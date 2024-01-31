@@ -746,24 +746,6 @@ public:
   }
 
 private:
-  // check whether node represents a symmetric matrix
-  void checkSpecialMatrices(mNode* p) {
-    if (mNode::isTerminal(p)) {
-      return;
-    }
-
-    p->setSymmetric(false);
-
-    // check if matrix is symmetric
-    const auto& e0 = p->e[0];
-    const auto& e3 = p->e[3];
-    if (!mNode::isSymmetric(e0.p) || !mNode::isSymmetric(e3.p)) {
-      return;
-    }
-
-    p->setSymmetric(true);
-  }
-
   vCachedEdge makeStateFromVector(const CVec::const_iterator& begin,
                                   const CVec::const_iterator& end,
                                   const Qubit level) {
@@ -1536,7 +1518,6 @@ public:
       @return a complex number representing the scalar product of the DDs
   **/
   ComplexValue innerProduct(const vEdge& x, const vEdge& y) {
-    // TODO: Adapt to identities
     if (x.isTerminal() || y.isTerminal() || x.w.approximatelyZero() ||
         y.w.approximatelyZero()) { // the 0 case
       return 0;
@@ -1866,7 +1847,7 @@ private:
                                   const dd::fp tol,
                                   const std::vector<bool>& garbage,
                                   const bool checkCloseToOne) {
-    // immediately return of this node is identical to the identity
+    // immediately return if this node is identical to the identity
     if (m.isIdentity()) {
       return true;
     }
@@ -2005,6 +1986,7 @@ public:
   }
   mEdge reduceGarbage(mEdge& e, const std::vector<bool>& garbage,
                       const bool regular = true) {
+    // TODO: adapt to properly handle the new identity-less DD structure
     // return if no more garbage left
     if (std::none_of(garbage.begin(), garbage.end(),
                      [](bool v) { return v; }) ||
@@ -2033,6 +2015,7 @@ private:
                                       const std::vector<bool>& ancillary,
                                       const Qubit lowerbound,
                                       const bool regular = true) {
+    // TODO: needs to properly handle the new structure
     if (p->v < lowerbound) {
       return {p, 1.};
     }
@@ -2071,77 +2054,6 @@ private:
                                        mCachedEdge::zero()});
   }
 
-  //  mEdge reduceAncillaeRecursion(mEdge& e, const std::vector<bool>&
-  //  ancillary,
-  //                                Qubit var, const bool regular = true) {
-  //
-  //    auto f = e;
-  //    std::array<mEdge, NEDGE> edges{};
-  //
-  //    // Check if ancillary at this level
-  //    if (ancillary[var]) {
-  //      // Check if level is above DD
-  //      if (f.p->v < var) {
-  //        // Create ancillaries above the DD
-  //        for (auto i = 0U; i < NEDGE; ++i) {
-  //          if (i == 0) {
-  //            edges[i] = mEdge::terminal(Complex::one());
-  //          } else {
-  //            edges[i] = mEdge::terminal(Complex::zero());
-  //          }
-  //        }
-  //        auto extension = makeDDNode(var, edges);
-  //        var = var - 1;
-  //        while (ancillary[var]) {
-  //          auto node = makeDDNode(var, edges);
-  //          extension = kronecker(extension, node, false);
-  //          var = var - 1;
-  //        }
-  //        // Stick them together
-  //        f = kronecker(extension, f, false);
-  //      } else if (f.p->v == var) {
-  //        // Replace current nodes with ancillaries
-  //        for (auto i = 0U; i < NEDGE; ++i) {
-  //          if (i == 0) {
-  //            edges[i] = {f.p->e[i].p, Complex::one()};
-  //          } else {
-  //            edges[i] = {f.p->e[i].p, Complex::zero()};
-  //          }
-  //        }
-  //        f = makeDDNode(var, edges);
-  //      } else if (f.p->v > var) {
-  //        // Create ancillaries below the DD
-  //        for (auto i = 0U; i < NEDGE; ++i) {
-  //          if (i == 0) {
-  //            edges[i] = mEdge::terminal(Complex::one());
-  //          } else {
-  //            edges[i] = mEdge::terminal(Complex::zero());
-  //          }
-  //        }
-  //        auto extension = makeDDNode(var, edges);
-  //        var = var - 1;
-  //        while (ancillary[var]) {
-  //          auto node = makeDDNode(var, edges);
-  //          extension = kronecker(extension, node, false);
-  //          var = var - 1;
-  //        }
-  //        // Stick them together
-  //        f = kronecker(f, extension, false);
-  //      }
-  //
-  //      // No ancillary
-  //    } else {
-  //      for (auto i = 0U; i < NEDGE; ++i) {
-  //        edges[i] =
-  //            reduceAncillaeRecursion(f.p->e[i], ancillary, var - 1, regular);
-  //      }
-  //      f = makeDDNode(var, edges);
-  //    }
-  //
-  //    f.w = cn.lookup(f.w * e.w);
-  //    return f;
-  //  }
-
   vCachedEdge reduceGarbageRecursion(vNode* p, const std::vector<bool>& garbage,
                                      const Qubit lowerbound) {
     if (p->v < lowerbound) {
@@ -2178,6 +2090,7 @@ private:
   mCachedEdge reduceGarbageRecursion(mNode* p, const std::vector<bool>& garbage,
                                      const Qubit lowerbound,
                                      const bool regular = true) {
+    // TODO: needs to properly handle the new structure
     if (p->v < lowerbound) {
       return {p, 1.};
     }
@@ -2223,320 +2136,6 @@ private:
   /// Vector and matrix extraction from DDs
   ///
 public:
-  /// Get a single element of the vector or matrix represented by the dd with
-  /// root edge e \tparam Edge type of edge to use (vector or matrix) \param e
-  /// edge to traverse \param decisions string {0, 1, 2, 3}^n describing which
-  /// outgoing edge should be followed (for vectors entries are limited
-  /// to 0 and 1). If string is longer than required, the additional characters
-  /// are ignored.
-  /// \return the complex amplitude of the specified element
-  template <class Edge>
-  ComplexValue getValueByPath(const Edge& e, const std::string& decisions) {
-
-    if (e.isTerminal()) {
-      return {RealNumber::val(e.w.r), RealNumber::val(e.w.i)};
-    }
-
-    auto c = cn.lookup(1, 0);
-    auto r = e;
-
-    // Normalization factor
-    c = c * r.w;
-
-    // Indexing of elements list is from top of DD, so we need a reference point
-    const auto topLevel = e.p->v;
-
-    // TODO: Size is hardcoded, may need a more flexible solution
-    //       not connected to number of max qubits
-
-    auto level = static_cast<std::int32_t>(topLevel);
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
-    do {
-      auto decision = static_cast<std::size_t>(
-          decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
-      assert(decision <= r.p->e.size());
-
-      // Path is selected
-      if (!r.isTerminal()) {
-        r = r.p->e.at(decision);
-      }
-      level--;
-
-      // Checks if path moves down more than one level i.e. skips nodes
-      if ((r.isTerminal() && level == -1) ||
-          (!r.isTerminal() && r.p->v == level)) {
-        c = c * r.w;
-      } else if (!r.isTerminal() && level > r.p->v) {
-        // Iterates over pseudo-identity if node is at a lower level
-        for (; level > r.p->v; level--) {
-          decision = static_cast<std::size_t>(
-              decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
-          if (decision == 0 || decision == 3) {
-            //            c = c * Complex::one();
-          } else if (decision == 1 || decision == 2) {
-            //            c = c * Complex::zero();
-          }
-        }
-      } else if (r.isTerminal() && level != -1) {
-        while (level != -1) {
-          decision = static_cast<std::size_t>(
-              decisions.at(static_cast<std::size_t>(topLevel - level)) - '0');
-          if (decision == 0 || decision == 3) {
-            //            c = c * Complex::one();
-          } else if (decision == 1 || decision == 2) {
-            //            c = c * Complex::zero();
-          }
-          level--;
-        }
-      }
-    } while (level != -1);
-
-    return {RealNumber::val(c.r), RealNumber::val(c.i)};
-  }
-
-  template <class Edge>
-  ComplexValue getValueByBitstring(const Edge& e, std::string& bitstring) {
-    if (std::is_same_v<Edge, mEdge>) {
-      std::replace(bitstring.begin(), bitstring.end(), '1', '2');
-    }
-    std::reverse(bitstring.begin(), bitstring.end());
-    return getValueByPath(e, bitstring);
-  }
-
-  ComplexValue getValueByIndex(const vEdge& e, std::size_t i) {
-    std::size_t vectorHalf = 1U;
-    if (!e.isTerminal()) {
-      vectorHalf = static_cast<std::size_t>(std::pow(2, e.p->v));
-    }
-
-    std::string decisions;
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
-    do {
-      if (i < vectorHalf) {
-        decisions = decisions + '0';
-      } else if (i >= vectorHalf) {
-        decisions = decisions + '1';
-        i -= vectorHalf;
-      }
-      vectorHalf = vectorHalf / 2;
-    } while (vectorHalf > 0);
-
-    return getValueByPath(e, decisions);
-  }
-
-  ComplexValue getValueByIndex(const mEdge& e, std::size_t i, std::size_t j) {
-    std::size_t matrixHalf = 1U;
-    if (!e.isTerminal()) {
-      matrixHalf = static_cast<std::size_t>(std::pow(2, e.p->v));
-    }
-
-    std::string decisions;
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
-    do {
-      if (i < matrixHalf && j < matrixHalf) {
-        decisions += '0';
-      } else if (i < matrixHalf && j >= matrixHalf) {
-        decisions += '1';
-        j -= matrixHalf;
-      } else if (i >= matrixHalf && j < matrixHalf) {
-        decisions += '2';
-        i -= matrixHalf;
-      } else if (i >= matrixHalf && j >= matrixHalf) {
-        decisions += '3';
-        i -= matrixHalf;
-        j -= matrixHalf;
-      }
-      matrixHalf = matrixHalf / 2;
-    } while (matrixHalf > 0);
-
-    return getValueByPath(e, decisions);
-  }
-
-  std::map<std::string, dd::fp>
-  getProbVectorFromDensityMatrix(dEdge e, const double measurementThreshold) {
-    dEdge::alignDensityEdge(e);
-    if (std::pow(2, e.p->v + 1) >=
-        static_cast<double>(std::numeric_limits<std::size_t>::max())) {
-      throw std::runtime_error(
-          std::string{"Density matrix is too large to measure!"});
-    }
-
-    const std::size_t statesToMeasure = 2ULL << e.p->v;
-    std::map<std::string, dd::fp> measuredResult = {};
-    for (std::size_t m = 0; m < statesToMeasure; m++) {
-      std::size_t currentResult = m;
-      auto globalProbability = RealNumber::val(e.w.r);
-      auto resultString = intToString(m, '1', e.p->v + 1);
-      dEdge cur = e;
-      for (dd::Qubit i = 0; i < e.p->v + 1; ++i) {
-        if (cur.isTerminal() || globalProbability <= measurementThreshold) {
-          globalProbability = 0;
-          break;
-        }
-        assert(RealNumber::approximatelyZero(cur.p->e.at(0).w.i) &&
-               RealNumber::approximatelyZero(cur.p->e.at(3).w.i));
-        const auto p0 = RealNumber::val(cur.p->e.at(0).w.r);
-        const auto p1 = RealNumber::val(cur.p->e.at(3).w.r);
-
-        if (currentResult % 2 == 0) {
-          cur = cur.p->e.at(0);
-          globalProbability *= p0;
-        } else {
-          cur = cur.p->e.at(3);
-          globalProbability *= p1;
-        }
-        currentResult = currentResult >> 1;
-      }
-      if (globalProbability > 0) { // No need to track probabilities of 0
-        measuredResult.insert({resultString, globalProbability});
-      }
-    }
-    return measuredResult;
-  }
-
-  [[nodiscard]] std::string intToString(std::size_t targetNumber,
-                                        const char value,
-                                        const Qubit size) const {
-    std::string path(size, '0');
-    for (auto i = 1U; i <= size; ++i) {
-      if ((targetNumber % 2) != 0U) {
-        path[size - i] = value;
-      }
-      targetNumber = targetNumber >> 1U;
-    }
-    return path;
-  }
-
-  CVec getVector(const vEdge& e) {
-    const std::size_t dim = 2ULL << e.p->v;
-    // allocate resulting vector
-    auto vec = CVec(dim, {0.0, 0.0});
-    getVector(e, Complex::one, 0, vec);
-    return vec;
-  }
-  void getVector(const vEdge& e, const Complex& amp, const std::size_t i,
-                 CVec& vec) {
-    // calculate new accumulated amplitude
-    auto c = e.w * amp;
-
-    // base case
-    if (e.isTerminal()) {
-      vec.at(i) = {c.r, c.i};
-      return;
-    }
-
-    const std::size_t x = i | (1ULL << e.p->v);
-
-    // recursive case
-    if (!e.p->e[0].w.approximatelyZero()) {
-      getVector(e.p->e[0], c, i, vec);
-    }
-    if (!e.p->e[1].w.approximatelyZero()) {
-      getVector(e.p->e[1], c, x, vec);
-    }
-  }
-
-  void printVector(const vEdge& e) {
-    const std::size_t element = 2ULL << e.p->v;
-    for (auto i = 0ULL; i < element; i++) {
-      const auto amplitude = getValueByIndex(e, i);
-      const auto n = static_cast<std::size_t>(e.p->v) + 1U;
-      for (auto j = n; j > 0; --j) {
-        std::cout << ((i >> (j - 1)) & 1ULL);
-      }
-      constexpr auto precision = 3;
-      // set fixed width to maximum of a printed number
-      // (-) 0.precision plus/minus 0.precision i
-      constexpr auto width = 1 + 2 + precision + 1 + 2 + precision + 1;
-      std::cout << ": " << std::setw(width)
-                << ComplexValue::toString(amplitude.r, amplitude.i, false,
-                                          precision)
-                << "\n";
-    }
-    std::cout << std::flush;
-  }
-
-  void printMatrix(const mEdge& e) {
-    const std::size_t element = 2ULL << e.p->v;
-    for (auto i = 0ULL; i < element; i++) {
-      for (auto j = 0ULL; j < element; j++) {
-        const auto amplitude = getValueByIndex(e, i, j);
-        constexpr auto precision = 3;
-        // set fixed width to maximum of a printed number
-        // (-) 0.precision plus/minus 0.precision i
-        constexpr auto width = 1 + 2 + precision + 1 + 2 + precision + 1;
-        std::cout << std::setw(width)
-                  << ComplexValue::toString(amplitude.r, amplitude.i, false,
-                                            precision)
-                  << " ";
-      }
-      std::cout << "\n";
-    }
-    std::cout << std::flush;
-  }
-
-  CMat getMatrix(const mEdge& e, std::size_t nrQubits) {
-    std::size_t dim = 0;
-    if (nrQubits != 0) {
-      dim = 2ULL << (nrQubits - 1);
-    }
-    // allocate resulting matrix
-    auto mat = CMat(dim, CVec(dim, {0.0, 0.0}));
-
-    // Identity case
-    if (e.isTerminal()) {
-      for (auto i = 0ULL; i < dim; i++) {
-        for (auto j = 0ULL; j < dim; j++) {
-          if (i == j) {
-            mat[i][j] = {1., 0.};
-          }
-        }
-      }
-    } else {
-      getMatrix(e, Complex::one, 0, 0, mat, static_cast<int>(nrQubits) - 1);
-    }
-    return mat;
-  }
-  void getMatrix(const mEdge& e, const Complex& amp, const std::size_t i,
-                 const std::size_t j, CMat& mat, const int level) {
-    // calculate new accumulated amplitude
-    auto c = e.w * amp;
-
-    std::size_t x = i;
-    std::size_t y = j;
-
-    if (level != -1) {
-      x = i | (1ULL << level);
-      y = j | (1ULL << level);
-    }
-
-    if (e.isTerminal() && level == -1) {
-      // base case
-      mat.at(i).at(j) = {c.r, c.i};
-      return;
-    }
-
-    if ((!e.isTerminal() && e.p->v == level)) {
-      // recursive case
-      if (!e.p->e[0].w.approximatelyZero()) {
-        getMatrix(e.p->e[0], c, i, j, mat, level - 1);
-      }
-      if (!e.p->e[1].w.approximatelyZero()) {
-        getMatrix(e.p->e[1], c, i, y, mat, level - 1);
-      }
-      if (!e.p->e[2].w.approximatelyZero()) {
-        getMatrix(e.p->e[2], c, x, j, mat, level - 1);
-      }
-      if (!e.p->e[3].w.approximatelyZero()) {
-        getMatrix(e.p->e[3], c, x, y, mat, level - 1);
-      }
-    } else if ((!e.isTerminal() && e.p->v < level) ||
-               (e.isTerminal() && level != -1)) {
-      getMatrix(e, c, i, j, mat, level - 1);
-      getMatrix(e, c, x, y, mat, level - 1);
-    }
-  }
-
   // transfers a decision diagram from another package to this package
   template <class Node> Edge<Node> transfer(Edge<Node>& original) {
     if (original.isTerminal()) {

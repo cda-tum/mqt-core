@@ -478,57 +478,6 @@ TEST(DDPackageTest, SerializationErrors) {
   EXPECT_THROW(dd->deserialize<dd::mNode>(ss), std::runtime_error);
 }
 
-TEST(DDPackageTest, TestConsistency) {
-  auto dd = std::make_unique<dd::Package<>>(2);
-
-  auto hGate = dd->makeGateDD(dd::H_MAT, 2, 1);
-  auto cxGate = dd->makeGateDD(dd::X_MAT, 2, 1_pc, 0);
-  auto zeroState = dd->makeZeroState(2);
-
-  auto bellMatrix = dd->multiply(cxGate, hGate);
-  dd->incRef(bellMatrix);
-  auto local = dd->isLocallyConsistent(bellMatrix);
-  EXPECT_TRUE(local);
-  auto global = dd->isGloballyConsistent(bellMatrix);
-  EXPECT_TRUE(global);
-  dd->debugnode(bellMatrix.p);
-
-  auto bellState = dd->multiply(bellMatrix, zeroState);
-  dd->incRef(bellState);
-  local = dd->isLocallyConsistent(bellState);
-  EXPECT_TRUE(local);
-  global = dd->isGloballyConsistent(bellState);
-  EXPECT_TRUE(global);
-  dd->debugnode(bellState.p);
-}
-
-TEST(DDPackageTest, TestLocalInconsistency) {
-  auto dd = std::make_unique<dd::Package<>>(3);
-
-  auto hGate = dd->makeGateDD(dd::H_MAT, 2, 0);
-  auto cxGate = dd->makeGateDD(dd::X_MAT, 2, 0_pc, 1);
-  auto zeroState = dd->makeZeroState(2);
-
-  auto bellState = dd->multiply(dd->multiply(cxGate, hGate), zeroState);
-  auto local = dd->isLocallyConsistent(bellState);
-  EXPECT_FALSE(local);
-  bellState.p->ref = 1;
-  local = dd->isLocallyConsistent(bellState);
-  EXPECT_FALSE(local);
-  bellState.p->ref = 0;
-  dd->incRef(bellState);
-
-  bellState.p->v = 2;
-  local = dd->isLocallyConsistent(bellState);
-  EXPECT_FALSE(local);
-  bellState.p->v = 1;
-
-  bellState.p->e[0].w.r->ref = 0;
-  local = dd->isLocallyConsistent(bellState);
-  EXPECT_FALSE(local);
-  bellState.p->e[0].w.r->ref = 1;
-}
-
 TEST(DDPackageTest, Ancillaries) {
   auto dd = std::make_unique<dd::Package<>>(4);
   auto hGate = dd->makeGateDD(dd::H_MAT, 2, 0);
@@ -1093,7 +1042,7 @@ TEST(DDPackageTest, NormalizationNumericStabilityTest) {
     auto p = dd->makeGateDD(dd::pMat(lambda), 1, 0);
     auto pdag = dd->makeGateDD(dd::pMat(-lambda), 1, 0);
     auto result = dd->multiply(p, pdag);
-    EXPECT_TRUE(result.isOneTerminal());
+    EXPECT_TRUE(result.isIdentity());
     dd->cUniqueTable.clear();
     dd->cMemoryManager.reset();
   }

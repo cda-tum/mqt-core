@@ -52,13 +52,6 @@ struct mNode {                        // NOLINT(readability-identifier-naming)
   [[nodiscard]] static constexpr mNode* getTerminal() noexcept {
     return nullptr;
   }
-  inline void setSymmetric(const bool symmetric) noexcept {
-    if (symmetric) {
-      flags = (flags | static_cast<std::uint8_t>(32U));
-    } else {
-      flags = (flags & static_cast<std::uint8_t>(~32U));
-    }
-  }
 };
 using mEdge = Edge<mNode>;
 using mCachedEdge = CachedEdge<mNode>;
@@ -73,8 +66,8 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   RefCount ref{};                     // reference count
   Qubit v{};                          // variable index
   std::uint8_t flags = 0;
-  // 32 = marks a node with is symmetric.
-  // 16 = free (used to mark identity nodes)
+  // 32 = unused (was used to mark a node which is symmetric)
+  // 16 = unused (was used to mark a node resembling the identity)
   // 8 = marks a reduced dm node,
   // 4 = marks a dm (tmp flag),
   // 2 = mark first path edge (tmp flag),

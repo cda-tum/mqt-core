@@ -197,30 +197,6 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
   return e;
 }
 
-template <class Config>
-MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd,
-                            const std::optional<std::size_t> ncycles) {
-  if (ncycles.has_value() && (*ncycles < qc->cycles.size() - 2U)) {
-    qc->removeCycles(qc->cycles.size() - 2U - *ncycles);
-  }
-
-  Permutation permutation = qc->initialLayout;
-  auto e = dd->makeIdent();
-  dd->incRef(e);
-  for (const auto& cycle : qc->cycles) {
-    auto f = dd->makeIdent();
-    for (const auto& op : cycle) {
-      f = dd->multiply(getDD(op.get(), dd, permutation), f);
-    }
-    auto g = dd->multiply(f, e);
-    dd->decRef(e);
-    dd->incRef(g);
-    e = g;
-    dd->garbageCollect();
-  }
-  return e;
-}
-
 template MatrixDD buildFunctionality(const qc::QuantumComputation* qc,
                                      Package<DDPackageConfig>& dd);
 template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation* qc,
@@ -235,7 +211,4 @@ template MatrixDD buildFunctionality(const qc::Grover* qc,
                                      Package<DDPackageConfig>& dd);
 template MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
                                               Package<DDPackageConfig>& dd);
-template MatrixDD buildFunctionality(const qc::QuantumComputation* qc,
-                                     Package<DDPackageConfig>& dd,
-                                     const std::optional<std::size_t> ncycles);
 } // namespace dd

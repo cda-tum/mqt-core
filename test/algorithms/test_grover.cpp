@@ -60,6 +60,7 @@ TEST_P(Grover, Functionality) {
   qc->printStatistics(std::cout);
   auto x = '1' + qc->expected;
   std::reverse(x.begin(), x.end());
+  std::replace(x.begin(), x.end(), '1', '2');
 
   auto exp = dd::benchmarkFunctionalityConstruction(*qc);
   func = exp->func;
@@ -80,6 +81,7 @@ TEST_P(Grover, FunctionalityRecursive) {
   qc->printStatistics(std::cout);
   auto x = '1' + qc->expected;
   std::reverse(x.begin(), x.end());
+  std::replace(x.begin(), x.end(), '1', '2');
 
   auto exp = dd::benchmarkFunctionalityConstruction(*qc, true);
   func = exp->func;

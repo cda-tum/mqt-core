@@ -329,10 +329,10 @@ TEST_F(DDFunctionality, nonUnitary) {
   }
   auto barrier =
       qc::StandardOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
-  EXPECT_EQ(getDD(&barrier, *dd), dd->makeIdent());
-  EXPECT_EQ(getInverseDD(&barrier, *dd), dd->makeIdent());
-  EXPECT_EQ(getDD(&barrier, *dd, dummyMap), dd->makeIdent());
-  EXPECT_EQ(getInverseDD(&barrier, *dd, dummyMap), dd->makeIdent());
+  EXPECT_TRUE(getDD(&barrier, *dd).isIdentity());
+  EXPECT_TRUE(getInverseDD(&barrier, *dd).isIdentity());
+  EXPECT_TRUE(getDD(&barrier, *dd, dummyMap).isIdentity());
+  EXPECT_TRUE(getInverseDD(&barrier, *dd, dummyMap).isIdentity());
 }
 
 TEST_F(DDFunctionality, CircuitEquivalence) {
