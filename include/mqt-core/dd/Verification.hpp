@@ -17,7 +17,7 @@ bool zeroAncillaePartialEquivalenceCheck(
     const std::unique_ptr<dd::Package<Config>>& dd) {
   if (c1.getNqubits() != c2.getNqubits() ||
       c1.getGarbage() != c2.getGarbage()) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
         "The circuits need to have the same number of qubits and the same "
         "permutation of input and output qubits.");
   }

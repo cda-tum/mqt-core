@@ -208,3 +208,28 @@ TEST(PartialEquivalence, DDMZAPECBenchmark) {
   std::cout << "Zero-ancilla partial equivalence check\n";
   partialEquivalencCheckingBenchmarks(dd, minN, maxN, reps, false);
 }
+
+TEST(PartialEquivalence, DDMInvalidInput) {
+  const auto dd = std::make_unique<dd::Package<>>(30);
+
+  // the circuits don't have the same number of measured qubits
+  qc::QuantumComputation c1{4, 1};
+  c1.x(1);
+
+  qc::QuantumComputation c2{4, 1};
+  c2.x(1);
+
+  c1.setLogicalQubitGarbage(1);
+  c1.setLogicalQubitGarbage(0);
+  c1.setLogicalQubitGarbage(3);
+
+  c2.setLogicalQubitGarbage(1);
+  c2.setLogicalQubitGarbage(0);
+
+  EXPECT_FALSE(dd::partialEquivalenceCheck(c1, c2, dd));
+
+  // now they have the same number of measured qubits but a different
+  // permutation of garbage qubits
+  c2.setLogicalQubitGarbage(2);
+  EXPECT_THROW(dd::partialEquivalenceCheck(c1, c2, dd), std::invalid_argument);
+}
