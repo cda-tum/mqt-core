@@ -14,7 +14,7 @@ namespace dd {
 template <class Config>
 bool zeroAncillaePartialEquivalenceCheck(
     qc::QuantumComputation c1, qc::QuantumComputation c2,
-    std::unique_ptr<dd::Package<Config>>& dd) {
+    const std::unique_ptr<dd::Package<Config>>& dd) {
   if (c1.getNqubits() != c2.getNqubits() ||
       c1.getGarbage() != c2.getGarbage()) {
     throw std::runtime_error(
@@ -26,7 +26,7 @@ bool zeroAncillaePartialEquivalenceCheck(
     c2.emplace_back(gate);
   }
 
-  auto u = buildFunctionality(&c2, *dd, false, false);
+  const auto u = buildFunctionality(&c2, *dd, false, false);
 
   return dd->isCloseToIdentity(u, 1.0E-10, c1.getGarbage(), false);
 }
@@ -49,23 +49,23 @@ inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
 template <class Config>
 bool partialEquivalenceCheck(qc::QuantumComputation c1,
                              qc::QuantumComputation c2,
-                             std::unique_ptr<dd::Package<Config>>& dd) {
+                             const std::unique_ptr<dd::Package<Config>>& dd) {
 
-  auto d1 = c1.getNqubitsWithoutAncillae();
-  auto d2 = c2.getNqubitsWithoutAncillae();
-  auto m1 = c1.getNmeasuredQubits();
-  auto m2 = c2.getNmeasuredQubits();
+  const auto d1 = c1.getNqubitsWithoutAncillae();
+  const auto d2 = c2.getNqubitsWithoutAncillae();
+  const auto m1 = c1.getNmeasuredQubits();
+  const auto m2 = c2.getNmeasuredQubits();
   if (m1 != m2 || d1 != d2) {
     return false;
   }
-  auto n1 = static_cast<Qubit>(c1.getNqubits());
-  auto n2 = static_cast<Qubit>(c2.getNqubits());
+  const auto n1 = static_cast<Qubit>(c1.getNqubits());
+  const auto n2 = static_cast<Qubit>(c2.getNqubits());
   if (d1 == n1 && d2 == n2) {
     // no ancilla qubits
     return zeroAncillaePartialEquivalenceCheck(c1, c2, dd);
   }
   // add swaps in order to put the measured (= not garbage) qubits in the end
-  auto garbage1 = c1.getGarbage();
+  const auto garbage1 = c1.getGarbage();
 
   auto nextGarbage = getNextGarbage(0, garbage1);
   // find the first garbage qubit at the end
@@ -82,8 +82,8 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   // partialEquivalenceCheck with dd
 
-  auto u1 = buildFunctionality(&c1, *dd, false, false);
-  auto u2 = buildFunctionality(&c2, *dd, false, false);
+  const auto u1 = buildFunctionality(&c1, *dd, false, false);
+  const auto u2 = buildFunctionality(&c2, *dd, false, false);
 
   return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
                                      static_cast<Qubit>(m1));

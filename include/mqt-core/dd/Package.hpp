@@ -2441,7 +2441,7 @@ private:
   }
 
   // only keeps the first 2^d columns
-  mEdge setColumnsToZero(const mEdge& e, Qubit d) {
+  mEdge setColumnsToZero(const mEdge& e, const Qubit d) {
     if (e.isTerminal()) {
       return e;
     }
@@ -2463,7 +2463,7 @@ private:
     return f;
   }
 
-  mEdge keepOnlyIthRow(const mEdge& e, std::int64_t i) {
+  mEdge keepOnlyIthRow(const mEdge& e, const std::int64_t i) {
     if (e.isZeroTerminal()) {
       return e;
     }
@@ -2503,7 +2503,7 @@ private:
     into 2^g parts of size 2^m (where g = n - m).
     For each part the (upperOffset + i)-th row is shifted by i*2^d columns.
     **/
-  mEdge shiftAllRowsRecursive(const mEdge& e, Qubit m, Qubit d,
+  mEdge shiftAllRowsRecursive(const mEdge& e, const Qubit m, const Qubit d,
                               std::int64_t upperOffset) {
     if (e.isTerminal() && upperOffset == 0) {
       return e;
@@ -2537,7 +2537,7 @@ private:
     }
 
     std::array<mEdge, NEDGE> edges{};
-    auto originalUpperOffset = upperOffset;
+    const auto originalUpperOffset = upperOffset;
 
     // if the current submatrix size is less than 2^m,
     // then the offset of the lower half needs to be adapted
@@ -2594,7 +2594,7 @@ public:
       For each part we keep only the first 2^d columns
       and the i-th row of each part is shifted by i*2^d columns.
   **/
-  mEdge shiftAllRows(const mEdge& e, Qubit m, Qubit d) {
+  mEdge shiftAllRows(const mEdge& e, const Qubit m, const Qubit d) {
     if (shiftAllMatrixRowsM != m || shiftAllMatrixRowsD != d) {
       shiftAllMatrixRows.clear();
       shiftAllMatrixRowsM = m;
@@ -2604,8 +2604,8 @@ public:
   }
 
 private:
-  mEdge partialEquivalenceCheckSubroutine(mEdge u, Qubit m, Qubit k,
-                                          Qubit extra) {
+  mEdge partialEquivalenceCheckSubroutine(mEdge u, const Qubit m, const Qubit k,
+                                          const Qubit extra) {
     // add extra ancillary qubits
     if (extra > 0) {
       if (u.p->v + 1U + extra > nqubits) {
@@ -2613,10 +2613,13 @@ private:
       }
       u = kronecker(makeIdent(extra), u);
     }
+    if (u.isTerminal()) {
+      return u;
+    }
     const auto n = static_cast<Qubit>(u.p->v + 1);
-    Qubit d = n - k;
+    const Qubit d = n - k;
     u = setColumnsToZero(u, d);
-    auto u2 = shiftAllRows(u, m, d);
+    const auto u2 = shiftAllRows(u, m, d);
     return multiply(conjugateTranspose(u), u2);
   }
 
@@ -2631,7 +2634,8 @@ public:
    @param m Number of measured qubits
    @return true if the two circuits u1 and u2 are partially equivalent.
    **/
-  bool partialEquivalenceCheck(mEdge u1, mEdge u2, Qubit d, Qubit m) {
+  bool partialEquivalenceCheck(mEdge u1, mEdge u2, const Qubit d,
+                               const Qubit m) {
     if (m == 0) {
       return true;
     }
@@ -2664,8 +2668,8 @@ public:
     }
     k = k + extra;
 
-    auto u1Prime = partialEquivalenceCheckSubroutine(u1, m, k, extra);
-    auto u2Prime = partialEquivalenceCheckSubroutine(u2, m, k, extra);
+    const auto u1Prime = partialEquivalenceCheckSubroutine(u1, m, k, extra);
+    const auto u2Prime = partialEquivalenceCheckSubroutine(u2, m, k, extra);
 
     return u1Prime == u2Prime;
   }
@@ -2679,7 +2683,8 @@ public:
       @param m Number of measured qubits
       @return true if the two circuits u1 and u2 are partially equivalent.
       **/
-  bool zeroAncillaePartialEquivalenceCheck(mEdge u1, mEdge u2, Qubit m) {
+  bool zeroAncillaePartialEquivalenceCheck(const mEdge& u1, const mEdge& u2,
+                                           const Qubit m) {
     auto u1u2 = multiply(u1, conjugateTranspose(u2));
     const Qubit n = u1.p->v + 1;
     std::vector<bool> garbage(n, false);

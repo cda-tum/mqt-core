@@ -141,8 +141,9 @@ TEST(PartialEquivalence, DDMPECSliQECPeriodFinding8Qubits) {
 }
 
 void partialEquivalencCheckingBenchmarks(
-    std::unique_ptr<dd::Package<dd::DDPackageConfig>>& dd, size_t minN,
-    size_t maxN, size_t reps, bool addAncilla) {
+    const std::unique_ptr<dd::Package<dd::DDPackageConfig>>& dd,
+    const size_t minN, const size_t maxN, const size_t reps,
+    const bool addAncilla) {
   for (size_t n = minN; n < maxN; n++) {
     std::chrono::microseconds totalTime{0};
     std::uint16_t totalGates{0};
@@ -159,13 +160,13 @@ void partialEquivalencCheckingBenchmarks(
       } else {
         m = static_cast<dd::Qubit>(rand()) % static_cast<dd::Qubit>(d - 1) + 1;
       }
-      auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
+      const auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
 
-      auto start = std::chrono::high_resolution_clock::now();
-      bool result = dd::partialEquivalenceCheck(c1, c2, dd);
+      const auto start = std::chrono::high_resolution_clock::now();
+      const bool result = dd::partialEquivalenceCheck(c1, c2, dd);
       // Get ending timepoint
-      auto stop = std::chrono::high_resolution_clock::now();
-      auto duration =
+      const auto stop = std::chrono::high_resolution_clock::now();
+      const auto duration =
           std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
       EXPECT_TRUE(result);
@@ -190,20 +191,20 @@ void partialEquivalencCheckingBenchmarks(
 }
 
 TEST(PartialEquivalence, DDMPECBenchmark) {
-  auto dd = std::make_unique<dd::Package<>>(20);
+  const auto dd = std::make_unique<dd::Package<>>(20);
   srand(55);
-  size_t minN = 2;
-  size_t maxN = 8;
-  size_t reps = 10;
+  const size_t minN = 2;
+  const size_t maxN = 8;
+  const size_t reps = 10;
   std::cout << "Partial equivalence check\n";
   partialEquivalencCheckingBenchmarks(dd, minN, maxN, reps, true);
 }
 
 TEST(PartialEquivalence, DDMZAPECBenchmark) {
-  auto dd = std::make_unique<dd::Package<>>(30);
-  size_t minN = 3;
-  size_t maxN = 15;
-  size_t reps = 10;
+  const auto dd = std::make_unique<dd::Package<>>(30);
+  const size_t minN = 3;
+  const size_t maxN = 15;
+  const size_t reps = 10;
   std::cout << "Zero-ancilla partial equivalence check\n";
   partialEquivalencCheckingBenchmarks(dd, minN, maxN, reps, false);
 }
