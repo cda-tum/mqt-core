@@ -1165,29 +1165,32 @@ public:
     return '1';
   }
 
-  mEdge buildMeasOp(const Qubit index, const bool measureZero) {
-      GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
-      const auto measurementGate = makeGateDD(measurementMatrix, nqubits, index);
-      return measurementGate;
-  }
+//  mEdge buildMeasOp(const Qubit index, const bool measureZero) {
+//      GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
+//      const auto measurementGate = makeGateDD(measurementMatrix, nqubits, index);
+//      return measurementGate;
+//  }
 
-  std::pair<dEdge, char> measureOneCollapsing(dEdge& e, const Qubit index,
+  char measureOneCollapsing(dEdge& e, const Qubit index,
                                               std::mt19937_64& mt) {
     char measuredResult = '0';
+    dEdge::alignDensityEdge(e);
+    const auto nrQubits = e.p->v + 1U;
+    dEdge::setDensityMatrixTrue(e);
 
-    auto operation = buildMeasOp(index, '0');
+    auto const measZeroDd = makeGateDD(MEAS_ZERO_MAT, nrQubits, index);
 
-    auto tmp0 = conjugateTranspose(operation);
+    auto tmp0 = conjugateTranspose(measZeroDd);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
-    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
+    auto tmp2 = multiply(densityFromMatrixEdge(measZeroDd), tmp1, 0, true);
     auto densityMatrixTrace = trace(tmp2);
 
     std::uniform_real_distribution<fp> dist(0., 1.);
     if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
-      operation = buildMeasOp(index, '1');
-      tmp0 = conjugateTranspose(operation);
+      auto const measOneDd = makeGateDD(MEAS_ONE_MAT, nrQubits, index);
+      tmp0 = conjugateTranspose(measOneDd);
       tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
-      tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
+      tmp2 = multiply(densityFromMatrixEdge(measOneDd), tmp1, 0, true);
       measuredResult = '1';
       densityMatrixTrace = trace(tmp2);
     }
@@ -1203,7 +1206,7 @@ public:
     cn.decRef(e.w);
     e.w = cn.lookup(result);
     cn.incRef(e.w);
-    return {e, measuredResult};
+    return measuredResult;
   }
 
   /**
