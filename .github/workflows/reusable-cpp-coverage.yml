@@ -59,7 +59,5 @@ jobs:
         with:
           fail_ci_if_error: true
           flags: cpp
-          gcov: true
-          gcov_ignore: "extern/**/*"
           token: ${{ secrets.token }}
           verbose: true
