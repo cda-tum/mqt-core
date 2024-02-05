@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from typing import ClassVar, overload
 
@@ -90,7 +90,7 @@ class OpType:
     def __ne__(self: Self, other: object) -> bool: ...
     def __setstate__(self: Self, state: int) -> None: ...
 
-class Operation(metaclass=ABCMeta):
+class Operation(ABC):
     type_: OpType
     controls: set[Control]
     num_qubits: int
