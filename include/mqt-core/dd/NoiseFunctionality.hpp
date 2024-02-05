@@ -254,16 +254,13 @@ public:
                                   double noiseProbabilityMultiQubit,
                                   double ampDampProbSingleQubit,
                                   double ampDampProbMultiQubit,
-                                  std::vector<NoiseOperations> effects,
-                                  bool useDensityMatType, bool seqApplyNoise)
+                                  std::vector<NoiseOperations> effects)
       : package(dd), nQubits(nq),
         noiseProbSingleQubit(noiseProbabilitySingleQubit),
         noiseProbMultiQubit(noiseProbabilityMultiQubit),
         ampDampingProbSingleQubit(ampDampProbSingleQubit),
         ampDampingProbMultiQubit(ampDampProbMultiQubit),
-        noiseEffects(std::move(effects)),
-        useDensityMatrixType(useDensityMatType),
-        sequentiallyApplyNoise(seqApplyNoise) {}
+        noiseEffects(std::move(effects)) {}
 
 protected:
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -276,16 +273,6 @@ protected:
   double ampDampingProbMultiQubit;
 
   std::vector<NoiseOperations> noiseEffects;
-  bool useDensityMatrixType;
-  bool sequentiallyApplyNoise;
-
-  inline static const std::map<NoiseOperations, std::size_t>
-      SEQUENTIAL_NOISE_MAP = {
-          {Identity, 1},         // Identity Noise
-          {PhaseFlip, 2},        // Phase-flip
-          {AmplitudeDamping, 2}, // Amplitude Damping
-          {Depolarization, 4},   // Depolarisation
-  };
 
   [[nodiscard]] std::size_t getNumberOfQubits() const { return nQubits; }
 
@@ -293,26 +280,16 @@ public:
   void applyNoiseEffects(dEdge& originalEdge,
                          const std::unique_ptr<qc::Operation>& qcOperation) {
     auto usedQubits = qcOperation->getUsedQubits();
-    if (sequentiallyApplyNoise) {
-      applyDetNoiseSequential(originalEdge, usedQubits);
-    } else {
-      dCachedEdge nodeAfterNoise = {};
-      if (useDensityMatrixType) {
-        dEdge::applyDmChangesToEdge(originalEdge);
-        nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
-        dEdge::revertDmChangesToEdge(originalEdge);
-      } else {
-        nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, true);
-      }
-      auto r = dEdge{nodeAfterNoise.p, package->cn.lookup(nodeAfterNoise.w)};
-      package->incRef(r);
-      dEdge::alignDensityEdge(originalEdge);
-      package->decRef(originalEdge);
-      originalEdge = r;
-      if (useDensityMatrixType) {
-        dEdge::setDensityMatrixTrue(originalEdge);
-      }
-    }
+    dCachedEdge nodeAfterNoise = {};
+    dEdge::applyDmChangesToEdge(originalEdge);
+    nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
+    dEdge::revertDmChangesToEdge(originalEdge);
+    auto r = dEdge{nodeAfterNoise.p, package->cn.lookup(nodeAfterNoise.w)};
+    package->incRef(r);
+    dEdge::alignDensityEdge(originalEdge);
+    package->decRef(originalEdge);
+    originalEdge = r;
+    dEdge::setDensityMatrixTrue(originalEdge);
   }
 
 private:
@@ -485,151 +462,6 @@ private:
       }
       e[3] = package->add2(helperEdge[0], helperEdge[1], var);
     }
-  }
-
-  void applyDetNoiseSequential(dEdge& originalEdge,
-                               const std::set<qc::Qubit>& targets) {
-    std::array<mEdge, NrEdges::value> idleOperation{};
-
-    // Iterate over qubits and check if the qubit had been used
-    for (const auto targetQubit : targets) {
-      for (auto const& type : noiseEffects) {
-        generateGate(idleOperation, type, targetQubit,
-                     getNoiseProbability(type, targets));
-        std::optional<dEdge> tmp{};
-        // Apply all noise matrices of the current noise effect
-        for (std::size_t m = 0; m < SEQUENTIAL_NOISE_MAP.find(type)->second;
-             m++) {
-          auto tmp0 = package->conjugateTranspose(idleOperation.at(m));
-          auto tmp1 = package->multiply(originalEdge,
-                                        densityFromMatrixEdge(tmp0), 0, false);
-          auto tmp2 =
-              package->multiply(densityFromMatrixEdge(idleOperation.at(m)),
-                                tmp1, 0, useDensityMatrixType);
-          if (!tmp.has_value()) {
-            tmp = tmp2;
-          } else {
-            tmp = package->add(tmp2, *tmp);
-          }
-        }
-        assert(tmp.has_value());
-        auto& tmpEdge = *tmp;
-        package->incRef(tmpEdge);
-        dEdge::alignDensityEdge(originalEdge);
-        package->decRef(originalEdge);
-        originalEdge = tmpEdge;
-        if (useDensityMatrixType) {
-          dEdge::setDensityMatrixTrue(originalEdge);
-        }
-      }
-    }
-  }
-
-  void generateDepolarizationGate(
-      std::array<mEdge, NrEdges::value>& pointerForMatrices,
-      const qc::Qubit target, const double probability) {
-    std::array<GateMatrix, NrEdges::value> idleNoiseGate{};
-
-    //                   (1 0)
-    // sqrt(1- ((3p)/4))*(0 1)
-    idleNoiseGate[0][0] = idleNoiseGate[0][3] =
-        std::sqrt(1 - ((3 * probability) / 4));
-    idleNoiseGate[0][1] = idleNoiseGate[0][2] = 0;
-
-    pointerForMatrices[0] =
-        package->makeGateDD(idleNoiseGate[0], getNumberOfQubits(), target);
-
-    //                      (0 1)
-    // sqrt(probability/4))*(1 0)
-    idleNoiseGate[1][1] = idleNoiseGate[1][2] = std::sqrt(probability / 4);
-    idleNoiseGate[1][0] = idleNoiseGate[1][3] = 0;
-
-    pointerForMatrices[1] =
-        package->makeGateDD(idleNoiseGate[1], getNumberOfQubits(), target);
-
-    //                      (1 0)
-    // sqrt(probability/4))*(0 -1)
-    idleNoiseGate[2][0] = std::sqrt(probability / 4);
-    idleNoiseGate[2][3] = -std::sqrt(probability / 4);
-    idleNoiseGate[2][1] = idleNoiseGate[2][2] = 0;
-
-    pointerForMatrices[3] =
-        package->makeGateDD(idleNoiseGate[2], getNumberOfQubits(), target);
-
-    //                      (0 -i)
-    // sqrt(probability/4))*(i 0)
-    idleNoiseGate[3][2] = {0, std::sqrt(probability / 4)};
-    idleNoiseGate[3][1] = {0, -std::sqrt(probability / 4)};
-    idleNoiseGate[3][0] = idleNoiseGate[3][3] = 0;
-
-    pointerForMatrices[2] =
-        package->makeGateDD(idleNoiseGate[3], getNumberOfQubits(), target);
-  }
-
-  void generateGate(std::array<mEdge, NrEdges::value>& pointerForMatrices,
-                    const NoiseOperations noiseType, const qc::Qubit target,
-                    const double probability) {
-    std::array<GateMatrix, NrEdges::value> idleNoiseGate{};
-    switch (noiseType) {
-      // identity noise (for testing)
-      //                  (1  0)
-      //                  (0  1),
-    case Identity: {
-      pointerForMatrices[0] =
-          package->makeGateDD(I_MAT, getNumberOfQubits(), target);
-
-      break;
-    }
-      // phase flip
-      //                          (1  0)                         (1  0)
-      //  e0= sqrt(1-probability)*(0  1), e1=  sqrt(probability)*(0 -1)
-    case PhaseFlip: {
-      idleNoiseGate[0][0] = idleNoiseGate[0][3] = std::sqrt(1 - probability);
-      idleNoiseGate[0][1] = idleNoiseGate[0][2] = 0;
-      idleNoiseGate[1][0] = std::sqrt(probability);
-      idleNoiseGate[1][3] = -std::sqrt(probability);
-      idleNoiseGate[1][1] = idleNoiseGate[1][2] = 0;
-
-      pointerForMatrices[0] =
-          package->makeGateDD(idleNoiseGate[0], getNumberOfQubits(), target);
-      pointerForMatrices[1] =
-          package->makeGateDD(idleNoiseGate[1], getNumberOfQubits(), target);
-
-      break;
-    }
-      // amplitude damping
-      //      (1                  0)       (0      sqrt(probability))
-      //  e0= (0 sqrt(1-probability), e1=  (0                      0)
-    case AmplitudeDamping: {
-      idleNoiseGate[0][0] = 1;
-      idleNoiseGate[0][1] = idleNoiseGate[0][2] = 0;
-      idleNoiseGate[0][3] = std::sqrt(1 - probability);
-
-      idleNoiseGate[1][0] = idleNoiseGate[1][3] = idleNoiseGate[1][2] = 0;
-      idleNoiseGate[1][1] = std::sqrt(probability);
-
-      pointerForMatrices[0] =
-          package->makeGateDD(idleNoiseGate[0], getNumberOfQubits(), target);
-      pointerForMatrices[1] =
-          package->makeGateDD(idleNoiseGate[1], getNumberOfQubits(), target);
-      break;
-    }
-      // depolarization
-    case Depolarization:
-      generateDepolarizationGate(pointerForMatrices, target, probability);
-      break;
-    default:
-      throw std::runtime_error("Unknown noise effect received.");
-    }
-  }
-
-  double getNoiseProbability(const NoiseOperations type,
-                             const std::set<qc::Qubit>& targets) {
-    if (type == AmplitudeDamping) {
-      return (targets.size() == 1) ? ampDampingProbSingleQubit
-                                   : ampDampingProbMultiQubit;
-    }
-    return (targets.size() == 1) ? noiseProbSingleQubit : noiseProbMultiQubit;
   }
 };
 

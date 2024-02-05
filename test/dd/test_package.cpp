@@ -1265,7 +1265,7 @@ TEST(DDPackageTest, dNodeMultiply) {
   operations.emplace_back(dd->makeGateDD(dd::Z_MAT, nrQubits, 2));
 
   for (const auto& op : operations) {
-    dd->applyOperationToDensity(state, op, true);
+    dd->applyOperationToDensity(state, op);
   }
 
   const auto stateDensityMatrix = state.getMatrix();
@@ -1312,7 +1312,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
   operations.emplace_back(dd->makeGateDD(dd::Z_MAT, nrQubits, 2));
 
   for (const auto& op : operations) {
-    dd->applyOperationToDensity(state, op, true);
+    dd->applyOperationToDensity(state, op);
   }
   operations[0].printMatrix();
 
@@ -1347,7 +1347,7 @@ TEST(DDPackageTest, dNodeMulCache1) {
   dd->incRef(state);
 
   const auto operation = dd->makeGateDD(dd::H_MAT, nrQubits, 0);
-  dd->applyOperationToDensity(state, operation, true);
+  dd->applyOperationToDensity(state, operation);
 
   state = dd->makeZeroDensityOperator(nrQubits);
   auto& computeTable = dd->getMultiplicationComputeTable<dd::dNode>();
@@ -1400,7 +1400,7 @@ TEST(DDPackageTest, dNoiseCache) {
 
   auto state = initialState;
   const auto operation = dd->makeGateDD(dd::X_MAT, nrQubits, 0);
-  dd->applyOperationToDensity(state, operation, true);
+  dd->applyOperationToDensity(state, operation);
   dd->densityNoise.insert(initialState, state, target);
 
   // noise pre-cached
