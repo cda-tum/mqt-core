@@ -1165,8 +1165,7 @@ public:
     return '1';
   }
 
-  char measureOneCollapsing(dEdge& e, const Qubit index,
-                                              std::mt19937_64& mt) {
+  char measureOneCollapsing(dEdge& e, const Qubit index, std::mt19937_64& mt) {
     char measuredResult = '0';
     dEdge::alignDensityEdge(e);
     const auto nrQubits = e.p->v + 1U;
@@ -1849,8 +1848,8 @@ private:
   /// TODO: introduce a compute table for the trace?
   template <class Node>
   CachedEdge<Node> trace(const Edge<Node>& a,
-                                const std::vector<bool>& eliminate,
-                                std::size_t alreadyEliminated = 0) {
+                         const std::vector<bool>& eliminate,
+                         std::size_t alreadyEliminated = 0) {
     const auto aWeight = static_cast<ComplexValue>(a.w);
     if (aWeight.approximatelyZero()) {
       return CachedEdge<Node>::zero();
