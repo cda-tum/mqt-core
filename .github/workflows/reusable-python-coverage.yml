@@ -57,4 +57,3 @@ jobs:
           fail_ci_if_error: true
           flags: python
           token: ${{ secrets.token }}
-          verbose: true

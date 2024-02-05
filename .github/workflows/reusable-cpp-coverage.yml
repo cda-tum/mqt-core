@@ -60,4 +60,3 @@ jobs:
           fail_ci_if_error: true
           flags: cpp
           token: ${{ secrets.token }}
-          verbose: true
