@@ -12,10 +12,10 @@ namespace na {
  */
 class Point {
 public:
-  std::uint32_t x;
+  std::int32_t x;
 
-  std::uint32_t y;
-  Point(std::uint32_t x, std::uint32_t y) : x(x), y(y){};
+  std::int32_t y;
+  Point(std::int32_t x, std::int32_t y) : x(x), y(y){};
   inline Point operator-(const Point&& p) {
     x -= p.x;
     y -= p.y;
