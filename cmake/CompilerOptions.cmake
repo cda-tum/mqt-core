@@ -61,4 +61,11 @@ function(enable_project_options target_name)
     check_pie_supported()
     set_target_properties(${target_name} PROPERTIES INTERFACE_POSITION_INDEPENDENT_CODE ON)
   endif()
+
+  # add a compile definition for _LIBCPP_REMOVE_TRANSITIVE_INCLUDES to remove transitive includes
+  # from libc++ headers. This is useful to avoid including system headers that are not needed and
+  # that may conflict with other headers. This is only supported by libc++.
+  if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+    target_compile_definitions(${target_name} INTERFACE _LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+  endif()
 endfunction()
