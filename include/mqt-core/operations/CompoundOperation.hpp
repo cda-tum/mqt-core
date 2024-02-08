@@ -9,9 +9,9 @@ private:
   std::vector<std::unique_ptr<Operation>> ops{};
 
 public:
-  explicit CompoundOperation(const std::size_t nq);
+  explicit CompoundOperation(std::size_t nq);
 
-  CompoundOperation(const std::size_t nq,
+  CompoundOperation(std::size_t nq,
                     std::vector<std::unique_ptr<Operation>>&& operations);
 
   CompoundOperation(const CompoundOperation& co);
@@ -20,7 +20,7 @@ public:
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override;
 
-  void setNqubits(const std::size_t nq) override;
+  void setNqubits(std::size_t nq) override;
 
   [[nodiscard]] bool isCompoundOperation() const override;
 
@@ -28,22 +28,22 @@ public:
 
   [[nodiscard]] inline bool isSymbolicOperation() const override;
 
-  void addControl(const Control c) override;
+  void addControl(Control c) override;
 
   void clearControls() override;
 
-  void removeControl(const Control c) override;
+  void removeControl(Control c) override;
 
-  Controls::iterator removeControl(const Controls::iterator it) override;
+  Controls::iterator removeControl(Controls::iterator it) override;
 
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override;
   [[nodiscard]] bool equals(const Operation& operation) const override;
 
   std::ostream& print(std::ostream& os, const Permutation& permutation,
-                      const std::size_t prefixWidth) const override;
+                      std::size_t prefixWidth) const override;
 
-  [[nodiscard]] bool actsOn(const Qubit i) const override;
+  [[nodiscard]] bool actsOn(Qubit i) const override;
 
   void addDepthContribution(std::vector<std::size_t>& depths) const override;
 
