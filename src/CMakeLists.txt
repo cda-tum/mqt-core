@@ -158,6 +158,10 @@ if(BINDINGS AND NOT TARGET mqt-core-python)
   target_link_libraries(${MQT_CORE_TARGET_NAME}-python PRIVATE MQT::ProjectOptions
                                                                MQT::ProjectWarnings)
 
+  # enable hidden visibility for target
+  set_target_properties(${MQT_CORE_TARGET_NAME}-python PROPERTIES CXX_VISIBILITY_PRESET hidden)
+  set_target_properties(${MQT_CORE_TARGET_NAME}-python PROPERTIES VISIBILITY_INLINES_HIDDEN ON)
+
   # add MQT alias
   add_library(MQT::CorePython ALIAS ${MQT_CORE_TARGET_NAME}-python)
   set_target_properties(
