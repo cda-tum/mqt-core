@@ -226,7 +226,7 @@ ConstEvalValue ConstEvalPass::evalFloatExpression(BinaryExpression::Op op,
 
   switch (op) {
   case BinaryExpression::Power:
-    result.value = pow(lhs, rhs);
+    result.value = std::pow(lhs, rhs);
     break;
   case BinaryExpression::Add:
     result.value = lhs + rhs;
@@ -411,42 +411,42 @@ std::optional<ConstEvalValue> ConstEvalPass::visitUnaryExpression(
     return std::nullopt;
   case UnaryExpression::Sin:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = sin(std::get<1>(val->value));
+      val->value = std::sin(std::get<1>(val->value));
     } else {
       return std::nullopt;
     }
     break;
   case UnaryExpression::Cos:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = cos(std::get<1>(val->value));
+      val->value = std::cos(std::get<1>(val->value));
     } else {
       return std::nullopt;
     }
     break;
   case UnaryExpression::Tan:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = tan(std::get<1>(val->value));
+      val->value = std::tan(std::get<1>(val->value));
     } else {
       return std::nullopt;
     }
     break;
   case UnaryExpression::Exp:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = exp(std::get<1>(val->value));
+      val->value = std::exp(std::get<1>(val->value));
     } else {
       return std::nullopt;
     }
     break;
   case UnaryExpression::Ln:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = log(std::get<1>(val->value));
+      val->value = std::log(std::get<1>(val->value));
     } else {
       return std::nullopt;
     }
     break;
   case UnaryExpression::Sqrt:
     if (val->type == ConstEvalValue::Type::ConstFloat) {
-      val->value = sqrt(std::get<1>(val->value));
+      val->value = std::sqrt(std::get<1>(val->value));
     } else {
       return std::nullopt;
     }
