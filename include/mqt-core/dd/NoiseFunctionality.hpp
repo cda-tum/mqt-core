@@ -4,7 +4,6 @@
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
-#include "mqt_core_export.h"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
@@ -93,7 +92,7 @@ protected:
                                                 bool multiQubitNoiseFlag) const;
 };
 
-class MQT_CORE_EXPORT DeterministicNoiseFunctionality {
+class DeterministicNoiseFunctionality {
 public:
   DeterministicNoiseFunctionality(
       const std::unique_ptr<Package<DensityMatrixSimulatorDDPackageConfig>>& dd,

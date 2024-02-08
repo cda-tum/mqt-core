@@ -63,10 +63,3 @@ if(DEPLOY)
       "10.15"
       CACHE STRING "" FORCE)
 endif()
-
-# build shared libraries by default
-option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
-
-# set default visibility for symbols to hidden (only expose explicitly)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)

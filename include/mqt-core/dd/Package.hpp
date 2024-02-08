@@ -19,7 +19,6 @@
 #include "dd/StochasticNoiseOperationTable.hpp"
 #include "dd/UnaryComputeTable.hpp"
 #include "dd/UniqueTable.hpp"
-#include "mqt_core_export.h"
 #include "operations/Control.hpp"
 
 #include <algorithm>
@@ -51,7 +50,7 @@
 
 namespace dd {
 
-template <class Config> class MQT_CORE_EXPORT Package {
+template <class Config> class Package {
   static_assert(std::is_base_of_v<DDPackageConfig, Config>,
                 "Config must be derived from DDPackageConfig");
 
@@ -2049,6 +2048,7 @@ private:
                                         checkCloseToOne) &&
              isCloseToIdentityRecursive(m.p->e[3U], visited, tol, garbage,
                                         checkCloseToOne);
+      ;
     }
 
     // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0

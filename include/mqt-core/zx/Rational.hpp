@@ -10,12 +10,12 @@ using Rational = boost::multiprecision::cpp_rational;
 using BigInt = boost::multiprecision::cpp_int;
 #endif
 
-#include "mqt_core_export.h"
-
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <type_traits>
+#include <utility>
 
 namespace zx {
 
@@ -24,7 +24,7 @@ namespace zx {
  * Rationals can only have values in the half-open interval (-1,1],
  * corresponding to the interval (-pi, pi]
  */
-class MQT_CORE_EXPORT PiRational {
+class PiRational {
 public:
   PiRational() = default;
   explicit PiRational(int64_t num, int64_t denom) : frac(num, denom) {

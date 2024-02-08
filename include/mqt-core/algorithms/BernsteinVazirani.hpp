@@ -1,15 +1,10 @@
 #pragma once
 
-#include "Definitions.hpp"
-#include "QuantumComputation.hpp"
-#include "mqt_core_export.h"
-
-#include <cstddef>
-#include <ostream>
-#include <string>
+#include <QuantumComputation.hpp>
+#include <bitset>
 
 namespace qc {
-class MQT_CORE_EXPORT BernsteinVazirani : public QuantumComputation {
+class BernsteinVazirani : public QuantumComputation {
 public:
   BitString s = 0;
   std::size_t bitwidth = 1;

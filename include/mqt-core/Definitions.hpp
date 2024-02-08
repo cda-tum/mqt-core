@@ -1,7 +1,5 @@
 #pragma once
 
-#include "mqt_core_export.h"
-
 #include <bitset>
 #include <cstddef>
 #include <cstdint>
@@ -15,7 +13,7 @@
 #include <vector>
 
 namespace qc {
-class MQT_CORE_EXPORT QFRException : public std::invalid_argument {
+class QFRException : public std::invalid_argument {
   std::string msg;
 
 public:

@@ -3,7 +3,6 @@
 #include "dd/Complex.hpp"
 #include "dd/ComplexValue.hpp"
 #include "dd/DDDefinitions.hpp"
-#include "mqt_core_export.h"
 
 #include <array>
 #include <complex>
@@ -41,7 +40,7 @@ using isMatrixVariant =
  * table, they are represented via cached numbers.
  * @tparam Node Type of the DD node
  */
-template <typename Node> struct MQT_CORE_EXPORT CachedEdge {
+template <typename Node> struct CachedEdge {
   Node* p{};
   ComplexValue w{};
 

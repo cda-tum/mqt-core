@@ -2,15 +2,8 @@
 
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
-#include "mqt_core_export.h"
-#include "operations/Operation.hpp"
-
-#include <cstddef>
-#include <memory>
-#include <utility>
-
 namespace ecc {
-class MQT_CORE_EXPORT Id : public Ecc {
+class Id : public Ecc {
 public:
   Id(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq)
       : Ecc({ID::Id, 1, 0, "Id", {}}, std::move(qc), measureFq) {}

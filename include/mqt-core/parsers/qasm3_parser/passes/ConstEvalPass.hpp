@@ -2,23 +2,12 @@
 
 #include "CompilerPass.hpp"
 #include "Definitions.hpp"
-#include "mqt_core_export.h"
 #include "parsers/qasm3_parser/Exception.hpp"
-#include "parsers/qasm3_parser/InstVisitor.hpp"
 #include "parsers/qasm3_parser/NestedEnvironment.hpp"
-#include "parsers/qasm3_parser/Statement.hpp"
-
-#include <cstddef>
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <variant>
 
 namespace qasm3::const_eval {
 struct ConstEvalValue {
-  enum Type : uint8_t {
+  enum Type {
     ConstInt,
     ConstUint,
     ConstFloat,
@@ -90,11 +79,10 @@ struct ConstEvalValue {
   }
 };
 
-class MQT_CORE_EXPORT ConstEvalPass
-    : public CompilerPass,
-      public DefaultInstVisitor,
-      public ExpressionVisitor<std::optional<ConstEvalValue>>,
-      public TypeVisitor<std::shared_ptr<Expression>> {
+class ConstEvalPass : public CompilerPass,
+                      public DefaultInstVisitor,
+                      public ExpressionVisitor<std::optional<ConstEvalValue>>,
+                      public TypeVisitor<std::shared_ptr<Expression>> {
   NestedEnvironment<ConstEvalValue> env{};
 
   template <typename T> static int64_t castToWidth(int64_t value) {

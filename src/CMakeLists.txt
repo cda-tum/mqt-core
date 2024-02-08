@@ -58,6 +58,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_TARGET_NAME}
     ${MQT_CORE_INCLUDE_BUILD_DIR}/algorithms/BernsteinVazirani.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/algorithms/Entanglement.hpp
+    ${MQT_CORE_INCLUDE_BUILD_DIR}/algorithms/GoogleRandomCircuitSampling.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/algorithms/Grover.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/algorithms/QFT.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/algorithms/QPE.hpp
@@ -90,6 +91,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/QuantumComputation.hpp
     algorithms/BernsteinVazirani.cpp
     algorithms/Entanglement.cpp
+    algorithms/GoogleRandomCircuitSampling.cpp
     algorithms/Grover.cpp
     algorithms/QFT.cpp
     algorithms/QPE.cpp
@@ -119,7 +121,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
   # set include directories
   target_include_directories(
     ${MQT_CORE_TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${MQT_CORE_INCLUDE_BUILD_DIR}>
-                                   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+                                   $<INSTALL_INTERFACE:${MQT_CORE_INCLUDE_INSTALL_DIR}>)
 
   # add options and warnings to the library
   target_link_libraries(${MQT_CORE_TARGET_NAME} PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
@@ -132,12 +134,6 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
                SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
                EXPORT_NAME Core)
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME})
-
-  include(GenerateExportHeader)
-  generate_export_header(${MQT_CORE_TARGET_NAME} BASE_NAME mqt_core)
-  if(NOT BUILD_SHARED_LIBS)
-    target_compile_definitions(${MQT_CORE_TARGET_NAME} PUBLIC MQT_CORE_STATIC_DEFINE)
-  endif()
 endif()
 
 # add DD package library
@@ -204,8 +200,6 @@ if(MQT_CORE_INSTALL)
     DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
 
   install(DIRECTORY ${MQT_CORE_INCLUDE_BUILD_DIR}/ DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mqt_core_export.h
-          DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
 
   install(
     EXPORT ${MQT_CORE_TARGETS_EXPORT_NAME}

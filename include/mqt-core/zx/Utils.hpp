@@ -1,6 +1,5 @@
 #pragma once
 
-#include "mqt_core_export.h"
 #include "operations/Expression.hpp"
 #include "zx/ZXDefinitions.hpp"
 
@@ -12,7 +11,7 @@
 
 namespace zx {
 
-struct MQT_CORE_EXPORT Edge {
+struct Edge {
   Vertex to;
   EdgeType type;
 
@@ -27,14 +26,14 @@ struct MQT_CORE_EXPORT Edge {
   }
 };
 
-struct MQT_CORE_EXPORT VertexData {
+struct VertexData {
   Col col;
   Qubit qubit;
   PiExpression phase;
   VertexType type;
 };
 
-class MQT_CORE_EXPORT Vertices {
+class Vertices {
 public:
   explicit Vertices(const std::vector<std::optional<VertexData>>& verts)
       : vertices(verts) {};
@@ -88,7 +87,7 @@ private:
   const std::vector<std::optional<VertexData>>& vertices;
 };
 
-class MQT_CORE_EXPORT Edges {
+class Edges {
 public:
   Edges(const std::vector<std::vector<Edge>>& edgs,
         const std::vector<std::optional<VertexData>>& verts)
@@ -144,9 +143,9 @@ private:
   const std::vector<std::optional<VertexData>>& vertices;
 };
 
-MQT_CORE_EXPORT bool isPauli(const PiExpression& expr);
-MQT_CORE_EXPORT bool isClifford(const PiExpression& expr);
-MQT_CORE_EXPORT bool isProperClifford(const PiExpression& expr);
+bool isPauli(const PiExpression& expr);
+bool isClifford(const PiExpression& expr);
+bool isProperClifford(const PiExpression& expr);
 
-MQT_CORE_EXPORT void roundToClifford(PiExpression& expr, fp tolerance);
+void roundToClifford(PiExpression& expr, fp tolerance);
 } // namespace zx

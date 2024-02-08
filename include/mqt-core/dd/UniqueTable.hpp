@@ -5,7 +5,6 @@
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
 #include "dd/statistics/UniqueTableStatistics.hpp"
-#include "mqt_core_export.h"
 #include "nlohmann/json.hpp"
 
 #include <algorithm>
@@ -24,8 +23,7 @@ namespace dd {
  * @tparam Node class of nodes to provide/store
  * @tparam NBUCKET number of hash buckets to use (has to be a power of two)
  */
-template <class Node, std::size_t NBUCKET = 32768>
-class MQT_CORE_EXPORT UniqueTable {
+template <class Node, std::size_t NBUCKET = 32768> class UniqueTable {
 
   static_assert(
       std::disjunction_v<std::is_same<Node, vNode>, std::is_same<Node, mNode>,

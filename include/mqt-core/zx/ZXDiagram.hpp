@@ -1,17 +1,17 @@
 #pragma once
 
-#include "mqt_core_export.h"
+#include "operations/Expression.hpp"
 #include "zx/Utils.hpp"
 #include "zx/ZXDefinitions.hpp"
 
-#include <cassert>
 #include <cstddef>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace zx {
-class MQT_CORE_EXPORT ZXDiagram {
+class ZXDiagram {
 public:
   ZXDiagram() = default;
   // create n_qubit identity_diagram

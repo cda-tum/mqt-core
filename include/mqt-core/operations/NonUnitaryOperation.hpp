@@ -1,22 +1,10 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "Operation.hpp"
-#include "Permutation.hpp"
-#include "mqt_core_export.h"
-#include "operations/Control.hpp"
-#include "operations/OpType.hpp"
-
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <ostream>
-#include <set>
-#include <vector>
 
 namespace qc {
 
-class MQT_CORE_EXPORT NonUnitaryOperation final : public Operation {
+class NonUnitaryOperation final : public Operation {
 protected:
   std::vector<Bit> classics{}; // vector for the classical bits to measure into
 

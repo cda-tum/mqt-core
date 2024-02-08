@@ -1,6 +1,5 @@
 #pragma once
 
-#include "mqt_core_export.h"
 #include "operations/Expression.hpp"
 #include "zx/Rational.hpp"
 
@@ -52,7 +51,7 @@ static constexpr auto PI = static_cast<fp>(
 
 using PiExpression = sym::Expression<double, PiRational>;
 
-class MQT_CORE_EXPORT ZXException : public std::invalid_argument {
+class ZXException : public std::invalid_argument {
   std::string msg;
 
 public:

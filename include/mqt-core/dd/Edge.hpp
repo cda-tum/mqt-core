@@ -2,7 +2,6 @@
 
 #include "dd/Complex.hpp"
 #include "dd/DDDefinitions.hpp"
-#include "mqt_core_export.h"
 
 #include <array>
 #include <complex>

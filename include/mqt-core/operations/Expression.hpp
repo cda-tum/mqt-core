@@ -1,15 +1,12 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "mqt_core_export.h"
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
-#include <functional>
+#include <cstdint>
 #include <numeric>
 #include <ostream>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -33,7 +30,7 @@ public:
   }
 };
 
-struct MQT_CORE_EXPORT Variable {
+struct Variable {
   // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
   static inline std::unordered_map<std::string, std::size_t> registered{};
   static inline std::unordered_map<std::size_t, std::string> names{};
@@ -71,7 +68,7 @@ using VariableAssignment = std::unordered_map<Variable, double>;
 template <typename T,
           typename = std::enable_if_t<std::is_constructible_v<int, T> &&
                                       std::is_constructible_v<T, double>>>
-class MQT_CORE_EXPORT Term {
+class Term {
 public:
   [[nodiscard]] Variable getVar() const { return var; }
   [[nodiscard]] T getCoeff() const { return coeff; }
@@ -165,7 +162,7 @@ template <
         std::is_constructible_v<T, U> && std::is_constructible_v<U, T> &&
         std::is_constructible_v<int, T> && std::is_constructible_v<T, double> &&
         std::is_constructible_v<U, double>>>
-class MQT_CORE_EXPORT Expression {
+class Expression {
 public:
   using iterator = typename std::vector<Term<T>>::iterator;
   using const_iterator = typename std::vector<Term<T>>::const_iterator;

@@ -1,23 +1,12 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "Operation.hpp"
-#include "Permutation.hpp"
-#include "mqt_core_export.h"
-#include "operations/Control.hpp"
-#include "operations/OpType.hpp"
 
-#include <cstddef>
-#include <cstdint>
-#include <functional>
-#include <memory>
-#include <ostream>
-#include <string>
 #include <utility>
 
 namespace qc {
 
-enum ComparisonKind : uint8_t {
+enum ComparisonKind : std::uint8_t {
   Eq,
   Neq,
   Lt,
@@ -26,14 +15,13 @@ enum ComparisonKind : uint8_t {
   Geq,
 };
 
-MQT_CORE_EXPORT ComparisonKind getInvertedComparsionKind(ComparisonKind kind);
+ComparisonKind getInvertedComparsionKind(ComparisonKind kind);
 
-MQT_CORE_EXPORT std::string toString(const ComparisonKind& kind);
+std::string toString(const ComparisonKind& kind);
 
-MQT_CORE_EXPORT std::ostream& operator<<(std::ostream& os,
-                                         const ComparisonKind& kind);
+std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind);
 
-class MQT_CORE_EXPORT ClassicControlledOperation final : public Operation {
+class ClassicControlledOperation final : public Operation {
 private:
   std::unique_ptr<Operation> op;
   ClassicalRegister controlRegister{};

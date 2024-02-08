@@ -1,13 +1,11 @@
 #pragma once
 
-#include "mqt_core_export.h"
-
 #include "operations/OpType.hpp"
 
 #include <cstddef>
 
 namespace dd {
-struct MQT_CORE_EXPORT DDPackageConfig {
+struct DDPackageConfig {
   // Note the order of parameters here must be the *same* as in the template
   // definition.
   static constexpr std::size_t UT_VEC_NBUCKET = 32768U;

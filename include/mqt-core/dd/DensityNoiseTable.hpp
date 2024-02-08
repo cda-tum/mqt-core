@@ -2,7 +2,6 @@
 
 #include "dd/DDDefinitions.hpp"
 #include "dd/statistics/TableStatistics.hpp"
-#include "mqt_core_export.h"
 
 #include <array>
 #include <bitset>
@@ -17,8 +16,7 @@ namespace dd {
 /// \tparam ResultType type of the operation's result
 /// \tparam NBUCKET number of hash buckets to use (has to be a power of two)
 template <class OperandType, class ResultType, std::size_t NBUCKET = 32768>
-class MQT_CORE_EXPORT
-    DensityNoiseTable { // todo: Inherit from UnaryComputerTable
+class DensityNoiseTable { // todo: Inherit from UnaryComputerTable
 public:
   DensityNoiseTable() {
     stats.entrySize = sizeof(Entry);

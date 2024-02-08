@@ -1,25 +1,20 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "Permutation.hpp"
 #include "QuantumComputation.hpp"
-#include "mqt_core_export.h"
-#include "operations/Control.hpp"
-#include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
 #include <array>
 #include <cstddef>
 #include <memory>
 #include <unordered_set>
-#include <vector>
 
 namespace qc {
 static constexpr std::array<qc::OpType, 10> DIAGONAL_GATES = {
     qc::Barrier, qc::I,   qc::Z, qc::S,  qc::Sdg,
     qc::T,       qc::Tdg, qc::P, qc::RZ, qc::RZZ};
 
-class MQT_CORE_EXPORT CircuitOptimizer {
+class CircuitOptimizer {
 protected:
   static void addToDag(DAG& dag, std::unique_ptr<Operation>* op);
   static void addNonStandardOperationToDag(DAG& dag,

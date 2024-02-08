@@ -1,7 +1,6 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
-#include "mqt_core_export.h"
 
 #include <cmath>
 #include <complex>
@@ -12,7 +11,7 @@
 
 namespace dd {
 /// A complex number represented by two floating point values.
-struct MQT_CORE_EXPORT ComplexValue {
+struct ComplexValue {
   /// real part
   fp r{};
   /// imaginary part
@@ -138,15 +137,12 @@ struct MQT_CORE_EXPORT ComplexValue {
   ComplexValue& operator*=(const fp& real) noexcept;
 };
 
-MQT_CORE_EXPORT ComplexValue operator+(const ComplexValue& c1,
-                                       const ComplexValue& c2);
-MQT_CORE_EXPORT ComplexValue operator*(const ComplexValue& c1, fp r);
-MQT_CORE_EXPORT ComplexValue operator*(fp r, const ComplexValue& c1);
-MQT_CORE_EXPORT ComplexValue operator*(const ComplexValue& c1,
-                                       const ComplexValue& c2);
-MQT_CORE_EXPORT ComplexValue operator/(const ComplexValue& c1, fp r);
-MQT_CORE_EXPORT ComplexValue operator/(const ComplexValue& c1,
-                                       const ComplexValue& c2);
+ComplexValue operator+(const ComplexValue& c1, const ComplexValue& c2);
+ComplexValue operator*(const ComplexValue& c1, fp r);
+ComplexValue operator*(fp r, const ComplexValue& c1);
+ComplexValue operator*(const ComplexValue& c1, const ComplexValue& c2);
+ComplexValue operator/(const ComplexValue& c1, fp r);
+ComplexValue operator/(const ComplexValue& c1, const ComplexValue& c2);
 
 /**
  * @brief Print a complex value to the given output stream.
@@ -154,13 +150,12 @@ MQT_CORE_EXPORT ComplexValue operator/(const ComplexValue& c1,
  * @param c The complex value to print.
  * @returns The output stream.
  */
-MQT_CORE_EXPORT std::ostream& operator<<(std::ostream& os,
-                                         const ComplexValue& c);
+std::ostream& operator<<(std::ostream& os, const ComplexValue& c);
 } // namespace dd
 
 namespace std {
 /// Hash function for complex values
-template <> struct MQT_CORE_EXPORT hash<dd::ComplexValue> {
+template <> struct hash<dd::ComplexValue> {
   /**
    * @brief Compute the hash value for the given complex value.
    * @details The hash value is computed by scaling the real and imaginary part

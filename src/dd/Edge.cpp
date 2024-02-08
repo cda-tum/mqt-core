@@ -577,9 +577,9 @@ void Edge<Node>::traverseDiagonal(const fp& prob, const std::size_t i,
 ///                      \n Explicit instantiations \n
 ///-----------------------------------------------------------------------------
 
-template struct MQT_CORE_EXPORT Edge<vNode>;
-template struct MQT_CORE_EXPORT Edge<mNode>;
-template struct MQT_CORE_EXPORT Edge<dNode>;
+template struct Edge<vNode>;
+template struct Edge<mNode>;
+template struct Edge<dNode>;
 
 template Edge<vNode> Edge<vNode>::normalize<vNode, true>(
     vNode* p, const std::array<Edge<vNode>, RADIX>& e, MemoryManager<vNode>& mm,
@@ -666,7 +666,7 @@ hash<dd::Edge<Node>>::operator()(const dd::Edge<Node>& e) const noexcept {
   return h3;
 }
 
-template struct MQT_CORE_EXPORT hash<dd::Edge<dd::vNode>>;
-template struct MQT_CORE_EXPORT hash<dd::Edge<dd::mNode>>;
-template struct MQT_CORE_EXPORT hash<dd::Edge<dd::dNode>>;
+template struct hash<dd::Edge<dd::vNode>>;
+template struct hash<dd::Edge<dd::mNode>>;
+template struct hash<dd::Edge<dd::dNode>>;
 } // namespace std

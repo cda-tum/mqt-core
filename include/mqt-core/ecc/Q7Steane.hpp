@@ -1,20 +1,9 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
-#include "mqt_core_export.h"
-#include "operations/Control.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
-
-#include <array>
-#include <cstddef>
-#include <memory>
-#include <utility>
-
 namespace ecc {
-class MQT_CORE_EXPORT Q7Steane : public Ecc {
+class Q7Steane : public Ecc {
 public:
   Q7Steane(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq)
       : Ecc({ID::Q7Steane,

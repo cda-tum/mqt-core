@@ -1,16 +1,14 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "mqt_core_export.h"
 
 #include <cstddef>
 #include <functional>
 #include <set>
 #include <sstream>
-#include <string>
 
 namespace qc {
-struct MQT_CORE_EXPORT Control {
+struct Control {
   enum class Type : bool { Pos = true, Neg = false };
 
   Qubit qubit{};
@@ -33,21 +31,21 @@ struct MQT_CORE_EXPORT Control {
   Control(const Qubit q = {}, const Type t = Type::Pos) : qubit(q), type(t) {}
 };
 
-MQT_CORE_EXPORT inline bool operator<(const Control& lhs, const Control& rhs) {
+inline bool operator<(const Control& lhs, const Control& rhs) {
   return lhs.qubit < rhs.qubit ||
          (lhs.qubit == rhs.qubit && lhs.type < rhs.type);
 }
 
-MQT_CORE_EXPORT inline bool operator==(const Control& lhs, const Control& rhs) {
+inline bool operator==(const Control& lhs, const Control& rhs) {
   return lhs.qubit == rhs.qubit && lhs.type == rhs.type;
 }
 
-MQT_CORE_EXPORT inline bool operator!=(const Control& lhs, const Control& rhs) {
+inline bool operator!=(const Control& lhs, const Control& rhs) {
   return !(lhs == rhs);
 }
 
 // this allows a set of controls to be indexed by a `Qubit`
-struct MQT_CORE_EXPORT CompareControl {
+struct CompareControl {
   using is_transparent [[maybe_unused]] = void;
 
   bool operator()(const Control& lhs, const Control& rhs) const {

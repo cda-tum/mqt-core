@@ -1,7 +1,6 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
-#include "mqt_core_export.h"
 
 #include <istream>
 #include <limits>
@@ -16,7 +15,7 @@ namespace dd {
  * be taken when accessing the value. The static functions in this struct
  * provide safe access to the value of a RealNumber* pointer.
  */
-struct MQT_CORE_EXPORT RealNumber {
+struct RealNumber {
 
   /**
    * @brief Check whether the number points to the zero number.
@@ -231,11 +230,11 @@ struct MQT_CORE_EXPORT RealNumber {
 namespace constants {
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 /// The constant zero.
-MQT_CORE_EXPORT extern RealNumber zero;
+extern RealNumber zero;
 /// The constant one.
-MQT_CORE_EXPORT extern RealNumber one;
+extern RealNumber one;
 /// The constant sqrt(2)/2 = 1/sqrt(2).
-MQT_CORE_EXPORT extern RealNumber sqrt2over2;
+extern RealNumber sqrt2over2;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 /**
