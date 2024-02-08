@@ -2,8 +2,6 @@
 
 #include "Operation.hpp"
 
-#include <algorithm>
-
 namespace qc {
 
 class CompoundOperation final : public Operation {
@@ -11,151 +9,53 @@ private:
   std::vector<std::unique_ptr<Operation>> ops{};
 
 public:
-  explicit CompoundOperation(const std::size_t nq) {
-    name = "Compound operation:";
-    nqubits = nq;
-    type = Compound;
-  }
+  explicit CompoundOperation(const std::size_t nq);
 
-  explicit CompoundOperation(
-      const std::size_t nq,
-      std::vector<std::unique_ptr<Operation>>&& operations)
-      : CompoundOperation(nq) {
-    // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
-    ops = std::move(operations);
-  }
+  CompoundOperation(const std::size_t nq,
+                    std::vector<std::unique_ptr<Operation>>&& operations);
 
-  CompoundOperation(const CompoundOperation& co)
-      : Operation(co), ops(co.ops.size()) {
-    for (std::size_t i = 0; i < co.ops.size(); ++i) {
-      ops[i] = co.ops[i]->clone();
-    }
-  }
+  CompoundOperation(const CompoundOperation& co);
 
-  CompoundOperation& operator=(const CompoundOperation& co) {
-    if (this != &co) {
-      Operation::operator=(co);
-      ops.resize(co.ops.size());
-      for (std::size_t i = 0; i < co.ops.size(); ++i) {
-        ops[i] = co.ops[i]->clone();
-      }
-    }
-    return *this;
-  }
+  CompoundOperation& operator=(const CompoundOperation& co);
 
-  [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    return std::make_unique<CompoundOperation>(*this);
-  }
+  [[nodiscard]] std::unique_ptr<Operation> clone() const override;
 
-  void setNqubits(const std::size_t nq) override {
-    nqubits = nq;
-    for (auto& op : ops) {
-      op->setNqubits(nq);
-    }
-  }
+  void setNqubits(const std::size_t nq) override;
 
-  [[nodiscard]] bool isCompoundOperation() const override { return true; }
+  [[nodiscard]] bool isCompoundOperation() const override;
 
-  [[nodiscard]] bool isNonUnitaryOperation() const override {
-    return std::any_of(ops.cbegin(), ops.cend(), [](const auto& op) {
-      return op->isNonUnitaryOperation();
-    });
-  }
+  [[nodiscard]] bool isNonUnitaryOperation() const override;
 
-  [[nodiscard]] inline bool isSymbolicOperation() const override {
-    return std::any_of(ops.begin(), ops.end(), [](const auto& op) {
-      return op->isSymbolicOperation();
-    });
-  }
+  [[nodiscard]] inline bool isSymbolicOperation() const override;
 
-  void addControl(const Control c) override {
-    controls.insert(c);
-    // we can just add the controls to each operation, as the operations will
-    // check if they already act on the control qubits.
-    for (auto& op : ops) {
-      op->addControl(c);
-    }
-  }
+  void addControl(const Control c) override;
 
-  void clearControls() override {
-    // we remove just our controls from nested operations
-    removeControls(controls);
-  }
+  void clearControls() override;
 
-  void removeControl(const Control c) override {
-    // first we iterate over our controls and check if we are actually allowed
-    // to remove them
-    if (controls.erase(c) == 0) {
-      throw QFRException("Cannot remove control from compound operation as it "
-                         "is not a control.");
-    }
+  void removeControl(const Control c) override;
 
-    for (auto& op : ops) {
-      op->removeControl(c);
-    }
-  }
-
-  Controls::iterator removeControl(const Controls::iterator it) override {
-    for (auto& op : ops) {
-      op->removeControl(*it);
-    }
-
-    return controls.erase(it);
-  }
+  Controls::iterator removeControl(const Controls::iterator it) override;
 
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
-                            const Permutation& perm2) const override {
-    if (const auto* comp = dynamic_cast<const CompoundOperation*>(&op)) {
-      if (comp->ops.size() != ops.size()) {
-        return false;
-      }
-
-      auto it = comp->ops.cbegin();
-      for (const auto& operation : ops) {
-        if (!operation->equals(**it, perm1, perm2)) {
-          return false;
-        }
-        ++it;
-      }
-      return true;
-    }
-    return false;
-  }
-  [[nodiscard]] bool equals(const Operation& operation) const override {
-    return equals(operation, {}, {});
-  }
+                            const Permutation& perm2) const override;
+  [[nodiscard]] bool equals(const Operation& operation) const override;
 
   std::ostream& print(std::ostream& os, const Permutation& permutation,
-                      const std::size_t prefixWidth) const override {
-    const auto prefix = std::string(prefixWidth - 1, ' ');
-    os << std::string(4 * nqubits, '-') << "\n";
-    for (const auto& op : ops) {
-      os << prefix << ":";
-      op->print(os, permutation, prefixWidth);
-      os << "\n";
-    }
-    os << prefix << std::string(4 * nqubits + 1, '-');
-    return os;
-  }
+                      const std::size_t prefixWidth) const override;
 
-  [[nodiscard]] bool actsOn(const Qubit i) const override {
-    return std::any_of(ops.cbegin(), ops.cend(),
-                       [&i](const auto& op) { return op->actsOn(i); });
-  }
+  [[nodiscard]] bool actsOn(const Qubit i) const override;
 
-  void addDepthContribution(std::vector<std::size_t>& depths) const override {
-    for (const auto& op : ops) {
-      op->addDepthContribution(depths);
-    }
-  }
+  void addDepthContribution(std::vector<std::size_t>& depths) const override;
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg, size_t indent,
-                    bool openQASM3) const override {
-    for (const auto& op : ops) {
-      op->dumpOpenQASM(of, qreg, creg, indent, openQASM3);
-    }
-  }
+                    bool openQASM3) const override;
+
+  std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
+
+  [[nodiscard]] std::set<Qubit> getUsedQubits() const override;
+
+  void invert() override;
 
   /**
    * Pass-Through
@@ -230,34 +130,11 @@ public:
   }
 
   [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
-
-  std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
-
-  [[nodiscard]] std::set<Qubit> getUsedQubits() const override {
-    std::set<Qubit> usedQubits{};
-    for (const auto& op : ops) {
-      usedQubits.merge(op->getUsedQubits());
-    }
-    return usedQubits;
-  }
-
-  void invert() override {
-    for (auto& op : ops) {
-      op->invert();
-    }
-    std::reverse(ops.begin(), ops.end());
-  }
 };
 } // namespace qc
 
 namespace std {
 template <> struct hash<qc::CompoundOperation> {
-  std::size_t operator()(const qc::CompoundOperation& co) const noexcept {
-    std::size_t seed = 0U;
-    for (const auto& op : co) {
-      qc::hashCombine(seed, std::hash<qc::Operation>{}(*op));
-    }
-    return seed;
-  }
+  std::size_t operator()(const qc::CompoundOperation& co) const noexcept;
 };
 } // namespace std
