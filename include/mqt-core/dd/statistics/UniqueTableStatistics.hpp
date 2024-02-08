@@ -1,11 +1,10 @@
 #pragma once
 
 #include "dd/statistics/TableStatistics.hpp"
-#include "mqt_core_export.h"
 
 namespace dd {
 /// \brief A class for storing statistics of a unique table
-struct MQT_CORE_EXPORT UniqueTableStatistics : public TableStatistics {
+struct UniqueTableStatistics : public TableStatistics {
   /**
    * @brief The total number of active entries
    * @details An entry is considered active if it has a non-zero reference count

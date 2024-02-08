@@ -1,14 +1,9 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
-#include "mqt_core_export.h"
-
-#include <cstddef>
-#include <ostream>
 
 namespace qc {
-class MQT_CORE_EXPORT QPE : public QuantumComputation {
+class QPE : public QuantumComputation {
 public:
   fp lambda = 0.;
   std::size_t precision;

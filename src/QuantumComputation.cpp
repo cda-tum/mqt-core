@@ -1,8 +1,6 @@
 #include "QuantumComputation.hpp"
 
 #include <cassert>
-#include <fstream>
-#include <iomanip>
 #include <memory>
 
 namespace qc {

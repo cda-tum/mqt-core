@@ -1,7 +1,6 @@
 #include "operations/Operation.hpp"
 
 #include <algorithm>
-#include <iomanip>
 
 namespace qc {
 

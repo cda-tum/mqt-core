@@ -4,7 +4,6 @@
 #include "Expression.hpp"
 #include "Permutation.hpp"
 #include "StandardOperation.hpp"
-#include "mqt_core_export.h"
 #include "operations/Control.hpp"
 #include "operations/OpType.hpp"
 
@@ -25,7 +24,7 @@ template <typename... Ts> struct Overload : Ts... {
 };
 template <class... Ts> Overload(Ts...) -> Overload<Ts...>;
 
-class MQT_CORE_EXPORT SymbolicOperation final : public StandardOperation {
+class SymbolicOperation final : public StandardOperation {
 protected:
   std::vector<std::optional<Symbolic>> symbolicParameter{};
 

@@ -4,7 +4,6 @@
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
-#include "mqt_core_export.h"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
@@ -32,7 +31,7 @@ enum NoiseOperations : std::uint8_t {
   Identity
 };
 
-template <class Config> class MQT_CORE_EXPORT StochasticNoiseFunctionality {
+template <class Config> class StochasticNoiseFunctionality {
 public:
   StochasticNoiseFunctionality(const std::unique_ptr<Package<Config>>& dd,
                                const std::size_t nq,
@@ -247,7 +246,7 @@ protected:
   }
 };
 
-template <class Config> class MQT_CORE_EXPORT DeterministicNoiseFunctionality {
+template <class Config> class DeterministicNoiseFunctionality {
 public:
   DeterministicNoiseFunctionality(const std::unique_ptr<Package<Config>>& dd,
                                   const std::size_t nq,

@@ -2,7 +2,6 @@
 
 #include "dd/DDDefinitions.hpp"
 #include "dd/RealNumber.hpp"
-#include "mqt_core_export.h"
 
 #include <complex>
 #include <cstddef>
@@ -16,7 +15,7 @@ struct RealNumber;
 struct ComplexValue;
 
 /// A complex number represented by two pointers to compute table entries.
-struct MQT_CORE_EXPORT Complex {
+struct Complex {
   /// Compute table entry for the real part.
   RealNumber* r;
   /// Compute table entry for the imaginary part.
@@ -114,29 +113,18 @@ struct MQT_CORE_EXPORT Complex {
  * @param c The complex number to print.
  * @returns The output stream.
  */
-MQT_CORE_EXPORT std::ostream& operator<<(std::ostream& os, const Complex& c);
+std::ostream& operator<<(std::ostream& os, const Complex& c);
 
-MQT_CORE_EXPORT ComplexValue operator*(const Complex& c1,
-                                       const ComplexValue& c2);
+ComplexValue operator*(const Complex& c1, const ComplexValue& c2);
+ComplexValue operator*(const ComplexValue& c1, const Complex& c2);
+ComplexValue operator*(const Complex& c1, const Complex& c2);
+ComplexValue operator*(const Complex& c1, fp real);
+ComplexValue operator*(fp real, const Complex& c1);
 
-MQT_CORE_EXPORT ComplexValue operator*(const ComplexValue& c1,
-                                       const Complex& c2);
-
-MQT_CORE_EXPORT ComplexValue operator*(const Complex& c1, const Complex& c2);
-
-MQT_CORE_EXPORT ComplexValue operator*(const Complex& c1, fp real);
-
-MQT_CORE_EXPORT ComplexValue operator*(fp real, const Complex& c1);
-
-MQT_CORE_EXPORT ComplexValue operator/(const Complex& c1,
-                                       const ComplexValue& c2);
-
-MQT_CORE_EXPORT ComplexValue operator/(const ComplexValue& c1,
-                                       const Complex& c2);
-
-MQT_CORE_EXPORT ComplexValue operator/(const Complex& c1, const Complex& c2);
-
-MQT_CORE_EXPORT ComplexValue operator/(const Complex& c1, fp real);
+ComplexValue operator/(const Complex& c1, const ComplexValue& c2);
+ComplexValue operator/(const ComplexValue& c1, const Complex& c2);
+ComplexValue operator/(const Complex& c1, const Complex& c2);
+ComplexValue operator/(const Complex& c1, fp real);
 
 } // namespace dd
 

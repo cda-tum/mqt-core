@@ -1,11 +1,9 @@
 #pragma once
 
-#include "Definitions.hpp"
-#include "QuantumComputation.hpp"
-#include "mqt_core_export.h"
+#include <QuantumComputation.hpp>
 
 namespace qc {
-class MQT_CORE_EXPORT WState : public QuantumComputation {
+class WState : public QuantumComputation {
 public:
   explicit WState(Qubit nq);
 };

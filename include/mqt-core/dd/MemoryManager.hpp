@@ -2,7 +2,6 @@
 
 #include "dd/DDDefinitions.hpp"
 #include "dd/statistics/MemoryManagerStatistics.hpp"
-#include "mqt_core_export.h"
 
 #include <cstddef>
 #include <type_traits>
@@ -28,7 +27,7 @@ namespace dd {
  * edge weights, etc.
  * @tparam T The type of objects to manage.
  */
-template <typename T> class MQT_CORE_EXPORT MemoryManager {
+template <typename T> class MemoryManager {
   static_assert(std::is_same_v<decltype(T::next), T*>,
                 "T must have a `next` member of type T*");
   static_assert(std::is_same_v<decltype(T::ref), RefCount>,

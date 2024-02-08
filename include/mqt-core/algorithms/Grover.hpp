@@ -1,15 +1,13 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
-#include "mqt_core_export.h"
 
-#include <cstddef>
-#include <ostream>
-#include <string>
+#include <bitset>
+#include <functional>
+#include <random>
 
 namespace qc {
-class MQT_CORE_EXPORT Grover : public QuantumComputation {
+class Grover : public QuantumComputation {
 public:
   std::size_t seed = 0;
   BitString targetValue = 0;

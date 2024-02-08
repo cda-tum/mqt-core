@@ -7,35 +7,27 @@
 #pragma once
 
 #include "Exception.hpp"
-#include "Permutation.hpp"
 #include "Scanner.hpp"
 #include "Statement.hpp"
 #include "StdGates.hpp"
-#include "mqt_core_export.h"
-#include "parsers/qasm3_parser/Token.hpp"
-#include "parsers/qasm3_parser/Types.hpp"
 
 #include <iostream>
-#include <memory>
-#include <optional>
 #include <sstream>
 #include <stack>
 #include <stdexcept>
-#include <string>
-#include <utility>
 #include <vector>
 
 namespace qasm3 {
-class MQT_CORE_EXPORT Parser {
+class Parser {
   struct ScannerState {
   private:
-    std::shared_ptr<std::istream> is;
+    std::unique_ptr<std::istream> is;
 
   public:
     Token last{0, 0};
     Token t{0, 0};
     Token next{0, 0};
-    std::shared_ptr<Scanner> scanner;
+    std::unique_ptr<Scanner> scanner;
     std::optional<std::string> filename;
     bool isImplicitInclude;
 
@@ -51,17 +43,17 @@ class MQT_CORE_EXPORT Parser {
         std::istream* in,
         std::optional<std::string> debugFilename = std::nullopt,
         const bool implicitInclude = false)
-        : scanner(std::make_shared<Scanner>(in)),
+        : scanner(std::make_unique<Scanner>(in)),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
       scan();
     }
 
     explicit ScannerState(
-        std::shared_ptr<std::istream> in,
+        std::unique_ptr<std::istream> in,
         std::optional<std::string> debugFilename = std::nullopt,
         const bool implicitInclude = false)
-        : is(std::move(in)), scanner(std::make_shared<Scanner>(is.get())),
+        : is(std::move(in)), scanner(std::make_unique<Scanner>(is.get())),
           filename(std::move(debugFilename)),
           isImplicitInclude(implicitInclude) {
       scan();
@@ -120,7 +112,7 @@ public:
     scanner.emplace(is);
     scan();
     if (implicitlyIncludeStdgates) {
-      scanner.emplace(std::make_shared<std::istringstream>(STDGATES),
+      scanner.emplace(std::make_unique<std::istringstream>(STDGATES),
                       "stdgates.inc", true);
       scan();
     }

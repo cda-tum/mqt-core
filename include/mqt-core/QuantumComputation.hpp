@@ -1,37 +1,30 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "mqt_core_export.h"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
-#include "operations/Control.hpp"
-#include "operations/Expression.hpp"
 #include "operations/NonUnitaryOperation.hpp"
-#include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"
 #include "operations/SymbolicOperation.hpp"
 
 #include <algorithm>
-#include <array>
-#include <cstddef>
-#include <cstdint>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <limits>
+#include <locale>
 #include <map>
 #include <memory>
-#include <numeric>
 #include <optional>
 #include <random>
 #include <sstream>
 #include <string>
-#include <unordered_set>
-#include <utility>
-#include <variant>
 #include <vector>
 
 namespace qc {
 class CircuitOptimizer;
 
-class MQT_CORE_EXPORT QuantumComputation {
+class QuantumComputation {
 public:
   using iterator = typename std::vector<std::unique_ptr<Operation>>::iterator;
   using const_iterator =

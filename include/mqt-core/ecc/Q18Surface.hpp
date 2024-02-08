@@ -2,18 +2,8 @@
 
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
-#include "mqt_core_export.h"
-#include "operations/Operation.hpp"
-
-#include <array>
-#include <cstddef>
-#include <map>
-#include <memory>
-#include <utility>
-#include <vector>
-
 namespace ecc {
-class MQT_CORE_EXPORT Q18Surface : public Ecc {
+class Q18Surface : public Ecc {
 public:
   Q18Surface(std::shared_ptr<qc::QuantumComputation> qc, std::size_t measureFq)
       : Ecc({ID::Q18Surface,

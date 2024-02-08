@@ -1,7 +1,6 @@
 #pragma once
 
 #include "dd/Package.hpp"
-#include "mqt_core_export.h"
 #include "nlohmann/json.hpp"
 
 namespace dd {
