@@ -69,8 +69,6 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/Expression.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/ClassicControlledOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/CompoundOperation.hpp
-    ${MQT_CORE_INCLUDE_BUILD_DIR}/na/GlobalOperation.hpp
-    ${MQT_CORE_INCLUDE_BUILD_DIR}/na/ShuttlingOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/Control.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/NonUnitaryOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/Operation.hpp
@@ -102,8 +100,6 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     CircuitOptimizer.cpp
     operations/ClassicControlledOperation.cpp
     operations/Expression.cpp
-    na/GlobalOperation.cpp
-    na/ShuttlingOperation.cpp
     operations/NonUnitaryOperation.cpp
     operations/Operation.cpp
     operations/StandardOperation.cpp
@@ -147,6 +143,11 @@ add_subdirectory(zx)
 
 # add ECC library
 add_subdirectory(ecc)
+
+# add NA library
+add_subdirectory(na)
+
+
 
 # ** Note ** The following target will soon be removed from the project. All top-level projects
 # should switch to using the mqt-core Python package.
