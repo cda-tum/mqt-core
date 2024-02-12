@@ -208,6 +208,7 @@ public:
    */
   [[nodiscard]] bool incRef(Node* p) noexcept {
     const auto inc = ::dd::incRef(p);
+    assert(!inc || p != nullptr);
     if (inc && p->ref == 1U) {
       stats[p->v].trackActiveEntry();
     }
@@ -226,6 +227,7 @@ public:
    */
   [[nodiscard]] bool decRef(Node* p) noexcept {
     const auto dec = ::dd::decRef(p);
+    assert(!dec || p != nullptr);
     if (dec && p->ref == 0U) {
       --stats[p->v].numActiveEntries;
     }
