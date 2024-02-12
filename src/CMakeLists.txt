@@ -146,37 +146,6 @@ add_subdirectory(zx)
 # add ECC library
 add_subdirectory(ecc)
 
-# ** Note ** The following target will soon be removed from the project. All top-level projects
-# should switch to using the mqt-core Python package.
-if(BINDINGS AND NOT TARGET mqt-core-python)
-  # add Python interface library
-  add_library(
-    ${MQT_CORE_TARGET_NAME}-python ${MQT_CORE_INCLUDE_BUILD_DIR}/python/qiskit/QuantumCircuit.hpp
-                                   python/qiskit/QuantumCircuit.cpp)
-
-  # link with main project library and pybind11 libraries
-  target_link_libraries(${MQT_CORE_TARGET_NAME}-python PUBLIC MQT::Core pybind11::pybind11)
-  target_link_libraries(${MQT_CORE_TARGET_NAME}-python PRIVATE MQT::ProjectOptions
-                                                               MQT::ProjectWarnings)
-
-  # enable hidden visibility for target
-  set_target_properties(${MQT_CORE_TARGET_NAME}-python PROPERTIES CXX_VISIBILITY_PRESET hidden)
-  set_target_properties(${MQT_CORE_TARGET_NAME}-python PROPERTIES VISIBILITY_INLINES_HIDDEN ON)
-  if(APPLE AND BUILD_SHARED_LIBS)
-    set_target_properties(${MQT_CORE_TARGET_NAME}-python PROPERTIES LINK_FLAGS
-                                                                    "-Wl,-undefined,dynamic_lookup")
-  endif()
-
-  # add MQT alias
-  add_library(MQT::CorePython ALIAS ${MQT_CORE_TARGET_NAME}-python)
-  set_target_properties(
-    ${MQT_CORE_TARGET_NAME}-python
-    PROPERTIES VERSION ${PROJECT_VERSION}
-               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-               EXPORT_NAME CorePython)
-  list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME}-python)
-endif()
-
 if(BUILD_MQT_CORE_BINDINGS)
   add_subdirectory(python)
 endif()
