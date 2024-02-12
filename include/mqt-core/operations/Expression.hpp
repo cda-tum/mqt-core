@@ -295,6 +295,16 @@ public:
     return *this;
   }
 
+  Expression<T, U>& operator/=(int64_t rhs) {
+    if (rhs == 0) {
+      throw std::runtime_error("Trying to divide expression by 0!");
+    }
+    std::for_each(terms.begin(), terms.end(),
+                  [&](auto& term) { term /= T{static_cast<double>(rhs)}; });
+    constant = U{double{constant} / static_cast<double>(rhs)};
+    return *this;
+  }
+
   [[nodiscard]] Expression<T, U> operator-() const {
     Expression<T, U> e;
     e.terms.reserve(terms.size());
@@ -451,6 +461,12 @@ inline Expression<T, U> operator/(Expression<T, U> lhs, const T& rhs) {
 template <typename T, typename U,
           typename std::enable_if_t<!std::is_same_v<T, U>>* = nullptr>
 inline Expression<T, U> operator/(Expression<T, U> lhs, const U& rhs) {
+  lhs /= rhs;
+  return lhs;
+}
+
+template <typename T, typename U>
+inline Expression<T, U> operator/(Expression<T, U> lhs, int64_t rhs) {
   lhs /= rhs;
   return lhs;
 }

@@ -213,7 +213,12 @@ void FunctionalityConstruction::addXXplusYY(
   addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRx(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
-  addRz(diag, -beta, qubit1, qubits, -unconvertedBeta);
+  if (unconvertedBeta.has_value()) {
+    addRz(diag, -beta, qubit1, qubits, -unconvertedBeta.value());
+  } else {
+    addRz(diag, -beta, qubit1, qubits);
+  }
+
   addRz(diag, PiExpression(-PiRational(1, 2)), qubit1, qubits);
 }
 
@@ -221,7 +226,11 @@ void FunctionalityConstruction::addXXminusYY(
     ZXDiagram& diag, const PiExpression& theta, const PiExpression& beta,
     const Qubit qubit0, const Qubit qubit1, std::vector<Vertex>& qubits,
     const std::optional<double>& unconvertedBeta) {
-  addRz(diag, -beta, qubit1, qubits, -unconvertedBeta);
+  if (unconvertedBeta.has_value()) {
+    addRz(diag, -beta, qubit1, qubits, -unconvertedBeta.value());
+  } else {
+    addRz(diag, -beta, qubit1, qubits);
+  }
   addRz(diag, PiExpression(PiRational(1, 2)), qubit1, qubits);
   addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRx(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
@@ -234,7 +243,7 @@ void FunctionalityConstruction::addXXminusYY(
   addRx(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
   addRz(diag, beta, qubit1, qubits, unconvertedBeta);
-  addRz(diag, PiExpression(-PiRational(1, 2)), qubit1, qubits, unconvertedBeta);
+  addRz(diag, PiExpression(-PiRational(1, 2)), qubit1, qubits);
 }
 
 void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target,
@@ -387,6 +396,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       } else {
         addRzz(diag, phase, target, target2, qubits);
       }
+      break;
     }
     case qc::OpType::RXX: {
       const auto target2 = static_cast<Qubit>(p.at(op->getTargets()[1]));
@@ -396,6 +406,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       } else {
         addRxx(diag, phase, target, target2, qubits);
       }
+      break;
     }
     case qc::OpType::RZX: {
       const auto target2 = static_cast<Qubit>(p.at(op->getTargets()[1]));
@@ -405,6 +416,7 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       } else {
         addRzx(diag, phase, target, target2, qubits);
       }
+      break;
     }
     case qc::OpType::RYY: {
       const auto target2 = static_cast<Qubit>(p.at(op->getTargets()[1]));
@@ -451,11 +463,11 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
       const auto target2 = static_cast<Qubit>(p.at(op->getTargets()[1]));
       const auto& betaExpr = parseParam(op.get(), 0);
       if (betaExpr.isConstant()) {
-        addXXplusYY(diag, betaExpr, parseParam(op.get(), 1), target, target2,
-                    qubits, op->getParameter().at(0));
+        addXXminusYY(diag, betaExpr, parseParam(op.get(), 1), target, target2,
+                     qubits, op->getParameter().at(0));
       } else {
-        addXXplusYY(diag, betaExpr, parseParam(op.get(), 1), target, target2,
-                    qubits);
+        addXXminusYY(diag, betaExpr, parseParam(op.get(), 1), target, target2,
+                     qubits);
       }
       break;
     }
