@@ -56,6 +56,7 @@ jobs:
         with:
           patterns: |
             -**/extern/**
+            -**/build/**
           input: sarif-results/python.sarif
           output: sarif-results/python.sarif
       - name: Upload SARIF

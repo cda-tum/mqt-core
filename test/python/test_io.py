@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, qasm2
 
 from mqt.core import QuantumComputation
 from mqt.core.io import load
@@ -64,7 +64,7 @@ def test_loading_qiskit_circuit() -> None:
     qiskit_circuit.h(0)
     qiskit_circuit.cx(0, 1)
     qiskit_circuit.measure(range(2), range(2))
-    qasm = qiskit_circuit.qasm()
+    qasm = qasm2.dumps(qiskit_circuit)
 
     # load the circuit
     qc = load(qiskit_circuit)

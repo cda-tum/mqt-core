@@ -1123,6 +1123,43 @@ public:
     return '1';
   }
 
+  char measureOneCollapsing(dEdge& e, const Qubit index, std::mt19937_64& mt) {
+    char measuredResult = '0';
+    dEdge::alignDensityEdge(e);
+    const auto nrQubits = e.p->v + 1U;
+    dEdge::setDensityMatrixTrue(e);
+
+    auto const measZeroDd = makeGateDD(MEAS_ZERO_MAT, nrQubits, index);
+
+    auto tmp0 = conjugateTranspose(measZeroDd);
+    auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
+    auto tmp2 = multiply(densityFromMatrixEdge(measZeroDd), tmp1, 0, true);
+    auto densityMatrixTrace = trace(tmp2);
+
+    std::uniform_real_distribution<fp> dist(0., 1.);
+    if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
+      auto const measOneDd = makeGateDD(MEAS_ONE_MAT, nrQubits, index);
+      tmp0 = conjugateTranspose(measOneDd);
+      tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
+      tmp2 = multiply(densityFromMatrixEdge(measOneDd), tmp1, 0, true);
+      measuredResult = '1';
+      densityMatrixTrace = trace(tmp2);
+    }
+
+    incRef(tmp2);
+    dEdge::alignDensityEdge(e);
+    decRef(e);
+    e = tmp2;
+    dEdge::setDensityMatrixTrue(e);
+
+    // Normalize density matrix
+    auto result = e.w / densityMatrixTrace;
+    cn.decRef(e.w);
+    e.w = cn.lookup(result);
+    cn.incRef(e.w);
+    return measuredResult;
+  }
+
   /**
    * @brief Performs a specific measurement on the given state vector decision
    * diagram. Collapses the state according to the measurement result.
@@ -1313,21 +1350,15 @@ public:
     }
   }
 
-  dEdge applyOperationToDensity(dEdge& e, const mEdge& operation,
-                                const bool generateDensityMatrix = false) {
+  dEdge applyOperationToDensity(dEdge& e, const mEdge& operation) {
     auto tmp0 = conjugateTranspose(operation);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
-    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0,
-                         generateDensityMatrix);
+    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
     incRef(tmp2);
     dEdge::alignDensityEdge(e);
     decRef(e);
     e = tmp2;
-
-    if (generateDensityMatrix) {
-      dEdge::setDensityMatrixTrue(e);
-    }
-
+    dEdge::setDensityMatrixTrue(e);
     return e;
   }
 
@@ -1770,7 +1801,8 @@ public:
     }
     return result;
   }
-  ComplexValue trace(const mEdge& a) {
+
+  template <class Node> ComplexValue trace(const Edge<Node>& a) {
     const auto eliminate = std::vector<bool>(nqubits, true);
     return trace(a, eliminate).w;
   }
@@ -1798,17 +1830,19 @@ public:
 
 private:
   /// TODO: introduce a compute table for the trace?
-  mCachedEdge trace(const mEdge& a, const std::vector<bool>& eliminate,
-                    std::size_t alreadyEliminated = 0) {
+  template <class Node>
+  CachedEdge<Node> trace(const Edge<Node>& a,
+                         const std::vector<bool>& eliminate,
+                         std::size_t alreadyEliminated = 0) {
     const auto aWeight = static_cast<ComplexValue>(a.w);
     if (aWeight.approximatelyZero()) {
-      return mCachedEdge::zero();
+      return CachedEdge<Node>::zero();
     }
 
-    if (mNode::isTerminal(a.p) ||
+    if (Node::isTerminal(a.p) ||
         std::none_of(eliminate.begin(), eliminate.end(),
                      [](bool v) { return v; })) {
-      return {a.p, aWeight};
+      return CachedEdge<Node>{a.p, aWeight};
     }
 
     const auto v = a.p->v;
@@ -1821,12 +1855,12 @@ private:
       return r;
     }
 
-    std::array<mCachedEdge, NEDGE> edge{};
-    std::transform(
-        a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
-        [this, &eliminate, &alreadyEliminated](const mEdge& e) -> mCachedEdge {
-          return trace(e, eliminate, alreadyEliminated);
-        });
+    std::array<CachedEdge<Node>, NEDGE> edge{};
+    std::transform(a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
+                   [this, &eliminate, &alreadyEliminated](
+                       const Edge<Node>& e) -> CachedEdge<Node> {
+                     return trace(e, eliminate, alreadyEliminated);
+                   });
     const auto adjustedV =
         static_cast<Qubit>(static_cast<std::size_t>(a.p->v) -
                            (static_cast<std::size_t>(std::count(
