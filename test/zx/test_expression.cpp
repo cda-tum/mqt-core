@@ -205,4 +205,6 @@ TEST_F(ExpressionTest, Arithmetic) {
 
   const auto betaExpr = zx::PiExpression{beta};
   EXPECT_EQ(betaExpr * 2., zx::PiExpression{zx::PiRational(1, 1)});
+
+  EXPECT_EQ(betaExpr / .5, zx::PiExpression{zx::PiRational(1, 1)});
 }
