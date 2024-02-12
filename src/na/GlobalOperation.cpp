@@ -5,11 +5,17 @@
 
 #include "na/GlobalOperation.hpp"
 
+#include "operations/CompoundOperation.hpp"
+
 bool na::GlobalOperation::checkAllOpTypeAndOneLayer(
     std::vector<std::unique_ptr<qc::Operation>>&& operations) const {
   std::set<qc::Qubit> qubits;
   for (auto& op : operations) {
     if (op->getType() != opsType) {
+      return false;
+    }
+    // check whether the parameter are the same
+    if (op->getParameter() != parameter) {
       return false;
     }
     // check whether the intersection of qubits and op->getUsedQubits() is not
@@ -27,118 +33,6 @@ bool na::GlobalOperation::checkAllOpTypeAndOneLayer(
     qubits.merge(op->getUsedQubits());
   }
   return true;
-}
-
-template <class T, class... Args>
-void na::GlobalOperation::emplace_back(Args&&... args) {
-  auto newops = std::make_unique<T>(args...);
-  // if not all operations in args are of opsType return false
-  for (auto& op : newops) {
-    if (op->getType() != opsType) {
-      throw std::invalid_argument(
-          "Not all operations are of the same type as the global operation.");
-    }
-  }
-  // if the intersection of getUsedQubits() and op->getUsedQubits() is not
-  // empty return false
-  std::set<qc::Qubit> qubits;
-  for (auto& op : newops) {
-    qubits.merge(op->getUsedQubits());
-    if (!getUsedQubits().empty()) {
-      std::vector<qc::Qubit> intersection;
-      std::set_intersection(getUsedQubits().cbegin(), getUsedQubits().cend(),
-                            qubits.cbegin(), qubits.cend(),
-                            std::back_inserter(intersection));
-      if (!intersection.empty()) {
-        throw std::invalid_argument(
-            "The operation acts on a qubit that is already acted on by the "
-            "global operation.");
-      }
-    }
-  }
-  ops.emplace_back(newops);
-}
-
-template <class T>
-void na::GlobalOperation::emplace_back(std::unique_ptr<T>& op) {
-  if (op->getType() != opsType) {
-    throw std::invalid_argument(
-        "The operation is not of the same type as the global operation.");
-  }
-  // if the intersection of getUsedQubits() and op->getUsedQubits() is not
-  // empty return false
-  if (!getUsedQubits().empty()) {
-    std::vector<qc::Qubit> intersection;
-    std::set_intersection(getUsedQubits().cbegin(), getUsedQubits().cend(),
-                          op->getUsedQubits().cbegin(),
-                          op->getUsedQubits().cend(),
-                          std::back_inserter(intersection));
-    if (!intersection.empty()) {
-      throw std::invalid_argument(
-          "The operation acts on a qubit that is already acted on by the "
-          "global operation.");
-    }
-  }
-  ops.emplace_back(std::move(op));
-}
-
-template <class T, class... Args>
-std::vector<std::unique_ptr<qc::Operation>>::iterator
-na::GlobalOperation::insert(
-    std::vector<std::unique_ptr<qc::Operation>>::const_iterator iterator,
-    Args&&... args) {
-  auto newops = std::make_unique<T>(args...);
-  // if not all operations in args are of opsType return false
-  for (auto& op : newops) {
-    if (op->getType() != opsType) {
-      throw std::invalid_argument(
-          "Not all operations are of the same type as the global operation.");
-    }
-  }
-  // if the intersection of getUsedQubits() and op->getUsedQubits() is not
-  // empty return false
-  std::set<qc::Qubit> qubits;
-  for (auto& op : newops) {
-    qubits.merge(op->getUsedQubits());
-    if (!getUsedQubits().empty()) {
-      std::vector<qc::Qubit> intersection;
-      std::set_intersection(getUsedQubits().cbegin(), getUsedQubits().cend(),
-                            qubits.cbegin(), qubits.cend(),
-                            std::back_inserter(intersection));
-      if (!intersection.empty()) {
-        throw std::invalid_argument(
-            "The operation acts on a qubit that is already acted on by the "
-            "global operation.");
-      }
-    }
-  }
-  return ops.insert(iterator, newops);
-}
-
-template <class T>
-std::vector<std::unique_ptr<qc::Operation>>::iterator
-na::GlobalOperation::insert(
-    std::vector<std::unique_ptr<qc::Operation>>::const_iterator iterator,
-    std::unique_ptr<T>& op) {
-  if (op->getType() != opsType) {
-    throw std::invalid_argument(
-        "The operation is not of the same type as the global operation.");
-  }
-  // if the intersection of getUsedQubits() and op->getUsedQubits() is not
-  // empty return false
-  if (!getUsedQubits().empty()) {
-    std::vector<qc::Qubit> intersection;
-    std::set_intersection(getUsedQubits().cbegin(), getUsedQubits().cend(),
-                          op->getUsedQubits().cbegin(),
-                          op->getUsedQubits().cend(),
-                          std::back_inserter(intersection));
-    if (!intersection.empty()) {
-      throw std::invalid_argument(
-          "The operation acts on a qubit that is already acted on by the "
-          "global operation.");
-    }
-  }
-  return ops.insert(iterator, std::move(op));
 }
 
 void na::GlobalOperation::invert() {
