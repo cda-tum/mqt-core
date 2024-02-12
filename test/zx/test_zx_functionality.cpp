@@ -343,7 +343,7 @@ TEST_F(ZXFunctionalityTest, XXplusYY) {
 
 TEST_F(ZXFunctionalityTest, XXminusYY) {
   const auto theta = zx::PI / 4.;
-  const auto beta = zx::PI / 2.;
+  const auto beta = -zx::PI / 2.;
 
   qc = qc::QuantumComputation(2);
   qc.xx_minus_yy(theta, beta, 0, 1);

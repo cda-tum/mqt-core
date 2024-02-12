@@ -65,7 +65,7 @@ void FunctionalityConstruction::addRz(ZXDiagram& diag,
                                       const PiExpression& phase,
                                       const Qubit target,
                                       std::vector<Vertex>& qubits) {
-  diag.addGlobalPhase(-phase / 2);
+  diag.addGlobalPhase(-(phase / 2));
   addZSpider(diag, target, qubits, phase);
 }
 
@@ -80,7 +80,7 @@ void FunctionalityConstruction::addRy(ZXDiagram& diag,
                                       const PiExpression& phase,
                                       const Qubit target,
                                       std::vector<Vertex>& qubits) {
-  diag.addGlobalPhase(-phase / 2);
+  diag.addGlobalPhase(-(phase / 2));
   addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
   addZSpider(diag, target, qubits, phase + PiRational(1, 1));
   addXSpider(diag, target, qubits, PiExpression(PiRational(1, 2)));
@@ -125,7 +125,7 @@ void FunctionalityConstruction::addRzz(ZXDiagram& diag,
   diag.addEdge(qubits[static_cast<std::size_t>(target)], midX);
   diag.addEdge(qubits[static_cast<std::size_t>(target2)], midX);
   diag.addEdge(midX, midZ);
-  diag.addGlobalPhase(-phase / 2.0);
+  diag.addGlobalPhase(-(phase / 2));
 }
 
 void FunctionalityConstruction::addRxx(ZXDiagram& diag,
@@ -141,7 +141,7 @@ void FunctionalityConstruction::addRxx(ZXDiagram& diag,
   diag.addEdge(qubits[static_cast<std::size_t>(target)], midZ);
   diag.addEdge(qubits[static_cast<std::size_t>(target2)], midZ);
   diag.addEdge(midZ, midX);
-  diag.addGlobalPhase(-phase / 2.0);
+  diag.addGlobalPhase(-(phase / 2));
 }
 
 void FunctionalityConstruction::addRzx(ZXDiagram& diag,
@@ -158,7 +158,7 @@ void FunctionalityConstruction::addRzx(ZXDiagram& diag,
   diag.addEdge(qubits[static_cast<std::size_t>(target2)], midX,
                EdgeType::Hadamard);
   diag.addEdge(midX, midZ);
-  diag.addGlobalPhase(-phase / 2.0);
+  diag.addGlobalPhase(-(phase / 2));
 }
 
 void FunctionalityConstruction::addDcx(ZXDiagram& diag, const Qubit qubit1,
@@ -171,39 +171,35 @@ void FunctionalityConstruction::addDcx(ZXDiagram& diag, const Qubit qubit1,
 void FunctionalityConstruction::addXXplusYY(
     ZXDiagram& diag, const PiExpression& theta, const PiExpression& beta,
     const Qubit qubit0, const Qubit qubit1, std::vector<Vertex>& qubits) {
-  addRz(diag, beta, qubit1, qubits);
+  addRz(diag, beta + PiRational(1, 2), qubit1, qubits);
   addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRx(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
   addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
-  addZSpider(diag, qubit1, qubits, PiExpression(PiRational(1, 2)));
   addCnot(diag, qubit0, qubit1, qubits);
   addRy(diag, theta / 2, qubit0, qubits);
   addRy(diag, theta / 2, qubit1, qubits);
   addCnot(diag, qubit0, qubit1, qubits);
-  addZSpider(diag, qubit1, qubits, PiExpression(PiRational(-1, 2)));
   addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRx(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
-  addRz(diag, -beta, qubit1, qubits);
+  addRz(diag, -beta - PiRational(1, 2), qubit1, qubits);
 }
 
 void FunctionalityConstruction::addXXminusYY(
     ZXDiagram& diag, const PiExpression& theta, const PiExpression& beta,
     const Qubit qubit0, const Qubit qubit1, std::vector<Vertex>& qubits) {
-  addRz(diag, -beta, qubit1, qubits);
+  addRz(diag, -beta + PiRational(1, 2), qubit1, qubits);
   addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRx(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
   addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
-  addZSpider(diag, qubit1, qubits, PiExpression(PiRational(1, 2)));
   addCnot(diag, qubit0, qubit1, qubits);
   addRy(diag, -theta / 2, qubit0, qubits);
   addRy(diag, theta / 2, qubit1, qubits);
   addCnot(diag, qubit0, qubit1, qubits);
-  addZSpider(diag, qubit1, qubits, PiExpression(PiRational(-1, 2)));
   addRz(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRx(diag, PiExpression(PiRational(-1, 2)), qubit0, qubits);
   addRz(diag, PiExpression(PiRational(1, 2)), qubit0, qubits);
-  addRz(diag, beta, qubit1, qubits);
+  addRz(diag, beta - PiRational(1, 2), qubit1, qubits);
 }
 
 void FunctionalityConstruction::addSwap(ZXDiagram& diag, const Qubit target,
