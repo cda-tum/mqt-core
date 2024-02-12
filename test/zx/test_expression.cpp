@@ -196,3 +196,13 @@ TEST_F(ExpressionTest, Instantiation) {
   EXPECT_THROW([[maybe_unused]] const auto h = e.evaluate(assignment),
                sym::SymbolicException);
 }
+
+TEST_F(ExpressionTest, Arithmetic) {
+  const auto beta = zx::PiRational(1, 2);
+
+  EXPECT_EQ(beta * 2, zx::PiRational(1, 1));
+  EXPECT_EQ(beta * 2., zx::PiRational(1, 1));
+
+  const auto betaExpr = zx::PiExpression{beta};
+  EXPECT_EQ(betaExpr * 2., zx::PiExpression{zx::PiRational(1, 1)});
+}

@@ -252,7 +252,7 @@ public:
       return *this;
     }
     std::for_each(terms.begin(), terms.end(), [&](auto& term) { term *= rhs; });
-    constant *= U{rhs};
+    constant = U{double{constant} * double{rhs}};
     return *this;
   }
 
