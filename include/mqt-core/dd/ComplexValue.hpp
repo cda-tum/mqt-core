@@ -43,7 +43,8 @@ struct ComplexValue {
 
   /**
    * @brief Check whether the complex number is exactly equal to one.
-   * @return True if the complex number is exactly equal to one, false otherwise.
+   * @return True if the complex number is exactly equal to one, false
+   * otherwise.
    */
   [[nodiscard]] bool exactlyOne() const noexcept { return r == 1. && i == 0.; }
 
