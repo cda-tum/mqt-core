@@ -275,7 +275,7 @@ public:
       throw std::runtime_error("Trying to divide expression by 0!");
     }
     std::for_each(terms.begin(), terms.end(), [&](auto& term) { term /= rhs; });
-    constant /= U{rhs};
+    constant = U{double{constant} / double{rhs}};
     return *this;
   }
 
