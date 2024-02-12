@@ -121,6 +121,13 @@ BUILD_SHARED_LIBS = "ON"
 write_to = "src/mqt/core/_version.py"
 
 
+[tool.check-wheel-contents]
+ignore = [
+    "W002",
+    "W004",
+]
+
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = ["-ra", "--strict-markers", "--strict-config"]
