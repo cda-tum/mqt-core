@@ -243,9 +243,15 @@ public:
    * @tparam T template parameter to enable this function only for matrix nodes
    * @return whether the matrix is the identity
    */
-  template <typename T = Node, isMatrixVariant<T> = true>
-  [[nodiscard]] bool isIdentity() const {
-    return Node::isIdentity(p);
+  template <typename T = Node, isMatrix<T> = true>
+  [[nodiscard]] bool isIdentity(const bool upToGlobalPhase = true) const {
+    if (!isTerminal()) {
+      return false;
+    }
+    if (upToGlobalPhase) {
+      return !w.exactlyZero();
+    }
+    return w.exactlyOne();
   }
 
   /**

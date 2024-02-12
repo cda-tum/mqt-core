@@ -24,13 +24,6 @@ namespace dd {
 ///                      \n General purpose methods \n
 ///-----------------------------------------------------------------------------
 
-// template <class Node> bool Edge<Node>::isIdentity() const {
-//   if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
-//     return isTerminal() && w != Complex::zero();
-//   }
-//   return false;
-// }
-
 template <class Node>
 std::complex<fp>
 Edge<Node>::getValueByPath(const std::string& decisions) const {
@@ -359,6 +352,7 @@ std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i,
 template <class Node>
 template <typename T, isMatrixVariant<T>>
 CMat Edge<Node>::getMatrix(const fp threshold) const {
+  // TODO: refactor this function
   if (isTerminal()) {
     return CMat{1, {static_cast<std::complex<fp>>(w)}};
   }

@@ -42,6 +42,12 @@ struct ComplexValue {
   [[nodiscard]] bool exactlyZero() const noexcept { return r == 0. && i == 0.; }
 
   /**
+   * @brief Check whether the complex number is exactly equal to one.
+   * @return True if the complex number is exactly equal to one, false otherwise.
+   */
+  [[nodiscard]] bool exactlyOne() const noexcept { return r == 1. && i == 0.; }
+
+  /**
    * @brief Check whether the complex number is approximately equal to the
    * given complex number.
    * @param c The complex number to compare to.

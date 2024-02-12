@@ -838,11 +838,11 @@ public:
         const auto& es = e.p->e;
         // Check if node resembles the identity. If so, skip it.
         if ((es[0].p == es[3].p) &&
-            (es[0].w == Complex::one && es[1].w == Complex::zero &&
-             es[2].w == Complex::zero && es[3].w == Complex::one)) {
+            (es[0].w.exactlyOne() && es[1].w.exactlyZero() &&
+             es[2].w.exactlyZero() && es[3].w.exactlyOne())) {
           auto* ptr = es[0].p;
           memoryManager.returnEntry(e.p);
-          return Edge<mNode>{ptr, e.w};
+          return EdgeType<mNode>{ptr, e.w};
         }
       }
     }
@@ -851,12 +851,6 @@ public:
     auto& uniqueTable = getUniqueTable<Node>();
     auto* l = uniqueTable.lookup(e.p);
 
-    // set specific node properties for matrices
-    if constexpr (std::is_same_v<Node, mNode>) {
-      if (l == e.p) {
-        checkSpecialMatrices(l);
-      }
-    }
     return EdgeType<Node>{l, e.w};
   }
 
@@ -1218,6 +1212,7 @@ public:
     std::array<CachedEdge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
       CachedEdge<Node> e1{};
+      // TODO: if constexpr for matrix type
       if (x.isIdentity() || x.p->v < var) {
         // [ 0 | 1 ]   [ x | 0 ]
         // --------- = ---------
