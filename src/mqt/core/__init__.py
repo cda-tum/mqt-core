@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 
 # under Windows, make sure to add the appropriate DLL directory to the PATH
-if sys.platform == "win32":
+if sys.platform == "win32":  # pragma: no cover
     import os
     import sysconfig
     from pathlib import Path
