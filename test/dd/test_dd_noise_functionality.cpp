@@ -8,40 +8,11 @@
 
 using namespace qc;
 
-struct StochasticNoiseSimulatorDDPackageConfig : public dd::DDPackageConfig {
-  static constexpr std::size_t STOCHASTIC_CACHE_OPS = OpType::OpCount;
-};
-
 using StochasticNoiseTestPackage =
-    dd::Package<StochasticNoiseSimulatorDDPackageConfig>;
-
-struct DensityMatrixSimulatorDDPackageConfig : public dd::DDPackageConfig {
-  static constexpr std::size_t UT_DM_NBUCKET = 65536U;
-  static constexpr std::size_t UT_DM_INITIAL_ALLOCATION_SIZE = 4096U;
-
-  static constexpr std::size_t CT_DM_DM_MULT_NBUCKET = 16384U;
-  static constexpr std::size_t CT_DM_ADD_NBUCKET = 16384U;
-  static constexpr std::size_t CT_DM_NOISE_NBUCKET = 4096U;
-
-  static constexpr std::size_t UT_MAT_NBUCKET = 16384U;
-  static constexpr std::size_t CT_MAT_ADD_NBUCKET = 4096U;
-  static constexpr std::size_t CT_VEC_ADD_NBUCKET = 4096U;
-  static constexpr std::size_t CT_MAT_TRANS_NBUCKET = 4096U;
-  static constexpr std::size_t CT_MAT_CONJ_TRANS_NBUCKET = 4096U;
-
-  static constexpr std::size_t CT_MAT_MAT_MULT_NBUCKET = 1U;
-  static constexpr std::size_t CT_MAT_VEC_MULT_NBUCKET = 1U;
-  static constexpr std::size_t UT_VEC_NBUCKET = 1U;
-  static constexpr std::size_t UT_VEC_INITIAL_ALLOCATION_SIZE = 1U;
-  static constexpr std::size_t UT_MAT_INITIAL_ALLOCATION_SIZE = 1U;
-  static constexpr std::size_t CT_VEC_KRON_NBUCKET = 1U;
-  static constexpr std::size_t CT_MAT_KRON_NBUCKET = 1U;
-  static constexpr std::size_t CT_VEC_INNER_PROD_NBUCKET = 1U;
-  static constexpr std::size_t STOCHASTIC_CACHE_OPS = 1U;
-};
+    dd::Package<dd::StochasticNoiseSimulatorDDPackageConfig>;
 
 using DensityMatrixTestPackage =
-    dd::Package<DensityMatrixSimulatorDDPackageConfig>;
+    dd::Package<dd::DensityMatrixSimulatorDDPackageConfig>;
 
 class DDNoiseFunctionalityTest : public ::testing::Test {
 protected:
