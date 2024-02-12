@@ -272,10 +272,6 @@ build-frontend = "build"
 
 [tool.cibuildwheel.linux]
 environment = { DEPLOY = "ON" }
-manylinux-x86_64-image = "manylinux_2_28"
-manylinux-ppc64le-image = "manylinux_2_28"
-manylinux-aarch64-image = "manylinux_2_28"
-manylinux-s390x-image = "manylinux_2_28"
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
