@@ -7,16 +7,18 @@
 
 #include "operations/CompoundOperation.hpp"
 
-bool na::GlobalOperation::checkAllOpTypeAndOneLayer(
-    std::vector<std::unique_ptr<qc::Operation>>&& operations) const {
+namespace na {
+
+GlobalOperation::GlobalOperation(
+    const qc::OpType& ot, std::size_t nctrl, const std::size_t nq,
+    std::vector<std::unique_ptr<qc::Operation>>&& operations)
+    : GlobalOperation(ot, nctrl, nq) {
   std::set<qc::Qubit> qubits;
   for (auto& op : operations) {
-    if (op->getType() != opsType) {
-      return false;
-    }
-    // check whether the parameter are the same
-    if (op->getParameter() != parameter) {
-      return false;
+    if (op->getType() != opsType || op->getNcontrols() != nControls ||
+        op->getNtargets() != nTargets || op->getParameter() != parameter) {
+      throw std::invalid_argument(
+          "Not all operations are of the same type as the global operation.");
     }
     // check whether the intersection of qubits and op->getUsedQubits() is not
     // empty
@@ -26,13 +28,14 @@ bool na::GlobalOperation::checkAllOpTypeAndOneLayer(
           qubits.cbegin(), qubits.cend(), op->getUsedQubits().cbegin(),
           op->getUsedQubits().cend(), std::back_inserter(intersection));
       if (!intersection.empty()) {
-        return false;
+        throw std::invalid_argument(
+            "Multiple operations act on the same qubit.");
       }
     }
     // insert used qubits into qubits
     qubits.merge(op->getUsedQubits());
   }
-  return true;
+  ops = std::move(operations);
 }
 
 void na::GlobalOperation::invert() {
@@ -105,3 +108,5 @@ void na::GlobalOperation::invert() {
   }
   qc::CompoundOperation::invert();
 }
+
+} // namespace na
