@@ -351,30 +351,71 @@ std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i,
 
 template <class Node>
 template <typename T, isMatrixVariant<T>>
-CMat Edge<Node>::getMatrix(const fp threshold) const {
-  // TODO: refactor this function
+CMat Edge<Node>::getMatrix(std::size_t nrQubits) const {
+  std::size_t dim = 0;
+  if (nrQubits != 0) {
+    dim = 2ULL << (nrQubits - 1);
+  }
+  // allocate resulting matrix
+  auto mat = CMat(dim, CVec(dim, {0., 0.}));
+
+  // Identity case
   if (isTerminal()) {
-    return CMat{1, {static_cast<std::complex<fp>>(w)}};
-  }
-
-  auto r = *this;
-  if constexpr (std::is_same_v<Node, dNode>) {
-    Edge<dNode>::applyDmChangesToEdge(r);
-  }
-
-  const std::size_t dim = 2ULL << r.p->v;
-  auto mat = CMat(dim, CVec(dim, 0.0));
-
-  r.traverseMatrix(
-      1, 0ULL, 0ULL,
-      [&mat](const std::size_t i, const std::size_t j,
-             const std::complex<fp>& c) { mat.at(i).at(j) = c; },
-      threshold);
-
-  if constexpr (std::is_same_v<Node, dNode>) {
-    Edge<dNode>::revertDmChangesToEdge(r);
+    for (auto i = 0ULL; i < dim; ++i) {
+      for (auto j = 0ULL; j < dim; ++j) {
+        if (i == j) {
+          mat[i][j] = {1., 0.};
+        }
+      }
+    }
+  } else {
+    getMatrix(*this, ComplexValue(1., 0.), 0, 0, mat,
+              static_cast<int>(nrQubits) - 1);
   }
   return mat;
+}
+
+template <class Node>
+template <typename T, isMatrixVariant<T>>
+void Edge<Node>::getMatrix(const Edge& e, const ComplexValue& amp,
+                           const std::size_t i, const std::size_t j, CMat& mat,
+                           const int level) const {
+  // calculate new accumulated amplitude
+  auto c = e.w * amp;
+
+  std::size_t x = i;
+  std::size_t y = j;
+
+  if (level != -1) {
+    x = i | (1ULL << level);
+    y = j | (1ULL << level);
+  }
+
+  if (e.isTerminal() && level == -1) {
+    // base case
+    mat.at(i).at(j) = {c.r, c.i};
+    return;
+  }
+
+  if ((!e.isTerminal() && e.p->v == level)) {
+    // recursive case
+    if (!e.p->e[0].w.approximatelyZero()) {
+      getMatrix(e.p->e[0], c, i, j, mat, level - 1);
+    }
+    if (!e.p->e[1].w.approximatelyZero()) {
+      getMatrix(e.p->e[1], c, i, y, mat, level - 1);
+    }
+    if (!e.p->e[2].w.approximatelyZero()) {
+      getMatrix(e.p->e[2], c, x, j, mat, level - 1);
+    }
+    if (!e.p->e[3].w.approximatelyZero()) {
+      getMatrix(e.p->e[3], c, x, y, mat, level - 1);
+    }
+  } else if ((!e.isTerminal() && e.p->v < level) ||
+             (e.isTerminal() && level != -1)) {
+    getMatrix(e, c, i, j, mat, level - 1);
+    getMatrix(e, c, x, y, mat, level - 1);
+  }
 }
 
 template <class Node>
@@ -572,7 +613,7 @@ template Edge<mNode> Edge<mNode>::normalize<mNode, true>(
 template std::complex<fp>
 Edge<mNode>::getValueByIndex<mNode, true>(const std::size_t i,
                                           const std::size_t j) const;
-template CMat Edge<mNode>::getMatrix<mNode, true>(const fp threshold) const;
+template CMat Edge<mNode>::getMatrix<mNode, true>(std::size_t nrQubits) const;
 template SparseCMat
 Edge<mNode>::getSparseMatrix<mNode, true>(const fp threshold) const;
 template void Edge<mNode>::printMatrix<mNode, true>() const;
@@ -583,7 +624,7 @@ template void Edge<mNode>::traverseMatrix<mNode, true>(
 template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
     dNode* p, const std::array<Edge<dNode>, NEDGE>& e, MemoryManager<dNode>& mm,
     ComplexNumbers& cn);
-template CMat Edge<dNode>::getMatrix<dNode, true>(const fp threshold) const;
+template CMat Edge<dNode>::getMatrix<dNode, true>(std::size_t nrQubits) const;
 template SparseCMat
 Edge<dNode>::getSparseMatrix<dNode, true>(const fp threshold) const;
 template void Edge<dNode>::printMatrix<dNode, true>() const;

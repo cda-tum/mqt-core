@@ -266,14 +266,29 @@ public:
                                                  std::size_t j) const;
 
   /**
-   * @brief Get the matrix represented by the DD
+   * Get the matrix represented by the DD
    * @tparam T template parameter to enable this function only for matrix nodes
-   * @param threshold entries with a magnitude below this threshold will be
-   * ignored
+   * @param e reference to the highest edge pointing to our DD
+   * @param nrQubits number of qubits needed to represented the whole DD
+   * including identities
    * @return the matrix
    */
   template <typename T = Node, isMatrixVariant<T> = true>
-  [[nodiscard]] CMat getMatrix(fp threshold = 0.) const;
+  [[nodiscard]] CMat getMatrix(std::size_t nrQubits) const;
+
+  /**
+   * Recursively get the matrix represented by the DD
+   * @tparam T template parameter to enable this function only for matrix nodes
+   * @param e reference to the current edge pointing to the next node
+   * @param amp current accumulated amplitude
+   * @param i current row index in our matrix
+   * @param j current column index in our matrix
+   * @param mat matrix representing our desired output
+   * @param level current level in our DD representing which qubit we are at
+   */
+  template <typename T = Node, isMatrixVariant<T> = true>
+  void getMatrix(const Edge& e, const ComplexValue& amp, std::size_t i,
+                 std::size_t j, CMat& mat, int level) const;
 
   /**
    * @brief Get the sparse matrix represented by the DD

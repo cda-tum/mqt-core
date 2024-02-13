@@ -88,7 +88,7 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
     const auto localDD = getDD(localOp.get(), dd);
 
     // translate local DD to matrix
-    const auto localMatrix = dd.getMatrix(localDD, localQubits);
+    const auto localMatrix = localDD.getMatrix(localQubits);
 
     // restore nqubits
     op->setNqubits(globalQubits);
