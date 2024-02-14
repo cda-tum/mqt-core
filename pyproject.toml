@@ -81,6 +81,7 @@ Discussions = "https://github.com/cda-tum/mqt-core/discussions"
 minimum-version = "0.6.1"
 cmake.verbose = true
 logging.level = "DEBUG"
+cmake.build-type = "Release"
 
 # Set the wheel install directory
 wheel.install-dir = "mqt/core"
