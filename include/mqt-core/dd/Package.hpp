@@ -1250,12 +1250,14 @@ public:
     for (std::size_t i = 0U; i < n; i++) {
       CachedEdge<Node> e1{};
       // TODO: if constexpr for matrix type
-      if (x.isIdentity() || x.p->v < var) {
-        // [ 0 | 1 ]   [ x | 0 ]
-        // --------- = ---------
-        // [ 2 | 3 ]   [ 0 | x ]
-        if (i == 0 || i == 3) {
-          e1 = x;
+      if constexpr (std::is_same_v<Node, mNode>) {
+        if (x.isIdentity() || x.p->v < var) {
+          // [ 0 | 1 ]   [ x | 0 ]
+          // --------- = ---------
+          // [ 2 | 3 ]   [ 0 | x ]
+          if (i == 0 || i == 3) {
+            e1 = x;
+          }
         }
       } else {
         auto& xSuccessor = x.p->e[i];
@@ -1265,12 +1267,14 @@ public:
         }
       }
       CachedEdge<Node> e2{};
-      if (y.isIdentity() || y.p->v < var) {
-        // [ 0 | 1 ]   [ y | 0 ]
-        // --------- = ---------
-        // [ 2 | 3 ]   [ 0 | y ]
-        if (i == 0 || i == 3) {
-          e2 = y;
+      if constexpr (std::is_same_v<Node, mNode>) {
+        if (y.isIdentity() || y.p->v < var) {
+          // [ 0 | 1 ]   [ y | 0 ]
+          // --------- = ---------
+          // [ 2 | 3 ]   [ 0 | y ]
+          if (i == 0 || i == 3) {
+            e2 = y;
+          }
         }
       } else {
         auto& ySuccessor = y.p->e[i];
@@ -1425,8 +1429,7 @@ private:
       return {y.p, rWeight};
     }
 
-    if constexpr (std::is_same_v<RightOperandNode, mNode> ||
-                  std::is_same_v<RightOperandNode, dNode>) {
+    if constexpr (std::is_same_v<RightOperandNode, mNode>) {
       if (y.isIdentity()) {
         return {x.p, rWeight};
       }
