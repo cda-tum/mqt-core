@@ -307,8 +307,7 @@ public:
     return nqubits;
   }
   [[nodiscard]] std::size_t getNmeasuredQubits() const {
-    return static_cast<std::size_t>(
-        std::count(getGarbage().begin(), getGarbage().end(), false));
+    return getNqubits() - getNgarbageQubits();
   }
   [[nodiscard]] std::size_t getNgarbageQubits() const {
     return static_cast<std::size_t>(

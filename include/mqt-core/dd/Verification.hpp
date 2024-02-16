@@ -90,5 +90,5 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 }
 
 std::pair<qc::QuantumComputation, qc::QuantumComputation>
-generateRandomBenchmark(size_t n, Qubit d, Qubit m);
+generateRandomBenchmark(size_t n, qc::Qubit d, qc::Qubit m);
 } // namespace dd

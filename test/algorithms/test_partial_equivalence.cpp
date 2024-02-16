@@ -327,24 +327,25 @@ TEST(PartialEquivalenceTest, SliQECPeriodFinding8Qubits) {
 
 void partialEquivalencCheckingBenchmarks(
     const std::unique_ptr<dd::Package<dd::DDPackageConfig>>& dd,
-    const size_t minN, const size_t maxN, const size_t reps,
+    const qc::Qubit minN, const qc::Qubit maxN, const size_t reps,
     const bool addAncilla) {
-  for (size_t n = minN; n < maxN; n++) {
+
+  std::mt19937 gen(55);
+
+  for (qc::Qubit n = minN; n < maxN; n++) {
     std::chrono::microseconds totalTime{0};
-    std::uint16_t totalGates{0};
+    std::size_t totalGates{0};
     for (size_t k = 0; k < reps; k++) {
-      dd::Qubit d{0};
+      qc::Qubit d{0};
       if (addAncilla) {
-        d = static_cast<dd::Qubit>(rand()) % static_cast<dd::Qubit>(n - 1) + 1;
+        std::uniform_int_distribution<qc::Qubit> nrDataQubits(1, n);
+        d = nrDataQubits(gen);
       } else {
-        d = static_cast<dd::Qubit>(n);
+        d = n;
       }
-      dd::Qubit m{0};
-      if (d == 1) {
-        m = 1;
-      } else {
-        m = static_cast<dd::Qubit>(rand()) % static_cast<dd::Qubit>(d - 1) + 1;
-      }
+      std::uniform_int_distribution<qc::Qubit> nrDataQubits(1, d);
+      qc::Qubit m = nrDataQubits(gen);
+
       const auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
 
       const auto start = std::chrono::high_resolution_clock::now();
@@ -363,7 +364,7 @@ void partialEquivalencCheckingBenchmarks(
       // 1000000.
       //           << " seconds\n";
       totalTime += duration;
-      totalGates += static_cast<std::uint16_t>(c2.size());
+      totalGates += c2.size();
     }
     std::cout << "\nnumber of qubits = " << n << "; number of reps = " << reps
               << "; average time = "
@@ -377,7 +378,6 @@ void partialEquivalencCheckingBenchmarks(
 
 TEST(PartialEquivalenceTest, Benchmark) {
   const auto dd = std::make_unique<dd::Package<>>(20);
-  srand(55);
   const size_t minN = 2;
   const size_t maxN = 8;
   const size_t reps = 10;
