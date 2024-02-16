@@ -1800,7 +1800,8 @@ public:
       c = c * a.w;
       result = mEdge::terminal(cn.lookup(c));
     } else {
-      result = trace(a, eliminate);
+      mCachedEdge t = trace(a, eliminate);
+      result = mEdge{t.p, cn.lookup(t.w)};
     }
     return result;
   }
