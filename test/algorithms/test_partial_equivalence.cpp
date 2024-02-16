@@ -344,7 +344,7 @@ void partialEquivalencCheckingBenchmarks(
         d = n;
       }
       std::uniform_int_distribution<qc::Qubit> nrDataQubits(1, d);
-      qc::Qubit m = nrDataQubits(gen);
+      const qc::Qubit m = nrDataQubits(gen);
 
       const auto [c1, c2] = dd::generateRandomBenchmark(n, d, m);
 

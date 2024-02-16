@@ -54,8 +54,8 @@ void addPreGeneratedCircuits(QuantumComputation& circuit1,
 
 void addDecomposedCcxGate(QuantumComputation& circuit, const Controls& controls,
                           const qc::Qubit target) {
-  qc::Qubit control1 = controls.begin()->qubit;
-  qc::Qubit control2 = (++controls.begin())->qubit;
+  const qc::Qubit control1 = controls.begin()->qubit;
+  const qc::Qubit control2 = (++controls.begin())->qubit;
   circuit.h(target);
   circuit.cx(control1, target);
   circuit.tdg(target);
