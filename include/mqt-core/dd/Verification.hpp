@@ -2,6 +2,100 @@
 #include "dd/Package.hpp"
 
 namespace dd {
+
+template <class Config>
+mEdge partialEquivalenceCheckDDSubroutine(mEdge u, const Qubit m, const Qubit k,
+                                          const Qubit extra,
+                                          Package<Config>& dd) {
+  // add extra ancillary qubits
+  if (extra > 0) {
+    if (u.p->v + 1U + extra > dd.qubits()) {
+      dd.resize(u.p->v + 1U + extra);
+    }
+    u = dd.kronecker(dd.makeIdent(extra), u);
+  }
+  if (u.isTerminal()) {
+    return u;
+  }
+  const auto n = static_cast<Qubit>(u.p->v + 1);
+  const Qubit d = n - k;
+  u = dd.setColumnsToZero(u, d);
+  const auto u2 = dd.shiftAllRows(u, m, d);
+  return dd.multiply(dd.conjugateTranspose(u), u2);
+}
+
+/**
+ Checks for partial equivalence between the two circuits u1 and u2,
+  where the first d qubits of the circuits are the data qubits and
+  the first m qubits are the measured qubits.
+ @param u1 DD representation of first circuit
+ @param u2 DD representation of second circuit
+ @param d Number of data qubits
+ @param m Number of measured qubits
+ @return true if the two circuits u1 and u2 are partially equivalent.
+ **/
+template <class Config>
+bool partialEquivalenceCheckDD(mEdge u1, mEdge u2, const Qubit d, const Qubit m,
+                               Package<Config>& dd) {
+  if (m == 0) {
+    return true;
+  }
+  if (u1.isTerminal() && u2.isTerminal()) {
+    return u1 == u2;
+  }
+  if (u1.isZeroTerminal() || u2.isZeroTerminal()) {
+    return false;
+  }
+  // add qubits such that u1 and u2 have the same dimension
+  if (u1.isTerminal()) {
+    auto w = u1.w;
+    u1 = dd.makeIdent(u2.p->v + 1);
+    u1.w = w;
+  } else if (u2.isTerminal()) {
+    auto w = u2.w;
+    u2 = dd.makeIdent(u1.p->v + 1);
+    u2.w = w;
+  } else if (u1.p->v < u2.p->v) {
+    u1 = dd.kronecker(dd.makeIdent(u2.p->v - u1.p->v), u1);
+  } else if (u1.p->v > u2.p->v) {
+    u2 = dd.kronecker(dd.makeIdent(u1.p->v - u2.p->v), u2);
+  }
+
+  const Qubit n = u1.p->v + 1;
+  Qubit k = n - d;
+  Qubit extra{0};
+  if (m > k) {
+    extra = m - k;
+  }
+  k = k + extra;
+
+  const auto u1Prime = partialEquivalenceCheckDDSubroutine(u1, m, k, extra, dd);
+  const auto u2Prime = partialEquivalenceCheckDDSubroutine(u2, m, k, extra, dd);
+
+  return u1Prime == u2Prime;
+}
+
+/**
+    Checks for partial equivalence between the two circuits u1 and u2,
+     where all qubits of the circuits are the data qubits and
+     the first m qubits are the measured qubits.
+    @param u1 DD representation of first circuit
+    @param u2 DD representation of second circuit
+    @param m Number of measured qubits
+    @return true if the two circuits u1 and u2 are partially equivalent.
+    **/
+template <class Config>
+bool zeroAncillaePartialEquivalenceCheckDD(const mEdge& u1, const mEdge& u2,
+                                           const Qubit m, Package<Config>& dd) {
+  auto u1u2 = dd.multiply(u1, dd.conjugateTranspose(u2));
+  const Qubit n = u1.p->v + 1;
+  std::vector<bool> garbage(n, false);
+  for (size_t i = m; i < n; i++) {
+    garbage[i] = true;
+  }
+  return dd.isCloseToIdentity(u1u2, 1.0E-10, garbage, false);
+}
+
 /**
     Checks for partial equivalence between the two circuits c1 and c2
     that have no ancilla qubits.
@@ -12,9 +106,9 @@ namespace dd {
     @return true if the two circuits c1 and c2 are partially equivalent.
     **/
 template <class Config>
-bool zeroAncillaePartialEquivalenceCheck(
-    qc::QuantumComputation c1, qc::QuantumComputation c2,
-    const std::unique_ptr<dd::Package<Config>>& dd) {
+bool zeroAncillaePartialEquivalenceCheck(qc::QuantumComputation c1,
+                                         qc::QuantumComputation c2,
+                                         Package<Config>& dd) {
   if (c1.getNqubits() != c2.getNqubits() ||
       c1.getGarbage() != c2.getGarbage()) {
     throw std::invalid_argument(
@@ -26,9 +120,9 @@ bool zeroAncillaePartialEquivalenceCheck(
     c2.emplace_back(gate);
   }
 
-  const auto u = buildFunctionality(&c2, *dd, false, false);
+  const auto u = buildFunctionality(&c2, dd, false, false);
 
-  return dd->isCloseToIdentity(u, 1.0E-10, c1.getGarbage(), false);
+  return dd.isCloseToIdentity(u, 1.0E-10, c1.getGarbage(), false);
 }
 // get next garbage qubit after n
 inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
@@ -48,8 +142,7 @@ inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
     **/
 template <class Config>
 bool partialEquivalenceCheck(qc::QuantumComputation c1,
-                             qc::QuantumComputation c2,
-                             const std::unique_ptr<dd::Package<Config>>& dd) {
+                             qc::QuantumComputation c2, Package<Config>& dd) {
 
   const auto d1 = c1.getNqubitsWithoutAncillae();
   const auto d2 = c2.getNqubitsWithoutAncillae();
@@ -82,11 +175,11 @@ bool partialEquivalenceCheck(qc::QuantumComputation c1,
 
   // partialEquivalenceCheck with dd
 
-  const auto u1 = buildFunctionality(&c1, *dd, false, false);
-  const auto u2 = buildFunctionality(&c2, *dd, false, false);
+  const auto u1 = buildFunctionality(&c1, dd, false, false);
+  const auto u2 = buildFunctionality(&c2, dd, false, false);
 
-  return dd->partialEquivalenceCheck(u1, u2, static_cast<Qubit>(d1),
-                                     static_cast<Qubit>(m1));
+  return partialEquivalenceCheckDD(u1, u2, static_cast<Qubit>(d1),
+                                   static_cast<Qubit>(m1), dd);
 }
 
 std::pair<qc::QuantumComputation, qc::QuantumComputation>

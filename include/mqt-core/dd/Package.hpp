@@ -2474,6 +2474,7 @@ private:
     return r;
   }
 
+public:
   // only keeps the first 2^d columns
   mEdge setColumnsToZero(const mEdge& e, const Qubit d) {
     if (e.isTerminal()) {
@@ -2528,6 +2529,7 @@ private:
     return f;
   }
 
+private:
   UnaryComputeTable<mEdge, mEdge> shiftAllMatrixRows{};
   Qubit shiftAllMatrixRowsM{0};
   Qubit shiftAllMatrixRowsD{0};
@@ -2635,97 +2637,6 @@ public:
       shiftAllMatrixRowsD = d;
     }
     return shiftAllRowsRecursive(e, m, d, 0);
-  }
-
-private:
-  mEdge partialEquivalenceCheckSubroutine(mEdge u, const Qubit m, const Qubit k,
-                                          const Qubit extra) {
-    // add extra ancillary qubits
-    if (extra > 0) {
-      if (u.p->v + 1U + extra > nqubits) {
-        resize(u.p->v + 1U + extra);
-      }
-      u = kronecker(makeIdent(extra), u);
-    }
-    if (u.isTerminal()) {
-      return u;
-    }
-    const auto n = static_cast<Qubit>(u.p->v + 1);
-    const Qubit d = n - k;
-    u = setColumnsToZero(u, d);
-    const auto u2 = shiftAllRows(u, m, d);
-    return multiply(conjugateTranspose(u), u2);
-  }
-
-public:
-  /**
-   Checks for partial equivalence between the two circuits u1 and u2,
-    where the first d qubits of the circuits are the data qubits and
-    the first m qubits are the measured qubits.
-   @param u1 DD representation of first circuit
-   @param u2 DD representation of second circuit
-   @param d Number of data qubits
-   @param m Number of measured qubits
-   @return true if the two circuits u1 and u2 are partially equivalent.
-   **/
-  bool partialEquivalenceCheck(mEdge u1, mEdge u2, const Qubit d,
-                               const Qubit m) {
-    if (m == 0) {
-      return true;
-    }
-    if (u1.isTerminal() && u2.isTerminal()) {
-      return u1 == u2;
-    }
-    if (u1.isZeroTerminal() || u2.isZeroTerminal()) {
-      return false;
-    }
-    // add qubits such that u1 and u2 have the same dimension
-    if (u1.isTerminal()) {
-      auto w = u1.w;
-      u1 = makeIdent(u2.p->v + 1);
-      u1.w = w;
-    } else if (u2.isTerminal()) {
-      auto w = u2.w;
-      u2 = makeIdent(u1.p->v + 1);
-      u2.w = w;
-    } else if (u1.p->v < u2.p->v) {
-      u1 = kronecker(makeIdent(u2.p->v - u1.p->v), u1);
-    } else if (u1.p->v > u2.p->v) {
-      u2 = kronecker(makeIdent(u1.p->v - u2.p->v), u2);
-    }
-
-    const Qubit n = u1.p->v + 1;
-    Qubit k = n - d;
-    Qubit extra{0};
-    if (m > k) {
-      extra = m - k;
-    }
-    k = k + extra;
-
-    const auto u1Prime = partialEquivalenceCheckSubroutine(u1, m, k, extra);
-    const auto u2Prime = partialEquivalenceCheckSubroutine(u2, m, k, extra);
-
-    return u1Prime == u2Prime;
-  }
-
-  /**
-      Checks for partial equivalence between the two circuits u1 and u2,
-       where all qubits of the circuits are the data qubits and
-       the first m qubits are the measured qubits.
-      @param u1 DD representation of first circuit
-      @param u2 DD representation of second circuit
-      @param m Number of measured qubits
-      @return true if the two circuits u1 and u2 are partially equivalent.
-      **/
-  bool zeroAncillaePartialEquivalenceCheck(const mEdge& u1, const mEdge& u2,
-                                           const Qubit m) {
-    auto u1u2 = multiply(u1, conjugateTranspose(u2));
-    const Qubit n = u1.p->v + 1;
-    std::vector<bool> garbage(n, false);
-    for (size_t i = m; i < n; i++) {
-      garbage[i] = true;
-    }
-    return isCloseToIdentity(u1u2, 1.0E-10, garbage, false);
   }
 };
 
