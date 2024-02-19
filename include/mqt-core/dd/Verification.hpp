@@ -76,27 +76,6 @@ bool partialEquivalenceCheckDD(mEdge u1, mEdge u2, const Qubit d, const Qubit m,
 }
 
 /**
-    Checks for partial equivalence between the two circuits u1 and u2,
-     where all qubits of the circuits are the data qubits and
-     the first m qubits are the measured qubits.
-    @param u1 DD representation of first circuit
-    @param u2 DD representation of second circuit
-    @param m Number of measured qubits
-    @return true if the two circuits u1 and u2 are partially equivalent.
-    **/
-template <class Config>
-bool zeroAncillaePartialEquivalenceCheckDD(const mEdge& u1, const mEdge& u2,
-                                           const Qubit m, Package<Config>& dd) {
-  auto u1u2 = dd.multiply(u1, dd.conjugateTranspose(u2));
-  const Qubit n = u1.p->v + 1;
-  std::vector<bool> garbage(n, false);
-  for (size_t i = m; i < n; i++) {
-    garbage[i] = true;
-  }
-  return dd.isCloseToIdentity(u1u2, 1.0E-10, garbage, false);
-}
-
-/**
     Checks for partial equivalence between the two circuits c1 and c2
     that have no ancilla qubits.
     Assumption: the input and output permutations are the same.
@@ -124,6 +103,7 @@ bool zeroAncillaePartialEquivalenceCheck(qc::QuantumComputation c1,
 
   return dd.isCloseToIdentity(u, 1.0E-10, c1.getGarbage(), false);
 }
+
 // get next garbage qubit after n
 inline Qubit getNextGarbage(Qubit n, const std::vector<bool>& garbage) {
   while (n < static_cast<Qubit>(garbage.size()) && !garbage.at(n)) {

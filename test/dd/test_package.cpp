@@ -1228,6 +1228,62 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
                                     {true, false, true}, false));
 }
 
+TEST(PartialEquivalenceTest, CloseToIdentityFalse) {
+  const auto nqubits = 2U;
+  const auto dd = std::make_unique<dd::Package<>>(nqubits);
+  // the first qubit has differing gates in the two circuits,
+  // therefore they should not be equivalent if we only measure the first qubit
+  const auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+  const auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 0);
+  const auto circuit1 = dd->multiply(xGate, hGate);
+  const auto circuit2 = dd->makeIdent(2);
+  auto u1u2 = dd->multiply(circuit1, dd->conjugateTranspose(circuit2));
+  std::vector<bool> garbage(nqubits, false);
+  garbage[1] = true;
+  EXPECT_FALSE(dd->isCloseToIdentity(u1u2, 1.0E-10, garbage, false));
+}
+
+TEST(PartialEquivalenceTest, CloseToIdentityExamplePaper) {
+  const auto nqubits = 3U;
+  const auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto controlledSwapGate =
+      dd->makeTwoQubitGateDD(dd::SWAP_MAT, nqubits, qc::Controls{1}, 0, 2);
+  const auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+  const auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
+  const auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+  const auto controlledHGate =
+      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
+
+  const auto c1 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
+  const auto c2 = dd->multiply(controlledHGate, xGate);
+
+  auto c1c2 = dd->multiply(c1, dd->conjugateTranspose(c2));
+  std::vector<bool> garbage(nqubits, false);
+  // only the last qubit is garbage
+  garbage[2] = true;
+  EXPECT_FALSE(dd->isCloseToIdentity(c1c2, 1.0E-10, garbage, false));
+  // the last two qubits are garbage
+  garbage[1] = true;
+  EXPECT_TRUE(dd->isCloseToIdentity(c1c2, 1.0E-10, garbage, false));
+
+  const auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 2);
+  const auto zGate2 = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
+  const auto controlledHGate2 =
+      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
+
+  const auto c3 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate2, dd->multiply(zGate2, controlledSwapGate)));
+  const auto c4 = dd->multiply(controlledHGate2, xGate);
+
+  auto c3c4 = dd->multiply(c3, dd->conjugateTranspose(c4));
+
+  // the last two qubits are garbage
+  EXPECT_FALSE(dd->isCloseToIdentity(c3c4, 1.0E-10, garbage, false));
+}
+
 struct DensityMatrixSimulatorDDPackageConfigTesting
     : public dd::DDPackageConfig {
   static constexpr std::size_t UT_DM_NBUCKET = 65536U;

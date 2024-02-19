@@ -49,8 +49,6 @@ TEST(PartialEquivalenceTest, NotEquivalent) {
   const auto circuit1 = dd->multiply(xGate, hGate);
   const auto circuit2 = dd->makeIdent(2);
   EXPECT_FALSE(partialEquivalenceCheckDD(circuit1, circuit2, 2, 1, *dd));
-  EXPECT_FALSE(
-      zeroAncillaePartialEquivalenceCheckDD(circuit1, circuit2, 1, *dd));
 }
 
 TEST(PartialEquivalenceTest, ExamplePaper) {
@@ -70,38 +68,6 @@ TEST(PartialEquivalenceTest, ExamplePaper) {
   const auto c2 = dd->multiply(controlledHGate, xGate);
 
   EXPECT_TRUE(partialEquivalenceCheckDD(c1, c2, 3, 1, *dd));
-}
-
-TEST(PartialEquivalenceTest, ExamplePaperZeroAncillae) {
-  const auto nqubits = 3U;
-  const auto dd = std::make_unique<dd::Package<>>(nqubits);
-  const auto controlledSwapGate =
-      dd->makeTwoQubitGateDD(dd::SWAP_MAT, nqubits, qc::Controls{1}, 0, 2);
-  const auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
-  const auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
-  const auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
-  const auto controlledHGate =
-      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
-
-  const auto c1 = dd->multiply(
-      controlledSwapGate,
-      dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
-  const auto c2 = dd->multiply(controlledHGate, xGate);
-
-  EXPECT_TRUE(zeroAncillaePartialEquivalenceCheckDD(c1, c2, 1, *dd));
-  EXPECT_FALSE(zeroAncillaePartialEquivalenceCheckDD(c1, c2, 2, *dd));
-
-  const auto hGate2 = dd->makeGateDD(dd::H_MAT, nqubits, 2);
-  const auto zGate2 = dd->makeGateDD(dd::Z_MAT, nqubits, 0);
-  const auto controlledHGate2 =
-      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
-
-  const auto c3 = dd->multiply(
-      controlledSwapGate,
-      dd->multiply(hGate2, dd->multiply(zGate2, controlledSwapGate)));
-  const auto c4 = dd->multiply(controlledHGate2, xGate);
-
-  EXPECT_FALSE(zeroAncillaePartialEquivalenceCheckDD(c3, c4, 1, *dd));
 }
 
 TEST(PartialEquivalenceTest, DifferentNumberOfQubits) {
