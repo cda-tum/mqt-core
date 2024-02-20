@@ -178,8 +178,8 @@ TEST(MatrixFunctionality, GetValueByIndexEndianness) {
 }
 
 TEST(MatrixFunctionality, GetMatrixTerminal) {
-  EXPECT_EQ(mEdge::zero().getMatrix(), CMat{{0.}});
-  EXPECT_EQ(mEdge::one().getMatrix(), CMat{{1.}});
+  EXPECT_EQ(mEdge::zero().getMatrix(1), CMat{{0.}});
+  EXPECT_EQ(mEdge::one().getMatrix(1), CMat{{1.}});
 }
 
 TEST(MatrixFunctionality, GetMatrixRoundtrip) {
@@ -193,7 +193,7 @@ TEST(MatrixFunctionality, GetMatrixRoundtrip) {
   // clang-format on
 
   const auto matDD = dd->makeDDFromMatrix(mat);
-  const auto matVec = matDD.getMatrix();
+  const auto matVec = matDD.getMatrix(dd->qubits());
   for (std::size_t i = 0U; i < mat.size(); ++i) {
     for (std::size_t j = 0U; j < mat.size(); ++j) {
       const auto val = matDD.getValueByIndex(i, j);
@@ -251,7 +251,7 @@ TEST(MatrixFunctionality, GetSparseMatrixConsistency) {
 
   const auto matDD = dd->makeDDFromMatrix(mat);
   const auto matSparse = matDD.getSparseMatrix();
-  const auto matDense = matDD.getMatrix();
+  const auto matDense = matDD.getMatrix(dd->qubits());
   for (const auto& [index, value] : matSparse) {
     const auto val = matDense.at(index.first).at(index.second);
     EXPECT_NEAR(value.real(), val.real(), 1e-10);
@@ -271,7 +271,7 @@ TEST(MatrixFunctionality, GetSparseMatrixTolerance) {
 
   const auto matDD = dd->makeDDFromMatrix(mat);
   const auto matSparse = matDD.getSparseMatrix(std::sqrt(0.1));
-  const auto matDense = matDD.getMatrix();
+  const auto matDense = matDD.getMatrix(dd->qubits());
   for (const auto& [index, value] : matSparse) {
     const auto val = matDense.at(index.first).at(index.second);
     EXPECT_NEAR(value.real(), val.real(), 1e-10);
@@ -366,7 +366,7 @@ TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
   const CMat dmRef = {{{diagValRef, 0.}, {offDiagValRef, -offDiagValRef}},
                       {{offDiagValRef, offDiagValRef}, {diagValRef, 0.}}};
 
-  const auto dm = state.getMatrix();
+  const auto dm = state.getMatrix(dd->qubits());
 
   for (std::size_t i = 0U; i < dm.size(); ++i) {
     for (std::size_t j = 0U; j < dm.size(); ++j) {
@@ -396,7 +396,7 @@ TEST(DensityMatrixFunctionality, GetSparseMatrixConsistency) {
   state = dd->applyOperationToDensity(state, op2);
 
   const auto dm = state.getSparseMatrix();
-  const auto dmDense = state.getMatrix();
+  const auto dmDense = state.getMatrix(dd->qubits());
 
   for (const auto& [index, value] : dm) {
     const auto val = dmDense.at(index.first).at(index.second);

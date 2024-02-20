@@ -1249,7 +1249,6 @@ public:
     std::array<CachedEdge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
       CachedEdge<Node> e1{};
-      // TODO: if constexpr for matrix type
       if constexpr (std::is_same_v<Node, mNode>) {
         if (x.isIdentity() || x.p->v < var) {
           // [ 0 | 1 ]   [ x | 0 ]
@@ -1747,39 +1746,29 @@ private:
       return CachedEdge<Node>::zero();
     }
 
-    // TODO: this does also not yet work with identities
-    if (x.isTerminal()) {
-      return {y.p, rWeight};
+    if (x.isTerminal() && y.isTerminal()) {
+      return {x.p, rWeight};
     }
 
+    if constexpr (std::is_same_v<Node, mNode>) {
+      if (x.isIdentity()) {
+        return {y.p, rWeight};
+      }
+    }
+
+    // check if we already computed the product before and return the result
     auto& computeTable = getKroneckerComputeTable<Node>();
     if (const auto* r = computeTable.lookup(x.p, y.p); r != nullptr) {
       return {r->p, rWeight};
     }
 
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
-    // special case handling for matrices
-    if constexpr (n == NEDGE) {
-      if (x.isIdentity()) {
-        auto idx = incIdx ? static_cast<Qubit>(y.p->v + 1) : y.p->v;
-        const auto yCopy = Edge<Node>{y.p, Complex::one()};
-        auto e = makeDDNode(idx, std::array{yCopy, Edge<Node>::zero(),
-                                            Edge<Node>::zero(), yCopy});
-        for (auto i = 0; i < x.p->v; ++i) {
-          idx = incIdx ? (e.p->v + 1) : e.p->v;
-          e = makeDDNode(
-              idx, std::array{e, Edge<Node>::zero(), Edge<Node>::zero(), e});
-        }
-        computeTable.insert(x.p, y.p, {e.p, e.w});
-        return {e.p, rWeight};
-      }
-    }
-
     std::array<CachedEdge<Node>, n> edge{};
     for (auto i = 0U; i < n; ++i) {
       edge[i] = kronecker2(x.p->e[i], y, incIdx);
     }
 
+    // Increase the qubit index
     auto idx = incIdx ? (y.p->v + x.p->v + 1) : x.p->v;
     auto e = makeDDNode(static_cast<Qubit>(idx), edge, true);
     computeTable.insert(x.p, y.p, {e.p, e.w});
