@@ -1972,8 +1972,18 @@ public:
       return e;
     }
 
-    auto f = reduceAncillaeRecursion(
-        e, ancillary, static_cast<Qubit>(ancillary.size() - 1), regular);
+    Qubit lowerbound = 0;
+    for (auto i = 0U; i < ancillary.size(); ++i) {
+      if (ancillary[i]) {
+        lowerbound = static_cast<Qubit>(i);
+        break;
+      }
+    }
+    if (e.p->v < lowerbound) {
+      return e;
+    }
+
+    const auto f = reduceAncillaeRecursion(e.p, ancillary, lowerbound, regular);
     const auto res = mEdge{f.p, cn.lookup(e.w * f.w)};
 
     incRef(res);
