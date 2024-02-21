@@ -178,8 +178,8 @@ TEST(MatrixFunctionality, GetValueByIndexEndianness) {
 }
 
 TEST(MatrixFunctionality, GetMatrixTerminal) {
-  EXPECT_EQ(mEdge::zero().getMatrix(1), CMat{{0.}});
-  EXPECT_EQ(mEdge::one().getMatrix(1), CMat{{1.}});
+  EXPECT_EQ(mEdge::zero().getMatrix(0), CMat{{0.}});
+  EXPECT_EQ(mEdge::one().getMatrix(0), CMat{{1.}});
 }
 
 TEST(MatrixFunctionality, GetMatrixRoundtrip) {
@@ -215,7 +215,7 @@ TEST(MatrixFunctionality, GetMatrixTolerance) {
   // clang-format on
 
   const auto matDD = dd->makeDDFromMatrix(mat);
-  const auto matVec = matDD.getMatrix(std::sqrt(0.1));
+  const auto matVec = matDD.getMatrix(dd->qubits(), std::sqrt(0.1));
   for (std::size_t i = 0U; i < mat.size(); ++i) {
     for (std::size_t j = 0U; j < mat.size(); ++j) {
       const auto val = matDD.getValueByIndex(i, j);
@@ -224,7 +224,8 @@ TEST(MatrixFunctionality, GetMatrixTolerance) {
       EXPECT_NEAR(ref.imag(), val.imag(), 1e-10);
     }
   }
-  const auto matVec2 = matDD.getMatrix(std::sqrt(0.1) + RealNumber::eps);
+  const auto matVec2 =
+      matDD.getMatrix(dd->qubits(), std::sqrt(0.1) + RealNumber::eps);
   EXPECT_NE(matVec2, matVec);
   EXPECT_EQ(matVec2[0][0], 0.);
   EXPECT_EQ(matVec2[1][3], 0.);
@@ -333,7 +334,7 @@ TEST(MatrixFunctionality, SizeBellState) {
   // clang-format on
 
   const auto bell = dd->makeDDFromMatrix(mat);
-  EXPECT_EQ(bell.size(), 4);
+  EXPECT_EQ(bell.size(), 3);
 }
 
 ///-----------------------------------------------------------------------------

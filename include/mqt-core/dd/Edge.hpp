@@ -274,7 +274,7 @@ public:
    * @return the matrix
    */
   template <typename T = Node, isMatrixVariant<T> = true>
-  [[nodiscard]] CMat getMatrix(std::size_t nrQubits) const;
+  [[nodiscard]] CMat getMatrix(std::size_t nrQubits, fp threshold = 0.) const;
 
   /**
    * Recursively get the matrix represented by the DD
@@ -288,7 +288,7 @@ public:
    */
   template <typename T = Node, isMatrixVariant<T> = true>
   void getMatrix(const Edge& e, const ComplexValue& amp, std::size_t i,
-                 std::size_t j, CMat& mat, int level) const;
+                 std::size_t j, CMat& mat, int level, fp threshold = 0.) const;
 
   /**
    * @brief Get the sparse matrix represented by the DD
