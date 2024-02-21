@@ -1,17 +1,11 @@
-#include "Definitions.hpp"
-#include "QuantumComputation.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Export.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
-#include "operations/OpType.hpp"
-#include "operations/StandardOperation.hpp"
 
 #include "gtest/gtest.h"
-#include <cstdint>
 #include <filesystem>
 #include <iomanip>
 #include <memory>
