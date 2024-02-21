@@ -1228,7 +1228,7 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
                                     {true, false, true}, false));
 }
 
-TEST(PartialEquivalenceTest, CloseToIdentityFalse) {
+TEST(DDPackageTest, CloseToIdentityFalse) {
   const auto nqubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nqubits);
   // the first qubit has differing gates in the two circuits,
@@ -1243,7 +1243,7 @@ TEST(PartialEquivalenceTest, CloseToIdentityFalse) {
   EXPECT_FALSE(dd->isCloseToIdentity(u1u2, 1.0E-10, garbage, false));
 }
 
-TEST(PartialEquivalenceTest, CloseToIdentityExamplePaper) {
+TEST(DDPackageTest, CloseToIdentityExamplePaper) {
   const auto nqubits = 3U;
   const auto dd = std::make_unique<dd::Package<>>(nqubits);
   const auto controlledSwapGate =

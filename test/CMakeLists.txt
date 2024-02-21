@@ -13,7 +13,6 @@ package_add_test(
   dd/test_package.cpp
   dd/test_dd_functionality.cpp
   dd/test_dd_noise_functionality.cpp
-  dd/test_partial_equivalence.cpp
   algorithms/eval_dynamic_circuits.cpp
   algorithms/test_qft.cpp
   algorithms/test_grover.cpp
