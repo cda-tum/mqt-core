@@ -17,7 +17,7 @@ mEdge partialEquivalenceCheckDDSubroutine(mEdge u, const Qubit m, const Qubit k,
   if (u.isTerminal()) {
     return u;
   }
-  const auto n = static_cast<Qubit>(u.p->v + 1);
+  const Qubit n = u.p->v + 1;
   const Qubit d = n - k;
   u = dd.setColumnsToZero(u, d);
   const auto u2 = dd.shiftAllRows(u, m, d);
