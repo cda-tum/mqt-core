@@ -304,3 +304,75 @@ TEST_F(ZXFunctionalityTest, ISWAP) {
   EXPECT_TRUE(d.globalPhaseIsZero());
   EXPECT_TRUE(d.connected(d.getInput(0), d.getOutput(0)));
 }
+
+TEST_F(ZXFunctionalityTest, XXplusYY) {
+  const auto theta = zx::PI / 4.;
+  const auto beta = zx::PI / 2.;
+
+  qc = qc::QuantumComputation(2);
+  qc.xx_plus_yy(theta, beta, 0, 1);
+
+  auto qcPrime = qc::QuantumComputation(2);
+  qcPrime.rz(beta, 1);
+  qcPrime.rz(-qc::PI_2, 0);
+  qcPrime.sx(0);
+  qcPrime.rz(qc::PI_2, 0);
+  qcPrime.s(1);
+  qcPrime.cx(0, 1);
+  qcPrime.ry(theta / 2, 0);
+  qcPrime.ry(theta / 2, 1);
+  qcPrime.cx(0, 1);
+  qcPrime.rz(-qc::PI_2, 0);
+  qcPrime.sdg(1);
+  qcPrime.sxdg(0);
+  qcPrime.rz(qc::PI_2, 0);
+  qcPrime.rz(-beta, 1);
+
+  auto d = zx::FunctionalityConstruction::buildFunctionality(&qc);
+
+  auto dPrime = zx::FunctionalityConstruction::buildFunctionality(&qcPrime);
+
+  d.concat(dPrime.invert());
+
+  zx::fullReduce(d);
+
+  EXPECT_TRUE(d.isIdentity());
+  EXPECT_TRUE(d.globalPhaseIsZero());
+  EXPECT_TRUE(d.connected(d.getInput(0), d.getOutput(0)));
+}
+
+TEST_F(ZXFunctionalityTest, XXminusYY) {
+  const auto theta = zx::PI / 4.;
+  const auto beta = -zx::PI / 2.;
+
+  qc = qc::QuantumComputation(2);
+  qc.xx_minus_yy(theta, beta, 0, 1);
+
+  auto qcPrime = qc::QuantumComputation(2);
+  qcPrime.rz(-beta, 1);
+  qcPrime.rz(-qc::PI_2, 0);
+  qcPrime.sx(0);
+  qcPrime.rz(qc::PI_2, 0);
+  qcPrime.s(1);
+  qcPrime.cx(0, 1);
+  qcPrime.ry(-theta / 2, 0);
+  qcPrime.ry(theta / 2, 1);
+  qcPrime.cx(0, 1);
+  qcPrime.sdg(1);
+  qcPrime.rz(-qc::PI_2, 0);
+  qcPrime.sxdg(0);
+  qcPrime.rz(qc::PI_2, 0);
+  qcPrime.rz(beta, 1);
+
+  auto d = zx::FunctionalityConstruction::buildFunctionality(&qc);
+
+  auto dPrime = zx::FunctionalityConstruction::buildFunctionality(&qcPrime);
+
+  d.concat(dPrime.invert());
+
+  zx::fullReduce(d);
+
+  EXPECT_TRUE(d.isIdentity());
+  EXPECT_TRUE(d.globalPhaseIsZero());
+  EXPECT_TRUE(d.connected(d.getInput(0), d.getOutput(0)));
+}

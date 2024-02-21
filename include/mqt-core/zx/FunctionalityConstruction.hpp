@@ -5,6 +5,7 @@
 #include "zx/ZXDiagram.hpp"
 
 #include <cstddef>
+#include <optional>
 
 namespace zx {
 class FunctionalityConstruction {
@@ -28,6 +29,16 @@ protected:
                          std::vector<Vertex>& qubits,
                          const PiExpression& phase = PiExpression(),
                          EdgeType type = EdgeType::Simple);
+  static void
+  addRz(ZXDiagram& diag, const PiExpression& phase, Qubit target,
+        std::vector<Vertex>& qubits,
+        const std::optional<double>& unconvertedPhase = std::nullopt);
+  static void addRx(ZXDiagram& diag, const PiExpression& phase, Qubit target,
+                    std::vector<Vertex>& qubits);
+  static void
+  addRy(ZXDiagram& diag, const PiExpression& phase, Qubit target,
+        std::vector<Vertex>& qubits,
+        const std::optional<double>& unconvertedPhase = std::nullopt);
   static void addCnot(ZXDiagram& diag, Qubit ctrl, Qubit target,
                       std::vector<Vertex>& qubits,
                       EdgeType type = EdgeType::Simple);
@@ -35,14 +46,30 @@ protected:
                         Qubit target, std::vector<Vertex>& qubits);
   static void addSwap(ZXDiagram& diag, Qubit target, Qubit target2,
                       std::vector<Vertex>& qubits);
-  static void addRzz(ZXDiagram& diag, const PiExpression& phase, Qubit target,
-                     Qubit target2, std::vector<Vertex>& qubits);
-  static void addRxx(ZXDiagram& diag, const PiExpression& phase, Qubit target,
-                     Qubit target2, std::vector<Vertex>& qubits);
-  static void addRzx(ZXDiagram& diag, const PiExpression& phase, Qubit target,
-                     Qubit target2, std::vector<Vertex>& qubits);
+  static void
+  addRzz(ZXDiagram& diag, const PiExpression& phase, Qubit target,
+         Qubit target2, std::vector<Vertex>& qubits,
+         const std::optional<double>& unconvertedPhase = std::nullopt);
+  static void
+  addRxx(ZXDiagram& diag, const PiExpression& phase, Qubit target,
+         Qubit target2, std::vector<Vertex>& qubits,
+         const std::optional<double>& unconvertedPhase = std::nullopt);
+  static void
+  addRzx(ZXDiagram& diag, const PiExpression& phase, Qubit target,
+         Qubit target2, std::vector<Vertex>& qubits,
+         const std::optional<double>& unconvertedPhase = std::nullopt);
   static void addDcx(ZXDiagram& diag, Qubit qubit1, Qubit qubit2,
                      std::vector<Vertex>& qubits);
+  static void
+  addXXplusYY(ZXDiagram& diag, const PiExpression& theta,
+              const PiExpression& beta, Qubit qubit0, Qubit qubit1,
+              std::vector<Vertex>& qubits,
+              const std::optional<double>& unconvertedBeta = std::nullopt);
+  static void
+  addXXminusYY(ZXDiagram& diag, const PiExpression& theta,
+               const PiExpression& beta, Qubit qubit0, Qubit qubit1,
+               std::vector<Vertex>& qubits,
+               const std::optional<double>& unconvertedBeta = std::nullopt);
   static void addCcx(ZXDiagram& diag, Qubit ctrl0, Qubit ctrl1, Qubit target,
                      std::vector<Vertex>& qubits);
   static op_it parseOp(ZXDiagram& diag, op_it it, op_it end,
