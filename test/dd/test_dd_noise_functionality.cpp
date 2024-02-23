@@ -281,3 +281,17 @@ TEST_F(DDNoiseFunctionalityTest, testingUsedQubits) {
   EXPECT_EQ(classicalControlledOp.getUsedQubits().size(), 1);
   EXPECT_TRUE(classicalControlledOp.getUsedQubits().count(0) == 1U);
 }
+
+TEST_F(DDNoiseFunctionalityTest, invalidNoiseEffect) {
+  auto dd = std::make_unique<StochasticNoiseTestPackage>(qc.getNqubits());
+  EXPECT_THROW(dd::StochasticNoiseFunctionality(dd, qc.getNqubits(), 0.01, 0.02,
+                                                2., "APK"),
+               std::runtime_error);
+}
+
+TEST_F(DDNoiseFunctionalityTest, invalidNoiseProbabilities) {
+  auto dd = std::make_unique<StochasticNoiseTestPackage>(qc.getNqubits());
+  EXPECT_THROW(
+      dd::StochasticNoiseFunctionality(dd, qc.getNqubits(), 0.3, 0.6, 2, "APD"),
+      std::runtime_error);
+}
