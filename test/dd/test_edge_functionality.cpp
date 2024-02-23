@@ -227,8 +227,7 @@ TEST(MatrixFunctionality, GetMatrixTolerance) {
       EXPECT_NEAR(ref.imag(), val.imag(), 1e-10);
     }
   }
-  const auto matVec2 =
-      matDD.getMatrix(std::sqrt(0.1) + RealNumber::eps);
+  const auto matVec2 = matDD.getMatrix(std::sqrt(0.1) + RealNumber::eps);
   EXPECT_NE(matVec2, matVec);
   EXPECT_EQ(matVec2[0][0], 0.);
   EXPECT_EQ(matVec2[1][3], 0.);
