@@ -129,6 +129,7 @@ TEST(DDPackageTest, QFTState) {
 
   qftOp = dd->multiply(swapGate, qftOp);
   auto qftState = dd->multiply(qftOp, dd->makeZeroState(3));
+  qftState.numQubits = 3;
 
   qftState.printVector();
 
@@ -324,9 +325,12 @@ TEST(DDPackageTest, BellMatrix) {
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   auto hGate = dd->makeGateDD(dd::H_MAT, 2, 1);
+  hGate.numQubits = 2;
   auto cxGate = dd->makeGateDD(dd::X_MAT, 2, 1_pc, 0);
+  cxGate.numQubits = 2;
 
   auto bellMatrix = dd->multiply(cxGate, hGate);
+  bellMatrix.numQubits = 2;
 
   bellMatrix.printMatrix();
 
@@ -364,7 +368,7 @@ TEST(DDPackageTest, BellMatrix) {
   auto goalRow3 =
       dd::CVec{{dd::SQRT2_2, 0.}, {0., 0.}, {-dd::SQRT2_2, 0.}, {0., 0.}};
   auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};
-  ASSERT_EQ(bellMatrix.getMatrix(dd->qubits()), goalMatrix);
+  ASSERT_EQ(bellMatrix.getMatrix(), goalMatrix);
 
   export2Dot(bellMatrix, "bell_matrix_colored_labels.dot", true, true, false,
              false, false);
@@ -557,6 +561,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   auto reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {false, false, false, false});
+  reducedBellMatrix.numQubits = 2;
   EXPECT_EQ(bellMatrix, reducedBellMatrix);
   dd->incRef(bellMatrix);
   reducedBellMatrix =
@@ -566,7 +571,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {false, true, false, false});
-  auto mat = reducedBellMatrix.getMatrix(2);
+  auto mat = reducedBellMatrix.getMatrix();
   auto zero = dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
   EXPECT_EQ(mat[2], zero);
   EXPECT_EQ(mat[3], zero);
@@ -574,7 +579,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {true, false, false, false});
-  mat = reducedBellMatrix.getMatrix(2);
+  mat = reducedBellMatrix.getMatrix();
   EXPECT_EQ(mat[1], zero);
   EXPECT_EQ(mat[3], zero);
 
@@ -740,8 +745,9 @@ TEST(DDPackageTest, KroneckerIdentityHandling) {
   // create a single qubit identity
   auto id = dd->makeIdent();
   // kronecker both DDs
-  const auto combined = dd->kronecker(h, id);
-  const auto matrix = combined.getMatrix(dd->qubits());
+  auto combined = dd->kronecker(h, id);
+  combined.numQubits = 3;
+  const auto matrix = combined.getMatrix();
   const auto expectedMatrix = dd::CMat{
       {dd::SQRT2_2, 0, 0, 0, dd::SQRT2_2, 0, 0, 0},
       {0, dd::SQRT2_2, 0, 0, 0, dd::SQRT2_2, 0, 0},
@@ -1217,6 +1223,7 @@ TEST(DDPackageTest, dNodeMultiply) {
   auto dd = std::make_unique<DensityMatrixPackageTest>(nrQubits);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(dd->qubits());
+  state.numQubits = 3;
   dd->incRef(state);
   std::vector<dd::mEdge> operations = {};
   operations.emplace_back(dd->makeGateDD(dd::H_MAT, nrQubits, 0));
@@ -1228,7 +1235,7 @@ TEST(DDPackageTest, dNodeMultiply) {
     dd->applyOperationToDensity(state, op);
   }
 
-  const auto stateDensityMatrix = state.getMatrix(dd->qubits());
+  const auto stateDensityMatrix = state.getMatrix();
 
   for (const auto& stateVector : stateDensityMatrix) {
     for (const auto& cValue : stateVector) {
@@ -1264,6 +1271,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
   auto dd = std::make_unique<DensityMatrixPackageTest>(nrQubits);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(dd->qubits());
+  state.numQubits = 3;
   dd->incRef(state);
   std::vector<dd::mEdge> operations = {};
   operations.emplace_back(dd->makeGateDD(dd::H_MAT, nrQubits, 0));
@@ -1276,7 +1284,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
   }
   operations[0].printMatrix();
 
-  const auto stateDensityMatrix = state.getMatrix(dd->qubits());
+  const auto stateDensityMatrix = state.getMatrix();
 
   for (std::size_t i = 0; i < (1 << nrQubits); i++) {
     for (std::size_t j = 0; j < (1 << nrQubits); j++) {
@@ -1537,9 +1545,9 @@ TEST(DDPackageTest, DDFromSingleQubitMatrix) {
 
   const auto nrQubits = 1U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
-  const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-
-  const auto outputMatrix = matDD.getMatrix(nrQubits);
+  auto matDD = dd->makeDDFromMatrix(inputMatrix);
+  matDD.numQubits = 1;
+  const auto outputMatrix = matDD.getMatrix();
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1550,8 +1558,9 @@ TEST(DDPackageTest, DDFromTwoQubitMatrix) {
 
   const auto nrQubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
-  const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = matDD.getMatrix(nrQubits);
+  auto matDD = dd->makeDDFromMatrix(inputMatrix);
+  matDD.numQubits = 2;
+  const auto outputMatrix = matDD.getMatrix();
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1564,8 +1573,9 @@ TEST(DDPackageTest, DDFromTwoQubitAsymmetricalMatrix) {
 
   const auto nrQubits = 2U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
-  const auto matDD = dd->makeDDFromMatrix(inputMatrix);
-  const auto outputMatrix = matDD.getMatrix(nrQubits);
+  auto matDD = dd->makeDDFromMatrix(inputMatrix);
+  matDD.numQubits = 2;
+  const auto outputMatrix = matDD.getMatrix();
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -1579,9 +1589,10 @@ TEST(DDPackageTest, DDFromThreeQubitMatrix) {
 
   const auto nrQubits = 3U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
-  const auto matDD = dd->makeDDFromMatrix(inputMatrix);
+  auto matDD = dd->makeDDFromMatrix(inputMatrix);
+  matDD.numQubits = 3;
 
-  const auto outputMatrix = matDD.getMatrix(nrQubits);
+  const auto outputMatrix = matDD.getMatrix();
 
   EXPECT_EQ(inputMatrix, outputMatrix);
 }
@@ -2131,14 +2142,15 @@ TEST(DDPackageTest, GetMatrixMultiQubitIdentity) {
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   auto identity = dd->makeIdent();
-  auto matrix = identity.getMatrix(nrQubits);
+  identity.numQubits = 2;
+  auto matrix = identity.getMatrix();
 
   auto goalRow0 = dd::CVec{{1., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
   auto goalRow1 = dd::CVec{{0., 0.}, {1., 0.}, {0., 0.}, {0., 0.}};
   auto goalRow2 = dd::CVec{{0., 0.}, {0., 0.}, {1., 0.}, {0., 0.}};
   auto goalRow3 = dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {1., 0.}};
   auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};
-  ASSERT_EQ(identity.getMatrix(nrQubits), goalMatrix);
+  ASSERT_EQ(identity.getMatrix(), goalMatrix);
 }
 
 TEST(DDPackageTest, GetMatrixCNOT) {
@@ -2147,7 +2159,8 @@ TEST(DDPackageTest, GetMatrixCNOT) {
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   auto originalDD = dd->makeGateDD(dd::X_MAT, 2, 1_pc, 0);
-  auto matrix = originalDD.getMatrix(nrQubits);
+  originalDD.numQubits = 2;
+  auto matrix = originalDD.getMatrix();
   auto recreatedDD = dd->makeDDFromMatrix(matrix);
 
   ASSERT_EQ(originalDD, recreatedDD);
@@ -2248,9 +2261,10 @@ TEST(DDPackageTest, ReduceAncillaRegression) {
       dd::CMat{{1, 1, 1, 1}, {1, -1, 1, -1}, {1, 1, -1, -1}, {1, -1, -1, 1}};
   auto inputDD = dd->makeDDFromMatrix(inputMatrix);
   dd->incRef(inputDD);
-  const auto outputDD = dd->reduceAncillae(inputDD, {true, false});
+  auto outputDD = dd->reduceAncillae(inputDD, {true, false});
+  outputDD.numQubits = 2;
 
-  const auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  const auto outputMatrix = outputDD.getMatrix();
   const auto expected =
       dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
 

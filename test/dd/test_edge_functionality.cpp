@@ -165,7 +165,8 @@ TEST(MatrixFunctionality, GetValueByIndexEndianness) {
     {-std::sqrt(0.4), -std::sqrt(0.1), -std::sqrt(0.2), std::sqrt(0.3)}};
   // clang-format on
 
-  const auto matDD = dd->makeDDFromMatrix(mat);
+  auto matDD = dd->makeDDFromMatrix(mat);
+  matDD.numQubits = 2;
 
   for (std::size_t i = 0U; i < mat.size(); ++i) {
     for (std::size_t j = 0U; j < mat.size(); ++j) {
@@ -192,8 +193,9 @@ TEST(MatrixFunctionality, GetMatrixRoundtrip) {
     {-std::sqrt(0.4), -std::sqrt(0.1), -std::sqrt(0.2), std::sqrt(0.3)}};
   // clang-format on
 
-  const auto matDD = dd->makeDDFromMatrix(mat);
-  const auto matVec = matDD.getMatrix(dd->qubits());
+  auto matDD = dd->makeDDFromMatrix(mat);
+  matDD.numQubits = 2;
+  const auto matVec = matDD.getMatrix();
   for (std::size_t i = 0U; i < mat.size(); ++i) {
     for (std::size_t j = 0U; j < mat.size(); ++j) {
       const auto val = matDD.getValueByIndex(i, j);
@@ -214,8 +216,9 @@ TEST(MatrixFunctionality, GetMatrixTolerance) {
     {-std::sqrt(0.4), -std::sqrt(0.1), -std::sqrt(0.2), std::sqrt(0.3)}};
   // clang-format on
 
-  const auto matDD = dd->makeDDFromMatrix(mat);
-  const auto matVec = matDD.getMatrix(dd->qubits(), std::sqrt(0.1));
+  auto matDD = dd->makeDDFromMatrix(mat);
+  matDD.numQubits = 2;
+  const auto matVec = matDD.getMatrix(std::sqrt(0.1));
   for (std::size_t i = 0U; i < mat.size(); ++i) {
     for (std::size_t j = 0U; j < mat.size(); ++j) {
       const auto val = matDD.getValueByIndex(i, j);
@@ -225,7 +228,7 @@ TEST(MatrixFunctionality, GetMatrixTolerance) {
     }
   }
   const auto matVec2 =
-      matDD.getMatrix(dd->qubits(), std::sqrt(0.1) + RealNumber::eps);
+      matDD.getMatrix(std::sqrt(0.1) + RealNumber::eps);
   EXPECT_NE(matVec2, matVec);
   EXPECT_EQ(matVec2[0][0], 0.);
   EXPECT_EQ(matVec2[1][3], 0.);
@@ -250,9 +253,10 @@ TEST(MatrixFunctionality, GetSparseMatrixConsistency) {
     {-std::sqrt(0.4), -std::sqrt(0.1), -std::sqrt(0.2), std::sqrt(0.3)}};
   // clang-format on
 
-  const auto matDD = dd->makeDDFromMatrix(mat);
+  auto matDD = dd->makeDDFromMatrix(mat);
+  matDD.numQubits = 2;
   const auto matSparse = matDD.getSparseMatrix();
-  const auto matDense = matDD.getMatrix(dd->qubits());
+  const auto matDense = matDD.getMatrix();
   for (const auto& [index, value] : matSparse) {
     const auto val = matDense.at(index.first).at(index.second);
     EXPECT_NEAR(value.real(), val.real(), 1e-10);
@@ -270,9 +274,10 @@ TEST(MatrixFunctionality, GetSparseMatrixTolerance) {
     {-std::sqrt(0.4), -std::sqrt(0.1), -std::sqrt(0.2), std::sqrt(0.3)}};
   // clang-format on
 
-  const auto matDD = dd->makeDDFromMatrix(mat);
+  auto matDD = dd->makeDDFromMatrix(mat);
+  matDD.numQubits = 2;
   const auto matSparse = matDD.getSparseMatrix(std::sqrt(0.1));
-  const auto matDense = matDD.getMatrix(dd->qubits());
+  const auto matDense = matDD.getMatrix();
   for (const auto& [index, value] : matSparse) {
     const auto val = matDense.at(index.first).at(index.second);
     EXPECT_NEAR(value.real(), val.real(), 1e-10);
@@ -308,7 +313,8 @@ TEST(MatrixFunctionality, PrintMatrix) {
     {-std::sqrt(0.4), -std::sqrt(0.1), -std::sqrt(0.2), std::sqrt(0.3)}};
   // clang-format on
 
-  const auto matDD = dd->makeDDFromMatrix(mat);
+  auto matDD = dd->makeDDFromMatrix(mat);
+  matDD.numQubits = 2;
   testing::internal::CaptureStdout();
   matDD.printMatrix();
   const auto matStr = testing::internal::GetCapturedStdout();
@@ -360,6 +366,7 @@ TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
   const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1);
   state = dd->applyOperationToDensity(state, op2);
+  state.numQubits = nqubits;
 
   const auto diagValRef = 0.5;
   const auto offDiagValRef = 0.25 * std::sqrt(2.);
@@ -367,7 +374,7 @@ TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
   const CMat dmRef = {{{diagValRef, 0.}, {offDiagValRef, -offDiagValRef}},
                       {{offDiagValRef, offDiagValRef}, {diagValRef, 0.}}};
 
-  const auto dm = state.getMatrix(dd->qubits());
+  const auto dm = state.getMatrix();
 
   for (std::size_t i = 0U; i < dm.size(); ++i) {
     for (std::size_t j = 0U; j < dm.size(); ++j) {
@@ -395,9 +402,10 @@ TEST(DensityMatrixFunctionality, GetSparseMatrixConsistency) {
   const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1);
   state = dd->applyOperationToDensity(state, op2);
+  state.numQubits = 1;
 
   const auto dm = state.getSparseMatrix();
-  const auto dmDense = state.getMatrix(dd->qubits());
+  const auto dmDense = state.getMatrix();
 
   for (const auto& [index, value] : dm) {
     const auto val = dmDense.at(index.first).at(index.second);
@@ -426,6 +434,7 @@ TEST(DensityMatrixFunctionality, PrintMatrix) {
   const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), nqubits, 0U);
   auto state = dd->applyOperationToDensity(zero, op1);
   state = dd->applyOperationToDensity(state, op2);
+  state.numQubits = 1;
 
   const auto diagValRef = 0.5;
   const auto offDiagValRef = 0.25 * std::sqrt(2.);

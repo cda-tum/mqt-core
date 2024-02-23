@@ -36,9 +36,18 @@ Edge<Node>::getValueByPath(const std::string& decisions) const {
   if constexpr (std::is_same_v<Node, dNode>) {
     Edge<dNode>::applyDmChangesToEdge(r);
   }
+
+  auto level = r.numQubits;
   while (!r.isTerminal()) {
+    auto index = r.p->v;
+    if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
+      if (level == 0) {
+        break;
+      }
+      index = static_cast<Qubit>(level - 1);
+    }
     c *= static_cast<std::complex<fp>>(r.w);
-    const auto tmp = static_cast<std::size_t>(decisions.at(r.p->v) - '0');
+    const auto tmp = static_cast<std::size_t>(decisions.at(index) - '0');
     assert(tmp <= r.p->e.size());
 
     if constexpr (std::is_same_v<Node, dNode>) {
@@ -49,7 +58,19 @@ Edge<Node>::getValueByPath(const std::string& decisions) const {
     } else {
       r = r.p->e[tmp];
     }
+    level--;
   }
+
+  if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
+    while (level > 0) {
+      level--;
+      const auto tmp = static_cast<std::size_t>(decisions.at(level) - '0');
+      if (tmp == 1 || tmp == 2) {
+        return 0.;
+      }
+    }
+  }
+
   c *= static_cast<std::complex<fp>>(r.w);
   return c;
 }
@@ -330,13 +351,13 @@ std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i,
     return static_cast<std::complex<fp>>(w);
   }
 
-  auto decisions = std::string(p->v + 1U, '0');
-  for (auto k = 0U; k <= p->v; ++k) {
+  auto decisions = std::string(numQubits, '0');
+  for (auto k = 0U; k < numQubits; ++k) {
     if ((i & (1ULL << k)) != 0U) {
       decisions[k] = '2';
     }
   }
-  for (auto k = 0U; k <= p->v; ++k) {
+  for (auto k = 0U; k < numQubits; ++k) {
     if ((j & (1ULL << k)) != 0U) {
       if (decisions[k] == '2') {
         decisions[k] = '3';
@@ -351,10 +372,10 @@ std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i,
 
 template <class Node>
 template <typename T, isMatrixVariant<T>>
-CMat Edge<Node>::getMatrix(std::size_t nrQubits, const fp threshold) const {
+CMat Edge<Node>::getMatrix(const fp threshold) const {
   std::size_t dim = 1;
-  if (nrQubits != 0) {
-    dim = 2ULL << (nrQubits - 1);
+  if (numQubits != 0) {
+    dim = 2ULL << (numQubits - 1);
   }
   // allocate resulting matrix
   auto mat = CMat(dim, CVec(dim, {0., 0.}));
@@ -370,7 +391,7 @@ CMat Edge<Node>::getMatrix(std::size_t nrQubits, const fp threshold) const {
     }
   } else {
     getMatrix(*this, ComplexValue(1., 0.), 0, 0, mat,
-              static_cast<int>(nrQubits) - 1, threshold);
+              static_cast<int>(numQubits) - 1, threshold);
   }
   return mat;
 }
@@ -467,7 +488,9 @@ void Edge<Node>::printMatrix() const {
     Edge<dNode>::alignDensityEdge(r);
   }
 
-  const std::size_t element = 2ULL << r.p->v;
+  // total number of qubits should not be lower than the highest qubit index
+  assert(numQubits >= r.p->v);
+  const std::size_t element = 2ULL << (r.numQubits - 1);
   for (auto i = 0ULL; i < element; ++i) {
     for (auto j = 0ULL; j < element; ++j) {
       const auto amplitude = getValueByIndex(i, j);
@@ -617,8 +640,7 @@ template Edge<mNode> Edge<mNode>::normalize<mNode, true>(
 template std::complex<fp>
 Edge<mNode>::getValueByIndex<mNode, true>(const std::size_t i,
                                           const std::size_t j) const;
-template CMat Edge<mNode>::getMatrix<mNode, true>(std::size_t nrQubits,
-                                                  const fp threshold) const;
+template CMat Edge<mNode>::getMatrix<mNode, true>(const fp threshold) const;
 template SparseCMat
 Edge<mNode>::getSparseMatrix<mNode, true>(const fp threshold) const;
 template void Edge<mNode>::printMatrix<mNode, true>() const;
@@ -629,8 +651,7 @@ template void Edge<mNode>::traverseMatrix<mNode, true>(
 template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
     dNode* p, const std::array<Edge<dNode>, NEDGE>& e, MemoryManager<dNode>& mm,
     ComplexNumbers& cn);
-template CMat Edge<dNode>::getMatrix<dNode, true>(std::size_t nrQubits,
-                                                  const fp threshold) const;
+template CMat Edge<dNode>::getMatrix<dNode, true>(const fp threshold) const;
 template SparseCMat
 Edge<dNode>::getSparseMatrix<dNode, true>(const fp threshold) const;
 template void Edge<dNode>::printMatrix<dNode, true>() const;

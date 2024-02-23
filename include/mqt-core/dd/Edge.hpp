@@ -51,7 +51,8 @@ using MatrixEntryFunc = std::function<void(const std::size_t, const std::size_t,
  */
 template <class Node> struct Edge {
   Node* p;
-  Complex w;
+  Complex w{};
+  std::size_t numQubits{};
 
   /// Comparing two DD edges with another involves comparing the respective
   /// pointers and checking whether the corresponding weights are "close enough"
@@ -274,7 +275,7 @@ public:
    * @return the matrix
    */
   template <typename T = Node, isMatrixVariant<T> = true>
-  [[nodiscard]] CMat getMatrix(std::size_t nrQubits, fp threshold = 0.) const;
+  [[nodiscard]] CMat getMatrix(fp threshold = 0.) const;
 
   /**
    * Recursively get the matrix represented by the DD
