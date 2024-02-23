@@ -31,6 +31,49 @@ enum NoiseOperations : std::uint8_t {
   Identity
 };
 
+static void sanityCheckOfNoiseProbabilities(const double noiseProbability,
+                                            const double amplitudeDampingProb,
+                                            const double multiQubitGateFactor) {
+  if (noiseProbability < 0 || amplitudeDampingProb < 0 ||
+      noiseProbability * multiQubitGateFactor > 1 ||
+      amplitudeDampingProb * multiQubitGateFactor > 1) {
+    throw std::runtime_error(
+        "Error probabilities are faulty!"
+        "\n single qubit error probability: " +
+        std::to_string(noiseProbability) + " multi qubit error probability: " +
+        std::to_string(noiseProbability * multiQubitGateFactor) +
+        "\n single qubit amplitude damping  probability: " +
+        std::to_string(amplitudeDampingProb) +
+        " multi qubit amplitude damping  probability: " +
+        std::to_string(amplitudeDampingProb * multiQubitGateFactor));
+  }
+}
+
+static std::vector<dd::NoiseOperations>
+initializeNoiseEffects(const std::string& cNoiseEffects) {
+  std::vector<dd::NoiseOperations> noiseOperationVector{};
+  for (const auto noise : cNoiseEffects) {
+    switch (noise) {
+    case 'A':
+      noiseOperationVector.push_back(dd::AmplitudeDamping);
+      break;
+    case 'P':
+      noiseOperationVector.push_back(dd::PhaseFlip);
+      break;
+    case 'D':
+      noiseOperationVector.push_back(dd::Depolarization);
+      break;
+    case 'I':
+      noiseOperationVector.push_back(dd::Identity);
+      break;
+    default:
+      throw std::runtime_error("Unknown noise operation '" + cNoiseEffects +
+                               "'\n");
+    }
+  }
+  return noiseOperationVector;
+}
+
 template <class Config> class StochasticNoiseFunctionality {
 public:
   StochasticNoiseFunctionality(const std::unique_ptr<Package<Config>>& dd,
@@ -38,7 +81,7 @@ public:
                                double gateNoiseProbability,
                                double amplitudeDampingProb,
                                double multiQubitGateFactor,
-                               std::vector<NoiseOperations> effects)
+                               const std::string& cNoiseEffects)
       : package(dd), nQubits(nq), dist(0.0, 1.0L),
         noiseProbability(gateNoiseProbability),
         noiseProbabilityMulti(gateNoiseProbability * multiQubitGateFactor),
@@ -54,8 +97,10 @@ public:
         ampDampingFalse({1, 0, 0, oneMinusSqrtAmplitudeDampingProbability}),
         ampDampingFalseMulti(
             {1, 0, 0, oneMinusSqrtAmplitudeDampingProbabilityMulti}),
-        noiseEffects(std::move(effects)),
+        noiseEffects(initializeNoiseEffects(cNoiseEffects)),
         identityDD(package->makeIdent(nQubits)) {
+    sanityCheckOfNoiseProbabilities(gateNoiseProbability, amplitudeDampingProb,
+                                    multiQubitGateFactor);
     package->incRef(identityDD);
   }
 
@@ -254,13 +299,18 @@ public:
                                   double noiseProbabilityMultiQubit,
                                   double ampDampProbSingleQubit,
                                   double ampDampProbMultiQubit,
-                                  std::vector<NoiseOperations> effects)
+                                  const std::string& cNoiseEffects)
       : package(dd), nQubits(nq),
         noiseProbSingleQubit(noiseProbabilitySingleQubit),
         noiseProbMultiQubit(noiseProbabilityMultiQubit),
         ampDampingProbSingleQubit(ampDampProbSingleQubit),
         ampDampingProbMultiQubit(ampDampProbMultiQubit),
-        noiseEffects(std::move(effects)) {}
+        noiseEffects(initializeNoiseEffects(cNoiseEffects)) {
+    sanityCheckOfNoiseProbabilities(noiseProbabilitySingleQubit,
+                                    ampDampProbSingleQubit, 1);
+    sanityCheckOfNoiseProbabilities(noiseProbabilityMultiQubit,
+                                    ampDampProbMultiQubit, 1);
+  }
 
 protected:
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)

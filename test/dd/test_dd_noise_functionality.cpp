@@ -67,8 +67,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
   auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
   dd->incRef(rootEdge);
 
-  const auto noiseEffects = {dd::AmplitudeDamping, dd::PhaseFlip,
-                             dd::Depolarization, dd::Identity};
+  const auto* const noiseEffects = "APDI";
 
   auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
       dd, qc.getNqubits(), 0.01, 0.02, 0.02, 0.04, noiseEffects);
@@ -161,8 +160,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
       {"0101", 0.}, {"0110", 0.}, {"0111", 0.}, {"1000", 0.}, {"1001", 0.},
       {"1010", 0.}, {"1011", 0.}, {"1100", 0.}, {"1101", 0.}};
 
-  const auto noiseEffects = {dd::AmplitudeDamping, dd::PhaseFlip, dd::Identity,
-                             dd::Depolarization};
+  const auto* const noiseEffects = "APDI";
 
   auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality(
       dd, qc.getNqubits(), 0.01, 0.02, 2., noiseEffects);
@@ -214,7 +212,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
       {"0101", 0.}, {"0110", 0.}, {"0111", 0.}, {"1000", 0.}, {"1001", 0.},
       {"1010", 0.}, {"1011", 0.}, {"1100", 0.}, {"1101", 0.}};
 
-  const auto noiseEffects = {dd::Identity};
+  const auto* const noiseEffects = "I";
 
   auto stochasticNoiseFunctionality = dd::StochasticNoiseFunctionality(
       dd, qc.getNqubits(), 0.01, 0.02, 2., noiseEffects);
