@@ -462,7 +462,7 @@ SparseCMat Edge<Node>::getSparseMatrix(const fp threshold) const {
              const std::complex<fp>& c) {
         mat[{i, j}] = c;
       },
-      threshold);
+      static_cast<int>(numQubits) - 1, threshold);
 
   if constexpr (std::is_same_v<Node, dNode>) {
     Edge<dNode>::revertDmChangesToEdge(r);
@@ -506,7 +506,8 @@ template <class Node>
 template <typename T, isMatrixVariant<T>>
 void Edge<Node>::traverseMatrix(const std::complex<fp>& amp,
                                 const std::size_t i, const std::size_t j,
-                                MatrixEntryFunc f, const fp threshold) const {
+                                MatrixEntryFunc f, const int level,
+                                const fp threshold) const {
   // calculate new accumulated amplitude
   const auto c = amp * static_cast<std::complex<fp>>(w);
 
@@ -514,24 +515,30 @@ void Edge<Node>::traverseMatrix(const std::complex<fp>& amp,
     return;
   }
 
-  if (isTerminal()) {
+  if (isTerminal() && level == -1) {
     f(i, j, c);
     return;
   }
 
-  const std::size_t x = i | (1ULL << p->v);
-  const std::size_t y = j | (1ULL << p->v);
+  const std::size_t x = i | (1ULL << level);
+  const std::size_t y = j | (1ULL << level);
   const auto coords = {std::pair{i, j}, {i, y}, {x, j}, {x, y}};
   std::size_t k = 0U;
   for (const auto& [a, b] : coords) {
-    if (auto& e = p->e[k++]; !e.w.exactlyZero()) {
-      if constexpr (std::is_same_v<Node, dNode>) {
-        Edge<dNode>::applyDmChangesToEdge(e);
+    if (!isTerminal() && p->v == level) {
+      if (auto& e = p->e[k++]; !e.w.exactlyZero()) {
+        if constexpr (std::is_same_v<Node, dNode>) {
+          Edge<dNode>::applyDmChangesToEdge(e);
+        }
+        e.traverseMatrix(c, a, b, f, level - 1, threshold);
+        if constexpr (std::is_same_v<Node, dNode>) {
+          Edge<dNode>::revertDmChangesToEdge(e);
+        }
       }
-      e.traverseMatrix(c, a, b, f, threshold);
-      if constexpr (std::is_same_v<Node, dNode>) {
-        Edge<dNode>::revertDmChangesToEdge(e);
-      }
+    } else if ((!isTerminal() && p->v < level) ||
+               (isTerminal() && level != -1)) {
+      traverseMatrix(c, i, j, f, level - 1, threshold);
+      traverseMatrix(c, x, y, f, level - 1, threshold);
     }
   }
 }
@@ -646,7 +653,7 @@ Edge<mNode>::getSparseMatrix<mNode, true>(const fp threshold) const;
 template void Edge<mNode>::printMatrix<mNode, true>() const;
 template void Edge<mNode>::traverseMatrix<mNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
-    MatrixEntryFunc f, const fp threshold) const;
+    MatrixEntryFunc f, const int level, const fp threshold) const;
 
 template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
     dNode* p, const std::array<Edge<dNode>, NEDGE>& e, MemoryManager<dNode>& mm,
@@ -664,7 +671,7 @@ Edge<dNode>::getValueByIndex<dNode, true>(const std::size_t i,
                                           const std::size_t j) const;
 template void Edge<dNode>::traverseMatrix<dNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
-    MatrixEntryFunc f, const fp threshold) const;
+    MatrixEntryFunc f, const int level, const fp threshold) const;
 template void Edge<dNode>::traverseDiagonal(const fp& prob, const std::size_t i,
                                             ProbabilityFunc f,
                                             const dd::fp threshold) const;

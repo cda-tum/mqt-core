@@ -324,7 +324,7 @@ private:
    */
   template <typename T = Node, isMatrixVariant<T> = true>
   void traverseMatrix(const std::complex<fp>& amp, std::size_t i, std::size_t j,
-                      MatrixEntryFunc f, fp threshold = 0.) const;
+                      MatrixEntryFunc f, int level, fp threshold = 0.) const;
 
   ///---------------------------------------------------------------------------
   ///                  \n Methods for density matrix DDs \n
