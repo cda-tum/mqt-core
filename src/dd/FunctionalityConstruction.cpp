@@ -199,6 +199,13 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
 
 template MatrixDD buildFunctionality(const qc::QuantumComputation* qc,
                                      Package<DDPackageConfig>& dd);
+template MatrixDD
+buildFunctionality(const qc::QuantumComputation* qc,
+                   Package<dd::DensityMatrixSimulatorDDPackageConfig>& dd);
+template MatrixDD
+buildFunctionality(const qc::QuantumComputation* qc,
+                   Package<dd::StochasticNoiseSimulatorDDPackageConfig>& dd);
+
 template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation* qc,
                                               Package<DDPackageConfig>& dd);
 template bool buildFunctionalityRecursive(const qc::QuantumComputation* qc,

@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runs-on: [ubuntu-latest, macos-11, windows-latest]
+        runs-on: [ubuntu-latest, macos-13, macos-14, windows-latest]
         python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
     steps:
       - uses: actions/checkout@v4
@@ -80,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ["s390x", "ppc64le"]
+        arch: ["s390x", "ppc64le", "aarch64"]
         python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
     steps:
       - uses: actions/checkout@v4
