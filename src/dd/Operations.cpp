@@ -85,11 +85,10 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
     auto localOp = op->clone();
     localOp->setControls(localControls);
     localOp->setTargets(localTargets);
-    auto localDD = getDD(localOp.get(), dd);
-    localDD.numQubits = localQubits;
+    const auto localDD = getDD(localOp.get(), dd);
 
     // translate local DD to matrix
-    const auto localMatrix = localDD.getMatrix();
+    const auto localMatrix = localDD.getMatrix(localQubits);
 
     // restore nqubits
     op->setNqubits(globalQubits);

@@ -51,8 +51,7 @@ using MatrixEntryFunc = std::function<void(const std::size_t, const std::size_t,
  */
 template <class Node> struct Edge {
   Node* p;
-  Complex w{};
-  std::size_t numQubits{};
+  Complex w;
 
   /// Comparing two DD edges with another involves comparing the respective
   /// pointers and checking whether the corresponding weights are "close enough"
@@ -122,7 +121,7 @@ template <class Node> struct Edge {
    * @return the complex amplitude of the specified element
    */
   [[nodiscard]] std::complex<fp>
-  getValueByPath(const std::string& decisions) const;
+  getValueByPath(std::size_t numQubits, const std::string& decisions) const;
 
   /**
    * @brief Get the size of the DD
@@ -263,8 +262,8 @@ public:
    * @return the complex value of the entry
    */
   template <typename T = Node, isMatrixVariant<T> = true>
-  [[nodiscard]] std::complex<fp> getValueByIndex(std::size_t i,
-                                                 std::size_t j) const;
+  [[nodiscard]] std::complex<fp>
+  getValueByIndex(std::size_t numQubits, std::size_t i, std::size_t j) const;
 
   /**
    * Get the matrix represented by the DD
@@ -275,7 +274,7 @@ public:
    * @return the matrix
    */
   template <typename T = Node, isMatrixVariant<T> = true>
-  [[nodiscard]] CMat getMatrix(fp threshold = 0.) const;
+  [[nodiscard]] CMat getMatrix(std::size_t numQubits, fp threshold = 0.) const;
 
   /**
    * Recursively get the matrix represented by the DD
@@ -299,7 +298,8 @@ public:
    * @return the sparse matrix
    */
   template <typename T = Node, isMatrixVariant<T> = true>
-  [[nodiscard]] SparseCMat getSparseMatrix(fp threshold = 0.) const;
+  [[nodiscard]] SparseCMat getSparseMatrix(std::size_t numQubits,
+                                           fp threshold = 0.) const;
 
   /**
    * @brief Print the matrix represented by the DD
@@ -307,7 +307,7 @@ public:
    * @note This function scales exponentially with the number of qubits.
    */
   template <typename T = Node, isMatrixVariant<T> = true>
-  void printMatrix() const;
+  void printMatrix(std::size_t numQubits) const;
 
 private:
   /**

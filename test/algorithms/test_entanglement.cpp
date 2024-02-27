@@ -31,8 +31,8 @@ TEST_P(Entanglement, FunctionTest) {
   ASSERT_EQ(qc.getNops(), nq);
   const qc::VectorDD r = result->dd->multiply(e, result->dd->makeZeroState(nq));
 
-  ASSERT_EQ(r.getValueByPath(std::string(nq, '0')), dd::SQRT2_2);
-  ASSERT_EQ(r.getValueByPath(std::string(nq, '1')), dd::SQRT2_2);
+  ASSERT_EQ(r.getValueByPath(nq, std::string(nq, '0')), dd::SQRT2_2);
+  ASSERT_EQ(r.getValueByPath(nq, std::string(nq, '1')), dd::SQRT2_2);
 }
 
 TEST_P(Entanglement, GHZRoutineFunctionTest) {
