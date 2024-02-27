@@ -214,6 +214,15 @@ template MatrixDD buildFunctionality(const qc::QuantumComputation* qc,
                                      Package<DDPackageConfig>& dd,
                                      bool reduceAncillaryQubits,
                                      bool reduceGarbageQubits);
+template MatrixDD
+buildFunctionality(const qc::QuantumComputation* qc,
+                   Package<dd::DensityMatrixSimulatorDDPackageConfig>& dd,
+                   bool reduceAncillaryQubits, bool reduceGarbageQubits);
+template MatrixDD
+buildFunctionality(const qc::QuantumComputation* qc,
+                   Package<dd::StochasticNoiseSimulatorDDPackageConfig>& dd,
+                   bool reduceAncillaryQubits, bool reduceGarbageQubits);
+
 template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation* qc,
                                               Package<DDPackageConfig>& dd,
                                               bool reduceAncillaryQubits,

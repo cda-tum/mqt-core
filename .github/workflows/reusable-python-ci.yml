@@ -38,14 +38,18 @@ jobs:
       z3-version: ${{ inputs.z3-version }}
 
   python-tests-macos:
-    name: 🍎 ${{ matrix.python-version }}
+    name: 🍎 ${{ matrix.python-version }} ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.8", "3.12"]
+        runs-on: [macos-13] # test Intel architecture
+        include:
+          - python-version: "3.12" # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
+            runs-on: macos-14 # test Apple Silicon architecture
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
-      runs-on: macos-latest
+      runs-on: ${{ matrix.runs-on }}
       python-version: ${{ matrix.python-version }}
       setup-z3: ${{ inputs.setup-z3 }}
       z3-version: ${{ inputs.z3-version }}

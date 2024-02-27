@@ -61,7 +61,7 @@ docs = [
     "mqt.core[evaluation]"
 ]
 qiskit = [
-   "qiskit[qasm3-import]>=0.45.0",
+   "qiskit[qasm3-import]>=1.0.0",
 ]
 dev = ["mqt.core[coverage, docs]",]
 
@@ -127,14 +127,8 @@ addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = [
     "error",
-    'ignore:.*qiskit.__qiskit_version__.*:DeprecationWarning:qiskit:',
-    'ignore:.*qiskit.utils.algorithm_globals.QiskitAlgorithmGlobals*:DeprecationWarning:qiskit',
-    'ignore:.*Building a flow controller with keyword arguments is going to be deprecated*:PendingDeprecationWarning:qiskit',
     'ignore:\s.*Pyarrow.*:DeprecationWarning:',
     'ignore:.*datetime\.datetime\.utcfromtimestamp.*:DeprecationWarning:',
-    'ignore:.*qiskit.utils.parallel*:DeprecationWarning:qiskit',
-    'ignore:.*qiskit.tools.events*:DeprecationWarning:qiskit',
-    'ignore:.*qiskit.qasm*:DeprecationWarning:qiskit',
 ]
 log_cli_level = "info"
 testpaths = ["test/python"]
@@ -267,6 +261,7 @@ build = "cp3*"
 skip = "*-musllinux_*"
 archs = "auto64"
 test-command = "python -c \"from mqt import core\""
+test-skip = "cp38-macosx_arm64"
 build-frontend = "build"
 
 [tool.cibuildwheel.linux]
