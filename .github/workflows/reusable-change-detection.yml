@@ -30,7 +30,7 @@ jobs:
       - name: Get a list of the changed files relevant for the C++ tests
         if: github.event_name == 'pull_request'
         id: changed-cpp-testable-files
-        uses: Ana06/get-changed-files@v2.2.0
+        uses: Ana06/get-changed-files@v2.3.0
         with:
           filter: |
             include/**
@@ -60,7 +60,7 @@ jobs:
       - name: Get a list of the changed files relevant for the C++ linter
         if: github.event_name == 'pull_request'
         id: changed-cpp-linter-files
-        uses: Ana06/get-changed-files@v2.2.0
+        uses: Ana06/get-changed-files@v2.3.0
         with:
           filter: |
             include/**
@@ -83,7 +83,7 @@ jobs:
       - name: Get a list of the changed files relevant for the Python tests
         if: github.event_name == 'pull_request'
         id: changed-python-testable-files
-        uses: Ana06/get-changed-files@v2.2.0
+        uses: Ana06/get-changed-files@v2.3.0
         with:
           filter: |
             cmake/**
@@ -110,7 +110,7 @@ jobs:
       - name: Get a list of the changed files relevant for CodeQL
         if: github.event_name == 'pull_request'
         id: changed-code-ql-files
-        uses: Ana06/get-changed-files@v2.2.0
+        uses: Ana06/get-changed-files@v2.3.0
         with:
           filter: |
             cmake/**
