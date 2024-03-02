@@ -2003,8 +2003,8 @@ public:
       return e;
     }
 
-    const auto f = reduceAncillaeRecursion(
-        e.p, ancillary, level, lowerbound, regular);
+    const auto f =
+        reduceAncillaeRecursion(e.p, ancillary, level, lowerbound, regular);
     const auto res = mEdge{f.p, cn.lookup(e.w * f.w)};
 
     incRef(res);
