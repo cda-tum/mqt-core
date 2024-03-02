@@ -1964,12 +1964,32 @@ public:
   ///
   mEdge reduceAncillae(mEdge& e, const std::vector<bool>& ancillary,
                        const bool regular = true) {
-    // TODO:these methods do not handle identities yet
     // return if no more garbage left
     if (std::none_of(ancillary.begin(), ancillary.end(),
                      [](bool v) { return v; }) ||
-        e.isTerminal()) {
+        e.isZeroTerminal()) {
       return e;
+    }
+
+    // if we have only identities and no other nodes
+    if (e.isTerminal()) {
+      for (auto i = 0U; i < ancillary.size(); ++i) {
+        if (ancillary[i]) {
+          e = makeDDNode(
+              static_cast<Qubit>(i),
+              std::array{e, mEdge::zero(), mEdge::zero(), mEdge::zero()});
+        }
+      }
+      return e;
+    }
+
+    auto level = ancillary.size() - 1;
+    for (std::size_t i = e.p->v + 1; i <= level; ++i) {
+      if (ancillary[i]) {
+        e = makeDDNode(
+            static_cast<Qubit>(i),
+            std::array{e, mEdge::zero(), mEdge::zero(), mEdge::zero()});
+      }
     }
 
     Qubit lowerbound = 0;
@@ -1983,7 +2003,8 @@ public:
       return e;
     }
 
-    const auto f = reduceAncillaeRecursion(e.p, ancillary, lowerbound, regular);
+    const auto f = reduceAncillaeRecursion(
+        e.p, ancillary, level, lowerbound, regular);
     const auto res = mEdge{f.p, cn.lookup(e.w * f.w)};
 
     incRef(res);
@@ -2045,9 +2066,9 @@ public:
 private:
   mCachedEdge reduceAncillaeRecursion(mNode* p,
                                       const std::vector<bool>& ancillary,
+                                      const std::size_t level,
                                       const Qubit lowerbound,
                                       const bool regular = true) {
-    // TODO: needs to properly handle the new structure
     if (p->v < lowerbound) {
       return {p, 1.};
     }
@@ -2057,10 +2078,30 @@ private:
     for (auto i = 0U; i < NEDGE; ++i) {
       if (!handled.test(i)) {
         if (p->e[i].isTerminal()) {
+          if (!p->e[i].isZeroTerminal()) {
+            // Check if we have to reduce other ancillaries between the current
+            // node and the terminal (i.e. introduce reduced non-identity nodes)
+            for (auto j = p->v - 1; j > -1; j--) {
+              if (ancillary[static_cast<uint64_t>(j)]) {
+                p->e[i] = makeDDNode(static_cast<Qubit>(j),
+                                     std::array{p->e[i], mEdge::zero(),
+                                                mEdge::zero(), mEdge::zero()});
+              }
+            }
+          }
           edges[i] = {p->e[i].p, p->e[i].w};
         } else {
-          edges[i] = reduceAncillaeRecursion(p->e[i].p, ancillary, lowerbound,
-                                             regular);
+          // Check between this node and the next node, if there are any
+          // ancillary identity qubits that need to be reduced as well
+          for (std::size_t j = p->e[i].p->v + 1; j < level; ++j) {
+            if (ancillary[j]) {
+              p->e[i] = makeDDNode(static_cast<Qubit>(j),
+                                   std::array{p->e[i], mEdge::zero(),
+                                              mEdge::zero(), mEdge::zero()});
+            }
+          }
+          edges[i] = reduceAncillaeRecursion(p->e[i].p, ancillary, level - 1,
+                                             lowerbound, regular);
           for (auto j = i + 1; j < NEDGE; ++j) {
             if (p->e[i].p == p->e[j].p) {
               edges[j] = edges[i];
