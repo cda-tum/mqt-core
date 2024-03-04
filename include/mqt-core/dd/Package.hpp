@@ -1984,8 +1984,7 @@ public:
       return g;
     }
 
-    auto level = ancillary.size() - 1;
-    for (std::size_t i = g.p->v + 1; i <= level; ++i) {
+    for (std::size_t i = g.p->v + 1; i < ancillary.size(); ++i) {
       if (ancillary[i]) {
         g = makeDDNode(
             static_cast<Qubit>(i),
@@ -2004,8 +2003,7 @@ public:
       return g;
     }
 
-    const auto f =
-        reduceAncillaeRecursion(g.p, ancillary, level, lowerbound, regular);
+    const auto f = reduceAncillaeRecursion(g.p, ancillary, lowerbound, regular);
     const auto res = mEdge{f.p, cn.lookup(g.w * f.w)};
 
     incRef(res);
@@ -2044,9 +2042,30 @@ public:
     // return if no more garbage left
     if (std::none_of(garbage.begin(), garbage.end(),
                      [](bool v) { return v; }) ||
-        e.isTerminal()) {
+        e.isZeroTerminal()) {
       return e;
     }
+
+    // if we have only identities and no other nodes
+    auto g = e;
+    if (g.isTerminal()) {
+      for (auto i = 0U; i < garbage.size(); ++i) {
+        if (garbage[i]) {
+          g = makeDDNode(static_cast<Qubit>(i),
+                         std::array{g, g, mEdge::zero(), mEdge::zero()});
+        }
+      }
+      return g;
+    }
+
+    auto level = garbage.size() - 1;
+    for (std::size_t i = g.p->v + 1; i <= level; ++i) {
+      if (garbage[i]) {
+        g = makeDDNode(static_cast<Qubit>(i),
+                       std::array{g, g, mEdge::zero(), mEdge::zero()});
+      }
+    }
+
     Qubit lowerbound = 0;
     for (auto i = 0U; i < garbage.size(); ++i) {
       if (garbage[i]) {
@@ -2054,11 +2073,13 @@ public:
         break;
       }
     }
-    if (e.p->v < lowerbound) {
-      return e;
+    if (g.p->v < lowerbound) {
+      return g;
     }
-    const auto f = reduceGarbageRecursion(e.p, garbage, lowerbound, regular);
-    const auto res = mEdge{f.p, cn.lookup(e.w * f.w)};
+
+    const auto f = reduceGarbageRecursion(g.p, garbage, lowerbound, regular);
+    const auto res = mEdge{f.p, cn.lookup(g.w * f.w)};
+
     incRef(res);
     decRef(e);
     return res;
@@ -2067,7 +2088,6 @@ public:
 private:
   mCachedEdge reduceAncillaeRecursion(mNode* p,
                                       const std::vector<bool>& ancillary,
-                                      const std::size_t level,
                                       const Qubit lowerbound,
                                       const bool regular = true) {
     if (p->v < lowerbound) {
@@ -2094,15 +2114,15 @@ private:
         } else {
           // Check between this node and the next node, if there are any
           // ancillary identity qubits that need to be reduced as well
-          for (std::size_t j = p->e[i].p->v + 1; j < level; ++j) {
+          for (std::size_t j = p->e[i].p->v + 1; j < p->v; ++j) {
             if (ancillary[j]) {
               p->e[i] = makeDDNode(static_cast<Qubit>(j),
                                    std::array{p->e[i], mEdge::zero(),
                                               mEdge::zero(), mEdge::zero()});
             }
           }
-          edges[i] = reduceAncillaeRecursion(p->e[i].p, ancillary, level - 1,
-                                             lowerbound, regular);
+          edges[i] = reduceAncillaeRecursion(p->e[i].p, ancillary, lowerbound,
+                                             regular);
           for (auto j = i + 1; j < NEDGE; ++j) {
             if (p->e[i].p == p->e[j].p) {
               edges[j] = edges[i];
@@ -2174,8 +2194,24 @@ private:
     for (auto i = 0U; i < NEDGE; ++i) {
       if (!handled.test(i)) {
         if (p->e[i].isTerminal()) {
+          if (!p->e[i].isZeroTerminal()) {
+            for (auto j = p->v - 1; j > -1; j--) {
+              if (garbage[static_cast<uint64_t>(j)]) {
+                p->e[i] = makeDDNode(
+                    static_cast<Qubit>(j),
+                    std::array{p->e[i], p->e[i], mEdge::zero(), mEdge::zero()});
+              }
+            }
+          }
           edges[i] = {p->e[i].p, p->e[i].w};
         } else {
+          for (std::size_t j = p->e[i].p->v + 1; j < p->v; ++j) {
+            if (garbage[j]) {
+              p->e[i] = makeDDNode(
+                  static_cast<Qubit>(j),
+                  std::array{p->e[i], p->e[i], mEdge::zero(), mEdge::zero()});
+            }
+          }
           edges[i] =
               reduceGarbageRecursion(p->e[i].p, garbage, lowerbound, regular);
           for (auto j = i + 1; j < NEDGE; ++j) {
