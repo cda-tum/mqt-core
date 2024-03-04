@@ -1972,23 +1972,24 @@ public:
     }
 
     // if we have only identities and no other nodes
-    if (e.isTerminal()) {
+    auto g = e;
+    if (g.isTerminal()) {
       for (auto i = 0U; i < ancillary.size(); ++i) {
         if (ancillary[i]) {
-          e = makeDDNode(
+          g = makeDDNode(
               static_cast<Qubit>(i),
-              std::array{e, mEdge::zero(), mEdge::zero(), mEdge::zero()});
+              std::array{g, mEdge::zero(), mEdge::zero(), mEdge::zero()});
         }
       }
-      return e;
+      return g;
     }
 
     auto level = ancillary.size() - 1;
-    for (std::size_t i = e.p->v + 1; i <= level; ++i) {
+    for (std::size_t i = g.p->v + 1; i <= level; ++i) {
       if (ancillary[i]) {
-        e = makeDDNode(
+        g = makeDDNode(
             static_cast<Qubit>(i),
-            std::array{e, mEdge::zero(), mEdge::zero(), mEdge::zero()});
+            std::array{g, mEdge::zero(), mEdge::zero(), mEdge::zero()});
       }
     }
 
@@ -1999,13 +2000,13 @@ public:
         break;
       }
     }
-    if (e.p->v < lowerbound) {
-      return e;
+    if (g.p->v < lowerbound) {
+      return g;
     }
 
     const auto f =
-        reduceAncillaeRecursion(e.p, ancillary, level, lowerbound, regular);
-    const auto res = mEdge{f.p, cn.lookup(e.w * f.w)};
+        reduceAncillaeRecursion(g.p, ancillary, level, lowerbound, regular);
+    const auto res = mEdge{f.p, cn.lookup(g.w * f.w)};
 
     incRef(res);
     decRef(e);
