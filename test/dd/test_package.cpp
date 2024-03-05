@@ -560,7 +560,7 @@ TEST(DDPackageTest, GarbageMatrix) {
   dd->incRef(bellMatrix);
   reducedBellMatrix =
       dd->reduceGarbage(bellMatrix, {false, false, true, false});
-  EXPECT_EQ(bellMatrix, reducedBellMatrix);
+  EXPECT_NE(bellMatrix, reducedBellMatrix);
 
   dd->incRef(bellMatrix);
   reducedBellMatrix =

@@ -1257,6 +1257,12 @@ public:
           if (i == 0 || i == 3) {
             e1 = x;
           }
+        } else {
+          auto& xSuccessor = x.p->e[i];
+          e1 = {xSuccessor.p, 0};
+          if (!xSuccessor.w.exactlyZero()) {
+            e1.w = x.w * xSuccessor.w;
+          }
         }
       } else {
         auto& xSuccessor = x.p->e[i];
@@ -1273,6 +1279,12 @@ public:
           // [ 2 | 3 ]   [ 0 | y ]
           if (i == 0 || i == 3) {
             e2 = y;
+          }
+        } else {
+          auto& ySuccessor = y.p->e[i];
+          e2 = {ySuccessor.p, 0};
+          if (!ySuccessor.w.exactlyZero()) {
+            e2.w = y.w * ySuccessor.w;
           }
         }
       } else {
@@ -2038,7 +2050,6 @@ public:
   }
   mEdge reduceGarbage(mEdge& e, const std::vector<bool>& garbage,
                       const bool regular = true) {
-    // TODO: adapt to properly handle the new identity-less DD structure
     // return if no more garbage left
     if (std::none_of(garbage.begin(), garbage.end(),
                      [](bool v) { return v; }) ||
@@ -2184,7 +2195,6 @@ private:
   mCachedEdge reduceGarbageRecursion(mNode* p, const std::vector<bool>& garbage,
                                      const Qubit lowerbound,
                                      const bool regular = true) {
-    // TODO: needs to properly handle the new structure
     if (p->v < lowerbound) {
       return {p, 1.};
     }
