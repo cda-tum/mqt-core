@@ -1781,8 +1781,21 @@ private:
     }
 
     // Increase the qubit index
-    auto idx = incIdx ? (y.p->v + x.p->v + 1) : x.p->v;
-    auto e = makeDDNode(static_cast<Qubit>(idx), edge, true);
+    Qubit idx = x.p->v;
+    if (incIdx) {
+      // If y is an identity only multiplied by a factor then we should still
+      // update the index count
+      if constexpr (std::is_same_v<Node, mNode>) {
+        if (y.isIdentity(false)) {
+          idx = x.p->v + 1;
+        } else {
+          idx = y.p->v + x.p->v + 1;
+        }
+      } else {
+        idx = y.p->v + x.p->v + 1;
+      }
+    }
+    auto e = makeDDNode(idx, edge, true);
     computeTable.insert(x.p, y.p, {e.p, e.w});
     return {e.p, rWeight};
   }
