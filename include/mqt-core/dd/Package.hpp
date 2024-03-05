@@ -1440,7 +1440,8 @@ private:
       return {y.p, rWeight};
     }
 
-    if constexpr (std::is_same_v<RightOperandNode, mNode>) {
+    if constexpr (std::is_same_v<RightOperandNode, mNode> ||
+                  std::is_same_v<RightOperandNode, dNode>) {
       if (y.isIdentity()) {
         return {x.p, rWeight};
       }
