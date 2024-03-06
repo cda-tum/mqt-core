@@ -1227,7 +1227,7 @@ TEST(DDPackageTest, dNodeMultiply) {
     dd->applyOperationToDensity(state, op);
   }
 
-  const auto stateDensityMatrix = state.getMatrix(dd->qubits());
+  const auto stateDensityMatrix = state.getDensityMatrix(dd->qubits());
 
   for (const auto& stateVector : stateDensityMatrix) {
     for (const auto& cValue : stateVector) {
@@ -1249,7 +1249,7 @@ TEST(DDPackageTest, dNodeMultiply) {
     }
   }
 
-  const auto probVector = state.getSparseProbabilityVector(0.001);
+  const auto probVector = state.getSparseProbabilityVector(nrQubits, 0.001);
   const double tolerance = 1e-10;
   for (const auto& [s, prob] : probVector) {
     std::cout << s << ": " << prob << "\n";
@@ -1275,7 +1275,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
   }
   operations[0].printMatrix(dd->qubits());
 
-  const auto stateDensityMatrix = state.getMatrix(dd->qubits());
+  const auto stateDensityMatrix = state.getDensityMatrix(dd->qubits());
 
   for (std::size_t i = 0; i < (1 << nrQubits); i++) {
     for (std::size_t j = 0; j < (1 << nrQubits); j++) {
@@ -1289,7 +1289,8 @@ TEST(DDPackageTest, dNodeMultiply2) {
                   0.000001);
     }
   }
-  const auto probVector = state.getSparseProbabilityVector(0.001);
+  const auto probVector =
+      state.getSparseProbabilityVector(nrQubits, 0.001);
   const double tolerance = 1e-10;
   for (const auto& [s, prob] : probVector) {
     std::cout << s << ": " << prob << "\n";

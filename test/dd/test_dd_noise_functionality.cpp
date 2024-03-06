@@ -77,7 +77,8 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
     deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
   }
 
-  const auto m = rootEdge.getSparseProbabilityVectorStrKeys(0.001);
+  const auto m =
+      rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits(), 0.001);
 
   // Expect that all results are the same
   static constexpr fp TOLERANCE = 1e-10;
@@ -113,7 +114,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
 
   const double tolerance = 1e-10;
 
-  auto tmp = rootEdge.getSparseProbabilityVectorStrKeys();
+  auto tmp = rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits());
   auto prob = 0.125;
   EXPECT_NEAR(tmp["000"], prob, tolerance);
   EXPECT_NEAR(tmp["001"], prob, tolerance);
@@ -126,7 +127,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
 
   dd->measureOneCollapsing(rootEdge, 0, qc.getGenerator());
 
-  auto tmp0 = rootEdge.getSparseProbabilityVectorStrKeys();
+  auto tmp0 = rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits());
   prob = 0.25;
 
   EXPECT_TRUE(fabs(tmp0["000"] + tmp0["001"] - prob) < tolerance);
@@ -136,7 +137,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
 
   dd->measureOneCollapsing(rootEdge, 1, qc.getGenerator());
 
-  auto tmp1 = rootEdge.getSparseProbabilityVectorStrKeys();
+  auto tmp1 = rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits());
   prob = 0.5;
   EXPECT_TRUE(fabs(tmp0["000"] + tmp0["001"] + tmp0["010"] + tmp0["011"] -
                    prob) < tolerance);
@@ -144,7 +145,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
                    prob) < tolerance);
 
   dd->measureOneCollapsing(rootEdge, 2, qc.getGenerator());
-  auto tmp2 = rootEdge.getSparseProbabilityVectorStrKeys();
+  auto tmp2 = rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits());
   EXPECT_TRUE(
       fabs(tmp2["000"] - 1) < tolerance || fabs(tmp2["001"] - 1) < tolerance ||
       fabs(tmp2["010"] - 1) < tolerance || fabs(tmp2["011"] - 1) < tolerance ||

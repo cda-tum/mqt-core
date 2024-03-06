@@ -447,6 +447,38 @@ void Edge<Node>::getMatrix(const Edge& e, const ComplexValue& amp,
 }
 
 template <class Node>
+template <typename T, isDensityMatrix<T>>
+CMat Edge<Node>::getDensityMatrix(const std::size_t numQubits,
+                                  const fp threshold) const {
+  if (isTerminal()) {
+    return CMat{1, {static_cast<std::complex<fp>>(w)}};
+  }
+
+  auto r = *this;
+  if constexpr (std::is_same_v<Node, dNode>) {
+    Edge<dNode>::applyDmChangesToEdge(r);
+  }
+
+  std::size_t dim = 1;
+  if (numQubits != 0) {
+    dim = 2ULL << (numQubits - 1);
+  }
+  // allocate resulting matrix
+  auto mat = CMat(dim, CVec(dim, {0., 0.}));
+
+  r.traverseMatrix(
+      1, 0ULL, 0ULL,
+      [&mat](const std::size_t i, const std::size_t j,
+             const std::complex<fp>& c) { mat.at(i).at(j) = c; },
+      static_cast<int>(numQubits) - 1, threshold);
+
+  if constexpr (std::is_same_v<Node, dNode>) {
+    Edge<dNode>::revertDmChangesToEdge(r);
+  }
+  return mat;
+}
+
+template <class Node>
 template <typename T, isMatrixVariant<T>>
 SparseCMat Edge<Node>::getSparseMatrix(const std::size_t numQubits,
                                        const fp threshold) const {
@@ -553,7 +585,8 @@ void Edge<Node>::traverseMatrix(const std::complex<fp>& amp,
 
 template <class Node>
 template <typename T, isDensityMatrix<T>>
-SparsePVec Edge<Node>::getSparseProbabilityVector(const fp threshold) const {
+SparsePVec Edge<Node>::getSparseProbabilityVector(const std::size_t numQubits,
+                                                  const fp threshold) const {
   if (isTerminal()) {
     return {{0, static_cast<std::complex<fp>>(w).real()}};
   }
@@ -567,14 +600,15 @@ SparsePVec Edge<Node>::getSparseProbabilityVector(const fp threshold) const {
       [&probabilities](const std::size_t i, const fp& prob) {
         probabilities[i] = prob;
       },
-      threshold);
+      static_cast<int>(numQubits) - 1, threshold);
   return probabilities;
 }
 
 template <class Node>
 template <typename T, isDensityMatrix<T>>
 SparsePVecStrKeys
-Edge<Node>::getSparseProbabilityVectorStrKeys(const fp threshold) const {
+Edge<Node>::getSparseProbabilityVectorStrKeys(const std::size_t numQubits,
+                                              const fp threshold) const {
   if (isTerminal()) {
     return {{"0", static_cast<std::complex<fp>>(w).real()}};
   }
@@ -589,14 +623,14 @@ Edge<Node>::getSparseProbabilityVectorStrKeys(const fp threshold) const {
       [&probabilities, &nqubits](const std::size_t i, const fp& prob) {
         probabilities[intToBinaryString(i, nqubits)] = prob;
       },
-      threshold);
+      static_cast<int>(numQubits) - 1, threshold);
   return probabilities;
 }
 
 template <class Node>
 template <typename T, isDensityMatrix<T>>
 void Edge<Node>::traverseDiagonal(const fp& prob, const std::size_t i,
-                                  ProbabilityFunc f,
+                                  ProbabilityFunc f, const int level,
                                   const dd::fp threshold) const {
   // calculate new accumulated probability
   const auto c = static_cast<std::complex<fp>>(w);
@@ -608,17 +642,22 @@ void Edge<Node>::traverseDiagonal(const fp& prob, const std::size_t i,
     return;
   }
 
-  if (isTerminal()) {
+  if (isTerminal() && level == -1) {
     f(i, val);
     return;
   }
 
-  // recursive case
-  if (auto& e = p->e[0]; !e.w.exactlyZero()) {
-    e.traverseDiagonal(val, i, f, threshold);
+  // recursive case for non-terminal node
+  if (!isTerminal() && p->v < level) {
+    if (auto& e = p->e[0]; !e.w.exactlyZero()) {
+      e.traverseDiagonal(val, i, f, level - 1, threshold);
+    }
+    if (auto& e = p->e[3]; !e.w.exactlyZero()) {
+      e.traverseDiagonal(val, i | (1ULL << p->v), f, level - 1, threshold);
+    }
   }
-  if (auto& e = p->e[3]; !e.w.exactlyZero()) {
-    e.traverseDiagonal(val, i | (1ULL << p->v), f, threshold);
+  if (isTerminal() && level != -1) {
+    traverseDiagonal(val, i, f, level - 1, threshold);
   }
 }
 
@@ -668,15 +707,19 @@ template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
     ComplexNumbers& cn);
 template CMat Edge<dNode>::getMatrix<dNode, true>(const std::size_t numQubits,
                                                   const fp threshold) const;
+template CMat Edge<dNode>::getDensityMatrix(const size_t numQubits,
+                                            fp threshold) const;
 template SparseCMat
 Edge<dNode>::getSparseMatrix<dNode, true>(const std::size_t numQubits,
                                           const fp threshold) const;
 template void
 Edge<dNode>::printMatrix<dNode, true>(const std::size_t numQubits) const;
 template SparsePVec
-Edge<dNode>::getSparseProbabilityVector(const fp threshold) const;
+Edge<dNode>::getSparseProbabilityVector(const std::size_t numQubits,
+                                        const fp threshold) const;
 template SparsePVecStrKeys
-Edge<dNode>::getSparseProbabilityVectorStrKeys(const fp threshold) const;
+Edge<dNode>::getSparseProbabilityVectorStrKeys(const std::size_t numQubits,
+                                               const fp threshold) const;
 template std::complex<fp>
 Edge<dNode>::getValueByIndex<dNode, true>(const std::size_t numQubits,
                                           const std::size_t i,
@@ -685,7 +728,7 @@ template void Edge<dNode>::traverseMatrix<dNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
     MatrixEntryFunc f, const int level, const fp threshold) const;
 template void Edge<dNode>::traverseDiagonal(const fp& prob, const std::size_t i,
-                                            ProbabilityFunc f,
+                                            ProbabilityFunc f, int level,
                                             const dd::fp threshold) const;
 
 } // namespace dd

@@ -268,9 +268,10 @@ public:
   /**
    * Get the matrix represented by the DD
    * @tparam T template parameter to enable this function only for matrix nodes
-   * @param e reference to the highest edge pointing to our DD
-   * @param nrQubits number of qubits needed to represented the whole DD
+   * @param numQubits number of qubits needed to represented the whole DD
    * including identities
+   * @param threshold entries with a magnitude below this threshold will be
+   * ignored
    * @return the matrix
    */
   template <typename T = Node, isMatrixVariant<T> = true>
@@ -289,6 +290,18 @@ public:
   template <typename T = Node, isMatrixVariant<T> = true>
   void getMatrix(const Edge& e, const ComplexValue& amp, std::size_t i,
                  std::size_t j, CMat& mat, int level, fp threshold = 0.) const;
+
+  /**
+   * @brief Get the density matrix represented by the DD
+   * @tparam T template parameter to enable this function only for dNodes
+   * @param numQubits number of qubits needed to represent the whole DD
+   * @param threshold entries with a magnitude below this threshold will be
+   * ignored
+   * @return the density matrix
+   */
+  template <typename T = Node, isDensityMatrix<T> = true>
+  [[nodiscard]] CMat getDensityMatrix(size_t numQubits,
+                                      fp threshold = 0.) const;
 
   /**
    * @brief Get the sparse matrix represented by the DD
@@ -375,21 +388,25 @@ public:
   /**
    * @brief Get the sparse probability vector for the underlying density matrix
    * @tparam T template parameter to enable this function only for dNode
+   * @param numQubits number of qubits needed to represent the whole DD
    * @param threshold probabilities below this threshold will be ignored
    * @return the sparse probability vector
    */
   template <typename T = Node, isDensityMatrix<T> = true>
-  [[nodiscard]] SparsePVec getSparseProbabilityVector(fp threshold = 0.) const;
+  [[nodiscard]] SparsePVec getSparseProbabilityVector(std::size_t numQubits,
+                                                      fp threshold = 0.) const;
 
   /**
    * @brief Get the sparse probability vector for the underlying density matrix
    * @tparam T template parameter to enable this function only for dNode
+   * @param numQubits number of qubits needed to represent the whole DD
    * @param threshold probabilities below this threshold will be ignored
    * @return the sparse probability vector (using strings as keys)
    */
   template <typename T = Node, isDensityMatrix<T> = true>
   [[nodiscard]] SparsePVecStrKeys
-  getSparseProbabilityVectorStrKeys(fp threshold = 0.) const;
+  getSparseProbabilityVectorStrKeys(std::size_t numQubits,
+                                    fp threshold = 0.) const;
 
 private:
   /**
@@ -404,7 +421,7 @@ private:
    */
   template <typename T = Node, isDensityMatrix<T> = true>
   void traverseDiagonal(const fp& prob, std::size_t i, ProbabilityFunc f,
-                        fp threshold = 0.) const;
+                        int level, fp threshold = 0.) const;
 };
 } // namespace dd
 

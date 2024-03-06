@@ -367,7 +367,7 @@ TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
   const CMat dmRef = {{{diagValRef, 0.}, {offDiagValRef, -offDiagValRef}},
                       {{offDiagValRef, offDiagValRef}, {diagValRef, 0.}}};
 
-  const auto dm = state.getMatrix(nqubits);
+  const auto dm = state.getDensityMatrix(nqubits);
 
   for (std::size_t i = 0U; i < dm.size(); ++i) {
     for (std::size_t j = 0U; j < dm.size(); ++j) {
@@ -397,7 +397,7 @@ TEST(DensityMatrixFunctionality, GetSparseMatrixConsistency) {
   state = dd->applyOperationToDensity(state, op2);
 
   const auto dm = state.getSparseMatrix(nqubits);
-  const auto dmDense = state.getMatrix(nqubits);
+  const auto dmDense = state.getDensityMatrix(nqubits);
 
   for (const auto& [index, value] : dm) {
     const auto val = dmDense.at(index.first).at(index.second);
