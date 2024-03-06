@@ -1289,8 +1289,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
                   0.000001);
     }
   }
-  const auto probVector =
-      state.getSparseProbabilityVector(nrQubits, 0.001);
+  const auto probVector = state.getSparseProbabilityVector(nrQubits, 0.001);
   const double tolerance = 1e-10;
   for (const auto& [s, prob] : probVector) {
     std::cout << s << ": " << prob << "\n";
