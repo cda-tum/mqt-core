@@ -1913,15 +1913,28 @@ private:
     const auto n = m.p->v;
 
     if (garbage.size() > n && garbage[n]) {
-      return isCloseToIdentityRecursive(m.p->e[0U], visited, tol, garbage,
-                                        checkCloseToOne) &&
-             isCloseToIdentityRecursive(m.p->e[1U], visited, tol, garbage,
-                                        checkCloseToOne) &&
-             isCloseToIdentityRecursive(m.p->e[2U], visited, tol, garbage,
-                                        checkCloseToOne) &&
-             isCloseToIdentityRecursive(m.p->e[3U], visited, tol, garbage,
+      auto e0 = true;
+      if (!m.p->e[0U].isZeroTerminal()) {
+        e0 = isCloseToIdentityRecursive(m.p->e[0U], visited, tol, garbage,
                                         checkCloseToOne);
-      ;
+      }
+      auto e1 = true;
+      if (!m.p->e[1U].isZeroTerminal()) {
+        e1 = isCloseToIdentityRecursive(m.p->e[1U], visited, tol, garbage,
+                                        checkCloseToOne);
+      }
+      auto e2 = true;
+      if (!m.p->e[2U].isZeroTerminal()) {
+        e2 = isCloseToIdentityRecursive(m.p->e[2U], visited, tol, garbage,
+                                        checkCloseToOne);
+      }
+      auto e3 = true;
+      if (!m.p->e[3U].isZeroTerminal()) {
+        e3 = isCloseToIdentityRecursive(m.p->e[3U], visited, tol, garbage,
+                                        checkCloseToOne);
+      }
+
+      return e0 && e1 && e2 && e3;
     }
 
     // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0
