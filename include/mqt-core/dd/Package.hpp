@@ -1790,10 +1790,10 @@ private:
         if (y.isIdentity(false)) {
           idx = x.p->v + 1;
         } else {
-          idx = y.p->v + x.p->v + 1;
+          idx = static_cast<Qubit>(y.p->v + x.p->v + 1);
         }
       } else {
-        idx = y.p->v + x.p->v + 1;
+        idx = static_cast<Qubit>(y.p->v + x.p->v + 1);
       }
     }
     auto e = makeDDNode(idx, edge, true);
@@ -1823,6 +1823,11 @@ public:
 
   template <class Node> ComplexValue trace(const Edge<Node>& a) {
     const auto eliminate = std::vector<bool>(nqubits, true);
+    if (a.isIdentity() && nqubits > 0) {
+      auto c = ComplexValue{std::pow(2, nqubits), 0.};
+      c = c * a.w;
+      return c;
+    }
     return trace(a, eliminate).w;
   }
 
