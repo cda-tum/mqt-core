@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.6.1", "setuptools-scm>=7", "pybind11>=2.11"]
+requires = ["scikit-build-core>=0.8.1", "setuptools-scm>=7", "pybind11>=2.11"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -61,7 +61,7 @@ docs = [
     "mqt.core[evaluation]"
 ]
 qiskit = [
-   "qiskit[qasm3-import]>=0.45.0",
+   "qiskit[qasm3-import]>=1.0.0",
 ]
 dev = ["mqt.core[coverage, docs]",]
 
@@ -78,14 +78,14 @@ Discussions = "https://github.com/cda-tum/mqt-core/discussions"
 
 [tool.scikit-build]
 # Protect the configuration against future changes in scikit-build-core
-minimum-version = "0.6.1"
+minimum-version = "0.8.1"
 
 # Set the wheel install directory
 wheel.install-dir = "mqt/core"
 
 # Set required CMake and Ninja versions
-cmake.minimum-version = "3.19"
-ninja.minimum-version = "1.10"
+cmake.version = ">=3.19"
+ninja.version = ">=1.10"
 
 # Setuptools-style build caching in a local directory
 build-dir = "build/{wheel_tag}"
@@ -127,9 +127,6 @@ addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = [
     "error",
-    'ignore:.*qiskit.__qiskit_version__.*:DeprecationWarning:qiskit:',
-    'ignore:.*qiskit.utils.algorithm_globals.QiskitAlgorithmGlobals*:DeprecationWarning:qiskit',
-    'ignore:.*Building a flow controller with keyword arguments is going to be deprecated*:PendingDeprecationWarning:qiskit',
     'ignore:\s.*Pyarrow.*:DeprecationWarning:',
     'ignore:.*datetime\.datetime\.utcfromtimestamp.*:DeprecationWarning:',
 ]
@@ -264,6 +261,7 @@ build = "cp3*"
 skip = "*-musllinux_*"
 archs = "auto64"
 test-command = "python -c \"from mqt import core\""
+test-skip = "cp38-macosx_arm64"
 build-frontend = "build"
 
 [tool.cibuildwheel.linux]

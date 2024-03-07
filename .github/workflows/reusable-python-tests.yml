@@ -51,5 +51,11 @@ jobs:
           cache: "pip"
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
+      - name: Install nox (non-macos-14)
+        if: ${{ inputs.runs-on != 'macos-14' }}
+        run: pipx install nox
+      - name: Install nox (macos-14)
+        if: ${{ inputs.runs-on == 'macos-14' }}
+        run: brew install nox
       - name: Test on 🐍 ${{ inputs.python-version }}
-        run: pipx run nox -s tests-${{ inputs.python-version }} --verbose
+        run: nox -s tests-${{ inputs.python-version }} --verbose

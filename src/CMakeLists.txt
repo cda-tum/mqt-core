@@ -100,6 +100,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     algorithms/WState.cpp
     CircuitOptimizer.cpp
     operations/ClassicControlledOperation.cpp
+    operations/CompoundOperation.cpp
     operations/Expression.cpp
     operations/NonUnitaryOperation.cpp
     operations/Operation.cpp

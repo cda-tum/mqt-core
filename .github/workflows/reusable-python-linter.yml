@@ -39,7 +39,7 @@ jobs:
           cache: "pip"
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
-      - uses: pre-commit/action@v3.0.0
+      - uses: pre-commit/action@v3.0.1
         with:
           extra_args: mypy --all-files
       - name: Run check-sdist
