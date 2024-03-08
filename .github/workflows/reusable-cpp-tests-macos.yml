@@ -21,8 +21,11 @@ on:
 
 jobs:
   cpp-tests-macos:
-    name: 🍎 ${{ inputs.config }}
-    runs-on: macos-latest
+    name: 🍎 ${{ inputs.config }} ${{ matrix.runs-on }}
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        runs-on: [macos-13, macos-14] # Tests on the Intel and arm64 architectures
     env:
       CMAKE_BUILD_PARALLEL_LEVEL: 3
       CTEST_PARALLEL_LEVEL: 3
@@ -45,7 +48,7 @@ jobs:
           prepend_symlinks_to_path: false
           override_cache_key: c++-tests-macos-latest-${{ inputs.config }}
       - name: Install Ninja
-        run: pipx install ninja
+        run: brew install ninja
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ inputs.config }} ${{ inputs.cmake-args }}
       - name: Build
