@@ -2268,3 +2268,19 @@ TEST(DDPackageTest, ReduceAncillaRegression) {
 
   EXPECT_EQ(outputMatrix, expected);
 }
+
+TEST(DDPackageTest, ReduceGarbageVector) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+  auto xGate = dd->makeGateDD(dd::X_MAT, 3, 2);
+  auto hGate = dd->makeGateDD(dd::H_MAT, 3, 2);
+  auto zeroState = dd->makeZeroState(3);
+  auto initialState = dd->multiply(dd->multiply(hGate, xGate), zeroState);
+  std::cout << "Initial State:\n";
+  initialState.printVector();
+
+  dd->incRef(initialState);
+  auto reducedState = dd->reduceGarbage(initialState, {false, true, true});
+  std::cout << "After reduceGarbage():\n";
+  reducedState.printVector();
+  EXPECT_TRUE(reducedState.isZeroTerminal());
+}
