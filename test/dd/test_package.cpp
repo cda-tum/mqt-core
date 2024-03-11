@@ -280,6 +280,13 @@ TEST(DDPackageTest, PartialIdentityTrace) {
   EXPECT_EQ(dd::RealNumber::val(mul.w.r), 4.0);
 }
 
+TEST(DDPackageTest, PartialNonIdentityTrace) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 2, 0, 1);
+  auto ptr = dd->partialTrace(swapGate, {true, false});
+  EXPECT_EQ(ptr.w * ptr.w, 1.);
+}
+
 TEST(DDPackageTest, StateGenerationManipulation) {
   const std::size_t nqubits = 6;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
@@ -730,6 +737,15 @@ TEST(DDPackageTest, KroneckerProduct) {
 
   auto kronecker2 = dd->kronecker(x, x);
   EXPECT_EQ(kronecker, kronecker2);
+}
+
+TEST(DDPackageTest, KroneckerProductVectors) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  auto zeroState = dd->makeZeroState(1);
+  auto kronecker = dd->kronecker(zeroState, zeroState);
+
+  auto expected = dd->makeZeroState(2);
+  EXPECT_EQ(kronecker, expected);
 }
 
 TEST(DDPackageTest, KroneckerIdentityHandling) {
@@ -2123,33 +2139,6 @@ TEST(DDPackageTest, InnerProductTopNodeConjugation) {
   EXPECT_NEAR(dd->expectationValue(op, evolvedState), -0.416, 0.001);
 }
 
-TEST(DDPackageTest, GetMatrixMultiQubitIdentity) {
-  const auto nrQubits = 2U;
-
-  auto dd = std::make_unique<dd::Package<>>(nrQubits);
-
-  auto identity = dd->makeIdent();
-
-  auto goalRow0 = dd::CVec{{1., 0.}, {0., 0.}, {0., 0.}, {0., 0.}};
-  auto goalRow1 = dd::CVec{{0., 0.}, {1., 0.}, {0., 0.}, {0., 0.}};
-  auto goalRow2 = dd::CVec{{0., 0.}, {0., 0.}, {1., 0.}, {0., 0.}};
-  auto goalRow3 = dd::CVec{{0., 0.}, {0., 0.}, {0., 0.}, {1., 0.}};
-  auto goalMatrix = dd::CMat{goalRow0, goalRow1, goalRow2, goalRow3};
-  ASSERT_EQ(identity.getMatrix(dd->qubits()), goalMatrix);
-}
-
-TEST(DDPackageTest, GetMatrixCNOT) {
-  const auto nrQubits = 2U;
-
-  auto dd = std::make_unique<dd::Package<>>(nrQubits);
-
-  auto originalDD = dd->makeGateDD(dd::X_MAT, 2, 1_pc, 0);
-  auto matrix = originalDD.getMatrix(dd->qubits());
-  auto recreatedDD = dd->makeDDFromMatrix(matrix);
-
-  ASSERT_EQ(originalDD, recreatedDD);
-}
-
 /**
  * @brief This is a regression test for a long lasting memory leak in the DD
  * package.
@@ -2251,5 +2240,139 @@ TEST(DDPackageTest, ReduceAncillaRegression) {
   const auto expected =
       dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
 
+  EXPECT_EQ(outputMatrix, expected);
+}
+
+TEST(DDPackageTest, ReduceAncillaIdentity) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  auto inputDD = dd->makeIdent();
+  const auto outputDD = dd->reduceAncillae(inputDD, {true, true});
+
+  const auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  const auto expected =
+      dd::CMat{{1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
+
+  EXPECT_EQ(outputMatrix, expected);
+}
+
+TEST(DDPackageTest, ReduceAnicllaIdentityBeforeFirstNode) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  auto xGate = dd->makeGateDD(dd::X_MAT, 2, 0);
+  auto outputDD = dd->reduceAncillae(xGate, {false, true});
+
+  auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  auto expected =
+      dd::CMat{{0, 1, 0, 0}, {1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+}
+
+TEST(DDPackageTest, ReduceAnicllaIdentityAfterLastNode) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  auto xGate = dd->makeGateDD(dd::X_MAT, 2, 1);
+  dd->incRef(xGate);
+  auto outputDD = dd->reduceAncillae(xGate, {true, false});
+
+  auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  auto expected =
+      dd::CMat{{0, 0, 1, 0}, {0, 0, 0, 0}, {1, 0, 0, 0}, {0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+}
+
+TEST(DDPackageTest, ReduceAncillaIdentityBetweenTwoNodes) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+  auto xGate0 = dd->makeGateDD(dd::X_MAT, 3, 0);
+  auto xGate2 = dd->makeGateDD(dd::X_MAT, 3, 2);
+  auto state = dd->multiply(xGate0, xGate2);
+
+  dd->incRef(state);
+  auto outputDD = dd->reduceAncillae(state, {false, true, false});
+  auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  auto expected = dd::CMat{{0, 0, 0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0, 0, 0},
+                           {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},
+                           {0, 1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0},
+                           {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+}
+
+TEST(DDPackageTest, ReduceGarbageIdentity) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  auto inputDD = dd->makeIdent();
+  auto outputDD = dd->reduceGarbage(inputDD, {true, true});
+
+  auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  auto expected =
+      dd::CMat{{1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+
+  // test also for non-regular garbage reduction as well
+  outputDD = dd->reduceGarbage(inputDD, {true, true}, false);
+
+  outputMatrix = outputDD.getMatrix(dd->qubits());
+  expected = dd::CMat{{1, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+}
+
+TEST(DDPackageTest, ReduceGarbageIdentityBeforeFirstNode) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  auto xGate = dd->makeGateDD(dd::X_MAT, 2, 0);
+  auto outputDD = dd->reduceGarbage(xGate, {false, true});
+
+  auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  auto expected =
+      dd::CMat{{0, 1, 0, 1}, {1, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+
+  // test also for non-regular garbage reduction as well
+  outputDD = dd->reduceGarbage(xGate, {false, true}, false);
+
+  outputMatrix = outputDD.getMatrix(dd->qubits());
+  expected = dd::CMat{{0, 1, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+}
+
+TEST(DDPackageTest, ReduceGarbageIdentityAfterLastNode) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+  auto xGate = dd->makeGateDD(dd::X_MAT, 2, 1);
+  dd->incRef(xGate);
+  auto outputDD = dd->reduceGarbage(xGate, {true, false});
+
+  auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  auto expected =
+      dd::CMat{{0, 0, 1, 1}, {0, 0, 0, 0}, {1, 1, 0, 0}, {0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+
+  // test also for non-regular garbage reduction as well
+  dd->incRef(xGate);
+  outputDD = dd->reduceGarbage(xGate, {true, false}, false);
+
+  outputMatrix = outputDD.getMatrix(dd->qubits());
+  expected = dd::CMat{{0, 0, 1, 0}, {0, 0, 1, 0}, {1, 0, 0, 0}, {1, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+}
+
+TEST(DDPackageTest, ReduceGarbageIdentityBetweenTwoNodes) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+  auto xGate0 = dd->makeGateDD(dd::X_MAT, 3, 0);
+  auto xGate2 = dd->makeGateDD(dd::X_MAT, 3, 2);
+  auto state = dd->multiply(xGate0, xGate2);
+
+  dd->incRef(state);
+  auto outputDD = dd->reduceGarbage(state, {false, true, false});
+  auto outputMatrix = outputDD.getMatrix(dd->qubits());
+  auto expected = dd::CMat{{0, 0, 0, 0, 0, 1, 0, 1}, {0, 0, 0, 0, 1, 0, 1, 0},
+                           {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},
+                           {0, 1, 0, 1, 0, 0, 0, 0}, {1, 0, 1, 0, 0, 0, 0, 0},
+                           {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0}};
+  EXPECT_EQ(outputMatrix, expected);
+
+  // test also for non-regular garbage reduction as well
+  dd->incRef(state);
+  outputDD = dd->reduceGarbage(state, {false, true, false}, false);
+
+  outputMatrix = outputDD.getMatrix(dd->qubits());
+  expected = dd::CMat{{0, 0, 0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0, 0, 0},
+                      {0, 0, 0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0, 0, 0},
+                      {0, 1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0},
+                      {0, 1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}};
   EXPECT_EQ(outputMatrix, expected);
 }

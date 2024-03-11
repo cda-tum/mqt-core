@@ -287,9 +287,10 @@ public:
    * @param mat matrix representing our desired output
    * @param level current level in our DD representing which qubit we are at
    */
-  template <typename T = Node, isMatrixVariant<T> = true>
-  void getMatrix(const Edge& e, const ComplexValue& amp, std::size_t i,
-                 std::size_t j, CMat& mat, int level, fp threshold = 0.) const;
+  //  template <typename T = Node, isMatrixVariant<T> = true>
+  //  void getMatrix(const Edge& e, const ComplexValue& amp, std::size_t i,
+  //                 std::size_t j, CMat& mat, int level, fp threshold = 0.)
+  //                 const;
 
   /**
    * @brief Get the density matrix represented by the DD
