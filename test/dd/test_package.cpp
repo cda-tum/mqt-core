@@ -626,6 +626,103 @@ TEST(DDPackageTest, GarbageMatrix) {
   EXPECT_TRUE(reducedBellMatrix.p->e[3].isZeroTerminal());
 }
 
+TEST(DDPackageTest, ReduceGarbageVector) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+  auto xGate = dd->makeGateDD(dd::X_MAT, 3, 2);
+  auto hGate = dd->makeGateDD(dd::H_MAT, 3, 2);
+  auto zeroState = dd->makeZeroState(3);
+  auto initialState = dd->multiply(dd->multiply(hGate, xGate), zeroState);
+  std::cout << "Initial State:\n";
+  initialState.printVector();
+
+  dd->incRef(initialState);
+  auto reducedState = dd->reduceGarbage(initialState, {false, true, true});
+  std::cout << "After reduceGarbage():\n";
+  reducedState.printVector();
+  EXPECT_EQ(reducedState, dd->makeZeroState(3));
+
+  auto reducedState2 =
+      dd->reduceGarbage(initialState, {false, true, true}, true);
+
+  EXPECT_EQ(reducedState2, dd->makeZeroState(3));
+}
+
+TEST(DDPackageTest, ReduceGarbageMatrix) {
+  auto dd = std::make_unique<dd::Package<>>(3);
+  auto hGate = dd->makeGateDD(dd::H_MAT, 3, 0);
+  auto cNotGate = dd->makeGateDD(dd::X_MAT, 3, qc::Controls{0}, 1);
+
+  auto initialState = dd->multiply(hGate, cNotGate);
+
+  std::cout << "Initial State:\n";
+  initialState.printMatrix();
+
+  dd->incRef(initialState);
+  auto reducedState1 =
+      dd->reduceGarbage(initialState, {false, true, true}, true, true);
+  std::cout << "After reduceGarbage(q1 and q2 are garbage):\n";
+  reducedState1.printMatrix();
+
+  auto expectedMatrix1 =
+      dd::CMat{{dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2,
+                dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2},
+               {dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2,
+                dd::SQRT2_2, dd::SQRT2_2, dd::SQRT2_2},
+               {0, 0, 0, 0, 0, 0, 0, 0},
+               {0, 0, 0, 0, 0, 0, 0, 0},
+               {0, 0, 0, 0, 0, 0, 0, 0},
+               {0, 0, 0, 0, 0, 0, 0, 0},
+               {0, 0, 0, 0, 0, 0, 0, 0},
+               {0, 0, 0, 0, 0, 0, 0, 0}};
+  EXPECT_EQ(reducedState1.getMatrix(), expectedMatrix1);
+
+  dd->incRef(initialState);
+  auto reducedState2 =
+      dd->reduceGarbage(initialState, {true, false, false}, true, true);
+  std::cout << "After reduceGarbage(q0 is garbage):\n";
+  reducedState2.printMatrix();
+
+  auto expectedMatrix2 =
+      dd::CMat{{1, 0, 0, 1, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},
+               {0, 1, 1, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},
+               {0, 0, 0, 0, 1, 0, 0, 1}, {0, 0, 0, 0, 0, 0, 0, 0},
+               {0, 0, 0, 0, 0, 1, 1, 0}, {0, 0, 0, 0, 0, 0, 0, 0}};
+  EXPECT_EQ(reducedState2.getMatrix(), expectedMatrix2);
+}
+
+TEST(DDPackageTest, ReduceGarbageMatrix2) {
+  const auto nqubits = 3U;
+  const auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto controlledSwapGate =
+      dd->makeTwoQubitGateDD(dd::SWAP_MAT, nqubits, qc::Controls{1}, 0, 2);
+  const auto hGate = dd->makeGateDD(dd::H_MAT, nqubits, 0);
+  const auto zGate = dd->makeGateDD(dd::Z_MAT, nqubits, 2);
+  const auto xGate = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+  const auto controlledHGate =
+      dd->makeGateDD(dd::H_MAT, nqubits, qc::Controls{1}, 0);
+
+  auto c1 = dd->multiply(
+      controlledSwapGate,
+      dd->multiply(hGate, dd->multiply(zGate, controlledSwapGate)));
+  auto c2 = dd->multiply(controlledHGate, xGate);
+
+  std::cout << "c1:\n";
+  c1.printMatrix();
+  std::cout << "reduceGarbage:\n";
+  dd->incRef(c1);
+  auto c1Reduced = dd->reduceGarbage(c1, {false, true, true}, true, true);
+  c1Reduced.printMatrix();
+
+  std::cout << "c2:\n";
+  c2.printMatrix();
+  std::cout << "reduceGarbage:\n";
+  dd->incRef(c2);
+  auto c2Reduced = dd->reduceGarbage(c2, {false, true, true}, true, true);
+  c2Reduced.printMatrix();
+
+  EXPECT_EQ(c1Reduced, c2Reduced);
+}
+
 TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
   auto nqubits = 2U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
@@ -2267,20 +2364,4 @@ TEST(DDPackageTest, ReduceAncillaRegression) {
       dd::CMat{{1, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, -1, 0}, {1, 0, -1, 0}};
 
   EXPECT_EQ(outputMatrix, expected);
-}
-
-TEST(DDPackageTest, ReduceGarbageVector) {
-  auto dd = std::make_unique<dd::Package<>>(3);
-  auto xGate = dd->makeGateDD(dd::X_MAT, 3, 2);
-  auto hGate = dd->makeGateDD(dd::H_MAT, 3, 2);
-  auto zeroState = dd->makeZeroState(3);
-  auto initialState = dd->multiply(dd->multiply(hGate, xGate), zeroState);
-  std::cout << "Initial State:\n";
-  initialState.printVector();
-
-  dd->incRef(initialState);
-  auto reducedState = dd->reduceGarbage(initialState, {false, true, true});
-  std::cout << "After reduceGarbage():\n";
-  reducedState.printVector();
-  EXPECT_TRUE(reducedState.isZeroTerminal());
 }
