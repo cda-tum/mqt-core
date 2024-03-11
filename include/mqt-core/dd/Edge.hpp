@@ -278,18 +278,6 @@ public:
   [[nodiscard]] CMat getMatrix(std::size_t numQubits, fp threshold = 0.) const;
 
   /**
-   * @brief Get the density matrix represented by the DD
-   * @tparam T template parameter to enable this function only for dNodes
-   * @param numQubits number of qubits needed to represent the whole DD
-   * @param threshold entries with a magnitude below this threshold will be
-   * ignored
-   * @return the density matrix
-   */
-  template <typename T = Node, isDensityMatrix<T> = true>
-  [[nodiscard]] CMat getDensityMatrix(size_t numQubits,
-                                      fp threshold = 0.) const;
-
-  /**
    * @brief Get the sparse matrix represented by the DD
    * @tparam T template parameter to enable this function only for matrix nodes
    * @param threshold entries with a magnitude below this threshold will be

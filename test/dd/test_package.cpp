@@ -1243,7 +1243,7 @@ TEST(DDPackageTest, dNodeMultiply) {
     dd->applyOperationToDensity(state, op);
   }
 
-  const auto stateDensityMatrix = state.getDensityMatrix(dd->qubits());
+  const auto stateDensityMatrix = state.getMatrix(dd->qubits());
 
   for (const auto& stateVector : stateDensityMatrix) {
     for (const auto& cValue : stateVector) {
@@ -1291,7 +1291,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
   }
   operations[0].printMatrix(dd->qubits());
 
-  const auto stateDensityMatrix = state.getDensityMatrix(dd->qubits());
+  const auto stateDensityMatrix = state.getMatrix(dd->qubits());
 
   for (std::size_t i = 0; i < (1 << nrQubits); i++) {
     for (std::size_t j = 0; j < (1 << nrQubits); j++) {

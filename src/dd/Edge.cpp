@@ -384,44 +384,18 @@ CMat Edge<Node>::getMatrix(const std::size_t numQubits,
   auto mat = CMat(dim, CVec(dim, {0., 0.}));
 
   auto r = *this;
-  r.traverseMatrix(
-      1, 0ULL, 0ULL,
-      [&mat](const std::size_t i, const std::size_t j,
-             const std::complex<fp>& c) { mat.at(i).at(j) = c; },
-      static_cast<int>(numQubits) - 1, threshold);
-
-  return mat;
-}
-
-template <class Node>
-template <typename T, isDensityMatrix<T>>
-CMat Edge<Node>::getDensityMatrix(const std::size_t numQubits,
-                                  const fp threshold) const {
-  if (isTerminal()) {
-    return CMat{1, {static_cast<std::complex<fp>>(w)}};
-  }
-
-  auto r = *this;
   if constexpr (std::is_same_v<Node, dNode>) {
     Edge<dNode>::applyDmChangesToEdge(r);
   }
-
-  std::size_t dim = 1;
-  if (numQubits != 0) {
-    dim = 2ULL << (numQubits - 1);
-  }
-  // allocate resulting matrix
-  auto mat = CMat(dim, CVec(dim, {0., 0.}));
-
   r.traverseMatrix(
       1, 0ULL, 0ULL,
       [&mat](const std::size_t i, const std::size_t j,
              const std::complex<fp>& c) { mat.at(i).at(j) = c; },
       static_cast<int>(numQubits) - 1, threshold);
-
   if constexpr (std::is_same_v<Node, dNode>) {
     Edge<dNode>::revertDmChangesToEdge(r);
   }
+
   return mat;
 }
 
@@ -654,8 +628,6 @@ template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
     ComplexNumbers& cn);
 template CMat Edge<dNode>::getMatrix<dNode, true>(const std::size_t numQubits,
                                                   const fp threshold) const;
-template CMat Edge<dNode>::getDensityMatrix(const size_t numQubits,
-                                            fp threshold) const;
 template SparseCMat
 Edge<dNode>::getSparseMatrix<dNode, true>(const std::size_t numQubits,
                                           const fp threshold) const;
