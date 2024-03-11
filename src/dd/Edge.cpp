@@ -390,68 +390,8 @@ CMat Edge<Node>::getMatrix(const std::size_t numQubits,
              const std::complex<fp>& c) { mat.at(i).at(j) = c; },
       static_cast<int>(numQubits) - 1, threshold);
 
-  // Identity case
-  //  if (isIdentity()) {
-  //    for (auto i = 0ULL; i < dim; ++i) {
-  //      for (auto j = 0ULL; j < dim; ++j) {
-  //        if (i == j) {
-  //          mat[i][j] = {1., 0.};
-  //        }
-  //      }
-  //    }
-  //  } else {
-  //    getMatrix(*this, ComplexValue(1., 0.), 0, 0, mat,
-  //              static_cast<int>(numQubits) - 1, threshold);
-  //  }
   return mat;
 }
-
-// template <class Node>
-// template <typename T, isMatrixVariant<T>>
-// void Edge<Node>::getMatrix(const Edge& e, const ComplexValue& amp,
-//                            const std::size_t i, const std::size_t j, CMat&
-//                            mat, const int level, const fp threshold) const {
-//   // calculate new accumulated amplitude
-//   auto c = e.w * amp;
-//
-//   if (c.mag() < threshold) {
-//     return;
-//   }
-//
-//   std::size_t x = i;
-//   std::size_t y = j;
-//
-//   if (level != -1) {
-//     x = i | (1ULL << level);
-//     y = j | (1ULL << level);
-//   }
-//
-//   if (e.isTerminal() && level == -1) {
-//     // base case
-//     mat.at(i).at(j) = {c.r, c.i};
-//     return;
-//   }
-//
-//   if ((!e.isTerminal() && e.p->v == level)) {
-//     // recursive case
-//     if (!e.p->e[0].w.approximatelyZero()) {
-//       getMatrix(e.p->e[0], c, i, j, mat, level - 1, threshold);
-//     }
-//     if (!e.p->e[1].w.approximatelyZero()) {
-//       getMatrix(e.p->e[1], c, i, y, mat, level - 1, threshold);
-//     }
-//     if (!e.p->e[2].w.approximatelyZero()) {
-//       getMatrix(e.p->e[2], c, x, j, mat, level - 1, threshold);
-//     }
-//     if (!e.p->e[3].w.approximatelyZero()) {
-//       getMatrix(e.p->e[3], c, x, y, mat, level - 1, threshold);
-//     }
-//   } else if ((!e.isTerminal() && e.p->v < level) ||
-//              (e.isTerminal() && level != -1)) {
-//     getMatrix(e, c, i, j, mat, level - 1, threshold);
-//     getMatrix(e, c, x, y, mat, level - 1, threshold);
-//   }
-// }
 
 template <class Node>
 template <typename T, isDensityMatrix<T>>

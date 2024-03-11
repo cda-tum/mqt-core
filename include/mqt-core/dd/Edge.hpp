@@ -278,21 +278,6 @@ public:
   [[nodiscard]] CMat getMatrix(std::size_t numQubits, fp threshold = 0.) const;
 
   /**
-   * Recursively get the matrix represented by the DD
-   * @tparam T template parameter to enable this function only for matrix nodes
-   * @param e reference to the current edge pointing to the next node
-   * @param amp current accumulated amplitude
-   * @param i current row index in our matrix
-   * @param j current column index in our matrix
-   * @param mat matrix representing our desired output
-   * @param level current level in our DD representing which qubit we are at
-   */
-  //  template <typename T = Node, isMatrixVariant<T> = true>
-  //  void getMatrix(const Edge& e, const ComplexValue& amp, std::size_t i,
-  //                 std::size_t j, CMat& mat, int level, fp threshold = 0.)
-  //                 const;
-
-  /**
    * @brief Get the density matrix represented by the DD
    * @tparam T template parameter to enable this function only for dNodes
    * @param numQubits number of qubits needed to represent the whole DD
