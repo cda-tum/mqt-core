@@ -51,8 +51,7 @@ std::ostream& RandomCliffordCircuit::printStatistics(std::ostream& os) const {
   os << "\tm: " << getNindividualOps() << "\n";
   os << "\tdepth: " << depth << "\n";
   os << "\tseed: " << seed << "\n";
-  os << "--------------"
-     << "\n";
+  os << "--------------" << "\n";
   return os;
 }
 
