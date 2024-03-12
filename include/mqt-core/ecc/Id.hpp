@@ -9,11 +9,11 @@ public:
       : Ecc({ID::Id, 1, 0, "Id", {}}, std::move(qc), measureFq) {}
 
 protected:
-  void writeEncoding() override{};
+  void writeEncoding() override {};
 
-  void measureAndCorrect() override{};
+  void measureAndCorrect() override {};
 
-  void writeDecoding() override{};
+  void writeDecoding() override {};
 
   void mapGate(const qc::Operation& gate) override {
     qcMapped->emplace_back(gate.clone());

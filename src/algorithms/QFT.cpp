@@ -22,8 +22,7 @@ std::ostream& QFT::printStatistics(std::ostream& os) const {
   os << "\tn: " << nqubits << "\n";
   os << "\tm: " << getNindividualOps() << "\n";
   os << "\tdynamic: " << dynamic << "\n";
-  os << "--------------"
-     << "\n";
+  os << "--------------" << "\n";
   return os;
 }
 void QFT::createCircuit() {

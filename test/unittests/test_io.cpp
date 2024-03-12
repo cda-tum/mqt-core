@@ -165,8 +165,7 @@ TEST_F(IO, dumpNegativeControl) {
 
 TEST_F(IO, qiskitMcxGray) {
   std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "mcx_gray q[0], q[1], q[2], q[3];\n";
+  ss << "qreg q[4];" << "mcx_gray q[0], q[1], q[2], q[3];\n";
   qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
   std::cout << *qc << "\n";
@@ -177,8 +176,7 @@ TEST_F(IO, qiskitMcxGray) {
 
 TEST_F(IO, qiskitMcxSkipGateDefinition) {
   std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "gate mcx q0,q1,q2,q3 { ctrl(3) @ x q0,q1,q2,q3; }"
+  ss << "qreg q[4];" << "gate mcx q0,q1,q2,q3 { ctrl(3) @ x q0,q1,q2,q3; }"
      << "mcx q[0], q[1], q[2], q[3];\n";
   qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
@@ -190,8 +188,7 @@ TEST_F(IO, qiskitMcxSkipGateDefinition) {
 
 TEST_F(IO, qiskitMcphase) {
   std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "mcphase(pi) q[0], q[1], q[2], q[3];\n";
+  ss << "qreg q[4];" << "mcphase(pi) q[0], q[1], q[2], q[3];\n";
   qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
   std::cout << *qc << "\n";
@@ -215,11 +212,9 @@ TEST_F(IO, qiskitMcphaseInDeclaration) {
 
 TEST_F(IO, qiskitMcxRecursive) {
   std::stringstream ss{};
-  ss << "qreg q[6];"
-     << "qreg anc[1];"
+  ss << "qreg q[6];" << "qreg anc[1];"
      << "mcx_recursive q[0], q[1], q[2], q[3], q[4];"
-     << "mcx_recursive q[0], q[1], q[2], q[3], q[4], q[5], anc[0];"
-     << "\n";
+     << "mcx_recursive q[0], q[1], q[2], q[3], q[4], q[5], anc[0];" << "\n";
   qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
   std::cout << *qc << "\n";
@@ -234,8 +229,7 @@ TEST_F(IO, qiskitMcxRecursive) {
 
 TEST_F(IO, qiskitMcxVchain) {
   std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "qreg anc[1];"
+  ss << "qreg q[4];" << "qreg anc[1];"
      << "mcx_vchain q[0], q[1], q[2], q[3], anc[0];\n";
   qc->import(ss, qc::Format::OpenQASM2);
   auto& gate = *(qc->begin());
@@ -280,24 +274,21 @@ TEST_F(IO, qiskitMcxVchainInDeclaration) {
 
 TEST_F(IO, qiskitMcxDuplicateQubit) {
   std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "qreg anc[1];"
+  ss << "qreg q[4];" << "qreg anc[1];"
      << "mcx_vchain q[0], q[0], q[2], q[3], anc[0];\n";
   EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM2), qasm3::CompilerError);
 }
 
 TEST_F(IO, qiskitMcxQubitRegister) {
   std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "qreg anc[1];"
+  ss << "qreg q[4];" << "qreg anc[1];"
      << "mcx_vchain q, q[0], q[2], q[3], anc[0];\n";
   EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM2), qasm3::CompilerError);
 }
 
 TEST_F(IO, barrierInDeclaration) {
   std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "gate foo q0 { h q0; barrier q0; h q0; }"
+  ss << "qreg q[1];" << "gate foo q0 { h q0; barrier q0; h q0; }"
      << "foo q[0];\n";
   qc->import(ss, qc::Format::OpenQASM3);
   std::cout << *qc << "\n";
@@ -356,10 +347,7 @@ TEST_F(IO, grcsInput) {
 
 TEST_F(IO, classicControlled) {
   std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "creg c[1];"
-     << "h q[0];"
-     << "measure q->c;"
+  ss << "qreg q[1];" << "creg c[1];" << "h q[0];" << "measure q->c;"
      << "// test classic controlled operation\n"
      << "if (c==1) x q[0];\n";
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3););
@@ -409,13 +397,8 @@ TEST_F(IO, PeresdagDumpIsValid) {
 
 TEST_F(IO, printingNonUnitary) {
   std::stringstream ss{};
-  ss << "qreg q[2];"
-     << "creg c[2];"
-     << "h q[0];"
-     << "reset q[0];"
-     << "h q[0];"
-     << "barrier q;"
-     << "measure q -> c;\n";
+  ss << "qreg q[2];" << "creg c[2];" << "h q[0];" << "reset q[0];" << "h q[0];"
+     << "barrier q;" << "measure q -> c;\n";
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3));
   std::cout << *qc << "\n";
   for (const auto& op : *qc) {
@@ -426,12 +409,8 @@ TEST_F(IO, printingNonUnitary) {
 
 TEST_F(IO, sxAndSxdag) {
   std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "creg c[1];"
-     << "gate test q0 { sx q0; sxdg q0;}"
-     << "sx q[0];"
-     << "sxdg q[0];"
-     << "test q[0];\n";
+  ss << "qreg q[1];" << "creg c[1];" << "gate test q0 { sx q0; sxdg q0;}"
+     << "sx q[0];" << "sxdg q[0];" << "test q[0];\n";
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3));
   std::cout << *qc << "\n";
   auto& op1 = *(qc->begin());
@@ -450,10 +429,7 @@ TEST_F(IO, sxAndSxdag) {
 
 TEST_F(IO, unifyRegisters) {
   std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "qreg r[1];"
-     << "x q[0];"
-     << "x r[0];\n";
+  ss << "qreg q[1];" << "qreg r[1];" << "x q[0];" << "x r[0];\n";
   qc->import(ss, qc::Format::OpenQASM3);
   std::cout << *qc << "\n";
   qc->unifyQuantumRegisters();
@@ -472,8 +448,7 @@ TEST_F(IO, unifyRegisters) {
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutation) {
   std::stringstream ss{};
   ss << "// o 1\n"
-     << "qreg q[2];"
-     << "x q[1];\n";
+     << "qreg q[2];" << "x q[1];\n";
   qc->import(ss, qc::Format::OpenQASM3);
   qc->appendMeasurementsAccordingToOutputPermutation();
   std::cout << *qc << "\n";
@@ -490,9 +465,7 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutation) {
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
   std::stringstream ss{};
   ss << "// o 0 1\n"
-     << "qreg q[2];"
-     << "creg c[1];"
-     << "x q;\n";
+     << "qreg q[2];" << "creg c[1];" << "x q;\n";
   qc->import(ss, qc::Format::OpenQASM3);
   qc->appendMeasurementsAccordingToOutputPermutation();
   std::cout << *qc << "\n";
@@ -532,9 +505,7 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
   std::stringstream ss{};
   ss << "// o 0 1\n"
-     << "qreg q[2];"
-     << "creg d[1];"
-     << "x q;\n";
+     << "qreg q[2];" << "creg d[1];" << "x q;\n";
   qc->import(ss, qc::Format::OpenQASM3);
   qc->appendMeasurementsAccordingToOutputPermutation();
   std::cout << *qc << "\n";
