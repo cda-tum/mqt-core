@@ -2164,9 +2164,9 @@ public:
   vEdge reduceGarbage(vEdge& e, const std::vector<bool>& garbage,
                       const bool normalizeWeights = false) {
     // return if no more garbage left
-    if (std::none_of(garbage.begin(), garbage.end(),
-                     [](bool v) { return v; }) ||
-        e.isTerminal()) {
+    if (!normalizeWeights && (std::none_of(garbage.begin(), garbage.end(),
+                                           [](bool v) { return v; }) ||
+                              e.isTerminal())) {
       return e;
     }
     Qubit lowerbound = 0;
@@ -2176,7 +2176,7 @@ public:
         break;
       }
     }
-    if (e.p->v < lowerbound) {
+    if (!normalizeWeights && e.p->v < lowerbound) {
       return e;
     }
     const auto f =
@@ -2194,9 +2194,9 @@ public:
                       const bool regular = true,
                       const bool normalizeWeights = false) {
     // return if no more garbage left
-    if (std::none_of(garbage.begin(), garbage.end(),
-                     [](bool v) { return v; }) ||
-        e.isTerminal()) {
+    if (!normalizeWeights && (std::none_of(garbage.begin(), garbage.end(),
+                                           [](bool v) { return v; }) ||
+                              e.isTerminal())) {
       return e;
     }
     Qubit lowerbound = 0;
@@ -2206,7 +2206,7 @@ public:
         break;
       }
     }
-    if (e.p->v < lowerbound) {
+    if (!normalizeWeights && e.p->v < lowerbound) {
       return e;
     }
     const auto f = reduceGarbageRecursion(e.p, garbage, lowerbound, regular,

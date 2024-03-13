@@ -641,10 +641,32 @@ TEST(DDPackageTest, ReduceGarbageVector) {
   reducedState.printVector();
   EXPECT_EQ(reducedState, dd->makeZeroState(3));
 
+  dd->incRef(initialState);
   auto reducedState2 =
       dd->reduceGarbage(initialState, {false, true, true}, true);
 
   EXPECT_EQ(reducedState2, dd->makeZeroState(3));
+}
+
+TEST(DDPackageTest, ReduceGarbageVectorTGate) {
+  const auto nqubits = 2U;
+  const auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto xGate0 = dd->makeGateDD(dd::X_MAT, nqubits, 0);
+  const auto xGate1 = dd->makeGateDD(dd::X_MAT, nqubits, 1);
+  const auto tdgGate0 = dd->makeGateDD(dd::TDG_MAT, nqubits, 0);
+
+  auto zeroState = dd->makeZeroState(nqubits);
+  auto initialState = dd->multiply(
+      dd->multiply(tdgGate0, dd->multiply(xGate0, xGate1)), zeroState);
+  std::cout << "Initial State:\n";
+  initialState.printVector();
+
+  dd->incRef(initialState);
+  auto reducedState = dd->reduceGarbage(initialState, {false, false}, true);
+  std::cout << "After reduceGarbage():\n";
+  reducedState.printVector();
+  EXPECT_EQ(reducedState,
+            dd->multiply(dd->multiply(xGate0, xGate1), zeroState));
 }
 
 TEST(DDPackageTest, ReduceGarbageMatrix) {
@@ -718,6 +740,51 @@ TEST(DDPackageTest, ReduceGarbageMatrix2) {
   std::cout << "reduceGarbage:\n";
   dd->incRef(c2);
   auto c2Reduced = dd->reduceGarbage(c2, {false, true, true}, true, true);
+  c2Reduced.printMatrix();
+
+  EXPECT_EQ(c1Reduced, c2Reduced);
+}
+
+TEST(DDPackageTest, ReduceGarbageMatrixNoGarbage) {
+  const auto nqubits = 2U;
+  const auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto tdgGate0 = dd->makeGateDD(dd::TDG_MAT, nqubits, 0);
+  const auto tdgGate1 = dd->makeGateDD(dd::TDG_MAT, nqubits, 1);
+
+  auto c1 = dd->makeIdent(nqubits);
+  auto c2 = dd->multiply(tdgGate0, tdgGate1);
+
+  std::cout << "c2:\n";
+  c2.printMatrix();
+  std::cout << "reduceGarbage:\n";
+  dd->incRef(c2);
+  auto c2Reduced = dd->reduceGarbage(c2, {false, false}, true, true);
+  c2Reduced.printMatrix();
+
+  EXPECT_EQ(c1, c2Reduced);
+}
+
+TEST(DDPackageTest, ReduceGarbageMatrixTGate) {
+  const auto nqubits = 2U;
+  const auto dd = std::make_unique<dd::Package<>>(nqubits);
+  const auto tdgGate0 = dd->makeGateDD(dd::TDG_MAT, nqubits, 0);
+  const auto tdgGate1 = dd->makeGateDD(dd::TDG_MAT, nqubits, 1);
+
+  auto c1 = dd->makeIdent(nqubits);
+  auto c2 = dd->multiply(tdgGate0, tdgGate1);
+
+  std::cout << "c1:\n";
+  c1.printMatrix();
+  std::cout << "reduceGarbage:\n";
+  dd->incRef(c1);
+  auto c1Reduced = dd->reduceGarbage(c1, {false, true}, true, true);
+  c1Reduced.printMatrix();
+
+  std::cout << "c2:\n";
+  c2.printMatrix();
+  std::cout << "reduceGarbage:\n";
+  dd->incRef(c2);
+  auto c2Reduced = dd->reduceGarbage(c2, {false, true}, true, true);
   c2Reduced.printMatrix();
 
   EXPECT_EQ(c1Reduced, c2Reduced);
