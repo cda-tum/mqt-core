@@ -2159,8 +2159,22 @@ public:
     return res;
   }
 
-  // Garbage reduction works for reversible circuits --- to be thoroughly tested
-  // for quantum circuits
+  /**
+  For each garbage qubit q, sums all the entries for q = 0 and q = 1 and sets
+  the entry for q = 0 to the sum and the entry for q = 1 to zero. In order to be
+  sure that probabilities of the result state is the sum of the probabilities of
+  the initial state, we don't compute simpla a sum, but we compute `sqrt(|a|^2 +
+  |b|^2)` for two entries `a` and `b`.
+  @param e DD representation of the matrix/vector
+  @param garbage vector that describes which qubits are garbage and which ones
+  are not. If garbage[i] = true, then qubit q_i is considered garbage
+  @param normalizeWeights By default set to `false`. If set to `true`,  the
+  function changes all weights in the DD to their magnitude, also for
+  non-garbage qubits. This is used for checking partial equivalence of circuits.
+  For partial equivalence, only the measurement probabilities are considered, so
+  we need to consider only the magnitudes of each entry.
+  @return DD representing of the reduced matrix/vector
+  **/
   vEdge reduceGarbage(vEdge& e, const std::vector<bool>& garbage,
                       const bool normalizeWeights = false) {
     // return if no more garbage left
