@@ -743,12 +743,14 @@ TEST_F(Qasm3ParserTest, ImportQasm3CPrefix) {
 TEST_F(Qasm3ParserTest, ImportQasmScanner) {
   std::stringstream ss{};
   const std::string testfile =
-      "$1 : . .5 -1. -= += ++ *= **= ** /= % %= |= || | &= "
+      "$1 : . .5 -1. 1.25e-3 1e3 -= += ++ *= **= ** /= % %= |= || | &= "
       "&& & ^= ^ ~= ~ ! <= <<= << < >= >>= >> >";
   const auto tokens = std::vector{
       qasm3::Token::Kind::HardwareQubit,
       qasm3::Token::Kind::Colon,
       qasm3::Token::Kind::Dot,
+      qasm3::Token::Kind::FloatLiteral,
+      qasm3::Token::Kind::FloatLiteral,
       qasm3::Token::Kind::FloatLiteral,
       qasm3::Token::Kind::FloatLiteral,
       qasm3::Token::Kind::MinusEquals,

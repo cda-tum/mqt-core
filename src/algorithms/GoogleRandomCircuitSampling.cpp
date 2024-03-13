@@ -145,10 +145,8 @@ GoogleRandomCircuitSampling::printStatistics(std::ostream& os) const {
      << ((layout == Rectangular) ? "Rectangular" : "Bristlecone") << "\n";
   os << "\tn: " << static_cast<std::size_t>(nqubits) << "\n";
   os << "\tm: " << getNops() << "\n";
-  os << "\tc: 1 + " << cycles.size() - 2 << " + 1"
-     << "\n";
-  os << "--------------"
-     << "\n";
+  os << "\tc: 1 + " << cycles.size() - 2 << " + 1" << "\n";
+  os << "--------------" << "\n";
   return os;
 }
 } // namespace qc

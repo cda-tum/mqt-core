@@ -1,6 +1,12 @@
 #include "parsers/qasm3_parser/Scanner.hpp"
 
+#include <cstdint>
+#include <istream>
+#include <optional>
 #include <regex>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 
 namespace qasm3 {
 char Scanner::readUtf8Codepoint(std::istream* in) {
@@ -186,12 +192,26 @@ Token Scanner::consumeNumberLiteral() {
       error("Float literals are only allowed in base 10");
     }
 
-    char const sep = ch;
-    nextCh();
-    auto valAfterDecimalSeparator = consumeNumberLiteral(base);
+    std::stringstream ss{};
+    ss << valBeforeDecimalSeparator;
 
-    std::stringstream ss;
-    ss << valBeforeDecimalSeparator << sep << valAfterDecimalSeparator;
+    if (ch == '.') {
+      ss << ch;
+      nextCh();
+      const auto valAfterDecimalSeparator = consumeNumberLiteral(base);
+      ss << valAfterDecimalSeparator;
+    }
+
+    if (ch == 'e' || ch == 'E') {
+      ss << ch;
+      nextCh();
+      if (ch == '+' || ch == '-') {
+        ss << ch;
+        nextCh();
+      }
+      const auto valAfterExponent = consumeNumberLiteral(base);
+      ss << valAfterExponent;
+    }
 
     try {
       t.valReal = std::stod(ss.str());
