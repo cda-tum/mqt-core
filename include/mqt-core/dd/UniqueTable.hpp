@@ -301,8 +301,7 @@ public:
     auto q = nvars - 1U;
     for (auto it = tables.rbegin(); it != tables.rend(); ++it) {
       auto& table = *it;
-      std::cout << "\tq" << q << ":"
-                << "\n";
+      std::cout << "\tq" << q << ":" << "\n";
       for (std::size_t key = 0; key < table.size(); ++key) {
         auto p = table[key];
         if (p != nullptr) {

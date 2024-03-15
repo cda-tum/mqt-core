@@ -392,9 +392,7 @@ SparseCMat Edge<Node>::getSparseMatrix(const fp threshold) const {
   r.traverseMatrix(
       1, 0ULL, 0ULL,
       [&mat](const std::size_t i, const std::size_t j,
-             const std::complex<fp>& c) {
-        mat[{i, j}] = c;
-      },
+             const std::complex<fp>& c) { mat[{i, j}] = c; },
       threshold);
 
   if constexpr (std::is_same_v<Node, dNode>) {
