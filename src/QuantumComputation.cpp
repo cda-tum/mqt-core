@@ -898,6 +898,13 @@ void QuantumComputation::setLogicalQubitAncillary(
   ancillary[logicalQubitIndex] = true;
 }
 
+void QuantumComputation::setLogicalQubitsAncillary(
+    const Qubit minLogicalQubitIndex, const Qubit maxLogicalQubitIndex) {
+  for (Qubit i = minLogicalQubitIndex; i <= maxLogicalQubitIndex; i++) {
+    setLogicalQubitAncillary(i);
+  }
+}
+
 void QuantumComputation::setLogicalQubitGarbage(const Qubit logicalQubitIndex) {
   garbage[logicalQubitIndex] = true;
   // setting a logical qubit garbage also means removing it from the output
@@ -908,6 +915,13 @@ void QuantumComputation::setLogicalQubitGarbage(const Qubit logicalQubitIndex) {
       outputPermutation.erase(it);
       break;
     }
+  }
+}
+
+void QuantumComputation::setLogicalQubitsGarbage(
+    const Qubit minLogicalQubitIndex, const Qubit maxLogicalQubitIndex) {
+  for (Qubit i = minLogicalQubitIndex; i <= maxLogicalQubitIndex; i++) {
+    setLogicalQubitGarbage(i);
   }
 }
 

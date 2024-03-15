@@ -306,6 +306,13 @@ public:
   [[nodiscard]] std::size_t getNqubitsWithoutAncillae() const {
     return nqubits;
   }
+  [[nodiscard]] std::size_t getNmeasuredQubits() const {
+    return getNqubits() - getNgarbageQubits();
+  }
+  [[nodiscard]] std::size_t getNgarbageQubits() const {
+    return static_cast<std::size_t>(
+        std::count(getGarbage().begin(), getGarbage().end(), true));
+  }
   [[nodiscard]] std::size_t getNcbits() const { return nclassics; }
   [[nodiscard]] std::string getName() const { return name; }
   [[nodiscard]] const QuantumRegisterMap& getQregs() const { return qregs; }
@@ -367,11 +374,30 @@ public:
    * @param logicalQubitIndex
    */
   void setLogicalQubitAncillary(Qubit logicalQubitIndex);
+  /**
+   * @brief Sets all logical qubits in the range [minLogicalQubitIndex,
+   * maxLogicalQubitIndex] to be ancillary
+   * @details Removes the qubits from the qubit register and adds it to the
+   * ancillary register, if such a register exists. Otherwise a new ancillary
+   * register is created.
+   * @param minLogicalQubitIndex first qubit that is set to be ancillary
+   * @param maxLogicalQubitIndex last qubit that is set to be ancillary
+   */
+  void setLogicalQubitsAncillary(Qubit minLogicalQubitIndex,
+                                 Qubit maxLogicalQubitIndex);
   [[nodiscard]] bool
   logicalQubitIsGarbage(const Qubit logicalQubitIndex) const {
     return garbage[logicalQubitIndex];
   }
   void setLogicalQubitGarbage(Qubit logicalQubitIndex);
+  /**
+   * @brief Sets all logical qubits in the range [minLogicalQubitIndex,
+   * maxLogicalQubitIndex] to be garbage
+   * @param minLogicalQubitIndex first qubit that is set to be garbage
+   * @param maxLogicalQubitIndex last qubit that is set to be garbage
+   */
+  void setLogicalQubitsGarbage(Qubit minLogicalQubitIndex,
+                               Qubit maxLogicalQubitIndex);
   [[nodiscard]] const std::vector<bool>& getAncillary() const {
     return ancillary;
   }
