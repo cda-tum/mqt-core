@@ -2277,9 +2277,9 @@ private:
     for (auto i = 0U; i < RADIX; ++i) {
       if (!handled.test(i)) {
         if (p->e[i].isTerminal()) {
-          auto weight = normalizeWeights
-                            ? cn.lookup(dd::ComplexValue{p->e[i].w}.mag())
-                            : p->e[i].w;
+          const auto weight = normalizeWeights
+                                  ? ComplexNumbers::mag(p->e[i].w)
+                                  : static_cast<ComplexValue>(p->e[i].w);
           edges[i] = {p->e[i].p, weight};
         } else {
           edges[i] = reduceGarbageRecursion(p->e[i].p, garbage, lowerbound,
@@ -2323,9 +2323,9 @@ private:
     for (auto i = 0U; i < NEDGE; ++i) {
       if (!handled.test(i)) {
         if (p->e[i].isTerminal()) {
-          auto weight = normalizeWeights
-                            ? cn.lookup(dd::ComplexValue{p->e[i].w}.mag())
-                            : p->e[i].w;
+          const auto weight = normalizeWeights
+                                  ? ComplexNumbers::mag(p->e[i].w)
+                                  : static_cast<ComplexValue>(p->e[i].w);
           edges[i] = {p->e[i].p, weight};
         } else {
           edges[i] = reduceGarbageRecursion(p->e[i].p, garbage, lowerbound,
