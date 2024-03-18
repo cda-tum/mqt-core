@@ -2149,9 +2149,9 @@ public:
   /**
   For each garbage qubit q, sums all the entries for q = 0 and q = 1 and sets
   the entry for q = 0 to the sum and the entry for q = 1 to zero. In order to be
-  sure that probabilities of the result state is the sum of the probabilities of
-  the initial state, we don't compute simpla a sum, but we compute `sqrt(|a|^2 +
-  |b|^2)` for two entries `a` and `b`.
+  sure that the probabilities of the resulting state are the sum of the
+  probabilities of the initial state, we don't simply compute a sum, but we
+  compute `sqrt(|a|^2 + |b|^2)` for two entries `a` and `b`.
   @param e DD representation of the matrix/vector
   @param garbage vector that describes which qubits are garbage and which ones
   are not. If garbage[i] = true, then qubit q_i is considered garbage
