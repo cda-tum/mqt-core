@@ -1366,7 +1366,8 @@ public:
       if (y.w.exactlyZero()) {
         return CachedEdge<Node>::zero();
       }
-      return y;
+      const auto rWeight = y.w.mag();
+      return {y.p, rWeight};
     }
     if (y.w.exactlyZero()) {
       const auto rWeight = x.w.mag();
