@@ -2206,16 +2206,9 @@ public:
                       const bool regular = true,
                       const bool normalizeWeights = false) {
     // return if no more garbage left
-    //<<<<<<< HEAD
     if (!normalizeWeights && (std::none_of(garbage.begin(), garbage.end(),
                                            [](bool v) { return v; }) ||
                               e.isZeroTerminal())) {
-      //=======
-      //    if (!normalizeWeights && (std::none_of(garbage.begin(),
-      //    garbage.end(),
-      //                                           [](bool v) { return v; }) ||
-      //                              e.isTerminal())) {
-      //>>>>>>> main
       return e;
     }
 
@@ -2256,7 +2249,7 @@ public:
         break;
       }
     }
-    //<<<<<<< HEAD
+
     if (!normalizeWeights && g.p->v < lowerbound) {
       return g;
     }
@@ -2269,19 +2262,6 @@ public:
     }
     const auto res = mEdge{f.p, cn.lookup(weight)};
 
-    //=======
-    //    if (!normalizeWeights && e.p->v < lowerbound) {
-    //      return e;
-    //    }
-    //    const auto f = reduceGarbageRecursion(e.p, garbage, lowerbound,
-    //    regular,
-    //                                          normalizeWeights);
-    //    auto weight = e.w * f.w;
-    //    if (normalizeWeights) {
-    //      weight = weight.mag();
-    //    }
-    //    const auto res = mEdge{f.p, cn.lookup(weight)};
-    //>>>>>>> main
     incRef(res);
     decRef(e);
     return res;
