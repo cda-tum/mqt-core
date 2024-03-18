@@ -1250,6 +1250,22 @@ public:
       return densityAdd;
     }
   }
+
+  ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge,
+               Config::CT_VEC_ADD_NBUCKET>
+      vectorAddMagnitudes{};
+  ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge,
+               Config::CT_MAT_ADD_NBUCKET>
+      matrixAddMagnitudes{};
+
+  template <class Node> [[nodiscard]] auto& getAddMagnitudesComputeTable() {
+    if constexpr (std::is_same_v<Node, vNode>) {
+      return vectorAddMagnitudes;
+    } else if constexpr (std::is_same_v<Node, mNode>) {
+      return matrixAddMagnitudes;
+    }
+  }
+
   template <class Node>
   Edge<Node> add(const Edge<Node>& x, const Edge<Node>& y) {
     Qubit var{};
@@ -1358,11 +1374,7 @@ public:
       return {x.p, rWeight};
     }
 
-    static ComputeTable<CachedEdge<Node>, CachedEdge<Node>, CachedEdge<Node>,
-                        std::is_same_v<Node, vNode>
-                            ? Config::CT_VEC_ADD_NBUCKET
-                            : Config::CT_MAT_ADD_NBUCKET>
-        computeTable{};
+    auto& computeTable = getAddMagnitudesComputeTable<Node>();
     if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
       return *r;
     }
