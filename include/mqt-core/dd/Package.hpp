@@ -1209,6 +1209,21 @@ public:
     }
   }
 
+  ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge,
+               Config::CT_VEC_ADD_NBUCKET>
+      vectorAddMagnitudes{};
+  ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge,
+               Config::CT_MAT_ADD_NBUCKET>
+      matrixAddMagnitudes{};
+
+  template <class Node> [[nodiscard]] auto& getAddMagnitudesComputeTable() {
+    if constexpr (std::is_same_v<Node, vNode>) {
+      return vectorAddMagnitudes;
+    } else if constexpr (std::is_same_v<Node, mNode>) {
+      return matrixAddMagnitudes;
+    }
+  }
+
   template <class Node>
   Edge<Node> add(const Edge<Node>& x, const Edge<Node>& y) {
     Qubit var{};
@@ -1304,6 +1319,89 @@ public:
       } else {
         edge[i] = add2(e1, e2, var - 1);
       }
+    }
+    auto r = makeDDNode(var, edge);
+    computeTable.insert(x, y, r);
+    return r;
+  }
+
+  /**
+   For two vectors (or matrices) x and y it returns a result r such that for
+   each index i: r[i] = sqrt(|x[i]|^2 + |y[i]|^2)
+   @param x DD representation of the first operand
+   @param y DD representation of the first operand
+   @param var number of qubits in the DD
+   @return DD representing the result
+   **/
+  template <class Node>
+  CachedEdge<Node> addMagnitudes(const CachedEdge<Node>& x,
+                                 const CachedEdge<Node>& y, const Qubit var) {
+    if (x.w.exactlyZero()) {
+      if (y.w.exactlyZero()) {
+        return CachedEdge<Node>::zero();
+      }
+      const auto rWeight = y.w.mag();
+      return {y.p, rWeight};
+    }
+    if (y.w.exactlyZero()) {
+      const auto rWeight = x.w.mag();
+      return {x.p, rWeight};
+    }
+    if (x.p == y.p) {
+      const auto rWeight = std::sqrt(x.w.mag2() + y.w.mag2());
+      return {x.p, rWeight};
+    }
+
+    auto& computeTable = getAddMagnitudesComputeTable<Node>();
+    if (const auto* r = computeTable.lookup(x, y); r != nullptr) {
+      return *r;
+    }
+
+    constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
+    std::array<CachedEdge<Node>, n> edge{};
+    for (std::size_t i = 0U; i < n; i++) {
+      CachedEdge<Node> e1{};
+      if constexpr (std::is_same_v<Node, mNode>) {
+        if (x.isIdentity() || x.p->v < var) {
+          if (i == 0 || i == 3) {
+            e1 = x;
+          }
+        } else {
+          auto& xSuccessor = x.p->e[i];
+          e1 = {xSuccessor.p, 0};
+          if (!xSuccessor.w.exactlyZero()) {
+            e1.w = x.w * xSuccessor.w;
+          }
+        }
+      } else {
+        auto& xSuccessor = x.p->e[i];
+        e1 = {xSuccessor.p, 0};
+        if (!xSuccessor.w.exactlyZero()) {
+          e1.w = x.w * xSuccessor.w;
+        }
+      }
+      CachedEdge<Node> e2{};
+      if constexpr (std::is_same_v<Node, mNode>) {
+        if (y.isIdentity() || y.p->v < var) {
+          if (i == 0 || i == 3) {
+            e2 = y;
+          }
+        } else {
+          auto& ySuccessor = y.p->e[i];
+          e2 = {ySuccessor.p, 0};
+          if (!ySuccessor.w.exactlyZero()) {
+            e2.w = y.w * ySuccessor.w;
+          }
+        }
+      } else {
+        auto& ySuccessor = y.p->e[i];
+        e2 = {ySuccessor.p, 0};
+        if (!ySuccessor.w.exactlyZero()) {
+          e2.w = y.w * ySuccessor.w;
+        }
+      }
+
+      edge[i] = addMagnitudes(e1, e2, var - 1);
     }
     auto r = makeDDNode(var, edge);
     computeTable.insert(x, y, r);
@@ -2059,13 +2157,28 @@ public:
     return res;
   }
 
-  // Garbage reduction works for reversible circuits --- to be thoroughly tested
-  // for quantum circuits
-  vEdge reduceGarbage(vEdge& e, const std::vector<bool>& garbage) {
+  /**
+  For each garbage qubit q, sums all the entries for q = 0 and q = 1 and sets
+  the entry for q = 0 to the sum and the entry for q = 1 to zero. In order to be
+  sure that the probabilities of the resulting state are the sum of the
+  probabilities of the initial state, we don't simply compute a sum, but we
+  compute `sqrt(|a|^2 + |b|^2)` for two entries `a` and `b`.
+  @param e DD representation of the matrix/vector
+  @param garbage vector that describes which qubits are garbage and which ones
+  are not. If garbage[i] = true, then qubit q_i is considered garbage
+  @param normalizeWeights By default set to `false`. If set to `true`,  the
+  function changes all weights in the DD to their magnitude, also for
+  non-garbage qubits. This is used for checking partial equivalence of circuits.
+  For partial equivalence, only the measurement probabilities are considered, so
+  we need to consider only the magnitudes of each entry.
+  @return DD representing of the reduced matrix/vector
+  **/
+  vEdge reduceGarbage(vEdge& e, const std::vector<bool>& garbage,
+                      const bool normalizeWeights = false) {
     // return if no more garbage left
-    if (std::none_of(garbage.begin(), garbage.end(),
-                     [](bool v) { return v; }) ||
-        e.isTerminal()) {
+    if (!normalizeWeights && (std::none_of(garbage.begin(), garbage.end(),
+                                           [](bool v) { return v; }) ||
+                              e.isTerminal())) {
       return e;
     }
     Qubit lowerbound = 0;
@@ -2075,21 +2188,33 @@ public:
         break;
       }
     }
-    if (e.p->v < lowerbound) {
+    if (!normalizeWeights && e.p->v < lowerbound) {
       return e;
     }
-    const auto f = reduceGarbageRecursion(e.p, garbage, lowerbound);
-    const auto res = vEdge{f.p, cn.lookup(e.w * f.w)};
+    const auto f =
+        reduceGarbageRecursion(e.p, garbage, lowerbound, normalizeWeights);
+    auto weight = e.w * f.w;
+    if (normalizeWeights) {
+      weight = weight.mag();
+    }
+    const auto res = vEdge{f.p, cn.lookup(weight)};
     incRef(res);
     decRef(e);
     return res;
   }
   mEdge reduceGarbage(mEdge& e, const std::vector<bool>& garbage,
-                      const bool regular = true) {
+                      const bool regular = true,
+                      const bool normalizeWeights = false) {
     // return if no more garbage left
-    if (std::none_of(garbage.begin(), garbage.end(),
+//<<<<<<< HEAD
+    if (!normalizeWeights && (std::none_of(garbage.begin(), garbage.end(),
                      [](bool v) { return v; }) ||
-        e.isZeroTerminal()) {
+        e.isZeroTerminal())) {
+//=======
+//    if (!normalizeWeights && (std::none_of(garbage.begin(), garbage.end(),
+//                                           [](bool v) { return v; }) ||
+//                              e.isTerminal())) {
+//>>>>>>> main
       return e;
     }
 
@@ -2130,13 +2255,31 @@ public:
         break;
       }
     }
-    if (g.p->v < lowerbound) {
+//<<<<<<< HEAD
+    if (!normalizeWeights && g.p->v < lowerbound) {
       return g;
     }
 
-    const auto f = reduceGarbageRecursion(g.p, garbage, lowerbound, regular);
-    const auto res = mEdge{f.p, cn.lookup(g.w * f.w)};
+    const auto f = reduceGarbageRecursion(g.p, garbage, lowerbound, regular,
+                                          normalizeWeights);
+    auto weight = g.w * f.w;
+    if (normalizeWeights) {
+      weight = weight.mag();
+    }
+    const auto res = mEdge{f.p, cn.lookup(weight)};
 
+//=======
+//    if (!normalizeWeights && e.p->v < lowerbound) {
+//      return e;
+//    }
+//    const auto f = reduceGarbageRecursion(e.p, garbage, lowerbound, regular,
+//                                          normalizeWeights);
+//    auto weight = e.w * f.w;
+//    if (normalizeWeights) {
+//      weight = weight.mag();
+//    }
+//    const auto res = mEdge{f.p, cn.lookup(weight)};
+//>>>>>>> main
     incRef(res);
     decRef(e);
     return res;
@@ -2220,8 +2363,9 @@ private:
   }
 
   vCachedEdge reduceGarbageRecursion(vNode* p, const std::vector<bool>& garbage,
-                                     const Qubit lowerbound) {
-    if (p->v < lowerbound) {
+                                     const Qubit lowerbound,
+                                     const bool normalizeWeights = false) {
+    if (!normalizeWeights && p->v < lowerbound) {
       return {p, 1.};
     }
 
@@ -2230,17 +2374,27 @@ private:
     for (auto i = 0U; i < RADIX; ++i) {
       if (!handled.test(i)) {
         if (p->e[i].isTerminal()) {
-          edges[i] = {p->e[i].p, p->e[i].w};
+          const auto weight = normalizeWeights
+                                  ? ComplexNumbers::mag(p->e[i].w)
+                                  : static_cast<ComplexValue>(p->e[i].w);
+          edges[i] = {p->e[i].p, weight};
         } else {
-          edges[i] = reduceGarbageRecursion(p->e[i].p, garbage, lowerbound);
+          edges[i] = reduceGarbageRecursion(p->e[i].p, garbage, lowerbound,
+                                            normalizeWeights);
           for (auto j = i + 1; j < RADIX; ++j) {
             if (p->e[i].p == p->e[j].p) {
               edges[j] = edges[i];
               edges[j].w = edges[j].w * p->e[j].w;
+              if (normalizeWeights) {
+                edges[j].w = edges[j].w.mag();
+              }
               handled.set(j);
             }
           }
           edges[i].w = edges[i].w * p->e[i].w;
+          if (normalizeWeights) {
+            edges[i].w = edges[i].w.mag();
+          }
         }
         handled.set(i);
       }
@@ -2249,13 +2403,15 @@ private:
       return makeDDNode(p->v, edges);
     }
     // something to reduce for this qubit
-    return makeDDNode(p->v, std::array{add2(edges[0], edges[1], p->v - 1),
-                                       vCachedEdge ::zero()});
+    return makeDDNode(p->v,
+                      std::array{addMagnitudes(edges[0], edges[1], p->v - 1),
+                                 vCachedEdge ::zero()});
   }
   mCachedEdge reduceGarbageRecursion(mNode* p, const std::vector<bool>& garbage,
                                      const Qubit lowerbound,
-                                     const bool regular = true) {
-    if (p->v < lowerbound) {
+                                     const bool regular = true,
+                                     const bool normalizeWeights = false) {
+    if (!normalizeWeights && p->v < lowerbound) {
       return {p, 1.};
     }
 
@@ -2285,7 +2441,10 @@ private:
             }
           }
           if (!addedReducedQubit) {
-            edges[i] = {p->e[i].p, p->e[i].w};
+            const auto weight = normalizeWeights
+                                    ? ComplexNumbers::mag(p->e[i].w)
+                                    : static_cast<ComplexValue>(p->e[i].w);
+            edges[i] = {p->e[i].p, weight};
           }
         } else {
           for (std::size_t j = p->e[i].p->v + 1; j < p->v; ++j) {
@@ -2307,19 +2466,25 @@ private:
           }
           if (addedReducedQubit) {
             edges[i] = reduceGarbageRecursion(edges[i].p, garbage, lowerbound,
-                                              regular);
+                                              regular, normalizeWeights);
           } else {
             edges[i] =
-                reduceGarbageRecursion(p->e[i].p, garbage, lowerbound, regular);
+                reduceGarbageRecursion(p->e[i].p, garbage, lowerbound, regular, normalizeWeights);
           }
           for (auto j = i + 1; j < NEDGE; ++j) {
             if (p->e[i].p == p->e[j].p) {
               edges[j] = edges[i];
               edges[j].w = edges[j].w * p->e[j].w;
+              if (normalizeWeights) {
+                edges[j].w = edges[j].w.mag();
+              }
               handled.set(j);
             }
           }
           edges[i].w = edges[i].w * p->e[i].w;
+          if (normalizeWeights) {
+            edges[i].w = edges[i].w.mag();
+          }
         }
         handled.set(i);
       }
@@ -2330,14 +2495,15 @@ private:
 
     if (regular) {
       return makeDDNode(p->v,
-                        std::array{add2(edges[0], edges[2], p->v - 1),
-                                   add2(edges[1], edges[3], p->v - 1),
+                        std::array{addMagnitudes(edges[0], edges[2], p->v - 1),
+                                   addMagnitudes(edges[1], edges[3], p->v - 1),
                                    mCachedEdge::zero(), mCachedEdge::zero()});
     }
-    return makeDDNode(p->v, std::array{add2(edges[0], edges[1], p->v - 1),
-                                       mCachedEdge::zero(),
-                                       add2(edges[2], edges[3], p->v - 1),
-                                       mCachedEdge::zero()});
+    return makeDDNode(p->v,
+                      std::array{addMagnitudes(edges[0], edges[1], p->v - 1),
+                                 mCachedEdge::zero(),
+                                 addMagnitudes(edges[2], edges[3], p->v - 1),
+                                 mCachedEdge::zero()});
   }
 
   ///

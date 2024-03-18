@@ -2424,6 +2424,24 @@ TEST_F(QFRFunctionality, testSettingAncillariesProperlyCreatesRegisters) {
   ASSERT_EQ(qc.getNancillae(), 0U);
 }
 
+TEST_F(QFRFunctionality, testSettingSetMultipleAncillariesAndGarbage) {
+  // create an empty circuit and assert some properties about its registers
+  qc::QuantumComputation qc(3U);
+  const auto& ancRegs = qc.getANCregs();
+  ASSERT_TRUE(ancRegs.empty());
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 3U);
+  ASSERT_EQ(qc.getNancillae(), 0U);
+
+  // set some ancillaries garbage and assert that the registers are created
+  // properly
+  qc.setLogicalQubitsAncillary(1U, 2U);
+  ASSERT_EQ(qc.getNqubitsWithoutAncillae(), 1U);
+  ASSERT_EQ(qc.getNancillae(), 2U);
+  qc.setLogicalQubitsGarbage(1U, 2U);
+  ASSERT_EQ(qc.getNgarbageQubits(), 2U);
+  ASSERT_EQ(qc.getNmeasuredQubits(), 1U);
+}
+
 TEST_F(QFRFunctionality, StripIdleQubitsInMiddleOfCircuit) {
   qc::QuantumComputation qc(5U);
   qc.setLogicalQubitAncillary(3U);
