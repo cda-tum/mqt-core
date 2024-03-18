@@ -50,6 +50,10 @@ void registerQuantumComputation(py::module& m) {
   qc.def_property_readonly("num_qubits", &qc::QuantumComputation::getNqubits);
   qc.def_property_readonly("num_ancilla_qubits",
                            &qc::QuantumComputation::getNancillae);
+  qc.def_property_readonly("num_garbage_qubits",
+                           &qc::QuantumComputation::getNgarbageQubits);
+  qc.def_property_readonly("num_measured_qubits",
+                           &qc::QuantumComputation::getNmeasuredQubits);
   qc.def_property_readonly("num_qubits_without_ancilla_qubits",
                            &qc::QuantumComputation::getNqubitsWithoutAncillae);
   qc.def_property_readonly("num_classical_bits",
@@ -219,6 +223,11 @@ void registerQuantumComputation(py::module& m) {
   qc.def("set_circuit_qubit_ancillary",
          &qc::QuantumComputation::setLogicalQubitAncillary, "q"_a,
          "Set the circuit's (logical) qubit q to be an ancillary qubit.");
+  qc.def("se_circuit_qubits_ancillary",
+         &qc::QuantumComputation::setLogicalQubitsAncillary, "q_min"_a,
+         "q_max"_a,
+         "Set the circuit's (logical) qubits q_min to q_max to be ancillary "
+         "qubits.");
   qc.def("is_circuit_qubit_ancillary",
          &qc::QuantumComputation::logicalQubitIsAncillary, "q"_a,
          "Check if the circuit's (logical) qubit q is an ancillary qubit.");
@@ -226,6 +235,10 @@ void registerQuantumComputation(py::module& m) {
   qc.def("set_circuit_qubit_garbage",
          &qc::QuantumComputation::setLogicalQubitGarbage, "q"_a,
          "Set the circuit's (logical) qubit q to be a garbage output.");
+  qc.def("set_circuit_qubits_garbage",
+         &qc::QuantumComputation::setLogicalQubitsGarbage, "q_min"_a, "q_max"_a,
+         "Set the circuit's (logical) qubits q_min to q_max to be garbage "
+         "outputs.");
   qc.def("is_circuit_qubit_garbage",
          &qc::QuantumComputation::logicalQubitIsGarbage, "q"_a,
          "Check if the circuit's (logical) qubit q is a garbage output.");
