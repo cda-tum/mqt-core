@@ -1411,7 +1411,6 @@ public:
       edge[i] = addMagnitudes(e1, e2, var - 1);
     }
     auto r = makeDDNode(var, edge);
-    r.w = r.w.mag();
     computeTable.insert(x, y, r);
     return r;
   }
