@@ -1257,16 +1257,12 @@ public:
   ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge,
                Config::CT_MAT_ADD_NBUCKET>
       matrixAddMagnitudes{};
-  ComputeTable<dCachedEdge, dCachedEdge, dCachedEdge, Config::CT_DM_ADD_NBUCKET>
-      densityAddMagnitudes{};
 
   template <class Node> [[nodiscard]] auto& getAddMagnitudesComputeTable() {
     if constexpr (std::is_same_v<Node, vNode>) {
       return vectorAddMagnitudes;
     } else if constexpr (std::is_same_v<Node, mNode>) {
       return matrixAddMagnitudes;
-    } else if constexpr (std::is_same_v<Node, dNode>) {
-      return densityAddMagnitudes;
     }
   }
 
@@ -1412,16 +1408,7 @@ public:
           e2 = CachedEdge<Node>::zero();
         }
       }
-
-      if constexpr (std::is_same_v<Node, dNode>) {
-        dNode::applyDmChangesToNode(e1.p);
-        dNode::applyDmChangesToNode(e2.p);
-        edge[i] = addMagnitudes(e1, e2, var - 1);
-        dNode::revertDmChangesToNode(e2.p);
-        dNode::revertDmChangesToNode(e1.p);
-      } else {
-        edge[i] = addMagnitudes(e1, e2, var - 1);
-      }
+      edge[i] = addMagnitudes(e1, e2, var - 1);
     }
     auto r = makeDDNode(var, edge);
     r.w = r.w.mag();
