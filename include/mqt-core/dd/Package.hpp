@@ -836,7 +836,7 @@ public:
     }
 
     auto e = EdgeType<Node>::normalize(p, edges, memoryManager, cn);
-    if constexpr (std::is_same_v<Node, mNode>) {
+    if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
       if (!e.isTerminal()) {
         const auto& es = e.p->e;
         // Check if node resembles the identity. If so, skip it.
@@ -845,7 +845,7 @@ public:
              es[2].w.exactlyZero() && es[3].w.exactlyOne())) {
           auto* ptr = es[0].p;
           memoryManager.returnEntry(e.p);
-          return EdgeType<mNode>{ptr, e.w};
+          return EdgeType<Node>{ptr, e.w};
         }
       }
     }
@@ -1267,7 +1267,8 @@ public:
     std::array<CachedEdge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
       CachedEdge<Node> e1{};
-      if constexpr (std::is_same_v<Node, mNode>) {
+      if constexpr (std::is_same_v<Node, mNode> ||
+                    std::is_same_v<Node, dNode>) {
         if (x.isIdentity() || x.p->v < var) {
           // [ 0 | 1 ]   [ x | 0 ]
           // --------- = ---------
@@ -1290,7 +1291,8 @@ public:
         }
       }
       CachedEdge<Node> e2{};
-      if constexpr (std::is_same_v<Node, mNode>) {
+      if constexpr (std::is_same_v<Node, mNode> ||
+                    std::is_same_v<Node, dNode>) {
         if (y.isIdentity() || y.p->v < var) {
           // [ 0 | 1 ]   [ y | 0 ]
           // --------- = ---------
@@ -1364,7 +1366,8 @@ public:
     std::array<CachedEdge<Node>, n> edge{};
     for (std::size_t i = 0U; i < n; i++) {
       CachedEdge<Node> e1{};
-      if constexpr (std::is_same_v<Node, mNode>) {
+      if constexpr (std::is_same_v<Node, mNode> ||
+                    std::is_same_v<Node, dNode>) {
         if (x.isIdentity() || x.p->v < var) {
           if (i == 0 || i == 3) {
             e1 = x;
@@ -1384,7 +1387,8 @@ public:
         }
       }
       CachedEdge<Node> e2{};
-      if constexpr (std::is_same_v<Node, mNode>) {
+      if constexpr (std::is_same_v<Node, mNode> ||
+                    std::is_same_v<Node, dNode>) {
         if (y.isIdentity() || y.p->v < var) {
           if (i == 0 || i == 3) {
             e2 = y;
