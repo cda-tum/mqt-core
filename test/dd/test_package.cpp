@@ -29,7 +29,7 @@ TEST(DDPackageTest, TrivialTest) {
   auto xGate = dd->makeGateDD(dd::X_MAT, 1, 0);
   auto hGate = dd->makeGateDD(dd::H_MAT, 1, 0);
 
-  ASSERT_EQ(hGate.getValueByPath(0, "0"), dd::SQRT2_2);
+  ASSERT_EQ(hGate.getValueByPath(1, "0"), dd::SQRT2_2);
 
   auto zeroState = dd->makeZeroState(1);
   auto hState = dd->multiply(hGate, zeroState);
