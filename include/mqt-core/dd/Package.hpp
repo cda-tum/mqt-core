@@ -1407,7 +1407,6 @@ public:
           e2.w = y.w * ySuccessor.w;
         }
       }
-
       edge[i] = addMagnitudes(e1, e2, var - 1);
     }
     auto r = makeDDNode(var, edge);
@@ -1834,19 +1833,20 @@ public:
 
   template <class Node>
   Edge<Node> kronecker(const Edge<Node>& x, const Edge<Node>& y,
-                       const bool incIdx = true) {
+                       const std::size_t yNumQubits, const bool incIdx = true) {
     if constexpr (std::is_same_v<Node, dNode>) {
       throw std::invalid_argument(
           "Kronecker is currently not supported for density matrices");
     }
 
-    const auto e = kronecker2(x, y, incIdx);
+    const auto e = kronecker2(x, y, yNumQubits, incIdx);
     return cn.lookup(e);
   }
 
 private:
   template <class Node>
   CachedEdge<Node> kronecker2(const Edge<Node>& x, const Edge<Node>& y,
+                              const std::size_t yNumQubits,
                               const bool incIdx = true) {
     if (x.w.exactlyZero() || y.w.exactlyZero()) {
       return CachedEdge<Node>::zero();
@@ -1868,7 +1868,7 @@ private:
       return {x.p, rWeight};
     }
 
-    if constexpr (std::is_same_v<Node, mNode>) {
+    if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
       if (x.isIdentity()) {
         return {y.p, rWeight};
       }
@@ -1887,22 +1887,22 @@ private:
     constexpr std::size_t n = std::tuple_size_v<decltype(x.p->e)>;
     std::array<CachedEdge<Node>, n> edge{};
     for (auto i = 0U; i < n; ++i) {
-      edge[i] = kronecker2(x.p->e[i], y, incIdx);
+      edge[i] = kronecker2(x.p->e[i], y, yNumQubits, incIdx);
     }
 
     // Increase the qubit index
     Qubit idx = x.p->v;
     if (incIdx) {
-      // If y is an identity only multiplied by a factor then we should still
-      // update the index count
-      if constexpr (std::is_same_v<Node, mNode>) {
-        if (y.isIdentity(false)) {
-          idx = x.p->v + 1;
+      // use the given number of qubits if y is an identity
+      if constexpr (std::is_same_v<Node, mNode> ||
+                    std::is_same_v<Node, dNode>) {
+        if (y.isIdentity()) {
+          idx += static_cast<Qubit>(yNumQubits);
         } else {
-          idx = static_cast<Qubit>(y.p->v + x.p->v + 1);
+          idx += static_cast<Qubit>(y.p->v + 1U);
         }
       } else {
-        idx = static_cast<Qubit>(y.p->v + x.p->v + 1);
+        idx += static_cast<Qubit>(y.p->v + 1U);
       }
     }
     auto e = makeDDNode(idx, edge, true);

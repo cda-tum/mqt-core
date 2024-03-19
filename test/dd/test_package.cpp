@@ -875,8 +875,8 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
   EXPECT_EQ(dd->vUniqueTable.lookup(one.p), one.p);
 
   auto zero = dd::vEdge::zero();
-  EXPECT_TRUE(dd->kronecker(zero, one).isZeroTerminal());
-  EXPECT_TRUE(dd->kronecker(one, one).isOneTerminal());
+  EXPECT_TRUE(dd->kronecker(zero, one, 0).isZeroTerminal());
+  EXPECT_TRUE(dd->kronecker(one, one, 0).isOneTerminal());
 
   EXPECT_EQ(one.getValueByPath(0, ""), 1.);
   EXPECT_EQ(one.getValueByIndex(0), 1.);
@@ -888,7 +888,7 @@ TEST(DDPackageTest, SpecialCaseTerminal) {
 TEST(DDPackageTest, KroneckerProduct) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto x = dd->makeGateDD(dd::X_MAT, 1, 0);
-  auto kronecker = dd->kronecker(x, x);
+  auto kronecker = dd->kronecker(x, x, 1);
   EXPECT_EQ(kronecker.p->v, 1);
   EXPECT_TRUE(kronecker.p->e[0].isZeroTerminal());
   EXPECT_EQ(kronecker.p->e[0], kronecker.p->e[3]);
@@ -899,14 +899,14 @@ TEST(DDPackageTest, KroneckerProduct) {
   EXPECT_TRUE(kronecker.p->e[1].p->e[1].isOneTerminal());
   EXPECT_EQ(kronecker.p->e[1].p->e[1], kronecker.p->e[1].p->e[2]);
 
-  auto kronecker2 = dd->kronecker(x, x);
+  auto kronecker2 = dd->kronecker(x, x, 1);
   EXPECT_EQ(kronecker, kronecker2);
 }
 
 TEST(DDPackageTest, KroneckerProductVectors) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto zeroState = dd->makeZeroState(1);
-  auto kronecker = dd->kronecker(zeroState, zeroState);
+  auto kronecker = dd->kronecker(zeroState, zeroState, 1);
 
   auto expected = dd->makeZeroState(2);
   EXPECT_EQ(kronecker, expected);
@@ -919,7 +919,7 @@ TEST(DDPackageTest, KroneckerIdentityHandling) {
   // create a single qubit identity
   auto id = dd->makeIdent();
   // kronecker both DDs
-  const auto combined = dd->kronecker(h, id);
+  const auto combined = dd->kronecker(h, id, 1);
   const auto matrix = combined.getMatrix(dd->qubits());
   const auto expectedMatrix = dd::CMat{
       {dd::SQRT2_2, 0, 0, 0, dd::SQRT2_2, 0, 0, 0},
@@ -1667,9 +1667,9 @@ TEST(DDPackageTest, expectationValueGlobalOperators) {
     auto globalHadamard = singleSiteHadamard;
 
     for (dd::Qubit i = 1; i < nrQubits; ++i) {
-      globalX = dd->kronecker(globalX, singleSiteX);
-      globalZ = dd->kronecker(globalZ, singleSiteZ);
-      globalHadamard = dd->kronecker(globalHadamard, singleSiteHadamard);
+      globalX = dd->kronecker(globalX, singleSiteX, 1);
+      globalZ = dd->kronecker(globalZ, singleSiteZ, 1);
+      globalHadamard = dd->kronecker(globalHadamard, singleSiteHadamard, 1);
     }
 
     // Global Expectation values
