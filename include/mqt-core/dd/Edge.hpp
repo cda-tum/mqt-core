@@ -266,7 +266,7 @@ public:
   getValueByIndex(std::size_t numQubits, std::size_t i, std::size_t j) const;
 
   /**
-   * Get the matrix represented by the DD
+   * @brief Get the matrix represented by the DD
    * @tparam T template parameter to enable this function only for matrix nodes
    * @param numQubits number of qubits needed to represented the whole DD
    * including identities
