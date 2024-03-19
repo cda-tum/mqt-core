@@ -467,10 +467,9 @@ void Edge<Node>::traverseMatrix(const std::complex<fp>& amp,
     return;
   }
 
-  const std::size_t x = i | (1ULL << (level - 1U));
-  const std::size_t y = j | (1ULL << (level - 1U));
-
   const auto nextLevel = static_cast<Qubit>(level - 1U);
+  const std::size_t x = i | (1ULL << nextLevel);
+  const std::size_t y = j | (1ULL << nextLevel);
   if (isTerminal() || p->v < nextLevel) {
     traverseMatrix(c, i, j, f, nextLevel, threshold);
     traverseMatrix(c, x, y, f, nextLevel, threshold);
@@ -563,13 +562,14 @@ void Edge<Node>::traverseDiagonal(const fp& prob, const std::size_t i,
   if (isTerminal() || p->v < nextLevel) {
     traverseDiagonal(prob, i, f, nextLevel, threshold);
     traverseDiagonal(prob, i | (1ULL << nextLevel), f, nextLevel, threshold);
-  } else {
-    if (auto& e = p->e[0]; !e.w.exactlyZero()) {
-      e.traverseDiagonal(val, i, f, nextLevel, threshold);
-    }
-    if (auto& e = p->e[3]; !e.w.exactlyZero()) {
-      e.traverseDiagonal(val, i | (1ULL << nextLevel), f, nextLevel, threshold);
-    }
+    return;
+  }
+
+  if (auto& e = p->e[0]; !e.w.exactlyZero()) {
+    e.traverseDiagonal(val, i, f, nextLevel, threshold);
+  }
+  if (auto& e = p->e[3]; !e.w.exactlyZero()) {
+    e.traverseDiagonal(val, i | (1ULL << nextLevel), f, nextLevel, threshold);
   }
 }
 
