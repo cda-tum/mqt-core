@@ -311,7 +311,8 @@ private:
    */
   template <typename T = Node, isMatrixVariant<T> = true>
   void traverseMatrix(const std::complex<fp>& amp, std::size_t i, std::size_t j,
-                      MatrixEntryFunc f, int level, fp threshold = 0.) const;
+                      MatrixEntryFunc f, std::size_t level,
+                      fp threshold = 0.) const;
 
   ///---------------------------------------------------------------------------
   ///                  \n Methods for density matrix DDs \n
@@ -395,7 +396,7 @@ private:
    */
   template <typename T = Node, isDensityMatrix<T> = true>
   void traverseDiagonal(const fp& prob, std::size_t i, ProbabilityFunc f,
-                        int level, fp threshold = 0.) const;
+                        std::size_t level, fp threshold = 0.) const;
 };
 } // namespace dd
 

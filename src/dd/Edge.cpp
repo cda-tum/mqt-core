@@ -28,29 +28,31 @@ template <class Node>
 std::complex<fp>
 Edge<Node>::getValueByPath(const std::size_t numQubits,
                            const std::string& decisions) const {
+  auto c = static_cast<std::complex<fp>>(w);
   if (isTerminal()) {
-    return static_cast<std::complex<fp>>(w);
+    return c;
   }
 
-  auto c = std::complex<fp>{1.0, 0.0};
   auto r = *this;
   if constexpr (std::is_same_v<Node, dNode>) {
     Edge<dNode>::applyDmChangesToEdge(r);
   }
 
   auto level = numQubits;
-  while (!r.isTerminal()) {
-    auto index = r.p->v;
-    if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
-      if (level == 0) {
-        break;
-      }
-      index = static_cast<Qubit>(level - 1);
-    }
-    c *= static_cast<std::complex<fp>>(r.w);
-    const auto tmp = static_cast<std::size_t>(decisions.at(index) - '0');
-    assert(tmp <= r.p->e.size());
+  while (level > 0U) {
+    const auto tmp = static_cast<std::size_t>(decisions.at(level - 1U) - '0');
 
+    // node is not at the expected level (skipped node)
+    if (r.isTerminal() || r.p->v != level - 1U) {
+      if (r.isZeroTerminal() || tmp == 1U || tmp == 2U) {
+        return 0.;
+      }
+      --level;
+      continue;
+    }
+
+    // node is at the expected level
+    assert(tmp <= r.p->e.size());
     if constexpr (std::is_same_v<Node, dNode>) {
       auto e = r;
       Edge<dNode>::applyDmChangesToEdge(r.p->e[tmp]);
@@ -59,20 +61,9 @@ Edge<Node>::getValueByPath(const std::size_t numQubits,
     } else {
       r = r.p->e[tmp];
     }
-    level--;
+    c *= static_cast<std::complex<fp>>(r.w);
+    --level;
   }
-
-  if constexpr (std::is_same_v<Node, mNode> || std::is_same_v<Node, dNode>) {
-    while (level > 0) {
-      level--;
-      const auto tmp = static_cast<std::size_t>(decisions.at(level) - '0');
-      if (tmp == 1 || tmp == 2) {
-        return 0.;
-      }
-    }
-  }
-
-  c *= static_cast<std::complex<fp>>(r.w);
   return c;
 }
 
@@ -172,18 +163,20 @@ Edge<Node> Edge<Node>::normalize(Node* p,
 template <class Node>
 template <typename T, isVector<T>>
 std::complex<fp> Edge<Node>::getValueByIndex(const std::size_t i) const {
-  if (isTerminal()) {
-    return static_cast<std::complex<fp>>(w);
+  auto bitwidth = static_cast<Qubit>(std::log2(i + 1U));
+
+  if (!isTerminal()) {
+    bitwidth = std::max(bitwidth, static_cast<Qubit>(p->v + 1U));
   }
 
-  auto decisions = std::string(p->v + 1U, '0');
-  for (auto j = 0U; j <= p->v; ++j) {
+  auto decisions = std::string(bitwidth, '0');
+  for (auto j = 0U; j < bitwidth; ++j) {
     if ((i & (1ULL << j)) != 0U) {
       decisions[j] = '1';
     }
   }
 
-  return getValueByPath(p->v + 1U, decisions);
+  return getValueByPath(bitwidth, decisions);
 }
 
 template <class Node>
@@ -376,26 +369,24 @@ template <class Node>
 template <typename T, isMatrixVariant<T>>
 CMat Edge<Node>::getMatrix(const std::size_t numQubits,
                            const fp threshold) const {
-  std::size_t dim = 1;
-  if (numQubits != 0) {
-    dim = 2ULL << (numQubits - 1);
+  if (numQubits == 0U) {
+    return CMat{1, {static_cast<std::complex<fp>>(w)}};
   }
-  // allocate resulting matrix
-  auto mat = CMat(dim, CVec(dim, {0., 0.}));
 
   auto r = *this;
   if constexpr (std::is_same_v<Node, dNode>) {
     Edge<dNode>::applyDmChangesToEdge(r);
   }
+  const std::size_t dim = 1ULL << numQubits;
+  auto mat = CMat(dim, CVec(dim, 0.));
   r.traverseMatrix(
       1, 0ULL, 0ULL,
       [&mat](const std::size_t i, const std::size_t j,
              const std::complex<fp>& c) { mat.at(i).at(j) = c; },
-      static_cast<int>(numQubits) - 1, threshold);
+      numQubits, threshold);
   if constexpr (std::is_same_v<Node, dNode>) {
     Edge<dNode>::revertDmChangesToEdge(r);
   }
-
   return mat;
 }
 
@@ -403,7 +394,7 @@ template <class Node>
 template <typename T, isMatrixVariant<T>>
 SparseCMat Edge<Node>::getSparseMatrix(const std::size_t numQubits,
                                        const fp threshold) const {
-  if (isTerminal()) {
+  if (numQubits == 0U) {
     return {{{0U, 0U}, static_cast<std::complex<fp>>(w)}};
   }
 
@@ -417,7 +408,7 @@ SparseCMat Edge<Node>::getSparseMatrix(const std::size_t numQubits,
       1, 0ULL, 0ULL,
       [&mat](const std::size_t i, const std::size_t j,
              const std::complex<fp>& c) { mat[{i, j}] = c; },
-      static_cast<int>(numQubits) - 1, threshold);
+      numQubits, threshold);
 
   if constexpr (std::is_same_v<Node, dNode>) {
     Edge<dNode>::revertDmChangesToEdge(r);
@@ -433,7 +424,7 @@ void Edge<Node>::printMatrix(const std::size_t numQubits) const {
   const auto oldPrecision = std::cout.precision();
   std::cout << std::setprecision(precision);
 
-  if (isTerminal()) {
+  if (numQubits == 0U) {
     std::cout << static_cast<std::complex<fp>>(w) << "\n";
     return;
   }
@@ -444,8 +435,8 @@ void Edge<Node>::printMatrix(const std::size_t numQubits) const {
   }
 
   // total number of qubits should not be lower than the highest qubit index
-  assert(numQubits >= r.p->v);
-  const std::size_t element = 2ULL << (numQubits - 1);
+  assert(r.isTerminal() || numQubits >= r.p->v);
+  const std::size_t element = 1ULL << numQubits;
   for (auto i = 0ULL; i < element; ++i) {
     for (auto j = 0ULL; j < element; ++j) {
       const auto amplitude = getValueByIndex(numQubits, i, j);
@@ -461,7 +452,7 @@ template <class Node>
 template <typename T, isMatrixVariant<T>>
 void Edge<Node>::traverseMatrix(const std::complex<fp>& amp,
                                 const std::size_t i, const std::size_t j,
-                                MatrixEntryFunc f, const int level,
+                                MatrixEntryFunc f, const std::size_t level,
                                 const fp threshold) const {
   // calculate new accumulated amplitude
   const auto c = amp * static_cast<std::complex<fp>>(w);
@@ -470,30 +461,33 @@ void Edge<Node>::traverseMatrix(const std::complex<fp>& amp,
     return;
   }
 
-  if (isTerminal() && level == -1) {
+  if (level == 0) {
+    assert(isTerminal());
     f(i, j, c);
     return;
   }
 
-  const std::size_t x = i | (1ULL << level);
-  const std::size_t y = j | (1ULL << level);
+  const std::size_t x = i | (1ULL << (level - 1U));
+  const std::size_t y = j | (1ULL << (level - 1U));
+
+  const auto nextLevel = static_cast<Qubit>(level - 1U);
+  if (isTerminal() || p->v < nextLevel) {
+    traverseMatrix(c, i, j, f, nextLevel, threshold);
+    traverseMatrix(c, x, y, f, nextLevel, threshold);
+    return;
+  }
+
   const auto coords = {std::pair{i, j}, {i, y}, {x, j}, {x, y}};
   std::size_t k = 0U;
   for (const auto& [a, b] : coords) {
-    if (!isTerminal() && p->v == level) {
-      if (auto& e = p->e[k++]; !e.w.exactlyZero()) {
-        if constexpr (std::is_same_v<Node, dNode>) {
-          Edge<dNode>::applyDmChangesToEdge(e);
-        }
-        e.traverseMatrix(c, a, b, f, level - 1, threshold);
-        if constexpr (std::is_same_v<Node, dNode>) {
-          Edge<dNode>::revertDmChangesToEdge(e);
-        }
+    if (auto& e = p->e[k++]; !e.w.exactlyZero()) {
+      if constexpr (std::is_same_v<Node, dNode>) {
+        Edge<dNode>::applyDmChangesToEdge(e);
       }
-    } else if ((!isTerminal() && p->v < level) ||
-               (isTerminal() && level != -1)) {
-      traverseMatrix(c, i, j, f, level - 1, threshold);
-      traverseMatrix(c, x, y, f, level - 1, threshold);
+      e.traverseMatrix(c, a, b, f, nextLevel, threshold);
+      if constexpr (std::is_same_v<Node, dNode>) {
+        Edge<dNode>::revertDmChangesToEdge(e);
+      }
     }
   }
 }
@@ -506,7 +500,7 @@ template <class Node>
 template <typename T, isDensityMatrix<T>>
 SparsePVec Edge<Node>::getSparseProbabilityVector(const std::size_t numQubits,
                                                   const fp threshold) const {
-  if (isTerminal()) {
+  if (numQubits == 0U) {
     return {{0, static_cast<std::complex<fp>>(w).real()}};
   }
 
@@ -519,7 +513,7 @@ SparsePVec Edge<Node>::getSparseProbabilityVector(const std::size_t numQubits,
       [&probabilities](const std::size_t i, const fp& prob) {
         probabilities[i] = prob;
       },
-      static_cast<int>(numQubits) - 1, threshold);
+      numQubits, threshold);
   return probabilities;
 }
 
@@ -528,7 +522,7 @@ template <typename T, isDensityMatrix<T>>
 SparsePVecStrKeys
 Edge<Node>::getSparseProbabilityVectorStrKeys(const std::size_t numQubits,
                                               const fp threshold) const {
-  if (isTerminal()) {
+  if (numQubits == 0U) {
     return {{"0", static_cast<std::complex<fp>>(w).real()}};
   }
 
@@ -542,41 +536,40 @@ Edge<Node>::getSparseProbabilityVectorStrKeys(const std::size_t numQubits,
       [&probabilities, &nqubits](const std::size_t i, const fp& prob) {
         probabilities[intToBinaryString(i, nqubits)] = prob;
       },
-      static_cast<int>(numQubits) - 1, threshold);
+      numQubits, threshold);
   return probabilities;
 }
 
 template <class Node>
 template <typename T, isDensityMatrix<T>>
 void Edge<Node>::traverseDiagonal(const fp& prob, const std::size_t i,
-                                  ProbabilityFunc f, const int level,
+                                  ProbabilityFunc f, const std::size_t level,
                                   const dd::fp threshold) const {
   // calculate new accumulated probability
   const auto c = static_cast<std::complex<fp>>(w);
-  assert(std::abs(c.imag()) < RealNumber::eps &&
-         "Density matrix diagonal must be real-valued.");
   const auto val = prob * c.real();
 
   if (val < threshold) {
     return;
   }
 
-  if (isTerminal() && level == -1) {
+  if (level == 0) {
+    assert(isTerminal());
     f(i, val);
     return;
   }
 
-  // recursive case for non-terminal node
-  if (!isTerminal() && p->v < level) {
+  const auto nextLevel = static_cast<Qubit>(level - 1U);
+  if (isTerminal() || p->v < nextLevel) {
+    traverseDiagonal(prob, i, f, nextLevel, threshold);
+    traverseDiagonal(prob, i | (1ULL << nextLevel), f, nextLevel, threshold);
+  } else {
     if (auto& e = p->e[0]; !e.w.exactlyZero()) {
-      e.traverseDiagonal(val, i, f, level - 1, threshold);
+      e.traverseDiagonal(val, i, f, nextLevel, threshold);
     }
     if (auto& e = p->e[3]; !e.w.exactlyZero()) {
-      e.traverseDiagonal(val, i | (1ULL << p->v), f, level - 1, threshold);
+      e.traverseDiagonal(val, i | (1ULL << nextLevel), f, nextLevel, threshold);
     }
-  }
-  if (isTerminal() && level != -1) {
-    traverseDiagonal(val, i, f, level - 1, threshold);
   }
 }
 
@@ -619,7 +612,7 @@ template void
 Edge<mNode>::printMatrix<mNode, true>(const std::size_t numQubits) const;
 template void Edge<mNode>::traverseMatrix<mNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
-    MatrixEntryFunc f, const int level, const fp threshold) const;
+    MatrixEntryFunc f, const std::size_t level, const fp threshold) const;
 
 template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
     dNode* p, const std::array<Edge<dNode>, NEDGE>& e, MemoryManager<dNode>& mm,
@@ -643,9 +636,10 @@ Edge<dNode>::getValueByIndex<dNode, true>(const std::size_t numQubits,
                                           const std::size_t j) const;
 template void Edge<dNode>::traverseMatrix<dNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
-    MatrixEntryFunc f, const int level, const fp threshold) const;
+    MatrixEntryFunc f, const std::size_t level, const fp threshold) const;
 template void Edge<dNode>::traverseDiagonal(const fp& prob, const std::size_t i,
-                                            ProbabilityFunc f, int level,
+                                            ProbabilityFunc f,
+                                            std::size_t level,
                                             const dd::fp threshold) const;
 
 } // namespace dd
