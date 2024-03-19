@@ -115,6 +115,7 @@ template <class Node> struct Edge {
 
   /**
    * @brief Get a single element of the vector or matrix represented by the DD
+   * @param numQubits number of qubits in the considered DD
    * @param decisions string {0, 1, 2, 3}^n describing which outgoing edge
    * should be followed (for vectors entries are limited to 0 and 1) If string
    * is longer than required, the additional characters are ignored.
@@ -257,6 +258,7 @@ public:
   /**
    * @brief Get a single element of the matrix represented by the DD
    * @tparam T template parameter to enable this function only for matrix nodes
+   * @param numQubits number of qubits in the considered DD
    * @param i row index of the element
    * @param j column index of the element
    * @return the complex value of the entry
@@ -268,8 +270,7 @@ public:
   /**
    * @brief Get the matrix represented by the DD
    * @tparam T template parameter to enable this function only for matrix nodes
-   * @param numQubits number of qubits needed to represented the whole DD
-   * including identities
+   * @param numQubits number of qubits in the considered DD
    * @param threshold entries with a magnitude below this threshold will be
    * ignored
    * @return the matrix
@@ -280,6 +281,7 @@ public:
   /**
    * @brief Get the sparse matrix represented by the DD
    * @tparam T template parameter to enable this function only for matrix nodes
+   * @param numQubits number of qubits in the considered DD
    * @param threshold entries with a magnitude below this threshold will be
    * ignored
    * @return the sparse matrix
@@ -291,6 +293,7 @@ public:
   /**
    * @brief Print the matrix represented by the DD
    * @tparam T template parameter to enable this function only for matrix nodes
+   * @param numQubits number of qubits in the considered DD
    * @note This function scales exponentially with the number of qubits.
    */
   template <typename T = Node, isMatrixVariant<T> = true>
@@ -306,6 +309,8 @@ private:
    * @param j the current column index in the matrix
    * @param f This function is called for each non-zero matrix entry with the
    * row index, the column index and the amplitude as arguments.
+   * @param level the current level in the DD (ranges from 1 to n for regular
+   * nodes and is 0 for the terminal node)
    * @param threshold entries with a magnitude below this threshold will be
    * ignored
    */
@@ -363,7 +368,7 @@ public:
   /**
    * @brief Get the sparse probability vector for the underlying density matrix
    * @tparam T template parameter to enable this function only for dNode
-   * @param numQubits number of qubits needed to represent the whole DD
+   * @param numQubits number of qubits in the considered DD
    * @param threshold probabilities below this threshold will be ignored
    * @return the sparse probability vector
    */
@@ -374,7 +379,7 @@ public:
   /**
    * @brief Get the sparse probability vector for the underlying density matrix
    * @tparam T template parameter to enable this function only for dNode
-   * @param numQubits number of qubits needed to represent the whole DD
+   * @param numQubits number of qubits in the considered DD
    * @param threshold probabilities below this threshold will be ignored
    * @return the sparse probability vector (using strings as keys)
    */
@@ -392,6 +397,8 @@ private:
    * @param i the current diagonal index in the matrix
    * @param f This function is called for each non-zero entry with the
    * diagonal index and the probability as arguments.
+   * @param level the current level in the DD (ranges from 1 to n for regular
+   * nodes and is 0 for the terminal node)
    * @param threshold probabilities below this threshold will be ignored
    */
   template <typename T = Node, isDensityMatrix<T> = true>
