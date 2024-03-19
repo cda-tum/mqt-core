@@ -531,15 +531,16 @@ public:
           std::to_string(nqubits) +
           " qubits. Please allocate a larger package instance."};
     }
-    std::array<mEdge, NEDGE> em{};
+    std::array<mCachedEdge, NEDGE> em{};
     auto it = controls.begin();
     for (auto i = 0U; i < NEDGE; ++i) {
-      em[i] = mEdge::terminal(cn.lookup(mat[i]));
+      em[i] = mCachedEdge::terminal(mat[i]);
     }
 
     if (controls.empty()) {
       // Single qubit operation
-      return makeDDNode(static_cast<Qubit>(target), em);
+      const auto e = makeDDNode(static_cast<Qubit>(target), em);
+      return {e.p, cn.lookup(e.w)};
     }
 
     // process lines below target
@@ -549,17 +550,17 @@ public:
         for (auto i2 = 0U; i2 < RADIX; ++i2) {
           auto i = i1 * RADIX + i2;
           if (it != controls.end() && it->qubit == z) {
-            auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
-                                    mEdge::zero()};
+            auto edges = std::array{mCachedEdge::zero(), mCachedEdge::zero(),
+                                    mCachedEdge::zero(), mCachedEdge::zero()};
             if (it->type == qc::Control::Type::Neg) { // neg. control
               edges[0] = em[i];
               if (i1 == i2) {
-                edges[3] = mEdge::one();
+                edges[3] = mCachedEdge::one();
               }
             } else { // pos. control
               edges[3] = em[i];
               if (i1 == i2) {
-                edges[0] = mEdge::one();
+                edges[0] = mCachedEdge::one();
               }
             }
             em[i] = makeDDNode(z, edges);
@@ -579,16 +580,17 @@ public:
       auto q = static_cast<Qubit>(z + 1);
       if (it != controls.end() && it->qubit == static_cast<qc::Qubit>(q)) {
         if (it->type == qc::Control::Type::Neg) { // neg. control
-          e = makeDDNode(
-              q, std::array{e, mEdge::zero(), mEdge::zero(), mEdge::one()});
+          e = makeDDNode(q,
+                         std::array{e, mCachedEdge::zero(), mCachedEdge::zero(),
+                                    mCachedEdge::one()});
         } else { // pos. control
-          e = makeDDNode(
-              q, std::array{mEdge::one(), mEdge::zero(), mEdge::zero(), e});
+          e = makeDDNode(q, std::array{mCachedEdge::one(), mCachedEdge::zero(),
+                                       mCachedEdge::zero(), e});
         }
         ++it;
       }
     }
-    return e;
+    return {e.p, cn.lookup(e.w)};
   }
 
   /**
@@ -634,12 +636,12 @@ public:
     }
 
     // create terminal edge matrix
-    std::array<std::array<mEdge, NEDGE>, NEDGE> em{};
+    std::array<std::array<mCachedEdge, NEDGE>, NEDGE> em{};
     for (auto i1 = 0U; i1 < NEDGE; i1++) {
       const auto& matRow = mat.at(i1);
       auto& emRow = em.at(i1);
       for (auto i2 = 0U; i2 < NEDGE; i2++) {
-        emRow.at(i2) = mEdge::terminal(cn.lookup(matRow.at(i2)));
+        emRow.at(i2) = mCachedEdge::terminal(matRow.at(i2));
       }
     }
 
@@ -651,17 +653,17 @@ public:
       for (auto row = 0U; row < NEDGE; ++row) {
         for (auto col = 0U; col < NEDGE; ++col) {
           if (it != controls.end() && it->qubit == z) {
-            auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
-                                    mEdge::zero()};
+            auto edges = std::array{mCachedEdge::zero(), mCachedEdge::zero(),
+                                    mCachedEdge::zero(), mCachedEdge::zero()};
             if (it->type == qc::Control::Type::Neg) { // negative control
               edges[0] = em[row][col];
               if (row == col) {
-                edges[3] = mEdge::one();
+                edges[3] = mCachedEdge::one();
               }
             } else { // positive control
               edges[3] = em[row][col];
               if (row == col) {
-                edges[0] = mEdge::one();
+                edges[0] = mCachedEdge::one();
               }
             }
             em[row][col] = makeDDNode(z, edges);
@@ -675,10 +677,10 @@ public:
 
     // process the smaller target by taking the 16 submatrices and appropriately
     // combining them into four DDs.
-    std::array<mEdge, NEDGE> em0{};
+    std::array<mCachedEdge, NEDGE> em0{};
     for (std::size_t row = 0; row < RADIX; ++row) {
       for (std::size_t col = 0; col < RADIX; ++col) {
-        std::array<mEdge, NEDGE> local{};
+        std::array<mCachedEdge, NEDGE> local{};
         if (target0 > target1) {
           for (std::size_t i = 0; i < RADIX; ++i) {
             for (std::size_t j = 0; j < RADIX; ++j) {
@@ -702,17 +704,17 @@ public:
     for (++z; z < std::max(target0, target1); ++z) {
       for (auto i = 0U; i < NEDGE; ++i) {
         if (it != controls.end() && it->qubit == z) {
-          auto edges = std::array{mEdge::zero(), mEdge::zero(), mEdge::zero(),
-                                  mEdge::zero()};
+          auto edges = std::array{mCachedEdge::zero(), mCachedEdge::zero(),
+                                  mCachedEdge::zero(), mCachedEdge::zero()};
           if (it->type == qc::Control::Type::Neg) { // negative control
             edges[0] = em0[i];
             if (i == 0 || i == NEDGE - 1) {
-              edges[3] = mEdge::one();
+              edges[3] = mCachedEdge::one();
             }
           } else { // positive control
             edges[3] = em0[i];
             if (i == 0 || i == NEDGE - 1) {
-              edges[0] = mEdge::one();
+              edges[0] = mCachedEdge::one();
             }
           }
           em0[i] = makeDDNode(z, edges);
@@ -732,17 +734,18 @@ public:
     for (++z; z < end; ++z) {
       if (it != controls.end() && it->qubit == z) {
         if (it->type == qc::Control::Type::Neg) { // negative control
-          e = makeDDNode(
-              z, std::array{e, mEdge::zero(), mEdge::zero(), mEdge::one()});
+          e = makeDDNode(z,
+                         std::array{e, mCachedEdge::zero(), mCachedEdge::zero(),
+                                    mCachedEdge::one()});
         } else { // positive control
-          e = makeDDNode(
-              z, std::array{mEdge::one(), mEdge::zero(), mEdge::zero(), e});
+          e = makeDDNode(z, std::array{mCachedEdge::one(), mCachedEdge::zero(),
+                                       mCachedEdge::zero(), e});
         }
         ++it;
       }
     }
 
-    return e;
+    return {e.p, cn.lookup(e.w)};
   }
 
 private:
