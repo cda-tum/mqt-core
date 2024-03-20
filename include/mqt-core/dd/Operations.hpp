@@ -281,10 +281,9 @@ void changePermutation(DDType& on, qc::Permutation& from,
                        const qc::Permutation& to, Package<Config>& dd,
                        const bool regular = true) {
   assert(from.size() >= to.size());
-  if (on.isTerminal()) {
+  if (on.isZeroTerminal()) {
     return;
   }
-  assert(on.p != nullptr);
 
   // iterate over (k,v) pairs of second permutation
   for (const auto& [i, goal] : to) {
@@ -313,8 +312,8 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD =
-        dd.makeTwoQubitGateDD(SWAP_MAT, on.p->v + 1U, from.at(i), from.at(j));
+    const auto swapDD = dd.makeTwoQubitGateDD(SWAP_MAT, std::max(i, j) + 1U,
+                                              from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd.multiply(swapDD, on);
     } else {
