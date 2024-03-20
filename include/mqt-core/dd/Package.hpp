@@ -2094,7 +2094,7 @@ public:
   ///
   mEdge reduceAncillae(mEdge& e, const std::vector<bool>& ancillary,
                        const bool regular = true) {
-    // return if no more garbage left
+    // return if no more ancillaries left
     if (std::none_of(ancillary.begin(), ancillary.end(),
                      [](bool v) { return v; }) ||
         e.isZeroTerminal()) {
@@ -2102,8 +2102,8 @@ public:
     }
 
     // if we have only identities and no other nodes
-    auto g = e;
-    if (g.isTerminal()) {
+    if (e.isIdentity()) {
+      auto g = e;
       for (auto i = 0U; i < ancillary.size(); ++i) {
         if (ancillary[i]) {
           g = makeDDNode(
@@ -2114,14 +2114,6 @@ public:
       return g;
     }
 
-    for (std::size_t i = g.p->v + 1; i < ancillary.size(); ++i) {
-      if (ancillary[i]) {
-        g = makeDDNode(
-            static_cast<Qubit>(i),
-            std::array{g, mEdge::zero(), mEdge::zero(), mEdge::zero()});
-      }
-    }
-
     Qubit lowerbound = 0;
     for (auto i = 0U; i < ancillary.size(); ++i) {
       if (ancillary[i]) {
@@ -2129,13 +2121,20 @@ public:
         break;
       }
     }
-    if (g.p->v < lowerbound) {
-      return g;
+
+    auto g = CachedEdge<mNode>{e.p, 1.};
+    if (e.p->v >= lowerbound) {
+      g = reduceAncillaeRecursion(e.p, ancillary, lowerbound, regular);
     }
 
-    const auto f = reduceAncillaeRecursion(g.p, ancillary, lowerbound, regular);
-    const auto res = mEdge{f.p, cn.lookup(g.w * f.w)};
-
+    for (std::size_t i = e.p->v + 1; i < ancillary.size(); ++i) {
+      if (ancillary[i]) {
+        g = makeDDNode(static_cast<Qubit>(i),
+                       std::array{g, mCachedEdge::zero(), mCachedEdge::zero(),
+                                  mCachedEdge::zero()});
+      }
+    }
+    const auto res = mEdge{g.p, cn.lookup(g.w * e.w)};
     incRef(res);
     decRef(e);
     return res;
@@ -2197,8 +2196,8 @@ public:
     }
 
     // if we have only identities and no other nodes
-    auto g = e;
-    if (g.isTerminal()) {
+    if (e.isIdentity()) {
+      auto g = e;
       for (auto i = 0U; i < garbage.size(); ++i) {
         if (garbage[i]) {
           if (regular) {
@@ -2213,19 +2212,6 @@ public:
       return g;
     }
 
-    auto level = garbage.size() - 1;
-    for (std::size_t i = g.p->v + 1; i <= level; ++i) {
-      if (garbage[i]) {
-        if (regular) {
-          g = makeDDNode(static_cast<Qubit>(i),
-                         std::array{g, g, mEdge::zero(), mEdge::zero()});
-        } else {
-          g = makeDDNode(static_cast<Qubit>(i),
-                         std::array{g, mEdge::zero(), g, mEdge::zero()});
-        }
-      }
-    }
-
     Qubit lowerbound = 0;
     for (auto i = 0U; i < garbage.size(); ++i) {
       if (garbage[i]) {
@@ -2234,17 +2220,31 @@ public:
       }
     }
 
-    if (!normalizeWeights && g.p->v < lowerbound) {
-      return g;
+    auto g = CachedEdge<mNode>{e.p, 1.};
+    if (e.p->v >= lowerbound || normalizeWeights) {
+      g = reduceGarbageRecursion(e.p, garbage, lowerbound, regular,
+                                 normalizeWeights);
     }
 
-    const auto f = reduceGarbageRecursion(g.p, garbage, lowerbound, regular,
-                                          normalizeWeights);
-    auto weight = g.w * f.w;
+    for (std::size_t i = e.p->v + 1; i < garbage.size(); ++i) {
+      if (garbage[i]) {
+        if (regular) {
+          g = makeDDNode(
+              static_cast<Qubit>(i),
+              std::array{g, g, mCachedEdge::zero(), mCachedEdge::zero()});
+        } else {
+          g = makeDDNode(
+              static_cast<Qubit>(i),
+              std::array{g, mCachedEdge::zero(), g, mCachedEdge::zero()});
+        }
+      }
+    }
+
+    auto weight = g.w * e.w;
     if (normalizeWeights) {
       weight = weight.mag();
     }
-    const auto res = mEdge{f.p, cn.lookup(weight)};
+    const auto res = mEdge{g.p, cn.lookup(weight)};
 
     incRef(res);
     decRef(e);
@@ -2263,57 +2263,55 @@ private:
     std::array<mCachedEdge, NEDGE> edges{};
     std::bitset<NEDGE> handled{};
     for (auto i = 0U; i < NEDGE; ++i) {
-      auto addedReducedQubit = false;
-      if (!handled.test(i)) {
-        if (p->e[i].isTerminal()) {
-          if (!p->e[i].isZeroTerminal()) {
-            // Check if we have to reduce other ancillaries between the current
-            // node and the terminal (i.e. introduce reduced non-identity nodes)
-            for (auto j = p->v - 1; j > -1; j--) {
-              if (ancillary[static_cast<uint64_t>(j)]) {
-                addedReducedQubit = true;
-                edges[i] = {p->e[i].p, p->e[i].w};
-                edges[i] = makeDDNode(static_cast<Qubit>(j),
-                                      std::array{edges[i], mCachedEdge::zero(),
-                                                 mCachedEdge::zero(),
-                                                 mCachedEdge::zero()});
-              }
-            }
-          }
-          if (!addedReducedQubit) {
-            edges[i] = {p->e[i].p, p->e[i].w};
-          }
-        } else {
-          // Check between this node and the next node, if there are any
-          // ancillary identity qubits that need to be reduced as well
-          for (std::size_t j = p->e[i].p->v + 1; j < p->v; ++j) {
-            if (ancillary[j]) {
-              addedReducedQubit = true;
-              edges[i] = {p->e[i].p, p->e[i].w};
-              edges[i] = makeDDNode(static_cast<Qubit>(j),
-                                    std::array{edges[i], mCachedEdge::zero(),
-                                               mCachedEdge::zero(),
-                                               mCachedEdge::zero()});
-            }
-          }
-          if (addedReducedQubit) {
-            edges[i] = reduceAncillaeRecursion(edges[i].p, ancillary,
-                                               lowerbound, regular);
-          } else {
-            edges[i] = reduceAncillaeRecursion(p->e[i].p, ancillary, lowerbound,
-                                               regular);
-          }
-          for (auto j = i + 1; j < NEDGE; ++j) {
-            if (p->e[i].p == p->e[j].p) {
-              edges[j] = edges[i];
-              edges[j].w = edges[j].w * p->e[j].w;
-              handled.set(j);
-            }
-          }
-          edges[i].w = edges[i].w * p->e[i].w;
+      if (ancillary[p->v]) {
+        // no need to reduce ancillaries for entries that will be zeroed anyway
+        if ((i == 3) || (i == 1 && regular) || (i == 2 && !regular)) {
+          continue;
         }
-        handled.set(i);
       }
+      if (handled.test(i)) {
+        continue;
+      }
+
+      if (p->e[i].isZeroTerminal()) {
+        edges[i] = {p->e[i].p, p->e[i].w};
+        handled.set(i);
+        continue;
+      }
+
+      if (p->e[i].isIdentity()) {
+        auto g = mCachedEdge::one();
+        for (auto j = lowerbound; j < p->v; ++j) {
+          if (ancillary[j]) {
+            g = makeDDNode(j, std::array{g, mCachedEdge::zero(),
+                                         mCachedEdge::zero(),
+                                         mCachedEdge::zero()});
+          }
+        }
+        edges[i] = {g.p, p->e[i].w};
+        handled.set(i);
+        continue;
+      }
+
+      edges[i] =
+          reduceAncillaeRecursion(p->e[i].p, ancillary, lowerbound, regular);
+      for (Qubit j = p->e[i].p->v + 1U; j < p->v; ++j) {
+        if (ancillary[j]) {
+          edges[i] = makeDDNode(j, std::array{edges[i], mCachedEdge::zero(),
+                                              mCachedEdge::zero(),
+                                              mCachedEdge::zero()});
+        }
+      }
+
+      for (auto j = i + 1U; j < NEDGE; ++j) {
+        if (p->e[i].p == p->e[j].p) {
+          edges[j] = edges[i];
+          edges[j].w = edges[j].w * p->e[j].w;
+          handled.set(j);
+        }
+      }
+      edges[i].w = edges[i].w * p->e[i].w;
+      handled.set(i);
     }
     if (!ancillary[p->v]) {
       return makeDDNode(p->v, edges);
@@ -2384,76 +2382,70 @@ private:
     std::array<mCachedEdge, NEDGE> edges{};
     std::bitset<NEDGE> handled{};
     for (auto i = 0U; i < NEDGE; ++i) {
-      auto addedReducedQubit = false;
-      if (!handled.test(i)) {
-        if (p->e[i].isTerminal()) {
-          if (!p->e[i].isZeroTerminal()) {
-            for (auto j = p->v - 1; j > -1; j--) {
-              if (garbage[static_cast<uint64_t>(j)]) {
-                addedReducedQubit = true;
-                edges[i] = {p->e[i].p, p->e[i].w};
-                if (regular) {
-                  edges[i] = makeDDNode(static_cast<Qubit>(j),
-                                        std::array{edges[i], edges[i],
-                                                   mCachedEdge::zero(),
-                                                   mCachedEdge::zero()});
-                } else {
-                  edges[i] =
-                      makeDDNode(static_cast<Qubit>(j),
-                                 std::array{edges[i], mCachedEdge::zero(),
-                                            edges[i], mCachedEdge::zero()});
-                }
-              }
+      if (handled.test(i)) {
+        continue;
+      }
+
+      if (p->e[i].isZeroTerminal()) {
+        edges[i] = mCachedEdge::zero();
+        handled.set(i);
+        continue;
+      }
+
+      if (p->e[i].isIdentity()) {
+        edges[i] = mCachedEdge::one();
+        for (auto j = lowerbound; j < p->v; ++j) {
+          if (garbage[j]) {
+            if (regular) {
+              edges[i] = makeDDNode(j, std::array{edges[i], edges[i],
+                                                  mCachedEdge::zero(),
+                                                  mCachedEdge::zero()});
+            } else {
+              edges[i] =
+                  makeDDNode(j, std::array{edges[i], mCachedEdge::zero(),
+                                           edges[i], mCachedEdge::zero()});
             }
-          }
-          if (!addedReducedQubit) {
-            const auto weight = normalizeWeights
-                                    ? ComplexNumbers::mag(p->e[i].w)
-                                    : static_cast<ComplexValue>(p->e[i].w);
-            edges[i] = {p->e[i].p, weight};
-          }
-        } else {
-          for (std::size_t j = p->e[i].p->v + 1; j < p->v; ++j) {
-            if (garbage[j]) {
-              addedReducedQubit = true;
-              edges[i] = {p->e[i].p, p->e[i].w};
-              if (regular) {
-                edges[i] = makeDDNode(static_cast<Qubit>(j),
-                                      std::array{edges[i], edges[i],
-                                                 mCachedEdge::zero(),
-                                                 mCachedEdge::zero()});
-              } else {
-                edges[i] =
-                    makeDDNode(static_cast<Qubit>(j),
-                               std::array{edges[i], mCachedEdge::zero(),
-                                          edges[i], mCachedEdge::zero()});
-              }
-            }
-          }
-          if (addedReducedQubit) {
-            edges[i] = reduceGarbageRecursion(edges[i].p, garbage, lowerbound,
-                                              regular, normalizeWeights);
-          } else {
-            edges[i] = reduceGarbageRecursion(p->e[i].p, garbage, lowerbound,
-                                              regular, normalizeWeights);
-          }
-          for (auto j = i + 1; j < NEDGE; ++j) {
-            if (p->e[i].p == p->e[j].p) {
-              edges[j] = edges[i];
-              edges[j].w = edges[j].w * p->e[j].w;
-              if (normalizeWeights) {
-                edges[j].w = edges[j].w.mag();
-              }
-              handled.set(j);
-            }
-          }
-          edges[i].w = edges[i].w * p->e[i].w;
-          if (normalizeWeights) {
-            edges[i].w = edges[i].w.mag();
           }
         }
+        if (normalizeWeights) {
+          edges[i].w = edges[i].w * ComplexNumbers::mag(p->e[i].w);
+        } else {
+          edges[i].w = edges[i].w * p->e[i].w;
+        }
         handled.set(i);
+        continue;
       }
+
+      edges[i] = reduceGarbageRecursion(p->e[i].p, garbage, lowerbound, regular,
+                                        normalizeWeights);
+      for (Qubit j = p->e[i].p->v + 1U; j < p->v; ++j) {
+        if (garbage[j]) {
+          if (regular) {
+            edges[i] = makeDDNode(j, std::array{edges[i], edges[i],
+                                                mCachedEdge::zero(),
+                                                mCachedEdge::zero()});
+          } else {
+            edges[i] = makeDDNode(j, std::array{edges[i], mCachedEdge::zero(),
+                                                edges[i], mCachedEdge::zero()});
+          }
+        }
+      }
+
+      for (auto j = i + 1; j < NEDGE; ++j) {
+        if (p->e[i].p == p->e[j].p) {
+          edges[j] = edges[i];
+          edges[j].w = edges[j].w * p->e[j].w;
+          if (normalizeWeights) {
+            edges[j].w = edges[j].w.mag();
+          }
+          handled.set(j);
+        }
+      }
+      edges[i].w = edges[i].w * p->e[i].w;
+      if (normalizeWeights) {
+        edges[i].w = edges[i].w.mag();
+      }
+      handled.set(i);
     }
     if (!garbage[p->v]) {
       return makeDDNode(p->v, edges);
