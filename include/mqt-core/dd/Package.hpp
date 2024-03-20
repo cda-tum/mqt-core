@@ -1137,7 +1137,7 @@ public:
     auto tmp0 = conjugateTranspose(measZeroDd);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
     auto tmp2 = multiply(densityFromMatrixEdge(measZeroDd), tmp1, 0, true);
-    auto densityMatrixTrace = trace(tmp2);
+    auto densityMatrixTrace = trace(tmp2, nrQubits);
 
     std::uniform_real_distribution<fp> dist(0., 1.);
     if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
@@ -1146,7 +1146,7 @@ public:
       tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
       tmp2 = multiply(densityFromMatrixEdge(measOneDd), tmp1, 0, true);
       measuredResult = '1';
-      densityMatrixTrace = trace(tmp2);
+      densityMatrixTrace = trace(tmp2, nrQubits);
     }
 
     incRef(tmp2);
@@ -1915,29 +1915,17 @@ private:
   ///
 public:
   mEdge partialTrace(const mEdge& a, const std::vector<bool>& eliminate) {
-    mEdge result;
-    // Check for identity case
-    if (a.isIdentity()) {
-      auto relevantQubits =
-          std::count(eliminate.begin(), eliminate.end(), true);
-      auto c = ComplexValue{std::pow(2, relevantQubits), 0.};
-      c = c * a.w;
-      result = mEdge::terminal(cn.lookup(c));
-    } else {
-      mCachedEdge t = trace(a, eliminate);
-      result = mEdge{t.p, cn.lookup(t.w)};
-    }
-    return result;
+    auto r = trace(a, eliminate, eliminate.size());
+    return {r.p, cn.lookup(r.w)};
   }
 
-  template <class Node> ComplexValue trace(const Edge<Node>& a) {
-    const auto eliminate = std::vector<bool>(nqubits, true);
-    if (a.isIdentity() && nqubits > 0) {
-      auto c = ComplexValue{std::pow(2, nqubits), 0.};
-      c = c * a.w;
-      return c;
+  template <class Node>
+  ComplexValue trace(const Edge<Node>& a, const std::size_t numQubits) {
+    if (a.isIdentity()) {
+      return a.w * std::pow(2, numQubits);
     }
-    return trace(a, eliminate).w;
+    const auto eliminate = std::vector<bool>(numQubits, true);
+    return trace(a, eliminate, numQubits).w;
   }
 
   /**
@@ -1965,24 +1953,30 @@ private:
   /// TODO: introduce a compute table for the trace?
   template <class Node>
   CachedEdge<Node> trace(const Edge<Node>& a,
-                         const std::vector<bool>& eliminate,
+                         const std::vector<bool>& eliminate, std::size_t level,
                          std::size_t alreadyEliminated = 0) {
     const auto aWeight = static_cast<ComplexValue>(a.w);
     if (aWeight.approximatelyZero()) {
       return CachedEdge<Node>::zero();
     }
 
-    if (Node::isTerminal(a.p) ||
-        std::none_of(eliminate.begin(), eliminate.end(),
+    if (std::none_of(eliminate.begin(), eliminate.end(),
                      [](bool v) { return v; })) {
       return CachedEdge<Node>{a.p, aWeight};
+    }
+
+    if (a.isIdentity()) {
+      const auto elims =
+          std::count(eliminate.begin(),
+                     eliminate.begin() + static_cast<int64_t>(level), true);
+      return CachedEdge<Node>{a.p, aWeight * std::pow(2, elims)};
     }
 
     const auto v = a.p->v;
     if (eliminate[v]) {
       const auto elims = alreadyEliminated + 1;
-      auto r = add2(trace(a.p->e[0], eliminate, elims),
-                    trace(a.p->e[3], eliminate, elims), v - 1);
+      auto r = add2(trace(a.p->e[0], eliminate, level - 1, elims),
+                    trace(a.p->e[3], eliminate, level - 1, elims), v - 1);
 
       r.w = r.w * aWeight;
       return r;
@@ -1990,9 +1984,9 @@ private:
 
     std::array<CachedEdge<Node>, NEDGE> edge{};
     std::transform(a.p->e.cbegin(), a.p->e.cend(), edge.begin(),
-                   [this, &eliminate, &alreadyEliminated](
-                       const Edge<Node>& e) -> CachedEdge<Node> {
-                     return trace(e, eliminate, alreadyEliminated);
+                   [this, &eliminate, &alreadyEliminated,
+                    &level](const Edge<Node>& e) -> CachedEdge<Node> {
+                     return trace(e, eliminate, level - 1, alreadyEliminated);
                    });
     const auto adjustedV =
         static_cast<Qubit>(static_cast<std::size_t>(a.p->v) -

@@ -268,7 +268,7 @@ TEST(DDPackageTest, NegativeControl) {
 
 TEST(DDPackageTest, IdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(4);
-  auto fullTrace = dd->trace(dd->makeIdent());
+  auto fullTrace = dd->trace(dd->makeIdent(), 4);
 
   ASSERT_EQ(fullTrace.r, 16.);
 }
