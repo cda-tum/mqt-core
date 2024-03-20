@@ -2003,8 +2003,8 @@ private:
                                   const dd::fp tol,
                                   const std::vector<bool>& garbage,
                                   const bool checkCloseToOne) {
-    // immediately return if this node is identical to the identity
-    if (m.isIdentity()) {
+    // immediately return if this node is identical to the identity or zero
+    if (m.isTerminal()) {
       return true;
     }
 
@@ -2016,28 +2016,14 @@ private:
     const auto n = m.p->v;
 
     if (garbage.size() > n && garbage[n]) {
-      auto e0 = true;
-      if (!m.p->e[0U].isZeroTerminal()) {
-        e0 = isCloseToIdentityRecursive(m.p->e[0U], visited, tol, garbage,
+      return isCloseToIdentityRecursive(m.p->e[0U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[1U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[2U], visited, tol, garbage,
+                                        checkCloseToOne) &&
+             isCloseToIdentityRecursive(m.p->e[3U], visited, tol, garbage,
                                         checkCloseToOne);
-      }
-      auto e1 = true;
-      if (!m.p->e[1U].isZeroTerminal()) {
-        e1 = isCloseToIdentityRecursive(m.p->e[1U], visited, tol, garbage,
-                                        checkCloseToOne);
-      }
-      auto e2 = true;
-      if (!m.p->e[2U].isZeroTerminal()) {
-        e2 = isCloseToIdentityRecursive(m.p->e[2U], visited, tol, garbage,
-                                        checkCloseToOne);
-      }
-      auto e3 = true;
-      if (!m.p->e[3U].isZeroTerminal()) {
-        e3 = isCloseToIdentityRecursive(m.p->e[3U], visited, tol, garbage,
-                                        checkCloseToOne);
-      }
-
-      return e0 && e1 && e2 && e3;
     }
 
     // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0
@@ -2091,7 +2077,7 @@ public:
   ///
   /// Identity matrices
   ///
-  // create n-qubit identity DD represented by the one-terminal.
+  // create identity DD represented by the one-terminal.
   mEdge makeIdent() { return mEdge::one(); }
 
   mEdge createInitialMatrix(const std::vector<bool>& ancillary) {
