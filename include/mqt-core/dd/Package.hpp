@@ -1668,10 +1668,7 @@ public:
       return 0;
     }
 
-    auto w = x.p->v;
-    if (y.p->v > w) {
-      w = y.p->v;
-    }
+    const auto w = std::max(x.p->v, y.p->v);
     // Overall normalization factor needs to be conjugated
     // before input into recursive private function
     auto xCopy = vEdge{x.p, ComplexNumbers::conj(x.w)};
