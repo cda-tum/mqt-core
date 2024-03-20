@@ -2111,6 +2111,7 @@ public:
               std::array{g, mEdge::zero(), mEdge::zero(), mEdge::zero()});
         }
       }
+      incRef(g);
       return g;
     }
 
@@ -2209,6 +2210,7 @@ public:
           }
         }
       }
+      incRef(g);
       return g;
     }
 
