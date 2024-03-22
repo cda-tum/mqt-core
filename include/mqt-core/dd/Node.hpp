@@ -92,8 +92,11 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   }
   static constexpr dNode* getTerminal() noexcept { return nullptr; }
 
+  [[nodiscard]] inline bool isIdentity() const noexcept {
+    return (flags & static_cast<std::uint8_t>(16U)) != 0;
+  }
   [[nodiscard]] static constexpr bool isIdentity(const dNode* p) noexcept {
-    return p == nullptr;
+    return p == nullptr || p->isIdentity();
   }
 
   [[nodiscard]] [[maybe_unused]] static constexpr bool
