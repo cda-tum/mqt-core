@@ -2432,3 +2432,32 @@ TEST(DDPackageTest, ReduceAncillaRegression) {
 
   EXPECT_EQ(outputMatrix, expected);
 }
+
+TEST(DDPackageTest, VectorConjugate) {
+  auto dd = std::make_unique<dd::Package<>>(2);
+
+  EXPECT_EQ(dd->conjugate(dd::vEdge::zero()), dd::vEdge::zero());
+
+  EXPECT_EQ(dd->conjugate(dd::vEdge::one()), dd::vEdge::one());
+  EXPECT_EQ(dd->conjugate(dd::vEdge::terminal(dd->cn.lookup(0., 1.))),
+            dd::vEdge::terminal(dd->cn.lookup(0., -1.)));
+
+  dd::CVec vec{{0., 0.5},
+               {0.5 * dd::SQRT2_2, 0.5 * dd::SQRT2_2},
+               {0., -0.5},
+               {-0.5 * dd::SQRT2_2, -0.5 * dd::SQRT2_2}};
+
+  auto vecDD = dd->makeStateFromVector(vec);
+  std::cout << "Vector:\n";
+  vecDD.printVector();
+  auto conjVecDD = dd->conjugate(vecDD);
+  std::cout << "Conjugated vector:\n";
+  conjVecDD.printVector();
+
+  auto conjVec = conjVecDD.getVector();
+  const dd::fp tolerance = 1e-10;
+  for (auto i = 0U; i < vec.size(); ++i) {
+    EXPECT_NEAR(conjVec[i].real(), vec[i].real(), tolerance);
+    EXPECT_NEAR(conjVec[i].imag(), -vec[i].imag(), tolerance);
+  }
+}
