@@ -16,6 +16,7 @@ struct DDPackageConfig {
   static constexpr std::size_t CT_MAT_ADD_NBUCKET = 16384U;
   static constexpr std::size_t CT_VEC_ADD_MAG_NBUCKET = 16384U;
   static constexpr std::size_t CT_MAT_ADD_MAG_NBUCKET = 16384U;
+  static constexpr std::size_t CT_VEC_CONJ_NBUCKET = 4096U;
   static constexpr std::size_t CT_MAT_CONJ_TRANS_NBUCKET = 4096U;
   static constexpr std::size_t CT_MAT_VEC_MULT_NBUCKET = 16384U;
   static constexpr std::size_t CT_MAT_MAT_MULT_NBUCKET = 16384U;
@@ -39,6 +40,7 @@ struct StochasticNoiseSimulatorDDPackageConfig : public dd::DDPackageConfig {
 
   static constexpr std::size_t CT_VEC_ADD_MAG_NBUCKET = 1U;
   static constexpr std::size_t CT_MAT_ADD_MAG_NBUCKET = 1U;
+  static constexpr std::size_t CT_VEC_CONJ_NBUCKET = 1U;
 };
 
 struct DensityMatrixSimulatorDDPackageConfig : public dd::DDPackageConfig {
@@ -65,5 +67,6 @@ struct DensityMatrixSimulatorDDPackageConfig : public dd::DDPackageConfig {
   static constexpr std::size_t STOCHASTIC_CACHE_OPS = 1U;
   static constexpr std::size_t CT_VEC_ADD_MAG_NBUCKET = 1U;
   static constexpr std::size_t CT_MAT_ADD_MAG_NBUCKET = 1U;
+  static constexpr std::size_t CT_VEC_CONJ_NBUCKET = 1U;
 };
 } // namespace dd

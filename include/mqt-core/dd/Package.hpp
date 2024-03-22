@@ -946,6 +946,7 @@ public:
     matrixAdd.clear();
     vectorAddMagnitudes.clear();
     matrixAddMagnitudes.clear();
+    conjugateVector.clear();
     conjugateMatrixTranspose.clear();
     matrixMatrixMultiplication.clear();
     matrixVectorMultiplication.clear();
@@ -1415,6 +1416,39 @@ public:
     auto r = makeDDNode(var, edge);
     computeTable.insert(x, y, r);
     return r;
+  }
+
+  ///
+  /// Vector conjugation
+  ///
+  UnaryComputeTable<vNode*, vCachedEdge, Config::CT_VEC_CONJ_NBUCKET>
+      conjugateVector{};
+
+  vEdge conjugate(const vEdge& a) {
+    auto r = conjugateRec(a);
+    return {r.p, cn.lookup(r.w)};
+  }
+
+  vCachedEdge conjugateRec(const vEdge& a) {
+    if (a.isZeroTerminal()) {
+      return vCachedEdge::zero();
+    }
+
+    if (a.isTerminal()) {
+      return {a.p, ComplexNumbers::conj(a.w)};
+    }
+
+    if (const auto* r = conjugateVector.lookup(a.p); r != nullptr) {
+      return {r->p, r->w * ComplexNumbers::conj(a.w)};
+    }
+
+    std::array<vCachedEdge, 2> e{};
+    e[0] = conjugateRec(a.p->e[0]);
+    e[1] = conjugateRec(a.p->e[1]);
+    auto res = makeDDNode(a.p->v, e);
+    conjugateVector.insert(a.p, res);
+    res.w = res.w * ComplexNumbers::conj(a.w);
+    return res;
   }
 
   ///
