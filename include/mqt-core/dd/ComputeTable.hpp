@@ -90,7 +90,8 @@ public:
       return result;
     }
 
-    if constexpr (std::is_same_v<RightOperandType, dEdge>) {
+    if constexpr (std::is_same_v<RightOperandType, dNode*> ||
+                  std::is_same_v<RightOperandType, dCachedEdge>) {
       // Since density matrices are reduced representations of matrices, a
       // density matrix may not be returned when a matrix is required and vice
       // versa
