@@ -944,6 +944,8 @@ public:
   void clearComputeTables() {
     vectorAdd.clear();
     matrixAdd.clear();
+    vectorAddMagnitudes.clear();
+    matrixAddMagnitudes.clear();
     conjugateVector.clear();
     conjugateMatrixTranspose.clear();
     matrixMatrixMultiplication.clear();
@@ -1253,10 +1255,10 @@ public:
   }
 
   ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge,
-               Config::CT_VEC_ADD_NBUCKET>
+               Config::CT_VEC_ADD_MAG_NBUCKET>
       vectorAddMagnitudes{};
   ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge,
-               Config::CT_MAT_ADD_NBUCKET>
+               Config::CT_MAT_ADD_MAG_NBUCKET>
       matrixAddMagnitudes{};
 
   template <class Node> [[nodiscard]] auto& getAddMagnitudesComputeTable() {
