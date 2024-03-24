@@ -87,13 +87,16 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   // 2 = mark first path edge (tmp flag),
   // 1 = mark path is conjugated (tmp flag))
 
-  static constexpr bool isTerminal(const dNode* p) noexcept {
-    return p == nullptr;
+  static bool isTerminal(const dNode* p) noexcept {
+    return (reinterpret_cast<std::uintptr_t>(p) & (~7ULL)) == 0ULL;
   }
   static constexpr dNode* getTerminal() noexcept { return nullptr; }
 
+  [[nodiscard]] inline bool isIdentity() const noexcept {
+    return (flags & static_cast<std::uint8_t>(16U)) != 0;
+  }
   [[nodiscard]] static constexpr bool isIdentity(const dNode* p) noexcept {
-    return p == nullptr;
+    return p == nullptr || p->isIdentity();
   }
 
   [[nodiscard]] [[maybe_unused]] static constexpr bool
