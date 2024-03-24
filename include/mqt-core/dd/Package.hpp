@@ -1578,13 +1578,33 @@ private:
     const auto yWeight = static_cast<ComplexValue>(y.w);
     const auto rWeight = xWeight * yWeight;
     if (x.isIdentity()) {
-      return {y.p, rWeight};
+      if constexpr (!std::is_same_v<RightOperandNode, dNode>) {
+        return {y.p, rWeight};
+      } else {
+        if (y.isIdentity() ||
+            (dNode::isDensityMatrixTempFlagSet(y.p->flags) &&
+             generateDensityMatrix) ||
+            (!dNode::isDensityMatrixTempFlagSet(y.p->flags) &&
+             !generateDensityMatrix)) {
+          return {y.p, rWeight};
+        }
+      }
     }
 
     if constexpr (std::is_same_v<RightOperandNode, mNode> ||
                   std::is_same_v<RightOperandNode, dNode>) {
       if (y.isIdentity()) {
-        return {x.p, rWeight};
+        if constexpr (!std::is_same_v<LeftOperandNode, dNode>) {
+          return {x.p, rWeight};
+        } else {
+          if (x.isIdentity() ||
+              (dNode::isDensityMatrixTempFlagSet(x.p->flags) &&
+               generateDensityMatrix) ||
+              (!dNode::isDensityMatrixTempFlagSet(x.p->flags) &&
+               !generateDensityMatrix)) {
+            return {x.p, rWeight};
+          }
+        }
       }
     }
     assert(x.p != nullptr);
