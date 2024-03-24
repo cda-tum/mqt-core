@@ -84,6 +84,37 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
   }
 }
 
+TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackD) {
+  const dd::SparsePVecStrKeys reference = {
+      {"0000", 0.0332328704931}, {"0001", 0.0683938280189},
+      {"0011", 0.0117061689898}, {"0100", 0.0129643065735},
+      {"0101", 0.0107812802908}, {"0111", 0.0160082331009},
+      {"1000", 0.0328434857577}, {"1001", 0.7370101351171},
+      {"1011", 0.0186346925411}, {"1101", 0.0275086747656}};
+
+  auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
+
+  auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
+  dd->incRef(rootEdge);
+
+  const auto* const noiseEffects = "D";
+
+  auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
+      dd, qc.getNqubits(), 0.01, 0.02, 0.02, 0.04, noiseEffects);
+
+  for (auto const& op : qc) {
+    dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), *dd));
+    deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
+  }
+
+  // Expect that all results are the same
+  const auto m = rootEdge.getSparseProbabilityVectorStrKeys(0.01);
+  static constexpr fp TOLERANCE = 1e-10;
+  for (const auto& [key, value] : m) {
+    EXPECT_NEAR(value, reference.at(key), TOLERANCE);
+  }
+}
+
 TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   qc::QuantumComputation qcOp{};
 
