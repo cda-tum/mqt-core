@@ -232,7 +232,8 @@ void DeterministicNoiseFunctionality::applyNoiseEffects(
   auto usedQubits = qcOperation->getUsedQubits();
   dCachedEdge nodeAfterNoise = {};
   dEdge::applyDmChangesToEdge(originalEdge);
-  nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false);
+  nodeAfterNoise = applyNoiseEffects(originalEdge, usedQubits, false,
+                                     static_cast<Qubit>(nQubits));
   dEdge::revertDmChangesToEdge(originalEdge);
   auto r = dEdge{nodeAfterNoise.p, package->cn.lookup(nodeAfterNoise.w)};
   package->incRef(r);
@@ -244,36 +245,45 @@ void DeterministicNoiseFunctionality::applyNoiseEffects(
 
 dCachedEdge DeterministicNoiseFunctionality::applyNoiseEffects(
     dEdge& originalEdge, const std::set<qc::Qubit>& usedQubits,
-    const bool firstPathEdge) {
+    const bool firstPathEdge, const Qubit level) {
+
   const auto originalWeight = static_cast<ComplexValue>(originalEdge.w);
-  if (originalEdge.isTerminal() || originalEdge.p->v < *usedQubits.begin()) {
+  if (originalEdge.isZeroTerminal() || level <= *usedQubits.begin()) {
     return {originalEdge.p, originalWeight};
   }
 
   auto originalCopy = dEdge{originalEdge.p, Complex::one()};
   ArrayOfEdges newEdges{};
-  for (std::size_t i = 0; i < newEdges.size(); i++) {
-    auto& successor = originalCopy.p->e[i];
-    if (firstPathEdge || i == 1) {
-      // If I am to the firstPathEdge I cannot minimize the necessary
-      // operations anymore
-      dEdge::applyDmChangesToEdge(successor);
-      newEdges[i] = applyNoiseEffects(successor, usedQubits, true);
-      dEdge::revertDmChangesToEdge(successor);
-    } else if (i == 2) {
-      // Since e[1] == e[2] (due to density matrix representation), I can skip
-      // calculating e[2]
-      newEdges[2] = newEdges[1];
-    } else {
-      dEdge::applyDmChangesToEdge(successor);
-      newEdges[i] = applyNoiseEffects(successor, usedQubits, false);
-      dEdge::revertDmChangesToEdge(successor);
+  if (originalEdge.isIdentity()) {
+    newEdges[0] =
+        applyNoiseEffects(originalCopy, usedQubits, firstPathEdge, level - 1U);
+    newEdges[3] =
+        applyNoiseEffects(originalCopy, usedQubits, firstPathEdge, level - 1U);
+  } else {
+    for (std::size_t i = 0; i < newEdges.size(); i++) {
+      auto& successor = originalCopy.p->e[i];
+      if (firstPathEdge || i == 1) {
+        // If I am to the firstPathEdge I cannot minimize the necessary
+        // operations anymore
+        dEdge::applyDmChangesToEdge(successor);
+        newEdges[i] =
+            applyNoiseEffects(successor, usedQubits, true, level - 1U);
+        dEdge::revertDmChangesToEdge(successor);
+      } else if (i == 2) {
+        // Since e[1] == e[2] (due to density matrix representation), I can skip
+        // calculating e[2]
+        newEdges[2] = newEdges[1];
+      } else {
+        dEdge::applyDmChangesToEdge(successor);
+        newEdges[i] =
+            applyNoiseEffects(successor, usedQubits, false, level - 1U);
+        dEdge::revertDmChangesToEdge(successor);
+      }
     }
   }
-  if (std::any_of(usedQubits.begin(), usedQubits.end(),
-                  [originalEdge](const qc::Qubit qubit) {
-                    return originalEdge.p->v == qubit;
-                  })) {
+  if (std::any_of(
+          usedQubits.begin(), usedQubits.end(),
+          [&level](const qc::Qubit qubit) { return (level - 1U) == qubit; })) {
     for (auto const& type : noiseEffects) {
       switch (type) {
       case AmplitudeDamping:
@@ -297,7 +307,7 @@ dCachedEdge DeterministicNoiseFunctionality::applyNoiseEffects(
     }
   }
 
-  auto e = package->makeDDNode(originalCopy.p->v, newEdges, firstPathEdge);
+  auto e = package->makeDDNode(level - 1U, newEdges, firstPathEdge);
   if (e.w.exactlyZero()) {
     return e;
   }
