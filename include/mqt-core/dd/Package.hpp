@@ -1610,8 +1610,6 @@ private:
         }
       }
     }
-    assert(x.p != nullptr);
-    assert(y.p != nullptr);
 
     auto& computeTable = getMultiplicationComputeTable<RightOperandNode>();
     if (const auto* r = computeTable.lookup(x.p, y.p, generateDensityMatrix);
@@ -1632,7 +1630,7 @@ private:
         for (auto k = 0U; k < rows; k++) {
           const auto xIdx = rows * i + k;
           LEdge e1{};
-          if (x.p->v == var) {
+          if (x.p != nullptr && x.p->v == var) {
             e1 = x.p->e[xIdx];
           } else {
             if (xIdx == 0 || xIdx == 3) {
@@ -1644,7 +1642,7 @@ private:
 
           const auto yIdx = j + cols * k;
           REdge e2{};
-          if (y.p->v == var) {
+          if (y.p != nullptr && y.p->v == var) {
             e2 = y.p->e[yIdx];
           } else {
             if (yIdx == 0 || yIdx == 3) {
