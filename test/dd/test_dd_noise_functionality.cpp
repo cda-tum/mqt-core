@@ -61,7 +61,6 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
       {"0011", 0.0242454336917}, {"1011", 0.0262779844799},
       {"0111", 0.0239296920989}, {"1111", 0.0110373166627}};
 
-  const std::array<std::array<dd::SparsePVecStrKeys, 2>, 2> results{};
   auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
@@ -77,16 +76,11 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
     deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
   }
 
-  const auto m = rootEdge.getSparseProbabilityVectorStrKeys(0.001);
-
   // Expect that all results are the same
+  const auto m = rootEdge.getSparseProbabilityVectorStrKeys(0.001);
   static constexpr fp TOLERANCE = 1e-10;
-  for (const auto& result : results) {
-    for (const auto& j : result) {
-      for (const auto& [key, value] : j) {
-        EXPECT_NEAR(value, reference.at(key), TOLERANCE);
-      }
-    }
+  for (const auto& [key, value] : m) {
+    EXPECT_NEAR(value, reference.at(key), TOLERANCE);
   }
 }
 
