@@ -1454,35 +1454,39 @@ public:
   ///
   /// Matrix (conjugate) transpose
   ///
-  UnaryComputeTable<mEdge, mEdge, Config::CT_MAT_CONJ_TRANS_NBUCKET>
+  UnaryComputeTable<mNode*, mCachedEdge, Config::CT_MAT_CONJ_TRANS_NBUCKET>
       conjugateMatrixTranspose{};
 
   mEdge conjugateTranspose(const mEdge& a) {
+    auto r = conjugateTransposeRec(a);
+    return {r.p, cn.lookup(r.w)};
+  }
+
+  mCachedEdge conjugateTransposeRec(const mEdge& a) {
     if (a.isTerminal()) { // terminal case
       return {a.p, ComplexNumbers::conj(a.w)};
     }
 
     // check if in compute table
-    if (const auto* r = conjugateMatrixTranspose.lookup(a); r != nullptr) {
-      return *r;
+    if (const auto* r = conjugateMatrixTranspose.lookup(a.p); r != nullptr) {
+      return {r->p, r->w * ComplexNumbers::conj(a.w)};
     }
 
-    std::array<mEdge, NEDGE> e{};
+    std::array<mCachedEdge, NEDGE> e{};
     // conjugate transpose submatrices and rearrange as required
     for (auto i = 0U; i < RADIX; ++i) {
       for (auto j = 0U; j < RADIX; ++j) {
-        e[RADIX * i + j] = conjugateTranspose(a.p->e[RADIX * j + i]);
+        e[RADIX * i + j] = conjugateTransposeRec(a.p->e[RADIX * j + i]);
       }
     }
     // create new top node
     auto res = makeDDNode(a.p->v, e);
 
-    // adjust top weight including conjugate
-    res.w = cn.lookup(res.w * ComplexNumbers::conj(a.w));
-
     // put it in the compute table
-    conjugateMatrixTranspose.insert(a, res);
-    return res;
+    conjugateMatrixTranspose.insert(a.p, res);
+
+    // adjust top weight including conjugate
+    return {res.p, res.w * ComplexNumbers::conj(a.w)};
   }
 
   ///
