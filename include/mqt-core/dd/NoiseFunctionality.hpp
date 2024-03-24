@@ -125,7 +125,7 @@ public:
 private:
   dCachedEdge applyNoiseEffects(dEdge& originalEdge,
                                 const std::set<qc::Qubit>& usedQubits,
-                                bool firstPathEdge);
+                                bool firstPathEdge, Qubit level);
 
   static void applyPhaseFlipToEdges(ArrayOfEdges& e, double probability);
 

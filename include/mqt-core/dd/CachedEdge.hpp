@@ -27,6 +27,8 @@ template <typename T> class MemoryManager;
 template <typename T>
 using isVector = std::enable_if_t<std::is_same_v<T, vNode>, bool>;
 template <typename T>
+using isMatrix = std::enable_if_t<std::is_same_v<T, mNode>, bool>;
+template <typename T>
 using isMatrixVariant =
     std::enable_if_t<std::is_same_v<T, mNode> || std::is_same_v<T, dNode>,
                      bool>;
@@ -100,6 +102,14 @@ template <typename Node> struct CachedEdge {
     return terminal(ComplexValue(1.));
   }
 
+  /**
+   * @brief Check whether this is a terminal.
+   * @return whether this is a terminal
+   */
+  [[nodiscard]] constexpr bool isTerminal() const {
+    return Node::isTerminal(p);
+  }
+
   ///---------------------------------------------------------------------------
   ///                     \n Methods for vector DDs \n
   ///---------------------------------------------------------------------------
@@ -136,6 +146,22 @@ template <typename Node> struct CachedEdge {
   template <typename T = Node, isMatrixVariant<T> = true>
   static CachedEdge normalize(Node* p, const std::array<CachedEdge, NEDGE>& e,
                               MemoryManager<Node>& mm, ComplexNumbers& cn);
+
+  /**
+   * @brief Check whether the matrix represented by the DD is the identity.
+   * @tparam T template parameter to enable this function only for matrix nodes
+   * @return whether the matrix is the identity
+   */
+  template <typename T = Node, isMatrixVariant<T> = true>
+  [[nodiscard]] bool isIdentity(const bool upToGlobalPhase = true) const {
+    if (!isTerminal()) {
+      return false;
+    }
+    if (upToGlobalPhase) {
+      return !w.exactlyZero();
+    }
+    return w.exactlyOne();
+  }
 };
 
 } // namespace dd

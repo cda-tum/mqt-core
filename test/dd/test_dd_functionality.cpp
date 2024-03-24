@@ -27,7 +27,7 @@ protected:
     initialComplexCount = dd->cn.realCount();
 
     // initial state preparation
-    e = ident = dd->makeIdent(nqubits);
+    e = ident = dd->makeIdent();
     dd->incRef(ident);
 
     std::array<std::mt19937_64::result_type, std::mt19937_64::state_size>
@@ -329,10 +329,10 @@ TEST_F(DDFunctionality, nonUnitary) {
   }
   auto barrier =
       qc::StandardOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
-  EXPECT_EQ(getDD(&barrier, *dd), dd->makeIdent(nqubits));
-  EXPECT_EQ(getInverseDD(&barrier, *dd), dd->makeIdent(nqubits));
-  EXPECT_EQ(getDD(&barrier, *dd, dummyMap), dd->makeIdent(nqubits));
-  EXPECT_EQ(getInverseDD(&barrier, *dd, dummyMap), dd->makeIdent(nqubits));
+  EXPECT_TRUE(getDD(&barrier, *dd).isIdentity());
+  EXPECT_TRUE(getInverseDD(&barrier, *dd).isIdentity());
+  EXPECT_TRUE(getDD(&barrier, *dd, dummyMap).isIdentity());
+  EXPECT_TRUE(getInverseDD(&barrier, *dd, dummyMap).isIdentity());
 }
 
 TEST_F(DDFunctionality, CircuitEquivalence) {

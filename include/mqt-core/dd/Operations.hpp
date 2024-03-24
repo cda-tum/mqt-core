@@ -193,11 +193,11 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
     const auto target1 = targets[1U];
     // update permutation
     std::swap(permutation.at(target0), permutation.at(target1));
-    return dd.makeIdent(nqubits);
+    return dd.makeIdent();
   }
 
   if (type == qc::Barrier) {
-    return dd.makeIdent(nqubits);
+    return dd.makeIdent();
   }
 
   if (type == qc::GPhase) {
@@ -205,7 +205,7 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
     if (inverse) {
       phase = -phase;
     }
-    auto id = dd.makeIdent(nqubits);
+    auto id = dd.makeIdent();
     id.w = dd.cn.lookup(std::cos(phase), std::sin(phase));
     return id;
   }
@@ -229,7 +229,7 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
   }
 
   if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
-    auto e = dd.makeIdent(op->getNqubits());
+    auto e = dd.makeIdent();
     if (inverse) {
       for (const auto& operation : *compoundOp) {
         e = dd.multiply(e, getInverseDD(operation.get(), dd, permutation));
@@ -281,10 +281,9 @@ void changePermutation(DDType& on, qc::Permutation& from,
                        const qc::Permutation& to, Package<Config>& dd,
                        const bool regular = true) {
   assert(from.size() >= to.size());
-  if (on.isTerminal()) {
+  if (on.isZeroTerminal()) {
     return;
   }
-  assert(on.p != nullptr);
 
   // iterate over (k,v) pairs of second permutation
   for (const auto& [i, goal] : to) {
@@ -313,8 +312,8 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD =
-        dd.makeTwoQubitGateDD(SWAP_MAT, on.p->v + 1U, from.at(i), from.at(j));
+    const auto swapDD = dd.makeTwoQubitGateDD(SWAP_MAT, std::max(i, j) + 1U,
+                                              from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd.multiply(swapDD, on);
     } else {

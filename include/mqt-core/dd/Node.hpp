@@ -39,32 +39,18 @@ struct mNode {                        // NOLINT(readability-identifier-naming)
   RefCount ref{};                     // reference count
   Qubit v{};                          // variable index
   std::uint8_t flags = 0;
-  // 32 = unused (was used to mark a node with is symmetric).
-  // 16 = marks a node resembling identity
+  // 32 = unused (was used to mark a node which is symmetric)
+  // 16 = unused (was used to mark a node resembling the identity)
   // 8 = marks a reduced dm node,
   // 4 = marks a dm (tmp flag),
   // 2 = mark first path edge (tmp flag),
-  // 1 = mark path is conjugated (tmp flag))
+  // 1 = mark path is conjugated (tmp flag)
 
   [[nodiscard]] static constexpr bool isTerminal(const mNode* p) noexcept {
     return p == nullptr;
   }
   [[nodiscard]] static constexpr mNode* getTerminal() noexcept {
     return nullptr;
-  }
-
-  [[nodiscard]] inline bool isIdentity() const noexcept {
-    return (flags & static_cast<std::uint8_t>(16U)) != 0;
-  }
-  [[nodiscard]] static constexpr bool isIdentity(const mNode* p) noexcept {
-    return p == nullptr || p->isIdentity();
-  }
-  inline void setIdentity(const bool identity) noexcept {
-    if (identity) {
-      flags = (flags | static_cast<std::uint8_t>(16U));
-    } else {
-      flags = (flags & static_cast<std::uint8_t>(~16U));
-    }
   }
 };
 using mEdge = Edge<mNode>;
@@ -80,24 +66,17 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   RefCount ref{};                     // reference count
   Qubit v{};                          // variable index
   std::uint8_t flags = 0;
-  // 32 = unused (was used to mark a node with is symmetric).
-  // 16 = marks a node resembling identity
+  // 32 = unused (was used to mark a node which is symmetric)
+  // 16 = unused (was used to mark a node resembling the identity)
   // 8 = marks a reduced dm node,
   // 4 = marks a dm (tmp flag),
   // 2 = mark first path edge (tmp flag),
-  // 1 = mark path is conjugated (tmp flag))
+  // 1 = mark path is conjugated (tmp flag)
 
   static bool isTerminal(const dNode* p) noexcept {
     return (reinterpret_cast<std::uintptr_t>(p) & (~7ULL)) == 0ULL;
   }
   static constexpr dNode* getTerminal() noexcept { return nullptr; }
-
-  [[nodiscard]] inline bool isIdentity() const noexcept {
-    return (flags & static_cast<std::uint8_t>(16U)) != 0;
-  }
-  [[nodiscard]] static constexpr bool isIdentity(const dNode* p) noexcept {
-    return p == nullptr || p->isIdentity();
-  }
 
   [[nodiscard]] [[maybe_unused]] static constexpr bool
   tempDensityMatrixFlagsEqual(const std::uint8_t a,
