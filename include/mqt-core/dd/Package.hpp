@@ -512,27 +512,28 @@ public:
   /// Matrix nodes, edges and quantum gates
   ///
   // build matrix representation for a single gate on an n-qubit circuit
-  mEdge makeGateDD(const GateMatrix& mat, const std::size_t n,
-                   const qc::Qubit target, const std::size_t start = 0) {
-    return makeGateDD(mat, n, qc::Controls{}, target, start);
+  mEdge makeGateDD(const GateMatrix& mat, const qc::Qubit target) {
+    return makeGateDD(mat, qc::Controls{}, target);
   }
-  mEdge makeGateDD(const GateMatrix& mat, const std::size_t n,
-                   const qc::Control& control, const qc::Qubit target,
-                   const std::size_t start = 0) {
-    return makeGateDD(mat, n, qc::Controls{control}, target, start);
+  mEdge makeGateDD(const GateMatrix& mat, const qc::Control& control,
+                   const qc::Qubit target) {
+    return makeGateDD(mat, qc::Controls{control}, target);
   }
-  mEdge makeGateDD(const GateMatrix& mat, const std::size_t n,
-                   const qc::Controls& controls, const qc::Qubit target,
-                   const std::size_t start = 0) {
-    if (n + start > nqubits) {
+  mEdge makeGateDD(const GateMatrix& mat, const qc::Controls& controls,
+                   const qc::Qubit target) {
+    if (std::any_of(controls.begin(), controls.end(),
+                    [this](const auto& c) {
+                      return c.qubit > static_cast<Qubit>(nqubits - 1U);
+                    }) ||
+        target > static_cast<Qubit>(nqubits - 1U)) {
       throw std::runtime_error{
-          "Requested gate with " + std::to_string(n + start) +
-          " qubits, but current package configuration only supports up to " +
+          "Requested gate acting on qubit(s) with index larger than " +
+          std::to_string(nqubits - 1U) +
+          " while the package configuration only supports up to " +
           std::to_string(nqubits) +
           " qubits. Please allocate a larger package instance."};
     }
     std::array<mCachedEdge, NEDGE> em{};
-    auto it = controls.begin();
     for (auto i = 0U; i < NEDGE; ++i) {
       em[i] = mCachedEdge::terminal(mat[i]);
     }
@@ -543,51 +544,40 @@ public:
       return {e.p, cn.lookup(e.w)};
     }
 
+    auto it = controls.begin();
+    auto edges = std::array{mCachedEdge::zero(), mCachedEdge::zero(),
+                            mCachedEdge::zero(), mCachedEdge::zero()};
+
     // process lines below target
-    auto z = static_cast<Qubit>(start);
-    for (; z < static_cast<Qubit>(target); ++z) {
+    for (; it != controls.end() && it->qubit < target; ++it) {
       for (auto i1 = 0U; i1 < RADIX; ++i1) {
         for (auto i2 = 0U; i2 < RADIX; ++i2) {
           auto i = i1 * RADIX + i2;
-          if (it != controls.end() && it->qubit == z) {
-            auto edges = std::array{mCachedEdge::zero(), mCachedEdge::zero(),
-                                    mCachedEdge::zero(), mCachedEdge::zero()};
-            if (it->type == qc::Control::Type::Neg) { // neg. control
-              edges[0] = em[i];
-              if (i1 == i2) {
-                edges[3] = mCachedEdge::one();
-              }
-            } else { // pos. control
-              edges[3] = em[i];
-              if (i1 == i2) {
-                edges[0] = mCachedEdge::one();
-              }
-            }
-            em[i] = makeDDNode(z, edges);
+          if (it->type == qc::Control::Type::Neg) { // neg. control
+            edges[0] = em[i];
+            edges[3] = (i1 == i2) ? mCachedEdge::one() : mCachedEdge::zero();
+          } else { // pos. control
+            edges[0] = (i1 == i2) ? mCachedEdge::one() : mCachedEdge::zero();
+            edges[3] = em[i];
           }
+          em[i] = makeDDNode(static_cast<Qubit>(it->qubit), edges);
         }
-      }
-      if (it != controls.end() && it->qubit == z) {
-        ++it;
       }
     }
 
     // target line
-    auto e = makeDDNode(z, em);
+    auto e = makeDDNode(static_cast<Qubit>(target), em);
 
     // process lines above target
-    for (; z < static_cast<Qubit>(n - 1 + start); z++) {
-      auto q = static_cast<Qubit>(z + 1);
-      if (it != controls.end() && it->qubit == static_cast<qc::Qubit>(q)) {
-        if (it->type == qc::Control::Type::Neg) { // neg. control
-          e = makeDDNode(q,
-                         std::array{e, mCachedEdge::zero(), mCachedEdge::zero(),
-                                    mCachedEdge::one()});
-        } else { // pos. control
-          e = makeDDNode(q, std::array{mCachedEdge::one(), mCachedEdge::zero(),
-                                       mCachedEdge::zero(), e});
-        }
-        ++it;
+    for (; it != controls.end(); ++it) {
+      if (it->type == qc::Control::Type::Neg) { // neg. control
+        edges[0] = e;
+        edges[3] = mCachedEdge::one();
+        e = makeDDNode(static_cast<Qubit>(it->qubit), edges);
+      } else { // pos. control
+        edges[0] = mCachedEdge::one();
+        edges[3] = e;
+        e = makeDDNode(static_cast<Qubit>(it->qubit), edges);
       }
     }
     return {e.p, cn.lookup(e.w)};
@@ -1135,7 +1125,7 @@ public:
     const auto nrQubits = e.p->v + 1U;
     dEdge::setDensityMatrixTrue(e);
 
-    auto const measZeroDd = makeGateDD(MEAS_ZERO_MAT, nrQubits, index);
+    auto const measZeroDd = makeGateDD(MEAS_ZERO_MAT, index);
 
     auto tmp0 = conjugateTranspose(measZeroDd);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
@@ -1144,7 +1134,7 @@ public:
 
     std::uniform_real_distribution<fp> dist(0., 1.);
     if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
-      auto const measOneDd = makeGateDD(MEAS_ONE_MAT, nrQubits, index);
+      auto const measOneDd = makeGateDD(MEAS_ONE_MAT, index);
       tmp0 = conjugateTranspose(measOneDd);
       tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
       tmp2 = multiply(densityFromMatrixEdge(measOneDd), tmp1, 0, true);
@@ -1181,8 +1171,7 @@ public:
                                     const bool measureZero) {
     GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
 
-    const auto measurementGate =
-        makeGateDD(measurementMatrix, rootEdge.p->v + 1U, index);
+    const auto measurementGate = makeGateDD(measurementMatrix, index);
 
     vEdge e = multiply(measurementGate, rootEdge);
 

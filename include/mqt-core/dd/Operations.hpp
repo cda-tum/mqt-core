@@ -19,8 +19,6 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
   GateMatrix gm;
 
   const auto type = op->getType();
-  const auto nqubits = op->getNqubits();
-  const auto startQubit = op->getStartingQubit();
   const auto& parameter = op->getParameter();
 
   switch (type) {
@@ -88,7 +86,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     oss << "DD for gate" << op->getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
-  return dd.makeGateDD(gm, nqubits, controls, target, startQubit);
+  return dd.makeGateDD(gm, controls, target);
 }
 
 // two-target Operations
