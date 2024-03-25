@@ -53,7 +53,7 @@ def _run_tests(
 
     session.install(*BUILD_REQUIREMENTS, *install_args, env=env)
     install_arg = f".[{','.join(_extras)}]"
-    session.install("--no-build-isolation", install_arg, *install_args, env=env)
+    session.install("-v", "--no-build-isolation", install_arg, *install_args, env=env)
     session.run("pytest", *run_args, *posargs, env=env)
 
 

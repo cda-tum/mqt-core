@@ -2,6 +2,8 @@
 
 #include "Operation.hpp"
 
+#include <algorithm>
+
 namespace qc {
 
 class CompoundOperation final : public Operation {
