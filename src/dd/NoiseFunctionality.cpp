@@ -116,7 +116,7 @@ mEdge StochasticNoiseFunctionality::stackOperation(
       op != nullptr) {
     return package->multiply(*op, operation);
   }
-  const auto gateDD = package->makeGateDD(matrix, getNumberOfQubits(), target);
+  const auto gateDD = package->makeGateDD(matrix, target);
   package->stochasticNoiseOperationCache.insert(noiseOperation, target, gateDD);
   return package->multiply(gateDD, operation);
 }

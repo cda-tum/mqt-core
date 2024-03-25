@@ -270,8 +270,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
 
       if (RealNumber::approximatelyEquals(pone, 1.)) {
         const qc::MatrixDD xGate =
-            dd.makeGateDD(X_MAT, static_cast<std::size_t>(state.p->v) + 1U,
-                          static_cast<Qubit>(permutation.at(target)));
+            dd.makeGateDD(X_MAT, static_cast<Qubit>(permutation.at(target)));
         const qc::VectorDD resetState = dd.multiply(xGate, state);
         dd.incRef(resetState);
         dd.decRef(state);
