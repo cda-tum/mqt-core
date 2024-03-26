@@ -22,7 +22,7 @@ public:
   NonUnitaryOperation(Qubit qubit, Bit cbit);
 
   // General constructor
-  NonUnitaryOperation(Targets qubits, OpType op = Reset);
+  explicit NonUnitaryOperation(Targets qubits, OpType op = Reset);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
     return std::make_unique<NonUnitaryOperation>(*this);

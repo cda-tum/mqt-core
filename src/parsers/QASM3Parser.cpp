@@ -796,9 +796,9 @@ public:
     return blockOps;
   }
 
-  [[nodiscard]] std::unique_ptr<qc::Operation>
+  [[nodiscard]] static std::unique_ptr<qc::Operation>
   getBarrierOp(const std::shared_ptr<BarrierStatement>& barrierStatement,
-               const qc::QuantumRegisterMap& qregs) const {
+               const qc::QuantumRegisterMap& qregs) {
     std::vector<qc::Qubit> qubits{};
     for (const auto& gate : barrierStatement->gates) {
       translateGateOperand(gate, qubits, qregs, barrierStatement->debugInfo);
