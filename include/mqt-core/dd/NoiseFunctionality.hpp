@@ -75,11 +75,6 @@ protected:
                                      bool amplitudeDampingFlag) const;
 
 public:
-  //  [[nodiscard]] mEdge getIdentityDD() const { return identityDD; }
-  //  void setNoiseEffects(std::vector<NoiseOperations> newNoiseEffects) {
-  //    noiseEffects = std::move(newNoiseEffects);
-  //  }
-
   void applyNoiseOperation(const std::set<qc::Qubit>& targets, mEdge operation,
                            vEdge& state, std::mt19937_64& generator);
 
