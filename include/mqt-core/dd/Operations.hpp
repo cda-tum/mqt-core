@@ -96,8 +96,6 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
                        const qc::Controls& controls, qc::Qubit target0,
                        qc::Qubit target1, const bool inverse) {
   const auto type = op->getType();
-  const auto nqubits = op->getNqubits();
-  const auto startQubit = op->getStartingQubit();
   const auto& parameter = op->getParameter();
 
   if (type == qc::DCX && inverse) {
@@ -154,8 +152,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     throw qc::QFRException(oss.str());
   }
 
-  return dd.makeTwoQubitGateDD(gm, nqubits, controls, target0, target1,
-                               startQubit);
+  return dd.makeTwoQubitGateDD(gm, controls, target0, target1);
 }
 
 // The methods with a permutation parameter apply these Operations according to
@@ -310,8 +307,7 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD = dd.makeTwoQubitGateDD(SWAP_MAT, std::max(i, j) + 1U,
-                                              from.at(i), from.at(j));
+    const auto swapDD = dd.makeTwoQubitGateDD(SWAP_MAT, from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd.multiply(swapDD, on);
     } else {

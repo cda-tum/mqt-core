@@ -586,41 +586,41 @@ public:
   /**
   Creates the DD for a two-qubit gate
   @param mat Matrix representation of the gate
-  @param n Number of qubits in the circuit
   @param target0 First target qubit
   @param target1 Second target qubit
-  @param start Start index for the DD
   @return DD representing the gate
   @throws std::runtime_error if the number of qubits is larger than the package
   configuration
   **/
-  mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat, const std::size_t n,
-                           const qc::Qubit target0, const qc::Qubit target1,
-                           const std::size_t start = 0) {
-    return makeTwoQubitGateDD(mat, n, qc::Controls{}, target0, target1, start);
+  mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat,
+                           const qc::Qubit target0, const qc::Qubit target1) {
+    return makeTwoQubitGateDD(mat, qc::Controls{}, target0, target1);
   }
 
   /**
   Creates the DD for a two-qubit gate
   @param mat Matrix representation of the gate
-  @param n Number of qubits in the circuit
   @param controls Control qubits of the two-qubit gate
   @param target0 First target qubit
   @param target1 Second target qubit
-  @param start Start index for the DD
   @return DD representing the gate
   @throws std::runtime_error if the number of qubits is larger than the package
   configuration
   **/
-  mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat, const std::size_t n,
+  mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat,
                            const qc::Controls& controls,
-                           const qc::Qubit target0, const qc::Qubit target1,
-                           const std::size_t start = 0) {
+                           const qc::Qubit target0, const qc::Qubit target1) {
     // sanity check
-    if (n + start > nqubits) {
+    if (std::any_of(controls.begin(), controls.end(),
+                    [this](const auto& c) {
+                      return c.qubit > static_cast<Qubit>(nqubits - 1U);
+                    }) ||
+        target0 > static_cast<Qubit>(nqubits - 1U) ||
+        target1 > static_cast<Qubit>(nqubits - 1U)) {
       throw std::runtime_error{
-          "Requested gate with " + std::to_string(n + start) +
-          " qubits, but current package configuration only supports up to " +
+          "Requested gate acting on qubit(s) with index larger than " +
+          std::to_string(nqubits - 1U) +
+          " while the package configuration only supports up to " +
           std::to_string(nqubits) +
           " qubits. Please allocate a larger package instance."};
     }
@@ -637,31 +637,23 @@ public:
 
     // process lines below smaller target
     auto it = controls.begin();
-    auto z = static_cast<Qubit>(start);
     const auto smallerTarget = std::min(target0, target1);
-    for (; z < smallerTarget; ++z) {
+
+    auto edges = std::array{mCachedEdge::zero(), mCachedEdge::zero(),
+                            mCachedEdge::zero(), mCachedEdge::zero()};
+
+    for (; it != controls.end() && it->qubit < smallerTarget; ++it) {
       for (auto row = 0U; row < NEDGE; ++row) {
         for (auto col = 0U; col < NEDGE; ++col) {
-          if (it != controls.end() && it->qubit == z) {
-            auto edges = std::array{mCachedEdge::zero(), mCachedEdge::zero(),
-                                    mCachedEdge::zero(), mCachedEdge::zero()};
-            if (it->type == qc::Control::Type::Neg) { // negative control
-              edges[0] = em[row][col];
-              if (row == col) {
-                edges[3] = mCachedEdge::one();
-              }
-            } else { // positive control
-              edges[3] = em[row][col];
-              if (row == col) {
-                edges[0] = mCachedEdge::one();
-              }
-            }
-            em[row][col] = makeDDNode(z, edges);
+          if (it->type == qc::Control::Type::Neg) { // negative control
+            edges[0] = em[row][col];
+            edges[3] = (row == col) ? mCachedEdge::one() : mCachedEdge::zero();
+          } else { // positive control
+            edges[0] = (row == col) ? mCachedEdge::one() : mCachedEdge::zero();
+            edges[3] = em[row][col];
           }
+          em[row][col] = makeDDNode(static_cast<Qubit>(it->qubit), edges);
         }
-      }
-      if (it != controls.end() && it->qubit == z) {
-        it++;
       }
     }
 
@@ -686,53 +678,42 @@ public:
             }
           }
         }
-        em0.at(row * RADIX + col) = makeDDNode(z, local);
+        em0.at(row * RADIX + col) =
+            makeDDNode(static_cast<Qubit>(smallerTarget), local);
       }
     }
 
     // process lines between the two targets
-    for (++z; z < std::max(target0, target1); ++z) {
+    const auto largerTarget = std::max(target0, target1);
+    for (; it != controls.end() && it->qubit < largerTarget; ++it) {
       for (auto i = 0U; i < NEDGE; ++i) {
-        if (it != controls.end() && it->qubit == z) {
-          auto edges = std::array{mCachedEdge::zero(), mCachedEdge::zero(),
-                                  mCachedEdge::zero(), mCachedEdge::zero()};
-          if (it->type == qc::Control::Type::Neg) { // negative control
-            edges[0] = em0[i];
-            if (i == 0 || i == NEDGE - 1) {
-              edges[3] = mCachedEdge::one();
-            }
-          } else { // positive control
-            edges[3] = em0[i];
-            if (i == 0 || i == NEDGE - 1) {
-              edges[0] = mCachedEdge::one();
-            }
-          }
-          em0[i] = makeDDNode(z, edges);
+        if (it->type == qc::Control::Type::Neg) { // negative control
+          edges[0] = em0[i];
+          edges[3] =
+              (i == 0 || i == 3) ? mCachedEdge::one() : mCachedEdge::zero();
+        } else { // positive control
+          edges[0] =
+              (i == 0 || i == 3) ? mCachedEdge::one() : mCachedEdge::zero();
+          edges[3] = em0[i];
         }
-      }
-      if (it != controls.end() && it->qubit == z) {
-        ++it;
+        em0[i] = makeDDNode(static_cast<Qubit>(it->qubit), edges);
       }
     }
 
     // process the larger target by combining the four DDs from the smaller
     // target
-    auto e = makeDDNode(z, em0);
+    auto e = makeDDNode(static_cast<Qubit>(largerTarget), em0);
 
     // process lines above the larger target
-    const auto end = static_cast<Qubit>(n + start);
-    for (++z; z < end; ++z) {
-      if (it != controls.end() && it->qubit == z) {
-        if (it->type == qc::Control::Type::Neg) { // negative control
-          e = makeDDNode(z,
-                         std::array{e, mCachedEdge::zero(), mCachedEdge::zero(),
-                                    mCachedEdge::one()});
-        } else { // positive control
-          e = makeDDNode(z, std::array{mCachedEdge::one(), mCachedEdge::zero(),
-                                       mCachedEdge::zero(), e});
-        }
-        ++it;
+    for (; it != controls.end(); ++it) {
+      if (it->type == qc::Control::Type::Neg) { // negative control
+        edges[0] = e;
+        edges[3] = mCachedEdge::one();
+      } else { // positive control
+        edges[0] = mCachedEdge::one();
+        edges[3] = e;
       }
+      e = makeDDNode(static_cast<Qubit>(it->qubit), edges);
     }
 
     return {e.p, cn.lookup(e.w)};
