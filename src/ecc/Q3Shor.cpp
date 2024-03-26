@@ -68,12 +68,10 @@ void Q3Shor::addOperation(const qc::Controls& controls,
   const auto numTargets = targets.size();
   const auto numControls = controls.size();
   const auto numQubits = qcOriginal->getNqubits();
-  const auto numMappedQubits = qcMapped->getNqubits();
   for (std::size_t j = 0; j < numTargets; j++) {
     auto i = targets[j];
     if (numControls > 0) {
-      qcMapped->emplace_back<qc::StandardOperation>(numMappedQubits, controls,
-                                                    i, type);
+      qcMapped->emplace_back<qc::StandardOperation>(controls, i, type);
       qc::Controls controls2;
       qc::Controls controls3;
       for (const auto& ct : controls) {
@@ -83,16 +81,15 @@ void Q3Shor::addOperation(const qc::Controls& controls,
             qc::Control{static_cast<Qubit>(ct.qubit + 2 * numQubits), ct.type});
       }
       qcMapped->emplace_back<qc::StandardOperation>(
-          numMappedQubits, controls2, static_cast<Qubit>(i + numQubits), type);
+          controls2, static_cast<Qubit>(i + numQubits), type);
       qcMapped->emplace_back<qc::StandardOperation>(
-          numMappedQubits, controls3, static_cast<Qubit>(i + 2 * numQubits),
-          type);
+          controls3, static_cast<Qubit>(i + 2 * numQubits), type);
     } else {
-      qcMapped->emplace_back<qc::StandardOperation>(numMappedQubits, i, type);
+      qcMapped->emplace_back<qc::StandardOperation>(i, type);
       qcMapped->emplace_back<qc::StandardOperation>(
-          numMappedQubits, static_cast<Qubit>(i + numQubits), type);
+          static_cast<Qubit>(i + numQubits), type);
       qcMapped->emplace_back<qc::StandardOperation>(
-          numMappedQubits, static_cast<Qubit>(i + 2 * numQubits), type);
+          static_cast<Qubit>(i + 2 * numQubits), type);
     }
   }
 }

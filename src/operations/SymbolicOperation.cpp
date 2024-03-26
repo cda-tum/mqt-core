@@ -190,17 +190,13 @@ void SymbolicOperation::checkSymbolicUgate() {
   // NOLINTEND(bugprone-unchecked-optional-access)
 }
 
-void SymbolicOperation::setup(const std::size_t nq,
-                              const std::vector<SymbolOrNumber>& params,
-                              const Qubit startingQubit) {
-  nqubits = nq;
+void SymbolicOperation::setup(const std::vector<SymbolOrNumber>& params) {
   const auto numParams = params.size();
   parameter.resize(numParams);
   symbolicParameter.resize(numParams);
   for (std::size_t i = 0; i < numParams; ++i) {
     storeSymbolOrNumber(params[i], i);
   }
-  startQubit = startingQubit;
   checkSymbolicUgate();
   name = toString(type);
 }
@@ -214,65 +210,55 @@ SymbolicOperation::getInstantiation(const SymbolOrNumber& symOrNum,
       symOrNum);
 }
 
-SymbolicOperation::SymbolicOperation(const std::size_t nq, const Qubit target,
-                                     const OpType g,
-                                     const std::vector<SymbolOrNumber>& params,
-                                     const Qubit startingQubit) {
+SymbolicOperation::SymbolicOperation(
+    const Qubit target, const OpType g,
+    const std::vector<SymbolOrNumber>& params) {
   type = g;
-  setup(nq, params, startingQubit);
+  setup(params);
   targets.emplace_back(target);
 }
 
-SymbolicOperation::SymbolicOperation(const std::size_t nq, const Targets& targ,
-                                     const OpType g,
-                                     const std::vector<SymbolOrNumber>& params,
-                                     const Qubit startingQubit) {
+SymbolicOperation::SymbolicOperation(
+    const Targets& targ, const OpType g,
+    const std::vector<SymbolOrNumber>& params) {
   type = g;
-  setup(nq, params, startingQubit);
+  setup(params);
   targets = targ;
 }
 
-SymbolicOperation::SymbolicOperation(const std::size_t nq,
-                                     const Control control, const Qubit target,
+SymbolicOperation::SymbolicOperation(const Control control, const Qubit target,
                                      const OpType g,
-                                     const std::vector<SymbolOrNumber>& params,
-                                     const Qubit startingQubit)
-    : SymbolicOperation(nq, target, g, params, startingQubit) {
+                                     const std::vector<SymbolOrNumber>& params)
+    : SymbolicOperation(target, g, params) {
   controls.insert(control);
 }
 
-SymbolicOperation::SymbolicOperation(const std::size_t nq,
-                                     const Control control, const Targets& targ,
+SymbolicOperation::SymbolicOperation(const Control control, const Targets& targ,
                                      const OpType g,
-                                     const std::vector<SymbolOrNumber>& params,
-                                     const Qubit startingQubit)
-    : SymbolicOperation(nq, targ, g, params, startingQubit) {
+                                     const std::vector<SymbolOrNumber>& params)
+    : SymbolicOperation(targ, g, params) {
   controls.insert(control);
 }
 
-SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& c,
-                                     const Qubit target, const OpType g,
-                                     const std::vector<SymbolOrNumber>& params,
-                                     const Qubit startingQubit)
-    : SymbolicOperation(nq, target, g, params, startingQubit) {
+SymbolicOperation::SymbolicOperation(const Controls& c, const Qubit target,
+                                     const OpType g,
+                                     const std::vector<SymbolOrNumber>& params)
+    : SymbolicOperation(target, g, params) {
   controls = c;
 }
 
-SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& c,
-                                     const Targets& targ, const OpType g,
-                                     const std::vector<SymbolOrNumber>& params,
-                                     const Qubit startingQubit)
-    : SymbolicOperation(nq, targ, g, params, startingQubit) {
+SymbolicOperation::SymbolicOperation(const Controls& c, const Targets& targ,
+                                     const OpType g,
+                                     const std::vector<SymbolOrNumber>& params)
+    : SymbolicOperation(targ, g, params) {
   controls = c;
 }
 
 // MCF (cSWAP), Peres, parameterized two target Constructor
-SymbolicOperation::SymbolicOperation(const std::size_t nq, const Controls& c,
-                                     const Qubit target0, const Qubit target1,
-                                     const OpType g,
-                                     const std::vector<SymbolOrNumber>& params,
-                                     const Qubit startingQubit)
-    : SymbolicOperation(nq, c, {target0, target1}, g, params, startingQubit) {}
+SymbolicOperation::SymbolicOperation(const Controls& c, const Qubit target0,
+                                     const Qubit target1, const OpType g,
+                                     const std::vector<SymbolOrNumber>& params)
+    : SymbolicOperation(c, {target0, target1}, g, params) {}
 
 bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
                                const Permutation& perm2) const {
@@ -326,7 +312,7 @@ StandardOperation SymbolicOperation::getInstantiatedOperation(
   for (std::size_t i = 0; i < size; ++i) {
     parameters.emplace_back(getInstantiation(getParameter(i), assignment));
   }
-  return {nqubits, targets, type, parameters, startQubit};
+  return {controls, targets, type, parameters};
 }
 
 // Instantiates this Operation

@@ -3,15 +3,14 @@
 #include <algorithm>
 
 namespace qc {
-CompoundOperation::CompoundOperation(const std::size_t nq) {
+CompoundOperation::CompoundOperation() {
   name = "Compound operation:";
-  nqubits = nq;
   type = Compound;
 }
 
 CompoundOperation::CompoundOperation(
-    const std::size_t nq, std::vector<std::unique_ptr<Operation>>&& operations)
-    : CompoundOperation(nq) {
+    std::vector<std::unique_ptr<Operation>>&& operations)
+    : CompoundOperation() {
   // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
   ops = std::move(operations);
 }
@@ -36,13 +35,6 @@ CompoundOperation& CompoundOperation::operator=(const CompoundOperation& co) {
 
 std::unique_ptr<Operation> CompoundOperation::clone() const {
   return std::make_unique<CompoundOperation>(*this);
-}
-
-void CompoundOperation::setNqubits(const std::size_t nq) {
-  nqubits = nq;
-  for (auto& op : ops) {
-    op->setNqubits(nq);
-  }
 }
 
 bool CompoundOperation::isNonUnitaryOperation() const {
@@ -118,12 +110,13 @@ bool CompoundOperation::equals(const Operation& operation) const {
 
 std::ostream& CompoundOperation::print(std::ostream& os,
                                        const Permutation& permutation,
-                                       const std::size_t prefixWidth) const {
+                                       const std::size_t prefixWidth,
+                                       const std::size_t nqubits) const {
   const auto prefix = std::string(prefixWidth - 1, ' ');
   os << std::string(4 * nqubits, '-') << "\n";
   for (const auto& op : ops) {
     os << prefix << ":";
-    op->print(os, permutation, prefixWidth);
+    op->print(os, permutation, prefixWidth, nqubits);
     os << "\n";
   }
   os << prefix << std::string(4 * nqubits + 1, '-');

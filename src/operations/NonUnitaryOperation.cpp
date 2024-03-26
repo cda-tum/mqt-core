@@ -12,12 +12,10 @@
 
 namespace qc {
 // Measurement constructor
-NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq,
-                                         std::vector<Qubit> qubitRegister,
+NonUnitaryOperation::NonUnitaryOperation(std::vector<Qubit> qubitRegister,
                                          std::vector<Bit> classicalRegister)
     : classics(std::move(classicalRegister)) {
   type = Measure;
-  nqubits = nq;
   targets = std::move(qubitRegister);
   name = toString(type);
   if (targets.size() != classics.size()) {
@@ -25,34 +23,31 @@ NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq,
         "Sizes of qubit register and classical register do not match.");
   }
 }
-NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq,
-                                         const Qubit qubit, const Bit cbit)
+NonUnitaryOperation::NonUnitaryOperation(const Qubit qubit, const Bit cbit)
     : classics({cbit}) {
   type = Measure;
-  nqubits = nq;
   targets = {qubit};
   name = toString(type);
 }
 
 // General constructor
-NonUnitaryOperation::NonUnitaryOperation(const std::size_t nq, Targets qubits,
-                                         OpType op) {
+NonUnitaryOperation::NonUnitaryOperation(Targets qubits, OpType op) {
   type = op;
-  nqubits = nq;
   targets = std::move(qubits);
   std::sort(targets.begin(), targets.end());
   name = toString(type);
 }
 
-std::ostream& NonUnitaryOperation::print(
-    std::ostream& os, const Permutation& permutation,
-    [[maybe_unused]] const std::size_t prefixWidth) const {
+std::ostream&
+NonUnitaryOperation::print(std::ostream& os, const Permutation& permutation,
+                           [[maybe_unused]] const std::size_t prefixWidth,
+                           const std::size_t nqubits) const {
   switch (type) {
   case Measure:
-    printMeasurement(os, targets, classics, permutation);
+    printMeasurement(os, targets, classics, permutation, nqubits);
     break;
   case Reset:
-    printReset(os, targets, permutation);
+    printReset(os, targets, permutation, nqubits);
     break;
   default:
     break;
@@ -146,9 +141,11 @@ bool NonUnitaryOperation::equals(const Operation& op, const Permutation& perm1,
   return false;
 }
 
-void NonUnitaryOperation::printMeasurement(
-    std::ostream& os, const std::vector<Qubit>& q, const std::vector<Bit>& c,
-    const Permutation& permutation) const {
+void NonUnitaryOperation::printMeasurement(std::ostream& os,
+                                           const std::vector<Qubit>& q,
+                                           const std::vector<Bit>& c,
+                                           const Permutation& permutation,
+                                           const std::size_t nqubits) {
   auto qubitIt = q.cbegin();
   auto classicIt = c.cbegin();
   if (permutation.empty()) {
@@ -176,7 +173,8 @@ void NonUnitaryOperation::printMeasurement(
 
 void NonUnitaryOperation::printReset(std::ostream& os,
                                      const std::vector<Qubit>& q,
-                                     const Permutation& permutation) const {
+                                     const Permutation& permutation,
+                                     const std::size_t nqubits) const {
   const auto actualTargets = permutation.apply(q);
   for (std::size_t i = 0; i < nqubits; ++i) {
     if (std::find(actualTargets.cbegin(), actualTargets.cend(), i) !=

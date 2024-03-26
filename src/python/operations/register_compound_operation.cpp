@@ -20,18 +20,16 @@ void registerCompoundOperation(py::module& m) {
   py::class_<qc::CompoundOperation, qc::Operation>(
       m, "CompoundOperation",
       "Quantum operation comprised of multiple sub-operations.")
-      .def(py::init<std::size_t>(), "nq"_a,
-           "Create an empty compound operation on `nq` qubits.")
-      .def(py::init([](std::size_t nq, std::vector<qc::Operation*>& ops) {
+      .def(py::init<>(), "Create an empty compound operation.")
+      .def(py::init([](std::vector<qc::Operation*>& ops) {
              std::vector<std::unique_ptr<qc::Operation>> uniqueOps;
              uniqueOps.reserve(ops.size());
              for (auto& op : ops) {
                uniqueOps.emplace_back(op->clone());
              }
-             return qc::CompoundOperation(nq, std::move(uniqueOps));
+             return qc::CompoundOperation(std::move(uniqueOps));
            }),
-           "nq"_a, "ops"_a,
-           "Create a compound operation from a list of operations.")
+           "ops"_a, "Create a compound operation from a list of operations.")
       .def("__len__", &qc::CompoundOperation::size,
            "Return number of sub-operations.")
       .def(
@@ -72,7 +70,7 @@ void registerCompoundOperation(py::module& m) {
       .def("empty", &qc::CompoundOperation::empty)
       .def("__repr__", [](const qc::CompoundOperation& op) {
         std::stringstream ss;
-        ss << "CompoundOperation(" << op.getNqubits() << ", [...ops...])";
+        ss << "CompoundOperation([..." << op.size() << " ops...])";
         return ss.str();
       });
 }

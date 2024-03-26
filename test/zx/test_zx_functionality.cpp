@@ -108,9 +108,9 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
 
 TEST_F(ZXFunctionalityTest, nestedCompoundGate) {
   qc = qc::QuantumComputation(1);
-  auto innerOp = std::make_unique<qc::StandardOperation>(1, 0, qc::OpType::X);
-  auto compound1 = std::make_unique<qc::CompoundOperation>(1);
-  auto compound2 = std::make_unique<qc::CompoundOperation>(1);
+  auto innerOp = std::make_unique<qc::StandardOperation>(0, qc::OpType::X);
+  auto compound1 = std::make_unique<qc::CompoundOperation>();
+  auto compound2 = std::make_unique<qc::CompoundOperation>();
 
   compound1->emplace_back(std::move(innerOp));
   compound2->emplace_back(std::move(compound1));

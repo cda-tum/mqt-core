@@ -86,28 +86,27 @@ void GoogleRandomCircuitSampling::importGRCS(const std::string& filename) {
       ss >> control;
       ss >> target;
       cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-          nqubits, Control{static_cast<Qubit>(control)},
-          static_cast<Qubit>(target), Z));
+          Control{static_cast<Qubit>(control)}, static_cast<Qubit>(target), Z));
     } else if (identifier == "is") {
       ss >> control;
       ss >> target;
       cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-          nqubits, qc::Controls{}, static_cast<Qubit>(control),
+          qc::Controls{}, static_cast<Qubit>(control),
           static_cast<Qubit>(target), iSWAP));
     } else {
       ss >> target;
       if (identifier == "h") {
-        cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-            nqubits, static_cast<Qubit>(target), H));
+        cycles[cycle].emplace_back(
+            std::make_unique<StandardOperation>(static_cast<Qubit>(target), H));
       } else if (identifier == "t") {
-        cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-            nqubits, static_cast<Qubit>(target), T));
+        cycles[cycle].emplace_back(
+            std::make_unique<StandardOperation>(static_cast<Qubit>(target), T));
       } else if (identifier == "x_1_2") {
         cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-            nqubits, static_cast<Qubit>(target), RX, std::vector{PI_2}));
+            static_cast<Qubit>(target), RX, std::vector{PI_2}));
       } else if (identifier == "y_1_2") {
         cycles[cycle].emplace_back(std::make_unique<StandardOperation>(
-            nqubits, static_cast<Qubit>(target), RY, std::vector{PI_2}));
+            static_cast<Qubit>(target), RY, std::vector{PI_2}));
       } else {
         throw QFRException("Unknown gate '" + identifier);
       }
@@ -131,7 +130,7 @@ std::ostream& GoogleRandomCircuitSampling::print(std::ostream& os) const {
     for (const auto& op : cycle) {
       os << std::setw(static_cast<int>(std::log10(getNops()) + 1.)) << ++j
          << ": ";
-      op->print(os, initialLayout, 0U);
+      op->print(os, initialLayout, 0U, nqubits);
       os << "\n";
     }
   }

@@ -116,7 +116,6 @@ void Q7Steane::addSOperation(const qc::Controls& controls,
   const auto numTargets = targets.size();
   const auto numControls = controls.size();
   const auto numQubits = qcOriginal->getNqubits();
-  const auto numMappedQubits = qcMapped->getNqubits();
 
   for (std::size_t k = 0; k < numTargets; k++) {
     auto i = targets[k];
@@ -128,23 +127,20 @@ void Q7Steane::addSOperation(const qc::Controls& controls,
                             ct.type);
         }
         qcMapped->emplace_back<qc::StandardOperation>(
-            numMappedQubits, controls2, static_cast<Qubit>(i + j * numQubits),
-            type);
+            controls2, static_cast<Qubit>(i + j * numQubits), type);
         qcMapped->emplace_back<qc::StandardOperation>(
-            numMappedQubits, controls2, static_cast<Qubit>(i + j * numQubits),
-            type);
+            controls2, static_cast<Qubit>(i + j * numQubits), type);
         qcMapped->emplace_back<qc::StandardOperation>(
-            numMappedQubits, controls2, static_cast<Qubit>(i + j * numQubits),
-            type);
+            controls2, static_cast<Qubit>(i + j * numQubits), type);
       }
     } else {
       for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
         qcMapped->emplace_back<qc::StandardOperation>(
-            numMappedQubits, static_cast<Qubit>(i + j * numQubits), type);
+            static_cast<Qubit>(i + j * numQubits), type);
         qcMapped->emplace_back<qc::StandardOperation>(
-            numMappedQubits, static_cast<Qubit>(i + j * numQubits), type);
+            static_cast<Qubit>(i + j * numQubits), type);
         qcMapped->emplace_back<qc::StandardOperation>(
-            numMappedQubits, static_cast<Qubit>(i + j * numQubits), type);
+            static_cast<Qubit>(i + j * numQubits), type);
       }
     }
   }
@@ -173,14 +169,12 @@ void Q7Steane::mapGate(const qc::Operation& gate) {
                 static_cast<Qubit>(ct.qubit + j * nQubits), ct.type});
           }
           qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), ctrls2,
-              static_cast<Qubit>(i + j * nQubits), gate.getType());
+              ctrls2, static_cast<Qubit>(i + j * nQubits), gate.getType());
         }
       } else {
         for (std::size_t j = 0; j < N_REDUNDANT_QUBITS; j++) {
           qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits),
-              gate.getType());
+              static_cast<Qubit>(i + j * nQubits), gate.getType());
         }
       }
     }

@@ -4,7 +4,6 @@
 #include "dd/Operations.hpp"
 
 #include "gtest/gtest.h"
-#include <random>
 
 using namespace qc;
 
@@ -285,24 +284,24 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
 
 TEST_F(DDNoiseFunctionalityTest, testingUsedQubits) {
   const std::size_t nqubits = 1;
-  auto standardOp = StandardOperation(nqubits, 1, qc::Z);
+  auto standardOp = StandardOperation(1, qc::Z);
   EXPECT_EQ(standardOp.getUsedQubits().size(), 1);
   EXPECT_TRUE(standardOp.getUsedQubits().count(1));
 
-  auto nonUnitaryOp = NonUnitaryOperation(nqubits, 0, 0);
+  auto nonUnitaryOp = NonUnitaryOperation(0, 0);
   EXPECT_EQ(nonUnitaryOp.getUsedQubits().size(), 1);
   EXPECT_TRUE(nonUnitaryOp.getUsedQubits().count(0) == 1U);
 
-  auto compoundOp = qc::CompoundOperation(nqubits);
-  compoundOp.emplace_back<qc::StandardOperation>(nqubits, 0, qc::Z);
-  compoundOp.emplace_back<qc::StandardOperation>(nqubits, 1, qc::H);
-  compoundOp.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
+  auto compoundOp = qc::CompoundOperation();
+  compoundOp.emplace_back<qc::StandardOperation>(0, qc::Z);
+  compoundOp.emplace_back<qc::StandardOperation>(1, qc::H);
+  compoundOp.emplace_back<qc::StandardOperation>(0, qc::X);
   EXPECT_EQ(compoundOp.getUsedQubits().size(), 2);
   EXPECT_TRUE(compoundOp.getUsedQubits().count(0));
   EXPECT_TRUE(compoundOp.getUsedQubits().count(1));
 
   std::unique_ptr<qc::Operation> xOp =
-      std::make_unique<qc::StandardOperation>(nqubits, 0, qc::X);
+      std::make_unique<qc::StandardOperation>(0, qc::X);
   auto classicalControlledOp =
       qc::ClassicControlledOperation(xOp, std::pair{0, nqubits}, 1U);
   EXPECT_EQ(classicalControlledOp.getUsedQubits().size(), 1);

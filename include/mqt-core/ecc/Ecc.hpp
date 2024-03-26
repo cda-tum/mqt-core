@@ -103,8 +103,8 @@ protected:
 
   void gateNotAvailableError(const qc::Operation& gate) const {
     std::stringstream stream;
-    stream << "Gate " << gate << " not supported to encode in error code "
-           << ecc.name << "!";
+    stream << "Gate " << toString(gate.getType())
+           << " not supported to encode in error code " << ecc.name << "!";
     throw qc::QFRException(stream.str());
   }
 };

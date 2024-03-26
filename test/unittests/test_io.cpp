@@ -402,7 +402,7 @@ TEST_F(IO, printingNonUnitary) {
   EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3));
   std::cout << *qc << "\n";
   for (const auto& op : *qc) {
-    op->print(std::cout);
+    op->print(std::cout, qc->getNqubits());
     std::cout << "\n";
   }
 }
