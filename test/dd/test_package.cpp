@@ -1820,6 +1820,42 @@ TEST(DDPackageTest, TwoQubitControlledGateDDConstruction) {
   }
 }
 
+TEST(DDPackageTest, TwoQubitControlledGateDDConstructionNegativeControls) {
+  const auto nrQubits = 5U;
+  const auto dd = std::make_unique<dd::Package<>>(nrQubits);
+
+  const auto gateMatrices = std::vector{std::pair{dd::X_MAT, dd::CX_MAT},
+                                        std::pair{dd::Z_MAT, dd::CZ_MAT}};
+
+  // For every combination of controls, control type, and target, test that the
+  // DD created by makeTwoQubitGateDD is equal to the DD created by makeGateDD.
+  // This should cover every scenario of the makeTwoQubitGateDD function.
+  for (const auto& [gateMatrix, controlledGateMatrix] : gateMatrices) {
+    for (dd::Qubit control0 = 0; control0 < nrQubits; ++control0) {
+      for (dd::Qubit control1 = 0; control1 < nrQubits; ++control1) {
+        if (control0 == control1) {
+          continue;
+        }
+        for (dd::Qubit target = 0; target < nrQubits; ++target) {
+          if (control0 == target || control1 == target) {
+            continue;
+          }
+          for (const auto controlType :
+               {qc::Control::Type::Pos, qc::Control::Type::Neg}) {
+            const auto controlledGateDD = dd->makeTwoQubitGateDD(
+                controlledGateMatrix, qc::Controls{{control0, controlType}},
+                control1, target);
+            const auto gateDD = dd->makeGateDD(
+                gateMatrix, qc::Controls{{control0, controlType}, control1},
+                target);
+            EXPECT_EQ(controlledGateDD, gateDD);
+          }
+        }
+      }
+    }
+  }
+}
+
 TEST(DDPackageTest, SWAPGateDDConstruction) {
   const auto nrQubits = 5U;
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
