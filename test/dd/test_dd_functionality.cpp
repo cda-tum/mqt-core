@@ -67,22 +67,21 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
   qc::StandardOperation op;
   switch (gate) {
   case qc::GPhase:
-    op = qc::StandardOperation(nqubits, Controls{}, Targets{}, gate,
+    op = qc::StandardOperation(Controls{}, Targets{}, gate,
                                std::vector{dist(mt)});
     break;
   case qc::U:
-    op = qc::StandardOperation(nqubits, 0, gate,
+    op = qc::StandardOperation(0, gate,
                                std::vector{dist(mt), dist(mt), dist(mt)});
     break;
   case qc::U2:
-    op = qc::StandardOperation(nqubits, 0, gate,
-                               std::vector{dist(mt), dist(mt)});
+    op = qc::StandardOperation(0, gate, std::vector{dist(mt), dist(mt)});
     break;
   case qc::RX:
   case qc::RY:
   case qc::RZ:
   case qc::P:
-    op = qc::StandardOperation(nqubits, 0, gate, std::vector{dist(mt)});
+    op = qc::StandardOperation(0, gate, std::vector{dist(mt)});
     break;
 
   case qc::SWAP:
@@ -92,22 +91,21 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
   case qc::ECR:
   case qc::Peres:
   case qc::Peresdg:
-    op = qc::StandardOperation(nqubits, {}, 0, 1, gate);
+    op = qc::StandardOperation({}, 0, 1, gate);
     break;
   case qc::RXX:
   case qc::RYY:
   case qc::RZZ:
   case qc::RZX:
-    op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate,
-                               std::vector{dist(mt)});
+    op = qc::StandardOperation(Controls{}, 0, 1, gate, std::vector{dist(mt)});
     break;
   case qc::XXminusYY:
   case qc::XXplusYY:
-    op = qc::StandardOperation(nqubits, Controls{}, 0, 1, gate,
+    op = qc::StandardOperation(Controls{}, 0, 1, gate,
                                std::vector{dist(mt), dist(mt)});
     break;
   default:
-    op = qc::StandardOperation(nqubits, 0, gate);
+    op = qc::StandardOperation(0, gate);
   }
 
   ASSERT_NO_THROW(
@@ -124,22 +122,21 @@ TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
   qc::StandardOperation op;
   switch (gate) {
   case qc::GPhase:
-    op = qc::StandardOperation(nqubits, Controls{0}, Targets{}, gate,
+    op = qc::StandardOperation(Controls{0}, Targets{}, gate,
                                std::vector{dist(mt)});
     break;
   case qc::U:
-    op = qc::StandardOperation(nqubits, 0, 1, gate,
+    op = qc::StandardOperation(0, 1, gate,
                                std::vector{dist(mt), dist(mt), dist(mt)});
     break;
   case qc::U2:
-    op = qc::StandardOperation(nqubits, 0, 1, gate,
-                               std::vector{dist(mt), dist(mt)});
+    op = qc::StandardOperation(0, 1, gate, std::vector{dist(mt), dist(mt)});
     break;
   case qc::RX:
   case qc::RY:
   case qc::RZ:
   case qc::P:
-    op = qc::StandardOperation(nqubits, 0, 1, gate, std::vector{dist(mt)});
+    op = qc::StandardOperation(0, 1, gate, std::vector{dist(mt)});
     break;
 
   case qc::SWAP:
@@ -149,22 +146,21 @@ TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
   case qc::ECR:
   case qc::Peres:
   case qc::Peresdg:
-    op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate);
+    op = qc::StandardOperation(Controls{0}, 1, 2, gate);
     break;
   case qc::RXX:
   case qc::RYY:
   case qc::RZZ:
   case qc::RZX:
-    op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate,
-                               std::vector{dist(mt)});
+    op = qc::StandardOperation(Controls{0}, 1, 2, gate, std::vector{dist(mt)});
     break;
   case qc::XXminusYY:
   case qc::XXplusYY:
-    op = qc::StandardOperation(nqubits, Controls{0}, 1, 2, gate,
+    op = qc::StandardOperation(Controls{0}, 1, 2, gate,
                                std::vector{dist(mt), dist(mt)});
     break;
   default:
-    op = qc::StandardOperation(nqubits, 0, 1, gate);
+    op = qc::StandardOperation(0, 1, gate);
   }
 
   ASSERT_NO_THROW(
@@ -181,23 +177,22 @@ TEST_P(DDFunctionality, controlledStandardNegOpBuildInverseBuild) {
   qc::StandardOperation op;
   switch (gate) {
   case qc::GPhase:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, Targets{}, gate,
+    op = qc::StandardOperation(Controls{0_nc}, Targets{}, gate,
                                std::vector{dist(mt)});
     break;
   case qc::U:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate,
+    op = qc::StandardOperation(Controls{0_nc}, 1, gate,
                                std::vector{dist(mt), dist(mt), dist(mt)});
     break;
   case qc::U2:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate,
+    op = qc::StandardOperation(Controls{0_nc}, 1, gate,
                                std::vector{dist(mt), dist(mt)});
     break;
   case qc::RX:
   case qc::RY:
   case qc::RZ:
   case qc::P:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate,
-                               std::vector{dist(mt)});
+    op = qc::StandardOperation(Controls{0_nc}, 1, gate, std::vector{dist(mt)});
     break;
 
   case qc::SWAP:
@@ -207,22 +202,22 @@ TEST_P(DDFunctionality, controlledStandardNegOpBuildInverseBuild) {
   case qc::ECR:
   case qc::Peres:
   case qc::Peresdg:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, 2, gate);
+    op = qc::StandardOperation(Controls{0_nc}, 1, 2, gate);
     break;
   case qc::RXX:
   case qc::RYY:
   case qc::RZZ:
   case qc::RZX:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, 2, gate,
+    op = qc::StandardOperation(Controls{0_nc}, 1, 2, gate,
                                std::vector{dist(mt)});
     break;
   case qc::XXminusYY:
   case qc::XXplusYY:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, 2, gate,
+    op = qc::StandardOperation(Controls{0_nc}, 1, 2, gate,
                                std::vector{dist(mt), dist(mt)});
     break;
   default:
-    op = qc::StandardOperation(nqubits, Controls{0_nc}, 1, gate);
+    op = qc::StandardOperation(Controls{0_nc}, 1, gate);
   }
 
   ASSERT_NO_THROW(
@@ -314,7 +309,7 @@ TEST_F(DDFunctionality, buildCircuit) {
 TEST_F(DDFunctionality, nonUnitary) {
   const qc::QuantumComputation qc{};
   auto dummyMap = Permutation{};
-  auto op = qc::NonUnitaryOperation(nqubits, {0, 1, 2, 3}, {0, 1, 2, 3});
+  auto op = qc::NonUnitaryOperation({0, 1, 2, 3}, {0, 1, 2, 3});
   EXPECT_FALSE(op.isUnitary());
   EXPECT_THROW(getDD(&op, *dd), qc::QFRException);
   EXPECT_THROW(getInverseDD(&op, *dd), qc::QFRException);
@@ -327,8 +322,7 @@ TEST_F(DDFunctionality, nonUnitary) {
   for (Qubit i = 0; i < nqubits; ++i) {
     dummyMap[i] = i;
   }
-  auto barrier =
-      qc::StandardOperation(nqubits, {0, 1, 2, 3}, qc::OpType::Barrier);
+  auto barrier = qc::StandardOperation({0, 1, 2, 3}, qc::OpType::Barrier);
   EXPECT_TRUE(getDD(&barrier, *dd).isIdentity());
   EXPECT_TRUE(getInverseDD(&barrier, *dd).isIdentity());
   EXPECT_TRUE(getDD(&barrier, *dd, dummyMap).isIdentity());

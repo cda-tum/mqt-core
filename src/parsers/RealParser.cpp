@@ -228,7 +228,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     case V:
     case Vdg:
       emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate);
+          Controls{controls.cbegin(), controls.cend()}, target, gate);
       break;
     case X:
       mcx(Controls{controls.cbegin(), controls.cend()}, target);
@@ -238,7 +238,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     case RZ:
     case P:
       emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate,
+          Controls{controls.cbegin(), controls.cend()}, target, gate,
           std::vector{PI / (lambda)});
       break;
     case SWAP:
@@ -248,8 +248,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       const auto target1 = controls.back().qubit;
       controls.pop_back();
       emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target1,
-          target, gate);
+          Controls{controls.cbegin(), controls.cend()}, target1, target, gate);
       break;
     }
     default:

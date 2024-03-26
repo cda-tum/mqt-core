@@ -1,2 +1,2 @@
-add_executable(${PROJECT_NAME}-dd-eval eval_dd_package.cpp)
-target_link_libraries(${PROJECT_NAME}-dd-eval ${PROJECT_NAME}-dd)
+add_executable(mqt-core-dd-eval eval_dd_package.cpp)
+target_link_libraries(mqt-core-dd-eval PRIVATE MQT::CoreDD MQT::ProjectOptions MQT::ProjectWarnings)

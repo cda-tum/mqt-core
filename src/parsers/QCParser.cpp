@@ -293,7 +293,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
       const Qubit target = controls.back().qubit;
       controls.pop_back();
       emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate);
+          Controls{controls.cbegin(), controls.cend()}, target, gate);
     } else if (gate == SWAP) {
       const Qubit target0 = controls.back().qubit;
       controls.pop_back();
@@ -304,7 +304,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
       const Qubit target = controls.back().qubit;
       controls.pop_back();
       emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate,
+          Controls{controls.cbegin(), controls.cend()}, target, gate,
           std::vector{lambda});
     }
   }

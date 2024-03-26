@@ -21,8 +21,6 @@ protected:
   Targets targets{};
   std::vector<fp> parameter{};
 
-  std::size_t nqubits = 0;
-  Qubit startQubit = 0;
   OpType type = None;
   std::string name{};
 
@@ -58,8 +56,6 @@ public:
     return controls.size();
   }
 
-  [[nodiscard]] std::size_t getNqubits() const { return nqubits; }
-
   [[nodiscard]] const std::vector<fp>& getParameter() const {
     return parameter;
   }
@@ -67,8 +63,6 @@ public:
 
   [[nodiscard]] const std::string& getName() const { return name; }
   [[nodiscard]] virtual OpType getType() const { return type; }
-
-  [[nodiscard]] virtual Qubit getStartingQubit() const { return startQubit; }
 
   [[nodiscard]] virtual std::set<Qubit> getUsedQubits() const {
     const auto& opTargets = getTargets();
@@ -87,8 +81,6 @@ public:
   }
 
   // Setter
-  virtual void setNqubits(const std::size_t nq) { nqubits = nq; }
-
   virtual void setTargets(const Targets& t) { targets = t; }
 
   virtual void setControls(const Controls& c) {
@@ -168,13 +160,12 @@ public:
   }
 
   virtual std::ostream& printParameters(std::ostream& os) const;
-  std::ostream& print(std::ostream& os) const { return print(os, {}, 0); }
-  virtual std::ostream& print(std::ostream& os, const Permutation& permutation,
-                              std::size_t prefixWidth) const;
-
-  friend std::ostream& operator<<(std::ostream& os, const Operation& op) {
-    return op.print(os);
+  std::ostream& print(std::ostream& os, const std::size_t nqubits) const {
+    return print(os, {}, 0, nqubits);
   }
+  virtual std::ostream& print(std::ostream& os, const Permutation& permutation,
+                              std::size_t prefixWidth,
+                              std::size_t nqubits) const;
 
   void dumpOpenQASM2(std::ostream& of, const RegisterNames& qreg,
                      const RegisterNames& creg) const {

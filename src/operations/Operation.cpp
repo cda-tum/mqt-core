@@ -41,9 +41,9 @@ std::ostream& Operation::printParameters(std::ostream& os) const {
   return os;
 }
 
-std::ostream&
-Operation::print(std::ostream& os, const Permutation& permutation,
-                 [[maybe_unused]] const std::size_t prefixWidth) const {
+std::ostream& Operation::print(std::ostream& os, const Permutation& permutation,
+                               [[maybe_unused]] const std::size_t prefixWidth,
+                               const std::size_t nqubits) const {
   const auto precBefore = std::cout.precision(20);
   const auto& actualControls = permutation.apply(getControls());
   const auto& actualTargets = permutation.apply(getTargets());

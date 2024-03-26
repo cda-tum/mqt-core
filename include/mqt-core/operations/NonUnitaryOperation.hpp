@@ -8,20 +8,21 @@ class NonUnitaryOperation final : public Operation {
 protected:
   std::vector<Bit> classics{}; // vector for the classical bits to measure into
 
-  void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
-                        const std::vector<Bit>& c,
-                        const Permutation& permutation) const;
+  static void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
+                               const std::vector<Bit>& c,
+                               const Permutation& permutation,
+                               std::size_t nqubits);
   void printReset(std::ostream& os, const std::vector<Qubit>& q,
-                  const Permutation& permutation) const;
+                  const Permutation& permutation, std::size_t nqubits) const;
 
 public:
   // Measurement constructor
-  NonUnitaryOperation(std::size_t nq, std::vector<Qubit> qubitRegister,
+  NonUnitaryOperation(std::vector<Qubit> qubitRegister,
                       std::vector<Bit> classicalRegister);
-  NonUnitaryOperation(std::size_t nq, Qubit qubit, Bit cbit);
+  NonUnitaryOperation(Qubit qubit, Bit cbit);
 
   // General constructor
-  NonUnitaryOperation(std::size_t nq, Targets qubits, OpType op = Reset);
+  explicit NonUnitaryOperation(Targets qubits, OpType op = Reset);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
     return std::make_unique<NonUnitaryOperation>(*this);
@@ -73,7 +74,8 @@ public:
   }
 
   std::ostream& print(std::ostream& os, const Permutation& permutation,
-                      std::size_t prefixWidth) const override;
+                      std::size_t prefixWidth,
+                      std::size_t nqubits) const override;
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                     const RegisterNames& creg, size_t indent,

@@ -173,8 +173,7 @@ protected:
           auto initialQuit = qcMapped->begin();
           qcMapped->insert(
               initialQuit + static_cast<int64_t>(insertErrorAfterNGates),
-              std::make_unique<NonUnitaryOperation>(qcMapped->getNqubits(),
-                                                    std::vector<Qubit>{target},
+              std::make_unique<NonUnitaryOperation>(std::vector<Qubit>{target},
                                                     qc::Reset));
           auto result =
               simulateAndVerifyResults(qcOriginal, qcMapped, simulateWithErrors,

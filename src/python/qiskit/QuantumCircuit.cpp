@@ -119,14 +119,14 @@ void qc::qiskit::QuantumCircuit::emplaceOperation(
   if (instructionName == "measure") {
     auto control = qubitMap[qargs[0]].cast<Qubit>();
     auto target = clbitMap[cargs[0]].cast<std::size_t>();
-    qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), control, target);
+    qc.emplace_back<NonUnitaryOperation>(control, target);
   } else if (instructionName == "barrier") {
     Targets targets{};
     for (const auto qubit : qargs) {
       auto target = qubitMap[qubit].cast<Qubit>();
       targets.emplace_back(target);
     }
-    qc.emplace_back<StandardOperation>(qc.getNqubits(), targets, Barrier);
+    qc.emplace_back<StandardOperation>(targets, Barrier);
   } else if (instructionName == "reset") {
     Targets targets{};
     for (const auto qubit : qargs) {
@@ -223,8 +223,8 @@ void qc::qiskit::QuantumCircuit::emplaceOperation(
                        qubitMap, clbitMap);
     } catch (py::error_already_set& e) {
       std::cerr << "Failed to import instruction " << instructionName
-                << " from Qiskit QuantumCircuit" << std::endl;
-      std::cerr << e.what() << std::endl;
+                << " from Qiskit QuantumCircuit\n";
+      std::cerr << e.what() << "\n";
     }
   }
 }
@@ -311,7 +311,7 @@ void qc::qiskit::QuantumCircuit::addOperation(qc::QuantumComputation& qc,
   std::vector<Control> qubits{};
   for (const auto qubit : qargs) {
     auto target = qubitMap[qubit].cast<Qubit>();
-    qubits.emplace_back(Control{target});
+    qubits.emplace_back(target);
   }
   auto target = qubits.back().qubit;
   qubits.pop_back();
@@ -328,11 +328,9 @@ void qc::qiskit::QuantumCircuit::addOperation(qc::QuantumComputation& qc,
     std::transform(parameters.cbegin(), parameters.cend(),
                    std::back_inserter(fpParams),
                    [](const auto& p) { return std::get<fp>(p); });
-    qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type,
-                                       fpParams);
+    qc.emplace_back<StandardOperation>(controls, target, type, fpParams);
   } else {
-    qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target, type,
-                                       parameters);
+    qc.emplace_back<SymbolicOperation>(controls, target, type, parameters);
     for (const auto& p : parameters) {
       qc.addVariables(p);
     }
@@ -345,7 +343,7 @@ void qc::qiskit::QuantumCircuit::addTwoTargetOperation(
   std::vector<Control> qubits{};
   for (const auto qubit : qargs) {
     auto target = qubitMap[qubit].cast<Qubit>();
-    qubits.emplace_back(Control{target});
+    qubits.emplace_back(target);
   }
   auto target1 = qubits.back().qubit;
   qubits.pop_back();
@@ -364,11 +362,11 @@ void qc::qiskit::QuantumCircuit::addTwoTargetOperation(
     std::transform(parameters.cbegin(), parameters.cend(),
                    std::back_inserter(fpParams),
                    [](const auto& p) { return std::get<fp>(p); });
-    qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0,
-                                       target1, type, fpParams);
+    qc.emplace_back<StandardOperation>(controls, target0, target1, type,
+                                       fpParams);
   } else {
-    qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target0,
-                                       target1, type, parameters);
+    qc.emplace_back<SymbolicOperation>(controls, target0, target1, type,
+                                       parameters);
     for (const auto& p : parameters) {
       qc.addVariables(p);
     }

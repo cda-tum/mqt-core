@@ -164,20 +164,6 @@ template <class Config>
 qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
                    qc::Permutation& permutation, const bool inverse = false) {
   const auto type = op->getType();
-  const auto nqubits = op->getNqubits();
-
-  // check whether the operation can be handled by the underlying DD package
-  if (nqubits > Package<Config>::MAX_POSSIBLE_QUBITS) {
-    throw qc::QFRException(
-        "Requested too many qubits to be handled by the DD package. Qubit "
-        "datatype only allows up to " +
-        std::to_string(Package<Config>::MAX_POSSIBLE_QUBITS) +
-        " qubits, while " + std::to_string(nqubits) +
-        " were requested. If you want to use more than " +
-        std::to_string(Package<Config>::MAX_POSSIBLE_QUBITS) +
-        " qubits, you have to recompile the package with a wider Qubit type in "
-        "`include/dd/DDDefinitions.hpp!`");
-  }
 
   // if a permutation is provided and the current operation is a SWAP, this
   // routine just updates the permutation

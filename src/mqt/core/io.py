@@ -16,9 +16,7 @@ def load(input_circuit: QuantumComputation | str | PathLike[str] | QuantumCircui
     """Load a quantum circuit from any supported format as a ``QuantumComputation``.
 
     Args:
-        input_circuit: The input circuit to translate to a ``QuantumComputation``.
-        This can be a `QuantumComputation` itself, a file name to any of the supported file formats,
-        an OpenQASM (2.0 or 3.0) string, or a Qiskit `QuantumCircuit`.
+        input_circuit: The input circuit to translate to a ``QuantumComputation``. This can be a `QuantumComputation` itself, a file name to any of the supported file formats, an OpenQASM (2.0 or 3.0) string, or a Qiskit `QuantumCircuit`.
 
     Returns:
         The ``QuantumComputation``.

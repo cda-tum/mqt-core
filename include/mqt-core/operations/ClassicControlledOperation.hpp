@@ -37,7 +37,6 @@ public:
                              ComparisonKind kind = ComparisonKind::Eq)
       : op(std::move(operation)), controlRegister(std::move(controlReg)),
         expectedValue(expectedVal), comparisonKind(kind) {
-    nqubits = op->getNqubits();
     name = "c_" + shortName(op->getType());
     parameter.reserve(3);
     parameter.emplace_back(static_cast<fp>(controlRegister.first));
@@ -72,11 +71,6 @@ public:
   [[nodiscard]] auto getExpectedValue() const { return expectedValue; }
 
   [[nodiscard]] auto getOperation() const { return op.get(); }
-
-  void setNqubits(std::size_t nq) override {
-    nqubits = nq;
-    op->setNqubits(nq);
-  }
 
   [[nodiscard]] const Targets& getTargets() const override {
     return op->getTargets();

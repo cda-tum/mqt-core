@@ -9,18 +9,16 @@ private:
   std::vector<std::unique_ptr<Operation>> ops{};
 
 public:
-  explicit CompoundOperation(std::size_t nq);
+  explicit CompoundOperation();
 
-  CompoundOperation(std::size_t nq,
-                    std::vector<std::unique_ptr<Operation>>&& operations);
+  explicit CompoundOperation(
+      std::vector<std::unique_ptr<Operation>>&& operations);
 
   CompoundOperation(const CompoundOperation& co);
 
   CompoundOperation& operator=(const CompoundOperation& co);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override;
-
-  void setNqubits(std::size_t nq) override;
 
   [[nodiscard]] bool isCompoundOperation() const override;
 
@@ -41,7 +39,8 @@ public:
   [[nodiscard]] bool equals(const Operation& operation) const override;
 
   std::ostream& print(std::ostream& os, const Permutation& permutation,
-                      std::size_t prefixWidth) const override;
+                      std::size_t prefixWidth,
+                      std::size_t nqubits) const override;
 
   [[nodiscard]] bool actsOn(Qubit i) const override;
 

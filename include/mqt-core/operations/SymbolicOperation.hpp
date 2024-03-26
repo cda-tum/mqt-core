@@ -59,8 +59,7 @@ protected:
 
   static fp& getNumber(SymbolOrNumber& param) { return std::get<fp>(param); }
 
-  void setup(std::size_t nq, const std::vector<SymbolOrNumber>& params,
-             Qubit startingQubit = 0);
+  void setup(const std::vector<SymbolOrNumber>& params);
 
   [[nodiscard]] static fp
   getInstantiation(const SymbolOrNumber& symOrNum,
@@ -94,32 +93,24 @@ public:
   }
 
   // Standard Constructors
-  SymbolicOperation(std::size_t nq, Qubit target, OpType g,
-                    const std::vector<SymbolOrNumber>& params = {},
-                    Qubit startingQubit = 0);
-  SymbolicOperation(std::size_t nq, const Targets& targ, OpType g,
-                    const std::vector<SymbolOrNumber>& params = {},
-                    Qubit startingQubit = 0);
+  SymbolicOperation(Qubit target, OpType g,
+                    const std::vector<SymbolOrNumber>& params = {});
+  SymbolicOperation(const Targets& targ, OpType g,
+                    const std::vector<SymbolOrNumber>& params = {});
 
-  SymbolicOperation(std::size_t nq, Control control, Qubit target, OpType g,
-                    const std::vector<SymbolOrNumber>& params = {},
-                    Qubit startingQubit = 0);
-  SymbolicOperation(std::size_t nq, Control control, const Targets& targ,
-                    OpType g, const std::vector<SymbolOrNumber>& params = {},
-                    Qubit startingQubit = 0);
+  SymbolicOperation(Control control, Qubit target, OpType g,
+                    const std::vector<SymbolOrNumber>& params = {});
+  SymbolicOperation(Control control, const Targets& targ, OpType g,
+                    const std::vector<SymbolOrNumber>& params = {});
 
-  SymbolicOperation(std::size_t nq, const Controls& c, Qubit target, OpType g,
-                    const std::vector<SymbolOrNumber>& params = {},
-                    Qubit startingQubit = 0);
-  SymbolicOperation(std::size_t nq, const Controls& c, const Targets& targ,
-                    OpType g, const std::vector<SymbolOrNumber>& params = {},
-                    Qubit startingQubit = 0);
+  SymbolicOperation(const Controls& c, Qubit target, OpType g,
+                    const std::vector<SymbolOrNumber>& params = {});
+  SymbolicOperation(const Controls& c, const Targets& targ, OpType g,
+                    const std::vector<SymbolOrNumber>& params = {});
 
   // MCF (cSWAP), Peres, parameterized two target Constructor
-  SymbolicOperation(std::size_t nq, const Controls& c, Qubit target0,
-                    Qubit target1, OpType g,
-                    const std::vector<SymbolOrNumber>& params = {},
-                    Qubit startingQubit = 0);
+  SymbolicOperation(const Controls& c, Qubit target0, Qubit target1, OpType g,
+                    const std::vector<SymbolOrNumber>& params = {});
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
     return std::make_unique<SymbolicOperation>(*this);

@@ -151,8 +151,8 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
                 e, static_cast<Qubit>(permutation.at(qubit)), true, mt);
             // apply an X operation whenever the measured result is one
             if (bit == '1') {
-              const auto x = qc::StandardOperation(
-                  qc->getNqubits(), permutation.at(qubit), qc::X);
+              const auto x =
+                  qc::StandardOperation(permutation.at(qubit), qc::X);
               auto tmp = dd.multiply(getDD(&x, dd), e);
               dd.incRef(tmp);
               dd.decRef(e);

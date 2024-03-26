@@ -141,7 +141,7 @@ class OpenQasm3Parser final : public InstVisitor {
 public:
   explicit OpenQasm3Parser(qc::QuantumComputation* quantumComputation)
       : typeCheckPass(&constEvalPass), qc(quantumComputation) {
-    for (auto [identifier, builtin] : initializeBuiltins()) {
+    for (const auto& [identifier, builtin] : initializeBuiltins()) {
       constEvalPass.addConst(identifier, builtin.first);
       typeCheckPass.addBuiltin(identifier, builtin.second);
     }
@@ -530,7 +530,7 @@ public:
     }
 
     // if we are broadcasting, we need to create a compound operation
-    auto op = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
+    auto op = std::make_unique<qc::CompoundOperation>();
     for (size_t j = 0; j < broadcastingWidth; ++j) {
       // first we apply the operation
       auto nestedOp = applyQuantumOperation(
@@ -602,7 +602,7 @@ public:
       const std::shared_ptr<DebugInfo>& debugInfo) {
     if (auto* standardGate = dynamic_cast<StandardGate*>(gate.get())) {
       auto op = std::make_unique<qc::StandardOperation>(
-          qc->getNqubits(), qc::Controls{}, targetBits, standardGate->info.type,
+          qc::Controls{}, targetBits, standardGate->info.type,
           evaluatedParameters);
       if (invertOperation) {
         op->invert();
@@ -627,7 +627,7 @@ public:
         index++;
       }
 
-      auto op = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
+      auto op = std::make_unique<qc::CompoundOperation>();
       for (const auto& nestedGate : compoundGate->body) {
         if (auto barrierStatement =
                 std::dynamic_pointer_cast<BarrierStatement>(nestedGate);
@@ -712,8 +712,7 @@ public:
             debugInfo);
     }
 
-    auto op = std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(),
-                                                        qubits, bits);
+    auto op = std::make_unique<qc::NonUnitaryOperation>(qubits, bits);
     qc->emplace_back(std::move(op));
   }
 
@@ -778,7 +777,7 @@ public:
 
   [[nodiscard]] std::unique_ptr<qc::Operation> translateBlockOperations(
       const std::vector<std::shared_ptr<Statement>>& statements) {
-    auto blockOps = std::make_unique<qc::CompoundOperation>(qc->getNqubits());
+    auto blockOps = std::make_unique<qc::CompoundOperation>();
     for (const auto& statement : statements) {
       auto gateCall = std::dynamic_pointer_cast<GateCallStatement>(statement);
       if (gateCall == nullptr) {
@@ -797,26 +796,24 @@ public:
     return blockOps;
   }
 
-  [[nodiscard]] std::unique_ptr<qc::Operation>
+  [[nodiscard]] static std::unique_ptr<qc::Operation>
   getBarrierOp(const std::shared_ptr<BarrierStatement>& barrierStatement,
-               const qc::QuantumRegisterMap& qregs) const {
+               const qc::QuantumRegisterMap& qregs) {
     std::vector<qc::Qubit> qubits{};
     for (const auto& gate : barrierStatement->gates) {
       translateGateOperand(gate, qubits, qregs, barrierStatement->debugInfo);
     }
 
-    return std::make_unique<qc::StandardOperation>(qc->getNqubits(), qubits,
-                                                   qc::Barrier);
+    return std::make_unique<qc::StandardOperation>(qubits, qc::Barrier);
   }
 
-  [[nodiscard]] std::unique_ptr<qc::Operation>
+  [[nodiscard]] static std::unique_ptr<qc::Operation>
   getResetOp(const std::shared_ptr<ResetStatement>& resetStatement,
-             const qc::QuantumRegisterMap& qregs) const {
+             const qc::QuantumRegisterMap& qregs) {
     std::vector<qc::Qubit> qubits{};
     translateGateOperand(resetStatement->gate, qubits, qregs,
                          resetStatement->debugInfo);
-    return std::make_unique<qc::NonUnitaryOperation>(qc->getNqubits(), qubits,
-                                                     qc::Reset);
+    return std::make_unique<qc::NonUnitaryOperation>(qubits, qc::Reset);
   }
 
   std::pair<std::string, size_t>

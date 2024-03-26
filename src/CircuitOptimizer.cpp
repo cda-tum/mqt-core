@@ -1,5 +1,6 @@
 #include "CircuitOptimizer.hpp"
 
+#include <algorithm>
 #include <cassert>
 
 namespace qc {
@@ -38,9 +39,7 @@ void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
 void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1);
@@ -126,9 +125,7 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
 DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1);
@@ -157,10 +154,9 @@ void CircuitOptimizer::addNonStandardOperationToDag(
   const auto& gate = *op;
   // compound operations are added "as-is"
   if (gate->isCompoundOperation()) {
-    for (std::size_t i = 0U; i < gate->getNqubits(); ++i) {
-      if (gate->actsOn(static_cast<Qubit>(i))) {
-        dag.at(i).push_back(op);
-      }
+    const auto usedQubits = gate->getUsedQubits();
+    for (const auto q : usedQubits) {
+      dag.at(q).push_back(op);
     }
   } else if (gate->isNonUnitaryOperation()) {
     for (const auto& b : gate->getTargets()) {
@@ -189,9 +185,7 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
 
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1);
@@ -260,8 +254,7 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
         it->setGate(qc::I);
       } else {
         compop->emplace_back<StandardOperation>(
-            it->getNqubits(), it->getTargets().at(0), it->getType(),
-            it->getParameter());
+            it->getTargets().at(0), it->getType(), it->getParameter());
         it->setGate(I);
       }
 
@@ -276,13 +269,11 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
       (*op)->setGate(qc::I);
       it->setGate(qc::I);
     } else {
-      auto compop = std::make_unique<CompoundOperation>(it->getNqubits());
+      auto compop = std::make_unique<CompoundOperation>();
       compop->emplace_back<StandardOperation>(
-          (*op)->getNqubits(), (*op)->getTargets().at(0), (*op)->getType(),
-          (*op)->getParameter());
+          (*op)->getTargets().at(0), (*op)->getType(), (*op)->getParameter());
       compop->emplace_back<StandardOperation>(
-          it->getNqubits(), it->getTargets().at(0), it->getType(),
-          it->getParameter());
+          it->getTargets().at(0), it->getType(), it->getParameter());
       it->setGate(I);
       (*op) = std::move(compop);
       dag.at(target).push_back(op);
@@ -601,31 +592,26 @@ void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc,
     if ((*it)->isStandardOperation()) {
       if ((*it)->getType() == qc::SWAP) {
         const auto targets = (*it)->getTargets();
-        const auto nqubits = (*it)->getNqubits();
         it = qc.ops.erase(it);
-        it = qc.ops.insert(
-            it, std::make_unique<StandardOperation>(
-                    nqubits, Control{targets[0]}, targets[1], qc::X));
+        it = qc.ops.insert(it, std::make_unique<StandardOperation>(
+                                   Control{targets[0]}, targets[1], qc::X));
         if (isDirectedArchitecture) {
-          it = qc.ops.insert(it, std::make_unique<StandardOperation>(
-                                     nqubits, targets[0], qc::H));
-          it = qc.ops.insert(it, std::make_unique<StandardOperation>(
-                                     nqubits, targets[1], qc::H));
           it = qc.ops.insert(
-              it, std::make_unique<StandardOperation>(
-                      nqubits, Control{targets[0]}, targets[1], qc::X));
+              it, std::make_unique<StandardOperation>(targets[0], qc::H));
+          it = qc.ops.insert(
+              it, std::make_unique<StandardOperation>(targets[1], qc::H));
           it = qc.ops.insert(it, std::make_unique<StandardOperation>(
-                                     nqubits, targets[0], qc::H));
-          it = qc.ops.insert(it, std::make_unique<StandardOperation>(
-                                     nqubits, targets[1], qc::H));
+                                     Control{targets[0]}, targets[1], qc::X));
+          it = qc.ops.insert(
+              it, std::make_unique<StandardOperation>(targets[0], qc::H));
+          it = qc.ops.insert(
+              it, std::make_unique<StandardOperation>(targets[1], qc::H));
         } else {
-          it = qc.ops.insert(
-              it, std::make_unique<StandardOperation>(
-                      nqubits, Control{targets[1]}, targets[0], qc::X));
+          it = qc.ops.insert(it, std::make_unique<StandardOperation>(
+                                     Control{targets[1]}, targets[0], qc::X));
         }
-        it = qc.ops.insert(
-            it, std::make_unique<StandardOperation>(
-                    nqubits, Control{targets[0]}, targets[1], qc::X));
+        it = qc.ops.insert(it, std::make_unique<StandardOperation>(
+                                   Control{targets[0]}, targets[1], qc::X));
       } else {
         ++it;
       }
@@ -635,27 +621,22 @@ void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc,
       while (cit != compOp->end()) {
         if ((*cit)->isStandardOperation() && (*cit)->getType() == qc::SWAP) {
           const auto targets = (*cit)->getTargets();
-          const auto nqubits = compOp->getNqubits();
           cit = compOp->erase(cit);
-          cit = compOp->insert<StandardOperation>(
-              cit, nqubits, Control{targets[0]}, targets[1], qc::X);
+          cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
+                                                  targets[1], qc::X);
           if (isDirectedArchitecture) {
-            cit = compOp->insert<StandardOperation>(cit, nqubits, targets[0],
-                                                    qc::H);
-            cit = compOp->insert<StandardOperation>(cit, nqubits, targets[1],
-                                                    qc::H);
-            cit = compOp->insert<StandardOperation>(
-                cit, nqubits, Control{targets[0]}, targets[1], qc::X);
-            cit = compOp->insert<StandardOperation>(cit, nqubits, targets[0],
-                                                    qc::H);
-            cit = compOp->insert<StandardOperation>(cit, nqubits, targets[1],
-                                                    qc::H);
+            cit = compOp->insert<StandardOperation>(cit, targets[0], qc::H);
+            cit = compOp->insert<StandardOperation>(cit, targets[1], qc::H);
+            cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
+                                                    targets[1], qc::X);
+            cit = compOp->insert<StandardOperation>(cit, targets[0], qc::H);
+            cit = compOp->insert<StandardOperation>(cit, targets[1], qc::H);
           } else {
-            cit = compOp->insert<StandardOperation>(
-                cit, nqubits, Control{targets[1]}, targets[0], qc::X);
+            cit = compOp->insert<StandardOperation>(cit, Control{targets[1]},
+                                                    targets[0], qc::X);
           }
-          cit = compOp->insert<StandardOperation>(
-              cit, nqubits, Control{targets[0]}, targets[1], qc::X);
+          cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
+                                                  targets[1], qc::X);
         } else {
           ++cit;
         }
@@ -738,13 +719,6 @@ void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
       it++;
     } else {
       it++;
-    }
-  }
-  // if anything has been modified the number of qubits of each gate has to be
-  // adjusted
-  if (!replacementMap.empty()) {
-    for (auto& op : qc.ops) {
-      op->setNqubits(qc.getNqubits());
     }
   }
 }
@@ -876,15 +850,13 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
               std::stringstream ss{};
               ss << "Underlying operation of classic-controlled operation is "
                     "not a StandardOperation.\n";
-              classicOp->print(ss);
+              classicOp->print(ss, qc.nqubits);
               throw QFRException(ss.str());
             }
 
             // get all the necessary information for reconstructing the
             // operation
-            const auto nqubits = standardOp->getNqubits();
             const auto type = standardOp->getType();
-
             const auto targs = standardOp->getTargets();
             for (const auto& target : targs) {
               if (target == measurementQubit) {
@@ -925,10 +897,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
 
             itInvalidated = (it >= currentInsertionPoint);
             // insert the new operation (invalidated all pointer onwards)
-            currentInsertionPoint =
-                qc.insert(currentInsertionPoint,
-                          std::make_unique<qc::StandardOperation>(
-                              nqubits, controls, targs, type, parameters));
+            currentInsertionPoint = qc.insert(
+                currentInsertionPoint, std::make_unique<qc::StandardOperation>(
+                                           controls, targs, type, parameters));
 
             if (itInvalidated) {
               it = currentInsertionPoint;
@@ -1202,9 +1173,7 @@ CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(
 void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1U);
@@ -1375,18 +1344,15 @@ void CircuitOptimizer::replaceMCXWithMCZ(
       const auto& controls = op->getControls();
       assert(op->getNtargets() == 1U);
       const auto target = op->getTargets()[0];
-      const auto nqubits = op->getNqubits();
 
       // -c-    ---c---
       //  |  =     |
       // -X-    -H-Z-H-
       std::array<std::unique_ptr<Operation>, 3U> replacementOps{};
-      replacementOps[0] =
-          std::make_unique<StandardOperation>(nqubits, target, H);
+      replacementOps[0] = std::make_unique<StandardOperation>(target, H);
       replacementOps[1] =
-          std::make_unique<StandardOperation>(nqubits, controls, target, Z);
-      replacementOps[2] =
-          std::make_unique<StandardOperation>(nqubits, target, H);
+          std::make_unique<StandardOperation>(controls, target, Z);
+      replacementOps[2] = std::make_unique<StandardOperation>(target, H);
 
       it = ops.insert(it, std::make_move_iterator(replacementOps.begin()),
                       std::make_move_iterator(replacementOps.end()));
