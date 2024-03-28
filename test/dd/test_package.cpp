@@ -1495,7 +1495,7 @@ TEST(DDPackageTest, dNodeMulCache1) {
       computeTable.lookup(state.p, densityMatrix0.p, false);
   ASSERT_NE(cachedResult, nullptr);
   ASSERT_NE(cachedResult->p, nullptr);
-  state = dd->multiply(state, densityMatrix0, 0, false);
+  state = dd->multiply(state, densityMatrix0, false);
   ASSERT_NE(state.p, nullptr);
   ASSERT_EQ(state.p, cachedResult->p);
 
@@ -1504,7 +1504,7 @@ TEST(DDPackageTest, dNodeMulCache1) {
       computeTable.lookup(densityMatrix1.p, state.p, true);
   ASSERT_NE(cachedResult1, nullptr);
   ASSERT_NE(cachedResult1->p, nullptr);
-  const auto state2 = dd->multiply(densityMatrix1, state, 0, true);
+  const auto state2 = dd->multiply(densityMatrix1, state, true);
   ASSERT_NE(state2.p, nullptr);
   ASSERT_EQ(state2.p, cachedResult1->p);
 

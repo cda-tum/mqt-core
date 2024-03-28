@@ -1109,16 +1109,16 @@ public:
     auto const measZeroDd = makeGateDD(MEAS_ZERO_MAT, index);
 
     auto tmp0 = conjugateTranspose(measZeroDd);
-    auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
-    auto tmp2 = multiply(densityFromMatrixEdge(measZeroDd), tmp1, 0, true);
+    auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
+    auto tmp2 = multiply(densityFromMatrixEdge(measZeroDd), tmp1, true);
     auto densityMatrixTrace = trace(tmp2, nrQubits);
 
     std::uniform_real_distribution<fp> dist(0., 1.);
     if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
       auto const measOneDd = makeGateDD(MEAS_ONE_MAT, index);
       tmp0 = conjugateTranspose(measOneDd);
-      tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
-      tmp2 = multiply(densityFromMatrixEdge(measOneDd), tmp1, 0, true);
+      tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
+      tmp2 = multiply(densityFromMatrixEdge(measOneDd), tmp1, true);
       measuredResult = '1';
       densityMatrixTrace = trace(tmp2, nrQubits);
     }
@@ -1481,8 +1481,8 @@ public:
 
   dEdge applyOperationToDensity(dEdge& e, const mEdge& operation) {
     auto tmp0 = conjugateTranspose(operation);
-    auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), 0, false);
-    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, 0, true);
+    auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
+    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, true);
     incRef(tmp2);
     dEdge::alignDensityEdge(e);
     decRef(e);
@@ -1494,7 +1494,6 @@ public:
   template <class LeftOperandNode, class RightOperandNode>
   Edge<RightOperandNode>
   multiply(const Edge<LeftOperandNode>& x, const Edge<RightOperandNode>& y,
-           const Qubit start = 0,
            [[maybe_unused]] const bool generateDensityMatrix = false) {
     using LEdge = Edge<LeftOperandNode>;
     using REdge = Edge<RightOperandNode>;
@@ -1518,7 +1517,7 @@ public:
         var = yCopy.p->v;
       }
 
-      const auto e = multiply2(xCopy, yCopy, var, start, generateDensityMatrix);
+      const auto e = multiply2(xCopy, yCopy, var, generateDensityMatrix);
       dEdge::revertDmChangesToEdges(xCopy, yCopy);
       return cn.lookup(e);
     } else {
@@ -1528,7 +1527,7 @@ public:
       if (!y.isTerminal() && y.p->v > var) {
         var = y.p->v;
       }
-      const auto e = multiply2(x, y, var, start);
+      const auto e = multiply2(x, y, var);
       return cn.lookup(e);
     }
   }
@@ -1537,7 +1536,7 @@ private:
   template <class LeftOperandNode, class RightOperandNode>
   CachedEdge<RightOperandNode>
   multiply2(const Edge<LeftOperandNode>& x, const Edge<RightOperandNode>& y,
-            const Qubit var, const Qubit start = 0,
+            const Qubit var,
             [[maybe_unused]] const bool generateDensityMatrix = false) {
     using LEdge = Edge<LeftOperandNode>;
     using REdge = Edge<RightOperandNode>;
@@ -1630,7 +1629,7 @@ private:
               // When generateDensityMatrix is false or I have the first edge I
               // don't optimize anything and set generateDensityMatrix to false
               // for all child edges
-              m = multiply2(e1, e2, v, start, false);
+              m = multiply2(e1, e2, v, false);
             } else if (idx == 2) {
               // When I have the second edge and generateDensityMatrix == false,
               // then edge[2] == edge[1]
@@ -1643,7 +1642,7 @@ private:
               }
               continue;
             } else {
-              m = multiply2(e1, e2, v, start, generateDensityMatrix);
+              m = multiply2(e1, e2, v, generateDensityMatrix);
             }
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
@@ -1658,7 +1657,7 @@ private:
             // Undo modifications on density matrices
             dEdge::revertDmChangesToEdges(e1, e2);
           } else {
-            auto m = multiply2(e1, e2, v, start);
+            auto m = multiply2(e1, e2, v);
 
             if (k == 0 || edge[idx].w.exactlyZero()) {
               edge[idx] = m;
