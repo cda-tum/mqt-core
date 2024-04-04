@@ -254,11 +254,12 @@ dCachedEdge DeterministicNoiseFunctionality::applyNoiseEffects(
 
   auto originalCopy = dEdge{originalEdge.p, Complex::one()};
   ArrayOfEdges newEdges{};
+  const auto nextLevel = static_cast<dd::Qubit>(level - 1U);
   if (originalEdge.isIdentity()) {
     newEdges[0] =
-        applyNoiseEffects(originalCopy, usedQubits, firstPathEdge, level - 1U);
+        applyNoiseEffects(originalCopy, usedQubits, firstPathEdge, nextLevel);
     newEdges[3] =
-        applyNoiseEffects(originalCopy, usedQubits, firstPathEdge, level - 1U);
+        applyNoiseEffects(originalCopy, usedQubits, firstPathEdge, nextLevel);
   } else {
     for (std::size_t i = 0; i < newEdges.size(); i++) {
       auto& successor = originalCopy.p->e[i];
@@ -266,8 +267,7 @@ dCachedEdge DeterministicNoiseFunctionality::applyNoiseEffects(
         // If I am to the firstPathEdge I cannot minimize the necessary
         // operations anymore
         dEdge::applyDmChangesToEdge(successor);
-        newEdges[i] =
-            applyNoiseEffects(successor, usedQubits, true, level - 1U);
+        newEdges[i] = applyNoiseEffects(successor, usedQubits, true, nextLevel);
         dEdge::revertDmChangesToEdge(successor);
       } else if (i == 2) {
         // Since e[1] == e[2] (due to density matrix representation), I can skip
@@ -276,14 +276,14 @@ dCachedEdge DeterministicNoiseFunctionality::applyNoiseEffects(
       } else {
         dEdge::applyDmChangesToEdge(successor);
         newEdges[i] =
-            applyNoiseEffects(successor, usedQubits, false, level - 1U);
+            applyNoiseEffects(successor, usedQubits, false, nextLevel);
         dEdge::revertDmChangesToEdge(successor);
       }
     }
   }
   if (std::any_of(
           usedQubits.begin(), usedQubits.end(),
-          [&level](const qc::Qubit qubit) { return (level - 1U) == qubit; })) {
+          [&nextLevel](const qc::Qubit qubit) { return nextLevel == qubit; })) {
     for (auto const& type : noiseEffects) {
       switch (type) {
       case AmplitudeDamping:
@@ -307,7 +307,7 @@ dCachedEdge DeterministicNoiseFunctionality::applyNoiseEffects(
     }
   }
 
-  auto e = package->makeDDNode(level - 1U, newEdges, firstPathEdge);
+  auto e = package->makeDDNode(nextLevel, newEdges, firstPathEdge);
   if (e.w.exactlyZero()) {
     return e;
   }
