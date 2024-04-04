@@ -230,7 +230,7 @@ def compare(
     Raises:
         ValueError: If factor is negative or sort is invalid or if num_qubits is specified while algorithm is not.
         FileNotFoundError: If the baseline_filepath argument or the feature_filepath argument does not point to a valid file.
-        JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
+        json.JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
     """
     if factor < 0:
         msg = "Factor must be positive!"
