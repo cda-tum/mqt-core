@@ -1803,6 +1803,7 @@ TEST_F(QFRFunctionality, CircuitToOperation) {
   EXPECT_EQ(qc.asOperation(), nullptr);
   qc.x(0);
   const auto& op = qc.asOperation();
+  ASSERT_NE(op, nullptr);
   EXPECT_EQ(op->getType(), qc::X);
   EXPECT_EQ(op->getNcontrols(), 0U);
   EXPECT_EQ(op->getTargets().front(), 0U);
@@ -1811,6 +1812,7 @@ TEST_F(QFRFunctionality, CircuitToOperation) {
   qc.h(0);
   qc.classicControlled(qc::X, 0, 1, {0, 1U}, 1U);
   const auto& op2 = qc.asOperation();
+  ASSERT_NE(op2, nullptr);
   EXPECT_EQ(op2->getType(), qc::Compound);
   EXPECT_TRUE(qc.empty());
 }
