@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import sys
 
+from ._commands import cmake_dir, include_dir
 from ._version import version as __version__
-from .commands import cmake_dir, include_dir
 
 
 def main() -> None:
