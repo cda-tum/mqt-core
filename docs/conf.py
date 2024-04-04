@@ -142,6 +142,7 @@ autoapi_options = [
     "show-inheritance",
     "undoc-members",
 ]
+add_module_names = False
 python_use_unqualified_type_names = True
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
