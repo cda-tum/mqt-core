@@ -14,7 +14,6 @@ from pybtex.style.template import field, href
 if TYPE_CHECKING:
     from pybtex.database import Entry
     from pybtex.richtext import HRef
-    from sphinx.application import Sphinx
 
 ROOT = Path(__file__).parent.parent.resolve()
 
@@ -139,37 +138,11 @@ autoapi_ignore = [
 ]
 autoapi_options = [
     "members",
-    "inherited-members",
     "imported-members",
     "show-inheritance",
-    "special-members",
     "undoc-members",
 ]
-
-
-def skip_cpp_core(_app: Sphinx, what: str, name: str, _obj: object, skip: bool, _options) -> bool:  # noqa: ANN001
-    """Skip the _core module in documentation."""
-    if (what == "package" and "_core" in name) or "_compat" in name:
-        skip = True
-    return skip
-
-
-def setup(sphinx: Sphinx) -> None:
-    """Setup Sphinx."""
-    sphinx.connect("autoapi-skip-member", skip_cpp_core)
-
-
-autodoc_typehints = "signature"
-autodoc_typehints_format = "short"
-autodoc_type_aliases = {
-    "QuantumCircuit": "qiskit.circuit.QuantumCircuit",
-}
-
-typehints_use_signature = True
-typehints_use_signature_return = True
-
-add_module_names = False
-
+python_use_unqualified_type_names = True
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 
