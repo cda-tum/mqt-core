@@ -420,3 +420,6 @@ def _import_definition(
         )
         params.extend(new_params)
     return params
+
+
+__all__ = ["qiskit_to_mqt"]
