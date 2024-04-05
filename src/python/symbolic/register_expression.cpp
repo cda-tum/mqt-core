@@ -7,26 +7,18 @@
 namespace mqt {
 
 void registerExpression(py::module& m) {
-  py::class_<sym::Expression<double, double>>(
-      m, "Expression",
-      "Class representing a symbolic sum of terms. The expression is of the "
-      "form `constant + term_1 + term_2 + ... + term_n`.")
+  py::class_<sym::Expression<double, double>>(m, "Expression")
       .def(py::init([](const std::vector<sym::Term<double>>& terms,
                        double constant) {
              return sym::Expression<double, double>(terms, constant);
            }),
-           "terms"_a, "constant"_a = 0.0,
-           "Create an expression with a given list of terms and a constant (0 "
-           "by default).")
+           "terms"_a, "constant"_a = 0.0)
       .def(py::init([](const sym::Term<double>& term, double constant) {
              return sym::Expression<double, double>(
                  std::vector<sym::Term<double>>{term}, constant);
            }),
-           "term"_a, "constant"_a = 0.0,
-           "Create an expression with a given term and a constant (0 by "
-           "default).")
-      .def(py::init<double>(), "constant"_a = 0.0,
-           "Create a constant expression involving no symbolic terms.")
+           "term"_a, "constant"_a = 0.0)
+      .def(py::init<double>(), "constant"_a = 0.0)
       .def_property("constant", &sym::Expression<double, double>::getConst,
                     &sym::Expression<double, double>::setConst)
       .def(
@@ -43,23 +35,16 @@ void registerExpression(py::module& m) {
              }
              return expr.getTerms()[idx];
            })
-      .def("is_zero", &sym::Expression<double, double>::isZero,
-           "Return true if this expression is zero, i.e., all terms have "
-           "coefficient 0 and the constant is 0 as well.")
-      .def("is_constant", &sym::Expression<double, double>::isConstant,
-           "Return true if this expression is constant, i.e., all terms have "
-           "coefficient 0 or no terms are involved.")
-      .def("num_terms", &sym::Expression<double, double>::numTerms,
-           "Return the number of terms in this expression.")
+      .def("is_zero", &sym::Expression<double, double>::isZero)
+      .def("is_constant", &sym::Expression<double, double>::isConstant)
+      .def("num_terms", &sym::Expression<double, double>::numTerms)
       .def("__len__", &sym::Expression<double, double>::numTerms)
       .def_property_readonly("terms",
                              &sym::Expression<double, double>::getTerms)
       .def_property_readonly("variables",
                              &sym::Expression<double, double>::getVariables)
       .def("evaluate", &sym::Expression<double, double>::evaluate,
-           "assignment"_a,
-           "Return the value of this expression given by summing the values of "
-           "all instantiated terms and the constant given by the assignment.")
+           "assignment"_a)
       // addition operators
       .def(py::self + py::self)
       .def(py::self + double())
