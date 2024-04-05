@@ -7,15 +7,36 @@ from .operations import Control, Operation, OpType
 from .symbolic import Expression, Variable
 
 class Permutation(MutableMapping[int, int]):
+    """
+    A class to represent a permutation of the qubits in a quantum circuit.
+    """
     def __getitem__(self: Self, idx: int) -> int: ...
     def __setitem__(self: Self, idx: int, val: int) -> None: ...
     def __delitem__(self: Self, key: int) -> None: ...
     def __iter__(self: Self) -> Iterator[int]: ...
     def __len__(self: Self) -> int: ...
     @overload
-    def apply(self: Self, controls: set[Control]) -> set[Control]: ...
+    def apply(self: Self, controls: set[Control]) -> set[Control]:
+        """
+        Apply the permutation to a set of controls.
+
+        Args:
+            controls: The set of controls to apply the permutation to.
+
+        Returns:
+            The set of controls with the permutation applied.
+        """
     @overload
-    def apply(self: Self, targets: list[int]) -> list[int]: ...
+    def apply(self: Self, targets: list[int]) -> list[int]:
+        """
+        Apply the permutation to a list of targets.
+
+        Args:
+            targets: The list of targets to apply the permutation to.
+
+        Returns:
+            The list of targets with the permutation applied.
+        """
 
 class QuantumComputation(MutableSequence[Operation]):
     # --------------------------------------------------------------------------
