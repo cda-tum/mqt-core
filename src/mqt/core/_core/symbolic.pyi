@@ -6,18 +6,17 @@ from .._compat.typing import Self
 class Variable:
     """
     A symbolic variable.
+
+    Args:
+        name: The name of the variable.
+
+    Note:
+        Variables are uniquely identified by their name, so if a variable with the same name already exists, the existing variable will be returned.
     """
     def __eq__(self: Self, arg0: object) -> bool: ...
     def __gt__(self: Self, arg0: Variable) -> bool: ...
     def __hash__(self: Self) -> int: ...
-    def __init__(self: Self, name: str = "") -> None:
-        """
-        Create a variable with a given variable name.
-        Variables are uniquely identified by their name, so if a variable with the same name already exists, the existing variable will be returned.
-
-        Args:
-            name: The name of the variable.
-        """
+    def __init__(self: Self, name: str = "") -> None: ...
     def __lt__(self: Self, arg0: Variable) -> bool: ...
     def __ne__(self: Self, arg0: object) -> bool: ...
     @property
@@ -29,17 +28,14 @@ class Variable:
 class Term:
     """
     A symbolic term which consists of a variable with a given coefficient.
+
+    Args:
+        variable: The variable of the term.
+        coefficient: The coefficient of the term.
     """
     def __eq__(self: Self, arg0: object) -> bool: ...
     def __hash__(self: Self) -> int: ...
-    def __init__(self: Self, variable: Variable, coefficient: float = 1.0) -> None:
-        """
-        Create a term with a given variable and coefficient.
-
-        Args:
-            variable: The variable of the term.
-            coefficient: The coefficient of the term.
-        """
+    def __init__(self: Self, variable: Variable, coefficient: float = 1.0) -> None: ...
     def __mul__(self: Self, arg0: float) -> Term: ...
     def __ne__(self: Self, arg0: object) -> bool: ...
     def __rmul__(self: Self, arg0: float) -> Term: ...
@@ -81,6 +77,12 @@ class Expression:
     """
     A symbolic expression which consists of a sum of terms and a constant.
     The expression is of the form :math:`constant + term_1 + term_2 + \dots + term_n`.
+
+    Args:
+        terms: The list of terms.
+        constant: The constant.
+
+    Alternatively, an expression can be created with a single term and a constant or just a constant.
     """
 
     constant: float
