@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <utility>
+#include <vector>
 
 namespace qc {
 void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
@@ -1475,5 +1477,253 @@ void CircuitOptimizer::backpropagateOutputPermutation(
       // case 4: nothing to do
     }
   }
+}
+
+/**
+ * @brief Disjoint Set Union data structure for qubits
+ *
+ * This data structure is used to maintain a relationship between qubits and
+ * blocks they belong to. The blocks are formed by operations that act on the
+ * same qubits.
+ */
+struct DSU {
+  std::unordered_map<Qubit, Qubit> parent;
+  std::unordered_map<Qubit, std::vector<Qubit>> bitBlocks;
+  std::unordered_map<Qubit, std::vector<QuantumComputation::iterator>>
+      gateBlocks;
+  std::size_t maxBlockSize = 0;
+
+  /**
+   * @brief Find the block that a qubit belongs to.
+   * @param index Qubit to find the block for
+   * @return The block that the qubit belongs to
+   */
+  Qubit findBlock(const Qubit index) {
+    if (parent.find(index) == parent.end()) {
+      parent[index] = index;
+      bitBlocks[index] = {index};
+      gateBlocks[index] = {};
+    }
+    if (parent[index] == index) {
+      return index;
+    }
+    parent[index] = findBlock(parent[index]);
+    return parent[index];
+  }
+
+  void unionBlock(Qubit block1, Qubit block2) {
+    auto parent1 = findBlock(block1);
+    auto parent2 = findBlock(block2);
+    if (parent1 == parent2) {
+      return;
+    }
+    if (gateBlocks[parent1].size() < gateBlocks[parent2].size()) {
+      std::swap(parent1, parent2);
+    }
+    parent[parent2] = parent1;
+    gateBlocks[parent1].insert(gateBlocks[parent1].end(),
+                               gateBlocks[parent2].begin(),
+                               gateBlocks[parent2].end());
+    bitBlocks[parent1].insert(bitBlocks[parent1].end(),
+                              bitBlocks[parent2].begin(),
+                              bitBlocks[parent2].end());
+    gateBlocks[parent2].clear();
+    bitBlocks[parent2].clear();
+  }
+};
+
+void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
+                                     const std::size_t maxBlockSize) {
+  if (qc.ops.size() <= 1) {
+    return;
+  }
+
+  // ensure canonical ordering and that measurements are as far back as possible
+  reorderOperations(qc);
+  deferMeasurements(qc);
+
+  // create an empty disjoint set union data structure
+  DSU dsu{};
+
+  // create a list for the gate blocks
+  std::vector<std::vector<QuantumComputation::iterator>> blockList{};
+
+  for (auto opIt = qc.begin(); opIt != qc.end(); ++opIt) {
+    auto& op = *opIt;
+    bool canProcess = true;
+    bool makesTooBig = false;
+
+    // check if the operation can be processed
+    if (!op->isUnitary()) {
+      canProcess = false;
+    }
+
+    const auto usedQubits = op->getUsedQubits();
+
+    if (canProcess) {
+      // check if grouping the operation with the current block would make the
+      // block too big
+      std::unordered_set<Qubit> blockQubits;
+      for (const auto& q : usedQubits) {
+        blockQubits.emplace(dsu.findBlock(q));
+      }
+      std::size_t totalSize = 0;
+      for (const auto& q : blockQubits) {
+        totalSize += dsu.bitBlocks[q].size();
+      }
+      if (totalSize > maxBlockSize) {
+        makesTooBig = true;
+      }
+    } else {
+      // resolve cases where an operation cannot be processed
+      for (const auto& q : usedQubits) {
+        const auto block = dsu.findBlock(q);
+        if (dsu.gateBlocks[block].empty()) {
+          continue;
+        }
+        blockList.emplace_back(std::move(dsu.gateBlocks[block]));
+        for (auto index : dsu.bitBlocks[block]) {
+          dsu.parent[index] = index;
+          dsu.bitBlocks[index] = {index};
+          dsu.gateBlocks[index] = {};
+        }
+      }
+    }
+
+    if (makesTooBig) {
+      // if the operation acts on more qubits than the maximum block size, all
+      // current blocks need to be finalized.
+      if (usedQubits.size() > maxBlockSize) {
+        // get all of the relevant blocks and check for the best way to combine
+        // them together.
+        std::unordered_map<Qubit, std::size_t> blocksAndSizes{};
+        for (const auto& q : usedQubits) {
+          const auto block = dsu.findBlock(q);
+          if (dsu.gateBlocks[block].empty() ||
+              blocksAndSizes.find(block) != blocksAndSizes.end()) {
+            continue;
+          }
+          blocksAndSizes[block] = dsu.bitBlocks[block].size();
+        }
+        // sort blocks in descending order
+        std::vector<std::pair<Qubit, std::size_t>> sortedBlocks(
+            blocksAndSizes.begin(), blocksAndSizes.end());
+        std::sort(
+            sortedBlocks.begin(), sortedBlocks.end(),
+            [](const auto& a, const auto& b) { return a.second > b.second; });
+        for (auto it = sortedBlocks.begin(); it != sortedBlocks.end(); ++it) {
+          auto& [block, size] = *it;
+          // maximally large block -> nothing to do
+          if (size == maxBlockSize) {
+            blockList.emplace_back(std::move(dsu.gateBlocks[block]));
+            for (auto index : dsu.bitBlocks[block]) {
+              dsu.parent[index] = index;
+              dsu.bitBlocks[index] = {index};
+              dsu.gateBlocks[index] = {};
+            }
+          }
+
+          // fill up with as many blocks as possible
+          auto nextIt = it + 1;
+          while (nextIt != sortedBlocks.end() && size < maxBlockSize) {
+            auto& [nextBlock, nextSize] = *nextIt;
+            if (size + nextSize <= maxBlockSize) {
+              dsu.unionBlock(block, nextBlock);
+              size += nextSize;
+              nextIt = sortedBlocks.erase(nextIt);
+            } else {
+              ++nextIt;
+            }
+          }
+
+          // just to be on the safe side, get the block again
+          block = dsu.findBlock(block);
+          if (!dsu.gateBlocks[block].empty()) {
+            blockList.emplace_back(std::move(dsu.gateBlocks[block]));
+          }
+          for (auto index : dsu.bitBlocks[block]) {
+            dsu.parent[index] = index;
+            dsu.bitBlocks[index] = {index};
+            dsu.gateBlocks[index] = {};
+          }
+        }
+      } else {
+        // otherwise, finalize blocks that would free up enough space.
+        // prioritize blocks that would free up the most space.
+        std::unordered_map<Qubit, std::size_t> savings{};
+        std::size_t totalSize = 0U;
+        for (const auto& q : usedQubits) {
+          const auto block = dsu.findBlock(q);
+          if (savings.find(block) != savings.end()) {
+            savings[block] -= 1;
+          } else {
+            savings[block] = dsu.bitBlocks[block].size() - 1;
+            totalSize += dsu.bitBlocks[block].size();
+          }
+        }
+        // sort savings in descending order
+        std::vector<std::pair<Qubit, std::size_t>> sortedSavings(
+            savings.begin(), savings.end());
+        std::sort(
+            sortedSavings.begin(), sortedSavings.end(),
+            [](const auto& a, const auto& b) { return a.second > b.second; });
+        auto savingsNeed = static_cast<std::int64_t>(totalSize - maxBlockSize);
+        for (const auto& [index, saving] : sortedSavings) {
+          if (savingsNeed > 0) {
+            savingsNeed -= static_cast<std::int64_t>(saving);
+            if (!dsu.gateBlocks[index].empty()) {
+              blockList.emplace_back(std::move(dsu.gateBlocks[index]));
+            }
+            for (auto j : dsu.bitBlocks[index]) {
+              dsu.parent[j] = j;
+              dsu.bitBlocks[j] = {j};
+              dsu.gateBlocks[j] = {};
+            }
+          }
+        }
+      }
+    }
+
+    if (canProcess) {
+      if (usedQubits.size() > maxBlockSize) {
+        continue;
+      }
+      std::int64_t prev = -1;
+      for (const auto& q : usedQubits) {
+        if (prev != -1) {
+          dsu.unionBlock(static_cast<Qubit>(prev), q);
+        }
+        prev = q;
+      }
+      dsu.gateBlocks[dsu.findBlock(static_cast<Qubit>(prev))].emplace_back(
+          opIt);
+    }
+  }
+
+  // convert remaining blocks to blockList
+  for (const auto& [q, index] : dsu.parent) {
+    if (q == index && !dsu.gateBlocks[q].empty()) {
+      blockList.emplace_back(std::move(dsu.gateBlocks[q]));
+    }
+  }
+
+  // Iterate over the blocks in reverse order and replace the first operation in
+  // each block with a compound operation containing all operations in the
+  // block. Then remove the remaining operations in the block.
+  for (auto it = blockList.rbegin(); it != blockList.rend(); ++it) {
+    auto& block = *it;
+    if (block.size() == 1U) {
+      continue;
+    }
+    std::vector<std::unique_ptr<Operation>> ops{};
+    ops.reserve(block.size());
+    for (auto& op : block) {
+      ops.emplace_back(std::move(*op));
+      *op = std::make_unique<StandardOperation>(0, I);
+    }
+    *block.front() = std::make_unique<CompoundOperation>(std::move(ops));
+  }
+
+  removeIdentities(qc);
 }
 } // namespace qc

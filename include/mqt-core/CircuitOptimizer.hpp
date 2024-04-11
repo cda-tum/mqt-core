@@ -74,6 +74,19 @@ public:
    */
   static void backpropagateOutputPermutation(QuantumComputation& qc);
 
+  /**
+   * @brief Collects all operations in the circuit into blocks of a maximum
+   * size.
+   * @details The circuit is traversed and operations are collected into blocks
+   * of a maximum size. The blocks are then appended to the circuit in the order
+   * they were collected. Each block is realized as a compound operation.
+   * Light optimizations are applied to the blocks, such as removing identity
+   * gates and fusing single-qubit gates.
+   * @param qc the quantum circuit
+   * @param maxBlockSize the maximum size of a block
+   */
+  static void collectBlocks(QuantumComputation& qc, std::size_t maxBlockSize);
+
 protected:
   static void removeDiagonalGatesBeforeMeasureRecursive(
       DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
