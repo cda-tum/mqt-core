@@ -38,6 +38,3 @@ jobs:
     if: ${{ inputs.enable-python }}
     name: 🐍
     uses: ./.github/workflows/reusable-code-ql-python.yml
-    with:
-      setup-z3: ${{ inputs.setup-z3 }}
-      z3-version: ${{ inputs.z3-version }}
