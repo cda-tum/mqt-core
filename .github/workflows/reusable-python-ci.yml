@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # use jq to get the last element of the array
-      - run: echo "max-python-version=$(echo '${{ needs.dist.outputs.python-versions }}' | jq '.[-1]')" >> $GITHUB_OUTPUT
+      - run: echo "max-python-version=$(echo '${{ needs.dist.outputs.python-versions }}' | jq --raw-output '.[-1]')" >> $GITHUB_OUTPUT
         id: max-python-version
     outputs:
       max-python-version: ${{ steps.max-python-version.outputs.max-python-version }}
@@ -85,9 +85,7 @@ jobs:
         runs-on: [macos-13] # test Intel architecture
         include:
           - runs-on: macos-14 # test Apple Silicon architecture
-            python-version:
-              # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
-              - ${{ needs.max-python-version.outputs.max-python-version }}
+            python-version: ${{ needs.max-python-version.outputs.max-python-version }} # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: ${{ matrix.runs-on }}
