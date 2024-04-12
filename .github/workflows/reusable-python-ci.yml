@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # use jq to get the last element of the array
-      - run: echo "::set-output name=max-python-version::$(echo '${{ fromJson(needs.dist.outputs.python-versions) }}' | jq '.[-1]')"
+      - run: echo "max-python-version=$(echo '${{ needs.dist.outputs.python-versions }}' | jq '.[-1]')" >> $GITHUB_OUTPUT
         id: max-python-version
     outputs:
       max-python-version: ${{ steps.max-python-version.outputs.max-python-version }}
