@@ -1,13 +1,17 @@
 name: 🐍 • Tests
 on:
   workflow_call:
+    secrets:
+      token:
+        description: "The token to use for Codecov"
+        required: true
     inputs:
       runs-on:
         description: "The platform to run the tests on (ubuntu-latest, macos-latest, windows-latest)"
         required: true
         type: string
       python-version:
-        description: "The Python version to use (3.8-3.11)"
+        description: "The Python version to use"
         required: true
         type: string
       setup-z3:
@@ -44,18 +48,17 @@ jobs:
           prepend_symlinks_to_path: false
           windows_compile_environment: msvc
           override_cache_key: python-tests-${{ inputs.runs-on }}-${{ inputs.python-version }}
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.python-version }}
-          cache: "pip"
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
-      - name: Install nox (non-macos-14)
-        if: ${{ inputs.runs-on != 'macos-14' }}
-        run: pipx install nox
-      - name: Install nox (macos-14)
-        if: ${{ inputs.runs-on == 'macos-14' }}
-        run: brew install nox
+      - uses: yezz123/setup-uv@v4
+      - uses: wntrblm/nox@2024.03.02
+        with:
+          python-versions: ${{ matrix.python-version }}
       - name: Test on 🐍 ${{ inputs.python-version }}
-        run: nox -s tests-${{ inputs.python-version }} --verbose
+        run: nox -s tests-${{ inputs.python-version }} --verbose -- --cov --cov-report=xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          flags: python
+          token: ${{ secrets.token }}
