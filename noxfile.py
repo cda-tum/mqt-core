@@ -72,15 +72,16 @@ def tests(session: nox.Session) -> None:
     _run_tests(session)
 
 
-@nox.session()
+@nox.session(venv_backend="uv")
 def minimums(session: nox.Session) -> None:
     """Test the minimum versions of dependencies."""
     _run_tests(
         session,
-        install_args=["--constraint=test/python/constraints.txt"],
+        install_args=["--resolution=lowest-direct"],
         run_args=["-Wdefault"],
+        extras=["qiskit", "evaluation"],
     )
-    session.run("pip", "list")
+    session.run("uv", "pip", "list")
 
 
 @nox.session(reuse_venv=True)
