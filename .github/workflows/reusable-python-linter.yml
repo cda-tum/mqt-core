@@ -33,15 +33,14 @@ jobs:
         with:
           prepend_symlinks_to_path: false
           override_cache_key: lint
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
-      - uses: pre-commit/action@v3.0.1
+      - uses: yezz123/setup-uv@v4
+      - uses: wntrblm/nox@2024.03.02
         with:
-          extra_args: mypy --all-files
+          python-versions: "3.12"
+      - name: Run mypy
+        run: nox -s lint -- mypy
       - name: Run check-sdist
         run: |
           pipx run check-sdist --inject-junk

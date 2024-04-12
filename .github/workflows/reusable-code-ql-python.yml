@@ -1,15 +1,6 @@
 name: 📝 • CodeQL • Python
 on:
   workflow_call:
-    inputs:
-      setup-z3:
-        description: "Whether to set up Z3"
-        default: false
-        type: boolean
-      z3-version:
-        description: "The version of Z3 to set up"
-        default: "4.11.2"
-        type: string
 
 jobs:
   analyze:
@@ -17,28 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
-    env:
-      CMAKE_BUILD_PARALLEL_LEVEL: 3
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-      - if: ${{ inputs.setup-z3 }}
-        name: Setup Z3
-        uses: cda-tum/setup-z3@v1
-        with:
-          version: ${{ inputs.z3-version }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          prepend_symlinks_to_path: false
-          override_cache_key: codeql-python
-      - name: Set up mold as linker
-        uses: rui314/setup-mold@v1
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
@@ -48,18 +23,3 @@ jobs:
             - uses: security-and-quality
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
-        with:
-          upload: False
-          output: sarif-results
-      - name: filter-sarif
-        uses: advanced-security/filter-sarif@main
-        with:
-          patterns: |
-            -**/extern/**
-            -**/build/**
-          input: sarif-results/python.sarif
-          output: sarif-results/python.sarif
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: sarif-results/python.sarif
