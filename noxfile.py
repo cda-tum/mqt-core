@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import sys
 from typing import TYPE_CHECKING
 
@@ -46,13 +47,18 @@ def _run_tests(
     if os.environ.get("CI", None) and sys.platform == "win32":
         env["CMAKE_GENERATOR"] = "Ninja"
 
+    if shutil.which("cmake") is None and shutil.which("cmake3") is None:
+        session.install("cmake")
+    if shutil.which("ninja") is None:
+        session.install("ninja")
+
     _extras = ["test", *extras]
     if "--cov" in posargs:
         _extras.append("coverage")
         posargs.append("--cov-config=pyproject.toml")
 
     session.install(*BUILD_REQUIREMENTS, *install_args, env=env)
-    install_arg = f".[{','.join(_extras)}]"
+    install_arg = f"-ve.[{','.join(_extras)}]"
     session.install("--no-build-isolation", install_arg, *install_args, env=env)
     session.run("pytest", *run_args, *posargs, env=env)
 
