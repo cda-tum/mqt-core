@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJson(needs.build-package.outputs.python-versions) }}
+        python-version: ${{ fromJson(needs.dist.outputs.python-versions) }}
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: ubuntu-latest
@@ -69,14 +69,14 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - ${{ fromJson(needs.build-package.outputs.python-versions)[0] }}
-          - ${{ fromJson(needs.build-package.outputs.python-versions)[-1] }}
+          - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
+          - ${{ fromJson(needs.dist.outputs.python-versions)[-1] }}
         runs-on: [macos-13] # test Intel architecture
         include:
           - runs-on: macos-14 # test Apple Silicon architecture
             python-version:
               # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
-              - ${{ fromJson(needs.build-package.outputs.python-versions)[-1] }}
+              - ${{ fromJson(needs.dist.outputs.python-versions)[-1] }}
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: ${{ matrix.runs-on }}
@@ -93,8 +93,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - ${{ fromJson(needs.build-package.outputs.python-versions)[0] }}
-          - ${{ fromJson(needs.build-package.outputs.python-versions)[-1] }}
+          - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
+          - ${{ fromJson(needs.dist.outputs.python-versions)[-1] }}
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: windows-latest
@@ -111,8 +111,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - ${{ fromJson(needs.build-package.outputs.python-versions)[0] }}
-          - ${{ fromJson(needs.build-package.outputs.python-versions)[-1] }}
+          - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
+          - ${{ fromJson(needs.dist.outputs.python-versions)[-1] }}
     uses: ./.github/workflows/reusable-python-minimums.yml
     with:
       runs-on: ubuntu-latest
