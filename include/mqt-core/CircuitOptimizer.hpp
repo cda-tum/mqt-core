@@ -5,6 +5,7 @@
 #include "operations/Operation.hpp"
 
 #include <array>
+#include <cstddef>
 #include <memory>
 #include <unordered_set>
 
@@ -58,9 +59,7 @@ public:
    * target qubit) in the given circuit.
    * @param qc the quantum circuit
    */
-  static void replaceMCXWithMCZ(qc::QuantumComputation& qc) {
-    replaceMCXWithMCZ(qc.ops);
-  }
+  static void replaceMCXWithMCZ(qc::QuantumComputation& qc);
 
   /**
    * @brief Backpropagates the output permutation through the circuit.
@@ -86,36 +85,5 @@ public:
    * @param maxBlockSize the maximum size of a block
    */
   static void collectBlocks(QuantumComputation& qc, std::size_t maxBlockSize);
-
-protected:
-  static void removeDiagonalGatesBeforeMeasureRecursive(
-      DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-      const qc::Operation* until);
-  static bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators,
-                                 Qubit idx, DAGReverseIterator& it,
-                                 qc::Operation* op);
-
-  static void
-  removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators,
-                                   Qubit idx, const qc::Operation* until);
-  static bool removeFinalMeasurement(DAG& dag,
-                                     DAGReverseIterators& dagIterators,
-                                     Qubit idx, DAGReverseIterator& it,
-                                     qc::Operation* op);
-
-  static void changeTargets(Targets& targets,
-                            const std::map<Qubit, Qubit>& replacementMap);
-  static void changeControls(Controls& controls,
-                             const std::map<Qubit, Qubit>& replacementMap);
-
-  using Iterator = decltype(qc::QuantumComputation::ops.begin());
-  static Iterator
-  flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops,
-                           Iterator it);
-
-  static void replaceMCXWithMCZ(std::vector<std::unique_ptr<Operation>>& ops);
-  static void backpropagateOutputPermutation(
-      std::vector<std::unique_ptr<Operation>>& ops, Permutation& permutation,
-      std::unordered_set<Qubit>& missingLogicalQubits);
 };
 } // namespace qc
