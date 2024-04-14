@@ -1,6 +1,8 @@
 #include "operations/CompoundOperation.hpp"
 
 #include <algorithm>
+#include <cassert>
+#include <iterator>
 
 namespace qc {
 CompoundOperation::CompoundOperation() {
@@ -156,6 +158,33 @@ void CompoundOperation::invert() {
     op->invert();
   }
   std::reverse(ops.begin(), ops.end());
+}
+
+void CompoundOperation::merge(CompoundOperation& op) {
+  ops.reserve(ops.size() + op.size());
+  ops.insert(ops.end(), std::make_move_iterator(op.begin()),
+             std::make_move_iterator(op.end()));
+  op.clear();
+}
+
+bool CompoundOperation::isConvertibleToSingleOperation() const {
+  if (ops.size() != 1) {
+    return false;
+  }
+  if (!ops.front()->isCompoundOperation()) {
+    return true;
+  }
+  return dynamic_cast<CompoundOperation*>(ops.front().get())
+      ->isConvertibleToSingleOperation();
+}
+
+std::unique_ptr<Operation> CompoundOperation::collapseToSingleOperation() {
+  assert(isConvertibleToSingleOperation());
+  if (!ops.front()->isCompoundOperation()) {
+    return std::move(ops.front());
+  }
+  return dynamic_cast<CompoundOperation*>(ops.front().get())
+      ->collapseToSingleOperation();
 }
 
 } // namespace qc

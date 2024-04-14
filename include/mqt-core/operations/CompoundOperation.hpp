@@ -1,6 +1,13 @@
 #pragma once
 
 #include "Operation.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <vector>
 
 namespace qc {
 
@@ -55,6 +62,30 @@ public:
   [[nodiscard]] std::set<Qubit> getUsedQubits() const override;
 
   void invert() override;
+
+  /**
+   * @brief Merge another compound operation into this one.
+   * @details This transfers ownership of the operations from the other compound
+   * operation to this one. The other compound operation will be empty after
+   * this operation.
+   * @param op the compound operation to merge into this one
+   */
+  void merge(CompoundOperation& op);
+
+  /**
+   * @brief Check whether this operation can be collapsed into a single
+   * operation.
+   * @return true if this operation can be collapsed into a single operation,
+   * false otherwise
+   */
+  [[nodiscard]] bool isConvertibleToSingleOperation() const;
+
+  /**
+   * @brief Collapse this operation into a single operation.
+   * @details This operation must be convertible to a single operation.
+   * @return the collapsed operation
+   */
+  [[nodiscard]] std::unique_ptr<Operation> collapseToSingleOperation();
 
   /**
    * Pass-Through
