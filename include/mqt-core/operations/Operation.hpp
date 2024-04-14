@@ -119,31 +119,21 @@ public:
 
   [[nodiscard]] virtual bool isUnitary() const { return true; }
 
-  [[nodiscard]] inline virtual bool isStandardOperation() const {
+  [[nodiscard]] virtual bool isStandardOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isCompoundOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isNonUnitaryOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isClassicControlledOperation() const {
     return false;
   }
 
-  [[nodiscard]] inline virtual bool isCompoundOperation() const {
-    return false;
-  }
+  [[nodiscard]] virtual bool isSymbolicOperation() const { return false; }
 
-  [[nodiscard]] inline virtual bool isNonUnitaryOperation() const {
-    return false;
-  }
+  [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }
 
-  [[nodiscard]] inline virtual bool isClassicControlledOperation() const {
-    return false;
-  }
-
-  [[nodiscard]] inline virtual bool isSymbolicOperation() const {
-    return false;
-  }
-
-  [[nodiscard]] inline virtual bool isControlled() const {
-    return !controls.empty();
-  }
-
-  [[nodiscard]] inline virtual bool actsOn(const Qubit i) const {
+  [[nodiscard]] virtual bool actsOn(const Qubit i) const {
     for (const auto& t : targets) {
       if (t == i) {
         return true;
