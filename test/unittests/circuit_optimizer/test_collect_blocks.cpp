@@ -165,4 +165,32 @@ TEST(CollectBlocks, unprocessableAtBegin) {
   EXPECT_TRUE(qc.back()->isStandardOperation());
 }
 
+TEST(CollectBlocks, handleCompoundOperation) {
+  QuantumComputation qc(2);
+  QuantumComputation op(1);
+  op.h(0);
+  qc.emplace_back(op.asCompoundOperation());
+  qc.x(1);
+  std::cout << qc << "\n";
+  qc::CircuitOptimizer::collectBlocks(qc, 1);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.size(), 2);
+  EXPECT_TRUE(qc.front()->isStandardOperation());
+  EXPECT_TRUE(qc.back()->isStandardOperation());
+}
+
+TEST(CollectBlocks, handleCompoundOperation2) {
+  QuantumComputation qc(1);
+  QuantumComputation op(1);
+  op.h(0);
+  op.x(0);
+  qc.emplace_back(op.asCompoundOperation());
+  qc.x(0);
+  std::cout << qc << "\n";
+  qc::CircuitOptimizer::collectBlocks(qc, 1);
+  std::cout << qc << "\n";
+  EXPECT_EQ(qc.size(), 1);
+  EXPECT_TRUE(qc.front()->isCompoundOperation());
+}
+
 } // namespace qc

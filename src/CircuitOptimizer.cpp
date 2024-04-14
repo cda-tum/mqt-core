@@ -1489,9 +1489,19 @@ void CircuitOptimizer::backpropagateOutputPermutation(
 struct DSU {
   std::unordered_map<Qubit, Qubit> parent;
   std::unordered_map<Qubit, std::vector<Qubit>> bitBlocks;
-  std::unordered_map<Qubit, std::vector<QuantumComputation::iterator>>
-      gateBlocks;
+  std::unordered_map<Qubit, std::unique_ptr<Operation>*> currentBlockInCircuit;
+  std::unordered_map<Qubit, std::unique_ptr<CompoundOperation>>
+      currentBlockOperations;
   std::size_t maxBlockSize = 0;
+
+  /**
+   * @brief Check if a block is empty.
+   * @param index Qubit to check
+   * @return
+   */
+  [[nodiscard]] bool blockEmpty(const Qubit index) {
+    return currentBlockInCircuit[findBlock(index)] == nullptr;
+  }
 
   /**
    * @brief Find the block that a qubit belongs to.
@@ -1502,7 +1512,8 @@ struct DSU {
     if (parent.find(index) == parent.end()) {
       parent[index] = index;
       bitBlocks[index] = {index};
-      gateBlocks[index] = {};
+      currentBlockInCircuit[index] = nullptr;
+      currentBlockOperations[index] = std::make_unique<CompoundOperation>();
     }
     if (parent[index] == index) {
       return index;
@@ -1511,24 +1522,64 @@ struct DSU {
     return parent[index];
   }
 
-  void unionBlock(Qubit block1, Qubit block2) {
+  /**
+   * @brief Merge two blocks together.
+   * @details The smaller block is merged into the larger block.
+   * @param block1 first block
+   * @param block2 second block
+   */
+  void unionBlock(const Qubit block1, const Qubit block2) {
     auto parent1 = findBlock(block1);
     auto parent2 = findBlock(block2);
     if (parent1 == parent2) {
       return;
     }
-    if (gateBlocks[parent1].size() < gateBlocks[parent2].size()) {
+    assert(currentBlockOperations[parent1] != nullptr);
+    assert(currentBlockOperations[parent2] != nullptr);
+    if (currentBlockOperations[parent1]->size() <
+        currentBlockOperations[parent2]->size()) {
       std::swap(parent1, parent2);
     }
     parent[parent2] = parent1;
-    gateBlocks[parent1].insert(gateBlocks[parent1].end(),
-                               gateBlocks[parent2].begin(),
-                               gateBlocks[parent2].end());
+    currentBlockOperations[parent1]->merge(*currentBlockOperations[parent2]);
     bitBlocks[parent1].insert(bitBlocks[parent1].end(),
                               bitBlocks[parent2].begin(),
                               bitBlocks[parent2].end());
-    gateBlocks[parent2].clear();
+    if (currentBlockInCircuit[parent2] != nullptr) {
+      (*currentBlockInCircuit[parent2]) =
+          std::make_unique<StandardOperation>(0, I);
+    }
+    currentBlockInCircuit[parent2] = nullptr;
+    currentBlockOperations[parent2] = std::make_unique<CompoundOperation>();
     bitBlocks[parent2].clear();
+  }
+
+  /**
+   * @brief Finalize a block.
+   * @details This replaces the original operation in the circuit with all the
+   * operations in the block. If the block is empty, nothing is done. If the
+   * block only contains a single operation, the operation is replaced with the
+   * single operation. Otherwise, the block is replaced with a compound
+   * operation.
+   * @param index the qubit that the block belongs to
+   */
+  void finalizeBlock(const Qubit index) {
+    const auto block = findBlock(index);
+    if (currentBlockInCircuit[block] == nullptr) {
+      return;
+    }
+    auto& compoundOp = currentBlockOperations[block];
+    if (compoundOp->isConvertibleToSingleOperation()) {
+      *currentBlockInCircuit[block] = compoundOp->collapseToSingleOperation();
+    } else {
+      *currentBlockInCircuit[block] = std::move(compoundOp);
+    }
+    for (auto i : bitBlocks[block]) {
+      parent[i] = i;
+      bitBlocks[i] = {i};
+      currentBlockInCircuit[i] = nullptr;
+      currentBlockOperations[i] = std::make_unique<CompoundOperation>();
+    }
   }
 };
 
@@ -1544,10 +1595,6 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
 
   // create an empty disjoint set union data structure
   DSU dsu{};
-
-  // create a list for the gate blocks
-  std::vector<std::vector<QuantumComputation::iterator>> blockList{};
-
   for (auto opIt = qc.begin(); opIt != qc.end(); ++opIt) {
     auto& op = *opIt;
     bool canProcess = true;
@@ -1577,16 +1624,7 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
     } else {
       // resolve cases where an operation cannot be processed
       for (const auto& q : usedQubits) {
-        const auto block = dsu.findBlock(q);
-        if (dsu.gateBlocks[block].empty()) {
-          continue;
-        }
-        blockList.emplace_back(std::move(dsu.gateBlocks[block]));
-        for (auto index : dsu.bitBlocks[block]) {
-          dsu.parent[index] = index;
-          dsu.bitBlocks[index] = {index};
-          dsu.gateBlocks[index] = {};
-        }
+        dsu.finalizeBlock(q);
       }
     }
 
@@ -1599,7 +1637,7 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
         std::unordered_map<Qubit, std::size_t> blocksAndSizes{};
         for (const auto& q : usedQubits) {
           const auto block = dsu.findBlock(q);
-          if (dsu.gateBlocks[block].empty() ||
+          if (dsu.blockEmpty(block) ||
               blocksAndSizes.find(block) != blocksAndSizes.end()) {
             continue;
           }
@@ -1615,12 +1653,8 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
           auto& [block, size] = *it;
           // maximally large block -> nothing to do
           if (size == maxBlockSize) {
-            blockList.emplace_back(std::move(dsu.gateBlocks[block]));
-            for (auto index : dsu.bitBlocks[block]) {
-              dsu.parent[index] = index;
-              dsu.bitBlocks[index] = {index};
-              dsu.gateBlocks[index] = {};
-            }
+            dsu.finalizeBlock(block);
+            continue;
           }
 
           // fill up with as many blocks as possible
@@ -1635,17 +1669,7 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
               ++nextIt;
             }
           }
-
-          // just to be on the safe side, get the block again
-          block = dsu.findBlock(block);
-          if (!dsu.gateBlocks[block].empty()) {
-            blockList.emplace_back(std::move(dsu.gateBlocks[block]));
-          }
-          for (auto index : dsu.bitBlocks[block]) {
-            dsu.parent[index] = index;
-            dsu.bitBlocks[index] = {index};
-            dsu.gateBlocks[index] = {};
-          }
+          dsu.finalizeBlock(block);
         }
       } else {
         // otherwise, finalize blocks that would free up enough space.
@@ -1671,14 +1695,7 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
         for (const auto& [index, saving] : sortedSavings) {
           if (savingsNeed > 0) {
             savingsNeed -= static_cast<std::int64_t>(saving);
-            if (!dsu.gateBlocks[index].empty()) {
-              blockList.emplace_back(std::move(dsu.gateBlocks[index]));
-            }
-            for (auto j : dsu.bitBlocks[index]) {
-              dsu.parent[j] = j;
-              dsu.bitBlocks[j] = {j};
-              dsu.gateBlocks[j] = {};
-            }
+            dsu.finalizeBlock(index);
           }
         }
       }
@@ -1695,35 +1712,29 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
         }
         prev = q;
       }
-      dsu.gateBlocks[dsu.findBlock(static_cast<Qubit>(prev))].emplace_back(
-          opIt);
+      const auto block = dsu.findBlock(static_cast<Qubit>(prev));
+      const auto empty = dsu.blockEmpty(block);
+      if (empty) {
+        dsu.currentBlockInCircuit[block] = &(*opIt);
+      }
+      dsu.currentBlockOperations[block]->emplace_back(std::move(op));
+      // if this is not the first operation in a block, remove it from the
+      // circuit
+      if (!empty) {
+        opIt = qc.erase(opIt);
+        // this can only ever be called on at least the second operation in a
+        // circuit, so it is safe to decrement the iterator here.
+        --opIt;
+      }
     }
   }
 
-  // convert remaining blocks to blockList
+  // finalize remaining blocks and remove identities
   for (const auto& [q, index] : dsu.parent) {
-    if (q == index && !dsu.gateBlocks[q].empty()) {
-      blockList.emplace_back(std::move(dsu.gateBlocks[q]));
+    if (q == index) {
+      dsu.finalizeBlock(q);
     }
   }
-
-  // Iterate over the blocks in reverse order and replace the first operation in
-  // each block with a compound operation containing all operations in the
-  // block. Then remove the remaining operations in the block.
-  for (auto it = blockList.rbegin(); it != blockList.rend(); ++it) {
-    auto& block = *it;
-    if (block.size() == 1U) {
-      continue;
-    }
-    std::vector<std::unique_ptr<Operation>> ops{};
-    ops.reserve(block.size());
-    for (auto& op : block) {
-      ops.emplace_back(std::move(*op));
-      *op = std::make_unique<StandardOperation>(0, I);
-    }
-    *block.front() = std::make_unique<CompoundOperation>(std::move(ops));
-  }
-
   removeIdentities(qc);
 }
 } // namespace qc
