@@ -115,7 +115,9 @@ public:
 
   virtual void setParameter(const std::vector<fp>& p) { parameter = p; }
 
-  [[nodiscard]] inline virtual bool isUnitary() const { return true; }
+  virtual void apply(const Permutation& permutation);
+
+  [[nodiscard]] virtual bool isUnitary() const { return true; }
 
   [[nodiscard]] inline virtual bool isStandardOperation() const {
     return false;

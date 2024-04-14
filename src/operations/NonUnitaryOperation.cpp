@@ -192,4 +192,8 @@ void NonUnitaryOperation::addDepthContribution(
     depths[target] += 1;
   }
 }
+
+void NonUnitaryOperation::apply(const Permutation& permutation) {
+  getTargets() = permutation.apply(getTargets());
+}
 } // namespace qc

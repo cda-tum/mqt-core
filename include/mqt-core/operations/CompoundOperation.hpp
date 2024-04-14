@@ -63,6 +63,8 @@ public:
 
   void invert() override;
 
+  void apply(const Permutation& permutation) override;
+
   /**
    * @brief Merge another compound operation into this one.
    * @details This transfers ownership of the operations from the other compound
