@@ -17,12 +17,12 @@
 namespace qc {
 class Operation {
 protected:
-  Controls controls{};
-  Targets targets{};
-  std::vector<fp> parameter{};
+  Controls controls;
+  Targets targets;
+  std::vector<fp> parameter;
 
   OpType type = None;
-  std::string name{};
+  std::string name;
 
   static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start,
                                    std::size_t end) {
