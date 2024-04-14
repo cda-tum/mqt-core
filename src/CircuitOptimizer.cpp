@@ -285,77 +285,10 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
   removeIdentities(qc);
 }
 
-bool CircuitOptimizer::removeDiagonalGate(DAG& dag,
-                                          DAGReverseIterators& dagIterators,
-                                          Qubit idx, DAGReverseIterator& it,
-                                          qc::Operation* op) {
-  // not a diagonal gate
-  if (std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), op->getType()) ==
-      DIAGONAL_GATES.end()) {
-    it = dag.at(idx).rend();
-    return false;
-  }
+bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
+                        DAGReverseIterator& it, qc::Operation* op);
 
-  if (op->getNcontrols() != 0) {
-    // need to check all controls and targets
-    bool onlyDiagonalGates = true;
-    for (const auto& control : op->getControls()) {
-      auto controlQubit = control.qubit;
-      if (controlQubit == idx) {
-        continue;
-      }
-      if (control.type == Control::Type::Neg) {
-        dagIterators.at(controlQubit) = dag.at(controlQubit).rend();
-        onlyDiagonalGates = false;
-        break;
-      }
-      if (dagIterators.at(controlQubit) == dag.at(controlQubit).rend()) {
-        onlyDiagonalGates = false;
-        break;
-      }
-      // recursive call at control with this operation as goal
-      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, controlQubit,
-                                                (*it)->get());
-      // check if iteration of control qubit was successful
-      if (*dagIterators.at(controlQubit) != *it) {
-        onlyDiagonalGates = false;
-        break;
-      }
-    }
-    for (const auto& target : op->getTargets()) {
-      if (target == idx) {
-        continue;
-      }
-      if (dagIterators.at(target) == dag.at(target).rend()) {
-        onlyDiagonalGates = false;
-        break;
-      }
-      // recursive call at target with this operation as goal
-      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target,
-                                                (*it)->get());
-      // check if iteration of target qubit was successful
-      if (*dagIterators.at(target) != *it) {
-        onlyDiagonalGates = false;
-        break;
-      }
-    }
-    if (!onlyDiagonalGates) {
-      // end qubit
-      dagIterators.at(idx) = dag.at(idx).rend();
-    } else {
-      // set operation to identity so that it can be collected by the
-      // removeIdentities pass
-      op->setGate(qc::I);
-    }
-    return onlyDiagonalGates;
-  }
-  // set operation to identity so that it can be collected by the
-  // removeIdentities pass
-  op->setGate(qc::I);
-  return true;
-}
-
-void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
+void removeDiagonalGatesBeforeMeasureRecursive(
     DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
     const qc::Operation* until) {
   // qubit is finished -> consider next qubit
@@ -446,6 +379,74 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
   }
 }
 
+bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
+                        DAGReverseIterator& it, qc::Operation* op) {
+  // not a diagonal gate
+  if (std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), op->getType()) ==
+      DIAGONAL_GATES.end()) {
+    it = dag.at(idx).rend();
+    return false;
+  }
+
+  if (op->getNcontrols() != 0) {
+    // need to check all controls and targets
+    bool onlyDiagonalGates = true;
+    for (const auto& control : op->getControls()) {
+      auto controlQubit = control.qubit;
+      if (controlQubit == idx) {
+        continue;
+      }
+      if (control.type == Control::Type::Neg) {
+        dagIterators.at(controlQubit) = dag.at(controlQubit).rend();
+        onlyDiagonalGates = false;
+        break;
+      }
+      if (dagIterators.at(controlQubit) == dag.at(controlQubit).rend()) {
+        onlyDiagonalGates = false;
+        break;
+      }
+      // recursive call at control with this operation as goal
+      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, controlQubit,
+                                                (*it)->get());
+      // check if iteration of control qubit was successful
+      if (*dagIterators.at(controlQubit) != *it) {
+        onlyDiagonalGates = false;
+        break;
+      }
+    }
+    for (const auto& target : op->getTargets()) {
+      if (target == idx) {
+        continue;
+      }
+      if (dagIterators.at(target) == dag.at(target).rend()) {
+        onlyDiagonalGates = false;
+        break;
+      }
+      // recursive call at target with this operation as goal
+      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target,
+                                                (*it)->get());
+      // check if iteration of target qubit was successful
+      if (*dagIterators.at(target) != *it) {
+        onlyDiagonalGates = false;
+        break;
+      }
+    }
+    if (!onlyDiagonalGates) {
+      // end qubit
+      dagIterators.at(idx) = dag.at(idx).rend();
+    } else {
+      // set operation to identity so that it can be collected by the
+      // removeIdentities pass
+      op->setGate(qc::I);
+    }
+    return onlyDiagonalGates;
+  }
+  // set operation to identity so that it can be collected by the
+  // removeIdentities pass
+  op->setGate(qc::I);
+  return true;
+}
+
 void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
     QuantumComputation& qc) {
   auto dag = constructDAG(qc);
@@ -469,46 +470,13 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
   removeIdentities(qc);
 }
 
-bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
-                                              DAGReverseIterators& dagIterators,
-                                              Qubit idx, DAGReverseIterator& it,
-                                              qc::Operation* op) {
-  if (op->getNtargets() != 0) {
-    // need to check all targets
-    bool onlyMeasurements = true;
-    for (const auto& target : op->getTargets()) {
-      if (target == idx) {
-        continue;
-      }
-      if (dagIterators.at(target) == dag.at(target).rend()) {
-        onlyMeasurements = false;
-        break;
-      }
-      // recursive call at target with this operation as goal
-      removeFinalMeasurementsRecursive(dag, dagIterators, target, (*it)->get());
-      // check if iteration of target qubit was successful
-      if (dagIterators.at(target) == dag.at(target).rend() ||
-          *dagIterators.at(target) != *it) {
-        onlyMeasurements = false;
-        break;
-      }
-    }
-    if (!onlyMeasurements) {
-      // end qubit
-      dagIterators.at(idx) = dag.at(idx).rend();
-    } else {
-      // set operation to identity so that it can be collected by the
-      // removeIdentities pass
-      op->setGate(qc::I);
-    }
-    return onlyMeasurements;
-  }
-  return false;
-}
+bool removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators,
+                            Qubit idx, DAGReverseIterator& it,
+                            qc::Operation* op);
 
-void CircuitOptimizer::removeFinalMeasurementsRecursive(
-    DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-    const qc::Operation* until) {
+void removeFinalMeasurementsRecursive(DAG& dag,
+                                      DAGReverseIterators& dagIterators,
+                                      Qubit idx, const qc::Operation* until) {
   if (dagIterators.at(idx) == dag.at(idx).rend()) { // we reached the end
     if (idx < static_cast<Qubit>(dag.size() - 1)) {
       removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, nullptr);
@@ -572,6 +540,42 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
       idx < static_cast<Qubit>(dag.size() - 1)) {
     removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, nullptr);
   }
+}
+
+bool removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators,
+                            Qubit idx, DAGReverseIterator& it,
+                            qc::Operation* op) {
+  if (op->getNtargets() != 0) {
+    // need to check all targets
+    bool onlyMeasurements = true;
+    for (const auto& target : op->getTargets()) {
+      if (target == idx) {
+        continue;
+      }
+      if (dagIterators.at(target) == dag.at(target).rend()) {
+        onlyMeasurements = false;
+        break;
+      }
+      // recursive call at target with this operation as goal
+      removeFinalMeasurementsRecursive(dag, dagIterators, target, (*it)->get());
+      // check if iteration of target qubit was successful
+      if (dagIterators.at(target) == dag.at(target).rend() ||
+          *dagIterators.at(target) != *it) {
+        onlyMeasurements = false;
+        break;
+      }
+    }
+    if (!onlyMeasurements) {
+      // end qubit
+      dagIterators.at(idx) = dag.at(idx).rend();
+    } else {
+      // set operation to identity so that it can be collected by the
+      // removeIdentities pass
+      op->setGate(qc::I);
+    }
+    return onlyMeasurements;
+  }
+  return false;
 }
 
 void CircuitOptimizer::removeFinalMeasurements(QuantumComputation& qc) {
@@ -653,6 +657,33 @@ void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc,
 void CircuitOptimizer::decomposeTeleport(
     [[maybe_unused]] QuantumComputation& qc) {}
 
+void changeTargets(Targets& targets,
+                   const std::map<Qubit, Qubit>& replacementMap) {
+  for (auto& target : targets) {
+    auto newTargetIt = replacementMap.find(target);
+    if (newTargetIt != replacementMap.end()) {
+      target = newTargetIt->second;
+    }
+  }
+}
+
+void changeControls(Controls& controls,
+                    const std::map<Qubit, Qubit>& replacementMap) {
+  if (controls.empty() || replacementMap.empty()) {
+    return;
+  }
+
+  // iterate over the replacement map and see if any control matches
+  for (const auto& [from, to] : replacementMap) {
+    auto controlIt = controls.find(from);
+    if (controlIt != controls.end()) {
+      const auto controlType = controlIt->type;
+      controls.erase(controlIt);
+      controls.insert(Control{to, controlType});
+    }
+  }
+}
+
 void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
   //      ┌───┐┌─┐     ┌───┐┌─┐            ┌───┐┌─┐ ░
   // q_0: ┤ H ├┤M├─|0>─┤ H ├┤M├       q_0: ┤ H ├┤M├─░─────────
@@ -721,33 +752,6 @@ void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
       it++;
     } else {
       it++;
-    }
-  }
-}
-
-void CircuitOptimizer::changeTargets(
-    Targets& targets, const std::map<Qubit, Qubit>& replacementMap) {
-  for (auto& target : targets) {
-    auto newTargetIt = replacementMap.find(target);
-    if (newTargetIt != replacementMap.end()) {
-      target = newTargetIt->second;
-    }
-  }
-}
-
-void CircuitOptimizer::changeControls(
-    Controls& controls, const std::map<Qubit, Qubit>& replacementMap) {
-  if (controls.empty() || replacementMap.empty()) {
-    return;
-  }
-
-  // iterate over the replacement map and see if any control matches
-  for (const auto& [from, to] : replacementMap) {
-    auto controlIt = controls.find(from);
-    if (controlIt != controls.end()) {
-      const auto controlType = controlIt->type;
-      controls.erase(controlIt);
-      controls.insert(Control{to, controlType});
     }
   }
 }
@@ -1132,20 +1136,9 @@ void CircuitOptimizer::printDAG(const DAG& dag, const DAGIterators& iterators) {
   }
 }
 
-void CircuitOptimizer::flattenOperations(QuantumComputation& qc) {
-  auto it = qc.begin();
-  while (it != qc.end()) {
-    if ((*it)->isCompoundOperation()) {
-      it = flattenCompoundOperation(qc.ops, it);
-    } else {
-      ++it;
-    }
-  }
-}
-
-CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(
-    std::vector<std::unique_ptr<Operation>>& ops,
-    CircuitOptimizer::Iterator it) {
+using Iterator = qc::QuantumComputation::iterator;
+Iterator flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops,
+                                  Iterator it) {
   assert((*it)->isCompoundOperation());
   auto& op = dynamic_cast<qc::CompoundOperation&>(**it);
   auto opIt = op.begin();
@@ -1170,6 +1163,17 @@ CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(
   // move the general iterator back to the position of the last moved operation
   std::advance(it, -movedOperations);
   return it;
+}
+
+void CircuitOptimizer::flattenOperations(QuantumComputation& qc) {
+  auto it = qc.begin();
+  while (it != qc.end()) {
+    if ((*it)->isCompoundOperation()) {
+      it = flattenCompoundOperation(qc.ops, it);
+    } else {
+      ++it;
+    }
+  }
 }
 
 void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
@@ -1338,8 +1342,7 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
   removeIdentities(qc);
 }
 
-void CircuitOptimizer::replaceMCXWithMCZ(
-    std::vector<std::unique_ptr<Operation>>& ops) {
+void replaceMCXWithMCZ(std::vector<std::unique_ptr<Operation>>& ops) {
   for (auto it = ops.begin(); it != ops.end(); ++it) {
     auto& op = *it;
     if (op->getType() == qc::X && op->getNcontrols() > 0) {
@@ -1369,49 +1372,11 @@ void CircuitOptimizer::replaceMCXWithMCZ(
   }
 }
 
-void CircuitOptimizer::backpropagateOutputPermutation(QuantumComputation& qc) {
-  auto permutation = qc.outputPermutation;
-
-  // Collect all logical qubits missing from the output permutation
-  std::unordered_set<Qubit> logicalQubits{};
-  for (const auto& [physical, logical] : permutation) {
-    logicalQubits.insert(logical);
-  }
-  std::unordered_set<Qubit> missingLogicalQubits{};
-  for (Qubit i = 0; i < qc.getNqubits(); ++i) {
-    if (logicalQubits.find(i) == logicalQubits.end()) {
-      missingLogicalQubits.emplace(i);
-    }
-  }
-
-  backpropagateOutputPermutation(qc.ops, permutation, missingLogicalQubits);
-
-  // `permutation` now holds a potentially incomplete initial layout
-  // check whether the initial layout is complete and return if it is
-  if (permutation.size() == qc.getNqubits()) {
-    qc.initialLayout = permutation;
-    return;
-  }
-
-  // Otherwise, fill the initial layout with the missing logical qubits.
-  // Give preference to choosing the same logical qubit as the missing physical
-  // qubit (i.e., an identity mapping) to avoid unnecessary permutations.
-  for (Qubit i = 0; i < qc.getNqubits(); ++i) {
-    if (permutation.find(i) == permutation.end()) {
-      if (missingLogicalQubits.find(i) != missingLogicalQubits.end()) {
-        permutation.emplace(i, i);
-        missingLogicalQubits.erase(i);
-      } else {
-        permutation.emplace(i, *missingLogicalQubits.begin());
-        missingLogicalQubits.erase(missingLogicalQubits.begin());
-      }
-    }
-  }
-  assert(missingLogicalQubits.empty());
-  qc.initialLayout = permutation;
+void CircuitOptimizer::replaceMCXWithMCZ(qc::QuantumComputation& qc) {
+  ::qc::replaceMCXWithMCZ(qc.ops);
 }
 
-void CircuitOptimizer::backpropagateOutputPermutation(
+void backpropagateOutputPermutation(
     std::vector<std::unique_ptr<Operation>>& ops, Permutation& permutation,
     std::unordered_set<Qubit>& missingLogicalQubits) {
   for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
@@ -1477,6 +1442,49 @@ void CircuitOptimizer::backpropagateOutputPermutation(
       // case 4: nothing to do
     }
   }
+}
+
+void CircuitOptimizer::backpropagateOutputPermutation(QuantumComputation& qc) {
+  auto permutation = qc.outputPermutation;
+
+  // Collect all logical qubits missing from the output permutation
+  std::unordered_set<Qubit> logicalQubits{};
+  for (const auto& [physical, logical] : permutation) {
+    logicalQubits.insert(logical);
+  }
+  std::unordered_set<Qubit> missingLogicalQubits{};
+  for (Qubit i = 0; i < qc.getNqubits(); ++i) {
+    if (logicalQubits.find(i) == logicalQubits.end()) {
+      missingLogicalQubits.emplace(i);
+    }
+  }
+
+  ::qc::backpropagateOutputPermutation(qc.ops, permutation,
+                                       missingLogicalQubits);
+
+  // `permutation` now holds a potentially incomplete initial layout
+  // check whether the initial layout is complete and return if it is
+  if (permutation.size() == qc.getNqubits()) {
+    qc.initialLayout = permutation;
+    return;
+  }
+
+  // Otherwise, fill the initial layout with the missing logical qubits.
+  // Give preference to choosing the same logical qubit as the missing physical
+  // qubit (i.e., an identity mapping) to avoid unnecessary permutations.
+  for (Qubit i = 0; i < qc.getNqubits(); ++i) {
+    if (permutation.find(i) == permutation.end()) {
+      if (missingLogicalQubits.find(i) != missingLogicalQubits.end()) {
+        permutation.emplace(i, i);
+        missingLogicalQubits.erase(i);
+      } else {
+        permutation.emplace(i, *missingLogicalQubits.begin());
+        missingLogicalQubits.erase(missingLogicalQubits.begin());
+      }
+    }
+  }
+  assert(missingLogicalQubits.empty());
+  qc.initialLayout = permutation;
 }
 
 /**
@@ -1737,4 +1745,5 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
   }
   removeIdentities(qc);
 }
+
 } // namespace qc
