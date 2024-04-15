@@ -1759,6 +1759,8 @@ void elidePermutations(std::vector<std::unique_ptr<Operation>>& ops,
       if (compOp->isConvertibleToSingleOperation()) {
         *it = compOp->collapseToSingleOperation();
       }
+      // make sure to also update the tracked controls in the compound operation
+      compOp->getControls() = permutation.apply(compOp->getControls());
       ++it;
       continue;
     }

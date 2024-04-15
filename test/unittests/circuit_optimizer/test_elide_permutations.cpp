@@ -119,7 +119,7 @@ TEST(ElidePermutations, compoundOperation3) {
 TEST(ElidePermutations, compoundOperation4) {
   QuantumComputation qc(3);
   QuantumComputation op(2);
-  qc.swap(0, 1);
+  qc.swap(0, 2);
   op.cx(0, 1);
   op.h(0);
   qc.emplace_back(op.asOperation());
@@ -131,8 +131,12 @@ TEST(ElidePermutations, compoundOperation4) {
 
   EXPECT_EQ(qc.size(), 1);
   EXPECT_TRUE(qc.front()->isCompoundOperation());
-  EXPECT_EQ(qc.outputPermutation[0], 1);
-  EXPECT_EQ(qc.outputPermutation[1], 0);
+  EXPECT_TRUE(qc.front()->isControlled());
+  EXPECT_EQ(qc.front()->getControls().size(), 1);
+  EXPECT_EQ(qc.front()->getControls().begin()->qubit, 0);
+  EXPECT_EQ(qc.outputPermutation[0], 2);
+  EXPECT_EQ(qc.outputPermutation[1], 1);
+  EXPECT_EQ(qc.outputPermutation[2], 0);
 }
 
 TEST(ElidePermutations, nonUnitaryOperation) {
