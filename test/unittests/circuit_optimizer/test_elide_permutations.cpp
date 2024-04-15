@@ -49,6 +49,25 @@ TEST(ElidePermutations, simpleInitialLayout) {
   EXPECT_EQ(qc.outputPermutation[0], 0);
 }
 
+TEST(ElidePermutations, applyPermutionCompound) {
+  QuantumComputation qc(2);
+  qc.cx(0, 1);
+  auto op = qc.asCompoundOperation();
+  op->addControl(2);
+  Permutation perm{};
+  perm[0] = 2;
+  perm[1] = 1;
+  perm[2] = 0;
+  op->apply(perm);
+  EXPECT_EQ(op->size(), 1);
+  EXPECT_TRUE(op->isControlled());
+  EXPECT_EQ(op->getControls().size(), 1);
+  EXPECT_EQ(op->getControls().begin()->qubit, 0);
+  EXPECT_EQ(op->getOps().front()->getTargets().front(), 1);
+  EXPECT_EQ(op->getOps().front()->getControls().size(), 2);
+  EXPECT_EQ(op->getOps().front()->getControls(), Controls({0, 2}));
+}
+
 TEST(ElidePermutations, compoundOperation) {
   QuantumComputation qc(2);
   QuantumComputation op(2);
