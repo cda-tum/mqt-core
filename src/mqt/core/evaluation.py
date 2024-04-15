@@ -144,7 +144,7 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
             ratio = after / before if before != 0 else 1 if after == 0 else math.inf
         key = k
         if k.endswith(tuple(higher_better_metrics)):
-            ratio = 1 / ratio
+            ratio /= 1
             key += "*"
         before = round(before, 3) if isinstance(before, float) else before
         after = round(after, 3) if isinstance(after, float) else after
