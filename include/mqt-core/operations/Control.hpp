@@ -46,15 +46,15 @@ inline bool operator!=(const Control& lhs, const Control& rhs) {
 struct CompareControl {
   using is_transparent [[maybe_unused]] = void;
 
-  inline bool operator()(const Control& lhs, const Control& rhs) const {
+  bool operator()(const Control& lhs, const Control& rhs) const {
     return lhs < rhs;
   }
 
-  inline bool operator()(Qubit lhs, const Control& rhs) const {
+  bool operator()(Qubit lhs, const Control& rhs) const {
     return lhs < rhs.qubit;
   }
 
-  inline bool operator()(const Control& lhs, Qubit rhs) const {
+  bool operator()(const Control& lhs, Qubit rhs) const {
     return lhs.qubit < rhs;
   }
 };

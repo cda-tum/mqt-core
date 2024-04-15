@@ -502,7 +502,8 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
   size_t i = 0U;
   for (const auto& op : ops) {
     os << std::setw(width) << ++i << ":";
-    op->print(os, {}, static_cast<std::size_t>(width) + 1U, nqubits);
+    op->print(os, initialLayout, static_cast<std::size_t>(width) + 1U,
+              getNqubits());
     os << "\n";
   }
 

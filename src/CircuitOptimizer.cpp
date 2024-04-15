@@ -1752,4 +1752,65 @@ void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
   removeIdentities(qc);
 }
 
+void elidePermutations(std::vector<std::unique_ptr<Operation>>& ops,
+                       Permutation& permutation) {
+  for (auto it = ops.begin(); it != ops.end();) {
+    auto& op = *it;
+    if (auto* compOp = dynamic_cast<CompoundOperation*>(op.get())) {
+      elidePermutations(compOp->getOps(), permutation);
+      if (compOp->empty()) {
+        it = ops.erase(it);
+        continue;
+      }
+      if (compOp->isConvertibleToSingleOperation()) {
+        *it = compOp->collapseToSingleOperation();
+      } else {
+        // also update the tracked controls in the compound operation
+        compOp->getControls() = permutation.apply(compOp->getControls());
+      }
+      ++it;
+      continue;
+    }
+
+    if (op->getType() == SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      assert(targets.size() == 2U);
+      assert(permutation.find(targets[0]) != permutation.end());
+      assert(permutation.find(targets[1]) != permutation.end());
+      auto& target0 = permutation[targets[0]];
+      auto& target1 = permutation[targets[1]];
+      std::swap(target0, target1);
+      it = ops.erase(it);
+      continue;
+    }
+
+    op->apply(permutation);
+    ++it;
+  }
+}
+
+void CircuitOptimizer::elidePermutations(QuantumComputation& qc) {
+  if (qc.empty()) {
+    return;
+  }
+
+  auto permutation = qc.initialLayout;
+  ::qc::elidePermutations(qc.ops, permutation);
+
+  // adjust the initial layout
+  Permutation initialLayout{};
+  for (auto& [physical, logical] : qc.initialLayout) {
+    initialLayout[logical] = logical;
+  }
+  qc.initialLayout = initialLayout;
+
+  // adjust the output permutation
+  Permutation outputPermutation{};
+  for (auto& [physical, logical] : qc.outputPermutation) {
+    assert(permutation.find(physical) != permutation.end());
+    outputPermutation[permutation[physical]] = logical;
+  }
+  qc.outputPermutation = outputPermutation;
+}
+
 } // namespace qc

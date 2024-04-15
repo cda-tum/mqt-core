@@ -160,6 +160,13 @@ void CompoundOperation::invert() {
   std::reverse(ops.begin(), ops.end());
 }
 
+void CompoundOperation::apply(const Permutation& permutation) {
+  Operation::apply(permutation);
+  for (auto& op : ops) {
+    op->apply(permutation);
+  }
+}
+
 void CompoundOperation::merge(CompoundOperation& op) {
   ops.reserve(ops.size() + op.size());
   ops.insert(ops.end(), std::make_move_iterator(op.begin()),

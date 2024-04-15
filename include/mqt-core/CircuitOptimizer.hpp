@@ -85,5 +85,15 @@ public:
    * @param maxBlockSize the maximum size of a block
    */
   static void collectBlocks(QuantumComputation& qc, std::size_t maxBlockSize);
+
+  /**
+   * @brief Elide permutations by propagating them through the circuit.
+   * @details The circuit is traversed and any SWAP gate is eliminated by
+   * propagating the permutation through the circuit. The final layout of the
+   * circuit is updated accordingly. This pass works well together with the
+   * `swapReconstruction` pass.
+   * @param qc the quantum circuit
+   */
+  static void elidePermutations(QuantumComputation& qc);
 };
 } // namespace qc

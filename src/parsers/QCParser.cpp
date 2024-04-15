@@ -136,8 +136,7 @@ int qc::QuantumComputation::readQCHeader(std::istream& is,
             constants.at(constidx - inputs.size()) == "1") {
           // add X operation in case of initial value 1
           if (constants.at(constidx - inputs.size()) == "1") {
-            emplace_back<StandardOperation>(nqubits + nancillae,
-                                            static_cast<Qubit>(constidx), X);
+            x(static_cast<Qubit>(constidx));
           }
           varMap.insert({var, static_cast<Qubit>(constidx++)});
         } else {

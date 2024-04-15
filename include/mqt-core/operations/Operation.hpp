@@ -17,12 +17,12 @@
 namespace qc {
 class Operation {
 protected:
-  Controls controls{};
-  Targets targets{};
-  std::vector<fp> parameter{};
+  Controls controls;
+  Targets targets;
+  std::vector<fp> parameter;
 
   OpType type = None;
-  std::string name{};
+  std::string name;
 
   static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start,
                                    std::size_t end) {
@@ -115,33 +115,25 @@ public:
 
   virtual void setParameter(const std::vector<fp>& p) { parameter = p; }
 
-  [[nodiscard]] inline virtual bool isUnitary() const { return true; }
+  virtual void apply(const Permutation& permutation);
 
-  [[nodiscard]] inline virtual bool isStandardOperation() const {
+  [[nodiscard]] virtual bool isUnitary() const { return true; }
+
+  [[nodiscard]] virtual bool isStandardOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isCompoundOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isNonUnitaryOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isClassicControlledOperation() const {
     return false;
   }
 
-  [[nodiscard]] inline virtual bool isCompoundOperation() const {
-    return false;
-  }
+  [[nodiscard]] virtual bool isSymbolicOperation() const { return false; }
 
-  [[nodiscard]] inline virtual bool isNonUnitaryOperation() const {
-    return false;
-  }
+  [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }
 
-  [[nodiscard]] inline virtual bool isClassicControlledOperation() const {
-    return false;
-  }
-
-  [[nodiscard]] inline virtual bool isSymbolicOperation() const {
-    return false;
-  }
-
-  [[nodiscard]] inline virtual bool isControlled() const {
-    return !controls.empty();
-  }
-
-  [[nodiscard]] inline virtual bool actsOn(const Qubit i) const {
+  [[nodiscard]] virtual bool actsOn(const Qubit i) const {
     for (const auto& t : targets) {
       if (t == i) {
         return true;

@@ -84,6 +84,8 @@ public:
   void invert() override {
     throw QFRException("Inverting a non-unitary operation is not supported.");
   }
+
+  void apply(const Permutation& permutation) override;
 };
 } // namespace qc
 
