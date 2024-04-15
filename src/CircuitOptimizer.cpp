@@ -1,7 +1,10 @@
 #include "CircuitOptimizer.hpp"
 
+#include "operations/NonUnitaryOperation.hpp"
+
 #include <algorithm>
 #include <cassert>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -926,6 +929,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
       }
     }
     ++it;
+  }
+  if (qubitsToAddMeasurements.empty()) {
+    return;
   }
   qc.outputPermutation.clear();
   for (const auto& [qubit, clbit] : qubitsToAddMeasurements) {
