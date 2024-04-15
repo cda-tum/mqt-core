@@ -101,7 +101,7 @@ TEST(ElidePermutations, compoundOperation3) {
   QuantumComputation qc(2);
   QuantumComputation op(2);
   op.swap(0, 1);
-  qc.emplace_back(op.asOperation());
+  qc.emplace_back(op.asCompoundOperation());
   qc.cx(0, 1);
 
   std::cout << qc << "\n";
@@ -112,6 +112,25 @@ TEST(ElidePermutations, compoundOperation3) {
   EXPECT_TRUE(qc.front()->isStandardOperation());
   auto reference = StandardOperation(1_pc, 0, X);
   EXPECT_EQ(*qc.front(), reference);
+  EXPECT_EQ(qc.outputPermutation[0], 1);
+  EXPECT_EQ(qc.outputPermutation[1], 0);
+}
+
+TEST(ElidePermutations, compoundOperation4) {
+  QuantumComputation qc(3);
+  QuantumComputation op(2);
+  qc.swap(0, 1);
+  op.cx(0, 1);
+  op.h(0);
+  qc.emplace_back(op.asOperation());
+  qc.back()->addControl(2);
+
+  std::cout << qc << "\n";
+  qc::CircuitOptimizer::elidePermutations(qc);
+  std::cout << qc << "\n";
+
+  EXPECT_EQ(qc.size(), 1);
+  EXPECT_TRUE(qc.front()->isCompoundOperation());
   EXPECT_EQ(qc.outputPermutation[0], 1);
   EXPECT_EQ(qc.outputPermutation[1], 0);
 }
