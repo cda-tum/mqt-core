@@ -65,6 +65,8 @@ source_suffix = [".rst", ".md"]
 exclude_patterns = [
     "_build",
     "**.ipynb_checkpoints",
+    "**.jupyter_cache",
+    "**jupyter_execute",
     "Thumbs.db",
     ".DS_Store",
     ".env",
