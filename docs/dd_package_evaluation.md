@@ -59,12 +59,8 @@ feature_path = "../test/python/results_feature.json"
 compare(baseline_path, feature_path)
 ```
 
-```{raw-cell}
-:raw_mimetype: text/restructuredtext
-
-Note that the method offers several parameters to customize the comparison. See :meth:`mqt.core.evaluation.compare`.
+Note that the method offers several parameters to customize the comparison. See {py:func}`mqt.core.evaluation.compare`.
 An exemplary run adjusting the parameters is shown below.
-```
 
 ```{code-cell} ipython3
 compare(baseline_path, feature_path, no_split=True)

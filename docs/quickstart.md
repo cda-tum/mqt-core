@@ -6,6 +6,11 @@ mystnb:
   number_source_lines: true
 ---
 
+```{code-cell} ipython3
+:tags: [remove-cell]
+%config InlineBackend.figure_formats = ['svg']
+```
+
 # Quickstart
 
 The central interface for working with quantum circuits in the Munich Quantum Toolkit is the {py:class}`~mqt.core.QuantumComputation` class.

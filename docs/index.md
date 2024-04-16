@@ -1,5 +1,9 @@
 # MQT Core - The Backbone of the Munich Quantum Toolkit (MQT)
 
+```{raw} latex
+\begin{abstract}
+```
+
 The MQT Core library forms the backbone of the quantum software tools developed as part of the _{doc}`Munich Quantum Toolkit (MQT) <mqt:index>`_ by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/). This includes the following tools:
 
 - {doc}`MQT DDSIM <ddsim:index>`: A Tool for Classical Quantum Circuit Simulation based on Decision Diagrams.
@@ -16,6 +20,18 @@ For a full list of tools and libraries, please visit the {doc}`MQT website <mqt:
 :end-before: <!-- SPHINX-END -->
 ```
 
+````{only} latex
+```{note}
+A live version of this document is available at [mqt.readthedocs.io/projects/core](https://mqt.readthedocs.io/projects/core).
+```
+````
+
+```{raw} latex
+\end{abstract}
+
+\sphinxtableofcontents
+```
+
 ```{toctree}
 :hidden:
 
@@ -29,6 +45,7 @@ self
 quickstart
 ```
 
+````{only} not latex
 ```{toctree}
 :maxdepth: 2
 :caption: DD Package Evaluation
@@ -36,7 +53,6 @@ quickstart
 dd_package_evaluation
 ```
 
-````{only} not latex
 ```{toctree}
 :maxdepth: 2
 :titlesonly:

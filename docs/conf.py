@@ -58,6 +58,7 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx.ext.viewcode",
     "sphinx.ext.imgconverter",
+    "sphinxcontrib.bibtex",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -171,7 +172,7 @@ latex_documents = [
     (
         master_doc,
         "mqt_core.tex",
-        r"MQT Core\\{\Large The Backbone of the Munich Quantum Toolkit (MQT)}",
+        r"MQT Core\\{\Large The Backbone of the Munich Quantum Toolkit}",
         r"Chair for Design Automation\\Technical University of Munich",
         "howto",
         False,
