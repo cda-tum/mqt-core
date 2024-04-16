@@ -8,11 +8,32 @@ from .symbolic import Expression, Variable
 
 class Permutation(MutableMapping[int, int]):
     """A class to represent a permutation of the qubits in a quantum circuit."""
-    def __getitem__(self: Self, idx: int) -> int: ...
-    def __setitem__(self: Self, idx: int, val: int) -> None: ...
-    def __delitem__(self: Self, key: int) -> None: ...
-    def __iter__(self: Self) -> Iterator[int]: ...
-    def __len__(self: Self) -> int: ...
+    def __getitem__(self: Self, idx: int) -> int:
+        """Get the value of the permutation at the given index.
+
+        Args:
+            idx: The index to get the value of the permutation at.
+
+        Returns:
+            The value of the permutation at the given index.
+        """
+    def __setitem__(self: Self, idx: int, val: int) -> None:
+        """Set the value of the permutation at the given index.
+
+        Args:
+            idx: The index to set the value of the permutation at.
+            val: The value to set the permutation at the given index to.
+        """
+    def __delitem__(self: Self, key: int) -> None:
+        """Delete the value of the permutation at the given index.
+
+        Args:
+            key: The index to delete the value of the permutation at.
+        """
+    def __iter__(self: Self) -> Iterator[int]:
+        """Return an iterator over the indices of the permutation."""
+    def __len__(self: Self) -> int:
+        """Return the number of indices in the permutation."""
     @overload
     def apply(self: Self, controls: set[Control]) -> set[Control]:
         """Apply the permutation to a set of controls.

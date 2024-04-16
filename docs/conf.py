@@ -140,6 +140,7 @@ autoapi_options = [
     "members",
     "imported-members",
     "show-inheritance",
+    "special-members",
     "undoc-members",
 ]
 add_module_names = False
