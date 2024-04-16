@@ -143,6 +143,7 @@ autoapi_options = [
     "undoc-members",
 ]
 add_module_names = False
+toc_object_entries_show_parents = "hide"
 python_use_unqualified_type_names = True
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
