@@ -5,7 +5,7 @@
 namespace mqt {
 
 void registerOperation(py::module& m) {
-  py::class_<qc::Operation>(m, "Operation", "Generic quantum operation.")
+  py::class_<qc::Operation>(m, "Operation")
       .def_property_readonly("name", &qc::Operation::getName)
       .def_property("type_", &qc::Operation::getType, &qc::Operation::setGate)
       .def_property(
@@ -16,22 +16,16 @@ void registerOperation(py::module& m) {
           "controls", [](const qc::Operation& op) { return op.getControls(); },
           &qc::Operation::setControls)
       .def_property_readonly("num_controls", &qc::Operation::getNcontrols)
-      .def("add_control", &qc::Operation::addControl, "control"_a,
-           "Add a control to this operation.")
-      .def("add_controls", &qc::Operation::addControls, "controls"_a,
-           "Add a list of controls to this operation.")
-      .def("clear_controls", &qc::Operation::clearControls,
-           "Remove all controls from this operation.")
+      .def("add_control", &qc::Operation::addControl, "control"_a)
+      .def("add_controls", &qc::Operation::addControls, "controls"_a)
+      .def("clear_controls", &qc::Operation::clearControls)
       .def(
           "remove_control",
           [](qc::Operation& op, const qc::Control& c) { op.removeControl(c); },
-          "control"_a, "Remove a control from this operation.")
-      .def("remove_controls", &qc::Operation::removeControls, "controls"_a,
-           "Remove a list of controls from this operation.")
-      .def("get_used_qubits", &qc::Operation::getUsedQubits,
-           "Get the qubits used by the operation (both control and targets).")
-      .def("acts_on", &qc::Operation::actsOn, "qubit"_a,
-           "Check if the operation acts on the specified qubit.")
+          "control"_a)
+      .def("remove_controls", &qc::Operation::removeControls, "controls"_a)
+      .def("get_used_qubits", &qc::Operation::getUsedQubits)
+      .def("acts_on", &qc::Operation::actsOn, "qubit"_a)
       .def_property(
           "parameter",
           [](const qc::Operation& op) { return op.getParameter(); },
@@ -44,29 +38,8 @@ void registerOperation(py::module& m) {
            &qc::Operation::isClassicControlledOperation)
       .def("is_symbolic_operation", &qc::Operation::isSymbolicOperation)
       .def("is_controlled", &qc::Operation::isControlled)
-      .def("get_inverted", &qc::Operation::getInverted,
-           "Return the inverse of this operation.")
-      .def("invert", &qc::Operation::invert, "Invert this operation.")
-      .def(
-          "qasm2_str",
-          [](const qc::Operation& op, const qc::RegisterNames& qreg,
-             const qc::RegisterNames& creg) {
-            std::ostringstream oss;
-            op.dumpOpenQASM2(oss, qreg, creg);
-            return oss.str();
-          },
-          "qreg"_a, "creg"_a,
-          "Return the OpenQASM 2.0 string representation of this operation.")
-      .def(
-          "qasm3_str",
-          [](const qc::Operation& op, const qc::RegisterNames& qreg,
-             const qc::RegisterNames& creg) {
-            std::ostringstream oss;
-            op.dumpOpenQASM3(oss, qreg, creg);
-            return oss.str();
-          },
-          "qreg"_a, "creg"_a,
-          "Return the OpenQASM 3.0 string representation of this operation.")
+      .def("get_inverted", &qc::Operation::getInverted)
+      .def("invert", &qc::Operation::invert)
       .def("__eq__", [](const qc::Operation& op,
                         const qc::Operation& other) { return op == other; })
       .def("__ne__", [](const qc::Operation& op,

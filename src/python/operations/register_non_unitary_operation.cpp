@@ -4,23 +4,15 @@
 namespace mqt {
 
 void registerNonUnitaryOperation(py::module& m) {
-  py::class_<qc::NonUnitaryOperation, qc::Operation>(
-      m, "NonUnitaryOperation",
-      "Non-unitary operations such as measurements and resets.")
+  py::class_<qc::NonUnitaryOperation, qc::Operation>(m, "NonUnitaryOperation")
       .def(py::init<std::vector<qc::Qubit>, std::vector<qc::Bit>>(),
-           "targets"_a, "classics"_a,
-           "Create a multi-qubit measurement operation.")
-      .def(py::init<qc::Qubit, qc::Bit>(), "target"_a, "classic"_a,
-           "Create a measurement operation that measures `target` into "
-           "`classic`.")
+           "targets"_a, "classics"_a)
+      .def(py::init<qc::Qubit, qc::Bit>(), "target"_a, "classic"_a)
       .def(py::init<std::vector<qc::Qubit>, qc::OpType>(), "targets"_a,
-           "op_type"_a = qc::OpType::Reset,
-           "Create a multi-qubit reset operation.")
+           "op_type"_a = qc::OpType::Reset)
       .def_property_readonly(
-          "classics",
-          py::overload_cast<>(&qc::NonUnitaryOperation::getClassics,
-                              py::const_),
-          "Return the classical bits.")
+          "classics", py::overload_cast<>(&qc::NonUnitaryOperation::getClassics,
+                                          py::const_))
       .def("__repr__", [](const qc::NonUnitaryOperation& op) {
         std::stringstream ss;
         ss << "NonUnitaryOperation(";
