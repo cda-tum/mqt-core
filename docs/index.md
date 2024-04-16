@@ -36,6 +36,7 @@ quickstart
 dd_package_evaluation
 ```
 
+````{only} not latex
 ```{toctree}
 :maxdepth: 2
 :titlesonly:
@@ -46,6 +47,7 @@ contributing
 support
 DevelopmentGuide
 ```
+````
 
 ```{toctree}
 :maxdepth: 3
