@@ -131,7 +131,7 @@ def test_ancilla() -> None:
     qc.cx(anc_reg[0], q_reg[0])
     mqt_qc = qiskit_to_mqt(qc)
     print(mqt_qc)
-    assert mqt_qc.num_qubits_without_ancilla_qubits == 1
+    assert mqt_qc.num_data_qubits == 1
     assert mqt_qc.num_ancilla_qubits == 1
 
 
