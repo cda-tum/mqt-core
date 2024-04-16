@@ -17,12 +17,14 @@ class Control:
 
         __members__: ClassVar[dict[Control.Type, str]]
         Neg: ClassVar[Control.Type]
-        """
-        A negative control. The operation that is controlled on this qubit is only executed if the qubit is in the |0> state.
+        r"""A negative control.
+
+        The operation that is controlled on this qubit is only executed if the qubit is in the :math:`|0\rangle` state.
         """
         Pos: ClassVar[Control.Type]
-        """
-        A positive control. The operation that is controlled on this qubit is only executed if the qubit is in the |1> state.
+        r"""A positive control.
+
+        The operation that is controlled on this qubit is only executed if the qubit is in the :math:`|1\rangle` state.
         """
 
         def __eq__(self: Self, other: object) -> bool: ...
@@ -485,8 +487,8 @@ class StandardOperation(Operation):
     and targets) they act on, and their parameters.
 
     Args:
-        control(s): The control qubit(s) of the operation (if any).
-        target(s): The target qubit(s) of the operation.
+        control: The control qubit(s) of the operation (if any).
+        target: The target qubit(s) of the operation.
         op_type: The type of the operation.
         params: The parameters of the operation (if any).
     """
@@ -577,8 +579,8 @@ class NonUnitaryOperation(Operation):
     that are not reversible. This includes measurements and resets.
 
     Args:
-        target(s): The target qubit(s) of the operation.
-        classic(s): The classical bit(s) that are associated with the operation (only relevant for measurements).
+        targets: The target qubit(s) of the operation.
+        classics: The classical bit(s) that are associated with the operation (only relevant for measurements).
         op_type: The type of the operation.
     """
     @property
@@ -605,7 +607,7 @@ class CompoundOperation(Operation):
     This class is used to aggregate and group multiple operations into a single
     object. This is useful for optimizations and for representing complex
     quantum functionality. A :class:`CompoundOperation` can contain any number
-    of operations, including other :class:`CompoundOperation`s.
+    of operations, including other :class:`CompoundOperation`'s.
 
     Args:
         ops: The operations that are part of the compound operation.
@@ -692,8 +694,8 @@ class SymbolicOperation(StandardOperation):
     expressions.
 
     Args:
-        control(s): The control qubit(s) of the operation (if any).
-        target(s): The target qubit(s) of the operation.
+        controls: The control qubit(s) of the operation (if any).
+        targets: The target qubit(s) of the operation.
         op_type: The type of the operation.
         params: The parameters of the operation (if any).
     """

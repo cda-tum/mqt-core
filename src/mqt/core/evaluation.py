@@ -267,7 +267,25 @@ def compare(
 
 
 def main() -> None:
-    """Main function for the command line interface."""
+    """Main function for the command line interface.
+
+    This function is called when running the `mqt-core-compare` CLI command.
+
+    .. code-block:: bash
+
+        mqt-core-compare baseline.json feature.json [options]
+
+    In addition to the mandatory filepath arguments, it provides the following optional command line options:
+
+    - :code:`--factor <float>`: How much a result has to change to be considered significant.
+    - :code:`--sort`: Sort the table by this column. Valid options are 'ratio' and 'algorithm'.
+    - :code:`--dd`: Whether to show the detailed DD benchmark results.
+    - :code:`--only_changed`: Whether to only show results that changed significantly.
+    - :code:`--no_split`: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+    - :code:`--algorithm <str>`: Only show results for this algorithm.
+    - :code:`--task <str>`: Only show results for this task.
+    - :code:`--num_qubits <int>`: Only show results for this number of qubits. Can only be used if algorithm is also specified.
+    """
     parser = argparse.ArgumentParser(
         description="Compare the results of two benchmarking runs from the generated json files."
     )

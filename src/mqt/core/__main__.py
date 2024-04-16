@@ -10,7 +10,21 @@ from ._version import version as __version__
 
 
 def main() -> None:
-    """Entry point for the mqt-core command line interface."""
+    """Entry point for the mqt-core command line interface.
+
+    This function is called when running the `mqt-core-cli` script.
+
+    .. code-block:: bash
+
+        mqt-core-cli [--version] [--include_dir] [--cmake_dir]
+
+    It provides the following command line options:
+
+    - :code:`--version`: Print the version and exit.
+    - :code:`--include_dir`: Print the path to the mqt-core C++ include directory.
+    - :code:`--cmake_dir`: Print the path to the mqt-core CMake module directory.
+
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", action="version", version=__version__, help="Print version and exit.")
 
