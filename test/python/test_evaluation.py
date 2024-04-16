@@ -100,7 +100,7 @@ def test_aggregate() -> None:
 def test_compare_with_negative_factor(script_runner: ScriptRunner) -> None:
     """Testing factor -0.1."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--factor=-0.1",
@@ -113,7 +113,7 @@ def test_compare_with_negative_factor(script_runner: ScriptRunner) -> None:
 def test_compare_with_invalid_sort_option(script_runner: ScriptRunner) -> None:
     """Testing an invalid sort option."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--sort=after",
@@ -126,7 +126,7 @@ def test_compare_with_invalid_sort_option(script_runner: ScriptRunner) -> None:
 def test_cli_with_num_qubits_specified_without_algorithm(script_runner: ScriptRunner) -> None:
     """Testing the error case when num_qubits is specified without algorithm."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--factor=0.2",
@@ -140,7 +140,7 @@ def test_cli_with_num_qubits_specified_without_algorithm(script_runner: ScriptRu
 def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with default parameters."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
     ])
@@ -156,7 +156,7 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
 def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with default parameters, except that factor is set to 0.3 and dd details should be shown."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--factor=0.3",
@@ -174,7 +174,7 @@ def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
 def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with default parameters, except that factor is set to 0.2 and only_changed is set to true."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--factor=0.2",
@@ -190,7 +190,7 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
 def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with factor=0.1 per default, but both only_changed and no_split are set to true, and dd details should be shown."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--dd",
@@ -209,7 +209,7 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
 def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with default parameters, except for no_split set to true, dd details should be shown and the output tables should only show benchmarks from the Functionality task."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--no_split",
@@ -228,7 +228,7 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
 def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
     """Testing the command line functionality with sort set with "algorithm" and no_split set to true. DD details should be shown and the output tables should only show benchmarks from the BV algorithm with 1024 qubits."""
     ret = script_runner.run([
-        "compare",
+        "mqt-core-compare",
         "./test/python/results_baseline.json",
         "./test/python/results_feature.json",
         "--sort=algorithm",
