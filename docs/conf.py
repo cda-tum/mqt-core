@@ -48,19 +48,16 @@ templates_path = ["_templates"]
 html_css_files = ["custom.css"]
 
 extensions = [
-    "myst_parser",
-    "nbsphinx",
+    "myst_nb",
     "autoapi.extension",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinx_design",
     "sphinxext.opengraph",
-    "sphinx.ext.autosectionlabel",
     "sphinx.ext.viewcode",
-    "sphinx_autodoc_typehints",
+    "sphinx.ext.imgconverter",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -88,24 +85,24 @@ intersphinx_mapping = {
 }
 
 myst_enable_extensions = [
+    "amsmath",
     "colon_fence",
     "substitution",
     "deflist",
+    "dollarmath",
 ]
-
 myst_substitutions = {
     "version": version,
 }
+myst_heading_anchors = 3
 
-nbsphinx_execute = "auto"
-highlight_language = "python3"
-nbsphinx_execute_arguments = [
-    "--InlineBackend.figure_formats={'svg', 'pdf'}",
-    "--InlineBackend.rc=figure.dpi=200",
+# -- Options for {MyST}NB ----------------------------------------------------
+
+nb_execution_mode = "cache"
+nb_mime_priority_overrides = [
+    # builder name, mime type, priority
+    ("latex", "image/svg+xml", 15),
 ]
-nbsphinx_kernel_name = "python3"
-
-autosectionlabel_prefix_document = True
 
 
 class CDAStyle(UnsrtStyle):
@@ -125,7 +122,6 @@ bibtex_default_style = "cda_style"
 copybutton_prompt_text = r"(?:\(venv\) )?(?:\[.*\] )?\$ "
 copybutton_prompt_is_regexp = True
 copybutton_line_continuation_character = "\\"
-
 
 modindex_common_prefix = ["mqt.core."]
 
@@ -162,30 +158,34 @@ html_theme_options = {
 }
 
 # -- Options for LaTeX output ------------------------------------------------
-latex_engine = "lualatex"
+
+numfig = True
+numfig_secnum_depth = 0
+
+sd_fontawesome_latex = True
+image_converter_args = ["-density", "300"]
+latex_engine = "pdflatex"
 latex_documents = [
-    (master_doc, "mqt-core.tex", "MQT Core Documentation", author, "howto", False),
+    (
+        master_doc,
+        "mqt_core.tex",
+        r"MQT Core\\{\Large The Backbone of the Munich Quantum Toolkit (MQT)}",
+        r"Chair for Design Automation\\Technical University of Munich",
+        "howto",
+        False,
+    ),
 ]
 latex_logo = "_static/mqt_dark.png"
 latex_elements = {
     "papersize": "a4paper",
+    "releasename": "Version",
     "printindex": r"\footnotesize\raggedright\printindex",
-    "fontpkg": r"""
-    \directlua{luaotfload.add_fallback
-   ("emojifallback",
-    {
-      "NotoColorEmoji:mode=harf;"
-    }
-   )}
-
-   \setmainfont{DejaVu Serif}[
-     RawFeature={fallback=emojifallback}
-    ]
-   \setsansfont{DejaVu Sans}[
-     RawFeature={fallback=emojifallback}
-   ]
-   \setmonofont{DejaVu Sans Mono}[
-     RawFeature={fallback=emojifallback}
-   ]
-""",
+    "tableofcontents": "",
+    "extrapackages": r"\usepackage{qrcode,graphicx,calc,amsthm}",
+    "preamble": r"""
+    \newtheorem{example}{Example}
+    \clubpenalty=10000
+    \widowpenalty=10000
+    \interlinepenalty 10000
+    """,
 }
