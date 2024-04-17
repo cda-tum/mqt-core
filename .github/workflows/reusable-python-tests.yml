@@ -51,7 +51,7 @@ jobs:
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
       - uses: yezz123/setup-uv@v4
-      - uses: wntrblm/nox@2024.03.02
+      - uses: wntrblm/nox@2024.04.15
         with:
           python-versions: ${{ inputs.python-version }}
       - name: Test on 🐍 ${{ inputs.python-version }}
