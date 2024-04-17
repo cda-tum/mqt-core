@@ -59,8 +59,6 @@ print(qc)
 
 ## Library Overview
 
-<!-- SPHINX-START -->
-
 MQT Core encompasses:
 
 - `MQT::Core`: An intermediate representation (IR) for quantum computations including means to import and export circuits in various formats.
@@ -68,8 +66,6 @@ MQT Core encompasses:
 - `MQT::CoreZX`: A library for working with ZX-diagrams and the ZX-calculus.
 - `MQT::CoreECC`: A library for working with error correcting codes (ECCs) for quantum computing.
 - `MQT::CorePython`: A Python interface for the MQT Core library (e.g., facilitating the import of Qiskit QuantumCircuits).
-
-<!-- SPHINX-END -->
 
 ## System Requirements
 

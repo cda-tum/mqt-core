@@ -4,21 +4,17 @@
 \begin{abstract}
 ```
 
-The MQT Core library forms the backbone of the quantum software tools developed as part of the _{doc}`Munich Quantum Toolkit (MQT) <mqt:index>`_ by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/). This includes the following tools:
+MQT Core is an open-source C++17 and Python library for quantum computing that forms the backbone of the quantum software tools developed as part of the _{doc}`Munich Quantum Toolkit (MQT) <mqt:index>`_ by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/).
+It consists of multiple components that are used throughout the MQT. Specifically, it includes
 
-- {doc}`MQT DDSIM <ddsim:index>`: A Tool for Classical Quantum Circuit Simulation based on Decision Diagrams.
-- {doc}`MQT QMAP <qmap:index>`: A Tool for Quantum Circuit Mapping.
-- {doc}`MQT QCEC <qcec:index>`: A Tool for Quantum Circuit Equivalence Checking.
-- {doc}`MQT QECC <qecc:index>`: A Tool for Quantum Error Correcting Codes.
-- [MQT DDVis](https://github.com/cda-tum/mqt-ddvis): A Web-Application visualizing Decision Diagrams for Quantum Computing.
-- {doc}`MQT SyReC <syrec:index>`: A Tool for Synthesis of Reversible Circuits/Quantum Computing Oracles.
+1. a fully fledged intermediate representation (IR) for quantum computations that is used
+   to represent and manipulate quantum circuits as well as to interface with other quantum software tools (such as Qiskit), e.g., in our quantum circuit compiler {doc}`MQT QMAP <qmap:index>`.
+2. a state-of-the-art decision diagram (DD) package for quantum computing that is used for classical quantum circuit simulation (as part of {doc}`MQT DDSIM <ddsim:index>`) and verification (as part of {doc}`MQT QCEC <qcec:index>`).
+3. a state-of-the-art ZX-diagram package for working with the ZX-calculus, e.g., for verification as part of {doc}`MQT QCEC <qcec:index>`.
 
-For a full list of tools and libraries, please visit the {doc}`MQT website <mqt:index>`.
-
-```{include} ../README.md
-:start-after: <!-- SPHINX-START -->
-:end-before: <!-- SPHINX-END -->
-```
+This documentation provides a comprehensive guide to the MQT Core library, including installation instructions, a quickstart guide, and detailed API documentation.
+The source code of MQT Core is publicly available on GitHub at [cda-tum/mqt-core](https://github.com/cda-tum/mqt-core), while pre-built binaries are available via [PyPI](https://pypi.org/project/mqt.core/) for all major operating systems and all modern Python versions.
+MQT Core is fully compatible with Qiskit 1.0 and above.
 
 ````{only} latex
 ```{note}
