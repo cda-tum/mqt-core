@@ -186,11 +186,12 @@ latex_elements = {
     "tableofcontents": "",
     "extrapackages": r"\usepackage{qrcode,graphicx,calc,amsthm}",
     "preamble": r"""
-    \newtheorem{example}{Example}
-    \clubpenalty=10000
-    \widowpenalty=10000
-    \interlinepenalty 10000
-    """,
+\newtheorem{example}{Example}
+\clubpenalty=10000
+\widowpenalty=10000
+\interlinepenalty 10000
+\def\subparagraph{} % because IEEE classes don't define this, but titlesec assumes it's present
+""",
     "extraclassoptions": r"journal, onecolumn",
     "fvset": r"\fvset{fontsize=\small}",
 }
