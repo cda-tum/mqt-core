@@ -1,6 +1,12 @@
 #include "CircuitOptimizer.hpp"
 
+#include "operations/NonUnitaryOperation.hpp"
+
+#include <algorithm>
 #include <cassert>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace qc {
 void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
@@ -38,9 +44,7 @@ void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
 void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1);
@@ -126,9 +130,7 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
 DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1);
@@ -157,10 +159,9 @@ void CircuitOptimizer::addNonStandardOperationToDag(
   const auto& gate = *op;
   // compound operations are added "as-is"
   if (gate->isCompoundOperation()) {
-    for (std::size_t i = 0U; i < gate->getNqubits(); ++i) {
-      if (gate->actsOn(static_cast<Qubit>(i))) {
-        dag.at(i).push_back(op);
-      }
+    const auto usedQubits = gate->getUsedQubits();
+    for (const auto q : usedQubits) {
+      dag.at(q).push_back(op);
     }
   } else if (gate->isNonUnitaryOperation()) {
     for (const auto& b : gate->getTargets()) {
@@ -189,9 +190,7 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
 
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1);
@@ -260,8 +259,7 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
         it->setGate(qc::I);
       } else {
         compop->emplace_back<StandardOperation>(
-            it->getNqubits(), it->getTargets().at(0), it->getType(),
-            it->getParameter());
+            it->getTargets().at(0), it->getType(), it->getParameter());
         it->setGate(I);
       }
 
@@ -276,13 +274,11 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
       (*op)->setGate(qc::I);
       it->setGate(qc::I);
     } else {
-      auto compop = std::make_unique<CompoundOperation>(it->getNqubits());
+      auto compop = std::make_unique<CompoundOperation>();
       compop->emplace_back<StandardOperation>(
-          (*op)->getNqubits(), (*op)->getTargets().at(0), (*op)->getType(),
-          (*op)->getParameter());
+          (*op)->getTargets().at(0), (*op)->getType(), (*op)->getParameter());
       compop->emplace_back<StandardOperation>(
-          it->getNqubits(), it->getTargets().at(0), it->getType(),
-          it->getParameter());
+          it->getTargets().at(0), it->getType(), it->getParameter());
       it->setGate(I);
       (*op) = std::move(compop);
       dag.at(target).push_back(op);
@@ -292,77 +288,10 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
   removeIdentities(qc);
 }
 
-bool CircuitOptimizer::removeDiagonalGate(DAG& dag,
-                                          DAGReverseIterators& dagIterators,
-                                          Qubit idx, DAGReverseIterator& it,
-                                          qc::Operation* op) {
-  // not a diagonal gate
-  if (std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), op->getType()) ==
-      DIAGONAL_GATES.end()) {
-    it = dag.at(idx).rend();
-    return false;
-  }
+bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
+                        DAGReverseIterator& it, qc::Operation* op);
 
-  if (op->getNcontrols() != 0) {
-    // need to check all controls and targets
-    bool onlyDiagonalGates = true;
-    for (const auto& control : op->getControls()) {
-      auto controlQubit = control.qubit;
-      if (controlQubit == idx) {
-        continue;
-      }
-      if (control.type == Control::Type::Neg) {
-        dagIterators.at(controlQubit) = dag.at(controlQubit).rend();
-        onlyDiagonalGates = false;
-        break;
-      }
-      if (dagIterators.at(controlQubit) == dag.at(controlQubit).rend()) {
-        onlyDiagonalGates = false;
-        break;
-      }
-      // recursive call at control with this operation as goal
-      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, controlQubit,
-                                                (*it)->get());
-      // check if iteration of control qubit was successful
-      if (*dagIterators.at(controlQubit) != *it) {
-        onlyDiagonalGates = false;
-        break;
-      }
-    }
-    for (const auto& target : op->getTargets()) {
-      if (target == idx) {
-        continue;
-      }
-      if (dagIterators.at(target) == dag.at(target).rend()) {
-        onlyDiagonalGates = false;
-        break;
-      }
-      // recursive call at target with this operation as goal
-      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target,
-                                                (*it)->get());
-      // check if iteration of target qubit was successful
-      if (*dagIterators.at(target) != *it) {
-        onlyDiagonalGates = false;
-        break;
-      }
-    }
-    if (!onlyDiagonalGates) {
-      // end qubit
-      dagIterators.at(idx) = dag.at(idx).rend();
-    } else {
-      // set operation to identity so that it can be collected by the
-      // removeIdentities pass
-      op->setGate(qc::I);
-    }
-    return onlyDiagonalGates;
-  }
-  // set operation to identity so that it can be collected by the
-  // removeIdentities pass
-  op->setGate(qc::I);
-  return true;
-}
-
-void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
+void removeDiagonalGatesBeforeMeasureRecursive(
     DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
     const qc::Operation* until) {
   // qubit is finished -> consider next qubit
@@ -453,6 +382,74 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasureRecursive(
   }
 }
 
+bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
+                        DAGReverseIterator& it, qc::Operation* op) {
+  // not a diagonal gate
+  if (std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), op->getType()) ==
+      DIAGONAL_GATES.end()) {
+    it = dag.at(idx).rend();
+    return false;
+  }
+
+  if (op->getNcontrols() != 0) {
+    // need to check all controls and targets
+    bool onlyDiagonalGates = true;
+    for (const auto& control : op->getControls()) {
+      auto controlQubit = control.qubit;
+      if (controlQubit == idx) {
+        continue;
+      }
+      if (control.type == Control::Type::Neg) {
+        dagIterators.at(controlQubit) = dag.at(controlQubit).rend();
+        onlyDiagonalGates = false;
+        break;
+      }
+      if (dagIterators.at(controlQubit) == dag.at(controlQubit).rend()) {
+        onlyDiagonalGates = false;
+        break;
+      }
+      // recursive call at control with this operation as goal
+      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, controlQubit,
+                                                (*it)->get());
+      // check if iteration of control qubit was successful
+      if (*dagIterators.at(controlQubit) != *it) {
+        onlyDiagonalGates = false;
+        break;
+      }
+    }
+    for (const auto& target : op->getTargets()) {
+      if (target == idx) {
+        continue;
+      }
+      if (dagIterators.at(target) == dag.at(target).rend()) {
+        onlyDiagonalGates = false;
+        break;
+      }
+      // recursive call at target with this operation as goal
+      removeDiagonalGatesBeforeMeasureRecursive(dag, dagIterators, target,
+                                                (*it)->get());
+      // check if iteration of target qubit was successful
+      if (*dagIterators.at(target) != *it) {
+        onlyDiagonalGates = false;
+        break;
+      }
+    }
+    if (!onlyDiagonalGates) {
+      // end qubit
+      dagIterators.at(idx) = dag.at(idx).rend();
+    } else {
+      // set operation to identity so that it can be collected by the
+      // removeIdentities pass
+      op->setGate(qc::I);
+    }
+    return onlyDiagonalGates;
+  }
+  // set operation to identity so that it can be collected by the
+  // removeIdentities pass
+  op->setGate(qc::I);
+  return true;
+}
+
 void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
     QuantumComputation& qc) {
   auto dag = constructDAG(qc);
@@ -476,46 +473,13 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
   removeIdentities(qc);
 }
 
-bool CircuitOptimizer::removeFinalMeasurement(DAG& dag,
-                                              DAGReverseIterators& dagIterators,
-                                              Qubit idx, DAGReverseIterator& it,
-                                              qc::Operation* op) {
-  if (op->getNtargets() != 0) {
-    // need to check all targets
-    bool onlyMeasurements = true;
-    for (const auto& target : op->getTargets()) {
-      if (target == idx) {
-        continue;
-      }
-      if (dagIterators.at(target) == dag.at(target).rend()) {
-        onlyMeasurements = false;
-        break;
-      }
-      // recursive call at target with this operation as goal
-      removeFinalMeasurementsRecursive(dag, dagIterators, target, (*it)->get());
-      // check if iteration of target qubit was successful
-      if (dagIterators.at(target) == dag.at(target).rend() ||
-          *dagIterators.at(target) != *it) {
-        onlyMeasurements = false;
-        break;
-      }
-    }
-    if (!onlyMeasurements) {
-      // end qubit
-      dagIterators.at(idx) = dag.at(idx).rend();
-    } else {
-      // set operation to identity so that it can be collected by the
-      // removeIdentities pass
-      op->setGate(qc::I);
-    }
-    return onlyMeasurements;
-  }
-  return false;
-}
+bool removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators,
+                            Qubit idx, DAGReverseIterator& it,
+                            qc::Operation* op);
 
-void CircuitOptimizer::removeFinalMeasurementsRecursive(
-    DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-    const qc::Operation* until) {
+void removeFinalMeasurementsRecursive(DAG& dag,
+                                      DAGReverseIterators& dagIterators,
+                                      Qubit idx, const qc::Operation* until) {
   if (dagIterators.at(idx) == dag.at(idx).rend()) { // we reached the end
     if (idx < static_cast<Qubit>(dag.size() - 1)) {
       removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, nullptr);
@@ -581,6 +545,42 @@ void CircuitOptimizer::removeFinalMeasurementsRecursive(
   }
 }
 
+bool removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators,
+                            Qubit idx, DAGReverseIterator& it,
+                            qc::Operation* op) {
+  if (op->getNtargets() != 0) {
+    // need to check all targets
+    bool onlyMeasurements = true;
+    for (const auto& target : op->getTargets()) {
+      if (target == idx) {
+        continue;
+      }
+      if (dagIterators.at(target) == dag.at(target).rend()) {
+        onlyMeasurements = false;
+        break;
+      }
+      // recursive call at target with this operation as goal
+      removeFinalMeasurementsRecursive(dag, dagIterators, target, (*it)->get());
+      // check if iteration of target qubit was successful
+      if (dagIterators.at(target) == dag.at(target).rend() ||
+          *dagIterators.at(target) != *it) {
+        onlyMeasurements = false;
+        break;
+      }
+    }
+    if (!onlyMeasurements) {
+      // end qubit
+      dagIterators.at(idx) = dag.at(idx).rend();
+    } else {
+      // set operation to identity so that it can be collected by the
+      // removeIdentities pass
+      op->setGate(qc::I);
+    }
+    return onlyMeasurements;
+  }
+  return false;
+}
+
 void CircuitOptimizer::removeFinalMeasurements(QuantumComputation& qc) {
   auto dag = constructDAG(qc);
   DAGReverseIterators dagIterators{dag.size()};
@@ -601,31 +601,26 @@ void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc,
     if ((*it)->isStandardOperation()) {
       if ((*it)->getType() == qc::SWAP) {
         const auto targets = (*it)->getTargets();
-        const auto nqubits = (*it)->getNqubits();
         it = qc.ops.erase(it);
-        it = qc.ops.insert(
-            it, std::make_unique<StandardOperation>(
-                    nqubits, Control{targets[0]}, targets[1], qc::X));
+        it = qc.ops.insert(it, std::make_unique<StandardOperation>(
+                                   Control{targets[0]}, targets[1], qc::X));
         if (isDirectedArchitecture) {
-          it = qc.ops.insert(it, std::make_unique<StandardOperation>(
-                                     nqubits, targets[0], qc::H));
-          it = qc.ops.insert(it, std::make_unique<StandardOperation>(
-                                     nqubits, targets[1], qc::H));
           it = qc.ops.insert(
-              it, std::make_unique<StandardOperation>(
-                      nqubits, Control{targets[0]}, targets[1], qc::X));
+              it, std::make_unique<StandardOperation>(targets[0], qc::H));
+          it = qc.ops.insert(
+              it, std::make_unique<StandardOperation>(targets[1], qc::H));
           it = qc.ops.insert(it, std::make_unique<StandardOperation>(
-                                     nqubits, targets[0], qc::H));
-          it = qc.ops.insert(it, std::make_unique<StandardOperation>(
-                                     nqubits, targets[1], qc::H));
+                                     Control{targets[0]}, targets[1], qc::X));
+          it = qc.ops.insert(
+              it, std::make_unique<StandardOperation>(targets[0], qc::H));
+          it = qc.ops.insert(
+              it, std::make_unique<StandardOperation>(targets[1], qc::H));
         } else {
-          it = qc.ops.insert(
-              it, std::make_unique<StandardOperation>(
-                      nqubits, Control{targets[1]}, targets[0], qc::X));
+          it = qc.ops.insert(it, std::make_unique<StandardOperation>(
+                                     Control{targets[1]}, targets[0], qc::X));
         }
-        it = qc.ops.insert(
-            it, std::make_unique<StandardOperation>(
-                    nqubits, Control{targets[0]}, targets[1], qc::X));
+        it = qc.ops.insert(it, std::make_unique<StandardOperation>(
+                                   Control{targets[0]}, targets[1], qc::X));
       } else {
         ++it;
       }
@@ -635,27 +630,22 @@ void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc,
       while (cit != compOp->end()) {
         if ((*cit)->isStandardOperation() && (*cit)->getType() == qc::SWAP) {
           const auto targets = (*cit)->getTargets();
-          const auto nqubits = compOp->getNqubits();
           cit = compOp->erase(cit);
-          cit = compOp->insert<StandardOperation>(
-              cit, nqubits, Control{targets[0]}, targets[1], qc::X);
+          cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
+                                                  targets[1], qc::X);
           if (isDirectedArchitecture) {
-            cit = compOp->insert<StandardOperation>(cit, nqubits, targets[0],
-                                                    qc::H);
-            cit = compOp->insert<StandardOperation>(cit, nqubits, targets[1],
-                                                    qc::H);
-            cit = compOp->insert<StandardOperation>(
-                cit, nqubits, Control{targets[0]}, targets[1], qc::X);
-            cit = compOp->insert<StandardOperation>(cit, nqubits, targets[0],
-                                                    qc::H);
-            cit = compOp->insert<StandardOperation>(cit, nqubits, targets[1],
-                                                    qc::H);
+            cit = compOp->insert<StandardOperation>(cit, targets[0], qc::H);
+            cit = compOp->insert<StandardOperation>(cit, targets[1], qc::H);
+            cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
+                                                    targets[1], qc::X);
+            cit = compOp->insert<StandardOperation>(cit, targets[0], qc::H);
+            cit = compOp->insert<StandardOperation>(cit, targets[1], qc::H);
           } else {
-            cit = compOp->insert<StandardOperation>(
-                cit, nqubits, Control{targets[1]}, targets[0], qc::X);
+            cit = compOp->insert<StandardOperation>(cit, Control{targets[1]},
+                                                    targets[0], qc::X);
           }
-          cit = compOp->insert<StandardOperation>(
-              cit, nqubits, Control{targets[0]}, targets[1], qc::X);
+          cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
+                                                  targets[1], qc::X);
         } else {
           ++cit;
         }
@@ -669,6 +659,33 @@ void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc,
 
 void CircuitOptimizer::decomposeTeleport(
     [[maybe_unused]] QuantumComputation& qc) {}
+
+void changeTargets(Targets& targets,
+                   const std::map<Qubit, Qubit>& replacementMap) {
+  for (auto& target : targets) {
+    auto newTargetIt = replacementMap.find(target);
+    if (newTargetIt != replacementMap.end()) {
+      target = newTargetIt->second;
+    }
+  }
+}
+
+void changeControls(Controls& controls,
+                    const std::map<Qubit, Qubit>& replacementMap) {
+  if (controls.empty() || replacementMap.empty()) {
+    return;
+  }
+
+  // iterate over the replacement map and see if any control matches
+  for (const auto& [from, to] : replacementMap) {
+    auto controlIt = controls.find(from);
+    if (controlIt != controls.end()) {
+      const auto controlType = controlIt->type;
+      controls.erase(controlIt);
+      controls.insert(Control{to, controlType});
+    }
+  }
+}
 
 void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
   //      ┌───┐┌─┐     ┌───┐┌─┐            ┌───┐┌─┐ ░
@@ -738,40 +755,6 @@ void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
       it++;
     } else {
       it++;
-    }
-  }
-  // if anything has been modified the number of qubits of each gate has to be
-  // adjusted
-  if (!replacementMap.empty()) {
-    for (auto& op : qc.ops) {
-      op->setNqubits(qc.getNqubits());
-    }
-  }
-}
-
-void CircuitOptimizer::changeTargets(
-    Targets& targets, const std::map<Qubit, Qubit>& replacementMap) {
-  for (auto& target : targets) {
-    auto newTargetIt = replacementMap.find(target);
-    if (newTargetIt != replacementMap.end()) {
-      target = newTargetIt->second;
-    }
-  }
-}
-
-void CircuitOptimizer::changeControls(
-    Controls& controls, const std::map<Qubit, Qubit>& replacementMap) {
-  if (controls.empty() || replacementMap.empty()) {
-    return;
-  }
-
-  // iterate over the replacement map and see if any control matches
-  for (const auto& [from, to] : replacementMap) {
-    auto controlIt = controls.find(from);
-    if (controlIt != controls.end()) {
-      const auto controlType = controlIt->type;
-      controls.erase(controlIt);
-      controls.insert(Control{to, controlType});
     }
   }
 }
@@ -876,15 +859,13 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
               std::stringstream ss{};
               ss << "Underlying operation of classic-controlled operation is "
                     "not a StandardOperation.\n";
-              classicOp->print(ss);
+              classicOp->print(ss, qc.nqubits);
               throw QFRException(ss.str());
             }
 
             // get all the necessary information for reconstructing the
             // operation
-            const auto nqubits = standardOp->getNqubits();
             const auto type = standardOp->getType();
-
             const auto targs = standardOp->getTargets();
             for (const auto& target : targs) {
               if (target == measurementQubit) {
@@ -925,10 +906,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
 
             itInvalidated = (it >= currentInsertionPoint);
             // insert the new operation (invalidated all pointer onwards)
-            currentInsertionPoint =
-                qc.insert(currentInsertionPoint,
-                          std::make_unique<qc::StandardOperation>(
-                              nqubits, controls, targs, type, parameters));
+            currentInsertionPoint = qc.insert(
+                currentInsertionPoint, std::make_unique<qc::StandardOperation>(
+                                           controls, targs, type, parameters));
 
             if (itInvalidated) {
               it = currentInsertionPoint;
@@ -949,6 +929,9 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
       }
     }
     ++it;
+  }
+  if (qubitsToAddMeasurements.empty()) {
+    return;
   }
   qc.outputPermutation.clear();
   for (const auto& [qubit, clbit] : qubitsToAddMeasurements) {
@@ -1159,20 +1142,9 @@ void CircuitOptimizer::printDAG(const DAG& dag, const DAGIterators& iterators) {
   }
 }
 
-void CircuitOptimizer::flattenOperations(QuantumComputation& qc) {
-  auto it = qc.begin();
-  while (it != qc.end()) {
-    if ((*it)->isCompoundOperation()) {
-      it = flattenCompoundOperation(qc.ops, it);
-    } else {
-      ++it;
-    }
-  }
-}
-
-CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(
-    std::vector<std::unique_ptr<Operation>>& ops,
-    CircuitOptimizer::Iterator it) {
+using Iterator = qc::QuantumComputation::iterator;
+Iterator flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops,
+                                  Iterator it) {
   assert((*it)->isCompoundOperation());
   auto& op = dynamic_cast<qc::CompoundOperation&>(**it);
   auto opIt = op.begin();
@@ -1199,12 +1171,21 @@ CircuitOptimizer::Iterator CircuitOptimizer::flattenCompoundOperation(
   return it;
 }
 
+void CircuitOptimizer::flattenOperations(QuantumComputation& qc) {
+  auto it = qc.begin();
+  while (it != qc.end()) {
+    if ((*it)->isCompoundOperation()) {
+      it = flattenCompoundOperation(qc.ops, it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1U);
@@ -1367,26 +1348,22 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
   removeIdentities(qc);
 }
 
-void CircuitOptimizer::replaceMCXWithMCZ(
-    std::vector<std::unique_ptr<Operation>>& ops) {
+void replaceMCXWithMCZ(std::vector<std::unique_ptr<Operation>>& ops) {
   for (auto it = ops.begin(); it != ops.end(); ++it) {
     auto& op = *it;
     if (op->getType() == qc::X && op->getNcontrols() > 0) {
       const auto& controls = op->getControls();
       assert(op->getNtargets() == 1U);
       const auto target = op->getTargets()[0];
-      const auto nqubits = op->getNqubits();
 
       // -c-    ---c---
       //  |  =     |
       // -X-    -H-Z-H-
       std::array<std::unique_ptr<Operation>, 3U> replacementOps{};
-      replacementOps[0] =
-          std::make_unique<StandardOperation>(nqubits, target, H);
+      replacementOps[0] = std::make_unique<StandardOperation>(target, H);
       replacementOps[1] =
-          std::make_unique<StandardOperation>(nqubits, controls, target, Z);
-      replacementOps[2] =
-          std::make_unique<StandardOperation>(nqubits, target, H);
+          std::make_unique<StandardOperation>(controls, target, Z);
+      replacementOps[2] = std::make_unique<StandardOperation>(target, H);
 
       it = ops.insert(it, std::make_move_iterator(replacementOps.begin()),
                       std::make_move_iterator(replacementOps.end()));
@@ -1401,49 +1378,11 @@ void CircuitOptimizer::replaceMCXWithMCZ(
   }
 }
 
-void CircuitOptimizer::backpropagateOutputPermutation(QuantumComputation& qc) {
-  auto permutation = qc.outputPermutation;
-
-  // Collect all logical qubits missing from the output permutation
-  std::unordered_set<Qubit> logicalQubits{};
-  for (const auto& [physical, logical] : permutation) {
-    logicalQubits.insert(logical);
-  }
-  std::unordered_set<Qubit> missingLogicalQubits{};
-  for (Qubit i = 0; i < qc.getNqubits(); ++i) {
-    if (logicalQubits.find(i) == logicalQubits.end()) {
-      missingLogicalQubits.emplace(i);
-    }
-  }
-
-  backpropagateOutputPermutation(qc.ops, permutation, missingLogicalQubits);
-
-  // `permutation` now holds a potentially incomplete initial layout
-  // check whether the initial layout is complete and return if it is
-  if (permutation.size() == qc.getNqubits()) {
-    qc.initialLayout = permutation;
-    return;
-  }
-
-  // Otherwise, fill the initial layout with the missing logical qubits.
-  // Give preference to choosing the same logical qubit as the missing physical
-  // qubit (i.e., an identity mapping) to avoid unnecessary permutations.
-  for (Qubit i = 0; i < qc.getNqubits(); ++i) {
-    if (permutation.find(i) == permutation.end()) {
-      if (missingLogicalQubits.find(i) != missingLogicalQubits.end()) {
-        permutation.emplace(i, i);
-        missingLogicalQubits.erase(i);
-      } else {
-        permutation.emplace(i, *missingLogicalQubits.begin());
-        missingLogicalQubits.erase(missingLogicalQubits.begin());
-      }
-    }
-  }
-  assert(missingLogicalQubits.empty());
-  qc.initialLayout = permutation;
+void CircuitOptimizer::replaceMCXWithMCZ(qc::QuantumComputation& qc) {
+  ::qc::replaceMCXWithMCZ(qc.ops);
 }
 
-void CircuitOptimizer::backpropagateOutputPermutation(
+void backpropagateOutputPermutation(
     std::vector<std::unique_ptr<Operation>>& ops, Permutation& permutation,
     std::unordered_set<Qubit>& missingLogicalQubits) {
   for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
@@ -1510,4 +1449,368 @@ void CircuitOptimizer::backpropagateOutputPermutation(
     }
   }
 }
+
+void CircuitOptimizer::backpropagateOutputPermutation(QuantumComputation& qc) {
+  auto permutation = qc.outputPermutation;
+
+  // Collect all logical qubits missing from the output permutation
+  std::unordered_set<Qubit> logicalQubits{};
+  for (const auto& [physical, logical] : permutation) {
+    logicalQubits.insert(logical);
+  }
+  std::unordered_set<Qubit> missingLogicalQubits{};
+  for (Qubit i = 0; i < qc.getNqubits(); ++i) {
+    if (logicalQubits.find(i) == logicalQubits.end()) {
+      missingLogicalQubits.emplace(i);
+    }
+  }
+
+  ::qc::backpropagateOutputPermutation(qc.ops, permutation,
+                                       missingLogicalQubits);
+
+  // `permutation` now holds a potentially incomplete initial layout
+  // check whether the initial layout is complete and return if it is
+  if (permutation.size() == qc.getNqubits()) {
+    qc.initialLayout = permutation;
+    return;
+  }
+
+  // Otherwise, fill the initial layout with the missing logical qubits.
+  // Give preference to choosing the same logical qubit as the missing physical
+  // qubit (i.e., an identity mapping) to avoid unnecessary permutations.
+  for (Qubit i = 0; i < qc.getNqubits(); ++i) {
+    if (permutation.find(i) == permutation.end()) {
+      if (missingLogicalQubits.find(i) != missingLogicalQubits.end()) {
+        permutation.emplace(i, i);
+        missingLogicalQubits.erase(i);
+      } else {
+        permutation.emplace(i, *missingLogicalQubits.begin());
+        missingLogicalQubits.erase(missingLogicalQubits.begin());
+      }
+    }
+  }
+  assert(missingLogicalQubits.empty());
+  qc.initialLayout = permutation;
+}
+
+/**
+ * @brief Disjoint Set Union data structure for qubits
+ *
+ * This data structure is used to maintain a relationship between qubits and
+ * blocks they belong to. The blocks are formed by operations that act on the
+ * same qubits.
+ */
+struct DSU {
+  std::unordered_map<Qubit, Qubit> parent;
+  std::unordered_map<Qubit, std::vector<Qubit>> bitBlocks;
+  std::unordered_map<Qubit, std::unique_ptr<Operation>*> currentBlockInCircuit;
+  std::unordered_map<Qubit, std::unique_ptr<CompoundOperation>>
+      currentBlockOperations;
+  std::size_t maxBlockSize = 0;
+
+  /**
+   * @brief Check if a block is empty.
+   * @param index Qubit to check
+   * @return
+   */
+  [[nodiscard]] bool blockEmpty(const Qubit index) {
+    return currentBlockInCircuit[findBlock(index)] == nullptr;
+  }
+
+  /**
+   * @brief Find the block that a qubit belongs to.
+   * @param index Qubit to find the block for
+   * @return The block that the qubit belongs to
+   */
+  Qubit findBlock(const Qubit index) {
+    if (parent.find(index) == parent.end()) {
+      parent[index] = index;
+      bitBlocks[index] = {index};
+      currentBlockInCircuit[index] = nullptr;
+      currentBlockOperations[index] = std::make_unique<CompoundOperation>();
+    }
+    if (parent[index] == index) {
+      return index;
+    }
+    parent[index] = findBlock(parent[index]);
+    return parent[index];
+  }
+
+  /**
+   * @brief Merge two blocks together.
+   * @details The smaller block is merged into the larger block.
+   * @param block1 first block
+   * @param block2 second block
+   */
+  void unionBlock(const Qubit block1, const Qubit block2) {
+    auto parent1 = findBlock(block1);
+    auto parent2 = findBlock(block2);
+    if (parent1 == parent2) {
+      return;
+    }
+    assert(currentBlockOperations[parent1] != nullptr);
+    assert(currentBlockOperations[parent2] != nullptr);
+    if (currentBlockOperations[parent1]->size() <
+        currentBlockOperations[parent2]->size()) {
+      std::swap(parent1, parent2);
+    }
+    parent[parent2] = parent1;
+    currentBlockOperations[parent1]->merge(*currentBlockOperations[parent2]);
+    bitBlocks[parent1].insert(bitBlocks[parent1].end(),
+                              bitBlocks[parent2].begin(),
+                              bitBlocks[parent2].end());
+    if (currentBlockInCircuit[parent2] != nullptr) {
+      (*currentBlockInCircuit[parent2]) =
+          std::make_unique<StandardOperation>(0, I);
+    }
+    currentBlockInCircuit[parent2] = nullptr;
+    currentBlockOperations[parent2] = std::make_unique<CompoundOperation>();
+    bitBlocks[parent2].clear();
+  }
+
+  /**
+   * @brief Finalize a block.
+   * @details This replaces the original operation in the circuit with all the
+   * operations in the block. If the block is empty, nothing is done. If the
+   * block only contains a single operation, the operation is replaced with the
+   * single operation. Otherwise, the block is replaced with a compound
+   * operation.
+   * @param index the qubit that the block belongs to
+   */
+  void finalizeBlock(const Qubit index) {
+    const auto block = findBlock(index);
+    if (currentBlockInCircuit[block] == nullptr) {
+      return;
+    }
+    auto& compoundOp = currentBlockOperations[block];
+    if (compoundOp->isConvertibleToSingleOperation()) {
+      *currentBlockInCircuit[block] = compoundOp->collapseToSingleOperation();
+    } else {
+      *currentBlockInCircuit[block] = std::move(compoundOp);
+    }
+    for (auto i : bitBlocks[block]) {
+      parent[i] = i;
+      bitBlocks[i] = {i};
+      currentBlockInCircuit[i] = nullptr;
+      currentBlockOperations[i] = std::make_unique<CompoundOperation>();
+    }
+  }
+};
+
+void CircuitOptimizer::collectBlocks(qc::QuantumComputation& qc,
+                                     const std::size_t maxBlockSize) {
+  if (qc.ops.size() <= 1) {
+    return;
+  }
+
+  // ensure canonical ordering and that measurements are as far back as possible
+  reorderOperations(qc);
+  deferMeasurements(qc);
+
+  // create an empty disjoint set union data structure
+  DSU dsu{};
+  for (auto opIt = qc.begin(); opIt != qc.end(); ++opIt) {
+    auto& op = *opIt;
+    bool canProcess = true;
+    bool makesTooBig = false;
+
+    // check if the operation can be processed
+    if (!op->isUnitary()) {
+      canProcess = false;
+    }
+
+    const auto usedQubits = op->getUsedQubits();
+
+    if (canProcess) {
+      // check if grouping the operation with the current block would make the
+      // block too big
+      std::unordered_set<Qubit> blockQubits;
+      for (const auto& q : usedQubits) {
+        blockQubits.emplace(dsu.findBlock(q));
+      }
+      std::size_t totalSize = 0;
+      for (const auto& q : blockQubits) {
+        totalSize += dsu.bitBlocks[q].size();
+      }
+      if (totalSize > maxBlockSize) {
+        makesTooBig = true;
+      }
+    } else {
+      // resolve cases where an operation cannot be processed
+      for (const auto& q : usedQubits) {
+        dsu.finalizeBlock(q);
+      }
+    }
+
+    if (makesTooBig) {
+      // if the operation acts on more qubits than the maximum block size, all
+      // current blocks need to be finalized.
+      if (usedQubits.size() > maxBlockSize) {
+        // get all of the relevant blocks and check for the best way to combine
+        // them together.
+        std::unordered_map<Qubit, std::size_t> blocksAndSizes{};
+        for (const auto& q : usedQubits) {
+          const auto block = dsu.findBlock(q);
+          if (dsu.blockEmpty(block) ||
+              blocksAndSizes.find(block) != blocksAndSizes.end()) {
+            continue;
+          }
+          blocksAndSizes[block] = dsu.bitBlocks[block].size();
+        }
+        // sort blocks in descending order
+        std::vector<std::pair<Qubit, std::size_t>> sortedBlocks(
+            blocksAndSizes.begin(), blocksAndSizes.end());
+        std::sort(
+            sortedBlocks.begin(), sortedBlocks.end(),
+            [](const auto& a, const auto& b) { return a.second > b.second; });
+        for (auto it = sortedBlocks.begin(); it != sortedBlocks.end(); ++it) {
+          auto& [block, size] = *it;
+          // maximally large block -> nothing to do
+          if (size == maxBlockSize) {
+            dsu.finalizeBlock(block);
+            continue;
+          }
+
+          // fill up with as many blocks as possible
+          auto nextIt = it + 1;
+          while (nextIt != sortedBlocks.end() && size < maxBlockSize) {
+            auto& [nextBlock, nextSize] = *nextIt;
+            if (size + nextSize <= maxBlockSize) {
+              dsu.unionBlock(block, nextBlock);
+              size += nextSize;
+              nextIt = sortedBlocks.erase(nextIt);
+            } else {
+              ++nextIt;
+            }
+          }
+          dsu.finalizeBlock(block);
+        }
+      } else {
+        // otherwise, finalize blocks that would free up enough space.
+        // prioritize blocks that would free up the most space.
+        std::unordered_map<Qubit, std::size_t> savings{};
+        std::size_t totalSize = 0U;
+        for (const auto& q : usedQubits) {
+          const auto block = dsu.findBlock(q);
+          if (savings.find(block) != savings.end()) {
+            savings[block] -= 1;
+          } else {
+            savings[block] = dsu.bitBlocks[block].size() - 1;
+            totalSize += dsu.bitBlocks[block].size();
+          }
+        }
+        // sort savings in descending order
+        std::vector<std::pair<Qubit, std::size_t>> sortedSavings(
+            savings.begin(), savings.end());
+        std::sort(
+            sortedSavings.begin(), sortedSavings.end(),
+            [](const auto& a, const auto& b) { return a.second > b.second; });
+        auto savingsNeed = static_cast<std::int64_t>(totalSize - maxBlockSize);
+        for (const auto& [index, saving] : sortedSavings) {
+          if (savingsNeed > 0) {
+            savingsNeed -= static_cast<std::int64_t>(saving);
+            dsu.finalizeBlock(index);
+          }
+        }
+      }
+    }
+
+    if (canProcess) {
+      if (usedQubits.size() > maxBlockSize) {
+        continue;
+      }
+      std::int64_t prev = -1;
+      for (const auto& q : usedQubits) {
+        if (prev != -1) {
+          dsu.unionBlock(static_cast<Qubit>(prev), q);
+        }
+        prev = q;
+      }
+      const auto block = dsu.findBlock(static_cast<Qubit>(prev));
+      const auto empty = dsu.blockEmpty(block);
+      if (empty) {
+        dsu.currentBlockInCircuit[block] = &(*opIt);
+      }
+      dsu.currentBlockOperations[block]->emplace_back(std::move(op));
+      // if this is not the first operation in a block, remove it from the
+      // circuit
+      if (!empty) {
+        opIt = qc.erase(opIt);
+        // this can only ever be called on at least the second operation in a
+        // circuit, so it is safe to decrement the iterator here.
+        --opIt;
+      }
+    }
+  }
+
+  // finalize remaining blocks and remove identities
+  for (const auto& [q, index] : dsu.parent) {
+    if (q == index) {
+      dsu.finalizeBlock(q);
+    }
+  }
+  removeIdentities(qc);
+}
+
+void elidePermutations(std::vector<std::unique_ptr<Operation>>& ops,
+                       Permutation& permutation) {
+  for (auto it = ops.begin(); it != ops.end();) {
+    auto& op = *it;
+    if (auto* compOp = dynamic_cast<CompoundOperation*>(op.get())) {
+      elidePermutations(compOp->getOps(), permutation);
+      if (compOp->empty()) {
+        it = ops.erase(it);
+        continue;
+      }
+      if (compOp->isConvertibleToSingleOperation()) {
+        *it = compOp->collapseToSingleOperation();
+      } else {
+        // also update the tracked controls in the compound operation
+        compOp->getControls() = permutation.apply(compOp->getControls());
+      }
+      ++it;
+      continue;
+    }
+
+    if (op->getType() == SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      assert(targets.size() == 2U);
+      assert(permutation.find(targets[0]) != permutation.end());
+      assert(permutation.find(targets[1]) != permutation.end());
+      auto& target0 = permutation[targets[0]];
+      auto& target1 = permutation[targets[1]];
+      std::swap(target0, target1);
+      it = ops.erase(it);
+      continue;
+    }
+
+    op->apply(permutation);
+    ++it;
+  }
+}
+
+void CircuitOptimizer::elidePermutations(QuantumComputation& qc) {
+  if (qc.empty()) {
+    return;
+  }
+
+  auto permutation = qc.initialLayout;
+  ::qc::elidePermutations(qc.ops, permutation);
+
+  // adjust the initial layout
+  Permutation initialLayout{};
+  for (auto& [physical, logical] : qc.initialLayout) {
+    initialLayout[logical] = logical;
+  }
+  qc.initialLayout = initialLayout;
+
+  // adjust the output permutation
+  Permutation outputPermutation{};
+  for (auto& [physical, logical] : qc.outputPermutation) {
+    assert(permutation.find(physical) != permutation.end());
+    outputPermutation[permutation[physical]] = logical;
+  }
+  qc.outputPermutation = outputPermutation;
+}
+
 } // namespace qc

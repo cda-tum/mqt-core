@@ -67,7 +67,7 @@ TEST_P(Grover, Functionality) {
   dd = std::move(exp->dd);
 
   // amplitude of the searched-for entry should be 1
-  auto c = func.getValueByPath(x);
+  auto c = func.getValueByPath(dd->qubits(), x);
   EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
   EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
   const auto prob = std::norm(c);
@@ -88,7 +88,7 @@ TEST_P(Grover, FunctionalityRecursive) {
   dd = std::move(exp->dd);
 
   // amplitude of the searched-for entry should be 1
-  auto c = func.getValueByPath(x);
+  auto c = func.getValueByPath(dd->qubits(), x);
   EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
   EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
   const auto prob = std::norm(c);

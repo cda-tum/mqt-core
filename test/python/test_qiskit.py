@@ -34,7 +34,6 @@ def test_single_gate() -> None:
     assert mqt_qc.num_qubits == 1
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "h"
-    assert mqt_qc[0].num_qubits == 1
 
 
 def test_two_qubit_gate() -> None:
@@ -46,7 +45,6 @@ def test_two_qubit_gate() -> None:
     assert mqt_qc.num_qubits == 2
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
-    assert mqt_qc[0].num_qubits == 2
     assert {control.qubit for control in mqt_qc[0].controls} == {0}
 
 
@@ -59,7 +57,6 @@ def test_mcx() -> None:
     assert mqt_qc.num_qubits == 3
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
-    assert mqt_qc[0].num_qubits == 3
     assert {control.qubit for control in mqt_qc[0].controls} == {0, 1}
 
 
@@ -72,7 +69,6 @@ def test_mcx_recursive() -> None:
     assert mqt_qc.num_qubits == 9
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
-    assert mqt_qc[0].num_qubits == 9
     assert {control.qubit for control in mqt_qc[0].controls} == {0, 1, 2, 3, 4, 5, 6}
     assert not mqt_qc[0].acts_on(8)
 
@@ -86,7 +82,6 @@ def test_small_mcx_recursive() -> None:
     assert mqt_qc.num_qubits == 5
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
-    assert mqt_qc[0].num_qubits == 5
     assert {control.qubit for control in mqt_qc[0].controls} == {0, 1, 2, 3}
 
 
@@ -99,7 +94,6 @@ def test_mcx_vchain() -> None:
     assert mqt_qc.num_qubits == 9
     assert mqt_qc.num_ops == 1
     assert mqt_qc[0].name.strip() == "x"
-    assert mqt_qc[0].num_qubits == 9
     assert {control.qubit for control in mqt_qc[0].controls} == {0, 1, 2, 3, 4}
     for i in range(6, 9):
         assert not mqt_qc[0].acts_on(i)
@@ -124,9 +118,6 @@ def test_custom_gate() -> None:
     assert mqt_qc[0][1].name.strip() == "x"
     assert mqt_qc[0][2].name.strip() == "x"
     assert mqt_qc[0][3].name.strip() == "measure"
-    assert mqt_qc[0][0].num_qubits == 3
-    assert mqt_qc[0][1].num_qubits == 3
-    assert mqt_qc[0][1].num_qubits == 3
     assert {control.qubit for control in mqt_qc[0][1].controls} == {0}
     assert {control.qubit for control in mqt_qc[0][2].controls} == {0}
 

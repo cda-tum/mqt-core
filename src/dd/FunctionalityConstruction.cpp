@@ -13,7 +13,7 @@ MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd) {
   }
 
   auto permutation = qc->initialLayout;
-  auto e = dd.createInitialMatrix(nq, qc->ancillary);
+  auto e = dd.createInitialMatrix(qc->ancillary);
 
   for (const auto& op : *qc) {
     auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);

@@ -110,7 +110,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   qc::CircuitOptimizer::reorderOperations(*iqpe);
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
-  qc::MatrixDD e = dd->makeIdent(precision + 1);
+  qc::MatrixDD e = dd->makeIdent();
   dd->incRef(e);
 
   auto leftIt = qpe->begin();
@@ -164,7 +164,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
      << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
   std::cout << ss.str() << "\n";
 
-  EXPECT_TRUE(e.p->isIdentity());
+  EXPECT_TRUE(e.isIdentity());
 }
 
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
@@ -316,7 +316,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   qc::CircuitOptimizer::reorderOperations(*iqpe);
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
-  qc::MatrixDD e = dd->makeIdent(precision + 1);
+  qc::MatrixDD e = dd->makeIdent();
   dd->incRef(e);
 
   auto leftIt = qpe->begin();
@@ -370,7 +370,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
      << ",2," << iqpeNgates << "," << preprocessing << "," << verification;
   std::cout << ss.str() << "\n";
 
-  EXPECT_TRUE(e.p->isIdentity());
+  EXPECT_TRUE(e.isIdentity());
 }
 
 TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
@@ -472,7 +472,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   qc::CircuitOptimizer::reorderOperations(*dbv);
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
-  qc::MatrixDD e = dd->makeIdent(bitwidth + 1);
+  qc::MatrixDD e = dd->makeIdent();
   dd->incRef(e);
 
   auto leftIt = bv->begin();
@@ -526,7 +526,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
      << dbvNgates << "," << preprocessing << "," << verification;
   std::cout << ss.str() << "\n";
 
-  EXPECT_TRUE(e.p->isIdentity());
+  EXPECT_TRUE(e.isIdentity());
 }
 
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
@@ -620,7 +620,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   qc::CircuitOptimizer::reorderOperations(*dqft);
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
-  qc::MatrixDD e = dd->makeIdent(precision);
+  qc::MatrixDD e = dd->makeIdent();
   dd->incRef(e);
 
   auto leftIt = qft->begin();
@@ -674,7 +674,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
      << dqftNgates << "," << preprocessing << "," << verification;
   std::cout << ss.str() << "\n";
 
-  EXPECT_TRUE(e.p->isIdentity());
+  EXPECT_TRUE(e.isIdentity());
 }
 
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {

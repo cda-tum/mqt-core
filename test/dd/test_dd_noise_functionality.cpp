@@ -4,7 +4,6 @@
 #include "dd/Operations.hpp"
 
 #include "gtest/gtest.h"
-#include <random>
 
 using namespace qc;
 
@@ -61,7 +60,6 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
       {"0011", 0.0242454336917}, {"1011", 0.0262779844799},
       {"0111", 0.0239296920989}, {"1111", 0.0110373166627}};
 
-  const std::array<std::array<dd::SparsePVecStrKeys, 2>, 2> results{};
   auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
@@ -77,16 +75,44 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
     deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
   }
 
-  const auto m = rootEdge.getSparseProbabilityVectorStrKeys(0.001);
+  // Expect that all results are the same
+  const auto m =
+      rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits(), 0.001);
+  static constexpr fp TOLERANCE = 1e-10;
+  for (const auto& [key, value] : m) {
+    EXPECT_NEAR(value, reference.at(key), TOLERANCE);
+  }
+}
+
+TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackD) {
+  const dd::SparsePVecStrKeys reference = {
+      {"0000", 0.0332328704931}, {"0001", 0.0683938280189},
+      {"0011", 0.0117061689898}, {"0100", 0.0129643065735},
+      {"0101", 0.0107812802908}, {"0111", 0.0160082331009},
+      {"1000", 0.0328434857577}, {"1001", 0.7370101351171},
+      {"1011", 0.0186346925411}, {"1101", 0.0275086747656}};
+
+  auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
+
+  auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
+  dd->incRef(rootEdge);
+
+  const auto* const noiseEffects = "D";
+
+  auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
+      dd, qc.getNqubits(), 0.01, 0.02, 0.02, 0.04, noiseEffects);
+
+  for (auto const& op : qc) {
+    dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), *dd));
+    deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
+  }
 
   // Expect that all results are the same
+  const auto m =
+      rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits(), 0.01);
   static constexpr fp TOLERANCE = 1e-10;
-  for (const auto& result : results) {
-    for (const auto& j : result) {
-      for (const auto& [key, value] : j) {
-        EXPECT_NEAR(value, reference.at(key), TOLERANCE);
-      }
-    }
+  for (const auto& [key, value] : m) {
+    EXPECT_NEAR(value, reference.at(key), TOLERANCE);
   }
 }
 
@@ -113,7 +139,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
 
   const double tolerance = 1e-10;
 
-  auto tmp = rootEdge.getSparseProbabilityVectorStrKeys();
+  auto tmp = rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits());
   auto prob = 0.125;
   EXPECT_NEAR(tmp["000"], prob, tolerance);
   EXPECT_NEAR(tmp["001"], prob, tolerance);
@@ -126,7 +152,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
 
   dd->measureOneCollapsing(rootEdge, 0, qc.getGenerator());
 
-  auto tmp0 = rootEdge.getSparseProbabilityVectorStrKeys();
+  auto tmp0 = rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits());
   prob = 0.25;
 
   EXPECT_TRUE(fabs(tmp0["000"] + tmp0["001"] - prob) < tolerance);
@@ -136,7 +162,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
 
   dd->measureOneCollapsing(rootEdge, 1, qc.getGenerator());
 
-  auto tmp1 = rootEdge.getSparseProbabilityVectorStrKeys();
+  auto tmp1 = rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits());
   prob = 0.5;
   EXPECT_TRUE(fabs(tmp0["000"] + tmp0["001"] + tmp0["010"] + tmp0["011"] -
                    prob) < tolerance);
@@ -144,7 +170,7 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
                    prob) < tolerance);
 
   dd->measureOneCollapsing(rootEdge, 2, qc.getGenerator());
-  auto tmp2 = rootEdge.getSparseProbabilityVectorStrKeys();
+  auto tmp2 = rootEdge.getSparseProbabilityVectorStrKeys(qc.getNqubits());
   EXPECT_TRUE(
       fabs(tmp2["000"] - 1) < tolerance || fabs(tmp2["001"] - 1) < tolerance ||
       fabs(tmp2["010"] - 1) < tolerance || fabs(tmp2["011"] - 1) < tolerance ||
@@ -258,24 +284,24 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
 
 TEST_F(DDNoiseFunctionalityTest, testingUsedQubits) {
   const std::size_t nqubits = 1;
-  auto standardOp = StandardOperation(nqubits, 1, qc::Z);
+  auto standardOp = StandardOperation(1, qc::Z);
   EXPECT_EQ(standardOp.getUsedQubits().size(), 1);
   EXPECT_TRUE(standardOp.getUsedQubits().count(1));
 
-  auto nonUnitaryOp = NonUnitaryOperation(nqubits, 0, 0);
+  auto nonUnitaryOp = NonUnitaryOperation(0, 0);
   EXPECT_EQ(nonUnitaryOp.getUsedQubits().size(), 1);
   EXPECT_TRUE(nonUnitaryOp.getUsedQubits().count(0) == 1U);
 
-  auto compoundOp = qc::CompoundOperation(nqubits);
-  compoundOp.emplace_back<qc::StandardOperation>(nqubits, 0, qc::Z);
-  compoundOp.emplace_back<qc::StandardOperation>(nqubits, 1, qc::H);
-  compoundOp.emplace_back<qc::StandardOperation>(nqubits, 0, qc::X);
+  auto compoundOp = qc::CompoundOperation();
+  compoundOp.emplace_back<qc::StandardOperation>(0, qc::Z);
+  compoundOp.emplace_back<qc::StandardOperation>(1, qc::H);
+  compoundOp.emplace_back<qc::StandardOperation>(0, qc::X);
   EXPECT_EQ(compoundOp.getUsedQubits().size(), 2);
   EXPECT_TRUE(compoundOp.getUsedQubits().count(0));
   EXPECT_TRUE(compoundOp.getUsedQubits().count(1));
 
   std::unique_ptr<qc::Operation> xOp =
-      std::make_unique<qc::StandardOperation>(nqubits, 0, qc::X);
+      std::make_unique<qc::StandardOperation>(0, qc::X);
   auto classicalControlledOp =
       qc::ClassicControlledOperation(xOp, std::pair{0, nqubits}, 1U);
   EXPECT_EQ(classicalControlledOp.getUsedQubits().size(), 1);

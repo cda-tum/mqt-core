@@ -80,12 +80,12 @@ TEST_P(QFT, Functionality) {
   // first row and first column should consist only of (1/sqrt(2))**nqubits
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
        ++i) {
-    auto c = func.getValueByIndex(0, i);
+    auto c = func.getValueByIndex(dd->qubits(), 0, i);
     EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
     EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
-    c = func.getValueByIndex(i, 0);
+    c = func.getValueByIndex(dd->qubits(), i, 0);
     EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
@@ -130,12 +130,12 @@ TEST_P(QFT, FunctionalityRecursive) {
   // first row and first column should consist only of (1/sqrt(2))**nqubits
   for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
        ++i) {
-    auto c = func.getValueByIndex(0, i);
+    auto c = func.getValueByIndex(dd->qubits(), 0, i);
     EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);
     EXPECT_NEAR(c.imag(), 0, dd::RealNumber::eps);
-    c = func.getValueByIndex(i, 0);
+    c = func.getValueByIndex(dd->qubits(), i, 0);
     EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
                 dd::RealNumber::eps);

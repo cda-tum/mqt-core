@@ -1,8 +1,0 @@
-pandas==2.0; python_version < "3.9"
-pandas==2.1.2; python_version >= "3.9"
-pybind11==2.11.0
-pytest==7.0.0
-pytest-console-scripts==1.4
-qiskit==1.0.0
-scikit-build-core==0.8.1
-setuptools-scm==7.0.0

@@ -306,6 +306,13 @@ public:
   [[nodiscard]] std::size_t getNqubitsWithoutAncillae() const {
     return nqubits;
   }
+  [[nodiscard]] std::size_t getNmeasuredQubits() const {
+    return getNqubits() - getNgarbageQubits();
+  }
+  [[nodiscard]] std::size_t getNgarbageQubits() const {
+    return static_cast<std::size_t>(
+        std::count(getGarbage().begin(), getGarbage().end(), true));
+  }
   [[nodiscard]] std::size_t getNcbits() const { return nclassics; }
   [[nodiscard]] std::string getName() const { return name; }
   [[nodiscard]] const QuantumRegisterMap& getQregs() const { return qregs; }
@@ -367,11 +374,30 @@ public:
    * @param logicalQubitIndex
    */
   void setLogicalQubitAncillary(Qubit logicalQubitIndex);
+  /**
+   * @brief Sets all logical qubits in the range [minLogicalQubitIndex,
+   * maxLogicalQubitIndex] to be ancillary
+   * @details Removes the qubits from the qubit register and adds it to the
+   * ancillary register, if such a register exists. Otherwise a new ancillary
+   * register is created.
+   * @param minLogicalQubitIndex first qubit that is set to be ancillary
+   * @param maxLogicalQubitIndex last qubit that is set to be ancillary
+   */
+  void setLogicalQubitsAncillary(Qubit minLogicalQubitIndex,
+                                 Qubit maxLogicalQubitIndex);
   [[nodiscard]] bool
   logicalQubitIsGarbage(const Qubit logicalQubitIndex) const {
     return garbage[logicalQubitIndex];
   }
   void setLogicalQubitGarbage(Qubit logicalQubitIndex);
+  /**
+   * @brief Sets all logical qubits in the range [minLogicalQubitIndex,
+   * maxLogicalQubitIndex] to be garbage
+   * @param minLogicalQubitIndex first qubit that is set to be garbage
+   * @param maxLogicalQubitIndex last qubit that is set to be garbage
+   */
+  void setLogicalQubitsGarbage(Qubit minLogicalQubitIndex,
+                               Qubit maxLogicalQubitIndex);
   [[nodiscard]] const std::vector<bool>& getAncillary() const {
     return ancillary;
   }
@@ -408,7 +434,7 @@ public:
   }                                                                            \
   void mc##op(const Controls& controls, const Qubit target) {                  \
     checkQubitRange(target, controls);                                         \
-    emplace_back<StandardOperation>(getNqubits(), controls, target,            \
+    emplace_back<StandardOperation>(controls, target,                          \
                                     OP_NAME_TO_TYPE.at(#op));                  \
   }
 
@@ -438,14 +464,13 @@ public:
               const Qubit target) {                                            \
     checkQubitRange(target, controls);                                         \
     if (std::holds_alternative<fp>(param)) {                                   \
-      emplace_back<StandardOperation>(getNqubits(), controls, target,          \
+      emplace_back<StandardOperation>(controls, target,                        \
                                       OP_NAME_TO_TYPE.at(#op),                 \
                                       std::vector{std::get<fp>(param)});       \
     } else {                                                                   \
       addVariables(param);                                                     \
-      emplace_back<SymbolicOperation>(getNqubits(), controls, target,          \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
-                                      std::vector{param});                     \
+      emplace_back<SymbolicOperation>(                                         \
+          controls, target, OP_NAME_TO_TYPE.at(#op), std::vector{param});      \
     }                                                                          \
   }
 
@@ -469,11 +494,11 @@ public:
     if (std::holds_alternative<fp>(param0) &&                                  \
         std::holds_alternative<fp>(param1)) {                                  \
       emplace_back<StandardOperation>(                                         \
-          getNqubits(), controls, target, OP_NAME_TO_TYPE.at(#op),             \
+          controls, target, OP_NAME_TO_TYPE.at(#op),                           \
           std::vector{std::get<fp>(param0), std::get<fp>(param1)});            \
     } else {                                                                   \
       addVariables(param0, param1);                                            \
-      emplace_back<SymbolicOperation>(getNqubits(), controls, target,          \
+      emplace_back<SymbolicOperation>(controls, target,                        \
                                       OP_NAME_TO_TYPE.at(#op),                 \
                                       std::vector{param0, param1});            \
     }                                                                          \
@@ -500,12 +525,12 @@ public:
         std::holds_alternative<fp>(param1) &&                                  \
         std::holds_alternative<fp>(param2)) {                                  \
       emplace_back<StandardOperation>(                                         \
-          getNqubits(), controls, target, OP_NAME_TO_TYPE.at(#op),             \
+          controls, target, OP_NAME_TO_TYPE.at(#op),                           \
           std::vector{std::get<fp>(param0), std::get<fp>(param1),              \
                       std::get<fp>(param2)});                                  \
     } else {                                                                   \
       addVariables(param0, param1, param2);                                    \
-      emplace_back<SymbolicOperation>(getNqubits(), controls, target,          \
+      emplace_back<SymbolicOperation>(controls, target,                        \
                                       OP_NAME_TO_TYPE.at(#op),                 \
                                       std::vector{param0, param1, param2});    \
     }                                                                          \
@@ -524,7 +549,7 @@ public:
   void mc##op(const Controls& controls, const Qubit target0,                   \
               const Qubit target1) {                                           \
     checkQubitRange(target0, target1, controls);                               \
-    emplace_back<StandardOperation>(getNqubits(), controls, target0, target1,  \
+    emplace_back<StandardOperation>(controls, target0, target1,                \
                                     OP_NAME_TO_TYPE.at(#op));                  \
   }
 
@@ -549,13 +574,13 @@ public:
               const Qubit target0, const Qubit target1) {                      \
     checkQubitRange(target0, target1, controls);                               \
     if (std::holds_alternative<fp>(param)) {                                   \
-      emplace_back<StandardOperation>(getNqubits(), controls, target0,         \
-                                      target1, OP_NAME_TO_TYPE.at(#op),        \
+      emplace_back<StandardOperation>(controls, target0, target1,              \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
                                       std::vector{std::get<fp>(param)});       \
     } else {                                                                   \
       addVariables(param);                                                     \
-      emplace_back<SymbolicOperation>(getNqubits(), controls, target0,         \
-                                      target1, OP_NAME_TO_TYPE.at(#op),        \
+      emplace_back<SymbolicOperation>(controls, target0, target1,              \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
                                       std::vector{param});                     \
     }                                                                          \
   }
@@ -582,12 +607,12 @@ public:
     if (std::holds_alternative<fp>(param0) &&                                  \
         std::holds_alternative<fp>(param1)) {                                  \
       emplace_back<StandardOperation>(                                         \
-          getNqubits(), controls, target0, target1, OP_NAME_TO_TYPE.at(#op),   \
+          controls, target0, target1, OP_NAME_TO_TYPE.at(#op),                 \
           std::vector{std::get<fp>(param0), std::get<fp>(param1)});            \
     } else {                                                                   \
       addVariables(param0, param1);                                            \
-      emplace_back<SymbolicOperation>(getNqubits(), controls, target0,         \
-                                      target1, OP_NAME_TO_TYPE.at(#op),        \
+      emplace_back<SymbolicOperation>(controls, target0, target1,              \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
                                       std::vector{param0, param1});            \
     }                                                                          \
   }
@@ -606,7 +631,7 @@ public:
   void measure(const Qubit qubit, const std::size_t bit) {
     checkQubitRange(qubit);
     checkBitRange(bit);
-    emplace_back<NonUnitaryOperation>(getNqubits(), qubit, bit);
+    emplace_back<NonUnitaryOperation>(qubit, bit);
   }
 
   void measure(Qubit qubit, const std::pair<std::string, Bit>& registerBit);
@@ -614,7 +639,7 @@ public:
   void measure(const Targets& qubits, const std::vector<Bit>& bits) {
     checkQubitRange(qubits);
     checkBitRange(bits);
-    emplace_back<NonUnitaryOperation>(getNqubits(), qubits, bits);
+    emplace_back<NonUnitaryOperation>(qubits, bits);
   }
 
   /**
@@ -628,26 +653,25 @@ public:
 
   void reset(const Qubit target) {
     checkQubitRange(target);
-    emplace_back<NonUnitaryOperation>(getNqubits(), std::vector<Qubit>{target},
-                                      qc::Reset);
+    emplace_back<NonUnitaryOperation>(std::vector<Qubit>{target}, qc::Reset);
   }
   void reset(const Targets& targets) {
     checkQubitRange(targets);
-    emplace_back<NonUnitaryOperation>(getNqubits(), targets, qc::Reset);
+    emplace_back<NonUnitaryOperation>(targets, qc::Reset);
   }
 
   void barrier() {
     std::vector<Qubit> targets(getNqubits());
     std::iota(targets.begin(), targets.end(), 0);
-    emplace_back<StandardOperation>(getNqubits(), targets, qc::Barrier);
+    emplace_back<StandardOperation>(targets, qc::Barrier);
   }
   void barrier(const Qubit target) {
     checkQubitRange(target);
-    emplace_back<StandardOperation>(getNqubits(), target, qc::Barrier);
+    emplace_back<StandardOperation>(target, qc::Barrier);
   }
   void barrier(const Targets& targets) {
     checkQubitRange(targets);
-    emplace_back<StandardOperation>(getNqubits(), targets, qc::Barrier);
+    emplace_back<StandardOperation>(targets, qc::Barrier);
   }
 
   void classicControlled(const OpType op, const Qubit target,
@@ -672,8 +696,8 @@ public:
                          const std::vector<fp>& params = {}) {
     checkQubitRange(target, controls);
     checkClassicalRegister(controlRegister);
-    std::unique_ptr<Operation> gate = std::make_unique<StandardOperation>(
-        getNqubits(), controls, target, op, params);
+    std::unique_ptr<Operation> gate =
+        std::make_unique<StandardOperation>(controls, target, op, params);
     emplace_back<ClassicControlledOperation>(std::move(gate), controlRegister,
                                              expectedValue);
   }
@@ -818,7 +842,7 @@ public:
 
   // this convenience method allows to turn a circuit into a compound operation.
   std::unique_ptr<CompoundOperation> asCompoundOperation() {
-    return std::make_unique<CompoundOperation>(getNqubits(), std::move(ops));
+    return std::make_unique<CompoundOperation>(std::move(ops));
   }
 
   // this convenience method allows to turn a circuit into an operation.

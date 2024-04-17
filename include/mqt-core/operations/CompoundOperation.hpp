@@ -1,6 +1,13 @@
 #pragma once
 
 #include "Operation.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <vector>
 
 namespace qc {
 
@@ -9,18 +16,16 @@ protected:
   std::vector<std::unique_ptr<Operation>> ops{};
 
 public:
-  explicit CompoundOperation(std::size_t nq);
+  explicit CompoundOperation();
 
-  CompoundOperation(std::size_t nq,
-                    std::vector<std::unique_ptr<Operation>>&& operations);
+  explicit CompoundOperation(
+      std::vector<std::unique_ptr<Operation>>&& operations);
 
   CompoundOperation(const CompoundOperation& co);
 
   CompoundOperation& operator=(const CompoundOperation& co);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override;
-
-  void setNqubits(std::size_t nq) override;
 
   [[nodiscard]] bool isCompoundOperation() const override;
 
@@ -41,7 +46,8 @@ public:
   [[nodiscard]] bool equals(const Operation& operation) const override;
 
   std::ostream& print(std::ostream& os, const Permutation& permutation,
-                      std::size_t prefixWidth) const override;
+                      std::size_t prefixWidth,
+                      std::size_t nqubits) const override;
 
   [[nodiscard]] bool actsOn(Qubit i) const override;
 
@@ -56,6 +62,32 @@ public:
   [[nodiscard]] std::set<Qubit> getUsedQubits() const override;
 
   void invert() override;
+
+  void apply(const Permutation& permutation) override;
+
+  /**
+   * @brief Merge another compound operation into this one.
+   * @details This transfers ownership of the operations from the other compound
+   * operation to this one. The other compound operation will be empty after
+   * this operation.
+   * @param op the compound operation to merge into this one
+   */
+  void merge(CompoundOperation& op);
+
+  /**
+   * @brief Check whether this operation can be collapsed into a single
+   * operation.
+   * @return true if this operation can be collapsed into a single operation,
+   * false otherwise
+   */
+  [[nodiscard]] bool isConvertibleToSingleOperation() const;
+
+  /**
+   * @brief Collapse this operation into a single operation.
+   * @details This operation must be convertible to a single operation.
+   * @return the collapsed operation
+   */
+  [[nodiscard]] std::unique_ptr<Operation> collapseToSingleOperation();
 
   /**
    * Pass-Through

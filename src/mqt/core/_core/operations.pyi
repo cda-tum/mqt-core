@@ -93,7 +93,6 @@ class OpType:
 class Operation(ABC):
     type_: OpType
     controls: set[Control]
-    num_qubits: int
     targets: list[int]
     parameter: list[float]
     @property
@@ -136,73 +135,57 @@ class StandardOperation(Operation):
     @overload
     def __init__(
         self: Self,
-        nq: int,
         target: int,
         op_type: OpType,
         params: Sequence[float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         targets: Sequence[int],
         op_type: OpType,
         params: Sequence[float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         control: Control,
         target: int,
         op_type: OpType,
         params: Sequence[float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         control: Control,
         targets: Sequence[int],
         op_type: OpType,
         params: Sequence[float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         controls: set[Control],
         target: int,
         op_type: OpType,
         params: Sequence[float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         controls: set[Control],
         targets: Sequence[int],
         op_type: OpType,
         params: Sequence[float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
-    @overload
-    def __init__(self: Self, nq: int, controls: set[Control], target: int, starting_qubit: int = 0) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         controls: set[Control],
         target0: int,
         target1: int,
         op_type: OpType,
         params: Sequence[float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     def add_control(self: Self, control: Control) -> None: ...
     def clear_controls(self: Self) -> None: ...
@@ -215,11 +198,11 @@ class NonUnitaryOperation(Operation):
     @property
     def classics(self: Self) -> list[int]: ...
     @overload
-    def __init__(self: Self, nq: int, targets: Sequence[int], classics: Sequence[int]) -> None: ...
+    def __init__(self: Self, targets: Sequence[int], classics: Sequence[int]) -> None: ...
     @overload
-    def __init__(self: Self, nq: int, target: int, classic: int) -> None: ...
+    def __init__(self: Self, target: int, classic: int) -> None: ...
     @overload
-    def __init__(self: Self, nq: int, targets: Sequence[int], op_type: OpType = ...) -> None: ...
+    def __init__(self: Self, targets: Sequence[int], op_type: OpType = ...) -> None: ...
     def add_control(self: Self, control: Control) -> None: ...
     def clear_controls(self: Self) -> None: ...
     def remove_control(self: Self, control: Control) -> None: ...
@@ -229,9 +212,9 @@ class NonUnitaryOperation(Operation):
 
 class CompoundOperation(Operation):
     @overload
-    def __init__(self: Self, nq: int) -> None: ...
+    def __init__(self: Self) -> None: ...
     @overload
-    def __init__(self: Self, nq: int, ops: Sequence[Operation]) -> None: ...
+    def __init__(self: Self, ops: Sequence[Operation]) -> None: ...
     def __len__(self: Self) -> int: ...
     @overload
     def __getitem__(self: Self, idx: int) -> Operation: ...
@@ -252,71 +235,57 @@ class SymbolicOperation(StandardOperation):
     @overload
     def __init__(
         self: Self,
-        nq: int,
         target: int,
         op_type: OpType,
         params: Sequence[Expression | float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         targets: Sequence[int],
         op_type: OpType,
         params: Sequence[Expression | float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         control: Control,
         target: int,
         op_type: OpType,
         params: Sequence[Expression | float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         control: Control,
         targets: Sequence[int],
         op_type: OpType,
         params: Sequence[Expression | float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         controls: set[Control],
         target: int,
         op_type: OpType,
         params: Sequence[Expression | float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         controls: set[Control],
         targets: Sequence[int],
         op_type: OpType,
         params: Sequence[Expression | float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     @overload
     def __init__(
         self: Self,
-        nq: int,
         controls: set[Control],
         target0: int,
         target1: int,
         op_type: OpType,
         params: Sequence[Expression | float] | None = None,
-        starting_qubit: int = 0,
     ) -> None: ...
     def get_parameter(self: Self, idx: int) -> Expression | float: ...
     def get_parameters(self: Self) -> list[Expression | float]: ...

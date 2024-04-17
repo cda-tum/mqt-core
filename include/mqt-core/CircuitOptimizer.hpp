@@ -5,6 +5,7 @@
 #include "operations/Operation.hpp"
 
 #include <array>
+#include <cstddef>
 #include <memory>
 #include <unordered_set>
 
@@ -58,9 +59,7 @@ public:
    * target qubit) in the given circuit.
    * @param qc the quantum circuit
    */
-  static void replaceMCXWithMCZ(qc::QuantumComputation& qc) {
-    replaceMCXWithMCZ(qc.ops);
-  }
+  static void replaceMCXWithMCZ(qc::QuantumComputation& qc);
 
   /**
    * @brief Backpropagates the output permutation through the circuit.
@@ -74,35 +73,27 @@ public:
    */
   static void backpropagateOutputPermutation(QuantumComputation& qc);
 
-protected:
-  static void removeDiagonalGatesBeforeMeasureRecursive(
-      DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-      const qc::Operation* until);
-  static bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators,
-                                 Qubit idx, DAGReverseIterator& it,
-                                 qc::Operation* op);
+  /**
+   * @brief Collects all operations in the circuit into blocks of a maximum
+   * size.
+   * @details The circuit is traversed and operations are collected into blocks
+   * of a maximum size. The blocks are then appended to the circuit in the order
+   * they were collected. Each block is realized as a compound operation.
+   * Light optimizations are applied to the blocks, such as removing identity
+   * gates and fusing single-qubit gates.
+   * @param qc the quantum circuit
+   * @param maxBlockSize the maximum size of a block
+   */
+  static void collectBlocks(QuantumComputation& qc, std::size_t maxBlockSize);
 
-  static void
-  removeFinalMeasurementsRecursive(DAG& dag, DAGReverseIterators& dagIterators,
-                                   Qubit idx, const qc::Operation* until);
-  static bool removeFinalMeasurement(DAG& dag,
-                                     DAGReverseIterators& dagIterators,
-                                     Qubit idx, DAGReverseIterator& it,
-                                     qc::Operation* op);
-
-  static void changeTargets(Targets& targets,
-                            const std::map<Qubit, Qubit>& replacementMap);
-  static void changeControls(Controls& controls,
-                             const std::map<Qubit, Qubit>& replacementMap);
-
-  using Iterator = decltype(qc::QuantumComputation::ops.begin());
-  static Iterator
-  flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops,
-                           Iterator it);
-
-  static void replaceMCXWithMCZ(std::vector<std::unique_ptr<Operation>>& ops);
-  static void backpropagateOutputPermutation(
-      std::vector<std::unique_ptr<Operation>>& ops, Permutation& permutation,
-      std::unordered_set<Qubit>& missingLogicalQubits);
+  /**
+   * @brief Elide permutations by propagating them through the circuit.
+   * @details The circuit is traversed and any SWAP gate is eliminated by
+   * propagating the permutation through the circuit. The final layout of the
+   * circuit is updated accordingly. This pass works well together with the
+   * `swapReconstruction` pass.
+   * @param qc the quantum circuit
+   */
+  static void elidePermutations(QuantumComputation& qc);
 };
 } // namespace qc

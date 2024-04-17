@@ -97,7 +97,7 @@ jobs:
             .github/codecov.yml
             .github/workflows/reusable-python-linter.yml
             .github/workflows/reusable-python-tests.yml
-            .github/workflows/reusable-python-coverage.yml
+            .github/workflows/reusable-python-minimums.yml
             .github/workflows/reusable-python-ci.yml
             .github/workflows/ci.yml
       - name: Set a flag for running the Python tests

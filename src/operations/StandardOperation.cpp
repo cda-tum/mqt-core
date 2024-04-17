@@ -161,9 +161,7 @@ void StandardOperation::checkUgate() {
   }
 }
 
-void StandardOperation::setup(const std::size_t nq, const Qubit startingQubit) {
-  nqubits = nq;
-  startQubit = startingQubit;
+void StandardOperation::setup() {
   checkUgate();
   name = toString(type);
 }
@@ -171,71 +169,55 @@ void StandardOperation::setup(const std::size_t nq, const Qubit startingQubit) {
 /***
  * Constructors
  ***/
-StandardOperation::StandardOperation(const std::size_t nq, const Qubit target,
-                                     const OpType g, std::vector<fp> params,
-                                     const Qubit startingQubit) {
+StandardOperation::StandardOperation(const Qubit target, const OpType g,
+                                     std::vector<fp> params) {
   type = g;
   parameter = std::move(params);
-  setup(nq, startingQubit);
+  setup();
   targets.emplace_back(target);
 }
 
-StandardOperation::StandardOperation(const std::size_t nq, const Targets& targ,
-                                     const OpType g, std::vector<fp> params,
-                                     const Qubit startingQubit) {
+StandardOperation::StandardOperation(const Targets& targ, const OpType g,
+                                     std::vector<fp> params) {
   type = g;
   parameter = std::move(params);
-  setup(nq, startingQubit);
+  setup();
   targets = targ;
 }
 
-StandardOperation::StandardOperation(const std::size_t nq,
-                                     const Control control, const Qubit target,
+StandardOperation::StandardOperation(const Control control, const Qubit target,
                                      const OpType g,
-                                     const std::vector<fp>& params,
-                                     const Qubit startingQubit)
-    : StandardOperation(nq, target, g, params, startingQubit) {
+                                     const std::vector<fp>& params)
+    : StandardOperation(target, g, params) {
   controls.insert(control);
 }
 
-StandardOperation::StandardOperation(const std::size_t nq,
-                                     const Control control, const Targets& targ,
+StandardOperation::StandardOperation(const Control control, const Targets& targ,
                                      const OpType g,
-                                     const std::vector<fp>& params,
-                                     const Qubit startingQubit)
-    : StandardOperation(nq, targ, g, params, startingQubit) {
+                                     const std::vector<fp>& params)
+    : StandardOperation(targ, g, params) {
   controls.insert(control);
 }
 
-StandardOperation::StandardOperation(const std::size_t nq, const Controls& c,
-                                     const Qubit target, const OpType g,
-                                     const std::vector<fp>& params,
-                                     const Qubit startingQubit)
-    : StandardOperation(nq, target, g, params, startingQubit) {
+StandardOperation::StandardOperation(const Controls& c, const Qubit target,
+                                     const OpType g,
+                                     const std::vector<fp>& params)
+    : StandardOperation(target, g, params) {
   controls = c;
 }
 
-StandardOperation::StandardOperation(const std::size_t nq, const Controls& c,
-                                     const Targets& targ, const OpType g,
-                                     const std::vector<fp>& params,
-                                     const Qubit startingQubit)
-    : StandardOperation(nq, targ, g, params, startingQubit) {
+StandardOperation::StandardOperation(const Controls& c, const Targets& targ,
+                                     const OpType g,
+                                     const std::vector<fp>& params)
+    : StandardOperation(targ, g, params) {
   controls = c;
 }
-
-// MCT Constructor
-StandardOperation::StandardOperation(const std::size_t nq, const Controls& c,
-                                     const Qubit target,
-                                     const Qubit startingQubit)
-    : StandardOperation(nq, c, target, X, {}, startingQubit) {}
 
 // MCF (cSWAP), Peres, parameterized two target Constructor
-StandardOperation::StandardOperation(const std::size_t nq, const Controls& c,
-                                     const Qubit target0, const Qubit target1,
-                                     const OpType g,
-                                     const std::vector<fp>& params,
-                                     const Qubit startingQubit)
-    : StandardOperation(nq, c, {target0, target1}, g, params, startingQubit) {}
+StandardOperation::StandardOperation(const Controls& c, const Qubit target0,
+                                     const Qubit target1, const OpType g,
+                                     const std::vector<fp>& params)
+    : StandardOperation(c, {target0, target1}, g, params) {}
 
 /***
  * Public Methods

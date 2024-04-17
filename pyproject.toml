@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.8.1", "setuptools-scm>=7", "pybind11>=2.11"]
+requires = ["scikit-build-core>=0.8.1", "setuptools-scm>=7", "pybind11>=2.12"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -37,7 +37,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = ["pytest>=7.0", "pytest-console-scripts>=1.4", "mqt.core[qiskit, evaluation]"]
-coverage = ["mqt.core[test]", "pytest-cov"]
+coverage = ["mqt.core[test]", "pytest-cov>=4"]
 evaluation = [
     "pandas[output_formatting]>=2.0; python_version < '3.9'",
     "pandas[output-formatting]>=2.1.2; python_version >= '3.9'",

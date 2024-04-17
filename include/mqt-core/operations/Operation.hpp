@@ -17,14 +17,12 @@
 namespace qc {
 class Operation {
 protected:
-  Controls controls{};
-  Targets targets{};
-  std::vector<fp> parameter{};
+  Controls controls;
+  Targets targets;
+  std::vector<fp> parameter;
 
-  std::size_t nqubits = 0;
-  Qubit startQubit = 0;
   OpType type = None;
-  std::string name{};
+  std::string name;
 
   static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start,
                                    std::size_t end) {
@@ -58,8 +56,6 @@ public:
     return controls.size();
   }
 
-  [[nodiscard]] std::size_t getNqubits() const { return nqubits; }
-
   [[nodiscard]] const std::vector<fp>& getParameter() const {
     return parameter;
   }
@@ -67,8 +63,6 @@ public:
 
   [[nodiscard]] const std::string& getName() const { return name; }
   [[nodiscard]] virtual OpType getType() const { return type; }
-
-  [[nodiscard]] virtual Qubit getStartingQubit() const { return startQubit; }
 
   [[nodiscard]] virtual std::set<Qubit> getUsedQubits() const {
     const auto& opTargets = getTargets();
@@ -87,8 +81,6 @@ public:
   }
 
   // Setter
-  virtual void setNqubits(const std::size_t nq) { nqubits = nq; }
-
   virtual void setTargets(const Targets& t) { targets = t; }
 
   virtual void setControls(const Controls& c) {
@@ -123,37 +115,25 @@ public:
 
   virtual void setParameter(const std::vector<fp>& p) { parameter = p; }
 
-  [[nodiscard]] inline virtual bool isUnitary() const { return true; }
+  virtual void apply(const Permutation& permutation);
 
-  [[nodiscard]] inline virtual bool isStandardOperation() const {
+  [[nodiscard]] virtual bool isUnitary() const { return true; }
+
+  [[nodiscard]] virtual bool isStandardOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isCompoundOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isNonUnitaryOperation() const { return false; }
+
+  [[nodiscard]] virtual bool isClassicControlledOperation() const {
     return false;
   }
 
-  [[nodiscard]] inline virtual bool isCompoundOperation() const {
-    return false;
-  }
+  [[nodiscard]] virtual bool isSymbolicOperation() const { return false; }
 
-  [[nodiscard]] inline virtual bool isGlobalOperation() const {
-    return false;
-  }
+  [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }
 
-  [[nodiscard]] inline virtual bool isNonUnitaryOperation() const {
-    return false;
-  }
-
-  [[nodiscard]] inline virtual bool isClassicControlledOperation() const {
-    return false;
-  }
-
-  [[nodiscard]] inline virtual bool isSymbolicOperation() const {
-    return false;
-  }
-
-  [[nodiscard]] inline virtual bool isControlled() const {
-    return !controls.empty();
-  }
-
-  [[nodiscard]] inline virtual bool actsOn(const Qubit i) const {
+  [[nodiscard]] virtual bool actsOn(const Qubit i) const {
     for (const auto& t : targets) {
       if (t == i) {
         return true;
@@ -172,13 +152,12 @@ public:
   }
 
   virtual std::ostream& printParameters(std::ostream& os) const;
-  std::ostream& print(std::ostream& os) const { return print(os, {}, 0); }
-  virtual std::ostream& print(std::ostream& os, const Permutation& permutation,
-                              std::size_t prefixWidth) const;
-
-  friend std::ostream& operator<<(std::ostream& os, const Operation& op) {
-    return op.print(os);
+  std::ostream& print(std::ostream& os, const std::size_t nqubits) const {
+    return print(os, {}, 0, nqubits);
   }
+  virtual std::ostream& print(std::ostream& os, const Permutation& permutation,
+                              std::size_t prefixWidth,
+                              std::size_t nqubits) const;
 
   void dumpOpenQASM2(std::ostream& of, const RegisterNames& qreg,
                      const RegisterNames& creg) const {

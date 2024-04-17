@@ -1,6 +1,7 @@
 #include "operations/Operation.hpp"
 
 #include <algorithm>
+#include <cassert>
 
 namespace qc {
 
@@ -41,9 +42,9 @@ std::ostream& Operation::printParameters(std::ostream& os) const {
   return os;
 }
 
-std::ostream&
-Operation::print(std::ostream& os, const Permutation& permutation,
-                 [[maybe_unused]] const std::size_t prefixWidth) const {
+std::ostream& Operation::print(std::ostream& os, const Permutation& permutation,
+                               [[maybe_unused]] const std::size_t prefixWidth,
+                               const std::size_t nqubits) const {
   const auto precBefore = std::cout.precision(20);
   const auto& actualControls = permutation.apply(getControls());
   const auto& actualTargets = permutation.apply(getTargets());
@@ -173,6 +174,11 @@ void Operation::addDepthContribution(std::vector<std::size_t>& depths) const {
   for (const auto& control : getControls()) {
     depths[control.qubit] = maxDepth;
   }
+}
+
+void Operation::apply(const Permutation& permutation) {
+  getTargets() = permutation.apply(getTargets());
+  getControls() = permutation.apply(getControls());
 }
 
 } // namespace qc

@@ -27,7 +27,7 @@ protected:
   OpType parseU1(fp& lambda);
 
   void checkUgate();
-  void setup(std::size_t nq, Qubit startingQubit = 0);
+  void setup();
 
   void dumpOpenQASMTeleportation(std::ostream& of,
                                  const RegisterNames& qreg) const;
@@ -36,33 +36,22 @@ public:
   StandardOperation() = default;
 
   // Standard Constructors
-  StandardOperation(std::size_t nq, Qubit target, OpType g,
-                    std::vector<fp> params = {}, Qubit startingQubit = 0);
-  StandardOperation(std::size_t nq, const Targets& targ, OpType g,
-                    std::vector<fp> params = {}, Qubit startingQubit = 0);
+  StandardOperation(Qubit target, OpType g, std::vector<fp> params = {});
+  StandardOperation(const Targets& targ, OpType g, std::vector<fp> params = {});
 
-  StandardOperation(std::size_t nq, Control control, Qubit target, OpType g,
-                    const std::vector<fp>& params = {},
-                    Qubit startingQubit = 0);
-  StandardOperation(std::size_t nq, Control control, const Targets& targ,
-                    OpType g, const std::vector<fp>& params = {},
-                    Qubit startingQubit = 0);
+  StandardOperation(Control control, Qubit target, OpType g,
+                    const std::vector<fp>& params = {});
+  StandardOperation(Control control, const Targets& targ, OpType g,
+                    const std::vector<fp>& params = {});
 
-  StandardOperation(std::size_t nq, const Controls& c, Qubit target, OpType g,
-                    const std::vector<fp>& params = {},
-                    Qubit startingQubit = 0);
-  StandardOperation(std::size_t nq, const Controls& c, const Targets& targ,
-                    OpType g, const std::vector<fp>& params = {},
-                    Qubit startingQubit = 0);
-
-  // MCT Constructor
-  StandardOperation(std::size_t nq, const Controls& c, Qubit target,
-                    Qubit startingQubit = 0);
+  StandardOperation(const Controls& c, Qubit target, OpType g,
+                    const std::vector<fp>& params = {});
+  StandardOperation(const Controls& c, const Targets& targ, OpType g,
+                    const std::vector<fp>& params = {});
 
   // MCF (cSWAP), Peres, parameterized two target Constructor
-  StandardOperation(std::size_t nq, const Controls& c, Qubit target0,
-                    Qubit target1, OpType g, const std::vector<fp>& params = {},
-                    Qubit startingQubit = 0);
+  StandardOperation(const Controls& c, Qubit target0, Qubit target1, OpType g,
+                    const std::vector<fp>& params = {});
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
     return std::make_unique<StandardOperation>(*this);

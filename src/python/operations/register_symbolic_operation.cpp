@@ -10,61 +10,52 @@ void registerSymbolicOperation(py::module& m) {
       "This encompasses all symbolic versions of `StandardOperation` that "
       "involve (float) angle parameters.")
       .def(py::init<>(), "Create an empty symbolic operation.")
-      .def(py::init<std::size_t, qc::Qubit, qc::OpType,
-                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
-           "nq"_a, "target"_a, "op_type"_a,
+      .def(py::init<qc::Qubit, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&>(),
+           "target"_a, "op_type"_a,
            "params"_a = std::vector<qc::SymbolOrNumber>{},
-           "starting_qubit"_a = 0,
            "Create a symbolic operation acting on a single qubit."
            "Params is a list of parameters that can be either `Expression` or "
            "`float`.")
-      .def(py::init<std::size_t, const qc::Targets&, qc::OpType,
-                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
-           "nq"_a, "targets"_a, "op_type"_a,
+      .def(py::init<const qc::Targets&, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&>(),
+           "targets"_a, "op_type"_a,
            "params"_a = std::vector<qc::SymbolOrNumber>{},
-           "starting_qubit"_a = 0,
            "Create a symbolic operation acting on multiple qubits."
            "Params is a list of parameters that can be either `Expression` or "
            "`float`.")
-      .def(py::init<std::size_t, qc::Control, qc::Qubit, qc::OpType,
-                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
-           "nq"_a, "control"_a, "target"_a, "op_type"_a,
+      .def(py::init<qc::Control, qc::Qubit, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&>(),
+           "control"_a, "target"_a, "op_type"_a,
            "params"_a = std::vector<qc::SymbolOrNumber>{},
-           "starting_qubit"_a = 0,
            "Create a controlled symbolic operation."
            "Params is a list of parameters that can be either `Expression` or "
            "`float`.")
-      .def(py::init<std::size_t, qc::Control, const qc::Targets&, qc::OpType,
-                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
-           "nq"_a, "control"_a, "targets"_a, "op_type"_a,
+      .def(py::init<qc::Control, const qc::Targets&, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&>(),
+           "control"_a, "targets"_a, "op_type"_a,
            "params"_a = std::vector<qc::SymbolOrNumber>{},
-           "starting_qubit"_a = 0,
            "Create a controlled multi-target symbolic operation."
            "Params is a list of parameters that can be either `Expression` or "
            "`float`.")
-      .def(py::init<std::size_t, const qc::Controls&, qc::Qubit, qc::OpType,
-                    const std::vector<qc::SymbolOrNumber>&, qc::Qubit>(),
-           "nq"_a, "controls"_a, "target"_a, "op_type"_a,
+      .def(py::init<const qc::Controls&, qc::Qubit, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&>(),
+           "controls"_a, "target"_a, "op_type"_a,
            "params"_a = std::vector<qc::SymbolOrNumber>{},
-           "starting_qubit"_a = 0,
            "Create a multi-controlled symbolic operation."
            "Params is a list of parameters that can be either `Expression` or "
            "`float`.")
-      .def(py::init<std::size_t, const qc::Controls&, const qc::Targets&,
-                    qc::OpType, const std::vector<qc::SymbolOrNumber>&,
-                    qc::Qubit>(),
-           "nq"_a, "controls"_a, "targets"_a, "op_type"_a,
+      .def(py::init<const qc::Controls&, const qc::Targets&, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&>(),
+           "controls"_a, "targets"_a, "op_type"_a,
            "params"_a = std::vector<qc::SymbolOrNumber>{},
-           "starting_qubit"_a = 0,
            "Create a multi-controlled multi-target symbolic operation."
            "Params is a list of parameters that can be either `Expression` or "
            "`float`.")
-      .def(py::init<std::size_t, const qc::Controls&, qc::Qubit, qc::Qubit,
-                    qc::OpType, const std::vector<qc::SymbolOrNumber>&,
-                    qc::Qubit>(),
-           "nq"_a, "controls"_a, "target0"_a, "target1"_a, "op_type"_a,
+      .def(py::init<const qc::Controls&, qc::Qubit, qc::Qubit, qc::OpType,
+                    const std::vector<qc::SymbolOrNumber>&>(),
+           "controls"_a, "target0"_a, "target1"_a, "op_type"_a,
            "params"_a = std::vector<qc::SymbolOrNumber>{},
-           "starting_qubit"_a = 0,
            "Create a multi-controlled two-target symbolic operation."
            "Params is a list of parameters that can be either `Expression` or "
            "`float`.")

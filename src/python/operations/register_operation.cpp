@@ -28,8 +28,6 @@ void registerOperation(py::module& m) {
           "control"_a, "Remove a control from this operation.")
       .def("remove_controls", &qc::Operation::removeControls, "controls"_a,
            "Remove a list of controls from this operation.")
-      .def_property("num_qubits", &qc::Operation::getNqubits,
-                    &qc::Operation::setNqubits)
       .def("get_used_qubits", &qc::Operation::getUsedQubits,
            "Get the qubits used by the operation (both control and targets).")
       .def("acts_on", &qc::Operation::actsOn, "qubit"_a,
@@ -77,15 +75,9 @@ void registerOperation(py::module& m) {
            [](const qc::Operation& op) {
              return std::hash<qc::Operation>{}(op);
            })
-      .def("__str__",
-           [](const qc::Operation& op) {
-             std::ostringstream oss;
-             oss << op;
-             return oss.str();
-           })
       .def("__repr__", [](const qc::Operation& op) {
         std::ostringstream oss;
-        oss << op;
+        oss << "Operation(type=" << op.getType() << ", ...)";
         return oss.str();
       });
 }

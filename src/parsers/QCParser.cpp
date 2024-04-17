@@ -136,8 +136,7 @@ int qc::QuantumComputation::readQCHeader(std::istream& is,
             constants.at(constidx - inputs.size()) == "1") {
           // add X operation in case of initial value 1
           if (constants.at(constidx - inputs.size()) == "1") {
-            emplace_back<StandardOperation>(nqubits + nancillae,
-                                            static_cast<Qubit>(constidx), X);
+            x(static_cast<Qubit>(constidx));
           }
           varMap.insert({var, static_cast<Qubit>(constidx++)});
         } else {
@@ -293,7 +292,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
       const Qubit target = controls.back().qubit;
       controls.pop_back();
       emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate);
+          Controls{controls.cbegin(), controls.cend()}, target, gate);
     } else if (gate == SWAP) {
       const Qubit target0 = controls.back().qubit;
       controls.pop_back();
@@ -304,7 +303,7 @@ void qc::QuantumComputation::readQCGateDescriptions(
       const Qubit target = controls.back().qubit;
       controls.pop_back();
       emplace_back<StandardOperation>(
-          nqubits, Controls{controls.cbegin(), controls.cend()}, target, gate,
+          Controls{controls.cbegin(), controls.cend()}, target, gate,
           std::vector{lambda});
     }
   }

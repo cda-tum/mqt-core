@@ -151,8 +151,8 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
                 e, static_cast<Qubit>(permutation.at(qubit)), true, mt);
             // apply an X operation whenever the measured result is one
             if (bit == '1') {
-              const auto x = qc::StandardOperation(
-                  qc->getNqubits(), permutation.at(qubit), qc::X);
+              const auto x =
+                  qc::StandardOperation(permutation.at(qubit), qc::X);
               auto tmp = dd.multiply(getDD(&x, dd), e);
               dd.incRef(tmp);
               dd.decRef(e);
@@ -270,8 +270,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
 
       if (RealNumber::approximatelyEquals(pone, 1.)) {
         const qc::MatrixDD xGate =
-            dd.makeGateDD(X_MAT, static_cast<std::size_t>(state.p->v) + 1U,
-                          static_cast<Qubit>(permutation.at(target)));
+            dd.makeGateDD(X_MAT, static_cast<Qubit>(permutation.at(target)));
         const qc::VectorDD resetState = dd.multiply(xGate, state);
         dd.incRef(resetState);
         dd.decRef(state);

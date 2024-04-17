@@ -19,8 +19,6 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
   GateMatrix gm;
 
   const auto type = op->getType();
-  const auto nqubits = op->getNqubits();
-  const auto startQubit = op->getStartingQubit();
   const auto& parameter = op->getParameter();
 
   switch (type) {
@@ -88,7 +86,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     oss << "DD for gate" << op->getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
-  return dd.makeGateDD(gm, nqubits, controls, target, startQubit);
+  return dd.makeGateDD(gm, controls, target);
 }
 
 // two-target Operations
@@ -98,8 +96,6 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
                        const qc::Controls& controls, qc::Qubit target0,
                        qc::Qubit target1, const bool inverse) {
   const auto type = op->getType();
-  const auto nqubits = op->getNqubits();
-  const auto startQubit = op->getStartingQubit();
   const auto& parameter = op->getParameter();
 
   if (type == qc::DCX && inverse) {
@@ -156,8 +152,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     throw qc::QFRException(oss.str());
   }
 
-  return dd.makeTwoQubitGateDD(gm, nqubits, controls, target0, target1,
-                               startQubit);
+  return dd.makeTwoQubitGateDD(gm, controls, target0, target1);
 }
 
 // The methods with a permutation parameter apply these Operations according to
@@ -169,20 +164,6 @@ template <class Config>
 qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
                    qc::Permutation& permutation, const bool inverse = false) {
   const auto type = op->getType();
-  const auto nqubits = op->getNqubits();
-
-  // check whether the operation can be handled by the underlying DD package
-  if (nqubits > Package<Config>::MAX_POSSIBLE_QUBITS) {
-    throw qc::QFRException(
-        "Requested too many qubits to be handled by the DD package. Qubit "
-        "datatype only allows up to " +
-        std::to_string(Package<Config>::MAX_POSSIBLE_QUBITS) +
-        " qubits, while " + std::to_string(nqubits) +
-        " were requested. If you want to use more than " +
-        std::to_string(Package<Config>::MAX_POSSIBLE_QUBITS) +
-        " qubits, you have to recompile the package with a wider Qubit type in "
-        "`include/dd/DDDefinitions.hpp!`");
-  }
 
   // if a permutation is provided and the current operation is a SWAP, this
   // routine just updates the permutation
@@ -193,11 +174,11 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
     const auto target1 = targets[1U];
     // update permutation
     std::swap(permutation.at(target0), permutation.at(target1));
-    return dd.makeIdent(nqubits);
+    return dd.makeIdent();
   }
 
   if (type == qc::Barrier) {
-    return dd.makeIdent(nqubits);
+    return dd.makeIdent();
   }
 
   if (type == qc::GPhase) {
@@ -205,7 +186,7 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
     if (inverse) {
       phase = -phase;
     }
-    auto id = dd.makeIdent(nqubits);
+    auto id = dd.makeIdent();
     id.w = dd.cn.lookup(std::cos(phase), std::sin(phase));
     return id;
   }
@@ -229,7 +210,7 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
   }
 
   if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
-    auto e = dd.makeIdent(op->getNqubits());
+    auto e = dd.makeIdent();
     if (inverse) {
       for (const auto& operation : *compoundOp) {
         e = dd.multiply(e, getInverseDD(operation.get(), dd, permutation));
@@ -281,10 +262,9 @@ void changePermutation(DDType& on, qc::Permutation& from,
                        const qc::Permutation& to, Package<Config>& dd,
                        const bool regular = true) {
   assert(from.size() >= to.size());
-  if (on.isTerminal()) {
+  if (on.isZeroTerminal()) {
     return;
   }
-  assert(on.p != nullptr);
 
   // iterate over (k,v) pairs of second permutation
   for (const auto& [i, goal] : to) {
@@ -313,8 +293,7 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD =
-        dd.makeTwoQubitGateDD(SWAP_MAT, on.p->v + 1U, from.at(i), from.at(j));
+    const auto swapDD = dd.makeTwoQubitGateDD(SWAP_MAT, from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd.multiply(swapDD, on);
     } else {

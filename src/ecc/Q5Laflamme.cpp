@@ -137,8 +137,7 @@ void Q5Laflamme::mapGate(const qc::Operation& gate) {
       } else {
         for (Qubit j = 0; j < N_REDUNDANT_QUBITS; j++) {
           qcMapped->emplace_back<qc::StandardOperation>(
-              qcMapped->getNqubits(), static_cast<Qubit>(i + j * nQubits),
-              gate.getType());
+              static_cast<Qubit>(i + j * nQubits), gate.getType());
         }
       }
     }

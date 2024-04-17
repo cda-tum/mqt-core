@@ -246,11 +246,6 @@ void QuantumComputation::addQubitRegister(std::size_t nq,
     outputPermutation.insert({j, j});
   }
   nqubits += nq;
-
-  for (auto& op : ops) {
-    op->setNqubits(nqubits + nancillae);
-  }
-
   ancillary.resize(nqubits + nancillae);
   garbage.resize(nqubits + nancillae);
 }
@@ -295,10 +290,6 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
     ancillary[j] = true;
   }
   nancillae += nq;
-
-  for (auto& op : ops) {
-    op->setNqubits(nqubits + nancillae);
-  }
 }
 
 void QuantumComputation::removeQubitfromQubitRegister(QuantumRegisterMap& regs,
@@ -403,13 +394,8 @@ QuantumComputation::removeQubit(const Qubit logicalQubitIndex) {
     outputPermutation.erase(physicalQubitIndex);
   }
 
-  // update all operations
-  const auto totalQubits = nqubits + nancillae;
-  for (auto& op : ops) {
-    op->setNqubits(totalQubits);
-  }
-
   // update ancillary and garbage tracking
+  const auto totalQubits = nqubits + nancillae;
   for (std::size_t i = logicalQubitIndex; i < totalQubits; ++i) {
     ancillary[i] = ancillary[i + 1];
     garbage[i] = garbage[i + 1];
@@ -455,11 +441,6 @@ void QuantumComputation::addAncillaryQubit(
     // if a qubit is not relevant for the output, it is considered garbage
     garbage[logicalQubitIndex] = true;
   }
-
-  // update all operations
-  for (auto& op : ops) {
-    op->setNqubits(nqubits + nancillae);
-  }
 }
 
 void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
@@ -491,14 +472,8 @@ void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
     outputPermutation.insert({physicalQubitIndex, *outputQubitIndex});
   }
 
-  const auto totalQubits = nqubits + nancillae;
-
-  // update all operations
-  for (auto& op : ops) {
-    op->setNqubits(totalQubits);
-  }
-
   // update ancillary and garbage tracking
+  const auto totalQubits = nqubits + nancillae;
   ancillary.resize(totalQubits);
   garbage.resize(totalQubits);
   for (auto i = totalQubits - 1; i > logicalQubitIndex; --i) {
@@ -527,7 +502,8 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
   size_t i = 0U;
   for (const auto& op : ops) {
     os << std::setw(width) << ++i << ":";
-    op->print(os, {}, static_cast<std::size_t>(width) + 1U);
+    op->print(os, initialLayout, static_cast<std::size_t>(width) + 1U,
+              getNqubits());
     os << "\n";
   }
 
@@ -897,6 +873,13 @@ void QuantumComputation::setLogicalQubitAncillary(
   ancillary[logicalQubitIndex] = true;
 }
 
+void QuantumComputation::setLogicalQubitsAncillary(
+    const Qubit minLogicalQubitIndex, const Qubit maxLogicalQubitIndex) {
+  for (Qubit i = minLogicalQubitIndex; i <= maxLogicalQubitIndex; i++) {
+    setLogicalQubitAncillary(i);
+  }
+}
+
 void QuantumComputation::setLogicalQubitGarbage(const Qubit logicalQubitIndex) {
   garbage[logicalQubitIndex] = true;
   // setting a logical qubit garbage also means removing it from the output
@@ -907,6 +890,13 @@ void QuantumComputation::setLogicalQubitGarbage(const Qubit logicalQubitIndex) {
       outputPermutation.erase(it);
       break;
     }
+  }
+}
+
+void QuantumComputation::setLogicalQubitsGarbage(
+    const Qubit minLogicalQubitIndex, const Qubit maxLogicalQubitIndex) {
+  for (Qubit i = minLogicalQubitIndex; i <= maxLogicalQubitIndex; i++) {
+    setLogicalQubitGarbage(i);
   }
 }
 
@@ -1081,8 +1071,8 @@ void QuantumComputation::measure(
          << " >= " << cRegister->second.second << ")";
       throw QFRException(ss.str());
     }
-    emplace_back<NonUnitaryOperation>(
-        getNqubits(), qubit, cRegister->second.first + registerBit.second);
+    emplace_back<NonUnitaryOperation>(qubit, cRegister->second.first +
+                                                 registerBit.second);
 
   } else {
     std::stringstream ss{};

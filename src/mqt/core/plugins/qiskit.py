@@ -164,15 +164,15 @@ def _emplace_operation(
 
     if name == "measure":
         clbits = [clbit_map[clbit] for clbit in cargs]
-        qc.append(NonUnitaryOperation(qc.num_qubits, qubits, clbits))
+        qc.append(NonUnitaryOperation(qubits, clbits))
         return []
 
     if name == "reset":
-        qc.append(NonUnitaryOperation(qc.num_qubits, qubits))
+        qc.append(NonUnitaryOperation(qubits))
         return []
 
     if name == "barrier":
-        qc.append(StandardOperation(qc.num_qubits, qubits, OpType.barrier))
+        qc.append(StandardOperation(qubits, OpType.barrier))
         return []
 
     if name in {"i", "id", "iden"}:
@@ -333,9 +333,9 @@ def _add_operation(
     controls = {Control(qubit) for qubit in qubits}
     parameters = [_parse_symbolic_expression(param) for param in params]
     if any(isinstance(parameter, Expression) for parameter in parameters):
-        qc.append(SymbolicOperation(qc.num_qubits, controls, target, type_, parameters))
+        qc.append(SymbolicOperation(controls, target, type_, parameters))
     else:
-        qc.append(StandardOperation(qc.num_qubits, controls, target, type_, cast(List[float], parameters)))
+        qc.append(StandardOperation(controls, target, type_, cast(List[float], parameters)))
     return parameters
 
 
@@ -352,9 +352,9 @@ def _add_two_target_operation(
     controls = {Control(qubit) for qubit in qubits}
     parameters = [_parse_symbolic_expression(param) for param in params]
     if any(isinstance(parameter, Expression) for parameter in parameters):
-        qc.append(SymbolicOperation(qc.num_qubits, controls, target1, target2, type_, parameters))
+        qc.append(SymbolicOperation(controls, target1, target2, type_, parameters))
     else:
-        qc.append(StandardOperation(qc.num_qubits, controls, target1, target2, type_, cast(List[float], parameters)))
+        qc.append(StandardOperation(controls, target1, target2, type_, cast(List[float], parameters)))
     return parameters
 
 
@@ -407,7 +407,7 @@ def _import_definition(
     qarg_map = dict(zip(circ.qubits, qargs))
     carg_map = dict(zip(circ.clbits, cargs))
 
-    qc.append(CompoundOperation(qc.num_qubits))
+    qc.append(CompoundOperation())
     comp_op = cast(CompoundOperation, qc[-1])
 
     params = []

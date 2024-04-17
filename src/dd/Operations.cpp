@@ -7,7 +7,6 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
                 Package<Config>& dd) {
   const auto type = op->getType();
   if (op->isStandardOperation()) {
-    auto nqubits = op->getNqubits();
     const auto& controls = op->getControls();
     const auto& targets = op->getTargets();
 
@@ -55,7 +54,6 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
 
     // write tensor dimensions
     const std::size_t localQubits = targets.size() + controls.size();
-    const std::size_t globalQubits = nqubits;
     of << "[";
     for (std::size_t q = 0U; q < localQubits; ++q) {
       if (q != 0U) {
@@ -78,8 +76,6 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
       }
       ++localIdx;
     }
-    // temporarily change nqubits
-    op->setNqubits(localQubits);
 
     // get DD for local operation
     auto localOp = op->clone();
@@ -88,10 +84,7 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
     const auto localDD = getDD(localOp.get(), dd);
 
     // translate local DD to matrix
-    const auto localMatrix = localDD.getMatrix();
-
-    // restore nqubits
-    op->setNqubits(globalQubits);
+    const auto localMatrix = localDD.getMatrix(localQubits);
 
     // set appropriate precision for dumping numbers
     const auto precision = of.precision();
