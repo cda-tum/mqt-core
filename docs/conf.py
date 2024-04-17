@@ -191,4 +191,5 @@ latex_elements = {
     \widowpenalty=10000
     \interlinepenalty 10000
     """,
+    "fvset": r"\fvset{fontsize=\small}",
 }
