@@ -193,3 +193,4 @@ latex_elements = {
     """,
     "fvset": r"\fvset{fontsize=\small}",
 }
+latex_domain_indices = False
