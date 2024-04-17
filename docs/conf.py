@@ -191,6 +191,10 @@ latex_elements = {
     \widowpenalty=10000
     \interlinepenalty 10000
     """,
+    "extraclassoptions": r"journal, onecolumn",
     "fvset": r"\fvset{fontsize=\small}",
 }
 latex_domain_indices = False
+latex_docclass = {
+    "howto": "IEEEtran",
+}
