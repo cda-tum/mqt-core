@@ -74,11 +74,11 @@ jobs:
       matrix:
         python-version:
           - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
-          - ${{ needs.max-python-version.outputs.max-python-version }}
+          - ${{ needs.dist.outputs.max-python-version }}
         runs-on: [macos-13] # test Intel architecture
         include:
           - runs-on: macos-14 # test Apple Silicon architecture
-            python-version: ${{ needs.max-python-version.outputs.max-python-version }} # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
+            python-version: ${{ needs.dist.outputs.max-python-version }} # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: ${{ matrix.runs-on }}
@@ -96,7 +96,7 @@ jobs:
       matrix:
         python-version:
           - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
-          - ${{ needs.max-python-version.outputs.max-python-version }}
+          - ${{ needs.dist.outputs.max-python-version }}
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: windows-latest
@@ -114,7 +114,7 @@ jobs:
       matrix:
         python-version:
           - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
-          - ${{ needs.max-python-version.outputs.max-python-version }}
+          - ${{ needs.dist.outputs.max-python-version }}
     uses: ./.github/workflows/reusable-python-minimums.yml
     with:
       runs-on: ubuntu-latest
