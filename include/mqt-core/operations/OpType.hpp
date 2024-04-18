@@ -64,6 +64,11 @@ enum OpType : std::uint8_t {
   OpCount
 };
 
+/// Enumeration of diagonal gates
+static constexpr std::array<qc::OpType, 10> DIAGONAL_GATES = {
+    qc::Barrier, qc::I,   qc::Z, qc::S,  qc::Sdg,
+    qc::T,       qc::Tdg, qc::P, qc::RZ, qc::RZZ};
+
 inline std::string toString(const OpType& opType) {
   switch (opType) {
   case None:
@@ -193,7 +198,7 @@ inline std::string shortName(const OpType& opType) {
   }
 }
 
-inline bool isTwoQubitGate(const OpType& opType) {
+[[nodiscard]] inline bool isTwoQubitGate(const OpType& opType) {
   switch (opType) {
   case SWAP:
   case iSWAP:
@@ -208,6 +213,32 @@ inline bool isTwoQubitGate(const OpType& opType) {
   case RZX:
   case XXminusYY:
   case XXplusYY:
+    return true;
+  default:
+    return false;
+  }
+}
+
+[[nodiscard]] inline auto isSingleQubitGate(const qc::OpType& type) {
+  switch (type) {
+  case qc::OpType::U:
+  case qc::OpType::U2:
+  case qc::OpType::P:
+  case qc::OpType::X:
+  case qc::OpType::Y:
+  case qc::OpType::Z:
+  case qc::OpType::H:
+  case qc::OpType::S:
+  case qc::OpType::Sdg:
+  case qc::OpType::T:
+  case qc::OpType::SX:
+  case qc::OpType::SXdg:
+  case qc::OpType::Tdg:
+  case qc::OpType::V:
+  case qc::OpType::Vdg:
+  case qc::OpType::RX:
+  case qc::OpType::RY:
+  case qc::OpType::RZ:
     return true;
   default:
     return false;
