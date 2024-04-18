@@ -395,6 +395,11 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
     if final_layout is None:
         return
 
+    # final_index_layout creates a list of final positions for input circuit qubits
+    final_index_layout = layout.final_index_layout(filter_ancillas=False)
+    for idx, value in enumerate(final_index_layout):
+        qc.output_permutation[value] = idx
+
 
 def _import_definition(
     qc: QuantumComputation | CompoundOperation,
