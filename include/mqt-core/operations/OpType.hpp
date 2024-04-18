@@ -47,12 +47,10 @@ enum OpType : std::uint8_t {
   XXplusYY,
   // Compound Operation
   Compound,
-  Global,
   // Non Unitary Operations
   Measure,
   Reset,
   Teleportation,
-  Shuttle,
   // Classically-controlled Operation
   ClassicControlled,
   // Noise operations
@@ -141,8 +139,6 @@ inline std::string toString(const OpType& opType) {
     return "xx_plus_yy";
   case Compound:
     return "compound";
-  case Global:
-    return "global";
   case Measure:
     return "measure";
   case Reset:
@@ -320,8 +316,6 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"teleportation", OpType::Teleportation},
         {"classic_controlled", OpType::ClassicControlled},
         {"compound", OpType::Compound},
-        {"global", OpType::Global},
-        {"shuttle", OpType::Shuttle},
 };
 
 [[nodiscard]] inline OpType opTypeFromString(const std::string& opType) {

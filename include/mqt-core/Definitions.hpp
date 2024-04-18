@@ -120,6 +120,13 @@ constexpr void hashCombine(std::size_t& hash, const std::size_t with) noexcept {
   hash = combineHash(hash, with);
 }
 
+/// Pairs do not provide a hash function by default, this is the replacement
+template <class T> struct PairHash {
+  size_t operator()(const std::pair<T, T>& x) const {
+    return combineHash(std::hash<T>{}(x.first), std::hash<T>{}(x.second));
+  }
+};
+
 /**
  * @brief Function used to mark unreachable code
  * @details Uses compiler specific extensions if possible. Even if no extension

@@ -1,7 +1,13 @@
 # add unit tests
 package_add_test(
-  ${PROJECT_NAME}-test ${PROJECT_NAME} unittests/test_io.cpp unittests/test_qfr_functionality.cpp
-  unittests/test_symbolic.cpp unittests/test_qasm3_parser.cpp)
+  ${PROJECT_NAME}-test
+  ${PROJECT_NAME}
+  unittests/test_io.cpp
+  unittests/test_qfr_functionality.cpp
+  unittests/test_symbolic.cpp
+  unittests/test_qasm3_parser.cpp
+  test_graph.cpp
+)
 
 file(GLOB_RECURSE circuit_optimizer_tests "unittests/circuit_optimizer/*.cpp")
 package_add_test(${PROJECT_NAME}-test-circuit-optimizer ${PROJECT_NAME} ${circuit_optimizer_tests})
