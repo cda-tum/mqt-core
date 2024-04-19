@@ -12,7 +12,7 @@ It consists of multiple components that are used throughout the MQT. Specificall
 2. a state-of-the-art decision diagram (DD) package for quantum computing that is used for classical quantum circuit simulation (as part of {doc}`MQT DDSIM <ddsim:index>`) and verification (as part of {doc}`MQT QCEC <qcec:index>`).
 3. a state-of-the-art ZX-diagram package for working with the ZX-calculus, e.g., for verification as part of {doc}`MQT QCEC <qcec:index>`.
 
-This documentation provides a comprehensive guide to the MQT Core library, including installation instructions, a quickstart guide, and detailed API documentation.
+This documentation provides a comprehensive guide to the MQT Core library, including {doc}`installation instructions <installation>`, a {doc}`quickstart guide <quickstart>`, and detailed {doc}`API documentation <api/mqt/core/index>`.
 The source code of MQT Core is publicly available on GitHub at [cda-tum/mqt-core](https://github.com/cda-tum/mqt-core), while pre-built binaries are available via [PyPI](https://pypi.org/project/mqt.core/) for all major operating systems and all modern Python versions.
 MQT Core is fully compatible with Qiskit 1.0 and above.
 
@@ -38,6 +38,7 @@ self
 :maxdepth: 2
 :caption: User Guide
 
+installation
 quickstart
 ```
 
