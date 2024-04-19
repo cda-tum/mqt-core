@@ -142,6 +142,7 @@ autoapi_options = [
     "special-members",
     "undoc-members",
 ]
+autoapi_keep_files = True
 add_module_names = False
 toc_object_entries_show_parents = "hide"
 python_use_unqualified_type_names = True
