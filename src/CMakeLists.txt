@@ -89,7 +89,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/passes/TypeCheckPass.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/Permutation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/QuantumComputation.hpp
-    # ${MQT_CORE_INCLUDE_BUILD_DIR}/Layer.hpp
+    ${MQT_CORE_INCLUDE_BUILD_DIR}/Layer.hpp
     algorithms/BernsteinVazirani.cpp
     algorithms/Entanglement.cpp
     algorithms/GoogleRandomCircuitSampling.cpp
@@ -118,7 +118,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     parsers/qasm3_parser/passes/ConstEvalPass.cpp
     parsers/qasm3_parser/passes/TypeCheckPass.cpp
     QuantumComputation.cpp
-    # Layer.cpp
+    Layer.cpp
   )
 
   # set include directories

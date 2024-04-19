@@ -1,6 +1,6 @@
 //
 // This file is part of the MQT QMAP library released under the MIT license.
-// See README.md or go to https://github.com/cda-tum/qmap for more information.
+// See README.md or go to https://github.com/cda-tum/mqt-core for more information.
 //
 
 #include "na/NAComputation.hpp"
@@ -14,7 +14,7 @@
 #include <sstream>
 #include <string>
 
-TEST(NAComputation, General) {
+TEST(NAComputationTest, General) {
   auto qc = na::NAComputation();
   qc.emplaceInitialPosition(std::make_shared<na::Point>(0, 0));
   qc.emplaceInitialPosition(std::make_shared<na::Point>(1, 0));

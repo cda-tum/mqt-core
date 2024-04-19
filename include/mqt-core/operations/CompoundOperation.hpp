@@ -18,8 +18,8 @@ private:
 public:
   explicit CompoundOperation();
 
-  explicit CompoundOperation(
-      std::vector<std::unique_ptr<Operation>>&& operations);
+  explicit
+  CompoundOperation(std::vector<std::unique_ptr<Operation>>&& operations);
 
   CompoundOperation(const CompoundOperation& co);
 
@@ -60,6 +60,16 @@ public:
   std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
 
   [[nodiscard]] std::set<Qubit> getUsedQubits() const override;
+
+  [[nodiscard]] auto commutesAtQubit(const Operation& other,
+                                     const Qubit& qubit) const -> bool override;
+
+  /**
+   * @warning This function only considers global gates represented as compound
+   * operations. Not compound operations in gernerl. If this function returns
+   * false, the operations might still be inverse of each other.
+   */
+  [[nodiscard]] auto isInverseOf(const Operation& other) const -> bool override;
 
   void invert() override;
 

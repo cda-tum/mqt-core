@@ -6,172 +6,15 @@
 
 #include "Layer.hpp"
 
-#include "Definitions.hpp"
 #include "Graph.hpp"
-#include "operations/CompoundOperation.hpp"
-#include "operations/OpType.hpp"
 
-#include <algorithm>
-#include <iostream>
 #include <memory>
-#include <numeric>
 #include <set>
 #include <unordered_set>
 
-namespace na {
+namespace qc {
 
-/// Checks whether the two operations commute on the given qubit.
-[[nodiscard]] auto
-Layer::commutesAtQubit(const std::unique_ptr<qc::Operation>* op1,
-                       const std::unique_ptr<qc::Operation>* op2,
-                       const qc::Qubit&                      qubit) -> bool {
-  // if an operation is a compound operation extract the corresponding operation
-  if ((*op1)->isCompoundOperation()) {
-    const auto& co         = dynamic_cast<qc::CompoundOperation&>(**op1);
-    const auto& opsOnQubit = std::accumulate(
-        co.cbegin(), co.cend(),
-        std::unordered_set<const std::unique_ptr<qc::Operation>*>{},
-        [qubit](auto& set, const auto& op) {
-          if (op->actsOn(qubit)) {
-            set.insert(&op);
-          }
-          return set;
-        });
-    if (opsOnQubit.empty()) {
-      return true;
-    }
-    if (opsOnQubit.size() == 1) {
-      const std::unique_ptr<qc::Operation>* op = *opsOnQubit.begin();
-      return commutesAtQubit(op2, op, qubit);
-    }
-    return false;
-  }
-  if ((*op2)->isCompoundOperation()) {
-    return commutesAtQubit(op2, op1, qubit);
-  }
-  // FIXME: Cleanup this conditional branch, but how?
-  // check whether both operations act on the given qubit
-  if (!(*op1)->actsOn(qubit) or !(*op2)->actsOn(qubit)) {
-    throw std::invalid_argument(
-        "The operations do not act on the given qubit.");
-  }
-  if (const auto& controls1 = (*op1)->getControls();
-      controls1.find(qubit) != controls1.end()) {
-    // if op1 is controlled on the given qubit
-    if (const auto& controls2 = (*op2)->getControls();
-        controls2.find(qubit) != controls2.end()) {
-      // if op2 is controlled on the given qubit
-      // q: ──■────■──
-      //      |    |
-      return true;
-    }
-    // here: qubit is a target of op2
-    return isDiagonal((*op2)->getType());
-    // true, iff qubit is a target and op2 is a diagonal gate
-    //         ┌────┐
-    // q: ──■──┤ RZ ├
-    //      |  └────┘
-  }
-  // here: qubit is a target of op1
-  if (const auto& controls2 = (*op2)->getControls();
-      controls2.find(qubit) != controls2.end()) {
-    return isDiagonal((*op1)->getType());
-    // true, iff qubit is a target and op1 is a diagonal gate and op2 is
-    // controlled
-    //    ┌────┐
-    // q: ┤ RZ ├──■──
-    //    └────┘  |
-  }
-  // here: qubit is a target of both operations
-  if (isDiagonal((*op1)->getType()) and isDiagonal((*op2)->getType())) {
-    // if both operations are diagonal gates
-    //    ┌────┐┌────┐
-    // q: ┤ RZ ├┤ RZ ├
-    //    └────┘└────┘
-    return true;
-  }
-  return (*op1)->getType() == (*op2)->getType() and
-         (*op1)->getType() < qc::OpType::Compound;
-  // FIXME: Beautify the hack with '< qc::OpType::Compound' to identify
-  // FIXME: standard gates
-  // true, iff both operations are of the same type
-  //    ┌───┐┌───┐
-  // q: ┤ A ├┤ A ├
-  //    └───┘└───┘
-}
-[[nodiscard]] auto Layer::isInverse(const std::unique_ptr<qc::Operation>* op1,
-                                    const std::unique_ptr<qc::Operation>* op2)
-    -> bool {
-  // TODO: Add check for remaining operations
-  if ((*op1)->isCompoundOperation() or (*op2)->isCompoundOperation()) {
-    if ((*op1)->isCompoundOperation() and (*op2)->isCompoundOperation()) {
-      const auto& co1 = dynamic_cast<qc::CompoundOperation&>(**op1);
-      const auto& co2 = dynamic_cast<qc::CompoundOperation&>(**op2);
-      if (co1.size() != co2.size()) {
-        return false;
-      }
-      std::unordered_set<qc::Qubit> usedQubits;
-      for (auto it1 = co1.cbegin(), it2 = co2.cbegin(); it1 != co1.cend(); ++it1, ++it2) {
-        if (!isInverse(&*it1, &*it2)) {
-          return false;
-        }
-        for (const auto q : (*it1)->getUsedQubits()) {
-          if (usedQubits.find(q) != usedQubits.end()) {
-            return false;
-          }
-          usedQubits.insert(q);
-        }
-      }
-      return true;
-    }
-    return false;
-  }
-  if ((*op1)->getControls() == (*op2)->getControls() and
-      (*op1)->getTargets() == (*op2)->getTargets()) {
-    auto result =
-        ((*op1)->getType() == qc::OpType::I and
-         (*op2)->getType() == qc::OpType::I) or
-        ((*op1)->getType() == qc::OpType::X and
-         (*op2)->getType() == qc::OpType::X) or
-        ((*op1)->getType() == qc::OpType::Y and
-         (*op2)->getType() == qc::OpType::Y) or
-        ((*op1)->getType() == qc::OpType::Z and
-         (*op2)->getType() == qc::OpType::Z) or
-        ((*op1)->getType() == qc::OpType::S and
-         (*op2)->getType() == qc::OpType::Sdg) or
-        ((*op1)->getType() == qc::OpType::Sdg and
-         (*op2)->getType() == qc::OpType::S) or
-        ((*op1)->getType() == qc::OpType::SX and
-         (*op2)->getType() == qc::OpType::SXdg) or
-        ((*op1)->getType() == qc::OpType::SXdg and
-         (*op2)->getType() == qc::OpType::SX) or
-        ((*op1)->getType() == qc::OpType::T and
-         (*op2)->getType() == qc::OpType::Tdg) or
-        ((*op1)->getType() == qc::OpType::Tdg and
-         (*op2)->getType() == qc::OpType::T) or
-        ((*op1)->getType() == qc::OpType::H and
-         (*op2)->getType() == qc::OpType::H) or
-        ((*op1)->getType() == qc::OpType::P and
-         (*op2)->getType() == qc::OpType::P and
-         std::abs((*op1)->getParameter()[0] + (*op2)->getParameter()[0]) <
-             qc::PARAMETER_TOLERANCE) or
-        ((*op1)->getType() == qc::OpType::RX and
-         (*op2)->getType() == qc::OpType::RX and
-         std::abs((*op1)->getParameter()[0] + (*op2)->getParameter()[0]) <
-             qc::PARAMETER_TOLERANCE) or
-        ((*op1)->getType() == qc::OpType::RY and
-         (*op2)->getType() == qc::OpType::RY and
-         std::abs((*op1)->getParameter()[0] + (*op2)->getParameter()[0]) <
-             qc::PARAMETER_TOLERANCE) or
-        ((*op1)->getType() == qc::OpType::RZ and
-         (*op2)->getType() == qc::OpType::RZ and
-         std::abs((*op1)->getParameter()[0] + (*op2)->getParameter()[0]) <
-             qc::PARAMETER_TOLERANCE);
-    return result;
-  }
-  return false;
-}
-auto Layer::constructDAG(const qc::QuantumComputation& qc) -> void {
+auto Layer::constructDAG(const QuantumComputation& qc) -> void {
   const auto nQubits = qc.getNqubits();
   // For a pair of self-canceling operations like two consecutive X operations
   // or RY rotations with opposite angles the first operations is a
@@ -209,12 +52,16 @@ auto Layer::constructDAG(const qc::QuantumComputation& qc) -> void {
         // here: the lookahead is not empty
         // get the current vertex from the lookahead and store the new
         // vertex in the lookahead
+        // Note: this might seem odd and one might think that the gates can be
+        // eliminated, however, since we also allow global gates, those might
+        // cancel out each other on a particular qubit but not on all qubits
+        // and, hence, cannot be eliminated.
         std::shared_ptr<DAGVertex> const current = lookahead[qubit];
-        lookahead[qubit]                         = vertex;
+        lookahead[qubit] = vertex;
         // check whether the current operation is the inverse of the
         // lookahead
-        if (isInverse(current->getOperation(),
-                      lookahead[qubit]->getOperation())) {
+        if ((*current->getOperation())
+                ->isInverseOf(**lookahead[qubit]->getOperation())) {
           // here: the current operation is the inverse of the lookahead
           // add an enabling edge from the lookahead to all operations on this
           // qubit including the destructive ones
@@ -252,8 +99,8 @@ auto Layer::constructDAG(const qc::QuantumComputation& qc) -> void {
           // check whether the current operation commutes with the current
           // group members
           if (!currentGroup[qubit].empty() and
-              !commutesAtQubit(currentGroup[qubit][0]->getOperation(),
-                               current->getOperation(), qubit)) {
+              !(*currentGroup[qubit][0]->getOperation())
+                   ->commutesAtQubit(**current->getOperation(), qubit)) {
             // here: the current operation does not commute with the current
             // group members and is not the inverse of the lookahead
             // --> start a new group
@@ -273,10 +120,10 @@ auto Layer::constructDAG(const qc::QuantumComputation& qc) -> void {
     }
   }
   // process the remaining lookahead for every qubit
-  for (qc::Qubit qubit = 0; qubit < nQubits; ++qubit) {
+  for (Qubit qubit = 0; qubit < nQubits; ++qubit) {
     if (lookahead[qubit] != nullptr) {
       auto const current = lookahead[qubit];
-      lookahead[qubit]   = nullptr;
+      lookahead[qubit] = nullptr;
       // add an enabling edge from each constructive operation
       for (const auto& constructiveOp : constructive[qubit]) {
         constructiveOp->addEnabledSuccessor(current);
@@ -288,8 +135,8 @@ auto Layer::constructDAG(const qc::QuantumComputation& qc) -> void {
       // check whether the current operation commutes with the current
       // group members
       if (!currentGroup[qubit].empty() and
-          !commutesAtQubit(currentGroup[qubit][0]->getOperation(),
-                           current->getOperation(), qubit)) {
+          !(*currentGroup[qubit][0]->getOperation())
+               ->commutesAtQubit(**current->getOperation(), qubit)) {
         // here: the current operation does not commute with the current
         // group members and is not the inverse of the lookahead
         // --> start a new group
@@ -307,54 +154,53 @@ auto Layer::constructDAG(const qc::QuantumComputation& qc) -> void {
     }
   }
 }
-[[nodiscard]] auto Layer::constructInteractionGraph(OpType opType) const
-    -> Graph<std::shared_ptr<DAGVertex>> {
-  switch (opType.type) {
-  case qc::X:
-  case qc::Y:
-  case qc::Z:
-  case qc::RX:
-  case qc::RY:
-  case qc::RZ:
-    if (opType.nctrl == 1) {
+auto Layer::constructInteractionGraph(OpType opType, std::size_t nctrl) const
+    -> Graph<Qubit, std::shared_ptr<DAGVertex>> {
+  switch (opType) {
+  case X:
+  case Y:
+  case Z:
+  case RX:
+  case RY:
+  case RZ:
+    if (nctrl == 1) {
       break;
     }
     [[fallthrough]];
   default:
     std::stringstream ss;
     ss << "The operation type ";
-    for (std::size_t i = 0; i < opType.nctrl; ++i) {
+    for (std::size_t i = 0; i < nctrl; ++i) {
       ss << "c";
     }
     ss << opType << " is not supported for constructing an interaction graph.";
     throw std::invalid_argument(ss.str());
   }
-  Graph<std::shared_ptr<DAGVertex>> graph;
+  Graph<Qubit, std::shared_ptr<DAGVertex>> graph;
   for (const auto& vertex : *executableSet) {
     const auto& gate = *vertex->getOperation();
-    if (gate->getType() == opType.type and
-        gate->getNcontrols() == opType.nctrl) {
+    if (gate->getType() == opType and gate->getNcontrols() == nctrl) {
       const auto& usedQubits = gate->getUsedQubits();
       if (usedQubits.size() != 2) {
         throw std::invalid_argument(
             "The interaction graph can only be constructed for two-qubit "
             "gates.");
       }
-      std::vector<qc::Qubit> q(usedQubits.cbegin(), usedQubits.cend());
+      std::vector<Qubit> q(usedQubits.cbegin(), usedQubits.cend());
       graph.addEdge(q[0], q[1], vertex);
     }
   }
   return graph;
 }
-[[nodiscard]] auto Layer::getExecutablesOfType(OpType opType) const
+auto Layer::getExecutablesOfType(OpType opType, std::size_t nctrl) const
     -> std::vector<std::shared_ptr<DAGVertex>> {
   std::vector<std::shared_ptr<DAGVertex>> executables;
   for (const auto& vertex : *executableSet) {
-    if ((*vertex->getOperation())->getType() == opType.type and
-        (*vertex->getOperation())->getNcontrols() == opType.nctrl) {
+    if ((*vertex->getOperation())->getType() == opType and
+        (*vertex->getOperation())->getNcontrols() == nctrl) {
       executables.emplace_back(vertex);
     }
   }
   return executables;
 }
-} // namespace na
+} // namespace qc

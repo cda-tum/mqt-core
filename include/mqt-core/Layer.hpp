@@ -5,24 +5,16 @@
 //
 
 #pragma once
-
-#include "Architecture.hpp"
-#include "Definitions.hpp"
-#include "Graph.hpp"
 #include "QuantumComputation.hpp"
-#include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
+#include <Graph.hpp>
 #include <cassert>
-#include <iostream>
-#include <iterator>
 #include <memory>
-#include <set>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
-namespace na {
+namespace qc {
 /**
  * @brief Class to manage the creation of layers when traversing a quantum
  * circuit.
@@ -30,18 +22,18 @@ namespace na {
  * can be executed at the same time. It can be used to create the front or look
  * ahead layer.
  */
-class Layer {
+class Layer final {
 public:
   class DAGVertex : public std::enable_shared_from_this<DAGVertex> {
   protected:
     // if the executableCounter becomes equal to the executableThreshold the
     // vertex becomes executable
-    std::size_t                             executableThreshold = 0;
-    std::size_t                             executableCounter   = 0;
-    std::vector<std::shared_ptr<DAGVertex>> enabledSuccessors   = {};
-    std::vector<std::shared_ptr<DAGVertex>> disabledSuccessors  = {};
-    bool                                    executed            = false;
-    const std::unique_ptr<qc::Operation>*   operation;
+    std::size_t executableThreshold = 0;
+    std::size_t executableCounter = 0;
+    std::vector<std::shared_ptr<DAGVertex>> enabledSuccessors;
+    std::vector<std::shared_ptr<DAGVertex>> disabledSuccessors;
+    bool executed = false;
+    const std::unique_ptr<Operation>* operation;
     std::unique_ptr<std::unordered_set<std::shared_ptr<DAGVertex>>>*
         executableSet;
 
@@ -53,14 +45,14 @@ public:
      * @param operation
      * @param executableSet
      */
-    DAGVertex(const std::unique_ptr<qc::Operation>* operation,
+    DAGVertex(const std::unique_ptr<Operation>* operation,
               std::unique_ptr<std::unordered_set<std::shared_ptr<DAGVertex>>>*
                   executableSet)
         : operation(operation), executableSet(executableSet) {}
 
   public:
     [[nodiscard]] static auto
-    create(const std::unique_ptr<qc::Operation>* operation,
+    create(const std::unique_ptr<Operation>* operation,
            std::unique_ptr<std::unordered_set<std::shared_ptr<DAGVertex>>>*
                executableSet) -> std::shared_ptr<DAGVertex> {
       std::shared_ptr<DAGVertex> v(new DAGVertex(operation, executableSet));
@@ -73,7 +65,7 @@ public:
     }
     [[nodiscard]] auto isExecuted() const { return executed; }
     [[nodiscard]] auto getOperation() const
-        -> const std::unique_ptr<qc::Operation>* {
+        -> const std::unique_ptr<Operation>* {
       return operation;
     }
 
@@ -120,12 +112,12 @@ public:
             "The vertex is not executable and cannot be executed.");
       }
     }
-    auto addEnabledSuccessor(std::shared_ptr<DAGVertex> successor) {
+    auto addEnabledSuccessor(const std::shared_ptr<DAGVertex>& successor) {
       enabledSuccessors.emplace_back(successor);
       ++successor->executableThreshold;
       successor->updateExecutableSet();
     }
-    auto addDisabledSuccessor(std::shared_ptr<DAGVertex> successor) {
+    auto addDisabledSuccessor(const std::shared_ptr<DAGVertex>& successor) {
       disabledSuccessors.emplace_back(successor);
       --successor->executableThreshold;
       successor->updateExecutableSet();
@@ -136,17 +128,7 @@ protected:
   std::unique_ptr<std::unordered_set<std::shared_ptr<DAGVertex>>>
       executableSet =
           std::make_unique<std::unordered_set<std::shared_ptr<DAGVertex>>>();
-
-  /// Checks whether two operations commute on a given qubit.
-  [[nodiscard]] static auto
-  commutesAtQubit(const std::unique_ptr<qc::Operation>* op1,
-                  const std::unique_ptr<qc::Operation>* op2,
-                  const qc::Qubit&                      qubit) -> bool;
-  /// Checks whether two consecutive operations cancel each other out.
-  [[nodiscard]] static auto isInverse(const std::unique_ptr<qc::Operation>* op1,
-                                      const std::unique_ptr<qc::Operation>* op2)
-      -> bool;
-  auto constructDAG(const qc::QuantumComputation& qc) -> void;
+  auto constructDAG(const QuantumComputation& qc) -> void;
 
 public:
   Layer() = default;
@@ -156,7 +138,7 @@ public:
             other.executableSet->cbegin(), other.executableSet->cend());
   }
   virtual ~Layer() = default;
-  explicit Layer(const qc::QuantumComputation& qc) { constructDAG(qc); }
+  explicit Layer(const QuantumComputation& qc) { constructDAG(qc); }
   Layer& operator=(const Layer& other) {
     executableSet =
         std::make_unique<std::unordered_set<std::shared_ptr<DAGVertex>>>(
@@ -167,17 +149,15 @@ public:
       std::unique_ptr<std::unordered_set<std::shared_ptr<DAGVertex>>>* {
     return &executableSet;
   }
-  auto setCircuit(const qc::QuantumComputation& qc) -> void {
+  auto setCircuit(const QuantumComputation& qc) -> void {
     executableSet->clear();
     constructDAG(qc);
   }
-  static auto execute(const std::shared_ptr<DAGVertex>& vertex) -> void {
-    vertex->execute();
-  }
-  [[nodiscard]] auto constructInteractionGraph(OpType opType) const
-      -> Graph<std::shared_ptr<DAGVertex>>;
-  [[nodiscard]] auto getExecutablesOfType(OpType opType) const
+  [[nodiscard]] auto constructInteractionGraph(OpType opType,
+                                               std::size_t nctrl) const
+      -> Graph<Qubit, std::shared_ptr<DAGVertex>>;
+  [[nodiscard]] auto getExecutablesOfType(OpType opType,
+                                          std::size_t nctrl) const
       -> std::vector<std::shared_ptr<DAGVertex>>;
 };
-
-} // namespace na
+} // namespace qc

@@ -1,8 +1,12 @@
 #include "operations/StandardOperation.hpp"
 
+#include "operations/CompoundOperation.hpp"
+
 #include <algorithm>
 #include <cassert>
+#include <numeric>
 #include <sstream>
+#include <unordered_set>
 #include <variant>
 
 namespace qc {
@@ -494,6 +498,95 @@ void StandardOperation::dumpOpenQASMTeleportation(
   of << "// teleport q_0, a_0, a_1; q_0 --> a_1  via a_0\n";
   of << "teleport " << qreg[targets[0]].second << ", "
      << qreg[targets[1]].second << ", " << qreg[targets[2]].second << ";\n";
+}
+
+auto StandardOperation::commutesAtQubit(const Operation& other,
+                                        const Qubit& qubit) const -> bool {
+  if (other.isCompoundOperation()) {
+    return other.commutesAtQubit(*this, qubit);
+  }
+  // check whether both operations act on the given qubit
+  if (!actsOn(qubit) or !other.actsOn(qubit)) {
+    throw std::invalid_argument(
+        "The operations do not act on the given qubit.");
+  }
+  if (controls.find(qubit) != controls.end()) {
+    // if this is controlled on the given qubit
+    if (const auto& controls2 = other.getControls();
+        controls2.find(qubit) != controls2.end()) {
+      // if other is controlled on the given qubit
+      // q: ──■────■──
+      //      |    |
+      return true;
+    }
+    // here: qubit is a target of other
+    return other.isDiagonal();
+    // true, iff qubit is a target and other is a diagonal gate, e.g., rz
+    //         ┌────┐
+    // q: ──■──┤ RZ ├
+    //      |  └────┘
+  }
+  // here: qubit is a target of this
+  if (const auto& controls2 = other.getControls();
+      controls2.find(qubit) != controls2.end()) {
+    return isDiagonal();
+    // true, iff qubit is a target and this is a diagonal gate and other is
+    // controlled, e.g.
+    //    ┌────┐
+    // q: ┤ RZ ├──■──
+    //    └────┘  |
+  }
+  // here: qubit is a target of both operations
+  if (isDiagonal() and other.isDiagonal()) {
+    // if both operations are diagonal gates, e.g.
+    //    ┌────┐┌────┐
+    // q: ┤ RZ ├┤ RZ ├
+    //    └────┘└────┘
+    return true;
+  }
+  return type == other.getType() and targets == other.getTargets();
+  // true, iff both operations are of the same type, e.g.
+  //    ┌───┐┌───┐
+  // q: ┤ E ├┤ E ├
+  //    | C || C |
+  //    ┤ R ├┤ R ├
+  //    └───┘└───┘
+  //      |    |
+  //    ──■────┼──
+  //           |
+  //    ───────■──
+}
+
+auto StandardOperation::isInverseOf(const Operation& other) const -> bool {
+  if (other.isStandardOperation()) {
+    if (controls == other.getControls() and targets == other.getTargets()) {
+      return (type == I and other.getType() == I) or
+             (type == X and other.getType() == X) or
+             (type == Y and other.getType() == Y) or
+             (type == Z and other.getType() == Z) or
+             (type == S and other.getType() == Sdg) or
+             (type == Sdg and other.getType() == S) or
+             (type == SX and other.getType() == SXdg) or
+             (type == SXdg and other.getType() == SX) or
+             (type == T and other.getType() == Tdg) or
+             (type == Tdg and other.getType() == T) or
+             (type == H and other.getType() == H) or
+             (type == P and other.getType() == P and
+              std::abs(parameter[0] + other.getParameter()[0]) <
+                  PARAMETER_TOLERANCE) or
+             (type == OpType::RX and other.getType() == OpType::RX and
+              std::abs(parameter[0] + other.getParameter()[0]) <
+                  PARAMETER_TOLERANCE) or
+             (type == OpType::RY and other.getType() == OpType::RY and
+              std::abs(parameter[0] + other.getParameter()[0]) <
+                  PARAMETER_TOLERANCE) or
+             (type == OpType::RZ and other.getType() == OpType::RZ and
+              std::abs(parameter[0] + other.getParameter()[0]) <
+                  PARAMETER_TOLERANCE);
+    }
+  }
+  // TODO: Add check for remaining operations
+  return false;
 }
 
 void StandardOperation::invert() {

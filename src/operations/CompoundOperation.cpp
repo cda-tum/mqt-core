@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <numeric>
+#include <unordered_set>
 
 namespace qc {
 CompoundOperation::CompoundOperation() {
@@ -153,6 +155,56 @@ std::set<Qubit> CompoundOperation::getUsedQubits() const {
   }
   return usedQubits;
 }
+
+auto CompoundOperation::commutesAtQubit(const Operation& other,
+                                        const Qubit& qubit) const -> bool {
+  const auto& opsOnQubit = std::accumulate(
+      cbegin(), cend(),
+      std::unordered_set<const std::unique_ptr<qc::Operation>*>{},
+      [qubit](auto& set, const auto& op) {
+        if (op->actsOn(qubit)) {
+          set.insert(&op);
+        }
+        return set;
+      });
+  if (opsOnQubit.empty()) {
+    return true;
+  }
+  if (opsOnQubit.size() == 1) {
+    const std::unique_ptr<qc::Operation>* op = *opsOnQubit.begin();
+    return (*op)->commutesAtQubit(other, qubit);
+  }
+  return false;
+}
+
+auto CompoundOperation::isInverseOf(const Operation& other) const -> bool {
+  if (other.isCompoundOperation()) {
+    // cast other to CompoundOperation
+    const auto& co = dynamic_cast<const CompoundOperation&>(other);
+    if (size() != co.size()) {
+      return false;
+    }
+    std::unordered_set<Qubit> usedQubits;
+    for (auto it1 = cbegin(), it2 = co.cbegin(); it1 != cend(); ++it1, ++it2) {
+      if (!(*it1)->isInverseOf(**it2)) {
+        // TODO: Handle cases where the operations do not come in the same order
+        return false;
+      }
+      for (const auto q : (*it1)->getUsedQubits()) {
+        if (usedQubits.find(q) != usedQubits.end()) {
+          // TODO: Handle cases when the compound operation contains more
+          // operations acting on a single qubit, if fixed remove the warning in
+          // the header file
+          return false;
+        }
+        usedQubits.insert(q);
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
 void CompoundOperation::invert() {
   for (auto& op : ops) {
     op->invert();
