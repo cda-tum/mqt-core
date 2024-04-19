@@ -90,6 +90,8 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/Permutation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/QuantumComputation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/Layer.hpp
+    ${MQT_CORE_INCLUDE_BUILD_DIR}/Graph.hpp
+    ${MQT_CORE_INCLUDE_BUILD_DIR}/DisjointSet.hpp
     algorithms/BernsteinVazirani.cpp
     algorithms/Entanglement.cpp
     algorithms/GoogleRandomCircuitSampling.cpp

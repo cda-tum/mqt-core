@@ -5,7 +5,7 @@
 #
 
 if(NOT TARGET ${MQT_CORE_TARGET_NAME}-na)
-  file(GLOB_RECURSE NA_HEADERS ${MQT_CORE_INCLUDE_BUILD_DIR}/na/**/*.hpp)
+  file(GLOB_RECURSE NA_HEADERS ${MQT_CORE_INCLUDE_BUILD_DIR}/na/**.hpp)
   file(GLOB_RECURSE NA_SOURCES *.cpp)
 
   # add NA package library
