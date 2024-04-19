@@ -47,7 +47,6 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: cpp
-          setup-python-dependencies: false
           config: |
             queries:
               - uses: security-and-quality
