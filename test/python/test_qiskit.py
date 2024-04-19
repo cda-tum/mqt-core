@@ -372,6 +372,10 @@ def test_final_layout_with_permutation_ancilla_in_front_and_back() -> None:
     seed = 123
     backend = Fake5QV1()
     qc_transpiled = transpile(qc, backend, initial_layout=initial_layout, seed_transpiler=seed)
+    routing_permutation = qc_transpiled.layout.routing_permutation()
     mqt_qc = qiskit_to_mqt(qc_transpiled)
-    for k, v in [(0, 1), (1, 0), (2, 2), (3, 3), (4, 4)]:
-        assert mqt_qc.output_permutation[k] == v
+
+    # Check that output_permutation matches the result of applying the routing permutation to input_layout
+    for idx, key in enumerate(qc_transpiled.layout.initial_index_layout()):
+        key_perm = routing_permutation[key]
+        assert mqt_qc.output_permutation[key_perm] == idx
