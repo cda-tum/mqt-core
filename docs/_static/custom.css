@@ -35,7 +35,8 @@ body:not([data-theme="light"]) .highlight .sa,
 .highlight .sr,
 .highlight .s1,
 .highlight .ss,
-.highlight .s1 {
+.highlight .s1,
+.highlight .s {
   background-color: #00000001;
 }
 
@@ -45,4 +46,8 @@ body:not([data-theme="light"]) {
   --mystnb-stdout-bg-color: #1a1c1e;
   --mystnb-stderr-bg-color: #442222;
   --mystnb-traceback-bg-color: #202020;
+}
+
+body:not([data-theme="light"]) .highlight .gp {
+  color: #c65d09;
 }
