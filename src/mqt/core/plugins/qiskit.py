@@ -359,9 +359,7 @@ def _add_two_target_operation(
 
 
 def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
-    # qiskit-terra 0.24.0 added a (public) `layout` attribute
-    layout = circ.layout if hasattr(circ, "layout") else circ._layout  # noqa: SLF001
-
+    layout = circ.layout
     initial_layout = layout.initial_layout
 
     # The following creates a map of virtual qubits in the layout to an integer index.
@@ -386,14 +384,15 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
     for device_qubit, circuit_qubit in initial_layout.get_physical_bits().items():
         idx = qubit_to_idx[circuit_qubit]
         qc.initial_layout[device_qubit] = idx
-        qc.output_permutation[device_qubit] = idx
 
-    if not hasattr(layout, "final_layout"):
+    if layout.final_layout is None:
+        qc.output_permutation = qc.initial_layout
         return
 
-    final_layout = layout.final_layout
-    if final_layout is None:
-        return
+    # final_index_layout creates a list of final positions for input circuit qubits
+    final_index_layout = layout.final_index_layout(filter_ancillas=False)
+    for idx, value in enumerate(final_index_layout):
+        qc.output_permutation[value] = idx
 
 
 def _import_definition(
