@@ -7,24 +7,18 @@
 [![codecov](https://img.shields.io/codecov/c/github/cda-tum/mqt-core?style=flat-square&logo=codecov)](https://codecov.io/gh/cda-tum/mqt-core)
 
 <p align="center">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cda-tum/mqt-core/main/docs/_static/mqt_light.png" width="60%">
-   <img src="https://raw.githubusercontent.com/cda-tum/mqt-core/main/docs/_static/mqt_dark.png" width="60%">
- </picture>
+  <a href="https://mqt.readthedocs.io">
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/cda-tum/mqt-core/main/docs/_static/mqt_light.png" width="60%">
+     <img src="https://raw.githubusercontent.com/cda-tum/mqt-core/main/docs/_static/mqt_dark.png" width="60%">
+   </picture>
+  </a>
 </p>
 
 # MQT Core - The Backbone of the Munich Quantum Toolkit (MQT)
 
-The MQT Core library forms the backbone of the quantum software tools developed as part of the _Munich Quantum Toolkit_ (_MQT_) by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/). This includes the following tools:
-
-- [MQT DDSIM](https://github.com/cda-tum/mqt-ddsim): A Tool for Classical Quantum Circuit Simulation based on Decision Diagrams.
-- [MQT QMAP](https://github.com/cda-tum/mqt-qmap): A Tool for Quantum Circuit Mapping.
-- [MQT QCEC](https://github.com/cda-tum/mqt-qcec): A Tool for Quantum Circuit Equivalence Checking.
-- [MQT QECC](https://github.com/cda-tum/mqt-qecc): A Tool for Quantum Error Correcting Codes.
-- [MQT DDVis](https://github.com/cda-tum/mqt-ddvis): A Web-Application visualizing Decision Diagrams for Quantum Computing.
-- [MQT SyReC](https://github.com/cda-tum/mqt-syrec): A Tool for Synthesis of Reversible Circuits/Quantum Computing Oracles.
-
-For a full list of tools and libraries, please visit the [MQT website](https://mqt.readthedocs.io/).
+MQT Core is an open-source C++17 and Python library for quantum computing that forms the backbone of the quantum software tools developed as part of the [_Munich Quantum Toolkit_ (_MQT_)](https://mqt.readthedocs.io) by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/).
+To this end, it consists of multiple components that are used throughout the MQT, including a fully fledged intermediate representation (IR) for quantum computations, a state-of-the-art decision diagram (DD) package for quantum computing, and a dedicated ZX-diagram package for working with the ZX-calculus.
 
 <p align="center">
   <a href="https://mqt.readthedocs.io/projects/core">
@@ -39,7 +33,7 @@ If you have any questions, feel free to create a [discussion](https://github.com
 `mqt.core` is available via [PyPI](https://pypi.org/project/mqt.core/) for all major operating systems and supports Python 3.8 to 3.12.
 
 ```console
-(venv) $ pip install mqt.core
+(.venv) $ pip install mqt.core
 ```
 
 The following code gives an example on the usage:
@@ -56,16 +50,6 @@ print(qc)
 ```
 
 **Detailed documentation and examples are available at [ReadTheDocs](https://mqt.readthedocs.io/projects/core).**
-
-## Library Overview
-
-MQT Core encompasses:
-
-- `MQT::Core`: An intermediate representation (IR) for quantum computations including means to import and export circuits in various formats.
-- `MQT::CoreDD`: A fully-fledged decision diagram (DD) library for quantum computing.
-- `MQT::CoreZX`: A library for working with ZX-diagrams and the ZX-calculus.
-- `MQT::CoreECC`: A library for working with error correcting codes (ECCs) for quantum computing.
-- `MQT::CorePython`: A Python interface for the MQT Core library (e.g., facilitating the import of Qiskit QuantumCircuits).
 
 ## System Requirements
 
