@@ -26,6 +26,7 @@ class Permutation(MutableMapping[int, int]):
         Returns:
             The value of the permutation at the given index.
         """
+
     def __setitem__(self: Self, idx: int, val: int) -> None:
         """Set the value of the permutation at the given index.
 
@@ -33,14 +34,17 @@ class Permutation(MutableMapping[int, int]):
             idx: The index to set the value of the permutation at.
             val: The value to set the permutation at the given index to.
         """
+
     def __delitem__(self: Self, key: int) -> None:
         """Delete the value of the permutation at the given index.
 
         Args:
             key: The index to delete the value of the permutation at.
         """
+
     def __iter__(self: Self) -> Iterator[int]:
         """Return an iterator over the indices of the permutation."""
+
     def __len__(self: Self) -> int:
         """Return the number of indices in the permutation."""
 
@@ -63,6 +67,7 @@ class Permutation(MutableMapping[int, int]):
         Returns:
             The set of controls with the permutation applied.
         """
+
     @overload
     def apply(self: Self, targets: list[int]) -> list[int]:
         """Apply the permutation to a list of targets.
@@ -121,6 +126,7 @@ class QuantumComputation(MutableSequence[Operation]):
     @property
     def num_qubits(self: Self) -> int:
         """The total number of qubits in the quantum computation."""
+
     @property
     def num_ancilla_qubits(self: Self) -> int:
         r"""The number of ancilla qubits in the quantum computation.
@@ -128,6 +134,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Note:
             Ancilla qubits are qubits that always start in a fixed state (usually :math:`|0\\rangle`).
         """
+
     @property
     def num_garbage_qubits(self: Self) -> int:
         """The number of garbage qubits in the quantum computation.
@@ -135,35 +142,44 @@ class QuantumComputation(MutableSequence[Operation]):
         Note:
             Garbage qubits are qubits whose final state is not relevant for the computation.
         """
+
     @property
     def num_measured_qubits(self: Self) -> int:
         """The number of qubits that are measured in the quantum computation.
 
         Computed as :math:`|qubits| - |garbage|`.
         """
+
     @property
     def num_data_qubits(self: Self) -> int:
         """The number of data qubits in the quantum computation.
 
         Computed as :math:`|qubits| - |ancilla|`.
         """
+
     @property
     def num_classical_bits(self: Self) -> int:
         """The number of classical bits in the quantum computation."""
+
     @property
     def num_ops(self: Self) -> int:
         """The number of operations in the quantum computation."""
+
     def num_single_qubit_ops(self: Self) -> int:
         """Return the number of single-qubit operations in the quantum computation."""
+
     def num_total_ops(self: Self) -> int:
         """Return the total number of operations in the quantum computation.
 
         Recursively counts sub-operations (e.g., from :class:`~mqt.core.operations.CompoundOperation` objects).
         """
+
     def depth(self: Self) -> int:
         """Return the depth of the quantum computation."""
+
     def invert(self: Self) -> None:
         """Invert the quantum computation (in-place) by inverting each operation and reversing the order of the operations."""
+
     def to_operation(self: Self) -> Operation:
         """Convert the quantum computation to a single operation.
 
@@ -181,6 +197,7 @@ class QuantumComputation(MutableSequence[Operation]):
 
     def __len__(self: Self) -> int:
         """Return the number of operations in the quantum computation."""
+
     @overload
     def __getitem__(self: Self, idx: int) -> Operation:
         """Get the operation at the given index.
@@ -194,6 +211,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Returns:
             The operation at the given index.
         """
+
     @overload
     def __getitem__(self: Self, idx: slice) -> list[Operation]:
         """Get a slice of operations from the quantum computation.
@@ -207,6 +225,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Returns:
             The operations in the given slice.
         """
+
     @overload
     def __setitem__(self: Self, idx: int, op: Operation) -> None:
         """Set the operation at the given index.
@@ -215,6 +234,7 @@ class QuantumComputation(MutableSequence[Operation]):
             idx: The index of the operation to set.
             op: The operation to set at the given index.
         """
+
     @overload
     def __setitem__(self: Self, idx: slice, ops: Iterable[Operation]) -> None:
         """Set the operations in the given slice.
@@ -223,6 +243,7 @@ class QuantumComputation(MutableSequence[Operation]):
             idx: The slice of operations to set.
             ops: The operations to set in the given slice.
         """
+
     @overload
     def __delitem__(self: Self, idx: int) -> None:
         """Delete the operation at the given index.
@@ -230,6 +251,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             idx: The index of the operation to delete.
         """
+
     @overload
     def __delitem__(self: Self, idx: slice) -> None:
         """Delete the operations in the given slice.
@@ -237,6 +259,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             idx: The slice of operations to delete.
         """
+
     def insert(self: Self, idx: int, op: Operation) -> None:
         """Insert an operation at the given index.
 
@@ -244,14 +267,17 @@ class QuantumComputation(MutableSequence[Operation]):
             idx: The index to insert the operation at.
             op: The operation to insert.
         """
+
     def append(self: Self, op: Operation) -> None:
         """Append an operation to the end of the quantum computation.
 
         Args:
             op: The operation to append.
         """
+
     def reverse(self: Self) -> None:
         """Reverse the order of the operations in the quantum computation (in-place)."""
+
     def clear(self: Self) -> None:
         """Clear the quantum computation of all operations."""
 
@@ -266,6 +292,7 @@ class QuantumComputation(MutableSequence[Operation]):
             n: The number of qubits in the ancillary register.
             name: The name of the ancillary register.
         """
+
     def add_classical_register(self: Self, n: int, name: str = "c") -> None:
         """Add a classical register to the quantum computation.
 
@@ -273,6 +300,7 @@ class QuantumComputation(MutableSequence[Operation]):
             n: The number of bits in the classical register.
             name: The name of the classical register.
         """
+
     def add_qubit_register(self: Self, n: int, name: str = "anc") -> None:
         """Add a qubit register to the quantum computation.
 
@@ -280,6 +308,7 @@ class QuantumComputation(MutableSequence[Operation]):
             n: The number of qubits in the qubit register.
             name: The name of the qubit register.
         """
+
     def unify_quantum_registers(self: Self, name: str = "q") -> None:
         """Unify all quantum registers in the quantum computation.
 
@@ -354,12 +383,14 @@ class QuantumComputation(MutableSequence[Operation]):
     @property
     def ancillary(self: Self) -> list[bool]:
         """A list of booleans indicating whether each qubit is ancillary."""
+
     def set_circuit_qubit_ancillary(self: Self, q: int) -> None:
         """Set a circuit (i.e., logical) qubit to be ancillary.
 
         Args:
             q: The index of the circuit qubit to set as ancillary.
         """
+
     def set_circuit_qubits_ancillary(self: Self, q_min: int, q_max: int) -> None:
         """Set a range of circuit (i.e., logical) qubits to be ancillary.
 
@@ -367,6 +398,7 @@ class QuantumComputation(MutableSequence[Operation]):
             q_min: The minimum index of the circuit qubits to set as ancillary.
             q_max: The maximum index of the circuit qubits to set as ancillary.
         """
+
     def is_circuit_qubit_ancillary(self: Self, q: int) -> bool:
         """Check if a circuit (i.e., logical) qubit is ancillary.
 
@@ -376,15 +408,18 @@ class QuantumComputation(MutableSequence[Operation]):
         Returns:
             True if the circuit qubit is ancillary, False otherwise.
         """
+
     @property
     def garbage(self: Self) -> list[bool]:
         """A list of booleans indicating whether each qubit is garbage."""
+
     def set_circuit_qubit_garbage(self: Self, q: int) -> None:
         """Set a circuit (i.e., logical) qubit to be garbage.
 
         Args:
             q: The index of the circuit qubit to set as garbage.
         """
+
     def set_circuit_qubits_garbage(self: Self, q_min: int, q_max: int) -> None:
         """Set a range of circuit (i.e., logical) qubits to be garbage.
 
@@ -392,6 +427,7 @@ class QuantumComputation(MutableSequence[Operation]):
             q_min: The minimum index of the circuit qubits to set as garbage.
             q_max: The maximum index of the circuit qubits to set as garbage.
         """
+
     def is_circuit_qubit_garbage(self: Self, q: int) -> bool:
         """Check if a circuit (i.e., logical) qubit is garbage.
 
@@ -409,24 +445,28 @@ class QuantumComputation(MutableSequence[Operation]):
     @property
     def variables(self: Self) -> set[Variable]:
         """The set of variables in the quantum computation."""
+
     def add_variable(self: Self, var: Expression | float) -> None:
         """Add a variable to the quantum computation.
 
         Args:
             var: The variable to add.
         """
+
     def add_variables(self: Self, vars_: Sequence[Expression | float]) -> None:
         """Add multiple variables to the quantum computation.
 
         Args:
             vars_: The variables to add.
         """
+
     def is_variable_free(self: Self) -> bool:
         """Check if the quantum computation is free of variables.
 
         Returns:
             True if the quantum computation is free of variables, False otherwise.
         """
+
     def instantiate(self: Self, assignment: Mapping[Variable, float]) -> QuantumComputation:
         """Instantiate the quantum computation with the given variable assignment.
 
@@ -436,6 +476,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Returns:
             The instantiated quantum computation.
         """
+
     def instantiate_inplace(self: Self, assignment: Mapping[Variable, float]) -> None:
         """Instantiate the quantum computation with the given variable assignment in-place.
 
@@ -461,6 +502,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Returns:
             The OpenQASM2 representation of the quantum computation as a string.
         """
+
     def qasm2(self: Self, filename: PathLike[str] | str) -> None:
         """Write the OpenQASM2 representation of the quantum computation to a file.
 
@@ -470,12 +512,14 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             filename: The filename of the file to write the OpenQASM2 representation to.
         """
+
     def qasm3_str(self: Self) -> str:
         """Return the OpenQASM3 representation of the quantum computation as a string.
 
         Returns:
             The OpenQASM3 representation of the quantum computation as a string.
         """
+
     def qasm3(self: Self, filename: PathLike[str] | str) -> None:
         """Write the OpenQASM3 representation of the quantum computation to a file.
 
@@ -499,6 +543,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def ci(self: Self, control: Control | int, target: int) -> None:
         """Apply a controlled identity operation.
 
@@ -509,6 +554,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`i`
         """
+
     def mci(self: Self, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled identity operation.
 
@@ -519,6 +565,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`i`
         """
+
     def x(self: Self, q: int) -> None:
         r"""Apply a Pauli-X gate.
 
@@ -528,6 +575,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def cx(self: Self, control: Control | int, target: int) -> None:
         """Apply a controlled Pauli-X (CNOT / CX) gate.
 
@@ -538,6 +586,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`x`
         """
+
     def mcx(self: Self, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled Pauli-X (Toffoli / MCX) gate.
 
@@ -548,6 +597,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`x`
         """
+
     def y(self: Self, q: int) -> None:
         r"""Apply a Pauli-Y gate.
 
@@ -557,6 +607,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def cy(self: Self, control: Control | int, target: int) -> None:
         """Apply a controlled Pauli-Y gate.
 
@@ -567,6 +618,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`y`
         """
+
     def mcy(self: Self, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled Pauli-Y gate.
 
@@ -577,6 +629,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`y`
         """
+
     def z(self: Self, q: int) -> None:
         r"""Apply a Pauli-Z gate.
 
@@ -586,6 +639,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def cz(self: Self, control: Control | int, target: int) -> None:
         """Apply a controlled Pauli-Z (CZ) gate.
 
@@ -596,6 +650,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`z`
         """
+
     def mcz(self: Self, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled Pauli-Z (MCZ) gate.
 
@@ -606,6 +661,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`z`
         """
+
     def h(self: Self, q: int) -> None:
         r"""Apply a Hadamard gate.
 
@@ -615,6 +671,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def ch(self: Self, control: Control | int, target: int) -> None:
         """Apply a controlled Hadamard gate.
 
@@ -625,6 +682,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`h`
         """
+
     def mch(self: Self, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled Hadamard gate.
 
@@ -635,6 +693,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`h`
         """
+
     def s(self: Self, q: int) -> None:
         r"""Apply an S gate (phase gate).
 
@@ -644,6 +703,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def cs(self: Self, control: Control | int, target: int) -> None:
         """Apply a controlled S gate (CS gate).
 
@@ -654,6 +714,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`s`
         """
+
     def mcs(self: Self, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled S gate.
 
@@ -664,6 +725,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`s`
         """
+
     def sdg(self: Self, q: int) -> None:
         r"""Apply an :math:`S^{\dagger}` gate.
 
@@ -673,6 +735,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def csdg(self: Self, control: Control | int, target: int) -> None:
         r"""Apply a controlled :math:`S^{\dagger}` gate.
 
@@ -683,6 +746,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`sdg`
         """
+
     def mcsdg(self: Self, controls: set[Control | int], target: int) -> None:
         r"""Apply a multi-controlled :math:`S^{\dagger}` gate.
 
@@ -693,6 +757,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`sdg`
         """
+
     def t(self: Self, q: int) -> None:
         r"""Apply a T gate.
 
@@ -702,6 +767,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def ct(self: Self, control: Control | int, target: int) -> None:
         """Apply a controlled T gate.
 
@@ -712,6 +778,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`t`
         """
+
     def mct(self: Self, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled T gate.
 
@@ -722,6 +789,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`t`
         """
+
     def tdg(self: Self, q: int) -> None:
         r"""Apply a :math:`T^{\dagger}` gate.
 
@@ -731,6 +799,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def ctdg(self: Self, control: Control | int, target: int) -> None:
         r"""Apply a controlled :math:`T^{\dagger}` gate.
 
@@ -741,6 +810,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`tdg`
         """
+
     def mctdg(self: Self, controls: set[Control | int], target: int) -> None:
         r"""Apply a multi-controlled :math:`T^{\dagger}` gate.
 
@@ -751,6 +821,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`tdg`
         """
+
     def v(self: Self, q: int) -> None:
         r"""Apply a V gate.
 
@@ -760,6 +831,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def cv(self: Self, control: Control | int, target: int) -> None:
         """Apply a controlled V gate.
 
@@ -770,6 +842,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`v`
         """
+
     def mcv(self: Self, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled V gate.
 
@@ -780,6 +853,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`v`
         """
+
     def vdg(self: Self, q: int) -> None:
         r"""Apply a :math:`V^{\dagger}` gate.
 
@@ -789,6 +863,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def cvdg(self: Self, control: Control | int, target: int) -> None:
         r"""Apply a controlled :math:`V^{\dagger}` gate.
 
@@ -799,6 +874,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`vdg`
         """
+
     def mcvdg(self: Self, controls: set[Control | int], target: int) -> None:
         r"""Apply a multi-controlled :math:`V^{\dagger}` gate.
 
@@ -809,6 +885,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`vdg`
         """
+
     def sx(self: Self, q: int) -> None:
         r"""Apply a :math:`\sqrt{X}` gate.
 
@@ -818,6 +895,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def csx(self: Self, control: Control | int, target: int) -> None:
         r"""Apply a controlled :math:`\sqrt{X}` gate.
 
@@ -828,6 +906,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`sx`
         """
+
     def mcsx(self: Self, controls: set[Control | int], target: int) -> None:
         r"""Apply a multi-controlled :math:`\sqrt{X}` gate.
 
@@ -838,6 +917,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`sx`
         """
+
     def sxdg(self: Self, q: int) -> None:
         r"""Apply a :math:`\sqrt{X}^{\dagger}` gate.
 
@@ -847,6 +927,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The target qubit
         """
+
     def csxdg(self: Self, control: Control | int, target: int) -> None:
         r"""Apply a controlled :math:`\sqrt{X}^{\dagger}` gate.
 
@@ -857,6 +938,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`sxdg`
         """
+
     def mcsxdg(self: Self, controls: set[Control | int], target: int) -> None:
         r"""Apply a multi-controlled :math:`\sqrt{X}^{\dagger}` gate.
 
@@ -867,6 +949,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`sxdg`
         """
+
     def rx(self: Self, theta: float | Expression, q: int) -> None:
         r"""Apply an :math:`R_x(\theta)` gate.
 
@@ -877,6 +960,7 @@ class QuantumComputation(MutableSequence[Operation]):
             theta: The rotation angle
             q: The target qubit
         """
+
     def crx(self: Self, theta: float | Expression, control: Control | int, target: int) -> None:
         r"""Apply a controlled :math:`R_x(\theta)` gate.
 
@@ -888,6 +972,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rx`
         """
+
     def mcrx(self: Self, theta: float | Expression, controls: set[Control | int], target: int) -> None:
         r"""Apply a multi-controlled :math:`R_x(\theta)` gate.
 
@@ -899,6 +984,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rx`
         """
+
     def ry(self: Self, theta: float | Expression, q: int) -> None:
         r"""Apply an :math:`R_y(\theta)` gate.
 
@@ -909,6 +995,7 @@ class QuantumComputation(MutableSequence[Operation]):
             theta: The rotation angle
             q: The target qubit
         """
+
     def cry(self: Self, theta: float | Expression, control: Control | int, target: int) -> None:
         r"""Apply a controlled :math:`R_y(\theta)` gate.
 
@@ -920,6 +1007,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`ry`
         """
+
     def mcry(self: Self, theta: float | Expression, controls: set[Control | int], target: int) -> None:
         r"""Apply a multi-controlled :math:`R_y(\theta)` gate.
 
@@ -931,6 +1019,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`ry`
         """
+
     def rz(self: Self, theta: float | Expression, q: int) -> None:
         r"""Apply an :math:`R_z(\theta)` gate.
 
@@ -941,6 +1030,7 @@ class QuantumComputation(MutableSequence[Operation]):
             theta: The rotation angle
             q: The target qubit
         """
+
     def crz(self: Self, theta: float | Expression, control: Control | int, target: int) -> None:
         r"""Apply a controlled :math:`R_z(\theta)` gate.
 
@@ -952,6 +1042,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rz`
         """
+
     def mcrz(self: Self, theta: float | Expression, controls: set[Control | int], target: int) -> None:
         r"""Apply a multi-controlled :math:`R_z(\theta)` gate.
 
@@ -963,6 +1054,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rz`
         """
+
     def p(self: Self, theta: float | Expression, q: int) -> None:
         r"""Apply a phase gate.
 
@@ -973,6 +1065,7 @@ class QuantumComputation(MutableSequence[Operation]):
             theta: The rotation angle
             q: The target qubit
         """
+
     def cp(self: Self, theta: float | Expression, control: Control | int, target: int) -> None:
         """Apply a controlled phase gate.
 
@@ -984,6 +1077,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`p`
         """
+
     def mcp(self: Self, theta: float | Expression, controls: set[Control | int], target: int) -> None:
         """Apply a multi-controlled phase gate.
 
@@ -995,6 +1089,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`p`
         """
+
     def u2(self: Self, phi: float | Expression, lambda_: float | Expression, q: int) -> None:
         r"""Apply a :math:`U_2(\phi, \lambda)` gate.
 
@@ -1007,6 +1102,7 @@ class QuantumComputation(MutableSequence[Operation]):
             lambda_: The rotation angle
             q: The target qubit
         """
+
     def cu2(
         self: Self, phi: float | Expression, lambda_: float | Expression, control: Control | int, target: int
     ) -> None:
@@ -1021,6 +1117,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`u2`
         """
+
     def mcu2(
         self: Self, phi: float | Expression, lambda_: float | Expression, controls: set[Control | int], target: int
     ) -> None:
@@ -1035,6 +1132,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`u2`
         """
+
     def u(self: Self, theta: float | Expression, phi: float | Expression, lambda_: float | Expression, q: int) -> None:
         r"""Apply a :math:`U(\theta, \phi, \lambda)` gate.
 
@@ -1048,6 +1146,7 @@ class QuantumComputation(MutableSequence[Operation]):
             lambda_: The rotation angle
             q: The target qubit
         """
+
     def cu(
         self: Self,
         theta: float | Expression,
@@ -1068,6 +1167,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`u`
         """
+
     def mcu(
         self: Self,
         theta: float | Expression,
@@ -1088,6 +1188,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`u`
         """
+
     def swap(self: Self, target1: int, target2: int) -> None:
         r"""Apply a SWAP gate.
 
@@ -1098,6 +1199,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def cswap(self: Self, control: Control | int, target1: int, target2: int) -> None:
         """Apply a controlled SWAP gate.
 
@@ -1109,6 +1211,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`swap`
         """
+
     def mcswap(self: Self, controls: set[Control | int], target1: int, target2: int) -> None:
         """Apply a multi-controlled SWAP gate.
 
@@ -1120,6 +1223,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`swap`
         """
+
     def dcx(self: Self, target1: int, target2: int) -> None:
         r"""Apply a DCX (double CNOT) gate.
 
@@ -1130,6 +1234,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def cdcx(self: Self, control: Control | int, target1: int, target2: int) -> None:
         """Apply a controlled DCX (double CNOT) gate.
 
@@ -1141,6 +1246,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`dcx`
         """
+
     def mcdcx(self: Self, controls: set[Control | int], target1: int, target2: int) -> None:
         """Apply a multi-controlled DCX (double CNOT) gate.
 
@@ -1152,6 +1258,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`dcx`
         """
+
     def ecr(self: Self, target1: int, target2: int) -> None:
         r"""Apply an ECR (echoed cross-resonance) gate.
 
@@ -1162,6 +1269,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def cecr(self: Self, control: Control | int, target1: int, target2: int) -> None:
         """Apply a controlled ECR (echoed cross-resonance) gate.
 
@@ -1173,6 +1281,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`ecr`
         """
+
     def mcecr(self: Self, controls: set[Control | int], target1: int, target2: int) -> None:
         """Apply a multi-controlled ECR (echoed cross-resonance) gate.
 
@@ -1184,6 +1293,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`ecr`
         """
+
     def iswap(self: Self, target1: int, target2: int) -> None:
         r"""Apply an iSWAP gate.
 
@@ -1194,6 +1304,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def ciswap(self: Self, control: Control | int, target1: int, target2: int) -> None:
         """Apply a controlled iSWAP gate.
 
@@ -1205,6 +1316,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`iswap`
         """
+
     def mciswap(self: Self, controls: set[Control | int], target1: int, target2: int) -> None:
         """Apply a multi-controlled iSWAP gate.
 
@@ -1216,6 +1328,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`iswap`
         """
+
     def iswapdg(self: Self, target1: int, target2: int) -> None:
         r"""Apply an :math:`iSWAP^{\dagger}` gate.
 
@@ -1226,6 +1339,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def ciswapdg(self: Self, control: Control | int, target1: int, target2: int) -> None:
         r"""Apply a controlled :math:`iSWAP^{\dagger}` gate.
 
@@ -1237,6 +1351,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`iswapdg`
         """
+
     def mciswapdg(self: Self, controls: set[Control | int], target1: int, target2: int) -> None:
         r"""Apply a multi-controlled :math:`iSWAP^{\dagger}` gate.
 
@@ -1248,6 +1363,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`iswapdg`
         """
+
     def peres(self: Self, target1: int, target2: int) -> None:
         r"""Apply a Peres gate.
 
@@ -1258,6 +1374,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def cperes(self: Self, control: Control | int, target1: int, target2: int) -> None:
         """Apply a controlled Peres gate.
 
@@ -1269,6 +1386,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`peres`
         """
+
     def mcperes(self: Self, controls: set[Control | int], target1: int, target2: int) -> None:
         """Apply a multi-controlled Peres gate.
 
@@ -1280,6 +1398,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`peres`
         """
+
     def peresdg(self: Self, target1: int, target2: int) -> None:
         r"""Apply a :math:`Peres^{\dagger}` gate.
 
@@ -1290,6 +1409,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def cperesdg(self: Self, control: Control | int, target1: int, target2: int) -> None:
         r"""Apply a controlled :math:`Peres^{\dagger}` gate.
 
@@ -1301,6 +1421,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`peresdg`
         """
+
     def mcperesdg(self: Self, controls: set[Control | int], target1: int, target2: int) -> None:
         r"""Apply a multi-controlled :math:`Peres^{\dagger}` gate.
 
@@ -1312,6 +1433,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`peresdg`
         """
+
     def rxx(self: Self, theta: float | Expression, target1: int, target2: int) -> None:
         r"""Apply an :math:`R_{xx}(\theta)` gate.
 
@@ -1323,6 +1445,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def crxx(self: Self, theta: float | Expression, control: Control | int, target1: int, target2: int) -> None:
         r"""Apply a controlled :math:`R_{xx}(\theta)` gate.
 
@@ -1335,6 +1458,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rxx`
         """
+
     def mcrxx(self: Self, theta: float | Expression, controls: set[Control | int], target1: int, target2: int) -> None:
         r"""Apply a multi-controlled :math:`R_{xx}(\theta)` gate.
 
@@ -1347,6 +1471,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rxx`
         """
+
     def ryy(self: Self, theta: float | Expression, target1: int, target2: int) -> None:
         r"""Apply an :math:`R_{yy}(\theta)` gate.
 
@@ -1358,6 +1483,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def cryy(self: Self, theta: float | Expression, control: Control | int, target1: int, target2: int) -> None:
         r"""Apply a controlled :math:`R_{yy}(\theta)` gate.
 
@@ -1370,6 +1496,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`ryy`
         """
+
     def mcryy(self: Self, theta: float | Expression, controls: set[Control | int], target1: int, target2: int) -> None:
         r"""Apply a multi-controlled :math:`R_{yy}(\theta)` gate.
 
@@ -1382,6 +1509,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`ryy`
         """
+
     def rzz(self: Self, theta: float | Expression, target1: int, target2: int) -> None:
         r"""Apply an :math:`R_{zz}(\theta)` gate.
 
@@ -1393,6 +1521,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def crzz(self: Self, theta: float | Expression, control: Control | int, target1: int, target2: int) -> None:
         r"""Apply a controlled :math:`R_{zz}(\theta)` gate.
 
@@ -1405,6 +1534,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rzz`
         """
+
     def mcrzz(self: Self, theta: float | Expression, controls: set[Control | int], target1: int, target2: int) -> None:
         r"""Apply a multi-controlled :math:`R_{zz}(\theta)` gate.
 
@@ -1417,6 +1547,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rzz`
         """
+
     def rzx(self: Self, theta: float | Expression, target1: int, target2: int) -> None:
         r"""Apply an :math:`R_{zx}(\theta)` gate.
 
@@ -1428,6 +1559,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def crzx(self: Self, theta: float | Expression, control: Control | int, target1: int, target2: int) -> None:
         r"""Apply a controlled :math:`R_{zx}(\theta)` gate.
 
@@ -1440,6 +1572,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rzx`
         """
+
     def mcrzx(self: Self, theta: float | Expression, controls: set[Control | int], target1: int, target2: int) -> None:
         r"""Apply a multi-controlled :math:`R_{zx}(\theta)` gate.
 
@@ -1452,6 +1585,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`rzx`
         """
+
     def xx_minus_yy(
         self: Self, theta: float | Expression, beta: float | Expression, target1: int, target2: int
     ) -> None:
@@ -1467,6 +1601,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def cxx_minus_yy(
         self: Self,
         theta: float | Expression,
@@ -1487,6 +1622,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`xx_minus_yy`
         """
+
     def mcxx_minus_yy(
         self: Self,
         theta: float | Expression,
@@ -1507,6 +1643,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`xx_minus_yy`
         """
+
     def xx_plus_yy(self: Self, theta: float | Expression, beta: float | Expression, target1: int, target2: int) -> None:
         r"""Apply an :math:`R_{XX + YY}(\theta, \beta)` gate.
 
@@ -1520,6 +1657,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target1: The first target qubit
             target2: The second target qubit
         """
+
     def cxx_plus_yy(
         self: Self,
         theta: float | Expression,
@@ -1540,6 +1678,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`xx_plus_yy`
         """
+
     def mcxx_plus_yy(
         self: Self,
         theta: float | Expression,
@@ -1560,6 +1699,7 @@ class QuantumComputation(MutableSequence[Operation]):
         See Also:
             :meth:`xx_plus_yy`
         """
+
     def gphase(self: Self, theta: float) -> None:
         r"""Apply a global phase gate.
 
@@ -1569,6 +1709,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             theta: The rotation angle
         """
+
     @overload
     def measure(self: Self, qubit: int, cbit: int) -> None:
         """Measure a qubit and store the result in a classical bit.
@@ -1577,6 +1718,7 @@ class QuantumComputation(MutableSequence[Operation]):
             qubit: The qubit to measure
             cbit: The classical bit to store the result
         """
+
     @overload
     def measure(self: Self, qubit: int, creg_bit: tuple[str, int]) -> None:
         """Measure a qubit and store the result in a bit of a classical register.
@@ -1585,6 +1727,7 @@ class QuantumComputation(MutableSequence[Operation]):
             qubit: The qubit to measure
             creg_bit: The classical register and index to store the result
         """
+
     @overload
     def measure(self: Self, qubits: Sequence[int], cbits: Sequence[int]) -> None:
         """Measure multiple qubits and store the results in classical bits.
@@ -1595,6 +1738,7 @@ class QuantumComputation(MutableSequence[Operation]):
             qubits: The qubits to measure
             cbits: The classical bits to store the results
         """
+
     def measure_all(self: Self, add_bits: bool = True) -> None:
         """Measure all qubits and store the results in classical bits.
 
@@ -1608,6 +1752,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             add_bits: Whether to explicitly add a classical register
         """
+
     @overload
     def reset(self: Self, q: int) -> None:
         """Add a reset operation to the circuit.
@@ -1615,6 +1760,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The qubit to reset
         """
+
     @overload
     def reset(self: Self, qubits: Sequence[int]) -> None:
         """Add a reset operation to the circuit.
@@ -1622,9 +1768,11 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             qubits: The qubits to reset
         """
+
     @overload
     def barrier(self: Self) -> None:
         """Add a barrier to the circuit."""
+
     @overload
     def barrier(self: Self, q: int) -> None:
         """Add a barrier to the circuit.
@@ -1632,6 +1780,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             q: The qubit to add the barrier to
         """
+
     @overload
     def barrier(self: Self, qubits: Sequence[int]) -> None:
         """Add a barrier to the circuit.
@@ -1639,6 +1788,7 @@ class QuantumComputation(MutableSequence[Operation]):
         Args:
             qubits: The qubits to add the barrier to
         """
+
     @overload
     def classic_controlled(
         self: Self,
@@ -1657,6 +1807,7 @@ class QuantumComputation(MutableSequence[Operation]):
             expected_value: The expected value of the classical register
             params: The parameters of the operation
         """
+
     @overload
     def classic_controlled(
         self: Self,
@@ -1677,6 +1828,7 @@ class QuantumComputation(MutableSequence[Operation]):
             expected_value: The expected value of the classical register
             params: The parameters of the operation
         """
+
     @overload
     def classic_controlled(
         self: Self,
