@@ -1400,14 +1400,10 @@ TEST_F(QFRFunctionality, UpdateOutputPermutation) {
   // Update output permutation if swap gate was applied even if physical qubit
   // index matches logical qubit index
   QuantumComputation qc(5U, 3U);
-  qc.rz(PI_2, 0);
-  qc.sx(0);
-  qc.rz(PI_2, 0);
+  qc.h(0);
 
   // Swap qubits 2 and 3
-  qc.cx(2, 3);
-  qc.cx(3, 2);
-  qc.cx(2, 3);
+  qc.swap(2, 3);
 
   qc.cx(1, 0);
   qc.cx(1, 3);
