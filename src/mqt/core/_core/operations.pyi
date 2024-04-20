@@ -10,8 +10,9 @@ class Control:
 
     Args:
         qubit: The qubit that is the control.
-        type_: The type of the control.
+        type_: The type of the control (default is positive).
     """
+
     class Type:
         """The type of a control. It can be either positive or negative."""
 
@@ -43,10 +44,22 @@ class Control:
     qubit: int
     type_: Type
 
-    @overload
-    def __init__(self: Self, qubit: int) -> None: ...
-    @overload
-    def __init__(self: Self, qubit: int, type_: Type) -> None: ...
+    def __init__(self: Self, qubit: int, type_: Type = ...) -> None:
+        """Initialize a control.
+
+        Args:
+            qubit: The qubit that is the control.
+            type_: The type of the control (default is positive).
+        """
+
+    def __eq__(self: Self, other: object) -> bool:
+        """Check if two controls are equal."""
+
+    def __ne__(self: Self, other: object) -> bool:
+        """Check if two controls are not equal."""
+
+    def __hash__(self: Self) -> int:
+        """Get the hash of the control."""
 
 class OpType:
     """An Enum-like class that represents the type of an operation."""
@@ -326,6 +339,7 @@ class OpType:
     See Also:
         :meth:`mqt.core.QuantumComputation.z`
     """
+
     @property
     def name(self: Self) -> str: ...
     @property
@@ -370,15 +384,19 @@ class Operation(ABC):
     Note:
         The notion of a parameter might not make sense for all types of operations.
     """
+
     @property
     def name(self: Self) -> str:
         """The name of the operation."""
+
     @property
     def num_targets(self: Self) -> int:
         """The number of targets of the operation."""
+
     @property
     def num_controls(self: Self) -> int:
         """The number of controls of the operation."""
+
     @abstractmethod
     def add_control(self: Self, control: Control) -> None:
         """Add a control to the operation.
@@ -386,15 +404,18 @@ class Operation(ABC):
         Args:
             control: The control to add.
         """
+
     def add_controls(self: Self, controls: set[Control]) -> None:
         """Add multiple controls to the operation.
 
         Args:
             controls: The controls to add.
         """
+
     @abstractmethod
     def clear_controls(self: Self) -> None:
         """Clear all controls of the operation."""
+
     @abstractmethod
     def remove_control(self: Self, control: Control) -> None:
         """Remove a control from the operation.
@@ -402,12 +423,14 @@ class Operation(ABC):
         Args:
             control: The control to remove.
         """
+
     def remove_controls(self: Self, controls: set[Control]) -> None:
         """Remove multiple controls from the operation.
 
         Args:
             controls: The controls to remove.
         """
+
     def acts_on(self: Self, qubit: int) -> bool:
         """Check if the operation acts on a specific qubit.
 
@@ -417,63 +440,74 @@ class Operation(ABC):
         Returns:
             True if the operation acts on the qubit, False otherwise.
         """
+
     def get_used_qubits(self: Self) -> set[int]:
         """Get the qubits that are used by the operation.
 
         Returns:
             The set of qubits that are used by the operation.
         """
+
     def is_classic_controlled_operation(self: Self) -> bool:
         """Check if the operation is a :class:`ClassicControlledOperation`.
 
         Returns:
             True if the operation is a :class:`ClassicControlledOperation`, False otherwise.
         """
+
     def is_compound_operation(self: Self) -> bool:
         """Check if the operation is a :class:`CompoundOperation`.
 
         Returns:
             True if the operation is a :class:`CompoundOperation`, False otherwise.
         """
+
     def is_controlled(self: Self) -> bool:
         """Check if the operation is controlled.
 
         Returns:
             True if the operation is controlled, False otherwise.
         """
+
     def is_non_unitary_operation(self: Self) -> bool:
         """Check if the operation is a :class:`NonUnitaryOperation`.
 
         Returns:
             True if the operation is a :class:`NonUnitaryOperation`, False otherwise.
         """
+
     def is_standard_operation(self: Self) -> bool:
         """Check if the operation is a :class:`StandardOperation`.
 
         Returns:
             True if the operation is a :class:`StandardOperation`, False otherwise.
         """
+
     def is_symbolic_operation(self: Self) -> bool:
         """Check if the operation is a :class:`SymbolicOperation`.
 
         Returns:
             True if the operation is a :class:`SymbolicOperation`, False otherwise.
         """
+
     def is_unitary(self: Self) -> bool:
         """Check if the operation is unitary.
 
         Returns:
             True if the operation is unitary, False otherwise.
         """
+
     def get_inverted(self: Self) -> Operation:
         """Get the inverse of the operation.
 
         Returns:
             The inverse of the operation.
         """
+
     @abstractmethod
     def invert(self: Self) -> None:
         """Invert the operation (in-place)."""
+
     def __eq__(self: Self, other: object) -> bool: ...
     def __hash__(self: Self) -> int: ...
     def __ne__(self: Self, other: object) -> bool: ...
@@ -492,6 +526,7 @@ class StandardOperation(Operation):
         op_type: The type of the operation.
         params: The parameters of the operation (if any).
     """
+
     @overload
     def __init__(self: Self) -> None: ...
     @overload
@@ -557,14 +592,17 @@ class StandardOperation(Operation):
         Args:
             control: The control to add.
         """
+
     def clear_controls(self: Self) -> None:
         """Clear all controls of the operation."""
+
     def remove_control(self: Self, control: Control) -> None:
         """Remove a control from the operation.
 
         Args:
             control: The control to remove.
         """
+
     def invert(self: Self) -> None:
         """Invert the operation (in-place).
 
@@ -583,9 +621,11 @@ class NonUnitaryOperation(Operation):
         classics: The classical bit(s) that are associated with the operation (only relevant for measurements).
         op_type: The type of the operation.
     """
+
     @property
     def classics(self: Self) -> list[int]:
         """The classical registers that are associated with the operation."""
+
     @overload
     def __init__(self: Self, targets: Sequence[int], classics: Sequence[int]) -> None: ...
     @overload
@@ -594,10 +634,13 @@ class NonUnitaryOperation(Operation):
     def __init__(self: Self, targets: Sequence[int], op_type: OpType = ...) -> None: ...
     def add_control(self: Self, control: Control) -> None:
         """Adding controls to a non-unitary operation is not supported."""
+
     def clear_controls(self: Self) -> None:
         """Cannot clear controls of a non-unitary operation."""
+
     def remove_control(self: Self, control: Control) -> None:
         """Removing controls from a non-unitary operation is not supported."""
+
     def invert(self: Self) -> None:
         """Non-unitary operations are, per definition, not invertible."""
 
@@ -612,12 +655,14 @@ class CompoundOperation(Operation):
     Args:
         ops: The operations that are part of the compound operation.
     """
+
     @overload
     def __init__(self: Self) -> None: ...
     @overload
     def __init__(self: Self, ops: Sequence[Operation]) -> None: ...
     def __len__(self: Self) -> int:
         """The number of operations in the compound operation."""
+
     @overload
     def __getitem__(self: Self, idx: int) -> Operation:
         """Get the operation at the given index.
@@ -631,6 +676,7 @@ class CompoundOperation(Operation):
         Notes:
             This gives direct access to the operations in the compound operation.
         """
+
     @overload
     def __getitem__(self: Self, idx: slice) -> list[Operation]:
         """Get the operations in the given slice.
@@ -644,10 +690,13 @@ class CompoundOperation(Operation):
         Notes:
             This gives direct access to the operations in the compound operation.
         """
+
     def append(self: Self, op: Operation) -> None:
         """Append an operation to the compound operation."""
+
     def empty(self: Self) -> bool:
         """Check if the compound operation is empty."""
+
     def add_control(self: Self, control: Control) -> None:
         """Add a control to the operation.
 
@@ -658,6 +707,7 @@ class CompoundOperation(Operation):
         Args:
             control: The control to add.
         """
+
     def clear_controls(self: Self) -> None:
         """Clear all controls of the operation.
 
@@ -665,6 +715,7 @@ class CompoundOperation(Operation):
         operation itself and will clear these controls of all operations that are
         part of the compound operation.
         """
+
     def remove_control(self: Self, control: Control) -> None:
         """Remove a control from the operation.
 
@@ -675,6 +726,7 @@ class CompoundOperation(Operation):
         Args:
             control: The control to remove.
         """
+
     def invert(self: Self) -> None:
         """Invert the operation (in-place).
 
@@ -699,6 +751,7 @@ class SymbolicOperation(StandardOperation):
         op_type: The type of the operation.
         params: The parameters of the operation (if any).
     """
+
     @overload
     def __init__(self: Self) -> None: ...
     @overload
@@ -765,12 +818,14 @@ class SymbolicOperation(StandardOperation):
         Returns:
             The parameter at the given index.
         """
+
     def get_parameters(self: Self) -> list[Expression | float]:
         """Get all parameters of the operation.
 
         Returns:
             The parameters of the operation.
         """
+
     def get_instantiated_operation(self: Self, assignment: Mapping[Variable, float]) -> StandardOperation:
         """Get the instantiated operation.
 
@@ -780,6 +835,7 @@ class SymbolicOperation(StandardOperation):
         Returns:
             The instantiated operation.
         """
+
     def instantiate(self: Self, assignment: Mapping[Variable, float]) -> None:
         """Instantiate the operation (in-place).
 
@@ -799,12 +855,14 @@ class ClassicControlledOperation(Operation):
         control_register: The classical register that controls the operation.
         expected_value: The expected value of the classical register.
     """
+
     def __init__(
         self: Self, operation: Operation, control_register: tuple[int, int], expected_value: int = 1
     ) -> None: ...
     @property
     def operation(self: Self) -> Operation:
         """The operation that is classically controlled."""
+
     @property
     def control_register(self: Self) -> tuple[int, int]:
         """The classical register that controls the operation.
@@ -814,6 +872,7 @@ class ClassicControlledOperation(Operation):
         Examples:
             A register that starts at index 0 and has a length of 2 is specified as ``(0, 2)``.
         """
+
     @property
     def expected_value(self: Self) -> int:
         """The expected value of the classical register.
@@ -823,6 +882,7 @@ class ClassicControlledOperation(Operation):
         Otherwise, the expected value is an integer that is interpreted as a binary number, where
         the least significant bit is at the start index of the classical register.
         """
+
     def add_control(self: Self, control: Control) -> None:
         """Adds a control to the underlying operation.
 
@@ -832,12 +892,14 @@ class ClassicControlledOperation(Operation):
         See Also:
             :meth:`Operation.add_control`
         """
+
     def clear_controls(self: Self) -> None:
         """Clears the controls of the underlying operation.
 
         See Also:
             :meth:`Operation.clear_controls`
         """
+
     def remove_control(self: Self, control: Control) -> None:
         """Removes a control from the underlying operation.
 
@@ -847,6 +909,7 @@ class ClassicControlledOperation(Operation):
         See Also:
             :meth:`Operation.remove_control`
         """
+
     def invert(self: Self) -> None:
         """Inverts the underlying operation.
 

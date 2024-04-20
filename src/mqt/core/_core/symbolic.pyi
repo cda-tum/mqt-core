@@ -12,6 +12,7 @@ class Variable:
     Note:
         Variables are uniquely identified by their name, so if a variable with the same name already exists, the existing variable will be returned.
     """
+
     def __eq__(self: Self, arg0: object) -> bool: ...
     def __gt__(self: Self, arg0: Variable) -> bool: ...
     def __hash__(self: Self) -> int: ...
@@ -29,6 +30,7 @@ class Term:
         variable: The variable of the term.
         coefficient: The coefficient of the term.
     """
+
     def __eq__(self: Self, arg0: object) -> bool: ...
     def __hash__(self: Self) -> int: ...
     def __init__(self: Self, variable: Variable, coefficient: float = 1.0) -> None: ...
@@ -43,6 +45,7 @@ class Term:
         Args:
             coeff: The coefficient to add.
         """
+
     def evaluate(self: Self, assignment: Mapping[Variable, float]) -> float:
         """Evaluate the term with a given variable assignment.
 
@@ -52,11 +55,14 @@ class Term:
         Returns:
             The evaluated value of the term.
         """
+
     def has_zero_coefficient(self: Self) -> bool:
         """Check if the coefficient of the term is zero."""
+
     @property
     def coefficient(self: Self) -> float:
         """The coefficient of the term."""
+
     @property
     def variable(self: Self) -> Variable:
         """The variable of the term."""
@@ -95,6 +101,7 @@ class Expression:
             terms: The list of terms.
             constant: The constant.
         """
+
     @overload
     def __init__(self: Self, term: Term, constant: float = 0.0) -> None:
         """Create an expression with a given term and a constant.
@@ -103,6 +110,7 @@ class Expression:
             term: The term.
             constant: The constant.
         """
+
     @overload
     def __init__(self: Self, constant: float = 0.0) -> None:
         """Create an expression with a given constant.
@@ -110,6 +118,7 @@ class Expression:
         Args:
             constant: The constant.
         """
+
     def __iter__(self: Self) -> Iterator[Term]: ...
     def __len__(self: Self) -> int: ...
     def __mul__(self: Self, arg0: float) -> Expression: ...
@@ -140,15 +149,20 @@ class Expression:
         Returns:
             The evaluated value of the expression.
         """
+
     def is_constant(self: Self) -> bool:
         """Check if the expression is a constant."""
+
     def is_zero(self: Self) -> bool:
         """Check if the expression is zero."""
+
     def num_terms(self: Self) -> int:
         """The number of terms in the expression."""
+
     @property
     def terms(self: Self) -> list[Term]:
         """The terms of the expression."""
+
     @property
     def variables(self: Self) -> set[Variable]:
         """The variables in the expression."""

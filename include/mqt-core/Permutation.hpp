@@ -3,6 +3,8 @@
 #include "Definitions.hpp"
 #include "operations/Control.hpp"
 
+#include <cstddef>
+#include <functional>
 #include <map>
 
 namespace qc {
@@ -30,3 +32,17 @@ public:
   }
 };
 } // namespace qc
+
+// define hash function for Permutation
+namespace std {
+template <> struct hash<qc::Permutation> {
+  std::size_t operator()(const qc::Permutation& p) const {
+    std::size_t seed = 0;
+    for (const auto& [k, v] : p) {
+      qc::hashCombine(seed, k);
+      qc::hashCombine(seed, v);
+    }
+    return seed;
+  }
+};
+} // namespace std

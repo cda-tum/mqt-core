@@ -1,4 +1,5 @@
 #include "Permutation.hpp"
+#include "pybind11/operators.h"
 #include "python/pybind11.hpp"
 
 namespace mqt {
@@ -34,6 +35,9 @@ void registerPermutation(py::module& m) {
             return py::make_iterator(p.begin(), p.end());
           },
           py::keep_alive<0, 1>())
+      .def(py::self == py::self)
+      .def(py::self != py::self)
+      .def(hash(py::self))
       .def("__str__",
            [](const qc::Permutation& p) {
              std::stringstream ss;
@@ -53,6 +57,7 @@ void registerPermutation(py::module& m) {
         ss << "})";
         return ss.str();
       });
+  py::implicitly_convertible<py::dict, qc::Permutation>();
 }
 
 } // namespace mqt
