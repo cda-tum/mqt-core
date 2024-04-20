@@ -334,9 +334,8 @@ def test_final_layout_without_permutation() -> None:
     seed = 123
     qc_transpiled = transpile(qc, initial_layout=initial_layout, seed_transpiler=seed)
     mqt_qc = qiskit_to_mqt(qc_transpiled)
-    for k, v in [(0, 2), (1, 0), (2, 1)]:
-        assert mqt_qc.initial_layout[k] == v
-        assert mqt_qc.output_permutation[k] == v
+    assert mqt_qc.initial_layout == {0: 2, 1: 0, 2: 1}
+    assert mqt_qc.output_permutation == mqt_qc.initial_layout
 
 
 def test_final_layout_with_permutation() -> None:
@@ -352,10 +351,8 @@ def test_final_layout_with_permutation() -> None:
     qc_transpiled = transpile(qc, backend, initial_layout=initial_layout, seed_transpiler=seed)
     final_index_layout = qc_transpiled.layout.final_index_layout()
     mqt_qc = qiskit_to_mqt(qc_transpiled)
-
-    # Check that initialize_io_mapping doesn't change the final_layout
-    for idx, key in enumerate(final_index_layout):
-        assert mqt_qc.output_permutation[key] == idx
+    # Check initialize_io_mapping doesn't change the final_layout
+    assert mqt_qc.output_permutation == dict(enumerate(final_index_layout))
 
 
 def test_final_layout_with_permutation_ancilla_in_front_and_back() -> None:
@@ -376,6 +373,4 @@ def test_final_layout_with_permutation_ancilla_in_front_and_back() -> None:
     mqt_qc = qiskit_to_mqt(qc_transpiled)
 
     # Check that output_permutation matches the result of applying the routing permutation to input_layout
-    for idx, key in enumerate(qc_transpiled.layout.initial_index_layout()):
-        key_perm = routing_permutation[key]
-        assert mqt_qc.output_permutation[key_perm] == idx
+    assert mqt_qc.output_permutation == {idx: routing_permutation[key] for idx, key in enumerate(initial_layout)}
