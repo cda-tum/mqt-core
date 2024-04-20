@@ -7,7 +7,16 @@ from .operations import Control, Operation, OpType
 from .symbolic import Expression, Variable
 
 class Permutation(MutableMapping[int, int]):
-    """A class to represent a permutation of the qubits in a quantum circuit."""
+    """A class to represent a permutation of the qubits in a quantum circuit.
+
+    Args:
+        permutation: The permutation to initialize the object with.
+
+    """
+
+    def __init__(self: Self, permutation: dict[int, int] | None = None) -> None:
+        """Initialize the permutation."""
+
     def __getitem__(self: Self, idx: int) -> int:
         """Get the value of the permutation at the given index.
 
@@ -34,6 +43,16 @@ class Permutation(MutableMapping[int, int]):
         """Return an iterator over the indices of the permutation."""
     def __len__(self: Self) -> int:
         """Return the number of indices in the permutation."""
+
+    def __eq__(self: Self, other: object) -> bool:
+        """Check if the permutation is equal to another permutation."""
+
+    def __ne__(self: Self, other: object) -> bool:
+        """Check if the permutation is not equal to another permutation."""
+
+    def __hash__(self: Self) -> int:
+        """Return the hash of the permutation."""
+
     @overload
     def apply(self: Self, controls: set[Control]) -> set[Control]:
         """Apply the permutation to a set of controls.
