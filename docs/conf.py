@@ -14,7 +14,6 @@ from pybtex.style.template import field, href
 if TYPE_CHECKING:
     from pybtex.database import Entry
     from pybtex.richtext import HRef
-    from sphinx.application import Sphinx
 
 ROOT = Path(__file__).parent.parent.resolve()
 
@@ -41,7 +40,7 @@ release = version.split("+")[0]
 project = "MQT Core"
 author = "Chair for Design Automation, Technical University of Munich"
 language = "en"
-project_copyright = "2023, Chair for Design Automation, Technical University of Munich"
+project_copyright = "2024, Chair for Design Automation, Technical University of Munich"
 
 master_doc = "index"
 
@@ -49,19 +48,17 @@ templates_path = ["_templates"]
 html_css_files = ["custom.css"]
 
 extensions = [
-    "myst_parser",
-    "nbsphinx",
+    "myst_nb",
     "autoapi.extension",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinx_design",
     "sphinxext.opengraph",
-    "sphinx.ext.autosectionlabel",
     "sphinx.ext.viewcode",
-    "sphinx_autodoc_typehints",
+    "sphinx.ext.imgconverter",
+    "sphinxcontrib.bibtex",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -69,6 +66,8 @@ source_suffix = [".rst", ".md"]
 exclude_patterns = [
     "_build",
     "**.ipynb_checkpoints",
+    "**.jupyter_cache",
+    "**jupyter_execute",
     "Thumbs.db",
     ".DS_Store",
     ".env",
@@ -79,7 +78,7 @@ pygments_style = "colorful"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "qiskit": ("https://qiskit.org/documentation/", None),
+    "qiskit": ("https://docs.quantum.ibm.com/api/qiskit/", None),
     "mqt": ("https://mqt.readthedocs.io/en/latest/", None),
     "ddsim": ("https://mqt.readthedocs.io/projects/ddsim/en/latest/", None),
     "qmap": ("https://mqt.readthedocs.io/projects/qmap/en/latest/", None),
@@ -89,24 +88,24 @@ intersphinx_mapping = {
 }
 
 myst_enable_extensions = [
+    "amsmath",
     "colon_fence",
     "substitution",
     "deflist",
+    "dollarmath",
 ]
-
 myst_substitutions = {
     "version": version,
 }
+myst_heading_anchors = 3
 
-nbsphinx_execute = "auto"
-highlight_language = "python3"
-nbsphinx_execute_arguments = [
-    "--InlineBackend.figure_formats={'svg', 'pdf'}",
-    "--InlineBackend.rc=figure.dpi=200",
+# -- Options for {MyST}NB ----------------------------------------------------
+
+nb_execution_mode = "cache"
+nb_mime_priority_overrides = [
+    # builder name, mime type, priority
+    ("latex", "image/svg+xml", 15),
 ]
-nbsphinx_kernel_name = "python3"
-
-autosectionlabel_prefix_document = True
 
 
 class CDAStyle(UnsrtStyle):
@@ -123,10 +122,9 @@ pybtex.plugin.register_plugin("pybtex.style.formatting", "cda_style", CDAStyle)
 bibtex_bibfiles = ["refs.bib"]
 bibtex_default_style = "cda_style"
 
-copybutton_prompt_text = r"(?:\(venv\) )?(?:\[.*\] )?\$ "
+copybutton_prompt_text = r"(?:\(\.?venv\) )?(?:\[.*\] )?\$ "
 copybutton_prompt_is_regexp = True
 copybutton_line_continuation_character = "\\"
-
 
 modindex_common_prefix = ["mqt.core."]
 
@@ -139,37 +137,15 @@ autoapi_ignore = [
 ]
 autoapi_options = [
     "members",
-    "inherited-members",
     "imported-members",
     "show-inheritance",
     "special-members",
     "undoc-members",
 ]
-
-
-def skip_cpp_core(_app: Sphinx, what: str, name: str, _obj: object, skip: bool, _options) -> bool:  # noqa: ANN001
-    """Skip the _core module in documentation."""
-    if (what == "package" and "_core" in name) or "_compat" in name:
-        skip = True
-    return skip
-
-
-def setup(sphinx: Sphinx) -> None:
-    """Setup Sphinx."""
-    sphinx.connect("autoapi-skip-member", skip_cpp_core)
-
-
-autodoc_typehints = "signature"
-autodoc_typehints_format = "short"
-autodoc_type_aliases = {
-    "QuantumCircuit": "qiskit.circuit.QuantumCircuit",
-}
-
-typehints_use_signature = True
-typehints_use_signature_return = True
-
+autoapi_keep_files = True
 add_module_names = False
-
+toc_object_entries_show_parents = "hide"
+python_use_unqualified_type_names = True
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 
@@ -186,30 +162,41 @@ html_theme_options = {
 }
 
 # -- Options for LaTeX output ------------------------------------------------
-latex_engine = "lualatex"
+
+numfig = True
+numfig_secnum_depth = 0
+
+sd_fontawesome_latex = True
+image_converter_args = ["-density", "300"]
+latex_engine = "pdflatex"
 latex_documents = [
-    (master_doc, "mqt-core.tex", "MQT Core Documentation", author, "howto", False),
+    (
+        master_doc,
+        "mqt_core.tex",
+        r"MQT Core\\{\Large The Backbone of the Munich Quantum Toolkit}",
+        r"Chair for Design Automation\\Technical University of Munich",
+        "howto",
+        False,
+    ),
 ]
 latex_logo = "_static/mqt_dark.png"
 latex_elements = {
     "papersize": "a4paper",
+    "releasename": "Version",
     "printindex": r"\footnotesize\raggedright\printindex",
-    "fontpkg": r"""
-    \directlua{luaotfload.add_fallback
-   ("emojifallback",
-    {
-      "NotoColorEmoji:mode=harf;"
-    }
-   )}
-
-   \setmainfont{DejaVu Serif}[
-     RawFeature={fallback=emojifallback}
-    ]
-   \setsansfont{DejaVu Sans}[
-     RawFeature={fallback=emojifallback}
-   ]
-   \setmonofont{DejaVu Sans Mono}[
-     RawFeature={fallback=emojifallback}
-   ]
+    "tableofcontents": "",
+    "extrapackages": r"\usepackage{qrcode,graphicx,calc,amsthm}",
+    "preamble": r"""
+\newtheorem{example}{Example}
+\clubpenalty=10000
+\widowpenalty=10000
+\interlinepenalty 10000
+\def\subparagraph{} % because IEEE classes don't define this, but titlesec assumes it's present
 """,
+    "extraclassoptions": r"journal, onecolumn",
+    "fvset": r"\fvset{fontsize=\small}",
+}
+latex_domain_indices = False
+latex_docclass = {
+    "howto": "IEEEtran",
 }

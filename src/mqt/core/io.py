@@ -13,16 +13,16 @@ if TYPE_CHECKING:
 
 
 def load(input_circuit: QuantumComputation | str | PathLike[str] | QuantumCircuit) -> QuantumComputation:
-    """Load a quantum circuit from any supported format as a ``QuantumComputation``.
+    """Load a quantum circuit from any supported format as a :class:`~mqt.core.QuantumComputation`.
 
     Args:
-        input_circuit: The input circuit to translate to a ``QuantumComputation``. This can be a `QuantumComputation` itself, a file name to any of the supported file formats, an OpenQASM (2.0 or 3.0) string, or a Qiskit `QuantumCircuit`.
+        input_circuit: The input circuit to translate to a :class:`~mqt.core.QuantumComputation`. This can be a :class:`~mqt.core.QuantumComputation` itself, a file name to any of the supported file formats, an OpenQASM (2.0 or 3.0) string, or a Qiskit :class:`~qiskit.circuit.QuantumCircuit`.
 
     Returns:
-        The ``QuantumComputation``.
+        The :class:`~mqt.core.QuantumComputation`.
 
     Raises:
-        ValueError: If the input circuit is a Qiskit `QuantumCircuit` but the `qiskit` extra is not installed.
+        ValueError: If the input circuit is a Qiskit :class:`~qiskit.circuit.QuantumCircuit` but the `qiskit` extra is not installed.
         FileNotFoundError: If the input circuit is a file name and the file does not exist.
     """
     if isinstance(input_circuit, QuantumComputation):

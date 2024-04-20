@@ -18,11 +18,11 @@ pd.set_option("display.max_colwidth", None)
 pd.set_option("display.max_rows", None)
 pd.set_option("display.width", None)
 
-sort_options = ["ratio", "algorithm"]
-higher_better_metrics = ["hits", "hit_ratio"]
+__sort_options = ["ratio", "algorithm"]
+__higher_better_metrics = ["hits", "hit_ratio"]
 
 
-class Bcolors:
+class _BColors:
     """Class for colored output in the terminal."""
 
     OKGREEN = "\033[92m"
@@ -42,7 +42,7 @@ def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = ".") -> d
     return items
 
 
-class BenchmarkDict(TypedDict, total=False):
+class _BenchmarkDict(TypedDict, total=False):
     """A dictionary containing the data of one particular benchmark."""
 
     algo: str
@@ -52,10 +52,10 @@ class BenchmarkDict(TypedDict, total=False):
     metric: str
 
 
-def __post_processing(key: str) -> BenchmarkDict:
+def __post_processing(key: str) -> _BenchmarkDict:
     """Postprocess the key of a flattened dictionary to get the metrics for the DataFrame columns."""
     metrics_divided = key.split(".")
-    result_metrics = BenchmarkDict()
+    result_metrics = _BenchmarkDict()
     if len(metrics_divided) < 4:
         raise ValueError("Benchmark " + key + " is missing algorithm, task, number of qubits or metric!")
     result_metrics["algo"] = metrics_divided.pop(0)
@@ -89,7 +89,7 @@ def __post_processing(key: str) -> BenchmarkDict:
     return result_metrics
 
 
-class DataDict(TypedDict):
+class _DataDict(TypedDict):
     """A dictionary containing the data for one entry in the DataFrame."""
 
     before: float
@@ -143,7 +143,7 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
         else:
             ratio = after / before if before != 0 else 1 if after == 0 else math.inf
         key = k
-        if k.endswith(tuple(higher_better_metrics)):
+        if k.endswith(tuple(__higher_better_metrics)):
             ratio = 1 / ratio
             key += "*"
         before = round(before, 3) if isinstance(before, float) else before
@@ -153,7 +153,7 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
         result_metrics = __post_processing(key)
 
         df_all_entries.append(
-            DataDict(
+            _DataDict(
                 before=before,
                 after=after,
                 ratio=ratio,
@@ -188,10 +188,10 @@ def __print_results(
         print(df.sort_values(by=sort_indices).to_markdown(index=False, stralign="right"))
         return
 
-    print(f"\n{Bcolors.OKGREEN}Benchmarks that have improved:{Bcolors.ENDC}\n")
+    print(f"\n{_BColors.OKGREEN}Benchmarks that have improved:{_BColors.ENDC}\n")
     print(df[m1].sort_values(by=sort_indices).to_markdown(index=False, stralign="right"))
 
-    print(f"\n{Bcolors.FAIL}Benchmarks that have worsened:{Bcolors.ENDC}\n")
+    print(f"\n{_BColors.FAIL}Benchmarks that have worsened:{_BColors.ENDC}\n")
     print(df[m2].sort_values(by=sort_indices, ascending=False).to_markdown(index=False, stralign="right"))
 
     if only_changed:
@@ -219,7 +219,7 @@ def compare(
         baseline_filepath: Path to the baseline json file.
         feature_filepath: Path to the feature json file.
         factor: How much a result has to change to be considered significant.
-        sort: Sort the table by this column. Valid options are "ratio" and "experiment".
+        sort: Sort the table by this column. Valid options are "ratio" and "algorithm".
         dd: Whether to show the detailed DD benchmark results.
         only_changed: Whether to only show results that changed significantly.
         no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
@@ -230,12 +230,12 @@ def compare(
     Raises:
         ValueError: If factor is negative or sort is invalid or if num_qubits is specified while algorithm is not.
         FileNotFoundError: If the baseline_filepath argument or the feature_filepath argument does not point to a valid file.
-        JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
+        json.JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
     """
     if factor < 0:
         msg = "Factor must be positive!"
         raise ValueError(msg)
-    if sort not in sort_options:
+    if sort not in __sort_options:
         msg = "Invalid sort option! Valid options are 'ratio' and 'algorithm'."
         raise ValueError(msg)
     if algorithm is None and num_qubits is not None:
@@ -267,7 +267,25 @@ def compare(
 
 
 def main() -> None:
-    """Main function for the command line interface."""
+    """Main function for the command line interface.
+
+    This function is called when running the `mqt-core-compare` CLI command.
+
+    .. code-block:: bash
+
+        mqt-core-compare baseline.json feature.json [options]
+
+    In addition to the mandatory filepath arguments, it provides the following optional command line options:
+
+    - :code:`--factor <float>`: How much a result has to change to be considered significant.
+    - :code:`--sort`: Sort the table by this column. Valid options are 'ratio' and 'algorithm'.
+    - :code:`--dd`: Whether to show the detailed DD benchmark results.
+    - :code:`--only_changed`: Whether to only show results that changed significantly.
+    - :code:`--no_split`: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+    - :code:`--algorithm <str>`: Only show results for this algorithm.
+    - :code:`--task <str>`: Only show results for this task.
+    - :code:`--num_qubits <int>`: Only show results for this number of qubits. Can only be used if algorithm is also specified.
+    """
     parser = argparse.ArgumentParser(
         description="Compare the results of two benchmarking runs from the generated json files."
     )

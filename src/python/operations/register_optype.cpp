@@ -4,9 +4,7 @@
 namespace mqt {
 
 void registerOptype(py::module& m) {
-  py::enum_<qc::OpType>(
-      m, "OpType",
-      "Enum class for representing the type of quantum operations.")
+  py::enum_<qc::OpType>(m, "OpType")
       .value("none", qc::OpType::None)
       .value("gphase", qc::OpType::GPhase)
       .value("i", qc::OpType::I)

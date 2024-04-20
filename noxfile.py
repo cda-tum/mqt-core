@@ -111,6 +111,6 @@ def docs(session: nox.Session) -> None:
     )
 
     if serve:
-        session.run("sphinx-autobuild", *shared_args)
+        session.run("sphinx-autobuild", "--ignore", "**jupyter**", *shared_args)
     else:
         session.run("sphinx-build", "--keep-going", *shared_args)

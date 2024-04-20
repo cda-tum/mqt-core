@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
-    """Convert a Qiskit `QuantumCircuit` to a `QuantumComputation` object.
+    """Convert a Qiskit :class:`~qiskit.circuit.QuantumCircuit` to a :class:`~mqt.core.QuantumComputation` object.
 
     Args:
         circ: The Qiskit circuit to convert.
@@ -420,3 +420,6 @@ def _import_definition(
         )
         params.extend(new_params)
     return params
+
+
+__all__ = ["qiskit_to_mqt"]
