@@ -10,7 +10,7 @@ class Control:
 
     Args:
         qubit: The qubit that is the control.
-        type_: The type of the control.
+        type_: The type of the control (default is positive).
     """
     class Type:
         """The type of a control. It can be either positive or negative."""
@@ -43,10 +43,22 @@ class Control:
     qubit: int
     type_: Type
 
-    @overload
-    def __init__(self: Self, qubit: int) -> None: ...
-    @overload
-    def __init__(self: Self, qubit: int, type_: Type) -> None: ...
+    def __init__(self: Self, qubit: int, type_: Type = ...) -> None:
+        """Initialize a control.
+
+        Args:
+            qubit: The qubit that is the control.
+            type_: The type of the control (default is positive).
+        """
+
+    def __eq__(self: Self, other: object) -> bool:
+        """Check if two controls are equal."""
+
+    def __ne__(self: Self, other: object) -> bool:
+        """Check if two controls are not equal."""
+
+    def __hash__(self: Self) -> int:
+        """Get the hash of the control."""
 
 class OpType:
     """An Enum-like class that represents the type of an operation."""

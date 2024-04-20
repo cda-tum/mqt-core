@@ -1,4 +1,5 @@
 #include "operations/Control.hpp"
+#include "pybind11/operators.h"
 #include "python/pybind11.hpp"
 
 namespace mqt {
@@ -33,6 +34,9 @@ void registerControl(py::module& m) {
   control.def_readwrite("qubit", &qc::Control::qubit);
   control.def("__str__", [](const qc::Control& c) { return c.toString(); });
   control.def("__repr__", [](const qc::Control& c) { return c.toString(); });
+  control.def(py::self == py::self);
+  control.def(py::self != py::self);
+  control.def(hash(py::self));
   py::implicitly_convertible<py::int_, qc::Control>();
 }
 
