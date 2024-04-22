@@ -105,21 +105,3 @@ jobs:
       z3-version: ${{ inputs.z3-version }}
     secrets:
       token: ${{ secrets.token }}
-
-  minimums:
-    name: 🔧 Minimums
-    needs: [dist]
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version:
-          - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
-          - ${{ needs.dist.outputs.max-python-version }}
-    uses: ./.github/workflows/reusable-python-minimums.yml
-    with:
-      runs-on: ubuntu-latest
-      python-version: ${{ matrix.python-version }}
-      setup-z3: ${{ inputs.setup-z3 }}
-      z3-version: ${{ inputs.z3-version }}
-    secrets:
-      token: ${{ secrets.token }}

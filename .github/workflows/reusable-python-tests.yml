@@ -55,6 +55,8 @@ jobs:
           python-versions: ${{ inputs.python-version }}
       - name: Test on 🐍 ${{ inputs.python-version }}
         run: nox -s tests-${{ inputs.python-version }} --verbose -- --cov --cov-report=xml
+      - name: Test on 🐍 ${{ inputs.python-version }} with minimal versions
+        run: nox -s minimums-${{ inputs.python-version }} --verbose -- --cov --cov-report=xml --cov-append
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
