@@ -76,7 +76,7 @@ jobs:
           skip-wheel: "true"
       - name: 🐍 create identifiers for supported Python versions
         id: python-versions
-        run: echo "python-versions='$(echo '${{ steps.baipp.outputs.supported_python_classifiers_json_array }}' | jq -c --raw-output 'map("cp" + . | gsub("\\."; ""))')'" >> $GITHUB_ENV
+        run: echo "python-versions=$(echo '${{ steps.baipp.outputs.supported_python_classifiers_json_array }}' | jq -c --raw-output 'map("\"cp" + . + "\"" | gsub("\\."; ""))')" >> $GITHUB_OUTPUT
     outputs:
       python-versions: ${{ steps.python-versions.outputs.python-versions }}
 
@@ -89,7 +89,7 @@ jobs:
       fail-fast: false
       matrix:
         runs-on: [ubuntu-latest, macos-13, macos-14, windows-latest]
-        python: ${{fromJson(needs.dist.outputs.python-versions)}}
+        python: ${{ fromJson(needs.dist.outputs.python-versions) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -135,7 +135,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["s390x", "ppc64le", "aarch64"]
-        python: ${{fromJson(needs.dist.outputs.python-versions)}}
+        python: ${{ fromJson(needs.dist.outputs.python-versions) }}
     steps:
       - uses: actions/checkout@v4
         with:
