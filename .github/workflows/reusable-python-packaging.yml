@@ -3,6 +3,10 @@ name: 🐍 • Packaging
 on:
   workflow_call:
     inputs:
+      pure-python:
+        description: "Whether this is a pure Python package (or contains compiled extensions)"
+        default: false
+        type: boolean
       setup-z3:
         description: "Whether to set up Z3"
         default: false
@@ -30,7 +34,26 @@ jobs:
           name: cibw-sdist
           path: dist/*.tar.gz
 
+  build_wheel:
+    if: ${{ inputs.pure-python }}
+    name: 🛞 Wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Build Wheel
+        run: pipx run build --wheel
+      - name: Check metadata
+        run: pipx run twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheel
+          path: dist/*.whl
+
   build_wheels:
+    if: ${{ !inputs.pure-python }}
     name: 🎡 ${{ matrix.runs-on }} ${{ matrix.python }}
     runs-on: ${{ matrix.runs-on }}
     strategy:
@@ -75,6 +98,7 @@ jobs:
           path: wheelhouse/*.whl
 
   build_wheels_emulation:
+    if: ${{ !inputs.pure-python }}
     name: 🎡 ${{ matrix.arch }} ${{ matrix.python }}
     runs-on: ubuntu-latest
     strategy:
