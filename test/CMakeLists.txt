@@ -9,6 +9,7 @@ package_add_test(
   test_graph.cpp
   test_layer.cpp
   test_operation.cpp
+  test_disjoint_set.cpp
 )
 
 file(GLOB_RECURSE circuit_optimizer_tests "unittests/circuit_optimizer/*.cpp")
