@@ -29,6 +29,7 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     env:
       FORCE_COLOR: 3
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,8 +41,6 @@ jobs:
         uses: cda-tum/setup-z3@v1
         with:
           version: ${{ inputs.z3-version }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
       - name: Setup ccache
         uses: Chocobo1/setup-ccache-action@v1
         with:
