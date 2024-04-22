@@ -48,12 +48,12 @@ jobs:
       - name: Configure CMake (Debug)
         run: cmake -S . -B build_debug -DCMAKE_BUILD_TYPE=Debug ${{ inputs.cmake-args }}
       - name: Build (Debug)
-        run: cmake --build build --config Debug
+        run: cmake --build build_debug --config Debug
       - name: Test (Debug)
-        run: ctest -C Debug --output-on-failure --test-dir build --repeat until-pass:3 --timeout 600
+        run: ctest -C Debug --output-on-failure --test-dir build_debug --repeat until-pass:3 --timeout 600
       - name: Configure CMake (Release)
         run: cmake -S . -B build_release -DCMAKE_BUILD_TYPE=Release ${{ inputs.cmake-args }}
       - name: Build (Release)
-        run: cmake --build build --config Release
+        run: cmake --build build_release --config Release
       - name: Test (Release)
-        run: ctest -C Release --output-on-failure --test-dir build --repeat until-pass:3 --timeout 600
+        run: ctest -C Release --output-on-failure --test-dir build_release --repeat until-pass:3 --timeout 600
