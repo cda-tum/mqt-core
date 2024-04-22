@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-TEST(TestLayer, ExecutableSet) {
+TEST(Layer, ExecutableSet) {
   auto qc = qc::QuantumComputation(3);
   /* construct the following circuit
 ┌─────────┐┌─────────┐┌──────────┐      ┌─────────┐┌─────────┐┌──────────┐
@@ -81,7 +81,7 @@ TEST(TestLayer, ExecutableSet) {
   EXPECT_EQ((*layer.getExecutableSet())->size(), 2); // layer (6), (9)
 }
 
-TEST(TestLayer, AllExecutable) {
+TEST(Layer, AllExecutable) {
   qc::QuantumComputation qc{};
   qc::Layer              layer{};
   qc = qc::QuantumComputation(8);

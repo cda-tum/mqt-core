@@ -12,7 +12,7 @@
 #include <string>
 #include <unordered_map>
 
-TEST(NADefinitionsTest, Point) {
+TEST(NADefinitions, Point) {
   na::Point p(-1, 2);
   EXPECT_EQ(p.x, -1);
   EXPECT_EQ(p.y, 2);
@@ -27,7 +27,7 @@ TEST(NADefinitionsTest, Point) {
   EXPECT_EQ(na::Point(1, 2) + p, na::Point(0, 4));
 }
 
-TEST(NADefinitionsTest, OpType) {
+TEST(NADefinitions, OpType) {
   na::OpType ot{qc::OpType::X, 1};
   EXPECT_EQ(ot.type, qc::OpType::X);
   EXPECT_EQ(ot.nctrl, 1);
@@ -39,7 +39,7 @@ TEST(NADefinitionsTest, OpType) {
   EXPECT_FALSE(ot == (na::OpType{qc::OpType::X, 2}));
 }
 
-TEST(NADefinitionsTest, IsGlobal) {
+TEST(NADefinitions, IsGlobal) {
   const std::string testfile = "OPENQASM 3.0;\n"
                                "include \"stdgates.inc\";\n"
                                "qubit[3] q;\n"
@@ -51,7 +51,7 @@ TEST(NADefinitionsTest, IsGlobal) {
   EXPECT_TRUE(na::isGlobal(*qc.at(1), 3));
 }
 
-TEST(NADefinitionsTest, OpTypeHash) {
+TEST(NADefinitions, OpTypeHash) {
   std::unordered_map<na::OpType, int> map;
   map[na::OpType{qc::OpType::X, 1}] = 1;
   map[na::OpType{qc::OpType::X, 2}] = 2;

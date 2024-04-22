@@ -14,7 +14,7 @@
 #include <sstream>
 #include <string>
 
-TEST(NAComputationTest, General) {
+TEST(NAComputation, General) {
   auto qc = na::NAComputation();
   qc.emplaceInitialPosition(std::make_shared<na::Point>(0, 0));
   qc.emplaceInitialPosition(std::make_shared<na::Point>(1, 0));
