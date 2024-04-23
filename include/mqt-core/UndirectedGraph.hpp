@@ -77,6 +77,39 @@ public:
     ss << "The edge (" << v << ", " << u << ") does not exist.";
     throw std::invalid_argument(ss.str());
   }
+  [[nodiscard]] auto getAdjacentEdges(V v) const -> std::unordered_set<E> {
+    if (mapping.find(v) == mapping.end()) {
+      std::stringstream ss;
+      ss << "The vertex " << v << " is not in the graph.";
+      throw std::invalid_argument(ss.str());
+    }
+    const auto i = mapping.at(v);
+    std::unordered_set<E> result;
+    for (std::size_t j = 0; j < nVertices; ++j) {
+      if (i < j ? adjacencyMatrix[i][j - i] != nullptr
+                : adjacencyMatrix[j][i - j] != nullptr) {
+        result.emplace(i < j ? adjacencyMatrix[i][j - i]
+                             : adjacencyMatrix[j][i - j]);
+      }
+    }
+    return result;
+  }
+  [[nodiscard]] auto getNeighbours(V v) const -> std::unordered_set<V> {
+    if (mapping.find(v) == mapping.end()) {
+      std::stringstream ss;
+      ss << "The vertex " << v << " is not in the graph.";
+      throw std::invalid_argument(ss.str());
+    }
+    const auto i = mapping.at(v);
+    std::unordered_set<V> result;
+    for (std::size_t j = 0; j < nVertices; ++j) {
+      if (i < j ? adjacencyMatrix[i][j - i] != nullptr
+                : adjacencyMatrix[j][i - j] != nullptr) {
+        result.emplace(mapping.at(j));
+      }
+    }
+    return result;
+  }
   [[nodiscard]] auto getDegree(V v) const -> std::size_t {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;

@@ -35,9 +35,7 @@ TEST(DirectedAcyclicGraph, TopologicalOrder) {
   g.addEdge(0, 1, &a);
   g.addEdge(1, 2, &b);
   g.addEdge(2, 3, &c);
-  //  0 ────> 1 ———> 2 ———> 3
-  //          ^             |
-  //          └──────X──────┘
+  //  0 ───> 1 ———> 2 ———> 3
   const auto& actual = g.orderTopologically();
   const std::vector<int> expected = {0, 1, 2, 3};
   EXPECT_EQ(actual, expected);
