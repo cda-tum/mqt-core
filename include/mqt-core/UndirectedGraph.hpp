@@ -57,15 +57,24 @@ public:
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
     if (i < j) {
+      if (adjacencyMatrix[i][j - i] == nullptr) {
+        ++degrees[i];
+        if (i != j) {
+          ++degrees[j];
+        }
+        ++nEdges;
+      }
       adjacencyMatrix[i][j - i] = e;
     } else {
+      if (adjacencyMatrix[j][i - j] == nullptr) {
+        ++degrees[i];
+        if (i != j) {
+          ++degrees[j];
+        }
+        ++nEdges;
+      }
       adjacencyMatrix[j][i - j] = e;
     }
-    ++degrees[i];
-    if (i != j) {
-      ++degrees[j];
-    }
-    ++nEdges;
   }
   [[nodiscard]] auto getNVertices() const -> std::size_t { return nVertices; }
   [[nodiscard]] auto getNEdges() const -> std::size_t { return nEdges; }

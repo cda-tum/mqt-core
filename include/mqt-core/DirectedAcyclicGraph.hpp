@@ -11,14 +11,14 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <sstream>
 #include <stack>
 #include <stdexcept>
 
 namespace qc {
 
-template <class V>
-class DirectedAcyclicGraph : public DirectedGraph<V> {
+template <class V> class DirectedAcyclicGraph : public DirectedGraph<V> {
 protected:
   // transitive closure matrix to detect cycles
   std::vector<std::vector<bool>> closureMatrix;
@@ -34,12 +34,10 @@ public:
     closureMatrix[i][i] = true;
   }
   auto addEdge(V u, V v) -> void override {
-    if (DirectedGraph<V>::mapping.find(u) ==
-        DirectedGraph<V>::mapping.end()) {
+    if (DirectedGraph<V>::mapping.find(u) == DirectedGraph<V>::mapping.end()) {
       addVertex(u);
     }
-    if (DirectedGraph<V>::mapping.find(v) ==
-        DirectedGraph<V>::mapping.end()) {
+    if (DirectedGraph<V>::mapping.find(v) == DirectedGraph<V>::mapping.end()) {
       addVertex(v);
     }
     std::size_t const i = DirectedGraph<V>::mapping.at(u);
@@ -60,12 +58,10 @@ public:
     }
   }
   [[nodiscard]] auto isReachable(V u, V v) const -> bool {
-    if (DirectedGraph<V>::mapping.find(u) ==
-        DirectedGraph<V>::mapping.end()) {
+    if (DirectedGraph<V>::mapping.find(u) == DirectedGraph<V>::mapping.end()) {
       throw std::invalid_argument("Vertex u not in graph.");
     }
-    if (DirectedGraph<V>::mapping.find(v) ==
-        DirectedGraph<V>::mapping.end()) {
+    if (DirectedGraph<V>::mapping.find(v) == DirectedGraph<V>::mapping.end()) {
       throw std::invalid_argument("Vertex v not in graph.");
     }
     return closureMatrix[DirectedGraph<V>::mapping.at(u)]
@@ -106,7 +102,7 @@ public:
       }
     }
     // Otherwise graph has a cycle
-    assert(result.size() == (DirectedGraph<V>::nVertices));
+    assert(result.size() == DirectedGraph<V>::nVertices);
     std::vector<V> vertices;
     std::transform(
         result.cbegin(), result.cend(), std::back_inserter(vertices),

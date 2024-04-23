@@ -24,12 +24,23 @@ TEST(DirectedAcyclicGraph, Reachable) {
 
 TEST(DirectedAcyclicGraph, TopologicalOrder) {
   qc::DirectedAcyclicGraph<int> g;
-  g.addVertex(0);
-  g.addEdge(0, 1);
-  g.addEdge(1, 2);
-  g.addEdge(2, 3);
-  //  0 ───> 1 ———> 2 ———> 3
+  g.addVertex(6);
+  g.addVertex(2);
+  g.addVertex(5);
+  g.addVertex(4);
+  g.addEdge(2, 6);
+  g.addEdge(2, 5);
+  g.addEdge(2, 4);
+  g.addEdge(5, 6);
+  g.addEdge(4, 6);
+  g.addEdge(4, 5);
+  //         ┌─────────────┐
+  //  ┌──────┼──────┐      │
+  //  │      |      v      v
+  //  2 ───> 4 ———> 5 ———> 6
+  //  │                    ^
+  //  └────────────────────┘
   const auto& actual = g.orderTopologically();
-  const std::vector<int> expected = {0, 1, 2, 3};
+  const std::vector<int> expected = {2, 4, 5, 6};
   EXPECT_EQ(actual, expected);
 }

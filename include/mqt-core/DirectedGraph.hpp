@@ -60,10 +60,12 @@ public:
     }
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
-    adjacencyMatrix[i][j] = true;
-    ++outDegrees[i];
-    ++inDegrees[j];
-    ++nEdges;
+    if (!adjacencyMatrix[i][j]) {
+      adjacencyMatrix[i][j] = true;
+      ++outDegrees[i];
+      ++inDegrees[j];
+      ++nEdges;
+    }
   }
   [[nodiscard]] auto getNVertices() const -> std::size_t { return nVertices; }
   [[nodiscard]] auto getNEdges() const -> std::size_t { return nEdges; }
