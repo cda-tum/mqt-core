@@ -1,11 +1,11 @@
 #include "Permutation.hpp"
+#include "pybind11/operators.h"
 #include "python/pybind11.hpp"
 
 namespace mqt {
 
 void registerPermutation(py::module& m) {
-  py::class_<qc::Permutation>(m, "Permutation",
-                              "Class representing a permutation of qubits.")
+  py::class_<qc::Permutation>(m, "Permutation")
       .def(py::init([](const py::dict& p) {
              qc::Permutation perm;
              for (const auto& [key, value] : p) {
@@ -17,15 +17,11 @@ void registerPermutation(py::module& m) {
       .def("apply",
            py::overload_cast<const qc::Controls&>(&qc::Permutation::apply,
                                                   py::const_),
-           "controls"_a,
-           "Apply the permutation to a set of controls and return the permuted "
-           "controls.")
+           "controls"_a)
       .def("apply",
            py::overload_cast<const qc::Targets&>(&qc::Permutation::apply,
                                                  py::const_),
-           "targets"_a,
-           "Apply the permutation to a set of targets and return the permuted "
-           "targets.")
+           "targets"_a)
       .def("__getitem__",
            [](const qc::Permutation& p, const qc::Qubit q) { return p.at(q); })
       .def("__setitem__", [](qc::Permutation& p, const qc::Qubit q,
@@ -39,6 +35,9 @@ void registerPermutation(py::module& m) {
             return py::make_iterator(p.begin(), p.end());
           },
           py::keep_alive<0, 1>())
+      .def(py::self == py::self)
+      .def(py::self != py::self)
+      .def(hash(py::self))
       .def("__str__",
            [](const qc::Permutation& p) {
              std::stringstream ss;
@@ -58,6 +57,7 @@ void registerPermutation(py::module& m) {
         ss << "})";
         return ss.str();
       });
+  py::implicitly_convertible<py::dict, qc::Permutation>();
 }
 
 } // namespace mqt

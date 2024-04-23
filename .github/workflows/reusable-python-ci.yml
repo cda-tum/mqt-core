@@ -43,18 +43,11 @@ jobs:
         uses: rui314/setup-mold@v1
       - uses: hynek/build-and-inspect-python-package@v2
         id: baipp
-    outputs:
-      python-versions: ${{ steps.baipp.outputs.supported_python_classifiers_json_array }}
-
-  max-python-version:
-    name: 🐍 Determine maximum supported Python version
-    needs: dist
-    runs-on: ubuntu-latest
-    steps:
-      # use jq to get the last element of the array
-      - run: echo "max-python-version=$(echo '${{ needs.dist.outputs.python-versions }}' | jq --raw-output '.[-1]')" >> $GITHUB_OUTPUT
+      - name: 🐍 Determine maximum supported Python version
+        run: echo "max-python-version=$(echo '${{ steps.baipp.outputs.supported_python_classifiers_json_array }}' | jq --raw-output '.[-1]')" >> $GITHUB_OUTPUT
         id: max-python-version
     outputs:
+      python-versions: ${{ steps.baipp.outputs.supported_python_classifiers_json_array }}
       max-python-version: ${{ steps.max-python-version.outputs.max-python-version }}
 
   python-tests-ubuntu:
@@ -75,17 +68,17 @@ jobs:
 
   python-tests-macos:
     name: 🍎 ${{ matrix.python-version }} ${{ matrix.runs-on }}
-    needs: [dist, max-python-version]
+    needs: [dist]
     strategy:
       fail-fast: false
       matrix:
         python-version:
           - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
-          - ${{ needs.max-python-version.outputs.max-python-version }}
+          - ${{ needs.dist.outputs.max-python-version }}
         runs-on: [macos-13] # test Intel architecture
         include:
           - runs-on: macos-14 # test Apple Silicon architecture
-            python-version: ${{ needs.max-python-version.outputs.max-python-version }} # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
+            python-version: ${{ needs.dist.outputs.max-python-version }} # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: ${{ matrix.runs-on }}
@@ -97,34 +90,16 @@ jobs:
 
   python-tests-windows:
     name: 🏁 ${{ matrix.python-version }}
-    needs: [dist, max-python-version]
+    needs: [dist]
     strategy:
       fail-fast: false
       matrix:
         python-version:
           - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
-          - ${{ needs.max-python-version.outputs.max-python-version }}
+          - ${{ needs.dist.outputs.max-python-version }}
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: windows-latest
-      python-version: ${{ matrix.python-version }}
-      setup-z3: ${{ inputs.setup-z3 }}
-      z3-version: ${{ inputs.z3-version }}
-    secrets:
-      token: ${{ secrets.token }}
-
-  minimums:
-    name: 🔧 Minimums
-    needs: [dist, max-python-version]
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version:
-          - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
-          - ${{ needs.max-python-version.outputs.max-python-version }}
-    uses: ./.github/workflows/reusable-python-minimums.yml
-    with:
-      runs-on: ubuntu-latest
       python-version: ${{ matrix.python-version }}
       setup-z3: ${{ inputs.setup-z3 }}
       z3-version: ${{ inputs.z3-version }}

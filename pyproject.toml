@@ -45,17 +45,16 @@ evaluation = [
 docs = [
     "furo>=2023.08.17",
     "sphinx",
-    "myst_parser>=0.13",
+    "myst_nb>=1.1.0",
     "setuptools-scm>=7",
     "sphinx-copybutton",
     "sphinx_design",
     "sphinxext-opengraph",
     "sphinxcontrib-bibtex>=2.4.2",
+    "sphinxcontrib-svg2pdfconverter",
     "pybtex>=0.24",
     "ipython",
     "ipykernel",
-    "nbsphinx",
-    "sphinx-autodoc-typehints",
     "sphinx-autoapi",
     "qiskit[visualization]",
     "mqt.core[evaluation]"
@@ -66,7 +65,7 @@ qiskit = [
 dev = ["mqt.core[coverage, docs]",]
 
 [project.scripts]
-compare = "mqt.core.evaluation:main"
+mqt-core-compare = "mqt.core.evaluation:main"
 mqt-core-cli = "mqt.core.__main__:main"
 
 [project.urls]
@@ -242,7 +241,7 @@ isort.required-imports = ["from __future__ import annotations"]
 "test/python/**" = ["T20", "ANN"]
 "docs/**" = ["T20"]
 "noxfile.py" = ["T20", "TID251"]
-"*.pyi" = ["D"]  # pydocstyle
+"*.pyi" = ["D418", "PYI021"]  # pydocstyle
 "*.ipynb" = [
     "D",    # pydocstyle
     "E402", # Allow imports to appear anywhere in Jupyter notebooks

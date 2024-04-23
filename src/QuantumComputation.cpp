@@ -165,8 +165,7 @@ void QuantumComputation::initializeIOMapping() {
           // output permutation was already set before -> permute existing
           // values
           const auto current = outputPermutation.at(qubitidx);
-          if (static_cast<std::size_t>(qubitidx) != bitidx &&
-              static_cast<std::size_t>(current) != bitidx) {
+          if (static_cast<std::size_t>(current) != bitidx) {
             for (auto& p : outputPermutation) {
               if (static_cast<std::size_t>(p.second) == bitidx) {
                 p.second = current;

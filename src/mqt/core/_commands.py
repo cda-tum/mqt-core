@@ -7,7 +7,12 @@ from pathlib import Path
 
 
 def include_dir() -> Path:
-    """Return the path to the mqt-core include directory."""
+    """Return the path to the mqt-core include directory.
+
+    Raises:
+        FileNotFoundError: If the include directory is not found.
+        ImportError: If mqt-core is not installed.
+    """
     try:
         dist = distribution("mqt-core")
         located_include_dir = Path(dist.locate_file("mqt/core/include/mqt-core"))
@@ -21,7 +26,12 @@ def include_dir() -> Path:
 
 
 def cmake_dir() -> Path:
-    """Return the path to the mqt-core CMake module directory."""
+    """Return the path to the mqt-core CMake module directory.
+
+    Raises:
+        FileNotFoundError: If the CMake module directory is not found.
+        ImportError: If mqt-core is not installed.
+    """
     try:
         dist = distribution("mqt-core")
         located_cmake_dir = Path(dist.locate_file("mqt/core/share/cmake"))

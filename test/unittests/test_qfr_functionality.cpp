@@ -1396,6 +1396,34 @@ TEST_F(QFRFunctionality, AvoidStrippingIdleQubitWhenInOutputPermutation) {
   EXPECT_EQ(qc.outputPermutation[1], 0U);
 }
 
+TEST_F(QFRFunctionality, UpdateOutputPermutation) {
+  // Update output permutation if swap gate was applied even if physical qubit
+  // index matches logical qubit index
+  QuantumComputation qc(5U, 3U);
+  qc.h(0);
+
+  // Swap qubits 2 and 3
+  qc.swap(2, 3);
+
+  qc.cx(1, 0);
+  qc.cx(1, 3);
+  qc.initialLayout[1] = 0;
+  qc.initialLayout[0] = 1;
+  qc.initialLayout[3] = 2;
+  qc.initialLayout[2] = 3;
+  qc.initialLayout[4] = 4;
+  qc.measure(1, 0);
+  qc.measure(0, 1);
+  qc.measure(2, 2);
+  qc.initializeIOMapping();
+
+  // Check that output permutation is equal to initialLayout for the measured
+  // qubits, except for the swap between qubits 2 and 3
+  EXPECT_EQ(qc.outputPermutation[1], qc.initialLayout[1]);
+  EXPECT_EQ(qc.outputPermutation[0], qc.initialLayout[0]);
+  EXPECT_EQ(qc.outputPermutation[2], qc.initialLayout[3]);
+}
+
 TEST_F(QFRFunctionality, RzAndPhaseDifference) {
   QuantumComputation qc(2);
   const std::string qasm = "// i 0 1\n"

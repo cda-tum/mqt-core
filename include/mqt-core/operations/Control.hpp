@@ -2,8 +2,11 @@
 
 #include "Definitions.hpp"
 
+#include <cstddef>
+#include <functional>
 #include <set>
 #include <sstream>
+#include <string>
 
 namespace qc {
 struct Control {
@@ -73,3 +76,12 @@ inline Control operator""_nc(unsigned long long int q) {
 }
 } // namespace literals
 } // namespace qc
+
+namespace std {
+template <> struct hash<qc::Control> {
+  std::size_t operator()(const qc::Control& c) const {
+    return std::hash<qc::Qubit>{}(c.qubit) ^
+           std::hash<qc::Control::Type>{}(c.type);
+  }
+};
+} // namespace std
