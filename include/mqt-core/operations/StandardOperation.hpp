@@ -97,8 +97,8 @@ public:
 
   [[nodiscard]] auto isInverseOf(const Operation& other) const -> bool override;
 
-  [[nodiscard]] auto commutesAtQubit(const Operation& other, const Qubit& qubit) const
-      -> bool override;
+  [[nodiscard]] auto commutesAtQubit(const Operation& other,
+                                     const Qubit& qubit) const -> bool override;
 
   void invert() override;
 

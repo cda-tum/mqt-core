@@ -1,30 +1,29 @@
 #pragma once
 
-#include "na/operations/NAOperation.hpp"
 #include "na/NADefinitions.hpp"
+#include "na/operations/NAOperation.hpp"
 #include "operations/OpType.hpp"
 
 #include <cmath>
 namespace na {
 class NAGlobalOperation : public NAOperation {
 protected:
-  OpType              type;
+  OpType type;
   std::vector<qc::fp> params;
 
 public:
-  explicit NAGlobalOperation(const OpType               type,
+  explicit NAGlobalOperation(const OpType type,
                              const std::vector<qc::fp>& params)
       : type(type), params(params) {
     if (!isSingleQubitGate(type.type)) {
       throw std::invalid_argument("Operation is not single qubit.");
     }
   }
-  explicit NAGlobalOperation(const OpType type)
-      : NAGlobalOperation(type, {}) {}
+  explicit NAGlobalOperation(const OpType type) : NAGlobalOperation(type, {}) {}
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
     return params;
   }
-  auto        isGlobalOperation() -> bool override { return true; }
+  auto isGlobalOperation() -> bool override { return true; }
   [[nodiscard]] auto toString() const -> std::string override {
     std::stringstream ss;
     ss << type;

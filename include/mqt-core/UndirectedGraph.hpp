@@ -89,7 +89,8 @@ public:
     ss << "The edge (" << v << ", " << u << ") does not exist.";
     throw std::invalid_argument(ss.str());
   }
-  [[nodiscard]] auto getAdjacentEdges(V v) const -> std::unordered_set<std::pair<V, V>, PairHash<V>> {
+  [[nodiscard]] auto getAdjacentEdges(V v) const
+      -> std::unordered_set<std::pair<V, V>, PairHash<V>> {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
       ss << "The vertex " << v << " is not in the graph.";
@@ -147,8 +148,8 @@ public:
   }
   [[nodiscard]] auto
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-  isAdjacentEdge(const std::pair<V, V>& e, const std::pair<V, V>& f) const
-      -> bool {
+  isAdjacentEdge(const std::pair<V, V>& e,
+                 const std::pair<V, V>& f) const -> bool {
     return e.first == f.first or e.first == f.second or e.second == f.first or
            e.second == f.second;
   }
@@ -169,8 +170,8 @@ public:
     ss << "}\n";
     return ss.str();
   }
-  friend auto operator<<(std::ostream& os, const UndirectedGraph& g)
-      -> std::ostream& {
+  friend auto operator<<(std::ostream& os,
+                         const UndirectedGraph& g) -> std::ostream& {
     os << g.toString(); // Using toString() method
     return os;
   }

@@ -122,8 +122,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     parsers/qasm3_parser/passes/ConstEvalPass.cpp
     parsers/qasm3_parser/passes/TypeCheckPass.cpp
     QuantumComputation.cpp
-    Layer.cpp
-  )
+    Layer.cpp)
 
   # set include directories
   target_include_directories(
@@ -154,8 +153,6 @@ add_subdirectory(ecc)
 
 # add NA library
 add_subdirectory(na)
-
-
 
 # ** Note ** The following target will soon be removed from the project. All top-level projects
 # should switch to using the mqt-core Python package.

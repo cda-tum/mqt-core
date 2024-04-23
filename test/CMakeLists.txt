@@ -11,8 +11,7 @@ package_add_test(
   test_directed_acyclic_graph.cpp
   test_layer.cpp
   test_operation.cpp
-  test_disjoint_set.cpp
-)
+  test_disjoint_set.cpp)
 
 file(GLOB_RECURSE circuit_optimizer_tests "unittests/circuit_optimizer/*.cpp")
 package_add_test(${PROJECT_NAME}-test-circuit-optimizer ${PROJECT_NAME} ${circuit_optimizer_tests})

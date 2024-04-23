@@ -1,7 +1,7 @@
 #pragma once
 
-#include "na/operations/NAOperation.hpp"
 #include "na/NADefinitions.hpp"
+#include "na/operations/NAOperation.hpp"
 #include "operations/OpType.hpp"
 
 #include <cmath>
@@ -13,7 +13,7 @@ enum ShuttleType { LOAD, MOVE, STORE };
 
 class NAShuttlingOperation : public NAOperation {
 protected:
-  ShuttleType                         type;
+  ShuttleType type;
   std::vector<std::shared_ptr<Point>> start;
   std::vector<std::shared_ptr<Point>> end;
 
@@ -27,22 +27,22 @@ public:
                              "start and end qubits.");
     }
   }
-  explicit NAShuttlingOperation(const ShuttleType      type,
+  explicit NAShuttlingOperation(const ShuttleType type,
                                 std::shared_ptr<Point> start,
                                 std::shared_ptr<Point> end)
       : NAShuttlingOperation(
             type, std::vector<std::shared_ptr<Point>>{std::move(start)},
             std::vector<std::shared_ptr<Point>>{std::move(end)}) {}
   [[nodiscard]] auto getType() const -> ShuttleType { return type; }
-  [[nodiscard]] auto getStart() const
-      -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto
+  getStart() const -> const std::vector<std::shared_ptr<Point>>& {
     return start;
   }
-  [[nodiscard]] auto getEnd() const
-      -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto
+  getEnd() const -> const std::vector<std::shared_ptr<Point>>& {
     return end;
   }
-  auto        isShuttlingOperation() -> bool override { return true; }
+  auto isShuttlingOperation() -> bool override { return true; }
   [[nodiscard]] auto toString() const -> std::string override {
     std::stringstream ss;
     switch (type) {

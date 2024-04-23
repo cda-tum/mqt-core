@@ -1,7 +1,7 @@
 #pragma once
 
-#include "na/operations/NAOperation.hpp"
 #include "na/NADefinitions.hpp"
+#include "na/operations/NAOperation.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -11,12 +11,12 @@
 namespace na {
 class NAComputation {
 protected:
-  std::vector<std::shared_ptr<Point>>       initialPositions;
+  std::vector<std::shared_ptr<Point>> initialPositions;
   std::vector<std::unique_ptr<NAOperation>> operations;
 
 public:
-  NAComputation()                                              = default;
-  NAComputation(NAComputation&& qc) noexcept            = default;
+  NAComputation() = default;
+  NAComputation(NAComputation&& qc) noexcept = default;
   NAComputation& operator=(NAComputation&& qc) noexcept = default;
   NAComputation(const NAComputation& qc)
       : initialPositions(qc.initialPositions) {
@@ -55,8 +55,8 @@ public:
   auto clear() -> void { operations.clear(); }
   auto clearInitialPositions() -> void { initialPositions.clear(); }
   [[nodiscard]] auto size() const -> std::size_t { return operations.size(); }
-  [[nodiscard]] auto getInitialPositions() const
-      -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto
+  getInitialPositions() const -> const std::vector<std::shared_ptr<Point>>& {
     return initialPositions;
   }
   auto emplaceInitialPosition(std::shared_ptr<Point> p) -> void {
@@ -66,8 +66,7 @@ public:
     std::stringstream ss;
     ss << "init at ";
     for (const auto& p : initialPositions) {
-      ss << "(" << p->x << ", " << p->y << ")"
-         << ", ";
+      ss << "(" << p->x << ", " << p->y << ")" << ", ";
     }
     ss.seekp(-2, std::ios_base::end);
     ss << ";\n";
@@ -76,22 +75,22 @@ public:
     }
     return ss.str();
   }
-  friend auto operator<<(std::ostream& os, const NAComputation& qc)
-      -> std::ostream& {
+  friend auto operator<<(std::ostream& os,
+                         const NAComputation& qc) -> std::ostream& {
     os << qc.toString();
     return os;
   }
   // Iterators (pass-through)
-  auto               begin() noexcept { return operations.begin(); }
+  auto begin() noexcept { return operations.begin(); }
   [[nodiscard]] auto begin() const noexcept { return operations.begin(); }
   [[nodiscard]] auto cbegin() const noexcept { return operations.cbegin(); }
-  auto               end() noexcept { return operations.end(); }
+  auto end() noexcept { return operations.end(); }
   [[nodiscard]] auto end() const noexcept { return operations.end(); }
   [[nodiscard]] auto cend() const noexcept { return operations.cend(); }
-  auto               rbegin() noexcept { return operations.rbegin(); }
+  auto rbegin() noexcept { return operations.rbegin(); }
   [[nodiscard]] auto rbegin() const noexcept { return operations.rbegin(); }
   [[nodiscard]] auto crbegin() const noexcept { return operations.crbegin(); }
-  auto               rend() noexcept { return operations.rend(); }
+  auto rend() noexcept { return operations.rend(); }
   [[nodiscard]] auto rend() const noexcept { return operations.rend(); }
   [[nodiscard]] auto crend() const noexcept { return operations.crend(); }
 };

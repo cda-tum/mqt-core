@@ -75,15 +75,14 @@ TEST(Layer, ExecutableSet) {
       vList.emplace_back(u);
     }
   }
-  std::for_each(vList.cbegin(), vList.cend(), [](const auto& u) {
-    u->execute();
-  });
+  std::for_each(vList.cbegin(), vList.cend(),
+                [](const auto& u) { u->execute(); });
   EXPECT_EQ((*layer.getExecutableSet())->size(), 2); // layer (6), (9)
 }
 
 TEST(Layer, AllExecutable) {
   qc::QuantumComputation qc{};
-  qc::Layer              layer{};
+  qc::Layer layer{};
   qc = qc::QuantumComputation(8);
   qc.cz(1, 2);
   qc.cz(1, 6);

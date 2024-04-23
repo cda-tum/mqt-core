@@ -5,14 +5,14 @@
 
 namespace qc {
 template <class T> struct DisjointSet {
-  std::unordered_map<T, T>           parent;
+  std::unordered_map<T, T> parent;
   std::unordered_map<T, std::size_t> rank;
 
   template <class Iterator>
   explicit DisjointSet(const Iterator& begin, const Iterator& end) {
     std::for_each(begin, end, [&](const auto& element) {
       parent[element] = element;
-      rank[element]   = 0;
+      rank[element] = 0;
     });
   }
 

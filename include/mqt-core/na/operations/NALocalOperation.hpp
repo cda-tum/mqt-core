@@ -1,7 +1,7 @@
 #pragma once
 
-#include "na/operations/NAOperation.hpp"
 #include "na/NADefinitions.hpp"
+#include "na/operations/NAOperation.hpp"
 #include "operations/OpType.hpp"
 
 #include <cmath>
@@ -9,8 +9,8 @@
 namespace na {
 class NALocalOperation : public NAOperation {
 protected:
-  OpType                               type;
-  std::vector<qc::fp>                  params;
+  OpType type;
+  std::vector<qc::fp> params;
   std::vector<std::shared_ptr<Point>> positions;
 
 public:
@@ -25,23 +25,26 @@ public:
       throw std::logic_error("Operation control qubits are not supported.");
     }
   }
-  explicit NALocalOperation(const OpType&                    type,
-                            const std::vector<std::shared_ptr<Point>>& positions)
+  explicit NALocalOperation(
+      const OpType& type, const std::vector<std::shared_ptr<Point>>& positions)
       : NALocalOperation(type, {}, positions) {}
-  explicit NALocalOperation(const OpType&              type,
+  explicit NALocalOperation(const OpType& type,
                             const std::vector<qc::fp>& params,
-                            std::shared_ptr<Point>               position)
-      : NALocalOperation(type, params, std::vector<std::shared_ptr<Point>>{std::move(position)}) {}
+                            std::shared_ptr<Point> position)
+      : NALocalOperation(
+            type, params,
+            std::vector<std::shared_ptr<Point>>{std::move(position)}) {}
   explicit NALocalOperation(const OpType& type, std::shared_ptr<Point> position)
       : NALocalOperation(type, {}, std::move(position)) {}
-  [[nodiscard]] auto getPositions() const -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto
+  getPositions() const -> const std::vector<std::shared_ptr<Point>>& {
     return positions;
   }
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
     return params;
   }
   [[nodiscard]] auto getType() const -> OpType { return type; }
-  auto        isLocalOperation() -> bool override { return true; }
+  auto isLocalOperation() -> bool override { return true; }
   [[nodiscard]] auto toString() const -> std::string override {
     std::stringstream ss;
     ss << type;

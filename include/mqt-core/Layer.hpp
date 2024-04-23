@@ -64,8 +64,8 @@ public:
       return (!executed) && executableCounter == executableThreshold;
     }
     [[nodiscard]] auto isExecuted() const { return executed; }
-    [[nodiscard]] auto getOperation() const
-        -> const std::unique_ptr<Operation>* {
+    [[nodiscard]] auto
+    getOperation() const -> const std::unique_ptr<Operation>* {
       return operation;
     }
 
@@ -153,11 +153,9 @@ public:
     executableSet->clear();
     constructDAG(qc);
   }
-  [[nodiscard]] auto constructInteractionGraph(OpType opType,
-                                               std::size_t nctrl) const
-      -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>>;
-  [[nodiscard]] auto getExecutablesOfType(OpType opType,
-                                          std::size_t nctrl) const
-      -> std::vector<std::shared_ptr<DAGVertex>>;
+  [[nodiscard]] auto constructInteractionGraph(OpType opType, std::size_t nctrl)
+      const -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>>;
+  [[nodiscard]] auto getExecutablesOfType(OpType opType, std::size_t nctrl)
+      const -> std::vector<std::shared_ptr<DAGVertex>>;
 };
 } // namespace qc
