@@ -77,7 +77,7 @@ public:
     return std::abs(static_cast<double>(coeff)) < TOLERANCE;
   }
 
-  explicit Term(const Variable v, T coef = 1.) : coeff(coef), var(v){};
+  explicit Term(const Variable v, T coef = 1.) : coeff(coef), var(v) {};
 
   Term operator-() const { return Term(var, -coeff); }
 
@@ -182,11 +182,11 @@ public:
   }
 
   Expression(const std::vector<Term<T>>& ts, const U& con)
-      : terms(ts), constant(con){};
+      : terms(ts), constant(con) {};
 
   Expression() = default;
 
-  explicit Expression(const U& r) : constant(r){};
+  explicit Expression(const U& r) : constant(r) {};
 
   iterator begin() { return terms.begin(); }
   [[nodiscard]] const_iterator begin() const { return terms.cbegin(); }

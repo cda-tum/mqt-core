@@ -14,7 +14,8 @@ class ComplexNumbers {
 
 public:
   /// Default constructor.
-  explicit ComplexNumbers(RealNumberUniqueTable& table) : uniqueTable(&table){};
+  explicit ComplexNumbers(RealNumberUniqueTable& table)
+      : uniqueTable(&table) {};
   /// Default destructor.
   ~ComplexNumbers() = default;
 
