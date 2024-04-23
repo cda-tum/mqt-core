@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <unordered_map>
 
+namespace qc {
 template <class T> struct DisjointSet {
   std::unordered_map<T, T>           parent;
   std::unordered_map<T, std::size_t> rank;
@@ -35,3 +36,4 @@ template <class T> struct DisjointSet {
     }
   }
 };
+} // namespace qc

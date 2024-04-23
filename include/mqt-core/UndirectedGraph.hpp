@@ -20,6 +20,8 @@ protected:
   std::vector<std::vector<E>> adjacencyMatrix{};
   // the mapping of vertices to indices in the graph are stored in a map
   std::unordered_map<V, std::size_t> mapping;
+  // the inverse mapping is used to get the vertex from the index
+  std::unordered_map<std::size_t, V> invMapping;
   // the number of vertices in the graph
   std::size_t nVertices = 0;
   // the number of edges in the graph
@@ -32,6 +34,7 @@ public:
     // check whether the vertex is already in the graph, if so do nothing
     if (mapping.find(v) == mapping.end()) {
       mapping[v] = nVertices;
+      invMapping[nVertices] = v;
       ++nVertices;
       for (auto& row : adjacencyMatrix) {
         row.emplace_back(nullptr);
@@ -77,19 +80,19 @@ public:
     ss << "The edge (" << v << ", " << u << ") does not exist.";
     throw std::invalid_argument(ss.str());
   }
-  [[nodiscard]] auto getAdjacentEdges(V v) const -> std::unordered_set<E> {
+  [[nodiscard]] auto getAdjacentEdges(V v) const -> std::unordered_set<std::pair<V, V>, PairHash<V>> {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
       ss << "The vertex " << v << " is not in the graph.";
       throw std::invalid_argument(ss.str());
     }
     const auto i = mapping.at(v);
-    std::unordered_set<E> result;
+    std::unordered_set<std::pair<V, V>, PairHash<V>> result;
     for (std::size_t j = 0; j < nVertices; ++j) {
       if (i < j ? adjacencyMatrix[i][j - i] != nullptr
                 : adjacencyMatrix[j][i - j] != nullptr) {
-        result.emplace(i < j ? adjacencyMatrix[i][j - i]
-                             : adjacencyMatrix[j][i - j]);
+        const auto u = invMapping[j];
+        result.emplace(std::make_pair(v, u));
       }
     }
     return result;
@@ -105,7 +108,7 @@ public:
     for (std::size_t j = 0; j < nVertices; ++j) {
       if (i < j ? adjacencyMatrix[i][j - i] != nullptr
                 : adjacencyMatrix[j][i - j] != nullptr) {
-        result.emplace(mapping.at(j));
+        result.emplace(invMapping[j]);
       }
     }
     return result;

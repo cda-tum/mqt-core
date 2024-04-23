@@ -14,10 +14,10 @@
 
 namespace qc {
 
-template <class V, class E> class DirectedGraph {
+template <class V> class DirectedGraph {
 protected:
   // the adjecency matrix works with indices
-  std::vector<std::vector<E>> adjacencyMatrix{};
+  std::vector<std::vector<bool>> adjacencyMatrix;
   // the mapping of vertices to indices in the graph are stored in a map
   std::unordered_map<V, std::size_t> mapping;
   // the inverse mapping is used to get the vertex from the index
@@ -40,9 +40,9 @@ public:
       invMapping[nVertices] = v;
       ++nVertices;
       for (auto& row : adjacencyMatrix) {
-        row.emplace_back(nullptr);
+        row.emplace_back(false);
       }
-      adjacencyMatrix.emplace_back(nVertices, nullptr);
+      adjacencyMatrix.emplace_back(nVertices, false);
       inDegrees.emplace_back(0);
       outDegrees.emplace_back(0);
     } else {
@@ -51,7 +51,7 @@ public:
       throw std::invalid_argument(ss.str());
     }
   }
-  virtual auto addEdge(V u, V v, E e) -> void {
+  virtual auto addEdge(V u, V v) -> void {
     if (mapping.find(u) == mapping.end()) {
       addVertex(u);
     }
@@ -60,23 +60,13 @@ public:
     }
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
-    adjacencyMatrix[i][j] = e;
+    adjacencyMatrix[i][j] = true;
     ++outDegrees[i];
     ++inDegrees[j];
     ++nEdges;
   }
   [[nodiscard]] auto getNVertices() const -> std::size_t { return nVertices; }
   [[nodiscard]] auto getNEdges() const -> std::size_t { return nEdges; }
-  [[nodiscard]] auto getEdge(V u, V v) const -> E {
-    const auto i = mapping.at(u);
-    const auto j = mapping.at(v);
-    if (adjacencyMatrix[i][j] != nullptr) {
-      return adjacencyMatrix[i][j];
-    }
-    std::stringstream ss;
-    ss << "The edge (" << u << ", " << v << ") does not exist.";
-    throw std::invalid_argument(ss.str());
-  }
   [[nodiscard]] auto getInDegree(V v) const -> std::size_t {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
@@ -106,7 +96,7 @@ public:
   [[nodiscard]] auto isEdge(const V u, const V v) const -> bool {
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
-    return adjacencyMatrix[i][j] != nullptr;
+    return adjacencyMatrix[i][j];
   }
   /// Outputs a string representation of the graph in the DOT format
   [[nodiscard]] auto toString() const -> std::string {
@@ -117,7 +107,7 @@ public:
     }
     for (std::size_t i = 0; i < nVertices; ++i) {
       for (std::size_t j = 0; j < nVertices; ++j) {
-        if (adjacencyMatrix[i][j] != nullptr) {
+        if (adjacencyMatrix[i][j]) {
           ss << "  " << i << " -> " << j << ";\n";
         }
       }
