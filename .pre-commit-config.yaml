@@ -86,7 +86,7 @@ repos:
 
   # Clang-format the C++ part of the code base automatically
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v18.1.3
+    rev: v18.1.4
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]

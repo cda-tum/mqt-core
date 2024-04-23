@@ -226,7 +226,7 @@ protected:
 
 public:
   explicit BenchmarkDDPackage(std::string filename)
-      : inputFilename(std::move(filename)){};
+      : inputFilename(std::move(filename)) {};
 
   void runAll() {
     runGHZ();
