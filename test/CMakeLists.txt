@@ -6,7 +6,9 @@ package_add_test(
   unittests/test_qfr_functionality.cpp
   unittests/test_symbolic.cpp
   unittests/test_qasm3_parser.cpp
-  test_graph.cpp
+  test_undirected_graph.cpp
+  test_directed_graph.cpp
+  test_directed_acyclic_graph.cpp
   test_layer.cpp
   test_operation.cpp
   test_disjoint_set.cpp

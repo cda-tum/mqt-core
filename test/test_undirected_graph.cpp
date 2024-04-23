@@ -3,12 +3,12 @@
 // See README.md or go to https://github.com/cda-tum/mqt-core for more information.
 //
 
-#include "Graph.hpp"
+#include "UndirectedGraph.hpp"
 
 #include "gtest/gtest.h"
 
-TEST(Graph, Numbered) {
-  qc::Graph<int, int*> g;
+TEST(UndirectedGraph, Numbered) {
+  qc::UndirectedGraph<int, int*> g;
   int a = 0;
   int b = 1;
   int c = 2;

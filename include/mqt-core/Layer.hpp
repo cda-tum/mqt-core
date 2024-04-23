@@ -8,7 +8,7 @@
 #include "QuantumComputation.hpp"
 #include "operations/Operation.hpp"
 
-#include <Graph.hpp>
+#include <UndirectedGraph.hpp>
 #include <cassert>
 #include <memory>
 #include <unordered_set>
@@ -155,7 +155,7 @@ public:
   }
   [[nodiscard]] auto constructInteractionGraph(OpType opType,
                                                std::size_t nctrl) const
-      -> Graph<Qubit, std::shared_ptr<DAGVertex>>;
+      -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>>;
   [[nodiscard]] auto getExecutablesOfType(OpType opType,
                                           std::size_t nctrl) const
       -> std::vector<std::shared_ptr<DAGVertex>>;
