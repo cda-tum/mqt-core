@@ -15,17 +15,17 @@
 #include <cmath>
 #include <cstdint>
 #include <sstream>
-#include <utility>
+
 namespace na {
 /// Class to store two-dimensional coordinates
 struct Point {
   std::int64_t x;
   std::int64_t y;
   Point(std::int64_t x, std::int64_t y) : x(x), y(y){};
-  inline Point operator-(const Point& p) const { return {x - p.x, y - p.y}; }
-  inline Point operator-(const Point&& p) const { return {x - p.x, y - p.y}; }
-  inline Point operator+(const Point& p) const { return {x + p.x, y + p.y}; }
-  inline Point operator+(const Point&& p) const { return {x + p.x, y + p.y}; }
+  Point operator-(const Point& p) const { return {x - p.x, y - p.y}; }
+  Point operator-(const Point&& p) const { return {x - p.x, y - p.y}; }
+  Point operator+(const Point& p) const { return {x + p.x, y + p.y}; }
+  Point operator+(const Point&& p) const { return {x + p.x, y + p.y}; }
   [[nodiscard]] auto length() const -> std::uint64_t {
     return static_cast<std::uint64_t>(std::round(std::sqrt(x * x + y * y)));
   }
