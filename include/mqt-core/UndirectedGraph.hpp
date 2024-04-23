@@ -91,7 +91,7 @@ public:
     for (std::size_t j = 0; j < nVertices; ++j) {
       if (i < j ? adjacencyMatrix[i][j - i] != nullptr
                 : adjacencyMatrix[j][i - j] != nullptr) {
-        const auto u = invMapping[j];
+        const auto u = invMapping.at(j);
         result.emplace(std::make_pair(v, u));
       }
     }
@@ -108,7 +108,7 @@ public:
     for (std::size_t j = 0; j < nVertices; ++j) {
       if (i < j ? adjacencyMatrix[i][j - i] != nullptr
                 : adjacencyMatrix[j][i - j] != nullptr) {
-        result.emplace(invMapping[j]);
+        result.emplace(invMapping.at(j));
       }
     }
     return result;
