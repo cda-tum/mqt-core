@@ -217,33 +217,32 @@ inline std::string shortName(const OpType& opType) {
 
 [[nodiscard]] inline auto isSingleQubitGate(const qc::OpType& type) {
   switch (type) {
-  case qc::OpType::U:
-  case qc::OpType::U2:
-  case qc::OpType::P:
-  case qc::OpType::X:
-  case qc::OpType::Y:
-  case qc::OpType::Z:
-  case qc::OpType::H:
-  case qc::OpType::S:
-  case qc::OpType::Sdg:
-  case qc::OpType::T:
-  case qc::OpType::SX:
-  case qc::OpType::SXdg:
-  case qc::OpType::Tdg:
-  case qc::OpType::V:
-  case qc::OpType::Vdg:
-  case qc::OpType::RX:
-  case qc::OpType::RY:
-  case qc::OpType::RZ:
+  case U:
+  case U2:
+  case P:
+  case X:
+  case Y:
+  case Z:
+  case H:
+  case S:
+  case Sdg:
+  case T:
+  case SX:
+  case SXdg:
+  case Tdg:
+  case V:
+  case Vdg:
+  case RX:
+  case RY:
+  case RZ:
     return true;
   default:
     return false;
   }
 }
 
-inline std::ostream& operator<<(std::ostream& out, OpType& opType) {
-  out << toString(opType);
-  return out;
+inline std::ostream& operator<<(std::ostream& out, const OpType& opType) {
+  return out << toString(opType);
 }
 
 const inline static std::unordered_map<std::string, qc::OpType>

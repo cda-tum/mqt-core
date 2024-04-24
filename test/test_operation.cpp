@@ -76,6 +76,18 @@ TEST(CompoundOperation, GlobalIsInverseOf) {
   EXPECT_TRUE(op2.isInverseOf(op1));
 }
 
+TEST(OpType, General) {
+  EXPECT_EQ(qc::toString(qc::RZ), "rz");
+  std::stringstream ss;
+  ss << qc::OpType::RZ;
+  EXPECT_EQ(ss.str(), "rz");
+}
+
+TEST(OpType, SingleQubitGate) {
+  EXPECT_TRUE(qc::isSingleQubitGate(qc::P));
+  EXPECT_FALSE(qc::isSingleQubitGate(qc::ECR));
+}
+
 TEST(CompoundOperation, IsInverseOf) {
   // This functionality is not implemented yet, the function isInversOf leads to
   // false negatives
