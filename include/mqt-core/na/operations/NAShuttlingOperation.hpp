@@ -42,7 +42,9 @@ public:
   getEnd() const -> const std::vector<std::shared_ptr<Point>>& {
     return end;
   }
-  [[nodiscard]] auto isShuttlingOperation() const -> bool override { return true; }
+  [[nodiscard]] auto isShuttlingOperation() const -> bool override {
+    return true;
+  }
   [[nodiscard]] auto toString() const -> std::string override {
     std::stringstream ss;
     switch (type) {

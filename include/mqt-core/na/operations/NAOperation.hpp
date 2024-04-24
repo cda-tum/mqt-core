@@ -5,7 +5,9 @@
 namespace na {
 class NAOperation {
 public:
-  [[nodiscard]] virtual auto isShuttlingOperation() const -> bool { return false; }
+  [[nodiscard]] virtual auto isShuttlingOperation() const -> bool {
+    return false;
+  }
   [[nodiscard]] virtual auto isLocalOperation() const -> bool { return false; }
   [[nodiscard]] virtual auto isGlobalOperation() const -> bool { return false; }
   [[nodiscard]] virtual auto toString() const -> std::string = 0;
