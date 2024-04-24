@@ -5,7 +5,10 @@
 #include "Permutation.hpp"
 
 #include <array>
+#include <cstring>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <set>
