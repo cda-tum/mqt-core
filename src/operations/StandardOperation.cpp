@@ -560,29 +560,27 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
 auto StandardOperation::isInverseOf(const Operation& other) const -> bool {
   if (other.isStandardOperation()) {
     if (controls == other.getControls() and targets == other.getTargets()) {
-      return (type == I and other.getType() == I) or
-             (type == X and other.getType() == X) or
-             (type == Y and other.getType() == Y) or
-             (type == Z and other.getType() == Z) or
-             (type == S and other.getType() == Sdg) or
-             (type == Sdg and other.getType() == S) or
-             (type == SX and other.getType() == SXdg) or
-             (type == SXdg and other.getType() == SX) or
-             (type == T and other.getType() == Tdg) or
-             (type == Tdg and other.getType() == T) or
-             (type == H and other.getType() == H) or
-             (type == P and other.getType() == P and
-              std::abs(parameter[0] + other.getParameter()[0]) <
-                  PARAMETER_TOLERANCE) or
-             (type == OpType::RX and other.getType() == OpType::RX and
-              std::abs(parameter[0] + other.getParameter()[0]) <
-                  PARAMETER_TOLERANCE) or
-             (type == OpType::RY and other.getType() == OpType::RY and
-              std::abs(parameter[0] + other.getParameter()[0]) <
-                  PARAMETER_TOLERANCE) or
-             (type == OpType::RZ and other.getType() == OpType::RZ and
-              std::abs(parameter[0] + other.getParameter()[0]) <
-                  PARAMETER_TOLERANCE);
+      // self-inverse
+      if ((type == I or type == X or type == Y or type == Z or type == H) and
+          type == other.getType()) {
+        return true;
+      }
+      // unparameterized gates
+      if ((type == S and other.getType() == Sdg) or
+          (type == Sdg and other.getType() == S) or
+          (type == T and other.getType() == Tdg) or
+          (type == Tdg and other.getType() == T) or
+          (type == SX and other.getType() == SXdg) or
+          (type == SXdg and other.getType() == SX)) {
+        return true;
+      }
+      // parameterized gates
+      if ((type == P or type == RX or type == RY or type == RZ) and
+          other.getType() == type and
+          std::abs(parameter[0] + other.getParameter()[0]) <
+              PARAMETER_TOLERANCE) {
+        return true;
+      }
     }
   }
   // TODO: Add check for remaining operations
