@@ -29,15 +29,15 @@ TEST(NADefinitions, Point) {
 }
 
 TEST(NADefinitions, OpType) {
-  na::OpType ot{qc::OpType::X, 1};
-  EXPECT_EQ(ot.type, qc::OpType::X);
-  EXPECT_EQ(ot.nctrl, 1);
-  EXPECT_EQ(ot.toString(), "cx");
+  const na::OpType t{qc::OpType::X, 1};
+  EXPECT_EQ(t.type, qc::OpType::X);
+  EXPECT_EQ(t.nctrl, 1);
+  EXPECT_EQ(t.toString(), "cx");
   std::stringstream ss;
-  ss << ot;
+  ss << t;
   EXPECT_EQ(ss.str(), "cx");
-  EXPECT_EQ(ot, (na::OpType{qc::OpType::X, 1}));
-  EXPECT_FALSE(ot == (na::OpType{qc::OpType::X, 2}));
+  EXPECT_EQ(t, (na::OpType{qc::OpType::X, 1}));
+  EXPECT_FALSE(t == (na::OpType{qc::OpType::X, 2}));
 }
 
 TEST(NADefinitions, IsGlobal) {
