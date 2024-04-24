@@ -154,7 +154,8 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
     }
   }
 }
-auto Layer::constructInteractionGraph(OpType opType, std::size_t nctrl) const
+auto Layer::constructInteractionGraph(const OpType opType,
+                                      const std::size_t nctrl) const
     -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>> {
   switch (opType) {
   case X:
@@ -192,7 +193,8 @@ auto Layer::constructInteractionGraph(OpType opType, std::size_t nctrl) const
   }
   return graph;
 }
-auto Layer::getExecutablesOfType(OpType opType, std::size_t nctrl) const
+auto Layer::getExecutablesOfType(const OpType opType,
+                                 const std::size_t nctrl) const
     -> std::vector<std::shared_ptr<DAGVertex>> {
   std::vector<std::shared_ptr<DAGVertex>> executables;
   for (const auto& vertex : *executableSet) {
