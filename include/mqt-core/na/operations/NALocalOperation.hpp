@@ -44,7 +44,7 @@ public:
     return params;
   }
   [[nodiscard]] auto getType() const -> OpType { return type; }
-  auto isLocalOperation() -> bool override { return true; }
+  [[nodiscard]] auto isLocalOperation() const -> bool override { return true; }
   [[nodiscard]] auto toString() const -> std::string override {
     std::stringstream ss;
     ss << type;
@@ -61,7 +61,7 @@ public:
       ss << *p << ", ";
     }
     ss.seekp(-2, std::ios_base::end);
-    ss << ";" << std::endl;
+    ss << ";\n";
     return ss.str();
   }
   [[nodiscard]] auto clone() const -> std::unique_ptr<NAOperation> override {

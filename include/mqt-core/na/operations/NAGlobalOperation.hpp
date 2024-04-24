@@ -23,7 +23,7 @@ public:
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
     return params;
   }
-  auto isGlobalOperation() -> bool override { return true; }
+  [[nodiscard]] auto isGlobalOperation() const -> bool override { return true; }
   [[nodiscard]] auto toString() const -> std::string override {
     std::stringstream ss;
     ss << type;
@@ -35,7 +35,7 @@ public:
       ss.seekp(-2, std::ios_base::end);
       ss << ")";
     }
-    ss << ";" << std::endl;
+    ss << ";\n";
     return ss.str();
   }
   [[nodiscard]] auto clone() const -> std::unique_ptr<NAOperation> override {

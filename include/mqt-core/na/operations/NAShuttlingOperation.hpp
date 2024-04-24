@@ -9,7 +9,7 @@
 #include <vector>
 namespace na {
 
-enum ShuttleType { LOAD, MOVE, STORE };
+enum ShuttleType : std::uint8_t { LOAD, MOVE, STORE };
 
 class NAShuttlingOperation : public NAOperation {
 protected:
@@ -42,7 +42,7 @@ public:
   getEnd() const -> const std::vector<std::shared_ptr<Point>>& {
     return end;
   }
-  auto isShuttlingOperation() -> bool override { return true; }
+  [[nodiscard]] auto isShuttlingOperation() const -> bool override { return true; }
   [[nodiscard]] auto toString() const -> std::string override {
     std::stringstream ss;
     switch (type) {
@@ -66,7 +66,7 @@ public:
       ss << *p << ", ";
     }
     ss.seekp(-2, std::ios_base::end);
-    ss << ";" << std::endl;
+    ss << ";\n";
     return ss.str();
   }
   [[nodiscard]] auto clone() const -> std::unique_ptr<NAOperation> override {
