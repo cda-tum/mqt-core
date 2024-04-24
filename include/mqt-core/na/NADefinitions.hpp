@@ -21,7 +21,7 @@ namespace na {
 struct Point {
   std::int64_t x;
   std::int64_t y;
-  Point(std::int64_t x, std::int64_t y) : x(x), y(y){};
+  Point(std::int64_t x, std::int64_t y) : x(x), y(y) {};
   Point operator-(const Point& p) const { return {x - p.x, y - p.y}; }
   Point operator-(const Point&& p) const { return {x - p.x, y - p.y}; }
   Point operator+(const Point& p) const { return {x + p.x, y + p.y}; }
