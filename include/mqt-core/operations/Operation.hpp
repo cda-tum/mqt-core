@@ -138,7 +138,7 @@ public:
 
   /// An operation is individual if it acts on a single qubit individually, i.e.
   /// does not entangle qubits.
-  [[nodiscard]] virtual auto isIndividual() -> bool {
+  [[nodiscard]] virtual auto isIndividual() const -> bool {
     return getNcontrols() == 0 and isSingleQubitGate(type);
   }
 

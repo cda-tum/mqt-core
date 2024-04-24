@@ -28,4 +28,8 @@ TEST(UndirectedGraph, Numbered) {
   EXPECT_TRUE(g.isAdjacent(1, 2));
   EXPECT_FALSE(g.isAdjacent(1, 0));
   EXPECT_TRUE(g.isAdjacentEdge({1, 2}, {2, 3}));
+
+  EXPECT_ANY_THROW(g.addVertex(1));
+  EXPECT_ANY_THROW(std::ignore = g.getDegree(4));
+  EXPECT_ANY_THROW(std::ignore = g.getEdge(0, 1));
 }

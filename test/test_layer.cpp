@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-TEST(Layer, ExecutableSet) {
+TEST(Layer, ExecutableSet1) {
   auto qc = qc::QuantumComputation(3);
   /* construct the following circuit
 ┌─────────┐┌─────────┐┌──────────┐      ┌─────────┐┌─────────┐┌──────────┐
@@ -52,6 +52,7 @@ TEST(Layer, ExecutableSet) {
   std::shared_ptr<qc::Layer::DAGVertex> v =
       *(*layer.getExecutableSet())->begin();
   v->execute();
+  EXPECT_ANY_THROW(v->execute());
   EXPECT_EQ((*layer.getExecutableSet())->size(), 3); // layer (2)
   v = *(*layer.getExecutableSet())->begin();
   v->execute();
@@ -80,7 +81,7 @@ TEST(Layer, ExecutableSet) {
   EXPECT_EQ((*layer.getExecutableSet())->size(), 2); // layer (6), (9)
 }
 
-TEST(Layer, AllExecutable) {
+TEST(Layer, ExecutableSet2) {
   qc::QuantumComputation qc{};
   qc = qc::QuantumComputation(8);
   qc.cz(1, 2);
@@ -161,4 +162,23 @@ TEST(Layer, InteractionGraph) {
   EXPECT_TRUE(graph.isAdjacent(7, 5));
   EXPECT_TRUE(graph.isAdjacent(7, 6));
   EXPECT_FALSE(graph.isAdjacent(7, 7));
+
+  EXPECT_ANY_THROW(std::ignore = layer.constructInteractionGraph(qc::Z, 2));
+  EXPECT_ANY_THROW(std::ignore = layer.constructInteractionGraph(qc::RZZ, 0));
+}
+
+TEST(Layer, ExecutableOfType) {
+  auto qc = qc::QuantumComputation(3);
+  qc.cz(0, 1);
+  qc.cz(0, 2);
+  qc.emplace_back<qc::StandardOperation>(qc::Targets{0, 1, 2}, qc::OpType::RY,
+                                         std::vector<qc::fp>{qc::PI_2});
+  qc.rz(qc::PI_4, 0);
+  qc.emplace_back<qc::StandardOperation>(qc::Targets{0, 1, 2}, qc::OpType::RY,
+                                         std::vector<qc::fp>{-qc::PI_2});
+  qc.cz(1, 2);
+
+  qc::Layer const layer(qc);
+  EXPECT_EQ(layer.getExecutablesOfType(qc::OpType::Z, 1).size(), 3);
+  EXPECT_EQ(layer.getExecutablesOfType(qc::OpType::RZ, 0).size(), 0);
 }

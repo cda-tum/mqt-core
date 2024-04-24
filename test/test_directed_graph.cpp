@@ -28,4 +28,8 @@ TEST(DirectedGraph, Numbered) {
   EXPECT_TRUE(g.isEdge(1, 2));
   EXPECT_FALSE(g.isEdge(2, 1));
   EXPECT_FALSE(g.isEdge(1, 0));
+
+  EXPECT_ANY_THROW(g.addVertex(1));
+  EXPECT_ANY_THROW(std::ignore = g.getInDegree(4));
+  EXPECT_ANY_THROW(std::ignore = g.getOutDegree(4));
 }
