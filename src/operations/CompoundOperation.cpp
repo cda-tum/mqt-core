@@ -159,8 +159,7 @@ std::set<Qubit> CompoundOperation::getUsedQubits() const {
 auto CompoundOperation::commutesAtQubit(const Operation& other,
                                         const Qubit& qubit) const -> bool {
   const auto& opsOnQubit = std::accumulate(
-      cbegin(), cend(),
-      std::unordered_set<const std::unique_ptr<Operation>*>(),
+      cbegin(), cend(), std::unordered_set<const std::unique_ptr<Operation>*>(),
       [qubit](auto& set, const auto& op) {
         if (op->actsOn(qubit)) {
           set.insert(&op);
