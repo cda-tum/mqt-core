@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -63,9 +64,8 @@ enum OpType : std::uint8_t {
 };
 
 /// Enumeration of diagonal gates
-static constexpr std::array<qc::OpType, 10> DIAGONAL_GATES = {
-    qc::Barrier, qc::I,   qc::Z, qc::S,  qc::Sdg,
-    qc::T,       qc::Tdg, qc::P, qc::RZ, qc::RZZ};
+static constexpr std::array<OpType, 10> DIAGONAL_GATES = {
+    Barrier, I, Z, S, Sdg, T, Tdg, P, RZ, RZZ};
 
 inline std::string toString(const OpType& opType) {
   switch (opType) {
