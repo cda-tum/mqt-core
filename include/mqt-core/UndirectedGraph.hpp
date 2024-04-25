@@ -150,8 +150,8 @@ public:
   }
   [[nodiscard]] auto
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-  isAdjacentEdge(const std::pair<V, V>& e, const std::pair<V, V>& f) const
-      -> bool {
+  isAdjacentEdge(const std::pair<V, V>& e,
+                 const std::pair<V, V>& f) const -> bool {
     return e.first == f.first or e.first == f.second or e.second == f.first or
            e.second == f.second;
   }
@@ -172,8 +172,8 @@ public:
     ss << "}\n";
     return ss.str();
   }
-  friend auto operator<<(std::ostream& os, const UndirectedGraph& g)
-      -> std::ostream& {
+  friend auto operator<<(std::ostream& os,
+                         const UndirectedGraph& g) -> std::ostream& {
     os << g.toString(); // Using toString() method
     return os;
   }
