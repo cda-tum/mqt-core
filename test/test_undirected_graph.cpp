@@ -9,16 +9,12 @@
 #include "gtest/gtest.h"
 
 TEST(UndirectedGraph, Numbered) {
-  qc::UndirectedGraph<int, int*> g;
-  int a = 0;
-  int b = 1;
-  int c = 2;
-  int d = 3;
+  qc::UndirectedGraph<int, int> g;
   g.addVertex(0);
-  g.addEdge(1, 1, &a);
-  g.addEdge(1, 2, &b);
-  g.addEdge(2, 3, &c);
-  g.addEdge(3, 1, &d);
+  g.addEdge(1, 1, std::make_shared<int>(0));
+  g.addEdge(1, 2, std::make_shared<int>(1));
+  g.addEdge(2, 3, std::make_shared<int>(2));
+  g.addEdge(3, 1, std::make_shared<int>(3));
   EXPECT_EQ(g.getNVertices(), 4);
   EXPECT_EQ(g.getNEdges(), 4);
   EXPECT_EQ(*g.getEdge(1, 2), 1);

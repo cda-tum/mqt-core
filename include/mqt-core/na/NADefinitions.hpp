@@ -22,6 +22,9 @@ struct Point {
   std::int64_t x;
   std::int64_t y;
   Point(std::int64_t x, std::int64_t y) : x(x), y(y) {};
+  Point(const Point& p) = default;
+  virtual ~Point() = default;
+  Point& operator=(const Point& p) = default;
   Point operator-(const Point& p) const { return {x - p.x, y - p.y}; }
   Point operator-(const Point&& p) const { return {x - p.x, y - p.y}; }
   Point operator+(const Point& p) const { return {x + p.x, y + p.y}; }

@@ -15,9 +15,11 @@
 namespace qc {
 
 template <class V, class E> class UndirectedGraph {
+  using F = std::shared_ptr<E>;
+
 protected:
   // the adjecency matrix works with indices
-  std::vector<std::vector<E>> adjacencyMatrix{};
+  std::vector<std::vector<F>> adjacencyMatrix{};
   // the mapping of vertices to indices in the graph are stored in a map
   std::unordered_map<V, std::size_t> mapping;
   // the inverse mapping is used to get the vertex from the index
@@ -47,7 +49,7 @@ public:
       throw std::invalid_argument(ss.str());
     }
   }
-  auto addEdge(V u, V v, E e) -> void {
+  auto addEdge(V u, V v, F e) -> void {
     if (mapping.find(u) == mapping.end()) {
       addVertex(u);
     }
@@ -78,7 +80,7 @@ public:
   }
   [[nodiscard]] auto getNVertices() const -> std::size_t { return nVertices; }
   [[nodiscard]] auto getNEdges() const -> std::size_t { return nEdges; }
-  [[nodiscard]] auto getEdge(V v, V u) const -> E {
+  [[nodiscard]] auto getEdge(V v, V u) const -> F {
     const auto i = mapping.at(v);
     const auto j = mapping.at(u);
     if (i < j ? adjacencyMatrix[i][j - i] != nullptr
@@ -148,8 +150,8 @@ public:
   }
   [[nodiscard]] auto
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-  isAdjacentEdge(const std::pair<V, V>& e,
-                 const std::pair<V, V>& f) const -> bool {
+  isAdjacentEdge(const std::pair<V, V>& e, const std::pair<V, V>& f) const
+      -> bool {
     return e.first == f.first or e.first == f.second or e.second == f.first or
            e.second == f.second;
   }
@@ -170,8 +172,8 @@ public:
     ss << "}\n";
     return ss.str();
   }
-  friend auto operator<<(std::ostream& os,
-                         const UndirectedGraph& g) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const UndirectedGraph& g)
+      -> std::ostream& {
     os << g.toString(); // Using toString() method
     return os;
   }
