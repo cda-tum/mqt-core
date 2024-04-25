@@ -6,7 +6,6 @@
 #include <cassert>
 #include <numeric>
 #include <sstream>
-#include <unordered_set>
 #include <variant>
 
 namespace qc {
@@ -560,26 +559,36 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
 auto StandardOperation::isInverseOf(const Operation& other) const -> bool {
   if (other.isStandardOperation()) {
     if (controls == other.getControls() and targets == other.getTargets()) {
-      // self-inverse
-      if ((type == I or type == X or type == Y or type == Z or type == H) and
-          type == other.getType()) {
-        return true;
-      }
+      switch (type) {
+      case I:
+      case X:
+      case Y:
+      case Z:
+      case H:
+        // self-inverse
+        return type == other.getType();
       // unparameterized gates
-      if ((type == S and other.getType() == Sdg) or
-          (type == Sdg and other.getType() == S) or
-          (type == T and other.getType() == Tdg) or
-          (type == Tdg and other.getType() == T) or
-          (type == SX and other.getType() == SXdg) or
-          (type == SXdg and other.getType() == SX)) {
-        return true;
-      }
-      // parameterized gates
-      if ((type == P or type == RX or type == RY or type == RZ) and
-          other.getType() == type and
-          std::abs(parameter[0] + other.getParameter()[0]) <
-              PARAMETER_TOLERANCE) {
-        return true;
+      case S:
+        return other.getType() == Sdg;
+      case Sdg:
+        return other.getType() == S;
+      case T:
+        return other.getType() == Tdg;
+      case Tdg:
+        return other.getType() == T;
+      case SX:
+        return other.getType() == SXdg;
+      case SXdg:
+        return other.getType() == SX;
+      case P:
+      case RX:
+      case RY:
+      case RZ:
+        return other.getType() == type and
+               std::abs(parameter[0] + other.getParameter()[0]) <
+                   PARAMETER_TOLERANCE;
+      default:
+        return false;
       }
     }
   }
