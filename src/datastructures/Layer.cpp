@@ -154,7 +154,7 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
 }
 auto Layer::constructInteractionGraph(const OpType opType,
                                       const std::size_t nControls) const
-    -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>> {
+    -> UndirectedGraph<Qubit, DAGVertex> {
   switch (opType) {
   case X:
   case Y:
@@ -175,7 +175,7 @@ auto Layer::constructInteractionGraph(const OpType opType,
     ss << opType << " is not supported for constructing an interaction graph.";
     throw std::invalid_argument(ss.str());
   }
-  UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>> graph;
+  UndirectedGraph<Qubit, DAGVertex> graph;
   for (const auto& vertex : executableSet) {
     const auto& gate = vertex->getOperation();
     if (gate->getType() == opType && gate->getNcontrols() == nControls) {

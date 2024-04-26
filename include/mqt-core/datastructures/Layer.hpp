@@ -127,13 +127,13 @@ protected:
 
 public:
   Layer() = default;
-  virtual ~Layer() = default;
+  ~Layer() = default;
   explicit Layer(const QuantumComputation& qc) { constructDAG(qc); }
   [[nodiscard]] auto getExecutableSet() const -> const ExecutableSet& {
     return executableSet;
   }
   [[nodiscard]] auto constructInteractionGraph(OpType opType, std::size_t nctrl)
-      const -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>>;
+      const -> UndirectedGraph<Qubit, DAGVertex>;
   [[nodiscard]] auto getExecutablesOfType(OpType opType, std::size_t nctrl)
       const -> std::vector<std::shared_ptr<DAGVertex>>;
 };
