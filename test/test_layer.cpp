@@ -48,37 +48,36 @@ TEST(Layer, ExecutableSet1) {
   qc.cz(1, 2);
 
   qc::Layer const layer(qc);
-  EXPECT_EQ((*layer.getExecutableSet())->size(), 1); // layer (1)
-  std::shared_ptr<qc::Layer::DAGVertex> v =
-      *(*layer.getExecutableSet())->begin();
+  EXPECT_EQ(layer.getExecutableSet().size(), 1); // layer (1)
+  std::shared_ptr<qc::Layer::DAGVertex> v = *(layer.getExecutableSet()).begin();
   v->execute();
   EXPECT_ANY_THROW(v->execute());
-  EXPECT_EQ((*layer.getExecutableSet())->size(), 3); // layer (2)
-  v = *(*layer.getExecutableSet())->begin();
+  EXPECT_EQ(layer.getExecutableSet().size(), 3); // layer (2)
+  v = *(layer.getExecutableSet()).begin();
   v->execute();
-  EXPECT_EQ((*layer.getExecutableSet())->size(), 2); // rest of layer (2)
-  v = *(*layer.getExecutableSet())->begin();
+  EXPECT_EQ(layer.getExecutableSet().size(), 2); // rest of layer (2)
+  v = *(layer.getExecutableSet()).begin();
   v->execute();
-  EXPECT_EQ((*layer.getExecutableSet())->size(), 1); // rest of layer (2)
-  v = *(*layer.getExecutableSet())->begin();
+  EXPECT_EQ(layer.getExecutableSet().size(), 1); // rest of layer (2)
+  v = *(layer.getExecutableSet()).begin();
   v->execute();
-  EXPECT_EQ((*layer.getExecutableSet())->size(), 1); // layer (3)
-  v = *(*layer.getExecutableSet())->begin();
+  EXPECT_EQ(layer.getExecutableSet().size(), 1); // layer (3)
+  v = *(layer.getExecutableSet()).begin();
   v->execute();
-  EXPECT_EQ((*layer.getExecutableSet())->size(), 3); // layer (4), (5), (9)
+  EXPECT_EQ(layer.getExecutableSet().size(), 3); // layer (4), (5), (9)
   // execute layer (4) and (5), first pick those two vertices and then execute
   // them because when executing the iterator over the executable set is not
   // valid anymore
   std::vector<std::shared_ptr<qc::Layer::DAGVertex>> vList;
-  for (const auto& u : **layer.getExecutableSet()) {
-    if (const auto& it = (*u->getOperation())->getUsedQubits();
+  for (const auto& u : layer.getExecutableSet()) {
+    if (const auto& it = (u->getOperation())->getUsedQubits();
         it.find(0) != it.end()) {
       vList.emplace_back(u);
     }
   }
   std::for_each(vList.cbegin(), vList.cend(),
                 [](const auto& u) { u->execute(); });
-  EXPECT_EQ((*layer.getExecutableSet())->size(), 2); // layer (6), (9)
+  EXPECT_EQ(layer.getExecutableSet().size(), 2); // layer (6), (9)
 }
 
 TEST(Layer, ExecutableSet2) {
@@ -95,7 +94,7 @@ TEST(Layer, ExecutableSet2) {
   qc.cz(5, 7);
   qc.cz(6, 7);
   const qc::Layer layer(qc);
-  EXPECT_EQ((*layer.getExecutableSet())->size(), 10);
+  EXPECT_EQ(layer.getExecutableSet().size(), 10);
 }
 
 TEST(Layer, InteractionGraph) {
