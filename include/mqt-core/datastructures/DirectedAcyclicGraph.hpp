@@ -58,8 +58,7 @@ public:
     if (this->mapping.find(v) == this->mapping.end()) {
       throw std::invalid_argument("Vertex v not in graph.");
     }
-    return closureMatrix[this->mapping.at(u)]
-                        [this->mapping.at(v)];
+    return closureMatrix[this->mapping.at(u)][this->mapping.at(v)];
   }
   /// Perform a depth-first search on the graph and return the nodes in a
   /// topological order
@@ -100,9 +99,8 @@ public:
     assert(result.size() == this->nVertices);
     std::vector<V> vertices;
     vertices.reserve(this->nVertices);
-    std::transform(
-        result.cbegin(), result.cend(), std::back_inserter(vertices),
-        [&](const auto i) { return this->invMapping.at(i); });
+    std::transform(result.cbegin(), result.cend(), std::back_inserter(vertices),
+                   [&](const auto i) { return this->invMapping.at(i); });
     return vertices;
   }
 };

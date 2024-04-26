@@ -2,13 +2,13 @@
 
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
-#include "operations/OpType.hpp"
 #include "datastructures/UndirectedGraph.hpp"
+#include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
 #include <cassert>
-#include <memory>
 #include <cstddef>
+#include <memory>
 #include <stdexcept>
 #include <unordered_set>
 #include <vector>
@@ -84,12 +84,12 @@ public:
         if (const auto& it = executableSet->find(shared_from_this());
             it == executableSet->end()) {
           executableSet->insert(shared_from_this());
-            }
+        }
       } else {
         if (const auto& it = executableSet->find(shared_from_this());
             it != executableSet->end()) {
           executableSet->erase(it);
-            }
+        }
       }
     }
 
@@ -120,6 +120,7 @@ public:
       successor->updateExecutableSet();
     }
   };
+
 protected:
   ExecutableSet executableSet;
   auto constructDAG(const QuantumComputation& qc) -> void;

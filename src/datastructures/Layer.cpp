@@ -1,8 +1,8 @@
 #include "datastructures/Layer.hpp"
 
-#include "datastructures/UndirectedGraph.hpp"
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "datastructures/UndirectedGraph.hpp"
 #include "operations/OpType.hpp"
 
 #include <memory>
@@ -190,8 +190,9 @@ auto Layer::constructInteractionGraph(const OpType opType,
   }
   return graph;
 }
-auto Layer::getExecutablesOfType(const OpType opType, const std::size_t nControls)
-    const -> std::vector<std::shared_ptr<DAGVertex>> {
+auto Layer::getExecutablesOfType(const OpType opType,
+                                 const std::size_t nControls) const
+    -> std::vector<std::shared_ptr<DAGVertex>> {
   std::vector<std::shared_ptr<DAGVertex>> executables;
   for (const auto& vertex : executableSet) {
     if ((vertex->getOperation())->getType() == opType and

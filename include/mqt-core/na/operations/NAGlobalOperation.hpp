@@ -19,7 +19,8 @@ public:
       throw std::invalid_argument("Operation is not single qubit.");
     }
   }
-  explicit NAGlobalOperation(const FullOpType type) : NAGlobalOperation(type, {}) {}
+  explicit NAGlobalOperation(const FullOpType type)
+      : NAGlobalOperation(type, {}) {}
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
     return params;
   }

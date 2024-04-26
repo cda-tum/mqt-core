@@ -18,8 +18,8 @@ TEST(NAComputation, General) {
   qc.emplaceBack(std::make_unique<NALocalOperation>(
       FullOpType{qc::RZ, 0}, std::vector{qc::PI_2},
       std::make_shared<Point>(0, 0)));
-  qc.emplaceBack(std::make_unique<NAGlobalOperation>(
-      FullOpType{qc::RY, 0}, std::vector{qc::PI_2}));
+  qc.emplaceBack(std::make_unique<NAGlobalOperation>(FullOpType{qc::RY, 0},
+                                                     std::vector{qc::PI_2}));
   qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
       LOAD,
       std::vector{std::make_shared<Point>(0, 0), std::make_shared<Point>(1, 0)},

@@ -130,8 +130,8 @@ public:
     ss << "}\n";
     return ss.str();
   }
-  friend auto operator<<(std::ostream& os, const DirectedGraph& g)
-      -> std::ostream& {
+  friend auto operator<<(std::ostream& os,
+                         const DirectedGraph& g) -> std::ostream& {
     return os << g.toString(); // Using toString() method
   }
 };

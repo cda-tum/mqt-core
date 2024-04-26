@@ -25,7 +25,8 @@ public:
     }
   }
   explicit NALocalOperation(
-      const FullOpType& type, const std::vector<std::shared_ptr<Point>>& positions)
+      const FullOpType& type,
+      const std::vector<std::shared_ptr<Point>>& positions)
       : NALocalOperation(type, {}, positions) {}
   explicit NALocalOperation(const FullOpType& type,
                             const std::vector<qc::fp>& params,
@@ -33,7 +34,8 @@ public:
       : NALocalOperation(
             type, params,
             std::vector<std::shared_ptr<Point>>{std::move(position)}) {}
-  explicit NALocalOperation(const FullOpType& type, std::shared_ptr<Point> position)
+  explicit NALocalOperation(const FullOpType& type,
+                            std::shared_ptr<Point> position)
       : NALocalOperation(type, {}, std::move(position)) {}
   [[nodiscard]] auto
   getPositions() const -> const std::vector<std::shared_ptr<Point>>& {

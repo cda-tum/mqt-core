@@ -11,8 +11,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-na)
   add_library(${MQT_CORE_TARGET_NAME}-na ${NA_HEADERS} ${NA_SOURCES})
 
   target_link_libraries(${MQT_CORE_TARGET_NAME}-na PUBLIC MQT::Core MQT::CoreDS)
-  target_link_libraries(${MQT_CORE_TARGET_NAME}-na PRIVATE MQT::ProjectOptions
-                                                           MQT::ProjectWarnings)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-na PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
 
   # add MQT alias
   add_library(MQT::CoreNA ALIAS ${MQT_CORE_TARGET_NAME}-na)

@@ -164,8 +164,7 @@ TEST(Layer, ExecutableOfType) {
   qc.emplace_back<qc::StandardOperation>(Targets{0, 1, 2}, RY,
                                          std::vector{PI_2});
   qc.rz(qc::PI_4, 0);
-  qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, RY,
-                                         std::vector{-PI_2});
+  qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, RY, std::vector{-PI_2});
   qc.cz(1, 2);
 
   Layer const layer(qc);
