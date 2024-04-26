@@ -131,15 +131,13 @@ public:
 
   [[nodiscard]] virtual bool isSymbolicOperation() const { return false; }
 
-  [[nodiscard]] virtual auto isDiagonal() const -> bool {
+  [[nodiscard]] virtual auto isDiagonalGate() const -> bool {
     return std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), type) !=
            DIAGONAL_GATES.end();
   }
 
-  /// An operation is individual if it acts on a single qubit individually, i.e.
-  /// does not entangle qubits.
-  [[nodiscard]] virtual auto isIndividual() const -> bool {
-    return getNcontrols() == 0 and isSingleQubitGate(type);
+  [[nodiscard]] virtual auto isSingleQubitGate() const -> bool {
+    return !isControlled() && isSingleQubitGate(type);
   }
 
   [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }

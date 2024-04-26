@@ -66,7 +66,7 @@ public:
 
   /**
    * @warning This function only considers global gates represented as compound
-   * operations. Not compound operations in gernerl. If this function returns
+   * operations. Not compound operations in general. If this function returns
    * false, the operations might still be inverse of each other.
    */
   [[nodiscard]] auto isInverseOf(const Operation& other) const -> bool override;

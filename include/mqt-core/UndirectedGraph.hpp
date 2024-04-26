@@ -32,7 +32,7 @@ protected:
   std::vector<std::size_t> degrees;
 
 public:
-  auto addVertex(V v) -> void {
+  auto addVertex(const V& v) -> void {
     // check whether the vertex is already in the graph, if so do nothing
     if (mapping.find(v) == mapping.end()) {
       mapping[v] = nVertices;
@@ -49,7 +49,7 @@ public:
       throw std::invalid_argument(ss.str());
     }
   }
-  auto addEdge(V u, V v, F e) -> void {
+  auto addEdge(const V& u, const V& v, F e) -> void {
     if (mapping.find(u) == mapping.end()) {
       addVertex(u);
     }
@@ -80,7 +80,7 @@ public:
   }
   [[nodiscard]] auto getNVertices() const -> std::size_t { return nVertices; }
   [[nodiscard]] auto getNEdges() const -> std::size_t { return nEdges; }
-  [[nodiscard]] auto getEdge(V v, V u) const -> F {
+  [[nodiscard]] auto getEdge(const V& v, const V& u) const -> F {
     const auto i = mapping.at(v);
     const auto j = mapping.at(u);
     if (i < j ? adjacencyMatrix[i][j - i] != nullptr
@@ -91,7 +91,7 @@ public:
     ss << "The edge (" << v << ", " << u << ") does not exist.";
     throw std::invalid_argument(ss.str());
   }
-  [[nodiscard]] auto getAdjacentEdges(V v) const
+  [[nodiscard]] auto getAdjacentEdges(const V& v) const
       -> std::unordered_set<std::pair<V, V>, PairHash<V>> {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
@@ -104,12 +104,12 @@ public:
       if (i < j ? adjacencyMatrix[i][j - i] != nullptr
                 : adjacencyMatrix[j][i - j] != nullptr) {
         const auto u = invMapping.at(j);
-        result.emplace(std::make_pair(v, u));
+        result.emplace(v, u);
       }
     }
     return result;
   }
-  [[nodiscard]] auto getNeighbours(V v) const -> std::unordered_set<V> {
+  [[nodiscard]] auto getNeighbours(const V& v) const -> std::unordered_set<V> {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
       ss << "The vertex " << v << " is not in the graph.";
@@ -125,7 +125,7 @@ public:
     }
     return result;
   }
-  [[nodiscard]] auto getDegree(V v) const -> std::size_t {
+  [[nodiscard]] auto getDegree(const V& v) const -> std::size_t {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
       ss << "The vertex " << v << " is not in the graph.";
@@ -142,7 +142,7 @@ public:
                              return acc;
                            });
   }
-  [[nodiscard]] auto isAdjacent(const V u, const V v) const -> bool {
+  [[nodiscard]] auto isAdjacent(const V& u, const V& v) const -> bool {
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
     return (i < j and adjacencyMatrix[i][j - i] != nullptr) or
@@ -174,8 +174,7 @@ public:
   }
   friend auto operator<<(std::ostream& os,
                          const UndirectedGraph& g) -> std::ostream& {
-    os << g.toString(); // Using toString() method
-    return os;
+    return os << g.toString(); // Using toString() method
   }
 };
 } // namespace qc
