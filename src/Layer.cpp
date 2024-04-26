@@ -26,20 +26,21 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
   // constructive operation enables them again
   // ---
   // those that add a (+) edge to the current group members
-  std::vector<std::vector<std::shared_ptr<DAGVertex>>> constructive(nQubits);
+  std::vector constructive(nQubits, std::vector<std::shared_ptr<DAGVertex>>());
   // those that add a (-) edge to the current group members
-  std::vector<std::vector<std::shared_ptr<DAGVertex>>> destructive(nQubits);
+  std::vector destructive(nQubits, std::vector<std::shared_ptr<DAGVertex>>());
   // those that are already in the current group where all gates commute on
   // this qubit
-  std::vector<std::vector<std::shared_ptr<DAGVertex>>> currentGroup(nQubits);
+  std::vector currentGroup(nQubits, std::vector<std::shared_ptr<DAGVertex>>());
   // lookahead of 1 serves as a buffer for the next operation on each qubit
-  std::vector<std::shared_ptr<DAGVertex>> lookahead(nQubits);
+  std::vector<std::shared_ptr<DAGVertex>> lookahead(nQubits, nullptr);
   // the predecessor of the current group members
-  std::vector<std::vector<std::shared_ptr<DAGVertex>>> predecessorGroup(
-      nQubits);
+  std::vector predecessorGroup(nQubits,
+                               std::vector<std::shared_ptr<DAGVertex>>());
   // all operations acting on a qubit (processed so far) excluding
   // constructive and destructive operations
-  std::vector<std::vector<std::shared_ptr<DAGVertex>>> qubitOperations(nQubits);
+  std::vector qubitOperations(nQubits,
+                              std::vector<std::shared_ptr<DAGVertex>>());
   // iterate over all operations in the quantum circuit
   for (const auto& op : qc) {
     // create a vertex for the current operation
