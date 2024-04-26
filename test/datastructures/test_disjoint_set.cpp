@@ -1,10 +1,4 @@
-//
-// This file is part of the MQT QMAP library released under the MIT license.
-// See README.md or go to https://github.com/cda-tum/mqt-core for more
-// information.
-//
-
-#include "DisjointSet.hpp"
+#include "datastructures/DisjointSet.hpp"
 
 #include <gtest/gtest.h>
 

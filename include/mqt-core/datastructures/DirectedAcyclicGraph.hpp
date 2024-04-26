@@ -1,9 +1,3 @@
-//
-// This file is part of the MQT QMAP library released under the MIT license.
-// See README.md or go to https://github.com/cda-tum/mqt-qmap for more
-// information.
-//
-
 #pragma once
 
 #include "Definitions.hpp"
@@ -30,25 +24,25 @@ public:
       row.emplace_back(false);
     }
     closureMatrix.emplace_back(this->nVertices, false);
-    const auto i = DirectedGraph<V>::mapping.at(v);
+    const auto i = this->mapping.at(v);
     closureMatrix[i][i] = true;
   }
   auto addEdge(const V& u, const V& v) -> void override {
-    if (DirectedGraph<V>::mapping.find(u) == DirectedGraph<V>::mapping.end()) {
+    if (this->mapping.find(u) == this->mapping.end()) {
       addVertex(u);
     }
-    if (DirectedGraph<V>::mapping.find(v) == DirectedGraph<V>::mapping.end()) {
+    if (this->mapping.find(v) == this->mapping.end()) {
       addVertex(v);
     }
-    std::size_t const i = DirectedGraph<V>::mapping.at(u);
-    std::size_t const j = DirectedGraph<V>::mapping.at(v);
+    std::size_t const i = this->mapping.at(u);
+    std::size_t const j = this->mapping.at(v);
     if (closureMatrix[j][i]) {
       std::ostringstream oss;
       oss << "Adding edge (" << u << ", " << v << ") would create a cycle.";
       throw std::logic_error(oss.str());
     }
     DirectedGraph<V>::addEdge(u, v);
-    for (std::size_t k = 0; k < DirectedGraph<V>::nVertices; ++k) {
+    for (std::size_t k = 0; k < this->nVertices; ++k) {
       if (closureMatrix[k][i]) {
         closureMatrix[k][j] = true;
       }
@@ -58,29 +52,29 @@ public:
     }
   }
   [[nodiscard]] auto isReachable(const V& u, const V& v) const -> bool {
-    if (DirectedGraph<V>::mapping.find(u) == DirectedGraph<V>::mapping.end()) {
+    if (this->mapping.find(u) == this->mapping.end()) {
       throw std::invalid_argument("Vertex u not in graph.");
     }
-    if (DirectedGraph<V>::mapping.find(v) == DirectedGraph<V>::mapping.end()) {
+    if (this->mapping.find(v) == this->mapping.end()) {
       throw std::invalid_argument("Vertex v not in graph.");
     }
-    return closureMatrix[DirectedGraph<V>::mapping.at(u)]
-                        [DirectedGraph<V>::mapping.at(v)];
+    return closureMatrix[this->mapping.at(u)]
+                        [this->mapping.at(v)];
   }
   /// Perform a depth-first search on the graph and return the nodes in a
   /// topological order
   [[nodiscard]] auto orderTopologically() const -> std::vector<V> {
     std::stack<std::size_t> stack{};
-    std::vector<std::size_t> result{};
+    std::vector<std::size_t> result;
     result.reserve(this->nVertices);
-    std::vector visited(DirectedGraph<V>::nVertices, false);
+    std::vector visited(this->nVertices, false);
     // visitedInDegree is used to count the incoming edges that have been
     // visited already such that the resulting order of the nodes is one that
     // satisfies a topological ordering
-    std::vector<std::size_t> visitedInDegree(DirectedGraph<V>::nVertices, 0);
+    std::vector<std::size_t> visitedInDegree(this->nVertices, 0);
     // Push nodes with 0 indegree onto the stack
-    for (std::size_t k = 0; k < DirectedGraph<V>::nVertices; ++k) {
-      if (DirectedGraph<V>::inDegrees[k] == 0) {
+    for (std::size_t k = 0; k < this->nVertices; ++k) {
+      if (this->inDegrees[k] == 0) {
         stack.push(k);
         visited[k] = true;
       }
@@ -91,10 +85,10 @@ public:
       stack.pop();
       result.emplace_back(u);
 
-      for (std::size_t k = 0; k < DirectedGraph<V>::nVertices; ++k) {
-        if (DirectedGraph<V>::adjacencyMatrix[u][k]) {
+      for (std::size_t k = 0; k < this->nVertices; ++k) {
+        if (this->adjacencyMatrix[u][k]) {
           if (not visited[k]) {
-            if (++visitedInDegree[k] == DirectedGraph<V>::inDegrees[k]) {
+            if (++visitedInDegree[k] == this->inDegrees[k]) {
               stack.push(k);
               visited[k] = true;
             }
@@ -103,12 +97,12 @@ public:
       }
     }
     // Otherwise graph has a cycle
-    assert(result.size() == DirectedGraph<V>::nVertices);
+    assert(result.size() == this->nVertices);
     std::vector<V> vertices;
     vertices.reserve(this->nVertices);
     std::transform(
         result.cbegin(), result.cend(), std::back_inserter(vertices),
-        [&](const auto i) { return DirectedGraph<V>::invMapping.at(i); });
+        [&](const auto i) { return this->invMapping.at(i); });
     return vertices;
   }
 };

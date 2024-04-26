@@ -1,11 +1,5 @@
-//
-// This file is part of the MQT QMAP library released under the MIT license.
-// See README.md or go to https://github.com/cda-tum/mqt-core for more
-// information.
-//
-
 #include "Definitions.hpp"
-#include "Layer.hpp"
+#include "datastructures/Layer.hpp"
 #include "QuantumComputation.hpp"
 #include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"

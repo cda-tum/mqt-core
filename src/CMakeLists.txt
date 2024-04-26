@@ -89,11 +89,6 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/passes/TypeCheckPass.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/Permutation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/QuantumComputation.hpp
-    ${MQT_CORE_INCLUDE_BUILD_DIR}/Layer.hpp
-    ${MQT_CORE_INCLUDE_BUILD_DIR}/UndirectedGraph.hpp
-    ${MQT_CORE_INCLUDE_BUILD_DIR}/DirectedGraph.hpp
-    ${MQT_CORE_INCLUDE_BUILD_DIR}/DirectedAcyclicGraph.hpp
-    ${MQT_CORE_INCLUDE_BUILD_DIR}/DisjointSet.hpp
     algorithms/BernsteinVazirani.cpp
     algorithms/Entanglement.cpp
     algorithms/GoogleRandomCircuitSampling.cpp
@@ -121,8 +116,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     parsers/qasm3_parser/Statement.cpp
     parsers/qasm3_parser/passes/ConstEvalPass.cpp
     parsers/qasm3_parser/passes/TypeCheckPass.cpp
-    QuantumComputation.cpp
-    Layer.cpp)
+    QuantumComputation.cpp)
 
   # set include directories
   target_include_directories(
@@ -141,6 +135,9 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
                EXPORT_NAME Core)
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME})
 endif()
+
+# add datastructures package
+add_subdirectory(datastructures)
 
 # add DD package library
 add_subdirectory(dd)

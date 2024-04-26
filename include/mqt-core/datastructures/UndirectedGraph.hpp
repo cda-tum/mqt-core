@@ -14,7 +14,16 @@
 
 namespace qc {
 
-template <class V, class E> class UndirectedGraph {
+/**
+ *
+ * @tparam V the type of the vertices in the graph. Must implement the <<
+ * operator.
+ */
+template <class V, class E> class UndirectedGraph final {
+  static_assert(
+      std::is_same<decltype(std::declval<std::ostream&>() << std::declval<V>()),
+                   std::ostream&>::value,
+      "V must support the << operator for std::ostream");
   using F = std::shared_ptr<E>;
 
 protected:
@@ -23,7 +32,7 @@ protected:
   // the mapping of vertices to indices in the graph are stored in a map
   std::unordered_map<V, std::size_t> mapping;
   // the inverse mapping is used to get the vertex from the index
-  std::unordered_map<std::size_t, V> invMapping;
+  std::vector<V> invMapping;
   // the number of vertices in the graph
   std::size_t nVertices = 0;
   // the number of edges in the graph
@@ -92,19 +101,19 @@ public:
     throw std::invalid_argument(ss.str());
   }
   [[nodiscard]] auto getAdjacentEdges(const V& v) const
-      -> std::unordered_set<std::pair<V, V>, PairHash<V>> {
+      -> std::unordered_set<std::pair<V, V>, PairHash<V, V>> {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
       ss << "The vertex " << v << " is not in the graph.";
       throw std::invalid_argument(ss.str());
     }
     const auto i = mapping.at(v);
-    std::unordered_set<std::pair<V, V>, PairHash<V>> result;
+    std::unordered_set<std::pair<V, V>, PairHash<V, V>> result;
     for (std::size_t j = 0; j < nVertices; ++j) {
       if (i < j ? adjacencyMatrix[i][j - i] != nullptr
                 : adjacencyMatrix[j][i - j] != nullptr) {
         const auto u = invMapping.at(j);
-        result.emplace(v, u);
+        result.emplace(std::make_pair(v, u));
       }
     }
     return result;
@@ -143,6 +152,16 @@ public:
                            });
   }
   [[nodiscard]] auto isAdjacent(const V& u, const V& v) const -> bool {
+    if (mapping.find(u) == mapping.end()) {
+      std::stringstream ss;
+      ss << "The vertex " << u << " is not in the graph.";
+      throw std::invalid_argument(ss.str());
+    }
+    if (mapping.find(v) == mapping.end()) {
+      std::stringstream ss;
+      ss << "The vertex " << v << " is not in the graph.";
+      throw std::invalid_argument(ss.str());
+    }
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
     return (i < j and adjacencyMatrix[i][j - i] != nullptr) or

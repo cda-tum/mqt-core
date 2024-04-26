@@ -1,14 +1,8 @@
-//
-// This file is part of the MQT QMAP library released under the MIT license.
-// See README.md or go to https://github.com/cda-tum/mqt-qmap for more
-// information.
-//
+#include "datastructures/Layer.hpp"
 
-#include "Layer.hpp"
-
+#include "datastructures/UndirectedGraph.hpp"
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
-#include "UndirectedGraph.hpp"
 #include "operations/OpType.hpp"
 
 #include <memory>
