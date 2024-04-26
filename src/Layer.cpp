@@ -6,11 +6,15 @@
 
 #include "Layer.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
 #include "UndirectedGraph.hpp"
+#include "operations/OpType.hpp"
 
 #include <memory>
-#include <set>
-#include <unordered_set>
+#include <sstream>
+#include <stdexcept>
+#include <vector>
 
 namespace qc {
 
@@ -39,8 +43,7 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
   // iterate over all operations in the quantum circuit
   for (const auto& op : qc) {
     // create a vertex for the current operation
-    std::shared_ptr<DAGVertex> const vertex =
-        DAGVertex::create(&op, &executableSet);
+    const auto vertex = DAGVertex::create(op.get(), executableSet);
     // iterate over all qubits the operation acts on
     for (const auto& qubit : op->getUsedQubits()) {
       // check whether the lookahead is empty
@@ -56,12 +59,12 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
         // eliminated, however, since we also allow global gates, those might
         // cancel out each other on a particular qubit but not on all qubits
         // and, hence, cannot be eliminated.
-        std::shared_ptr<DAGVertex> const current = lookahead[qubit];
+        auto current = lookahead[qubit];
         lookahead[qubit] = vertex;
         // check whether the current operation is the inverse of the
         // lookahead
-        if ((*current->getOperation())
-                ->isInverseOf(**lookahead[qubit]->getOperation())) {
+        if (current->getOperation()->isInverseOf(
+                *lookahead[qubit]->getOperation())) {
           // here: the current operation is the inverse of the lookahead
           // add an enabling edge from the lookahead to all operations on this
           // qubit including the destructive ones
@@ -99,8 +102,8 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
           // check whether the current operation commutes with the current
           // group members
           if (!currentGroup[qubit].empty() and
-              !(*currentGroup[qubit][0]->getOperation())
-                   ->commutesAtQubit(**current->getOperation(), qubit)) {
+              !(currentGroup[qubit][0]->getOperation())
+                   ->commutesAtQubit(*current->getOperation(), qubit)) {
             // here: the current operation does not commute with the current
             // group members and is not the inverse of the lookahead
             // --> start a new group
@@ -122,7 +125,7 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
   // process the remaining lookahead for every qubit
   for (Qubit qubit = 0; qubit < nQubits; ++qubit) {
     if (lookahead[qubit] != nullptr) {
-      auto const current = lookahead[qubit];
+      const auto current = lookahead[qubit];
       lookahead[qubit] = nullptr;
       // add an enabling edge from each constructive operation
       for (const auto& constructiveOp : constructive[qubit]) {
@@ -135,8 +138,8 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
       // check whether the current operation commutes with the current
       // group members
       if (!currentGroup[qubit].empty() and
-          !(*currentGroup[qubit][0]->getOperation())
-               ->commutesAtQubit(**current->getOperation(), qubit)) {
+          !(currentGroup[qubit][0]->getOperation())
+               ->commutesAtQubit(*current->getOperation(), qubit)) {
         // here: the current operation does not commute with the current
         // group members and is not the inverse of the lookahead
         // --> start a new group
@@ -178,8 +181,8 @@ auto Layer::constructInteractionGraph(const OpType opType,
     throw std::invalid_argument(ss.str());
   }
   UndirectedGraph<Qubit, DAGVertex> graph;
-  for (const auto& vertex : *executableSet) {
-    const auto& gate = *vertex->getOperation();
+  for (const auto& vertex : executableSet) {
+    const auto& gate = vertex->getOperation();
     if (gate->getType() == opType and gate->getNcontrols() == nctrl) {
       const auto& usedQubits = gate->getUsedQubits();
       if (usedQubits.size() != 2) {
@@ -187,8 +190,7 @@ auto Layer::constructInteractionGraph(const OpType opType,
             "The interaction graph can only be constructed for two-qubit "
             "gates.");
       }
-      std::vector<Qubit> q(usedQubits.cbegin(), usedQubits.cend());
-      graph.addEdge(q[0], q[1], vertex);
+      graph.addEdge(*usedQubits.begin(), *usedQubits.rbegin(), vertex);
     }
   }
   return graph;
@@ -196,9 +198,9 @@ auto Layer::constructInteractionGraph(const OpType opType,
 auto Layer::getExecutablesOfType(const OpType opType, const std::size_t nctrl)
     const -> std::vector<std::shared_ptr<DAGVertex>> {
   std::vector<std::shared_ptr<DAGVertex>> executables;
-  for (const auto& vertex : *executableSet) {
-    if ((*vertex->getOperation())->getType() == opType and
-        (*vertex->getOperation())->getNcontrols() == nctrl) {
+  for (const auto& vertex : executableSet) {
+    if ((vertex->getOperation())->getType() == opType and
+        (vertex->getOperation())->getNcontrols() == nctrl) {
       executables.emplace_back(vertex);
     }
   }
