@@ -56,7 +56,7 @@ public:
     }
     [[nodiscard]] auto isExecutable() const {
       assert(executableCounter <= executableThreshold);
-      return (not executed) and executableCounter == executableThreshold;
+      return (!executed) && executableCounter == executableThreshold;
     }
     [[nodiscard]] auto isExecuted() const { return executed; }
     [[nodiscard]] auto getOperation() const

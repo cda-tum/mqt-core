@@ -178,7 +178,7 @@ auto Layer::constructInteractionGraph(const OpType opType,
   UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>> graph;
   for (const auto& vertex : executableSet) {
     const auto& gate = vertex->getOperation();
-    if (gate->getType() == opType and gate->getNcontrols() == nctrl) {
+    if (gate->getType() == opType && gate->getNcontrols() == nctrl) {
       const auto& usedQubits = gate->getUsedQubits();
       if (usedQubits.size() != 2) {
         throw std::invalid_argument(

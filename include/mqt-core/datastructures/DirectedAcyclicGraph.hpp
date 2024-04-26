@@ -87,7 +87,7 @@ public:
 
       for (std::size_t k = 0; k < this->nVertices; ++k) {
         if (this->adjacencyMatrix[u][k]) {
-          if (not visited[k]) {
+          if (!visited[k]) {
             if (++visitedInDegree[k] == this->inDegrees[k]) {
               stack.push(k);
               visited[k] = true;

@@ -137,7 +137,7 @@ public:
   }
 
   [[nodiscard]] virtual auto isSingleQubitGate() const -> bool {
-    return !isControlled() && isSingleQubitGate(type);
+    return !isControlled() && qc::isSingleQubitGate(type);
   }
 
   [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }

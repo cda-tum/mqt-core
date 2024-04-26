@@ -43,6 +43,8 @@ public:
       for (auto& row : adjacencyMatrix) {
         row.emplace_back(std::nullopt);
       }
+      // the first param must be a 1 not nVertices since we are using an upper
+      // triangular matrix as adjacency matrix instead of a square matrix
       adjacencyMatrix.emplace_back(1, std::nullopt);
       degrees.emplace_back(0);
     } else {
@@ -87,7 +89,8 @@ public:
     const auto j = mapping.at(u);
     if (i < j ? adjacencyMatrix[i][j - i] != std::nullopt
               : adjacencyMatrix[j][i - j] != std::nullopt) {
-      return i < j ? adjacencyMatrix[i][j - i].value() : adjacencyMatrix[j][i - j].value();
+      return i < j ? adjacencyMatrix[i][j - i].value()
+                   : adjacencyMatrix[j][i - j].value();
     }
     std::stringstream ss;
     ss << "The edge (" << v << ", " << u << ") does not exist.";
@@ -157,12 +160,12 @@ public:
     }
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
-    return (i < j and adjacencyMatrix[i][j - i] != std::nullopt) or
-           (j < i and adjacencyMatrix[j][i - j] != std::nullopt);
+    return (i < j && adjacencyMatrix[i][j - i] != std::nullopt) or
+           (j < i && adjacencyMatrix[j][i - j] != std::nullopt);
   }
   [[nodiscard]] static auto isAdjacentEdge(const std::pair<V, V>& e,
                                            const std::pair<V, V>& f) -> bool {
-    return e.first == f.first or e.first == f.second or e.second == f.first or
+    return e.first == f.first || e.first == f.second || e.second == f.first ||
            e.second == f.second;
   }
   /// Outputs a string representation of the graph in the DOT format

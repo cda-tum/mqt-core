@@ -505,7 +505,7 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
     return other.commutesAtQubit(*this, qubit);
   }
   // check whether both operations act on the given qubit
-  if (!actsOn(qubit) or !other.actsOn(qubit)) {
+  if (!actsOn(qubit) || !other.actsOn(qubit)) {
     throw std::invalid_argument(
         "The operations do not act on the given qubit.");
   }
@@ -536,14 +536,14 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
     //    └────┘  |
   }
   // here: qubit is a target of both operations
-  if (isDiagonal() and other.isDiagonal()) {
+  if (isDiagonal() && other.isDiagonal()) {
     // if both operations are diagonal gates, e.g.
     //    ┌────┐┌────┐
     // q: ┤ RZ ├┤ RZ ├
     //    └────┘└────┘
     return true;
   }
-  return type == other.getType() and targets == other.getTargets();
+  return type == other.getType() && targets == other.getTargets();
   // true, iff both operations are of the same type, e.g.
   //    ┌───┐┌───┐
   // q: ┤ E ├┤ E ├
@@ -558,7 +558,7 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
 
 auto StandardOperation::isInverseOf(const Operation& other) const -> bool {
   if (other.isStandardOperation()) {
-    if (controls == other.getControls() and targets == other.getTargets()) {
+    if (controls == other.getControls() && targets == other.getTargets()) {
       switch (type) {
       case I:
       case X:
