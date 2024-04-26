@@ -17,7 +17,7 @@ TEST(StandardOperation, CommutesAtQubit) {
   EXPECT_TRUE(op1.commutesAtQubit(op2, 0));
   EXPECT_TRUE(op1.commutesAtQubit(op2, 0));
   EXPECT_FALSE(op1.commutesAtQubit(op3, 0));
-  EXPECT_ANY_THROW(std::ignore = op1.commutesAtQubit(op2, 2));
+  EXPECT_TRUE(op1.commutesAtQubit(op2, 2));
 }
 
 TEST(CompoundOperation, CommutesAtQubit) {
