@@ -8,20 +8,11 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-na)
   file(GLOB_RECURSE NA_SOURCES **.cpp)
 
   # add NA package library
-  if(NA_SOURCES)
-    add_library(${MQT_CORE_TARGET_NAME}-na ${NA_HEADERS} ${NA_SOURCES})
+  add_library(${MQT_CORE_TARGET_NAME}-na ${NA_HEADERS} ${NA_SOURCES})
 
-    target_link_libraries(${MQT_CORE_TARGET_NAME}-na PUBLIC MQT::Core MQT::CoreDS)
-    target_link_libraries(${MQT_CORE_TARGET_NAME}-na PRIVATE MQT::ProjectOptions
-                                                             MQT::ProjectWarnings)
-  else()
-    # When no sources are found, the above approach does not work and create an interface library
-    add_library(${MQT_CORE_TARGET_NAME}-na INTERFACE ${NA_HEADERS})
-    target_include_directories(
-      ${MQT_CORE_TARGET_NAME}-na INTERFACE $<BUILD_INTERFACE:${MQT_CORE_INCLUDE_BUILD_DIR}>
-                                           $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-    target_link_libraries(${MQT_CORE_TARGET_NAME}-na INTERFACE MQT::Core MQT::CoreDS)
-  endif()
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-na PUBLIC MQT::Core MQT::CoreDS)
+  target_link_libraries(${MQT_CORE_TARGET_NAME}-na PRIVATE MQT::ProjectOptions
+                                                           MQT::ProjectWarnings)
 
   # add MQT alias
   add_library(MQT::CoreNA ALIAS ${MQT_CORE_TARGET_NAME}-na)

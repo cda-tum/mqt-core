@@ -45,32 +45,7 @@ public:
   [[nodiscard]] auto isShuttlingOperation() const -> bool override {
     return true;
   }
-  [[nodiscard]] auto toString() const -> std::string override {
-    std::stringstream ss;
-    switch (type) {
-    case LOAD:
-      ss << "load";
-      break;
-    case MOVE:
-      ss << "move";
-      break;
-    case STORE:
-      ss << "store";
-      break;
-    }
-    ss << " ";
-    for (const auto& p : start) {
-      ss << *p << ", ";
-    }
-    ss.seekp(-2, std::ios_base::end);
-    ss << " to ";
-    for (const auto& p : end) {
-      ss << *p << ", ";
-    }
-    ss.seekp(-2, std::ios_base::end);
-    ss << ";\n";
-    return ss.str();
-  }
+  [[nodiscard]] auto toString() const -> std::string override;
   [[nodiscard]] auto clone() const -> std::unique_ptr<NAOperation> override {
     return std::make_unique<NAShuttlingOperation>(*this);
   }
