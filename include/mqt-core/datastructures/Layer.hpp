@@ -149,10 +149,10 @@ public:
     constructDAG(qc);
   }
   [[nodiscard]] auto constructInteractionGraph(OpType opType,
-                                               std::size_t nctrl) const
+                                               std::size_t nControls) const
       -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>>;
   [[nodiscard]] auto getExecutablesOfType(OpType opType,
-                                          std::size_t nctrl) const
+                                          std::size_t nControls) const
       -> std::vector<std::shared_ptr<DAGVertex>>;
 };
 } // namespace qc

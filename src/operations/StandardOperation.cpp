@@ -519,7 +519,7 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
       return true;
     }
     // here: qubit is a target of other
-    return other.isDiagonal();
+    return other.isDiagonalGate();
     // true, iff qubit is a target and other is a diagonal gate, e.g., rz
     //         ┌────┐
     // q: ──■──┤ RZ ├
@@ -528,7 +528,7 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
   // here: qubit is a target of this
   if (const auto& controls2 = other.getControls();
       controls2.find(qubit) != controls2.end()) {
-    return isDiagonal();
+    return isDiagonalGate();
     // true, iff qubit is a target and this is a diagonal gate and other is
     // controlled, e.g.
     //    ┌────┐
@@ -536,7 +536,7 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
     //    └────┘  |
   }
   // here: qubit is a target of both operations
-  if (isDiagonal() && other.isDiagonal()) {
+  if (isDiagonalGate() && other.isDiagonalGate()) {
     // if both operations are diagonal gates, e.g.
     //    ┌────┐┌────┐
     // q: ┤ RZ ├┤ RZ ├

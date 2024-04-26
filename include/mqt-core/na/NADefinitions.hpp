@@ -38,7 +38,7 @@ struct Point {
 /// More specific operation type including the number of control qubits
 struct OpType {
   qc::OpType type;
-  std::size_t nctrl;
+  std::size_t nControls;
   [[nodiscard]] auto toString() const -> std::string {
     return std::string(nctrl, 'c') + qc::toString(type);
   }
@@ -79,7 +79,7 @@ struct OpType {
 template <> struct std::hash<na::OpType> {
   std::size_t operator()(na::OpType const& t) const noexcept {
     std::size_t const h1 = std::hash<qc::OpType>{}(t.type);
-    std::size_t const h2 = std::hash<std::size_t>{}(t.nctrl);
+    std::size_t const h2 = std::hash<std::size_t>{}(t.nControls);
     return qc::combineHash(h1, h2);
   }
 };

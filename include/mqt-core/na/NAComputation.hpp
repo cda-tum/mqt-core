@@ -52,11 +52,13 @@ public:
                   "T must be a subclass of NAOperation.");
     operations.emplace_back(std::make_unique<T>(args...));
   }
-  auto clear() -> void { operations.clear(); }
-  auto clearInitialPositions() -> void { initialPositions.clear(); }
+  auto clear() -> void {
+    operations.clear();
+    initialPositions.clear();
+  }
   [[nodiscard]] auto size() const -> std::size_t { return operations.size(); }
-  [[nodiscard]] auto
-  getInitialPositions() const -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto getInitialPositions() const
+      -> const std::vector<std::shared_ptr<Point>>& {
     return initialPositions;
   }
   auto emplaceInitialPosition(std::shared_ptr<Point> p) -> void {
@@ -75,8 +77,8 @@ public:
     }
     return ss.str();
   }
-  friend auto operator<<(std::ostream& os,
-                         const NAComputation& qc) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const NAComputation& qc)
+      -> std::ostream& {
     return os << qc.toString();
   }
   // Iterators (pass-through)

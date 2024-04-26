@@ -153,7 +153,7 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
   }
 }
 auto Layer::constructInteractionGraph(const OpType opType,
-                                      const std::size_t nctrl) const
+                                      const std::size_t nControls) const
     -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>> {
   switch (opType) {
   case X:
@@ -162,14 +162,14 @@ auto Layer::constructInteractionGraph(const OpType opType,
   case RX:
   case RY:
   case RZ:
-    if (nctrl == 1) {
+    if (nControls == 1) {
       break;
     }
     [[fallthrough]];
   default:
     std::stringstream ss;
     ss << "The operation type ";
-    for (std::size_t i = 0; i < nctrl; ++i) {
+    for (std::size_t i = 0; i < nControls; ++i) {
       ss << "c";
     }
     ss << opType << " is not supported for constructing an interaction graph.";
@@ -178,7 +178,7 @@ auto Layer::constructInteractionGraph(const OpType opType,
   UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>> graph;
   for (const auto& vertex : executableSet) {
     const auto& gate = vertex->getOperation();
-    if (gate->getType() == opType && gate->getNcontrols() == nctrl) {
+    if (gate->getType() == opType && gate->getNcontrols() == nControls) {
       const auto& usedQubits = gate->getUsedQubits();
       if (usedQubits.size() != 2) {
         throw std::invalid_argument(
@@ -195,7 +195,7 @@ auto Layer::getExecutablesOfType(const OpType opType, const std::size_t nctrl)
   std::vector<std::shared_ptr<DAGVertex>> executables;
   for (const auto& vertex : executableSet) {
     if ((vertex->getOperation())->getType() == opType and
-        (vertex->getOperation())->getNcontrols() == nctrl) {
+        (vertex->getOperation())->getNcontrols() == nControls) {
       executables.emplace_back(vertex);
     }
   }

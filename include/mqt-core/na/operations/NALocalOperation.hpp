@@ -20,7 +20,7 @@ public:
     if (!isSingleQubitGate(type.type)) {
       throw std::invalid_argument("Operation is not single qubit.");
     }
-    if (type.nctrl != 0) {
+    if (type.nControls != 0) {
       throw std::logic_error("Operation control qubits are not supported.");
     }
   }

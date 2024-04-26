@@ -25,7 +25,7 @@ TEST(NADefinitions, Point) {
 TEST(NADefinitions, OpType) {
   const na::OpType t{qc::OpType::X, 1};
   EXPECT_EQ(t.type, qc::OpType::X);
-  EXPECT_EQ(t.nctrl, 1);
+  EXPECT_EQ(t.nControls, 1);
   EXPECT_EQ(t.toString(), "cx");
   std::stringstream ss;
   ss << t;
