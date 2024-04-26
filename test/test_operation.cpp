@@ -126,16 +126,16 @@ TEST(NonStandardOperation, CommutesAtQubit) {
 
 TEST(Operation, IsIndividualGate) {
   const qc::StandardOperation op1(0, qc::X);
-  EXPECT_TRUE(op1.isIndividual());
+  EXPECT_TRUE(op1.isSingleQubitGate());
   const qc::StandardOperation op2(0, 1, qc::X);
-  EXPECT_FALSE(op2.isIndividual());
+  EXPECT_FALSE(op2.isSingleQubitGate());
   const qc::StandardOperation op3(1, qc::RXX);
-  EXPECT_FALSE(op3.isIndividual());
+  EXPECT_FALSE(op3.isSingleQubitGate());
 }
 
 TEST(Operation, IsDiagonalGate) {
   const qc::StandardOperation op1(0, qc::X);
-  EXPECT_FALSE(op1.isDiagonal());
+  EXPECT_FALSE(op1.isDiagonalGate());
   const qc::StandardOperation op2(0, qc::Z);
-  EXPECT_TRUE(op2.isDiagonal());
+  EXPECT_TRUE(op2.isDiagonalGate());
 }

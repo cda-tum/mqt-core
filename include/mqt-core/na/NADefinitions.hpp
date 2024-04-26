@@ -15,7 +15,7 @@ namespace na {
 struct Point {
   std::int64_t x;
   std::int64_t y;
-  Point(std::int64_t x, std::int64_t y) : x(x), y(y) {};
+  Point(std::int64_t x, std::int64_t y) : x(x), y(y){};
   Point(const Point& p) = default;
   virtual ~Point() = default;
   Point& operator=(const Point& p) = default;
@@ -34,6 +34,9 @@ struct Point {
   friend auto operator<<(std::ostream& os, const Point& obj) -> std::ostream& {
     return os << obj.toString(); // Using toString() method
   }
+  [[nodiscard]] auto operator==(const Point& other) const -> bool {
+    return x == other.x && y == other.y;
+  }
 };
 /// More specific operation type including the number of control qubits
 struct FullOpType {
@@ -42,8 +45,12 @@ struct FullOpType {
   [[nodiscard]] auto toString() const -> std::string {
     return std::string(nControls, 'c') + qc::toString(type);
   }
-  friend auto operator<<(std::ostream& os, const FullOpType& obj) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const FullOpType& obj)
+      -> std::ostream& {
     return os << obj.toString(); // Using toString() method
+  }
+  [[nodiscard]] auto operator==(const FullOpType& other) const -> bool {
+    return type == other.type && nControls == other.nControls;
   }
 };
 

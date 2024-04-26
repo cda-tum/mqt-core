@@ -1,7 +1,7 @@
 #include "na/operations/NAShuttlingOperation.hpp"
 
 namespace na {
-auto NAShuttlingOperation::toString() const -> std::string override {
+auto NAShuttlingOperation::toString() const -> std::string {
   std::stringstream ss;
   switch (type) {
   case LOAD:

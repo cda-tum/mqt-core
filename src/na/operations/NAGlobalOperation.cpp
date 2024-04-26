@@ -1,7 +1,7 @@
 #include "na/operations/NAGlobalOperation.hpp"
 
 namespace na {
-auto NAGlobalOperation::toString() const -> std::string override {
+auto NAGlobalOperation::toString() const -> std::string {
   std::stringstream ss;
   ss << type;
   if (!params.empty()) {
