@@ -1,9 +1,3 @@
-//
-// This file is part of the MQT QMAP library released under the MIT license.
-// See README.md or go to https://github.com/cda-tum/mqt-qmap for more
-// information.
-//
-
 #pragma once
 
 #include "Definitions.hpp"
@@ -20,15 +14,14 @@ namespace qc {
  * operator.
  */
 template <class V, class E> class UndirectedGraph final {
-  static_assert(
-      std::is_same<decltype(std::declval<std::ostream&>() << std::declval<V>()),
-                   std::ostream&>::value,
-      "V must support the << operator for std::ostream");
-  using F = std::shared_ptr<E>;
+  static_assert(std::is_same_v<decltype(std::declval<std::ostream&>()
+                                        << std::declval<V>()),
+                               std::ostream&>,
+                "V must support the << operator for std::ostream");
 
 protected:
   // the adjecency matrix works with indices
-  std::vector<std::vector<F>> adjacencyMatrix{};
+  std::vector<std::vector<std::optional<E>>> adjacencyMatrix{};
   // the mapping of vertices to indices in the graph are stored in a map
   std::unordered_map<V, std::size_t> mapping;
   // the inverse mapping is used to get the vertex from the index
@@ -45,12 +38,12 @@ public:
     // check whether the vertex is already in the graph, if so do nothing
     if (mapping.find(v) == mapping.end()) {
       mapping[v] = nVertices;
-      invMapping[nVertices] = v;
+      invMapping.emplace_back(v);
       ++nVertices;
       for (auto& row : adjacencyMatrix) {
-        row.emplace_back(nullptr);
+        row.emplace_back(std::nullopt);
       }
-      adjacencyMatrix.emplace_back(1, nullptr);
+      adjacencyMatrix.emplace_back(1, std::nullopt);
       degrees.emplace_back(0);
     } else {
       std::stringstream ss;
@@ -58,7 +51,7 @@ public:
       throw std::invalid_argument(ss.str());
     }
   }
-  auto addEdge(const V& u, const V& v, F e) -> void {
+  auto addEdge(const V& u, const V& v, E e) -> void {
     if (mapping.find(u) == mapping.end()) {
       addVertex(u);
     }
@@ -68,7 +61,7 @@ public:
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
     if (i < j) {
-      if (adjacencyMatrix[i][j - i] == nullptr) {
+      if (adjacencyMatrix[i][j - i] == std::nullopt) {
         ++degrees[i];
         if (i != j) {
           ++degrees[j];
@@ -77,7 +70,7 @@ public:
       }
       adjacencyMatrix[i][j - i] = e;
     } else {
-      if (adjacencyMatrix[j][i - j] == nullptr) {
+      if (adjacencyMatrix[j][i - j] == std::nullopt) {
         ++degrees[i];
         if (i != j) {
           ++degrees[j];
@@ -89,12 +82,12 @@ public:
   }
   [[nodiscard]] auto getNVertices() const -> std::size_t { return nVertices; }
   [[nodiscard]] auto getNEdges() const -> std::size_t { return nEdges; }
-  [[nodiscard]] auto getEdge(const V& v, const V& u) const -> F {
+  [[nodiscard]] auto getEdge(const V& v, const V& u) const -> E {
     const auto i = mapping.at(v);
     const auto j = mapping.at(u);
-    if (i < j ? adjacencyMatrix[i][j - i] != nullptr
-              : adjacencyMatrix[j][i - j] != nullptr) {
-      return i < j ? adjacencyMatrix[i][j - i] : adjacencyMatrix[j][i - j];
+    if (i < j ? adjacencyMatrix[i][j - i] != std::nullopt
+              : adjacencyMatrix[j][i - j] != std::nullopt) {
+      return i < j ? adjacencyMatrix[i][j - i].value() : adjacencyMatrix[j][i - j].value();
     }
     std::stringstream ss;
     ss << "The edge (" << v << ", " << u << ") does not exist.";
@@ -110,8 +103,8 @@ public:
     const auto i = mapping.at(v);
     std::unordered_set<std::pair<V, V>, PairHash<V, V>> result;
     for (std::size_t j = 0; j < nVertices; ++j) {
-      if (i < j ? adjacencyMatrix[i][j - i] != nullptr
-                : adjacencyMatrix[j][i - j] != nullptr) {
+      if (i < j ? adjacencyMatrix[i][j - i] != std::nullopt
+                : adjacencyMatrix[j][i - j] != std::nullopt) {
         const auto u = invMapping.at(j);
         result.emplace(std::make_pair(v, u));
       }
@@ -127,8 +120,8 @@ public:
     const auto i = mapping.at(v);
     std::unordered_set<V> result;
     for (std::size_t j = 0; j < nVertices; ++j) {
-      if (i < j ? adjacencyMatrix[i][j - i] != nullptr
-                : adjacencyMatrix[j][i - j] != nullptr) {
+      if (i < j ? adjacencyMatrix[i][j - i] != std::nullopt
+                : adjacencyMatrix[j][i - j] != std::nullopt) {
         result.emplace(invMapping.at(j));
       }
     }
@@ -164,13 +157,11 @@ public:
     }
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
-    return (i < j and adjacencyMatrix[i][j - i] != nullptr) or
-           (j < i and adjacencyMatrix[j][i - j] != nullptr);
+    return (i < j and adjacencyMatrix[i][j - i] != std::nullopt) or
+           (j < i and adjacencyMatrix[j][i - j] != std::nullopt);
   }
-  [[nodiscard]] auto
-  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-  isAdjacentEdge(const std::pair<V, V>& e,
-                 const std::pair<V, V>& f) const -> bool {
+  [[nodiscard]] static auto isAdjacentEdge(const std::pair<V, V>& e,
+                                           const std::pair<V, V>& f) -> bool {
     return e.first == f.first or e.first == f.second or e.second == f.first or
            e.second == f.second;
   }
@@ -183,7 +174,7 @@ public:
     }
     for (std::size_t i = 0; i < nVertices; ++i) {
       for (std::size_t j = i + 1; j < nVertices; ++j) {
-        if (adjacencyMatrix[i][j - i] != nullptr) {
+        if (adjacencyMatrix[i][j - i] != std::nullopt) {
           ss << "  " << i << " -- " << j << ";\n";
         }
       }
@@ -191,8 +182,8 @@ public:
     ss << "}\n";
     return ss.str();
   }
-  friend auto operator<<(std::ostream& os,
-                         const UndirectedGraph& g) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const UndirectedGraph& g)
+      -> std::ostream& {
     return os << g.toString(); // Using toString() method
   }
 };

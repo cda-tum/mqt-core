@@ -150,7 +150,7 @@ public:
   }
   [[nodiscard]] auto constructInteractionGraph(OpType opType,
                                                std::size_t nctrl) const
-      -> UndirectedGraph<Qubit, DAGVertex>;
+      -> UndirectedGraph<Qubit, std::shared_ptr<DAGVertex>>;
   [[nodiscard]] auto getExecutablesOfType(OpType opType,
                                           std::size_t nctrl) const
       -> std::vector<std::shared_ptr<DAGVertex>>;

@@ -45,7 +45,7 @@ public:
       throw std::invalid_argument(ss.str());
     }
     mapping[v] = nVertices;
-    invMapping[nVertices] = v;
+    invMapping.emplace_back(v);
     ++nVertices;
     for (auto& row : adjacencyMatrix) {
       row.emplace_back(false);
