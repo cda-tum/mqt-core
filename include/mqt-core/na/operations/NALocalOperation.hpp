@@ -14,7 +14,7 @@ protected:
   std::vector<std::shared_ptr<Point>> positions;
 
 public:
-  explicit NALocalOperation(
+  NALocalOperation(
       const OpType& type, const std::vector<qc::fp>& params,
       const std::vector<std::shared_ptr<Point>>& positions)
       : type(type), params(params), positions(positions) {

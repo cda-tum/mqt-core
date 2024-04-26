@@ -38,29 +38,18 @@ struct Point {
     return ss.str();
   }
   friend auto operator<<(std::ostream& os, const Point& obj) -> std::ostream& {
-    os << obj.toString(); // Using toString() method
-    return os;
+    return os << obj.toString(); // Using toString() method
   }
-  auto operator==(const Point& p) const -> bool { return p.x == x && p.y == y; }
 };
 /// More specific operation type including the number of control qubits
 struct OpType {
   qc::OpType type;
   std::size_t nctrl;
   [[nodiscard]] auto toString() const -> std::string {
-    std::stringstream ss;
-    for (std::size_t i = 0; i < nctrl; ++i) {
-      ss << "c";
-    }
-    ss << qc::toString(type);
-    return ss.str();
+    return std::string(nctrl, 'c') + qc::toString(type);
   }
   friend auto operator<<(std::ostream& os, const OpType& obj) -> std::ostream& {
-    os << obj.toString(); // Using toString() method
-    return os;
-  }
-  auto operator==(const OpType& t) const -> bool {
-    return type == t.type && nctrl == t.nctrl;
+    return os << obj.toString(); // Using toString() method
   }
 };
 
@@ -81,10 +70,10 @@ struct OpType {
     const auto ops = dynamic_cast<const qc::CompoundOperation&>(op);
     const auto& params = ops.at(0)->getParameter();
     const auto& type = ops.at(0)->getType();
-    return op.getUsedQubits().size() == nQubits and
+    return op.getUsedQubits().size() == nQubits &&
            std::all_of(ops.cbegin(), ops.cend(), [&](const auto& op) {
-             return op->isStandardOperation() and op->getNcontrols() == 0 and
-                    op->getParameter() == params and op->getType() == type;
+             return op->isStandardOperation() && op->getNcontrols() == 0 &&
+                     op->getType() == type && op->getParameter() == params;
            });
   }
   return false;

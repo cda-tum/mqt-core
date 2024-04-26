@@ -38,17 +38,17 @@ public:
   }
   virtual ~NAComputation() = default;
   template <class T> auto emplaceBack(std::unique_ptr<T>&& op) -> void {
-    static_assert(std::is_base_of<NAOperation, T>::value,
+    static_assert(std::is_base_of_v<NAOperation, T>,
                   "T must be a subclass of NAOperation.");
     operations.emplace_back(std::move(op));
   }
   template <class T> auto emplaceBack(const std::unique_ptr<T>& op) -> void {
-    static_assert(std::is_base_of<NAOperation, T>::value,
+    static_assert(std::is_base_of_v<NAOperation, T>,
                   "T must be a subclass of NAOperation.");
     operations.emplace_back(std::move(op));
   }
   template <class T, class... Args> auto emplaceBack(Args&&... args) -> void {
-    static_assert(std::is_base_of<NAOperation, T>::value,
+    static_assert(std::is_base_of_v<NAOperation, T>,
                   "T must be a subclass of NAOperation.");
     operations.emplace_back(std::make_unique<T>(args...));
   }
@@ -77,8 +77,7 @@ public:
   }
   friend auto operator<<(std::ostream& os,
                          const NAComputation& qc) -> std::ostream& {
-    os << qc.toString();
-    return os;
+    return os << qc.toString();
   }
   // Iterators (pass-through)
   auto begin() noexcept { return operations.begin(); }
