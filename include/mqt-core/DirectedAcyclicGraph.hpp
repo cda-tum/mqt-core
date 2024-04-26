@@ -18,22 +18,22 @@
 
 namespace qc {
 
-template <class V> class DirectedAcyclicGraph : public DirectedGraph<V> {
+template <class V> class DirectedAcyclicGraph final : public DirectedGraph<V> {
 protected:
   // transitive closure matrix to detect cycles
   std::vector<std::vector<bool>> closureMatrix;
 
 public:
-  auto addVertex(V v) -> void override {
+  auto addVertex(const V& v) -> void override {
     DirectedGraph<V>::addVertex(v);
     for (auto& row : closureMatrix) {
       row.emplace_back(false);
     }
-    closureMatrix.emplace_back(DirectedGraph<V>::nVertices, false);
+    closureMatrix.emplace_back(this->nVertices, false);
     const auto i = DirectedGraph<V>::mapping.at(v);
     closureMatrix[i][i] = true;
   }
-  auto addEdge(V u, V v) -> void override {
+  auto addEdge(const V& u, const V& v) -> void override {
     if (DirectedGraph<V>::mapping.find(u) == DirectedGraph<V>::mapping.end()) {
       addVertex(u);
     }
@@ -57,7 +57,7 @@ public:
       }
     }
   }
-  [[nodiscard]] auto isReachable(V u, V v) const -> bool {
+  [[nodiscard]] auto isReachable(const V& u, const V& v) const -> bool {
     if (DirectedGraph<V>::mapping.find(u) == DirectedGraph<V>::mapping.end()) {
       throw std::invalid_argument("Vertex u not in graph.");
     }
@@ -72,6 +72,7 @@ public:
   [[nodiscard]] auto orderTopologically() const -> std::vector<V> {
     std::stack<std::size_t> stack{};
     std::vector<std::size_t> result{};
+    result.reserve(this->nVertices);
     std::vector visited(DirectedGraph<V>::nVertices, false);
     // visitedInDegree is used to count the incoming edges that have been
     // visited already such that the resulting order of the nodes is one that
@@ -88,7 +89,7 @@ public:
     while (!stack.empty()) {
       const auto u = stack.top();
       stack.pop();
-      result.push_back(u);
+      result.emplace_back(u);
 
       for (std::size_t k = 0; k < DirectedGraph<V>::nVertices; ++k) {
         if (DirectedGraph<V>::adjacencyMatrix[u][k]) {
@@ -104,6 +105,7 @@ public:
     // Otherwise graph has a cycle
     assert(result.size() == DirectedGraph<V>::nVertices);
     std::vector<V> vertices;
+    vertices.reserve(this->nVertices);
     std::transform(
         result.cbegin(), result.cend(), std::back_inserter(vertices),
         [&](const auto i) { return DirectedGraph<V>::invMapping.at(i); });

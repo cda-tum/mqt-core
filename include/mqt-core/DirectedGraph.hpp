@@ -33,25 +33,24 @@ protected:
 
 public:
   virtual ~DirectedGraph() = default;
-  virtual auto addVertex(V v) -> void {
+  virtual auto addVertex(const V& v) -> void {
     // check whether the vertex is already in the graph, if so do nothing
-    if (mapping.find(v) == mapping.end()) {
-      mapping[v] = nVertices;
-      invMapping[nVertices] = v;
-      ++nVertices;
-      for (auto& row : adjacencyMatrix) {
-        row.emplace_back(false);
-      }
-      adjacencyMatrix.emplace_back(nVertices, false);
-      inDegrees.emplace_back(0);
-      outDegrees.emplace_back(0);
-    } else {
+    if (mapping.find(v) != mapping.end()) {
       std::stringstream ss;
       ss << "The vertex " << v << " is already in the graph.";
       throw std::invalid_argument(ss.str());
     }
+    mapping[v] = nVertices;
+    invMapping[nVertices] = v;
+    ++nVertices;
+    for (auto& row : adjacencyMatrix) {
+      row.emplace_back(false);
+    }
+    adjacencyMatrix.emplace_back(nVertices, false);
+    inDegrees.emplace_back(0);
+    outDegrees.emplace_back(0);
   }
-  virtual auto addEdge(V u, V v) -> void {
+  virtual auto addEdge(const V& u, const V& v) -> void {
     if (mapping.find(u) == mapping.end()) {
       addVertex(u);
     }
@@ -69,7 +68,7 @@ public:
   }
   [[nodiscard]] auto getNVertices() const -> std::size_t { return nVertices; }
   [[nodiscard]] auto getNEdges() const -> std::size_t { return nEdges; }
-  [[nodiscard]] auto getInDegree(V v) const -> std::size_t {
+  [[nodiscard]] auto getInDegree(const V& v) const -> std::size_t {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
       ss << "The vertex " << v << " is not in the graph.";
@@ -78,7 +77,7 @@ public:
     const auto i = mapping.at(v);
     return inDegrees[i];
   }
-  [[nodiscard]] auto getOutDegree(V v) const -> std::size_t {
+  [[nodiscard]] auto getOutDegree(const V& v) const -> std::size_t {
     if (mapping.find(v) == mapping.end()) {
       std::stringstream ss;
       ss << "The vertex " << v << " is not in the graph.";
@@ -95,7 +94,7 @@ public:
                              return acc;
                            });
   }
-  [[nodiscard]] auto isEdge(const V u, const V v) const -> bool {
+  [[nodiscard]] auto isEdge(const V& u, const V& v) const -> bool {
     const auto i = mapping.at(u);
     const auto j = mapping.at(v);
     return adjacencyMatrix[i][j];
@@ -119,8 +118,7 @@ public:
   }
   friend auto operator<<(std::ostream& os,
                          const DirectedGraph& g) -> std::ostream& {
-    os << g.toString(); // Using toString() method
-    return os;
+    return os << g.toString(); // Using toString() method
   }
 };
 } // namespace qc

@@ -16,22 +16,22 @@ template <class T> struct DisjointSet {
     });
   }
 
-  T findSet(T v) {
+  T findSet(const T& v) {
     if (parent[v] != v) {
       parent[v] = findSet(parent[v]);
     }
     return parent[v];
   }
 
-  void unionSet(T x, T y) {
-    x = findSet(x);
-    y = findSet(y);
-    if (rank[x] > rank[y]) {
-      parent[y] = x;
+  void unionSet(const T& x, const T& y) {
+    const auto& xSet = findSet(x);
+    const auto& ySet = findSet(y);
+    if (rank[xSet] > rank[ySet]) {
+      parent[ySet] = xSet;
     } else {
-      parent[x] = y;
-      if (rank[x] == rank[y]) {
-        ++rank[y];
+      parent[xSet] = ySet;
+      if (rank[xSet] == rank[ySet]) {
+        ++rank[ySet];
       }
     }
   }
