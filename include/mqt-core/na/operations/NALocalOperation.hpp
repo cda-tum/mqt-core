@@ -14,9 +14,8 @@ protected:
   std::vector<std::shared_ptr<Point>> positions;
 
 public:
-  NALocalOperation(
-      const OpType& type, const std::vector<qc::fp>& params,
-      const std::vector<std::shared_ptr<Point>>& positions)
+  NALocalOperation(const OpType& type, const std::vector<qc::fp>& params,
+                   const std::vector<std::shared_ptr<Point>>& positions)
       : type(type), params(params), positions(positions) {
     if (!isSingleQubitGate(type.type)) {
       throw std::invalid_argument("Operation is not single qubit.");

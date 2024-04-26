@@ -73,7 +73,7 @@ struct OpType {
     return op.getUsedQubits().size() == nQubits &&
            std::all_of(ops.cbegin(), ops.cend(), [&](const auto& op) {
              return op->isStandardOperation() && op->getNcontrols() == 0 &&
-                     op->getType() == type && op->getParameter() == params;
+                    op->getType() == type && op->getParameter() == params;
            });
   }
   return false;
