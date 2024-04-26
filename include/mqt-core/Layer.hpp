@@ -28,8 +28,8 @@ public:
   protected:
     // if the executableCounter becomes equal to the executableThreshold the
     // vertex becomes executable
-    std::size_t executableThreshold = 0;
-    std::size_t executableCounter = 0;
+    std::int64_t executableThreshold = 0;
+    std::int64_t executableCounter = 0;
     std::vector<std::shared_ptr<DAGVertex>> enabledSuccessors;
     std::vector<std::shared_ptr<DAGVertex>> disabledSuccessors;
     bool executed = false;
@@ -61,11 +61,11 @@ public:
     }
     [[nodiscard]] auto isExecutable() const {
       assert(executableCounter <= executableThreshold);
-      return (!executed) && executableCounter == executableThreshold;
+      return (not executed) and executableCounter == executableThreshold;
     }
     [[nodiscard]] auto isExecuted() const { return executed; }
-    [[nodiscard]] auto
-    getOperation() const -> const std::unique_ptr<Operation>* {
+    [[nodiscard]] auto getOperation() const
+        -> const std::unique_ptr<Operation>* {
       return operation;
     }
 
@@ -84,13 +84,13 @@ public:
      */
     auto updateExecutableSet() -> void {
       if (isExecutable()) {
-        if (const auto& it = (*executableSet)->find(shared_from_this());
-            it == (*executableSet)->end()) {
+        if ((*executableSet)->find(shared_from_this()) ==
+            (*executableSet)->end()) {
           (*executableSet)->insert(shared_from_this());
         }
       } else {
-        if (const auto& it = (*executableSet)->find(shared_from_this());
-            it != (*executableSet)->end()) {
+        if ((*executableSet)->find(shared_from_this()) !=
+            (*executableSet)->end()) {
           (*executableSet)->erase(shared_from_this());
         }
       }
@@ -153,9 +153,11 @@ public:
     executableSet->clear();
     constructDAG(qc);
   }
-  [[nodiscard]] auto constructInteractionGraph(OpType opType, std::size_t nctrl)
-      const -> UndirectedGraph<Qubit, DAGVertex>;
-  [[nodiscard]] auto getExecutablesOfType(OpType opType, std::size_t nctrl)
-      const -> std::vector<std::shared_ptr<DAGVertex>>;
+  [[nodiscard]] auto constructInteractionGraph(OpType opType,
+                                               std::size_t nctrl) const
+      -> UndirectedGraph<Qubit, DAGVertex>;
+  [[nodiscard]] auto getExecutablesOfType(OpType opType,
+                                          std::size_t nctrl) const
+      -> std::vector<std::shared_ptr<DAGVertex>>;
 };
 } // namespace qc
