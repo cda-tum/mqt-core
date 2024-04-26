@@ -190,7 +190,7 @@ auto Layer::constructInteractionGraph(const OpType opType,
   }
   return graph;
 }
-auto Layer::getExecutablesOfType(const OpType opType, const std::size_t nctrl)
+auto Layer::getExecutablesOfType(const OpType opType, const std::size_t nControls)
     const -> std::vector<std::shared_ptr<DAGVertex>> {
   std::vector<std::shared_ptr<DAGVertex>> executables;
   for (const auto& vertex : executableSet) {
