@@ -8,18 +8,18 @@
 namespace na {
 class NAGlobalOperation : public NAOperation {
 protected:
-  OpType type;
+  FullOpType type;
   std::vector<qc::fp> params;
 
 public:
-  explicit NAGlobalOperation(const OpType type,
+  explicit NAGlobalOperation(const FullOpType type,
                              const std::vector<qc::fp>& params)
       : type(type), params(params) {
     if (!isSingleQubitGate(type.type)) {
       throw std::invalid_argument("Operation is not single qubit.");
     }
   }
-  explicit NAGlobalOperation(const OpType type) : NAGlobalOperation(type, {}) {}
+  explicit NAGlobalOperation(const FullOpType type) : NAGlobalOperation(type, {}) {}
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
     return params;
   }

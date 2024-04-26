@@ -9,12 +9,12 @@
 namespace na {
 class NALocalOperation : public NAOperation {
 protected:
-  OpType type;
+  FullOpType type;
   std::vector<qc::fp> params;
   std::vector<std::shared_ptr<Point>> positions;
 
 public:
-  NALocalOperation(const OpType& type, const std::vector<qc::fp>& params,
+  NALocalOperation(const FullOpType& type, const std::vector<qc::fp>& params,
                    const std::vector<std::shared_ptr<Point>>& positions)
       : type(type), params(params), positions(positions) {
     if (!isSingleQubitGate(type.type)) {
@@ -25,15 +25,15 @@ public:
     }
   }
   explicit NALocalOperation(
-      const OpType& type, const std::vector<std::shared_ptr<Point>>& positions)
+      const FullOpType& type, const std::vector<std::shared_ptr<Point>>& positions)
       : NALocalOperation(type, {}, positions) {}
-  explicit NALocalOperation(const OpType& type,
+  explicit NALocalOperation(const FullOpType& type,
                             const std::vector<qc::fp>& params,
                             std::shared_ptr<Point> position)
       : NALocalOperation(
             type, params,
             std::vector<std::shared_ptr<Point>>{std::move(position)}) {}
-  explicit NALocalOperation(const OpType& type, std::shared_ptr<Point> position)
+  explicit NALocalOperation(const FullOpType& type, std::shared_ptr<Point> position)
       : NALocalOperation(type, {}, std::move(position)) {}
   [[nodiscard]] auto
   getPositions() const -> const std::vector<std::shared_ptr<Point>>& {
@@ -42,7 +42,7 @@ public:
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
     return params;
   }
-  [[nodiscard]] auto getType() const -> OpType { return type; }
+  [[nodiscard]] auto getType() const -> FullOpType { return type; }
   [[nodiscard]] auto isLocalOperation() const -> bool override { return true; }
   [[nodiscard]] auto toString() const -> std::string override {
     std::stringstream ss;

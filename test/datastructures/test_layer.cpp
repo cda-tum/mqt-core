@@ -1,6 +1,6 @@
 #include "Definitions.hpp"
-#include "datastructures/Layer.hpp"
 #include "QuantumComputation.hpp"
+#include "datastructures/Layer.hpp"
 #include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"
 
@@ -13,8 +13,9 @@
 #include <string>
 #include <vector>
 
+namespace qc {
 TEST(Layer, ExecutableSet1) {
-  auto qc = qc::QuantumComputation(3);
+  auto qc = QuantumComputation(3);
   /* construct the following circuit
 ┌─────────┐┌─────────┐┌──────────┐      ┌─────────┐┌─────────┐┌──────────┐
 ┤         ├┤ Rz(π/4) ├┤          ├─■──■─┤         ├┤ Rz(π/4) ├┤          ├───
@@ -25,25 +26,21 @@ TEST(Layer, ExecutableSet1) {
 └─────────┘└─────────┘└──────────┘      └─────────┘           └──────────┘
     (1)        (2)        (3)     (4)(5)    (6)        (7)        (8)     (9)
   */
-  qc.emplace_back<qc::StandardOperation>(qc::Targets{0, 1, 2}, qc::OpType::RY,
-                                         std::vector<qc::fp>{qc::PI_2});
-  qc.rz(qc::PI_4, 0);
-  qc.rz(qc::PI_4, 1);
-  qc.rz(qc::PI_4, 2);
-  qc.emplace_back<qc::StandardOperation>(qc::Targets{0, 1, 2}, qc::OpType::RY,
-                                         std::vector<qc::fp>{-qc::PI_2});
+  qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, RY, std::vector{PI_2});
+  qc.rz(PI_4, 0);
+  qc.rz(PI_4, 1);
+  qc.rz(PI_4, 2);
+  qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, RY, std::vector{-PI_2});
   qc.cz(0, 1);
   qc.cz(0, 2);
-  qc.emplace_back<qc::StandardOperation>(qc::Targets{0, 1, 2}, qc::OpType::RY,
-                                         std::vector<qc::fp>{qc::PI_2});
-  qc.rz(qc::PI_4, 0);
-  qc.emplace_back<qc::StandardOperation>(qc::Targets{0, 1, 2}, qc::OpType::RY,
-                                         std::vector<qc::fp>{-qc::PI_2});
+  qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, RY, std::vector{PI_2});
+  qc.rz(PI_4, 0);
+  qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, RY, std::vector{-PI_2});
   qc.cz(1, 2);
 
-  qc::Layer const layer(qc);
+  Layer const layer(qc);
   EXPECT_EQ(layer.getExecutableSet().size(), 1); // layer (1)
-  std::shared_ptr<qc::Layer::DAGVertex> v = *(layer.getExecutableSet()).begin();
+  std::shared_ptr<Layer::DAGVertex> v = *(layer.getExecutableSet()).begin();
   v->execute();
   EXPECT_ANY_THROW(v->execute());
   EXPECT_EQ(layer.getExecutableSet().size(), 3); // layer (2)
@@ -62,7 +59,7 @@ TEST(Layer, ExecutableSet1) {
   // execute layer (4) and (5), first pick those two vertices and then execute
   // them because when executing the iterator over the executable set is not
   // valid anymore
-  std::vector<std::shared_ptr<qc::Layer::DAGVertex>> vList;
+  std::vector<std::shared_ptr<Layer::DAGVertex>> vList;
   for (const auto& u : layer.getExecutableSet()) {
     if (const auto& it = (u->getOperation())->getUsedQubits();
         it.find(0) != it.end()) {
@@ -75,8 +72,8 @@ TEST(Layer, ExecutableSet1) {
 }
 
 TEST(Layer, ExecutableSet2) {
-  qc::QuantumComputation qc{};
-  qc = qc::QuantumComputation(8);
+  QuantumComputation qc{};
+  qc = QuantumComputation(8);
   qc.cz(1, 2);
   qc.cz(1, 6);
   qc.cz(2, 7);
@@ -87,13 +84,13 @@ TEST(Layer, ExecutableSet2) {
   qc.cz(4, 7);
   qc.cz(5, 7);
   qc.cz(6, 7);
-  const qc::Layer layer(qc);
+  const Layer layer(qc);
   EXPECT_EQ(layer.getExecutableSet().size(), 10);
 }
 
 TEST(Layer, InteractionGraph) {
-  qc::QuantumComputation qc{};
-  qc = qc::QuantumComputation(8);
+  QuantumComputation qc{};
+  qc = QuantumComputation(8);
   qc.cz(1, 2);
   qc.cz(1, 6);
   qc.cz(2, 7);
@@ -105,7 +102,7 @@ TEST(Layer, InteractionGraph) {
   qc.cz(5, 7);
   qc.cz(6, 7);
   const qc::Layer layer(qc);
-  const auto& graph = layer.constructInteractionGraph(qc::Z, 1);
+  const auto& graph = layer.constructInteractionGraph(Z, 1);
   EXPECT_FALSE(graph.isAdjacent(1, 1));
   EXPECT_TRUE(graph.isAdjacent(1, 2));
   EXPECT_FALSE(graph.isAdjacent(1, 3));
@@ -156,22 +153,23 @@ TEST(Layer, InteractionGraph) {
   EXPECT_TRUE(graph.isAdjacent(7, 6));
   EXPECT_FALSE(graph.isAdjacent(7, 7));
 
-  EXPECT_ANY_THROW(std::ignore = layer.constructInteractionGraph(qc::Z, 2));
-  EXPECT_ANY_THROW(std::ignore = layer.constructInteractionGraph(qc::RZZ, 0));
+  EXPECT_ANY_THROW(std::ignore = layer.constructInteractionGraph(Z, 2));
+  EXPECT_ANY_THROW(std::ignore = layer.constructInteractionGraph(RZZ, 0));
 }
 
 TEST(Layer, ExecutableOfType) {
-  auto qc = qc::QuantumComputation(3);
+  auto qc = QuantumComputation(3);
   qc.cz(0, 1);
   qc.cz(0, 2);
-  qc.emplace_back<qc::StandardOperation>(qc::Targets{0, 1, 2}, qc::OpType::RY,
-                                         std::vector<qc::fp>{qc::PI_2});
+  qc.emplace_back<qc::StandardOperation>(Targets{0, 1, 2}, RY,
+                                         std::vector{PI_2});
   qc.rz(qc::PI_4, 0);
-  qc.emplace_back<qc::StandardOperation>(qc::Targets{0, 1, 2}, qc::OpType::RY,
-                                         std::vector<qc::fp>{-qc::PI_2});
+  qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, RY,
+                                         std::vector{-PI_2});
   qc.cz(1, 2);
 
-  qc::Layer const layer(qc);
-  EXPECT_EQ(layer.getExecutablesOfType(qc::OpType::Z, 1).size(), 3);
-  EXPECT_EQ(layer.getExecutablesOfType(qc::OpType::RZ, 0).size(), 0);
+  Layer const layer(qc);
+  EXPECT_EQ(layer.getExecutablesOfType(Z, 1).size(), 3);
+  EXPECT_EQ(layer.getExecutablesOfType(RZ, 0).size(), 0);
 }
+} // namespace qc

@@ -36,13 +36,13 @@ struct Point {
   }
 };
 /// More specific operation type including the number of control qubits
-struct OpType {
+struct FullOpType {
   qc::OpType type;
   std::size_t nControls;
   [[nodiscard]] auto toString() const -> std::string {
-    return std::string(nctrl, 'c') + qc::toString(type);
+    return std::string(nControls, 'c') + qc::toString(type);
   }
-  friend auto operator<<(std::ostream& os, const OpType& obj) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const FullOpType& obj) -> std::ostream& {
     return os << obj.toString(); // Using toString() method
   }
 };
@@ -76,8 +76,8 @@ struct OpType {
 } // namespace na
 
 /// Hash function for OpType, e.g., for use in unordered_map
-template <> struct std::hash<na::OpType> {
-  std::size_t operator()(na::OpType const& t) const noexcept {
+template <> struct std::hash<na::FullOpType> {
+  std::size_t operator()(na::FullOpType const& t) const noexcept {
     std::size_t const h1 = std::hash<qc::OpType>{}(t.type);
     std::size_t const h2 = std::hash<std::size_t>{}(t.nControls);
     return qc::combineHash(h1, h2);

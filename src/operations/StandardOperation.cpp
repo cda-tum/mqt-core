@@ -506,8 +506,7 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
   }
   // check whether both operations act on the given qubit
   if (!actsOn(qubit) || !other.actsOn(qubit)) {
-    throw std::invalid_argument(
-        "The operations do not act on the given qubit.");
+    return true;
   }
   if (controls.find(qubit) != controls.end()) {
     // if this is controlled on the given qubit

@@ -2,8 +2,9 @@
 
 #include "gtest/gtest.h"
 
+namespace qc {
 TEST(DirectedAcyclicGraph, Reachable) {
-  qc::DirectedAcyclicGraph<int> g;
+  DirectedAcyclicGraph<int> g;
   g.addVertex(0);
   g.addEdge(0, 1);
   g.addEdge(1, 2);
@@ -17,7 +18,7 @@ TEST(DirectedAcyclicGraph, Reachable) {
 }
 
 TEST(DirectedAcyclicGraph, TopologicalOrder) {
-  qc::DirectedAcyclicGraph<int> g;
+  DirectedAcyclicGraph<int> g;
   g.addVertex(6);
   g.addVertex(2);
   g.addVertex(5);
@@ -35,6 +36,7 @@ TEST(DirectedAcyclicGraph, TopologicalOrder) {
   //  │                    ^
   //  └────────────────────┘
   const auto& actual = g.orderTopologically();
-  const std::vector<int> expected = {2, 4, 5, 6};
+  const std::vector expected = {2, 4, 5, 6};
   EXPECT_EQ(actual, expected);
 }
+} // namespace qc

@@ -2,16 +2,17 @@
 
 #include <gtest/gtest.h>
 
+namespace qc {
 TEST(DisjointSet, FindSet) {
   std::vector elements = {1, 2, 3};
-  qc::DisjointSet<int> ds(elements.begin(), elements.end());
+  DisjointSet<int> ds(elements.begin(), elements.end());
   EXPECT_EQ(ds.findSet(1), ds.findSet(1));
   EXPECT_NE(ds.findSet(1), ds.findSet(2));
 }
 
 TEST(DisjointSet, UnionSet) {
   std::vector elements = {1, 2, 3};
-  qc::DisjointSet<int> ds(elements.begin(), elements.end());
+  DisjointSet<int> ds(elements.begin(), elements.end());
   ds.unionSet(1, 2);
   EXPECT_EQ(ds.findSet(1), ds.findSet(2));
   EXPECT_NE(ds.findSet(1), ds.findSet(3));
@@ -21,3 +22,4 @@ TEST(DisjointSet, UnionSet) {
   EXPECT_EQ(ds.findSet(1), ds.findSet(3));
   EXPECT_EQ(ds.findSet(2), ds.findSet(3));
 }
+} // namespace qc

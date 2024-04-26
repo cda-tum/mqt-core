@@ -2,8 +2,9 @@
 
 #include "gtest/gtest.h"
 
+namespace qc {
 TEST(UndirectedGraph, Numbered) {
-  qc::UndirectedGraph<int, int> g;
+  UndirectedGraph<int, int> g;
   g.addVertex(0);
   g.addEdge(1, 1, 0);
   g.addEdge(1, 2, 1);
@@ -23,3 +24,4 @@ TEST(UndirectedGraph, Numbered) {
   EXPECT_ANY_THROW(std::ignore = g.getDegree(4));
   EXPECT_ANY_THROW(std::ignore = g.getEdge(0, 1));
 }
+} // namespace qc

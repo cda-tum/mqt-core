@@ -2,8 +2,9 @@
 
 #include "gtest/gtest.h"
 
+namespace qc {
 TEST(DirectedGraph, Numbered) {
-  qc::DirectedGraph<int> g;
+  DirectedGraph<int> g;
   g.addVertex(0);
   g.addEdge(1, 1);
   g.addEdge(1, 2);
@@ -27,3 +28,4 @@ TEST(DirectedGraph, Numbered) {
   EXPECT_ANY_THROW(std::ignore = g.getInDegree(4));
   EXPECT_ANY_THROW(std::ignore = g.getOutDegree(4));
 }
+} // namespace qc
