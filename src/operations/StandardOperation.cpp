@@ -555,7 +555,7 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
     //           |
     //    ───────■──
   }
-  // operations with more than one parameter might not be commutive when the
+  // operations with more than one parameter might not be commutative when the
   // parameter are not the same, i.e. a general U3 gate
   // TODO: this check might introduce false negatives
   return type == other.getType() && targets == other.getTargets() &&
