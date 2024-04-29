@@ -5,6 +5,7 @@
 #include <numeric>
 #include <sstream>
 #include <unordered_set>
+#include <optional>
 
 namespace qc {
 
@@ -53,7 +54,7 @@ public:
       throw std::invalid_argument(ss.str());
     }
   }
-  auto addEdge(const V& u, const V& v, E e) -> void {
+  auto addEdge(const V& u, const V& v, const E& e) -> void {
     if (mapping.find(u) == mapping.end()) {
       addVertex(u);
     }
