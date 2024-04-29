@@ -75,10 +75,7 @@ jobs:
         python-version:
           - ${{ fromJson(needs.dist.outputs.python-versions)[0] }}
           - ${{ needs.dist.outputs.max-python-version }}
-        runs-on: [macos-13] # test Intel architecture
-        include:
-          - runs-on: macos-14 # test Apple Silicon architecture
-            python-version: ${{ needs.dist.outputs.max-python-version }} # testing Apple Silicon on 3.8 is blocked by https://github.com/actions/setup-python/issues/808
+        runs-on: [macos-13, macos-14]
     uses: ./.github/workflows/reusable-python-tests.yml
     with:
       runs-on: ${{ matrix.runs-on }}
