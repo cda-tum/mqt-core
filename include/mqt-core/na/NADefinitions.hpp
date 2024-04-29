@@ -52,6 +52,15 @@ struct FullOpType {
   [[nodiscard]] auto operator==(const FullOpType& other) const -> bool {
     return type == other.type && nControls == other.nControls;
   }
+  [[nodiscard]] auto isSingleQubitType() const -> bool {
+    return isSingleQubitGate(type);
+  }
+  [[nodiscard]] auto isTwoQubitType() const -> bool {
+    return isTwoQubitGate(type);
+  }
+  [[nodiscard]] auto isControlledType() const -> bool {
+    return nControls > 0;
+  }
 };
 
 /**

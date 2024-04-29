@@ -17,11 +17,11 @@ public:
   NALocalOperation(const FullOpType& type, const std::vector<qc::fp>& params,
                    const std::vector<std::shared_ptr<Point>>& positions)
       : type(type), params(params), positions(positions) {
-    if (!isSingleQubitGate(type.type)) {
+    if (!type.isSingleQubitType()) {
       throw std::invalid_argument("Operation is not single qubit.");
     }
-    if (type.nControls != 0) {
-      throw std::logic_error("Operation control qubits are not supported.");
+    if (type.isControlledType()) {
+      throw std::logic_error("Control qubits are not supported.");
     }
   }
   explicit NALocalOperation(

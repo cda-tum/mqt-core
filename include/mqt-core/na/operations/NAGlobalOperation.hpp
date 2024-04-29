@@ -15,7 +15,7 @@ public:
   explicit NAGlobalOperation(const FullOpType type,
                              const std::vector<qc::fp>& params)
       : type(type), params(params) {
-    if (!isSingleQubitGate(type.type)) {
+    if (!type.isSingleQubitType()) {
       throw std::invalid_argument("Operation is not single qubit.");
     }
   }
