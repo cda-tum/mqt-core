@@ -3,9 +3,9 @@
 #include "Definitions.hpp"
 
 #include <numeric>
+#include <optional>
 #include <sstream>
 #include <unordered_set>
-#include <optional>
 
 namespace qc {
 
