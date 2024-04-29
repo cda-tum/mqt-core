@@ -562,46 +562,6 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
          parameter == other.getParameter();
 }
 
-auto StandardOperation::isInverseOf(const Operation& other) const -> bool {
-  if (other.isStandardOperation()) {
-    if (controls == other.getControls() && targets == other.getTargets()) {
-      switch (type) {
-      case I:
-      case X:
-      case Y:
-      case Z:
-      case H:
-        // self-inverse
-        return type == other.getType();
-      // unparameterized gates
-      case S:
-        return other.getType() == Sdg;
-      case Sdg:
-        return other.getType() == S;
-      case T:
-        return other.getType() == Tdg;
-      case Tdg:
-        return other.getType() == T;
-      case SX:
-        return other.getType() == SXdg;
-      case SXdg:
-        return other.getType() == SX;
-      case P:
-      case RX:
-      case RY:
-      case RZ:
-        return other.getType() == type and
-               std::abs(parameter[0] + other.getParameter()[0]) <
-                   PARAMETER_TOLERANCE;
-      default:
-        return false;
-      }
-    }
-  }
-  // TODO: Add check for remaining operations
-  return false;
-}
-
 void StandardOperation::invert() {
   switch (type) {
   // self-inverting gates

@@ -1,5 +1,7 @@
 #include "operations/CompoundOperation.hpp"
 
+#include <CircuitOptimizer.hpp>
+#include <QuantumComputation.hpp>
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -171,23 +173,33 @@ auto CompoundOperation::isInverseOf(const Operation& other) const -> bool {
     if (size() != co.size()) {
       return false;
     }
-    std::unordered_set<Qubit> usedQubits;
-    for (auto it1 = cbegin(), it2 = co.cbegin(); it1 != cend(); ++it1, ++it2) {
-      if (!(*it1)->isInverseOf(**it2)) {
-        // TODO: Handle cases where the operations do not come in the same order
-        return false;
-      }
-      for (const auto q : (*it1)->getUsedQubits()) {
-        if (usedQubits.find(q) != usedQubits.end()) {
-          // TODO: Handle cases when the compound operation contains more
-          // operations acting on a single qubit, if fixed remove the warning in
-          // the header file
-          return false;
-        }
-        usedQubits.insert(q);
-      }
+    // here both compound operations have the same size
+    if (empty()) {
+      return true;
     }
-    return true;
+    // transform compound to a QuantumComputation such that the invert method
+    // and the reorderOperations method can be used to get a canonical form of
+    // the compound operations
+    const auto& thisUsedQubits = getUsedQubits();
+    assert(!thisUsedQubits.empty());
+    const auto thisMaxQubit =
+        *std::max_element(thisUsedQubits.cbegin(), thisUsedQubits.cend());
+    QuantumComputation thisQc(thisMaxQubit);
+    std::for_each(cbegin(), cend(),
+                  [&](const auto& op) { thisQc.emplace_back(op->clone()); });
+    const auto& otherUsedQubits = co.getUsedQubits();
+    assert(!otherUsedQubits.empty());
+    const auto otherMaxQubit =
+        *std::max_element(otherUsedQubits.cbegin(), otherUsedQubits.cend());
+    QuantumComputation otherQc(otherMaxQubit);
+    std::for_each(co.cbegin(), co.cend(),
+                  [&](const auto& op) { otherQc.emplace_back(op->clone()); });
+    CircuitOptimizer::reorderOperations(thisQc);
+    otherQc.invert();
+    CircuitOptimizer::reorderOperations(otherQc);
+    return std::equal(
+        thisQc.cbegin(), thisQc.cend(), otherQc.cbegin(),
+        [](const auto& op1, const auto& op2) { return op1 == op2; });
   }
   return false;
 }

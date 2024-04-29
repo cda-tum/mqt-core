@@ -18,8 +18,8 @@ private:
 public:
   explicit CompoundOperation();
 
-  explicit CompoundOperation(
-      std::vector<std::unique_ptr<Operation>>&& operations);
+  explicit
+  CompoundOperation(std::vector<std::unique_ptr<Operation>>&& operations);
 
   CompoundOperation(const CompoundOperation& co);
 
@@ -65,9 +65,8 @@ public:
                                      const Qubit& qubit) const -> bool override;
 
   /**
-   * @warning This function only considers global gates represented as compound
-   * operations. Not compound operations in general. If this function returns
-   * false, the operations might still be inverse of each other.
+   * This refines the inherited method because the inherited method leads to
+   * false negatives
    */
   [[nodiscard]] auto isInverseOf(const Operation& other) const -> bool override;
 

@@ -188,9 +188,7 @@ public:
   }
 
   [[nodiscard]] virtual auto
-  isInverseOf(const Operation& /*other*/) const -> bool {
-    return false;
-  }
+  isInverseOf(const Operation& /*other*/) const -> bool;
 
   virtual void invert() = 0;
 
