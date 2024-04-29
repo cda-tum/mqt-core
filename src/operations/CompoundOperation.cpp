@@ -158,22 +158,10 @@ std::set<Qubit> CompoundOperation::getUsedQubits() const {
 
 auto CompoundOperation::commutesAtQubit(const Operation& other,
                                         const Qubit& qubit) const -> bool {
-  const auto& opsOnQubit = std::accumulate(
-      cbegin(), cend(), std::unordered_set<const std::unique_ptr<Operation>*>(),
-      [qubit](auto& set, const auto& op) {
-        if (op->actsOn(qubit)) {
-          set.insert(&op);
-        }
-        return set;
-      });
-  if (opsOnQubit.empty()) {
-    return true;
-  }
-  if (opsOnQubit.size() == 1) {
-    const std::unique_ptr<Operation>* op = *opsOnQubit.begin();
-    return (*op)->commutesAtQubit(other, qubit);
-  }
-  return false;
+  return std::all_of(ops.cbegin(), ops.cend(),
+                     [&other, &qubit](const auto& op) {
+                       return op->commutesAtQubit(other, qubit);
+                     });
 }
 
 auto CompoundOperation::isInverseOf(const Operation& other) const -> bool {

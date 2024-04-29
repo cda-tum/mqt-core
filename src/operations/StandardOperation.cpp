@@ -535,24 +535,31 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
     //    └────┘  |
   }
   // here: qubit is a target of both operations
-  if (isDiagonalGate() && other.isDiagonalGate()) {
-    // if both operations are diagonal gates, e.g.
-    //    ┌────┐┌────┐
-    // q: ┤ RZ ├┤ RZ ├
-    //    └────┘└────┘
+  if (isDiagonalGate() || other.isDiagonalGate()) {
+    // if one operation is a diagonal gate, e.g.
+    //    ┌────┐┌───┐
+    // q: ┤ RZ ├┤ U ├
+    //    └────┘└───┘
     return true;
   }
-  return type == other.getType() && targets == other.getTargets();
-  // true, iff both operations are of the same type, e.g.
-  //    ┌───┐┌───┐
-  // q: ┤ E ├┤ E ├
-  //    | C || C |
-  //    ┤ R ├┤ R ├
-  //    └───┘└───┘
-  //      |    |
-  //    ──■────┼──
-  //           |
-  //    ───────■──
+  if (parameter.size() <= 1) {
+    return type == other.getType() && targets == other.getTargets();
+    // true, iff both operations are of the same type, e.g.
+    //    ┌───┐┌───┐
+    // q: ┤ E ├┤ E ├
+    //    | C || C |
+    //    ┤ R ├┤ R ├
+    //    └───┘└───┘
+    //      |    |
+    //    ──■────┼──
+    //           |
+    //    ───────■──
+  }
+  // operations with more than one parameter might not be commutive when the
+  // parameter are not the same, i.e. a general U3 gate
+  // TODO: this check might introduce false negatives
+  return type == other.getType() && targets == other.getTargets() &&
+         parameter == other.getParameter();
 }
 
 auto StandardOperation::isInverseOf(const Operation& other) const -> bool {
