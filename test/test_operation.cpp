@@ -8,12 +8,9 @@
 #include <gtest/gtest.h>
 
 TEST(StandardOperation, CommutesAtQubit) {
-  const qc::StandardOperation op1(0, 1, qc::OpType::RY,
-                                  std::vector<qc::fp>{qc::PI_2});
-  const qc::StandardOperation op2(0, 1, qc::OpType::RY,
-                                  std::vector<qc::fp>{-qc::PI_4});
-  const qc::StandardOperation op3(0, qc::OpType::RY,
-                                  std::vector<qc::fp>{-qc::PI_4});
+  const qc::StandardOperation op1(0, 1, qc::OpType::RY, std::vector{qc::PI_2});
+  const qc::StandardOperation op2(0, 1, qc::OpType::RY, std::vector{-qc::PI_4});
+  const qc::StandardOperation op3(0, qc::OpType::RY, std::vector{-qc::PI_4});
   EXPECT_TRUE(op1.commutesAtQubit(op2, 0));
   EXPECT_TRUE(op1.commutesAtQubit(op2, 0));
   EXPECT_FALSE(op1.commutesAtQubit(op3, 0));
@@ -23,32 +20,29 @@ TEST(StandardOperation, CommutesAtQubit) {
 TEST(CompoundOperation, CommutesAtQubit) {
   qc::CompoundOperation op1;
   op1.emplace_back<qc::StandardOperation>(0, qc::OpType::RY,
-                                          std::vector<qc::fp>{qc::PI_2});
+                                          std::vector{qc::PI_2});
   op1.emplace_back<qc::StandardOperation>(1, qc::OpType::RX,
-                                          std::vector<qc::fp>{qc::PI_2});
+                                          std::vector{qc::PI_2});
   qc::CompoundOperation op2;
   op2.emplace_back<qc::StandardOperation>(0, qc::OpType::RY,
-                                          std::vector<qc::fp>{qc::PI_2});
+                                          std::vector{qc::PI_2});
   op2.emplace_back<qc::StandardOperation>(1, qc::OpType::RY,
-                                          std::vector<qc::fp>{qc::PI_2});
+                                          std::vector{qc::PI_2});
   op2.emplace_back<qc::StandardOperation>(1, qc::OpType::RY,
-                                          std::vector<qc::fp>{qc::PI_2});
-  const qc::StandardOperation op3(0, qc::OpType::RY,
-                                  std::vector<qc::fp>{-qc::PI_4});
-  const qc::StandardOperation op4(1, qc::OpType::RY,
-                                  std::vector<qc::fp>{-qc::PI_4});
+                                          std::vector{qc::PI_2});
+  const qc::StandardOperation op3(0, qc::OpType::RY, std::vector{-qc::PI_4});
+  const qc::StandardOperation op4(1, qc::OpType::RY, std::vector{-qc::PI_4});
   EXPECT_TRUE(op1.commutesAtQubit(op3, 0));
   EXPECT_TRUE(op3.commutesAtQubit(op1, 0));
   EXPECT_FALSE(op4.commutesAtQubit(op1, 1));
-  EXPECT_FALSE(op4.commutesAtQubit(op2, 1));
+  EXPECT_TRUE(op4.commutesAtQubit(op2, 1));
   EXPECT_TRUE(op1.commutesAtQubit(op2, 0));
   EXPECT_FALSE(op1.commutesAtQubit(op2, 1));
   EXPECT_TRUE(op1.commutesAtQubit(op2, 2));
 }
 
 TEST(StandardOperation, IsInverseOf) {
-  const qc::StandardOperation op1(0, qc::OpType::RY,
-                                  std::vector<qc::fp>{qc::PI_2});
+  const qc::StandardOperation op1(0, qc::OpType::RY, std::vector{qc::PI_2});
   qc::StandardOperation op1Inv = op1;
   op1Inv.invert();
   EXPECT_TRUE(op1.isInverseOf(op1Inv));
@@ -73,7 +67,7 @@ TEST(CompoundOperation, GlobalIsInverseOf) {
   // the compound operations with different number of operations
   qc::CompoundOperation op3 = op2;
   op3.emplace_back<qc::StandardOperation>(2, qc::RY, std::vector{qc::PI_2});
-  // the operations come in wrong order (this is a false negative)
+  // the operations come in different order
   qc::CompoundOperation op4;
   op4.emplace_back<qc::StandardOperation>(1, qc::RY, std::vector{-qc::PI_2});
   op4.emplace_back<qc::StandardOperation>(0, qc::RY, std::vector{-qc::PI_2});
@@ -81,18 +75,17 @@ TEST(CompoundOperation, GlobalIsInverseOf) {
   EXPECT_TRUE(op2.isInverseOf(op1));
   EXPECT_FALSE(op1.isInverseOf(op3));
   EXPECT_FALSE(op1.isInverseOf(qc::StandardOperation(0, qc::RY)));
-  EXPECT_FALSE(op1.isInverseOf(op4));
+  EXPECT_TRUE(op1.isInverseOf(op4));
 }
 
 TEST(CompoundOperation, IsInverseOf) {
   // This functionality is not implemented yet, the function isInversOf leads to
   // false negatives
-  GTEST_SKIP();
   qc::CompoundOperation op1;
   op1.emplace_back<qc::StandardOperation>(0, qc::OpType::RY,
-                                          std::vector<qc::fp>{-qc::PI_2});
+                                          std::vector{-qc::PI_2});
   op1.emplace_back<qc::StandardOperation>(1, qc::OpType::RY,
-                                          std::vector<qc::fp>{-qc::PI_2});
+                                          std::vector{-qc::PI_2});
   qc::CompoundOperation op2 = op1;
   op2.invert();
   EXPECT_TRUE(op1.isInverseOf(op2));
@@ -119,7 +112,7 @@ TEST(NonStandardOperation, IsInverseOf) {
 TEST(NonStandardOperation, CommutesAtQubit) {
   const qc::StandardOperation op(0, qc::X);
   EXPECT_FALSE(qc::NonUnitaryOperation(qc::Targets{0}).commutesAtQubit(op, 0));
-  EXPECT_FALSE(
+  EXPECT_TRUE(
       qc::SymbolicOperation(0, qc::P, {sym::Expression<qc::fp, qc::fp>()})
           .commutesAtQubit(op, 0));
 }

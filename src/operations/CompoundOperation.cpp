@@ -184,14 +184,14 @@ auto CompoundOperation::isInverseOf(const Operation& other) const -> bool {
     assert(!thisUsedQubits.empty());
     const auto thisMaxQubit =
         *std::max_element(thisUsedQubits.cbegin(), thisUsedQubits.cend());
-    QuantumComputation thisQc(thisMaxQubit);
+    QuantumComputation thisQc(thisMaxQubit + 1);
     std::for_each(cbegin(), cend(),
                   [&](const auto& op) { thisQc.emplace_back(op->clone()); });
     const auto& otherUsedQubits = co.getUsedQubits();
     assert(!otherUsedQubits.empty());
     const auto otherMaxQubit =
         *std::max_element(otherUsedQubits.cbegin(), otherUsedQubits.cend());
-    QuantumComputation otherQc(otherMaxQubit);
+    QuantumComputation otherQc(otherMaxQubit + 1);
     std::for_each(co.cbegin(), co.cend(),
                   [&](const auto& op) { otherQc.emplace_back(op->clone()); });
     CircuitOptimizer::reorderOperations(thisQc);
@@ -199,7 +199,7 @@ auto CompoundOperation::isInverseOf(const Operation& other) const -> bool {
     CircuitOptimizer::reorderOperations(otherQc);
     return std::equal(
         thisQc.cbegin(), thisQc.cend(), otherQc.cbegin(),
-        [](const auto& op1, const auto& op2) { return op1 == op2; });
+        [](const auto& op1, const auto& op2) { return *op1 == *op2; });
   }
   return false;
 }
