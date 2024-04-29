@@ -112,7 +112,7 @@ TEST(NonStandardOperation, IsInverseOf) {
 TEST(NonStandardOperation, CommutesAtQubit) {
   const qc::StandardOperation op(0, qc::X);
   EXPECT_FALSE(qc::NonUnitaryOperation(qc::Targets{0}).commutesAtQubit(op, 0));
-  EXPECT_TRUE(
+  EXPECT_FALSE(
       qc::SymbolicOperation(0, qc::P, {sym::Expression<qc::fp, qc::fp>()})
           .commutesAtQubit(op, 0));
 }

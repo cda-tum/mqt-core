@@ -535,11 +535,11 @@ auto StandardOperation::commutesAtQubit(const Operation& other,
     //    └────┘  |
   }
   // here: qubit is a target of both operations
-  if (isDiagonalGate() || other.isDiagonalGate()) {
-    // if one operation is a diagonal gate, e.g.
-    //    ┌────┐┌───┐
-    // q: ┤ RZ ├┤ U ├
-    //    └────┘└───┘
+  if (isDiagonalGate() && other.isDiagonalGate()) {
+    // if both operations are diagonal gates, e.g.
+    //    ┌────┐┌────┐
+    // q: ┤ RZ ├┤ RZ ├
+    //    └────┘└────┘
     return true;
   }
   if (parameter.size() <= 1) {
