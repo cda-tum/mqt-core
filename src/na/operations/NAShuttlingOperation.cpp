@@ -1,5 +1,9 @@
 #include "na/operations/NAShuttlingOperation.hpp"
 
+#include <ios>
+#include <sstream>
+#include <string>
+
 namespace na {
 auto NAShuttlingOperation::toString() const -> std::string {
   std::stringstream ss;

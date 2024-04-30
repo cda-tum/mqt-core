@@ -1,11 +1,15 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "na/NADefinitions.hpp"
 #include "na/operations/NAOperation.hpp"
-#include "operations/OpType.hpp"
 
 #include <cmath>
+#include <memory>
+#include <stdexcept>
+#include <string>
 #include <utility>
+#include <vector>
 namespace na {
 class NALocalOperation : public NAOperation {
 protected:
@@ -14,29 +18,28 @@ protected:
   std::vector<std::shared_ptr<Point>> positions;
 
 public:
-  NALocalOperation(const FullOpType& type, const std::vector<qc::fp>& params,
-                   const std::vector<std::shared_ptr<Point>>& positions)
-      : type(type), params(params), positions(positions) {
-    if (!type.isSingleQubitType()) {
+  NALocalOperation(const FullOpType& opType,
+                   const std::vector<qc::fp>& parameter,
+                   const std::vector<std::shared_ptr<Point>>& pos)
+      : type(opType), params(parameter), positions(pos) {
+    if (!opType.isSingleQubitType()) {
       throw std::invalid_argument("Operation is not single qubit.");
     }
-    if (type.isControlledType()) {
+    if (opType.isControlledType()) {
       throw std::logic_error("Control qubits are not supported.");
     }
   }
-  explicit NALocalOperation(
-      const FullOpType& type,
-      const std::vector<std::shared_ptr<Point>>& positions)
-      : NALocalOperation(type, {}, positions) {}
-  explicit NALocalOperation(const FullOpType& type,
-                            const std::vector<qc::fp>& params,
-                            std::shared_ptr<Point> position)
-      : NALocalOperation(
-            type, params,
-            std::vector<std::shared_ptr<Point>>{std::move(position)}) {}
-  explicit NALocalOperation(const FullOpType& type,
-                            std::shared_ptr<Point> position)
-      : NALocalOperation(type, {}, std::move(position)) {}
+  explicit NALocalOperation(const FullOpType& opType,
+                            const std::vector<std::shared_ptr<Point>>& pos)
+      : NALocalOperation(opType, {}, pos) {}
+  explicit NALocalOperation(const FullOpType& opType,
+                            const std::vector<qc::fp>& parameters,
+                            std::shared_ptr<Point> pos)
+      : NALocalOperation(opType, parameters,
+                         std::vector<std::shared_ptr<Point>>{std::move(pos)}) {}
+  explicit NALocalOperation(const FullOpType& opType,
+                            std::shared_ptr<Point> pos)
+      : NALocalOperation(opType, {}, std::move(pos)) {}
   [[nodiscard]] auto
   getPositions() const -> const std::vector<std::shared_ptr<Point>>& {
     return positions;

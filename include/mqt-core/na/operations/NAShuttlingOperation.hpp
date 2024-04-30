@@ -2,9 +2,12 @@
 
 #include "na/NADefinitions.hpp"
 #include "na/operations/NAOperation.hpp"
-#include "operations/OpType.hpp"
 
 #include <cmath>
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 namespace na {
@@ -19,20 +22,22 @@ protected:
 
 public:
   explicit NAShuttlingOperation(
-      const ShuttleType type, const std::vector<std::shared_ptr<Point>>& start,
-      const std::vector<std::shared_ptr<Point>>& end)
-      : type(type), start(start), end(end) {
-    if (start.size() != end.size()) {
+      const ShuttleType shuttleType,
+      const std::vector<std::shared_ptr<Point>>& startConfig,
+      const std::vector<std::shared_ptr<Point>>& endConfig)
+      : type(shuttleType), start(startConfig), end(endConfig) {
+    if (startConfig.size() != endConfig.size()) {
       throw std::logic_error("Shuttling operation must have the same number of "
                              "start and end qubits.");
     }
   }
-  explicit NAShuttlingOperation(const ShuttleType type,
-                                std::shared_ptr<Point> start,
-                                std::shared_ptr<Point> end)
+  explicit NAShuttlingOperation(const ShuttleType shuttleType,
+                                std::shared_ptr<Point> startPoint,
+                                std::shared_ptr<Point> endPoint)
       : NAShuttlingOperation(
-            type, std::vector<std::shared_ptr<Point>>{std::move(start)},
-            std::vector<std::shared_ptr<Point>>{std::move(end)}) {}
+            shuttleType,
+            std::vector<std::shared_ptr<Point>>{std::move(startPoint)},
+            std::vector<std::shared_ptr<Point>>{std::move(endPoint)}) {}
   [[nodiscard]] auto getType() const -> ShuttleType { return type; }
   [[nodiscard]] auto
   getStart() const -> const std::vector<std::shared_ptr<Point>>& {

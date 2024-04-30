@@ -1,5 +1,9 @@
 #include "na/operations/NALocalOperation.hpp"
 
+#include <ios>
+#include <sstream>
+#include <string>
+
 namespace na {
 auto NALocalOperation::toString() const -> std::string {
   std::stringstream ss;

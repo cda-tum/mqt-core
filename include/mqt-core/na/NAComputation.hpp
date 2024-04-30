@@ -4,7 +4,10 @@
 #include "na/operations/NAOperation.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <iterator>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <vector>
 

@@ -15,7 +15,7 @@ namespace na {
 struct Point {
   std::int64_t x;
   std::int64_t y;
-  Point(const std::int64_t x, const std::int64_t y) : x(x), y(y) {};
+  Point(const std::int64_t xp, const std::int64_t yp) : x(xp), y(yp) {};
   Point(const Point& p) = default;
   virtual ~Point() = default;
   Point& operator=(const Point& p) = default;
@@ -79,9 +79,11 @@ struct FullOpType {
     const auto& params = ops.at(0)->getParameter();
     const auto& type = ops.at(0)->getType();
     return op.getUsedQubits().size() == nQubits &&
-           std::all_of(ops.cbegin(), ops.cend(), [&](const auto& op) {
-             return op->isStandardOperation() && op->getNcontrols() == 0 &&
-                    op->getType() == type && op->getParameter() == params;
+           std::all_of(ops.cbegin(), ops.cend(), [&](const auto& operation) {
+             return operation->isStandardOperation() &&
+                    operation->getNcontrols() == 0 &&
+                    operation->getType() == type &&
+                    operation->getParameter() == params;
            });
   }
   return false;

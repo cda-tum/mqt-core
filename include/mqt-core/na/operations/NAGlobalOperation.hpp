@@ -1,10 +1,14 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "na/NADefinitions.hpp"
 #include "na/operations/NAOperation.hpp"
-#include "operations/OpType.hpp"
 
 #include <cmath>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
 namespace na {
 class NAGlobalOperation : public NAOperation {
 protected:
@@ -12,15 +16,15 @@ protected:
   std::vector<qc::fp> params;
 
 public:
-  explicit NAGlobalOperation(const FullOpType type,
-                             const std::vector<qc::fp>& params)
-      : type(type), params(params) {
-    if (!type.isSingleQubitType()) {
+  explicit NAGlobalOperation(const FullOpType opType,
+                             const std::vector<qc::fp>& parameters)
+      : type(opType), params(parameters) {
+    if (!opType.isSingleQubitType()) {
       throw std::invalid_argument("Operation is not single qubit.");
     }
   }
-  explicit NAGlobalOperation(const FullOpType type)
-      : NAGlobalOperation(type, {}) {}
+  explicit NAGlobalOperation(const FullOpType opType)
+      : NAGlobalOperation(opType, {}) {}
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
     return params;
   }

@@ -1,5 +1,9 @@
 #include "na/NAComputation.hpp"
 
+#include <ios>
+#include <sstream>
+#include <string>
+
 namespace na {
 auto NAComputation::toString() const -> std::string {
   std::stringstream ss;

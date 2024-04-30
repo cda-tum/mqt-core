@@ -44,11 +44,11 @@ public:
      * @details The constructor initializes the vertex with the given operation
      * and the given executable set, which is shared among all vertices.
      *
-     * @param operation
-     * @param executableSet
+     * @param op
+     * @param es
      */
-    DAGVertex(Operation* operation, ExecutableSet& executableSet)
-        : operation(operation), executableSet(&executableSet) {}
+    DAGVertex(Operation* op, ExecutableSet& es)
+        : operation(op), executableSet(&es) {}
 
   public:
     [[nodiscard]] static auto

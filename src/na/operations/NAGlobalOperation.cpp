@@ -1,5 +1,9 @@
 #include "na/operations/NAGlobalOperation.hpp"
 
+#include <ios>
+#include <sstream>
+#include <string>
+
 namespace na {
 auto NAGlobalOperation::toString() const -> std::string {
   std::stringstream ss;
