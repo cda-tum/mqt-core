@@ -58,9 +58,7 @@ struct FullOpType {
   [[nodiscard]] auto isTwoQubitType() const -> bool {
     return isTwoQubitGate(type);
   }
-  [[nodiscard]] auto isControlledType() const -> bool {
-    return nControls > 0;
-  }
+  [[nodiscard]] auto isControlledType() const -> bool { return nControls > 0; }
 };
 
 /**
