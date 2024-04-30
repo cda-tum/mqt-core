@@ -156,9 +156,22 @@ auto Layer::constructInteractionGraph(const OpType opType,
                                       const std::size_t nControls) const
     -> InteractionGraph {
   switch (opType) {
+  case I:
+  case H:
   case X:
   case Y:
   case Z:
+  case S:
+  case Sdg:
+  case T:
+  case Tdg:
+  case V:
+  case Vdg:
+  case U:
+  case U2:
+  case P:
+  case SX:
+  case SXdg:
   case RX:
   case RY:
   case RZ:
