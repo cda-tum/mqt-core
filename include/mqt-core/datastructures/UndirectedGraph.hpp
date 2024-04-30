@@ -10,15 +10,15 @@
 namespace qc {
 
 /**
+ * Class representing generic undirected directed graphs.
  *
- * @tparam V the type of the vertices in the graph. Must implement the <<
- * operator.
+ * @tparam V the type of the vertices in the graph. Must implement `operator<<`.
  */
 template <class V, class E> class UndirectedGraph final {
   static_assert(std::is_same_v<decltype(std::declval<std::ostream&>()
                                         << std::declval<V>()),
                                std::ostream&>,
-                "V must support the << operator for std::ostream");
+                "V must support `operator<<`.");
 
 protected:
   // the adjecency matrix works with indices
