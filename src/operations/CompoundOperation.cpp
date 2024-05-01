@@ -1,12 +1,22 @@
 #include "operations/CompoundOperation.hpp"
 
+#include "Definitions.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+
 #include <CircuitOptimizer.hpp>
 #include <QuantumComputation.hpp>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <functional>
 #include <iterator>
-#include <numeric>
-#include <unordered_set>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <utility>
+#include <vector>
 
 namespace qc {
 CompoundOperation::CompoundOperation() {
@@ -229,6 +239,7 @@ bool CompoundOperation::isConvertibleToSingleOperation() const {
   if (ops.size() != 1) {
     return false;
   }
+  assert(ops.front() != nullptr);
   if (!ops.front()->isCompoundOperation()) {
     return true;
   }
