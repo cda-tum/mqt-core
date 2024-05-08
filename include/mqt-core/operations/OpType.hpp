@@ -59,7 +59,12 @@ enum OpType : std::uint8_t {
   MultiATrue,
   MultiAFalse,
   // Number of OpTypes
-  OpCount
+  OpCount,
+  // Neutral atom shuttling operations
+  Move,
+  AodActivate,
+  AodDeactivate,
+  AodMove,
 };
 
 inline std::string toString(const OpType& opType) {
@@ -144,6 +149,14 @@ inline std::string toString(const OpType& opType) {
     return "teleportation";
   case ClassicControlled:
     return "classic_controlled";
+  case Move:
+    return "move";
+  case AodActivate:
+    return "aod_activate";
+  case AodDeactivate:
+    return "aod_deactivate";
+  case AodMove:
+    return "aod_move";
   // GCOV_EXCL_START
   default:
     throw std::invalid_argument("Invalid OpType!");
@@ -285,6 +298,10 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"teleportation", OpType::Teleportation},
         {"classic_controlled", OpType::ClassicControlled},
         {"compound", OpType::Compound},
+        {"move", OpType::Move},
+        {"aod_activate", OpType::AodActivate},
+        {"aod_deactivate", OpType::AodDeactivate},
+        {"aod_move", OpType::AodMove},
 };
 
 [[nodiscard]] inline OpType opTypeFromString(const std::string& opType) {

@@ -401,6 +401,9 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
   case iSWAPdg:
     op << "iswapdg";
     break;
+  case Move:
+    op << "move";
+    break;
   case Peres:
     of << op.str() << "cx";
     for (const auto& c : controls) {
@@ -586,6 +589,10 @@ void StandardOperation::invert() {
   case MultiATrue:
   case MultiAFalse:
   case OpCount:
+  case Move:
+  case AodActivate:
+  case AodDeactivate:
+  case AodMove:
     throw QFRException("Inverting gate" + toString(type) +
                        " is not supported.");
   }

@@ -560,6 +560,7 @@ public:
   DEFINE_TWO_TARGET_OPERATION(iswapdg)
   DEFINE_TWO_TARGET_OPERATION(peres)
   DEFINE_TWO_TARGET_OPERATION(peresdg)
+  DEFINE_TWO_TARGET_OPERATION(move)
 
 #define DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(op, param)                \
   void op(const SymbolOrNumber&(param), const Qubit target0,                   \
