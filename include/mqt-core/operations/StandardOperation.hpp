@@ -95,6 +95,9 @@ public:
                     const RegisterNames& creg, size_t indent,
                     bool openQASM3) const override;
 
+  [[nodiscard]] auto commutesAtQubit(const Operation& other,
+                                     const Qubit& qubit) const -> bool override;
+
   void invert() override;
 
 protected:

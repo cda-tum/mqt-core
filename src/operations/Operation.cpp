@@ -181,4 +181,8 @@ void Operation::apply(const Permutation& permutation) {
   getControls() = permutation.apply(getControls());
 }
 
+auto Operation::isInverseOf(const Operation& other) const -> bool {
+  return operator==(*other.getInverted());
+}
+
 } // namespace qc

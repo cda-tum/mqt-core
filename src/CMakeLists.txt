@@ -136,6 +136,9 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME})
 endif()
 
+# add datastructures package
+add_subdirectory(datastructures)
+
 # add DD package library
 add_subdirectory(dd)
 
@@ -144,6 +147,9 @@ add_subdirectory(zx)
 
 # add ECC library
 add_subdirectory(ecc)
+
+# add NA library
+add_subdirectory(na)
 
 # ** Note ** The following target will soon be removed from the project. All top-level projects
 # should switch to using the mqt-core Python package.

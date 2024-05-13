@@ -1,7 +1,12 @@
 # add unit tests
 package_add_test(
-  ${PROJECT_NAME}-test ${PROJECT_NAME} unittests/test_io.cpp unittests/test_qfr_functionality.cpp
-  unittests/test_symbolic.cpp unittests/test_qasm3_parser.cpp)
+  ${PROJECT_NAME}-test
+  ${PROJECT_NAME}
+  unittests/test_io.cpp
+  unittests/test_qfr_functionality.cpp
+  unittests/test_symbolic.cpp
+  unittests/test_qasm3_parser.cpp
+  test_operation.cpp)
 
 file(GLOB_RECURSE circuit_optimizer_tests "unittests/circuit_optimizer/*.cpp")
 package_add_test(${PROJECT_NAME}-test-circuit-optimizer ${PROJECT_NAME} ${circuit_optimizer_tests})
@@ -30,3 +35,6 @@ package_add_test(${PROJECT_NAME}-test-zx ${PROJECT_NAME}-zx ${zx_tests})
 
 package_add_test(${PROJECT_NAME}-test-ecc ${PROJECT_NAME}-ecc unittests/test_ecc_functionality.cpp)
 target_link_libraries(${PROJECT_NAME}-test-ecc PRIVATE ${PROJECT_NAME}-dd)
+
+add_subdirectory(datastructures)
+add_subdirectory(na)
