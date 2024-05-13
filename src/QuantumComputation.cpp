@@ -510,7 +510,8 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
   for (const auto& physicalQubit : initialLayout) {
     auto it = outputPermutation.find(physicalQubit.first);
     if (it == outputPermutation.end()) {
-      os << "\033[31m" << std::setw(4) << "|" << "\033[0m";
+      os << "\033[31m" << std::setw(4) << "|"
+         << "\033[0m";
     } else {
       os << std::setw(4) << it->second;
     }

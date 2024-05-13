@@ -25,8 +25,9 @@ void registerClassicControlledOperation(py::module& m) {
   ccop.def("__repr__", [](const qc::ClassicControlledOperation& op) {
     std::stringstream ss;
     const auto& controlReg = op.getControlRegister();
-    ss << "ClassicControlledOperation(<...op...>, " << "control_register=("
-       << controlReg.first << ", " << controlReg.second << "), "
+    ss << "ClassicControlledOperation(<...op...>, "
+       << "control_register=(" << controlReg.first << ", " << controlReg.second
+       << "), "
        << "expected_value=" << op.getExpectedValue() << ")";
     return ss.str();
   });
