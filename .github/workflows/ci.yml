@@ -21,6 +21,8 @@ jobs:
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.0.0
+    with:
+      cmake-args-macos: -DMQT_CORE_WITH_GMP=ON
     secrets:
       token: ${{ secrets.CODECOV_TOKEN }}
 
