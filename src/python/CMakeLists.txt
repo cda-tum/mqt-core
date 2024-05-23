@@ -30,5 +30,5 @@ if(NOT TARGET _core)
   install(
     TARGETS _core
     DESTINATION .
-    COMPONENT MQTCorePythonModule)
+    COMPONENT ${MQT_CORE_TARGET_NAME}_Python)
 endif()
