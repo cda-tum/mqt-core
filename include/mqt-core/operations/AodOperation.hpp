@@ -12,9 +12,9 @@
 #include "tuple"
 #include "vector"
 
-#include <cmath>
-#include <cstdint>
-#include <stddef.h>
+#include "cmath"
+#include "cstdint"
+#include "cstddef"
 
 namespace qc {
 
