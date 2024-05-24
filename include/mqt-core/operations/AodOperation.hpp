@@ -22,7 +22,8 @@ struct SingleOperation {
 class AodOperation : public Operation {
   std::vector<SingleOperation> operations;
 
-  static std::vector<Dimension> convertToDimension(const std::vector<uint32_t>& dirs) ;
+  static std::vector<Dimension>
+  convertToDimension(const std::vector<uint32_t>& dirs);
 
 public:
   AodOperation() = default;

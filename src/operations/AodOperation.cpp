@@ -1,6 +1,6 @@
 #include "operations/AodOperation.hpp"
-#include "Definitions.hpp"
 
+#include "Definitions.hpp"
 #include "cassert"
 #include "iomanip"
 #include "limits"
@@ -9,18 +9,19 @@
 
 namespace qc {
 AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
-                           const std::vector<uint32_t>& dirs, std::vector<fp> start,
-                           std::vector<fp> end)
-    : AodOperation(s, std::move(qubits), convertToDimension(dirs), std::move(start), std::move(end)) {}
+                           const std::vector<uint32_t>& dirs,
+                           std::vector<fp> start, std::vector<fp> end)
+    : AodOperation(s, std::move(qubits), convertToDimension(dirs),
+                   std::move(start), std::move(end)) {}
 
-std::vector<Dimension> AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
+std::vector<Dimension>
+AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
   std::vector<Dimension> dirsEnum(dirs.size());
   for (size_t i = 0; i < dirs.size(); ++i) {
     dirsEnum[i] = static_cast<Dimension>(dirs[i]);
   }
   return dirsEnum;
 }
-
 
 AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
                            std::vector<Dimension> dirs, std::vector<fp> start,
@@ -36,10 +37,10 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
 }
 
 AodOperation::AodOperation(const std::string& type, std::vector<Qubit> targets,
-                           const std::vector<uint32_t>& dirs, std::vector<fp> start,
-                           std::vector<fp> end)
-    : AodOperation(OP_NAME_TO_TYPE.at(type), std::move(targets),
-                   dirs, std::move(start), std::move(end)) {}
+                           const std::vector<uint32_t>& dirs,
+                           std::vector<fp> start, std::vector<fp> end)
+    : AodOperation(OP_NAME_TO_TYPE.at(type), std::move(targets), dirs,
+                   std::move(start), std::move(end)) {}
 
 AodOperation::AodOperation(
     OpType s, std::vector<Qubit> targets,
