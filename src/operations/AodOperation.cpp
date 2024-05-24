@@ -39,8 +39,9 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
 AodOperation::AodOperation(const std::string& type, std::vector<Qubit> targets,
                            const std::vector<uint32_t>& dirs,
                            std::vector<fp> start, std::vector<fp> end)
-    : AodOperation(OP_NAME_TO_TYPE.at(type), std::move(targets), convertToDimension(dirs),
-                   std::move(start), std::move(end)) {}
+    : AodOperation(OP_NAME_TO_TYPE.at(type), std::move(targets),
+                   convertToDimension(dirs), std::move(start), std::move(end)) {
+}
 
 AodOperation::AodOperation(
     OpType s, std::vector<Qubit> targets,
@@ -93,11 +94,9 @@ void AodOperation::invert() {
       op.start = op.end;
       op.end = -op.start;
     }
-  }
-  else if (type == OpType::AodActivate) {
+  } else if (type == OpType::AodActivate) {
     type = OpType::AodDeactivate;
-  }
-  else if (type == OpType::AodDeactivate) {
+  } else if (type == OpType::AodDeactivate) {
     type = OpType::AodActivate;
   }
 }

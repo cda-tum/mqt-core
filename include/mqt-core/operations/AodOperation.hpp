@@ -1,19 +1,19 @@
 #pragma once
 
-#include "operations/Operation.hpp"
-#include "OpType.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
+#include "OpType.hpp"
+#include "algorithm"
+#include "memory"
+#include "operations/Operation.hpp"
+#include "ostream"
+#include "sstream"
+#include "string"
+#include "tuple"
+#include "vector"
 
 #include <cmath>
 #include <cstdint>
-#include "string"
-#include "sstream"
-#include "ostream"
-#include "vector"
-#include "tuple"
-#include "algorithm"
-#include "memory"
 
 namespace qc {
 
