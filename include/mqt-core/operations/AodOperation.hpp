@@ -4,6 +4,9 @@
 #include "Definitions.hpp"
 #include "OpType.hpp"
 #include "algorithm"
+#include "cmath"
+#include "cstddef"
+#include "cstdint"
 #include "memory"
 #include "operations/Operation.hpp"
 #include "ostream"
@@ -11,10 +14,6 @@
 #include "string"
 #include "tuple"
 #include "vector"
-
-#include "cmath"
-#include "cstdint"
-#include "cstddef"
 
 namespace qc {
 
