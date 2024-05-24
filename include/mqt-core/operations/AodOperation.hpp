@@ -14,6 +14,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <stddef.h>
 
 namespace qc {
 
