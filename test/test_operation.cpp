@@ -211,6 +211,15 @@ TEST(AodOperation, Constructors) {
   EXPECT_EQ(0, 0);
 }
 
+TEST(AodOperation, OverrideMethods) {
+  qc::AodOperation move(qc::OpType::AodMove, {0}, {qc::Dimension::X}, {0.0},
+                        {1.0});
+  move.addControl(qc::Control(0, qc::Control::Type::Pos));
+  move.removeControl(qc::Control(0, qc::Control::Type::Pos));
+  move.clearControls();
+  auto it = move.clone();
+}
+
 TEST(AodOperation, Invert) {
   qc::AodOperation move(qc::OpType::AodMove, {0}, {qc::Dimension::X}, {0.0},
                         {1.0});
