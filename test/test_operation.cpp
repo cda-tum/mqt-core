@@ -185,7 +185,9 @@ TEST(AodOperation, Qasm) {
                               {qc::Dimension::X, qc::Dimension::Y}, {0.0, 1.0},
                               {1.0, 3.0});
   std::stringstream ss;
-  qc::RegisterNames qreg{{"q", "q"}};
+  qc::RegisterNames qreg;
+  qreg.emplace_back("q", "q[0]");
+  qreg.emplace_back("q", "q[1]");
   qc::RegisterNames creg{{"c", "c"}};
   move.dumpOpenQASM(ss, qreg, creg, 0, false);
 
