@@ -193,9 +193,12 @@ TEST(AodOperation, Qasm) {
 }
 
 TEST(AodOperation, Constructors) {
-  const qc::AodOperation move(qc::OpType::AodMove, {0, 1}, {0, 1}, {0.0, 1.0},
+  uint32_t dir1 = 0;
+  uint32_t dir2 = 1;
+
+  const qc::AodOperation move(qc::OpType::AodMove, {0, 1}, {dir1,dir2}, {0.0, 1.0},
                               {1.0, 3.0});
-  const qc::AodOperation move2("aod_move", {0, 1}, {0}, {0.0}, {1.0});
+  const qc::AodOperation move2("aod_move", {0, 1}, {dir1}, {0.0}, {1.0});
   std::vector<std::tuple<qc::Dimension, qc::fp, qc::fp>> operations;
   operations.emplace_back(qc::Dimension::X, 0.0, 1.0);
   const qc::AodOperation move3(qc::OpType::AodMove, {0}, operations);
@@ -206,8 +209,8 @@ TEST(AodOperation, Constructors) {
   EXPECT_EQ(0, 0);
 }
 
-TEST(AodOPeration, Invert) {
-  qc::AodOperation move(qc::OpType::AodMove, {0}, {0}, {0.0}, {1.0});
+TEST(AodOperation, Invert) {
+  qc::AodOperation move(qc::OpType::AodMove, {0}, {qc::Dimension::X}, {0.0}, {1.0});
   move.invert();
   EXPECT_EQ(move.getStarts(qc::Dimension::X).at(0), 1.0);
   EXPECT_EQ(move.getEnds(qc::Dimension::X).at(0), -1.0);
