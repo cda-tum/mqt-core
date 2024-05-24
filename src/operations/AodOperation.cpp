@@ -1,24 +1,26 @@
-//
-// Created by Ludwig Schmid on 30.10.23.
-//
-
 #include "operations/AodOperation.hpp"
+#include "Definitions.hpp"
 
 #include "cassert"
+#include "iomanip"
+#include "limits"
 
 #include <utility>
 
 namespace qc {
 AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
-                           std::vector<uint32_t> dirs, std::vector<fp> start,
-                           std::vector<fp> end) {
-  auto dirsEnum = std::vector<Dimension>(dirs.size());
+                           const std::vector<uint32_t>& dirs, std::vector<fp> start,
+                           std::vector<fp> end)
+    : AodOperation(s, std::move(qubits), convertToDimension(dirs), std::move(start), std::move(end)) {}
+
+std::vector<Dimension> AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
+  std::vector<Dimension> dirsEnum(dirs.size());
   for (size_t i = 0; i < dirs.size(); ++i) {
     dirsEnum[i] = static_cast<Dimension>(dirs[i]);
   }
-  AodOperation(s, std::move(qubits), std::move(dirsEnum), std::move(start),
-               std::move(end));
+  return dirsEnum;
 }
+
 
 AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
                            std::vector<Dimension> dirs, std::vector<fp> start,
@@ -33,11 +35,11 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
   }
 }
 
-AodOperation::AodOperation(std::string type, std::vector<Qubit> targets,
-                           std::vector<uint32_t> dirs, std::vector<fp> start,
+AodOperation::AodOperation(const std::string& type, std::vector<Qubit> targets,
+                           const std::vector<uint32_t>& dirs, std::vector<fp> start,
                            std::vector<fp> end)
     : AodOperation(OP_NAME_TO_TYPE.at(type), std::move(targets),
-                   std::move(dirs), std::move(start), std::move(end)) {}
+                   dirs, std::move(start), std::move(end)) {}
 
 AodOperation::AodOperation(
     OpType s, std::vector<Qubit> targets,
@@ -55,7 +57,7 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> t,
                            std::vector<SingleOperation>& ops)
     : operations(std::move(ops)) {
   type = s;
-  this->targets = t;
+  this->targets = std::move(t);
   name = toString(type);
 }
 
