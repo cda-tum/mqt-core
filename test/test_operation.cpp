@@ -216,12 +216,13 @@ TEST(AodOperation, Invert) {
   EXPECT_EQ(move.getStarts(qc::Dimension::X).at(0), 1.0);
   EXPECT_EQ(move.getEnds(qc::Dimension::X).at(0), -1.0);
 
-  qc::AodOperation activate(qc::OpType::AodActivate, {0}, {0}, {0.0}, {1.0});
+  qc::AodOperation activate(qc::OpType::AodActivate, {0}, {qc::Dimension::X},
+                            {0.0}, {1.0});
   activate.invert();
   EXPECT_EQ(activate.getType(), qc::OpType::AodDeactivate);
 
-  qc::AodOperation deactivate(qc::OpType::AodDeactivate, {0}, {0}, {0.0},
-                              {1.0});
+  qc::AodOperation deactivate(qc::OpType::AodDeactivate, {0},
+                              {qc::Dimension::X}, {0.0}, {1.0});
   deactivate.invert();
   EXPECT_EQ(deactivate.getType(), qc::OpType::AodActivate);
 }
