@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import locale
 import sys
 from pathlib import Path
 
@@ -30,7 +31,7 @@ def test_loading_quantum_computation() -> None:
 def test_loading_file() -> None:
     """Test whether importing a simple QASM file works."""
     qasm = "qreg q[2];\ncreg c[2];\nh q[0];\ncx q[0], q[1];\nmeasure q -> c;\n"
-    with Path("test.qasm").open("w") as f:
+    with Path("test.qasm").open("w", encoding=locale.getpreferredencoding(False)) as f:
         f.write(qasm)
 
     # load the file

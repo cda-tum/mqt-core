@@ -73,11 +73,13 @@ std::ostream& Operation::print(std::ostream& os, const Permutation& permutation,
       } else {
         os << "\033[31m";
       }
-      os << std::setw(4) << "c" << "\033[0m";
+      os << std::setw(4) << "c"
+         << "\033[0m";
       continue;
     }
 
-    os << std::setw(4) << "|" << "\033[0m";
+    os << std::setw(4) << "|"
+       << "\033[0m";
   }
 
   printParameters(os);
@@ -179,6 +181,10 @@ void Operation::addDepthContribution(std::vector<std::size_t>& depths) const {
 void Operation::apply(const Permutation& permutation) {
   getTargets() = permutation.apply(getTargets());
   getControls() = permutation.apply(getControls());
+}
+
+auto Operation::isInverseOf(const Operation& other) const -> bool {
+  return operator==(*other.getInverted());
 }
 
 } // namespace qc

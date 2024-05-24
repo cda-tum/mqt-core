@@ -138,6 +138,9 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME})
 endif()
 
+# add datastructures package
+add_subdirectory(datastructures)
+
 # add DD package library
 add_subdirectory(dd)
 
@@ -146,6 +149,9 @@ add_subdirectory(zx)
 
 # add ECC library
 add_subdirectory(ecc)
+
+# add NA library
+add_subdirectory(na)
 
 # ** Note ** The following target will soon be removed from the project. All top-level projects
 # should switch to using the mqt-core Python package.
@@ -180,7 +186,7 @@ if(MQT_CORE_INSTALL)
   configure_package_config_file(
     ${MQT_CORE_CMAKE_CONFIG_TEMPLATE} ${MQT_CORE_CMAKE_PROJECT_CONFIG_FILE}
     INSTALL_DESTINATION ${MQT_CORE_CONFIG_INSTALL_DIR}
-    PATH_VARS MQT_CORE_ZX_WITH_GMP
+    PATH_VARS MQT_CORE_WITH_GMP
     NO_SET_AND_CHECK_MACRO NO_CHECK_REQUIRED_COMPONENTS_MACRO)
   write_basic_package_version_file(
     ${MQT_CORE_CMAKE_VERSION_CONFIG_FILE}

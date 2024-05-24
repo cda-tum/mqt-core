@@ -37,7 +37,8 @@ std::ostream& BernsteinVazirani::printStatistics(std::ostream& os) const {
   os << "\tm: " << getNindividualOps() << "\n";
   os << "\ts: " << expected << "\n";
   os << "\tdynamic: " << dynamic << "\n";
-  os << "--------------" << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 

@@ -48,10 +48,12 @@ std::ostream& QPE::printStatistics(std::ostream& os) const {
   os << "QPE Statistics:\n";
   os << "\tn: " << nqubits + 1 << "\n";
   os << "\tm: " << getNindividualOps() << "\n";
-  os << "\tlambda: " << lambda << "π" << "\n";
+  os << "\tlambda: " << lambda << "π"
+     << "\n";
   os << "\tprecision: " << precision << "\n";
   os << "\titerative: " << iterative << "\n";
-  os << "--------------" << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 

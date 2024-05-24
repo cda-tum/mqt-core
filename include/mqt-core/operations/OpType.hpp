@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -66,6 +67,10 @@ enum OpType : std::uint8_t {
   AodDeactivate,
   AodMove,
 };
+
+/// Enumeration of diagonal gates
+static constexpr std::array<OpType, 10> DIAGONAL_GATES = {
+    Barrier, I, Z, S, Sdg, T, Tdg, P, RZ, RZZ};
 
 inline std::string toString(const OpType& opType) {
   switch (opType) {
@@ -202,7 +207,7 @@ inline std::string shortName(const OpType& opType) {
   }
 }
 
-inline bool isTwoQubitGate(const OpType& opType) {
+[[nodiscard]] inline bool isTwoQubitGate(const OpType& opType) {
   switch (opType) {
   case SWAP:
   case iSWAP:
@@ -223,9 +228,34 @@ inline bool isTwoQubitGate(const OpType& opType) {
   }
 }
 
-inline std::ostream& operator<<(std::ostream& out, OpType& opType) {
-  out << toString(opType);
-  return out;
+[[nodiscard]] inline auto isSingleQubitGate(const qc::OpType& type) {
+  switch (type) {
+  case U:
+  case U2:
+  case P:
+  case X:
+  case Y:
+  case Z:
+  case H:
+  case S:
+  case Sdg:
+  case T:
+  case SX:
+  case SXdg:
+  case Tdg:
+  case V:
+  case Vdg:
+  case RX:
+  case RY:
+  case RZ:
+    return true;
+  default:
+    return false;
+  }
+}
+
+inline std::ostream& operator<<(std::ostream& out, const OpType& opType) {
+  return out << toString(opType);
 }
 
 const inline static std::unordered_map<std::string, qc::OpType>

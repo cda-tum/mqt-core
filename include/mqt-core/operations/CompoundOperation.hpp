@@ -61,6 +61,15 @@ public:
 
   [[nodiscard]] std::set<Qubit> getUsedQubits() const override;
 
+  [[nodiscard]] auto commutesAtQubit(const Operation& other,
+                                     const Qubit& qubit) const -> bool override;
+
+  /**
+   * This refines the inherited method because the inherited method leads to
+   * false negatives
+   */
+  [[nodiscard]] auto isInverseOf(const Operation& other) const -> bool override;
+
   void invert() override;
 
   void apply(const Permutation& permutation) override;
