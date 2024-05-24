@@ -1,14 +1,14 @@
 #pragma once
 
-#include "operations/Operation.hpp"
 #include "Definitions.hpp"
-
-#include "stdlib.h"
-#include <cstdint>
-#include "string"
-#include "vector"
-#include "tuple"
 #include "algorithm"
+#include "operations/Operation.hpp"
+#include "stdlib.h"
+#include "string"
+#include "tuple"
+#include "vector"
+
+#include <cstdint>
 
 namespace qc {
 
