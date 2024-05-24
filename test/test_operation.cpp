@@ -1,3 +1,4 @@
+#include "Definitions.hpp"
 #include "operations/AodOperation.hpp"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
@@ -177,4 +178,46 @@ TEST(AodOperation, Distances) {
                               {1.0, 3.0});
   EXPECT_EQ(move.getMaxDistance(qc::Dimension::X), 1.0);
   EXPECT_EQ(move.getMaxDistance(qc::Dimension::Y), 2.0);
+}
+
+TEST(AodOperation, Qasm) {
+  const qc::AodOperation move(qc::OpType::AodMove, {0, 1},
+                              {qc::Dimension::X, qc::Dimension::Y}, {0.0, 1.0},
+                              {1.0, 3.0});
+  std::stringstream ss;
+  qc::RegisterNames qreg{{"q", "q"}};
+  qc::RegisterNames creg{{"c", "c"}};
+  move.dumpOpenQASM(ss, qreg, creg, 0, false);
+
+  EXPECT_FALSE(ss.str().empty());
+}
+
+TEST(AodOperation, Constructors) {
+  const qc::AodOperation move(qc::OpType::AodMove, {0, 1}, {0, 1}, {0.0, 1.0},
+                              {1.0, 3.0});
+  const qc::AodOperation move2("aod_move", {0, 1}, {0}, {0.0}, {1.0});
+  std::vector<std::tuple<qc::Dimension, qc::fp, qc::fp>> operations;
+  operations.emplace_back(qc::Dimension::X, 0.0, 1.0);
+  const qc::AodOperation move3(qc::OpType::AodMove, {0}, operations);
+  qc::SingleOperation singleOp(qc::Dimension::X, 0.0, 1.0);
+  std::vector<qc::SingleOperation> ops{singleOp};
+  const qc::AodOperation move4(qc::OpType::AodMove, {0}, ops);
+
+  EXPECT_EQ(0, 0);
+}
+
+TEST(AodOPeration, Invert) {
+  qc::AodOperation move(qc::OpType::AodMove, {0}, {0}, {0.0}, {1.0});
+  move.invert();
+  EXPECT_EQ(move.getStarts(qc::Dimension::X).at(0), 1.0);
+  EXPECT_EQ(move.getEnds(qc::Dimension::X).at(0), -1.0);
+
+  qc::AodOperation activate(qc::OpType::AodActivate, {0}, {0}, {0.0}, {1.0});
+  activate.invert();
+  EXPECT_EQ(activate.getType(), qc::OpType::AodDeactivate);
+
+  qc::AodOperation deactivate(qc::OpType::AodDeactivate, {0}, {0}, {0.0},
+                              {1.0});
+  deactivate.invert();
+  EXPECT_EQ(deactivate.getType(), qc::OpType::AodActivate);
 }
