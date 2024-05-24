@@ -94,10 +94,10 @@ void AodOperation::invert() {
       op.end = -op.start;
     }
   }
-  if (type == OpType::AodActivate) {
+  else if (type == OpType::AodActivate) {
     type = OpType::AodDeactivate;
   }
-  if (type == OpType::AodDeactivate) {
+  else if (type == OpType::AodDeactivate) {
     type = OpType::AodActivate;
   }
 }
