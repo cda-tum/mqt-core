@@ -20,11 +20,9 @@ jobs:
     name: 🇨‌ Test
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.0.0
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@improve-coverage-configuration
     with:
       cmake-args-macos: -DMQT_CORE_WITH_GMP=ON
-    secrets:
-      token: ${{ secrets.CODECOV_TOKEN }}
 
   cpp-linter:
     name: 🇨‌ Lint
@@ -38,9 +36,7 @@ jobs:
     name: 🐍 Test
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-python-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@v1.0.0
-    secrets:
-      token: ${{ secrets.CODECOV_TOKEN }}
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@improve-coverage-configuration
 
   code-ql:
     name: 📝 CodeQL
