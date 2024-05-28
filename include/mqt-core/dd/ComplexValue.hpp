@@ -5,6 +5,8 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <utility>

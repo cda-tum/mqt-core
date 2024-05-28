@@ -2,7 +2,14 @@
 
 #include "QuantumComputation.hpp"
 #include "algorithms/GoogleRandomCircuitSampling.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/Operations.hpp"
+#include "dd/Package_fwd.hpp"
+
+#include <cstddef>
+#include <map>
+#include <optional>
+#include <string>
 
 namespace dd {
 using namespace qc;

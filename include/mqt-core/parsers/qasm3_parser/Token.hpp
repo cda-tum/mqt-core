@@ -1,15 +1,20 @@
 #pragma once
 
-#include "QuantumComputation.hpp"
+#include "Definitions.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace qasm3 {
 
 struct Token {
 public:
-  enum class Kind {
+  enum class Kind : uint8_t {
     None,
 
     OpenQasm,

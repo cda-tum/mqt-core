@@ -1,9 +1,23 @@
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/DDpackageConfig.hpp"
 #include "dd/NoiseFunctionality.hpp"
 #include "dd/Operations.hpp"
+#include "dd/Package.hpp"
+#include "operations/OpType.hpp"
 
-#include "gtest/gtest.h"
+#include <algorithm>
+#include <bitset>
+#include <cmath>
+#include <complex>
+#include <cstddef>
+#include <functional>
+#include <gtest/gtest.h>
+#include <map>
+#include <memory>
+#include <stdexcept>
+#include <utility>
 
 using namespace qc;
 
@@ -45,7 +59,7 @@ protected:
     qc.h(3);
   }
 
-  qc::QuantumComputation qc{};
+  qc::QuantumComputation qc;
   size_t stochRuns = 1000U;
 };
 
@@ -300,10 +314,9 @@ TEST_F(DDNoiseFunctionalityTest, testingUsedQubits) {
   EXPECT_TRUE(compoundOp.getUsedQubits().count(0));
   EXPECT_TRUE(compoundOp.getUsedQubits().count(1));
 
-  std::unique_ptr<qc::Operation> xOp =
-      std::make_unique<qc::StandardOperation>(0, qc::X);
-  auto classicalControlledOp =
-      qc::ClassicControlledOperation(xOp, std::pair{0, nqubits}, 1U);
+  auto classicalControlledOp = qc::ClassicControlledOperation(
+      std::make_unique<qc::StandardOperation>(0, qc::X), std::pair{0, nqubits},
+      1U);
   EXPECT_EQ(classicalControlledOp.getUsedQubits().size(), 1);
   EXPECT_TRUE(classicalControlledOp.getUsedQubits().count(0) == 1U);
 }

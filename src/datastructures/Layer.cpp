@@ -2,9 +2,9 @@
 
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
-#include "datastructures/UndirectedGraph.hpp"
 #include "operations/OpType.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <sstream>
 #include <stdexcept>

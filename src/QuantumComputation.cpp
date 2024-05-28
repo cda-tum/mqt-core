@@ -1,7 +1,33 @@
 #include "QuantumComputation.hpp"
 
+#include "Definitions.hpp"
+#include "operations/CompoundOperation.hpp"
+#include "operations/Control.hpp"
+#include "operations/Expression.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
+#include "operations/SymbolicOperation.hpp"
+
+#include <algorithm>
 #include <cassert>
+#include <cctype>
+#include <cmath>
+#include <cstddef>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <istream>
+#include <iterator>
 #include <memory>
+#include <optional>
+#include <ostream>
+#include <set>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
 
 namespace qc {
 
@@ -95,7 +121,7 @@ void QuantumComputation::import(const std::string& filename, Format format) {
   }
 }
 
-void QuantumComputation::import(std::istream&& is, Format format) {
+void QuantumComputation::import(std::istream& is, Format format) {
   // reset circuit before importing
   reset();
 
@@ -634,7 +660,7 @@ void QuantumComputation::dump(const std::string& filename, Format format) {
   dump(of, format);
 }
 
-void QuantumComputation::dump(std::ostream&& of, Format format) {
+void QuantumComputation::dump(std::ostream& of, Format format) {
   switch (format) {
   case Format::OpenQASM3:
     dumpOpenQASM(of, true);

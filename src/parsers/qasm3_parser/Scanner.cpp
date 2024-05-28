@@ -1,5 +1,7 @@
 #include "parsers/qasm3_parser/Scanner.hpp"
 
+#include "parsers/qasm3_parser/Token.hpp"
+
 #include <cstdint>
 #include <istream>
 #include <optional>

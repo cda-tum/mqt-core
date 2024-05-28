@@ -6,9 +6,20 @@
 
 #include "operations/NonUnitaryOperation.hpp"
 
+#include "Definitions.hpp"
+#include "Permutation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <iomanip>
+#include <ostream>
+#include <set>
+#include <stdexcept>
 #include <utility>
+#include <vector>
 
 namespace qc {
 // Measurement constructor

@@ -15,9 +15,9 @@ namespace dd {
 ///-----------------------------------------------------------------------------
 ///                        \n Forward declarations \n
 ///-----------------------------------------------------------------------------
-struct vNode;
-struct mNode;
-struct dNode;
+struct vNode; // NOLINT(readability-identifier-naming)
+struct mNode; // NOLINT(readability-identifier-naming)
+struct dNode; // NOLINT(readability-identifier-naming)
 class ComplexNumbers;
 template <typename T> class MemoryManager;
 
@@ -42,7 +42,7 @@ using isMatrixVariant =
  */
 template <typename Node> struct CachedEdge {
   Node* p{};
-  ComplexValue w{};
+  ComplexValue w;
 
   CachedEdge() = default;
   CachedEdge(Node* n, const ComplexValue& v) : p(n), w(v) {}

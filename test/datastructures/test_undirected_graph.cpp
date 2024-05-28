@@ -1,6 +1,7 @@
 #include "datastructures/UndirectedGraph.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include <tuple>
 
 namespace qc {
 TEST(UndirectedGraph, Numbered) {

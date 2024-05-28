@@ -1,8 +1,18 @@
 #include "parsers/qasm3_parser/passes/ConstEvalPass.hpp"
 
 #include "parsers/qasm3_parser/Exception.hpp"
+#include "parsers/qasm3_parser/Statement.hpp"
+#include "parsers/qasm3_parser/Types.hpp"
 
+#include <algorithm>
+#include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
 
 namespace qasm3::const_eval {
 namespace {

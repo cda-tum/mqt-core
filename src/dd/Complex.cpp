@@ -1,6 +1,7 @@
 #include "dd/Complex.hpp"
 
 #include "dd/ComplexValue.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/RealNumber.hpp"
 
 #include <complex>

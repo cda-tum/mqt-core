@@ -1,5 +1,17 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "operations/CompoundOperation.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <ostream>
+#include <random>
+
 namespace qc {
 
 RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq,

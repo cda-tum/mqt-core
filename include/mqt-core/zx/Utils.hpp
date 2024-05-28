@@ -1,8 +1,8 @@
 #pragma once
 
-#include "operations/Expression.hpp"
 #include "zx/ZXDefinitions.hpp"
 
+#include <cassert>
 #include <cstdint>
 #include <iterator>
 #include <optional>

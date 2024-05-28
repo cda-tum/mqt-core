@@ -4,15 +4,18 @@
 #include "parsers/qasm3_parser/Statement.hpp"
 #include "parsers/qasm3_parser/Types.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
-#include <vector>
+#include <memory>
+#include <sstream>
 
 namespace qasm3::type_checking {
 
 void TypeCheckPass::visitGateStatement(
     std::shared_ptr<GateDeclaration> gateStatement) {
-  // we save the current environment to restore it afterwards
+  // we save the current environment to restore it afterward
   const auto oldEnv = env;
 
   for (const auto& param : gateStatement->parameters->identifiers) {

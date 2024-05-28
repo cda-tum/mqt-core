@@ -2,6 +2,7 @@
 #include "python/pybind11.hpp"
 
 #include <pybind11/operators.h>
+#include <string>
 
 namespace mqt {
 

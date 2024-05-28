@@ -1,5 +1,8 @@
 #include "operations/Expression.hpp"
 
+#include <ostream>
+#include <string>
+
 namespace sym {
 
 Variable::Variable(const std::string& name) {

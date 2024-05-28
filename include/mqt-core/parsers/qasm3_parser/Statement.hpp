@@ -93,7 +93,7 @@ public:
 class BinaryExpression : public Expression,
                          public std::enable_shared_from_this<BinaryExpression> {
 public:
-  enum Op {
+  enum Op : uint8_t {
     Power,
     Add,
     Subtract,
@@ -131,7 +131,7 @@ std::optional<qc::ComparisonKind> getComparisonKind(BinaryExpression::Op op);
 class UnaryExpression : public Expression,
                         public std::enable_shared_from_this<UnaryExpression> {
 public:
-  enum Op {
+  enum Op : uint8_t {
     BitwiseNot,
     LogicalNot,
     Negate,
@@ -169,7 +169,7 @@ public:
 class IdentifierList : public Expression,
                        public std::enable_shared_from_this<IdentifierList> {
 public:
-  std::vector<std::shared_ptr<IdentifierExpression>> identifiers{};
+  std::vector<std::shared_ptr<IdentifierExpression>> identifiers;
 
   explicit IdentifierList(
       std::vector<std::shared_ptr<IdentifierExpression>> ids)
@@ -371,7 +371,7 @@ class AssignmentStatement
     : public Statement,
       public std::enable_shared_from_this<AssignmentStatement> {
 public:
-  enum Type {
+  enum Type : uint8_t {
     Assignment,
     PlusAssignment,
     MinusAssignment,

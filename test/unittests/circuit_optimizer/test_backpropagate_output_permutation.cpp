@@ -1,8 +1,7 @@
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
 
-#include "gtest/gtest.h"
-#include <iostream>
+#include <gtest/gtest.h>
 
 namespace qc {
 TEST(BackpropagateOutputPermutation, FullySpecified) {

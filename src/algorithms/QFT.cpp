@@ -1,5 +1,14 @@
 #include "algorithms/QFT.hpp"
 
+#include "Definitions.hpp"
+#include "operations/OpType.hpp"
+
+#include <cmath>
+#include <cstddef>
+#include <ostream>
+#include <string>
+#include <vector>
+
 namespace qc {
 QFT::QFT(const std::size_t nq, const bool includeMeas, const bool dyn)
     : precision(nq), includeMeasurements(includeMeas), dynamic(dyn) {

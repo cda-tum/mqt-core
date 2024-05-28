@@ -1,4 +1,10 @@
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+
+#include <cstddef>
+#include <istream>
+#include <sstream>
+#include <string>
 
 void qc::QuantumComputation::importGRCS(std::istream& is) {
   std::size_t nq{};

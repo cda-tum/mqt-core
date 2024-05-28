@@ -1,8 +1,13 @@
 #pragma once
 
-#include "NestedEnvironment.hpp"
-#include "QuantumComputation.hpp"
 #include "Statement.hpp"
+#include "operations/OpType.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace qasm3 {
 struct GateInfo {

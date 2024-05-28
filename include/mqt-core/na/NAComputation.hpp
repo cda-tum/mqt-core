@@ -53,7 +53,7 @@ public:
   template <class T, class... Args> auto emplaceBack(Args&&... args) -> void {
     static_assert(std::is_base_of_v<NAOperation, T>,
                   "T must be a subclass of NAOperation.");
-    operations.emplace_back(std::make_unique<T>(args...));
+    operations.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
   }
   auto clear(const bool clearInitialPositions = true) -> void {
     operations.clear();

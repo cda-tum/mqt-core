@@ -1,6 +1,8 @@
 #include "operations/OpType.hpp"
 #include "python/pybind11.hpp"
 
+#include <string>
+
 namespace mqt {
 
 void registerOptype(py::module& m) {

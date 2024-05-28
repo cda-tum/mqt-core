@@ -1,10 +1,25 @@
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/CompoundOperation.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 #include "parsers/qasm3_parser/Exception.hpp"
 
-#include "gtest/gtest.h"
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstddef>
 #include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
 #include <iostream>
+#include <iterator>
+#include <memory>
+#include <sstream>
 #include <string>
+#include <tuple>
+#include <vector>
 
 class IO : public testing::TestWithParam<std::tuple<std::string, qc::Format>> {
 protected:
@@ -13,7 +28,7 @@ protected:
   void SetUp() override { qc = std::make_unique<qc::QuantumComputation>(); }
 
   std::size_t nqubits = 0;
-  unsigned int seed = 0;
+  std::size_t seed = 0;
   std::string output = "tmp.txt";
   std::string output2 = "tmp2.txt";
   std::string output3 = "tmp";

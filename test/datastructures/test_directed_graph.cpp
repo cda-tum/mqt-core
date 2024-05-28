@@ -1,6 +1,7 @@
 #include "datastructures/DirectedGraph.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include <tuple>
 
 namespace qc {
 TEST(DirectedGraph, Numbered) {

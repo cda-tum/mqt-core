@@ -1,8 +1,17 @@
 #pragma once
 
+#include "Permutation.hpp"
 #include "QuantumComputation.hpp"
 #include "algorithms/Grover.hpp"
 #include "dd/Operations.hpp"
+#include "dd/Package_fwd.hpp"
+#include "operations/OpType.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <stack>
+#include <vector>
 
 namespace dd {
 using namespace qc;

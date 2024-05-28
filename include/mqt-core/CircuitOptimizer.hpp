@@ -4,10 +4,8 @@
 #include "QuantumComputation.hpp"
 #include "operations/Operation.hpp"
 
-#include <array>
 #include <cstddef>
 #include <memory>
-#include <unordered_set>
 
 namespace qc {
 

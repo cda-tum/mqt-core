@@ -1,7 +1,18 @@
 #include "operations/Operation.hpp"
 
+#include "Definitions.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <iomanip>
+#include <iostream>
+#include <ostream>
+#include <set>
+#include <vector>
 
 namespace qc {
 

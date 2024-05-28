@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <unordered_set>
@@ -128,6 +129,10 @@ protected:
 
 public:
   Layer() = default;
+  Layer(const Layer&) = default;
+  Layer(Layer&&) = default;
+  Layer& operator=(const Layer&) = default;
+  Layer& operator=(Layer&&) = default;
   ~Layer() = default;
   explicit Layer(const QuantumComputation& qc) { constructDAG(qc); }
   [[nodiscard]] auto getExecutableSet() const -> const ExecutableSet& {
