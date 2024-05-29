@@ -1,5 +1,4 @@
 #include "Definitions.hpp"
-#include "Definitions.hpp"
 #include "operations/AodOperation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/Expression.hpp"
