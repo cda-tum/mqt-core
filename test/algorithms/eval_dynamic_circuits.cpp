@@ -1,15 +1,23 @@
 #include "CircuitOptimizer.hpp"
+#include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/Export.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Operations.hpp"
+#include "dd/Package.hpp"
+#include "dd/Package_fwd.hpp"
 #include "dd/Simulation.hpp"
 
-#include "gtest/gtest.h"
 #include <bitset>
 #include <chrono>
-#include <iomanip>
+#include <cstdlib>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 
@@ -18,7 +26,7 @@ protected:
   std::size_t precision{};
   qc::fp theta{};
   std::size_t expectedResult{};
-  std::string expectedResultRepresentation{};
+  std::string expectedResultRepresentation;
   std::unique_ptr<qc::QuantumComputation> qpe;
   std::unique_ptr<qc::QuantumComputation> iqpe;
   std::size_t qpeNgates{};
@@ -67,7 +75,7 @@ protected:
     }
     std::stringstream ss{};
     for (auto i = static_cast<int>(precision - 1); i >= 0; --i) {
-      if ((expectedResult & (1ULL << i)) != 0) {
+      if ((expectedResult & (1ULL << static_cast<std::size_t>(i))) != 0) {
         ss << 1;
       } else {
         ss << 0;
@@ -210,9 +218,9 @@ protected:
   std::size_t precision{};
   dd::fp theta{};
   std::size_t expectedResult{};
-  std::string expectedResultRepresentation{};
+  std::string expectedResultRepresentation;
   std::size_t secondExpectedResult{};
-  std::string secondExpectedResultRepresentation{};
+  std::string secondExpectedResultRepresentation;
   std::unique_ptr<qc::QuantumComputation> qpe;
   std::unique_ptr<qc::QuantumComputation> iqpe;
   std::size_t qpeNgates{};

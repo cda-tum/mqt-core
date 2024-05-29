@@ -4,13 +4,10 @@
 #include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"
 
-#include "gtest/gtest.h"
-#include <fstream>
-#include <iostream>
+#include <algorithm>
+#include <gtest/gtest.h>
 #include <memory>
-#include <random>
-#include <sstream>
-#include <string>
+#include <tuple>
 #include <vector>
 
 namespace qc {

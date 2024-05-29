@@ -1,8 +1,10 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 #include "dd/Benchmark.hpp"
 
-#include "gtest/gtest.h"
-#include <string>
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <sstream>
 
 class RandomClifford : public testing::TestWithParam<std::size_t> {
 protected:

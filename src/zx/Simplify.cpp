@@ -1,9 +1,10 @@
 #include "zx/Simplify.hpp"
 
 #include "zx/Rules.hpp"
+#include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include <utility>
+#include <cstddef>
 
 namespace zx {
 

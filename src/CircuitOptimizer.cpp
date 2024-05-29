@@ -1,10 +1,27 @@
 #include "CircuitOptimizer.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "operations/CompoundOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <ios>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <set>
+#include <sstream>
+#include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 

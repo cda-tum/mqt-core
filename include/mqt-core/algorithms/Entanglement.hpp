@@ -1,6 +1,8 @@
 #pragma once
 
-#include <QuantumComputation.hpp>
+#include "QuantumComputation.hpp"
+
+#include <cstddef>
 
 namespace qc {
 class Entanglement : public QuantumComputation {

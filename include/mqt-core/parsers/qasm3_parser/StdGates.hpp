@@ -1,7 +1,10 @@
 #pragma once
 
 #include "Gate.hpp"
+#include "operations/OpType.hpp"
 
+#include <map>
+#include <memory>
 #include <string>
 
 namespace qasm3 {

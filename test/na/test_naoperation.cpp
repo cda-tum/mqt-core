@@ -1,9 +1,13 @@
+#include "Definitions.hpp"
+#include "na/NADefinitions.hpp"
 #include "na/operations/NAGlobalOperation.hpp"
 #include "na/operations/NALocalOperation.hpp"
-#include "na/operations/NAOperation.hpp"
 #include "na/operations/NAShuttlingOperation.hpp"
+#include "operations/OpType.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include <memory>
+#include <vector>
 
 namespace na {
 TEST(NAOperation, ShuttlingOperation) {

@@ -2,10 +2,17 @@
 
 #include "Definitions.hpp"
 
+#include <cstddef>
 #include <numeric>
 #include <optional>
+#include <ostream>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 namespace qc {
 

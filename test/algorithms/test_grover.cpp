@@ -1,9 +1,19 @@
 #include "algorithms/Grover.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Package.hpp"
+#include "dd/Package_fwd.hpp"
 
-#include "gtest/gtest.h"
+#include <algorithm>
 #include <cmath>
+#include <complex>
+#include <cstddef>
+#include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
+#include <sstream>
+#include <tuple>
+#include <utility>
 
 class Grover
     : public testing::TestWithParam<std::tuple<std::size_t, std::size_t>> {

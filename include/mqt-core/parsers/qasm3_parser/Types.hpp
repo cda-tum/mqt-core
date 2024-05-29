@@ -2,8 +2,10 @@
 
 #include "InstVisitor.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace qasm3 {
@@ -42,7 +44,7 @@ public:
   virtual std::string toString() = 0;
 };
 
-enum DesignatedTy {
+enum DesignatedTy : uint8_t {
   Qubit,
   Bit,
   Int,
@@ -133,7 +135,7 @@ public:
   std::string designatorToString();
 };
 
-enum UnsizedTy { Bool, Duration };
+enum UnsizedTy : uint8_t { Bool, Duration };
 
 template <typename T> class UnsizedType : public Type<T> {
 public:

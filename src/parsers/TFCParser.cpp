@@ -1,6 +1,17 @@
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <ios>
+#include <istream>
+#include <limits>
+#include <map>
 #include <regex>
+#include <string>
+#include <vector>
 
 void qc::QuantumComputation::importTFC(std::istream& is) {
   std::map<std::string, Qubit> varMap{};

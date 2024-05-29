@@ -26,7 +26,6 @@
 #include <bitset>
 #include <cassert>
 #include <cmath>
-#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -34,7 +33,6 @@
 #include <iterator>
 #include <limits>
 #include <map>
-#include <optional>
 #include <queue>
 #include <random>
 #include <regex>
@@ -111,7 +109,7 @@ public:
    * @note The real and imaginary part of complex numbers are treated
    * separately. Hence, it suffices for the manager to only manage real numbers.
    */
-  MemoryManager<RealNumber> cMemoryManager{};
+  MemoryManager<RealNumber> cMemoryManager;
 
   /**
    * @brief Get the memory manager for a given type
@@ -1150,7 +1148,8 @@ public:
   void performCollapsingMeasurement(vEdge& rootEdge, const Qubit index,
                                     const fp probability,
                                     const bool measureZero) {
-    GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
+    const GateMatrix measurementMatrix =
+        measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
 
     const auto measurementGate = makeGateDD(measurementMatrix, index);
 
@@ -1737,14 +1736,14 @@ public:
       return 0.;
     }
 
-    std::size_t leftIdx = i;
+    const std::size_t leftIdx = i;
     fp leftContribution = 0.;
     if (!e.p->e[0].w.approximatelyZero()) {
       leftContribution = fidelityOfMeasurementOutcomesRecursive(
           e.p->e[0], probs, leftIdx, permutation, nQubits);
     }
 
-    std::size_t rightIdx = i | (1ULL << e.p->v);
+    const std::size_t rightIdx = i | (1ULL << e.p->v);
     auto rightContribution = 0.;
     if (!e.p->e[1].w.approximatelyZero()) {
       rightContribution = fidelityOfMeasurementOutcomesRecursive(

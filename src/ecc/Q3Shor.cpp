@@ -1,4 +1,16 @@
 #include "ecc/Q3Shor.hpp"
+
+#include "Definitions.hpp"
+#include "ecc/Ecc.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+#include "operations/StandardOperation.hpp"
+
+#include <array>
+#include <cstddef>
+#include <stdexcept>
+#include <utility>
 namespace ecc {
 void Q3Shor::writeEncoding() {
   if (!isDecoded || !gatesWritten) {

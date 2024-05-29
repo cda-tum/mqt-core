@@ -1,8 +1,10 @@
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Control.hpp"
 #include "operations/Expression.hpp"
-#include "operations/SymbolicOperation.hpp"
+#include "operations/OpType.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <memory>
 
 using namespace qc;

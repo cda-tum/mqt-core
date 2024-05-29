@@ -1,10 +1,19 @@
 #include "algorithms/QFT.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Package.hpp"
+#include "dd/RealNumber.hpp"
 
-#include "gtest/gtest.h"
+#include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
+#include <sstream>
+#include <utility>
 
 class QFT : public testing::TestWithParam<std::size_t> {
 protected:

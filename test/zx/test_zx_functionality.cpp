@@ -1,13 +1,22 @@
+#include "Definitions.hpp"
+#include "Permutation.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/CompoundOperation.hpp"
+#include "operations/Expression.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 #include "zx/FunctionalityConstruction.hpp"
 #include "zx/Simplify.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include "gtest/gtest.h"
 #include <array>
-#include <iostream>
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <utility>
 
 class ZXFunctionalityTest : public ::testing::Test {
 public:

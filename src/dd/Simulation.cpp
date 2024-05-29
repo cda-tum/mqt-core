@@ -1,6 +1,23 @@
 #include "dd/Simulation.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "algorithms/GoogleRandomCircuitSampling.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
+#include "dd/Package.hpp"
+#include "dd/Package_fwd.hpp"
+#include "dd/RealNumber.hpp"
+#include "operations/ClassicControlledOperation.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+
+#include <array>
+#include <cstddef>
+#include <map>
+#include <optional>
+#include <random>
+#include <string>
 
 namespace dd {
 template <class Config>

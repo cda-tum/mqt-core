@@ -2,6 +2,14 @@
 
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Operation.hpp"
+
+#include <array>
+#include <cstddef>
+#include <map>
+#include <memory>
+#include <utility>
+#include <vector>
 namespace ecc {
 class Q18Surface : public Ecc {
 public:

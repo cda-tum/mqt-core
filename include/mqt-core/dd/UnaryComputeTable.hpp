@@ -1,13 +1,11 @@
 #pragma once
 
-#include "DDDefinitions.hpp"
 #include "dd/statistics/TableStatistics.hpp"
 
 #include <array>
 #include <bitset>
 #include <cstddef>
-#include <iostream>
-#include <utility>
+#include <functional>
 
 namespace dd {
 

@@ -1,5 +1,15 @@
 #include "dd/FunctionalityConstruction.hpp"
 
+#include "QuantumComputation.hpp"
+#include "algorithms/Grover.hpp"
+#include "dd/Package.hpp"
+#include "dd/Package_fwd.hpp"
+
+#include <bitset>
+#include <cmath>
+#include <cstddef>
+#include <stack>
+
 namespace dd {
 template <class Config>
 MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd) {

@@ -1,5 +1,22 @@
 #include "dd/Operations.hpp"
 
+#include "Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Package.hpp"
+#include "operations/CompoundOperation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+
+#include <cstddef>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <ostream>
+#include <sstream>
+#include <variant>
+#include <vector>
+
 namespace dd {
 template <class Config>
 void dumpTensor(qc::Operation* op, std::ostream& of,
