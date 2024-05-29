@@ -7,8 +7,10 @@
 #include "operations/StandardOperation.hpp"
 #include "operations/SymbolicOperation.hpp"
 
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <sstream>
+#include <tuple>
 #include <vector>
 
 TEST(StandardOperation, CommutesAtQubit) {
@@ -190,15 +192,15 @@ TEST(AodOperation, Qasm) {
   qc::RegisterNames qreg;
   qreg.emplace_back("q", "q[0]");
   qreg.emplace_back("q", "q[1]");
-  qc::RegisterNames creg{{"c", "c"}};
+  qc::RegisterNames const creg{{"c", "c"}};
   move.dumpOpenQASM(ss, qreg, creg, 0, false);
 
   EXPECT_FALSE(ss.str().empty());
 }
 
 TEST(AodOperation, Constructors) {
-  uint32_t dir1 = 0;
-  uint32_t dir2 = 1;
+  uint32_t const dir1 = 0;
+  uint32_t const dir2 = 1;
 
   const qc::AodOperation move(qc::OpType::AodMove, {0, 1}, {dir1, dir2},
                               {0.0, 1.0}, {1.0, 3.0});
@@ -206,7 +208,7 @@ TEST(AodOperation, Constructors) {
   std::vector<std::tuple<qc::Dimension, qc::fp, qc::fp>> operations;
   operations.emplace_back(qc::Dimension::X, 0.0, 1.0);
   const qc::AodOperation move3(qc::OpType::AodMove, {0}, operations);
-  qc::SingleOperation singleOp(qc::Dimension::X, 0.0, 1.0);
+  qc::SingleOperation const singleOp(qc::Dimension::X, 0.0, 1.0);
   std::vector<qc::SingleOperation> ops{singleOp};
   const qc::AodOperation move4(qc::OpType::AodMove, {0}, ops);
 

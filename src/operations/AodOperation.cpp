@@ -4,8 +4,16 @@
 #include "cassert"
 #include "iomanip"
 #include "limits"
+#include "operations/OpType.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <ios>
+#include <ostream>
+#include <stdexcept>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 namespace qc {
 AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
