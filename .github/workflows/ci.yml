@@ -31,7 +31,6 @@ jobs:
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@v1.0.1
     with:
       cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON
-      files-changed-only: false
 
   python-tests:
     name: 🐍 Test
