@@ -2,7 +2,7 @@
 #include "na/NADefinitions.hpp"
 #include "operations/OpType.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <sstream>
 #include <string>
 #include <unordered_map>

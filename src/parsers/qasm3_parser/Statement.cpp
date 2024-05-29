@@ -1,5 +1,9 @@
 #include "parsers/qasm3_parser/Statement.hpp"
 
+#include "operations/ClassicControlledOperation.hpp"
+
+#include <optional>
+
 namespace qasm3 {
 
 std::optional<qc::ComparisonKind> getComparisonKind(BinaryExpression::Op op) {

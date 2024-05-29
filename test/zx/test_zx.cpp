@@ -3,8 +3,13 @@
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include "gtest/gtest.h"
 #include <array>
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <optional>
+#include <sstream>
+#include <utility>
 
 class ZXDiagramTest : public ::testing::Test {
 public:

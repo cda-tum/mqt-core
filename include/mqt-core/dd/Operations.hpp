@@ -1,13 +1,26 @@
 #pragma once
 
+#include "Definitions.hpp"
+#include "Permutation.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
+#include "dd/Package_fwd.hpp"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
+#include "operations/Control.hpp"
 #include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
 #include "operations/StandardOperation.hpp"
 
-#include <variant>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace dd {
 // single-target Operations

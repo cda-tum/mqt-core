@@ -1,13 +1,16 @@
 #include "Definitions.hpp"
+#include "Definitions.hpp"
 #include "operations/AodOperation.hpp"
-#include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
+#include "operations/Expression.hpp"
 #include "operations/NonUnitaryOperation.hpp"
-#include "operations/Operation.hpp"
+#include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"
 #include "operations/SymbolicOperation.hpp"
 
 #include <gtest/gtest.h>
+#include <sstream>
+#include <vector>
 
 TEST(StandardOperation, CommutesAtQubit) {
   const qc::StandardOperation op1(0, 1, qc::OpType::RY, std::vector{qc::PI_2});

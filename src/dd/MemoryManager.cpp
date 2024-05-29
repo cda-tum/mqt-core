@@ -4,6 +4,7 @@
 #include "dd/RealNumber.hpp"
 
 #include <cassert>
+#include <cstddef>
 
 namespace dd {
 

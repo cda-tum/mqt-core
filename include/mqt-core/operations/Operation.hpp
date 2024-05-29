@@ -3,15 +3,16 @@
 #include "Definitions.hpp"
 #include "OpType.hpp"
 #include "Permutation.hpp"
+#include "operations/Control.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstring>
-#include <fstream>
-#include <iomanip>
+#include <functional>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <vector>
 
 namespace qc {

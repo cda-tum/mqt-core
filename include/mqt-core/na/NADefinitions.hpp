@@ -7,8 +7,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <ostream>
 #include <sstream>
+#include <string>
 
 namespace na {
 /// Class to store two-dimensional coordinates

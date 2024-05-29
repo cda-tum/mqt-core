@@ -1,12 +1,21 @@
 #include "operations/StandardOperation.hpp"
 
-#include "operations/CompoundOperation.hpp"
+#include "Definitions.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
 
 #include <algorithm>
 #include <cassert>
-#include <numeric>
+#include <cmath>
+#include <cstdlib>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <ostream>
 #include <sstream>
-#include <variant>
+#include <utility>
+#include <vector>
 
 namespace qc {
 /***

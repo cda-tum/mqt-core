@@ -1,6 +1,19 @@
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <ios>
+#include <istream>
+#include <limits>
+#include <map>
 #include <regex>
+#include <string>
+#include <vector>
 
 void qc::QuantumComputation::importQC(std::istream& is) {
   std::map<std::string, Qubit> varMap{};

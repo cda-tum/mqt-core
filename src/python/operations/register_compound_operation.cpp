@@ -1,5 +1,12 @@
 #include "operations/CompoundOperation.hpp"
+#include "operations/Operation.hpp"
 #include "python/pybind11.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <utility>
+#include <vector>
 
 namespace mqt {
 

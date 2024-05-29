@@ -1,10 +1,15 @@
 #pragma once
 
-#include "Definitions.hpp"
-
+#include <cstddef>
 #include <numeric>
+#include <ostream>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 namespace qc {
 
@@ -14,10 +19,10 @@ namespace qc {
  * @tparam V the type of the vertices in the graph. Must implement `operator<<`.
  */
 template <class V> class DirectedGraph {
-  static_assert(
-      std::is_same<decltype(std::declval<std::ostream&>() << std::declval<V>()),
-                   std::ostream&>::value,
-      "V must support `operator<<`.");
+  static_assert(std::is_same_v<decltype(std::declval<std::ostream&>()
+                                        << std::declval<V>()),
+                               std::ostream&>,
+                "V must support `operator<<`.");
 
 protected:
   // the adjecency matrix works with indices
@@ -36,6 +41,11 @@ protected:
   std::vector<std::size_t> outDegrees;
 
 public:
+  DirectedGraph() = default;
+  DirectedGraph(const DirectedGraph&) = default;
+  DirectedGraph(DirectedGraph&&) = default;
+  DirectedGraph& operator=(const DirectedGraph&) = default;
+  DirectedGraph& operator=(DirectedGraph&&) = default;
   virtual ~DirectedGraph() = default;
   virtual auto addVertex(const V& v) -> void {
     // check whether the vertex is already in the graph, if so do nothing

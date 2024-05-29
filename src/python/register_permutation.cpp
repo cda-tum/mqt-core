@@ -1,6 +1,10 @@
+#include "Definitions.hpp"
 #include "Permutation.hpp"
-#include "pybind11/operators.h"
+#include "operations/Control.hpp"
 #include "python/pybind11.hpp"
+
+#include <pybind11/operators.h>
+#include <sstream>
 
 namespace mqt {
 

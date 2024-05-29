@@ -1,17 +1,32 @@
+#include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/DDpackageConfig.hpp"
 #include "dd/Export.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
+#include "dd/MemoryManager.hpp"
+#include "dd/Node.hpp"
 #include "dd/Package.hpp"
+#include "dd/RealNumber.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 #include "operations/Control.hpp"
 
-#include "gtest/gtest.h"
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
 #include <iomanip>
+#include <iostream>
+#include <limits>
 #include <memory>
 #include <random>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 using namespace qc::literals;
@@ -1358,39 +1373,12 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
                                     {true, false, true}, false));
 }
 
-struct DensityMatrixSimulatorDDPackageConfigTesting
-    : public dd::DDPackageConfig {
-  static constexpr std::size_t UT_DM_NBUCKET = 65536U;
-  static constexpr std::size_t UT_DM_INITIAL_ALLOCATION_SIZE = 4096U;
-
-  static constexpr std::size_t CT_DM_DM_MULT_NBUCKET = 16384U;
-  static constexpr std::size_t CT_DM_ADD_NBUCKET = 16384U;
-  static constexpr std::size_t CT_DM_NOISE_NBUCKET = 4096U;
-
-  static constexpr std::size_t UT_MAT_NBUCKET = 16384U;
-  static constexpr std::size_t CT_MAT_ADD_NBUCKET = 4096U;
-  static constexpr std::size_t CT_VEC_ADD_NBUCKET = 4096U;
-  static constexpr std::size_t CT_MAT_TRANS_NBUCKET = 4096U;
-  static constexpr std::size_t CT_MAT_CONJ_TRANS_NBUCKET = 4096U;
-
-  static constexpr std::size_t CT_MAT_MAT_MULT_NBUCKET = 1U;
-  static constexpr std::size_t CT_MAT_VEC_MULT_NBUCKET = 1U;
-  static constexpr std::size_t UT_VEC_NBUCKET = 1U;
-  static constexpr std::size_t UT_VEC_INITIAL_ALLOCATION_SIZE = 1U;
-  static constexpr std::size_t UT_MAT_INITIAL_ALLOCATION_SIZE = 1U;
-  static constexpr std::size_t CT_VEC_KRON_NBUCKET = 1U;
-  static constexpr std::size_t CT_MAT_KRON_NBUCKET = 1U;
-  static constexpr std::size_t CT_VEC_INNER_PROD_NBUCKET = 1U;
-  static constexpr std::size_t STOCHASTIC_CACHE_OPS = 1U;
-};
-
-using DensityMatrixPackageTest =
-    dd::Package<DensityMatrixSimulatorDDPackageConfigTesting>;
-
 TEST(DDPackageTest, dNodeMultiply) {
   // Multiply dNode with mNode (MxMxM)
   const auto nrQubits = 3U;
-  auto dd = std::make_unique<DensityMatrixPackageTest>(nrQubits);
+  auto dd =
+      std::make_unique<dd::Package<dd::DensityMatrixSimulatorDDPackageConfig>>(
+          nrQubits);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(dd->qubits());
   dd->incRef(state);
@@ -1437,7 +1425,9 @@ TEST(DDPackageTest, dNodeMultiply) {
 TEST(DDPackageTest, dNodeMultiply2) {
   // Multiply dNode with mNode (MxMxM)
   const auto nrQubits = 3U;
-  auto dd = std::make_unique<DensityMatrixPackageTest>(nrQubits);
+  auto dd =
+      std::make_unique<dd::Package<dd::DensityMatrixSimulatorDDPackageConfig>>(
+          nrQubits);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(dd->qubits());
   dd->incRef(state);
@@ -1477,7 +1467,9 @@ TEST(DDPackageTest, dNodeMultiply2) {
 TEST(DDPackageTest, dNodeMulCache1) {
   // Make caching test with dNodes
   const auto nrQubits = 1U;
-  auto dd = std::make_unique<DensityMatrixPackageTest>(nrQubits);
+  auto dd =
+      std::make_unique<dd::Package<dd::DensityMatrixSimulatorDDPackageConfig>>(
+          nrQubits);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(nrQubits);
   dd->incRef(state);
@@ -1559,15 +1551,10 @@ TEST(DDPackageTest, calCulpDistance) {
   EXPECT_EQ(tmp1, 0);
 }
 
-struct StochPackageConfig : public dd::DDPackageConfig {
-  static constexpr std::size_t STOCHASTIC_CACHE_OPS = 36;
-};
-
-using stochPackage = dd::Package<StochPackageConfig>;
-
 TEST(DDPackageTest, dStochCache) {
   const auto nrQubits = 4U;
-  auto dd = std::make_unique<stochPackage>(nrQubits);
+  auto dd = std::make_unique<
+      dd::Package<dd::StochasticNoiseSimulatorDDPackageConfig>>(nrQubits);
 
   std::vector<dd::mEdge> operations = {};
   operations.emplace_back(dd->makeGateDD(dd::X_MAT, 0));

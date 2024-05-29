@@ -96,7 +96,7 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
   isDensityMatrixTempFlagSet(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 2)) != 0U;
   }
-  [[nodiscard]] static inline bool
+  [[nodiscard]] static bool
   isDensityMatrixNode(const std::uintptr_t p) noexcept {
     return (p & (1ULL << 3)) != 0U;
   }
@@ -131,7 +131,7 @@ struct dNode {                        // NOLINT(readability-identifier-naming)
     p = reinterpret_cast<dNode*>(reinterpret_cast<std::uintptr_t>(p) & (~7ULL));
   }
 
-  [[nodiscard]] static inline std::uintptr_t
+  [[nodiscard]] static std::uintptr_t
   getDensityMatrixTempFlags(dNode*& p) noexcept {
     return getDensityMatrixTempFlags(reinterpret_cast<std::uintptr_t>(p));
   }

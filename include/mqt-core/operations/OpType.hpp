@@ -2,8 +2,8 @@
 
 #include <array>
 #include <cstdint>
-#include <functional>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 

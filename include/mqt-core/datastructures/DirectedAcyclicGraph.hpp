@@ -1,14 +1,14 @@
 #pragma once
 
-#include "Definitions.hpp"
 #include "DirectedGraph.hpp"
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
+#include <cstddef>
 #include <sstream>
 #include <stack>
 #include <stdexcept>
+#include <vector>
 
 namespace qc {
 

@@ -1,7 +1,15 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <utility>
 namespace ecc {
 class Q3Shor : public Ecc {
 public:

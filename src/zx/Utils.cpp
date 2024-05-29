@@ -1,6 +1,9 @@
 #include "zx/Utils.hpp"
 
-#include <cstddef>
+#include "zx/ZXDefinitions.hpp"
+
+#include <optional>
+#include <vector>
 
 namespace zx {
 Vertices::VertexIterator::VertexIterator(

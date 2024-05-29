@@ -1,8 +1,18 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Operation.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
 
 #include <cmath>
+#include <cstddef>
+#include <memory>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace qc {
 class StandardOperation : public Operation {
@@ -92,7 +102,7 @@ public:
   }
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, size_t indent,
+                    const RegisterNames& creg, std::size_t indent,
                     bool openQASM3) const override;
 
   [[nodiscard]] auto commutesAtQubit(const Operation& other,

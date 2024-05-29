@@ -1,7 +1,11 @@
 #pragma once
 
-#include <QuantumComputation.hpp>
-#include <bitset>
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+
+#include <cstddef>
+#include <ostream>
+#include <string>
 
 namespace qc {
 class BernsteinVazirani : public QuantumComputation {
@@ -9,7 +13,7 @@ public:
   BitString s = 0;
   std::size_t bitwidth = 1;
   bool dynamic = false;
-  std::string expected{};
+  std::string expected;
 
   explicit BernsteinVazirani(const BitString& hiddenString, bool dyn = false);
   explicit BernsteinVazirani(std::size_t nq, bool dyn = false);

@@ -1,10 +1,28 @@
 #include "CircuitOptimizer.hpp"
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
 #include "algorithms/RandomCliffordCircuit.hpp"
+#include "operations/ClassicControlledOperation.hpp"
+#include "operations/CompoundOperation.hpp"
+#include "operations/Control.hpp"
+#include "operations/Expression.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
 
-#include "gtest/gtest.h"
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <random>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace qc;
 
@@ -1151,15 +1169,15 @@ TEST_F(QFRFunctionality, OperationEquality) {
       std::make_unique<StandardOperation>(0, qc::X);
   std::unique_ptr<Operation> xp2 =
       std::make_unique<StandardOperation>(0, qc::X);
-  const auto classic0 =
-      ClassicControlledOperation(xp0, controlRegister0, expectedValue0);
-  const auto classic1 =
-      ClassicControlledOperation(xp1, controlRegister0, expectedValue1);
-  const auto classic2 =
-      ClassicControlledOperation(xp2, controlRegister1, expectedValue0);
+  const auto classic0 = ClassicControlledOperation(
+      std::move(xp0), controlRegister0, expectedValue0);
+  const auto classic1 = ClassicControlledOperation(
+      std::move(xp1), controlRegister0, expectedValue1);
+  const auto classic2 = ClassicControlledOperation(
+      std::move(xp2), controlRegister1, expectedValue0);
   std::unique_ptr<Operation> zp = std::make_unique<StandardOperation>(0, qc::Z);
-  const auto classic3 =
-      ClassicControlledOperation(zp, controlRegister0, expectedValue0);
+  const auto classic3 = ClassicControlledOperation(
+      std::move(zp), controlRegister0, expectedValue0);
   EXPECT_FALSE(classic0.equals(x));
   EXPECT_NE(classic0, x);
   EXPECT_TRUE(classic0.equals(classic0));
@@ -1588,7 +1606,8 @@ TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
   std::unique_ptr<Operation> xp = std::make_unique<StandardOperation>(0, qc::X);
   const auto controlRegister = qc::QuantumRegister{0, 1U};
   const auto expectedValue = 0U;
-  auto op = ClassicControlledOperation(xp, controlRegister, expectedValue);
+  auto op =
+      ClassicControlledOperation(std::move(xp), controlRegister, expectedValue);
 
   op.addControl(1);
   op.addControl(2);
@@ -1653,7 +1672,7 @@ TEST_F(QFRFunctionality, addControlTwice) {
   EXPECT_THROW(op->addControl(control), QFRException);
 
   auto classicControlledOp =
-      ClassicControlledOperation(op, qc::QuantumRegister{0, 1U}, 0U);
+      ClassicControlledOperation(std::move(op), qc::QuantumRegister{0, 1U}, 0U);
   EXPECT_THROW(classicControlledOp.addControl(control), QFRException);
 
   auto symbolicOp = SymbolicOperation(Targets{1}, OpType::X);
@@ -1670,7 +1689,7 @@ TEST_F(QFRFunctionality, addTargetAsControl) {
   EXPECT_THROW(op->addControl(control), QFRException);
 
   auto classicControlledOp =
-      ClassicControlledOperation(op, qc::QuantumRegister{0, 1U}, 0U);
+      ClassicControlledOperation(std::move(op), qc::QuantumRegister{0, 1U}, 0U);
   EXPECT_THROW(classicControlledOp.addControl(control), QFRException);
 
   auto symbolicOp = SymbolicOperation(Targets{1}, OpType::X);

@@ -1,11 +1,10 @@
 #pragma once
 
-#include "pybind11/pybind11.h"
-#include "pybind11/pytypes.h"
+#include "operations/Expression.hpp"
+#include "operations/OpType.hpp"
+#include "python/pybind11.hpp" // IWYU pragma: keep
 
-#include <regex>
-#include <type_traits>
-#include <variant>
+#include <pybind11/pytypes.h>
 
 namespace py = pybind11;
 

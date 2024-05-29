@@ -1,5 +1,11 @@
 #include "algorithms/WState.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+
+#include <cmath>
+#include <string>
+
 namespace qc {
 void fGate(QuantumComputation& qc, const Qubit i, const Qubit j, const Qubit k,
            const Qubit n) {

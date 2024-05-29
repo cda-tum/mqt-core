@@ -6,8 +6,12 @@
 #include "zx/ZXDefinitions.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 namespace zx {
 
@@ -159,9 +163,8 @@ void ZXDiagram::removeVertex(const Vertex toRemove) {
 std::vector<Edge>::iterator ZXDiagram::getEdgePtr(const Vertex from,
                                                   const Vertex to) {
   auto& incident = edges[from];
-  auto edge = std::find_if(incident.begin(), incident.end(),
-                           [&](const auto& e) { return e.to == to; });
-  return edge;
+  return std::find_if(incident.begin(), incident.end(),
+                      [&](const auto& e) { return e.to == to; });
 }
 
 [[nodiscard]] std::vector<std::pair<Vertex, const VertexData&>>

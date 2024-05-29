@@ -1,7 +1,18 @@
 #pragma once
 
+#include "dd/Complex.hpp"
+#include "dd/ComplexNumbers.hpp"
+#include "dd/ComplexValue.hpp"
+#include "dd/DDpackageConfig.hpp"
+#include "dd/Edge.hpp"
+#include "dd/Node.hpp"
 #include "dd/Package.hpp"
-#include "nlohmann/json.hpp"
+#include "dd/RealNumber.hpp"
+
+#include <iostream>
+#include <nlohmann/json.hpp>
+#include <ostream>
+#include <string>
 
 namespace dd {
 
@@ -96,10 +107,10 @@ template <class Config>
 }
 
 template <class Config = DDPackageConfig>
-[[nodiscard]] static nlohmann::json
+[[nodiscard]] static nlohmann::basic_json<>
 getStatistics(Package<Config>* package,
               const bool includeIndividualTables = false) {
-  nlohmann::json j;
+  nlohmann::basic_json<> j;
 
   auto& vector = j["vector"];
   vector["unique_table"] =
@@ -156,9 +167,9 @@ getStatistics(Package<Config>* package,
  * @return A JSON representation of the statistics
  */
 template <class Config = DDPackageConfig>
-[[nodiscard]] static nlohmann::json
+[[nodiscard]] static nlohmann::basic_json<>
 getDataStructureStatistics(Package<Config>* package) {
-  nlohmann::json j;
+  nlohmann::basic_json<> j;
 
   // Information about key data structures
   // For every entry, we store the size in bytes and the alignment in bytes

@@ -2,11 +2,17 @@
 
 #include "Statement.hpp"
 
+#include <exception>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+
 namespace qasm3 {
 class CompilerError final : public std::exception {
 public:
-  std::string message{};
-  std::shared_ptr<DebugInfo> debugInfo{};
+  std::string message;
+  std::shared_ptr<DebugInfo> debugInfo;
 
   CompilerError(std::string msg, std::shared_ptr<DebugInfo> debug)
       : message(std::move(msg)), debugInfo(std::move(debug)) {}
@@ -30,7 +36,7 @@ public:
 
 class ConstEvalError final : public std::exception {
 public:
-  std::string message{};
+  std::string message;
 
   explicit ConstEvalError(std::string msg) : message(std::move(msg)) {}
 
@@ -41,7 +47,7 @@ public:
 
 class TypeCheckError final : public std::exception {
 public:
-  std::string message{};
+  std::string message;
 
   explicit TypeCheckError(std::string msg) : message(std::move(msg)) {}
 

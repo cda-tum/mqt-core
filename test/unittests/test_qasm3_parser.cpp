@@ -9,9 +9,9 @@
 #include "parsers/qasm3_parser/Token.hpp"
 #include "parsers/qasm3_parser/passes/ConstEvalPass.hpp"
 
-#include "gtest/gtest.h"
 #include <cmath>
 #include <cstddef>
+#include <gtest/gtest.h>
 #include <memory>
 #include <sstream>
 #include <string>

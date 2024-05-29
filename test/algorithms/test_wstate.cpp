@@ -1,8 +1,18 @@
+#include "Definitions.hpp"
 #include "algorithms/WState.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/ComplexNumbers.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Package.hpp"
+#include "dd/RealNumber.hpp"
 
-#include "gtest/gtest.h"
+#include <cstddef>
+#include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 class WState : public testing::TestWithParam<qc::Qubit> {};

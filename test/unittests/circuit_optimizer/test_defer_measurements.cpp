@@ -4,7 +4,7 @@
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/OpType.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <iostream>
 
 namespace qc {

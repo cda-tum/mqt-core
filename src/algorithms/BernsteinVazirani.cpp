@@ -1,5 +1,11 @@
 #include "algorithms/BernsteinVazirani.hpp"
 
+#include "Definitions.hpp"
+
+#include <algorithm>
+#include <cstddef>
+#include <ostream>
+
 namespace qc {
 BernsteinVazirani::BernsteinVazirani(const BitString& hiddenString,
                                      const bool dyn)

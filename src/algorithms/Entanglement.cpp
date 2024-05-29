@@ -1,5 +1,11 @@
 #include "algorithms/Entanglement.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+
+#include <cstddef>
+#include <string>
+
 namespace qc {
 Entanglement::Entanglement(const std::size_t nq) : QuantumComputation(nq, nq) {
   name = "entanglement_" + std::to_string(nq);

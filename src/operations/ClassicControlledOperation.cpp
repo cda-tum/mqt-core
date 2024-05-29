@@ -1,5 +1,10 @@
 #include "operations/ClassicControlledOperation.hpp"
 
+#include "Definitions.hpp"
+
+#include <ostream>
+#include <string>
+
 namespace qc {
 
 std::string toString(const ComparisonKind& kind) {

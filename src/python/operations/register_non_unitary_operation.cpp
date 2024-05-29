@@ -1,5 +1,11 @@
+#include "Definitions.hpp"
 #include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
 #include "python/pybind11.hpp"
+
+#include <sstream>
+#include <vector>
 
 namespace mqt {
 
