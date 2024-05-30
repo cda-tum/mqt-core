@@ -26,13 +26,13 @@ build:
     - |
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ];
       then
-          .venv/bin/python -m sphinx -T -b dirhtml -d docs/_build/doctrees -D language=en docs
+          .venv/bin/python -m sphinx -T -b dirhtml -d docs/_build/doctrees -D language=en docs docs/_build/dirhtml
           zip -r $READTHEDOCS_OUTPUT/htmlzip/html.zip docs/_build/dirhtml/*
       fi
     - |
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ];
       then
-          .venv/bin/python -m sphinx -T -b latex -d docs/_build/doctrees -D language=en docs
+          .venv/bin/python -m sphinx -T -b latex -d docs/_build/doctrees -D language=en docs docs/_build/latex
           cd docs/_build/latex
           latexmk -pdf -f -dvi- -ps- -interaction=nonstopmode -jobname=$READTHEDOCS_PROJECT
           cp $READTHEDOCS_PROJECT.pdf $READTHEDOCS_OUTPUT/pdf/$READTHEDOCS_PROJECT.pdf
