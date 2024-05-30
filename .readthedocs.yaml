@@ -26,7 +26,7 @@ build:
     - |
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ];
       then
-          .venv/bin/python -m sphinx -T -b readthedocssinglehtmllocalmedia -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/htmlzip
+          .venv/bin/python -m sphinx -T -b singlehtml -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/htmlzip
       fi
     - |
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ];
