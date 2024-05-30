@@ -195,7 +195,7 @@ TEST(AodOperation, Qasm) {
   qc::RegisterNames const creg{{"c", "c"}};
   move.dumpOpenQASM(ss, qreg, creg, 0, false);
 
-  EXPECT_FALSE(ss.str().empty());
+  EXPECT_EQ(ss.str(), "aod_move (0, 0, 1; 1, 1, 3;) q[0], q[1];\n");
 }
 
 TEST(AodOperation, Constructors) {
