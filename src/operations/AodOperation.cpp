@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <ios>
 #include <ostream>
-#include <stdexcept>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -75,7 +74,7 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> t,
 
 void AodOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                                 [[maybe_unused]] const RegisterNames& creg,
-                                size_t indent, bool openQASM3) const {
+                                size_t indent, bool /*openQASM3*/) const {
   of << std::setprecision(std::numeric_limits<fp>::digits10);
   of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
   of << name;
