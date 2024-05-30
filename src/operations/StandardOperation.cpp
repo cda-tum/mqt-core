@@ -413,6 +413,9 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
   case iSWAPdg:
     op << "iswapdg";
     break;
+  case Move:
+    op << "move";
+    break;
   case Peres:
     of << op.str() << "cx";
     for (const auto& c : controls) {

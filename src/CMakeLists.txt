@@ -74,6 +74,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/Operation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/StandardOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/SymbolicOperation.hpp
+    ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/AodOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Scanner.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Token.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Parser.hpp
@@ -105,6 +106,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     operations/Operation.cpp
     operations/StandardOperation.cpp
     operations/SymbolicOperation.cpp
+    operations/AodOperation.cpp
     parsers/GRCSParser.cpp
     parsers/QASM3Parser.cpp
     parsers/QCParser.cpp

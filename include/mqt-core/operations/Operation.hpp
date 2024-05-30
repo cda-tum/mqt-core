@@ -56,6 +56,9 @@ public:
   [[nodiscard]] virtual std::size_t getNcontrols() const {
     return controls.size();
   }
+  [[nodiscard]] std::size_t getNqubits() const {
+    return getUsedQubits().size();
+  }
 
   [[nodiscard]] const std::vector<fp>& getParameter() const {
     return parameter;

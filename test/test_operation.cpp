@@ -1,4 +1,5 @@
 #include "Definitions.hpp"
+#include "operations/AodOperation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/Expression.hpp"
 #include "operations/NonUnitaryOperation.hpp"
@@ -6,8 +7,10 @@
 #include "operations/StandardOperation.hpp"
 #include "operations/SymbolicOperation.hpp"
 
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <sstream>
+#include <tuple>
 #include <vector>
 
 TEST(StandardOperation, CommutesAtQubit) {
@@ -134,4 +137,105 @@ TEST(Operation, IsDiagonalGate) {
   EXPECT_FALSE(op1.isDiagonalGate());
   const qc::StandardOperation op2(0, qc::Z);
   EXPECT_TRUE(op2.isDiagonalGate());
+}
+
+TEST(StandardOperation, Move) {
+  const qc::StandardOperation moveOp({0, 1}, qc::OpType::Move);
+  EXPECT_EQ(moveOp.getTargets().size(), 2);
+  EXPECT_EQ(moveOp.getNqubits(), 2);
+}
+
+TEST(AodOperation, Activate) {
+  // activate at position 0, dimension X, start 0.0, end 1.0
+  const qc::AodOperation activate(qc::OpType::AodActivate, {0},
+                                  {qc::Dimension::X}, {0.0}, {1.0});
+  EXPECT_EQ(activate.getNqubits(), 1);
+  EXPECT_EQ(activate.getStarts(qc::Dimension::X).at(0), 0.0);
+  EXPECT_EQ(activate.getEnds(qc::Dimension::X).at(0), 1.0);
+}
+
+TEST(AodOperation, Deactivate) {
+  // deactivate at position 0,1 dimension Y, start 0.0, end 1.0
+  const qc::AodOperation deactivate(qc::OpType::AodDeactivate, {0, 1},
+                                    {qc::Dimension::Y}, {0.0}, {1.0});
+  EXPECT_EQ(deactivate.getNqubits(), 2);
+  EXPECT_EQ(deactivate.getStarts(qc::Dimension::Y).at(0), 0.0);
+  EXPECT_EQ(deactivate.getEnds(qc::Dimension::Y).at(0), 1.0);
+}
+
+TEST(AodOperation, Move) {
+  // move from 0,1 to 2,3 dimension X, start 0.0, end 1.0 and dimension Y,
+  // start 1.0, end 2.0
+  const qc::AodOperation move(qc::OpType::AodMove, {0, 1},
+                              {qc::Dimension::X, qc::Dimension::Y}, {0.0, 1.0},
+                              {1.0, 2.0});
+  EXPECT_EQ(move.getNqubits(), 2);
+  EXPECT_EQ(move.getStarts(qc::Dimension::X).at(0), 0.0);
+  EXPECT_EQ(move.getEnds(qc::Dimension::X).at(0), 1.0);
+  EXPECT_EQ(move.getStarts(qc::Dimension::Y).at(0), 1.0);
+  EXPECT_EQ(move.getEnds(qc::Dimension::Y).at(0), 2.0);
+}
+
+TEST(AodOperation, Distances) {
+  const qc::AodOperation move(qc::OpType::AodMove, {0, 1},
+                              {qc::Dimension::X, qc::Dimension::Y}, {0.0, 1.0},
+                              {1.0, 3.0});
+  EXPECT_EQ(move.getMaxDistance(qc::Dimension::X), 1.0);
+  EXPECT_EQ(move.getMaxDistance(qc::Dimension::Y), 2.0);
+}
+
+TEST(AodOperation, Qasm) {
+  const qc::AodOperation move(qc::OpType::AodMove, {0, 1},
+                              {qc::Dimension::X, qc::Dimension::Y}, {0.0, 1.0},
+                              {1.0, 3.0});
+  std::stringstream ss;
+  qc::RegisterNames qreg;
+  qreg.emplace_back("q", "q[0]");
+  qreg.emplace_back("q", "q[1]");
+  qc::RegisterNames const creg{{"c", "c"}};
+  move.dumpOpenQASM(ss, qreg, creg, 0, false);
+
+  EXPECT_EQ(ss.str(), "aod_move (0, 0, 1; 1, 1, 3;) q[0], q[1];\n");
+}
+
+TEST(AodOperation, Constructors) {
+  uint32_t const dir1 = 0;
+  uint32_t const dir2 = 1;
+
+  const qc::AodOperation move(qc::OpType::AodMove, {0, 1}, {dir1, dir2},
+                              {0.0, 1.0}, {1.0, 3.0});
+  const qc::AodOperation move2("aod_move", {0, 1}, {dir1}, {0.0}, {1.0});
+  const qc::AodOperation move3(qc::OpType::AodMove, {0},
+                               {std::tuple{qc::Dimension::X, 0.0, 1.0}});
+  qc::SingleOperation const singleOp(qc::Dimension::X, 0.0, 1.0);
+  const qc::AodOperation move4(qc::OpType::AodMove, {0}, {singleOp});
+
+  EXPECT_EQ(0, 0);
+}
+
+TEST(AodOperation, OverrideMethods) {
+  qc::AodOperation move(qc::OpType::AodMove, {0}, {qc::Dimension::X}, {0.0},
+                        {1.0});
+  move.addControl(qc::Control(0, qc::Control::Type::Pos));
+  move.removeControl(qc::Control(0, qc::Control::Type::Pos));
+  move.clearControls();
+  auto it = move.clone();
+}
+
+TEST(AodOperation, Invert) {
+  qc::AodOperation move(qc::OpType::AodMove, {0}, {qc::Dimension::X}, {0.0},
+                        {1.0});
+  move.invert();
+  EXPECT_EQ(move.getStarts(qc::Dimension::X).at(0), 1.0);
+  EXPECT_EQ(move.getEnds(qc::Dimension::X).at(0), 0.0);
+
+  qc::AodOperation activate(qc::OpType::AodActivate, {0}, {qc::Dimension::X},
+                            {0.0}, {1.0});
+  activate.invert();
+  EXPECT_EQ(activate.getType(), qc::OpType::AodDeactivate);
+
+  qc::AodOperation deactivate(qc::OpType::AodDeactivate, {0},
+                              {qc::Dimension::X}, {0.0}, {1.0});
+  deactivate.invert();
+  EXPECT_EQ(deactivate.getType(), qc::OpType::AodActivate);
 }
