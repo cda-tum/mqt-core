@@ -76,10 +76,6 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> t,
 void AodOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                                 [[maybe_unused]] const RegisterNames& creg,
                                 size_t indent, bool openQASM3) const {
-  if (openQASM3) {
-    throw std::runtime_error("AOD operations are not supported in OpenQASM3, "
-                             "please use the OpenQASM2 output format.");
-  }
   of << std::setprecision(std::numeric_limits<fp>::digits10);
   of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
   of << name;
