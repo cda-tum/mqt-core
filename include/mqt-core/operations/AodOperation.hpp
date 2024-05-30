@@ -3,12 +3,13 @@
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "OpType.hpp"
+#include "operations/Operation.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include "operations/Operation.hpp"
 #include <ostream>
 #include <sstream>
 #include <string>
