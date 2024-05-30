@@ -59,13 +59,13 @@ enum OpType : std::uint8_t {
   AFalse,
   MultiATrue,
   MultiAFalse,
-  // Number of OpTypes
-  OpCount,
   // Neutral atom shuttling operations
   Move,
   AodActivate,
   AodDeactivate,
   AodMove,
+  // Number of OpTypes (needs to be last in the enum)
+  OpCount,
 };
 
 /// Enumeration of diagonal gates
