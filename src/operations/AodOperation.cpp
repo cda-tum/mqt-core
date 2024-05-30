@@ -18,9 +18,10 @@
 namespace qc {
 AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
                            const std::vector<uint32_t>& dirs,
-                           std::vector<fp> start, std::vector<fp> end)
-    : AodOperation(s, std::move(qubits), convertToDimension(dirs),
-                   std::move(start), std::move(end)) {}
+                           const std::vector<fp>& start,
+                           const std::vector<fp>& end)
+    : AodOperation(s, std::move(qubits), convertToDimension(dirs), start, end) {
+}
 
 std::vector<Dimension>
 AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
@@ -31,9 +32,10 @@ AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
   return dirsEnum;
 }
 
-AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
-                           std::vector<Dimension> dirs, std::vector<fp> start,
-                           std::vector<fp> end) {
+AodOperation::AodOperation(const OpType s, std::vector<Qubit> qubits,
+                           const std::vector<Dimension>& dirs,
+                           const std::vector<fp>& start,
+                           const std::vector<fp>& end) {
   assert(dirs.size() == start.size() && start.size() == end.size());
   type = s;
   targets = std::move(qubits);
@@ -46,25 +48,25 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
 
 AodOperation::AodOperation(const std::string& type, std::vector<Qubit> targets,
                            const std::vector<uint32_t>& dirs,
-                           std::vector<fp> start, std::vector<fp> end)
+                           const std::vector<fp>& start,
+                           const std::vector<fp>& end)
     : AodOperation(OP_NAME_TO_TYPE.at(type), std::move(targets),
-                   convertToDimension(dirs), std::move(start), std::move(end)) {
-}
+                   convertToDimension(dirs), start, end) {}
 
 AodOperation::AodOperation(
     OpType s, std::vector<Qubit> targets,
-    std::vector<std::tuple<Dimension, fp, fp>>& operations) {
+    const std::vector<std::tuple<Dimension, fp, fp>>& operations) {
   type = s;
   this->targets = std::move(targets);
   name = toString(type);
 
   for (const auto& [dir, index, param] : operations) {
-    operations.emplace_back(dir, index, param);
+    this->operations.emplace_back(dir, index, param);
   }
 }
 
 AodOperation::AodOperation(OpType s, std::vector<Qubit> t,
-                           std::vector<SingleOperation>& ops)
+                           std::vector<SingleOperation> ops)
     : operations(std::move(ops)) {
   type = s;
   this->targets = std::move(t);

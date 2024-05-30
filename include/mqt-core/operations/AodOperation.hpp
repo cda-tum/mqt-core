@@ -41,18 +41,18 @@ class AodOperation : public Operation {
 public:
   AodOperation() = default;
   AodOperation(OpType type, std::vector<Qubit> targets,
-               std::vector<Dimension> dirs, std::vector<fp> starts,
-               std::vector<fp> ends);
+               const std::vector<Dimension>& dirs,
+               const std::vector<fp>& starts, const std::vector<fp>& ends);
   AodOperation(OpType type, std::vector<Qubit> targets,
-               const std::vector<uint32_t>& dirs, std::vector<fp> starts,
-               std::vector<fp> ends);
+               const std::vector<uint32_t>& dirs, const std::vector<fp>& starts,
+               const std::vector<fp>& ends);
   AodOperation(const std::string& type, std::vector<Qubit> targets,
-               const std::vector<uint32_t>& dirs, std::vector<fp> starts,
-               std::vector<fp> ends);
+               const std::vector<uint32_t>& dirs, const std::vector<fp>& starts,
+               const std::vector<fp>& ends);
   AodOperation(OpType type, std::vector<Qubit> targets,
-               std::vector<std::tuple<Dimension, fp, fp>>& operations);
+               const std::vector<std::tuple<Dimension, fp, fp>>& operations);
   AodOperation(OpType type, std::vector<Qubit> targets,
-               std::vector<SingleOperation>& operations);
+               std::vector<SingleOperation> operations);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
     return std::make_unique<AodOperation>(*this);
