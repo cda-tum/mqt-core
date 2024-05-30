@@ -36,7 +36,7 @@ build:
     - |
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ];
       then
-          latexmk -r latexmkrc -pdf -f -dvi- -ps- -jobname=mqt-$READTHEDOCS_PROJECT -interaction=nonstopmode
+          latexmk -r $READTHEDOCS_OUTPUT/pdf/latexmkrc -pdf -f -dvi- -ps- -jobname=mqt-$READTHEDOCS_PROJECT -interaction=nonstopmode
       fi
 
 sphinx:
