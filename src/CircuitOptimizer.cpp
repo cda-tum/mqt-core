@@ -28,16 +28,27 @@
 namespace qc {
 void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
   // delete the identities from circuit
+  CircuitOptimizer::removeOperation(qc, {I}, 1);
+}
+
+void CircuitOptimizer::removeOperation(qc::QuantumComputation& qc,
+                                       const std::set<OpType>& opTypes,
+                                       size_t opSize) {
+  // opSize = 0 means that the operation can have any number of qubits
   auto it = qc.ops.begin();
   while (it != qc.ops.end()) {
-    if ((*it)->getType() == I) {
+    if (opTypes.find((*it)->getType()) != opTypes.end() &&
+        (opSize == 0 || it->get()->getNqubits() == opSize)) {
       it = qc.ops.erase(it);
     } else if ((*it)->isCompoundOperation()) {
       auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
       auto cit = compOp->cbegin();
       while (cit != compOp->cend()) {
         const auto* cop = cit->get();
-        if (cop->getType() == qc::I) {
+        // Please check: not sure if this generalizes to compound operations
+        // correctly
+        if (opTypes.find(cop->getType()) != opTypes.end() &&
+            (opSize == 0 || cop->getUsedQubits().size() == opSize)) {
           cit = compOp->erase(cit);
         } else {
           ++cit;

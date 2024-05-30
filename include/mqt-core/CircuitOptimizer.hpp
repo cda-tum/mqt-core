@@ -28,6 +28,9 @@ public:
 
   static void removeIdentities(QuantumComputation& qc);
 
+  static void removeOperation(qc::QuantumComputation& qc,
+                              const std::set<OpType>& opTypes, size_t opSize);
+
   static void removeDiagonalGatesBeforeMeasure(QuantumComputation& qc);
 
   static void removeFinalMeasurements(QuantumComputation& qc);
