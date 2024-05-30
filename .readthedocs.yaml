@@ -22,16 +22,16 @@ build:
     - asdf global uv latest
     - uv venv
     - uv pip install .[docs] readthedocs-sphinx-ext
-    - .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/html
+    - .venv/bin/python -m sphinx -T -b html -d _build/doctrees -D language=en . $READTHEDOCS_OUTPUT/html
     - |
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ];
       then
-          .venv/bin/python -m sphinx -T -b dirhtml -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/htmlzip
+          .venv/bin/python -m sphinx -T -b dirhtml -d _build/doctrees -D language=en . $READTHEDOCS_OUTPUT/htmlzip
       fi
     - |
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ];
       then
-          .venv/bin/python -m sphinx -T -b latex -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/pdf
+          .venv/bin/python -m sphinx -T -b latex -d _build/doctrees -D language=en . $READTHEDOCS_OUTPUT/pdf
       fi
     - |
       if [ "$READTHEDOCS_VERSION_TYPE" = "external" ];
