@@ -205,12 +205,10 @@ TEST(AodOperation, Constructors) {
   const qc::AodOperation move(qc::OpType::AodMove, {0, 1}, {dir1, dir2},
                               {0.0, 1.0}, {1.0, 3.0});
   const qc::AodOperation move2("aod_move", {0, 1}, {dir1}, {0.0}, {1.0});
-  std::vector<std::tuple<qc::Dimension, qc::fp, qc::fp>> operations;
-  operations.emplace_back(qc::Dimension::X, 0.0, 1.0);
-  const qc::AodOperation move3(qc::OpType::AodMove, {0}, operations);
+  const qc::AodOperation move3(qc::OpType::AodMove, {0},
+                               {std::tuple{qc::Dimension::X, 0.0, 1.0}});
   qc::SingleOperation const singleOp(qc::Dimension::X, 0.0, 1.0);
-  std::vector<qc::SingleOperation> ops{singleOp};
-  const qc::AodOperation move4(qc::OpType::AodMove, {0}, ops);
+  const qc::AodOperation move4(qc::OpType::AodMove, {0}, {singleOp});
 
   EXPECT_EQ(0, 0);
 }
