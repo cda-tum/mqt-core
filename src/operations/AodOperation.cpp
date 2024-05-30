@@ -75,12 +75,13 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> t,
 
 void AodOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                                 [[maybe_unused]] const RegisterNames& creg,
-                                size_t /*indent*/, bool openQASM3) const {
+                                size_t indent, bool openQASM3) const {
   if (openQASM3) {
     throw std::runtime_error("AOD operations are not supported in OpenQASM3, "
                              "please use the OpenQASM2 output format.");
   }
   of << std::setprecision(std::numeric_limits<fp>::digits10);
+  of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
   of << name;
   // write AOD operations
   of << " (";
@@ -101,8 +102,7 @@ void AodOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
 void AodOperation::invert() {
   if (type == OpType::AodMove) {
     for (auto& op : operations) {
-      op.start = op.end;
-      op.end = -op.start;
+      std::swap(op.start, op.end);
     }
   } else if (type == OpType::AodActivate) {
     type = OpType::AodDeactivate;

@@ -227,7 +227,7 @@ TEST(AodOperation, Invert) {
                         {1.0});
   move.invert();
   EXPECT_EQ(move.getStarts(qc::Dimension::X).at(0), 1.0);
-  EXPECT_EQ(move.getEnds(qc::Dimension::X).at(0), -1.0);
+  EXPECT_EQ(move.getEnds(qc::Dimension::X).at(0), 0.0);
 
   qc::AodOperation activate(qc::OpType::AodActivate, {0}, {qc::Dimension::X},
                             {0.0}, {1.0});
