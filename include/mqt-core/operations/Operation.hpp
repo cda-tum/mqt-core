@@ -57,7 +57,7 @@ public:
     return controls.size();
   }
   [[nodiscard]] std::size_t getNqubits() const {
-    return getNcontrols() + getNtargets();
+    return getUsedQubits().size();
   }
 
   [[nodiscard]] const std::vector<fp>& getParameter() const {
