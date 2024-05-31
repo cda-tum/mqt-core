@@ -24,8 +24,8 @@ struct SingleOperation {
   qc::fp start;
   qc::fp end;
 
-  SingleOperation(Dimension dir, qc::fp start, qc::fp end)
-      : dir(dir), start(start), end(end) {}
+  SingleOperation(const Dimension d, const qc::fp s, const qc::fp e)
+      : dir(d), start(s), end(e) {}
 
   [[nodiscard]] std::string toQASMString() const {
     std::stringstream ss;
@@ -41,21 +41,20 @@ class AodOperation : public qc::Operation {
 
 public:
   AodOperation() = default;
-  AodOperation(qc::OpType type, std::vector<qc::Qubit> targets,
+  AodOperation(qc::OpType s, std::vector<qc::Qubit> qubits,
                const std::vector<Dimension>& dirs,
                const std::vector<qc::fp>& starts,
                const std::vector<qc::fp>& ends);
-  AodOperation(qc::OpType type, std::vector<qc::Qubit> targets,
+  AodOperation(qc::OpType s, std::vector<qc::Qubit> qubits,
                const std::vector<uint32_t>& dirs,
                const std::vector<qc::fp>& starts,
                const std::vector<qc::fp>& ends);
-  AodOperation(const std::string& type, std::vector<qc::Qubit> targets,
+  AodOperation(const std::string& typeName, std::vector<qc::Qubit> qubits,
                const std::vector<uint32_t>& dirs,
                const std::vector<qc::fp>& starts,
                const std::vector<qc::fp>& ends);
-  AodOperation(
-      qc::OpType type, std::vector<qc::Qubit> targets,
-      const std::vector<std::tuple<Dimension, qc::fp, qc::fp>>& operations);
+  AodOperation(qc::OpType s, std::vector<qc::Qubit> qubits,
+               const std::vector<std::tuple<Dimension, qc::fp, qc::fp>>& ops);
   AodOperation(qc::OpType type, std::vector<qc::Qubit> targets,
                std::vector<SingleOperation> operations);
 

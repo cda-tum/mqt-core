@@ -45,23 +45,23 @@ AodOperation::AodOperation(const qc::OpType s, std::vector<qc::Qubit> qubits,
   }
 }
 
-AodOperation::AodOperation(const std::string& type,
-                           std::vector<qc::Qubit> targets,
+AodOperation::AodOperation(const std::string& typeName,
+                           std::vector<qc::Qubit> qubits,
                            const std::vector<uint32_t>& dirs,
                            const std::vector<qc::fp>& start,
                            const std::vector<qc::fp>& end)
-    : AodOperation(qc::OP_NAME_TO_TYPE.at(type), std::move(targets),
+    : AodOperation(qc::OP_NAME_TO_TYPE.at(typeName), std::move(qubits),
                    convertToDimension(dirs), start, end) {}
 
 AodOperation::AodOperation(
-    qc::OpType s, std::vector<qc::Qubit> targets,
-    const std::vector<std::tuple<Dimension, qc::fp, qc::fp>>& operations) {
+    const qc::OpType s, std::vector<qc::Qubit> qubits,
+    const std::vector<std::tuple<Dimension, qc::fp, qc::fp>>& ops) {
   type = s;
-  this->targets = std::move(targets);
+  targets = std::move(qubits);
   name = toString(type);
 
-  for (const auto& [dir, index, param] : operations) {
-    this->operations.emplace_back(dir, index, param);
+  for (const auto& [dir, index, param] : ops) {
+    operations.emplace_back(dir, index, param);
   }
 }
 
@@ -69,7 +69,7 @@ AodOperation::AodOperation(qc::OpType s, std::vector<qc::Qubit> t,
                            std::vector<SingleOperation> ops)
     : operations(std::move(ops)) {
   type = s;
-  this->targets = std::move(t);
+  targets = std::move(t);
   name = toString(type);
 }
 
