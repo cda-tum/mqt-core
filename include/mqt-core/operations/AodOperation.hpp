@@ -16,15 +16,15 @@
 #include <tuple>
 #include <vector>
 
-namespace qc {
+namespace na {
 
 enum class Dimension : std::uint8_t { X = 0, Y = 1 };
 struct SingleOperation {
   Dimension dir;
-  fp start;
-  fp end;
+  qc::fp start;
+  qc::fp end;
 
-  SingleOperation(Dimension dir, fp start, fp end)
+  SingleOperation(Dimension dir, qc::fp start, qc::fp end)
       : dir(dir), start(start), end(end) {}
 
   [[nodiscard]] std::string toQASMString() const {
@@ -33,7 +33,7 @@ struct SingleOperation {
     return ss.str();
   }
 };
-class AodOperation : public Operation {
+class AodOperation : public qc::Operation {
   std::vector<SingleOperation> operations;
 
   static std::vector<Dimension>
@@ -41,33 +41,37 @@ class AodOperation : public Operation {
 
 public:
   AodOperation() = default;
-  AodOperation(OpType type, std::vector<Qubit> targets,
+  AodOperation(qc::OpType type, std::vector<qc::Qubit> targets,
                const std::vector<Dimension>& dirs,
-               const std::vector<fp>& starts, const std::vector<fp>& ends);
-  AodOperation(OpType type, std::vector<Qubit> targets,
-               const std::vector<uint32_t>& dirs, const std::vector<fp>& starts,
-               const std::vector<fp>& ends);
-  AodOperation(const std::string& type, std::vector<Qubit> targets,
-               const std::vector<uint32_t>& dirs, const std::vector<fp>& starts,
-               const std::vector<fp>& ends);
-  AodOperation(OpType type, std::vector<Qubit> targets,
-               const std::vector<std::tuple<Dimension, fp, fp>>& operations);
-  AodOperation(OpType type, std::vector<Qubit> targets,
+               const std::vector<qc::fp>& starts,
+               const std::vector<qc::fp>& ends);
+  AodOperation(qc::OpType type, std::vector<qc::Qubit> targets,
+               const std::vector<uint32_t>& dirs,
+               const std::vector<qc::fp>& starts,
+               const std::vector<qc::fp>& ends);
+  AodOperation(const std::string& type, std::vector<qc::Qubit> targets,
+               const std::vector<uint32_t>& dirs,
+               const std::vector<qc::fp>& starts,
+               const std::vector<qc::fp>& ends);
+  AodOperation(
+      qc::OpType type, std::vector<qc::Qubit> targets,
+      const std::vector<std::tuple<Dimension, qc::fp, qc::fp>>& operations);
+  AodOperation(qc::OpType type, std::vector<qc::Qubit> targets,
                std::vector<SingleOperation> operations);
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override {
     return std::make_unique<AodOperation>(*this);
   }
 
-  void addControl([[maybe_unused]] Control c) override {}
+  void addControl([[maybe_unused]] qc::Control c) override {}
   void clearControls() override {}
-  void removeControl([[maybe_unused]] Control c) override {}
-  Controls::iterator removeControl(Controls::iterator it) override {
+  void removeControl([[maybe_unused]] qc::Control c) override {}
+  qc::Controls::iterator removeControl(qc::Controls::iterator it) override {
     return it;
   }
 
-  [[nodiscard]] std::vector<fp> getEnds(Dimension dir) const {
-    std::vector<fp> ends;
+  [[nodiscard]] std::vector<qc::fp> getEnds(Dimension dir) const {
+    std::vector<qc::fp> ends;
     for (const auto& op : operations) {
       if (op.dir == dir) {
         ends.push_back(op.end);
@@ -76,8 +80,8 @@ public:
     return ends;
   }
 
-  [[nodiscard]] std::vector<fp> getStarts(Dimension dir) const {
-    std::vector<fp> starts;
+  [[nodiscard]] std::vector<qc::fp> getStarts(Dimension dir) const {
+    std::vector<qc::fp> starts;
     for (const auto& op : operations) {
       if (op.dir == dir) {
         starts.push_back(op.start);
@@ -86,7 +90,7 @@ public:
     return starts;
   }
 
-  [[nodiscard]] fp getMaxDistance(Dimension dir) const {
+  [[nodiscard]] qc::fp getMaxDistance(Dimension dir) const {
     const auto distances = getDistances(dir);
     if (distances.empty()) {
       return 0;
@@ -94,8 +98,8 @@ public:
     return *std::max_element(distances.begin(), distances.end());
   }
 
-  [[nodiscard]] std::vector<fp> getDistances(Dimension dir) const {
-    std::vector<fp> params;
+  [[nodiscard]] std::vector<qc::fp> getDistances(Dimension dir) const {
+    std::vector<qc::fp> params;
     for (const auto& op : operations) {
       if (op.dir == dir) {
         params.push_back(std::abs(op.end - op.start));
@@ -104,10 +108,10 @@ public:
     return params;
   }
 
-  void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, size_t indent,
+  void dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
+                    const qc::RegisterNames& creg, size_t indent,
                     bool openQASM3) const override;
 
   void invert() override;
 };
-} // namespace qc
+} // namespace na
