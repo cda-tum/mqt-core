@@ -41,6 +41,26 @@ struct Point {
   [[nodiscard]] auto operator==(const Point& other) const -> bool {
     return x == other.x && y == other.y;
   }
+  [[maybe_unused]] [[nodiscard]] auto
+  getEuclidianDistance(const Point& c) const {
+    const auto delta = *this - c;
+    return delta.length();
+  }
+
+  [[maybe_unused]] [[nodiscard]] std::int64_t
+  getManhattanDistanceX(const Point& c) const {
+    if (x > c.x) {
+      return x - c.x;
+    }
+    return c.x - x;
+  }
+  [[maybe_unused]] [[nodiscard]] std::int64_t
+  getManhattanDistanceY(const Point& c) const {
+    if (y > c.y) {
+      return y - c.y;
+    }
+    return c.y - y;
+  }
 };
 /// More specific operation type including the number of control qubits
 struct FullOpType {
