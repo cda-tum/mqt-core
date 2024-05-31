@@ -71,8 +71,6 @@ class Parser {
   std::shared_ptr<DebugInfo> includeDebugInfo{nullptr};
 
   [[noreturn]] void error(const Token& token, const std::string& msg) {
-    std::cerr << "Error at line " << token.line << ", column " << token.col
-              << ": " << msg << '\n';
     throw CompilerError(msg, makeDebugInfo(token));
   }
 
