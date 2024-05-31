@@ -78,7 +78,7 @@ public:
       statement.accept(this);
 
       if (hasError) {
-        throw CompilerError("Type check failed.", statement.debugInfo);
+        throw TypeCheckError("Type check failed.");
       }
     } catch (const TypeCheckError& e) {
       throw CompilerError(e.what(), statement.debugInfo);
