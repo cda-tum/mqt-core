@@ -17,15 +17,20 @@ build:
       then
         exit 183;
       fi
+    # Set up uv and a virtual environment
     - asdf plugin add uv
     - asdf install uv latest
     - asdf global uv latest
     - uv venv
+    # Install the project and its documentation dependencies
     - uv pip install .[docs] readthedocs-sphinx-ext
+    # Run the html builder
     - .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/html
+    # Run the htmlzip builder and create a zip file
     - .venv/bin/python -m sphinx -T -b dirhtml -d docs/_build/doctrees -D language=en docs docs/_build/dirhtml
     - mkdir -p $READTHEDOCS_OUTPUT/htmlzip
     - zip -r $READTHEDOCS_OUTPUT/htmlzip/html.zip docs/_build/dirhtml/*
+    # Run the latex builder and create a pdf file
     - .venv/bin/python -m sphinx -T -b latex -d docs/_build/doctrees -D language=en docs docs/_build/latex
     - cd docs/_build/latex && latexmk -pdf -f -dvi- -ps- -interaction=nonstopmode -jobname=$READTHEDOCS_PROJECT
     - mkdir -p $READTHEDOCS_OUTPUT/pdf
