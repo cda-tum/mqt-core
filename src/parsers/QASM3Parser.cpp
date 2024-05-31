@@ -179,7 +179,7 @@ public:
         typeCheckPass.processStatement(*statement);
         statement->accept(this);
       } catch (CompilerError& e) {
-        std::cerr << e.toString() << '\n';
+        std::cerr << e.what() << '\n';
         throw;
       }
     }
