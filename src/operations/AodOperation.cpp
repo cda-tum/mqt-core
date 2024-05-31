@@ -14,11 +14,11 @@
 #include <utility>
 #include <vector>
 
-namespace qc {
-AodOperation::AodOperation(OpType s, std::vector<Qubit> qubits,
+namespace na {
+AodOperation::AodOperation(qc::OpType s, std::vector<qc::Qubit> qubits,
                            const std::vector<uint32_t>& dirs,
-                           const std::vector<fp>& start,
-                           const std::vector<fp>& end)
+                           const std::vector<qc::fp>& start,
+                           const std::vector<qc::fp>& end)
     : AodOperation(s, std::move(qubits), convertToDimension(dirs), start, end) {
 }
 
@@ -31,10 +31,10 @@ AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
   return dirsEnum;
 }
 
-AodOperation::AodOperation(const OpType s, std::vector<Qubit> qubits,
+AodOperation::AodOperation(const qc::OpType s, std::vector<qc::Qubit> qubits,
                            const std::vector<Dimension>& dirs,
-                           const std::vector<fp>& start,
-                           const std::vector<fp>& end) {
+                           const std::vector<qc::fp>& start,
+                           const std::vector<qc::fp>& end) {
   assert(dirs.size() == start.size() && start.size() == end.size());
   type = s;
   targets = std::move(qubits);
@@ -45,16 +45,17 @@ AodOperation::AodOperation(const OpType s, std::vector<Qubit> qubits,
   }
 }
 
-AodOperation::AodOperation(const std::string& type, std::vector<Qubit> targets,
+AodOperation::AodOperation(const std::string& type,
+                           std::vector<qc::Qubit> targets,
                            const std::vector<uint32_t>& dirs,
-                           const std::vector<fp>& start,
-                           const std::vector<fp>& end)
-    : AodOperation(OP_NAME_TO_TYPE.at(type), std::move(targets),
+                           const std::vector<qc::fp>& start,
+                           const std::vector<qc::fp>& end)
+    : AodOperation(qc::OP_NAME_TO_TYPE.at(type), std::move(targets),
                    convertToDimension(dirs), start, end) {}
 
 AodOperation::AodOperation(
-    OpType s, std::vector<Qubit> targets,
-    const std::vector<std::tuple<Dimension, fp, fp>>& operations) {
+    qc::OpType s, std::vector<qc::Qubit> targets,
+    const std::vector<std::tuple<Dimension, qc::fp, qc::fp>>& operations) {
   type = s;
   this->targets = std::move(targets);
   name = toString(type);
@@ -64,7 +65,7 @@ AodOperation::AodOperation(
   }
 }
 
-AodOperation::AodOperation(OpType s, std::vector<Qubit> t,
+AodOperation::AodOperation(qc::OpType s, std::vector<qc::Qubit> t,
                            std::vector<SingleOperation> ops)
     : operations(std::move(ops)) {
   type = s;
@@ -72,11 +73,11 @@ AodOperation::AodOperation(OpType s, std::vector<Qubit> t,
   name = toString(type);
 }
 
-void AodOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                                [[maybe_unused]] const RegisterNames& creg,
+void AodOperation::dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
+                                [[maybe_unused]] const qc::RegisterNames& creg,
                                 size_t indent, bool /*openQASM3*/) const {
-  of << std::setprecision(std::numeric_limits<fp>::digits10);
-  of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
+  of << std::setprecision(std::numeric_limits<qc::fp>::digits10);
+  of << std::string(indent * qc::OUTPUT_INDENT_SIZE, ' ');
   of << name;
   // write AOD operations
   of << " (";
@@ -95,15 +96,15 @@ void AodOperation::dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
 }
 
 void AodOperation::invert() {
-  if (type == OpType::AodMove) {
+  if (type == qc::OpType::AodMove) {
     for (auto& op : operations) {
       std::swap(op.start, op.end);
     }
-  } else if (type == OpType::AodActivate) {
-    type = OpType::AodDeactivate;
-  } else if (type == OpType::AodDeactivate) {
-    type = OpType::AodActivate;
+  } else if (type == qc::OpType::AodActivate) {
+    type = qc::OpType::AodDeactivate;
+  } else if (type == qc::OpType::AodDeactivate) {
+    type = qc::OpType::AodActivate;
   }
 }
 
-} // namespace qc
+} // namespace na
