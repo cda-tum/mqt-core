@@ -123,7 +123,7 @@ public:
     try {
       statement.accept(this);
     } catch (const ConstEvalError& e) {
-      throw CompilerError(e.toString(), statement.debugInfo);
+      throw CompilerError(e.what(), statement.debugInfo);
     }
   }
 
