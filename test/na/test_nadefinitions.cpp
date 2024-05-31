@@ -23,6 +23,16 @@ TEST(NADefinitions, Point) {
   EXPECT_EQ(Point(1, 2) + p, Point(0, 4));
 }
 
+TEST(NADefinitions, PointDistances) {
+  const Point p1(0, 0);
+  const Point p2(3, 4);
+  EXPECT_EQ(p1.getEuclidianDistance(p2), 5);
+  EXPECT_EQ(p1.getManhattanDistanceX(p2), 3);
+  EXPECT_EQ(p1.getManhattanDistanceY(p2), 4);
+  EXPECT_EQ(p2.getManhattanDistanceX(p1), 3);
+  EXPECT_EQ(p2.getManhattanDistanceY(p1), 4);
+}
+
 TEST(NADefinitions, OpType) {
   constexpr FullOpType t{qc::OpType::X, 1};
   EXPECT_EQ(t.type, qc::OpType::X);
