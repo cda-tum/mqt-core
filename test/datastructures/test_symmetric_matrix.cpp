@@ -1,0 +1,34 @@
+#include "datastructures/SymmetricMatrix.hpp"
+
+#include <gtest/gtest.h>
+#include <string>
+
+namespace qc {
+
+TEST(SymmetricMatrix, Constructors) {
+  SymmetricMatrix<int> const m(3);
+  EXPECT_EQ(m.getSize(), 3);
+  SymmetricMatrix<int> m2(3, 1);
+  EXPECT_EQ(m2.getSize(), 3);
+  for (unsigned i = 0; i < m2.getSize(); ++i) {
+    for (unsigned j = 0; j <= i; ++j) {
+      EXPECT_EQ(m2(i, j), 1);
+      EXPECT_EQ(m2(j, i), 1);
+    }
+  }
+}
+
+TEST(SymmetricMatrix, DifferentDataTypes) {
+  SymmetricMatrix<double> const m(3);
+  EXPECT_EQ(m.getSize(), 3);
+  SymmetricMatrix<std::string> const m2(3, "1");
+  EXPECT_EQ(m2.getSize(), 3);
+  EXPECT_EQ(m2(0, 2), m2(2, 0));
+  EXPECT_EQ(m2(0, 2), "1");
+  SymmetricMatrix<char> const m3(3, '1');
+  EXPECT_EQ(m3.getSize(), 3);
+  EXPECT_EQ(m3(0, 1), m3(1, 0));
+  EXPECT_EQ(m3(0, 1), '1');
+}
+
+} // namespace qc
