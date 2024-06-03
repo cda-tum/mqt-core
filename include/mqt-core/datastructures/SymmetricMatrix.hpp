@@ -27,14 +27,14 @@ public:
     }
   }
 
-  [[nodiscard]] const T& operator()(const size_t row, const size_t col) {
+  [[nodiscard]] const T& operator()(const size_t row, const size_t col) const {
     if (row < col) {
       return data[col][row];
     }
     return data[row][col];
   }
 
-  [[nodiscard]] T operator()(const size_t row, const size_t col) const {
+  [[nodiscard]] T& operator()(const size_t row, const size_t col) {
     if (row < col) {
       return data[col][row];
     }
