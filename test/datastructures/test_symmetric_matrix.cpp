@@ -32,4 +32,17 @@ TEST(SymmetricMatrix, DifferentDataTypes) {
   EXPECT_EQ(m3(0, 1), '1');
 }
 
+TEST(SymmetricMatrix, Assignment) {
+  SymmetricMatrix<int> m(3);
+  m(0, 1) = 1;
+  m(1, 2) = 2;
+  m(0, 2) = 3;
+  EXPECT_EQ(m(0, 1), 1);
+  EXPECT_EQ(m(1, 0), 1);
+  EXPECT_EQ(m(1, 2), 2);
+  EXPECT_EQ(m(2, 1), 2);
+  EXPECT_EQ(m(0, 2), 3);
+  EXPECT_EQ(m(2, 0), 3);
+}
+
 } // namespace qc
