@@ -28,7 +28,7 @@
 namespace qc {
 void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
   // delete the identities from circuit
-  CircuitOptimizer::removeOperation(qc, {I}, 1);
+  CircuitOptimizer::removeOperation(qc, {I}, 0);
 }
 
 void CircuitOptimizer::removeOperation(qc::QuantumComputation& qc,
