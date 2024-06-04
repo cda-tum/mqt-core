@@ -2,10 +2,12 @@
 
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
 #include <cstddef>
 #include <memory>
+#include <set>
 
 namespace qc {
 
