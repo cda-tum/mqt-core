@@ -335,7 +335,7 @@ TEST_F(QFRFunctionality, removeGateInCompoundOperation) {
   qc.emplace_back(compound.asOperation());
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
-  CircuitOptimizer::removeOperation(qc, {Y}, 0);
+  CircuitOptimizer::removeOperation(qc, {Y}, 1);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
