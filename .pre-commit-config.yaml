@@ -108,11 +108,10 @@ repos:
         types_or: [yaml, markdown, html, css, scss, javascript, json]
 
   # Check for spelling
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.3.0
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.22.0
     hooks:
-      - id: codespell
-        args: ["-L", "wille,linz", "--skip", "*.ipynb"]
+      - id: typos
 
   # Catch common capitalization mistakes
   - repo: local
