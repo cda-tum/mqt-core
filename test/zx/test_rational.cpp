@@ -1,8 +1,7 @@
 #include "zx/Rational.hpp"
 #include "zx/ZXDefinitions.hpp"
 
-#include "gtest/gtest.h"
-#include <iostream>
+#include <gtest/gtest.h>
 
 class RationalTest : public ::testing::Test {};
 

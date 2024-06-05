@@ -1,5 +1,18 @@
 #include "algorithms/GoogleRandomCircuitSampling.hpp"
 
+#include "Definitions.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
+
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
 #include <utility>
 
 namespace qc {
@@ -52,8 +65,7 @@ GoogleRandomCircuitSampling::GoogleRandomCircuitSampling(
 void GoogleRandomCircuitSampling::importGRCS(const std::string& filename) {
   auto ifs = std::ifstream(filename);
   if (!ifs.good()) {
-    std::cerr << "Error opening/reading from file: " << filename << "\n";
-    exit(3);
+    throw QFRException("Error opening/reading from file: " + filename);
   }
   const std::size_t slash = filename.find_last_of('/');
   const std::size_t dot = filename.find_last_of('.');
@@ -144,8 +156,10 @@ GoogleRandomCircuitSampling::printStatistics(std::ostream& os) const {
      << ((layout == Rectangular) ? "Rectangular" : "Bristlecone") << "\n";
   os << "\tn: " << static_cast<std::size_t>(nqubits) << "\n";
   os << "\tm: " << getNops() << "\n";
-  os << "\tc: 1 + " << cycles.size() - 2 << " + 1" << "\n";
-  os << "--------------" << "\n";
+  os << "\tc: 1 + " << cycles.size() - 2 << " + 1"
+     << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 } // namespace qc

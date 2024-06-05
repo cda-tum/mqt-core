@@ -1,10 +1,15 @@
 #include "dd/RealNumberUniqueTable.hpp"
 
+#include "dd/DDDefinitions.hpp"
+#include "dd/MemoryManager.hpp"
 #include "dd/RealNumber.hpp"
 
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
 #include <limits>
 
 namespace dd {

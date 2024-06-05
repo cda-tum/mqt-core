@@ -6,6 +6,12 @@
 #include "dd/Simulation.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 
+#include <chrono>
+#include <cstddef>
+#include <map>
+#include <memory>
+#include <string>
+
 namespace dd {
 
 std::unique_ptr<SimulationExperiment>

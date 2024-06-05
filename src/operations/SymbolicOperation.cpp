@@ -1,9 +1,18 @@
 #include "operations/SymbolicOperation.hpp"
 
 #include "Definitions.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+#include "operations/Expression.hpp"
+#include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"
 
+#include <cstddef>
+#include <cstdlib>
+#include <ostream>
+#include <utility>
 #include <variant>
+#include <vector>
 
 namespace qc {
 
@@ -152,7 +161,7 @@ OpType SymbolicOperation::parseU1([[maybe_unused]] const Symbolic& lambda) {
 }
 
 void SymbolicOperation::checkSymbolicUgate() {
-  // NOLINTBEGIN(bugprone-unchecked-optional-access) - we check for this
+  // NOLINTBEGIN(bugprone-unchecked-optional-access) – we check for this
   if (type == P) {
     if (!isSymbolicParameter(0)) {
       type = StandardOperation::parseU1(parameter[0]);
@@ -316,7 +325,7 @@ StandardOperation SymbolicOperation::getInstantiatedOperation(
 }
 
 // Instantiates this Operation
-// Afterwards casting to StandardOperation can be done if assignment is total
+// Afterward casting to StandardOperation can be done if assignment is total
 void SymbolicOperation::instantiate(const VariableAssignment& assignment) {
   for (std::size_t i = 0; i < symbolicParameter.size(); ++i) {
     parameter.at(i) = getInstantiation(getParameter(i), assignment);
@@ -327,7 +336,7 @@ void SymbolicOperation::instantiate(const VariableAssignment& assignment) {
 
 void SymbolicOperation::negateSymbolicParameter(const std::size_t index) {
   if (isSymbolicParameter(index)) {
-    // NOLINTBEGIN(bugprone-unchecked-optional-access) - we check for this
+    // NOLINTBEGIN(bugprone-unchecked-optional-access) – we check for this
     symbolicParameter.at(index) = -symbolicParameter.at(index).value();
     // NOLINTEND(bugprone-unchecked-optional-access)
   } else {
@@ -338,7 +347,7 @@ void SymbolicOperation::negateSymbolicParameter(const std::size_t index) {
 void SymbolicOperation::addToSymbolicParameter(const std::size_t index,
                                                const fp value) {
   if (isSymbolicParameter(index)) {
-    // NOLINTBEGIN(bugprone-unchecked-optional-access) - we check for this
+    // NOLINTBEGIN(bugprone-unchecked-optional-access) – we check for this
     symbolicParameter.at(index) = symbolicParameter.at(index).value() + value;
     // NOLINTEND(bugprone-unchecked-optional-access)
   } else {

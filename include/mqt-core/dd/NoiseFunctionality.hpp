@@ -1,19 +1,21 @@
 #pragma once
 
-#include "dd/ComplexNumbers.hpp"
-#include "dd/GateMatrixDefinitions.hpp"
+#include "Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/DDpackageConfig.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cassert>
-#include <complex>
-#include <map>
-#include <optional>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <random>
+#include <set>
+#include <string>
 #include <utility>
 #include <vector>
 

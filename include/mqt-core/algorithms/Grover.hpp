@@ -1,10 +1,11 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
 
-#include <bitset>
-#include <functional>
-#include <random>
+#include <cstddef>
+#include <ostream>
+#include <string>
 
 namespace qc {
 class Grover : public QuantumComputation {
@@ -12,7 +13,7 @@ public:
   std::size_t seed = 0;
   BitString targetValue = 0;
   std::size_t iterations = 1;
-  std::string expected{};
+  std::string expected;
   std::size_t nDataQubits{};
 
   explicit Grover(std::size_t nq, std::size_t s = 0);

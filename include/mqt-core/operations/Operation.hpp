@@ -3,15 +3,16 @@
 #include "Definitions.hpp"
 #include "OpType.hpp"
 #include "Permutation.hpp"
+#include "operations/Control.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstring>
-#include <fstream>
-#include <iomanip>
+#include <functional>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <vector>
 
 namespace qc {
@@ -54,6 +55,9 @@ public:
   virtual Controls& getControls() { return controls; }
   [[nodiscard]] virtual std::size_t getNcontrols() const {
     return controls.size();
+  }
+  [[nodiscard]] std::size_t getNqubits() const {
+    return getUsedQubits().size();
   }
 
   [[nodiscard]] const std::vector<fp>& getParameter() const {
@@ -131,6 +135,15 @@ public:
 
   [[nodiscard]] virtual bool isSymbolicOperation() const { return false; }
 
+  [[nodiscard]] virtual auto isDiagonalGate() const -> bool {
+    return std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), type) !=
+           DIAGONAL_GATES.end();
+  }
+
+  [[nodiscard]] virtual auto isSingleQubitGate() const -> bool {
+    return !isControlled() && qc::isSingleQubitGate(type);
+  }
+
   [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }
 
   [[nodiscard]] virtual bool actsOn(const Qubit i) const {
@@ -170,6 +183,16 @@ public:
   virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
                             const RegisterNames& creg, size_t indent,
                             bool openQASM3) const = 0;
+
+  /// Checks whether operation commutes with other operation on a given qubit.
+  [[nodiscard]] virtual auto
+  commutesAtQubit(const Operation& /*other*/,
+                  const Qubit& /*qubit*/) const -> bool {
+    return false;
+  }
+
+  [[nodiscard]] virtual auto
+  isInverseOf(const Operation& /*other*/) const -> bool;
 
   virtual void invert() = 0;
 

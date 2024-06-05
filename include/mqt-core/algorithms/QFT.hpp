@@ -2,6 +2,9 @@
 
 #include "QuantumComputation.hpp"
 
+#include <cstddef>
+#include <ostream>
+
 namespace qc {
 class QFT : public QuantumComputation {
 public:

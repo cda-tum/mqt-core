@@ -1,8 +1,22 @@
 #include "operations/CompoundOperation.hpp"
 
+#include "Definitions.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+
+#include <CircuitOptimizer.hpp>
+#include <QuantumComputation.hpp>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <functional>
 #include <iterator>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <utility>
+#include <vector>
 
 namespace qc {
 CompoundOperation::CompoundOperation() {
@@ -153,6 +167,53 @@ std::set<Qubit> CompoundOperation::getUsedQubits() const {
   }
   return usedQubits;
 }
+
+auto CompoundOperation::commutesAtQubit(const Operation& other,
+                                        const Qubit& qubit) const -> bool {
+  return std::all_of(ops.cbegin(), ops.cend(),
+                     [&other, &qubit](const auto& op) {
+                       return op->commutesAtQubit(other, qubit);
+                     });
+}
+
+auto CompoundOperation::isInverseOf(const Operation& other) const -> bool {
+  if (other.isCompoundOperation()) {
+    // cast other to CompoundOperation
+    const auto& co = dynamic_cast<const CompoundOperation&>(other);
+    if (size() != co.size()) {
+      return false;
+    }
+    // here both compound operations have the same size
+    if (empty()) {
+      return true;
+    }
+    // transform compound to a QuantumComputation such that the invert method
+    // and the reorderOperations method can be used to get a canonical form of
+    // the compound operations
+    const auto& thisUsedQubits = getUsedQubits();
+    assert(!thisUsedQubits.empty());
+    const auto thisMaxQubit =
+        *std::max_element(thisUsedQubits.cbegin(), thisUsedQubits.cend());
+    QuantumComputation thisQc(thisMaxQubit + 1);
+    std::for_each(cbegin(), cend(),
+                  [&](const auto& op) { thisQc.emplace_back(op->clone()); });
+    const auto& otherUsedQubits = co.getUsedQubits();
+    assert(!otherUsedQubits.empty());
+    const auto otherMaxQubit =
+        *std::max_element(otherUsedQubits.cbegin(), otherUsedQubits.cend());
+    QuantumComputation otherQc(otherMaxQubit + 1);
+    std::for_each(co.cbegin(), co.cend(),
+                  [&](const auto& op) { otherQc.emplace_back(op->clone()); });
+    CircuitOptimizer::reorderOperations(thisQc);
+    otherQc.invert();
+    CircuitOptimizer::reorderOperations(otherQc);
+    return std::equal(
+        thisQc.cbegin(), thisQc.cend(), otherQc.cbegin(),
+        [](const auto& op1, const auto& op2) { return *op1 == *op2; });
+  }
+  return false;
+}
+
 void CompoundOperation::invert() {
   for (auto& op : ops) {
     op->invert();
@@ -178,6 +239,7 @@ bool CompoundOperation::isConvertibleToSingleOperation() const {
   if (ops.size() != 1) {
     return false;
   }
+  assert(ops.front() != nullptr);
   if (!ops.front()->isCompoundOperation()) {
     return true;
   }

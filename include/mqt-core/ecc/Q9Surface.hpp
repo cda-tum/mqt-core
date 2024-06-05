@@ -2,6 +2,13 @@
 
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Operation.hpp"
+
+#include <array>
+#include <cstddef>
+#include <memory>
+#include <set>
+#include <utility>
 
 // Reference to this ecc in https://arxiv.org/pdf/1608.05053.pdf
 namespace ecc {

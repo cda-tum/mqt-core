@@ -1,6 +1,15 @@
+#include "dd/DDDefinitions.hpp"
+#include "dd/GateMatrixDefinitions.hpp"
+#include "dd/Node.hpp"
 #include "dd/Package.hpp"
+#include "dd/RealNumber.hpp"
 
-#include "gtest/gtest.h"
+#include <cmath>
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <iomanip>
+#include <memory>
+#include <sstream>
 
 namespace dd {
 

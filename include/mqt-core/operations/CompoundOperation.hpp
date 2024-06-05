@@ -1,14 +1,22 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Operation.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
 
-#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <vector>
 
 namespace qc {
 
 class CompoundOperation final : public Operation {
 private:
-  std::vector<std::unique_ptr<Operation>> ops{};
+  std::vector<std::unique_ptr<Operation>> ops;
 
 public:
   explicit CompoundOperation();
@@ -55,6 +63,15 @@ public:
   std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
 
   [[nodiscard]] std::set<Qubit> getUsedQubits() const override;
+
+  [[nodiscard]] auto commutesAtQubit(const Operation& other,
+                                     const Qubit& qubit) const -> bool override;
+
+  /**
+   * This refines the inherited method because the inherited method leads to
+   * false negatives
+   */
+  [[nodiscard]] auto isInverseOf(const Operation& other) const -> bool override;
 
   void invert() override;
 
@@ -116,7 +133,7 @@ public:
   // Modifiers (pass-through)
   void clear() noexcept { ops.clear(); }
   // NOLINTNEXTLINE(readability-identifier-naming)
-  void pop_back() { return ops.pop_back(); }
+  void pop_back() { ops.pop_back(); }
   void resize(std::size_t count) { ops.resize(count); }
   std::vector<std::unique_ptr<Operation>>::iterator
   erase(std::vector<std::unique_ptr<Operation>>::const_iterator pos) {
@@ -130,7 +147,7 @@ public:
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   template <class T, class... Args> void emplace_back(Args&&... args) {
-    ops.emplace_back(std::make_unique<T>(args...));
+    ops.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
   }
 
   // NOLINTNEXTLINE(readability-identifier-naming)
@@ -147,7 +164,8 @@ public:
   std::vector<std::unique_ptr<Operation>>::iterator
   insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator,
          Args&&... args) {
-    return ops.insert(iterator, std::make_unique<T>(args...));
+    return ops.insert(iterator,
+                      std::make_unique<T>(std::forward<Args>(args)...));
   }
   template <class T>
   std::vector<std::unique_ptr<Operation>>::iterator

@@ -1,9 +1,21 @@
 #include "operations/StandardOperation.hpp"
 
+#include "Definitions.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+
 #include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdlib>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <ostream>
 #include <sstream>
-#include <variant>
+#include <utility>
+#include <vector>
 
 namespace qc {
 /***
@@ -401,6 +413,9 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
   case iSWAPdg:
     op << "iswapdg";
     break;
+  case Move:
+    op << "move";
+    break;
   case Peres:
     of << op.str() << "cx";
     for (const auto& c : controls) {
@@ -496,6 +511,69 @@ void StandardOperation::dumpOpenQASMTeleportation(
      << qreg[targets[1]].second << ", " << qreg[targets[2]].second << ";\n";
 }
 
+auto StandardOperation::commutesAtQubit(const Operation& other,
+                                        const Qubit& qubit) const -> bool {
+  if (other.isCompoundOperation()) {
+    return other.commutesAtQubit(*this, qubit);
+  }
+  // check whether both operations act on the given qubit
+  if (!actsOn(qubit) || !other.actsOn(qubit)) {
+    return true;
+  }
+  if (controls.find(qubit) != controls.end()) {
+    // if this is controlled on the given qubit
+    if (const auto& controls2 = other.getControls();
+        controls2.find(qubit) != controls2.end()) {
+      // if other is controlled on the given qubit
+      // q: ──■────■──
+      //      |    |
+      return true;
+    }
+    // here: qubit is a target of other
+    return other.isDiagonalGate();
+    // true, iff qubit is a target and other is a diagonal gate, e.g., rz
+    //         ┌────┐
+    // q: ──■──┤ RZ ├
+    //      |  └────┘
+  }
+  // here: qubit is a target of this
+  if (const auto& controls2 = other.getControls();
+      controls2.find(qubit) != controls2.end()) {
+    return isDiagonalGate();
+    // true, iff qubit is a target and this is a diagonal gate and other is
+    // controlled, e.g.
+    //    ┌────┐
+    // q: ┤ RZ ├──■──
+    //    └────┘  |
+  }
+  // here: qubit is a target of both operations
+  if (isDiagonalGate() && other.isDiagonalGate()) {
+    // if both operations are diagonal gates, e.g.
+    //    ┌────┐┌────┐
+    // q: ┤ RZ ├┤ RZ ├
+    //    └────┘└────┘
+    return true;
+  }
+  if (parameter.size() <= 1) {
+    return type == other.getType() && targets == other.getTargets();
+    // true, iff both operations are of the same type, e.g.
+    //    ┌───┐┌───┐
+    // q: ┤ E ├┤ E ├
+    //    | C || C |
+    //    ┤ R ├┤ R ├
+    //    └───┘└───┘
+    //      |    |
+    //    ──■────┼──
+    //           |
+    //    ───────■──
+  }
+  // operations with more than one parameter might not be commutative when the
+  // parameter are not the same, i.e. a general U3 gate
+  // TODO: this check might introduce false negatives
+  return type == other.getType() && targets == other.getTargets() &&
+         parameter == other.getParameter();
+}
+
 void StandardOperation::invert() {
   switch (type) {
   // self-inverting gates
@@ -575,17 +653,7 @@ void StandardOperation::invert() {
   case iSWAPdg:
     type = iSWAP;
     break;
-  case None:
-  case Compound:
-  case Measure:
-  case Reset:
-  case Teleportation:
-  case ClassicControlled:
-  case ATrue:
-  case AFalse:
-  case MultiATrue:
-  case MultiAFalse:
-  case OpCount:
+  default:
     throw QFRException("Inverting gate" + toString(type) +
                        " is not supported.");
   }

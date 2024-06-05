@@ -2,11 +2,18 @@
 
 #include "Statement.hpp"
 
+#include <exception>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+
 namespace qasm3 {
 class CompilerError final : public std::exception {
 public:
-  std::string message{};
-  std::shared_ptr<DebugInfo> debugInfo{};
+  std::string message;
+  std::shared_ptr<DebugInfo> debugInfo;
+  mutable std::string cachedMessage;
 
   CompilerError(std::string msg, std::shared_ptr<DebugInfo> debug)
       : message(std::move(msg)), debugInfo(std::move(debug)) {}
@@ -25,27 +32,44 @@ public:
 
     return ss.str();
   }
+
+  [[nodiscard]] const char* what() const noexcept override {
+    cachedMessage = toString();
+    return cachedMessage.c_str();
+  }
 };
 } // namespace qasm3
 
 class ConstEvalError final : public std::exception {
 public:
-  std::string message{};
+  std::string message;
+  mutable std::string cachedMessage;
 
   explicit ConstEvalError(std::string msg) : message(std::move(msg)) {}
 
   [[nodiscard]] std::string toString() const {
     return "Constant Evaluation: " + message;
   }
+
+  [[nodiscard]] const char* what() const noexcept override {
+    cachedMessage = toString();
+    return cachedMessage.c_str();
+  }
 };
 
 class TypeCheckError final : public std::exception {
 public:
-  std::string message{};
+  std::string message;
+  mutable std::string cachedMessage;
 
   explicit TypeCheckError(std::string msg) : message(std::move(msg)) {}
 
   [[nodiscard]] std::string toString() const {
     return "Type Check Error: " + message;
+  }
+
+  [[nodiscard]] const char* what() const noexcept override {
+    cachedMessage = toString();
+    return cachedMessage.c_str();
   }
 };

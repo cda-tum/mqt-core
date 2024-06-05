@@ -1,7 +1,12 @@
 #include "algorithms/GoogleRandomCircuitSampling.hpp"
+#include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 
-#include "gtest/gtest.h"
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <memory>
+#include <optional>
 
 class GRCS : public testing::Test {
 protected:

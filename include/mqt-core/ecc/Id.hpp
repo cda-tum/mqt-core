@@ -2,6 +2,11 @@
 
 #include "Ecc.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Operation.hpp"
+
+#include <cstddef>
+#include <memory>
+#include <utility>
 namespace ecc {
 class Id : public Ecc {
 public:

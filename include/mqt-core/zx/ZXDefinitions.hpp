@@ -3,9 +3,13 @@
 #include "operations/Expression.hpp"
 #include "zx/Rational.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <ostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace zx {
 

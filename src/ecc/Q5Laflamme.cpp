@@ -1,4 +1,15 @@
 #include "ecc/Q5Laflamme.hpp"
+
+#include "ecc/Ecc.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+#include "operations/StandardOperation.hpp"
+
+#include <array>
+#include <cstddef>
+#include <stdexcept>
+#include <utility>
 namespace ecc {
 void Q5Laflamme::writeEncoding() {
   Ecc::writeEncoding();

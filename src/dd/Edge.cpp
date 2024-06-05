@@ -1,5 +1,6 @@
 #include "dd/Edge.hpp"
 
+#include "Definitions.hpp"
 #include "dd/Complex.hpp"
 #include "dd/ComplexNumbers.hpp"
 #include "dd/DDDefinitions.hpp"
@@ -12,11 +13,14 @@
 #include <cassert>
 #include <cmath>
 #include <complex>
+#include <cstddef>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <unordered_set>
+#include <utility>
 
 namespace dd {
 

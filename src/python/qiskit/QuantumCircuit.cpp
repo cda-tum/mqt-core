@@ -1,5 +1,24 @@
 #include "python/qiskit/QuantumCircuit.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "operations/Control.hpp"
+#include "operations/Expression.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
+#include "operations/SymbolicOperation.hpp"
+
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <iterator>
+#include <regex>
+#include <set>
+#include <sstream>
+#include <tuple>
+#include <vector>
+
 void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
                                         const py::object& circ) {
   qc.reset();

@@ -75,6 +75,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/Operation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/StandardOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/SymbolicOperation.hpp
+    ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/AodOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Scanner.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Token.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Parser.hpp
@@ -106,6 +107,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     operations/Operation.cpp
     operations/StandardOperation.cpp
     operations/SymbolicOperation.cpp
+    operations/AodOperation.cpp
     parsers/GRCSParser.cpp
     parsers/QASM3Parser.cpp
     parsers/QCParser.cpp
@@ -143,6 +145,9 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
   endif()
 endif()
 
+# add datastructures package
+add_subdirectory(datastructures)
+
 # add DD package library
 add_subdirectory(dd)
 
@@ -151,6 +156,9 @@ add_subdirectory(zx)
 
 # add ECC library
 add_subdirectory(ecc)
+
+# add NA library
+add_subdirectory(na)
 
 if(BUILD_MQT_CORE_BINDINGS)
   add_subdirectory(python)
@@ -162,7 +170,7 @@ if(MQT_CORE_INSTALL)
   configure_package_config_file(
     ${MQT_CORE_CMAKE_CONFIG_TEMPLATE} ${MQT_CORE_CMAKE_PROJECT_CONFIG_FILE}
     INSTALL_DESTINATION ${MQT_CORE_CONFIG_INSTALL_DIR}
-    PATH_VARS MQT_CORE_ZX_WITH_GMP
+    PATH_VARS MQT_CORE_WITH_GMP
     NO_SET_AND_CHECK_MACRO NO_CHECK_REQUIRED_COMPONENTS_MACRO)
   write_basic_package_version_file(
     ${MQT_CORE_CMAKE_VERSION_CONFIG_FILE}

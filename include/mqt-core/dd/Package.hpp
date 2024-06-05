@@ -26,7 +26,6 @@
 #include <bitset>
 #include <cassert>
 #include <cmath>
-#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -34,7 +33,6 @@
 #include <iterator>
 #include <limits>
 #include <map>
-#include <optional>
 #include <queue>
 #include <random>
 #include <regex>
@@ -111,7 +109,7 @@ public:
    * @note The real and imaginary part of complex numbers are treated
    * separately. Hence, it suffices for the manager to only manage real numbers.
    */
-  MemoryManager<RealNumber> cMemoryManager{};
+  MemoryManager<RealNumber> cMemoryManager;
 
   /**
    * @brief Get the memory manager for a given type
@@ -983,27 +981,28 @@ public:
   std::pair<dd::fp, dd::fp>
   determineMeasurementProbabilities(const vEdge& rootEdge, const Qubit index,
                                     const bool assumeProbabilityNormalization) {
-    std::map<const vNode*, fp> probsMone;
+    std::map<const vNode*, fp> measurementProbabilities;
     std::set<const vNode*> visited;
     std::queue<const vNode*> q;
 
-    probsMone[rootEdge.p] = ComplexNumbers::mag2(rootEdge.w);
+    measurementProbabilities[rootEdge.p] = ComplexNumbers::mag2(rootEdge.w);
     visited.insert(rootEdge.p);
     q.push(rootEdge.p);
 
     while (q.front()->v != index) {
       const auto* ptr = q.front();
       q.pop();
-      const fp prob = probsMone[ptr];
+      const fp prob = measurementProbabilities[ptr];
 
       const auto& s0 = ptr->e[0];
       if (const auto s0w = static_cast<ComplexValue>(s0.w);
           !s0w.approximatelyZero()) {
         const fp tmp1 = prob * s0w.mag2();
         if (visited.find(s0.p) != visited.end()) {
-          probsMone[s0.p] = probsMone[s0.p] + tmp1;
+          measurementProbabilities[s0.p] =
+              measurementProbabilities[s0.p] + tmp1;
         } else {
-          probsMone[s0.p] = tmp1;
+          measurementProbabilities[s0.p] = tmp1;
           visited.insert(s0.p);
           q.push(s0.p);
         }
@@ -1014,9 +1013,10 @@ public:
           !s1w.approximatelyZero()) {
         const fp tmp1 = prob * s1w.mag2();
         if (visited.find(s1.p) != visited.end()) {
-          probsMone[s1.p] = probsMone[s1.p] + tmp1;
+          measurementProbabilities[s1.p] =
+              measurementProbabilities[s1.p] + tmp1;
         } else {
-          probsMone[s1.p] = tmp1;
+          measurementProbabilities[s1.p] = tmp1;
           visited.insert(s1.p);
           q.push(s1.p);
         }
@@ -1033,12 +1033,12 @@ public:
         const auto& s0 = ptr->e[0];
         if (const auto s0w = static_cast<ComplexValue>(s0.w);
             !s0w.approximatelyZero()) {
-          pzero += probsMone[ptr] * s0w.mag2();
+          pzero += measurementProbabilities[ptr] * s0w.mag2();
         }
         const auto& s1 = ptr->e[1];
         if (const auto s1w = static_cast<ComplexValue>(s1.w);
             !s1w.approximatelyZero()) {
-          pone += probsMone[ptr] * s1w.mag2();
+          pone += measurementProbabilities[ptr] * s1w.mag2();
         }
       }
     } else {
@@ -1052,12 +1052,12 @@ public:
         const auto& s0 = ptr->e[0];
         if (const auto s0w = static_cast<ComplexValue>(s0.w);
             !s0w.approximatelyZero()) {
-          pzero += probsMone[ptr] * probs[s0.p] * s0w.mag2();
+          pzero += measurementProbabilities[ptr] * probs[s0.p] * s0w.mag2();
         }
         const auto& s1 = ptr->e[1];
         if (const auto s1w = static_cast<ComplexValue>(s1.w);
             !s1w.approximatelyZero()) {
-          pone += probsMone[ptr] * probs[s1.p] * s1w.mag2();
+          pone += measurementProbabilities[ptr] * probs[s1.p] * s1w.mag2();
         }
       }
     }
@@ -1150,7 +1150,8 @@ public:
   void performCollapsingMeasurement(vEdge& rootEdge, const Qubit index,
                                     const fp probability,
                                     const bool measureZero) {
-    GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
+    const GateMatrix measurementMatrix =
+        measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
 
     const auto measurementGate = makeGateDD(measurementMatrix, index);
 
@@ -1737,14 +1738,14 @@ public:
       return 0.;
     }
 
-    std::size_t leftIdx = i;
+    const std::size_t leftIdx = i;
     fp leftContribution = 0.;
     if (!e.p->e[0].w.approximatelyZero()) {
       leftContribution = fidelityOfMeasurementOutcomesRecursive(
           e.p->e[0], probs, leftIdx, permutation, nQubits);
     }
 
-    std::size_t rightIdx = i | (1ULL << e.p->v);
+    const std::size_t rightIdx = i | (1ULL << e.p->v);
     auto rightContribution = 0.;
     if (!e.p->e[1].w.approximatelyZero()) {
       rightContribution = fidelityOfMeasurementOutcomesRecursive(

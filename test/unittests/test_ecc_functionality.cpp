@@ -1,5 +1,7 @@
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
-#include "ecc/Ecc.hpp"
 #include "ecc/Id.hpp"
 #include "ecc/Q18Surface.hpp"
 #include "ecc/Q3Shor.hpp"
@@ -7,9 +9,17 @@
 #include "ecc/Q7Steane.hpp"
 #include "ecc/Q9Shor.hpp"
 #include "ecc/Q9Surface.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
 
-#include "gtest/gtest.h"
-#include <random>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <memory>
+#include <vector>
 
 using namespace qc;
 
@@ -162,7 +172,7 @@ protected:
       const std::shared_ptr<qc::QuantumComputation>& qcOriginal,
       const std::shared_ptr<qc::QuantumComputation>& qcMapped,
       bool simulateWithErrors, const std::vector<Qubit>& dataQubits = {},
-      std::size_t insertErrorAfterNGates = 0) {
+      const std::size_t insertErrorAfterNGates = 0) {
     if (!simulateWithErrors) {
       return simulateAndVerifyResults(qcOriginal, qcMapped);
     }
@@ -234,7 +244,7 @@ protected:
 };
 
 TEST_F(DDECCFunctionalityTest, testIdEcc) {
-  size_t insertNoiseAfterNQubits = 1;
+  const size_t insertNoiseAfterNQubits = 1;
 
   std::vector<TestCase> const circuitsExpectToPass = {
       {createIdentityCircuit, false, insertNoiseAfterNQubits},
@@ -252,7 +262,7 @@ TEST_F(DDECCFunctionalityTest, testIdEcc) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ3Shor) {
-  size_t insertNoiseAfterNQubits = 4;
+  const size_t insertNoiseAfterNQubits = 4;
 
   std::vector<TestCase> const circuitsExpectToPass = {
       {createIdentityCircuit, true, insertNoiseAfterNQubits},
@@ -274,7 +284,7 @@ TEST_F(DDECCFunctionalityTest, testQ3Shor) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
-  size_t insertNoiseAfterNQubits = 61;
+  const size_t insertNoiseAfterNQubits = 61;
 
   std::vector<TestCase> const circuitsExpectToPass = {
       {createIdentityCircuit, true, insertNoiseAfterNQubits},
@@ -296,7 +306,7 @@ TEST_F(DDECCFunctionalityTest, testQ5LaflammeEcc) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ7Steane) {
-  size_t insertNoiseAfterNQubits = 57;
+  const size_t insertNoiseAfterNQubits = 57;
 
   std::vector<TestCase> const circuitsExpectToPass = {
       {createIdentityCircuit, true, insertNoiseAfterNQubits},
@@ -314,7 +324,7 @@ TEST_F(DDECCFunctionalityTest, testQ7Steane) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
-  size_t insertNoiseAfterNQubits = 7;
+  const size_t insertNoiseAfterNQubits = 7;
 
   std::vector<TestCase> const circuitsExpectToPass = {
       {createIdentityCircuit, true, insertNoiseAfterNQubits},
@@ -338,7 +348,7 @@ TEST_F(DDECCFunctionalityTest, testQ9ShorEcc) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
-  size_t insertNoiseAfterNQubits = 55;
+  const size_t insertNoiseAfterNQubits = 55;
 
   std::vector<TestCase> const circuitsExpectToPass = {
       {createIdentityCircuit, true, insertNoiseAfterNQubits},
@@ -363,7 +373,7 @@ TEST_F(DDECCFunctionalityTest, testQ9SurfaceEcc) {
 }
 
 TEST_F(DDECCFunctionalityTest, testQ18SurfaceEcc) {
-  size_t insertNoiseAfterNQubits = 47;
+  const size_t insertNoiseAfterNQubits = 47;
 
   std::vector<TestCase> const circuitsExpectToPass{
       {createIdentityCircuit, false, insertNoiseAfterNQubits},

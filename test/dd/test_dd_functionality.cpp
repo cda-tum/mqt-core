@@ -1,10 +1,26 @@
 #include "CircuitOptimizer.hpp"
+#include "Definitions.hpp"
+#include "Permutation.hpp"
 #include "QuantumComputation.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Operations.hpp"
+#include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 
-#include "gtest/gtest.h"
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <memory>
 #include <random>
+#include <sstream>
+#include <string>
+#include <vector>
 
 using namespace qc;
 

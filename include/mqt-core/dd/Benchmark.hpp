@@ -1,9 +1,14 @@
 #pragma once
 
 #include "dd/Package.hpp"
-#include "nlohmann/json.hpp"
+#include "dd/Package_fwd.hpp"
 
 #include <chrono>
+#include <cstddef>
+#include <map>
+#include <memory>
+#include <nlohmann/json.hpp>
+#include <string>
 
 namespace qc {
 class QuantumComputation;
@@ -12,10 +17,15 @@ class QuantumComputation;
 namespace dd {
 
 struct Experiment {
-  std::unique_ptr<Package<>> dd{};
-  nlohmann::json stats = nlohmann::json::object();
+  std::unique_ptr<Package<>> dd;
+  nlohmann::basic_json<> stats = nlohmann::basic_json<>::object();
   std::chrono::duration<double> runtime{};
 
+  Experiment() = default;
+  Experiment(const Experiment&) = delete;
+  Experiment(Experiment&&) = default;
+  Experiment& operator=(const Experiment&) = delete;
+  Experiment& operator=(Experiment&&) = default;
   virtual ~Experiment() = default;
 
   [[nodiscard]] virtual bool success() const noexcept { return false; }

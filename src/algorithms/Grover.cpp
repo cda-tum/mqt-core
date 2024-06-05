@@ -1,5 +1,17 @@
 #include "algorithms/Grover.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "operations/Control.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <ostream>
+#include <random>
+#include <string>
+#include <type_traits>
+
 namespace qc {
 /***
  * Private Methods
@@ -110,7 +122,8 @@ std::ostream& Grover::printStatistics(std::ostream& os) const {
   os << "\tseed: " << seed << "\n";
   os << "\tx: " << expected << "\n";
   os << "\ti: " << iterations << "\n";
-  os << "--------------" << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 } // namespace qc

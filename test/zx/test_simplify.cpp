@@ -1,7 +1,11 @@
+#include "operations/Expression.hpp"
 #include "zx/Simplify.hpp"
+#include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include "gtest/gtest.h"
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <vector>
 
 using zx::fullReduceApproximate;
 

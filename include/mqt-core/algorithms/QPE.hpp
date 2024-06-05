@@ -1,6 +1,10 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+
+#include <cstddef>
+#include <ostream>
 
 namespace qc {
 class QPE : public QuantumComputation {

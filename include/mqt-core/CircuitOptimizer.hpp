@@ -2,17 +2,14 @@
 
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
-#include <array>
 #include <cstddef>
 #include <memory>
 #include <unordered_set>
 
 namespace qc {
-static constexpr std::array<qc::OpType, 10> DIAGONAL_GATES = {
-    qc::Barrier, qc::I,   qc::Z, qc::S,  qc::Sdg,
-    qc::T,       qc::Tdg, qc::P, qc::RZ, qc::RZZ};
 
 class CircuitOptimizer {
 protected:
@@ -32,6 +29,10 @@ public:
   static void singleQubitGateFusion(QuantumComputation& qc);
 
   static void removeIdentities(QuantumComputation& qc);
+
+  static void removeOperation(qc::QuantumComputation& qc,
+                              const std::unordered_set<OpType>& opTypes,
+                              size_t opSize);
 
   static void removeDiagonalGatesBeforeMeasure(QuantumComputation& qc);
 

@@ -1,9 +1,16 @@
 #include "CircuitOptimizer.hpp"
+#include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 
-#include "gtest/gtest.h"
+#include <cstddef>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <memory>
+#include <sstream>
 
 class BernsteinVazirani : public testing::TestWithParam<std::uint64_t> {
 protected:
@@ -120,7 +127,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   auto dbv = qc::BernsteinVazirani(s, true);
 
   // transform dynamic circuits by first eliminating reset operations and
-  // afterwards deferring measurements
+  // afterward deferring measurements
   qc::CircuitOptimizer::eliminateResets(dbv);
   qc::CircuitOptimizer::deferMeasurements(dbv);
   qc::CircuitOptimizer::backpropagateOutputPermutation(dbv);

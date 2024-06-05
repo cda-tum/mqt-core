@@ -1,7 +1,7 @@
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <iostream>
 
 namespace qc {

@@ -1,26 +1,52 @@
 #include "CircuitOptimizer.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "operations/CompoundOperation.hpp"
 #include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <ios>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <set>
+#include <sstream>
+#include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 namespace qc {
 void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
   // delete the identities from circuit
+  CircuitOptimizer::removeOperation(qc, {I}, 0);
+}
+
+void CircuitOptimizer::removeOperation(
+    qc::QuantumComputation& qc, const std::unordered_set<OpType>& opTypes,
+    const size_t opSize) {
+  // opSize = 0 means that the operation can have any number of qubits
   auto it = qc.ops.begin();
   while (it != qc.ops.end()) {
-    if ((*it)->getType() == I) {
+    if (opTypes.find((*it)->getType()) != opTypes.end() &&
+        (opSize == 0 || it->get()->getNqubits() == opSize)) {
       it = qc.ops.erase(it);
     } else if ((*it)->isCompoundOperation()) {
       auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
       auto cit = compOp->cbegin();
       while (cit != compOp->cend()) {
         const auto* cop = cit->get();
-        if (cop->getType() == qc::I) {
+        if (opTypes.find(cop->getType()) != opTypes.end() &&
+            (opSize == 0 || cop->getNqubits() == opSize)) {
           cit = compOp->erase(cit);
         } else {
           ++cit;

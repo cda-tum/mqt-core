@@ -3,22 +3,28 @@
 #include "Definitions.hpp"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
+#include "operations/Control.hpp"
+#include "operations/Expression.hpp"
 #include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
 #include "operations/StandardOperation.hpp"
 #include "operations/SymbolicOperation.hpp"
 
 #include <algorithm>
-#include <fstream>
-#include <iomanip>
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
-#include <limits>
-#include <locale>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <random>
 #include <sstream>
 #include <string>
+#include <unordered_set>
+#include <utility>
+#include <variant>
 #include <vector>
 
 namespace qc {
@@ -33,7 +39,7 @@ public:
   friend class CircuitOptimizer;
 
 protected:
-  std::vector<std::unique_ptr<Operation>> ops{};
+  std::vector<std::unique_ptr<Operation>> ops;
   std::size_t nqubits = 0;
   std::size_t nclassics = 0;
   std::size_t nancillae = 0;
@@ -41,16 +47,16 @@ protected:
 
   // register names are used as keys, while the values are `{startIndex,
   // length}` pairs
-  QuantumRegisterMap qregs{};
-  ClassicalRegisterMap cregs{};
-  QuantumRegisterMap ancregs{};
+  QuantumRegisterMap qregs;
+  ClassicalRegisterMap cregs;
+  QuantumRegisterMap ancregs;
 
   std::mt19937_64 mt;
   std::size_t seed = 0;
 
   fp globalPhase = 0.;
 
-  std::unordered_set<sym::Variable> occuringVariables;
+  std::unordered_set<sym::Variable> occurringVariables;
 
   void importOpenQASM3(std::istream& is);
   void importReal(std::istream& is);
@@ -249,7 +255,7 @@ public:
       : nqubits(qc.nqubits), nclassics(qc.nclassics), nancillae(qc.nancillae),
         name(qc.name), qregs(qc.qregs), cregs(qc.cregs), ancregs(qc.ancregs),
         mt(qc.mt), seed(qc.seed), globalPhase(qc.globalPhase),
-        occuringVariables(qc.occuringVariables),
+        occurringVariables(qc.occurringVariables),
         initialLayout(qc.initialLayout),
         outputPermutation(qc.outputPermutation), ancillary(qc.ancillary),
         garbage(qc.garbage) {
@@ -270,7 +276,7 @@ public:
       mt = qc.mt;
       seed = qc.seed;
       globalPhase = qc.globalPhase;
-      occuringVariables = qc.occuringVariables;
+      occurringVariables = qc.occurringVariables;
       initialLayout = qc.initialLayout;
       outputPermutation = qc.outputPermutation;
       ancillary = qc.ancillary;
@@ -328,8 +334,8 @@ public:
   Permutation initialLayout{};
   Permutation outputPermutation{};
 
-  std::vector<bool> ancillary{};
-  std::vector<bool> garbage{};
+  std::vector<bool> ancillary;
+  std::vector<bool> garbage;
 
   [[nodiscard]] std::size_t getNindividualOps() const;
   [[nodiscard]] std::size_t getNsingleQubitOps() const;
@@ -553,13 +559,14 @@ public:
                                     OP_NAME_TO_TYPE.at(#op));                  \
   }
 
-  DEFINE_TWO_TARGET_OPERATION(swap)
+  DEFINE_TWO_TARGET_OPERATION(swap) // NOLINT: bugprone-exception-escape
   DEFINE_TWO_TARGET_OPERATION(dcx)
   DEFINE_TWO_TARGET_OPERATION(ecr)
   DEFINE_TWO_TARGET_OPERATION(iswap)
   DEFINE_TWO_TARGET_OPERATION(iswapdg)
   DEFINE_TWO_TARGET_OPERATION(peres)
   DEFINE_TWO_TARGET_OPERATION(peresdg)
+  DEFINE_TWO_TARGET_OPERATION(move)
 
 #define DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(op, param)                \
   void op(const SymbolOrNumber&(param), const Qubit target0,                   \
@@ -709,16 +716,13 @@ public:
 
   void import(const std::string& filename);
   void import(const std::string& filename, Format format);
-  void import(std::istream& is, Format format) {
-    import(std::move(is), format);
-  }
-  void import(std::istream&& is, Format format);
+  void import(std::istream& is, Format format);
   void initializeIOMapping();
   // append measurements to the end of the circuit according to the tracked
   // output permutation
   void appendMeasurementsAccordingToOutputPermutation(
       const std::string& registerName = "c");
-  // search for current position of target value in map and afterwards exchange
+  // search for current position of target value in map and afterward exchange
   // it with the value at new position
   static void findAndSWAP(Qubit targetValue, Qubit newPosition,
                           Permutation& map) {
@@ -731,7 +735,7 @@ public:
   }
 
   // this function augments a given circuit by additional registers
-  void addQubitRegister(std::size_t, const std::string& regName = "q");
+  void addQubitRegister(std::size_t nq, const std::string& regName = "q");
   void addClassicalRegister(std::size_t nc, const std::string& regName = "c");
   void addAncillaryRegister(std::size_t nq, const std::string& regName = "anc");
   // a function to combine all quantum registers (qregs and ancregs) into a
@@ -773,7 +777,7 @@ public:
   }
 
   [[nodiscard]] const std::unordered_set<sym::Variable>& getVariables() const {
-    return occuringVariables;
+    return occurringVariables;
   }
 
   /**
@@ -819,15 +823,12 @@ public:
   static std::ostream& printPermutation(const Permutation& permutation,
                                         std::ostream& os = std::cout);
 
-  virtual void dump(const std::string& filename, Format format);
-  virtual void dump(const std::string& filename);
-  virtual void dump(std::ostream& of, Format format) {
-    dump(std::move(of), format);
-  }
-  virtual void dump(std::ostream&& of, Format format);
+  void dump(const std::string& filename, Format format);
+  void dump(const std::string& filename);
+  void dump(std::ostream& of, Format format);
   void dumpOpenQASM2(std::ostream& of) { dumpOpenQASM(of, false); }
   void dumpOpenQASM3(std::ostream& of) { dumpOpenQASM(of, true); }
-  virtual void dumpOpenQASM(std::ostream& of, bool openQasm3);
+  void dumpOpenQASM(std::ostream& of, bool openQasm3);
 
   /**
    * @brief Returns the OpenQASM representation of the circuit
@@ -902,7 +903,7 @@ public:
   // Modifiers (pass-through)
   void clear() noexcept { ops.clear(); }
   // NOLINTNEXTLINE(readability-identifier-naming)
-  void pop_back() { return ops.pop_back(); }
+  void pop_back() { ops.pop_back(); }
   void resize(std::size_t count) { ops.resize(count); }
   iterator erase(const_iterator pos) { return ops.erase(pos); }
   iterator erase(const_iterator first, const_iterator last) {
@@ -920,7 +921,7 @@ public:
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   template <class T, class... Args> void emplace_back(Args&&... args) {
-    ops.emplace_back(std::make_unique<T>(args...));
+    ops.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
   }
 
   // NOLINTNEXTLINE(readability-identifier-naming)

@@ -1,8 +1,12 @@
 #pragma once
 
-#include <QuantumComputation.hpp>
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+
+#include <cstddef>
+#include <cstdint>
 #include <functional>
-#include <random>
+#include <ostream>
 
 namespace qc {
 class RandomCliffordCircuit : public QuantumComputation {

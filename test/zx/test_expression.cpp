@@ -1,10 +1,11 @@
 #include "operations/Expression.hpp"
 #include "zx/Rational.hpp"
 #include "zx/Utils.hpp"
+#include "zx/ZXDefinitions.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include <iostream>
 #include <stdexcept>
-#include <variant>
 
 class ExpressionTest : public ::testing::Test {
 public:
