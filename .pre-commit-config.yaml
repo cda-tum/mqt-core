@@ -129,3 +129,11 @@ repos:
     hooks:
       - id: sp-repo-review
         additional_dependencies: ["repo-review[cli]"]
+
+  # Check JSON schemata
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.28.4
+    hooks:
+      - id: check-dependabot
+      - id: check-github-workflows
+      - id: check-readthedocs
