@@ -45,8 +45,6 @@ void CircuitOptimizer::removeOperation(
       auto cit = compOp->cbegin();
       while (cit != compOp->cend()) {
         const auto* cop = cit->get();
-        // Please check: not sure if this generalizes to compound operations
-        // correctly
         if (opTypes.find(cop->getType()) != opTypes.end() &&
             (opSize == 0 || cop->getUsedQubits().size() == opSize)) {
           cit = compOp->erase(cit);
