@@ -316,6 +316,28 @@ TEST(DDPackageTest, NonIdentityTrace2) {
   ASSERT_EQ(fullTrace, 4.);
 }
 
+TEST(DDPackageTest, IdentityTrace2Normalized) {
+  std::size_t numQubits = 4;
+  auto matrixDim = std::pow(2, numQubits);
+  auto dd = std::make_unique<dd::Package<>>(numQubits);
+  auto fullTrace = dd->trace2(dd->makeIdent(), numQubits);
+  auto fullTraceNormalized = dd->trace2(dd->makeIdent(), numQubits, true);
+  auto normalizedTrace = fullTrace / matrixDim;
+  ASSERT_EQ(fullTraceNormalized, normalizedTrace);
+}
+
+TEST(DDPackageTest, NonIdentityTrace2Normalized) {
+  std::size_t numQubits = 4;
+  auto matrixDim = std::pow(2, numQubits);
+  auto dd = std::make_unique<dd::Package<>>(numQubits);
+  auto cxGate = dd->makeGateDD(dd::X_MAT, 1_pc, 0);
+  auto cxGateKron = dd->kronecker(cxGate, cxGate, 2);
+  auto fullTrace = dd->trace2(cxGateKron, numQubits);
+  auto fullTraceNormalized = dd->trace2(cxGateKron, numQubits, true);
+  auto normalizedTrace = fullTrace / matrixDim;
+  ASSERT_EQ(fullTraceNormalized, normalizedTrace);
+}
+
 TEST(DDPackageTest, StateGenerationManipulation) {
   const std::size_t nqubits = 6;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
