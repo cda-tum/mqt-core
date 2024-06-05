@@ -325,6 +325,25 @@ TEST_F(QFRFunctionality, removeMoves) {
   EXPECT_EQ(qc.getNops(), 2);
 }
 
+TEST_F(QFRFunctionality, removeGateInCompoundOperation) {
+  const std::size_t nqubits = 1;
+  QuantumComputation qc(nqubits);
+  QuantumComputation compound(nqubits);
+  compound.x(0);
+  compound.y(0);
+  compound.z(0);
+  qc.emplace_back(compound.asOperation());
+  std::cout << "-----------------------------\n";
+  qc.print(std::cout);
+  CircuitOptimizer::removeOperation(qc, {Y}, 0);
+  std::cout << "-----------------------------\n";
+  qc.print(std::cout);
+  EXPECT_EQ(qc.getNops(), 1);
+  EXPECT_EQ(qc.front()->getType(), Compound);
+  auto* compoundOp = dynamic_cast<CompoundOperation*>(qc.front().get());
+  EXPECT_EQ(compoundOp->size(), 2);
+}
+
 TEST_F(QFRFunctionality, eliminateInverseInCompoundOperation) {
   const std::size_t nqubits = 1;
   QuantumComputation qc(nqubits);
