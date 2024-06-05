@@ -85,8 +85,8 @@ TEST(CompoundOperation, GlobalIsInverseOf) {
 }
 
 TEST(CompoundOperation, IsInverseOf) {
-  // This functionality is not implemented yet, the function isInversOf leads to
-  // false negatives
+  // This functionality is not implemented yet, the function isInverseOf leads
+  // to false negatives
   qc::CompoundOperation op1;
   op1.emplace_back<qc::StandardOperation>(0, qc::OpType::RY,
                                           std::vector{-qc::PI_2});

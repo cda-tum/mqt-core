@@ -1715,7 +1715,7 @@ TEST_F(QFRFunctionality, addControlNonUnitaryOperation) {
   EXPECT_THROW(op.removeControl(Controls::const_iterator{}), QFRException);
 }
 
-TEST_F(QFRFunctionality, addControlCompundOperation) {
+TEST_F(QFRFunctionality, addControlCompoundOperation) {
   auto op = CompoundOperation();
 
   auto control0 = 0U;
@@ -1774,7 +1774,7 @@ TEST_F(QFRFunctionality, addTargetAsControl) {
   EXPECT_THROW(symbolicOp.addControl(control), QFRException);
 }
 
-TEST_F(QFRFunctionality, addControlCompundOperationInvalid) {
+TEST_F(QFRFunctionality, addControlCompoundOperationInvalid) {
   auto op = CompoundOperation();
 
   auto control1 = 1U;

@@ -25,7 +25,7 @@ enum ComparisonKind : std::uint8_t {
   Geq,
 };
 
-ComparisonKind getInvertedComparsionKind(ComparisonKind kind);
+ComparisonKind getInvertedComparisonKind(ComparisonKind kind);
 
 std::string toString(const ComparisonKind& kind);
 

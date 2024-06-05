@@ -31,7 +31,7 @@ std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind) {
   return os;
 }
 
-ComparisonKind getInvertedComparsionKind(const ComparisonKind kind) {
+ComparisonKind getInvertedComparisonKind(const ComparisonKind kind) {
   switch (kind) {
   case Lt:
     return Geq;

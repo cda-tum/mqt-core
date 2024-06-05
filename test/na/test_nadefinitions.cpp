@@ -26,7 +26,7 @@ TEST(NADefinitions, Point) {
 TEST(NADefinitions, PointDistances) {
   const Point p1(0, 0);
   const Point p2(3, 4);
-  EXPECT_EQ(p1.getEuclidianDistance(p2), 5);
+  EXPECT_EQ(p1.getEuclideanDistance(p2), 5);
   EXPECT_EQ(p1.getManhattanDistanceX(p2), 3);
   EXPECT_EQ(p1.getManhattanDistanceY(p2), 4);
   EXPECT_EQ(p2.getManhattanDistanceX(p1), 3);
