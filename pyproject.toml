@@ -90,8 +90,6 @@ build-dir = "build/{wheel_tag}"
 # Explicitly set the package directory
 wheel.packages = ["src/mqt"]
 
-install.components = ["mqt-core_Python"]
-
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 sdist.include = ["src/mqt/core/_version.py"]
 sdist.exclude = [
