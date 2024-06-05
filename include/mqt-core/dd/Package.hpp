@@ -5,6 +5,7 @@
 #include "dd/CachedEdge.hpp"
 #include "dd/Complex.hpp"
 #include "dd/ComplexNumbers.hpp"
+#include "dd/ComplexValue.hpp"
 #include "dd/ComputeTable.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/DDpackageConfig.hpp"
@@ -1949,6 +1950,30 @@ public:
     }
     const auto eliminate = std::vector<bool>(numQubits, true);
     return trace(a, eliminate, numQubits).w;
+  }
+
+  template <class Node>
+  ComplexValue trace2(const Edge<Node>& a, const std::size_t numQubits) {
+    const auto aWeight = static_cast<ComplexValue>(a.w);
+    if (aWeight.approximatelyZero()) {
+      return ComplexValue{0., 0.};
+    }
+
+    if (a.isIdentity()) {
+      return aWeight * std::pow(2, numQubits);
+    }
+
+    if (a.isTerminal()) {
+      return ComplexValue(a.w);
+    }
+
+    if (numQubits <= 0) {
+      throw std::invalid_argument("Number of Qubits is incorrect");
+    }
+    auto l = trace2(a.p->e[0], numQubits - 1);
+    auto r = trace2(a.p->e[3], numQubits - 1);
+    auto w = aWeight * (l + r);
+    return w;
   }
 
   /**

@@ -302,6 +302,20 @@ TEST(DDPackageTest, PartialNonIdentityTrace) {
   EXPECT_EQ(ptr.w * ptr.w, 1.);
 }
 
+TEST(DDPackageTest, IdentityTrace2) {
+  auto dd = std::make_unique<dd::Package<>>(4);
+  auto fullTrace = dd->trace2(dd->makeIdent(), 4);
+  ASSERT_EQ(fullTrace, 16.);
+}
+
+TEST(DDPackageTest, NonIdentityTrace2) {
+  auto dd = std::make_unique<dd::Package<>>(4);
+  auto cxGate = dd->makeGateDD(dd::X_MAT, 1_pc, 0);
+  auto cxGateKron = dd->kronecker(cxGate, cxGate, 2);
+  auto fullTrace = dd->trace2(cxGateKron, 4);
+  ASSERT_EQ(fullTrace, 4.);
+}
+
 TEST(DDPackageTest, StateGenerationManipulation) {
   const std::size_t nqubits = 6;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
