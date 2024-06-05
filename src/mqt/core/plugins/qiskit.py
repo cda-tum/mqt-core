@@ -285,16 +285,16 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
     is_const = True
     for summand in _SUM_REGEX.findall(expr_str):
         sign = 1
-        summand_no_operaror = summand
+        summand_no_operator = summand
         if summand[0] == "+":
-            summand_no_operaror = summand[1:]
+            summand_no_operator = summand[1:]
         elif summand[0] == "-":
-            summand_no_operaror = summand[1:]
+            summand_no_operator = summand[1:]
             sign = -1
 
         coeff = 1.0
         var = ""
-        for factor in _PROD_REGEX.findall(summand_no_operaror):
+        for factor in _PROD_REGEX.findall(summand_no_operator):
             is_div = False
             factor_no_operator = factor
             if factor[0] == "*":

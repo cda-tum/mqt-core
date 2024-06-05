@@ -267,8 +267,8 @@ ZXDiagram& ZXDiagram::concat(const ZXDiagram& rhs) {
     }
   } // add new edges
 
-  const auto nOuptuts = outputs.size();
-  for (size_t i = 0; i < nOuptuts; ++i) {
+  const auto nOutputs = outputs.size();
+  for (size_t i = 0; i < nOutputs; ++i) {
     removeVertex(outputs[i]);
     outputs[i] = newVs[rhs.outputs[i]];
   }

@@ -244,7 +244,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
   EXPECT_NEAR(measSummary["1111"], 0.011037316662706232, tolerance);
 }
 
-TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentiyError) {
+TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentityError) {
   auto dd = std::make_unique<StochasticNoiseTestPackage>(qc.getNqubits());
 
   std::map<std::string, double, std::less<>> measSummary = {

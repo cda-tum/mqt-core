@@ -785,12 +785,12 @@ public:
           std::move(thenOps), creg->second, rhs->getUInt(), *comparisonKind));
     }
     if (!ifStatement->elseStatements.empty()) {
-      const auto invertedComparsionKind =
-          qc::getInvertedComparsionKind(*comparisonKind);
+      const auto invertedComparisonKind =
+          qc::getInvertedComparisonKind(*comparisonKind);
       auto elseOps = translateBlockOperations(ifStatement->elseStatements);
       qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
           std::move(elseOps), creg->second, rhs->getUInt(),
-          invertedComparsionKind));
+          invertedComparisonKind));
     }
   }
 

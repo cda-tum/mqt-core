@@ -370,7 +370,7 @@ TEST_F(Qasm3ParserTest, ImportQasm3IfElseStatement) {
         "  x q[1];\n"
         "}\n"
         "if (c " +
-        toString(getInvertedComparsionKind(comparisonKind)) +
+        toString(getInvertedComparisonKind(comparisonKind)) +
         " 1) {\n"
         "  x q[0];\n"
         "  x q[1];\n"
