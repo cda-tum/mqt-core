@@ -46,7 +46,7 @@ void CircuitOptimizer::removeOperation(
       while (cit != compOp->cend()) {
         const auto* cop = cit->get();
         if (opTypes.find(cop->getType()) != opTypes.end() &&
-            (opSize == 0 || cop->getUsedQubits().size() == opSize)) {
+            (opSize == 0 || cop->getNqubits() == opSize)) {
           cit = compOp->erase(cit);
         } else {
           ++cit;
