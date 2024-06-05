@@ -7,7 +7,7 @@
 
 #include <cstddef>
 #include <memory>
-#include <set>
+#include <unordered_set>
 
 namespace qc {
 
@@ -31,7 +31,8 @@ public:
   static void removeIdentities(QuantumComputation& qc);
 
   static void removeOperation(qc::QuantumComputation& qc,
-                              const std::set<OpType>& opTypes, size_t opSize);
+                              const std::unordered_set<OpType>& opTypes,
+                              size_t opSize);
 
   static void removeDiagonalGatesBeforeMeasure(QuantumComputation& qc);
 

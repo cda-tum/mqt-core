@@ -31,9 +31,9 @@ void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
   CircuitOptimizer::removeOperation(qc, {I}, 0);
 }
 
-void CircuitOptimizer::removeOperation(qc::QuantumComputation& qc,
-                                       const std::set<OpType>& opTypes,
-                                       size_t opSize) {
+void CircuitOptimizer::removeOperation(
+    qc::QuantumComputation& qc, const std::unordered_set<OpType>& opTypes,
+    const size_t opSize) {
   // opSize = 0 means that the operation can have any number of qubits
   auto it = qc.ops.begin();
   while (it != qc.ops.end()) {
