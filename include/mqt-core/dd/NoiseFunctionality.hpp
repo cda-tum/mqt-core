@@ -37,7 +37,7 @@ void sanityCheckOfNoiseProbabilities(double noiseProbability,
                                      double amplitudeDampingProb,
                                      double multiQubitGateFactor);
 
-class MQT_CORE_EXPORT StochasticNoiseFunctionality {
+class StochasticNoiseFunctionality {
 public:
   StochasticNoiseFunctionality(
       const std::unique_ptr<Package<StochasticNoiseSimulatorDDPackageConfig>>&

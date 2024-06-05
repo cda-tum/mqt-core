@@ -6,6 +6,7 @@
 #include <functional>
 #include <set>
 #include <sstream>
+#include <string>
 
 namespace qc {
 struct Control {

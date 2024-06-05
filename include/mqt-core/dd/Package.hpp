@@ -2049,7 +2049,6 @@ private:
                                         checkCloseToOne) &&
              isCloseToIdentityRecursive(m.p->e[3U], visited, tol, garbage,
                                         checkCloseToOne);
-      ;
     }
 
     // check whether any of the middle successors is non-zero, i.e., m = [ x 0 0
