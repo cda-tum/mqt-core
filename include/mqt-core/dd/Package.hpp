@@ -261,12 +261,14 @@ public:
       matrixAdd.clear();
       conjugateMatrixTranspose.clear();
       matrixKronecker.clear();
+      matrixTrace.clear();
       matrixVectorMultiplication.clear();
       matrixMatrixMultiplication.clear();
       stochasticNoiseOperationCache.clear();
       densityAdd.clear();
       densityDensityMultiplication.clear();
       densityNoise.clear();
+      densityTrace.clear();
     }
     // invalidate all compute tables where any component of the entry contains
     // numbers from the complex table if any complex numbers were collected
@@ -277,10 +279,12 @@ public:
       vectorInnerProduct.clear();
       vectorKronecker.clear();
       matrixKronecker.clear();
+      matrixTrace.clear();
       stochasticNoiseOperationCache.clear();
       densityAdd.clear();
       densityDensityMultiplication.clear();
       densityNoise.clear();
+      densityTrace.clear();
     }
     return vCollect > 0 || mCollect > 0 || cCollect > 0;
   }
@@ -886,11 +890,13 @@ public:
     vectorInnerProduct.clear();
     vectorKronecker.clear();
     matrixKronecker.clear();
+    matrixTrace.clear();
 
     stochasticNoiseOperationCache.clear();
     densityAdd.clear();
     densityDensityMultiplication.clear();
     densityNoise.clear();
+    densityTrace.clear();
   }
 
   ///
@@ -1938,6 +1944,19 @@ private:
   /// (Partial) trace
   ///
 public:
+  UnaryComputeTable<dNode*, dCachedEdge, Config::CT_DM_TRACE_NBUCKET>
+      densityTrace{};
+  UnaryComputeTable<mNode*, mCachedEdge, Config::CT_MAT_TRACE_NBUCKET>
+      matrixTrace{};
+
+  template <class Node> [[nodiscard]] auto& getTraceComputeTable() {
+    if constexpr (std::is_same_v<Node, mNode>) {
+      return matrixTrace;
+    } else {
+      return densityTrace;
+    }
+  }
+
   mEdge partialTrace(const mEdge& a, const std::vector<bool>& eliminate) {
     auto r = trace(a, eliminate, eliminate.size());
     return {r.p, cn.lookup(r.w)};
@@ -2027,12 +2046,19 @@ private:
       return CachedEdge<Node>{a.p, aWeight * std::pow(2, elims)};
     }
 
+    // check if we already computed the trace before and return the result
+    auto& computeTable = getTraceComputeTable<Node>();
+    if (const auto* r = computeTable.lookup(a.p); r != nullptr) {
+      return {r->p, r->w * aWeight};
+    }
+
     const auto v = a.p->v;
     if (eliminate[v]) {
       const auto elims = alreadyEliminated + 1;
       auto r = add2(trace(a.p->e[0], eliminate, level - 1, elims),
                     trace(a.p->e[3], eliminate, level - 1, elims), v - 1);
 
+      computeTable.insert(a.p, {r.p, r.w});
       r.w = r.w * aWeight;
       return r;
     }
@@ -2049,6 +2075,7 @@ private:
                                 eliminate.begin(), eliminate.end(), true)) -
                             alreadyEliminated));
     auto r = makeDDNode(adjustedV, edge);
+    computeTable.insert(a.p, {r.p, r.w});
     r.w = r.w * aWeight;
     return r;
   }

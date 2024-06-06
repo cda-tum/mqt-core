@@ -338,6 +338,26 @@ TEST(DDPackageTest, NonIdentityTrace2Normalized) {
   ASSERT_EQ(fullTraceNormalized, normalizedTrace);
 }
 
+TEST(DDPackageTest, TraceComplexity) {
+  // Check that the trace computation scales with the number of nodes instead of
+  // paths in the DD due to the usage of a compute table
+  for (std::size_t numQubits = 1; numQubits <= 10; ++numQubits) {
+    auto dd = std::make_unique<dd::Package<>>(numQubits);
+    auto& computeTable = dd->getTraceComputeTable<dd::mNode>();
+    const auto hGate = dd->makeGateDD(dd::H_MAT, 0);
+    auto hKron = hGate;
+    for (std::size_t i = 0; i < numQubits - 1; ++i) {
+      hKron = dd->kronecker(hKron, hGate, 1);
+    }
+    dd->trace(hKron, numQubits);
+    auto stats = computeTable.getStats();
+    auto lookups = stats.lookups;
+    auto hits = stats.hits;
+    ASSERT_EQ(lookups, 2 * numQubits - 1);
+    ASSERT_EQ(hits, numQubits - 1);
+  }
+}
+
 TEST(DDPackageTest, StateGenerationManipulation) {
   const std::size_t nqubits = 6;
   auto dd = std::make_unique<dd::Package<>>(nqubits);

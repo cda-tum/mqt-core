@@ -22,6 +22,8 @@ struct DDPackageConfig {
   static constexpr std::size_t CT_MAT_MAT_MULT_NBUCKET = 16384U;
   static constexpr std::size_t CT_VEC_KRON_NBUCKET = 4096U;
   static constexpr std::size_t CT_MAT_KRON_NBUCKET = 4096U;
+  static constexpr std::size_t CT_DM_TRACE_NBUCKET = 1U;
+  static constexpr std::size_t CT_MAT_TRACE_NBUCKET = 4096U;
   static constexpr std::size_t CT_VEC_INNER_PROD_NBUCKET = 4096U;
   static constexpr std::size_t CT_DM_NOISE_NBUCKET = 1U;
   static constexpr std::size_t UT_DM_NBUCKET = 1U;
@@ -63,6 +65,8 @@ struct DensityMatrixSimulatorDDPackageConfig : public dd::DDPackageConfig {
   static constexpr std::size_t UT_MAT_INITIAL_ALLOCATION_SIZE = 1U;
   static constexpr std::size_t CT_VEC_KRON_NBUCKET = 1U;
   static constexpr std::size_t CT_MAT_KRON_NBUCKET = 1U;
+  static constexpr std::size_t CT_DM_TRACE_NBUCKET = 4096U;
+  static constexpr std::size_t CT_MAT_TRACE_NBUCKET = 1U;
   static constexpr std::size_t CT_VEC_INNER_PROD_NBUCKET = 1U;
   static constexpr std::size_t STOCHASTIC_CACHE_OPS = 1U;
   static constexpr std::size_t CT_VEC_ADD_MAG_NBUCKET = 1U;
