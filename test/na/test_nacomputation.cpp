@@ -47,7 +47,7 @@ TEST(NAComputation, General) {
                       "store (4, 1), (5, 1) to (4, 0), (5, 0);\n");
 }
 
-TEST(NAOperation, EmptyPrint) {
+TEST(NAComputation, EmptyPrint) {
   const NAComputation qc;
   std::stringstream ss;
   ss << qc;
