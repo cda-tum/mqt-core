@@ -154,6 +154,8 @@ TEST(Operation, Equality) {
                          qc::Permutation{{{0, 2}, {1, 0}}}));
   EXPECT_FALSE(
       op2.equals(op3, qc::Permutation{{{0, 0}, {1, 2}}}, qc::Permutation{}));
+  EXPECT_FALSE(op2.equals(op4, qc::Permutation{{{0, 0}, {1, 2}}},
+                          qc::Permutation{{{0, 2}, {1, 0}}}));
 }
 
 TEST(StandardOperation, Move) {
