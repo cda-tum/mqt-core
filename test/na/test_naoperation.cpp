@@ -51,7 +51,8 @@ TEST(NAOperation, LocalOperation) {
 }
 
 TEST(NAOperation, EmptyPrint) {
-  const NALocalOperation op(FullOpType{qc::RY, 0}, std::vector{qc::PI_2}, std::vector<std::shared_ptr<Point>>{});
+  const NALocalOperation op(FullOpType{qc::RY, 0}, std::vector{qc::PI_2},
+                            std::vector<std::shared_ptr<Point>>{});
   std::stringstream ss;
   ss << op;
   EXPECT_EQ(ss.str(), "ry(1.5708) at;\n");
