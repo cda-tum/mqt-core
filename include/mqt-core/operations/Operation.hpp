@@ -69,8 +69,9 @@ public:
   [[nodiscard]] virtual OpType getType() const { return type; }
 
   [[nodiscard]] virtual auto
-  getUsedQubits(std::function<Qubit(Qubit)> perm = [](Qubit x) { return x; }) const
-      -> std::set<Qubit> {
+  getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](Qubit q) {
+    return q;
+  }) const -> std::set<Qubit> {
     const auto& opTargets = getTargets();
     const auto& opControls = getControls();
     std::set<Qubit> usedQubits;

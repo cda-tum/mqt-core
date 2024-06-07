@@ -47,9 +47,16 @@ public:
   std::vector<Bit>& getClassics() { return classics; }
   [[nodiscard]] std::size_t getNclassics() const { return classics.size(); }
 
-  [[nodiscard]] std::set<Qubit> getUsedQubits() const override {
+  [[nodiscard]] std::set<Qubit>
+  getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](Qubit q) {
+    return q;
+  }) const override {
     const auto& opTargets = getTargets();
-    return {opTargets.begin(), opTargets.end()};
+    std::set<Qubit> usedQubits;
+    for (const auto& target : opTargets) {
+      usedQubits.emplace(perm(target));
+    }
+    return usedQubits;
   }
 
   [[nodiscard]] const Controls& getControls() const override {

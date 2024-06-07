@@ -160,10 +160,11 @@ void CompoundOperation::dumpOpenQASM(std::ostream& of,
   }
 }
 
-std::set<Qubit> CompoundOperation::getUsedQubits() const {
+std::set<Qubit> CompoundOperation::getUsedQubits(
+    const std::function<Qubit(Qubit)>& perm) const {
   std::set<Qubit> usedQubits{};
   for (const auto& op : ops) {
-    usedQubits.merge(op->getUsedQubits());
+    usedQubits.merge(op->getUsedQubits(perm));
   }
   return usedQubits;
 }
