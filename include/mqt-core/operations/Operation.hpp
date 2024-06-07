@@ -47,12 +47,16 @@ public:
   // Getters
   [[nodiscard]] virtual const Targets& getTargets() const { return targets; }
   virtual Targets& getTargets() { return targets; }
+  [[nodiscard]] virtual auto getTargets(
+      const std::function<Qubit(const Qubit)>& permFunc) const -> Targets;
   [[nodiscard]] virtual std::size_t getNtargets() const {
     return targets.size();
   }
 
   [[nodiscard]] virtual const Controls& getControls() const { return controls; }
   virtual Controls& getControls() { return controls; }
+  [[nodiscard]] virtual auto getControls(
+      const std::function<Qubit(const Qubit)>& permFunc) const -> Controls;
   [[nodiscard]] virtual std::size_t getNcontrols() const {
     return controls.size();
   }

@@ -211,4 +211,24 @@ auto Operation::isInverseOf(const Operation& other) const -> bool {
   return result;
 }
 
+auto Operation::getTargets(
+    const std::function<Qubit(const Qubit)>& permFunc) const -> Targets {
+  Targets permutedTargets{};
+  const auto& targ = getTargets();
+  permutedTargets.reserve(targ.size());
+  for (const auto& target : targ) {
+    permutedTargets.emplace_back(permFunc(target));
+  }
+  return permutedTargets;
+}
+
+auto Operation::getControls(
+    const std::function<Qubit(const Qubit)>& permFunc) const -> Controls {
+  Controls permutedControls{};
+  for (const auto& control : getControls()) {
+    permutedControls.emplace(permFunc(control.qubit), control.type);
+  }
+  return permutedControls;
+}
+
 } // namespace qc
