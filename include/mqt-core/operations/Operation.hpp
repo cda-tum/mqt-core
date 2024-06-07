@@ -156,8 +156,9 @@ public:
 
   virtual void addDepthContribution(std::vector<std::size_t>& depths) const;
 
-  [[nodiscard]] virtual bool equals(const Operation& op, const Permutation& p1,
-                                    const Permutation& p2) const;
+  [[nodiscard]] virtual bool equals(const Operation& op,
+                                    const Permutation& perm1,
+                                    const Permutation& perm2) const;
   [[nodiscard]] virtual bool equals(const Operation& op) const {
     return equals(op, {}, {});
   }

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <ostream>
@@ -100,14 +101,8 @@ std::ostream& Operation::print(std::ostream& os, const Permutation& permutation,
   return os;
 }
 
-bool Operation::equals(const Operation& op, const Permutation& p1,
-                       const Permutation& p2) const {
-  const std::function<Qubit(Qubit)>& perm1 = [&p1](const Qubit& q) -> Qubit {
-    return p1.empty() ? q : p1.at(q);
-  };
-  const std::function<Qubit(Qubit)>& perm2 = [&p2](const Qubit& q) -> Qubit {
-    return p2.empty() ? q : p2.at(q);
-  };
+bool Operation::equals(const Operation& op, const Permutation& perm1,
+                       const Permutation& perm2) const {
   // check type
   if (getType() != op.getType()) {
     return false;
@@ -127,10 +122,19 @@ bool Operation::equals(const Operation& op, const Permutation& p1,
     return false;
   }
 
+  const auto permFunc1 =
+      perm1.empty() ? std::function<Qubit(const Qubit)>(
+                          [](const Qubit q) -> Qubit { return q; })
+                    : [&perm1](const Qubit q) -> Qubit { return perm1.at(q); };
+  const auto permFunc2 =
+      perm2.empty() ? std::function<Qubit(const Qubit)>(
+                          [](const Qubit q) -> Qubit { return q; })
+                    : [&perm2](const Qubit q) -> Qubit { return perm2.at(q); };
+
   if (isDiagonalGate()) {
     // check pos. controls and targets together
-    const std::set<Qubit>& usedQubits1 = getUsedQubits(perm1);
-    const std::set<Qubit>& usedQubits2 = op.getUsedQubits(perm2);
+    const auto& usedQubits1 = getUsedQubitsPermuted(permFunc1);
+    const auto& usedQubits2 = op.getUsedQubitsPermuted(permFunc2);
     if (usedQubits1 != usedQubits2) {
       return false;
     }
@@ -138,46 +142,23 @@ bool Operation::equals(const Operation& op, const Permutation& p1,
     std::set<Qubit> negControls1{};
     for (const auto& control : getControls()) {
       if (control.type == Control::Type::Neg) {
-        negControls1.emplace(perm1(control.qubit));
+        negControls1.emplace(permFunc1(control.qubit));
       }
     }
     std::set<Qubit> negControls2{};
     for (const auto& control : op.getControls()) {
       if (control.type == Control::Type::Neg) {
-        negControls2.emplace(perm2(control.qubit));
+        negControls2.emplace(permFunc2(control.qubit));
       }
     }
     return negControls1 == negControls2;
   }
   // check controls
-  if (nc1 != 0U) {
-    Controls controls1;
-    for (const auto& control : getControls()) {
-      controls1.emplace(perm1(control.qubit), control.type);
-    }
-
-    Controls controls2;
-    for (const auto& control : op.getControls()) {
-      controls2.emplace(perm2(control.qubit), control.type);
-    }
-
-    if (controls1 != controls2) {
-      return false;
-    }
+  if (nc1 != 0U && getControls(permFunc1) != op.getControls(permFunc2)) {
+    return false;
   }
 
-  // check targets
-  std::set<Qubit> targets1{};
-  for (const auto& target : getTargets()) {
-    targets1.emplace(perm1(target));
-  }
-
-  std::set<Qubit> targets2{};
-  for (const auto& target : op.getTargets()) {
-    targets2.emplace(perm2(target));
-  }
-
-  return targets1 == targets2;
+  return getTargets(permFunc1) == op.getTargets(permFunc2);
 }
 
 void Operation::addDepthContribution(std::vector<std::size_t>& depths) const {
