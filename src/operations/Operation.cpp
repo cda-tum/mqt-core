@@ -209,6 +209,21 @@ void Operation::apply(const Permutation& permutation) {
 auto Operation::isInverseOf(const Operation& other) const -> bool {
   return operator==(*other.getInverted());
 }
+
+auto Operation::getUsedQubitsPermuted(
+    const std::function<Qubit(const Qubit)>& perm) const -> std::set<Qubit> {
+  std::set<Qubit> usedQubits;
+  for (const auto& target : getTargets()) {
+    usedQubits.emplace(perm(target));
+  }
+  for (const auto& control : getControls()) {
+    usedQubits.emplace(perm(control.qubit));
+  }
+  return usedQubits;
+}
+
+auto Operation::getUsedQubits() const -> std::set<Qubit> {
+  return getUsedQubitsPermuted([](const Qubit q) { return q; });
 }
 
 auto Operation::getTargets(
