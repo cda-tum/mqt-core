@@ -148,7 +148,7 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
     }
 
     std::set<Qubit> usedQubits2{};
-        std::set<Qubit> negControls2{};
+    std::set<Qubit> negControls2{};
     if (perm2.empty()) {
       usedQubits2 = {op.getTargets().cbegin(), op.getTargets().cend()};
       for (const auto& control : op.getControls()) {
