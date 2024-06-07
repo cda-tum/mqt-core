@@ -139,6 +139,17 @@ TEST(Operation, IsDiagonalGate) {
   EXPECT_TRUE(op2.isDiagonalGate());
 }
 
+TEST(Operation, Equality) {
+  const qc::StandardOperation op1(0, qc::Z);
+  const qc::StandardOperation op2(1, 0, qc::Z);
+  const qc::StandardOperation op3(0, 1, qc::Z);
+  const qc::StandardOperation op4({0, qc::Control::Type::Neg}, 1, qc::Z);
+  EXPECT_FALSE(op1 == op2);
+  EXPECT_TRUE(op2 == op3);
+  EXPECT_TRUE(op3 == op2);
+  EXPECT_FALSE(op2 == op4);
+}
+
 TEST(StandardOperation, Move) {
   const qc::StandardOperation moveOp({0, 1}, qc::OpType::Move);
   EXPECT_EQ(moveOp.getTargets().size(), 2);
