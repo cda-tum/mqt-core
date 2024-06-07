@@ -185,14 +185,14 @@ public:
                             bool openQASM3) const = 0;
 
   /// Checks whether operation commutes with other operation on a given qubit.
-  [[nodiscard]] virtual auto
-  commutesAtQubit(const Operation& /*other*/,
-                  const Qubit& /*qubit*/) const -> bool {
+  [[nodiscard]] virtual auto commutesAtQubit(const Operation& /*other*/,
+                                             const Qubit& /*qubit*/) const
+      -> bool {
     return false;
   }
 
-  [[nodiscard]] virtual auto
-  isInverseOf(const Operation& /*other*/) const -> bool;
+  [[nodiscard]] virtual auto isInverseOf(const Operation& /*other*/) const
+      -> bool;
 
   virtual void invert() = 0;
 

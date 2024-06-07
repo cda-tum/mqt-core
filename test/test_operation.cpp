@@ -148,6 +148,10 @@ TEST(Operation, Equality) {
   EXPECT_TRUE(op2 == op3);
   EXPECT_TRUE(op3 == op2);
   EXPECT_FALSE(op2 == op4);
+
+  EXPECT_TRUE(
+      op2.equals(op3, qc::Permutation{{{0, 0}, {1, 2}}}, qc::Permutation{{{0, 2}, {1, 0}}}));
+  EXPECT_FALSE(op2.equals(op3, qc::Permutation{{{0, 0}, {1, 2}}}, qc::Permutation{}));
 }
 
 TEST(StandardOperation, Move) {
