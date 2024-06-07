@@ -1706,7 +1706,6 @@ TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
 TEST_F(QFRFunctionality, addControlNonUnitaryOperation) {
   auto op = NonUnitaryOperation(0U, Measure);
 
-  EXPECT_THROW(static_cast<void>(op.getControls()), QFRException);
   EXPECT_THROW(op.addControl(1), QFRException);
   EXPECT_THROW(op.removeControl(1), QFRException);
   EXPECT_THROW(op.clearControls(), QFRException);

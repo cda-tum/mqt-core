@@ -46,4 +46,11 @@ TEST(NAComputation, General) {
                       "move (0, 1), (1, 1) to (4, 1), (5, 1);\n"
                       "store (4, 1), (5, 1) to (4, 0), (5, 0);\n");
 }
+
+TEST(NAComputation, EmptyPrint) {
+  const NAComputation qc;
+  std::stringstream ss;
+  ss << qc;
+  EXPECT_EQ(ss.str(), "init at;\n");
+}
 } // namespace na

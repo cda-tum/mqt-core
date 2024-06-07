@@ -1,4 +1,5 @@
 #include "Definitions.hpp"
+#include "Permutation.hpp"
 #include "operations/AodOperation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/Expression.hpp"
@@ -137,6 +138,24 @@ TEST(Operation, IsDiagonalGate) {
   EXPECT_FALSE(op1.isDiagonalGate());
   const qc::StandardOperation op2(0, qc::Z);
   EXPECT_TRUE(op2.isDiagonalGate());
+}
+
+TEST(Operation, Equality) {
+  const qc::StandardOperation op1(0, qc::Z);
+  const qc::StandardOperation op2(1, 0, qc::Z);
+  const qc::StandardOperation op3(0, 1, qc::Z);
+  const qc::StandardOperation op4({0, qc::Control::Type::Neg}, 1, qc::Z);
+  EXPECT_FALSE(op1 == op2);
+  EXPECT_TRUE(op2 == op3);
+  EXPECT_TRUE(op3 == op2);
+  EXPECT_FALSE(op2 == op4);
+
+  EXPECT_TRUE(op2.equals(op3, qc::Permutation{{{0, 0}, {1, 2}}},
+                         qc::Permutation{{{0, 2}, {1, 0}}}));
+  EXPECT_FALSE(
+      op2.equals(op3, qc::Permutation{{{0, 0}, {1, 2}}}, qc::Permutation{}));
+  EXPECT_FALSE(op2.equals(op4, qc::Permutation{{{0, 0}, {1, 2}}},
+                          qc::Permutation{{{0, 2}, {1, 0}}}));
 }
 
 TEST(StandardOperation, Move) {

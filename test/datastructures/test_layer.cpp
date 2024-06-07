@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <gtest/gtest.h>
 #include <memory>
+#include <stdexcept>
 #include <tuple>
 #include <vector>
 
@@ -39,7 +40,7 @@ TEST(Layer, ExecutableSet1) {
   EXPECT_EQ(layer.getExecutableSet().size(), 1); // layer (1)
   std::shared_ptr<Layer::DAGVertex> v = *(layer.getExecutableSet()).begin();
   v->execute();
-  EXPECT_ANY_THROW(v->execute());
+  EXPECT_THROW(v->execute(), std::logic_error);
   EXPECT_EQ(layer.getExecutableSet().size(), 3); // layer (2)
   v = *(layer.getExecutableSet()).begin();
   v->execute();

@@ -62,7 +62,8 @@ public:
 
   std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
 
-  [[nodiscard]] std::set<Qubit> getUsedQubits() const override;
+  [[nodiscard]] auto getUsedQubitsPermuted(const Permutation& perm) const
+      -> std::set<Qubit> override;
 
   [[nodiscard]] auto commutesAtQubit(const Operation& other,
                                      const Qubit& qubit) const -> bool override;

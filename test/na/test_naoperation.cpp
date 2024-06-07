@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 #include <memory>
+#include <sstream>
 #include <vector>
 
 namespace na {
@@ -48,5 +49,13 @@ TEST(NAOperation, LocalOperation) {
       NALocalOperation(FullOpType{qc::ECR, 0}, std::make_shared<Point>(0, 0)));
   EXPECT_ANY_THROW(
       NALocalOperation(FullOpType{qc::RY, 1}, std::make_shared<Point>(0, 0)));
+}
+
+TEST(NAOperation, EmptyPrint) {
+  const NALocalOperation op(FullOpType{qc::RY, 0}, std::vector{qc::PI_2},
+                            std::vector<std::shared_ptr<Point>>{});
+  std::stringstream ss;
+  ss << op;
+  EXPECT_EQ(ss.str(), "ry(1.5708) at;\n");
 }
 } // namespace na

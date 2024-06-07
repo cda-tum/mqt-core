@@ -123,3 +123,12 @@ template <> struct std::hash<na::FullOpType> {
     return qc::combineHash(h1, h2);
   }
 };
+
+/// Hash function for Point, e.g., for use in unordered_map
+template <> struct std::hash<na::Point> {
+  std::size_t operator()(const na::Point& p) const noexcept {
+    const std::size_t h1 = std::hash<decltype(p.x)>{}(p.x);
+    const std::size_t h2 = std::hash<decltype(p.y)>{}(p.y);
+    return qc::combineHash(h1, h2);
+  }
+};
