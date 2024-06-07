@@ -72,14 +72,12 @@ public:
   getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](const Qubit q) {
     return q;
   }) const -> std::set<Qubit> {
-    const auto& opTargets = getTargets();
-    const auto& opControls = getControls();
     std::set<Qubit> usedQubits;
-    for (const auto& target : opTargets) {
-      usedQubits.emplace(perm(target));
+    for (const auto& target : getTargets()) {
+      usedQubits.insert(perm(target));
     }
-    for (const auto& control : opControls) {
-      usedQubits.emplace(perm(control.qubit));
+    for (const auto& control : getControls()) {
+      usedQubits.insert(perm(control.qubit));
     }
     return usedQubits;
   }
@@ -163,8 +161,7 @@ public:
 
   virtual void addDepthContribution(std::vector<std::size_t>& depths) const;
 
-  [[nodiscard]] virtual bool equals(const Operation& op,
-                                    const Permutation& p1,
+  [[nodiscard]] virtual bool equals(const Operation& op, const Permutation& p1,
                                     const Permutation& p2) const;
   [[nodiscard]] virtual bool equals(const Operation& op) const {
     return equals(op, {}, {});
@@ -191,14 +188,14 @@ public:
                             bool openQASM3) const = 0;
 
   /// Checks whether operation commutes with other operation on a given qubit.
-  [[nodiscard]] virtual auto
-  commutesAtQubit(const Operation& /*other*/,
-                  const Qubit& /*qubit*/) const -> bool {
+  [[nodiscard]] virtual auto commutesAtQubit(const Operation& /*other*/,
+                                             const Qubit& /*qubit*/) const
+      -> bool {
     return false;
   }
 
-  [[nodiscard]] virtual auto
-  isInverseOf(const Operation& /*other*/) const -> bool;
+  [[nodiscard]] virtual auto isInverseOf(const Operation& /*other*/) const
+      -> bool;
 
   virtual void invert() = 0;
 

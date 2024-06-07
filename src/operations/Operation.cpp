@@ -129,10 +129,8 @@ bool Operation::equals(const Operation& op, const Permutation& p1,
 
   if (isDiagonalGate()) {
     // check pos. controls and targets together
-    std::set<Qubit> usedQubits1 = getUsedQubits(perm1);
-
-    std::set<Qubit> usedQubits2 = getUsedQubits(perm2);
-
+    const std::set<Qubit>& usedQubits1 = getUsedQubits(perm1);
+    const std::set<Qubit>& usedQubits2 = op.getUsedQubits(perm2);
     if (usedQubits1 != usedQubits2) {
       return false;
     }
@@ -143,14 +141,12 @@ bool Operation::equals(const Operation& op, const Permutation& p1,
         negControls1.emplace(perm1(control.qubit));
       }
     }
-
     std::set<Qubit> negControls2{};
     for (const auto& control : op.getControls()) {
       if (control.type == Control::Type::Neg) {
         negControls2.emplace(perm2(control.qubit));
       }
     }
-
     return negControls1 == negControls2;
   }
   // check controls
@@ -211,7 +207,8 @@ void Operation::apply(const Permutation& permutation) {
 }
 
 auto Operation::isInverseOf(const Operation& other) const -> bool {
-  return operator==(*other.getInverted());
+  auto result = operator==(*other.getInverted());
+  return result;
 }
 
 } // namespace qc
