@@ -48,7 +48,7 @@ public:
   [[nodiscard]] std::size_t getNclassics() const { return classics.size(); }
 
   [[nodiscard]] std::set<Qubit>
-  getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](Qubit q) {
+  getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](const Qubit q) {
     return q;
   }) const override {
     const auto& opTargets = getTargets();

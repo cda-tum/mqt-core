@@ -100,8 +100,14 @@ std::ostream& Operation::print(std::ostream& os, const Permutation& permutation,
   return os;
 }
 
-bool Operation::equals(const Operation& op, const Permutation& perm1,
-                       const Permutation& perm2) const {
+bool Operation::equals(const Operation& op, const Permutation& p1,
+                       const Permutation& p2) const {
+  const std::function<Qubit(Qubit)>& perm1 = [&p1](const Qubit& q) -> Qubit {
+    return p1.empty() ? q : p1.at(q);
+  };
+  const std::function<Qubit(Qubit)>& perm2 = [&p2](const Qubit& q) -> Qubit {
+    return p2.empty() ? q : p2.at(q);
+  };
   // check type
   if (getType() != op.getType()) {
     return false;
@@ -123,15 +129,9 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
 
   if (isDiagonalGate()) {
     // check pos. controls and targets together
-    std::set<Qubit> usedQubits1 =
-        perm1.empty()
-            ? getUsedQubits()
-            : getUsedQubits([&perm1](const auto& q) { return perm1.at(q); });
+    std::set<Qubit> usedQubits1 = getUsedQubits(perm1);
 
-    std::set<Qubit> usedQubits2 =
-        perm2.empty()
-            ? getUsedQubits()
-            : getUsedQubits([&perm2](const auto& q) { return perm2.at(q); });
+    std::set<Qubit> usedQubits2 = getUsedQubits(perm2);
 
     if (usedQubits1 != usedQubits2) {
       return false;
@@ -140,22 +140,14 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
     std::set<Qubit> negControls1{};
     for (const auto& control : getControls()) {
       if (control.type == Control::Type::Neg) {
-        if (perm1.empty()) {
-          negControls1.emplace(control.qubit);
-        } else {
-          negControls1.emplace(perm1.at(control.qubit));
-        }
+        negControls1.emplace(perm1(control.qubit));
       }
     }
 
     std::set<Qubit> negControls2{};
     for (const auto& control : op.getControls()) {
       if (control.type == Control::Type::Neg) {
-        if (perm2.empty()) {
-          negControls2.emplace(control.qubit);
-        } else {
-          negControls2.emplace(perm2.at(control.qubit));
-        }
+        negControls2.emplace(perm2(control.qubit));
       }
     }
 
@@ -163,22 +155,14 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
   }
   // check controls
   if (nc1 != 0U) {
-    Controls controls1{};
-    if (perm1.empty()) {
-      controls1 = getControls();
-    } else {
-      for (const auto& control : getControls()) {
-        controls1.emplace(perm1.at(control.qubit), control.type);
-      }
+    Controls controls1;
+    for (const auto& control : getControls()) {
+      controls1.emplace(perm1(control.qubit), control.type);
     }
 
-    Controls controls2{};
-    if (perm2.empty()) {
-      controls2 = op.getControls();
-    } else {
-      for (const auto& control : op.getControls()) {
-        controls2.emplace(perm2.at(control.qubit), control.type);
-      }
+    Controls controls2;
+    for (const auto& control : op.getControls()) {
+      controls2.emplace(perm2(control.qubit), control.type);
     }
 
     if (controls1 != controls2) {
@@ -188,21 +172,13 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
 
   // check targets
   std::set<Qubit> targets1{};
-  if (perm1.empty()) {
-    targets1 = {getTargets().begin(), getTargets().end()};
-  } else {
-    for (const auto& target : getTargets()) {
-      targets1.emplace(perm1.at(target));
-    }
+  for (const auto& target : getTargets()) {
+    targets1.emplace(perm1(target));
   }
 
   std::set<Qubit> targets2{};
-  if (perm2.empty()) {
-    targets2 = {op.getTargets().begin(), op.getTargets().end()};
-  } else {
-    for (const auto& target : op.getTargets()) {
-      targets2.emplace(perm2.at(target));
-    }
+  for (const auto& target : op.getTargets()) {
+    targets2.emplace(perm2(target));
   }
 
   return targets1 == targets2;

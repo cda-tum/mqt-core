@@ -63,7 +63,7 @@ public:
   std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
 
   [[nodiscard]] std::set<Qubit>
-  getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](Qubit q) {
+  getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](const Qubit q) {
     return q;
   }) const override;
 

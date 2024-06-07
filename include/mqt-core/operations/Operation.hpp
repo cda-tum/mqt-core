@@ -69,7 +69,7 @@ public:
   [[nodiscard]] virtual OpType getType() const { return type; }
 
   [[nodiscard]] virtual auto
-  getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](Qubit q) {
+  getUsedQubits(const std::function<Qubit(Qubit)>& perm = [](const Qubit q) {
     return q;
   }) const -> std::set<Qubit> {
     const auto& opTargets = getTargets();
@@ -164,8 +164,8 @@ public:
   virtual void addDepthContribution(std::vector<std::size_t>& depths) const;
 
   [[nodiscard]] virtual bool equals(const Operation& op,
-                                    const Permutation& perm1,
-                                    const Permutation& perm2) const;
+                                    const Permutation& p1,
+                                    const Permutation& p2) const;
   [[nodiscard]] virtual bool equals(const Operation& op) const {
     return equals(op, {}, {});
   }
