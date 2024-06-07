@@ -30,6 +30,13 @@ public:
     }
     return t;
   }
+
+  [[nodiscard]] auto apply(const Qubit qubit) const -> Qubit {
+    if (empty()) {
+      return qubit;
+    }
+    return at(qubit);
+  }
 };
 } // namespace qc
 
