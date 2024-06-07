@@ -123,23 +123,15 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
 
   if (isDiagonalGate()) {
     // check pos. controls and targets together
-    std::set<Qubit> usedQubits1 = getUsedQubits();
-    if (!perm1.empty()) {
-      const std::set<Qubit> beforeMapping = usedQubits1;
-      usedQubits1.clear();
-      for (const auto& q : beforeMapping) {
-        usedQubits1.emplace(perm1.at(q));
-      }
-    }
+    std::set<Qubit> usedQubits1 =
+        perm1.empty()
+            ? getUsedQubits()
+            : getUsedQubits([&perm1](const auto& q) { return perm1.at(q); });
 
-    std::set<Qubit> usedQubits2 = op.getUsedQubits();
-    if (!perm2.empty()) {
-      const std::set<Qubit> beforeMapping = usedQubits2;
-      usedQubits2.clear();
-      for (const auto& q : beforeMapping) {
-        usedQubits2.emplace(perm2.at(q));
-      }
-    }
+    std::set<Qubit> usedQubits2 =
+        perm2.empty()
+            ? getUsedQubits()
+            : getUsedQubits([&perm2](const auto& q) { return perm2.at(q); });
 
     if (usedQubits1 != usedQubits2) {
       return false;

@@ -68,12 +68,17 @@ public:
   [[nodiscard]] const std::string& getName() const { return name; }
   [[nodiscard]] virtual OpType getType() const { return type; }
 
-  [[nodiscard]] virtual std::set<Qubit> getUsedQubits() const {
+  [[nodiscard]] virtual auto
+  getUsedQubits(std::function<Qubit(Qubit)> perm = [](Qubit x) { return x; }) const
+      -> std::set<Qubit> {
     const auto& opTargets = getTargets();
     const auto& opControls = getControls();
-    std::set<Qubit> usedQubits = {opTargets.begin(), opTargets.end()};
+    std::set<Qubit> usedQubits;
+    for (const auto& target : opTargets) {
+      usedQubits.emplace(perm(target));
+    }
     for (const auto& control : opControls) {
-      usedQubits.insert(control.qubit);
+      usedQubits.emplace(perm(control.qubit));
     }
     return usedQubits;
   }
@@ -185,14 +190,14 @@ public:
                             bool openQASM3) const = 0;
 
   /// Checks whether operation commutes with other operation on a given qubit.
-  [[nodiscard]] virtual auto
-  commutesAtQubit(const Operation& /*other*/,
-                  const Qubit& /*qubit*/) const -> bool {
+  [[nodiscard]] virtual auto commutesAtQubit(const Operation& /*other*/,
+                                             const Qubit& /*qubit*/) const
+      -> bool {
     return false;
   }
 
-  [[nodiscard]] virtual auto
-  isInverseOf(const Operation& /*other*/) const -> bool;
+  [[nodiscard]] virtual auto isInverseOf(const Operation& /*other*/) const
+      -> bool;
 
   virtual void invert() = 0;
 
