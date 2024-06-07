@@ -207,8 +207,8 @@ void Operation::apply(const Permutation& permutation) {
 }
 
 auto Operation::isInverseOf(const Operation& other) const -> bool {
-  auto result = operator==(*other.getInverted());
-  return result;
+  return operator==(*other.getInverted());
+}
 }
 
 auto Operation::getTargets(
