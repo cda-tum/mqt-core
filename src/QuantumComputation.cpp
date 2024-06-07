@@ -1058,7 +1058,7 @@ void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
   if (std::holds_alternative<Symbolic>(expr)) {
     const auto& sym = std::get<Symbolic>(expr);
     for (const auto& term : sym) {
-      occuringVariables.insert(term.getVar());
+      occurringVariables.insert(term.getVar());
     }
   }
 }
@@ -1081,7 +1081,7 @@ void QuantumComputation::instantiateInplace(
   // after an operation is instantiated, the respective parameters can be
   // removed from the circuit
   for (const auto& [var, _] : assignment) {
-    occuringVariables.erase(var);
+    occurringVariables.erase(var);
   }
 }
 

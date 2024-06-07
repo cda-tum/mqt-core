@@ -20,6 +20,7 @@ if(MQT_CORE_INSTALL)
   endif()
   set(CMAKE_INSTALL_RPATH ${BASEPOINT} ${BASEPOINT}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
 if(NOT TARGET project_warnings)
@@ -123,7 +124,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
   # set include directories
   target_include_directories(
     ${MQT_CORE_TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${MQT_CORE_INCLUDE_BUILD_DIR}>
-                                   $<INSTALL_INTERFACE:${MQT_CORE_INCLUDE_INSTALL_DIR}>)
+                                   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
   # add options and warnings to the library
   target_link_libraries(${MQT_CORE_TARGET_NAME} PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
@@ -136,6 +137,12 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
                SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
                EXPORT_NAME Core)
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME})
+
+  include(GenerateExportHeader)
+  generate_export_header(${MQT_CORE_TARGET_NAME} BASE_NAME mqt_core)
+  if(NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(${MQT_CORE_TARGET_NAME} PUBLIC MQT_CORE_STATIC_DEFINE)
+  endif()
 endif()
 
 # add datastructures package
@@ -208,6 +215,8 @@ if(MQT_CORE_INSTALL)
     DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
 
   install(DIRECTORY ${MQT_CORE_INCLUDE_BUILD_DIR}/ DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mqt_core_export.h
+          DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
 
   install(
     EXPORT ${MQT_CORE_TARGETS_EXPORT_NAME}

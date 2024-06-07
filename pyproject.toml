@@ -13,24 +13,23 @@ keywords = ["MQT", "quantum-computing", "design-automation", "decision-diagrams"
 license = { file = "LICENSE.md" }
 
 classifiers = [
-    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
-    "Intended Audience :: Science/Research",
-    "Natural Language :: English",
-    "Operating System :: POSIX :: Linux",
-    "Operating System :: MacOS",
-    "Operating System :: Microsoft :: Windows",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: C++",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Development Status :: 4 - Beta",
-    "Typing :: Typed",
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: C++",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+  "Typing :: Typed",
 ]
 requires-python = ">=3.8"
 dynamic = ["version"]
@@ -255,6 +254,19 @@ isort.required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+
+[tool.typos]
+[tool.typos.default.extend-words]
+wille = "wille"
+anc = "anc"
+mch = "mch"
+
+
+[tool.repo-review]
+ignore = [
+  "PC160" # "Uses codespell" -> switched to https://github.com/crate-ci/typos
+]
 
 
 [tool.cibuildwheel]

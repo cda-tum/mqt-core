@@ -42,7 +42,7 @@ struct Point {
     return x == other.x && y == other.y;
   }
   [[maybe_unused]] [[nodiscard]] auto
-  getEuclidianDistance(const Point& c) const {
+  getEuclideanDistance(const Point& c) const {
     const auto delta = *this - c;
     return delta.length();
   }
