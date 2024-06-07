@@ -121,6 +121,58 @@ bool Operation::equals(const Operation& op, const Permutation& perm1,
     return false;
   }
 
+  if (isDiagonalGate()) {
+    // check pos. controls and targets together
+    std::set<Qubit> usedQubits1{};
+    std::set<Qubit> negControls1{};
+    if (perm1.empty()) {
+      usedQubits1 = {targets.cbegin(), targets.cend()};
+      for (const auto& control : controls) {
+        if (control.type == Control::Type::Pos) {
+          usedQubits1.emplace(control.qubit);
+        } else {
+          negControls1.emplace(control.qubit);
+        }
+      }
+    } else {
+      for (const auto& control : controls) {
+        if (control.type == Control::Type::Pos) {
+          usedQubits1.emplace(perm1.at(control.qubit));
+        } else {
+          negControls1.emplace(perm1.at(control.qubit));
+        }
+      }
+      for (const auto& qubit : targets) {
+        usedQubits1.emplace(perm1.at(qubit));
+      }
+    }
+
+    std::set<Qubit> usedQubits2{};
+        std::set<Qubit> negControls2{};
+    if (perm2.empty()) {
+      usedQubits2 = {op.getTargets().cbegin(), op.getTargets().cend()};
+      for (const auto& control : op.getControls()) {
+        if (control.type == Control::Type::Pos) {
+          usedQubits2.emplace(control.qubit);
+        } else {
+          negControls2.emplace(control.qubit);
+        }
+      }
+    } else {
+      for (const auto& control : op.getControls()) {
+        if (control.type == Control::Type::Pos) {
+          usedQubits2.emplace(perm2.at(control.qubit));
+        } else {
+          negControls2.emplace(perm2.at(control.qubit));
+        }
+      }
+      for (const auto& qubit : op.getTargets()) {
+        usedQubits2.emplace(perm2.at(qubit));
+      }
+    }
+
+    return usedQubits1 == usedQubits2 && negControls1 == negControls2;
+  }
   // check controls
   if (nc1 != 0U) {
     Controls controls1{};

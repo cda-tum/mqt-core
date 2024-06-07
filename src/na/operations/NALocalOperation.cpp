@@ -17,10 +17,14 @@ auto NALocalOperation::toString() const -> std::string {
     ss << ")";
   }
   ss << " at ";
-  for (const auto& p : positions) {
-    ss << *p << ", ";
+  if (positions.empty()) {
+    ss.seekp(-1, std::ios_base::end);
+  } else {
+    for (const auto& p : positions) {
+      ss << *p << ", ";
+    }
+    ss.seekp(-2, std::ios_base::end);
   }
-  ss.seekp(-2, std::ios_base::end);
   ss << ";\n";
   return ss.str();
 }

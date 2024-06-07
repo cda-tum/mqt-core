@@ -1,5 +1,6 @@
 #pragma once
 
+#include "QuantumComputation.hpp"
 #include "na/NADefinitions.hpp"
 #include "na/operations/NAOperation.hpp"
 
@@ -57,22 +58,21 @@ public:
   }
   auto clear(const bool clearInitialPositions = true) -> void {
     operations.clear();
-    initialPositions.clear();
     if (clearInitialPositions) {
       initialPositions.clear();
     }
   }
   [[nodiscard]] auto size() const -> std::size_t { return operations.size(); }
-  [[nodiscard]] auto
-  getInitialPositions() const -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto getInitialPositions() const
+      -> const std::vector<std::shared_ptr<Point>>& {
     return initialPositions;
   }
   auto emplaceInitialPosition(std::shared_ptr<Point> p) -> void {
     initialPositions.emplace_back(std::move(p));
   }
   [[nodiscard]] auto toString() const -> std::string;
-  friend auto operator<<(std::ostream& os,
-                         const NAComputation& qc) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const NAComputation& qc)
+      -> std::ostream& {
     return os << qc.toString();
   }
   // Iterators (pass-through)
