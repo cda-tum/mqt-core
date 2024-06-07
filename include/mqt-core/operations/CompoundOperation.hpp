@@ -21,8 +21,8 @@ private:
 public:
   explicit CompoundOperation();
 
-  explicit
-  CompoundOperation(std::vector<std::unique_ptr<Operation>>&& operations);
+  explicit CompoundOperation(
+      std::vector<std::unique_ptr<Operation>>&& operations);
 
   CompoundOperation(const CompoundOperation& co);
 
