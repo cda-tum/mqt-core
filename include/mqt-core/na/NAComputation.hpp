@@ -1,6 +1,5 @@
 #pragma once
 
-#include "QuantumComputation.hpp"
 #include "na/NADefinitions.hpp"
 #include "na/operations/NAOperation.hpp"
 

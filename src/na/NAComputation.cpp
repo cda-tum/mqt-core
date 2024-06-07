@@ -1,9 +1,5 @@
 #include "na/NAComputation.hpp"
 
-#include "na/operations/NAGlobalOperation.hpp"
-#include "na/operations/NALocalOperation.hpp"
-#include "na/operations/NAShuttlingOperation.hpp"
-
 #include <ios>
 #include <sstream>
 #include <string>
