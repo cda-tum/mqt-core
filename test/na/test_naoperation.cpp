@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 #include <memory>
+#include <sstream>
 #include <vector>
 
 namespace na {
