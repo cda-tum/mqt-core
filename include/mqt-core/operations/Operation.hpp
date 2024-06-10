@@ -68,15 +68,10 @@ public:
   [[nodiscard]] const std::string& getName() const { return name; }
   [[nodiscard]] virtual OpType getType() const { return type; }
 
-  [[nodiscard]] virtual std::set<Qubit> getUsedQubits() const {
-    const auto& opTargets = getTargets();
-    const auto& opControls = getControls();
-    std::set<Qubit> usedQubits = {opTargets.begin(), opTargets.end()};
-    for (const auto& control : opControls) {
-      usedQubits.insert(control.qubit);
-    }
-    return usedQubits;
-  }
+  [[nodiscard]] virtual auto
+  getUsedQubitsPermuted(const Permutation& perm) const -> std::set<Qubit>;
+
+  [[nodiscard]] auto getUsedQubits() const -> std::set<Qubit>;
 
   [[nodiscard]] std::unique_ptr<Operation> getInverted() const {
     auto op = clone();

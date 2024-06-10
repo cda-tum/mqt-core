@@ -50,7 +50,7 @@ TEST(ElidePermutations, simpleInitialLayout) {
   EXPECT_EQ(qc.outputPermutation[0], 0);
 }
 
-TEST(ElidePermutations, applyPermutionCompound) {
+TEST(ElidePermutations, applyPermutationCompound) {
   QuantumComputation qc(2);
   qc.cx(0, 1);
   auto op = qc.asCompoundOperation();

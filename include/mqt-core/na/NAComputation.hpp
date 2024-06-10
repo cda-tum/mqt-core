@@ -57,7 +57,6 @@ public:
   }
   auto clear(const bool clearInitialPositions = true) -> void {
     operations.clear();
-    initialPositions.clear();
     if (clearInitialPositions) {
       initialPositions.clear();
     }

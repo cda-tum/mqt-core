@@ -28,6 +28,7 @@ public:
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
     return params;
   }
+  [[nodiscard]] auto getType() const -> FullOpType { return type; }
   [[nodiscard]] auto isGlobalOperation() const -> bool override { return true; }
   [[nodiscard]] auto toString() const -> std::string override;
   [[nodiscard]] auto clone() const -> std::unique_ptr<NAOperation> override {

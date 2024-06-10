@@ -56,7 +56,7 @@ protected:
 
   fp globalPhase = 0.;
 
-  std::unordered_set<sym::Variable> occuringVariables;
+  std::unordered_set<sym::Variable> occurringVariables;
 
   void importOpenQASM3(std::istream& is);
   void importReal(std::istream& is);
@@ -255,7 +255,7 @@ public:
       : nqubits(qc.nqubits), nclassics(qc.nclassics), nancillae(qc.nancillae),
         name(qc.name), qregs(qc.qregs), cregs(qc.cregs), ancregs(qc.ancregs),
         mt(qc.mt), seed(qc.seed), globalPhase(qc.globalPhase),
-        occuringVariables(qc.occuringVariables),
+        occurringVariables(qc.occurringVariables),
         initialLayout(qc.initialLayout),
         outputPermutation(qc.outputPermutation), ancillary(qc.ancillary),
         garbage(qc.garbage) {
@@ -276,7 +276,7 @@ public:
       mt = qc.mt;
       seed = qc.seed;
       globalPhase = qc.globalPhase;
-      occuringVariables = qc.occuringVariables;
+      occurringVariables = qc.occurringVariables;
       initialLayout = qc.initialLayout;
       outputPermutation = qc.outputPermutation;
       ancillary = qc.ancillary;
@@ -777,7 +777,7 @@ public:
   }
 
   [[nodiscard]] const std::unordered_set<sym::Variable>& getVariables() const {
-    return occuringVariables;
+    return occurringVariables;
   }
 
   /**

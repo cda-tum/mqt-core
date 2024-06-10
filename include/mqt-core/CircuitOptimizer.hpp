@@ -2,10 +2,12 @@
 
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 
 #include <cstddef>
 #include <memory>
+#include <unordered_set>
 
 namespace qc {
 
@@ -27,6 +29,10 @@ public:
   static void singleQubitGateFusion(QuantumComputation& qc);
 
   static void removeIdentities(QuantumComputation& qc);
+
+  static void removeOperation(qc::QuantumComputation& qc,
+                              const std::unordered_set<OpType>& opTypes,
+                              size_t opSize);
 
   static void removeDiagonalGatesBeforeMeasure(QuantumComputation& qc);
 

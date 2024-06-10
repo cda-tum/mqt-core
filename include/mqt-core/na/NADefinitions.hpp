@@ -42,7 +42,7 @@ struct Point {
     return x == other.x && y == other.y;
   }
   [[maybe_unused]] [[nodiscard]] auto
-  getEuclidianDistance(const Point& c) const {
+  getEuclideanDistance(const Point& c) const {
     const auto delta = *this - c;
     return delta.length();
   }
@@ -120,6 +120,15 @@ template <> struct std::hash<na::FullOpType> {
   std::size_t operator()(na::FullOpType const& t) const noexcept {
     std::size_t const h1 = std::hash<qc::OpType>{}(t.type);
     std::size_t const h2 = std::hash<std::size_t>{}(t.nControls);
+    return qc::combineHash(h1, h2);
+  }
+};
+
+/// Hash function for Point, e.g., for use in unordered_map
+template <> struct std::hash<na::Point> {
+  std::size_t operator()(const na::Point& p) const noexcept {
+    const std::size_t h1 = std::hash<decltype(p.x)>{}(p.x);
+    const std::size_t h2 = std::hash<decltype(p.y)>{}(p.y);
     return qc::combineHash(h1, h2);
   }
 };
