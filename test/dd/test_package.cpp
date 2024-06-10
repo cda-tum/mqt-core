@@ -285,57 +285,61 @@ TEST(DDPackageTest, IdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(4);
   auto fullTrace = dd->trace(dd->makeIdent(), 4);
 
-  ASSERT_EQ(fullTrace.r, 16.);
+  ASSERT_EQ(fullTrace.r, 1.);
+}
+
+TEST(DDPackageTest, CNotKronTrace) {
+  auto dd = std::make_unique<dd::Package<>>(4);
+  auto cxGate = dd->makeGateDD(dd::X_MAT, 1_pc, 0);
+  auto cxGateKron = dd->kronecker(cxGate, cxGate, 2);
+  auto fullTrace = dd->trace(cxGateKron, 4);
+  ASSERT_EQ(fullTrace, 0.25);
 }
 
 TEST(DDPackageTest, PartialIdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto tr = dd->partialTrace(dd->makeIdent(), {false, true});
   auto mul = dd->multiply(tr, tr);
-  EXPECT_EQ(dd::RealNumber::val(mul.w.r), 4.0);
+  EXPECT_EQ(dd::RealNumber::val(mul.w.r), 1.);
 }
 
-TEST(DDPackageTest, PartialNonIdentityTrace) {
+TEST(DDPackageTest, PartialSWapMatTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
+  auto dd2 = std::make_unique<dd::Package<>>(2);
   auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
+  auto swapGate2 = dd2->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
   auto ptr = dd->partialTrace(swapGate, {true, false});
-  EXPECT_EQ(ptr.w * ptr.w, 1.);
+  auto fullTrace = dd->trace(ptr, 1);
+  auto fullTraceOriginal = dd2->trace(swapGate2, 2);
+  EXPECT_EQ(dd::RealNumber::val(ptr.w.r), 0.5);
+  // Check that successively tracing out subsystems is the same as computing the
+  // full trace from the beginning
+  EXPECT_EQ(fullTrace.r, fullTraceOriginal.r);
 }
 
-TEST(DDPackageTest, IdentityTrace2) {
-  auto dd = std::make_unique<dd::Package<>>(4);
-  auto fullTrace = dd->trace2(dd->makeIdent(), 4);
-  ASSERT_EQ(fullTrace, 16.);
-}
-
-TEST(DDPackageTest, NonIdentityTrace2) {
-  auto dd = std::make_unique<dd::Package<>>(4);
-  auto cxGate = dd->makeGateDD(dd::X_MAT, 1_pc, 0);
-  auto cxGateKron = dd->kronecker(cxGate, cxGate, 2);
-  auto fullTrace = dd->trace2(cxGateKron, 4);
-  ASSERT_EQ(fullTrace, 4.);
-}
-
-TEST(DDPackageTest, IdentityTrace2Normalized) {
-  std::size_t numQubits = 4;
-  auto matrixDim = std::pow(2, numQubits);
+TEST(DDPackageTest, PartialTraceKeepOuterQubits) {
+  std::size_t numQubits = 8;
   auto dd = std::make_unique<dd::Package<>>(numQubits);
-  auto fullTrace = dd->trace2(dd->makeIdent(), numQubits);
-  auto fullTraceNormalized = dd->trace2(dd->makeIdent(), numQubits, true);
-  auto normalizedTrace = fullTrace / matrixDim;
-  ASSERT_EQ(fullTraceNormalized, normalizedTrace);
-}
-
-TEST(DDPackageTest, NonIdentityTrace2Normalized) {
-  std::size_t numQubits = 4;
-  auto matrixDim = std::pow(2, numQubits);
-  auto dd = std::make_unique<dd::Package<>>(numQubits);
-  auto cxGate = dd->makeGateDD(dd::X_MAT, 1_pc, 0);
-  auto cxGateKron = dd->kronecker(cxGate, cxGate, 2);
-  auto fullTrace = dd->trace2(cxGateKron, numQubits);
-  auto fullTraceNormalized = dd->trace2(cxGateKron, numQubits, true);
-  auto normalizedTrace = fullTrace / matrixDim;
-  ASSERT_EQ(fullTraceNormalized, normalizedTrace);
+  auto dd2 = std::make_unique<dd::Package<>>(numQubits);
+  const auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
+  auto swapKron = swapGate;
+  for (std::size_t i = 0; i < 3; ++i) {
+    swapKron = dd->kronecker(swapKron, swapGate, 2);
+  }
+  const auto swapGate2 = dd2->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
+  auto swapKron2 = swapGate2;
+  for (std::size_t i = 0; i < 3; ++i) {
+    swapKron2 = dd2->kronecker(swapKron2, swapGate2, 2);
+  }
+  auto fullTraceOriginal = dd2->trace(swapKron2, numQubits);
+  auto ptr = dd->partialTrace(
+      swapKron, {true, true, false, false, false, false, true, true});
+  auto fullTrace = dd->trace(ptr, 4);
+  EXPECT_EQ(dd::RealNumber::val(ptr.w.r), 0.25);
+  EXPECT_EQ(fullTrace.r, 0.0625);
+  // Check that successively tracing out subsystems is the same as computing the
+  // full trace from the beginning
+  EXPECT_EQ(fullTrace.r, fullTraceOriginal.r);
 }
 
 TEST(DDPackageTest, TraceComplexity) {

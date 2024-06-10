@@ -6,8 +6,6 @@
 
 namespace dd {
 struct DDPackageConfig {
-  // Note the order of parameters here must be the *same* as in the template
-  // definition.
   static constexpr std::size_t UT_VEC_NBUCKET = 32768U;
   static constexpr std::size_t UT_VEC_INITIAL_ALLOCATION_SIZE = 2048U;
   static constexpr std::size_t UT_MAT_NBUCKET = 32768U;

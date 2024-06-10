@@ -1962,44 +1962,15 @@ public:
     return {r.p, cn.lookup(r.w)};
   }
 
+  // Normalized trace function
   template <class Node>
   ComplexValue trace(const Edge<Node>& a, const std::size_t numQubits) {
     if (a.isIdentity()) {
-      return a.w * std::pow(2, numQubits);
+      return static_cast<ComplexValue>(a.w);
+      ;
     }
     const auto eliminate = std::vector<bool>(numQubits, true);
     return trace(a, eliminate, numQubits).w;
-  }
-
-  template <class Node>
-  ComplexValue trace2(const Edge<Node>& a, const std::size_t numQubits,
-                      bool normalize = false) {
-    const auto aWeight = static_cast<ComplexValue>(a.w);
-    if (aWeight.approximatelyZero()) {
-      return ComplexValue{0., 0.};
-    }
-
-    if (a.isIdentity()) {
-      if (normalize) {
-        return aWeight;
-      }
-      return aWeight * std::pow(2, numQubits);
-    }
-
-    if (a.isTerminal()) {
-      return ComplexValue(a.w);
-    }
-
-    if (numQubits <= 0) {
-      throw std::invalid_argument("Number of Qubits is incorrect");
-    }
-    auto l = trace2(a.p->e[0], numQubits - 1, normalize);
-    auto r = trace2(a.p->e[3], numQubits - 1, normalize);
-    auto w = aWeight * (l + r);
-    if (normalize) {
-      w = w / 2;
-    }
-    return w;
   }
 
   /**
@@ -2024,7 +1995,6 @@ public:
   }
 
 private:
-  /// TODO: introduce a compute table for the trace?
   template <class Node>
   CachedEdge<Node> trace(const Edge<Node>& a,
                          const std::vector<bool>& eliminate, std::size_t level,
@@ -2034,16 +2004,11 @@ private:
       return CachedEdge<Node>::zero();
     }
 
-    if (std::none_of(eliminate.begin(), eliminate.end(),
-                     [](bool v) { return v; })) {
+    // If a is the identity matrix or there is nothing left to eliminate (e.g. a
+    // is a terminal) then simply return a
+    if (a.isIdentity() || std::none_of(eliminate.begin(), eliminate.end(),
+                                       [](bool v) { return v; })) {
       return CachedEdge<Node>{a.p, aWeight};
-    }
-
-    if (a.isIdentity()) {
-      const auto elims =
-          std::count(eliminate.begin(),
-                     eliminate.begin() + static_cast<int64_t>(level), true);
-      return CachedEdge<Node>{a.p, aWeight * std::pow(2, elims)};
     }
 
     // check if we already computed the trace before and return the result
@@ -2058,6 +2023,7 @@ private:
       auto r = add2(trace(a.p->e[0], eliminate, level - 1, elims),
                     trace(a.p->e[3], eliminate, level - 1, elims), v - 1);
 
+      r.w = r.w / 2.0;
       computeTable.insert(a.p, {r.p, r.w});
       r.w = r.w * aWeight;
       return r;
@@ -2075,7 +2041,7 @@ private:
                                 eliminate.begin(), eliminate.end(), true)) -
                             alreadyEliminated));
     auto r = makeDDNode(adjustedV, edge);
-    computeTable.insert(a.p, {r.p, r.w});
+    // nodes that were not eliminated are not added to the compute table
     r.w = r.w * aWeight;
     return r;
   }
