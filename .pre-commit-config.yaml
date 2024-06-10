@@ -109,7 +109,7 @@ repos:
 
   # Check for spelling
   - repo: https://github.com/crate-ci/typos
-    rev: typos-dict-v0.11.20
+    rev: v1.22.3
     hooks:
       - id: typos
 
