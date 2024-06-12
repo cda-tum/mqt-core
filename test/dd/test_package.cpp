@@ -317,8 +317,13 @@ TEST(DDPackageTest, PartialSWapMatTrace) {
   EXPECT_EQ(fullTrace.r, fullTraceOriginal.r);
 }
 
-TEST(DDPackageTest, PartialTraceKeepOuterQubits) {
-  std::size_t numQubits = 8;
+TEST(DDPackageTest, PartialTraceKeepInnerQubits) {
+  // Check that the partial trace computation is correct when tracing out the
+  // outer qubits only. This test shows that we should avoid storing
+  // non-eliminated nodes in the compute table, as this would prevent their
+  // proper elimination in subsequent trace calls.
+
+  const std::size_t numQubits = 8;
   auto dd = std::make_unique<dd::Package<>>(numQubits);
   auto dd2 = std::make_unique<dd::Package<>>(numQubits);
   const auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
@@ -343,8 +348,8 @@ TEST(DDPackageTest, PartialTraceKeepOuterQubits) {
 }
 
 TEST(DDPackageTest, TraceComplexity) {
-  // Check that the trace computation scales with the number of nodes instead of
-  // paths in the DD due to the usage of a compute table
+  // Check that the full trace computation scales with the number of nodes
+  // instead of paths in the DD due to the usage of a compute table
   for (std::size_t numQubits = 1; numQubits <= 10; ++numQubits) {
     auto dd = std::make_unique<dd::Package<>>(numQubits);
     auto& computeTable = dd->getTraceComputeTable<dd::mNode>();

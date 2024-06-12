@@ -1964,7 +1964,6 @@ public:
     return {r.p, cn.lookup(r.w)};
   }
 
-  // Normalized trace function
   template <class Node>
   ComplexValue trace(const Edge<Node>& a, const std::size_t numQubits) {
     if (a.isIdentity()) {
@@ -1997,6 +1996,13 @@ public:
   }
 
 private:
+  /**
+      Computes the normalized (partial) trace using a compute table to store
+     results for eliminated nodes. This allows the full trace computation to
+     scale linearly with respect to the number of nodes. However, the partial
+     trace computation still scales with the number of paths in the DD if the
+     bottom qubits are to be eliminated.
+      **/
   template <class Node>
   CachedEdge<Node> trace(const Edge<Node>& a,
                          const std::vector<bool>& eliminate, std::size_t level,
