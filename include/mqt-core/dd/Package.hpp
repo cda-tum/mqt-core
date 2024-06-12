@@ -1118,7 +1118,7 @@ public:
     auto tmp0 = conjugateTranspose(measZeroDd);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
     auto tmp2 = multiply(densityFromMatrixEdge(measZeroDd), tmp1, true);
-    auto densityMatrixTrace = trace(tmp2, nrQubits);
+    auto densityMatrixTrace = trace(tmp2, nrQubits) * std::pow(2, nrQubits);
 
     std::uniform_real_distribution<fp> dist(0., 1.);
     if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
@@ -1127,7 +1127,7 @@ public:
       tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
       tmp2 = multiply(densityFromMatrixEdge(measOneDd), tmp1, true);
       measuredResult = '1';
-      densityMatrixTrace = trace(tmp2, nrQubits);
+      densityMatrixTrace = trace(tmp2, nrQubits) * std::pow(2, nrQubits);
     }
 
     incRef(tmp2);
