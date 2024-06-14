@@ -305,12 +305,10 @@ TEST(DDPackageTest, PartialIdentityTrace) {
 
 TEST(DDPackageTest, PartialSWapMatTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
-  auto dd2 = std::make_unique<dd::Package<>>(2);
   auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
-  auto swapGate2 = dd2->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
   auto ptr = dd->partialTrace(swapGate, {true, false});
   auto fullTrace = dd->trace(ptr, 1);
-  auto fullTraceOriginal = dd2->trace(swapGate2, 2);
+  auto fullTraceOriginal = dd->trace(swapGate, 2);
   EXPECT_EQ(dd::RealNumber::val(ptr.w.r), 0.5);
   // Check that successively tracing out subsystems is the same as computing the
   // full trace from the beginning
@@ -359,12 +357,28 @@ TEST(DDPackageTest, TraceComplexity) {
       hKron = dd->kronecker(hKron, hGate, 1);
     }
     dd->trace(hKron, numQubits);
-    auto stats = computeTable.getStats();
-    auto lookups = stats.lookups;
-    auto hits = stats.hits;
-    ASSERT_EQ(lookups, 2 * numQubits - 1);
-    ASSERT_EQ(hits, numQubits - 1);
+    const auto& stats = computeTable.getStats();
+    ASSERT_EQ(stats.lookups, 2 * numQubits - 1);
+    ASSERT_EQ(stats.hits, numQubits - 1);
   }
+}
+
+TEST(DDPackageTest, KeepBottomQubitsPartialTraceComplexity) {
+  // Check that during the trace computation, once a level is reached
+  // where the remaining qubits should not be eliminated, the function does not
+  // recurse further but immediately returns the current CachedEdge<Node>.
+  const std::size_t numQubits = 8;
+  auto dd = std::make_unique<dd::Package<>>(numQubits);
+  auto& computeTable = dd->getTraceComputeTable<dd::mNode>();
+  const auto hGate = dd->makeGateDD(dd::H_MAT, 0);
+  auto hKron = hGate;
+  for (std::size_t i = 0; i < numQubits - 1; ++i) {
+    hKron = dd->kronecker(hKron, hGate, 1);
+  }
+  dd->partialTrace(hKron,
+                   {false, false, false, false, false, false, true, true});
+  const auto& stats = computeTable.getStats();
+  ASSERT_EQ(stats.lookups, 3);
 }
 
 TEST(DDPackageTest, StateGenerationManipulation) {

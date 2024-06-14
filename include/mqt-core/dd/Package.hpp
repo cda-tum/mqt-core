@@ -257,7 +257,7 @@ public:
     }
     // invalidate all compute tables involving matrices if any matrix node has
     // been collected
-    if (mCollect > 0 || dCollect > 0) {
+    if (mCollect > 0) {
       matrixAdd.clear();
       conjugateMatrixTranspose.clear();
       matrixKronecker.clear();
@@ -265,6 +265,10 @@ public:
       matrixVectorMultiplication.clear();
       matrixMatrixMultiplication.clear();
       stochasticNoiseOperationCache.clear();
+    }
+    // invalidate all compute tables involving density matrices if any density
+    // matrix node has been collected
+    if (dCollect > 0) {
       densityAdd.clear();
       densityDensityMultiplication.clear();
       densityNoise.clear();
@@ -1118,7 +1122,7 @@ public:
     auto tmp0 = conjugateTranspose(measZeroDd);
     auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
     auto tmp2 = multiply(densityFromMatrixEdge(measZeroDd), tmp1, true);
-    auto densityMatrixTrace = trace(tmp2, nrQubits) * std::pow(2, nrQubits);
+    auto densityMatrixTrace = trace(tmp2, nrQubits);
 
     std::uniform_real_distribution<fp> dist(0., 1.);
     if (const auto threshold = dist(mt); threshold > densityMatrixTrace.r) {
@@ -1127,7 +1131,7 @@ public:
       tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
       tmp2 = multiply(densityFromMatrixEdge(measOneDd), tmp1, true);
       measuredResult = '1';
-      densityMatrixTrace = trace(tmp2, nrQubits) * std::pow(2, nrQubits);
+      densityMatrixTrace = trace(tmp2, nrQubits);
     }
 
     incRef(tmp2);
@@ -1997,12 +2001,19 @@ public:
 
 private:
   /**
-      Computes the normalized (partial) trace using a compute table to store
-     results for eliminated nodes. This allows the full trace computation to
-     scale linearly with respect to the number of nodes. However, the partial
-     trace computation still scales with the number of paths in the DD if the
-     bottom qubits are to be eliminated.
-      **/
+   * @brief Computes the normalized (partial) trace using a compute table to
+   * store results for eliminated nodes.
+   * @details This optimization allows the full trace
+   * computation to scale linearly with respect to the number of nodes.
+   * However, the partial trace computation still scales with the number of
+   * paths in the DD when bottom qubits are to be eliminated.
+   *
+   * Normalization is continuously applied, dividing by two at each level
+   * marked for elimination, thereby ensuring that the result is mapped to the
+   * interval [0,1].
+   * @note Normalization is only applied to matrix nodes, as the trace
+   * of density matrices equals 1 by definition.
+   */
   template <class Node>
   CachedEdge<Node> trace(const Edge<Node>& a,
                          const std::vector<bool>& eliminate, std::size_t level,
@@ -2012,26 +2023,34 @@ private:
       return CachedEdge<Node>::zero();
     }
 
-    // If a is the identity matrix or there is nothing left to eliminate (e.g. a
-    // is a terminal) then simply return a
-    if (a.isIdentity() || std::none_of(eliminate.begin(), eliminate.end(),
-                                       [](bool v) { return v; })) {
+    // If `a` is the identity matrix or there is nothing left to eliminate,
+    // then simply return `a`
+    if (a.isIdentity() ||
+        std::none_of(eliminate.begin(),
+                     eliminate.begin() +
+                         static_cast<std::vector<bool>::difference_type>(level),
+                     [](bool v) { return v; })) {
       return CachedEdge<Node>{a.p, aWeight};
-    }
-
-    // check if we already computed the trace before and return the result
-    auto& computeTable = getTraceComputeTable<Node>();
-    if (const auto* r = computeTable.lookup(a.p); r != nullptr) {
-      return {r->p, r->w * aWeight};
     }
 
     const auto v = a.p->v;
     if (eliminate[v]) {
+      // Lookup nodes marked for elimination in the compute table: if the trace
+      // has already been computed, return the result
+      auto& computeTable = getTraceComputeTable<Node>();
+      if (const auto* r = computeTable.lookup(a.p); r != nullptr) {
+        return {r->p, r->w * aWeight};
+      }
+
       const auto elims = alreadyEliminated + 1;
       auto r = add2(trace(a.p->e[0], eliminate, level - 1, elims),
                     trace(a.p->e[3], eliminate, level - 1, elims), v - 1);
 
-      r.w = r.w / 2.0;
+      // The resulting weight is continuously normalized to the range [0,1] for
+      // matrix nodes
+      if constexpr (std::is_same_v<Node, mNode>) {
+        r.w = r.w / 2.0;
+      }
       computeTable.insert(a.p, {r.p, r.w});
       r.w = r.w * aWeight;
       return r;
