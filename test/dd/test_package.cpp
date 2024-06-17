@@ -323,18 +323,12 @@ TEST(DDPackageTest, PartialTraceKeepInnerQubits) {
 
   const std::size_t numQubits = 8;
   auto dd = std::make_unique<dd::Package<>>(numQubits);
-  auto dd2 = std::make_unique<dd::Package<>>(numQubits);
   const auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
   auto swapKron = swapGate;
   for (std::size_t i = 0; i < 3; ++i) {
     swapKron = dd->kronecker(swapKron, swapGate, 2);
   }
-  const auto swapGate2 = dd2->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
-  auto swapKron2 = swapGate2;
-  for (std::size_t i = 0; i < 3; ++i) {
-    swapKron2 = dd2->kronecker(swapKron2, swapGate2, 2);
-  }
-  auto fullTraceOriginal = dd2->trace(swapKron2, numQubits);
+  auto fullTraceOriginal = dd->trace(swapKron, numQubits);
   auto ptr = dd->partialTrace(
       swapKron, {true, true, false, false, false, false, true, true});
   auto fullTrace = dd->trace(ptr, 4);
