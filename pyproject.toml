@@ -286,6 +286,6 @@ before-test = "ccache -s"
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
 
 [tool.cibuildwheel.windows]
-before-build = "pip install delvewheel>=1.4.0"
+before-build = "uv pip install delvewheel>=1.4.0"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt"
 environment = { CMAKE_GENERATOR = "Ninja" }
