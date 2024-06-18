@@ -363,16 +363,64 @@ TEST(DDPackageTest, KeepBottomQubitsPartialTraceComplexity) {
   // recurse further but immediately returns the current CachedEdge<Node>.
   const std::size_t numQubits = 8;
   auto dd = std::make_unique<dd::Package<>>(numQubits);
-  auto& computeTable = dd->getTraceComputeTable<dd::mNode>();
+  auto& uniqueTable = dd->getUniqueTable<dd::mNode>();
   const auto hGate = dd->makeGateDD(dd::H_MAT, 0);
   auto hKron = hGate;
   for (std::size_t i = 0; i < numQubits - 1; ++i) {
     hKron = dd->kronecker(hKron, hGate, 1);
   }
+
+  const std::size_t maxNodeVal = 5;
+  std::vector<std::size_t> lookupValues;
+
+  for (std::size_t i = 0; i <= maxNodeVal; ++i) {
+    const auto& stats = uniqueTable.getStats(i);
+    // Store the number of lookups performed so far for the six bottom qubits
+    lookupValues.push_back(stats.lookups);
+  }
   dd->partialTrace(hKron,
                    {false, false, false, false, false, false, true, true});
-  const auto& stats = computeTable.getStats();
-  ASSERT_EQ(stats.lookups, 3);
+  for (std::size_t i = 0; i <= maxNodeVal; ++i) {
+    const auto& stats = uniqueTable.getStats(i);
+    ASSERT_EQ(lookupValues[i], 1);
+    // Check that the partial trace computation performs no additional lookups
+    // on the bottom qubits that are not eliminated
+    ASSERT_EQ(stats.lookups, lookupValues[i]);
+  }
+}
+
+TEST(DDPackageTest, PartialTraceComplexity) {
+  // In the worst case, the partial trace computation scales with the number of
+  // paths in the DD. This situation arises particularly when tracing out the
+  // bottom qubits.
+  const std::size_t numQubits = 9;
+  auto dd = std::make_unique<dd::Package<>>(numQubits);
+  auto& uniqueTable = dd->getUniqueTable<dd::mNode>();
+  const auto hGate = dd->makeGateDD(dd::H_MAT, 0);
+  auto hKron = hGate;
+  for (std::size_t i = 0; i < numQubits - 2; ++i) {
+    hKron = dd->kronecker(hKron, hGate, 1);
+  }
+  hKron = dd->kronecker(hKron, dd->makeIdent(), 1);
+
+  const std::size_t maxNodeVal = 5;
+  std::vector<std::size_t> lookupValues;
+  for (std::size_t i = 1; i <= maxNodeVal + 1; ++i) {
+    const auto& stats = uniqueTable.getStats(i);
+    // Store the number of lookups performed so far for levels 1 through 6
+    lookupValues.push_back(stats.lookups);
+  }
+
+  dd->partialTrace(
+      hKron, {true, false, false, false, false, false, false, true, true});
+  for (std::size_t i = 1; i <= maxNodeVal; ++i) {
+    const auto& stats = uniqueTable.getStats(i);
+    // Check that the number of lookups scales with the number of paths in the
+    // DD
+    ASSERT_EQ(stats.lookups,
+              lookupValues[i] +
+                  static_cast<std::size_t>(std::pow(4, (maxNodeVal - i + 1))));
+  }
 }
 
 TEST(DDPackageTest, StateGenerationManipulation) {

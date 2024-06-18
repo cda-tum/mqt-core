@@ -2003,8 +2003,8 @@ private:
   /**
    * @brief Computes the normalized (partial) trace using a compute table to
    * store results for eliminated nodes.
-   * @details At each level, perform lookup and store results in the compute
-   * table only if all lower level qubits are eliminated as well.
+   * @details At each level, perform a lookup and store results in the compute
+   * table only if all lower-level qubits are eliminated as well.
    *
    * This optimization allows the full trace
    * computation to scale linearly with respect to the number of nodes.
@@ -2039,14 +2039,15 @@ private:
     const auto v = a.p->v;
     if (eliminate[v]) {
       // Lookup nodes marked for elimination in the compute table if all
-      // lower level qubits are eliminated as well: if the trace has already
+      // lower-level qubits are eliminated as well: if the trace has already
       // been computed, return the result
       auto& computeTable = getTraceComputeTable<Node>();
-      if (std::all_of(
-              eliminate.begin(),
-              eliminate.begin() +
-                  static_cast<std::vector<bool>::difference_type>(level),
-              [](bool e) { return e; })) {
+      const auto eliminateAll = std::all_of(
+          eliminate.begin(),
+          eliminate.begin() +
+              static_cast<std::vector<bool>::difference_type>(level),
+          [](bool e) { return e; });
+      if (eliminateAll) {
         if (const auto* r = computeTable.lookup(a.p); r) {
           return {r->p, r->w * aWeight};
         }
@@ -2062,13 +2063,9 @@ private:
         r.w = r.w / 2.0;
       }
 
-      // Insert result into compute table if all lower level qubits are
+      // Insert result into compute table if all lower-level qubits are
       // eliminated as well
-      if (std::all_of(
-              eliminate.begin(),
-              eliminate.begin() +
-                  static_cast<std::vector<bool>::difference_type>(level),
-              [](bool e) { return e; })) {
+      if (eliminateAll) {
         computeTable.insert(a.p, {r.p, r.w});
       }
       r.w = r.w * aWeight;
