@@ -63,3 +63,8 @@ if(DEPLOY)
       "10.15"
       CACHE STRING "" FORCE)
 endif()
+
+# On Windows, export all symbols by default
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
+    ON
+    CACHE BOOL "Export all symbols on Windows")
