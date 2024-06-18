@@ -279,8 +279,6 @@ build-frontend = "build[uv]"
 
 [tool.cibuildwheel.linux]
 environment = { DEPLOY = "ON" }
-before-all = "yum install -y ccache"
-before-test = "ccache -s"
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
