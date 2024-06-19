@@ -312,7 +312,7 @@ TEST(DDPackageTest, PartialSWapMatTrace) {
   EXPECT_EQ(dd::RealNumber::val(ptr.w.r), 0.5);
   // Check that successively tracing out subsystems is the same as computing the
   // full trace from the beginning
-  EXPECT_EQ(fullTrace.r, fullTraceOriginal.r);
+  EXPECT_EQ(fullTrace, fullTraceOriginal);
 }
 
 TEST(DDPackageTest, PartialTraceKeepInnerQubits) {
@@ -336,7 +336,7 @@ TEST(DDPackageTest, PartialTraceKeepInnerQubits) {
   EXPECT_EQ(fullTrace.r, 0.0625);
   // Check that successively tracing out subsystems is the same as computing the
   // full trace from the beginning
-  EXPECT_EQ(fullTrace.r, fullTraceOriginal.r);
+  EXPECT_EQ(fullTrace, fullTraceOriginal);
 }
 
 TEST(DDPackageTest, TraceComplexity) {
@@ -370,22 +370,19 @@ TEST(DDPackageTest, KeepBottomQubitsPartialTraceComplexity) {
     hKron = dd->kronecker(hKron, hGate, 1);
   }
 
-  const std::size_t maxNodeVal = 5;
-  std::vector<std::size_t> lookupValues;
+  const std::size_t maxNodeVal = 6;
+  std::array<std::size_t, maxNodeVal> lookupValues;
 
-  for (std::size_t i = 0; i <= maxNodeVal; ++i) {
-    const auto& stats = uniqueTable.getStats(i);
+  for (std::size_t i = 0; i < maxNodeVal; ++i) {
     // Store the number of lookups performed so far for the six bottom qubits
-    lookupValues.push_back(stats.lookups);
+    lookupValues[i] = uniqueTable.getStats(i).lookups;
   }
   dd->partialTrace(hKron,
                    {false, false, false, false, false, false, true, true});
-  for (std::size_t i = 0; i <= maxNodeVal; ++i) {
-    const auto& stats = uniqueTable.getStats(i);
-    ASSERT_EQ(lookupValues[i], 1);
+  for (std::size_t i = 0; i < maxNodeVal; ++i) {
     // Check that the partial trace computation performs no additional lookups
     // on the bottom qubits that are not eliminated
-    ASSERT_EQ(stats.lookups, lookupValues[i]);
+    ASSERT_EQ(uniqueTable.getStats(i).lookups, lookupValues[i]);
   }
 }
 
@@ -403,23 +400,21 @@ TEST(DDPackageTest, PartialTraceComplexity) {
   }
   hKron = dd->kronecker(hKron, dd->makeIdent(), 1);
 
-  const std::size_t maxNodeVal = 5;
-  std::vector<std::size_t> lookupValues;
-  for (std::size_t i = 1; i <= maxNodeVal + 1; ++i) {
-    const auto& stats = uniqueTable.getStats(i);
+  const std::size_t maxNodeVal = 6;
+  std::array<std::size_t, maxNodeVal + 1> lookupValues;
+  for (std::size_t i = 1; i <= maxNodeVal; ++i) {
     // Store the number of lookups performed so far for levels 1 through 6
-    lookupValues.push_back(stats.lookups);
+    lookupValues[i] = uniqueTable.getStats(i).lookups;
   }
 
   dd->partialTrace(
       hKron, {true, false, false, false, false, false, false, true, true});
-  for (std::size_t i = 1; i <= maxNodeVal; ++i) {
-    const auto& stats = uniqueTable.getStats(i);
+  for (std::size_t i = 1; i < maxNodeVal; ++i) {
     // Check that the number of lookups scales with the number of paths in the
     // DD
-    ASSERT_EQ(stats.lookups,
+    ASSERT_EQ(uniqueTable.getStats(i).lookups,
               lookupValues[i] +
-                  static_cast<std::size_t>(std::pow(4, (maxNodeVal - i + 1))));
+                  static_cast<std::size_t>(std::pow(4, (maxNodeVal - i))));
   }
 }
 
