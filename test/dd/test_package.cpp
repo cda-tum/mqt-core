@@ -285,21 +285,137 @@ TEST(DDPackageTest, IdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(4);
   auto fullTrace = dd->trace(dd->makeIdent(), 4);
 
-  ASSERT_EQ(fullTrace.r, 16.);
+  ASSERT_EQ(fullTrace.r, 1.);
+}
+
+TEST(DDPackageTest, CNotKronTrace) {
+  auto dd = std::make_unique<dd::Package<>>(4);
+  auto cxGate = dd->makeGateDD(dd::X_MAT, 1_pc, 0);
+  auto cxGateKron = dd->kronecker(cxGate, cxGate, 2);
+  auto fullTrace = dd->trace(cxGateKron, 4);
+  ASSERT_EQ(fullTrace, 0.25);
 }
 
 TEST(DDPackageTest, PartialIdentityTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto tr = dd->partialTrace(dd->makeIdent(), {false, true});
   auto mul = dd->multiply(tr, tr);
-  EXPECT_EQ(dd::RealNumber::val(mul.w.r), 4.0);
+  EXPECT_EQ(dd::RealNumber::val(mul.w.r), 1.);
 }
 
-TEST(DDPackageTest, PartialNonIdentityTrace) {
+TEST(DDPackageTest, PartialSWapMatTrace) {
   auto dd = std::make_unique<dd::Package<>>(2);
   auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
   auto ptr = dd->partialTrace(swapGate, {true, false});
-  EXPECT_EQ(ptr.w * ptr.w, 1.);
+  auto fullTrace = dd->trace(ptr, 1);
+  auto fullTraceOriginal = dd->trace(swapGate, 2);
+  EXPECT_EQ(dd::RealNumber::val(ptr.w.r), 0.5);
+  // Check that successively tracing out subsystems is the same as computing the
+  // full trace from the beginning
+  EXPECT_EQ(fullTrace, fullTraceOriginal);
+}
+
+TEST(DDPackageTest, PartialTraceKeepInnerQubits) {
+  // Check that the partial trace computation is correct when tracing out the
+  // outer qubits only. This test shows that we should avoid storing
+  // non-eliminated nodes in the compute table, as this would prevent their
+  // proper elimination in subsequent trace calls.
+
+  const std::size_t numQubits = 8;
+  auto dd = std::make_unique<dd::Package<>>(numQubits);
+  const auto swapGate = dd->makeTwoQubitGateDD(dd::SWAP_MAT, 0, 1);
+  auto swapKron = swapGate;
+  for (std::size_t i = 0; i < 3; ++i) {
+    swapKron = dd->kronecker(swapKron, swapGate, 2);
+  }
+  auto fullTraceOriginal = dd->trace(swapKron, numQubits);
+  auto ptr = dd->partialTrace(
+      swapKron, {true, true, false, false, false, false, true, true});
+  auto fullTrace = dd->trace(ptr, 4);
+  EXPECT_EQ(dd::RealNumber::val(ptr.w.r), 0.25);
+  EXPECT_EQ(fullTrace.r, 0.0625);
+  // Check that successively tracing out subsystems is the same as computing the
+  // full trace from the beginning
+  EXPECT_EQ(fullTrace, fullTraceOriginal);
+}
+
+TEST(DDPackageTest, TraceComplexity) {
+  // Check that the full trace computation scales with the number of nodes
+  // instead of paths in the DD due to the usage of a compute table
+  for (std::size_t numQubits = 1; numQubits <= 10; ++numQubits) {
+    auto dd = std::make_unique<dd::Package<>>(numQubits);
+    auto& computeTable = dd->getTraceComputeTable<dd::mNode>();
+    const auto hGate = dd->makeGateDD(dd::H_MAT, 0);
+    auto hKron = hGate;
+    for (std::size_t i = 0; i < numQubits - 1; ++i) {
+      hKron = dd->kronecker(hKron, hGate, 1);
+    }
+    dd->trace(hKron, numQubits);
+    const auto& stats = computeTable.getStats();
+    ASSERT_EQ(stats.lookups, 2 * numQubits - 1);
+    ASSERT_EQ(stats.hits, numQubits - 1);
+  }
+}
+
+TEST(DDPackageTest, KeepBottomQubitsPartialTraceComplexity) {
+  // Check that during the trace computation, once a level is reached
+  // where the remaining qubits should not be eliminated, the function does not
+  // recurse further but immediately returns the current CachedEdge<Node>.
+  const std::size_t numQubits = 8;
+  auto dd = std::make_unique<dd::Package<>>(numQubits);
+  auto& uniqueTable = dd->getUniqueTable<dd::mNode>();
+  const auto hGate = dd->makeGateDD(dd::H_MAT, 0);
+  auto hKron = hGate;
+  for (std::size_t i = 0; i < numQubits - 1; ++i) {
+    hKron = dd->kronecker(hKron, hGate, 1);
+  }
+
+  const std::size_t maxNodeVal = 6;
+  std::array<std::size_t, maxNodeVal> lookupValues{};
+
+  for (std::size_t i = 0; i < maxNodeVal; ++i) {
+    // Store the number of lookups performed so far for the six bottom qubits
+    lookupValues[i] = uniqueTable.getStats(i).lookups;
+  }
+  dd->partialTrace(hKron,
+                   {false, false, false, false, false, false, true, true});
+  for (std::size_t i = 0; i < maxNodeVal; ++i) {
+    // Check that the partial trace computation performs no additional lookups
+    // on the bottom qubits that are not eliminated
+    ASSERT_EQ(uniqueTable.getStats(i).lookups, lookupValues[i]);
+  }
+}
+
+TEST(DDPackageTest, PartialTraceComplexity) {
+  // In the worst case, the partial trace computation scales with the number of
+  // paths in the DD. This situation arises particularly when tracing out the
+  // bottom qubits.
+  const std::size_t numQubits = 9;
+  auto dd = std::make_unique<dd::Package<>>(numQubits);
+  auto& uniqueTable = dd->getUniqueTable<dd::mNode>();
+  const auto hGate = dd->makeGateDD(dd::H_MAT, 0);
+  auto hKron = hGate;
+  for (std::size_t i = 0; i < numQubits - 2; ++i) {
+    hKron = dd->kronecker(hKron, hGate, 1);
+  }
+  hKron = dd->kronecker(hKron, dd->makeIdent(), 1);
+
+  const std::size_t maxNodeVal = 6;
+  std::array<std::size_t, maxNodeVal + 1> lookupValues{};
+  for (std::size_t i = 1; i <= maxNodeVal; ++i) {
+    // Store the number of lookups performed so far for levels 1 through 6
+    lookupValues[i] = uniqueTable.getStats(i).lookups;
+  }
+
+  dd->partialTrace(
+      hKron, {true, false, false, false, false, false, false, true, true});
+  for (std::size_t i = 1; i < maxNodeVal; ++i) {
+    // Check that the number of lookups scales with the number of paths in the
+    // DD
+    ASSERT_EQ(uniqueTable.getStats(i).lookups,
+              lookupValues[i] +
+                  static_cast<std::size_t>(std::pow(4, (maxNodeVal - i))));
+  }
 }
 
 TEST(DDPackageTest, StateGenerationManipulation) {
