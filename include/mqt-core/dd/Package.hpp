@@ -2008,13 +2008,14 @@ private:
    * This optimization allows the full trace
    * computation to scale linearly with respect to the number of nodes.
    * However, the partial trace computation still scales with the number of
-   * paths in the DD when bottom qubits are to be eliminated.
+   * paths to the lowest level in the DD that should be traced out.
    *
-   * Normalization is continuously applied, dividing by two at each level
-   * marked for elimination, thereby ensuring that the result is mapped to the
-   * interval [0,1].
-   * @note Normalization is only applied to matrix nodes, as the trace
-   * of density matrices equals 1 by definition.
+   * For matrices, normalization is continuously applied, dividing by two at
+   * each level marked for elimination, thereby ensuring that the result is
+   * mapped to the interval [0,1] (as opposed to the interval [0,2^N]).
+   *
+   * For density matrices, such normalization is not applied as the trace of
+   * density matrices is always 1 by definition.
    */
   template <class Node>
   CachedEdge<Node> trace(const Edge<Node>& a,
