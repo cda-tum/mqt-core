@@ -2041,14 +2041,14 @@ private:
       // Lookup nodes marked for elimination in the compute table if all
       // lower-level qubits are eliminated as well: if the trace has already
       // been computed, return the result
-      auto& computeTable = getTraceComputeTable<Node>();
       const auto eliminateAll = std::all_of(
           eliminate.begin(),
           eliminate.begin() +
               static_cast<std::vector<bool>::difference_type>(level),
           [](bool e) { return e; });
       if (eliminateAll) {
-        if (const auto* r = computeTable.lookup(a.p); r) {
+        if (const auto* r = getTraceComputeTable<Node>().lookup(a.p);
+            r != nullptr) {
           return {r->p, r->w * aWeight};
         }
       }
@@ -2066,7 +2066,7 @@ private:
       // Insert result into compute table if all lower-level qubits are
       // eliminated as well
       if (eliminateAll) {
-        computeTable.insert(a.p, {r.p, r.w});
+        getTraceComputeTable<Node>().insert(a.p, r);
       }
       r.w = r.w * aWeight;
       return r;
@@ -2084,7 +2084,6 @@ private:
                                 eliminate.begin(), eliminate.end(), true)) -
                             alreadyEliminated));
     auto r = makeDDNode(adjustedV, edge);
-    // nodes that were not eliminated are not added to the compute table
     r.w = r.w * aWeight;
     return r;
   }
