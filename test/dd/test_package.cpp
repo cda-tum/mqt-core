@@ -371,7 +371,7 @@ TEST(DDPackageTest, KeepBottomQubitsPartialTraceComplexity) {
   }
 
   const std::size_t maxNodeVal = 6;
-  std::array<std::size_t, maxNodeVal> lookupValues;
+  std::array<std::size_t, maxNodeVal> lookupValues{};
 
   for (std::size_t i = 0; i < maxNodeVal; ++i) {
     // Store the number of lookups performed so far for the six bottom qubits
@@ -401,7 +401,7 @@ TEST(DDPackageTest, PartialTraceComplexity) {
   hKron = dd->kronecker(hKron, dd->makeIdent(), 1);
 
   const std::size_t maxNodeVal = 6;
-  std::array<std::size_t, maxNodeVal + 1> lookupValues;
+  std::array<std::size_t, maxNodeVal + 1> lookupValues{};
   for (std::size_t i = 1; i <= maxNodeVal; ++i) {
     // Store the number of lookups performed so far for levels 1 through 6
     lookupValues[i] = uniqueTable.getStats(i).lookups;
