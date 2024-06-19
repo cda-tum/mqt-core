@@ -138,8 +138,7 @@ repos:
       - id: check-readthedocs
 
   # Check the pyproject.toml file
-  - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.18
+  - repo: https://github.com/henryiii/validate-pyproject-schema-store
+    rev: 2024.06.10
     hooks:
       - id: validate-pyproject
-        additional_dependencies: ["validate-pyproject-schema-store[all]"]
