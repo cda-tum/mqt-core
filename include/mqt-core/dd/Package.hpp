@@ -1972,7 +1972,6 @@ public:
   ComplexValue trace(const Edge<Node>& a, const std::size_t numQubits) {
     if (a.isIdentity()) {
       return static_cast<ComplexValue>(a.w);
-      ;
     }
     const auto eliminate = std::vector<bool>(numQubits, true);
     return trace(a, eliminate, numQubits).w;
