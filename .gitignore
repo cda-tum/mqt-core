@@ -171,3 +171,6 @@ Thumbs.db
 /docs/**/build
 .vs
 out/build
+
+node_modules/
+wheelhouse/
