@@ -58,7 +58,7 @@ repos:
 
   # Python linting using ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.9
+    rev: v0.4.10
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
@@ -86,7 +86,7 @@ repos:
 
   # Clang-format the C++ part of the code base automatically
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v18.1.6
+    rev: v18.1.7
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
@@ -102,14 +102,14 @@ repos:
 
   # Format configuration files with prettier
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types_or: [yaml, markdown, html, css, scss, javascript, json]
 
   # Check for spelling
   - repo: https://github.com/crate-ci/typos
-    rev: v1.22.7
+    rev: v1.22.9
     hooks:
       - id: typos
 
@@ -131,7 +131,7 @@ repos:
 
   # Check JSON schemata
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.28.5
+    rev: 0.28.6
     hooks:
       - id: check-dependabot
       - id: check-github-workflows
@@ -139,6 +139,6 @@ repos:
 
   # Check the pyproject.toml file
   - repo: https://github.com/henryiii/validate-pyproject-schema-store
-    rev: 2024.06.10
+    rev: 2024.06.24
     hooks:
       - id: validate-pyproject
