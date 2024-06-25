@@ -1,12 +1,24 @@
 #include "CircuitOptimizer.hpp"
+#include "Definitions.hpp"
 #include "algorithms/QPE.hpp"
 #include "dd/Benchmark.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Package.hpp"
+#include "dd/Package_fwd.hpp"
 #include "dd/Simulation.hpp"
 
-#include "gtest/gtest.h"
 #include <bitset>
-#include <iomanip>
+#include <complex>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <iterator>
+#include <memory>
+#include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 
@@ -17,9 +29,9 @@ protected:
   qc::fp theta{};
   bool exactlyRepresentable{};
   std::uint64_t expectedResult{};
-  std::string expectedResultRepresentation{};
+  std::string expectedResultRepresentation;
   std::uint64_t secondExpectedResult{};
-  std::string secondExpectedResultRepresentation{};
+  std::string secondExpectedResultRepresentation;
 
   void TearDown() override {}
   void SetUp() override {

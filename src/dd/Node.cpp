@@ -3,6 +3,7 @@
 #include "dd/ComplexNumbers.hpp"
 
 #include <cassert>
+#include <cstdint>
 #include <utility>
 
 namespace dd {

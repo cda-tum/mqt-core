@@ -7,14 +7,21 @@
 #pragma once
 
 #include "Exception.hpp"
+#include "Permutation.hpp"
 #include "Scanner.hpp"
 #include "Statement.hpp"
 #include "StdGates.hpp"
+#include "parsers/qasm3_parser/Token.hpp"
+#include "parsers/qasm3_parser/Types.hpp"
 
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <stack>
 #include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace qasm3 {
@@ -60,12 +67,10 @@ class Parser {
     }
   };
 
-  std::stack<ScannerState> scanner{};
+  std::stack<ScannerState> scanner;
   std::shared_ptr<DebugInfo> includeDebugInfo{nullptr};
 
   [[noreturn]] void error(const Token& token, const std::string& msg) {
-    std::cerr << "Error at line " << token.line << ", column " << token.col
-              << ": " << msg << '\n';
     throw CompilerError(msg, makeDebugInfo(token));
   }
 

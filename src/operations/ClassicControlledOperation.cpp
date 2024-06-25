@@ -1,5 +1,10 @@
 #include "operations/ClassicControlledOperation.hpp"
 
+#include "Definitions.hpp"
+
+#include <ostream>
+#include <string>
+
 namespace qc {
 
 std::string toString(const ComparisonKind& kind) {
@@ -26,7 +31,7 @@ std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind) {
   return os;
 }
 
-ComparisonKind getInvertedComparsionKind(const ComparisonKind kind) {
+ComparisonKind getInvertedComparisonKind(const ComparisonKind kind) {
   switch (kind) {
   case Lt:
     return Geq;

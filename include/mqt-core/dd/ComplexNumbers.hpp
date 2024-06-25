@@ -1,9 +1,13 @@
 #pragma once
 
+#include "dd/CachedEdge.hpp"
 #include "dd/Complex.hpp"
 #include "dd/DDDefinitions.hpp"
-#include "dd/Node.hpp"
+#include "dd/Edge.hpp"
 #include "dd/RealNumberUniqueTable.hpp"
+
+#include <complex>
+#include <cstddef>
 
 namespace dd {
 

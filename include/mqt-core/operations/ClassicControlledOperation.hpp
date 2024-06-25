@@ -1,7 +1,17 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Operation.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <ostream>
+#include <string>
 #include <utility>
 
 namespace qc {
@@ -15,7 +25,7 @@ enum ComparisonKind : std::uint8_t {
   Geq,
 };
 
-ComparisonKind getInvertedComparsionKind(ComparisonKind kind);
+ComparisonKind getInvertedComparisonKind(ComparisonKind kind);
 
 std::string toString(const ComparisonKind& kind);
 
@@ -24,14 +34,14 @@ std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind);
 class ClassicControlledOperation final : public Operation {
 private:
   std::unique_ptr<Operation> op;
-  ClassicalRegister controlRegister{};
+  ClassicalRegister controlRegister;
   std::uint64_t expectedValue = 1U;
   ComparisonKind comparisonKind = ComparisonKind::Eq;
 
 public:
   // Applies operation `_op` if the creg starting at index `control` has the
   // expected value
-  ClassicControlledOperation(std::unique_ptr<qc::Operation>& operation,
+  ClassicControlledOperation(std::unique_ptr<qc::Operation>&& operation,
                              ClassicalRegister controlReg,
                              std::uint64_t expectedVal = 1U,
                              ComparisonKind kind = ComparisonKind::Eq)
@@ -133,7 +143,7 @@ public:
   }
 
   void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, size_t indent,
+                    const RegisterNames& creg, std::size_t indent,
                     bool openQASM3) const override {
     of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
     of << "if (";

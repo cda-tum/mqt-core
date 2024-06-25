@@ -1,8 +1,21 @@
 #include "parsers/qasm3_parser/Parser.hpp"
 
+#include "Definitions.hpp"
+#include "Permutation.hpp"
+#include "parsers/qasm3_parser/Statement.hpp"
 #include "parsers/qasm3_parser/StdGates.hpp"
+#include "parsers/qasm3_parser/Token.hpp"
+#include "parsers/qasm3_parser/Types.hpp"
 
+#include <fstream>
+#include <istream>
+#include <memory>
 #include <regex>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace qasm3 {
 void Parser::scan() {

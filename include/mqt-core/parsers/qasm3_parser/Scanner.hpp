@@ -2,12 +2,18 @@
 
 #include "Token.hpp"
 
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <optional>
+#include <string>
+#include <unordered_map>
 
 namespace qasm3 {
 class Scanner {
   std::istream* is;
-  std::unordered_map<std::string, Token::Kind> keywords{};
+  std::unordered_map<std::string, Token::Kind> keywords;
   char ch = 0;
   size_t line = 1;
   size_t col = 0;

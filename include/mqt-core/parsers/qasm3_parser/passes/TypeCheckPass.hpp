@@ -1,9 +1,17 @@
 #pragma once
 
 #include "ConstEvalPass.hpp"
+#include "parsers/qasm3_parser/Exception.hpp"
+#include "parsers/qasm3_parser/InstVisitor.hpp"
+#include "parsers/qasm3_parser/Statement.hpp"
 #include "parsers/qasm3_parser/Types.hpp"
+#include "parsers/qasm3_parser/passes/CompilerPass.hpp"
 
 #include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace qasm3::type_checking {
 
@@ -70,10 +78,10 @@ public:
       statement.accept(this);
 
       if (hasError) {
-        throw CompilerError("Type check failed.", statement.debugInfo);
+        throw TypeCheckError("Type check failed.");
       }
     } catch (const TypeCheckError& e) {
-      throw CompilerError(e.toString(), statement.debugInfo);
+      throw CompilerError(e.what(), statement.debugInfo);
     }
   }
 

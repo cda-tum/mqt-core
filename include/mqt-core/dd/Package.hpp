@@ -5,6 +5,7 @@
 #include "dd/CachedEdge.hpp"
 #include "dd/Complex.hpp"
 #include "dd/ComplexNumbers.hpp"
+#include "dd/ComplexValue.hpp"
 #include "dd/ComputeTable.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/DDpackageConfig.hpp"
@@ -26,7 +27,6 @@
 #include <bitset>
 #include <cassert>
 #include <cmath>
-#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
@@ -34,7 +34,6 @@
 #include <iterator>
 #include <limits>
 #include <map>
-#include <optional>
 #include <queue>
 #include <random>
 #include <regex>
@@ -111,7 +110,7 @@ public:
    * @note The real and imaginary part of complex numbers are treated
    * separately. Hence, it suffices for the manager to only manage real numbers.
    */
-  MemoryManager<RealNumber> cMemoryManager{};
+  MemoryManager<RealNumber> cMemoryManager;
 
   /**
    * @brief Get the memory manager for a given type
@@ -258,16 +257,22 @@ public:
     }
     // invalidate all compute tables involving matrices if any matrix node has
     // been collected
-    if (mCollect > 0 || dCollect > 0) {
+    if (mCollect > 0) {
       matrixAdd.clear();
       conjugateMatrixTranspose.clear();
       matrixKronecker.clear();
+      matrixTrace.clear();
       matrixVectorMultiplication.clear();
       matrixMatrixMultiplication.clear();
       stochasticNoiseOperationCache.clear();
+    }
+    // invalidate all compute tables involving density matrices if any density
+    // matrix node has been collected
+    if (dCollect > 0) {
       densityAdd.clear();
       densityDensityMultiplication.clear();
       densityNoise.clear();
+      densityTrace.clear();
     }
     // invalidate all compute tables where any component of the entry contains
     // numbers from the complex table if any complex numbers were collected
@@ -278,10 +283,12 @@ public:
       vectorInnerProduct.clear();
       vectorKronecker.clear();
       matrixKronecker.clear();
+      matrixTrace.clear();
       stochasticNoiseOperationCache.clear();
       densityAdd.clear();
       densityDensityMultiplication.clear();
       densityNoise.clear();
+      densityTrace.clear();
     }
     return vCollect > 0 || mCollect > 0 || cCollect > 0;
   }
@@ -887,11 +894,13 @@ public:
     vectorInnerProduct.clear();
     vectorKronecker.clear();
     matrixKronecker.clear();
+    matrixTrace.clear();
 
     stochasticNoiseOperationCache.clear();
     densityAdd.clear();
     densityDensityMultiplication.clear();
     densityNoise.clear();
+    densityTrace.clear();
   }
 
   ///
@@ -983,27 +992,28 @@ public:
   std::pair<dd::fp, dd::fp>
   determineMeasurementProbabilities(const vEdge& rootEdge, const Qubit index,
                                     const bool assumeProbabilityNormalization) {
-    std::map<const vNode*, fp> probsMone;
+    std::map<const vNode*, fp> measurementProbabilities;
     std::set<const vNode*> visited;
     std::queue<const vNode*> q;
 
-    probsMone[rootEdge.p] = ComplexNumbers::mag2(rootEdge.w);
+    measurementProbabilities[rootEdge.p] = ComplexNumbers::mag2(rootEdge.w);
     visited.insert(rootEdge.p);
     q.push(rootEdge.p);
 
     while (q.front()->v != index) {
       const auto* ptr = q.front();
       q.pop();
-      const fp prob = probsMone[ptr];
+      const fp prob = measurementProbabilities[ptr];
 
       const auto& s0 = ptr->e[0];
       if (const auto s0w = static_cast<ComplexValue>(s0.w);
           !s0w.approximatelyZero()) {
         const fp tmp1 = prob * s0w.mag2();
         if (visited.find(s0.p) != visited.end()) {
-          probsMone[s0.p] = probsMone[s0.p] + tmp1;
+          measurementProbabilities[s0.p] =
+              measurementProbabilities[s0.p] + tmp1;
         } else {
-          probsMone[s0.p] = tmp1;
+          measurementProbabilities[s0.p] = tmp1;
           visited.insert(s0.p);
           q.push(s0.p);
         }
@@ -1014,9 +1024,10 @@ public:
           !s1w.approximatelyZero()) {
         const fp tmp1 = prob * s1w.mag2();
         if (visited.find(s1.p) != visited.end()) {
-          probsMone[s1.p] = probsMone[s1.p] + tmp1;
+          measurementProbabilities[s1.p] =
+              measurementProbabilities[s1.p] + tmp1;
         } else {
-          probsMone[s1.p] = tmp1;
+          measurementProbabilities[s1.p] = tmp1;
           visited.insert(s1.p);
           q.push(s1.p);
         }
@@ -1033,12 +1044,12 @@ public:
         const auto& s0 = ptr->e[0];
         if (const auto s0w = static_cast<ComplexValue>(s0.w);
             !s0w.approximatelyZero()) {
-          pzero += probsMone[ptr] * s0w.mag2();
+          pzero += measurementProbabilities[ptr] * s0w.mag2();
         }
         const auto& s1 = ptr->e[1];
         if (const auto s1w = static_cast<ComplexValue>(s1.w);
             !s1w.approximatelyZero()) {
-          pone += probsMone[ptr] * s1w.mag2();
+          pone += measurementProbabilities[ptr] * s1w.mag2();
         }
       }
     } else {
@@ -1052,12 +1063,12 @@ public:
         const auto& s0 = ptr->e[0];
         if (const auto s0w = static_cast<ComplexValue>(s0.w);
             !s0w.approximatelyZero()) {
-          pzero += probsMone[ptr] * probs[s0.p] * s0w.mag2();
+          pzero += measurementProbabilities[ptr] * probs[s0.p] * s0w.mag2();
         }
         const auto& s1 = ptr->e[1];
         if (const auto s1w = static_cast<ComplexValue>(s1.w);
             !s1w.approximatelyZero()) {
-          pone += probsMone[ptr] * probs[s1.p] * s1w.mag2();
+          pone += measurementProbabilities[ptr] * probs[s1.p] * s1w.mag2();
         }
       }
     }
@@ -1150,7 +1161,8 @@ public:
   void performCollapsingMeasurement(vEdge& rootEdge, const Qubit index,
                                     const fp probability,
                                     const bool measureZero) {
-    GateMatrix measurementMatrix = measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
+    const GateMatrix measurementMatrix =
+        measureZero ? MEAS_ZERO_MAT : MEAS_ONE_MAT;
 
     const auto measurementGate = makeGateDD(measurementMatrix, index);
 
@@ -1737,14 +1749,14 @@ public:
       return 0.;
     }
 
-    std::size_t leftIdx = i;
+    const std::size_t leftIdx = i;
     fp leftContribution = 0.;
     if (!e.p->e[0].w.approximatelyZero()) {
       leftContribution = fidelityOfMeasurementOutcomesRecursive(
           e.p->e[0], probs, leftIdx, permutation, nQubits);
     }
 
-    std::size_t rightIdx = i | (1ULL << e.p->v);
+    const std::size_t rightIdx = i | (1ULL << e.p->v);
     auto rightContribution = 0.;
     if (!e.p->e[1].w.approximatelyZero()) {
       rightContribution = fidelityOfMeasurementOutcomesRecursive(
@@ -1938,6 +1950,19 @@ private:
   /// (Partial) trace
   ///
 public:
+  UnaryComputeTable<dNode*, dCachedEdge, Config::CT_DM_TRACE_NBUCKET>
+      densityTrace{};
+  UnaryComputeTable<mNode*, mCachedEdge, Config::CT_MAT_TRACE_NBUCKET>
+      matrixTrace{};
+
+  template <class Node> [[nodiscard]] auto& getTraceComputeTable() {
+    if constexpr (std::is_same_v<Node, mNode>) {
+      return matrixTrace;
+    } else {
+      return densityTrace;
+    }
+  }
+
   mEdge partialTrace(const mEdge& a, const std::vector<bool>& eliminate) {
     auto r = trace(a, eliminate, eliminate.size());
     return {r.p, cn.lookup(r.w)};
@@ -1946,7 +1971,7 @@ public:
   template <class Node>
   ComplexValue trace(const Edge<Node>& a, const std::size_t numQubits) {
     if (a.isIdentity()) {
-      return a.w * std::pow(2, numQubits);
+      return static_cast<ComplexValue>(a.w);
     }
     const auto eliminate = std::vector<bool>(numQubits, true);
     return trace(a, eliminate, numQubits).w;
@@ -1974,7 +1999,24 @@ public:
   }
 
 private:
-  /// TODO: introduce a compute table for the trace?
+  /**
+   * @brief Computes the normalized (partial) trace using a compute table to
+   * store results for eliminated nodes.
+   * @details At each level, perform a lookup and store results in the compute
+   * table only if all lower-level qubits are eliminated as well.
+   *
+   * This optimization allows the full trace
+   * computation to scale linearly with respect to the number of nodes.
+   * However, the partial trace computation still scales with the number of
+   * paths to the lowest level in the DD that should be traced out.
+   *
+   * For matrices, normalization is continuously applied, dividing by two at
+   * each level marked for elimination, thereby ensuring that the result is
+   * mapped to the interval [0,1] (as opposed to the interval [0,2^N]).
+   *
+   * For density matrices, such normalization is not applied as the trace of
+   * density matrices is always 1 by definition.
+   */
   template <class Node>
   CachedEdge<Node> trace(const Edge<Node>& a,
                          const std::vector<bool>& eliminate, std::size_t level,
@@ -1984,24 +2026,48 @@ private:
       return CachedEdge<Node>::zero();
     }
 
-    if (std::none_of(eliminate.begin(), eliminate.end(),
+    // If `a` is the identity matrix or there is nothing left to eliminate,
+    // then simply return `a`
+    if (a.isIdentity() ||
+        std::none_of(eliminate.begin(),
+                     eliminate.begin() +
+                         static_cast<std::vector<bool>::difference_type>(level),
                      [](bool v) { return v; })) {
       return CachedEdge<Node>{a.p, aWeight};
     }
 
-    if (a.isIdentity()) {
-      const auto elims =
-          std::count(eliminate.begin(),
-                     eliminate.begin() + static_cast<int64_t>(level), true);
-      return CachedEdge<Node>{a.p, aWeight * std::pow(2, elims)};
-    }
-
     const auto v = a.p->v;
     if (eliminate[v]) {
+      // Lookup nodes marked for elimination in the compute table if all
+      // lower-level qubits are eliminated as well: if the trace has already
+      // been computed, return the result
+      const auto eliminateAll = std::all_of(
+          eliminate.begin(),
+          eliminate.begin() +
+              static_cast<std::vector<bool>::difference_type>(level),
+          [](bool e) { return e; });
+      if (eliminateAll) {
+        if (const auto* r = getTraceComputeTable<Node>().lookup(a.p);
+            r != nullptr) {
+          return {r->p, r->w * aWeight};
+        }
+      }
+
       const auto elims = alreadyEliminated + 1;
       auto r = add2(trace(a.p->e[0], eliminate, level - 1, elims),
                     trace(a.p->e[3], eliminate, level - 1, elims), v - 1);
 
+      // The resulting weight is continuously normalized to the range [0,1] for
+      // matrix nodes
+      if constexpr (std::is_same_v<Node, mNode>) {
+        r.w = r.w / 2.0;
+      }
+
+      // Insert result into compute table if all lower-level qubits are
+      // eliminated as well
+      if (eliminateAll) {
+        getTraceComputeTable<Node>().insert(a.p, r);
+      }
       r.w = r.w * aWeight;
       return r;
     }

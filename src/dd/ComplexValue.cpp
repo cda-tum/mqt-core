@@ -1,10 +1,15 @@
 #include "dd/ComplexValue.hpp"
 
+#include "Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/RealNumber.hpp"
 
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <iomanip>
 #include <istream>
 #include <ostream>
@@ -87,8 +92,15 @@ ComplexValue::getLowestFraction(const fp x,
 }
 
 void ComplexValue::printFormatted(std::ostream& os, fp num, bool imaginary) {
+  if (std::signbit(num)) {
+    os << "-";
+    num = -num;
+  } else if (imaginary) {
+    os << "+";
+  }
+
   if (RealNumber::approximatelyZero(num)) {
-    os << (std::signbit(num) ? "-" : "+") << "0" << (imaginary ? "i" : "");
+    os << "0" << (imaginary ? "i" : "");
     return;
   }
 
@@ -100,17 +112,14 @@ void ComplexValue::printFormatted(std::ostream& os, fp num, bool imaginary) {
   // suitable fraction a/b found
   if (const auto error = absnum - approx;
       RealNumber::approximatelyZero(error)) {
-    const std::string sign = std::signbit(num) ? "-" : (imaginary ? "+" : "");
-
     if (fraction.first == 1U && fraction.second == 1U) {
-      os << sign << (imaginary ? "i" : "1");
+      os << (imaginary ? "i" : "1");
     } else if (fraction.second == 1U) {
-      os << sign << fraction.first << (imaginary ? "i" : "");
+      os << fraction.first << (imaginary ? "i" : "");
     } else if (fraction.first == 1U) {
-      os << sign << (imaginary ? "i" : "1") << "/" << fraction.second;
+      os << (imaginary ? "i" : "1") << "/" << fraction.second;
     } else {
-      os << sign << fraction.first << (imaginary ? "i" : "") << "/"
-         << fraction.second;
+      os << fraction.first << (imaginary ? "i" : "") << "/" << fraction.second;
     }
 
     return;
@@ -122,17 +131,16 @@ void ComplexValue::printFormatted(std::ostream& os, fp num, bool imaginary) {
   // suitable fraction a/(b * sqrt(2)) found
   if (const auto error = abssqrt - approx;
       RealNumber::approximatelyZero(error)) {
-    const std::string sign = std::signbit(num) ? "-" : (imaginary ? "+" : "");
 
     if (fraction.first == 1U && fraction.second == 1U) {
-      os << sign << (imaginary ? "i" : "1") << "/√2";
+      os << (imaginary ? "i" : "1") << "/√2";
     } else if (fraction.second == 1U) {
-      os << sign << fraction.first << (imaginary ? "i" : "") << "/√2";
+      os << fraction.first << (imaginary ? "i" : "") << "/√2";
     } else if (fraction.first == 1U) {
-      os << sign << (imaginary ? "i" : "1") << "/(" << fraction.second << "√2)";
+      os << (imaginary ? "i" : "1") << "/(" << fraction.second << "√2)";
     } else {
-      os << sign << fraction.first << (imaginary ? "i" : "") << "/("
-         << fraction.second << "√2)";
+      os << fraction.first << (imaginary ? "i" : "") << "/(" << fraction.second
+         << "√2)";
     }
     return;
   }
@@ -142,23 +150,22 @@ void ComplexValue::printFormatted(std::ostream& os, fp num, bool imaginary) {
   approx = static_cast<fp>(fraction.first) / static_cast<fp>(fraction.second);
   // suitable fraction a/b π found
   if (const auto error = abspi - approx; RealNumber::approximatelyZero(error)) {
-    const std::string sign = std::signbit(num) ? "-" : (imaginary ? "+" : "");
     const std::string imagUnit = imaginary ? "i" : "";
 
     if (fraction.first == 1U && fraction.second == 1U) {
-      os << sign << "π" << imagUnit;
+      os << "π" << imagUnit;
     } else if (fraction.second == 1U) {
-      os << sign << fraction.first << "π" << imagUnit;
+      os << fraction.first << "π" << imagUnit;
     } else if (fraction.first == 1U) {
-      os << sign << "π" << imagUnit << "/" << fraction.second;
+      os << "π" << imagUnit << "/" << fraction.second;
     } else {
-      os << sign << fraction.first << "π" << imagUnit << "/" << fraction.second;
+      os << fraction.first << "π" << imagUnit << "/" << fraction.second;
     }
     return;
   }
 
   if (imaginary) { // default
-    os << (std::signbit(num) ? "" : "+") << num << "i";
+    os << num << "i";
   } else {
     os << num;
   }

@@ -20,6 +20,7 @@ if(MQT_CORE_INSTALL)
   endif()
   set(CMAKE_INSTALL_RPATH ${BASEPOINT} ${BASEPOINT}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
 if(NOT TARGET project_warnings)
@@ -74,6 +75,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/Operation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/StandardOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/SymbolicOperation.hpp
+    ${MQT_CORE_INCLUDE_BUILD_DIR}/operations/AodOperation.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Scanner.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Token.hpp
     ${MQT_CORE_INCLUDE_BUILD_DIR}/parsers/qasm3_parser/Parser.hpp
@@ -105,6 +107,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
     operations/Operation.cpp
     operations/StandardOperation.cpp
     operations/SymbolicOperation.cpp
+    operations/AodOperation.cpp
     parsers/GRCSParser.cpp
     parsers/QASM3Parser.cpp
     parsers/QCParser.cpp
@@ -121,7 +124,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
   # set include directories
   target_include_directories(
     ${MQT_CORE_TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${MQT_CORE_INCLUDE_BUILD_DIR}>
-                                   $<INSTALL_INTERFACE:${MQT_CORE_INCLUDE_INSTALL_DIR}>)
+                                   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
   # add options and warnings to the library
   target_link_libraries(${MQT_CORE_TARGET_NAME} PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
@@ -134,7 +137,16 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME})
                SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
                EXPORT_NAME Core)
   list(APPEND MQT_CORE_TARGETS ${MQT_CORE_TARGET_NAME})
+
+  include(GenerateExportHeader)
+  generate_export_header(${MQT_CORE_TARGET_NAME} BASE_NAME mqt_core)
+  if(NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(${MQT_CORE_TARGET_NAME} PUBLIC MQT_CORE_STATIC_DEFINE)
+  endif()
 endif()
+
+# add datastructures package
+add_subdirectory(datastructures)
 
 # add DD package library
 add_subdirectory(dd)
@@ -144,6 +156,9 @@ add_subdirectory(zx)
 
 # add ECC library
 add_subdirectory(ecc)
+
+# add NA library
+add_subdirectory(na)
 
 # ** Note ** The following target will soon be removed from the project. All top-level projects
 # should switch to using the mqt-core Python package.
@@ -178,7 +193,7 @@ if(MQT_CORE_INSTALL)
   configure_package_config_file(
     ${MQT_CORE_CMAKE_CONFIG_TEMPLATE} ${MQT_CORE_CMAKE_PROJECT_CONFIG_FILE}
     INSTALL_DESTINATION ${MQT_CORE_CONFIG_INSTALL_DIR}
-    PATH_VARS MQT_CORE_ZX_WITH_GMP
+    PATH_VARS MQT_CORE_WITH_GMP
     NO_SET_AND_CHECK_MACRO NO_CHECK_REQUIRED_COMPONENTS_MACRO)
   write_basic_package_version_file(
     ${MQT_CORE_CMAKE_VERSION_CONFIG_FILE}
@@ -200,6 +215,8 @@ if(MQT_CORE_INSTALL)
     DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
 
   install(DIRECTORY ${MQT_CORE_INCLUDE_BUILD_DIR}/ DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mqt_core_export.h
+          DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
 
   install(
     EXPORT ${MQT_CORE_TARGETS_EXPORT_NAME}

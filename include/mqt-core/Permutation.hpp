@@ -10,7 +10,7 @@
 namespace qc {
 class Permutation : public std::map<Qubit, Qubit> {
 public:
-  [[nodiscard]] inline Controls apply(const Controls& controls) const {
+  [[nodiscard]] Controls apply(const Controls& controls) const {
     if (empty()) {
       return controls;
     }
@@ -20,7 +20,7 @@ public:
     }
     return c;
   }
-  [[nodiscard]] inline Targets apply(const Targets& targets) const {
+  [[nodiscard]] Targets apply(const Targets& targets) const {
     if (empty()) {
       return targets;
     }
@@ -29,6 +29,13 @@ public:
       t.emplace_back(at(target));
     }
     return t;
+  }
+
+  [[nodiscard]] auto apply(const Qubit qubit) const -> Qubit {
+    if (empty()) {
+      return qubit;
+    }
+    return at(qubit);
   }
 };
 } // namespace qc

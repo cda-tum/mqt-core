@@ -1,6 +1,21 @@
+#include "Definitions.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <cstddef>
+#include <ios>
+#include <iostream>
+#include <istream>
+#include <limits>
+#include <map>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <vector>
 
 std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
     const std::string& variableIdent, const qc::QuantumRegisterMap& dataQubits,

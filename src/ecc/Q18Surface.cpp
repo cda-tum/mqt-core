@@ -1,4 +1,16 @@
 #include "ecc/Q18Surface.hpp"
+
+#include "ecc/Ecc.hpp"
+#include "operations/Control.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+
+#include <array>
+#include <cstddef>
+#include <map>
+#include <stdexcept>
+#include <utility>
 namespace ecc {
 void Q18Surface::measureAndCorrect() {
   if (isDecoded) {

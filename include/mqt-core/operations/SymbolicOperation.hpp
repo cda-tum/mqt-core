@@ -26,7 +26,7 @@ template <class... Ts> Overload(Ts...) -> Overload<Ts...>;
 
 class SymbolicOperation final : public StandardOperation {
 protected:
-  std::vector<std::optional<Symbolic>> symbolicParameter{};
+  std::vector<std::optional<Symbolic>> symbolicParameter;
 
   static OpType parseU3(const Symbolic& theta, fp& phi, fp& lambda);
   static OpType parseU3(fp& theta, const Symbolic& phi, fp& lambda);
@@ -116,19 +116,19 @@ public:
     return std::make_unique<SymbolicOperation>(*this);
   }
 
-  [[nodiscard]] inline bool isSymbolicOperation() const override {
+  [[nodiscard]] bool isSymbolicOperation() const override {
     return std::any_of(symbolicParameter.begin(), symbolicParameter.end(),
                        [](const auto& sym) { return sym.has_value(); });
   }
 
-  [[nodiscard]] inline bool isStandardOperation() const override {
+  [[nodiscard]] bool isStandardOperation() const override {
     return std::all_of(symbolicParameter.begin(), symbolicParameter.end(),
                        [](const auto& sym) { return !sym.has_value(); });
   }
 
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override;
-  [[nodiscard]] inline bool equals(const Operation& op) const override {
+  [[nodiscard]] bool equals(const Operation& op) const override {
     return equals(op, {}, {});
   }
 

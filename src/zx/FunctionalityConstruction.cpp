@@ -1,11 +1,17 @@
 #include "zx/FunctionalityConstruction.hpp"
 
+#include "Permutation.hpp"
+#include "QuantumComputation.hpp"
+#include "operations/CompoundOperation.hpp"
+#include "operations/Expression.hpp"
 #include "operations/OpType.hpp"
+#include "operations/SymbolicOperation.hpp"
 #include "zx/Rational.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <variant>

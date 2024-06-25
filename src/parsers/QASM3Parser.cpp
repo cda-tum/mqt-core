@@ -1,5 +1,13 @@
+#include "Definitions.hpp"
+#include "Permutation.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/ClassicControlledOperation.hpp"
+#include "operations/CompoundOperation.hpp"
+#include "operations/Control.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
+#include "operations/StandardOperation.hpp"
 #include "parsers/qasm3_parser/Exception.hpp"
 #include "parsers/qasm3_parser/Gate.hpp"
 #include "parsers/qasm3_parser/InstVisitor.hpp"
@@ -7,11 +15,21 @@
 #include "parsers/qasm3_parser/Parser.hpp"
 #include "parsers/qasm3_parser/Statement.hpp"
 #include "parsers/qasm3_parser/StdGates.hpp"
+#include "parsers/qasm3_parser/Types.hpp"
 #include "parsers/qasm3_parser/passes/ConstEvalPass.hpp"
 #include "parsers/qasm3_parser/passes/TypeCheckPass.hpp"
 
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 using namespace qasm3;
 using const_eval::ConstEvalPass;
@@ -23,10 +41,10 @@ class OpenQasm3Parser final : public InstVisitor {
   ConstEvalPass constEvalPass;
   TypeCheckPass typeCheckPass;
 
-  NestedEnvironment<std::shared_ptr<DeclarationStatement>> declarations{};
+  NestedEnvironment<std::shared_ptr<DeclarationStatement>> declarations;
   qc::QuantumComputation* qc{};
 
-  std::vector<std::unique_ptr<qc::Operation>> ops{};
+  std::vector<std::unique_ptr<qc::Operation>> ops;
 
   std::map<std::string, std::shared_ptr<Gate>> gates = STANDARD_GATES;
 
@@ -161,7 +179,7 @@ public:
         typeCheckPass.processStatement(*statement);
         statement->accept(this);
       } catch (CompilerError& e) {
-        std::cerr << e.toString() << '\n';
+        std::cerr << e.what() << '\n';
         throw;
       }
     }
@@ -764,14 +782,15 @@ public:
     if (!ifStatement->thenStatements.empty()) {
       auto thenOps = translateBlockOperations(ifStatement->thenStatements);
       qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
-          thenOps, creg->second, rhs->getUInt(), *comparisonKind));
+          std::move(thenOps), creg->second, rhs->getUInt(), *comparisonKind));
     }
     if (!ifStatement->elseStatements.empty()) {
-      const auto invertedComparsionKind =
-          qc::getInvertedComparsionKind(*comparisonKind);
+      const auto invertedComparisonKind =
+          qc::getInvertedComparisonKind(*comparisonKind);
       auto elseOps = translateBlockOperations(ifStatement->elseStatements);
       qc->emplace_back(std::make_unique<qc::ClassicControlledOperation>(
-          elseOps, creg->second, rhs->getUInt(), invertedComparsionKind));
+          std::move(elseOps), creg->second, rhs->getUInt(),
+          invertedComparisonKind));
     }
   }
 

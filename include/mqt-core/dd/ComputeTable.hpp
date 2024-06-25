@@ -1,14 +1,14 @@
 #pragma once
 
-#include "dd/DDDefinitions.hpp"
+#include "Definitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/statistics/TableStatistics.hpp"
 
 #include <array>
 #include <bitset>
 #include <cstddef>
+#include <functional>
 #include <iostream>
-#include <utility>
 
 namespace dd {
 

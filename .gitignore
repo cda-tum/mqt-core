@@ -53,6 +53,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+*.profraw
 
 # Translations
 *.mo
@@ -170,3 +171,6 @@ Thumbs.db
 /docs/**/build
 .vs
 out/build
+
+node_modules/
+wheelhouse/

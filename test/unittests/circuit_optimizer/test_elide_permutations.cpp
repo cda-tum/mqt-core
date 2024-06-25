@@ -1,7 +1,8 @@
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/OpType.hpp"
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <iostream>
 
 namespace qc {
@@ -49,7 +50,7 @@ TEST(ElidePermutations, simpleInitialLayout) {
   EXPECT_EQ(qc.outputPermutation[0], 0);
 }
 
-TEST(ElidePermutations, applyPermutionCompound) {
+TEST(ElidePermutations, applyPermutationCompound) {
   QuantumComputation qc(2);
   qc.cx(0, 1);
   auto op = qc.asCompoundOperation();
@@ -85,8 +86,8 @@ TEST(ElidePermutations, compoundOperation) {
   EXPECT_TRUE(qc.front()->isCompoundOperation());
   auto& compound = dynamic_cast<CompoundOperation&>(*qc.front());
   EXPECT_EQ(compound.size(), 2);
-  auto reference = StandardOperation(0_pc, 1, X);
-  auto reference2 = StandardOperation(1_pc, 0, X);
+  auto reference = StandardOperation(0, 1, X);
+  auto reference2 = StandardOperation(1, 0, X);
   EXPECT_EQ(*compound.getOps().front(), reference);
   EXPECT_EQ(*compound.getOps().back(), reference2);
   EXPECT_EQ(*qc.back(), reference);
@@ -108,7 +109,7 @@ TEST(ElidePermutations, compoundOperation2) {
 
   EXPECT_EQ(qc.size(), 2);
   EXPECT_TRUE(qc.front()->isStandardOperation());
-  auto reference = StandardOperation(1_pc, 0, X);
+  auto reference = StandardOperation(1, 0, X);
   EXPECT_EQ(*qc.front(), reference);
   EXPECT_TRUE(qc.back()->isStandardOperation());
   EXPECT_EQ(*qc.back(), reference);
@@ -129,7 +130,7 @@ TEST(ElidePermutations, compoundOperation3) {
 
   EXPECT_EQ(qc.size(), 1);
   EXPECT_TRUE(qc.front()->isStandardOperation());
-  auto reference = StandardOperation(1_pc, 0, X);
+  auto reference = StandardOperation(1, 0, X);
   EXPECT_EQ(*qc.front(), reference);
   EXPECT_EQ(qc.outputPermutation[0], 1);
   EXPECT_EQ(qc.outputPermutation[1], 0);

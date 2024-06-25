@@ -1,5 +1,12 @@
+#include "Definitions.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
 #include "operations/StandardOperation.hpp"
 #include "python/pybind11.hpp"
+
+#include <sstream>
+#include <vector>
 
 namespace mqt {
 

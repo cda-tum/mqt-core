@@ -1,5 +1,17 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "operations/CompoundOperation.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <ostream>
+#include <random>
+
 namespace qc {
 
 RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq,
@@ -51,7 +63,8 @@ std::ostream& RandomCliffordCircuit::printStatistics(std::ostream& os) const {
   os << "\tm: " << getNindividualOps() << "\n";
   os << "\tdepth: " << depth << "\n";
   os << "\tseed: " << seed << "\n";
-  os << "--------------" << "\n";
+  os << "--------------"
+     << "\n";
   return os;
 }
 

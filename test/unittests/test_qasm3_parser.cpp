@@ -9,9 +9,9 @@
 #include "parsers/qasm3_parser/Token.hpp"
 #include "parsers/qasm3_parser/passes/ConstEvalPass.hpp"
 
-#include "gtest/gtest.h"
 #include <cmath>
 #include <cstddef>
+#include <gtest/gtest.h>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -370,7 +370,7 @@ TEST_F(Qasm3ParserTest, ImportQasm3IfElseStatement) {
         "  x q[1];\n"
         "}\n"
         "if (c " +
-        toString(getInvertedComparsionKind(comparisonKind)) +
+        toString(getInvertedComparisonKind(comparisonKind)) +
         " 1) {\n"
         "  x q[0];\n"
         "  x q[1];\n"
@@ -989,7 +989,7 @@ TEST_F(Qasm3ParserTest, ImportQasmAssignmentUnknownIdentifier) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1007,7 +1007,7 @@ TEST_F(Qasm3ParserTest, ImportQasmAssignmentConstVar) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1325,7 +1325,7 @@ TEST_F(Qasm3ParserTest, ImportQasmTypeMismatchAssignment) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1341,7 +1341,7 @@ TEST_F(Qasm3ParserTest, ImportQasmTypeMismatchBinaryExpr) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1373,7 +1373,7 @@ TEST_F(Qasm3ParserTest, ImportQasmUnaryTypeMismatchLogicalNot) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1389,7 +1389,7 @@ TEST_F(Qasm3ParserTest, ImportQasmUnaryTypeMismatchBitwiseNot) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1404,7 +1404,7 @@ TEST_F(Qasm3ParserTest, ImportQasmBinaryTypeMismatch) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1420,7 +1420,7 @@ TEST_F(Qasm3ParserTest, ImportQasmAssignmentIndexType) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1435,7 +1435,7 @@ TEST_F(Qasm3ParserTest, ImportQasmUnknownIdentifier) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1450,7 +1450,7 @@ TEST_F(Qasm3ParserTest, ImportQasmUnknownQubit) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },
@@ -1465,7 +1465,7 @@ TEST_F(Qasm3ParserTest, ImportQasmNegativeTypeDesignator) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Type check failed.");
+          EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
           throw;
         }
       },

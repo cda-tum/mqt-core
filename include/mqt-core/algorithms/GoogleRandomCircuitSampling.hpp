@@ -1,26 +1,39 @@
 #pragma once
 
-#include <QuantumComputation.hpp>
-#include <chrono>
+#include "Definitions.hpp"
+#include "QuantumComputation.hpp"
+#include "operations/Operation.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <ostream>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace qc {
-enum Layout { Rectangular, Bristlecone };
+enum Layout : std::uint8_t { Rectangular, Bristlecone };
 
 class GoogleRandomCircuitSampling : public QuantumComputation {
 public:
-  std::vector<std::vector<std::unique_ptr<Operation>>> cycles{};
+  std::vector<std::vector<std::unique_ptr<Operation>>> cycles;
   Layout layout = Rectangular;
   std::string pathPrefix =
       "../../../Benchmarks/GoogleRandomCircuitSampling/inst/";
 
   explicit GoogleRandomCircuitSampling(const std::string& filename);
 
-  GoogleRandomCircuitSampling(std::string prefix, std::uint16_t device,
-                              std::uint16_t depth, std::uint16_t instance);
+  [[maybe_unused]] GoogleRandomCircuitSampling(std::string prefix,
+                                               std::uint16_t device,
+                                               std::uint16_t depth,
+                                               std::uint16_t instance);
 
-  GoogleRandomCircuitSampling(std::string prefix, std::uint16_t x,
-                              std::uint16_t y, std::uint16_t depth,
-                              std::uint16_t instance);
+  [[maybe_unused]] GoogleRandomCircuitSampling(std::string prefix,
+                                               std::uint16_t x, std::uint16_t y,
+                                               std::uint16_t depth,
+                                               std::uint16_t instance);
 
   void importGRCS(const std::string& filename);
 

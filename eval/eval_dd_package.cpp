@@ -8,16 +8,24 @@
 #include "algorithms/WState.hpp"
 #include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Package.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
-#include "nlohmann/json.hpp"
 
+#include <array>
+#include <bitset>
+#include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <exception>
+#include <fstream>
+#include <ios>
+#include <iostream>
+#include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
 
 namespace dd {
-
-static const std::string FILENAME_START = "results_";
-static const std::string FILENAME_END = ".json";
 
 static constexpr std::size_t SEED = 42U;
 
@@ -26,9 +34,9 @@ protected:
   void verifyAndSave(const std::string& name, const std::string& type,
                      qc::QuantumComputation& qc, const Experiment& exp) {
 
-    const std::string& filename = FILENAME_START + inputFilename + FILENAME_END;
+    const std::string& filename = "results_" + inputFilename + ".json";
 
-    nlohmann::json j;
+    nlohmann::basic_json<> j;
     std::fstream file(filename, std::ios::in | std::ios::out | std::ios::ate);
     if (!file.is_open()) {
       std::ofstream outputFile(filename);

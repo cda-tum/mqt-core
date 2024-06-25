@@ -1,4 +1,16 @@
 #include "ecc/Q9Shor.hpp"
+
+#include "ecc/Ecc.hpp"
+#include "operations/Control.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+#include "operations/StandardOperation.hpp"
+
+#include <array>
+#include <cstddef>
+#include <stdexcept>
+#include <utility>
 namespace ecc {
 void Q9Shor::writeEncoding() {
   if (!isDecoded) {

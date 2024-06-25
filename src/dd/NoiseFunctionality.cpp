@@ -1,5 +1,26 @@
 #include "dd/NoiseFunctionality.hpp"
 
+#include "Definitions.hpp"
+#include "dd/ComplexNumbers.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/DDpackageConfig.hpp"
+#include "dd/GateMatrixDefinitions.hpp"
+#include "dd/Node.hpp"
+#include "dd/Package.hpp"
+#include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <memory>
+#include <random>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
 namespace {
 
 std::vector<dd::NoiseOperations>

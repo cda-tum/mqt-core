@@ -2,6 +2,10 @@
 
 #include "zx/ZXDefinitions.hpp"
 
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+
 namespace zx {
 
 PiRational::PiRational(double val) {

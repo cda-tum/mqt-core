@@ -1,6 +1,8 @@
+#include "Definitions.hpp"
 #include "operations/Control.hpp"
-#include "pybind11/operators.h"
 #include "python/pybind11.hpp"
+
+#include <pybind11/operators.h>
 
 namespace mqt {
 

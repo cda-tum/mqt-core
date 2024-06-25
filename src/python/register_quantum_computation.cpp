@@ -1,9 +1,18 @@
 #include "Definitions.hpp"
 #include "QuantumComputation.hpp"
 #include "operations/Control.hpp"
+#include "operations/Expression.hpp"
 #include "operations/OpType.hpp"
 #include "operations/Operation.hpp"
 #include "python/pybind11.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace mqt {
 

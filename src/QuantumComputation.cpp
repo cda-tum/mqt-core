@@ -1,7 +1,33 @@
 #include "QuantumComputation.hpp"
 
+#include "Definitions.hpp"
+#include "operations/CompoundOperation.hpp"
+#include "operations/Control.hpp"
+#include "operations/Expression.hpp"
+#include "operations/NonUnitaryOperation.hpp"
+#include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
+#include "operations/SymbolicOperation.hpp"
+
+#include <algorithm>
 #include <cassert>
+#include <cctype>
+#include <cmath>
+#include <cstddef>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <istream>
+#include <iterator>
 #include <memory>
+#include <optional>
+#include <ostream>
+#include <set>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
 
 namespace qc {
 
@@ -95,7 +121,7 @@ void QuantumComputation::import(const std::string& filename, Format format) {
   }
 }
 
-void QuantumComputation::import(std::istream&& is, Format format) {
+void QuantumComputation::import(std::istream& is, Format format) {
   // reset circuit before importing
   reset();
 
@@ -510,7 +536,8 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
   for (const auto& physicalQubit : initialLayout) {
     auto it = outputPermutation.find(physicalQubit.first);
     if (it == outputPermutation.end()) {
-      os << "\033[31m" << std::setw(4) << "|" << "\033[0m";
+      os << "\033[31m" << std::setw(4) << "|"
+         << "\033[0m";
     } else {
       os << std::setw(4) << it->second;
     }
@@ -633,7 +660,7 @@ void QuantumComputation::dump(const std::string& filename, Format format) {
   dump(of, format);
 }
 
-void QuantumComputation::dump(std::ostream&& of, Format format) {
+void QuantumComputation::dump(std::ostream& of, Format format) {
   switch (format) {
   case Format::OpenQASM3:
     dumpOpenQASM(of, true);
@@ -1031,7 +1058,7 @@ void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
   if (std::holds_alternative<Symbolic>(expr)) {
     const auto& sym = std::get<Symbolic>(expr);
     for (const auto& term : sym) {
-      occuringVariables.insert(term.getVar());
+      occurringVariables.insert(term.getVar());
     }
   }
 }
@@ -1054,7 +1081,7 @@ void QuantumComputation::instantiateInplace(
   // after an operation is instantiated, the respective parameters can be
   // removed from the circuit
   for (const auto& [var, _] : assignment) {
-    occuringVariables.erase(var);
+    occurringVariables.erase(var);
   }
 }
 

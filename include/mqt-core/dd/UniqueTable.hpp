@@ -1,18 +1,20 @@
 #pragma once
 
-#include "dd/DDDefinitions.hpp"
+#include "Definitions.hpp"
 #include "dd/Edge.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
 #include "dd/statistics/UniqueTableStatistics.hpp"
-#include "nlohmann/json.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iostream>
+#include <nlohmann/json.hpp>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -97,7 +99,7 @@ public:
   }
 
   /// Get a JSON object with the statistics
-  [[nodiscard]] nlohmann::json
+  [[nodiscard]] nlohmann::basic_json<>
   getStatsJson(const bool includeIndividualTables = false) const {
     if (std::all_of(stats.begin(), stats.end(),
                     [](const UniqueTableStatistics& stat) {
@@ -121,7 +123,7 @@ public:
       totalStats.gcRuns = std::max(totalStats.gcRuns, stat.gcRuns);
     }
 
-    nlohmann::json j;
+    nlohmann::basic_json<> j;
     j["total"] = totalStats.json();
     if (includeIndividualTables) {
       std::size_t v = 0U;
@@ -301,9 +303,10 @@ public:
     auto q = nvars - 1U;
     for (auto it = tables.rbegin(); it != tables.rend(); ++it) {
       auto& table = *it;
-      std::cout << "\tq" << q << ":" << "\n";
+      std::cout << "\tq" << q << ":"
+                << "\n";
       for (std::size_t key = 0; key < table.size(); ++key) {
-        auto p = table[key];
+        auto* p = table[key];
         if (p != nullptr) {
           std::cout << "\tkey=" << key << ": ";
         }

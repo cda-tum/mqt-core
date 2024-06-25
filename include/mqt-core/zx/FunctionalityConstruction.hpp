@@ -1,11 +1,15 @@
 #pragma once
 
+#include "Permutation.hpp"
 #include "QuantumComputation.hpp"
+#include "operations/Expression.hpp"
+#include "operations/Operation.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
 #include <cstddef>
 #include <optional>
+#include <vector>
 
 namespace zx {
 class FunctionalityConstruction {

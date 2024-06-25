@@ -1,12 +1,23 @@
 #pragma once
 
+#include "Definitions.hpp"
 #include "Operation.hpp"
+#include "Permutation.hpp"
+#include "operations/Control.hpp"
+#include "operations/OpType.hpp"
+
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <ostream>
+#include <set>
+#include <vector>
 
 namespace qc {
 
 class NonUnitaryOperation final : public Operation {
 protected:
-  std::vector<Bit> classics{}; // vector for the classical bits to measure into
+  std::vector<Bit> classics; // vector for the classical bits to measure into
 
   static void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
                                const std::vector<Bit>& c,
@@ -34,20 +45,7 @@ public:
 
   [[nodiscard]] const std::vector<Bit>& getClassics() const { return classics; }
   std::vector<Bit>& getClassics() { return classics; }
-  [[nodiscard]] size_t getNclassics() const { return classics.size(); }
-
-  [[nodiscard]] std::set<Qubit> getUsedQubits() const override {
-    const auto& opTargets = getTargets();
-    return {opTargets.begin(), opTargets.end()};
-  }
-
-  [[nodiscard]] const Controls& getControls() const override {
-    throw QFRException("Cannot get controls from non-unitary operation.");
-  }
-
-  [[nodiscard]] Controls& getControls() override {
-    throw QFRException("Cannot get controls from non-unitary operation.");
-  }
+  [[nodiscard]] std::size_t getNclassics() const { return classics.size(); }
 
   void addDepthContribution(std::vector<std::size_t>& depths) const override;
 

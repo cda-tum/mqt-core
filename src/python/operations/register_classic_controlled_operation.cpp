@@ -1,5 +1,11 @@
+#include "Definitions.hpp"
 #include "operations/ClassicControlledOperation.hpp"
+#include "operations/Operation.hpp"
 #include "python/pybind11.hpp"
+
+#include <cstdint>
+#include <memory>
+#include <sstream>
 
 namespace mqt {
 
@@ -10,9 +16,8 @@ void registerClassicControlledOperation(py::module& m) {
   ccop.def(
       py::init([](qc::Operation* operation, qc::ClassicalRegister controlReg,
                   std::uint64_t expectedVal) {
-        auto op = operation->clone();
-        return std::make_unique<qc::ClassicControlledOperation>(op, controlReg,
-                                                                expectedVal);
+        return std::make_unique<qc::ClassicControlledOperation>(
+            operation->clone(), controlReg, expectedVal);
       }),
       "operation"_a, "control_register"_a, "expected_value"_a = 1U);
   ccop.def_property_readonly("operation",
@@ -25,8 +30,9 @@ void registerClassicControlledOperation(py::module& m) {
   ccop.def("__repr__", [](const qc::ClassicControlledOperation& op) {
     std::stringstream ss;
     const auto& controlReg = op.getControlRegister();
-    ss << "ClassicControlledOperation(<...op...>, " << "control_register=("
-       << controlReg.first << ", " << controlReg.second << "), "
+    ss << "ClassicControlledOperation(<...op...>, "
+       << "control_register=(" << controlReg.first << ", " << controlReg.second
+       << "), "
        << "expected_value=" << op.getExpectedValue() << ")";
     return ss.str();
   });

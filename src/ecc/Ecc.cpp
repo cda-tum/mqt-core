@@ -1,5 +1,10 @@
 #include "ecc/Ecc.hpp"
 
+#include "QuantumComputation.hpp"
+
+#include <cstddef>
+#include <memory>
+
 namespace ecc {
 void Ecc::initMappedCircuit() {
   qcOriginal->stripIdleQubits(true, false);

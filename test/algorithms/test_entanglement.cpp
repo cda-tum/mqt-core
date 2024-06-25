@@ -1,8 +1,14 @@
 #include "algorithms/Entanglement.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/Simulation.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/Package.hpp"
+#include "dd/Package_fwd.hpp"
 
-#include "gtest/gtest.h"
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 
 class Entanglement : public testing::TestWithParam<std::size_t> {
