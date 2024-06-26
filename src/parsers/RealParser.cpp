@@ -94,9 +94,9 @@ parseIoNames(std::size_t lineInRealFileDefiningIoNames,
 
     ioNameStartIdx = ioNameEndIdx + searchingForWhitespaceCharacter;
     /*
-     * We offer the user the use of some special literals to denote either constant inputs
-     * or garbage outputs instead of finding unique names for said ios, otherwise check that the
-     * given io name is unique.
+     * We offer the user the use of some special literals to denote either
+     * constant inputs or garbage outputs instead of finding unique names for
+     * said ios, otherwise check that the given io name is unique.
      */
     if (!(ioName == "0" || ioName == "1" || ioName == "g")) {
       if (const auto& ioNameInsertionIntoLookupResult =
@@ -105,7 +105,7 @@ parseIoNames(std::size_t lineInRealFileDefiningIoNames,
         throw qc::QFRException("[real parser] l: " +
                                std::to_string(lineInRealFileDefiningIoNames) +
                                "duplicate io name: " + ioName);
-      } 
+      }
     }
   }
   return foundIoNames;
@@ -151,9 +151,10 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     }
 
     /*
-     * TODO: Parsing currently assumes that expected entries are defined only once and in the expected
-     * definition order as defined in the .real header specification. 
-     * (https://www.revlib.org/doc/docu/revlib_2_0_1.pdf Chapter 3.2)
+     * TODO: Parsing currently assumes that expected entries are defined only
+     * once and in the expected definition order as defined in the .real header
+     * specification. (https://www.revlib.org/doc/docu/revlib_2_0_1.pdf
+     * Chapter 3.2)
      */
     if (cmd == ".BEGIN") {
       // header read complete
@@ -183,8 +184,16 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         ancillary.resize(nqubits);
         garbage.resize(nqubits);
       }
-
-      // TODO: Check whether more than the declared number of variables was defined
+ 
+      /*
+       * TODO: Check whether more than the declared number of variables was
+       * defined
+       *
+       * TODO: Ancillary qubits are expected to be initialized with the value
+       * '0' but .real file .constants definition allows the two values '0' and
+       * '1' - do we have to manually insert appropriate gates to set the
+       * value qubits marked as constants to '1' ?
+       */
     } else if (cmd == ".CONSTANTS") {
       is >> std::ws;
       for (std::size_t i = 0; i < nclassics; ++i) {
@@ -202,8 +211,8 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
 
           /*
            * Since the call to setLogicalQubitAncillary does not actually
-           * transfer the qubit from the data qubit lookup into the ancillary lookup
-           * we will 'manually' perform this transfer.
+           * transfer the qubit from the data qubit lookup into the ancillary
+           * lookup we will 'manually' perform this transfer.
            */
           const std::string& associatedVariableNameForQubitRegister =
               getQubitRegister(ancillaryQubit);
@@ -271,35 +280,47 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
             std::to_string(expectedNumOutputIos) + " outputs to be declared!");
       }
 
-       for (const auto& [outputIoIdent, outputIoQubit] :
-            userDefinedOutputIdents) {
-         /*
-          * We assume that a permutation of a given input qubit Q at index i
-          * is performed in the circuit if an entry in both in the .output
-          * as well as the .input definition using the same literal is found
-          * with the input literal being defined at position i in the .input definition.
-          * If no such matching is found, we assume that the output is marked as garbage
-          * and thus remove the entry from the output permutation.
-          *
-          * The outputPermutation map will use be structured as shown in the documentation
-          * (https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information)
-          * with the output qubit being used as the key while the input qubit
-          * serves as the map entries value.
-          */
-         if (!userDefinedInputIdents.count(outputIoIdent)) {
-           outputPermutation.erase(outputIoQubit);
-         } else if (const qc::Qubit matchingInputQubitForOutputLiteral =
-                        userDefinedInputIdents.at(outputIoIdent);
-                    matchingInputQubitForOutputLiteral != outputIoQubit) {
-           /*
-            * Only if the matching entries where defined at different indices
-            in their respective IO declaration
-            * do we update the existing 1-1 mapping for the given output qubit
-            */
-           outputPermutation.insert_or_assign(
-               outputIoQubit, matchingInputQubitForOutputLiteral);
-         }
-       }
+      for (const auto& [outputIoIdent, outputIoQubit] :
+           userDefinedOutputIdents) {
+        /*
+         * We assume that a permutation of a given input qubit Q at index i
+         * is performed in the circuit if an entry in both in the .output
+         * as well as the .input definition using the same literal is found
+         * with the input literal being defined at position i in the .input
+         * definition. If no such matching is found, we assume that the output
+         * is marked as garbage and thus remove the entry from the output
+         * permutation.
+         *
+         * The outputPermutation map will use be structured as shown in the
+         * documentation
+         * (https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information)
+         * with the output qubit being used as the key while the input qubit
+         * serves as the map entries value.
+         */
+        if (!userDefinedInputIdents.count(outputIoIdent)) {
+          /*
+           * In case no matching input definition exists for a given output
+           * ident, remove said output qubit from the output permutation only if
+           * the output qubit is marked as garbage. If we would not take the
+           * garbage status into account, we would also remove ancillary output
+           * qubits which could potentially not be garbage qubits from the
+           * output permutation.
+           *
+           */
+          if (logicalQubitIsGarbage(outputIoQubit))
+            outputPermutation.erase(outputIoQubit);
+        } else if (const qc::Qubit matchingInputQubitForOutputLiteral =
+                       userDefinedInputIdents.at(outputIoIdent);
+                   matchingInputQubitForOutputLiteral != outputIoQubit) {
+          /*
+           * Only if the matching entries where defined at different indices
+           in their respective IO declaration
+           * do we update the existing 1-1 mapping for the given output qubit
+           */
+          outputPermutation.insert_or_assign(
+              outputIoQubit, matchingInputQubitForOutputLiteral);
+        }
+      }
     } else if (cmd == ".VERSION" || cmd == ".INPUTBUS" || cmd == ".OUTPUTBUS") {
       is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
       continue;
