@@ -98,7 +98,8 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
           " invalid io name: " + ioName);
     }
 
-    ioNameStartIdx = ioNameEndIdx + static_cast<std::size_t>(searchingForWhitespaceCharacter);
+    ioNameStartIdx = ioNameEndIdx +
+                     static_cast<std::size_t>(searchingForWhitespaceCharacter);
     /*
      * We offer the user the use of some special literals to denote either
      * constant inputs or garbage outputs instead of finding unique names for
@@ -190,7 +191,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         ancillary.resize(nqubits);
         garbage.resize(nqubits);
       }
- 
+
       /*
        * TODO: Check whether more than the declared number of variables was
        * defined
