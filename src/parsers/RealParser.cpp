@@ -12,9 +12,12 @@
 #include <istream>
 #include <limits>
 #include <map>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <vector>
 
 std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
@@ -40,22 +43,24 @@ bool isValidIoName(const std::string_view& ioName) {
   return !ioName.empty() &&
          std::all_of(
              ioName.cbegin(), ioName.cend(), [](const char ioNameCharacter) {
-               return std::isalnum(ioNameCharacter) || ioNameCharacter == '_';
+               return static_cast<bool>(std::isalnum(
+                          static_cast<unsigned char>(ioNameCharacter))) ||
+                      ioNameCharacter == '_';
              });
 }
 
 std::unordered_map<std::string, qc::Qubit>
-parseIoNames(std::size_t lineInRealFileDefiningIoNames,
-             std::size_t expectedNumberOfIos,
+parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
+             const std::size_t expectedNumberOfIos,
              const std::string& ioNameIdentsRawValues) {
   std::unordered_map<std::string, qc::Qubit> foundIoNames;
   std::size_t ioNameStartIdx = 0;
-  std::size_t ioNameEndIdx;
+  std::size_t ioNameEndIdx = 0;
   std::size_t ioIdx = 0;
 
   while (ioNameStartIdx < ioNameIdentsRawValues.size() &&
          foundIoNames.size() <= expectedNumberOfIos) {
-    bool searchingForWhitespaceCharacter =
+    const bool searchingForWhitespaceCharacter =
         ioNameIdentsRawValues.at(ioNameStartIdx) != '"';
     if (searchingForWhitespaceCharacter)
       ioNameEndIdx = ioNameIdentsRawValues.find_first_of(' ', ioNameStartIdx);
@@ -72,13 +77,14 @@ parseIoNames(std::size_t lineInRealFileDefiningIoNames,
             std::to_string(ioIdx));
       }
     } else {
-      ioNameEndIdx += !searchingForWhitespaceCharacter;
+      ioNameEndIdx +=
+          static_cast<std::size_t>(!searchingForWhitespaceCharacter);
     }
 
     std::size_t ioNameLength = ioNameEndIdx - ioNameStartIdx;
     // On windows the line ending could be the character sequence \r\n while on
     // linux system it would only be \n
-    if (ioNameLength &&
+    if (ioNameLength > 0 &&
         ioNameIdentsRawValues.at(
             std::min(ioNameEndIdx, ioNameIdentsRawValues.size() - 1)) == '\r')
       --ioNameLength;
@@ -92,7 +98,7 @@ parseIoNames(std::size_t lineInRealFileDefiningIoNames,
           " invalid io name: " + ioName);
     }
 
-    ioNameStartIdx = ioNameEndIdx + searchingForWhitespaceCharacter;
+    ioNameStartIdx = ioNameEndIdx + static_cast<std::size_t>(searchingForWhitespaceCharacter);
     /*
      * We offer the user the use of some special literals to denote either
      * constant inputs or garbage outputs instead of finding unique names for
