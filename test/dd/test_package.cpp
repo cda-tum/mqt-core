@@ -2669,3 +2669,28 @@ TEST(DDPackageTest, ReduceGarbageIdentityBetweenTwoNodes) {
                       {0, 1, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}};
   EXPECT_EQ(outputMatrix, expected);
 }
+
+TEST(DDPackageTest, MatrixNormalizationRegression) {
+  const qc::Qubit nqubits = 100U;
+  for (auto q = 1U; q <= nqubits; ++q) {
+    auto dd = std::make_unique<dd::Package<>>(q);
+    auto f = dd->makeIdent();
+    for (qc::Qubit i = 0; i < q; ++i) {
+      const auto h = dd->makeGateDD(dd::H_MAT, i);
+      f = dd->multiply(f, h);
+    }
+    std::cout << "Qubits: " << q << ", ";
+    std::cout << "Top edge weight: " << f.w.toString(false) << ", ";
+    std::cout << "Is identity: " << f.isIdentity(false) << "\n";
+    for (qc::Qubit i = 0; i < q; ++i) {
+      const auto h = dd->makeGateDD(dd::H_MAT, q - i - 1);
+      f = dd->multiply(f, h);
+    }
+    std::cout << "Qubits: " << q << ", ";
+    std::cout << "Top edge weight: " << f.w.toString(false) << ", ";
+    std::cout << "Is identity: " << f.isIdentity(false) << "\n";
+    const auto w = static_cast<dd::ComplexValue>(f.w);
+    EXPECT_TRUE(w.approximatelyEquals({1., 0.}));
+    EXPECT_TRUE(f.isIdentity(false));
+  }
+}
