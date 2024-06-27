@@ -98,47 +98,45 @@ CachedEdge<Node>::normalize(Node* p,
     return CachedEdge::zero();
   }
 
-  std::optional<std::size_t> argMax = std::nullopt;
-  fp maxMag2 = 0.;
-  ComplexValue maxVal = 1.;
-  // determine max amplitude
-  for (auto i = 0U; i < NEDGE; ++i) {
-    if (zero[i]) {
-      continue;
-    }
-    const auto& w = e[i].w;
-    if (!argMax.has_value()) {
-      argMax = i;
-      maxMag2 = w.mag2();
-      maxVal = w;
-    } else {
-      if (const auto mag2 = w.mag2(); mag2 - maxMag2 > RealNumber::eps) {
-        argMax = i;
-        maxMag2 = mag2;
-        maxVal = w;
-      }
-    }
-  }
-  assert(argMax.has_value() && "argMax should have been set by now");
+  const auto mag2 =
+      std::array{e[0].w.mag2(), e[1].w.mag2(), e[2].w.mag2(), e[3].w.mag2()};
 
-  const auto argMaxValue = *argMax;
-  for (auto i = 0U; i < NEDGE; ++i) {
-    // The approximation below is really important for numerical stability.
-    // An exactly zero check will lead to numerical instabilities.
-    if (zero[i]) {
-      p->e[i] = Edge<Node>::zero();
-      continue;
-    }
-    if (i == argMaxValue) {
-      p->e[i] = {e[i].p, Complex::one()};
-      continue;
-    }
-    p->e[i] = {e[i].p, cn.lookup(e[i].w / maxVal)};
-    if (p->e[i].w.exactlyZero()) {
-      p->e[i].p = Node::getTerminal();
+  std::size_t argMax = 0U;
+  auto maxMag2 = mag2[0];
+  for (std::size_t i = 1U; i < NEDGE; ++i) {
+    if (const auto mag2i = mag2[i]; mag2i + RealNumber::eps > maxMag2) {
+      argMax = i;
+      maxMag2 = mag2i;
     }
   }
-  return CachedEdge<Node>{p, maxVal};
+
+  // pair up 0 <-> 2 and 1 <-> 3
+  const auto argMin = (argMax + 2U) % 4;
+  const auto minMag2 = mag2[argMin];
+
+  const auto norm = std::sqrt(maxMag2 + minMag2);
+  const auto maxMag = std::sqrt(maxMag2);
+  const auto commonFactor = norm / maxMag;
+
+  const auto topWeight = e[argMax].w * commonFactor;
+  const auto maxWeight = maxMag / norm;
+  p->e[argMax] = {e[argMax].p, cn.lookup(maxWeight)};
+  assert(!p->e[argMax].w.exactlyZero() &&
+         "Max edge weight should not be zero.");
+
+  for (std::size_t i = 0; i < NEDGE; ++i) {
+    if (i == argMax) {
+      continue;
+    }
+    const auto weight = e[i].w / topWeight;
+    auto& successor = p->e[i];
+    successor.p = e[i].p;
+    successor.w = cn.lookup(weight);
+    if (successor.w.exactlyZero()) {
+      successor.p = Node::getTerminal();
+    }
+  }
+  return {p, topWeight};
 }
 
 ///-----------------------------------------------------------------------------

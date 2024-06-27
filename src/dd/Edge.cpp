@@ -299,46 +299,52 @@ Edge<Node> Edge<Node>::normalize(Node* p,
       static_cast<ComplexValue>(e[0].w), static_cast<ComplexValue>(e[1].w),
       static_cast<ComplexValue>(e[2].w), static_cast<ComplexValue>(e[3].w)};
 
-  std::optional<std::size_t> argMax = std::nullopt;
-  fp maxMag2 = 0.;
-  auto maxVal = Complex::one();
-  // determine max amplitude
-  for (auto i = 0U; i < NEDGE; ++i) {
-    if (zero[i]) {
-      p->e[i] = Edge::zero();
-      continue;
-    }
-    const auto& w = weights[i];
-    if (!argMax.has_value()) {
-      argMax = i;
-      maxMag2 = w.mag2();
-      maxVal = e[i].w;
-    } else {
-      if (const auto mag2 = w.mag2(); mag2 - maxMag2 > RealNumber::eps) {
-        argMax = i;
-        maxMag2 = mag2;
-        maxVal = e[i].w;
-      }
-    }
-  }
-  assert(argMax.has_value() && "argMax should have been set by now");
+  const auto mag2 = std::array{weights[0].mag2(), weights[1].mag2(),
+                               weights[2].mag2(), weights[3].mag2()};
 
-  const auto argMaxValue = *argMax;
-  const auto argMaxWeight = weights[argMaxValue];
-  for (auto i = 0U; i < NEDGE; ++i) {
-    if (zero[i]) {
-      continue;
-    }
-    if (i == argMaxValue) {
-      p->e[i] = {e[i].p, Complex::one()};
-      continue;
-    }
-    p->e[i] = {e[i].p, cn.lookup(weights[i] / argMaxWeight)};
-    if (p->e[i].w.exactlyZero()) {
-      p->e[i].p = Node::getTerminal();
+  std::size_t argMax = 0U;
+  auto maxMag2 = mag2[0];
+  for (std::size_t i = 1U; i < NEDGE; ++i) {
+    if (const auto mag2i = mag2[i]; mag2i + RealNumber::eps > maxMag2) {
+      argMax = i;
+      maxMag2 = mag2i;
     }
   }
-  return Edge<Node>{p, maxVal};
+
+  // pair up 0 <-> 2 and 1 <-> 3
+  const auto argMin = (argMax + 2U) % 4;
+  const auto minMag2 = mag2[argMin];
+
+  const auto norm = std::sqrt(maxMag2 + minMag2);
+  const auto maxMag = std::sqrt(maxMag2);
+  const auto commonFactor = norm / maxMag;
+
+  const auto topWeight = weights[argMax] * commonFactor;
+  const auto maxWeight = maxMag / norm;
+  p->e[argMax].w = cn.lookup(maxWeight);
+  assert(!p->e[argMax].w.exactlyZero() &&
+         "Max edge weight should not be zero.");
+
+  Edge<Node> r = {p, cn.lookup(topWeight)};
+  assert(!r.w.exactlyZero() && "Top edge weight should not be zero.");
+
+  // In theory, the more efficient computation here would be
+  //              weight / topWeight
+  // However, the lookup of the top weight can slightly change its value.
+  // Therefore, we use the following computation instead, which accounts for the
+  // potential difference (at the cost of a Complex->ComplexValue conversion).
+  for (std::size_t i = 0; i < NEDGE; ++i) {
+    if (i == argMax) {
+      continue;
+    }
+    const auto weight = weights[i] / r.w;
+    auto& successor = p->e[i];
+    successor.w = cn.lookup(weight);
+    if (successor.w.exactlyZero()) {
+      successor.p = Node::getTerminal();
+    }
+  }
+  return r;
 }
 
 template <class Node>
