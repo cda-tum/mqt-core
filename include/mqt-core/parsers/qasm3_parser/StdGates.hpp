@@ -89,6 +89,7 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
     {"id", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::I}))},
     {"u2", std::make_shared<StandardGate>(StandardGate({0, 1, 2, qc::U2}))},
     {"u3", std::make_shared<StandardGate>(StandardGate({0, 1, 3, qc::U}))},
+    {"u", std::make_shared<StandardGate>(StandardGate({0, 1, 3, qc::U}))},
 
     {"x", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::X}))},
     {"cx", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
