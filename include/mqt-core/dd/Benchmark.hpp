@@ -1,6 +1,5 @@
 #pragma once
 
-#include "dd/Package.hpp"
 #include "dd/Package_fwd.hpp"
 
 #include <chrono>

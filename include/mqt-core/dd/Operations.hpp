@@ -5,7 +5,6 @@
 #include "dd/DDDefinitions.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
-#include "dd/Package_fwd.hpp"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/Control.hpp"
