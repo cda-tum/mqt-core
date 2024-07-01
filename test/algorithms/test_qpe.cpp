@@ -5,7 +5,6 @@
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
-#include "dd/Package_fwd.hpp"
 #include "dd/Simulation.hpp"
 
 #include <bitset>

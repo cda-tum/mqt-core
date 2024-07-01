@@ -2,7 +2,6 @@
 #include "dd/Benchmark.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Package.hpp"
-#include "dd/Package_fwd.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>

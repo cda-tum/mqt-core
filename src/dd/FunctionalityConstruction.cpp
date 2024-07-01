@@ -3,7 +3,6 @@
 #include "QuantumComputation.hpp"
 #include "algorithms/Grover.hpp"
 #include "dd/Package.hpp"
-#include "dd/Package_fwd.hpp"
 
 #include <bitset>
 #include <cmath>
