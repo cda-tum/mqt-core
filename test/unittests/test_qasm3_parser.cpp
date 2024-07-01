@@ -708,6 +708,52 @@ TEST_F(Qasm3ParserTest, ImportMCXGate) {
   EXPECT_EQ(out, expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportMQTBenchCircuit) {
+  const std::string qasm = R"(
+    // Benchmark was created by MQT Bench on 2024-03-17
+    // For more information about MQT Bench, please visit https://www.cda.cit.tum.de/mqtbench/
+    // MQT Bench version: 1.1.0
+    // Qiskit version: 1.0.2
+
+    OPENQASM 2.0;
+    include "qelib1.inc";
+    qreg eval[1];
+    qreg q[1];
+    creg meas[2];
+    u2(0,-pi) eval[0];
+    u3(0.9272952180016122,0,0) q[0];
+    cx eval[0],q[0];
+    u(-0.9272952180016122,0,0) q[0];
+    cx eval[0],q[0];
+    h eval[0];
+    u(0.9272952180016122,0,0) q[0];
+    barrier eval[0],q[0];
+    measure eval[0] -> meas[0];
+    measure q[0] -> meas[1];
+  )";
+  auto qc = qc::QuantumComputation::fromQASM(qasm);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] eval;\n"
+                               "qubit[1] q;\n"
+                               "bit[2] meas;\n"
+                               "h eval[0];\n"
+                               "ry(0.927295218001612) q[0];\n"
+                               "cx eval[0], q[0];\n"
+                               "ry(-0.927295218001612) q[0];\n"
+                               "cx eval[0], q[0];\n"
+                               "h eval[0];\n"
+                               "ry(0.927295218001612) q[0];\n"
+                               "barrier eval[0], q[0];\n"
+                               "meas[0] = measure eval[0];\n"
+                               "meas[1] = measure q[0];\n";
+  EXPECT_EQ(out, expected);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasm2CPrefixInvalidGate) {
   const std::string testfile = "OPENQASM 2.0;\n"
                                "qubit[5] q;\n"
