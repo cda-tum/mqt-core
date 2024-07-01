@@ -1,6 +1,5 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 #include "dd/Benchmark.hpp"
-#include "dd/Package.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>
