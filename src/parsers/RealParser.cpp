@@ -407,7 +407,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     const fp lambda = m.str(3).empty() ? static_cast<fp>(0L)
                                        : static_cast<fp>(std::stold(m.str(3)));
 
-    if (gate == V || gate == Vdg || m.str(1) == "c" || gate == SWAP) {
+    if (gate == V || gate == Vdg || m.str(1) == "c") {
       ncontrols = 1;
     } else if (gate == Peres || gate == Peresdg) {
       ncontrols = 2;
@@ -426,6 +426,23 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
 
     std::vector<Control> controls{};
     std::istringstream iss(qubits);
+
+    const unsigned long numberOfGateLines = std::stoul(m.str(2));
+    // Current parser implementation defines number of expected control lines
+    // (nControl) as nLines (of gate definition) - 1. Controlled swap gate has
+    // at most two target lines so we define the number of control lines as
+    // nLines - 2.
+    if (gate == SWAP) {
+      if (numberOfGateLines < 2) {
+        throw QFRException("[real parser] l: " + std::to_string(line) +
+                           "msg: SWAP gate is expected to operate on at least "
+                           "two qubits but only " +
+                           std::to_string(ncontrols) + " were defined");
+      }
+      ncontrols = numberOfGateLines - 2;
+      if (ncontrols)
+        gate = iSWAP;
+    }
 
     // get controls and target
     for (std::size_t i = 0; i < ncontrols; ++i) {
@@ -452,19 +469,24 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                                                    : Control::Type::Pos);
     }
 
-    if (!(iss >> label)) {
-      throw QFRException("[real parser] l:" + std::to_string(line) +
-                         " msg: Too few variables (no target) for gate " +
-                         m.str(1));
-    }
-
-    // Since variable qubits can either be data or ancillary qubits our search
-    // will have to be conducted in both lookups
-    const std::optional<qc::Qubit> targetLineQubit =
-        getQubitForVariableIdentFromAnyLookup(label, qregs, ancregs);
-    if (!targetLineQubit) {
-      throw QFRException("[real parser] l:" + std::to_string(line) +
-                         " msg: Label " + label + " not found!");
+    const unsigned long numberOfTargetLines = numberOfGateLines - ncontrols;
+    std::vector<qc::Qubit> targetLineQubits(numberOfTargetLines, qc::Qubit());
+    for (std::size_t i = 0; i < numberOfTargetLines; ++i) {
+      if (!(iss >> label)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Too few variables (no target) for gate " +
+                           m.str(1));
+      }
+      // Since variable qubits can either be data or ancillary qubits our search
+      // will have to be conducted in both lookups
+      if (const std::optional<qc::Qubit> targetLineQubit =
+              getQubitForVariableIdentFromAnyLookup(label, qregs, ancregs);
+          targetLineQubit.has_value()) {
+        targetLineQubits[i] = *targetLineQubit;
+      } else {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Label " + label + " not found!");
+      }
     }
 
     switch (gate) {
@@ -479,28 +501,36 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     case V:
     case Vdg:
       emplace_back<StandardOperation>(
-          Controls{controls.cbegin(), controls.cend()}, *targetLineQubit, gate);
+          Controls{controls.cbegin(), controls.cend()},
+          targetLineQubits.front(), gate);
       break;
     case X:
-      mcx(Controls{controls.cbegin(), controls.cend()}, *targetLineQubit);
+      mcx(Controls{controls.cbegin(), controls.cend()}, targetLineQubits.front());
       break;
     case RX:
     case RY:
     case RZ:
     case P:
       emplace_back<StandardOperation>(
-          Controls{controls.cbegin(), controls.cend()}, *targetLineQubit, gate,
+          Controls{controls.cbegin(), controls.cend()},
+          targetLineQubits.front(), gate,
           std::vector{PI / (lambda)});
       break;
     case SWAP:
+    case iSWAP:
+      emplace_back<StandardOperation>(
+        Controls{controls.cbegin(), controls.cend()},
+        Targets{targetLineQubits.cbegin(), targetLineQubits.cend()},
+        gate
+      );
+      break;
     case Peres:
-    case Peresdg:
-    case iSWAP: {
+    case Peresdg: {
       const auto target1 = controls.back().qubit;
       controls.pop_back();
       emplace_back<StandardOperation>(
           Controls{controls.cbegin(), controls.cend()}, target1,
-          *targetLineQubit, gate);
+          targetLineQubits.front(), gate);
       break;
     }
     default:
