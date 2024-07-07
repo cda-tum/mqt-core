@@ -430,8 +430,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     std::vector<Control> controls{};
     std::istringstream iss(qubits);
 
-    // TODO: Check how non-default RevLib .real specification gate types shall be supported
-    // i.e. c a b (which does not define the number of gate lines)
+    // TODO: Check how non-default RevLib .real specification gate types shall
+    // be supported i.e. c a b (which does not define the number of gate lines)
     const std::string& stringifiedNumberOfGateLines = m.str(2);
     const auto numberOfGateLines =
         stringifiedNumberOfGateLines.empty()
