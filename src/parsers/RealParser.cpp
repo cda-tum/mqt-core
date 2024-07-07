@@ -430,7 +430,13 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     std::vector<Control> controls{};
     std::istringstream iss(qubits);
 
-    const unsigned long numberOfGateLines = std::stoul(m.str(2));
+    // TODO: Check how non-default RevLib .real specification gate types shall be supported
+    // i.e. c a b (which does not define the number of gate lines)
+    const std::string& stringifiedNumberOfGateLines = m.str(2);
+    const auto numberOfGateLines =
+        stringifiedNumberOfGateLines.empty()
+            ? 0
+            : std::stoul(stringifiedNumberOfGateLines, nullptr, 0);
     // Current parser implementation defines number of expected control lines
     // (nControl) as nLines (of gate definition) - 1. Controlled swap gate has
     // at most two target lines so we define the number of control lines as
@@ -443,8 +449,6 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                            std::to_string(ncontrols) + " were defined");
       }
       ncontrols = numberOfGateLines - 2;
-      if (ncontrols > 0)
-        gate = iSWAP;
     }
 
     // get controls and target
@@ -461,19 +465,20 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
 
       // Since variable qubits can either be data or ancillary qubits our search
       // will have to be conducted in both lookups
-      const std::optional<qc::Qubit> controlLineQubit =
-          getQubitForVariableIdentFromAnyLookup(label, qregs, ancregs);
-      if (!controlLineQubit) {
+      if (const std::optional<Qubit> controlLineQubit =
+              getQubitForVariableIdentFromAnyLookup(label, qregs, ancregs);
+          controlLineQubit.has_value()) {
+        controls.emplace_back(*controlLineQubit, negativeControl
+                                                     ? Control::Type::Neg
+                                                     : Control::Type::Pos);
+      } else {
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Label " + label + " not found!");
       }
-      controls.emplace_back(*controlLineQubit, negativeControl
-                                                   ? Control::Type::Neg
-                                                   : Control::Type::Pos);
     }
 
-    const unsigned long numberOfTargetLines = numberOfGateLines - ncontrols;
-    std::vector<qc::Qubit> targetLineQubits(numberOfTargetLines, qc::Qubit());
+    const auto numberOfTargetLines = numberOfGateLines - ncontrols;
+    std::vector targetLineQubits(numberOfTargetLines, Qubit());
     for (std::size_t i = 0; i < numberOfTargetLines; ++i) {
       if (!(iss >> label)) {
         throw QFRException("[real parser] l:" + std::to_string(line) +
@@ -482,7 +487,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       }
       // Since variable qubits can either be data or ancillary qubits our search
       // will have to be conducted in both lookups
-      if (const std::optional<qc::Qubit> targetLineQubit =
+      if (const std::optional<Qubit> targetLineQubit =
               getQubitForVariableIdentFromAnyLookup(label, qregs, ancregs);
           targetLineQubit.has_value()) {
         targetLineQubits[i] = *targetLineQubit;
