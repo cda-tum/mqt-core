@@ -18,6 +18,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
@@ -133,7 +134,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
    * to avoid potential errors due to any future refactoring of said type, we
    * use an std::unordered_map instead
    */
-  std::unordered_map<std::string, qc::Qubit> userDefinedInputIdents;
+  std::unordered_map<std::string, Qubit> userDefinedInputIdents;
 
   while (true) {
     if (!static_cast<bool>(is >> cmd)) {
@@ -204,7 +205,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     } else if (cmd == ".CONSTANTS") {
       is >> std::ws;
       for (std::size_t i = 0; i < nclassics; ++i) {
-        char readConstantFlagValue;
+        char readConstantFlagValue = '-';
         if (!is.get(readConstantFlagValue)) {
           throw QFRException("[real parser] l:" + std::to_string(line) +
                              " msg: Failed read in '.constants' line");
@@ -213,7 +214,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         if (const bool isCurrentQubitMarkedAsAncillary =
                 readConstantFlagValue == '0' || readConstantFlagValue == '1';
             isCurrentQubitMarkedAsAncillary) {
-          const Qubit ancillaryQubit = static_cast<Qubit>(i);
+          const auto& ancillaryQubit = static_cast<Qubit>(i);
           setLogicalQubitAncillary(ancillaryQubit);
 
           /*
@@ -237,7 +238,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     } else if (cmd == ".GARBAGE") {
       is >> std::ws;
       for (std::size_t i = 0; i < nclassics; ++i) {
-        char readGarbageStatusFlagValue;
+        char readGarbageStatusFlagValue = '-';
         if (!is.get(readGarbageStatusFlagValue)) {
           throw QFRException("[real parser] l:" + std::to_string(line) +
                              " msg: Failed read in '.garbage' line");
@@ -262,7 +263,8 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       std::getline(is, ioNameIdentsLine);
 
       userDefinedInputIdents =
-          parseIoNames(line, expectedNumInputIos, ioNameIdentsLine);
+          parseIoNames(static_cast<std::size_t>(line), expectedNumInputIos,
+                       ioNameIdentsLine);
 
       if (userDefinedInputIdents.size() != expectedNumInputIos) {
         std::cout << userDefinedInputIdents.size() << "\n";
@@ -278,7 +280,8 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       std::getline(is, ioNameIdentsLine);
 
       const std::unordered_map<std::string, qc::Qubit> userDefinedOutputIdents =
-          parseIoNames(line, expectedNumOutputIos, ioNameIdentsLine);
+          parseIoNames(static_cast<std::size_t>(line), expectedNumOutputIos,
+                       ioNameIdentsLine);
 
       if (userDefinedOutputIdents.size() != expectedNumOutputIos) {
         std::cout << userDefinedOutputIdents.size() << "\n";
@@ -304,7 +307,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
          * with the output qubit being used as the key while the input qubit
          * serves as the map entries value.
          */
-        if (!userDefinedInputIdents.count(outputIoIdent)) {
+        if (userDefinedInputIdents.count(outputIoIdent) == 0) {
           /*
            * In case no matching input definition exists for a given output
            * ident, remove said output qubit from the output permutation only if
@@ -440,7 +443,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                            std::to_string(ncontrols) + " were defined");
       }
       ncontrols = numberOfGateLines - 2;
-      if (ncontrols)
+      if (ncontrols > 0)
         gate = iSWAP;
     }
 
@@ -505,7 +508,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
           targetLineQubits.front(), gate);
       break;
     case X:
-      mcx(Controls{controls.cbegin(), controls.cend()}, targetLineQubits.front());
+      mcx(Controls{controls.cbegin(), controls.cend()},
+          targetLineQubits.front());
       break;
     case RX:
     case RY:
@@ -513,16 +517,13 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     case P:
       emplace_back<StandardOperation>(
           Controls{controls.cbegin(), controls.cend()},
-          targetLineQubits.front(), gate,
-          std::vector{PI / (lambda)});
+          targetLineQubits.front(), gate, std::vector{PI / (lambda)});
       break;
     case SWAP:
     case iSWAP:
       emplace_back<StandardOperation>(
-        Controls{controls.cbegin(), controls.cend()},
-        Targets{targetLineQubits.cbegin(), targetLineQubits.cend()},
-        gate
-      );
+          Controls{controls.cbegin(), controls.cend()},
+          Targets{targetLineQubits.cbegin(), targetLineQubits.cend()}, gate);
       break;
     case Peres:
     case Peresdg: {
