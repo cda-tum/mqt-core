@@ -6,6 +6,7 @@ package_add_test(
   unittests/test_qfr_functionality.cpp
   unittests/test_symbolic.cpp
   unittests/test_qasm3_parser.cpp
+  unittests/test_real_parser.cpp
   test_operation.cpp)
 
 file(GLOB_RECURSE circuit_optimizer_tests "unittests/circuit_optimizer/*.cpp")

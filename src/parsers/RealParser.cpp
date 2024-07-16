@@ -66,7 +66,8 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
     if (searchingForWhitespaceCharacter)
       ioNameEndIdx = ioNameIdentsRawValues.find_first_of(' ', ioNameStartIdx);
     else
-      ioNameEndIdx = ioNameIdentsRawValues.find_first_of('"', ioNameStartIdx);
+      ioNameEndIdx =
+          ioNameIdentsRawValues.find_first_of('"', ioNameStartIdx + 1);
 
     if (ioNameEndIdx == std::string::npos) {
       ioNameEndIdx = ioNameIdentsRawValues.size();
@@ -90,17 +91,22 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
             std::min(ioNameEndIdx, ioNameIdentsRawValues.size() - 1)) == '\r')
       --ioNameLength;
 
-    const std::string ioName =
+    const auto& ioName =
         ioNameIdentsRawValues.substr(ioNameStartIdx, ioNameLength);
 
-    if (!isValidIoName(ioName)) {
+    std::string_view ioNameToValidate = ioName;
+    if (!searchingForWhitespaceCharacter) {
+      ioNameToValidate =
+          ioNameToValidate.substr(1, ioNameToValidate.size() - 2);
+    }
+
+    if (!isValidIoName(ioNameToValidate)) {
       throw qc::QFRException(
           "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
           " invalid io name: " + ioName);
     }
 
-    ioNameStartIdx = ioNameEndIdx +
-                     static_cast<std::size_t>(searchingForWhitespaceCharacter);
+    ioNameStartIdx = ioNameEndIdx + 1;
     /*
      * We offer the user the use of some special literals to denote either
      * constant inputs or garbage outputs instead of finding unique names for
@@ -158,12 +164,6 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                          " msg: Invalid file header");
     }
 
-    /*
-     * TODO: Parsing currently assumes that expected entries are defined only
-     * once and in the expected definition order as defined in the .real header
-     * specification. (https://www.revlib.org/doc/docu/revlib_2_0_1.pdf
-     * Chapter 3.2)
-     */
     if (cmd == ".BEGIN") {
       // header read complete
       return line;
@@ -267,7 +267,6 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                        ioNameIdentsLine);
 
       if (userDefinedInputIdents.size() != expectedNumInputIos) {
-        std::cout << userDefinedInputIdents.size() << "\n";
         throw QFRException(
             "[real parser} l: " + std::to_string(line) + "msg: Expected " +
             std::to_string(expectedNumInputIos) + " inputs to be declared!");
@@ -284,7 +283,6 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                        ioNameIdentsLine);
 
       if (userDefinedOutputIdents.size() != expectedNumOutputIos) {
-        std::cout << userDefinedOutputIdents.size() << "\n";
         throw QFRException(
             "[real parser} l: " + std::to_string(line) + "msg: Expected " +
             std::to_string(expectedNumOutputIos) + " outputs to be declared!");
