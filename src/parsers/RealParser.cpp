@@ -258,6 +258,12 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                 constantValuePerIo == '0' || constantValuePerIo == '1';
             isCurrentQubitMarkedAsAncillary) {
           const auto& ancillaryQubit = static_cast<Qubit>(constantValueIdx);
+          // Since ancillary qubits are assumed to have an initial value of
+          // zero, we need to add an inversion gate to derive the correct
+          // initial value of 1.
+          if (constantValuePerIo == '1')
+            x(ancillaryQubit);
+
           setLogicalQubitAncillary(ancillaryQubit);
 
           /*
