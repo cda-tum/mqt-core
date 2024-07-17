@@ -3,29 +3,39 @@
 #include "QuantumComputation.hpp"
 
 #include "gmock/gmock-matchers.h"
+#include <cstddef>
 #include <functional>
 #include <gtest/gtest.h>
+#include <initializer_list>
+#include <iomanip>
+#include <ios>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 
 using namespace qc;
 using ::testing::NotNull;
 
 class RealParserTest : public testing::Test {
 public:
-  RealParserTest& UsingVersion(double versionNumber) {
-    realFileContent << REAL_HEADER_VERSION << " " << std::fixed
+  RealParserTest& usingVersion(double versionNumber) {
+    realFileContent << realHeaderVersionCommandPrefix << " " << std::fixed
                     << std::setprecision(1) << versionNumber << "\n";
     return *this;
   }
 
-  RealParserTest& UsingNVariables(std::size_t numVariables) {
-    realFileContent << REAL_HEADER_NUMVARS << " "
+  RealParserTest& usingNVariables(std::size_t numVariables) {
+    realFileContent << realHeaderNumVarsCommandPrefix << " "
                     << std::to_string(numVariables) << "\n";
     return *this;
   }
 
-  RealParserTest& UsingVariables(
+  RealParserTest& usingVariables(
       const std::initializer_list<std::string_view>& variableIdents) {
-    realFileContent << REAL_HEADER_VARIABLES;
+    realFileContent << realHeaderVariablesCommandPrefix;
     for (const auto& variableIdent : variableIdents)
       realFileContent << " " << variableIdent;
 
@@ -34,8 +44,8 @@ public:
   }
 
   RealParserTest&
-  UsingInputs(const std::initializer_list<std::string_view>& inputIdents) {
-    realFileContent << REAL_HEADER_INPUTS;
+  usingInputs(const std::initializer_list<std::string_view>& inputIdents) {
+    realFileContent << realHeaderInputCommandPrefix;
     for (const auto& inputIdent : inputIdents)
       realFileContent << " " << inputIdent;
 
@@ -44,8 +54,8 @@ public:
   }
 
   RealParserTest&
-  UsingOutputs(const std::initializer_list<std::string_view>& outputIdents) {
-    realFileContent << REAL_HEADER_OUTPUTS;
+  usingOutputs(const std::initializer_list<std::string_view>& outputIdents) {
+    realFileContent << realHeaderOutputCommandPrefix;
     for (const auto& outputIdent : outputIdents)
       realFileContent << " " << outputIdent;
 
@@ -54,8 +64,8 @@ public:
   }
 
   RealParserTest&
-  WithConstants(const std::initializer_list<char>& constantValuePerVariable) {
-    realFileContent << REAL_HEADER_CONSTANTS << " ";
+  withConstants(const std::initializer_list<char>& constantValuePerVariable) {
+    realFileContent << realHeaderConstantsCommandPrefix << " ";
     for (const auto& constantValue : constantValuePerVariable)
       realFileContent << constantValue;
 
@@ -63,9 +73,9 @@ public:
     return *this;
   }
 
-  RealParserTest& WithGarbageValues(
+  RealParserTest& withGarbageValues(
       const std::initializer_list<char>& isGarbageValuePerVariable) {
-    realFileContent << REAL_HEADER_GARBAGE << " ";
+    realFileContent << realHeaderGarbageCommandPrefix << " ";
     for (const auto& garbageValue : isGarbageValuePerVariable)
       realFileContent << garbageValue;
 
@@ -73,44 +83,44 @@ public:
     return *this;
   }
 
-  RealParserTest& WithEmptyGateList() {
-    realFileContent << REAL_HEADER_GATE_LIST_PREFIX << "\n"
-                    << REAL_HEADER_GATE_LIST_POSTFIX;
+  RealParserTest& withEmptyGateList() {
+    realFileContent << realHeaderGateListPrefix << "\n"
+                    << reakHeaderGateListPostfix;
     return *this;
   }
 
-  RealParserTest& WithGates(
+  RealParserTest& withGates(
       const std::initializer_list<std::string_view>& stringifiedGateList) {
     if (stringifiedGateList.size() == 0)
-      return WithEmptyGateList();
+      return withEmptyGateList();
 
-    realFileContent << REAL_HEADER_GATE_LIST_PREFIX << "\n";
+    realFileContent << realHeaderGateListPrefix << "\n";
     for (const auto& stringifiedGate : stringifiedGateList)
       realFileContent << stringifiedGate << "\n";
 
-    realFileContent << REAL_HEADER_GATE_LIST_POSTFIX;
+    realFileContent << reakHeaderGateListPostfix;
     return *this;
   }
 
 protected:
-  const std::string REAL_HEADER_VERSION = ".version";
-  const std::string REAL_HEADER_NUMVARS = ".numvars";
-  const std::string REAL_HEADER_VARIABLES = ".variables";
-  const std::string REAL_HEADER_INPUTS = ".inputs";
-  const std::string REAL_HEADER_OUTPUTS = ".outputs";
-  const std::string REAL_HEADER_CONSTANTS = ".constants";
-  const std::string REAL_HEADER_GARBAGE = ".garbage";
-  const std::string REAL_HEADER_GATE_LIST_PREFIX = ".begin";
-  const std::string REAL_HEADER_GATE_LIST_POSTFIX = ".end";
+  const std::string realHeaderVersionCommandPrefix = ".version";
+  const std::string realHeaderNumVarsCommandPrefix = ".numvars";
+  const std::string realHeaderVariablesCommandPrefix = ".variables";
+  const std::string realHeaderInputCommandPrefix = ".inputs";
+  const std::string realHeaderOutputCommandPrefix = ".outputs";
+  const std::string realHeaderConstantsCommandPrefix = ".constants";
+  const std::string realHeaderGarbageCommandPrefix = ".garbage";
+  const std::string realHeaderGateListPrefix = ".begin";
+  const std::string reakHeaderGateListPostfix = ".end";
 
   static constexpr double DEFAULT_REAL_VERSION = 2.0;
 
-  const char CONSTANT_VALUE_ZERO = '0';
-  const char CONSTANT_VALUE_ONE = '1';
-  const char CONSTANT_VALUE_NONE = '-';
+  const char constantValueZero = '0';
+  const char constantValueOne = '1';
+  const char constantValueNone = '-';
 
-  const char IS_GARBAGE_STATE = '1';
-  const char IS_NOT_GARBAGE_STATE = '-';
+  const char isGarbageState = '1';
+  const char isNotGarbageState = '-';
 
   enum class GateType { Toffoli };
 
@@ -122,7 +132,7 @@ protected:
     ASSERT_THAT(quantumComputationInstance, NotNull());
   }
 
-  static Permutation GetIdentityPermutation(std::size_t nQubits) {
+  static Permutation getIdentityPermutation(std::size_t nQubits) {
     auto identityPermutation = Permutation();
     for (std::size_t i = 0; i < nQubits; ++i) {
       const auto qubit = static_cast<Qubit>(i);
@@ -132,13 +142,10 @@ protected:
   }
 
   static std::string stringifyGateType(const GateType gateType) {
-    switch (gateType) {
-    case GateType::Toffoli:
+    if (gateType == GateType::Toffoli)
       return "t";
 
-    default:
-      throw new std::invalid_argument("Failed to stringify gate type");
-    }
+    throw std::invalid_argument("Failed to stringify gate type");
   }
 
   static std::string
@@ -153,12 +160,11 @@ protected:
                 const std::optional<std::size_t>& optionalNumberOfGateLines,
                 const std::initializer_list<std::string_view>& controlLines,
                 const std::initializer_list<std::string_view>& targetLines) {
-    EXPECT_TRUE(controlLines.size() >= static_cast<std::size_t>(0) &&
-                targetLines.size() > static_cast<std::size_t>(0))
+    EXPECT_TRUE(targetLines.size() > static_cast<std::size_t>(0))
         << "Gate must have at least one line defined";
 
     std::stringstream stringifiedGateBuffer;
-    if (!controlLines.size() && !optionalNumberOfGateLines.has_value())
+    if (controlLines.size() == 0 && !optionalNumberOfGateLines.has_value())
       stringifiedGateBuffer << stringifyGateType(gateType);
     else
       stringifiedGateBuffer
@@ -178,10 +184,10 @@ protected:
 
 // ERROR TESTS
 TEST_F(RealParserTest, MoreVariablesThanNumVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2", "v3"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2", "v3"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -189,11 +195,11 @@ TEST_F(RealParserTest, MoreVariablesThanNumVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, MoreInputsThanVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingInputs({"i1", "i2", "i3"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1", "i2", "i3"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -201,11 +207,11 @@ TEST_F(RealParserTest, MoreInputsThanVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, MoreOutputsThanVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingOutputs({"o1", "o2", "o3"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"o1", "o2", "o3"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -213,12 +219,11 @@ TEST_F(RealParserTest, MoreOutputsThanVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, MoreConstantsThanVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithConstants(
-          {CONSTANT_VALUE_ZERO, CONSTANT_VALUE_ZERO, CONSTANT_VALUE_ZERO})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withConstants({constantValueZero, constantValueZero, constantValueZero})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -226,12 +231,11 @@ TEST_F(RealParserTest, MoreConstantsThanVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, MoreGarbageEntriesThanVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithGarbageValues(
-          {IS_GARBAGE_STATE, IS_NOT_GARBAGE_STATE, IS_GARBAGE_STATE})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGarbageValues({isGarbageState, isNotGarbageState, isGarbageState})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -239,10 +243,10 @@ TEST_F(RealParserTest, MoreGarbageEntriesThanVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, LessVariablesThanNumVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -250,11 +254,11 @@ TEST_F(RealParserTest, LessVariablesThanNumVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, LessInputsThanNumVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingInputs({"i1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -262,11 +266,11 @@ TEST_F(RealParserTest, LessInputsThanNumVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, LessOutputsThanNumVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingOutputs({"o1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"o1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -274,11 +278,11 @@ TEST_F(RealParserTest, LessOutputsThanNumVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, LessConstantsThanNumVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithConstants({CONSTANT_VALUE_NONE})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withConstants({constantValueNone})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -286,11 +290,11 @@ TEST_F(RealParserTest, LessConstantsThanNumVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, LessGarbageEntriesThanNumVariablesDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithGarbageValues({IS_NOT_GARBAGE_STATE})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGarbageValues({isNotGarbageState})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -298,10 +302,10 @@ TEST_F(RealParserTest, LessGarbageEntriesThanNumVariablesDeclared) {
 }
 
 TEST_F(RealParserTest, InvalidVariableIdentDeclaration) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"variable-1", "v2"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"variable-1", "v2"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -309,11 +313,11 @@ TEST_F(RealParserTest, InvalidVariableIdentDeclaration) {
 }
 
 TEST_F(RealParserTest, InvalidInputIdentDeclaration) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingInputs({"test-input1", "i2"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"test-input1", "i2"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -321,11 +325,11 @@ TEST_F(RealParserTest, InvalidInputIdentDeclaration) {
 }
 
 TEST_F(RealParserTest, InvalidInputIdentDeclarationInQuote) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingInputs({"\"test-input1\"", "i2"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"\"test-input1\"", "i2"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -333,11 +337,11 @@ TEST_F(RealParserTest, InvalidInputIdentDeclarationInQuote) {
 }
 
 TEST_F(RealParserTest, InvalidOutputIdentDeclaration) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingOutputs({"i1", "test-output1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"i1", "test-output1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -345,11 +349,11 @@ TEST_F(RealParserTest, InvalidOutputIdentDeclaration) {
 }
 
 TEST_F(RealParserTest, InvalidOutputIdentDeclarationInQuote) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingInputs({"\"test-output1\"", "o2"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"\"test-output1\"", "o2"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -357,11 +361,11 @@ TEST_F(RealParserTest, InvalidOutputIdentDeclarationInQuote) {
 }
 
 TEST_F(RealParserTest, InputIdentMatchingVariableIdentIsNotAllowed) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingInputs({"i1", "v2"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1", "v2"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -369,11 +373,11 @@ TEST_F(RealParserTest, InputIdentMatchingVariableIdentIsNotAllowed) {
 }
 
 TEST_F(RealParserTest, OutputIdentMatchingVariableIdentIsNotAllowed) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingOutputs({"v1", "o2"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"v1", "o2"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -381,10 +385,10 @@ TEST_F(RealParserTest, OutputIdentMatchingVariableIdentIsNotAllowed) {
 }
 
 TEST_F(RealParserTest, DuplicateVariableIdentDeclaration) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -392,11 +396,11 @@ TEST_F(RealParserTest, DuplicateVariableIdentDeclaration) {
 }
 
 TEST_F(RealParserTest, DuplicateInputIdentDeclaration) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingInputs({"i1", "i1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1", "i1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -404,11 +408,11 @@ TEST_F(RealParserTest, DuplicateInputIdentDeclaration) {
 }
 
 TEST_F(RealParserTest, DuplicateOutputIdentDeclaration) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingOutputs({"o1", "o1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"o1", "o1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -417,11 +421,11 @@ TEST_F(RealParserTest, DuplicateOutputIdentDeclaration) {
 
 TEST_F(RealParserTest,
        MissingClosingQuoteInIoIdentifierDoesNotLeadToInfinityLoop) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingOutputs({"\"o1", "o1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"\"o1", "o1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -429,11 +433,11 @@ TEST_F(RealParserTest,
 }
 
 TEST_F(RealParserTest, MissingOpeningQuoteInIoIdentifierIsDetectedAsFaulty) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingOutputs({"o1\"", "o1"})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"o1\"", "o1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -441,11 +445,11 @@ TEST_F(RealParserTest, MissingOpeningQuoteInIoIdentifierIsDetectedAsFaulty) {
 }
 
 TEST_F(RealParserTest, InvalidConstantStateValue) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithConstants({CONSTANT_VALUE_ONE, 't'})
-      .WithEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withConstants({constantValueOne, 't'})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -453,10 +457,10 @@ TEST_F(RealParserTest, InvalidConstantStateValue) {
 }
 
 TEST_F(RealParserTest, InvalidGarbageStateValue) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithGarbageValues({'t', IS_NOT_GARBAGE_STATE});
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGarbageValues({'t', isNotGarbageState});
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -464,10 +468,10 @@ TEST_F(RealParserTest, InvalidGarbageStateValue) {
 }
 
 TEST_F(RealParserTest, GateWithMoreLinesThanDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(3)
-      .UsingVariables({"v1", "v2", "v3"})
-      .WithGates({stringifyGate(GateType::Toffoli, std::optional(2),
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(3)
+      .usingVariables({"v1", "v2", "v3"})
+      .withGates({stringifyGate(GateType::Toffoli, std::optional(2),
                                 {"v1", "v2"}, {"v3"})});
 
   EXPECT_THROW(
@@ -476,10 +480,10 @@ TEST_F(RealParserTest, GateWithMoreLinesThanDeclared) {
 }
 
 TEST_F(RealParserTest, GateWithLessLinesThanDeclared) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(3)
-      .UsingVariables({"v1", "v2", "v3"})
-      .WithGates(
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(3)
+      .usingVariables({"v1", "v2", "v3"})
+      .withGates(
           {stringifyGate(GateType::Toffoli, std::optional(3), {"v1"}, {"v3"})});
 
   EXPECT_THROW(
@@ -488,10 +492,10 @@ TEST_F(RealParserTest, GateWithLessLinesThanDeclared) {
 }
 
 TEST_F(RealParserTest, GateWithControlLineTargetingUnknownVariable) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithGates({stringifyGate(GateType::Toffoli, {"v3"}, {"v2"})});
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGates({stringifyGate(GateType::Toffoli, {"v3"}, {"v2"})});
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -499,10 +503,10 @@ TEST_F(RealParserTest, GateWithControlLineTargetingUnknownVariable) {
 }
 
 TEST_F(RealParserTest, GateWithTargetLineTargetingUnknownVariable) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v3"})});
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v3"})});
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -511,11 +515,11 @@ TEST_F(RealParserTest, GateWithTargetLineTargetingUnknownVariable) {
 
 // OK TESTS
 TEST_F(RealParserTest, ConstantValueZero) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithConstants({CONSTANT_VALUE_ZERO, CONSTANT_VALUE_NONE})
-      .WithGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withConstants({constantValueZero, constantValueNone})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
                   stringifyGate(GateType::Toffoli, {"v2"}, {"v1"})});
 
   EXPECT_NO_THROW(
@@ -530,16 +534,16 @@ TEST_F(RealParserTest, ConstantValueZero) {
               testing::ElementsAre(true, false));
 
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(2)),
+      std::hash<Permutation>{}(getIdentityPermutation(2)),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
 TEST_F(RealParserTest, ConstantValueOne) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithConstants({CONSTANT_VALUE_NONE, CONSTANT_VALUE_ONE})
-      .WithGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withConstants({constantValueNone, constantValueOne})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
                   stringifyGate(GateType::Toffoli, {"v2"}, {"v1"})});
 
   EXPECT_NO_THROW(
@@ -554,16 +558,16 @@ TEST_F(RealParserTest, ConstantValueOne) {
               testing::ElementsAre(false, true));
 
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(2)),
+      std::hash<Permutation>{}(getIdentityPermutation(2)),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
 TEST_F(RealParserTest, GarbageValues) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .WithGarbageValues({IS_NOT_GARBAGE_STATE, IS_GARBAGE_STATE})
-      .WithGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGarbageValues({isNotGarbageState, isGarbageState})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
                   stringifyGate(GateType::Toffoli, {"v2"}, {"v1"})});
 
   EXPECT_NO_THROW(
@@ -587,11 +591,11 @@ TEST_F(RealParserTest, GarbageValues) {
 }
 
 TEST_F(RealParserTest, InputIdentDeclarationInQuotes) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingInputs({"i1", "\"test_input_1\""})
-      .WithGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1", "\"test_input_1\""})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
                   stringifyGate(GateType::Toffoli, {"v2"}, {"v1"})});
 
   EXPECT_NO_THROW(
@@ -606,16 +610,16 @@ TEST_F(RealParserTest, InputIdentDeclarationInQuotes) {
               testing::ElementsAre(false, false));
 
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(2)),
+      std::hash<Permutation>{}(getIdentityPermutation(2)),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
 TEST_F(RealParserTest, OutputIdentDeclarationInQuotes) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(2)
-      .UsingVariables({"v1", "v2"})
-      .UsingOutputs({"\"other_output_2\"", "\"o2\""})
-      .WithGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"\"other_output_2\"", "\"o2\""})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
                   stringifyGate(GateType::Toffoli, {"v2"}, {"v1"})});
 
   EXPECT_NO_THROW(
@@ -630,18 +634,18 @@ TEST_F(RealParserTest, OutputIdentDeclarationInQuotes) {
               testing::ElementsAre(false, false));
 
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(2)),
+      std::hash<Permutation>{}(getIdentityPermutation(2)),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
 TEST_F(RealParserTest,
        InputIdentInQuotesAndMatchingOutputNotInQuotesNotConsideredEqual) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(4)
-      .UsingVariables({"v1", "v2", "v3", "v4"})
-      .UsingInputs({"i1", "\"o2\"", "i3", "\"o4\""})
-      .UsingOutputs({"o1", "o2", "o3", "o4"})
-      .WithGates({
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(4)
+      .usingVariables({"v1", "v2", "v3", "v4"})
+      .usingInputs({"i1", "\"o2\"", "i3", "\"o4\""})
+      .usingOutputs({"o1", "o2", "o3", "o4"})
+      .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
           stringifyGate(GateType::Toffoli, {"v3"}, {"v4"}),
@@ -660,18 +664,18 @@ TEST_F(RealParserTest,
               testing::ElementsAre(false, false, false, false));
 
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(4)),
+      std::hash<Permutation>{}(getIdentityPermutation(4)),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
 TEST_F(RealParserTest,
        InputIdentNotInQuotesAndMatchingOutputInQuotesNotConsideredEqual) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(4)
-      .UsingVariables({"v1", "v2", "v3", "v4"})
-      .UsingInputs({"i1", "i2", "i3", "i4"})
-      .UsingOutputs({"o1", "\"i1\"", "o2", "\"i4\""})
-      .WithGates({
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(4)
+      .usingVariables({"v1", "v2", "v3", "v4"})
+      .usingInputs({"i1", "i2", "i3", "i4"})
+      .usingOutputs({"o1", "\"i1\"", "o2", "\"i4\""})
+      .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
           stringifyGate(GateType::Toffoli, {"v3"}, {"v4"}),
@@ -690,21 +694,21 @@ TEST_F(RealParserTest,
               testing::ElementsAre(false, false, false, false));
 
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(4)),
+      std::hash<Permutation>{}(getIdentityPermutation(4)),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
 TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(4)
-      .UsingVariables({"v1", "v2", "v3", "v4"})
-      .UsingInputs({"i1", "i2", "i3", "i4"})
-      .WithConstants({CONSTANT_VALUE_ONE, CONSTANT_VALUE_NONE,
-                      CONSTANT_VALUE_NONE, CONSTANT_VALUE_ZERO})
-      .UsingOutputs({"o1", "i1", "i4", "o2"})
-      .WithGarbageValues({IS_GARBAGE_STATE, IS_NOT_GARBAGE_STATE,
-                          IS_NOT_GARBAGE_STATE, IS_GARBAGE_STATE})
-      .WithGates({
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(4)
+      .usingVariables({"v1", "v2", "v3", "v4"})
+      .usingInputs({"i1", "i2", "i3", "i4"})
+      .withConstants({constantValueOne, constantValueNone, constantValueNone,
+                      constantValueZero})
+      .usingOutputs({"o1", "i1", "i4", "o2"})
+      .withGarbageValues({isGarbageState, isNotGarbageState, isNotGarbageState,
+                          isGarbageState})
+      .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
           stringifyGate(GateType::Toffoli, {"v3"}, {"v4"}),
@@ -735,16 +739,16 @@ TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
 }
 
 TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(4)
-      .UsingVariables({"v1", "v2", "v3", "v4"})
-      .UsingInputs({"i1", "\"i2\"", "\"i3\"", "i4"})
-      .WithConstants({CONSTANT_VALUE_NONE, CONSTANT_VALUE_ONE,
-                      CONSTANT_VALUE_ZERO, CONSTANT_VALUE_NONE})
-      .UsingOutputs({"i4", "\"i3\"", "\"i2\"", "o1"})
-      .WithGarbageValues({IS_GARBAGE_STATE, IS_NOT_GARBAGE_STATE,
-                          IS_NOT_GARBAGE_STATE, IS_GARBAGE_STATE})
-      .WithGates({
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(4)
+      .usingVariables({"v1", "v2", "v3", "v4"})
+      .usingInputs({"i1", "\"i2\"", "\"i3\"", "i4"})
+      .withConstants({constantValueNone, constantValueOne, constantValueZero,
+                      constantValueNone})
+      .usingOutputs({"i4", "\"i3\"", "\"i2\"", "o1"})
+      .withGarbageValues({isGarbageState, isNotGarbageState, isNotGarbageState,
+                          isGarbageState})
+      .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
           stringifyGate(GateType::Toffoli, {"v3"}, {"v4"}),
@@ -779,12 +783,12 @@ TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
 
 TEST_F(RealParserTest,
        OutputPermutationCorrectlySetBetweenMatchingInputAndOutputEntries) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(4)
-      .UsingVariables({"v1", "v2", "v3", "v4"})
-      .UsingInputs({"i1", "i2", "i3", "i4"})
-      .UsingOutputs({"\"i4\"", "i3", "\"i2\"", "i1"})
-      .WithGates({
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(4)
+      .usingVariables({"v1", "v2", "v3", "v4"})
+      .usingInputs({"i1", "i2", "i3", "i4"})
+      .usingOutputs({"\"i4\"", "i3", "\"i2\"", "i1"})
+      .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
           stringifyGate(GateType::Toffoli, {"v3"}, {"v4"}),
@@ -815,14 +819,14 @@ TEST_F(RealParserTest,
 }
 
 TEST_F(RealParserTest, OutputPermutationForGarbageQubitsNotCreated) {
-  UsingVersion(DEFAULT_REAL_VERSION)
-      .UsingNVariables(4)
-      .UsingVariables({"v1", "v2", "v3", "v4"})
-      .UsingInputs({"i1", "i2", "i3", "i4"})
-      .UsingOutputs({"i4", "o1", "o2", "i1"})
-      .WithGarbageValues({IS_GARBAGE_STATE, IS_NOT_GARBAGE_STATE,
-                          IS_NOT_GARBAGE_STATE, IS_GARBAGE_STATE})
-      .WithGates({
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(4)
+      .usingVariables({"v1", "v2", "v3", "v4"})
+      .usingInputs({"i1", "i2", "i3", "i4"})
+      .usingOutputs({"i4", "o1", "o2", "i1"})
+      .withGarbageValues({isGarbageState, isNotGarbageState, isNotGarbageState,
+                          isGarbageState})
+      .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
           stringifyGate(GateType::Toffoli, {"v3"}, {"v4"}),
