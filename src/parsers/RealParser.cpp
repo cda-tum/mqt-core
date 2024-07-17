@@ -18,6 +18,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -210,12 +211,12 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         }
 
         if (!isValidIoName(variable)) {
-          throw qc::QFRException("[real parser] l: " + std::to_string(line) +
+          throw QFRException("[real parser] l: " + std::to_string(line) +
                                  " msg: invalid variable name: " + variable);
         }
 
         if (userDeclaredVariableIdents.count(variable) > 0) {
-          throw qc::QFRException("[real parser] l: " + std::to_string(line) +
+          throw QFRException("[real parser] l: " + std::to_string(line) +
                                  " msg: duplicate variable name: " + variable);
         }
         userDeclaredVariableIdents.emplace(variable);
@@ -245,11 +246,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       if (constantsValuePerIoDefinition.size() != nclassics) {
-        throw QFRException("[real parser] l: " + std::to_string(line) +
-                           " msg: Expected " + std::to_string(nclassics) +
-                           " constant values but " +
+        throw QFRException(
+            "[real parser] l: " + std::to_string(line) + " msg: Expected " +
+            std::to_string(nclassics) + " constant values but " +
             std::to_string(constantsValuePerIoDefinition.size()) +
-                           " were declared!");
+            " were declared!");
       }
 
       std::size_t constantValueIdx = 0;
@@ -293,11 +294,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       if (garbageStatePerIoDefinition.size() != nclassics) {
-        throw QFRException(
-            "[real parser] l: " + std::to_string(line) + " msg: Expected " +
-            std::to_string(nclassics) + " garbage state values but " +
-            std::to_string(garbageStatePerIoDefinition.size()) +
-            " were declared!");
+        throw QFRException("[real parser] l: " + std::to_string(line) +
+                           " msg: Expected " + std::to_string(nclassics) +
+                           " garbage state values but " +
+                           std::to_string(garbageStatePerIoDefinition.size()) +
+                           " were declared!");
       }
 
       std::size_t garbageStateIdx = 0;
@@ -321,7 +322,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Failed read in '.inputs' line");
       }
-      
+
       userDefinedInputIdents =
           parseIoNames(static_cast<std::size_t>(line), expectedNumInputIos,
                        ioNameIdentsLine, userDeclaredVariableIdents);

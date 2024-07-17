@@ -1,7 +1,11 @@
+#include "Definitions.hpp"
+#include "Permutation.hpp"
 #include "QuantumComputation.hpp"
 
 #include "gmock/gmock-matchers.h"
 #include <gtest/gtest.h>
+
+#include <functional>
 
 using namespace qc;
 using ::testing::NotNull;
@@ -123,7 +127,7 @@ protected:
     auto identityPermutation = Permutation();
     for (std::size_t i = 0; i < nQubits; ++i) {
       const auto qubit = static_cast<Qubit>(i);
-      identityPermutation.insert({i, i});
+      identityPermutation.insert({qubit, qubit});
     }
     return identityPermutation;
   }
@@ -160,8 +164,8 @@ protected:
     else
       stringifiedGateBuffer
           << stringifyGateType(gateType)
-          << std::to_string(
-                 optionalNumberOfGateLines.value_or(controlLines.size() + targetLines.size()));
+          << std::to_string(optionalNumberOfGateLines.value_or(
+                 controlLines.size() + targetLines.size()));
 
     for (const auto& controlLine : controlLines)
       stringifiedGateBuffer << " " << controlLine;
@@ -172,8 +176,6 @@ protected:
     return stringifiedGateBuffer.str();
   }
 };
-
-// TODO: Gate list prefix and postfix missing
 
 // ERROR TESTS
 TEST_F(RealParserTest, MoreVariablesThanNumVariablesDeclared) {
@@ -414,7 +416,8 @@ TEST_F(RealParserTest, DuplicateOutputIdentDeclaration) {
       QFRException);
 }
 
-TEST_F(RealParserTest, MissingClosingQuoteInIoIdentifierDoesNotLeadToInfinityLoop) {
+TEST_F(RealParserTest,
+       MissingClosingQuoteInIoIdentifierDoesNotLeadToInfinityLoop) {
   UsingVersion(DEFAULT_REAL_VERSION)
       .UsingNVariables(2)
       .UsingVariables({"v1", "v2"})
@@ -732,14 +735,6 @@ TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
-/*
- * TODO: What if no matching output for a given input exists and the original inputs qubit was transformed to another position.
- * Should we remove the output permutation entry of the output qubit (only if the original input qubit was moved).
- *
- * TODO: Garbage state will be reset and recreated based on idle state of qubit in QuantumComputation::initializeIOMapping L227-248
- *
- * TODO: Extend checks for whether more than N qubit garbage or constant state have been declared
- */
 TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
   UsingVersion(DEFAULT_REAL_VERSION)
       .UsingNVariables(4)
