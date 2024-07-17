@@ -147,17 +147,21 @@ protected:
 
   static std::string
   stringifyGate(const GateType gateType,
-                const std::optional<std::size_t>& optionalNumberOfControlLines,
+                const std::optional<std::size_t>& optionalNumberOfGateLines,
                 const std::initializer_list<std::string_view>& controlLines,
                 const std::initializer_list<std::string_view>& targetLines) {
+    EXPECT_TRUE(controlLines.size() >= static_cast<std::size_t>(0) &&
+                targetLines.size() > static_cast<std::size_t>(0))
+        << "Gate must have at least one line defined";
+
     std::stringstream stringifiedGateBuffer;
-    if (!controlLines.size() && !optionalNumberOfControlLines.has_value())
+    if (!controlLines.size() && !optionalNumberOfGateLines.has_value())
       stringifiedGateBuffer << stringifyGateType(gateType);
     else
       stringifiedGateBuffer
           << stringifyGateType(gateType)
           << std::to_string(
-                 optionalNumberOfControlLines.value_or(controlLines.size()));
+                 optionalNumberOfGateLines.value_or(controlLines.size() + targetLines.size()));
 
     for (const auto& controlLine : controlLines)
       stringifiedGateBuffer << " " << controlLine;
@@ -292,7 +296,17 @@ TEST_F(RealParserTest, LessGarbageEntriesThanNumVariablesDeclared) {
       QFRException);
 }
 
-TEST_F(RealParserTest, InvalidVariableIdentDeclaration) { GTEST_SKIP(); }
+TEST_F(RealParserTest, InvalidVariableIdentDeclaration) {
+  UsingVersion(DEFAULT_REAL_VERSION)
+      .UsingNVariables(2)
+      .UsingVariables({"variable-1", "v2"})
+      .WithEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
 TEST_F(RealParserTest, InvalidInputIdentDeclaration) {
   UsingVersion(DEFAULT_REAL_VERSION)
       .UsingNVariables(2)
@@ -393,6 +407,30 @@ TEST_F(RealParserTest, DuplicateOutputIdentDeclaration) {
       .UsingNVariables(2)
       .UsingVariables({"v1", "v2"})
       .UsingOutputs({"o1", "o1"})
+      .WithEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, MissingClosingQuoteInIoIdentifierDoesNotLeadToInfinityLoop) {
+  UsingVersion(DEFAULT_REAL_VERSION)
+      .UsingNVariables(2)
+      .UsingVariables({"v1", "v2"})
+      .UsingOutputs({"\"o1", "o1"})
+      .WithEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, MissingOpeningQuoteInIoIdentifierIsDetectedAsFaulty) {
+  UsingVersion(DEFAULT_REAL_VERSION)
+      .UsingNVariables(2)
+      .UsingVariables({"v1", "v2"})
+      .UsingOutputs({"o1\"", "o1"})
       .WithEmptyGateList();
 
   EXPECT_THROW(
@@ -537,8 +575,12 @@ TEST_F(RealParserTest, GarbageValues) {
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(false, false));
 
+  Permutation expectedOutputPermutation;
+  expectedOutputPermutation.emplace(static_cast<Qubit>(0),
+                                    static_cast<Qubit>(0));
+
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(2)),
+      std::hash<Permutation>{}(expectedOutputPermutation),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
@@ -607,16 +649,16 @@ TEST_F(RealParserTest,
   EXPECT_NO_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real));
 
-  ASSERT_EQ(2, quantumComputationInstance->getNqubits());
+  ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(false, false));
+              testing::ElementsAre(false, false, false, false));
   ASSERT_THAT(quantumComputationInstance->ancillary,
-              testing::ElementsAre(false, false));
+              testing::ElementsAre(false, false, false, false));
 
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(2)),
+      std::hash<Permutation>{}(GetIdentityPermutation(4)),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
@@ -637,18 +679,19 @@ TEST_F(RealParserTest,
   EXPECT_NO_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real));
 
-  ASSERT_EQ(2, quantumComputationInstance->getNqubits());
+  ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(false, false));
+              testing::ElementsAre(false, false, false, false));
   ASSERT_THAT(quantumComputationInstance->ancillary,
-              testing::ElementsAre(false, false));
+              testing::ElementsAre(false, false, false, false));
 
   ASSERT_EQ(
-      std::hash<Permutation>{}(GetIdentityPermutation(2)),
+      std::hash<Permutation>{}(GetIdentityPermutation(4)),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
+
 TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
   UsingVersion(DEFAULT_REAL_VERSION)
       .UsingNVariables(4)
@@ -670,7 +713,7 @@ TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
       quantumComputationInstance->import(realFileContent, Format::Real));
 
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
-  ASSERT_EQ(0, quantumComputationInstance->getNancillae());
+  ASSERT_EQ(2, quantumComputationInstance->getNancillae());
   ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
               testing::ElementsAre(true, false, false, true));
@@ -694,6 +737,8 @@ TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
  * Should we remove the output permutation entry of the output qubit (only if the original input qubit was moved).
  *
  * TODO: Garbage state will be reset and recreated based on idle state of qubit in QuantumComputation::initializeIOMapping L227-248
+ *
+ * TODO: Extend checks for whether more than N qubit garbage or constant state have been declared
  */
 TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
   UsingVersion(DEFAULT_REAL_VERSION)
@@ -757,17 +802,17 @@ TEST_F(RealParserTest,
 
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
-  ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
+  ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
               testing::ElementsAre(false, false, false, false));
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(false, false, false, false));
 
   Permutation expectedOutputPermutation;
-  expectedOutputPermutation.emplace(static_cast<Qubit>(4),
-                                    static_cast<Qubit>(1));
-
   expectedOutputPermutation.emplace(static_cast<Qubit>(3),
+                                    static_cast<Qubit>(0));
+
+  expectedOutputPermutation.emplace(static_cast<Qubit>(1),
                                     static_cast<Qubit>(2));
 
   ASSERT_EQ(
@@ -802,11 +847,11 @@ TEST_F(RealParserTest, OutputPermutationForGarbageQubitsNotCreated) {
               testing::ElementsAre(false, false, false, false));
 
   Permutation expectedOutputPermutation;
+  expectedOutputPermutation.emplace(static_cast<Qubit>(1),
+                                    static_cast<Qubit>(1));
+
   expectedOutputPermutation.emplace(static_cast<Qubit>(2),
                                     static_cast<Qubit>(2));
-
-  expectedOutputPermutation.emplace(static_cast<Qubit>(3),
-                                    static_cast<Qubit>(3));
 
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedOutputPermutation),
