@@ -212,12 +212,12 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
 
         if (!isValidIoName(variable)) {
           throw QFRException("[real parser] l: " + std::to_string(line) +
-                                 " msg: invalid variable name: " + variable);
+                             " msg: invalid variable name: " + variable);
         }
 
         if (userDeclaredVariableIdents.count(variable) > 0) {
           throw QFRException("[real parser] l: " + std::to_string(line) +
-                                 " msg: duplicate variable name: " + variable);
+                             " msg: duplicate variable name: " + variable);
         }
         userDeclaredVariableIdents.emplace(variable);
 

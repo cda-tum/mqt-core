@@ -3,9 +3,8 @@
 #include "QuantumComputation.hpp"
 
 #include "gmock/gmock-matchers.h"
-#include <gtest/gtest.h>
-
 #include <functional>
+#include <gtest/gtest.h>
 
 using namespace qc;
 using ::testing::NotNull;
