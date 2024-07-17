@@ -53,15 +53,17 @@ bool isValidIoName(const std::string_view& ioName) {
 std::unordered_map<std::string, qc::Qubit>
 parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
              const std::size_t expectedNumberOfIos,
-             const std::string& ioNameIdentsRawValues) {
+             const std::string& ioNameIdentsRawValues,
+             const std::unordered_set<std::string>& variableIdentLookup) {
   std::unordered_map<std::string, qc::Qubit> foundIoNames;
   std::size_t ioNameStartIdx = 0;
   std::size_t ioNameEndIdx = 0;
   std::size_t ioIdx = 0;
 
+  bool searchingForWhitespaceCharacter = false;
   while (ioNameStartIdx < ioNameIdentsRawValues.size() &&
          foundIoNames.size() <= expectedNumberOfIos) {
-    const bool searchingForWhitespaceCharacter =
+    searchingForWhitespaceCharacter =
         ioNameIdentsRawValues.at(ioNameStartIdx) != '"';
     if (searchingForWhitespaceCharacter)
       ioNameEndIdx = ioNameIdentsRawValues.find_first_of(' ', ioNameStartIdx);
@@ -103,7 +105,14 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
     if (!isValidIoName(ioNameToValidate)) {
       throw qc::QFRException(
           "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
-          " invalid io name: " + ioName);
+          " msg: invalid io name: " + ioName);
+    }
+
+    if (variableIdentLookup.count(ioName) > 0) {
+      throw qc::QFRException(
+          "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+          " msg: IO ident matched already declared variable with name " +
+          ioName);
     }
 
     ioNameStartIdx = ioNameEndIdx + 1;
@@ -118,9 +127,22 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
           !ioNameInsertionIntoLookupResult.second) {
         throw qc::QFRException("[real parser] l: " +
                                std::to_string(lineInRealFileDefiningIoNames) +
-                               "duplicate io name: " + ioName);
+                               " msg: duplicate io name: " + ioName);
       }
     }
+  }
+
+  if (searchingForWhitespaceCharacter &&
+      ioNameEndIdx + 1 < ioNameIdentsRawValues.size() &&
+      ioNameIdentsRawValues.at(ioNameEndIdx + 1) == ' ') {
+    throw qc::QFRException(
+        "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+        " msg: expected only " + std::to_string(expectedNumberOfIos) +
+        " io identifiers to be declared but io identifier delimiter was found"
+        " after " +
+        std::to_string(expectedNumberOfIos) +
+        " identifiers were detected (which we assume will be followed by "
+        "another io identifier)!");
   }
   return foundIoNames;
 }
@@ -141,6 +163,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
    * use an std::unordered_map instead
    */
   std::unordered_map<std::string, Qubit> userDefinedInputIdents;
+  std::unordered_set<std::string> userDeclaredVariableIdents;
 
   while (true) {
     if (!static_cast<bool>(is >> cmd)) {
@@ -178,12 +201,25 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
       nclassics = nqubits;
     } else if (cmd == ".VARIABLES") {
+      userDeclaredVariableIdents.reserve(nclassics);
       for (std::size_t i = 0; i < nclassics; ++i) {
         if (!static_cast<bool>(is >> variable) || variable.at(0) == '.') {
           throw QFRException(
               "[real parser] l:" + std::to_string(line) +
               " msg: Invalid or insufficient variables declared");
         }
+
+        if (!isValidIoName(variable)) {
+          throw qc::QFRException("[real parser] l: " + std::to_string(line) +
+                                 " msg: invalid variable name: " + variable);
+        }
+
+        if (userDeclaredVariableIdents.count(variable) > 0) {
+          throw qc::QFRException("[real parser] l: " + std::to_string(line) +
+                                 " msg: duplicate variable name: " + variable);
+        }
+        userDeclaredVariableIdents.emplace(variable);
+
         const auto qubit = static_cast<Qubit>(i);
         qregs.insert({variable, {qubit, 1U}});
         cregs.insert({"c_" + variable, {qubit, 1U}});
@@ -194,8 +230,6 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       /*
-       * TODO: Check whether more than the declared number of variables was
-       * defined
        *
        * TODO: Ancillary qubits are expected to be initialized with the value
        * '0' but .real file .constants definition allows the two values '0' and
@@ -204,17 +238,26 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
        */
     } else if (cmd == ".CONSTANTS") {
       is >> std::ws;
-      for (std::size_t i = 0; i < nclassics; ++i) {
-        char readConstantFlagValue = '-';
-        if (!is.get(readConstantFlagValue)) {
-          throw QFRException("[real parser] l:" + std::to_string(line) +
-                             " msg: Failed read in '.constants' line");
-        }
+      std::string constantsValuePerIoDefinition;
+      if (!std::getline(is, constantsValuePerIoDefinition)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.constants' line");
+      }
 
+      if (constantsValuePerIoDefinition.size() != nclassics) {
+        throw QFRException("[real parser] l: " + std::to_string(line) +
+                           " msg: Expected " + std::to_string(nclassics) +
+                           " constant values but " +
+            std::to_string(constantsValuePerIoDefinition.size()) +
+                           " were declared!");
+      }
+
+      std::size_t constantValueIdx = 0;
+      for (const auto constantValuePerIo : constantsValuePerIoDefinition) {
         if (const bool isCurrentQubitMarkedAsAncillary =
-                readConstantFlagValue == '0' || readConstantFlagValue == '1';
+                constantValuePerIo == '0' || constantValuePerIo == '1';
             isCurrentQubitMarkedAsAncillary) {
-          const auto& ancillaryQubit = static_cast<Qubit>(i);
+          const auto& ancillaryQubit = static_cast<Qubit>(constantValueIdx);
           setLogicalQubitAncillary(ancillaryQubit);
 
           /*
@@ -228,43 +271,54 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
           ancregs.insert_or_assign(
               associatedVariableNameForQubitRegister,
               qc::QuantumRegister(std::make_pair(ancillaryQubit, 1U)));
-        } else if (readConstantFlagValue != '-') {
+        } else if (constantValuePerIo != '-') {
           throw QFRException("[real parser] l:" + std::to_string(line) +
                              " msg: Invalid value in '.constants' header: '" +
-                             std::to_string(readConstantFlagValue) + "'");
+                             std::to_string(constantValuePerIo) + "'");
         }
+        ++constantValueIdx;
       }
-      is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     } else if (cmd == ".GARBAGE") {
       is >> std::ws;
-      for (std::size_t i = 0; i < nclassics; ++i) {
-        char readGarbageStatusFlagValue = '-';
-        if (!is.get(readGarbageStatusFlagValue)) {
-          throw QFRException("[real parser] l:" + std::to_string(line) +
-                             " msg: Failed read in '.garbage' line");
-        }
+      std::string garbageStatePerIoDefinition;
+      if (!std::getline(is, garbageStatePerIoDefinition)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.garbage' line");
+      }
 
-        if (const bool isCurrentQubitMarkedAsGarbage =
-                readGarbageStatusFlagValue == '1';
+      if (garbageStatePerIoDefinition.size() != nclassics) {
+        throw QFRException(
+            "[real parser] l: " + std::to_string(line) + " msg: Expected " +
+            std::to_string(nclassics) + " garbage state values but " +
+            std::to_string(garbageStatePerIoDefinition.size()) +
+            " were declared!");
+      }
+
+      std::size_t garbageStateIdx = 0;
+      for (const auto garbageStateValue : garbageStatePerIoDefinition) {
+        if (const bool isCurrentQubitMarkedAsGarbage = garbageStateValue == '1';
             isCurrentQubitMarkedAsGarbage) {
-          setLogicalQubitGarbage(static_cast<Qubit>(i));
-        } else if (readGarbageStatusFlagValue != '-') {
+          setLogicalQubitGarbage(static_cast<Qubit>(garbageStateIdx));
+        } else if (garbageStateValue != '-') {
           throw QFRException("[real parser] l:" + std::to_string(line) +
                              " msg: Invalid value in '.garbage' header: '" +
-                             std::to_string(readGarbageStatusFlagValue) + "'");
+                             std::to_string(garbageStateValue) + "'");
         }
+        garbageStateIdx++;
       }
-      is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     } else if (cmd == ".INPUTS") {
       // .INPUT: specifies initial layout
       is >> std::ws;
       const std::size_t expectedNumInputIos = nclassics;
       std::string ioNameIdentsLine;
-      std::getline(is, ioNameIdentsLine);
-
+      if (!std::getline(is, ioNameIdentsLine)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.inputs' line");
+      }
+      
       userDefinedInputIdents =
           parseIoNames(static_cast<std::size_t>(line), expectedNumInputIos,
-                       ioNameIdentsLine);
+                       ioNameIdentsLine, userDeclaredVariableIdents);
 
       if (userDefinedInputIdents.size() != expectedNumInputIos) {
         throw QFRException(
@@ -276,11 +330,14 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       is >> std::ws;
       const std::size_t expectedNumOutputIos = nclassics;
       std::string ioNameIdentsLine;
-      std::getline(is, ioNameIdentsLine);
+      if (!std::getline(is, ioNameIdentsLine)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.outputs' line");
+      }
 
       const std::unordered_map<std::string, qc::Qubit> userDefinedOutputIdents =
           parseIoNames(static_cast<std::size_t>(line), expectedNumOutputIos,
-                       ioNameIdentsLine);
+                       ioNameIdentsLine, userDeclaredVariableIdents);
 
       if (userDefinedOutputIdents.size() != expectedNumOutputIos) {
         throw QFRException(
