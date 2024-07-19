@@ -37,6 +37,7 @@ public:
       typename std::vector<std::unique_ptr<Operation>>::const_iterator;
 
   friend class CircuitOptimizer;
+  friend class DDMinimizer;
 
 protected:
   std::vector<std::unique_ptr<Operation>> ops;
