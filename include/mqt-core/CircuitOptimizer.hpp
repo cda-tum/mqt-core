@@ -52,6 +52,7 @@ public:
   static void reorderOperations(QuantumComputation& qc);
 
   static void flattenOperations(QuantumComputation& qc);
+  static void flattenOperations(QuantumComputation& qc, bool customGatesOnly);
 
   static void cancelCNOTs(QuantumComputation& qc);
 

@@ -17,12 +17,18 @@ namespace qc {
 class CompoundOperation final : public Operation {
 private:
   std::vector<std::unique_ptr<Operation>> ops;
+  bool customGate;
 
 public:
   explicit CompoundOperation();
 
+  explicit CompoundOperation(bool isCustom);
+
   explicit CompoundOperation(
       std::vector<std::unique_ptr<Operation>>&& operations);
+
+  explicit CompoundOperation(
+      std::vector<std::unique_ptr<Operation>>&& operations, bool isCustom);
 
   CompoundOperation(const CompoundOperation& co);
 
@@ -35,6 +41,8 @@ public:
   [[nodiscard]] bool isNonUnitaryOperation() const override;
 
   [[nodiscard]] inline bool isSymbolicOperation() const override;
+
+  [[nodiscard]] bool isCustomGate() const;
 
   void addControl(Control c) override;
 
