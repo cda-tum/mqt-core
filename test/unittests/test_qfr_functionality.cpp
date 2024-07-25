@@ -8,6 +8,7 @@
 #include "operations/Expression.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 
 #include <algorithm>
 #include <array>
@@ -1190,6 +1191,51 @@ TEST_F(QFRFunctionality, FlattenRecursive) {
   EXPECT_EQ(gate2->getType(), qc::Z);
   EXPECT_EQ(gate2->getTargets().at(0), 0U);
   EXPECT_TRUE(gate2->getControls().empty());
+}
+
+TEST_F(QFRFunctionality, FlattenCustomOnly) {
+  const std::size_t nqubits = 1U;
+
+  // create a nested compound operation
+  QuantumComputation op(nqubits);
+  op.x(0);
+  op.z(0);
+  QuantumComputation op2(nqubits);
+  op2.emplace_back(op.asCompoundOperation());
+  QuantumComputation qc(nqubits);
+  qc.emplace_back(op2.asCompoundOperation());
+  std::cout << qc << "\n";
+
+  qc::CircuitOptimizer::flattenOperations(qc, true);
+  std::cout << qc << "\n";
+
+  ASSERT_EQ(qc.getNops(), 1U);
+  auto& gate = qc.at(0);
+  EXPECT_EQ(gate->getType(), qc::Compound);
+
+  std::vector<std::unique_ptr<Operation>> opsCompound;
+  opsCompound.push_back(std::make_unique<StandardOperation>(0, qc::X));
+  opsCompound.push_back(std::make_unique<StandardOperation>(0, qc::Z));
+  QuantumComputation qc2(nqubits);
+  qc2.emplace_back<CompoundOperation>(std::move(opsCompound), true);
+  std::cout << qc2 << "\n";
+
+  qc::CircuitOptimizer::flattenOperations(qc2, true);
+  std::cout << qc2 << "\n";
+
+  for (const auto& g : qc2) {
+    EXPECT_FALSE(g->isCompoundOperation());
+  }
+
+  ASSERT_EQ(qc2.getNops(), 2U);
+  auto& gate3 = qc2.at(0);
+  EXPECT_EQ(gate3->getType(), qc::X);
+  EXPECT_EQ(gate3->getTargets().at(0), 0U);
+  EXPECT_TRUE(gate3->getControls().empty());
+  auto& gate4 = qc2.at(1);
+  EXPECT_EQ(gate4->getType(), qc::Z);
+  EXPECT_EQ(gate4->getTargets().at(0), 0U);
+  EXPECT_TRUE(gate4->getControls().empty());
 }
 
 TEST_F(QFRFunctionality, OperationEquality) {

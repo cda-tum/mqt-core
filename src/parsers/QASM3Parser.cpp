@@ -645,7 +645,7 @@ public:
         index++;
       }
 
-      auto op = std::make_unique<qc::CompoundOperation>();
+      auto op = std::make_unique<qc::CompoundOperation>(true);
       for (const auto& nestedGate : compoundGate->body) {
         if (auto barrierStatement =
                 std::dynamic_pointer_cast<BarrierStatement>(nestedGate);
