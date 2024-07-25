@@ -12,7 +12,8 @@
 
 namespace qc {
 
-auto Layer::constructDAG(const QuantumComputation& qc) -> void {
+auto Layer::constructDAG(const QuantumComputation& qc, const bool commutable)
+    -> void {
   const auto nQubits = qc.getNqubits();
   // For a pair of self-canceling operations like two consecutive X operations
   // or RY rotations with opposite angles the first operations is a
@@ -97,8 +98,9 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
           // check whether the current operation commutes with the current
           // group members
           if (!currentGroup[qubit].empty() and
-              !(currentGroup[qubit][0]->getOperation())
-                   ->commutesAtQubit(*current->getOperation(), qubit)) {
+              (!commutable or
+               !(currentGroup[qubit][0]->getOperation())
+                    ->commutesAtQubit(*current->getOperation(), qubit))) {
             // here: the current operation does not commute with the current
             // group members and is not the inverse of the lookahead
             // --> start a new group
@@ -133,8 +135,8 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
       // check whether the current operation commutes with the current
       // group members
       if (!currentGroup[qubit].empty() and
-          !(currentGroup[qubit][0]->getOperation())
-               ->commutesAtQubit(*current->getOperation(), qubit)) {
+          (!commutable or !(currentGroup[qubit][0]->getOperation())
+               ->commutesAtQubit(*current->getOperation(), qubit))) {
         // here: the current operation does not commute with the current
         // group members and is not the inverse of the lookahead
         // --> start a new group
