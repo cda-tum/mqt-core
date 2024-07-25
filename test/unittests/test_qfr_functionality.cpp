@@ -8,6 +8,7 @@
 #include "operations/Expression.hpp"
 #include "operations/NonUnitaryOperation.hpp"
 #include "operations/OpType.hpp"
+#include "operations/StandardOperation.hpp"
 
 #include <algorithm>
 #include <array>
