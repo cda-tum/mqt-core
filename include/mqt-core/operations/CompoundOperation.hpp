@@ -20,15 +20,11 @@ private:
   bool customGate;
 
 public:
-  explicit CompoundOperation();
-
-  explicit CompoundOperation(bool isCustom);
+  explicit CompoundOperation(bool isCustom = false);
 
   explicit CompoundOperation(
-      std::vector<std::unique_ptr<Operation>>&& operations);
-
-  explicit CompoundOperation(
-      std::vector<std::unique_ptr<Operation>>&& operations, bool isCustom);
+      std::vector<std::unique_ptr<Operation>>&& operations,
+      bool isCustom = false);
 
   CompoundOperation(const CompoundOperation& co);
 

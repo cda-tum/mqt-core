@@ -1197,10 +1197,6 @@ Iterator flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops,
   return it;
 }
 
-void CircuitOptimizer::flattenOperations(QuantumComputation& qc) {
-  flattenOperations(qc, false);
-}
-
 void CircuitOptimizer::flattenOperations(QuantumComputation& qc,
                                          bool customGatesOnly) {
   auto it = qc.begin();

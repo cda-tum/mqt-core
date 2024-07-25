@@ -24,18 +24,12 @@ CompoundOperation::CompoundOperation(bool isCustom) : customGate(isCustom) {
   type = Compound;
 }
 
-CompoundOperation::CompoundOperation() : CompoundOperation(false) {}
-
 CompoundOperation::CompoundOperation(
     std::vector<std::unique_ptr<Operation>>&& operations, bool isCustom)
     : CompoundOperation(isCustom) {
   // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
   ops = std::move(operations);
 }
-
-CompoundOperation::CompoundOperation(
-    std::vector<std::unique_ptr<Operation>>&& operations)
-    : CompoundOperation(std::move(operations), false) {}
 
 CompoundOperation::CompoundOperation(const CompoundOperation& co)
     : Operation(co), ops(co.ops.size()), customGate(co.customGate) {
