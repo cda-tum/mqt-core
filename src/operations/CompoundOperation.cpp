@@ -39,7 +39,7 @@ CompoundOperation::CompoundOperation(
     : CompoundOperation(std::move(operations), false) {}
 
 CompoundOperation::CompoundOperation(const CompoundOperation& co)
-    : Operation(co), ops(co.ops.size()) {
+    : Operation(co), ops(co.ops.size()), customGate(co.customGate) {
   for (std::size_t i = 0; i < co.ops.size(); ++i) {
     ops[i] = co.ops[i]->clone();
   }
@@ -52,6 +52,7 @@ CompoundOperation& CompoundOperation::operator=(const CompoundOperation& co) {
     for (std::size_t i = 0; i < co.ops.size(); ++i) {
       ops[i] = co.ops[i]->clone();
     }
+    customGate = co.customGate;
   }
   return *this;
 }
