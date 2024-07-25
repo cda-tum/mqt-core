@@ -19,10 +19,9 @@
 #include <vector>
 
 namespace qc {
-CompoundOperation::CompoundOperation(bool isCustom) {
+CompoundOperation::CompoundOperation(bool isCustom) : customGate(isCustom) {
   name = "Compound operation:";
   type = Compound;
-  customGate = isCustom;
 }
 
 CompoundOperation::CompoundOperation() : CompoundOperation(false) {}
