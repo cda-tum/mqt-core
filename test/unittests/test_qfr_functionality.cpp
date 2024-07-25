@@ -1220,10 +1220,10 @@ TEST_F(QFRFunctionality, FlattenCustomOnly) {
   qc2.push_back(opCompound);
   std::cout << qc2 << "\n";
 
-  qc::CircuitOptimizer::flattenOperations(qc, true);
+  qc::CircuitOptimizer::flattenOperations(qc2, true);
   std::cout << qc2 << "\n";
 
-  for (const auto& g : qc) {
+  for (const auto& g : qc2) {
     EXPECT_FALSE(g->isCompoundOperation());
   }
 
