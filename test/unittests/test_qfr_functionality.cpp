@@ -1216,9 +1216,8 @@ TEST_F(QFRFunctionality, FlattenCustomOnly) {
   std::vector<std::unique_ptr<Operation>> opsCompound;
   opsCompound.push_back(std::make_unique<StandardOperation>(0, qc::X));
   opsCompound.push_back(std::make_unique<StandardOperation>(0, qc::Z));
-  const CompoundOperation opCompound(std::move(opsCompound), true);
   QuantumComputation qc2(nqubits);
-  qc2.push_back(opCompound);
+  qc2.emplace_back<CompoundOperation>(std::move(opsCompound), true);
   std::cout << qc2 << "\n";
 
   qc::CircuitOptimizer::flattenOperations(qc2, true);
