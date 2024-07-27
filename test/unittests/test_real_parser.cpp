@@ -781,8 +781,8 @@ TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
       .usingInputs({"i1", "\"i2\"", "\"i3\"", "i4"})
       .withConstants({constantValueNone, constantValueOne, constantValueZero,
                       constantValueNone})
-      .withGarbageValues({isNotGarbageState, isNotGarbageState, isNotGarbageState,
-                          isGarbageState})
+      .withGarbageValues({isNotGarbageState, isNotGarbageState,
+                          isNotGarbageState, isGarbageState})
       .usingOutputs({"i4", "\"i3\"", "\"i2\"", "o1"})
       .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
