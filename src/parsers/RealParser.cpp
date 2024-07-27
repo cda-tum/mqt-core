@@ -164,6 +164,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
    * use an std::unordered_map instead
    */
   std::unordered_map<std::string, Qubit> userDefinedInputIdents;
+  std::unordered_map<std::string, Qubit> userDefinedOutputIdents;
   std::unordered_set<std::string> userDeclaredVariableIdents;
 
   while (true) {
@@ -329,7 +330,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
 
       if (userDefinedInputIdents.size() != expectedNumInputIos) {
         throw QFRException(
-            "[real parser} l: " + std::to_string(line) + "msg: Expected " +
+            "[real parser] l: " + std::to_string(line) + "msg: Expected " +
             std::to_string(expectedNumInputIos) + " inputs to be declared!");
       }
     } else if (cmd == ".OUTPUTS") {
@@ -342,26 +343,28 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                            " msg: Failed read in '.outputs' line");
       }
 
-      const std::unordered_map<std::string, qc::Qubit> userDefinedOutputIdents =
+      userDefinedOutputIdents =
           parseIoNames(static_cast<std::size_t>(line), expectedNumOutputIos,
                        ioNameIdentsLine, userDeclaredVariableIdents);
 
       if (userDefinedOutputIdents.size() != expectedNumOutputIos) {
         throw QFRException(
-            "[real parser} l: " + std::to_string(line) + "msg: Expected " +
+            "[real parser] l: " + std::to_string(line) + "msg: Expected " +
             std::to_string(expectedNumOutputIos) + " outputs to be declared!");
       }
+
+      if (userDefinedInputIdents.empty())
+        continue;
 
       for (const auto& [outputIoIdent, outputIoQubit] :
            userDefinedOutputIdents) {
         /*
          * We assume that a permutation of a given input qubit Q at index i
          * is performed in the circuit if an entry in both in the .output
-         * as well as the .input definition using the same literal is found
+         * as well as the .input definition using the same literal is found,
          * with the input literal being defined at position i in the .input
-         * definition. If no such matching is found, we assume that the output
-         * is marked as garbage and thus remove the entry from the output
-         * permutation.
+         * definition. If no such matching is found, we require that the output
+         * is marked as garbage.
          *
          * The outputPermutation map will use be structured as shown in the
          * documentation
@@ -371,23 +374,27 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
          */
         if (userDefinedInputIdents.count(outputIoIdent) == 0) {
           /*
-           * In case no matching input definition exists for a given output
-           * ident, remove said output qubit from the output permutation only if
-           * the output qubit is marked as garbage. If we would not take the
-           * garbage status into account, we would also remove ancillary output
-           * qubits which could potentially not be garbage qubits from the
-           * output permutation.
-           *
+           * The current implementation requires that the .garbage definition is
+           * define prior to the .output one.
            */
-          if (logicalQubitIsGarbage(outputIoQubit))
-            outputPermutation.erase(outputIoQubit);
-        } else if (const qc::Qubit matchingInputQubitForOutputLiteral =
+          if (!logicalQubitIsGarbage(outputIoQubit)) {
+            throw QFRException("[real parser] l: " + std::to_string(line) +
+                               " msg: outputs without matching inputs are "
+                               "expected to be marked as garbage");
+          }
+        } else if (const Qubit matchingInputQubitForOutputLiteral =
                        userDefinedInputIdents.at(outputIoIdent);
-                   matchingInputQubitForOutputLiteral != outputIoQubit) {
+                   matchingInputQubitForOutputLiteral != outputIoQubit &&
+                   !logicalQubitIsGarbage(outputIoQubit)) {
           /*
+           * We do not need to check whether a mapping from one input to any
+           * output exists, since we require that the idents defined in either
+           * of the .input as well as the .output definition are unique in their
+           * definition.
+           *
            * Only if the matching entries where defined at different indices
-           in their respective IO declaration
-           * do we update the existing 1-1 mapping for the given output qubit
+           * in their respective IO declaration do we update the existing 1-1
+           * mapping for the given output qubit
            */
           outputPermutation.insert_or_assign(
               outputIoQubit, matchingInputQubitForOutputLiteral);

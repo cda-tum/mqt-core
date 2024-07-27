@@ -336,6 +336,18 @@ TEST_F(RealParserTest, InvalidInputIdentDeclarationInQuote) {
       QFRException);
 }
 
+TEST_F(RealParserTest, EmptyInputIdentInQuotesNotAllowed) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1", "\"\""})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
 TEST_F(RealParserTest, InvalidOutputIdentDeclaration) {
   usingVersion(DEFAULT_REAL_VERSION)
       .usingNVariables(2)
@@ -353,6 +365,18 @@ TEST_F(RealParserTest, InvalidOutputIdentDeclarationInQuote) {
       .usingNVariables(2)
       .usingVariables({"v1", "v2"})
       .usingInputs({"\"test-output1\"", "o2"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, EmptyOutputIdentInQuotesNotAllowed) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"\"\"", "o2"})
       .withEmptyGateList();
 
   EXPECT_THROW(
@@ -644,7 +668,9 @@ TEST_F(RealParserTest,
       .usingNVariables(4)
       .usingVariables({"v1", "v2", "v3", "v4"})
       .usingInputs({"i1", "\"o2\"", "i3", "\"o4\""})
-      .usingOutputs({"o1", "o2", "o3", "o4"})
+      .withGarbageValues({isNotGarbageState, isGarbageState, isNotGarbageState,
+                          isGarbageState})
+      .usingOutputs({"i1", "o2", "i3", "o4"})
       .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
@@ -657,14 +683,18 @@ TEST_F(RealParserTest,
 
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
-  ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
+  ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(false, false, false, false));
+              testing::ElementsAre(false, true, false, true));
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(false, false, false, false));
 
+  auto expectedOutputPermutation = getIdentityPermutation(4);
+  expectedOutputPermutation.erase(1);
+  expectedOutputPermutation.erase(3);
+
   ASSERT_EQ(
-      std::hash<Permutation>{}(getIdentityPermutation(4)),
+      std::hash<Permutation>{}(expectedOutputPermutation),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
@@ -674,7 +704,9 @@ TEST_F(RealParserTest,
       .usingNVariables(4)
       .usingVariables({"v1", "v2", "v3", "v4"})
       .usingInputs({"i1", "i2", "i3", "i4"})
-      .usingOutputs({"o1", "\"i1\"", "o2", "\"i4\""})
+      .withGarbageValues({isNotGarbageState, isGarbageState, isNotGarbageState,
+                          isGarbageState})
+      .usingOutputs({"i1", "\"i1\"", "i2", "\"i4\""})
       .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
@@ -687,14 +719,18 @@ TEST_F(RealParserTest,
 
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
-  ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
+  ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(false, false, false, false));
+              testing::ElementsAre(false, true, false, true));
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(false, false, false, false));
 
+  auto expectedOutputPermutation = getIdentityPermutation(4);
+  expectedOutputPermutation.erase(1);
+  expectedOutputPermutation.erase(3);
+
   ASSERT_EQ(
-      std::hash<Permutation>{}(getIdentityPermutation(4)),
+      std::hash<Permutation>{}(expectedOutputPermutation),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
 }
 
@@ -705,9 +741,9 @@ TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
       .usingInputs({"i1", "i2", "i3", "i4"})
       .withConstants({constantValueOne, constantValueNone, constantValueNone,
                       constantValueZero})
-      .usingOutputs({"o1", "i1", "i4", "o2"})
       .withGarbageValues({isGarbageState, isNotGarbageState, isNotGarbageState,
                           isGarbageState})
+      .usingOutputs({"o1", "i1", "i4", "o2"})
       .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
@@ -727,11 +763,11 @@ TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
               testing::ElementsAre(true, false, false, true));
 
   Permutation expectedOutputPermutation;
-  expectedOutputPermutation.emplace(static_cast<Qubit>(2),
-                                    static_cast<Qubit>(1));
+  expectedOutputPermutation.emplace(static_cast<Qubit>(1),
+                                    static_cast<Qubit>(0));
 
-  expectedOutputPermutation.emplace(static_cast<Qubit>(3),
-                                    static_cast<Qubit>(4));
+  expectedOutputPermutation.emplace(static_cast<Qubit>(2),
+                                    static_cast<Qubit>(3));
 
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedOutputPermutation),
@@ -745,9 +781,9 @@ TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
       .usingInputs({"i1", "\"i2\"", "\"i3\"", "i4"})
       .withConstants({constantValueNone, constantValueOne, constantValueZero,
                       constantValueNone})
-      .usingOutputs({"i4", "\"i3\"", "\"i2\"", "o1"})
-      .withGarbageValues({isGarbageState, isNotGarbageState, isNotGarbageState,
+      .withGarbageValues({isNotGarbageState, isNotGarbageState, isNotGarbageState,
                           isGarbageState})
+      .usingOutputs({"i4", "\"i3\"", "\"i2\"", "o1"})
       .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
@@ -760,21 +796,21 @@ TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
 
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(2, quantumComputationInstance->getNancillae());
-  ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
+  ASSERT_EQ(1, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(true, false, false, true));
+              testing::ElementsAre(false, false, false, true));
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(false, true, true, false));
 
   Permutation expectedOutputPermutation;
-  expectedOutputPermutation.emplace(static_cast<Qubit>(1),
-                                    static_cast<Qubit>(4));
-
-  expectedOutputPermutation.emplace(static_cast<Qubit>(2),
+  expectedOutputPermutation.emplace(static_cast<Qubit>(0),
                                     static_cast<Qubit>(3));
 
-  expectedOutputPermutation.emplace(static_cast<Qubit>(3),
+  expectedOutputPermutation.emplace(static_cast<Qubit>(1),
                                     static_cast<Qubit>(2));
+
+  expectedOutputPermutation.emplace(static_cast<Qubit>(2),
+                                    static_cast<Qubit>(1));
 
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedOutputPermutation),
@@ -787,7 +823,7 @@ TEST_F(RealParserTest,
       .usingNVariables(4)
       .usingVariables({"v1", "v2", "v3", "v4"})
       .usingInputs({"i1", "i2", "i3", "i4"})
-      .usingOutputs({"\"i4\"", "i3", "\"i2\"", "i1"})
+      .usingOutputs({"i4", "i3", "i2", "i1"})
       .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
@@ -807,11 +843,17 @@ TEST_F(RealParserTest,
               testing::ElementsAre(false, false, false, false));
 
   Permutation expectedOutputPermutation;
-  expectedOutputPermutation.emplace(static_cast<Qubit>(3),
-                                    static_cast<Qubit>(0));
+  expectedOutputPermutation.emplace(static_cast<Qubit>(0),
+                                    static_cast<Qubit>(3));
 
   expectedOutputPermutation.emplace(static_cast<Qubit>(1),
                                     static_cast<Qubit>(2));
+
+  expectedOutputPermutation.emplace(static_cast<Qubit>(2),
+                                    static_cast<Qubit>(1));
+
+  expectedOutputPermutation.emplace(static_cast<Qubit>(3),
+                                    static_cast<Qubit>(0));
 
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedOutputPermutation),
@@ -823,9 +865,9 @@ TEST_F(RealParserTest, OutputPermutationForGarbageQubitsNotCreated) {
       .usingNVariables(4)
       .usingVariables({"v1", "v2", "v3", "v4"})
       .usingInputs({"i1", "i2", "i3", "i4"})
+      .withGarbageValues({isNotGarbageState, isGarbageState, isGarbageState,
+                          isNotGarbageState})
       .usingOutputs({"i4", "o1", "o2", "i1"})
-      .withGarbageValues({isGarbageState, isNotGarbageState, isNotGarbageState,
-                          isGarbageState})
       .withGates({
           stringifyGate(GateType::Toffoli, {"v1"}, {"v2"}),
           stringifyGate(GateType::Toffoli, {"v2"}, {"v1"}),
@@ -840,16 +882,16 @@ TEST_F(RealParserTest, OutputPermutationForGarbageQubitsNotCreated) {
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(true, false, false, true));
+              testing::ElementsAre(false, true, true, false));
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(false, false, false, false));
 
   Permutation expectedOutputPermutation;
-  expectedOutputPermutation.emplace(static_cast<Qubit>(1),
-                                    static_cast<Qubit>(1));
+  expectedOutputPermutation.emplace(static_cast<Qubit>(0),
+                                    static_cast<Qubit>(3));
 
-  expectedOutputPermutation.emplace(static_cast<Qubit>(2),
-                                    static_cast<Qubit>(2));
+  expectedOutputPermutation.emplace(static_cast<Qubit>(3),
+                                    static_cast<Qubit>(0));
 
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedOutputPermutation),
