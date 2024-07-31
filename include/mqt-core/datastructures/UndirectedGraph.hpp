@@ -77,8 +77,12 @@ public:
           ++degrees[j];
         }
         ++nEdges;
+        adjacencyMatrix[i][j - i] = e;
+      } else {
+        std::stringstream ss;
+        ss << "The edge (" << i << ", " << j << ") is already in the graph.";
+        throw std::invalid_argument(ss.str());
       }
-      adjacencyMatrix[i][j - i] = e;
     } else {
       if (adjacencyMatrix[j][i - j] == std::nullopt) {
         ++degrees[i];
@@ -86,8 +90,12 @@ public:
           ++degrees[j];
         }
         ++nEdges;
+        adjacencyMatrix[j][i - j] = e;
+      } else {
+        std::stringstream ss;
+        ss << "The edge (" << j << ", " << i << ") is already in the graph.";
+        throw std::invalid_argument(ss.str());
       }
-      adjacencyMatrix[j][i - j] = e;
     }
   }
   [[nodiscard]] auto getNVertices() const -> std::size_t { return nVertices; }
