@@ -4,6 +4,7 @@
 #include "QuantumComputation.hpp"
 #include "operations/OpType.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <sstream>
