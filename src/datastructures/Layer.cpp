@@ -60,9 +60,9 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
         // lookahead
         if (current->getOperation()->isInverseOf(
                 *lookahead[qubit]->getOperation()) &&
-                (currentGroup[qubit].empty() ||
-                !(currentGroup[qubit][0]->getOperation())
-                   ->commutesAtQubit(*current->getOperation(), qubit))) {
+            (currentGroup[qubit].empty() ||
+             !(currentGroup[qubit][0]->getOperation())
+                  ->commutesAtQubit(*current->getOperation(), qubit))) {
           // here: the current operation is the inverse of the lookahead
           // add an enabling edge from the lookahead to all operations on this
           // qubit including the destructive ones
@@ -99,11 +99,17 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
           }
           // check whether the current operation commutes with the current
           // group members
-          // NOTE: We treat operations that are already in the group as such that would not commute because redundant operations in a group cause problems later on, e.g., when generating interaction graphs
+          // NOTE: We treat operations that are already in the group as such
+          // that would not commute because redundant operations in a group
+          // cause problems later on, e.g., when generating interaction graphs
           if (!currentGroup[qubit].empty() &&
               (!(currentGroup[qubit][0]->getOperation())
-                   ->commutesAtQubit(*current->getOperation(), qubit) ||
-                   std::find_if(currentGroup[qubit].cbegin(), currentGroup[qubit].cend(), [&current](const auto& vertex){ return *vertex->getOperation() == *current->getOperation(); }) != currentGroup[qubit].cend())) {
+                    ->commutesAtQubit(*current->getOperation(), qubit) ||
+               std::find_if(
+                   currentGroup[qubit].cbegin(), currentGroup[qubit].cend(),
+                   [&current](const auto& vertex) {
+                     return *vertex->getOperation() == *current->getOperation();
+                   }) != currentGroup[qubit].cend())) {
             // here: the current operation does not commute with the current
             // group members and is not the inverse of the lookahead
             // --> start a new group
