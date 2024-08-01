@@ -1,6 +1,7 @@
 #include "datastructures/UndirectedGraph.hpp"
 
 #include <gtest/gtest.h>
+#include <stdexcept>
 #include <tuple>
 
 namespace qc {
@@ -21,8 +22,12 @@ TEST(UndirectedGraph, Numbered) {
   EXPECT_FALSE(g.isAdjacent(1, 0));
   EXPECT_TRUE(g.isAdjacentEdge({1, 2}, {2, 3}));
 
-  EXPECT_ANY_THROW(g.addVertex(1));
-  EXPECT_ANY_THROW(std::ignore = g.getDegree(4));
-  EXPECT_ANY_THROW(std::ignore = g.getEdge(0, 1));
+  EXPECT_THROW(g.addVertex(1), std::invalid_argument);
+  EXPECT_THROW(g.addEdge(1, 2, 10), std::invalid_argument);
+  EXPECT_THROW(g.addEdge(2, 1, 10), std::invalid_argument);
+  EXPECT_THROW(std::ignore = g.getDegree(4), std::invalid_argument);
+  EXPECT_THROW(std::ignore = g.getEdge(0, 1), std::invalid_argument);
+  EXPECT_THROW(std::ignore = g.isAdjacent(0, 10), std::invalid_argument);
+  EXPECT_THROW(std::ignore = g.isAdjacent(10, 1), std::invalid_argument);
 }
 } // namespace qc
