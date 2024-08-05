@@ -19,20 +19,20 @@
 #include <vector>
 
 namespace qc {
-CompoundOperation::CompoundOperation() {
+CompoundOperation::CompoundOperation(bool isCustom) : customGate(isCustom) {
   name = "Compound operation:";
   type = Compound;
 }
 
 CompoundOperation::CompoundOperation(
-    std::vector<std::unique_ptr<Operation>>&& operations)
-    : CompoundOperation() {
+    std::vector<std::unique_ptr<Operation>>&& operations, bool isCustom)
+    : CompoundOperation(isCustom) {
   // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
   ops = std::move(operations);
 }
 
 CompoundOperation::CompoundOperation(const CompoundOperation& co)
-    : Operation(co), ops(co.ops.size()) {
+    : Operation(co), ops(co.ops.size()), customGate(co.customGate) {
   for (std::size_t i = 0; i < co.ops.size(); ++i) {
     ops[i] = co.ops[i]->clone();
   }
@@ -45,6 +45,7 @@ CompoundOperation& CompoundOperation::operator=(const CompoundOperation& co) {
     for (std::size_t i = 0; i < co.ops.size(); ++i) {
       ops[i] = co.ops[i]->clone();
     }
+    customGate = co.customGate;
   }
   return *this;
 }
@@ -60,6 +61,8 @@ bool CompoundOperation::isNonUnitaryOperation() const {
 }
 
 bool CompoundOperation::isCompoundOperation() const { return true; }
+
+bool CompoundOperation::isCustomGate() const { return customGate; }
 
 bool CompoundOperation::isSymbolicOperation() const {
   return std::any_of(ops.begin(), ops.end(),

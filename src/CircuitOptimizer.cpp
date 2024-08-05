@@ -1197,11 +1197,17 @@ Iterator flattenCompoundOperation(std::vector<std::unique_ptr<Operation>>& ops,
   return it;
 }
 
-void CircuitOptimizer::flattenOperations(QuantumComputation& qc) {
+void CircuitOptimizer::flattenOperations(QuantumComputation& qc,
+                                         bool customGatesOnly) {
   auto it = qc.begin();
   while (it != qc.end()) {
     if ((*it)->isCompoundOperation()) {
-      it = flattenCompoundOperation(qc.ops, it);
+      auto& op = dynamic_cast<qc::CompoundOperation&>(**it);
+      if (!customGatesOnly || op.isCustomGate()) {
+        it = flattenCompoundOperation(qc.ops, it);
+      } else {
+        ++it;
+      }
     } else {
       ++it;
     }
