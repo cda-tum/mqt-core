@@ -86,6 +86,31 @@ TEST(Layer, ExecutableSet2) {
   EXPECT_EQ(layer.getExecutableSet().size(), 10);
 }
 
+TEST(Layer, ExecutableSetNotCommutable) {
+  QuantumComputation qc{};
+  qc = QuantumComputation(8);
+  qc.cz(1, 7);
+  qc.cz(2, 4);
+  qc.cz(5, 6);
+  qc.cz(1, 5);
+  qc.cz(6, 7);
+  qc.cz(2, 3);
+  qc.cz(1, 3);
+  qc.cz(4, 6);
+  qc.cz(2, 5);
+  const Layer layer(qc, false);
+  EXPECT_EQ(layer.getExecutableSet().size(), 3);
+  std::unordered_set<const Operation*> actualSet{};
+  for (const auto& u : layer.getExecutableSet()) {
+    actualSet.emplace(u->getOperation());
+  }
+  std::unordered_set<const Operation*> expectedSet{};
+  expectedSet.emplace(qc.at(0).get());
+  expectedSet.emplace(qc.at(1).get());
+  expectedSet.emplace(qc.at(2).get());
+  EXPECT_EQ(actualSet, expectedSet);
+}
+
 TEST(Layer, InteractionGraph) {
   QuantumComputation qc{};
   qc = QuantumComputation(8);
