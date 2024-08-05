@@ -52,9 +52,9 @@ public:
         : operation(op), executableSet(&es) {}
 
   public:
-    [[nodiscard]] static auto create(Operation* operation,
-                                     ExecutableSet& executableSet)
-        -> std::shared_ptr<DAGVertex> {
+    [[nodiscard]] static auto
+    create(Operation* operation,
+           ExecutableSet& executableSet) -> std::shared_ptr<DAGVertex> {
       std::shared_ptr<DAGVertex> v(new DAGVertex(operation, executableSet));
       v->updateExecutableSet();
       return v;
@@ -84,12 +84,12 @@ public:
     auto updateExecutableSet() -> void {
       if (isExecutable()) {
         if (const auto& it = executableSet->find(shared_from_this());
-          it == executableSet->end()) {
+            it == executableSet->end()) {
           executableSet->insert(shared_from_this());
         }
       } else {
         if (const auto& it = executableSet->find(shared_from_this());
-          it != executableSet->end()) {
+            it != executableSet->end()) {
           executableSet->erase(it);
         }
       }
@@ -152,11 +152,10 @@ public:
   [[nodiscard]] auto getExecutableSet() const -> const ExecutableSet& {
     return executableSet;
   }
-  [[nodiscard]] auto constructInteractionGraph(OpType opType,
-                                               std::size_t nControls) const
-      -> InteractionGraph;
-  [[nodiscard]] auto getExecutablesOfType(OpType opType,
-                                          std::size_t nControls) const
-      -> std::vector<std::shared_ptr<DAGVertex>>;
+  [[nodiscard]] auto
+  constructInteractionGraph(OpType opType,
+                            std::size_t nControls) const -> InteractionGraph;
+  [[nodiscard]] auto getExecutablesOfType(OpType opType, std::size_t nControls)
+      const -> std::vector<std::shared_ptr<DAGVertex>>;
 };
 } // namespace qc
