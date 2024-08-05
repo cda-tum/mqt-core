@@ -279,6 +279,7 @@ archs = "auto64"
 test-command = "python -c \"from mqt import core\""
 test-skip = "cp38-macosx_arm64"
 build-frontend = "build[uv]"
+free-threaded-support = true
 
 [tool.cibuildwheel.linux]
 environment = { DEPLOY = "ON" }
