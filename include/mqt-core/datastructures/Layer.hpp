@@ -84,12 +84,12 @@ public:
     auto updateExecutableSet() -> void {
       if (isExecutable()) {
         if (const auto& it = executableSet->find(shared_from_this());
-            it == executableSet->end()) {
+          it == executableSet->end()) {
           executableSet->insert(shared_from_this());
         }
       } else {
         if (const auto& it = executableSet->find(shared_from_this());
-            it != executableSet->end()) {
+          it != executableSet->end()) {
           executableSet->erase(it);
         }
       }
@@ -134,6 +134,18 @@ public:
   Layer& operator=(const Layer&) = default;
   Layer& operator=(Layer&&) = default;
   ~Layer() = default;
+  /**
+   * @brief Constructs a new layer from the given quantum circuit.
+   * @details The layer contains all gates that are currently executable in a
+   * set of executable gates. When a gate is executed, this can enable other
+   * gates that are added to the set of executable sets then, or disable gates
+   * that are removed from the set of executable gates. The commutable flag can
+   * be used to specify whether commutation rules should be considered.
+   *
+   * @param qc         quantum circuit
+   * @param commutable true if commutation rules should be considered, false
+   * otherwise (default: true)
+   */
   explicit Layer(const QuantumComputation& qc, bool commutable = true) {
     constructDAG(qc, commutable);
   }
