@@ -10,7 +10,7 @@ import pytest
 from qiskit import QuantumCircuit, qasm2
 
 from mqt.core import QuantumComputation
-from mqt.core.io import load
+from mqt.core.load import load
 
 
 def test_loading_quantum_computation() -> None:
