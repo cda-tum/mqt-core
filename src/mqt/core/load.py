@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from os import PathLike
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from . import QuantumComputation
 
 if TYPE_CHECKING:
     from qiskit.circuit import QuantumCircuit
 
+    CircuitInputType = Union[QuantumComputation, str, PathLike[str], QuantumCircuit]
 
-def load(input_circuit: QuantumComputation | str | PathLike[str] | QuantumCircuit) -> QuantumComputation:
+
+def load(input_circuit: CircuitInputType) -> QuantumComputation:
     """Load a quantum circuit from any supported format as a :class:`~mqt.core.QuantumComputation`.
 
     Args:
@@ -48,3 +50,5 @@ def load(input_circuit: QuantumComputation | str | PathLike[str] | QuantumCircui
 
 
 __all__ = ["load"]
+if TYPE_CHECKING:
+    __all__ += ["CircuitInputType"]
