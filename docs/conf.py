@@ -185,6 +185,7 @@ latex_elements = {
     "releasename": "Version",
     "printindex": r"\footnotesize\raggedright\printindex",
     "tableofcontents": "",
+    "sphinxsetup": "iconpackage=fontawesome",
     "extrapackages": r"\usepackage{qrcode,graphicx,calc,amsthm}",
     "preamble": r"""
 \newtheorem{example}{Example}
