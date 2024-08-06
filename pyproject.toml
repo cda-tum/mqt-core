@@ -132,6 +132,13 @@ BUILD_SHARED_LIBS = "ON"
 write_to = "src/mqt/core/_version.py"
 
 
+[tool.check-wheel-contents]
+ignore = [
+  "W002", # Wheel contains duplicate files (.so symlinks)
+  "W004", # Module is not located at imprtable path (.../lib/mqt-core-*.so)
+]
+
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = ["-ra", "--strict-markers", "--strict-config"]
