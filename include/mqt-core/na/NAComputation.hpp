@@ -87,5 +87,7 @@ public:
   auto rend() noexcept { return operations.rend(); }
   [[nodiscard]] auto rend() const noexcept { return operations.rend(); }
   [[nodiscard]] auto crend() const noexcept { return operations.crend(); }
+
+  [[nodiscard]] auto validateAODConstraints() -> bool;
 };
 } // namespace na
