@@ -27,7 +27,7 @@ auto NAComputation::toString() const -> std::string {
   }
   return ss.str();
 }
-auto NAComputation::validateAODConstraints() -> bool {
+auto NAComputation::validateAODConstraints() const -> bool {
   std::size_t counter = 1; // the first operation is `init at ...;`
   for (const auto& naOp : operations) {
     ++counter;

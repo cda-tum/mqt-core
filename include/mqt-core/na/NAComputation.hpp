@@ -88,6 +88,6 @@ public:
   [[nodiscard]] auto rend() const noexcept { return operations.rend(); }
   [[nodiscard]] auto crend() const noexcept { return operations.crend(); }
 
-  [[nodiscard]] auto validateAODConstraints() -> bool;
+  [[nodiscard]] auto validateAODConstraints() const -> bool;
 };
 } // namespace na
