@@ -53,4 +53,80 @@ TEST(NAComputation, EmptyPrint) {
   ss << qc;
   EXPECT_EQ(ss.str(), "init at;\n");
 }
+
+TEST(NAComputation, ValidateAODConstraints) {
+  auto qc = NAComputation();
+  qc.emplaceInitialPosition(std::make_shared<Point>(0, 0));
+  qc.emplaceInitialPosition(std::make_shared<Point>(1, 0));
+  qc.emplaceInitialPosition(std::make_shared<Point>(0, 2));
+  qc.emplaceInitialPosition(std::make_shared<Point>(1, 2));
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(0, 0), std::make_shared<Point>(1, 0)},
+      std::vector{std::make_shared<Point>(0, 1),
+                  std::make_shared<Point>(1, 1)}));
+  EXPECT_TRUE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(0, 0), std::make_shared<Point>(0, 0)},
+      std::vector{std::make_shared<Point>(0, 1),
+                  std::make_shared<Point>(1, 0)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(0, 0), std::make_shared<Point>(1, 0)},
+      std::vector{std::make_shared<Point>(0, 1),
+                  std::make_shared<Point>(0, 1)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(0, 0), std::make_shared<Point>(1, 0)},
+      std::vector{std::make_shared<Point>(0, 1),
+                  std::make_shared<Point>(1, 0)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(0, 0), std::make_shared<Point>(1, 0)},
+      std::vector{std::make_shared<Point>(1, 1),
+                  std::make_shared<Point>(0, 1)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(1, 0), std::make_shared<Point>(0, 0)},
+      std::vector{std::make_shared<Point>(0, 1),
+                  std::make_shared<Point>(1, 1)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(0, 0), std::make_shared<Point>(0, 2)},
+      std::vector{std::make_shared<Point>(1, 0),
+                  std::make_shared<Point>(0, 1)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(0, 0), std::make_shared<Point>(1, 2)},
+      std::vector{std::make_shared<Point>(0, 2),
+                  std::make_shared<Point>(1, 0)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NAShuttlingOperation>(
+      LOAD,
+      std::vector{std::make_shared<Point>(1, 2), std::make_shared<Point>(0, 0)},
+      std::vector{std::make_shared<Point>(1, 0),
+                  std::make_shared<Point>(0, 2)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+  qc.clear(false);
+  qc.emplaceBack(std::make_unique<NALocalOperation>(
+      FullOpType{qc::RZ, 0}, std::vector{qc::PI_2},
+      std::vector{std::make_shared<Point>(0, 0),
+                  std::make_shared<Point>(0, 0)}));
+  EXPECT_FALSE(qc.validateAODConstraints());
+}
 } // namespace na
