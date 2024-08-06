@@ -60,6 +60,7 @@ dev = ["mqt.core[coverage, docs]",]
 
 [project.scripts]
 mqt-core-dd-compare = "mqt.core.dd.evaluation:main"
+mqt-core-cli = "mqt.core.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/cda-tum/mqt-core"
