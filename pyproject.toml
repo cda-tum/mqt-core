@@ -306,5 +306,5 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
 
 [tool.cibuildwheel.windows]
 before-build = "uv pip install delvewheel>=1.7.3"
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt --ignore-in-wheel"
 environment = { CMAKE_GENERATOR = "Ninja" }
