@@ -9,6 +9,7 @@
 #include <memory>
 #include <stdexcept>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 namespace qc {
