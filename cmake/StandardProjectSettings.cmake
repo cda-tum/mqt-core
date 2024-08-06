@@ -74,3 +74,8 @@ if(ENABLE_IPO)
     message(DEBUG "IPO is not supported: ${ipo_output}")
   endif()
 endif()
+
+# export all symbols by default on Windows
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
+    ON
+    CACHE BOOL "Export all symbols on Windows")
