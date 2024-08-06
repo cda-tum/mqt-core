@@ -10,7 +10,22 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
+
+# under Windows, make sure to add the appropriate DLL directory to the PATH
+if sys.platform == "win32":
+
+    def _dll_patch() -> None:
+        """Add the DLL directory to the PATH."""
+        import sysconfig
+
+        bin_dir = Path(sysconfig.get_paths()["purelib"]) / "mqt" / "core" / "bin"
+        os.add_dll_directory(str(bin_dir))
+
+    _dll_patch()
+    del _dll_patch
+
 from typing import TYPE_CHECKING
 
 from ._version import version as __version__
