@@ -99,7 +99,6 @@ build.targets = [
   "mqt-core-ds",
   "mqt-core-na",
   "mqt-core-ecc",
-  "mqt-core-python",
   "_core"
 ]
 
