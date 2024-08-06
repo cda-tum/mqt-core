@@ -3,7 +3,9 @@
 #include "na/operations/NALocalOperation.hpp"
 #include "na/operations/NAShuttlingOperation.hpp"
 
+#include <cstddef>
 #include <ios>
+#include <iostream>
 #include <sstream>
 #include <string>
 
