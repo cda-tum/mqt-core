@@ -11,7 +11,7 @@ void registerOperations(py::module& m);
 void registerSymbolic(py::module& m);
 void registerQuantumComputation(py::module& m);
 
-PYBIND11_MODULE(_core, m) {
+PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
   registerPermutation(m);
 
   py::module symbolic = m.def_submodule("symbolic");
