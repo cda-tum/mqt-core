@@ -567,6 +567,7 @@ public:
   DEFINE_TWO_TARGET_OPERATION(peres)
   DEFINE_TWO_TARGET_OPERATION(peresdg)
   DEFINE_TWO_TARGET_OPERATION(move)
+  DEFINE_TWO_TARGET_OPERATION(passby)
 
 #define DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(op, param)                \
   void op(const SymbolOrNumber&(param), const Qubit target0,                   \
