@@ -66,6 +66,7 @@ dev = ["mqt.core[coverage, docs]",]
 
 [project.scripts]
 mqt-core-compare = "mqt.core.evaluation:main"
+mqt-core-cli = "mqt.core.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/cda-tum/mqt-core"
@@ -85,16 +86,21 @@ wheel.install-dir = "mqt/core"
 ninja.version = ">=1.10"
 
 # Setuptools-style build caching in a local directory
-build-dir = "build/{wheel_tag}"
+build-dir = "build/{build_type}"
 
 # Explicitly set the package directory
 wheel.packages = ["src/mqt"]
 
-# Only build the Python bindings target
-build.targets = ["_core"]
-
-# Only install the Python package component
-install.components = ["mqt-core_Python"]
+# All the targets to build
+build.targets = [
+  "mqt-core",
+  "mqt-core-dd",
+  "mqt-core-zx",
+  "mqt-core-ds",
+  "mqt-core-na",
+  "mqt-core-ecc",
+  "_core"
+]
 
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 sdist.include = ["src/mqt/core/_version.py"]
@@ -118,10 +124,18 @@ git-only = [
 [tool.scikit-build.cmake.define]
 BUILD_MQT_CORE_BINDINGS = "ON"
 BUILD_MQT_CORE_TESTS = "OFF"
+BUILD_SHARED_LIBS = "ON"
 
 
 [tool.setuptools_scm]
 write_to = "src/mqt/core/_version.py"
+
+
+[tool.check-wheel-contents]
+ignore = [
+  "W002", # Wheel contains duplicate files (.so symlinks)
+  "W004", # Module is not located at imprtable path (.../lib/mqt-core-*.so)
+]
 
 
 [tool.pytest.ini_options]
@@ -292,5 +306,5 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
 
 [tool.cibuildwheel.windows]
 before-build = "uv pip install delvewheel>=1.7.3"
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt"
-environment = { CMAKE_GENERATOR = "Ninja" }
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt --ignore-in-wheel"
+environment = { CMAKE_GENERATOR = "Ninja", SKBUILD_CMAKE_ARGS="--fresh" }
