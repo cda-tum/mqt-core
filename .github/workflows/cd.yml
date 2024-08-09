@@ -1,11 +1,18 @@
 name: CD
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
   pull_request:
     paths:
       - .github/workflows/cd.yml
+
+permissions:
+  attestations: write
+  contents: read
+  id-token: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -15,6 +22,27 @@ jobs:
   python-packaging:
     name: 🐍 Packaging
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-packaging.yml@v1.4
+    with:
+      no-local-version: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+
+  deploy-test-pypi:
+    name: 🚀 Deploy to Test PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: test-pypi
+      url: https://test.pypi.org/p/mqt.core
+    needs: [python-packaging]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: test-cibw-*
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          attestations: true
 
   deploy:
     if: github.event_name == 'release' && github.event.action == 'published'
@@ -23,10 +51,6 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/p/mqt.core
-    permissions:
-      id-token: write
-      attestations: write
-      contents: read
     needs: [python-packaging]
     steps:
       - uses: actions/download-artifact@v4
@@ -39,3 +63,5 @@ jobs:
         with:
           subject-path: "dist/*"
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
