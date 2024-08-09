@@ -12,10 +12,141 @@
 #include <istream>
 #include <limits>
 #include <map>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
+#include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
+
+std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
+    const std::string& variableIdent, const qc::QuantumRegisterMap& dataQubits,
+    const qc::QuantumRegisterMap& ancillaryQubits) {
+  if (const auto& matchingEntryInDataQubits = dataQubits.find(variableIdent);
+      matchingEntryInDataQubits != dataQubits.end())
+    return matchingEntryInDataQubits->second.first;
+
+  if (const auto& matchingEntryInAncillaryQubits =
+          ancillaryQubits.find(variableIdent);
+      matchingEntryInAncillaryQubits != ancillaryQubits.end())
+    return matchingEntryInAncillaryQubits->second.first;
+
+  return std::nullopt;
+}
+
+/// Determine whether the given io name value that is not enclosed in quotes
+/// consists of only letters, digits and underscore characters.
+/// @param ioName The name to valid
+/// @return Whether the given io name is valid
+bool isValidIoName(const std::string_view& ioName) {
+  return !ioName.empty() &&
+         std::all_of(
+             ioName.cbegin(), ioName.cend(), [](const char ioNameCharacter) {
+               return static_cast<bool>(std::isalnum(
+                          static_cast<unsigned char>(ioNameCharacter))) ||
+                      ioNameCharacter == '_';
+             });
+}
+
+std::unordered_map<std::string, qc::Qubit>
+parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
+             const std::size_t expectedNumberOfIos,
+             const std::string& ioNameIdentsRawValues,
+             const std::unordered_set<std::string>& variableIdentLookup) {
+  std::unordered_map<std::string, qc::Qubit> foundIoNames;
+  std::size_t ioNameStartIdx = 0;
+  std::size_t ioNameEndIdx = 0;
+  std::size_t ioIdx = 0;
+
+  bool searchingForWhitespaceCharacter = false;
+  while (ioNameStartIdx < ioNameIdentsRawValues.size() &&
+         foundIoNames.size() <= expectedNumberOfIos) {
+    searchingForWhitespaceCharacter =
+        ioNameIdentsRawValues.at(ioNameStartIdx) != '"';
+    if (searchingForWhitespaceCharacter)
+      ioNameEndIdx = ioNameIdentsRawValues.find_first_of(' ', ioNameStartIdx);
+    else
+      ioNameEndIdx =
+          ioNameIdentsRawValues.find_first_of('"', ioNameStartIdx + 1);
+
+    if (ioNameEndIdx == std::string::npos) {
+      ioNameEndIdx = ioNameIdentsRawValues.size();
+      if (!searchingForWhitespaceCharacter) {
+        throw qc::QFRException(
+            "[real parser] l: " +
+            std::to_string(lineInRealFileDefiningIoNames) +
+            " no matching closing quote found for name of io: " +
+            std::to_string(ioIdx));
+      }
+    } else {
+      ioNameEndIdx +=
+          static_cast<std::size_t>(!searchingForWhitespaceCharacter);
+    }
+
+    std::size_t ioNameLength = ioNameEndIdx - ioNameStartIdx;
+    // On windows the line ending could be the character sequence \r\n while on
+    // linux system it would only be \n
+    if (ioNameLength > 0 &&
+        ioNameIdentsRawValues.at(
+            std::min(ioNameEndIdx, ioNameIdentsRawValues.size() - 1)) == '\r')
+      --ioNameLength;
+
+    const auto& ioName =
+        ioNameIdentsRawValues.substr(ioNameStartIdx, ioNameLength);
+
+    std::string_view ioNameToValidate = ioName;
+    if (!searchingForWhitespaceCharacter) {
+      ioNameToValidate =
+          ioNameToValidate.substr(1, ioNameToValidate.size() - 2);
+    }
+
+    if (!isValidIoName(ioNameToValidate)) {
+      throw qc::QFRException(
+          "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+          " msg: invalid io name: " + ioName);
+    }
+
+    if (variableIdentLookup.count(ioName) > 0) {
+      throw qc::QFRException(
+          "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+          " msg: IO ident matched already declared variable with name " +
+          ioName);
+    }
+
+    ioNameStartIdx = ioNameEndIdx + 1;
+    /*
+     * We offer the user the use of some special literals to denote either
+     * constant inputs or garbage outputs instead of finding unique names for
+     * said ios, otherwise check that the given io name is unique.
+     */
+    if (!(ioName == "0" || ioName == "1" || ioName == "g")) {
+      if (const auto& ioNameInsertionIntoLookupResult =
+              foundIoNames.emplace(ioName, static_cast<qc::Qubit>(ioIdx++));
+          !ioNameInsertionIntoLookupResult.second) {
+        throw qc::QFRException("[real parser] l: " +
+                               std::to_string(lineInRealFileDefiningIoNames) +
+                               " msg: duplicate io name: " + ioName);
+      }
+    }
+  }
+
+  if (searchingForWhitespaceCharacter &&
+      ioNameEndIdx + 1 < ioNameIdentsRawValues.size() &&
+      ioNameIdentsRawValues.at(ioNameEndIdx + 1) == ' ') {
+    throw qc::QFRException(
+        "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+        " msg: expected only " + std::to_string(expectedNumberOfIos) +
+        " io identifiers to be declared but io identifier delimiter was found"
+        " after " +
+        std::to_string(expectedNumberOfIos) +
+        " identifiers were detected (which we assume will be followed by "
+        "another io identifier)!");
+  }
+  return foundIoNames;
+}
 
 void qc::QuantumComputation::importReal(std::istream& is) {
   auto line = readRealHeader(is);
@@ -26,6 +157,15 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
   std::string cmd;
   std::string variable;
   int line = 0;
+
+  /*
+   * We could reuse the QuantumRegisterMap type defined in the qc namespace but
+   * to avoid potential errors due to any future refactoring of said type, we
+   * use an std::unordered_map instead
+   */
+  std::unordered_map<std::string, Qubit> userDefinedInputIdents;
+  std::unordered_map<std::string, Qubit> userDefinedOutputIdents;
+  std::unordered_set<std::string> userDeclaredVariableIdents;
 
   while (true) {
     if (!static_cast<bool>(is >> cmd)) {
@@ -63,12 +203,25 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
       nclassics = nqubits;
     } else if (cmd == ".VARIABLES") {
-      for (std::size_t i = 0; i < nqubits; ++i) {
+      userDeclaredVariableIdents.reserve(nclassics);
+      for (std::size_t i = 0; i < nclassics; ++i) {
         if (!static_cast<bool>(is >> variable) || variable.at(0) == '.') {
           throw QFRException(
               "[real parser] l:" + std::to_string(line) +
               " msg: Invalid or insufficient variables declared");
         }
+
+        if (!isValidIoName(variable)) {
+          throw QFRException("[real parser] l: " + std::to_string(line) +
+                             " msg: invalid variable name: " + variable);
+        }
+
+        if (userDeclaredVariableIdents.count(variable) > 0) {
+          throw QFRException("[real parser] l: " + std::to_string(line) +
+                             " msg: duplicate variable name: " + variable);
+        }
+        userDeclaredVariableIdents.emplace(variable);
+
         const auto qubit = static_cast<Qubit>(i);
         qregs.insert({variable, {qubit, 1U}});
         cregs.insert({"c_" + variable, {qubit, 1U}});
@@ -77,28 +230,177 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         ancillary.resize(nqubits);
         garbage.resize(nqubits);
       }
+
+      /*
+       *
+       * TODO: Ancillary qubits are expected to be initialized with the value
+       * '0' but .real file .constants definition allows the two values '0' and
+       * '1' - do we have to manually insert appropriate gates to set the
+       * value qubits marked as constants to '1' ?
+       */
     } else if (cmd == ".CONSTANTS") {
       is >> std::ws;
-      for (std::size_t i = 0; i < nqubits; ++i) {
-        const auto value = is.get();
-        if (!is.good()) {
-          throw QFRException("[real parser] l:" + std::to_string(line) +
-                             " msg: Failed read in '.constants' line");
-        }
-        if (value == '1') {
-          x(static_cast<Qubit>(i));
-        } else if (value != '-' && value != '0') {
+      std::string constantsValuePerIoDefinition;
+      if (!std::getline(is, constantsValuePerIoDefinition)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.constants' line");
+      }
+
+      if (constantsValuePerIoDefinition.size() != nclassics) {
+        throw QFRException(
+            "[real parser] l: " + std::to_string(line) + " msg: Expected " +
+            std::to_string(nclassics) + " constant values but " +
+            std::to_string(constantsValuePerIoDefinition.size()) +
+            " were declared!");
+      }
+
+      std::size_t constantValueIdx = 0;
+      for (const auto constantValuePerIo : constantsValuePerIoDefinition) {
+        if (const bool isCurrentQubitMarkedAsAncillary =
+                constantValuePerIo == '0' || constantValuePerIo == '1';
+            isCurrentQubitMarkedAsAncillary) {
+          const auto& ancillaryQubit = static_cast<Qubit>(constantValueIdx);
+          // Since ancillary qubits are assumed to have an initial value of
+          // zero, we need to add an inversion gate to derive the correct
+          // initial value of 1.
+          if (constantValuePerIo == '1')
+            x(ancillaryQubit);
+
+          setLogicalQubitAncillary(ancillaryQubit);
+
+          /*
+           * Since the call to setLogicalQubitAncillary does not actually
+           * transfer the qubit from the data qubit lookup into the ancillary
+           * lookup we will 'manually' perform this transfer.
+           */
+          const std::string& associatedVariableNameForQubitRegister =
+              getQubitRegister(ancillaryQubit);
+          qregs.erase(associatedVariableNameForQubitRegister);
+          ancregs.insert_or_assign(
+              associatedVariableNameForQubitRegister,
+              qc::QuantumRegister(std::make_pair(ancillaryQubit, 1U)));
+        } else if (constantValuePerIo != '-') {
           throw QFRException("[real parser] l:" + std::to_string(line) +
                              " msg: Invalid value in '.constants' header: '" +
-                             std::to_string(value) + "'");
+                             std::to_string(constantValuePerIo) + "'");
+        }
+        ++constantValueIdx;
+      }
+    } else if (cmd == ".GARBAGE") {
+      is >> std::ws;
+      std::string garbageStatePerIoDefinition;
+      if (!std::getline(is, garbageStatePerIoDefinition)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.garbage' line");
+      }
+
+      if (garbageStatePerIoDefinition.size() != nclassics) {
+        throw QFRException("[real parser] l: " + std::to_string(line) +
+                           " msg: Expected " + std::to_string(nclassics) +
+                           " garbage state values but " +
+                           std::to_string(garbageStatePerIoDefinition.size()) +
+                           " were declared!");
+      }
+
+      std::size_t garbageStateIdx = 0;
+      for (const auto garbageStateValue : garbageStatePerIoDefinition) {
+        if (const bool isCurrentQubitMarkedAsGarbage = garbageStateValue == '1';
+            isCurrentQubitMarkedAsGarbage) {
+          setLogicalQubitGarbage(static_cast<Qubit>(garbageStateIdx));
+        } else if (garbageStateValue != '-') {
+          throw QFRException("[real parser] l:" + std::to_string(line) +
+                             " msg: Invalid value in '.garbage' header: '" +
+                             std::to_string(garbageStateValue) + "'");
+        }
+        garbageStateIdx++;
+      }
+    } else if (cmd == ".INPUTS") {
+      // .INPUT: specifies initial layout
+      is >> std::ws;
+      const std::size_t expectedNumInputIos = nclassics;
+      std::string ioNameIdentsLine;
+      if (!std::getline(is, ioNameIdentsLine)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.inputs' line");
+      }
+
+      userDefinedInputIdents =
+          parseIoNames(static_cast<std::size_t>(line), expectedNumInputIos,
+                       ioNameIdentsLine, userDeclaredVariableIdents);
+
+      if (userDefinedInputIdents.size() != expectedNumInputIos) {
+        throw QFRException(
+            "[real parser] l: " + std::to_string(line) + "msg: Expected " +
+            std::to_string(expectedNumInputIos) + " inputs to be declared!");
+      }
+    } else if (cmd == ".OUTPUTS") {
+      // .OUTPUTS: specifies output permutation
+      is >> std::ws;
+      const std::size_t expectedNumOutputIos = nclassics;
+      std::string ioNameIdentsLine;
+      if (!std::getline(is, ioNameIdentsLine)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.outputs' line");
+      }
+
+      userDefinedOutputIdents =
+          parseIoNames(static_cast<std::size_t>(line), expectedNumOutputIos,
+                       ioNameIdentsLine, userDeclaredVariableIdents);
+
+      if (userDefinedOutputIdents.size() != expectedNumOutputIos) {
+        throw QFRException(
+            "[real parser] l: " + std::to_string(line) + "msg: Expected " +
+            std::to_string(expectedNumOutputIos) + " outputs to be declared!");
+      }
+
+      if (userDefinedInputIdents.empty())
+        continue;
+
+      for (const auto& [outputIoIdent, outputIoQubit] :
+           userDefinedOutputIdents) {
+        /*
+         * We assume that a permutation of a given input qubit Q at index i
+         * is performed in the circuit if an entry in both in the .output
+         * as well as the .input definition using the same literal is found,
+         * with the input literal being defined at position i in the .input
+         * definition. If no such matching is found, we require that the output
+         * is marked as garbage.
+         *
+         * The outputPermutation map will use be structured as shown in the
+         * documentation
+         * (https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information)
+         * with the output qubit being used as the key while the input qubit
+         * serves as the map entries value.
+         */
+        if (userDefinedInputIdents.count(outputIoIdent) == 0) {
+          /*
+           * The current implementation requires that the .garbage definition is
+           * define prior to the .output one.
+           */
+          if (!logicalQubitIsGarbage(outputIoQubit)) {
+            throw QFRException("[real parser] l: " + std::to_string(line) +
+                               " msg: outputs without matching inputs are "
+                               "expected to be marked as garbage");
+          }
+        } else if (const Qubit matchingInputQubitForOutputLiteral =
+                       userDefinedInputIdents.at(outputIoIdent);
+                   matchingInputQubitForOutputLiteral != outputIoQubit &&
+                   !logicalQubitIsGarbage(outputIoQubit)) {
+          /*
+           * We do not need to check whether a mapping from one input to any
+           * output exists, since we require that the idents defined in either
+           * of the .input as well as the .output definition are unique in their
+           * definition.
+           *
+           * Only if the matching entries where defined at different indices
+           * in their respective IO declaration do we update the existing 1-1
+           * mapping for the given output qubit
+           */
+          outputPermutation.insert_or_assign(
+              outputIoQubit, matchingInputQubitForOutputLiteral);
         }
       }
-      is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    } else if (cmd == ".INPUTS" || cmd == ".OUTPUTS" || cmd == ".GARBAGE" ||
-               cmd == ".VERSION" || cmd == ".INPUTBUS" || cmd == ".OUTPUTBUS") {
-      // TODO .inputs: specifies initial layout (and ancillaries)
-      // TODO .outputs: specifies output permutation
-      // TODO .garbage: specifies garbage outputs
+    } else if (cmd == ".VERSION" || cmd == ".INPUTBUS" || cmd == ".OUTPUTBUS") {
       is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
       continue;
     } else if (cmd == ".DEFINE") {
@@ -177,16 +479,16 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     const fp lambda = m.str(3).empty() ? static_cast<fp>(0L)
                                        : static_cast<fp>(std::stold(m.str(3)));
 
-    if (gate == V || gate == Vdg || m.str(1) == "c" || gate == SWAP) {
+    if (gate == V || gate == Vdg || m.str(1) == "c") {
       ncontrols = 1;
     } else if (gate == Peres || gate == Peresdg) {
       ncontrols = 2;
     }
 
-    if (ncontrols >= nqubits) {
+    if (ncontrols >= getNqubits()) {
       throw QFRException("[real parser] l:" + std::to_string(line) +
                          " msg: Gate acts on " + std::to_string(ncontrols + 1) +
-                         " qubits, but only " + std::to_string(nqubits) +
+                         " qubits, but only " + std::to_string(getNqubits()) +
                          " qubits are available.");
     }
 
@@ -196,6 +498,27 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
 
     std::vector<Control> controls{};
     std::istringstream iss(qubits);
+
+    // TODO: Check how non-default RevLib .real specification gate types shall
+    // be supported i.e. c a b (which does not define the number of gate lines)
+    const std::string& stringifiedNumberOfGateLines = m.str(2);
+    const auto numberOfGateLines =
+        stringifiedNumberOfGateLines.empty()
+            ? 0
+            : std::stoul(stringifiedNumberOfGateLines, nullptr, 0);
+    // Current parser implementation defines number of expected control lines
+    // (nControl) as nLines (of gate definition) - 1. Controlled swap gate has
+    // at most two target lines so we define the number of control lines as
+    // nLines - 2.
+    if (gate == SWAP) {
+      if (numberOfGateLines < 2) {
+        throw QFRException("[real parser] l: " + std::to_string(line) +
+                           "msg: SWAP gate is expected to operate on at least "
+                           "two qubits but only " +
+                           std::to_string(ncontrols) + " were defined");
+      }
+      ncontrols = numberOfGateLines - 2;
+    }
 
     // get controls and target
     for (std::size_t i = 0; i < ncontrols; ++i) {
@@ -209,28 +532,40 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
         label.erase(label.begin());
       }
 
-      auto iter = qregs.find(label);
-      if (iter == qregs.end()) {
+      // Since variable qubits can either be data or ancillary qubits our search
+      // will have to be conducted in both lookups
+      if (const std::optional<Qubit> controlLineQubit =
+              getQubitForVariableIdentFromAnyLookup(label, qregs, ancregs);
+          controlLineQubit.has_value()) {
+        controls.emplace_back(*controlLineQubit, negativeControl
+                                                     ? Control::Type::Neg
+                                                     : Control::Type::Pos);
+      } else {
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Label " + label + " not found!");
       }
-      controls.emplace_back(iter->second.first, negativeControl
-                                                    ? Control::Type::Neg
-                                                    : Control::Type::Pos);
     }
 
-    if (!(iss >> label)) {
-      throw QFRException("[real parser] l:" + std::to_string(line) +
-                         " msg: Too few variables (no target) for gate " +
-                         m.str(1));
-    }
-    auto iter = qregs.find(label);
-    if (iter == qregs.end()) {
-      throw QFRException("[real parser] l:" + std::to_string(line) +
-                         " msg: Label " + label + " not found!");
+    const auto numberOfTargetLines = numberOfGateLines - ncontrols;
+    std::vector targetLineQubits(numberOfTargetLines, Qubit());
+    for (std::size_t i = 0; i < numberOfTargetLines; ++i) {
+      if (!(iss >> label)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Too few variables (no target) for gate " +
+                           m.str(1));
+      }
+      // Since variable qubits can either be data or ancillary qubits our search
+      // will have to be conducted in both lookups
+      if (const std::optional<Qubit> targetLineQubit =
+              getQubitForVariableIdentFromAnyLookup(label, qregs, ancregs);
+          targetLineQubit.has_value()) {
+        targetLineQubits[i] = *targetLineQubit;
+      } else {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Label " + label + " not found!");
+      }
     }
 
-    const Qubit target = iter->second.first;
     switch (gate) {
     case I:
     case H:
@@ -243,27 +578,34 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     case V:
     case Vdg:
       emplace_back<StandardOperation>(
-          Controls{controls.cbegin(), controls.cend()}, target, gate);
+          Controls{controls.cbegin(), controls.cend()},
+          targetLineQubits.front(), gate);
       break;
     case X:
-      mcx(Controls{controls.cbegin(), controls.cend()}, target);
+      mcx(Controls{controls.cbegin(), controls.cend()},
+          targetLineQubits.front());
       break;
     case RX:
     case RY:
     case RZ:
     case P:
       emplace_back<StandardOperation>(
-          Controls{controls.cbegin(), controls.cend()}, target, gate,
-          std::vector{PI / (lambda)});
+          Controls{controls.cbegin(), controls.cend()},
+          targetLineQubits.front(), gate, std::vector{PI / (lambda)});
       break;
     case SWAP:
+    case iSWAP:
+      emplace_back<StandardOperation>(
+          Controls{controls.cbegin(), controls.cend()},
+          Targets{targetLineQubits.cbegin(), targetLineQubits.cend()}, gate);
+      break;
     case Peres:
-    case Peresdg:
-    case iSWAP: {
+    case Peresdg: {
       const auto target1 = controls.back().qubit;
       controls.pop_back();
       emplace_back<StandardOperation>(
-          Controls{controls.cbegin(), controls.cend()}, target1, target, gate);
+          Controls{controls.cbegin(), controls.cend()}, target1,
+          targetLineQubits.front(), gate);
       break;
     }
     default:
