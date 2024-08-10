@@ -51,6 +51,87 @@ bool isValidIoName(const std::string_view& ioName) {
              });
 }
 
+std::vector<std::string>
+parseVariableNames(const std::size_t processedLineNumberInRealFile,
+                   const std::size_t expectedNumberOfVariables,
+                   const std::string& readInRawVariableIdentValues,
+                   const std::unordered_set<std::string>& variableIdentsLookup,
+                   bool checkForDuplicates) {
+  std::vector<std::string> variableNames;
+  variableNames.reserve(expectedNumberOfVariables);
+
+  std::unordered_set<std::string> processedVariableIdents;
+  std::size_t variableIdentStartIdx = 0;
+  std::size_t variableIdentEndIdx = 0;
+
+  while (variableIdentStartIdx < readInRawVariableIdentValues.size() &&
+         variableNames.size() <= expectedNumberOfVariables &&
+         variableNames.size() < expectedNumberOfVariables) {
+    variableIdentEndIdx =
+        readInRawVariableIdentValues.find_first_of(' ', variableIdentStartIdx);
+
+    if (variableIdentEndIdx == std::string::npos)
+      variableIdentEndIdx = readInRawVariableIdentValues.size();
+
+    std::size_t variableIdentLength =
+        variableIdentEndIdx - variableIdentStartIdx;
+    // On windows the line ending could be the character sequence \r\n while on
+    // linux system it would only be \n
+    if (variableIdentLength > 0 &&
+        readInRawVariableIdentValues.at(std::min(
+            variableIdentEndIdx, readInRawVariableIdentValues.size() - 1)) ==
+            '\r')
+      --variableIdentLength;
+
+    const auto& variableIdent = readInRawVariableIdentValues.substr(
+        variableIdentStartIdx, variableIdentLength);
+
+    if (!isValidIoName(variableIdent)) {
+      throw qc::QFRException(
+          "[real parser] l: " + std::to_string(processedLineNumberInRealFile) +
+          " msg: invalid variable name: " + variableIdent);
+    }
+
+    if (!checkForDuplicates) {
+      if (variableIdentsLookup.count(variableIdent) == 0) {
+        throw qc::QFRException("[real parser] l: " +
+                               std::to_string(processedLineNumberInRealFile) +
+                               " msg: given variable name " + variableIdent +
+                               " was not declared in .variables entry");
+      }
+    } else if (processedVariableIdents.count(variableIdent) > 0) {
+      throw qc::QFRException(
+          "[real parser] l: " + std::to_string(processedLineNumberInRealFile) +
+          " msg: duplicate variable name: " + variableIdent);
+    }
+    processedVariableIdents.emplace(variableIdent);
+    variableNames.emplace_back(variableIdent);
+    variableIdentStartIdx = variableIdentEndIdx + 1;
+  }
+
+  if (variableIdentEndIdx < readInRawVariableIdentValues.size() &&
+      readInRawVariableIdentValues.at(variableIdentEndIdx) == ' ') {
+    throw qc::QFRException(
+        "[real parser] l: " + std::to_string(processedLineNumberInRealFile) +
+        " msg: expected only " + std::to_string(expectedNumberOfVariables) +
+        " variable identifiers to be declared but variable identifier "
+        "delimiter was found"
+        " after " +
+        std::to_string(expectedNumberOfVariables) +
+        " identifiers were detected (which we assume will be followed by "
+        "another io identifier)!");
+  }
+
+  if (variableNames.size() < expectedNumberOfVariables) {
+    throw qc::QFRException(
+        "[real parser] l:" + std::to_string(processedLineNumberInRealFile) +
+        " msg: Expected " + std::to_string(expectedNumberOfVariables) +
+        " variable idents but only " + std::to_string(variableNames.size()) +
+        " were declared!");
+  }
+  return variableNames;
+}
+
 std::unordered_map<std::string, qc::Qubit>
 parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
              const std::size_t expectedNumberOfIos,
@@ -117,19 +198,12 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
     }
 
     ioNameStartIdx = ioNameEndIdx + 1;
-    /*
-     * We offer the user the use of some special literals to denote either
-     * constant inputs or garbage outputs instead of finding unique names for
-     * said ios, otherwise check that the given io name is unique.
-     */
-    if (!(ioName == "0" || ioName == "1" || ioName == "g")) {
-      if (const auto& ioNameInsertionIntoLookupResult =
-              foundIoNames.emplace(ioName, static_cast<qc::Qubit>(ioIdx++));
-          !ioNameInsertionIntoLookupResult.second) {
-        throw qc::QFRException("[real parser] l: " +
-                               std::to_string(lineInRealFileDefiningIoNames) +
-                               " msg: duplicate io name: " + ioName);
-      }
+    if (const auto& ioNameInsertionIntoLookupResult =
+            foundIoNames.emplace(ioName, static_cast<qc::Qubit>(ioIdx++));
+        !ioNameInsertionIntoLookupResult.second) {
+      throw qc::QFRException(
+          "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+          " msg: duplicate io name: " + ioName);
     }
   }
 
@@ -221,41 +295,30 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
       nclassics = nqubits;
     } else if (cmd == ".VARIABLES") {
+      is >> std::ws;
       userDeclaredVariableIdents.reserve(nclassics);
-      for (std::size_t i = 0; i < nclassics; ++i) {
-        if (!static_cast<bool>(is >> variable) || variable.at(0) == '.') {
-          throw QFRException(
-              "[real parser] l:" + std::to_string(line) +
-              " msg: Invalid or insufficient variables declared");
-        }
 
-        if (!isValidIoName(variable)) {
-          throw QFRException("[real parser] l: " + std::to_string(line) +
-                             " msg: invalid variable name: " + variable);
-        }
-
-        if (userDeclaredVariableIdents.count(variable) > 0) {
-          throw QFRException("[real parser] l: " + std::to_string(line) +
-                             " msg: duplicate variable name: " + variable);
-        }
-        userDeclaredVariableIdents.emplace(variable);
-
-        const auto qubit = static_cast<Qubit>(i);
-        qregs.insert({variable, {qubit, 1U}});
-        cregs.insert({"c_" + variable, {qubit, 1U}});
-        initialLayout.insert({qubit, qubit});
-        outputPermutation.insert({qubit, qubit});
-        ancillary.resize(nqubits);
-        garbage.resize(nqubits);
+      std::string variableDefinitionEntry;
+      if (!std::getline(is, variableDefinitionEntry)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.variables' line");
       }
 
-      /*
-       *
-       * TODO: Ancillary qubits are expected to be initialized with the value
-       * '0' but .real file .constants definition allows the two values '0' and
-       * '1' - do we have to manually insert appropriate gates to set the
-       * value qubits marked as constants to '1' ?
-       */
+      const auto& processedVariableIdents =
+          parseVariableNames(static_cast<std::size_t>(line), nclassics,
+                             variableDefinitionEntry, {}, true);
+      userDeclaredVariableIdents.insert(processedVariableIdents.cbegin(),
+                                        processedVariableIdents.cend());
+
+      ancillary.resize(nqubits);
+      garbage.resize(nqubits);
+      for (std::size_t i = 0; i < nclassics; ++i) {
+        const auto qubit = static_cast<Qubit>(i);
+        qregs.insert({processedVariableIdents.at(i), {qubit, 1U}});
+        cregs.insert({"c_" + processedVariableIdents.at(i), {qubit, 1U}});
+        initialLayout.insert({qubit, qubit});
+        outputPermutation.insert({qubit, qubit});
+      }
     } else if (cmd == ".CONSTANTS") {
       is >> std::ws;
       std::string constantsValuePerIoDefinition;
