@@ -166,6 +166,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
   std::unordered_map<std::string, Qubit> userDefinedInputIdents;
   std::unordered_map<std::string, Qubit> userDefinedOutputIdents;
   std::unordered_set<std::string> userDeclaredVariableIdents;
+  std::unordered_set<Qubit> outputQubitsMarkedAsGarbage;
 
   while (true) {
     if (!static_cast<bool>(is >> cmd)) {
@@ -190,6 +191,23 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     }
 
     if (cmd == ".BEGIN") {
+      /*
+       * The garbage declarations in the .real file are defined on the outputs
+       * while the garbage state of the quantum computation operates on the
+       * defined inputs, thus we perform a mapping from the output marked as
+       * garbage back to the input using the output permutation.
+       */
+      for (const auto& outputQubitMarkedAsGarbage :
+           outputQubitsMarkedAsGarbage) {
+        /*
+         * Since the call setLogicalQubitAsGarbage(...) assumes that the qubit
+         * parameter is an input qubit, we need to manually mark the output qubit
+         * as garbage by using the output qubit instead.
+         */
+        garbage[outputQubitMarkedAsGarbage] = true;
+        outputPermutation.erase(outputQubitMarkedAsGarbage);
+      }
+
       // header read complete
       return line;
     }
@@ -306,7 +324,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       for (const auto garbageStateValue : garbageStatePerIoDefinition) {
         if (const bool isCurrentQubitMarkedAsGarbage = garbageStateValue == '1';
             isCurrentQubitMarkedAsGarbage) {
-          setLogicalQubitGarbage(static_cast<Qubit>(garbageStateIdx));
+          outputQubitsMarkedAsGarbage.emplace(static_cast<Qubit>(garbageStateIdx));
         } else if (garbageStateValue != '-') {
           throw QFRException("[real parser] l:" + std::to_string(line) +
                              " msg: Invalid value in '.garbage' header: '" +
@@ -377,7 +395,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
            * The current implementation requires that the .garbage definition is
            * define prior to the .output one.
            */
-          if (!logicalQubitIsGarbage(outputIoQubit)) {
+          if (outputQubitsMarkedAsGarbage.count(outputIoQubit) == 0) {
             throw QFRException("[real parser] l: " + std::to_string(line) +
                                " msg: outputs without matching inputs are "
                                "expected to be marked as garbage");
@@ -398,6 +416,18 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
            */
           outputPermutation.insert_or_assign(
               outputIoQubit, matchingInputQubitForOutputLiteral);
+
+          /*
+           * If we have determined a non-identity permutation of an input qubit,
+           * (i.e. output 2 <- input 1) delete any existing identify permutation of
+           * the input qubit since for the output 1 of the previous identity mapping
+           * either another non-identity permutation must exist or the output 1 must be
+           * declared as garbage.
+           */
+          if (outputPermutation.count(matchingInputQubitForOutputLiteral) > 0 &&
+              outputPermutation[matchingInputQubitForOutputLiteral] ==
+                  matchingInputQubitForOutputLiteral)
+            outputPermutation.erase(matchingInputQubitForOutputLiteral);
         }
       }
     } else if (cmd == ".VERSION" || cmd == ".INPUTBUS" || cmd == ".OUTPUTBUS") {

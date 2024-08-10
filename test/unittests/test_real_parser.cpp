@@ -721,13 +721,14 @@ TEST_F(RealParserTest,
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(false, true, false, true));
+              testing::ElementsAre(false, false, true, true));
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(false, false, false, false));
 
   auto expectedOutputPermutation = getIdentityPermutation(4);
   expectedOutputPermutation.erase(1);
   expectedOutputPermutation.erase(3);
+  expectedOutputPermutation[2] = static_cast<Qubit>(1);
 
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedOutputPermutation),
@@ -758,7 +759,7 @@ TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
   ASSERT_EQ(2, quantumComputationInstance->getNancillae());
   ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(true, false, false, true));
+              testing::ElementsAre(false, true, true, false));
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(true, false, false, true));
 
@@ -798,7 +799,7 @@ TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
   ASSERT_EQ(2, quantumComputationInstance->getNancillae());
   ASSERT_EQ(1, quantumComputationInstance->getNgarbageQubits());
   ASSERT_THAT(quantumComputationInstance->garbage,
-              testing::ElementsAre(false, false, false, true));
+              testing::ElementsAre(true, false, false, false));
   ASSERT_THAT(quantumComputationInstance->ancillary,
               testing::ElementsAre(false, true, true, false));
 
