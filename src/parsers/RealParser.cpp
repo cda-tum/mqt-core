@@ -55,7 +55,7 @@ parseVariableNames(const std::size_t processedLineNumberInRealFile,
                    const std::size_t expectedNumberOfVariables,
                    const std::string& readInRawVariableIdentValues,
                    const std::unordered_set<std::string>& variableIdentsLookup,
-                   bool checkForDuplicates,
+                   bool allowedDuplicateVariableIdentDeclarations,
                    const std::string_view& trimableVariableIdentPrefix) {
   std::vector<std::string> variableNames;
   variableNames.reserve(expectedNumberOfVariables);
@@ -97,17 +97,19 @@ parseVariableNames(const std::size_t processedLineNumberInRealFile,
           " msg: invalid variable name: " + variableIdent);
     }
 
-    if (!checkForDuplicates) {
-      if (variableIdentsLookup.count(variableIdent) == 0) {
-        throw qc::QFRException("[real parser] l: " +
-                               std::to_string(processedLineNumberInRealFile) +
-                               " msg: given variable name " + variableIdent +
-                               " was not declared in .variables entry");
-      }
-    } else if (processedVariableIdents.count(variableIdent) > 0) {
+    if (!allowedDuplicateVariableIdentDeclarations &&
+        processedVariableIdents.count(variableIdent) > 0) {
       throw qc::QFRException(
           "[real parser] l: " + std::to_string(processedLineNumberInRealFile) +
           " msg: duplicate variable name: " + variableIdent);
+    }
+
+    if (!variableIdentsLookup.empty() &&
+        variableIdentsLookup.count(variableIdent) == 0) {
+      throw qc::QFRException(
+          "[real parser] l: " + std::to_string(processedLineNumberInRealFile) +
+          " msg: given variable name " + variableIdent +
+          " was not declared in .variables entry");
     }
     processedVariableIdents.emplace(variableIdent);
     variableNames.emplace_back(trimVariableIdent
@@ -313,7 +315,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
 
       const auto& processedVariableIdents =
           parseVariableNames(static_cast<std::size_t>(line), nclassics,
-                             variableDefinitionEntry, {}, true, "");
+                             variableDefinitionEntry, {}, false, "");
       userDeclaredVariableIdents.insert(processedVariableIdents.cbegin(),
                                         processedVariableIdents.cend());
 
@@ -325,6 +327,29 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         cregs.insert({"c_" + processedVariableIdents.at(i), {qubit, 1U}});
         initialLayout.insert({qubit, qubit});
         outputPermutation.insert({qubit, qubit});
+      }
+    } else if (cmd == ".INITIAL_LAYOUT") {
+      is >> std::ws;
+      std::string initialLayoutDefinitionEntry;
+      if (!std::getline(is, initialLayoutDefinitionEntry)) {
+        throw QFRException("[real parser] l:" + std::to_string(line) +
+                           " msg: Failed read in '.initial_layout' line");
+      }
+
+      const auto& processedVariableIdents = parseVariableNames(
+          static_cast<std::size_t>(line), nclassics,
+          initialLayoutDefinitionEntry, userDeclaredVariableIdents, false, "");
+
+      /* Map the user declared variable idents in the .variable entry to the
+       * ones declared in the .initial_layout as explained in
+       * https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information
+       */
+      for (std::size_t i = 0; i < nclassics; ++i) {
+        const auto algorithmicQubit = static_cast<Qubit>(i);
+        const auto deviceQubitForVariableIdentInInitialLayout =
+            qregs[processedVariableIdents.at(i)].first;
+        initialLayout[deviceQubitForVariableIdentInInitialLayout] =
+            algorithmicQubit;
       }
     } else if (cmd == ".CONSTANTS") {
       is >> std::ws;
@@ -629,10 +654,11 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       validVariableIdentLookup.emplace(
           qregNameAndQubitIndexPair.first.substr(2));
 
+    // TODO: Check that no control line is used as a target line
     // We will ignore the prefix '-' when validating a given gate line ident
     auto processedGateLines =
         parseVariableNames(static_cast<std::size_t>(line), numberOfGateLines,
-                           gateLines, validVariableIdentLookup, false, "-");
+                           gateLines, validVariableIdentLookup, true, "-");
 
     std::size_t lineIdx = 0;
     // get controls and target

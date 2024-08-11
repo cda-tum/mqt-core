@@ -42,6 +42,17 @@ public:
     return *this;
   }
 
+  RealParserTest& usingInitialLayout(
+      const std::initializer_list<std::string_view>& variableIdents
+  ) {
+    realFileContent << realHeaderInitialLayoutCommandPrefix;
+    for (const auto& variableIdent : variableIdents)
+      realFileContent << " " << variableIdent;
+
+    realFileContent << "\n";
+    return *this;
+  }
+
   RealParserTest&
   usingInputs(const std::initializer_list<std::string_view>& inputIdents) {
     realFileContent << realHeaderInputCommandPrefix;
@@ -105,6 +116,7 @@ protected:
   const std::string realHeaderVersionCommandPrefix = ".version";
   const std::string realHeaderNumVarsCommandPrefix = ".numvars";
   const std::string realHeaderVariablesCommandPrefix = ".variables";
+  const std::string realHeaderInitialLayoutCommandPrefix = ".initial_layout";
   const std::string realHeaderInputCommandPrefix = ".inputs";
   const std::string realHeaderOutputCommandPrefix = ".outputs";
   const std::string realHeaderConstantsCommandPrefix = ".constants";
@@ -241,6 +253,18 @@ TEST_F(RealParserTest, MoreGarbageEntriesThanVariablesDeclared) {
       QFRException);
 }
 
+TEST_F(RealParserTest, MoreIdentsInInitialLayoutThanVariablesDeclared) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInitialLayout({"v1", "v2", "v3"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
 TEST_F(RealParserTest, LessVariablesThanNumVariablesDeclared) {
   usingVersion(DEFAULT_REAL_VERSION)
       .usingNVariables(2)
@@ -300,6 +324,18 @@ TEST_F(RealParserTest, LessGarbageEntriesThanNumVariablesDeclared) {
       QFRException);
 }
 
+TEST_F(RealParserTest, LessIdentsInInitialLayoutThanVariablesDeclared) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInitialLayout({"v2"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
 TEST_F(RealParserTest, InvalidVariableIdentDeclaration) {
   usingVersion(DEFAULT_REAL_VERSION)
       .usingNVariables(2)
@@ -328,6 +364,18 @@ TEST_F(RealParserTest, InvalidInputIdentDeclarationInQuote) {
       .usingNVariables(2)
       .usingVariables({"v1", "v2"})
       .usingInputs({"\"test-input1\"", "i2"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, InvalidVariableIdentDeclarationInInitialLayout) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInitialLayout({"v-1", "v2"})
       .withEmptyGateList();
 
   EXPECT_THROW(
@@ -442,6 +490,18 @@ TEST_F(RealParserTest, DuplicateOutputIdentDeclaration) {
       QFRException);
 }
 
+TEST_F(RealParserTest, DuplicateVariableIdentDeclarationInInitialLayout) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInitialLayout({"v1", "v1"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
 TEST_F(RealParserTest,
        MissingClosingQuoteInIoIdentifierDoesNotLeadToInfinityLoop) {
   usingVersion(DEFAULT_REAL_VERSION)
@@ -530,6 +590,18 @@ TEST_F(RealParserTest, GateWithTargetLineTargetingUnknownVariable) {
       .usingNVariables(2)
       .usingVariables({"v1", "v2"})
       .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v3"})});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, UnknownVariableIdentDeclarationInInitialLayout) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInitialLayout({"v4", "v1"})
+      .withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -896,4 +968,51 @@ TEST_F(RealParserTest, OutputPermutationForGarbageQubitsNotCreated) {
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedOutputPermutation),
       std::hash<Permutation>{}(quantumComputationInstance->outputPermutation));
+}
+
+TEST_F(RealParserTest, CheckIdentityInitialLayout) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInitialLayout({"v1", "v2"})
+      .withEmptyGateList();
+
+  EXPECT_NO_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real));
+
+  ASSERT_EQ(2, quantumComputationInstance->getNqubits());
+
+  Permutation expectedInitialLayout = getIdentityPermutation(2);
+  ASSERT_EQ(
+      std::hash<Permutation>{}(expectedInitialLayout),
+      std::hash<Permutation>{}(quantumComputationInstance->initialLayout));
+}
+
+TEST_F(RealParserTest, CheckNoneIdentityInitialLayout) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(4)
+      .usingVariables({"v1", "v2", "v3", "v4"})
+      .usingInitialLayout({"v4", "v2", "v1", "v3"})
+      .withEmptyGateList();
+
+  EXPECT_NO_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real));
+
+  ASSERT_EQ(4, quantumComputationInstance->getNqubits());
+  Permutation expectedInitialLayout;
+
+  expectedInitialLayout.emplace(static_cast<Qubit>(0),
+                                    static_cast<Qubit>(2));
+
+  expectedInitialLayout.emplace(static_cast<Qubit>(1),
+                                    static_cast<Qubit>(1));
+
+  expectedInitialLayout.emplace(static_cast<Qubit>(2),
+                                    static_cast<Qubit>(3));
+
+  expectedInitialLayout.emplace(static_cast<Qubit>(3),
+                                    static_cast<Qubit>(0));
+  ASSERT_EQ(
+      std::hash<Permutation>{}(expectedInitialLayout),
+      std::hash<Permutation>{}(quantumComputationInstance->initialLayout));
 }
