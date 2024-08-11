@@ -4,6 +4,7 @@
 
 #include "gmock/gmock-matchers.h"
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <gtest/gtest.h>
 #include <initializer_list>
@@ -14,6 +15,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 using namespace qc;
 using ::testing::NotNull;
@@ -981,7 +983,7 @@ TEST_F(RealParserTest, CheckIdentityInitialLayout) {
 
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
 
-  Permutation expectedInitialLayout = getIdentityPermutation(2);
+  const Permutation expectedInitialLayout = getIdentityPermutation(2);
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedInitialLayout),
       std::hash<Permutation>{}(quantumComputationInstance->initialLayout));

@@ -674,9 +674,9 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
               getQubitForVariableIdentFromAnyLookup(std::string(gateIdent),
                                                     qregs, ancregs);
           controlLineQubit.has_value()) {
-        controls.emplace_back(*controlLineQubit, negativeControl
-                                                     ? Control::Type::Neg
-                                                     : Control::Type::Pos);
+        controls[i] =
+            Control(*controlLineQubit,
+                    negativeControl ? Control::Type::Neg : Control::Type::Pos);
       } else {
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Matching qubit for control line " +
