@@ -43,8 +43,7 @@ public:
   }
 
   RealParserTest& usingInitialLayout(
-      const std::initializer_list<std::string_view>& variableIdents
-  ) {
+      const std::initializer_list<std::string_view>& variableIdents) {
     realFileContent << realHeaderInitialLayoutCommandPrefix;
     for (const auto& variableIdent : variableIdents)
       realFileContent << " " << variableIdent;
@@ -133,7 +132,7 @@ protected:
   const char isGarbageState = '1';
   const char isNotGarbageState = '-';
 
-  enum class GateType { Toffoli };
+  enum class GateType : std::uint8_t { Toffoli };
 
   std::unique_ptr<QuantumComputation> quantumComputationInstance;
   std::stringstream realFileContent;
@@ -1001,17 +1000,13 @@ TEST_F(RealParserTest, CheckNoneIdentityInitialLayout) {
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   Permutation expectedInitialLayout;
 
-  expectedInitialLayout.emplace(static_cast<Qubit>(0),
-                                    static_cast<Qubit>(2));
+  expectedInitialLayout.emplace(static_cast<Qubit>(0), static_cast<Qubit>(2));
 
-  expectedInitialLayout.emplace(static_cast<Qubit>(1),
-                                    static_cast<Qubit>(1));
+  expectedInitialLayout.emplace(static_cast<Qubit>(1), static_cast<Qubit>(1));
 
-  expectedInitialLayout.emplace(static_cast<Qubit>(2),
-                                    static_cast<Qubit>(3));
+  expectedInitialLayout.emplace(static_cast<Qubit>(2), static_cast<Qubit>(3));
 
-  expectedInitialLayout.emplace(static_cast<Qubit>(3),
-                                    static_cast<Qubit>(0));
+  expectedInitialLayout.emplace(static_cast<Qubit>(3), static_cast<Qubit>(0));
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedInitialLayout),
       std::hash<Permutation>{}(quantumComputationInstance->initialLayout));
