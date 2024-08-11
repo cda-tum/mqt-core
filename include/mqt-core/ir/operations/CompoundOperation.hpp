@@ -41,7 +41,7 @@ public:
 
   [[nodiscard]] bool isNonUnitaryOperation() const override;
 
-  [[nodiscard]] inline bool isSymbolicOperation() const override;
+  [[nodiscard]] bool isSymbolicOperation() const override;
 
   [[nodiscard]] bool isCustomGate() const;
 
