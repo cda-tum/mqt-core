@@ -4,6 +4,7 @@
 #include "QuantumComputation.hpp"
 #include "operations/OpType.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <sstream>
@@ -12,7 +13,8 @@
 
 namespace qc {
 
-auto Layer::constructDAG(const QuantumComputation& qc) -> void {
+auto Layer::constructDAG(const QuantumComputation& qc,
+                         const bool commutable) -> void {
   const auto nQubits = qc.getNqubits();
   // For a pair of self-canceling operations like two consecutive X operations
   // or RY rotations with opposite angles the first operations is a
@@ -59,7 +61,10 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
         // check whether the current operation is the inverse of the
         // lookahead
         if (current->getOperation()->isInverseOf(
-                *lookahead[qubit]->getOperation())) {
+                *lookahead[qubit]->getOperation()) &&
+            (currentGroup[qubit].empty() ||
+             !(currentGroup[qubit][0]->getOperation())
+                  ->commutesAtQubit(*current->getOperation(), qubit))) {
           // here: the current operation is the inverse of the lookahead
           // add an enabling edge from the lookahead to all operations on this
           // qubit including the destructive ones
@@ -96,9 +101,18 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
           }
           // check whether the current operation commutes with the current
           // group members
-          if (!currentGroup[qubit].empty() and
-              !(currentGroup[qubit][0]->getOperation())
-                   ->commutesAtQubit(*current->getOperation(), qubit)) {
+          // NOTE: We treat operations that are already in the group as such
+          // that would not commute because redundant operations in a group
+          // cause problems later on, e.g., when generating interaction graphs
+          if (!currentGroup[qubit].empty() &&
+              (!commutable ||
+               !(currentGroup[qubit][0]->getOperation())
+                    ->commutesAtQubit(*current->getOperation(), qubit) ||
+               std::find_if(
+                   currentGroup[qubit].cbegin(), currentGroup[qubit].cend(),
+                   [&current](const auto& vertex) {
+                     return *vertex->getOperation() == *current->getOperation();
+                   }) != currentGroup[qubit].cend())) {
             // here: the current operation does not commute with the current
             // group members and is not the inverse of the lookahead
             // --> start a new group
@@ -133,8 +147,9 @@ auto Layer::constructDAG(const QuantumComputation& qc) -> void {
       // check whether the current operation commutes with the current
       // group members
       if (!currentGroup[qubit].empty() and
-          !(currentGroup[qubit][0]->getOperation())
-               ->commutesAtQubit(*current->getOperation(), qubit)) {
+          (!commutable or
+           !(currentGroup[qubit][0]->getOperation())
+                ->commutesAtQubit(*current->getOperation(), qubit))) {
         // here: the current operation does not commute with the current
         // group members and is not the inverse of the lookahead
         // --> start a new group

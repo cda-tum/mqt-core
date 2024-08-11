@@ -14,7 +14,7 @@
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
-#include "dd/Package_fwd.hpp"
+#include "dd/Package_fwd.hpp" // IWYU pragma: export
 #include "dd/RealNumber.hpp"
 #include "dd/RealNumberUniqueTable.hpp"
 #include "dd/StochasticNoiseOperationTable.hpp"

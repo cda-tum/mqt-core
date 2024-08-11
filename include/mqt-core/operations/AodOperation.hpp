@@ -29,7 +29,7 @@ struct SingleOperation {
 
   [[nodiscard]] std::string toQASMString() const {
     std::stringstream ss;
-    ss << static_cast<char32_t>(dir) << ", " << start << ", " << end << "; ";
+    ss << static_cast<std::size_t>(dir) << ", " << start << ", " << end << "; ";
     return ss.str();
   }
 };
