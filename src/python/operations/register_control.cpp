@@ -1,5 +1,5 @@
 #include "Definitions.hpp"
-#include "operations/Control.hpp"
+#include "ir/operations/Control.hpp"
 #include "python/pybind11.hpp"
 
 #include <pybind11/operators.h>

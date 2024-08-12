@@ -1,7 +1,7 @@
 #include "algorithms/WState.hpp"
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <cmath>
 #include <string>

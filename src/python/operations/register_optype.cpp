@@ -1,4 +1,4 @@
-#include "operations/OpType.hpp"
+#include "ir/operations/OpType.hpp"
 #include "python/pybind11.hpp"
 
 #include <string>

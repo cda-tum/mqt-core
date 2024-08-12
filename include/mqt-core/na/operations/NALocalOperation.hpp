@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../NADefinitions.hpp"
 #include "Definitions.hpp"
-#include "na/NADefinitions.hpp"
-#include "na/operations/NAOperation.hpp"
+#include "NAOperation.hpp"
 
 #include <cmath>
 #include <memory>
@@ -10,6 +10,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+
 namespace na {
 class NALocalOperation : public NAOperation {
 protected:

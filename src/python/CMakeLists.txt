@@ -24,7 +24,7 @@ if(NOT TARGET _core)
     symbolic/register_variable.cpp
     symbolic/register_term.cpp
     symbolic/register_expression.cpp)
-  target_link_libraries(_core PRIVATE MQT::Core MQT::ProjectOptions MQT::ProjectWarnings)
+  target_link_libraries(_core PRIVATE MQT::CoreIR MQT::ProjectOptions MQT::ProjectWarnings)
 
   # Install directive for scikit-build-core
   install(

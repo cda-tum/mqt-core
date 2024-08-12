@@ -1,6 +1,6 @@
 #pragma once
 
-#include "operations/OpType.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <cstddef>
 

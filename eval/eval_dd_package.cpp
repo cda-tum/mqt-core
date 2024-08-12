@@ -1,4 +1,3 @@
-#include "CircuitOptimizer.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/Entanglement.hpp"
 #include "algorithms/Grover.hpp"
@@ -6,6 +5,7 @@
 #include "algorithms/QPE.hpp"
 #include "algorithms/RandomCliffordCircuit.hpp"
 #include "algorithms/WState.hpp"
+#include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/Benchmark.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"

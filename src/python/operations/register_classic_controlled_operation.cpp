@@ -1,6 +1,6 @@
 #include "Definitions.hpp"
-#include "operations/ClassicControlledOperation.hpp"
-#include "operations/Operation.hpp"
+#include "ir/operations/ClassicControlledOperation.hpp"
+#include "ir/operations/Operation.hpp"
 #include "python/pybind11.hpp"
 
 #include <cstdint>

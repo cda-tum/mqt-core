@@ -1,5 +1,5 @@
-#include "operations/Control.hpp"
-#include "operations/Operation.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/Operation.hpp"
 #include "python/pybind11.hpp"
 
 #include <sstream>

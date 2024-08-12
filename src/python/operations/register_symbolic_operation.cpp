@@ -1,9 +1,9 @@
 #include "Definitions.hpp"
-#include "operations/Control.hpp"
-#include "operations/Expression.hpp"
-#include "operations/OpType.hpp"
-#include "operations/StandardOperation.hpp"
-#include "operations/SymbolicOperation.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/StandardOperation.hpp"
+#include "ir/operations/SymbolicOperation.hpp"
 #include "python/pybind11.hpp"
 
 #include <vector>

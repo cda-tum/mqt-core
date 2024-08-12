@@ -1,9 +1,9 @@
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
-#include "operations/Control.hpp"
-#include "operations/Expression.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 #include "python/pybind11.hpp"
 
 #include <cstddef>

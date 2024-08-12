@@ -1,14 +1,13 @@
 #pragma once
 
-#include "operations/Expression.hpp"
-#include "operations/OpType.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/OpType.hpp"
 #include "python/pybind11.hpp" // IWYU pragma: keep
 
 #include <pybind11/pytypes.h>
 
 namespace py = pybind11;
-
-#include "QuantumComputation.hpp"
 
 namespace qc::qiskit {
 using namespace pybind11::literals;

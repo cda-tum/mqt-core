@@ -1,16 +1,16 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "Permutation.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
-#include "operations/ClassicControlledOperation.hpp"
-#include "operations/CompoundOperation.hpp"
-#include "operations/Control.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
-#include "operations/StandardOperation.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/operations/ClassicControlledOperation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
+#include "ir/operations/StandardOperation.hpp"
 
 #include <cassert>
 #include <cmath>

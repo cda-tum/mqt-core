@@ -1,10 +1,10 @@
 #include "Definitions.hpp"
+#include "ir/operations/OpType.hpp"
 #include "na/NAComputation.hpp"
 #include "na/NADefinitions.hpp"
 #include "na/operations/NAGlobalOperation.hpp"
 #include "na/operations/NALocalOperation.hpp"
 #include "na/operations/NAShuttlingOperation.hpp"
-#include "operations/OpType.hpp"
 
 #include <gtest/gtest.h>
 #include <memory>

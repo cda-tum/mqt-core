@@ -1,13 +1,13 @@
 #include "python/qiskit/QuantumCircuit.hpp"
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
-#include "operations/Control.hpp"
-#include "operations/Expression.hpp"
-#include "operations/NonUnitaryOperation.hpp"
-#include "operations/OpType.hpp"
-#include "operations/StandardOperation.hpp"
-#include "operations/SymbolicOperation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/NonUnitaryOperation.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/StandardOperation.hpp"
+#include "ir/operations/SymbolicOperation.hpp"
 
 #include <algorithm>
 #include <cstddef>

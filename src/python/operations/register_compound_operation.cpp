@@ -1,5 +1,5 @@
-#include "operations/CompoundOperation.hpp"
-#include "operations/Operation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
+#include "ir/operations/Operation.hpp"
 #include "python/pybind11.hpp"
 
 #include <cstddef>

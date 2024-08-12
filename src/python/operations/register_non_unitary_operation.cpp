@@ -1,7 +1,7 @@
 #include "Definitions.hpp"
-#include "operations/NonUnitaryOperation.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
+#include "ir/operations/NonUnitaryOperation.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 #include "python/pybind11.hpp"
 
 #include <sstream>
