@@ -1,12 +1,15 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/OpType.hpp"
+#include "ir/operations/StandardOperation.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace qc {

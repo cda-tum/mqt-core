@@ -1,5 +1,6 @@
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/OpType.hpp"
 
 #include <cstddef>

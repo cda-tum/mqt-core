@@ -1,10 +1,14 @@
+#include "Definitions.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/OpType.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <sstream>
+#include <string>
 
 namespace qc {
 TEST(RemoveFinalMeasurements, removeFinalMeasurements) {
