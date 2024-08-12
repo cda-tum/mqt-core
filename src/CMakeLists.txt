@@ -154,9 +154,6 @@ add_subdirectory(dd)
 # add ZX package library
 add_subdirectory(zx)
 
-# add ECC library
-add_subdirectory(ecc)
-
 # add NA library
 add_subdirectory(na)
 
