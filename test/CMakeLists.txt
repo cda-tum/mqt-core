@@ -33,8 +33,5 @@ package_add_test(${PROJECT_NAME}-test-dd-edge ${PROJECT_NAME}-dd dd/test_edge_fu
 file(GLOB_RECURSE zx_tests "zx/*.cpp")
 package_add_test(${PROJECT_NAME}-test-zx ${PROJECT_NAME}-zx ${zx_tests})
 
-package_add_test(${PROJECT_NAME}-test-ecc ${PROJECT_NAME}-ecc unittests/test_ecc_functionality.cpp)
-target_link_libraries(${PROJECT_NAME}-test-ecc PRIVATE ${PROJECT_NAME}-dd)
-
 add_subdirectory(datastructures)
 add_subdirectory(na)
