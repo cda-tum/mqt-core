@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <ios>
 #include <iostream>
 #include <iterator>
@@ -930,9 +931,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
 bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
-    if (q.first > highestPhysicalQubit) {
-      highestPhysicalQubit = q.first;
-    }
+    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
   }
 
   auto dag = DAG(highestPhysicalQubit + 1);
@@ -1292,7 +1291,7 @@ void CircuitOptimizer::replaceMCXWithMCZ(qc::QuantumComputation& qc) {
 
 using ConstReverseIterator = QuantumComputation::const_reverse_iterator;
 void backpropagateOutputPermutation(
-    ConstReverseIterator rbegin, ConstReverseIterator rend,
+    const ConstReverseIterator& rbegin, const ConstReverseIterator& rend,
     Permutation& permutation, std::unordered_set<Qubit>& missingLogicalQubits) {
   for (auto it = rbegin; it != rend; ++it) {
     if ((*it)->isCompoundOperation()) {
