@@ -65,7 +65,7 @@ qiskit = [
 dev = ["mqt.core[coverage, docs]",]
 
 [project.scripts]
-mqt-core-compare = "mqt.core.evaluation:main"
+mqt-core-dd-compare = "mqt.core.dd.evaluation:main"
 
 [project.urls]
 Homepage = "https://github.com/cda-tum/mqt-core"
@@ -91,7 +91,7 @@ build-dir = "build/{build_type}"
 wheel.packages = ["src/mqt"]
 
 # Only build the Python bindings target
-build.targets = ["_core"]
+build.targets = ["ir"]
 
 # Only install the Python package component
 install.components = ["mqt-core_Python"]
@@ -250,7 +250,7 @@ isort.required-imports = ["from __future__ import annotations"]
     "I002", # Allow missing `from __future__ import annotations` import
 ]
 "src/mqt/core/_compat/**.py" = ["TID251"]
-"src/mqt/core/evaluation.py" = ["T201"]
+"src/mqt/core/dd/evaluation.py" = ["T201"]
 "src/mqt/core/__main__.py" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]

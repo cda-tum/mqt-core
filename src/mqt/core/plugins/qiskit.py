@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, List, cast
 
 from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
-from .. import QuantumComputation
-from ..operations import (
+from ..ir import QuantumComputation
+from ..ir.operations import (
     CompoundOperation,
     Control,
     NonUnitaryOperation,
@@ -17,7 +17,7 @@ from ..operations import (
     StandardOperation,
     SymbolicOperation,
 )
-from ..symbolic import Expression, Term, Variable
+from ..ir.symbolic import Expression, Term, Variable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
-    """Convert a Qiskit :class:`~qiskit.circuit.QuantumCircuit` to a :class:`~mqt.core.QuantumComputation` object.
+    """Convert a Qiskit :class:`~qiskit.circuit.QuantumCircuit` to a :class:`~mqt.core.ir.QuantumComputation` object.
 
     Args:
         circ: The Qiskit circuit to convert.

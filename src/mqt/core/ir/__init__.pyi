@@ -1,3 +1,5 @@
+"""MQT Core IR  - The MQT Core Intermediate Representation (IR) module."""
+
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping, MutableSequence, Sequence
 from os import PathLike
 from typing import overload
@@ -82,7 +84,7 @@ class Permutation(MutableMapping[int, int]):
 class QuantumComputation(MutableSequence[Operation]):
     """The main class for representing quantum computations within the MQT.
 
-    Acts as mutable sequence of :class:`~mqt.core.operations.Operation` objects, which represent the individual operations in the quantum computation.
+    Acts as mutable sequence of :class:`~mqt.core.ir.operations.Operation` objects, which represent the individual operations in the quantum computation.
 
     Args:
         nq: The number of qubits in the quantum computation.
@@ -171,7 +173,7 @@ class QuantumComputation(MutableSequence[Operation]):
     def num_total_ops(self: Self) -> int:
         """Return the total number of operations in the quantum computation.
 
-        Recursively counts sub-operations (e.g., from :class:`~mqt.core.operations.CompoundOperation` objects).
+        Recursively counts sub-operations (e.g., from :class:`~mqt.core.ir.operations.CompoundOperation` objects).
         """
 
     def depth(self: Self) -> int:
@@ -185,7 +187,7 @@ class QuantumComputation(MutableSequence[Operation]):
 
         This gives ownership of the operations to the resulting operation, so the quantum computation will be empty after this operation.
 
-        When the quantum computation contains more than one operation, the resulting operation is a :class:`~mqt.core.operations.CompoundOperation`.
+        When the quantum computation contains more than one operation, the resulting operation is a :class:`~mqt.core.ir.operations.CompoundOperation`.
 
         Returns:
             The operation representing the quantum computation.

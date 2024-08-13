@@ -3,7 +3,7 @@ from collections.abc import Mapping, Sequence
 from typing import ClassVar, overload
 
 from .._compat.typing import Self
-from ..symbolic import Expression, Variable
+from .symbolic import Expression, Variable
 
 class Control:
     """A control is a pair of a qubit and a type. The type can be either positive or negative.
@@ -70,14 +70,14 @@ class OpType:
     A barrier operation. It is used to separate operations in the circuit.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.barrier`
+        :meth:`mqt.core.ir.QuantumComputation.barrier`
     """
     classic_controlled: ClassVar[OpType]
     """
     A classic controlled operation. It is used to control the execution of an operation based on the value of a classical register.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.classic_controlled`
+        :meth:`mqt.core.ir.QuantumComputation.classic_controlled`
     """
     compound: ClassVar[OpType]
     """
@@ -91,56 +91,56 @@ class OpType:
     A DCX gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.dcx`
+        :meth:`mqt.core.ir.QuantumComputation.dcx`
     """
     ecr: ClassVar[OpType]
     """
     An ECR gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.ecr`
+        :meth:`mqt.core.ir.QuantumComputation.ecr`
     """
     gphase: ClassVar[OpType]
     """
     A global phase operation.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.gphase`
+        :meth:`mqt.core.ir.QuantumComputation.gphase`
     """
     h: ClassVar[OpType]
     """
     A Hadamard gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.h`
+        :meth:`mqt.core.ir.QuantumComputation.h`
     """
     i: ClassVar[OpType]
     """
     An identity operation.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.i`
+        :meth:`mqt.core.ir.QuantumComputation.i`
     """
     iswap: ClassVar[OpType]
     """
     An iSWAP gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.iswap`
+        :meth:`mqt.core.ir.QuantumComputation.iswap`
     """
     iswapdg: ClassVar[OpType]
     r"""
     An :math:`i\text{SWAP}^\dagger` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.iswapdg`
+        :meth:`mqt.core.ir.QuantumComputation.iswapdg`
     """
     measure: ClassVar[OpType]
     """
     A measurement operation.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.measure`
+        :meth:`mqt.core.ir.QuantumComputation.measure`
     """
     none: ClassVar[OpType]
     """
@@ -151,126 +151,126 @@ class OpType:
     A Peres gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.peres`
+        :meth:`mqt.core.ir.QuantumComputation.peres`
     """
     peresdg: ClassVar[OpType]
     """
     A :math:`\text{Peres}^\dagger` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.peresdg`
+        :meth:`mqt.core.ir.QuantumComputation.peresdg`
     """
     p: ClassVar[OpType]
     """
     A phase gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.p`
+        :meth:`mqt.core.ir.QuantumComputation.p`
     """
     reset: ClassVar[OpType]
     """
     A reset operation.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.reset`
+        :meth:`mqt.core.ir.QuantumComputation.reset`
     """
     rx: ClassVar[OpType]
     r"""
     An :math:`R_x` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.rx`
+        :meth:`mqt.core.ir.QuantumComputation.rx`
     """
     rxx: ClassVar[OpType]
     r"""
     An :math:`R_{xx}` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.rxx`
+        :meth:`mqt.core.ir.QuantumComputation.rxx`
     """
     ry: ClassVar[OpType]
     r"""
     An :math:`R_y` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.ry`
+        :meth:`mqt.core.ir.QuantumComputation.ry`
     """
     ryy: ClassVar[OpType]
     r"""
     An :math:`R_{yy}` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.ryy`
+        :meth:`mqt.core.ir.QuantumComputation.ryy`
     """
     rz: ClassVar[OpType]
     r"""
     An :math:`R_z` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.rz`
+        :meth:`mqt.core.ir.QuantumComputation.rz`
     """
     rzx: ClassVar[OpType]
     r"""
     An :math:`R_{zx}` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.rzx`
+        :meth:`mqt.core.ir.QuantumComputation.rzx`
     """
     rzz: ClassVar[OpType]
     r"""
     An :math:`R_{zz}` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.rzz`
+        :meth:`mqt.core.ir.QuantumComputation.rzz`
     """
     s: ClassVar[OpType]
     """
     An S gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.s`
+        :meth:`mqt.core.ir.QuantumComputation.s`
     """
     sdg: ClassVar[OpType]
     r"""
     An :math:`S^\dagger` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.sdg`
+        :meth:`mqt.core.ir.QuantumComputation.sdg`
     """
     swap: ClassVar[OpType]
     """
     A SWAP gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.swap`
+        :meth:`mqt.core.ir.QuantumComputation.swap`
     """
     sx: ClassVar[OpType]
     r"""
     A :math:`\sqrt{X}` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.sx`
+        :meth:`mqt.core.ir.QuantumComputation.sx`
     """
     sxdg: ClassVar[OpType]
     r"""
     A :math:`\sqrt{X}^\dagger` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.sxdg`
+        :meth:`mqt.core.ir.QuantumComputation.sxdg`
     """
     t: ClassVar[OpType]
     """
     A T gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.t`
+        :meth:`mqt.core.ir.QuantumComputation.t`
     """
     tdg: ClassVar[OpType]
     r"""
     A :math:`T^\dagger` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.tdg`
+        :meth:`mqt.core.ir.QuantumComputation.tdg`
     """
     teleportation: ClassVar[OpType]
     """
@@ -281,63 +281,63 @@ class OpType:
     A U2 gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.u2`
+        :meth:`mqt.core.ir.QuantumComputation.u2`
     """
     u: ClassVar[OpType]
     """
     A U gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.u`
+        :meth:`mqt.core.ir.QuantumComputation.u`
     """
     v: ClassVar[OpType]
     """
     A V gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.v`
+        :meth:`mqt.core.ir.QuantumComputation.v`
     """
     vdg: ClassVar[OpType]
     r"""
     A :math:`V^\dagger` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.vdg`
+        :meth:`mqt.core.ir.QuantumComputation.vdg`
     """
     x: ClassVar[OpType]
     """
     An X gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.x`
+        :meth:`mqt.core.ir.QuantumComputation.x`
     """
     xx_minus_yy: ClassVar[OpType]
     r"""
     An :math:`R_{XX - YY}` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.xx_minus_yy`
+        :meth:`mqt.core.ir.QuantumComputation.xx_minus_yy`
     """
     xx_plus_yy: ClassVar[OpType]
     r"""
     An :math:`R_{XX + YY}` gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.xx_plus_yy`
+        :meth:`mqt.core.ir.QuantumComputation.xx_plus_yy`
     """
     y: ClassVar[OpType]
     """
     A Y gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.y`
+        :meth:`mqt.core.ir.QuantumComputation.y`
     """
     z: ClassVar[OpType]
     """
     A Z gate.
 
     See Also:
-        :meth:`mqt.core.QuantumComputation.z`
+        :meth:`mqt.core.ir.QuantumComputation.z`
     """
 
     @property
@@ -357,7 +357,7 @@ class OpType:
     def __setstate__(self: Self, state: int) -> None: ...
 
 class Operation(ABC):
-    """An abstract base class for operations that can be added to a :class:`~mqt.core.QuantumComputation`."""
+    """An abstract base class for operations that can be added to a :class:`~mqt.core.ir.QuantumComputation`."""
 
     type_: OpType
     """
