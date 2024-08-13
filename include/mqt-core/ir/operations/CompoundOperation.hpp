@@ -166,16 +166,15 @@ public:
   }
 
   template <class T, class... Args>
-  iterator insert(const_iterator iterator, Args&&... args) {
-    return ops.insert(iterator,
-                      std::make_unique<T>(std::forward<Args>(args)...));
+  iterator insert(const_iterator iter, Args&&... args) {
+    return ops.insert(iter, std::make_unique<T>(std::forward<Args>(args)...));
   }
   template <class T>
-  iterator insert(const_iterator iterator, std::unique_ptr<T>& op) {
-    return ops.insert(iterator, std::move(op));
+  iterator insert(const_iterator iter, std::unique_ptr<T>& op) {
+    return ops.insert(iter, std::move(op));
   }
-  template <class T> iterator insert(const_iterator iterator, T&& op) {
-    return ops.insert(iterator, std::forward<decltype(op)>(op));
+  template <class T> iterator insert(const_iterator iter, T&& op) {
+    return ops.insert(iter, std::forward<decltype(op)>(op));
   }
 
   [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
