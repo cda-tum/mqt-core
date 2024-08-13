@@ -1,6 +1,6 @@
-#include "QuantumComputation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 #include "na/NADefinitions.hpp"
-#include "operations/OpType.hpp"
 
 #include <gtest/gtest.h>
 #include <sstream>

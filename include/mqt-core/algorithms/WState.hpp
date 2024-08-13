@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 namespace qc {
 class WState : public QuantumComputation {

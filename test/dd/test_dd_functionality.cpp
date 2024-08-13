@@ -1,15 +1,15 @@
-#include "CircuitOptimizer.hpp"
 #include "Definitions.hpp"
-#include "Permutation.hpp"
-#include "QuantumComputation.hpp"
+#include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
-#include "operations/Control.hpp"
-#include "operations/OpType.hpp"
-#include "operations/StandardOperation.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/StandardOperation.hpp"
 
 #include <algorithm>
 #include <array>

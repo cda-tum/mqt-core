@@ -1,7 +1,7 @@
 #pragma once
 
-#include "na/NADefinitions.hpp"
-#include "na/operations/NAOperation.hpp"
+#include "NADefinitions.hpp"
+#include "operations/NAOperation.hpp"
 
 #include <algorithm>
 #include <cstddef>

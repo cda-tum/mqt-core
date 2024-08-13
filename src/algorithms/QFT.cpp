@@ -1,7 +1,7 @@
 #include "algorithms/QFT.hpp"
 
 #include "Definitions.hpp"
-#include "operations/OpType.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <cmath>
 #include <cstddef>

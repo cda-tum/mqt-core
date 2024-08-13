@@ -8,7 +8,7 @@
 #include "dd/Package.hpp"
 #include "dd/RealNumber.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
-#include "operations/Control.hpp"
+#include "ir/operations/Control.hpp"
 
 #include <array>
 #include <cmath>

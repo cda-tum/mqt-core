@@ -1,6 +1,6 @@
-#include "CircuitOptimizer.hpp"
 #include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
+#include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/Benchmark.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"

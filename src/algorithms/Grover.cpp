@@ -1,8 +1,8 @@
 #include "algorithms/Grover.hpp"
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
-#include "operations/Control.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/Control.hpp"
 
 #include <algorithm>
 #include <cmath>

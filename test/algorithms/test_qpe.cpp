@@ -1,6 +1,6 @@
-#include "CircuitOptimizer.hpp"
 #include "Definitions.hpp"
 #include "algorithms/QPE.hpp"
+#include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/Benchmark.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"

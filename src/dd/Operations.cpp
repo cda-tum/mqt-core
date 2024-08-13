@@ -3,10 +3,10 @@
 #include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Package.hpp"
-#include "operations/CompoundOperation.hpp"
-#include "operations/Control.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <cstddef>
 #include <iostream>
