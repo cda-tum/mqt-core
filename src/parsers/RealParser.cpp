@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
 #include <ios>
 #include <iostream>
 #include <istream>
@@ -624,11 +625,18 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                          " msg: Failed read in gate definition");
     }
 
+    /*
+     * If we cannot determine how many gate lines are to be expected from the
+     * gate definition (i.e. the gate definition 'c a b' does not define the
+     * number of gate lines) we assume that the number of whitespaces left of
+     * the gate type define the number of gate lines.
+     */
     const std::string& stringifiedNumberOfGateLines = m.str(2);
-    const auto numberOfGateLines =
+    const std::size_t numberOfGateLines = static_cast<std::size_t>(
         stringifiedNumberOfGateLines.empty()
-            ? 0
-            : std::stoul(stringifiedNumberOfGateLines, nullptr, 0);
+            ? std::count(qubits.cbegin(), qubits.cend(), ' ')
+            : std::stoul(stringifiedNumberOfGateLines, nullptr, 0));
+
     // Current parser implementation defines number of expected control lines
     // (nControl) as nLines (of gate definition) - 1. Controlled swap gate has
     // at most two target lines so we define the number of control lines as
@@ -640,7 +648,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                            "two qubits but only " +
                            std::to_string(ncontrols) + " were defined");
       }
-      ncontrols = numberOfGateLines - 2;
+      ncontrols = static_cast<uint32_t>(numberOfGateLines - 2);
     }
 
     std::vector<Control> controls(ncontrols, Qubit());
