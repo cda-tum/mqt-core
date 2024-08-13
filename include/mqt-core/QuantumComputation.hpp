@@ -567,7 +567,6 @@ public:
   DEFINE_TWO_TARGET_OPERATION(peres)
   DEFINE_TWO_TARGET_OPERATION(peresdg)
   DEFINE_TWO_TARGET_OPERATION(move)
-  DEFINE_TWO_TARGET_OPERATION(passby)
 
 #define DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(op, param)                \
   void op(const SymbolOrNumber&(param), const Qubit target0,                   \
@@ -680,6 +679,11 @@ public:
   void barrier(const Targets& targets) {
     checkQubitRange(targets);
     emplace_back<StandardOperation>(targets, qc::Barrier);
+  }
+
+  void passby(const Control moved, const Targets& targets) {
+    checkQubitRange(targets);
+    emplace_back<StandardOperation>(Controls{moved}, targets, qc::PassBy);
   }
 
   void classicControlled(const OpType op, const Qubit target,
