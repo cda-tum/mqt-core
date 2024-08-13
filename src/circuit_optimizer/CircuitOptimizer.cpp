@@ -76,7 +76,7 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
 
   for (auto& it : qc.ops) {
     if (!it->isStandardOperation()) {
-      addNonStandardOperationToDag(dag, &it);
+      addToDag(dag, &it);
       continue;
     }
 
@@ -160,49 +160,16 @@ DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
 
   auto dag = DAG(highestPhysicalQubit + 1);
 
-  for (auto& it : qc.ops) {
-    if (!it->isStandardOperation()) {
-      addNonStandardOperationToDag(dag, &it);
-    } else {
-      addToDag(dag, &it);
-    }
+  for (auto& op : qc) {
+    addToDag(dag, &op);
   }
   return dag;
 }
 
 void CircuitOptimizer::addToDag(DAG& dag, std::unique_ptr<Operation>* op) {
-  for (const auto& control : (*op)->getControls()) {
-    dag.at(control.qubit).push_back(op);
-  }
-  for (const auto& target : (*op)->getTargets()) {
-    dag.at(target).push_back(op);
-  }
-}
-
-void CircuitOptimizer::addNonStandardOperationToDag(
-    DAG& dag, std::unique_ptr<Operation>* op) {
-  const auto& gate = *op;
-  // compound operations are added "as-is"
-  if (gate->isCompoundOperation()) {
-    const auto usedQubits = gate->getUsedQubits();
-    for (const auto q : usedQubits) {
-      dag.at(q).push_back(op);
-    }
-  } else if (gate->isNonUnitaryOperation()) {
-    for (const auto& b : gate->getTargets()) {
-      dag.at(b).push_back(op);
-    }
-  } else if (gate->isClassicControlledOperation()) {
-    auto* cop =
-        dynamic_cast<ClassicControlledOperation*>(gate.get())->getOperation();
-    for (const auto& control : cop->getControls()) {
-      dag.at(control.qubit).push_back(op);
-    }
-    for (const auto& target : cop->getTargets()) {
-      dag.at(target).push_back(op);
-    }
-  } else {
-    throw QFRException("Unexpected operation encountered");
+  const auto usedQubits = (*op)->getUsedQubits();
+  for (const auto q : usedQubits) {
+    dag.at(q).push_back(op);
   }
 }
 
@@ -220,15 +187,10 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
 
   auto dag = DAG(highestPhysicalQubit + 1);
 
-  for (auto& it : qc.ops) {
-    if (!it->isStandardOperation()) {
-      addNonStandardOperationToDag(dag, &it);
-      continue;
-    }
-
-    // not a single qubit operation TODO: multiple targets could also be
-    // considered here
-    if (!it->getControls().empty() || it->getTargets().size() > 1) {
+  for (auto& it : qc) {
+    // not a single-qubit operation
+    if (!it->isStandardOperation() || !it->getControls().empty() ||
+        it->getTargets().size() > 1) {
       addToDag(dag, &it);
       continue;
     }
@@ -1131,7 +1093,7 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
 
   for (auto& it : qc.ops) {
     if (!it->isStandardOperation()) {
-      addNonStandardOperationToDag(dag, &it);
+      addToDag(dag, &it);
       continue;
     }
 
