@@ -1144,7 +1144,7 @@ void QuantumComputation::reorderOperations() {
   DAGIterators dagIterators{dag.size()};
   for (size_t q = 0; q < dag.size(); ++q) {
     if (dag.at(q).empty()) {
-      // qubit is isdle
+      // qubit is idle
       dagIterators.at(q) = dag.at(q).end();
     } else {
       // point to first operation
