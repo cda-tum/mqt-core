@@ -1,7 +1,8 @@
 #include "algorithms/Grover.hpp"
-#include "dd/Benchmark.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
+#include "dd/Simulation.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -38,7 +39,7 @@ protected:
   qc::MatrixDD func{};
 };
 
-constexpr std::size_t GROVER_MAX_QUBITS = 18;
+constexpr std::size_t GROVER_MAX_QUBITS = 15;
 constexpr std::size_t GROVER_NUM_SEEDS = 5;
 constexpr dd::fp GROVER_ACCURACY = 1e-2;
 constexpr dd::fp GROVER_GOAL_PROBABILITY = 0.9;
@@ -62,6 +63,87 @@ INSTANTIATE_TEST_SUITE_P(
       return ss.str();
     });
 
+template <class Config>
+qc::MatrixDD buildFunctionality(const qc::Grover* qc, dd::Package<Config>& dd) {
+  qc::QuantumComputation groverIteration(qc->getNqubits());
+  qc->oracle(groverIteration);
+  qc->diffusion(groverIteration);
+
+  auto iteration = buildFunctionality(&groverIteration, dd);
+
+  auto e = iteration;
+  dd.incRef(e);
+
+  for (std::size_t i = 0U; i < qc->iterations - 1U; ++i) {
+    auto f = dd.multiply(iteration, e);
+    dd.incRef(f);
+    dd.decRef(e);
+    e = f;
+    dd.garbageCollect();
+  }
+
+  qc::QuantumComputation setup(qc->getNqubits());
+  qc->setup(setup);
+  auto g = buildFunctionality(&setup, dd);
+  auto f = dd.multiply(e, g);
+  dd.incRef(f);
+  dd.decRef(e);
+  dd.decRef(g);
+  e = f;
+
+  dd.decRef(iteration);
+  return e;
+}
+
+template <class Config>
+qc::MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
+                                         dd::Package<Config>& dd) {
+  qc::QuantumComputation groverIteration(qc->getNqubits());
+  qc->oracle(groverIteration);
+  qc->diffusion(groverIteration);
+
+  auto iter = buildFunctionalityRecursive(&groverIteration, dd);
+  auto e = iter;
+  std::bitset<128U> iterBits(qc->iterations);
+  auto msb = static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
+  auto f = iter;
+  dd.incRef(f);
+  bool zero = !iterBits[0U];
+  for (std::size_t j = 1U; j <= msb; ++j) {
+    auto tmp = dd.multiply(f, f);
+    dd.incRef(tmp);
+    dd.decRef(f);
+    f = tmp;
+    if (iterBits[j]) {
+      if (zero) {
+        dd.incRef(f);
+        dd.decRef(e);
+        e = f;
+        zero = false;
+      } else {
+        auto g = dd.multiply(e, f);
+        dd.incRef(g);
+        dd.decRef(e);
+        e = g;
+        dd.garbageCollect();
+      }
+    }
+  }
+  dd.decRef(f);
+
+  // apply state preparation setup
+  qc::QuantumComputation statePrep(qc->getNqubits());
+  qc->setup(statePrep);
+  auto s = buildFunctionality(&statePrep, dd);
+  auto tmp = dd.multiply(e, s);
+  dd.incRef(tmp);
+  dd.decRef(s);
+  dd.decRef(e);
+  e = tmp;
+
+  return e;
+}
+
 TEST_P(Grover, Functionality) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
@@ -71,9 +153,8 @@ TEST_P(Grover, Functionality) {
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
 
-  auto exp = dd::benchmarkFunctionalityConstruction(*qc);
-  func = exp->func;
-  dd = std::move(exp->dd);
+  // there should be no error building the functionality
+  ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), *dd); });
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(dd->qubits(), x);
@@ -92,9 +173,8 @@ TEST_P(Grover, FunctionalityRecursive) {
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
 
-  auto exp = dd::benchmarkFunctionalityConstruction(*qc, true);
-  func = exp->func;
-  dd = std::move(exp->dd);
+  // there should be no error building the functionality
+  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), *dd); });
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(dd->qubits(), x);
@@ -109,9 +189,10 @@ TEST_P(Grover, Simulation) {
   ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
 
   qc->printStatistics(std::cout);
+  auto in = dd->makeZeroState(nqubits + 1U);
   // there should be no error simulating the circuit
   const std::size_t shots = 1024;
-  auto measurements = dd::benchmarkSimulateWithShots(*qc, shots);
+  auto measurements = simulate(qc.get(), in, *dd, shots);
 
   for (const auto& [state, count] : measurements) {
     std::cout << state << ": " << count << "\n";

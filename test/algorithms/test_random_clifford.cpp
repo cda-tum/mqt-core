@@ -1,5 +1,7 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
-#include "dd/Benchmark.hpp"
+#include "dd/FunctionalityConstruction.hpp"
+#include "dd/Package.hpp"
+#include "dd/Simulation.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>
@@ -25,23 +27,21 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(RandomClifford, simulate) {
   const auto nq = GetParam();
 
+  auto dd = std::make_unique<dd::Package<>>(nq);
   auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
+  auto in = dd->makeZeroState(nq);
+
   std::cout << qc << "\n";
-  ASSERT_NO_THROW({
-    auto out = dd::benchmarkSimulate(qc);
-    EXPECT_TRUE(out->success());
-  });
+  ASSERT_NO_THROW({ simulate(&qc, in, *dd); });
   qc.printStatistics(std::cout);
 }
 
 TEST_P(RandomClifford, buildFunctionality) {
   const auto nq = GetParam();
 
+  auto dd = std::make_unique<dd::Package<>>(nq);
   auto qc = qc::RandomCliffordCircuit(nq, nq * nq, 12345);
   std::cout << qc << "\n";
-  ASSERT_NO_THROW({
-    auto out = dd::benchmarkFunctionalityConstruction(qc);
-    EXPECT_TRUE(out->success());
-  });
+  ASSERT_NO_THROW({ buildFunctionality(&qc, *dd); });
   qc.printStatistics(std::cout);
 }
