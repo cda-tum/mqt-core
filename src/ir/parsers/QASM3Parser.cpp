@@ -109,7 +109,7 @@ class OpenQasm3Parser final : public InstVisitor {
     }
 
     for (uint64_t i = 0; i < qubit.second; ++i) {
-      qubits.emplace_back(qubit.first + i);
+      qubits.emplace_back(static_cast<qc::Qubit>(qubit.first + i));
     }
   }
 
