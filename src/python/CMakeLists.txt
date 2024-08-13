@@ -1,4 +1,7 @@
 if(NOT TARGET _core)
+  # collect source files
+  file(GLOB_RECURSE IR_PYTHON_SOURCES ir/*.cpp)
+
   pybind11_add_module(
     # Name of the extension
     _core
@@ -9,21 +12,7 @@ if(NOT TARGET _core)
     # Source code goes here
     ${MQT_CORE_INCLUDE_BUILD_DIR}/python/pybind11.hpp
     module.cpp
-    register_operations.cpp
-    register_permutation.cpp
-    register_symbolic.cpp
-    register_quantum_computation.cpp
-    operations/register_optype.cpp
-    operations/register_control.cpp
-    operations/register_operation.cpp
-    operations/register_standard_operation.cpp
-    operations/register_classic_controlled_operation.cpp
-    operations/register_compound_operation.cpp
-    operations/register_non_unitary_operation.cpp
-    operations/register_symbolic_operation.cpp
-    symbolic/register_variable.cpp
-    symbolic/register_term.cpp
-    symbolic/register_expression.cpp)
+    ${IR_PYTHON_SOURCES})
   target_link_libraries(_core PRIVATE MQT::CoreIR MQT::ProjectOptions MQT::ProjectWarnings)
 
   # Install directive for scikit-build-core
