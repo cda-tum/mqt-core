@@ -631,11 +631,15 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
      * number of gate lines) we assume that the number of whitespaces left of
      * the gate type define the number of gate lines.
      */
-    const std::string& stringifiedNumberOfGateLines = m.str(2);
-    const std::size_t numberOfGateLines = static_cast<std::size_t>(
-        stringifiedNumberOfGateLines.empty()
-            ? std::count(qubits.cbegin(), qubits.cend(), ' ')
-            : std::stoul(stringifiedNumberOfGateLines, nullptr, 0));
+    std::size_t numberOfGateLines = 0;
+    if (const std::string& stringifiedNumberOfGateLines = m.str(2);
+        !stringifiedNumberOfGateLines.empty()) {
+      numberOfGateLines = static_cast<std::size_t>(
+          std::stoul(stringifiedNumberOfGateLines, nullptr, 0));
+    } else {
+      numberOfGateLines = static_cast<std::size_t>(
+          std::count(qubits.cbegin(), qubits.cend(), ' '));
+    }
 
     // Current parser implementation defines number of expected control lines
     // (nControl) as nLines (of gate definition) - 1. Controlled swap gate has
@@ -662,7 +666,6 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       validVariableIdentLookup.emplace(
           qregNameAndQubitIndexPair.first.substr(2));
 
-    // TODO: Check that no control line is used as a target line
     // We will ignore the prefix '-' when validating a given gate line ident
     auto processedGateLines =
         parseVariableNames(static_cast<std::size_t>(line), numberOfGateLines,
