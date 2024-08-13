@@ -15,6 +15,11 @@
 namespace qc {
 
 class CompoundOperation final : public Operation {
+public:
+  using iterator = typename std::vector<std::unique_ptr<Operation>>::iterator;
+  using const_iterator =
+      typename std::vector<std::unique_ptr<Operation>>::const_iterator;
+
 private:
   std::vector<std::unique_ptr<Operation>> ops;
   bool customGate;
@@ -140,13 +145,8 @@ public:
   // NOLINTNEXTLINE(readability-identifier-naming)
   void pop_back() { ops.pop_back(); }
   void resize(std::size_t count) { ops.resize(count); }
-  std::vector<std::unique_ptr<Operation>>::iterator
-  erase(std::vector<std::unique_ptr<Operation>>::const_iterator pos) {
-    return ops.erase(pos);
-  }
-  std::vector<std::unique_ptr<Operation>>::iterator
-  erase(std::vector<std::unique_ptr<Operation>>::const_iterator first,
-        std::vector<std::unique_ptr<Operation>>::const_iterator last) {
+  iterator erase(const_iterator pos) { return ops.erase(pos); }
+  iterator erase(const_iterator first, const_iterator last) {
     return ops.erase(first, last);
   }
 
@@ -166,17 +166,16 @@ public:
   }
 
   template <class T, class... Args>
-  std::vector<std::unique_ptr<Operation>>::iterator
-  insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator,
-         Args&&... args) {
+  iterator insert(const_iterator iterator, Args&&... args) {
     return ops.insert(iterator,
                       std::make_unique<T>(std::forward<Args>(args)...));
   }
   template <class T>
-  std::vector<std::unique_ptr<Operation>>::iterator
-  insert(std::vector<std::unique_ptr<Operation>>::const_iterator iterator,
-         std::unique_ptr<T>& op) {
+  iterator insert(const_iterator iterator, std::unique_ptr<T>& op) {
     return ops.insert(iterator, std::move(op));
+  }
+  template <class T> iterator insert(const_iterator iterator, T&& op) {
+    return ops.insert(iterator, std::forward<decltype(op)>(op));
   }
 
   [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }

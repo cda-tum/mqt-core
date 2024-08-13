@@ -35,8 +35,10 @@ public:
   using iterator = typename std::vector<std::unique_ptr<Operation>>::iterator;
   using const_iterator =
       typename std::vector<std::unique_ptr<Operation>>::const_iterator;
-
-  friend class CircuitOptimizer;
+  using reverse_iterator =
+      typename std::vector<std::unique_ptr<Operation>>::reverse_iterator;
+  using const_reverse_iterator =
+      typename std::vector<std::unique_ptr<Operation>>::const_reverse_iterator;
 
 protected:
   std::vector<std::unique_ptr<Operation>> ops;
