@@ -1116,7 +1116,7 @@ TEST_F(QFRFunctionality, trivialOperationReordering) {
 }
 
 TEST_F(QFRFunctionality, OperationReorderingBarrier) {
-  QuantumComputation qc(2);
+  QuantumComputation qc(3);
   qc.h(0);
   qc.barrier({0, 1});
   qc.h(1);
