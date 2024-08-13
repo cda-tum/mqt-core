@@ -1134,36 +1134,9 @@ void QuantumComputation::reorderOperations() {
   auto dag = DAG(highestPhysicalQubit + 1);
 
   for (auto& op : ops) {
-    if (!op->isStandardOperation()) {
-      // compound operations are added "as-is"
-      if (op->isCompoundOperation()) {
-        const auto usedQubits = op->getUsedQubits();
-        for (const auto q : usedQubits) {
-          dag.at(q).push_back(&op);
-        }
-      } else if (op->isNonUnitaryOperation()) {
-        for (const auto& b : op->getTargets()) {
-          dag.at(b).push_back(&op);
-        }
-      } else if (op->isClassicControlledOperation()) {
-        auto* cop =
-            dynamic_cast<ClassicControlledOperation*>(op.get())->getOperation();
-        for (const auto& control : cop->getControls()) {
-          dag.at(control.qubit).push_back(&op);
-        }
-        for (const auto& target : cop->getTargets()) {
-          dag.at(target).push_back(&op);
-        }
-      } else {
-        throw QFRException("Unexpected operation encountered");
-      }
-    } else {
-      for (const auto& control : op->getControls()) {
-        dag.at(control.qubit).push_back(&op);
-      }
-      for (const auto& target : op->getTargets()) {
-        dag.at(target).push_back(&op);
-      }
+    const auto usedQubits = op->getUsedQubits();
+    for (const auto q : usedQubits) {
+      dag.at(q).push_back(&op);
     }
   }
 
@@ -1200,12 +1173,6 @@ void QuantumComputation::reorderOperations() {
       // get the current operation on the qubit
       auto& it = dagIterators.at(static_cast<std::size_t>(q));
       auto& op = **it;
-
-      // warning for classically controlled operations
-      if (op->getType() == ClassicControlled) {
-        std::cerr << "Caution! Reordering operations might not work if the "
-                     "circuit contains classically controlled operations\n";
-      }
 
       // check whether the gate can be scheduled, i.e. whether all qubits it
       // acts on are at this operation
