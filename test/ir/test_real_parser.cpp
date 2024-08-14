@@ -847,7 +847,7 @@ TEST_F(RealParserTest, NotDefinedVariableNotUsableAsControlLine) {
       QFRException);
 }
 
-TEST_F(RealParserTest, NotDefinedVariablNotUsableAsTargetLine) {
+TEST_F(RealParserTest, NotDefinedVariableNotUsableAsTargetLine) {
   usingVersion(DEFAULT_REAL_VERSION)
       .usingNVariables(2)
       .usingVariables({"v1", "v2"})

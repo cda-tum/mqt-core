@@ -281,7 +281,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
   /*
    * To enabled heterogenous lookup in an associative, ordered container (i.e.
    * use the type std::string_view or a string literal as the lookup key without
-   * allocating a new string) we need to specify the transparent comparater.
+   * allocating a new string) we need to specify the transparent comparator.
    * Heterogenuous lookup in unordered associative containers is a C++20
    * feature.
    */
