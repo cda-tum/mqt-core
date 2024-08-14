@@ -1,6 +1,6 @@
 #include "Definitions.hpp"
-#include "Permutation.hpp"
-#include "QuantumComputation.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include "gmock/gmock-matchers.h"
 #include <cstddef>
