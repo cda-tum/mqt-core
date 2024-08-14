@@ -609,6 +609,210 @@ TEST_F(RealParserTest, UnknownVariableIdentDeclarationInInitialLayout) {
       QFRException);
 }
 
+TEST_F(RealParserTest, DuplicateNumVarsDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingNVariables(3)
+      .usingVariables({"v1", "v2"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, DuplicateVariablesDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1", "i2"})
+      .usingVariables({"v1", "v2"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, DuplicateInputsDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1", "i2"})
+      .withConstants({constantValueOne, constantValueNone})
+      .usingOutputs({"o1", "o2"})
+      .usingInputs({"i1", "i2"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, DuplicateConstantsDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInputs({"i1", "i2"})
+      .withConstants({constantValueOne, constantValueNone})
+      .usingOutputs({"o1", "o2"})
+      .withConstants({constantValueOne, constantValueNone})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, DuplicateOutputsDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"o1", "o2"})
+      .withGarbageValues({isGarbageState, isNotGarbageState})
+      .usingOutputs({"o1", "o2"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, DuplicateGarbageDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"o1", "o2"})
+      .withGarbageValues({isGarbageState, isNotGarbageState})
+      .withGarbageValues({isGarbageState, isNotGarbageState})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, DuplicateInitialLayoutDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingInitialLayout({"v2", "v1"})
+      .withGarbageValues({isGarbageState, isNotGarbageState})
+      .usingInitialLayout({"v2", "v1"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, HeaderWithoutNumVarsDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingVariables({"v1", "v2"})
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, HeaderWithoutVariablesDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .withEmptyGateList();
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, ContentWithoutGateListNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, VariableDefinitionPriorToNumVarsDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingVariables({"v1", "v2"})
+      .usingNVariables(2);
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, InputsDefinitionPrioToVariableDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingInputs({"i1", "i2"})
+      .usingVariables({"v1", "v2"});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, OutputDefinitionPriorToVariableDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingOutputs({"o1", "o2"})
+      .usingVariables({"v1", "v2"});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, ConstantsDefinitionPriorToNumVarsDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .withConstants({constantValueOne, constantValueZero})
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, GarbageDefinitionPriorToNumVarsDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .withGarbageValues({isGarbageState, isGarbageState})
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, InitialLayoutPriorToVariableDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingInitialLayout({"v1", "v2"})
+      .usingVariables({"v1", "v2"});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, OutputsDefinitionPriorToInputDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .usingOutputs({"i2", "i1"})
+      .usingInputs({"i1", "i2"});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
 // OK TESTS
 TEST_F(RealParserTest, ConstantValueZero) {
   usingVersion(DEFAULT_REAL_VERSION)

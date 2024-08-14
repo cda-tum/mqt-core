@@ -52,7 +52,7 @@ bool isValidIoName(const std::string_view& ioName) {
 }
 
 std::vector<std::string>
-parseVariableNames(const std::size_t processedLineNumberInRealFile,
+parseVariableNames(const int processedLineNumberInRealFile,
                    const std::size_t expectedNumberOfVariables,
                    const std::string& readInRawVariableIdentValues,
                    const std::unordered_set<std::string>& variableIdentsLookup,
@@ -144,7 +144,7 @@ parseVariableNames(const std::size_t processedLineNumberInRealFile,
 }
 
 std::unordered_map<std::string, qc::Qubit>
-parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
+parseIoNames(const int lineInRealFileDefiningIoNames,
              const std::size_t expectedNumberOfIos,
              const std::string& ioNameIdentsRawValues,
              const std::unordered_set<std::string>& variableIdentLookup) {
@@ -197,7 +197,7 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
 
     if (!isValidIoName(ioNameToValidate)) {
       throw qc::QFRException(
-          "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+          "[real parser] l: "+ std::to_string(lineInRealFileDefiningIoNames) +
           " msg: invalid io name: " + ioName);
     }
 
@@ -213,7 +213,7 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
             foundIoNames.emplace(ioName, static_cast<qc::Qubit>(ioIdx++));
         !ioNameInsertionIntoLookupResult.second) {
       throw qc::QFRException(
-          "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+          "[real parser] l:" + std::to_string(lineInRealFileDefiningIoNames) +
           " msg: duplicate io name: " + ioName);
     }
   }
@@ -222,7 +222,7 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
       ioNameEndIdx + 1 < ioNameIdentsRawValues.size() &&
       ioNameIdentsRawValues.at(ioNameEndIdx + 1) == ' ') {
     throw qc::QFRException(
-        "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
+        "[real parser] l:" + std::to_string(lineInRealFileDefiningIoNames) +
         " msg: expected only " + std::to_string(expectedNumberOfIos) +
         " io identifiers to be declared but io identifier delimiter was found"
         " after " +
@@ -231,6 +231,22 @@ parseIoNames(const std::size_t lineInRealFileDefiningIoNames,
         "another io identifier)!");
   }
   return foundIoNames;
+}
+
+void assertRequiredHeaderComponentsAreDefined(
+    int processedLine,
+    std::initializer_list<std::string_view> requiredHeaderComponentPrefixes,
+    const std::set<std::string, std::less<>>&
+        currentUserDeclaredHeaderComponents) {
+
+  for (const auto& requiredHeaderComponentPrefix :
+       requiredHeaderComponentPrefixes)
+    if (currentUserDeclaredHeaderComponents.count(
+            requiredHeaderComponentPrefix) == 0)
+      throw qc::QFRException(
+          "[real parser] l:" + std::to_string(processedLine) +
+          " msg: Expected " + std::string(requiredHeaderComponentPrefix) +
+          " to have been already defined");
 }
 
 void qc::QuantumComputation::importReal(std::istream& is) {
@@ -251,6 +267,17 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
   std::unordered_map<std::string, Qubit> userDefinedOutputIdents;
   std::unordered_set<std::string> userDeclaredVariableIdents;
   std::unordered_set<Qubit> outputQubitsMarkedAsGarbage;
+
+  const std::string NUM_VARIABLES_HEADER_COMPONENT_PREFIX = ".NUMVARS";
+  const std::string VARIABLES_HEADER_COMPONENT_PREFIX = ".VARIABLES";
+  const std::string OUTPUTS_HEADER_COMPONENT_PREFIX = ".OUTPUTS";
+  /*
+   * To enabled heterogenous lookup in an associative, ordered container (i.e. use
+   * the type std::string_view or a string literal as the lookup key without allocating
+   * a new string) we need to specify the transparent comparater. Heterogenuous lookup in
+   * unordered associative containers is a C++20 feature.
+   */
+  std::set<std::string, std::less<>> definedHeaderComponents;
 
   while (true) {
     if (!static_cast<bool>(is >> cmd)) {
@@ -274,7 +301,20 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                          " msg: Invalid file header");
     }
 
+    if (definedHeaderComponents.count(cmd) != 0)
+      throw QFRException("[real parser] l:" + std::to_string(line) +
+                         " msg: Duplicate definition of header component " +
+                         cmd);
+
+    definedHeaderComponents.emplace(cmd);
     if (cmd == ".BEGIN") {
+      // Entries .numvars and .variables must be declared in all .real files
+      assertRequiredHeaderComponentsAreDefined(
+          line,
+          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX,
+           VARIABLES_HEADER_COMPONENT_PREFIX},
+          definedHeaderComponents);
+
       /*
        * The garbage declarations in the .real file are defined on the outputs
        * while the garbage state of the quantum computation operates on the
@@ -306,6 +346,10 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       nclassics = nqubits;
     } else if (cmd == ".VARIABLES") {
       is >> std::ws;
+      assertRequiredHeaderComponentsAreDefined(
+          line,
+          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX},
+          definedHeaderComponents);
       userDeclaredVariableIdents.reserve(nclassics);
 
       std::string variableDefinitionEntry;
@@ -315,7 +359,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       const auto& processedVariableIdents =
-          parseVariableNames(static_cast<std::size_t>(line), nclassics,
+          parseVariableNames(line, nclassics,
                              variableDefinitionEntry, {}, false, "");
       userDeclaredVariableIdents.insert(processedVariableIdents.cbegin(),
                                         processedVariableIdents.cend());
@@ -331,14 +375,19 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
     } else if (cmd == ".INITIAL_LAYOUT") {
       is >> std::ws;
+      assertRequiredHeaderComponentsAreDefined(
+          line,
+          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX,
+           VARIABLES_HEADER_COMPONENT_PREFIX},
+          definedHeaderComponents);
+
       std::string initialLayoutDefinitionEntry;
       if (!std::getline(is, initialLayoutDefinitionEntry)) {
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Failed read in '.initial_layout' line");
       }
 
-      const auto& processedVariableIdents = parseVariableNames(
-          static_cast<std::size_t>(line), nclassics,
+      const auto& processedVariableIdents = parseVariableNames(line, nclassics,
           initialLayoutDefinitionEntry, userDeclaredVariableIdents, false, "");
 
       /* Map the user declared variable idents in the .variable entry to the
@@ -354,6 +403,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
     } else if (cmd == ".CONSTANTS") {
       is >> std::ws;
+      assertRequiredHeaderComponentsAreDefined(
+          line,
+          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX},
+          definedHeaderComponents);
+
       std::string constantsValuePerIoDefinition;
       if (!std::getline(is, constantsValuePerIoDefinition)) {
         throw QFRException("[real parser] l:" + std::to_string(line) +
@@ -362,7 +416,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
 
       if (constantsValuePerIoDefinition.size() != nclassics) {
         throw QFRException(
-            "[real parser] l: " + std::to_string(line) + " msg: Expected " +
+            "[real parser] l:" + std::to_string(line) + " msg: Expected " +
             std::to_string(nclassics) + " constant values but " +
             std::to_string(constantsValuePerIoDefinition.size()) +
             " were declared!");
@@ -402,6 +456,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
     } else if (cmd == ".GARBAGE") {
       is >> std::ws;
+      assertRequiredHeaderComponentsAreDefined(
+          line,
+          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX},
+          definedHeaderComponents);
+
       std::string garbageStatePerIoDefinition;
       if (!std::getline(is, garbageStatePerIoDefinition)) {
         throw QFRException("[real parser] l:" + std::to_string(line) +
@@ -409,7 +468,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       if (garbageStatePerIoDefinition.size() != nclassics) {
-        throw QFRException("[real parser] l: " + std::to_string(line) +
+        throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Expected " + std::to_string(nclassics) +
                            " garbage state values but " +
                            std::to_string(garbageStatePerIoDefinition.size()) +
@@ -432,6 +491,17 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     } else if (cmd == ".INPUTS") {
       // .INPUT: specifies initial layout
       is >> std::ws;
+      assertRequiredHeaderComponentsAreDefined(
+          line,
+          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX,
+           VARIABLES_HEADER_COMPONENT_PREFIX},
+          definedHeaderComponents);
+
+      if (definedHeaderComponents.count(OUTPUTS_HEADER_COMPONENT_PREFIX) > 0)
+        throw QFRException(
+            "[real parser] l:" + std::to_string(line) +
+            " msg: .inputs entry must be declared prior to the .outputs entry");
+
       const std::size_t expectedNumInputIos = nclassics;
       std::string ioNameIdentsLine;
       if (!std::getline(is, ioNameIdentsLine)) {
@@ -440,17 +510,23 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       userDefinedInputIdents =
-          parseIoNames(static_cast<std::size_t>(line), expectedNumInputIos,
+          parseIoNames(line, expectedNumInputIos,
                        ioNameIdentsLine, userDeclaredVariableIdents);
 
       if (userDefinedInputIdents.size() != expectedNumInputIos) {
         throw QFRException(
-            "[real parser] l: " + std::to_string(line) + "msg: Expected " +
+            "[real parser] l:" + std::to_string(line) + "msg: Expected " +
             std::to_string(expectedNumInputIos) + " inputs to be declared!");
       }
     } else if (cmd == ".OUTPUTS") {
       // .OUTPUTS: specifies output permutation
       is >> std::ws;
+      assertRequiredHeaderComponentsAreDefined(
+          line,
+          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX,
+           VARIABLES_HEADER_COMPONENT_PREFIX},
+          definedHeaderComponents);
+
       const std::size_t expectedNumOutputIos = nclassics;
       std::string ioNameIdentsLine;
       if (!std::getline(is, ioNameIdentsLine)) {
@@ -459,12 +535,12 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       userDefinedOutputIdents =
-          parseIoNames(static_cast<std::size_t>(line), expectedNumOutputIos,
+          parseIoNames(line, expectedNumOutputIos,
                        ioNameIdentsLine, userDeclaredVariableIdents);
 
       if (userDefinedOutputIdents.size() != expectedNumOutputIos) {
         throw QFRException(
-            "[real parser] l: " + std::to_string(line) + "msg: Expected " +
+            "[real parser] l:" + std::to_string(line) + "msg: Expected " +
             std::to_string(expectedNumOutputIos) + " outputs to be declared!");
       }
 
@@ -493,7 +569,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
            * define prior to the .output one.
            */
           if (outputQubitsMarkedAsGarbage.count(outputIoQubit) == 0) {
-            throw QFRException("[real parser] l: " + std::to_string(line) +
+            throw QFRException("[real parser] l:" + std::to_string(line) +
                                " msg: outputs without matching inputs are "
                                "expected to be marked as garbage");
           }
@@ -647,7 +723,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     // nLines - 2.
     if (gate == SWAP) {
       if (numberOfGateLines < 2) {
-        throw QFRException("[real parser] l: " + std::to_string(line) +
+        throw QFRException("[real parser] l:" + std::to_string(line) +
                            "msg: SWAP gate is expected to operate on at least "
                            "two qubits but only " +
                            std::to_string(ncontrols) + " were defined");
@@ -668,8 +744,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
 
     // We will ignore the prefix '-' when validating a given gate line ident
     auto processedGateLines =
-        parseVariableNames(static_cast<std::size_t>(line), numberOfGateLines,
-                           gateLines, validVariableIdentLookup, true, "-");
+        parseVariableNames(line, numberOfGateLines, gateLines,
+                           validVariableIdentLookup, true, "-");
 
     std::size_t lineIdx = 0;
     // get controls and target
