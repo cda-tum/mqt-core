@@ -13,9 +13,9 @@ mystnb:
 
 # Quickstart
 
-The central interface for working with quantum circuits in the Munich Quantum Toolkit is the {py:class}`~mqt.core.QuantumComputation` class.
+The central interface for working with quantum circuits in the Munich Quantum Toolkit is the {py:class}`~mqt.core.ir.QuantumComputation` class.
 It represents quantum circuits as a sequential list of operations.
-Operations can be directly applied to the {py:class}`~mqt.core.QuantumComputation`:
+Operations can be directly applied to the {py:class}`~mqt.core.ir.QuantumComputation`:
 
 ```{code-cell} ipython3
 from mqt.core import QuantumComputation
@@ -34,7 +34,7 @@ print(qc.qasm3_str())
 The circuit class provides a lot of flexibility as every unitary gate can be declared as a controlled gate:
 
 ```{code-cell} ipython3
-from mqt.core.operations import Control
+from mqt.core.ir.operations import Control
 
 nqubits = 2
 qc = QuantumComputation(nqubits)
@@ -65,10 +65,10 @@ print(qc.qasm3_str())
 
 ## Layout Information
 
-A {py:class}`~mqt.core.QuantumComputation` also contains information about the mapping of algorithmic (or logical/virtual/circuit) qubits to and from device (or physical) qubits.
-These are contained in the {py:attr}`~mqt.core.QuantumComputation.initial_layout` and {py:attr}`~mqt.core.QuantumComputation.output_permutation` members which are instances of the {py:class}`~mqt.core.Permutation` class. If no layout is given the trivial layout is assumed.
+A {py:class}`~mqt.core.ir.QuantumComputation` also contains information about the mapping of algorithmic (or logical/virtual/circuit) qubits to and from device (or physical) qubits.
+These are contained in the {py:attr}`~mqt.core.ir.QuantumComputation.initial_layout` and {py:attr}`~mqt.core.ir.QuantumComputation.output_permutation` members which are instances of the {py:class}`~mqt.core.ir.Permutation` class. If no layout is given the trivial layout is assumed.
 
-When printing the OpenQASM representation of the {py:class}`~mqt.core.QuantumComputation` the input and output permutations are given as comments in the first two lines of the QASM string. The format is:
+When printing the OpenQASM representation of the {py:class}`~mqt.core.ir.QuantumComputation` the input and output permutations are given as comments in the first two lines of the QASM string. The format is:
 
 `// i Q_0, Q_1, ..., Q_n` ... algorithmic qubit $i$ is mapped to device qubit $Q_i$.
 
@@ -90,7 +90,7 @@ print(qc.qasm3_str())
 ```
 
 The layout information can also be automatically determined from measurements
-using the {py:meth}`~mqt.core.QuantumComputation.initialize_io_mapping` method:
+using the {py:meth}`~mqt.core.ir.QuantumComputation.initialize_io_mapping` method:
 
 ```{code-cell} ipython3
 nqubits = 3
@@ -126,19 +126,19 @@ print(qc)
 
 ## Operations
 
-The operations in a {py:class}`~mqt.core.QuantumComputation` object are of type {py:class}`~mqt.core.operations.Operation`.
+The operations in a {py:class}`~mqt.core.ir.QuantumComputation` object are of type {py:class}`~mqt.core.ir.operations.Operation`.
 Every type of operation in `mqt-core` is derived from this class.
 Operations can also be explicitly constructed.
-Each {py:class}`~mqt.core.operations.Operation` has a type in the form of an {py:class}`~mqt.core.operations.OpType`.
+Each {py:class}`~mqt.core.ir.operations.Operation` has a type in the form of an {py:class}`~mqt.core.ir.operations.OpType`.
 
 ### `StandardOperation`
 
-A {py:class}`~mqt.core.operations.StandardOperation` is used to represent basic unitary gates. These can also be declared with arbitrary targets and controls.
+A {py:class}`~mqt.core.ir.operations.StandardOperation` is used to represent basic unitary gates. These can also be declared with arbitrary targets and controls.
 
 ```{code-cell} ipython3
 from math import pi
 
-from mqt.core.operations import OpType, StandardOperation
+from mqt.core.ir.operations import OpType, StandardOperation
 
 nqubits = 3
 
@@ -162,10 +162,10 @@ print(qc)
 
 ### `NonUnitaryOperation`
 
-A {py:class}`~mqt.core.operations.NonUnitaryOperation` is used to represent operations involving measurements or resets.
+A {py:class}`~mqt.core.ir.operations.NonUnitaryOperation` is used to represent operations involving measurements or resets.
 
 ```{code-cell} ipython3
-from mqt.core.operations import NonUnitaryOperation
+from mqt.core.ir.operations import NonUnitaryOperation
 
 nqubits = 2
 qc = QuantumComputation(nqubits, nqubits)
@@ -185,12 +185,12 @@ print(qc.qasm3_str())
 
 ### `SymbolicOperation`
 
-A {py:class}`~mqt.core.operations.SymbolicOperation` can represent all gates of a {py:class}`~mqt.core.operations.StandardOperation` but the gate parameters can be symbolic.
-Symbolic expressions are represented in MQT using the {py:class}`~mqt.core.symbolic.Expression` type, which represent linear combinations of symbolic {py:class}`~mqt.core.symbolic.Term` objects over some set of {py:class}`~mqt.core.symbolic.Variable` objects.
+A {py:class}`~mqt.core.ir.operations.SymbolicOperation` can represent all gates of a {py:class}`~mqt.core.ir.operations.StandardOperation` but the gate parameters can be symbolic.
+Symbolic expressions are represented in MQT using the {py:class}`~mqt.core.ir.symbolic.Expression` type, which represent linear combinations of symbolic {py:class}`~mqt.core.ir.symbolic.Term` objects over some set of {py:class}`~mqt.core.ir.symbolic.Variable` objects.
 
 ```{code-cell} ipython3
-from mqt.core.operations import SymbolicOperation
-from mqt.core.symbolic import Expression, Term, Variable
+from mqt.core.ir.operations import SymbolicOperation
+from mqt.core.ir.symbolic import Expression, Term, Variable
 
 nqubits = 1
 
@@ -211,10 +211,10 @@ u2_symb = SymbolicOperation(target=0, params=[sym, 2.0], op_type=OpType.u2)
 
 ### `CompoundOperation`
 
-A {py:class}`~mqt.core.operations.CompoundOperation` bundles multiple {py:class}`~mqt.core.operations.Operation` objects together.
+A {py:class}`~mqt.core.ir.operations.CompoundOperation` bundles multiple {py:class}`~mqt.core.ir.operations.Operation` objects together.
 
 ```{code-cell} ipython3
-from mqt.core.operations import CompoundOperation
+from mqt.core.ir.operations import CompoundOperation
 
 nqubits = 2
 comp_op = CompoundOperation()
@@ -247,7 +247,7 @@ print(qc)
 
 ## Interfacing with other SDKs
 
-Since a {py:class}`~mqt.core.QuantumComputation` can be imported from and exported to an OpenQASM 3.0 (or OpenQASM 2.0) string, any library that can work with OpenQASM is easy to use in conjunction with the {py:class}`~mqt.core.QuantumComputation` class.
+Since a {py:class}`~mqt.core.ir.QuantumComputation` can be imported from and exported to an OpenQASM 3.0 (or OpenQASM 2.0) string, any library that can work with OpenQASM is easy to use in conjunction with the {py:class}`~mqt.core.ir.QuantumComputation` class.
 
 In addition, `mqt-core` can import [Qiskit](https://qiskit.org/) {py:class}`~qiskit.circuit.QuantumCircuit` objects directly.
 

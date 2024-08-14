@@ -1,8 +1,8 @@
 #include "algorithms/RandomCliffordCircuit.hpp"
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
-#include "operations/CompoundOperation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
 
 #include <algorithm>
 #include <array>

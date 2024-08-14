@@ -1,4 +1,4 @@
-#include "operations/Expression.hpp"
+#include "ir/operations/Expression.hpp"
 #include "zx/Simplify.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"

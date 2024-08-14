@@ -1,7 +1,7 @@
 #pragma once
 
-#include "operations/Expression.hpp"
-#include "zx/Rational.hpp"
+#include "Rational.hpp"
+#include "ir/operations/Expression.hpp"
 
 #include <cstddef>
 #include <cstdint>

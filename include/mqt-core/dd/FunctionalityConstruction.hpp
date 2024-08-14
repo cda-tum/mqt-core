@@ -1,11 +1,10 @@
 #pragma once
 
-#include "Permutation.hpp"
-#include "QuantumComputation.hpp"
-#include "algorithms/Grover.hpp"
 #include "dd/Operations.hpp"
 #include "dd/Package_fwd.hpp"
-#include "operations/OpType.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -28,12 +27,6 @@ bool buildFunctionalityRecursive(const QuantumComputation* qc,
                                  std::size_t depth, std::size_t opIdx,
                                  std::stack<MatrixDD>& s,
                                  Permutation& permutation, Package<Config>& dd);
-
-template <class Config>
-MatrixDD buildFunctionality(const qc::Grover* qc, Package<Config>& dd);
-
-template <class Config>
-MatrixDD buildFunctionalityRecursive(const qc::Grover* qc, Package<Config>& dd);
 
 inline void dumpTensorNetwork(std::ostream& of, const QuantumComputation& qc) {
   of << "{\"tensors\": [\n";

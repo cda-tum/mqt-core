@@ -1,11 +1,11 @@
-#include "CircuitOptimizer.hpp"
 #include "Definitions.hpp"
 #include "algorithms/QPE.hpp"
-#include "dd/Benchmark.hpp"
+#include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <bitset>
 #include <complex>
@@ -120,13 +120,16 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(QPE, QPETest) {
+  auto dd = std::make_unique<dd::Package<>>(precision + 1);
   auto qc = qc::QPE(lambda, precision);
   qc.printStatistics(std::cout);
   ASSERT_EQ(qc.getNqubits(), precision + 1);
   ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(qc); });
 
-  auto out = dd::benchmarkSimulate(qc);
-  qc::VectorDD const e = out->sim;
+  qc::VectorDD e{};
+  ASSERT_NO_THROW(
+      { e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd); });
+
   // account for the eigenstate qubit by adding an offset
   const auto offset = 1ULL << (e.p->v + 1);
   const auto amplitude = e.getValueByIndex(expectedResult + offset);
@@ -153,11 +156,13 @@ TEST_P(QPE, QPETest) {
 }
 
 TEST_P(QPE, IQPETest) {
+  auto dd = std::make_unique<dd::Package<>>(precision + 1);
   auto qc = qc::QPE(lambda, precision, true);
   ASSERT_EQ(qc.getNqubits(), 2U);
 
   constexpr auto shots = 8192U;
-  auto measurements = dd::benchmarkSimulateWithShots(qc, shots);
+  auto measurements =
+      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
 
   // sort the measurements
   using Measurement = std::pair<std::string, std::size_t>;
@@ -240,8 +245,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto exp = dd::benchmarkFunctionalityConstruction(qpe);
-  auto e = exp->func;
+  auto e = buildFunctionality(&qpe, *dd);
 
   // create standard IQPE circuit
   auto iqpe = qc::QPE(lambda, precision, true);
@@ -256,7 +260,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = buildFunctionality(&iqpe, *(exp->dd));
+  auto f = buildFunctionality(&iqpe, *dd);
 
   EXPECT_EQ(e, f);
 }

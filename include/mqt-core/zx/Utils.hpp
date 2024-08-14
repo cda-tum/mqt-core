@@ -1,6 +1,6 @@
 #pragma once
 
-#include "zx/ZXDefinitions.hpp"
+#include "ZXDefinitions.hpp"
 
 #include <cassert>
 #include <cstdint>

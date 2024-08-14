@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 from qiskit import QuantumCircuit, qasm2
 
-from mqt.core import QuantumComputation
-from mqt.core.load import load
+from mqt.core import load
+from mqt.core.ir import QuantumComputation
 
 
 def test_loading_quantum_computation() -> None:

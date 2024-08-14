@@ -1,8 +1,8 @@
 #include "datastructures/Layer.hpp"
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
-#include "operations/OpType.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -110,8 +110,8 @@ auto Layer::constructDAG(const QuantumComputation& qc,
                     ->commutesAtQubit(*current->getOperation(), qubit) ||
                std::find_if(
                    currentGroup[qubit].cbegin(), currentGroup[qubit].cend(),
-                   [&current](const auto& vertex) {
-                     return *vertex->getOperation() == *current->getOperation();
+                   [&current](const auto& v) {
+                     return *v->getOperation() == *current->getOperation();
                    }) != currentGroup[qubit].cend())) {
             // here: the current operation does not commute with the current
             // group members and is not the inverse of the lookahead

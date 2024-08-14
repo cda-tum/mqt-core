@@ -7,8 +7,8 @@
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <algorithm>
 #include <array>

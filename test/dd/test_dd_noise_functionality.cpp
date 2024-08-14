@@ -1,11 +1,11 @@
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/DDpackageConfig.hpp"
 #include "dd/NoiseFunctionality.hpp"
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
-#include "operations/OpType.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <algorithm>
 #include <bitset>

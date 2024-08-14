@@ -1,13 +1,13 @@
-#include "CircuitOptimizer.hpp"
 #include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
-#include "dd/Benchmark.hpp"
+#include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <bitset>
 #include <chrono>
@@ -18,7 +18,6 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <utility>
 
 class DynamicCircuitEvalExactQPE : public testing::TestWithParam<std::size_t> {
 protected:
@@ -105,7 +104,7 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
-  qc::CircuitOptimizer::reorderOperations(*qpe);
+  qpe->reorderOperations();
   const auto start = std::chrono::steady_clock::now();
   // transform dynamic circuit to unitary circuit by first eliminating reset
   // operations and afterwards deferring measurements to the end of the circuit
@@ -114,7 +113,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 
   // remove final measurements in order to just obtain the unitary functionality
   qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
-  qc::CircuitOptimizer::reorderOperations(*iqpe);
+  iqpe->reorderOperations();
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
   qc::MatrixDD e = dd->makeIdent();
@@ -177,10 +176,8 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto exp = dd::benchmarkSimulate(*qpe);
+  auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), *dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
-  auto e = exp->sim;
-  dd = std::move(exp->dd);
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
@@ -311,7 +308,7 @@ INSTANTIATE_TEST_SUITE_P(Eval, DynamicCircuitEvalInexactQPE,
                          });
 
 TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
-  qc::CircuitOptimizer::reorderOperations(*qpe);
+  qpe->reorderOperations();
   const auto start = std::chrono::steady_clock::now();
   // transform dynamic circuit to unitary circuit by first eliminating reset
   // operations and afterwards deferring measurements to the end of the circuit
@@ -320,7 +317,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
 
   // remove final measurements in order to just obtain the unitary functionality
   qc::CircuitOptimizer::removeFinalMeasurements(*iqpe);
-  qc::CircuitOptimizer::reorderOperations(*iqpe);
+  iqpe->reorderOperations();
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
   qc::MatrixDD e = dd->makeIdent();
@@ -390,10 +387,8 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   std::cout << "---- extraction done ----\n";
 
   // generate DD of QPE circuit via simulation
-  auto exp = dd::benchmarkSimulate(*qpe);
+  auto e = simulate(qpe.get(), dd->makeZeroState(qpe->getNqubits()), *dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
-  auto e = exp->sim;
-  dd = std::move(exp->dd);
   std::cout << "---- sim done ----\n";
 
   // compare outcomes
@@ -467,7 +462,7 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
-  qc::CircuitOptimizer::reorderOperations(*bv);
+  bv->reorderOperations();
   const auto start = std::chrono::steady_clock::now();
   // transform dynamic circuit to unitary circuit by first eliminating reset
   // operations and afterwards deferring measurements to the end of the circuit
@@ -476,7 +471,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 
   // remove final measurements in order to just obtain the unitary functionality
   qc::CircuitOptimizer::removeFinalMeasurements(*dbv);
-  qc::CircuitOptimizer::reorderOperations(*dbv);
+  dbv->reorderOperations();
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
   qc::MatrixDD e = dd->makeIdent();
@@ -539,10 +534,8 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto exp = dd::benchmarkSimulate(*bv);
+  auto e = simulate(bv.get(), dd->makeZeroState(bv->getNqubits()), *dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
-  auto e = exp->sim;
-  dd = std::move(exp->dd);
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
@@ -615,7 +608,7 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
-  qc::CircuitOptimizer::reorderOperations(*qft);
+  qft->reorderOperations();
   const auto start = std::chrono::steady_clock::now();
   // transform dynamic circuit to unitary circuit by first eliminating reset
   // operations and afterwards deferring measurements to the end of the circuit
@@ -624,7 +617,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 
   // remove final measurements in order to just obtain the unitary functionality
   qc::CircuitOptimizer::removeFinalMeasurements(*dqft);
-  qc::CircuitOptimizer::reorderOperations(*dqft);
+  dqft->reorderOperations();
   const auto finishedTransformation = std::chrono::steady_clock::now();
 
   qc::MatrixDD e = dd->makeIdent();
@@ -687,12 +680,10 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto exp = dd::benchmarkSimulate(*qft);
+  auto e = simulate(qft.get(), dd->makeZeroState(qft->getNqubits()), *dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
   const auto simulation =
       std::chrono::duration<double>(simulationEnd - start).count();
-  auto e = exp->sim;
-  dd = std::move(exp->dd);
 
   std::stringstream ss{};
   // extract measurement probabilities from IQPE simulations

@@ -10,9 +10,9 @@ from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, Quantu
 from qiskit.circuit.library import U2Gate, XXMinusYYGate, XXPlusYYGate
 from qiskit.providers.fake_provider import Fake5QV1
 
-from mqt.core.operations import CompoundOperation, SymbolicOperation
+from mqt.core.ir.operations import CompoundOperation, SymbolicOperation
+from mqt.core.ir.symbolic import Expression
 from mqt.core.plugins.qiskit import qiskit_to_mqt
-from mqt.core.symbolic import Expression
 
 
 def test_empty_circuit() -> None:

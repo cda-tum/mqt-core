@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "Permutation.hpp"
 #include "dd/CachedEdge.hpp"
 #include "dd/Complex.hpp"
 #include "dd/ComplexNumbers.hpp"
@@ -20,7 +19,8 @@
 #include "dd/StochasticNoiseOperationTable.hpp"
 #include "dd/UnaryComputeTable.hpp"
 #include "dd/UniqueTable.hpp"
-#include "operations/Control.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/operations/Control.hpp"
 
 #include <algorithm>
 #include <array>
