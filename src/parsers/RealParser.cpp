@@ -8,6 +8,8 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <initializer_list>
 #include <ios>
 #include <iostream>
 #include <istream>
@@ -15,6 +17,7 @@
 #include <map>
 #include <optional>
 #include <regex>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -41,7 +44,7 @@ std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
 /// consists of only letters, digits and underscore characters.
 /// @param ioName The name to valid
 /// @return Whether the given io name is valid
-bool isValidIoName(const std::string_view& ioName) {
+bool isValidIoName(const std::string_view& ioName) noexcept {
   return !ioName.empty() &&
          std::all_of(
              ioName.cbegin(), ioName.cend(), [](const char ioNameCharacter) {
@@ -56,7 +59,6 @@ parseVariableNames(const int processedLineNumberInRealFile,
                    const std::size_t expectedNumberOfVariables,
                    const std::string& readInRawVariableIdentValues,
                    const std::unordered_set<std::string>& variableIdentsLookup,
-                   bool allowedDuplicateVariableIdentDeclarations,
                    const std::string_view& trimableVariableIdentPrefix) {
   std::vector<std::string> variableNames;
   variableNames.reserve(expectedNumberOfVariables);
@@ -98,8 +100,7 @@ parseVariableNames(const int processedLineNumberInRealFile,
           " msg: invalid variable name: " + variableIdent);
     }
 
-    if (!allowedDuplicateVariableIdentDeclarations &&
-        processedVariableIdents.count(variableIdent) > 0) {
+    if (processedVariableIdents.count(variableIdent) > 0) {
       throw qc::QFRException(
           "[real parser] l: " + std::to_string(processedLineNumberInRealFile) +
           " msg: duplicate variable name: " + variableIdent);
@@ -197,7 +198,7 @@ parseIoNames(const int lineInRealFileDefiningIoNames,
 
     if (!isValidIoName(ioNameToValidate)) {
       throw qc::QFRException(
-          "[real parser] l: "+ std::to_string(lineInRealFileDefiningIoNames) +
+          "[real parser] l: " + std::to_string(lineInRealFileDefiningIoNames) +
           " msg: invalid io name: " + ioName);
     }
 
@@ -268,14 +269,15 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
   std::unordered_set<std::string> userDeclaredVariableIdents;
   std::unordered_set<Qubit> outputQubitsMarkedAsGarbage;
 
-  const std::string NUM_VARIABLES_HEADER_COMPONENT_PREFIX = ".NUMVARS";
-  const std::string VARIABLES_HEADER_COMPONENT_PREFIX = ".VARIABLES";
-  const std::string OUTPUTS_HEADER_COMPONENT_PREFIX = ".OUTPUTS";
+  constexpr std::string_view numVariablesHeaderComponentPrefix = ".NUMVARS";
+  constexpr std::string_view variablesHeaderComponentPrefix = ".VARIABLES";
+  constexpr std::string_view outputsHeaderComponentPrefix = ".OUTPUTS";
   /*
-   * To enabled heterogenous lookup in an associative, ordered container (i.e. use
-   * the type std::string_view or a string literal as the lookup key without allocating
-   * a new string) we need to specify the transparent comparater. Heterogenuous lookup in
-   * unordered associative containers is a C++20 feature.
+   * To enabled heterogenous lookup in an associative, ordered container (i.e.
+   * use the type std::string_view or a string literal as the lookup key without
+   * allocating a new string) we need to specify the transparent comparater.
+   * Heterogenuous lookup in unordered associative containers is a C++20
+   * feature.
    */
   std::set<std::string, std::less<>> definedHeaderComponents;
 
@@ -311,8 +313,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       // Entries .numvars and .variables must be declared in all .real files
       assertRequiredHeaderComponentsAreDefined(
           line,
-          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX,
-           VARIABLES_HEADER_COMPONENT_PREFIX},
+          {numVariablesHeaderComponentPrefix, variablesHeaderComponentPrefix},
           definedHeaderComponents);
 
       /*
@@ -347,9 +348,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     } else if (cmd == ".VARIABLES") {
       is >> std::ws;
       assertRequiredHeaderComponentsAreDefined(
-          line,
-          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX},
-          definedHeaderComponents);
+          line, {numVariablesHeaderComponentPrefix}, definedHeaderComponents);
       userDeclaredVariableIdents.reserve(nclassics);
 
       std::string variableDefinitionEntry;
@@ -359,8 +358,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       const auto& processedVariableIdents =
-          parseVariableNames(line, nclassics,
-                             variableDefinitionEntry, {}, false, "");
+          parseVariableNames(line, nclassics, variableDefinitionEntry, {}, "");
       userDeclaredVariableIdents.insert(processedVariableIdents.cbegin(),
                                         processedVariableIdents.cend());
 
@@ -377,8 +375,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       is >> std::ws;
       assertRequiredHeaderComponentsAreDefined(
           line,
-          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX,
-           VARIABLES_HEADER_COMPONENT_PREFIX},
+          {numVariablesHeaderComponentPrefix, variablesHeaderComponentPrefix},
           definedHeaderComponents);
 
       std::string initialLayoutDefinitionEntry;
@@ -387,8 +384,9 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                            " msg: Failed read in '.initial_layout' line");
       }
 
-      const auto& processedVariableIdents = parseVariableNames(line, nclassics,
-          initialLayoutDefinitionEntry, userDeclaredVariableIdents, false, "");
+      const auto& processedVariableIdents =
+          parseVariableNames(line, nclassics, initialLayoutDefinitionEntry,
+                             userDeclaredVariableIdents, "");
 
       /* Map the user declared variable idents in the .variable entry to the
        * ones declared in the .initial_layout as explained in
@@ -404,9 +402,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     } else if (cmd == ".CONSTANTS") {
       is >> std::ws;
       assertRequiredHeaderComponentsAreDefined(
-          line,
-          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX},
-          definedHeaderComponents);
+          line, {numVariablesHeaderComponentPrefix}, definedHeaderComponents);
 
       std::string constantsValuePerIoDefinition;
       if (!std::getline(is, constantsValuePerIoDefinition)) {
@@ -457,9 +453,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     } else if (cmd == ".GARBAGE") {
       is >> std::ws;
       assertRequiredHeaderComponentsAreDefined(
-          line,
-          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX},
-          definedHeaderComponents);
+          line, {numVariablesHeaderComponentPrefix}, definedHeaderComponents);
 
       std::string garbageStatePerIoDefinition;
       if (!std::getline(is, garbageStatePerIoDefinition)) {
@@ -493,11 +487,10 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       is >> std::ws;
       assertRequiredHeaderComponentsAreDefined(
           line,
-          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX,
-           VARIABLES_HEADER_COMPONENT_PREFIX},
+          {numVariablesHeaderComponentPrefix, variablesHeaderComponentPrefix},
           definedHeaderComponents);
 
-      if (definedHeaderComponents.count(OUTPUTS_HEADER_COMPONENT_PREFIX) > 0)
+      if (definedHeaderComponents.count(outputsHeaderComponentPrefix) > 0)
         throw QFRException(
             "[real parser] l:" + std::to_string(line) +
             " msg: .inputs entry must be declared prior to the .outputs entry");
@@ -510,8 +503,8 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       userDefinedInputIdents =
-          parseIoNames(line, expectedNumInputIos,
-                       ioNameIdentsLine, userDeclaredVariableIdents);
+          parseIoNames(line, expectedNumInputIos, ioNameIdentsLine,
+                       userDeclaredVariableIdents);
 
       if (userDefinedInputIdents.size() != expectedNumInputIos) {
         throw QFRException(
@@ -523,8 +516,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       is >> std::ws;
       assertRequiredHeaderComponentsAreDefined(
           line,
-          {NUM_VARIABLES_HEADER_COMPONENT_PREFIX,
-           VARIABLES_HEADER_COMPONENT_PREFIX},
+          {numVariablesHeaderComponentPrefix, variablesHeaderComponentPrefix},
           definedHeaderComponents);
 
       const std::size_t expectedNumOutputIos = nclassics;
@@ -535,8 +527,8 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       }
 
       userDefinedOutputIdents =
-          parseIoNames(line, expectedNumOutputIos,
-                       ioNameIdentsLine, userDeclaredVariableIdents);
+          parseIoNames(line, expectedNumOutputIos, ioNameIdentsLine,
+                       userDeclaredVariableIdents);
 
       if (userDefinedOutputIdents.size() != expectedNumOutputIos) {
         throw QFRException(
@@ -743,9 +735,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
           qregNameAndQubitIndexPair.first.substr(2));
 
     // We will ignore the prefix '-' when validating a given gate line ident
-    auto processedGateLines =
-        parseVariableNames(line, numberOfGateLines, gateLines,
-                           validVariableIdentLookup, true, "-");
+    auto processedGateLines = parseVariableNames(
+        line, numberOfGateLines, gateLines, validVariableIdentLookup, "-");
 
     std::size_t lineIdx = 0;
     // get controls and target

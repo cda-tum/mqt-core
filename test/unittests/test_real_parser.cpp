@@ -134,7 +134,7 @@ protected:
   const char isGarbageState = '1';
   const char isNotGarbageState = '-';
 
-  enum class GateType : std::uint8_t { Toffoli };
+  enum class GateType : std::uint8_t { Toffoli, V };
 
   std::unique_ptr<QuantumComputation> quantumComputationInstance;
   std::stringstream realFileContent;
@@ -156,6 +156,8 @@ protected:
   static std::string stringifyGateType(const GateType gateType) {
     if (gateType == GateType::Toffoli)
       return "t";
+    if (gateType == GateType::V)
+      return "v";
 
     throw std::invalid_argument("Failed to stringify gate type");
   }
@@ -717,9 +719,7 @@ TEST_F(RealParserTest, HeaderWithoutNumVarsDefinitionNotPossible) {
 }
 
 TEST_F(RealParserTest, HeaderWithoutVariablesDefinitionNotPossible) {
-  usingVersion(DEFAULT_REAL_VERSION)
-      .usingNVariables(2)
-      .withEmptyGateList();
+  usingVersion(DEFAULT_REAL_VERSION).usingNVariables(2).withEmptyGateList();
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -807,6 +807,62 @@ TEST_F(RealParserTest, OutputsDefinitionPriorToInputDefinitionNotPossible) {
       .usingVariables({"v1", "v2"})
       .usingOutputs({"i2", "i1"})
       .usingInputs({"i1", "i2"});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, DuplicateControlLineInGateDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(3)
+      .usingVariables({"v1", "v2", "v3"})
+      .withGates(
+          {stringifyGate(GateType::Toffoli, {"v1", "v2", "v1"}, {"v3"})});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, DuplicateTargetLineInGateDefinitionNotPossible) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(3)
+      .usingVariables({"v1", "v2", "v3"})
+      .withGates({stringifyGate(GateType::V, {"v1"}, {"v2", "v3", "v2"})});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, NotDefinedVariableNotUsableAsControlLine) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1", "v3"}, {"v2"})});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, NotDefinedVariablNotUsableAsTargetLine) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v3"})});
+
+  EXPECT_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real),
+      QFRException);
+}
+
+TEST_F(RealParserTest, GateLineNotUsableAsControlAndTargetLine) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGates({stringifyGate(GateType::Toffoli, {"v1"}, {"v1"})});
 
   EXPECT_THROW(
       quantumComputationInstance->import(realFileContent, Format::Real),
@@ -1216,4 +1272,17 @@ TEST_F(RealParserTest, CheckNoneIdentityInitialLayout) {
   ASSERT_EQ(
       std::hash<Permutation>{}(expectedInitialLayout),
       std::hash<Permutation>{}(quantumComputationInstance->initialLayout));
+}
+
+TEST_F(RealParserTest, GateWithoutExplicitNumGateLinesDefinitionOk) {
+  usingVersion(DEFAULT_REAL_VERSION)
+      .usingNVariables(2)
+      .usingVariables({"v1", "v2"})
+      .withGates({stringifyGate(GateType::V, {}, {"v1", "v2"})});
+
+  EXPECT_NO_THROW(
+      quantumComputationInstance->import(realFileContent, Format::Real));
+
+  ASSERT_EQ(2, quantumComputationInstance->getNqubits());
+  ASSERT_EQ(1, quantumComputationInstance->getNops());
 }
