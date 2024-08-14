@@ -5,6 +5,7 @@
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <bitset>
 #include <complex>

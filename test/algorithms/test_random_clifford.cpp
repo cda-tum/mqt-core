@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <memory>
 #include <sstream>
 
 class RandomClifford : public testing::TestWithParam<std::size_t> {

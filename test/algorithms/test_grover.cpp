@@ -1,10 +1,11 @@
 #include "algorithms/Grover.hpp"
 #include "dd/DDDefinitions.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <algorithm>
+#include <bitset>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -13,7 +14,6 @@
 #include <memory>
 #include <sstream>
 #include <tuple>
-#include <utility>
 
 class Grover
     : public testing::TestWithParam<std::tuple<std::size_t, std::size_t>> {

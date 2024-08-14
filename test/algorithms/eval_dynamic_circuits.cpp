@@ -7,6 +7,7 @@
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <bitset>
 #include <chrono>
@@ -17,7 +18,6 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <utility>
 
 class DynamicCircuitEvalExactQPE : public testing::TestWithParam<std::size_t> {
 protected:

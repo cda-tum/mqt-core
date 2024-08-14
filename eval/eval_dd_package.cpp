@@ -10,6 +10,7 @@
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <array>
 #include <bitset>

@@ -13,7 +13,6 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
-#include <utility>
 
 class QFT : public testing::TestWithParam<std::size_t> {
 protected:
