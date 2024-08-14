@@ -1,10 +1,10 @@
 #include "Definitions.hpp"
 #include "algorithms/WState.hpp"
-#include "dd/Benchmark.hpp"
 #include "dd/ComplexNumbers.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "dd/RealNumber.hpp"
+#include "dd/Simulation.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>
@@ -42,7 +42,10 @@ TEST_P(WState, FunctionTest) {
   const auto nq = GetParam();
 
   auto qc = qc::WState(nq);
-  const auto measurements = dd::benchmarkSimulateWithShots(qc, 4096U);
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
+  const std::size_t shots = 4096U;
+  const auto measurements =
+      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
   for (const auto& result : generateWStateStrings(nq)) {
     EXPECT_TRUE(measurements.find(result) != measurements.end());
   }
@@ -52,9 +55,9 @@ TEST_P(WState, RoutineFunctionTest) {
   const auto nq = GetParam();
 
   auto qc = qc::WState(nq);
-  auto exp = dd::benchmarkSimulate(qc);
-  auto e = exp->sim;
-  const auto f = exp->dd->makeWState(nq);
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
+  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd);
+  const auto f = dd->makeWState(nq);
 
   EXPECT_EQ(e, f);
 }

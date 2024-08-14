@@ -1,7 +1,8 @@
 #include "algorithms/Entanglement.hpp"
-#include "dd/Benchmark.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
+#include "dd/Simulation.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>
@@ -29,12 +30,12 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(Entanglement, FunctionTest) {
   const auto nq = GetParam();
 
+  auto dd = std::make_unique<dd::Package<>>(nq);
   auto qc = qc::Entanglement(nq);
-  auto result = dd::benchmarkFunctionalityConstruction(qc);
-  auto e = result->func;
+  auto e = buildFunctionality(&qc, *dd);
 
   ASSERT_EQ(qc.getNops(), nq);
-  const qc::VectorDD r = result->dd->multiply(e, result->dd->makeZeroState(nq));
+  const auto r = dd->multiply(e, dd->makeZeroState(nq));
 
   ASSERT_EQ(r.getValueByPath(nq, std::string(nq, '0')), dd::SQRT2_2);
   ASSERT_EQ(r.getValueByPath(nq, std::string(nq, '1')), dd::SQRT2_2);
@@ -44,9 +45,9 @@ TEST_P(Entanglement, GHZRoutineFunctionTest) {
   const auto nq = GetParam();
 
   auto qc = qc::Entanglement(nq);
-  auto exp = dd::benchmarkSimulate(qc);
-  auto e = exp->sim;
-  const auto f = exp->dd->makeGHZState(nq);
+  auto dd = std::make_unique<dd::Package<>>(nq);
+  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd);
+  const auto f = dd->makeGHZState(nq);
 
   EXPECT_EQ(e, f);
 }
