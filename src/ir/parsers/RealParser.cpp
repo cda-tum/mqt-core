@@ -25,6 +25,11 @@
 #include <utility>
 #include <vector>
 
+/*
+ * Use the anonymous namespace to declare the file-scope functions only
+ * used in the current source file instead of static functions
+ */
+namespace {
 std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
     const std::string& variableIdent, const qc::QuantumRegisterMap& dataQubits,
     const qc::QuantumRegisterMap& ancillaryQubits) {
@@ -249,6 +254,7 @@ void assertRequiredHeaderComponentsAreDefined(
           " msg: Expected " + std::string(requiredHeaderComponentPrefix) +
           " to have been already defined");
 }
+} // namespace
 
 void qc::QuantumComputation::importReal(std::istream& is) {
   auto line = readRealHeader(is);
