@@ -254,6 +254,26 @@ void assertRequiredHeaderComponentsAreDefined(
           " msg: Expected " + std::string(requiredHeaderComponentPrefix) +
           " to have been already defined");
 }
+
+void trimCommentAndTrailingWhitespaceData(std::string& lineToProcess) {
+  if (const auto commentLinePrefixPosition = lineToProcess.find_first_of('#');
+      commentLinePrefixPosition != std::string::npos) {
+    if (commentLinePrefixPosition != 0)
+      lineToProcess = lineToProcess.substr(0, commentLinePrefixPosition);
+    else
+      lineToProcess = "";
+  }
+
+  if (lineToProcess.empty())
+    return;
+
+  if (const std::size_t positionOfLastDataCharacter =
+          lineToProcess.find_last_not_of(" \t");
+      positionOfLastDataCharacter != std::string::npos &&
+      positionOfLastDataCharacter != lineToProcess.size() - 1) {
+    lineToProcess = lineToProcess.substr(0, positionOfLastDataCharacter + 1);
+  }
+}
 } // namespace
 
 void qc::QuantumComputation::importReal(std::istream& is) {
@@ -363,6 +383,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                            " msg: Failed read in '.variables' line");
       }
 
+      trimCommentAndTrailingWhitespaceData(variableDefinitionEntry);
       const auto& processedVariableIdents =
           parseVariableNames(line, nclassics, variableDefinitionEntry, {}, "");
       userDeclaredVariableIdents.insert(processedVariableIdents.cbegin(),
@@ -390,6 +411,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                            " msg: Failed read in '.initial_layout' line");
       }
 
+      trimCommentAndTrailingWhitespaceData(initialLayoutDefinitionEntry);
       const auto& processedVariableIdents =
           parseVariableNames(line, nclassics, initialLayoutDefinitionEntry,
                              userDeclaredVariableIdents, "");
@@ -416,6 +438,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                            " msg: Failed read in '.constants' line");
       }
 
+      trimCommentAndTrailingWhitespaceData(constantsValuePerIoDefinition);
       if (constantsValuePerIoDefinition.size() != nclassics) {
         throw QFRException(
             "[real parser] l:" + std::to_string(line) + " msg: Expected " +
@@ -467,6 +490,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                            " msg: Failed read in '.garbage' line");
       }
 
+      trimCommentAndTrailingWhitespaceData(garbageStatePerIoDefinition);
       if (garbageStatePerIoDefinition.size() != nclassics) {
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Expected " + std::to_string(nclassics) +
@@ -508,6 +532,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                            " msg: Failed read in '.inputs' line");
       }
 
+      trimCommentAndTrailingWhitespaceData(ioNameIdentsLine);
       userDefinedInputIdents =
           parseIoNames(line, expectedNumInputIos, ioNameIdentsLine,
                        userDeclaredVariableIdents);
@@ -532,6 +557,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                            " msg: Failed read in '.outputs' line");
       }
 
+      trimCommentAndTrailingWhitespaceData(ioNameIdentsLine);
       userDefinedOutputIdents =
           parseIoNames(line, expectedNumOutputIos, ioNameIdentsLine,
                        userDeclaredVariableIdents);
@@ -698,6 +724,7 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       throw QFRException("[real parser] l:" + std::to_string(line) +
                          " msg: Failed read in gate definition");
     }
+    trimCommentAndTrailingWhitespaceData(qubits);
 
     /*
      * If we cannot determine how many gate lines are to be expected from the
