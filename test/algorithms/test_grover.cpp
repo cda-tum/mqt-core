@@ -1,5 +1,6 @@
 #include "algorithms/Grover.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 #include "ir/QuantumComputation.hpp"
@@ -63,87 +64,6 @@ INSTANTIATE_TEST_SUITE_P(
       return ss.str();
     });
 
-template <class Config>
-qc::MatrixDD buildFunctionality(const qc::Grover* qc, dd::Package<Config>& dd) {
-  qc::QuantumComputation groverIteration(qc->getNqubits());
-  qc->oracle(groverIteration);
-  qc->diffusion(groverIteration);
-
-  auto iteration = buildFunctionality(&groverIteration, dd);
-
-  auto e = iteration;
-  dd.incRef(e);
-
-  for (std::size_t i = 0U; i < qc->iterations - 1U; ++i) {
-    auto f = dd.multiply(iteration, e);
-    dd.incRef(f);
-    dd.decRef(e);
-    e = f;
-    dd.garbageCollect();
-  }
-
-  qc::QuantumComputation setup(qc->getNqubits());
-  qc->setup(setup);
-  auto g = buildFunctionality(&setup, dd);
-  auto f = dd.multiply(e, g);
-  dd.incRef(f);
-  dd.decRef(e);
-  dd.decRef(g);
-  e = f;
-
-  dd.decRef(iteration);
-  return e;
-}
-
-template <class Config>
-qc::MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
-                                         dd::Package<Config>& dd) {
-  qc::QuantumComputation groverIteration(qc->getNqubits());
-  qc->oracle(groverIteration);
-  qc->diffusion(groverIteration);
-
-  auto iter = buildFunctionalityRecursive(&groverIteration, dd);
-  auto e = iter;
-  std::bitset<128U> iterBits(qc->iterations);
-  auto msb = static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
-  auto f = iter;
-  dd.incRef(f);
-  bool zero = !iterBits[0U];
-  for (std::size_t j = 1U; j <= msb; ++j) {
-    auto tmp = dd.multiply(f, f);
-    dd.incRef(tmp);
-    dd.decRef(f);
-    f = tmp;
-    if (iterBits[j]) {
-      if (zero) {
-        dd.incRef(f);
-        dd.decRef(e);
-        e = f;
-        zero = false;
-      } else {
-        auto g = dd.multiply(e, f);
-        dd.incRef(g);
-        dd.decRef(e);
-        e = g;
-        dd.garbageCollect();
-      }
-    }
-  }
-  dd.decRef(f);
-
-  // apply state preparation setup
-  qc::QuantumComputation statePrep(qc->getNqubits());
-  qc->setup(statePrep);
-  auto s = buildFunctionality(&statePrep, dd);
-  auto tmp = dd.multiply(e, s);
-  dd.incRef(tmp);
-  dd.decRef(s);
-  dd.decRef(e);
-  e = tmp;
-
-  return e;
-}
-
 TEST_P(Grover, Functionality) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
@@ -154,7 +74,33 @@ TEST_P(Grover, Functionality) {
   std::replace(x.begin(), x.end(), '1', '2');
 
   // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), *dd); });
+  qc::QuantumComputation groverIteration(qc->getNqubits());
+  qc->oracle(groverIteration);
+  qc->diffusion(groverIteration);
+
+  auto iteration = buildFunctionality(&groverIteration, *dd);
+
+  auto e = iteration;
+  dd->incRef(e);
+
+  for (std::size_t i = 0U; i < qc->iterations - 1U; ++i) {
+    auto f = dd->multiply(iteration, e);
+    dd->incRef(f);
+    dd->decRef(e);
+    e = f;
+    dd->garbageCollect();
+  }
+
+  qc::QuantumComputation setup(qc->getNqubits());
+  qc->setup(setup);
+  auto g = buildFunctionality(&setup, *dd);
+  auto f = dd->multiply(e, g);
+  dd->incRef(f);
+  dd->decRef(e);
+  dd->decRef(g);
+  func = f;
+
+  dd->decRef(iteration);
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(dd->qubits(), x);
@@ -173,8 +119,48 @@ TEST_P(Grover, FunctionalityRecursive) {
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
 
-  // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), *dd); });
+  qc::QuantumComputation groverIteration(qc->getNqubits());
+  qc->oracle(groverIteration);
+  qc->diffusion(groverIteration);
+
+  auto iter = buildFunctionalityRecursive(&groverIteration, *dd);
+  auto e = iter;
+  std::bitset<128U> iterBits(qc->iterations);
+  auto msb = static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
+  auto f = iter;
+  dd->incRef(f);
+  bool zero = !iterBits[0U];
+  for (std::size_t j = 1U; j <= msb; ++j) {
+    auto tmp = dd->multiply(f, f);
+    dd->incRef(tmp);
+    dd->decRef(f);
+    f = tmp;
+    if (iterBits[j]) {
+      if (zero) {
+        dd->incRef(f);
+        dd->decRef(e);
+        e = f;
+        zero = false;
+      } else {
+        auto g = dd->multiply(e, f);
+        dd->incRef(g);
+        dd->decRef(e);
+        e = g;
+        dd->garbageCollect();
+      }
+    }
+  }
+  dd->decRef(f);
+
+  // apply state preparation setup
+  qc::QuantumComputation statePrep(qc->getNqubits());
+  qc->setup(statePrep);
+  auto s = buildFunctionality(&statePrep, *dd);
+  auto tmp = dd->multiply(e, s);
+  dd->incRef(tmp);
+  dd->decRef(s);
+  dd->decRef(e);
+  func = tmp;
 
   // amplitude of the searched-for entry should be 1
   auto c = func.getValueByPath(dd->qubits(), x);
