@@ -98,10 +98,10 @@ public:
   RealParserTest&
   withConstants(const std::initializer_list<char>& constantValuePerVariable,
                 const std::optional<std::string>& optionalPostfix) {
-    const std::string concatinatedConstantValues(constantValuePerVariable);
+    const std::string concatenatedConstantValues(constantValuePerVariable);
     pipeStringifiedCollectionToStream(
         realFileContent, realHeaderConstantsCommandPrefix + " ",
-        {concatinatedConstantValues}, "", optionalPostfix);
+        {concatenatedConstantValues}, "", optionalPostfix);
     return *this;
   }
 
@@ -114,10 +114,10 @@ public:
       const std::initializer_list<char>& isGarbageValuePerVariable,
       const std::optional<std::string>& optionalPostfix) {
 
-    const std::string concatinatedIsGarbageValues(isGarbageValuePerVariable);
+    const std::string concatenatedIsGarbageValues(isGarbageValuePerVariable);
     pipeStringifiedCollectionToStream(
         realFileContent, realHeaderGarbageCommandPrefix + " ",
-        {concatinatedIsGarbageValues}, "", optionalPostfix);
+        {concatenatedIsGarbageValues}, "", optionalPostfix);
     return *this;
   }
 
