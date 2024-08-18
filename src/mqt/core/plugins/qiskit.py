@@ -83,8 +83,8 @@ def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
         for symb_param in symb_params:
             qc.add_variable(symb_param)
 
-    # import initial layout and output permutation in case it is available
-    if (hasattr(circ, "layout") and circ.layout is not None) or circ._layout is not None:  # noqa: SLF001
+    # import initial layout and output permutation if available
+    if circ.layout is not None:
         _import_layouts(qc, circ)
 
     qc.initialize_io_mapping()
