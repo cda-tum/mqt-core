@@ -8,7 +8,7 @@ import pytest
 from qiskit import QuantumCircuit, transpile
 from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, QuantumRegister
 from qiskit.circuit.library import U2Gate, XXMinusYYGate, XXPlusYYGate
-from qiskit.providers.fake_provider import Fake5QV1
+from qiskit.providers.fake_provider import GenericBackendV2
 
 from mqt.core.ir.operations import CompoundOperation, SymbolicOperation
 from mqt.core.ir.symbolic import Expression
@@ -338,7 +338,18 @@ def test_final_layout_without_permutation() -> None:
     assert mqt_qc.output_permutation == mqt_qc.initial_layout
 
 
-def test_final_layout_with_permutation() -> None:
+# test fixture for the backend using GenericBackendV2
+@pytest.fixture
+def backend() -> GenericBackendV2:
+    """Fixture for the backend using GenericBackendV2."""
+    return GenericBackendV2(
+        num_qubits=5,
+        basis_gates=["id", "rz", "sx", "x", "cx", "reset"],
+        coupling_map=[[0, 1], [0, 2], [1, 0], [1, 2], [2, 0], [2, 1], [2, 3], [3, 2], [3, 4], [4, 3]],
+    )
+
+
+def test_final_layout_with_permutation(backend: GenericBackendV2) -> None:
     """Test that the output permutation gets updated correctly when routing is performed."""
     qc = QuantumCircuit(3)
     qc.h(0)
@@ -347,7 +358,6 @@ def test_final_layout_with_permutation() -> None:
     qc.measure_all()
     initial_layout = [1, 0, 3]
     seed = 123
-    backend = Fake5QV1()
     qc_transpiled = transpile(qc, backend, initial_layout=initial_layout, seed_transpiler=seed)
     final_index_layout = qc_transpiled.layout.final_index_layout()
     mqt_qc = qiskit_to_mqt(qc_transpiled)
@@ -355,7 +365,7 @@ def test_final_layout_with_permutation() -> None:
     assert mqt_qc.output_permutation == dict(enumerate(final_index_layout))
 
 
-def test_final_layout_with_permutation_ancilla_in_front_and_back() -> None:
+def test_final_layout_with_permutation_ancilla_in_front_and_back(backend: GenericBackendV2) -> None:
     """Test that permutation update is correct with multiple registers and ancilla qubits."""
     e = QuantumRegister(2, "e")
     f_anc = AncillaRegister(1, "f")
@@ -367,7 +377,6 @@ def test_final_layout_with_permutation_ancilla_in_front_and_back() -> None:
     qc.measure_all()
     initial_layout = [1, 0, 3, 2, 4]
     seed = 123
-    backend = Fake5QV1()
     qc_transpiled = transpile(qc, backend, initial_layout=initial_layout, seed_transpiler=seed)
     routing_permutation = qc_transpiled.layout.routing_permutation()
     mqt_qc = qiskit_to_mqt(qc_transpiled)

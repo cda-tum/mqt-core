@@ -70,8 +70,16 @@ def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
         )
         qc.global_phase = 0
 
-    for instruction, qargs, cargs in circ.data:
-        symb_params = _emplace_operation(qc, instruction, qargs, cargs, instruction.params, qubit_map, clbit_map)
+    for instruction in circ.data:
+        symb_params = _emplace_operation(
+            qc,
+            instruction.operation,
+            instruction.qubits,
+            instruction.clbits,
+            instruction.operation.params,
+            qubit_map,
+            clbit_map,
+        )
         for symb_param in symb_params:
             qc.add_variable(symb_param)
 
@@ -410,12 +418,12 @@ def _import_definition(
     comp_op = cast(CompoundOperation, qc[-1])
 
     params = []
-    for instruction, q_args, c_args in circ.data:
-        mapped_qargs = [qarg_map[qarg] for qarg in q_args]
-        mapped_cargs = [carg_map[carg] for carg in c_args]
-        instruction_params = instruction.params
+    for instruction in circ.data:
+        mapped_qargs = [qarg_map[qarg] for qarg in instruction.qubits]
+        mapped_cargs = [carg_map[carg] for carg in instruction.clbits]
+        operation = instruction.operation
         new_params = _emplace_operation(
-            comp_op, instruction, mapped_qargs, mapped_cargs, instruction_params, qubit_map, clbit_map
+            comp_op, operation, mapped_qargs, mapped_cargs, operation.params, qubit_map, clbit_map
         )
         params.extend(new_params)
     return params
