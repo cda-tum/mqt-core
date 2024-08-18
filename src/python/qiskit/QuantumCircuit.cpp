@@ -16,7 +16,6 @@
 #include <regex>
 #include <set>
 #include <sstream>
-#include <tuple>
 #include <vector>
 
 void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
@@ -94,10 +93,9 @@ void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
   // iterate over instructions
   auto&& data = circ.attr("data");
   for (const auto pyinst : data) {
-    auto&& inst = pyinst.cast<std::tuple<py::object, py::list, py::list>>();
-    auto&& instruction = std::get<0>(inst);
-    auto&& qargs = std::get<1>(inst);
-    auto&& cargs = std::get<2>(inst);
+    auto&& instruction = pyinst.attr("operation");
+    auto&& qargs = pyinst.attr("qubits");
+    auto&& cargs = pyinst.attr("clbits");
     auto&& params = instruction.attr("params");
 
     emplaceOperation(qc, instruction, qargs, cargs, params, qubitMap, clbitMap);
@@ -409,16 +407,15 @@ void qc::qiskit::QuantumCircuit::importDefinition(
 
   auto&& data = circ.attr("data");
   for (const auto pyinst : data) {
-    auto&& inst = pyinst.cast<std::tuple<py::object, py::list, py::list>>();
-    auto&& instruction = std::get<0>(inst);
+    auto&& instruction = pyinst.attr("operation");
 
-    const py::list& instQargs = std::get<1>(inst);
+    const py::list& instQargs = pyinst.attr("qubits");
     py::list mappedQargs{};
     for (auto&& instQarg : instQargs) {
       mappedQargs.append(qargMap[instQarg]);
     }
 
-    const py::list& instCargs = std::get<2>(inst);
+    const py::list& instCargs = pyinst.attr("clbits");
     py::list mappedCargs{};
     for (auto&& instCarg : instCargs) {
       mappedCargs.append(cargMap[instCarg]);
@@ -436,19 +433,18 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
   const py::object qubit = py::module::import("qiskit.circuit").attr("Qubit");
 
   // get layout
-  auto layout = circ.attr("_layout");
+  auto layout = circ.attr("layout");
 
-  // qiskit-terra 0.22.0 changed the `_layout` attribute to a
-  // `TranspileLayout` dataclass object that contains the initial layout as a
-  // `Layout` object in the `initial_layout` attribute.
-  if (py::hasattr(layout, "initial_layout")) {
-    layout = layout.attr("initial_layout");
+  if (layout.is_none()) {
+    return;
   }
+
+  auto initial_layout = layout.attr("initial_layout");
 
   // create map between registers used in the layout and logical qubit indices
   // NOTE: this only works correctly if the registers were originally declared
   // in alphabetical order!
-  const auto registers = layout.attr("get_registers")().cast<py::set>();
+  const auto registers = initial_layout.attr("get_registers")().cast<py::set>();
   std::size_t logicalQubitIndex = 0U;
   const py::dict logicalQubitIndices{};
 
@@ -483,7 +479,7 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
 
   // get a map of physical to logical qubits
   const auto physicalQubits =
-      layout.attr("get_physical_bits")().cast<py::dict>();
+      initial_layout.attr("get_physical_bits")().cast<py::dict>();
 
   // create initial layout (and assume identical output permutation)
   for (const auto& [physicalQubit, logicalQubit] : physicalQubits) {

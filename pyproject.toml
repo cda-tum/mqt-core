@@ -133,6 +133,7 @@ filterwarnings = [
     'ignore:\s.*Pyarrow.*:DeprecationWarning:',
     'ignore:.*datetime\.datetime\.utcfromtimestamp.*:DeprecationWarning:',
     'ignore:.*Qiskit with Python 3.8.*:DeprecationWarning:',
+    'ignore:.*no need for these schema-conformant objects.*:DeprecationWarning:', # Qiskit itself imports deprecated code (should be resolved in the 1.2.1 release)
 ]
 log_cli_level = "info"
 testpaths = ["test/python"]
