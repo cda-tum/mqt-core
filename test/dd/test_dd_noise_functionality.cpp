@@ -77,7 +77,6 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
   auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
-  dd->incRef(rootEdge);
 
   const auto* const noiseEffects = "APDI";
 
@@ -109,7 +108,6 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackD) {
   auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
-  dd->incRef(rootEdge);
 
   const auto* const noiseEffects = "D";
 
@@ -141,7 +139,6 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   auto dd = std::make_unique<DensityMatrixTestPackage>(qcOp.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qcOp.getNqubits());
-  dd->incRef(rootEdge);
 
   auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
       dd, qcOp.getNqubits(), 0.01, 0.02, 0.02, 0.04, {});
