@@ -213,7 +213,6 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
 TEST_P(QFT, DynamicSimulation) {
   // there should be no error constructing the circuit
   ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, true, true); });
-  auto dd = std::make_unique<dd::Package<>>(nqubits);
   qc->printStatistics(std::cout);
 
   // simulate the circuit
