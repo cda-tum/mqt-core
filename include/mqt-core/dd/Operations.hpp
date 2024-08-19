@@ -266,7 +266,7 @@ qc::MatrixDD getInverseDD(const qc::Operation* op, Package<Config>& dd,
 }
 
 template <class Config, class Node>
-Edge<Node> applyUnitaryOperation(const qc::Operation* op, Edge<Node>& in,
+Edge<Node> applyUnitaryOperation(const qc::Operation* op, Edge<Node> in,
                                  Package<Config>& dd,
                                  qc::Permutation& permutation) {
   static_assert(std::is_same_v<Node, dd::vNode> ||
@@ -281,7 +281,7 @@ Edge<Node> applyUnitaryOperation(const qc::Operation* op, Edge<Node>& in,
 
 template <class Config>
 qc::VectorDD
-applyMeasurement(const qc::Operation* op, qc::VectorDD& in, Package<Config>& dd,
+applyMeasurement(const qc::Operation* op, qc::VectorDD in, Package<Config>& dd,
                  const qc::Permutation& permutation, std::mt19937_64& rng,
                  std::vector<bool>& measurements) {
   assert(op->getType() == qc::Measure);
@@ -301,7 +301,7 @@ applyMeasurement(const qc::Operation* op, qc::VectorDD& in, Package<Config>& dd,
 }
 
 template <class Config>
-qc::VectorDD applyReset(const qc::Operation* op, qc::VectorDD& in,
+qc::VectorDD applyReset(const qc::Operation* op, qc::VectorDD in,
                         Package<Config>& dd, qc::Permutation& permutation,
                         std::mt19937_64& rng) {
   assert(op->getType() == qc::Reset);
@@ -324,7 +324,7 @@ qc::VectorDD applyReset(const qc::Operation* op, qc::VectorDD& in,
 
 template <class Config>
 qc::VectorDD applyClassicControlledOperation(const qc::Operation* op,
-                                             qc::VectorDD& in,
+                                             qc::VectorDD in,
                                              Package<Config>& dd,
                                              qc::Permutation& permutation,
                                              std::vector<bool>& measurements) {
