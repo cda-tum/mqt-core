@@ -82,6 +82,8 @@ public:
 
   [[nodiscard]] auto getOperation() const { return op.get(); }
 
+  [[nodiscard]] auto getComparisonKind() const { return comparisonKind; }
+
   [[nodiscard]] const Targets& getTargets() const override {
     return op->getTargets();
   }
