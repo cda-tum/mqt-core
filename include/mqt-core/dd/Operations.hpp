@@ -316,7 +316,7 @@ qc::VectorDD applyReset(const qc::Operation* op, qc::VectorDD in,
     // apply an X operation whenever the measured result is one
     if (bit == '1') {
       const auto x = qc::StandardOperation(qubit, qc::X);
-      applyUnitaryOperation(&x, in, dd, permutation);
+      in = applyUnitaryOperation(&x, in, dd, permutation);
     }
   }
   return in;
