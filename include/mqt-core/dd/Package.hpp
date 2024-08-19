@@ -303,6 +303,7 @@ public:
           static_cast<Qubit>(p),
           std::array{f, dEdge::zero(), dEdge::zero(), dEdge::zero()});
     }
+    incRef(f);
     return f;
   }
 
@@ -319,6 +320,7 @@ public:
     for (std::size_t p = start; p < n + start; p++) {
       f = makeDDNode(static_cast<Qubit>(p), std::array{f, vEdge::zero()});
     }
+    incRef(f);
     return f;
   }
   // generate computational basis state |i> with n qubits
@@ -339,6 +341,7 @@ public:
         f = makeDDNode(static_cast<Qubit>(p), std::array{vEdge::zero(), f});
       }
     }
+    incRef(f);
     return f;
   }
   // generate general basis state with n qubits
@@ -391,7 +394,9 @@ public:
         break;
       }
     }
-    return {f.p, cn.lookup(f.w)};
+    vEdge e{f.p, cn.lookup(f.w)};
+    incRef(e);
+    return e;
   }
 
   // generate general GHZ state with n qubits
@@ -418,11 +423,13 @@ public:
                                 std::array{vEdge::zero(), rightSubtree});
     }
 
-    return makeDDNode(
+    vEdge e = makeDDNode(
         static_cast<Qubit>(n - 1),
         std::array<vEdge, RADIX>{
             {{leftSubtree.p, {&constants::sqrt2over2, &constants::zero}},
              {rightSubtree.p, {&constants::sqrt2over2, &constants::zero}}}});
+    incRef(e);
+    return e;
   }
 
   // generate general W state with n qubits
@@ -459,6 +466,7 @@ public:
                                   std::array{rightSubtree, vEdge::zero()});
       }
     }
+    incRef(leftSubtree);
     return leftSubtree;
   }
 
@@ -480,7 +488,9 @@ public:
     const auto level = static_cast<Qubit>(std::log2(length) - 1);
     const auto state =
         makeStateFromVector(stateVector.begin(), stateVector.end(), level);
-    return {state.p, cn.lookup(state.w)};
+    vEdge e{state.p, cn.lookup(state.w)};
+    incRef(e);
+    return e;
   }
 
   /**

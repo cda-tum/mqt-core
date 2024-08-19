@@ -81,7 +81,6 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
     // simulate once and measure all qubits repeatedly
     auto permutation = qc->initialLayout;
     auto e = in;
-    dd.incRef(e);
 
     for (const auto& op : *qc) {
       // simply skip any non-unitary
@@ -135,11 +134,13 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
   std::map<std::string, std::size_t> counts{};
 
   for (std::size_t i = 0U; i < shots; i++) {
+    // increase reference count of input state so that it is not collected.
+    dd.incRef(in);
+
     std::vector<bool> measurements(qc->getNcbits(), false);
 
     auto permutation = qc->initialLayout;
     auto e = in;
-    dd.incRef(e);
 
     for (const auto& op : *qc) {
       if (op->getType() == Measure) {
@@ -170,6 +171,9 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
     }
     counts[shot]++;
   }
+
+  // decrease reference count of input state so that it can be collected.
+  dd.decRef(in);
 
   return counts;
 }
