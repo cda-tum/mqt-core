@@ -15,6 +15,7 @@
 #include <map>
 #include <random>
 #include <string>
+#include <vector>
 
 namespace dd {
 template <class Config>
@@ -88,12 +89,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
         continue;
       }
 
-      auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
-      dd.incRef(tmp);
-      dd.decRef(e);
-      e = tmp;
-
-      dd.garbageCollect();
+      e = applyUnitaryOperation(op.get(), e, dd, permutation);
     }
 
     // correct permutation if necessary
@@ -139,78 +135,38 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
   std::map<std::string, std::size_t> counts{};
 
   for (std::size_t i = 0U; i < shots; i++) {
-    std::map<std::size_t, char> measurements{};
+    std::vector<bool> measurements(qc->getNcbits(), false);
 
     auto permutation = qc->initialLayout;
     auto e = in;
     dd.incRef(e);
 
     for (const auto& op : *qc) {
-      if (const auto* nonunitary = dynamic_cast<NonUnitaryOperation*>(op.get());
-          nonunitary != nullptr) {
-        if (nonunitary->getType() == Measure) {
-          const auto& qubits = nonunitary->getTargets();
-          const auto& bits = nonunitary->getClassics();
-          for (std::size_t j = 0U; j < qubits.size(); ++j) {
-            measurements[bits.at(j)] = dd.measureOneCollapsing(
-                e, static_cast<Qubit>(permutation.at(qubits.at(j))), true, mt);
-          }
-          continue;
-        }
-
-        if (nonunitary->getType() == Reset) {
-          const auto& qubits = nonunitary->getTargets();
-          for (const auto& qubit : qubits) {
-            auto bit = dd.measureOneCollapsing(
-                e, static_cast<Qubit>(permutation.at(qubit)), true, mt);
-            // apply an X operation whenever the measured result is one
-            if (bit == '1') {
-              const auto x =
-                  qc::StandardOperation(permutation.at(qubit), qc::X);
-              auto tmp = dd.multiply(getDD(&x, dd), e);
-              dd.incRef(tmp);
-              dd.decRef(e);
-              e = tmp;
-              dd.garbageCollect();
-            }
-          }
-          continue;
-        }
+      if (op->getType() == Measure) {
+        e = applyMeasurement(op.get(), e, dd, permutation, mt, measurements);
+        continue;
       }
 
-      if (const auto* classicControlled =
-              dynamic_cast<ClassicControlledOperation*>(op.get());
-          classicControlled != nullptr) {
-        const auto& controlRegister = classicControlled->getControlRegister();
-        const auto& expectedValue = classicControlled->getExpectedValue();
-        auto actualValue = 0ULL;
-        // determine the actual value from measurements
-        for (std::size_t j = 0; j < controlRegister.second; ++j) {
-          if (measurements[controlRegister.first + j] == '1') {
-            actualValue |= 1ULL << j;
-          }
-        }
-
-        // do not apply an operation if the value is not the expected one
-        if (actualValue != expectedValue) {
-          continue;
-        }
+      if (op->getType() == Reset) {
+        e = applyReset(op.get(), e, dd, permutation, mt);
+        continue;
       }
 
-      auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
-      dd.incRef(tmp);
-      dd.decRef(e);
-      e = tmp;
+      if (op->isClassicControlledOperation()) {
+        e = applyClassicControlledOperation(op.get(), e, dd, permutation,
+                                            measurements);
+        continue;
+      }
 
-      dd.garbageCollect();
+      e = applyUnitaryOperation(op.get(), e, dd, permutation);
     }
 
     // reduce reference count of measured state
     dd.decRef(e);
 
     std::string shot(qc->getNcbits(), '0');
-    for (const auto& [bit, value] : measurements) {
-      shot[qc->getNcbits() - bit - 1U] = value;
+    for (size_t bit = 0U; bit < qc->getNcbits(); ++bit) {
+      shot[qc->getNcbits() - bit - 1U] = measurements[bit] ? '1' : '0';
     }
     counts[shot]++;
   }

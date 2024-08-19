@@ -19,13 +19,7 @@ MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd) {
   auto e = dd.createInitialMatrix(qc->ancillary);
 
   for (const auto& op : *qc) {
-    auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
-
-    dd.incRef(tmp);
-    dd.decRef(e);
-    e = tmp;
-
-    dd.garbageCollect();
+    e = applyUnitaryOperation(op.get(), e, dd, permutation);
   }
   // correct permutation if necessary
   changePermutation(e, permutation, qc->outputPermutation, dd);
