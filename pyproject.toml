@@ -276,6 +276,10 @@ test-command = "python -c \"from mqt import core\""
 test-skip = "cp38-macosx_arm64"
 build-frontend = "build[uv]"
 free-threaded-support = true
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+manylinux-ppc64le-image = "manylinux_2_28"
+manylinux-s390x-image = "manylinux_2_28"
 
 [tool.cibuildwheel.linux]
 environment = { DEPLOY = "ON" }
