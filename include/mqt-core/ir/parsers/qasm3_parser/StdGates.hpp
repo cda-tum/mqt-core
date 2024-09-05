@@ -34,43 +34,6 @@ const std::string QE1LIB = "gate rccx a, b, c {\n"
                            "  u2(0,pi) d; u1(pi/4) d; \n"
                            "  cx c,d; u1(-pi/4) d; \n"
                            "  u2(0,pi) d; \n"
-                           "}\n"
-                           "gate c3x a,b,c,d {\n"
-                           "  h d; cu1(-pi/4) a,d; h d; \n"
-                           "  cx a,b; \n"
-                           "  h d; cu1(pi/4) b,d; h d; \n"
-                           "  cx a,b; \n"
-                           "  h d; cu1(-pi/4) b,d; h d; \n"
-                           "  cx b,c; \n"
-                           "  h d; cu1(pi/4) c,d; h d; \n"
-                           "  cx a,c; \n"
-                           "  h d; cu1(-pi/4) c,d; h d; \n"
-                           "  cx b,c; \n"
-                           "  h d; cu1(pi/4) c,d; h d; \n"
-                           "  cx a,c; \n"
-                           "  h d; cu1(-pi/4) c,d; h d; \n"
-                           "}\n"
-                           "gate c3sqrtx a,b,c,d {\n"
-                           "  h d; cu1(-pi/8) a,d; h d; \n"
-                           "  cx a,b; \n"
-                           "  h d; cu1(pi/8) b,d; h d; \n"
-                           "  cx a,b; \n"
-                           "  h d; cu1(-pi/8) b,d; h d; \n"
-                           "  cx b,c; \n"
-                           "  h d; cu1(pi/8) c,d; h d; \n"
-                           "  cx a,c; \n"
-                           "  h d; cu1(-pi/8) c,d; h d; \n"
-                           "  cx b,c; \n"
-                           "  h d; cu1(pi/8) c,d; h d; \n"
-                           "  cx a,c; \n"
-                           "  h d; cu1(-pi/8) c,d; h d; \n"
-                           "}\n"
-                           "gate c4x a,b,c,d,e {\n"
-                           "  h e; cu1(-pi/2) d,e; h e; \n"
-                           "  c3x a,b,c,d; \n"
-                           "  h e; cu1(pi/2) d,e; h e; \n"
-                           "  c3x a,b,c,d; \n"
-                           "  c3sqrtx a,b,c,e; \n"
                            "}\n";
 
 const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
@@ -95,6 +58,8 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
     {"cx", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
     {"CX", std::make_shared<StandardGate>(StandardGate({1, 1, 0, qc::X}))},
     {"ccx", std::make_shared<StandardGate>(StandardGate({2, 1, 0, qc::X}))},
+    {"c3x", std::make_shared<StandardGate>(StandardGate({3, 1, 0, qc::X}))},
+    {"c4x", std::make_shared<StandardGate>(StandardGate({4, 1, 0, qc::X}))},
 
     {"rx", std::make_shared<StandardGate>(StandardGate({0, 1, 1, qc::RX}))},
     {"crx", std::make_shared<StandardGate>(StandardGate({1, 1, 1, qc::RX}))},
@@ -122,6 +87,8 @@ const std::map<std::string, std::shared_ptr<Gate>> STANDARD_GATES = {
 
     {"sx", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::SX}))},
     {"sxdg", std::make_shared<StandardGate>(StandardGate({0, 1, 0, qc::SXdg}))},
+    {"c3sqrtx",
+     std::make_shared<StandardGate>(StandardGate({3, 1, 0, qc::SXdg}))},
 
     {"teleport", std::make_shared<StandardGate>(
                      StandardGate({0, 3, 0, qc::Teleportation}))},
