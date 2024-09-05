@@ -9,6 +9,12 @@ The resulting Python package is available on [PyPI](https://pypi.org/project/mqt
 
 In most practical cases (under 64-bit Linux, MacOS incl. Apple Silicon, and Windows), this requires no compilation and merely downloads and installs a platform-specific pre-built wheel.
 
+:::{attention}
+As of version 2.7.0, support for Python 3.8 has been officially dropped.
+We strongly recommend that users upgrade to a more recent version of Python to ensure compatibility and continue receiving updates and support.
+Thank you for your understanding.
+:::
+
 ## Building from source for performance
 
 In order to get the best performance and enable platform-specific optimizations that cannot be enabled on portable wheels, it is recommended to build the library from source via:
