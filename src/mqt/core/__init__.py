@@ -39,9 +39,9 @@ def load(input_circuit: CircuitInputType) -> QuantumComputation:
                 msg = f"File {input_circuit} does not exist."
                 raise FileNotFoundError(msg)
             # otherwise, we assume that this is a QASM string
-            return QuantumComputation.from_qasm(input_circuit)
+            return QuantumComputation.from_qasm(str(input_circuit))
 
-        return QuantumComputation(input_circuit)
+        return QuantumComputation(str(input_circuit))
 
     try:
         from .plugins.qiskit import qiskit_to_mqt
