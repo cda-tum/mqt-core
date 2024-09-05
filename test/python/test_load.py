@@ -48,6 +48,27 @@ def test_loading_file() -> None:
     Path("test.qasm").unlink()
 
 
+def test_loading_file_from_path() -> None:
+    """Test whether importing a simple QASM file works."""
+    qasm = "qreg q[2];\ncreg c[2];\nh q[0];\ncx q[0], q[1];\nmeasure q -> c;\n"
+    path = Path("test.qasm")
+    with path.open("w", encoding=locale.getpreferredencoding(False)) as f:
+        f.write(qasm)
+
+    # load the file
+    qc = load(path)
+    print(qc)
+
+    # check the result
+    assert isinstance(qc, QuantumComputation)
+    qc_qasm = qc.qasm2_str()
+
+    assert qasm in qc_qasm
+
+    # remove the file
+    path.unlink()
+
+
 def test_loading_nonexistent_file() -> None:
     """Test whether trying to load a non-existent file raises an error."""
     try:
