@@ -1272,10 +1272,11 @@ void replaceMCXWithMCZ(
       auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
       replaceMCXWithMCZ(
           compOp->begin(), [&compOp] { return compOp->end(); },
-          [&compOp](auto it, auto&& op) {
-            return compOp->insert(it, std::forward<decltype(op)>(op));
+          [&compOp](auto iter, auto&& operation) {
+            return compOp->insert(iter,
+                                  std::forward<decltype(operation)>(operation));
           },
-          [&compOp](auto it) { return compOp->erase(it); });
+          [&compOp](auto iter) { return compOp->erase(iter); });
     }
   }
 }
@@ -1668,7 +1669,7 @@ void elidePermutations(Iterator begin, const std::function<Iterator()>& end,
     if (auto* compOp = dynamic_cast<CompoundOperation*>(op.get())) {
       elidePermutations(
           compOp->begin(), [&compOp]() { return compOp->end(); },
-          [&compOp](auto it) { return compOp->erase(it); }, permutation);
+          [&compOp](auto iter) { return compOp->erase(iter); }, permutation);
       if (compOp->empty()) {
         it = erase(it);
         continue;
