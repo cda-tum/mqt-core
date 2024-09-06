@@ -58,7 +58,7 @@ repos:
 
   # Python linting using ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.3
+    rev: v0.6.4
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
@@ -69,11 +69,12 @@ repos:
     rev: v1.11.2
     hooks:
       - id: mypy
-        files: ^(src/mqt|test/python)
+        files: ^(src/mqt|test/python|noxfile.py)
         args: []
         additional_dependencies:
-          - pytest
+          - nox
           - pandas-stubs
+          - pytest
 
   # Also run Black on examples in the documentation
   - repo: https://github.com/adamchainz/blacken-docs
@@ -107,7 +108,7 @@ repos:
 
   # Check for spelling
   - repo: https://github.com/crate-ci/typos
-    rev: v1.24.1
+    rev: v1.24.5
     hooks:
       - id: typos
 
