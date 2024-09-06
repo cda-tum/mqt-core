@@ -6,6 +6,7 @@ project(
   LANGUAGES CXX
   DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
 
+# Add path for custom modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(cmake/StandardProjectSettings.cmake)
@@ -84,10 +85,12 @@ if(BUILD_MQT_CORE_BENCHMARKS)
 endif()
 
 if(MQT_CORE_MASTER_PROJECT)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
-                 ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake IMMEDIATE @ONLY)
-  add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P
-                                      ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+  if(NOT TARGET mqt-core-uninstall)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
+                   ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake IMMEDIATE @ONLY)
+    add_custom_target(mqt-core-uninstall COMMAND ${CMAKE_COMMAND} -P
+                                                 ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+  endif()
 else()
   set(mqt-core_FOUND
       TRUE
