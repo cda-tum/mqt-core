@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import warnings
-from typing import TYPE_CHECKING, List, cast
+from typing import TYPE_CHECKING, cast
 
 from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
 
@@ -343,7 +343,7 @@ def _add_operation(
     if any(isinstance(parameter, Expression) for parameter in parameters):
         qc.append(SymbolicOperation(controls, target, type_, parameters))
     else:
-        qc.append(StandardOperation(controls, target, type_, cast(List[float], parameters)))
+        qc.append(StandardOperation(controls, target, type_, cast(list[float], parameters)))
     return parameters
 
 
@@ -362,7 +362,7 @@ def _add_two_target_operation(
     if any(isinstance(parameter, Expression) for parameter in parameters):
         qc.append(SymbolicOperation(controls, target1, target2, type_, parameters))
     else:
-        qc.append(StandardOperation(controls, target1, target2, type_, cast(List[float], parameters)))
+        qc.append(StandardOperation(controls, target1, target2, type_, cast(list[float], parameters)))
     return parameters
 
 

@@ -23,7 +23,6 @@ classifiers = [
   "Programming Language :: C++",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -32,15 +31,14 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
   "Typing :: Typed",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dynamic = ["version"]
 
 [project.optional-dependencies]
 test = ["pytest>=7.0", "pytest-console-scripts>=1.4", "mqt.core[qiskit, evaluation]"]
 coverage = ["mqt.core[test]", "pytest-cov>=4"]
 evaluation = [
-    "pandas[output_formatting]>=2.0; python_version < '3.9'",
-    "pandas[output-formatting]>=2.1.2; python_version >= '3.9'",
+    "pandas[output-formatting]>=2.1.2",
 ]
 docs = [
     "furo>=2023.08.17",
@@ -139,7 +137,6 @@ filterwarnings = [
     "error",
     'ignore:\s.*Pyarrow.*:DeprecationWarning:',
     'ignore:.*datetime\.datetime\.utcfromtimestamp.*:DeprecationWarning:',
-    'ignore:.*Qiskit with Python 3.8.*:DeprecationWarning:',
     'ignore:.*no need for these schema-conformant objects.*:DeprecationWarning:', # Qiskit itself imports deprecated code (should be resolved in the 1.2.1 release)
 ]
 log_cli_level = "info"
@@ -162,7 +159,7 @@ report.exclude_also = [
 [tool.mypy]
 files = ["src/mqt", "test/python", "noxfile.py"]
 mypy_path = ["$MYPY_CONFIG_FILE_DIR/src"]
-python_version = "3.8"
+python_version = "3.9"
 warn_unused_configs = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 strict = true
@@ -280,7 +277,6 @@ build = "cp3*"
 skip = "*-musllinux_*"
 archs = "auto64"
 test-command = "python -c \"from mqt import core\""
-test-skip = "cp38-macosx_arm64"
 build-frontend = "build[uv]"
 free-threaded-support = true
 manylinux-x86_64-image = "manylinux_2_28"
