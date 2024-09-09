@@ -26,6 +26,13 @@
 #include <vector>
 
 namespace qc {
+void addToDag(DAG& dag, std::unique_ptr<Operation>* op) {
+  const auto usedQubits = (*op)->getUsedQubits();
+  for (const auto q : usedQubits) {
+    dag.at(q).push_back(op);
+  }
+}
+
 void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
   // delete the identities from circuit
   CircuitOptimizer::removeOperation(qc, {I}, 0);
@@ -165,13 +172,6 @@ DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
     addToDag(dag, &op);
   }
   return dag;
-}
-
-void CircuitOptimizer::addToDag(DAG& dag, std::unique_ptr<Operation>* op) {
-  const auto usedQubits = (*op)->getUsedQubits();
-  for (const auto q : usedQubits) {
-    dag.at(q).push_back(op);
-  }
 }
 
 void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
@@ -928,6 +928,47 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
   qc.initializeIOMapping();
 }
 
+bool isDynamicCircuit(std::unique_ptr<Operation>* op,
+                      std::vector<bool>& measured, DAG& dag) {
+  assert(op != nullptr);
+  auto& it = *op;
+  // whenever a classic-controlled or a reset operation are encountered
+  // the circuit has to be dynamic.
+  if (it->getType() == Reset || it->isClassicControlledOperation()) {
+    return true;
+  }
+
+  if (it->isStandardOperation()) {
+    // Whenever a qubit has already been measured, the circuit is dynamic
+    const auto& usedQubits = it->getUsedQubits();
+    for (const auto& q : usedQubits) {
+      if (measured[q]) {
+        return true;
+      }
+    }
+    addToDag(dag, op);
+    return false;
+  }
+
+  if (it->isNonUnitaryOperation()) {
+    assert(it->getType() == qc::Measure);
+    for (const auto& b : it->getTargets()) {
+      dag.at(b).push_back(op);
+      measured[b] = true;
+    }
+    return false;
+  }
+
+  assert(it->isCompoundOperation());
+  auto* compOp = dynamic_cast<CompoundOperation*>(it.get());
+  for (auto& g : *compOp) {
+    if (isDynamicCircuit(&g, measured, dag)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : qc.initialLayout) {
@@ -936,82 +977,14 @@ bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
 
   auto dag = DAG(highestPhysicalQubit + 1);
 
-  bool hasMeasurements = false;
+  // marks whether a qubit in the DAG has been measured
+  std::vector<bool> measured(highestPhysicalQubit + 1, false);
 
   for (auto& it : qc) {
-    if (!it->isStandardOperation()) {
-      if (it->isNonUnitaryOperation()) {
-        // whenever a reset operation is encountered the circuit has to be
-        // dynamic
-        if (it->getType() == Reset) {
-          return true;
-        }
-
-        // record whether the circuit contains measurements
-        if (it->getType() == Measure) {
-          hasMeasurements = true;
-        }
-
-        for (const auto& b : it->getTargets()) {
-          dag.at(b).push_back(&it);
-        }
-      } else if (it->isClassicControlledOperation()) {
-        // whenever a classic-controlled operation is encountered the circuit
-        // has to be dynamic
-        return true;
-      } else if (it->isCompoundOperation()) {
-        auto* compOp = dynamic_cast<CompoundOperation*>(it.get());
-        for (auto& op : *compOp) {
-          if (op->getType() == Reset || op->isClassicControlledOperation()) {
-            return true;
-          }
-
-          if (op->getType() == Measure) {
-            hasMeasurements = true;
-          }
-
-          if (op->isNonUnitaryOperation()) {
-            for (const auto& b : op->getTargets()) {
-              dag.at(b).push_back(&op);
-            }
-          } else {
-            addToDag(dag, &op);
-          }
-        }
-      }
-    } else {
-      addToDag(dag, &it);
-    }
-  }
-
-  if (!hasMeasurements) {
-    return false;
-  }
-
-  for (const auto& qubitDAG : dag) {
-    bool operation = false;
-    bool measurement = false;
-    for (auto it = qubitDAG.rbegin(); it != qubitDAG.rend(); ++it) {
-      auto* op = *it;
-      // once a measurement is encountered the iteration for this qubit can stop
-      if (op->get()->getType() == qc::Measure) {
-        measurement = true;
-        break;
-      }
-
-      if (op->get()->isStandardOperation() ||
-          op->get()->isClassicControlledOperation() ||
-          op->get()->isCompoundOperation() || op->get()->getType() == Reset) {
-        operation = true;
-      }
-    }
-    // there was a measurement and then a non-trivial operation, so the circuit
-    // is dynamic
-    if (measurement && operation) {
+    if (::qc::isDynamicCircuit(&it, measured, dag)) {
       return true;
     }
   }
-
   return false;
 }
 
