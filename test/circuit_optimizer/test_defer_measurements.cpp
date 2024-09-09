@@ -421,4 +421,15 @@ TEST(DeferMeasurements, preserveOutputPermutationWithoutMeasurements) {
   EXPECT_EQ(qc.outputPermutation.size(), 1);
   EXPECT_EQ(qc.outputPermutation.at(0), 0);
 }
+
+TEST(DeferMeasurements, isDynamicOnRepeatedMeasurements) {
+  QuantumComputation qc(1, 2);
+  qc.h(0);
+  qc.measure(0, 0);
+  qc.h(0);
+  qc.measure(0, 1);
+
+  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+}
+
 } // namespace qc
