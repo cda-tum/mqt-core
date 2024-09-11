@@ -18,15 +18,9 @@ VectorDD simulate(const QuantumComputation* qc, const VectorDD& in,
   // measurements are currently not supported here
   auto permutation = qc->initialLayout;
   auto e = in;
-  dd.incRef(e);
 
   for (const auto& op : *qc) {
-    auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
-    dd.incRef(tmp);
-    dd.decRef(e);
-    e = tmp;
-
-    dd.garbageCollect();
+    e = applyUnitaryOperation(op.get(), e, dd, permutation);
   }
 
   // correct permutation if necessary

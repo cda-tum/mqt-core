@@ -428,8 +428,6 @@ TEST(DDPackageTest, StateGenerationManipulation) {
                               {dd::BasisStates::zero, dd::BasisStates::one,
                                dd::BasisStates::plus, dd::BasisStates::minus,
                                dd::BasisStates::left, dd::BasisStates::right});
-  dd->incRef(e);
-  dd->incRef(f);
   dd->vUniqueTable.print();
   dd->decRef(e);
   dd->decRef(f);
@@ -1497,7 +1495,6 @@ TEST(DDPackageTest, dNodeMultiply) {
           nrQubits);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(dd->qubits());
-  dd->incRef(state);
   std::vector<dd::mEdge> operations = {};
   operations.emplace_back(dd->makeGateDD(dd::H_MAT, 0));
   operations.emplace_back(dd->makeGateDD(dd::H_MAT, 1));
@@ -1546,7 +1543,6 @@ TEST(DDPackageTest, dNodeMultiply2) {
           nrQubits);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(dd->qubits());
-  dd->incRef(state);
   std::vector<dd::mEdge> operations = {};
   operations.emplace_back(dd->makeGateDD(dd::H_MAT, 0));
   operations.emplace_back(dd->makeGateDD(dd::H_MAT, 1));
@@ -1588,7 +1584,6 @@ TEST(DDPackageTest, dNodeMulCache1) {
           nrQubits);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(nrQubits);
-  dd->incRef(state);
 
   const auto operation = dd->makeGateDD(dd::H_MAT, 0);
   dd->applyOperationToDensity(state, operation);
@@ -1635,7 +1630,6 @@ TEST(DDPackageTest, dNoiseCache) {
   auto dd = std::make_unique<dd::Package<>>(nrQubits);
   // Make zero density matrix
   const auto initialState = dd->makeZeroDensityOperator(nrQubits);
-  dd->incRef(initialState);
 
   // nothing pre-cached
   const std::vector<dd::Qubit> target = {0};
