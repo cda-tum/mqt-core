@@ -1246,8 +1246,7 @@ bool isDynamicCircuit(const std::unique_ptr<Operation>* op,
                        [&measured](const auto& q) { return measured[q]; });
   }
 
-  if (it->isNonUnitaryOperation()) {
-    assert(it->getType() == qc::Measure);
+  if (it->getType() == qc::Measure) {
     for (const auto& b : it->getTargets()) {
       measured[b] = true;
     }
