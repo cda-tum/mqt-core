@@ -40,8 +40,6 @@ public:
 
   static void deferMeasurements(QuantumComputation& qc);
 
-  static bool isDynamicCircuit(QuantumComputation& qc);
-
   static void flattenOperations(QuantumComputation& qc,
                                 bool customGatesOnly = false);
 

@@ -22,7 +22,7 @@ TEST(EliminateResets, eliminateResetsBasicTest) {
 
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
@@ -78,7 +78,7 @@ TEST(EliminateResets, eliminateResetsClassicControlled) {
   qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
@@ -128,7 +128,7 @@ TEST(EliminateResets, eliminateResetsMultipleTargetReset) {
 
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
@@ -176,7 +176,7 @@ TEST(EliminateResets, eliminateResetsCompoundOperation) {
 
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 

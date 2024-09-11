@@ -1131,3 +1131,14 @@ TEST_F(QFRFunctionality, OperationReorderingBarrier) {
   const auto target2 = (*it)->getTargets().at(0);
   EXPECT_EQ(target2, 1);
 }
+
+TEST_F(QFRFunctionality, isDynamicCompoundOperation) {
+  QuantumComputation qc(1, 1);
+  QuantumComputation compound(1, 1);
+  compound.measure(0, 0);
+  compound.x(0);
+  compound.measure(0, 0);
+  qc.emplace_back(compound.asCompoundOperation());
+  std::cout << qc << "\n";
+  EXPECT_TRUE(qc.isDynamic());
+}

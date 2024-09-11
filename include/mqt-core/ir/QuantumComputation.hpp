@@ -344,9 +344,15 @@ public:
 
   [[nodiscard]] std::string getQubitRegister(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::string getClassicalRegister(Bit classicalIndex) const;
-  static Qubit getHighestLogicalQubitIndex(const Permutation& permutation);
+  [[nodiscard]] static Qubit
+  getHighestLogicalQubitIndex(const Permutation& permutation);
   [[nodiscard]] Qubit getHighestLogicalQubitIndex() const {
     return getHighestLogicalQubitIndex(initialLayout);
+  };
+  [[nodiscard]] static Qubit
+  getHighestPhysicalQubitIndex(const Permutation& permutation);
+  [[nodiscard]] Qubit getHighestPhysicalQubitIndex() const {
+    return getHighestPhysicalQubitIndex(initialLayout);
   };
   [[nodiscard]] std::pair<std::string, Qubit>
   getQubitRegisterAndIndex(Qubit physicalQubitIndex) const;
@@ -879,6 +885,16 @@ public:
    * qubit.
    */
   void reorderOperations();
+
+  /**
+   * @brief Check whether the quantum computation contains dynamic circuit
+   * primitives
+   * @details Dynamic circuit primitives are mid-circuit measurements, resets,
+   * or classical control flow operations. This method traverses the whole
+   * circuit once until it finds a dynamic operation.
+   * @return Whether the quantum computation contains dynamic circuit primitives
+   */
+  [[nodiscard]] bool isDynamic() const;
 
   /**
    * Pass-Through

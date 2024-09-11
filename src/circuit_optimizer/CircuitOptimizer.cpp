@@ -75,12 +75,7 @@ void CircuitOptimizer::removeOperation(
 }
 
 void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
-  Qubit highestPhysicalQubit = 0;
-  for (const auto& q : qc.initialLayout) {
-    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
-  }
-
-  auto dag = DAG(highestPhysicalQubit + 1);
+  auto dag = DAG(qc.getHighestPhysicalQubitIndex() + 1);
 
   for (auto& it : qc) {
     if (!it->isStandardOperation()) {
@@ -161,12 +156,7 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
 }
 
 DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
-  Qubit highestPhysicalQubit = 0;
-  for (const auto& q : qc.initialLayout) {
-    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
-  }
-
-  auto dag = DAG(highestPhysicalQubit + 1);
+  auto dag = DAG(qc.getHighestPhysicalQubitIndex() + 1);
 
   for (auto& op : qc) {
     addToDag(dag, &op);
@@ -181,12 +171,7 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
       {qc::Sdg, qc::S},   {qc::T, qc::Tdg},   {qc::Tdg, qc::T},
       {qc::SX, qc::SXdg}, {qc::SXdg, qc::SX}, {qc::Barrier, qc::Barrier}};
 
-  Qubit highestPhysicalQubit = 0;
-  for (const auto& q : qc.initialLayout) {
-    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
-  }
-
-  auto dag = DAG(highestPhysicalQubit + 1);
+  auto dag = DAG(qc.getHighestPhysicalQubitIndex() + 1);
 
   for (auto& it : qc) {
     // not a single-qubit operation
@@ -928,66 +913,6 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
   qc.initializeIOMapping();
 }
 
-bool isDynamicCircuit(std::unique_ptr<Operation>* op,
-                      std::vector<bool>& measured, DAG& dag) {
-  assert(op != nullptr);
-  auto& it = *op;
-  // whenever a classic-controlled or a reset operation are encountered
-  // the circuit has to be dynamic.
-  if (it->getType() == Reset || it->isClassicControlledOperation()) {
-    return true;
-  }
-
-  if (it->isStandardOperation()) {
-    // Whenever a qubit has already been measured, the circuit is dynamic
-    const auto& usedQubits = it->getUsedQubits();
-    for (const auto& q : usedQubits) {
-      if (measured[q]) {
-        return true;
-      }
-    }
-    addToDag(dag, op);
-    return false;
-  }
-
-  if (it->isNonUnitaryOperation()) {
-    assert(it->getType() == qc::Measure);
-    for (const auto& b : it->getTargets()) {
-      dag.at(b).push_back(op);
-      measured[b] = true;
-    }
-    return false;
-  }
-
-  assert(it->isCompoundOperation());
-  auto* compOp = dynamic_cast<CompoundOperation*>(it.get());
-  for (auto& g : *compOp) {
-    if (isDynamicCircuit(&g, measured, dag)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool CircuitOptimizer::isDynamicCircuit(QuantumComputation& qc) {
-  Qubit highestPhysicalQubit = 0;
-  for (const auto& q : qc.initialLayout) {
-    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
-  }
-
-  auto dag = DAG(highestPhysicalQubit + 1);
-
-  // marks whether a qubit in the DAG has been measured
-  std::vector<bool> measured(highestPhysicalQubit + 1, false);
-
-  for (auto& it : qc) {
-    if (::qc::isDynamicCircuit(&it, measured, dag)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void CircuitOptimizer::printDAG(const DAG& dag) {
   for (const auto& qubitDag : dag) {
     std::cout << " - ";
@@ -1054,12 +979,7 @@ void CircuitOptimizer::flattenOperations(QuantumComputation& qc,
 }
 
 void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
-  Qubit highestPhysicalQubit = 0;
-  for (const auto& q : qc.initialLayout) {
-    highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);
-  }
-
-  auto dag = DAG(highestPhysicalQubit + 1U);
+  auto dag = DAG(qc.getHighestPhysicalQubitIndex() + 1U);
 
   for (auto& it : qc) {
     if (!it->isStandardOperation()) {
