@@ -31,13 +31,13 @@ TEST(DeferMeasurements, basicTest) {
   qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 3);
@@ -96,13 +96,13 @@ TEST(DeferMeasurements, measurementBetweenMeasurementAndClassic) {
   qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 4);
@@ -172,13 +172,13 @@ TEST(DeferMeasurements, twoClassic) {
 
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 5);
@@ -253,13 +253,13 @@ TEST(DeferMeasurements, correctOrder) {
   qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 4);
@@ -328,13 +328,13 @@ TEST(DeferMeasurements, twoClassicCorrectOrder) {
   qc.classicControlled(qc::Z, 1, {0, 1U}, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 5);
@@ -401,7 +401,7 @@ TEST(DeferMeasurements, errorOnImplicitReset) {
   qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_THROW(CircuitOptimizer::deferMeasurements(qc), qc::QFRException);
 }
@@ -429,7 +429,7 @@ TEST(DeferMeasurements, isDynamicOnRepeatedMeasurements) {
   qc.h(0);
   qc.measure(0, 1);
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 }
 
 } // namespace qc

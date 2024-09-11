@@ -870,6 +870,15 @@ Qubit QuantumComputation::getHighestLogicalQubitIndex(
   return maxIndex;
 }
 
+Qubit QuantumComputation::getHighestPhysicalQubitIndex(
+    const Permutation& permutation) {
+  Qubit maxIndex = 0;
+  for (const auto& [physical, logical] : permutation) {
+    maxIndex = std::max(maxIndex, physical);
+  }
+  return maxIndex;
+}
+
 bool QuantumComputation::physicalQubitIsAncillary(
     const Qubit physicalQubitIndex) const {
   return std::any_of(ancregs.cbegin(), ancregs.cend(),
@@ -1218,6 +1227,46 @@ void QuantumComputation::reorderOperations() {
   ops.clear();
   // move all operations from the newly created vector to the original one
   std::move(newOps.begin(), newOps.end(), std::back_inserter(ops));
+}
+
+bool isDynamicCircuit(const std::unique_ptr<Operation>* op,
+                      std::vector<bool>& measured) {
+  assert(op != nullptr);
+  const auto& it = *op;
+  // whenever a classic-controlled or a reset operation are encountered
+  // the circuit has to be dynamic.
+  if (it->getType() == Reset || it->isClassicControlledOperation()) {
+    return true;
+  }
+
+  if (it->isStandardOperation()) {
+    // Whenever a qubit has already been measured, the circuit is dynamic
+    const auto& usedQubits = it->getUsedQubits();
+    return std::any_of(usedQubits.cbegin(), usedQubits.cend(),
+                       [&measured](const auto& q) { return measured[q]; });
+  }
+
+  if (it->isNonUnitaryOperation()) {
+    assert(it->getType() == qc::Measure);
+    for (const auto& b : it->getTargets()) {
+      measured[b] = true;
+    }
+    return false;
+  }
+
+  assert(it->isCompoundOperation());
+  auto* compOp = dynamic_cast<CompoundOperation*>(it.get());
+  return std::any_of(
+      compOp->cbegin(), compOp->cend(),
+      [&measured](const auto& g) { return isDynamicCircuit(&g, measured); });
+}
+
+bool QuantumComputation::isDynamic() const {
+  // marks whether a qubit in the DAG has been measured
+  std::vector<bool> measured(getHighestPhysicalQubitIndex() + 1, false);
+  return std::any_of(cbegin(), cend(), [&measured](const auto& op) {
+    return ::qc::isDynamicCircuit(&op, measured);
+  });
 }
 
 } // namespace qc
