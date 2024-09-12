@@ -765,14 +765,6 @@ public:
   void addQubit(Qubit logicalQubitIndex, Qubit physicalQubitIndex,
                 std::optional<Qubit> outputQubitIndex);
 
-  /**
-   * @brief Ensures unassigned qubits in initial layout are assigned
-   * (deterministic) qubit indices.
-   * @details After this function is called, the initial layout will be
-   * contiguous.
-   */
-  void ensureContiguousInitialLayout();
-
   QuantumComputation instantiate(const VariableAssignment& assignment) {
     QuantumComputation result(*this);
     result.instantiateInplace(assignment);

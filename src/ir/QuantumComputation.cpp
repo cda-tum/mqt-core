@@ -506,18 +506,6 @@ void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
   garbage[logicalQubitIndex] = false;
 }
 
-void QuantumComputation::ensureContiguousInitialLayout() {
-  const auto maxPhysicalQubit = getHighestPhysicalQubitIndex();
-  auto logicalQubitIndex = getHighestLogicalQubitIndex() + 1;
-  for (Qubit physicalQubitIndex = 0; physicalQubitIndex < maxPhysicalQubit;
-       ++physicalQubitIndex) {
-    if (initialLayout.count(physicalQubitIndex) == 0) {
-      addQubit(logicalQubitIndex, physicalQubitIndex, std::nullopt);
-      ++logicalQubitIndex;
-    }
-  }
-}
-
 std::ostream& QuantumComputation::print(std::ostream& os) const {
   os << name << "\n";
   const auto width =
