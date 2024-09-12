@@ -861,22 +861,12 @@ std::ostream& QuantumComputation::printRegisters(std::ostream& os) const {
   return os;
 }
 
-Qubit QuantumComputation::getHighestLogicalQubitIndex(
-    const Permutation& permutation) {
-  Qubit maxIndex = 0;
-  for (const auto& [physical, logical] : permutation) {
-    maxIndex = std::max(maxIndex, logical);
-  }
-  return maxIndex;
+Qubit QuantumComputation::getHighestLogicalQubitIndex() const {
+  return initialLayout.maxValue();
 }
 
-Qubit QuantumComputation::getHighestPhysicalQubitIndex(
-    const Permutation& permutation) {
-  Qubit maxIndex = 0;
-  for (const auto& [physical, logical] : permutation) {
-    maxIndex = std::max(maxIndex, physical);
-  }
-  return maxIndex;
+Qubit QuantumComputation::getHighestPhysicalQubitIndex() const {
+  return initialLayout.maxKey();
 }
 
 bool QuantumComputation::physicalQubitIsAncillary(

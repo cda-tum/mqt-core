@@ -344,16 +344,10 @@ public:
 
   [[nodiscard]] std::string getQubitRegister(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::string getClassicalRegister(Bit classicalIndex) const;
-  [[nodiscard]] static Qubit
-  getHighestLogicalQubitIndex(const Permutation& permutation);
-  [[nodiscard]] Qubit getHighestLogicalQubitIndex() const {
-    return getHighestLogicalQubitIndex(initialLayout);
-  };
-  [[nodiscard]] static Qubit
-  getHighestPhysicalQubitIndex(const Permutation& permutation);
-  [[nodiscard]] Qubit getHighestPhysicalQubitIndex() const {
-    return getHighestPhysicalQubitIndex(initialLayout);
-  };
+  /// Returns the highest qubit index used as a value in the initial layout
+  [[nodiscard]] Qubit getHighestLogicalQubitIndex() const;
+  /// Returns the highest qubit index used as a key in the initial layout
+  [[nodiscard]] Qubit getHighestPhysicalQubitIndex() const;
   [[nodiscard]] std::pair<std::string, Qubit>
   getQubitRegisterAndIndex(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::pair<std::string, Bit>
