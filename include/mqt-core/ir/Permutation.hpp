@@ -10,33 +10,11 @@
 namespace qc {
 class Permutation : public std::map<Qubit, Qubit> {
 public:
-  [[nodiscard]] Controls apply(const Controls& controls) const {
-    if (empty()) {
-      return controls;
-    }
-    Controls c{};
-    for (const auto& control : controls) {
-      c.emplace(at(control.qubit), control.type);
-    }
-    return c;
-  }
-  [[nodiscard]] Targets apply(const Targets& targets) const {
-    if (empty()) {
-      return targets;
-    }
-    Targets t{};
-    for (const auto& target : targets) {
-      t.emplace_back(at(target));
-    }
-    return t;
-  }
-
-  [[nodiscard]] auto apply(const Qubit qubit) const -> Qubit {
-    if (empty()) {
-      return qubit;
-    }
-    return at(qubit);
-  }
+  [[nodiscard]] auto apply(const Controls& controls) const -> Controls;
+  [[nodiscard]] auto apply(const Targets& targets) const -> Targets;
+  [[nodiscard]] auto apply(Qubit qubit) const -> Qubit;
+  [[nodiscard]] auto maxKey() const -> Qubit;
+  [[nodiscard]] auto maxValue() const -> Qubit;
 };
 } // namespace qc
 

@@ -298,14 +298,21 @@ public:
    * @param qasm The OpenQASM 2.0 or 3.0 string
    * @return The constructed QuantumComputation
    */
-  [[nodiscard]] static QuantumComputation fromQASM(const std::string& qasm) {
-    std::stringstream ss{};
-    ss << qasm;
-    QuantumComputation qc{};
-    qc.importOpenQASM3(ss);
-    qc.initializeIOMapping();
-    return qc;
-  }
+  [[nodiscard]] static QuantumComputation fromQASM(const std::string& qasm);
+
+  /**
+   * @brief Construct a QuantumComputation from CompoundOperation object
+   * @details The function creates a copy of each operation in the compound
+   * operation. It uses the largest qubit index in the CompoundOperation for
+   * determining the number of qubits. It adds a single quantum register with
+   * all qubits from 0 to the largest qubit index and a corresponding classical
+   * register with the same size. The initial layout as well as the output
+   * permutation are set to the identity permutation.
+   * @param op The CompoundOperation to convert to a quantum circuit
+   * @return The constructed QuantumComputation
+   */
+  [[nodiscard]] static QuantumComputation
+  fromCompoundOperation(const CompoundOperation& op);
 
   [[nodiscard]] virtual std::size_t getNops() const { return ops.size(); }
   [[nodiscard]] std::size_t getNqubits() const { return nqubits + nancillae; }
@@ -344,16 +351,10 @@ public:
 
   [[nodiscard]] std::string getQubitRegister(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::string getClassicalRegister(Bit classicalIndex) const;
-  [[nodiscard]] static Qubit
-  getHighestLogicalQubitIndex(const Permutation& permutation);
-  [[nodiscard]] Qubit getHighestLogicalQubitIndex() const {
-    return getHighestLogicalQubitIndex(initialLayout);
-  };
-  [[nodiscard]] static Qubit
-  getHighestPhysicalQubitIndex(const Permutation& permutation);
-  [[nodiscard]] Qubit getHighestPhysicalQubitIndex() const {
-    return getHighestPhysicalQubitIndex(initialLayout);
-  };
+  /// Returns the highest qubit index used as a value in the initial layout
+  [[nodiscard]] Qubit getHighestLogicalQubitIndex() const;
+  /// Returns the highest qubit index used as a key in the initial layout
+  [[nodiscard]] Qubit getHighestPhysicalQubitIndex() const;
   [[nodiscard]] std::pair<std::string, Qubit>
   getQubitRegisterAndIndex(Qubit physicalQubitIndex) const;
   [[nodiscard]] std::pair<std::string, Bit>
@@ -830,23 +831,27 @@ public:
   static std::ostream& printPermutation(const Permutation& permutation,
                                         std::ostream& os = std::cout);
 
-  void dump(const std::string& filename, Format format);
-  void dump(const std::string& filename);
-  void dump(std::ostream& of, Format format);
-  void dumpOpenQASM2(std::ostream& of) { dumpOpenQASM(of, false); }
-  void dumpOpenQASM3(std::ostream& of) { dumpOpenQASM(of, true); }
-  void dumpOpenQASM(std::ostream& of, bool openQasm3);
+  void dump(const std::string& filename, Format format) const;
+  void dump(const std::string& filename) const;
+  void dump(std::ostream& of, Format format) const;
+  void dumpOpenQASM2(std::ostream& of) const { dumpOpenQASM(of, false); }
+  void dumpOpenQASM3(std::ostream& of) const { dumpOpenQASM(of, true); }
+
+  /**
+   * @brief Dumps the circuit in OpenQASM format to the given output stream
+   * @details One might want to call `ensureContiguousInitialLayout` before
+   * calling this function to ensure full layout information is available.
+   * @param of The output stream to write the OpenQASM representation to
+   * @param openQasm3 Whether to use OpenQASM 3.0 or 2.0
+   */
+  void dumpOpenQASM(std::ostream& of, bool openQasm3) const;
 
   /**
    * @brief Returns the OpenQASM representation of the circuit
    * @param qasm3 Whether to use OpenQASM 3.0 or 2.0
    * @return The OpenQASM representation of the circuit
    */
-  [[nodiscard]] std::string toQASM(const bool qasm3 = true) {
-    std::stringstream ss;
-    dumpOpenQASM(ss, qasm3);
-    return ss.str();
-  }
+  [[nodiscard]] std::string toQASM(bool qasm3 = true) const;
 
   // this convenience method allows to turn a circuit into a compound operation.
   std::unique_ptr<CompoundOperation> asCompoundOperation() {

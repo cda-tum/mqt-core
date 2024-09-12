@@ -557,7 +557,7 @@ std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
   return os;
 }
 
-void QuantumComputation::dump(const std::string& filename) {
+void QuantumComputation::dump(const std::string& filename) const {
   const std::size_t dot = filename.find_last_of('.');
   assert(dot != std::string::npos);
   std::string extension = filename.substr(dot + 1);
@@ -580,18 +580,7 @@ void QuantumComputation::dump(const std::string& filename) {
   }
 }
 
-void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) {
-  // Add missing physical qubits
-  if (!qregs.empty()) {
-    for (Qubit physicalQubit = 0; physicalQubit < initialLayout.rbegin()->first;
-         ++physicalQubit) {
-      if (initialLayout.count(physicalQubit) == 0) {
-        const auto logicalQubit = getHighestLogicalQubitIndex() + 1;
-        addQubit(logicalQubit, physicalQubit, std::nullopt);
-      }
-    }
-  }
-
+void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) const {
   // dump initial layout and output permutation
   Permutation inverseInitialLayout{};
   for (const auto& q : initialLayout) {
@@ -647,7 +636,14 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) {
   }
 }
 
-void QuantumComputation::dump(const std::string& filename, Format format) {
+std::string QuantumComputation::toQASM(const bool qasm3) const {
+  std::stringstream ss;
+  dumpOpenQASM(ss, qasm3);
+  return ss.str();
+}
+
+void QuantumComputation::dump(const std::string& filename,
+                              Format format) const {
   auto of = std::ofstream(filename);
   if (!of.good()) {
     throw QFRException("[dump] Error opening file: " + filename);
@@ -655,7 +651,7 @@ void QuantumComputation::dump(const std::string& filename, Format format) {
   dump(of, format);
 }
 
-void QuantumComputation::dump(std::ostream& of, Format format) {
+void QuantumComputation::dump(std::ostream& of, Format format) const {
   switch (format) {
   case Format::OpenQASM3:
     dumpOpenQASM(of, true);
@@ -861,22 +857,12 @@ std::ostream& QuantumComputation::printRegisters(std::ostream& os) const {
   return os;
 }
 
-Qubit QuantumComputation::getHighestLogicalQubitIndex(
-    const Permutation& permutation) {
-  Qubit maxIndex = 0;
-  for (const auto& [physical, logical] : permutation) {
-    maxIndex = std::max(maxIndex, logical);
-  }
-  return maxIndex;
+Qubit QuantumComputation::getHighestLogicalQubitIndex() const {
+  return initialLayout.maxValue();
 }
 
-Qubit QuantumComputation::getHighestPhysicalQubitIndex(
-    const Permutation& permutation) {
-  Qubit maxIndex = 0;
-  for (const auto& [physical, logical] : permutation) {
-    maxIndex = std::max(maxIndex, physical);
-  }
-  return maxIndex;
+Qubit QuantumComputation::getHighestPhysicalQubitIndex() const {
+  return initialLayout.maxKey();
 }
 
 bool QuantumComputation::physicalQubitIsAncillary(
@@ -1266,6 +1252,47 @@ bool QuantumComputation::isDynamic() const {
   return std::any_of(cbegin(), cend(), [&measured](const auto& op) {
     return ::qc::isDynamicCircuit(&op, measured);
   });
+}
+
+QuantumComputation QuantumComputation::fromQASM(const std::string& qasm) {
+  std::stringstream ss{};
+  ss << qasm;
+  QuantumComputation qc{};
+  qc.importOpenQASM3(ss);
+  qc.initializeIOMapping();
+  return qc;
+}
+
+QuantumComputation
+QuantumComputation::fromCompoundOperation(const CompoundOperation& op) {
+  QuantumComputation qc{};
+  Qubit maxQubitIndex = 0;
+  Bit maxBitIndex = 0;
+  for (const auto& g : op) {
+    // clone the gate and add it to the circuit
+    qc.emplace_back(g->clone());
+
+    // update the maximum qubit index
+    const auto& usedQubits = g->getUsedQubits();
+    for (const auto& q : usedQubits) {
+      maxQubitIndex = std::max(maxQubitIndex, q);
+    }
+
+    if (g->getType() == Measure) {
+      // update the maximum classical bit index
+      const auto* measureOp = dynamic_cast<const NonUnitaryOperation*>(g.get());
+      const auto& classics = measureOp->getClassics();
+      for (const auto& c : classics) {
+        maxBitIndex = std::max(maxBitIndex, c);
+      }
+    }
+  }
+
+  // The following also sets the initial layout and the output permutation
+  qc.addQubitRegister(static_cast<size_t>(maxQubitIndex) + 1);
+  qc.addClassicalRegister(static_cast<size_t>(maxBitIndex) + 1);
+
+  return qc;
 }
 
 } // namespace qc

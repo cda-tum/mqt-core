@@ -1,4 +1,5 @@
 #include "Definitions.hpp"
+#include "ir/Permutation.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
@@ -1141,4 +1142,15 @@ TEST_F(QFRFunctionality, isDynamicCompoundOperation) {
   qc.emplace_back(compound.asCompoundOperation());
   std::cout << qc << "\n";
   EXPECT_TRUE(qc.isDynamic());
+}
+
+TEST_F(QFRFunctionality, emptyPermutation) {
+  const Permutation perm{};
+
+  EXPECT_EQ(perm.size(), 0U);
+  EXPECT_EQ(perm.apply(0U), 0U);
+  EXPECT_EQ(perm.apply(Targets{0U}), Targets{0U});
+  EXPECT_EQ(perm.apply(Controls{0U}), Controls{0U});
+  EXPECT_EQ(perm.maxKey(), 0U);
+  EXPECT_EQ(perm.maxValue(), 0U);
 }
