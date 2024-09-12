@@ -298,14 +298,21 @@ public:
    * @param qasm The OpenQASM 2.0 or 3.0 string
    * @return The constructed QuantumComputation
    */
-  [[nodiscard]] static QuantumComputation fromQASM(const std::string& qasm) {
-    std::stringstream ss{};
-    ss << qasm;
-    QuantumComputation qc{};
-    qc.importOpenQASM3(ss);
-    qc.initializeIOMapping();
-    return qc;
-  }
+  [[nodiscard]] static QuantumComputation fromQASM(const std::string& qasm);
+
+  /**
+   * @brief Construct a QuantumComputation from CompoundOperation object
+   * @details The function creates a copy of each operation in the compound
+   * operation. It uses the largest qubit index in the CompoundOperation for
+   * determining the number of qubits. It adds a single quantum register with
+   * all qubits from 0 to the largest qubit index and a corresponding classical
+   * register with the same size. The initial layout as well as the output
+   * permutation are set to the identity permutation.
+   * @param op The CompoundOperation to convert to a quantum circuit
+   * @return The constructed QuantumComputation
+   */
+  [[nodiscard]] static QuantumComputation
+  fromCompoundOperation(const CompoundOperation& op);
 
   [[nodiscard]] virtual std::size_t getNops() const { return ops.size(); }
   [[nodiscard]] std::size_t getNqubits() const { return nqubits + nancillae; }

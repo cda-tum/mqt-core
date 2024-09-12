@@ -1266,4 +1266,45 @@ bool QuantumComputation::isDynamic() const {
   });
 }
 
+QuantumComputation QuantumComputation::fromQASM(const std::string& qasm) {
+  std::stringstream ss{};
+  ss << qasm;
+  QuantumComputation qc{};
+  qc.importOpenQASM3(ss);
+  qc.initializeIOMapping();
+  return qc;
+}
+
+QuantumComputation
+QuantumComputation::fromCompoundOperation(const CompoundOperation& op) {
+  QuantumComputation qc{};
+  Qubit maxQubitIndex = 0;
+  Bit maxBitIndex = 0;
+  for (const auto& g : op) {
+    // clone the gate and add it to the circuit
+    qc.emplace_back(g->clone());
+
+    // update the maximum qubit index
+    const auto& usedQubits = g->getUsedQubits();
+    for (const auto& q : usedQubits) {
+      maxQubitIndex = std::max(maxQubitIndex, q);
+    }
+
+    if (g->getType() == Measure) {
+      // update the maximum classical bit index
+      const auto* measureOp = dynamic_cast<const NonUnitaryOperation*>(g.get());
+      const auto& classics = measureOp->getClassics();
+      for (const auto& c : classics) {
+        maxBitIndex = std::max(maxBitIndex, c);
+      }
+    }
+  }
+
+  // The following also sets the initial layout and the output permutation
+  qc.addQubitRegister(static_cast<size_t>(maxQubitIndex) + 1);
+  qc.addClassicalRegister(static_cast<size_t>(maxBitIndex) + 1);
+
+  return qc;
+}
+
 } // namespace qc
