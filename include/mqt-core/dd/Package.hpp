@@ -2801,4 +2801,6 @@ private:
   }
 };
 
+using UnitarySimulatorDDPackage = Package<UnitarySimulatorDDPackageConfig>;
+
 } // namespace dd
