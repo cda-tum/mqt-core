@@ -71,4 +71,27 @@ struct DensityMatrixSimulatorDDPackageConfig : public dd::DDPackageConfig {
   static constexpr std::size_t CT_MAT_ADD_MAG_NBUCKET = 1U;
   static constexpr std::size_t CT_VEC_CONJ_NBUCKET = 1U;
 };
+
+struct UnitarySimulatorDDPackageConfig : public dd::DDPackageConfig {
+  // unitary simulation requires more resources for matrices.
+  static constexpr std::size_t UT_MAT_NBUCKET = 65'536U;
+  static constexpr std::size_t CT_MAT_ADD_NBUCKET = 65'536U;
+  static constexpr std::size_t CT_MAT_MAT_MULT_NBUCKET = 65'536U;
+
+  // unitary simulation does not need any vector nodes
+  static constexpr std::size_t UT_VEC_NBUCKET = 1U;
+  static constexpr std::size_t UT_VEC_INITIAL_ALLOCATION_SIZE = 1U;
+
+  // unitary simulation needs no vector functionality
+  static constexpr std::size_t CT_VEC_ADD_NBUCKET = 1U;
+  static constexpr std::size_t CT_VEC_ADD_MAG_NBUCKET = 1U;
+  static constexpr std::size_t CT_MAT_ADD_MAG_NBUCKET = 1U;
+  static constexpr std::size_t CT_VEC_CONJ_NBUCKET = 1U;
+  static constexpr std::size_t CT_MAT_CONJ_TRANS_NBUCKET = 1U;
+  static constexpr std::size_t CT_MAT_VEC_MULT_NBUCKET = 1U;
+  static constexpr std::size_t CT_VEC_KRON_NBUCKET = 1U;
+  static constexpr std::size_t CT_MAT_KRON_NBUCKET = 1U;
+  static constexpr std::size_t CT_MAT_TRACE_NBUCKET = 1U;
+  static constexpr std::size_t CT_VEC_INNER_PROD_NBUCKET = 1U;
+};
 } // namespace dd

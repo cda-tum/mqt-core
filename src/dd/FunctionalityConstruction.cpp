@@ -124,6 +124,9 @@ template MatrixDD
 buildFunctionality(const qc::QuantumComputation* qc,
                    Package<dd::StochasticNoiseSimulatorDDPackageConfig>& dd);
 
+template MatrixDD buildFunctionality(const qc::QuantumComputation* qc,
+                                     UnitarySimulatorDDPackage& dd);
+
 template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation* qc,
                                               Package<DDPackageConfig>& dd);
 template bool buildFunctionalityRecursive(const qc::QuantumComputation* qc,
@@ -132,4 +135,12 @@ template bool buildFunctionalityRecursive(const qc::QuantumComputation* qc,
                                           std::stack<MatrixDD>& s,
                                           qc::Permutation& permutation,
                                           Package<DDPackageConfig>& dd);
+template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation* qc,
+                                              UnitarySimulatorDDPackage& dd);
+template bool buildFunctionalityRecursive(const qc::QuantumComputation* qc,
+                                          const std::size_t depth,
+                                          const std::size_t opIdx,
+                                          std::stack<MatrixDD>& s,
+                                          qc::Permutation& permutation,
+                                          UnitarySimulatorDDPackage& dd);
 } // namespace dd
