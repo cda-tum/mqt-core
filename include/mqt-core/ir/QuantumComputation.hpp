@@ -758,6 +758,14 @@ public:
   void addQubit(Qubit logicalQubitIndex, Qubit physicalQubitIndex,
                 std::optional<Qubit> outputQubitIndex);
 
+  /**
+   * @brief Ensures unassigned qubits in initial layout are assigned
+   * (deterministic) qubit indices.
+   * @details After this function is called, the initial layout will be
+   * contiguous.
+   */
+  void ensureContiguousInitialLayout();
+
   QuantumComputation instantiate(const VariableAssignment& assignment) {
     QuantumComputation result(*this);
     result.instantiateInplace(assignment);
@@ -824,23 +832,27 @@ public:
   static std::ostream& printPermutation(const Permutation& permutation,
                                         std::ostream& os = std::cout);
 
-  void dump(const std::string& filename, Format format);
-  void dump(const std::string& filename);
-  void dump(std::ostream& of, Format format);
-  void dumpOpenQASM2(std::ostream& of) { dumpOpenQASM(of, false); }
-  void dumpOpenQASM3(std::ostream& of) { dumpOpenQASM(of, true); }
-  void dumpOpenQASM(std::ostream& of, bool openQasm3);
+  void dump(const std::string& filename, Format format) const;
+  void dump(const std::string& filename) const;
+  void dump(std::ostream& of, Format format) const;
+  void dumpOpenQASM2(std::ostream& of) const { dumpOpenQASM(of, false); }
+  void dumpOpenQASM3(std::ostream& of) const { dumpOpenQASM(of, true); }
+
+  /**
+   * @brief Dumps the circuit in OpenQASM format to the given output stream
+   * @details One might want to call `ensureContiguousInitialLayout` before
+   * calling this function to ensure full layout information is available.
+   * @param of The output stream to write the OpenQASM representation to
+   * @param openQasm3 Whether to use OpenQASM 3.0 or 2.0
+   */
+  void dumpOpenQASM(std::ostream& of, bool openQasm3) const;
 
   /**
    * @brief Returns the OpenQASM representation of the circuit
    * @param qasm3 Whether to use OpenQASM 3.0 or 2.0
    * @return The OpenQASM representation of the circuit
    */
-  [[nodiscard]] std::string toQASM(const bool qasm3 = true) {
-    std::stringstream ss;
-    dumpOpenQASM(ss, qasm3);
-    return ss.str();
-  }
+  [[nodiscard]] std::string toQASM(bool qasm3 = true) const;
 
   // this convenience method allows to turn a circuit into a compound operation.
   std::unique_ptr<CompoundOperation> asCompoundOperation() {
