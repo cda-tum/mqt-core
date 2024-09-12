@@ -103,170 +103,157 @@ TEST_F(IO, dumpValidFilenames) {
   std::filesystem::remove(output5dir);
 }
 
-TEST_F(IO, importFromString) {
-  const std::string bellCircuitQasm =
-      "qreg q[2];\nU(pi/2,0,pi) q[0];\nCX q[0],q[1];\n";
-  std::stringstream ss{bellCircuitQasm};
-  ASSERT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3));
+TEST_F(IO, importFromStringQASM) {
+  ASSERT_NO_THROW(*qc = qc::QuantumComputation::fromQASM("qreg q[2];"
+                                                         "U(pi/2,0,pi) q[0];"
+                                                         "CX q[0],q[1];"));
   std::cout << *qc << "\n";
-  const std::string bellCircuitReal =
-      ".numvars 2\n.variables q0 q1\n.begin\nh1 q0\nt2 q0 q1\n.end\n";
-  ss.clear();
-  ss.str(bellCircuitReal);
+}
+
+TEST_F(IO, importFromStringReal) {
+  std::stringstream ss{
+      ".numvars 2\n.variables q0 q1\n.begin\nh1 q0\nt2 q0 q1\n.end"};
   ASSERT_NO_THROW(qc->import(ss, qc::Format::Real));
   std::cout << *qc << "\n";
 }
 
 TEST_F(IO, controlledOpActingOnWholeRegister) {
-  const std::string circuitQasm = "qreg q[2];\ncx q,q[1];\n";
-  std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qc::QFRException);
+  EXPECT_THROW(*qc = qc::QuantumComputation::fromQASM("qreg q[2];"
+                                                      "cx q,q[1];"),
+               qc::QFRException);
 }
 
 TEST_F(IO, invalidRealHeader) {
-  const std::string circuitReal =
-      ".numvars 2\nvariables q0 q1\n.begin\nh1 q0\nt2 q0 q1\n.end\n";
-  std::stringstream ss{circuitReal};
+  std::stringstream ss{
+      ".numvars 2\nvariables q0 q1\n.begin\nh1 q0\nt2 q0 q1\n.end"};
   EXPECT_THROW(qc->import(ss, qc::Format::Real), qc::QFRException);
 }
 
 TEST_F(IO, invalidRealCommand) {
-  const std::string circuitReal =
-      ".numvars 2\n.var q0 q1\n.begin\nh1 q0\n# test comment\nt2 q0 q1\n.end\n";
-  std::stringstream ss{circuitReal};
+  std::stringstream ss{".numvars 2\n.var q0 q1\n.begin\nh1 q0\n# test "
+                       "comment\nt2 q0 q1\n.end"};
   EXPECT_THROW(qc->import(ss, qc::Format::Real), qc::QFRException);
 }
 
 TEST_F(IO, insufficientRegistersQelib) {
-  const std::string circuitQasm = "qreg q[2];\ncx q[0];\n";
-  std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
+  EXPECT_THROW(*qc = qc::QuantumComputation::fromQASM("qreg q[2];"
+                                                      "cx q[0];"),
+               qasm3::CompilerError);
 }
 
 TEST_F(IO, insufficientRegistersEnhancedQelib) {
-  const std::string circuitQasm = "qreg q[4];\nctrl(3) @ z q[0], q[1], q[2];\n";
-  std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
+  EXPECT_THROW(*qc = qc::QuantumComputation::fromQASM(
+                   "qreg q[4];"
+                   "ctrl(3) @ z q[0], q[1], q[2];"),
+               qasm3::CompilerError);
 }
 
 TEST_F(IO, superfluousRegistersQelib) {
-  const std::string circuitQasm = "qreg q[3];\ncx q[0], q[1], q[2];\n";
-  std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
+  EXPECT_THROW(*qc = qc::QuantumComputation::fromQASM("qreg q[3];"
+                                                      "cx q[0], q[1], q[2];"),
+               qasm3::CompilerError);
 }
 
 TEST_F(IO, superfluousRegistersEnhancedQelib) {
-  const std::string circuitQasm =
-      "qreg q[5];\nctrl(3) z q[0], q[1], q[2], q[3], q[4];\n";
-  std::stringstream ss{circuitQasm};
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
+  EXPECT_THROW(*qc = qc::QuantumComputation::fromQASM(
+                   "qreg q[5];"
+                   "ctrl(3) z q[0], q[1], q[2], q[3], q[4];"),
+               qasm3::CompilerError);
 }
 
 TEST_F(IO, dumpNegativeControl) {
-  const std::string circuitReal =
-      ".numvars 2\n.variables a b\n.begin\nt2 -a b\n.end";
-  std::stringstream ss{circuitReal};
+  std::stringstream ss{".numvars 2\n.variables a b\n.begin\nt2 -a b\n.end"};
   qc->import(ss, qc::Format::Real);
-  const auto qasm = qc->toQASM();
-  *qc = qc::QuantumComputation::fromQASM(qasm);
+  *qc = qc::QuantumComputation::fromQASM(qc->toQASM());
   ASSERT_EQ(qc->getNops(), 1);
-  auto it = qc->begin();
-  EXPECT_EQ((*it)->getType(), qc::X);
-  EXPECT_EQ((*it)->getControls().size(), 1);
-  EXPECT_EQ((*it)->getControls().begin()->type, qc::Control::Type::Neg);
+  const auto& gate = qc->front();
+  EXPECT_EQ(gate->getType(), qc::X);
+  EXPECT_EQ(gate->getControls().size(), 1);
+  EXPECT_EQ(gate->getControls().begin()->type, qc::Control::Type::Neg);
 }
 
 TEST_F(IO, qiskitMcxGray) {
-  std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "mcx_gray q[0], q[1], q[2], q[3];\n";
-  qc->import(ss, qc::Format::OpenQASM2);
-  auto& gate = *(qc->begin());
+  *qc = qc::QuantumComputation::fromQASM("qreg q[4];"
+                                         "mcx_gray q[0], q[1], q[2], q[3];");
   std::cout << *qc << "\n";
+  const auto& gate = qc->front();
   EXPECT_EQ(gate->getType(), qc::X);
   EXPECT_EQ(gate->getNcontrols(), 3);
   EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
 TEST_F(IO, qiskitMcxSkipGateDefinition) {
-  std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "gate mcx q0,q1,q2,q3 { ctrl(3) @ x q0,q1,q2,q3; }"
-     << "mcx q[0], q[1], q[2], q[3];\n";
-  qc->import(ss, qc::Format::OpenQASM2);
-  auto& gate = *(qc->begin());
+
+  *qc = qc::QuantumComputation::fromQASM(
+      "qreg q[4];"
+      "gate mcx q0,q1,q2,q3 { ctrl(3) @ x q0,q1,q2,q3; }"
+      "mcx q[0], q[1], q[2], q[3];");
   std::cout << *qc << "\n";
+  const auto& gate = qc->front();
   EXPECT_EQ(gate->getType(), qc::X);
   EXPECT_EQ(gate->getNcontrols(), 3);
   EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
 TEST_F(IO, qiskitMcphase) {
-  std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "mcphase(pi) q[0], q[1], q[2], q[3];\n";
-  qc->import(ss, qc::Format::OpenQASM2);
-  auto& gate = *(qc->begin());
+  *qc = qc::QuantumComputation::fromQASM("qreg q[4];"
+                                         "mcphase(pi) q[0], q[1], q[2], q[3];");
   std::cout << *qc << "\n";
+  const auto& gate = qc->front();
   EXPECT_EQ(gate->getType(), qc::Z);
   EXPECT_EQ(gate->getNcontrols(), 3);
   EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
 TEST_F(IO, qiskitMcphaseInDeclaration) {
-  std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "gate foo q0, q1, q2, q3 { mcphase(pi) q0, q1, q2, q3; }"
-     << "foo q[0], q[1], q[2], q[3];\n";
-  qc->import(ss, qc::Format::OpenQASM2);
+  *qc = qc::QuantumComputation::fromQASM(
+      "qreg q[4];"
+      "gate foo q0, q1, q2, q3 { mcphase(pi) q0, q1, q2, q3; }"
+      "foo q[0], q[1], q[2], q[3];");
   std::cout << *qc << "\n";
-  auto& op = *(qc->begin());
+  const auto& op = qc->front();
   EXPECT_EQ(op->getType(), qc::Z);
   EXPECT_EQ(op->getNcontrols(), 3);
   EXPECT_EQ(op->getTargets().at(0), 3);
 }
 
 TEST_F(IO, qiskitMcxRecursive) {
-  std::stringstream ss{};
-  ss << "qreg q[6];"
-     << "qreg anc[1];"
-     << "mcx_recursive q[0], q[1], q[2], q[3], q[4];"
-     << "mcx_recursive q[0], q[1], q[2], q[3], q[4], q[5], anc[0];"
-     << "\n";
-  qc->import(ss, qc::Format::OpenQASM2);
-  auto& gate = *(qc->begin());
+  *qc = qc::QuantumComputation::fromQASM(
+      "qreg q[6];"
+      "qreg anc[1];"
+      "mcx_recursive q[0], q[1], q[2], q[3], q[4];"
+      "mcx_recursive q[0], q[1], q[2], q[3], q[4], q[5], anc[0];");
   std::cout << *qc << "\n";
+  const auto& gate = qc->at(0);
   EXPECT_EQ(gate->getType(), qc::X);
   EXPECT_EQ(gate->getNcontrols(), 4);
   EXPECT_EQ(gate->getTargets().at(0), 4);
-  auto& second = *(++qc->begin());
+  const auto& second = qc->at(1);
   EXPECT_EQ(second->getType(), qc::X);
   EXPECT_EQ(second->getNcontrols(), 5);
   EXPECT_EQ(second->getTargets().at(0), 5);
 }
 
 TEST_F(IO, qiskitMcxVchain) {
-  std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "qreg anc[1];"
-     << "mcx_vchain q[0], q[1], q[2], q[3], anc[0];\n";
-  qc->import(ss, qc::Format::OpenQASM2);
-  auto& gate = *(qc->begin());
+  *qc = qc::QuantumComputation::fromQASM(
+      "qreg q[4];"
+      "qreg anc[1];"
+      "mcx_vchain q[0], q[1], q[2], q[3], anc[0];");
   std::cout << *qc << "\n";
+  const auto& gate = qc->front();
   EXPECT_EQ(gate->getType(), qc::X);
   EXPECT_EQ(gate->getNcontrols(), 3);
   EXPECT_EQ(gate->getTargets().at(0), 3);
 }
 
 TEST_F(IO, qiskitMcxRecursiveInDeclaration) {
-  std::stringstream ss{};
-  ss << "qreg q[7];"
-     << "gate foo q0, q1, q2, q3, q4 { mcx_recursive q0, q1, q2, q3, q4; }"
-     << "gate bar q0, q1, q2, q3, q4, q5, anc { mcx_recursive q0, q1, q2, q3, "
-        "q4, q5, anc; }"
-     << "foo q[0], q[1], q[2], q[3], q[4];"
-     << "bar q[0], q[1], q[2], q[3], q[4], q[5], q[6];\n";
-  qc->import(ss, qc::Format::OpenQASM2);
+  *qc = qc::QuantumComputation::fromQASM(
+      "qreg q[7];"
+      "gate foo q0, q1, q2, q3, q4 { mcx_recursive q0, q1, q2, q3, q4; }"
+      "gate bar q0, q1, q2, q3, q4, q5, anc { mcx_recursive q0, q1, q2, q3, "
+      "q4, q5, anc; }"
+      "foo q[0], q[1], q[2], q[3], q[4];"
+      "bar q[0], q[1], q[2], q[3], q[4], q[5], q[6];");
   std::cout << *qc << "\n";
   const auto& op = qc->at(0);
   EXPECT_EQ(op->getType(), qc::X);
@@ -279,40 +266,38 @@ TEST_F(IO, qiskitMcxRecursiveInDeclaration) {
 }
 
 TEST_F(IO, qiskitMcxVchainInDeclaration) {
-  std::stringstream ss{};
-  ss << "qreg q[5];"
-     << "gate foo q0, q1, q2, q3, anc { mcx_vchain q0, q1, q2, q3, anc; }"
-     << "foo q[0], q[1], q[2], q[3], q[4];\n";
-  qc->import(ss, qc::Format::OpenQASM2);
+  *qc = qc::QuantumComputation::fromQASM(
+      "qreg q[5];"
+      "gate foo q0, q1, q2, q3, anc { mcx_vchain q0, q1, q2, q3, anc; }"
+      "foo q[0], q[1], q[2], q[3], q[4];");
   std::cout << *qc << "\n";
-  const auto& op = qc->at(0);
+  const auto& op = qc->front();
   EXPECT_EQ(op->getType(), qc::X);
   EXPECT_EQ(op->getNcontrols(), 3);
   EXPECT_EQ(op->getTargets().at(0), 3);
 }
 
 TEST_F(IO, qiskitMcxDuplicateQubit) {
-  std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "qreg anc[1];"
-     << "mcx_vchain q[0], q[0], q[2], q[3], anc[0];\n";
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM2), qasm3::CompilerError);
+  EXPECT_THROW(*qc = qc::QuantumComputation::fromQASM(
+                   "qreg q[4];"
+                   "qreg anc[1];"
+                   "mcx_vchain q[0], q[0], q[2], q[3], anc[0];"),
+               qasm3::CompilerError);
 }
 
 TEST_F(IO, qiskitMcxQubitRegister) {
-  std::stringstream ss{};
-  ss << "qreg q[4];"
-     << "qreg anc[1];"
-     << "mcx_vchain q, q[0], q[2], q[3], anc[0];\n";
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM2), qasm3::CompilerError);
+  EXPECT_THROW(*qc = qc::QuantumComputation::fromQASM(
+                   "qreg q[4];"
+                   "qreg anc[1];"
+                   "mcx_vchain q, q[0], q[2], q[3], anc[0];"),
+               qasm3::CompilerError);
 }
 
 TEST_F(IO, barrierInDeclaration) {
-  std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "gate foo q0 { h q0; barrier q0; h q0; }"
-     << "foo q[0];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc =
+      qc::QuantumComputation::fromQASM("qreg q[1];"
+                                       "gate foo q0 { h q0; barrier q0; h q0; }"
+                                       "foo q[0];");
   std::cout << *qc << "\n";
   EXPECT_EQ(qc->getNops(), 1);
   const auto& op = qc->at(0);
@@ -325,15 +310,12 @@ TEST_F(IO, barrierInDeclaration) {
 }
 
 TEST_F(IO, CommentInDeclaration) {
-  std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "gate foo q0 { \n"
-        "  h q0;\n"
-        "  //x q0;\n"
-        "  h q0;\n"
-        "}\n"
-     << "foo q[0];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM("qreg q[1];gate foo q0 {"
+                                         "h q0;"
+                                         "//x q0;\n"
+                                         "h q0;"
+                                         "}"
+                                         "foo q[0];");
   std::cout << *qc << "\n";
   EXPECT_EQ(qc->getNops(), 1);
   const auto& op = qc->at(0);
@@ -361,14 +343,13 @@ TEST_F(IO, qcInput) {
 }
 
 TEST_F(IO, classicControlled) {
-  std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "creg c[1];"
-     << "h q[0];"
-     << "measure q->c;"
-     << "// test classic controlled operation\n"
-     << "if (c==1) x q[0];\n";
-  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3););
+  *qc =
+      qc::QuantumComputation::fromQASM("qreg q[1];"
+                                       "creg c[1];"
+                                       "h q[0];"
+                                       "measure q->c;"
+                                       "// test classic controlled operation\n"
+                                       "if (c==1) x q[0];");
   std::cout << *qc << "\n";
 }
 
@@ -376,9 +357,9 @@ TEST_F(IO, iSWAPDumpIsValid) {
   qc->addQubitRegister(2);
   qc->iswap(0, 1);
   std::cout << *qc << "\n";
-  std::stringstream ss{};
-  qc->dumpOpenQASM2(ss);
-  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3););
+  const auto qasm = qc->toQASM();
+  std::cout << qasm << "\n";
+  EXPECT_NO_THROW(*qc = qc::QuantumComputation::fromQASM(qasm));
   std::cout << *qc << "\n";
 }
 
@@ -386,10 +367,9 @@ TEST_F(IO, iSWAPdagDumpIsValid) {
   qc->addQubitRegister(2);
   qc->iswapdg(0, 1);
   std::cout << *qc << "\n";
-  std::stringstream ss{};
-  qc->dumpOpenQASM2(ss);
-  std::cerr << ss.str() << "\n";
-  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM2););
+  const auto qasm = qc->toQASM();
+  std::cout << qasm << "\n";
+  EXPECT_NO_THROW(*qc = qc::QuantumComputation::fromQASM(qasm));
   std::cout << *qc << "\n";
 }
 
@@ -397,9 +377,9 @@ TEST_F(IO, PeresDumpIsValid) {
   qc->addQubitRegister(2);
   qc->peres(0, 1);
   std::cout << *qc << "\n";
-  std::stringstream ss{};
-  qc->dumpOpenQASM2(ss);
-  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3););
+  const auto qasm = qc->toQASM();
+  std::cout << qasm << "\n";
+  EXPECT_NO_THROW(*qc = qc::QuantumComputation::fromQASM(qasm));
   std::cout << *qc << "\n";
 }
 
@@ -407,22 +387,20 @@ TEST_F(IO, PeresdagDumpIsValid) {
   qc->addQubitRegister(2);
   qc->peresdg(0, 1);
   std::cout << *qc << "\n";
-  std::stringstream ss{};
-  qc->dumpOpenQASM2(ss);
-  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3););
+  const auto qasm = qc->toQASM();
+  std::cout << qasm << "\n";
+  EXPECT_NO_THROW(*qc = qc::QuantumComputation::fromQASM(qasm));
   std::cout << *qc << "\n";
 }
 
 TEST_F(IO, printingNonUnitary) {
-  std::stringstream ss{};
-  ss << "qreg q[2];"
-     << "creg c[2];"
-     << "h q[0];"
-     << "reset q[0];"
-     << "h q[0];"
-     << "barrier q;"
-     << "measure q -> c;\n";
-  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3));
+  *qc = qc::QuantumComputation::fromQASM("qreg q[2];"
+                                         "creg c[2];"
+                                         "h q[0];"
+                                         "reset q[0];"
+                                         "h q[0];"
+                                         "barrier q;"
+                                         "measure q -> c;");
   std::cout << *qc << "\n";
   for (const auto& op : *qc) {
     op->print(std::cout, qc->getNqubits());
@@ -431,59 +409,52 @@ TEST_F(IO, printingNonUnitary) {
 }
 
 TEST_F(IO, sxAndSxdag) {
-  std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "creg c[1];"
-     << "gate test q0 { sx q0; sxdg q0;}"
-     << "sx q[0];"
-     << "sxdg q[0];"
-     << "test q[0];\n";
-  EXPECT_NO_THROW(qc->import(ss, qc::Format::OpenQASM3));
+  *qc = qc::QuantumComputation::fromQASM("qreg q[1];"
+                                         "creg c[1];"
+                                         "gate test q0 { sx q0; sxdg q0;}"
+                                         "sx q[0];"
+                                         "sxdg q[0];"
+                                         "test q[0];");
   std::cout << *qc << "\n";
-  auto& op1 = *(qc->begin());
+  const auto& op1 = qc->at(0);
   EXPECT_EQ(op1->getType(), qc::OpType::SX);
-  auto& op2 = *(++qc->begin());
+  const auto& op2 = qc->at(1);
   EXPECT_EQ(op2->getType(), qc::OpType::SXdg);
-  auto& op3 = *(++(++qc->begin()));
+  const auto& op3 = qc->at(2);
   ASSERT_TRUE(op3->isCompoundOperation());
   auto* compOp = dynamic_cast<qc::CompoundOperation*>(op3.get());
   ASSERT_NE(compOp, nullptr);
-  auto& compOp1 = *(compOp->begin());
+  const auto& compOp1 = compOp->at(0);
   EXPECT_EQ(compOp1->getType(), qc::OpType::SX);
-  auto& compOp2 = *(++compOp->begin());
+  const auto& compOp2 = compOp->at(1);
   EXPECT_EQ(compOp2->getType(), qc::OpType::SXdg);
 }
 
 TEST_F(IO, unifyRegisters) {
-  std::stringstream ss{};
-  ss << "qreg q[1];"
-     << "qreg r[1];"
-     << "x q[0];"
-     << "x r[0];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM("qreg q[1];"
+                                         "qreg r[1];"
+                                         "x q[0];"
+                                         "x r[0];");
   std::cout << *qc << "\n";
   qc->unifyQuantumRegisters();
   std::cout << *qc << "\n";
-  std::ostringstream oss{};
-  qc->dump(oss, qc::Format::OpenQASM2);
-  EXPECT_STREQ(oss.str().c_str(), "// i 0 1\n"
-                                  "// o 0 1\n"
-                                  "OPENQASM 2.0;\n"
-                                  "include \"qelib1.inc\";\n"
-                                  "qreg q[2];\n"
-                                  "x q[0];\n"
-                                  "x q[1];\n");
+  const auto qasm = qc->toQASM(false);
+  EXPECT_EQ(qasm, "// i 0 1\n"
+                  "// o 0 1\n"
+                  "OPENQASM 2.0;\n"
+                  "include \"qelib1.inc\";\n"
+                  "qreg q[2];\n"
+                  "x q[0];\n"
+                  "x q[1];\n");
 }
 
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutation) {
-  std::stringstream ss{};
-  ss << "// o 1\n"
-     << "qreg q[2];"
-     << "x q[1];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM("// o 1\n"
+                                         "qreg q[2];"
+                                         "x q[1];");
   qc->appendMeasurementsAccordingToOutputPermutation();
   std::cout << *qc << "\n";
-  const auto& op = *(qc->rbegin());
+  const auto& op = qc->back();
   ASSERT_EQ(op->getType(), qc::OpType::Measure);
   const auto& meas = dynamic_cast<const qc::NonUnitaryOperation*>(op.get());
   ASSERT_NE(meas, nullptr);
@@ -494,16 +465,14 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutation) {
 }
 
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
-  std::stringstream ss{};
-  ss << "// o 0 1\n"
-     << "qreg q[2];"
-     << "creg c[1];"
-     << "x q;\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM("// o 0 1\n"
+                                         "qreg q[2];"
+                                         "creg c[1];"
+                                         "x q;");
   qc->appendMeasurementsAccordingToOutputPermutation();
   std::cout << *qc << "\n";
   EXPECT_EQ(qc->getNcbits(), 2U);
-  const auto& op = *(qc->rbegin());
+  const auto& op = qc->back();
   ASSERT_EQ(op->getType(), qc::OpType::Measure);
   const auto& meas = dynamic_cast<const qc::NonUnitaryOperation*>(op.get());
   ASSERT_NE(meas, nullptr);
@@ -519,33 +488,30 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
   EXPECT_EQ(meas2->getTargets().front(), 0U);
   EXPECT_EQ(meas2->getClassics().size(), 1U);
   EXPECT_EQ(meas2->getClassics().front(), 0U);
-  std::ostringstream oss{};
-  qc->dump(oss, qc::Format::OpenQASM2);
-  std::cout << oss.str() << "\n";
-  EXPECT_STREQ(oss.str().c_str(), "// i 0 1\n"
-                                  "// o 0 1\n"
-                                  "OPENQASM 2.0;\n"
-                                  "include \"qelib1.inc\";\n"
-                                  "qreg q[2];\n"
-                                  "creg c[2];\n"
-                                  "x q[0];\n"
-                                  "x q[1];\n"
-                                  "barrier q;\n"
-                                  "measure q[0] -> c[0];\n"
-                                  "measure q[1] -> c[1];\n");
+  const auto qasm = qc->toQASM(false);
+  std::cout << qasm << "\n";
+  EXPECT_EQ(qasm, "// i 0 1\n"
+                  "// o 0 1\n"
+                  "OPENQASM 2.0;\n"
+                  "include \"qelib1.inc\";\n"
+                  "qreg q[2];\n"
+                  "creg c[2];\n"
+                  "x q[0];\n"
+                  "x q[1];\n"
+                  "barrier q;\n"
+                  "measure q[0] -> c[0];\n"
+                  "measure q[1] -> c[1];\n");
 }
 
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
-  std::stringstream ss{};
-  ss << "// o 0 1\n"
-     << "qreg q[2];"
-     << "creg d[1];"
-     << "x q;\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM("// o 0 1\n"
+                                         "qreg q[2];"
+                                         "creg d[1];"
+                                         "x q;");
   qc->appendMeasurementsAccordingToOutputPermutation();
   std::cout << *qc << "\n";
   EXPECT_EQ(qc->getNcbits(), 2U);
-  const auto& op = *(qc->rbegin());
+  const auto& op = qc->back();
   ASSERT_EQ(op->getType(), qc::OpType::Measure);
   const auto& meas = dynamic_cast<const qc::NonUnitaryOperation*>(op.get());
   ASSERT_NE(meas, nullptr);
@@ -561,21 +527,20 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
   EXPECT_EQ(meas2->getTargets().front(), 0U);
   EXPECT_EQ(meas2->getClassics().size(), 1U);
   EXPECT_EQ(meas2->getClassics().front(), 0U);
-  std::ostringstream oss{};
-  qc->dump(oss, qc::Format::OpenQASM2);
-  std::cout << oss.str() << "\n";
-  EXPECT_STREQ(oss.str().c_str(), "// i 0 1\n"
-                                  "// o 0 1\n"
-                                  "OPENQASM 2.0;\n"
-                                  "include \"qelib1.inc\";\n"
-                                  "qreg q[2];\n"
-                                  "creg d[1];\n"
-                                  "creg c[1];\n"
-                                  "x q[0];\n"
-                                  "x q[1];\n"
-                                  "barrier q;\n"
-                                  "measure q[0] -> d[0];\n"
-                                  "measure q[1] -> c[0];\n");
+  const auto qasm = qc->toQASM(false);
+  std::cout << qasm << "\n";
+  EXPECT_EQ(qasm, "// i 0 1\n"
+                  "// o 0 1\n"
+                  "OPENQASM 2.0;\n"
+                  "include \"qelib1.inc\";\n"
+                  "qreg q[2];\n"
+                  "creg d[1];\n"
+                  "creg c[1];\n"
+                  "x q[0];\n"
+                  "x q[1];\n"
+                  "barrier q;\n"
+                  "measure q[0] -> d[0];\n"
+                  "measure q[1] -> c[0];\n");
 }
 
 TEST_F(IO, NativeTwoQubitGateImportAndExport) {
@@ -609,26 +574,24 @@ TEST_F(IO, NativeTwoQubitGateImportAndExport) {
 }
 
 TEST_F(IO, UseQelib1Gate) {
-  std::stringstream ss{};
-  ss << "include \"qelib1.inc\";\n"
-     << "qreg q[3];\n"
-     << "rccx q[0], q[1], q[2];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM("include \"qelib1.inc\";"
+                                         "qreg q[3];"
+                                         "rccx q[0], q[1], q[2];");
   std::cout << *qc << "\n";
   EXPECT_EQ(qc->getNqubits(), 3U);
   EXPECT_EQ(qc->getNops(), 1U);
-  EXPECT_EQ(qc->at(0)->getType(), qc::Compound);
-  const auto& op = dynamic_cast<const qc::CompoundOperation*>(qc->at(0).get());
+  EXPECT_EQ(qc->front()->getType(), qc::Compound);
+  const auto& op =
+      dynamic_cast<const qc::CompoundOperation*>(qc->front().get());
   ASSERT_NE(op, nullptr);
   EXPECT_EQ(op->size(), 9U);
 }
 
 TEST_F(IO, ParametrizedGateDefinition) {
-  std::stringstream ss{};
-  ss << "qreg q[1];\n"
-     << "gate foo(theta, beta) q { rz(theta) q; rx(beta) q; }\n"
-     << "foo(2*cos(pi/4), 0.5*sin(pi/2)) q[0];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM(
+      "qreg q[1];"
+      "gate foo(theta, beta) q { rz(theta) q; rx(beta) q; }"
+      "foo(2*cos(pi/4), 0.5*sin(pi/2)) q[0];");
   std::cout << *qc << "\n";
   EXPECT_EQ(qc->getNqubits(), 1U);
   EXPECT_EQ(qc->getNops(), 1U);
@@ -647,80 +610,89 @@ TEST_F(IO, ParametrizedGateDefinition) {
 }
 
 TEST_F(IO, NonExistingInclude) {
-  std::stringstream ss{};
-  ss << "include \"qelib.inc\";\n";
-  EXPECT_THROW(qc->import(ss, qc::Format::OpenQASM3), qasm3::CompilerError);
+  EXPECT_THROW(*qc = qc::QuantumComputation::fromQASM(
+                   "include \"nonexisting.inc\";"),
+               qasm3::CompilerError);
 }
 
 TEST_F(IO, NonStandardInclude) {
   std::ofstream ofs{"defs.inc"};
   ofs << "gate foo q { h q; }\n";
   ofs.close();
-  std::stringstream ss{};
-  ss << "include \"defs.inc\";\n"
-     << "qreg q[1];\n"
-     << "foo q[0];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM("include \"defs.inc\";"
+                                         "qreg q[1];"
+                                         "foo q[0];");
   std::cout << *qc << "\n";
   EXPECT_EQ(qc->getNqubits(), 1U);
   EXPECT_EQ(qc->getNops(), 1U);
-  EXPECT_EQ(qc->at(0)->getType(), qc::H);
+  EXPECT_EQ(qc->front()->getType(), qc::H);
   std::filesystem::remove("defs.inc");
 }
 
 TEST_F(IO, SingleRegistersDoubleCreg) {
-  std::stringstream ss{};
-  ss << "qreg p[1];\n"
-     << "qreg q[1];\n"
-     << "creg c[2];\n"
-     << "measure p[0] -> c[0];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  const auto* const qasmIn = "qreg p[1];\n"
+                             "qreg q[1];\n"
+                             "creg c[2];\n"
+                             "measure p[0] -> c[0];";
+  *qc = qc::QuantumComputation::fromQASM(qasmIn);
   std::cout << *qc << "\n";
-  std::stringstream ss2{};
-  qc->dump(ss2, qc::Format::OpenQASM2);
-  std::cout << ss2.str() << "\n";
-  EXPECT_NE(ss2.str().find(ss.str()), std::string::npos);
+  const auto qasmOut = qc->toQASM(false);
+  std::cout << qasmOut << "\n";
+  EXPECT_NE(qasmOut.find(qasmIn), std::string::npos);
 }
 
 TEST_F(IO, MarkAncillaryAndDump) {
-  std::stringstream ss{};
-  ss << "qreg q[2];\n"
-     << "x q[0];\n"
-     << "x q[1];\n";
-  qc->import(ss, qc::Format::OpenQASM3);
+  *qc = qc::QuantumComputation::fromQASM("qreg q[2];"
+                                         "x q[0];"
+                                         "x q[1];");
   std::cout << *qc << "\n";
   qc->setLogicalQubitAncillary(0U);
   EXPECT_EQ(qc->getNancillae(), 1U);
   EXPECT_TRUE(qc->logicalQubitIsAncillary(0U));
   std::cout << *qc << "\n";
-  std::stringstream ss2{};
-  qc->dump(ss2, qc::Format::OpenQASM2);
-  std::cout << ss2.str() << "\n";
-  std::stringstream expected{};
-  expected << "// i 0 1\n"
-           << "// o 0 1\n"
-           << "OPENQASM 2.0;\n"
-           << "include \"qelib1.inc\";\n"
-           << "qreg q[2];\n"
-           << "x q[0];\n"
-           << "x q[1];\n";
-  EXPECT_STREQ(ss2.str().c_str(), expected.str().c_str());
+  const auto qasm = qc->toQASM(false);
+  std::cout << qasm << "\n";
+  const auto* const expected = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 2.0;\n"
+                               "include \"qelib1.inc\";\n"
+                               "qreg q[2];\n"
+                               "x q[0];\n"
+                               "x q[1];\n";
+  EXPECT_EQ(qasm, expected);
 }
 
 TEST_F(IO, dumpEmptyOpenQASM) {
-  std::stringstream ss{};
-  ss << "\n";
-  qc->import(ss, qc::Format::OpenQASM2);
+  *qc = qc::QuantumComputation::fromQASM("");
 
   std::string const openQASM2 =
       "// i\n// o\nOPENQASM 2.0;\ninclude \"qelib1.inc\";\n";
   std::string const openQASM3 =
       "// i\n// o\nOPENQASM 3.0;\ninclude \"stdgates.inc\";\n";
 
-  std::stringstream out1;
-  qc->dumpOpenQASM2(out1);
-  EXPECT_EQ(openQASM2, out1.str());
-  std::stringstream out2;
-  qc->dumpOpenQASM3(out2);
-  EXPECT_EQ(openQASM3, out2.str());
+  EXPECT_EQ(openQASM2, qc->toQASM(false));
+  EXPECT_EQ(openQASM3, qc->toQASM(true));
+}
+
+TEST_F(IO, fromCompoundOperation) {
+  qc->addQubitRegister(2);
+  qc->addClassicalRegister(2);
+  qc->x(1);
+  qc->measure(1, 1);
+  const auto compound = qc->asCompoundOperation();
+  const auto qc2 = qc::QuantumComputation::fromCompoundOperation(*compound);
+
+  EXPECT_EQ(qc2.getNqubits(), 2);
+  EXPECT_EQ(qc2.getNcbits(), 2);
+  EXPECT_EQ(qc2.getNops(), 2);
+  const std::string expected = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[2] c;\n"
+                               "x q[1];\n"
+                               "c[1] = measure q[1];\n";
+  const auto actual = qc2.toQASM();
+  EXPECT_EQ(expected, actual);
 }
