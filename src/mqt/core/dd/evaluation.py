@@ -76,14 +76,12 @@ def __post_processing(key: str) -> _BenchmarkDict:
             metric = separator.join(metrics_divided[-2:])
             result_metrics["metric"] = metric
             component = separator.join(metrics_divided[:-2])
-            if component.startswith("dd_"):
-                component = component[3:]
+            component = component.removeprefix("dd_")
             result_metrics["component"] = component
         else:
             result_metrics["metric"] = metrics_divided[-1]
             component = separator.join(metrics_divided[:-1])
-            if component.startswith("dd_"):
-                component = component[3:]
+            component = component.removeprefix("dd_")
             result_metrics["component"] = component
 
     return result_metrics
