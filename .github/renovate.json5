@@ -15,7 +15,7 @@
   packageRules: [
     {
       matchManagers: ["github-actions"],
-      addLabels: ["github-actions", "continuous-integration"],
+      addLabels: ["github_actions", "continuous integration"],
       commitMessagePrefix: "⬆\uFE0F\uD83D\uDC68\u200D\uD83D\uDCBB"
     },
     {
@@ -25,7 +25,7 @@
     },
     {
       matchManagers: ["pre-commit"],
-      addLabels: ["pre-commit", "continuous-integration"],
+      addLabels: ["pre-commit", "continuous integration"],
       commitMessagePrefix: "⬆\uFE0F\uD83E\uDE9D"
     }
   ]
