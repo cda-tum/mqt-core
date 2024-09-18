@@ -1,6 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended"],
+  extends: ["config:recommended", ":gitSignOff"],
   labels: ["dependencies"],
   prHourlyLimit: 10,
   enabledManagers: ["github-actions", "pre-commit", "pep621"],
@@ -10,4 +10,6 @@
   lockFileMaintenance: {
     "enabled": true
   },
+  commitMessagePrefix: "⬆\uFE0F",
+  commitBodyTable: true,
 }
