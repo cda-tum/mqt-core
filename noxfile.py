@@ -18,7 +18,7 @@ nox.options.default_venv_backend = "uv|virtualenv"
 
 nox.options.sessions = ["lint", "tests", "minimums"]
 
-PYTHON_ALL_VERSIONS = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+PYTHON_ALL_VERSIONS = ["3.9", "3.10", "3.11", "3.12"]
 
 # The following lists all the build requirements for building the package.
 # Note that this includes transitive build dependencies of package dependencies,
@@ -27,7 +27,7 @@ PYTHON_ALL_VERSIONS = ["3.9", "3.10", "3.11", "3.12", "3.13"]
 # not available via wheels on PyPI (i.e., only as source distributions).
 BUILD_REQUIREMENTS = [
     "scikit-build-core>=0.10.1",
-    "setuptools_scm>=8",
+    "setuptools_scm>=8.1",
     "pybind11>=2.13.5",
 ]
 
@@ -55,6 +55,7 @@ def _run_tests(
     env = {}
     if os.environ.get("CI", None) and sys.platform == "win32":
         env["CMAKE_GENERATOR"] = "Ninja"
+        env["SKBUILD_CMAKE_ARGS"] = "--fresh"
 
     if shutil.which("cmake") is None and shutil.which("cmake3") is None:
         session.install("cmake")

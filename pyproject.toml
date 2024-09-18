@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.10.1", "setuptools-scm>=8", "pybind11>=2.13.5"]
+requires = ["scikit-build-core>=0.10.1", "setuptools-scm>=8.1", "pybind11>=2.13.5"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -45,7 +45,7 @@ docs = [
   "mqt.core[qiskit,evaluation]",
   "myst_nb>=1.1.0",
   "qiskit[visualization]",
-  "setuptools-scm>=8",
+  "setuptools-scm>=8.1",
   "sphinx_design>=0.6",
   "sphinx-autoapi>=3",
   "sphinx-copybutton>=0.5",
