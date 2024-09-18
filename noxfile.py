@@ -27,7 +27,7 @@ PYTHON_ALL_VERSIONS = ["3.9", "3.10", "3.11", "3.12"]
 # not available via wheels on PyPI (i.e., only as source distributions).
 BUILD_REQUIREMENTS = [
     "scikit-build-core>=0.10.1",
-    "setuptools_scm>=8",
+    "setuptools_scm>=8.1",
     "pybind11>=2.13.5",
 ]
 
