@@ -1,15 +1,32 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:recommended", ":gitSignOff"],
-  labels: ["dependencies"],
   prHourlyLimit: 10,
   enabledManagers: ["github-actions", "pre-commit", "pep621"],
   "pre-commit": {
-    enabled: true,
+    enabled: true
   },
   lockFileMaintenance: {
     "enabled": true
   },
-  commitMessagePrefix: "⬆\uFE0F",
+  configMigration: true,
   commitBodyTable: true,
+  labels: ["dependencies"],
+  packageRules: [
+    {
+      matchManagers: ["github-actions"],
+      addLabels: ["github-actions", "continuous-integration"],
+      commitMessagePrefix: "⬆\uFE0F\uD83D\uDC68\u200D\uD83D\uDCBB"
+    },
+    {
+      matchManagers: ["pep621"],
+      addLabels: ["python"],
+      commitMessagePrefix: "⬆\uFE0F\uD83D\uDC0D"
+    },
+    {
+      matchManagers: ["pre-commit"],
+      addLabels: ["pre-commit", "continuous-integration"],
+      commitMessagePrefix: "⬆\uFE0F\uD83E\uDE9D"
+    }
+  ]
 }
