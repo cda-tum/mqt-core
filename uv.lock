@@ -1151,7 +1151,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'coverage'", specifier = ">=4" },
     { name = "qiskit", extras = ["qasm3-import"], marker = "extra == 'qiskit'", specifier = ">=1.0.0" },
     { name = "qiskit", extras = ["visualization"], marker = "extra == 'docs'" },
-    { name = "setuptools-scm", marker = "extra == 'docs'", specifier = ">=8" },
+    { name = "setuptools-scm", marker = "extra == 'docs'", specifier = ">=8.1" },
     { name = "sphinx-autoapi", marker = "extra == 'docs'", specifier = ">=3" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5" },
     { name = "sphinx-design", marker = "extra == 'docs'", specifier = ">=0.6" },
