@@ -144,12 +144,7 @@ std::shared_ptr<Statement> Parser::parseStatement() {
     return parseMeasureStatement();
   }
 
-  if (auto quantumStatement = parseQuantumStatement();
-      quantumStatement != nullptr) {
-    return quantumStatement;
-  }
-
-  error(current(), "Expected statement, got '" + current().toString() + "'.");
+  return parseQuantumStatement();
 }
 
 std::shared_ptr<QuantumStatement> Parser::parseQuantumStatement() {
@@ -173,7 +168,8 @@ std::shared_ptr<QuantumStatement> Parser::parseQuantumStatement() {
     return parseBarrierStatement();
   }
 
-  return nullptr;
+  error(current(),
+        "Expected quantum statement, got '" + current().toString() + "'.");
 }
 
 void Parser::parseInclude() {

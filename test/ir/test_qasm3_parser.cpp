@@ -1322,7 +1322,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateExpectStatement) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Expected statement, got '+'.");
+          EXPECT_EQ(e.message, "Expected quantum statement, got '+'.");
           throw;
         }
       },
@@ -1512,6 +1512,25 @@ TEST_F(Qasm3ParserTest, ImportQasmNegativeTypeDesignator) {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
           EXPECT_EQ(e.message, "Type Check Error: Type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmRegisterDeclarationInDefinition) {
+  const std::string testfile = "qubit[1] q;"
+                               "gate test a {"
+                               "qubit[2] crash;"
+                               "x a;}"
+                               "test q[0];";
+
+  EXPECT_THROW(
+      {
+        try {
+          const auto qc = QuantumComputation::fromQASM(testfile);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Expected quantum statement, got 'qubit'.");
           throw;
         }
       },
