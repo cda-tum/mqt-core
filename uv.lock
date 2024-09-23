@@ -1091,7 +1091,7 @@ wheels = [
 
 [[package]]
 name = "mqt-core"
-version = "2.6.1.dev63+gef65fad"
+version = "2.6.1.dev64+g81c8383"
 source = { editable = "." }
 
 [package.optional-dependencies]
