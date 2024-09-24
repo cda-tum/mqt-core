@@ -41,8 +41,8 @@ public:
   explicit NALocalOperation(const FullOpType& opType,
                             std::shared_ptr<Point> pos)
       : NALocalOperation(opType, {}, std::move(pos)) {}
-  [[nodiscard]] auto
-  getPositions() const -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto getPositions() const
+      -> const std::vector<std::shared_ptr<Point>>& {
     return positions;
   }
   [[nodiscard]] auto getParams() const -> const std::vector<qc::fp>& {
