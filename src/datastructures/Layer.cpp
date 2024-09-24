@@ -13,8 +13,8 @@
 
 namespace qc {
 
-auto Layer::constructDAG(const QuantumComputation& qc,
-                         const bool commutable) -> void {
+auto Layer::constructDAG(const QuantumComputation& qc, const bool commutable)
+    -> void {
   const auto nQubits = qc.getNqubits();
   // For a pair of self-canceling operations like two consecutive X operations
   // or RY rotations with opposite angles the first operations is a

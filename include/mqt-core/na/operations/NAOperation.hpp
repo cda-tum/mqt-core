@@ -13,8 +13,8 @@ public:
   [[nodiscard]] virtual auto isLocalOperation() const -> bool { return false; }
   [[nodiscard]] virtual auto isGlobalOperation() const -> bool { return false; }
   [[nodiscard]] virtual auto toString() const -> std::string = 0;
-  friend auto operator<<(std::ostream& os,
-                         const NAOperation& obj) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const NAOperation& obj)
+      -> std::ostream& {
     return os << obj.toString(); // Using toString() method
   }
   virtual ~NAOperation() = default;

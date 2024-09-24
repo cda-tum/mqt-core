@@ -6,8 +6,8 @@
 #include <algorithm>
 
 namespace qc {
-[[nodiscard]] auto
-Permutation::apply(const Controls& controls) const -> Controls {
+[[nodiscard]] auto Permutation::apply(const Controls& controls) const
+    -> Controls {
   if (empty()) {
     return controls;
   }
