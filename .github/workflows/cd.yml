@@ -24,6 +24,7 @@ jobs:
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-packaging.yml@v1.4
     with:
       no-local-version: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+      build-emulated-wheels: ${{ github.ref != 'refs/heads/main' || github.event_name != 'push' }}
 
   deploy-test-pypi:
     name: 🚀 Deploy to Test PyPI
