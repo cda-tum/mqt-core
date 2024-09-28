@@ -11,13 +11,19 @@ permissions:
   id-token: write
 
 jobs:
+  # Builds the sdist and wheels on all supported platforms and uploads the resulting
+  # wheels as GitHub artifacts `dev-cibw-*`, `test-cibw-*`, or `cibw-*`, depending on
+  # whether the workflow is triggered from a PR, a push to main, or a release, respectively.
   python-packaging:
     name: 🐍 Packaging
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-packaging.yml@v1.4
     with:
+      # Do not include local version information on pushes to main to facilitate TestPyPI uploads.
       no-local-version: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+      # Do not build emulated wheels on pushes to main to reduce runner load for CD.
       build-emulated-wheels: ${{ github.ref != 'refs/heads/main' || github.event_name != 'push' }}
 
+  # Downloads the previously generated artifacts and deploys to TestPyPI on pushes to main
   deploy-test-pypi:
     name: 🚀 Deploy to Test PyPI
     runs-on: ubuntu-latest
@@ -37,6 +43,7 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
           attestations: true
 
+  # Downloads the previously generated artifacts and deploys to PyPI on published releases.
   deploy:
     if: github.event_name == 'release' && github.event.action == 'published'
     name: 🚀 Deploy to PyPI
