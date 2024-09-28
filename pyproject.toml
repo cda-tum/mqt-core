@@ -294,3 +294,7 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
 before-build = "uv pip install delvewheel>=1.7.3"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt"
 environment = { CMAKE_GENERATOR = "Ninja", SKBUILD_CMAKE_ARGS="--fresh" }
+
+[[tool.cibuildwheel.overrides]]
+select = "*-macosx_arm64"
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
