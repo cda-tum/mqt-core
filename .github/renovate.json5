@@ -7,15 +7,16 @@
     enabled: true
   },
   lockFileMaintenance: {
-    "enabled": true
+    "enabled": true,
+    // "automerge": true, disabled due to endless update loops caused by setuptools_scm
   },
   configMigration: true,
-  commitBodyTable: true,
   labels: ["dependencies"],
+  schedule: ["every weekend"],
   packageRules: [
     {
       matchManagers: ["github-actions"],
-      addLabels: ["github_actions", "continuous integration"],
+      addLabels: ["github-actions", "continuous integration"],
       commitMessagePrefix: "⬆\uFE0F\uD83D\uDC68\u200D\uD83D\uDCBB"
     },
     {
@@ -26,7 +27,12 @@
     {
       matchManagers: ["pre-commit"],
       addLabels: ["pre-commit", "continuous integration"],
-      commitMessagePrefix: "⬆\uFE0F\uD83E\uDE9D"
+      commitMessagePrefix: "⬆\uFE0F\uD83E\uDE9D",
+    },
+    {
+      "description": "Automerge patch updates",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
     }
   ]
 }
