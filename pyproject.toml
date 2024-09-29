@@ -80,7 +80,7 @@ wheel.install-dir = "mqt/core"
 ninja.version = ">=1.10"
 
 # Setuptools-style build caching in a local directory
-build-dir = "build/{build_type}"
+build-dir = "build/{wheel_tag}/{build_type}"
 
 # Explicitly set the package directory
 wheel.packages = ["src/mqt"]
@@ -308,7 +308,7 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
 [tool.cibuildwheel.windows]
 before-build = "uv pip install delvewheel>=1.7.3"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt --ignore-in-wheel"
-environment = { CMAKE_GENERATOR = "Ninja", SKBUILD_CMAKE_ARGS="--fresh" }
+environment = { CMAKE_GENERATOR = "Ninja" }
 
 [[tool.cibuildwheel.overrides]]
 select = "*-macosx_arm64"
