@@ -25,13 +25,13 @@ build:
     # Install the project and its documentation dependencies
     - uv pip install .[docs] readthedocs-sphinx-ext
     # Run the html builder
-    - .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/html
+    - . .venv/bin/activate && .venv/bin/python -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/html
     # Run the htmlzip builder and create a zip file
-    - .venv/bin/python -m sphinx -T -b dirhtml -d docs/_build/doctrees -D language=en docs docs/_build/dirhtml
+    - . .venv/bin/activate && .venv/bin/python -m sphinx -T -b dirhtml -d docs/_build/doctrees -D language=en docs docs/_build/dirhtml
     - mkdir -p $READTHEDOCS_OUTPUT/htmlzip
     - zip -r $READTHEDOCS_OUTPUT/htmlzip/html.zip docs/_build/dirhtml/*
     # Run the latex builder and create a pdf file
-    - .venv/bin/python -m sphinx -T -b latex -d docs/_build/doctrees -D language=en docs docs/_build/latex
+    - . .venv/bin/activate && .venv/bin/python -m sphinx -T -b latex -d docs/_build/doctrees -D language=en docs docs/_build/latex
     - cd docs/_build/latex && latexmk -pdf -f -dvi- -ps- -interaction=nonstopmode -jobname=$READTHEDOCS_PROJECT
     - mkdir -p $READTHEDOCS_OUTPUT/pdf
     - cp docs/_build/latex/$READTHEDOCS_PROJECT.pdf $READTHEDOCS_OUTPUT/pdf/$READTHEDOCS_PROJECT.pdf
