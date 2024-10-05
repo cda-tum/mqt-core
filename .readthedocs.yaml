@@ -22,6 +22,7 @@ build:
     - asdf install uv latest
     - asdf global uv latest
     - uv venv
+    - source .venv/bin/activate
     # Install the project and its documentation dependencies
     - uv pip install .[docs] readthedocs-sphinx-ext
     # Run the html builder
