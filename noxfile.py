@@ -55,7 +55,6 @@ def _run_tests(
     env = {}
     if os.environ.get("CI", None) and sys.platform == "win32":
         env["CMAKE_GENERATOR"] = "Ninja"
-        env["SKBUILD_CMAKE_ARGS"] = "--fresh"
 
     if shutil.which("cmake") is None and shutil.which("cmake3") is None:
         session.install("cmake")
