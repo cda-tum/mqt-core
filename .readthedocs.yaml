@@ -22,6 +22,8 @@ build:
     - asdf install uv latest
     - asdf global uv latest
     - uv venv
+    # Unshallow the git clone and fetch tags to get proper version information
+    - git fetch --unshallow --tags
     # Install the project and its documentation dependencies
     - uv pip install .[docs] readthedocs-sphinx-ext
     # Run the html builder
