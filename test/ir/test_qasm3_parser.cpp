@@ -2234,3 +2234,10 @@ TEST_F(Qasm3ParserTest, TokenKindTimingLiteralInvalidSuffix) {
   const auto token = scanner.next();
   EXPECT_NE(token.kind, qasm3::Token::Kind::TimingLiteral);
 }
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralMicrosecondsInteger) {
+  qasm3::Scanner scanner(new std::istringstream("1us"));
+  const auto token = scanner.next();
+  EXPECT_EQ(token.kind, qasm3::Token::Kind::TimingLiteral);
+  EXPECT_DOUBLE_EQ(token.valReal, 1.0e-6);
+}
