@@ -153,8 +153,7 @@ std::shared_ptr<QuantumStatement> Parser::parseQuantumStatement() {
       current().kind == Token::Kind::Ctrl ||
       current().kind == Token::Kind::NegCtrl ||
       current().kind == Token::Kind::Identifier ||
-      current().kind == Token::Kind::Gphase ||
-      current().kind == Token::Kind::S) {
+      current().kind == Token::Kind::Gphase) {
     // TODO: since we do not support classical function calls yet, we can assume
     // that this is a gate statement
     return parseGateCallStatement();
@@ -385,9 +384,6 @@ std::shared_ptr<GateCallStatement> Parser::parseGateCallStatement() {
     scan();
     identifier = "gphase";
     operandsOptional = true;
-  } else if (current().kind == Token::Kind::S) {
-    scan();
-    identifier = "s";
   } else {
     identifier = expect(Token::Kind::Identifier).str;
   }

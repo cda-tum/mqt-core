@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from os import PathLike
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from qiskit.circuit import QuantumCircuit
 
     """The type of input that can be used to load a quantum circuit."""
-    CircuitInputType = Union[QuantumComputation, str, PathLike[str], QuantumCircuit]
+    CircuitInputType = Union[QuantumComputation, str, os.PathLike[str], QuantumCircuit]
 
 
 def load(input_circuit: CircuitInputType) -> QuantumComputation:
@@ -33,15 +33,17 @@ def load(input_circuit: CircuitInputType) -> QuantumComputation:
     if isinstance(input_circuit, QuantumComputation):
         return input_circuit
 
-    if isinstance(input_circuit, (str, PathLike)):
-        if not Path(input_circuit).is_file():
-            if isinstance(input_circuit, PathLike) or "OPENQASM" not in input_circuit:
+    if isinstance(input_circuit, (str, os.PathLike)):
+        input_str = str(input_circuit)
+        max_filename_length = 255 if os.name == "nt" else os.pathconf("/", "PC_NAME_MAX")
+        if len(input_str) > max_filename_length or not Path(input_circuit).is_file():
+            if isinstance(input_circuit, os.PathLike) or "OPENQASM" not in input_circuit:
                 msg = f"File {input_circuit} does not exist."
                 raise FileNotFoundError(msg)
             # otherwise, we assume that this is a QASM string
-            return QuantumComputation.from_qasm(str(input_circuit))
+            return QuantumComputation.from_qasm(input_str)
 
-        return QuantumComputation(str(input_circuit))
+        return QuantumComputation(input_str)
 
     try:
         from .plugins.qiskit import qiskit_to_mqt

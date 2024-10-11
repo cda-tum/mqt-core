@@ -1,7 +1,9 @@
 #include "ir/parsers/qasm3_parser/Scanner.hpp"
 
+#include "Definitions.hpp"
 #include "ir/parsers/qasm3_parser/Token.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <istream>
 #include <optional>
@@ -9,6 +11,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace qasm3 {
 char Scanner::readUtf8Codepoint(std::istream* in) {
@@ -225,16 +229,40 @@ Token Scanner::consumeNumberLiteral() {
     if (negative) {
       t.valReal *= -1;
     }
-
-    return t;
+  } else {
+    t.val = static_cast<int64_t>(
+        parseIntegerLiteral(valBeforeDecimalSeparator, base));
+    t.kind = Token::Kind::IntegerLiteral;
+    if (negative) {
+      t.val *= -1;
+      t.isSigned = true;
+    }
   }
 
-  t.val = static_cast<int64_t>(
-      parseIntegerLiteral(valBeforeDecimalSeparator, base));
-  t.kind = Token::Kind::IntegerLiteral;
-  if (negative) {
-    t.val *= -1;
-    t.isSigned = true;
+  const auto suffix1 = ch;
+  const auto suffix2 = peek();
+  if (hasTimingSuffix(suffix1, suffix2)) {
+    double factor = 1.0;
+    nextCh();
+    if (suffix1 != 's' && (suffix1 != 'd' || suffix2 != 't')) {
+      nextCh();
+      const auto suffix = std::string{suffix1, suffix2};
+      if (suffix == "ms") {
+        factor = 1e-3;
+      } else if (suffix == "us") {
+        factor = 1e-6;
+      } else if (suffix == "ns") {
+        factor = 1e-9;
+      } else if (suffix == "ps") {
+        factor = 1e-12;
+      }
+    }
+    if (t.kind == Token::Kind::FloatLiteral) {
+      t.valReal *= factor;
+    } else {
+      t.valReal = static_cast<qc::fp>(t.val) * factor;
+    }
+    t.kind = Token::Kind::TimingLiteral;
   }
 
   t.endCol = col;
@@ -345,12 +373,6 @@ Scanner::Scanner(std::istream* in) : is(in) {
   keywords["true"] = Token::Kind::True;
   keywords["false"] = Token::Kind::False;
   keywords["im"] = Token::Kind::Imag;
-  keywords["dt"] = Token::Kind::TimeUnitDt;
-  keywords["ns"] = Token::Kind::TimeUnitNs;
-  keywords["us"] = Token::Kind::TimeUnitUs;
-  keywords["mys"] = Token::Kind::TimeUnitMys;
-  keywords["ms"] = Token::Kind::TimeUnitMs;
-  keywords["s"] = Token::Kind::S;
   keywords["sin"] = Token::Kind::Sin;
   keywords["cos"] = Token::Kind::Cos;
   keywords["tan"] = Token::Kind::Tan;
@@ -602,5 +624,17 @@ Token Scanner::next() {
   t.endCol = col;
   t.endLine = line;
   return t;
+}
+
+bool Scanner::hasTimingSuffix(const char first, const char second) {
+  if (first == 's') {
+    return true;
+  }
+  const auto suffixes = std::vector<std::pair<char, char>>{
+      {'m', 's'}, {'u', 's'}, {'n', 's'}, {'p', 's'}, {'d', 't'}};
+  return std::any_of(suffixes.begin(), suffixes.end(),
+                     [first, second](const auto& suffix) {
+                       return suffix.first == first && suffix.second == second;
+                     });
 }
 } // namespace qasm3

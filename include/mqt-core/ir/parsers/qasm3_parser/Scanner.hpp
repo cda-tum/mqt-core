@@ -32,6 +32,8 @@ class Scanner {
     return isNum(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
   }
 
+  [[nodiscard]] static bool hasTimingSuffix(char first, char second);
+
   static char readUtf8Codepoint(std::istream* in);
 
   void nextCh();
