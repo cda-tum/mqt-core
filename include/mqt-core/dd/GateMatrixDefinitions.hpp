@@ -146,10 +146,10 @@ inline TwoQubitGateMatrix xxMinusYYMat(const fp theta, const fp beta = 0.) {
   const auto sinBeta = std::sin(beta);
 
   return TwoQubitGateMatrix{
-      {{cosTheta, 0, 0, {sinBeta * sinTheta, -cosBeta * sinTheta}},
+      {{cosTheta, 0, 0, {-sinBeta * sinTheta, -cosBeta * sinTheta}},
        {0, 1, 0, 0},
        {0, 0, 1, 0},
-       {std::complex{-sinBeta * sinTheta, -cosBeta * sinTheta}, 0, 0,
+       {std::complex{sinBeta * sinTheta, -cosBeta * sinTheta}, 0, 0,
         cosTheta}}};
 }
 
