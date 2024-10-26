@@ -91,7 +91,7 @@ constexpr TwoQubitGateMatrix ECR_MAT{
      {std::complex{0., -SQRT2_2}, SQRT2_2, 0, 0}}};
 
 constexpr TwoQubitGateMatrix DCX_MAT{
-    {{1, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 0, 0}, {0, 0, 1, 0}}};
+    {{1, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}, {0, 1, 0, 0}}};
 
 constexpr TwoQubitGateMatrix PERES_MAT{
     {{0, 0, 0, 1}, {0, 0, 1, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}}};
@@ -146,10 +146,10 @@ inline TwoQubitGateMatrix xxMinusYYMat(const fp theta, const fp beta = 0.) {
   const auto sinBeta = std::sin(beta);
 
   return TwoQubitGateMatrix{
-      {{cosTheta, 0, 0, {sinBeta * sinTheta, -cosBeta * sinTheta}},
+      {{cosTheta, 0, 0, {-sinBeta * sinTheta, -cosBeta * sinTheta}},
        {0, 1, 0, 0},
        {0, 0, 1, 0},
-       {std::complex{-sinBeta * sinTheta, -cosBeta * sinTheta}, 0, 0,
+       {std::complex{sinBeta * sinTheta, -cosBeta * sinTheta}, 0, 0,
         cosTheta}}};
 }
 

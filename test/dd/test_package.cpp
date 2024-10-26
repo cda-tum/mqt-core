@@ -1971,12 +1971,10 @@ TEST(DDPackageTest, SWAPGateDDConstruction) {
       const auto swapGateDD =
           dd->makeTwoQubitGateDD(dd::SWAP_MAT, control, target);
 
-      auto c = qc::Controls{control};
-      auto gateDD = dd->makeGateDD(dd::X_MAT, c, target);
-      c.erase(qc::Control{control});
-      c.insert(qc::Control{target});
+      auto gateDD = dd->makeGateDD(dd::X_MAT, control, target);
       gateDD = dd->multiply(
-          gateDD, dd->multiply(dd->makeGateDD(dd::X_MAT, c, control), gateDD));
+          gateDD,
+          dd->multiply(dd->makeGateDD(dd::X_MAT, target, control), gateDD));
 
       EXPECT_EQ(swapGateDD, gateDD);
     }
@@ -1995,8 +1993,7 @@ TEST(DDPackageTest, PeresGateDDConstruction) {
       const auto peresGateDD =
           dd->makeTwoQubitGateDD(dd::PERES_MAT, control, target);
 
-      const auto c = qc::Controls{control};
-      auto gateDD = dd->makeGateDD(dd::X_MAT, c, target);
+      auto gateDD = dd->makeGateDD(dd::X_MAT, control, target);
       gateDD = dd->multiply(dd->makeGateDD(dd::X_MAT, control), gateDD);
 
       EXPECT_EQ(peresGateDD, gateDD);
@@ -2005,7 +2002,8 @@ TEST(DDPackageTest, PeresGateDDConstruction) {
           dd->makeTwoQubitGateDD(dd::PERESDG_MAT, control, target);
 
       auto gateInvDD = dd->makeGateDD(dd::X_MAT, control);
-      gateInvDD = dd->multiply(dd->makeGateDD(dd::X_MAT, c, target), gateInvDD);
+      gateInvDD =
+          dd->multiply(dd->makeGateDD(dd::X_MAT, control, target), gateInvDD);
 
       EXPECT_EQ(peresInvDD, gateInvDD);
     }
@@ -2026,18 +2024,15 @@ TEST(DDPackageTest, iSWAPGateDDConstruction) {
 
       auto gateDD = dd->makeGateDD(dd::S_MAT, target); // S q[1]
       gateDD =
-          dd->multiply(gateDD, dd->makeGateDD(dd::S_MAT, control)); // S q[0]
+          dd->multiply(dd->makeGateDD(dd::S_MAT, control), gateDD); // S q[0]
       gateDD =
-          dd->multiply(gateDD, dd->makeGateDD(dd::H_MAT, control)); // H q[0]
-      auto c = qc::Controls{control};
-      gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::X_MAT, c,
-                                                   target)); // CX q[0], q[1]
-      c.erase(qc::Control{control});
-      c.insert(qc::Control{target});
-      gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::X_MAT, c,
-                                                   control)); // CX q[1], q[0]
+          dd->multiply(dd->makeGateDD(dd::H_MAT, control), gateDD); // H q[0]
+      gateDD = dd->multiply(dd->makeGateDD(dd::X_MAT, control, target),
+                            gateDD); // CX q[0], q[1]
+      gateDD = dd->multiply(dd->makeGateDD(dd::X_MAT, target, control),
+                            gateDD); // CX q[1], q[0]
       gateDD =
-          dd->multiply(gateDD, dd->makeGateDD(dd::H_MAT, target)); // H q[1]
+          dd->multiply(dd->makeGateDD(dd::H_MAT, target), gateDD); // H q[1]
 
       EXPECT_EQ(iswapGateDD, gateDD);
 
@@ -2045,21 +2040,16 @@ TEST(DDPackageTest, iSWAPGateDDConstruction) {
           dd->makeTwoQubitGateDD(dd::ISWAPDG_MAT, control, target);
 
       auto gateInvDD = dd->makeGateDD(dd::H_MAT, target); // H q[1]
-      c = qc::Controls{target};
+      gateInvDD = dd->multiply(dd->makeGateDD(dd::X_MAT, target, control),
+                               gateInvDD); // CX q[1], q[0]
+      gateInvDD = dd->multiply(dd->makeGateDD(dd::X_MAT, control, target),
+                               gateInvDD); // CX q[0], q[1]
       gateInvDD =
-          dd->multiply(gateInvDD, dd->makeGateDD(dd::X_MAT, c,
-                                                 control)); // CX q[1], q[0]
-      c.erase(qc::Control{target});
-      c.insert(qc::Control{control});
-      gateInvDD =
-          dd->multiply(gateInvDD, dd->makeGateDD(dd::X_MAT, c,
-                                                 target)); // CX q[0], q[1]
-      gateInvDD =
-          dd->multiply(gateInvDD, dd->makeGateDD(dd::H_MAT, control)); // H q[0]
-      gateInvDD = dd->multiply(gateInvDD, dd->makeGateDD(dd::SDG_MAT,
-                                                         control)); // Sdag q[0]
-      gateInvDD = dd->multiply(gateInvDD, dd->makeGateDD(dd::SDG_MAT,
-                                                         target)); // Sdag q[1]
+          dd->multiply(dd->makeGateDD(dd::H_MAT, control), gateInvDD); // H q[0]
+      gateInvDD = dd->multiply(dd->makeGateDD(dd::SDG_MAT, control),
+                               gateInvDD); // Sdag q[0]
+      gateInvDD = dd->multiply(dd->makeGateDD(dd::SDG_MAT, target),
+                               gateInvDD); // Sdag q[1]
 
       EXPECT_EQ(iswapInvGateDD, gateInvDD);
     }
@@ -2078,12 +2068,9 @@ TEST(DDPackageTest, DCXGateDDConstruction) {
       const auto dcxGateDD =
           dd->makeTwoQubitGateDD(dd::DCX_MAT, control, target);
 
-      auto c = qc::Controls{};
-      c.insert(qc::Control{control});
-      auto gateDD = dd->makeGateDD(dd::X_MAT, c, target);
-      c.erase(qc::Control{control});
-      c.insert(qc::Control{target});
-      gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::X_MAT, c, control));
+      const auto gateDD =
+          dd->multiply(dd->makeGateDD(dd::X_MAT, target, control),
+                       dd->makeGateDD(dd::X_MAT, control, target));
 
       EXPECT_EQ(dcxGateDD, gateDD);
     }
@@ -2105,14 +2092,10 @@ TEST(DDPackageTest, RZZGateDDConstruction) {
         const auto rzzGateDD =
             dd->makeTwoQubitGateDD(dd::rzzMat(param), control, target);
 
-        auto c = qc::Controls{};
-        c.insert(qc::Control{control});
-        auto gateDD = dd->makeGateDD(dd::X_MAT, c, target);
-        c.erase(qc::Control{control});
+        auto gateDD = dd->makeGateDD(dd::X_MAT, control, target);
+        gateDD = dd->multiply(dd->makeGateDD(dd::rzMat(param), target), gateDD);
         gateDD =
-            dd->multiply(gateDD, dd->makeGateDD(dd::rzMat(param), c, target));
-        c.insert(qc::Control{control});
-        gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::X_MAT, c, target));
+            dd->multiply(dd->makeGateDD(dd::X_MAT, control, target), gateDD);
 
         EXPECT_EQ(rzzGateDD, gateDD);
       }
@@ -2152,13 +2135,13 @@ TEST(DDPackageTest, RYYGateDDConstruction) {
         // controls are 0.
         auto gateDD = dd->makeGateDD(dd::rxMat(dd::PI_2), control);
         gateDD =
-            dd->multiply(gateDD, dd->makeGateDD(dd::rxMat(dd::PI_2), target));
+            dd->multiply(dd->makeGateDD(dd::rxMat(dd::PI_2), target), gateDD);
         gateDD = dd->multiply(
-            gateDD, dd->makeTwoQubitGateDD(dd::rzzMat(param), control, target));
+            dd->makeTwoQubitGateDD(dd::rzzMat(param), control, target), gateDD);
         gateDD =
-            dd->multiply(gateDD, dd->makeGateDD(dd::rxMat(-dd::PI_2), target));
+            dd->multiply(dd->makeGateDD(dd::rxMat(-dd::PI_2), target), gateDD);
         gateDD =
-            dd->multiply(gateDD, dd->makeGateDD(dd::rxMat(-dd::PI_2), control));
+            dd->multiply(dd->makeGateDD(dd::rxMat(-dd::PI_2), control), gateDD);
 
         EXPECT_EQ(ryyGateDD, gateDD);
       }
@@ -2191,11 +2174,11 @@ TEST(DDPackageTest, RXXGateDDConstruction) {
             dd->makeTwoQubitGateDD(dd::rxxMat(param), control, target);
 
         auto gateDD = dd->makeGateDD(dd::H_MAT, control);
-        gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::H_MAT, target));
+        gateDD = dd->multiply(dd->makeGateDD(dd::H_MAT, target), gateDD);
         gateDD = dd->multiply(
-            gateDD, dd->makeTwoQubitGateDD(dd::rzzMat(param), control, target));
-        gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::H_MAT, target));
-        gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::H_MAT, control));
+            dd->makeTwoQubitGateDD(dd::rzzMat(param), control, target), gateDD);
+        gateDD = dd->multiply(dd->makeGateDD(dd::H_MAT, target), gateDD);
+        gateDD = dd->multiply(dd->makeGateDD(dd::H_MAT, control), gateDD);
 
         EXPECT_EQ(rxxGateDD, gateDD);
       }
@@ -2231,8 +2214,8 @@ TEST(DDPackageTest, RZXGateDDConstruction) {
         // controls are 0.
         auto gateDD = dd->makeGateDD(dd::H_MAT, target);
         gateDD = dd->multiply(
-            gateDD, dd->makeTwoQubitGateDD(dd::rzzMat(param), control, target));
-        gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::H_MAT, target));
+            dd->makeTwoQubitGateDD(dd::rzzMat(param), control, target), gateDD);
+        gateDD = dd->multiply(dd->makeGateDD(dd::H_MAT, target), gateDD);
 
         EXPECT_EQ(rzxGateDD, gateDD);
       }
@@ -2263,10 +2246,11 @@ TEST(DDPackageTest, ECRGateDDConstruction) {
           dd->makeTwoQubitGateDD(dd::ECR_MAT, control, target);
 
       auto gateDD =
-          dd->makeTwoQubitGateDD(dd::rzxMat(-dd::PI_4), control, target);
-      gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::X_MAT, control));
-      gateDD = dd->multiply(gateDD, dd->makeTwoQubitGateDD(dd::rzxMat(dd::PI_4),
-                                                           control, target));
+          dd->makeTwoQubitGateDD(dd::rzxMat(dd::PI_4), control, target);
+      gateDD = dd->multiply(dd->makeGateDD(dd::X_MAT, control), gateDD);
+      gateDD = dd->multiply(
+          dd->makeTwoQubitGateDD(dd::rzxMat(-dd::PI_4), control, target),
+          gateDD);
 
       EXPECT_EQ(ecrGateDD, gateDD);
     }
@@ -2292,32 +2276,29 @@ TEST(DDPackageTest, XXMinusYYGateDDConstruction) {
               dd::xxMinusYYMat(theta, beta), control, target);
 
           auto gateDD = dd->makeGateDD(dd::rzMat(-beta), target);
-          gateDD = dd->multiply(gateDD,
-                                dd->makeGateDD(dd::rzMat(-dd::PI_2), control));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::SX_MAT, control));
-          gateDD = dd->multiply(gateDD,
-                                dd->makeGateDD(dd::rzMat(dd::PI_2), control));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::S_MAT, target));
-          gateDD = dd->multiply(
-              gateDD, dd->makeGateDD(dd::X_MAT, qc::Control{control}, target));
-          // only the following two gates need to be controlled by the controls
-          // since the other gates cancel if the controls are 0.
+          gateDD = dd->multiply(dd->makeGateDD(dd::rzMat(-dd::PI_2), control),
+                                gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::SX_MAT, control), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::rzMat(dd::PI_2), control),
+                                gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::S_MAT, target), gateDD);
           gateDD =
-              dd->multiply(gateDD, dd->makeGateDD(dd::ryMat(-theta / 2.),
-                                                  qc::Controls{}, control));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::ryMat(theta / 2.),
-                                                       qc::Controls{}, target));
+              dd->multiply(dd->makeGateDD(dd::X_MAT, control, target), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::ryMat(theta / 2.), control),
+                                gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::ryMat(-theta / 2.), target),
+                                gateDD);
 
-          gateDD = dd->multiply(
-              gateDD, dd->makeGateDD(dd::X_MAT, qc::Control{control}, target));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::SDG_MAT, target));
-          gateDD = dd->multiply(gateDD,
-                                dd->makeGateDD(dd::rzMat(-dd::PI_2), control));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::SXDG_MAT, control));
-          gateDD = dd->multiply(gateDD,
-                                dd->makeGateDD(dd::rzMat(dd::PI_2), control));
           gateDD =
-              dd->multiply(gateDD, dd->makeGateDD(dd::rzMat(beta), target));
+              dd->multiply(dd->makeGateDD(dd::X_MAT, control, target), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::SDG_MAT, target), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::rzMat(-dd::PI_2), control),
+                                gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::SXDG_MAT, control), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::rzMat(dd::PI_2), control),
+                                gateDD);
+          gateDD =
+              dd->multiply(dd->makeGateDD(dd::rzMat(beta), target), gateDD);
 
           EXPECT_EQ(xxMinusYYGateDD, gateDD);
         }
@@ -2343,33 +2324,29 @@ TEST(DDPackageTest, XXPlusYYGateDDConstruction) {
         for (const auto& beta : betaAngles) {
           const auto xxPlusYYGateDD = dd->makeTwoQubitGateDD(
               dd::xxPlusYYMat(theta, beta), control, target);
-          auto gateDD = dd->makeGateDD(dd::rzMat(beta), target);
-          gateDD = dd->multiply(gateDD,
-                                dd->makeGateDD(dd::rzMat(-dd::PI_2), control));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::SX_MAT, control));
-          gateDD = dd->multiply(gateDD,
-                                dd->makeGateDD(dd::rzMat(dd::PI_2), control));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::S_MAT, target));
-          gateDD = dd->multiply(
-              gateDD, dd->makeGateDD(dd::X_MAT, qc::Control{control}, target));
-          // only the following two gates need to be controlled by the controls
-          // since the other gates cancel if the controls are 0.
+          auto gateDD = dd->makeGateDD(dd::rzMat(beta), control);
+          gateDD = dd->multiply(dd->makeGateDD(dd::rzMat(-dd::PI_2), target),
+                                gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::SX_MAT, target), gateDD);
           gateDD =
-              dd->multiply(gateDD, dd->makeGateDD(dd::ryMat(theta / 2.),
-                                                  qc::Controls{}, control));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::ryMat(theta / 2.),
-                                                       qc::Controls{}, target));
-
-          gateDD = dd->multiply(
-              gateDD, dd->makeGateDD(dd::X_MAT, qc::Control{control}, target));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::SDG_MAT, target));
-          gateDD = dd->multiply(gateDD,
-                                dd->makeGateDD(dd::rzMat(-dd::PI_2), control));
-          gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::SXDG_MAT, control));
-          gateDD = dd->multiply(gateDD,
-                                dd->makeGateDD(dd::rzMat(dd::PI_2), control));
+              dd->multiply(dd->makeGateDD(dd::rzMat(dd::PI_2), target), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::S_MAT, control), gateDD);
           gateDD =
-              dd->multiply(gateDD, dd->makeGateDD(dd::rzMat(-beta), target));
+              dd->multiply(dd->makeGateDD(dd::X_MAT, target, control), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::ryMat(-theta / 2.), control),
+                                gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::ryMat(-theta / 2.), target),
+                                gateDD);
+          gateDD =
+              dd->multiply(dd->makeGateDD(dd::X_MAT, target, control), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::SDG_MAT, control), gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::rzMat(-dd::PI_2), target),
+                                gateDD);
+          gateDD = dd->multiply(dd->makeGateDD(dd::SXDG_MAT, target), gateDD);
+          gateDD =
+              dd->multiply(dd->makeGateDD(dd::rzMat(dd::PI_2), target), gateDD);
+          gateDD =
+              dd->multiply(dd->makeGateDD(dd::rzMat(-beta), control), gateDD);
 
           EXPECT_EQ(xxPlusYYGateDD, gateDD);
         }
