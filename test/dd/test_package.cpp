@@ -2078,12 +2078,9 @@ TEST(DDPackageTest, DCXGateDDConstruction) {
       const auto dcxGateDD =
           dd->makeTwoQubitGateDD(dd::DCX_MAT, control, target);
 
-      auto c = qc::Controls{};
-      c.insert(qc::Control{control});
-      auto gateDD = dd->makeGateDD(dd::X_MAT, c, target);
-      c.erase(qc::Control{control});
-      c.insert(qc::Control{target});
-      gateDD = dd->multiply(gateDD, dd->makeGateDD(dd::X_MAT, c, control));
+      const auto gateDD =
+          dd->multiply(dd->makeGateDD(dd::X_MAT, target, control),
+                       dd->makeGateDD(dd::X_MAT, control, target));
 
       EXPECT_EQ(dcxGateDD, gateDD);
     }

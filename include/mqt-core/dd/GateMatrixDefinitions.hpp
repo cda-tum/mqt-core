@@ -91,7 +91,7 @@ constexpr TwoQubitGateMatrix ECR_MAT{
      {std::complex{0., -SQRT2_2}, SQRT2_2, 0, 0}}};
 
 constexpr TwoQubitGateMatrix DCX_MAT{
-    {{1, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 0, 0}, {0, 0, 1, 0}}};
+    {{1, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}, {0, 1, 0, 0}}};
 
 constexpr TwoQubitGateMatrix PERES_MAT{
     {{0, 0, 0, 1}, {0, 0, 1, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}}};
