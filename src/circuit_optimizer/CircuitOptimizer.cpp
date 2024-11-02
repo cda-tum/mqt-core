@@ -111,18 +111,18 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
       continue;
     }
 
-    const auto opCcontrol = (*opC)->getControls().begin()->qubit;
+    const auto opControl = (*opC)->getControls().begin()->qubit;
     const auto opCtarget = (*opC)->getTargets().at(0);
     const auto opTcontrol = (*opT)->getControls().begin()->qubit;
     const auto opTtarget = (*opT)->getTargets().at(0);
 
     // operation at control and target qubit are not the same
-    if (opCcontrol != opTcontrol || opCtarget != opTtarget) {
+    if (opControl != opTcontrol || opCtarget != opTtarget) {
       addToDag(dag, &it);
       continue;
     }
 
-    if (control == opCcontrol && target == opCtarget) {
+    if (control == opControl && target == opCtarget) {
       // elimination
       dag.at(control).pop_back();
       dag.at(target).pop_back();
@@ -130,7 +130,7 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
       (*opC)->clearControls();
       it->setGate(I);
       it->clearControls();
-    } else if (control == opCtarget && target == opCcontrol) {
+    } else if (control == opCtarget && target == opControl) {
       dag.at(control).pop_back();
       dag.at(target).pop_back();
 
