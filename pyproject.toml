@@ -85,7 +85,7 @@ ninja.version = ">=1.10"
 build-dir = "build/{wheel_tag}/{build_type}"
 
 # Only build the Python bindings target
-build.targets = ["ir"]
+build.targets = ["ir", "na"]
 
 # Only install the Python package component
 install.components = ["mqt-core_Python"]
