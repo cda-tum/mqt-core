@@ -34,83 +34,99 @@
 #include <vector>
 
 namespace dd {
-// single-target Operations
-template <class Config>
-qc::MatrixDD
-getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
-                       const qc::Controls& controls, const qc::Qubit target,
-                       const bool inverse) {
-  GateMatrix gm;
 
-  const auto type = op->getType();
+inline std::pair<qc::OpType, std::vector<fp>>
+getOperationParameters(const qc::StandardOperation* op, qc::Qubit* target0,
+                       qc::Qubit* target1, bool inverse) {
+  auto type = op->getType();
   const auto& parameter = op->getParameter();
 
   switch (type) {
+  // self-inverse Operations
   case qc::I:
-    gm = I_MAT;
-    break;
   case qc::H:
-    gm = H_MAT;
-    break;
   case qc::X:
-    gm = X_MAT;
-    break;
   case qc::Y:
-    gm = Y_MAT;
-    break;
   case qc::Z:
-    gm = Z_MAT;
-    break;
+  case qc::SWAP:
+  case qc::ECR:
+    return {type, {}};
+  // inverse by using the inverse type
+  case qc::iSWAP:
+  case qc::iSWAPdg:
+  case qc::Peres:
+  case qc::Peresdg:
   case qc::S:
-    gm = inverse ? SDG_MAT : S_MAT;
-    break;
   case qc::Sdg:
-    gm = inverse ? S_MAT : SDG_MAT;
-    break;
   case qc::T:
-    gm = inverse ? TDG_MAT : T_MAT;
-    break;
   case qc::Tdg:
-    gm = inverse ? T_MAT : TDG_MAT;
-    break;
   case qc::V:
-    gm = inverse ? VDG_MAT : V_MAT;
-    break;
   case qc::Vdg:
-    gm = inverse ? V_MAT : VDG_MAT;
-    break;
-  case qc::U:
-    gm = inverse ? uMat(-parameter[1U], -parameter[2U], -parameter[0U])
-                 : uMat(parameter[2U], parameter[1U], parameter[0U]);
-    break;
-  case qc::U2:
-    gm = inverse ? u2Mat(-parameter[0U] + PI, -parameter[1U] - PI)
-                 : u2Mat(parameter[1U], parameter[0U]);
-    break;
-  case qc::P:
-    gm = inverse ? pMat(-parameter[0U]) : pMat(parameter[0U]);
-    break;
   case qc::SX:
-    gm = inverse ? SXDG_MAT : SX_MAT;
-    break;
   case qc::SXdg:
-    gm = inverse ? SX_MAT : SXDG_MAT;
-    break;
+    if (inverse) {
+      type = static_cast<qc::OpType>(+type ^ qc::OpTypeInv);
+    }
+    return {type, {}};
+  // inverse by negating the parameter
+  case qc::RXX:
+  case qc::RYY:
+  case qc::RZZ:
+  case qc::RZX:
   case qc::RX:
-    gm = inverse ? rxMat(-parameter[0U]) : rxMat(parameter[0U]);
-    break;
   case qc::RY:
-    gm = inverse ? ryMat(-parameter[0U]) : ryMat(parameter[0U]);
-    break;
   case qc::RZ:
-    gm = inverse ? rzMat(-parameter[0U]) : rzMat(parameter[0U]);
-    break;
+  case qc::P:
+    if (inverse) {
+      return {type, {-parameter[0U]}};
+    }
+    return {type, {parameter[0U]}};
+  // inverse by negating the first of two parameter
+  case qc::XXminusYY:
+  case qc::XXplusYY:
+    if (inverse) {
+      return {type, {-parameter[0U], parameter[1U]}};
+    }
+    return {type, {parameter[0U], parameter[1U]}};
+
+  case qc::DCX:
+    if (inverse) {
+      if (target0 == nullptr || target1 == nullptr) {
+        throw qc::QFRException("Invalid target qubits for DCX");
+      }
+
+      // DCX is not self-inverse, but the inverse is just swapping the targets
+      std::swap(*target0, *target1);
+    }
+    return {type, {}};
+
+  case qc::U:
+    if (inverse) {
+      return {type, {-parameter[1U], -parameter[2U], -parameter[0U]}};
+    }
+
+    return {type, {parameter[2U], parameter[1U], parameter[0U]}};
+  case qc::U2:
+    if (inverse) {
+      return {type, {-parameter[1U] + PI, -parameter[1U] - PI}};
+    }
+    return {type, {parameter[1U], parameter[1U]}};
   default:
     std::ostringstream oss{};
-    oss << "DD for gate" << op->getName() << " not available!";
+    oss << "DD for gate " << op->getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
-  return dd.makeGateDD(gm, controls, target);
+}
+
+// single-target Operations
+template <class Config>
+qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
+                                    Package<Config>& dd,
+                                    const qc::Controls& controls,
+                                    qc::Qubit target, const bool inverse) {
+  auto [type, params] = getOperationParameters(op, &target, nullptr, inverse);
+
+  return dd.makeGateDD(opToSingleGateMatrix(type, params), controls, target);
 }
 
 // two-target Operations
@@ -119,64 +135,10 @@ qc::MatrixDD
 getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
                        const qc::Controls& controls, qc::Qubit target0,
                        qc::Qubit target1, const bool inverse) {
-  const auto type = op->getType();
-  const auto& parameter = op->getParameter();
+  auto [type, params] = getOperationParameters(op, &target0, &target1, inverse);
 
-  if (type == qc::DCX && inverse) {
-    // DCX is not self-inverse, but the inverse is just swapping the targets
-    std::swap(target0, target1);
-  }
-
-  TwoQubitGateMatrix gm;
-  switch (type) {
-  case qc::SWAP:
-    gm = SWAP_MAT;
-    break;
-  case qc::iSWAP:
-    gm = inverse ? ISWAPDG_MAT : ISWAP_MAT;
-    break;
-  case qc::iSWAPdg:
-    gm = inverse ? ISWAP_MAT : ISWAPDG_MAT;
-    break;
-  case qc::Peres:
-    gm = inverse ? PERESDG_MAT : PERES_MAT;
-    break;
-  case qc::Peresdg:
-    gm = inverse ? PERES_MAT : PERESDG_MAT;
-    break;
-  case qc::DCX:
-    gm = DCX_MAT;
-    break;
-  case qc::ECR:
-    gm = ECR_MAT;
-    break;
-  case qc::RXX:
-    gm = inverse ? rxxMat(-parameter[0U]) : rxxMat(parameter[0U]);
-    break;
-  case qc::RYY:
-    gm = inverse ? ryyMat(-parameter[0U]) : ryyMat(parameter[0U]);
-    break;
-  case qc::RZZ:
-    gm = inverse ? rzzMat(-parameter[0U]) : rzzMat(parameter[0U]);
-    break;
-  case qc::RZX:
-    gm = inverse ? rzxMat(-parameter[0U]) : rzxMat(parameter[0U]);
-    break;
-  case qc::XXminusYY:
-    gm = inverse ? xxMinusYYMat(-parameter[0U], parameter[1U])
-                 : xxMinusYYMat(parameter[0U], parameter[1U]);
-    break;
-  case qc::XXplusYY:
-    gm = inverse ? xxPlusYYMat(-parameter[0U], parameter[1U])
-                 : xxPlusYYMat(parameter[0U], parameter[1U]);
-    break;
-  default:
-    std::ostringstream oss{};
-    oss << "DD for gate " << op->getName() << " not available!";
-    throw qc::QFRException(oss.str());
-  }
-
-  return dd.makeTwoQubitGateDD(gm, controls, target0, target1);
+  return dd.makeTwoQubitGateDD(opToTwoQubitGateMatrix(type, params), controls,
+                               target0, target1);
 }
 
 // The methods with a permutation parameter apply these Operations according to
@@ -392,7 +354,8 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD = dd.makeTwoQubitGateDD(SWAP_MAT, from.at(i), from.at(j));
+    const auto swapDD = dd.makeTwoQubitGateDD(opToTwoQubitGateMatrix(qc::SWAP),
+                                              from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
       on = dd.multiply(swapDD, on);
     } else {
