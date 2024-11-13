@@ -9,173 +9,46 @@
 
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 namespace qc {
-// Natively supported operations of the QFR library
-enum OpType : std::uint8_t {
-  None,
-  // Standard Operations
-  GPhase,
-  I,
-  Barrier,
-  H,
-  X,
-  Y,
-  Z,
-  S,
-  Sdg,
-  T,
-  Tdg,
-  V,
-  Vdg,
-  U,
-  U2,
-  P,
-  SX,
-  SXdg,
-  RX,
-  RY,
-  RZ,
-  SWAP,
-  iSWAP,   // NOLINT (readability-identifier-naming)
-  iSWAPdg, // NOLINT (readability-identifier-naming)
-  Peres,
-  Peresdg,
-  DCX,
-  ECR,
-  RXX,
-  RYY,
-  RZZ,
-  RZX,
-  XXminusYY,
-  XXplusYY,
-  // Compound Operation
-  Compound,
-  // Non Unitary Operations
-  Measure,
-  Reset,
-  Teleportation,
-  // Classically-controlled Operation
-  ClassicControlled,
-  // Noise operations
-  ATrue,
-  AFalse,
-  MultiATrue,
-  MultiAFalse,
-  // Neutral atom shuttling operations
-  Move,
-  AodActivate,
-  AodDeactivate,
-  AodMove,
-  // Number of OpTypes (needs to be last in the enum)
-  OpCount,
+
+enum OpTypeFlags : uint8_t {
+  OpTypeNone = 0b00,
+  OpTypeInv = 0b01,
+  OpTypeDiag = 0b10,
 };
 
-/// Enumeration of diagonal gates
-static constexpr std::array<OpType, 10> DIAGONAL_GATES = {
-    Barrier, I, Z, S, Sdg, T, Tdg, P, RZ, RZZ};
+constexpr static unsigned NUM_OP_TYPE_FLAG_BITS = 2;
+
+// Natively supported operations of the QFR library
+enum OpType : std::uint8_t {
+#define HANDLE_OP_TYPE(N, id, flags, repr)                                     \
+  id = ((N) << (NUM_OP_TYPE_FLAG_BITS)) | (flags),
+#define LAST_OP_TYPE(N) OpTypeEnd = (N) << (NUM_OP_TYPE_FLAG_BITS),
+#include "OpType.inc"
+#undef HANDLE_OP_TYPE
+#undef LAST_OP_TYPE
+};
 
 inline std::string toString(const OpType& opType) {
-  switch (opType) {
-  case None:
-    return "none";
-  case GPhase:
-    return "gphase";
-  case I:
-    return "i";
-  case H:
-    return "h";
-  case X:
-    return "x";
-  case Y:
-    return "y";
-  case Z:
-    return "z";
-  case S:
-    return "s";
-  case Sdg:
-    return "sdg";
-  case T:
-    return "t";
-  case Tdg:
-    return "tdg";
-  case V:
-    return "v";
-  case Vdg:
-    return "vdg";
-  case U:
-    return "u";
-  case U2:
-    return "u2";
-  case P:
-    return "p";
-  case SX:
-    return "sx";
-  case SXdg:
-    return "sxdg";
-  case RX:
-    return "rx";
-  case RY:
-    return "ry";
-  case RZ:
-    return "rz";
-  case SWAP:
-    return "swap";
-  case iSWAP:
-    return "iswap";
-  case iSWAPdg:
-    return "iswapdg";
-  case Peres:
-    return "peres";
-  case Peresdg:
-    return "peresdg";
-  case DCX:
-    return "dcx";
-  case ECR:
-    return "ecr";
-  case RXX:
-    return "rxx";
-  case RYY:
-    return "ryy";
-  case RZZ:
-    return "rzz";
-  case RZX:
-    return "rzx";
-  case XXminusYY:
-    return "xx_minus_yy";
-  case XXplusYY:
-    return "xx_plus_yy";
-  case Compound:
-    return "compound";
-  case Measure:
-    return "measure";
-  case Reset:
-    return "reset";
-  case Barrier:
-    return "barrier";
-  case Teleportation:
-    return "teleportation";
-  case ClassicControlled:
-    return "classic_controlled";
-  case Move:
-    return "move";
-  case AodActivate:
-    return "aod_activate";
-  case AodDeactivate:
-    return "aod_deactivate";
-  case AodMove:
-    return "aod_move";
-  // GCOV_EXCL_START
-  default:
-    throw std::invalid_argument("Invalid OpType!");
-    // GCOV_EXCL_STOP
+  static const std::unordered_map<OpType, std::string_view> OP_NAMES{
+#define HANDLE_OP_TYPE(N, id, flags, repr) {id, {repr}},
+#define LAST_OP_TYPE(N)
+#include "OpType.inc"
+#undef HANDLE_OP_TYPE
+#undef LAST_OP_TYPE
+  };
+
+  if (const auto it = OP_NAMES.find(opType); it != OP_NAMES.end()) {
+    return std::string(it->second);
   }
+  throw std::invalid_argument("Invalid OpType!");
 }
 
 /**
@@ -216,7 +89,7 @@ inline std::string shortName(const OpType& opType) {
   }
 }
 
-[[nodiscard]] inline bool isTwoQubitGate(const OpType& opType) {
+[[nodiscard]] constexpr bool isTwoQubitGate(const OpType& opType) {
   switch (opType) {
   case SWAP:
   case iSWAP:
@@ -237,8 +110,9 @@ inline std::string shortName(const OpType& opType) {
   }
 }
 
-[[nodiscard]] inline auto isSingleQubitGate(const qc::OpType& type) {
+[[nodiscard]] constexpr bool isSingleQubitGate(const qc::OpType& type) {
   switch (type) {
+  case I:
   case U:
   case U2:
   case P:
