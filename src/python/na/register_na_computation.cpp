@@ -20,4 +20,7 @@ void registerNAComputation(py::module& m) {
   qc.def("__str__",
          [](const na::NAComputation& circ) { return circ.toString(); });
 }
+
+PYBIND11_MODULE(na, m, py::mod_gil_not_used()) { registerNAComputation(m); }
+
 } // namespace mqt
