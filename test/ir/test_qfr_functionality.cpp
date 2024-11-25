@@ -1154,3 +1154,8 @@ TEST_F(QFRFunctionality, emptyPermutation) {
   EXPECT_EQ(perm.maxKey(), 0U);
   EXPECT_EQ(perm.maxValue(), 0U);
 }
+
+TEST_F(QFRFunctionality, NoRegisterOnEmptyCircuit) {
+  const qc::QuantumComputation qc(0U);
+  EXPECT_TRUE(qc.getQregs().empty());
+}
