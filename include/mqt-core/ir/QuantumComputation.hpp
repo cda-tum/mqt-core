@@ -216,7 +216,9 @@ public:
   explicit QuantumComputation(const std::size_t nq, const std::size_t nc = 0U,
                               const std::size_t s = 0)
       : seed(s) {
-    addQubitRegister(nq);
+    if (nq > 0) {
+      addQubitRegister(nq);
+    }
     if (nc > 0) {
       addClassicalRegister(nc);
     }
