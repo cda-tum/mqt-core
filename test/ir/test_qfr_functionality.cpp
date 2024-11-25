@@ -1156,6 +1156,10 @@ TEST_F(QFRFunctionality, emptyPermutation) {
 }
 
 TEST_F(QFRFunctionality, NoRegisterOnEmptyCircuit) {
-  const qc::QuantumComputation qc(0U);
-  EXPECT_TRUE(qc.getQregs().empty());
+  // This is a regression test. Previously, the following code would throw an
+  // exception because even zero-qubit circuits had an empty register named "q".
+  qc::QuantumComputation qc(0U);
+  qc.addQubitRegister(1U, "p");
+  EXPECT_NO_THROW(qc.addQubitRegister(1U, "q"));
+  EXPECT_EQ(qc.getQregs().size(), 2U);
 }
