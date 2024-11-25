@@ -579,3 +579,17 @@ TEST_F(SimplifyTest, equivalenceSymbolic) {
   EXPECT_EQ(d1.getNVertices(), 6);
   EXPECT_TRUE(d1.isIdentity());
 }
+
+TEST_F(SimplifyTest, OnlyDeletedVertices) {
+  // This is a regression test. The following code should not throw an
+  // exception. It previously did because the code did not handle the case where
+  // the diagram only contains deleted vertices.
+  zx::ZXDiagram diag = ::makeIdentityDiagram(1, 0);
+  diag.makeAncilla(0);
+  // The following simplifies the diagram to the empty diagram.
+  zx::fullReduce(diag);
+  EXPECT_EQ(diag.getNEdges(), 0);
+  EXPECT_EQ(diag.getNVertices(), 0);
+  // A subsequent simplification should not throw an exception.
+  EXPECT_NO_THROW(zx::fullReduce(diag););
+}

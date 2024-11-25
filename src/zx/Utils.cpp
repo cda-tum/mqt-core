@@ -59,9 +59,14 @@ Edges::EdgeIterator::EdgeIterator(
     while (v < edges.size() && !vertices[v].has_value()) {
       ++v;
     }
-    currentPos = edges[v].begin();
-    edgesPos = edges.begin() + static_cast<int>(v);
-    checkNextVertex();
+    if (v < edges.size()) {
+      currentPos = edges[v].begin();
+      edgesPos = edges.begin() + static_cast<int>(v);
+      checkNextVertex();
+    } else {
+      currentPos = edges.back().end();
+      edgesPos = edges.end();
+    }
   } else {
     currentPos = edges.back().end();
     edgesPos = edges.end();
