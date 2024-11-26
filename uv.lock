@@ -1141,7 +1141,7 @@ wheels = [
 
 [[package]]
 name = "mqt-core"
-version = "2.7.1.dev39+gbe0f044a.d20241126"
+version = "2.7.1.dev42+g58729673.d20241126"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -1149,9 +1149,7 @@ evaluation = [
     { name = "pandas", extra = ["output-formatting"] },
 ]
 qiskit = [
-    { name = "numpy", version = "2.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "qiskit", extra = ["qasm3-import"] },
-    { name = "scipy", version = "1.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
 ]
 
 [package.dev-dependencies]
@@ -1207,10 +1205,8 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "numpy", marker = "python_full_version >= '3.13' and extra == 'qiskit'", specifier = ">=2.1" },
     { name = "pandas", extras = ["output-formatting"], marker = "extra == 'evaluation'", specifier = ">=2.1.2" },
     { name = "qiskit", extras = ["qasm3-import"], marker = "extra == 'qiskit'", specifier = ">=1.0.0" },
-    { name = "scipy", marker = "python_full_version >= '3.13' and extra == 'qiskit'", specifier = ">=1.14.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -1221,14 +1217,17 @@ build = [
 ]
 dev = [
     { name = "furo", specifier = ">=2023.9.10" },
-    { name = "mqt-core", extras = ["evaluation", "qiskit"], editable = "." },
     { name = "myst-nb", specifier = ">=1.1.0" },
+    { name = "numpy", marker = "python_full_version >= '3.13'", specifier = ">=2.1" },
+    { name = "pandas", extras = ["output-formatting"], specifier = ">=2.1.2" },
     { name = "pybind11", specifier = ">=2.13.5" },
     { name = "pytest", specifier = ">=7.2" },
     { name = "pytest-console-scripts", specifier = ">=1.4" },
     { name = "pytest-cov", specifier = ">=4" },
-    { name = "qiskit", extras = ["visualization"], specifier = ">=1.0" },
+    { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.0.0" },
+    { name = "qiskit", extras = ["qasm3-import", "visualization"], specifier = ">=1.0.0" },
     { name = "scikit-build-core", specifier = ">=0.10.1" },
+    { name = "scipy", marker = "python_full_version >= '3.13'", specifier = ">=1.14.1" },
     { name = "setuptools-scm", specifier = ">=8.1" },
     { name = "sphinx-autoapi", specifier = ">=3" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
@@ -1239,9 +1238,11 @@ dev = [
 ]
 docs = [
     { name = "furo", specifier = ">=2023.9.10" },
-    { name = "mqt-core", extras = ["evaluation", "qiskit"], editable = "." },
     { name = "myst-nb", specifier = ">=1.1.0" },
-    { name = "qiskit", extras = ["visualization"], specifier = ">=1.0" },
+    { name = "numpy", marker = "python_full_version >= '3.13'", specifier = ">=2.1" },
+    { name = "pandas", extras = ["output-formatting"], specifier = ">=2.1.2" },
+    { name = "qiskit", extras = ["qasm3-import", "visualization"], specifier = ">=1.0.0" },
+    { name = "scipy", marker = "python_full_version >= '3.13'", specifier = ">=1.14.1" },
     { name = "setuptools-scm", specifier = ">=8.1" },
     { name = "sphinx-autoapi", specifier = ">=3" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
@@ -1251,10 +1252,13 @@ docs = [
     { name = "sphinxext-opengraph", specifier = ">=0.9" },
 ]
 test = [
-    { name = "mqt-core", extras = ["evaluation", "qiskit"], editable = "." },
+    { name = "numpy", marker = "python_full_version >= '3.13'", specifier = ">=2.1" },
+    { name = "pandas", extras = ["output-formatting"], specifier = ">=2.1.2" },
     { name = "pytest", specifier = ">=7.2" },
     { name = "pytest-console-scripts", specifier = ">=1.4" },
     { name = "pytest-cov", specifier = ">=4" },
+    { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.0.0" },
+    { name = "scipy", marker = "python_full_version >= '3.13'", specifier = ">=1.14.1" },
 ]
 
 [[package]]

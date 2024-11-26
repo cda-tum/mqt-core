@@ -48,26 +48,22 @@ def _run_tests(
     if shutil.which("ninja") is None:
         session.install("ninja")
 
+    # install build and test dependencies on top of the existing environment
     session.run(
         "uv",
         "sync",
-        "--frozen",  # do not update lockfile
-        "--no-dev",  # do not auto-install dev dependencies
-        "--group",
-        "build",  # explicitly install build dependencies
-        "--no-install-project",  # do not install the project
-        "--inexact",  # do not wipe existing environment
+        "--inexact",
+        "--only-group",
+        "build",
+        "--only-group",
+        "test",
         *install_args,
         env=env,
     )
     session.run(
         "uv",
         "run",
-        "--frozen",  # do not update lockfile
         "--no-dev",  # do not auto-install dev dependencies
-        "--group",
-        "test",  # explicitly install test dependencies
-        "--all-extras",  # install all extras
         "--no-build-isolation-package",
         "mqt-core",  # build the project without isolation
         *install_args,
@@ -108,15 +104,15 @@ def docs(session: nox.Session) -> None:
         session.install("sphinx-autobuild")
 
     env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
+    # install build and docs dependencies on top of the existing environment
     session.run(
         "uv",
         "sync",
-        "--frozen",  # do not update lockfile
-        "--no-dev",  # do not auto-install dev dependencies
-        "--group",
-        "build",  # explicitly install build dependencies
-        "--no-install-project",  # do not install the project
-        "--inexact",  # do not wipe existing environment
+        "--inexact",
+        "--only-group",
+        "build",
+        "--only-group",
+        "docs",
         env=env,
     )
 
@@ -132,11 +128,7 @@ def docs(session: nox.Session) -> None:
     session.run(
         "uv",
         "run",
-        "--frozen",  # do not update lockfile
         "--no-dev",  # do not auto-install dev dependencies
-        "--group",
-        "docs",  # explicitly install docs dependencies
-        "--all-extras",  # install all extras
         "--no-build-isolation-package",
         "mqt-core",  # build the project without isolation
         "sphinx-autobuild" if serve else "sphinx-build",
