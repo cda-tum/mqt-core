@@ -587,7 +587,7 @@ TEST_F(IO, UseQelib1Gate) {
   EXPECT_EQ(op->size(), 9U);
 }
 
-TEST_F(IO, ParametrizedGateDefinition) {
+TEST_F(IO, ParameterizedGateDefinition) {
   *qc = qc::QuantumComputation::fromQASM(
       "qreg q[1];"
       "gate foo(theta, beta) q { rz(theta) q; rx(beta) q; }"
