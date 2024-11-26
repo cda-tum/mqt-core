@@ -73,7 +73,9 @@ class OpType:
     """
     classic_controlled: ClassVar[OpType]
     """
-    A classic controlled operation. It is used to control the execution of an operation based on the value of a classical register.
+    A classic controlled operation.
+
+    It is used to control the execution of an operation based on the value of a classical register.
 
     See Also:
         :meth:`mqt.core.ir.QuantumComputation.classic_controlled`
@@ -153,7 +155,7 @@ class OpType:
         :meth:`mqt.core.ir.QuantumComputation.peres`
     """
     peresdg: ClassVar[OpType]
-    """
+    r"""
     A :math:`\text{Peres}^\dagger` gate.
 
     See Also:

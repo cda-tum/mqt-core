@@ -83,12 +83,14 @@ class Permutation(MutableMapping[int, int]):
 class QuantumComputation(MutableSequence[Operation]):
     """The main class for representing quantum computations within the MQT.
 
-    Acts as mutable sequence of :class:`~mqt.core.ir.operations.Operation` objects, which represent the individual operations in the quantum computation.
+    Acts as mutable sequence of :class:`~mqt.core.ir.operations.Operation` objects,
+    which represent the individual operations in the quantum computation.
 
     Args:
         nq: The number of qubits in the quantum computation.
         nc: The number of classical bits in the quantum computation.
-        filename: The filename of the file to load the quantum computation from. Supported formats are OpenQASM2, OpenQASM3, Real, GRCS, TFC, QC.
+        filename: The filename of the file to load the quantum computation from.
+                  Supported formats are OpenQASM2, OpenQASM3, Real, GRCS, TFC, QC.
     """
 
     # --------------------------------------------------------------------------
@@ -179,14 +181,16 @@ class QuantumComputation(MutableSequence[Operation]):
         """Return the depth of the quantum computation."""
 
     def invert(self) -> None:
-        """Invert the quantum computation (in-place) by inverting each operation and reversing the order of the operations."""
+        """Invert the quantum computation in-place by inverting each operation and reversing the order of operations."""
 
     def to_operation(self) -> Operation:
         """Convert the quantum computation to a single operation.
 
-        This gives ownership of the operations to the resulting operation, so the quantum computation will be empty after this operation.
+        This gives ownership of the operations to the resulting operation,
+        so the quantum computation will be empty after this operation.
 
-        When the quantum computation contains more than one operation, the resulting operation is a :class:`~mqt.core.ir.operations.CompoundOperation`.
+        When the quantum computation contains more than one operation,
+        the resulting operation is a :class:`~mqt.core.ir.operations.CompoundOperation`.
 
         Returns:
             The operation representing the quantum computation.
@@ -955,7 +959,8 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`R_x(\theta)` gate.
 
         .. math::
-            R_x(\theta) = e^{-i\theta X/2} = \cos(\theta/2) I - i \sin(\theta/2) X = \begin{pmatrix} \cos(\theta/2) & -i \sin(\theta/2) \\ -i \sin(\theta/2) & \cos(\theta/2) \end{pmatrix}
+            R_x(\theta) = e^{-i\theta X/2} = \cos(\theta/2) I - i \sin(\theta/2) X
+            = \begin{pmatrix} \cos(\theta/2) & -i \sin(\theta/2) \\ -i \sin(\theta/2) & \cos(\theta/2) \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -990,7 +995,8 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`R_y(\theta)` gate.
 
         .. math::
-            R_y(\theta) = e^{-i\theta Y/2} = \cos(\theta/2) I - i \sin(\theta/2) Y = \begin{pmatrix} \cos(\theta/2) & -\sin(\theta/2) \\ \sin(\theta/2) & \cos(\theta/2) \end{pmatrix}
+            R_y(\theta) = e^{-i\theta Y/2} = \cos(\theta/2) I - i \sin(\theta/2) Y
+            = \begin{pmatrix} \cos(\theta/2) & -\sin(\theta/2) \\ \sin(\theta/2) & \cos(\theta/2) \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -1118,7 +1124,11 @@ class QuantumComputation(MutableSequence[Operation]):
         """
 
     def mcu2(
-        self, phi: float | Expression, lambda_: float | Expression, controls: set[Control | int], target: int
+        self,
+        phi: float | Expression,
+        lambda_: float | Expression,
+        controls: set[Control | int],
+        target: int,
     ) -> None:
         r"""Apply a multi-controlled :math:`U_2(\phi, \lambda)` gate.
 
@@ -1137,7 +1147,8 @@ class QuantumComputation(MutableSequence[Operation]):
 
         .. math::
             U(\theta, \phi, \lambda) =
-            \begin{pmatrix} \cos(\theta/2) & -e^{i\lambda}\sin(\theta/2) \\ e^{i\phi}\sin(\theta/2) & e^{i(\phi + \lambda)}\cos(\theta/2) \end{pmatrix}
+            \begin{pmatrix} \cos(\theta/2) & -e^{i\lambda}\sin(\theta/2) \\
+            e^{i\phi}\sin(\theta/2) & e^{i(\phi + \lambda)}\cos(\theta/2) \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -1262,7 +1273,8 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an ECR (echoed cross-resonance) gate.
 
         .. math::
-            ECR = \frac{1}{\sqrt{2}} \begin{pmatrix} 0 & 0 & 1 & i \\ 0 & 0 & i & 1 \\ 1 & -i & 0 & 0 \\ -i & 1 & 0 & 0 \end{pmatrix}
+            ECR = \frac{1}{\sqrt{2}}
+            \begin{pmatrix} 0 & 0 & 1 & i \\ 0 & 0 & i & 1 \\ 1 & -i & 0 & 0 \\ -i & 1 & 0 & 0 \end{pmatrix}
 
         Args:
             target1: The first target qubit
@@ -1332,7 +1344,8 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`iSWAP^{\dagger}` gate.
 
         .. math::
-            iSWAP^{\dagger} = \begin{pmatrix} 1 & 0 & 0 & 0 \\ 0 & 0 & -i & 0 \\ 0 & -i & 0 & 0 \\ 0 & 0 & 0 & 1 \end{pmatrix}
+            iSWAP^{\dagger} =
+            \begin{pmatrix} 1 & 0 & 0 & 0 \\ 0 & 0 & -i & 0 \\ 0 & -i & 0 & 0 \\ 0 & 0 & 0 & 1 \end{pmatrix}
 
         Args:
             target1: The first target qubit
@@ -1402,7 +1415,8 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply a :math:`Peres^{\dagger}` gate.
 
         .. math::
-            Peres^{\dagger} = \begin{pmatrix} 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \\ 0 & 1 & 0 & 0 \\ 1 & 0 & 0 & 0 \end{pmatrix}
+            Peres^{\dagger} =
+            \begin{pmatrix} 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1 \\ 0 & 1 & 0 & 0 \\ 1 & 0 & 0 & 0 \end{pmatrix}
 
         Args:
             target1: The first target qubit
@@ -1437,7 +1451,11 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`R_{xx}(\theta)` gate.
 
         .. math::
-            R_{xx}(\theta) = e^{-i\theta XX/2} = \cos(\theta/2) I\otimes I - i \sin(\theta/2) X \otimes X = \begin{pmatrix} \cos(\theta/2) & 0 & 0 & -i \sin(\theta/2) \\ 0 & \cos(\theta/2) & -i \sin(\theta/2) & 0 \\ 0 & -i \sin(\theta/2) & \cos(\theta/2) & 0 \\ -i \sin(\theta/2) & 0 & 0 & \cos(\theta/2) \end{pmatrix}
+            R_{xx}(\theta) = e^{-i\theta XX/2} = \cos(\theta/2) I\otimes I - i \sin(\theta/2) X \otimes X
+            = \begin{pmatrix} \cos(\theta/2) & 0 & 0 & -i \sin(\theta/2) \\
+            0 & \cos(\theta/2) & -i \sin(\theta/2) & 0 \\
+            0 & -i \sin(\theta/2) & \cos(\theta/2) & 0 \\
+            -i \sin(\theta/2) & 0 & 0 & \cos(\theta/2) \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -1475,7 +1493,11 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`R_{yy}(\theta)` gate.
 
         .. math::
-            R_{yy}(\theta) = e^{-i\theta YY/2} = \cos(\theta/2) I\otimes I - i \sin(\theta/2) Y \otimes Y = \begin{pmatrix} \cos(\theta/2) & 0 & 0 & i \sin(\theta/2) \\ 0 & \cos(\theta/2) & -i \sin(\theta/2) & 0 \\ 0 & -i \sin(\theta/2) & \cos(\theta/2) & 0 \\ i \sin(\theta/2) & 0 & 0 & \cos(\theta/2) \end{pmatrix}
+            R_{yy}(\theta) = e^{-i\theta YY/2} = \cos(\theta/2) I\otimes I - i \sin(\theta/2) Y \otimes Y
+            = \begin{pmatrix} \cos(\theta/2) & 0 & 0 & i \sin(\theta/2) \\
+            0 & \cos(\theta/2) & -i \sin(\theta/2) & 0 \\
+            0 & -i \sin(\theta/2) & \cos(\theta/2) & 0 \\
+            i \sin(\theta/2) & 0 & 0 & \cos(\theta/2) \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -1513,7 +1535,11 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`R_{zz}(\theta)` gate.
 
         .. math::
-            R_{zz}(\theta) = e^{-i\theta ZZ/2} = \begin{pmatrix} e^{-i\theta/2} & 0 & 0 & 0 \\ 0 & e^{i\theta/2} & 0 & 0 \\ 0 & 0 & e^{i\theta/2} & 0 \\ 0 & 0 & 0 & e^{-i\theta/2} \end{pmatrix}
+            R_{zz}(\theta) = e^{-i\theta ZZ/2} =
+            \begin{pmatrix} e^{-i\theta/2} & 0 & 0 & 0 \\
+            0 & e^{i\theta/2} & 0 & 0 \\
+            0 & 0 & e^{i\theta/2} & 0 \\
+            0 & 0 & 0 & e^{-i\theta/2} \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -1551,7 +1577,11 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`R_{zx}(\theta)` gate.
 
         .. math::
-            R_{zx}(\theta) = e^{-i\theta ZX/2} = \cos(\theta/2) I\otimes I - i \sin(\theta/2) Z \otimes X = \begin{pmatrix} \cos(\theta/2) & -i \sin(\theta/2) & 0 & 0 \\ -i \sin(\theta/2) & \cos(\theta/2) & 0 & 0 \\ 0 & 0 & \cos(\theta/2) & i \sin(\theta/2) \\ 0 & 0 & i \sin(\theta/2) & \cos(\theta/2) \end{pmatrix}
+            R_{zx}(\theta) = e^{-i\theta ZX/2} = \cos(\theta/2) I\otimes I - i \sin(\theta/2) Z \otimes X =
+            \begin{pmatrix} \cos(\theta/2) & -i \sin(\theta/2) & 0 & 0 \\
+            -i \sin(\theta/2) & \cos(\theta/2) & 0 & 0 \\
+            0 & 0 & \cos(\theta/2) & i \sin(\theta/2) \\
+            0 & 0 & i \sin(\theta/2) & \cos(\theta/2) \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -1589,8 +1619,12 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`R_{XX - YY}(\theta, \beta)` gate.
 
         .. math::
-            R_{XX - YY}(\theta, \beta) = R_{z_2}(\beta) \cdot e^{-i\frac{\theta}{2} \frac{XX-YY}{2}} \cdot R_{z_2}(-\beta) =
-            \begin{pmatrix} \cos(\theta/2) & 0 & 0 & -i \sin(\theta/2) e^{-i\beta} \\ 0 & 1 & 0 & 0 \\ 0 & 0 & 1 & 0 \\ -i \sin(\theta/2) e^{i\beta} & 0 & 0 & \cos(\theta/2) \end{pmatrix}
+            R_{XX - YY}(\theta, \beta)
+            = R_{z_2}(\beta) \cdot e^{-i\frac{\theta}{2} \frac{XX-YY}{2}} \cdot R_{z_2}(-\beta)
+            = \begin{pmatrix} \cos(\theta/2) & 0 & 0 & -i \sin(\theta/2) e^{-i\beta} \\
+            0 & 1 & 0 & 0 \\
+            0 & 0 & 1 & 0 \\
+            -i \sin(\theta/2) e^{i\beta} & 0 & 0 & \cos(\theta/2) \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -1645,8 +1679,12 @@ class QuantumComputation(MutableSequence[Operation]):
         r"""Apply an :math:`R_{XX + YY}(\theta, \beta)` gate.
 
         .. math::
-            R_{XX + YY}(\theta, \beta) = R_{z_1}(\beta) \cdot e^{-i\frac{\theta}{2} \frac{XX+YY}{2}} \cdot R_{z_1}(-\beta) =
-            \begin{pmatrix} 1 & 0 & 0 & 0 \\ 0 & \cos(\theta/2) & -i \sin(\theta/2) e^{-i\beta} & 0 \\ 0 & -i \sin(\theta/2) e^{i\beta} & \cos(\theta/2) & 0 \\ 0 & 0 & 0 & 1 \end{pmatrix}
+            R_{XX + YY}(\theta, \beta)
+            = R_{z_1}(\beta) \cdot e^{-i\frac{\theta}{2} \frac{XX+YY}{2}} \cdot R_{z_1}(-\beta)
+            = \begin{pmatrix} 1 & 0 & 0 & 0 \\
+            0 & \cos(\theta/2) & -i \sin(\theta/2) e^{-i\beta} & 0 \\
+            0 & -i \sin(\theta/2) e^{i\beta} & \cos(\theta/2) & 0 \\
+            0 & 0 & 0 & 1 \end{pmatrix}
 
         Args:
             theta: The rotation angle
@@ -1736,7 +1774,7 @@ class QuantumComputation(MutableSequence[Operation]):
             cbits: The classical bits to store the results
         """
 
-    def measure_all(self, add_bits: bool = True) -> None:
+    def measure_all(self, *, add_bits: bool = True) -> None:
         """Measure all qubits and store the results in classical bits.
 
         Details:

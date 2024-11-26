@@ -60,7 +60,11 @@ def test_post_processing() -> None:
 
 
 def test_aggregate() -> None:
-    """Test the data aggregation method."""
+    """Test the data aggregation method.
+
+    Raises:
+        AssertionError: If the test fails.
+    """
     try:
         df_all = __aggregate(path_base, path_feature)
         lookups = df_all[df_all["metric"] == "lookups"]
@@ -138,7 +142,7 @@ def test_cli_with_num_qubits_specified_without_algorithm(script_runner: ScriptRu
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters."""
+    """Testing the CLI functionality with default parameters."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
         "./test/python/results_baseline.json",
@@ -154,7 +158,10 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters, except that factor is set to 0.3 and dd details should be shown."""
+    """Testing the CLI functionality with default parameters, except that factor is set to 0.3.
+
+    DD details should be shown.
+    """
     ret = script_runner.run([
         "mqt-core-dd-compare",
         "./test/python/results_baseline.json",
@@ -172,7 +179,7 @@ def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters, except that factor is set to 0.2 and only_changed is set to true."""
+    """Testing the CLI functionality with factor set to 0.2 and only_changed set."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
         "./test/python/results_baseline.json",
@@ -188,7 +195,10 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with factor=0.1 per default, but both only_changed and no_split are set to true, and dd details should be shown."""
+    """Testing the CLI functionality with factor=0.1 per default, but both only_changed and no_split are set to true.
+
+    DD details should be shown.
+    """
     ret = script_runner.run([
         "mqt-core-dd-compare",
         "./test/python/results_baseline.json",
@@ -207,7 +217,10 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters, except for no_split set to true, dd details should be shown and the output tables should only show benchmarks from the Functionality task."""
+    """Testing the CLI functionality with default parameters, except for no_split set to true.
+
+    DD details should be shown and the output tables should only show benchmarks from the Functionality task.
+    """
     ret = script_runner.run([
         "mqt-core-dd-compare",
         "./test/python/results_baseline.json",
@@ -226,7 +239,10 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with sort set with "algorithm" and no_split set to true. DD details should be shown and the output tables should only show benchmarks from the BV algorithm with 1024 qubits."""
+    """Testing the CLI functionality with sort set with "algorithm" and no_split set to true.
+
+    DD details should be shown and the output tables should only show benchmarks from the BV algorithm with 1024 qubits.
+    """
     ret = script_runner.run([
         "mqt-core-dd-compare",
         "./test/python/results_baseline.json",

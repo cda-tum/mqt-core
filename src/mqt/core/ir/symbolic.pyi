@@ -8,7 +8,8 @@ class Variable:
         name: The name of the variable.
 
     Note:
-        Variables are uniquely identified by their name, so if a variable with the same name already exists, the existing variable will be returned.
+        Variables are uniquely identified by their name, so if a variable with the same name already exists,
+        the existing variable will be returned.
     """
 
     def __eq__(self, arg0: object) -> bool: ...

@@ -341,7 +341,11 @@ def test_final_layout_without_permutation() -> None:
 # test fixture for the backend using GenericBackendV2
 @pytest.fixture
 def backend() -> GenericBackendV2:
-    """Fixture for the backend using GenericBackendV2."""
+    """Fixture for the backend using GenericBackendV2.
+
+    Returns:
+        A generic five-qubit backend to be used for compilation.
+    """
     return GenericBackendV2(
         num_qubits=5,
         basis_gates=["id", "rz", "sx", "x", "cx", "reset"],

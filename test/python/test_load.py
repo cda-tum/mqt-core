@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import locale
 import sys
 from pathlib import Path
 
@@ -31,7 +30,7 @@ def test_loading_quantum_computation() -> None:
 def test_loading_file() -> None:
     """Test whether importing a simple QASM file works."""
     qasm = "qreg q[2];\ncreg c[2];\nh q[0];\ncx q[0], q[1];\nmeasure q -> c;\n"
-    with Path("test.qasm").open("w", encoding=locale.getpreferredencoding(False)) as f:
+    with Path("test.qasm").open("w", encoding="utf-8") as f:
         f.write(qasm)
 
     # load the file
@@ -52,7 +51,7 @@ def test_loading_file_from_path() -> None:
     """Test whether importing a simple QASM file works."""
     qasm = "qreg q[2];\ncreg c[2];\nh q[0];\ncx q[0], q[1];\nmeasure q -> c;\n"
     path = Path("test.qasm")
-    with path.open("w", encoding=locale.getpreferredencoding(False)) as f:
+    with path.open("w", encoding="utf-8") as f:
         f.write(qasm)
 
     # load the file
@@ -70,7 +69,11 @@ def test_loading_file_from_path() -> None:
 
 
 def test_loading_nonexistent_file() -> None:
-    """Test whether trying to load a non-existent file raises an error."""
+    """Test whether trying to load a non-existent file raises an error.
+
+    Raises:
+        AssertionError: If no error is raised.
+    """
     try:
         load("nonexistent.qasm")
     except FileNotFoundError:
