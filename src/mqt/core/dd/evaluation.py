@@ -31,7 +31,11 @@ class _BColors:
 
 
 def __flatten_dict(d: dict[Any, Any], parent_key: str = "", sep: str = ".") -> dict[str, Any]:
-    """Flatten a nested dictionary. Every value only has one key which is the path to the value."""
+    """Flatten a nested dictionary. Every value only has one key which is the path to the value.
+
+    Returns:
+        A dictionary with the flattened keys and the values.
+    """
     items = {}
     for key, value in d.items():
         new_key = f"{parent_key}{sep}{key}" if parent_key else key
@@ -53,7 +57,14 @@ class _BenchmarkDict(TypedDict, total=False):
 
 
 def __post_processing(key: str) -> _BenchmarkDict:
-    """Postprocess the key of a flattened dictionary to get the metrics for the DataFrame columns."""
+    """Postprocess the key of a flattened dictionary to get the metrics for the DataFrame columns.
+
+    Returns:
+        A dictionary containing the algorithm, task, number of qubits, component, and metric.
+
+    Raises:
+        ValueError: If the key is missing the algorithm, task, number of qubits, or metric.
+    """
     metrics_divided = key.split(".")
     result_metrics = _BenchmarkDict()
     if len(metrics_divided) < 4:
@@ -101,7 +112,11 @@ class _DataDict(TypedDict):
 
 
 def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | PathLike[str]) -> pd.DataFrame:
-    """Aggregate the data from the baseline and feature json files into one DataFrame for visualization."""
+    """Aggregate the data from the baseline and feature json files into one DataFrame for visualization.
+
+    Returns:
+        A DataFrame containing the aggregated data.
+    """
     base_path = Path(baseline_filepath)
     with base_path.open(mode="r", encoding="utf-8") as f:
         d = json.load(f)
@@ -160,7 +175,7 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
                 n=result_metrics["n"],
                 component=result_metrics["component"],
                 metric=result_metrics["metric"],
-            )
+            ),
         )
 
     df_all = pd.DataFrame(df_all_entries)
@@ -170,7 +185,12 @@ def __aggregate(baseline_filepath: str | PathLike[str], feature_filepath: str | 
 
 
 def __print_results(
-    df: pd.DataFrame, sort_indices: list[str], factor: float, no_split: bool, only_changed: bool
+    *,
+    df: pd.DataFrame,
+    sort_indices: list[str],
+    factor: float,
+    no_split: bool,
+    only_changed: bool,
 ) -> None:
     """Print the results in a nice table."""
     # after significantly smaller than before
@@ -202,6 +222,7 @@ def __print_results(
 def compare(
     baseline_filepath: str | PathLike[str],
     feature_filepath: str | PathLike[str],
+    *,
     factor: float = 0.1,
     sort: str = "ratio",
     dd: bool = False,
@@ -220,15 +241,14 @@ def compare(
         sort: Sort the table by this column. Valid options are "ratio" and "algorithm".
         dd: Whether to show the detailed DD benchmark results.
         only_changed: Whether to only show results that changed significantly.
-        no_split: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+        no_split: Whether to merge all results together in one table or to separate the results
+                  into benchmarks that improved, stayed the same, or worsened.
         algorithm: Only show results for this algorithm.
         task: Only show results for this task.
         num_qubits: Only show results for this number of qubits. Can only be used if algorithm is also specified.
 
     Raises:
         ValueError: If factor is negative or sort is invalid or if num_qubits is specified while algorithm is not.
-        FileNotFoundError: If the baseline_filepath argument or the feature_filepath argument does not point to a valid file.
-        json.JSONDecodeError: If the baseline_filepath argument or the feature_filepath argument points to a file that is not a valid JSON file.
     """
     if factor < 0:
         msg = "Factor must be positive!"
@@ -253,7 +273,9 @@ def compare(
     df_runtime = df_runtime.drop(columns=["component", "metric"])
     print("\nRuntime:")
     sort_indices = ["ratio"] if sort == "ratio" else ["algo", "task", "n"]
-    __print_results(df_runtime, sort_indices, factor, no_split, only_changed)
+    __print_results(
+        df=df_runtime, sort_indices=sort_indices, factor=factor, no_split=no_split, only_changed=only_changed
+    )
 
     if not dd:
         return
@@ -261,7 +283,7 @@ def compare(
     print("\nDD Package details:")
     df_dd = df_all[df_all["metric"] != "runtime"]
     sort_indices = ["ratio"] if sort == "ratio" else ["algo", "task", "n", "component", "metric"]
-    __print_results(df_dd, sort_indices, factor, no_split, only_changed)
+    __print_results(df=df_dd, sort_indices=sort_indices, factor=factor, no_split=no_split, only_changed=only_changed)
 
 
 def main() -> None:
@@ -279,18 +301,23 @@ def main() -> None:
     - :code:`--sort`: Sort the table by this column. Valid options are 'ratio' and 'algorithm'.
     - :code:`--dd`: Whether to show the detailed DD benchmark results.
     - :code:`--only_changed`: Whether to only show results that changed significantly.
-    - :code:`--no_split`: Whether to merge all results together in one table or to separate the results into benchmarks that improved, stayed the same, or worsened.
+    - :code:`--no_split`: Whether to merge all results together in one table or to separate the results into benchmarks
+      that improved, stayed the same, or worsened.
     - :code:`--algorithm <str>`: Only show results for this algorithm.
     - :code:`--task <str>`: Only show results for this task.
-    - :code:`--num_qubits <int>`: Only show results for this number of qubits. Can only be used if algorithm is also specified.
+    - :code:`--num_qubits <int>`: Only show results for this number of qubits.
+      Can only be used if algorithm is also specified.
     """
     parser = argparse.ArgumentParser(
-        description="Compare the results of two benchmarking runs from the generated json files."
+        description="Compare the results of two benchmarking runs from the generated json files.",
     )
     parser.add_argument("baseline_filepath", type=str, help="Path to the baseline json file.")
     parser.add_argument("feature_filepath", type=str, help="Path to the feature json file.")
     parser.add_argument(
-        "--factor", type=float, default=0.1, help="How much a result has to change to be considered significant."
+        "--factor",
+        type=float,
+        default=0.1,
+        help="How much a result has to change to be considered significant.",
     )
     parser.add_argument(
         "--sort",
@@ -300,7 +327,9 @@ def main() -> None:
     )
     parser.add_argument("--dd", action="store_true", help="Whether to show the detailed DD benchmark results.")
     parser.add_argument(
-        "--only_changed", action="store_true", help="Whether to only show results that changed significantly."
+        "--only_changed",
+        action="store_true",
+        help="Whether to only show results that changed significantly.",
     )
     parser.add_argument(
         "--no_split",
@@ -320,12 +349,12 @@ def main() -> None:
     compare(
         args.baseline_filepath,
         args.feature_filepath,
-        args.factor,
-        args.sort,
-        args.dd,
-        args.only_changed,
-        args.no_split,
-        args.algorithm,
-        args.task,
-        args.num_qubits,
+        factor=args.factor,
+        sort=args.sort,
+        dd=args.dd,
+        only_changed=args.only_changed,
+        no_split=args.no_split,
+        algorithm=args.algorithm,
+        task=args.task,
+        num_qubits=args.num_qubits,
     )

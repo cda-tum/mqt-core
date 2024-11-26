@@ -383,7 +383,7 @@ void registerQuantumComputation(py::module& m) {
                            const std::vector<qc::Bit>&>(
              &qc::QuantumComputation::measure),
          "qubits"_a, "cbits"_a);
-  qc.def("measure_all", &qc::QuantumComputation::measureAll,
+  qc.def("measure_all", &qc::QuantumComputation::measureAll, py::kw_only(),
          "add_bits"_a = true);
 
   qc.def("reset", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::reset),
