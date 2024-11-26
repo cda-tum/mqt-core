@@ -216,13 +216,10 @@ extend-select = [
     "YTT",         # flake8-2020
 ]
 ignore = [
-    "ANN101",  # Missing type annotation for `self` in method
-    "ANN102",  # Missing type annotation for `cls` in classmethod
     "ISC001",  # Conflicts with formatter
     "PLR09",   # Too many <...>
     "PLR2004", # Magic value used in comparison
     "PLC0415", # Import should be at top of file
-    "PT004",   # Incorrect, just usefixtures instead.
     "S101",    # Use of assert detected
     "S404",    # `subprocess` module is possibly insecure
 ]
@@ -235,8 +232,6 @@ isort.required-imports = ["from __future__ import annotations"]
 "typing.Mapping".msg = "Use collections.abc.Mapping instead."
 "typing.Sequence".msg = "Use collections.abc.Sequence instead."
 "typing.Set".msg = "Use collections.abc.Set instead."
-"typing.Self".msg = "Use mqt.core._compat.typing.Self instead."
-"typing_extensions.Self".msg = "Use mqt.core._compat.typing.Self instead."
 "typing.assert_never".msg = "Use mqt.core._compat.typing.assert_never instead."
 
 [tool.ruff.lint.per-file-ignores]

@@ -280,8 +280,8 @@ def _emplace_operation(
     raise NotImplementedError(msg)
 
 
-_SUM_REGEX = re.compile("[+|-]?[^+-]+")
-_PROD_REGEX = re.compile("[*/]?[^*/]+")
+_SUM_REGEX = re.compile(r"[+|-]?[^+-]+")
+_PROD_REGEX = re.compile(r"[*/]?[^*/]+")
 
 
 def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> float | Expression:
