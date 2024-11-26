@@ -89,7 +89,9 @@ def minimums(session: nox.Session) -> None:
         install_args=["--resolution=lowest-direct"],
         run_args=["-Wdefault"],
     )
-    session.run("uv", "pip", "list")
+    env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
+    session.run("uv", "tree", "--frozen", env=env)
+    session.run("uv", "lock", "--refresh", env=env)
 
 
 @nox.session(reuse_venv=True)
