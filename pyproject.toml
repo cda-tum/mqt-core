@@ -39,7 +39,9 @@ evaluation = [
   "pandas[output-formatting]>=2.1.2",
 ]
 qiskit = [
-   "qiskit[qasm3-import]>=1.0.0",
+  "qiskit[qasm3-import]>=1.0.0",
+  "scipy>=1.14.1; python_version >= '3.13'",
+  "numpy>=2.1; python_version >= '3.13'",
 ]
 
 [project.scripts]

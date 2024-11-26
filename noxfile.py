@@ -18,7 +18,7 @@ nox.options.default_venv_backend = "uv"
 
 nox.options.sessions = ["lint", "tests", "minimums"]
 
-PYTHON_ALL_VERSIONS = ["3.9", "3.10", "3.11", "3.12"]
+PYTHON_ALL_VERSIONS = ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
 if os.environ.get("CI", None):
     nox.options.error_on_missing_interpreters = True
