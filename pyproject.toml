@@ -244,7 +244,7 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 # Some of our extra dependencies do not support free-threading yet.
 [[tool.cibuildwheel.overrides]]
-select = "cp3*t-manylinux*"
+select = "cp3*t-*"
 test-groups = []
 test-command = "python -c \"from mqt import core\""
 
