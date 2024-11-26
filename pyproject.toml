@@ -35,28 +35,12 @@ requires-python = ">=3.9"
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["pytest>=7.2", "pytest-console-scripts>=1.4", "mqt.core[qiskit, evaluation]"]
-coverage = ["mqt.core[test]", "pytest-cov>=4"]
 evaluation = [
-    "pandas[output-formatting]>=2.1.2",
-]
-docs = [
-  "furo>=2023.9.10",
-  "mqt.core[qiskit,evaluation]",
-  "myst_nb>=1.1.0",
-  "qiskit[visualization]",
-  "setuptools-scm>=8.1",
-  "sphinx_design>=0.6",
-  "sphinx-autoapi>=3",
-  "sphinx-copybutton>=0.5",
-  "sphinxcontrib-bibtex>=2.4.2",
-  "sphinxcontrib-svg2pdfconverter>=1.2",
-  "sphinxext-opengraph>=0.9",
+  "pandas[output-formatting]>=2.1.2",
 ]
 qiskit = [
    "qiskit[qasm3-import]>=1.0.0",
 ]
-dev = ["mqt.core[coverage, docs]",]
 
 [project.scripts]
 mqt-core-dd-compare = "mqt.core.dd.evaluation:main"
@@ -260,3 +244,37 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 [tool.uv]
 reinstall-package = ["mqt-core"]
+
+[tool.uv.sources]
+mqt-core = { workspace = true }
+
+[dependency-groups]
+build = [
+    "pybind11>=2.13.5",
+    "scikit-build-core>=0.10.1",
+    "setuptools-scm>=8.1",
+]
+docs = [
+    "furo>=2023.9.10",
+    "mqt-core[evaluation,qiskit]",
+    "myst-nb>=1.1.0",
+    "qiskit[visualization]>=1.0",
+    "setuptools-scm>=8.1",
+    "sphinx-autoapi>=3",
+    "sphinx-copybutton>=0.5",
+    "sphinx-design>=0.6",
+    "sphinxcontrib-bibtex>=2.4.2",
+    "sphinxcontrib-svg2pdfconverter>=1.2",
+    "sphinxext-opengraph>=0.9",
+]
+test = [
+  "pytest>=7.2",
+  "pytest-console-scripts>=1.4",
+  "pytest-cov>=4",
+  "mqt-core[evaluation,qiskit]",
+]
+dev = [
+  {include-group = "build"},
+  {include-group = "docs"},
+  {include-group = "test"},
+]
