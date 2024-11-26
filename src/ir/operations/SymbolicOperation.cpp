@@ -308,9 +308,9 @@ SymbolicOperation::dumpOpenQASM([[maybe_unused]] std::ostream& of,
                                 bool openQASM3) const {
   if (openQASM3) {
     throw QFRException(
-        "Printing OpenQASM 3.0 parametrized gates is not supported yet!");
+        "Printing OpenQASM 3.0 parameterized gates is not supported yet!");
   }
-  throw QFRException("OpenQASM 2.0 doesn't support parametrized gates!");
+  throw QFRException("OpenQASM 2.0 doesn't support parameterized gates!");
 }
 
 StandardOperation SymbolicOperation::getInstantiatedOperation(
