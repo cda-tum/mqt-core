@@ -42,7 +42,6 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          attestations: true
 
   # Downloads the previously generated artifacts and deploys to PyPI on published releases.
   deploy:
@@ -64,5 +63,3 @@ jobs:
         with:
           subject-path: "dist/*"
       - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          attestations: true
