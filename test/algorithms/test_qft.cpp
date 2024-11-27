@@ -218,7 +218,7 @@ TEST_P(QFT, DynamicSimulation) {
   const std::size_t unique = measurements.size();
 
   nqubits = GetParam();
-  const auto maxUnique = std::min(1UL << nqubits, shots);
+  const auto maxUnique = std::min<std::size_t>(1UL << nqubits, shots);
   const auto ratio =
       static_cast<double>(unique) / static_cast<double>(maxUnique);
 
