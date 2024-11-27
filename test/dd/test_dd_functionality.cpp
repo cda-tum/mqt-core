@@ -533,7 +533,7 @@ TEST_F(DDFunctionality, classicControlledOperationConditions) {
     // measure into the same register to check the result.
     qc.measure(0, 0);
 
-    const auto shots = 16U;
+    constexpr auto shots = 16U;
     const auto hist = dd::sample(qc, shots);
 
     EXPECT_EQ(hist.size(), 1);
@@ -553,4 +553,37 @@ TEST_F(DDFunctionality, vectorKroneckerWithTerminal) {
   const auto zeroState = dd->makeZeroState(1);
   const auto extendedRoot = dd->kronecker(zeroState, root, 0);
   EXPECT_EQ(zeroState, extendedRoot);
+}
+
+TEST_F(DDFunctionality, dynamicCircuitSimulationWithSWAP) {
+  QuantumComputation qc(2, 2);
+  qc.x(0);
+  qc.swap(0, 1);
+  qc.measure(1, 0);
+  qc.classicControlled(qc::X, 0, {0, 1U});
+  qc.measure(0, 1);
+
+  constexpr auto shots = 16U;
+  const auto hist = dd::sample(qc, shots);
+  EXPECT_EQ(hist.size(), 1);
+  const auto& [key, value] = *hist.begin();
+  EXPECT_EQ(value, shots);
+  EXPECT_EQ(key, "11");
+}
+
+TEST_F(DDFunctionality, dynamicCircuitProbabilityVectorExtractionWithSWAP) {
+  QuantumComputation qc(2, 2);
+  qc.x(0);
+  qc.swap(0, 1);
+  qc.measure(1, 0);
+  qc.reset(1);
+  qc.measure(1, 1);
+
+  const auto zeroState = dd->makeZeroState(2);
+  auto probVector = dd::SparsePVec{};
+  extractProbabilityVector(&qc, zeroState, probVector, *dd);
+  EXPECT_EQ(probVector.size(), 1);
+  const auto& [key, value] = *probVector.begin();
+  EXPECT_EQ(value, 1.);
+  EXPECT_EQ(key, 0b01);
 }

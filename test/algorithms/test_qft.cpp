@@ -209,28 +209,28 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
 }
 
-TEST_P(QFT, DynamicSimulation) {
-  // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, true, true); });
-  qc->printStatistics(std::cout);
+TEST_P(QFT, SimulationSampling) {
+  const auto dynamic = {false, true};
+  for (const auto dyn : dynamic) {
+    qc = std::make_unique<qc::QFT>(nqubits, false, dyn);
 
-  // simulate the circuit
-  constexpr std::size_t shots = 8192U;
-  const auto measurements = dd::sample(*qc, shots);
-  const std::size_t unique = measurements.size();
+    // simulate the circuit
+    constexpr std::size_t shots = 8192U;
+    const auto measurements = dd::sample(*qc, shots);
 
-  nqubits = GetParam();
-  const auto maxUnique = std::min<std::size_t>(1ULL << nqubits, shots);
-  const auto ratio =
-      static_cast<double>(unique) / static_cast<double>(maxUnique);
+    const std::size_t unique = measurements.size();
+    const auto maxUnique = std::min<std::size_t>(1ULL << nqubits, shots);
+    const auto ratio =
+        static_cast<double>(unique) / static_cast<double>(maxUnique);
 
-  std::cout << "Unique entries " << unique << " out of " << maxUnique
-            << " for a ratio of: " << ratio << "\n";
+    std::cout << "Unique entries " << unique << " out of " << maxUnique
+              << " for a ratio of: " << ratio << "\n";
 
-  // the number of unique entries should be close to the number of shots
-  EXPECT_GE(ratio, 0.7);
-  dd->garbageCollect(true);
-  // number of complex table entries after clean-up should equal initial
-  // number of entries
-  EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
+    // the number of unique entries should be close to the number of shots
+    EXPECT_GE(ratio, 0.7);
+    dd->garbageCollect(true);
+    // number of complex table entries after clean-up should equal initial
+    // number of entries
+    EXPECT_EQ(dd->cn.realCount(), INITIAL_COMPLEX_COUNT);
+  }
 }
