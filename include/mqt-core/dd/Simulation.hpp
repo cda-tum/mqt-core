@@ -4,10 +4,12 @@
 #include "dd/Operations.hpp"
 #include "dd/Package_fwd.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <cstddef>
 #include <map>
 #include <string>
+#include <utility>
 
 namespace dd {
 using namespace qc;
@@ -15,25 +17,27 @@ using namespace qc;
 template <class Config>
 VectorDD simulate(const QuantumComputation* qc, const VectorDD& in,
                   Package<Config>& dd) {
-  // measurements are currently not supported here
   auto permutation = qc->initialLayout;
   auto e = in;
-
   for (const auto& op : *qc) {
+    // SWAP gates can be executed virtually by changing the permutation
+    if (op->getType() == OpType::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+      continue;
+    }
+
     e = applyUnitaryOperation(op.get(), e, dd, permutation);
   }
-
-  // correct permutation if necessary
   changePermutation(e, permutation, qc->outputPermutation, dd);
   e = dd.reduceGarbage(e, qc->garbage);
-
   return e;
 }
 
 template <class Config>
 std::map<std::string, std::size_t>
-simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
-         std::size_t shots, std::size_t seed = 0U);
+sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
+       std::size_t shots, std::size_t seed = 0U);
 
 /**
  * Sample from the output distribution of a quantum computation

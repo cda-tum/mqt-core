@@ -15,16 +15,17 @@
 #include <map>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace dd {
 template <class Config>
 std::map<std::string, std::size_t>
-simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
-         std::size_t shots, std::size_t seed) {
-  bool isDynamicCircuit = false;
-  bool hasMeasurements = false;
-  bool measurementsLast = true;
+sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
+       std::size_t shots, std::size_t seed) {
+  auto isDynamicCircuit = false;
+  auto hasMeasurements = false;
+  auto measurementsLast = true;
 
   std::mt19937_64 mt{};
   if (seed != 0U) {
@@ -88,6 +89,13 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
         continue;
       }
 
+      // SWAP gates can be executed virtually by changing the permutation
+      if (op->getType() == OpType::SWAP && !op->isControlled()) {
+        const auto& targets = op->getTargets();
+        std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+        continue;
+      }
+
       e = applyUnitaryOperation(op.get(), e, dd, permutation);
     }
 
@@ -143,23 +151,35 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
     auto e = in;
 
     for (const auto& op : *qc) {
+      if (op->isUnitary()) {
+        // SWAP gates can be executed virtually by changing the permutation
+        if (op->getType() == OpType::SWAP && !op->isControlled()) {
+          const auto& targets = op->getTargets();
+          std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+          continue;
+        }
+
+        e = applyUnitaryOperation(op.get(), e, dd, permutation);
+        continue;
+      }
+
       if (op->getType() == Measure) {
-        e = applyMeasurement(op.get(), e, dd, permutation, mt, measurements);
+        e = applyMeasurement(op.get(), e, dd, mt, measurements, permutation);
         continue;
       }
 
       if (op->getType() == Reset) {
-        e = applyReset(op.get(), e, dd, permutation, mt);
+        e = applyReset(op.get(), e, dd, mt, permutation);
         continue;
       }
 
       if (op->isClassicControlledOperation()) {
-        e = applyClassicControlledOperation(op.get(), e, dd, permutation,
-                                            measurements);
+        e = applyClassicControlledOperation(op.get(), e, dd, measurements,
+                                            permutation);
         continue;
       }
 
-      e = applyUnitaryOperation(op.get(), e, dd, permutation);
+      qc::unreachable();
     }
 
     // reduce reference count of measured state
@@ -183,7 +203,7 @@ std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
                                           const std::size_t seed) {
   const auto nqubits = qc.getNqubits();
   Package<> dd(nqubits);
-  return simulate(&qc, dd.makeZeroState(nqubits), dd, shots, seed);
+  return sample(&qc, dd.makeZeroState(nqubits), dd, shots, seed);
 }
 
 template <class Config>
@@ -208,16 +228,28 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
   for (auto it = currentIt; it != qc->end(); ++it) {
     const auto& op = (*it);
 
+    // any standard operation is applied here
+    if (op->isUnitary()) {
+      // SWAP gates can be executed virtually by changing the permutation
+      if (op->getType() == OpType::SWAP && !op->isControlled()) {
+        const auto& targets = op->getTargets();
+        std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+        continue;
+      }
+      state = applyUnitaryOperation(op.get(), state, dd, permutation);
+      continue;
+    }
+
     // check whether a classic controlled operations can be applied
-    if (const auto* classicControlled =
-            dynamic_cast<ClassicControlledOperation*>(op.get());
-        classicControlled != nullptr) {
-      const auto& controlRegister = classicControlled->getControlRegister();
+    if (op->isClassicControlledOperation()) {
+      const auto* classicControlled =
+          dynamic_cast<ClassicControlledOperation*>(op.get());
+      const auto& [regStart, regSize] = classicControlled->getControlRegister();
       const auto& expectedValue = classicControlled->getExpectedValue();
       qc::Bit actualValue = 0U;
       // determine the actual value from measurements
-      for (std::size_t j = 0; j < controlRegister.second; ++j) {
-        if (measurements[controlRegister.first + j] == '1') {
+      for (std::size_t j = 0; j < regSize; ++j) {
+        if (measurements[regStart + j] == '1') {
           actualValue |= 1ULL << j;
         }
       }
@@ -226,6 +258,10 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
       if (actualValue != expectedValue) {
         continue;
       }
+
+      state = applyUnitaryOperation(classicControlled->getOperation(), state,
+                                    dd, permutation);
+      continue;
     }
 
     if (op->getType() == Reset) {
@@ -269,9 +305,9 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
     }
 
     // measurements form splitting points in this extraction scheme
-    if (const auto* measurement =
-            dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-        measurement != nullptr && measurement->getType() == Measure) {
+    if (op->getType() == qc::Measure) {
+      const auto* measurement =
+          dynamic_cast<qc::NonUnitaryOperation*>(op.get());
       const auto& targets = measurement->getTargets();
       const auto& classics = measurement->getClassics();
       if (targets.size() != 1U || classics.size() != 1U) {
@@ -379,21 +415,13 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
       // everything is said and done
       return;
     }
-
-    // any standard operation or classic-controlled operation is applied here
-    auto tmp = dd.multiply(getDD(op.get(), dd, permutation), state);
-    dd.incRef(tmp);
-    dd.decRef(state);
-    state = tmp;
-
-    dd.garbageCollect();
   }
 }
 
 template std::map<std::string, std::size_t>
-simulate<DDPackageConfig>(const QuantumComputation* qc, const VectorDD& in,
-                          Package<DDPackageConfig>& dd, std::size_t shots,
-                          std::size_t seed);
+sample<DDPackageConfig>(const QuantumComputation* qc, const VectorDD& in,
+                        Package<DDPackageConfig>& dd, std::size_t shots,
+                        std::size_t seed);
 template void extractProbabilityVector<DDPackageConfig>(
     const QuantumComputation* qc, const VectorDD& in, SparsePVec& probVector,
     Package<DDPackageConfig>& dd);
