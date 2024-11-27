@@ -569,7 +569,7 @@ public:
     for (; it != controls.end() && it->qubit < target; ++it) {
       for (auto i1 = 0U; i1 < RADIX; ++i1) {
         for (auto i2 = 0U; i2 < RADIX; ++i2) {
-          auto i = i1 * RADIX + i2;
+          const auto i = (i1 * RADIX) + i2;
           if (it->type == qc::Control::Type::Neg) { // neg. control
             edges[0] = em[i];
             edges[3] = (i1 == i2) ? mCachedEdge::one() : mCachedEdge::zero();
@@ -683,19 +683,19 @@ public:
         if (target0 > target1) {
           for (std::size_t i = 0; i < RADIX; ++i) {
             for (std::size_t j = 0; j < RADIX; ++j) {
-              local.at(i * RADIX + j) =
-                  em.at(row * RADIX + i).at(col * RADIX + j);
+              local.at((i * RADIX) + j) =
+                  em.at((row * RADIX) + i).at((col * RADIX) + j);
             }
           }
         } else {
           for (std::size_t i = 0; i < RADIX; ++i) {
             for (std::size_t j = 0; j < RADIX; ++j) {
-              local.at(i * RADIX + j) =
-                  em.at(i * RADIX + row).at(j * RADIX + col);
+              local.at((i * RADIX) + j) =
+                  em.at((i * RADIX) + row).at((j * RADIX) + col);
             }
           }
         }
-        em0.at(row * RADIX + col) =
+        em0.at((row * RADIX) + col) =
             makeDDNode(static_cast<Qubit>(smallerTarget), local);
       }
     }
@@ -999,7 +999,7 @@ private:
   }
 
 public:
-  std::pair<dd::fp, dd::fp>
+  static std::pair<dd::fp, dd::fp>
   determineMeasurementProbabilities(const vEdge& rootEdge, const Qubit index) {
     std::map<const vNode*, fp> measurementProbabilities;
     std::set<const vNode*> visited;
@@ -1442,7 +1442,7 @@ public:
     // conjugate transpose submatrices and rearrange as required
     for (auto i = 0U; i < RADIX; ++i) {
       for (auto j = 0U; j < RADIX; ++j) {
-        e[RADIX * i + j] = conjugateTransposeRec(a.p->e[RADIX * j + i]);
+        e[(RADIX * i) + j] = conjugateTransposeRec(a.p->e[(RADIX * j) + i]);
       }
     }
     // create new top node
@@ -1477,9 +1477,9 @@ public:
   }
 
   dEdge applyOperationToDensity(dEdge& e, const mEdge& operation) {
-    auto tmp0 = conjugateTranspose(operation);
-    auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
-    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, true);
+    const auto tmp0 = conjugateTranspose(operation);
+    const auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
+    const auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, true);
     incRef(tmp2);
     dEdge::alignDensityEdge(e);
     decRef(e);
@@ -1591,10 +1591,10 @@ private:
     std::array<ResultEdge, n> edge{};
     for (auto i = 0U; i < rows; i++) {
       for (auto j = 0U; j < cols; j++) {
-        auto idx = cols * i + j;
+        auto idx = (cols * i) + j;
         edge[idx] = ResultEdge::zero();
         for (auto k = 0U; k < rows; k++) {
-          const auto xIdx = rows * i + k;
+          const auto xIdx = (rows * i) + k;
           LEdge e1{};
           if (x.p != nullptr && x.p->v == var) {
             e1 = x.p->e[xIdx];
@@ -1606,7 +1606,7 @@ private:
             }
           }
 
-          const auto yIdx = j + cols * k;
+          const auto yIdx = j + (cols * k);
           REdge e2{};
           if (y.p != nullptr && y.p->v == var) {
             e2 = y.p->e[yIdx];
@@ -1703,8 +1703,9 @@ public:
     return innerProduct(x, y).mag2();
   }
 
-  fp fidelityOfMeasurementOutcomes(const vEdge& e, const SparsePVec& probs,
-                                   const qc::Permutation& permutation = {}) {
+  static fp
+  fidelityOfMeasurementOutcomes(const vEdge& e, const SparsePVec& probs,
+                                const qc::Permutation& permutation = {}) {
     if (e.w.approximatelyZero()) {
       return 0.;
     }
@@ -1712,11 +1713,9 @@ public:
                                                   e.p->v + 1U);
   }
 
-  fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e,
-                                            const SparsePVec& probs,
-                                            const std::size_t i,
-                                            const qc::Permutation& permutation,
-                                            const std::size_t nQubits) {
+  static fp fidelityOfMeasurementOutcomesRecursive(
+      const vEdge& e, const SparsePVec& probs, const std::size_t i,
+      const qc::Permutation& permutation, const std::size_t nQubits) {
     const auto top = ComplexNumbers::mag(e.w);
     if (e.isTerminal()) {
       auto idx = i;
