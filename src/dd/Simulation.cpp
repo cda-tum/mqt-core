@@ -22,7 +22,7 @@ namespace dd {
 template <class Config>
 std::map<std::string, std::size_t>
 sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
-       std::size_t shots, std::size_t seed) {
+       const std::size_t shots, const std::size_t seed) {
   auto isDynamicCircuit = false;
   auto hasMeasurements = false;
   auto measurementsLast = true;
@@ -184,7 +184,9 @@ sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
 
     std::string shot(qc->getNcbits(), '0');
     for (size_t bit = 0U; bit < qc->getNcbits(); ++bit) {
-      shot[qc->getNcbits() - bit - 1U] = measurements[bit] ? '1' : '0';
+      if (measurements[bit]) {
+        shot[qc->getNcbits() - bit - 1U] = '1';
+      }
     }
     counts[shot]++;
   }
