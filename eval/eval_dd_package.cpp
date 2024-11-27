@@ -21,7 +21,6 @@
 #include <fstream>
 #include <ios>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -44,7 +43,7 @@ struct Experiment {
   [[nodiscard]] virtual bool success() const noexcept { return false; }
 };
 
-struct SimulationExperiment : public Experiment {
+struct SimulationExperiment final : public Experiment {
   SimulationExperiment() = default;
   qc::VectorDD sim{};
 
@@ -53,7 +52,7 @@ struct SimulationExperiment : public Experiment {
   }
 };
 
-struct FunctionalityConstructionExperiment : public Experiment {
+struct FunctionalityConstructionExperiment final : public Experiment {
   qc::MatrixDD func{};
 
   [[nodiscard]] bool success() const noexcept override {
@@ -61,6 +60,7 @@ struct FunctionalityConstructionExperiment : public Experiment {
   }
 };
 
+namespace {
 template <class Config>
 MatrixDD buildFunctionality(const qc::Grover* qc, Package<Config>& dd) {
   QuantumComputation groverIteration(qc->getNqubits());
@@ -144,8 +144,7 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
 
 std::unique_ptr<SimulationExperiment>
 benchmarkSimulate(const QuantumComputation& qc) {
-  std::unique_ptr<SimulationExperiment> exp =
-      std::make_unique<SimulationExperiment>();
+  auto exp = std::make_unique<SimulationExperiment>();
   const auto nq = qc.getNqubits();
   exp->dd = std::make_unique<Package<>>(nq);
   const auto start = std::chrono::high_resolution_clock::now();
@@ -161,8 +160,7 @@ benchmarkSimulate(const QuantumComputation& qc) {
 std::unique_ptr<FunctionalityConstructionExperiment>
 benchmarkFunctionalityConstruction(const QuantumComputation& qc,
                                    const bool recursive = false) {
-  std::unique_ptr<FunctionalityConstructionExperiment> exp =
-      std::make_unique<FunctionalityConstructionExperiment>();
+  auto exp = std::make_unique<FunctionalityConstructionExperiment>();
   const auto nq = qc.getNqubits();
   exp->dd = std::make_unique<Package<>>(nq);
   const auto start = std::chrono::high_resolution_clock::now();
@@ -186,23 +184,14 @@ benchmarkFunctionalityConstruction(const QuantumComputation& qc,
   exp->stats = dd::getStatistics(exp->dd.get());
   return exp;
 }
-
-std::map<std::string, std::size_t>
-benchmarkSimulateWithShots(const qc::QuantumComputation& qc,
-                           const std::size_t shots) {
-  auto nq = qc.getNqubits();
-  auto dd = std::make_unique<dd::Package<>>(nq);
-  auto in = dd->makeZeroState(nq);
-  auto measurements = simulate(&qc, in, *dd, shots);
-  return measurements;
-}
+} // namespace
 
 static constexpr std::size_t SEED = 42U;
 
 class BenchmarkDDPackage {
 protected:
   void verifyAndSave(const std::string& name, const std::string& type,
-                     qc::QuantumComputation& qc, const Experiment& exp) {
+                     qc::QuantumComputation& qc, const Experiment& exp) const {
 
     const std::string& filename = "results_" + inputFilename + ".json";
 
@@ -234,8 +223,8 @@ protected:
 
   std::string inputFilename;
 
-  void runGHZ() {
-    const std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
+  void runGHZ() const {
+    constexpr std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running GHZ Simulation..." << '\n';
     for (const auto& nq : nqubits) {
       auto qc = qc::Entanglement(nq);
@@ -250,8 +239,8 @@ protected:
     }
   }
 
-  void runWState() {
-    const std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
+  void runWState() const {
+    constexpr std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running WState Simulation..." << '\n';
     for (const auto& nq : nqubits) {
       auto qc = qc::WState(nq);
@@ -266,8 +255,8 @@ protected:
     }
   }
 
-  void runBV() {
-    const std::array nqubits = {255U, 511U, 1023U, 2047U, 4095U};
+  void runBV() const {
+    constexpr std::array nqubits = {255U, 511U, 1023U, 2047U, 4095U};
     std::cout << "Running BV Simulation..." << '\n';
     for (const auto& nq : nqubits) {
       auto qc = qc::BernsteinVazirani(nq);
@@ -284,15 +273,15 @@ protected:
     }
   }
 
-  void runQFT() {
-    const std::array nqubitsSim = {256U, 512U, 1024U, 2048U, 4096U};
+  void runQFT() const {
+    constexpr std::array nqubitsSim = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running QFT Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
       auto qc = qc::QFT(nq, false);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("QFT", "Simulation", qc, *exp);
     }
-    const std::array nqubitsFunc = {18U, 19U, 20U, 21U, 22U};
+    constexpr std::array nqubitsFunc = {18U, 19U, 20U, 21U, 22U};
     std::cout << "Running QFT Functionality..." << '\n';
     for (const auto& nq : nqubitsFunc) {
       auto qc = qc::QFT(nq, false);
@@ -302,7 +291,7 @@ protected:
   }
 
   void runGrover() {
-    const std::array nqubits = {27U, 31U, 35U, 39U, 41U};
+    constexpr std::array nqubits = {27U, 31U, 35U, 39U, 41U};
     std::cout << "Running Grover Simulation..." << '\n';
     for (const auto& nq : nqubits) {
       auto qc = std::make_unique<qc::Grover>(nq, SEED);
@@ -323,7 +312,7 @@ protected:
 
       auto iter = buildFunctionalityRecursive(&groverIteration, *dd);
       std::bitset<128U> iterBits(qc->iterations);
-      auto msb =
+      const auto msb =
           static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
       auto f = iter;
       dd->incRef(f);
@@ -347,8 +336,7 @@ protected:
       const auto runtime =
           std::chrono::duration_cast<std::chrono::duration<double>>(end -
                                                                     start);
-      std::unique_ptr<SimulationExperiment> exp =
-          std::make_unique<SimulationExperiment>();
+      auto exp = std::make_unique<SimulationExperiment>();
       exp->dd = std::move(dd);
       exp->sim = e;
       exp->runtime = runtime;
@@ -366,8 +354,8 @@ protected:
     }
   }
 
-  void runQPE() {
-    const std::array nqubitsSim = {14U, 15U, 16U, 17U, 18U};
+  void runQPE() const {
+    constexpr std::array nqubitsSim = {14U, 15U, 16U, 17U, 18U};
     std::cout << "Running QPE Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
       auto qc = qc::QPE(nq, false);
@@ -376,7 +364,7 @@ protected:
       verifyAndSave("QPE", "Simulation", qc, *exp);
     }
     std::cout << "Running QPE Functionality..." << '\n';
-    const std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
+    constexpr std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
     for (const auto& nq : nqubitsFunc) {
       auto qc = qc::QPE(nq, false);
       qc::CircuitOptimizer::removeFinalMeasurements(qc);
@@ -385,8 +373,8 @@ protected:
     }
   }
 
-  void runRandomClifford() {
-    const std::array<std::size_t, 5> nqubitsSim = {14U, 15U, 16U, 17U, 18U};
+  void runRandomClifford() const {
+    constexpr std::array<std::size_t, 5> nqubitsSim = {14U, 15U, 16U, 17U, 18U};
     std::cout << "Running RandomClifford Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
       auto qc = qc::RandomCliffordCircuit(nq, nq * nq, SEED);
@@ -394,7 +382,7 @@ protected:
       verifyAndSave("RandomClifford", "Simulation", qc, *exp);
     }
     std::cout << "Running RandomClifford Functionality..." << '\n';
-    const std::array<std::size_t, 5> nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
+    constexpr std::array<std::size_t, 5> nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
     for (const auto& nq : nqubitsFunc) {
       auto qc = qc::RandomCliffordCircuit(nq, nq * nq, SEED);
       auto exp = benchmarkFunctionalityConstruction(qc);
@@ -419,14 +407,14 @@ public:
 
 } // namespace dd
 
-int main(int argc, char** argv) {
+int main(const int argc, char** argv) {
   if (argc != 2) {
     std::cerr << "Exactly one argument is required to name the results file."
               << '\n';
     return 1;
   }
   try {
-    dd::BenchmarkDDPackage run = dd::BenchmarkDDPackage(
+    auto run = dd::BenchmarkDDPackage(
         argv[1]); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     run.runAll();
   } catch (const std::exception& e) {
