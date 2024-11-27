@@ -79,7 +79,8 @@ TEST_P(QFT, Functionality) {
   // the final DD should store all 2^n different amplitudes
   // since only positive real values are stored in the complex table
   // this number has to be divided by 4
-  ASSERT_EQ(dd->cn.realCount(), 1ULL << (std::max(2UL, nqubits) - 2));
+  ASSERT_EQ(dd->cn.realCount(),
+            1ULL << (std::max<std::size_t>(2UL, nqubits) - 2));
 
   // top edge weight should equal sqrt(0.5)^n
   EXPECT_NEAR(dd::RealNumber::val(func.w.r),
