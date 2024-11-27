@@ -7,6 +7,7 @@
 #include "dd/Simulation.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
@@ -513,4 +514,35 @@ TEST_F(DDFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 2);
   EXPECT_EQ(e, f);
+}
+
+TEST_F(DDFunctionality, classicControlledOperationConditions) {
+  const auto cmpKinds = {ComparisonKind::Eq, ComparisonKind::Neq,
+                         ComparisonKind::Lt, ComparisonKind::Leq,
+                         ComparisonKind::Gt, ComparisonKind::Geq};
+  for (const auto kind : cmpKinds) {
+    QuantumComputation qc(1U, 1U);
+    // ensure that the state is |1>.
+    qc.x(0);
+    // measure the qubit to get a classical `1` result to condition on.
+    qc.measure(0, 0);
+    // apply a classic-controlled X gate whenever the measured result compares
+    // as specified by kind with the previously measured result.
+    qc.classicControlled(qc::X, 0, {0, 1U}, 1U, kind);
+    // measure into the same register to check the result.
+    qc.measure(0, 0);
+
+    const auto shots = 16U;
+    const auto hist = dd::sample(qc, shots);
+
+    EXPECT_EQ(hist.size(), 1);
+    const auto& [key, value] = *hist.begin();
+    EXPECT_EQ(value, shots);
+    if (kind == ComparisonKind::Eq || kind == ComparisonKind::Leq ||
+        kind == ComparisonKind::Geq) {
+      EXPECT_EQ(key, "0");
+    } else {
+      EXPECT_EQ(key, "1");
+    }
+  }
 }
