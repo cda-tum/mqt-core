@@ -844,6 +844,23 @@ class SymbolicOperation(StandardOperation):
             assignment: The assignment of the symbolic parameters.
         """
 
+class ComparisonKind:
+    """An Enum-like class that represents the kind of comparison for classic controlled operations."""
+
+    __members__: ClassVar[dict[ComparisonKind, str]]  # readonly
+    eq: ClassVar[ComparisonKind]
+    """Equality comparison."""
+    neq: ClassVar[ComparisonKind]
+    """Inequality comparison."""
+    lt: ClassVar[ComparisonKind]
+    """Less than comparison."""
+    leq: ClassVar[ComparisonKind]
+    """Less than or equal comparison."""
+    gt: ClassVar[ComparisonKind]
+    """Greater than comparison."""
+    geq: ClassVar[ComparisonKind]
+    """Greater than or equal comparison."""
+
 class ClassicControlledOperation(Operation):
     """Classic controlled quantum operation.
 
@@ -855,9 +872,16 @@ class ClassicControlledOperation(Operation):
         operation: The operation that is controlled.
         control_register: The classical register that controls the operation.
         expected_value: The expected value of the classical register.
+        comparison_kind: The kind of comparison (default is equality).
     """
 
-    def __init__(self, operation: Operation, control_register: tuple[int, int], expected_value: int = 1) -> None: ...
+    def __init__(
+        self,
+        operation: Operation,
+        control_register: tuple[int, int],
+        expected_value: int = 1,
+        comparison_kind: ComparisonKind = ...,
+    ) -> None: ...
     @property
     def operation(self) -> Operation:
         """The operation that is classically controlled."""
@@ -876,10 +900,19 @@ class ClassicControlledOperation(Operation):
     def expected_value(self) -> int:
         """The expected value of the classical register.
 
-        The operation is only executed if the value of the classical register matches the expected value.
+        The operation is only executed if the value of the classical register matches the expected value
+        based on the kind of comparison.
         If the classical register is a single bit, the expected value is either 0 or 1.
         Otherwise, the expected value is an integer that is interpreted as a binary number, where
         the least significant bit is at the start index of the classical register.
+        """
+
+    @property
+    def comparison_kind(self) -> ComparisonKind:
+        """The kind of comparison.
+
+        The operation is only executed if the value of the classical register matches the expected value
+        based on the kind of comparison.
         """
 
     def add_control(self, control: Control) -> None:

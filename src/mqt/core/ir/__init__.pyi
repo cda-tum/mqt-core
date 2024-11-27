@@ -4,7 +4,7 @@ from collections.abc import Iterable, Iterator, Mapping, MutableMapping, Mutable
 from os import PathLike
 from typing import overload
 
-from .operations import Control, Operation, OpType
+from .operations import ComparisonKind, Control, Operation, OpType
 from .symbolic import Expression, Variable
 
 class Permutation(MutableMapping[int, int]):
@@ -1831,6 +1831,7 @@ class QuantumComputation(MutableSequence[Operation]):
         target: int,
         creg: tuple[int, int],
         expected_value: int = 1,
+        comparison_kind: ComparisonKind = ComparisonKind.eq,
         params: Sequence[float] = (),
     ) -> None:
         """Add a classic-controlled operation to the circuit.
@@ -1840,6 +1841,7 @@ class QuantumComputation(MutableSequence[Operation]):
             target: The target qubit
             creg: The classical register (index and number of bits)
             expected_value: The expected value of the classical register
+            comparison_kind: The kind of comparison to perform
             params: The parameters of the operation
         """
 
@@ -1851,6 +1853,7 @@ class QuantumComputation(MutableSequence[Operation]):
         control: Control | int,
         creg: tuple[int, int],
         expected_value: int = 1,
+        comparison_kind: ComparisonKind = ComparisonKind.eq,
         params: Sequence[float] = (),
     ) -> None:
         """Add a classic-controlled operation to the circuit.
@@ -1861,6 +1864,7 @@ class QuantumComputation(MutableSequence[Operation]):
             control: The control qubit
             creg: The classical register (index and number of bits)
             expected_value: The expected value of the classical register
+            comparison_kind: The kind of comparison to perform
             params: The parameters of the operation
         """
 
@@ -1872,6 +1876,7 @@ class QuantumComputation(MutableSequence[Operation]):
         controls: set[Control | int],
         creg: tuple[int, int],
         expected_value: int = 1,
+        comparison_kind: ComparisonKind = ComparisonKind.eq,
         params: Sequence[float] = (),
     ) -> None:
         """Add a classic-controlled operation to the circuit.
@@ -1882,6 +1887,7 @@ class QuantumComputation(MutableSequence[Operation]):
             controls: The control qubits
             creg: The classical register (index and number of bits)
             expected_value: The expected value of the classical register
+            comparison_kind: The kind of comparison to perform
             params: The parameters of the operation
         """
 
