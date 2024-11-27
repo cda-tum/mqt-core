@@ -196,7 +196,8 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
     return id;
   }
 
-  if (const auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
+  if (op->isStandardOperation()) {
+    const auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op);
     const auto& targets = permutation.apply(op->getTargets());
     const auto& controls = permutation.apply(op->getControls());
 
@@ -210,7 +211,8 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
                                   inverse);
   }
 
-  if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
+  if (op->isCompoundOperation()) {
+    const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op);
     auto e = dd.makeIdent();
     if (inverse) {
       for (const auto& operation : *compoundOp) {
@@ -224,8 +226,9 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
     return e;
   }
 
-  if (const auto* classicOp =
-          dynamic_cast<const qc::ClassicControlledOperation*>(op)) {
+  if (op->isClassicControlledOperation()) {
+    const auto* classicOp =
+        dynamic_cast<const qc::ClassicControlledOperation*>(op);
     return getDD(classicOp->getOperation(), dd, permutation, inverse);
   }
 
@@ -245,7 +248,6 @@ Edge<Node> applyUnitaryOperation(const qc::Operation* op, Edge<Node> in,
                                  const qc::Permutation& permutation = {}) {
   static_assert(std::is_same_v<Node, dd::vNode> ||
                 std::is_same_v<Node, dd::mNode>);
-  assert(op->isUnitary());
   auto tmp = dd.multiply(getDD(op, dd, permutation), in);
   dd.incRef(tmp);
   dd.decRef(in);
