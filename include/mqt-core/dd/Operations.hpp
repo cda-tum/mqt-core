@@ -341,7 +341,7 @@ qc::VectorDD applyClassicControlledOperation(
     return in;
   }
 
-  return applyUnitaryOperation(classic->getOperation(), in, dd, permutation);
+  return applyUnitaryOperation(classic, in, dd, permutation);
 }
 
 template <class Config>
