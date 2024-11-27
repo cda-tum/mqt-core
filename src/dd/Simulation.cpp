@@ -235,7 +235,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
       }
       const auto target = targets[0];
       auto [pzero, pone] = dd.determineMeasurementProbabilities(
-          state, static_cast<Qubit>(permutation.at(target)), true);
+          state, static_cast<Qubit>(permutation.at(target)));
 
       // normalize probabilities
       const auto norm = pzero + pone;
@@ -277,7 +277,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
 
       // determine probabilities for this measurement
       auto [pzero, pone] = dd.determineMeasurementProbabilities(
-          state, static_cast<Qubit>(permutation.at(target)), true);
+          state, static_cast<Qubit>(permutation.at(target)));
 
       // normalize probabilities
       const auto norm = pzero + pone;

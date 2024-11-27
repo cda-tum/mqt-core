@@ -1000,8 +1000,7 @@ private:
 
 public:
   std::pair<dd::fp, dd::fp>
-  determineMeasurementProbabilities(const vEdge& rootEdge, const Qubit index,
-                                    const bool assumeProbabilityNormalization) {
+  determineMeasurementProbabilities(const vEdge& rootEdge, const Qubit index) {
     std::map<const vNode*, fp> measurementProbabilities;
     std::set<const vNode*> visited;
     std::queue<const vNode*> q;
@@ -1046,42 +1045,21 @@ public:
 
     fp pzero{0};
     fp pone{0};
-
-    if (assumeProbabilityNormalization) {
-      while (!q.empty()) {
-        const auto* ptr = q.front();
-        q.pop();
-        const auto& s0 = ptr->e[0];
-        if (const auto s0w = static_cast<ComplexValue>(s0.w);
-            !s0w.approximatelyZero()) {
-          pzero += measurementProbabilities[ptr] * s0w.mag2();
-        }
-        const auto& s1 = ptr->e[1];
-        if (const auto s1w = static_cast<ComplexValue>(s1.w);
-            !s1w.approximatelyZero()) {
-          pone += measurementProbabilities[ptr] * s1w.mag2();
-        }
+    while (!q.empty()) {
+      const auto* ptr = q.front();
+      q.pop();
+      const auto& s0 = ptr->e[0];
+      if (const auto s0w = static_cast<ComplexValue>(s0.w);
+          !s0w.approximatelyZero()) {
+        pzero += measurementProbabilities[ptr] * s0w.mag2();
       }
-    } else {
-      std::unordered_map<const vNode*, fp> probs;
-      assignProbabilities(rootEdge, probs);
-
-      while (!q.empty()) {
-        const auto* ptr = q.front();
-        q.pop();
-
-        const auto& s0 = ptr->e[0];
-        if (const auto s0w = static_cast<ComplexValue>(s0.w);
-            !s0w.approximatelyZero()) {
-          pzero += measurementProbabilities[ptr] * probs[s0.p] * s0w.mag2();
-        }
-        const auto& s1 = ptr->e[1];
-        if (const auto s1w = static_cast<ComplexValue>(s1.w);
-            !s1w.approximatelyZero()) {
-          pone += measurementProbabilities[ptr] * probs[s1.p] * s1w.mag2();
-        }
+      const auto& s1 = ptr->e[1];
+      if (const auto s1w = static_cast<ComplexValue>(s1.w);
+          !s1w.approximatelyZero()) {
+        pone += measurementProbabilities[ptr] * s1w.mag2();
       }
     }
+
     return {pzero, pone};
   }
 
@@ -1090,8 +1068,6 @@ public:
    * decision diagram. Collapses the state according to the measurement result.
    * @param rootEdge the root edge of the state vector decision diagram
    * @param index the index of the qubit to be measured
-   * @param assumeProbabilityNormalization whether or not to assume that the
-   * state vector decision diagram has normalized edge weights.
    * @param mt the random number generator
    * @param epsilon the numerical precision used for checking the normalization
    * of the state vector decision diagram
@@ -1100,10 +1076,9 @@ public:
    * the measurement.
    */
   char measureOneCollapsing(vEdge& rootEdge, const Qubit index,
-                            const bool assumeProbabilityNormalization,
                             std::mt19937_64& mt, const fp epsilon = 0.001) {
-    const auto& [pzero, pone] = determineMeasurementProbabilities(
-        rootEdge, index, assumeProbabilityNormalization);
+    const auto& [pzero, pone] =
+        determineMeasurementProbabilities(rootEdge, index);
     const fp sum = pzero + pone;
     if (std::abs(sum - 1) > epsilon) {
       throw std::runtime_error(

@@ -294,8 +294,8 @@ applyMeasurement(const qc::Operation* op, qc::VectorDD in, Package<Config>& dd,
   for (size_t j = 0U; j < qubits.size(); ++j) {
     measurements.at(bits.at(j)) =
         dd.measureOneCollapsing(
-            in, static_cast<dd::Qubit>(permutation.at(qubits.at(j))), true,
-            rng) == '1';
+            in, static_cast<dd::Qubit>(permutation.at(qubits.at(j))), rng) ==
+        '1';
   }
   return in;
 }
@@ -312,7 +312,7 @@ qc::VectorDD applyReset(const qc::Operation* op, qc::VectorDD in,
   const auto& qubits = reset->getTargets();
   for (const auto& qubit : qubits) {
     const auto bit = dd.measureOneCollapsing(
-        in, static_cast<dd::Qubit>(permutation.at(qubit)), true, rng);
+        in, static_cast<dd::Qubit>(permutation.at(qubit)), rng);
     // apply an X operation whenever the measured result is one
     if (bit == '1') {
       const auto x = qc::StandardOperation(qubit, qc::X);

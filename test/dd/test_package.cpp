@@ -268,8 +268,7 @@ TEST(DDPackageTest, CorruptedBellState) {
 
   ASSERT_THROW(dd->measureAll(bellState, false, mt), std::runtime_error);
 
-  ASSERT_THROW(dd->measureOneCollapsing(bellState, 0, true, mt),
-               std::runtime_error);
+  ASSERT_THROW(dd->measureOneCollapsing(bellState, 0, mt), std::runtime_error);
 }
 
 TEST(DDPackageTest, NegativeControl) {
@@ -1157,28 +1156,7 @@ TEST(DDPackageTest, DestructiveMeasurementOne) {
 
   std::mt19937_64 mt{0}; // NOLINT(cert-msc51-cpp)
 
-  const char m = dd->measureOneCollapsing(plusState, 0, true, mt);
-  const dd::CVec vAfter = plusState.getVector();
-
-  ASSERT_EQ(m, '0');
-  ASSERT_EQ(vAfter[0], dd::SQRT2_2);
-  ASSERT_EQ(vAfter[2], dd::SQRT2_2);
-  ASSERT_EQ(vAfter[1], 0.);
-  ASSERT_EQ(vAfter[3], 0.);
-}
-
-TEST(DDPackageTest, DestructiveMeasurementOneArbitraryNormalization) {
-  auto dd = std::make_unique<dd::Package<>>(4);
-  auto hGate0 = dd->makeGateDD(dd::H_MAT, 0);
-  auto hGate1 = dd->makeGateDD(dd::H_MAT, 1);
-  auto plusMatrix = dd->multiply(hGate0, hGate1);
-  auto zeroState = dd->makeZeroState(2);
-  auto plusState = dd->multiply(plusMatrix, zeroState);
-  dd->incRef(plusState);
-
-  std::mt19937_64 mt{0}; // NOLINT(cert-msc51-cpp)
-
-  const char m = dd->measureOneCollapsing(plusState, 0, false, mt);
+  const char m = dd->measureOneCollapsing(plusState, 0, mt);
   const dd::CVec vAfter = plusState.getVector();
 
   ASSERT_EQ(m, '0');
