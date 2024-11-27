@@ -178,6 +178,14 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
   return counts;
 }
 
+std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
+                                          const std::size_t shots,
+                                          const std::size_t seed) {
+  const auto nqubits = qc.getNqubits();
+  Package<> dd(nqubits);
+  return simulate(&qc, dd.makeZeroState(nqubits), dd, shots, seed);
+}
+
 template <class Config>
 void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
                               SparsePVec& probVector, Package<Config>& dd) {
