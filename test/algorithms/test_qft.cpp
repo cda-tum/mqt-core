@@ -5,6 +5,7 @@
 #include "dd/RealNumber.hpp"
 #include "dd/Simulation.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -43,7 +44,7 @@ protected:
 ///	Utilizing more qubits requires the use of fp=long double
 constexpr std::size_t QFT_MAX_QUBITS = 17U;
 
-static const size_t INITIAL_COMPLEX_COUNT = 1;
+constexpr size_t INITIAL_COMPLEX_COUNT = 1;
 
 INSTANTIATE_TEST_SUITE_P(QFT, QFT,
                          testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U,
@@ -70,7 +71,7 @@ TEST_P(QFT, Functionality) {
 
   qc->printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
-  ASSERT_EQ(func.size(), std::pow(2, nqubits));
+  ASSERT_EQ(func.size(), 1ULL << nqubits);
 
   // Force garbage collection of compute table and complex table
   dd->garbageCollect(true);
@@ -78,8 +79,7 @@ TEST_P(QFT, Functionality) {
   // the final DD should store all 2^n different amplitudes
   // since only positive real values are stored in the complex table
   // this number has to be divided by 4
-  ASSERT_EQ(dd->cn.realCount(),
-            static_cast<std::size_t>(std::ceil(std::pow(2, nqubits) / 4)));
+  ASSERT_EQ(dd->cn.realCount(), 1ULL << (std::max(2UL, nqubits) - 2));
 
   // top edge weight should equal sqrt(0.5)^n
   EXPECT_NEAR(dd::RealNumber::val(func.w.r),
@@ -87,8 +87,7 @@ TEST_P(QFT, Functionality) {
               dd::RealNumber::eps);
 
   // first row and first column should consist only of (1/sqrt(2))**nqubits
-  for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
-       ++i) {
+  for (std::uint64_t i = 0; i < 1ULL << nqubits; ++i) {
     auto c = func.getValueByIndex(dd->qubits(), 0, i);
     EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
@@ -116,7 +115,7 @@ TEST_P(QFT, FunctionalityRecursive) {
 
   qc->printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
-  ASSERT_EQ(func.size(), std::pow(2, nqubits));
+  ASSERT_EQ(func.size(), 1ULL << nqubits);
 
   // Force garbage collection of compute table and complex table
   dd->garbageCollect(true);
@@ -124,8 +123,7 @@ TEST_P(QFT, FunctionalityRecursive) {
   // the final DD should store all 2^n different amplitudes
   // since only positive real values are stored in the complex table
   // this number has to be divided by 4
-  ASSERT_EQ(dd->cn.realCount(),
-            static_cast<std::size_t>(std::ceil(std::pow(2, nqubits) / 4)));
+  ASSERT_EQ(dd->cn.realCount(), 1ULL << (std::max(2UL, nqubits) - 2));
 
   // top edge weight should equal sqrt(0.5)^n
   EXPECT_NEAR(dd::RealNumber::val(func.w.r),
@@ -175,8 +173,7 @@ TEST_P(QFT, Simulation) {
   EXPECT_NEAR(dd::RealNumber::val(sim.w.i), 0, dd::RealNumber::eps);
 
   // first column should consist only of sqrt(0.5)^n's
-  for (std::uint64_t i = 0; i < std::pow(static_cast<long double>(2), nqubits);
-       ++i) {
+  for (std::uint64_t i = 0; i < 1ULL << nqubits; ++i) {
     auto c = sim.getValueByIndex(i);
     EXPECT_NEAR(c.real(),
                 static_cast<dd::fp>(std::pow(1.L / std::sqrt(2.L), nqubits)),
@@ -216,21 +213,16 @@ TEST_P(QFT, DynamicSimulation) {
   qc->printStatistics(std::cout);
 
   // simulate the circuit
-  std::size_t shots = 8192U;
-  auto measurements =
-      simulate(qc.get(), dd->makeZeroState(qc->getNqubits()), *dd, shots);
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  constexpr std::size_t shots = 8192U;
+  const auto measurements = dd::sample(*qc, shots);
   const std::size_t unique = measurements.size();
 
   nqubits = GetParam();
-  const auto maxUnique = 1ULL << nqubits;
-  if (maxUnique < shots) {
-    shots = maxUnique;
-  }
-  const auto ratio = static_cast<double>(unique) / static_cast<double>(shots);
-  std::cout << "Unique entries " << unique << " out of " << shots
+  const auto maxUnique = std::min(1UL << nqubits, shots);
+  const auto ratio =
+      static_cast<double>(unique) / static_cast<double>(maxUnique);
+
+  std::cout << "Unique entries " << unique << " out of " << maxUnique
             << " for a ratio of: " << ratio << "\n";
 
   // the number of unique entries should be close to the number of shots

@@ -30,6 +30,8 @@ protected:
   void SetUp() override {
     std::tie(nqubits, seed) = GetParam();
     dd = std::make_unique<dd::Package<>>(nqubits + 1);
+    qc = std::make_unique<qc::Grover>(nqubits, seed);
+    qc->printStatistics(std::cout);
   }
 
   std::size_t nqubits = 0;
@@ -65,24 +67,18 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(Grover, Functionality) {
-  // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
-
-  qc->printStatistics(std::cout);
   auto x = '1' + qc->expected;
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
 
-  // there should be no error building the functionality
   qc::QuantumComputation groverIteration(qc->getNqubits());
   qc->oracle(groverIteration);
   qc->diffusion(groverIteration);
 
-  auto iteration = buildFunctionality(&groverIteration, *dd);
+  const auto iteration = buildFunctionality(&groverIteration, *dd);
 
   auto e = iteration;
   dd->incRef(e);
-
   for (std::size_t i = 0U; i < qc->iterations - 1U; ++i) {
     auto f = dd->multiply(iteration, e);
     dd->incRef(f);
@@ -93,8 +89,8 @@ TEST_P(Grover, Functionality) {
 
   qc::QuantumComputation setup(qc->getNqubits());
   qc->setup(setup);
-  auto g = buildFunctionality(&setup, *dd);
-  auto f = dd->multiply(e, g);
+  const auto g = buildFunctionality(&setup, *dd);
+  const auto f = dd->multiply(e, g);
   dd->incRef(f);
   dd->decRef(e);
   dd->decRef(g);
@@ -103,7 +99,7 @@ TEST_P(Grover, Functionality) {
   dd->decRef(iteration);
 
   // amplitude of the searched-for entry should be 1
-  auto c = func.getValueByPath(dd->qubits(), x);
+  const auto c = func.getValueByPath(qc->getNqubits(), x);
   EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
   EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
   const auto prob = std::norm(c);
@@ -111,10 +107,6 @@ TEST_P(Grover, Functionality) {
 }
 
 TEST_P(Grover, FunctionalityRecursive) {
-  // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
-
-  qc->printStatistics(std::cout);
   auto x = '1' + qc->expected;
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
@@ -123,10 +115,11 @@ TEST_P(Grover, FunctionalityRecursive) {
   qc->oracle(groverIteration);
   qc->diffusion(groverIteration);
 
-  auto iter = buildFunctionalityRecursive(&groverIteration, *dd);
+  const auto iter = buildFunctionalityRecursive(&groverIteration, *dd);
   auto e = iter;
   std::bitset<128U> iterBits(qc->iterations);
-  auto msb = static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
+  const auto msb =
+      static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
   auto f = iter;
   dd->incRef(f);
   bool zero = !iterBits[0U];
@@ -155,15 +148,14 @@ TEST_P(Grover, FunctionalityRecursive) {
   // apply state preparation setup
   qc::QuantumComputation statePrep(qc->getNqubits());
   qc->setup(statePrep);
-  auto s = buildFunctionality(&statePrep, *dd);
-  auto tmp = dd->multiply(e, s);
-  dd->incRef(tmp);
+  const auto s = buildFunctionality(&statePrep, *dd);
+  func = dd->multiply(e, s);
+  dd->incRef(func);
   dd->decRef(s);
   dd->decRef(e);
-  func = tmp;
 
   // amplitude of the searched-for entry should be 1
-  auto c = func.getValueByPath(dd->qubits(), x);
+  const auto c = func.getValueByPath(qc->getNqubits(), x);
   EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
   EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
   const auto prob = std::norm(c);
@@ -171,21 +163,11 @@ TEST_P(Grover, FunctionalityRecursive) {
 }
 
 TEST_P(Grover, Simulation) {
-  // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
-
-  qc->printStatistics(std::cout);
-  auto in = dd->makeZeroState(nqubits + 1U);
-  // there should be no error simulating the circuit
-  const std::size_t shots = 1024;
-  auto measurements = simulate(qc.get(), in, *dd, shots);
-
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
-
-  auto correctShots = measurements[qc->expected];
-  auto probability =
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(*qc, shots);
+  ASSERT_TRUE(measurements.find(qc->expected) != measurements.end());
+  const auto correctShots = measurements.at(qc->expected);
+  const auto probability =
       static_cast<double>(correctShots) / static_cast<double>(shots);
 
   EXPECT_GE(probability, GROVER_GOAL_PROBABILITY);

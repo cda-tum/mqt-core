@@ -38,81 +38,55 @@ TEST_P(BernsteinVazirani, FunctionTest) {
   auto s = qc::BitString(GetParam());
 
   // construct Bernstein Vazirani circuit
-  auto qc = qc::BernsteinVazirani(s);
+  const auto qc = qc::BernsteinVazirani(s);
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
-
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc.expected], shots);
+  EXPECT_EQ(measurements.at(qc.expected), shots);
 }
 
 TEST_P(BernsteinVazirani, FunctionTestDynamic) {
   // get hidden bitstring
-  auto s = qc::BitString(GetParam());
+  const auto s = qc::BitString(GetParam());
 
   // construct Bernstein Vazirani circuit
-  auto qc = qc::BernsteinVazirani(s, true);
+  const auto qc = qc::BernsteinVazirani(s, true);
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
-
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc.expected], shots);
+  EXPECT_EQ(measurements.at(qc.expected), shots);
 }
 
 TEST_F(BernsteinVazirani, LargeCircuit) {
-  const std::size_t nq = 127;
-  auto qc = qc::BernsteinVazirani(nq);
-  qc.printStatistics(std::cout);
+  constexpr std::size_t nq = 127;
+  const auto qc = qc::BernsteinVazirani(nq);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
-
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc.expected], shots);
+  EXPECT_EQ(measurements.at(qc.expected), shots);
 }
 
 TEST_F(BernsteinVazirani, DynamicCircuit) {
-  const std::size_t nq = 127;
-  auto qc = qc::BernsteinVazirani(nq, true);
-  qc.printStatistics(std::cout);
+  constexpr std::size_t nq = 127;
+  const auto qc = qc::BernsteinVazirani(nq, true);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
-
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc.expected], shots);
+  EXPECT_EQ(measurements.at(qc.expected), shots);
 }
 
 TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
@@ -128,7 +102,7 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(bv);
 
   // simulate circuit
-  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), *dd);
+  auto e = dd::simulate(&bv, dd->makeZeroState(bv.getNqubits()), *dd);
 
   // create dynamic BV circuit
   auto dbv = qc::BernsteinVazirani(s, true);
@@ -143,11 +117,9 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(dbv);
 
   // simulate circuit
-  auto f = simulate(&dbv, dd->makeZeroState(dbv.getNqubits()), *dd);
+  auto f = dd::simulate(&dbv, dd->makeZeroState(dbv.getNqubits()), *dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
-  std::cout << "Fidelity of both circuits: " << fidelity << "\n";
-
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }

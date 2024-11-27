@@ -128,7 +128,7 @@ TEST_P(QPE, QPETest) {
 
   qc::VectorDD e{};
   ASSERT_NO_THROW(
-      { e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd); });
+      { e = dd::simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd); });
 
   // account for the eigenstate qubit by adding an offset
   const auto offset = 1ULL << (e.p->v + 1);
@@ -140,7 +140,7 @@ TEST_P(QPE, QPETest) {
   if (exactlyRepresentable) {
     EXPECT_NEAR(probability, 1.0, 1e-8);
   } else {
-    const auto threshold = 4. / (qc::PI * qc::PI);
+    constexpr auto threshold = 4. / (qc::PI * qc::PI);
     // account for the eigenstate qubit in the expected result by shifting and
     // adding 1
     const auto secondAmplitude =
@@ -161,8 +161,7 @@ TEST_P(QPE, IQPETest) {
   ASSERT_EQ(qc.getNqubits(), 2U);
 
   constexpr auto shots = 8192U;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
+  const auto measurements = dd::sample(qc, shots);
 
   // sort the measurements
   using Measurement = std::pair<std::string, std::size_t>;
@@ -176,28 +175,27 @@ TEST_P(QPE, IQPETest) {
                                                       measurements.end(), comp);
 
   std::cout << "Obtained measurements: \n";
-  for (const auto& measurement : ordered) {
-    std::cout << "\t" << measurement.first << ": " << measurement.second << " ("
-              << (measurement.second * 100) / shots << "%)\n";
+  for (const auto& [bitstring, count] : ordered) {
+    std::cout << "\t" << bitstring << ": " << count << " ("
+              << (count * 100) / shots << "%)\n";
   }
 
-  const auto& mostLikely = *ordered.begin();
+  const auto& [mostLikelyResult, mostLikelyCount] = *ordered.begin();
   if (exactlyRepresentable) {
-    EXPECT_EQ(mostLikely.first, expectedResultRepresentation);
-    EXPECT_EQ(mostLikely.second, shots);
+    EXPECT_EQ(mostLikelyResult, expectedResultRepresentation);
+    EXPECT_EQ(mostLikelyCount, shots);
   } else {
     auto it = ordered.begin();
     std::advance(it, 1);
-    const auto& secondMostLikely = *(it);
+    const auto& [secondMostLikelyResult, secondMostLikelyCount] = *(it);
     EXPECT_TRUE(
-        (mostLikely.first == expectedResultRepresentation &&
-         secondMostLikely.first == secondExpectedResultRepresentation) ||
-        (mostLikely.first == secondExpectedResultRepresentation &&
-         secondMostLikely.first == expectedResultRepresentation));
+        (mostLikelyResult == expectedResultRepresentation &&
+         secondMostLikelyResult == secondExpectedResultRepresentation) ||
+        (mostLikelyResult == secondExpectedResultRepresentation &&
+         secondMostLikelyResult == expectedResultRepresentation));
     const auto threshold = 4. / (qc::PI * qc::PI);
-    EXPECT_NEAR(static_cast<double>(mostLikely.second) / shots, threshold,
-                0.02);
-    EXPECT_NEAR(static_cast<double>(secondMostLikely.second) / shots, threshold,
+    EXPECT_NEAR(static_cast<double>(mostLikelyCount) / shots, threshold, 0.02);
+    EXPECT_NEAR(static_cast<double>(secondMostLikelyCount) / shots, threshold,
                 0.02);
   }
 }
@@ -212,7 +210,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
+  auto e = dd::simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
 
   // create standard IQPE circuit
   auto iqpe = qc::QPE(lambda, precision, true);
@@ -226,7 +224,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = simulate(&iqpe, dd->makeZeroState(iqpe.getNqubits()), *dd);
+  auto f = dd::simulate(&iqpe, dd->makeZeroState(iqpe.getNqubits()), *dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
@@ -245,7 +243,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = buildFunctionality(&qpe, *dd);
+  auto e = dd::buildFunctionality(&qpe, *dd);
 
   // create standard IQPE circuit
   auto iqpe = qc::QPE(lambda, precision, true);
@@ -260,7 +258,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = buildFunctionality(&iqpe, *dd);
+  auto f = dd::buildFunctionality(&iqpe, *dd);
 
   EXPECT_EQ(e, f);
 }
@@ -271,10 +269,9 @@ TEST_P(QPE, ProbabilityExtraction) {
   // create standard QPE circuit
   auto iqpe = qc::QPE(lambda, precision, true);
 
-  std::cout << iqpe << "\n";
   dd::SparsePVec probs{};
-  extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
-                           *dd);
+  dd::extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()),
+                               probs, *dd);
 
   for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
@@ -285,7 +282,7 @@ TEST_P(QPE, ProbabilityExtraction) {
   if (exactlyRepresentable) {
     EXPECT_NEAR(probs.at(expectedResult), 1.0, 1e-6);
   } else {
-    const auto threshold = 4. / (qc::PI * qc::PI);
+    constexpr auto threshold = 4. / (qc::PI * qc::PI);
     EXPECT_NEAR(probs.at(expectedResult), threshold, 0.02);
     EXPECT_NEAR(probs.at(secondExpectedResult), threshold, 0.02);
   }
@@ -301,7 +298,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
+  auto e = dd::simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
   const auto vec = e.getVector();
   std::cout << "QPE:\n";
   for (const auto& amp : vec) {
@@ -313,8 +310,8 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
-  extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
-                           *dd);
+  dd::extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()),
+                               probs, *dd);
 
   std::cout << "IQPE:\n";
   for (const auto& [state, prob] : probs) {
