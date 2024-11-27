@@ -243,7 +243,7 @@ qc::MatrixDD getInverseDD(const qc::Operation* op, Package<Config>& dd,
 }
 
 template <class Config, class Node>
-Edge<Node> applyUnitaryOperation(const qc::Operation* op, Edge<Node> in,
+Edge<Node> applyUnitaryOperation(const qc::Operation* op, const Edge<Node>& in,
                                  Package<Config>& dd,
                                  const qc::Permutation& permutation = {}) {
   static_assert(std::is_same_v<Node, dd::vNode> ||
@@ -299,7 +299,7 @@ qc::VectorDD applyReset(const qc::Operation* op, qc::VectorDD in,
 
 template <class Config>
 qc::VectorDD applyClassicControlledOperation(
-    const qc::Operation* op, qc::VectorDD in, Package<Config>& dd,
+    const qc::Operation* op, const qc::VectorDD& in, Package<Config>& dd,
     std::vector<bool>& measurements, const qc::Permutation& permutation = {}) {
   assert(op->isClassicControlledOperation());
   const auto* classic = dynamic_cast<const qc::ClassicControlledOperation*>(op);
