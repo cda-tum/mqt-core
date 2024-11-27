@@ -394,7 +394,7 @@ public:
         break;
       }
     }
-    vEdge e{f.p, cn.lookup(f.w)};
+    const vEdge e{f.p, cn.lookup(f.w)};
     incRef(e);
     return e;
   }

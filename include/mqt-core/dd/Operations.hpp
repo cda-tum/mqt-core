@@ -360,10 +360,8 @@ qc::VectorDD applyClassicControlledOperation(const qc::Operation* op,
       return actualValue > expectedValue;
     case qc::ComparisonKind::Geq:
       return actualValue >= expectedValue;
-    default:
-      qc::unreachable();
-      throw qc::QFRException("Unknown comparison kind.");
     }
+    qc::unreachable();
   }();
 
   if (!control) {
