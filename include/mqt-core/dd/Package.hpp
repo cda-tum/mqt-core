@@ -1897,6 +1897,9 @@ private:
       if (x.isTerminal()) {
         return {y.p, rWeight};
       }
+      if (y.isTerminal()) {
+        return {x.p, rWeight};
+      }
     }
 
     // check if we already computed the product before and return the result

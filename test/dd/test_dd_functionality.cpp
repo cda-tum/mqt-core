@@ -2,6 +2,7 @@
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Node.hpp"
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
@@ -545,4 +546,11 @@ TEST_F(DDFunctionality, classicControlledOperationConditions) {
       EXPECT_EQ(key, "1");
     }
   }
+}
+
+TEST_F(DDFunctionality, vectorKroneckerWithTerminal) {
+  const auto root = dd::vEdge::one();
+  const auto zeroState = dd->makeZeroState(1);
+  const auto extendedRoot = dd->kronecker(zeroState, root, 0);
+  EXPECT_EQ(zeroState, extendedRoot);
 }
