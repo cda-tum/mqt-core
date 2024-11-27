@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.10.1", "setuptools-scm>=8.1", "pybind11>=2.13.5"]
+requires = ["scikit-build-core>=0.10.7", "setuptools-scm>=8.1", "pybind11>=2.13.6"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -35,28 +35,12 @@ requires-python = ">=3.9"
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["pytest>=7.2", "pytest-console-scripts>=1.4", "mqt.core[qiskit, evaluation]"]
-coverage = ["mqt.core[test]", "pytest-cov>=4"]
 evaluation = [
-    "pandas[output-formatting]>=2.1.2",
-]
-docs = [
-  "furo>=2023.9.10",
-  "mqt.core[qiskit,evaluation]",
-  "myst_nb>=1.1.0",
-  "qiskit[visualization]",
-  "setuptools-scm>=8.1",
-  "sphinx_design>=0.6",
-  "sphinx-autoapi>=3",
-  "sphinx-copybutton>=0.5",
-  "sphinxcontrib-bibtex>=2.4.2",
-  "sphinxcontrib-svg2pdfconverter>=1.2",
-  "sphinxext-opengraph>=0.9",
+  "pandas[output-formatting]>=2.1.2",
 ]
 qiskit = [
-   "qiskit[qasm3-import]>=1.0.0",
+  "qiskit[qasm3-import]>=1.0.0",
 ]
-dev = ["mqt.core[coverage, docs]",]
 
 [project.scripts]
 mqt-core-dd-compare = "mqt.core.dd.evaluation:main"
@@ -234,7 +218,8 @@ ignore = ["GH200"]
 build = "cp3*"
 skip = "*-musllinux_*"
 archs = "auto64"
-test-command = "python -c \"from mqt import core\""
+test-groups = ["test"]
+test-command = "pytest {project}/test/python"
 build-frontend = "build[uv]"
 enable = ["cpython-freethreading"]
 manylinux-x86_64-image = "manylinux_2_28"
@@ -257,6 +242,54 @@ environment = { CMAKE_GENERATOR = "Ninja" }
 select = "*-macosx_arm64"
 environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
+# Some of our extra dependencies do not support free-threading yet.
+[[tool.cibuildwheel.overrides]]
+select = "cp3*t-*"
+test-groups = []
+test-command = "python -c \"from mqt import core\""
+
 
 [tool.uv]
 reinstall-package = ["mqt-core"]
+
+[tool.uv.sources]
+mqt-core = { workspace = true }
+
+[dependency-groups]
+build = [
+  "pybind11>=2.13.6",
+  "scikit-build-core>=0.10.7",
+  "setuptools-scm>=8.1",
+]
+docs = [
+  "furo>=2024.8.6",
+  "ipython>=8.29; python_version >= '3.10'",
+  "myst-nb>=1.1.2",
+  "myst-parser>=4; python_version >= '3.10'",
+  "setuptools-scm>=8.1",
+  "sphinx>=8; python_version >= '3.10'",
+  "sphinx-autoapi>=3.3.3",
+  "sphinx-copybutton>=0.5.2",
+  "sphinx-design>=0.6.1",
+  "sphinxcontrib-bibtex>=2.6.3",
+  "sphinxcontrib-svg2pdfconverter>=1.2.3",
+  "sphinxext-opengraph>=0.9.1",
+  "pandas[output-formatting]>=2.1.2",
+  "qiskit[qasm3-import,visualization]>=1.0.0",
+  "scipy>=1.14.1; python_version >= '3.13'",
+  "numpy>=2.1; python_version >= '3.13'",
+]
+test = [
+  "pytest>=8.3.3",
+  "pytest-console-scripts>=1.4.1",
+  "pytest-cov>=6",
+  "pandas[output-formatting]>=2.1.2",
+  "qiskit[qasm3-import]>=1.0.0",
+  "scipy>=1.14.1; python_version >= '3.13'",
+  "numpy>=2.1; python_version >= '3.13'",
+]
+dev = [
+  {include-group = "build"},
+  {include-group = "docs"},
+  {include-group = "test"},
+]

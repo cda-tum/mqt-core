@@ -105,8 +105,8 @@ def test_compare_with_negative_factor(script_runner: ScriptRunner) -> None:
     """Testing factor -0.1."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--factor=-0.1",
     ])
     assert not ret.success
@@ -118,8 +118,8 @@ def test_compare_with_invalid_sort_option(script_runner: ScriptRunner) -> None:
     """Testing an invalid sort option."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--sort=after",
     ])
     assert not ret.success
@@ -131,8 +131,8 @@ def test_cli_with_num_qubits_specified_without_algorithm(script_runner: ScriptRu
     """Testing the error case when num_qubits is specified without algorithm."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--factor=0.2",
         "--num_qubits=1024",
     ])
@@ -145,8 +145,8 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
     """Testing the CLI functionality with default parameters."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
     ])
     assert "Runtime:" in ret.stdout
     assert "Benchmarks that have improved:" in ret.stdout
@@ -164,8 +164,8 @@ def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
     """
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--factor=0.3",
         "--dd",
     ])
@@ -182,8 +182,8 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
     """Testing the CLI functionality with factor set to 0.2 and only_changed set."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--factor=0.2",
         "--only_changed",
     ])
@@ -201,8 +201,8 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
     """
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--dd",
         "--only_changed",
         "--no_split",
@@ -223,8 +223,8 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
     """
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--no_split",
         "--dd",
         "--task=functionality",
@@ -245,8 +245,8 @@ def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
     """
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--sort=algorithm",
         "--no_split",
         "--dd",
