@@ -123,7 +123,8 @@ TEST_P(QFT, FunctionalityRecursive) {
   // the final DD should store all 2^n different amplitudes
   // since only positive real values are stored in the complex table
   // this number has to be divided by 4
-  ASSERT_EQ(dd->cn.realCount(), 1ULL << (std::max(2UL, nqubits) - 2));
+  ASSERT_EQ(dd->cn.realCount(),
+            1ULL << (std::max<std::size_t>(2UL, nqubits) - 2));
 
   // top edge weight should equal sqrt(0.5)^n
   EXPECT_NEAR(dd::RealNumber::val(func.w.r),
@@ -218,7 +219,7 @@ TEST_P(QFT, DynamicSimulation) {
   const std::size_t unique = measurements.size();
 
   nqubits = GetParam();
-  const auto maxUnique = std::min<std::size_t>(1UL << nqubits, shots);
+  const auto maxUnique = std::min<std::size_t>(1ULL << nqubits, shots);
   const auto ratio =
       static_cast<double>(unique) / static_cast<double>(maxUnique);
 
