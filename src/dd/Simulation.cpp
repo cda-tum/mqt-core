@@ -142,14 +142,11 @@ sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
   std::map<std::string, std::size_t> counts{};
 
   for (std::size_t i = 0U; i < shots; i++) {
-    // increase reference count of input state so that it is not collected.
-    dd.incRef(in);
-
     std::vector<bool> measurements(qc->getNcbits(), false);
 
     auto permutation = qc->initialLayout;
     auto e = in;
-
+    dd.incRef(e);
     for (const auto& op : *qc) {
       if (op->isUnitary()) {
         // SWAP gates can be executed virtually by changing the permutation
@@ -191,10 +188,6 @@ sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
     }
     counts[shot]++;
   }
-
-  // decrease reference count of input state so that it can be collected.
-  dd.decRef(in);
-
   return counts;
 }
 
