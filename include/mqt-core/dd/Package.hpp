@@ -423,7 +423,7 @@ public:
                                 std::array{vEdge::zero(), rightSubtree});
     }
 
-    vEdge e = makeDDNode(
+    const vEdge e = makeDDNode(
         static_cast<Qubit>(n - 1),
         std::array<vEdge, RADIX>{
             {{leftSubtree.p, {&constants::sqrt2over2, &constants::zero}},
@@ -488,7 +488,7 @@ public:
     const auto level = static_cast<Qubit>(std::log2(length) - 1);
     const auto state =
         makeStateFromVector(stateVector.begin(), stateVector.end(), level);
-    vEdge e{state.p, cn.lookup(state.w)};
+    const vEdge e{state.p, cn.lookup(state.w)};
     incRef(e);
     return e;
   }
