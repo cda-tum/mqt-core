@@ -1476,6 +1476,30 @@ public:
     }
   }
 
+  /**
+   * @brief Applies a matrix operation to a matrix or vector.
+   *
+   * @details The reference count of the input matrix or vector is decreased,
+   * while the reference count of the result is increased. After the operation,
+   * garbage collection is triggered.
+   *
+   * @tparam Node Node type
+   * @param operation Matrix operation to apply
+   * @param e Matrix or vector to apply the operation to
+   * @return The appropriately reference-counted result.
+   */
+  template <class Node>
+  Edge<Node> applyOperation(const mEdge& operation, const Edge<Node>& e) {
+    static_assert(std::disjunction_v<std::is_same<Node, vNode>,
+                                     std::is_same<Node, mNode>>,
+                  "Node must be a vector or matrix node.");
+    const auto tmp = multiply(operation, e);
+    incRef(tmp);
+    decRef(e);
+    garbageCollect();
+    return tmp;
+  }
+
   dEdge applyOperationToDensity(dEdge& e, const mEdge& operation) {
     const auto tmp0 = conjugateTranspose(operation);
     const auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
@@ -1827,7 +1851,7 @@ public:
           "expectation value.");
     }
 
-    auto yPrime = multiply(x, y);
+    const auto yPrime = multiply(x, y);
     const ComplexValue expValue = innerProduct(y, yPrime);
 
     assert(RealNumber::approximatelyZero(expValue.i));

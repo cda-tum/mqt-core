@@ -248,11 +248,7 @@ Edge<Node> applyUnitaryOperation(const qc::Operation* op, const Edge<Node>& in,
                                  const qc::Permutation& permutation = {}) {
   static_assert(std::is_same_v<Node, dd::vNode> ||
                 std::is_same_v<Node, dd::mNode>);
-  auto tmp = dd.multiply(getDD(op, dd, permutation), in);
-  dd.incRef(tmp);
-  dd.decRef(in);
-  dd.garbageCollect();
-  return tmp;
+  return dd.applyOperation(getDD(op, dd, permutation), in);
 }
 
 template <class Config>
