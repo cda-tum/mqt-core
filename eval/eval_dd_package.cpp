@@ -71,25 +71,16 @@ MatrixDD buildFunctionality(const qc::Grover* qc, Package<Config>& dd) {
 
   auto e = iteration;
   dd.incRef(e);
-
   for (std::size_t i = 0U; i < qc->iterations - 1U; ++i) {
-    auto f = dd.multiply(iteration, e);
-    dd.incRef(f);
-    dd.decRef(e);
-    e = f;
-    dd.garbageCollect();
+    e = dd.applyOperation(iteration, e);
   }
+  dd.decRef(iteration);
 
   QuantumComputation setup(qc->getNqubits());
   qc->setup(setup);
-  auto g = buildFunctionality(&setup, dd);
-  auto f = dd.multiply(e, g);
-  dd.incRef(f);
-  dd.decRef(e);
+  const auto g = buildFunctionality(&setup, dd);
+  e = dd.applyOperation(e, g);
   dd.decRef(g);
-  e = f;
-
-  dd.decRef(iteration);
   return e;
 }
 
@@ -103,15 +94,13 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
   auto iter = buildFunctionalityRecursive(&groverIteration, dd);
   auto e = iter;
   std::bitset<128U> iterBits(qc->iterations);
-  auto msb = static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
+  const auto msb =
+      static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
   auto f = iter;
   dd.incRef(f);
   bool zero = !iterBits[0U];
   for (std::size_t j = 1U; j <= msb; ++j) {
-    auto tmp = dd.multiply(f, f);
-    dd.incRef(tmp);
-    dd.decRef(f);
-    f = tmp;
+    f = dd.applyOperation(f, f);
     if (iterBits[j]) {
       if (zero) {
         dd.incRef(f);
@@ -119,11 +108,7 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
         e = f;
         zero = false;
       } else {
-        auto g = dd.multiply(e, f);
-        dd.incRef(g);
-        dd.decRef(e);
-        e = g;
-        dd.garbageCollect();
+        e = dd.applyOperation(e, f);
       }
     }
   }
@@ -132,14 +117,8 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
   // apply state preparation setup
   qc::QuantumComputation statePrep(qc->getNqubits());
   qc->setup(statePrep);
-  auto s = buildFunctionality(&statePrep, dd);
-  auto tmp = dd.multiply(e, s);
-  dd.incRef(tmp);
-  dd.decRef(s);
-  dd.decRef(e);
-  e = tmp;
-
-  return e;
+  const auto s = buildFunctionality(&statePrep, dd);
+  return dd.applyOperation(e, s);
 }
 
 std::unique_ptr<SimulationExperiment>
@@ -302,9 +281,7 @@ protected:
       qc::QuantumComputation statePrep(qc->getNqubits());
       qc->setup(statePrep);
       auto s = buildFunctionality(&statePrep, *dd);
-      auto e = dd->multiply(s, dd->makeZeroState(qc->getNqubits()));
-      dd->incRef(e);
-      dd->decRef(s);
+      auto e = dd->applyOperation(s, dd->makeZeroState(qc->getNqubits()));
 
       qc::QuantumComputation groverIteration(qc->getNqubits());
       qc->oracle(groverIteration);
@@ -318,17 +295,10 @@ protected:
       dd->incRef(f);
       for (std::size_t j = 0U; j <= msb; ++j) {
         if (iterBits[j]) {
-          auto g = dd->multiply(f, e);
-          dd->incRef(g);
-          dd->decRef(e);
-          e = g;
-          dd->garbageCollect();
+          e = dd->applyOperation(f, e);
         }
         if (j < msb) {
-          auto tmp = dd->multiply(f, f);
-          dd->incRef(tmp);
-          dd->decRef(f);
-          f = tmp;
+          f = dd->applyOperation(f, f);
         }
       }
       dd->decRef(f);
