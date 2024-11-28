@@ -2,16 +2,17 @@
 
 #include "dd/Package.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <cmath>
 #include <cstddef>
 #include <stack>
+#include <utility>
 
 namespace dd {
 template <class Config>
 MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd) {
-  const auto nq = qc->getNqubits();
-  if (nq == 0U) {
+  if (qc->getNqubits() == 0U) {
     return MatrixDD::one();
   }
 
@@ -19,13 +20,14 @@ MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd) {
   auto e = dd.createInitialMatrix(qc->ancillary);
 
   for (const auto& op : *qc) {
-    auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
+    // SWAP gates can be executed virtually by changing the permutation
+    if (op->getType() == OpType::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+      continue;
+    }
 
-    dd.incRef(tmp);
-    dd.decRef(e);
-    e = tmp;
-
-    dd.garbageCollect();
+    e = applyUnitaryOperation(op.get(), e, dd, permutation);
   }
   // correct permutation if necessary
   changePermutation(e, permutation, qc->outputPermutation, dd);
@@ -72,14 +74,29 @@ bool buildFunctionalityRecursive(const QuantumComputation* qc,
                                  Package<Config>& dd) {
   // base case
   if (depth == 1U) {
-    auto e = getDD(qc->at(opIdx).get(), dd, permutation);
+    auto e = dd.makeIdent();
+    if (const auto& op = qc->at(opIdx);
+        op->getType() == OpType::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+    } else {
+      e = getDD(qc->at(opIdx).get(), dd, permutation);
+    }
     ++opIdx;
-    if (opIdx == qc->size()) { // only one element was left
+    if (opIdx == qc->size()) {
+      // only one element was left
       s.push(e);
       dd.incRef(e);
       return false;
     }
-    auto f = getDD(qc->at(opIdx).get(), dd, permutation);
+    auto f = dd.makeIdent();
+    if (const auto& op = qc->at(opIdx);
+        op->getType() == OpType::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+    } else {
+      f = getDD(qc->at(opIdx).get(), dd, permutation);
+    }
     s.push(dd.multiply(f, e)); // ! reverse multiplication
     dd.incRef(s.top());
     return (opIdx != qc->size() - 1U);

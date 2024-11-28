@@ -1,6 +1,7 @@
 #include "algorithms/QPE.hpp"
 
 #include "Definitions.hpp"
+#include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/OpType.hpp"
 
 #include <cmath>
@@ -102,7 +103,7 @@ void QPE::createCircuit() {
       // hybrid quantum-classical inverse QFT
       for (std::size_t j = 0; j < i; j++) {
         auto iQFTLambda = -PI / static_cast<double>(1ULL << (i - j));
-        classicControlled(P, 1, {j, 1U}, 1U, {iQFTLambda});
+        classicControlled(P, 1, {j, 1U}, 1U, Eq, {iQFTLambda});
       }
       h(1);
 

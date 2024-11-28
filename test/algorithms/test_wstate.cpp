@@ -17,6 +17,7 @@
 
 class WState : public testing::TestWithParam<qc::Qubit> {};
 
+namespace {
 std::vector<std::string> generateWStateStrings(const std::size_t length) {
   std::vector<std::string> result;
   result.reserve(length);
@@ -27,6 +28,7 @@ std::vector<std::string> generateWStateStrings(const std::size_t length) {
   }
   return result;
 }
+} // namespace
 
 INSTANTIATE_TEST_SUITE_P(
     WState, WState, testing::Range<qc::Qubit>(1U, 128U, 7U),
@@ -40,12 +42,9 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(WState, FunctionTest) {
   const auto nq = GetParam();
-
-  auto qc = qc::WState(nq);
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 4096U;
-  const auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
+  const auto qc = qc::WState(nq);
+  constexpr std::size_t shots = 4096U;
+  const auto measurements = dd::sample(qc, shots);
   for (const auto& result : generateWStateStrings(nq)) {
     EXPECT_TRUE(measurements.find(result) != measurements.end());
   }
@@ -56,7 +55,8 @@ TEST_P(WState, RoutineFunctionTest) {
 
   auto qc = qc::WState(nq);
   auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const dd::VectorDD e = simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd);
+  const dd::VectorDD e =
+      dd::simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd);
   const auto f = dd->makeWState(nq);
 
   EXPECT_EQ(e, f);

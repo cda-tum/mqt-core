@@ -4,10 +4,12 @@
 #include "dd/Operations.hpp"
 #include "dd/Package_fwd.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <cstddef>
 #include <map>
 #include <string>
+#include <utility>
 
 namespace dd {
 using namespace qc;
@@ -15,31 +17,43 @@ using namespace qc;
 template <class Config>
 VectorDD simulate(const QuantumComputation* qc, const VectorDD& in,
                   Package<Config>& dd) {
-  // measurements are currently not supported here
   auto permutation = qc->initialLayout;
   auto e = in;
-  dd.incRef(e);
-
   for (const auto& op : *qc) {
-    auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
-    dd.incRef(tmp);
-    dd.decRef(e);
-    e = tmp;
+    // SWAP gates can be executed virtually by changing the permutation
+    if (op->getType() == OpType::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+      continue;
+    }
 
-    dd.garbageCollect();
+    e = applyUnitaryOperation(op.get(), e, dd, permutation);
   }
-
-  // correct permutation if necessary
   changePermutation(e, permutation, qc->outputPermutation, dd);
   e = dd.reduceGarbage(e, qc->garbage);
-
   return e;
 }
 
 template <class Config>
 std::map<std::string, std::size_t>
-simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
-         std::size_t shots, std::size_t seed = 0U);
+sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
+       std::size_t shots, std::size_t seed = 0U);
+
+/**
+ * Sample from the output distribution of a quantum computation
+ *
+ * This method classically simulates the quantum computation @p qc and samples
+ * @p shots times from the output distribution. The seed for the random number
+ * generator can be set using the @p seed parameter.
+ *
+ * @param qc The quantum computation to simulate
+ * @param shots The number of shots to sample
+ * @param seed The seed for the random number generator
+ * @return A histogram of the measurement results
+ */
+std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
+                                          std::size_t shots = 1024U,
+                                          std::size_t seed = 0U);
 
 template <class Config>
 void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,

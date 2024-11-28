@@ -303,6 +303,7 @@ public:
           static_cast<Qubit>(p),
           std::array{f, dEdge::zero(), dEdge::zero(), dEdge::zero()});
     }
+    incRef(f);
     return f;
   }
 
@@ -319,6 +320,7 @@ public:
     for (std::size_t p = start; p < n + start; p++) {
       f = makeDDNode(static_cast<Qubit>(p), std::array{f, vEdge::zero()});
     }
+    incRef(f);
     return f;
   }
   // generate computational basis state |i> with n qubits
@@ -339,6 +341,7 @@ public:
         f = makeDDNode(static_cast<Qubit>(p), std::array{vEdge::zero(), f});
       }
     }
+    incRef(f);
     return f;
   }
   // generate general basis state with n qubits
@@ -391,7 +394,9 @@ public:
         break;
       }
     }
-    return {f.p, cn.lookup(f.w)};
+    const vEdge e{f.p, cn.lookup(f.w)};
+    incRef(e);
+    return e;
   }
 
   // generate general GHZ state with n qubits
@@ -418,11 +423,13 @@ public:
                                 std::array{vEdge::zero(), rightSubtree});
     }
 
-    return makeDDNode(
+    const vEdge e = makeDDNode(
         static_cast<Qubit>(n - 1),
         std::array<vEdge, RADIX>{
             {{leftSubtree.p, {&constants::sqrt2over2, &constants::zero}},
              {rightSubtree.p, {&constants::sqrt2over2, &constants::zero}}}});
+    incRef(e);
+    return e;
   }
 
   // generate general W state with n qubits
@@ -459,6 +466,7 @@ public:
                                   std::array{rightSubtree, vEdge::zero()});
       }
     }
+    incRef(leftSubtree);
     return leftSubtree;
   }
 
@@ -480,7 +488,9 @@ public:
     const auto level = static_cast<Qubit>(std::log2(length) - 1);
     const auto state =
         makeStateFromVector(stateVector.begin(), stateVector.end(), level);
-    return {state.p, cn.lookup(state.w)};
+    const vEdge e{state.p, cn.lookup(state.w)};
+    incRef(e);
+    return e;
   }
 
   /**
@@ -559,7 +569,7 @@ public:
     for (; it != controls.end() && it->qubit < target; ++it) {
       for (auto i1 = 0U; i1 < RADIX; ++i1) {
         for (auto i2 = 0U; i2 < RADIX; ++i2) {
-          auto i = i1 * RADIX + i2;
+          const auto i = (i1 * RADIX) + i2;
           if (it->type == qc::Control::Type::Neg) { // neg. control
             edges[0] = em[i];
             edges[3] = (i1 == i2) ? mCachedEdge::one() : mCachedEdge::zero();
@@ -673,19 +683,19 @@ public:
         if (target0 > target1) {
           for (std::size_t i = 0; i < RADIX; ++i) {
             for (std::size_t j = 0; j < RADIX; ++j) {
-              local.at(i * RADIX + j) =
-                  em.at(row * RADIX + i).at(col * RADIX + j);
+              local.at((i * RADIX) + j) =
+                  em.at((row * RADIX) + i).at((col * RADIX) + j);
             }
           }
         } else {
           for (std::size_t i = 0; i < RADIX; ++i) {
             for (std::size_t j = 0; j < RADIX; ++j) {
-              local.at(i * RADIX + j) =
-                  em.at(i * RADIX + row).at(j * RADIX + col);
+              local.at((i * RADIX) + j) =
+                  em.at((i * RADIX) + row).at((j * RADIX) + col);
             }
           }
         }
-        em0.at(row * RADIX + col) =
+        em0.at((row * RADIX) + col) =
             makeDDNode(static_cast<Qubit>(smallerTarget), local);
       }
     }
@@ -989,9 +999,8 @@ private:
   }
 
 public:
-  std::pair<dd::fp, dd::fp>
-  determineMeasurementProbabilities(const vEdge& rootEdge, const Qubit index,
-                                    const bool assumeProbabilityNormalization) {
+  static std::pair<dd::fp, dd::fp>
+  determineMeasurementProbabilities(const vEdge& rootEdge, const Qubit index) {
     std::map<const vNode*, fp> measurementProbabilities;
     std::set<const vNode*> visited;
     std::queue<const vNode*> q;
@@ -1036,42 +1045,21 @@ public:
 
     fp pzero{0};
     fp pone{0};
-
-    if (assumeProbabilityNormalization) {
-      while (!q.empty()) {
-        const auto* ptr = q.front();
-        q.pop();
-        const auto& s0 = ptr->e[0];
-        if (const auto s0w = static_cast<ComplexValue>(s0.w);
-            !s0w.approximatelyZero()) {
-          pzero += measurementProbabilities[ptr] * s0w.mag2();
-        }
-        const auto& s1 = ptr->e[1];
-        if (const auto s1w = static_cast<ComplexValue>(s1.w);
-            !s1w.approximatelyZero()) {
-          pone += measurementProbabilities[ptr] * s1w.mag2();
-        }
+    while (!q.empty()) {
+      const auto* ptr = q.front();
+      q.pop();
+      const auto& s0 = ptr->e[0];
+      if (const auto s0w = static_cast<ComplexValue>(s0.w);
+          !s0w.approximatelyZero()) {
+        pzero += measurementProbabilities[ptr] * s0w.mag2();
       }
-    } else {
-      std::unordered_map<const vNode*, fp> probs;
-      assignProbabilities(rootEdge, probs);
-
-      while (!q.empty()) {
-        const auto* ptr = q.front();
-        q.pop();
-
-        const auto& s0 = ptr->e[0];
-        if (const auto s0w = static_cast<ComplexValue>(s0.w);
-            !s0w.approximatelyZero()) {
-          pzero += measurementProbabilities[ptr] * probs[s0.p] * s0w.mag2();
-        }
-        const auto& s1 = ptr->e[1];
-        if (const auto s1w = static_cast<ComplexValue>(s1.w);
-            !s1w.approximatelyZero()) {
-          pone += measurementProbabilities[ptr] * probs[s1.p] * s1w.mag2();
-        }
+      const auto& s1 = ptr->e[1];
+      if (const auto s1w = static_cast<ComplexValue>(s1.w);
+          !s1w.approximatelyZero()) {
+        pone += measurementProbabilities[ptr] * s1w.mag2();
       }
     }
+
     return {pzero, pone};
   }
 
@@ -1080,8 +1068,6 @@ public:
    * decision diagram. Collapses the state according to the measurement result.
    * @param rootEdge the root edge of the state vector decision diagram
    * @param index the index of the qubit to be measured
-   * @param assumeProbabilityNormalization whether or not to assume that the
-   * state vector decision diagram has normalized edge weights.
    * @param mt the random number generator
    * @param epsilon the numerical precision used for checking the normalization
    * of the state vector decision diagram
@@ -1090,10 +1076,9 @@ public:
    * the measurement.
    */
   char measureOneCollapsing(vEdge& rootEdge, const Qubit index,
-                            const bool assumeProbabilityNormalization,
                             std::mt19937_64& mt, const fp epsilon = 0.001) {
-    const auto& [pzero, pone] = determineMeasurementProbabilities(
-        rootEdge, index, assumeProbabilityNormalization);
+    const auto& [pzero, pone] =
+        determineMeasurementProbabilities(rootEdge, index);
     const fp sum = pzero + pone;
     if (std::abs(sum - 1) > epsilon) {
       throw std::runtime_error(
@@ -1457,7 +1442,7 @@ public:
     // conjugate transpose submatrices and rearrange as required
     for (auto i = 0U; i < RADIX; ++i) {
       for (auto j = 0U; j < RADIX; ++j) {
-        e[RADIX * i + j] = conjugateTransposeRec(a.p->e[RADIX * j + i]);
+        e[(RADIX * i) + j] = conjugateTransposeRec(a.p->e[(RADIX * j) + i]);
       }
     }
     // create new top node
@@ -1492,9 +1477,9 @@ public:
   }
 
   dEdge applyOperationToDensity(dEdge& e, const mEdge& operation) {
-    auto tmp0 = conjugateTranspose(operation);
-    auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
-    auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, true);
+    const auto tmp0 = conjugateTranspose(operation);
+    const auto tmp1 = multiply(e, densityFromMatrixEdge(tmp0), false);
+    const auto tmp2 = multiply(densityFromMatrixEdge(operation), tmp1, true);
     incRef(tmp2);
     dEdge::alignDensityEdge(e);
     decRef(e);
@@ -1606,10 +1591,10 @@ private:
     std::array<ResultEdge, n> edge{};
     for (auto i = 0U; i < rows; i++) {
       for (auto j = 0U; j < cols; j++) {
-        auto idx = cols * i + j;
+        auto idx = (cols * i) + j;
         edge[idx] = ResultEdge::zero();
         for (auto k = 0U; k < rows; k++) {
-          const auto xIdx = rows * i + k;
+          const auto xIdx = (rows * i) + k;
           LEdge e1{};
           if (x.p != nullptr && x.p->v == var) {
             e1 = x.p->e[xIdx];
@@ -1621,7 +1606,7 @@ private:
             }
           }
 
-          const auto yIdx = j + cols * k;
+          const auto yIdx = j + (cols * k);
           REdge e2{};
           if (y.p != nullptr && y.p->v == var) {
             e2 = y.p->e[yIdx];
@@ -1718,8 +1703,9 @@ public:
     return innerProduct(x, y).mag2();
   }
 
-  fp fidelityOfMeasurementOutcomes(const vEdge& e, const SparsePVec& probs,
-                                   const qc::Permutation& permutation = {}) {
+  static fp
+  fidelityOfMeasurementOutcomes(const vEdge& e, const SparsePVec& probs,
+                                const qc::Permutation& permutation = {}) {
     if (e.w.approximatelyZero()) {
       return 0.;
     }
@@ -1727,11 +1713,9 @@ public:
                                                   e.p->v + 1U);
   }
 
-  fp fidelityOfMeasurementOutcomesRecursive(const vEdge& e,
-                                            const SparsePVec& probs,
-                                            const std::size_t i,
-                                            const qc::Permutation& permutation,
-                                            const std::size_t nQubits) {
+  static fp fidelityOfMeasurementOutcomesRecursive(
+      const vEdge& e, const SparsePVec& probs, const std::size_t i,
+      const qc::Permutation& permutation, const std::size_t nQubits) {
     const auto top = ComplexNumbers::mag(e.w);
     if (e.isTerminal()) {
       auto idx = i;
@@ -1911,6 +1895,9 @@ private:
     } else {
       if (x.isTerminal()) {
         return {y.p, rWeight};
+      }
+      if (y.isTerminal()) {
+        return {x.p, rWeight};
       }
     }
 
