@@ -13,6 +13,7 @@
 #include <array>
 #include <cstddef>
 #include <map>
+#include <memory>
 #include <random>
 #include <string>
 #include <utility>
@@ -197,8 +198,8 @@ std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
                                           const std::size_t shots,
                                           const std::size_t seed) {
   const auto nqubits = qc.getNqubits();
-  Package<> dd(nqubits);
-  return sample(&qc, dd.makeZeroState(nqubits), dd, shots, seed);
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  return sample(&qc, dd->makeZeroState(nqubits), *dd, shots, seed);
 }
 
 template <class Config>
