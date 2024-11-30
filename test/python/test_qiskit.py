@@ -201,7 +201,7 @@ def test_symbolic() -> None:
     assert mqt_qc[0].name.strip() == "rx"
     assert isinstance(mqt_qc[0], SymbolicOperation)
     assert isinstance(mqt_qc[0].get_parameter(0), Expression)
-    expr = cast(Expression, mqt_qc[0].get_parameter(0))
+    expr = cast("Expression", mqt_qc[0].get_parameter(0))
     print(expr)
     assert expr.num_terms() == 3
     assert expr.terms[0].coefficient == -1
@@ -232,7 +232,7 @@ def test_symbolic_two_qubit() -> None:
     assert mqt_qc[0].name.strip() == "rxx"
     assert isinstance(mqt_qc[0], SymbolicOperation)
     assert isinstance(mqt_qc[0].get_parameter(0), Expression)
-    expr = cast(Expression, mqt_qc[0].get_parameter(0))
+    expr = cast("Expression", mqt_qc[0].get_parameter(0))
     assert expr.num_terms() == 1
     assert expr.constant == 0
     assert not mqt_qc.is_variable_free()

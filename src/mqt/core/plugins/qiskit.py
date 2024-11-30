@@ -343,7 +343,7 @@ def _add_operation(
     if any(isinstance(parameter, Expression) for parameter in parameters):
         qc.append(SymbolicOperation(controls, target, type_, parameters))
     else:
-        qc.append(StandardOperation(controls, target, type_, cast(list[float], parameters)))
+        qc.append(StandardOperation(controls, target, type_, cast("list[float]", parameters)))
     return parameters
 
 
@@ -362,7 +362,7 @@ def _add_two_target_operation(
     if any(isinstance(parameter, Expression) for parameter in parameters):
         qc.append(SymbolicOperation(controls, target1, target2, type_, parameters))
     else:
-        qc.append(StandardOperation(controls, target1, target2, type_, cast(list[float], parameters)))
+        qc.append(StandardOperation(controls, target1, target2, type_, cast("list[float]", parameters)))
     return parameters
 
 
@@ -415,7 +415,7 @@ def _import_definition(
     carg_map = dict(zip(circ.clbits, cargs))
 
     qc.append(CompoundOperation())
-    comp_op = cast(CompoundOperation, qc[-1])
+    comp_op = cast("CompoundOperation", qc[-1])
 
     params = []
     for instruction in circ.data:
