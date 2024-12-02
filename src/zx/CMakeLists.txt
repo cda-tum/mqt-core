@@ -1,3 +1,10 @@
+# Copyright (c) 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
   # make sure the MQT::multiprecision target is available
   if(NOT TARGET MQT::Multiprecision)

@@ -1,3 +1,10 @@
+# Copyright (c) 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # A cmake script to determine the project version either
 #
 # * from the `SKBUILD_PROJECT_VERSION` variable (if available) or

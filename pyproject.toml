@@ -195,7 +195,7 @@ isort.required-imports = ["from __future__ import annotations"]
     "E402", # Allow imports to appear anywhere in Jupyter notebooks
     "I002", # Allow missing `from __future__ import annotations` import
 ]
-"src/mqt/core/_compat/**.py" = ["TID251"]
+"src/mqt/core/_compat/**.py" = ["TID251", "A005"]
 "src/mqt/core/dd/evaluation.py" = ["T201"]
 "src/mqt/core/__main__.py" = ["T201"]
 

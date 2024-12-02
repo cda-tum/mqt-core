@@ -1,3 +1,10 @@
+# Copyright (c) 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 set(MQT_CORE_TARGET_NAME "mqt-core")
 set(MQT_CORE_TARGETS "")
 

@@ -1,3 +1,10 @@
+# Copyright (c) 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # File adapted from
 # https://github.com/dune-project/dune-common/blob/master/cmake/modules/FindGMP.cmake
 
