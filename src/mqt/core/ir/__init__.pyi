@@ -1,3 +1,10 @@
+# Copyright (c) 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 """MQT Core IR  - The MQT Core Intermediate Representation (IR) module."""
 
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping, MutableSequence, Sequence

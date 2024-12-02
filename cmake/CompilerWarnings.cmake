@@ -1,3 +1,10 @@
+# Copyright (c) 2023 - 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # enable extensive compiler warnings from here:
 # https://github.com/lefticus/cppbestpractices/blob/master/02-Use_the_Tools_Available.md
 function(set_project_warnings target_name)

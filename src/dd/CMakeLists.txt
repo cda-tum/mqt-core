@@ -1,3 +1,10 @@
+# Copyright (c) 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 if(NOT TARGET ${MQT_CORE_TARGET_NAME}-dd)
   # collect headers and source files
   file(GLOB_RECURSE DD_HEADERS ${MQT_CORE_INCLUDE_BUILD_DIR}/dd/*.hpp)

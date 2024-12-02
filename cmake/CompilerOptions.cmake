@@ -1,3 +1,10 @@
+# Copyright (c) 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # set common compiler options for projects
 function(enable_project_options target_name)
   include(CheckCXXCompilerFlag)

@@ -1,3 +1,10 @@
+# Copyright (c) 2024 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # macro to add a test executable for one of the project libraries
 macro(PACKAGE_ADD_TEST testname linklibs)
   if(NOT TARGET ${testname})
