@@ -10,6 +10,13 @@
       "affiliation": "Chair for Design Automation, Technical University of Munich, Germany"
     },
     {
+      "@id": "https://orcid.org/0000-0001-5785-2528",
+      "@type": "Person",
+      "email": "yannick.stade@tum.de",
+      "name": "Yannick Stade",
+      "affiliation": "Chair for Design Automation, Technical University of Munich, Germany"
+    },
+    {
       "@id": "https://orcid.org/0000-0002-4993-7860",
       "@type": "Person",
       "email": "robert.wille@tum.de",

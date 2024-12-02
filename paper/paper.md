@@ -15,6 +15,9 @@ authors:
     corresponding: true
     orcid: 0000-0003-4699-1316
     affiliation: 1
+  - name: Yannick Stade
+    orcid: 0000-0001-5785-2528
+    affiliation: 1
   - name: Robert Wille
     orcid: 0000-0002-4993-7860
     affiliation: "1, 2"
