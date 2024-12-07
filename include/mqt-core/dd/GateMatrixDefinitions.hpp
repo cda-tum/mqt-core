@@ -10,30 +10,26 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <cmath>
 #include <complex>
+#include <unordered_map>
+#include <vector>
 
 namespace dd {
 
 // Gate matrices
-constexpr GateMatrix I_MAT{1, 0, 0, 1};
-constexpr GateMatrix H_MAT{SQRT2_2, SQRT2_2, SQRT2_2, -SQRT2_2};
-constexpr GateMatrix X_MAT{0, 1, 1, 0};
-constexpr GateMatrix Y_MAT{0, {0, -1}, {0, 1}, 0};
-constexpr GateMatrix Z_MAT{1, 0, 0, -1};
-constexpr GateMatrix S_MAT{1, 0, 0, {0, 1}};
-constexpr GateMatrix SDG_MAT{1, 0, 0, {0, -1}};
-constexpr GateMatrix T_MAT{1, 0, 0, {SQRT2_2, SQRT2_2}};
-constexpr GateMatrix TDG_MAT{1, 0, 0, {SQRT2_2, -SQRT2_2}};
-constexpr GateMatrix SX_MAT{
-    std::complex{0.5, 0.5}, {0.5, -0.5}, {0.5, -0.5}, {0.5, 0.5}};
-constexpr GateMatrix SXDG_MAT{
-    std::complex{0.5, -0.5}, {0.5, 0.5}, {0.5, 0.5}, {0.5, -0.5}};
-constexpr GateMatrix V_MAT{SQRT2_2, {0, -SQRT2_2}, {0, -SQRT2_2}, SQRT2_2};
-constexpr GateMatrix VDG_MAT{SQRT2_2, {0, SQRT2_2}, {0, SQRT2_2}, SQRT2_2};
 constexpr GateMatrix MEAS_ZERO_MAT{1, 0, 0, 0};
 constexpr GateMatrix MEAS_ONE_MAT{0, 0, 0, 1};
+
+extern const std::unordered_map<qc::OpType,
+                                GateMatrix (*const)(const std::vector<fp>&)>
+    MATS_GENERATORS;
+
+extern const std::unordered_map<qc::OpType, TwoQubitGateMatrix (*const)(
+                                                const std::vector<fp>&)>
+    TWO_GATE_MATS_GENERATORS;
 
 inline GateMatrix uMat(const fp lambda, const fp phi, const fp theta) {
   return GateMatrix{{{std::cos(theta / 2.), 0.},
@@ -77,36 +73,6 @@ inline GateMatrix rzMat(const fp lambda) {
                      0,
                      {std::cos(lambda / 2.), std::sin(lambda / 2.)}}};
 }
-
-constexpr TwoQubitGateMatrix CX_MAT{
-    {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 0, 1}, {0, 0, 1, 0}}};
-
-constexpr TwoQubitGateMatrix CZ_MAT{
-    {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, -1}}};
-
-constexpr TwoQubitGateMatrix SWAP_MAT{
-    {{1, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 0, 0}, {0, 0, 0, 1}}};
-
-constexpr TwoQubitGateMatrix ISWAP_MAT{
-    {{1, 0, 0, 0}, {0, 0, {0, 1}, 0}, {0, {0, 1}, 0, 0}, {0, 0, 0, 1}}};
-
-constexpr TwoQubitGateMatrix ISWAPDG_MAT{
-    {{1, 0, 0, 0}, {0, 0, {0, -1}, 0}, {0, {0, -1}, 0, 0}, {0, 0, 0, 1}}};
-
-constexpr TwoQubitGateMatrix ECR_MAT{
-    {{0, 0, SQRT2_2, {0, SQRT2_2}},
-     {0, 0, {0, SQRT2_2}, SQRT2_2},
-     {SQRT2_2, {0, -SQRT2_2}, 0, 0},
-     {std::complex{0., -SQRT2_2}, SQRT2_2, 0, 0}}};
-
-constexpr TwoQubitGateMatrix DCX_MAT{
-    {{1, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}, {0, 1, 0, 0}}};
-
-constexpr TwoQubitGateMatrix PERES_MAT{
-    {{0, 0, 0, 1}, {0, 0, 1, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}}};
-
-constexpr TwoQubitGateMatrix PERESDG_MAT{
-    {{0, 0, 1, 0}, {0, 0, 0, 1}, {0, 1, 0, 0}, {1, 0, 0, 0}}};
 
 inline TwoQubitGateMatrix rxxMat(const fp theta) {
   const auto cosTheta = std::cos(theta / 2.);
@@ -174,4 +140,15 @@ inline TwoQubitGateMatrix xxPlusYYMat(const fp theta, const fp beta = 0.) {
        {0, {-sinBeta * sinTheta, -cosBeta * sinTheta}, cosTheta, 0},
        {0, 0, 0, 1}}};
 }
+
+inline GateMatrix opToSingleGateMatrix(qc::OpType t,
+                                       const std::vector<fp>& params = {}) {
+  return MATS_GENERATORS.at(t)(params);
+}
+
+inline TwoQubitGateMatrix
+opToTwoQubitGateMatrix(qc::OpType t, const std::vector<fp>& params = {}) {
+  return TWO_GATE_MATS_GENERATORS.at(t)(params);
+}
+
 } // namespace dd
