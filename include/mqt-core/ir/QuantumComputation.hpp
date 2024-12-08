@@ -184,7 +184,7 @@ protected:
       for (decltype(RegisterType::second) i = 0; i < reg.second.second.second;
            i++) {
         ss << reg.second.first << "[" << i << "]";
-        regnames.push_back(std::make_pair(reg.second.first, ss.str()));
+        regnames.emplace_back(reg.second.first, ss.str());
         ss.str(std::string());
       }
     }
