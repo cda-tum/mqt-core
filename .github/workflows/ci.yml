@@ -39,6 +39,9 @@ jobs:
     uses: nquetschlich/mqt-workflows/.github/workflows/reusable-python-ci.yml@parallel_workflow
     with:
       run-tests-individually: true
+    permissions:
+      contents: read # Required for the `actions/checkout` action
+      id-token: write # Required for the `codecov/codecov-action` action
 
   code-ql:
     name: 📝 CodeQL
