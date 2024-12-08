@@ -38,7 +38,6 @@ jobs:
     if: fromJSON(needs.change-detection.outputs.run-python-tests)
     uses: nquetschlich/mqt-workflows/.github/workflows/reusable-python-ci.yml@parallel_workflow
     with:
-      # Runs all Python tests in separate jobs to maximize parallelism
       run-tests-individually: true
     permissions:
       contents: read # Required for the `actions/checkout` action
