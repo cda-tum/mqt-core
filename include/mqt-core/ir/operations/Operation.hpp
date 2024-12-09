@@ -14,8 +14,6 @@
 #include "Definitions.hpp"
 #include "OpType.hpp"
 
-#include <algorithm>
-#include <array>
 #include <cstring>
 #include <functional>
 #include <iostream>
@@ -140,8 +138,8 @@ public:
   [[nodiscard]] virtual bool isSymbolicOperation() const { return false; }
 
   [[nodiscard]] virtual auto isDiagonalGate() const -> bool {
-    return std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), type) !=
-           DIAGONAL_GATES.end();
+    // the second bit in the type is a flag that is set for diagonal gates
+    return (+type & OpTypeDiag) != 0;
   }
 
   [[nodiscard]] virtual auto isSingleQubitGate() const -> bool {

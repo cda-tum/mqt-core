@@ -180,16 +180,11 @@ mEdge StochasticNoiseFunctionality::generateNoiseOperation(
           stackOperation(operation, target, effect, amplitudeDampingMatrix);
       break;
     }
-    case (qc::X): {
-      operation = stackOperation(operation, target, effect, X_MAT);
-      break;
-    }
-    case (qc::Y): {
-      operation = stackOperation(operation, target, effect, Y_MAT);
-      break;
-    }
+    case (qc::X):
+    case (qc::Y):
     case (qc::Z): {
-      operation = stackOperation(operation, target, effect, Z_MAT);
+      operation = stackOperation(operation, target, effect,
+                                 opToSingleGateMatrix(effect));
       break;
     }
     default: {
