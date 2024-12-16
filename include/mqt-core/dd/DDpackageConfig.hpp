@@ -45,7 +45,7 @@ struct DDPackageConfig {
 };
 
 struct StochasticNoiseSimulatorDDPackageConfig : public dd::DDPackageConfig {
-  static constexpr std::size_t STOCHASTIC_CACHE_OPS = qc::OpType::OpCount;
+  static constexpr std::size_t STOCHASTIC_CACHE_OPS = qc::OpType::OpTypeEnd;
 
   static constexpr std::size_t CT_VEC_ADD_MAG_NBUCKET = 1U;
   static constexpr std::size_t CT_MAT_ADD_MAG_NBUCKET = 1U;

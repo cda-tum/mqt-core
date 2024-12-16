@@ -28,19 +28,19 @@
 
 namespace dd {
 template <class Config>
-void dumpTensor(qc::Operation* op, std::ostream& of,
+void dumpTensor(qc::Operation& op, std::ostream& of,
                 std::vector<std::size_t>& inds, size_t& gateIdx,
                 Package<Config>& dd) {
-  const auto type = op->getType();
-  if (op->isStandardOperation()) {
-    const auto& controls = op->getControls();
-    const auto& targets = op->getTargets();
+  const auto type = op.getType();
+  if (op.isStandardOperation()) {
+    const auto& controls = op.getControls();
+    const auto& targets = op.getTargets();
 
     // start of tensor
     of << "[";
 
     // save tags including operation type, involved qubits, and gate index
-    of << "[\"" << op->getName() << "\", ";
+    of << "[\"" << op.getName() << "\", ";
 
     // obtain an ordered map of involved qubits and add corresponding tags
     std::map<qc::Qubit, std::variant<qc::Qubit, qc::Control>> orderedQubits{};
@@ -104,10 +104,10 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
     }
 
     // get DD for local operation
-    auto localOp = op->clone();
+    auto localOp = op.clone();
     localOp->setControls(localControls);
     localOp->setTargets(localTargets);
-    const auto localDD = getDD(localOp.get(), dd);
+    const auto localDD = getDD(*localOp, dd);
 
     // translate local DD to matrix
     const auto localMatrix = localDD.getMatrix(localQubits);
@@ -136,12 +136,12 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
 
     // end of tensor
     of << "]";
-  } else if (auto* compoundOp = dynamic_cast<qc::CompoundOperation*>(op)) {
+  } else if (auto* compoundOp = dynamic_cast<qc::CompoundOperation*>(&op)) {
     for (const auto& operation : *compoundOp) {
       if (operation != (*compoundOp->begin())) {
         of << ",\n";
       }
-      dumpTensor(operation.get(), of, inds, gateIdx, dd);
+      dumpTensor(*operation, of, inds, gateIdx, dd);
     }
   } else if (type == qc::Barrier) {
     return;
@@ -153,7 +153,7 @@ void dumpTensor(qc::Operation* op, std::ostream& of,
   }
 }
 
-template void dumpTensor<DDPackageConfig>(qc::Operation* op, std::ostream& of,
+template void dumpTensor<DDPackageConfig>(qc::Operation& op, std::ostream& of,
                                           std::vector<std::size_t>& inds,
                                           size_t& gateIdx,
                                           Package<DDPackageConfig>& dd);

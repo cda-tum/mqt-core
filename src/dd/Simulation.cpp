@@ -106,7 +106,7 @@ sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
         continue;
       }
 
-      e = applyUnitaryOperation(op.get(), e, dd, permutation);
+      e = applyUnitaryOperation(*op, e, dd, permutation);
     }
 
     // correct permutation if necessary
@@ -166,22 +166,22 @@ sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
           continue;
         }
 
-        e = applyUnitaryOperation(op.get(), e, dd, permutation);
+        e = applyUnitaryOperation(*op, e, dd, permutation);
         continue;
       }
 
       if (op->getType() == Measure) {
-        e = applyMeasurement(op.get(), e, dd, mt, measurements, permutation);
+        e = applyMeasurement(*op, e, dd, mt, measurements, permutation);
         continue;
       }
 
       if (op->getType() == Reset) {
-        e = applyReset(op.get(), e, dd, mt, permutation);
+        e = applyReset(*op, e, dd, mt, permutation);
         continue;
       }
 
       if (op->isClassicControlledOperation()) {
-        e = applyClassicControlledOperation(op.get(), e, dd, measurements,
+        e = applyClassicControlledOperation(*op, e, dd, measurements,
                                             permutation);
         continue;
       }
@@ -241,7 +241,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
         std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
         continue;
       }
-      state = applyUnitaryOperation(op.get(), state, dd, permutation);
+      state = applyUnitaryOperation(*op, state, dd, permutation);
       continue;
     }
 
@@ -264,7 +264,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
         continue;
       }
 
-      state = applyUnitaryOperation(classicControlled->getOperation(), state,
+      state = applyUnitaryOperation(*classicControlled->getOperation(), state,
                                     dd, permutation);
       continue;
     }
@@ -293,7 +293,8 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
 
       if (RealNumber::approximatelyEquals(pone, 1.)) {
         const qc::MatrixDD xGate =
-            dd.makeGateDD(X_MAT, static_cast<Qubit>(permutation.at(target)));
+            dd.makeGateDD(opToSingleQubitGateMatrix(qc::X),
+                          static_cast<Qubit>(permutation.at(target)));
         state = dd.applyOperation(xGate, state);
         continue;
       }

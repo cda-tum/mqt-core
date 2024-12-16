@@ -132,9 +132,8 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   auto rightIt = iqpe->begin();
 
   while (leftIt != qpe->end() && rightIt != iqpe->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
-    auto multRight =
-        dd->multiply(multLeft, getInverseDD((*rightIt).get(), *dd));
+    auto multLeft = dd->multiply(getDD(**leftIt, *dd), e);
+    auto multRight = dd->multiply(multLeft, getInverseDD(**rightIt, *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -146,7 +145,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   }
 
   while (leftIt != qpe->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
+    auto multLeft = dd->multiply(getDD(**leftIt, *dd), e);
     dd->incRef(multLeft);
     dd->decRef(e);
     e = multLeft;
@@ -157,7 +156,7 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
   }
 
   while (rightIt != iqpe->end()) {
-    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), *dd));
+    auto multRight = dd->multiply(e, getInverseDD(**rightIt, *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -336,9 +335,8 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   auto rightIt = iqpe->begin();
 
   while (leftIt != qpe->end() && rightIt != iqpe->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
-    auto multRight =
-        dd->multiply(multLeft, getInverseDD((*rightIt).get(), *dd));
+    auto multLeft = dd->multiply(getDD(**leftIt, *dd), e);
+    auto multRight = dd->multiply(multLeft, getInverseDD(**rightIt, *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -350,7 +348,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   }
 
   while (leftIt != qpe->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
+    auto multLeft = dd->multiply(getDD(**leftIt, *dd), e);
     dd->incRef(multLeft);
     dd->decRef(e);
     e = multLeft;
@@ -361,7 +359,7 @@ TEST_P(DynamicCircuitEvalInexactQPE, UnitaryTransformation) {
   }
 
   while (rightIt != iqpe->end()) {
-    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), *dd));
+    auto multRight = dd->multiply(e, getInverseDD(**rightIt, *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -490,9 +488,8 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   auto rightIt = dbv->begin();
 
   while (leftIt != bv->end() && rightIt != dbv->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
-    auto multRight =
-        dd->multiply(multLeft, getInverseDD((*rightIt).get(), *dd));
+    auto multLeft = dd->multiply(getDD(**leftIt, *dd), e);
+    auto multRight = dd->multiply(multLeft, getInverseDD(**rightIt, *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -504,7 +501,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   }
 
   while (leftIt != bv->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
+    auto multLeft = dd->multiply(getDD(**leftIt, *dd), e);
     dd->incRef(multLeft);
     dd->decRef(e);
     e = multLeft;
@@ -515,7 +512,7 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
   }
 
   while (rightIt != dbv->end()) {
-    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), *dd));
+    auto multRight = dd->multiply(e, getInverseDD(**rightIt, *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -636,9 +633,8 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   auto rightIt = dqft->begin();
 
   while (leftIt != qft->end() && rightIt != dqft->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
-    auto multRight =
-        dd->multiply(multLeft, getInverseDD((*rightIt).get(), *dd));
+    auto multLeft = dd->multiply(getDD(**leftIt, *dd), e);
+    auto multRight = dd->multiply(multLeft, getInverseDD(**rightIt, *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;
@@ -650,7 +646,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   }
 
   while (leftIt != qft->end()) {
-    auto multLeft = dd->multiply(getDD((*leftIt).get(), *dd), e);
+    auto multLeft = dd->multiply(getDD(**leftIt, *dd), e);
     dd->incRef(multLeft);
     dd->decRef(e);
     e = multLeft;
@@ -661,7 +657,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
   }
 
   while (rightIt != dqft->end()) {
-    auto multRight = dd->multiply(e, getInverseDD((*rightIt).get(), *dd));
+    auto multRight = dd->multiply(e, getInverseDD(**rightIt, *dd));
     dd->incRef(multRight);
     dd->decRef(e);
     e = multRight;

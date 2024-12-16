@@ -49,7 +49,7 @@ inline void dumpTensorNetwork(std::ostream& of, const QuantumComputation& qc) {
     if (op != qc.front() && (type != Measure && type != Barrier)) {
       of << ",\n";
     }
-    dumpTensor(op.get(), of, inds, gateIdx, *dd);
+    dumpTensor(*op, of, inds, gateIdx, *dd);
   }
   of << "\n]}\n";
 }
