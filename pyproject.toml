@@ -37,6 +37,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 evaluation = [
   "pandas[output-formatting]>=2.1.2",
+  "pandas[output-formatting]>=2.2.3; python_version >= '3.13'",
 ]
 qiskit = [
   "qiskit[qasm3-import]>=1.0.0",
@@ -279,6 +280,7 @@ docs = [
   "sphinxcontrib-svg2pdfconverter>=1.2.3",
   "sphinxext-opengraph>=0.9.1",
   "pandas[output-formatting]>=2.1.2",
+  "pandas[output-formatting]>=2.2.3; python_version >= '3.13'",
   "qiskit[qasm3-import,visualization]>=1.0.0",
   "scipy>=1.14.1; python_version >= '3.13'",
   "numpy>=2.1; python_version >= '3.13'",
@@ -288,6 +290,7 @@ test = [
   "pytest-console-scripts>=1.4.1",
   "pytest-cov>=6",
   "pandas[output-formatting]>=2.1.2",
+  "pandas[output-formatting]>=2.2.3; python_version >= '3.13'",
   "qiskit[qasm3-import]>=1.0.0",
   "scipy>=1.14.1; python_version >= '3.13'",
   "numpy>=2.1; python_version >= '3.13'",
