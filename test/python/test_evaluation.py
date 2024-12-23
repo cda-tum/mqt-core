@@ -34,7 +34,7 @@ def test_flatten_dict() -> None:
 
 def test_post_processing() -> None:
     """Test postprocessing."""
-    with pytest.raises(ValueError, match="Benchmark a.b is missing algorithm, task, number of qubits or metric!"):
+    with pytest.raises(ValueError, match=r"Benchmark a.b is missing algorithm, task, number of qubits or metric!"):
         __post_processing("a.b")
     assert __post_processing("BV.Functionality.1024.runtime") == {
         "algo": "BV",
