@@ -1323,7 +1323,7 @@ wheels = [
 
 [[package]]
 name = "mqt-core"
-version = "2.7.1.dev60+g51e4f92"
+version = "2.7.1.dev62+g3b47bbce"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -1342,10 +1342,7 @@ build = [
 ]
 dev = [
     { name = "furo" },
-    { name = "ipython", version = "8.31.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "myst-nb" },
-    { name = "myst-parser", version = "4.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "numpy", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "pandas", extra = ["output-formatting"] },
     { name = "pybind11" },
     { name = "pytest" },
@@ -1353,9 +1350,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "qiskit", extra = ["qasm3-import", "visualization"] },
     { name = "scikit-build-core" },
-    { name = "scipy", version = "1.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "setuptools-scm" },
-    { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "sphinx-autoapi" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-design" },
@@ -1365,15 +1360,10 @@ dev = [
 ]
 docs = [
     { name = "furo" },
-    { name = "ipython", version = "8.31.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "myst-nb" },
-    { name = "myst-parser", version = "4.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "numpy", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "pandas", extra = ["output-formatting"] },
     { name = "qiskit", extra = ["qasm3-import", "visualization"] },
-    { name = "scipy", version = "1.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "setuptools-scm" },
-    { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "sphinx-autoapi" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-design" },
@@ -1382,18 +1372,15 @@ docs = [
     { name = "sphinxext-opengraph" },
 ]
 test = [
-    { name = "numpy", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "pandas", extra = ["output-formatting"] },
     { name = "pytest" },
     { name = "pytest-console-scripts" },
     { name = "pytest-cov" },
     { name = "qiskit", extra = ["qasm3-import"] },
-    { name = "scipy", version = "1.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "pandas", extras = ["output-formatting"], marker = "python_full_version >= '3.13' and extra == 'evaluation'", specifier = ">=2.2.3" },
     { name = "pandas", extras = ["output-formatting"], marker = "extra == 'evaluation'", specifier = ">=2.1.2" },
     { name = "qiskit", extras = ["qasm3-import"], marker = "extra == 'qiskit'", specifier = ">=1.0.0" },
 ]
@@ -1406,10 +1393,7 @@ build = [
 ]
 dev = [
     { name = "furo", specifier = ">=2024.8.6" },
-    { name = "ipython", marker = "python_full_version >= '3.10'", specifier = ">=8.29" },
     { name = "myst-nb", specifier = ">=1.1.2" },
-    { name = "myst-parser", marker = "python_full_version >= '3.10'", specifier = ">=4" },
-    { name = "numpy", marker = "python_full_version >= '3.13'", specifier = ">=2.1" },
     { name = "pandas", extras = ["output-formatting"], specifier = ">=2.1.2" },
     { name = "pandas", extras = ["output-formatting"], marker = "python_full_version >= '3.13'", specifier = ">=2.2.3" },
     { name = "pybind11", specifier = ">=2.13.6" },
@@ -1419,9 +1403,7 @@ dev = [
     { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.0.0" },
     { name = "qiskit", extras = ["qasm3-import", "visualization"], specifier = ">=1.0.0" },
     { name = "scikit-build-core", specifier = ">=0.10.7" },
-    { name = "scipy", marker = "python_full_version >= '3.13'", specifier = ">=1.14.1" },
     { name = "setuptools-scm", specifier = ">=8.1" },
-    { name = "sphinx", marker = "python_full_version >= '3.10'", specifier = ">=8" },
     { name = "sphinx-autoapi", specifier = ">=3.3.3" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-design", specifier = ">=0.6.1" },
@@ -1431,16 +1413,10 @@ dev = [
 ]
 docs = [
     { name = "furo", specifier = ">=2024.8.6" },
-    { name = "ipython", marker = "python_full_version >= '3.10'", specifier = ">=8.29" },
     { name = "myst-nb", specifier = ">=1.1.2" },
-    { name = "myst-parser", marker = "python_full_version >= '3.10'", specifier = ">=4" },
-    { name = "numpy", marker = "python_full_version >= '3.13'", specifier = ">=2.1" },
     { name = "pandas", extras = ["output-formatting"], specifier = ">=2.1.2" },
-    { name = "pandas", extras = ["output-formatting"], marker = "python_full_version >= '3.13'", specifier = ">=2.2.3" },
     { name = "qiskit", extras = ["qasm3-import", "visualization"], specifier = ">=1.0.0" },
-    { name = "scipy", marker = "python_full_version >= '3.13'", specifier = ">=1.14.1" },
     { name = "setuptools-scm", specifier = ">=8.1" },
-    { name = "sphinx", marker = "python_full_version >= '3.10'", specifier = ">=8" },
     { name = "sphinx-autoapi", specifier = ">=3.3.3" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-design", specifier = ">=0.6.1" },
@@ -1449,14 +1425,12 @@ docs = [
     { name = "sphinxext-opengraph", specifier = ">=0.9.1" },
 ]
 test = [
-    { name = "numpy", marker = "python_full_version >= '3.13'", specifier = ">=2.1" },
     { name = "pandas", extras = ["output-formatting"], specifier = ">=2.1.2" },
     { name = "pandas", extras = ["output-formatting"], marker = "python_full_version >= '3.13'", specifier = ">=2.2.3" },
     { name = "pytest", specifier = ">=8.3.3" },
     { name = "pytest-console-scripts", specifier = ">=1.4.1" },
     { name = "pytest-cov", specifier = ">=6" },
     { name = "qiskit", extras = ["qasm3-import"], specifier = ">=1.0.0" },
-    { name = "scipy", marker = "python_full_version >= '3.13'", specifier = ">=1.14.1" },
 ]
 
 [[package]]
