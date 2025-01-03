@@ -1172,3 +1172,25 @@ TEST_F(QFRFunctionality, NoRegisterOnEmptyCircuit) {
   EXPECT_NO_THROW(qc.addQubitRegister(1U, "q"));
   EXPECT_EQ(qc.getQregs().size(), 2U);
 }
+
+TEST_F(QFRFunctionality, stripIdleQubits) {
+  QuantumComputation qc(3, 2);
+  qc.x(0);
+  qc.x(2);
+  qc.measure(0, 0);
+  qc.measure(2, 1);
+  qc.stripIdleQubits(true);
+
+  const auto* const expected = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[2] c;\n"
+                               "x q[0];\n"
+                               "x q[1];\n"
+                               "c[0] = measure q[0];\n"
+                               "c[1] = measure q[1];\n";
+
+  EXPECT_EQ(qc.toQASM(), expected);
+}
