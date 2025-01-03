@@ -229,6 +229,7 @@ default.extend-ignore-re = [
 wille = "wille"
 anc = "anc"
 mch = "mch"
+ket = "ket"
 
 
 [tool.repo-review]

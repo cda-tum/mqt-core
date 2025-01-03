@@ -92,6 +92,36 @@ integration with existing Python-based quantum computing tools. In addition, pre
 are available for all major platforms and Python versions, making it easy to install and use MQT
 Core in various environments without the need for manual compilation.
 
+# Related Work
+
+MQT Core builds on a rich history of research in quantum computing, design automation, and data
+structures. The design of its IR is heavily inspired by IBM's Qiskit [@qiskit2024], with which it
+has stayed compatible since `qiskit-terra` version 0.16.1 (released at the end of 2020).
+MQT Core remains one of the few libraries providing drop-in replacements for large parts of Qiskit's
+core data structures in C++.
+Alternative IRs, that come as part of larger quantum computing frameworks, include
+Quantinuum's C++-based t$|$ket$\rangle$ [@sivarajah_tket_2021],
+LBNL's Python-based `bqskit` [@younis_berkeley_2021],
+Xanadu's MLIR-based `catalyst` [@Ittah2024], and
+NVIDIA's MLIR-based `CUDA-Q` [@cuda_q].
+
+The origin of the decision diagram package in MQT Core dates back to the seminal work on
+Quantum Multiple-Valued Decision Diagrams (QMDDs) [@niemann_qmdds_2016].
+It provides a state-of-the-art implementation of QMDDs that natively integrates with the MQT Core IR.
+Alternative types of quantum decision diagrams and related software packages include
+TDD's [@hong_tensor_2022], Bit-Slicing Decision Diagrams [@tsaiBitSlicingHilbertSpace2021], and
+LIMDDs [@vinkhuijzen_limdd_2023].
+In comparison to MQT Core, most of these libraries have remained academic prototypes and have not
+seen widespread adoption in the quantum computing community.
+
+The ZX-diagram package in MQT Core is inspired by the `PyZX` library [@kissingerPyZXLargeScale2020]
+and the t$|$ket$\rangle$ [@sivarajah_tket_2021] compiler.
+It provides an efficient C++ implementation of core ZX-calculus concepts and is tightly integrated
+with the MQT Core IR.
+Compared to other implementations, the ZX package in MQT Core is fine-tuned for verification use
+cases and provides dedicated support for handling qubit permutations as well as numerical
+inaccuracies that arise in practice.
+
 # Acknowledgements
 
 The Munich Quantum Toolkit has been supported by the European Research Council (ERC) under the
