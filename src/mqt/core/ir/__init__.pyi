@@ -297,7 +297,7 @@ class QuantumComputation(MutableSequence[Operation]):
     #                          (Qu)Bit Registers
     # --------------------------------------------------------------------------
 
-    def add_ancillary_register(self, n: int, name: str = "q") -> None:
+    def add_ancillary_register(self, n: int, name: str = "anc") -> None:
         """Add an ancillary register to the quantum computation.
 
         Args:
@@ -313,7 +313,7 @@ class QuantumComputation(MutableSequence[Operation]):
             name: The name of the classical register.
         """
 
-    def add_qubit_register(self, n: int, name: str = "anc") -> None:
+    def add_qubit_register(self, n: int, name: str = "q") -> None:
         """Add a qubit register to the quantum computation.
 
         Args:
