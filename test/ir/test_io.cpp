@@ -705,3 +705,40 @@ TEST_F(IO, fromCompoundOperation) {
   const auto actual = qc2.toQASM();
   EXPECT_EQ(expected, actual);
 }
+
+TEST_F(IO, classicalControlledOperationToOpenQASM3) {
+  qc->addQubitRegister(2);
+  qc->addClassicalRegister(2);
+  qc->classicControlled(qc::X, 0, {0, 1});
+  qc->classicControlled(qc::X, 1, {0, 2});
+  const std::string expected = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[2] c;\n"
+                               "if (c[0] == 1) {\n"
+                               "  x q[0];\n"
+                               "}\n"
+                               "if (c == 1) {\n"
+                               "  x q[1];\n"
+                               "}\n";
+
+  const auto actual = qc->toQASM();
+  EXPECT_EQ(expected, actual);
+}
+
+TEST_F(IO, classicalControlledOperationToOpenQASM3MoreThanOneRegister) {
+  qc->addQubitRegister(1);
+  qc->addClassicalRegister(1);
+  qc->addClassicalRegister(1, "d");
+  qc->classicControlled(qc::X, 0, {0, 2});
+  EXPECT_THROW(qc->dumpOpenQASM3(std::cout), qc::QFRException);
+}
+
+TEST_F(IO, classicalControlledOperationToOpenQASM3NotEntireRegister) {
+  qc->addQubitRegister(1);
+  qc->addClassicalRegister(3);
+  qc->classicControlled(qc::X, 0, {0, 2});
+  EXPECT_THROW(qc->dumpOpenQASM3(std::cout), qc::QFRException);
+}

@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "../Permutation.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "OpType.hpp"
 #include "Operation.hpp"
+#include "ir/Permutation.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -158,7 +158,19 @@ public:
                     bool openQASM3) const override {
     of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
     of << "if (";
-    of << creg[controlRegister.first].first;
+    if (isWholeQubitRegister(creg, controlRegister.first,
+                             controlRegister.first + controlRegister.second -
+                                 1)) {
+      of << creg[controlRegister.first].first;
+    } else {
+      // This might use slices in the future to address multiple bits.
+      if (controlRegister.second != 1) {
+        throw QFRException(
+            "Control register of classically controlled operation may either"
+            " be a single bit or a whole register.");
+      }
+      of << creg[controlRegister.first].second;
+    }
     of << " " << comparisonKind << " " << expectedValue << ") ";
     if (openQASM3) {
       of << "{\n";
