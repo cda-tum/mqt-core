@@ -1,4 +1,4 @@
-name: CD
+name: CD 🚀
 on:
   push:
     branches: [main]
@@ -21,8 +21,8 @@ jobs:
     with:
       # Do not include local version information on pushes to main to facilitate TestPyPI uploads.
       no-local-version: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-      # Do not build emulated wheels on pushes to main to reduce runner load for CD.
-      build-emulated-wheels: ${{ github.ref != 'refs/heads/main' || github.event_name != 'push' }}
+      # Do not build emulated wheels for mqt-core to avoid issues with PyPI space limitations.
+      build-emulated-wheels: false
 
   # Downloads the previously generated artifacts and deploys to TestPyPI on pushes to main
   deploy-test-pypi:
