@@ -9,18 +9,17 @@
 
 #pragma once
 
-#include "../Exception.hpp"
-#include "../InstVisitor.hpp"
-#include "../NestedEnvironment.hpp"
-#include "../Statement.hpp"
 #include "CompilerPass.hpp"
 #include "Definitions.hpp"
+#include "ir/parsers/qasm3_parser/Exception.hpp"
+#include "ir/parsers/qasm3_parser/InstVisitor.hpp"
+#include "ir/parsers/qasm3_parser/NestedEnvironment.hpp"
+#include "ir/parsers/qasm3_parser/Statement.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <variant>
 
@@ -50,8 +49,7 @@ struct ConstEvalValue {
     case ConstFloat:
       return std::make_shared<Constant>(Constant(std::get<1>(value)));
     case ConstBool:
-      return std::make_shared<Constant>(
-          Constant(static_cast<int64_t>(std::get<2>(value)), false));
+      return std::make_shared<Constant>(Constant(std::get<2>(value), false));
     default:
       qc::unreachable();
     }
@@ -77,31 +75,14 @@ struct ConstEvalValue {
 
   bool operator!=(const ConstEvalValue& rhs) const { return !(*this == rhs); }
 
-  [[nodiscard]] std::string toString() const {
-    std::stringstream ss{};
-    switch (type) {
-    case ConstInt:
-      ss << "ConstInt(" << std::get<0>(value) << ")";
-      break;
-    case ConstUint:
-      ss << "ConstUint(" << std::get<0>(value) << ")";
-      break;
-    case ConstFloat:
-      ss << "ConstFloat(" << std::get<1>(value) << ")";
-      break;
-    case ConstBool:
-      ss << "ConstBool(" << std::get<2>(value) << ")";
-      break;
-    }
-
-    return ss.str();
-  }
+  [[nodiscard]] std::string toString() const;
 };
 
-class ConstEvalPass : public CompilerPass,
-                      public DefaultInstVisitor,
-                      public ExpressionVisitor<std::optional<ConstEvalValue>>,
-                      public TypeVisitor<std::shared_ptr<Expression>> {
+class ConstEvalPass final
+    : public CompilerPass,
+      public DefaultInstVisitor,
+      public ExpressionVisitor<std::optional<ConstEvalValue>>,
+      public TypeVisitor<std::shared_ptr<Expression>> {
   NestedEnvironment<ConstEvalValue> env;
 
   template <typename T> static int64_t castToWidth(int64_t value) {

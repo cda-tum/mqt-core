@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "../Permutation.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "OpType.hpp"
 #include "Operation.hpp"
+#include "ir/Permutation.hpp"
 
 #include <cmath>
 #include <cstddef>

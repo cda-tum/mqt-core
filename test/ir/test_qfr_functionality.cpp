@@ -17,6 +17,7 @@
 #include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
+#include "ir/operations/SymbolicOperation.hpp"
 
 #include <algorithm>
 #include <array>

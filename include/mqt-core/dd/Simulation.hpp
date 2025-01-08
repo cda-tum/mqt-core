@@ -30,7 +30,7 @@ VectorDD simulate(const QuantumComputation* qc, const VectorDD& in,
   auto e = in;
   for (const auto& op : *qc) {
     // SWAP gates can be executed virtually by changing the permutation
-    if (op->getType() == OpType::SWAP && !op->isControlled()) {
+    if (op->getType() == SWAP && !op->isControlled()) {
       const auto& targets = op->getTargets();
       std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
       continue;

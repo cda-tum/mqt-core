@@ -13,12 +13,14 @@
 #include "ir/operations/OpType.hpp"
 
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
 #include <ios>
 #include <limits>
 #include <ostream>
+#include <sstream>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -31,6 +33,11 @@ AodOperation::AodOperation(qc::OpType s, std::vector<qc::Qubit> qubits,
     : AodOperation(s, std::move(qubits), convertToDimension(dirs), start, end) {
 }
 
+std::string SingleOperation::toQASMString() const {
+  std::stringstream ss;
+  ss << static_cast<std::size_t>(dir) << ", " << start << ", " << end << "; ";
+  return ss.str();
+}
 std::vector<Dimension>
 AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
   std::vector<Dimension> dirsEnum(dirs.size());
@@ -82,9 +89,43 @@ AodOperation::AodOperation(qc::OpType s, std::vector<qc::Qubit> t,
   name = toString(type);
 }
 
+std::vector<qc::fp> AodOperation::getEnds(const Dimension dir) const {
+  std::vector<qc::fp> ends;
+  for (const auto& op : operations) {
+    if (op.dir == dir) {
+      ends.emplace_back(op.end);
+    }
+  }
+  return ends;
+}
+std::vector<qc::fp> AodOperation::getStarts(const Dimension dir) const {
+  std::vector<qc::fp> starts;
+  for (const auto& op : operations) {
+    if (op.dir == dir) {
+      starts.emplace_back(op.start);
+    }
+  }
+  return starts;
+}
+qc::fp AodOperation::getMaxDistance(const Dimension dir) const {
+  const auto distances = getDistances(dir);
+  if (distances.empty()) {
+    return 0;
+  }
+  return *std::max_element(distances.begin(), distances.end());
+}
+std::vector<qc::fp> AodOperation::getDistances(const Dimension dir) const {
+  std::vector<qc::fp> params;
+  for (const auto& op : operations) {
+    if (op.dir == dir) {
+      params.emplace_back(std::abs(op.end - op.start));
+    }
+  }
+  return params;
+}
 void AodOperation::dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
                                 [[maybe_unused]] const qc::RegisterNames& creg,
-                                size_t indent, bool /*openQASM3*/) const {
+                                const size_t indent, bool /*openQASM3*/) const {
   of << std::setprecision(std::numeric_limits<qc::fp>::digits10);
   of << std::string(indent * qc::OUTPUT_INDENT_SIZE, ' ');
   of << name;

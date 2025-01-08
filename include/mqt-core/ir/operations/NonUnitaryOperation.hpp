@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "../Permutation.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "OpType.hpp"
 #include "Operation.hpp"
+#include "ir/Permutation.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -25,16 +25,6 @@
 namespace qc {
 
 class NonUnitaryOperation final : public Operation {
-protected:
-  std::vector<Bit> classics; // vector for the classical bits to measure into
-
-  static void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
-                               const std::vector<Bit>& c,
-                               const Permutation& permutation,
-                               std::size_t nqubits);
-  void printReset(std::ostream& os, const std::vector<Qubit>& q,
-                  const Permutation& permutation, std::size_t nqubits) const;
-
 public:
   // Measurement constructor
   NonUnitaryOperation(std::vector<Qubit> qubitRegister,
@@ -93,11 +83,20 @@ public:
   }
 
   void apply(const Permutation& permutation) override;
+
+protected:
+  std::vector<Bit> classics; // vector for the classical bits to measure into
+
+  static void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
+                               const std::vector<Bit>& c,
+                               const Permutation& permutation,
+                               std::size_t nqubits);
+  void printReset(std::ostream& os, const std::vector<Qubit>& q,
+                  const Permutation& permutation, std::size_t nqubits) const;
 };
 } // namespace qc
 
-namespace std {
-template <> struct hash<qc::NonUnitaryOperation> {
+template <> struct std::hash<qc::NonUnitaryOperation> {
   std::size_t operator()(qc::NonUnitaryOperation const& op) const noexcept {
     std::size_t seed = 0U;
     qc::hashCombine(seed, op.getType());
@@ -110,4 +109,3 @@ template <> struct hash<qc::NonUnitaryOperation> {
     return seed;
   }
 };
-} // namespace std

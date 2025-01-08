@@ -9,10 +9,10 @@
 
 #pragma once
 
-#include "../Permutation.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "OpType.hpp"
+#include "ir/Permutation.hpp"
 
 #include <algorithm>
 #include <array>
@@ -129,11 +129,13 @@ public:
 
   [[nodiscard]] virtual bool isStandardOperation() const { return false; }
 
-  [[nodiscard]] virtual bool isCompoundOperation() const { return false; }
+  [[nodiscard]] virtual bool isCompoundOperation() const noexcept {
+    return false;
+  }
 
   [[nodiscard]] virtual bool isNonUnitaryOperation() const { return false; }
 
-  [[nodiscard]] virtual bool isClassicControlledOperation() const {
+  [[nodiscard]] virtual bool isClassicControlledOperation() const noexcept {
     return false;
   }
 
@@ -205,8 +207,7 @@ public:
 };
 } // namespace qc
 
-namespace std {
-template <> struct hash<qc::Operation> {
+template <> struct std::hash<qc::Operation> {
   std::size_t operator()(const qc::Operation& op) const noexcept {
     std::size_t seed = 0U;
     qc::hashCombine(seed, hash<qc::OpType>{}(op.getType()));
@@ -225,4 +226,3 @@ template <> struct hash<qc::Operation> {
     return seed;
   }
 };
-} // namespace std

@@ -16,6 +16,7 @@
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <ostream>
@@ -25,6 +26,12 @@
 
 namespace qc {
 
+// Overload pattern for std::visit
+template <typename... Ts> struct Overload : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> Overload(Ts...) -> Overload<Ts...>;
+
 void SymbolicOperation::storeSymbolOrNumber(const SymbolOrNumber& param,
                                             const std::size_t i) {
   if (std::holds_alternative<fp>(param)) {
@@ -32,6 +39,18 @@ void SymbolicOperation::storeSymbolOrNumber(const SymbolOrNumber& param,
   } else {
     symbolicParameter.at(i) = std::get<Symbolic>(param);
   }
+}
+bool SymbolicOperation::isSymbolicParameter(const std::size_t i) const {
+  return symbolicParameter.at(i).has_value();
+}
+bool SymbolicOperation::isSymbol(const SymbolOrNumber& param) {
+  return std::holds_alternative<Symbolic>(param);
+}
+Symbolic& SymbolicOperation::getSymbol(SymbolOrNumber& param) {
+  return std::get<Symbolic>(param);
+}
+fp& SymbolicOperation::getNumber(SymbolOrNumber& param) {
+  return std::get<fp>(param);
 }
 
 OpType SymbolicOperation::parseU3([[maybe_unused]] const Symbolic& theta,
@@ -138,7 +157,6 @@ OpType SymbolicOperation::parseU3(fp& theta, const Symbolic& phi,
   }
 
   // parse a real u3 gate
-
   checkInteger(theta);
   checkFractionPi(theta);
 
@@ -228,6 +246,19 @@ SymbolicOperation::getInstantiation(const SymbolOrNumber& symOrNum,
       symOrNum);
 }
 
+SymbolOrNumber SymbolicOperation::getParameter(const std::size_t i) const {
+  if (const auto& param = symbolicParameter.at(i); param.has_value()) {
+    return *param;
+  }
+  return parameter.at(i);
+}
+std::vector<SymbolOrNumber> SymbolicOperation::getParameters() const {
+  std::vector<SymbolOrNumber> params{};
+  for (std::size_t i = 0; i < parameter.size(); ++i) {
+    params.emplace_back(getParameter(i));
+  }
+  return params;
+}
 SymbolicOperation::SymbolicOperation(
     const Qubit target, const OpType g,
     const std::vector<SymbolOrNumber>& params) {
@@ -278,13 +309,24 @@ SymbolicOperation::SymbolicOperation(const Controls& c, const Qubit target0,
                                      const std::vector<SymbolOrNumber>& params)
     : SymbolicOperation(c, {target0, target1}, g, params) {}
 
+std::unique_ptr<Operation> SymbolicOperation::clone() const {
+  return std::make_unique<SymbolicOperation>(*this);
+}
+bool SymbolicOperation::isSymbolicOperation() const {
+  return std::any_of(symbolicParameter.begin(), symbolicParameter.end(),
+                     [](const auto& sym) { return sym.has_value(); });
+}
+bool SymbolicOperation::isStandardOperation() const {
+  return std::all_of(symbolicParameter.begin(), symbolicParameter.end(),
+                     [](const auto& sym) { return !sym.has_value(); });
+}
+
 bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
                                const Permutation& perm2) const {
   if (!op.isSymbolicOperation() && !isStandardOperation()) {
     return false;
   }
-  if (isStandardOperation() &&
-      qc::StandardOperation::equals(op, perm1, perm2)) {
+  if (isStandardOperation() && StandardOperation::equals(op, perm1, perm2)) {
     return true;
   }
 

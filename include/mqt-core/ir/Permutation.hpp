@@ -28,9 +28,8 @@ public:
 } // namespace qc
 
 // define hash function for Permutation
-namespace std {
-template <> struct hash<qc::Permutation> {
-  std::size_t operator()(const qc::Permutation& p) const {
+template <> struct std::hash<qc::Permutation> {
+  std::size_t operator()(const qc::Permutation& p) const noexcept {
     std::size_t seed = 0;
     for (const auto& [k, v] : p) {
       qc::hashCombine(seed, k);
@@ -39,4 +38,3 @@ template <> struct hash<qc::Permutation> {
     return seed;
   }
 };
-} // namespace std

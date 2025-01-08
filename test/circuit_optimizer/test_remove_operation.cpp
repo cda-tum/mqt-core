@@ -91,7 +91,7 @@ TEST(RemoveOperation, removeGateInCompoundOperation) {
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
   EXPECT_EQ(qc.front()->getType(), Compound);
-  auto* compoundOp = dynamic_cast<CompoundOperation*>(qc.front().get());
-  EXPECT_EQ(compoundOp->size(), 2);
+  const auto& compoundOp = dynamic_cast<const CompoundOperation&>(*qc.front());
+  EXPECT_EQ(compoundOp.size(), 2);
 }
 } // namespace qc

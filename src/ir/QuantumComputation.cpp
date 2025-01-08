@@ -41,6 +41,171 @@
 
 namespace qc {
 
+namespace {
+template <class RegisterType>
+void printSortedRegisters(const RegisterMap<RegisterType>& regmap,
+                          const std::string& identifier, std::ostream& of,
+                          const bool openQASM3) {
+  // sort regs by start index
+  std::map<decltype(RegisterType::first), std::pair<std::string, RegisterType>>
+      sortedRegs{};
+  for (const auto& reg : regmap) {
+    sortedRegs.insert({reg.second.first, reg});
+  }
+
+  for (const auto& reg : sortedRegs) {
+    if (openQASM3) {
+      of << identifier << "[" << reg.second.second.second << "] "
+         << reg.second.first << ";" << std::endl;
+    } else {
+      of << identifier << " " << reg.second.first << "["
+         << reg.second.second.second << "];" << std::endl;
+    }
+  }
+}
+
+template <class RegisterType>
+void consolidateRegister(RegisterMap<RegisterType>& regs) {
+  bool finished = regs.empty();
+  while (!finished) {
+    for (const auto& qreg : regs) {
+      finished = true;
+      auto regname = qreg.first;
+      // check if lower part of register
+      if (regname.length() > 2 &&
+          regname.compare(regname.size() - 2, 2, "_l") == 0) {
+        auto lowidx = qreg.second.first;
+        auto lownum = qreg.second.second;
+        // search for higher part of register
+        auto highname = regname.substr(0, regname.size() - 1) + 'h';
+        auto it = regs.find(highname);
+        if (it != regs.end()) {
+          auto highidx = it->second.first;
+          auto highnum = it->second.second;
+          // fusion of registers possible
+          if (lowidx + lownum == highidx) {
+            finished = false;
+            auto targetname = regname.substr(0, regname.size() - 2);
+            auto targetidx = lowidx;
+            auto targetnum = lownum + highnum;
+            regs.insert({targetname, {targetidx, targetnum}});
+            regs.erase(regname);
+            regs.erase(highname);
+          }
+        }
+        break;
+      }
+    }
+  }
+}
+
+template <class RegisterType>
+void createRegisterArray(const RegisterMap<RegisterType>& regs,
+                         RegisterNames& regnames) {
+  regnames.clear();
+  std::stringstream ss;
+  // sort regs by start index
+  std::map<decltype(RegisterType::first), std::pair<std::string, RegisterType>>
+      sortedRegs{};
+  for (const auto& reg : regs) {
+    sortedRegs.insert({reg.second.first, reg});
+  }
+
+  for (const auto& reg : sortedRegs) {
+    for (decltype(RegisterType::second) i = 0; i < reg.second.second.second;
+         ++i) {
+      ss << reg.second.first << "[" << i << "]";
+      regnames.push_back(std::make_pair(reg.second.first, ss.str()));
+      ss.str(std::string());
+    }
+  }
+}
+
+/**
+ * @brief Removes a certain qubit in a register from the register map
+ * @details If this was the last qubit in the register, the register is
+ * deleted. Removals at the beginning or the end of a register just modify the
+ * existing register. Removals in the middle of a register split the register
+ * into two new registers. The new registers are named by appending "_l" and
+ * "_h" to the original register name.
+ * @param regs A collection of all the registers
+ * @param reg The name of the register containing the qubit to be removed
+ * @param idx The index of the qubit in the register to be removed
+ */
+void removeQubitfromQubitRegister(QuantumRegisterMap& regs,
+                                  const std::string& reg, Qubit idx) {
+  if (idx == 0) {
+    // last remaining qubit of register
+    if (regs[reg].second == 1) {
+      // delete register
+      regs.erase(reg);
+    }
+    // first qubit of register
+    else {
+      regs[reg].first++;
+      regs[reg].second--;
+    }
+    // last index
+  } else if (idx == regs[reg].second - 1) {
+    // reduce count of register
+    regs[reg].second--;
+  } else {
+    auto qreg = regs.at(reg);
+    auto lowPart = reg + "_l";
+    auto lowIndex = qreg.first;
+    auto lowCount = idx;
+    auto highPart = reg + "_h";
+    auto highIndex = qreg.first + idx + 1;
+    auto highCount = qreg.second - idx - 1;
+
+    regs.erase(reg);
+    regs.try_emplace(lowPart, lowIndex, lowCount);
+    regs.try_emplace(highPart, highIndex, highCount);
+  }
+}
+
+/**
+ * @brief Adds a qubit to a register in the register map
+ * @details If the register map is empty, a new register is created with the
+ * default name. If the qubit can be appended to the start or the end of an
+ * existing register, it is appended. Otherwise a new register is created with
+ * the default name and the qubit index appended.
+ * @param regs A collection of all the registers
+ * @param physicalQubitIndex The index of the qubit to be added
+ * @param defaultRegName The default name of the register to be created
+ */
+void addQubitToQubitRegister(QuantumRegisterMap& regs, Qubit physicalQubitIndex,
+                             const std::string& defaultRegName) {
+  auto fusionPossible = false;
+  for (auto& reg : regs) {
+    auto& startIndex = reg.second.first;
+    auto& count = reg.second.second;
+    // 1st case: can append to start of existing register
+    if (startIndex == physicalQubitIndex + 1) {
+      startIndex--;
+      count++;
+      fusionPossible = true;
+      break;
+    }
+    // 2nd case: can append to end of existing register
+    if (startIndex + count == physicalQubitIndex) {
+      count++;
+      fusionPossible = true;
+      break;
+    }
+  }
+
+  consolidateRegister(regs);
+
+  if (regs.empty()) {
+    regs.try_emplace(defaultRegName, physicalQubitIndex, 1);
+  } else if (!fusionPossible) {
+    auto newRegName = defaultRegName + "_" + std::to_string(physicalQubitIndex);
+    regs.try_emplace(newRegName, physicalQubitIndex, 1);
+  }
+}
+} // namespace
+
 /***
  * Public Methods
  ***/
@@ -322,71 +487,6 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
   nancillae += nq;
 }
 
-void QuantumComputation::removeQubitfromQubitRegister(QuantumRegisterMap& regs,
-                                                      const std::string& reg,
-                                                      const Qubit idx) {
-  if (idx == 0) {
-    // last remaining qubit of register
-    if (regs[reg].second == 1) {
-      // delete register
-      regs.erase(reg);
-    }
-    // first qubit of register
-    else {
-      regs[reg].first++;
-      regs[reg].second--;
-    }
-    // last index
-  } else if (idx == regs[reg].second - 1) {
-    // reduce count of register
-    regs[reg].second--;
-  } else {
-    auto qreg = regs.at(reg);
-    auto lowPart = reg + "_l";
-    auto lowIndex = qreg.first;
-    auto lowCount = idx;
-    auto highPart = reg + "_h";
-    auto highIndex = qreg.first + idx + 1;
-    auto highCount = qreg.second - idx - 1;
-
-    regs.erase(reg);
-    regs.try_emplace(lowPart, lowIndex, lowCount);
-    regs.try_emplace(highPart, highIndex, highCount);
-  }
-}
-
-void QuantumComputation::addQubitToQubitRegister(
-    QuantumRegisterMap& regs, const Qubit physicalQubitIndex,
-    const std::string& defaultRegName) {
-  bool fusionPossible = false;
-  for (auto& reg : regs) {
-    auto& startIndex = reg.second.first;
-    auto& count = reg.second.second;
-    // 1st case: can append to start of existing register
-    if (startIndex == physicalQubitIndex + 1) {
-      startIndex--;
-      count++;
-      fusionPossible = true;
-      break;
-    }
-    // 2nd case: can append to end of existing register
-    if (startIndex + count == physicalQubitIndex) {
-      count++;
-      fusionPossible = true;
-      break;
-    }
-  }
-
-  consolidateRegister(regs);
-
-  if (regs.empty()) {
-    regs.try_emplace(defaultRegName, physicalQubitIndex, 1);
-  } else if (!fusionPossible) {
-    auto newRegName = defaultRegName + "_" + std::to_string(physicalQubitIndex);
-    regs.try_emplace(newRegName, physicalQubitIndex, 1);
-  }
-}
-
 // removes the i-th logical qubit and returns the index j it was assigned to in
 // the initial layout i.e., initialLayout[j] = i
 std::pair<Qubit, std::optional<Qubit>>
@@ -514,7 +614,28 @@ void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
   ancillary[logicalQubitIndex] = false;
   garbage[logicalQubitIndex] = false;
 }
+QuantumComputation
+QuantumComputation::instantiate(const VariableAssignment& assignment) const {
+  QuantumComputation result(*this);
+  result.instantiateInplace(assignment);
+  return result;
+}
 
+void QuantumComputation::invert() {
+  for (const auto& op : ops) {
+    op->invert();
+  }
+  std::reverse(ops.begin(), ops.end());
+
+  if (initialLayout.size() == outputPermutation.size()) {
+    std::swap(initialLayout, outputPermutation);
+  } else {
+    std::cerr << "Warning: Inverting a circuit with different initial layout "
+                 "and output permutation sizes. This is not supported yet.\n"
+                 "The circuit will be inverted, but the initial layout and "
+                 "output permutation will not be swapped.\n";
+  }
+}
 std::ostream& QuantumComputation::print(std::ostream& os) const {
   os << name << "\n";
   const auto width =
@@ -649,6 +770,28 @@ std::string QuantumComputation::toQASM(const bool qasm3) const {
   std::stringstream ss;
   dumpOpenQASM(ss, qasm3);
   return ss.str();
+}
+std::unique_ptr<Operation> QuantumComputation::asOperation() {
+  if (ops.empty()) {
+    return {};
+  }
+  if (ops.size() == 1) {
+    auto op = std::move(ops.front());
+    ops.clear();
+    return op;
+  }
+  return asCompoundOperation();
+}
+void QuantumComputation::reset() {
+  ops.clear();
+  nqubits = 0;
+  nclassics = 0;
+  nancillae = 0;
+  qregs.clear();
+  cregs.clear();
+  ancregs.clear();
+  initialLayout.clear();
+  outputPermutation.clear();
 }
 
 void QuantumComputation::dump(const std::string& filename,
@@ -987,7 +1130,7 @@ void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(
       cregs[registerName].second = outputPermutation.size();
     }
   }
-  auto targets = std::vector<qc::Qubit>{};
+  auto targets = std::vector<Qubit>{};
   for (std::size_t q = 0; q < getNqubits(); ++q) {
     targets.emplace_back(static_cast<Qubit>(q));
   }
@@ -1025,7 +1168,7 @@ void QuantumComputation::checkQubitRange(
   }
 }
 
-void QuantumComputation::checkBitRange(const qc::Bit bit) const {
+void QuantumComputation::checkBitRange(const Bit bit) const {
   if (bit >= nclassics) {
     std::stringstream ss{};
     ss << "Classical bit index " << bit << " not found in any register";
@@ -1050,6 +1193,87 @@ void QuantumComputation::checkClassicalRegister(
   }
 }
 
+void QuantumComputation::reverse() { std::reverse(ops.begin(), ops.end()); }
+
+QuantumComputation::QuantumComputation(const std::size_t nq,
+                                       const std::size_t nc,
+                                       const std::size_t s)
+    : seed(s) {
+  if (nq > 0) {
+    addQubitRegister(nq);
+  }
+  if (nc > 0) {
+    addClassicalRegister(nc);
+  }
+  if (seed != 0) {
+    mt.seed(seed);
+  } else {
+    // create and properly seed rng
+    std::array<std::mt19937_64::result_type, std::mt19937_64::state_size>
+        randomData{};
+    std::random_device rd;
+    std::generate(std::begin(randomData), std::end(randomData),
+                  [&rd]() { return rd(); });
+    std::seed_seq seeds(std::begin(randomData), std::end(randomData));
+    mt.seed(seeds);
+  }
+}
+QuantumComputation::QuantumComputation(const std::string& filename,
+                                       const std::size_t s)
+    : seed(s) {
+  import(filename);
+  if (seed != 0U) {
+    mt.seed(seed);
+  } else {
+    // create and properly seed rng
+    std::array<std::mt19937_64::result_type, std::mt19937_64::state_size>
+        randomData{};
+    std::random_device rd;
+    std::generate(std::begin(randomData), std::end(randomData),
+                  [&rd]() { return rd(); });
+    std::seed_seq seeds(std::begin(randomData), std::end(randomData));
+    mt.seed(seeds);
+  }
+}
+QuantumComputation::QuantumComputation(const QuantumComputation& qc)
+    : nqubits(qc.nqubits), nclassics(qc.nclassics), nancillae(qc.nancillae),
+      name(qc.name), qregs(qc.qregs), cregs(qc.cregs), ancregs(qc.ancregs),
+      ancillary(qc.ancillary), garbage(qc.garbage), mt(qc.mt), seed(qc.seed),
+      globalPhase(qc.globalPhase), occurringVariables(qc.occurringVariables),
+      initialLayout(qc.initialLayout), outputPermutation(qc.outputPermutation) {
+  ops.reserve(qc.ops.size());
+  for (const auto& op : qc.ops) {
+    emplace_back(op->clone());
+  }
+}
+QuantumComputation&
+QuantumComputation::operator=(const QuantumComputation& qc) {
+  if (this != &qc) {
+    nqubits = qc.nqubits;
+    nclassics = qc.nclassics;
+    nancillae = qc.nancillae;
+    name = qc.name;
+    qregs = qc.qregs;
+    cregs = qc.cregs;
+    ancregs = qc.ancregs;
+    mt = qc.mt;
+    seed = qc.seed;
+    globalPhase = qc.globalPhase;
+    occurringVariables = qc.occurringVariables;
+    initialLayout = qc.initialLayout;
+    outputPermutation = qc.outputPermutation;
+    ancillary = qc.ancillary;
+    garbage = qc.garbage;
+
+    ops.clear();
+    ops.reserve(qc.ops.size());
+    for (const auto& op : qc.ops) {
+      emplace_back(op->clone());
+    }
+  }
+  return *this;
+}
+
 void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
   if (std::holds_alternative<Symbolic>(expr)) {
     const auto& sym = std::get<Symbolic>(expr);
@@ -1057,6 +1281,11 @@ void QuantumComputation::addVariable(const SymbolOrNumber& expr) {
       occurringVariables.insert(term.getVar());
     }
   }
+}
+
+bool QuantumComputation::isVariableFree() const {
+  return std::all_of(ops.begin(), ops.end(),
+                     [](const auto& op) { return !op->isSymbolicOperation(); });
 }
 
 // Instantiates this computation
@@ -1078,54 +1307,6 @@ void QuantumComputation::instantiateInplace(
   // removed from the circuit
   for (const auto& [var, _] : assignment) {
     occurringVariables.erase(var);
-  }
-}
-
-void QuantumComputation::measure(
-    const Qubit qubit, const std::pair<std::string, Bit>& registerBit) {
-  checkQubitRange(qubit);
-  if (const auto cRegister = cregs.find(registerBit.first);
-      cRegister != cregs.end()) {
-    if (registerBit.second >= cRegister->second.second) {
-      std::stringstream ss{};
-      ss << "The classical register \"" << registerBit.first
-         << "\" is too small! (" << registerBit.second
-         << " >= " << cRegister->second.second << ")";
-      throw QFRException(ss.str());
-    }
-    emplace_back<NonUnitaryOperation>(qubit, cRegister->second.first +
-                                                 registerBit.second);
-
-  } else {
-    std::stringstream ss{};
-    ss << "The classical register \"" << registerBit.first
-       << "\" does not exist!";
-    throw QFRException(ss.str());
-  }
-}
-
-void QuantumComputation::measureAll(const bool addBits) {
-  if (addBits) {
-    addClassicalRegister(getNqubits(), "meas");
-  }
-
-  if (nclassics < getNqubits()) {
-    std::stringstream ss{};
-    ss << "The number of classical bits (" << nclassics
-       << ") is smaller than the number of qubits (" << getNqubits() << ")!";
-    throw QFRException(ss.str());
-  }
-
-  barrier();
-  Qubit start = 0U;
-  if (addBits) {
-    start = static_cast<Qubit>(cregs.at("meas").first);
-  }
-  // measure i -> (start+i) in descending order
-  // (this is an optimization for the simulator)
-  for (std::size_t i = getNqubits(); i > 0; --i) {
-    const auto q = static_cast<Qubit>(i - 1);
-    measure(q, start + q);
   }
 }
 
@@ -1156,7 +1337,7 @@ void QuantumComputation::reorderOperations() {
     }
   }
 
-  std::vector<std::unique_ptr<qc::Operation>> newOps{};
+  std::vector<std::unique_ptr<Operation>> newOps{};
 
   // iterate over DAG in depth-first fashion starting from the top-most qubit
   const auto msq = dag.size() - 1;
@@ -1241,7 +1422,7 @@ bool isDynamicCircuit(const std::unique_ptr<Operation>* op,
                        [&measured](const auto& q) { return measured[q]; });
   }
 
-  if (it->getType() == qc::Measure) {
+  if (it->getType() == Measure) {
     for (const auto& b : it->getTargets()) {
       measured[b] = true;
     }
@@ -1249,9 +1430,9 @@ bool isDynamicCircuit(const std::unique_ptr<Operation>* op,
   }
 
   assert(it->isCompoundOperation());
-  auto* compOp = dynamic_cast<CompoundOperation*>(it.get());
+  const auto& compOp = dynamic_cast<const CompoundOperation&>(*it);
   return std::any_of(
-      compOp->cbegin(), compOp->cend(),
+      compOp.cbegin(), compOp.cend(),
       [&measured](const auto& g) { return isDynamicCircuit(&g, measured); });
 }
 
@@ -1289,8 +1470,8 @@ QuantumComputation::fromCompoundOperation(const CompoundOperation& op) {
 
     if (g->getType() == Measure) {
       // update the maximum classical bit index
-      const auto* measureOp = dynamic_cast<const NonUnitaryOperation*>(g.get());
-      const auto& classics = measureOp->getClassics();
+      const auto& measureOp = dynamic_cast<const NonUnitaryOperation&>(*g);
+      const auto& classics = measureOp.getClassics();
       for (const auto& c : classics) {
         maxBitIndex = std::max(maxBitIndex, c);
       }
@@ -1304,4 +1485,348 @@ QuantumComputation::fromCompoundOperation(const CompoundOperation& op) {
   return qc;
 }
 
+///---------------------------------------------------------------------------
+///                            \n Operations \n
+///---------------------------------------------------------------------------
+
+void QuantumComputation::gphase(const fp angle) {
+  globalPhase += angle;
+  // normalize to [0, 2pi)
+  while (globalPhase < 0) {
+    globalPhase += 2 * PI;
+  }
+  while (globalPhase >= 2 * PI) {
+    globalPhase -= 2 * PI;
+  }
+}
+
+#define DEFINE_SINGLE_TARGET_OPERATION(op)                                     \
+  void QuantumComputation::op(const Qubit target) {                            \
+    mc##op(Controls{}, target);                                                \
+  }                                                                            \
+  void QuantumComputation::c##op(const Control& control, const Qubit target) { \
+    mc##op(Controls{control}, target);                                         \
+  }                                                                            \
+  void QuantumComputation::mc##op(const Controls& controls,                    \
+                                  const Qubit target) {                        \
+    checkQubitRange(target, controls);                                         \
+    emplace_back<StandardOperation>(controls, target,                          \
+                                    OP_NAME_TO_TYPE.at(#op));                  \
+  }
+
+DEFINE_SINGLE_TARGET_OPERATION(i)
+DEFINE_SINGLE_TARGET_OPERATION(x)
+DEFINE_SINGLE_TARGET_OPERATION(y)
+DEFINE_SINGLE_TARGET_OPERATION(z)
+DEFINE_SINGLE_TARGET_OPERATION(h)
+DEFINE_SINGLE_TARGET_OPERATION(s)
+DEFINE_SINGLE_TARGET_OPERATION(sdg)
+DEFINE_SINGLE_TARGET_OPERATION(t)
+DEFINE_SINGLE_TARGET_OPERATION(tdg)
+DEFINE_SINGLE_TARGET_OPERATION(v)
+DEFINE_SINGLE_TARGET_OPERATION(vdg)
+DEFINE_SINGLE_TARGET_OPERATION(sx)
+DEFINE_SINGLE_TARGET_OPERATION(sxdg)
+
+#undef DEFINE_SINGLE_TARGET_OPERATION
+
+#define DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(op, param)             \
+  void QuantumComputation::op(const SymbolOrNumber&(param),                    \
+                              const Qubit target) {                            \
+    mc##op(param, Controls{}, target);                                         \
+  }                                                                            \
+  void QuantumComputation::c##op(const SymbolOrNumber&(param),                 \
+                                 const Control& control, const Qubit target) { \
+    mc##op(param, Controls{control}, target);                                  \
+  }                                                                            \
+  void QuantumComputation::mc##op(const SymbolOrNumber&(param),                \
+                                  const Controls& controls,                    \
+                                  const Qubit target) {                        \
+    checkQubitRange(target, controls);                                         \
+    if (std::holds_alternative<fp>(param)) {                                   \
+      emplace_back<StandardOperation>(controls, target,                        \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      std::vector{std::get<fp>(param)});       \
+    } else {                                                                   \
+      addVariables(param);                                                     \
+      emplace_back<SymbolicOperation>(                                         \
+          controls, target, OP_NAME_TO_TYPE.at(#op), std::vector{param});      \
+    }                                                                          \
+  }
+
+DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(rx, theta)
+DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(ry, theta)
+DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(rz, theta)
+DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(p, theta)
+
+#undef DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION
+
+#define DEFINE_SINGLE_TARGET_TWO_PARAMETER_OPERATION(op, param0, param1)       \
+  void QuantumComputation::op(const SymbolOrNumber&(param0),                   \
+                              const SymbolOrNumber&(param1),                   \
+                              const Qubit target) {                            \
+    mc##op(param0, param1, Controls{}, target);                                \
+  }                                                                            \
+  void QuantumComputation::c##op(const SymbolOrNumber&(param0),                \
+                                 const SymbolOrNumber&(param1),                \
+                                 const Control& control, const Qubit target) { \
+    mc##op(param0, param1, Controls{control}, target);                         \
+  }                                                                            \
+  void QuantumComputation::mc##op(                                             \
+      const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),            \
+      const Controls& controls, const Qubit target) {                          \
+    checkQubitRange(target, controls);                                         \
+    if (std::holds_alternative<fp>(param0) &&                                  \
+        std::holds_alternative<fp>(param1)) {                                  \
+      emplace_back<StandardOperation>(                                         \
+          controls, target, OP_NAME_TO_TYPE.at(#op),                           \
+          std::vector{std::get<fp>(param0), std::get<fp>(param1)});            \
+    } else {                                                                   \
+      addVariables(param0, param1);                                            \
+      emplace_back<SymbolicOperation>(controls, target,                        \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      std::vector{param0, param1});            \
+    }                                                                          \
+  }
+
+DEFINE_SINGLE_TARGET_TWO_PARAMETER_OPERATION(u2, phi, lambda)
+
+#undef DEFINE_SINGLE_TARGET_TWO_PARAMETER_OPERATION
+
+#define DEFINE_SINGLE_TARGET_THREE_PARAMETER_OPERATION(op, param0, param1,     \
+                                                       param2)                 \
+  void QuantumComputation::op(                                                 \
+      const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),            \
+      const SymbolOrNumber&(param2), const Qubit target) {                     \
+    mc##op(param0, param1, param2, Controls{}, target);                        \
+  }                                                                            \
+  void QuantumComputation::c##op(const SymbolOrNumber&(param0),                \
+                                 const SymbolOrNumber&(param1),                \
+                                 const SymbolOrNumber&(param2),                \
+                                 const Control& control, const Qubit target) { \
+    mc##op(param0, param1, param2, Controls{control}, target);                 \
+  }                                                                            \
+  void QuantumComputation::mc##op(                                             \
+      const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),            \
+      const SymbolOrNumber&(param2), const Controls& controls,                 \
+      const Qubit target) {                                                    \
+    checkQubitRange(target, controls);                                         \
+    if (std::holds_alternative<fp>(param0) &&                                  \
+        std::holds_alternative<fp>(param1) &&                                  \
+        std::holds_alternative<fp>(param2)) {                                  \
+      emplace_back<StandardOperation>(                                         \
+          controls, target, OP_NAME_TO_TYPE.at(#op),                           \
+          std::vector{std::get<fp>(param0), std::get<fp>(param1),              \
+                      std::get<fp>(param2)});                                  \
+    } else {                                                                   \
+      addVariables(param0, param1, param2);                                    \
+      emplace_back<SymbolicOperation>(controls, target,                        \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      std::vector{param0, param1, param2});    \
+    }                                                                          \
+  }
+
+DEFINE_SINGLE_TARGET_THREE_PARAMETER_OPERATION(u, theta, phi, lambda)
+
+#undef DEFINE_SINGLE_TARGET_THREE_PARAMETER_OPERATION
+
+#define DEFINE_TWO_TARGET_OPERATION(op)                                        \
+  void QuantumComputation::op(const Qubit target0, const Qubit target1) {      \
+    mc##op(Controls{}, target0, target1);                                      \
+  }                                                                            \
+  void QuantumComputation::c##op(const Control& control, const Qubit target0,  \
+                                 const Qubit target1) {                        \
+    mc##op(Controls{control}, target0, target1);                               \
+  }                                                                            \
+  void QuantumComputation::mc##op(const Controls& controls,                    \
+                                  const Qubit target0, const Qubit target1) {  \
+    checkQubitRange(target0, target1, controls);                               \
+    emplace_back<StandardOperation>(controls, target0, target1,                \
+                                    OP_NAME_TO_TYPE.at(#op));                  \
+  }
+
+DEFINE_TWO_TARGET_OPERATION(swap) // NOLINT: bugprone-exception-escape
+DEFINE_TWO_TARGET_OPERATION(dcx)
+DEFINE_TWO_TARGET_OPERATION(ecr)
+DEFINE_TWO_TARGET_OPERATION(iswap)
+DEFINE_TWO_TARGET_OPERATION(iswapdg)
+DEFINE_TWO_TARGET_OPERATION(peres)
+DEFINE_TWO_TARGET_OPERATION(peresdg)
+DEFINE_TWO_TARGET_OPERATION(move)
+
+#undef DEFINE_TWO_TARGET_OPERATION
+
+#define DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(op, param)                \
+  void QuantumComputation::op(const SymbolOrNumber&(param),                    \
+                              const Qubit target0, const Qubit target1) {      \
+    mc##op(param, Controls{}, target0, target1);                               \
+  }                                                                            \
+  void QuantumComputation::c##op(const SymbolOrNumber&(param),                 \
+                                 const Control& control, const Qubit target0,  \
+                                 const Qubit target1) {                        \
+    mc##op(param, Controls{control}, target0, target1);                        \
+  }                                                                            \
+  void QuantumComputation::mc##op(const SymbolOrNumber&(param),                \
+                                  const Controls& controls,                    \
+                                  const Qubit target0, const Qubit target1) {  \
+    checkQubitRange(target0, target1, controls);                               \
+    if (std::holds_alternative<fp>(param)) {                                   \
+      emplace_back<StandardOperation>(controls, target0, target1,              \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      std::vector{std::get<fp>(param)});       \
+    } else {                                                                   \
+      addVariables(param);                                                     \
+      emplace_back<SymbolicOperation>(controls, target0, target1,              \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      std::vector{param});                     \
+    }                                                                          \
+  }
+
+DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(rxx, theta)
+DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(ryy, theta)
+DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(rzz, theta)
+DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(rzx, theta)
+
+#undef DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION
+
+#define DEFINE_TWO_TARGET_TWO_PARAMETER_OPERATION(op, param0, param1)          \
+  void QuantumComputation::op(const SymbolOrNumber&(param0),                   \
+                              const SymbolOrNumber&(param1),                   \
+                              const Qubit target0, const Qubit target1) {      \
+    mc##op(param0, param1, Controls{}, target0, target1);                      \
+  }                                                                            \
+  void QuantumComputation::c##op(                                              \
+      const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),            \
+      const Control& control, const Qubit target0, const Qubit target1) {      \
+    mc##op(param0, param1, Controls{control}, target0, target1);               \
+  }                                                                            \
+  void QuantumComputation::mc##op(                                             \
+      const SymbolOrNumber&(param0), const SymbolOrNumber&(param1),            \
+      const Controls& controls, const Qubit target0, const Qubit target1) {    \
+    checkQubitRange(target0, target1, controls);                               \
+    if (std::holds_alternative<fp>(param0) &&                                  \
+        std::holds_alternative<fp>(param1)) {                                  \
+      emplace_back<StandardOperation>(                                         \
+          controls, target0, target1, OP_NAME_TO_TYPE.at(#op),                 \
+          std::vector{std::get<fp>(param0), std::get<fp>(param1)});            \
+    } else {                                                                   \
+      addVariables(param0, param1);                                            \
+      emplace_back<SymbolicOperation>(controls, target0, target1,              \
+                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      std::vector{param0, param1});            \
+    }                                                                          \
+  }
+
+DEFINE_TWO_TARGET_TWO_PARAMETER_OPERATION(xx_minus_yy, theta, beta)
+DEFINE_TWO_TARGET_TWO_PARAMETER_OPERATION(xx_plus_yy, theta, beta)
+
+#undef DEFINE_TWO_TARGET_TWO_PARAMETER_OPERATION
+
+void QuantumComputation::measure(const Qubit qubit, const std::size_t bit) {
+  checkQubitRange(qubit);
+  checkBitRange(bit);
+  emplace_back<NonUnitaryOperation>(qubit, bit);
+}
+
+void QuantumComputation::measure(
+    const Qubit qubit, const std::pair<std::string, Bit>& registerBit) {
+  checkQubitRange(qubit);
+  if (const auto cRegister = cregs.find(registerBit.first);
+      cRegister != cregs.end()) {
+    if (registerBit.second >= cRegister->second.second) {
+      std::stringstream ss{};
+      ss << "The classical register \"" << registerBit.first
+         << "\" is too small! (" << registerBit.second
+         << " >= " << cRegister->second.second << ")";
+      throw QFRException(ss.str());
+    }
+    emplace_back<NonUnitaryOperation>(qubit, cRegister->second.first +
+                                                 registerBit.second);
+
+  } else {
+    std::stringstream ss{};
+    ss << "The classical register \"" << registerBit.first
+       << "\" does not exist!";
+    throw QFRException(ss.str());
+  }
+}
+
+void QuantumComputation::measure(const Targets& qubits,
+                                 const std::vector<Bit>& bits) {
+  checkQubitRange(qubits);
+  checkBitRange(bits);
+  emplace_back<NonUnitaryOperation>(qubits, bits);
+}
+
+void QuantumComputation::measureAll(const bool addBits) {
+  if (addBits) {
+    addClassicalRegister(getNqubits(), "meas");
+  }
+
+  if (nclassics < getNqubits()) {
+    std::stringstream ss{};
+    ss << "The number of classical bits (" << nclassics
+       << ") is smaller than the number of qubits (" << getNqubits() << ")!";
+    throw QFRException(ss.str());
+  }
+
+  barrier();
+  Qubit start = 0U;
+  if (addBits) {
+    start = static_cast<Qubit>(cregs.at("meas").first);
+  }
+  // measure i -> (start+i) in descending order
+  // (this is an optimization for the simulator)
+  for (std::size_t i = getNqubits(); i > 0; --i) {
+    const auto q = static_cast<Qubit>(i - 1);
+    measure(q, start + q);
+  }
+}
+
+void QuantumComputation::reset(const Qubit target) {
+  checkQubitRange(target);
+  emplace_back<NonUnitaryOperation>(std::vector<Qubit>{target}, Reset);
+}
+void QuantumComputation::reset(const Targets& targets) {
+  checkQubitRange(targets);
+  emplace_back<NonUnitaryOperation>(targets, Reset);
+}
+void QuantumComputation::barrier() {
+  std::vector<Qubit> targets(getNqubits());
+  std::iota(targets.begin(), targets.end(), 0);
+  emplace_back<StandardOperation>(targets, Barrier);
+}
+void QuantumComputation::barrier(const Qubit target) {
+  checkQubitRange(target);
+  emplace_back<StandardOperation>(target, Barrier);
+}
+void QuantumComputation::barrier(const Targets& targets) {
+  checkQubitRange(targets);
+  emplace_back<StandardOperation>(targets, Barrier);
+}
+void QuantumComputation::classicControlled(
+    const OpType op, const Qubit target,
+    const ClassicalRegister& controlRegister, const std::uint64_t expectedValue,
+    const ComparisonKind cmp, const std::vector<fp>& params) {
+  classicControlled(op, target, Controls{}, controlRegister, expectedValue, cmp,
+                    params);
+}
+void QuantumComputation::classicControlled(
+    const OpType op, const Qubit target, const Control control,
+    const ClassicalRegister& controlRegister, const std::uint64_t expectedValue,
+    const ComparisonKind cmp, const std::vector<fp>& params) {
+  classicControlled(op, target, Controls{control}, controlRegister,
+                    expectedValue, cmp, params);
+}
+void QuantumComputation::classicControlled(
+    const OpType op, const Qubit target, const Controls& controls,
+    const ClassicalRegister& controlRegister, const std::uint64_t expectedValue,
+    const ComparisonKind cmp, const std::vector<fp>& params) {
+  checkQubitRange(target, controls);
+  checkClassicalRegister(controlRegister);
+  std::unique_ptr<Operation> gate =
+      std::make_unique<StandardOperation>(controls, target, op, params);
+  emplace_back<ClassicControlledOperation>(std::move(gate), controlRegister,
+                                           expectedValue, cmp);
+}
 } // namespace qc

@@ -21,6 +21,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 
 namespace qasm3::const_eval {
@@ -92,6 +93,26 @@ void ConstEvalPass::visitGateCallStatement(
       }
     }
   }
+}
+
+std::string ConstEvalValue::toString() const {
+  std::stringstream ss{};
+  switch (type) {
+  case ConstInt:
+    ss << "ConstInt(" << std::get<0>(value) << ")";
+    break;
+  case ConstUint:
+    ss << "ConstUint(" << std::get<0>(value) << ")";
+    break;
+  case ConstFloat:
+    ss << "ConstFloat(" << std::get<1>(value) << ")";
+    break;
+  case ConstBool:
+    ss << "ConstBool(" << std::get<2>(value) << ")";
+    break;
+  }
+
+  return ss.str();
 }
 
 ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,

@@ -250,27 +250,27 @@ void registerQuantumComputation(py::module& m) {
   ///---------------------------------------------------------------------------
 
   qc.def("qasm2_str",
-         [](qc::QuantumComputation& circ) { return circ.toQASM(false); });
+         [](const qc::QuantumComputation& circ) { return circ.toQASM(false); });
   qc.def(
       "qasm2",
-      [](qc::QuantumComputation& circ, const std::string& filename) {
+      [](const qc::QuantumComputation& circ, const std::string& filename) {
         circ.dump(filename, qc::Format::OpenQASM2);
       },
       "filename"_a);
   qc.def("qasm3_str",
-         [](qc::QuantumComputation& circ) { return circ.toQASM(true); });
+         [](const qc::QuantumComputation& circ) { return circ.toQASM(true); });
   qc.def(
       "qasm3",
-      [](qc::QuantumComputation& circ, const std::string& filename) {
+      [](const qc::QuantumComputation& circ, const std::string& filename) {
         circ.dump(filename, qc::Format::OpenQASM3);
       },
       "filename"_a);
-  qc.def("__str__", [](qc::QuantumComputation& circ) {
+  qc.def("__str__", [](const qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
     circ.print(ss);
     return ss.str();
   });
-  qc.def("__repr__", [](qc::QuantumComputation& circ) {
+  qc.def("__repr__", [](const qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
     circ.print(ss);
     return ss.str();
