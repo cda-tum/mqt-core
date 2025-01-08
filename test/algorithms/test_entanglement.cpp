@@ -7,32 +7,30 @@
  * Licensed under the MIT License
  */
 
-#include "algorithms/Entanglement.hpp"
+#include "Definitions.hpp"
+#include "algorithms/GHZState.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 
-#include <cstddef>
 #include <gtest/gtest.h>
-#include <memory>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 
-class Entanglement : public testing::TestWithParam<std::size_t> {
+class Entanglement : public testing::TestWithParam<qc::Qubit> {
 protected:
   void TearDown() override {}
   void SetUp() override {
     nq = GetParam();
     dd = std::make_unique<dd::Package<>>(nq);
   }
-  std::size_t nq{};
+  qc::Qubit nq{};
   std::unique_ptr<dd::Package<>> dd;
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    Entanglement, Entanglement, testing::Range<std::size_t>(2U, 90U, 7U),
+    Entanglement, Entanglement, testing::Range<qc::Qubit>(2U, 90U, 7U),
     [](const testing::TestParamInfo<Entanglement::ParamType>& inf) {
       // Generate names for test cases
       const auto nqubits = inf.param;
@@ -42,7 +40,7 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(Entanglement, FunctionTest) {
-  const auto qc = qc::Entanglement(nq);
+  const auto qc = qc::createGHZState(nq);
   const auto e = dd::buildFunctionality(&qc, *dd);
   ASSERT_EQ(qc.getNops(), nq);
   const auto r = dd->multiply(e, dd->makeZeroState(nq));
@@ -51,7 +49,7 @@ TEST_P(Entanglement, FunctionTest) {
 }
 
 TEST_P(Entanglement, GHZRoutineFunctionTest) {
-  const auto qc = qc::Entanglement(nq);
+  const auto qc = qc::createGHZState(nq);
   const auto e = dd::simulate(&qc, dd->makeZeroState(nq), *dd);
   const auto f = dd->makeGHZState(nq);
   EXPECT_EQ(e, f);

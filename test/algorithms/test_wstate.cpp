@@ -51,7 +51,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(WState, FunctionTest) {
   const auto nq = GetParam();
-  const auto qc = qc::WState(nq);
+  const auto qc = qc::createWState(nq);
   constexpr std::size_t shots = 4096U;
   const auto measurements = dd::sample(qc, shots);
   for (const auto& result : generateWStateStrings(nq)) {
@@ -62,7 +62,7 @@ TEST_P(WState, FunctionTest) {
 TEST_P(WState, RoutineFunctionTest) {
   const auto nq = GetParam();
 
-  auto qc = qc::WState(nq);
+  auto qc = qc::createWState(nq);
   auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const dd::VectorDD e =
       dd::simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd);

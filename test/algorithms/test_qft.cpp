@@ -24,7 +24,7 @@
 #include <memory>
 #include <sstream>
 
-class QFT : public testing::TestWithParam<std::size_t> {
+class QFT : public testing::TestWithParam<qc::Qubit> {
 protected:
   void TearDown() override {}
 
@@ -33,9 +33,9 @@ protected:
     dd = std::make_unique<dd::Package<>>(nqubits);
   }
 
-  std::size_t nqubits = 0;
+  qc::Qubit nqubits = 0;
   std::unique_ptr<dd::Package<>> dd;
-  std::unique_ptr<qc::QFT> qc;
+  qc::QuantumComputation qc;
   qc::VectorDD sim{};
   qc::MatrixDD func{};
 };
@@ -51,13 +51,12 @@ protected:
 /// The accuracy of double floating points allows for a minimal CN::TOLERANCE
 /// value of 10e-15
 ///	Utilizing more qubits requires the use of fp=long double
-constexpr std::size_t QFT_MAX_QUBITS = 17U;
+constexpr qc::Qubit QFT_MAX_QUBITS = 17U;
 
 constexpr size_t INITIAL_COMPLEX_COUNT = 1;
 
 INSTANTIATE_TEST_SUITE_P(QFT, QFT,
-                         testing::Range<std::size_t>(0U, QFT_MAX_QUBITS + 1U,
-                                                     3U),
+                         testing::Range<qc::Qubit>(0U, QFT_MAX_QUBITS + 1U, 3U),
                          [](const testing::TestParamInfo<QFT::ParamType>& inf) {
                            const auto nqubits = inf.param;
                            std::stringstream ss{};
@@ -72,13 +71,13 @@ INSTANTIATE_TEST_SUITE_P(QFT, QFT,
 
 TEST_P(QFT, Functionality) {
   // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
+  ASSERT_NO_THROW({ qc = qc::createQFT(nqubits, false); });
   // there should be no error building the functionality
 
   // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionality(qc.get(), *dd); });
+  ASSERT_NO_THROW({ func = buildFunctionality(&qc, *dd); });
 
-  qc->printStatistics(std::cout);
+  qc.printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
   ASSERT_EQ(func.size(), 1ULL << nqubits);
 
@@ -118,12 +117,12 @@ TEST_P(QFT, Functionality) {
 
 TEST_P(QFT, FunctionalityRecursive) {
   // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
+  ASSERT_NO_THROW({ qc = qc::createQFT(nqubits, false); });
 
   // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), *dd); });
+  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(&qc, *dd); });
 
-  qc->printStatistics(std::cout);
+  qc.printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
   ASSERT_EQ(func.size(), 1ULL << nqubits);
 
@@ -164,14 +163,14 @@ TEST_P(QFT, FunctionalityRecursive) {
 
 TEST_P(QFT, Simulation) {
   // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
+  ASSERT_NO_THROW({ qc = qc::createQFT(nqubits, false); });
 
   // there should be no error simulating the circuit
   ASSERT_NO_THROW({
     auto in = dd->makeZeroState(nqubits);
-    sim = simulate(qc.get(), in, *dd);
+    sim = simulate(&qc, in, *dd);
   });
-  qc->printStatistics(std::cout);
+  qc.printStatistics(std::cout);
 
   // QFT DD |0...0> sim should consist of n nodes
   ASSERT_EQ(sim.size(), nqubits + 1);
@@ -200,14 +199,14 @@ TEST_P(QFT, Simulation) {
 
 TEST_P(QFT, FunctionalityRecursiveEquality) {
   // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::QFT>(nqubits, false); });
+  ASSERT_NO_THROW({ qc = qc::createQFT(nqubits, false); });
 
   // there should be no error building the functionality recursively
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc.get(), *dd); });
+  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(&qc, *dd); });
 
   // there should be no error building the functionality regularly
   qc::MatrixDD funcRec{};
-  ASSERT_NO_THROW({ funcRec = buildFunctionality(qc.get(), *dd); });
+  ASSERT_NO_THROW({ funcRec = buildFunctionality(&qc, *dd); });
 
   ASSERT_EQ(func, funcRec);
   dd->decRef(funcRec);
@@ -221,11 +220,15 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
 TEST_P(QFT, SimulationSampling) {
   const auto dynamic = {false, true};
   for (const auto dyn : dynamic) {
-    qc = std::make_unique<qc::QFT>(nqubits, false, dyn);
+    if (dyn) {
+      qc = qc::createIterativeQFT(nqubits);
+    } else {
+      qc = qc::createQFT(nqubits, false);
+    }
 
     // simulate the circuit
     constexpr std::size_t shots = 8192U;
-    const auto measurements = dd::sample(*qc, shots);
+    const auto measurements = dd::sample(qc, shots);
 
     const std::size_t unique = measurements.size();
     const auto maxUnique = std::min<std::size_t>(1ULL << nqubits, shots);

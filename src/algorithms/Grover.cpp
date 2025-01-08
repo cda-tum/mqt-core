@@ -16,48 +16,43 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <ostream>
 #include <random>
 #include <string>
 #include <type_traits>
 
 namespace qc {
-/***
- * Private Methods
- ***/
-void Grover::setup(QuantumComputation& qc) const {
-  qc.x(static_cast<Qubit>(nDataQubits));
-  for (std::size_t i = 0; i < nDataQubits; ++i) {
-    qc.h(static_cast<Qubit>(i));
+auto appendGroverInitialization(QuantumComputation& qc) -> void {
+  const auto nDataQubits = static_cast<Qubit>(qc.getNqubits() - 1);
+  qc.x(nDataQubits);
+  for (Qubit i = 0; i < nDataQubits; ++i) {
+    qc.h(i);
   }
 }
 
-void Grover::oracle(QuantumComputation& qc) const {
+auto appendGroverOracle(QuantumComputation& qc, const BitString& targetValue)
+    -> void {
+  const auto nDataQubits = static_cast<Qubit>(qc.getNqubits() - 1);
   Controls controls{};
   for (std::size_t i = 0; i < nDataQubits; ++i) {
-    controls.emplace(static_cast<Qubit>(i), targetValue.test(i)
-                                                ? Control::Type::Pos
-                                                : Control::Type::Neg);
+    controls.emplace(i, targetValue.test(i) ? Control::Type::Pos
+                                            : Control::Type::Neg);
   }
-  qc.mcz(controls, static_cast<Qubit>(nDataQubits));
+  qc.mcz(controls, nDataQubits);
 }
 
-void Grover::diffusion(QuantumComputation& qc) const {
-  for (std::size_t i = 0; i < nDataQubits; ++i) {
-    qc.h(static_cast<Qubit>(i));
+auto appendGroverDiffusion(QuantumComputation& qc) -> void {
+  const auto nDataQubits = static_cast<Qubit>(qc.getNqubits() - 1);
+  for (Qubit i = 0; i < nDataQubits; ++i) {
+    qc.h(i);
   }
-  for (std::size_t i = 0; i < nDataQubits; ++i) {
-    qc.x(static_cast<Qubit>(i));
+  for (Qubit i = 0; i < nDataQubits; ++i) {
+    qc.x(i);
   }
-
-  qc.h(0);
   Controls controls{};
   for (Qubit j = 1; j < nDataQubits; ++j) {
     controls.emplace(j);
   }
-  qc.mcx(controls, 0);
-  qc.h(0);
-
+  qc.mcz(controls, 0);
   for (auto i = static_cast<std::make_signed_t<Qubit>>(nDataQubits - 1); i >= 0;
        --i) {
     qc.x(static_cast<Qubit>(i));
@@ -68,71 +63,78 @@ void Grover::diffusion(QuantumComputation& qc) const {
   }
 }
 
-void Grover::fullGrover(QuantumComputation& qc) const {
-  // create initial superposition
-  setup(qc);
-
-  // apply Grover iterations
-  for (std::size_t j = 0; j < iterations; ++j) {
-    oracle(qc);
-    diffusion(qc);
+auto computeNumberOfIterations(const Qubit nq) -> std::size_t {
+  if (nq <= 2) {
+    return 1;
   }
-
-  // measure the resulting state
-  for (std::size_t i = 0; i < nDataQubits; ++i) {
-    qc.measure(static_cast<Qubit>(i), i);
+  if (nq % 2 == 1) {
+    return static_cast<std::size_t>(
+        std::round(PI_4 * std::pow(2., static_cast<double>(nq + 1) / 2. - 1.) *
+                   std::sqrt(2)));
   }
+  return static_cast<std::size_t>(
+      std::round(PI_4 * std::pow(2., static_cast<double>(nq) / 2.)));
 }
 
-/***
- * Public Methods
- ***/
-Grover::Grover(std::size_t nq, std::size_t s) : seed(s), nDataQubits(nq) {
-  name = "grover_" + std::to_string(nq);
-
-  addQubitRegister(nDataQubits, "q");
-  addQubitRegister(1, "flag");
-  addClassicalRegister(nDataQubits);
-
-  mt.seed(seed);
-
+[[nodiscard]] auto generateTargetValue(const std::size_t nDataQubits,
+                                       std::mt19937_64& mt) -> BitString {
+  BitString targetValue;
   std::bernoulli_distribution distribution{};
   for (std::size_t i = 0; i < nDataQubits; i++) {
     if (distribution(mt)) {
       targetValue.set(i);
     }
   }
+  return targetValue;
+}
 
-  expected = targetValue.to_string();
+[[nodiscard]] auto getGroverName(const BitString& s, const Qubit nq)
+    -> std::string {
+  auto expected = s.to_string();
   std::reverse(expected.begin(), expected.end());
-  while (expected.length() > nqubits - 1) {
+  while (expected.length() > nq) {
     expected.pop_back();
   }
   std::reverse(expected.begin(), expected.end());
+  return "grover_" + std::to_string(nq) + "_" + expected;
+}
 
-  if (nDataQubits <= 2) {
-    iterations = 1;
-  } else if (nDataQubits % 2 == 1) {
-    iterations = static_cast<std::size_t>(std::round(
-        PI_4 * std::pow(2., static_cast<double>(nDataQubits + 1) / 2. - 1.) *
-        std::sqrt(2)));
-  } else {
-    iterations = static_cast<std::size_t>(
-        std::round(PI_4 * std::pow(2., static_cast<double>(nDataQubits) / 2.)));
+auto constructGroverCircuit(QuantumComputation& qc, const Qubit nq,
+                            const BitString& targetValue) {
+  qc.setName(getGroverName(targetValue, nq));
+  qc.addQubitRegister(nq, "q");
+  qc.addQubitRegister(1, "flag");
+  qc.addClassicalRegister(nq);
+
+  // create initial superposition
+  appendGroverInitialization(qc);
+
+  // apply Grover iterations
+  const auto iterations = computeNumberOfIterations(nq);
+  for (std::size_t j = 0; j < iterations; ++j) {
+    appendGroverOracle(qc, targetValue);
+    appendGroverDiffusion(qc);
   }
 
-  fullGrover(*this);
+  // measure the resulting state
+  for (Qubit i = 0; i < nq; ++i) {
+    qc.measure(i, i);
+  }
 }
 
-std::ostream& Grover::printStatistics(std::ostream& os) const {
-  os << "Grover (" << nqubits - 1 << ") Statistics:\n";
-  os << "\tn: " << nqubits << "\n";
-  os << "\tm: " << getNindividualOps() << "\n";
-  os << "\tseed: " << seed << "\n";
-  os << "\tx: " << expected << "\n";
-  os << "\ti: " << iterations << "\n";
-  os << "--------------"
-     << "\n";
-  return os;
+auto createGrover(const Qubit nq, const std::size_t seed)
+    -> QuantumComputation {
+  auto qc = QuantumComputation(0, 0, seed);
+  const auto targetValue = generateTargetValue(nq, qc.getGenerator());
+  constructGroverCircuit(qc, nq, targetValue);
+  return qc;
 }
+
+auto createGrover(const Qubit nq, const BitString& targetValue)
+    -> QuantumComputation {
+  auto qc = QuantumComputation();
+  constructGroverCircuit(qc, nq, targetValue);
+  return qc;
+}
+
 } // namespace qc
