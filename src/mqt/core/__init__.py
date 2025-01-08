@@ -35,8 +35,6 @@ def load(input_circuit: QuantumComputation | str | os.PathLike[str] | QuantumCir
         The :class:`~mqt.core.ir.QuantumComputation`.
 
     Raises:
-        ValueError: If the input circuit is a Qiskit :class:`~qiskit.circuit.QuantumCircuit`,
-                    but the `qiskit` extra is not installed.
         FileNotFoundError: If the input circuit is a file name and the file does not exist.
     """
     if isinstance(input_circuit, QuantumComputation):
@@ -54,11 +52,8 @@ def load(input_circuit: QuantumComputation | str | os.PathLike[str] | QuantumCir
 
         return QuantumComputation(input_str)
 
-    try:
-        from .plugins.qiskit import qiskit_to_mqt
-    except ImportError:
-        msg = "Qiskit is not installed. Please install `mqt.core[qiskit]` to use Qiskit circuits as input."
-        raise ValueError(msg) from None
+    # At this point, we know that the input is a Qiskit QuantumCircuit
+    from .plugins.qiskit import qiskit_to_mqt
 
     return qiskit_to_mqt(input_circuit)
 

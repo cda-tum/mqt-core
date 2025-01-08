@@ -13,7 +13,7 @@ import re
 import warnings
 from typing import TYPE_CHECKING, cast
 
-from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
+from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Qubit
 
 from ..ir import QuantumComputation
 from ..ir.operations import (
@@ -29,7 +29,7 @@ from ..ir.symbolic import Expression, Term, Variable
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from qiskit.circuit import QuantumCircuit
+    from qiskit.circuit import Instruction, ParameterExpression, QuantumCircuit
 
 
 def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
