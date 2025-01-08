@@ -324,11 +324,11 @@ TEST_F(DDFunctionality, buildCircuit) {
   qc.swap(0, 1);
   qc.x(0);
 
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   EXPECT_EQ(ident, e);
 
   qc.x(0);
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   dd->incRef(e);
   EXPECT_NE(ident, e);
 }
@@ -367,8 +367,8 @@ TEST_F(DDFunctionality, CircuitEquivalence) {
   qc2.sx(0);
   qc2.rz(PI_2, 0);
 
-  const qc::MatrixDD dd1 = buildFunctionality(&qc1, *dd);
-  const qc::MatrixDD dd2 = buildFunctionality(&qc2, *dd);
+  const qc::MatrixDD dd1 = buildFunctionality(qc1, *dd);
+  const qc::MatrixDD dd2 = buildFunctionality(qc2, *dd);
 
   EXPECT_EQ(dd1.p, dd2.p);
 }
@@ -380,12 +380,12 @@ TEST_F(DDFunctionality, changePermutation) {
                                "qreg q[2];"
                                "x q[0];\n";
   const auto qc = QuantumComputation::fromQASM(testfile);
-  auto sim = simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd);
+  const auto sim = simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].w.exactlyOne());
   EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].p->e[0].w.exactlyOne());
-  auto func = buildFunctionality(&qc, *dd);
+  const auto func = buildFunctionality(qc, *dd);
   EXPECT_FALSE(func.p->e[0].isZeroTerminal());
   EXPECT_FALSE(func.p->e[1].isZeroTerminal());
   EXPECT_FALSE(func.p->e[2].isZeroTerminal());
@@ -465,9 +465,9 @@ TEST_F(DDFunctionality, FuseTwoSingleQubitGates) {
   qc.h(0);
 
   qc.print(std::cout);
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   CircuitOptimizer::singleQubitGateFusion(qc);
-  const auto f = buildFunctionality(&qc, *dd);
+  const auto f = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
@@ -481,11 +481,11 @@ TEST_F(DDFunctionality, FuseThreeSingleQubitGates) {
   qc.h(0);
   qc.y(0);
 
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
-  const auto f = buildFunctionality(&qc, *dd);
+  const auto f = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
@@ -498,11 +498,11 @@ TEST_F(DDFunctionality, FuseNoSingleQubitGates) {
   qc.h(0);
   qc.cx(0, 1);
   qc.y(0);
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
-  const auto f = buildFunctionality(&qc, *dd);
+  const auto f = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 3);
@@ -515,11 +515,11 @@ TEST_F(DDFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
   qc.h(0);
   qc.z(1);
   qc.y(0);
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
-  const auto f = buildFunctionality(&qc, *dd);
+  const auto f = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 2);
@@ -590,7 +590,7 @@ TEST_F(DDFunctionality, dynamicCircuitProbabilityVectorExtractionWithSWAP) {
 
   const auto zeroState = dd->makeZeroState(2);
   auto probVector = dd::SparsePVec{};
-  extractProbabilityVector(&qc, zeroState, probVector, *dd);
+  extractProbabilityVector(qc, zeroState, probVector, *dd);
   EXPECT_EQ(probVector.size(), 1);
   const auto& [key, value] = *probVector.begin();
   EXPECT_EQ(value, 1.);

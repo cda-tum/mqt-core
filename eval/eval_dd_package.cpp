@@ -77,7 +77,7 @@ benchmarkSimulate(const QuantumComputation& qc) {
   exp->dd = std::make_unique<Package<>>(nq);
   const auto start = std::chrono::high_resolution_clock::now();
   const auto in = exp->dd->makeZeroState(nq);
-  exp->sim = simulate(&qc, in, *(exp->dd));
+  exp->sim = simulate(qc, in, *(exp->dd));
   const auto end = std::chrono::high_resolution_clock::now();
   exp->runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
@@ -91,7 +91,7 @@ benchmarkFunctionalityConstruction(const QuantumComputation& qc) {
   const auto nq = qc.getNqubits();
   exp->dd = std::make_unique<Package<>>(nq);
   const auto start = std::chrono::high_resolution_clock::now();
-  exp->func = buildFunctionality(&qc, *(exp->dd));
+  exp->func = buildFunctionality(qc, *(exp->dd));
   const auto end = std::chrono::high_resolution_clock::now();
   exp->runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
@@ -109,14 +109,14 @@ benchmarkSimulateGrover(const qc::Qubit nq, const BitString& targetValue) {
   // apply state preparation setup
   QuantumComputation statePrep(nq + 1);
   appendGroverInitialization(statePrep);
-  const auto s = buildFunctionality(&statePrep, dd);
+  const auto s = buildFunctionality(statePrep, dd);
   auto e = dd.applyOperation(s, dd.makeZeroState(nq + 1));
 
   QuantumComputation groverIteration(nq + 1);
   appendGroverOracle(groverIteration, targetValue);
   appendGroverDiffusion(groverIteration);
 
-  auto iter = buildFunctionalityRecursive(&groverIteration, dd);
+  auto iter = buildFunctionalityRecursive(groverIteration, dd);
   const auto iterations = computeNumberOfIterations(nq);
   const std::bitset<128U> iterBits(iterations);
   const auto msb = static_cast<std::size_t>(std::floor(std::log2(iterations)));
@@ -151,7 +151,7 @@ benchmarkFunctionalityConstructionGrover(const qc::Qubit nq,
   appendGroverOracle(groverIteration, targetValue);
   appendGroverDiffusion(groverIteration);
 
-  const auto iter = buildFunctionalityRecursive(&groverIteration, dd);
+  const auto iter = buildFunctionalityRecursive(groverIteration, dd);
   auto e = iter;
   const auto iterations = computeNumberOfIterations(nq);
   const std::bitset<128U> iterBits(iterations);
@@ -177,7 +177,7 @@ benchmarkFunctionalityConstructionGrover(const qc::Qubit nq,
   // apply state preparation setup
   QuantumComputation statePrep(nq + 1);
   appendGroverInitialization(statePrep);
-  const auto s = buildFunctionality(&statePrep, dd);
+  const auto s = buildFunctionality(statePrep, dd);
   exp->func = dd.applyOperation(e, s);
 
   const auto end = std::chrono::high_resolution_clock::now();

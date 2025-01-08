@@ -65,7 +65,7 @@ TEST_P(WState, RoutineFunctionTest) {
   auto qc = qc::createWState(nq);
   auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
   const dd::VectorDD e =
-      dd::simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd);
+      dd::simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd);
   const auto f = dd->makeWState(nq);
 
   EXPECT_EQ(e, f);

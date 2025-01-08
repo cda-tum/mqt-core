@@ -137,7 +137,7 @@ TEST_P(QPE, QPETest) {
 
   qc::VectorDD e{};
   ASSERT_NO_THROW(
-      { e = dd::simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd); });
+      { e = dd::simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd); });
 
   // account for the eigenstate qubit by adding an offset
   const auto offset = 1ULL << (e.p->v + 1);
@@ -219,7 +219,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = dd::simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
+  auto e = dd::simulate(qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
 
   // create standard IQPE circuit
   auto iqpe = qc::createIterativeQPE(lambda, precision);
@@ -233,7 +233,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = dd::simulate(&iqpe, dd->makeZeroState(iqpe.getNqubits()), *dd);
+  auto f = dd::simulate(iqpe, dd->makeZeroState(iqpe.getNqubits()), *dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
@@ -252,7 +252,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = dd::buildFunctionality(&qpe, *dd);
+  auto e = dd::buildFunctionality(qpe, *dd);
 
   // create standard IQPE circuit
   auto iqpe = qc::createIterativeQPE(lambda, precision);
@@ -267,7 +267,7 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = dd::buildFunctionality(&iqpe, *dd);
+  auto f = dd::buildFunctionality(iqpe, *dd);
 
   EXPECT_EQ(e, f);
 }
@@ -279,7 +279,7 @@ TEST_P(QPE, ProbabilityExtraction) {
   auto iqpe = qc::createIterativeQPE(lambda, precision);
 
   dd::SparsePVec probs{};
-  dd::extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()),
+  dd::extractProbabilityVector(iqpe, dd->makeZeroState(iqpe.getNqubits()),
                                probs, *dd);
 
   for (const auto& [state, prob] : probs) {
@@ -307,7 +307,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = dd::simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
+  auto e = dd::simulate(qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
   const auto vec = e.getVector();
   std::cout << "QPE:\n";
   for (const auto& amp : vec) {
@@ -319,7 +319,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
-  dd::extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()),
+  dd::extractProbabilityVector(iqpe, dd->makeZeroState(iqpe.getNqubits()),
                                probs, *dd);
 
   std::cout << "IQPE:\n";
@@ -330,8 +330,8 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   }
 
   // calculate fidelity between both results
-  auto fidelity =
-      dd->fidelityOfMeasurementOutcomes(e, probs, qpe.outputPermutation);
+  const auto fidelity = dd::Package<>::fidelityOfMeasurementOutcomes(
+      e, probs, qpe.outputPermutation);
   std::cout << "Fidelity of both circuits' measurement outcomes: " << fidelity
             << "\n";
 

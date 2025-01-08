@@ -75,7 +75,7 @@ TEST_P(QFT, Functionality) {
   // there should be no error building the functionality
 
   // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionality(&qc, *dd); });
+  ASSERT_NO_THROW({ func = buildFunctionality(qc, *dd); });
 
   qc.printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
@@ -120,7 +120,7 @@ TEST_P(QFT, FunctionalityRecursive) {
   ASSERT_NO_THROW({ qc = qc::createQFT(nqubits, false); });
 
   // there should be no error building the functionality
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(&qc, *dd); });
+  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc, *dd); });
 
   qc.printStatistics(std::cout);
   // QFT DD should consist of 2^n nodes
@@ -168,7 +168,7 @@ TEST_P(QFT, Simulation) {
   // there should be no error simulating the circuit
   ASSERT_NO_THROW({
     auto in = dd->makeZeroState(nqubits);
-    sim = simulate(&qc, in, *dd);
+    sim = simulate(qc, in, *dd);
   });
   qc.printStatistics(std::cout);
 
@@ -202,11 +202,11 @@ TEST_P(QFT, FunctionalityRecursiveEquality) {
   ASSERT_NO_THROW({ qc = qc::createQFT(nqubits, false); });
 
   // there should be no error building the functionality recursively
-  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(&qc, *dd); });
+  ASSERT_NO_THROW({ func = buildFunctionalityRecursive(qc, *dd); });
 
   // there should be no error building the functionality regularly
   qc::MatrixDD funcRec{};
-  ASSERT_NO_THROW({ funcRec = buildFunctionality(&qc, *dd); });
+  ASSERT_NO_THROW({ funcRec = buildFunctionality(qc, *dd); });
 
   ASSERT_EQ(func, funcRec);
   dd->decRef(funcRec);

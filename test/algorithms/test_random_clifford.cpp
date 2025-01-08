@@ -40,7 +40,7 @@ TEST_P(RandomClifford, simulate) {
   auto dd = std::make_unique<dd::Package<>>(nq);
   auto qc = qc::createRandomCliffordCircuit(nq, nq * nq, 12345);
   auto in = dd->makeZeroState(nq);
-  ASSERT_NO_THROW({ dd::simulate(&qc, in, *dd); });
+  ASSERT_NO_THROW({ dd::simulate(qc, in, *dd); });
   qc.printStatistics(std::cout);
 }
 
@@ -49,6 +49,6 @@ TEST_P(RandomClifford, buildFunctionality) {
 
   auto dd = std::make_unique<dd::Package<>>(nq);
   auto qc = qc::createRandomCliffordCircuit(nq, nq * nq, 12345);
-  ASSERT_NO_THROW({ dd::buildFunctionality(&qc, *dd); });
+  ASSERT_NO_THROW({ dd::buildFunctionality(qc, *dd); });
   qc.printStatistics(std::cout);
 }

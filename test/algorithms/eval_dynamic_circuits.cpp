@@ -186,12 +186,12 @@ TEST_P(DynamicCircuitEvalExactQPE, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalExactQPE, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  const auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
+  const auto e = simulate(qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
-  extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
+  extractProbabilityVector(iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
                            *dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
 
@@ -391,13 +391,13 @@ TEST_P(DynamicCircuitEvalInexactQPE, ProbabilityExtraction) {
   const auto start = std::chrono::steady_clock::now();
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
-  extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
+  extractProbabilityVector(iqpe, dd->makeZeroState(iqpe.getNqubits()), probs,
                            *dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
   std::cout << "---- extraction done ----\n";
 
   // generate DD of QPE circuit via simulation
-  auto e = simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
+  auto e = simulate(qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
   std::cout << "---- sim done ----\n";
 
@@ -540,12 +540,12 @@ TEST_P(DynamicCircuitEvalBV, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalBV, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  const auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), *dd);
+  const auto e = simulate(bv, dd->makeZeroState(bv.getNqubits()), *dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
-  extractProbabilityVector(&dbv, dd->makeZeroState(dbv.getNqubits()), probs,
+  extractProbabilityVector(dbv, dd->makeZeroState(dbv.getNqubits()), probs,
                            *dd);
   const auto extractionEnd = std::chrono::steady_clock::now();
 
@@ -684,7 +684,7 @@ TEST_P(DynamicCircuitEvalQFT, UnitaryTransformation) {
 TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
   // generate DD of QPE circuit via simulation
   const auto start = std::chrono::steady_clock::now();
-  auto e = simulate(&qft, dd->makeZeroState(qft.getNqubits()), *dd);
+  auto e = simulate(qft, dd->makeZeroState(qft.getNqubits()), *dd);
   const auto simulationEnd = std::chrono::steady_clock::now();
   const auto simulation =
       std::chrono::duration<double>(simulationEnd - start).count();
@@ -693,7 +693,7 @@ TEST_P(DynamicCircuitEvalQFT, ProbabilityExtraction) {
   // extract measurement probabilities from IQPE simulations
   if (qft.getNqubits() <= 15) {
     dd::SparsePVec probs{};
-    extractProbabilityVector(&dqft, dd->makeZeroState(dqft.getNqubits()), probs,
+    extractProbabilityVector(dqft, dd->makeZeroState(dqft.getNqubits()), probs,
                              *dd);
     const auto extractionEnd = std::chrono::steady_clock::now();
 

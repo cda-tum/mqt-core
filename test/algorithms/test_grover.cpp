@@ -91,7 +91,7 @@ TEST_P(Grover, Functionality) {
   qc::appendGroverOracle(groverIteration, targetValue);
   qc::appendGroverDiffusion(groverIteration);
 
-  const auto iteration = buildFunctionality(&groverIteration, *dd);
+  const auto iteration = buildFunctionality(groverIteration, *dd);
 
   auto e = iteration;
   dd->incRef(e);
@@ -106,7 +106,7 @@ TEST_P(Grover, Functionality) {
 
   qc::QuantumComputation setup(qc.getNqubits());
   qc::appendGroverInitialization(setup);
-  const auto g = buildFunctionality(&setup, *dd);
+  const auto g = buildFunctionality(setup, *dd);
   const auto f = dd->multiply(e, g);
   dd->incRef(f);
   dd->decRef(e);
@@ -132,7 +132,7 @@ TEST_P(Grover, FunctionalityRecursive) {
   qc::appendGroverOracle(groverIteration, targetValue);
   qc::appendGroverDiffusion(groverIteration);
 
-  const auto iter = buildFunctionalityRecursive(&groverIteration, *dd);
+  const auto iter = buildFunctionalityRecursive(groverIteration, *dd);
   auto e = iter;
   const auto iterations = qc::computeNumberOfIterations(nqubits);
   const std::bitset<128U> iterBits(iterations);
@@ -165,7 +165,7 @@ TEST_P(Grover, FunctionalityRecursive) {
   // apply state preparation setup
   qc::QuantumComputation statePrep(qc.getNqubits());
   qc::appendGroverInitialization(statePrep);
-  const auto s = buildFunctionality(&statePrep, *dd);
+  const auto s = buildFunctionality(statePrep, *dd);
   func = dd->multiply(e, s);
   dd->incRef(func);
   dd->decRef(s);
