@@ -12,8 +12,8 @@ from __future__ import annotations
 from typing import cast
 
 import pytest
-from qiskit import QuantumCircuit, transpile
-from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, QuantumRegister
+from qiskit import transpile
+from qiskit.circuit import AncillaRegister, ClassicalRegister, Parameter, QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import U2Gate, XXMinusYYGate, XXPlusYYGate
 from qiskit.providers.fake_provider import GenericBackendV2
 

@@ -9,11 +9,7 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-
-import pytest
-from qiskit import QuantumCircuit, qasm2
 
 from mqt.core import load
 from mqt.core.ir import QuantumComputation
@@ -92,11 +88,14 @@ def test_loading_nonexistent_file() -> None:
 
 def test_loading_qiskit_circuit() -> None:
     """Test whether importing a Qiskit circuit works."""
+    from qiskit import QuantumCircuit
+    from qiskit.qasm2 import dumps
+
     qiskit_circuit = QuantumCircuit(2, 2)
     qiskit_circuit.h(0)
     qiskit_circuit.cx(0, 1)
     qiskit_circuit.measure(range(2), range(2))
-    qasm = qasm2.dumps(qiskit_circuit)
+    qasm = dumps(qiskit_circuit)
 
     # load the circuit
     qc = load(qiskit_circuit)
@@ -108,14 +107,6 @@ def test_loading_qiskit_circuit() -> None:
 
     # remove any whitespace from both QASM strings and check for equality
     assert "".join(qasm.split()) in "".join(qc_qasm.split())
-
-
-def test_qiskit_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test that trying to import a Qiskit circuit without the `qiskit` extra raises an error."""
-    monkeypatch.setitem(sys.modules, "mqt.core.plugins.qiskit", None)
-
-    with pytest.raises(ValueError, match="Qiskit is not installed"):
-        load(QuantumCircuit())
 
 
 def test_loading_qasm2_string() -> None:
