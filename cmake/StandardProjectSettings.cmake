@@ -28,20 +28,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
     ON
     CACHE BOOL "Export compile commands" FORCE)
 
-option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" OFF)
-if(ENABLE_IPO)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
-  # enable inter-procedural optimization if it is supported
-  if(ipo_supported)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION
-        TRUE
-        CACHE BOOL "Enable Interprocedural Optimization" FORCE)
-  else()
-    message(DEBUG "IPO is not supported: ${ipo_output}")
-  endif()
-endif()
-
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
   add_compile_options(-fcolor-diagnostics)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -69,4 +55,22 @@ if(DEPLOY)
   set(CMAKE_OSX_DEPLOYMENT_TARGET
       "10.15"
       CACHE STRING "" FORCE)
+endif()
+
+if(NOT DEPLOY)
+  option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" ON)
+else()
+  option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" OFF)
+endif()
+if(ENABLE_IPO)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
+  # enable inter-procedural optimization if it is supported
+  if(ipo_supported)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION
+        TRUE
+        CACHE BOOL "Enable Interprocedural Optimization" FORCE)
+  else()
+    message(DEBUG "IPO is not supported: ${ipo_output}")
+  endif()
 endif()
