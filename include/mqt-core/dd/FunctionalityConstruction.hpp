@@ -37,21 +37,4 @@ bool buildFunctionalityRecursive(const QuantumComputation& qc,
                                  std::stack<MatrixDD>& s,
                                  Permutation& permutation, Package<Config>& dd);
 
-inline void dumpTensorNetwork(std::ostream& of, const QuantumComputation& qc) {
-  of << "{\"tensors\": [\n";
-
-  // initialize an index for every qubit
-  auto inds = std::vector<std::size_t>(qc.getNqubits(), 0U);
-  std::size_t gateIdx = 0U;
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  for (const auto& op : qc) {
-    const auto type = op->getType();
-    if (op != qc.front() && (type != Measure && type != Barrier)) {
-      of << ",\n";
-    }
-    dumpTensor(op.get(), of, inds, gateIdx, *dd);
-  }
-  of << "\n]}\n";
-}
-
 } // namespace dd

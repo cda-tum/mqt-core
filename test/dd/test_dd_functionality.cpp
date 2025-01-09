@@ -393,68 +393,6 @@ TEST_F(DDFunctionality, changePermutation) {
   EXPECT_TRUE(func.p->e[3].p->e[2].w.exactlyOne());
 }
 
-TEST_F(DDFunctionality, basicTensorDumpTest) {
-  QuantumComputation qc(2);
-  qc.h(1);
-  qc.cx(1, 0);
-
-  std::stringstream ss{};
-  dd::dumpTensorNetwork(ss, qc);
-
-  const std::string reference =
-      "{\"tensors\": [\n"
-      "[[\"h\", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], "
-      "[[0.70710678118654757, 0], [0.70710678118654757, 0], "
-      "[0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
-      "[[\"x\", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", "
-      "\"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, "
-      "0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, "
-      "0], [0, 0]]]\n"
-      "]}\n";
-  EXPECT_EQ(ss.str(), reference);
-}
-
-TEST_F(DDFunctionality, compoundTensorDumpTest) {
-  QuantumComputation qc(2);
-  QuantumComputation comp(2);
-  comp.h(1);
-  comp.cx(1, 0);
-  qc.emplace_back(comp.asOperation());
-
-  std::stringstream ss{};
-  dd::dumpTensorNetwork(ss, qc);
-
-  const std::string reference =
-      "{\"tensors\": [\n"
-      "[[\"h\", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], "
-      "[[0.70710678118654757, 0], [0.70710678118654757, 0], "
-      "[0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
-      "[[\"x\", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", "
-      "\"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, "
-      "0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, "
-      "0], [0, 0]]]\n"
-      "]}\n";
-  EXPECT_EQ(ss.str(), reference);
-}
-
-TEST_F(DDFunctionality, errorTensorDumpTest) {
-  QuantumComputation qc(2U, 2U);
-  qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
-
-  std::stringstream ss{};
-  EXPECT_THROW(dd::dumpTensorNetwork(ss, qc), qc::QFRException);
-
-  ss.str("");
-  qc.erase(qc.begin());
-  qc.barrier(0);
-  qc.measure(0, 0);
-  EXPECT_NO_THROW(dd::dumpTensorNetwork(ss, qc));
-
-  ss.str("");
-  qc.reset(0);
-  EXPECT_THROW(dd::dumpTensorNetwork(ss, qc), qc::QFRException);
-}
-
 TEST_F(DDFunctionality, FuseTwoSingleQubitGates) {
   nqubits = 1;
   QuantumComputation qc(nqubits);

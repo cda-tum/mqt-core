@@ -340,11 +340,6 @@ applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
   return applyUnitaryOperation(op, in, dd, permutation);
 }
 
-template <class Config>
-void dumpTensor(qc::Operation* op, std::ostream& of,
-                std::vector<std::size_t>& inds, std::size_t& gateIdx,
-                Package<Config>& dd);
-
 // apply swaps 'on' DD in order to change 'from' to 'to'
 // where |from| >= |to|
 template <class DDType, class Config>
