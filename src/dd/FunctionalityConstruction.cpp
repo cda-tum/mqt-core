@@ -36,7 +36,7 @@ MatrixDD buildFunctionality(const QuantumComputation& qc, Package<Config>& dd) {
       continue;
     }
 
-    e = applyUnitaryOperation(op.get(), e, dd, permutation);
+    e = applyUnitaryOperation(*op, e, dd, permutation);
   }
   // correct permutation if necessary
   changePermutation(e, permutation, qc.outputPermutation, dd);
@@ -56,7 +56,7 @@ MatrixDD buildFunctionalityRecursive(const QuantumComputation& qc,
   auto permutation = qc.initialLayout;
 
   if (qc.size() == 1U) {
-    auto e = getDD(qc.front().get(), dd, permutation);
+    auto e = getDD(*qc.front(), dd, permutation);
     dd.incRef(e);
     return e;
   }
@@ -89,7 +89,7 @@ bool buildFunctionalityRecursive(const QuantumComputation& qc,
       const auto& targets = op->getTargets();
       std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
     } else {
-      e = getDD(qc.at(opIdx).get(), dd, permutation);
+      e = getDD(*qc.at(opIdx), dd, permutation);
     }
     ++opIdx;
     if (opIdx == qc.size()) {
@@ -104,7 +104,7 @@ bool buildFunctionalityRecursive(const QuantumComputation& qc,
       const auto& targets = op->getTargets();
       std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
     } else {
-      f = getDD(qc.at(opIdx).get(), dd, permutation);
+      f = getDD(*qc.at(opIdx), dd, permutation);
     }
     s.push(dd.multiply(f, e)); // ! reverse multiplication
     dd.incRef(s.top());

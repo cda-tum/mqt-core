@@ -106,7 +106,7 @@ sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
         continue;
       }
 
-      e = applyUnitaryOperation(op.get(), e, dd, permutation);
+      e = applyUnitaryOperation(*op, e, dd, permutation);
     }
 
     // correct permutation if necessary
@@ -165,22 +165,26 @@ sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
           continue;
         }
 
-        e = applyUnitaryOperation(op.get(), e, dd, permutation);
+        e = applyUnitaryOperation(*op, e, dd, permutation);
         continue;
       }
 
       if (op->getType() == Measure) {
-        e = applyMeasurement(op.get(), e, dd, mt, measurements, permutation);
+        const auto& measure = dynamic_cast<const NonUnitaryOperation&>(*op);
+        e = applyMeasurement(measure, e, dd, mt, measurements, permutation);
         continue;
       }
 
       if (op->getType() == Reset) {
-        e = applyReset(op.get(), e, dd, mt, permutation);
+        const auto& reset = dynamic_cast<const NonUnitaryOperation&>(*op);
+        e = applyReset(reset, e, dd, mt, permutation);
         continue;
       }
 
       if (op->isClassicControlledOperation()) {
-        e = applyClassicControlledOperation(op.get(), e, dd, measurements,
+        const auto& classic =
+            dynamic_cast<const ClassicControlledOperation&>(*op);
+        e = applyClassicControlledOperation(classic, e, dd, measurements,
                                             permutation);
         continue;
       }
@@ -240,16 +244,16 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
         std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
         continue;
       }
-      state = applyUnitaryOperation(op.get(), state, dd, permutation);
+      state = applyUnitaryOperation(*op, state, dd, permutation);
       continue;
     }
 
     // check whether a classic controlled operations can be applied
     if (op->isClassicControlledOperation()) {
-      const auto* classicControlled =
-          dynamic_cast<ClassicControlledOperation*>(op.get());
-      const auto& [regStart, regSize] = classicControlled->getControlRegister();
-      const auto& expectedValue = classicControlled->getExpectedValue();
+      const auto& classicControlled =
+          dynamic_cast<const ClassicControlledOperation&>(*op);
+      const auto& [regStart, regSize] = classicControlled.getControlRegister();
+      const auto& expectedValue = classicControlled.getExpectedValue();
       qc::Bit actualValue = 0U;
       // determine the actual value from measurements
       for (std::size_t j = 0; j < regSize; ++j) {
@@ -263,7 +267,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
         continue;
       }
 
-      state = applyUnitaryOperation(classicControlled->getOperation(), state,
+      state = applyUnitaryOperation(*classicControlled.getOperation(), state,
                                     dd, permutation);
       continue;
     }
@@ -307,10 +311,9 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
 
     // measurements form splitting points in this extraction scheme
     if (op->getType() == qc::Measure) {
-      const auto* measurement =
-          dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-      const auto& targets = measurement->getTargets();
-      const auto& classics = measurement->getClassics();
+      const auto& measurement = dynamic_cast<const NonUnitaryOperation&>(*op);
+      const auto& targets = measurement.getTargets();
+      const auto& classics = measurement.getClassics();
       if (targets.size() != 1U || classics.size() != 1U) {
         throw qc::QFRException(
             "Measurements on multiple qubits are not supported right now. "

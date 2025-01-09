@@ -135,8 +135,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     op = qc::StandardOperation(0, gate);
   }
 
-  ASSERT_NO_THROW(
-      { e = dd->multiply(getDD(&op, *dd), getInverseDD(&op, *dd)); });
+  ASSERT_NO_THROW({ e = dd->multiply(getDD(op, *dd), getInverseDD(op, *dd)); });
   dd->incRef(e);
 
   EXPECT_EQ(ident, e);
@@ -190,8 +189,7 @@ TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
     op = qc::StandardOperation(0, 1, gate);
   }
 
-  ASSERT_NO_THROW(
-      { e = dd->multiply(getDD(&op, *dd), getInverseDD(&op, *dd)); });
+  ASSERT_NO_THROW({ e = dd->multiply(getDD(op, *dd), getInverseDD(op, *dd)); });
   dd->incRef(e);
 
   EXPECT_EQ(ident, e);
@@ -247,8 +245,7 @@ TEST_P(DDFunctionality, controlledStandardNegOpBuildInverseBuild) {
     op = qc::StandardOperation(Controls{0_nc}, 1, gate);
   }
 
-  ASSERT_NO_THROW(
-      { e = dd->multiply(getDD(&op, *dd), getInverseDD(&op, *dd)); });
+  ASSERT_NO_THROW({ e = dd->multiply(getDD(op, *dd), getInverseDD(op, *dd)); });
   dd->incRef(e);
 
   EXPECT_EQ(ident, e);
@@ -338,10 +335,10 @@ TEST_F(DDFunctionality, nonUnitary) {
   auto dummyMap = Permutation{};
   auto op = qc::NonUnitaryOperation({0, 1, 2, 3}, {0, 1, 2, 3});
   EXPECT_FALSE(op.isUnitary());
-  EXPECT_THROW(getDD(&op, *dd), qc::QFRException);
-  EXPECT_THROW(getInverseDD(&op, *dd), qc::QFRException);
-  EXPECT_THROW(getDD(&op, *dd, dummyMap), qc::QFRException);
-  EXPECT_THROW(getInverseDD(&op, *dd, dummyMap), qc::QFRException);
+  EXPECT_THROW(getDD(op, *dd), qc::QFRException);
+  EXPECT_THROW(getInverseDD(op, *dd), qc::QFRException);
+  EXPECT_THROW(getDD(op, *dd, dummyMap), qc::QFRException);
+  EXPECT_THROW(getInverseDD(op, *dd, dummyMap), qc::QFRException);
   for (Qubit i = 0; i < nqubits; ++i) {
     EXPECT_TRUE(op.actsOn(i));
   }
@@ -350,10 +347,10 @@ TEST_F(DDFunctionality, nonUnitary) {
     dummyMap[i] = i;
   }
   auto barrier = qc::StandardOperation({0, 1, 2, 3}, qc::OpType::Barrier);
-  EXPECT_TRUE(getDD(&barrier, *dd).isIdentity());
-  EXPECT_TRUE(getInverseDD(&barrier, *dd).isIdentity());
-  EXPECT_TRUE(getDD(&barrier, *dd, dummyMap).isIdentity());
-  EXPECT_TRUE(getInverseDD(&barrier, *dd, dummyMap).isIdentity());
+  EXPECT_TRUE(getDD(barrier, *dd).isIdentity());
+  EXPECT_TRUE(getInverseDD(barrier, *dd).isIdentity());
+  EXPECT_TRUE(getDD(barrier, *dd, dummyMap).isIdentity());
+  EXPECT_TRUE(getInverseDD(barrier, *dd, dummyMap).isIdentity());
 }
 
 TEST_F(DDFunctionality, CircuitEquivalence) {

@@ -37,13 +37,13 @@ namespace dd {
 // single-target Operations
 template <class Config>
 qc::MatrixDD
-getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
+getStandardOperationDD(const qc::StandardOperation& op, Package<Config>& dd,
                        const qc::Controls& controls, const qc::Qubit target,
                        const bool inverse) {
   GateMatrix gm;
 
-  const auto type = op->getType();
-  const auto& parameter = op->getParameter();
+  const auto type = op.getType();
+  const auto& parameter = op.getParameter();
 
   switch (type) {
   case qc::I:
@@ -107,7 +107,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     break;
   default:
     std::ostringstream oss{};
-    oss << "DD for gate" << op->getName() << " not available!";
+    oss << "DD for gate" << op.getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
   return dd.makeGateDD(gm, controls, target);
@@ -116,11 +116,11 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
 // two-target Operations
 template <class Config>
 qc::MatrixDD
-getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
+getStandardOperationDD(const qc::StandardOperation& op, Package<Config>& dd,
                        const qc::Controls& controls, qc::Qubit target0,
                        qc::Qubit target1, const bool inverse) {
-  const auto type = op->getType();
-  const auto& parameter = op->getParameter();
+  const auto type = op.getType();
+  const auto& parameter = op.getParameter();
 
   if (type == qc::DCX && inverse) {
     // DCX is not self-inverse, but the inverse is just swapping the targets
@@ -172,7 +172,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     break;
   default:
     std::ostringstream oss{};
-    oss << "DD for gate " << op->getName() << " not available!";
+    oss << "DD for gate " << op.getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
 
@@ -186,17 +186,17 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
 // An empty permutation marks the identity permutation.
 
 template <class Config>
-qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
+qc::MatrixDD getDD(const qc::Operation& op, Package<Config>& dd,
                    const qc::Permutation& permutation = {},
                    const bool inverse = false) {
-  const auto type = op->getType();
+  const auto type = op.getType();
 
   if (type == qc::Barrier) {
     return dd.makeIdent();
   }
 
   if (type == qc::GPhase) {
-    auto phase = op->getParameter()[0U];
+    auto phase = op.getParameter()[0U];
     if (inverse) {
       phase = -phase;
     }
@@ -205,10 +205,10 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
     return id;
   }
 
-  if (op->isStandardOperation()) {
-    const auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op);
-    const auto& targets = permutation.apply(op->getTargets());
-    const auto& controls = permutation.apply(op->getControls());
+  if (op.isStandardOperation()) {
+    const auto& standardOp = dynamic_cast<const qc::StandardOperation&>(op);
+    const auto& targets = permutation.apply(standardOp.getTargets());
+    const auto& controls = permutation.apply(standardOp.getControls());
 
     if (qc::isTwoQubitGate(type)) {
       assert(targets.size() == 2);
@@ -220,39 +220,39 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
                                   inverse);
   }
 
-  if (op->isCompoundOperation()) {
-    const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op);
+  if (op.isCompoundOperation()) {
+    const auto& compoundOp = dynamic_cast<const qc::CompoundOperation&>(op);
     auto e = dd.makeIdent();
     if (inverse) {
-      for (const auto& operation : *compoundOp) {
-        e = dd.multiply(e, getInverseDD(operation.get(), dd, permutation));
+      for (const auto& operation : compoundOp) {
+        e = dd.multiply(e, getInverseDD(*operation, dd, permutation));
       }
     } else {
-      for (const auto& operation : *compoundOp) {
-        e = dd.multiply(getDD(operation.get(), dd, permutation), e);
+      for (const auto& operation : compoundOp) {
+        e = dd.multiply(getDD(*operation, dd, permutation), e);
       }
     }
     return e;
   }
 
-  if (op->isClassicControlledOperation()) {
-    const auto* classicOp =
-        dynamic_cast<const qc::ClassicControlledOperation*>(op);
-    return getDD(classicOp->getOperation(), dd, permutation, inverse);
+  if (op.isClassicControlledOperation()) {
+    const auto& classicOp =
+        dynamic_cast<const qc::ClassicControlledOperation&>(op);
+    return getDD(*classicOp.getOperation(), dd, permutation, inverse);
   }
 
-  assert(op->isNonUnitaryOperation());
+  assert(op.isNonUnitaryOperation());
   throw qc::QFRException("DD for non-unitary operation not available!");
 }
 
 template <class Config>
-qc::MatrixDD getInverseDD(const qc::Operation* op, Package<Config>& dd,
+qc::MatrixDD getInverseDD(const qc::Operation& op, Package<Config>& dd,
                           const qc::Permutation& permutation = {}) {
   return getDD(op, dd, permutation, true);
 }
 
 template <class Config, class Node>
-Edge<Node> applyUnitaryOperation(const qc::Operation* op, const Edge<Node>& in,
+Edge<Node> applyUnitaryOperation(const qc::Operation& op, const Edge<Node>& in,
                                  Package<Config>& dd,
                                  const qc::Permutation& permutation = {}) {
   static_assert(std::is_same_v<Node, dd::vNode> ||
@@ -261,17 +261,14 @@ Edge<Node> applyUnitaryOperation(const qc::Operation* op, const Edge<Node>& in,
 }
 
 template <class Config>
-qc::VectorDD applyMeasurement(const qc::Operation* op, qc::VectorDD in,
-                              Package<Config>& dd, std::mt19937_64& rng,
+qc::VectorDD applyMeasurement(const qc::NonUnitaryOperation& op,
+                              qc::VectorDD in, Package<Config>& dd,
+                              std::mt19937_64& rng,
                               std::vector<bool>& measurements,
                               const qc::Permutation& permutation = {}) {
-  assert(op->getType() == qc::Measure);
-  assert(op->isNonUnitaryOperation());
-  const auto* measure = dynamic_cast<const qc::NonUnitaryOperation*>(op);
-  assert(measure != nullptr);
-
-  const auto& qubits = permutation.apply(measure->getTargets());
-  const auto& bits = measure->getClassics();
+  assert(op.getType() == qc::Measure);
+  const auto& qubits = permutation.apply(op.getTargets());
+  const auto& bits = op.getClassics();
   for (size_t j = 0U; j < qubits.size(); ++j) {
     measurements.at(bits.at(j)) =
         dd.measureOneCollapsing(in, static_cast<dd::Qubit>(qubits.at(j)),
@@ -281,38 +278,32 @@ qc::VectorDD applyMeasurement(const qc::Operation* op, qc::VectorDD in,
 }
 
 template <class Config>
-qc::VectorDD applyReset(const qc::Operation* op, qc::VectorDD in,
+qc::VectorDD applyReset(const qc::NonUnitaryOperation& op, qc::VectorDD in,
                         Package<Config>& dd, std::mt19937_64& rng,
                         const qc::Permutation& permutation = {}) {
-  assert(op->getType() == qc::Reset);
-  assert(op->isNonUnitaryOperation());
-  const auto* reset = dynamic_cast<const qc::NonUnitaryOperation*>(op);
-  assert(reset != nullptr);
-
-  const auto& qubits = permutation.apply(reset->getTargets());
+  assert(op.getType() == qc::Reset);
+  const auto& qubits = permutation.apply(op.getTargets());
   for (const auto& qubit : qubits) {
     const auto bit =
         dd.measureOneCollapsing(in, static_cast<dd::Qubit>(qubit), rng);
     // apply an X operation whenever the measured result is one
     if (bit == '1') {
       const auto x = qc::StandardOperation(qubit, qc::X);
-      in = applyUnitaryOperation(&x, in, dd);
+      in = applyUnitaryOperation(x, in, dd);
     }
   }
   return in;
 }
 
 template <class Config>
-qc::VectorDD applyClassicControlledOperation(
-    const qc::Operation* op, const qc::VectorDD& in, Package<Config>& dd,
-    std::vector<bool>& measurements, const qc::Permutation& permutation = {}) {
-  assert(op->isClassicControlledOperation());
-  const auto* classic = dynamic_cast<const qc::ClassicControlledOperation*>(op);
-  assert(classic != nullptr);
-
-  const auto& [regStart, regSize] = classic->getControlRegister();
-  const auto& expectedValue = classic->getExpectedValue();
-  const auto& comparisonKind = classic->getComparisonKind();
+qc::VectorDD
+applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
+                                const qc::VectorDD& in, Package<Config>& dd,
+                                std::vector<bool>& measurements,
+                                const qc::Permutation& permutation = {}) {
+  const auto& [regStart, regSize] = op.getControlRegister();
+  const auto& expectedValue = op.getExpectedValue();
+  const auto& comparisonKind = op.getComparisonKind();
 
   auto actualValue = 0ULL;
   // determine the actual value from measurements
@@ -346,7 +337,7 @@ qc::VectorDD applyClassicControlledOperation(
     return in;
   }
 
-  return applyUnitaryOperation(classic, in, dd, permutation);
+  return applyUnitaryOperation(op, in, dd, permutation);
 }
 
 template <class Config>
