@@ -468,12 +468,12 @@ TEST_F(QFRFunctionality, AddAncillaryQubits) {
   qc.addAncillaryQubit(1, std::nullopt);
   EXPECT_EQ(qc.getNqubits(), 2);
   EXPECT_EQ(qc.getNancillae(), 1);
-  ASSERT_EQ(qc.ancillary.size(), 2U);
-  ASSERT_EQ(qc.garbage.size(), 2U);
-  EXPECT_FALSE(qc.ancillary[0]);
-  EXPECT_TRUE(qc.ancillary[1]);
-  EXPECT_FALSE(qc.garbage[0]);
-  EXPECT_TRUE(qc.garbage[1]);
+  ASSERT_EQ(qc.getAncillary().size(), 2U);
+  ASSERT_EQ(qc.getGarbage().size(), 2U);
+  EXPECT_FALSE(qc.getAncillary()[0]);
+  EXPECT_TRUE(qc.getAncillary()[1]);
+  EXPECT_FALSE(qc.getGarbage()[0]);
+  EXPECT_TRUE(qc.getGarbage()[1]);
 }
 
 TEST_F(QFRFunctionality, CircuitDepthEmptyCircuit) {

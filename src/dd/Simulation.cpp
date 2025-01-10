@@ -111,7 +111,7 @@ sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
 
     // correct permutation if necessary
     changePermutation(e, permutation, qc.outputPermutation, dd);
-    e = dd.reduceGarbage(e, qc.garbage);
+    e = dd.reduceGarbage(e, qc.getGarbage());
 
     // measure all qubits
     std::map<std::string, std::size_t> counts{};

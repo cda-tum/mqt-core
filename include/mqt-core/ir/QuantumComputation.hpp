@@ -52,6 +52,9 @@ protected:
   ClassicalRegisterMap cregs;
   QuantumRegisterMap ancregs;
 
+  std::vector<bool> ancillary;
+  std::vector<bool> garbage;
+
   std::mt19937_64 mt;
   std::size_t seed = 0;
 
@@ -133,9 +136,6 @@ public:
   [[nodiscard]] std::size_t getNgarbageQubits() const;
 
   void setName(const std::string& n) noexcept { name = n; }
-
-  std::vector<bool> ancillary;
-  std::vector<bool> garbage;
 
   [[nodiscard]] std::size_t getNindividualOps() const;
   [[nodiscard]] std::size_t getNsingleQubitOps() const;

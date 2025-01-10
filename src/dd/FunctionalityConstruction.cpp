@@ -26,7 +26,7 @@ MatrixDD buildFunctionality(const QuantumComputation& qc, Package<Config>& dd) {
   }
 
   auto permutation = qc.initialLayout;
-  auto e = dd.createInitialMatrix(qc.ancillary);
+  auto e = dd.createInitialMatrix(qc.getAncillary());
 
   for (const auto& op : qc) {
     // SWAP gates can be executed virtually by changing the permutation
@@ -40,8 +40,8 @@ MatrixDD buildFunctionality(const QuantumComputation& qc, Package<Config>& dd) {
   }
   // correct permutation if necessary
   changePermutation(e, permutation, qc.outputPermutation, dd);
-  e = dd.reduceAncillae(e, qc.ancillary);
-  e = dd.reduceGarbage(e, qc.garbage);
+  e = dd.reduceAncillae(e, qc.getAncillary());
+  e = dd.reduceGarbage(e, qc.getGarbage());
 
   return e;
 }
@@ -69,8 +69,8 @@ MatrixDD buildFunctionalityRecursive(const QuantumComputation& qc,
 
   // correct permutation if necessary
   changePermutation(e, permutation, qc.outputPermutation, dd);
-  e = dd.reduceAncillae(e, qc.ancillary);
-  e = dd.reduceGarbage(e, qc.garbage);
+  e = dd.reduceAncillae(e, qc.getAncillary());
+  e = dd.reduceGarbage(e, qc.getGarbage());
 
   return e;
 }

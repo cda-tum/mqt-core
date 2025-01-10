@@ -39,7 +39,7 @@ VectorDD simulate(const QuantumComputation& qc, const VectorDD& in,
     e = applyUnitaryOperation(*op, e, dd, permutation);
   }
   changePermutation(e, permutation, qc.outputPermutation, dd);
-  e = dd.reduceGarbage(e, qc.garbage);
+  e = dd.reduceGarbage(e, qc.getGarbage());
   return e;
 }
 

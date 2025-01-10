@@ -1485,6 +1485,14 @@ QuantumComputation::fromCompoundOperation(const CompoundOperation& op) {
   return qc;
 }
 
+std::size_t QuantumComputation::getNmeasuredQubits() const noexcept {
+  return getNqubits() - getNgarbageQubits();
+}
+std::size_t QuantumComputation::getNgarbageQubits() const {
+  return static_cast<std::size_t>(
+      std::count(getGarbage().cbegin(), getGarbage().cend(), true));
+}
+
 ///---------------------------------------------------------------------------
 ///                            \n Operations \n
 ///---------------------------------------------------------------------------
