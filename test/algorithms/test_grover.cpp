@@ -7,6 +7,7 @@
  * Licensed under the MIT License
  */
 
+#include "Definitions.hpp"
 #include "algorithms/Grover.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
@@ -54,8 +55,8 @@ protected:
   qc::QuantumComputation qc;
   qc::VectorDD sim{};
   qc::MatrixDD func{};
-  std::string expected{};
-  qc::BitString targetValue{};
+  std::string expected;
+  qc::BitString targetValue;
 };
 
 constexpr qc::Qubit GROVER_MAX_QUBITS = 15;

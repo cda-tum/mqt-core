@@ -7,12 +7,14 @@
  * Licensed under the MIT License
  */
 
+#include "Definitions.hpp"
 #include "algorithms/QFT.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
 #include "dd/RealNumber.hpp"
 #include "dd/Simulation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <algorithm>
 #include <cassert>

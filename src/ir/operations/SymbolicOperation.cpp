@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
+#include <memory>
 #include <ostream>
 #include <utility>
 #include <variant>

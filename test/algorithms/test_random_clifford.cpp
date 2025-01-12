@@ -7,6 +7,7 @@
  * Licensed under the MIT License
  */
 
+#include "Definitions.hpp"
 #include "algorithms/RandomCliffordCircuit.hpp"
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
@@ -38,7 +39,8 @@ TEST_P(RandomClifford, simulate) {
   const auto nq = GetParam();
 
   auto dd = std::make_unique<dd::Package<>>(nq);
-  auto qc = qc::createRandomCliffordCircuit(nq, nq * nq, 12345);
+  auto qc = qc::createRandomCliffordCircuit(
+      nq, static_cast<std::size_t>(nq) * nq, 12345);
   auto in = dd->makeZeroState(nq);
   ASSERT_NO_THROW({ dd::simulate(qc, in, *dd); });
   qc.printStatistics(std::cout);
@@ -48,7 +50,8 @@ TEST_P(RandomClifford, buildFunctionality) {
   const auto nq = GetParam();
 
   auto dd = std::make_unique<dd::Package<>>(nq);
-  auto qc = qc::createRandomCliffordCircuit(nq, nq * nq, 12345);
+  auto qc = qc::createRandomCliffordCircuit(
+      nq, static_cast<std::size_t>(nq) * nq, 12345);
   ASSERT_NO_THROW({ dd::buildFunctionality(qc, *dd); });
   qc.printStatistics(std::cout);
 }

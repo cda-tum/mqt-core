@@ -12,6 +12,7 @@
 #include "Definitions.hpp"
 #include "ir/operations/OpType.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -21,6 +22,7 @@
 #include <limits>
 #include <ostream>
 #include <sstream>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>

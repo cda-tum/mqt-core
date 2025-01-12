@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Definitions.hpp"
+#include "Permutation.hpp"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/Control.hpp"
@@ -428,8 +429,6 @@ public:
                                   const QuantumComputation& qc) {
     return qc.print(os);
   }
-
-  static void printBin(std::size_t n, std::stringstream& ss);
 
   std::ostream& printStatistics(std::ostream& os) const;
 

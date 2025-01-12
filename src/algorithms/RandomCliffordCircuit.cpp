@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <random>
+#include <string>
 
 namespace qc {
 

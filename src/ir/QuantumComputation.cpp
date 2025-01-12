@@ -10,6 +10,7 @@
 #include "ir/QuantumComputation.hpp"
 
 #include "Definitions.hpp"
+#include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/Expression.hpp"
@@ -19,18 +20,23 @@
 #include "ir/operations/SymbolicOperation.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <istream>
 #include <iterator>
+#include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <ostream>
+#include <random>
 #include <set>
 #include <sstream>
 #include <string>
@@ -669,13 +675,6 @@ std::ostream& QuantumComputation::print(std::ostream& os) const {
   }
   os << "\n";
   return os;
-}
-
-void QuantumComputation::printBin(std::size_t n, std::stringstream& ss) {
-  if (n > 1) {
-    printBin(n / 2, ss);
-  }
-  ss << n % 2;
 }
 
 std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {

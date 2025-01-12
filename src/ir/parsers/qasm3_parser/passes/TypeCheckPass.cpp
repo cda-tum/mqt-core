@@ -20,6 +20,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <string>
 
 namespace qasm3::type_checking {
 

@@ -272,6 +272,15 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   EXPECT_EQ(e, f);
 }
 
+namespace {
+void printBin(const std::size_t n, std::stringstream& ss) {
+  if (n > 1) {
+    printBin(n / 2, ss);
+  }
+  ss << n % 2;
+}
+} // namespace
+
 TEST_P(QPE, ProbabilityExtraction) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
@@ -284,7 +293,7 @@ TEST_P(QPE, ProbabilityExtraction) {
 
   for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
-    qc::QuantumComputation::printBin(state, ss);
+    printBin(state, ss);
     std::cout << ss.str() << ": " << prob << "\n";
   }
 
@@ -325,7 +334,7 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   std::cout << "IQPE:\n";
   for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
-    qc::QuantumComputation::printBin(state, ss);
+    printBin(state, ss);
     std::cout << ss.str() << ": " << prob << "\n";
   }
 

@@ -10,10 +10,12 @@
 #include "algorithms/BernsteinVazirani.hpp"
 
 #include "Definitions.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <algorithm>
 #include <cstddef>
 #include <random>
+#include <string>
 
 namespace qc {
 

@@ -10,6 +10,7 @@
 #include "algorithms/QPE.hpp"
 
 #include "Definitions.hpp"
+#include "ir/QuantumComputation.hpp"
 #include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/OpType.hpp"
 
@@ -19,6 +20,7 @@
 #include <limits>
 #include <random>
 #include <sstream>
+#include <string>
 
 namespace qc {
 

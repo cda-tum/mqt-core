@@ -49,7 +49,7 @@ struct ConstEvalValue {
     case ConstFloat:
       return std::make_shared<Constant>(Constant(std::get<1>(value)));
     case ConstBool:
-      return std::make_shared<Constant>(Constant(std::get<2>(value), false));
+      return std::make_shared<Constant>(Constant(std::get<2>(value)));
     default:
       qc::unreachable();
     }

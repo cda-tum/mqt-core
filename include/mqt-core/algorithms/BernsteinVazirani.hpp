@@ -12,6 +12,8 @@
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 
+#include <cstddef>
+
 namespace qc {
 
 [[nodiscard]] auto createBernsteinVazirani(const BitString& hiddenString)

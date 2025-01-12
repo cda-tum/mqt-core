@@ -12,6 +12,8 @@
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 
+#include <cstddef>
+
 namespace qc {
 [[nodiscard]] auto createQPE(Qubit nq, bool exact = true, std::size_t seed = 0)
     -> QuantumComputation;

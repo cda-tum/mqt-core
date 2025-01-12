@@ -15,7 +15,9 @@
 #include "dd/Simulation.hpp"
 
 #include <gtest/gtest.h>
+#include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 class Entanglement : public testing::TestWithParam<qc::Qubit> {

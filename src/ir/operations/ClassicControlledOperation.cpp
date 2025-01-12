@@ -10,9 +10,15 @@
 #include "ir/operations/ClassicControlledOperation.hpp"
 
 #include "Definitions.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/operations/OpType.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <ostream>
 #include <string>
+#include <utility>
 
 namespace qc {
 

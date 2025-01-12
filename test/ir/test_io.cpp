@@ -47,6 +47,7 @@ protected:
   std::unique_ptr<qc::QuantumComputation> qc;
 };
 
+namespace {
 void compareFiles(const std::string& file1, const std::string& file2,
                   bool stripWhitespaces = false) {
   std::ifstream fstream1(file1);
@@ -61,6 +62,7 @@ void compareFiles(const std::string& file1, const std::string& file2,
   }
   ASSERT_EQ(str1, str2);
 }
+} // namespace
 
 INSTANTIATE_TEST_SUITE_P(
     IO, IO,

@@ -7,6 +7,7 @@
  * Licensed under the MIT License
  */
 
+#include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/GHZState.hpp"
 #include "algorithms/Grover.hpp"
@@ -28,7 +29,6 @@
 #include <cstddef>
 #include <exception>
 #include <fstream>
-#include <ios>
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -355,14 +355,16 @@ protected:
     constexpr std::array nqubitsSim = {14U, 15U, 16U, 17U, 18U};
     std::cout << "Running RandomClifford Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
-      auto qc = createRandomCliffordCircuit(nq, nq * nq, SEED);
+      auto qc =
+          createRandomCliffordCircuit(nq, static_cast<size_t>(nq) * nq, SEED);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("RandomClifford", "Simulation", qc, *exp);
     }
     std::cout << "Running RandomClifford Functionality..." << '\n';
     constexpr std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
     for (const auto& nq : nqubitsFunc) {
-      auto qc = createRandomCliffordCircuit(nq, nq * nq, SEED);
+      auto qc =
+          createRandomCliffordCircuit(nq, static_cast<size_t>(nq) * nq, SEED);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("RandomClifford", "Functionality", qc, *exp);
     }
