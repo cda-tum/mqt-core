@@ -1173,3 +1173,164 @@ TEST_F(QFRFunctionality, NoRegisterOnEmptyCircuit) {
   EXPECT_NO_THROW(qc.addQubitRegister(1U, "q"));
   EXPECT_EQ(qc.getQregs().size(), 2U);
 }
+
+TEST_F(QFRFunctionality, AddQubitAtFrontOfRegister) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(2, "q");
+  const auto& qregs = qc.getQregs();
+  EXPECT_EQ(qregs.size(), 1U);
+  const auto& [name, reg] = *qregs.begin();
+  const auto& [start, size] = reg;
+  EXPECT_EQ(name, "q");
+  EXPECT_EQ(start, 0U);
+  EXPECT_EQ(size, 2U);
+
+  // first remove the qubit
+  const auto& [physicalIndex, outputIndex] = qc.removeQubit(0);
+  EXPECT_EQ(physicalIndex, 0U);
+  EXPECT_EQ(outputIndex, 0U);
+
+  const auto& qregsAfter = qc.getQregs();
+  EXPECT_EQ(qregsAfter.size(), 1U);
+  const auto& [nameAfter, regAfter] = *qregsAfter.begin();
+  const auto& [startAfter, sizeAfter] = regAfter;
+  EXPECT_EQ(nameAfter, "q");
+  EXPECT_EQ(startAfter, 1U);
+  EXPECT_EQ(sizeAfter, 1U);
+
+  // add the qubit back at the front
+  qc.addQubit(0, physicalIndex, outputIndex);
+  const auto& qregsAfterAdd = qc.getQregs();
+  EXPECT_EQ(qregsAfterAdd.size(), 1U);
+  const auto& [nameAfterAdd, regAfterAdd] = *qregsAfterAdd.begin();
+  const auto& [startAfterAdd, sizeAfterAdd] = regAfterAdd;
+  EXPECT_EQ(nameAfterAdd, "q");
+  EXPECT_EQ(startAfterAdd, 0U);
+  EXPECT_EQ(sizeAfterAdd, 2U);
+}
+
+TEST_F(QFRFunctionality, AddQubitAtEndOfRegister) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(2, "q");
+  const auto& qregs = qc.getQregs();
+  EXPECT_EQ(qregs.size(), 1U);
+  const auto& [name, reg] = *qregs.begin();
+  const auto& [start, size] = reg;
+  EXPECT_EQ(name, "q");
+  EXPECT_EQ(start, 0U);
+  EXPECT_EQ(size, 2U);
+
+  // first remove the qubit
+  const auto& [physicalIndex, outputIndex] = qc.removeQubit(1);
+  EXPECT_EQ(physicalIndex, 1U);
+  EXPECT_EQ(outputIndex, 1U);
+
+  const auto& qregsAfter = qc.getQregs();
+  EXPECT_EQ(qregsAfter.size(), 1U);
+  const auto& [nameAfter, regAfter] = *qregsAfter.begin();
+  const auto& [startAfter, sizeAfter] = regAfter;
+  EXPECT_EQ(nameAfter, "q");
+  EXPECT_EQ(startAfter, 0U);
+  EXPECT_EQ(sizeAfter, 1U);
+
+  // add the qubit back at the end
+  qc.addQubit(1, physicalIndex, outputIndex);
+  const auto& qregsAfterAdd = qc.getQregs();
+  EXPECT_EQ(qregsAfterAdd.size(), 1U);
+  const auto& [nameAfterAdd, regAfterAdd] = *qregsAfterAdd.begin();
+  const auto& [startAfterAdd, sizeAfterAdd] = regAfterAdd;
+  EXPECT_EQ(nameAfterAdd, "q");
+  EXPECT_EQ(startAfterAdd, 0U);
+  EXPECT_EQ(sizeAfterAdd, 2U);
+}
+
+TEST_F(QFRFunctionality, AddQubitInMiddleOfSplitRegister) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(3, "q");
+  const auto& qregs = qc.getQregs();
+  EXPECT_EQ(qregs.size(), 1U);
+  const auto& [name, reg] = *qregs.begin();
+  const auto& [start, size] = reg;
+  EXPECT_EQ(name, "q");
+  EXPECT_EQ(start, 0U);
+  EXPECT_EQ(size, 3U);
+
+  // remove the middle qubit -> splits the register into q_l and q_h
+  const auto& [physicalIndex, outputIndex] = qc.removeQubit(1);
+  EXPECT_EQ(physicalIndex, 1U);
+  EXPECT_EQ(outputIndex, 1U);
+
+  const auto& qregsAfter = qc.getQregs();
+  EXPECT_EQ(qregsAfter.size(), 2U);
+  const auto& [nameLow, regLow] = *qregsAfter.begin();
+  const auto& [startLow, sizeLow] = regLow;
+  EXPECT_EQ(nameLow, "q_l");
+  EXPECT_EQ(startLow, 0U);
+  EXPECT_EQ(sizeLow, 1U);
+  const auto& [nameHigh, regHigh] = *qregsAfter.rbegin();
+  const auto& [startHigh, sizeHigh] = regHigh;
+  EXPECT_EQ(nameHigh, "q_h");
+  EXPECT_EQ(startHigh, 2U);
+  EXPECT_EQ(sizeHigh, 1U);
+
+  // add back the qubit. should consolidate the registers again
+  qc.addQubit(1, physicalIndex, outputIndex);
+  const auto& qregsAfterAdd = qc.getQregs();
+  EXPECT_EQ(qregsAfterAdd.size(), 1U);
+  const auto& [nameConsolidated, regConsolidated] = *qregsAfterAdd.begin();
+  const auto& [startConsolidated, sizeConsolidated] = regConsolidated;
+  EXPECT_EQ(nameConsolidated, "q");
+  EXPECT_EQ(startConsolidated, 0U);
+  EXPECT_EQ(sizeConsolidated, 3U);
+}
+
+TEST_F(QFRFunctionality, AddQubitWithoutNeighboringQubits) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(5, "q");
+  const auto& qregs = qc.getQregs();
+  EXPECT_EQ(qregs.size(), 1U);
+  const auto& [name, reg] = *qregs.begin();
+  const auto& [start, size] = reg;
+  EXPECT_EQ(name, "q");
+  EXPECT_EQ(start, 0U);
+  EXPECT_EQ(size, 5U);
+
+  // remove the middle 3 qubits -> splits the register into q_l and q_h with one
+  // qubit each.
+  const auto& [physicalIndex1, outputIndex1] = qc.removeQubit(1);
+  EXPECT_EQ(physicalIndex1, 1U);
+  EXPECT_EQ(outputIndex1, 1U);
+  const auto& [physicalIndex2, outputIndex2] = qc.removeQubit(2);
+  EXPECT_EQ(physicalIndex2, 2U);
+  EXPECT_EQ(outputIndex2, 2U);
+  const auto& [physicalIndex3, outputIndex3] = qc.removeQubit(3);
+  EXPECT_EQ(physicalIndex3, 3U);
+  EXPECT_EQ(outputIndex3, 3U);
+
+  const auto& qregsAfter = qc.getQregs();
+  EXPECT_EQ(qregsAfter.size(), 2U);
+  const auto& [nameLow, regLow] = *qregsAfter.begin();
+  const auto& [startLow, sizeLow] = regLow;
+  EXPECT_EQ(nameLow, "q_l");
+  EXPECT_EQ(startLow, 0U);
+  EXPECT_EQ(sizeLow, 1U);
+
+  const auto& [nameHigh, regHigh] = *qregsAfter.rbegin();
+  const auto& [startHigh, sizeHigh] = regHigh;
+  EXPECT_EQ(nameHigh, "q_h");
+  EXPECT_EQ(startHigh, 4U);
+  EXPECT_EQ(sizeHigh, 1U);
+
+  // add back the middle qubit. should create a new register for the qubit
+  qc.addQubit(2, physicalIndex2, outputIndex2);
+  const auto& qregsAfterAdd = qc.getQregs();
+  EXPECT_EQ(qregsAfterAdd.size(), 3U);
+  // expect to find a `q_2` register with 1 qubit starting at index 2
+  const auto& it = qregsAfterAdd.find("q_2");
+  ASSERT_NE(it, qregsAfterAdd.end());
+  const auto& [nameMiddle, regMiddle] = *it;
+  const auto& [startMiddle, sizeMiddle] = regMiddle;
+  EXPECT_EQ(nameMiddle, "q_2");
+  EXPECT_EQ(startMiddle, 2U);
+  EXPECT_EQ(sizeMiddle, 1U);
+}
