@@ -50,7 +50,7 @@ public:
   virtual std::string getName() = 0;
 };
 
-class DeclarationExpression {
+class DeclarationExpression final {
 public:
   std::shared_ptr<Expression> expression;
 
@@ -60,7 +60,7 @@ public:
   virtual ~DeclarationExpression() = default;
 };
 
-class Constant : public Expression {
+class Constant final : public Expression {
   std::variant<int64_t, double, bool> val;
   bool isSigned;
   bool isFp;
@@ -80,12 +80,12 @@ public:
   [[nodiscard]] bool isUInt() const { return !isFp && !isSigned; }
   [[nodiscard]] bool isFP() const { return isFp; }
   [[nodiscard]] bool isBool() const { return isBoolean; }
-  [[nodiscard]] virtual int64_t getSInt() const { return std::get<0>(val); }
-  [[nodiscard]] virtual uint64_t getUInt() const {
+  [[nodiscard]] int64_t getSInt() const { return std::get<0>(val); }
+  [[nodiscard]] uint64_t getUInt() const {
     return static_cast<uint64_t>(std::get<0>(val));
   }
-  [[nodiscard]] virtual double getFP() const { return std::get<1>(val); }
-  [[nodiscard]] virtual double asFP() const {
+  [[nodiscard]] double getFP() const { return std::get<1>(val); }
+  [[nodiscard]] double asFP() const {
     if (isFp) {
       return getFP();
     }
@@ -94,13 +94,14 @@ public:
     }
     return static_cast<double>(getUInt());
   }
-  [[nodiscard]] virtual bool getBool() const { return std::get<2>(val); }
+  [[nodiscard]] bool getBool() const { return std::get<2>(val); }
 
   std::string getName() override { return "Constant"; }
 };
 
-class BinaryExpression : public Expression,
-                         public std::enable_shared_from_this<BinaryExpression> {
+class BinaryExpression final
+    : public Expression,
+      public std::enable_shared_from_this<BinaryExpression> {
 public:
   enum Op : uint8_t {
     Power,
@@ -137,8 +138,9 @@ public:
 
 std::optional<qc::ComparisonKind> getComparisonKind(BinaryExpression::Op op);
 
-class UnaryExpression : public Expression,
-                        public std::enable_shared_from_this<UnaryExpression> {
+class UnaryExpression final
+    : public Expression,
+      public std::enable_shared_from_this<UnaryExpression> {
 public:
   enum Op : uint8_t {
     BitwiseNot,
@@ -162,7 +164,7 @@ public:
   std::string getName() override { return "UnaryExpr"; }
 };
 
-class IdentifierExpression
+class IdentifierExpression final
     : public Expression,
       public std::enable_shared_from_this<IdentifierExpression> {
 public:
@@ -175,8 +177,9 @@ public:
   }
 };
 
-class IdentifierList : public Expression,
-                       public std::enable_shared_from_this<IdentifierList> {
+class IdentifierList final
+    : public Expression,
+      public std::enable_shared_from_this<IdentifierList> {
 public:
   std::vector<std::shared_ptr<IdentifierExpression>> identifiers;
 
@@ -199,7 +202,7 @@ public:
       : identifier(std::move(id)), expression(std::move(expr)) {}
 };
 
-class MeasureExpression
+class MeasureExpression final
     : public Expression,
       public std::enable_shared_from_this<MeasureExpression> {
 public:
@@ -229,8 +232,9 @@ protected:
       : Statement(std::move(debug)) {}
 };
 
-class GateDeclaration : public Statement,
-                        public std::enable_shared_from_this<GateDeclaration> {
+class GateDeclaration final
+    : public Statement,
+      public std::enable_shared_from_this<GateDeclaration> {
 public:
   std::string identifier;
   std::shared_ptr<IdentifierList> parameters;
@@ -256,7 +260,7 @@ public:
   }
 };
 
-class VersionDeclaration
+class VersionDeclaration final
     : public Statement,
       public std::enable_shared_from_this<VersionDeclaration> {
 public:
@@ -271,8 +275,8 @@ public:
   }
 };
 
-class InitialLayout : public Statement,
-                      public std::enable_shared_from_this<InitialLayout> {
+class InitialLayout final : public Statement,
+                            public std::enable_shared_from_this<InitialLayout> {
 public:
   qc::Permutation permutation;
 
@@ -285,7 +289,7 @@ private:
   }
 };
 
-class OutputPermutation
+class OutputPermutation final
     : public Statement,
       public std::enable_shared_from_this<OutputPermutation> {
 public:
@@ -301,7 +305,7 @@ private:
   }
 };
 
-class DeclarationStatement
+class DeclarationStatement final
     : public Statement,
       public std::enable_shared_from_this<DeclarationStatement> {
 public:
@@ -322,21 +326,17 @@ public:
 };
 
 class GateModifier : public std::enable_shared_from_this<GateModifier> {
-protected:
-  GateModifier() {}
-
 public:
   virtual ~GateModifier() = default;
 };
 
-class InvGateModifier : public GateModifier,
-                        public std::enable_shared_from_this<InvGateModifier> {
-public:
-  explicit InvGateModifier() = default;
-};
+class InvGateModifier final
+    : public GateModifier,
+      public std::enable_shared_from_this<InvGateModifier> {};
 
-class PowGateModifier : public GateModifier,
-                        public std::enable_shared_from_this<PowGateModifier> {
+class PowGateModifier final
+    : public GateModifier,
+      public std::enable_shared_from_this<PowGateModifier> {
 public:
   std::shared_ptr<Expression> expression;
 
@@ -344,8 +344,9 @@ public:
       : expression(std::move(expr)) {}
 };
 
-class CtrlGateModifier : public GateModifier,
-                         public std::enable_shared_from_this<CtrlGateModifier> {
+class CtrlGateModifier final
+    : public GateModifier,
+      public std::enable_shared_from_this<CtrlGateModifier> {
 public:
   bool ctrlType;
   std::shared_ptr<Expression> expression;
@@ -354,7 +355,7 @@ public:
       : ctrlType(ty), expression(std::move(expr)) {}
 };
 
-class GateCallStatement
+class GateCallStatement final
     : public QuantumStatement,
       public std::enable_shared_from_this<GateCallStatement> {
 public:
@@ -376,7 +377,7 @@ public:
   }
 };
 
-class AssignmentStatement
+class AssignmentStatement final
     : public Statement,
       public std::enable_shared_from_this<AssignmentStatement> {
 public:
@@ -411,8 +412,9 @@ public:
   }
 };
 
-class BarrierStatement : public QuantumStatement,
-                         public std::enable_shared_from_this<BarrierStatement> {
+class BarrierStatement final
+    : public QuantumStatement,
+      public std::enable_shared_from_this<BarrierStatement> {
 public:
   std::vector<std::shared_ptr<GateOperand>> gates;
 
@@ -425,8 +427,9 @@ public:
   }
 };
 
-class ResetStatement : public QuantumStatement,
-                       public std::enable_shared_from_this<ResetStatement> {
+class ResetStatement final
+    : public QuantumStatement,
+      public std::enable_shared_from_this<ResetStatement> {
 public:
   std::shared_ptr<GateOperand> gate;
 
@@ -439,8 +442,8 @@ public:
   }
 };
 
-class IfStatement : public Statement,
-                    public std::enable_shared_from_this<IfStatement> {
+class IfStatement final : public Statement,
+                          public std::enable_shared_from_this<IfStatement> {
 public:
   std::shared_ptr<Expression> condition;
   std::vector<std::shared_ptr<Statement>> thenStatements;

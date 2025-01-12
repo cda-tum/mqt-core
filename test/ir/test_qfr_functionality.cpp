@@ -17,6 +17,7 @@
 #include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
+#include "ir/operations/SymbolicOperation.hpp"
 
 #include <algorithm>
 #include <array>
@@ -467,12 +468,12 @@ TEST_F(QFRFunctionality, AddAncillaryQubits) {
   qc.addAncillaryQubit(1, std::nullopt);
   EXPECT_EQ(qc.getNqubits(), 2);
   EXPECT_EQ(qc.getNancillae(), 1);
-  ASSERT_EQ(qc.ancillary.size(), 2U);
-  ASSERT_EQ(qc.garbage.size(), 2U);
-  EXPECT_FALSE(qc.ancillary[0]);
-  EXPECT_TRUE(qc.ancillary[1]);
-  EXPECT_FALSE(qc.garbage[0]);
-  EXPECT_TRUE(qc.garbage[1]);
+  ASSERT_EQ(qc.getAncillary().size(), 2U);
+  ASSERT_EQ(qc.getGarbage().size(), 2U);
+  EXPECT_FALSE(qc.getAncillary()[0]);
+  EXPECT_TRUE(qc.getAncillary()[1]);
+  EXPECT_FALSE(qc.getGarbage()[0]);
+  EXPECT_TRUE(qc.getGarbage()[1]);
 }
 
 TEST_F(QFRFunctionality, CircuitDepthEmptyCircuit) {
@@ -1171,4 +1172,302 @@ TEST_F(QFRFunctionality, NoRegisterOnEmptyCircuit) {
   qc.addQubitRegister(1U, "p");
   EXPECT_NO_THROW(qc.addQubitRegister(1U, "q"));
   EXPECT_EQ(qc.getQregs().size(), 2U);
+}
+
+TEST_F(QFRFunctionality, AddQubitAtFrontOfRegister) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(2, "q");
+  const auto& qregs = qc.getQregs();
+  EXPECT_EQ(qregs.size(), 1U);
+  const auto& [name, reg] = *qregs.begin();
+  const auto& [start, size] = reg;
+  EXPECT_EQ(name, "q");
+  EXPECT_EQ(start, 0U);
+  EXPECT_EQ(size, 2U);
+
+  // first remove the qubit
+  const auto& [physicalIndex, outputIndex] = qc.removeQubit(0);
+  EXPECT_EQ(physicalIndex, 0U);
+  EXPECT_EQ(outputIndex, 0U);
+
+  const auto& qregsAfter = qc.getQregs();
+  EXPECT_EQ(qregsAfter.size(), 1U);
+  const auto& [nameAfter, regAfter] = *qregsAfter.begin();
+  const auto& [startAfter, sizeAfter] = regAfter;
+  EXPECT_EQ(nameAfter, "q");
+  EXPECT_EQ(startAfter, 1U);
+  EXPECT_EQ(sizeAfter, 1U);
+
+  // add the qubit back at the front
+  qc.addQubit(0, physicalIndex, outputIndex);
+  const auto& qregsAfterAdd = qc.getQregs();
+  EXPECT_EQ(qregsAfterAdd.size(), 1U);
+  const auto& [nameAfterAdd, regAfterAdd] = *qregsAfterAdd.begin();
+  const auto& [startAfterAdd, sizeAfterAdd] = regAfterAdd;
+  EXPECT_EQ(nameAfterAdd, "q");
+  EXPECT_EQ(startAfterAdd, 0U);
+  EXPECT_EQ(sizeAfterAdd, 2U);
+}
+
+TEST_F(QFRFunctionality, AddQubitAtEndOfRegister) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(2, "q");
+  const auto& qregs = qc.getQregs();
+  EXPECT_EQ(qregs.size(), 1U);
+  const auto& [name, reg] = *qregs.begin();
+  const auto& [start, size] = reg;
+  EXPECT_EQ(name, "q");
+  EXPECT_EQ(start, 0U);
+  EXPECT_EQ(size, 2U);
+
+  // first remove the qubit
+  const auto& [physicalIndex, outputIndex] = qc.removeQubit(1);
+  EXPECT_EQ(physicalIndex, 1U);
+  EXPECT_EQ(outputIndex, 1U);
+
+  const auto& qregsAfter = qc.getQregs();
+  EXPECT_EQ(qregsAfter.size(), 1U);
+  const auto& [nameAfter, regAfter] = *qregsAfter.begin();
+  const auto& [startAfter, sizeAfter] = regAfter;
+  EXPECT_EQ(nameAfter, "q");
+  EXPECT_EQ(startAfter, 0U);
+  EXPECT_EQ(sizeAfter, 1U);
+
+  // add the qubit back at the end
+  qc.addQubit(1, physicalIndex, outputIndex);
+  const auto& qregsAfterAdd = qc.getQregs();
+  EXPECT_EQ(qregsAfterAdd.size(), 1U);
+  const auto& [nameAfterAdd, regAfterAdd] = *qregsAfterAdd.begin();
+  const auto& [startAfterAdd, sizeAfterAdd] = regAfterAdd;
+  EXPECT_EQ(nameAfterAdd, "q");
+  EXPECT_EQ(startAfterAdd, 0U);
+  EXPECT_EQ(sizeAfterAdd, 2U);
+}
+
+TEST_F(QFRFunctionality, AddQubitInMiddleOfSplitRegister) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(3, "q");
+  const auto& qregs = qc.getQregs();
+  EXPECT_EQ(qregs.size(), 1U);
+  const auto& [name, reg] = *qregs.begin();
+  const auto& [start, size] = reg;
+  EXPECT_EQ(name, "q");
+  EXPECT_EQ(start, 0U);
+  EXPECT_EQ(size, 3U);
+
+  // remove the middle qubit -> splits the register into q_l and q_h
+  const auto& [physicalIndex, outputIndex] = qc.removeQubit(1);
+  EXPECT_EQ(physicalIndex, 1U);
+  EXPECT_EQ(outputIndex, 1U);
+
+  const auto& qregsAfter = qc.getQregs();
+  EXPECT_EQ(qregsAfter.size(), 2U);
+  const auto& [nameLow, regLow] = *qregsAfter.begin();
+  const auto& [startLow, sizeLow] = regLow;
+  EXPECT_EQ(nameLow, "q_l");
+  EXPECT_EQ(startLow, 0U);
+  EXPECT_EQ(sizeLow, 1U);
+  const auto& [nameHigh, regHigh] = *qregsAfter.rbegin();
+  const auto& [startHigh, sizeHigh] = regHigh;
+  EXPECT_EQ(nameHigh, "q_h");
+  EXPECT_EQ(startHigh, 2U);
+  EXPECT_EQ(sizeHigh, 1U);
+
+  // add back the qubit. should consolidate the registers again
+  qc.addQubit(1, physicalIndex, outputIndex);
+  const auto& qregsAfterAdd = qc.getQregs();
+  EXPECT_EQ(qregsAfterAdd.size(), 1U);
+  const auto& [nameConsolidated, regConsolidated] = *qregsAfterAdd.begin();
+  const auto& [startConsolidated, sizeConsolidated] = regConsolidated;
+  EXPECT_EQ(nameConsolidated, "q");
+  EXPECT_EQ(startConsolidated, 0U);
+  EXPECT_EQ(sizeConsolidated, 3U);
+}
+
+TEST_F(QFRFunctionality, AddQubitWithoutNeighboringQubits) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(5, "q");
+  const auto& qregs = qc.getQregs();
+  EXPECT_EQ(qregs.size(), 1U);
+  const auto& [name, reg] = *qregs.begin();
+  const auto& [start, size] = reg;
+  EXPECT_EQ(name, "q");
+  EXPECT_EQ(start, 0U);
+  EXPECT_EQ(size, 5U);
+
+  // remove the middle 3 qubits -> splits the register into q_l and q_h with one
+  // qubit each.
+  const auto& [physicalIndex1, outputIndex1] = qc.removeQubit(1);
+  EXPECT_EQ(physicalIndex1, 1U);
+  EXPECT_EQ(outputIndex1, 1U);
+  const auto& [physicalIndex2, outputIndex2] = qc.removeQubit(2);
+  EXPECT_EQ(physicalIndex2, 2U);
+  EXPECT_EQ(outputIndex2, 2U);
+  const auto& [physicalIndex3, outputIndex3] = qc.removeQubit(3);
+  EXPECT_EQ(physicalIndex3, 3U);
+  EXPECT_EQ(outputIndex3, 3U);
+
+  const auto& qregsAfter = qc.getQregs();
+  EXPECT_EQ(qregsAfter.size(), 2U);
+  const auto& [nameLow, regLow] = *qregsAfter.begin();
+  const auto& [startLow, sizeLow] = regLow;
+  EXPECT_EQ(nameLow, "q_l");
+  EXPECT_EQ(startLow, 0U);
+  EXPECT_EQ(sizeLow, 1U);
+
+  const auto& [nameHigh, regHigh] = *qregsAfter.rbegin();
+  const auto& [startHigh, sizeHigh] = regHigh;
+  EXPECT_EQ(nameHigh, "q_h");
+  EXPECT_EQ(startHigh, 4U);
+  EXPECT_EQ(sizeHigh, 1U);
+
+  // add back the middle qubit. should create a new register for the qubit
+  qc.addQubit(2, physicalIndex2, outputIndex2);
+  const auto& qregsAfterAdd = qc.getQregs();
+  EXPECT_EQ(qregsAfterAdd.size(), 3U);
+  // expect to find a `q_2` register with 1 qubit starting at index 2
+  const auto& it = qregsAfterAdd.find("q_2");
+  ASSERT_NE(it, qregsAfterAdd.end());
+  const auto& [nameMiddle, regMiddle] = *it;
+  const auto& [startMiddle, sizeMiddle] = regMiddle;
+  EXPECT_EQ(nameMiddle, "q_2");
+  EXPECT_EQ(startMiddle, 2U);
+  EXPECT_EQ(sizeMiddle, 1U);
+}
+
+TEST_F(QFRFunctionality, CopyConstructor) {
+  QuantumComputation qc(2, 2);
+  qc.h(0);
+  qc.swap(0, 1);
+  qc.barrier();
+  qc.measure(0, 0);
+  qc.classicControlled(X, 0, {0, 1});
+  const sym::Variable theta{"theta"};
+  qc.rx(Symbolic{theta}, 0);
+
+  QuantumComputation compound(2, 2);
+  compound.h(0);
+  compound.cx(0, 1);
+  qc.emplace_back(compound.asOperation());
+
+  qc.initialLayout[0] = 1;
+  qc.initialLayout[1] = 0;
+  qc.outputPermutation[0] = 1;
+  qc.outputPermutation[1] = 0;
+  qc.gphase(0.25);
+
+  qc.setLogicalQubitAncillary(1);
+  qc.setLogicalQubitGarbage(1);
+
+  const auto qcCopy = qc;
+  EXPECT_EQ(qc, qcCopy);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentNumberOfQubits) {
+  // Different number of qubits
+  const QuantumComputation qc1(2, 2);
+  const QuantumComputation qc2(3, 3);
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentInitialLayout) {
+  // Different initial layout
+  QuantumComputation qc1(2, 2);
+  QuantumComputation qc2(2, 2);
+  qc1.initialLayout[0] = 0;
+  qc1.initialLayout[1] = 1;
+  qc2.initialLayout[0] = 1;
+  qc2.initialLayout[1] = 0;
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentGateOperations) {
+  // Different gate operations
+  QuantumComputation qc1(2, 2);
+  QuantumComputation qc2(2, 2);
+  qc1.h(0);
+  qc2.cx(0, 1); // Different operation
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentGateOrder) {
+  // Same gates but different order
+  QuantumComputation qc1(2, 2);
+  QuantumComputation qc2(2, 2);
+  qc1.h(0);
+  qc1.cx(0, 1);
+
+  qc2.cx(0, 1);
+  qc2.h(0); // Reversed order
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentAncillaryQubits) {
+  // Different ancillary qubits
+  QuantumComputation qc1(2, 2);
+  qc1.setLogicalQubitAncillary(1);
+
+  const QuantumComputation qc2(2, 2);
+  // No ancillary qubits in qc2
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentGarbageQubits) {
+  // Different garbage qubits
+  QuantumComputation qc1(2, 2);
+  qc1.setLogicalQubitGarbage(1);
+
+  const QuantumComputation qc2(2, 2);
+  // No garbage qubits in qc2
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentFinalLayout) {
+  // Different final layout
+  QuantumComputation qc1(2, 2);
+  QuantumComputation qc2(2, 2);
+  qc1.outputPermutation[0] = 1;
+  qc1.outputPermutation[1] = 0;
+
+  qc2.outputPermutation[0] = 0;
+  qc2.outputPermutation[1] = 1;
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentQuantumPhase) {
+  // Different quantum phase
+  QuantumComputation qc1(2, 2);
+  qc1.gphase(0.1); // Add global phase
+
+  const QuantumComputation qc2(2, 2);
+  // No global phase in qc2
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentNumberOfClassicalBits) {
+  // Different number of classical bits
+  const QuantumComputation qc1(2, 3); // 2 qubits, 3 classical bits
+  const QuantumComputation qc2(2, 2); // 2 qubits, 2 classical bits
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentMeasurementMappings) {
+  // Different measurement mappings
+  QuantumComputation qc1(2, 2);
+  qc1.measure(0, 1); // Measure qubit 0 to classical bit 1
+
+  QuantumComputation qc2(2, 2);
+  qc2.measure(0, 0); // Measure qubit 0 to classical bit 0
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentAdditionalOperations) {
+  // Different additional operations
+  QuantumComputation qc1(2, 2);
+  qc1.h(0);
+
+  QuantumComputation qc2(2, 2);
+  qc2.h(0);
+  qc2.barrier(); // qc2 has an additional barrier
+  EXPECT_NE(qc1, qc2);
 }

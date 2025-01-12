@@ -57,23 +57,23 @@ void CircuitOptimizer::removeOperation(
         (opSize == 0 || it->get()->getNqubits() == opSize)) {
       it = qc.erase(it);
     } else if ((*it)->isCompoundOperation()) {
-      auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
-      auto cit = compOp->cbegin();
-      while (cit != compOp->cend()) {
-        const auto* cop = cit->get();
-        if (opTypes.find(cop->getType()) != opTypes.end() &&
+      auto& compOp = dynamic_cast<CompoundOperation&>(**it);
+      auto cit = compOp.cbegin();
+      while (cit != compOp.cend()) {
+        if (const auto* cop = cit->get();
+            opTypes.find(cop->getType()) != opTypes.end() &&
             (opSize == 0 || cop->getNqubits() == opSize)) {
-          cit = compOp->erase(cit);
+          cit = compOp.erase(cit);
         } else {
           ++cit;
         }
       }
-      if (compOp->empty()) {
+      if (compOp.empty()) {
         it = qc.erase(it);
       } else {
-        if (compOp->size() == 1) {
+        if (compOp.size() == 1) {
           // CompoundOperation has degraded to single Operation
-          (*it) = std::move(*(compOp->begin()));
+          (*it) = std::move(*(compOp.begin()));
         }
         ++it;
       }
@@ -607,27 +607,27 @@ void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc,
         ++it;
       }
     } else if ((*it)->isCompoundOperation()) {
-      auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
-      auto cit = compOp->begin();
-      while (cit != compOp->end()) {
+      auto& compOp = dynamic_cast<CompoundOperation&>(**it);
+      auto cit = compOp.begin();
+      while (cit != compOp.end()) {
         if ((*cit)->isStandardOperation() && (*cit)->getType() == qc::SWAP) {
           const auto targets = (*cit)->getTargets();
-          cit = compOp->erase(cit);
-          cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
-                                                  targets[1], qc::X);
+          cit = compOp.erase(cit);
+          cit = compOp.insert<StandardOperation>(cit, Control{targets[0]},
+                                                 targets[1], qc::X);
           if (isDirectedArchitecture) {
-            cit = compOp->insert<StandardOperation>(cit, targets[0], qc::H);
-            cit = compOp->insert<StandardOperation>(cit, targets[1], qc::H);
-            cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
-                                                    targets[1], qc::X);
-            cit = compOp->insert<StandardOperation>(cit, targets[0], qc::H);
-            cit = compOp->insert<StandardOperation>(cit, targets[1], qc::H);
+            cit = compOp.insert<StandardOperation>(cit, targets[0], qc::H);
+            cit = compOp.insert<StandardOperation>(cit, targets[1], qc::H);
+            cit = compOp.insert<StandardOperation>(cit, Control{targets[0]},
+                                                   targets[1], qc::X);
+            cit = compOp.insert<StandardOperation>(cit, targets[0], qc::H);
+            cit = compOp.insert<StandardOperation>(cit, targets[1], qc::H);
           } else {
-            cit = compOp->insert<StandardOperation>(cit, Control{targets[1]},
-                                                    targets[0], qc::X);
+            cit = compOp.insert<StandardOperation>(cit, Control{targets[1]},
+                                                   targets[0], qc::X);
           }
-          cit = compOp->insert<StandardOperation>(cit, Control{targets[0]},
-                                                  targets[1], qc::X);
+          cit = compOp.insert<StandardOperation>(cit, Control{targets[0]},
+                                                 targets[1], qc::X);
         } else {
           ++cit;
         }
@@ -694,21 +694,21 @@ void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
       it = qc.erase(it);
     } else if (!replacementMap.empty()) {
       if ((*it)->isCompoundOperation()) {
-        auto* compOp = dynamic_cast<qc::CompoundOperation*>((*it).get());
-        auto compOpIt = compOp->begin();
-        while (compOpIt != compOp->end()) {
+        auto& compOp = dynamic_cast<CompoundOperation&>(**it);
+        auto compOpIt = compOp.begin();
+        while (compOpIt != compOp.end()) {
           if ((*compOpIt)->getType() == qc::Reset) {
             for (const auto& compTarget : (*compOpIt)->getTargets()) {
               auto indexAddQubit = static_cast<Qubit>(qc.getNqubits());
               qc.addQubit(indexAddQubit, indexAddQubit, indexAddQubit);
-              auto oldReset = replacementMap.find(compTarget);
-              if (oldReset != replacementMap.end()) {
+              if (auto oldReset = replacementMap.find(compTarget);
+                  oldReset != replacementMap.end()) {
                 oldReset->second = indexAddQubit;
               } else {
                 replacementMap.try_emplace(compTarget, indexAddQubit);
               }
             }
-            compOpIt = compOp->erase(compOpIt);
+            compOpIt = compOp.erase(compOpIt);
           } else {
             if ((*compOpIt)->isStandardOperation() ||
                 (*compOpIt)->isClassicControlledOperation()) {
@@ -720,7 +720,7 @@ void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
               auto& targets = (*compOpIt)->getTargets();
               changeTargets(targets, replacementMap);
             }
-            compOpIt++;
+            ++compOpIt;
           }
         }
       }
@@ -734,9 +734,9 @@ void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
         auto& targets = (*it)->getTargets();
         changeTargets(targets, replacementMap);
       }
-      it++;
+      ++it;
     } else {
-      it++;
+      ++it;
     }
   }
 }

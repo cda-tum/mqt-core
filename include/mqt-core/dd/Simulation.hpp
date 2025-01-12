@@ -24,28 +24,28 @@ namespace dd {
 using namespace qc;
 
 template <class Config>
-VectorDD simulate(const QuantumComputation* qc, const VectorDD& in,
+VectorDD simulate(const QuantumComputation& qc, const VectorDD& in,
                   Package<Config>& dd) {
-  auto permutation = qc->initialLayout;
+  auto permutation = qc.initialLayout;
   auto e = in;
-  for (const auto& op : *qc) {
+  for (const auto& op : qc) {
     // SWAP gates can be executed virtually by changing the permutation
-    if (op->getType() == OpType::SWAP && !op->isControlled()) {
+    if (op->getType() == SWAP && !op->isControlled()) {
       const auto& targets = op->getTargets();
       std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
       continue;
     }
 
-    e = applyUnitaryOperation(op.get(), e, dd, permutation);
+    e = applyUnitaryOperation(*op, e, dd, permutation);
   }
-  changePermutation(e, permutation, qc->outputPermutation, dd);
-  e = dd.reduceGarbage(e, qc->garbage);
+  changePermutation(e, permutation, qc.outputPermutation, dd);
+  e = dd.reduceGarbage(e, qc.getGarbage());
   return e;
 }
 
 template <class Config>
 std::map<std::string, std::size_t>
-sample(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
+sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
        std::size_t shots, std::size_t seed = 0U);
 
 /**
@@ -65,13 +65,15 @@ std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
                                           std::size_t seed = 0U);
 
 template <class Config>
-void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
-                              dd::SparsePVec& probVector, Package<Config>& dd);
+void extractProbabilityVector(const QuantumComputation& qc, const VectorDD& in,
+                              SparsePVec& probVector, Package<Config>& dd);
 
 template <class Config>
-void extractProbabilityVectorRecursive(
-    const QuantumComputation* qc, const VectorDD& currentState,
-    decltype(qc->begin()) currentIt, Permutation& permutation,
-    std::map<std::size_t, char> measurements, dd::fp commonFactor,
-    dd::SparsePVec& probVector, Package<Config>& dd);
+void extractProbabilityVectorRecursive(const QuantumComputation& qc,
+                                       const VectorDD& currentState,
+                                       decltype(qc.begin()) currentIt,
+                                       Permutation& permutation,
+                                       std::map<std::size_t, char> measurements,
+                                       fp commonFactor, SparsePVec& probVector,
+                                       Package<Config>& dd);
 } // namespace dd

@@ -9,23 +9,12 @@
 
 #pragma once
 
+#include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 
-#include <cstddef>
-#include <ostream>
-
 namespace qc {
-class QFT : public QuantumComputation {
-public:
-  explicit QFT(std::size_t nq, bool includeMeas = true, bool dyn = false);
+[[nodiscard]] auto createQFT(Qubit nq, bool includeMeasurements = true)
+    -> QuantumComputation;
 
-  std::ostream& printStatistics(std::ostream& os) const override;
-
-  std::size_t precision{};
-  bool includeMeasurements;
-  bool dynamic;
-
-protected:
-  void createCircuit();
-};
+[[nodiscard]] auto createIterativeQFT(Qubit nq) -> QuantumComputation;
 } // namespace qc

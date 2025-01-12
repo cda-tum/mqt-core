@@ -14,13 +14,10 @@
 #include "OpType.hpp"
 #include "Operation.hpp"
 
-#include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <ostream>
-#include <sstream>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -36,13 +33,9 @@ struct SingleOperation {
   SingleOperation(const Dimension d, const qc::fp s, const qc::fp e)
       : dir(d), start(s), end(e) {}
 
-  [[nodiscard]] std::string toQASMString() const {
-    std::stringstream ss;
-    ss << static_cast<std::size_t>(dir) << ", " << start << ", " << end << "; ";
-    return ss.str();
-  }
+  [[nodiscard]] std::string toQASMString() const;
 };
-class AodOperation : public qc::Operation {
+class AodOperation final : public qc::Operation {
   std::vector<SingleOperation> operations;
 
   static std::vector<Dimension>
@@ -74,47 +67,18 @@ public:
   void addControl([[maybe_unused]] qc::Control c) override {}
   void clearControls() override {}
   void removeControl([[maybe_unused]] qc::Control c) override {}
-  qc::Controls::iterator removeControl(qc::Controls::iterator it) override {
-    return it;
+  qc::Controls::iterator
+  removeControl(const qc::Controls::iterator it) override {
+    return controls.erase(it);
   }
 
-  [[nodiscard]] std::vector<qc::fp> getEnds(Dimension dir) const {
-    std::vector<qc::fp> ends;
-    for (const auto& op : operations) {
-      if (op.dir == dir) {
-        ends.push_back(op.end);
-      }
-    }
-    return ends;
-  }
+  [[nodiscard]] std::vector<qc::fp> getEnds(Dimension dir) const;
 
-  [[nodiscard]] std::vector<qc::fp> getStarts(Dimension dir) const {
-    std::vector<qc::fp> starts;
-    for (const auto& op : operations) {
-      if (op.dir == dir) {
-        starts.push_back(op.start);
-      }
-    }
-    return starts;
-  }
+  [[nodiscard]] std::vector<qc::fp> getStarts(Dimension dir) const;
 
-  [[nodiscard]] qc::fp getMaxDistance(Dimension dir) const {
-    const auto distances = getDistances(dir);
-    if (distances.empty()) {
-      return 0;
-    }
-    return *std::max_element(distances.begin(), distances.end());
-  }
+  [[nodiscard]] qc::fp getMaxDistance(Dimension dir) const;
 
-  [[nodiscard]] std::vector<qc::fp> getDistances(Dimension dir) const {
-    std::vector<qc::fp> params;
-    for (const auto& op : operations) {
-      if (op.dir == dir) {
-        params.push_back(std::abs(op.end - op.start));
-      }
-    }
-    return params;
-  }
+  [[nodiscard]] std::vector<qc::fp> getDistances(Dimension dir) const;
 
   void dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
                     const qc::RegisterNames& creg, size_t indent,

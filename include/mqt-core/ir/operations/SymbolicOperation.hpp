@@ -9,14 +9,13 @@
 
 #pragma once
 
-#include "../Permutation.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "Expression.hpp"
 #include "OpType.hpp"
 #include "StandardOperation.hpp"
+#include "ir/Permutation.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -27,75 +26,13 @@
 
 namespace qc {
 
-// Overload pattern for std::visit
-template <typename... Ts> struct Overload : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> Overload(Ts...) -> Overload<Ts...>;
-
 class SymbolicOperation final : public StandardOperation {
-protected:
-  std::vector<std::optional<Symbolic>> symbolicParameter;
-
-  static OpType parseU3(const Symbolic& theta, fp& phi, fp& lambda);
-  static OpType parseU3(fp& theta, const Symbolic& phi, fp& lambda);
-  static OpType parseU3(fp& theta, fp& phi, const Symbolic& lambda);
-  static OpType parseU3(const Symbolic& theta, const Symbolic& phi, fp& lambda);
-  static OpType parseU3(const Symbolic& theta, fp& phi, const Symbolic& lambda);
-  static OpType parseU3(fp& theta, const Symbolic& phi, const Symbolic& lambda);
-
-  static OpType parseU2(const Symbolic& phi, const Symbolic& lambda);
-  static OpType parseU2(const Symbolic& phi, fp& lambda);
-  static OpType parseU2(fp& phi, const Symbolic& lambda);
-
-  static OpType parseU1(const Symbolic& lambda);
-
-  void checkSymbolicUgate();
-
-  void storeSymbolOrNumber(const SymbolOrNumber& param, std::size_t i);
-
-  [[nodiscard]] bool isSymbolicParameter(const std::size_t i) const {
-    return symbolicParameter.at(i).has_value();
-  }
-
-  static bool isSymbol(const SymbolOrNumber& param) {
-    return std::holds_alternative<Symbolic>(param);
-  }
-
-  static Symbolic& getSymbol(SymbolOrNumber& param) {
-    return std::get<Symbolic>(param);
-  }
-
-  static fp& getNumber(SymbolOrNumber& param) { return std::get<fp>(param); }
-
-  void setup(const std::vector<SymbolOrNumber>& params);
-
-  [[nodiscard]] static fp
-  getInstantiation(const SymbolOrNumber& symOrNum,
-                   const VariableAssignment& assignment);
-
-  void negateSymbolicParameter(std::size_t index);
-
-  void addToSymbolicParameter(std::size_t index, fp value);
-
 public:
   SymbolicOperation() = default;
 
-  [[nodiscard]] SymbolOrNumber getParameter(const std::size_t i) const {
-    const auto& param = symbolicParameter.at(i);
-    if (param.has_value()) {
-      return *param;
-    }
-    return parameter.at(i);
-  }
+  [[nodiscard]] SymbolOrNumber getParameter(std::size_t i) const;
 
-  [[nodiscard]] std::vector<SymbolOrNumber> getParameters() const {
-    std::vector<SymbolOrNumber> params{};
-    for (std::size_t i = 0; i < parameter.size(); ++i) {
-      params.emplace_back(getParameter(i));
-    }
-    return params;
-  }
+  [[nodiscard]] std::vector<SymbolOrNumber> getParameters() const;
 
   void setSymbolicParameter(const Symbolic& par, const std::size_t i) {
     symbolicParameter.at(i) = par;
@@ -121,19 +58,11 @@ public:
   SymbolicOperation(const Controls& c, Qubit target0, Qubit target1, OpType g,
                     const std::vector<SymbolOrNumber>& params = {});
 
-  [[nodiscard]] std::unique_ptr<Operation> clone() const override {
-    return std::make_unique<SymbolicOperation>(*this);
-  }
+  [[nodiscard]] std::unique_ptr<Operation> clone() const override;
 
-  [[nodiscard]] bool isSymbolicOperation() const override {
-    return std::any_of(symbolicParameter.begin(), symbolicParameter.end(),
-                       [](const auto& sym) { return sym.has_value(); });
-  }
+  [[nodiscard]] bool isSymbolicOperation() const override;
 
-  [[nodiscard]] bool isStandardOperation() const override {
-    return std::all_of(symbolicParameter.begin(), symbolicParameter.end(),
-                       [](const auto& sym) { return !sym.has_value(); });
-  }
+  [[nodiscard]] bool isStandardOperation() const override;
 
   [[nodiscard]] bool equals(const Operation& op, const Permutation& perm1,
                             const Permutation& perm2) const override;
@@ -153,11 +82,48 @@ public:
   void instantiate(const VariableAssignment& assignment);
 
   void invert() override;
+
+protected:
+  std::vector<std::optional<Symbolic>> symbolicParameter;
+
+  static OpType parseU3(const Symbolic& theta, fp& phi, fp& lambda);
+  static OpType parseU3(fp& theta, const Symbolic& phi, fp& lambda);
+  static OpType parseU3(fp& theta, fp& phi, const Symbolic& lambda);
+  static OpType parseU3(const Symbolic& theta, const Symbolic& phi, fp& lambda);
+  static OpType parseU3(const Symbolic& theta, fp& phi, const Symbolic& lambda);
+  static OpType parseU3(fp& theta, const Symbolic& phi, const Symbolic& lambda);
+
+  static OpType parseU2(const Symbolic& phi, const Symbolic& lambda);
+  static OpType parseU2(const Symbolic& phi, fp& lambda);
+  static OpType parseU2(fp& phi, const Symbolic& lambda);
+
+  static OpType parseU1(const Symbolic& lambda);
+
+  void checkSymbolicUgate();
+
+  void storeSymbolOrNumber(const SymbolOrNumber& param, std::size_t i);
+
+  [[nodiscard]] bool isSymbolicParameter(std::size_t i) const;
+
+  static bool isSymbol(const SymbolOrNumber& param);
+
+  static Symbolic& getSymbol(SymbolOrNumber& param);
+
+  static fp& getNumber(SymbolOrNumber& param);
+
+  void setup(const std::vector<SymbolOrNumber>& params);
+
+  [[nodiscard]] static fp
+  getInstantiation(const SymbolOrNumber& symOrNum,
+                   const VariableAssignment& assignment);
+
+  void negateSymbolicParameter(std::size_t index);
+
+  void addToSymbolicParameter(std::size_t index, fp value);
 };
 } // namespace qc
 
-namespace std {
-template <> struct hash<qc::SymbolicOperation> {
+template <> struct std::hash<qc::SymbolicOperation> {
   std::size_t operator()(qc::SymbolicOperation const& op) const noexcept {
     std::size_t seed = 0U;
     qc::hashCombine(seed, std::hash<qc::Operation>{}(op));
@@ -171,4 +137,3 @@ template <> struct hash<qc::SymbolicOperation> {
     return seed;
   }
 };
-} // namespace std

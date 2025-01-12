@@ -7,8 +7,9 @@
  * Licensed under the MIT License
  */
 
+#include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
-#include "algorithms/Entanglement.hpp"
+#include "algorithms/GHZState.hpp"
 #include "algorithms/Grover.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
@@ -28,7 +29,6 @@
 #include <cstddef>
 #include <exception>
 #include <fstream>
-#include <ios>
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -54,7 +54,7 @@ struct Experiment {
 
 struct SimulationExperiment final : public Experiment {
   SimulationExperiment() = default;
-  qc::VectorDD sim{};
+  VectorDD sim{};
 
   [[nodiscard]] bool success() const noexcept override {
     return sim.p != nullptr;
@@ -62,7 +62,7 @@ struct SimulationExperiment final : public Experiment {
 };
 
 struct FunctionalityConstructionExperiment final : public Experiment {
-  qc::MatrixDD func{};
+  MatrixDD func{};
 
   [[nodiscard]] bool success() const noexcept override {
     return func.p != nullptr;
@@ -70,41 +70,92 @@ struct FunctionalityConstructionExperiment final : public Experiment {
 };
 
 namespace {
-template <class Config>
-MatrixDD buildFunctionality(const qc::Grover* qc, Package<Config>& dd) {
-  QuantumComputation groverIteration(qc->getNqubits());
-  qc->oracle(groverIteration);
-  qc->diffusion(groverIteration);
-
-  auto iteration = buildFunctionality(&groverIteration, dd);
-
-  auto e = iteration;
-  dd.incRef(e);
-  for (std::size_t i = 0U; i < qc->iterations - 1U; ++i) {
-    e = dd.applyOperation(iteration, e);
-  }
-  dd.decRef(iteration);
-
-  QuantumComputation setup(qc->getNqubits());
-  qc->setup(setup);
-  const auto g = buildFunctionality(&setup, dd);
-  e = dd.applyOperation(e, g);
-  dd.decRef(g);
-  return e;
+std::unique_ptr<SimulationExperiment>
+benchmarkSimulate(const QuantumComputation& qc) {
+  auto exp = std::make_unique<SimulationExperiment>();
+  const auto nq = qc.getNqubits();
+  exp->dd = std::make_unique<Package<>>(nq);
+  const auto start = std::chrono::high_resolution_clock::now();
+  const auto in = exp->dd->makeZeroState(nq);
+  exp->sim = simulate(qc, in, *(exp->dd));
+  const auto end = std::chrono::high_resolution_clock::now();
+  exp->runtime =
+      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  exp->stats = dd::getStatistics(exp->dd.get());
+  return exp;
 }
 
-template <class Config>
-MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
-                                     Package<Config>& dd) {
-  QuantumComputation groverIteration(qc->getNqubits());
-  qc->oracle(groverIteration);
-  qc->diffusion(groverIteration);
+std::unique_ptr<FunctionalityConstructionExperiment>
+benchmarkFunctionalityConstruction(const QuantumComputation& qc) {
+  auto exp = std::make_unique<FunctionalityConstructionExperiment>();
+  const auto nq = qc.getNqubits();
+  exp->dd = std::make_unique<Package<>>(nq);
+  const auto start = std::chrono::high_resolution_clock::now();
+  exp->func = buildFunctionality(qc, *(exp->dd));
+  const auto end = std::chrono::high_resolution_clock::now();
+  exp->runtime =
+      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  exp->stats = dd::getStatistics(exp->dd.get());
+  return exp;
+}
 
-  auto iter = buildFunctionalityRecursive(&groverIteration, dd);
+std::unique_ptr<SimulationExperiment>
+benchmarkSimulateGrover(const qc::Qubit nq, const BitString& targetValue) {
+  auto exp = std::make_unique<SimulationExperiment>();
+  exp->dd = std::make_unique<Package<>>(nq + 1);
+  auto& dd = *(exp->dd);
+  const auto start = std::chrono::high_resolution_clock::now();
+
+  // apply state preparation setup
+  QuantumComputation statePrep(nq + 1);
+  appendGroverInitialization(statePrep);
+  const auto s = buildFunctionality(statePrep, dd);
+  auto e = dd.applyOperation(s, dd.makeZeroState(nq + 1));
+
+  QuantumComputation groverIteration(nq + 1);
+  appendGroverOracle(groverIteration, targetValue);
+  appendGroverDiffusion(groverIteration);
+
+  auto iter = buildFunctionalityRecursive(groverIteration, dd);
+  const auto iterations = computeNumberOfIterations(nq);
+  const std::bitset<128U> iterBits(iterations);
+  const auto msb = static_cast<std::size_t>(std::floor(std::log2(iterations)));
+  auto f = iter;
+  dd.incRef(f);
+  for (std::size_t j = 0U; j <= msb; ++j) {
+    if (iterBits[j]) {
+      e = dd.applyOperation(f, e);
+    }
+    if (j < msb) {
+      f = dd.applyOperation(f, f);
+    }
+  }
+  dd.decRef(f);
+  exp->sim = e;
+  const auto end = std::chrono::high_resolution_clock::now();
+  exp->runtime =
+      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+  exp->stats = dd::getStatistics(exp->dd.get());
+  return exp;
+}
+
+std::unique_ptr<FunctionalityConstructionExperiment>
+benchmarkFunctionalityConstructionGrover(const qc::Qubit nq,
+                                         const BitString& targetValue) {
+  auto exp = std::make_unique<FunctionalityConstructionExperiment>();
+  exp->dd = std::make_unique<Package<>>(nq + 1);
+  auto& dd = *(exp->dd);
+  const auto start = std::chrono::high_resolution_clock::now();
+
+  QuantumComputation groverIteration(nq + 1);
+  appendGroverOracle(groverIteration, targetValue);
+  appendGroverDiffusion(groverIteration);
+
+  const auto iter = buildFunctionalityRecursive(groverIteration, dd);
   auto e = iter;
-  std::bitset<128U> iterBits(qc->iterations);
-  const auto msb =
-      static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
+  const auto iterations = computeNumberOfIterations(nq);
+  const std::bitset<128U> iterBits(iterations);
+  const auto msb = static_cast<std::size_t>(std::floor(std::log2(iterations)));
   auto f = iter;
   dd.incRef(f);
   bool zero = !iterBits[0U];
@@ -124,48 +175,11 @@ MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
   dd.decRef(f);
 
   // apply state preparation setup
-  qc::QuantumComputation statePrep(qc->getNqubits());
-  qc->setup(statePrep);
-  const auto s = buildFunctionality(&statePrep, dd);
-  return dd.applyOperation(e, s);
-}
+  QuantumComputation statePrep(nq + 1);
+  appendGroverInitialization(statePrep);
+  const auto s = buildFunctionality(statePrep, dd);
+  exp->func = dd.applyOperation(e, s);
 
-std::unique_ptr<SimulationExperiment>
-benchmarkSimulate(const QuantumComputation& qc) {
-  auto exp = std::make_unique<SimulationExperiment>();
-  const auto nq = qc.getNqubits();
-  exp->dd = std::make_unique<Package<>>(nq);
-  const auto start = std::chrono::high_resolution_clock::now();
-  const auto in = exp->dd->makeZeroState(nq);
-  exp->sim = simulate(&qc, in, *(exp->dd));
-  const auto end = std::chrono::high_resolution_clock::now();
-  exp->runtime =
-      std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  exp->stats = dd::getStatistics(exp->dd.get());
-  return exp;
-}
-
-std::unique_ptr<FunctionalityConstructionExperiment>
-benchmarkFunctionalityConstruction(const QuantumComputation& qc,
-                                   const bool recursive = false) {
-  auto exp = std::make_unique<FunctionalityConstructionExperiment>();
-  const auto nq = qc.getNqubits();
-  exp->dd = std::make_unique<Package<>>(nq);
-  const auto start = std::chrono::high_resolution_clock::now();
-
-  if (const auto* grover = dynamic_cast<const Grover*>(&qc)) {
-    if (recursive) {
-      exp->func = buildFunctionalityRecursive(grover, *(exp->dd));
-    } else {
-      exp->func = buildFunctionality(grover, *(exp->dd));
-    }
-  } else {
-    if (recursive) {
-      exp->func = buildFunctionalityRecursive(&qc, *(exp->dd));
-    } else {
-      exp->func = buildFunctionality(&qc, *(exp->dd));
-    }
-  }
   const auto end = std::chrono::high_resolution_clock::now();
   exp->runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
@@ -179,7 +193,7 @@ static constexpr std::size_t SEED = 42U;
 class BenchmarkDDPackage {
 protected:
   void verifyAndSave(const std::string& name, const std::string& type,
-                     qc::QuantumComputation& qc, const Experiment& exp) const {
+                     QuantumComputation& qc, const Experiment& exp) const {
 
     const std::string& filename = "results_" + inputFilename + ".json";
 
@@ -215,13 +229,13 @@ protected:
     constexpr std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running GHZ Simulation..." << '\n';
     for (const auto& nq : nqubits) {
-      auto qc = qc::Entanglement(nq);
+      auto qc = createGHZState(nq);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("GHZ", "Simulation", qc, *exp);
     }
     std::cout << "Running GHZ Functionality..." << '\n';
     for (const auto& nq : nqubits) {
-      auto qc = qc::Entanglement(nq);
+      auto qc = createGHZState(nq);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("GHZ", "Functionality", qc, *exp);
     }
@@ -231,13 +245,13 @@ protected:
     constexpr std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running WState Simulation..." << '\n';
     for (const auto& nq : nqubits) {
-      auto qc = qc::WState(nq);
+      auto qc = createWState(nq);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("WState", "Simulation", qc, *exp);
     }
     std::cout << "Running WState Functionality..." << '\n';
     for (const auto& nq : nqubits) {
-      auto qc = qc::WState(nq);
+      auto qc = createWState(nq);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("WState", "Functionality", qc, *exp);
     }
@@ -247,15 +261,15 @@ protected:
     constexpr std::array nqubits = {255U, 511U, 1023U, 2047U, 4095U};
     std::cout << "Running BV Simulation..." << '\n';
     for (const auto& nq : nqubits) {
-      auto qc = qc::BernsteinVazirani(nq);
-      qc::CircuitOptimizer::removeFinalMeasurements(qc);
+      auto qc = createBernsteinVazirani(nq, SEED);
+      CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("BV", "Simulation", qc, *exp);
     }
     std::cout << "Running BV Functionality..." << '\n';
     for (const auto& nq : nqubits) {
-      auto qc = qc::BernsteinVazirani(nq);
-      qc::CircuitOptimizer::removeFinalMeasurements(qc);
+      auto qc = createBernsteinVazirani(nq, SEED);
+      CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("BV", "Functionality", qc, *exp);
     }
@@ -265,71 +279,37 @@ protected:
     constexpr std::array nqubitsSim = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running QFT Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
-      auto qc = qc::QFT(nq, false);
+      auto qc = createQFT(nq, false);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("QFT", "Simulation", qc, *exp);
     }
     constexpr std::array nqubitsFunc = {18U, 19U, 20U, 21U, 22U};
     std::cout << "Running QFT Functionality..." << '\n';
     for (const auto& nq : nqubitsFunc) {
-      auto qc = qc::QFT(nq, false);
+      auto qc = createQFT(nq, false);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("QFT", "Functionality", qc, *exp);
     }
   }
 
-  void runGrover() {
+  void runGrover() const {
     constexpr std::array nqubits = {27U, 31U, 35U, 39U, 41U};
     std::cout << "Running Grover Simulation..." << '\n';
     for (const auto& nq : nqubits) {
-      auto qc = std::make_unique<qc::Grover>(nq, SEED);
-      auto dd = std::make_unique<dd::Package<>>(qc->getNqubits());
-      const auto start = std::chrono::high_resolution_clock::now();
-
-      // apply state preparation setup
-      qc::QuantumComputation statePrep(qc->getNqubits());
-      qc->setup(statePrep);
-      auto s = buildFunctionality(&statePrep, *dd);
-      auto e = dd->applyOperation(s, dd->makeZeroState(qc->getNqubits()));
-
-      qc::QuantumComputation groverIteration(qc->getNqubits());
-      qc->oracle(groverIteration);
-      qc->diffusion(groverIteration);
-
-      auto iter = buildFunctionalityRecursive(&groverIteration, *dd);
-      std::bitset<128U> iterBits(qc->iterations);
-      const auto msb =
-          static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
-      auto f = iter;
-      dd->incRef(f);
-      for (std::size_t j = 0U; j <= msb; ++j) {
-        if (iterBits[j]) {
-          e = dd->applyOperation(f, e);
-        }
-        if (j < msb) {
-          f = dd->applyOperation(f, f);
-        }
-      }
-      dd->decRef(f);
-      const auto end = std::chrono::high_resolution_clock::now();
-      const auto runtime =
-          std::chrono::duration_cast<std::chrono::duration<double>>(end -
-                                                                    start);
-      auto exp = std::make_unique<SimulationExperiment>();
-      exp->dd = std::move(dd);
-      exp->sim = e;
-      exp->runtime = runtime;
-      exp->stats = dd::getStatistics(exp->dd.get());
-
-      verifyAndSave("Grover", "Simulation", *qc, *exp);
+      BitString targetValue;
+      targetValue.set();
+      auto qc = createGrover(nq, targetValue);
+      auto exp = benchmarkSimulateGrover(nq, targetValue);
+      verifyAndSave("Grover", "Simulation", qc, *exp);
     }
 
     std::cout << "Running Grover Functionality..." << '\n';
     for (const auto& nq : nqubits) {
-
-      auto qc = std::make_unique<qc::Grover>(nq, SEED);
-      auto exp = benchmarkFunctionalityConstruction(*qc, true);
-      verifyAndSave("Grover", "Functionality", *qc, *exp);
+      BitString targetValue;
+      targetValue.set();
+      auto qc = createGrover(nq, targetValue);
+      auto exp = benchmarkFunctionalityConstructionGrover(nq, targetValue);
+      verifyAndSave("Grover", "Functionality", qc, *exp);
     }
   }
 
@@ -337,33 +317,54 @@ protected:
     constexpr std::array nqubitsSim = {14U, 15U, 16U, 17U, 18U};
     std::cout << "Running QPE Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
-      auto qc = qc::QPE(nq, false);
-      qc::CircuitOptimizer::removeFinalMeasurements(qc);
+      auto qc = createQPE(nq, false, SEED);
+      CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("QPE", "Simulation", qc, *exp);
     }
     std::cout << "Running QPE Functionality..." << '\n';
     constexpr std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
     for (const auto& nq : nqubitsFunc) {
-      auto qc = qc::QPE(nq, false);
-      qc::CircuitOptimizer::removeFinalMeasurements(qc);
+      auto qc = createQPE(nq, false, SEED);
+      CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("QPE", "Functionality", qc, *exp);
     }
   }
 
+  void runExactQPE() const {
+    constexpr std::array nqubitsSim = {8U, 16U, 32U, 48U, 64U};
+    std::cout << "Running QPE Simulation..." << '\n';
+    for (const auto& nq : nqubitsSim) {
+      auto qc = createQPE(nq, true, SEED);
+      CircuitOptimizer::removeFinalMeasurements(qc);
+      auto exp = benchmarkSimulate(qc);
+      verifyAndSave("QPE_Exact", "Simulation", qc, *exp);
+    }
+    std::cout << "Running QPE Functionality..." << '\n';
+    constexpr std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
+    for (const auto& nq : nqubitsFunc) {
+      auto qc = createQPE(nq, true, SEED);
+      CircuitOptimizer::removeFinalMeasurements(qc);
+      auto exp = benchmarkFunctionalityConstruction(qc);
+      verifyAndSave("QPE_Exact", "Functionality", qc, *exp);
+    }
+  }
+
   void runRandomClifford() const {
-    constexpr std::array<std::size_t, 5> nqubitsSim = {14U, 15U, 16U, 17U, 18U};
+    constexpr std::array nqubitsSim = {14U, 15U, 16U, 17U, 18U};
     std::cout << "Running RandomClifford Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
-      auto qc = qc::RandomCliffordCircuit(nq, nq * nq, SEED);
+      auto qc =
+          createRandomCliffordCircuit(nq, static_cast<size_t>(nq) * nq, SEED);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("RandomClifford", "Simulation", qc, *exp);
     }
     std::cout << "Running RandomClifford Functionality..." << '\n';
-    constexpr std::array<std::size_t, 5> nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
+    constexpr std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
     for (const auto& nq : nqubitsFunc) {
-      auto qc = qc::RandomCliffordCircuit(nq, nq * nq, SEED);
+      auto qc =
+          createRandomCliffordCircuit(nq, static_cast<size_t>(nq) * nq, SEED);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("RandomClifford", "Functionality", qc, *exp);
     }
@@ -373,7 +374,7 @@ public:
   explicit BenchmarkDDPackage(std::string filename)
       : inputFilename(std::move(filename)) {};
 
-  void runAll() {
+  void runAll() const {
     runGHZ();
     runWState();
     runBV();
@@ -393,7 +394,7 @@ int main(const int argc, char** argv) {
     return 1;
   }
   try {
-    auto run = dd::BenchmarkDDPackage(
+    const auto run = dd::BenchmarkDDPackage(
         argv[1]); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     run.runAll();
   } catch (const std::exception& e) {

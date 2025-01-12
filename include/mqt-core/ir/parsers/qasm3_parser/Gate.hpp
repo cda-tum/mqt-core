@@ -34,7 +34,7 @@ struct Gate {
   virtual size_t getNParameters() = 0;
 };
 
-struct StandardGate : Gate {
+struct StandardGate final : Gate {
   GateInfo info;
 
   explicit StandardGate(const GateInfo& gateInfo) : info(gateInfo) {}
@@ -45,7 +45,7 @@ struct StandardGate : Gate {
   size_t getNParameters() override { return info.nParameters; }
 };
 
-struct CompoundGate : Gate {
+struct CompoundGate final : Gate {
   std::vector<std::string> parameterNames;
   std::vector<std::string> targetNames;
   std::vector<std::shared_ptr<QuantumStatement>> body;

@@ -13,8 +13,5 @@
 #include "ir/QuantumComputation.hpp"
 
 namespace qc {
-class WState : public QuantumComputation {
-public:
-  explicit WState(Qubit nq);
-};
+[[nodiscard]] auto createWState(Qubit nq) -> QuantumComputation;
 } // namespace qc

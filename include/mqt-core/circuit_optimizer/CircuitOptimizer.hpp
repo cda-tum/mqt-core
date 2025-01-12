@@ -32,7 +32,7 @@ public:
 
   static void removeIdentities(QuantumComputation& qc);
 
-  static void removeOperation(qc::QuantumComputation& qc,
+  static void removeOperation(QuantumComputation& qc,
                               const std::unordered_set<OpType>& opTypes,
                               size_t opSize);
 
@@ -59,7 +59,7 @@ public:
    * target qubit) in the given circuit.
    * @param qc the quantum circuit
    */
-  static void replaceMCXWithMCZ(qc::QuantumComputation& qc);
+  static void replaceMCXWithMCZ(QuantumComputation& qc);
 
   /**
    * @brief Backpropagates the output permutation through the circuit.

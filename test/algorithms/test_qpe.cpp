@@ -30,10 +30,10 @@
 #include <string>
 #include <utility>
 
-class QPE : public testing::TestWithParam<std::pair<qc::fp, std::size_t>> {
+class QPE : public testing::TestWithParam<std::pair<qc::fp, qc::Qubit>> {
 protected:
   qc::fp lambda{};
-  std::uint64_t precision{};
+  qc::Qubit precision{};
   qc::fp theta{};
   bool exactlyRepresentable{};
   std::uint64_t expectedResult{};
@@ -130,14 +130,14 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(QPE, QPETest) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
-  auto qc = qc::QPE(lambda, precision);
+  auto qc = qc::createQPE(lambda, precision);
   qc.printStatistics(std::cout);
   ASSERT_EQ(qc.getNqubits(), precision + 1);
   ASSERT_NO_THROW({ qc::CircuitOptimizer::removeFinalMeasurements(qc); });
 
   qc::VectorDD e{};
   ASSERT_NO_THROW(
-      { e = dd::simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd); });
+      { e = dd::simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd); });
 
   // account for the eigenstate qubit by adding an offset
   const auto offset = 1ULL << (e.p->v + 1);
@@ -166,7 +166,7 @@ TEST_P(QPE, QPETest) {
 
 TEST_P(QPE, IQPETest) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
-  auto qc = qc::QPE(lambda, precision, true);
+  auto qc = qc::createIterativeQPE(lambda, precision);
   ASSERT_EQ(qc.getNqubits(), 2U);
 
   constexpr auto shots = 8192U;
@@ -213,16 +213,16 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
   // create standard QPE circuit
-  auto qpe = qc::QPE(lambda, precision);
+  auto qpe = qc::createQPE(lambda, precision);
 
   // remove final measurements to obtain statevector
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = dd::simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
+  auto e = dd::simulate(qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
 
   // create standard IQPE circuit
-  auto iqpe = qc::QPE(lambda, precision, true);
+  auto iqpe = qc::createIterativeQPE(lambda, precision);
 
   // transform dynamic circuits by first eliminating reset operations and
   // afterwards deferring measurements
@@ -233,7 +233,7 @@ TEST_P(QPE, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = dd::simulate(&iqpe, dd->makeZeroState(iqpe.getNqubits()), *dd);
+  auto f = dd::simulate(iqpe, dd->makeZeroState(iqpe.getNqubits()), *dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
@@ -246,16 +246,16 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
   // create standard QPE circuit
-  auto qpe = qc::QPE(lambda, precision);
+  auto qpe = qc::createQPE(lambda, precision);
 
   // remove final measurements to obtain statevector
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = dd::buildFunctionality(&qpe, *dd);
+  auto e = dd::buildFunctionality(qpe, *dd);
 
   // create standard IQPE circuit
-  auto iqpe = qc::QPE(lambda, precision, true);
+  auto iqpe = qc::createIterativeQPE(lambda, precision);
 
   // transform dynamic circuits by first eliminating reset operations and
   // afterwards deferring measurements
@@ -267,24 +267,33 @@ TEST_P(QPE, DynamicEquivalenceFunctionality) {
   qc::CircuitOptimizer::removeFinalMeasurements(iqpe);
 
   // simulate circuit
-  auto f = dd::buildFunctionality(&iqpe, *dd);
+  auto f = dd::buildFunctionality(iqpe, *dd);
 
   EXPECT_EQ(e, f);
 }
+
+namespace {
+void printBin(const std::size_t n, std::stringstream& ss) {
+  if (n > 1) {
+    printBin(n / 2, ss);
+  }
+  ss << n % 2;
+}
+} // namespace
 
 TEST_P(QPE, ProbabilityExtraction) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
   // create standard QPE circuit
-  auto iqpe = qc::QPE(lambda, precision, true);
+  auto iqpe = qc::createIterativeQPE(lambda, precision);
 
   dd::SparsePVec probs{};
-  dd::extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()),
+  dd::extractProbabilityVector(iqpe, dd->makeZeroState(iqpe.getNqubits()),
                                probs, *dd);
 
   for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
-    qc::QuantumComputation::printBin(state, ss);
+    printBin(state, ss);
     std::cout << ss.str() << ": " << prob << "\n";
   }
 
@@ -301,13 +310,13 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   auto dd = std::make_unique<dd::Package<>>(precision + 1);
 
   // create standard QPE circuit
-  auto qpe = qc::QPE(lambda, precision);
+  auto qpe = qc::createQPE(lambda, precision);
 
   // remove final measurements to obtain statevector
   qc::CircuitOptimizer::removeFinalMeasurements(qpe);
 
   // simulate circuit
-  auto e = dd::simulate(&qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
+  auto e = dd::simulate(qpe, dd->makeZeroState(qpe.getNqubits()), *dd);
   const auto vec = e.getVector();
   std::cout << "QPE:\n";
   for (const auto& amp : vec) {
@@ -315,23 +324,23 @@ TEST_P(QPE, DynamicEquivalenceSimulationProbabilityExtraction) {
   }
 
   // create standard IQPE circuit
-  auto iqpe = qc::QPE(lambda, precision, true);
+  auto iqpe = qc::createIterativeQPE(lambda, precision);
 
   // extract measurement probabilities from IQPE simulations
   dd::SparsePVec probs{};
-  dd::extractProbabilityVector(&iqpe, dd->makeZeroState(iqpe.getNqubits()),
+  dd::extractProbabilityVector(iqpe, dd->makeZeroState(iqpe.getNqubits()),
                                probs, *dd);
 
   std::cout << "IQPE:\n";
   for (const auto& [state, prob] : probs) {
     std::stringstream ss{};
-    qc::QuantumComputation::printBin(state, ss);
+    printBin(state, ss);
     std::cout << ss.str() << ": " << prob << "\n";
   }
 
   // calculate fidelity between both results
-  auto fidelity =
-      dd->fidelityOfMeasurementOutcomes(e, probs, qpe.outputPermutation);
+  const auto fidelity = dd::Package<>::fidelityOfMeasurementOutcomes(
+      e, probs, qpe.outputPermutation);
   std::cout << "Fidelity of both circuits' measurement outcomes: " << fidelity
             << "\n";
 

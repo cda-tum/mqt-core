@@ -13,7 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
+#include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -22,7 +22,6 @@
 namespace qasm3 {
 
 struct Token {
-public:
   enum class Kind : uint8_t {
     None,
 
