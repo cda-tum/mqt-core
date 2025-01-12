@@ -27,10 +27,9 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <tuple>
 #include <vector>
 
-class IO : public testing::TestWithParam<std::tuple<std::string, qc::Format>> {
+class IO : public testing::Test {
 protected:
   void TearDown() override {}
 
@@ -64,31 +63,28 @@ void compareFiles(const std::string& file1, const std::string& file2,
 }
 } // namespace
 
-INSTANTIATE_TEST_SUITE_P(
-    IO, IO,
-    testing::Values(std::make_tuple(
-        "../circuits/test.qasm",
-        qc::Format::OpenQASM3)), // std::make_tuple("circuits/test.real",
-                                 // qc::Format::Real
-    [](const testing::TestParamInfo<IO::ParamType>& inf) {
-      const qc::Format format = std::get<1>(inf.param);
-
-      switch (format) {
-      case qc::Format::Real:
-        return "Real";
-      case qc::Format::OpenQASM2:
-      case qc::Format::OpenQASM3:
-        return "OpenQasm";
-      default:
-        return "Unknown format";
-      }
-    });
-
-TEST_P(IO, importAndDump) {
-  const auto& [input, format] = GetParam();
+TEST_F(IO, importAndDumpQASM) {
+  constexpr auto input = "../circuits/test.qasm";
+  constexpr auto format = qc::Format::OpenQASM2;
   std::cout << "FILE: " << input << "\n";
 
   ASSERT_NO_THROW(qc->import(input, format));
+  ASSERT_NO_THROW(qc->dump(output, format));
+  ASSERT_NO_THROW(qc->reset());
+  ASSERT_NO_THROW(qc->import(output, format));
+  ASSERT_NO_THROW(qc->dump(output2, format));
+
+  compareFiles(output, output2, true);
+  std::filesystem::remove(output);
+  std::filesystem::remove(output2);
+}
+
+TEST_F(IO, importAndDumpQASMFromConstructor) {
+  constexpr auto input = "../circuits/test.qasm";
+  constexpr auto format = qc::Format::OpenQASM2;
+  std::cout << "FILE: " << input << "\n";
+
+  ASSERT_NO_THROW(qc = std::make_unique<qc::QuantumComputation>(input));
   ASSERT_NO_THROW(qc->dump(output, format));
   ASSERT_NO_THROW(qc->reset());
   ASSERT_NO_THROW(qc->import(output, format));
