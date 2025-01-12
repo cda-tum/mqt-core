@@ -1334,3 +1334,140 @@ TEST_F(QFRFunctionality, AddQubitWithoutNeighboringQubits) {
   EXPECT_EQ(startMiddle, 2U);
   EXPECT_EQ(sizeMiddle, 1U);
 }
+
+TEST_F(QFRFunctionality, CopyConstructor) {
+  QuantumComputation qc(2, 2);
+  qc.h(0);
+  qc.swap(0, 1);
+  qc.barrier();
+  qc.measure(0, 0);
+  qc.classicControlled(X, 0, {0, 1});
+  const sym::Variable theta{"theta"};
+  qc.rx(Symbolic{theta}, 0);
+
+  QuantumComputation compound(2, 2);
+  compound.h(0);
+  compound.cx(0, 1);
+  qc.emplace_back(compound.asOperation());
+
+  qc.initialLayout[0] = 1;
+  qc.initialLayout[1] = 0;
+  qc.outputPermutation[0] = 1;
+  qc.outputPermutation[1] = 0;
+  qc.gphase(0.25);
+
+  qc.setLogicalQubitAncillary(1);
+  qc.setLogicalQubitGarbage(1);
+
+  const auto qcCopy = qc;
+  EXPECT_EQ(qc, qcCopy);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentNumberOfQubits) {
+  // Different number of qubits
+  const QuantumComputation qc1(2, 2);
+  const QuantumComputation qc2(3, 3);
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentInitialLayout) {
+  // Different initial layout
+  QuantumComputation qc1(2, 2);
+  QuantumComputation qc2(2, 2);
+  qc1.initialLayout[0] = 0;
+  qc1.initialLayout[1] = 1;
+  qc2.initialLayout[0] = 1;
+  qc2.initialLayout[1] = 0;
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentGateOperations) {
+  // Different gate operations
+  QuantumComputation qc1(2, 2);
+  QuantumComputation qc2(2, 2);
+  qc1.h(0);
+  qc2.cx(0, 1); // Different operation
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentGateOrder) {
+  // Same gates but different order
+  QuantumComputation qc1(2, 2);
+  QuantumComputation qc2(2, 2);
+  qc1.h(0);
+  qc1.cx(0, 1);
+
+  qc2.cx(0, 1);
+  qc2.h(0); // Reversed order
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentAncillaryQubits) {
+  // Different ancillary qubits
+  QuantumComputation qc1(2, 2);
+  qc1.setLogicalQubitAncillary(1);
+
+  const QuantumComputation qc2(2, 2);
+  // No ancillary qubits in qc2
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentGarbageQubits) {
+  // Different garbage qubits
+  QuantumComputation qc1(2, 2);
+  qc1.setLogicalQubitGarbage(1);
+
+  const QuantumComputation qc2(2, 2);
+  // No garbage qubits in qc2
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentFinalLayout) {
+  // Different final layout
+  QuantumComputation qc1(2, 2);
+  QuantumComputation qc2(2, 2);
+  qc1.outputPermutation[0] = 1;
+  qc1.outputPermutation[1] = 0;
+
+  qc2.outputPermutation[0] = 0;
+  qc2.outputPermutation[1] = 1;
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentQuantumPhase) {
+  // Different quantum phase
+  QuantumComputation qc1(2, 2);
+  qc1.gphase(0.1); // Add global phase
+
+  const QuantumComputation qc2(2, 2);
+  // No global phase in qc2
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentNumberOfClassicalBits) {
+  // Different number of classical bits
+  const QuantumComputation qc1(2, 3); // 2 qubits, 3 classical bits
+  const QuantumComputation qc2(2, 2); // 2 qubits, 2 classical bits
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentMeasurementMappings) {
+  // Different measurement mappings
+  QuantumComputation qc1(2, 2);
+  qc1.measure(0, 1); // Measure qubit 0 to classical bit 1
+
+  QuantumComputation qc2(2, 2);
+  qc2.measure(0, 0); // Measure qubit 0 to classical bit 0
+  EXPECT_NE(qc1, qc2);
+}
+
+TEST_F(QFRFunctionality, InequalityDifferentAdditionalOperations) {
+  // Different additional operations
+  QuantumComputation qc1(2, 2);
+  qc1.h(0);
+
+  QuantumComputation qc2(2, 2);
+  qc2.h(0);
+  qc2.barrier(); // qc2 has an additional barrier
+  EXPECT_NE(qc1, qc2);
+}

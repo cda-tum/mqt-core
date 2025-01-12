@@ -420,6 +420,11 @@ public:
    */
   void invert();
 
+  [[nodiscard]] bool operator==(const QuantumComputation& rhs) const;
+  [[nodiscard]] bool operator!=(const QuantumComputation& rhs) const {
+    return !(*this == rhs);
+  }
+
   /**
    * printing
    */

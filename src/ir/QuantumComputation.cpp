@@ -642,6 +642,31 @@ void QuantumComputation::invert() {
                  "output permutation will not be swapped.\n";
   }
 }
+
+bool QuantumComputation::operator==(const QuantumComputation& rhs) const {
+  if (nqubits != rhs.nqubits || nancillae != rhs.nancillae ||
+      nclassics != rhs.nclassics || qregs != rhs.qregs || cregs != rhs.cregs ||
+      ancregs != rhs.ancregs || initialLayout != rhs.initialLayout ||
+      outputPermutation != rhs.outputPermutation ||
+      ancillary != rhs.ancillary || garbage != rhs.garbage ||
+      seed != rhs.seed || globalPhase != rhs.globalPhase ||
+      occurringVariables != rhs.occurringVariables) {
+    return false;
+  }
+
+  if (ops.size() != rhs.ops.size()) {
+    return false;
+  }
+
+  for (std::size_t i = 0; i < ops.size(); ++i) {
+    if (*ops[i] != *rhs.ops[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 std::ostream& QuantumComputation::print(std::ostream& os) const {
   os << name << "\n";
   const auto width =
