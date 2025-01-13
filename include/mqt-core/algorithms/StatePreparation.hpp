@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "CircuitOptimizer.hpp"
@@ -22,15 +31,19 @@ namespace qc {
 class StatePreparation : public QuantumComputation {
 
 public:
-    explicit StatePreparation(const std::vector<std::complex<double>>& amplitudes);
+  explicit StatePreparation(
+      const std::vector<std::complex<double>>& amplitudes);
 
 private:
   template <typename T> static bool isNormalized(std::vector<T> vec);
   template <typename T> static double twoNorm(std::vector<T> vec);
-  static std::vector<std::vector<double>> kroneckerProduct(std::vector<std::vector<double>> matrixA, std::vector<std::vector<double>> matrixB);
+  static std::vector<std::vector<double>>
+  kroneckerProduct(std::vector<std::vector<double>> matrixA,
+                   std::vector<std::vector<double>> matrixB);
   static std::vector<std::vector<double>> createIdentity(size_t size);
-  static std::vector<double> matrixVectorProd(const std::vector<std::vector<double>>& matrix,
-                                              std::vector<double> vector);
+  static std::vector<double>
+  matrixVectorProd(const std::vector<std::vector<double>>& matrix,
+                   std::vector<double> vector);
   static qc::QuantumComputation
   gatesToUncompute(std::vector<std::complex<double>> amplitudes,
                    size_t numQubits);

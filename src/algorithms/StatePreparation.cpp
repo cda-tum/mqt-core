@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "algorithms/StatePreparation.hpp"
 
 static const double EPS = 1e-10;
@@ -6,9 +15,7 @@ namespace qc {
 using Matrix = std::vector<std::vector<double>>;
 
 StatePreparation::StatePreparation(
-    const std::vector<std::complex<double>>& amplitudes) {
-
-}
+    const std::vector<std::complex<double>>& amplitudes) {}
 
 template <typename T> bool StatePreparation::isNormalized(std::vector<T> vec) {
   return std::abs(1 - twoNorm(vec)) < EPS;
