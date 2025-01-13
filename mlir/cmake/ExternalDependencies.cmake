@@ -18,28 +18,6 @@ FetchContent_Declare(
   FIND_PACKAGE_ARGS ${MQT_CORE_VERSION})
 list(APPEND FETCH_PACKAGES mqt-core)
 
-# MLIR must be installed on the system
-find_package(MLIR REQUIRED CONFIG)
-message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
-# Add the paths to the MLIR and LLVM CMake modules.
-list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
-list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-
-# Include the TableGen, LLVM and MLIR CMake modules.
-include(TableGen)
-include(AddLLVM)
-include(AddMLIR)
-include(HandleLLVMOptions)
-
-include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(${MLIR_INCLUDE_DIRS})
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${PROJECT_BINARY_DIR}/include)
-link_directories(${LLVM_BUILD_LIBRARY_DIR})
-add_definitions(${LLVM_DEFINITIONS})
-
 if(BUILD_MQT_MLIR_TESTS)
   set(gtest_force_shared_crt
       ON

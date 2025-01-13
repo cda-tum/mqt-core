@@ -1,0 +1,11 @@
+add_mlir_library(
+  MLIRQuantum
+  QuantumDialect.cpp
+  QuantumInterfaces.cpp
+  QuantumOps.cpp
+  ADDITIONAL_HEADER_DIRS
+  ${MQT_MLIR_INCLUDE_BUILD_DIR}/CatalystQuantum
+  DEPENDS
+  MLIRQuantumInterfacesIncGen
+  MLIRQuantumOpsIncGen
+  MLIRQuantumEnumsIncGen)
