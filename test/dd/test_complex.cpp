@@ -1,18 +1,34 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/ComplexNumbers.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Export.hpp"
+#include "dd/MemoryManager.hpp"
+#include "dd/RealNumber.hpp"
+#include "dd/RealNumberUniqueTable.hpp"
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include <array>
+#include <cstddef>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <iomanip>
+#include <iostream>
 #include <limits>
+#include <sstream>
 #include <vector>
 
 using namespace dd;
 
 class CNTest : public testing::Test {
 protected:
-  MemoryManager<RealNumber> mm{};
+  MemoryManager<RealNumber> mm;
   RealNumberUniqueTable ut{mm};
   ComplexNumbers cn{ut};
 };
@@ -243,7 +259,7 @@ TEST(DDComplexTest, NumberPrintingFormattedFractions) {
   std::stringstream ss{};
 
   ComplexValue::printFormatted(ss, 0.0, false);
-  EXPECT_STREQ(ss.str().c_str(), "+0");
+  EXPECT_STREQ(ss.str().c_str(), "0");
   ss.str("");
   ComplexValue::printFormatted(ss, -0.0, false);
   EXPECT_STREQ(ss.str().c_str(), "-0");

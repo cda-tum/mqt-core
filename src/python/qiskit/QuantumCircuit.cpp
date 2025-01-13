@@ -1,4 +1,31 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "python/qiskit/QuantumCircuit.hpp"
+
+#include "Definitions.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/NonUnitaryOperation.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/StandardOperation.hpp"
+#include "ir/operations/SymbolicOperation.hpp"
+
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <iterator>
+#include <regex>
+#include <set>
+#include <sstream>
+#include <vector>
 
 void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
                                         const py::object& circ) {
@@ -75,10 +102,9 @@ void qc::qiskit::QuantumCircuit::import(qc::QuantumComputation& qc,
   // iterate over instructions
   auto&& data = circ.attr("data");
   for (const auto pyinst : data) {
-    auto&& inst = pyinst.cast<std::tuple<py::object, py::list, py::list>>();
-    auto&& instruction = std::get<0>(inst);
-    auto&& qargs = std::get<1>(inst);
-    auto&& cargs = std::get<2>(inst);
+    auto&& instruction = pyinst.attr("operation");
+    auto&& qargs = pyinst.attr("qubits");
+    auto&& cargs = pyinst.attr("clbits");
     auto&& params = instruction.attr("params");
 
     emplaceOperation(qc, instruction, qargs, cargs, params, qubitMap, clbitMap);
@@ -119,14 +145,14 @@ void qc::qiskit::QuantumCircuit::emplaceOperation(
   if (instructionName == "measure") {
     auto control = qubitMap[qargs[0]].cast<Qubit>();
     auto target = clbitMap[cargs[0]].cast<std::size_t>();
-    qc.emplace_back<NonUnitaryOperation>(qc.getNqubits(), control, target);
+    qc.emplace_back<NonUnitaryOperation>(control, target);
   } else if (instructionName == "barrier") {
     Targets targets{};
     for (const auto qubit : qargs) {
       auto target = qubitMap[qubit].cast<Qubit>();
       targets.emplace_back(target);
     }
-    qc.emplace_back<StandardOperation>(qc.getNqubits(), targets, Barrier);
+    qc.emplace_back<StandardOperation>(targets, Barrier);
   } else if (instructionName == "reset") {
     Targets targets{};
     for (const auto qubit : qargs) {
@@ -223,8 +249,8 @@ void qc::qiskit::QuantumCircuit::emplaceOperation(
                        qubitMap, clbitMap);
     } catch (py::error_already_set& e) {
       std::cerr << "Failed to import instruction " << instructionName
-                << " from Qiskit QuantumCircuit" << std::endl;
-      std::cerr << e.what() << std::endl;
+                << " from Qiskit QuantumCircuit\n";
+      std::cerr << e.what() << "\n";
     }
   }
 }
@@ -311,7 +337,7 @@ void qc::qiskit::QuantumCircuit::addOperation(qc::QuantumComputation& qc,
   std::vector<Control> qubits{};
   for (const auto qubit : qargs) {
     auto target = qubitMap[qubit].cast<Qubit>();
-    qubits.emplace_back(Control{target});
+    qubits.emplace_back(target);
   }
   auto target = qubits.back().qubit;
   qubits.pop_back();
@@ -328,11 +354,9 @@ void qc::qiskit::QuantumCircuit::addOperation(qc::QuantumComputation& qc,
     std::transform(parameters.cbegin(), parameters.cend(),
                    std::back_inserter(fpParams),
                    [](const auto& p) { return std::get<fp>(p); });
-    qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target, type,
-                                       fpParams);
+    qc.emplace_back<StandardOperation>(controls, target, type, fpParams);
   } else {
-    qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target, type,
-                                       parameters);
+    qc.emplace_back<SymbolicOperation>(controls, target, type, parameters);
     for (const auto& p : parameters) {
       qc.addVariables(p);
     }
@@ -345,7 +369,7 @@ void qc::qiskit::QuantumCircuit::addTwoTargetOperation(
   std::vector<Control> qubits{};
   for (const auto qubit : qargs) {
     auto target = qubitMap[qubit].cast<Qubit>();
-    qubits.emplace_back(Control{target});
+    qubits.emplace_back(target);
   }
   auto target1 = qubits.back().qubit;
   qubits.pop_back();
@@ -364,11 +388,11 @@ void qc::qiskit::QuantumCircuit::addTwoTargetOperation(
     std::transform(parameters.cbegin(), parameters.cend(),
                    std::back_inserter(fpParams),
                    [](const auto& p) { return std::get<fp>(p); });
-    qc.emplace_back<StandardOperation>(qc.getNqubits(), controls, target0,
-                                       target1, type, fpParams);
+    qc.emplace_back<StandardOperation>(controls, target0, target1, type,
+                                       fpParams);
   } else {
-    qc.emplace_back<SymbolicOperation>(qc.getNqubits(), controls, target0,
-                                       target1, type, parameters);
+    qc.emplace_back<SymbolicOperation>(controls, target0, target1, type,
+                                       parameters);
     for (const auto& p : parameters) {
       qc.addVariables(p);
     }
@@ -392,16 +416,15 @@ void qc::qiskit::QuantumCircuit::importDefinition(
 
   auto&& data = circ.attr("data");
   for (const auto pyinst : data) {
-    auto&& inst = pyinst.cast<std::tuple<py::object, py::list, py::list>>();
-    auto&& instruction = std::get<0>(inst);
+    auto&& instruction = pyinst.attr("operation");
 
-    const py::list& instQargs = std::get<1>(inst);
+    const py::list& instQargs = pyinst.attr("qubits");
     py::list mappedQargs{};
     for (auto&& instQarg : instQargs) {
       mappedQargs.append(qargMap[instQarg]);
     }
 
-    const py::list& instCargs = std::get<2>(inst);
+    const py::list& instCargs = pyinst.attr("clbits");
     py::list mappedCargs{};
     for (auto&& instCarg : instCargs) {
       mappedCargs.append(cargMap[instCarg]);
@@ -419,19 +442,18 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
   const py::object qubit = py::module::import("qiskit.circuit").attr("Qubit");
 
   // get layout
-  auto layout = circ.attr("_layout");
+  auto layout = circ.attr("layout");
 
-  // qiskit-terra 0.22.0 changed the `_layout` attribute to a
-  // `TranspileLayout` dataclass object that contains the initial layout as a
-  // `Layout` object in the `initial_layout` attribute.
-  if (py::hasattr(layout, "initial_layout")) {
-    layout = layout.attr("initial_layout");
+  if (layout.is_none()) {
+    return;
   }
+
+  auto initial_layout = layout.attr("initial_layout");
 
   // create map between registers used in the layout and logical qubit indices
   // NOTE: this only works correctly if the registers were originally declared
   // in alphabetical order!
-  const auto registers = layout.attr("get_registers")().cast<py::set>();
+  const auto registers = initial_layout.attr("get_registers")().cast<py::set>();
   std::size_t logicalQubitIndex = 0U;
   const py::dict logicalQubitIndices{};
 
@@ -466,7 +488,7 @@ void qc::qiskit::QuantumCircuit::importInitialLayout(qc::QuantumComputation& qc,
 
   // get a map of physical to logical qubits
   const auto physicalQubits =
-      layout.attr("get_physical_bits")().cast<py::dict>();
+      initial_layout.attr("get_physical_bits")().cast<py::dict>();
 
   // create initial layout (and assume identical output permutation)
   for (const auto& [physicalQubit, logicalQubit] : physicalQubits) {

@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "nlohmann/json_fwd.hpp"
@@ -8,6 +17,11 @@
 namespace dd {
 
 struct Statistics {
+  Statistics() = default;
+  Statistics(const Statistics&) = default;
+  Statistics(Statistics&&) = default;
+  Statistics& operator=(const Statistics&) = default;
+  Statistics& operator=(Statistics&&) = default;
   virtual ~Statistics() = default;
 
   /// Reset all statistics (except for peak values)

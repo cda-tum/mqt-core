@@ -1,14 +1,23 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "dd/DDDefinitions.hpp"
+#include "Definitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/statistics/TableStatistics.hpp"
 
 #include <array>
 #include <bitset>
 #include <cstddef>
+#include <functional>
 #include <iostream>
-#include <utility>
 
 namespace dd {
 
@@ -90,7 +99,8 @@ public:
       return result;
     }
 
-    if constexpr (std::is_same_v<RightOperandType, dEdge>) {
+    if constexpr (std::is_same_v<RightOperandType, dNode*> ||
+                  std::is_same_v<RightOperandType, dCachedEdge>) {
       // Since density matrices are reduced representations of matrices, a
       // density matrix may not be returned when a matrix is required and vice
       // versa

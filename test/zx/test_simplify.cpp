@@ -1,7 +1,20 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
+#include "ir/operations/Expression.hpp"
 #include "zx/Simplify.hpp"
+#include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include "gtest/gtest.h"
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <vector>
 
 using zx::fullReduceApproximate;
 
@@ -574,4 +587,18 @@ TEST_F(SimplifyTest, equivalenceSymbolic) {
   EXPECT_EQ(d1.getNEdges(), 3);
   EXPECT_EQ(d1.getNVertices(), 6);
   EXPECT_TRUE(d1.isIdentity());
+}
+
+TEST_F(SimplifyTest, OnlyDeletedVertices) {
+  // This is a regression test. The following code should not throw an
+  // exception. It previously did because the code did not handle the case where
+  // the diagram only contains deleted vertices.
+  zx::ZXDiagram diag = ::makeIdentityDiagram(1, 0);
+  diag.makeAncilla(0);
+  // The following simplifies the diagram to the empty diagram.
+  zx::fullReduce(diag);
+  EXPECT_EQ(diag.getNEdges(), 0);
+  EXPECT_EQ(diag.getNVertices(), 0);
+  // A subsequent simplification should not throw an exception.
+  EXPECT_NO_THROW(zx::fullReduce(diag););
 }

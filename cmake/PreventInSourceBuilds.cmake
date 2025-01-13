@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # This function will prevent in-source builds
 function(assure_out_of_source_builds)
   # make sure the user doesn't play dirty with symlinks

@@ -1,13 +1,31 @@
-#include "QuantumComputation.hpp"
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
+#include "Definitions.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/StandardOperation.hpp"
 #include "zx/FunctionalityConstruction.hpp"
 #include "zx/Simplify.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include "gtest/gtest.h"
 #include <array>
-#include <iostream>
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <utility>
 
 class ZXFunctionalityTest : public ::testing::Test {
 public:
@@ -148,9 +166,9 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
 
 TEST_F(ZXFunctionalityTest, nestedCompoundGate) {
   qc = qc::QuantumComputation(1);
-  auto innerOp = std::make_unique<qc::StandardOperation>(1, 0, qc::OpType::X);
-  auto compound1 = std::make_unique<qc::CompoundOperation>(1);
-  auto compound2 = std::make_unique<qc::CompoundOperation>(1);
+  auto innerOp = std::make_unique<qc::StandardOperation>(0, qc::OpType::X);
+  auto compound1 = std::make_unique<qc::CompoundOperation>();
+  auto compound2 = std::make_unique<qc::CompoundOperation>();
 
   compound1->emplace_back(std::move(innerOp));
   compound2->emplace_back(std::move(compound1));

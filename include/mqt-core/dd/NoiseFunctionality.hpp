@@ -1,19 +1,30 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "dd/ComplexNumbers.hpp"
-#include "dd/GateMatrixDefinitions.hpp"
+#include "Definitions.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/DDpackageConfig.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cassert>
-#include <complex>
-#include <map>
-#include <optional>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <random>
+#include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -75,11 +86,6 @@ protected:
                                      bool amplitudeDampingFlag) const;
 
 public:
-  //  [[nodiscard]] mEdge getIdentityDD() const { return identityDD; }
-  //  void setNoiseEffects(std::vector<NoiseOperations> newNoiseEffects) {
-  //    noiseEffects = std::move(newNoiseEffects);
-  //  }
-
   void applyNoiseOperation(const std::set<qc::Qubit>& targets, mEdge operation,
                            vEdge& state, std::mt19937_64& generator);
 
@@ -125,7 +131,7 @@ public:
 private:
   dCachedEdge applyNoiseEffects(dEdge& originalEdge,
                                 const std::set<qc::Qubit>& usedQubits,
-                                bool firstPathEdge);
+                                bool firstPathEdge, Qubit level);
 
   static void applyPhaseFlipToEdges(ArrayOfEdges& e, double probability);
 

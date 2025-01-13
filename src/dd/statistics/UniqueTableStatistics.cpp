@@ -1,8 +1,18 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/statistics/UniqueTableStatistics.hpp"
 
-#include "nlohmann/json.hpp"
+#include "dd/statistics/TableStatistics.hpp"
 
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
 namespace dd {
 
@@ -16,12 +26,12 @@ void UniqueTableStatistics::reset() noexcept {
   numActiveEntries = 0U;
 }
 
-nlohmann::json UniqueTableStatistics::json() const {
+nlohmann::basic_json<> UniqueTableStatistics::json() const {
   if (lookups == 0) {
     return "unused";
   }
 
-  nlohmann::json j = TableStatistics::json();
+  auto j = TableStatistics::json();
   j["num_active_entries"] = numActiveEntries;
   j["peak_num_active_entries"] = peakNumActiveEntries;
   j["gc_runs"] = gcRuns;

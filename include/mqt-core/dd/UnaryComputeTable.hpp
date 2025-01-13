@@ -1,13 +1,20 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "DDDefinitions.hpp"
 #include "dd/statistics/TableStatistics.hpp"
 
 #include <array>
 #include <bitset>
 #include <cstddef>
-#include <iostream>
-#include <utility>
+#include <functional>
 
 namespace dd {
 

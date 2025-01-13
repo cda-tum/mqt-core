@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # Declare all external dependencies and make sure that they are available.
 
 include(FetchContent)
@@ -17,7 +24,7 @@ if(BUILD_MQT_CORE_BINDINGS)
   message(STATUS "Python executable: ${Python_EXECUTABLE}")
 
   # add pybind11 library
-  find_package(pybind11 CONFIG REQUIRED)
+  find_package(pybind11 2.13.5 CONFIG REQUIRED)
 endif()
 
 set(JSON_VERSION
@@ -39,12 +46,13 @@ else()
   endif()
 endif()
 
-option(USE_SYSTEM_BOOST "Whether to try to use the system Boost installation" ON)
+option(USE_SYSTEM_BOOST "Whether to try to use the system Boost installation" OFF)
 set(BOOST_MIN_VERSION
     1.80.0
     CACHE STRING "Minimum required Boost version")
-find_package(Boost ${BOOST_MIN_VERSION} CONFIG QUIET)
-if(NOT Boost_FOUND OR NOT USE_SYSTEM_BOOST)
+if(USE_SYSTEM_BOOST)
+  find_package(Boost ${BOOST_MIN_VERSION} CONFIG REQUIRED)
+else()
   set(BOOST_MP_STANDALONE
       ON
       CACHE INTERNAL "Use standalone boost multiprecision")
@@ -54,14 +62,14 @@ if(NOT Boost_FOUND OR NOT USE_SYSTEM_BOOST)
   set(BOOST_URL
       https://github.com/boostorg/multiprecision/archive/refs/tags/Boost_${BOOST_VERSION}.tar.gz)
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
-    FetchContent_Declare(boost_multiprecision URL ${BOOST_URL} FIND_PACKAGE_ARGS
-                                                  ${BOOST_MIN_VERSION} CONFIG)
-    list(APPEND FETCH_PACKAGES boost_multiprecision)
+    FetchContent_Declare(boost_mp URL ${BOOST_URL} FIND_PACKAGE_ARGS ${BOOST_MIN_VERSION} CONFIG
+                                      NAMES boost_multiprecision)
+    list(APPEND FETCH_PACKAGES boost_mp)
   else()
-    find_package(boost_multiprecision ${BOOST_MIN_VERSION} QUIET CONFIG)
-    if(NOT boost_multiprecision_FOUND)
-      FetchContent_Declare(boost_multiprecision URL ${BOOST_URL})
-      list(APPEND FETCH_PACKAGES boost_multiprecision)
+    find_package(boost_mp ${BOOST_MIN_VERSION} QUIET CONFIG NAMES boost_multiprecision)
+    if(NOT boost_mp_FOUND)
+      FetchContent_Declare(boost_mp URL ${BOOST_URL})
+      list(APPEND FETCH_PACKAGES boost_mp)
     endif()
   endif()
 endif()

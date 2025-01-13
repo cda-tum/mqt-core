@@ -1,30 +1,29 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "QuantumComputation.hpp"
+#include "Definitions.hpp"
+#include "ir/QuantumComputation.hpp"
 
-#include <bitset>
-#include <functional>
-#include <random>
+#include <cstddef>
 
 namespace qc {
-class Grover : public QuantumComputation {
-public:
-  std::size_t seed = 0;
-  BitString targetValue = 0;
-  std::size_t iterations = 1;
-  std::string expected{};
-  std::size_t nDataQubits{};
+auto appendGroverInitialization(QuantumComputation& qc) -> void;
+auto appendGroverOracle(QuantumComputation& qc, const BitString& targetValue)
+    -> void;
+auto appendGroverDiffusion(QuantumComputation& qc) -> void;
 
-  explicit Grover(std::size_t nq, std::size_t s = 0);
+[[nodiscard]] auto computeNumberOfIterations(Qubit nq) -> std::size_t;
 
-  void setup(QuantumComputation& qc) const;
-
-  void oracle(QuantumComputation& qc) const;
-
-  void diffusion(QuantumComputation& qc) const;
-
-  void fullGrover(QuantumComputation& qc) const;
-
-  std::ostream& printStatistics(std::ostream& os) const override;
-};
+[[nodiscard]] auto createGrover(Qubit nq, const BitString& targetValue)
+    -> QuantumComputation;
+[[nodiscard]] auto createGrover(Qubit nq, std::size_t seed = 0)
+    -> QuantumComputation;
 } // namespace qc

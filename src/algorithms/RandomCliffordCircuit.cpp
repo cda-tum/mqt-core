@@ -1,65 +1,29 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "algorithms/RandomCliffordCircuit.hpp"
+
+#include "Definitions.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <random>
+#include <string>
 
 namespace qc {
 
-RandomCliffordCircuit::RandomCliffordCircuit(const std::size_t nq,
-                                             const std::size_t d,
-                                             const std::size_t s)
-    : depth(d), seed(s) {
-  addQubitRegister(nq);
-  addClassicalRegister(nq);
-
-  std::mt19937_64 generator;
-  if (seed == 0) {
-    // this is probably overkill but better safe than sorry
-    std::array<std::mt19937_64::result_type, std::mt19937_64::state_size>
-        randomData{};
-    std::random_device rd;
-    std::generate(std::begin(randomData), std::end(randomData), std::ref(rd));
-    std::seed_seq seeds(std::begin(randomData), std::end(randomData));
-    generator.seed(seeds);
-  } else {
-    generator.seed(seed);
-  }
-  std::uniform_int_distribution<std::uint16_t> distribution(0, 11520);
-  cliffordGenerator = [&]() { return distribution(generator); };
-
-  for (std::size_t l = 0; l < depth; ++l) {
-    if (nqubits == 1) {
-      append1QClifford(cliffordGenerator(), 0);
-    } else if (nqubits == 2) {
-      append2QClifford(cliffordGenerator(), 0, 1);
-    } else {
-      if (l % 2 != 0) {
-        for (std::size_t i = 1; i < nqubits - 1; i += 2) {
-          append2QClifford(cliffordGenerator(), static_cast<Qubit>(i),
-                           static_cast<Qubit>(i + 1));
-        }
-      } else {
-        for (std::size_t i = 0; i < nqubits - 1; i += 2) {
-          append2QClifford(cliffordGenerator(), static_cast<Qubit>(i),
-                           static_cast<Qubit>(i + 1));
-        }
-      }
-    }
-  }
-}
-
-std::ostream& RandomCliffordCircuit::printStatistics(std::ostream& os) const {
-  os << "Random Clifford circuit statistics:\n";
-  os << "\tn: " << nqubits << "\n";
-  os << "\tm: " << getNindividualOps() << "\n";
-  os << "\tdepth: " << depth << "\n";
-  os << "\tseed: " << seed << "\n";
-  os << "--------------"
-     << "\n";
-  return os;
-}
-
-void RandomCliffordCircuit::append1QClifford(const std::uint16_t idx,
-                                             const Qubit target) {
+auto append1QClifford(QuantumComputation& circ, const std::uint16_t idx,
+                      const Qubit target) -> void {
   const auto id = static_cast<std::uint8_t>(idx % 24);
-  auto qc = QuantumComputation(nqubits);
+  auto qc = QuantumComputation(circ.getNqubits());
   // Hadamard
   if ((id / 12 % 2) != 0) {
     qc.h(target);
@@ -82,17 +46,16 @@ void RandomCliffordCircuit::append1QClifford(const std::uint16_t idx,
   } else if (id % 4 == 3) {
     qc.y(target);
   }
-  emplace_back<CompoundOperation>(qc.asCompoundOperation());
+  circ.emplace_back<CompoundOperation>(qc.asCompoundOperation());
 }
 
-void RandomCliffordCircuit::append2QClifford(const std::uint16_t idx,
-                                             const Qubit control,
-                                             const Qubit target) {
+auto append2QClifford(QuantumComputation& circ, const std::uint16_t idx,
+                      const Qubit control, const Qubit target) -> void {
   auto id = static_cast<std::uint16_t>(idx % 11520);
   const auto pauliIdx = static_cast<std::uint8_t>(id % 16);
   id /= 16;
 
-  auto qc = QuantumComputation(nqubits);
+  auto qc = QuantumComputation(circ.getNqubits());
   if (id < 36) {
     // single-qubit Cliffords
     if ((id / 9 % 2) != 0) {
@@ -236,6 +199,36 @@ void RandomCliffordCircuit::append2QClifford(const std::uint16_t idx,
     qc.y(target);
   }
 
-  emplace_back<CompoundOperation>(qc.asCompoundOperation());
+  circ.emplace_back<CompoundOperation>(qc.asCompoundOperation());
 }
+
+auto createRandomCliffordCircuit(const Qubit nq, const std::size_t depth,
+                                 const std::size_t seed) -> QuantumComputation {
+  auto qc = QuantumComputation(nq, nq, seed);
+  qc.setName("random_clifford_" + std::to_string(nq) + "_" +
+             std::to_string(depth) + "_" + std::to_string(seed));
+
+  std::uniform_int_distribution<std::uint16_t> distribution(0, 11520);
+  auto cliffordGenerator = [&]() { return distribution(qc.getGenerator()); };
+
+  for (std::size_t l = 0; l < depth; ++l) {
+    if (nq == 1) {
+      append1QClifford(qc, cliffordGenerator(), 0);
+    } else if (nq == 2) {
+      append2QClifford(qc, cliffordGenerator(), 0, 1);
+    } else {
+      if (l % 2 != 0) {
+        for (Qubit i = 1; i < nq - 1; i += 2) {
+          append2QClifford(qc, cliffordGenerator(), i, i + 1);
+        }
+      } else {
+        for (Qubit i = 0; i < nq - 1; i += 2) {
+          append2QClifford(qc, cliffordGenerator(), i, i + 1);
+        }
+      }
+    }
+  }
+  return qc;
+}
+
 } // namespace qc

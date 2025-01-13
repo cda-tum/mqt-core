@@ -1,8 +1,19 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/CachedEdge.hpp"
 
+#include "Definitions.hpp"
 #include "dd/Complex.hpp"
 #include "dd/ComplexNumbers.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
 #include "dd/RealNumber.hpp"
@@ -10,6 +21,8 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
+#include <functional>
 #include <optional>
 
 namespace dd {

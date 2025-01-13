@@ -1,9 +1,22 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
+#include "dd/CachedEdge.hpp"
 #include "dd/Complex.hpp"
 #include "dd/DDDefinitions.hpp"
-#include "dd/Node.hpp"
+#include "dd/Edge.hpp"
 #include "dd/RealNumberUniqueTable.hpp"
+
+#include <complex>
+#include <cstddef>
 
 namespace dd {
 
@@ -14,7 +27,8 @@ class ComplexNumbers {
 
 public:
   /// Default constructor.
-  explicit ComplexNumbers(RealNumberUniqueTable& table) : uniqueTable(&table){};
+  explicit ComplexNumbers(RealNumberUniqueTable& table)
+      : uniqueTable(&table) {};
   /// Default destructor.
   ~ComplexNumbers() = default;
 

@@ -1,11 +1,24 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "operations/Expression.hpp"
-#include "zx/Rational.hpp"
+#include "Rational.hpp"
+#include "ir/operations/Expression.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <ostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace zx {
 

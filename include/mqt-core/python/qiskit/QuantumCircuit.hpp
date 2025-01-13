@@ -1,15 +1,22 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "pybind11/pybind11.h"
-#include "pybind11/pytypes.h"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/OpType.hpp"
+#include "python/pybind11.hpp" // IWYU pragma: keep
 
-#include <regex>
-#include <type_traits>
-#include <variant>
+#include <pybind11/pytypes.h>
 
 namespace py = pybind11;
-
-#include "QuantumComputation.hpp"
 
 namespace qc::qiskit {
 using namespace pybind11::literals;

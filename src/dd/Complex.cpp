@@ -1,6 +1,16 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/Complex.hpp"
 
 #include "dd/ComplexValue.hpp"
+#include "dd/DDDefinitions.hpp"
 #include "dd/RealNumber.hpp"
 
 #include <complex>

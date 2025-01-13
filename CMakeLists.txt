@@ -1,11 +1,19 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # set required cmake version
-cmake_minimum_required(VERSION 3.19...3.28)
+cmake_minimum_required(VERSION 3.19...3.30)
 
 project(
   mqt-core
   LANGUAGES CXX
   DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
 
+# Add path for custom modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(cmake/StandardProjectSettings.cmake)
@@ -30,9 +38,14 @@ if(BUILD_MQT_CORE_BINDINGS)
       ON
       CACHE BOOL "Prevent multiple searches for Python and instead cache the results.")
 
+  if(DISABLE_GIL)
+    message(STATUS "Disabling Python GIL")
+    add_compile_definitions(Py_GIL_DISABLED)
+  endif()
+
   # top-level call to find Python
   find_package(
-    Python 3.8 REQUIRED
+    Python 3.9 REQUIRED
     COMPONENTS Interpreter Development.Module
     OPTIONAL_COMPONENTS Development.SABIModule)
 endif()
@@ -79,10 +92,12 @@ if(BUILD_MQT_CORE_BENCHMARKS)
 endif()
 
 if(MQT_CORE_MASTER_PROJECT)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
-                 ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake IMMEDIATE @ONLY)
-  add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P
-                                      ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+  if(NOT TARGET mqt-core-uninstall)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
+                   ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake IMMEDIATE @ONLY)
+    add_custom_target(mqt-core-uninstall COMMAND ${CMAKE_COMMAND} -P
+                                                 ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+  endif()
 else()
   set(mqt-core_FOUND
       TRUE

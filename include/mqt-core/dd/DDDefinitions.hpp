@@ -1,9 +1,20 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
 
 #include <array>
+#include <cmath>
 #include <complex>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -41,7 +52,7 @@ static constexpr std::uint8_t RADIX = 2;
 // max no. of edges = RADIX^2
 static constexpr std::uint8_t NEDGE = RADIX * RADIX;
 
-enum class BasisStates {
+enum class BasisStates : std::uint8_t {
   zero,  // NOLINT(readability-identifier-naming)
   one,   // NOLINT(readability-identifier-naming)
   plus,  // NOLINT(readability-identifier-naming)

@@ -1,21 +1,30 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #if defined(GMP)
-#include "boost/multiprecision/gmp.hpp"
+#include <boost/multiprecision/gmp.hpp> // IWYU pragma: keep
 using Rational = boost::multiprecision::mpq_rational;
 using BigInt = boost::multiprecision::mpz_int;
 #else
-#include "boost/multiprecision/cpp_int.hpp"
+#include <boost/multiprecision/cpp_int.hpp> // IWYU pragma: keep
+#include <boost/multiprecision/fwd.hpp>
 using Rational = boost::multiprecision::cpp_rational;
 using BigInt = boost::multiprecision::cpp_int;
 #endif
 
+#include <boost/multiprecision/rational_adaptor.hpp>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <type_traits>
-#include <utility>
 
 namespace zx {
 
@@ -81,7 +90,7 @@ public:
   explicit operator double() const { return this->toDouble(); }
 
 private:
-  Rational frac{};
+  Rational frac;
 
   void modPi();
 

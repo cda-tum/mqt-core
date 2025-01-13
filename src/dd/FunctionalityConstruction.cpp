@@ -1,89 +1,115 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/FunctionalityConstruction.hpp"
+
+#include "dd/Operations.hpp"
+#include "dd/Package.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
+
+#include <cmath>
+#include <cstddef>
+#include <stack>
+#include <utility>
 
 namespace dd {
 template <class Config>
-MatrixDD buildFunctionality(const QuantumComputation* qc, Package<Config>& dd) {
-  const auto nq = qc->getNqubits();
-  if (nq == 0U) {
+MatrixDD buildFunctionality(const QuantumComputation& qc, Package<Config>& dd) {
+  if (qc.getNqubits() == 0U) {
     return MatrixDD::one();
   }
 
-  if (const auto* grover = dynamic_cast<const qc::Grover*>(qc)) {
-    return buildFunctionality(grover, dd);
-  }
+  auto permutation = qc.initialLayout;
+  auto e = dd.createInitialMatrix(qc.getAncillary());
 
-  auto permutation = qc->initialLayout;
-  auto e = dd.createInitialMatrix(nq, qc->ancillary);
+  for (const auto& op : qc) {
+    // SWAP gates can be executed virtually by changing the permutation
+    if (op->getType() == OpType::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+      continue;
+    }
 
-  for (const auto& op : *qc) {
-    auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
-
-    dd.incRef(tmp);
-    dd.decRef(e);
-    e = tmp;
-
-    dd.garbageCollect();
+    e = applyUnitaryOperation(*op, e, dd, permutation);
   }
   // correct permutation if necessary
-  changePermutation(e, permutation, qc->outputPermutation, dd);
-  e = dd.reduceAncillae(e, qc->ancillary);
-  e = dd.reduceGarbage(e, qc->garbage);
+  changePermutation(e, permutation, qc.outputPermutation, dd);
+  e = dd.reduceAncillae(e, qc.getAncillary());
+  e = dd.reduceGarbage(e, qc.getGarbage());
 
   return e;
 }
 
 template <class Config>
-MatrixDD buildFunctionalityRecursive(const QuantumComputation* qc,
+MatrixDD buildFunctionalityRecursive(const QuantumComputation& qc,
                                      Package<Config>& dd) {
-  if (qc->getNqubits() == 0U) {
+  if (qc.getNqubits() == 0U) {
     return MatrixDD::one();
   }
 
-  if (const auto* grover = dynamic_cast<const qc::Grover*>(qc)) {
-    return buildFunctionalityRecursive(grover, dd);
-  }
+  auto permutation = qc.initialLayout;
 
-  auto permutation = qc->initialLayout;
-
-  if (qc->size() == 1U) {
-    auto e = getDD(qc->front().get(), dd, permutation);
+  if (qc.size() == 1U) {
+    auto e = getDD(*qc.front(), dd, permutation);
     dd.incRef(e);
     return e;
   }
 
   std::stack<MatrixDD> s{};
-  auto depth = static_cast<std::size_t>(std::ceil(std::log2(qc->size())));
+  auto depth = static_cast<std::size_t>(std::ceil(std::log2(qc.size())));
   buildFunctionalityRecursive(qc, depth, 0, s, permutation, dd);
   auto e = s.top();
   s.pop();
 
   // correct permutation if necessary
-  changePermutation(e, permutation, qc->outputPermutation, dd);
-  e = dd.reduceAncillae(e, qc->ancillary);
-  e = dd.reduceGarbage(e, qc->garbage);
+  changePermutation(e, permutation, qc.outputPermutation, dd);
+  e = dd.reduceAncillae(e, qc.getAncillary());
+  e = dd.reduceGarbage(e, qc.getGarbage());
 
   return e;
 }
 
 template <class Config>
-bool buildFunctionalityRecursive(const QuantumComputation* qc,
+bool buildFunctionalityRecursive(const QuantumComputation& qc,
                                  std::size_t depth, std::size_t opIdx,
                                  std::stack<MatrixDD>& s,
                                  Permutation& permutation,
                                  Package<Config>& dd) {
   // base case
   if (depth == 1U) {
-    auto e = getDD(qc->at(opIdx).get(), dd, permutation);
+    auto e = dd.makeIdent();
+    if (const auto& op = qc.at(opIdx);
+        op->getType() == OpType::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+    } else {
+      e = getDD(*qc.at(opIdx), dd, permutation);
+    }
     ++opIdx;
-    if (opIdx == qc->size()) { // only one element was left
+    if (opIdx == qc.size()) {
+      // only one element was left
       s.push(e);
       dd.incRef(e);
       return false;
     }
-    auto f = getDD(qc->at(opIdx).get(), dd, permutation);
+    auto f = dd.makeIdent();
+    if (const auto& op = qc.at(opIdx);
+        op->getType() == OpType::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+    } else {
+      f = getDD(*qc.at(opIdx), dd, permutation);
+    }
     s.push(dd.multiply(f, e)); // ! reverse multiplication
     dd.incRef(s.top());
-    return (opIdx != qc->size() - 1U);
+    return (opIdx != qc.size() - 1U);
   }
 
   // in case no operations are left after the first recursive call nothing has
@@ -116,106 +142,32 @@ bool buildFunctionalityRecursive(const QuantumComputation* qc,
   return success;
 }
 
-template <class Config>
-MatrixDD buildFunctionality(const qc::Grover* qc, Package<Config>& dd) {
-  QuantumComputation groverIteration(qc->getNqubits());
-  qc->oracle(groverIteration);
-  qc->diffusion(groverIteration);
-
-  auto iteration = buildFunctionality(&groverIteration, dd);
-
-  auto e = iteration;
-  dd.incRef(e);
-
-  for (std::size_t i = 0U; i < qc->iterations - 1U; ++i) {
-    auto f = dd.multiply(iteration, e);
-    dd.incRef(f);
-    dd.decRef(e);
-    e = f;
-    dd.garbageCollect();
-  }
-
-  QuantumComputation setup(qc->getNqubits());
-  qc->setup(setup);
-  auto g = buildFunctionality(&setup, dd);
-  auto f = dd.multiply(e, g);
-  dd.incRef(f);
-  dd.decRef(e);
-  dd.decRef(g);
-  e = f;
-
-  dd.decRef(iteration);
-  return e;
-}
-
-template <class Config>
-MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
-                                     Package<Config>& dd) {
-  QuantumComputation groverIteration(qc->getNqubits());
-  qc->oracle(groverIteration);
-  qc->diffusion(groverIteration);
-
-  auto iter = buildFunctionalityRecursive(&groverIteration, dd);
-  auto e = iter;
-  std::bitset<128U> iterBits(qc->iterations);
-  auto msb = static_cast<std::size_t>(std::floor(std::log2(qc->iterations)));
-  auto f = iter;
-  dd.incRef(f);
-  bool zero = !iterBits[0U];
-  for (std::size_t j = 1U; j <= msb; ++j) {
-    auto tmp = dd.multiply(f, f);
-    dd.incRef(tmp);
-    dd.decRef(f);
-    f = tmp;
-    if (iterBits[j]) {
-      if (zero) {
-        dd.incRef(f);
-        dd.decRef(e);
-        e = f;
-        zero = false;
-      } else {
-        auto g = dd.multiply(e, f);
-        dd.incRef(g);
-        dd.decRef(e);
-        e = g;
-        dd.garbageCollect();
-      }
-    }
-  }
-  dd.decRef(f);
-
-  // apply state preparation setup
-  qc::QuantumComputation statePrep(qc->getNqubits());
-  qc->setup(statePrep);
-  auto s = buildFunctionality(&statePrep, dd);
-  auto tmp = dd.multiply(e, s);
-  dd.incRef(tmp);
-  dd.decRef(s);
-  dd.decRef(e);
-  e = tmp;
-
-  return e;
-}
-
-template MatrixDD buildFunctionality(const qc::QuantumComputation* qc,
+template MatrixDD buildFunctionality(const qc::QuantumComputation& qc,
                                      Package<DDPackageConfig>& dd);
 template MatrixDD
-buildFunctionality(const qc::QuantumComputation* qc,
+buildFunctionality(const qc::QuantumComputation& qc,
                    Package<dd::DensityMatrixSimulatorDDPackageConfig>& dd);
 template MatrixDD
-buildFunctionality(const qc::QuantumComputation* qc,
+buildFunctionality(const qc::QuantumComputation& qc,
                    Package<dd::StochasticNoiseSimulatorDDPackageConfig>& dd);
 
-template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation* qc,
+template MatrixDD buildFunctionality(const qc::QuantumComputation& qc,
+                                     UnitarySimulatorDDPackage& dd);
+
+template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation& qc,
                                               Package<DDPackageConfig>& dd);
-template bool buildFunctionalityRecursive(const qc::QuantumComputation* qc,
+template bool buildFunctionalityRecursive(const qc::QuantumComputation& qc,
                                           const std::size_t depth,
                                           const std::size_t opIdx,
                                           std::stack<MatrixDD>& s,
                                           qc::Permutation& permutation,
                                           Package<DDPackageConfig>& dd);
-template MatrixDD buildFunctionality(const qc::Grover* qc,
-                                     Package<DDPackageConfig>& dd);
-template MatrixDD buildFunctionalityRecursive(const qc::Grover* qc,
-                                              Package<DDPackageConfig>& dd);
+template MatrixDD buildFunctionalityRecursive(const qc::QuantumComputation& qc,
+                                              UnitarySimulatorDDPackage& dd);
+template bool buildFunctionalityRecursive(const qc::QuantumComputation& qc,
+                                          const std::size_t depth,
+                                          const std::size_t opIdx,
+                                          std::stack<MatrixDD>& s,
+                                          qc::Permutation& permutation,
+                                          UnitarySimulatorDDPackage& dd);
 } // namespace dd

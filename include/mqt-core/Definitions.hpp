@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include <bitset>
@@ -64,15 +73,7 @@ static constexpr size_t OUTPUT_INDENT_SIZE = 2;
 class Operation;
 
 // supported file formats
-enum class Format : uint8_t {
-  Real,
-  OpenQASM2,
-  OpenQASM3,
-  GRCS,
-  TFC,
-  QC,
-  Tensor
-};
+enum class Format : uint8_t { Real, OpenQASM2, OpenQASM3, TFC, QC, Tensor };
 
 using DAG = std::vector<std::deque<std::unique_ptr<Operation>*>>;
 using DAGIterator = std::deque<std::unique_ptr<Operation>*>::iterator;
@@ -119,6 +120,13 @@ combineHash(const std::size_t lhs, const std::size_t rhs) noexcept {
 constexpr void hashCombine(std::size_t& hash, const std::size_t with) noexcept {
   hash = combineHash(hash, with);
 }
+
+/// Pairs do not provide a hash function by default, this is the replacement
+template <class T, class U> struct PairHash {
+  size_t operator()(const std::pair<T, U>& x) const {
+    return combineHash(std::hash<T>{}(x.first), std::hash<U>{}(x.second));
+  }
+};
 
 /**
  * @brief Function used to mark unreachable code

@@ -1,6 +1,18 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/statistics/TableStatistics.hpp"
 
-#include "nlohmann/json.hpp"
+#include "dd/statistics/Statistics.hpp"
+
+#include <algorithm>
+#include <nlohmann/json.hpp>
 
 namespace dd {
 
@@ -41,12 +53,12 @@ double TableStatistics::getMemoryMiB() const noexcept {
   return static_cast<double>(numBuckets) * getEntrySizeMiB();
 }
 
-nlohmann::json TableStatistics::json() const {
+nlohmann::basic_json<> TableStatistics::json() const {
   if (lookups == 0) {
     return "unused";
   }
 
-  nlohmann::json j = Statistics::json();
+  auto j = Statistics::json();
   j["num_buckets"] = numBuckets;
   j["memory_MiB"] = getMemoryMiB();
   j["num_entries"] = numEntries;

@@ -1,9 +1,19 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "zx/Simplify.hpp"
 
 #include "zx/Rules.hpp"
+#include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include <utility>
+#include <cstddef>
 
 namespace zx {
 

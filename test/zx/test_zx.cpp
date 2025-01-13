@@ -1,10 +1,24 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "zx/Rational.hpp"
 #include "zx/Simplify.hpp"
 #include "zx/ZXDefinitions.hpp"
 #include "zx/ZXDiagram.hpp"
 
-#include "gtest/gtest.h"
 #include <array>
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <optional>
+#include <sstream>
+#include <utility>
 
 class ZXDiagramTest : public ::testing::Test {
 public:

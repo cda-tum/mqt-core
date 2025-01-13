@@ -1,10 +1,21 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/statistics/MemoryManagerStatistics.hpp"
 
 #include "dd/Node.hpp"
 #include "dd/RealNumber.hpp"
-#include "nlohmann/json.hpp"
+#include "dd/statistics/Statistics.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <nlohmann/json.hpp>
 
 namespace dd {
 
@@ -69,12 +80,13 @@ template <typename T> void MemoryManagerStatistics<T>::reset() noexcept {
   numAvailableForReuse = 0U;
 }
 
-template <typename T> nlohmann::json MemoryManagerStatistics<T>::json() const {
+template <typename T>
+nlohmann::basic_json<> MemoryManagerStatistics<T>::json() const {
   if (peakNumUsed == 0) {
     return "unused";
   }
 
-  nlohmann::json j = Statistics::json();
+  auto j = Statistics::json();
   j["memory_allocated_MiB"] = getAllocatedMemoryMiB();
   j["memory_used_MiB"] = getUsedMemoryMiB();
   j["memory_used_MiB_peak"] = getPeakUsedMemoryMiB();

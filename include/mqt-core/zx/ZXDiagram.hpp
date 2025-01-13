@@ -1,12 +1,20 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "operations/Expression.hpp"
-#include "zx/Utils.hpp"
-#include "zx/ZXDefinitions.hpp"
+#include "Utils.hpp"
+#include "ZXDefinitions.hpp"
 
+#include <cassert>
 #include <cstddef>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -155,7 +163,7 @@ private:
   std::vector<Vertex> outputs;
   std::size_t nvertices = 0;
   std::size_t nedges = 0;
-  PiExpression globalPhase = {};
+  PiExpression globalPhase;
 
   std::vector<Vertex> initGraph(std::size_t nqubits);
   void closeGraph(const std::vector<Vertex>& qubitVertices);

@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
@@ -5,6 +14,8 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <utility>
@@ -40,6 +51,13 @@ struct ComplexValue {
    * otherwise.
    */
   [[nodiscard]] bool exactlyZero() const noexcept { return r == 0. && i == 0.; }
+
+  /**
+   * @brief Check whether the complex number is exactly equal to one.
+   * @return True if the complex number is exactly equal to one, false
+   * otherwise.
+   */
+  [[nodiscard]] bool exactlyOne() const noexcept { return r == 1. && i == 0.; }
 
   /**
    * @brief Check whether the complex number is approximately equal to the

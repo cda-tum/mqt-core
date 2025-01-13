@@ -1,15 +1,22 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 """Functionality for interoperability with Qiskit."""
 
 from __future__ import annotations
 
 import re
 import warnings
-from typing import TYPE_CHECKING, List, cast
+from typing import TYPE_CHECKING, cast
 
-from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
+from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Qubit
 
-from .. import QuantumComputation
-from ..operations import (
+from ..ir import QuantumComputation
+from ..ir.operations import (
     CompoundOperation,
     Control,
     NonUnitaryOperation,
@@ -17,16 +24,16 @@ from ..operations import (
     StandardOperation,
     SymbolicOperation,
 )
-from ..symbolic import Expression, Term, Variable
+from ..ir.symbolic import Expression, Term, Variable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from qiskit.circuit import QuantumCircuit
+    from qiskit.circuit import Instruction, ParameterExpression, QuantumCircuit
 
 
 def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
-    """Convert a Qiskit `QuantumCircuit` to a `QuantumComputation` object.
+    """Convert a Qiskit :class:`~qiskit.circuit.QuantumCircuit` to a :class:`~mqt.core.ir.QuantumComputation` object.
 
     Args:
         circ: The Qiskit circuit to convert.
@@ -70,13 +77,21 @@ def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
         )
         qc.global_phase = 0
 
-    for instruction, qargs, cargs in circ.data:
-        symb_params = _emplace_operation(qc, instruction, qargs, cargs, instruction.params, qubit_map, clbit_map)
+    for instruction in circ.data:
+        symb_params = _emplace_operation(
+            qc,
+            instruction.operation,
+            instruction.qubits,
+            instruction.clbits,
+            instruction.operation.params,
+            qubit_map,
+            clbit_map,
+        )
         for symb_param in symb_params:
             qc.add_variable(symb_param)
 
-    # import initial layout and output permutation in case it is available
-    if (hasattr(circ, "layout") and circ.layout is not None) or circ._layout is not None:  # noqa: SLF001
+    # import initial layout and output permutation if available
+    if circ.layout is not None:
         _import_layouts(qc, circ)
 
     qc.initialize_io_mapping()
@@ -164,15 +179,15 @@ def _emplace_operation(
 
     if name == "measure":
         clbits = [clbit_map[clbit] for clbit in cargs]
-        qc.append(NonUnitaryOperation(qc.num_qubits, qubits, clbits))
+        qc.append(NonUnitaryOperation(qubits, clbits))
         return []
 
     if name == "reset":
-        qc.append(NonUnitaryOperation(qc.num_qubits, qubits))
+        qc.append(NonUnitaryOperation(qubits))
         return []
 
     if name == "barrier":
-        qc.append(StandardOperation(qc.num_qubits, qubits, OpType.barrier))
+        qc.append(StandardOperation(qubits, OpType.barrier))
         return []
 
     if name in {"i", "id", "iden"}:
@@ -272,8 +287,8 @@ def _emplace_operation(
     raise NotImplementedError(msg)
 
 
-_SUM_REGEX = re.compile("[+|-]?[^+-]+")
-_PROD_REGEX = re.compile("[*/]?[^*/]+")
+_SUM_REGEX = re.compile(r"[+|-]?[^+-]+")
+_PROD_REGEX = re.compile(r"[*/]?[^*/]+")
 
 
 def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> float | Expression:
@@ -285,16 +300,16 @@ def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> floa
     is_const = True
     for summand in _SUM_REGEX.findall(expr_str):
         sign = 1
-        summand_no_operaror = summand
+        summand_no_operator = summand
         if summand[0] == "+":
-            summand_no_operaror = summand[1:]
+            summand_no_operator = summand[1:]
         elif summand[0] == "-":
-            summand_no_operaror = summand[1:]
+            summand_no_operator = summand[1:]
             sign = -1
 
         coeff = 1.0
         var = ""
-        for factor in _PROD_REGEX.findall(summand_no_operaror):
+        for factor in _PROD_REGEX.findall(summand_no_operator):
             is_div = False
             factor_no_operator = factor
             if factor[0] == "*":
@@ -333,9 +348,9 @@ def _add_operation(
     controls = {Control(qubit) for qubit in qubits}
     parameters = [_parse_symbolic_expression(param) for param in params]
     if any(isinstance(parameter, Expression) for parameter in parameters):
-        qc.append(SymbolicOperation(qc.num_qubits, controls, target, type_, parameters))
+        qc.append(SymbolicOperation(controls, target, type_, parameters))
     else:
-        qc.append(StandardOperation(qc.num_qubits, controls, target, type_, cast(List[float], parameters)))
+        qc.append(StandardOperation(controls, target, type_, cast("list[float]", parameters)))
     return parameters
 
 
@@ -352,16 +367,14 @@ def _add_two_target_operation(
     controls = {Control(qubit) for qubit in qubits}
     parameters = [_parse_symbolic_expression(param) for param in params]
     if any(isinstance(parameter, Expression) for parameter in parameters):
-        qc.append(SymbolicOperation(qc.num_qubits, controls, target1, target2, type_, parameters))
+        qc.append(SymbolicOperation(controls, target1, target2, type_, parameters))
     else:
-        qc.append(StandardOperation(qc.num_qubits, controls, target1, target2, type_, cast(List[float], parameters)))
+        qc.append(StandardOperation(controls, target1, target2, type_, cast("list[float]", parameters)))
     return parameters
 
 
 def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
-    # qiskit-terra 0.24.0 added a (public) `layout` attribute
-    layout = circ.layout if hasattr(circ, "layout") else circ._layout  # noqa: SLF001
-
+    layout = circ.layout
     initial_layout = layout.initial_layout
 
     # The following creates a map of virtual qubits in the layout to an integer index.
@@ -386,14 +399,15 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
     for device_qubit, circuit_qubit in initial_layout.get_physical_bits().items():
         idx = qubit_to_idx[circuit_qubit]
         qc.initial_layout[device_qubit] = idx
-        qc.output_permutation[device_qubit] = idx
 
-    if not hasattr(layout, "final_layout"):
+    if layout.final_layout is None:
+        qc.output_permutation = qc.initial_layout
         return
 
-    final_layout = layout.final_layout
-    if final_layout is None:
-        return
+    # final_index_layout creates a list of final positions for input circuit qubits
+    final_index_layout = layout.final_index_layout(filter_ancillas=False)
+    for idx, value in enumerate(final_index_layout):
+        qc.output_permutation[value] = idx
 
 
 def _import_definition(
@@ -407,16 +421,25 @@ def _import_definition(
     qarg_map = dict(zip(circ.qubits, qargs))
     carg_map = dict(zip(circ.clbits, cargs))
 
-    qc.append(CompoundOperation(qc.num_qubits))
-    comp_op = cast(CompoundOperation, qc[-1])
+    qc.append(CompoundOperation())
+    comp_op = cast("CompoundOperation", qc[-1])
 
     params = []
-    for instruction, q_args, c_args in circ.data:
-        mapped_qargs = [qarg_map[qarg] for qarg in q_args]
-        mapped_cargs = [carg_map[carg] for carg in c_args]
-        instruction_params = instruction.params
+    for instruction in circ.data:
+        mapped_qargs = [qarg_map[qarg] for qarg in instruction.qubits]
+        mapped_cargs = [carg_map[carg] for carg in instruction.clbits]
+        operation = instruction.operation
         new_params = _emplace_operation(
-            comp_op, instruction, mapped_qargs, mapped_cargs, instruction_params, qubit_map, clbit_map
+            comp_op,
+            operation,
+            mapped_qargs,
+            mapped_cargs,
+            operation.params,
+            qubit_map,
+            clbit_map,
         )
         params.extend(new_params)
     return params
+
+
+__all__ = ["qiskit_to_mqt"]

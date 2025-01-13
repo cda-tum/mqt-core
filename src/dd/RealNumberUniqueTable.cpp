@@ -1,10 +1,24 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/RealNumberUniqueTable.hpp"
 
+#include "dd/DDDefinitions.hpp"
+#include "dd/MemoryManager.hpp"
 #include "dd/RealNumber.hpp"
 
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
 #include <limits>
 
 namespace dd {

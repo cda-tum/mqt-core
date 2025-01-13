@@ -1,8 +1,17 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "operations/Expression.hpp"
-#include "zx/ZXDefinitions.hpp"
+#include "ZXDefinitions.hpp"
 
+#include <cassert>
 #include <cstdint>
 #include <iterator>
 #include <optional>
@@ -16,7 +25,7 @@ struct Edge {
   EdgeType type;
 
   Edge() = default;
-  Edge(const Vertex t, const EdgeType typ) : to(t), type(typ){};
+  Edge(const Vertex t, const EdgeType typ) : to(t), type(typ) {};
   void toggle() {
     if (type == EdgeType::Simple) {
       type = EdgeType::Hadamard;
@@ -36,7 +45,7 @@ struct VertexData {
 class Vertices {
 public:
   explicit Vertices(const std::vector<std::optional<VertexData>>& verts)
-      : vertices(verts){};
+      : vertices(verts) {};
 
   class VertexIterator {
   public:
@@ -91,7 +100,7 @@ class Edges {
 public:
   Edges(const std::vector<std::vector<Edge>>& edgs,
         const std::vector<std::optional<VertexData>>& verts)
-      : edges(edgs), vertices(verts){};
+      : edges(edgs), vertices(verts) {};
 
   class EdgeIterator {
   public:
