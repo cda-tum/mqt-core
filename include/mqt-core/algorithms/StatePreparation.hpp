@@ -2,6 +2,7 @@
 
 #include "CircuitOptimizer.hpp"
 #include "QuantumComputation.hpp"
+#include "ir/operations/StandardOperation.hpp"
 
 #include <cmath>
 #include <complex>
