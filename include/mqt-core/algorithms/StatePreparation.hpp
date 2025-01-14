@@ -11,6 +11,8 @@
 
 #include "ir/QuantumComputation.hpp"
 
+#include <complex>
+
 namespace qc {
 /**
  * Prepares a generic Quantum State from a list of normalized complex
@@ -29,6 +31,5 @@ namespace qc {
  * @param list of complex amplitudes to initialize to
  * @return MQT Circuit that initializes a state
  * */
-[[nodiscard]] auto createStatePreparationCircuit(
-    const std::vector<std::complex<double>>& amplitudes) -> QuantumComputation;
+[[nodiscard]] auto createStatePreparationCircuit(std::vector<std::complex<double>>& amplitudes) -> QuantumComputation;
 } // namespace qc
