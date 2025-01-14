@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mlir/Dialect/MQT/QuantumInterfaces.h"
+#include "mlir/Dialect/MQT/MQTInterfaces.h"
 
 using namespace mlir;
 using namespace catalyst::quantum;
 
 //===----------------------------------------------------------------------===//
-// Quantum interface definitions.
+// MQT interface definitions.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/QuantumInterfaces.cpp.inc"
+#include "mlir/Dialect/MQT/MQTInterfaces.cpp.inc"
