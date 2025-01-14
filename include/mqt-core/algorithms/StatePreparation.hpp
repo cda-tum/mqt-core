@@ -12,6 +12,7 @@
 #include "ir/QuantumComputation.hpp"
 
 #include <complex>
+#include <vector>
 
 namespace qc {
 /**

@@ -32,17 +32,17 @@ static const double EPS = 1e-10;
 namespace qc {
 using Matrix = std::vector<std::vector<double>>;
 
-template <typename T>
-[[nodiscard]] auto isNormalized(std::vector<T> vec) -> bool {
-  return std::abs(1 - twoNorm(vec)) < EPS;
-}
-
 template <typename T> [[nodiscard]] auto twoNorm(std::vector<T> vec) -> double {
   double norm = 0;
   for (auto elem : vec) {
     norm += std::norm(elem);
   }
   return sqrt(norm);
+}
+
+template <typename T>
+[[nodiscard]] auto isNormalized(std::vector<T> vec) -> bool {
+  return std::abs(1 - twoNorm(vec)) < EPS;
 }
 
 [[nodiscard]] auto kroneckerProduct(Matrix matrixA, Matrix matrixB) -> Matrix {
