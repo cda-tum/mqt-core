@@ -25,7 +25,7 @@
 #include <optional>
 
 using namespace mlir;
-using namespace catalyst::quantum;
+using namespace mlir::mqt;
 
 //===----------------------------------------------------------------------===//
 // MQT op definitions.

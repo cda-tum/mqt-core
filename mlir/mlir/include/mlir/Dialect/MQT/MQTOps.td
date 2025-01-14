@@ -37,7 +37,7 @@ def NamedObservable : I32EnumAttr<"NamedObservable",
         I32EnumAttrCase<"PauliZ",   3>,
         I32EnumAttrCase<"Hadamard", 4>,
     ]> {
-    let cppNamespace = "catalyst::quantum";
+    let cppNamespace = "mlir::mqt";
     let genSpecializedAttr = 0;
 }
 

@@ -20,7 +20,7 @@
 #include "llvm/ADT/TypeSwitch.h" // needed for generated type parser
 
 using namespace mlir;
-using namespace catalyst::quantum;
+using namespace mlir::mqt;
 
 //===----------------------------------------------------------------------===//
 // MQT dialect definitions.
