@@ -15,7 +15,6 @@
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
-#include "ir/operations/OpType.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -80,9 +79,9 @@ template <typename T>
   return identity;
 }
 
-[[nodiscard]] auto
-matrixVectorProd(const Matrix& matrix,
-                 std::vector<double> vector) -> std::vector<double> {
+[[nodiscard]] auto matrixVectorProd(const Matrix& matrix,
+                                    std::vector<double> vector)
+    -> std::vector<double> {
   std::vector<double> result;
   for (const auto& matrixVec : matrix) {
     double sum{0};
@@ -196,8 +195,8 @@ rotationsToDisentangle(std::vector<std::complex<double>> amplitudes)
 
 // creates circuit that takes desired vector to zero
 [[nodiscard]] auto
-gatesToUncompute(std::vector<std::complex<double>> amplitudes,
-                 size_t numQubits) -> QuantumComputation {
+gatesToUncompute(std::vector<std::complex<double>> amplitudes, size_t numQubits)
+    -> QuantumComputation {
   QuantumComputation disentangler{numQubits};
   for (size_t i = 0; i < numQubits; ++i) {
     // rotations to disentangle LSB
