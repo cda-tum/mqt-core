@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mlir/Dialect/MQT/QuantumDialect.h"
+#include "mlir/Dialect/MQT/MQTDialect.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/InitAllDialects.h"
@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::func::registerAllExtensions(registry);
-  registry.insert<catalyst::quantum::QuantumDialect>();
+  registry.insert<mlir::mqt::MQTDialect>();
 
   return mlir::asMainReturnCode(
       mlir::MlirOptMain(argc, argv, "Quantum optimizer driver\n", registry));

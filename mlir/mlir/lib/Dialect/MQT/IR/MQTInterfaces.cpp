@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Xanadu Quantum Technologies Inc.
+// Copyright 2023 Xanadu Quantum Technologies Inc.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#include "mlir/Dialect/MQT/MQTInterfaces.h"
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
-
-//===----------------------------------------------------------------------===//
-// Quantum dialect declarations.
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/MQT/QuantumOpsDialect.h.inc"
+using namespace mlir;
+using namespace mlir::mqt;
 
 //===----------------------------------------------------------------------===//
-// Quantum type declarations.
+// MQT interface definitions.
 //===----------------------------------------------------------------------===//
 
-#define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQT/QuantumOpsTypes.h.inc"
+#include "mlir/Dialect/MQT/MQTInterfaces.cpp.inc"

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUANTUM_OPS
-#define QUANTUM_OPS
+#ifndef MQT_OPS
+#define MQT_OPS
 
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
@@ -21,11 +21,11 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 
-include "mlir/Dialect/MQT/QuantumDialect.td"
-include "mlir/Dialect/MQT/QuantumInterfaces.td"
+include "mlir/Dialect/MQT/MQTDialect.td"
+include "mlir/Dialect/MQT/MQTInterfaces.td"
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect enums.
+// MQT dialect enums.
 //===----------------------------------------------------------------------===//
 
 def NamedObservable : I32EnumAttr<"NamedObservable",
@@ -37,13 +37,13 @@ def NamedObservable : I32EnumAttr<"NamedObservable",
         I32EnumAttrCase<"PauliZ",   3>,
         I32EnumAttrCase<"Hadamard", 4>,
     ]> {
-    let cppNamespace = "catalyst::quantum";
+    let cppNamespace = "mlir::mqt";
     let genSpecializedAttr = 0;
 }
 
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect traits.
+// MQT dialect traits.
 //===----------------------------------------------------------------------===//
 
 def Unitary : NativeOpTrait<"UnitaryTrait">;
@@ -52,18 +52,18 @@ def Hermitian : NativeOpTrait<"HermitianTrait">;
 def QuantumMemory : Resource<"QuantumMemory">;
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect attributes.
+// MQT dialect attributes.
 //===----------------------------------------------------------------------===//
 
-def NamedObservableAttr : EnumAttr<QuantumDialect, NamedObservable, "named_observable">;
+def NamedObservableAttr : EnumAttr<MQTDialect, NamedObservable, "named_observable">;
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect operations.
+// MQT dialect operations.
 //===----------------------------------------------------------------------===//
 
-class Quantum_Op<string mnemonic, list<Trait> traits = []> : Op<QuantumDialect, mnemonic, traits>;
+class MQT_OP<string mnemonic, list<Trait> traits = []> : Op<MQTDialect, mnemonic, traits>;
 
-def InitializeOp : Quantum_Op<"init"> {
+def InitializeOp : MQT_OP<"init"> {
     let summary = "Initialize the quantum runtime.";
 
     let assemblyFormat = [{
@@ -71,7 +71,7 @@ def InitializeOp : Quantum_Op<"init"> {
     }];
 }
 
-def FinalizeOp : Quantum_Op<"finalize"> {
+def FinalizeOp : MQT_OP<"finalize"> {
     let summary = "Teardown the quantum runtime.";
 
     let assemblyFormat = [{
@@ -79,7 +79,7 @@ def FinalizeOp : Quantum_Op<"finalize"> {
     }];
 }
 
-def DeviceInitOp : Quantum_Op<"device"> {
+def DeviceInitOp : MQT_OP<"device"> {
     let summary = "Initialize a quantum device.";
 
     let arguments = (ins
@@ -95,7 +95,7 @@ def DeviceInitOp : Quantum_Op<"device"> {
 
 }
 
-def DeviceReleaseOp : Quantum_Op<"device_release"> {
+def DeviceReleaseOp : MQT_OP<"device_release"> {
     let summary = "Release the active quantum device.";
 
     let assemblyFormat = [{
@@ -105,7 +105,7 @@ def DeviceReleaseOp : Quantum_Op<"device_release"> {
 
 // -----
 
-class Memory_Op<string mnemonic, list<Trait> traits = []> : Quantum_Op<mnemonic, traits>;
+class Memory_Op<string mnemonic, list<Trait> traits = []> : MQT_OP<mnemonic, traits>;
 
 // The operation has no memory effect and is pure, therefore two similar alloc would be removed
 // by a CSE pass. This needs to be changed in the future.
@@ -196,7 +196,7 @@ def InsertOp : Memory_Op<"insert", [NoMemoryEffect]> {
 // -----
 
 class Gate_Op<string mnemonic, list<Trait> traits = []> :
-        Quantum_Op<mnemonic, traits # [QuantumOperation]> {
+        MQT_OP<mnemonic, traits # [MQTOperation]> {
 
     code extraBaseClassDeclaration = [{
         std::vector<mlir::Value> getQubitOperands() {
@@ -538,7 +538,7 @@ def MultiRZOp : UnitaryGate_Op<"multirz", [DifferentiableGate, NoMemoryEffect,
                                            AttrSizedOperandSegments, AttrSizedResultSegments]> {
     let summary = "Apply an arbitrary multi Z rotation";
     let description = [{
-        The `quantum.multirz` operation applies an arbitrary multi Z rotation to the state-vector.
+        The `mqt.multirz` operation applies an arbitrary multi Z rotation to the state-vector.
         The arguments are the rotation angle `theta` and a set of qubits the operation acts on.
     }];
 
@@ -572,7 +572,7 @@ def QubitUnitaryOp : UnitaryGate_Op<"unitary", [ParametrizedGate, NoMemoryEffect
                                                 AttrSizedOperandSegments, AttrSizedResultSegments]> {
     let summary = "Apply an arbitrary fixed unitary matrix";
     let description = [{
-        The `quantum.unitary` operation applies an arbitrary fixed unitary matrix to the
+        The `mqt.unitary` operation applies an arbitrary fixed unitary matrix to the
         state-vector. The arguments are a set of qubits and a 2-dim matrix of complex numbers
         that represents a Unitary matrix of size 2^(number of qubits) * 2^(number of qubits).
     }];
@@ -608,7 +608,7 @@ def QubitUnitaryOp : UnitaryGate_Op<"unitary", [ParametrizedGate, NoMemoryEffect
 // -----
 
 class Region_Op<string mnemonic, list<Trait> traits = []> :
-        Quantum_Op<mnemonic, traits # [NoMemoryEffect]>;
+        MQT_OP<mnemonic, traits # [NoMemoryEffect]>;
 
 def AdjointOp : Region_Op<"adjoint", [QuantumRegion, SingleBlockImplicitTerminator<"YieldOp">]> {
     let summary = "Calculate the adjoint of the enclosed operations";
@@ -630,7 +630,7 @@ def AdjointOp : Region_Op<"adjoint", [QuantumRegion, SingleBlockImplicitTerminat
     let hasVerifier = 1;
 }
 
-def YieldOp : Quantum_Op<"yield", [Pure, ReturnLike, Terminator, ParentOneOf<["AdjointOp"]>]> {
+def YieldOp : MQT_OP<"yield", [Pure, ReturnLike, Terminator, ParentOneOf<["AdjointOp"]>]> {
     let summary = "Return results from quantum program regions";
 
     let arguments = (ins
@@ -649,12 +649,12 @@ def YieldOp : Quantum_Op<"yield", [Pure, ReturnLike, Terminator, ParentOneOf<["A
 // -----
 
 class Observable_Op<string mnemonic, list<Trait> traits = []> :
-        Quantum_Op<mnemonic, traits # [Pure]>;
+        MQT_OP<mnemonic, traits # [Pure]>;
 
 def ComputationalBasisOp : Observable_Op<"compbasis"> {
     let summary = "Define a pseudo-obeservable of the computational basis for use in measurements";
     let description = [{
-        The `quantum.compbasis` operation defines a quantum observable to be used by other
+        The `mqt.compbasis` operation defines a quantum observable to be used by other
         operations such as measurement processes. The specific observable defined here is a
         "pseudo" observable to represent measurements in the computational basis.
         The only arguments are the list of qubits to measure.
@@ -662,9 +662,9 @@ def ComputationalBasisOp : Observable_Op<"compbasis"> {
         Example:
 
         ```mlir
-        func.func @foo(%q0: !quantum.bit, %q1: !quantum.bit)
+        func.func @foo(%q0: !mqt.bit, %q1: !mqt.bit)
         {
-            %res = quantum.compbasis %q0, %q1 : !quantum.obs
+            %res = mqt.compbasis %q0, %q1 : !mqt.obs
             func.return
         }
         ```
@@ -686,7 +686,7 @@ def ComputationalBasisOp : Observable_Op<"compbasis"> {
 def NamedObsOp : Observable_Op<"namedobs"> {
     let summary = "Define a Named observable for use in measurements";
     let description = [{
-        The `quantum.namedobs` operation defines a quantum observable to be used by measurement
+        The `mqt.namedobs` operation defines a quantum observable to be used by measurement
         processes. The specific observable defined here represents one of 5 named observables
         {Identity, PauliX, PauliY, PauliZ, Hadamard} on a qubit. The arguments are a qubit to
         measure as well as an encoding operator for the qubit as an integer between 0-4.
@@ -694,9 +694,9 @@ def NamedObsOp : Observable_Op<"namedobs"> {
         Example:
 
         ```mlir
-        func.func @foo(%q: !quantum.bit)
+        func.func @foo(%q: !mqt.bit)
         {
-            %res = quantum.namedobs %q[4] : !quantum.obs
+            %res = mqt.namedobs %q[4] : !mqt.obs
             func.return
         }
         ```
@@ -719,7 +719,7 @@ def NamedObsOp : Observable_Op<"namedobs"> {
 def HermitianOp : Observable_Op<"hermitian"> {
     let summary = "Define a Hermitian observable for use in measurements";
     let description = [{
-        The `quantum.hermitian` operation defines a quantum observable to be used by measurement
+        The `mqt.hermitian` operation defines a quantum observable to be used by measurement
         processes. The specific observable defined here represents the Hermitian observable on a
         set of qubits. The arguments are a set of qubits to measure as well as a row-major flatten
         matrix of complex numbers that represents a Hermitian matrix that must be of size
@@ -745,19 +745,19 @@ def HermitianOp : Observable_Op<"hermitian"> {
 def TensorOp : Observable_Op<"tensor"> {
     let summary = "Define a tensor product of observables for use in measurements";
     let description = [{
-        The `quantum.tensor` operation defines a quantum observable to be used by other
+        The `mqt.tensor` operation defines a quantum observable to be used by other
         operations such as measurement processes. The specific observable defined here represents
         the tensor product of observables on a set of qubits. The arguments are a set of
-        `quantum.Observable` generated by `quantum.namedobs` and `quantum.hermitian`.
+        `mqt.Observable` generated by `mqt.namedobs` and `mqt.hermitian`.
 
         Example:
 
         ```mlir
-        func.func @foo(%q0: !quantum.bit, %q1: !quantum.bit, %m: tensor<2x2xcomplex<f64>>)
+        func.func @foo(%q0: !mqt.bit, %q1: !mqt.bit, %m: tensor<2x2xcomplex<f64>>)
         {
-            %obs1 = quantum.namedobs %q0[4] : !quantum.obs
-            %obs2 = quantum.hermitian(%m: tensor<2x2xcomplex<f64>>) %q1 : !quantum.obs
-            %res = quantum.tensorprod %obs1, %obs2 : !quantum.obs
+            %obs1 = mqt.namedobs %q0[4] : !mqt.obs
+            %obs2 = mqt.hermitian(%m: tensor<2x2xcomplex<f64>>) %q1 : !mqt.obs
+            %res = mqt.tensorprod %obs1, %obs2 : !mqt.obs
             func.return
         }
         ```
@@ -779,19 +779,19 @@ def TensorOp : Observable_Op<"tensor"> {
 def HamiltonianOp : Observable_Op<"hamiltonian"> {
     let summary = "Define a Hamiltonian observable for use in measurements";
     let description = [{
-        The `quantum.hamiltonian` operation defines a quantum observable to be used by other
+        The `mqt.hamiltonian` operation defines a quantum observable to be used by other
         operations such as measurement processes. The specific observable defined here represents
         the hamiltonian of observables. The arguments are a set of coefficients and a set of
-        `quantum.Observable` generated by `quantum.namedobs`, `quantum.hermitian`,
-        or `quantum.tensorobs`.
+        `mqt.Observable` generated by `mqt.namedobs`, `mqt.hermitian`,
+        or `mqt.tensorobs`.
 
         Example:
 
         ```mlir
-        func.func @foo(%q0: !quantum.bit, %q1: !quantum.bit, %c: tensor<2xf64>) {
-            %obs1 = quantum.namedobs %q0[4] : !quantum.obs
-            %obs2 = quantum.namedobs %q1[2] : !quantum.obs
-            %res = quantum.hamiltonian(%c: tensor<2xf64>) %obs1, %obs2 : !quantum.obs
+        func.func @foo(%q0: !mqt.bit, %q1: !mqt.bit, %c: tensor<2xf64>) {
+            %obs1 = mqt.namedobs %q0[4] : !mqt.obs
+            %obs2 = mqt.namedobs %q1[2] : !mqt.obs
+            %res = mqt.hamiltonian(%c: tensor<2xf64>) %obs1, %obs2 : !mqt.obs
             func.return
         }
         ```
@@ -816,9 +816,9 @@ def HamiltonianOp : Observable_Op<"hamiltonian"> {
 // -----
 
 class Measurement_Op<string mnemonic, list<Trait> traits = []> :
-        Quantum_Op<mnemonic, traits # [MeasurementProcess]>;
+        MQT_OP<mnemonic, traits # [MeasurementProcess]>;
 
-def MeasureOp : Quantum_Op<"measure"> {
+def MeasureOp : MQT_OP<"measure"> {
     let summary = "A single-qubit projective measurement in the computational basis.";
     let description = [{
     }];
@@ -841,7 +841,7 @@ def MeasureOp : Quantum_Op<"measure"> {
 def SampleOp : Measurement_Op<"sample"> {
     let summary = "Sample eigenvalues from the given observable for the current state";
     let description = [{
-        The `quantum.sample` operation represents the measurement process of sampling eigenvalues
+        The `mqt.sample` operation represents the measurement process of sampling eigenvalues
         from an observable on the current quantum state.
         The only SSA argument is an observable that must be defined by an operation in the local scope.
         from an observable on the current quantum state.
@@ -855,14 +855,14 @@ def SampleOp : Measurement_Op<"sample"> {
         Example:
 
         ```mlir
-        func.func @foo(%q0: !quantum.bit, %q1: !quantum.bit, %shots: i64)
+        func.func @foo(%q0: !mqt.bit, %q1: !mqt.bit, %shots: i64)
         {
-            quantum.device shots(%shots) ["rtd_lightning.so", "lightning.qubit", "{my_attr: my_attr_value}"]
-            %obs1 = quantum.compbasis %q0, %q1 : !quantum.obs
-            %samples = quantum.samples %obs1 : tensor<?xf64>
+            mqt.device shots(%shots) ["rtd_lightning.so", "lightning.qubit", "{my_attr: my_attr_value}"]
+            %obs1 = mqt.compbasis %q0, %q1 : !mqt.obs
+            %samples = mqt.samples %obs1 : tensor<?xf64>
 
-            %obs2 = quantum.pauli %q0[3], %q1[1] : !quantum.obs
-            %samples2 = quantum.samples %obs2 : tensor<?x2xf64>
+            %obs2 = mqt.pauli %q0[3], %q1[1] : !mqt.obs
+            %samples2 = mqt.samples %obs2 : tensor<?x2xf64>
 
             func.return
         }
@@ -904,7 +904,7 @@ def SampleOp : Measurement_Op<"sample"> {
 def CountsOp : Measurement_Op<"counts", [SameVariadicOperandSize, SameVariadicResultSize]> {
     let summary = "Compute sample counts for the given observable for the current state";
     let description = [{
-        The `quantum.counts` operation represents the measurement process of sampling eigenvalues
+        The `mqt.counts` operation represents the measurement process of sampling eigenvalues
         from an observable on the current quantum state and counting the frequency of each
         eigenvalue.
         The only SSA argument is an observable that must be defined by an operation in the local scope.
@@ -919,14 +919,14 @@ def CountsOp : Measurement_Op<"counts", [SameVariadicOperandSize, SameVariadicRe
         Example:
 
         ```mlir
-        func.func @foo(%q0: !quantum.bit, %q1: !quantum.bit, %shots: i64)
+        func.func @foo(%q0: !mqt.bit, %q1: !mqt.bit, %shots: i64)
         {
-            quantum.device shots(%shots) ["rtd_lightning.so", "lightning.qubit", "{my_attr: my_attr_value}"]
-            %obs = quantum.compbasis %q0, %q1 : !quantum.obs
-            %counts = quantum.counts %obs : tensor<4xf64>, tensor<4xi64>
+            mqt.device shots(%shots) ["rtd_lightning.so", "lightning.qubit", "{my_attr: my_attr_value}"]
+            %obs = mqt.compbasis %q0, %q1 : !mqt.obs
+            %counts = mqt.counts %obs : tensor<4xf64>, tensor<4xi64>
 
-            %obs2 = quantum.pauli %q0[3], %q1[1] : !quantum.obs
-            %counts2 = quantum.counts %obs2 : tensor<2xf64>, tensor<2xi64>
+            %obs2 = mqt.pauli %q0[3], %q1[1] : !mqt.obs
+            %counts2 = mqt.counts %obs2 : tensor<2xf64>, tensor<2xi64>
 
             func.return
         }
@@ -962,7 +962,7 @@ def CountsOp : Measurement_Op<"counts", [SameVariadicOperandSize, SameVariadicRe
 def ExpvalOp : Measurement_Op<"expval"> {
     let summary = "Compute the expectation value of the given observable for the current state";
     let description = [{
-        The `quantum.expval` operation represents the measurement process of computing the
+        The `mqt.expval` operation represents the measurement process of computing the
         expectation value of an observable on the current quantum state. While this quantity can
         be computed analytically on simulators, for hardware execution or shot noise
         simulation, the shots attached to the device
@@ -973,10 +973,10 @@ def ExpvalOp : Measurement_Op<"expval"> {
         Example:
 
         ```mlir
-        func.func @foo(%q: !quantum.bit)
+        func.func @foo(%q: !mqt.bit)
         {
-            %obs = quantum.namedobs %q[4] : !quantum.obs
-            %expval = quantum.expval %obs : f64
+            %obs = mqt.namedobs %q[4] : !mqt.obs
+            %expval = mqt.expval %obs : f64
 
             func.return
         }
@@ -999,7 +999,7 @@ def ExpvalOp : Measurement_Op<"expval"> {
 def VarianceOp : Measurement_Op<"var"> {
     let summary = "Compute the variance of the given observable for the current state";
     let description = [{
-        The `quantum.var` operation represents the measurement process of computing the variance of
+        The `mqt.var` operation represents the measurement process of computing the variance of
         an observable on the current quantum state. While this quantity can be computed analytically on simulators, for hardware execution or shot noise
         simulation, the shots attached to the device
         in the local scope is used.
@@ -1009,10 +1009,10 @@ def VarianceOp : Measurement_Op<"var"> {
         Example:
 
         ```mlir
-        func.func @foo(%q: !quantum.bit)
+        func.func @foo(%q: !mqt.bit)
         {
-            %obs = quantum.namedobs %q[4] : !quantum.obs
-            %var = quantum.var %obs : f64
+            %obs = mqt.namedobs %q[4] : !mqt.obs
+            %var = mqt.var %obs : f64
 
             func.return
         }
@@ -1035,7 +1035,7 @@ def VarianceOp : Measurement_Op<"var"> {
 def ProbsOp : Measurement_Op<"probs"> {
     let summary = "Compute computational basis probabilities for the current state";
     let description = [{
-        The `quantum.probs` operation represents the measurement process of computing probabilities
+        The `mqt.probs` operation represents the measurement process of computing probabilities
         for measurement outcomes in the computational basis for a set of qubits.
         Marginal probabilities are supported, that is the provided qubits do not need to make up the
         entire statevector.
@@ -1045,9 +1045,9 @@ def ProbsOp : Measurement_Op<"probs"> {
         Example:
 
         ```mlir
-        func.func @foo(%q0: !quantum.bit, %q1: !quantum.bit)
+        func.func @foo(%q0: !mqt.bit, %q1: !mqt.bit)
         {
-            %probs = quantum.probs %q0, %q1 : tensor<4xf64>
+            %probs = mqt.probs %q0, %q1 : tensor<4xf64>
             func.return
         }
         ```
@@ -1078,7 +1078,7 @@ def ProbsOp : Measurement_Op<"probs"> {
 def StateOp : Measurement_Op<"state"> {
     let summary = "Return the current statevector";
     let description = [{
-        The `quantum.state` operation represents the measurement process of returning the current
+        The `mqt.state` operation represents the measurement process of returning the current
         statevector in the computational basis. Typically reserved for simulator devices, although
         in principle also achievable on hardware via tomography techniques.
         While marginal states are supported, the operation is only well-defined if the provided
@@ -1089,9 +1089,9 @@ def StateOp : Measurement_Op<"state"> {
         Example:
 
         ```mlir
-        func.func @foo(%q0: !quantum.bit, %q1: !quantum.bit)
+        func.func @foo(%q0: !mqt.bit, %q1: !mqt.bit)
         {
-            %state = quantum.state %q0, %q1 : tensor<4xcomplex<f64>>
+            %state = mqt.state %q0, %q1 : tensor<4xcomplex<f64>>
             func.return
         }
         ```
@@ -1120,4 +1120,4 @@ def StateOp : Measurement_Op<"state"> {
 }
 
 
-#endif // QUANTUM_OPS
+#endif // MQT_OPS

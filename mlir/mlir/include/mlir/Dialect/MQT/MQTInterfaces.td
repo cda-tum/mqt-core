@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUANTUM_INTERFACES
-#define QUANTUM_INTERFACES
+#ifndef MQT_INTERFACES
+#define MQT_INTERFACES
 
 include "mlir/IR/OpBase.td"
 
@@ -24,7 +24,7 @@ def QuantumRegion : OpInterface<"QuantumRegion"> {
         qubit register, and returning a new register value.
     }];
 
-    let cppNamespace = "::catalyst::quantum";
+    let cppNamespace = "::mlir::mqt";
 
     let methods = [
         InterfaceMethod<
@@ -53,14 +53,14 @@ def QuantumRegion : OpInterface<"QuantumRegion"> {
     }];
 }
 
-def QuantumOperation : OpInterface<"QuantumOperation"> {
+def MQTOperation : OpInterface<"MQTOperation"> {
     let description = [{
         This interface provides a generic way to interact with instructions that are
         considered quantum logic gates. These are characterized by operating on zero
         or more qubit values, and returning the same amount of qubit values.
     }];
 
-    let cppNamespace = "::catalyst::quantum";
+    let cppNamespace = "::mlir::mqt";
 
     let methods = [
         InterfaceMethod<
@@ -89,14 +89,14 @@ def QuantumOperation : OpInterface<"QuantumOperation"> {
     }];
 }
 
-def QuantumGate : OpInterface<"QuantumGate", [QuantumOperation]> {
+def QuantumGate : OpInterface<"QuantumGate", [MQTOperation]> {
     let description = [{
         This interface provides a generic way to interact with instructions that are
         considered 'unitary' gates, which in addition to the properties of the
-        "QuantumOperation" can be inverted and controlled.
+        "MQTOperation" can be inverted and controlled.
     }];
 
-    let cppNamespace = "::catalyst::quantum";
+    let cppNamespace = "::mlir::mqt";
 
     let methods = [
         InterfaceMethod<
@@ -171,7 +171,7 @@ def StaticGate : OpInterface<"StaticGate", [QuantumGate]> {
         are specified by a set of constant literals in the form of an array attribute.
     }];
 
-    let cppNamespace = "::catalyst::quantum";
+    let cppNamespace = "::mlir::mqt";
 
     let methods = [
         InterfaceMethod<
@@ -188,7 +188,7 @@ def ParametrizedGate : OpInterface<"ParametrizedGate", [QuantumGate]> {
         classical gate parameters.
     }];
 
-    let cppNamespace = "::catalyst::quantum";
+    let cppNamespace = "::mlir::mqt";
 
     let methods = [
         InterfaceMethod<
@@ -210,7 +210,7 @@ def DifferentiableGate : OpInterface<"DifferentiableGate", [ParametrizedGate]> {
         gate parameters (must be scalar F64 values).
     }];
 
-    let cppNamespace = "::catalyst::quantum";
+    let cppNamespace = "::mlir::mqt";
 
     let methods = [
         InterfaceMethod<
@@ -241,7 +241,7 @@ def MeasurementProcess : OpInterface<"MeasurementProcess"> {
         program as a whole, usually requiring many executions of the same circuit.
     }];
 
-    let cppNamespace = "::catalyst::quantum";
+    let cppNamespace = "::mlir::mqt";
 }
 
-#endif // QUANTUM_INTERFACES
+#endif // MQT_INTERFACES
