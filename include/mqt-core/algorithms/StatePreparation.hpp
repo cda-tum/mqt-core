@@ -31,5 +31,7 @@ namespace qc {
  * @param list of complex amplitudes to initialize to
  * @return MQT Circuit that initializes a state
  * */
-[[nodiscard]] auto createStatePreparationCircuit(std::vector<std::complex<double>>& amplitudes) -> QuantumComputation;
+[[nodiscard]] auto
+createStatePreparationCircuit(std::vector<std::complex<double>>& amplitudes)
+    -> QuantumComputation;
 } // namespace qc
