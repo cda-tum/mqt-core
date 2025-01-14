@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mlir/Dialect/MQT/QuantumDialect.h"
+#include "mlir/Dialect/MQT/MQTDialect.h"
 
-#include "mlir/Dialect/MQT/QuantumOps.h"
+#include "mlir/Dialect/MQT/MQTOps.h"
 #include "mlir/IR/DialectImplementation.h" // needed for generated type parser
 
 #include "llvm/ADT/TypeSwitch.h" // needed for generated type parser
@@ -23,34 +23,34 @@ using namespace mlir;
 using namespace catalyst::quantum;
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect definitions.
+// MQT dialect definitions.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/QuantumOpsDialect.cpp.inc"
+#include "mlir/Dialect/MQT/MQTOpsDialect.cpp.inc"
 
-void QuantumDialect::initialize() {
+void MQTDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/MQT/QuantumOpsTypes.cpp.inc"
+#include "mlir/Dialect/MQT/MQTOpsTypes.cpp.inc"
       >();
 
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/MQT/QuantumAttributes.cpp.inc"
+#include "mlir/Dialect/MQT/MQTAttributes.cpp.inc"
       >();
 
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/MQT/QuantumOps.cpp.inc"
+#include "mlir/Dialect/MQT/MQTOps.cpp.inc"
       >();
 }
 
 //===----------------------------------------------------------------------===//
-// Quantum type definitions.
+// MQT type definitions.
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQT/QuantumOpsTypes.cpp.inc"
+#include "mlir/Dialect/MQT/MQTOpsTypes.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/MQT/QuantumAttributes.cpp.inc"
+#include "mlir/Dialect/MQT/MQTAttributes.cpp.inc"
