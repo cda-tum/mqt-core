@@ -3,8 +3,8 @@
 module {
     // CHECK-LABEL: func @bar()
     func.func @bar() {
-        // CHECK: %{{.*}} = quantum.alloc( 1) : !quantum.reg
-        %0 = quantum.alloc( 1) : !quantum.reg
+        // CHECK: %{{.*}} = mqt.alloc( 1) : !mqt.reg
+        %0 = mqt.alloc( 1) : !mqt.reg
         return
     }
 }
