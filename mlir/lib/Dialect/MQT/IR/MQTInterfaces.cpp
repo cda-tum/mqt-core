@@ -15,7 +15,7 @@
 #include "mlir/Dialect/MQT/MQTInterfaces.h"
 
 using namespace mlir;
-using namespace catalyst::quantum;
+using namespace mlir::mqt;
 
 //===----------------------------------------------------------------------===//
 // MQT interface definitions.

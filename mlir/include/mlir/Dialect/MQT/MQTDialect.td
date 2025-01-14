@@ -40,10 +40,10 @@ def MQTDialect : Dialect {
     }];
 
     /// This is the namespace of the dialect in MLIR, which is used as a prefix for types and ops.
-    let name = "quantum";
+    let name = "mqt";
 
     /// This is the C++ namespace that the dialect, and all sub-components, get placed in.
-    let cppNamespace = "::catalyst::quantum";
+    let cppNamespace = "::mlir::mqt";
 
     /// Use the default type printing/parsing hooks, otherwise we would explicitly define them.
     let useDefaultTypePrinterParser = 1;
