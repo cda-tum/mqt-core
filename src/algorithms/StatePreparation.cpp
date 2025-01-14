@@ -6,6 +6,7 @@
  *
  * Licensed under the MIT License
  */
+
 #include "algorithms/StatePreparation.hpp"
 
 #include "CircuitOptimizer.hpp"
@@ -94,9 +95,9 @@ template <typename T>[[noexcept]] auto twoNorm(std::vector<T> vec) -> double {
   return identity;
 }
 
-[[noexcept]] auto
-matrixVectorProd(const Matrix& matrix,
-                 std::vector<double> vector) -> std::vector<double> {
+[[noexcept]] auto matrixVectorProd(const Matrix& matrix,
+                                   std::vector<double> vector)
+    -> std::vector<double> {
   std::vector<double> result;
   for (const auto& matrixVec : matrix) {
     double sum{0};
