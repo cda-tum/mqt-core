@@ -10,14 +10,14 @@
 #include "algorithms/StatePreparation.hpp"
 
 #include "CircuitOptimizer.hpp"
+#include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
-#include "ir/operations/OpType.hpp"
 
 #include <cmath>
 #include <complex>
-#include <tuple>
 #include <stddef.h>
+#include <tuple>
 
 static const double EPS = 1e-10;
 
@@ -98,9 +98,9 @@ template <typename T>[[noexcept]] auto twoNorm(std::vector<T> vec) -> double {
   return identity;
 }
 
-[[noexcept]] auto
-matrixVectorProd(const Matrix& matrix,
-                 std::vector<double> vector) -> std::vector<double> {
+[[noexcept]] auto matrixVectorProd(const Matrix& matrix,
+                                   std::vector<double> vector)
+    -> std::vector<double> {
   std::vector<double> result;
   for (const auto& matrixVec : matrix) {
     double sum{0};
