@@ -6,22 +6,52 @@
  *
  * Licensed under the MIT License
  */
-
 #include "algorithms/StatePreparation.hpp"
+
+#include "CircuitOptimizer.hpp"
+#include "ir/operations/StandardOperation.hpp"
+
+#include <cmath>
+#include <complex>
+#include <utility>
 
 static const double EPS = 1e-10;
 
 namespace qc {
 using Matrix = std::vector<std::vector<double>>;
 
-StatePreparation::StatePreparation(
-    const std::vector<std::complex<double>>& amplitudes) {}
+auto createStatePreparationCircuit(
+    const std::vector<std::complex<double>>& amplitudes) -> QuantumComputation {
 
-template <typename T> bool StatePreparation::isNormalized(std::vector<T> vec) {
+  if (!isNormalized(amplitudes)) {
+    throw std::invalid_argument{
+        "Using State Preparation with Amplitudes that are not normalized"};
+  }
+
+  // get number of qubits needed
+  double const numQubits = std::log2(amplitudes.size());
+
+  if (numQubits == 0 || std::floor(numQubits) != numQubits) {
+    throw std::invalid_argument{
+        "Using State Preparation with vector size that is not a power of 2"};
+  }
+
+  QuantumComputation toZeroCircuit =
+      gatesToUncompute(amplitudes, static_cast<size_t>(numQubits));
+
+  // invert circuit
+  CircuitOptimizer::flattenOperations(toZeroCircuit);
+  toZeroCircuit.invert();
+
+  return toZeroCircuit;
+}
+
+template <typename T>
+[[noexcept]] auto isNormalized(std::vector<T> vec) -> bool {
   return std::abs(1 - twoNorm(vec)) < EPS;
 }
 
-template <typename T> double StatePreparation::twoNorm(std::vector<T> vec) {
+template <typename T>[[noexcept]] auto twoNorm(std::vector<T> vec) -> double {
   double norm = 0;
   for (auto elem : vec) {
     norm += std::norm(elem);
@@ -29,7 +59,7 @@ template <typename T> double StatePreparation::twoNorm(std::vector<T> vec) {
   return sqrt(norm);
 }
 
-Matrix StatePreparation::kroneckerProduct(Matrix matrixA, Matrix matrixB) {
+[[noexcept]] auto kroneckerProduct(Matrix matrixA, Matrix matrixB) -> Matrix {
   size_t const rowA = matrixA.size();
   size_t const rowB = matrixB.size();
   size_t const colA = matrixA[0].size();
@@ -55,7 +85,7 @@ Matrix StatePreparation::kroneckerProduct(Matrix matrixA, Matrix matrixB) {
   return newMatrix;
 }
 
-Matrix StatePreparation::createIdentity(size_t size) {
+[[noexcept]] auto createIdentity(size_t size) -> Matrix {
   Matrix identity{
       std::vector<std::vector<double>>(size, std::vector<double>(size, 0))};
   for (size_t i = 0; i < size; ++i) {
@@ -64,9 +94,9 @@ Matrix StatePreparation::createIdentity(size_t size) {
   return identity;
 }
 
-std::vector<double>
-StatePreparation::matrixVectorProd(const Matrix& matrix,
-                                   std::vector<double> vector) {
+[[noexcept]] auto
+matrixVectorProd(const Matrix& matrix,
+                 std::vector<double> vector) -> std::vector<double> {
   std::vector<double> result;
   for (const auto& matrixVec : matrix) {
     double sum{0};
@@ -79,10 +109,9 @@ StatePreparation::matrixVectorProd(const Matrix& matrix,
 }
 
 // creates circuit that takes desired vector to zero
-qc::QuantumComputation
-StatePreparation::gatesToUncompute(std::vector<std::complex<double>> amplitudes,
-                                   size_t numQubits) {
-  qc::QuantumComputation disentangler{numQubits};
+[[noexcept]] auto gatesToUncompute(std::vector<std::complex<double>> amplitudes,
+                                   size_t numQubits) -> QuantumComputation {
+  QuantumComputation disentangler{numQubits};
   for (size_t i = 0; i < numQubits; ++i) {
     // rotations to disentangle LSB
     auto [remainingParams, thetas, phis] = rotationsToDisentangle(amplitudes);
@@ -96,8 +125,8 @@ StatePreparation::gatesToUncompute(std::vector<std::complex<double>> amplitudes,
     }
     if (phisNorm != 0) {
       // call multiplex with RZGate
-      qc::QuantumComputation rzMultiplexer =
-          multiplex(qc::OpType{qc::RZ}, phis, addLastCnot);
+      QuantumComputation rzMultiplexer =
+          multiplex(OpType{RZ}, phis, addLastCnot);
       // append rzMultiplexer to disentangler, but it should only attach on
       // qubits i-numQubits, thus "i" is added to the local qubit indices
       for (auto& op : rzMultiplexer) {
@@ -107,16 +136,16 @@ StatePreparation::gatesToUncompute(std::vector<std::complex<double>> amplitudes,
         for (auto control : op->getControls()) {
           // there were some errors when accessing the qubit directly and
           // adding to it
-          op->setControls(qc::Controls{
-              qc::Control{control.qubit + static_cast<unsigned int>(i)}});
+          op->setControls(
+              Controls{Control{control.qubit + static_cast<unsigned int>(i)}});
         }
       }
-      disentangler.emplace_back<qc::Operation>(rzMultiplexer.asOperation());
+      disentangler.emplace_back<Operation>(rzMultiplexer.asOperation());
     }
     if (thetasNorm != 0) {
       // call multiplex with RYGate
-      qc::QuantumComputation ryMultiplexer =
-          multiplex(qc::OpType{qc::RY}, thetas, addLastCnot);
+      QuantumComputation ryMultiplexer =
+          multiplex(OpType{RY}, thetas, addLastCnot);
       // append reversed ry_multiplexer to disentangler, but it should only
       // attach on qubits i-numQubits, thus "i" is added to the local qubit
       // indices
@@ -128,11 +157,11 @@ StatePreparation::gatesToUncompute(std::vector<std::complex<double>> amplitudes,
         for (auto control : op->getControls()) {
           // there were some errors when accessing the qubit directly and
           // adding to it
-          op->setControls(qc::Controls{
-              qc::Control{control.qubit + static_cast<unsigned int>(i)}});
+          op->setControls(
+              Controls{Control{control.qubit + static_cast<unsigned int>(i)}});
         }
       }
-      disentangler.emplace_back<qc::Operation>(ryMultiplexer.asOperation());
+      disentangler.emplace_back<Operation>(ryMultiplexer.asOperation());
     }
   }
   // adjust global phase according to the last e^(it)
@@ -146,10 +175,10 @@ StatePreparation::gatesToUncompute(std::vector<std::complex<double>> amplitudes,
 
 // works out Ry and Rz rotation angles used to disentangle LSB qubit
 // rotations make up block diagonal matrix U
-std::tuple<std::vector<std::complex<double>>, std::vector<double>,
-           std::vector<double>>
-StatePreparation::rotationsToDisentangle(
-    std::vector<std::complex<double>> amplitudes) {
+[[noexcept]] auto
+rotationsToDisentangle(std::vector<std::complex<double>> amplitudes)
+    -> std::tuple<std::vector<std::complex<double>>, std::vector<double>,
+                  std::vector<double>> {
   std::vector<std::complex<double>> remainingVector;
   std::vector<double> thetas;
   std::vector<double> phis;
@@ -164,9 +193,9 @@ StatePreparation::rotationsToDisentangle(
   return {remainingVector, thetas, phis};
 }
 
-std::tuple<std::complex<double>, double, double>
-StatePreparation::blochAngles(std::complex<double> const complexA,
-                              std::complex<double> const complexB) {
+[[noexcept]] auto blochAngles(std::complex<double> const complexA,
+                              std::complex<double> const complexB)
+    -> std::tuple<std::complex<double>, double, double> {
   double theta{0};
   double phi{0};
   double finalT{0};
@@ -191,18 +220,17 @@ StatePreparation::blochAngles(std::complex<double> const complexA,
  * @param lastCnot : add last cnot if true
  * @return multiplexer circuit as QuantumComputation
  */
-qc::QuantumComputation StatePreparation::multiplex(qc::OpType targetGate,
-                                                   std::vector<double> angles,
-                                                   bool lastCnot) {
+[[noexcept]] auto multiplex(OpType targetGate, std::vector<double> angles,
+                            bool lastCnot) -> QuantumComputation {
   size_t const listLen = angles.size();
   double const localNumQubits =
       std::floor(std::log2(static_cast<double>(listLen))) + 1;
-  qc::QuantumComputation multiplexer{static_cast<size_t>(localNumQubits)};
+  QuantumComputation multiplexer{static_cast<size_t>(localNumQubits)};
   // recursion base case
   if (localNumQubits == 1) {
-    multiplexer.emplace_back<qc::StandardOperation>(
-        multiplexer.getNqubits(), qc::Controls{}, 0, targetGate,
-        std::vector{angles[0]});
+    multiplexer.emplace_back<StandardOperation>(multiplexer.getNqubits(),
+                                                Controls{}, 0, targetGate,
+                                                std::vector{angles[0]});
     return multiplexer;
   }
 
@@ -218,31 +246,31 @@ qc::QuantumComputation StatePreparation::multiplex(qc::OpType targetGate,
       std::make_move_iterator(angles.begin()),
       std::make_move_iterator(angles.begin() +
                               static_cast<int64_t>(listLen) / 2)};
-  qc::QuantumComputation multiplex1 = multiplex(targetGate, angles1, false);
+  QuantumComputation multiplex1 = multiplex(targetGate, angles1, false);
 
   // append multiplex1 to multiplexer
-  multiplexer.emplace_back<qc::Operation>(multiplex1.asOperation());
+  multiplexer.emplace_back<Operation>(multiplex1.asOperation());
   // flips the LSB qubit, control on MSB
-  multiplexer.cx(0, static_cast<qc::Qubit>(localNumQubits - 1));
+  multiplexer.cx(0, static_cast<Qubit>(localNumQubits - 1));
 
   std::vector<double> const angles2{std::make_move_iterator(angles.begin()) +
                                         static_cast<int64_t>(listLen) / 2,
                                     std::make_move_iterator(angles.end())};
-  qc::QuantumComputation multiplex2 = multiplex(targetGate, angles2, false);
+  QuantumComputation multiplex2 = multiplex(targetGate, angles2, false);
 
   // extra efficiency by reversing (!= inverting) second multiplex
   if (listLen > 1) {
     multiplex2.reverse();
-    multiplexer.emplace_back<qc::Operation>(multiplex2.asOperation());
+    multiplexer.emplace_back<Operation>(multiplex2.asOperation());
   } else {
-    multiplexer.emplace_back<qc::Operation>(multiplex2.asOperation());
+    multiplexer.emplace_back<Operation>(multiplex2.asOperation());
   }
 
   if (lastCnot) {
-    multiplexer.cx(0, static_cast<qc::Qubit>(localNumQubits - 1));
+    multiplexer.cx(0, static_cast<Qubit>(localNumQubits - 1));
   }
 
-  qc::CircuitOptimizer::flattenOperations(multiplexer);
+  CircuitOptimizer::flattenOperations(multiplexer);
   return multiplexer;
 }
 
