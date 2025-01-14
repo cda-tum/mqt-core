@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUANTUM_INTERFACES
-#define QUANTUM_INTERFACES
+#ifndef MQT_INTERFACES
+#define MQT_INTERFACES
 
 include "mlir/IR/OpBase.td"
 

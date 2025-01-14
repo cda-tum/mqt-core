@@ -21,11 +21,11 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 
-include "mlir/Dialect/MQT/QuantumDialect.td"
-include "mlir/Dialect/MQT/QuantumInterfaces.td"
+include "mlir/Dialect/MQT/MQTDialect.td"
+include "mlir/Dialect/MQT/MQTInterfaces.td"
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect enums.
+// MQT dialect enums.
 //===----------------------------------------------------------------------===//
 
 def NamedObservable : I32EnumAttr<"NamedObservable",
@@ -43,7 +43,7 @@ def NamedObservable : I32EnumAttr<"NamedObservable",
 
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect traits.
+// MQT dialect traits.
 //===----------------------------------------------------------------------===//
 
 def Unitary : NativeOpTrait<"UnitaryTrait">;
@@ -52,16 +52,16 @@ def Hermitian : NativeOpTrait<"HermitianTrait">;
 def QuantumMemory : Resource<"QuantumMemory">;
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect attributes.
+// MQT dialect attributes.
 //===----------------------------------------------------------------------===//
 
-def NamedObservableAttr : EnumAttr<QuantumDialect, NamedObservable, "named_observable">;
+def NamedObservableAttr : EnumAttr<MQTDialect, NamedObservable, "named_observable">;
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect operations.
+// MQT dialect operations.
 //===----------------------------------------------------------------------===//
 
-class Quantum_Op<string mnemonic, list<Trait> traits = []> : Op<QuantumDialect, mnemonic, traits>;
+class Quantum_Op<string mnemonic, list<Trait> traits = []> : Op<MQTDialect, mnemonic, traits>;
 
 def InitializeOp : Quantum_Op<"init"> {
     let summary = "Initialize the quantum runtime.";
