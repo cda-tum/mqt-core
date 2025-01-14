@@ -15,6 +15,7 @@
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <algorithm>
 #include <cmath>
