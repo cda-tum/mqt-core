@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Xanadu Quantum Technologies Inc.
+// Copyright 2023 Xanadu Quantum Technologies Inc.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,18 +14,10 @@
 
 #pragma once
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
+#include "mlir/IR/OpDefinition.h"
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect declarations.
+// Quantum interface declarations.
 //===----------------------------------------------------------------------===//
 
-#include "CatalystQuantum/QuantumOpsDialect.h.inc"
-
-//===----------------------------------------------------------------------===//
-// Quantum type declarations.
-//===----------------------------------------------------------------------===//
-
-#define GET_TYPEDEF_CLASSES
-#include "CatalystQuantum/QuantumOpsTypes.h.inc"
+#include "mlir/Dialect/MQT/QuantumInterfaces.h.inc"

@@ -21,42 +21,10 @@ else()
 endif()
 
 option(BUILD_MQT_MLIR_TESTS "Also build tests for the MQT MLIR project" ${MQT_MLIR_MASTER_PROJECT})
+option(BUILD_MLIR_DIALECT "Build the MQT MLIR dialect" ${MQT_MLIR_MASTER_PROJECT})
 
 include(cmake/ExternalDependencies.cmake)
 
-# set the include directory for the build tree
-set(MQT_MLIR_INCLUDE_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
-
-# MLIR must be installed on the system
-find_package(MLIR REQUIRED CONFIG)
-message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
-# Add the paths to the MLIR and LLVM CMake modules.
-list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
-list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-
-# Include the TableGen, LLVM and MLIR CMake modules.
-include(TableGen)
-include(AddLLVM)
-include(AddMLIR)
-include(HandleLLVMOptions)
-
-include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(${MLIR_INCLUDE_DIRS})
-include_directories(${MQT_MLIR_INCLUDE_BUILD_DIR})
-include_directories(${PROJECT_BINARY_DIR}/include)
-link_directories(${LLVM_BUILD_LIBRARY_DIR})
-add_definitions(${LLVM_DEFINITIONS})
-
-# add main library code
-add_subdirectory(include)
-add_subdirectory(src)
-add_subdirectory(tools)
-
-# add test code
-if(BUILD_MQT_MLIR_TESTS)
-  enable_testing()
-  include(GoogleTest)
-  add_subdirectory(test)
+if(BUILD_MLIR_DIALECT)
+  add_subdirectory(mlir)
 endif()

@@ -21,8 +21,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 
-include "CatalystQuantum/QuantumDialect.td"
-include "CatalystQuantum/QuantumInterfaces.td"
+include "mlir/Dialect/MQT/QuantumDialect.td"
+include "mlir/Dialect/MQT/QuantumInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // Quantum dialect enums.
