@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mlir/Dialect/MQT/QuantumOps.h"
+#include "mlir/Dialect/MQT/MQTOps.h"
 
-#include "mlir/Dialect/MQT/QuantumDialect.h"
+#include "mlir/Dialect/MQT/MQTDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
@@ -28,15 +28,15 @@ using namespace mlir;
 using namespace catalyst::quantum;
 
 //===----------------------------------------------------------------------===//
-// Quantum op definitions.
+// MQT op definitions.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/QuantumEnums.cpp.inc"
+#include "mlir/Dialect/MQT/MQTEnums.cpp.inc"
 #define GET_OP_CLASSES
-#include "mlir/Dialect/MQT/QuantumOps.cpp.inc"
+#include "mlir/Dialect/MQT/MQTOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// Quantum op canonicalizers.
+// MQT op canonicalizers.
 //===----------------------------------------------------------------------===//
 static const mlir::StringSet<> hermitianOps = {"Hadamard", "PauliX", "PauliY",
                                                "PauliZ",   "CNOT",   "CY",
@@ -192,7 +192,7 @@ OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// Quantum op verifiers.
+// MQT op verifiers.
 //===----------------------------------------------------------------------===//
 
 LogicalResult ExtractOp::verify() {
