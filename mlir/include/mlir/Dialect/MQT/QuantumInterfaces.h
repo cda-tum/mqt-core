@@ -17,7 +17,7 @@
 #include "mlir/IR/OpDefinition.h"
 
 //===----------------------------------------------------------------------===//
-// Quantum interface declarations.
+// MQT interface declarations.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/QuantumInterfaces.h.inc"
+#include "mlir/Dialect/MQT/MQTInterfaces.h.inc"

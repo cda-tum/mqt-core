@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef QUANTUM_DIALECT
-#define QUANTUM_DIALECT
+#ifndef MQT_DIALECT
+#define MQT_DIALECT
 
 include "mlir/IR/DialectBase.td"
 include "mlir/IR/AttrTypeBase.td"
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect.
+// MQT dialect.
 //===----------------------------------------------------------------------===//
 
-def QuantumDialect : Dialect {
+def MQTDialect : Dialect {
     let summary = "A quantum computing dialect with value semantics.";
     let description = [{
         The quantum dialect extends core MLIR with the necessary types and operations to form
@@ -51,25 +51,25 @@ def QuantumDialect : Dialect {
 }
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect types.
+// MQT dialect types.
 //===----------------------------------------------------------------------===//
 
-class Quantum_Type<string name, string typeMnemonic, list<Trait> traits = []>
-        : TypeDef<QuantumDialect, name, traits> {
+class MQT_Type<string name, string typeMnemonic, list<Trait> traits = []>
+        : TypeDef<MQTDialect, name, traits> {
     let mnemonic = typeMnemonic;
 }
 
-def QubitType : Quantum_Type<"Qubit", "bit"> {
+def QubitType : MQT_Type<"Qubit", "bit"> {
     let summary = "A value-semantic qubit (state).";
 }
-def QuregType : Quantum_Type<"Qureg", "reg"> {
+def QuregType : MQT_Type<"Qureg", "reg"> {
     let summary = "An array of value-semantic qubits (i.e. quantum register).";
 }
-def ObservableType : Quantum_Type<"Observable", "obs"> {
+def ObservableType : MQT_Type<"Observable", "obs"> {
     let summary = "A quantum observable for use in measurements.";
 }
-def ResultType : Quantum_Type<"Result", "res"> {
+def ResultType : MQT_Type<"Result", "res"> {
     let summary = "A quantum measurement result.";
 }
 
-#endif // QUANTUM_DIALECT
+#endif // MQT_DIALECT

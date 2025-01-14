@@ -18,14 +18,14 @@
 #include "mlir/IR/Dialect.h"
 
 //===----------------------------------------------------------------------===//
-// Quantum dialect declarations.
+// MQT dialect declarations.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/QuantumOpsDialect.h.inc"
+#include "mlir/Dialect/MQT/MQTOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
-// Quantum type declarations.
+// MQT type declarations.
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQT/QuantumOpsTypes.h.inc"
+#include "mlir/Dialect/MQT/MQTOpsTypes.h.inc"
