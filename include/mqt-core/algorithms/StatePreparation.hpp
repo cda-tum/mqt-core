@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "QuantumComputation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 namespace qc {
 /**
