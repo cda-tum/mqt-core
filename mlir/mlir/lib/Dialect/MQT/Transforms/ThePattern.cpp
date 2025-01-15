@@ -7,7 +7,6 @@
 #include <mlir/Support/LogicalResult.h>
 
 namespace mlir::mqt {
-
 /// Multi-step rewrite using "match" and "rewrite". This allows for separating
 /// the concerns of matching and rewriting.
 struct ThePattern final : OpRewritePattern<CustomOp> {

@@ -1,4 +1,5 @@
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
+#include "mlir/IR/Operation.h"
 
 #include <mlir/IR/BuiltinOps.h>
 #include <mlir/IR/MLIRContext.h>
@@ -8,17 +9,15 @@
 #include <mlir/Transforms/GreedyPatternRewriteDriver.h>
 #include <utility>
 
-namespace mlir {
+namespace mlir::mqt {
 
 #define GEN_PASS_DEF_THEPASS
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
-namespace mqt {
-
-struct ThePass : PassWrapper<ThePass, OperationPass<ModuleOp>> {
+struct ThePass final : impl::ThePassBase<ThePass> {
   void runOnOperation() override {
     // Get the current operation being operated on.
-    const ModuleOp op = getOperation();
+    Operation* op = getOperation();
     MLIRContext* ctx = &getContext();
 
     // Define the set of patterns to use.
@@ -32,6 +31,4 @@ struct ThePass : PassWrapper<ThePass, OperationPass<ModuleOp>> {
   }
 };
 
-} // namespace mqt
-
-} // namespace mlir
+} // namespace mlir::mqt
