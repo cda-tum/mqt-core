@@ -22,7 +22,7 @@
 
 int main(int argc, char** argv) {
   mlir::registerAllPasses();
-  mlir::registerMQTPasses();
+  mlir::mqt::registerMQTPasses();
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
