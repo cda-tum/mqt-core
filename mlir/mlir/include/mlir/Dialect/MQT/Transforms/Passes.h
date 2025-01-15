@@ -11,7 +11,8 @@ namespace mqt {
 #define GEN_PASS_DECL
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
-void populateThePassPatterns(RewritePatternSet& patterns);
+void populateThePassPatterns(RewritePatternSet& patterns,
+                             DenseSet<Operation*>& handledOperations);
 
 //===----------------------------------------------------------------------===//
 // Registration
