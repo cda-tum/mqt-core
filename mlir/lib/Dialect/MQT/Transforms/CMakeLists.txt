@@ -5,4 +5,3 @@ file(GLOB TRANSFORMS_SOURCES *.cpp)
 
 add_mlir_library(MLIRMQTTransforms ${TRANSFORMS_SOURCES} LINK_LIBS ${LIBRARIES} DEPENDS
                  MLIRMQTTransformsIncGen)
-target_include_directories(MLIRMQTTransforms PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
