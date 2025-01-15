@@ -7,8 +7,8 @@
 
 /// Multi-step rewrite using "match" and "rewrite". This allows for separating
 /// the concerns of matching and rewriting.
-struct ThePass : public mlir::OpRewritePattern<mlir::mqt::CustomOp> {
-  explicit ThePass(mlir::MLIRContext* context)
+struct ThePattern : public mlir::OpRewritePattern<mlir::mqt::CustomOp> {
+  explicit ThePattern(mlir::MLIRContext* context)
       : mlir::OpRewritePattern<mlir::mqt::CustomOp>(context) {}
 
   llvm::LogicalResult match(mlir::mqt::CustomOp op) const override {
