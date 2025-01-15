@@ -15,6 +15,9 @@ namespace mlir::mqt {
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
 struct ThePass final : impl::ThePassBase<ThePass> {
+
+  DenseSet<Operation*> handled;
+
   void runOnOperation() override {
     // Get the current operation being operated on.
     Operation* op = getOperation();
@@ -22,7 +25,7 @@ struct ThePass final : impl::ThePassBase<ThePass> {
 
     // Define the set of patterns to use.
     RewritePatternSet thePatterns(ctx);
-    populateThePassPatterns(thePatterns);
+    populateThePassPatterns(thePatterns, handled);
 
     // Apply patterns in an iterative and greedy manner.
     if (failed(applyPatternsAndFoldGreedily(op, std::move(thePatterns)))) {
