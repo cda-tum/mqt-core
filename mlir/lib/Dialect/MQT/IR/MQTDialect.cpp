@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mlir/Dialect/MQT/MQTDialect.h"
+#include "mlir/Dialect/MQT/IR/MQTDialect.h"
 
-#include "mlir/Dialect/MQT/MQTOps.h"
+#include "mlir/Dialect/MQT/IR/MQTOps.h"
 #include "mlir/IR/DialectImplementation.h" // needed for generated type parser
 
 #include "llvm/ADT/TypeSwitch.h" // needed for generated type parser
@@ -26,22 +26,22 @@ using namespace mlir::mqt;
 // MQT dialect definitions.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/MQTOpsDialect.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTOpsDialect.cpp.inc"
 
 void MQTDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/MQT/MQTOpsTypes.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTOpsTypes.cpp.inc"
       >();
 
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/MQT/MQTAttributes.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTAttributes.cpp.inc"
       >();
 
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/MQT/MQTOps.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTOps.cpp.inc"
       >();
 }
 
@@ -50,7 +50,7 @@ void MQTDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQT/MQTOpsTypes.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTOpsTypes.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/MQT/MQTAttributes.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTAttributes.cpp.inc"

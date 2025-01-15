@@ -21,11 +21,11 @@
 // MQT dialect declarations.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/MQTOpsDialect.h.inc"
+#include "mlir/Dialect/MQT/IR/MQTOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
 // MQT type declarations.
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQT/MQTOpsTypes.h.inc"
+#include "mlir/Dialect/MQT/IR/MQTOpsTypes.h.inc"

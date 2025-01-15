@@ -20,4 +20,4 @@
 // MQT interface declarations.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/MQTInterfaces.h.inc"
+#include "mlir/Dialect/MQT/IR/MQTInterfaces.h.inc"

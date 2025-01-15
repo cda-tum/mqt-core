@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mlir/Dialect/MQT/MQTOps.h"
+#include "mlir/Dialect/MQT/IR/MQTOps.h"
 
-#include "mlir/Dialect/MQT/MQTDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MQT/IR/MQTDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 
@@ -31,9 +31,9 @@ using namespace mlir::mqt;
 // MQT op definitions.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/MQTEnums.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTEnums.cpp.inc"
 #define GET_OP_CLASSES
-#include "mlir/Dialect/MQT/MQTOps.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // MQT op canonicalizers.

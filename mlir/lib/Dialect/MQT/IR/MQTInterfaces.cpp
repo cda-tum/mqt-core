@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mlir/Dialect/MQT/MQTInterfaces.h"
+#include "mlir/Dialect/MQT/IR/MQTInterfaces.h"
 
 using namespace mlir;
 using namespace mlir::mqt;
@@ -21,4 +21,4 @@ using namespace mlir::mqt;
 // MQT interface definitions.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/MQTInterfaces.cpp.inc"
+#include "mlir/Dialect/MQT/IR/MQTInterfaces.cpp.inc"

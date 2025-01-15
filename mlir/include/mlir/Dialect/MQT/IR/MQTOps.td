@@ -21,8 +21,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 
-include "mlir/Dialect/MQT/MQTDialect.td"
-include "mlir/Dialect/MQT/MQTInterfaces.td"
+include "mlir/Dialect/MQT/IR/MQTDialect.td"
+include "mlir/Dialect/MQT/IR/MQTInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // MQT dialect enums.

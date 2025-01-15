@@ -1,6 +1,8 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-set(LIBS ${dialect_libs} ${conversion_libs} ${extension_libs})
+set(LIBRARIES ${dialect_libs} MLIRMQT)
 
-add_mlir_library(MLIRMQTThePattern ThePattern.cpp LINK_LIBS ${LIBS})
-target_include_directories(MLIRMQTThePattern PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+file(GLOB TRANSFORMS_SOURCES *.cpp)
+
+add_mlir_library(MLIRMQTTransforms ${TRANSFORMS_SOURCES} LINK_LIBS ${LIBRARIES} DEPENDS
+                 MLIRMQTTransformsIncGen)
+target_include_directories(MLIRMQTTransforms PUBLIC ${CMAKE_CURRENT_BINARY_DIR})

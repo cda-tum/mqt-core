@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include "mlir/Dialect/MQT/MQTInterfaces.h"
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
+#include "mlir/Dialect/MQT/IR/MQTInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -53,9 +53,9 @@ class QuantumMemory : public mlir::SideEffects::Resource::Base<QuantumMemory> {
 // MQT ops declarations.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQT/MQTDialect.h"
-#include "mlir/Dialect/MQT/MQTEnums.h.inc"
+#include "mlir/Dialect/MQT/IR/MQTDialect.h"
+#include "mlir/Dialect/MQT/IR/MQTEnums.h.inc"
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/MQT/MQTAttributes.h.inc"
+#include "mlir/Dialect/MQT/IR/MQTAttributes.h.inc"
 #define GET_OP_CLASSES
-#include "mlir/Dialect/MQT/MQTOps.h.inc"
+#include "mlir/Dialect/MQT/IR/MQTOps.h.inc"
