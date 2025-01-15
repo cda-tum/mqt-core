@@ -1,14 +1,25 @@
-#include "ThePass.h.inc"
 #include "mlir/Dialect/MQT/MQTOps.h"
 
+#include <iostream>
+#include <llvm/Support/LogicalResult.h>
+#include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
 
-static mlir::Value
-performThePass(mlir::PatternRewriter& rewriter, mlir::Operation* op,
-               mlir::Value params, mlir::Value in_qubits,
-               mlir::Attribute gate_name, mlir::Attribute adjoint,
-               mlir::Value in_ctrl_qubits, mlir::Value in_ctrl_values) {
-  return rewriter.create<mlir::mqt::CustomOp>(
-      op->getLoc(), {params, in_qubits, in_ctrl_qubits, in_ctrl_values},
-      {in_qubits, gate_name});
-}
+/// Multi-step rewrite using "match" and "rewrite". This allows for separating
+/// the concerns of matching and rewriting.
+struct ThePass : public mlir::OpRewritePattern<mlir::mqt::CustomOp> {
+  explicit ThePass(mlir::MLIRContext* context)
+      : mlir::OpRewritePattern<mlir::mqt::CustomOp>(context) {}
+
+  llvm::LogicalResult match(mlir::mqt::CustomOp op) const override {
+    if (op.getGateName() == "Hadamard") {
+      return llvm::success();
+    }
+    return llvm::failure();
+  }
+
+  void rewrite(mlir::mqt::CustomOp /*op*/,
+               mlir::PatternRewriter& /*rewriter*/) const override {
+    std::cout << "ATTENTION: Hadarmard detected!\n";
+  }
+};
