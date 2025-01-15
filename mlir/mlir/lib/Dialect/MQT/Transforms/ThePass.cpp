@@ -8,7 +8,12 @@
 #include <mlir/Transforms/GreedyPatternRewriteDriver.h>
 #include <utility>
 
-namespace mlir::mqt {
+namespace mlir {
+
+#define GEN_PASS_DEF_THEPASS
+#include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
+
+namespace mqt {
 
 struct ThePass : PassWrapper<ThePass, OperationPass<ModuleOp>> {
   void runOnOperation() override {
@@ -26,4 +31,7 @@ struct ThePass : PassWrapper<ThePass, OperationPass<ModuleOp>> {
     }
   }
 };
-} // namespace mlir::mqt
+
+} // namespace mqt
+
+} // namespace mlir

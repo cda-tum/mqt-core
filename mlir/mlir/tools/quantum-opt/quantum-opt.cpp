@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mlir/Dialect/MQT/MQTDialect.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
+#include "mlir/Dialect/MQT/IR/MQTDialect.h"
+#include "mlir/Dialect/MQT/Transforms/Passes.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
@@ -21,6 +22,7 @@
 
 int main(int argc, char** argv) {
   mlir::registerAllPasses();
+  mlir::registerMQTPasses();
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
