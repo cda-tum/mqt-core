@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ThePass : Pass<"the-pass"> {
+def ThePass : Pass<"the-pass", "ModuleOp"> {
   let summary = "That is THE pass for the MQT dialect";
   let description = [{
     This pass does something very important.
