@@ -27,7 +27,7 @@ struct ToQuantumComputation final : impl::ToQuantumComputationBase<ToQuantumComp
     populateToQuantumComputationPatterns(patterns, handledOperations);
 
     // Apply patterns in an iterative and greedy manner.
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(op, std::move(patterns)))) {
       signalPassFailure();
     }
   }
