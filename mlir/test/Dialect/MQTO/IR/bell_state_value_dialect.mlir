@@ -3,27 +3,20 @@
 module {
     // CHECK-LABEL: func @bell_state()
     func.func @bell_state() -> (i1, i1) {
-
-        %r0 = "mqto.allocQubitRegister" () {"size_attr" = 2 : i64} : () -> !mqto.QubitRegister
-        %r0_1, %q0 = "mqto.extractQubit" (%r0) {"index_attr" = 0 : i64} : (!mqto.QubitRegister) -> (!mqto.QubitRegister, !mqto.Qubit)
-
-        %k = arith.constant 2 : i64
-        %r1 = "mqto.allocQubitRegister" (%k) : (i64) -> !mqto.QubitRegister
-        %i = arith.constant 0 : i64
-        %r1_1, %q1 = "mqto.extractQubit" (%r1, %i) : (!mqto.QubitRegister, i64) -> (!mqto.QubitRegister, !mqto.Qubit)
-
-        %q0_1 = "mqto.operation" (%q0) {"gate_name" = "Hadamard"} : (!mqto.Qubit) -> !mqto.Qubit
-        %q0_2, %q1_1 = "mqto.operation" (%q0_1, %q1) {"gate_name" = "CX"} : (!mqto.Qubit, !mqto.Qubit) -> (!mqto.Qubit, !mqto.Qubit)
-
-        %q0_3, %c0 = "mqto.measure" (%q0_2) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
-        %q1_2, %c1 = "mqto.measure" (%q1_1) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
-
-        %r0_2 = "mqto.insertQubit" (%r0_1, %q0_3) {"index_attr" = 0 : i64} : (!mqto.QubitRegister, !mqto.Qubit) -> !mqto.QubitRegister
-        %r1_2 = "mqto.insertQubit" (%r1_1, %q1_2) {"index_attr" = 0 : i64} : (!mqto.QubitRegister, !mqto.Qubit) -> !mqto.QubitRegister
-
-        "mqto.deallocQubitRegister" (%r0_2) : (!mqto.QubitRegister) -> ()
-        "mqto.deallocQubitRegister" (%r1_2) : (!mqto.QubitRegister) -> ()
-
-        return %c0, %c1 : i1, i1
+        %0 = "mqto.allocQubitRegister"() <{size_attr = 2 : i64}> : () -> !mqto.QubitRegister
+        %out_qureg, %out_qubit = "mqto.extractQubit"(%0) <{index_attr = 0 : i64}> : (!mqto.QubitRegister) -> (!mqto.QubitRegister, !mqto.Qubit)
+        %c2_i64 = arith.constant 2 : i64
+        %1 = "mqto.allocQubitRegister"(%c2_i64) : (i64) -> !mqto.QubitRegister
+        %c0_i64 = arith.constant 0 : i64
+        %out_qureg_0, %out_qubit_1 = "mqto.extractQubit"(%1, %c0_i64) : (!mqto.QubitRegister, i64) -> (!mqto.QubitRegister, !mqto.Qubit)
+        %2 = "mqto.operation"(%out_qubit) <{gate_name = "Hadamard"}> : (!mqto.Qubit) -> !mqto.Qubit
+        %3:2 = "mqto.operation"(%2, %out_qubit_1) <{gate_name = "CX"}> : (!mqto.Qubit, !mqto.Qubit) -> (!mqto.Qubit, !mqto.Qubit)
+        %out_qubit_2, %out_bit = "mqto.measure"(%3#0) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
+        %out_qubit_3, %out_bit_4 = "mqto.measure"(%3#1) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
+        %4 = "mqto.insertQubit"(%out_qureg, %out_qubit_2) <{index_attr = 0 : i64}> : (!mqto.QubitRegister, !mqto.Qubit) -> !mqto.QubitRegister
+        %5 = "mqto.insertQubit"(%out_qureg_0, %out_qubit_3) <{index_attr = 0 : i64}> : (!mqto.QubitRegister, !mqto.Qubit) -> !mqto.QubitRegister
+        "mqto.deallocQubitRegister"(%4) : (!mqto.QubitRegister) -> ()
+        "mqto.deallocQubitRegister"(%5) : (!mqto.QubitRegister) -> ()
+        return %out_bit, %out_bit_4 : i1, i1
     }
 }
