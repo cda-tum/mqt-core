@@ -1,10 +1,8 @@
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
 #include "mlir/IR/Operation.h"
 
-#include <mlir/IR/BuiltinOps.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
-#include <mlir/Pass/Pass.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Transforms/GreedyPatternRewriteDriver.h>
 #include <utility>
