@@ -1,4 +1,4 @@
-#include "mlir/Dialect/MQTO/IR/MQTO_Ops.h"
+#include "mlir/Dialect/MQTO/IR/MQTO_Dialect.h"
 
 #include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/Builders.h>
