@@ -1,7 +1,7 @@
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/Dialect/MQT/IR/MQTDialect.h"
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
-#include "mlir/Dialect/MQTO/IR/MQTO_Ops.h"
+#include "mlir/Dialect/MQTO/IR/MQTO_Dialect.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
