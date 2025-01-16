@@ -21,10 +21,12 @@ struct ThePass final : impl::ThePassBase<ThePass> {
 
     // Define the set of patterns to use.
     RewritePatternSet thePatterns(ctx);
-    populateThePassPatterns(thePatterns);
+    //populateThePassPatterns(thePatterns);
+    //populateThePassWithHadamardRewritePattern(thePatterns);
+    populateThePassWithCXRewritePattern(thePatterns);
 
     // Apply patterns in an iterative and greedy manner.
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(thePatterns)))) {
+    if (failed(applyPatternsGreedily(op, std::move(thePatterns)))) {
       signalPassFailure();
     }
   }
