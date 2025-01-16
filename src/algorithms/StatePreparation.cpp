@@ -79,9 +79,9 @@ template <typename T>
   return identity;
 }
 
-[[nodiscard]] auto matrixVectorProd(const Matrix& matrix,
-                                    std::vector<double> vector)
-    -> std::vector<double> {
+[[nodiscard]] auto
+matrixVectorProd(const Matrix& matrix,
+                 std::vector<double> vector) -> std::vector<double> {
   std::vector<double> result;
   for (const auto& matrixVec : matrix) {
     double sum{0};
@@ -195,8 +195,8 @@ rotationsToDisentangle(std::vector<std::complex<double>> amplitudes)
 
 // creates circuit that takes desired vector to zero
 [[nodiscard]] auto
-gatesToUncompute(std::vector<std::complex<double>> amplitudes, size_t numQubits)
-    -> QuantumComputation {
+gatesToUncompute(std::vector<std::complex<double>> amplitudes,
+                 size_t numQubits) -> QuantumComputation {
   QuantumComputation disentangler{numQubits};
   for (size_t i = 0; i < numQubits; ++i) {
     // rotations to disentangle LSB
@@ -268,7 +268,7 @@ auto createStatePreparationCircuit(
   }
 
   // check if the number of elements in the vector is a power of two
-  if (amplitudes.size() == 0 ||
+  if (amplitudes.empty() ||
       (amplitudes.size() & (amplitudes.size() - 1)) != 0) {
     throw std::invalid_argument{
         "Using State Preparation with vector size that is not a power of 2"};
