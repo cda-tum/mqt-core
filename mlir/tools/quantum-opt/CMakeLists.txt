@@ -1,7 +1,14 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
-set(LIBS ${dialect_libs} ${conversion_libs} ${extension_libs} MLIROptLib MLIRMQT MLIRMQTTransforms)
+set(LIBS
+    ${dialect_libs}
+    ${conversion_libs}
+    ${extension_libs}
+    MLIROptLib
+    MLIRMQT
+    MLIRMQTTransforms
+    MLIRMQTO)
 
 add_mlir_tool(quantum-opt quantum-opt.cpp DEPENDS ${LIBS} SUPPORT_PLUGINS)
 target_link_libraries(quantum-opt PUBLIC ${LIBS})

@@ -1,8 +1,7 @@
 #pragma once
 
-#include <set>
-
 #include <mlir/Pass/Pass.h>
+#include <set>
 
 namespace mlir {
 
