@@ -268,7 +268,8 @@ auto createStatePreparationCircuit(
   }
 
   // check if the number of elements in the vector is a power of two
-  if (amplitudes.size() == 0 || (amplitudes.size() & (amplitudes.size() - 1)) != 0) {
+  if (amplitudes.size() == 0 ||
+      (amplitudes.size() & (amplitudes.size() - 1)) != 0) {
     throw std::invalid_argument{
         "Using State Preparation with vector size that is not a power of 2"};
   }
