@@ -10,37 +10,37 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LogicalResult.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
-#include <set>
+
 
 namespace mlir::mqt {
 
-/// Pattern to transform `quantum.custom` Hadamard to MQT equivalent.
-struct HadamardRewritePattern : public OpRewritePattern<CustomOp> {
-  explicit HadamardRewritePattern(MLIRContext* context)
+/// Pattern to transform `quantum.custom` multi-qubit gate to MQT equivalent.
+struct MultiQubitGateRewritePattern : public OpRewritePattern<CustomOp> {
+  explicit MultiQubitGateRewritePattern(MLIRContext* context)
       : OpRewritePattern(context) {}
 
   LogicalResult match(CustomOp op) const override {
-    // Match only "Hadamard" gate in the quantum dialect.
-    return op.getGateName() == "Hadamard" ? success() : failure();
+    // NOTE: This pattern is currently only checking for the CNOT gate.
+    return op.getGateName() == "CNOT" ? success() : failure();
   }
 
   void rewrite(CustomOp op, PatternRewriter& rewriter) const override {
-    std::cout << "APPLYING: HadamardRewritePattern\n";
+    std::cout << "APPLYING: MultiQubitGateRewritePattern\n";
 
     // Extract the input qubit for the operation.
-    auto qubit = op.getInQubits()[0];
+    auto qubits = op.getInQubits();
 
     // Replace with a new MQT operation.
-    auto mqtoHadamard = rewriter.create<CustomOp>(op.getLoc(), "MQTOHadamard", mlir::ValueRange{qubit});
+    auto mqtoPlaceholder = rewriter.create<CustomOp>(op.getLoc(), "MQTOMulitQubitGatePlaceholder", mlir::ValueRange{qubits});
     
     // Replace the original operation with the new MQT operation.
-    rewriter.replaceOp(op, mqtoHadamard);
+    rewriter.replaceOp(op, mqtoPlaceholder);
   }
 };
 
 /// Populate patterns for the transformation pass.
-void populateThePassWithHadamardRewritePattern(RewritePatternSet& patterns) {
-  patterns.add<HadamardRewritePattern>(patterns.getContext());
+void populatePassWithMultiQubitGateRewritePattern(RewritePatternSet& patterns) {
+  patterns.add<MultiQubitGateRewritePattern>(patterns.getContext());
 }
 
 } // namespace mlir::mqt
