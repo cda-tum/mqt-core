@@ -54,19 +54,18 @@ LogicalResult OperationOp::verify() {
 }
 
 LogicalResult AllocOp::verify() {
-  if (!getNqubits() && !getNqubitsAttr().has_value()) {
-    return emitOpError() << "expected a operand or attribute for nqubits";
+  if (!getSize() && !getSizeAttr().has_value()) {
+    return emitOpError() << "expected an operand or attribute for size";
   }
-  if (getNqubits() && getNqubitsAttr().has_value()) {
-    return emitOpError()
-           << "expected either an operand or attribute for nqubits";
+  if (getSize() && getSizeAttr().has_value()) {
+    return emitOpError() << "expected either an operand or attribute for size";
   }
   return success();
 }
 
 LogicalResult ExtractOp::verify() {
   if (!getIndex() && !getIndexAttr().has_value()) {
-    return emitOpError() << "expected a operand or attribute for index";
+    return emitOpError() << "expected an operand or attribute for index";
   }
   if (getIndex() && getIndexAttr().has_value()) {
     return emitOpError() << "expected either an operand or attribute for index";
@@ -76,7 +75,7 @@ LogicalResult ExtractOp::verify() {
 
 LogicalResult InsertOp::verify() {
   if (!getIndex() && !getIndexAttr().has_value()) {
-    return emitOpError() << "expected a operand or attribute for index";
+    return emitOpError() << "expected an operand or attribute for index";
   }
   if (getIndex() && getIndexAttr().has_value()) {
     return emitOpError() << "expected either an operand or attribute for index";

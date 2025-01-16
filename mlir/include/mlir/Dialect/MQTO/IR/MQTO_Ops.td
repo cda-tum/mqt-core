@@ -81,8 +81,8 @@ def AllocOp : MQTO_Op<"allocQubitRegister"> {
         .
     }];
     let arguments = (ins
-        Optional<UI64>:$nqubits,
-        OptionalAttr<ConfinedAttr<UI64Attr, [IntNonNegative]>>:$nqubits_attr
+        Optional<I64>:$size,
+        OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$size_attr
     );
     let results = (outs
         QuregType:$qureg
@@ -107,8 +107,8 @@ def ExtractOp : MQTO_Op<"extractQubit"> {
     }];
     let arguments = (ins
         QuregType:$in_qureg,
-        Optional<UI64>:$index,
-        OptionalAttr<ConfinedAttr<UI64Attr, [IntNonNegative]>>:$index_attr
+        Optional<I64>:$index,
+        OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$index_attr
     );
     let results = (outs
         QuregType:$out_qureg,
@@ -125,8 +125,8 @@ def InsertOp : MQTO_Op<"insertQubit"> {
     let arguments = (ins
         QuregType:$in_qureg,
         QubitType:$in_qubit,
-        Optional<UI64>:$index,
-        OptionalAttr<ConfinedAttr<UI64Attr, [IntNonNegative]>>:$index_attr
+        Optional<I64>:$index,
+        OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$index_attr
     );
     let results = (outs
         QuregType:$out_qureg
