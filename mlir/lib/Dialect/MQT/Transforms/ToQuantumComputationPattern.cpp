@@ -15,11 +15,11 @@
 #include <set>
 
 namespace mlir::mqt {
-/// Analysis pattern that filters out all quantum operations from a given program.
-struct QuantumFilterPattern final : OpRewritePattern<AllocOp> {
+/// Analysis pattern that filters out all quantum operations from a given program and creates a quantum computation from them.
+struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
   std::set<Operation*>& handledOperations;
 
-  explicit QuantumFilterPattern(MLIRContext* context, std::set<Operation*>& handled)
+  explicit ToQuantumComputationPattern(MLIRContext* context, std::set<Operation*>& handled)
       : OpRewritePattern(context), handledOperations(handled) {}
 
   LogicalResult match(AllocOp op) const override {
@@ -28,6 +28,42 @@ struct QuantumFilterPattern final : OpRewritePattern<AllocOp> {
     }
     
     return failure();
+  }
+
+  void handleCustomOp(CustomOp op, qc::QuantumComputation& circuit, std::vector<Value>& currentQubitVariables) const {
+    const auto ins = op.getInQubits();
+    const auto outs = op.getOutQubits();
+
+    std::vector<size_t> ins_indices(ins.size());
+    std::transform(ins.begin(), ins.end(), ins_indices.begin(), [&currentQubitVariables](Value val) {
+        const auto found = std::find(currentQubitVariables.begin(), currentQubitVariables.end(), val);
+        if(currentQubitVariables.end() == found) {
+          llvm::outs() << "ERROR: Qubit not found!\n";
+          return -1UL;
+        }
+        return (size_t)std::distance(currentQubitVariables.begin(), found);
+    });
+
+    for(size_t i = 0; i < ins.size(); i++) {
+      currentQubitVariables[ins_indices[i]] = outs[i];
+    }
+
+    const auto name = op.getGateName();
+    if(name == "Hadamard") {
+      circuit.h(ins_indices[0]);
+    }
+    if(name == "PauliX") {
+      circuit.x(ins_indices[0]);
+    }
+    if(name == "PauliY") {
+      circuit.y(ins_indices[0]);
+    }
+    if(name == "PauliZ") {
+      circuit.z(ins_indices[0]);
+    }
+    if(name == "CNOT") {
+      circuit.cx(ins_indices[0], ins_indices[1]);
+    }
   }
 
   void rewrite(AllocOp op, PatternRewriter& rewriter) const override {
@@ -44,8 +80,10 @@ struct QuantumFilterPattern final : OpRewritePattern<AllocOp> {
 
     const std::size_t numQubits = *op.getNqubitsAttr();
 
-    std::vector<Operation*> individualQubitOps(numQubits);
+    std::vector<Value> currentQubitVariables(numQubits);
     qc::QuantumComputation circuit(numQubits);
+    std::vector<Operation*> toVisit{};
+    std::set<Operation*> visited{op};
 
     for (Operation* user : op->getUsers()) {
       if(user->getName().getStringRef() == "mqt.extract") {
@@ -55,47 +93,33 @@ struct QuantumFilterPattern final : OpRewritePattern<AllocOp> {
           llvm::outs() << "ERROR: Qubit extraction only supported with attr index!\n";
           return;
         } else {
-          individualQubitOps[*extractOp.getIdxAttr()] = user;
+          currentQubitVariables[*extractOp.getIdxAttr()] = extractOp.getResult();
+          toVisit.push_back(extractOp);
         }
       }
     }
 
-    llvm::outs() << "-----------------CIRCUIT----------------\n";
-
-    for(std::size_t i = 0; i < numQubits; i++) {
-      llvm::outs() << "q" << i;
-      std::set<Operation*> toVisit{individualQubitOps[i]};
-      while(!toVisit.empty()) {
+    while(!toVisit.empty()) {
         Operation* current = *toVisit.begin();
         toVisit.erase(toVisit.begin());
 
+        if(visited.find(current) != visited.end()) {
+          continue;
+        }
+        visited.insert(current);
+
         for (Operation* user : current->getUsers()) {
-          toVisit.insert(user);
+          if(visited.find(user) != visited.end() || toVisit.end() != std::find(toVisit.begin(), toVisit.end(), user)) {
+            continue;
+          }
           if(user->getName().getStringRef() == "mqt.custom") {
             CustomOp customOp = dyn_cast<CustomOp>(user);
-            const auto name = customOp.getGateName();
-            llvm::outs() << " -> ";
-            if(name == "PauliX") {
-              llvm::outs() << "X";
-              circuit.x(i);
-            } else if(name == "PauliY") {
-              llvm::outs() << "Y";
-              circuit.y(i);
-            } else if(name == "PauliZ") {
-              llvm::outs() << "Z";
-              circuit.z(i);
-            } else if(name == "Hadamard") {
-              llvm::outs() << "H";
-              circuit.h(i);
-            } else {
-              llvm::outs() << "unknown";
-            }
+            handleCustomOp(customOp, circuit, currentQubitVariables);
           } else {
-            llvm::outs() << " -> unknown";
+            // TODO: Handle measurements
           }
+          toVisit.push_back(user);
         }
-      }
-      llvm::outs() << "\n";
     }
 
     llvm::outs() << "----------------------------------------\n\n";
@@ -112,7 +136,7 @@ struct QuantumFilterPattern final : OpRewritePattern<AllocOp> {
 };
 
 void populateToQuantumComputationPatterns(RewritePatternSet& patterns, std::set<Operation*>& handled) {
-  patterns.add<QuantumFilterPattern>(patterns.getContext(), handled);
+  patterns.add<ToQuantumComputationPattern>(patterns.getContext(), handled);
 }
 
 } // namespace mlir::mqt
