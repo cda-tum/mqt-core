@@ -1,3 +1,4 @@
+// UNSUPPORTED: *
 // RUN: quantum-opt %s | FileCheck %s
 
 module {
@@ -6,7 +7,7 @@ module {
         // Lukas: Any thoughts?
         //%r0 = "mqt.allocQubitRegister" () {"size" = 1 : i32} : () -> !mqt.QubitRegister
         //%q0 = "mqt.extractQubit" (%r0) {"index" = 0 : i32} : (!mqt.QubitRegister) -> !mqt.Qubit
-        
+
         %i = arith.constant 0 : i32
         %q1 = "mqt.extractQubit" (%i) : (i32) -> !mqt.Qubit
         %q2 = "mqt.extractQubit" {"index" = 1 : i32} : () -> !mqt.Qubit

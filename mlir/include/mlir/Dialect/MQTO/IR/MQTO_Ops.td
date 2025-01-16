@@ -26,10 +26,10 @@ class MQTO_Type<string name, string typeMnemonic, list<Trait> traits = []>
     let mnemonic = typeMnemonic;
 }
 
-def QubitType : MQTO_Type<"Qubit", "bit"> {
+def QubitType : MQTO_Type<"Qubit", "Qubit"> {
     let summary = "A value-semantic qubit (state).";
 }
-def QuregType : MQTO_Type<"Qureg", "reg"> {
+def QuregType : MQTO_Type<"QubitRegister", "QubitRegister"> {
     let summary = "An array of value-semantic qubits (i.e. quantum register).";
 }
 
