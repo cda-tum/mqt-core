@@ -267,16 +267,13 @@ auto createStatePreparationCircuit(
         "Using State Preparation with Amplitudes that are not normalized"};
   }
 
-  // get number of qubits needed
-  double const numQubits = std::log2(amplitudes.size());
-
-  if (std::abs(numQubits) < EPS || std::floor(numQubits) != numQubits) {
+  // check if the number of elements in the vector is a power of two
+  if (amplitudes.size() == 0 || (amplitudes.size() & (amplitudes.size() - 1)) != 0) {
     throw std::invalid_argument{
         "Using State Preparation with vector size that is not a power of 2"};
   }
-
-  QuantumComputation toZeroCircuit =
-      gatesToUncompute(amplitudes, static_cast<size_t>(numQubits));
+  const auto numQubits = static_cast<size_t>(std::log2(amplitudes.size()));
+  QuantumComputation toZeroCircuit = gatesToUncompute(amplitudes, numQubits);
 
   // invert circuit
   CircuitOptimizer::flattenOperations(toZeroCircuit);
