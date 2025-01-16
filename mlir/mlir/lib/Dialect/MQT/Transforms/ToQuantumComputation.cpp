@@ -5,15 +5,16 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Transforms/GreedyPatternRewriteDriver.h>
-#include <utility>
 #include <set>
+#include <utility>
 
 namespace mlir::mqt {
 
 #define GEN_PASS_DEF_TOQUANTUMCOMPUTATION
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
-struct ToQuantumComputation final : impl::ToQuantumComputationBase<ToQuantumComputation> {
+struct ToQuantumComputation final
+    : impl::ToQuantumComputationBase<ToQuantumComputation> {
 
   std::set<Operation*> handledOperations;
 
