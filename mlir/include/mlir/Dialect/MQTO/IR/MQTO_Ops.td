@@ -15,6 +15,7 @@ def MQTO_Dialect : Dialect {
         The MQT optimization (MQTO) dialect.
     }];
     let cppNamespace = "::mlir::mqto";
+    let useDefaultTypePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
