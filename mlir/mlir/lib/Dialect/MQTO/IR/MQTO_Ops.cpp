@@ -1,8 +1,33 @@
 #include "mlir/Dialect/MQTO/IR/MQTO_Ops.h"
 
-#include "mlir/Support/LLVM.h"
-
+#include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/Builders.h>
+#include <mlir/Support/LLVM.h>
+
+//===----------------------------------------------------------------------===//
+// MQT dialect definitions.
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/MQTO/IR/MQTO_OpsDialect.cpp.inc"
+
+void mlir::mqto::MQTODialect::initialize() {
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.cpp.inc"
+      >();
+
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/Dialect/MQTO/IR/MQTO_Ops.cpp.inc"
+      >();
+}
+
+//===----------------------------------------------------------------------===//
+// MQT type definitions.
+//===----------------------------------------------------------------------===//
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Operations
