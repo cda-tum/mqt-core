@@ -1,5 +1,9 @@
 #include "mlir/Dialect/MQT/IR/MQTOps.h"
+#include "mlir/Dialect/MQT/IR/MQTDialect.h"
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Support/LLVM.h"
 
 #include <iostream>
 #include <mlir/IR/MLIRContext.h>
@@ -21,15 +25,27 @@ struct ThePattern final : OpRewritePattern<CustomOp> {
     if (handled.contains(op)) {
       return failure(); // Skip already handled operations
     }
-    if (op.getGateName() == "Hadamard") {
+    if (op.getGateName() == "PauliZ") {
       return success();
     }
     return failure();
   }
 
-  void rewrite(CustomOp op, PatternRewriter& /*rewriter*/) const override {
+  void rewrite(CustomOp op, PatternRewriter& rewriter) const override {
     handled.insert(op);
     std::cout << "ATTENTION: Hadarmard detected!\n";
+    
+    // Replace with a new operation
+    auto qubits = op.getInQubits();
+    CustomOp hadamard_0 = rewriter.create<CustomOp>(op.getLoc(), TypeRange{QubitType}, mlir::ValueRange{"Hadamard", qubits});
+
+    qubits = hadamard_0.getOutQubits();
+    CustomOp pauli_x = rewriter.create<CustomOp>(op.getLoc(), TypeRange{mlir::StringRef, mlir::ValueRange}, mlir::ValueRange{"PauliX", qubits});
+
+    qubits = pauli_x.getOutQubits();
+    CustomOp hadamard_1 = rewriter.create<CustomOp>(op.getLoc(), TypeRange{mlir::StringRef, mlir::ValueRange}, mlir::ValueRange{"Hadamard", qubits});
+
+    rewriter.replaceOp<CustomOp>(op, mlir::ValueRange{hadamard_0});
   }
 };
 
