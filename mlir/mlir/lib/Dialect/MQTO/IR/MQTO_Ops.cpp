@@ -47,7 +47,7 @@ LogicalResult OperationOp::verify() {
   if (getInQubits().empty()) {
     return emitOpError() << "expected at least one input qubit";
   }
-  if (getInQubits().size() == getOutQubits().size()) {
+  if (getInQubits().size() != getOutQubits().size()) {
     return emitOpError() << "expected same number of input and output qubits";
   }
   return success();
