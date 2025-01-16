@@ -1,8 +1,7 @@
 #pragma once
 
-#include <set>
-
 #include <mlir/Pass/Pass.h>
+#include <set>
 
 namespace mlir {
 
@@ -14,8 +13,8 @@ namespace mqt {
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
 void populateThePassPatterns(RewritePatternSet& patterns);
-void populateToQuantumComputationPatterns(RewritePatternSet& patterns,
-                             std::set<Operation*>& handledOperations);
+void populateToQuantumComputationPatterns(
+    RewritePatternSet& patterns, std::set<Operation*>& handledOperations);
 
 //===----------------------------------------------------------------------===//
 // Registration
