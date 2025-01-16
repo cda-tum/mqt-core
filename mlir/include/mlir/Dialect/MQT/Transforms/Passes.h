@@ -14,6 +14,8 @@ namespace mqt {
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
 void populateThePassPatterns(RewritePatternSet& patterns);
+void populateThePassWithHadamardRewritePattern(RewritePatternSet& patterns);
+void populateThePassWithCXRewritePattern(RewritePatternSet& patterns);
 void populateToQuantumComputationPatterns(RewritePatternSet& patterns,
                              std::set<Operation*>& handledOperations);
 
