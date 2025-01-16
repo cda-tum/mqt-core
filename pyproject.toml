@@ -269,6 +269,7 @@ test-command = "python -c \"from mqt import core\""
 
 
 [tool.uv]
+required-version = ">=0.5.20"
 reinstall-package = ["mqt-core"]
 
 [tool.uv.sources]
