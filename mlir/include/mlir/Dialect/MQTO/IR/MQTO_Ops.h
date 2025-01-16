@@ -5,7 +5,22 @@
 #include <mlir/IR/OpDefinition.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 
+//===----------------------------------------------------------------------===//
+// Dialect declarations
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/MQTO/IR/MQTO_OpsDialect.h.inc"
+
+//===----------------------------------------------------------------------===//
+// Type declarations
+//===----------------------------------------------------------------------===//
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.h.inc"
+
+//===----------------------------------------------------------------------===//
+// Operation declarations
+//===----------------------------------------------------------------------===//
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/MQTO/IR/MQTO_Ops.h.inc"
