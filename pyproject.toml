@@ -44,6 +44,7 @@ qiskit = [
 
 [project.scripts]
 mqt-core-dd-compare = "mqt.core.dd.evaluation:main"
+mqt-core-cli = "mqt.core.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/cda-tum/mqt-core"
@@ -68,11 +69,17 @@ ninja.version = ">=1.10"
 # Setuptools-style build caching in a local directory
 build-dir = "build/{wheel_tag}/{build_type}"
 
-# Only build the Python bindings target
-build.targets = ["ir"]
-
-# Only install the Python package component
-install.components = ["mqt-core_Python"]
+# All the targets to build
+build.targets = [
+  "mqt-core-ir",
+  "mqt-core-algorithms",
+  "mqt-core-circuit-optimizer",
+  "mqt-core-dd",
+  "mqt-core-zx",
+  "mqt-core-ds",
+  "mqt-core-na",
+  "ir",
+]
 
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 sdist.include = ["src/mqt/core/_version.py"]
@@ -96,6 +103,7 @@ git-only = [
 [tool.scikit-build.cmake.define]
 BUILD_MQT_CORE_BINDINGS = "ON"
 BUILD_MQT_CORE_TESTS = "OFF"
+BUILD_SHARED_LIBS = "ON"
 
 [[tool.scikit-build.overrides]]
 if.python-version = ">=3.13"
@@ -107,6 +115,13 @@ cmake.define.DISABLE_GIL = "1"
 
 [tool.setuptools_scm]
 write_to = "src/mqt/core/_version.py"
+
+
+[tool.check-wheel-contents]
+ignore = [
+  "W002", # Wheel contains duplicate files (.so symlinks)
+  "W004", # Module is not located at importable path (/lib/mqt-core-*.so)
+]
 
 
 [tool.pytest.ini_options]
@@ -238,8 +253,8 @@ environment = { DEPLOY = "ON" }
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
 
 [tool.cibuildwheel.windows]
-before-build = "uv pip install delvewheel>=1.7.3"
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt"
+before-build = "uv pip install delvewheel>=1.9.0"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt --ignore-existing"
 environment = { CMAKE_GENERATOR = "Ninja" }
 
 [[tool.cibuildwheel.overrides]]
@@ -254,6 +269,7 @@ test-command = "python -c \"from mqt import core\""
 
 
 [tool.uv]
+required-version = ">=0.5.20"
 reinstall-package = ["mqt-core"]
 
 [tool.uv.sources]
