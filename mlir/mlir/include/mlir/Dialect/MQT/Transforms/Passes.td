@@ -19,4 +19,12 @@ def ThePass : Pass<"the-pass", "ModuleOp"> {
   }];
 }
 
+def ToQuantumComputation : Pass<"to-quantum-computation", "ModuleOp"> {
+  let summary = "This pass creates a quantum computation from a given program in the MQT-Opt dialect";
+  let description = [{
+    This pass starts by extracting all quantum-computation-relevant operations and then
+    translates them into an MQT Core quantum computation.
+  }];
+}
+
 #endif // MQT_PASSES

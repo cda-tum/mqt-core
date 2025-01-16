@@ -16,11 +16,8 @@ namespace mlir::mqt {
 /// Multi-step rewrite using "match" and "rewrite". This allows for separating
 /// the concerns of matching and rewriting.
 struct ThePattern final : OpRewritePattern<CustomOp> {
-  DenseSet<Operation*>& handled;
-
-  explicit ThePattern(MLIRContext* context,
-                      DenseSet<Operation*>& handledOperations)
-      : OpRewritePattern(context), handled(handledOperations) {}
+  explicit ThePattern(MLIRContext* context)
+      : OpRewritePattern(context) {}
 
   LogicalResult match(CustomOp op) const override {
     if (op.getGateName() == "PauliZ") {
@@ -47,9 +44,8 @@ struct ThePattern final : OpRewritePattern<CustomOp> {
   }
 };
 
-void populateThePassPatterns(RewritePatternSet& patterns,
-                             DenseSet<Operation*>& handledOperations) {
-  patterns.add<ThePattern>(patterns.getContext(), handledOperations);
+void populateThePassPatterns(RewritePatternSet& patterns) {
+  patterns.add<ThePattern>(patterns.getContext());
 }
 
 } // namespace mlir::mqt

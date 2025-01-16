@@ -6,13 +6,16 @@
 #include <mlir/Support/LLVM.h>
 #include <mlir/Transforms/GreedyPatternRewriteDriver.h>
 #include <utility>
+#include <set>
 
 namespace mlir::mqt {
 
-#define GEN_PASS_DEF_THEPASS
+#define GEN_PASS_DEF_TOQUANTUMCOMPUTATION
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
-struct ThePass final : impl::ThePassBase<ThePass> {
+struct ToQuantumComputation final : impl::ToQuantumComputationBase<ToQuantumComputation> {
+
+  std::set<Operation*> handledOperations;
 
   void runOnOperation() override {
     // Get the current operation being operated on.
@@ -20,11 +23,11 @@ struct ThePass final : impl::ThePassBase<ThePass> {
     MLIRContext* ctx = &getContext();
 
     // Define the set of patterns to use.
-    RewritePatternSet thePatterns(ctx);
-    populateThePassPatterns(thePatterns);
+    RewritePatternSet patterns(ctx);
+    populateToQuantumComputationPatterns(patterns, handledOperations);
 
     // Apply patterns in an iterative and greedy manner.
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(thePatterns)))) {
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
       signalPassFailure();
     }
   }
