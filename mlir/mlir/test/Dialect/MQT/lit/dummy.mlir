@@ -1,4 +1,4 @@
-// RUN: quantum-opt %s | quantum-opt | FileCheck %s
+// RUN: quantum-opt %s | FileCheck %s
 
 module {
     // CHECK-LABEL: func @bar()
