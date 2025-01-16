@@ -2,6 +2,7 @@
 
 #include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/Builders.h>
+#include <mlir/IR/DialectImplementation.h>
 #include <mlir/Support/LLVM.h>
 
 //===----------------------------------------------------------------------===//
