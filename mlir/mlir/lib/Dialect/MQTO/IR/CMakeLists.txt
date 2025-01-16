@@ -1,1 +1,1 @@
-add_mlir_library(MLIRMQTO MQTO_Ops.cpp DEPENDS MLIRMQTO_OpsIncGen)
+add_mlir_dialect_library(MLIRMQTO MQTO_Ops.cpp DEPENDS MLIRMQTO_OpsIncGen MLIRMQTO_EnumsIncGen)

@@ -19,6 +19,14 @@
 #include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.h.inc"
 
 //===----------------------------------------------------------------------===//
+// Enum declarations
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/MQTO/IR/MQTO_OpsEnums.h.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/MQTO/IR/MQTO_OpsAttributes.h.inc"
+
+//===----------------------------------------------------------------------===//
 // Operation declarations
 //===----------------------------------------------------------------------===//
 
