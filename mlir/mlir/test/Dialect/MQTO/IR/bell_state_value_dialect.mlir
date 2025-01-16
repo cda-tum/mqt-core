@@ -9,7 +9,7 @@ module {
         %1 = "mqto.allocQubitRegister"(%c2_i64) : (i64) -> !mqto.QubitRegister
         %c0_i64 = arith.constant 0 : i64
         %out_qureg_0, %out_qubit_1 = "mqto.extractQubit"(%1, %c0_i64) : (!mqto.QubitRegister, i64) -> (!mqto.QubitRegister, !mqto.Qubit)
-        %2 = "mqto.operation"(%out_qubit) <{gate_name = "Hadamard"}> : (!mqto.Qubit) -> !mqto.Qubit
+        %2 = "mqto.operation"(%out_qubit) <{gate_name = "H"}> : (!mqto.Qubit) -> !mqto.Qubit
         %3:2 = "mqto.operation"(%2, %out_qubit_1) <{gate_name = "CX"}> : (!mqto.Qubit, !mqto.Qubit) -> (!mqto.Qubit, !mqto.Qubit)
         %out_qubit_2, %out_bit = "mqto.measure"(%3#0) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
         %out_qubit_3, %out_bit_4 = "mqto.measure"(%3#1) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
