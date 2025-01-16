@@ -67,6 +67,36 @@ def QuregType : MQTO_Type<"QubitRegister", "QubitRegister"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Enums
+//===----------------------------------------------------------------------===//
+
+class I8EnumAttrCase<string sym, int val, string str = sym>
+    : IntEnumAttrCaseBase<I8, sym, str, val>;
+
+class I8EnumAttr<string name, string summary, list<I8EnumAttrCase> cases> :
+    IntEnumAttr<I8, name, summary, cases> {
+  let underlyingType = "uint8_t";
+}
+
+def OpTypeEnum : I8EnumAttr<"OpTypeEnum",
+    "Known named operation types",
+    [
+        I8EnumAttrCase<"I", 0>,
+        I8EnumAttrCase<"X", 1>,
+        I8EnumAttrCase<"Y", 2>,
+        I8EnumAttrCase<"Z", 3>,
+        I8EnumAttrCase<"H", 4>,
+    ]> {
+    let cppNamespace = "mlir::mqto";
+}
+
+//===----------------------------------------------------------------------===//
+// Attributes
+//===----------------------------------------------------------------------===//
+
+def OpTypeAttr : EnumAttr<MQTO_Dialect, OpTypeEnum, "op_type_attr">;
+
+//===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
@@ -88,13 +118,13 @@ def OperationOp : MQTO_Op<"operation"> {
 
         Example:
         ```mlir
-        %2:2 = "mqto.operation"(%0, %1) <{gate_name = "CX"}> : (!mqto.Qubit, !mqto.Qubit) -> (!mqto.Qubit, !mqto.Qubit)
-        %3 = "mqto.operation"(%2#0) <{gate_name = "H"}> : (!mqto.Qubit) -> !mqto.Qubit
+        %2:2 = "mqto.operation"(%0, %1) <{op_type = "CX"}> : (!mqto.Qubit, !mqto.Qubit) -> (!mqto.Qubit, !mqto.Qubit)
+        %3 = "mqto.operation"(%2#0) <{op_type = "H"}> : (!mqto.Qubit) -> !mqto.Qubit
         ```
     }];
 
     let arguments = (ins
-        StrAttr:$gate_name,
+        OpTypeAttr:$op_type,
         Variadic<QubitType>:$in_qubits
     );
 
