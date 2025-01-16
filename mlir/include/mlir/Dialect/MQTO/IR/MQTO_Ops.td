@@ -71,7 +71,7 @@ def MeasureOp : MQTO_Op<"measure"> {
     );
     let results = (outs
         QubitType:$out_qubit,
-        UI1:$out_bit
+        I1:$out_bit
     );
 }
 

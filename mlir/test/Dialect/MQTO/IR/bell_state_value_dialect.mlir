@@ -18,13 +18,11 @@ module {
         %q0_3, %c0 = "mqto.measure" (%q0_2) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
         %q1_2, %c1 = "mqto.measure" (%q1_1) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
 
-        %q0_4, %q1_3 = "mqto.reset" (%q0_3, %q1_2) : (!mqto.Qubit, !mqto.Qubit) -> (!mqto.Qubit, !mqto.Qubit)
+        %r0_2 = "mqto.insertQubit" (%r0_1, %q0_3) {"index_attr" = 0 : i64} : (!mqto.QubitRegister, !mqto.Qubit) -> !mqto.QubitRegister
+        %r1_2 = "mqto.insertQubit" (%r1_1, %q1_2) {"index_attr" = 0 : i64} : (!mqto.QubitRegister, !mqto.Qubit) -> !mqto.QubitRegister
 
-        %r0_2 = "mqto.insertQubit" (%r0_1, %q0_4) {"index_attr" = 0 : i64} : (!mqto.QubitRegister, !mqto.Qubit) -> !mqto.QubitRegister
-        %r1_2 = "mqto.insertQubit" (%r1_1, %q1_3) {"index_attr" = 0 : i64} : (!mqto.QubitRegister, !mqto.Qubit) -> !mqto.QubitRegister
-
-        "mqt.deallocQubitRegister" (%r0_2) : (!mqto.QubitRegister) -> ()
-        "mqt.deallocQubitRegister" (%r1_2) : (!mqto.QubitRegister) -> ()
+        "mqto.deallocQubitRegister" (%r0_2) : (!mqto.QubitRegister) -> ()
+        "mqto.deallocQubitRegister" (%r1_2) : (!mqto.QubitRegister) -> ()
 
         return %c0, %c1 : i1, i1
     }
