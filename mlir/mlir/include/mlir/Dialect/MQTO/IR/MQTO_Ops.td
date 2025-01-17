@@ -40,9 +40,8 @@ def MQTO_Dialect : Dialect {
     }];
 
     // The C++ namespace that the dialect, and all sub-components, get placed
-    // in. This must start with "::mlir::" and cannot start with "::mqt::", for
-    // example.
-    let cppNamespace = "::mlir::mqto";
+    // in. Here, `mlir::` must either appear at the front or not at all.
+    let cppNamespace = "mqtmlir::mqto";
 
     // This dialect defines its own types for qubits and qubit registers. To
     // parse and print these, respective hooks must be defined. With this flag
