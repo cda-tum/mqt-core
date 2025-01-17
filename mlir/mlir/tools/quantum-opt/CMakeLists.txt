@@ -8,7 +8,7 @@ set(LIBS
     MLIROptLib
     MLIRMQT
     MLIRMQTTransforms
-    MLIRMQTO)
+    MLIRMQTOpt)
 
 add_mlir_tool(quantum-opt quantum-opt.cpp DEPENDS ${LIBS} SUPPORT_PLUGINS)
 target_link_libraries(quantum-opt PUBLIC ${LIBS})

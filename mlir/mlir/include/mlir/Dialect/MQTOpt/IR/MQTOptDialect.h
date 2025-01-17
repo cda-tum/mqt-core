@@ -6,21 +6,21 @@
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 
 //===----------------------------------------------------------------------===//
-// Dialect declarations
+// Dialect
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQTO/IR/MQTO_OpsDialect.h.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
-// Type declarations
+// Types
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.h.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.h.inc"
 
 //===----------------------------------------------------------------------===//
-// Operation declarations
+// Operations
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/MQTO/IR/MQTO_Ops.h.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOps.h.inc"
