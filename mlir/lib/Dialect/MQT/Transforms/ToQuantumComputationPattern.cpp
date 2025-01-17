@@ -17,18 +17,13 @@ namespace mlir::mqt {
 /// Analysis pattern that filters out all quantum operations from a given
 /// program and creates a quantum computation from them.
 struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
-  std::set<Operation*>& handledOperations;
   qc::QuantumComputation& circuit;
 
   explicit ToQuantumComputationPattern(MLIRContext* context,
-                                       std::set<Operation*>& handled,
                                        qc::QuantumComputation& qc)
-      : OpRewritePattern(context), handledOperations(handled), circuit(qc) {}
+      : OpRewritePattern(context), circuit(qc) {}
 
   LogicalResult match(AllocOp op) const override {
-    /*if (handledOperations.find(op) == handledOperations.end()) {
-      return success();
-    }*/
     llvm::outs() << op << " ---> " << op->hasAttr("to_replace") << "\n";
     return (op->hasAttr("to_replace") || op->hasAttr("mqt_core")) ? failure()
                                                                   : success();
@@ -92,8 +87,6 @@ struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
   }
 
   void rewrite(AllocOp op, PatternRewriter& rewriter) const override {
-    handledOperations.insert(op);
-
     llvm::outs() << "\n-----------------GENERAL----------------\n";
 
     if (!op.getNqubitsAttr().has_value()) {
@@ -181,10 +174,8 @@ struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
 };
 
 void populateToQuantumComputationPatterns(RewritePatternSet& patterns,
-                                          std::set<Operation*>& handled,
                                           qc::QuantumComputation& circuit) {
-  patterns.add<ToQuantumComputationPattern>(patterns.getContext(), handled,
-                                            circuit);
+  patterns.add<ToQuantumComputationPattern>(patterns.getContext(), circuit);
 }
 
 } // namespace mlir::mqt
