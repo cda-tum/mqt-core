@@ -1,16 +1,15 @@
-#include "mlir/Dialect/MQT/IR/MQTOps.h"
 #include "mlir/Dialect/MQT/IR/MQTDialect.h"
+#include "mlir/Dialect/MQT/IR/MQTOps.h"
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
 
 #include <iostream>
+#include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LogicalResult.h>
-#include <mlir/Dialect/Arith/IR/Arith.h>
-
 
 namespace mlir::mqt {
 
@@ -31,8 +30,9 @@ struct MultiQubitGateRewritePattern : public OpRewritePattern<CustomOp> {
     auto qubits = op.getInQubits();
 
     // Replace with a new MQT operation.
-    auto mqtoPlaceholder = rewriter.create<CustomOp>(op.getLoc(), "MQTOMulitQubitGatePlaceholder", mlir::ValueRange{qubits});
-    
+    auto mqtoPlaceholder = rewriter.create<CustomOp>(
+        op.getLoc(), "MQTOMulitQubitGatePlaceholder", mlir::ValueRange{qubits});
+
     // Replace the original operation with the new MQT operation.
     rewriter.replaceOp(op, mqtoPlaceholder);
   }

@@ -15,12 +15,10 @@ namespace mqt {
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
 void populateThePassPatterns(RewritePatternSet& patterns);
-void populateToQuantumComputationPatterns(
-    RewritePatternSet& patterns, std::set<Operation*>& handledOperations,
-    qc::QuantumComputation& circuit);
-void populateFromQuantumComputationPatterns(
-    RewritePatternSet& patterns, std::set<Operation*>& handledOperations,
-    qc::QuantumComputation& circuit);
+void populateToQuantumComputationPatterns(RewritePatternSet& patterns,
+                                          qc::QuantumComputation& circuit);
+void populateFromQuantumComputationPatterns(RewritePatternSet& patterns,
+                                            qc::QuantumComputation& circuit);
 void populatePassWithSingleQubitGateRewritePattern(RewritePatternSet& patterns);
 void populatePassWithMultiQubitGateRewritePattern(RewritePatternSet& patterns);
 
