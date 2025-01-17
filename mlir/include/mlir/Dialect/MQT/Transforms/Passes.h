@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ir/QuantumComputation.hpp"
+
 #include <mlir/Pass/Pass.h>
 #include <set>
 
@@ -14,7 +16,11 @@ namespace mqt {
 
 void populateThePassPatterns(RewritePatternSet& patterns);
 void populateToQuantumComputationPatterns(
-    RewritePatternSet& patterns, std::set<Operation*>& handledOperations);
+    RewritePatternSet& patterns, std::set<Operation*>& handledOperations,
+    qc::QuantumComputation& circuit);
+void populateFromQuantumComputationPatterns(
+    RewritePatternSet& patterns, std::set<Operation*>& handledOperations,
+    qc::QuantumComputation& circuit);
 
 //===----------------------------------------------------------------------===//
 // Registration
