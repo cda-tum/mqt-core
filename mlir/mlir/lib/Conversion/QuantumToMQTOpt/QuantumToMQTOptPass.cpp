@@ -10,10 +10,10 @@
 
 namespace mlir::mqt {
 
-#define GEN_PASS_DEF_THEPASS
+#define GEN_PASS_DEF_QUANTUM_TO_MQTOPT
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
-struct ThePass final : impl::ThePassBase<ThePass> {
+struct QuantumToMQTOpt final : impl::QuantumToMQTOptBase<QuantumToMQTOpt> {
 
     void getDependentDialects(DialectRegistry& registry) const override {
     // Register the required dialects.
@@ -28,9 +28,8 @@ struct ThePass final : impl::ThePassBase<ThePass> {
     // Define the set of patterns to use.
     RewritePatternSet thePatterns(ctx);
     ctx->getOrLoadDialect<::mqt::ir::opt::MQTOptDialect>();
-    //populateThePassPatterns(thePatterns);
-    //populatePassWithSingleQubitGateRewritePattern(thePatterns);
-    //populatePassWithMultiQubitGateRewritePattern(thePatterns);
+    populatePassWithAllocRewritePattern(thePatterns);
+
     // Apply patterns in an iterative and greedy manner.
     if (failed(applyPatternsAndFoldGreedily(op, std::move(thePatterns)))) {
       signalPassFailure();
