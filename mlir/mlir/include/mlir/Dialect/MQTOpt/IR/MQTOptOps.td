@@ -98,6 +98,12 @@ class UnaryUnitaryOp<string mnemonic, list<Trait> traits = []> :
         QubitType:$out_qubit,
         Variadic<QubitType>:$ctrl_out_qubits
     );
+
+    let assemblyFormat = [{
+        `(` `)` attr-dict $in_qubit ( `ctrl` `(` $ctrl_in_qubits^ `)` )?
+        `:` `(` type($in_qubit) ( `,` type($ctrl_in_qubits)^ )? `)`
+        `->` type($out_qubit) ( `,` type($ctrl_out_qubits)^ )?
+    }];
 }
 
 def XOp : UnaryUnitaryOp<"x"> {
