@@ -25,17 +25,7 @@ INSTANTIATE_TEST_SUITE_P(
                                 std::complex{-1 / std::sqrt(2)}},
                     std::vector<std::complex<double>>{
                         0, std::complex{1 / std::sqrt(2)},
-                        std::complex{-1 / std::sqrt(2)}, 0}),
-    [](const testing::TestParamInfo<StatePreparation::ParamType>& inf) {
-      const std::vector<std::complex<double>> vector = inf.param;
-      std::stringstream ss{};
-      ss << "State Preparation with amplitudes: [";
-      for (const auto cmplx : vector) {
-        ss << ", (" + std::to_string(cmplx.real()) + "," +
-                  std::to_string(cmplx.imag()) + ")";
-      }
-      return ss.str();
-    });
+                        std::complex{-1 / std::sqrt(2)}, 0}));
 
 TEST_P(StatePreparation, StatePreparationCircuitSimulation) {
   ASSERT_NO_THROW({ auto qc = qc::createStatePreparationCircuit(amplitudes); });
