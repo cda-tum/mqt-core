@@ -1,7 +1,8 @@
-#include "mlir/Dialect/MQTO/IR/MQTO_Ops.h"
+#include "mlir/Dialect/MQTO/IR/MQTO_Dialect.h"
 
 #include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/Builders.h>
+#include <mlir/IR/DialectImplementation.h>
 #include <mlir/Support/LLVM.h>
 
 //===----------------------------------------------------------------------===//
@@ -43,20 +44,43 @@ void mlir::mqto::MQTODialect::initialize() {
 namespace mlir::mqto {
 
 LogicalResult OperationOp::verify() {
-  return success(getInQubits().size() > 0 &&
-                 (getInQubits().size() == getOutQubits().size()));
+  if (getInQubits().empty()) {
+    return emitOpError() << "expected at least one input qubit";
+  }
+  if (getInQubits().size() != getOutQubits().size()) {
+    return emitOpError() << "expected same number of input and output qubits";
+  }
+  return success();
 }
 
 LogicalResult AllocOp::verify() {
-  return success((getNumOperands() == 1) ^ getNqubitsAttr().has_value());
+  if (!getSize() && !getSizeAttr().has_value()) {
+    return emitOpError() << "expected an operand or attribute for size";
+  }
+  if (getSize() && getSizeAttr().has_value()) {
+    return emitOpError() << "expected either an operand or attribute for size";
+  }
+  return success();
 }
 
 LogicalResult ExtractOp::verify() {
-  return success((getNumOperands() == 2) ^ getIndexAttr().has_value());
+  if (!getIndex() && !getIndexAttr().has_value()) {
+    return emitOpError() << "expected an operand or attribute for index";
+  }
+  if (getIndex() && getIndexAttr().has_value()) {
+    return emitOpError() << "expected either an operand or attribute for index";
+  }
+  return success();
 }
 
 LogicalResult InsertOp::verify() {
-  return success((getNumOperands() == 3) ^ getIndexAttr().has_value());
+  if (!getIndex() && !getIndexAttr().has_value()) {
+    return emitOpError() << "expected an operand or attribute for index";
+  }
+  if (getIndex() && getIndexAttr().has_value()) {
+    return emitOpError() << "expected either an operand or attribute for index";
+  }
+  return success();
 }
 
 } // namespace mlir::mqto
