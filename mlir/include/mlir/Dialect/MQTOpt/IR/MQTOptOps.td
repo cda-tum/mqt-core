@@ -6,6 +6,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/DialectBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+include "mlir/Dialect/MQTOpt/IR/MQTOptInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // Dialect
@@ -84,12 +85,13 @@ class GateOp<string mnemonic, list<Trait> traits = []> :
     MQTOptOp<mnemonic, traits> {
 }
 
-class UnitaryOp<string mnemonic, list<Trait> traits = [AttrSizedOperandSegments]> :
-    GateOp<mnemonic, traits> {
+class UnitaryOp<string mnemonic, list<Trait> traits = []> :
+    GateOp<mnemonic, traits # [AttrSizedOperandSegments, UnitaryInterface]> {
     let arguments = (ins
+        Variadic<F64>:$params,
         Variadic<QubitType>:$in_qubits,
-        Variadic<QubitType>:$pos_ctrl_in_qubits,
-        Variadic<QubitType>:$neg_ctrl_in_qubits
+        Variadic<QubitType>:$pos_ctrl_qubits,
+        Variadic<QubitType>:$neg_ctrl_qubits
     );
 
     let results = (outs
@@ -97,12 +99,12 @@ class UnitaryOp<string mnemonic, list<Trait> traits = [AttrSizedOperandSegments]
     );
 
     let assemblyFormat = [{
-        `(` `)` attr-dict $in_qubits ( `ctrl` $pos_ctrl_in_qubits^ )? ( `nctrl` $neg_ctrl_in_qubits^ )?
+        `(` $params `)` attr-dict $in_qubits ( `ctrl` $pos_ctrl_qubits^ )? ( `nctrl` $neg_ctrl_qubits^ )?
         `:` type($out_qubits)
     }];
 }
 
-def XOp : UnitaryOp<"x"> {
+def XOp : UnitaryOp<"x", [NoParametersInterface]> {
     let summary = "X operation";
 
     let description = [{
@@ -119,10 +121,19 @@ def XOp : UnitaryOp<"x"> {
     }];
 }
 
-class NonUnitaryOp<string mnemonic, list<Trait> traits = []> :
-    GateOp<mnemonic, traits>;
+def RZOp : UnitaryOp<"rz", [OneParameterInterface]> {
+    let summary = "RZ operation";
 
-def MeasureOp : NonUnitaryOp<"measure", [SameVariadicResultSize]> {
+    let description = [{}]; // todo: add description
+}
+
+def UOp : UnitaryOp<"u", [ThreeParametersInterface]> {
+    let summary = "U operation";
+
+    let description = [{}]; // todo: add description
+}
+
+def MeasureOp : GateOp<"measure", [SameVariadicResultSize]> {
     let summary = "A measure operation";
 
     let description = [{
@@ -145,6 +156,11 @@ def MeasureOp : NonUnitaryOp<"measure", [SameVariadicResultSize]> {
         Variadic<QubitType>:$out_qubits,
         Variadic<I1>:$out_bits
     );
+
+    // This operation has a verifier that checks if the number of input qubits
+    // is equal to the number of output qubits. It is implemented in the
+    // corresponding .cpp file.
+    let hasVerifier = 1;
 }
 
 class ResourceOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits>;
