@@ -26,7 +26,7 @@ struct ThePass final : impl::ThePassBase<ThePass> {
     populatePassWithMultiQubitGateRewritePattern(thePatterns);
 
     // Apply patterns in an iterative and greedy manner.
-    if (failed(applyPatternsGreedily(op, std::move(thePatterns)))) {
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(thePatterns)))) {
       signalPassFailure();
     }
   }
