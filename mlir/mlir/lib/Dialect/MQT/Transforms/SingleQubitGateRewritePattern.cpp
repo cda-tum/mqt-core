@@ -1,5 +1,5 @@
-#include "mlir/Dialect/MQT/IR/MQTOps.h"
 #include "mlir/Dialect/MQT/IR/MQTDialect.h"
+#include "mlir/Dialect/MQT/IR/MQTOps.h"
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -7,11 +7,10 @@
 #include "mlir/Support/LLVM.h"
 
 #include <iostream>
+#include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LogicalResult.h>
-#include <mlir/Dialect/Arith/IR/Arith.h>
-
 
 namespace mlir::mqt {
 
@@ -43,7 +42,8 @@ struct SingleQubitGateRewritePattern : public OpRewritePattern<CustomOp> {
 };
 
 /// Populate patterns for the transformation pass.
-void populatePassWithSingleQubitGateRewritePattern(RewritePatternSet& patterns) {
+void populatePassWithSingleQubitGateRewritePattern(
+    RewritePatternSet& patterns) {
   patterns.add<SingleQubitGateRewritePattern>(patterns.getContext());
 }
 

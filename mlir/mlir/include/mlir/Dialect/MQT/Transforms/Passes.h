@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ir/QuantumComputation.hpp"
+
 #include <mlir/Pass/Pass.h>
 #include <set>
 
