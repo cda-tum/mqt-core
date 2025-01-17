@@ -1,19 +1,21 @@
-#ifndef MQTO_OPS
-#define MQTO_OPS
+#ifndef MQTOPT_OPS
+#define MQTOPT_OPS
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/DialectBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+
 
 //===----------------------------------------------------------------------===//
 // Dialect
 //===----------------------------------------------------------------------===//
 
-def MQTO_Dialect : Dialect {
+def MQTOptDialect : Dialect {
     // The dialect name used in the MLIR file to prefix operations.
-    let name = "mqto";
+    let name = "mqtopt";
 
-    let summary = "The MQT optimization (mqto) dialect.";
+    let summary = "The MQT optimization (mqtopt) dialect.";
 
     let description = [{
         This dialect is using value semantics for qubits. This means that
@@ -24,12 +26,12 @@ def MQTO_Dialect : Dialect {
 
         The first requirement is enforced by the SSA form of MLIR. The second
         requirement is not explicitly enforced. However, when converting the
-        input dialect mqt that is using reference semantics to the mqto dialect,
+        input dialect mqt that is using reference semantics to the mqtopt dialect,
         qubit state values will only be used once by construction. This is also
-        the reason why the mqto dialect is not meant to be used by hand, but
+        the reason why the mqtopt dialect is not meant to be used by hand, but
         rather as an intermediate representation for optimization passes.
 
-        Due to the value semantics, the mqto dialect allows dataflow analysis
+        Due to the value semantics, the mqtopt dialect allows dataflow analysis
         and optimizations. Those are very common in classical compiler
         optimizations. Hence, the existing classical compiler optimizations can
         easier be reused for quantum programs.
@@ -41,7 +43,7 @@ def MQTO_Dialect : Dialect {
 
     // The C++ namespace that the dialect, and all sub-components, get placed
     // in. Here, `mlir::` must either appear at the front or not at all.
-    let cppNamespace = "mqtmlir::mqto";
+    let cppNamespace = "::mqt::ir::opt";
 
     // This dialect defines its own types for qubits and qubit registers. To
     // parse and print these, respective hooks must be defined. With this flag
@@ -53,15 +55,15 @@ def MQTO_Dialect : Dialect {
 // Types
 //===----------------------------------------------------------------------===//
 
-class MQTO_Type<string name, string typeMnemonic, list<Trait> traits = []>
-        : TypeDef<MQTO_Dialect, name, traits> {
+class MQTOptType<string name, string typeMnemonic, list<Trait> traits = []>
+        : TypeDef<MQTOptDialect, name, traits> {
     let mnemonic = typeMnemonic;
 }
 
-def QubitType : MQTO_Type<"Qubit", "Qubit"> {
+def QubitType : MQTOptType<"Qubit", "Qubit"> {
     let summary = "A value-semantic qubit (state).";
 }
-def QuregType : MQTO_Type<"QubitRegister", "QubitRegister"> {
+def QuregType : MQTOptType<"QubitRegister", "QubitRegister"> {
     let summary = "An array of value-semantic qubits (i.e. quantum register).";
 }
 
@@ -77,7 +79,7 @@ class I8EnumAttr<string name, string summary, list<I8EnumAttrCase> cases> :
   let underlyingType = "uint8_t";
 }
 
-def OpTypeEnum : I8EnumAttr<"OpTypeEnum",
+def OpType : I8EnumAttr<"OpType",
     "Known named operation types",
     [
         I8EnumAttrCase<"I", 0>,
@@ -86,28 +88,29 @@ def OpTypeEnum : I8EnumAttr<"OpTypeEnum",
         I8EnumAttrCase<"Z", 3>,
         I8EnumAttrCase<"H", 4>,
     ]> {
-    let cppNamespace = "mlir::mqto";
+    let cppNamespace = "::mqt::ir::opt";
+    let genSpecializedAttr = 0;
 }
 
 //===----------------------------------------------------------------------===//
 // Attributes
 //===----------------------------------------------------------------------===//
 
-def OpTypeAttr : EnumAttr<MQTO_Dialect, OpTypeEnum, "op_type_attr">;
+def OpTypeAttr : EnumAttr<MQTOptDialect, OpType, "op_type">;
 
 //===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
-// This is the base class for all operations in the MQTO dialect. It is a
-// template that takes the operation mnemonic and a list of traits. The MQTO_Op
+// This is the base class for all operations in the MQTOpt dialect. It is a
+// template that takes the operation mnemonic and a list of traits. The MQTOptOp
 // class is a subclass of the Op class defined in the MLIR core. Every operation
-// in the MQTO dialect has no side effects due to the value semantics of qubits.
+// in the MQTOpt dialect has no side effects due to the value semantics of qubits.
 // This is accomplished by the [NoMemoryEffect] trait.
-class MQTO_Op<string mnemonic, list<Trait> traits = []> :
-        Op<MQTO_Dialect, mnemonic, traits # [NoMemoryEffect]>;
+class MQTOptOp<string mnemonic, list<Trait> traits = []> :
+        Op<MQTOptDialect, mnemonic, traits # [NoMemoryEffect]>;
 
-def OperationOp : MQTO_Op<"operation"> {
+def OperationOp : MQTOptOp<"operation"> {
     let summary = "A standard operation";
 
     let description = [{
@@ -117,8 +120,8 @@ def OperationOp : MQTO_Op<"operation"> {
 
         Example:
         ```mlir
-        %2:2 = "mqto.operation"(%0, %1) <{op_type = "CX"}> : (!mqto.Qubit, !mqto.Qubit) -> (!mqto.Qubit, !mqto.Qubit)
-        %3 = "mqto.operation"(%2#0) <{op_type = "H"}> : (!mqto.Qubit) -> !mqto.Qubit
+        %2:2 = "mqtopt.operation"(%0, %1) <{op_type = "CX"}> : (!mqtopt.Qubit, !mqtopt.Qubit) -> (!mqtopt.Qubit, !mqtopt.Qubit)
+        %3 = "mqtopt.operation"(%2#0) <{op_type = "H"}> : (!mqtopt.Qubit) -> !mqtopt.Qubit
         ```
     }];
 
@@ -137,7 +140,7 @@ def OperationOp : MQTO_Op<"operation"> {
     let hasVerifier = 1;
 }
 
-def MeasureOp : MQTO_Op<"measure"> {
+def MeasureOp : MQTOptOp<"measure"> {
     let summary = "A measure operation";
 
     let description = [{
@@ -148,7 +151,7 @@ def MeasureOp : MQTO_Op<"measure"> {
 
         Example:
         ```mlir
-        %1, %2 = "mqto.measure"(%0) : (!mqto.Qubit) -> (!mqto.Qubit, i1)
+        %1, %2 = "mqtopt.measure"(%0) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
         ```
     }];
 
@@ -162,7 +165,7 @@ def MeasureOp : MQTO_Op<"measure"> {
     );
 }
 
-def AllocOp : MQTO_Op<"allocQubitRegister"> {
+def AllocOp : MQTOptOp<"allocQubitRegister"> {
     let summary = "Allocates a qubit register";
 
     let description = [{
@@ -188,7 +191,7 @@ def AllocOp : MQTO_Op<"allocQubitRegister"> {
     let hasVerifier = 1;
 }
 
-def DeallocOp : MQTO_Op<"deallocQubitRegister"> {
+def DeallocOp : MQTOptOp<"deallocQubitRegister"> {
     let summary = "Deallocates a qubit register";
 
     let description = [{
@@ -203,7 +206,7 @@ def DeallocOp : MQTO_Op<"deallocQubitRegister"> {
     );
 }
 
-def ExtractOp : MQTO_Op<"extractQubit"> {
+def ExtractOp : MQTOptOp<"extractQubit"> {
     let summary = "Extract a specific qubit from a given register";
 
     let description = [{
@@ -231,7 +234,7 @@ def ExtractOp : MQTO_Op<"extractQubit"> {
     let hasVerifier = 1;
 }
 
-def InsertOp : MQTO_Op<"insertQubit"> {
+def InsertOp : MQTOptOp<"insertQubit"> {
     let summary = "Insert a qubit to an empty register index";
 
     let description = [{
@@ -259,4 +262,4 @@ def InsertOp : MQTO_Op<"insertQubit"> {
     let hasVerifier = 1;
 }
 
-#endif // MQTO_OPS
+#endif // MQTOPT_OPS

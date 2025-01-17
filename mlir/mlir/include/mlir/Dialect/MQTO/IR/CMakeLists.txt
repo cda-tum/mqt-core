@@ -1,8 +1,0 @@
-add_mlir_dialect(MQTO_Ops mqto)
-add_mlir_doc(MQTO_Ops MLIRMQTO_Dialect Dialects/ -gen-dialect-doc)
-set(LLVM_TARGET_DEFINITIONS MQTO_Ops.td)
-mlir_tablegen(MQTO_OpsEnums.h.inc -gen-enum-decls)
-mlir_tablegen(MQTO_OpsEnums.cpp.inc -gen-enum-defs)
-mlir_tablegen(MQTO_OpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=mqto)
-mlir_tablegen(MQTO_OpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=mqto)
-add_public_tablegen_target(MLIRMQTO_EnumsIncGen)
