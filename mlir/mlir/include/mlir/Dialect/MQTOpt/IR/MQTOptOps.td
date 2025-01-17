@@ -87,21 +87,24 @@ class GateOp<string mnemonic, list<Trait> traits = []> :
 class UnitaryOp<string mnemonic, list<Trait> traits = []> :
     GateOp<mnemonic, traits>;
 
-class UnaryUnitaryOp<string mnemonic, list<Trait> traits = []> :
+class UnaryUnitaryOp<string mnemonic, list<Trait> traits = [AttrSizedOperandSegments, AttrSizedResultSegments]> :
     UnitaryOp<mnemonic, traits> {
     let arguments = (ins
         QubitType:$in_qubit,
-        Variadic<QubitType>:$ctrl_in_qubits
+        Variadic<QubitType>:$pos_ctrl_in_qubits,
+        Variadic<QubitType>:$neg_ctrl_in_qubits
     );
 
     let results = (outs
-        Variadic<QubitType>:$out_qubits
+        QubitType:$out_qubit,
+        Variadic<QubitType>:$pos_ctrl_out_qubits,
+        Variadic<QubitType>:$neg_ctrl_out_qubits
     );
 
     let assemblyFormat = [{
-        `(` `)` attr-dict $in_qubit ( `ctrl` `(` $ctrl_in_qubits^ `)` )?
-        `:` `(` type($in_qubit) ( `,` type($ctrl_in_qubits)^ )? `)`
-        `->` `(` type($out_qubits) `)`
+        `(` `)` attr-dict $in_qubit ( `ctrl` `(` $pos_ctrl_in_qubits^ `)` )? ( `nctrl` `(` $neg_ctrl_in_qubits^ `)` )?
+        `:` `(` type($in_qubit) ( `,` type($pos_ctrl_in_qubits)^ )? ( `,` type($neg_ctrl_in_qubits)^ )? `)`
+        `->` `(` type($out_qubit) ( `,` type($pos_ctrl_out_qubits)^ )? ( `,` type($neg_ctrl_out_qubits)^ )? `)`
     }];
 }
 
