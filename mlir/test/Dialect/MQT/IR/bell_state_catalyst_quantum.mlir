@@ -1,3 +1,6 @@
+// XFAIL: *
+// RUN: quantum-opt %s | FileCheck %s
+
 module @circuit {
   func.func public @jit_circuit() -> tensor<2xf64> attributes {llvm.emit_c_interface} {
     %0 = catalyst.launch_kernel @module_circuit::@circuit() : () -> tensor<2xf64>
@@ -6,7 +9,7 @@ module @circuit {
   module @module_circuit {
     module attributes {transform.with_named_sequence} {
       transform.named_sequence @__transform_main(%arg0: !transform.op<"builtin.module">) {
-        transform.yield 
+        transform.yield
       }
     }
     func.func public @circuit() -> tensor<2xf64> attributes {diff_method = "parameter-shift", llvm.linkage = #llvm.linkage<internal>, qnode} {

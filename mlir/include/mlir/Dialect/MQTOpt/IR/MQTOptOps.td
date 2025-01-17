@@ -98,7 +98,7 @@ class NonUnitaryOp<string mnemonic, list<Trait> traits = []> : GateOp<mnemonic, 
     let description = [{Unitary qubit operations that can not be inverted or adjoint.}];
 }
 
-def XOp : UnitaryOp<"x", [AttrSizedOperandSegments]> {
+def XOp : UnitaryOp<"x"> {
     let summary = "X operation";
 
     let description = [{
@@ -116,22 +116,15 @@ def XOp : UnitaryOp<"x", [AttrSizedOperandSegments]> {
 
     let arguments = (ins
         QubitType:$in_qubit,
-        Variadic<QubitType>:$pos_ctrl_qubits,
-        Variadic<QubitType>:$neg_ctrl_qubits
+        Variadic<QubitType>:$ctrl_qubits
     );
 
     let results = (outs
         Variadic<QubitType>:$out_qubits
     );
-
-    let assemblyFormat = [{
-        $in_qubit ( `pos_ctrls` `(` $pos_ctrl_qubits^ `)` )? ( `neg_ctrls` `(` $neg_ctrl_qubits^ `)` )? attr-dict
-        `:` `(` type($in_qubit) (`,` `pos_ctrls` type($pos_ctrl_qubits)^ )? (`,` `neg_ctrls` type($neg_ctrl_qubits)^ )? `)`
-        `->` type($out_qubits)
-    }];
 }
 
-def MeasureOp : NonUnitaryOp<"measure", [AttrSizedResultSegments]> {
+def MeasureOp : NonUnitaryOp<"measure", [SameVariadicResultSize]> {
     let summary = "A measure operation";
 
     let description = [{

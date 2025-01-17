@@ -13,7 +13,7 @@ module {
         %out_qureg_0, %out_qubit_1 = "mqtopt.extractQubit"(%1, %c0_i64) : (!mqtopt.QubitRegister, i64) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
 
         %2 = "mqtopt.x"(%out_qubit) : (!mqtopt.Qubit) -> !mqtopt.Qubit
-        %3:2 = "mqtopt.x"(%2) pos_ctrls(%out_qubit_1) : (!mqtopt.Qubit, pos_ctrls !mqtopt.Qubit) -> (!mqtopt.Qubit, !mqtopt.Qubit)
+        %3:2 = "mqtopt.x"(%2, %out_qubit_1) : (!mqtopt.Qubit, !mqtopt.Qubit) -> (!mqtopt.Qubit, !mqtopt.Qubit)
 
         %out_qubit_2, %out_bit = "mqtopt.measure"(%3#0) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
         %out_qubit_3, %out_bit_4 = "mqtopt.measure"(%3#1) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
