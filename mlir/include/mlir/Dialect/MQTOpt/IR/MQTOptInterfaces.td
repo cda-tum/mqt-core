@@ -30,6 +30,66 @@ def UnitaryInterface : OpInterface<"UnitaryInterface"> {
     }];
 }
 
+def UnaryInterface : OpInterface<"UnaryInterface"> {
+    let description = [{
+        This interface provides a generic way to interact with unary
+        operations in the MQTOpt dialect. Unary operations are quantum
+        operations that take exactly one input qubit plus optional controlling
+        qubits.
+    }];
+
+    let cppNamespace = "::mqt::ir::opt";
+
+    let verify = [{
+        auto gate = mlir::cast<ConcreteOp>($_op);
+        if (gate.getInQubits().size() != 1) {
+            return $_op->emitError() <<
+                "number of input qubits (" << gate.getInQubits().size() << ") must be the one";
+        }
+        return mlir::success();
+    }];
+}
+
+def BinaryInterface : OpInterface<"BinaryInterface"> {
+    let description = [{
+        This interface provides a generic way to interact with unary
+        operations in the MQTOpt dialect. Unary operations are quantum
+        operations that take exactly two input qubits plus optional controlling
+        qubits.
+    }];
+
+    let cppNamespace = "::mqt::ir::opt";
+
+    let verify = [{
+        auto gate = mlir::cast<ConcreteOp>($_op);
+        if (gate.getInQubits().size() != 2) {
+            return $_op->emitError() <<
+                "number of input qubits (" << gate.getInQubits().size() << ") must be the two";
+        }
+        return mlir::success();
+    }];
+}
+
+def TernaryInterface : OpInterface<"TernaryInterface"> {
+    let description = [{
+        This interface provides a generic way to interact with unary
+        operations in the MQTOpt dialect. Unary operations are quantum
+        operations that take exactly three input qubits plus optional controlling
+        qubits.
+    }];
+
+    let cppNamespace = "::mqt::ir::opt";
+
+    let verify = [{
+        auto gate = mlir::cast<ConcreteOp>($_op);
+        if (gate.getInQubits().size() != 3) {
+            return $_op->emitError() <<
+                "number of input qubits (" << gate.getInQubits().size() << ") must be the three";
+        }
+        return mlir::success();
+    }];
+}
+
 def NoParametersInterface : OpInterface<"NoParametersInterface"> {
     let description = [{
         This interface provides a generic way to interact with operations that

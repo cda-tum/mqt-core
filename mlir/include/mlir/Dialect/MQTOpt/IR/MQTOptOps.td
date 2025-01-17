@@ -104,7 +104,7 @@ class UnitaryOp<string mnemonic, list<Trait> traits = []> :
     }];
 }
 
-def XOp : UnitaryOp<"x", [NoParametersInterface]> {
+def XOp : UnitaryOp<"x", [NoParametersInterface, UnaryInterface]> {
     let summary = "X operation";
 
     let description = [{
@@ -121,13 +121,13 @@ def XOp : UnitaryOp<"x", [NoParametersInterface]> {
     }];
 }
 
-def RZOp : UnitaryOp<"rz", [OneParameterInterface]> {
+def RZOp : UnitaryOp<"rz", [OneParameterInterface, UnaryInterface]> {
     let summary = "RZ operation";
 
     let description = [{}]; // todo: add description
 }
 
-def UOp : UnitaryOp<"u", [ThreeParametersInterface]> {
+def UOp : UnitaryOp<"u", [ThreeParametersInterface, UnaryInterface]> {
     let summary = "U operation";
 
     let description = [{}]; // todo: add description
