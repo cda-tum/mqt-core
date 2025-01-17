@@ -31,19 +31,6 @@ void mqt::ir::opt::MQTOptDialect::initialize() {
 #include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// Attributes
-//===----------------------------------------------------------------------===//
-
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsAttributes.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// Enums
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsEnums.cpp.inc"
-
-//===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
@@ -55,16 +42,6 @@ void mqt::ir::opt::MQTOptDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 namespace mqt::ir::opt {
-
-mlir::LogicalResult OperationOp::verify() {
-  if (getInQubits().empty()) {
-    return emitOpError() << "expected at least one input qubit";
-  }
-  if (getInQubits().size() != getOutQubits().size()) {
-    return emitOpError() << "expected same number of input and output qubits";
-  }
-  return mlir::success();
-}
 
 mlir::LogicalResult AllocOp::verify() {
   if (!getSize() && !getSizeAttr().has_value()) {

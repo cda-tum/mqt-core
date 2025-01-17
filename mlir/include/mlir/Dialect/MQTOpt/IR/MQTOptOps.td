@@ -63,40 +63,10 @@ class MQTOptType<string name, string typeMnemonic, list<Trait> traits = []>
 def QubitType : MQTOptType<"Qubit", "Qubit"> {
     let summary = "A value-semantic qubit (state).";
 }
+
 def QuregType : MQTOptType<"QubitRegister", "QubitRegister"> {
     let summary = "An array of value-semantic qubits (i.e. quantum register).";
 }
-
-//===----------------------------------------------------------------------===//
-// Enums
-//===----------------------------------------------------------------------===//
-
-class I8EnumAttrCase<string sym, int val, string str = sym>
-    : IntEnumAttrCaseBase<I8, sym, str, val>;
-
-class I8EnumAttr<string name, string summary, list<I8EnumAttrCase> cases> :
-    IntEnumAttr<I8, name, summary, cases> {
-  let underlyingType = "uint8_t";
-}
-
-def OpType : I8EnumAttr<"OpType",
-    "Known named operation types",
-    [
-        I8EnumAttrCase<"I", 0>,
-        I8EnumAttrCase<"X", 1>,
-        I8EnumAttrCase<"Y", 2>,
-        I8EnumAttrCase<"Z", 3>,
-        I8EnumAttrCase<"H", 4>,
-    ]> {
-    let cppNamespace = "::mqt::ir::opt";
-    let genSpecializedAttr = 0;
-}
-
-//===----------------------------------------------------------------------===//
-// Attributes
-//===----------------------------------------------------------------------===//
-
-def OpTypeAttr : EnumAttr<MQTOptDialect, OpType, "op_type">;
 
 //===----------------------------------------------------------------------===//
 // Operations
@@ -110,8 +80,26 @@ def OpTypeAttr : EnumAttr<MQTOptDialect, OpType, "op_type">;
 class MQTOptOp<string mnemonic, list<Trait> traits = []> :
         Op<MQTOptDialect, mnemonic, traits # [NoMemoryEffect]>;
 
-def OperationOp : MQTOptOp<"operation"> {
-    let summary = "A standard operation";
+class GateOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits> {
+    let summary = "Generic gate operation.";
+
+    let description = [{Base class for unitary and non-unitary operations.}];
+}
+
+class UnitaryOp<string mnemonic, list<Trait> traits = []> : GateOp<mnemonic, traits> {
+    let summary = "Generic unitary gate operation.";
+
+    let description = [{Unitary qubit operations that can be inverted or adjoint.}];
+}
+
+class NonUnitaryOp<string mnemonic, list<Trait> traits = []> : GateOp<mnemonic, traits> {
+    let summary = "Generic non-unitary gate operation.";
+
+    let description = [{Unitary qubit operations that can not be inverted or adjoint.}];
+}
+
+def XOp : UnitaryOp<"x", [AttrSizedOperandSegments]> {
+    let summary = "X operation";
 
     let description = [{
         This class represents a standard quantum operation. It has a gate name
@@ -120,27 +108,30 @@ def OperationOp : MQTOptOp<"operation"> {
 
         Example:
         ```mlir
-        %2:2 = "mqtopt.operation"(%0, %1) <{op_type = "CX"}> : (!mqtopt.Qubit, !mqtopt.Qubit) -> (!mqtopt.Qubit, !mqtopt.Qubit)
-        %3 = "mqtopt.operation"(%2#0) <{op_type = "H"}> : (!mqtopt.Qubit) -> !mqtopt.Qubit
+        %0_1 = "mqtopt.x"(%0) : (!mqtopt.Qubit) -> !mqtopt.Qubit
+        %0_1, %1_1 = "mqtopt.x"(%0_1, [%1]) : (!mqtopt.Qubit, !mqtopt.Qubit) -> !mqtopt.Qubit
+        %0_2, %1_2, %2_1,  = "mqtopt.x"(%0_1, [%1_1], [%2]) : (!mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit) -> !mqtopt.Qubit
         ```
     }];
 
     let arguments = (ins
-        OpTypeAttr:$op_type,
-        Variadic<QubitType>:$in_qubits
+        QubitType:$in_qubit,
+        Variadic<QubitType>:$pos_ctrl_qubits,
+        Variadic<QubitType>:$neg_ctrl_qubits
     );
 
     let results = (outs
         Variadic<QubitType>:$out_qubits
     );
 
-    // This operation has a verifier that checks if the number of input qubits
-    // is equal to the number of output qubits. It is implemented in the
-    // corresponding .cpp file.
-    let hasVerifier = 1;
+    let assemblyFormat = [{
+        $in_qubit ( `pos_ctrls` `(` $pos_ctrl_qubits^ `)` )? ( `neg_ctrls` `(` $neg_ctrl_qubits^ `)` )? attr-dict
+        `:` `(` type($in_qubit) (`,` `pos_ctrls` type($pos_ctrl_qubits)^ )? (`,` `neg_ctrls` type($neg_ctrl_qubits)^ )? `)`
+        `->` type($out_qubits)
+    }];
 }
 
-def MeasureOp : MQTOptOp<"measure"> {
+def MeasureOp : NonUnitaryOp<"measure", [AttrSizedResultSegments]> {
     let summary = "A measure operation";
 
     let description = [{
@@ -151,21 +142,27 @@ def MeasureOp : MQTOptOp<"measure"> {
 
         Example:
         ```mlir
-        %1, %2 = "mqtopt.measure"(%0) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
+        %0_1, %1 = "mqtopt.measure"(%0) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
         ```
     }];
 
     let arguments = (ins
-        QubitType:$in_qubit
+        Variadic<QubitType>:$in_qubits
     );
 
     let results = (outs
-        QubitType:$out_qubit,
-        I1:$out_bit
+        Variadic<QubitType>:$out_qubits,
+        Variadic<I1>:$out_bits
     );
 }
 
-def AllocOp : MQTOptOp<"allocQubitRegister"> {
+class ResourceOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits> {
+    let summary = "Quantum resource management operation.";
+
+    let description = [{Base class for resource management operations.}];
+}
+
+def AllocOp : ResourceOp<"allocQubitRegister"> {
     let summary = "Allocates a qubit register";
 
     let description = [{
@@ -174,6 +171,14 @@ def AllocOp : MQTOptOp<"allocQubitRegister"> {
         attribute when the size is known at compile time. Before the qubits in
         the register can be used, they need to be extracted from the register
         with the extract operation.
+
+        Example:
+        ```mlir
+        %0 = "mqtopt.allocQubitRegister"() <{size_attr = 2 : i64}> : () -> !mqtopt.QubitRegister
+
+        %c0_i64 = arith.constant 2 : i64
+        %1 = "mqtopt.allocQubitRegister"(%c0_i64) : (i64) -> !mqtopt.QubitRegister
+        ```
     }];
 
     let arguments = (ins
@@ -191,7 +196,7 @@ def AllocOp : MQTOptOp<"allocQubitRegister"> {
     let hasVerifier = 1;
 }
 
-def DeallocOp : MQTOptOp<"deallocQubitRegister"> {
+def DeallocOp : ResourceOp<"deallocQubitRegister"> {
     let summary = "Deallocates a qubit register";
 
     let description = [{
@@ -199,6 +204,11 @@ def DeallocOp : MQTOptOp<"deallocQubitRegister"> {
         The qubit register is no longer valid after this operation. To be valid
         all extracted qubits had to be inserted back into the register. However,
         this property is not enforced by the dialect.
+
+        Example:
+        ```
+        "mqtopt.deallocQubitRegister"(%0) : (!mqtopt.QubitRegister) -> ()
+        ```
     }];
 
     let arguments = (ins
@@ -206,7 +216,7 @@ def DeallocOp : MQTOptOp<"deallocQubitRegister"> {
     );
 }
 
-def ExtractOp : MQTOptOp<"extractQubit"> {
+def ExtractOp : ResourceOp<"extractQubit"> {
     let summary = "Extract a specific qubit from a given register";
 
     let description = [{
@@ -215,6 +225,11 @@ def ExtractOp : MQTOptOp<"extractQubit"> {
         allocateQubitRegister operation. Upon invocation of this operation, the
         qubit is removed from the register and can be used in operations. A gap
         is left in the register that can be filled with the insert operation.
+
+        Extract:
+
+        %out_qureg, %out_qubit = "mqtopt.extractQubit"(%0) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
+
     }];
 
     let arguments = (ins
@@ -234,8 +249,7 @@ def ExtractOp : MQTOptOp<"extractQubit"> {
     let hasVerifier = 1;
 }
 
-def InsertOp : MQTOptOp<"insertQubit"> {
-    let summary = "Insert a qubit to an empty register index";
+def InsertOp : ResourceOp<"insertQubit"> {
 
     let description = [{
         This class represents an operation that inserts a qubit back into a qubit

@@ -6,28 +6,20 @@
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 
 //===----------------------------------------------------------------------===//
-// Dialect declarations
+// Dialect
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MQTOpt/IR/MQTOptOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
-// Type declarations
+// Types
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.h.inc"
 
 //===----------------------------------------------------------------------===//
-// Enum declarations
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsEnums.h.inc"
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsAttributes.h.inc"
-
-//===----------------------------------------------------------------------===//
-// Operation declarations
+// Operations
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES

@@ -1,8 +1,2 @@
 add_mlir_dialect(MQTOptOps mqtopt)
 add_mlir_doc(MQTOptOps MLIRMQTOptDialect Dialects/ -gen-dialect-doc)
-set(LLVM_TARGET_DEFINITIONS MQTOptOps.td)
-mlir_tablegen(MQTOptOpsEnums.h.inc -gen-enum-decls)
-mlir_tablegen(MQTOptOpsEnums.cpp.inc -gen-enum-defs)
-mlir_tablegen(MQTOptOpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=mqtopt)
-mlir_tablegen(MQTOptOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=mqtopt)
-add_public_tablegen_target(MLIRMQTOptEnumsIncGen)
