@@ -1,5 +1,4 @@
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
-#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 #include "mlir/IR/Operation.h"
 
 #include <mlir/IR/MLIRContext.h>
@@ -15,11 +14,6 @@ namespace mlir::mqt {
 
 struct ThePass final : impl::ThePassBase<ThePass> {
 
-    void getDependentDialects(DialectRegistry& registry) const override {
-    // Register the required dialects.
-    registry.insert<::mqt::ir::opt::MQTOptDialect>();
-  }
-
   void runOnOperation() override {
     // Get the current operation being operated on.
     Operation* op = getOperation();
@@ -27,10 +21,10 @@ struct ThePass final : impl::ThePassBase<ThePass> {
 
     // Define the set of patterns to use.
     RewritePatternSet thePatterns(ctx);
-    ctx->getOrLoadDialect<::mqt::ir::opt::MQTOptDialect>();
-    //populateThePassPatterns(thePatterns);
-    //populatePassWithSingleQubitGateRewritePattern(thePatterns);
-    //populatePassWithMultiQubitGateRewritePattern(thePatterns);
+    populateThePassPatterns(thePatterns);
+    populatePassWithSingleQubitGateRewritePattern(thePatterns);
+    populatePassWithMultiQubitGateRewritePattern(thePatterns);
+
     // Apply patterns in an iterative and greedy manner.
     if (failed(applyPatternsAndFoldGreedily(op, std::move(thePatterns)))) {
       signalPassFailure();
