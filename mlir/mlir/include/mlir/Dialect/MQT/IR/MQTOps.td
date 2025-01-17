@@ -109,7 +109,7 @@ class Memory_Op<string mnemonic, list<Trait> traits = []> : MQT_OP<mnemonic, tra
 
 // The operation has no memory effect and is pure, therefore two similar alloc would be removed
 // by a CSE pass. This needs to be changed in the future.
-def AllocOp : Memory_Op<"alloc", [NoMemoryEffect]> {
+def AllocOp : Memory_Op<"alloc"> {
     let summary = "Allocate n qubits into a quantum register.";
     let description = [{
     }];
