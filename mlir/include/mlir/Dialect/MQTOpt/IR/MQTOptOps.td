@@ -80,25 +80,27 @@ def QuregType : MQTOptType<"QubitRegister", "QubitRegister"> {
 class MQTOptOp<string mnemonic, list<Trait> traits = []> :
         Op<MQTOptDialect, mnemonic, traits # [NoMemoryEffect]>;
 
-class GateOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits> {
-    let summary = "Generic gate operation.";
-
-    let description = [{Base class for unitary and non-unitary operations.}];
+class GateOp<string mnemonic, list<Trait> traits = []> :
+    MQTOptOp<mnemonic, traits> {
 }
 
-class UnitaryOp<string mnemonic, list<Trait> traits = []> : GateOp<mnemonic, traits> {
-    let summary = "Generic unitary gate operation.";
+class UnitaryOp<string mnemonic, list<Trait> traits = []> :
+    GateOp<mnemonic, traits>;
 
-    let description = [{Unitary qubit operations that can be inverted or adjoint.}];
+class UnaryUnitaryOp<string mnemonic, list<Trait> traits = []> :
+    UnitaryOp<mnemonic, traits> {
+    let arguments = (ins
+        QubitType:$in_qubit,
+        Variadic<QubitType>:$ctrl_in_qubits
+    );
+
+    let results = (outs
+        QubitType:$out_qubit,
+        Variadic<QubitType>:$ctrl_out_qubits
+    );
 }
 
-class NonUnitaryOp<string mnemonic, list<Trait> traits = []> : GateOp<mnemonic, traits> {
-    let summary = "Generic non-unitary gate operation.";
-
-    let description = [{Unitary qubit operations that can not be inverted or adjoint.}];
-}
-
-def XOp : UnitaryOp<"x"> {
+def XOp : UnaryUnitaryOp<"x"> {
     let summary = "X operation";
 
     let description = [{
@@ -113,16 +115,10 @@ def XOp : UnitaryOp<"x"> {
         %0_2, %1_2, %2_1,  = "mqtopt.x"(%0_1, [%1_1], [%2]) : (!mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit) -> !mqtopt.Qubit
         ```
     }];
-
-    let arguments = (ins
-        QubitType:$in_qubit,
-        Variadic<QubitType>:$ctrl_qubits
-    );
-
-    let results = (outs
-        Variadic<QubitType>:$out_qubits
-    );
 }
+
+class NonUnitaryOp<string mnemonic, list<Trait> traits = []> :
+    GateOp<mnemonic, traits>;
 
 def MeasureOp : NonUnitaryOp<"measure", [SameVariadicResultSize]> {
     let summary = "A measure operation";
@@ -149,11 +145,7 @@ def MeasureOp : NonUnitaryOp<"measure", [SameVariadicResultSize]> {
     );
 }
 
-class ResourceOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits> {
-    let summary = "Quantum resource management operation.";
-
-    let description = [{Base class for resource management operations.}];
-}
+class ResourceOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits>;
 
 def AllocOp : ResourceOp<"allocQubitRegister"> {
     let summary = "Allocates a qubit register";
