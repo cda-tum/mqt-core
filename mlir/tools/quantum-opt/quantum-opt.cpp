@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   mlir::registerAllDialects(registry);
   mlir::func::registerAllExtensions(registry);
   registry.insert<mlir::mqt::MQTDialect>();
-  registry.insert<mlir::mqto::MQTODialect>();
+  registry.insert<mqtmlir::mqto::MQTODialect>();
 
   return mlir::asMainReturnCode(
       mlir::MlirOptMain(argc, argv, "Quantum optimizer driver\n", registry));

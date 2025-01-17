@@ -11,7 +11,7 @@
 
 #include "mlir/Dialect/MQTO/IR/MQTO_OpsDialect.cpp.inc"
 
-void mlir::mqto::MQTODialect::initialize() {
+void mqtmlir::mqto::MQTODialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.cpp.inc"
@@ -41,46 +41,46 @@ void mlir::mqto::MQTODialect::initialize() {
 // Verifier
 //===----------------------------------------------------------------------===//
 
-namespace mlir::mqto {
+namespace mqtmlir::mqto {
 
-LogicalResult OperationOp::verify() {
+mlir::LogicalResult OperationOp::verify() {
   if (getInQubits().empty()) {
     return emitOpError() << "expected at least one input qubit";
   }
   if (getInQubits().size() != getOutQubits().size()) {
     return emitOpError() << "expected same number of input and output qubits";
   }
-  return success();
+  return mlir::success();
 }
 
-LogicalResult AllocOp::verify() {
+mlir::LogicalResult AllocOp::verify() {
   if (!getSize() && !getSizeAttr().has_value()) {
     return emitOpError() << "expected an operand or attribute for size";
   }
   if (getSize() && getSizeAttr().has_value()) {
     return emitOpError() << "expected either an operand or attribute for size";
   }
-  return success();
+  return mlir::success();
 }
 
-LogicalResult ExtractOp::verify() {
+mlir::LogicalResult ExtractOp::verify() {
   if (!getIndex() && !getIndexAttr().has_value()) {
     return emitOpError() << "expected an operand or attribute for index";
   }
   if (getIndex() && getIndexAttr().has_value()) {
     return emitOpError() << "expected either an operand or attribute for index";
   }
-  return success();
+  return mlir::success();
 }
 
-LogicalResult InsertOp::verify() {
+mlir::LogicalResult InsertOp::verify() {
   if (!getIndex() && !getIndexAttr().has_value()) {
     return emitOpError() << "expected an operand or attribute for index";
   }
   if (getIndex() && getIndexAttr().has_value()) {
     return emitOpError() << "expected either an operand or attribute for index";
   }
-  return success();
+  return mlir::success();
 }
 
-} // namespace mlir::mqto
+} // namespace mqtmlir::mqto
