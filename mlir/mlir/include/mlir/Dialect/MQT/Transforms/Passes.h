@@ -12,9 +12,10 @@ namespace mqt {
 #define GEN_PASS_DECL
 #include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
 
-void populateThePassPatterns(RewritePatternSet& patterns);
-void populatePassWithSingleQubitGateRewritePattern(RewritePatternSet& patterns);
-void populatePassWithMultiQubitGateRewritePattern(RewritePatternSet& patterns);
+//void populateThePassPatterns(RewritePatternSet& patterns);
+//void populatePassWithSingleQubitGateRewritePattern(RewritePatternSet& patterns);
+//void populatePassWithMultiQubitGateRewritePattern(RewritePatternSet& patterns);
+void populatePassWithAllocRewritePattern(RewritePatternSet& patterns);
 void populateToQuantumComputationPatterns(RewritePatternSet& patterns,
                              std::set<Operation*>& handledOperations);
 
