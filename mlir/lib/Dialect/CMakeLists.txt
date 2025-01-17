@@ -1,2 +1,2 @@
 add_subdirectory(MQT)
-add_subdirectory(MQTO)
+add_subdirectory(MQTOpt)

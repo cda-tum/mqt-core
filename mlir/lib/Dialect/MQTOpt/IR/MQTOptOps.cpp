@@ -1,4 +1,4 @@
-#include "mlir/Dialect/MQTO/IR/MQTO_Dialect.h"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 
 #include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/Builders.h>
@@ -6,42 +6,55 @@
 #include <mlir/Support/LLVM.h>
 
 //===----------------------------------------------------------------------===//
-// MQT dialect definitions.
+// Dialect
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQTO/IR/MQTO_OpsDialect.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsDialect.cpp.inc"
 
-void mqtmlir::mqto::MQTODialect::initialize() {
+void mqt::ir::opt::MQTOptDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.cpp.inc"
       >();
 
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/MQTO/IR/MQTO_Ops.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOps.cpp.inc"
       >();
 }
 
 //===----------------------------------------------------------------------===//
-// MQT type definitions.
+// Types
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// Attributes
+//===----------------------------------------------------------------------===//
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsAttributes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// Enums
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsEnums.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/MQTO/IR/MQTO_Ops.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Verifier
 //===----------------------------------------------------------------------===//
 
-namespace mqtmlir::mqto {
+namespace mqt::ir::opt {
 
 mlir::LogicalResult OperationOp::verify() {
   if (getInQubits().empty()) {
@@ -83,4 +96,4 @@ mlir::LogicalResult InsertOp::verify() {
   return mlir::success();
 }
 
-} // namespace mqtmlir::mqto
+} // namespace mqt::ir::opt
