@@ -1,4 +1,4 @@
-#include "mlir/Dialect/MQTO/IR/MQTO_Dialect.h"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 
 #include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/Builders.h>
@@ -6,81 +6,71 @@
 #include <mlir/Support/LLVM.h>
 
 //===----------------------------------------------------------------------===//
-// MQT dialect definitions.
+// Dialect
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQTO/IR/MQTO_OpsDialect.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsDialect.cpp.inc"
 
-void mlir::mqto::MQTODialect::initialize() {
+void mqt::ir::opt::MQTOptDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.cpp.inc"
       >();
 
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/MQTO/IR/MQTO_Ops.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOps.cpp.inc"
       >();
 }
 
 //===----------------------------------------------------------------------===//
-// MQT type definitions.
+// Types
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQTO/IR/MQTO_OpsTypes.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/MQTO/IR/MQTO_Ops.cpp.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Verifier
 //===----------------------------------------------------------------------===//
 
-namespace mlir::mqto {
+namespace mqt::ir::opt {
 
-LogicalResult OperationOp::verify() {
-  if (getInQubits().empty()) {
-    return emitOpError() << "expected at least one input qubit";
-  }
-  if (getInQubits().size() != getOutQubits().size()) {
-    return emitOpError() << "expected same number of input and output qubits";
-  }
-  return success();
-}
-
-LogicalResult AllocOp::verify() {
+mlir::LogicalResult AllocOp::verify() {
   if (!getSize() && !getSizeAttr().has_value()) {
     return emitOpError() << "expected an operand or attribute for size";
   }
   if (getSize() && getSizeAttr().has_value()) {
     return emitOpError() << "expected either an operand or attribute for size";
   }
-  return success();
+  return mlir::success();
 }
 
-LogicalResult ExtractOp::verify() {
+mlir::LogicalResult ExtractOp::verify() {
   if (!getIndex() && !getIndexAttr().has_value()) {
     return emitOpError() << "expected an operand or attribute for index";
   }
   if (getIndex() && getIndexAttr().has_value()) {
     return emitOpError() << "expected either an operand or attribute for index";
   }
-  return success();
+  return mlir::success();
 }
 
-LogicalResult InsertOp::verify() {
+mlir::LogicalResult InsertOp::verify() {
   if (!getIndex() && !getIndexAttr().has_value()) {
     return emitOpError() << "expected an operand or attribute for index";
   }
   if (getIndex() && getIndexAttr().has_value()) {
     return emitOpError() << "expected either an operand or attribute for index";
   }
-  return success();
+  return mlir::success();
 }
 
-} // namespace mlir::mqto
+} // namespace mqt::ir::opt

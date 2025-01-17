@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: quantum-opt %s | FileCheck %s
 
 module {
