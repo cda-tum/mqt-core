@@ -84,31 +84,25 @@ class GateOp<string mnemonic, list<Trait> traits = []> :
     MQTOptOp<mnemonic, traits> {
 }
 
-class UnitaryOp<string mnemonic, list<Trait> traits = []> :
-    GateOp<mnemonic, traits>;
-
-class UnaryUnitaryOp<string mnemonic, list<Trait> traits = [AttrSizedOperandSegments, AttrSizedResultSegments]> :
-    UnitaryOp<mnemonic, traits> {
+class UnitaryOp<string mnemonic, list<Trait> traits = [AttrSizedOperandSegments]> :
+    GateOp<mnemonic, traits> {
     let arguments = (ins
-        QubitType:$in_qubit,
+        Variadic<QubitType>:$in_qubits,
         Variadic<QubitType>:$pos_ctrl_in_qubits,
         Variadic<QubitType>:$neg_ctrl_in_qubits
     );
 
     let results = (outs
-        QubitType:$out_qubit,
-        Variadic<QubitType>:$pos_ctrl_out_qubits,
-        Variadic<QubitType>:$neg_ctrl_out_qubits
+        Variadic<QubitType>:$out_qubits
     );
 
     let assemblyFormat = [{
-        `(` `)` attr-dict $in_qubit ( `ctrl` `(` $pos_ctrl_in_qubits^ `)` )? ( `nctrl` `(` $neg_ctrl_in_qubits^ `)` )?
-        `:` `(` type($in_qubit) ( `,` type($pos_ctrl_in_qubits)^ )? ( `,` type($neg_ctrl_in_qubits)^ )? `)`
-        `->` `(` type($out_qubit) ( `,` type($pos_ctrl_out_qubits)^ )? ( `,` type($neg_ctrl_out_qubits)^ )? `)`
+        `(` `)` attr-dict $in_qubits ( `ctrl` $pos_ctrl_in_qubits^ )? ( `nctrl` $neg_ctrl_in_qubits^ )?
+        `:` type($out_qubits)
     }];
 }
 
-def XOp : UnaryUnitaryOp<"x"> {
+def XOp : UnitaryOp<"x"> {
     let summary = "X operation";
 
     let description = [{
@@ -118,9 +112,9 @@ def XOp : UnaryUnitaryOp<"x"> {
 
         Example:
         ```mlir
-        %0_1 = "mqtopt.x"(%0) : (!mqtopt.Qubit) -> !mqtopt.Qubit
-        %0_1, %1_1 = "mqtopt.x"(%0_1, [%1]) : (!mqtopt.Qubit, !mqtopt.Qubit) -> !mqtopt.Qubit
-        %0_2, %1_2, %2_1,  = "mqtopt.x"(%0_1, [%1_1], [%2]) : (!mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit) -> !mqtopt.Qubit
+        %1 = mqtopt.x() %0 : (!mqtopt.Qubit) -> (!mqtopt.Qubit)
+        %3, %4 = mqtopt.x() %1 ctrl(%2) : (!mqtopt.Qubit, !mqtopt.Qubit) -> (!mqtopt.Qubit, !mqtopt.Qubit)
+        %7, %8, %9, %10 = mqtopt.x() %3 ctrl(%4) nctrl(%5, %6) : (!mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit) -> (!mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit)
         ```
     }];
 }
