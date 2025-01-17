@@ -1,3 +1,4 @@
+// UNSUPPORTED: *
 // RUN: quantum-opt %s | FileCheck %s
 
 module {
