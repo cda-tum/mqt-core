@@ -150,7 +150,7 @@ template <typename T>
     multiplexer.cx(0, static_cast<Qubit>(localNumQubits - 1));
   }
 
-  CircuitOptimizer::flattenOperations(multiplexer);
+  CircuitOptimizer::flattenOperations(multiplexer, false);
   return multiplexer;
 }
 
@@ -277,7 +277,7 @@ auto createStatePreparationCircuit(
   QuantumComputation toZeroCircuit = gatesToUncompute(amplitudes, numQubits);
 
   // invert circuit
-  CircuitOptimizer::flattenOperations(toZeroCircuit);
+  CircuitOptimizer::flattenOperations(toZeroCircuit, false);
   toZeroCircuit.invert();
 
   return toZeroCircuit;
