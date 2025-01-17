@@ -21,6 +21,8 @@ void populateToQuantumComputationPatterns(
 void populateFromQuantumComputationPatterns(
     RewritePatternSet& patterns, std::set<Operation*>& handledOperations,
     qc::QuantumComputation& circuit);
+void populatePassWithSingleQubitGateRewritePattern(RewritePatternSet& patterns);
+void populatePassWithMultiQubitGateRewritePattern(RewritePatternSet& patterns);
 
 //===----------------------------------------------------------------------===//
 // Registration

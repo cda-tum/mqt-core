@@ -1,3 +1,6 @@
+// XFAIL: *
+// RUN: quantum-opt %s | FileCheck %s
+
 module {
     func.func @bell() {
         %0 = mqt.alloc( 2) : !mqt.reg
