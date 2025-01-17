@@ -23,6 +23,10 @@ include_directories(${PROJECT_BINARY_DIR}/mlir/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
 
+# set the binary directory for the build tree such that, e.g., docs can be generated in the build
+# tree
+set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
+
 # add main library code
 add_subdirectory(include)
 add_subdirectory(lib)
