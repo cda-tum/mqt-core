@@ -17,21 +17,19 @@ namespace mlir::mqt {
 /// Analysis pattern that filters out all quantum operations from a given
 /// program and creates a quantum computation from them.
 struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
-  std::set<Operation*>& handledOperations;
+  qc::QuantumComputation& circuit;
 
   explicit ToQuantumComputationPattern(MLIRContext* context,
-                                       std::set<Operation*>& handled)
-      : OpRewritePattern(context), handledOperations(handled) {}
+                                       qc::QuantumComputation& qc)
+      : OpRewritePattern(context), circuit(qc) {}
 
   LogicalResult match(AllocOp op) const override {
-    if (handledOperations.find(op) == handledOperations.end()) {
-      return success();
-    }
-
-    return failure();
+    llvm::outs() << op << " ---> " << op->hasAttr("to_replace") << "\n";
+    return (op->hasAttr("to_replace") || op->hasAttr("mqt_core")) ? failure()
+                                                                  : success();
   }
 
-  void handleCustomOp(CustomOp op, qc::QuantumComputation& circuit,
+  void handleCustomOp(CustomOp op,
                       std::vector<Value>& currentQubitVariables) const {
     const auto ins = op.getInQubits();
     const auto outs = op.getOutQubits();
@@ -71,9 +69,24 @@ struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
     }
   }
 
-  void rewrite(AllocOp op, PatternRewriter& rewriter) const override {
-    handledOperations.insert(op);
+  void deleteRecursively(Operation* op, PatternRewriter& rewriter) const {
 
+    if (op->getName().getStringRef() == "mqt.alloc") {
+      return; // Do not delete extract operations.
+    }
+    if (!op->getUsers().empty()) {
+      return; // Do not delete operations with users.
+    }
+    rewriter.eraseOp(op);
+
+    for (auto operand : op->getOperands()) {
+      if (auto* defOp = operand.getDefiningOp()) {
+        deleteRecursively(defOp, rewriter);
+      }
+    }
+  }
+
+  void rewrite(AllocOp op, PatternRewriter& rewriter) const override {
     llvm::outs() << "\n-----------------GENERAL----------------\n";
 
     if (!op.getNqubitsAttr().has_value()) {
@@ -87,8 +100,13 @@ struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
     const std::size_t numQubits = *op.getNqubitsAttr();
 
     std::vector<Value> currentQubitVariables(numQubits);
-    qc::QuantumComputation circuit(numQubits);
     std::vector<Operation*> toVisit{};
+
+    std::string regName;
+    llvm::raw_string_ostream os(regName);
+    op.getResult().print(os);
+
+    circuit.addQubitRegister(numQubits, regName);
     std::set<Operation*> visited{op};
 
     for (Operation* user : op->getUsers()) {
@@ -123,7 +141,7 @@ struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
         }
         if (user->getName().getStringRef() == "mqt.custom") {
           CustomOp customOp = dyn_cast<CustomOp>(user);
-          handleCustomOp(customOp, circuit, currentQubitVariables);
+          handleCustomOp(customOp, currentQubitVariables);
         } else {
           // TODO: Handle measurements
         }
@@ -139,12 +157,25 @@ struct ToQuantumComputationPattern final : OpRewritePattern<AllocOp> {
     const auto circuitString = ss.str();
     llvm::outs() << circuitString << "\n";
     llvm::outs() << "----------------------------------------\n\n";
+
+    for (auto* operation : visited) {
+      if (operation->getUsers().empty()) {
+        deleteRecursively(operation, rewriter);
+      }
+    }
+    auto newAlloc = rewriter.create<AllocOp>(
+        op.getLoc(), QuregType::get(rewriter.getContext()), nullptr,
+        rewriter.getIntegerAttr(rewriter.getI64Type(), 0));
+    newAlloc->setAttr("to_replace", rewriter.getUnitAttr());
+    rewriter.replaceOp(op, newAlloc);
+
+    llvm::outs() << "--------------END-----------------------\n\n";
   }
 };
 
 void populateToQuantumComputationPatterns(RewritePatternSet& patterns,
-                                          std::set<Operation*>& handled) {
-  patterns.add<ToQuantumComputationPattern>(patterns.getContext(), handled);
+                                          qc::QuantumComputation& circuit) {
+  patterns.add<ToQuantumComputationPattern>(patterns.getContext(), circuit);
 }
 
 } // namespace mlir::mqt

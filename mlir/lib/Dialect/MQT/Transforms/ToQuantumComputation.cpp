@@ -1,3 +1,4 @@
+#include "ir/QuantumComputation.hpp"
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
 #include "mlir/IR/Operation.h"
 
@@ -16,7 +17,7 @@ namespace mlir::mqt {
 struct ToQuantumComputation final
     : impl::ToQuantumComputationBase<ToQuantumComputation> {
 
-  std::set<Operation*> handledOperations;
+  qc::QuantumComputation circuit;
 
   void runOnOperation() override {
     // Get the current operation being operated on.
@@ -25,7 +26,8 @@ struct ToQuantumComputation final
 
     // Define the set of patterns to use.
     RewritePatternSet patterns(ctx);
-    populateToQuantumComputationPatterns(patterns, handledOperations);
+    populateToQuantumComputationPatterns(patterns, circuit);
+    populateFromQuantumComputationPatterns(patterns, circuit);
 
     // Apply patterns in an iterative and greedy manner.
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
