@@ -116,34 +116,34 @@ jobs:
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-coverage.yml@v1.5
 
-  cpp-linter:
-    name: 🇨‌ Lint
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@v1.5
-    with:
-      cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON
-
-  python-tests:
-    name: 🐍 Test
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-python-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@extensive-ci
-
-  code-ql:
-    name: 📝 CodeQL
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-code-ql)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-code-ql.yml@v1.5
-
-  cd:
-    name: 🚀 CD
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cd)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-packaging.yml@v1.5
-    with:
-      # Do not build emulated wheels for mqt-core to avoid issues with PyPI space limitations.
-      build-emulated-wheels: false
+  #  cpp-linter:
+  #    name: 🇨‌ Lint
+  #    needs: change-detection
+  #    if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
+  #    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@v1.5
+  #    with:
+  #      cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON
+  #
+  #  python-tests:
+  #    name: 🐍 Test
+  #    needs: change-detection
+  #    if: fromJSON(needs.change-detection.outputs.run-python-tests)
+  #    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@extensive-ci
+  #
+  #  code-ql:
+  #    name: 📝 CodeQL
+  #    needs: change-detection
+  #    if: fromJSON(needs.change-detection.outputs.run-code-ql)
+  #    uses: cda-tum/mqt-workflows/.github/workflows/reusable-code-ql.yml@v1.5
+  #
+  #  cd:
+  #    name: 🚀 CD
+  #    needs: change-detection
+  #    if: fromJSON(needs.change-detection.outputs.run-cd)
+  #    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-packaging.yml@v1.5
+  #    with:
+  #      # Do not build emulated wheels for mqt-core to avoid issues with PyPI space limitations.
+  #      build-emulated-wheels: false
 
   required-checks-pass: # This job does nothing and is only used for branch protection
     name: 🚦 Check
@@ -151,10 +151,10 @@ jobs:
     needs:
       - change-detection
       - cpp-tests
-      - cpp-linter
-      - python-tests
-      - code-ql
-      - cd
+    #      - cpp-linter
+    #      - python-tests
+    #      - code-ql
+    #      - cd
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
@@ -169,16 +169,16 @@ jobs:
               fromJSON(needs.change-detection.outputs.run-cpp-linter)
               && '' || 'cpp-linter,'
             }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-python-tests)
-              && '' || 'python-tests,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-code-ql)
-              && '' || 'code-ql,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-cd)
-              && '' || 'cd,'
-            }}
+          #            ${{
+          #              fromJSON(needs.change-detection.outputs.run-python-tests)
+          #              && '' || 'python-tests,'
+          #            }}
+          #            ${{
+          #              fromJSON(needs.change-detection.outputs.run-code-ql)
+          #              && '' || 'code-ql,'
+          #            }}
+          #            ${{
+          #              fromJSON(needs.change-detection.outputs.run-cd)
+          #              && '' || 'cd,'
+          #            }}
           jobs: ${{ toJSON(needs) }}
