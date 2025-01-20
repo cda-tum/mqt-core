@@ -1,8 +1,17 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "datastructures/Layer.hpp"
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
-#include "operations/OpType.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -13,8 +22,8 @@
 
 namespace qc {
 
-auto Layer::constructDAG(const QuantumComputation& qc,
-                         const bool commutable) -> void {
+auto Layer::constructDAG(const QuantumComputation& qc, const bool commutable)
+    -> void {
   const auto nQubits = qc.getNqubits();
   // For a pair of self-canceling operations like two consecutive X operations
   // or RY rotations with opposite angles the first operations is a
@@ -110,8 +119,8 @@ auto Layer::constructDAG(const QuantumComputation& qc,
                     ->commutesAtQubit(*current->getOperation(), qubit) ||
                std::find_if(
                    currentGroup[qubit].cbegin(), currentGroup[qubit].cend(),
-                   [&current](const auto& vertex) {
-                     return *vertex->getOperation() == *current->getOperation();
+                   [&current](const auto& v) {
+                     return *v->getOperation() == *current->getOperation();
                    }) != currentGroup[qubit].cend())) {
             // here: the current operation does not commute with the current
             // group members and is not the inverse of the lookahead

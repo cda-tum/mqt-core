@@ -1,21 +1,100 @@
 # Installation
 
 MQT Core is mainly developed as a C++17 library with Python bindings.
-The resulting Python package is available on [PyPI](https://pypi.org/project/mqt.core/) and can be installed via `pip` for all major operating systems and all modern Python versions.
+The resulting Python package is available on [PyPI](https://pypi.org/project/mqt.core/) and can be installed on all major operating systems using all modern Python versions.
+
+:::::{tip}
+We highly recommend using [`uv`](https://docs.astral.sh/uv/) for working with Python projects.
+It is an extremely fast Python package and project manager, written in Rust and developed by [Astral](https://astral.sh/) (the same team behind [`ruff`](https://docs.astral.sh/ruff/)).
+It can act as a drop-in replacement for `pip` and `virtualenv`, and provides a more modern and faster alternative to the traditional Python package management tools.
+It automatically handles the creation of virtual environments and the installation of packages, and is much faster than `pip`.
+Additionally, it can even set up Python for you if it is not installed yet.
+
+If you do not have `uv` installed yet, you can install it via:
+
+::::{tab-set}
+:::{tab-item} macOS and Linux
 
 ```console
-(.venv) $ pip install mqt.core
+$ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+:::
+:::{tab-item} Windows
+
+```console
+$ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+::::
+
+Check out their excellent [documentation](https://docs.astral.sh/uv/) for more information.
+
+:::::
+
+::::{tab-set}
+:sync-group: installer
+
+:::{tab-item} uv _(recommended)_
+:sync: uv
+
+```console
+$ uv pip install mqt.core
+```
+
+:::
+
+:::{tab-item} pip
+:sync: pip
+
+```console
+(.venv) $ python -m pip install mqt.core
+```
+
+:::
+::::
+
 In most practical cases (under 64-bit Linux, MacOS incl. Apple Silicon, and Windows), this requires no compilation and merely downloads and installs a platform-specific pre-built wheel.
+
+Once installed, you can check if the installation was successful by running:
+
+```console
+(.venv) $ python -c "import mqt.core; print(mqt.core.__version__)"
+```
+
+which should print the installed version of the library.
+
+:::{attention}
+As of version 2.7.0, support for Python 3.8 has been officially dropped.
+We strongly recommend that users upgrade to a more recent version of Python to ensure compatibility and continue receiving updates and support.
+Thank you for your understanding.
+:::
 
 ## Building from source for performance
 
 In order to get the best performance and enable platform-specific optimizations that cannot be enabled on portable wheels, it is recommended to build the library from source via:
 
+::::{tab-set}
+:sync-group: installer
+
+:::{tab-item} uv _(recommended)_
+:sync: uv
+
+```console
+$ uv pip install mqt.core --no-binary mqt.core
+```
+
+:::
+
+:::{tab-item} pip
+:sync: pip
+
 ```console
 (.venv) $ pip install mqt.core --no-binary mqt.core
 ```
+
+:::
+::::
 
 This requires a [C++ compiler supporting C++17](https://en.wikipedia.org/wiki/List_of_compilers#C++_compilers) and a minimum [CMake](https://cmake.org/) version of 3.19.
 The library is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments).
@@ -27,12 +106,21 @@ If you want to use the MQT Core Python package in your own project, you can simp
 This will automatically install the MQT Core package when your project is installed.
 
 ::::{tab-set}
+
+:::{tab-item} uv _(recommended)_
+
+```console
+$ uv add mqt.core
+```
+
+:::
+
 :::{tab-item} pyproject.toml
 
 ```toml
 [project]
 # ...
-dependencies = ["mqt.core>=2.4.0"]
+dependencies = ["mqt.core>=2.7.0"]
 # ...
 ```
 
@@ -45,7 +133,7 @@ from setuptools import setup
 
 setup(
     # ...
-    install_requires=["mqt.core>=2.4.0"],
+    install_requires=["mqt.core>=2.7.0"],
     # ...
 )
 ```
@@ -69,12 +157,19 @@ Furthermore, CMake's [FetchContent](https://cmake.org/cmake/help/latest/module/F
 include(FetchContent)
 set(FETCH_PACKAGES "")
 
-set(MQT_CORE_VERSION 2.4.0 CACHE STRING "MQT Core version")
+# cmake-format: off
+set(MQT_CORE_VERSION 2.7.0
+    CACHE STRING "MQT Core version")
+set(MQT_CORE_REV "2ccf532b66998af376c256ae94a39eed802b990c"
+    CACHE STRING "MQT Core identifier (tag, branch or commit hash)")
+set(MQT_CORE_REPO_OWNER "cda-tum"
+    CACHE STRING "MQT Core repository owner (change when using a fork)")
+# cmake-format: on
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
   FetchContent_Declare(
     mqt-core
-    GIT_REPOSITORY https://github.com/cda-tum/mqt-core.git
-    GIT_TAG v${MQT_CORE_VERSION}
+    GIT_REPOSITORY https://github.com/${MQT_CORE_REPO_OWNER}/mqt-core.git
+    GIT_TAG ${MQT_CORE_REV}
     FIND_PACKAGE_ARGS ${MQT_CORE_VERSION})
   list(APPEND FETCH_PACKAGES mqt-core)
 else()
@@ -82,14 +177,46 @@ else()
   if(NOT mqt-core_FOUND)
     FetchContent_Declare(
       mqt-core
-      GIT_REPOSITORY https://github.com/cda-tum/mqt-core.git
-      GIT_TAG v${MQT_CORE_VERSION})
+      GIT_REPOSITORY https://github.com/${MQT_CORE_REPO_OWNER}/mqt-core.git
+      GIT_TAG ${MQT_CORE_REV})
     list(APPEND FETCH_PACKAGES mqt-core)
   endif()
 endif()
 
 # Make all declared dependencies available.
 FetchContent_MakeAvailable(${FETCH_PACKAGES})
+```
+
+We even offer a Dependabot-like GitHub workflow that automatically updates the `MQT_CORE_VERSION` and `MQT_CORE_REV` variables in your `CMakeLists.txt` file.
+Simply add the following workflow to your project's `.github/workflows` directory:
+
+```yaml
+name: Update MQT Core
+on:
+  schedule:
+    # run once a month on the first day of the month at 00:00 UTC
+    - cron: "0 0 1 * *"
+  workflow_dispatch:
+    inputs:
+      update-to-head:
+        description: "Update to the latest commit on the default branch"
+        type: boolean
+        required: false
+        default: false
+  pull_request:
+    paths:
+      - .github/workflows/update-mqt-core.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  update-mqt-core:
+    name: Update MQT Core
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-mqt-core-update.yml@v1.5
+    with:
+      update-to-head: ${{ github.event.inputs.update-to-head == 'true' }}
 ```
 
 :::
@@ -100,8 +227,8 @@ Integrating the library as a git submodule is the simplest approach.
 However, handling git submodules can be cumbersome, especially when working with multiple branches or versions of the library.
 First, add the submodule to your project (e.g., in the `external` directory) via:
 
-```bash
-git submodule add https://github.com/cda-tum/mqt-core.git external/mqt-core
+```console
+$ git submodule add https://github.com/cda-tum/mqt-core.git external/mqt-core
 ```
 
 Then, add the following lines to your `CMakeLists.txt` to make the library's targets available in your project:
@@ -116,18 +243,18 @@ add_subdirectory(external/mqt-core)
 
 MQT Core can be installed on your system after building it from source.
 
-```bash
-git clone https://github.com/cda-tum/mqt-core.git
-cd mqt-core
-cmake -S . -B build
-cmake --build build
-cmake --install build
+```console
+$ git clone https://github.com/cda-tum/mqt-core.git
+$ cd mqt-core
+$ cmake -S . -B build
+$ cmake --build build
+$ cmake --install build
 ```
 
 Then, in your project's `CMakeLists.txt`, you can use the `find_package` command to locate the installed library:
 
 ```cmake
-find_package(mqt-core 2.4.0 REQUIRED)
+find_package(mqt-core 2.7.0 REQUIRED)
 ```
 
 ::::

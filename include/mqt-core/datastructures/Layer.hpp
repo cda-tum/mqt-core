@@ -1,10 +1,19 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
 #include "datastructures/UndirectedGraph.hpp"
-#include "operations/OpType.hpp"
-#include "operations/Operation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <cassert>
 #include <cstddef>
@@ -52,9 +61,9 @@ public:
         : operation(op), executableSet(&es) {}
 
   public:
-    [[nodiscard]] static auto
-    create(Operation* operation,
-           ExecutableSet& executableSet) -> std::shared_ptr<DAGVertex> {
+    [[nodiscard]] static auto create(Operation* operation,
+                                     ExecutableSet& executableSet)
+        -> std::shared_ptr<DAGVertex> {
       std::shared_ptr<DAGVertex> v(new DAGVertex(operation, executableSet));
       v->updateExecutableSet();
       return v;
@@ -152,10 +161,11 @@ public:
   [[nodiscard]] auto getExecutableSet() const -> const ExecutableSet& {
     return executableSet;
   }
-  [[nodiscard]] auto
-  constructInteractionGraph(OpType opType,
-                            std::size_t nControls) const -> InteractionGraph;
-  [[nodiscard]] auto getExecutablesOfType(OpType opType, std::size_t nControls)
-      const -> std::vector<std::shared_ptr<DAGVertex>>;
+  [[nodiscard]] auto constructInteractionGraph(OpType opType,
+                                               std::size_t nControls) const
+      -> InteractionGraph;
+  [[nodiscard]] auto getExecutablesOfType(OpType opType,
+                                          std::size_t nControls) const
+      -> std::vector<std::shared_ptr<DAGVertex>>;
 };
 } // namespace qc

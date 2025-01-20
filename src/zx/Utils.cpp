@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "zx/Utils.hpp"
 
 #include "zx/ZXDefinitions.hpp"
@@ -59,9 +68,14 @@ Edges::EdgeIterator::EdgeIterator(
     while (v < edges.size() && !vertices[v].has_value()) {
       ++v;
     }
-    currentPos = edges[v].begin();
-    edgesPos = edges.begin() + static_cast<int>(v);
-    checkNextVertex();
+    if (v < edges.size()) {
+      currentPos = edges[v].begin();
+      edgesPos = edges.begin() + static_cast<int>(v);
+      checkNextVertex();
+    } else {
+      currentPos = edges.back().end();
+      edgesPos = edges.end();
+    }
   } else {
     currentPos = edges.back().end();
     edgesPos = edges.end();

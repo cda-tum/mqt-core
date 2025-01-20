@@ -1,10 +1,19 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
-#include "Permutation.hpp"
-#include "QuantumComputation.hpp"
-#include "operations/CompoundOperation.hpp"
-#include "operations/Expression.hpp"
-#include "operations/OpType.hpp"
-#include "operations/StandardOperation.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/CompoundOperation.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/StandardOperation.hpp"
 #include "zx/FunctionalityConstruction.hpp"
 #include "zx/Simplify.hpp"
 #include "zx/ZXDefinitions.hpp"

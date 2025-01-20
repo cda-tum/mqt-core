@@ -1,16 +1,18 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 """Test the circuit IO functionality."""
 
 from __future__ import annotations
 
-import locale
-import sys
 from pathlib import Path
 
-import pytest
-from qiskit import QuantumCircuit, qasm2
-
-from mqt.core import QuantumComputation
-from mqt.core.load import load
+from mqt.core import load
+from mqt.core.ir import QuantumComputation
 
 
 def test_loading_quantum_computation() -> None:
@@ -31,7 +33,7 @@ def test_loading_quantum_computation() -> None:
 def test_loading_file() -> None:
     """Test whether importing a simple QASM file works."""
     qasm = "qreg q[2];\ncreg c[2];\nh q[0];\ncx q[0], q[1];\nmeasure q -> c;\n"
-    with Path("test.qasm").open("w", encoding=locale.getpreferredencoding(False)) as f:
+    with Path("test.qasm").open("w", encoding="utf-8") as f:
         f.write(qasm)
 
     # load the file
@@ -48,8 +50,33 @@ def test_loading_file() -> None:
     Path("test.qasm").unlink()
 
 
+def test_loading_file_from_path() -> None:
+    """Test whether importing a simple QASM file works."""
+    qasm = "qreg q[2];\ncreg c[2];\nh q[0];\ncx q[0], q[1];\nmeasure q -> c;\n"
+    path = Path("test.qasm")
+    with path.open("w", encoding="utf-8") as f:
+        f.write(qasm)
+
+    # load the file
+    qc = load(path)
+    print(qc)
+
+    # check the result
+    assert isinstance(qc, QuantumComputation)
+    qc_qasm = qc.qasm2_str()
+
+    assert qasm in qc_qasm
+
+    # remove the file
+    path.unlink()
+
+
 def test_loading_nonexistent_file() -> None:
-    """Test whether trying to load a non-existent file raises an error."""
+    """Test whether trying to load a non-existent file raises an error.
+
+    Raises:
+        AssertionError: If no error is raised.
+    """
     try:
         load("nonexistent.qasm")
     except FileNotFoundError:
@@ -61,11 +88,14 @@ def test_loading_nonexistent_file() -> None:
 
 def test_loading_qiskit_circuit() -> None:
     """Test whether importing a Qiskit circuit works."""
+    from qiskit import QuantumCircuit
+    from qiskit.qasm2 import dumps
+
     qiskit_circuit = QuantumCircuit(2, 2)
     qiskit_circuit.h(0)
     qiskit_circuit.cx(0, 1)
     qiskit_circuit.measure(range(2), range(2))
-    qasm = qasm2.dumps(qiskit_circuit)
+    qasm = dumps(qiskit_circuit)
 
     # load the circuit
     qc = load(qiskit_circuit)
@@ -77,14 +107,6 @@ def test_loading_qiskit_circuit() -> None:
 
     # remove any whitespace from both QASM strings and check for equality
     assert "".join(qasm.split()) in "".join(qc_qasm.split())
-
-
-def test_qiskit_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test that trying to import a Qiskit circuit without the `qiskit` extra raises an error."""
-    monkeypatch.setitem(sys.modules, "mqt.core.plugins.qiskit", None)
-
-    with pytest.raises(ValueError, match="Qiskit is not installed"):
-        load(QuantumCircuit())
 
 
 def test_loading_qasm2_string() -> None:

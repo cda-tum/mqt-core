@@ -1,14 +1,24 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
+#include "../NADefinitions.hpp"
 #include "Definitions.hpp"
-#include "na/NADefinitions.hpp"
-#include "na/operations/NAOperation.hpp"
+#include "NAOperation.hpp"
 
 #include <cmath>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
 namespace na {
 class NAGlobalOperation : public NAOperation {
 protected:

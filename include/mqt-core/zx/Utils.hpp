@@ -1,6 +1,15 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "zx/ZXDefinitions.hpp"
+#include "ZXDefinitions.hpp"
 
 #include <cassert>
 #include <cstdint>

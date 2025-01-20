@@ -1,7 +1,16 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "na/NADefinitions.hpp"
-#include "na/operations/NAOperation.hpp"
+#include "../NADefinitions.hpp"
+#include "NAOperation.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -39,12 +48,12 @@ public:
             std::vector<std::shared_ptr<Point>>{std::move(startPoint)},
             std::vector<std::shared_ptr<Point>>{std::move(endPoint)}) {}
   [[nodiscard]] auto getType() const -> ShuttleType { return type; }
-  [[nodiscard]] auto
-  getStart() const -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto getStart() const
+      -> const std::vector<std::shared_ptr<Point>>& {
     return start;
   }
-  [[nodiscard]] auto
-  getEnd() const -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto getEnd() const
+      -> const std::vector<std::shared_ptr<Point>>& {
     return end;
   }
   [[nodiscard]] auto isShuttlingOperation() const -> bool override {

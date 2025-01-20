@@ -1,11 +1,20 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
-#include "QuantumComputation.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/DDpackageConfig.hpp"
 #include "dd/NoiseFunctionality.hpp"
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
-#include "operations/OpType.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/OpType.hpp"
 
 #include <algorithm>
 #include <bitset>
@@ -77,7 +86,6 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
   auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
-  dd->incRef(rootEdge);
 
   const auto* const noiseEffects = "APDI";
 
@@ -85,7 +93,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackAPD) {
       dd, qc.getNqubits(), 0.01, 0.02, 0.02, 0.04, noiseEffects);
 
   for (auto const& op : qc) {
-    dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), *dd));
+    dd->applyOperationToDensity(rootEdge, dd::getDD(*op, *dd));
     deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
   }
 
@@ -109,7 +117,6 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackD) {
   auto dd = std::make_unique<DensityMatrixTestPackage>(qc.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qc.getNqubits());
-  dd->incRef(rootEdge);
 
   const auto* const noiseEffects = "D";
 
@@ -117,7 +124,7 @@ TEST_F(DDNoiseFunctionalityTest, DetSimulateAdder4TrackD) {
       dd, qc.getNqubits(), 0.01, 0.02, 0.02, 0.04, noiseEffects);
 
   for (auto const& op : qc) {
-    dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), *dd));
+    dd->applyOperationToDensity(rootEdge, dd::getDD(*op, *dd));
     deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
   }
 
@@ -141,13 +148,12 @@ TEST_F(DDNoiseFunctionalityTest, testingMeasure) {
   auto dd = std::make_unique<DensityMatrixTestPackage>(qcOp.getNqubits());
 
   auto rootEdge = dd->makeZeroDensityOperator(qcOp.getNqubits());
-  dd->incRef(rootEdge);
 
   auto deterministicNoiseFunctionality = dd::DeterministicNoiseFunctionality(
       dd, qcOp.getNqubits(), 0.01, 0.02, 0.02, 0.04, {});
 
   for (auto const& op : qcOp) {
-    dd->applyOperationToDensity(rootEdge, dd::getDD(op.get(), *dd));
+    dd->applyOperationToDensity(rootEdge, dd::getDD(*op, *dd));
     deterministicNoiseFunctionality.applyNoiseEffects(rootEdge, op);
   }
 
@@ -210,7 +216,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4TrackAPD) {
     dd->incRef(rootEdge);
 
     for (auto const& op : qc) {
-      auto operation = dd::getDD(op.get(), *dd);
+      auto operation = dd::getDD(*op, *dd);
       auto usedQubits = op->getUsedQubits();
       stochasticNoiseFunctionality.applyNoiseOperation(
           usedQubits, operation, rootEdge, qc.getGenerator());
@@ -262,7 +268,7 @@ TEST_F(DDNoiseFunctionalityTest, StochSimulateAdder4IdentityError) {
     dd->incRef(rootEdge);
 
     for (auto const& op : qc) {
-      auto operation = dd::getDD(op.get(), *dd);
+      auto operation = dd::getDD(*op, *dd);
       auto usedQubits = op->getUsedQubits();
       stochasticNoiseFunctionality.applyNoiseOperation(
           op->getUsedQubits(), operation, rootEdge, qc.getGenerator());

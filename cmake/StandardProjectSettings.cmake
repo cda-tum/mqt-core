@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # enable organization of targets into folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -20,20 +27,6 @@ set_property(GLOBAL PROPERTY CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS
     ON
     CACHE BOOL "Export compile commands" FORCE)
-
-option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" OFF)
-if(ENABLE_IPO)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
-  # enable inter-procedural optimization if it is supported
-  if(ipo_supported)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION
-        TRUE
-        CACHE BOOL "Enable Interprocedural Optimization" FORCE)
-  else()
-    message(DEBUG "IPO is not supported: ${ipo_output}")
-  endif()
-endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
   add_compile_options(-fcolor-diagnostics)
@@ -63,3 +56,26 @@ if(DEPLOY)
       "10.15"
       CACHE STRING "" FORCE)
 endif()
+
+if(NOT DEPLOY)
+  option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" ON)
+else()
+  option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" OFF)
+endif()
+if(ENABLE_IPO)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
+  # enable inter-procedural optimization if it is supported
+  if(ipo_supported)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION
+        TRUE
+        CACHE BOOL "Enable Interprocedural Optimization" FORCE)
+  else()
+    message(DEBUG "IPO is not supported: ${ipo_output}")
+  endif()
+endif()
+
+# export all symbols by default on Windows
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
+    ON
+    CACHE BOOL "Export all symbols on Windows")

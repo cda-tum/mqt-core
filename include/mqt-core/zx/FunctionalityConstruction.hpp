@@ -1,11 +1,20 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "Permutation.hpp"
-#include "QuantumComputation.hpp"
-#include "operations/Expression.hpp"
-#include "operations/Operation.hpp"
-#include "zx/ZXDefinitions.hpp"
-#include "zx/ZXDiagram.hpp"
+#include "ZXDefinitions.hpp"
+#include "ZXDiagram.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/QuantumComputation.hpp"
+#include "ir/operations/Expression.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <cstddef>
 #include <optional>

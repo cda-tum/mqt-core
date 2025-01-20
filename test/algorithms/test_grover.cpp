@@ -1,9 +1,22 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
+#include "Definitions.hpp"
 #include "algorithms/Grover.hpp"
-#include "dd/Benchmark.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
+#include "dd/Simulation.hpp"
+#include "ir/QuantumComputation.hpp"
 
 #include <algorithm>
+#include <bitset>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -12,10 +25,9 @@
 #include <memory>
 #include <sstream>
 #include <tuple>
-#include <utility>
 
 class Grover
-    : public testing::TestWithParam<std::tuple<std::size_t, std::size_t>> {
+    : public testing::TestWithParam<std::tuple<qc::Qubit, std::size_t>> {
 protected:
   void TearDown() override {
     dd->decRef(sim);
@@ -28,17 +40,26 @@ protected:
   void SetUp() override {
     std::tie(nqubits, seed) = GetParam();
     dd = std::make_unique<dd::Package<>>(nqubits + 1);
+    qc = qc::createGrover(nqubits, seed);
+    qc.printStatistics(std::cout);
+
+    // parse expected result from circuit name
+    const auto& name = qc.getName();
+    expected = name.substr(name.find_last_of('_') + 1);
+    targetValue = qc::BitString(expected);
   }
 
-  std::size_t nqubits = 0;
+  qc::Qubit nqubits = 0;
   std::size_t seed = 0;
   std::unique_ptr<dd::Package<>> dd;
-  std::unique_ptr<qc::Grover> qc;
+  qc::QuantumComputation qc;
   qc::VectorDD sim{};
   qc::MatrixDD func{};
+  std::string expected;
+  qc::BitString targetValue;
 };
 
-constexpr std::size_t GROVER_MAX_QUBITS = 18;
+constexpr qc::Qubit GROVER_MAX_QUBITS = 15;
 constexpr std::size_t GROVER_NUM_SEEDS = 5;
 constexpr dd::fp GROVER_ACCURACY = 1e-2;
 constexpr dd::fp GROVER_GOAL_PROBABILITY = 0.9;
@@ -46,7 +67,7 @@ constexpr dd::fp GROVER_GOAL_PROBABILITY = 0.9;
 INSTANTIATE_TEST_SUITE_P(
     Grover, Grover,
     testing::Combine(
-        testing::Range(static_cast<std::size_t>(2), GROVER_MAX_QUBITS + 1, 3),
+        testing::Range(static_cast<qc::Qubit>(2), GROVER_MAX_QUBITS + 1, 3),
         testing::Range(static_cast<std::size_t>(0), GROVER_NUM_SEEDS)),
     [](const testing::TestParamInfo<Grover::ParamType>& inf) {
       const auto nqubits = std::get<0>(inf.param);
@@ -63,20 +84,40 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST_P(Grover, Functionality) {
-  // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
-
-  qc->printStatistics(std::cout);
-  auto x = '1' + qc->expected;
+  auto x = '1' + expected;
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
 
-  auto exp = dd::benchmarkFunctionalityConstruction(*qc);
-  func = exp->func;
-  dd = std::move(exp->dd);
+  qc::QuantumComputation groverIteration(qc.getNqubits());
+  qc::appendGroverOracle(groverIteration, targetValue);
+  qc::appendGroverDiffusion(groverIteration);
+
+  const auto iteration = buildFunctionality(groverIteration, *dd);
+
+  auto e = iteration;
+  dd->incRef(e);
+  const auto iterations = qc::computeNumberOfIterations(nqubits);
+  for (std::size_t i = 0U; i < iterations - 1U; ++i) {
+    auto f = dd->multiply(iteration, e);
+    dd->incRef(f);
+    dd->decRef(e);
+    e = f;
+    dd->garbageCollect();
+  }
+
+  qc::QuantumComputation setup(qc.getNqubits());
+  qc::appendGroverInitialization(setup);
+  const auto g = buildFunctionality(setup, *dd);
+  const auto f = dd->multiply(e, g);
+  dd->incRef(f);
+  dd->decRef(e);
+  dd->decRef(g);
+  func = f;
+
+  dd->decRef(iteration);
 
   // amplitude of the searched-for entry should be 1
-  auto c = func.getValueByPath(dd->qubits(), x);
+  const auto c = func.getValueByPath(qc.getNqubits(), x);
   EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
   EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
   const auto prob = std::norm(c);
@@ -84,20 +125,55 @@ TEST_P(Grover, Functionality) {
 }
 
 TEST_P(Grover, FunctionalityRecursive) {
-  // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
-
-  qc->printStatistics(std::cout);
-  auto x = '1' + qc->expected;
+  auto x = '1' + expected;
   std::reverse(x.begin(), x.end());
   std::replace(x.begin(), x.end(), '1', '2');
 
-  auto exp = dd::benchmarkFunctionalityConstruction(*qc, true);
-  func = exp->func;
-  dd = std::move(exp->dd);
+  qc::QuantumComputation groverIteration(qc.getNqubits());
+  qc::appendGroverOracle(groverIteration, targetValue);
+  qc::appendGroverDiffusion(groverIteration);
+
+  const auto iter = buildFunctionalityRecursive(groverIteration, *dd);
+  auto e = iter;
+  const auto iterations = qc::computeNumberOfIterations(nqubits);
+  const std::bitset<128U> iterBits(iterations);
+  const auto msb = static_cast<std::size_t>(std::floor(std::log2(iterations)));
+  auto f = iter;
+  dd->incRef(f);
+  bool zero = !iterBits[0U];
+  for (std::size_t j = 1U; j <= msb; ++j) {
+    auto tmp = dd->multiply(f, f);
+    dd->incRef(tmp);
+    dd->decRef(f);
+    f = tmp;
+    if (iterBits[j]) {
+      if (zero) {
+        dd->incRef(f);
+        dd->decRef(e);
+        e = f;
+        zero = false;
+      } else {
+        auto g = dd->multiply(e, f);
+        dd->incRef(g);
+        dd->decRef(e);
+        e = g;
+        dd->garbageCollect();
+      }
+    }
+  }
+  dd->decRef(f);
+
+  // apply state preparation setup
+  qc::QuantumComputation statePrep(qc.getNqubits());
+  qc::appendGroverInitialization(statePrep);
+  const auto s = buildFunctionality(statePrep, *dd);
+  func = dd->multiply(e, s);
+  dd->incRef(func);
+  dd->decRef(s);
+  dd->decRef(e);
 
   // amplitude of the searched-for entry should be 1
-  auto c = func.getValueByPath(dd->qubits(), x);
+  const auto c = func.getValueByPath(qc.getNqubits(), x);
   EXPECT_NEAR(std::abs(c.real()), 1, GROVER_ACCURACY);
   EXPECT_NEAR(std::abs(c.imag()), 0, GROVER_ACCURACY);
   const auto prob = std::norm(c);
@@ -105,20 +181,11 @@ TEST_P(Grover, FunctionalityRecursive) {
 }
 
 TEST_P(Grover, Simulation) {
-  // there should be no error constructing the circuit
-  ASSERT_NO_THROW({ qc = std::make_unique<qc::Grover>(nqubits, seed); });
-
-  qc->printStatistics(std::cout);
-  // there should be no error simulating the circuit
-  const std::size_t shots = 1024;
-  auto measurements = dd::benchmarkSimulateWithShots(*qc, shots);
-
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
-
-  auto correctShots = measurements[qc->expected];
-  auto probability =
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
+  ASSERT_TRUE(measurements.find(expected) != measurements.end());
+  const auto correctShots = measurements.at(expected);
+  const auto probability =
       static_cast<double>(correctShots) / static_cast<double>(shots);
 
   EXPECT_GE(probability, GROVER_GOAL_PROBABILITY);

@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 """Sphinx configuration file."""
 
 from __future__ import annotations
@@ -78,13 +85,13 @@ pygments_style = "colorful"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "qiskit": ("https://docs.quantum.ibm.com/api/qiskit/", None),
-    "mqt": ("https://mqt.readthedocs.io/en/latest/", None),
-    "ddsim": ("https://mqt.readthedocs.io/projects/ddsim/en/latest/", None),
-    "qmap": ("https://mqt.readthedocs.io/projects/qmap/en/latest/", None),
-    "qcec": ("https://mqt.readthedocs.io/projects/qcec/en/latest/", None),
-    "qecc": ("https://mqt.readthedocs.io/projects/qecc/en/latest/", None),
-    "syrec": ("https://mqt.readthedocs.io/projects/syrec/en/latest/", None),
+    "qiskit": ("https://docs.quantum.ibm.com/api/qiskit", None),
+    "mqt": ("https://mqt.readthedocs.io/en/latest", None),
+    "ddsim": ("https://mqt.readthedocs.io/projects/ddsim/en/latest", None),
+    "qmap": ("https://mqt.readthedocs.io/projects/qmap/en/latest", None),
+    "qcec": ("https://mqt.readthedocs.io/projects/qcec/en/latest", None),
+    "qecc": ("https://mqt.readthedocs.io/projects/qecc/en/latest", None),
+    "syrec": ("https://mqt.readthedocs.io/projects/syrec/en/latest", None),
 }
 
 myst_enable_extensions = [
@@ -112,7 +119,11 @@ class CDAStyle(UnsrtStyle):
     """Custom style for including PDF links."""
 
     def format_url(self, _e: Entry) -> HRef:  # noqa: PLR6301
-        """Format URL field as a link to the PDF."""
+        """Format URL field as a link to the PDF.
+
+        Returns:
+            The formatted URL field.
+        """
         url = field("url", raw=True)
         return href()[url, "[PDF]"]
 
