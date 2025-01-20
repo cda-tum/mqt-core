@@ -8,7 +8,8 @@ set(LIBS
     MLIROptLib
     MLIRMQT
     MLIRMQTTransforms
-    MLIRMQTOpt)
+    MLIRMQTOpt
+    MLIRMQTOptTransforms)
 
 add_mlir_tool(quantum-opt quantum-opt.cpp DEPENDS ${LIBS} SUPPORT_PLUGINS)
 target_compile_options(quantum-opt PRIVATE -fexceptions)
