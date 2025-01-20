@@ -1836,6 +1836,10 @@ void QuantumComputation::barrier(const Targets& targets) {
   checkQubitRange(targets);
   emplace_back<StandardOperation>(targets, Barrier);
 }
+void QuantumComputation::passby(const Control moved, const Targets& targets) {
+  checkQubitRange(targets);
+  emplace_back<StandardOperation>(Controls{moved}, targets, PassBy);
+}
 void QuantumComputation::classicControlled(
     const OpType op, const Qubit target,
     const ClassicalRegister& controlRegister, const std::uint64_t expectedValue,

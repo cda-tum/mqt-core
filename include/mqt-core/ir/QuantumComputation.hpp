@@ -346,6 +346,8 @@ public:
   void barrier(Qubit target);
   void barrier(const Targets& targets);
 
+  void passby(const Control moved, const Targets& targets);
+
   void classicControlled(OpType op, Qubit target,
                          const ClassicalRegister& controlRegister,
                          std::uint64_t expectedValue = 1U,
