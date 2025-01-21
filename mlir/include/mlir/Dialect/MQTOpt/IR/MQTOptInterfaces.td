@@ -119,8 +119,8 @@ def UnaryInterface : OpInterface<"UnaryInterface"> {
 
 def BinaryInterface : OpInterface<"BinaryInterface"> {
     let description = [{
-        This interface provides a generic way to interact with unary
-        operations in the MQTOpt dialect. Unary operations are quantum
+        This interface provides a generic way to interact with binary
+        operations in the MQTOpt dialect. Binary operations are quantum
         operations that take exactly two input qubits plus optional controlling
         qubits.
     }];
@@ -139,8 +139,8 @@ def BinaryInterface : OpInterface<"BinaryInterface"> {
 
 def TernaryInterface : OpInterface<"TernaryInterface"> {
     let description = [{
-        This interface provides a generic way to interact with unary
-        operations in the MQTOpt dialect. Unary operations are quantum
+        This interface provides a generic way to interact with ternary
+        operations in the MQTOpt dialect. Ternary operations are quantum
         operations that take exactly three input qubits plus optional controlling
         qubits.
     }];
