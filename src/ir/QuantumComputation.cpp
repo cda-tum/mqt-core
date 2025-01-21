@@ -1685,6 +1685,7 @@ DEFINE_TWO_TARGET_OPERATION(iswapdg)
 DEFINE_TWO_TARGET_OPERATION(peres)
 DEFINE_TWO_TARGET_OPERATION(peresdg)
 DEFINE_TWO_TARGET_OPERATION(move)
+DEFINE_TWO_TARGET_OPERATION(passby)
 
 #undef DEFINE_TWO_TARGET_OPERATION
 
@@ -1835,10 +1836,6 @@ void QuantumComputation::barrier(const Qubit target) {
 void QuantumComputation::barrier(const Targets& targets) {
   checkQubitRange(targets);
   emplace_back<StandardOperation>(targets, Barrier);
-}
-void QuantumComputation::passby(const Control moved, const Targets& targets) {
-  checkQubitRange(targets);
-  emplace_back<StandardOperation>(Controls{moved}, targets, PassBy);
 }
 void QuantumComputation::classicControlled(
     const OpType op, const Qubit target,

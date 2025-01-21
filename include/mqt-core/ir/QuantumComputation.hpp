@@ -296,6 +296,7 @@ public:
   DECLARE_TWO_TARGET_OPERATION(peres)
   DECLARE_TWO_TARGET_OPERATION(peresdg)
   DECLARE_TWO_TARGET_OPERATION(move)
+  DECLARE_TWO_TARGET_OPERATION(passby)
 
 #undef DECLARE_TWO_TARGET_OPERATION
 
@@ -345,8 +346,6 @@ public:
   void barrier();
   void barrier(Qubit target);
   void barrier(const Targets& targets);
-
-  void passby(const Control moved, const Targets& targets);
 
   void classicControlled(OpType op, Qubit target,
                          const ClassicalRegister& controlRegister,
