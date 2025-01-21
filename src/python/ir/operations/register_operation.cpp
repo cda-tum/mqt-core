@@ -15,7 +15,7 @@
 
 namespace mqt {
 
-void registerOperation(py::module& m) {
+void registerOperation(const py::module& m) {
   py::class_<qc::Operation>(m, "Operation")
       .def_property_readonly("name", &qc::Operation::getName)
       .def_property("type_", &qc::Operation::getType, &qc::Operation::setGate)

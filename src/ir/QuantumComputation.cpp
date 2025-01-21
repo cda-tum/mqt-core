@@ -842,7 +842,7 @@ void QuantumComputation::dump(std::ostream& of, Format format) const {
 }
 
 bool QuantumComputation::isIdleQubit(const Qubit physicalQubit) const {
-  return !std::any_of(
+  return std::none_of(
       ops.cbegin(), ops.cend(),
       [&physicalQubit](const auto& op) { return op->actsOn(physicalQubit); });
 }
@@ -1047,11 +1047,7 @@ void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(
     }
     addClassicalRegister(outputPermutation.size() - nclassics, registerName);
   }
-  auto targets = std::vector<Qubit>{};
-  for (std::size_t q = 0; q < getNqubits(); ++q) {
-    targets.emplace_back(static_cast<Qubit>(q));
-  }
-  barrier(targets);
+  barrier();
   // append measurements according to output permutation
   for (const auto& [qubit, clbit] : outputPermutation) {
     measure(qubit, clbit);

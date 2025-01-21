@@ -19,7 +19,7 @@
 
 namespace mqt {
 
-void registerStandardOperation(py::module& m) {
+void registerStandardOperation(const py::module& m) {
   py::class_<qc::StandardOperation, qc::Operation>(m, "StandardOperation")
       .def(py::init<>())
       .def(py::init<qc::Qubit, qc::OpType, std::vector<qc::fp>>(), "target"_a,

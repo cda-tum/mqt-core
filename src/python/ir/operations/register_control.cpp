@@ -15,7 +15,7 @@
 
 namespace mqt {
 
-void registerControl(py::module& m) {
+void registerControl(const py::module& m) {
 
   auto control = py::class_<qc::Control>(m, "Control");
   auto controlType = py::enum_<qc::Control::Type>(control, "Type");

@@ -18,7 +18,7 @@
 
 namespace mqt {
 
-void registerClassicControlledOperation(py::module& m) {
+void registerClassicControlledOperation(const py::module& m) {
   py::enum_<qc::ComparisonKind>(m, "ComparisonKind")
       .value("eq", qc::ComparisonKind::Eq)
       .value("neq", qc::ComparisonKind::Neq)
@@ -35,7 +35,7 @@ void registerClassicControlledOperation(py::module& m) {
   auto ccop = py::class_<qc::ClassicControlledOperation, qc::Operation>(
       m, "ClassicControlledOperation");
 
-  ccop.def(py::init([](qc::Operation* operation,
+  ccop.def(py::init([](const qc::Operation* operation,
                        const qc::ClassicalRegister& controlReg,
                        std::uint64_t expectedVal, qc::ComparisonKind cmp) {
              return std::make_unique<qc::ClassicControlledOperation>(
@@ -43,7 +43,7 @@ void registerClassicControlledOperation(py::module& m) {
            }),
            "operation"_a, "control_register"_a, "expected_value"_a = 1U,
            "comparison_kind"_a = qc::ComparisonKind::Eq);
-  ccop.def(py::init([](qc::Operation* operation, qc::Bit cBit,
+  ccop.def(py::init([](const qc::Operation* operation, qc::Bit cBit,
                        std::uint64_t expectedVal, qc::ComparisonKind cmp) {
              return std::make_unique<qc::ClassicControlledOperation>(
                  operation->clone(), cBit, expectedVal, cmp);
