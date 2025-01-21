@@ -13,6 +13,7 @@
 #include "Definitions.hpp"
 #include "Operation.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -115,8 +116,8 @@ public:
     return equals(operation, {}, {});
   }
 
-  void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, std::size_t indent,
+  void dumpOpenQASM(std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+                    const BitIndexToRegisterMap& bitMap, std::size_t indent,
                     bool openQASM3) const override;
 
   void invert() override { op->invert(); }

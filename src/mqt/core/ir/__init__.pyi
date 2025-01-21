@@ -87,6 +87,82 @@ class Permutation(MutableMapping[int, int]):
             The list of targets with the permutation applied.
         """
 
+class QuantumRegister:
+    """A class to represent a collection of qubits.
+
+    Args:
+        start: The starting index of the quantum register.
+        size: The number of qubits in the quantum register.
+        name: The name of the quantum register. A name will be generated if not provided.
+    """
+
+    def __init__(self, start: int, size: int, name: str = "") -> None: ...
+    @property
+    def start(self) -> int:
+        """The index of the first qubit in the quantum register."""
+
+    @property
+    def end(self) -> int:
+        """Index of the last qubit in the quantum register."""
+
+    @property
+    def size(self) -> int:
+        """The number of qubits in the quantum register."""
+
+    @property
+    def name(self) -> str:
+        """The name of the quantum register."""
+
+    def __eq__(self, other: object) -> bool:
+        """Check if the quantum register is equal to another quantum register."""
+
+    def __ne__(self, other: object) -> bool:
+        """Check if the quantum register is not equal to another quantum register."""
+
+    def __hash__(self) -> int:
+        """Return the hash of the quantum register."""
+
+    def __contains__(self, qubit: int) -> bool:
+        """Check if the quantum register contains a qubit."""
+
+class ClassicalRegister:
+    """A class to represent a collection of classical bits.
+
+    Args:
+        start: The starting index of the classical register.
+        size: The number of bits in the classical register.
+        name: The name of the classical register. A name will be generated if not provided.
+    """
+
+    def __init__(self, start: int, size: int, name: str = "") -> None: ...
+    @property
+    def start(self) -> int:
+        """The index of the first bit in the classical register."""
+
+    @property
+    def end(self) -> int:
+        """Index of the last bit in the classical register."""
+
+    @property
+    def size(self) -> int:
+        """The number of bits in the classical register."""
+
+    @property
+    def name(self) -> str:
+        """The name of the classical register."""
+
+    def __eq__(self, other: object) -> bool:
+        """Check if the classical register is equal to another classical register."""
+
+    def __ne__(self, other: object) -> bool:
+        """Check if the classical register is not equal to another classical register."""
+
+    def __hash__(self) -> int:
+        """Return the hash of the classical register."""
+
+    def __contains__(self, bit: int) -> bool:
+        """Check if the classical register contains a bit."""
+
 class QuantumComputation(MutableSequence[Operation]):
     """The main class for representing quantum computations within the MQT.
 
@@ -305,12 +381,15 @@ class QuantumComputation(MutableSequence[Operation]):
             name: The name of the ancillary register.
         """
 
-    def add_classical_register(self, n: int, name: str = "c") -> None:
+    def add_classical_register(self, n: int, name: str = "c") -> ClassicalRegister:
         """Add a classical register to the quantum computation.
 
         Args:
             n: The number of bits in the classical register.
             name: The name of the classical register.
+
+        Returns:
+            The classical register added to the quantum computation.
         """
 
     def add_qubit_register(self, n: int, name: str = "q") -> None:
@@ -1762,15 +1841,6 @@ class QuantumComputation(MutableSequence[Operation]):
         """
 
     @overload
-    def measure(self, qubit: int, creg_bit: tuple[str, int]) -> None:
-        """Measure a qubit and store the result in a bit of a classical register.
-
-        Args:
-            qubit: The qubit to measure
-            creg_bit: The classical register and index to store the result
-        """
-
-    @overload
     def measure(self, qubits: Sequence[int], cbits: Sequence[int]) -> None:
         """Measure multiple qubits and store the results in classical bits.
 
@@ -1899,6 +1969,8 @@ class QuantumComputation(MutableSequence[Operation]):
         """
 
 __all__ = [
+    "ClassicalRegister",
     "Permutation",
     "QuantumComputation",
+    "QuantumRegister",
 ]

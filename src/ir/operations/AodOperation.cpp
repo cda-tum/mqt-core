@@ -10,6 +10,7 @@
 #include "ir/operations/AodOperation.hpp"
 
 #include "Definitions.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/OpType.hpp"
 
 #include <algorithm>
@@ -125,11 +126,12 @@ std::vector<qc::fp> AodOperation::getDistances(const Dimension dir) const {
   }
   return params;
 }
-void AodOperation::dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
-                                [[maybe_unused]] const qc::RegisterNames& creg,
-                                const size_t indent, bool /*openQASM3*/) const {
+void AodOperation::dumpOpenQASM(
+    std::ostream& of, const qc::QubitIndexToRegisterMap& qubitMap,
+    [[maybe_unused]] const qc::BitIndexToRegisterMap& bitMap,
+    const size_t indent, bool /*openQASM3*/) const {
   of << std::setprecision(std::numeric_limits<qc::fp>::digits10);
-  of << std::string(indent * qc::OUTPUT_INDENT_SIZE, ' ');
+  of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
   of << name;
   // write AOD operations
   of << " (";
@@ -141,7 +143,7 @@ void AodOperation::dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
   of << ")";
   // write qubit start
   for (const auto& qubit : targets) {
-    of << " " << qreg[qubit].second << ",";
+    of << " " << qubitMap.at(qubit).second << ",";
   }
   of.seekp(-1, std::ios_base::end);
   of << ";\n";

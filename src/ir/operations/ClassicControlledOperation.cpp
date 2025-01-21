@@ -11,8 +11,10 @@
 
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/OpType.hpp"
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -93,11 +95,10 @@ bool ClassicControlledOperation::equals(const Operation& operation,
   }
   return false;
 }
-void ClassicControlledOperation::dumpOpenQASM(std::ostream& of,
-                                              const RegisterNames& qreg,
-                                              const RegisterNames& creg,
-                                              const std::size_t indent,
-                                              const bool openQASM3) const {
+void ClassicControlledOperation::dumpOpenQASM(
+    std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+    const BitIndexToRegisterMap& bitMap, const std::size_t indent,
+    const bool openQASM3) const {
   of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
   of << "if (";
   if (isWholeQubitRegister(creg, controlRegister.first,
@@ -117,7 +118,7 @@ void ClassicControlledOperation::dumpOpenQASM(std::ostream& of,
   if (openQASM3) {
     of << "{\n";
   }
-  op->dumpOpenQASM(of, qreg, creg, indent + 1, openQASM3);
+  op->dumpOpenQASM(of, qubitMap, bitMap, indent + 1, openQASM3);
   if (openQASM3) {
     of << "}\n";
   }

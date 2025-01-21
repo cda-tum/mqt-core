@@ -385,10 +385,6 @@ void registerQuantumComputation(py::module& m) {
              &qc::QuantumComputation::measure),
          "qubit"_a, "cbit"_a);
   qc.def("measure",
-         py::overload_cast<qc::Qubit, const std::pair<std::string, qc::Bit>&>(
-             &qc::QuantumComputation::measure),
-         "qubit"_a, "creg_bit"_a);
-  qc.def("measure",
          py::overload_cast<const std::vector<qc::Qubit>&,
                            const std::vector<qc::Bit>&>(
              &qc::QuantumComputation::measure),

@@ -15,6 +15,7 @@
 #include "OpType.hpp"
 #include "StandardOperation.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -70,8 +71,10 @@ public:
     return equals(op, {}, {});
   }
 
-  [[noreturn]] void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                                 const RegisterNames& creg, size_t indent,
+  [[noreturn]] void dumpOpenQASM(std::ostream& of,
+                                 const QubitIndexToRegisterMap& qubitMap,
+                                 const BitIndexToRegisterMap& bitMap,
+                                 std::size_t indent,
                                  bool openQASM3) const override;
 
   [[nodiscard]] StandardOperation

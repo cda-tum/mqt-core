@@ -12,8 +12,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <map>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -34,16 +32,6 @@ public:
 
 using Qubit = std::uint32_t;
 using Bit = std::uint64_t;
-
-template <class IdxType, class SizeType>
-using Register = std::pair<IdxType, SizeType>;
-using QuantumRegister = Register<Qubit, std::size_t>;
-using ClassicalRegister = Register<Bit, std::size_t>;
-template <class RegisterType>
-using RegisterMap = std::map<std::string, RegisterType, std::greater<>>;
-using QuantumRegisterMap = RegisterMap<QuantumRegister>;
-using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
-using RegisterNames = std::vector<std::pair<std::string, std::string>>;
 
 using Targets = std::vector<Qubit>;
 
