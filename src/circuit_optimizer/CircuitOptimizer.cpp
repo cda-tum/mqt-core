@@ -1399,7 +1399,10 @@ struct DSU {
     } else {
       *currentBlockInCircuit[block] = std::move(compoundOp);
     }
-    for (auto i : bitBlocks[block]) {
+    // need to make a copy here because otherwise the updates in the loop might
+    // invalidate the iterator
+    const auto blockBits = bitBlocks[block];
+    for (auto i : blockBits) {
       parent[i] = i;
       bitBlocks[i] = {i};
       currentBlockInCircuit[i] = nullptr;
