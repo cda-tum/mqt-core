@@ -16,6 +16,7 @@
 #include "ir/parsers/qasm3_parser/NestedEnvironment.hpp"
 #include "ir/parsers/qasm3_parser/Statement.hpp"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
