@@ -471,45 +471,6 @@ TEST_F(IO, appendMeasurementsAccordingToOutputPermutation) {
   EXPECT_EQ(meas->getClassics().front(), 0U);
 }
 
-TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAugmentRegister) {
-  *qc = qc::QuantumComputation::fromQASM("// o 0 1\n"
-                                         "qreg q[2];"
-                                         "creg c[1];"
-                                         "x q;");
-  qc->appendMeasurementsAccordingToOutputPermutation();
-  std::cout << *qc << "\n";
-  EXPECT_EQ(qc->getNcbits(), 2U);
-  const auto& op = qc->back();
-  ASSERT_EQ(op->getType(), qc::OpType::Measure);
-  const auto& meas = dynamic_cast<const qc::NonUnitaryOperation*>(op.get());
-  ASSERT_NE(meas, nullptr);
-  EXPECT_EQ(meas->getTargets().size(), 1U);
-  EXPECT_EQ(meas->getTargets().front(), 1U);
-  EXPECT_EQ(meas->getClassics().size(), 1U);
-  EXPECT_EQ(meas->getClassics().front(), 1U);
-  const auto& op2 = *(++qc->rbegin());
-  ASSERT_EQ(op2->getType(), qc::OpType::Measure);
-  const auto& meas2 = dynamic_cast<const qc::NonUnitaryOperation*>(op2.get());
-  ASSERT_NE(meas2, nullptr);
-  EXPECT_EQ(meas2->getTargets().size(), 1U);
-  EXPECT_EQ(meas2->getTargets().front(), 0U);
-  EXPECT_EQ(meas2->getClassics().size(), 1U);
-  EXPECT_EQ(meas2->getClassics().front(), 0U);
-  const auto qasm = qc->toQASM(false);
-  std::cout << qasm << "\n";
-  EXPECT_EQ(qasm, "// i 0 1\n"
-                  "// o 0 1\n"
-                  "OPENQASM 2.0;\n"
-                  "include \"qelib1.inc\";\n"
-                  "qreg q[2];\n"
-                  "creg c[2];\n"
-                  "x q[0];\n"
-                  "x q[1];\n"
-                  "barrier q;\n"
-                  "measure q[0] -> c[0];\n"
-                  "measure q[1] -> c[1];\n");
-}
-
 TEST_F(IO, appendMeasurementsAccordingToOutputPermutationAddRegister) {
   *qc = qc::QuantumComputation::fromQASM("// o 0 1\n"
                                          "qreg q[2];"
@@ -706,9 +667,9 @@ TEST_F(IO, fromCompoundOperation) {
 
 TEST_F(IO, classicalControlledOperationToOpenQASM3) {
   qc->addQubitRegister(2);
-  qc->addClassicalRegister(2);
-  qc->classicControlled(qc::X, 0, {0, 1});
-  qc->classicControlled(qc::X, 1, {0, 2});
+  const auto& creg = qc->addClassicalRegister(2);
+  qc->classicControlled(qc::X, 0, 0);
+  qc->classicControlled(qc::X, 1, creg);
   const std::string expected = "// i 0 1\n"
                                "// o 0 1\n"
                                "OPENQASM 3.0;\n"
@@ -724,19 +685,4 @@ TEST_F(IO, classicalControlledOperationToOpenQASM3) {
 
   const auto actual = qc->toQASM();
   EXPECT_EQ(expected, actual);
-}
-
-TEST_F(IO, classicalControlledOperationToOpenQASM3MoreThanOneRegister) {
-  qc->addQubitRegister(1);
-  qc->addClassicalRegister(1);
-  qc->addClassicalRegister(1, "d");
-  qc->classicControlled(qc::X, 0, {0, 2});
-  EXPECT_THROW(qc->dumpOpenQASM3(std::cout), qc::QFRException);
-}
-
-TEST_F(IO, classicalControlledOperationToOpenQASM3NotEntireRegister) {
-  qc->addQubitRegister(1);
-  qc->addClassicalRegister(3);
-  qc->classicControlled(qc::X, 0, {0, 2});
-  EXPECT_THROW(qc->dumpOpenQASM3(std::cout), qc::QFRException);
 }

@@ -446,8 +446,8 @@ protected:
     bvNgates = bv.getNindividualOps();
 
     const auto expected = bv.getName().substr(3);
-    dbv =
-        qc::createIterativeBernsteinVazirani(qc::BitString(expected), bitwidth);
+    dbv = qc::createIterativeBernsteinVazirani(qc::BVBitString(expected),
+                                               bitwidth);
     dbvNgates = dbv.getNindividualOps();
     std::cout << "Hidden bitstring: " << expected << " (" << bitwidth
               << " qubits)\n";

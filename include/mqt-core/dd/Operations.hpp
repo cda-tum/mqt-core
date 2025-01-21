@@ -301,21 +301,30 @@ applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
                                 const qc::VectorDD& in, Package<Config>& dd,
                                 std::vector<bool>& measurements,
                                 const qc::Permutation& permutation = {}) {
-  const auto& [regStart, regSize] = op.getControlRegister();
   const auto& expectedValue = op.getExpectedValue();
   const auto& comparisonKind = op.getComparisonKind();
 
-  auto actualValue = 0ULL;
   // determine the actual value from measurements
-  for (std::size_t j = 0; j < regSize; ++j) {
-    if (measurements[regStart + j]) {
-      actualValue |= 1ULL << j;
+  auto actualValue = 0ULL;
+  if (const auto& controlRegister = op.getControlRegister();
+      controlRegister.has_value()) {
+    assert(!op.getControlBit().has_value());
+    const auto regStart = controlRegister->getStartIndex();
+    const auto regSize = controlRegister->getSize();
+    for (std::size_t j = 0; j < regSize; ++j) {
+      if (measurements[regStart + j]) {
+        actualValue |= 1ULL << j;
+      }
     }
+  }
+  if (const auto& controlBit = op.getControlBit(); controlBit.has_value()) {
+    assert(!op.getControlRegister().has_value());
+    actualValue = measurements[*controlBit] ? 1U : 0U;
   }
 
   // check if the actual value matches the expected value according to the
   // comparison kind
-  const auto control = [&]() -> bool {
+  const auto control = [actualValue, expectedValue, comparisonKind]() {
     switch (comparisonKind) {
     case qc::ComparisonKind::Eq:
       return actualValue == expectedValue;

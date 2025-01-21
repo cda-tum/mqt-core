@@ -18,7 +18,7 @@
 
 namespace mqt {
 
-void registerNonUnitaryOperation(py::module& m) {
+void registerNonUnitaryOperation(const py::module& m) {
   py::class_<qc::NonUnitaryOperation, qc::Operation>(m, "NonUnitaryOperation")
       .def(py::init<std::vector<qc::Qubit>, std::vector<qc::Bit>>(),
            "targets"_a, "classics"_a)

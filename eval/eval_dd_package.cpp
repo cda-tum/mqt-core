@@ -100,7 +100,8 @@ benchmarkFunctionalityConstruction(const QuantumComputation& qc) {
 }
 
 std::unique_ptr<SimulationExperiment>
-benchmarkSimulateGrover(const qc::Qubit nq, const BitString& targetValue) {
+benchmarkSimulateGrover(const qc::Qubit nq,
+                        const GroverBitString& targetValue) {
   auto exp = std::make_unique<SimulationExperiment>();
   exp->dd = std::make_unique<Package<>>(nq + 1);
   auto& dd = *(exp->dd);
@@ -141,7 +142,7 @@ benchmarkSimulateGrover(const qc::Qubit nq, const BitString& targetValue) {
 
 std::unique_ptr<FunctionalityConstructionExperiment>
 benchmarkFunctionalityConstructionGrover(const qc::Qubit nq,
-                                         const BitString& targetValue) {
+                                         const GroverBitString& targetValue) {
   auto exp = std::make_unique<FunctionalityConstructionExperiment>();
   exp->dd = std::make_unique<Package<>>(nq + 1);
   auto& dd = *(exp->dd);
@@ -296,7 +297,7 @@ protected:
     constexpr std::array nqubits = {27U, 31U, 35U, 39U, 41U};
     std::cout << "Running Grover Simulation..." << '\n';
     for (const auto& nq : nqubits) {
-      BitString targetValue;
+      GroverBitString targetValue;
       targetValue.set();
       auto qc = createGrover(nq, targetValue);
       auto exp = benchmarkSimulateGrover(nq, targetValue);
@@ -305,7 +306,7 @@ protected:
 
     std::cout << "Running Grover Functionality..." << '\n';
     for (const auto& nq : nqubits) {
-      BitString targetValue;
+      GroverBitString targetValue;
       targetValue.set();
       auto qc = createGrover(nq, targetValue);
       auto exp = benchmarkFunctionalityConstructionGrover(nq, targetValue);

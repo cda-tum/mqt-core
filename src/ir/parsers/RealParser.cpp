@@ -79,8 +79,9 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
               " msg: Invalid or insufficient variables declared");
         }
         const auto qubit = static_cast<Qubit>(i);
-        qregs.insert({variable, {qubit, 1U}});
-        cregs.insert({"c_" + variable, {qubit, 1U}});
+        quantumRegisters.try_emplace(variable, qubit, 1U, variable);
+        const auto& creg = "c_" + variable;
+        classicalRegisters.try_emplace(creg, qubit, 1U, creg);
         initialLayout.insert({qubit, qubit});
         outputPermutation.insert({qubit, qubit});
         ancillary.resize(nqubits);
@@ -218,14 +219,14 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
         label.erase(label.begin());
       }
 
-      auto iter = qregs.find(label);
-      if (iter == qregs.end()) {
+      auto iter = quantumRegisters.find(label);
+      if (iter == quantumRegisters.end()) {
         throw QFRException("[real parser] l:" + std::to_string(line) +
                            " msg: Label " + label + " not found!");
       }
-      controls.emplace_back(iter->second.first, negativeControl
-                                                    ? Control::Type::Neg
-                                                    : Control::Type::Pos);
+      controls.emplace_back(iter->second.getStartIndex(),
+                            negativeControl ? Control::Type::Neg
+                                            : Control::Type::Pos);
     }
 
     if (!(iss >> label)) {
@@ -233,13 +234,13 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
                          " msg: Too few variables (no target) for gate " +
                          m.str(1));
     }
-    auto iter = qregs.find(label);
-    if (iter == qregs.end()) {
+    auto iter = quantumRegisters.find(label);
+    if (iter == quantumRegisters.end()) {
       throw QFRException("[real parser] l:" + std::to_string(line) +
                          " msg: Label " + label + " not found!");
     }
 
-    const Qubit target = iter->second.first;
+    const Qubit target = iter->second.getStartIndex();
     switch (gate) {
     case I:
     case H:

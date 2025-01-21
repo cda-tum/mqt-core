@@ -11,11 +11,13 @@
 
 #include "Definitions.hpp"
 #include "Permutation.hpp"
+#include "Register.hpp"
 #include "operations/ClassicControlledOperation.hpp"
 #include "operations/CompoundOperation.hpp"
 #include "operations/Control.hpp"
 #include "operations/Expression.hpp"
 #include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -25,11 +27,15 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 namespace qc {
+using QuantumRegisterMap = std::unordered_map<std::string, QuantumRegister>;
+using ClassicalRegisterMap = std::unordered_map<std::string, ClassicalRegister>;
+
 class QuantumComputation {
 public:
   using iterator = std::vector<std::unique_ptr<Operation>>::iterator;
@@ -47,11 +53,9 @@ protected:
   std::size_t nancillae = 0;
   std::string name;
 
-  // register names are used as keys, while the values are `{startIndex,
-  // length}` pairs
-  QuantumRegisterMap qregs;
-  ClassicalRegisterMap cregs;
-  QuantumRegisterMap ancregs;
+  QuantumRegisterMap quantumRegisters;
+  ClassicalRegisterMap classicalRegisters;
+  QuantumRegisterMap ancillaRegisters;
 
   std::vector<bool> ancillary;
   std::vector<bool> garbage;
@@ -115,14 +119,14 @@ public:
   }
   [[nodiscard]] std::size_t getNcbits() const noexcept { return nclassics; }
   [[nodiscard]] std::string getName() const noexcept { return name; }
-  [[nodiscard]] const QuantumRegisterMap& getQregs() const noexcept {
-    return qregs;
+  [[nodiscard]] const auto& getQuantumRegisters() const noexcept {
+    return quantumRegisters;
   }
-  [[nodiscard]] const ClassicalRegisterMap& getCregs() const noexcept {
-    return cregs;
+  [[nodiscard]] const auto& getClassicalRegisters() const noexcept {
+    return classicalRegisters;
   }
-  [[nodiscard]] const QuantumRegisterMap& getANCregs() const noexcept {
-    return ancregs;
+  [[nodiscard]] const auto& getAncillaRegisters() const noexcept {
+    return ancillaRegisters;
   }
   [[nodiscard]] decltype(mt)& getGenerator() noexcept { return mt; }
 
@@ -142,16 +146,11 @@ public:
   [[nodiscard]] std::size_t getNsingleQubitOps() const;
   [[nodiscard]] std::size_t getDepth() const;
 
-  [[nodiscard]] std::string getQubitRegister(Qubit physicalQubitIndex) const;
-  [[nodiscard]] std::string getClassicalRegister(Bit classicalIndex) const;
+  [[nodiscard]] QuantumRegister& getQubitRegister(Qubit physicalQubitIndex);
   /// Returns the highest qubit index used as a value in the initial layout
   [[nodiscard]] Qubit getHighestLogicalQubitIndex() const;
   /// Returns the highest qubit index used as a key in the initial layout
   [[nodiscard]] Qubit getHighestPhysicalQubitIndex() const;
-  [[nodiscard]] std::pair<std::string, Qubit>
-  getQubitRegisterAndIndex(Qubit physicalQubitIndex) const;
-  [[nodiscard]] std::pair<std::string, Bit>
-  getClassicalRegisterAndIndex(Bit classicalIndex) const;
   /**
    * @brief Returns the physical qubit index of the given logical qubit index
    * @details Iterates over the initial layout dictionary and returns the key
@@ -160,11 +159,6 @@ public:
    * @return The physical qubit index of the given logical qubit index
    */
   [[nodiscard]] Qubit getPhysicalQubitIndex(Qubit logicalQubitIndex);
-
-  [[nodiscard]] Qubit
-  getIndexFromQubitRegister(const std::pair<std::string, Qubit>& qubit) const;
-  [[nodiscard]] Bit getIndexFromClassicalRegister(
-      const std::pair<std::string, std::size_t>& clbit) const;
   [[nodiscard]] bool isIdleQubit(Qubit physicalQubit) const;
   [[nodiscard]] bool isLastOperationOnQubit(const const_iterator& opIt,
                                             const const_iterator& end) const;
@@ -327,7 +321,6 @@ public:
 #undef DECLARE_TWO_TARGET_TWO_PARAMETER_OPERATION
 
   void measure(Qubit qubit, std::size_t bit);
-  void measure(Qubit qubit, const std::pair<std::string, Bit>& registerBit);
   void measure(const Targets& qubits, const std::vector<Bit>& bits);
 
   /**
@@ -361,11 +354,23 @@ public:
                          std::uint64_t expectedValue = 1U,
                          ComparisonKind cmp = Eq,
                          const std::vector<fp>& params = {});
+  void classicControlled(OpType op, Qubit target, Bit cBit,
+                         std::uint64_t expectedValue = 1U,
+                         ComparisonKind cmp = Eq,
+                         const std::vector<fp>& params = {});
+  void classicControlled(OpType op, Qubit target, Control control, Bit cBit,
+                         std::uint64_t expectedValue = 1U,
+                         ComparisonKind cmp = Eq,
+                         const std::vector<fp>& params = {});
+  void classicControlled(OpType op, Qubit target, const Controls& controls,
+                         Bit cBit, std::uint64_t expectedValue = 1U,
+                         ComparisonKind cmp = Eq,
+                         const std::vector<fp>& params = {});
 
   /// strip away qubits with no operations applied to them and which do not pop
   /// up in the output permutation \param force if true, also strip away idle
   /// qubits occurring in the output permutation
-  void stripIdleQubits(bool force = false, bool reduceIOpermutations = true);
+  void stripIdleQubits(bool force = false);
 
   void import(const std::string& filename);
   void import(const std::string& filename, Format format);
@@ -378,16 +383,20 @@ public:
 
   // this function augments a given circuit by additional registers
   void addQubitRegister(std::size_t nq, const std::string& regName = "q");
-  void addClassicalRegister(std::size_t nc, const std::string& regName = "c");
+  const ClassicalRegister&
+  addClassicalRegister(std::size_t nc, const std::string& regName = "c");
   void addAncillaryRegister(std::size_t nq, const std::string& regName = "anc");
   // a function to combine all quantum registers (qregs and ancregs) into a
   // single register (useful for circuits mapped to a device)
   void unifyQuantumRegisters(const std::string& regName = "q");
 
-  // removes a specific logical qubit and returns the index of the physical
-  // qubit in the initial layout as well as the index of the removed physical
-  // qubit's output permutation i.e., initialLayout[physical_qubit] =
-  // logical_qubit and outputPermutation[physicalQubit] = output_qubit
+  /**
+   * @brief Removes a logical qubit
+   * @param logicalQubitIndex The qubit to remove
+   * @return The physical qubit index that the logical qubit was mapped to in
+   * the initial layout and the output qubit index that the logical qubit was
+   * mapped to in the output permutation.
+   */
   std::pair<Qubit, std::optional<Qubit>> removeQubit(Qubit logicalQubitIndex);
 
   // adds physical qubit as ancillary qubit and gives it the appropriate output
@@ -436,8 +445,6 @@ public:
   }
 
   std::ostream& printStatistics(std::ostream& os) const;
-
-  std::ostream& printRegisters(std::ostream& os = std::cout) const;
 
   static std::ostream& printPermutation(const Permutation& permutation,
                                         std::ostream& os = std::cout);

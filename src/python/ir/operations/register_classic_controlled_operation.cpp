@@ -18,7 +18,7 @@
 
 namespace mqt {
 
-void registerClassicControlledOperation(py::module& m) {
+void registerClassicControlledOperation(const py::module& m) {
   py::enum_<qc::ComparisonKind>(m, "ComparisonKind")
       .value("eq", qc::ComparisonKind::Eq)
       .value("neq", qc::ComparisonKind::Neq)
@@ -35,30 +35,45 @@ void registerClassicControlledOperation(py::module& m) {
   auto ccop = py::class_<qc::ClassicControlledOperation, qc::Operation>(
       m, "ClassicControlledOperation");
 
-  ccop.def(
-      py::init([](qc::Operation* operation, qc::ClassicalRegister controlReg,
-                  std::uint64_t expectedVal, qc::ComparisonKind cmp) {
-        return std::make_unique<qc::ClassicControlledOperation>(
-            operation->clone(), controlReg, expectedVal, cmp);
-      }),
-      "operation"_a, "control_register"_a, "expected_value"_a = 1U,
-      "comparison_kind"_a = qc::ComparisonKind::Eq);
+  ccop.def(py::init([](const qc::Operation* operation,
+                       const qc::ClassicalRegister& controlReg,
+                       std::uint64_t expectedVal, qc::ComparisonKind cmp) {
+             return std::make_unique<qc::ClassicControlledOperation>(
+                 operation->clone(), controlReg, expectedVal, cmp);
+           }),
+           "operation"_a, "control_register"_a, "expected_value"_a = 1U,
+           "comparison_kind"_a = qc::ComparisonKind::Eq);
+  ccop.def(py::init([](const qc::Operation* operation, qc::Bit cBit,
+                       std::uint64_t expectedVal, qc::ComparisonKind cmp) {
+             return std::make_unique<qc::ClassicControlledOperation>(
+                 operation->clone(), cBit, expectedVal, cmp);
+           }),
+           "operation"_a, "control_bit"_a, "expected_value"_a = 1U,
+           "comparison_kind"_a = qc::ComparisonKind::Eq);
   ccop.def_property_readonly("operation",
                              &qc::ClassicControlledOperation::getOperation,
                              py::return_value_policy::reference_internal);
   ccop.def_property_readonly(
       "control_register", &qc::ClassicControlledOperation::getControlRegister);
+  ccop.def_property_readonly("control_bit",
+                             &qc::ClassicControlledOperation::getControlBit);
   ccop.def_property_readonly("expected_value",
                              &qc::ClassicControlledOperation::getExpectedValue);
   ccop.def_property_readonly(
       "comparison_kind", &qc::ClassicControlledOperation::getComparisonKind);
   ccop.def("__repr__", [](const qc::ClassicControlledOperation& op) {
     std::stringstream ss;
-    const auto& controlReg = op.getControlRegister();
-    ss << "ClassicControlledOperation(<...op...>, "
-       << "control_register=(" << controlReg.first << ", " << controlReg.second
-       << "), "
-       << "expected_value=" << op.getExpectedValue() << ", "
+    ss << "ClassicControlledOperation(<...op...>, ";
+    if (const auto& controlReg = op.getControlRegister();
+        controlReg.has_value()) {
+      ss << "control_register=ClassicalRegister(" << controlReg->getSize()
+         << ", " << controlReg->getStartIndex() << ", " << controlReg->getName()
+         << "), ";
+    }
+    if (const auto& controlBit = op.getControlBit(); controlBit.has_value()) {
+      ss << "control_bit=" << controlBit.value() << ", ";
+    }
+    ss << "expected_value=" << op.getExpectedValue() << ", "
        << "comparison_kind='" << op.getComparisonKind() << "')";
     return ss.str();
   });

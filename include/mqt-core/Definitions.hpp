@@ -9,13 +9,9 @@
 
 #pragma once
 
-#include <bitset>
 #include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <functional>
-#include <map>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -37,24 +33,10 @@ public:
 using Qubit = std::uint32_t;
 using Bit = std::uint64_t;
 
-template <class IdxType, class SizeType>
-using Register = std::pair<IdxType, SizeType>;
-using QuantumRegister = Register<Qubit, std::size_t>;
-using ClassicalRegister = Register<Bit, std::size_t>;
-template <class RegisterType>
-using RegisterMap = std::map<std::string, RegisterType, std::greater<>>;
-using QuantumRegisterMap = RegisterMap<QuantumRegister>;
-using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
-using RegisterNames = std::vector<std::pair<std::string, std::string>>;
-
 using Targets = std::vector<Qubit>;
-
-using BitString = std::bitset<4096>;
 
 // floating-point type used throughout the library
 using fp = double;
-
-constexpr fp PARAMETER_TOLERANCE = 1e-13;
 
 static constexpr fp PI = static_cast<fp>(
     3.141592653589793238462643383279502884197169399375105820974L);
@@ -67,20 +49,8 @@ static constexpr fp TAU = static_cast<fp>(
 static constexpr fp E = static_cast<fp>(
     2.718281828459045235360287471352662497757247093699959574967L);
 
-static constexpr size_t OUTPUT_INDENT_SIZE = 2;
-
-// forward declaration
-class Operation;
-
 // supported file formats
 enum class Format : uint8_t { Real, OpenQASM2, OpenQASM3, TFC, QC, Tensor };
-
-using DAG = std::vector<std::deque<std::unique_ptr<Operation>*>>;
-using DAGIterator = std::deque<std::unique_ptr<Operation>*>::iterator;
-using DAGReverseIterator =
-    std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
-using DAGIterators = std::vector<DAGIterator>;
-using DAGReverseIterators = std::vector<DAGReverseIterator>;
 
 /**
  * @brief 64bit mixing hash (from MurmurHash3)

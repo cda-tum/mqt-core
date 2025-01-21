@@ -14,6 +14,7 @@
 #include "OpType.hpp"
 #include "Operation.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -74,8 +75,8 @@ public:
                       std::size_t prefixWidth,
                       std::size_t nqubits) const override;
 
-  void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, size_t indent,
+  void dumpOpenQASM(std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+                    const BitIndexToRegisterMap& bitMap, std::size_t indent,
                     bool openQASM3) const override;
 
   void invert() override {

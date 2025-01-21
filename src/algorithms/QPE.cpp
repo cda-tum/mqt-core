@@ -173,7 +173,7 @@ auto constructIterativeQPECircuit(QuantumComputation& qc, const fp lambda,
     // hybrid quantum-classical inverse QFT
     for (std::size_t j = 0; j < i; j++) {
       auto iQFTLambda = -PI / static_cast<double>(1ULL << (i - j));
-      qc.classicControlled(P, 1, {j, 1U}, 1U, Eq, {iQFTLambda});
+      qc.classicControlled(P, 1, j, 1U, Eq, {iQFTLambda});
     }
     qc.h(1);
 

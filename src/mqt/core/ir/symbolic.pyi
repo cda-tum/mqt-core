@@ -8,6 +8,8 @@
 from collections.abc import Iterator, Mapping, Sequence
 from typing import overload
 
+__all__ = ["Expression", "Term", "Variable"]
+
 class Variable:
     """A symbolic variable.
 

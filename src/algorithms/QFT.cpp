@@ -78,13 +78,13 @@ auto createIterativeQFT(const Qubit nq) -> QuantumComputation {
     for (Qubit j = 1; j <= i; ++j) {
       const auto d = nq - j;
       if (j == i) {
-        qc.classicControlled(S, 0, {d, 1U}, 1U);
+        qc.classicControlled(S, 0, d, 1U);
       } else if (j == i - 1) {
-        qc.classicControlled(T, 0, {d, 1U}, 1U);
+        qc.classicControlled(T, 0, d, 1U);
       } else {
         const auto powerOfTwo = std::pow(2., i - j + 1);
         const auto lambda = PI / powerOfTwo;
-        qc.classicControlled(P, 0, {d, 1U}, 1U, Eq, {lambda});
+        qc.classicControlled(P, 0, d, 1U, Eq, {lambda});
       }
     }
 
