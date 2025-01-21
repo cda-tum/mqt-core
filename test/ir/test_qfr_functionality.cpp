@@ -1447,4 +1447,49 @@ TEST_F(QFRFunctionality, InequalityDifferentAdditionalOperations) {
   EXPECT_NE(qc1, qc2);
 }
 
+TEST_F(QFRFunctionality, TryAddingExistingQuantumRegister) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(2, "q");
+  EXPECT_THROW(qc.addQubitRegister(2, "q"), QFRException);
+}
+
+TEST_F(QFRFunctionality, TryAddingExistingAncillaryRegister) {
+  QuantumComputation qc{};
+  qc.addAncillaryRegister(2, "a");
+  EXPECT_THROW(qc.addAncillaryRegister(2, "a"), QFRException);
+}
+
+TEST_F(QFRFunctionality, TryAddingExistingClassicalRegister) {
+  QuantumComputation qc{};
+  qc.addClassicalRegister(2, "c");
+  EXPECT_THROW(qc.addClassicalRegister(2, "c"), QFRException);
+}
+
+TEST_F(QFRFunctionality, TryAddingQubitRegisterAfterAncillaryRegister) {
+  QuantumComputation qc{};
+  qc.addAncillaryRegister(2, "a");
+  EXPECT_THROW(qc.addQubitRegister(2, "q"), QFRException);
+}
+
+TEST_F(QFRFunctionality, TryAddingZeroSizeQuantumRegister) {
+  QuantumComputation qc{};
+  EXPECT_THROW(qc.addQubitRegister(0, "q"), QFRException);
+}
+
+TEST_F(QFRFunctionality, TryAddingZeroSizeAncillaryRegister) {
+  QuantumComputation qc{};
+  EXPECT_THROW(qc.addAncillaryRegister(0, "a"), QFRException);
+}
+
+TEST_F(QFRFunctionality, TryAddingZeroSizeClassicalRegister) {
+  QuantumComputation qc{};
+  EXPECT_THROW(qc.addClassicalRegister(0, "c"), QFRException);
+}
+
+TEST_F(QFRFunctionality, TryGettingRegisterForQubitNotInRegister) {
+  QuantumComputation qc{};
+  qc.addQubitRegister(1, "q");
+  EXPECT_THROW(std::ignore = qc.getQubitRegister(2), QFRException);
+}
+
 } // namespace qc

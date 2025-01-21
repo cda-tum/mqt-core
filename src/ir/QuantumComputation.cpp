@@ -459,6 +459,11 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
                        " already exists");
   }
 
+  if (nq == 0) {
+    throw QFRException(
+        "[addAncillaryRegister] New register size must be larger than 0");
+  }
+
   const auto totalqubits = nqubits + nancillae;
   ancillaRegisters.try_emplace(regName, totalqubits, nq, regName);
   ancillary.resize(totalqubits + nq);

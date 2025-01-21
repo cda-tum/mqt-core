@@ -34,10 +34,10 @@ TEST(DeferMeasurements, basicTest) {
 
   QuantumComputation qc{};
   qc.addQubitRegister(2);
-  qc.addClassicalRegister(1);
+  const auto& creg = qc.addClassicalRegister(1);
   qc.h(0);
   qc.measure(0, 0U);
-  qc.classicControlled(qc::X, 1, 0, 1U);
+  qc.classicControlled(qc::X, 1, creg, 1U);
   std::cout << qc << "\n";
 
   EXPECT_TRUE(qc.isDynamic());
@@ -408,6 +408,35 @@ TEST(DeferMeasurements, errorOnImplicitReset) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.classicControlled(qc::X, 0, 0, 1U);
+  std::cout << qc << "\n";
+
+  EXPECT_TRUE(qc.isDynamic());
+
+  EXPECT_THROW(CircuitOptimizer::deferMeasurements(qc), qc::QFRException);
+}
+
+TEST(DeferMeasurements, errorOnMultiQubitRegister) {
+  // Input:
+  // i: 0 1 2
+  // 1: x | |
+  // 2: | x |
+  // 3: 0 | |
+  // 4: | 1 |
+  // 5: | | x c[0...1] == 3
+  // o: 0 1 2
+
+  // Expected Output:
+  // Error, since the classic-controlled operation is controlled by a register
+  // of more than one bit.
+
+  QuantumComputation qc{};
+  qc.addQubitRegister(3);
+  const auto& creg = qc.addClassicalRegister(2);
+  qc.x(0);
+  qc.x(1);
+  qc.measure(0, 0U);
+  qc.measure(1, 1U);
+  qc.classicControlled(qc::X, 2, creg, 3U);
   std::cout << qc << "\n";
 
   EXPECT_TRUE(qc.isDynamic());
