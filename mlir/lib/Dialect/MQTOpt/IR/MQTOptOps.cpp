@@ -31,6 +31,12 @@ void mqt::ir::opt::MQTOptDialect::initialize() {
 #include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// Types
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/MQTOpt/IR/MQTOptInterfaces.cpp.inc"
+
+//===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
@@ -42,6 +48,15 @@ void mqt::ir::opt::MQTOptDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 namespace mqt::ir::opt {
+
+mlir::LogicalResult MeasureOp::verify() {
+  if (getInQubits().size() != getOutQubits().size()) {
+    return emitOpError() << "number of input qubits (" << getInQubits().size()
+                         << ") " << "and output qubits ("
+                         << getOutQubits().size() << ") must be the same";
+  }
+  return mlir::success();
+}
 
 mlir::LogicalResult AllocOp::verify() {
   if (!getSize() && !getSizeAttr().has_value()) {
