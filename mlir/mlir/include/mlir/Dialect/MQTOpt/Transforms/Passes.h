@@ -7,7 +7,7 @@
 
 namespace mlir {
 
-    class RewritePatternSet;
+class RewritePatternSet;
 
 } // namespace mlir
 
