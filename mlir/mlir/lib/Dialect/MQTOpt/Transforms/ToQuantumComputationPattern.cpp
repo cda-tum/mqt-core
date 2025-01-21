@@ -71,7 +71,7 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
 
   void handleXOp(XOp op,
                       std::vector<mlir::Value>& currentQubitVariables) const {
-    const auto in = op.getInQubit();
+    const auto in = op.getInQubits()[0];
     const auto ctrlIns = op.getCtrlQubits();
     const auto outs = op.getOutQubits();
 
