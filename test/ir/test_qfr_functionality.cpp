@@ -172,18 +172,18 @@ TEST_F(QFRFunctionality, StripIdleAndDump) {
                                "cx q[0],q[4];\n";
 
   ss << testfile;
-  auto qc = qc::QuantumComputation();
-  qc.import(ss, qc::Format::OpenQASM2);
+  auto qc = QuantumComputation();
+  qc.import(ss, Format::OpenQASM2);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
   std::stringstream goal{};
   qc.print(goal);
   std::stringstream test{};
-  qc.dump(test, qc::Format::OpenQASM2);
+  qc.dump(test, Format::OpenQASM2);
   std::cout << test.str() << "\n";
   qc.reset();
-  qc.import(test, qc::Format::OpenQASM2);
+  qc.import(test, Format::OpenQASM2);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
@@ -332,15 +332,15 @@ TEST_F(QFRFunctionality, wrongRegisterSizes) {
 }
 
 TEST_F(QFRFunctionality, OperationEquality) {
-  const auto x = StandardOperation(0, qc::X);
-  const auto z = StandardOperation(0, qc::Z);
+  const auto x = StandardOperation(0, X);
+  const auto z = StandardOperation(0, Z);
   EXPECT_TRUE(x.equals(x));
   EXPECT_EQ(x, x);
   EXPECT_FALSE(x.equals(z));
   EXPECT_NE(x, z);
 
-  const auto x0 = StandardOperation(0, qc::X);
-  const auto x1 = StandardOperation(1, qc::X);
+  const auto x0 = StandardOperation(0, X);
+  const auto x1 = StandardOperation(1, X);
   EXPECT_FALSE(x0.equals(x1));
   EXPECT_NE(x0, x1);
   Permutation perm0{};
@@ -349,15 +349,15 @@ TEST_F(QFRFunctionality, OperationEquality) {
   EXPECT_TRUE(x0.equals(x1, perm0, {}));
   EXPECT_TRUE(x0.equals(x1, {}, perm0));
 
-  const auto cx01 = StandardOperation(0, 1, qc::X);
-  const auto cx10 = StandardOperation(1, 0, qc::X);
+  const auto cx01 = StandardOperation(0, 1, X);
+  const auto cx10 = StandardOperation(1, 0, X);
   EXPECT_FALSE(cx01.equals(cx10));
   EXPECT_NE(cx01, cx10);
   EXPECT_FALSE(x0.equals(cx01));
   EXPECT_NE(x0, cx01);
 
-  const auto p = StandardOperation(0, qc::P, {2.0});
-  const auto pm = StandardOperation(0, qc::P, {-2.0});
+  const auto p = StandardOperation(0, P, {2.0});
+  const auto pm = StandardOperation(0, P, {-2.0});
   EXPECT_FALSE(p.equals(pm));
   EXPECT_NE(p, pm);
 
@@ -407,14 +407,14 @@ TEST_F(QFRFunctionality, OperationEquality) {
   EXPECT_NE(classic0, classic3);
 
   auto compound0 = CompoundOperation();
-  compound0.emplace_back<StandardOperation>(0, qc::X);
+  compound0.emplace_back<StandardOperation>(0, X);
 
   auto compound1 = CompoundOperation();
-  compound1.emplace_back<StandardOperation>(0, qc::X);
-  compound1.emplace_back<StandardOperation>(0, qc::Z);
+  compound1.emplace_back<StandardOperation>(0, X);
+  compound1.emplace_back<StandardOperation>(0, Z);
 
   auto compound2 = CompoundOperation();
-  compound2.emplace_back<StandardOperation>(0, qc::Z);
+  compound2.emplace_back<StandardOperation>(0, Z);
 
   EXPECT_FALSE(compound0.equals(x));
   EXPECT_NE(compound0, x);
@@ -428,7 +428,7 @@ TEST_F(QFRFunctionality, OperationEquality) {
 
 TEST_F(QFRFunctionality, IndexOutOfRange) {
   QuantumComputation qc(2);
-  qc::Permutation layout{};
+  Permutation layout{};
   layout[0] = 0;
   layout[2] = 1;
   qc.initialLayout = layout;
@@ -521,16 +521,16 @@ TEST_F(QFRFunctionality, CircuitToOperation) {
   qc.x(0);
   const auto& op = qc.asOperation();
   ASSERT_NE(op, nullptr);
-  EXPECT_EQ(op->getType(), qc::X);
+  EXPECT_EQ(op->getType(), X);
   EXPECT_EQ(op->getNcontrols(), 0U);
   EXPECT_EQ(op->getTargets().front(), 0U);
   EXPECT_TRUE(qc.empty());
   qc.x(0);
   qc.h(0);
-  qc.classicControlled(qc::X, 0, 1, {0, 1U}, 1U);
+  qc.classicControlled(X, 0, 1, {0, 1U}, 1U);
   const auto& op2 = qc.asOperation();
   ASSERT_NE(op2, nullptr);
-  EXPECT_EQ(op2->getType(), qc::Compound);
+  EXPECT_EQ(op2->getType(), Compound);
   EXPECT_TRUE(qc.empty());
 }
 
@@ -585,7 +585,7 @@ TEST_F(QFRFunctionality, RzAndPhaseDifference) {
                            "cp(1/8) q[0],q[1];\n";
   std::stringstream ss;
   ss << qasm;
-  qc.import(ss, qc::Format::OpenQASM2);
+  qc.import(ss, Format::OpenQASM2);
   std::cout << qc << "\n";
   std::stringstream oss;
   qc.dumpOpenQASM2(oss);
@@ -599,12 +599,12 @@ TEST_F(QFRFunctionality, U3toU2Gate) {
   qc.u(PI_2, PI_2, -PI_2, 0); // Vdag = RX(-pi/2)
   qc.u(PI_2, 0.25, 0.5, 0);   // U2(0.25, 0.5)
   std::cout << qc << "\n";
-  EXPECT_EQ(qc.at(0)->getType(), qc::H);
-  EXPECT_EQ(qc.at(1)->getType(), qc::RY);
+  EXPECT_EQ(qc.at(0)->getType(), H);
+  EXPECT_EQ(qc.at(1)->getType(), RY);
   EXPECT_EQ(qc.at(1)->getParameter().at(0), PI_2);
-  EXPECT_EQ(qc.at(2)->getType(), qc::V);
-  EXPECT_EQ(qc.at(3)->getType(), qc::Vdg);
-  EXPECT_EQ(qc.at(4)->getType(), qc::U2);
+  EXPECT_EQ(qc.at(2)->getType(), V);
+  EXPECT_EQ(qc.at(3)->getType(), Vdg);
+  EXPECT_EQ(qc.at(4)->getType(), U2);
   EXPECT_EQ(qc.at(4)->getParameter().at(0), 0.25);
   EXPECT_EQ(qc.at(4)->getParameter().at(1), 0.5);
 }
@@ -620,13 +620,13 @@ TEST_F(QFRFunctionality, U3toU1Gate) {
   qc.u(0., 0., 0.5, 0);   // p(0.5)
 
   std::cout << qc << "\n";
-  EXPECT_EQ(qc.at(0)->getType(), qc::I);
-  EXPECT_EQ(qc.at(1)->getType(), qc::Z);
-  EXPECT_EQ(qc.at(2)->getType(), qc::S);
-  EXPECT_EQ(qc.at(3)->getType(), qc::Sdg);
-  EXPECT_EQ(qc.at(4)->getType(), qc::T);
-  EXPECT_EQ(qc.at(5)->getType(), qc::Tdg);
-  EXPECT_EQ(qc.at(6)->getType(), qc::P);
+  EXPECT_EQ(qc.at(0)->getType(), I);
+  EXPECT_EQ(qc.at(1)->getType(), Z);
+  EXPECT_EQ(qc.at(2)->getType(), S);
+  EXPECT_EQ(qc.at(3)->getType(), Sdg);
+  EXPECT_EQ(qc.at(4)->getType(), T);
+  EXPECT_EQ(qc.at(5)->getType(), Tdg);
+  EXPECT_EQ(qc.at(6)->getType(), P);
   EXPECT_EQ(qc.at(6)->getParameter().at(0), 0.5);
 }
 
@@ -640,15 +640,15 @@ TEST_F(QFRFunctionality, U3SpecialCases) {
   qc.u(0.5, 0.25, 0.125, 0); // U3(0.5, 0.25, 0.125)
 
   std::cout << qc << "\n";
-  EXPECT_EQ(qc.at(0)->getType(), qc::RY);
+  EXPECT_EQ(qc.at(0)->getType(), RY);
   EXPECT_EQ(qc.at(0)->getParameter().at(0), 0.5);
-  EXPECT_EQ(qc.at(1)->getType(), qc::RX);
+  EXPECT_EQ(qc.at(1)->getType(), RX);
   EXPECT_EQ(qc.at(1)->getParameter().at(0), 0.5);
-  EXPECT_EQ(qc.at(2)->getType(), qc::RX);
+  EXPECT_EQ(qc.at(2)->getType(), RX);
   EXPECT_EQ(qc.at(2)->getParameter().at(0), -0.5);
-  EXPECT_EQ(qc.at(3)->getType(), qc::Y);
-  EXPECT_EQ(qc.at(4)->getType(), qc::X);
-  EXPECT_EQ(qc.at(5)->getType(), qc::U);
+  EXPECT_EQ(qc.at(3)->getType(), Y);
+  EXPECT_EQ(qc.at(4)->getType(), X);
+  EXPECT_EQ(qc.at(5)->getType(), U);
   EXPECT_EQ(qc.at(5)->getParameter().at(0), 0.5);
   EXPECT_EQ(qc.at(5)->getParameter().at(1), 0.25);
   EXPECT_EQ(qc.at(5)->getParameter().at(2), 0.125);
@@ -664,19 +664,19 @@ TEST_F(QFRFunctionality, GlobalPhaseNormalization) {
 }
 
 TEST_F(QFRFunctionality, OpNameToTypeSimple) {
-  EXPECT_EQ(qc::OpType::X, qc::opTypeFromString("x"));
-  EXPECT_EQ(qc::OpType::Y, qc::opTypeFromString("y"));
-  EXPECT_EQ(qc::OpType::Z, qc::opTypeFromString("z"));
+  EXPECT_EQ(OpType::X, opTypeFromString("x"));
+  EXPECT_EQ(OpType::Y, opTypeFromString("y"));
+  EXPECT_EQ(OpType::Z, opTypeFromString("z"));
 
-  EXPECT_EQ(qc::OpType::H, qc::opTypeFromString("h"));
-  EXPECT_EQ(qc::OpType::S, qc::opTypeFromString("s"));
-  EXPECT_EQ(qc::OpType::Sdg, qc::opTypeFromString("sdg"));
-  EXPECT_EQ(qc::OpType::T, qc::opTypeFromString("t"));
-  EXPECT_EQ(qc::OpType::Tdg, qc::opTypeFromString("tdg"));
+  EXPECT_EQ(OpType::H, opTypeFromString("h"));
+  EXPECT_EQ(OpType::S, opTypeFromString("s"));
+  EXPECT_EQ(OpType::Sdg, opTypeFromString("sdg"));
+  EXPECT_EQ(OpType::T, opTypeFromString("t"));
+  EXPECT_EQ(OpType::Tdg, opTypeFromString("tdg"));
 
-  EXPECT_EQ(qc::OpType::X, qc::opTypeFromString("cnot"));
+  EXPECT_EQ(OpType::X, opTypeFromString("cnot"));
 
-  EXPECT_THROW([[maybe_unused]] const auto type = qc::opTypeFromString("foo"),
+  EXPECT_THROW([[maybe_unused]] const auto type = opTypeFromString("foo"),
                std::invalid_argument);
 }
 
@@ -688,7 +688,7 @@ TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
   EXPECT_TRUE(ss.str().find("teleport") != std::string::npos);
 
   QuantumComputation qcImported(3);
-  qcImported.import(ss, qc::Format::OpenQASM2);
+  qcImported.import(ss, Format::OpenQASM2);
   ASSERT_EQ(qcImported.size(), 1);
   EXPECT_EQ(qcImported.at(0)->getType(), OpType::Teleportation);
 }
@@ -968,7 +968,7 @@ TEST_F(QFRFunctionality, invertSymbolicOpParamChange) {
 }
 
 TEST_F(QFRFunctionality, measureAll) {
-  qc::QuantumComputation qc(2U);
+  QuantumComputation qc(2U);
   qc.measureAll();
   std::cout << qc << "\n";
   EXPECT_EQ(qc.getNops(), 3U);
@@ -979,7 +979,7 @@ TEST_F(QFRFunctionality, measureAll) {
 }
 
 TEST_F(QFRFunctionality, measureAllExistingRegister) {
-  qc::QuantumComputation qc(2U, 2U);
+  QuantumComputation qc(2U, 2U);
   qc.measureAll(false);
   std::cout << qc << "\n";
   EXPECT_EQ(qc.getNops(), 3U);
@@ -990,7 +990,7 @@ TEST_F(QFRFunctionality, measureAllExistingRegister) {
 }
 
 TEST_F(QFRFunctionality, measureAllInsufficientRegisterSize) {
-  qc::QuantumComputation qc(2U, 1U);
+  QuantumComputation qc(2U, 1U);
   EXPECT_THROW(qc.measureAll(false), QFRException);
 }
 
@@ -1067,7 +1067,8 @@ TEST_F(QFRFunctionality, testSettingSetMultipleAncillariesAndGarbage) {
 }
 
 TEST_F(QFRFunctionality, StripIdleQubitsInMiddleOfCircuit) {
-  qc::QuantumComputation qc(5U);
+  QuantumComputation qc{};
+  qc.addQubitRegister(5, "q");
   qc.setLogicalQubitAncillary(3U);
   qc.setLogicalQubitAncillary(4U);
   qc.setLogicalQubitGarbage(3U);
@@ -1168,7 +1169,7 @@ TEST_F(QFRFunctionality, emptyPermutation) {
 TEST_F(QFRFunctionality, NoRegisterOnEmptyCircuit) {
   // This is a regression test. Previously, the following code would throw an
   // exception because even zero-qubit circuits had an empty register named "q".
-  qc::QuantumComputation qc(0U);
+  QuantumComputation qc(0U);
   qc.addQubitRegister(1U, "p");
   EXPECT_NO_THROW(qc.addQubitRegister(1U, "q"));
   EXPECT_EQ(qc.getQregs().size(), 2U);
@@ -1471,3 +1472,5 @@ TEST_F(QFRFunctionality, InequalityDifferentAdditionalOperations) {
   qc2.barrier(); // qc2 has an additional barrier
   EXPECT_NE(qc1, qc2);
 }
+
+} // namespace qc
