@@ -395,26 +395,21 @@ TEST_F(QFRFunctionality, OperationEquality) {
   EXPECT_TRUE(measure0.equals(measure2, perm0, {}));
   EXPECT_TRUE(measure0.equals(measure2, {}, perm0));
 
-  const auto controlRegister0 = qc::QuantumRegister{0, 1U};
-  const auto controlRegister1 = qc::QuantumRegister{1, 1U};
   const auto expectedValue0 = 0U;
   const auto expectedValue1 = 1U;
 
-  std::unique_ptr<Operation> xp0 =
-      std::make_unique<StandardOperation>(0, qc::X);
-  std::unique_ptr<Operation> xp1 =
-      std::make_unique<StandardOperation>(0, qc::X);
-  std::unique_ptr<Operation> xp2 =
-      std::make_unique<StandardOperation>(0, qc::X);
-  const auto classic0 = ClassicControlledOperation(
-      std::move(xp0), controlRegister0, expectedValue0);
-  const auto classic1 = ClassicControlledOperation(
-      std::move(xp1), controlRegister0, expectedValue1);
-  const auto classic2 = ClassicControlledOperation(
-      std::move(xp2), controlRegister1, expectedValue0);
-  std::unique_ptr<Operation> zp = std::make_unique<StandardOperation>(0, qc::Z);
-  const auto classic3 = ClassicControlledOperation(
-      std::move(zp), controlRegister0, expectedValue0);
+  std::unique_ptr<Operation> xp0 = std::make_unique<StandardOperation>(0, X);
+  std::unique_ptr<Operation> xp1 = std::make_unique<StandardOperation>(0, X);
+  std::unique_ptr<Operation> xp2 = std::make_unique<StandardOperation>(0, X);
+  const auto classic0 =
+      ClassicControlledOperation(std::move(xp0), 0, expectedValue0);
+  const auto classic1 =
+      ClassicControlledOperation(std::move(xp1), 0, expectedValue1);
+  const auto classic2 =
+      ClassicControlledOperation(std::move(xp2), 1, expectedValue0);
+  std::unique_ptr<Operation> zp = std::make_unique<StandardOperation>(0, Z);
+  const auto classic3 =
+      ClassicControlledOperation(std::move(zp), 0, expectedValue0);
   EXPECT_FALSE(classic0.equals(x));
   EXPECT_NE(classic0, x);
   EXPECT_TRUE(classic0.equals(classic0));
@@ -753,11 +748,9 @@ TEST_F(QFRFunctionality, addControlSymbolicOperation) {
 }
 
 TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
-  std::unique_ptr<Operation> xp = std::make_unique<StandardOperation>(0, qc::X);
-  const auto controlRegister = qc::QuantumRegister{0, 1U};
+  std::unique_ptr<Operation> xp = std::make_unique<StandardOperation>(0, X);
   const auto expectedValue = 0U;
-  auto op =
-      ClassicControlledOperation(std::move(xp), controlRegister, expectedValue);
+  auto op = ClassicControlledOperation(std::move(xp), 0, expectedValue);
 
   op.addControl(1);
   op.addControl(2);
@@ -820,8 +813,7 @@ TEST_F(QFRFunctionality, addControlTwice) {
   op->addControl(control);
   EXPECT_THROW(op->addControl(control), QFRException);
 
-  auto classicControlledOp =
-      ClassicControlledOperation(std::move(op), qc::QuantumRegister{0, 1U}, 0U);
+  auto classicControlledOp = ClassicControlledOperation(std::move(op), 0, 0U);
   EXPECT_THROW(classicControlledOp.addControl(control), QFRException);
 
   auto symbolicOp = SymbolicOperation(Targets{1}, OpType::X);
@@ -837,8 +829,7 @@ TEST_F(QFRFunctionality, addTargetAsControl) {
       std::make_unique<StandardOperation>(Targets{1}, OpType::X);
   EXPECT_THROW(op->addControl(control), QFRException);
 
-  auto classicControlledOp =
-      ClassicControlledOperation(std::move(op), qc::QuantumRegister{0, 1U}, 0U);
+  auto classicControlledOp = ClassicControlledOperation(std::move(op), 0, 0U);
   EXPECT_THROW(classicControlledOp.addControl(control), QFRException);
 
   auto symbolicOp = SymbolicOperation(Targets{1}, OpType::X);
@@ -1011,16 +1002,8 @@ TEST_F(QFRFunctionality, measureAllInsufficientRegisterSize) {
 }
 
 TEST_F(QFRFunctionality, checkClassicalRegisters) {
-  qc::QuantumComputation qc(1U, 1U);
-  EXPECT_THROW(qc.classicControlled(qc::X, 0U, {0U, 2U}), QFRException);
-}
-
-TEST_F(QFRFunctionality, MeasurementSanityCheck) {
-  qc::QuantumComputation qc(1U);
-  qc.addClassicalRegister(1U, "c");
-
-  EXPECT_THROW(qc.measure(0, {"c", 1U}), QFRException);
-  EXPECT_THROW(qc.measure(0, {"d", 0U}), QFRException);
+  QuantumComputation qc(1U, 1U);
+  EXPECT_THROW(qc.classicControlled(X, 0U, {0U, 2U}), QFRException);
 }
 
 TEST_F(QFRFunctionality, testSettingAncillariesProperlyCreatesRegisters) {

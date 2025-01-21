@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <utility>
@@ -42,10 +43,12 @@ std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind);
 
 class ClassicControlledOperation final : public Operation {
 public:
-  // Applies operation `_op` if the creg starting at index `control` has the
-  // expected value
   ClassicControlledOperation(std::unique_ptr<Operation>&& operation,
                              ClassicalRegister controlReg,
+                             std::uint64_t expectedVal = 1U,
+                             ComparisonKind kind = Eq);
+
+  ClassicControlledOperation(std::unique_ptr<Operation>&& operation, Bit cBit,
                              std::uint64_t expectedVal = 1U,
                              ComparisonKind kind = Eq);
 
@@ -57,8 +60,11 @@ public:
     return std::make_unique<ClassicControlledOperation>(*this);
   }
 
-  [[nodiscard]] auto getControlRegister() const noexcept {
+  [[nodiscard]] const auto& getControlRegister() const noexcept {
     return controlRegister;
+  }
+  [[nodiscard]] const auto& getControlBit() const noexcept {
+    return controlBit;
   }
 
   [[nodiscard]] auto getExpectedValue() const noexcept { return expectedValue; }
@@ -124,7 +130,8 @@ public:
 
 private:
   std::unique_ptr<Operation> op;
-  ClassicalRegister controlRegister;
+  std::optional<ClassicalRegister> controlRegister;
+  std::optional<Bit> controlBit;
   std::uint64_t expectedValue = 1U;
   ComparisonKind comparisonKind = Eq;
 };
@@ -133,10 +140,16 @@ private:
 template <> struct std::hash<qc::ClassicControlledOperation> {
   std::size_t
   operator()(qc::ClassicControlledOperation const& ccop) const noexcept {
-    auto seed = qc::combineHash(ccop.getControlRegister().first,
-                                ccop.getControlRegister().second);
-    qc::hashCombine(seed, ccop.getExpectedValue());
-    qc::hashCombine(seed, std::hash<qc::Operation>{}(*ccop.getOperation()));
+    auto seed =
+        qc::combineHash(std::hash<qc::Operation>{}(*ccop.getOperation()),
+                        ccop.getExpectedValue());
+    if (ccop.getControlRegister().has_value()) {
+      qc::hashCombine(seed, std::hash<qc::ClassicalRegister>{}(
+                                ccop.getControlRegister().value()));
+    }
+    if (ccop.getControlBit().has_value()) {
+      qc::hashCombine(seed, ccop.getControlBit().value());
+    }
     return seed;
   }
 };

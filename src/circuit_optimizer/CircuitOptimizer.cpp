@@ -824,93 +824,103 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
         }
 
         if (const auto* classicOp =
-                dynamic_cast<qc::ClassicControlledOperation*>((*opIt).get());
+                dynamic_cast<ClassicControlledOperation*>(opIt->get());
             classicOp != nullptr) {
-          const auto& controlRegister = classicOp->getControlRegister();
           const auto& expectedValue = classicOp->getExpectedValue();
 
-          if (controlRegister.second != 1 && expectedValue <= 1) {
-            throw QFRException(
-                "Classic-controlled operations targeted at more than one bit "
-                "are currently not supported. Try decomposing the operation "
-                "into individual contributions.");
+          Bit cBit = 0;
+          if (const auto& controlRegister = classicOp->getControlRegister();
+              controlRegister.has_value()) {
+            assert(!classicOp->getControlBit().has_value());
+            if (controlRegister->getSize() != 1) {
+              throw QFRException(
+                  "Classic-controlled operations targeted at more than one bit "
+                  "are currently not supported. Try decomposing the operation "
+                  "into individual contributions.");
+            }
+            cBit = controlRegister->getStartIndex();
+          }
+          if (const auto& controlBit = classicOp->getControlBit();
+              controlBit.has_value()) {
+            assert(!classicOp->getControlRegister().has_value());
+            cBit = controlBit.value();
           }
 
           // if this is not the classical bit that is measured, continue
-          if (controlRegister.first == static_cast<Qubit>(measurementBit)) {
-            // get the underlying operation
-            const auto* standardOp =
-                dynamic_cast<qc::StandardOperation*>(classicOp->getOperation());
-            if (standardOp == nullptr) {
-              std::stringstream ss{};
-              ss << "Underlying operation of classic-controlled operation is "
-                    "not a StandardOperation.\n";
-              classicOp->print(ss, qc.getNqubits());
-              throw QFRException(ss.str());
-            }
-
-            // get all the necessary information for reconstructing the
-            // operation
-            const auto type = standardOp->getType();
-            const auto targs = standardOp->getTargets();
-            for (const auto& target : targs) {
-              if (target == measurementQubit) {
-                throw qc::QFRException(
-                    "Implicit reset operation in circuit detected. Measuring a "
-                    "qubit and then targeting the same qubit with a "
-                    "classic-controlled operation is not allowed at the "
-                    "moment.");
-              }
-            }
-
-            // determine the appropriate control to add
-            auto controls = standardOp->getControls();
-            const auto controlQubit = measurementQubit;
-            const auto controlType =
-                (expectedValue == 1) ? Control::Type::Pos : Control::Type::Neg;
-            controls.emplace(controlQubit, controlType);
-
-            const auto parameters = standardOp->getParameter();
-
-            // remove the classic-controlled operation
-            // carefully handle iterator invalidation.
-            // if the current insertion point is the same as the current
-            // iterator the insertion point has to be updated to the new
-            // operation as well.
-            auto itInvalidated = (it >= opIt);
-            const auto insertionPointInvalidated =
-                (currentInsertionPoint >= opIt);
-
-            opIt = qc.erase(opIt);
-
-            if (itInvalidated) {
-              it = opIt;
-            }
-            if (insertionPointInvalidated) {
-              currentInsertionPoint = opIt;
-            }
-
-            itInvalidated = (it >= currentInsertionPoint);
-            // insert the new operation (invalidated all pointer onwards)
-            currentInsertionPoint = qc.insert(
-                currentInsertionPoint, std::make_unique<qc::StandardOperation>(
-                                           controls, targs, type, parameters));
-
-            if (itInvalidated) {
-              it = currentInsertionPoint;
-            }
-            // advance just after the currently inserted operation
-            ++currentInsertionPoint;
-            // the inner loop also has to restart from here due to the
-            // invalidation of the iterators
-            opIt = currentInsertionPoint;
-          } else {
+          if (cBit != measurementBit) {
             if (!operation->actsOn(measurementQubit)) {
               ++currentInsertionPoint;
             }
             ++opIt;
             continue;
           }
+
+          // get the underlying operation
+          const auto* standardOp =
+              dynamic_cast<StandardOperation*>(classicOp->getOperation());
+          if (standardOp == nullptr) {
+            std::stringstream ss{};
+            ss << "Underlying operation of classic-controlled operation is "
+                  "not a StandardOperation.\n";
+            classicOp->print(ss, qc.getNqubits());
+            throw QFRException(ss.str());
+          }
+
+          // get all the necessary information for reconstructing the
+          // operation
+          const auto type = standardOp->getType();
+          const auto targs = standardOp->getTargets();
+          for (const auto& target : targs) {
+            if (target == measurementQubit) {
+              throw QFRException(
+                  "Implicit reset operation in circuit detected. Measuring a "
+                  "qubit and then targeting the same qubit with a "
+                  "classic-controlled operation is not allowed at the "
+                  "moment.");
+            }
+          }
+
+          // determine the appropriate control to add
+          auto controls = standardOp->getControls();
+          const auto controlQubit = measurementQubit;
+          const auto controlType =
+              (expectedValue == 1) ? Control::Type::Pos : Control::Type::Neg;
+          controls.emplace(controlQubit, controlType);
+
+          const auto parameters = standardOp->getParameter();
+
+          // remove the classic-controlled operation
+          // carefully handle iterator invalidation.
+          // if the current insertion point is the same as the current
+          // iterator the insertion point has to be updated to the new
+          // operation as well.
+          auto itInvalidated = (it >= opIt);
+          const auto insertionPointInvalidated =
+              (currentInsertionPoint >= opIt);
+
+          opIt = qc.erase(opIt);
+
+          if (itInvalidated) {
+            it = opIt;
+          }
+          if (insertionPointInvalidated) {
+            currentInsertionPoint = opIt;
+          }
+
+          itInvalidated = (it >= currentInsertionPoint);
+          // insert the new operation (invalidated all pointer onwards)
+          currentInsertionPoint = qc.insert(
+              currentInsertionPoint, std::make_unique<StandardOperation>(
+                                         controls, targs, type, parameters));
+
+          if (itInvalidated) {
+            it = currentInsertionPoint;
+          }
+          // advance just after the currently inserted operation
+          ++currentInsertionPoint;
+          // the inner loop also has to restart from here due to the
+          // invalidation of the iterators
+          opIt = currentInsertionPoint;
         }
       }
     }

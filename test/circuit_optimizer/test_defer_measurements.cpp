@@ -37,7 +37,7 @@ TEST(DeferMeasurements, basicTest) {
   qc.addClassicalRegister(1);
   qc.h(0);
   qc.measure(0, 0U);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
   std::cout << qc << "\n";
 
   EXPECT_TRUE(qc.isDynamic());
@@ -102,7 +102,7 @@ TEST(DeferMeasurements, measurementBetweenMeasurementAndClassic) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.h(0);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
   std::cout << qc << "\n";
 
   EXPECT_TRUE(qc.isDynamic());
@@ -176,8 +176,8 @@ TEST(DeferMeasurements, twoClassic) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.h(0);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
-  qc.classicControlled(qc::Z, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
+  qc.classicControlled(qc::Z, 1, 0, 1U);
 
   std::cout << qc << "\n";
 
@@ -259,7 +259,7 @@ TEST(DeferMeasurements, correctOrder) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.h(1);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
   std::cout << qc << "\n";
 
   EXPECT_TRUE(qc.isDynamic());
@@ -333,8 +333,8 @@ TEST(DeferMeasurements, twoClassicCorrectOrder) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.h(1);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
-  qc.classicControlled(qc::Z, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
+  qc.classicControlled(qc::Z, 1, 0, 1U);
   std::cout << qc << "\n";
 
   EXPECT_TRUE(qc.isDynamic());
@@ -407,7 +407,7 @@ TEST(DeferMeasurements, errorOnImplicitReset) {
   QuantumComputation qc(1U, 1U);
   qc.h(0);
   qc.measure(0, 0U);
-  qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 0, 0, 1U);
   std::cout << qc << "\n";
 
   EXPECT_TRUE(qc.isDynamic());

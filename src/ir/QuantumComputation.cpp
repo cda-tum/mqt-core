@@ -1738,4 +1738,33 @@ void QuantumComputation::classicControlled(
   emplace_back<ClassicControlledOperation>(std::move(gate), controlRegister,
                                            expectedValue, cmp);
 }
+void QuantumComputation::classicControlled(const OpType op, const Qubit target,
+                                           const Bit cBit,
+                                           const std::uint64_t expectedValue,
+                                           const ComparisonKind cmp,
+                                           const std::vector<fp>& params) {
+  classicControlled(op, target, Controls{}, cBit, expectedValue, cmp, params);
+}
+void QuantumComputation::classicControlled(const OpType op, const Qubit target,
+                                           const Control control,
+                                           const Bit cBit,
+                                           const std::uint64_t expectedValue,
+                                           const ComparisonKind cmp,
+                                           const std::vector<fp>& params) {
+  classicControlled(op, target, Controls{control}, cBit, expectedValue, cmp,
+                    params);
+}
+void QuantumComputation::classicControlled(const OpType op, const Qubit target,
+                                           const Controls& controls,
+                                           const Bit cBit,
+                                           const std::uint64_t expectedValue,
+                                           const ComparisonKind cmp,
+                                           const std::vector<fp>& params) {
+  checkQubitRange(target, controls);
+  checkClassicalRegister({1, cBit});
+  std::unique_ptr<Operation> gate =
+      std::make_unique<StandardOperation>(controls, target, op, params);
+  emplace_back<ClassicControlledOperation>(std::move(gate), cBit, expectedValue,
+                                           cmp);
+}
 } // namespace qc

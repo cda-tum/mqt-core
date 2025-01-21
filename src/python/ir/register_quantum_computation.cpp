@@ -432,5 +432,31 @@ void registerQuantumComputation(py::module& m) {
       "op"_a, "target"_a, "controls"_a, "creg"_a, "expected_value"_a = 1U,
       "comparison_kind"_a = qc::ComparisonKind::Eq,
       "params"_a = std::vector<qc::fp>{});
+  qc.def("classic_controlled",
+         py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Bit,
+                           const std::uint64_t, const qc::ComparisonKind,
+                           const std::vector<qc::fp>&>(
+             &qc::QuantumComputation::classicControlled),
+         "op"_a, "target"_a, "cbit"_a, "expected_value"_a = 1U,
+         "comparison_kind"_a = qc::ComparisonKind::Eq,
+         "params"_a = std::vector<qc::fp>{});
+  qc.def(
+      "classic_controlled",
+      py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Control,
+                        const qc::Bit, const std::uint64_t,
+                        const qc::ComparisonKind, const std::vector<qc::fp>&>(
+          &qc::QuantumComputation::classicControlled),
+      "op"_a, "target"_a, "control"_a, "cbit"_a, "expected_value"_a = 1U,
+      "comparison_kind"_a = qc::ComparisonKind::Eq,
+      "params"_a = std::vector<qc::fp>{});
+  qc.def(
+      "classic_controlled",
+      py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Controls&,
+                        const qc::Bit, const std::uint64_t,
+                        const qc::ComparisonKind, const std::vector<qc::fp>&>(
+          &qc::QuantumComputation::classicControlled),
+      "op"_a, "target"_a, "controls"_a, "cbit"_a, "expected_value"_a = 1U,
+      "comparison_kind"_a = qc::ComparisonKind::Eq,
+      "params"_a = std::vector<qc::fp>{});
 }
 } // namespace mqt

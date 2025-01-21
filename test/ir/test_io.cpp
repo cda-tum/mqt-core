@@ -686,18 +686,3 @@ TEST_F(IO, classicalControlledOperationToOpenQASM3) {
   const auto actual = qc->toQASM();
   EXPECT_EQ(expected, actual);
 }
-
-TEST_F(IO, classicalControlledOperationToOpenQASM3MoreThanOneRegister) {
-  qc->addQubitRegister(1);
-  qc->addClassicalRegister(1);
-  qc->addClassicalRegister(1, "d");
-  qc->classicControlled(qc::X, 0, {0, 2});
-  EXPECT_THROW(qc->dumpOpenQASM3(std::cout), qc::QFRException);
-}
-
-TEST_F(IO, classicalControlledOperationToOpenQASM3NotEntireRegister) {
-  qc->addQubitRegister(1);
-  qc->addClassicalRegister(3);
-  qc->classicControlled(qc::X, 0, {0, 2});
-  EXPECT_THROW(qc->dumpOpenQASM3(std::cout), qc::QFRException);
-}

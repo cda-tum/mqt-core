@@ -55,15 +55,26 @@ ClassicControlledOperation::ClassicControlledOperation(
       expectedValue(expectedVal), comparisonKind(kind) {
   name = "c_" + shortName(op->getType());
   parameter.reserve(3);
-  parameter.emplace_back(static_cast<fp>(controlRegister.first));
-  parameter.emplace_back(static_cast<fp>(controlRegister.second));
+  parameter.emplace_back(static_cast<fp>(controlRegister->getStartIndex()));
+  parameter.emplace_back(static_cast<fp>(controlRegister->getSize()));
+  parameter.emplace_back(static_cast<fp>(expectedValue));
+  type = ClassicControlled;
+}
+ClassicControlledOperation::ClassicControlledOperation(
+    std::unique_ptr<Operation>&& operation, const Bit cBit,
+    const std::uint64_t expectedVal, ComparisonKind kind)
+    : op(std::move(operation)), controlBit(cBit), expectedValue(expectedVal),
+      comparisonKind(kind) {
+  name = "c_" + shortName(op->getType());
+  parameter.reserve(2);
+  parameter.emplace_back(static_cast<fp>(cBit));
   parameter.emplace_back(static_cast<fp>(expectedValue));
   type = ClassicControlled;
 }
 ClassicControlledOperation::ClassicControlledOperation(
     const ClassicControlledOperation& ccop)
     : Operation(ccop), controlRegister(ccop.controlRegister),
-      expectedValue(ccop.expectedValue) {
+      controlBit(ccop.controlBit), expectedValue(ccop.expectedValue) {
   op = ccop.op->clone();
 }
 ClassicControlledOperation&
@@ -71,6 +82,7 @@ ClassicControlledOperation::operator=(const ClassicControlledOperation& ccop) {
   if (this != &ccop) {
     Operation::operator=(ccop);
     controlRegister = ccop.controlRegister;
+    controlBit = ccop.controlBit;
     expectedValue = ccop.expectedValue;
     op = ccop.op->clone();
   }
@@ -83,6 +95,10 @@ bool ClassicControlledOperation::equals(const Operation& operation,
   if (const auto* classic =
           dynamic_cast<const ClassicControlledOperation*>(&operation)) {
     if (controlRegister != classic->controlRegister) {
+      return false;
+    }
+
+    if (controlBit != classic->controlBit) {
       return false;
     }
 
@@ -101,18 +117,14 @@ void ClassicControlledOperation::dumpOpenQASM(
     const bool openQASM3) const {
   of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
   of << "if (";
-  if (isWholeQubitRegister(creg, controlRegister.first,
-                           controlRegister.first + controlRegister.second -
-                               1)) {
-    of << creg[controlRegister.first].first;
-  } else {
-    // This might use slices in the future to address multiple bits.
-    if (controlRegister.second != 1) {
-      throw QFRException(
-          "Control register of classically controlled operation may either"
-          " be a single bit or a whole register.");
-    }
-    of << creg[controlRegister.first].second;
+  if (controlRegister.has_value()) {
+    assert(!controlBit.has_value());
+    of << controlRegister->getName();
+  }
+  if (controlBit.has_value()) {
+    assert(!controlRegister.has_value());
+    const auto& creg = bitMap.at(*controlBit);
+    of << creg.second;
   }
   of << " " << comparisonKind << " " << expectedValue << ") ";
   if (openQASM3) {

@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from typing import ClassVar, overload
 
+from . import ClassicalRegister
 from .symbolic import Expression, Variable
 
 class Control:
@@ -882,10 +883,19 @@ class ClassicControlledOperation(Operation):
         comparison_kind: The kind of comparison (default is equality).
     """
 
+    @overload
     def __init__(
         self,
         operation: Operation,
-        control_register: tuple[int, int],
+        control_register: ClassicalRegister,
+        expected_value: int = 1,
+        comparison_kind: ComparisonKind = ...,
+    ) -> None: ...
+    @overload
+    def __init__(
+        self,
+        operation: Operation,
+        control_bit: int,
         expected_value: int = 1,
         comparison_kind: ComparisonKind = ...,
     ) -> None: ...
