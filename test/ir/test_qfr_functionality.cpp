@@ -1492,4 +1492,28 @@ TEST_F(QFRFunctionality, TryGettingRegisterForQubitNotInRegister) {
   EXPECT_THROW(std::ignore = qc.getQubitRegister(2), QFRException);
 }
 
+TEST_F(QFRFunctionality, stripIdleQubits) {
+  QuantumComputation qc(3, 2);
+  qc.x(0);
+  qc.x(2);
+  qc.measure(0, 0);
+  qc.measure(2, 1);
+  qc.stripIdleQubits(true);
+
+  const auto* const expected = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q_l;\n"
+                               "qubit[1] q_h;\n"
+                               "bit[2] c;\n"
+                               "x q_l[0];\n"
+                               "x q_h[0];\n"
+                               "c[0] = measure q_l[0];\n"
+                               "c[1] = measure q_h[0];\n";
+
+  EXPECT_EQ(qc.toQASM(), expected);
+  const auto qc2 = QuantumComputation::fromQASM(expected);
+  EXPECT_EQ(qc2.toQASM(), expected);
+}
 } // namespace qc
