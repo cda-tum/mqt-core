@@ -714,10 +714,10 @@ TEST_F(QFRFunctionality, addControlStandardOperation) {
   op.addControl(1);
   op.addControl(2);
   ASSERT_EQ(op.getNcontrols(), 2);
-  const auto expectedControls = Controls{1, 2};
+  const auto expectedControls = Controls{1U, 2U};
   EXPECT_EQ(op.getControls(), expectedControls);
   op.removeControl(1);
-  const auto expectedControlsAfterRemove = Controls{2};
+  const auto expectedControlsAfterRemove = Controls{2U};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
@@ -735,10 +735,10 @@ TEST_F(QFRFunctionality, addControlSymbolicOperation) {
   op.addControl(2);
 
   ASSERT_EQ(op.getNcontrols(), 2);
-  auto expectedControls = Controls{1, 2};
+  auto expectedControls = Controls{1U, 2U};
   EXPECT_EQ(op.getControls(), expectedControls);
   op.removeControl(1);
-  auto expectedControlsAfterRemove = Controls{2};
+  auto expectedControlsAfterRemove = Controls{2U};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
@@ -757,10 +757,10 @@ TEST_F(QFRFunctionality, addControlClassicControlledOperation) {
   op.addControl(2);
 
   ASSERT_EQ(op.getNcontrols(), 2);
-  auto expectedControls = Controls{1, 2};
+  auto expectedControls = Controls{1U, 2U};
   EXPECT_EQ(op.getControls(), expectedControls);
   op.removeControl(1);
-  auto expectedControlsAfterRemove = Controls{2};
+  auto expectedControlsAfterRemove = Controls{2U};
   EXPECT_EQ(op.getControls(), expectedControlsAfterRemove);
   op.clearControls();
   EXPECT_EQ(op.getNcontrols(), 0);
