@@ -34,6 +34,8 @@ protected:
   OpType type = None;
   std::string name;
 
+  static constexpr size_t OUTPUT_INDENT_SIZE = 2;
+
   static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start,
                                    std::size_t end) {
     return !reg.empty() && reg[start].first == reg[end].first &&
