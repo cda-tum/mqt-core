@@ -369,7 +369,7 @@ public:
   /// strip away qubits with no operations applied to them and which do not pop
   /// up in the output permutation \param force if true, also strip away idle
   /// qubits occurring in the output permutation
-  void stripIdleQubits(bool force = false, bool reduceIOpermutations = true);
+  void stripIdleQubits(bool force = false);
 
   void import(const std::string& filename);
   void import(const std::string& filename, Format format);

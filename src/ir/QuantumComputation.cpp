@@ -847,8 +847,7 @@ bool QuantumComputation::isIdleQubit(const Qubit physicalQubit) const {
       [&physicalQubit](const auto& op) { return op->actsOn(physicalQubit); });
 }
 
-void QuantumComputation::stripIdleQubits(bool force,
-                                         bool reduceIOpermutations) {
+void QuantumComputation::stripIdleQubits(bool force) {
   auto layoutCopy = initialLayout;
   for (auto physicalQubitIt = layoutCopy.rbegin();
        physicalQubitIt != layoutCopy.rend(); ++physicalQubitIt) {
@@ -875,7 +874,7 @@ void QuantumComputation::stripIdleQubits(bool force,
 
       removeQubit(logicalQubitIndex);
 
-      if (reduceIOpermutations && (logicalQubitIndex < nqubits + nancillae)) {
+      if (logicalQubitIndex < nqubits + nancillae) {
         for (auto& [physical, logical] : initialLayout) {
           if (logical > logicalQubitIndex) {
             --logical;
