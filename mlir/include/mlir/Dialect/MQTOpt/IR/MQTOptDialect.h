@@ -5,6 +5,8 @@
 #include <mlir/IR/OpDefinition.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 
+#define DIALECT_NAME_MQTOPT "mqtopt"
+
 //===----------------------------------------------------------------------===//
 // Dialect
 //===----------------------------------------------------------------------===//
