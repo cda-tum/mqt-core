@@ -67,7 +67,7 @@ jobs:
   cpp-tests-extensive:
     name: 🇨‌ Test (Extensive)
     needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-ci')
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@extensive-ci
     with:
       # Runs to enable
@@ -130,6 +130,36 @@ jobs:
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-python-tests)
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@extensive-ci
+    with:
+      # Runs to enable
+      enable-ubuntu2404: true
+      enable-ubuntu2404-arm: true
+      enable-macos13: true
+      enable-macos14: true
+      enable-windows2022: true
+      # Runs to disable
+      enable-ubuntu2204: false
+      enable-ubuntu2204-arm: false
+      enable-macos15: false
+      enable-windows2025: false
+
+  python-tests-extensive:
+    name: 🐍 Test (Extensive)
+    needs: change-detection
+    if: fromJSON(needs.change-detection.outputs.run-python-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-python-ci')
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@extensive-ci
+    with:
+      # Runs to enable
+      enable-ubuntu2204: true
+      enable-ubuntu2204-arm: true
+      enable-macos15: true
+      enable-windows2025: true
+      # Runs to disable (these are already enabled in the non-extensive run)
+      enable-ubuntu2404: false
+      enable-ubuntu2404-arm: false
+      enable-macos13: false
+      enable-macos14: false
+      enable-windows2022: false
 
   code-ql:
     name: 📝 CodeQL
@@ -155,6 +185,7 @@ jobs:
       - cpp-tests-extensive
       - cpp-linter
       - python-tests
+      - python-tests-extensive
       - code-ql
       - cd
     runs-on: ubuntu-latest
@@ -168,7 +199,7 @@ jobs:
               && '' || 'cpp-tests,'
             }}
             ${{
-              fromJSON(needs.change-detection.outputs.run-cpp-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-ci')
+              fromJSON(needs.change-detection.outputs.run-cpp-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
               && '' || 'cpp-tests-extensive,'
             }}
             ${{
@@ -178,6 +209,10 @@ jobs:
             ${{
               fromJSON(needs.change-detection.outputs.run-python-tests)
               && '' || 'python-tests,'
+            }}
+            ${{
+              fromJSON(needs.change-detection.outputs.run-python-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-python-ci')
+              && '' || 'python-tests-extensive,'
             }}
             ${{
               fromJSON(needs.change-detection.outputs.run-code-ql)
