@@ -7,7 +7,6 @@
  * Licensed under the MIT License
  */
 
-#include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/Package.hpp"

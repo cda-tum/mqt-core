@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"

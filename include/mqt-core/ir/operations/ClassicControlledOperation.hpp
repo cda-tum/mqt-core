@@ -22,7 +22,6 @@
 #include <optional>
 #include <ostream>
 #include <string>
-#include <utility>
 
 namespace qc {
 
@@ -143,12 +142,13 @@ template <> struct std::hash<qc::ClassicControlledOperation> {
     auto seed =
         qc::combineHash(std::hash<qc::Operation>{}(*ccop.getOperation()),
                         ccop.getExpectedValue());
-    if (ccop.getControlRegister().has_value()) {
-      qc::hashCombine(seed, std::hash<qc::ClassicalRegister>{}(
-                                ccop.getControlRegister().value()));
+    if (const auto& controlRegister = ccop.getControlRegister();
+        controlRegister.has_value()) {
+      qc::hashCombine(
+          seed, std::hash<qc::ClassicalRegister>{}(controlRegister.value()));
     }
-    if (ccop.getControlBit().has_value()) {
-      qc::hashCombine(seed, ccop.getControlBit().value());
+    if (const auto& controlBit = ccop.getControlBit(); controlBit.has_value()) {
+      qc::hashCombine(seed, controlBit.value());
     }
     return seed;
   }

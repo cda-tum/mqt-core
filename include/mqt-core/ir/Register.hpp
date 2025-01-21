@@ -12,7 +12,8 @@
 #include "Definitions.hpp"
 
 #include <cstddef>
-#include <memory>
+#include <functional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>

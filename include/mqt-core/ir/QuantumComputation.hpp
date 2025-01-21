@@ -17,6 +17,7 @@
 #include "operations/Control.hpp"
 #include "operations/Expression.hpp"
 #include "operations/OpType.hpp"
+#include "operations/Operation.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -52,9 +53,9 @@ protected:
   std::size_t nancillae = 0;
   std::string name;
 
-  QuantumRegisterMap quantumRegisters{};
-  ClassicalRegisterMap classicalRegisters{};
-  QuantumRegisterMap ancillaRegisters{};
+  QuantumRegisterMap quantumRegisters;
+  ClassicalRegisterMap classicalRegisters;
+  QuantumRegisterMap ancillaRegisters;
 
   std::vector<bool> ancillary;
   std::vector<bool> garbage;

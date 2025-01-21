@@ -15,6 +15,7 @@
 #include "ir/Register.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <algorithm>
 #include <cassert>

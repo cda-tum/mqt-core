@@ -13,6 +13,7 @@
 #include "ir/Permutation.hpp"
 #include "ir/Register.hpp"
 #include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <cassert>
 #include <cstddef>

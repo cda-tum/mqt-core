@@ -15,6 +15,7 @@
 #include "ir/operations/Control.hpp"
 #include "ir/operations/Expression.hpp"
 #include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
 
 #include <algorithm>

@@ -13,6 +13,7 @@
 #include "Definitions.hpp"
 #include "Expression.hpp"
 #include "OpType.hpp"
+#include "Operation.hpp"
 #include "StandardOperation.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/Register.hpp"
