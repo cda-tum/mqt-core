@@ -54,8 +54,6 @@ using BitString = std::bitset<4096>;
 // floating-point type used throughout the library
 using fp = double;
 
-constexpr fp PARAMETER_TOLERANCE = 1e-13;
-
 static constexpr fp PI = static_cast<fp>(
     3.141592653589793238462643383279502884197169399375105820974L);
 static constexpr fp PI_2 = static_cast<fp>(

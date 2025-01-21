@@ -26,6 +26,8 @@
 namespace qc {
 class StandardOperation : public Operation {
 protected:
+  constexpr static fp PARAMETER_TOLERANCE = 1e-13;
+
   static void checkInteger(fp& ld) {
     const fp nearest = std::nearbyint(ld);
     if (std::abs(ld - nearest) < PARAMETER_TOLERANCE) {
