@@ -130,7 +130,7 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
    * @param rewriter The pattern rewriter to use for deleting the operation.
    */
   void deleteRecursively(mlir::Operation* op, mlir::PatternRewriter& rewriter) const {
-    if (op->getName().getStringRef() == "mqtopt.allocQubitRegister") {
+    if (llvm::isa<AllocOp>(op)) {
       return; // Do not delete extract operations.
     }
     if (!op->getUsers().empty()) {
@@ -225,10 +225,10 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
       }
       visited.insert(current);
 
-      if (current->getName().getStringRef() == "mqtopt.x") {
+      if (llvm::isa<XOp>(current)) {
         XOp xOp = mlir::dyn_cast<XOp>(current);
         handleUnitaryOp(xOp, currentQubitVariables);
-      } else if (current->getName().getStringRef() == "mqtopt.extractQubit") {
+      } else if (llvm::isa<ExtractOp>(current)) {
         ExtractOp extractOp = mlir::dyn_cast<ExtractOp>(current);
 
         if (!extractOp.getIndexAttr().has_value()) {
@@ -237,9 +237,9 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
           currentQubitVariables[*extractOp.getIndexAttr()] =
               extractOp.getOutQubit();
         }
-      } else if (current->getName().getStringRef() == "mqtopt.allocQubitRegister") {
+      } else if (llvm::isa<AllocOp>(current)) {
         // Do nothing for now, may change later.
-      } else if (current->getName().getStringRef() == "mqtopt.measure") {
+      } else if (llvm::isa<MeasureOp>(current)) {
         // We count the number of measurements and add a measurement operation to the QuantumComputation.
         measureCount++;
         MeasureOp measureOp = mlir::dyn_cast<MeasureOp>(current);
@@ -269,14 +269,14 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
 
     // Update the inputs of all non-mqtopt operations that use mqtopt operations as inputs, as these will be deleted later.
     for (auto* operation : visited) {
-      if (operation->getDialect()->getNamespace() != "mqtopt") {
+      if (operation->getDialect()->getNamespace() != DIALECT_NAME_MQTOPT) {
         updateMQTOptInputs(operation, rewriter, newAlloc.getQureg(), measureCount);
       }
     }
 
     // Delete all operations that are part of the mqtopt dialect (except for `AllocOp`).
     for (auto* operation : visited) {
-      if (operation->getDialect()->getNamespace() == "mqtopt") {
+      if (operation->getDialect()->getNamespace() == DIALECT_NAME_MQTOPT) {
         deleteRecursively(operation, rewriter);
       }
     }
