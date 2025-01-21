@@ -11,14 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ThePass : Pass<"the-pass", "ModuleOp"> {
-  let summary = "That is THE pass for the MQT dialect";
-  let description = [{
-    This pass does something very important.
-    It is the most important pass in the MQT dialect.
-  }];
-}
-
 def ToQuantumComputation : Pass<"to-quantum-computation", "ModuleOp"> {
   let summary = "This pass creates a quantum computation from a given program in the MQT-Opt dialect";
   let description = [{
