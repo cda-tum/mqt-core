@@ -67,7 +67,7 @@ for i in range(precision):
 
   # Iterative inverse QFT
   for j in range(i):
-    qc.classic_controlled(op="p", target=0, creg=(j, 1), params=[-pi / 2**(i - j)])
+    qc.classic_controlled(op="p", target=0, cbit=j, params=[-pi / 2**(i - j)])
   qc.h(0)
 
   # Measure the result
@@ -292,7 +292,7 @@ qc = QuantumComputation(1, 1)
 qc.h(0)
 qc.measure(0, 0)
 
-classic_controlled = ClassicControlledOperation(operation=StandardOperation(target=0, op_type=OpType.x), control_register=(0, 1))
+classic_controlled = ClassicControlledOperation(operation=StandardOperation(target=0, op_type=OpType.x), control_bit=0)
 qc.append(classic_controlled)
 
 print(qc)
