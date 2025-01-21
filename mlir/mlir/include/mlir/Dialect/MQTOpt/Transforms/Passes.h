@@ -28,5 +28,4 @@ void populateFromQuantumComputationPatterns(mlir::RewritePatternSet& patterns,
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
-
 } // namespace mqt::ir::opt

@@ -6,6 +6,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/IR/DialectBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+include "mlir/Dialect/MQTOpt/IR/MQTOptInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // Dialect
@@ -80,25 +81,30 @@ def QuregType : MQTOptType<"QubitRegister", "QubitRegister"> {
 class MQTOptOp<string mnemonic, list<Trait> traits = []> :
         Op<MQTOptDialect, mnemonic, traits # [NoMemoryEffect]>;
 
-class GateOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits> {
-    let summary = "Generic gate operation.";
-
-    let description = [{Base class for unitary and non-unitary operations.}];
+class GateOp<string mnemonic, list<Trait> traits = []> :
+    MQTOptOp<mnemonic, traits> {
 }
 
-class UnitaryOp<string mnemonic, list<Trait> traits = []> : GateOp<mnemonic, traits> {
-    let summary = "Generic unitary gate operation.";
+class UnitaryOp<string mnemonic, list<Trait> traits = []> :
+    GateOp<mnemonic, traits # [AttrSizedOperandSegments, UnitaryInterface]> {
+    let arguments = (ins
+        Variadic<F64>:$params,
+        Variadic<QubitType>:$in_qubits,
+        Variadic<QubitType>:$pos_ctrl_qubits,
+        Variadic<QubitType>:$neg_ctrl_qubits
+    );
 
-    let description = [{Unitary qubit operations that can be inverted or adjoint.}];
+    let results = (outs
+        Variadic<QubitType>:$out_qubits
+    );
+
+    let assemblyFormat = [{
+        `(` $params `)` attr-dict $in_qubits ( `ctrl` $pos_ctrl_qubits^ )? ( `nctrl` $neg_ctrl_qubits^ )?
+        `:` type($out_qubits)
+    }];
 }
 
-class NonUnitaryOp<string mnemonic, list<Trait> traits = []> : GateOp<mnemonic, traits> {
-    let summary = "Generic non-unitary gate operation.";
-
-    let description = [{Unitary qubit operations that can not be inverted or adjoint.}];
-}
-
-def XOp : UnitaryOp<"x"> {
+def XOp : UnitaryOp<"x", [NoParametersInterface, UnaryInterface]> {
     let summary = "X operation";
 
     let description = [{
@@ -108,23 +114,26 @@ def XOp : UnitaryOp<"x"> {
 
         Example:
         ```mlir
-        %0_1 = "mqtopt.x"(%0) : (!mqtopt.Qubit) -> !mqtopt.Qubit
-        %0_1, %1_1 = "mqtopt.x"(%0_1, [%1]) : (!mqtopt.Qubit, !mqtopt.Qubit) -> !mqtopt.Qubit
-        %0_2, %1_2, %2_1,  = "mqtopt.x"(%0_1, [%1_1], [%2]) : (!mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit) -> !mqtopt.Qubit
+        %1 = mqtopt.x() %0 : (!mqtopt.Qubit) -> (!mqtopt.Qubit)
+        %3, %4 = mqtopt.x() %1 ctrl(%2) : (!mqtopt.Qubit, !mqtopt.Qubit) -> (!mqtopt.Qubit, !mqtopt.Qubit)
+        %7, %8, %9, %10 = mqtopt.x() %3 ctrl(%4) nctrl(%5, %6) : (!mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit) -> (!mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit)
         ```
     }];
-
-    let arguments = (ins
-        QubitType:$in_qubit,
-        Variadic<QubitType>:$ctrl_qubits
-    );
-
-    let results = (outs
-        Variadic<QubitType>:$out_qubits
-    );
 }
 
-def MeasureOp : NonUnitaryOp<"measure", [SameVariadicResultSize]> {
+def RZOp : UnitaryOp<"rz", [OneParameterInterface, UnaryInterface]> {
+    let summary = "RZ operation";
+
+    let description = [{}]; // todo: add description
+}
+
+def UOp : UnitaryOp<"u", [ThreeParametersInterface, UnaryInterface]> {
+    let summary = "U operation";
+
+    let description = [{}]; // todo: add description
+}
+
+def MeasureOp : GateOp<"measure", [SameVariadicResultSize]> {
     let summary = "A measure operation";
 
     let description = [{
@@ -147,13 +156,14 @@ def MeasureOp : NonUnitaryOp<"measure", [SameVariadicResultSize]> {
         Variadic<QubitType>:$out_qubits,
         Variadic<I1>:$out_bits
     );
+
+    // This operation has a verifier that checks if the number of input qubits
+    // is equal to the number of output qubits. It is implemented in the
+    // corresponding .cpp file.
+    let hasVerifier = 1;
 }
 
-class ResourceOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits> {
-    let summary = "Quantum resource management operation.";
-
-    let description = [{Base class for resource management operations.}];
-}
+class ResourceOp<string mnemonic, list<Trait> traits = []> : MQTOptOp<mnemonic, traits>;
 
 def AllocOp : ResourceOp<"allocQubitRegister"> {
     let summary = "Allocates a qubit register";
