@@ -721,23 +721,27 @@ void QuantumComputation::dump(const std::string& filename) const {
 
 void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) const {
   // dump initial layout and output permutation
+  // since it might happen that the physical qubit indices are not consecutive,
+  // due to qubit removals, we need to adjust them accordingly.
   Permutation inverseInitialLayout{};
-  for (const auto& q : initialLayout) {
-    inverseInitialLayout.insert({q.second, q.first});
+  std::size_t idx = 0;
+  for (const auto& [physical, logical] : initialLayout) {
+    inverseInitialLayout.emplace(logical, idx++);
   }
   of << "// i";
-  for (const auto& q : inverseInitialLayout) {
-    of << " " << static_cast<std::size_t>(q.second);
+  for (const auto& [logical, physical] : inverseInitialLayout) {
+    of << " " << static_cast<std::size_t>(physical);
   }
   of << "\n";
 
   Permutation inverseOutputPermutation{};
-  for (const auto& q : outputPermutation) {
-    inverseOutputPermutation.insert({q.second, q.first});
+  idx = 0;
+  for (const auto& [physical, logical] : outputPermutation) {
+    inverseOutputPermutation.emplace(logical, idx++);
   }
   of << "// o";
-  for (const auto& q : inverseOutputPermutation) {
-    of << " " << q.second;
+  for (const auto& [logical, physical] : inverseOutputPermutation) {
+    of << " " << physical;
   }
   of << "\n";
 
