@@ -2,6 +2,7 @@
 #include "mlir/Dialect/MQT/IR/MQTDialect.h"
 #include "mlir/Dialect/MQT/Transforms/Passes.h"
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
+#include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
@@ -10,6 +11,7 @@
 int main(int argc, char** argv) {
   mlir::registerAllPasses();
   mlir::mqt::registerMQTPasses();
+  mqt::ir::opt::registerMQTOptPasses();
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
