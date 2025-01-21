@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -48,8 +47,6 @@ using ClassicalRegisterMap = RegisterMap<ClassicalRegister>;
 using RegisterNames = std::vector<std::pair<std::string, std::string>>;
 
 using Targets = std::vector<Qubit>;
-
-using BitString = std::bitset<4096>;
 
 // floating-point type used throughout the library
 using fp = double;

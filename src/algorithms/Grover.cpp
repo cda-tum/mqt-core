@@ -29,8 +29,8 @@ auto appendGroverInitialization(QuantumComputation& qc) -> void {
   }
 }
 
-auto appendGroverOracle(QuantumComputation& qc, const BitString& targetValue)
-    -> void {
+auto appendGroverOracle(QuantumComputation& qc,
+                        const GroverBitString& targetValue) -> void {
   const auto nDataQubits = static_cast<Qubit>(qc.getNqubits() - 1);
   Controls controls{};
   for (std::size_t i = 0; i < nDataQubits; ++i) {
@@ -77,8 +77,8 @@ auto computeNumberOfIterations(const Qubit nq) -> std::size_t {
 }
 
 [[nodiscard]] auto generateTargetValue(const std::size_t nDataQubits,
-                                       std::mt19937_64& mt) -> BitString {
-  BitString targetValue;
+                                       std::mt19937_64& mt) -> GroverBitString {
+  GroverBitString targetValue;
   std::bernoulli_distribution distribution{};
   for (std::size_t i = 0; i < nDataQubits; i++) {
     if (distribution(mt)) {
@@ -88,7 +88,7 @@ auto computeNumberOfIterations(const Qubit nq) -> std::size_t {
   return targetValue;
 }
 
-[[nodiscard]] auto getGroverName(const BitString& s, const Qubit nq)
+[[nodiscard]] auto getGroverName(const GroverBitString& s, const Qubit nq)
     -> std::string {
   auto expected = s.to_string();
   std::reverse(expected.begin(), expected.end());
@@ -100,7 +100,7 @@ auto computeNumberOfIterations(const Qubit nq) -> std::size_t {
 }
 
 auto constructGroverCircuit(QuantumComputation& qc, const Qubit nq,
-                            const BitString& targetValue) {
+                            const GroverBitString& targetValue) {
   qc.setName(getGroverName(targetValue, nq));
   qc.addQubitRegister(nq, "q");
   qc.addQubitRegister(1, "flag");
@@ -130,7 +130,7 @@ auto createGrover(const Qubit nq, const std::size_t seed)
   return qc;
 }
 
-auto createGrover(const Qubit nq, const BitString& targetValue)
+auto createGrover(const Qubit nq, const GroverBitString& targetValue)
     -> QuantumComputation {
   auto qc = QuantumComputation();
   constructGroverCircuit(qc, nq, targetValue);
