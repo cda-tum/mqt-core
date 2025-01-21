@@ -26,6 +26,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -1335,6 +1336,10 @@ void QuantumComputation::instantiateInplace(
 }
 
 void QuantumComputation::reorderOperations() {
+  using DAG = std::vector<std::deque<std::unique_ptr<Operation>*>>;
+  using DAGIterator = std::deque<std::unique_ptr<Operation>*>::iterator;
+  using DAGIterators = std::vector<DAGIterator>;
+
   Qubit highestPhysicalQubit = 0;
   for (const auto& q : initialLayout) {
     highestPhysicalQubit = std::max(q.first, highestPhysicalQubit);

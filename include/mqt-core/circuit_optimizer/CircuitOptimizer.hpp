@@ -12,15 +12,26 @@
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <cstddef>
+#include <deque>
+#include <memory>
 #include <unordered_set>
+#include <vector>
 
 namespace qc {
 
 class CircuitOptimizer {
 public:
   CircuitOptimizer() = default;
+
+  using DAG = std::vector<std::deque<std::unique_ptr<Operation>*>>;
+  using DAGIterator = std::deque<std::unique_ptr<Operation>*>::iterator;
+  using DAGReverseIterator =
+      std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
+  using DAGIterators = std::vector<DAGIterator>;
+  using DAGReverseIterators = std::vector<DAGReverseIterator>;
 
   static DAG constructDAG(QuantumComputation& qc);
   static void printDAG(const DAG& dag);

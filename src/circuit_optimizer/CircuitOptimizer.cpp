@@ -35,7 +35,7 @@
 #include <vector>
 
 namespace qc {
-void addToDag(DAG& dag, std::unique_ptr<Operation>* op) {
+void addToDag(CircuitOptimizer::DAG& dag, std::unique_ptr<Operation>* op) {
   const auto usedQubits = (*op)->getUsedQubits();
   for (const auto q : usedQubits) {
     dag.at(q).push_back(op);
@@ -164,7 +164,7 @@ void CircuitOptimizer::swapReconstruction(QuantumComputation& qc) {
   removeIdentities(qc);
 }
 
-DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
+CircuitOptimizer::DAG CircuitOptimizer::constructDAG(QuantumComputation& qc) {
   auto dag = DAG(qc.getHighestPhysicalQubitIndex() + 1);
 
   for (auto& op : qc) {
@@ -270,12 +270,15 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
   removeIdentities(qc);
 }
 
-bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-                        DAGReverseIterator& it, qc::Operation* op);
+bool removeDiagonalGate(CircuitOptimizer::DAG& dag,
+                        CircuitOptimizer::DAGReverseIterators& dagIterators,
+                        Qubit idx, CircuitOptimizer::DAGReverseIterator& it,
+                        Operation* op);
 
 void removeDiagonalGatesBeforeMeasureRecursive(
-    DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-    const qc::Operation* until) {
+    CircuitOptimizer::DAG& dag,
+    CircuitOptimizer::DAGReverseIterators& dagIterators, Qubit idx,
+    const Operation* until) {
   // qubit is finished -> consider next qubit
   if (dagIterators.at(idx) == dag.at(idx).rend()) {
     if (idx < static_cast<Qubit>(dag.size() - 1)) {
@@ -364,8 +367,10 @@ void removeDiagonalGatesBeforeMeasureRecursive(
   }
 }
 
-bool removeDiagonalGate(DAG& dag, DAGReverseIterators& dagIterators, Qubit idx,
-                        DAGReverseIterator& it, qc::Operation* op) {
+bool removeDiagonalGate(CircuitOptimizer::DAG& dag,
+                        CircuitOptimizer::DAGReverseIterators& dagIterators,
+                        Qubit idx, CircuitOptimizer::DAGReverseIterator& it,
+                        Operation* op) {
   // not a diagonal gate
   if (std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), op->getType()) ==
       DIAGONAL_GATES.end()) {
@@ -455,13 +460,15 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
   removeIdentities(qc);
 }
 
-bool removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators,
-                            Qubit idx, DAGReverseIterator& it,
-                            qc::Operation* op);
+bool removeFinalMeasurement(CircuitOptimizer::DAG& dag,
+                            CircuitOptimizer::DAGReverseIterators& dagIterators,
+                            Qubit idx, CircuitOptimizer::DAGReverseIterator& it,
+                            Operation* op);
 
-void removeFinalMeasurementsRecursive(DAG& dag,
-                                      DAGReverseIterators& dagIterators,
-                                      Qubit idx, const qc::Operation* until) {
+void removeFinalMeasurementsRecursive(
+    CircuitOptimizer::DAG& dag,
+    CircuitOptimizer::DAGReverseIterators& dagIterators, Qubit idx,
+    const Operation* until) {
   if (dagIterators.at(idx) == dag.at(idx).rend()) { // we reached the end
     if (idx < static_cast<Qubit>(dag.size() - 1)) {
       removeFinalMeasurementsRecursive(dag, dagIterators, idx + 1, nullptr);
@@ -527,9 +534,10 @@ void removeFinalMeasurementsRecursive(DAG& dag,
   }
 }
 
-bool removeFinalMeasurement(DAG& dag, DAGReverseIterators& dagIterators,
-                            Qubit idx, DAGReverseIterator& it,
-                            qc::Operation* op) {
+bool removeFinalMeasurement(CircuitOptimizer::DAG& dag,
+                            CircuitOptimizer::DAGReverseIterators& dagIterators,
+                            Qubit idx, CircuitOptimizer::DAGReverseIterator& it,
+                            Operation* op) {
   if (op->getNtargets() != 0) {
     // need to check all targets
     bool onlyMeasurements = true;
