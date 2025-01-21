@@ -1,6 +1,4 @@
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
-#include "mlir/Dialect/MQT/IR/MQTDialect.h"
-#include "mlir/Dialect/MQT/Transforms/Passes.h"
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -10,13 +8,11 @@
 
 int main(int argc, char** argv) {
   mlir::registerAllPasses();
-  mlir::mqt::registerMQTPasses();
   mqt::ir::opt::registerMQTOptPasses();
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::func::registerAllExtensions(registry);
-  registry.insert<mlir::mqt::MQTDialect>();
   registry.insert<mqt::ir::opt::MQTOptDialect>();
 
   return mlir::asMainReturnCode(
