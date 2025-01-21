@@ -55,6 +55,8 @@ void registerClassicControlledOperation(const py::module& m) {
                              py::return_value_policy::reference_internal);
   ccop.def_property_readonly(
       "control_register", &qc::ClassicControlledOperation::getControlRegister);
+  ccop.def_property_readonly("control_bit",
+                             &qc::ClassicControlledOperation::getControlBit);
   ccop.def_property_readonly("expected_value",
                              &qc::ClassicControlledOperation::getExpectedValue);
   ccop.def_property_readonly(

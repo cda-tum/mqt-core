@@ -23,7 +23,8 @@ void registerQuantumComputation(py::module& m);
 
 PYBIND11_MODULE(ir, m, py::mod_gil_not_used()) {
   registerPermutation(m);
-  registerRegisters(m);
+  py::module registers = m.def_submodule("registers");
+  registerRegisters(registers);
 
   py::module symbolic = m.def_submodule("symbolic");
   registerSymbolic(symbolic);

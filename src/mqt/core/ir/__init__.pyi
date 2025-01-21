@@ -12,7 +12,13 @@ from os import PathLike
 from typing import overload
 
 from .operations import ComparisonKind, Control, Operation, OpType
+from .registers import ClassicalRegister
 from .symbolic import Expression, Variable
+
+__all__ = [
+    "Permutation",
+    "QuantumComputation",
+]
 
 class Permutation(MutableMapping[int, int]):
     """A class to represent a permutation of the qubits in a quantum circuit.
@@ -86,82 +92,6 @@ class Permutation(MutableMapping[int, int]):
         Returns:
             The list of targets with the permutation applied.
         """
-
-class QuantumRegister:
-    """A class to represent a collection of qubits.
-
-    Args:
-        start: The starting index of the quantum register.
-        size: The number of qubits in the quantum register.
-        name: The name of the quantum register. A name will be generated if not provided.
-    """
-
-    def __init__(self, start: int, size: int, name: str = "") -> None: ...
-    @property
-    def start(self) -> int:
-        """The index of the first qubit in the quantum register."""
-
-    @property
-    def end(self) -> int:
-        """Index of the last qubit in the quantum register."""
-
-    @property
-    def size(self) -> int:
-        """The number of qubits in the quantum register."""
-
-    @property
-    def name(self) -> str:
-        """The name of the quantum register."""
-
-    def __eq__(self, other: object) -> bool:
-        """Check if the quantum register is equal to another quantum register."""
-
-    def __ne__(self, other: object) -> bool:
-        """Check if the quantum register is not equal to another quantum register."""
-
-    def __hash__(self) -> int:
-        """Return the hash of the quantum register."""
-
-    def __contains__(self, qubit: int) -> bool:
-        """Check if the quantum register contains a qubit."""
-
-class ClassicalRegister:
-    """A class to represent a collection of classical bits.
-
-    Args:
-        start: The starting index of the classical register.
-        size: The number of bits in the classical register.
-        name: The name of the classical register. A name will be generated if not provided.
-    """
-
-    def __init__(self, start: int, size: int, name: str = "") -> None: ...
-    @property
-    def start(self) -> int:
-        """The index of the first bit in the classical register."""
-
-    @property
-    def end(self) -> int:
-        """Index of the last bit in the classical register."""
-
-    @property
-    def size(self) -> int:
-        """The number of bits in the classical register."""
-
-    @property
-    def name(self) -> str:
-        """The name of the classical register."""
-
-    def __eq__(self, other: object) -> bool:
-        """Check if the classical register is equal to another classical register."""
-
-    def __ne__(self, other: object) -> bool:
-        """Check if the classical register is not equal to another classical register."""
-
-    def __hash__(self) -> int:
-        """Return the hash of the classical register."""
-
-    def __contains__(self, bit: int) -> bool:
-        """Check if the classical register contains a bit."""
 
 class QuantumComputation(MutableSequence[Operation]):
     """The main class for representing quantum computations within the MQT.
@@ -2034,10 +1964,3 @@ class QuantumComputation(MutableSequence[Operation]):
             comparison_kind: The kind of comparison to perform
             params: The parameters of the operation
         """
-
-__all__ = [
-    "ClassicalRegister",
-    "Permutation",
-    "QuantumComputation",
-    "QuantumRegister",
-]

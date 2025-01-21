@@ -9,8 +9,20 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from typing import ClassVar, overload
 
-from . import ClassicalRegister
+from .registers import ClassicalRegister
 from .symbolic import Expression, Variable
+
+__all__ = [
+    "ClassicControlledOperation",
+    "ComparisonKind",
+    "CompoundOperation",
+    "Control",
+    "NonUnitaryOperation",
+    "OpType",
+    "Operation",
+    "StandardOperation",
+    "SymbolicOperation",
+]
 
 class Control:
     """A control is a pair of a qubit and a type. The type can be either positive or negative.
@@ -904,14 +916,12 @@ class ClassicControlledOperation(Operation):
         """The operation that is classically controlled."""
 
     @property
-    def control_register(self) -> tuple[int, int]:
-        """The classical register that controls the operation.
+    def control_register(self) -> ClassicalRegister | None:
+        """The classical register that controls the operation."""
 
-        The register is specified as a tuple of the start index and the length.
-
-        Examples:
-            A register that starts at index 0 and has a length of 2 is specified as ``(0, 2)``.
-        """
+    @property
+    def control_bit(self) -> int | None:
+        """The classical bit that controls the operation."""
 
     @property
     def expected_value(self) -> int:
