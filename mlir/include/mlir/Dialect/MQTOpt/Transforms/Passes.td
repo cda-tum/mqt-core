@@ -24,7 +24,7 @@ def MQTCoreRoundTrip : Pass<"mqt-core-round-trip", "mlir::ModuleOp"> {
     - All qubits are measured exactly once and the boolean measurement results are returned from the function in order.
     - The first returned value is the `AllocOp` that constructs a qubit register.
     - Measurements/Operations may only target a single qubit. Unitary operations may also use any number of (positive) controls.
-    - Supported operations are `x`, `y`, `z`, `h`, and `measure`. 
+    - Supported operations are `x`, `y`, `z`, `h`, and `measure`.
   }];
 }
 

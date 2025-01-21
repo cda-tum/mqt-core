@@ -14,12 +14,12 @@ namespace mqt::ir::opt {
 #define GEN_PASS_DEF_MQTCOREROUNDTRIP
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
-struct MQTCoreRoundTrip final
-    : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
+struct MQTCoreRoundTrip final : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
 
   MQTCoreRoundTrip() : circuit(0, 100) {}
 
-  qc::QuantumComputation circuit; // TODO qc has fixed number of 100 classical bits.
+  qc::QuantumComputation
+      circuit; // TODO qc has fixed number of 100 classical bits.
 
   void runOnOperation() override {
     // Get the current operation being operated on.
@@ -32,7 +32,8 @@ struct MQTCoreRoundTrip final
     populateFromQuantumComputationPatterns(patterns, circuit);
 
     // Apply patterns in an iterative and greedy manner.
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
+    if (mlir::failed(
+            mlir::applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
       signalPassFailure();
     }
   }
