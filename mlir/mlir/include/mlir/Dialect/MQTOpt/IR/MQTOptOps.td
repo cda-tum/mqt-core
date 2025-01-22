@@ -192,7 +192,7 @@ def ZOp : UnitaryOp<"z", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def SOp : UnitaryOp<"s", [NoParametersInterface], UnaryInterface]> {
+def SOp : UnitaryOp<"s", [NoParametersInterface, UnaryInterface]> {
     let summary = "S operation";
 
     let description = [{
@@ -203,7 +203,7 @@ def SOp : UnitaryOp<"s", [NoParametersInterface], UnaryInterface]> {
     }];
 }
 
-def SdgOp : UnitaryOp<"sdg", [NoParametersInterface], UnaryInterface]> {
+def SdgOp : UnitaryOp<"sdg", [NoParametersInterface, UnaryInterface]> {
     let summary = "Sdg operation";
 
     let description = [{
@@ -214,7 +214,7 @@ def SdgOp : UnitaryOp<"sdg", [NoParametersInterface], UnaryInterface]> {
     }];
 }
 
-def TOp : UnitaryOp<"t", [NoParametersInterface], UnaryInterface]> {
+def TOp : UnitaryOp<"t", [NoParametersInterface, UnaryInterface]> {
     let summary = "T operation";
 
     let description = [{
@@ -225,7 +225,7 @@ def TOp : UnitaryOp<"t", [NoParametersInterface], UnaryInterface]> {
     }];
 }
 
-def TdgOp : UnitaryOp<"tdg", [NoParametersInterface], UnaryInterface]> {
+def TdgOp : UnitaryOp<"tdg", [NoParametersInterface, UnaryInterface]> {
     let summary = "Tdg operation";
 
     let description = [{
@@ -236,7 +236,7 @@ def TdgOp : UnitaryOp<"tdg", [NoParametersInterface], UnaryInterface]> {
     }];
 }
 
-def VOp : UnitaryOp<"v", [NoParametersInterface], UnaryInterface]> {
+def VOp : UnitaryOp<"v", [NoParametersInterface, UnaryInterface]> {
     let summary = "V operation";
 
     let description = [{
@@ -247,7 +247,7 @@ def VOp : UnitaryOp<"v", [NoParametersInterface], UnaryInterface]> {
     }];
 }
 
-def VdgOp : UnitaryOp<"vdg", [NoParametersInterface], UnaryInterface]> {
+def VdgOp : UnitaryOp<"vdg", [NoParametersInterface, UnaryInterface]> {
     let summary = "Vdg operation";
 
     let description = [{
@@ -297,7 +297,7 @@ def POp : UnitaryOp<"p", [OneParameterInterface, UnaryInterface]> {
     }];
 }
 
-def SXOp : UnitaryOp<"sx", [NoParametersInterface], UnaryInterface]> {
+def SXOp : UnitaryOp<"sx", [NoParametersInterface, UnaryInterface]> {
     let summary = "SX operation";
 
     let description = [{
@@ -308,7 +308,7 @@ def SXOp : UnitaryOp<"sx", [NoParametersInterface], UnaryInterface]> {
     }];
 }
 
-def SXdgOp : UnitaryOp<"sxdg", [NoParametersInterface], UnaryInterface]> {
+def SXdgOp : UnitaryOp<"sxdg", [NoParametersInterface, UnaryInterface]> {
     let summary = "SXdg operation";
 
     let description = [{
@@ -358,7 +358,7 @@ def RZOp : UnitaryOp<"rz", [OneParameterInterface, UnaryInterface]> {
     }];
 }
 
-def SWAPOp : UnitaryOp<"swap", [NoParametersInterface], BinaryInterface]> {
+def SWAPOp : UnitaryOp<"swap", [NoParametersInterface, BinaryInterface]> {
     let summary = "SWAP operation";
 
     let description = [{
@@ -370,7 +370,7 @@ def SWAPOp : UnitaryOp<"swap", [NoParametersInterface], BinaryInterface]> {
     }];
 }
 
-def iSWAPOp : UnitaryOp<"iswap", [NoParametersInterface], BinaryInterface]> {
+def iSWAPOp : UnitaryOp<"iswap", [NoParametersInterface, BinaryInterface]> {
     let summary = "iSWAP operation";
 
     let description = [{
@@ -382,7 +382,7 @@ def iSWAPOp : UnitaryOp<"iswap", [NoParametersInterface], BinaryInterface]> {
     }];
 }
 
-def iSWAPdgOp : UnitaryOp<"iswapdg", [NoParametersInterface], BinaryInterface]> {
+def iSWAPdgOp : UnitaryOp<"iswapdg", [NoParametersInterface, BinaryInterface]> {
     let summary = "iSWAPdg operation";
 
     let description = [{
@@ -394,7 +394,7 @@ def iSWAPdgOp : UnitaryOp<"iswapdg", [NoParametersInterface], BinaryInterface]> 
     }];
 }
 
-def PeresOp : UnitaryOp<"peres", [NoParametersInterface], BinaryInterface]> {
+def PeresOp : UnitaryOp<"peres", [NoParametersInterface, BinaryInterface]> {
     let summary = "Peres operation";
 
     let description = [{
@@ -406,7 +406,7 @@ def PeresOp : UnitaryOp<"peres", [NoParametersInterface], BinaryInterface]> {
     }];
 }
 
-def PeresdgOp : UnitaryOp<"peresdg", [NoParametersInterface], BinaryInterface]> {
+def PeresdgOp : UnitaryOp<"peresdg", [NoParametersInterface, BinaryInterface]> {
     let summary = "Peresdg operation";
 
     let description = [{
@@ -418,7 +418,7 @@ def PeresdgOp : UnitaryOp<"peresdg", [NoParametersInterface], BinaryInterface]> 
     }];
 }
 
-def DCXOp : UnitaryOp<"dcx", [NoParametersInterface], BinaryInterface]> {
+def DCXOp : UnitaryOp<"dcx", [NoParametersInterface, BinaryInterface]> {
     let summary = "DCX operation";
 
     let description = [{
@@ -430,7 +430,7 @@ def DCXOp : UnitaryOp<"dcx", [NoParametersInterface], BinaryInterface]> {
     }];
 }
 
-def ECROp : UnitaryOp<"ecr", [NoParametersInterface], BinaryInterface]> {
+def ECROp : UnitaryOp<"ecr", [NoParametersInterface, BinaryInterface]> {
     let summary = "DCX operation";
 
     let description = [{
