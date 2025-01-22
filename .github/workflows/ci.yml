@@ -63,7 +63,7 @@ jobs:
       # General settings
       cmake-args-macos: -DMQT_CORE_WITH_GMP=ON
 
-  # run extensive cpp tests whenever this is on a PR and the PR has the `extensive-ci` label
+  # run extensive C++ tests whenever this is on a PR and the PR has the `extensive-cpp-ci` label
   cpp-tests-extensive:
     name: 🇨‌ Test (Extensive)
     needs: change-detection
@@ -143,6 +143,7 @@ jobs:
       enable-macos15: false
       enable-windows2025: false
 
+  # run extensive Python tests whenever this is on a PR and the PR has the `extensive-python-ci` label
   python-tests-extensive:
     name: 🐍 Test (Extensive)
     needs: change-detection
