@@ -14,13 +14,13 @@ concurrency:
 jobs:
   change-detection:
     name: 🔍 Change
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-change-detection.yml@v1.5
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-change-detection.yml@v1.6
 
   cpp-tests:
     name: 🇨‌ Test
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@extensive-ci
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.6
     with:
       # Runs to enable
       enable-ubuntu2404-gcc-release: true
@@ -68,7 +68,7 @@ jobs:
     name: 🇨‌ Test (Extensive)
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@extensive-ci
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.6
     with:
       # Runs to enable
       enable-ubuntu2404-gcc-debug: true
@@ -115,13 +115,13 @@ jobs:
     name: 🇨‌ Coverage
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-coverage.yml@v1.5
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-coverage.yml@v1.6
 
   cpp-linter:
     name: 🇨‌ Lint
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@v1.5
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@v1.6
     with:
       cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON
 
@@ -129,7 +129,7 @@ jobs:
     name: 🐍 Test
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-python-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@extensive-ci
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@v1.6
     with:
       # Runs to enable
       enable-ubuntu2404: true
@@ -147,7 +147,7 @@ jobs:
     name: 🐍 Test (Extensive)
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-python-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-python-ci')
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@extensive-ci
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@v1.6
     with:
       # Runs to enable
       enable-ubuntu2204: true
@@ -165,19 +165,19 @@ jobs:
     name: 🐍 Lint
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-python-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-linter.yml@v1.5
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-linter.yml@v1.6
 
   code-ql:
     name: 📝 CodeQL
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-code-ql)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-code-ql.yml@v1.5
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-code-ql.yml@v1.6
 
   cd:
     name: 🚀 CD
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cd)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-packaging.yml@v1.5
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-packaging.yml@v1.6
     with:
       # Do not build emulated wheels for mqt-core to avoid issues with PyPI space limitations.
       build-emulated-wheels: false
