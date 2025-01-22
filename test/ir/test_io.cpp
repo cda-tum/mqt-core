@@ -686,3 +686,14 @@ TEST_F(IO, classicalControlledOperationToOpenQASM3) {
   const auto actual = qc->toQASM();
   EXPECT_EQ(expected, actual);
 }
+
+TEST_F(IO, dumpingIncompleteOutputPermutationNotStartingAtZero) {
+  qc->addQubitRegister(2);
+  qc->addClassicalRegister(1);
+  qc->measure(1, 0);
+  qc->initializeIOMapping();
+  const auto qasm = qc->toQASM();
+  std::cout << qasm << "\n";
+  const auto qc2 = qc::QuantumComputation::fromQASM(qasm);
+  EXPECT_EQ(*qc, qc2);
+}
