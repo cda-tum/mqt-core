@@ -222,6 +222,10 @@ jobs:
               && '' || 'python-tests-extensive,'
             }}
             ${{
+              fromJSON(needs.change-detection.outputs.run-python-tests)
+              && '' || 'python-linter,'
+            }}
+            ${{
               fromJSON(needs.change-detection.outputs.run-code-ql)
               && '' || 'code-ql,'
             }}
