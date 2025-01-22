@@ -1,7 +1,5 @@
 name: CD 🚀
 on:
-  push:
-    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -23,25 +21,6 @@ jobs:
       no-local-version: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
       # Do not build emulated wheels for mqt-core to avoid issues with PyPI space limitations.
       build-emulated-wheels: false
-
-  # Downloads the previously generated artifacts and deploys to TestPyPI on pushes to main
-  deploy-test-pypi:
-    name: 🚀 Deploy to Test PyPI
-    runs-on: ubuntu-latest
-    environment:
-      name: test-pypi
-      url: https://test.pypi.org/p/mqt.core
-    needs: [python-packaging]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: test-cibw-*
-          path: dist
-          merge-multiple: true
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
 
   # Downloads the previously generated artifacts and deploys to PyPI on published releases.
   deploy:
