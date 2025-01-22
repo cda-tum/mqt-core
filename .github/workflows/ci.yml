@@ -189,6 +189,7 @@ jobs:
       - change-detection
       - cpp-tests
       - cpp-tests-extensive
+      - cpp-coverage
       - cpp-linter
       - python-tests
       - python-tests-extensive
@@ -208,6 +209,10 @@ jobs:
             ${{
               fromJSON(needs.change-detection.outputs.run-cpp-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
               && '' || 'cpp-tests-extensive,'
+            }}
+            ${{
+              fromJSON(needs.change-detection.outputs.run-cpp-tests)
+              && '' || 'cpp-coverage,'
             }}
             ${{
               fromJSON(needs.change-detection.outputs.run-cpp-linter)
