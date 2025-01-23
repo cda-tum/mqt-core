@@ -97,9 +97,6 @@ parseVariableNames(const int processedLineNumberInRealFile,
       variableIdentEndIdx = readInRawVariableIdentValues.size();
     }
 
-    std::size_t variableIdentLength =
-        variableIdentEndIdx - variableIdentStartIdx;
-
 // Since the string fed into this function is a line read from the .real file
 // (read until a newline character is encountered), the carriage return
 // character used in combination with the newline character on windows systems
@@ -108,12 +105,17 @@ parseVariableNames(const int processedLineNumberInRealFile,
 // carriage return to indicate a newline]) use the newline character to indicate
 // a newline in a file.
 #if _WIN32
-    if (variableIdentLength > 0 &&
-        readInRawVariableIdentValues.at(std::min(
-            variableIdentEndIdx, readInRawVariableIdentValues.size() - 1)) ==
-            '\r') {
-      --variableIdentLength;
-    }
+    std::size_t variableIdentLength =
+        variableIdentEndIdx - variableIdentStartIdx;
+
+    variableIdentLength -= static_cast<std::size_t>(
+        (variableIdentLength > 0 &&
+         readInRawVariableIdentValues.at(std::min(
+             variableIdentEndIdx, readInRawVariableIdentValues.size() - 1)) ==
+             '\r'));
+#else
+    const std::size_t variableIdentLength =
+        variableIdentEndIdx - variableIdentStartIdx;
 #endif
 
     auto variableIdent = readInRawVariableIdentValues.substr(
@@ -211,7 +213,6 @@ parseIoNames(const int lineInRealFileDefiningIoNames,
           static_cast<std::size_t>(!searchingForWhitespaceCharacter);
     }
 
-    std::size_t ioNameLength = ioNameEndIdx - ioNameStartIdx;
 // Since the string fed into this function is a line read from the .real file
 // (read until a newline character is encountered), the carriage return
 // character used in combination with the newline character on windows systems
@@ -220,11 +221,13 @@ parseIoNames(const int lineInRealFileDefiningIoNames,
 // carriage return to indicate a newline]) use the newline character to indicate
 // a newline in a file.
 #if _WIN32
-    if (ioNameLength > 0 &&
-        ioNameIdentsRawValues.at(
-            std::min(ioNameEndIdx, ioNameIdentsRawValues.size() - 1)) == '\r') {
-      --ioNameLength;
-    }
+    std::size_t ioNameLength = ioNameEndIdx - ioNameStartIdx;
+    ioNameLength -= static_cast<std::size_t>(
+        (ioNameLength > 0 &&
+         ioNameIdentsRawValues.at(std::min(
+             ioNameEndIdx, ioNameIdentsRawValues.size() - 1)) == '\r'));
+#else
+    const std::size_t ioNameLength = ioNameEndIdx - ioNameStartIdx;
 #endif
 
     const auto& ioName =

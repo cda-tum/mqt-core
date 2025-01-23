@@ -22,7 +22,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-// #include <stdexcept>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
