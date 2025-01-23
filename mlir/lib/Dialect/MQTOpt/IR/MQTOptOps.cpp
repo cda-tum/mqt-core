@@ -31,7 +31,7 @@ void mqt::ir::opt::MQTOptDialect::initialize() {
 #include "mlir/Dialect/MQTOpt/IR/MQTOptOpsTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// Types
+// Interfaces
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MQTOpt/IR/MQTOptInterfaces.cpp.inc"
