@@ -240,6 +240,7 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
     op.getResult().print(os);
 
     circuit.addQubitRegister(numQubits, regName);
+    circuit.addClassicalRegister(numQubits);
 
     std::set<mlir::Operation*> visited{};
 
