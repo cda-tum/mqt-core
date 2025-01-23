@@ -422,6 +422,9 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
   case iSWAPdg:
     op << "iswapdg";
     break;
+  case Bridge:
+    op << "bridge";
+    break;
   case Move:
     op << "move";
     break;
