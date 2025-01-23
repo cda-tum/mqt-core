@@ -69,6 +69,7 @@ enum OpType : std::uint8_t {
   MultiATrue,
   MultiAFalse,
   // Neutral atom shuttling operations
+  Bridge,
   Move,
   PassBy,
   AodActivate,
@@ -164,6 +165,8 @@ inline std::string toString(const OpType& opType) {
     return "teleportation";
   case ClassicControlled:
     return "classic_controlled";
+  case Bridge:
+    return "bridge";
   case Move:
     return "move";
   case PassBy:
@@ -340,6 +343,7 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"teleportation", OpType::Teleportation},
         {"classic_controlled", OpType::ClassicControlled},
         {"compound", OpType::Compound},
+        {"bridge", OpType::Bridge},
         {"move", OpType::Move},
         {"pass_by", OpType::PassBy},
         {"aod_activate", OpType::AodActivate},

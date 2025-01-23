@@ -1816,6 +1816,11 @@ void QuantumComputation::measureAll(const bool addBits) {
   }
 }
 
+void QuantumComputation::bridge(const Targets& targets) {
+  checkQubitRange(targets);
+  emplace_back<StandardOperation>(targets, Bridge);
+}
+
 void QuantumComputation::reset(const Qubit target) {
   checkQubitRange(target);
   emplace_back<NonUnitaryOperation>(std::vector<Qubit>{target}, Reset);

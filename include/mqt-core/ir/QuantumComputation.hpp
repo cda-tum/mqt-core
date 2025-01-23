@@ -340,6 +340,8 @@ public:
    */
   void measureAll(bool addBits = true);
 
+  void bridge(const Targets& targets);
+
   void reset(Qubit target);
   void reset(const Targets& targets);
 
