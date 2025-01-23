@@ -14,9 +14,6 @@ namespace mqt::ir::opt {
 
 struct MQTCoreRoundTrip final : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
 
-  MQTCoreRoundTrip()
-      : circuit(0, 100) {} // qc has fixed number of 100 classical bits.
-
   qc::QuantumComputation circuit;
 
   void runOnOperation() override {
