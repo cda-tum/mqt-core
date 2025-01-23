@@ -1,6 +1,3 @@
-// XFAIL: *
-// RUN: quantum-opt %s | FileCheck %s
-
 module {
     func.func @bell() -> (!mqtopt.QubitRegister, i1, i1) {
         %reg_0 = "mqtopt.allocQubitRegister"() <{size_attr = 2 : i64}> : () -> !mqtopt.QubitRegister
