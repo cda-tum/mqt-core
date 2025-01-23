@@ -7,7 +7,6 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
 
-#include <iostream>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>

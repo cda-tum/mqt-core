@@ -5,12 +5,10 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
 
-#include <iostream>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LogicalResult.h>
-#include <set>
 
 namespace mqt::ir::opt {
 /// Analysis pattern that creates MLIR instructions from a given

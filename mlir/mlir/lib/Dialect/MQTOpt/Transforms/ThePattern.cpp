@@ -6,7 +6,6 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
-#include <vector>
 
 namespace mqt::ir::opt {
 /// Multistep rewrite using "match" and "rewrite". This allows for separating
