@@ -28,12 +28,4 @@ def MQTCoreRoundTrip : Pass<"mqt-core-round-trip", "mlir::ModuleOp"> {
   }];
 }
 
-def ThePass : Pass<"the-pass", "ModuleOp"> {
-  let summary = "That is THE pass for the MQT dialect";
-  let description = [{
-    This pass does something very important.
-    It is the most important pass in the MQT dialect.
-  }];
-}
-
 #endif // MQTO_PASSES
