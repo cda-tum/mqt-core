@@ -75,13 +75,11 @@ def QuregType : MQTOptType<"QubitRegister", "QubitRegister"> {
 
 // This is the base class for all operations in the MQTOpt dialect. It is a
 // template that takes the operation mnemonic and a list of traits. The MQTOptOp
-// class is a subclass of the Op class defined in the MLIR core. Every operation
-// in the MQTOpt dialect has no side effects due to the value semantics of qubits.
-// This is accomplished by the [NoMemoryEffect] trait.
+// class is a subclass of the Op class defined in the MLIR core.
 class MQTOptOp<string mnemonic, list<Trait> traits = []> :
-        Op<MQTOptDialect, mnemonic, traits # [NoMemoryEffect]>;
+        Op<MQTOptDialect, mnemonic, traits>;
 
-class GateOp<string mnemonic, list<Trait> traits = []> :
+class GateOp<string mnemonic, list<Trait> traits = [NoMemoryEffect]> :
     MQTOptOp<mnemonic, traits> {
 }
 
