@@ -1,24 +1,29 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 
 #include <cstddef>
-#include <ostream>
 
 namespace qc {
-class QPE : public QuantumComputation {
-public:
-  fp lambda = 0.;
-  std::size_t precision;
-  bool iterative;
+[[nodiscard]] auto createQPE(Qubit nq, bool exact = true, std::size_t seed = 0)
+    -> QuantumComputation;
 
-  explicit QPE(std::size_t nq, bool exact = true, bool iter = false);
-  QPE(fp l, std::size_t prec, bool iter = false);
+[[nodiscard]] auto createQPE(fp lambda, Qubit precision) -> QuantumComputation;
 
-  std::ostream& printStatistics(std::ostream& os) const override;
+[[nodiscard]] auto createIterativeQPE(Qubit nq, bool exact = true,
+                                      std::size_t seed = 0)
+    -> QuantumComputation;
 
-protected:
-  void createCircuit();
-};
+[[nodiscard]] auto createIterativeQPE(fp lambda, Qubit precision)
+    -> QuantumComputation;
 } // namespace qc

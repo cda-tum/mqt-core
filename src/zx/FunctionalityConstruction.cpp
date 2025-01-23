@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "zx/FunctionalityConstruction.hpp"
 
 #include "ir/Permutation.hpp"
@@ -579,15 +588,14 @@ FunctionalityConstruction::parseOp(ZXDiagram& diag, op_it it, op_it end,
 }
 
 FunctionalityConstruction::op_it FunctionalityConstruction::parseCompoundOp(
-    ZXDiagram& diag, op_it it, op_it end, std::vector<Vertex>& qubits,
-    const qc::Permutation& initialLayout) {
+    ZXDiagram& diag, const op_it it, const op_it end,
+    std::vector<Vertex>& qubits, const qc::Permutation& initialLayout) {
   const auto& op = *it;
-
-  if (op->getType() == qc::OpType::Compound) {
-    const auto* compOp = dynamic_cast<qc::CompoundOperation*>(op.get());
-    for (auto subIt = compOp->cbegin(); subIt != compOp->cend();) {
+  if (op->isCompoundOperation()) {
+    const auto& compOp = dynamic_cast<qc::CompoundOperation&>(*op);
+    for (auto subIt = compOp.cbegin(); subIt != compOp.cend();) {
       subIt =
-          parseCompoundOp(diag, subIt, compOp->cend(), qubits, initialLayout);
+          parseCompoundOp(diag, subIt, compOp.cend(), qubits, initialLayout);
     }
     return it + 1;
   }

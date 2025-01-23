@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 """Test the evaluation of JSON results."""
 
 from __future__ import annotations
@@ -27,7 +34,7 @@ def test_flatten_dict() -> None:
 
 def test_post_processing() -> None:
     """Test postprocessing."""
-    with pytest.raises(ValueError, match="Benchmark a.b is missing algorithm, task, number of qubits or metric!"):
+    with pytest.raises(ValueError, match=r"Benchmark a.b is missing algorithm, task, number of qubits or metric!"):
         __post_processing("a.b")
     assert __post_processing("BV.Functionality.1024.runtime") == {
         "algo": "BV",
@@ -60,7 +67,11 @@ def test_post_processing() -> None:
 
 
 def test_aggregate() -> None:
-    """Test the data aggregation method."""
+    """Test the data aggregation method.
+
+    Raises:
+        AssertionError: If the test fails.
+    """
     try:
         df_all = __aggregate(path_base, path_feature)
         lookups = df_all[df_all["metric"] == "lookups"]
@@ -101,8 +112,8 @@ def test_compare_with_negative_factor(script_runner: ScriptRunner) -> None:
     """Testing factor -0.1."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--factor=-0.1",
     ])
     assert not ret.success
@@ -114,8 +125,8 @@ def test_compare_with_invalid_sort_option(script_runner: ScriptRunner) -> None:
     """Testing an invalid sort option."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--sort=after",
     ])
     assert not ret.success
@@ -127,8 +138,8 @@ def test_cli_with_num_qubits_specified_without_algorithm(script_runner: ScriptRu
     """Testing the error case when num_qubits is specified without algorithm."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--factor=0.2",
         "--num_qubits=1024",
     ])
@@ -138,11 +149,11 @@ def test_cli_with_num_qubits_specified_without_algorithm(script_runner: ScriptRu
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters."""
+    """Testing the CLI functionality with default parameters."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
     ])
     assert "Runtime:" in ret.stdout
     assert "Benchmarks that have improved:" in ret.stdout
@@ -154,11 +165,14 @@ def test_cli_with_default_parameters(script_runner: ScriptRunner) -> None:
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters, except that factor is set to 0.3 and dd details should be shown."""
+    """Testing the CLI functionality with default parameters, except that factor is set to 0.3.
+
+    DD details should be shown.
+    """
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--factor=0.3",
         "--dd",
     ])
@@ -172,11 +186,11 @@ def test_cli_with_factor_point_three(script_runner: ScriptRunner) -> None:
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters, except that factor is set to 0.2 and only_changed is set to true."""
+    """Testing the CLI functionality with factor set to 0.2 and only_changed set."""
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--factor=0.2",
         "--only_changed",
     ])
@@ -188,11 +202,14 @@ def test_cli_with_only_changed(script_runner: ScriptRunner) -> None:
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with factor=0.1 per default, but both only_changed and no_split are set to true, and dd details should be shown."""
+    """Testing the CLI functionality with factor=0.1 per default, but both only_changed and no_split are set to true.
+
+    DD details should be shown.
+    """
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--dd",
         "--only_changed",
         "--no_split",
@@ -207,11 +224,14 @@ def test_cli_with_only_changed_and_no_split(script_runner: ScriptRunner) -> None
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with default parameters, except for no_split set to true, dd details should be shown and the output tables should only show benchmarks from the Functionality task."""
+    """Testing the CLI functionality with default parameters, except for no_split set to true.
+
+    DD details should be shown and the output tables should only show benchmarks from the Functionality task.
+    """
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--no_split",
         "--dd",
         "--task=functionality",
@@ -226,11 +246,14 @@ def test_cli_with_no_split(script_runner: ScriptRunner) -> None:
 
 @pytest.mark.script_launch_mode("subprocess")
 def test_cli_with_sort_by_algorithm(script_runner: ScriptRunner) -> None:
-    """Testing the command line functionality with sort set with "algorithm" and no_split set to true. DD details should be shown and the output tables should only show benchmarks from the BV algorithm with 1024 qubits."""
+    """Testing the CLI functionality with sort set with "algorithm" and no_split set to true.
+
+    DD details should be shown and the output tables should only show benchmarks from the BV algorithm with 1024 qubits.
+    """
     ret = script_runner.run([
         "mqt-core-dd-compare",
-        "./test/python/results_baseline.json",
-        "./test/python/results_feature.json",
+        path_base,
+        path_feature,
         "--sort=algorithm",
         "--no_split",
         "--dd",

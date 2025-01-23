@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
@@ -21,7 +30,7 @@
 namespace sym {
 static constexpr double TOLERANCE = 1e-9;
 
-class SymbolicException : public std::invalid_argument {
+class SymbolicException final : public std::invalid_argument {
   std::string msg;
 
 public:
@@ -42,7 +51,7 @@ struct Variable {
 
   explicit Variable(const std::string& name);
 
-  [[nodiscard]] std::string getName() const;
+  [[nodiscard]] std::string getName() const noexcept;
 
   bool operator==(const Variable& rhs) const { return id == rhs.id; }
 
@@ -57,13 +66,11 @@ private:
 };
 } // namespace sym
 
-namespace std {
-template <> struct hash<sym::Variable> {
-  std::size_t operator()(const sym::Variable& var) const {
+template <> struct std::hash<sym::Variable> {
+  std::size_t operator()(const sym::Variable& var) const noexcept {
     return std::hash<std::string>()(var.getName());
   }
 };
-} // namespace std
 
 namespace sym {
 using VariableAssignment = std::unordered_map<Variable, double>;
@@ -73,8 +80,8 @@ template <typename T,
                                       std::is_constructible_v<T, double>>>
 class Term {
 public:
-  [[nodiscard]] Variable getVar() const { return var; }
-  [[nodiscard]] T getCoeff() const { return coeff; }
+  [[nodiscard]] Variable getVar() const noexcept { return var; }
+  [[nodiscard]] T getCoeff() const noexcept { return coeff; }
 
   [[nodiscard]] bool hasZeroCoeff() const {
     return std::abs(static_cast<double>(coeff)) < TOLERANCE;
@@ -117,46 +124,42 @@ private:
 };
 template <typename T,
           typename = std::enable_if_t<std::is_constructible_v<int, T>>>
-inline Term<T> operator*(Term<T> lhs, const double rhs) {
+Term<T> operator*(Term<T> lhs, const double rhs) {
   lhs *= rhs;
   return lhs;
 }
 template <typename T,
           typename = std::enable_if_t<std::is_constructible_v<int, T>>>
-inline Term<T> operator/(Term<T> lhs, const double rhs) {
+Term<T> operator/(Term<T> lhs, const double rhs) {
   lhs /= rhs;
   return lhs;
 }
 template <typename T,
           typename = std::enable_if_t<std::is_constructible_v<int, T>>>
-inline Term<T> operator*(double lhs, const Term<T>& rhs) {
+Term<T> operator*(double lhs, const Term<T>& rhs) {
   return rhs * lhs;
 }
 template <typename T,
           typename = std::enable_if_t<std::is_constructible_v<int, T>>>
-inline Term<T> operator/(double lhs, const Term<T>& rhs) {
+Term<T> operator/(double lhs, const Term<T>& rhs) {
   return rhs / lhs;
 }
-template <typename T>
-inline bool operator==(const Term<T>& lhs, const Term<T>& rhs) {
+template <typename T> bool operator==(const Term<T>& lhs, const Term<T>& rhs) {
   return lhs.getVar() == rhs.getVar() &&
          std::abs(lhs.getCoeff() - rhs.getCoeff()) < TOLERANCE;
 }
-template <typename T>
-inline bool operator!=(const Term<T>& lhs, const Term<T>& rhs) {
+template <typename T> bool operator!=(const Term<T>& lhs, const Term<T>& rhs) {
   return !(lhs == rhs);
 }
 } // namespace sym
 
-namespace std {
-template <typename T> struct hash<sym::Term<T>> {
-  std::size_t operator()(const sym::Term<T>& term) const {
+template <typename T> struct std::hash<sym::Term<T>> {
+  std::size_t operator()(const sym::Term<T>& term) const noexcept {
     const auto h1 = std::hash<sym::Variable>{}(term.getVar());
     const auto h2 = std::hash<T>{}(term.getCoeff());
     return qc::combineHash(h1, h2);
   }
 };
-} // namespace std
 
 namespace sym {
 template <
@@ -263,8 +266,7 @@ public:
     return *this;
   }
 
-  template <typename V = U,
-            typename std::enable_if_t<!std::is_same_v<T, V>, int> = 0>
+  template <typename V = U, std::enable_if_t<!std::is_same_v<T, V>, int> = 0>
   Expression<T, U>& operator*=(const U& rhs) {
     if (std::abs(static_cast<double>(T{rhs})) < TOLERANCE) {
       terms.clear();
@@ -286,8 +288,7 @@ public:
     return *this;
   }
 
-  template <typename V = U,
-            typename std::enable_if_t<!std::is_same_v<T, V>, int> = 0>
+  template <typename V = U, std::enable_if_t<!std::is_same_v<T, V>, int> = 0>
   Expression<T, U>& operator/=(const U& rhs) {
     if (std::abs(static_cast<double>(T{rhs})) < TOLERANCE) {
       throw std::runtime_error("Trying to divide expression by 0!");
@@ -321,7 +322,7 @@ public:
   [[nodiscard]] const Term<T>& operator[](const std::size_t i) const {
     return terms[i];
   }
-  [[nodiscard]] U getConst() const { return constant; }
+  [[nodiscard]] U getConst() const noexcept { return constant; }
   void setConst(const U& val) { constant = val; }
   [[nodiscard]] auto numTerms() const { return terms.size(); }
 
@@ -336,7 +337,7 @@ public:
   }
 
   template <typename V,
-            typename std::enable_if_t<std::is_constructible_v<U, V>>* = nullptr>
+            std::enable_if_t<std::is_constructible_v<U, V>>* = nullptr>
   Expression<T, V> convert() const {
     return Expression<T, V>(terms, V{constant});
   }
@@ -377,117 +378,114 @@ private:
 };
 
 template <typename T, typename U>
-inline Expression<T, U> operator+(Expression<T, U> lhs,
-                                  const Expression<T, U>& rhs) {
+Expression<T, U> operator+(Expression<T, U> lhs, const Expression<T, U>& rhs) {
   lhs += rhs;
   return lhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator+(Expression<T, U> lhs, const Term<T>& rhs) {
+Expression<T, U> operator+(Expression<T, U> lhs, const Term<T>& rhs) {
   lhs += rhs;
   return lhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator+(const Term<T>& lhs, Expression<T, U> rhs) {
+Expression<T, U> operator+(const Term<T>& lhs, Expression<T, U> rhs) {
   rhs += lhs;
   return rhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator+(const U& lhs, Expression<T, U> rhs) {
+Expression<T, U> operator+(const U& lhs, Expression<T, U> rhs) {
   rhs += lhs;
   return rhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator+(Expression<T, U> lhs, const U& rhs) {
+Expression<T, U> operator+(Expression<T, U> lhs, const U& rhs) {
   lhs += rhs;
   return lhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator+([[maybe_unused]] const T& lhs,
-                                  Expression<T, U> rhs) {
+Expression<T, U> operator+([[maybe_unused]] const T& lhs,
+                           Expression<T, U> rhs) {
   rhs += rhs;
   return rhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator-(Expression<T, U> lhs,
-                                  const Expression<T, U>& rhs) {
+Expression<T, U> operator-(Expression<T, U> lhs, const Expression<T, U>& rhs) {
   lhs -= rhs;
   return lhs;
 }
 template <typename T, typename U>
-inline Expression<T, U> operator-(Expression<T, U> lhs, const Term<T>& rhs) {
+Expression<T, U> operator-(Expression<T, U> lhs, const Term<T>& rhs) {
   lhs -= rhs;
   return lhs;
 }
 template <typename T, typename U>
-inline Expression<T, U> operator-(const Term<T>& lhs, Expression<T, U> rhs) {
+Expression<T, U> operator-(const Term<T>& lhs, Expression<T, U> rhs) {
   rhs -= lhs;
   return rhs;
 }
 template <typename T, typename U>
-inline Expression<T, U> operator-(const U& lhs, Expression<T, U> rhs) {
+Expression<T, U> operator-(const U& lhs, Expression<T, U> rhs) {
   rhs -= lhs;
   return rhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator-(Expression<T, U> lhs, const U& rhs) {
+Expression<T, U> operator-(Expression<T, U> lhs, const U& rhs) {
   lhs -= rhs;
   return lhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator*(Expression<T, U> lhs, const T& rhs) {
+Expression<T, U> operator*(Expression<T, U> lhs, const T& rhs) {
   lhs *= rhs;
   return lhs;
 }
 
 template <typename T, typename U,
-          typename std::enable_if_t<!std::is_same_v<T, U>>* = nullptr>
-inline Expression<T, U> operator*(Expression<T, U> lhs, const U& rhs) {
+          std::enable_if_t<!std::is_same_v<T, U>>* = nullptr>
+Expression<T, U> operator*(Expression<T, U> lhs, const U& rhs) {
   lhs *= rhs;
   return lhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator/(Expression<T, U> lhs, const T& rhs) {
+Expression<T, U> operator/(Expression<T, U> lhs, const T& rhs) {
   lhs /= rhs;
   return lhs;
 }
 
 template <typename T, typename U,
-          typename std::enable_if_t<!std::is_same_v<T, U>>* = nullptr>
-inline Expression<T, U> operator/(Expression<T, U> lhs, const U& rhs) {
+          std::enable_if_t<!std::is_same_v<T, U>>* = nullptr>
+Expression<T, U> operator/(Expression<T, U> lhs, const U& rhs) {
   lhs /= rhs;
   return lhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator/(Expression<T, U> lhs, int64_t rhs) {
+Expression<T, U> operator/(Expression<T, U> lhs, int64_t rhs) {
   lhs /= rhs;
   return lhs;
 }
 
 template <typename T, typename U>
-inline Expression<T, U> operator*(const T& lhs, Expression<T, U> rhs) {
+Expression<T, U> operator*(const T& lhs, Expression<T, U> rhs) {
   return rhs * lhs;
 }
 
 template <typename T, typename U,
-          typename std::enable_if_t<!std::is_same_v<T, U>>* = nullptr>
-inline Expression<T, U> operator*(const U& lhs, Expression<T, U> rhs) {
+          std::enable_if_t<!std::is_same_v<T, U>>* = nullptr>
+Expression<T, U> operator*(const U& lhs, Expression<T, U> rhs) {
   return rhs * lhs;
 }
 
 template <typename T, typename U>
-inline bool operator==(const Expression<T, U>& lhs,
-                       const Expression<T, U>& rhs) {
+bool operator==(const Expression<T, U>& lhs, const Expression<T, U>& rhs) {
   if (lhs.numTerms() != rhs.numTerms() || lhs.getConst() != rhs.getConst()) {
     return false;
   }
@@ -502,8 +500,7 @@ inline bool operator==(const Expression<T, U>& lhs,
 }
 
 template <typename T, typename U>
-inline bool operator!=(const Expression<T, U>& lhs,
-                       const Expression<T, U>& rhs) {
+bool operator!=(const Expression<T, U>& lhs, const Expression<T, U>& rhs) {
   return !(lhs == rhs);
 }
 
@@ -524,9 +521,8 @@ std::ostream& operator<<(std::ostream& os, const Expression<T, U>& expr) {
 }
 } // namespace sym
 
-namespace std {
-template <typename T, typename U> struct hash<sym::Expression<T, U>> {
-  std::size_t operator()(const sym::Expression<T, U>& expr) const {
+template <typename T, typename U> struct std::hash<sym::Expression<T, U>> {
+  std::size_t operator()(const sym::Expression<T, U>& expr) const noexcept {
     std::size_t seed = 0U;
     for (const auto& term : expr) {
       qc::hashCombine(seed, std::hash<sym::Term<T>>{}(term));
@@ -534,8 +530,7 @@ template <typename T, typename U> struct hash<sym::Expression<T, U>> {
     qc::hashCombine(seed, std::hash<U>{}(expr.getConst()));
     return seed;
   }
-};
-} // namespace std
+}; // namespace std
 
 namespace qc {
 using Symbolic = sym::Expression<fp, fp>;

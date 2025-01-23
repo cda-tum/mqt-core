@@ -1,5 +1,15 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
@@ -10,7 +20,6 @@
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
-#include <ios>
 #include <iostream>
 #include <istream>
 #include <limits>
@@ -22,25 +31,31 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
-/*
- * Use the anonymous namespace to declare the file-scope functions only
- * used in the current source file instead of static functions
- */
+// Using the anonymous namespace to declare the file-scope functions only
+// used in the current source file instead of static functions.
+//
+// While the LLVM coding standard prefers static functions over anonymous
+// namespaces: https://llvm.org/docs/CodingStandards.html#anonymous-namespaces
+// the clang-tidy documentation for one check states that anonymous namespaces
+// are the "superior alternative"
+// (https://clang.llvm.org/extra/clang-tidy/checks/misc/use-anonymous-namespace.html)
+// according to the C++ standard thus we follow the clang-tidy recommendation.
 namespace {
 std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
     const std::string& variableIdent, const qc::QuantumRegisterMap& dataQubits,
     const qc::QuantumRegisterMap& ancillaryQubits) {
   if (const auto& matchingEntryInDataQubits = dataQubits.find(variableIdent);
-      matchingEntryInDataQubits != dataQubits.end())
-    return matchingEntryInDataQubits->second.first;
+      matchingEntryInDataQubits != dataQubits.end()) {
+    return matchingEntryInDataQubits->second.getStartIndex();
+  }
 
   if (const auto& matchingEntryInAncillaryQubits =
           ancillaryQubits.find(variableIdent);
-      matchingEntryInAncillaryQubits != ancillaryQubits.end())
-    return matchingEntryInAncillaryQubits->second.first;
+      matchingEntryInAncillaryQubits != ancillaryQubits.end()) {
+    return matchingEntryInAncillaryQubits->second.getStartIndex();
+  }
 
   return std::nullopt;
 }
@@ -78,26 +93,37 @@ parseVariableNames(const int processedLineNumberInRealFile,
     variableIdentEndIdx =
         readInRawVariableIdentValues.find_first_of(' ', variableIdentStartIdx);
 
-    if (variableIdentEndIdx == std::string::npos)
+    if (variableIdentEndIdx == std::string::npos) {
       variableIdentEndIdx = readInRawVariableIdentValues.size();
+    }
 
     std::size_t variableIdentLength =
         variableIdentEndIdx - variableIdentStartIdx;
-    // On windows the line ending could be the character sequence \r\n while on
-    // linux system it would only be \n
+
+// Since the string fed into this function is a line read from the .real file
+// (read until a newline character is encountered), the carriage return
+// character used in combination with the newline character on windows systems
+// needs ignored, otherwise the carriage return would be considered as part of
+// the variable identifier. All other systems (expect Mac OS <= 9 [using
+// carriage return to indicate a newline]) use the newline character to indicate
+// a newline in a file.
+#if _WIN32
     if (variableIdentLength > 0 &&
         readInRawVariableIdentValues.at(std::min(
             variableIdentEndIdx, readInRawVariableIdentValues.size() - 1)) ==
-            '\r')
+            '\r') {
       --variableIdentLength;
+    }
+#endif
 
     auto variableIdent = readInRawVariableIdentValues.substr(
         variableIdentStartIdx, variableIdentLength);
     const bool trimVariableIdent =
         variableIdent.find_first_of(trimableVariableIdentPrefix) == 0;
-    if (trimVariableIdent)
+    if (trimVariableIdent) {
       variableIdent =
           variableIdent.replace(0, trimableVariableIdentPrefix.size(), "");
+    }
 
     if (!isValidIoName(variableIdent)) {
       throw qc::QFRException(
@@ -164,11 +190,12 @@ parseIoNames(const int lineInRealFileDefiningIoNames,
          foundIoNames.size() <= expectedNumberOfIos) {
     searchingForWhitespaceCharacter =
         ioNameIdentsRawValues.at(ioNameStartIdx) != '"';
-    if (searchingForWhitespaceCharacter)
+    if (searchingForWhitespaceCharacter) {
       ioNameEndIdx = ioNameIdentsRawValues.find_first_of(' ', ioNameStartIdx);
-    else
+    } else {
       ioNameEndIdx =
           ioNameIdentsRawValues.find_first_of('"', ioNameStartIdx + 1);
+    }
 
     if (ioNameEndIdx == std::string::npos) {
       ioNameEndIdx = ioNameIdentsRawValues.size();
@@ -185,12 +212,20 @@ parseIoNames(const int lineInRealFileDefiningIoNames,
     }
 
     std::size_t ioNameLength = ioNameEndIdx - ioNameStartIdx;
-    // On windows the line ending could be the character sequence \r\n while on
-    // linux system it would only be \n
+// Since the string fed into this function is a line read from the .real file
+// (read until a newline character is encountered), the carriage return
+// character used in combination with the newline character on windows systems
+// needs ignored, otherwise the carriage return would be considered as part of
+// the variable identifier. All other systems (expect Mac OS <= 9 [using
+// carriage return to indicate a newline]) use the newline character to indicate
+// a newline in a file.
+#if _WIN32
     if (ioNameLength > 0 &&
         ioNameIdentsRawValues.at(
-            std::min(ioNameEndIdx, ioNameIdentsRawValues.size() - 1)) == '\r')
+            std::min(ioNameEndIdx, ioNameIdentsRawValues.size() - 1)) == '\r') {
       --ioNameLength;
+    }
+#endif
 
     const auto& ioName =
         ioNameIdentsRawValues.substr(ioNameStartIdx, ioNameLength);
@@ -246,26 +281,30 @@ void assertRequiredHeaderComponentsAreDefined(
         currentUserDeclaredHeaderComponents) {
 
   for (const auto& requiredHeaderComponentPrefix :
-       requiredHeaderComponentPrefixes)
+       requiredHeaderComponentPrefixes) {
     if (currentUserDeclaredHeaderComponents.count(
-            requiredHeaderComponentPrefix) == 0)
+            requiredHeaderComponentPrefix) == 0) {
       throw qc::QFRException(
           "[real parser] l:" + std::to_string(processedLine) +
           " msg: Expected " + std::string(requiredHeaderComponentPrefix) +
           " to have been already defined");
+    }
+  }
 }
 
 void trimCommentAndTrailingWhitespaceData(std::string& lineToProcess) {
   if (const auto commentLinePrefixPosition = lineToProcess.find_first_of('#');
       commentLinePrefixPosition != std::string::npos) {
-    if (commentLinePrefixPosition != 0)
+    if (commentLinePrefixPosition != 0) {
       lineToProcess = lineToProcess.substr(0, commentLinePrefixPosition);
-    else
+    } else {
       lineToProcess = "";
+    }
   }
 
-  if (lineToProcess.empty())
+  if (lineToProcess.empty()) {
     return;
+  }
 
   if (const std::size_t positionOfLastDataCharacter =
           lineToProcess.find_last_not_of(" \t");
@@ -285,11 +324,9 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
   std::string cmd;
   int line = 0;
 
-  /*
-   * We could reuse the QuantumRegisterMap type defined in the qc namespace but
-   * to avoid potential errors due to any future refactoring of said type, we
-   * use an std::unordered_map instead
-   */
+  // We could reuse the QuantumRegisterMap type defined in the qc namespace but
+  // to avoid potential errors due to any future refactoring of said type, we
+  // use an std::unordered_map instead
   std::unordered_map<std::string, Qubit> userDefinedInputIdents;
   std::unordered_map<std::string, Qubit> userDefinedOutputIdents;
   std::unordered_set<std::string> userDeclaredVariableIdents;
@@ -298,13 +335,12 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
   constexpr std::string_view numVariablesHeaderComponentPrefix = ".NUMVARS";
   constexpr std::string_view variablesHeaderComponentPrefix = ".VARIABLES";
   constexpr std::string_view outputsHeaderComponentPrefix = ".OUTPUTS";
-  /*
-   * To enabled heterogenous lookup in an associative, ordered container (i.e.
-   * use the type std::string_view or a string literal as the lookup key without
-   * allocating a new string) we need to specify the transparent comparator.
-   * Heterogenuous lookup in unordered associative containers is a C++20
-   * feature.
-   */
+
+  // To enabled heterogenous lookup in an associative, ordered container (i.e.
+  // use the type std::string_view or a string literal as the lookup key without
+  // allocating a new string) we need to specify the transparent comparator.
+  // Heterogenuous lookup in unordered associative containers is a C++20
+  // feature.
   std::set<std::string, std::less<>> definedHeaderComponents;
 
   while (true) {
@@ -329,10 +365,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                          " msg: Invalid file header");
     }
 
-    if (definedHeaderComponents.count(cmd) != 0)
+    if (definedHeaderComponents.count(cmd) != 0) {
       throw QFRException("[real parser] l:" + std::to_string(line) +
                          " msg: Duplicate definition of header component " +
                          cmd);
+    }
 
     definedHeaderComponents.emplace(cmd);
     if (cmd == ".BEGIN") {
@@ -342,19 +379,16 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
           {numVariablesHeaderComponentPrefix, variablesHeaderComponentPrefix},
           definedHeaderComponents);
 
-      /*
-       * The garbage declarations in the .real file are defined on the outputs
-       * while the garbage state of the quantum computation operates on the
-       * defined inputs, thus we perform a mapping from the output marked as
-       * garbage back to the input using the output permutation.
-       */
+      // The garbage declarations in the .real file are defined on the outputs
+      // while the garbage state of the quantum computation operates on the
+      // defined inputs, thus we perform a mapping from the output marked as
+      // garbage back to the input using the output permutation.
       for (const auto& outputQubitMarkedAsGarbage :
            outputQubitsMarkedAsGarbage) {
-        /*
-         * Since the call setLogicalQubitAsGarbage(...) assumes that the qubit
-         * parameter is an input qubit, we need to manually mark the output
-         * qubit as garbage by using the output qubit instead.
-         */
+
+        // Since the call setLogicalQubitAsGarbage(...) assumes that the qubit
+        // parameter is an input qubit, we need to manually mark the output
+        // qubit as garbage by using the output qubit instead.
         garbage[outputQubitMarkedAsGarbage] = true;
         outputPermutation.erase(outputQubitMarkedAsGarbage);
       }
@@ -393,8 +427,17 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
       garbage.resize(nqubits);
       for (std::size_t i = 0; i < nclassics; ++i) {
         const auto qubit = static_cast<Qubit>(i);
-        qregs.insert({processedVariableIdents.at(i), {qubit, 1U}});
-        cregs.insert({"c_" + processedVariableIdents.at(i), {qubit, 1U}});
+        const std::string& quantumRegisterIdentifier =
+            processedVariableIdents.at(i);
+        quantumRegisters.insert(
+            {quantumRegisterIdentifier,
+             QuantumRegister(qubit, 1, quantumRegisterIdentifier)});
+
+        const std::string& classicalRegisterIdentifier =
+            "c_" + quantumRegisterIdentifier;
+        classicalRegisters.insert(
+            {classicalRegisterIdentifier,
+             ClassicalRegister(qubit, 1, classicalRegisterIdentifier)});
         initialLayout.insert({qubit, qubit});
         outputPermutation.insert({qubit, qubit});
       }
@@ -416,14 +459,13 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
           parseVariableNames(line, nclassics, initialLayoutDefinitionEntry,
                              userDeclaredVariableIdents, "");
 
-      /* Map the user declared variable idents in the .variable entry to the
-       * ones declared in the .initial_layout as explained in
-       * https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information
-       */
+      // Map the user declared variable idents in the .variable entry to the
+      // ones declared in the .initial_layout as explained in
+      // https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information
       for (std::size_t i = 0; i < nclassics; ++i) {
         const auto algorithmicQubit = static_cast<Qubit>(i);
         const auto deviceQubitForVariableIdentInInitialLayout =
-            qregs[processedVariableIdents.at(i)].first;
+            quantumRegisters.at(processedVariableIdents.at(i)).getStartIndex();
         initialLayout[deviceQubitForVariableIdentInInitialLayout] =
             algorithmicQubit;
       }
@@ -456,22 +498,22 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
           // Since ancillary qubits are assumed to have an initial value of
           // zero, we need to add an inversion gate to derive the correct
           // initial value of 1.
-          if (constantValuePerIo == '1')
+          if (constantValuePerIo == '1') {
             x(ancillaryQubit);
+          }
 
           setLogicalQubitAncillary(ancillaryQubit);
 
-          /*
-           * Since the call to setLogicalQubitAncillary does not actually
-           * transfer the qubit from the data qubit lookup into the ancillary
-           * lookup we will 'manually' perform this transfer.
-           */
-          const std::string& associatedVariableNameForQubitRegister =
-              getQubitRegister(ancillaryQubit);
-          qregs.erase(associatedVariableNameForQubitRegister);
-          ancregs.insert_or_assign(
+          // Since the call to setLogicalQubitAncillary does not actually
+          // transfer the qubit from the data qubit lookup into the ancillary
+          // lookup we will 'manually' perform this transfer.
+          const std::string associatedVariableNameForQubitRegister =
+              getQubitRegister(ancillaryQubit).getName();
+          quantumRegisters.erase(associatedVariableNameForQubitRegister);
+          ancillaRegisters.insert_or_assign(
               associatedVariableNameForQubitRegister,
-              qc::QuantumRegister(std::make_pair(ancillaryQubit, 1U)));
+              QuantumRegister(ancillaryQubit, 1,
+                              associatedVariableNameForQubitRegister));
         } else if (constantValuePerIo != '-') {
           throw QFRException("[real parser] l:" + std::to_string(line) +
                              " msg: Invalid value in '.constants' header: '" +
@@ -520,10 +562,11 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
           {numVariablesHeaderComponentPrefix, variablesHeaderComponentPrefix},
           definedHeaderComponents);
 
-      if (definedHeaderComponents.count(outputsHeaderComponentPrefix) > 0)
+      if (definedHeaderComponents.count(outputsHeaderComponentPrefix) > 0) {
         throw QFRException(
             "[real parser] l:" + std::to_string(line) +
             " msg: .inputs entry must be declared prior to the .outputs entry");
+      }
 
       const std::size_t expectedNumInputIos = nclassics;
       std::string ioNameIdentsLine;
@@ -568,30 +611,29 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
             std::to_string(expectedNumOutputIos) + " outputs to be declared!");
       }
 
-      if (userDefinedInputIdents.empty())
+      if (userDefinedInputIdents.empty()) {
         continue;
+      }
 
       for (const auto& [outputIoIdent, outputIoQubit] :
            userDefinedOutputIdents) {
-        /*
-         * We assume that a permutation of a given input qubit Q at index i
-         * is performed in the circuit if an entry in both in the .output
-         * as well as the .input definition using the same literal is found,
-         * with the input literal being defined at position i in the .input
-         * definition. If no such matching is found, we require that the output
-         * is marked as garbage.
-         *
-         * The outputPermutation map will use be structured as shown in the
-         * documentation
-         * (https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information)
-         * with the output qubit being used as the key while the input qubit
-         * serves as the map entries value.
-         */
+
+        // We assume that a permutation of a given input qubit Q at index i
+        // is performed in the circuit if an entry in both in the .output
+        // as well as the .input definition using the same literal is found,
+        // with the input literal being defined at position i in the .input
+        // definition. If no such matching is found, we require that the output
+        // is marked as garbage.
+        //
+        // The outputPermutation map will use be structured as shown in the
+        // documentation
+        // (https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information)
+        // with the output qubit being used as the key while the input qubit
+        // serves as the map entries value.
+        //
         if (userDefinedInputIdents.count(outputIoIdent) == 0) {
-          /*
-           * The current implementation requires that the .garbage definition is
-           * define prior to the .output one.
-           */
+          // The current implementation requires that the .garbage definition is
+          // define prior to the .output one.
           if (outputQubitsMarkedAsGarbage.count(outputIoQubit) == 0) {
             throw QFRException("[real parser] l:" + std::to_string(line) +
                                " msg: outputs without matching inputs are "
@@ -601,35 +643,32 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
                        userDefinedInputIdents.at(outputIoIdent);
                    matchingInputQubitForOutputLiteral != outputIoQubit &&
                    !logicalQubitIsGarbage(outputIoQubit)) {
-          /*
-           * We do not need to check whether a mapping from one input to any
-           * output exists, since we require that the idents defined in either
-           * of the .input as well as the .output definition are unique in their
-           * definition.
-           *
-           * Only if the matching entries where defined at different indices
-           * in their respective IO declaration do we update the existing 1-1
-           * mapping for the given output qubit
-           */
+          // We do not need to check whether a mapping from one input to any
+          // output exists, since we require that the idents defined in either
+          // of the .input as well as the .output definition are unique in their
+          // definition.
+          //
+          // Only if the matching entries where defined at different indices
+          // in their respective IO declaration do we update the existing
+          // identity mapping for the given output qubit
           outputPermutation.insert_or_assign(
               outputIoQubit, matchingInputQubitForOutputLiteral);
 
-          /*
-           * If we have determined a non-identity permutation of an input qubit,
-           * (i.e. output 2 <- input 1) delete any existing identify permutation
-           * of the input qubit since for the output 1 of the previous identity
-           * mapping either another non-identity permutation must exist or the
-           * output 1 must be declared as garbage.
-           */
+          // If we have determined a non-identity permutation of an input qubit,
+          // (i.e. output 2 <- input 1) any existing identity permutation
+          // of the input qubit will be removed since the previously mapped to
+          // output (output 1) of the identity permutation must have another
+          // non-identity permutation defined or must be declared as a garbage
+          // output.
           if (outputPermutation.count(matchingInputQubitForOutputLiteral) > 0 &&
               outputPermutation[matchingInputQubitForOutputLiteral] ==
-                  matchingInputQubitForOutputLiteral)
+                  matchingInputQubitForOutputLiteral) {
             outputPermutation.erase(matchingInputQubitForOutputLiteral);
+          }
         }
       }
     } else if (cmd == ".VERSION" || cmd == ".INPUTBUS" || cmd == ".OUTPUTBUS") {
       is.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-      continue;
     } else if (cmd == ".DEFINE") {
       // TODO: Defines currently not supported
       std::cerr << "[WARN] File contains 'define' statement, which is "
@@ -726,12 +765,10 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     }
     trimCommentAndTrailingWhitespaceData(qubits);
 
-    /*
-     * If we cannot determine how many gate lines are to be expected from the
-     * gate definition (i.e. the gate definition 'c a b' does not define the
-     * number of gate lines) we assume that the number of whitespaces left of
-     * the gate type define the number of gate lines.
-     */
+    // If we cannot determine how many gate lines are to be expected from the
+    // gate definition (i.e. the gate definition 'c a b' does not define the
+    // number of gate lines) we assume that the number of whitespaces left of
+    // the gate type define the number of gate lines.
     std::size_t numberOfGateLines = 0;
     if (const std::string& stringifiedNumberOfGateLines = m.str(2);
         !stringifiedNumberOfGateLines.empty()) {
@@ -760,12 +797,12 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     const auto& gateLines = qubits.empty() ? "" : qubits.substr(1);
     std::unordered_set<std::string> validVariableIdentLookup;
 
-    /* Use the entries of the creg register map prefixed with 'c_' to determine
-     * the declared variable idents in the .variable entry
-     */
-    for (const auto& qregNameAndQubitIndexPair : cregs)
+    // Use the entries of the creg register map prefixed with 'c_' to determine
+    // the declared variable idents in the .variable entry
+    for (const auto& qregNameAndQubitIndexPair : classicalRegisters) {
       validVariableIdentLookup.emplace(
           qregNameAndQubitIndexPair.first.substr(2));
+    }
 
     // We will ignore the prefix '-' when validating a given gate line ident
     auto processedGateLines = parseVariableNames(
@@ -776,14 +813,15 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
     for (std::size_t i = 0; i < ncontrols; ++i) {
       std::string_view gateIdent = processedGateLines.at(lineIdx++);
       const bool negativeControl = gateIdent.front() == '-';
-      if (negativeControl)
+      if (negativeControl) {
         gateIdent = gateIdent.substr(1);
+      }
 
       // Since variable qubits can either be data or ancillary qubits our search
       // will have to be conducted in both lookups
       if (const std::optional<Qubit> controlLineQubit =
-              getQubitForVariableIdentFromAnyLookup(std::string(gateIdent),
-                                                    qregs, ancregs);
+              getQubitForVariableIdentFromAnyLookup(
+                  std::string(gateIdent), quantumRegisters, ancillaRegisters);
           controlLineQubit.has_value()) {
         controls[i] =
             Control(*controlLineQubit,
@@ -802,8 +840,8 @@ void qc::QuantumComputation::readRealGateDescriptions(std::istream& is,
       // Since variable qubits can either be data or ancillary qubits our search
       // will have to be conducted in both lookups
       if (const std::optional<Qubit> targetLineQubit =
-              getQubitForVariableIdentFromAnyLookup(targetLineIdent, qregs,
-                                                    ancregs);
+              getQubitForVariableIdentFromAnyLookup(
+                  targetLineIdent, quantumRegisters, ancillaRegisters);
           targetLineQubit.has_value()) {
         targetLineQubits[i] = *targetLineQubit;
       } else {

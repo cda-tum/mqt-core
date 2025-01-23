@@ -1,12 +1,23 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/FunctionalityConstruction.hpp"
+#include "dd/Node.hpp"
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
@@ -18,7 +29,6 @@
 #include <iostream>
 #include <memory>
 #include <random>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -124,8 +134,7 @@ TEST_P(DDFunctionality, standardOpBuildInverseBuild) {
     op = qc::StandardOperation(0, gate);
   }
 
-  ASSERT_NO_THROW(
-      { e = dd->multiply(getDD(&op, *dd), getInverseDD(&op, *dd)); });
+  ASSERT_NO_THROW({ e = dd->multiply(getDD(op, *dd), getInverseDD(op, *dd)); });
   dd->incRef(e);
 
   EXPECT_EQ(ident, e);
@@ -179,8 +188,7 @@ TEST_P(DDFunctionality, controlledStandardOpBuildInverseBuild) {
     op = qc::StandardOperation(0, 1, gate);
   }
 
-  ASSERT_NO_THROW(
-      { e = dd->multiply(getDD(&op, *dd), getInverseDD(&op, *dd)); });
+  ASSERT_NO_THROW({ e = dd->multiply(getDD(op, *dd), getInverseDD(op, *dd)); });
   dd->incRef(e);
 
   EXPECT_EQ(ident, e);
@@ -236,8 +244,7 @@ TEST_P(DDFunctionality, controlledStandardNegOpBuildInverseBuild) {
     op = qc::StandardOperation(Controls{0_nc}, 1, gate);
   }
 
-  ASSERT_NO_THROW(
-      { e = dd->multiply(getDD(&op, *dd), getInverseDD(&op, *dd)); });
+  ASSERT_NO_THROW({ e = dd->multiply(getDD(op, *dd), getInverseDD(op, *dd)); });
   dd->incRef(e);
 
   EXPECT_EQ(ident, e);
@@ -313,11 +320,11 @@ TEST_F(DDFunctionality, buildCircuit) {
   qc.swap(0, 1);
   qc.x(0);
 
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   EXPECT_EQ(ident, e);
 
   qc.x(0);
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   dd->incRef(e);
   EXPECT_NE(ident, e);
 }
@@ -327,10 +334,10 @@ TEST_F(DDFunctionality, nonUnitary) {
   auto dummyMap = Permutation{};
   auto op = qc::NonUnitaryOperation({0, 1, 2, 3}, {0, 1, 2, 3});
   EXPECT_FALSE(op.isUnitary());
-  EXPECT_THROW(getDD(&op, *dd), qc::QFRException);
-  EXPECT_THROW(getInverseDD(&op, *dd), qc::QFRException);
-  EXPECT_THROW(getDD(&op, *dd, dummyMap), qc::QFRException);
-  EXPECT_THROW(getInverseDD(&op, *dd, dummyMap), qc::QFRException);
+  EXPECT_THROW(getDD(op, *dd), qc::QFRException);
+  EXPECT_THROW(getInverseDD(op, *dd), qc::QFRException);
+  EXPECT_THROW(getDD(op, *dd, dummyMap), qc::QFRException);
+  EXPECT_THROW(getInverseDD(op, *dd, dummyMap), qc::QFRException);
   for (Qubit i = 0; i < nqubits; ++i) {
     EXPECT_TRUE(op.actsOn(i));
   }
@@ -339,10 +346,10 @@ TEST_F(DDFunctionality, nonUnitary) {
     dummyMap[i] = i;
   }
   auto barrier = qc::StandardOperation({0, 1, 2, 3}, qc::OpType::Barrier);
-  EXPECT_TRUE(getDD(&barrier, *dd).isIdentity());
-  EXPECT_TRUE(getInverseDD(&barrier, *dd).isIdentity());
-  EXPECT_TRUE(getDD(&barrier, *dd, dummyMap).isIdentity());
-  EXPECT_TRUE(getInverseDD(&barrier, *dd, dummyMap).isIdentity());
+  EXPECT_TRUE(getDD(barrier, *dd).isIdentity());
+  EXPECT_TRUE(getInverseDD(barrier, *dd).isIdentity());
+  EXPECT_TRUE(getDD(barrier, *dd, dummyMap).isIdentity());
+  EXPECT_TRUE(getInverseDD(barrier, *dd, dummyMap).isIdentity());
 }
 
 TEST_F(DDFunctionality, CircuitEquivalence) {
@@ -356,8 +363,8 @@ TEST_F(DDFunctionality, CircuitEquivalence) {
   qc2.sx(0);
   qc2.rz(PI_2, 0);
 
-  const qc::MatrixDD dd1 = buildFunctionality(&qc1, *dd);
-  const qc::MatrixDD dd2 = buildFunctionality(&qc2, *dd);
+  const qc::MatrixDD dd1 = buildFunctionality(qc1, *dd);
+  const qc::MatrixDD dd2 = buildFunctionality(qc2, *dd);
 
   EXPECT_EQ(dd1.p, dd2.p);
 }
@@ -369,12 +376,12 @@ TEST_F(DDFunctionality, changePermutation) {
                                "qreg q[2];"
                                "x q[0];\n";
   const auto qc = QuantumComputation::fromQASM(testfile);
-  auto sim = simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd);
+  const auto sim = simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].w.exactlyOne());
   EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].p->e[0].w.exactlyOne());
-  auto func = buildFunctionality(&qc, *dd);
+  const auto func = buildFunctionality(qc, *dd);
   EXPECT_FALSE(func.p->e[0].isZeroTerminal());
   EXPECT_FALSE(func.p->e[1].isZeroTerminal());
   EXPECT_FALSE(func.p->e[2].isZeroTerminal());
@@ -385,68 +392,6 @@ TEST_F(DDFunctionality, changePermutation) {
   EXPECT_TRUE(func.p->e[3].p->e[2].w.exactlyOne());
 }
 
-TEST_F(DDFunctionality, basicTensorDumpTest) {
-  QuantumComputation qc(2);
-  qc.h(1);
-  qc.cx(1, 0);
-
-  std::stringstream ss{};
-  dd::dumpTensorNetwork(ss, qc);
-
-  const std::string reference =
-      "{\"tensors\": [\n"
-      "[[\"h\", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], "
-      "[[0.70710678118654757, 0], [0.70710678118654757, 0], "
-      "[0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
-      "[[\"x\", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", "
-      "\"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, "
-      "0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, "
-      "0], [0, 0]]]\n"
-      "]}\n";
-  EXPECT_EQ(ss.str(), reference);
-}
-
-TEST_F(DDFunctionality, compoundTensorDumpTest) {
-  QuantumComputation qc(2);
-  QuantumComputation comp(2);
-  comp.h(1);
-  comp.cx(1, 0);
-  qc.emplace_back(comp.asOperation());
-
-  std::stringstream ss{};
-  dd::dumpTensorNetwork(ss, qc);
-
-  const std::string reference =
-      "{\"tensors\": [\n"
-      "[[\"h\", \"Q1\", \"GATE0\"], [\"q1_0\", \"q1_1\"], [2, 2], "
-      "[[0.70710678118654757, 0], [0.70710678118654757, 0], "
-      "[0.70710678118654757, 0], [-0.70710678118654757, 0]]],\n"
-      "[[\"x\", \"Q1\", \"Q0\", \"GATE1\"], [\"q1_1\", \"q0_0\", \"q1_2\", "
-      "\"q0_1\"], [2, 2, 2, 2], [[1, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, "
-      "0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [1, 0], [0, 0], [0, 0], [1, "
-      "0], [0, 0]]]\n"
-      "]}\n";
-  EXPECT_EQ(ss.str(), reference);
-}
-
-TEST_F(DDFunctionality, errorTensorDumpTest) {
-  QuantumComputation qc(2U, 2U);
-  qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
-
-  std::stringstream ss{};
-  EXPECT_THROW(dd::dumpTensorNetwork(ss, qc), qc::QFRException);
-
-  ss.str("");
-  qc.erase(qc.begin());
-  qc.barrier(0);
-  qc.measure(0, 0);
-  EXPECT_NO_THROW(dd::dumpTensorNetwork(ss, qc));
-
-  ss.str("");
-  qc.reset(0);
-  EXPECT_THROW(dd::dumpTensorNetwork(ss, qc), qc::QFRException);
-}
-
 TEST_F(DDFunctionality, FuseTwoSingleQubitGates) {
   nqubits = 1;
   QuantumComputation qc(nqubits);
@@ -454,9 +399,9 @@ TEST_F(DDFunctionality, FuseTwoSingleQubitGates) {
   qc.h(0);
 
   qc.print(std::cout);
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   CircuitOptimizer::singleQubitGateFusion(qc);
-  const auto f = buildFunctionality(&qc, *dd);
+  const auto f = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
@@ -470,11 +415,11 @@ TEST_F(DDFunctionality, FuseThreeSingleQubitGates) {
   qc.h(0);
   qc.y(0);
 
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
-  const auto f = buildFunctionality(&qc, *dd);
+  const auto f = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
@@ -487,11 +432,11 @@ TEST_F(DDFunctionality, FuseNoSingleQubitGates) {
   qc.h(0);
   qc.cx(0, 1);
   qc.y(0);
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
-  const auto f = buildFunctionality(&qc, *dd);
+  const auto f = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 3);
@@ -504,13 +449,84 @@ TEST_F(DDFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
   qc.h(0);
   qc.z(1);
   qc.y(0);
-  e = buildFunctionality(&qc, *dd);
+  e = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::singleQubitGateFusion(qc);
-  const auto f = buildFunctionality(&qc, *dd);
+  const auto f = buildFunctionality(qc, *dd);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 2);
   EXPECT_EQ(e, f);
+}
+
+TEST_F(DDFunctionality, classicControlledOperationConditions) {
+  const auto cmpKinds = {ComparisonKind::Eq, ComparisonKind::Neq,
+                         ComparisonKind::Lt, ComparisonKind::Leq,
+                         ComparisonKind::Gt, ComparisonKind::Geq};
+  for (const auto kind : cmpKinds) {
+    QuantumComputation qc(1U, 1U);
+    // ensure that the state is |1>.
+    qc.x(0);
+    // measure the qubit to get a classical `1` result to condition on.
+    qc.measure(0, 0);
+    // apply a classic-controlled X gate whenever the measured result compares
+    // as specified by kind with the previously measured result.
+    qc.classicControlled(qc::X, 0, 0, 1U, kind);
+    // measure into the same register to check the result.
+    qc.measure(0, 0);
+
+    constexpr auto shots = 16U;
+    const auto hist = dd::sample(qc, shots);
+
+    EXPECT_EQ(hist.size(), 1);
+    const auto& [key, value] = *hist.begin();
+    EXPECT_EQ(value, shots);
+    if (kind == ComparisonKind::Eq || kind == ComparisonKind::Leq ||
+        kind == ComparisonKind::Geq) {
+      EXPECT_EQ(key, "0");
+    } else {
+      EXPECT_EQ(key, "1");
+    }
+  }
+}
+
+TEST_F(DDFunctionality, vectorKroneckerWithTerminal) {
+  const auto root = dd::vEdge::one();
+  const auto zeroState = dd->makeZeroState(1);
+  const auto extendedRoot = dd->kronecker(zeroState, root, 0);
+  EXPECT_EQ(zeroState, extendedRoot);
+}
+
+TEST_F(DDFunctionality, dynamicCircuitSimulationWithSWAP) {
+  QuantumComputation qc(2, 2);
+  qc.x(0);
+  qc.swap(0, 1);
+  qc.measure(1, 0);
+  qc.classicControlled(qc::X, 0, 0);
+  qc.measure(0, 1);
+
+  constexpr auto shots = 16U;
+  const auto hist = dd::sample(qc, shots);
+  EXPECT_EQ(hist.size(), 1);
+  const auto& [key, value] = *hist.begin();
+  EXPECT_EQ(value, shots);
+  EXPECT_EQ(key, "11");
+}
+
+TEST_F(DDFunctionality, dynamicCircuitProbabilityVectorExtractionWithSWAP) {
+  QuantumComputation qc(2, 2);
+  qc.x(0);
+  qc.swap(0, 1);
+  qc.measure(1, 0);
+  qc.reset(1);
+  qc.measure(1, 1);
+
+  const auto zeroState = dd->makeZeroState(2);
+  auto probVector = dd::SparsePVec{};
+  extractProbabilityVector(qc, zeroState, probVector, *dd);
+  EXPECT_EQ(probVector.size(), 1);
+  const auto& [key, value] = *probVector.begin();
+  EXPECT_EQ(value, 1.);
+  EXPECT_EQ(key, 0b01);
 }

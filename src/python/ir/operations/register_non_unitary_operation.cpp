@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
@@ -9,7 +18,7 @@
 
 namespace mqt {
 
-void registerNonUnitaryOperation(py::module& m) {
+void registerNonUnitaryOperation(const py::module& m) {
   py::class_<qc::NonUnitaryOperation, qc::Operation>(m, "NonUnitaryOperation")
       .def(py::init<std::vector<qc::Qubit>, std::vector<qc::Bit>>(),
            "targets"_a, "classics"_a)

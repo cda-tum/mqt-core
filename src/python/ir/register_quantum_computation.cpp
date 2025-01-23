@@ -1,5 +1,15 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/Expression.hpp"
 #include "ir/operations/OpType.hpp"
@@ -198,7 +208,7 @@ void registerQuantumComputation(py::module& m) {
   ///                  \n Ancillary and Garbage Handling \n
   ///---------------------------------------------------------------------------
 
-  qc.def_readonly("ancillary", &qc::QuantumComputation::ancillary);
+  qc.def_property_readonly("ancillary", &qc::QuantumComputation::getAncillary);
   qc.def("set_circuit_qubit_ancillary",
          &qc::QuantumComputation::setLogicalQubitAncillary, "q"_a);
   qc.def("se_circuit_qubits_ancillary",
@@ -206,7 +216,7 @@ void registerQuantumComputation(py::module& m) {
          "q_max"_a);
   qc.def("is_circuit_qubit_ancillary",
          &qc::QuantumComputation::logicalQubitIsAncillary, "q"_a);
-  qc.def_readonly("garbage", &qc::QuantumComputation::garbage);
+  qc.def_property_readonly("garbage", &qc::QuantumComputation::getGarbage);
   qc.def("set_circuit_qubit_garbage",
          &qc::QuantumComputation::setLogicalQubitGarbage, "q"_a);
   qc.def("set_circuit_qubits_garbage",
@@ -240,27 +250,27 @@ void registerQuantumComputation(py::module& m) {
   ///---------------------------------------------------------------------------
 
   qc.def("qasm2_str",
-         [](qc::QuantumComputation& circ) { return circ.toQASM(false); });
+         [](const qc::QuantumComputation& circ) { return circ.toQASM(false); });
   qc.def(
       "qasm2",
-      [](qc::QuantumComputation& circ, const std::string& filename) {
+      [](const qc::QuantumComputation& circ, const std::string& filename) {
         circ.dump(filename, qc::Format::OpenQASM2);
       },
       "filename"_a);
   qc.def("qasm3_str",
-         [](qc::QuantumComputation& circ) { return circ.toQASM(true); });
+         [](const qc::QuantumComputation& circ) { return circ.toQASM(true); });
   qc.def(
       "qasm3",
-      [](qc::QuantumComputation& circ, const std::string& filename) {
+      [](const qc::QuantumComputation& circ, const std::string& filename) {
         circ.dump(filename, qc::Format::OpenQASM3);
       },
       "filename"_a);
-  qc.def("__str__", [](qc::QuantumComputation& circ) {
+  qc.def("__str__", [](const qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
     circ.print(ss);
     return ss.str();
   });
-  qc.def("__repr__", [](qc::QuantumComputation& circ) {
+  qc.def("__repr__", [](const qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
     circ.print(ss);
     return ss.str();
@@ -375,15 +385,11 @@ void registerQuantumComputation(py::module& m) {
              &qc::QuantumComputation::measure),
          "qubit"_a, "cbit"_a);
   qc.def("measure",
-         py::overload_cast<qc::Qubit, const std::pair<std::string, qc::Bit>&>(
-             &qc::QuantumComputation::measure),
-         "qubit"_a, "creg_bit"_a);
-  qc.def("measure",
          py::overload_cast<const std::vector<qc::Qubit>&,
                            const std::vector<qc::Bit>&>(
              &qc::QuantumComputation::measure),
          "qubits"_a, "cbits"_a);
-  qc.def("measure_all", &qc::QuantumComputation::measureAll,
+  qc.def("measure_all", &qc::QuantumComputation::measureAll, py::kw_only(),
          "add_bits"_a = true);
 
   qc.def("reset", py::overload_cast<qc::Qubit>(&qc::QuantumComputation::reset),
@@ -399,26 +405,58 @@ void registerQuantumComputation(py::module& m) {
   qc.def("barrier", py::overload_cast<const std::vector<qc::Qubit>&>(
                         &qc::QuantumComputation::barrier));
 
+  qc.def(
+      "classic_controlled",
+      py::overload_cast<const qc::OpType, const qc::Qubit,
+                        const qc::ClassicalRegister&, const std::uint64_t,
+                        const qc::ComparisonKind, const std::vector<qc::fp>&>(
+          &qc::QuantumComputation::classicControlled),
+      "op"_a, "target"_a, "creg"_a, "expected_value"_a = 1U,
+      "comparison_kind"_a = qc::ComparisonKind::Eq,
+      "params"_a = std::vector<qc::fp>{});
+  qc.def(
+      "classic_controlled",
+      py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Control,
+                        const qc::ClassicalRegister&, const std::uint64_t,
+                        const qc::ComparisonKind, const std::vector<qc::fp>&>(
+          &qc::QuantumComputation::classicControlled),
+      "op"_a, "target"_a, "control"_a, "creg"_a, "expected_value"_a = 1U,
+      "comparison_kind"_a = qc::ComparisonKind::Eq,
+      "params"_a = std::vector<qc::fp>{});
+  qc.def(
+      "classic_controlled",
+      py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Controls&,
+                        const qc::ClassicalRegister&, const std::uint64_t,
+                        const qc::ComparisonKind, const std::vector<qc::fp>&>(
+          &qc::QuantumComputation::classicControlled),
+      "op"_a, "target"_a, "controls"_a, "creg"_a, "expected_value"_a = 1U,
+      "comparison_kind"_a = qc::ComparisonKind::Eq,
+      "params"_a = std::vector<qc::fp>{});
   qc.def("classic_controlled",
-         py::overload_cast<const qc::OpType, const qc::Qubit,
-                           const qc::ClassicalRegister&, const std::uint64_t,
+         py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Bit,
+                           const std::uint64_t, const qc::ComparisonKind,
                            const std::vector<qc::fp>&>(
              &qc::QuantumComputation::classicControlled),
-         "op"_a, "target"_a, "creg"_a, "expected_value"_a = 1U,
+         "op"_a, "target"_a, "cbit"_a, "expected_value"_a = 1U,
+         "comparison_kind"_a = qc::ComparisonKind::Eq,
          "params"_a = std::vector<qc::fp>{});
-  qc.def("classic_controlled",
-         py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Control,
-                           const qc::ClassicalRegister&, const std::uint64_t,
-                           const std::vector<qc::fp>&>(
-             &qc::QuantumComputation::classicControlled),
-         "op"_a, "target"_a, "control"_a, "creg"_a, "expected_value"_a = 1U,
-         "params"_a = std::vector<qc::fp>{});
-  qc.def("classic_controlled",
-         py::overload_cast<const qc::OpType, const qc::Qubit,
-                           const qc::Controls&, const qc::ClassicalRegister&,
-                           const std::uint64_t, const std::vector<qc::fp>&>(
-             &qc::QuantumComputation::classicControlled),
-         "op"_a, "target"_a, "controls"_a, "creg"_a, "expected_value"_a = 1U,
-         "params"_a = std::vector<qc::fp>{});
+  qc.def(
+      "classic_controlled",
+      py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Control,
+                        const qc::Bit, const std::uint64_t,
+                        const qc::ComparisonKind, const std::vector<qc::fp>&>(
+          &qc::QuantumComputation::classicControlled),
+      "op"_a, "target"_a, "control"_a, "cbit"_a, "expected_value"_a = 1U,
+      "comparison_kind"_a = qc::ComparisonKind::Eq,
+      "params"_a = std::vector<qc::fp>{});
+  qc.def(
+      "classic_controlled",
+      py::overload_cast<const qc::OpType, const qc::Qubit, const qc::Controls&,
+                        const qc::Bit, const std::uint64_t,
+                        const qc::ComparisonKind, const std::vector<qc::fp>&>(
+          &qc::QuantumComputation::classicControlled),
+      "op"_a, "target"_a, "controls"_a, "cbit"_a, "expected_value"_a = 1U,
+      "comparison_kind"_a = qc::ComparisonKind::Eq,
+      "params"_a = std::vector<qc::fp>{});
 }
 } // namespace mqt

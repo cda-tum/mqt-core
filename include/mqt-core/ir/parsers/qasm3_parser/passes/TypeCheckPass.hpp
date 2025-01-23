@@ -1,13 +1,21 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "../Exception.hpp"
-#include "../InstVisitor.hpp"
-#include "../Statement.hpp"
-#include "../Types.hpp"
 #include "CompilerPass.hpp"
 #include "ConstEvalPass.hpp"
+#include "ir/parsers/qasm3_parser/Exception.hpp"
+#include "ir/parsers/qasm3_parser/InstVisitor.hpp"
+#include "ir/parsers/qasm3_parser/Statement.hpp"
+#include "ir/parsers/qasm3_parser/Types.hpp"
 
-#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -45,9 +53,9 @@ struct InferredType {
   }
 };
 
-class TypeCheckPass : public CompilerPass,
-                      public InstVisitor,
-                      public ExpressionVisitor<InferredType> {
+class TypeCheckPass final : public CompilerPass,
+                            public InstVisitor,
+                            public ExpressionVisitor<InferredType> {
   bool hasError = false;
   std::map<std::string, InferredType> env;
   // We need a reference to a const eval pass to evaluate types before type
@@ -55,14 +63,7 @@ class TypeCheckPass : public CompilerPass,
   ConstEvalPass* constEvalPass;
 
   InferredType error(const std::string& msg,
-                     const std::shared_ptr<DebugInfo>& debugInfo = nullptr) {
-    std::cerr << "Type check error: " << msg << '\n';
-    if (debugInfo) {
-      std::cerr << "  " << debugInfo->toString() << '\n';
-    }
-    hasError = true;
-    return InferredType::error();
-  }
+                     const std::shared_ptr<DebugInfo>& debugInfo = nullptr);
 
 public:
   explicit TypeCheckPass(ConstEvalPass* pass) : constEvalPass(pass) {}

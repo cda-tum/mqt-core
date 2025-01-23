@@ -1,6 +1,16 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
+#include "mqt_core_dd_export.h"
 
 #include <istream>
 #include <limits>
@@ -230,11 +240,11 @@ struct RealNumber {
 namespace constants {
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 /// The constant zero.
-extern RealNumber zero;
+MQT_CORE_DD_EXPORT extern RealNumber zero;
 /// The constant one.
-extern RealNumber one;
+MQT_CORE_DD_EXPORT extern RealNumber one;
 /// The constant sqrt(2)/2 = 1/sqrt(2).
-extern RealNumber sqrt2over2;
+MQT_CORE_DD_EXPORT extern RealNumber sqrt2over2;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 /**

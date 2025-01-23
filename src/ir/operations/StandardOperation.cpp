@@ -1,6 +1,16 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/operations/StandardOperation.hpp"
 
 #include "Definitions.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
@@ -234,24 +244,25 @@ StandardOperation::StandardOperation(const Controls& c, const Qubit target0,
 /***
  * Public Methods
  ***/
-void StandardOperation::dumpOpenQASM(std::ostream& of,
-                                     const RegisterNames& qreg,
-                                     [[maybe_unused]] const RegisterNames& creg,
-                                     size_t indent, bool openQASM3) const {
+void StandardOperation::dumpOpenQASM(
+    std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+    [[maybe_unused]] const BitIndexToRegisterMap& bitMap, size_t indent,
+    bool openQASM3) const {
   std::ostringstream op;
   op << std::setprecision(std::numeric_limits<fp>::digits10);
 
   op << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
 
   if (openQASM3) {
-    dumpOpenQASM3(of, op, qreg);
+    dumpOpenQASM3(of, op, qubitMap);
   } else {
-    dumpOpenQASM2(of, op, qreg);
+    dumpOpenQASM2(of, op, qubitMap);
   }
 }
 
-void StandardOperation::dumpOpenQASM2(std::ostream& of, std::ostringstream& op,
-                                      const RegisterNames& qreg) const {
+void StandardOperation::dumpOpenQASM2(
+    std::ostream& of, std::ostringstream& op,
+    const QubitIndexToRegisterMap& qubitMap) const {
   if ((controls.size() > 1 && type != X) || controls.size() > 2) {
     std::cout << "[WARNING] Multiple controlled gates are not natively "
                  "supported by OpenQASM. "
@@ -271,32 +282,34 @@ void StandardOperation::dumpOpenQASM2(std::ostream& of, std::ostringstream& op,
     // apply X operations to negate the respective controls
     for (const auto& c : controls) {
       if (c.type == Control::Type::Neg) {
-        of << "x " << qreg[c.qubit].second << ";\n";
+        of << "x " << qubitMap.at(c.qubit).second << ";\n";
       }
     }
   }
 
-  dumpGateType(of, op, qreg);
+  dumpGateType(of, op, qubitMap);
 
   if (!isSpecialGate) {
     // apply X operations to negate the respective controls again
     for (const auto& c : controls) {
       if (c.type == Control::Type::Neg) {
-        of << "x " << qreg[c.qubit].second << ";\n";
+        of << "x " << qubitMap.at(c.qubit).second << ";\n";
       }
     }
   }
 }
 
-void StandardOperation::dumpOpenQASM3(std::ostream& of, std::ostringstream& op,
-                                      const RegisterNames& qreg) const {
+void StandardOperation::dumpOpenQASM3(
+    std::ostream& of, std::ostringstream& op,
+    const QubitIndexToRegisterMap& qubitMap) const {
   dumpControls(op);
 
-  dumpGateType(of, op, qreg);
+  dumpGateType(of, op, qubitMap);
 }
 
-void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
-                                     const RegisterNames& qreg) const {
+void StandardOperation::dumpGateType(
+    std::ostream& of, std::ostringstream& op,
+    const QubitIndexToRegisterMap& qubitMap) const {
   // Dump the operation name and parameters.
   switch (type) {
   case GPhase:
@@ -419,33 +432,33 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
   case Peres:
     of << op.str() << "cx";
     for (const auto& c : controls) {
-      of << " " << qreg[c.qubit].second << ",";
+      of << " " << qubitMap.at(c.qubit).second << ",";
     }
-    of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second
-       << ";\n";
+    of << " " << qubitMap.at(targets[1]).second << ", "
+       << qubitMap.at(targets[0]).second << ";\n";
 
     of << op.str() << "x";
     for (const auto& c : controls) {
-      of << " " << qreg[c.qubit].second << ",";
+      of << " " << qubitMap.at(c.qubit).second << ",";
     }
-    of << " " << qreg[targets[1]].second << ";\n";
+    of << " " << qubitMap.at(targets[1]).second << ";\n";
     return;
   case Peresdg:
     of << op.str() << "x";
     for (const auto& c : controls) {
-      of << " " << qreg[c.qubit].second << ",";
+      of << " " << qubitMap.at(c.qubit).second << ",";
     }
-    of << " " << qreg[targets[1]].second << ";\n";
+    of << " " << qubitMap.at(targets[1]).second << ";\n";
 
     of << op.str() << "cx";
     for (const auto& c : controls) {
-      of << " " << qreg[c.qubit].second << ",";
+      of << " " << qubitMap.at(c.qubit).second << ",";
     }
-    of << " " << qreg[targets[1]].second << ", " << qreg[targets[0]].second
-       << ";\n";
+    of << " " << qubitMap.at(targets[1]).second << ", "
+       << qubitMap.at(targets[0]).second << ";\n";
     return;
   case Teleportation:
-    dumpOpenQASMTeleportation(of, qreg);
+    dumpOpenQASMTeleportation(of, qubitMap);
     return;
   default:
     std::cerr << "gate type " << toString(type)
@@ -457,7 +470,7 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
 
   // First print control qubits.
   for (auto it = controls.begin(); it != controls.end();) {
-    of << " " << qreg[it->qubit].second;
+    of << " " << qubitMap.at(it->qubit).second;
     // we only print a comma if there are more controls or targets.
     if (++it != controls.end() || !targets.empty()) {
       of << ",";
@@ -465,11 +478,11 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
   }
   // Print target qubits.
   if (!targets.empty() && type == Barrier &&
-      isWholeQubitRegister(qreg, targets.front(), targets.back())) {
-    of << " " << qreg[targets.front()].first;
+      isWholeQubitRegister(qubitMap, targets.front(), targets.back())) {
+    of << " " << qubitMap.at(targets.front()).first.getName();
   } else {
     for (auto it = targets.begin(); it != targets.end();) {
-      of << " " << qreg[*it].second;
+      of << " " << qubitMap.at(*it).second;
       // only print comma if there are more targets
       if (++it != targets.end()) {
         of << ",";
@@ -480,18 +493,8 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
 }
 
 void StandardOperation::dumpOpenQASMTeleportation(
-    std::ostream& of, const RegisterNames& qreg) const {
+    std::ostream& of, const QubitIndexToRegisterMap& qubitMap) const {
   if (!controls.empty() || targets.size() != 3) {
-    std::cerr << "controls = ";
-    for (const auto& c : controls) {
-      std::cerr << qreg.at(c.qubit).second << " ";
-    }
-    std::cerr << "\ntargets = ";
-    for (const auto& t : targets) {
-      std::cerr << qreg.at(t).second << " ";
-    }
-    std::cerr << "\n";
-
     throw QFRException("Teleportation needs three targets");
   }
   /*
@@ -507,8 +510,9 @@ void StandardOperation::dumpOpenQASMTeleportation(
                                                          0           └─────┘
           */
   of << "// teleport q_0, a_0, a_1; q_0 --> a_1  via a_0\n";
-  of << "teleport " << qreg[targets[0]].second << ", "
-     << qreg[targets[1]].second << ", " << qreg[targets[2]].second << ";\n";
+  of << "teleport " << qubitMap.at(targets[0]).second << ", "
+     << qubitMap.at(targets[1]).second << ", " << qubitMap.at(targets[2]).second
+     << ";\n";
 }
 
 auto StandardOperation::commutesAtQubit(const Operation& other,

@@ -6,7 +6,7 @@
 
 MQT Core is an open-source C++17 and Python library for quantum computing that forms the backbone of the quantum software tools developed as part of the _{doc}`Munich Quantum Toolkit (MQT) <mqt:index>`_ by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/).
 To this end, it consists of multiple components that are used throughout the MQT, including a fully fledged intermediate representation (IR) for quantum computations, a state-of-the-art decision diagram (DD) package for quantum computing, and a state-of-the-art ZX-diagram package for working with the ZX-calculus.
-This documentation provides a comprehensive guide to the MQT Core library, including {doc}`installation instructions <installation>`, a {doc}`quickstart guide <quickstart>`, and detailed {doc}`API documentation <api/mqt/core/index>`.
+This documentation provides a comprehensive guide to the MQT Core library, including {doc}`installation instructions <installation>`, a {doc}`quickstart guide for the MQT Core IR <mqt_core_ir>`, and detailed {doc}`API documentation <api/mqt/core/index>`.
 The source code of MQT Core is publicly available on GitHub at [cda-tum/mqt-core](https://github.com/cda-tum/mqt-core), while pre-built binaries are available via [PyPI](https://pypi.org/project/mqt.core/) for all major operating systems and all modern Python versions.
 MQT Core is fully compatible with Qiskit 1.0 and above.
 
@@ -33,7 +33,7 @@ self
 :caption: User Guide
 
 installation
-quickstart
+mqt_core_ir
 ```
 
 ````{only} not latex

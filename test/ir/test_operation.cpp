@@ -1,10 +1,21 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/AodOperation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/Expression.hpp"
 #include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
 #include "ir/operations/SymbolicOperation.hpp"
 
@@ -208,11 +219,11 @@ TEST(AodOperation, Qasm) {
                               {na::Dimension::X, na::Dimension::Y}, {0.0, 1.0},
                               {1.0, 3.0});
   std::stringstream ss;
-  qc::RegisterNames qreg;
-  qreg.emplace_back("q", "q[0]");
-  qreg.emplace_back("q", "q[1]");
-  qc::RegisterNames const creg{{"c", "c"}};
-  move.dumpOpenQASM(ss, qreg, creg, 0, false);
+  qc::QuantumRegister qreg(0, 2, "q");
+  qc::QubitIndexToRegisterMap qubitToReg{};
+  qubitToReg.try_emplace(0, qreg, qreg.toString(0));
+  qubitToReg.try_emplace(1, qreg, qreg.toString(1));
+  move.dumpOpenQASM(ss, qubitToReg, {}, 0, false);
 
   EXPECT_EQ(ss.str(), "aod_move (0, 0, 1; 1, 1, 3;) q[0], q[1];\n");
 }

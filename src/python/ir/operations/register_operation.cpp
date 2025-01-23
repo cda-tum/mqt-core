@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/operations/Control.hpp"
 #include "ir/operations/Operation.hpp"
 #include "python/pybind11.hpp"
@@ -6,7 +15,7 @@
 
 namespace mqt {
 
-void registerOperation(py::module& m) {
+void registerOperation(const py::module& m) {
   py::class_<qc::Operation>(m, "Operation")
       .def_property_readonly("name", &qc::Operation::getName)
       .def_property("type_", &qc::Operation::getType, &qc::Operation::setGate)

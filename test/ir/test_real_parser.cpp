@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/QuantumComputation.hpp"
@@ -13,7 +22,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-#include <stdexcept>
+// #include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -129,12 +138,14 @@ public:
 
   RealParserTest& withGates(
       const std::initializer_list<std::string_view>& stringifiedGateList) {
-    if (stringifiedGateList.size() == 0)
+    if (stringifiedGateList.size() == 0) {
       return withEmptyGateList();
+    }
 
     realFileContent << realHeaderGateListPrefix;
-    for (const auto& stringifiedGate : stringifiedGateList)
+    for (const auto& stringifiedGate : stringifiedGateList) {
       realFileContent << "\n" << stringifiedGate;
+    }
 
     realFileContent << "\n" << reakHeaderGateListPostfix;
     return *this;
@@ -173,11 +184,13 @@ protected:
       std::string_view elementDelimiter,
       const std::optional<std::string_view>& optionalPostfix) {
     pipedToStream << elementsPrefix;
-    for (const auto& element : elements)
+    for (const auto& element : elements) {
       pipedToStream << elementDelimiter << element;
+    }
 
-    if (optionalPostfix.has_value())
+    if (optionalPostfix.has_value()) {
       pipedToStream << optionalPostfix.value();
+    }
 
     pipedToStream << "\n";
   }
@@ -201,10 +214,12 @@ protected:
   }
 
   static std::string stringifyGateType(const GateType gateType) {
-    if (gateType == GateType::Toffoli)
+    if (gateType == GateType::Toffoli) {
       return "t";
-    if (gateType == GateType::V)
+    }
+    if (gateType == GateType::V) {
       return "v";
+    }
 
     throw std::invalid_argument("Failed to stringify gate type");
   }
@@ -227,22 +242,25 @@ protected:
         << "Gate must have at least one line defined";
 
     std::stringstream stringifiedGateBuffer;
-    if (controlLines.size() == 0 && !optionalNumberOfGateLines.has_value())
+    if (controlLines.size() == 0 && !optionalNumberOfGateLines.has_value()) {
       stringifiedGateBuffer << stringifyGateType(gateType);
-    else
+    } else {
       stringifiedGateBuffer
           << stringifyGateType(gateType)
           << std::to_string(optionalNumberOfGateLines.value_or(
                  controlLines.size() + targetLines.size()));
-
-    for (const auto& controlLine : controlLines)
+    }
+    for (const auto& controlLine : controlLines) {
       stringifiedGateBuffer << " " << controlLine;
+    }
 
-    for (const auto& targetLine : targetLines)
+    for (const auto& targetLine : targetLines) {
       stringifiedGateBuffer << " " << targetLine;
+    }
 
-    if (optionalPostfix.has_value())
+    if (optionalPostfix.has_value()) {
       stringifiedGateBuffer << optionalPostfix.value();
+    }
 
     return stringifiedGateBuffer.str();
   }
@@ -936,9 +954,9 @@ TEST_F(RealParserTest, ConstantValueZero) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(1, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, false));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(true, false));
 
   ASSERT_EQ(
@@ -960,9 +978,9 @@ TEST_F(RealParserTest, ConstantValueOne) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(1, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, false));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, true));
 
   ASSERT_EQ(
@@ -984,9 +1002,9 @@ TEST_F(RealParserTest, GarbageValues) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(1, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, true));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, false));
 
   Permutation expectedOutputPermutation;
@@ -1012,9 +1030,9 @@ TEST_F(RealParserTest, InputIdentDefinitionInQuotes) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, false));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, false));
 
   ASSERT_EQ(
@@ -1036,9 +1054,9 @@ TEST_F(RealParserTest, OutputIdentDefinitionInQuotes) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, false));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, false));
 
   ASSERT_EQ(
@@ -1068,9 +1086,9 @@ TEST_F(RealParserTest,
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, true, false, true));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, false, false, false));
 
   auto expectedOutputPermutation = getIdentityPermutation(4);
@@ -1104,9 +1122,9 @@ TEST_F(RealParserTest,
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, false, true, true));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, false, false, false));
 
   auto expectedOutputPermutation = getIdentityPermutation(4);
@@ -1142,9 +1160,9 @@ TEST_F(RealParserTest, MatchingInputAndOutputNotInQuotes) {
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(2, quantumComputationInstance->getNancillae());
   ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, true, true, false));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(true, false, false, true));
 
   Permutation expectedOutputPermutation;
@@ -1182,9 +1200,9 @@ TEST_F(RealParserTest, MatchingInputAndOutputInQuotes) {
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(2, quantumComputationInstance->getNancillae());
   ASSERT_EQ(1, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(true, false, false, false));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, true, true, false));
 
   Permutation expectedOutputPermutation;
@@ -1222,9 +1240,9 @@ TEST_F(RealParserTest,
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, false, false, false));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, false, false, false));
 
   Permutation expectedOutputPermutation;
@@ -1266,9 +1284,9 @@ TEST_F(RealParserTest, OutputPermutationForGarbageQubitsNotCreated) {
   ASSERT_EQ(4, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(2, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, true, true, false));
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(false, false, false, false));
 
   Permutation expectedOutputPermutation;
@@ -1424,7 +1442,7 @@ TEST_F(RealParserTest, ConstantsDefinitionWithCommentLineAsPostfix) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(1, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(true, false));
 }
 
@@ -1442,7 +1460,7 @@ TEST_F(RealParserTest, ConstantsDefinitionWithWhitespaceAsPostfix) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(1, quantumComputationInstance->getNancillae());
   ASSERT_EQ(0, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->ancillary,
+  ASSERT_THAT(quantumComputationInstance->getAncillary(),
               testing::ElementsAre(true, false));
 }
 
@@ -1483,7 +1501,7 @@ TEST_F(RealParserTest, GarbageDefinitionWithCommentLineAsPostfix) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(1, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(true, false));
 }
 
@@ -1501,7 +1519,7 @@ TEST_F(RealParserTest, GarbageDefinitionWithWhitespaceAsPostfix) {
   ASSERT_EQ(2, quantumComputationInstance->getNqubits());
   ASSERT_EQ(0, quantumComputationInstance->getNancillae());
   ASSERT_EQ(1, quantumComputationInstance->getNgarbageQubits());
-  ASSERT_THAT(quantumComputationInstance->garbage,
+  ASSERT_THAT(quantumComputationInstance->getGarbage(),
               testing::ElementsAre(false, true));
 }
 

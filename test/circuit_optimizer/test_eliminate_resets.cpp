@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "ir/QuantumComputation.hpp"
@@ -22,7 +31,7 @@ TEST(EliminateResets, eliminateResetsBasicTest) {
 
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
@@ -75,10 +84,10 @@ TEST(EliminateResets, eliminateResetsClassicControlled) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.reset(0);
-  qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 0, 0, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
@@ -128,7 +137,7 @@ TEST(EliminateResets, eliminateResetsMultipleTargetReset) {
 
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 
@@ -171,12 +180,12 @@ TEST(EliminateResets, eliminateResetsCompoundOperation) {
   comp.cx(1, 0);
   comp.reset(0);
   comp.measure(0, 0);
-  comp.classicControlled(qc::X, 0, {0, 1U}, 1U);
+  comp.classicControlled(qc::X, 0, 0, 1U);
   qc.emplace_back(comp.asOperation());
 
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::eliminateResets(qc););
 

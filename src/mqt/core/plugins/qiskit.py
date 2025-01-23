@@ -1,12 +1,19 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 """Functionality for interoperability with Qiskit."""
 
 from __future__ import annotations
 
 import re
 import warnings
-from typing import TYPE_CHECKING, List, cast
+from typing import TYPE_CHECKING, cast
 
-from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Instruction, ParameterExpression, Qubit
+from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Qubit
 
 from ..ir import QuantumComputation
 from ..ir.operations import (
@@ -22,7 +29,7 @@ from ..ir.symbolic import Expression, Term, Variable
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from qiskit.circuit import QuantumCircuit
+    from qiskit.circuit import Instruction, ParameterExpression, QuantumCircuit
 
 
 def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
@@ -70,13 +77,21 @@ def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
         )
         qc.global_phase = 0
 
-    for instruction, qargs, cargs in circ.data:
-        symb_params = _emplace_operation(qc, instruction, qargs, cargs, instruction.params, qubit_map, clbit_map)
+    for instruction in circ.data:
+        symb_params = _emplace_operation(
+            qc,
+            instruction.operation,
+            instruction.qubits,
+            instruction.clbits,
+            instruction.operation.params,
+            qubit_map,
+            clbit_map,
+        )
         for symb_param in symb_params:
             qc.add_variable(symb_param)
 
-    # import initial layout and output permutation in case it is available
-    if (hasattr(circ, "layout") and circ.layout is not None) or circ._layout is not None:  # noqa: SLF001
+    # import initial layout and output permutation if available
+    if circ.layout is not None:
         _import_layouts(qc, circ)
 
     qc.initialize_io_mapping()
@@ -272,8 +287,8 @@ def _emplace_operation(
     raise NotImplementedError(msg)
 
 
-_SUM_REGEX = re.compile("[+|-]?[^+-]+")
-_PROD_REGEX = re.compile("[*/]?[^*/]+")
+_SUM_REGEX = re.compile(r"[+|-]?[^+-]+")
+_PROD_REGEX = re.compile(r"[*/]?[^*/]+")
 
 
 def _parse_symbolic_expression(qiskit_expr: ParameterExpression | float) -> float | Expression:
@@ -335,7 +350,7 @@ def _add_operation(
     if any(isinstance(parameter, Expression) for parameter in parameters):
         qc.append(SymbolicOperation(controls, target, type_, parameters))
     else:
-        qc.append(StandardOperation(controls, target, type_, cast(List[float], parameters)))
+        qc.append(StandardOperation(controls, target, type_, cast("list[float]", parameters)))
     return parameters
 
 
@@ -354,7 +369,7 @@ def _add_two_target_operation(
     if any(isinstance(parameter, Expression) for parameter in parameters):
         qc.append(SymbolicOperation(controls, target1, target2, type_, parameters))
     else:
-        qc.append(StandardOperation(controls, target1, target2, type_, cast(List[float], parameters)))
+        qc.append(StandardOperation(controls, target1, target2, type_, cast("list[float]", parameters)))
     return parameters
 
 
@@ -407,15 +422,21 @@ def _import_definition(
     carg_map = dict(zip(circ.clbits, cargs))
 
     qc.append(CompoundOperation())
-    comp_op = cast(CompoundOperation, qc[-1])
+    comp_op = cast("CompoundOperation", qc[-1])
 
     params = []
-    for instruction, q_args, c_args in circ.data:
-        mapped_qargs = [qarg_map[qarg] for qarg in q_args]
-        mapped_cargs = [carg_map[carg] for carg in c_args]
-        instruction_params = instruction.params
+    for instruction in circ.data:
+        mapped_qargs = [qarg_map[qarg] for qarg in instruction.qubits]
+        mapped_cargs = [carg_map[carg] for carg in instruction.clbits]
+        operation = instruction.operation
         new_params = _emplace_operation(
-            comp_op, instruction, mapped_qargs, mapped_cargs, instruction_params, qubit_map, clbit_map
+            comp_op,
+            operation,
+            mapped_qargs,
+            mapped_cargs,
+            operation.params,
+            qubit_map,
+            clbit_map,
         )
         params.extend(new_params)
     return params

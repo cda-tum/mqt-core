@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 """Sphinx configuration file."""
 
 from __future__ import annotations
@@ -112,7 +119,11 @@ class CDAStyle(UnsrtStyle):
     """Custom style for including PDF links."""
 
     def format_url(self, _e: Entry) -> HRef:  # noqa: PLR6301
-        """Format URL field as a link to the PDF."""
+        """Format URL field as a link to the PDF.
+
+        Returns:
+            The formatted URL field.
+        """
         url = field("url", raw=True)
         return href()[url, "[PDF]"]
 

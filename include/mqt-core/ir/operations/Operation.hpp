@@ -1,9 +1,19 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "../Permutation.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "OpType.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 
 #include <algorithm>
 #include <array>
@@ -25,11 +35,14 @@ protected:
   OpType type = None;
   std::string name;
 
-  static bool isWholeQubitRegister(const RegisterNames& reg, std::size_t start,
-                                   std::size_t end) {
-    return !reg.empty() && reg[start].first == reg[end].first &&
-           (start == 0 || reg[start].first != reg[start - 1].first) &&
-           (end == reg.size() - 1 || reg[end].first != reg[end + 1].first);
+  static constexpr size_t OUTPUT_INDENT_SIZE = 2;
+
+  static bool isWholeQubitRegister(const QubitIndexToRegisterMap& regMap,
+                                   const Qubit start, const Qubit end) {
+    const auto& startReg = regMap.at(start).first;
+    const auto& endReg = regMap.at(end).first;
+    return startReg == endReg && startReg.getStartIndex() == start &&
+           endReg.getEndIndex() == end;
   }
 
 public:
@@ -120,11 +133,13 @@ public:
 
   [[nodiscard]] virtual bool isStandardOperation() const { return false; }
 
-  [[nodiscard]] virtual bool isCompoundOperation() const { return false; }
+  [[nodiscard]] virtual bool isCompoundOperation() const noexcept {
+    return false;
+  }
 
   [[nodiscard]] virtual bool isNonUnitaryOperation() const { return false; }
 
-  [[nodiscard]] virtual bool isClassicControlledOperation() const {
+  [[nodiscard]] virtual bool isClassicControlledOperation() const noexcept {
     return false;
   }
 
@@ -167,27 +182,28 @@ public:
                               std::size_t prefixWidth,
                               std::size_t nqubits) const;
 
-  void dumpOpenQASM2(std::ostream& of, const RegisterNames& qreg,
-                     const RegisterNames& creg) const {
-    dumpOpenQASM(of, qreg, creg, 0, false);
+  void dumpOpenQASM2(std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+                     const BitIndexToRegisterMap& bitMap) const {
+    dumpOpenQASM(of, qubitMap, bitMap, 0, false);
   }
-  void dumpOpenQASM3(std::ostream& of, const RegisterNames& qreg,
-                     const RegisterNames& creg) const {
-    dumpOpenQASM(of, qreg, creg, 0, true);
+  void dumpOpenQASM3(std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+                     const BitIndexToRegisterMap& bitMap) const {
+    dumpOpenQASM(of, qubitMap, bitMap, 0, true);
   }
-  virtual void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                            const RegisterNames& creg, size_t indent,
+  virtual void dumpOpenQASM(std::ostream& of,
+                            const QubitIndexToRegisterMap& qubitMap,
+                            const BitIndexToRegisterMap& bitMap, size_t indent,
                             bool openQASM3) const = 0;
 
   /// Checks whether operation commutes with other operation on a given qubit.
-  [[nodiscard]] virtual auto
-  commutesAtQubit(const Operation& /*other*/,
-                  const Qubit& /*qubit*/) const -> bool {
+  [[nodiscard]] virtual auto commutesAtQubit(const Operation& /*other*/,
+                                             const Qubit& /*qubit*/) const
+      -> bool {
     return false;
   }
 
-  [[nodiscard]] virtual auto
-  isInverseOf(const Operation& /*other*/) const -> bool;
+  [[nodiscard]] virtual auto isInverseOf(const Operation& /*other*/) const
+      -> bool;
 
   virtual void invert() = 0;
 
@@ -196,8 +212,7 @@ public:
 };
 } // namespace qc
 
-namespace std {
-template <> struct hash<qc::Operation> {
+template <> struct std::hash<qc::Operation> {
   std::size_t operator()(const qc::Operation& op) const noexcept {
     std::size_t seed = 0U;
     qc::hashCombine(seed, hash<qc::OpType>{}(op.getType()));
@@ -216,4 +231,3 @@ template <> struct hash<qc::Operation> {
     return seed;
   }
 };
-} // namespace std

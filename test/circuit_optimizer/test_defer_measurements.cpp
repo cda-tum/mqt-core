@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "ir/QuantumComputation.hpp"
@@ -25,19 +34,19 @@ TEST(DeferMeasurements, basicTest) {
 
   QuantumComputation qc{};
   qc.addQubitRegister(2);
-  qc.addClassicalRegister(1);
+  const auto& creg = qc.addClassicalRegister(1);
   qc.h(0);
   qc.measure(0, 0U);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, creg, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 3);
@@ -93,16 +102,16 @@ TEST(DeferMeasurements, measurementBetweenMeasurementAndClassic) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.h(0);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 4);
@@ -167,18 +176,18 @@ TEST(DeferMeasurements, twoClassic) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.h(0);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
-  qc.classicControlled(qc::Z, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
+  qc.classicControlled(qc::Z, 1, 0, 1U);
 
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 5);
@@ -250,16 +259,16 @@ TEST(DeferMeasurements, correctOrder) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.h(1);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 4);
@@ -324,17 +333,17 @@ TEST(DeferMeasurements, twoClassicCorrectOrder) {
   qc.h(0);
   qc.measure(0, 0U);
   qc.h(1);
-  qc.classicControlled(qc::X, 1, {0, 1U}, 1U);
-  qc.classicControlled(qc::Z, 1, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 1, 0, 1U);
+  qc.classicControlled(qc::Z, 1, 0, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_NO_THROW(CircuitOptimizer::deferMeasurements(qc););
 
   std::cout << qc << "\n";
 
-  EXPECT_FALSE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_FALSE(qc.isDynamic());
 
   ASSERT_EQ(qc.getNqubits(), 2);
   ASSERT_EQ(qc.getNindividualOps(), 5);
@@ -398,10 +407,39 @@ TEST(DeferMeasurements, errorOnImplicitReset) {
   QuantumComputation qc(1U, 1U);
   qc.h(0);
   qc.measure(0, 0U);
-  qc.classicControlled(qc::X, 0, {0, 1U}, 1U);
+  qc.classicControlled(qc::X, 0, 0, 1U);
   std::cout << qc << "\n";
 
-  EXPECT_TRUE(CircuitOptimizer::isDynamicCircuit(qc));
+  EXPECT_TRUE(qc.isDynamic());
+
+  EXPECT_THROW(CircuitOptimizer::deferMeasurements(qc), qc::QFRException);
+}
+
+TEST(DeferMeasurements, errorOnMultiQubitRegister) {
+  // Input:
+  // i: 0 1 2
+  // 1: x | |
+  // 2: | x |
+  // 3: 0 | |
+  // 4: | 1 |
+  // 5: | | x c[0...1] == 3
+  // o: 0 1 2
+
+  // Expected Output:
+  // Error, since the classic-controlled operation is controlled by a register
+  // of more than one bit.
+
+  QuantumComputation qc{};
+  qc.addQubitRegister(3);
+  const auto& creg = qc.addClassicalRegister(2);
+  qc.x(0);
+  qc.x(1);
+  qc.measure(0, 0U);
+  qc.measure(1, 1U);
+  qc.classicControlled(qc::X, 2, creg, 3U);
+  std::cout << qc << "\n";
+
+  EXPECT_TRUE(qc.isDynamic());
 
   EXPECT_THROW(CircuitOptimizer::deferMeasurements(qc), qc::QFRException);
 }
@@ -421,4 +459,15 @@ TEST(DeferMeasurements, preserveOutputPermutationWithoutMeasurements) {
   EXPECT_EQ(qc.outputPermutation.size(), 1);
   EXPECT_EQ(qc.outputPermutation.at(0), 0);
 }
+
+TEST(DeferMeasurements, isDynamicOnRepeatedMeasurements) {
+  QuantumComputation qc(1, 2);
+  qc.h(0);
+  qc.measure(0, 0);
+  qc.h(0);
+  qc.measure(0, 1);
+
+  EXPECT_TRUE(qc.isDynamic());
+}
+
 } // namespace qc

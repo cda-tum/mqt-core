@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/operations/Expression.hpp"
 
 #include <ostream>
@@ -6,8 +15,7 @@
 namespace sym {
 
 Variable::Variable(const std::string& name) {
-  const auto it = registered.find(name);
-  if (it != registered.end()) {
+  if (const auto it = registered.find(name); it != registered.end()) {
     id = it->second;
   } else {
     registered[name] = nextId;
@@ -17,7 +25,7 @@ Variable::Variable(const std::string& name) {
   }
 }
 
-std::string Variable::getName() const { return names[id]; }
+std::string Variable::getName() const noexcept { return names[id]; }
 
 std::ostream& operator<<(std::ostream& os, const Variable& var) {
   os << var.getName();

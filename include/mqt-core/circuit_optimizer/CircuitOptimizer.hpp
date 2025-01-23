@@ -1,24 +1,36 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 
 #include <cstddef>
+#include <deque>
 #include <memory>
 #include <unordered_set>
+#include <vector>
 
 namespace qc {
 
 class CircuitOptimizer {
-protected:
-  static void addToDag(DAG& dag, std::unique_ptr<Operation>* op);
-  static void addNonStandardOperationToDag(DAG& dag,
-                                           std::unique_ptr<Operation>* op);
-
 public:
   CircuitOptimizer() = default;
+
+  using DAG = std::vector<std::deque<std::unique_ptr<Operation>*>>;
+  using DAGIterator = std::deque<std::unique_ptr<Operation>*>::iterator;
+  using DAGReverseIterator =
+      std::deque<std::unique_ptr<Operation>*>::reverse_iterator;
+  using DAGIterators = std::vector<DAGIterator>;
+  using DAGReverseIterators = std::vector<DAGReverseIterator>;
 
   static DAG constructDAG(QuantumComputation& qc);
   static void printDAG(const DAG& dag);
@@ -30,7 +42,7 @@ public:
 
   static void removeIdentities(QuantumComputation& qc);
 
-  static void removeOperation(qc::QuantumComputation& qc,
+  static void removeOperation(QuantumComputation& qc,
                               const std::unordered_set<OpType>& opTypes,
                               size_t opSize);
 
@@ -47,8 +59,6 @@ public:
 
   static void deferMeasurements(QuantumComputation& qc);
 
-  static bool isDynamicCircuit(QuantumComputation& qc);
-
   static void flattenOperations(QuantumComputation& qc,
                                 bool customGatesOnly = false);
 
@@ -59,7 +69,7 @@ public:
    * target qubit) in the given circuit.
    * @param qc the quantum circuit
    */
-  static void replaceMCXWithMCZ(qc::QuantumComputation& qc);
+  static void replaceMCXWithMCZ(QuantumComputation& qc);
 
   /**
    * @brief Backpropagates the output permutation through the circuit.

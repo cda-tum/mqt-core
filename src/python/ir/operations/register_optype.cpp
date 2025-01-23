@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/operations/OpType.hpp"
 #include "python/pybind11.hpp"
 
@@ -5,7 +14,7 @@
 
 namespace mqt {
 
-void registerOptype(py::module& m) {
+void registerOptype(const py::module& m) {
   py::enum_<qc::OpType>(m, "OpType")
       .value("none", qc::OpType::None)
       .value("gphase", qc::OpType::GPhase)

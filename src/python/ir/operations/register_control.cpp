@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/operations/Control.hpp"
 #include "python/pybind11.hpp"
@@ -6,7 +15,7 @@
 
 namespace mqt {
 
-void registerControl(py::module& m) {
+void registerControl(const py::module& m) {
 
   auto control = py::class_<qc::Control>(m, "Control");
   auto controlType = py::enum_<qc::Control::Type>(control, "Type");

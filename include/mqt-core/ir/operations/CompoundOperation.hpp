@@ -1,9 +1,19 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "../Permutation.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "Operation.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -16,9 +26,9 @@ namespace qc {
 
 class CompoundOperation final : public Operation {
 public:
-  using iterator = typename std::vector<std::unique_ptr<Operation>>::iterator;
+  using iterator = std::vector<std::unique_ptr<Operation>>::iterator;
   using const_iterator =
-      typename std::vector<std::unique_ptr<Operation>>::const_iterator;
+      std::vector<std::unique_ptr<Operation>>::const_iterator;
 
 private:
   std::vector<std::unique_ptr<Operation>> ops;
@@ -37,13 +47,13 @@ public:
 
   [[nodiscard]] std::unique_ptr<Operation> clone() const override;
 
-  [[nodiscard]] bool isCompoundOperation() const override;
+  [[nodiscard]] bool isCompoundOperation() const noexcept override;
 
   [[nodiscard]] bool isNonUnitaryOperation() const override;
 
   [[nodiscard]] bool isSymbolicOperation() const override;
 
-  [[nodiscard]] bool isCustomGate() const;
+  [[nodiscard]] bool isCustomGate() const noexcept;
 
   void addControl(Control c) override;
 
@@ -65,11 +75,11 @@ public:
 
   void addDepthContribution(std::vector<std::size_t>& depths) const override;
 
-  void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, size_t indent,
+  void dumpOpenQASM(std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+                    const BitIndexToRegisterMap& bitMap, std::size_t indent,
                     bool openQASM3) const override;
 
-  std::vector<std::unique_ptr<Operation>>& getOps() { return ops; }
+  std::vector<std::unique_ptr<Operation>>& getOps() noexcept { return ops; }
 
   [[nodiscard]] auto getUsedQubitsPermuted(const Permutation& perm) const
       -> std::set<Qubit> override;
@@ -136,7 +146,7 @@ public:
   [[nodiscard]] std::size_t max_size() const noexcept { return ops.max_size(); }
   [[nodiscard]] std::size_t capacity() const noexcept { return ops.capacity(); }
 
-  void reserve(std::size_t newCap) { ops.reserve(newCap); }
+  void reserve(const std::size_t newCap) { ops.reserve(newCap); }
   // NOLINTNEXTLINE(readability-identifier-naming)
   void shrink_to_fit() { ops.shrink_to_fit(); }
 
@@ -144,9 +154,9 @@ public:
   void clear() noexcept { ops.clear(); }
   // NOLINTNEXTLINE(readability-identifier-naming)
   void pop_back() { ops.pop_back(); }
-  void resize(std::size_t count) { ops.resize(count); }
-  iterator erase(const_iterator pos) { return ops.erase(pos); }
-  iterator erase(const_iterator first, const_iterator last) {
+  void resize(const std::size_t count) { ops.resize(count); }
+  iterator erase(const const_iterator pos) { return ops.erase(pos); }
+  iterator erase(const const_iterator first, const const_iterator last) {
     return ops.erase(first, last);
   }
 
@@ -177,12 +187,10 @@ public:
     return ops.insert(iter, std::forward<decltype(op)>(op));
   }
 
-  [[nodiscard]] const auto& at(std::size_t i) const { return ops.at(i); }
+  [[nodiscard]] const auto& at(const std::size_t i) const { return ops.at(i); }
 };
 } // namespace qc
 
-namespace std {
-template <> struct hash<qc::CompoundOperation> {
+template <> struct std::hash<qc::CompoundOperation> {
   std::size_t operator()(const qc::CompoundOperation& co) const noexcept;
-};
-} // namespace std
+}; // namespace std

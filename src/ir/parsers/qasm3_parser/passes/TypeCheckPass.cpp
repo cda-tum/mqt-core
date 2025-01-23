@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/parsers/qasm3_parser/passes/TypeCheckPass.hpp"
 
 #include "ir/parsers/qasm3_parser/Exception.hpp"
@@ -8,13 +17,25 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <memory>
 #include <sstream>
+#include <string>
 
 namespace qasm3::type_checking {
 
+InferredType TypeCheckPass::error(const std::string& msg,
+                                  const std::shared_ptr<DebugInfo>& debugInfo) {
+  std::cerr << "Type check error: " << msg << '\n';
+  if (debugInfo) {
+    std::cerr << "  " << debugInfo->toString() << '\n';
+  }
+  hasError = true;
+  return InferredType::error();
+}
+
 void TypeCheckPass::visitGateStatement(
-    std::shared_ptr<GateDeclaration> gateStatement) {
+    const std::shared_ptr<GateDeclaration> gateStatement) {
   // we save the current environment to restore it afterward
   const auto oldEnv = env;
 
@@ -41,7 +62,7 @@ void TypeCheckPass::visitVersionDeclaration(
     std::shared_ptr<VersionDeclaration> /*versionDeclaration*/) {}
 
 void TypeCheckPass::visitDeclarationStatement(
-    std::shared_ptr<DeclarationStatement> declarationStatement) {
+    const std::shared_ptr<DeclarationStatement> declarationStatement) {
   // Type checking declarations is a bit involved. If the type contains a
   // designator expression, we need to resolve the statement in three steps.
   const auto typeExpr = std::get<0>(declarationStatement->type);
@@ -86,14 +107,14 @@ void TypeCheckPass::visitOutputPermutation(
     std::shared_ptr<OutputPermutation> /*outputPermutation*/) {}
 
 void TypeCheckPass::visitGateCallStatement(
-    std::shared_ptr<GateCallStatement> gateCallStatement) {
+    const std::shared_ptr<GateCallStatement> gateCallStatement) {
   for (const auto& arg : gateCallStatement->arguments) {
     visit(arg);
   }
 }
 
 void TypeCheckPass::visitAssignmentStatement(
-    std::shared_ptr<AssignmentStatement> assignmentStatement) {
+    const std::shared_ptr<AssignmentStatement> assignmentStatement) {
   if (assignmentStatement->indexExpression != nullptr) {
     auto indexTy = visit(assignmentStatement->indexExpression);
     if (!indexTy.isError && !indexTy.type->isUint()) {
@@ -125,7 +146,7 @@ void TypeCheckPass::visitAssignmentStatement(
 }
 
 void TypeCheckPass::visitBarrierStatement(
-    std::shared_ptr<BarrierStatement> barrierStatement) {
+    const std::shared_ptr<BarrierStatement> barrierStatement) {
   for (auto& gate : barrierStatement->gates) {
     if (!gate->expression) {
       continue;
@@ -135,12 +156,12 @@ void TypeCheckPass::visitBarrierStatement(
 }
 
 void TypeCheckPass::visitResetStatement(
-    std::shared_ptr<ResetStatement> resetStatement) {
+    const std::shared_ptr<ResetStatement> resetStatement) {
   checkGateOperand(*resetStatement->gate);
 }
 
 InferredType TypeCheckPass::visitBinaryExpression(
-    std::shared_ptr<BinaryExpression> binaryExpression) {
+    const std::shared_ptr<BinaryExpression> binaryExpression) {
   auto lhs = visit(binaryExpression->lhs);
   auto rhs = visit(binaryExpression->rhs);
   if (rhs.isError) {
@@ -212,7 +233,7 @@ InferredType TypeCheckPass::visitBinaryExpression(
 }
 
 InferredType TypeCheckPass::visitUnaryExpression(
-    std::shared_ptr<UnaryExpression> unaryExpression) {
+    const std::shared_ptr<UnaryExpression> unaryExpression) {
   auto type = visit(unaryExpression->operand);
 
   switch (unaryExpression->op) {
@@ -243,8 +264,8 @@ InferredType TypeCheckPass::visitUnaryExpression(
   return type;
 }
 
-InferredType
-TypeCheckPass::visitConstantExpression(std::shared_ptr<Constant> constant) {
+InferredType TypeCheckPass::visitConstantExpression(
+    const std::shared_ptr<Constant> constant) {
   if (constant->isFP()) {
     return InferredType{std::dynamic_pointer_cast<ResolvedType>(
         DesignatedType<uint64_t>::getFloatTy(64))};
@@ -271,7 +292,7 @@ TypeCheckPass::visitConstantExpression(std::shared_ptr<Constant> constant) {
 }
 
 InferredType TypeCheckPass::visitIdentifierExpression(
-    std::shared_ptr<IdentifierExpression> identifierExpression) {
+    const std::shared_ptr<IdentifierExpression> identifierExpression) {
   const auto type = env.find(identifierExpression->identifier);
   if (type == env.end()) {
     error("Unknown identifier '" + identifierExpression->identifier + "'.");
@@ -286,7 +307,7 @@ InferredType TypeCheckPass::visitIdentifierExpression(
 }
 
 InferredType TypeCheckPass::visitMeasureExpression(
-    std::shared_ptr<MeasureExpression> measureExpression) {
+    const std::shared_ptr<MeasureExpression> measureExpression) {
   size_t width = 1;
   if (measureExpression->gate->expression != nullptr) {
     visit(measureExpression->gate->expression);
@@ -304,7 +325,8 @@ InferredType TypeCheckPass::visitMeasureExpression(
       DesignatedType<uint64_t>::getBitTy(width))};
 }
 
-void TypeCheckPass::visitIfStatement(std::shared_ptr<IfStatement> ifStatement) {
+void TypeCheckPass::visitIfStatement(
+    const std::shared_ptr<IfStatement> ifStatement) {
   // We support ifs on bits and bools
   const auto ty = visit(ifStatement->condition);
   if (!ty.isError && !ty.type->isBool()) {

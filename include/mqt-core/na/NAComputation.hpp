@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "NADefinitions.hpp"
@@ -62,16 +71,16 @@ public:
     }
   }
   [[nodiscard]] auto size() const -> std::size_t { return operations.size(); }
-  [[nodiscard]] auto
-  getInitialPositions() const -> const std::vector<std::shared_ptr<Point>>& {
+  [[nodiscard]] auto getInitialPositions() const
+      -> const std::vector<std::shared_ptr<Point>>& {
     return initialPositions;
   }
   auto emplaceInitialPosition(std::shared_ptr<Point> p) -> void {
     initialPositions.emplace_back(std::move(p));
   }
   [[nodiscard]] auto toString() const -> std::string;
-  friend auto operator<<(std::ostream& os,
-                         const NAComputation& qc) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const NAComputation& qc)
+      -> std::ostream& {
     return os << qc.toString();
   }
   // Iterators (pass-through)

@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # set common compiler options for projects
 function(enable_project_options target_name)
   include(CheckCXXCompilerFlag)
@@ -53,10 +60,6 @@ function(enable_project_options target_name)
 
   option(BINDINGS "Configure for building Python bindings")
   if(BINDINGS)
-    check_cxx_compiler_flag(-fvisibility=hidden HAS_VISIBILITY_HIDDEN)
-    if(HAS_VISIBILITY_HIDDEN)
-      target_compile_options(${target_name} INTERFACE -fvisibility=hidden)
-    endif()
     include(CheckPIESupported)
     check_pie_supported()
     set_target_properties(${target_name} PROPERTIES INTERFACE_POSITION_INDEPENDENT_CODE ON)

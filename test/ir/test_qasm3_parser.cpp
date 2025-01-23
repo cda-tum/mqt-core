@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/ClassicControlledOperation.hpp"
@@ -754,6 +763,34 @@ TEST_F(Qasm3ParserTest, ImportMQTBenchCircuit) {
   EXPECT_EQ(out, expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportMSGate) {
+  const std::string testfile = "OPENQASM 3.0;"
+                               "qubit[3] q;"
+                               "bit[3] c;"
+                               "gate ms(p0) q0, q1, q2 {"
+                               "  rxx(p0) q0, q1;"
+                               "  rxx(p0) q0, q2;"
+                               "  rxx(p0) q1, q2;"
+                               "}"
+                               "ms(0.844396) q[0], q[1], q[2];"
+                               "c = measure q;";
+
+  auto qc = QuantumComputation::fromQASM(testfile);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0 1 2\n"
+                               "// o 0 1 2\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[3] q;\n"
+                               "bit[3] c;\n"
+                               "rxx(0.844396) q[0], q[1];\n"
+                               "rxx(0.844396) q[0], q[2];\n"
+                               "rxx(0.844396) q[1], q[2];\n"
+                               "c = measure q;\n";
+  EXPECT_EQ(out, expected);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasm2CPrefixInvalidGate) {
   const std::string testfile = "OPENQASM 2.0;\n"
                                "qubit[5] q;\n"
@@ -1322,7 +1359,7 @@ TEST_F(Qasm3ParserTest, ImportQasmGateExpectStatement) {
         try {
           const auto qc = QuantumComputation::fromQASM(testfile);
         } catch (const qasm3::CompilerError& e) {
-          EXPECT_EQ(e.message, "Expected statement, got '+'.");
+          EXPECT_EQ(e.message, "Expected quantum statement, got '+'.");
           throw;
         }
       },
@@ -1518,6 +1555,25 @@ TEST_F(Qasm3ParserTest, ImportQasmNegativeTypeDesignator) {
       qasm3::CompilerError);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasmRegisterDeclarationInDefinition) {
+  const std::string testfile = "qubit[1] q;"
+                               "gate test a {"
+                               "qubit[2] crash;"
+                               "x a;}"
+                               "test q[0];";
+
+  EXPECT_THROW(
+      {
+        try {
+          const auto qc = QuantumComputation::fromQASM(testfile);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Expected quantum statement, got 'qubit'.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
 TEST_F(Qasm3ParserTest, TestPrintTokens) {
   // This test is to print all tokens and make the coverage report happy.
   const auto tokens = std::vector{
@@ -1625,12 +1681,6 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
       qasm3::Token(qasm3::Token::Kind::RightShift, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Imag, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Underscore, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::TimeUnitDt, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::TimeUnitNs, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::TimeUnitUs, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::TimeUnitMys, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::TimeUnitMs, 0, 0),
-      qasm3::Token(qasm3::Token::Kind::S, 0, 0),
       qasm3::Token(qasm3::Token::Kind::DoubleQuote, 0, 0),
       qasm3::Token(qasm3::Token::Kind::SingleQuote, 0, 0),
       qasm3::Token(qasm3::Token::Kind::BackSlash, 0, 0),
@@ -1639,6 +1689,7 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
       qasm3::Token(qasm3::Token::Kind::StringLiteral, 0, 0, "hello, world"),
       qasm3::Token(qasm3::Token::Kind::IntegerLiteral, 0, 0),
       qasm3::Token(qasm3::Token::Kind::FloatLiteral, 0, 0),
+      qasm3::Token(qasm3::Token::Kind::TimingLiteral, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Sin, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Cos, 0, 0),
       qasm3::Token(qasm3::Token::Kind::Tan, 0, 0),
@@ -1762,12 +1813,6 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
       ">>\n"
       "imag\n"
       "underscore\n"
-      "dt\n"
-      "ns\n"
-      "us\n"
-      "mys\n"
-      "ms\n"
-      "s\n"
       "\"\n"
       "'\n"
       "\\\n"
@@ -1777,6 +1822,7 @@ TEST_F(Qasm3ParserTest, TestPrintTokens) {
       "StringLiteral (\"hello, world\")\n"
       "IntegerLiteral (0)\n"
       "FloatLiteral (0)\n"
+      "TimingLiteral (0 [s])\n"
       "sin\n"
       "cos\n"
       "tan\n"
@@ -2148,4 +2194,59 @@ TEST_F(Qasm3ParserTest, TestConstEval) {
     EXPECT_TRUE(result.has_value());
     EXPECT_EQ(result, expected);
   }
+}
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralSeconds) {
+  qasm3::Scanner scanner(new std::istringstream("1.0s"));
+  const auto token = scanner.next();
+  EXPECT_EQ(token.kind, qasm3::Token::Kind::TimingLiteral);
+  EXPECT_DOUBLE_EQ(token.valReal, 1.0);
+}
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralMilliseconds) {
+  qasm3::Scanner scanner(new std::istringstream("1.0ms"));
+  const auto token = scanner.next();
+  EXPECT_EQ(token.kind, qasm3::Token::Kind::TimingLiteral);
+  EXPECT_DOUBLE_EQ(token.valReal, 1.0e-3);
+}
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralMicroseconds) {
+  qasm3::Scanner scanner(new std::istringstream("1.0us"));
+  const auto token = scanner.next();
+  EXPECT_EQ(token.kind, qasm3::Token::Kind::TimingLiteral);
+  EXPECT_DOUBLE_EQ(token.valReal, 1.0e-6);
+}
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralNanoseconds) {
+  qasm3::Scanner scanner(new std::istringstream("1.0ns"));
+  const auto token = scanner.next();
+  EXPECT_EQ(token.kind, qasm3::Token::Kind::TimingLiteral);
+  EXPECT_DOUBLE_EQ(token.valReal, 1.0e-9);
+}
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralPicoseconds) {
+  qasm3::Scanner scanner(new std::istringstream("1.0ps"));
+  const auto token = scanner.next();
+  EXPECT_EQ(token.kind, qasm3::Token::Kind::TimingLiteral);
+  EXPECT_DOUBLE_EQ(token.valReal, 1.0e-12);
+}
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralDoubleSuffix) {
+  qasm3::Scanner scanner(new std::istringstream("1.0dt"));
+  const auto token = scanner.next();
+  EXPECT_EQ(token.kind, qasm3::Token::Kind::TimingLiteral);
+  EXPECT_DOUBLE_EQ(token.valReal, 1.0);
+}
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralInvalidSuffix) {
+  qasm3::Scanner scanner(new std::istringstream("1.0xs"));
+  const auto token = scanner.next();
+  EXPECT_NE(token.kind, qasm3::Token::Kind::TimingLiteral);
+}
+
+TEST_F(Qasm3ParserTest, TokenKindTimingLiteralMicrosecondsInteger) {
+  qasm3::Scanner scanner(new std::istringstream("1us"));
+  const auto token = scanner.next();
+  EXPECT_EQ(token.kind, qasm3::Token::Kind::TimingLiteral);
+  EXPECT_DOUBLE_EQ(token.valReal, 1.0e-6);
 }

@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Token.hpp"
@@ -31,6 +40,8 @@ class Scanner {
   [[nodiscard]] static bool isHex(const char c) {
     return isNum(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
   }
+
+  [[nodiscard]] static bool hasTimingSuffix(char first, char second);
 
   static char readUtf8Codepoint(std::istream* in);
 

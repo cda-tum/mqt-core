@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 #
 # This file is part of the MQT CORE library released under the MIT license. See README.md or go to
 # https://github.com/cda-tum/mqt-core for more information.

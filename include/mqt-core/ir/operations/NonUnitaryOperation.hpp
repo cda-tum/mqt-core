@@ -1,10 +1,20 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
-#include "../Permutation.hpp"
 #include "Control.hpp"
 #include "Definitions.hpp"
 #include "OpType.hpp"
 #include "Operation.hpp"
+#include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -16,16 +26,6 @@
 namespace qc {
 
 class NonUnitaryOperation final : public Operation {
-protected:
-  std::vector<Bit> classics; // vector for the classical bits to measure into
-
-  static void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
-                               const std::vector<Bit>& c,
-                               const Permutation& permutation,
-                               std::size_t nqubits);
-  void printReset(std::ostream& os, const std::vector<Qubit>& q,
-                  const Permutation& permutation, std::size_t nqubits) const;
-
 public:
   // Measurement constructor
   NonUnitaryOperation(std::vector<Qubit> qubitRegister,
@@ -75,8 +75,8 @@ public:
                       std::size_t prefixWidth,
                       std::size_t nqubits) const override;
 
-  void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, size_t indent,
+  void dumpOpenQASM(std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+                    const BitIndexToRegisterMap& bitMap, std::size_t indent,
                     bool openQASM3) const override;
 
   void invert() override {
@@ -84,11 +84,20 @@ public:
   }
 
   void apply(const Permutation& permutation) override;
+
+protected:
+  std::vector<Bit> classics; // vector for the classical bits to measure into
+
+  static void printMeasurement(std::ostream& os, const std::vector<Qubit>& q,
+                               const std::vector<Bit>& c,
+                               const Permutation& permutation,
+                               std::size_t nqubits);
+  void printReset(std::ostream& os, const std::vector<Qubit>& q,
+                  const Permutation& permutation, std::size_t nqubits) const;
 };
 } // namespace qc
 
-namespace std {
-template <> struct hash<qc::NonUnitaryOperation> {
+template <> struct std::hash<qc::NonUnitaryOperation> {
   std::size_t operator()(qc::NonUnitaryOperation const& op) const noexcept {
     std::size_t seed = 0U;
     qc::hashCombine(seed, op.getType());
@@ -101,4 +110,3 @@ template <> struct hash<qc::NonUnitaryOperation> {
     return seed;
   }
 };
-} // namespace std

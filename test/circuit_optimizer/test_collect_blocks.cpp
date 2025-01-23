@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "ir/QuantumComputation.hpp"
 
@@ -45,7 +54,7 @@ TEST(CollectBlocks, mergeBlocks) {
   std::cout << qc << "\n";
   EXPECT_EQ(qc.size(), 1);
   EXPECT_TRUE(qc.front()->isCompoundOperation());
-  EXPECT_EQ(dynamic_cast<qc::CompoundOperation*>(qc.front().get())->size(), 3);
+  EXPECT_EQ(dynamic_cast<qc::CompoundOperation&>(*qc.front()).size(), 3);
 }
 
 TEST(CollectBlocks, mergeBlocks2) {
@@ -60,7 +69,7 @@ TEST(CollectBlocks, mergeBlocks2) {
   std::cout << qc << "\n";
   EXPECT_EQ(qc.size(), 1);
   EXPECT_TRUE(qc.front()->isCompoundOperation());
-  EXPECT_EQ(dynamic_cast<qc::CompoundOperation*>(qc.front().get())->size(), 5);
+  EXPECT_EQ(dynamic_cast<qc::CompoundOperation&>(*qc.front()).size(), 5);
 }
 
 TEST(CollectBlocks, addToMultiQubitBlock) {
@@ -72,7 +81,7 @@ TEST(CollectBlocks, addToMultiQubitBlock) {
   std::cout << qc << "\n";
   EXPECT_EQ(qc.size(), 1);
   EXPECT_TRUE(qc.front()->isCompoundOperation());
-  EXPECT_EQ(dynamic_cast<qc::CompoundOperation*>(qc.front().get())->size(), 2);
+  EXPECT_EQ(dynamic_cast<qc::CompoundOperation&>(*qc.front()).size(), 2);
 }
 
 TEST(CollectBlocks, gateTooBig) {

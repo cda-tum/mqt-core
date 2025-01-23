@@ -1,3 +1,10 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # Declare all external dependencies and make sure that they are available.
 
 include(FetchContent)
@@ -17,7 +24,7 @@ if(BUILD_MQT_CORE_BINDINGS)
   message(STATUS "Python executable: ${Python_EXECUTABLE}")
 
   # add pybind11 library
-  find_package(pybind11 2.13 CONFIG REQUIRED)
+  find_package(pybind11 2.13.5 CONFIG REQUIRED)
 endif()
 
 set(JSON_VERSION

@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "InstVisitor.hpp"
@@ -39,7 +48,7 @@ public:
   virtual bool isUint() { return false; }
   virtual bool isBit() { return false; }
 
-  virtual bool fits(const Type<T>& other) { return *this == other; }
+  virtual bool fits(const Type& other) { return *this == other; }
 
   virtual std::string toString() = 0;
 };
@@ -53,7 +62,7 @@ enum DesignatedTy : uint8_t {
   Angle,
 };
 
-template <typename T> class DesignatedType : public Type<T> {
+template <typename T> class DesignatedType final : public Type<T> {
 public:
   ~DesignatedType() override = default;
 
@@ -137,7 +146,7 @@ public:
 
 enum UnsizedTy : uint8_t { Bool, Duration };
 
-template <typename T> class UnsizedType : public Type<T> {
+template <typename T> class UnsizedType final : public Type<T> {
 public:
   ~UnsizedType() override = default;
 
@@ -181,7 +190,7 @@ public:
   }
 };
 
-template <typename T> class ArrayType : public Type<T> {
+template <typename T> class ArrayType final : public Type<T> {
 public:
   std::shared_ptr<Type<T>> type;
   T size;

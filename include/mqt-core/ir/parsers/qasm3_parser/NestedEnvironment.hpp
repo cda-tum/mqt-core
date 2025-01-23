@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include <map>
@@ -6,13 +15,12 @@
 #include <vector>
 
 template <typename T> class NestedEnvironment {
-private:
   std::vector<std::map<std::string, T>> env{};
 
 public:
-  NestedEnvironment() { env.push_back({}); };
+  NestedEnvironment() { env.emplace_back(); };
 
-  void push() { env.push_back({}); }
+  void push() { env.emplace_back(); }
 
   void pop() { env.pop_back(); }
 

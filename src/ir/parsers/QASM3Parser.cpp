@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/QuantumComputation.hpp"
@@ -99,17 +108,17 @@ class OpenQasm3Parser final : public InstVisitor {
     if (indexExpr != nullptr) {
       const auto result = evaluatePositiveConstant(indexExpr, debugInfo);
 
-      if (result >= qubit.second) {
+      if (result >= qubit.getSize()) {
         error("Index expression must be smaller than the width of the "
               "quantum register.",
               debugInfo);
       }
-      qubit.first += static_cast<qc::Qubit>(result);
-      qubit.second = 1;
+      qubit.getStartIndex() += static_cast<qc::Qubit>(result);
+      qubit.getSize() = 1;
     }
 
-    for (uint64_t i = 0; i < qubit.second; ++i) {
-      qubits.emplace_back(static_cast<qc::Qubit>(qubit.first + i));
+    for (uint64_t i = 0; i < qubit.getSize(); ++i) {
+      qubits.emplace_back(static_cast<qc::Qubit>(qubit.getStartIndex() + i));
     }
   }
 
@@ -117,26 +126,26 @@ class OpenQasm3Parser final : public InstVisitor {
                            const std::shared_ptr<Expression>& indexExpr,
                            std::vector<qc::Bit>& bits,
                            const std::shared_ptr<DebugInfo>& debugInfo) const {
-    const auto iter = qc->getCregs().find(bitIdentifier);
-    if (iter == qc->getCregs().end()) {
+    const auto iter = qc->getClassicalRegisters().find(bitIdentifier);
+    if (iter == qc->getClassicalRegisters().end()) {
       error("Usage of unknown classical register.", debugInfo);
     }
     auto creg = iter->second;
 
     if (indexExpr != nullptr) {
       const auto index = evaluatePositiveConstant(indexExpr, debugInfo);
-      if (index >= creg.second) {
+      if (index >= creg.getSize()) {
         error("Index expression must be smaller than the width of the "
               "classical register.",
               debugInfo);
       }
 
-      creg.first += index;
-      creg.second = 1;
+      creg.getStartIndex() += index;
+      creg.getSize() = 1;
     }
 
-    for (uint64_t i = 0; i < creg.second; ++i) {
-      bits.emplace_back(creg.first + i);
+    for (uint64_t i = 0; i < creg.getSize(); ++i) {
+      bits.emplace_back(creg.getStartIndex() + i);
     }
   }
 
@@ -356,8 +365,7 @@ public:
 
   void visitGateCallStatement(
       const std::shared_ptr<GateCallStatement> gateCallStatement) override {
-    auto qregs = qc->getQregs();
-
+    const auto& qregs = qc->getQuantumRegisters();
     if (auto op = evaluateGateCall(
             gateCallStatement, gateCallStatement->identifier,
             gateCallStatement->arguments, gateCallStatement->operands, qregs);
@@ -639,9 +647,8 @@ public:
       auto nestedQubits = qc::QuantumRegisterMap{};
       size_t index = 0;
       for (const auto& qubitIdentifier : compoundGate->targetNames) {
-        auto qubit = std::pair{targetBits[index], 1};
-
-        nestedQubits.emplace(qubitIdentifier, qubit);
+        nestedQubits.try_emplace(qubitIdentifier, targetBits[index], 1,
+                                 qubitIdentifier);
         index++;
       }
 
@@ -716,8 +723,8 @@ public:
 
     std::vector<qc::Qubit> qubits{};
     std::vector<qc::Bit> bits{};
-    translateGateOperand(measureExpression->gate, qubits, qc->getQregs(),
-                         debugInfo);
+    translateGateOperand(measureExpression->gate, qubits,
+                         qc->getQuantumRegisters(), debugInfo);
     translateBitOperand(identifier, indexExpression, bits, debugInfo);
 
     if (qubits.size() != bits.size()) {
@@ -736,12 +743,12 @@ public:
 
   void visitBarrierStatement(
       const std::shared_ptr<BarrierStatement> barrierStatement) override {
-    qc->emplace_back(getBarrierOp(barrierStatement, qc->getQregs()));
+    qc->emplace_back(getBarrierOp(barrierStatement, qc->getQuantumRegisters()));
   }
 
   void
   visitResetStatement(std::shared_ptr<ResetStatement> resetStatement) override {
-    qc->emplace_back(getResetOp(resetStatement, qc->getQregs()));
+    qc->emplace_back(getResetOp(resetStatement, qc->getQuantumRegisters()));
   }
 
   void visitIfStatement(std::shared_ptr<IfStatement> ifStatement) override {
@@ -771,8 +778,8 @@ public:
       error("Can only compare to constants.", ifStatement->debugInfo);
     }
 
-    const auto creg = qc->getCregs().find(lhs->identifier);
-    if (creg == qc->getCregs().end()) {
+    const auto creg = qc->getClassicalRegisters().find(lhs->identifier);
+    if (creg == qc->getClassicalRegisters().end()) {
       error("Usage of unknown or invalid identifier '" + lhs->identifier +
                 "' in condition.",
             ifStatement->debugInfo);
@@ -803,7 +810,7 @@ public:
         error("Only quantum statements are supported in blocks.",
               statement->debugInfo);
       }
-      const auto& qregs = qc->getQregs();
+      const auto& qregs = qc->getQuantumRegisters();
 
       auto op =
           evaluateGateCall(gateCall, gateCall->identifier, gateCall->arguments,

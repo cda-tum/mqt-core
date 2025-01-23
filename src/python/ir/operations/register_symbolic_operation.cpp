@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "Definitions.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/Expression.hpp"
@@ -10,7 +19,7 @@
 
 namespace mqt {
 
-void registerSymbolicOperation(py::module& m) {
+void registerSymbolicOperation(const py::module& m) {
   py::class_<qc::SymbolicOperation, qc::StandardOperation>(
       m, "SymbolicOperation",
       "Class representing a symbolic operation."

@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
@@ -82,7 +91,7 @@ TEST(RemoveOperation, removeGateInCompoundOperation) {
   qc.print(std::cout);
   EXPECT_EQ(qc.getNops(), 1);
   EXPECT_EQ(qc.front()->getType(), Compound);
-  auto* compoundOp = dynamic_cast<CompoundOperation*>(qc.front().get());
-  EXPECT_EQ(compoundOp->size(), 2);
+  const auto& compoundOp = dynamic_cast<const CompoundOperation&>(*qc.front());
+  EXPECT_EQ(compoundOp.size(), 2);
 }
 } // namespace qc

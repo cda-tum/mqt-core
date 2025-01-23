@@ -1,10 +1,19 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
 
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
+#include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -13,7 +22,6 @@
 namespace qasm3 {
 
 struct Token {
-public:
   enum class Kind : uint8_t {
     None,
 
@@ -142,14 +150,6 @@ public:
 
     Underscore,
 
-    TimeUnitDt,
-    TimeUnitNs,
-    TimeUnitUs,
-    TimeUnitMys,
-    TimeUnitMs,
-    // might be either TimeUnitS or the `s` gate
-    S,
-
     DoubleQuote,
     SingleQuote,
     BackSlash,
@@ -160,6 +160,7 @@ public:
     StringLiteral,
     IntegerLiteral,
     FloatLiteral,
+    TimingLiteral,
 
     Sin,
     Cos,
@@ -401,18 +402,6 @@ public:
       return "imag";
     case Kind::Underscore:
       return "underscore";
-    case Kind::TimeUnitDt:
-      return "dt";
-    case Kind::TimeUnitNs:
-      return "ns";
-    case Kind::TimeUnitUs:
-      return "us";
-    case Kind::TimeUnitMys:
-      return "mys";
-    case Kind::TimeUnitMs:
-      return "ms";
-    case Kind::S:
-      return "s";
     case Kind::DoubleQuote:
       return "\"";
     case Kind::SingleQuote:
@@ -429,6 +418,8 @@ public:
       return "IntegerLiteral";
     case Kind::FloatLiteral:
       return "FloatLiteral";
+    case Kind::TimingLiteral:
+      return "TimingLiteral";
     case Kind::Sin:
       return "sin";
     case Kind::Cos:
@@ -472,6 +463,9 @@ public:
       break;
     case Kind::FloatLiteral:
       ss << " (" << valReal << ")";
+      break;
+    case Kind::TimingLiteral:
+      ss << " (" << valReal << " [s])";
       break;
     default:
       break;

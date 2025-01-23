@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "datastructures/Layer.hpp"
 
 #include "Definitions.hpp"
@@ -13,8 +22,8 @@
 
 namespace qc {
 
-auto Layer::constructDAG(const QuantumComputation& qc,
-                         const bool commutable) -> void {
+auto Layer::constructDAG(const QuantumComputation& qc, const bool commutable)
+    -> void {
   const auto nQubits = qc.getNqubits();
   // For a pair of self-canceling operations like two consecutive X operations
   // or RY rotations with opposite angles the first operations is a

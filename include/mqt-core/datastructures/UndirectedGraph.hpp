@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
@@ -201,8 +210,8 @@ public:
     ss << "}\n";
     return ss.str();
   }
-  friend auto operator<<(std::ostream& os,
-                         const UndirectedGraph& g) -> std::ostream& {
+  friend auto operator<<(std::ostream& os, const UndirectedGraph& g)
+      -> std::ostream& {
     return os << g.toString(); // Using toString() method
   }
 };

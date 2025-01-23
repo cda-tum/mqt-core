@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/Operation.hpp"
 #include "python/pybind11.hpp"
@@ -13,7 +22,7 @@ namespace mqt {
 using DiffType = std::vector<std::unique_ptr<qc::Operation>>::difference_type;
 using SizeType = std::vector<std::unique_ptr<qc::Operation>>::size_type;
 
-void registerCompoundOperation(py::module& m) {
+void registerCompoundOperation(const py::module& m) {
   auto wrap = [](DiffType i, const SizeType size) {
     if (i < 0) {
       i += static_cast<DiffType>(size);
@@ -26,7 +35,7 @@ void registerCompoundOperation(py::module& m) {
 
   py::class_<qc::CompoundOperation, qc::Operation>(m, "CompoundOperation")
       .def(py::init<>())
-      .def(py::init([](std::vector<qc::Operation*>& ops) {
+      .def(py::init([](const std::vector<qc::Operation*>& ops) {
              std::vector<std::unique_ptr<qc::Operation>> uniqueOps;
              uniqueOps.reserve(ops.size());
              for (auto& op : ops) {
@@ -45,7 +54,7 @@ void registerCompoundOperation(py::module& m) {
           py::return_value_policy::reference_internal, "i"_a)
       .def(
           "__getitem__",
-          [](qc::CompoundOperation& op, const py::slice& slice) {
+          [](const qc::CompoundOperation& op, const py::slice& slice) {
             std::size_t start{};
             std::size_t stop{};
             std::size_t step{};

@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
@@ -77,11 +86,9 @@ inline Control operator""_nc(unsigned long long int q) {
 } // namespace literals
 } // namespace qc
 
-namespace std {
-template <> struct hash<qc::Control> {
-  std::size_t operator()(const qc::Control& c) const {
+template <> struct std::hash<qc::Control> {
+  std::size_t operator()(const qc::Control& c) const noexcept {
     return std::hash<qc::Qubit>{}(c.qubit) ^
            std::hash<qc::Control::Type>{}(c.type);
   }
 };
-} // namespace std

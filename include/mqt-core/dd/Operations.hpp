@@ -1,13 +1,24 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/Control.hpp"
+#include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
@@ -16,6 +27,7 @@
 #include <cmath>
 #include <cstddef>
 #include <ostream>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -25,13 +37,13 @@ namespace dd {
 // single-target Operations
 template <class Config>
 qc::MatrixDD
-getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
+getStandardOperationDD(const qc::StandardOperation& op, Package<Config>& dd,
                        const qc::Controls& controls, const qc::Qubit target,
                        const bool inverse) {
   GateMatrix gm;
 
-  const auto type = op->getType();
-  const auto& parameter = op->getParameter();
+  const auto type = op.getType();
+  const auto& parameter = op.getParameter();
 
   switch (type) {
   case qc::I:
@@ -95,7 +107,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     break;
   default:
     std::ostringstream oss{};
-    oss << "DD for gate" << op->getName() << " not available!";
+    oss << "DD for gate" << op.getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
   return dd.makeGateDD(gm, controls, target);
@@ -104,11 +116,11 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
 // two-target Operations
 template <class Config>
 qc::MatrixDD
-getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
+getStandardOperationDD(const qc::StandardOperation& op, Package<Config>& dd,
                        const qc::Controls& controls, qc::Qubit target0,
                        qc::Qubit target1, const bool inverse) {
-  const auto type = op->getType();
-  const auto& parameter = op->getParameter();
+  const auto type = op.getType();
+  const auto& parameter = op.getParameter();
 
   if (type == qc::DCX && inverse) {
     // DCX is not self-inverse, but the inverse is just swapping the targets
@@ -160,7 +172,7 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
     break;
   default:
     std::ostringstream oss{};
-    oss << "DD for gate " << op->getName() << " not available!";
+    oss << "DD for gate " << op.getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
 
@@ -171,30 +183,20 @@ getStandardOperationDD(const qc::StandardOperation* op, Package<Config>& dd,
 // the mapping specified by the permutation, e.g.
 //      if perm[0] = 1 and perm[1] = 0
 //      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
+// An empty permutation marks the identity permutation.
 
 template <class Config>
-qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
-                   qc::Permutation& permutation, const bool inverse = false) {
-  const auto type = op->getType();
-
-  // if a permutation is provided and the current operation is a SWAP, this
-  // routine just updates the permutation
-  if (!permutation.empty() && type == qc::SWAP && !op->isControlled()) {
-    const auto& targets = op->getTargets();
-
-    const auto target0 = targets[0U];
-    const auto target1 = targets[1U];
-    // update permutation
-    std::swap(permutation.at(target0), permutation.at(target1));
-    return dd.makeIdent();
-  }
+qc::MatrixDD getDD(const qc::Operation& op, Package<Config>& dd,
+                   const qc::Permutation& permutation = {},
+                   const bool inverse = false) {
+  const auto type = op.getType();
 
   if (type == qc::Barrier) {
     return dd.makeIdent();
   }
 
   if (type == qc::GPhase) {
-    auto phase = op->getParameter()[0U];
+    auto phase = op.getParameter()[0U];
     if (inverse) {
       phase = -phase;
     }
@@ -203,13 +205,10 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
     return id;
   }
 
-  if (const auto* standardOp = dynamic_cast<const qc::StandardOperation*>(op)) {
-    auto targets = op->getTargets();
-    auto controls = op->getControls();
-    if (!permutation.empty()) {
-      targets = permutation.apply(targets);
-      controls = permutation.apply(controls);
-    }
+  if (op.isStandardOperation()) {
+    const auto& standardOp = dynamic_cast<const qc::StandardOperation&>(op);
+    const auto& targets = permutation.apply(standardOp.getTargets());
+    const auto& controls = permutation.apply(standardOp.getControls());
 
     if (qc::isTwoQubitGate(type)) {
       assert(targets.size() == 2);
@@ -221,51 +220,134 @@ qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
                                   inverse);
   }
 
-  if (const auto* compoundOp = dynamic_cast<const qc::CompoundOperation*>(op)) {
+  if (op.isCompoundOperation()) {
+    const auto& compoundOp = dynamic_cast<const qc::CompoundOperation&>(op);
     auto e = dd.makeIdent();
     if (inverse) {
-      for (const auto& operation : *compoundOp) {
-        e = dd.multiply(e, getInverseDD(operation.get(), dd, permutation));
+      for (const auto& operation : compoundOp) {
+        e = dd.multiply(e, getInverseDD(*operation, dd, permutation));
       }
     } else {
-      for (const auto& operation : *compoundOp) {
-        e = dd.multiply(getDD(operation.get(), dd, permutation), e);
+      for (const auto& operation : compoundOp) {
+        e = dd.multiply(getDD(*operation, dd, permutation), e);
       }
     }
     return e;
   }
 
-  if (const auto* classicOp =
-          dynamic_cast<const qc::ClassicControlledOperation*>(op)) {
-    return getDD(classicOp->getOperation(), dd, permutation, inverse);
+  if (op.isClassicControlledOperation()) {
+    const auto& classicOp =
+        dynamic_cast<const qc::ClassicControlledOperation&>(op);
+    return getDD(*classicOp.getOperation(), dd, permutation, inverse);
   }
 
-  assert(op->isNonUnitaryOperation());
+  assert(op.isNonUnitaryOperation());
   throw qc::QFRException("DD for non-unitary operation not available!");
 }
 
 template <class Config>
-qc::MatrixDD getDD(const qc::Operation* op, Package<Config>& dd,
-                   const bool inverse = false) {
-  qc::Permutation perm{};
-  return getDD(op, dd, perm, inverse);
-}
-
-template <class Config>
-qc::MatrixDD getInverseDD(const qc::Operation* op, Package<Config>& dd) {
-  return getDD(op, dd, true);
-}
-
-template <class Config>
-qc::MatrixDD getInverseDD(const qc::Operation* op, Package<Config>& dd,
-                          qc::Permutation& permutation) {
+qc::MatrixDD getInverseDD(const qc::Operation& op, Package<Config>& dd,
+                          const qc::Permutation& permutation = {}) {
   return getDD(op, dd, permutation, true);
 }
 
+template <class Config, class Node>
+Edge<Node> applyUnitaryOperation(const qc::Operation& op, const Edge<Node>& in,
+                                 Package<Config>& dd,
+                                 const qc::Permutation& permutation = {}) {
+  static_assert(std::is_same_v<Node, dd::vNode> ||
+                std::is_same_v<Node, dd::mNode>);
+  return dd.applyOperation(getDD(op, dd, permutation), in);
+}
+
 template <class Config>
-void dumpTensor(qc::Operation* op, std::ostream& of,
-                std::vector<std::size_t>& inds, std::size_t& gateIdx,
-                Package<Config>& dd);
+qc::VectorDD applyMeasurement(const qc::NonUnitaryOperation& op,
+                              qc::VectorDD in, Package<Config>& dd,
+                              std::mt19937_64& rng,
+                              std::vector<bool>& measurements,
+                              const qc::Permutation& permutation = {}) {
+  assert(op.getType() == qc::Measure);
+  const auto& qubits = permutation.apply(op.getTargets());
+  const auto& bits = op.getClassics();
+  for (size_t j = 0U; j < qubits.size(); ++j) {
+    measurements.at(bits.at(j)) =
+        dd.measureOneCollapsing(in, static_cast<dd::Qubit>(qubits.at(j)),
+                                rng) == '1';
+  }
+  return in;
+}
+
+template <class Config>
+qc::VectorDD applyReset(const qc::NonUnitaryOperation& op, qc::VectorDD in,
+                        Package<Config>& dd, std::mt19937_64& rng,
+                        const qc::Permutation& permutation = {}) {
+  assert(op.getType() == qc::Reset);
+  const auto& qubits = permutation.apply(op.getTargets());
+  for (const auto& qubit : qubits) {
+    const auto bit =
+        dd.measureOneCollapsing(in, static_cast<dd::Qubit>(qubit), rng);
+    // apply an X operation whenever the measured result is one
+    if (bit == '1') {
+      const auto x = qc::StandardOperation(qubit, qc::X);
+      in = applyUnitaryOperation(x, in, dd);
+    }
+  }
+  return in;
+}
+
+template <class Config>
+qc::VectorDD
+applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
+                                const qc::VectorDD& in, Package<Config>& dd,
+                                std::vector<bool>& measurements,
+                                const qc::Permutation& permutation = {}) {
+  const auto& expectedValue = op.getExpectedValue();
+  const auto& comparisonKind = op.getComparisonKind();
+
+  // determine the actual value from measurements
+  auto actualValue = 0ULL;
+  if (const auto& controlRegister = op.getControlRegister();
+      controlRegister.has_value()) {
+    assert(!op.getControlBit().has_value());
+    const auto regStart = controlRegister->getStartIndex();
+    const auto regSize = controlRegister->getSize();
+    for (std::size_t j = 0; j < regSize; ++j) {
+      if (measurements[regStart + j]) {
+        actualValue |= 1ULL << j;
+      }
+    }
+  }
+  if (const auto& controlBit = op.getControlBit(); controlBit.has_value()) {
+    assert(!op.getControlRegister().has_value());
+    actualValue = measurements[*controlBit] ? 1U : 0U;
+  }
+
+  // check if the actual value matches the expected value according to the
+  // comparison kind
+  const auto control = [actualValue, expectedValue, comparisonKind]() {
+    switch (comparisonKind) {
+    case qc::ComparisonKind::Eq:
+      return actualValue == expectedValue;
+    case qc::ComparisonKind::Neq:
+      return actualValue != expectedValue;
+    case qc::ComparisonKind::Lt:
+      return actualValue < expectedValue;
+    case qc::ComparisonKind::Leq:
+      return actualValue <= expectedValue;
+    case qc::ComparisonKind::Gt:
+      return actualValue > expectedValue;
+    case qc::ComparisonKind::Geq:
+      return actualValue >= expectedValue;
+    }
+    qc::unreachable();
+  }();
+
+  if (!control) {
+    return in;
+  }
+
+  return applyUnitaryOperation(op, in, dd, permutation);
+}
 
 // apply swaps 'on' DD in order to change 'from' to 'to'
 // where |from| >= |to|

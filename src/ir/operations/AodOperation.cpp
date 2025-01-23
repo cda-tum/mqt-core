@@ -1,15 +1,29 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/operations/AodOperation.hpp"
 
 #include "Definitions.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/OpType.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
 #include <ios>
 #include <limits>
 #include <ostream>
+#include <sstream>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -22,6 +36,11 @@ AodOperation::AodOperation(qc::OpType s, std::vector<qc::Qubit> qubits,
     : AodOperation(s, std::move(qubits), convertToDimension(dirs), start, end) {
 }
 
+std::string SingleOperation::toQASMString() const {
+  std::stringstream ss;
+  ss << static_cast<std::size_t>(dir) << ", " << start << ", " << end << "; ";
+  return ss.str();
+}
 std::vector<Dimension>
 AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
   std::vector<Dimension> dirsEnum(dirs.size());
@@ -73,11 +92,46 @@ AodOperation::AodOperation(qc::OpType s, std::vector<qc::Qubit> t,
   name = toString(type);
 }
 
-void AodOperation::dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
-                                [[maybe_unused]] const qc::RegisterNames& creg,
-                                size_t indent, bool /*openQASM3*/) const {
+std::vector<qc::fp> AodOperation::getEnds(const Dimension dir) const {
+  std::vector<qc::fp> ends;
+  for (const auto& op : operations) {
+    if (op.dir == dir) {
+      ends.emplace_back(op.end);
+    }
+  }
+  return ends;
+}
+std::vector<qc::fp> AodOperation::getStarts(const Dimension dir) const {
+  std::vector<qc::fp> starts;
+  for (const auto& op : operations) {
+    if (op.dir == dir) {
+      starts.emplace_back(op.start);
+    }
+  }
+  return starts;
+}
+qc::fp AodOperation::getMaxDistance(const Dimension dir) const {
+  const auto distances = getDistances(dir);
+  if (distances.empty()) {
+    return 0;
+  }
+  return *std::max_element(distances.begin(), distances.end());
+}
+std::vector<qc::fp> AodOperation::getDistances(const Dimension dir) const {
+  std::vector<qc::fp> params;
+  for (const auto& op : operations) {
+    if (op.dir == dir) {
+      params.emplace_back(std::abs(op.end - op.start));
+    }
+  }
+  return params;
+}
+void AodOperation::dumpOpenQASM(
+    std::ostream& of, const qc::QubitIndexToRegisterMap& qubitMap,
+    [[maybe_unused]] const qc::BitIndexToRegisterMap& bitMap,
+    const size_t indent, bool /*openQASM3*/) const {
   of << std::setprecision(std::numeric_limits<qc::fp>::digits10);
-  of << std::string(indent * qc::OUTPUT_INDENT_SIZE, ' ');
+  of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
   of << name;
   // write AOD operations
   of << " (";
@@ -89,7 +143,7 @@ void AodOperation::dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
   of << ")";
   // write qubit start
   for (const auto& qubit : targets) {
-    of << " " << qreg[qubit].second << ",";
+    of << " " << qubitMap.at(qubit).second << ",";
   }
   of.seekp(-1, std::ios_base::end);
   of << ";\n";

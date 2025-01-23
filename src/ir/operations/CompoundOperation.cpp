@@ -1,10 +1,21 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/operations/CompoundOperation.hpp"
 
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -59,9 +70,9 @@ bool CompoundOperation::isNonUnitaryOperation() const {
   });
 }
 
-bool CompoundOperation::isCompoundOperation() const { return true; }
+bool CompoundOperation::isCompoundOperation() const noexcept { return true; }
 
-bool CompoundOperation::isCustomGate() const { return customGate; }
+bool CompoundOperation::isCustomGate() const noexcept { return customGate; }
 
 bool CompoundOperation::isSymbolicOperation() const {
   return std::any_of(ops.begin(), ops.end(),
@@ -72,7 +83,7 @@ void CompoundOperation::addControl(const Control c) {
   controls.insert(c);
   // we can just add the controls to each operation, as the operations will
   // check if they already act on the control qubits.
-  for (auto& op : ops) {
+  for (const auto& op : ops) {
     op->addControl(c);
   }
 }
@@ -90,14 +101,14 @@ void CompoundOperation::removeControl(const Control c) {
                        "is not a control.");
   }
 
-  for (auto& op : ops) {
+  for (const auto& op : ops) {
     op->removeControl(c);
   }
 }
 
 Controls::iterator
 CompoundOperation::removeControl(const Controls::iterator it) {
-  for (auto& op : ops) {
+  for (const auto& op : ops) {
     op->removeControl(*it);
   }
 
@@ -154,11 +165,12 @@ void CompoundOperation::addDepthContribution(
 }
 
 void CompoundOperation::dumpOpenQASM(std::ostream& of,
-                                     const RegisterNames& qreg,
-                                     const RegisterNames& creg, size_t indent,
+                                     const QubitIndexToRegisterMap& qubitMap,
+                                     const BitIndexToRegisterMap& bitMap,
+                                     const std::size_t indent,
                                      bool openQASM3) const {
   for (const auto& op : ops) {
-    op->dumpOpenQASM(of, qreg, creg, indent, openQASM3);
+    op->dumpOpenQASM(of, qubitMap, bitMap, indent, openQASM3);
   }
 }
 
@@ -218,7 +230,7 @@ auto CompoundOperation::isInverseOf(const Operation& other) const -> bool {
 }
 
 void CompoundOperation::invert() {
-  for (auto& op : ops) {
+  for (const auto& op : ops) {
     op->invert();
   }
   std::reverse(ops.begin(), ops.end());
@@ -226,7 +238,7 @@ void CompoundOperation::invert() {
 
 void CompoundOperation::apply(const Permutation& permutation) {
   Operation::apply(permutation);
-  for (auto& op : ops) {
+  for (const auto& op : ops) {
     op->apply(permutation);
   }
 }
@@ -246,8 +258,8 @@ bool CompoundOperation::isConvertibleToSingleOperation() const {
   if (!ops.front()->isCompoundOperation()) {
     return true;
   }
-  return dynamic_cast<CompoundOperation*>(ops.front().get())
-      ->isConvertibleToSingleOperation();
+  return dynamic_cast<const CompoundOperation&>(*ops.front())
+      .isConvertibleToSingleOperation();
 }
 
 std::unique_ptr<Operation> CompoundOperation::collapseToSingleOperation() {
@@ -255,13 +267,12 @@ std::unique_ptr<Operation> CompoundOperation::collapseToSingleOperation() {
   if (!ops.front()->isCompoundOperation()) {
     return std::move(ops.front());
   }
-  return dynamic_cast<CompoundOperation*>(ops.front().get())
-      ->collapseToSingleOperation();
+  return dynamic_cast<CompoundOperation&>(*ops.front())
+      .collapseToSingleOperation();
 }
 
 } // namespace qc
 
-namespace std {
 std::size_t std::hash<qc::CompoundOperation>::operator()(
     const qc::CompoundOperation& co) const noexcept {
   std::size_t seed = 0U;
@@ -270,4 +281,3 @@ std::size_t std::hash<qc::CompoundOperation>::operator()(
   }
   return seed;
 }
-} // namespace std

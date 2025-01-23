@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/Simulation.hpp"
 
 #include "Definitions.hpp"
@@ -13,17 +22,20 @@
 #include <array>
 #include <cstddef>
 #include <map>
+#include <memory>
 #include <random>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace dd {
 template <class Config>
 std::map<std::string, std::size_t>
-simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
-         std::size_t shots, std::size_t seed) {
-  bool isDynamicCircuit = false;
-  bool hasMeasurements = false;
-  bool measurementsLast = true;
+sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
+       const std::size_t shots, const std::size_t seed) {
+  auto isDynamicCircuit = false;
+  auto hasMeasurements = false;
+  auto measurementsLast = true;
 
   std::mt19937_64 mt{};
   if (seed != 0U) {
@@ -42,7 +54,7 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
   std::map<qc::Qubit, std::size_t> measurementMap{};
 
   // rudimentary check whether circuit is dynamic
-  for (const auto& op : *qc) {
+  for (const auto& op : qc) {
     // if it contains any dynamic circuit primitives, it certainly is dynamic
     if (op->isClassicControlledOperation() || op->getType() == qc::Reset) {
       isDynamicCircuit = true;
@@ -78,27 +90,28 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
   if (!isDynamicCircuit) {
     // if all gates are unitary (besides measurements at the end), we just
     // simulate once and measure all qubits repeatedly
-    auto permutation = qc->initialLayout;
+    auto permutation = qc.initialLayout;
     auto e = in;
-    dd.incRef(e);
 
-    for (const auto& op : *qc) {
+    for (const auto& op : qc) {
       // simply skip any non-unitary
       if (!op->isUnitary()) {
         continue;
       }
 
-      auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
-      dd.incRef(tmp);
-      dd.decRef(e);
-      e = tmp;
+      // SWAP gates can be executed virtually by changing the permutation
+      if (op->getType() == OpType::SWAP && !op->isControlled()) {
+        const auto& targets = op->getTargets();
+        std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+        continue;
+      }
 
-      dd.garbageCollect();
+      e = applyUnitaryOperation(*op, e, dd, permutation);
     }
 
     // correct permutation if necessary
-    changePermutation(e, permutation, qc->outputPermutation, dd);
-    e = dd.reduceGarbage(e, qc->garbage);
+    changePermutation(e, permutation, qc.outputPermutation, dd);
+    e = dd.reduceGarbage(e, qc.getGarbage());
 
     // measure all qubits
     std::map<std::string, std::size_t> counts{};
@@ -112,22 +125,21 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
 
     std::map<std::string, std::size_t> actualCounts{};
     for (const auto& [bitstring, count] : counts) {
-      std::string measurement(qc->getNcbits(), '0');
+      std::string measurement(qc.getNcbits(), '0');
       if (hasMeasurements) {
         // if the circuit contains measurements, we only want to return the
         // measured bits
         for (const auto& [qubit, bit] : measurementMap) {
           // measurement map specifies that the circuit `qubit` is measured into
           // a certain `bit`
-          measurement[qc->getNcbits() - 1U - bit] =
-              bitstring[bitstring.size() - 1U -
-                        qc->outputPermutation.at(qubit)];
+          measurement[qc.getNcbits() - 1U - bit] =
+              bitstring[bitstring.size() - 1U - qc.outputPermutation.at(qubit)];
         }
       } else {
         // otherwise, we consider the output permutation for determining where
         // to measure the qubits to
-        for (const auto& [qubit, bit] : qc->outputPermutation) {
-          measurement[qc->getNcbits() - 1U - bit] =
+        for (const auto& [qubit, bit] : qc.outputPermutation) {
+          measurement[qc.getNcbits() - 1U - bit] =
               bitstring[bitstring.size() - 1U - qubit];
         }
       }
@@ -139,125 +151,133 @@ simulate(const QuantumComputation* qc, const VectorDD& in, Package<Config>& dd,
   std::map<std::string, std::size_t> counts{};
 
   for (std::size_t i = 0U; i < shots; i++) {
-    std::map<std::size_t, char> measurements{};
+    std::vector<bool> measurements(qc.getNcbits(), false);
 
-    auto permutation = qc->initialLayout;
+    auto permutation = qc.initialLayout;
     auto e = in;
     dd.incRef(e);
-
-    for (const auto& op : *qc) {
-      if (const auto* nonunitary = dynamic_cast<NonUnitaryOperation*>(op.get());
-          nonunitary != nullptr) {
-        if (nonunitary->getType() == Measure) {
-          const auto& qubits = nonunitary->getTargets();
-          const auto& bits = nonunitary->getClassics();
-          for (std::size_t j = 0U; j < qubits.size(); ++j) {
-            measurements[bits.at(j)] = dd.measureOneCollapsing(
-                e, static_cast<Qubit>(permutation.at(qubits.at(j))), true, mt);
-          }
+    for (const auto& op : qc) {
+      if (op->isUnitary()) {
+        // SWAP gates can be executed virtually by changing the permutation
+        if (op->getType() == OpType::SWAP && !op->isControlled()) {
+          const auto& targets = op->getTargets();
+          std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
           continue;
         }
 
-        if (nonunitary->getType() == Reset) {
-          const auto& qubits = nonunitary->getTargets();
-          for (const auto& qubit : qubits) {
-            auto bit = dd.measureOneCollapsing(
-                e, static_cast<Qubit>(permutation.at(qubit)), true, mt);
-            // apply an X operation whenever the measured result is one
-            if (bit == '1') {
-              const auto x =
-                  qc::StandardOperation(permutation.at(qubit), qc::X);
-              auto tmp = dd.multiply(getDD(&x, dd), e);
-              dd.incRef(tmp);
-              dd.decRef(e);
-              e = tmp;
-              dd.garbageCollect();
-            }
-          }
-          continue;
-        }
+        e = applyUnitaryOperation(*op, e, dd, permutation);
+        continue;
       }
 
-      if (const auto* classicControlled =
-              dynamic_cast<ClassicControlledOperation*>(op.get());
-          classicControlled != nullptr) {
-        const auto& controlRegister = classicControlled->getControlRegister();
-        const auto& expectedValue = classicControlled->getExpectedValue();
-        auto actualValue = 0ULL;
-        // determine the actual value from measurements
-        for (std::size_t j = 0; j < controlRegister.second; ++j) {
-          if (measurements[controlRegister.first + j] == '1') {
-            actualValue |= 1ULL << j;
-          }
-        }
-
-        // do not apply an operation if the value is not the expected one
-        if (actualValue != expectedValue) {
-          continue;
-        }
+      if (op->getType() == Measure) {
+        const auto& measure = dynamic_cast<const NonUnitaryOperation&>(*op);
+        e = applyMeasurement(measure, e, dd, mt, measurements, permutation);
+        continue;
       }
 
-      auto tmp = dd.multiply(getDD(op.get(), dd, permutation), e);
-      dd.incRef(tmp);
-      dd.decRef(e);
-      e = tmp;
+      if (op->getType() == Reset) {
+        const auto& reset = dynamic_cast<const NonUnitaryOperation&>(*op);
+        e = applyReset(reset, e, dd, mt, permutation);
+        continue;
+      }
 
-      dd.garbageCollect();
+      if (op->isClassicControlledOperation()) {
+        const auto& classic =
+            dynamic_cast<const ClassicControlledOperation&>(*op);
+        e = applyClassicControlledOperation(classic, e, dd, measurements,
+                                            permutation);
+        continue;
+      }
+
+      qc::unreachable();
     }
 
     // reduce reference count of measured state
     dd.decRef(e);
 
-    std::string shot(qc->getNcbits(), '0');
-    for (const auto& [bit, value] : measurements) {
-      shot[qc->getNcbits() - bit - 1U] = value;
+    std::string shot(qc.getNcbits(), '0');
+    for (size_t bit = 0U; bit < qc.getNcbits(); ++bit) {
+      if (measurements[bit]) {
+        shot[qc.getNcbits() - bit - 1U] = '1';
+      }
     }
     counts[shot]++;
   }
-
   return counts;
 }
 
+std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
+                                          const std::size_t shots,
+                                          const std::size_t seed) {
+  const auto nqubits = qc.getNqubits();
+  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  return sample(qc, dd->makeZeroState(nqubits), *dd, shots, seed);
+}
+
 template <class Config>
-void extractProbabilityVector(const QuantumComputation* qc, const VectorDD& in,
+void extractProbabilityVector(const QuantumComputation& qc, const VectorDD& in,
                               SparsePVec& probVector, Package<Config>& dd) {
-  auto permutation = qc->initialLayout;
+  auto permutation = qc.initialLayout;
   dd.incRef(in);
-  extractProbabilityVectorRecursive(qc, in, qc->begin(), permutation,
+  extractProbabilityVectorRecursive(qc, in, qc.begin(), permutation,
                                     std::map<std::size_t, char>{}, 1.,
                                     probVector, dd);
 }
 
 template <class Config>
-void extractProbabilityVectorRecursive(const QuantumComputation* qc,
+void extractProbabilityVectorRecursive(const QuantumComputation& qc,
                                        const VectorDD& currentState,
-                                       decltype(qc->begin()) currentIt,
+                                       decltype(qc.begin()) currentIt,
                                        Permutation& permutation,
                                        std::map<std::size_t, char> measurements,
                                        fp commonFactor, SparsePVec& probVector,
                                        Package<Config>& dd) {
   auto state = currentState;
-  for (auto it = currentIt; it != qc->end(); ++it) {
+  for (auto it = currentIt; it != qc.end(); ++it) {
     const auto& op = (*it);
 
+    // any standard operation is applied here
+    if (op->isUnitary()) {
+      // SWAP gates can be executed virtually by changing the permutation
+      if (op->getType() == OpType::SWAP && !op->isControlled()) {
+        const auto& targets = op->getTargets();
+        std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+        continue;
+      }
+      state = applyUnitaryOperation(*op, state, dd, permutation);
+      continue;
+    }
+
     // check whether a classic controlled operations can be applied
-    if (const auto* classicControlled =
-            dynamic_cast<ClassicControlledOperation*>(op.get());
-        classicControlled != nullptr) {
-      const auto& controlRegister = classicControlled->getControlRegister();
-      const auto& expectedValue = classicControlled->getExpectedValue();
-      qc::Bit actualValue = 0U;
+    if (op->isClassicControlledOperation()) {
+      const auto& classicControlled =
+          dynamic_cast<const ClassicControlledOperation&>(*op);
+      const auto& expectedValue = classicControlled.getExpectedValue();
       // determine the actual value from measurements
-      for (std::size_t j = 0; j < controlRegister.second; ++j) {
-        if (measurements[controlRegister.first + j] == '1') {
-          actualValue |= 1ULL << j;
+      qc::Bit actualValue = 0U;
+      if (const auto& controlRegister = classicControlled.getControlRegister();
+          controlRegister.has_value()) {
+        const auto regStart = controlRegister->getStartIndex();
+        const auto regSize = controlRegister->getSize();
+        for (std::size_t j = 0; j < regSize; ++j) {
+          if (measurements[regStart + j] == '1') {
+            actualValue |= 1ULL << j;
+          }
         }
+      }
+      if (const auto& controlBit = classicControlled.getControlBit();
+          controlBit.has_value()) {
+        actualValue = measurements[*controlBit] == '1' ? 1U : 0U;
       }
 
       // do not apply an operation if the value is not the expected one
       if (actualValue != expectedValue) {
         continue;
       }
+
+      state = applyUnitaryOperation(*classicControlled.getOperation(), state,
+                                    dd, permutation);
+      continue;
     }
 
     if (op->getType() == Reset) {
@@ -275,7 +295,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
       }
       const auto target = targets[0];
       auto [pzero, pone] = dd.determineMeasurementProbabilities(
-          state, static_cast<Qubit>(permutation.at(target)), true);
+          state, static_cast<Qubit>(permutation.at(target)));
 
       // normalize probabilities
       const auto norm = pzero + pone;
@@ -285,10 +305,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
       if (RealNumber::approximatelyEquals(pone, 1.)) {
         const qc::MatrixDD xGate =
             dd.makeGateDD(X_MAT, static_cast<Qubit>(permutation.at(target)));
-        const qc::VectorDD resetState = dd.multiply(xGate, state);
-        dd.incRef(resetState);
-        dd.decRef(state);
-        state = resetState;
+        state = dd.applyOperation(xGate, state);
         continue;
       }
 
@@ -301,11 +318,10 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
     }
 
     // measurements form splitting points in this extraction scheme
-    if (const auto* measurement =
-            dynamic_cast<qc::NonUnitaryOperation*>(op.get());
-        measurement != nullptr && measurement->getType() == Measure) {
-      const auto& targets = measurement->getTargets();
-      const auto& classics = measurement->getClassics();
+    if (op->getType() == qc::Measure) {
+      const auto& measurement = dynamic_cast<const NonUnitaryOperation&>(*op);
+      const auto& targets = measurement.getTargets();
+      const auto& classics = measurement.getClassics();
       if (targets.size() != 1U || classics.size() != 1U) {
         throw qc::QFRException(
             "Measurements on multiple qubits are not supported right now. "
@@ -317,7 +333,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
 
       // determine probabilities for this measurement
       auto [pzero, pone] = dd.determineMeasurementProbabilities(
-          state, static_cast<Qubit>(permutation.at(target)), true);
+          state, static_cast<Qubit>(permutation.at(target)));
 
       // normalize probabilities
       const auto norm = pzero + pone;
@@ -326,10 +342,10 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
 
       // base case -> determine the basis state from the measurement and safe
       // the probability
-      if (measurements.size() == qc->getNcbits() - 1) {
+      if (measurements.size() == qc.getNcbits() - 1) {
         std::size_t idx0 = 0U;
         std::size_t idx1 = 0U;
-        for (std::size_t i = 0U; i < qc->getNcbits(); ++i) {
+        for (std::size_t i = 0U; i < qc.getNcbits(); ++i) {
           // if this is the qubit being measured and the result is one
           if (i == static_cast<std::size_t>(bit)) {
             idx1 |= (1ULL << i);
@@ -411,27 +427,18 @@ void extractProbabilityVectorRecursive(const QuantumComputation* qc,
       // everything is said and done
       return;
     }
-
-    // any standard operation or classic-controlled operation is applied here
-    auto tmp = dd.multiply(getDD(op.get(), dd, permutation), state);
-    dd.incRef(tmp);
-    dd.decRef(state);
-    state = tmp;
-
-    dd.garbageCollect();
   }
 }
 
 template std::map<std::string, std::size_t>
-simulate<DDPackageConfig>(const QuantumComputation* qc, const VectorDD& in,
-                          Package<DDPackageConfig>& dd, std::size_t shots,
-                          std::size_t seed);
+sample<DDPackageConfig>(const QuantumComputation& qc, const VectorDD& in,
+                        Package<>& dd, std::size_t shots, std::size_t seed);
 template void extractProbabilityVector<DDPackageConfig>(
-    const QuantumComputation* qc, const VectorDD& in, SparsePVec& probVector,
-    Package<DDPackageConfig>& dd);
+    const QuantumComputation& qc, const VectorDD& in, SparsePVec& probVector,
+    Package<>& dd);
 template void extractProbabilityVectorRecursive<DDPackageConfig>(
-    const QuantumComputation* qc, const VectorDD& in,
-    decltype(qc->begin()) currentIt, Permutation& permutation,
+    const QuantumComputation& qc, const VectorDD& in,
+    decltype(qc.begin()) currentIt, Permutation& permutation,
     std::map<std::size_t, char> measurements, fp commonFactor,
-    SparsePVec& probVector, Package<DDPackageConfig>& dd);
+    SparsePVec& probVector, Package<>& dd);
 } // namespace dd

@@ -1,4 +1,12 @@
-#include "Definitions.hpp"
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "algorithms/BernsteinVazirani.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/Package.hpp"
@@ -35,92 +43,78 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(BernsteinVazirani, FunctionTest) {
   // get hidden bitstring
-  auto s = qc::BitString(GetParam());
+  auto s = qc::BVBitString(GetParam());
 
   // construct Bernstein Vazirani circuit
-  auto qc = qc::BernsteinVazirani(s);
+  const auto qc = qc::createBernsteinVazirani(s);
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
 
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  // extract expected bitstring from circuit name
+  const auto expected = qc.getName().substr(3);
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc.expected], shots);
+  EXPECT_EQ(measurements.at(expected), shots);
 }
 
 TEST_P(BernsteinVazirani, FunctionTestDynamic) {
   // get hidden bitstring
-  auto s = qc::BitString(GetParam());
+  const auto s = qc::BVBitString(GetParam());
 
   // construct Bernstein Vazirani circuit
-  auto qc = qc::BernsteinVazirani(s, true);
+  const auto qc = qc::createIterativeBernsteinVazirani(s);
   qc.printStatistics(std::cout);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
 
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  // extract expected bitstring from circuit name
+  const auto expected = qc.getName().substr(13);
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc.expected], shots);
+  EXPECT_EQ(measurements.at(expected), shots);
 }
 
 TEST_F(BernsteinVazirani, LargeCircuit) {
-  const std::size_t nq = 127;
-  auto qc = qc::BernsteinVazirani(nq);
-  qc.printStatistics(std::cout);
+  constexpr std::size_t nq = 127;
+  const auto qc = qc::createBernsteinVazirani(nq);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
-
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc.expected], shots);
+  const auto expected = qc.getName().substr(3);
+
+  // expect to obtain the hidden bitstring with certainty
+  EXPECT_EQ(measurements.at(expected), shots);
 }
 
 TEST_F(BernsteinVazirani, DynamicCircuit) {
-  const std::size_t nq = 127;
-  auto qc = qc::BernsteinVazirani(nq, true);
-  qc.printStatistics(std::cout);
+  constexpr std::size_t nq = 127;
+  const auto qc = qc::createIterativeBernsteinVazirani(nq);
 
   // simulate the circuit
-  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
-  const std::size_t shots = 1024;
-  auto measurements =
-      simulate(&qc, dd->makeZeroState(qc.getNqubits()), *dd, shots);
+  constexpr std::size_t shots = 1024;
+  const auto measurements = dd::sample(qc, shots);
 
-  for (const auto& [state, count] : measurements) {
-    std::cout << state << ": " << count << "\n";
-  }
+  // extract expected bitstring from circuit name
+  const auto expected = qc.getName().substr(13);
 
   // expect to obtain the hidden bitstring with certainty
-  EXPECT_EQ(measurements[qc.expected], shots);
+  EXPECT_EQ(measurements.at(expected), shots);
 }
 
 TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   // get hidden bitstring
-  auto s = qc::BitString(GetParam());
+  const auto s = qc::BVBitString(GetParam());
 
   // create standard BV circuit
-  auto bv = qc::BernsteinVazirani(s);
+  auto bv = qc::createBernsteinVazirani(s);
 
   auto dd = std::make_unique<dd::Package<>>(bv.getNqubits());
 
@@ -128,10 +122,10 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(bv);
 
   // simulate circuit
-  auto e = simulate(&bv, dd->makeZeroState(bv.getNqubits()), *dd);
+  auto e = dd::simulate(bv, dd->makeZeroState(bv.getNqubits()), *dd);
 
   // create dynamic BV circuit
-  auto dbv = qc::BernsteinVazirani(s, true);
+  auto dbv = qc::createIterativeBernsteinVazirani(s);
 
   // transform dynamic circuits by first eliminating reset operations and
   // afterward deferring measurements
@@ -143,11 +137,9 @@ TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   qc::CircuitOptimizer::removeFinalMeasurements(dbv);
 
   // simulate circuit
-  auto f = simulate(&dbv, dd->makeZeroState(dbv.getNqubits()), *dd);
+  auto f = dd::simulate(dbv, dd->makeZeroState(dbv.getNqubits()), *dd);
 
   // calculate fidelity between both results
   auto fidelity = dd->fidelity(e, f);
-  std::cout << "Fidelity of both circuits: " << fidelity << "\n";
-
   EXPECT_NEAR(fidelity, 1.0, 1e-4);
 }

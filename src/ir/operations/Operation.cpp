@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "ir/operations/Operation.hpp"
 
 #include "Definitions.hpp"
@@ -18,11 +27,14 @@ namespace qc {
 
 std::ostream& Operation::printParameters(std::ostream& os) const {
   if (isClassicControlledOperation()) {
+
     os << "  c[" << parameter[0];
-    if (parameter[1] != 1) {
-      os << " ... " << (parameter[0] + parameter[1] - 1);
+    if (parameter.size() == 2) {
+      os << "] == " << parameter[1];
+    } else {
+      os << "..." << (parameter[0] + parameter[1] - 1)
+         << "] == " << parameter[2];
     }
-    os << "] == " << parameter[2];
     return os;
   }
 

@@ -30,7 +30,7 @@ If you have any questions, feel free to create a [discussion](https://github.com
 
 ## Getting Started
 
-`mqt.core` is available via [PyPI](https://pypi.org/project/mqt.core/) for all major operating systems and supports Python 3.8 to 3.12.
+`mqt.core` is available via [PyPI](https://pypi.org/project/mqt.core/) for all major operating systems and supports Python 3.9 to 3.13.
 
 ```console
 (.venv) $ pip install mqt.core
