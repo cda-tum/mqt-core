@@ -20,7 +20,7 @@ def UnitaryInterface : OpInterface<"UnitaryInterface"> {
 
     let methods = [
         InterfaceMethod<
-            /*desc=*/        "Returns all input qubits of the operation excl. controlling qubits.",
+            /*desc=*/        "Returns all input qubits of the operation excl. control qubits.",
             /*returnType=*/  "mlir::OperandRange",
             /*methodName=*/  "getInQubits",
             /*args=*/        (ins),
@@ -29,7 +29,7 @@ def UnitaryInterface : OpInterface<"UnitaryInterface"> {
                 return $_op.getInQubits();
             }]>,
         InterfaceMethod<
-            /*desc=*/        "Returns all positively controlling qubits of the operation.",
+            /*desc=*/        "Returns all positively control qubits of the operation.",
             /*returnType=*/  "mlir::OperandRange",
             /*methodName=*/  "getPosCtrlQubits",
             /*args=*/        (ins),
@@ -38,7 +38,7 @@ def UnitaryInterface : OpInterface<"UnitaryInterface"> {
                 return $_op.getPosCtrlQubits();
             }]>,
         InterfaceMethod<
-            /*desc=*/        "Returns all negatively controlling qubits of the operation.",
+            /*desc=*/        "Returns all negatively control qubits of the operation.",
             /*returnType=*/  "mlir::OperandRange",
             /*methodName=*/  "getNegCtrlQubits",
             /*args=*/        (ins),
@@ -47,7 +47,7 @@ def UnitaryInterface : OpInterface<"UnitaryInterface"> {
                 return $_op.getNegCtrlQubits();
             }]>,
         InterfaceMethod<
-            /*desc=*/        "Returns all output qubits of the operation incl. all controlling qubits.",
+            /*desc=*/        "Returns all output qubits of the operation incl. all control qubits.",
             /*returnType=*/  "mlir::ResultRange",
             /*methodName=*/  "getOutQubits",
             /*args=*/        (ins),
@@ -56,7 +56,7 @@ def UnitaryInterface : OpInterface<"UnitaryInterface"> {
                 return $_op.getOutQubits();
             }]>,
         InterfaceMethod<
-            /*desc=*/        "Returns all controlling qubits of the operation incl. positive and negative controls.",
+            /*desc=*/        "Returns all control qubits of the operation incl. positive and negative controls.",
             /*returnType=*/  "std::vector<mlir::Value>",
             /*methodName=*/  "getCtrlQubits",
             /*args=*/        (ins),
@@ -70,7 +70,7 @@ def UnitaryInterface : OpInterface<"UnitaryInterface"> {
                 return controls;
             }]>,
         InterfaceMethod<
-            /*desc=*/        "Returns all input qubits of the operation incl. all controlling qubits.",
+            /*desc=*/        "Returns all input qubits of the operation incl. all control qubits.",
             /*returnType=*/  "std::vector<mlir::Value>",
             /*methodName=*/  "getAllInQubits",
             /*args=*/        (ins),
@@ -101,7 +101,7 @@ def UnaryInterface : OpInterface<"UnaryInterface"> {
     let description = [{
         This interface provides a generic way to interact with unary
         operations in the MQTOpt dialect. Unary operations are quantum
-        operations that take exactly one input qubit plus optional controlling
+        operations that take exactly one input qubit plus optional control
         qubits.
     }];
 
@@ -121,7 +121,7 @@ def BinaryInterface : OpInterface<"BinaryInterface"> {
     let description = [{
         This interface provides a generic way to interact with binary
         operations in the MQTOpt dialect. Binary operations are quantum
-        operations that take exactly two input qubits plus optional controlling
+        operations that take exactly two input qubits plus optional control
         qubits.
     }];
 
@@ -141,7 +141,7 @@ def TernaryInterface : OpInterface<"TernaryInterface"> {
     let description = [{
         This interface provides a generic way to interact with ternary
         operations in the MQTOpt dialect. Ternary operations are quantum
-        operations that take exactly three input qubits plus optional controlling
+        operations that take exactly three input qubits plus optional control
         qubits.
     }];
 
