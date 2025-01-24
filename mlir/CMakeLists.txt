@@ -1,10 +1,14 @@
 # set required cmake version
-cmake_minimum_required(VERSION 3.19...3.30)
+cmake_minimum_required(VERSION 3.24...3.30)
 
 project(
   mqt-mlir
-  LANGUAGES CXX
+  LANGUAGES C CXX
   DESCRIPTION "MQT MLIR - Interfacing between the Munich Quantum Toolkit and MLIR")
+
+set(CMAKE_CXX_STANDARD
+    17
+    CACHE STRING "C++ standard to conform to")
 
 # Add path for custom modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -17,18 +21,10 @@ else()
 endif()
 
 option(BUILD_MQT_MLIR_TESTS "Also build tests for the MQT MLIR project" ${MQT_MLIR_MASTER_PROJECT})
+option(BUILD_MLIR_DIALECT "Build the MQT MLIR dialect" ${MQT_MLIR_MASTER_PROJECT})
 
 include(cmake/ExternalDependencies.cmake)
 
-# set the include directory for the build tree
-set(MQT_MLIR_INCLUDE_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
-
-# add main library code
-add_subdirectory(src)
-
-# add test code
-if(BUILD_MQT_MLIR_TESTS)
-  enable_testing()
-  include(GoogleTest)
-  add_subdirectory(test)
+if(BUILD_MLIR_DIALECT)
+  add_subdirectory(mlir)
 endif()

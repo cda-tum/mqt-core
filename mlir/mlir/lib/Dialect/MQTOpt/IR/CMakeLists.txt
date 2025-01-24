@@ -1,0 +1,2 @@
+add_mlir_dialect_library(MLIRMQTOpt MQTOptOps.cpp DEPENDS MLIRMQTOptOpsIncGen
+                         MLIRMQTOptInterfacesIncGen)
