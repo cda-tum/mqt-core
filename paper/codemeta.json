@@ -17,6 +17,13 @@
       "affiliation": "Chair for Design Automation, Technical University of Munich, Germany"
     },
     {
+      "@id": "https://orcid.org/0000-0003-3434-7881",
+      "@type": "Person",
+      "email": "tom.peham@tum.de",
+      "name": "Tom Peham",
+      "affiliation": "Chair for Design Automation, Technical University of Munich, Germany"
+    },
+    {
       "@id": "https://orcid.org/0000-0002-4993-7860",
       "@type": "Person",
       "email": "robert.wille@tum.de",

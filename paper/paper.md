@@ -18,6 +18,9 @@ authors:
   - name: Yannick Stade
     orcid: 0000-0001-5785-2528
     affiliation: 1
+  - name: Tom Peham
+    orcid: 0000-0003-3434-7881
+    affiliation: 1
   - name: Robert Wille
     orcid: 0000-0002-4993-7860
     affiliation: "1, 2"
