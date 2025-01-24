@@ -102,13 +102,62 @@ class UnitaryOp<string mnemonic, list<Trait> traits = []> :
     }];
 }
 
+def GPhaseOp : UnitaryOp<"GPhase", [OneParameterInterface, UnaryInterface]> {
+    let summary = "GPhase operation";
+
+    let description = [{
+        This class represents a standard general phase quantum operation.
+        It has a variadic number of input qubits and additionally accepts
+        a parameter indicating the degree of the rotation angle. It returns
+        the same number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def IOp : UnitaryOp<"I", [NoParametersInterface, UnaryInterface]> {
+    let summary = "I operation";
+
+    let description = [{
+        This class represents a standard identity quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def Barrier : UnitaryOp<"barrier", [NoParametersInterface, UnaryInterface]> {
+    let summary = "Barrier operation";
+
+    let description = [{
+        This class represents the barrier operation. It has a variadic number
+        of input qubits. It returns the same number of qubits as it takes as
+        input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def HOp : UnitaryOp<"H", [NoParametersInterface, UnaryInterface]> {
+    let summary = "H operation";
+
+    let description = [{
+        This class represents a standard Hadamard quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
 def XOp : UnitaryOp<"x", [NoParametersInterface, UnaryInterface]> {
     let summary = "X operation";
 
     let description = [{
-        This class represents a standard quantum operation. It has a gate name
-        attribute and a variadic number of input qubits. It returns the same
-        number of qubits as it takes as input.
+        This class represents a standard X quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
 
         Example:
         ```mlir
@@ -119,16 +168,350 @@ def XOp : UnitaryOp<"x", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def RZOp : UnitaryOp<"rz", [OneParameterInterface, UnaryInterface]> {
-    let summary = "RZ operation";
+def YOp : UnitaryOp<"y", [NoParametersInterface, UnaryInterface]> {
+    let summary = "Y operation";
 
-    let description = [{}]; // todo: add description
+    let description = [{
+        This class represents a standard Y quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def ZOp : UnitaryOp<"z", [NoParametersInterface, UnaryInterface]> {
+    let summary = "Z operation";
+
+    let description = [{
+        This class represents a standard Z quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def SOp : UnitaryOp<"s", [NoParametersInterface, UnaryInterface]> {
+    let summary = "S operation";
+
+    let description = [{
+        This class represents a standard S quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def SdgOp : UnitaryOp<"sdg", [NoParametersInterface, UnaryInterface]> {
+    let summary = "Sdg operation";
+
+    let description = [{
+        This class represents a standard S dagger quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def TOp : UnitaryOp<"t", [NoParametersInterface, UnaryInterface]> {
+    let summary = "T operation";
+
+    let description = [{
+        This class represents a standard T quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def TdgOp : UnitaryOp<"tdg", [NoParametersInterface, UnaryInterface]> {
+    let summary = "Tdg operation";
+
+    let description = [{
+        This class represents a standard T dagger quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def VOp : UnitaryOp<"v", [NoParametersInterface, UnaryInterface]> {
+    let summary = "V operation";
+
+    let description = [{
+        This class represents a standard V quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def VdgOp : UnitaryOp<"vdg", [NoParametersInterface, UnaryInterface]> {
+    let summary = "Vdg operation";
+
+    let description = [{
+        This class represents a standard V dagger quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
 }
 
 def UOp : UnitaryOp<"u", [ThreeParametersInterface, UnaryInterface]> {
     let summary = "U operation";
 
-    let description = [{}]; // todo: add description
+    let description = [{
+        This class represents a standard U quantum operation. It has a variadic
+        number of input qubits and additionally accepts three parameters
+        indicating the degree of the rotation angles. It returns the same number
+        of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def U2Op : UnitaryOp<"u2", [TwoParametersInterface, UnaryInterface]> {
+    let summary = "U2 operation";
+
+    let description = [{
+        This class represents a standard U2 quantum operation. It has a variadic
+        number of input qubits and additionally accepts two parameters indicating
+        the degree of the rotation angles. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def POp : UnitaryOp<"p", [OneParameterInterface, UnaryInterface]> {
+    let summary = "P operation";
+
+    let description = [{
+        This class represents a standard phase quantum operation. It has a
+        variadic number of input qubits and additionally accepts a parameter
+        indicating the degree of the rotation angle. It returns the same
+        number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def SXOp : UnitaryOp<"sx", [NoParametersInterface, UnaryInterface]> {
+    let summary = "SX operation";
+
+    let description = [{
+        This class represents a standard SX quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def SXdgOp : UnitaryOp<"sxdg", [NoParametersInterface, UnaryInterface]> {
+    let summary = "SXdg operation";
+
+    let description = [{
+        This class represents a standard SX dagger quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def RXOp : UnitaryOp<"rx", [OneParameterInterface, UnaryInterface]> {
+    let summary = "RX operation";
+
+    let description = [{
+        This class represents a standard RX quantum operation. It has a
+        variadic number of input qubits and additionally accepts a parameter
+        indicating the degree of the rotation angle. It returns the same
+        number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def RYOp : UnitaryOp<"ry", [OneParameterInterface, UnaryInterface]> {
+    let summary = "RY operation";
+
+    let description = [{
+        This class represents a standard RY quantum operation. It has a
+        variadic number of input qubits and additionally accepts a parameter
+        indicating the degree of the rotation angle. It returns the same
+        number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def RZOp : UnitaryOp<"rz", [OneParameterInterface, UnaryInterface]> {
+    let summary = "RZ operation";
+
+    let description = [{
+        This class represents a standard RZ quantum operation. It has a
+        variadic number of input qubits and additionally accepts a parameter
+        indicating the degree of the rotation angle. It returns the same
+        number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def SWAPOp : UnitaryOp<"swap", [NoParametersInterface, BinaryInterface]> {
+    let summary = "SWAP operation";
+
+    let description = [{
+        This class represents a standard SWAP quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def iSWAPOp : UnitaryOp<"iswap", [NoParametersInterface, BinaryInterface]> {
+    let summary = "iSWAP operation";
+
+    let description = [{
+        This class represents a standard iSWAP quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def iSWAPdgOp : UnitaryOp<"iswapdg", [NoParametersInterface, BinaryInterface]> {
+    let summary = "iSWAPdg operation";
+
+    let description = [{
+        This class represents a standard iSWAP dagger quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def PeresOp : UnitaryOp<"peres", [NoParametersInterface, BinaryInterface]> {
+    let summary = "Peres operation";
+
+    let description = [{
+        This class represents a Peres quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def PeresdgOp : UnitaryOp<"peresdg", [NoParametersInterface, BinaryInterface]> {
+    let summary = "Peresdg operation";
+
+    let description = [{
+        This class represents a Peres dagger quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def DCXOp : UnitaryOp<"dcx", [NoParametersInterface, BinaryInterface]> {
+    let summary = "DCX operation";
+
+    let description = [{
+        This class represents a standard DCX quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def ECROp : UnitaryOp<"ecr", [NoParametersInterface, BinaryInterface]> {
+    let summary = "DCX operation";
+
+    let description = [{
+        This class represents a standard ECR quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def RXXOp : UnitaryOp<"rxx", [OneParameterInterface, BinaryInterface]> {
+    let summary = "RXX operation";
+
+    let description = [{
+        This class represents a standard RXX quantum operation. It has a
+        variadic number of input qubits and additionally accepts a parameter
+        indicating the degree of the rotation angle. It returns the same
+        number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def RYYOp : UnitaryOp<"ryy", [OneParameterInterface, BinaryInterface]> {
+    let summary = "RYY operation";
+
+    let description = [{
+        This class represents a standard RYY quantum operation. It has a
+        variadic number of input qubits and additionally accepts a parameter
+        indicating the degree of the rotation angle. It returns the same
+        number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def RZZOp : UnitaryOp<"rzz", [OneParameterInterface, BinaryInterface]> {
+    let summary = "RZZ operation";
+
+    let description = [{
+        This class represents a standard RZZ quantum operation. It has a
+        variadic number of input qubits and additionally accepts a parameter
+        indicating the degree of the rotation angle. It returns the same
+        number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def RZXOp : UnitaryOp<"rzx", [OneParameterInterface, BinaryInterface]> {
+    let summary = "RZX operation";
+
+    let description = [{
+        This class represents a standard RZX quantum operation. It has a
+        variadic number of input qubits and additionally accepts a parameter
+        indicating the degree of the rotation angle. It returns the same
+        number of qubits as it takes as input.
+
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def XXminusYY : UnitaryOp<"xxminusyy", [NoParameterInterface, BinaryInterface]> {
+    let summary = "XXminusYY operation";
+
+    let description = [{
+        This class represents a XXminusYY quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
+}
+
+def XXplusYY : UnitaryOp<"xxplusyy", [NoParameterInterface, BinaryInterface]> {
+    let summary = "XXplusYY operation";
+
+    let description = [{
+        This class represents a XXplusYY quantum operation. It has
+        a variadic number of input qubits. It returns the same number of qubits
+        as it takes as input.
+        An analogous example can be seen in the description of XOp.
+    }];
 }
 
 def MeasureOp : GateOp<"measure", [SameVariadicResultSize]> {
