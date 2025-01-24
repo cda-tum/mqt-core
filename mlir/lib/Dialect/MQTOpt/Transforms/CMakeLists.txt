@@ -1,5 +1,5 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-set(LIBRARIES ${dialect_libs} MLIRMQTOpt)
+set(LIBRARIES ${dialect_libs} MQT::CoreIR)
 add_compile_options(-fexceptions)
 
 file(GLOB TRANSFORMS_SOURCES *.cpp)

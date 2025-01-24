@@ -1,39 +1,37 @@
 #include "ir/QuantumComputation.hpp"
-#include "mlir/Dialect/MQT/Transforms/Passes.h"
+#include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 #include "mlir/IR/Operation.h"
 
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Transforms/GreedyPatternRewriteDriver.h>
-#include <set>
-#include <utility>
 
-namespace mlir::mqt {
+namespace mqt::ir::opt {
 
-#define GEN_PASS_DEF_TOQUANTUMCOMPUTATION
-#include "mlir/Dialect/MQT/Transforms/Passes.h.inc"
+#define GEN_PASS_DEF_MQTCOREROUNDTRIP
+#include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
-struct ToQuantumComputation final
-    : impl::ToQuantumComputationBase<ToQuantumComputation> {
+struct MQTCoreRoundTrip final : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
 
   qc::QuantumComputation circuit;
 
   void runOnOperation() override {
     // Get the current operation being operated on.
-    Operation* op = getOperation();
-    MLIRContext* ctx = &getContext();
+    mlir::Operation* op = getOperation();
+    mlir::MLIRContext* ctx = &getContext();
 
     // Define the set of patterns to use.
-    RewritePatternSet patterns(ctx);
+    mlir::RewritePatternSet patterns(ctx);
     populateToQuantumComputationPatterns(patterns, circuit);
     populateFromQuantumComputationPatterns(patterns, circuit);
 
     // Apply patterns in an iterative and greedy manner.
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
+    if (mlir::failed(
+            mlir::applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
       signalPassFailure();
     }
   }
 };
 
-} // namespace mlir::mqt
+} // namespace mqt::ir::opt
