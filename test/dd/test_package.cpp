@@ -7,6 +7,7 @@
  * Licensed under the MIT License
  */
 
+#include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/DDpackageConfig.hpp"
 #include "dd/Export.hpp"
@@ -37,6 +38,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 using namespace qc::literals;
@@ -280,6 +282,33 @@ TEST(DDPackageTest, CorruptedBellState) {
   ASSERT_THROW(dd->measureAll(bellState, false, mt), std::runtime_error);
 
   ASSERT_THROW(dd->measureOneCollapsing(bellState, 0, mt), std::runtime_error);
+}
+
+TEST(DDPackageTest, InvalidStandardOperation) {
+  auto dd = std::make_unique<dd::Package<>>();
+  const std::vector<std::pair<qc::Targets, qc::OpType>> invalidOps{
+      {{qc::Targets{}, qc::I},
+       {qc::Targets{0, 1}, qc::I},
+       {qc::Targets{}, qc::SWAP},
+       {qc::Targets{0}, qc::SWAP},
+       {qc::Targets{0, 1, 2}, qc::SWAP},
+       {qc::Targets{0, 1}, qc::OpTypeEnd}}};
+  for (const auto& [targets, type] : invalidOps) {
+    ASSERT_THROW(dd::getDD(qc::StandardOperation(targets, type), *dd),
+                 std::invalid_argument);
+  }
+  ASSERT_THROW(dd::opToSingleQubitGateMatrix(qc::SWAP), std::invalid_argument);
+  ASSERT_THROW(dd::opToSingleQubitGateMatrix(qc::OpTypeEnd),
+               std::invalid_argument);
+  ASSERT_THROW(dd::opToTwoQubitGateMatrix(qc::I), std::invalid_argument);
+  ASSERT_THROW(dd::opToTwoQubitGateMatrix(qc::OpTypeEnd),
+               std::invalid_argument);
+}
+
+TEST(DDPackageTest, PrintNoneGateType) {
+  std::ostringstream oss;
+  oss << qc::None;
+  EXPECT_EQ(oss.str(), "none");
 }
 
 TEST(DDPackageTest, NegativeControl) {
