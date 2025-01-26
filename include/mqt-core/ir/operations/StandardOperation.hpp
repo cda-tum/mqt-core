@@ -14,6 +14,7 @@
 #include "OpType.hpp"
 #include "Operation.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 
 #include <cmath>
 #include <cstddef>
@@ -26,6 +27,8 @@
 namespace qc {
 class StandardOperation : public Operation {
 protected:
+  constexpr static fp PARAMETER_TOLERANCE = 1e-13;
+
   static void checkInteger(fp& ld) {
     const fp nearest = std::nearbyint(ld);
     if (std::abs(ld - nearest) < PARAMETER_TOLERANCE) {
@@ -49,7 +52,7 @@ protected:
   void setup();
 
   void dumpOpenQASMTeleportation(std::ostream& of,
-                                 const RegisterNames& qreg) const;
+                                 const QubitIndexToRegisterMap& qreg) const;
 
 public:
   StandardOperation() = default;
@@ -110,8 +113,8 @@ public:
     return equals(operation, {}, {});
   }
 
-  void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, std::size_t indent,
+  void dumpOpenQASM(std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+                    const BitIndexToRegisterMap& bitMap, size_t indent,
                     bool openQASM3) const override;
 
   [[nodiscard]] auto commutesAtQubit(const Operation& other,
@@ -121,12 +124,12 @@ public:
 
 protected:
   void dumpOpenQASM2(std::ostream& of, std::ostringstream& op,
-                     const RegisterNames& qreg) const;
+                     const QubitIndexToRegisterMap& qubitMap) const;
   void dumpOpenQASM3(std::ostream& of, std::ostringstream& op,
-                     const RegisterNames& qreg) const;
+                     const QubitIndexToRegisterMap& qubitMap) const;
 
   void dumpGateType(std::ostream& of, std::ostringstream& op,
-                    const RegisterNames& qreg) const;
+                    const QubitIndexToRegisterMap& qubitMap) const;
 
   void dumpControls(std::ostringstream& op) const;
 };

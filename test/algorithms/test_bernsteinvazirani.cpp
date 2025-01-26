@@ -7,7 +7,6 @@
  * Licensed under the MIT License
  */
 
-#include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "dd/Package.hpp"
@@ -44,7 +43,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(BernsteinVazirani, FunctionTest) {
   // get hidden bitstring
-  auto s = qc::BitString(GetParam());
+  auto s = qc::BVBitString(GetParam());
 
   // construct Bernstein Vazirani circuit
   const auto qc = qc::createBernsteinVazirani(s);
@@ -63,7 +62,7 @@ TEST_P(BernsteinVazirani, FunctionTest) {
 
 TEST_P(BernsteinVazirani, FunctionTestDynamic) {
   // get hidden bitstring
-  const auto s = qc::BitString(GetParam());
+  const auto s = qc::BVBitString(GetParam());
 
   // construct Bernstein Vazirani circuit
   const auto qc = qc::createIterativeBernsteinVazirani(s);
@@ -112,7 +111,7 @@ TEST_F(BernsteinVazirani, DynamicCircuit) {
 
 TEST_P(BernsteinVazirani, DynamicEquivalenceSimulation) {
   // get hidden bitstring
-  const auto s = qc::BitString(GetParam());
+  const auto s = qc::BVBitString(GetParam());
 
   // create standard BV circuit
   auto bv = qc::createBernsteinVazirani(s);

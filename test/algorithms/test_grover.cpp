@@ -46,7 +46,7 @@ protected:
     // parse expected result from circuit name
     const auto& name = qc.getName();
     expected = name.substr(name.find_last_of('_') + 1);
-    targetValue = qc::BitString(expected);
+    targetValue = qc::GroverBitString(expected);
   }
 
   qc::Qubit nqubits = 0;
@@ -56,7 +56,7 @@ protected:
   qc::VectorDD sim{};
   qc::MatrixDD func{};
   std::string expected;
-  qc::BitString targetValue;
+  qc::GroverBitString targetValue;
 };
 
 constexpr qc::Qubit GROVER_MAX_QUBITS = 15;

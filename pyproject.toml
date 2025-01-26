@@ -148,10 +148,12 @@ run.omit = [
     '*/_compat/*',
 ]
 report.exclude_also = [
-    '\.\.\.',
-    'if TYPE_CHECKING:',
-    'raise AssertionError',
-    'raise NotImplementedError',
+  '\.\.\.',
+  'if TYPE_CHECKING:',
+  'raise AssertionError',
+  'raise NotImplementedError',
+  'def __dir__()',  # Ignore __dir__ method that exists mainly for better IDE support
+  '@overload'  # Overloads are only for static typing
 ]
 
 

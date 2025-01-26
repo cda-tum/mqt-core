@@ -19,7 +19,7 @@
 
 namespace mqt {
 
-void registerSymbolicOperation(py::module& m) {
+void registerSymbolicOperation(const py::module& m) {
   py::class_<qc::SymbolicOperation, qc::StandardOperation>(
       m, "SymbolicOperation",
       "Class representing a symbolic operation."

@@ -16,8 +16,10 @@
 #include "ir/parsers/qasm3_parser/NestedEnvironment.hpp"
 #include "ir/parsers/qasm3_parser/Statement.hpp"
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -65,7 +67,8 @@ struct ConstEvalValue {
     case ConstUint:
       return std::get<0>(value) == std::get<0>(rhs.value);
     case ConstFloat:
-      return std::get<1>(value) == std::get<1>(rhs.value);
+      return std::abs(std::get<1>(value) - std::get<1>(rhs.value)) <
+             std::numeric_limits<double>::epsilon() * 1024;
     case ConstBool:
       return std::get<2>(value) == std::get<2>(rhs.value);
     }

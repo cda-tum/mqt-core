@@ -11,9 +11,11 @@
 
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/Expression.hpp"
 #include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
 
 #include <algorithm>
@@ -352,12 +354,11 @@ bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
   return true;
 }
 
-[[noreturn]] void
-SymbolicOperation::dumpOpenQASM([[maybe_unused]] std::ostream& of,
-                                [[maybe_unused]] const RegisterNames& qreg,
-                                [[maybe_unused]] const RegisterNames& creg,
-                                [[maybe_unused]] size_t indent,
-                                bool openQASM3) const {
+[[noreturn]] void SymbolicOperation::dumpOpenQASM(
+    [[maybe_unused]] std::ostream& of,
+    [[maybe_unused]] const QubitIndexToRegisterMap& qubitMap,
+    [[maybe_unused]] const BitIndexToRegisterMap& bitMap,
+    [[maybe_unused]] size_t indent, bool openQASM3) const {
   if (openQASM3) {
     throw QFRException(
         "Printing OpenQASM 3.0 parameterized gates is not supported yet!");

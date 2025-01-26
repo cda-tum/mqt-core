@@ -19,7 +19,7 @@
 
 namespace qc {
 
-[[nodiscard]] auto getMostSignificantBit(const BitString& s) -> std::size_t {
+[[nodiscard]] auto getMostSignificantBit(const BVBitString& s) -> std::size_t {
   std::size_t msb = 0;
   for (std::size_t i = 0; i < s.size(); ++i) {
     if (s.test(i)) {
@@ -30,8 +30,8 @@ namespace qc {
 }
 
 [[nodiscard]] auto generateBitstring(const std::size_t nq, std::mt19937_64& mt)
-    -> BitString {
-  BitString s;
+    -> BVBitString {
+  BVBitString s;
   auto distribution = std::bernoulli_distribution();
   for (std::size_t i = 0; i < nq; ++i) {
     if (distribution(mt)) {
@@ -41,7 +41,7 @@ namespace qc {
   return s;
 }
 
-[[nodiscard]] auto getExpected(const BitString& s, const Qubit nq)
+[[nodiscard]] auto getExpected(const BVBitString& s, const Qubit nq)
     -> std::string {
   auto expected = s.to_string();
   std::reverse(expected.begin(), expected.end());
@@ -53,7 +53,7 @@ namespace qc {
 }
 
 auto constructBernsteinVaziraniCircuit(QuantumComputation& qc,
-                                       const BitString& s, const Qubit nq) {
+                                       const BVBitString& s, const Qubit nq) {
   qc.setName("bv_" + getExpected(s, nq));
   qc.addQubitRegister(1, "flag");
   qc.addQubitRegister(nq, "q");
@@ -94,7 +94,7 @@ auto constructBernsteinVaziraniCircuit(QuantumComputation& qc,
   }
 }
 
-auto createBernsteinVazirani(const BitString& hiddenString)
+auto createBernsteinVazirani(const BVBitString& hiddenString)
     -> QuantumComputation {
   const auto msb = static_cast<Qubit>(getMostSignificantBit(hiddenString));
   return createBernsteinVazirani(hiddenString, msb + 1);
@@ -108,7 +108,7 @@ auto createBernsteinVazirani(const Qubit nq, const std::size_t seed)
   return qc;
 }
 
-auto createBernsteinVazirani(const BitString& hiddenString, const Qubit nq)
+auto createBernsteinVazirani(const BVBitString& hiddenString, const Qubit nq)
     -> QuantumComputation {
   auto qc = QuantumComputation(0, 0);
   constructBernsteinVaziraniCircuit(qc, hiddenString, nq);
@@ -116,7 +116,7 @@ auto createBernsteinVazirani(const BitString& hiddenString, const Qubit nq)
 }
 
 auto constructIterativeBernsteinVaziraniCircuit(QuantumComputation& qc,
-                                                const BitString& s,
+                                                const BVBitString& s,
                                                 const Qubit nq) {
   qc.setName("iterative_bv_" + getExpected(s, nq));
   qc.addQubitRegister(1, "flag");
@@ -156,7 +156,7 @@ auto constructIterativeBernsteinVaziraniCircuit(QuantumComputation& qc,
   return qc;
 }
 
-auto createIterativeBernsteinVazirani(const BitString& hiddenString)
+auto createIterativeBernsteinVazirani(const BVBitString& hiddenString)
     -> QuantumComputation {
   const auto msb = static_cast<Qubit>(getMostSignificantBit(hiddenString));
   return createIterativeBernsteinVazirani(hiddenString, msb + 1);
@@ -170,7 +170,7 @@ auto createIterativeBernsteinVazirani(const Qubit nq, const std::size_t seed)
   return qc;
 }
 
-auto createIterativeBernsteinVazirani(const BitString& hiddenString,
+auto createIterativeBernsteinVazirani(const BVBitString& hiddenString,
                                       const Qubit nq) -> QuantumComputation {
   auto qc = QuantumComputation(0, 0);
   constructIterativeBernsteinVaziraniCircuit(qc, hiddenString, nq);

@@ -17,6 +17,7 @@
 
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 
@@ -75,34 +76,48 @@ NonUnitaryOperation::print(std::ostream& os, const Permutation& permutation,
   return os;
 }
 
+namespace {
+bool isWholeClassicalRegister(const BitIndexToRegisterMap& reg, const Bit start,
+                              const Bit end) {
+  const auto& startReg = reg.at(start).first;
+  const auto& endReg = reg.at(end).first;
+  return startReg == endReg && startReg.getStartIndex() == start &&
+         endReg.getEndIndex() == end;
+}
+} // namespace
+
 void NonUnitaryOperation::dumpOpenQASM(std::ostream& of,
-                                       const RegisterNames& qreg,
-                                       const RegisterNames& creg, size_t indent,
+                                       const QubitIndexToRegisterMap& qubitMap,
+                                       const BitIndexToRegisterMap& bitMap,
+                                       std::size_t indent,
                                        bool openQASM3) const {
   of << std::string(indent * OUTPUT_INDENT_SIZE, ' ');
 
-  if (isWholeQubitRegister(qreg, targets.front(), targets.back()) &&
+  if (isWholeQubitRegister(qubitMap, targets.front(), targets.back()) &&
       (type != Measure ||
-       isWholeQubitRegister(creg, classics.front(), classics.back()))) {
+       isWholeClassicalRegister(bitMap, classics.front(), classics.back()))) {
     if (type == Measure && openQASM3) {
-      of << creg[classics.front()].first << " = ";
+      of << bitMap.at(classics.front()).first.getName() << " = ";
     }
-    of << toString(type) << " " << qreg[targets.front()].first;
+    of << toString(type) << " " << qubitMap.at(targets.front()).first.getName();
     if (type == Measure && !openQASM3) {
       of << " -> ";
-      of << creg[classics.front()].first;
+      of << bitMap.at(classics.front()).first.getName();
     }
     of << ";\n";
     return;
   }
   auto classicsIt = classics.cbegin();
   for (const auto& q : targets) {
+    const auto& qreg = qubitMap.at(q);
     if (type == Measure && openQASM3) {
-      of << creg[*classicsIt].second << " = ";
+      const auto& creg = bitMap.at(*classicsIt);
+      of << creg.second << " = ";
     }
-    of << toString(type) << " " << qreg[q].second;
+    of << toString(type) << " " << qreg.second;
     if (type == Measure && !openQASM3) {
-      of << " -> " << creg[*classicsIt].second;
+      const auto& creg = bitMap.at(*classicsIt);
+      of << " -> " << creg.second;
       ++classicsIt;
     }
     of << ";\n";

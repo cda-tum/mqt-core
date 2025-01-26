@@ -12,24 +12,27 @@
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 
+#include <bitset>
 #include <cstddef>
 
 namespace qc {
 
-[[nodiscard]] auto createBernsteinVazirani(const BitString& hiddenString)
+using BVBitString = std::bitset<4096>;
+
+[[nodiscard]] auto createBernsteinVazirani(const BVBitString& hiddenString)
     -> QuantumComputation;
 [[nodiscard]] auto createBernsteinVazirani(Qubit nq, std::size_t seed = 0)
     -> QuantumComputation;
-[[nodiscard]] auto createBernsteinVazirani(const BitString& hiddenString,
+[[nodiscard]] auto createBernsteinVazirani(const BVBitString& hiddenString,
                                            Qubit nq) -> QuantumComputation;
 
 [[nodiscard]] auto
-createIterativeBernsteinVazirani(const BitString& hiddenString)
+createIterativeBernsteinVazirani(const BVBitString& hiddenString)
     -> QuantumComputation;
 [[nodiscard]] auto createIterativeBernsteinVazirani(Qubit nq,
                                                     std::size_t seed = 0)
     -> QuantumComputation;
 [[nodiscard]] auto
-createIterativeBernsteinVazirani(const BitString& hiddenString, Qubit nq)
+createIterativeBernsteinVazirani(const BVBitString& hiddenString, Qubit nq)
     -> QuantumComputation;
 } // namespace qc

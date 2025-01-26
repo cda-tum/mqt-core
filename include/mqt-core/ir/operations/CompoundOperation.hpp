@@ -13,6 +13,7 @@
 #include "Definitions.hpp"
 #include "Operation.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/Register.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -74,8 +75,8 @@ public:
 
   void addDepthContribution(std::vector<std::size_t>& depths) const override;
 
-  void dumpOpenQASM(std::ostream& of, const RegisterNames& qreg,
-                    const RegisterNames& creg, size_t indent,
+  void dumpOpenQASM(std::ostream& of, const QubitIndexToRegisterMap& qubitMap,
+                    const BitIndexToRegisterMap& bitMap, std::size_t indent,
                     bool openQASM3) const override;
 
   std::vector<std::unique_ptr<Operation>>& getOps() noexcept { return ops; }

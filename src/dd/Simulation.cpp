@@ -252,14 +252,22 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
     if (op->isClassicControlledOperation()) {
       const auto& classicControlled =
           dynamic_cast<const ClassicControlledOperation&>(*op);
-      const auto& [regStart, regSize] = classicControlled.getControlRegister();
       const auto& expectedValue = classicControlled.getExpectedValue();
-      qc::Bit actualValue = 0U;
       // determine the actual value from measurements
-      for (std::size_t j = 0; j < regSize; ++j) {
-        if (measurements[regStart + j] == '1') {
-          actualValue |= 1ULL << j;
+      qc::Bit actualValue = 0U;
+      if (const auto& controlRegister = classicControlled.getControlRegister();
+          controlRegister.has_value()) {
+        const auto regStart = controlRegister->getStartIndex();
+        const auto regSize = controlRegister->getSize();
+        for (std::size_t j = 0; j < regSize; ++j) {
+          if (measurements[regStart + j] == '1') {
+            actualValue |= 1ULL << j;
+          }
         }
+      }
+      if (const auto& controlBit = classicControlled.getControlBit();
+          controlBit.has_value()) {
+        actualValue = measurements[*controlBit] == '1' ? 1U : 0U;
       }
 
       // do not apply an operation if the value is not the expected one

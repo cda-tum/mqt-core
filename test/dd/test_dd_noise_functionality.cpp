@@ -26,7 +26,6 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
-#include <utility>
 
 using namespace qc;
 
@@ -321,8 +320,7 @@ TEST_F(DDNoiseFunctionalityTest, testingUsedQubits) {
   EXPECT_TRUE(compoundOp.getUsedQubits().count(1));
 
   auto classicalControlledOp = qc::ClassicControlledOperation(
-      std::make_unique<qc::StandardOperation>(0, qc::X), std::pair{0, nqubits},
-      1U);
+      std::make_unique<qc::StandardOperation>(0, qc::X), {0, nqubits}, 1U);
   EXPECT_EQ(classicalControlledOp.getUsedQubits().size(), 1);
   EXPECT_TRUE(classicalControlledOp.getUsedQubits().count(0) == 1U);
 }
