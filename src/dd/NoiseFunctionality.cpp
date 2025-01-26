@@ -184,7 +184,7 @@ mEdge StochasticNoiseFunctionality::generateNoiseOperation(
     case (qc::Y):
     case (qc::Z): {
       operation = stackOperation(operation, target, effect,
-                                 opToSingleGateMatrix(effect));
+                                 opToSingleQubitGateMatrix(effect));
       break;
     }
     default: {

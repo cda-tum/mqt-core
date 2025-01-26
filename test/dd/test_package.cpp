@@ -1899,8 +1899,8 @@ TEST(DDPackageTest, TwoQubitControlledGateDDConstruction) {
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   const auto gateMatrices =
-      std::vector{std::pair{dd::opToSingleGateMatrix(qc::X), CX_MAT},
-                  std::pair{dd::opToSingleGateMatrix(qc::Z), CZ_MAT}};
+      std::vector{std::pair{dd::opToSingleQubitGateMatrix(qc::X), CX_MAT},
+                  std::pair{dd::opToSingleQubitGateMatrix(qc::Z), CZ_MAT}};
 
   // For every combination of control and target, test that the DD created by
   // makeTwoQubitGateDD is equal to the DD created by makeGateDD. This should
@@ -1926,8 +1926,8 @@ TEST(DDPackageTest, TwoQubitControlledGateDDConstructionNegativeControls) {
   const auto dd = std::make_unique<dd::Package<>>(nrQubits);
 
   const auto gateMatrices =
-      std::vector{std::pair{dd::opToSingleGateMatrix(qc::X), CX_MAT},
-                  std::pair{dd::opToSingleGateMatrix(qc::Z), CZ_MAT}};
+      std::vector{std::pair{dd::opToSingleQubitGateMatrix(qc::X), CX_MAT},
+                  std::pair{dd::opToSingleQubitGateMatrix(qc::Z), CZ_MAT}};
 
   // For every combination of controls, control type, and target, test that the
   // DD created by makeTwoQubitGateDD is equal to the DD created by makeGateDD.

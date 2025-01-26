@@ -141,7 +141,7 @@ inline TwoQubitGateMatrix xxPlusYYMat(const fp theta, const fp beta = 0.) {
        {0, 0, 0, 1}}};
 }
 
-inline GateMatrix opToSingleGateMatrix(qc::OpType t,
+inline GateMatrix opToSingleQubitGateMatrix(qc::OpType t,
                                        const std::vector<fp>& params = {}) {
   return MATS_GENERATORS.at(t)(params);
 }

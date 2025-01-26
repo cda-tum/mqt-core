@@ -110,7 +110,17 @@ getStandardOperationDD(const qc::StandardOperation& op, Package<Config>& dd,
     oss << "DD for gate" << op.getName() << " not available!";
     throw qc::QFRException(oss.str());
   }
-  return dd.makeGateDD(gm, controls, target);
+}
+
+// single-target Operations
+template <class Config>
+qc::MatrixDD getStandardOperationDD(const qc::StandardOperation* op,
+                                    Package<Config>& dd,
+                                    const qc::Controls& controls,
+                                    qc::Qubit target, const bool inverse) {
+  auto [type, params] = getOperationParameters(op, &target, nullptr, inverse);
+
+  return dd.makeGateDD(opToSingleQubitGateMatrix(type, params), controls, target);
 }
 
 // two-target Operations
