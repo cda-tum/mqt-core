@@ -22,6 +22,13 @@
 
 namespace zx {
 
+/**
+ * @brief Enum for the different types of edges in the ZX-calculus
+ * @details Simple edges are the standard edges in the ZX-calculus, while
+ Hadamard edges are a shorthand used to represent edges with Hadamard gates on
+ them.
+
+ */
 enum class EdgeType : uint8_t { Simple, Hadamard };
 inline std::ostream& operator<<(std::ostream& os, const EdgeType& type) {
   switch (type) {
@@ -35,6 +42,11 @@ inline std::ostream& operator<<(std::ostream& os, const EdgeType& type) {
   return os;
 }
 
+/**
+ * @brief Enum for the different types of vertices in the ZX-calculus
+ * @details Boundary vertices represent inputs and outputs. Otherwise, vertices
+ * are either Z-vertices or X-vertices.
+ */
 enum class VertexType : uint8_t { Boundary, Z, X };
 inline std::ostream& operator<<(std::ostream& os, const VertexType& type) {
   switch (type) {
