@@ -31,7 +31,8 @@ static const double EPS = 1e-10;
 namespace qc {
 using Matrix = std::vector<std::vector<double>>;
 
-template <typename T> [[nodiscard]] auto twoNorm(std::vector<T> vec) -> double {
+template <typename T>
+[[nodiscard]] auto twoNorm(const std::vector<T>& vec) -> double {
   double norm = 0;
   for (auto elem : vec) {
     norm += std::norm(elem);
@@ -40,11 +41,12 @@ template <typename T> [[nodiscard]] auto twoNorm(std::vector<T> vec) -> double {
 }
 
 template <typename T>
-[[nodiscard]] auto isNormalized(std::vector<T> vec) -> bool {
+[[nodiscard]] auto isNormalized(const std::vector<T>& vec) -> bool {
   return std::abs(1 - twoNorm(vec)) < EPS;
 }
 
-[[nodiscard]] auto kroneckerProduct(Matrix matrixA, Matrix matrixB) -> Matrix {
+[[nodiscard]] auto kroneckerProduct(const Matrix& matrixA,
+                                    const Matrix& matrixB) -> Matrix {
   size_t const rowA = matrixA.size();
   size_t const rowB = matrixB.size();
   size_t const colA = matrixA[0].size();
@@ -79,9 +81,9 @@ template <typename T>
   return identity;
 }
 
-[[nodiscard]] auto matrixVectorProd(const Matrix& matrix,
-                                    std::vector<double> vector)
-    -> std::vector<double> {
+[[nodiscard]] auto
+matrixVectorProd(const Matrix& matrix,
+                 const std::vector<double>& vector) -> std::vector<double> {
   std::vector<double> result;
   for (const auto& matrixVec : matrix) {
     double sum{0};
@@ -150,7 +152,7 @@ template <typename T>
     multiplexer.cx(0, static_cast<Qubit>(localNumQubits - 1));
   }
 
-  CircuitOptimizer::flattenOperations(multiplexer, false);
+  CircuitOptimizer::flattenOperations(multiplexer);
   return multiplexer;
 }
 
@@ -195,8 +197,8 @@ rotationsToDisentangle(std::vector<std::complex<double>> amplitudes)
 
 // creates circuit that takes desired vector to zero
 [[nodiscard]] auto
-gatesToUncompute(std::vector<std::complex<double>> amplitudes, size_t numQubits)
-    -> QuantumComputation {
+gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
+                 size_t numQubits) -> QuantumComputation {
   QuantumComputation disentangler{numQubits};
   for (size_t i = 0; i < numQubits; ++i) {
     // rotations to disentangle LSB
@@ -277,7 +279,7 @@ auto createStatePreparationCircuit(
   QuantumComputation toZeroCircuit = gatesToUncompute(amplitudes, numQubits);
 
   // invert circuit
-  CircuitOptimizer::flattenOperations(toZeroCircuit, false);
+  CircuitOptimizer::flattenOperations(toZeroCircuit);
   toZeroCircuit.invert();
 
   return toZeroCircuit;
