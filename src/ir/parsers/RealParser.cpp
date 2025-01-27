@@ -79,7 +79,6 @@ parseVariableNames(const int processedLineNumberInRealFile,
   std::size_t variableIdentEndIdx = 0;
 
   while (variableIdentStartIdx < readInRawVariableIdentValues.size() &&
-         variableNames.size() <= expectedNumberOfVariables &&
          variableNames.size() < expectedNumberOfVariables) {
     variableIdentEndIdx =
         readInRawVariableIdentValues.find_first_of(' ', variableIdentStartIdx);
