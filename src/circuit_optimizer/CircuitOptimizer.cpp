@@ -18,7 +18,6 @@
 #include "ir/operations/StandardOperation.hpp"
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -371,8 +370,7 @@ bool removeDiagonalGate(CircuitOptimizer::DAG& dag,
                         Qubit idx, CircuitOptimizer::DAGReverseIterator& it,
                         Operation* op) {
   // not a diagonal gate
-  if (std::find(DIAGONAL_GATES.begin(), DIAGONAL_GATES.end(), op->getType()) ==
-      DIAGONAL_GATES.end()) {
+  if (!op->isDiagonalGate()) {
     it = dag.at(idx).rend();
     return false;
   }
