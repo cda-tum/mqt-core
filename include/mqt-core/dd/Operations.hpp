@@ -77,6 +77,15 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation& op,
   std::vector<qc::Qubit> targetQubits = targets;
 
   switch (type) {
+  // operations that are self-inverse do not need any changes
+  case qc::I:
+  case qc::H:
+  case qc::X:
+  case qc::Y:
+  case qc::Z:
+  case qc::SWAP:
+  case qc::ECR:
+    break;
   // operations that have an inverse gate with the same parameters
   case qc::iSWAP:
   case qc::iSWAPdg:
@@ -125,15 +134,6 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation& op,
     std::swap(params[0U], params[1U]);
     params[0U] = -params[0U] - PI;
     params[1U] = -params[1U] + PI;
-    break;
-  // operations that are self-inverse do not need any changes
-  case qc::I:
-  case qc::H:
-  case qc::X:
-  case qc::Y:
-  case qc::Z:
-  case qc::SWAP:
-  case qc::ECR:
     break;
 
   default:
