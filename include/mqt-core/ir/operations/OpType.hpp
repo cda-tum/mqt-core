@@ -32,6 +32,7 @@ enum OpType : std::uint8_t {
   id = ((N) << (NUM_OP_TYPE_FLAG_BITS)) | (flags),
 #define LAST_OP_TYPE(N) OpTypeEnd = (N) << (NUM_OP_TYPE_FLAG_BITS),
 #include "OpType.inc"
+
 #undef HANDLE_OP_TYPE
 #undef LAST_OP_TYPE
 };
@@ -41,6 +42,7 @@ inline std::string toString(const OpType& opType) {
 #define HANDLE_OP_TYPE(N, id, flags, repr) {id, {repr}},
 #define LAST_OP_TYPE(N)
 #include "OpType.inc"
+
 #undef HANDLE_OP_TYPE
 #undef LAST_OP_TYPE
   };
@@ -110,7 +112,7 @@ inline std::string shortName(const OpType& opType) {
   }
 }
 
-[[nodiscard]] constexpr bool isSingleQubitGate(const qc::OpType& type) {
+[[nodiscard]] constexpr bool isSingleQubitGate(const OpType& type) {
   switch (type) {
   case I:
   case U:

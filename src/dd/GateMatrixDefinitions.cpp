@@ -21,7 +21,7 @@
 namespace {
 using namespace dd;
 
-inline GateMatrix uMat(const fp lambda, const fp phi, const fp theta) {
+GateMatrix uMat(const fp lambda, const fp phi, const fp theta) {
   return GateMatrix{{{std::cos(theta / 2.), 0.},
                      {-std::cos(lambda) * std::sin(theta / 2.),
                       -std::sin(lambda) * std::sin(theta / 2.)},
@@ -31,7 +31,7 @@ inline GateMatrix uMat(const fp lambda, const fp phi, const fp theta) {
                       std::sin(lambda + phi) * std::cos(theta / 2.)}}};
 }
 
-inline GateMatrix u2Mat(const fp lambda, const fp phi) {
+GateMatrix u2Mat(const fp lambda, const fp phi) {
   return GateMatrix{
       SQRT2_2,
       {-std::cos(lambda) * SQRT2_2, -std::sin(lambda) * SQRT2_2},
@@ -39,32 +39,32 @@ inline GateMatrix u2Mat(const fp lambda, const fp phi) {
       {std::cos(lambda + phi) * SQRT2_2, std::sin(lambda + phi) * SQRT2_2}};
 }
 
-inline GateMatrix pMat(const fp lambda) {
+GateMatrix pMat(const fp lambda) {
   return GateMatrix{1, 0, 0, {std::cos(lambda), std::sin(lambda)}};
 }
 
-inline GateMatrix rxMat(const fp lambda) {
+GateMatrix rxMat(const fp lambda) {
   return GateMatrix{{{std::cos(lambda / 2.), 0.},
                      {0., -std::sin(lambda / 2.)},
                      {0., -std::sin(lambda / 2.)},
                      {std::cos(lambda / 2.), 0.}}};
 }
 
-inline GateMatrix ryMat(const fp lambda) {
+GateMatrix ryMat(const fp lambda) {
   return GateMatrix{{{std::cos(lambda / 2.), 0.},
                      {-std::sin(lambda / 2.), 0.},
                      {std::sin(lambda / 2.), 0.},
                      {std::cos(lambda / 2.), 0.}}};
 }
 
-inline GateMatrix rzMat(const fp lambda) {
+GateMatrix rzMat(const fp lambda) {
   return GateMatrix{{{std::cos(lambda / 2.), -std::sin(lambda / 2.)},
                      0,
                      0,
                      {std::cos(lambda / 2.), std::sin(lambda / 2.)}}};
 }
 
-inline TwoQubitGateMatrix rxxMat(const fp theta) {
+TwoQubitGateMatrix rxxMat(const fp theta) {
   const auto cosTheta = std::cos(theta / 2.);
   const auto sinTheta = std::sin(theta / 2.);
 
@@ -74,7 +74,7 @@ inline TwoQubitGateMatrix rxxMat(const fp theta) {
                              {std::complex{0., -sinTheta}, 0, 0, cosTheta}}};
 }
 
-inline TwoQubitGateMatrix ryyMat(const fp theta) {
+TwoQubitGateMatrix ryyMat(const fp theta) {
   const auto cosTheta = std::cos(theta / 2.);
   const auto sinTheta = std::sin(theta / 2.);
 
@@ -84,7 +84,7 @@ inline TwoQubitGateMatrix ryyMat(const fp theta) {
                              {std::complex{0., sinTheta}, 0, 0, cosTheta}}};
 }
 
-inline TwoQubitGateMatrix rzzMat(const fp theta) {
+TwoQubitGateMatrix rzzMat(const fp theta) {
   const auto cosTheta = std::cos(theta / 2.);
   const auto sinTheta = std::sin(theta / 2.);
 
@@ -94,7 +94,7 @@ inline TwoQubitGateMatrix rzzMat(const fp theta) {
                              {0, 0, 0, {cosTheta, -sinTheta}}}};
 }
 
-inline TwoQubitGateMatrix rzxMat(const fp theta) {
+TwoQubitGateMatrix rzxMat(const fp theta) {
   const auto cosTheta = std::cos(theta / 2.);
   const auto sinTheta = std::sin(theta / 2.);
 
@@ -104,7 +104,7 @@ inline TwoQubitGateMatrix rzxMat(const fp theta) {
                              {0, 0, {0., sinTheta}, cosTheta}}};
 }
 
-inline TwoQubitGateMatrix xxMinusYYMat(const fp theta, const fp beta = 0.) {
+TwoQubitGateMatrix xxMinusYYMat(const fp theta, const fp beta = 0.) {
   const auto cosTheta = std::cos(theta / 2.);
   const auto sinTheta = std::sin(theta / 2.);
   const auto cosBeta = std::cos(beta);
@@ -118,7 +118,7 @@ inline TwoQubitGateMatrix xxMinusYYMat(const fp theta, const fp beta = 0.) {
         cosTheta}}};
 }
 
-inline TwoQubitGateMatrix xxPlusYYMat(const fp theta, const fp beta = 0.) {
+TwoQubitGateMatrix xxPlusYYMat(const fp theta, const fp beta = 0.) {
   const auto cosTheta = std::cos(theta / 2.);
   const auto sinTheta = std::sin(theta / 2.);
   const auto cosBeta = std::cos(beta);
