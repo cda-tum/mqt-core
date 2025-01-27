@@ -426,7 +426,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
 
       // Map the user declared variable idents in the .variable entry to the
       // ones declared in the .initial_layout as explained in
-      // https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information
+      // https://mqt.readthedocs.io/projects/core/en/latest/mqt_core_ir.html#layout-information
       for (std::size_t i = 0; i < nclassics; ++i) {
         const auto algorithmicQubit = static_cast<Qubit>(i);
         const auto deviceQubitForVariableIdentInInitialLayout =
@@ -592,7 +592,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         //
         // The outputPermutation map will use be structured as shown in the
         // documentation
-        // (https://mqt.readthedocs.io/projects/core/en/latest/quickstart.html#layout-information)
+        // (https://mqt.readthedocs.io/projects/core/en/latest/mqt_core_ir.html#layout-information)
         // with the output qubit being used as the key while the input qubit
         // serves as the map entries value.
         //
