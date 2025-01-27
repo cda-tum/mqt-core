@@ -153,7 +153,7 @@ std::size_t cliffordSimp(ZXDiagram& diag);
  * @brief Simplify the diagram by applying the pivot rule to non-Pauli spider.
  * @details By extracting the phases into extra "gadgets", the pivot rule can be
  * applies to non-Pauli spiders. See https://arxiv.org/abs/1903.10477, page 13
- * rule (P2) and (P3) for details
+ * rule (P2) and (P3) for details.
  * @param diag The diagram to simplify.
  * @return The number of simplifications applied.
  */
