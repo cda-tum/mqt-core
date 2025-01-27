@@ -470,8 +470,8 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
           setLogicalQubitAncillary(ancillaryQubit);
 
           // Since the call to setLogicalQubitAncillary does not actually
-          // transfer the qubit from the data qubit lookup into the ancillary
-          // lookup we will 'manually' perform this transfer.
+          // transfer the qubit from the data qubit register into the ancillary
+          // register we will 'manually' perform this transfer.
           const std::string associatedVariableNameForQubitRegister =
               getQubitRegister(ancillaryQubit).getName();
           quantumRegisters.erase(associatedVariableNameForQubitRegister);
