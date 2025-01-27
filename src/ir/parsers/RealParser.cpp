@@ -246,7 +246,7 @@ parseIoNames(const int lineInRealFileDefiningIoNames,
 }
 
 void assertRequiredHeaderComponentsAreDefined(
-    int processedLine,
+    const int processedLine,
     std::initializer_list<std::string_view> requiredHeaderComponentPrefixes,
     const std::set<std::string, std::less<>>&
         currentUserDeclaredHeaderComponents) {
@@ -287,7 +287,7 @@ void trimCommentAndTrailingWhitespaceData(std::string& lineToProcess) {
 } // namespace
 
 void qc::QuantumComputation::importReal(std::istream& is) {
-  auto line = readRealHeader(is);
+  const auto line = readRealHeader(is);
   readRealGateDescriptions(is, line);
 }
 
@@ -364,8 +364,7 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
     }
 
     if (cmd == ".NUMVARS") {
-      std::size_t nq{};
-      if (!static_cast<bool>(is >> nq)) {
+      if (std::size_t nq{}; !static_cast<bool>(is >> nq)) {
         nqubits = 0;
       } else {
         nqubits = nq;
@@ -395,17 +394,17 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
         const auto qubit = static_cast<Qubit>(i);
         const std::string& quantumRegisterIdentifier =
             processedVariableIdents.at(i);
-        quantumRegisters.insert(
-            {quantumRegisterIdentifier,
-             QuantumRegister(qubit, 1, quantumRegisterIdentifier)});
+        quantumRegisters.emplace(
+            quantumRegisterIdentifier,
+            QuantumRegister(qubit, 1, quantumRegisterIdentifier));
 
         const std::string& classicalRegisterIdentifier =
             "c_" + quantumRegisterIdentifier;
-        classicalRegisters.insert(
-            {classicalRegisterIdentifier,
-             ClassicalRegister(qubit, 1, classicalRegisterIdentifier)});
-        initialLayout.insert({qubit, qubit});
-        outputPermutation.insert({qubit, qubit});
+        classicalRegisters.emplace(
+            classicalRegisterIdentifier,
+            ClassicalRegister(qubit, 1, classicalRegisterIdentifier));
+        initialLayout.emplace(qubit, qubit);
+        outputPermutation.emplace(qubit, qubit);
       }
     } else if (cmd == ".INITIAL_LAYOUT") {
       is >> std::ws;
