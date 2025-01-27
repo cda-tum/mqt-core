@@ -26,7 +26,7 @@ enum OpTypeFlags : uint8_t {
 
 constexpr static unsigned NUM_OP_TYPE_FLAG_BITS = 2;
 
-// Natively supported operations of the QFR library
+// Natively supported operations of the MQT Core library
 enum OpType : std::uint8_t {
 #define HANDLE_OP_TYPE(N, id, flags, repr)                                     \
   id = ((N) << (NUM_OP_TYPE_FLAG_BITS)) | (flags),
