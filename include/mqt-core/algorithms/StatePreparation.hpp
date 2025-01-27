@@ -22,12 +22,16 @@ namespace qc {
  * Adapted implementation of IBM Qiskit's State Preparation:
  * https://github.com/Qiskit/qiskit/blob/e9ccd3f374fd5424214361d47febacfa5919e1e3/qiskit/circuit/library/data_preparation/state_preparation.py
  * based on the following paper:
- *      V. V. Shende, S. S. Bullock and I. L. Markov, "Synthesis of quantum-logic circuits," in IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, vol. 25, no. 6, pp. 1000-1010, June 2006, doi: 10.1109/TCAD.2005.855930.
+ *      V. V. Shende, S. S. Bullock and I. L. Markov, "Synthesis of
+ *quantum-logic circuits," in IEEE Transactions on Computer-Aided Design of
+ *Integrated Circuits and Systems, vol. 25, no. 6, pp. 1000-1010, June 2006,
+ *doi: 10.1109/TCAD.2005.855930.
  *
- * @param amplitudes state (vector) to prepare. Must be normalized and have a size that is a power of two
+ * @param amplitudes state (vector) to prepare. Must be normalized and have a
+ *size that is a power of two
  * @return quantum computation that prepares the state
- * @throws invalid_argument @p amplitudes is not normalized or its length is not a
- * power of two
+ * @throws invalid_argument @p amplitudes is not normalized or its length is not
+ *a power of two
  **/
 [[nodiscard]] auto
 createStatePreparationCircuit(std::vector<std::complex<double>>& amplitudes)
