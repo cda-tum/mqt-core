@@ -28,8 +28,9 @@ namespace zx {
  * are the inputs and outputs of the diagram. The graph is stored as an
  * adjacency list. The vertices are stored in a vector of optional VertexData.
  * The optional is empty if the vertex has been deleted.
+ * The scalars of the diagram are SymbolicPiExpressions, meaning that all
+ * computations can be done symbolically.
  */
-
 class ZXDiagram {
 public:
   ZXDiagram() = default;
