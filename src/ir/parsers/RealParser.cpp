@@ -87,26 +87,14 @@ parseVariableNames(const int processedLineNumberInRealFile,
       variableIdentEndIdx = readInRawVariableIdentValues.size();
     }
 
-// Since the string fed into this function is a line read from the .real file
-// (read until a newline character is encountered), the carriage return
-// character used in combination with the newline character on windows systems
-// needs ignored, otherwise the carriage return would be considered as part of
-// the variable identifier. All other systems (expect Mac OS <= 9 [using
-// carriage return to indicate a newline]) use the newline character to indicate
-// a newline in a file.
-#if _WIN32
     std::size_t variableIdentLength =
         variableIdentEndIdx - variableIdentStartIdx;
 
-    variableIdentLength -= static_cast<std::size_t>(
-        (variableIdentLength > 0 &&
-         readInRawVariableIdentValues.at(std::min(
-             variableIdentEndIdx, readInRawVariableIdentValues.size() - 1)) ==
-             '\r'));
-#else
-    const std::size_t variableIdentLength =
-        variableIdentEndIdx - variableIdentStartIdx;
-#endif
+    // Remove carriage return character if present
+    if (variableIdentLength > 0 &&
+        readInRawVariableIdentValues.at(variableIdentEndIdx - 1) == '\r') {
+      --variableIdentLength;
+    }
 
     auto variableIdent = readInRawVariableIdentValues.substr(
         variableIdentStartIdx, variableIdentLength);
@@ -203,22 +191,12 @@ parseIoNames(const int lineInRealFileDefiningIoNames,
           static_cast<std::size_t>(!searchingForWhitespaceCharacter);
     }
 
-// Since the string fed into this function is a line read from the .real file
-// (read until a newline character is encountered), the carriage return
-// character used in combination with the newline character on windows systems
-// needs ignored, otherwise the carriage return would be considered as part of
-// the variable identifier. All other systems (expect Mac OS <= 9 [using
-// carriage return to indicate a newline]) use the newline character to indicate
-// a newline in a file.
-#if _WIN32
     std::size_t ioNameLength = ioNameEndIdx - ioNameStartIdx;
-    ioNameLength -= static_cast<std::size_t>(
-        (ioNameLength > 0 &&
-         ioNameIdentsRawValues.at(std::min(
-             ioNameEndIdx, ioNameIdentsRawValues.size() - 1)) == '\r'));
-#else
-    const std::size_t ioNameLength = ioNameEndIdx - ioNameStartIdx;
-#endif
+    // Remove carriage return character if present
+    if (ioNameLength > 0 &&
+        ioNameIdentsRawValues.at(ioNameEndIdx - 1) == '\r') {
+      --ioNameLength;
+    }
 
     const auto& ioName =
         ioNameIdentsRawValues.substr(ioNameStartIdx, ioNameLength);
