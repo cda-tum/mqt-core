@@ -60,9 +60,9 @@ std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
   return std::nullopt;
 }
 
-/// Determine whether the given io name value that is not enclosed in quotes
-/// consists of only letters, digits and underscore characters.
-/// @param ioName The name to valid
+/// Determine whether the given io name value, which is not enclosed in quotes,
+/// consists of only letters, digits, and underscore characters.
+/// @param ioName The name to validate
 /// @return Whether the given io name is valid
 bool isValidIoName(const std::string_view& ioName) noexcept {
   return !ioName.empty() &&
