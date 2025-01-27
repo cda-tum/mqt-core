@@ -1450,8 +1450,7 @@ void QuantumComputation::gphase(const fp angle) {
   void QuantumComputation::mc##op(const Controls& controls,                    \
                                   const Qubit target) {                        \
     checkQubitRange(target, controls);                                         \
-    emplace_back<StandardOperation>(controls, target,                          \
-                                    OP_NAME_TO_TYPE.at(#op));                  \
+    emplace_back<StandardOperation>(controls, target, opTypeFromString(#op));  \
   }
 
 DEFINE_SINGLE_TARGET_OPERATION(i)
@@ -1484,13 +1483,12 @@ DEFINE_SINGLE_TARGET_OPERATION(sxdg)
                                   const Qubit target) {                        \
     checkQubitRange(target, controls);                                         \
     if (std::holds_alternative<fp>(param)) {                                   \
-      emplace_back<StandardOperation>(controls, target,                        \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+      emplace_back<StandardOperation>(controls, target, opTypeFromString(#op), \
                                       std::vector{std::get<fp>(param)});       \
     } else {                                                                   \
       addVariables(param);                                                     \
-      emplace_back<SymbolicOperation>(                                         \
-          controls, target, OP_NAME_TO_TYPE.at(#op), std::vector{param});      \
+      emplace_back<SymbolicOperation>(controls, target, opTypeFromString(#op), \
+                                      std::vector{param});                     \
     }                                                                          \
   }
 
@@ -1519,12 +1517,11 @@ DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(p, theta)
     if (std::holds_alternative<fp>(param0) &&                                  \
         std::holds_alternative<fp>(param1)) {                                  \
       emplace_back<StandardOperation>(                                         \
-          controls, target, OP_NAME_TO_TYPE.at(#op),                           \
+          controls, target, opTypeFromString(#op),                             \
           std::vector{std::get<fp>(param0), std::get<fp>(param1)});            \
     } else {                                                                   \
       addVariables(param0, param1);                                            \
-      emplace_back<SymbolicOperation>(controls, target,                        \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+      emplace_back<SymbolicOperation>(controls, target, opTypeFromString(#op), \
                                       std::vector{param0, param1});            \
     }                                                                          \
   }
@@ -1554,14 +1551,13 @@ DEFINE_SINGLE_TARGET_TWO_PARAMETER_OPERATION(u2, phi, lambda)
     if (std::holds_alternative<fp>(param0) &&                                  \
         std::holds_alternative<fp>(param1) &&                                  \
         std::holds_alternative<fp>(param2)) {                                  \
-      emplace_back<StandardOperation>(                                         \
-          controls, target, OP_NAME_TO_TYPE.at(#op),                           \
-          std::vector{std::get<fp>(param0), std::get<fp>(param1),              \
-                      std::get<fp>(param2)});                                  \
+      emplace_back<StandardOperation>(controls, target, opTypeFromString(#op), \
+                                      std::vector{std::get<fp>(param0),        \
+                                                  std::get<fp>(param1),        \
+                                                  std::get<fp>(param2)});      \
     } else {                                                                   \
       addVariables(param0, param1, param2);                                    \
-      emplace_back<SymbolicOperation>(controls, target,                        \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+      emplace_back<SymbolicOperation>(controls, target, opTypeFromString(#op), \
                                       std::vector{param0, param1, param2});    \
     }                                                                          \
   }
@@ -1582,7 +1578,7 @@ DEFINE_SINGLE_TARGET_THREE_PARAMETER_OPERATION(u, theta, phi, lambda)
                                   const Qubit target0, const Qubit target1) {  \
     checkQubitRange(target0, target1, controls);                               \
     emplace_back<StandardOperation>(controls, target0, target1,                \
-                                    OP_NAME_TO_TYPE.at(#op));                  \
+                                    opTypeFromString(#op));                    \
   }
 
 DEFINE_TWO_TARGET_OPERATION(swap) // NOLINT: bugprone-exception-escape
@@ -1612,12 +1608,12 @@ DEFINE_TWO_TARGET_OPERATION(move)
     checkQubitRange(target0, target1, controls);                               \
     if (std::holds_alternative<fp>(param)) {                                   \
       emplace_back<StandardOperation>(controls, target0, target1,              \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      opTypeFromString(#op),                   \
                                       std::vector{std::get<fp>(param)});       \
     } else {                                                                   \
       addVariables(param);                                                     \
       emplace_back<SymbolicOperation>(controls, target0, target1,              \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      opTypeFromString(#op),                   \
                                       std::vector{param});                     \
     }                                                                          \
   }
@@ -1647,12 +1643,12 @@ DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(rzx, theta)
     if (std::holds_alternative<fp>(param0) &&                                  \
         std::holds_alternative<fp>(param1)) {                                  \
       emplace_back<StandardOperation>(                                         \
-          controls, target0, target1, OP_NAME_TO_TYPE.at(#op),                 \
+          controls, target0, target1, opTypeFromString(#op),                   \
           std::vector{std::get<fp>(param0), std::get<fp>(param1)});            \
     } else {                                                                   \
       addVariables(param0, param1);                                            \
       emplace_back<SymbolicOperation>(controls, target0, target1,              \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      opTypeFromString(#op),                   \
                                       std::vector{param0, param1});            \
     }                                                                          \
   }
