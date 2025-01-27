@@ -33,15 +33,6 @@
 #include <unordered_set>
 #include <vector>
 
-// Using the anonymous namespace to declare the file-scope functions only
-// used in the current source file instead of static functions.
-//
-// While the LLVM coding standard prefers static functions over anonymous
-// namespaces: https://llvm.org/docs/CodingStandards.html#anonymous-namespaces
-// the clang-tidy documentation for one check states that anonymous namespaces
-// are the "superior alternative"
-// (https://clang.llvm.org/extra/clang-tidy/checks/misc/use-anonymous-namespace.html)
-// according to the C++ standard thus we follow the clang-tidy recommendation.
 namespace {
 std::optional<qc::Qubit> getQubitForVariableIdentFromAnyLookup(
     const std::string& variableIdent, const qc::QuantumRegisterMap& dataQubits,
@@ -339,11 +330,6 @@ int qc::QuantumComputation::readRealHeader(std::istream& is) {
   constexpr std::string_view variablesHeaderComponentPrefix = ".VARIABLES";
   constexpr std::string_view outputsHeaderComponentPrefix = ".OUTPUTS";
 
-  // To enabled heterogenous lookup in an associative, ordered container (i.e.
-  // use the type std::string_view or a string literal as the lookup key without
-  // allocating a new string) we need to specify the transparent comparator.
-  // Heterogenuous lookup in unordered associative containers is a C++20
-  // feature.
   std::set<std::string, std::less<>> definedHeaderComponents;
 
   while (true) {
