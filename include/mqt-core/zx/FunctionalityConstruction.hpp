@@ -40,7 +40,7 @@ public:
   /**
    * @brief Check whether a given QuantumComputation can be transformed to a
    * ZXDiagram.
-   * @details Not all instructions supported by the QuantumComputation is
+   * @details Not all instructions supported by the QuantumComputation are
    * supported by the ZXDiagram (e.g. arbitrarily-controlled multi-qubit gates).
    * @param qc Pointer to QuantumComputation to check
    * @return true if the QuantumComputation can be transformed to a ZXDiagram,
