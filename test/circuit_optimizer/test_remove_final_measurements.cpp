@@ -12,6 +12,7 @@
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/OpType.hpp"
+#include "qasm3/Importer.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>
@@ -147,10 +148,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsWithOperationsInFront) {
   const std::string circ =
       "OPENQASM 2.0;include \"qelib1.inc\";qreg q[3];qreg r[3];h q;cx q, "
       "r;creg c[3];creg d[3];barrier q;measure q->c;measure r->d;\n";
-  std::stringstream ss{};
-  ss << circ;
-  QuantumComputation qc{};
-  qc.import(ss, qc::Format::OpenQASM2);
+  auto qc = qasm3::Importer::imports(circ);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::removeFinalMeasurements(qc);

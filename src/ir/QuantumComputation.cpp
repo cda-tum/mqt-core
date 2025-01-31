@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -31,7 +30,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <istream>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -246,64 +244,6 @@ std::size_t QuantumComputation::getDepth() const {
   }
 
   return *std::max_element(depths.begin(), depths.end());
-}
-
-void QuantumComputation::import(const std::string& filename) {
-  const std::size_t dot = filename.find_last_of('.');
-  std::string extension = filename.substr(dot + 1);
-  std::transform(
-      extension.begin(), extension.end(), extension.begin(),
-      [](unsigned char ch) { return static_cast<char>(::tolower(ch)); });
-  if (extension == "real") {
-    import(filename, Format::Real);
-  } else if (extension == "qasm") {
-    import(filename, Format::OpenQASM3);
-  } else if (extension == "tfc") {
-    import(filename, Format::TFC);
-  } else if (extension == "qc") {
-    import(filename, Format::QC);
-  } else {
-    throw QFRException("[import] extension " + extension + " not recognized");
-  }
-}
-
-void QuantumComputation::import(const std::string& filename, Format format) {
-  const std::size_t slash = filename.find_last_of('/');
-  const std::size_t dot = filename.find_last_of('.');
-  name = filename.substr(slash + 1, dot - slash - 1);
-
-  auto ifs = std::ifstream(filename);
-  if (ifs.good()) {
-    import(ifs, format);
-  } else {
-    throw QFRException("[import] Error processing input stream: " + name);
-  }
-}
-
-void QuantumComputation::import(std::istream& is, Format format) {
-  // reset circuit before importing
-  reset();
-
-  switch (format) {
-  case Format::Real:
-    importReal(is);
-    break;
-  case Format::OpenQASM2:
-  case Format::OpenQASM3:
-    importOpenQASM3(is);
-    break;
-  case Format::TFC:
-    importTFC(is);
-    break;
-  case Format::QC:
-    importQC(is);
-    break;
-  default:
-    throw QFRException("[import] format not recognized");
-  }
-
-  // initialize the initial layout and output permutation
-  initializeIOMapping();
 }
 
 void QuantumComputation::initializeIOMapping() {
@@ -696,29 +636,6 @@ std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
   return os;
 }
 
-void QuantumComputation::dump(const std::string& filename) const {
-  const std::size_t dot = filename.find_last_of('.');
-  assert(dot != std::string::npos);
-  std::string extension = filename.substr(dot + 1);
-  std::transform(
-      extension.begin(), extension.end(), extension.begin(),
-      [](unsigned char c) { return static_cast<char>(::tolower(c)); });
-  if (extension == "real") {
-    dump(filename, Format::Real);
-  } else if (extension == "qasm") {
-    dump(filename, Format::OpenQASM3);
-  } else if (extension == "qc") {
-    dump(filename, Format::QC);
-  } else if (extension == "tfc") {
-    dump(filename, Format::TFC);
-  } else if (extension == "tensor") {
-    dump(filename, Format::Tensor);
-  } else {
-    throw QFRException("[dump] Extension " + extension +
-                       " not recognized/supported for dumping.");
-  }
-}
-
 void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) const {
   // dump initial layout and output permutation
 
@@ -824,33 +741,15 @@ void QuantumComputation::reset() {
 }
 
 void QuantumComputation::dump(const std::string& filename,
-                              Format format) const {
+                              const Format format) const {
   auto of = std::ofstream(filename);
   if (!of.good()) {
     throw QFRException("[dump] Error opening file: " + filename);
   }
-  dump(of, format);
-}
-
-void QuantumComputation::dump(std::ostream& of, Format format) const {
-  switch (format) {
-  case Format::OpenQASM3:
+  if (format == Format::OpenQASM3) {
     dumpOpenQASM(of, true);
-    break;
-  case Format::OpenQASM2:
+  } else {
     dumpOpenQASM(of, false);
-    break;
-  case Format::Real:
-    std::cerr << "Dumping in real format currently not supported\n";
-    break;
-  case Format::TFC:
-    std::cerr << "Dumping in TFC format currently not supported\n";
-    break;
-  case Format::QC:
-    std::cerr << "Dumping in QC format currently not supported\n";
-    break;
-  default:
-    throw QFRException("[dump] Format not recognized/supported for dumping.");
   }
 }
 
@@ -1144,23 +1043,7 @@ QuantumComputation::QuantumComputation(const std::size_t nq,
     mt.seed(seeds);
   }
 }
-QuantumComputation::QuantumComputation(const std::string& filename,
-                                       const std::size_t s)
-    : seed(s) {
-  import(filename);
-  if (seed != 0U) {
-    mt.seed(seed);
-  } else {
-    // create and properly seed rng
-    std::array<std::mt19937_64::result_type, std::mt19937_64::state_size>
-        randomData{};
-    std::random_device rd;
-    std::generate(std::begin(randomData), std::end(randomData),
-                  [&rd]() { return rd(); });
-    std::seed_seq seeds(std::begin(randomData), std::end(randomData));
-    mt.seed(seeds);
-  }
-}
+
 QuantumComputation::QuantumComputation(const QuantumComputation& qc)
     : nqubits(qc.nqubits), nclassics(qc.nclassics), nancillae(qc.nancillae),
       name(qc.name), quantumRegisters(qc.quantumRegisters),
@@ -1374,15 +1257,6 @@ bool QuantumComputation::isDynamic() const {
   return std::any_of(cbegin(), cend(), [&measured](const auto& op) {
     return ::qc::isDynamicCircuit(&op, measured);
   });
-}
-
-QuantumComputation QuantumComputation::fromQASM(const std::string& qasm) {
-  std::stringstream ss{};
-  ss << qasm;
-  QuantumComputation qc{};
-  qc.importOpenQASM3(ss);
-  qc.initializeIOMapping();
-  return qc;
 }
 
 QuantumComputation

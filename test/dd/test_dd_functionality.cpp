@@ -21,6 +21,7 @@
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
+#include "qasm3/Importer.hpp"
 
 #include <algorithm>
 #include <array>
@@ -375,7 +376,7 @@ TEST_F(DDFunctionality, changePermutation) {
                                "include \"qelib1.inc\";"
                                "qreg q[2];"
                                "x q[0];\n";
-  const auto qc = QuantumComputation::fromQASM(testfile);
+  const auto qc = qasm3::Importer::imports(testfile);
   const auto sim = simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].w.exactlyOne());

@@ -10,21 +10,24 @@
 #pragma once
 
 #include "CompilerPass.hpp"
-#include "ConstEvalPass.hpp"
-#include "ir/parsers/qasm3_parser/Exception.hpp"
-#include "ir/parsers/qasm3_parser/InstVisitor.hpp"
-#include "ir/parsers/qasm3_parser/Statement.hpp"
-#include "ir/parsers/qasm3_parser/Types.hpp"
+#include "qasm3/InstVisitor.hpp"
+#include "qasm3/Types.hpp"
 
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 
+namespace qasm3 {
+class GateOperand;
+struct DebugInfo;
+} // namespace qasm3
+
+namespace qasm3::const_eval {
+class ConstEvalPass;
+}
+
 namespace qasm3::type_checking {
-
-using const_eval::ConstEvalPass;
-
 struct InferredType {
   bool isError;
   std::shared_ptr<ResolvedType> type;
@@ -60,13 +63,14 @@ class TypeCheckPass final : public CompilerPass,
   std::map<std::string, InferredType> env;
   // We need a reference to a const eval pass to evaluate types before type
   // checking.
-  ConstEvalPass* constEvalPass;
+  const_eval::ConstEvalPass* constEvalPass;
 
   InferredType error(const std::string& msg,
                      const std::shared_ptr<DebugInfo>& debugInfo = nullptr);
 
 public:
-  explicit TypeCheckPass(ConstEvalPass* pass) : constEvalPass(pass) {}
+  explicit TypeCheckPass(const_eval::ConstEvalPass* pass)
+      : constEvalPass(pass) {}
 
   ~TypeCheckPass() override = default;
 
@@ -74,28 +78,9 @@ public:
     env.emplace(identifier, ty);
   }
 
-  void processStatement(Statement& statement) override {
-    try {
-      statement.accept(this);
+  void processStatement(Statement& statement) override;
 
-      if (hasError) {
-        throw TypeCheckError("Type check failed.");
-      }
-    } catch (const TypeCheckError& e) {
-      throw CompilerError(e.what(), statement.debugInfo);
-    }
-  }
-
-  void checkGateOperand(const GateOperand& operand) {
-    if (operand.expression == nullptr) {
-      return;
-    }
-
-    if (const auto type = visit(operand.expression);
-        !type.isError && !type.type->isUint()) {
-      error("Index must be an unsigned integer");
-    }
-  }
+  void checkGateOperand(const GateOperand& operand);
 
   // Types
   void

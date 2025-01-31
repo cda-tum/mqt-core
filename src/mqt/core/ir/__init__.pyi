@@ -102,21 +102,15 @@ class QuantumComputation(MutableSequence[Operation]):
     Args:
         nq: The number of qubits in the quantum computation.
         nc: The number of classical bits in the quantum computation.
-        filename: The filename of the file to load the quantum computation from.
-                  Supported formats are OpenQASM2, OpenQASM3, Real, GRCS, TFC, QC.
+        seed: The seed to use for the internal random number generator.
     """
 
     # --------------------------------------------------------------------------
     #                               Constructors
     # --------------------------------------------------------------------------
-    @overload
-    def __init__(self) -> None: ...
-    @overload
-    def __init__(self, nq: int, nc: int = 0) -> None: ...
-    @overload
-    def __init__(self, filename: str | PathLike[str]) -> None: ...
+    def __init__(self, nq: int = 0, nc: int = 0, seed: int = 0) -> None: ...
     @staticmethod
-    def from_qasm(qasm: str) -> QuantumComputation:
+    def from_qasm_str(qasm: str) -> QuantumComputation:
         """Create a QuantumComputation object from an OpenQASM string.
 
         Args:
@@ -124,6 +118,16 @@ class QuantumComputation(MutableSequence[Operation]):
 
         Returns:
             The QuantumComputation object created from the OpenQASM string.
+        """
+    @staticmethod
+    def from_qasm(filename: str) -> QuantumComputation:
+        """Create a QuantumComputation object from an OpenQASM file.
+
+        Args:
+            filename: The filename of the OpenQASM file to create the QuantumComputation object from.
+
+        Returns:
+            The QuantumComputation object created from the OpenQASM file.
         """
 
     # --------------------------------------------------------------------------

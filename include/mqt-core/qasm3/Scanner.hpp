@@ -11,10 +11,9 @@
 
 #include "Token.hpp"
 
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
+#include <iosfwd>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -27,19 +26,13 @@ class Scanner {
   size_t line = 1;
   size_t col = 0;
 
-  [[nodiscard]] static bool isSpace(const char c) {
-    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-  }
+  [[nodiscard]] static bool isSpace(char c);
 
-  [[nodiscard]] static bool isFirstIdChar(const char c) {
-    return isalpha(c) != 0 || c == '_';
-  }
+  [[nodiscard]] static bool isFirstIdChar(char c);
 
-  [[nodiscard]] static bool isNum(const char c) { return c >= '0' && c <= '9'; }
+  [[nodiscard]] static bool isNum(char c);
 
-  [[nodiscard]] static bool isHex(const char c) {
-    return isNum(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-  }
+  [[nodiscard]] static bool isHex(char c);
 
   [[nodiscard]] static bool hasTimingSuffix(char first, char second);
 
@@ -65,18 +58,9 @@ class Scanner {
 
   Token consumeName();
 
-  void error(const std::string& msg) const {
-    std::cerr << "Error at line " << line << ", column " << col << ": " << msg
-              << '\n';
-  }
+  void error(const std::string& msg) const;
 
-  void expect(const char expected) {
-    if (ch != expected) {
-      error("Expected '" + std::to_string(expected) + "', got '" + ch + "'");
-    } else {
-      nextCh();
-    }
-  }
+  void expect(char expected);
 
 public:
   explicit Scanner(std::istream* in);

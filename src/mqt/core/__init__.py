@@ -63,9 +63,9 @@ def load(input_circuit: QuantumComputation | str | os.PathLike[str] | QuantumCir
                 msg = f"File {input_circuit} does not exist."
                 raise FileNotFoundError(msg)
             # otherwise, we assume that this is a QASM string
-            return QuantumComputation.from_qasm(input_str)
+            return QuantumComputation.from_qasm_str(input_str)
 
-        return QuantumComputation(input_str)
+        return QuantumComputation.from_qasm(input_str)
 
     # At this point, we know that the input is a Qiskit QuantumCircuit
     from .plugins.qiskit import qiskit_to_mqt
