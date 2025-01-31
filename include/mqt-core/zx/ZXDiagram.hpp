@@ -144,7 +144,6 @@ public:
    * @param to second vertex
    * @return true if there is a path between the two vertices, false otherwise
    */
-
   [[nodiscard]] bool connected(Vertex from, Vertex to) const;
 
   /**
