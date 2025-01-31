@@ -161,7 +161,7 @@ public:
   explicit Term(const Variable v, T coef = 1.) : coeff(coef), var(v) {};
 
   /**
-   * Get the negative of the term.
+   * @brief Get the negative of the term.
    * @return Negative of the term.
    */
   Term operator-() const { return Term(var, -coeff); }
