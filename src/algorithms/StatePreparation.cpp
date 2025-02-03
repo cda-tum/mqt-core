@@ -221,11 +221,8 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
         for (auto& target : op->getTargets()) {
           target += static_cast<unsigned int>(i);
         }
-        for (auto control : op->getControls()) {
-          // there were some errors when accessing the qubit directly and
-          // adding to it
-          op->setControls(
-              Controls{Control{control.qubit + static_cast<unsigned int>(i)}});
+        for (auto& control: op->getControls()) {
+          control.qubit += static_cast<Qubit>(i);
         }
       }
       disentangler.emplace_back<Operation>(rzMultiplexer.asOperation());
@@ -242,12 +239,9 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
         for (auto& target : op->getTargets()) {
           target += static_cast<unsigned int>(i);
         }
-        for (auto control : op->getControls()) {
-          // there were some errors when accessing the qubit directly and
-          // adding to it
-          op->setControls(
-              Controls{Control{control.qubit + static_cast<unsigned int>(i)}});
-        }
+      for (auto& control: op->getControls()) {
+        control.qubit += static_cast<Qubit>(i);
+      }
       }
       disentangler.emplace_back<Operation>(ryMultiplexer.asOperation());
     }
