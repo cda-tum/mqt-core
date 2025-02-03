@@ -81,9 +81,9 @@ template <typename T>
   return identity;
 }
 
-[[nodiscard]] auto
-matrixVectorProd(const Matrix& matrix,
-                 const std::vector<double>& vector) -> std::vector<double> {
+[[nodiscard]] auto matrixVectorProd(const Matrix& matrix,
+                                    const std::vector<double>& vector)
+    -> std::vector<double> {
   std::vector<double> result;
   for (const auto& matrixVec : matrix) {
     double sum{0};
