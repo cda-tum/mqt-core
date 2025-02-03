@@ -8,10 +8,12 @@
  */
 
 #include "dd/DDDefinitions.hpp"
-#include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Node.hpp"
+#include "dd/Operations.hpp"
 #include "dd/Package.hpp"
 #include "dd/RealNumber.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/StandardOperation.hpp"
 
 #include <cmath>
 #include <cstddef>
@@ -373,8 +375,8 @@ TEST(DensityMatrixFunctionality, GetValueByIndexProperDensityMatrix) {
   const auto nqubits = 1U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
-  const auto op1 = dd->makeGateDD(dd::H_MAT, 0U);
-  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), 0U);
+  const auto op1 = dd::getDD(qc::StandardOperation(0U, qc::H), *dd);
+  const auto op2 = dd::getDD(qc::StandardOperation(0, qc::RZ, {dd::PI_4}), *dd);
   auto state = dd->applyOperationToDensity(zero, op1);
   state = dd->applyOperationToDensity(state, op2);
 
@@ -407,8 +409,8 @@ TEST(DensityMatrixFunctionality, GetSparseMatrixConsistency) {
   const auto nqubits = 1U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
-  const auto op1 = dd->makeGateDD(dd::H_MAT, 0U);
-  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), 0U);
+  const auto op1 = dd::getDD(qc::StandardOperation(0U, qc::H), *dd);
+  const auto op2 = dd::getDD(qc::StandardOperation(0, qc::RZ, {dd::PI_4}), *dd);
   auto state = dd->applyOperationToDensity(zero, op1);
   state = dd->applyOperationToDensity(state, op2);
 
@@ -437,8 +439,8 @@ TEST(DensityMatrixFunctionality, PrintMatrix) {
   const auto nqubits = 1U;
   auto dd = std::make_unique<dd::Package<>>(nqubits);
   auto zero = dd->makeZeroDensityOperator(nqubits);
-  const auto op1 = dd->makeGateDD(dd::H_MAT, 0U);
-  const auto op2 = dd->makeGateDD(dd::rzMat(dd::PI_4), 0U);
+  const auto op1 = dd::getDD(qc::StandardOperation(0U, qc::H), *dd);
+  const auto op2 = dd::getDD(qc::StandardOperation(0, qc::RZ, {dd::PI_4}), *dd);
   auto state = dd->applyOperationToDensity(zero, op1);
   state = dd->applyOperationToDensity(state, op2);
 
