@@ -105,9 +105,11 @@ public:
   [[nodiscard]] const std::vector<bool>& getAncillary() const noexcept {
     return ancillary;
   }
+  [[nodiscard]] std::vector<bool>& getAncillary() noexcept { return ancillary; }
   [[nodiscard]] const std::vector<bool>& getGarbage() const noexcept {
     return garbage;
   }
+  [[nodiscard]] std::vector<bool>& getGarbage() noexcept { return garbage; }
   [[nodiscard]] std::size_t getNcbits() const noexcept { return nclassics; }
   [[nodiscard]] std::string getName() const noexcept { return name; }
   [[nodiscard]] const auto& getQuantumRegisters() const noexcept {

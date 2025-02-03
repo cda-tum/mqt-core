@@ -208,7 +208,8 @@ void registerQuantumComputation(py::module& m) {
   ///                  \n Ancillary and Garbage Handling \n
   ///---------------------------------------------------------------------------
 
-  qc.def_property_readonly("ancillary", &qc::QuantumComputation::getAncillary);
+  qc.def_property_readonly(
+      "ancillary", py::overload_cast<>(&qc::QuantumComputation::getAncillary));
   qc.def("set_circuit_qubit_ancillary",
          &qc::QuantumComputation::setLogicalQubitAncillary, "q"_a);
   qc.def("se_circuit_qubits_ancillary",
@@ -216,7 +217,8 @@ void registerQuantumComputation(py::module& m) {
          "q_max"_a);
   qc.def("is_circuit_qubit_ancillary",
          &qc::QuantumComputation::logicalQubitIsAncillary, "q"_a);
-  qc.def_property_readonly("garbage", &qc::QuantumComputation::getGarbage);
+  qc.def_property_readonly(
+      "garbage", py::overload_cast<>(&qc::QuantumComputation::getGarbage));
   qc.def("set_circuit_qubit_garbage",
          &qc::QuantumComputation::setLogicalQubitGarbage, "q"_a);
   qc.def("set_circuit_qubits_garbage",
