@@ -362,7 +362,8 @@ void QuantumComputation::addQubitRegister(std::size_t nq,
         "qubits have been added");
   }
 
-  quantumRegisters.try_emplace(regName, nqubits, nq, regName);
+  quantumRegisters.try_emplace(regName, static_cast<Qubit>(nqubits), nq,
+                               regName);
   for (std::size_t i = 0; i < nq; ++i) {
     auto j = static_cast<Qubit>(nqubits + i);
     initialLayout.insert({j, j});
@@ -404,7 +405,7 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
         "[addAncillaryRegister] New register size must be larger than 0");
   }
 
-  const auto totalqubits = nqubits + nancillae;
+  const auto totalqubits = static_cast<Qubit>(nqubits + nancillae);
   ancillaRegisters.try_emplace(regName, totalqubits, nq, regName);
   ancillary.resize(totalqubits + nq);
   garbage.resize(totalqubits + nq);

@@ -110,7 +110,7 @@ public:
   visitConstantExpression(std::shared_ptr<Constant> constantInt) override;
   InferredType visitIdentifierExpression(
       std::shared_ptr<IdentifierExpression> identifierExpression) override;
-  [[noreturn]] InferredType
+  InferredType
   visitIdentifierList(std::shared_ptr<IdentifierList> identifierList) override;
   InferredType visitMeasureExpression(
       std::shared_ptr<MeasureExpression> measureExpression) override;
