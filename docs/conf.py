@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import warnings
 from importlib import metadata
 from pathlib import Path
@@ -66,6 +67,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.imgconverter",
     "sphinxcontrib.bibtex",
+    "breathe",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -159,6 +161,11 @@ toc_object_entries_show_parents = "hide"
 python_use_unqualified_type_names = True
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
+
+
+breathe_projects = {"mqt.core": "doxygen/xml"}
+breathe_default_project = "mqt.core"
+subprocess.call("doxygen", shell=True)  # noqa: S602, S607
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "furo"
