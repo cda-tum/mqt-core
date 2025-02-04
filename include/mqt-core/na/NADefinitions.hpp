@@ -55,7 +55,11 @@ struct Point {
     const auto delta = *this - c;
     return delta.length();
   }
-
+  [[maybe_unused]] [[nodiscard]] qc::fp
+  getEuclideanDistanceFp(const Point& c) const {
+    const auto delta = *this - c;
+    return std::sqrt(delta.x * delta.x + delta.y * delta.y);
+  }
   [[maybe_unused]] [[nodiscard]] std::int64_t
   getManhattanDistanceX(const Point& c) const {
     if (x > c.x) {
