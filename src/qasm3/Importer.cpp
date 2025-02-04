@@ -177,7 +177,7 @@ Importer::evaluatePositiveConstant(const std::shared_ptr<Expression>& expr,
 }
 
 Importer::Importer(qc::QuantumComputation& quantumComputation)
-    : typeCheckPass(&constEvalPass), qc(&quantumComputation),
+    : typeCheckPass(constEvalPass), qc(&quantumComputation),
       gates(STANDARD_GATES) {
   for (const auto& [identifier, builtin] : initializeBuiltins()) {
     constEvalPass.addConst(identifier, builtin.first);

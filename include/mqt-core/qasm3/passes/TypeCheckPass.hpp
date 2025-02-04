@@ -67,8 +67,8 @@ class TypeCheckPass final : public CompilerPass,
                      const std::shared_ptr<DebugInfo>& debugInfo = nullptr);
 
 public:
-  explicit TypeCheckPass(const_eval::ConstEvalPass* pass)
-      : constEvalPass(pass) {}
+  explicit TypeCheckPass(const_eval::ConstEvalPass& pass)
+      : constEvalPass(&pass) {}
 
   ~TypeCheckPass() override = default;
 
