@@ -71,7 +71,6 @@ enum OpType : std::uint8_t {
   // Neutral atom shuttling operations
   Bridge,
   Move,
-  PassBy,
   AodActivate,
   AodDeactivate,
   AodMove,
@@ -169,8 +168,6 @@ inline std::string toString(const OpType& opType) {
     return "bridge";
   case Move:
     return "move";
-  case PassBy:
-    return "passby";
   case AodActivate:
     return "aod_activate";
   case AodDeactivate:
@@ -345,7 +342,6 @@ const inline static std::unordered_map<std::string, qc::OpType>
         {"compound", OpType::Compound},
         {"bridge", OpType::Bridge},
         {"move", OpType::Move},
-        {"passby", OpType::PassBy},
         {"aod_activate", OpType::AodActivate},
         {"aod_deactivate", OpType::AodDeactivate},
         {"aod_move", OpType::AodMove},

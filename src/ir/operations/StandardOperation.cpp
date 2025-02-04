@@ -428,9 +428,6 @@ void StandardOperation::dumpGateType(std::ostream& of, std::ostringstream& op,
   case Move:
     op << "move";
     break;
-  case PassBy:
-    op << "pass_by";
-    break;
   case Peres:
     of << op.str() << "cx";
     for (const auto& c : controls) {
