@@ -11,6 +11,7 @@
 
 #include "qasm3/InstVisitor.hpp"
 #include "qasm3/NestedEnvironment.hpp"
+#include "qasm3/Statement_fwd.hpp"
 #include "qasm3/passes/CompilerPass.hpp"
 
 #include <cstddef>

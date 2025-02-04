@@ -10,17 +10,21 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "InstVisitor.hpp"
-#include "NestedEnvironment.hpp"
 #include "ir/Permutation.hpp"
-#include "passes/ConstEvalPass.hpp"
-#include "passes/TypeCheckPass.hpp"
+#include "qasm3/InstVisitor.hpp"
+#include "qasm3/NestedEnvironment.hpp"
+#include "qasm3/Statement_fwd.hpp"
+#include "qasm3/passes/ConstEvalPass.hpp"
+#include "qasm3/passes/TypeCheckPass.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace qc {

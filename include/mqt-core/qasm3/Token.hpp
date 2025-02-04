@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <iosfwd>
 #include <string>
+#include <utility>
 
 namespace qasm3 {
 

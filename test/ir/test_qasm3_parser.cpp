@@ -7,7 +7,6 @@
  * Licensed under the MIT License
  */
 
-#include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/OpType.hpp"
@@ -30,10 +29,7 @@
 
 using namespace qc;
 
-class Qasm3ParserTest : public testing::TestWithParam<std::size_t> {
-protected:
-  void SetUp() override {}
-};
+class Qasm3ParserTest : public testing::TestWithParam<std::size_t> {};
 
 TEST_F(Qasm3ParserTest, ImportQasm3) {
   const std::string testfile = "OPENQASM 3.0;\n"

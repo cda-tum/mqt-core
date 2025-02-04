@@ -17,12 +17,11 @@
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 namespace qc {
 TEST(RemoveFinalMeasurements, removeFinalMeasurements) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   qc.h(0);
   qc.h(1);
@@ -48,7 +47,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurements) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsTwoQubitMeasurement) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   qc.h(0);
   qc.h(1);
@@ -73,7 +72,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsTwoQubitMeasurement) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompound) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
@@ -101,7 +100,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompound) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompoundDegraded) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
@@ -126,7 +125,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompoundDegraded) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompoundEmpty) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
@@ -159,7 +158,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsWithOperationsInFront) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsWithBarrier) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   qc.barrier({0, 1});
   qc.measure(0, 0);

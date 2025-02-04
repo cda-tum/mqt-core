@@ -11,6 +11,7 @@
 
 #include "CompilerPass.hpp"
 #include "qasm3/InstVisitor.hpp"
+#include "qasm3/Statement_fwd.hpp"
 #include "qasm3/Types.hpp"
 
 #include <map>

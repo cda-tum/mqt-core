@@ -250,7 +250,7 @@ public:
                            std::shared_ptr<IdentifierList> params,
                            std::shared_ptr<IdentifierList> qbits,
                            std::vector<std::shared_ptr<QuantumStatement>> stmts,
-                           const bool opaque = false);
+                           bool opaque = false);
 
   void accept(InstVisitor* visitor) override;
 };

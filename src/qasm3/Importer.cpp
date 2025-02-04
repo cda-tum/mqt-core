@@ -44,11 +44,6 @@
 
 namespace qasm3 {
 
-using const_eval::ConstEvalPass;
-using const_eval::ConstEvalValue;
-using type_checking::InferredType;
-using type_checking::TypeCheckPass;
-
 auto Importer::importf(const std::string& filename) -> qc::QuantumComputation {
   std::ifstream file(filename);
   if (!file.good()) {
@@ -75,19 +70,27 @@ auto Importer::imports(const std::string& qasm) -> qc::QuantumComputation {
   return import(is);
 }
 
-std::map<std::string, std::pair<ConstEvalValue, InferredType>>
+std::map<std::string,
+         std::pair<const_eval::ConstEvalValue, type_checking::InferredType>>
 Importer::initializeBuiltins() {
-  std::map<std::string, std::pair<ConstEvalValue, InferredType>> builtins{};
+  std::map<std::string,
+           std::pair<const_eval::ConstEvalValue, type_checking::InferredType>>
+      builtins{};
 
-  InferredType const floatTy{std::dynamic_pointer_cast<ResolvedType>(
-      std::make_shared<DesignatedType<uint64_t>>(Float, 64))};
+  type_checking::InferredType const floatTy{
+      std::dynamic_pointer_cast<ResolvedType>(
+          std::make_shared<DesignatedType<uint64_t>>(Float, 64))};
 
-  builtins.emplace("pi", std::pair{ConstEvalValue(qc::PI), floatTy});
-  builtins.emplace("π", std::pair{ConstEvalValue(qc::PI), floatTy});
-  builtins.emplace("tau", std::pair{ConstEvalValue(qc::TAU), floatTy});
-  builtins.emplace("τ", std::pair{ConstEvalValue(qc::TAU), floatTy});
-  builtins.emplace("euler", std::pair{ConstEvalValue(qc::E), floatTy});
-  builtins.emplace("ℇ", std::pair{ConstEvalValue(qc::E), floatTy});
+  builtins.emplace("pi",
+                   std::pair{const_eval::ConstEvalValue(qc::PI), floatTy});
+  builtins.emplace("π", std::pair{const_eval::ConstEvalValue(qc::PI), floatTy});
+  builtins.emplace("tau",
+                   std::pair{const_eval::ConstEvalValue(qc::TAU), floatTy});
+  builtins.emplace("τ",
+                   std::pair{const_eval::ConstEvalValue(qc::TAU), floatTy});
+  builtins.emplace("euler",
+                   std::pair{const_eval::ConstEvalValue(qc::E), floatTy});
+  builtins.emplace("ℇ", std::pair{const_eval::ConstEvalValue(qc::E), floatTy});
 
   return builtins;
 }
