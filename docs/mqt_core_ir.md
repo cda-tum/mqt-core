@@ -298,16 +298,37 @@ qc.append(classic_controlled)
 print(qc)
 ```
 
-## Interfacing with other SDKs
+## Interfacing with other SDKs and Formats
 
-Since a {py:class}`~mqt.core.ir.QuantumComputation` can be imported from and exported to an OpenQASM 3.0 (or OpenQASM 2.0) string, any library that can work with OpenQASM is easy to use in conjunction with the {py:class}`~mqt.core.ir.QuantumComputation` class.
+### OpenQASM
 
-In addition, `mqt-core` can import [Qiskit](https://qiskit.org/) {py:class}`~qiskit.circuit.QuantumCircuit` objects directly.
+OpenQASM is a widely used format for representing quantum circuits.
+Its latest version, [OpenQASM 3](https://openqasm.com/index.html), is a powerful language that can express a wide range of quantum circuits.
+MQT Core supports the full functionality of OpenQASM 2.0 (including classically controlled operations) and a growing subset of OpenQASM 3.
+
+```{code-cell} ipython3
+from mqt.core.ir import QuantumComputation
+
+qasm_str = """
+OPENQASM 3.0;
+include "stdgates.inc";
+qubit[3] q;
+h q[0];
+cx q[0], q[1];
+cx q[0], q[2];
+"""
+
+qc = QuantumComputation.from_qasm_str(qasm_str)
+
+print(qc)
+```
+
+### Qiskit
+
+In addition to OpenQASM, `mqt-core` can natively import [Qiskit](https://qiskit.org/) {py:class}`~qiskit.circuit.QuantumCircuit` objects.
 
 ```{code-cell} ipython3
 from qiskit import QuantumCircuit
-
-from mqt.core.plugins.qiskit import qiskit_to_mqt
 
 # GHZ circuit in qiskit
 qiskit_qc = QuantumCircuit(3)
@@ -319,6 +340,8 @@ qiskit_qc.draw(output="mpl", style="iqp")
 ```
 
 ```{code-cell} ipython3
+from mqt.core.plugins.qiskit import qiskit_to_mqt
+
 mqt_qc = qiskit_to_mqt(qiskit_qc)
 print(mqt_qc)
 ```

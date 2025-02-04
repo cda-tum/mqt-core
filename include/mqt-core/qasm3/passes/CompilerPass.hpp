@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "../Statement.hpp"
-
 namespace qasm3 {
+class Statement;
+
 class CompilerPass {
 public:
   virtual ~CompilerPass() = default;

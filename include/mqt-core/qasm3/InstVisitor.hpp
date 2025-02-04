@@ -9,29 +9,13 @@
 
 #pragma once
 
+#include "Statement_fwd.hpp"
+
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
 
 namespace qasm3 {
-class GateDeclaration;
-class GateCallStatement;
-class VersionDeclaration;
-class DeclarationStatement;
-class InitialLayout;
-class OutputPermutation;
-class AssignmentStatement;
-class BarrierStatement;
-class ResetStatement;
-
-class Expression;
-class BinaryExpression;
-class UnaryExpression;
-class IdentifierExpression;
-class IdentifierList;
-class Constant;
-class MeasureExpression;
-class IfStatement;
 
 class InstVisitor {
 public:

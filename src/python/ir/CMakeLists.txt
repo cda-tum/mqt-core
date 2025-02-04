@@ -20,7 +20,8 @@ if(NOT TARGET ir)
     # Source code goes here
     ${MQT_CORE_INCLUDE_BUILD_DIR}/python/pybind11.hpp
     ${IR_SOURCES})
-  target_link_libraries(ir PRIVATE MQT::CoreIR MQT::ProjectOptions MQT::ProjectWarnings)
+  target_link_libraries(ir PRIVATE MQT::CoreIR MQT::CoreQASM MQT::ProjectOptions
+                                   MQT::ProjectWarnings)
 
   # Install directive for scikit-build-core
   install(

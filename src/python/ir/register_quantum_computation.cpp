@@ -15,6 +15,7 @@
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 #include "python/pybind11.hpp"
+#include "qasm3/Importer.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -45,13 +46,12 @@ void registerQuantumComputation(py::module& m) {
   ///---------------------------------------------------------------------------
   ///                           \n Constructors \n
   ///---------------------------------------------------------------------------
+  qc.def(py::init<std::size_t, std::size_t, std::size_t>(), "nq"_a = 0U,
+         "nc"_a = 0U, "seed"_a = 0U);
 
-  qc.def(py::init<>(), "Constructs an empty QuantumComputation.");
-  qc.def(py::init<std::size_t, std::size_t>(), "nq"_a, "nc"_a = 0U);
-  qc.def(py::init<std::string>(), "filename"_a);
-
-  // expose the static constructor from qasm strings
-  qc.def_static("from_qasm", &qc::QuantumComputation::fromQASM, "qasm"_a);
+  // expose the static constructor from qasm strings or files
+  qc.def_static("from_qasm_str", &qasm3::Importer::imports, "qasm"_a);
+  qc.def_static("from_qasm", &qasm3::Importer::importf, "filename"_a);
 
   ///---------------------------------------------------------------------------
   ///                       \n General Properties \n
@@ -208,7 +208,8 @@ void registerQuantumComputation(py::module& m) {
   ///                  \n Ancillary and Garbage Handling \n
   ///---------------------------------------------------------------------------
 
-  qc.def_property_readonly("ancillary", &qc::QuantumComputation::getAncillary);
+  qc.def_property_readonly(
+      "ancillary", py::overload_cast<>(&qc::QuantumComputation::getAncillary));
   qc.def("set_circuit_qubit_ancillary",
          &qc::QuantumComputation::setLogicalQubitAncillary, "q"_a);
   qc.def("se_circuit_qubits_ancillary",
@@ -216,7 +217,8 @@ void registerQuantumComputation(py::module& m) {
          "q_max"_a);
   qc.def("is_circuit_qubit_ancillary",
          &qc::QuantumComputation::logicalQubitIsAncillary, "q"_a);
-  qc.def_property_readonly("garbage", &qc::QuantumComputation::getGarbage);
+  qc.def_property_readonly(
+      "garbage", py::overload_cast<>(&qc::QuantumComputation::getGarbage));
   qc.def("set_circuit_qubit_garbage",
          &qc::QuantumComputation::setLogicalQubitGarbage, "q"_a);
   qc.def("set_circuit_qubits_garbage",

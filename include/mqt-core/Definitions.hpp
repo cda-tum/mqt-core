@@ -50,7 +50,7 @@ static constexpr fp E = static_cast<fp>(
     2.718281828459045235360287471352662497757247093699959574967L);
 
 // supported file formats
-enum class Format : uint8_t { Real, OpenQASM2, OpenQASM3, TFC, QC, Tensor };
+enum class Format : uint8_t { OpenQASM2, OpenQASM3 };
 
 /**
  * @brief 64bit mixing hash (from MurmurHash3)

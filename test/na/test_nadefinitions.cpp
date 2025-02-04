@@ -10,6 +10,7 @@
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "na/NADefinitions.hpp"
+#include "qasm3/Importer.hpp"
 
 #include <gtest/gtest.h>
 #include <sstream>
@@ -60,7 +61,7 @@ TEST(NADefinitions, IsGlobal) {
                                "qubit[3] q;\n"
                                "rz(pi/4) q[0];\n"
                                "ry(pi/2) q;\n";
-  const auto qc = qc::QuantumComputation::fromQASM(testfile);
+  const auto qc = qasm3::Importer::imports(testfile);
   EXPECT_EQ(qc.getHighestLogicalQubitIndex(), 2);
   EXPECT_FALSE(isGlobal(*qc.at(0), 3));
   EXPECT_TRUE(isGlobal(*qc.at(1), 3));
