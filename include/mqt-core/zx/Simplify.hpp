@@ -20,14 +20,14 @@ namespace zx {
 /**
  * @brief Simplify the diagram by applying the given rule to all vertices that
  * match the given check.
-      * @tparam VertexCheckFun Type of the check function
-      * @tparam VertexRuleFun Type of the rule function
-      * @param diag The diagram to simplify
-      * @param check The check function that determines if a vertex should be
-      simplified
-      * @param rule The rule function that is applied to the vertex
-      * @return The number of simplifications that were applied
-      */
+ * @tparam VertexCheckFun Type of the check function
+ * @tparam VertexRuleFun Type of the rule function
+ * @param diag The diagram to simplify
+ * @param check The check function that determines if a vertex should be
+ * simplified
+ * @param rule The rule function that is applied to the vertex
+ * @return The number of simplifications that were applied
+ */
 template <class VertexCheckFun, class VertexRuleFun>
 std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
                              VertexRuleFun rule) {
@@ -51,14 +51,14 @@ std::size_t simplifyVertices(ZXDiagram& diag, VertexCheckFun check,
 /**
  * @brief Simplify the diagram by applying the given rule to all edges that
  * match the given check.
-      * @tparam EdgeCheckFun Type of the check function
-      * @tparam EdgeRuleFun Type of the rule function
-      * @param diag The diagram to simplify
-      * @param check The check function that determines if an edge should be
-      simplified
-      * @param rule The rule function that is applied to the edge
-      * @return The number of simplifications that were applied
-      */
+ * @tparam EdgeCheckFun Type of the check function
+ * @tparam EdgeRuleFun Type of the rule function
+ * @param diag The diagram to simplify
+ * @param check The check function that determines if an edge should be
+ * simplified
+ * @param rule The rule function that is applied to the edge
+ * @return The number of simplifications that were applied
+ */
 template <class EdgeCheckFun, class EdgeRuleFun>
 std::size_t simplifyEdges(ZXDiagram& diag, EdgeCheckFun check,
                           EdgeRuleFun rule) {
@@ -95,7 +95,7 @@ std::size_t idSimp(ZXDiagram& diag);
 /**
  * @brief Apply the spider rule to the Diagram until exhaustion.
  * @details Spiders of the same type connected by a regular edge can be turned
-into one
+ * into one
  * by adding both phases and fusing all incident edges.
  * See https://arxiv.org/abs/2012.13966 page 27, rule (f).
  * @param diag The diagram to simplify
@@ -160,14 +160,13 @@ std::size_t cliffordSimp(ZXDiagram& diag);
 std::size_t pivotgadgetSimp(ZXDiagram& diag);
 
 /**
-   * @brief Simplify the diagram by applying Clifford simplifications and the
-   gadget pivot rule.
-   * @details In addition to the Clifford simplification, this function also
-   applies the pivot gadget rule.
-        * @param diag The diagram to simplify.
-          * @return The number of simplifications applied.
-
-   */
+ * @brief Simplify the diagram by applying Clifford simplifications and the
+ * gadget pivot rule.
+ * @details In addition to the Clifford simplification, this function also
+ * applies the pivot gadget rule.
+ * @param diag The diagram to simplify.
+ * @return The number of simplifications applied.
+ */
 std::size_t fullReduce(ZXDiagram& diag);
 
 /**

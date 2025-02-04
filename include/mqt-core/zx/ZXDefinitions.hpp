@@ -25,9 +25,8 @@ namespace zx {
 /**
  * @brief Enum for the different types of edges in the ZX-calculus
  * @details Simple edges are the standard edges in the ZX-calculus, while
- Hadamard edges are a shorthand used to represent edges with Hadamard gates on
- them.
-
+ * Hadamard edges are a shorthand used to represent edges with Hadamard gates on
+ * them.
  */
 enum class EdgeType : uint8_t { Simple, Hadamard };
 inline std::ostream& operator<<(std::ostream& os, const EdgeType& type) {
