@@ -9,10 +9,11 @@
 
 #pragma once
 
-#include "CompilerPass.hpp"
 #include "qasm3/InstVisitor.hpp"
 #include "qasm3/Statement_fwd.hpp"
 #include "qasm3/Types.hpp"
+#include "qasm3/passes/CompilerPass.hpp"
+#include "qasm3/passes/ConstEvalPass.hpp"
 
 #include <map>
 #include <memory>
@@ -23,10 +24,6 @@ namespace qasm3 {
 class GateOperand;
 struct DebugInfo;
 } // namespace qasm3
-
-namespace qasm3::const_eval {
-class ConstEvalPass;
-}
 
 namespace qasm3::type_checking {
 struct InferredType {

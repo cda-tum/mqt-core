@@ -12,7 +12,6 @@
 #include "qasm3/Exception.hpp"
 #include "qasm3/Statement.hpp"
 #include "qasm3/Types.hpp"
-#include "qasm3/passes/ConstEvalPass.hpp"
 
 #include <algorithm>
 #include <cassert>
