@@ -24,7 +24,11 @@ namespace zx {
  * @tparam VertexRuleFun Type of the rule function
  * @param diag The diagram to simplify
  * @param check The check function that determines if a vertex should be
+<<<<<<< HEAD
  * simplified
+=======
+ simplified
+>>>>>>> origin/zx-docs
  * @param rule The rule function that is applied to the vertex
  * @return The number of simplifications that were applied
  */
