@@ -106,9 +106,8 @@ template <typename T>
 [[nodiscard]] auto multiplex(OpType targetGate, std::vector<double> angles,
                              bool lastCnot) -> QuantumComputation {
   size_t const listLen = angles.size();
-  double const localNumQubits =
-      std::floor(std::log2(static_cast<double>(listLen))) + 1;
-  QuantumComputation multiplexer{static_cast<size_t>(localNumQubits)};
+  size_t const localNumQubits = static_cast<size_t>(std::floor(std::log2(static_cast<double>(listLen))) + 1);
+  QuantumComputation multiplexer{localNumQubits};
   // recursion base case
   if (localNumQubits == 1) {
     multiplexer.emplace_back<StandardOperation>(0, targetGate,
@@ -118,8 +117,7 @@ template <typename T>
 
   Matrix const matrix{std::vector<double>{0.5, 0.5},
                       std::vector<double>{0.5, -0.5}};
-  Matrix const identity =
-      createIdentity(static_cast<size_t>(pow(2., localNumQubits - 2.)));
+  Matrix const identity = createIdentity(1 << (localNumQubits - 2));
   Matrix const angleWeights = kroneckerProduct(matrix, identity);
 
   angles = matrixVectorProd(angleWeights, angles);
@@ -133,7 +131,7 @@ template <typename T>
   // append multiplex1 to multiplexer
   multiplexer.emplace_back<Operation>(multiplex1.asOperation());
   // flips the LSB qubit, control on MSB
-  multiplexer.cx(static_cast<Qubit>(localNumQubits - 1), 0);
+  multiplexer.cx(localNumQubits - 1, 0);
 
   std::vector<double> const angles2{std::make_move_iterator(angles.begin()) +
                                         static_cast<int64_t>(listLen) / 2,
@@ -149,7 +147,7 @@ template <typename T>
   }
 
   if (lastCnot) {
-    multiplexer.cx(static_cast<Qubit>(localNumQubits - 1), 0);
+    multiplexer.cx(localNumQubits - 1, 0);
   }
 
   CircuitOptimizer::flattenOperations(multiplexer);
