@@ -214,7 +214,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
     if (phisNorm > EPS) {
       // call multiplex with RZGate
       QuantumComputation rzMultiplexer =
-          multiplex(OpType{RZ}, phis, addLastCnot);
+          multiplex(RZ, phis, addLastCnot);
       // append rzMultiplexer to disentangler, but it should only attach on
       // qubits i-numQubits, thus "i" is added to the local qubit indices
       for (auto& op : rzMultiplexer) {
@@ -235,7 +235,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
     if (thetasNorm > EPS) {
       // call multiplex with RYGate
       QuantumComputation ryMultiplexer =
-          multiplex(OpType{RY}, thetas, addLastCnot);
+          multiplex(RY, thetas, addLastCnot);
       // append reversed ry_multiplexer to disentangler, but it should only
       // attach on qubits i-numQubits, thus "i" is added to the local qubit
       // indices
