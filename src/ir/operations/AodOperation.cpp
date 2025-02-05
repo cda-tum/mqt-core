@@ -40,6 +40,7 @@ std::string SingleOperation::toQASMString() const {
   ss << static_cast<std::size_t>(dir) << ", " << start << ", " << end << "; ";
   return ss.str();
 }
+
 std::vector<Dimension>
 AodOperation::convertToDimension(const std::vector<uint32_t>& dirs) {
   std::vector<Dimension> dirsEnum(dirs.size());
@@ -100,6 +101,7 @@ std::vector<qc::fp> AodOperation::getEnds(const Dimension dir) const {
   }
   return ends;
 }
+
 std::vector<qc::fp> AodOperation::getStarts(const Dimension dir) const {
   std::vector<qc::fp> starts;
   for (const auto& op : operations) {
@@ -109,6 +111,7 @@ std::vector<qc::fp> AodOperation::getStarts(const Dimension dir) const {
   }
   return starts;
 }
+
 qc::fp AodOperation::getMaxDistance(const Dimension dir) const {
   const auto distances = getDistances(dir);
   if (distances.empty()) {
@@ -116,6 +119,7 @@ qc::fp AodOperation::getMaxDistance(const Dimension dir) const {
   }
   return *std::max_element(distances.begin(), distances.end());
 }
+
 std::vector<qc::fp> AodOperation::getDistances(const Dimension dir) const {
   std::vector<qc::fp> params;
   for (const auto& op : operations) {
@@ -125,26 +129,47 @@ std::vector<qc::fp> AodOperation::getDistances(const Dimension dir) const {
   }
   return params;
 }
+
 void AodOperation::dumpOpenQASM(std::ostream& of, const qc::RegisterNames& qreg,
                                 [[maybe_unused]] const qc::RegisterNames& creg,
                                 const size_t indent, bool /*openQASM3*/) const {
-  of << std::setprecision(std::numeric_limits<qc::fp>::digits10);
-  of << std::string(indent * qc::OUTPUT_INDENT_SIZE, ' ');
-  of << name;
-  // write AOD operations
-  of << " (";
+  std::ostringstream oss;
+  oss << std::setprecision(std::numeric_limits<qc::fp>::digits10);
+
+  // Add indentation and operation name
+  oss << std::string(indent * qc::OUTPUT_INDENT_SIZE, ' ') << name;
+
+  // Write AOD operations
+  oss << " (";
   for (const auto& op : operations) {
-    of << op.toQASMString();
+    oss << op.toQASMString();
   }
-  // remove last semicolon
-  of.seekp(-1, std::ios_base::end);
-  of << ")";
-  // write qubit start
+
+  // Remove the last "; " if present
+  std::string content = oss.str();
+  const std::string semicolon = "; ";
+  if (content.size() >= semicolon.size() &&
+      content.compare(content.size() - semicolon.size(), semicolon.size(),
+                      semicolon) == 0) {
+    content.erase(content.size() - semicolon.size());
+  }
+
+  content += ")";
+
+  // Write qubit start
   for (const auto& qubit : targets) {
-    of << " " << qreg[qubit].second << ",";
+    content += " " + qreg[qubit].second + ",";
   }
-  of.seekp(-1, std::ios_base::end);
-  of << ";\n";
+
+  // Remove the last comma if present
+  if (!content.empty() && content.back() == ',') {
+    content.pop_back();
+  }
+
+  content += ";\n";
+
+  // Write final content to the provided ostream
+  of << content;
 }
 
 void AodOperation::invert() {
@@ -158,5 +183,4 @@ void AodOperation::invert() {
     type = qc::OpType::AodActivate;
   }
 }
-
 } // namespace na
