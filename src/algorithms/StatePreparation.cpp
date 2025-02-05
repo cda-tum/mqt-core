@@ -106,7 +106,7 @@ template <typename T>
 [[nodiscard]] auto multiplex(OpType targetGate, std::vector<double> angles,
                              bool lastCnot) -> QuantumComputation {
   size_t const listLen = angles.size();
-  size_t const localNumQubits = static_cast<size_t>(std::floor(std::log2(static_cast<double>(listLen))) + 1);
+  Qubit const localNumQubits = static_cast<Qubit>(std::floor(std::log2(static_cast<double>(listLen))) + 1);
   QuantumComputation multiplexer{localNumQubits};
   // recursion base case
   if (localNumQubits == 1) {
