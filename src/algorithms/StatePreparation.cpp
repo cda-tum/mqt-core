@@ -208,10 +208,10 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
     bool addLastCnot = true;
     double const phisNorm = twoNorm(phis);
     double const thetasNorm = twoNorm(thetas);
-    if (phisNorm != 0 && thetasNorm != 0) {
+    if (phisNorm > EPS && thetasNorm > EPS) {
       addLastCnot = false;
     }
-    if (phisNorm != 0) {
+    if (phisNorm > EPS) {
       // call multiplex with RZGate
       QuantumComputation rzMultiplexer =
           multiplex(OpType{RZ}, phis, addLastCnot);
@@ -232,7 +232,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
       }
       disentangler.emplace_back<Operation>(rzMultiplexer.asOperation());
     }
-    if (thetasNorm != 0) {
+    if (thetasNorm > EPS) {
       // call multiplex with RYGate
       QuantumComputation ryMultiplexer =
           multiplex(OpType{RY}, thetas, addLastCnot);
@@ -259,7 +259,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
   // adjust global phase according to the last e^(it)
   double const arg = -std::arg(std::accumulate(
       amplitudes.begin(), amplitudes.end(), std::complex<double>(0, 0)));
-  if (arg != 0) {
+  if (std::abs(arg) > EPS) {
     disentangler.gphase(arg);
   }
   return disentangler;
