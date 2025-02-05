@@ -239,7 +239,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
       // append reversed ry_multiplexer to disentangler, but it should only
       // attach on qubits i-numQubits, thus "i" is added to the local qubit
       // indices
-      std::reverse(ryMultiplexer.begin(), ryMultiplexer.end());
+      ryMultiplexer.reverse();
       for (auto& op : ryMultiplexer) {
         for (auto& target : op->getTargets()) {
           target += static_cast<unsigned int>(i);
