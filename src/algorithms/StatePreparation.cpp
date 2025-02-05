@@ -111,7 +111,7 @@ template <typename T>
   QuantumComputation multiplexer{static_cast<size_t>(localNumQubits)};
   // recursion base case
   if (localNumQubits == 1) {
-    multiplexer.emplace_back<StandardOperation>(Controls{}, 0, targetGate,
+    multiplexer.emplace_back<StandardOperation>(0, targetGate,
                                                 std::vector{angles[0]});
     return multiplexer;
   }
