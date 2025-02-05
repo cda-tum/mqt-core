@@ -65,7 +65,8 @@ api/mqt/core/index
 
 ```{toctree}
 :hidden:
+:glob:
 :caption: C++ API Reference
 
-api/zx/zx_library
+api/cpp/namespace/namespacezx
 ```
