@@ -221,9 +221,14 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
         for (auto& target : op->getTargets()) {
           target += static_cast<unsigned int>(i);
         }
-        for (auto& control: op->getControls()) {
-          control.qubit += static_cast<Qubit>(i);
+        // as there were some systematic compiler errors with accessing the
+        // qubit directly the controls are collected and then newly set
+        std::vector<qc::Control> newControls;
+        for (const auto& control : op->getControls()) {
+          newControls.push_back(
+              qc::Control{control.qubit + static_cast<unsigned int>(i)});
         }
+        op->setControls(qc::Controls{newControls.begin(), newControls.end()});
       }
       disentangler.emplace_back<Operation>(rzMultiplexer.asOperation());
     }
@@ -239,9 +244,14 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
         for (auto& target : op->getTargets()) {
           target += static_cast<unsigned int>(i);
         }
-      for (auto& control: op->getControls()) {
-        control.qubit += static_cast<Qubit>(i);
-      }
+        // as there were some systematic compiler errors with accessing the
+        // qubit directly the controls are collected and then newly set
+        std::vector<qc::Control> newControls;
+        for (const auto& control : op->getControls()) {
+          newControls.push_back(
+              qc::Control{control.qubit + static_cast<unsigned int>(i)});
+        }
+        op->setControls(qc::Controls{newControls.begin(), newControls.end()});
       }
       disentangler.emplace_back<Operation>(ryMultiplexer.asOperation());
     }
