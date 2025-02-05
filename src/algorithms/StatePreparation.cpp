@@ -133,7 +133,7 @@ template <typename T>
   // append multiplex1 to multiplexer
   multiplexer.emplace_back<Operation>(multiplex1.asOperation());
   // flips the LSB qubit, control on MSB
-  multiplexer.cx(0, static_cast<Qubit>(localNumQubits - 1));
+  multiplexer.cx(static_cast<Qubit>(localNumQubits - 1), 0);
 
   std::vector<double> const angles2{std::make_move_iterator(angles.begin()) +
                                         static_cast<int64_t>(listLen) / 2,
@@ -149,7 +149,7 @@ template <typename T>
   }
 
   if (lastCnot) {
-    multiplexer.cx(0, static_cast<Qubit>(localNumQubits - 1));
+    multiplexer.cx(static_cast<Qubit>(localNumQubits - 1), 0);
   }
 
   CircuitOptimizer::flattenOperations(multiplexer);
