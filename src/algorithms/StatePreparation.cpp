@@ -83,6 +83,7 @@ template <typename T>
                                     const std::vector<double>& vector)
     -> std::vector<double> {
   std::vector<double> result;
+  result.reserve(matrix.size());
   for (const auto& matrixVec : matrix) {
     double sum{0};
     for (size_t i = 0; i < matrixVec.size(); ++i) {
@@ -175,13 +176,20 @@ template <typename T>
 // works out Ry and Rz rotation angles used to disentangle LSB qubit
 // rotations make up block diagonal matrix U
 [[nodiscard]] auto
-rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes, double EPS)
+rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes,
+                       double EPS)
     -> std::tuple<std::vector<std::complex<double>>, std::vector<double>,
                   std::vector<double>> {
+  size_t amplitudesHalf = amplitudes.size() / 2;
   std::vector<std::complex<double>> remainingVector;
   std::vector<double> thetas;
   std::vector<double> phis;
-  for (size_t i = 0; i < (amplitudes.size() / 2); ++i) {
+
+  remainingVector.reserve(amplitudesHalf);
+  thetas.reserve(amplitudesHalf);
+  phis.reserve(amplitudesHalf);
+
+  for (size_t i = 0; i < amplitudesHalf; ++i) {
     auto [remains, theta, phi] =
         blochAngles(amplitudes[2 * i], amplitudes[2 * i + 1], EPS);
     remainingVector.emplace_back(remains);
