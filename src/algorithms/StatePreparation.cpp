@@ -93,8 +93,8 @@ template <typename T>
   return result;
 }
 
-// recursive implementation that returns multiplexer circuit
 /**
+ * @brief recursive implementation that returns multiplexer circuit
  * @param target_gate : Ry or Rz gate to apply to target qubit, multiplexed
  * over all other "select" qubits
  * @param angles : list of rotation angles to apply Ry and Rz
