@@ -8,11 +8,10 @@
 
 namespace mqt::ir::opt {
 
-#define GEN_PASS_DEF_BRANCHOPERATIONPUSHDOWN
+#define GEN_PASS_DEF_QUANTUMSINKPASS
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
-struct BranchOperationPushdown final
-    : impl::BranchOperationPushdownBase<BranchOperationPushdown> {
+struct QuantumSinkPass final : impl::QuantumSinkPassBase<QuantumSinkPass> {
 
   void runOnOperation() override {
     // Get the current operation being operated on.
@@ -21,7 +20,8 @@ struct BranchOperationPushdown final
 
     // Define the set of patterns to use.
     mlir::RewritePatternSet patterns(ctx);
-    populateBranchOperationPushdownPatterns(patterns);
+    populateQuantumSinkPushPatterns(patterns);
+    populateQuantumSinkMergePatterns(patterns);
 
     // Apply patterns in an iterative and greedy manner.
     if (mlir::failed(

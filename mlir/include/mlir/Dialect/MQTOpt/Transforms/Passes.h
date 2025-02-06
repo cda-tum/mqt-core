@@ -16,7 +16,8 @@ namespace mqt::ir::opt {
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
 void populateCancelSelfInversePatterns(mlir::RewritePatternSet& patterns);
-void populateBranchOperationPushdownPatterns(mlir::RewritePatternSet& patterns);
+void populateQuantumSinkPushPatterns(mlir::RewritePatternSet& patterns);
+void populateQuantumSinkMergePatterns(mlir::RewritePatternSet& patterns);
 void populateToQuantumComputationPatterns(mlir::RewritePatternSet& patterns,
                                           qc::QuantumComputation& circuit);
 void populateFromQuantumComputationPatterns(mlir::RewritePatternSet& patterns,
