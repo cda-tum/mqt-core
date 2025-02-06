@@ -281,7 +281,6 @@ auto createStatePreparationCircuit(
       gatesToUncompute(amplitudes, numQubits, EPS);
 
   // invert circuit
-  CircuitOptimizer::flattenOperations(toZeroCircuit);
   toZeroCircuit.invert();
 
   return toZeroCircuit;
