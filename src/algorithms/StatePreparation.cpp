@@ -175,7 +175,7 @@ template <typename T>
 // works out Ry and Rz rotation angles used to disentangle LSB qubit
 // rotations make up block diagonal matrix U
 [[nodiscard]] auto
-rotationsToDisentangle(std::vector<std::complex<double>>& const amplitudes, double EPS)
+rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes, double EPS)
     -> std::tuple<std::vector<std::complex<double>>, std::vector<double>,
                   std::vector<double>> {
   std::vector<std::complex<double>> remainingVector;
