@@ -88,7 +88,7 @@ template <typename T>
     for (size_t i = 0; i < matrixVec.size(); ++i) {
       sum += matrixVec[i] * vector[i];
     }
-    result.push_back(sum);
+    result.emplace_back(sum);
   }
   return result;
 }
@@ -175,7 +175,7 @@ template <typename T>
 // works out Ry and Rz rotation angles used to disentangle LSB qubit
 // rotations make up block diagonal matrix U
 [[nodiscard]] auto
-rotationsToDisentangle(std::vector<std::complex<double>> amplitudes, double EPS)
+rotationsToDisentangle(std::vector<std::complex<double>>& const amplitudes, double EPS)
     -> std::tuple<std::vector<std::complex<double>>, std::vector<double>,
                   std::vector<double>> {
   std::vector<std::complex<double>> remainingVector;
@@ -184,10 +184,10 @@ rotationsToDisentangle(std::vector<std::complex<double>> amplitudes, double EPS)
   for (size_t i = 0; i < (amplitudes.size() / 2); ++i) {
     auto [remains, theta, phi] =
         blochAngles(amplitudes[2 * i], amplitudes[2 * i + 1], EPS);
-    remainingVector.push_back(remains);
+    remainingVector.emplace_back(remains);
     // minus sign because we move it to zero
-    thetas.push_back(-theta);
-    phis.push_back(-phi);
+    thetas.emplace_back(-theta);
+    phis.emplace_back(-phi);
   }
   return {remainingVector, thetas, phis};
 }
@@ -222,7 +222,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
         // qubit directly the controls are collected and then newly set
         std::vector<qc::Control> newControls;
         for (const auto& control : op->getControls()) {
-          newControls.push_back(
+          newControls.emplace_back(
               qc::Control{control.qubit + static_cast<Qubit>(i)});
         }
         op->setControls(qc::Controls{newControls.begin(), newControls.end()});
@@ -244,7 +244,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
         // qubit directly the controls are collected and then newly set
         std::vector<qc::Control> newControls;
         for (const auto& control : op->getControls()) {
-          newControls.push_back(
+          newControls.emplace_back(
               qc::Control{control.qubit + static_cast<Qubit>(i)});
         }
         op->setControls(qc::Controls{newControls.begin(), newControls.end()});
