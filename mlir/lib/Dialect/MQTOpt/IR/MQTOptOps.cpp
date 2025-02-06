@@ -52,7 +52,7 @@ namespace mqt::ir::opt {
 mlir::LogicalResult GPhaseOp::verify() {
   if (!getInQubits().empty() || !getOutQubits().empty()) {
     return emitOpError() << "GPhase gate should not have neither input nor "
-                          << "output qubits";
+                         << "output qubits";
   }
   return mlir::success();
 }
