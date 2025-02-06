@@ -39,7 +39,7 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto isNormalized(const std::vector<T>& vec) -> bool {
+[[nodiscard]] auto isNormalized(const std::vector<T>& vec, double EPS) -> bool {
   return std::abs(1 - twoNorm(vec)) < EPS;
 }
 
@@ -265,7 +265,7 @@ auto createStatePreparationCircuit(
     std::vector<std::complex<double>>& amplitudes, double EPS)
     -> QuantumComputation {
 
-  if (!isNormalized(amplitudes)) {
+  if (!isNormalized(amplitudes, EPS)) {
     throw std::invalid_argument{
         "Using State Preparation with Amplitudes that are not normalized"};
   }
