@@ -26,8 +26,6 @@
 #include <tuple>
 #include <vector>
 
-static const double EPS = 1e-10;
-
 namespace qc {
 using Matrix = std::vector<std::vector<double>>;
 
@@ -106,7 +104,8 @@ template <typename T>
 [[nodiscard]] auto multiplex(OpType targetGate, std::vector<double> angles,
                              bool lastCnot) -> QuantumComputation {
   size_t const listLen = angles.size();
-  Qubit const localNumQubits = static_cast<Qubit>(std::floor(std::log2(static_cast<double>(listLen))) + 1);
+  Qubit const localNumQubits = static_cast<Qubit>(
+      std::floor(std::log2(static_cast<double>(listLen))) + 1);
   QuantumComputation multiplexer{localNumQubits};
   // recursion base case
   if (localNumQubits == 1) {
@@ -155,7 +154,7 @@ template <typename T>
 }
 
 [[nodiscard]] auto blochAngles(std::complex<double> const complexA,
-                               std::complex<double> const complexB)
+                               std::complex<double> const complexB, double EPS)
     -> std::tuple<std::complex<double>, double, double> {
   double theta{0};
   double phi{0};
@@ -176,7 +175,7 @@ template <typename T>
 // works out Ry and Rz rotation angles used to disentangle LSB qubit
 // rotations make up block diagonal matrix U
 [[nodiscard]] auto
-rotationsToDisentangle(std::vector<std::complex<double>> amplitudes)
+rotationsToDisentangle(std::vector<std::complex<double>> amplitudes, double EPS)
     -> std::tuple<std::vector<std::complex<double>>, std::vector<double>,
                   std::vector<double>> {
   std::vector<std::complex<double>> remainingVector;
@@ -184,7 +183,7 @@ rotationsToDisentangle(std::vector<std::complex<double>> amplitudes)
   std::vector<double> phis;
   for (size_t i = 0; i < (amplitudes.size() / 2); ++i) {
     auto [remains, theta, phi] =
-        blochAngles(amplitudes[2 * i], amplitudes[2 * i + 1]);
+        blochAngles(amplitudes[2 * i], amplitudes[2 * i + 1], EPS);
     remainingVector.push_back(remains);
     // minus sign because we move it to zero
     thetas.push_back(-theta);
@@ -196,11 +195,12 @@ rotationsToDisentangle(std::vector<std::complex<double>> amplitudes)
 // creates circuit that takes desired vector to zero
 [[nodiscard]] auto
 gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
-                 size_t numQubits) -> QuantumComputation {
+                 size_t numQubits, double EPS) -> QuantumComputation {
   QuantumComputation disentangler{numQubits};
   for (size_t i = 0; i < numQubits; ++i) {
     // rotations to disentangle LSB
-    auto [remainingParams, thetas, phis] = rotationsToDisentangle(amplitudes);
+    auto [remainingParams, thetas, phis] =
+        rotationsToDisentangle(amplitudes, EPS);
     amplitudes = remainingParams;
     // perform required rotations
     bool addLastCnot = true;
@@ -262,7 +262,8 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
 }
 
 auto createStatePreparationCircuit(
-    std::vector<std::complex<double>>& amplitudes) -> QuantumComputation {
+    std::vector<std::complex<double>>& amplitudes, double EPS)
+    -> QuantumComputation {
 
   if (!isNormalized(amplitudes)) {
     throw std::invalid_argument{
@@ -276,7 +277,8 @@ auto createStatePreparationCircuit(
         "Using State Preparation with vector size that is not a power of 2"};
   }
   const auto numQubits = static_cast<size_t>(std::log2(amplitudes.size()));
-  QuantumComputation toZeroCircuit = gatesToUncompute(amplitudes, numQubits);
+  QuantumComputation toZeroCircuit =
+      gatesToUncompute(amplitudes, numQubits, EPS);
 
   // invert circuit
   CircuitOptimizer::flattenOperations(toZeroCircuit);
