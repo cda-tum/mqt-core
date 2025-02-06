@@ -230,8 +230,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
         // qubit directly the controls are collected and then newly set
         qc::Controls newControls;
         for (const auto& control : op->getControls()) {
-          newControls.emplace(
-              qc::Control{control.qubit + static_cast<Qubit>(i)});
+          newControls.emplace(control.qubit + static_cast<Qubit>(i));
         }
         op->setControls(newControls);
       }
@@ -252,8 +251,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
         // qubit directly the controls are collected and then newly set
         qc::Controls newControls;
         for (const auto& control : op->getControls()) {
-          newControls.emplace(
-              qc::Control{control.qubit + static_cast<Qubit>(i)});
+          newControls.emplace(control.qubit + static_cast<Qubit>(i));
         }
         op->setControls(newControls);
       }
