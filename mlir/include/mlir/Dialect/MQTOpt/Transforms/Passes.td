@@ -36,5 +36,11 @@ def CancelConsecutiveSelfInverse : Pass<"cancel-consecutive-self-inverse", "mlir
   }];
 }
 
+def BranchOperationPushdown : Pass<"branch-operation-pushdown", "mlir::ModuleOp"> {
+  let summary = "This pass attempts to push down operations into branches for possible optimizations.";
+  let description = [{
+    This pass searches for branch instructions and attempts to push instructions from previous branches into them.
+  }];
+}
 
 #endif // MQTO_PASSES
