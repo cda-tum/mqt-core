@@ -13,18 +13,22 @@ module {
     cf.cond_br %c0_0, ^then, ^else
 
   ^then:
-    %q0_2 = mqtopt.x() %q0_1 : !mqtopt.Qubit
-    cf.br ^continue
+    %q0_2then = mqtopt.x() %q0_1 : !mqtopt.Qubit
+    cf.br ^continue(%q0_2then : !mqtopt.Qubit)
 
   ^else:
-    %q0_2 = mqtopt.x() %q0_1 : !mqtopt.Qubit
-    cf.br ^continue
+    %q0_2else = mqtopt.x() %q0_1 : !mqtopt.Qubit
+    cf.br ^continue(%q0_2else : !mqtopt.Qubit)
 
-  ^continue:
-    %q1_5 = mqtopt.x() %q0_2then : !mqtopt.Qubit
+  ^continue(%q0_2 : !mqtopt.Qubit):
+    %q1_5 = mqtopt.x() %q1_4 : !mqtopt.Qubit
     %q1_6 = mqtopt.z() %q1_5 : !mqtopt.Qubit
     %q1_7 = mqtopt.y() %q1_6 : !mqtopt.Qubit
     %q1_8 = mqtopt.x() %q1_7 : !mqtopt.Qubit
+
+    %reg_3 = "mqtopt.insertQubit"(%reg_2, %q0_2) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+    %reg_4 = "mqtopt.insertQubit"(%reg_3, %q1_8) <{index_attr = 1 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+    "mqtopt.deallocQubitRegister"(%reg_4) : (!mqtopt.QubitRegister) -> ()
     return
   }
 }

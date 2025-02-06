@@ -84,6 +84,8 @@ struct QuantumSinkPushPattern final
         auto clone = rewriter.clone(*op);
         if (blockToOp.find(nextBlock) != blockToOp.end()) {
           replaceInputsWithClone(rewriter, op, clone, blockToOp[nextBlock]);
+        } else {
+          // TODO make accessible for later use
         }
         newBlocks.emplace_back(nextBlock);
       } else if (nextBlocks.size() > 1) {
