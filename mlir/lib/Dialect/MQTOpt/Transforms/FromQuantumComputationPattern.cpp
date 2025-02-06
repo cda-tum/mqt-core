@@ -147,10 +147,12 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
       for (const auto& control : o->getControls()) {
         if (control.type == qc::Control::Type::Pos) {
           controlQubitIndicesPositive.emplace_back(control.qubit);
-          controlQubitsPositive.emplace_back(currentQubitVariables[control.qubit]);
+          controlQubitsPositive.emplace_back(
+              currentQubitVariables[control.qubit]);
         } else {
           controlQubitIndicesNegative.emplace_back(control.qubit);
-          controlQubitsNegative.emplace_back(currentQubitVariables[control.qubit]);
+          controlQubitsNegative.emplace_back(
+              currentQubitVariables[control.qubit]);
         }
       }
 
