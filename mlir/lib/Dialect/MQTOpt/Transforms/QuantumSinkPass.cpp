@@ -1,7 +1,7 @@
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
-#include "mlir/IR/Operation.h"
 
 #include <mlir/IR/MLIRContext.h>
+#include <mlir/IR/Operation.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Transforms/GreedyPatternRewriteDriver.h>
@@ -12,7 +12,8 @@ namespace mqt::ir::opt {
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
 /**
- * @brief This pass attempty to sink quantum operations into the block where their results are used.
+ * @brief This pass attempty to sink quantum operations into the block where
+ * their results are used.
  */
 struct QuantumSinkPass final : impl::QuantumSinkPassBase<QuantumSinkPass> {
 

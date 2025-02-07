@@ -1,11 +1,9 @@
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ValueRange.h"
-#include "mlir/Support/LLVM.h"
 
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
+#include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
 
 namespace mqt::ir::opt {
