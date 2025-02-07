@@ -7,7 +7,6 @@
 
 #include <algorithm>
 #include <map>
-#include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LogicalResult.h>
@@ -15,106 +14,166 @@
 
 namespace mqt::ir::opt {
 
+/**
+ * @brief This pattern is responsible to push Unitary operations through branch operations into new blocks.
+ *
+ * This can be done in some circumstances, if a branch operation uses the result of a unitary operation as a block argument.
+ */
 struct QuantumSinkPushPattern final
     : mlir::OpInterfaceRewritePattern<UnitaryInterface> {
+
 
   explicit QuantumSinkPushPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern(context) {}
 
   mlir::LogicalResult match(UnitaryInterface op) const override {
-    // Ensure that at least one user is a unitary operation.
-    const auto& users = op->getUsers();
-    auto* ownBlock = op->getBlock();
-    if (std::none_of(users.begin(), users.end(), [&ownBlock](auto* user) {
-          return mlir::isa<UnitaryInterface>(user) &&
-                 user->getBlock() != ownBlock;
-        })) {
+    // We only consider 1-qubit gates.
+    if(op.getOutQubits().size() != 1) {
       return mlir::failure();
     }
-    return mlir::success();
+
+    const auto& users = op->getUsers();
+    if(users.empty()) {
+      return mlir::failure();
+    }
+
+    auto* user = *users.begin();
+
+    // This pattern only applies to operations in the same block.
+    if(user->getBlock() != op->getBlock()) {
+      return mlir::failure();
+    }
+
+    // The pattern can always be applied if the user is a conditional branch operation.
+    if(mlir::isa<mlir::cf::CondBranchOp>(user)) {
+      return mlir::success();
+    }
+
+    // For normal branch operations, we can only apply the pattern if the successor block
+    // only has one predecessor.
+    if(auto branchOp = mlir::dyn_cast<mlir::cf::BranchOp>(user)) {
+      auto* successor = branchOp.getDest();
+      if(std::distance(successor->getPredecessors().begin(), successor->getPredecessors().end()) == 1) {
+        return mlir::success();
+      }
+    }
+    return mlir::failure();
   }
 
-  void replaceInputsWithClone(mlir::PatternRewriter& rewriter,
-                              mlir::Operation* original, mlir::Operation* clone,
-                              mlir::Operation* user) const {
-    for (size_t i = 0; i < user->getOperands().size(); i++) {
-      const auto& operand = user->getOperand(i);
-      const auto found = std::find(original->getResults().begin(),
-                                   original->getResults().end(), operand);
-      if (found == original->getResults().end()) {
+  /**
+   * @brief Pushes the given Unitary operation through a branch operation into the given block.
+   * 
+   * @param op The Unitary operation to push.
+   * @param block The block to push the operation into.
+   * @param blockArgs The arguments used to call the block.
+   * @param rewriter The pattern rewriter to use.
+   * @return The new arguments to call the block with.
+  */
+  std::vector<mlir::Value> pushIntoBlock(UnitaryInterface op, mlir::Block* block, mlir::OperandRange blockArgs, mlir::PatternRewriter& rewriter) const {
+    std::vector<mlir::Value> newBlockArgs;
+    // We start by inserting the operation at the beginning of the block.
+    rewriter.setInsertionPointToStart(block);
+    auto* clone = rewriter.clone(*op);
+
+    // We iterate over all block args: If any of them involved the result of the pushed operation,
+    // they can be removed, as the operation is now already in the block. However, this means
+    for(int i = static_cast<int>(blockArgs.size()) - 1; i >= 0; i--) {
+      auto arg = blockArgs[i];
+      auto found = std::find(op->getResults().begin(), op->getResults().end(), arg);
+      if(found == op->getResults().end()) {
+        newBlockArgs.emplace_back(arg);
         continue;
       }
-      const auto idx = std::distance(original->getResults().begin(), found);
-      rewriter.modifyOpInPlace(
-          user, [&] { user->setOperand(i, clone->getResults()[idx]); });
+      auto idx = std::distance(op->getResults().begin(), found);
+      block->getArgument(i).replaceAllUsesWith(clone->getResult(idx));
+      block->eraseArgument(i);
     }
+
+    // Now, the block instead needs to be passed the inputs of the pushed operation
+    // so we extend the block with new arguments.
+    for(size_t i = 0; i < clone->getOperands().size(); i++) {
+      auto in = clone->getOperand(i);
+      auto newArg = block->addArgument(in.getType(), clone->getLoc());
+      rewriter.modifyOpInPlace(clone, [&]() {
+        clone->setOperand(i, newArg);
+      });
+      newBlockArgs.emplace_back(in);
+    }
+
+    return newBlockArgs;
   }
 
-  std::vector<mlir::Block*> getBranchSuccessors(mlir::Operation* op) const {
-    std::vector<mlir::Block*> blocks;
-    if (auto condBr = mlir::dyn_cast<mlir::cf::CondBranchOp>(op)) {
-      blocks.emplace_back(condBr.getTrueDest());
-      blocks.emplace_back(condBr.getFalseDest());
-    } else if (auto br = mlir::dyn_cast<mlir::cf::BranchOp>(op)) {
-      blocks.emplace_back(br.getDest());
+  /**
+   * @brief Breaks a critical edge through the given branch operation by adding a new block.
+   *
+   * @param oldTarget The target block to which the critical edge went.
+   * @param branchOp The branch operation that caused the critical edge.
+   * @param rewriter The pattern rewriter to use.
+   * @return The new block that was created.
+  */
+  mlir::Block* breakCriticalEdge(mlir::Block* oldTarget, mlir::Operation* branchOp, mlir::PatternRewriter& rewriter) const {
+    auto* newBlock = rewriter.createBlock(oldTarget->getParent());
+    std::vector<mlir::Value> newBlockOutputs;
+    for(auto arg : oldTarget->getArguments()) {
+      auto newArg = newBlock->addArgument(arg.getType(), branchOp->getLoc());
+      newBlockOutputs.emplace_back(newArg);
     }
-    return blocks;
+    rewriter.setInsertionPointToEnd(newBlock);
+    rewriter.create<mlir::cf::BranchOp>(branchOp->getLoc(), oldTarget, newBlockOutputs);
+    return newBlock;
+  }
+
+  /**
+   * @brief Pushes a Unitary operation through a single conditional branch operation.
+   *
+   * @param op The Unitary operation to push.
+   * @param condBranchOp The conditional branch operation to push through.
+   * @param rewriter The pattern rewriter to use.
+   */
+  void rewriteCondBranch(UnitaryInterface op, mlir::cf::CondBranchOp condBranchOp, mlir::PatternRewriter& rewriter) const {
+    auto* targetBlockTrue = std::distance(condBranchOp.getTrueDest()->getPredecessors().begin(), condBranchOp.getTrueDest()->getPredecessors().end()) == 1
+      ? condBranchOp.getTrueDest()
+      : breakCriticalEdge(condBranchOp.getTrueDest(), condBranchOp, rewriter);
+    auto newBlockArgsTrue = pushIntoBlock(op, targetBlockTrue, condBranchOp.getTrueOperands(), rewriter);
+
+    auto* targetBlockFalse = std::distance(condBranchOp.getFalseDest()->getPredecessors().begin(), condBranchOp.getFalseDest()->getPredecessors().end()) == 1
+      ? condBranchOp.getFalseDest()
+      : breakCriticalEdge(condBranchOp.getFalseDest(), condBranchOp, rewriter);
+    auto newBlockArgsFalse = pushIntoBlock(op, targetBlockFalse, condBranchOp.getFalseOperands(), rewriter);
+    
+    rewriter.setInsertionPoint(condBranchOp);
+    rewriter.replaceOpWithNewOp<mlir::cf::CondBranchOp>(condBranchOp, condBranchOp.getCondition(), targetBlockTrue, newBlockArgsTrue, targetBlockFalse, newBlockArgsFalse);
+    rewriter.eraseOp(op);
+  }
+
+  /**
+   * @brief Pushes a Unitary operation through a single branch operation.
+   *
+   * The successor of this branch will always have exactly one predecessor as per the
+   * match function. Therefore, we do not have to worry about critical edges.
+   *
+   * @param op The Unitary operation to push.
+   * @param branchOp The branch operation to push through.
+   * @param rewriter The pattern rewriter to use.
+   */
+  void rewriteBranch(UnitaryInterface op, mlir::cf::BranchOp branchOp, mlir::PatternRewriter& rewriter) const {
+    auto newBlockArgs = pushIntoBlock(op, branchOp.getDest(), branchOp.getOperands(), rewriter);
+    rewriter.modifyOpInPlace(branchOp, [&]() {
+      branchOp.getDestOperandsMutable().assign(newBlockArgs);
+    });
+    rewriter.eraseOp(op);
   }
 
   void rewrite(UnitaryInterface op,
                mlir::PatternRewriter& rewriter) const override {
-    llvm::outs() << "looking at op: " << op << "\n";
-    std::map<mlir::Block*, mlir::Operation*> blockToOp;
-    for (auto* user : op->getUsers()) {
-      blockToOp.insert(
-          {user->getBlock(), user}); // Users per block are always <= 1.
+    auto* user = *op->getUsers().begin();
+    if(auto condBranchOp = mlir::dyn_cast<mlir::cf::CondBranchOp>(user)) {
+      rewriteCondBranch(op, condBranchOp, rewriter);
+      return;
+    } else {
+      rewriteBranch(op, mlir::dyn_cast<mlir::cf::BranchOp>(user), rewriter);
+      return;
     }
-
-    auto* currentBlock = op->getBlock();
-    auto* terminator = currentBlock->getTerminator();
-    std::vector<mlir::Block*> nextBlocks = getBranchSuccessors(terminator);
-    std::vector<mlir::Block*> newBlocks;
-
-    for (auto* nextBlock : nextBlocks) {
-      if (std::distance(nextBlock->getPredecessors().begin(),
-                        nextBlock->getPredecessors().end()) == 1) {
-        // We can simply shift the operation to the next block.
-        mlir::Operation& blockStart = nextBlock->front();
-        rewriter.setInsertionPoint(&blockStart);
-        auto clone = rewriter.clone(*op);
-        if (blockToOp.find(nextBlock) != blockToOp.end()) {
-          replaceInputsWithClone(rewriter, op, clone, blockToOp[nextBlock]);
-        } else {
-          // TODO make accessible for later use
-        }
-        newBlocks.emplace_back(nextBlock);
-      } else if (nextBlocks.size() > 1) {
-        // We need to create a new block and insert the operation there to break
-        // the critical edge.
-        auto* newBlock = rewriter.createBlock(nextBlock->getPrevNode());
-        rewriter.setInsertionPointToStart(newBlock);
-        auto clone = rewriter.clone(*op);
-        if (blockToOp.find(nextBlock) != blockToOp.end()) {
-          replaceInputsWithClone(rewriter, op, clone, blockToOp[nextBlock]);
-        }
-        rewriter.create<mlir::cf::BranchOp>(op->getLoc(), nextBlock);
-        newBlocks.emplace_back(newBlock);
-      } else {
-        // Operation has to stay here.
-        newBlocks.emplace_back(nextBlock);
-      }
-    }
-
-    // Update the original branch operation if necessary.
-    if (newBlocks != nextBlocks) {
-      auto condBr = mlir::dyn_cast<mlir::cf::CondBranchOp>(
-          terminator); // must be a CondBranchOp.
-      rewriter.replaceOpWithNewOp<mlir::cf::CondBranchOp>(
-          condBr, condBr.getCondition(), newBlocks[0], condBr.getTrueOperands(),
-          newBlocks[1], condBr.getFalseOperands());
-    }
-
-    rewriter.eraseOp(op);
   }
 };
 

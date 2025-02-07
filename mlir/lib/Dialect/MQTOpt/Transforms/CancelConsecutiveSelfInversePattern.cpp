@@ -10,6 +10,9 @@
 
 namespace mqt::ir::opt {
 
+/**
+ * @brief This pattern attempty to cancel consecutive self-inverse operations.
+ */
 struct CancelConsecutiveSelfInversePattern final
     : mlir::OpInterfaceRewritePattern<UnitaryInterface> {
 

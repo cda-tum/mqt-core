@@ -11,6 +11,9 @@ namespace mqt::ir::opt {
 #define GEN_PASS_DEF_QUANTUMSINKPASS
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
+/**
+ * @brief This pass attempty to sink quantum operations into the block where their results are used.
+ */
 struct QuantumSinkPass final : impl::QuantumSinkPassBase<QuantumSinkPass> {
 
   void runOnOperation() override {
@@ -20,8 +23,8 @@ struct QuantumSinkPass final : impl::QuantumSinkPassBase<QuantumSinkPass> {
 
     // Define the set of patterns to use.
     mlir::RewritePatternSet patterns(ctx);
+    populateQuantumSinkShiftPatterns(patterns);
     populateQuantumSinkPushPatterns(patterns);
-    populateQuantumSinkMergePatterns(patterns);
 
     // Apply patterns in an iterative and greedy manner.
     if (mlir::failed(
