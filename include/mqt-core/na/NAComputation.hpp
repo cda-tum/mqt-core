@@ -21,60 +21,44 @@
 #include <vector>
 
 namespace na {
-class NAComputation final {
+class NAComputation final : protected std::vector<std::unique_ptr<Op>> {
 protected:
-  std::vector<Atom> atoms;
-  std::vector<Zone> zones;
+  std::vector<std::unique_ptr<Atom>> atoms;
+  std::vector<std::unique_ptr<Zone>> zones;
   std::unordered_map<const Atom*, Location> initialLocations;
-  std::vector<std::unique_ptr<Op>> operations;
 
 public:
+  using std::vector<std::unique_ptr<Op>>::begin;
+  using std::vector<std::unique_ptr<Op>>::clear;
+  using std::vector<std::unique_ptr<Op>>::end;
+  using std::vector<std::unique_ptr<Op>>::size;
+  using std::vector<std::unique_ptr<Op>>::operator[];
   NAComputation() = default;
   NAComputation(const NAComputation& qc) = default;
   NAComputation(NAComputation&& qc) noexcept = default;
   NAComputation& operator=(const NAComputation& qc) = default;
   NAComputation& operator=(NAComputation&& qc) noexcept = default;
-  [[nodiscard]] auto getAtoms() -> decltype(atoms)& { return atoms; }
-  [[nodiscard]] auto getAtoms() const -> const decltype(atoms)& {
-    return atoms;
+  auto emplaceBackAtom(std::string name) -> const Atom* {
+    return atoms.emplace_back(std::make_unique<Atom>(std::move(name))).get();
   }
-  [[nodiscard]] auto getZones() -> decltype(zones)& { return zones; }
-  [[nodiscard]] auto getZones() const -> const decltype(zones)& {
-    return zones;
+  auto emplaceBackZone(std::string name) -> const Zone* {
+    return zones.emplace_back(std::make_unique<Zone>(std::move(name))).get();
   }
-  [[nodiscard]] auto getInitialLocations() -> decltype(initialLocations)& {
-    return initialLocations;
+  auto emplaceBackInitialLocation(const Atom* atom, const Location& loc) -> void {
+    initialLocations.emplace(atom, loc);
   }
-  [[nodiscard]] auto getInitialLocations() const -> const
-      decltype(initialLocations)& {
-    return initialLocations;
+  template <typename... Args>
+  auto emplaceBackInitialLocation(const Atom* atom, Args&&... loc) -> void {
+    initialLocations.emplace(atom, Location(std::forward<Args>(loc)...));
   }
   template <class T> auto emplaceBack(T&& op) -> std::unique_ptr<Op>& {
-    return operations.emplace_back(std::make_unique<T>(std::forward<T>(op)));
+    return std::vector<std::unique_ptr<Op>>::emplace_back(
+        std::make_unique<T>(std::forward<T>(op)));
   }
   template <class T, typename... Args>
   auto emplaceBack(Args&&... args) -> std::unique_ptr<Op>& {
-    return operations.emplace_back(
+    return std::vector<std::unique_ptr<Op>>::emplace_back(
         std::make_unique<T>(std::forward<Args>(args)...));
-  }
-  [[nodiscard]] auto begin() -> decltype(operations)::iterator {
-    return operations.begin();
-  }
-  [[nodiscard]] auto begin() const -> decltype(operations)::const_iterator {
-    return operations.begin();
-  }
-  [[nodiscard]] auto end() -> decltype(operations)::iterator {
-    return operations.end();
-  }
-  [[nodiscard]] auto end() const -> decltype(operations)::const_iterator {
-    return operations.end();
-  }
-  auto clear() -> void { operations.clear(); }
-  [[nodiscard]] auto empty() const -> bool { return operations.empty(); }
-  [[nodiscard]] auto size() const -> std::size_t { return operations.size(); }
-  [[nodiscard]] auto operator[](std::size_t i) -> Op& { return *operations[i]; }
-  [[nodiscard]] auto operator[](std::size_t i) const -> const Op& {
-    return *operations[i];
   }
   [[nodiscard]] auto toString() const -> std::string;
   friend auto operator<<(std::ostream& os, const NAComputation& qc)

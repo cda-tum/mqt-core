@@ -26,13 +26,13 @@
 namespace na {
 TEST(NAComputation, General) {
   auto qc = NAComputation();
-  const auto* atom0 = &qc.getAtoms().emplace_back("atom0");
-  const auto* atom1 = &qc.getAtoms().emplace_back("atom1");
-  const auto* atom2 = &qc.getAtoms().emplace_back("atom2");
-  const auto* globalZone = &qc.getZones().emplace_back("global");
-  qc.getInitialLocations().emplace(atom0, Location{0, 0});
-  qc.getInitialLocations().emplace(atom1, Location{1, 0});
-  qc.getInitialLocations().emplace(atom2, Location{2, 0});
+  const auto* const atom0 = qc.emplaceBackAtom("atom0");
+  const auto* const atom1 = qc.emplaceBackAtom("atom1");
+  const auto* const atom2 = qc.emplaceBackAtom("atom2");
+  const auto* const globalZone = qc.emplaceBackZone("global");
+  qc.emplaceBackInitialLocation(atom0, 0, 0);
+  qc.emplaceBackInitialLocation(atom1, 1, 0);
+  qc.emplaceBackInitialLocation(atom2, 2, 0);
   qc.emplaceBack<LocalRZOp>(qc::PI_2, atom0);
   qc.emplaceBack<GlobalRYOp>(qc::PI_2, globalZone);
   qc.emplaceBack<LoadOp>(std::vector{atom0, atom1}, std::vector{Location{0, 1}, Location{1, 1}});
@@ -44,18 +44,18 @@ TEST(NAComputation, General) {
                       "atom (1.000, 0.000) atom1\n"
                       "atom (2.000, 0.000) atom2\n"
                       "@+ rz 1.57080 atom0\n"
-                      "@+ ry 1.5708 global\n"
-                      "@+ load ["
-                      "    (1, 0) atom0\n"
-                      "    (1, 1) atom1\n"
+                      "@+ ry 1.57080 global\n"
+                      "@+ load [\n"
+                      "    (0.000, 1.000) atom0\n"
+                      "    (1.000, 1.000) atom1\n"
                       "]\n"
                       "@+ move [\n"
-                      "    (1, 1) atom0\n"
-                      "    (5, 1) atom1\n"
+                      "    (4.000, 1.000) atom0\n"
+                      "    (5.000, 1.000) atom1\n"
                       "]\n"
                       "@+ store [\n"
-                      "    (5, 1) atom0\n"
-                      "    (5, 0) atom1\n"
+                      "    (4.000, 0.000) atom0\n"
+                      "    (5.000, 0.000) atom1\n"
                       "]\n");
 }
 
@@ -68,14 +68,14 @@ TEST(NAComputation, EmptyPrint) {
 
 TEST(NAComputation, ValidateAODConstraints) {
   auto qc = NAComputation();
-  const auto* atom0 = &qc.getAtoms().emplace_back("atom0");
-  const auto* atom1 = &qc.getAtoms().emplace_back("atom1");
-  const auto* atom2 = &qc.getAtoms().emplace_back("atom2");
-  const auto* atom3 = &qc.getAtoms().emplace_back("atom3");
-  qc.getInitialLocations().emplace(atom0, Location{0, 0});
-  qc.getInitialLocations().emplace(atom1, Location{1, 0});
-  qc.getInitialLocations().emplace(atom2, Location{0, 2});
-  qc.getInitialLocations().emplace(atom3, Location{1, 2});
+  const auto* const atom0 = qc.emplaceBackAtom("atom0");
+  const auto* const atom1 = qc.emplaceBackAtom("atom1");
+  const auto* const atom2 = qc.emplaceBackAtom("atom2");
+  const auto* const atom3 = qc.emplaceBackAtom("atom3");
+  qc.emplaceBackInitialLocation(atom0, 0, 0);
+  qc.emplaceBackInitialLocation(atom1, 1, 0);
+  qc.emplaceBackInitialLocation(atom2, 0, 2);
+  qc.emplaceBackInitialLocation(atom3, 1, 2);
   qc.emplaceBack(LoadOp({atom0, atom1}, {Location{0, 1}, Location{1, 1}}));
   EXPECT_TRUE(qc.validate());
   // atom already loaded
