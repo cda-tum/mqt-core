@@ -19,7 +19,7 @@
 
 namespace na {
 TEST(NADefinitions, Point) {
-  const Point p(-1, 2);
+  const Location p(-1, 2);
   EXPECT_EQ(p.x, -1);
   EXPECT_EQ(p.y, 2);
   EXPECT_EQ(p.length(), 2);
@@ -27,15 +27,15 @@ TEST(NADefinitions, Point) {
   std::stringstream ss;
   ss << p;
   EXPECT_EQ(ss.str(), "(-1, 2)");
-  EXPECT_EQ(p, Point(-1, 2));
-  EXPECT_FALSE(p == Point(1, 2));
-  EXPECT_EQ(p - Point(1, 2), Point(-2, 0));
-  EXPECT_EQ(Point(1, 2) + p, Point(0, 4));
+  EXPECT_EQ(p, Location(-1, 2));
+  EXPECT_FALSE(p == Location(1, 2));
+  EXPECT_EQ(p - Location(1, 2), Location(-2, 0));
+  EXPECT_EQ(Location(1, 2) + p, Location(0, 4));
 }
 
 TEST(NADefinitions, PointDistances) {
-  const Point p1(0, 0);
-  const Point p2(3, 4);
+  const Location p1(0, 0);
+  const Location p2(3, 4);
   EXPECT_EQ(p1.getEuclideanDistance(p2), 5);
   EXPECT_EQ(p1.getManhattanDistanceX(p2), 3);
   EXPECT_EQ(p1.getManhattanDistanceY(p2), 4);

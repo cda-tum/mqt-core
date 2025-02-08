@@ -9,103 +9,120 @@
 
 #include "na/NAComputation.hpp"
 
-#include "na/operations/NALocalOperation.hpp"
-#include "na/operations/NAShuttlingOperation.hpp"
+#include "na/operations/LoadOp.hpp"
+#include "na/operations/LocalOp.hpp"
+#include "na/operations/ShuttlingOp.hpp"
+#include "na/operations/StoreOp.hpp"
 
+#include <algorithm>
 #include <cstddef>
-#include <ios>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace na {
 auto NAComputation::toString() const -> std::string {
   std::stringstream ss;
-  ss << "init at ";
-  for (const auto& p : initialPositions) {
-    ss << *p << ", ";
+  for (const auto& [atom, loc] : initialLocations) {
+    ss << "atom " << loc << " " << *atom << "\n";
   }
-  if (ss.tellp() == 8) {
-    ss.seekp(-1, std::ios_base::end);
-  } else {
-    ss.seekp(-2, std::ios_base::end);
-  }
-  ss << ";\n";
-  for (const auto& op : operations) {
-    ss << *op;
+  for (const auto& op : *this) {
+    ss << op << "\n";
   }
   return ss.str();
 }
-auto NAComputation::validateAODConstraints() const -> bool {
+auto NAComputation::validate() const -> bool {
   std::size_t counter = 1; // the first operation is `init at ...;`
-  for (const auto& naOp : operations) {
+  std::unordered_map<const Atom*, Location> currentLocations = initialLocations;
+  std::unordered_set<const Atom*> currentlyShuttling{};
+  for (const auto& op : *this) {
     ++counter;
-    if (naOp->isShuttlingOperation()) {
-      const auto& shuttlingOp =
-          dynamic_cast<const NAShuttlingOperation&>(*naOp);
-      if (shuttlingOp.getStart().size() != shuttlingOp.getEnd().size()) {
-        return false;
-      }
-      for (std::size_t i = 0; i < shuttlingOp.getStart().size(); ++i) {
-        for (std::size_t j = i + 1; j < shuttlingOp.getStart().size(); ++j) {
-          const auto& s1 = shuttlingOp.getStart()[i];
-          const auto& s2 = shuttlingOp.getStart()[j];
-          const auto& e1 = shuttlingOp.getEnd()[i];
-          const auto& e2 = shuttlingOp.getEnd()[j];
-          if (*s1 == *s2) {
-            std::cout << "Error in op number " << counter
-                      << " (two start points identical)\n";
-            return false;
-          }
-          if (*e1 == *e2) {
-            std::cout << "Error in op number " << counter
-                      << " (two end points identical)\n";
-            return false;
-          }
-          if (s1->x == s2->x && e1->x != e2->x) {
-            std::cout << "Error in op number " << counter
-                      << " (columns not preserved)\n";
-            return false;
-          }
-          if (s1->y == s2->y && e1->y != e2->y) {
-            std::cout << "Error in op number " << counter
-                      << " (rows not preserved)\n";
-            return false;
-          }
-          if (s1->x < s2->x && e1->x >= e2->x) {
-            std::cout << "Error in op number " << counter
-                      << " (column order not preserved)\n";
-            return false;
-          }
-          if (s1->y < s2->y && e1->y >= e2->y) {
-            std::cout << "Error in op number " << counter
-                      << " (row order not preserved)\n";
-            return false;
-          }
-          if (s1->x > s2->x && e1->x <= e2->x) {
-            std::cout << "Error in op number " << counter
-                      << " (column order not preserved)\n";
-            return false;
-          }
-          if (s1->y > s2->y && e1->y <= e2->y) {
-            std::cout << "Error in op number " << counter
-                      << " (row order not preserved)\n";
-            return false;
-          }
+    if (op.is<ShuttlingOp>()) {
+      const auto& shuttlingOp = op.as<ShuttlingOp>();
+      const auto& atoms = shuttlingOp.getAtoms();
+      if (shuttlingOp.is<LoadOp>()) {
+        if (std::any_of(atoms.begin(), atoms.end(),
+                        [&currentLocations](const auto* atom) {
+                          return currentLocations.find(atom) !=
+                                 currentLocations.end();
+                        })) {
+          std::cout << "Error in op number " << counter
+                    << " (atom already loaded)\n";
+          return false;
+        }
+        std::for_each(atoms.begin(), atoms.end(),
+                      [&currentlyShuttling](const auto* atom) {
+                        currentlyShuttling.insert(atom);
+                      });
+      } else {
+        if (std::any_of(atoms.begin(), atoms.end(),
+                        [&currentlyShuttling](const auto* atom) {
+                          return currentlyShuttling.find(atom) ==
+                                 currentlyShuttling.end();
+                        })) {
+          std::cout << "Error in op number " << counter
+                    << " (atom not loaded)\n";
+          return false;
         }
       }
-    } else if (naOp->isLocalOperation()) {
-      const auto& localOp = dynamic_cast<const NALocalOperation&>(*naOp);
-      for (std::size_t i = 0; i < localOp.getPositions().size(); ++i) {
-        for (std::size_t j = i + 1; j < localOp.getPositions().size(); ++j) {
-          const auto& a = localOp.getPositions()[i];
-          const auto& b = localOp.getPositions()[j];
-          if (*a == *b) {
-            std::cout << "Error in op number " << counter
-                      << " (identical positions)\n";
-            return false;
+      if ((op.is<LoadOp>() && op.as<LoadOp>().hasTargetLocations()) ||
+          (op.is<LoadOp>() && op.as<StoreOp>().hasTargetLocations())) {
+        const auto& targetLocations = shuttlingOp.getTargetLocations();
+        for (std::size_t i = 0; i < atoms.size(); ++i) {
+          const auto* a = atoms[i];
+          for (std::size_t j = i + 1; j < atoms.size(); ++j) {
+            const auto* b = atoms[j];
+            const auto& s1 = currentLocations[a];
+            const auto& s2 = currentLocations[b];
+            const auto& e1 = targetLocations[i];
+            const auto& e2 = targetLocations[j];
+            if (e1 == e2) {
+              std::cout << "Error in op number " << counter
+                        << " (two end points identical)\n";
+              return false;
+            }
+            if (s1.x == s2.x && e1.x != e2.x) {
+              std::cout << "Error in op number " << counter
+                        << " (columns not preserved)\n";
+              return false;
+            }
+            if (s1.y == s2.y && e1.y != e2.y) {
+              std::cout << "Error in op number " << counter
+                        << " (rows not preserved)\n";
+              return false;
+            }
+            if (s1.x < s2.x && e1.x >= e2.x) {
+              std::cout << "Error in op number " << counter
+                        << " (column order not preserved)\n";
+              return false;
+            }
+            if (s1.y < s2.y && e1.y >= e2.y) {
+              std::cout << "Error in op number " << counter
+                        << " (row order not preserved)\n";
+              return false;
+            }
+            if (s1.x > s2.x && e1.x <= e2.x) {
+              std::cout << "Error in op number " << counter
+                        << " (column order not preserved)\n";
+              return false;
+            }
+            if (s1.y > s2.y && e1.y <= e2.y) {
+              std::cout << "Error in op number " << counter
+                        << " (row order not preserved)\n";
+              return false;
+            }
           }
         }
+        for (std::size_t i = 0; i < atoms.size(); ++i) {
+          currentLocations[atoms[i]] = targetLocations[i];
+        }
+      }
+      if (shuttlingOp.is<StoreOp>()) {
+        std::for_each(atoms.begin(), atoms.end(), [&](const auto* atom) {
+          currentlyShuttling.erase(atom);
+        });
       }
     }
   }
