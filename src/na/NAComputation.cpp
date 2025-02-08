@@ -72,7 +72,7 @@ auto NAComputation::validate() const -> bool {
         }
       }
       if ((op->is<LoadOp>() && op->as<LoadOp>().hasTargetLocations()) ||
-          (op->is<LoadOp>() && op->as<StoreOp>().hasTargetLocations())) {
+          (op->is<StoreOp>() && op->as<StoreOp>().hasTargetLocations())) {
         const auto& targetLocations = shuttlingOp.getTargetLocations();
         for (std::size_t i = 0; i < opAtoms.size(); ++i) {
           const auto* a = opAtoms[i];
