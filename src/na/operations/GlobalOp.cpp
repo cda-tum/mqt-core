@@ -7,25 +7,24 @@
  * Licensed under the MIT License
  */
 
-#include "na/operations/NAGlobalOperation.hpp"
+#include "na/operations/GlobalRYOp.hpp"
 
+#include <iomanip>
 #include <ios>
 #include <sstream>
 #include <string>
 
 namespace na {
-auto NAGlobalOperation::toString() const -> std::string {
+auto GlobalOp::toString() const -> std::string {
   std::stringstream ss;
-  ss << type;
+  ss << std::setprecision(5) << std::fixed;
+  ss << "@+ " << name;
   if (!params.empty()) {
-    ss << "(";
     for (const auto& p : params) {
-      ss << p << ", ";
+      ss << " " << p;
     }
-    ss.seekp(-2, std::ios_base::end);
-    ss << ")";
   }
-  ss << ";\n";
+  ss << " " << zone;
   return ss.str();
 }
 } // namespace na
