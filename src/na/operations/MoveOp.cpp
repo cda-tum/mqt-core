@@ -17,11 +17,11 @@ auto MoveOp::toString() const -> std::string {
   std::stringstream ss;
   ss << "@+ move";
   if (atoms.size() == 1) {
-    ss << " " << targetLocations.front() << " " << *atoms.front();
+    ss << " " << targetLocations.front() << " " << *(atoms.front());
   } else {
     ss << " [\n";
     for (std::size_t i = 0; i < atoms.size(); ++i) {
-      ss << "\t" << targetLocations[i] << " " << *atoms[i] << "\n";
+      ss << "    " << targetLocations[i] << " " << *(atoms[i]) << "\n";
     }
     ss << "]";
   }

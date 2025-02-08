@@ -25,11 +25,15 @@
 namespace na {
 auto NAComputation::toString() const -> std::string {
   std::stringstream ss;
-  for (const auto& [atom, loc] : initialLocations) {
+  std::vector<std::pair<const Atom*, Location>> initialLocationsAsc(
+      initialLocations.begin(), initialLocations.end());
+  std::sort(initialLocationsAsc.begin(), initialLocationsAsc.end(),
+            [](const auto& a, const auto& b) { return a.second < b.second; });
+  for (const auto& [atom, loc] : initialLocationsAsc) {
     ss << "atom " << loc << " " << *atom << "\n";
   }
   for (const auto& op : *this) {
-    ss << op << "\n";
+    ss << *op << "\n";
   }
   return ss.str();
 }
@@ -39,25 +43,25 @@ auto NAComputation::validate() const -> bool {
   std::unordered_set<const Atom*> currentlyShuttling{};
   for (const auto& op : *this) {
     ++counter;
-    if (op.is<ShuttlingOp>()) {
-      const auto& shuttlingOp = op.as<ShuttlingOp>();
-      const auto& atoms = shuttlingOp.getAtoms();
+    if (op->is<ShuttlingOp>()) {
+      const auto& shuttlingOp = op->as<ShuttlingOp>();
+      const auto& opAtoms = shuttlingOp.getAtoms();
       if (shuttlingOp.is<LoadOp>()) {
-        if (std::any_of(atoms.begin(), atoms.end(),
-                        [&currentLocations](const auto* atom) {
-                          return currentLocations.find(atom) !=
-                                 currentLocations.end();
+        if (std::any_of(opAtoms.begin(), opAtoms.end(),
+                        [&currentlyShuttling](const auto* atom) {
+                          return currentlyShuttling.find(atom) !=
+                                 currentlyShuttling.end();
                         })) {
           std::cout << "Error in op number " << counter
                     << " (atom already loaded)\n";
           return false;
         }
-        std::for_each(atoms.begin(), atoms.end(),
+        std::for_each(opAtoms.begin(), opAtoms.end(),
                       [&currentlyShuttling](const auto* atom) {
                         currentlyShuttling.insert(atom);
                       });
       } else {
-        if (std::any_of(atoms.begin(), atoms.end(),
+        if (std::any_of(opAtoms.begin(), opAtoms.end(),
                         [&currentlyShuttling](const auto* atom) {
                           return currentlyShuttling.find(atom) ==
                                  currentlyShuttling.end();
@@ -67,13 +71,18 @@ auto NAComputation::validate() const -> bool {
           return false;
         }
       }
-      if ((op.is<LoadOp>() && op.as<LoadOp>().hasTargetLocations()) ||
-          (op.is<LoadOp>() && op.as<StoreOp>().hasTargetLocations())) {
+      if ((op->is<LoadOp>() && op->as<LoadOp>().hasTargetLocations()) ||
+          (op->is<LoadOp>() && op->as<StoreOp>().hasTargetLocations())) {
         const auto& targetLocations = shuttlingOp.getTargetLocations();
-        for (std::size_t i = 0; i < atoms.size(); ++i) {
-          const auto* a = atoms[i];
-          for (std::size_t j = i + 1; j < atoms.size(); ++j) {
-            const auto* b = atoms[j];
+        for (std::size_t i = 0; i < opAtoms.size(); ++i) {
+          const auto* a = opAtoms[i];
+          for (std::size_t j = i + 1; j < opAtoms.size(); ++j) {
+            const auto* b = opAtoms[j];
+            if (a == b) {
+              std::cout << "Error in op number " << counter
+                        << " (two atoms identical)\n";
+              return false;
+            }
             const auto& s1 = currentLocations[a];
             const auto& s2 = currentLocations[b];
             const auto& e1 = targetLocations[i];
@@ -115,14 +124,26 @@ auto NAComputation::validate() const -> bool {
             }
           }
         }
-        for (std::size_t i = 0; i < atoms.size(); ++i) {
-          currentLocations[atoms[i]] = targetLocations[i];
+        for (std::size_t i = 0; i < opAtoms.size(); ++i) {
+          currentLocations[opAtoms[i]] = targetLocations[i];
         }
       }
       if (shuttlingOp.is<StoreOp>()) {
-        std::for_each(atoms.begin(), atoms.end(), [&](const auto* atom) {
+        std::for_each(opAtoms.begin(), opAtoms.end(), [&](const auto* atom) {
           currentlyShuttling.erase(atom);
         });
+      }
+    } else if (op->is<LocalOp>()) {
+      const auto& opAtoms = op->as<LocalOp>().getAtoms();
+      for (std::size_t i = 0; i < opAtoms.size(); ++i) {
+        const auto* a = opAtoms[i];
+        for (std::size_t j = i + 1; j < opAtoms.size(); ++j) {
+          if (const auto* b = opAtoms[j]; a == b) {
+            std::cout << "Error in op number " << counter
+                      << " (two atoms identical)\n";
+            return false;
+          }
+        }
       }
     }
   }

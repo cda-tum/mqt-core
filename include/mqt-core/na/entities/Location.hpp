@@ -18,12 +18,15 @@
 namespace na {
 /// Class to store two-dimensional coordinates
 struct Location final {
-  double x;
-  double y;
+  double x = 0;
+  double y = 0;
   Location(const double x, const double y) : x(x), y(y) {};
-  Location(const Location& p) = default;
-  ~Location() = default;
+  Location() = default;
+  Location(const Location& loc) = default;
+  Location(Location&& loc) noexcept = default;
   Location& operator=(const Location& loc) = default;
+  Location& operator=(Location&& loc) noexcept = default;
+  ~Location() = default;
   Location operator-(const Location& loc) const {
     return {x - loc.x, y - loc.y};
   }
@@ -51,6 +54,21 @@ struct Location final {
   }
   [[nodiscard]] auto operator==(const Location& other) const -> bool {
     return x == other.x && y == other.y;
+  }
+  [[nodiscard]] auto operator!=(const Location& other) const -> bool {
+    return !(*this == other);
+  }
+  [[nodiscard]] auto operator<(const Location& other) const -> bool {
+    return x < other.x || (x == other.x && y < other.y);
+  }
+  [[nodiscard]] auto operator>(const Location& other) const -> bool {
+    return x > other.x || (x == other.x && y > other.y);
+  }
+  [[nodiscard]] auto operator<=(const Location& other) const -> bool {
+    return x <= other.x || (x == other.x && y <= other.y);
+  }
+  [[nodiscard]] auto operator>=(const Location& other) const -> bool {
+    return x >= other.x || (x == other.x && y >= other.y);
   }
   [[maybe_unused]] [[nodiscard]] auto
   getEuclideanDistance(const Location& loc) const -> double {
