@@ -20,15 +20,15 @@ auto LoadOp::toString() const -> std::string {
     if (targetLocations) {
       ss << " " << targetLocations->front();
     }
-    ss << " " << *atoms.front();
+    ss << " " << *(atoms.front());
   } else {
     ss << " [\n";
     for (std::size_t i = 0; i < atoms.size(); ++i) {
-      ss << "\t";
+      ss << "    ";
       if (targetLocations) {
         ss << (*targetLocations)[i] << " ";
       }
-      ss << *atoms[i] << "\n";
+      ss << *(atoms[i]) << "\n";
     }
     ss << "]";
   }

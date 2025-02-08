@@ -24,17 +24,17 @@ auto LocalOp::toString() const -> std::string {
         ss << " " << p;
       }
     }
-    ss << " " << *atoms.front();
+    ss << " " << *(atoms.front());
   } else {
     ss << " [\n";
-    for (std::size_t i = 0; i < atoms.size(); ++i) {
-      ss << "\t";
+    for (const auto* const atom : atoms) {
+      ss << "    ";
       if (!params.empty()) {
         for (const auto& p : params) {
           ss << p << " ";
         }
       }
-      ss << *atoms[i] << "\n";
+      ss << *atom << "\n";
     }
     ss << "]";
   }

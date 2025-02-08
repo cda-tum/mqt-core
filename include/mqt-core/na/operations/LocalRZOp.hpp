@@ -19,5 +19,9 @@ public:
   LocalRZOp(qc::fp angle, const Atom* atom) : LocalOp({angle}, atom) {
     name = "rz";
   }
+  LocalRZOp(qc::fp angle, std::vector<const Atom*> atom)
+      : LocalOp({angle}, std::move(atom)) {
+    name = "rz";
+  }
 };
 } // namespace na

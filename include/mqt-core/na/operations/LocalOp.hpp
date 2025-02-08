@@ -28,7 +28,7 @@ protected:
   explicit LocalOp(std::vector<const Atom*>& atoms)
       : LocalOp({}, std::move(atoms)) {}
   explicit LocalOp(std::vector<qc::fp> params, const Atom* atom)
-      : LocalOp(std::move(params), {atom}) {}
+      : LocalOp(std::move(params), std::vector{atom}) {}
   explicit LocalOp(const Atom* atom) : LocalOp({}, atom) {}
 
 public:
