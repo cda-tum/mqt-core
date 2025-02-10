@@ -23,5 +23,8 @@ public:
       : LocalOp({angle}, std::move(atom)) {
     name = "rz";
   }
+  [[nodiscard]] auto clone() const -> std::unique_ptr<Op> override {
+    return std::make_unique<LocalRZOp>(*this);
+  }
 };
 } // namespace na

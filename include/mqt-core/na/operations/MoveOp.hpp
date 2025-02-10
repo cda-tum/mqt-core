@@ -43,5 +43,8 @@ public:
     return targetLocations;
   }
   [[nodiscard]] auto toString() const -> std::string override;
+  [[nodiscard]] auto clone() const -> std::unique_ptr<Op> override {
+    return std::make_unique<MoveOp>(*this);
+  }
 };
 } // namespace na
