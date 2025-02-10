@@ -29,11 +29,12 @@ namespace qc {
  *
  * @param amplitudes state (vector) to prepare. Must be normalized and have a
  *size that is a power of two
+ * @param Eps precision wanted for computations, default 1e-10
  * @return quantum computation that prepares the state
  * @throws invalid_argument @p amplitudes is not normalized or its length is not
  *a power of two
  **/
 [[nodiscard]] auto
 createStatePreparationCircuit(std::vector<std::complex<double>>& amplitudes,
-                              double EPS = 1e-10) -> QuantumComputation;
+                              double Eps = 1e-10) -> QuantumComputation;
 } // namespace qc

@@ -12,11 +12,11 @@
 #include "Definitions.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -39,8 +39,8 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto isNormalized(const std::vector<T>& vec, double EPS) -> bool {
-  return std::abs(1 - twoNorm(vec)) < EPS;
+[[nodiscard]] auto isNormalized(const std::vector<T>& vec, double Eps) -> bool {
+  return std::abs(1 - twoNorm(vec)) < Eps;
 }
 
 [[nodiscard]] auto kroneckerProduct(const Matrix& matrixA,
@@ -105,7 +105,7 @@ template <typename T>
 [[nodiscard]] auto multiplex(OpType targetGate, std::vector<double> angles,
                              bool lastCnot) -> QuantumComputation {
   size_t const listLen = angles.size();
-  Qubit const localNumQubits = static_cast<Qubit>(
+  auto const localNumQubits = static_cast<Qubit>(
       std::floor(std::log2(static_cast<double>(listLen))) + 1);
   QuantumComputation multiplexer{localNumQubits};
   // recursion base case
@@ -155,7 +155,7 @@ template <typename T>
 }
 
 [[nodiscard]] auto blochAngles(std::complex<double> const complexA,
-                               std::complex<double> const complexB, double EPS)
+                               std::complex<double> const complexB, double Eps)
     -> std::tuple<std::complex<double>, double, double> {
   double theta{0};
   double phi{0};
@@ -163,7 +163,7 @@ template <typename T>
   double const magA = std::abs(complexA);
   double const magB = std::abs(complexB);
   double const finalR = sqrt(pow(magA, 2) + pow(magB, 2));
-  if (finalR > EPS) {
+  if (finalR > Eps) {
     theta = 2 * acos(magA / finalR);
     double const aAngle = std::arg(complexA);
     double const bAngle = std::arg(complexB);
@@ -177,10 +177,10 @@ template <typename T>
 // rotations make up block diagonal matrix U
 [[nodiscard]] auto
 rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes,
-                       double EPS)
+                       double Eps)
     -> std::tuple<std::vector<std::complex<double>>, std::vector<double>,
                   std::vector<double>> {
-  size_t amplitudesHalf = amplitudes.size() / 2;
+  size_t const amplitudesHalf = amplitudes.size() / 2;
   std::vector<std::complex<double>> remainingVector;
   std::vector<double> thetas;
   std::vector<double> phis;
@@ -191,7 +191,7 @@ rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes,
 
   for (size_t i = 0; i < amplitudesHalf; ++i) {
     auto [remains, theta, phi] =
-        blochAngles(amplitudes[2 * i], amplitudes[2 * i + 1], EPS);
+        blochAngles(amplitudes[2 * i], amplitudes[2 * i + 1], Eps);
     remainingVector.emplace_back(remains);
     // minus sign because we move it to zero
     thetas.emplace_back(-theta);
@@ -203,21 +203,21 @@ rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes,
 // creates circuit that takes desired vector to zero
 [[nodiscard]] auto
 gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
-                 size_t numQubits, double EPS) -> QuantumComputation {
+                 size_t numQubits, double Eps) -> QuantumComputation {
   QuantumComputation disentangler{numQubits};
   for (size_t i = 0; i < numQubits; ++i) {
     // rotations to disentangle LSB
     auto [remainingParams, thetas, phis] =
-        rotationsToDisentangle(amplitudes, EPS);
+        rotationsToDisentangle(amplitudes, Eps);
     amplitudes = remainingParams;
     // perform required rotations
     bool addLastCnot = true;
     double const phisNorm = twoNorm(phis);
     double const thetasNorm = twoNorm(thetas);
-    if (phisNorm > EPS && thetasNorm > EPS) {
+    if (phisNorm > Eps && thetasNorm > Eps) {
       addLastCnot = false;
     }
-    if (phisNorm > EPS) {
+    if (phisNorm > Eps) {
       // call multiplex with RZGate
       QuantumComputation rzMultiplexer = multiplex(RZ, phis, addLastCnot);
       // append rzMultiplexer to disentangler, but it should only attach on
@@ -236,7 +236,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
       }
       disentangler.emplace_back<Operation>(rzMultiplexer.asOperation());
     }
-    if (thetasNorm > EPS) {
+    if (thetasNorm > Eps) {
       // call multiplex with RYGate
       QuantumComputation ryMultiplexer = multiplex(RY, thetas, addLastCnot);
       // append reversed ry_multiplexer to disentangler, but it should only
@@ -261,17 +261,17 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
   // adjust global phase according to the last e^(it)
   double const arg = -std::arg(std::accumulate(
       amplitudes.begin(), amplitudes.end(), std::complex<double>(0, 0)));
-  if (std::abs(arg) > EPS) {
+  if (std::abs(arg) > Eps) {
     disentangler.gphase(arg);
   }
   return disentangler;
 }
 
 auto createStatePreparationCircuit(
-    std::vector<std::complex<double>>& amplitudes, double EPS)
+    std::vector<std::complex<double>>& amplitudes, double Eps)
     -> QuantumComputation {
 
-  if (!isNormalized(amplitudes, EPS)) {
+  if (!isNormalized(amplitudes, Eps)) {
     throw std::invalid_argument{
         "Using State Preparation with Amplitudes that are not normalized"};
   }
@@ -284,7 +284,7 @@ auto createStatePreparationCircuit(
   }
   const auto numQubits = static_cast<size_t>(std::log2(amplitudes.size()));
   QuantumComputation toZeroCircuit =
-      gatesToUncompute(amplitudes, numQubits, EPS);
+      gatesToUncompute(amplitudes, numQubits, Eps);
 
   // invert circuit
   toZeroCircuit.invert();
