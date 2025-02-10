@@ -12,6 +12,7 @@
 #include "entities/Atom.hpp"
 #include "entities/Location.hpp"
 #include "entities/Zone.hpp"
+#include "operations/MoveOp.hpp"
 #include "operations/Op.hpp"
 
 #include <iterator>
@@ -38,6 +39,24 @@ public:
   NAComputation(NAComputation&& qc) noexcept = default;
   NAComputation& operator=(const NAComputation& qc) = default;
   NAComputation& operator=(NAComputation&& qc) noexcept = default;
+  [[nodiscard]] auto getAtomsSize() const -> std::size_t { return atoms.size(); }
+  [[nodiscard]] auto getAtoms() const -> const decltype(atoms)& {
+    return atoms;
+  }
+  [[nodiscard]] auto getLocationOfAtomAfterOperation(const std::unique_ptr<Atom>& atom, const std::unique_ptr<Op>& op) const
+      -> Location {
+      return getLocationOfAtomAfterOperation(atom.get(), op.get());
+  }
+  [[nodiscard]] auto getLocationOfAtomAfterOperation(const std::unique_ptr<Atom>& atom, const Op* op) const
+      -> Location {
+      return getLocationOfAtomAfterOperation(atom.get(), op);
+  }
+  [[nodiscard]] auto getLocationOfAtomAfterOperation(const Atom* atom, const std::unique_ptr<Op>& op) const
+      -> Location {
+      return getLocationOfAtomAfterOperation(atom, op.get());
+  }
+  [[nodiscard]] auto getLocationOfAtomAfterOperation(const Atom* atom, const Op* op) const
+      -> Location;
   auto emplaceBackAtom(std::string name) -> const Atom* {
     return atoms.emplace_back(std::make_unique<Atom>(std::move(name))).get();
   }
@@ -51,14 +70,14 @@ public:
   auto emplaceBackInitialLocation(const Atom* atom, Args&&... loc) -> void {
     initialLocations.emplace(atom, Location(std::forward<Args>(loc)...));
   }
-  template <class T> auto emplaceBack(T&& op) -> std::unique_ptr<Op>& {
+  template <class T> auto emplaceBack(T&& op) -> const Op* {
     return std::vector<std::unique_ptr<Op>>::emplace_back(
-        std::make_unique<T>(std::forward<T>(op)));
+        std::make_unique<T>(std::forward<T>(op))).get();
   }
   template <class T, typename... Args>
-  auto emplaceBack(Args&&... args) -> std::unique_ptr<Op>& {
+  auto emplaceBack(Args&&... args) -> const Op* {
     return std::vector<std::unique_ptr<Op>>::emplace_back(
-        std::make_unique<T>(std::forward<Args>(args)...));
+        std::make_unique<T>(std::forward<Args>(args)...)).get();
   }
   [[nodiscard]] auto toString() const -> std::string;
   friend auto operator<<(std::ostream& os, const NAComputation& qc)
