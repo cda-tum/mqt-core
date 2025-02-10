@@ -14,8 +14,6 @@
 namespace na {
 class GlobalCZOp final : public GlobalOp {
 public:
-  explicit GlobalCZOp(const Zone* zone) : GlobalOp(zone) {
-    name = "cz";
-  }
+  explicit GlobalCZOp(const Zone* zone) : GlobalOp(zone) { name = "cz"; }
 };
 } // namespace na

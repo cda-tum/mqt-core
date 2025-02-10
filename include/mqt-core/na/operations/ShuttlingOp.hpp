@@ -12,8 +12,8 @@
 #include "na/entities/Atom.hpp"
 #include "na/operations/Op.hpp"
 
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace na {
 class ShuttlingOp : public Op {

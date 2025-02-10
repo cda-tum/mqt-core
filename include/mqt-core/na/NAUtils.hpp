@@ -51,7 +51,8 @@ namespace na {
 } // namespace na
 
 template <> struct std::hash<std::pair<qc::OpType, std::size_t>> {
-  std::size_t operator()(const std::pair<qc::OpType, std::size_t>& t) const noexcept {
+  std::size_t
+  operator()(const std::pair<qc::OpType, std::size_t>& t) const noexcept {
     const std::size_t h1 = std::hash<qc::OpType>{}(t.first);
     const std::size_t h2 = std::hash<std::size_t>{}(t.second);
     return qc::combineHash(h1, h2);
@@ -59,7 +60,8 @@ template <> struct std::hash<std::pair<qc::OpType, std::size_t>> {
 };
 
 template <> struct std::hash<std::pair<std::size_t, std::size_t>> {
-  std::size_t operator()(const std::pair<std::size_t, std::size_t>& p) const noexcept {
+  std::size_t
+  operator()(const std::pair<std::size_t, std::size_t>& p) const noexcept {
     const std::size_t h1 = std::hash<std::size_t>{}(p.first);
     const std::size_t h2 = std::hash<std::size_t>{}(p.second);
     return qc::combineHash(h1, h2);
