@@ -45,6 +45,10 @@ public:
   [[nodiscard]] auto getAtoms() const -> const decltype(atoms)& {
     return atoms;
   }
+  [[nodiscard]] auto getInitialLocations() const -> const
+      decltype(initialLocations)& {
+    return initialLocations;
+  }
   [[nodiscard]] auto
   getLocationOfAtomAfterOperation(const std::unique_ptr<Atom>& atom,
                                   const std::unique_ptr<Op>& op) const
