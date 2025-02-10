@@ -39,6 +39,9 @@ auto NAComputation::toString() const -> std::string {
 }
 auto NAComputation::validate() const -> bool {
   std::size_t counter = 1; // the first operation is `init at ...;`
+  if (atoms.size() != initialLocations.size()) {
+    std::cout << "Number of atoms and initial locations must be equal\n";
+  }
   std::unordered_map<const Atom*, Location> currentLocations = initialLocations;
   std::unordered_set<const Atom*> currentlyShuttling{};
   for (const auto& op : *this) {
