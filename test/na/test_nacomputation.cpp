@@ -35,9 +35,12 @@ TEST(NAComputation, General) {
   qc.emplaceBackInitialLocation(atom2, 2, 0);
   qc.emplaceBack<LocalRZOp>(qc::PI_2, atom0);
   qc.emplaceBack<GlobalRYOp>(qc::PI_2, globalZone);
-  qc.emplaceBack<LoadOp>(std::vector{atom0, atom1}, std::vector{Location{0, 1}, Location{1, 1}});
-  qc.emplaceBack<MoveOp>(std::vector{atom0, atom1}, std::vector{Location{4, 1}, Location{5, 1}});
-  qc.emplaceBack<StoreOp>(std::vector{atom0, atom1}, std::vector{Location{4, 0}, Location{5, 0}});
+  qc.emplaceBack<LoadOp>(std::vector{atom0, atom1},
+                         std::vector{Location{0, 1}, Location{1, 1}});
+  qc.emplaceBack<MoveOp>(std::vector{atom0, atom1},
+                         std::vector{Location{4, 1}, Location{5, 1}});
+  qc.emplaceBack<StoreOp>(std::vector{atom0, atom1},
+                          std::vector{Location{4, 0}, Location{5, 0}});
   std::stringstream ss;
   ss << qc;
   EXPECT_EQ(ss.str(), "atom (0.000, 0.000) atom0\n"
