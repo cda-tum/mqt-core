@@ -19,6 +19,7 @@
 #include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
 #include "ir/operations/SymbolicOperation.hpp"
+#include "qasm3/Importer.hpp"
 
 #include <algorithm>
 #include <array>
@@ -179,7 +180,6 @@ TEST_F(QFRFunctionality, splitQreg) {
 }
 
 TEST_F(QFRFunctionality, StripIdleAndDump) {
-  std::stringstream ss{};
   const std::string testfile = "OPENQASM 2.0;\n"
                                "include \"qelib1.inc\";\n"
                                "qreg q[5];\n"
@@ -192,19 +192,17 @@ TEST_F(QFRFunctionality, StripIdleAndDump) {
                                "reset q[2];\n"
                                "cx q[0],q[4];\n";
 
-  ss << testfile;
-  auto qc = QuantumComputation();
-  qc.import(ss, Format::OpenQASM2);
+  auto qc = qasm3::Importer::imports(testfile);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
   std::stringstream goal{};
   qc.print(goal);
   std::stringstream test{};
-  qc.dump(test, Format::OpenQASM2);
+  qc.dumpOpenQASM(test, false);
   std::cout << test.str() << "\n";
   qc.reset();
-  qc.import(test, Format::OpenQASM2);
+  qc = qasm3::Importer::import(test);
   qc.print(std::cout);
   qc.stripIdleQubits();
   qc.print(std::cout);
@@ -589,7 +587,6 @@ TEST_F(QFRFunctionality, UpdateOutputPermutation) {
 }
 
 TEST_F(QFRFunctionality, RzAndPhaseDifference) {
-  QuantumComputation qc(2);
   const std::string qasm = "// i 0 1\n"
                            "// o 0 1\n"
                            "OPENQASM 2.0;\n"
@@ -599,12 +596,10 @@ TEST_F(QFRFunctionality, RzAndPhaseDifference) {
                            "p(1/8) q[1];\n"
                            "crz(1/8) q[0],q[1];\n"
                            "cp(1/8) q[0],q[1];\n";
-  std::stringstream ss;
-  ss << qasm;
-  qc.import(ss, Format::OpenQASM2);
+  auto qc = qasm3::Importer::imports(qasm);
   std::cout << qc << "\n";
   std::stringstream oss;
-  qc.dumpOpenQASM2(oss);
+  qc.dumpOpenQASM(oss, false);
 }
 
 TEST_F(QFRFunctionality, U3toU2Gate) {
@@ -700,11 +695,10 @@ TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
   QuantumComputation qc(3);
   qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, OpType::Teleportation);
   std::stringstream ss;
-  qc.dumpOpenQASM2(ss);
+  qc.dumpOpenQASM(ss, false);
   EXPECT_TRUE(ss.str().find("teleport") != std::string::npos);
 
-  QuantumComputation qcImported(3);
-  qcImported.import(ss, Format::OpenQASM2);
+  auto qcImported = qasm3::Importer::import(ss);
   ASSERT_EQ(qcImported.size(), 1);
   EXPECT_EQ(qcImported.at(0)->getType(), OpType::Teleportation);
 }
@@ -1513,7 +1507,7 @@ TEST_F(QFRFunctionality, stripIdleQubits) {
                                "c[1] = measure q_h[0];\n";
 
   EXPECT_EQ(qc.toQASM(), expected);
-  const auto qc2 = QuantumComputation::fromQASM(expected);
+  const auto qc2 = qasm3::Importer::imports(expected);
   EXPECT_EQ(qc2.toQASM(), expected);
 }
 } // namespace qc

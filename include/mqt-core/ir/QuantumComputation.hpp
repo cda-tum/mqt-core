@@ -22,7 +22,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <optional>
 #include <random>
@@ -68,10 +67,8 @@ protected:
   std::unordered_set<sym::Variable> occurringVariables;
 
 public:
-  QuantumComputation() = default;
-  explicit QuantumComputation(std::size_t nq, std::size_t nc = 0U,
+  explicit QuantumComputation(std::size_t nq = 0, std::size_t nc = 0U,
                               std::size_t s = 0);
-  explicit QuantumComputation(const std::string& filename, std::size_t s = 0U);
   QuantumComputation(QuantumComputation&& qc) noexcept = default;
   QuantumComputation& operator=(QuantumComputation&& qc) noexcept = default;
   QuantumComputation(const QuantumComputation& qc);
@@ -81,13 +78,6 @@ public:
   // physical qubits are used as keys, logical qubits as values
   Permutation initialLayout{};
   Permutation outputPermutation{};
-
-  /**
-   * @brief Construct a QuantumComputation from an OpenQASM string
-   * @param qasm The OpenQASM 2.0 or 3.0 string
-   * @return The constructed QuantumComputation
-   */
-  [[nodiscard]] static QuantumComputation fromQASM(const std::string& qasm);
 
   /**
    * @brief Construct a QuantumComputation from CompoundOperation object
@@ -114,9 +104,11 @@ public:
   [[nodiscard]] const std::vector<bool>& getAncillary() const noexcept {
     return ancillary;
   }
+  [[nodiscard]] std::vector<bool>& getAncillary() noexcept { return ancillary; }
   [[nodiscard]] const std::vector<bool>& getGarbage() const noexcept {
     return garbage;
   }
+  [[nodiscard]] std::vector<bool>& getGarbage() noexcept { return garbage; }
   [[nodiscard]] std::size_t getNcbits() const noexcept { return nclassics; }
   [[nodiscard]] std::string getName() const noexcept { return name; }
   [[nodiscard]] const auto& getQuantumRegisters() const noexcept {
@@ -372,9 +364,6 @@ public:
   /// qubits occurring in the output permutation
   void stripIdleQubits(bool force = false);
 
-  void import(const std::string& filename);
-  void import(const std::string& filename, Format format);
-  void import(std::istream& is, Format format);
   void initializeIOMapping();
   // append measurements to the end of the circuit according to the tracked
   // output permutation
@@ -408,7 +397,8 @@ public:
   void addQubit(Qubit logicalQubitIndex, Qubit physicalQubitIndex,
                 std::optional<Qubit> outputQubitIndex);
 
-  QuantumComputation instantiate(const VariableAssignment& assignment) const;
+  [[nodiscard]] QuantumComputation
+  instantiate(const VariableAssignment& assignment) const;
   void instantiateInplace(const VariableAssignment& assignment);
 
   void addVariable(const SymbolOrNumber& expr);
@@ -449,20 +439,15 @@ public:
   static std::ostream& printPermutation(const Permutation& permutation,
                                         std::ostream& os = std::cout);
 
-  void dump(const std::string& filename, Format format) const;
-  void dump(const std::string& filename) const;
-  void dump(std::ostream& of, Format format) const;
-  void dumpOpenQASM2(std::ostream& of) const { dumpOpenQASM(of, false); }
-  void dumpOpenQASM3(std::ostream& of) const { dumpOpenQASM(of, true); }
+  void dump(const std::string& filename,
+            Format format = Format::OpenQASM3) const;
 
   /**
    * @brief Dumps the circuit in OpenQASM format to the given output stream
-   * @details One might want to call `ensureContiguousInitialLayout` before
-   * calling this function to ensure full layout information is available.
    * @param of The output stream to write the OpenQASM representation to
    * @param openQasm3 Whether to use OpenQASM 3.0 or 2.0
    */
-  void dumpOpenQASM(std::ostream& of, bool openQasm3) const;
+  void dumpOpenQASM(std::ostream& of, bool openQasm3 = true) const;
 
   /**
    * @brief Returns the OpenQASM representation of the circuit
@@ -500,19 +485,6 @@ public:
   [[nodiscard]] bool isDynamic() const;
 
 protected:
-  void importOpenQASM3(std::istream& is);
-  void importReal(std::istream& is);
-  int readRealHeader(std::istream& is);
-  void readRealGateDescriptions(std::istream& is, int line);
-  void importTFC(std::istream& is);
-  int readTFCHeader(std::istream& is, std::map<std::string, Qubit>& varMap);
-  void readTFCGateDescriptions(std::istream& is, int line,
-                               std::map<std::string, Qubit>& varMap);
-  void importQC(std::istream& is);
-  int readQCHeader(std::istream& is, std::map<std::string, Qubit>& varMap);
-  void readQCGateDescriptions(std::istream& is, int line,
-                              std::map<std::string, Qubit>& varMap);
-
   [[nodiscard]] std::size_t getSmallestAncillary() const {
     for (std::size_t i = 0; i < ancillary.size(); ++i) {
       if (ancillary[i]) {

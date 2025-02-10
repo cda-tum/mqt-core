@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "Statement.hpp"
+#include "Statement_fwd.hpp"
 #include "ir/operations/OpType.hpp"
 
 #include <cstddef>

@@ -7,7 +7,7 @@
  * Licensed under the MIT License
  */
 
-#include "ir/parsers/qasm3_parser/Types.hpp"
+#include "qasm3/Types.hpp"
 
 #include <cstdint>
 #include <memory>

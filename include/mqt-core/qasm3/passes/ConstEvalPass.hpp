@@ -9,17 +9,13 @@
 
 #pragma once
 
-#include "CompilerPass.hpp"
-#include "Definitions.hpp"
-#include "ir/parsers/qasm3_parser/Exception.hpp"
-#include "ir/parsers/qasm3_parser/InstVisitor.hpp"
-#include "ir/parsers/qasm3_parser/NestedEnvironment.hpp"
-#include "ir/parsers/qasm3_parser/Statement.hpp"
+#include "qasm3/InstVisitor.hpp"
+#include "qasm3/NestedEnvironment.hpp"
+#include "qasm3/Statement_fwd.hpp"
+#include "qasm3/passes/CompilerPass.hpp"
 
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -42,39 +38,9 @@ struct ConstEvalValue {
       : type(isSigned ? ConstInt : ConstUint), value(val), width(w) {}
   explicit ConstEvalValue(bool val) : type(ConstBool), value(val), width(1) {}
 
-  [[nodiscard]] std::shared_ptr<Constant> toExpr() const {
-    switch (type) {
-    case ConstInt:
-      return std::make_shared<Constant>(Constant(std::get<0>(value), true));
-    case ConstUint:
-      return std::make_shared<Constant>(Constant(std::get<0>(value), false));
-    case ConstFloat:
-      return std::make_shared<Constant>(Constant(std::get<1>(value)));
-    case ConstBool:
-      return std::make_shared<Constant>(Constant(std::get<2>(value)));
-    default:
-      qc::unreachable();
-    }
-  }
+  [[nodiscard]] std::shared_ptr<Constant> toExpr() const;
 
-  bool operator==(const ConstEvalValue& rhs) const {
-    if (type != rhs.type) {
-      return false;
-    }
-
-    switch (type) {
-    case ConstInt:
-    case ConstUint:
-      return std::get<0>(value) == std::get<0>(rhs.value);
-    case ConstFloat:
-      return std::abs(std::get<1>(value) - std::get<1>(rhs.value)) <
-             std::numeric_limits<double>::epsilon() * 1024;
-    case ConstBool:
-      return std::get<2>(value) == std::get<2>(rhs.value);
-    }
-
-    return false;
-  }
+  bool operator==(const ConstEvalValue& rhs) const;
 
   bool operator!=(const ConstEvalValue& rhs) const { return !(*this == rhs); }
 
@@ -88,18 +54,6 @@ class ConstEvalPass final
       public TypeVisitor<std::shared_ptr<Expression>> {
   NestedEnvironment<ConstEvalValue> env;
 
-  template <typename T> static int64_t castToWidth(int64_t value) {
-    return static_cast<int64_t>(static_cast<T>(value));
-  }
-
-  static ConstEvalValue evalIntExpression(BinaryExpression::Op op, int64_t lhs,
-                                          int64_t rhs, size_t width,
-                                          bool isSigned);
-  static ConstEvalValue evalFloatExpression(BinaryExpression::Op op, double lhs,
-                                            double rhs);
-  static ConstEvalValue evalBoolExpression(BinaryExpression::Op op, bool lhs,
-                                           bool rhs);
-
 public:
   ConstEvalPass() = default;
   ~ConstEvalPass() override = default;
@@ -112,13 +66,7 @@ public:
     env.emplace(identifier, ConstEvalValue(val));
   }
 
-  void processStatement(Statement& statement) override {
-    try {
-      statement.accept(this);
-    } catch (const ConstEvalError& e) {
-      throw CompilerError(e.what(), statement.debugInfo);
-    }
-  }
+  void processStatement(Statement& statement) override;
 
   void pushEnv() { env.push(); }
   void popEnv() { env.pop(); }

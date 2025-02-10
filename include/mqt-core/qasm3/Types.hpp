@@ -10,6 +10,7 @@
 #pragma once
 
 #include "InstVisitor.hpp"
+#include "Types_fwd.hpp" // IWYU pragma: export
 
 #include <cstddef>
 #include <cstdint>
@@ -18,11 +19,6 @@
 #include <string>
 
 namespace qasm3 {
-class Expression;
-
-template <typename T> class Type;
-using TypeExpr = Type<std::shared_ptr<Expression>>;
-using ResolvedType = Type<uint64_t>;
 
 template <typename T> class Type {
 public:

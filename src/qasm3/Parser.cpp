@@ -7,18 +7,20 @@
  * Licensed under the MIT License
  */
 
-#include "ir/parsers/qasm3_parser/Parser.hpp"
+#include "qasm3/Parser.hpp"
 
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
-#include "ir/parsers/qasm3_parser/Statement.hpp"
-#include "ir/parsers/qasm3_parser/StdGates.hpp"
-#include "ir/parsers/qasm3_parser/Token.hpp"
-#include "ir/parsers/qasm3_parser/Types.hpp"
+#include "qasm3/Exception.hpp"
+#include "qasm3/Statement.hpp"
+#include "qasm3/StdGates.hpp"
+#include "qasm3/Token.hpp"
+#include "qasm3/Types.hpp"
 
 #include <fstream>
 #include <istream>
 #include <memory>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -37,6 +39,72 @@ void Parser::scan() {
     if (includeDebugInfo) {
       includeDebugInfo = includeDebugInfo->parent;
     }
+  }
+}
+
+std::shared_ptr<DebugInfo> Parser::makeDebugInfo(Token const& begin,
+                                                 Token const& /*end*/) {
+  // Parameter `end` is currently not used.
+  return std::make_shared<DebugInfo>(begin.line, begin.col,
+                                     scanner.top().filename.value_or("<input>"),
+                                     includeDebugInfo);
+}
+
+std::shared_ptr<DebugInfo> Parser::makeDebugInfo(Token const& token) {
+  return std::make_shared<DebugInfo>(token.line, token.col,
+                                     scanner.top().filename.value_or("<input>"),
+                                     includeDebugInfo);
+}
+
+void Parser::error(const Token& token, const std::string& msg) {
+  throw CompilerError(msg, makeDebugInfo(token));
+}
+
+Token Parser::last() const {
+  if (scanner.empty()) {
+    throw std::runtime_error("No scanner available");
+  }
+  return scanner.top().last;
+}
+
+Token Parser::current() const {
+  if (scanner.empty()) {
+    throw std::runtime_error("No scanner available");
+  }
+  return scanner.top().t;
+}
+
+Token Parser::peek() const {
+  if (scanner.empty()) {
+    throw std::runtime_error("No scanner available");
+  }
+  return scanner.top().next;
+}
+
+Token Parser::expect(const Token::Kind& expected,
+                     const std::optional<std::string>& context) {
+  if (current().kind != expected) {
+    std::string message = "Expected '" + Token::kindToString(expected) +
+                          "', got '" + Token::kindToString(current().kind) +
+                          "'.";
+    if (context.has_value()) {
+      message += " " + context.value();
+    }
+    error(current(), message);
+  }
+
+  auto token = current();
+  scan();
+  return token;
+}
+
+Parser::Parser(std::istream& is, const bool implicitlyIncludeStdgates) {
+  scanner.emplace(&is);
+  scan();
+  if (implicitlyIncludeStdgates) {
+    scanner.emplace(std::make_unique<std::istringstream>(STDGATES),
+                    "stdgates.inc", true);
+    scan();
   }
 }
 

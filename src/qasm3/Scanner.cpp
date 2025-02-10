@@ -7,13 +7,15 @@
  * Licensed under the MIT License
  */
 
-#include "ir/parsers/qasm3_parser/Scanner.hpp"
+#include "qasm3/Scanner.hpp"
 
 #include "Definitions.hpp"
-#include "ir/parsers/qasm3_parser/Token.hpp"
+#include "qasm3/Token.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdint>
+#include <iostream>
 #include <istream>
 #include <optional>
 #include <regex>
@@ -119,6 +121,19 @@ Token Scanner::consumeName() {
   t.endCol = col;
   t.endLine = line;
   return t;
+}
+
+void Scanner::error(const std::string& msg) const {
+  std::cerr << "Error at line " << line << ", column " << col << ": " << msg
+            << '\n';
+}
+
+void Scanner::expect(const char expected) {
+  if (ch != expected) {
+    error("Expected '" + std::to_string(expected) + "', got '" + ch + "'");
+  } else {
+    nextCh();
+  }
 }
 
 bool Scanner::isValidDigit(const uint8_t base, const char c) {
@@ -633,6 +648,20 @@ Token Scanner::next() {
   t.endCol = col;
   t.endLine = line;
   return t;
+}
+
+bool Scanner::isSpace(const char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+
+bool Scanner::isFirstIdChar(const char c) {
+  return isalpha(c) != 0 || c == '_';
+}
+
+bool Scanner::isNum(const char c) { return c >= '0' && c <= '9'; }
+
+bool Scanner::isHex(const char c) {
+  return isNum(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
 bool Scanner::hasTimingSuffix(const char first, const char second) {

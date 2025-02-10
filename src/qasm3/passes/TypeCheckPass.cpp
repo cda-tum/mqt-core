@@ -7,11 +7,11 @@
  * Licensed under the MIT License
  */
 
-#include "ir/parsers/qasm3_parser/passes/TypeCheckPass.hpp"
+#include "qasm3/passes/TypeCheckPass.hpp"
 
-#include "ir/parsers/qasm3_parser/Exception.hpp"
-#include "ir/parsers/qasm3_parser/Statement.hpp"
-#include "ir/parsers/qasm3_parser/Types.hpp"
+#include "qasm3/Exception.hpp"
+#include "qasm3/Statement.hpp"
+#include "qasm3/Types.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -32,6 +32,29 @@ InferredType TypeCheckPass::error(const std::string& msg,
   }
   hasError = true;
   return InferredType::error();
+}
+
+void TypeCheckPass::processStatement(Statement& statement) {
+  try {
+    statement.accept(this);
+
+    if (hasError) {
+      throw TypeCheckError("Type check failed.");
+    }
+  } catch (const TypeCheckError& e) {
+    throw CompilerError(e.what(), statement.debugInfo);
+  }
+}
+
+void TypeCheckPass::checkGateOperand(const GateOperand& operand) {
+  if (operand.expression == nullptr) {
+    return;
+  }
+
+  if (const auto type = visit(operand.expression);
+      !type.isError && !type.type->isUint()) {
+    error("Index must be an unsigned integer");
+  }
 }
 
 void TypeCheckPass::visitGateStatement(
@@ -301,7 +324,7 @@ InferredType TypeCheckPass::visitIdentifierExpression(
   return type->second;
 }
 
-[[noreturn]] InferredType TypeCheckPass::visitIdentifierList(
+InferredType TypeCheckPass::visitIdentifierList(
     std::shared_ptr<IdentifierList> /*identifierList*/) {
   throw TypeCheckError("TypeCheckPass::visitIdentifierList not implemented");
 }
