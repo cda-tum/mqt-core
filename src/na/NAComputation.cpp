@@ -23,6 +23,28 @@
 #include <unordered_set>
 
 namespace na {
+auto NAComputation::getLocationOfAtomAfterOperation(const Atom* atom,
+                                                    const Op* op) const
+    -> Location {
+  auto currentLocation = initialLocations.at(atom);
+  for (const auto& opUniquePtr : *this) {
+    if (opUniquePtr->is<MoveOp>()) {
+      const auto& moveOp = opUniquePtr->as<MoveOp>();
+      const auto& opAtoms = moveOp.getAtoms();
+      const auto& targetLocations = moveOp.getTargetLocations();
+      for (std::size_t k = 0; k < opAtoms.size(); ++k) {
+        if (opAtoms[k] == atom) {
+          currentLocation = targetLocations[k];
+          break;
+        }
+      }
+    }
+    if (opUniquePtr.get() == op) {
+      break;
+    }
+  }
+  return currentLocation;
+}
 auto NAComputation::toString() const -> std::string {
   std::stringstream ss;
   std::vector<std::pair<const Atom*, Location>> initialLocationsAsc(
