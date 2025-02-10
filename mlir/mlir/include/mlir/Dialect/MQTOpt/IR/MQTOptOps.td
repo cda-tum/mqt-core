@@ -70,6 +70,30 @@ def QuregType : MQTOptType<"QubitRegister", "QubitRegister"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Traits
+//===----------------------------------------------------------------------===//
+
+class TargetArity<int N>
+    : ParamNativeOpTrait<"TargetArity", !cast<string>(N)> {
+    let cppNamespace = "::mqt::ir::opt";
+}
+
+def NoTarget : TargetArity<0>;
+def OneTarget : TargetArity<1>;
+def TwoTarget : TargetArity<2>;
+
+class ParameterArity<int N>
+    : ParamNativeOpTrait<"ParameterArity", !cast<string>(N)> {
+    let cppNamespace = "::mqt::ir::opt";
+}
+
+def NoParameter : ParameterArity<0>;
+def OneParameter : ParameterArity<1>;
+def TwoParameters : ParameterArity<2>;
+def ThreeParameters : ParameterArity<3>;
+
+
+//===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
@@ -86,6 +110,8 @@ class GateOp<string mnemonic, list<Trait> traits = [NoMemoryEffect]> :
 class UnitaryOp<string mnemonic, list<Trait> traits = []> :
     GateOp<mnemonic, traits # [AttrSizedOperandSegments, UnitaryInterface]> {
     let arguments = (ins
+        OptionalAttr<DenseF64ArrayAttr>:$static_params,
+        OptionalAttr<DenseBoolArrayAttr>:$params_mask,
         Variadic<F64>:$params,
         Variadic<QubitType>:$in_qubits,
         Variadic<QubitType>:$pos_ctrl_qubits,
@@ -97,12 +123,12 @@ class UnitaryOp<string mnemonic, list<Trait> traits = []> :
     );
 
     let assemblyFormat = [{
-        `(` $params `)` attr-dict $in_qubits ( `ctrl` $pos_ctrl_qubits^ )? ( `nctrl` $neg_ctrl_qubits^ )?
+        `(` $params ( `static` $static_params^ )? ( `mask` $params_mask^ )? `)` attr-dict $in_qubits ( `ctrl` $pos_ctrl_qubits^ )? ( `nctrl` $neg_ctrl_qubits^ )?
         `:` type($out_qubits)
     }];
 }
 
-def GPhaseOp : UnitaryOp<"GPhase", [OneParameterInterface]> {
+def GPhaseOp : UnitaryOp<"GPhase", [NoTarget, OneParameter]> {
     let summary = "GPhase operation";
 
     let description = [{
@@ -119,7 +145,7 @@ def GPhaseOp : UnitaryOp<"GPhase", [OneParameterInterface]> {
     let hasVerifier = 1;
 }
 
-def IOp : UnitaryOp<"I", [NoParametersInterface, UnaryInterface]> {
+def IOp : UnitaryOp<"I", [OneTarget, NoParameter]> {
     let summary = "I operation";
 
     let description = [{
@@ -130,7 +156,7 @@ def IOp : UnitaryOp<"I", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def BarrierOp : UnitaryOp<"barrier", [NoParametersInterface]> {
+def BarrierOp : UnitaryOp<"barrier", [NoParameter]> {
     let summary = "Barrier operation";
 
     let description = [{
@@ -145,7 +171,7 @@ def BarrierOp : UnitaryOp<"barrier", [NoParametersInterface]> {
     let hasVerifier = 1;
 }
 
-def HOp : UnitaryOp<"H", [NoParametersInterface, UnaryInterface]> {
+def HOp : UnitaryOp<"H", [OneTarget, NoParameter]> {
     let summary = "H operation";
 
     let description = [{
@@ -156,7 +182,7 @@ def HOp : UnitaryOp<"H", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def XOp : UnitaryOp<"x", [NoParametersInterface, UnaryInterface]> {
+def XOp : UnitaryOp<"x", [OneTarget, NoParameter]> {
     let summary = "X operation";
 
     let description = [{
@@ -172,7 +198,7 @@ def XOp : UnitaryOp<"x", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def YOp : UnitaryOp<"y", [NoParametersInterface, UnaryInterface]> {
+def YOp : UnitaryOp<"y", [OneTarget, NoParameter]> {
     let summary = "Y operation";
 
     let description = [{
@@ -183,7 +209,7 @@ def YOp : UnitaryOp<"y", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def ZOp : UnitaryOp<"z", [NoParametersInterface, UnaryInterface]> {
+def ZOp : UnitaryOp<"z", [OneTarget, NoParameter]> {
     let summary = "Z operation";
 
     let description = [{
@@ -194,7 +220,7 @@ def ZOp : UnitaryOp<"z", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def SOp : UnitaryOp<"s", [NoParametersInterface, UnaryInterface]> {
+def SOp : UnitaryOp<"s", [OneTarget, NoParameter]> {
     let summary = "S operation";
 
     let description = [{
@@ -205,7 +231,7 @@ def SOp : UnitaryOp<"s", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def SdgOp : UnitaryOp<"sdg", [NoParametersInterface, UnaryInterface]> {
+def SdgOp : UnitaryOp<"sdg", [OneTarget, NoParameter]> {
     let summary = "Sdg operation";
 
     let description = [{
@@ -216,7 +242,7 @@ def SdgOp : UnitaryOp<"sdg", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def TOp : UnitaryOp<"t", [NoParametersInterface, UnaryInterface]> {
+def TOp : UnitaryOp<"t", [OneTarget, NoParameter]> {
     let summary = "T operation";
 
     let description = [{
@@ -227,7 +253,7 @@ def TOp : UnitaryOp<"t", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def TdgOp : UnitaryOp<"tdg", [NoParametersInterface, UnaryInterface]> {
+def TdgOp : UnitaryOp<"tdg", [OneTarget, NoParameter]> {
     let summary = "Tdg operation";
 
     let description = [{
@@ -238,7 +264,7 @@ def TdgOp : UnitaryOp<"tdg", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def VOp : UnitaryOp<"v", [NoParametersInterface, UnaryInterface]> {
+def VOp : UnitaryOp<"v", [OneTarget, NoParameter]> {
     let summary = "V operation";
 
     let description = [{
@@ -249,7 +275,7 @@ def VOp : UnitaryOp<"v", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def VdgOp : UnitaryOp<"vdg", [NoParametersInterface, UnaryInterface]> {
+def VdgOp : UnitaryOp<"vdg", [OneTarget, NoParameter]> {
     let summary = "Vdg operation";
 
     let description = [{
@@ -260,7 +286,7 @@ def VdgOp : UnitaryOp<"vdg", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def UOp : UnitaryOp<"u", [ThreeParametersInterface, UnaryInterface]> {
+def UOp : UnitaryOp<"u", [OneTarget, ThreeParameters]> {
     let summary = "U operation";
 
     let description = [{
@@ -272,7 +298,7 @@ def UOp : UnitaryOp<"u", [ThreeParametersInterface, UnaryInterface]> {
     }];
 }
 
-def U2Op : UnitaryOp<"u2", [TwoParametersInterface, UnaryInterface]> {
+def U2Op : UnitaryOp<"u2", [OneTarget, TwoParameters]> {
     let summary = "U2 operation";
 
     let description = [{
@@ -284,7 +310,7 @@ def U2Op : UnitaryOp<"u2", [TwoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def POp : UnitaryOp<"p", [OneParameterInterface, UnaryInterface]> {
+def POp : UnitaryOp<"p", [OneTarget, OneParameter]> {
     let summary = "P operation";
 
     let description = [{
@@ -296,7 +322,7 @@ def POp : UnitaryOp<"p", [OneParameterInterface, UnaryInterface]> {
     }];
 }
 
-def SXOp : UnitaryOp<"sx", [NoParametersInterface, UnaryInterface]> {
+def SXOp : UnitaryOp<"sx", [OneTarget, NoParameter]> {
     let summary = "SX operation";
 
     let description = [{
@@ -307,7 +333,7 @@ def SXOp : UnitaryOp<"sx", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def SXdgOp : UnitaryOp<"sxdg", [NoParametersInterface, UnaryInterface]> {
+def SXdgOp : UnitaryOp<"sxdg", [OneTarget, NoParameter]> {
     let summary = "SXdg operation";
 
     let description = [{
@@ -318,7 +344,7 @@ def SXdgOp : UnitaryOp<"sxdg", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def RXOp : UnitaryOp<"rx", [OneParameterInterface, UnaryInterface]> {
+def RXOp : UnitaryOp<"rx", [OneTarget, OneParameter]> {
     let summary = "RX operation";
 
     let description = [{
@@ -330,7 +356,7 @@ def RXOp : UnitaryOp<"rx", [OneParameterInterface, UnaryInterface]> {
     }];
 }
 
-def RYOp : UnitaryOp<"ry", [OneParameterInterface, UnaryInterface]> {
+def RYOp : UnitaryOp<"ry", [OneTarget, OneParameter]> {
     let summary = "RY operation";
 
     let description = [{
@@ -342,7 +368,7 @@ def RYOp : UnitaryOp<"ry", [OneParameterInterface, UnaryInterface]> {
     }];
 }
 
-def RZOp : UnitaryOp<"rz", [OneParameterInterface, UnaryInterface]> {
+def RZOp : UnitaryOp<"rz", [OneTarget, OneParameter]> {
     let summary = "RZ operation";
 
     let description = [{
@@ -354,7 +380,7 @@ def RZOp : UnitaryOp<"rz", [OneParameterInterface, UnaryInterface]> {
     }];
 }
 
-def SWAPOp : UnitaryOp<"swap", [NoParametersInterface, BinaryInterface]> {
+def SWAPOp : UnitaryOp<"swap", [TwoTarget, NoParameter]> {
     let summary = "SWAP operation";
 
     let description = [{
@@ -365,7 +391,7 @@ def SWAPOp : UnitaryOp<"swap", [NoParametersInterface, BinaryInterface]> {
     }];
 }
 
-def iSWAPOp : UnitaryOp<"iswap", [NoParametersInterface, BinaryInterface]> {
+def iSWAPOp : UnitaryOp<"iswap", [TwoTarget, NoParameter]> {
     let summary = "iSWAP operation";
 
     let description = [{
@@ -376,7 +402,7 @@ def iSWAPOp : UnitaryOp<"iswap", [NoParametersInterface, BinaryInterface]> {
     }];
 }
 
-def iSWAPdgOp : UnitaryOp<"iswapdg", [NoParametersInterface, BinaryInterface]> {
+def iSWAPdgOp : UnitaryOp<"iswapdg", [TwoTarget, NoParameter]> {
     let summary = "iSWAPdg operation";
 
     let description = [{
@@ -387,7 +413,7 @@ def iSWAPdgOp : UnitaryOp<"iswapdg", [NoParametersInterface, BinaryInterface]> {
     }];
 }
 
-def PeresOp : UnitaryOp<"peres", [NoParametersInterface, BinaryInterface]> {
+def PeresOp : UnitaryOp<"peres", [TwoTarget, NoParameter]> {
     let summary = "Peres operation";
 
     let description = [{
@@ -398,7 +424,7 @@ def PeresOp : UnitaryOp<"peres", [NoParametersInterface, BinaryInterface]> {
     }];
 }
 
-def PeresdgOp : UnitaryOp<"peresdg", [NoParametersInterface, BinaryInterface]> {
+def PeresdgOp : UnitaryOp<"peresdg", [TwoTarget, NoParameter]> {
     let summary = "Peresdg operation";
 
     let description = [{
@@ -409,7 +435,7 @@ def PeresdgOp : UnitaryOp<"peresdg", [NoParametersInterface, BinaryInterface]> {
     }];
 }
 
-def DCXOp : UnitaryOp<"dcx", [NoParametersInterface, BinaryInterface]> {
+def DCXOp : UnitaryOp<"dcx", [TwoTarget, NoParameter]> {
     let summary = "DCX operation";
 
     let description = [{
@@ -420,7 +446,7 @@ def DCXOp : UnitaryOp<"dcx", [NoParametersInterface, BinaryInterface]> {
     }];
 }
 
-def ECROp : UnitaryOp<"ecr", [NoParametersInterface, BinaryInterface]> {
+def ECROp : UnitaryOp<"ecr", [TwoTarget, NoParameter]> {
     let summary = "DCX operation";
 
     let description = [{
@@ -431,7 +457,7 @@ def ECROp : UnitaryOp<"ecr", [NoParametersInterface, BinaryInterface]> {
     }];
 }
 
-def RXXOp : UnitaryOp<"rxx", [OneParameterInterface, BinaryInterface]> {
+def RXXOp : UnitaryOp<"rxx", [TwoTarget, OneParameter]> {
     let summary = "RXX operation";
 
     let description = [{
@@ -443,7 +469,7 @@ def RXXOp : UnitaryOp<"rxx", [OneParameterInterface, BinaryInterface]> {
     }];
 }
 
-def RYYOp : UnitaryOp<"ryy", [OneParameterInterface, BinaryInterface]> {
+def RYYOp : UnitaryOp<"ryy", [TwoTarget, OneParameter]> {
     let summary = "RYY operation";
 
     let description = [{
@@ -455,7 +481,7 @@ def RYYOp : UnitaryOp<"ryy", [OneParameterInterface, BinaryInterface]> {
     }];
 }
 
-def RZZOp : UnitaryOp<"rzz", [OneParameterInterface, BinaryInterface]> {
+def RZZOp : UnitaryOp<"rzz", [TwoTarget, OneParameter]> {
     let summary = "RZZ operation";
 
     let description = [{
@@ -467,7 +493,7 @@ def RZZOp : UnitaryOp<"rzz", [OneParameterInterface, BinaryInterface]> {
     }];
 }
 
-def RZXOp : UnitaryOp<"rzx", [OneParameterInterface, BinaryInterface]> {
+def RZXOp : UnitaryOp<"rzx", [TwoTarget, OneParameter]> {
     let summary = "RZX operation";
 
     let description = [{
@@ -479,7 +505,7 @@ def RZXOp : UnitaryOp<"rzx", [OneParameterInterface, BinaryInterface]> {
     }];
 }
 
-def XXminusYY : UnitaryOp<"xxminusyy", [TwoParametersInterface, BinaryInterface]> {
+def XXminusYY : UnitaryOp<"xxminusyy", [TwoTarget, TwoParameters]> {
     let summary = "XXminusYY operation";
 
     let description = [{
@@ -491,7 +517,7 @@ def XXminusYY : UnitaryOp<"xxminusyy", [TwoParametersInterface, BinaryInterface]
     }];
 }
 
-def XXplusYY : UnitaryOp<"xxplusyy", [TwoParametersInterface, BinaryInterface]> {
+def XXplusYY : UnitaryOp<"xxplusyy", [TwoTarget, TwoParameters]> {
     let summary = "XXplusYY operation";
 
     let description = [{

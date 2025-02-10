@@ -27,8 +27,7 @@ struct MQTCoreRoundTrip final : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
     populateFromQuantumComputationPatterns(patterns, circuit);
 
     // Apply patterns in an iterative and greedy manner.
-    if (mlir::failed(
-            mlir::applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
+    if (mlir::failed(applyPatternsGreedily(op, std::move(patterns)))) {
       signalPassFailure();
     }
   }

@@ -1,4 +1,7 @@
+// RUN: quantum-opt %s | FileCheck %s
+
 module {
+    // CHECK-LABEL: func @bell()
     func.func @bell() -> (!mqtopt.QubitRegister, i1, i1) {
         %reg_0 = "mqtopt.allocQubitRegister"() <{size_attr = 2 : i64}> : () -> !mqtopt.QubitRegister
         %reg_1, %q0_0 = "mqtopt.extractQubit"(%reg_0) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)

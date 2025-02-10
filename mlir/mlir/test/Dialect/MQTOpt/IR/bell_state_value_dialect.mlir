@@ -13,12 +13,13 @@ module {
         %3:2 = mqtopt.x() %2 ctrl %out_qubit_1 : !mqtopt.Qubit, !mqtopt.Qubit
         %cst = arith.constant 3.000000e-01 : f64
         %4:2 = mqtopt.rz(%cst) %3#0 nctrl %3#1 : !mqtopt.Qubit, !mqtopt.Qubit
-        %out_qubits, %out_bits = "mqtopt.measure"(%4#0) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
+        %5 = mqtopt.u(%cst, %cst static [3.000000e-01] mask [false, true, false]) %4#0 : !mqtopt.Qubit
+        %out_qubits, %out_bits = "mqtopt.measure"(%5) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
         %out_qubits_2, %out_bits_3 = "mqtopt.measure"(%4#1) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
-        %5 = "mqtopt.insertQubit"(%out_qureg, %out_qubits) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
-        %6 = "mqtopt.insertQubit"(%out_qureg_0, %out_qubits_2) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
-        "mqtopt.deallocQubitRegister"(%5) : (!mqtopt.QubitRegister) -> ()
+        %6 = "mqtopt.insertQubit"(%out_qureg, %out_qubits) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+        %7 = "mqtopt.insertQubit"(%out_qureg_0, %out_qubits_2) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
         "mqtopt.deallocQubitRegister"(%6) : (!mqtopt.QubitRegister) -> ()
+        "mqtopt.deallocQubitRegister"(%7) : (!mqtopt.QubitRegister) -> ()
         return %out_bits, %out_bits_3 : i1, i1
     }
 }

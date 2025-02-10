@@ -25,6 +25,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MQTOpt/IR/MQTOptInterfaces.h.inc"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptTraits.h"
 
 //===----------------------------------------------------------------------===//
 // Operations

@@ -68,8 +68,9 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
 
     switch (type) {
     case qc::OpType::X:
-      return rewriter.create<XOp>(loc, outTypes, mlir::ValueRange{},
-                                  mlir::ValueRange{inQubit},
+      return rewriter.create<XOp>(loc, outTypes, mlir::DenseF64ArrayAttr{},
+                                  mlir::DenseBoolArrayAttr{},
+                                  mlir::ValueRange{}, mlir::ValueRange{inQubit},
                                   controlQubitsPositive, controlQubitsNegative);
     default:
       throw std::runtime_error("Unsupported operation type");
@@ -147,10 +148,12 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
       for (const auto& control : o->getControls()) {
         if (control.type == qc::Control::Type::Pos) {
           controlQubitIndicesPositive.emplace_back(control.qubit);
-          controlQubitsPositive.emplace_back(currentQubitVariables[control.qubit]);
+          controlQubitsPositive.emplace_back(
+              currentQubitVariables[control.qubit]);
         } else {
           controlQubitIndicesNegative.emplace_back(control.qubit);
-          controlQubitsNegative.emplace_back(currentQubitVariables[control.qubit]);
+          controlQubitsNegative.emplace_back(
+              currentQubitVariables[control.qubit]);
         }
       }
 
