@@ -36,5 +36,5 @@ namespace qc {
  **/
 [[nodiscard]] auto
 createStatePreparationCircuit(std::vector<std::complex<double>>& amplitudes,
-                              double Eps = 1e-10) -> QuantumComputation;
+                              double eps = 1e-10) -> QuantumComputation;
 } // namespace qc
