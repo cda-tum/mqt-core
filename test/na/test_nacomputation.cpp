@@ -30,9 +30,9 @@ TEST(NAComputation, General) {
   const auto* const atom1 = qc.emplaceBackAtom("atom1");
   const auto* const atom2 = qc.emplaceBackAtom("atom2");
   const auto* const globalZone = qc.emplaceBackZone("global");
-  qc.emplaceBackInitialLocation(atom0, 0, 0);
-  qc.emplaceBackInitialLocation(atom1, 1, 0);
-  qc.emplaceBackInitialLocation(atom2, 2, 0);
+  qc.emplaceInitialLocation(atom0, 0, 0);
+  qc.emplaceInitialLocation(atom1, 1, 0);
+  qc.emplaceInitialLocation(atom2, 2, 0);
   qc.emplaceBack<LocalRZOp>(qc::PI_2, atom0);
   qc.emplaceBack<GlobalRYOp>(qc::PI_2, globalZone);
   qc.emplaceBack<LoadOp>(std::vector{atom0, atom1},
@@ -75,10 +75,10 @@ TEST(NAComputation, ValidateAODConstraints) {
   const auto* const atom1 = qc.emplaceBackAtom("atom1");
   const auto* const atom2 = qc.emplaceBackAtom("atom2");
   const auto* const atom3 = qc.emplaceBackAtom("atom3");
-  qc.emplaceBackInitialLocation(atom0, 0, 0);
-  qc.emplaceBackInitialLocation(atom1, 1, 0);
-  qc.emplaceBackInitialLocation(atom2, 0, 2);
-  qc.emplaceBackInitialLocation(atom3, 1, 2);
+  qc.emplaceInitialLocation(atom0, 0, 0);
+  qc.emplaceInitialLocation(atom1, 1, 0);
+  qc.emplaceInitialLocation(atom2, 0, 2);
+  qc.emplaceInitialLocation(atom3, 1, 2);
   qc.emplaceBack(LoadOp({atom0, atom1}, {Location{0, 1}, Location{1, 1}}));
   EXPECT_TRUE(qc.validate());
   // atom already loaded

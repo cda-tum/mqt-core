@@ -69,12 +69,11 @@ public:
   auto emplaceBackZone(std::string name) -> const Zone* {
     return zones.emplace_back(std::make_unique<Zone>(std::move(name))).get();
   }
-  auto emplaceBackInitialLocation(const Atom* atom, const Location& loc)
-      -> void {
+  auto emplaceInitialLocation(const Atom* atom, const Location& loc) -> void {
     initialLocations.emplace(atom, loc);
   }
   template <typename... Args>
-  auto emplaceBackInitialLocation(const Atom* atom, Args&&... loc) -> void {
+  auto emplaceInitialLocation(const Atom* atom, Args&&... loc) -> void {
     initialLocations.emplace(atom, Location(std::forward<Args>(loc)...));
   }
   template <class T> auto emplaceBack(T&& op) -> const Op* {
