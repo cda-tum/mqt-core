@@ -34,15 +34,16 @@ public:
   using std::vector<std::unique_ptr<Op>>::size;
   using std::vector<std::unique_ptr<Op>>::operator[];
   NAComputation() = default;
-  NAComputation(const NAComputation& qc) = default;
   NAComputation(NAComputation&& qc) noexcept = default;
-  NAComputation& operator=(const NAComputation& qc) = default;
   NAComputation& operator=(NAComputation&& qc) noexcept = default;
   [[nodiscard]] auto getAtomsSize() const -> std::size_t {
     return atoms.size();
   }
   [[nodiscard]] auto getAtoms() const -> const decltype(atoms)& {
     return atoms;
+  }
+  [[nodiscard]] auto getZones() const -> const decltype(zones)& {
+    return zones;
   }
   [[nodiscard]] auto getInitialLocations() const -> const
       decltype(initialLocations)& {
