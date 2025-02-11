@@ -11,7 +11,6 @@
 #include "ir/operations/OpType.hpp"
 #include "na/NAComputation.hpp"
 #include "na/NAUtils.hpp"
-#include "na/operations/GlobalOp.hpp"
 #include "na/operations/GlobalRYOp.hpp"
 #include "na/operations/LoadOp.hpp"
 #include "na/operations/LocalRZOp.hpp"
@@ -79,50 +78,59 @@ TEST(NAComputation, ValidateAODConstraints) {
   qc.emplaceInitialLocation(atom1, 1, 0);
   qc.emplaceInitialLocation(atom2, 0, 2);
   qc.emplaceInitialLocation(atom3, 1, 2);
-  qc.emplaceBack(LoadOp({atom0, atom1}, {Location{0, 1}, Location{1, 1}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom0, atom1},
+                         std::vector{Location{0, 1}, Location{1, 1}});
   EXPECT_TRUE(qc.validate());
   // atom already loaded
-  qc.emplaceBack(LoadOp({atom0}, {Location{0, 1}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom0}, std::vector{Location{0, 1}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // atom not loaded
-  qc.emplaceBack(MoveOp({atom0}, {Location{0, 1}}));
+  qc.emplaceBack<MoveOp>(std::vector{atom0}, std::vector{Location{0, 1}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // two atoms identical
-  qc.emplaceBack(LoadOp({atom0, atom0}, {Location{0, 1}, Location{1, 1}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom0, atom0},
+                         std::vector{Location{0, 1}, Location{1, 1}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // two end points identical
-  qc.emplaceBack(LoadOp({atom0, atom1}, {Location{0, 1}, Location{0, 1}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom0, atom1},
+                         std::vector{Location{0, 1}, Location{0, 1}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // columns not preserved
-  qc.emplaceBack(LoadOp({atom1, atom3}, {Location{0, 1}, Location{2, 2}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom1, atom3},
+                         std::vector{Location{0, 1}, Location{2, 2}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // rows not preserved
-  qc.emplaceBack(LoadOp({atom0, atom1}, {Location{0, 1}, Location{1, -1}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom0, atom1},
+                         std::vector{Location{0, 1}, Location{1, -1}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // column order not preserved
-  qc.emplaceBack(LoadOp({atom0, atom3}, {Location{1, 1}, Location{0, 1}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom0, atom3},
+                         std::vector{Location{1, 1}, Location{0, 1}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // row order not preserved
-  qc.emplaceBack(LoadOp({atom0, atom3}, {Location{0, 1}, Location{2, 0}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom0, atom3},
+                         std::vector{Location{0, 1}, Location{2, 0}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // column order not preserved
-  qc.emplaceBack(LoadOp({atom2, atom1}, {Location{1, 3}, Location{0, 1}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom2, atom1},
+                         std::vector{Location{1, 3}, Location{0, 1}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // row order not preserved
-  qc.emplaceBack(LoadOp({atom2, atom1}, {Location{0, 1}, Location{2, 2}}));
+  qc.emplaceBack<LoadOp>(std::vector{atom2, atom1},
+                         std::vector{Location{0, 1}, Location{2, 2}});
   EXPECT_FALSE(qc.validate());
   qc.clear();
   // two atoms identical
-  qc.emplaceBack(LocalRZOp(qc::PI_2, {atom0, atom0}));
+  qc.emplaceBack<LocalRZOp>(qc::PI_2, std::vector{atom0, atom0});
   EXPECT_FALSE(qc.validate());
 }
 } // namespace na

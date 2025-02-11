@@ -23,7 +23,7 @@ public:
   Atom(Atom&& atom) noexcept = default;
   Atom& operator=(const Atom& atom) = default;
   Atom& operator=(Atom&& atom) noexcept = default;
-  virtual ~Atom() = default;
+  ~Atom() = default;
   [[nodiscard]] auto getName() const -> std::string { return name; }
   [[nodiscard]] auto toString() const -> std::string { return name; }
   friend auto operator<<(std::ostream& os, const Atom& obj) -> std::ostream& {

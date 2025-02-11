@@ -23,7 +23,7 @@ public:
   Zone(Zone&& zone) noexcept = default;
   Zone& operator=(const Zone& zone) = default;
   Zone& operator=(Zone&& zone) noexcept = default;
-  virtual ~Zone() = default;
+  ~Zone() = default;
   [[nodiscard]] auto getName() const -> std::string { return name; }
   [[nodiscard]] auto toString() const -> std::string { return name; }
   friend auto operator<<(std::ostream& os, const Zone& obj) -> std::ostream& {
