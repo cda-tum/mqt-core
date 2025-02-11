@@ -30,6 +30,5 @@ public:
   template <class T> [[nodiscard]] auto as() const -> const T& {
     return dynamic_cast<const T&>(*this);
   }
-  [[nodiscard]] virtual auto clone() const -> std::unique_ptr<Op> = 0;
 };
 } // namespace na
