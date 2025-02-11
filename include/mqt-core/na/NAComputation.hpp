@@ -9,11 +9,10 @@
 
 #pragma once
 
-#include "entities/Atom.hpp"
-#include "entities/Location.hpp"
-#include "entities/Zone.hpp"
-#include "operations/MoveOp.hpp"
-#include "operations/Op.hpp"
+#include "na/entities/Atom.hpp"
+#include "na/entities/Location.hpp"
+#include "na/entities/Zone.hpp"
+#include "na/operations/Op.hpp"
 
 #include <iterator>
 #include <ostream>

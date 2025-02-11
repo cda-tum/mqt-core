@@ -15,6 +15,7 @@
 namespace na {
 class Op {
 public:
+  Op() = default;
   virtual ~Op() = default;
   [[nodiscard]] virtual auto toString() const -> std::string = 0;
   friend auto operator<<(std::ostream& os, const Op& obj) -> std::ostream& {

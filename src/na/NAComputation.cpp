@@ -11,6 +11,7 @@
 
 #include "na/operations/LoadOp.hpp"
 #include "na/operations/LocalOp.hpp"
+#include "na/operations/MoveOp.hpp"
 #include "na/operations/ShuttlingOp.hpp"
 #include "na/operations/StoreOp.hpp"
 
