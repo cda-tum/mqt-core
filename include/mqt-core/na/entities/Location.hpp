@@ -20,7 +20,31 @@ namespace na {
 struct Location final {
   double x = 0;
   double y = 0;
+  Location(const float x, const float y)
+      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
   Location(const double x, const double y) : x(x), y(y) {};
+  Location(const std::int32_t x, const std::int32_t y)
+      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
+  Location(const std::int64_t x, const std::int64_t y)
+      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
+  Location(const std::uint32_t x, const std::uint32_t y)
+      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
+  Location(const std::uint64_t x, const std::uint64_t y)
+      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
+  Location(const std::size_t x, const std::size_t y)
+      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
+  Location(const std::pair<float, float> p) : Location(p.first, p.second) {};
+  Location(const std::pair<double, double> p) : Location(p.first, p.second) {};
+  Location(const std::pair<std::int32_t, std::int32_t> p)
+      : Location(p.first, p.second) {};
+  Location(const std::pair<std::int64_t, std::int64_t> p)
+      : Location(p.first, p.second) {};
+  Location(const std::pair<std::uint32_t, std::uint32_t> p)
+      : Location(p.first, p.second) {};
+  Location(const std::pair<std::uint64_t, std::uint64_t> p)
+      : Location(p.first, p.second) {};
+  Location(const std::pair<std::size_t, std::size_t> p)
+      : Location(p.first, p.second) {};
   Location() = default;
   Location(const Location& loc) = default;
   Location(Location&& loc) noexcept = default;
