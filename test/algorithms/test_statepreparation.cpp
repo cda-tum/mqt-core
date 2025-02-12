@@ -9,7 +9,10 @@
 
 #include "Definitions.hpp"
 #include "algorithms/StatePreparation.hpp"
+#include "dd/DDDefinitions.hpp"
+#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
+#include "dd/Simulation.hpp"
 #include "ir/QuantumComputation.hpp"
 
 #include <cmath>
@@ -37,7 +40,15 @@ INSTANTIATE_TEST_SUITE_P(
                         std::complex{-1 / std::sqrt(2)}, 0}));
 
 TEST_P(StatePreparation, StatePreparationCircuitSimulation) {
-  ASSERT_NO_THROW({ auto qc = qc::createStatePreparationCircuit(amplitudes); });
+  const auto expectedAmplitudes = GetParam();
+  qc::QuantumComputation qc;
+  ASSERT_NO_THROW({ qc = qc::createStatePreparationCircuit(amplitudes); });
+  auto dd = std::make_unique<dd::Package<>>(qc.getNqubits());
+  qc::VectorDD e{};
+  ASSERT_NO_THROW(
+      { e = dd::simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd); });
+  auto result = e.getVector();
+  ASSERT_EQ(expectedAmplitudes, result);
 }
 
 TEST_P(StatePreparation, StatePreparationCircuit) {}
