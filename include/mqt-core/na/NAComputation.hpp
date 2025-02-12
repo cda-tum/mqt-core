@@ -78,7 +78,7 @@ public:
   }
   template <typename... Args>
   auto emplaceInitialLocation(const Atom* atom, Args&&... loc) -> void {
-    initialLocations.emplace(atom, Location(std::forward<Args>(loc)...));
+    initialLocations.emplace(atom, Location{std::forward<Args>(loc)...});
   }
   template <class T> auto emplaceBack(T&& op) -> const Op* {
     return std::vector<std::unique_ptr<Op>>::emplace_back(
