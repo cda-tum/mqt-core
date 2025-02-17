@@ -95,12 +95,9 @@ public:
 
   /**
    * @brief Clear the compute table
-   * @details Sets all entries to invalid and resets the statistics.
+   * @details Sets all entries to invalid.
    */
-  void clear() {
-    valid.reset();
-    stats.reset();
-  }
+  void clear() { valid.reset(); }
 
 private:
   /// The actual table storing the entries
