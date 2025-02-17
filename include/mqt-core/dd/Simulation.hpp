@@ -82,13 +82,4 @@ std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
 template <class Config>
 void extractProbabilityVector(const QuantumComputation& qc, const VectorDD& in,
                               SparsePVec& probVector, Package<Config>& dd);
-
-template <class Config>
-void extractProbabilityVectorRecursive(const QuantumComputation& qc,
-                                       const VectorDD& currentState,
-                                       decltype(qc.begin()) currentIt,
-                                       Permutation& permutation,
-                                       std::map<std::size_t, char> measurements,
-                                       fp commonFactor, SparsePVec& probVector,
-                                       Package<Config>& dd);
 } // namespace dd
