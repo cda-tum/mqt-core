@@ -418,8 +418,6 @@ private:
 ///                         \n Hash related code \n
 ///-----------------------------------------------------------------------------
 
-namespace std {
-template <class Node> struct hash<dd::Edge<Node>> {
+template <class Node> struct std::hash<dd::Edge<Node>> {
   std::size_t operator()(dd::Edge<Node> const& e) const noexcept;
 };
-} // namespace std
