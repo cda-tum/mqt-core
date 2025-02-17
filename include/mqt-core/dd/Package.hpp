@@ -1064,7 +1064,7 @@ public:
   ///
   /// Compute table definitions
   ///
-public:
+
   /**
    * @brief Clear all compute tables.
    *
