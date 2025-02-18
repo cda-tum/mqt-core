@@ -72,6 +72,11 @@ ClassicControlledOperation::ClassicControlledOperation(
         "Expected value for single bit comparison must be 0 or 1.");
   }
   name = "c_" + shortName(op->getType());
+  // Canonicalize comparisons on a single bit.
+  if (comparisonKind == Neq) {
+    comparisonKind = Eq;
+    expectedValue = 1 - expectedValue;
+  }
   if (comparisonKind != Eq) {
     throw std::invalid_argument(
         "Inequality comparisons on a single bit are not supported.");
