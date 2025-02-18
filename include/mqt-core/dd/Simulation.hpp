@@ -15,12 +15,12 @@
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/OpType.hpp"
 
+#include <cmath>
+#include <complex>
 #include <cstddef>
 #include <map>
 #include <string>
 #include <utility>
-#include <cmath>
-#include <complex>
 
 namespace dd {
 using namespace qc;
