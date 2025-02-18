@@ -51,7 +51,7 @@ std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind) {
 
 ClassicControlledOperation::ClassicControlledOperation(
     std::unique_ptr<Operation>&& operation, ClassicalRegister controlReg,
-    const std::uint64_t expectedVal, ComparisonKind kind)
+    const std::uint64_t expectedVal, const ComparisonKind kind)
     : op(std::move(operation)), controlRegister(std::move(controlReg)),
       expectedValue(expectedVal), comparisonKind(kind) {
   name = "c_" + shortName(op->getType());
@@ -63,7 +63,7 @@ ClassicControlledOperation::ClassicControlledOperation(
 }
 ClassicControlledOperation::ClassicControlledOperation(
     std::unique_ptr<Operation>&& operation, const Bit cBit,
-    const std::uint64_t expectedVal, ComparisonKind kind)
+    const std::uint64_t expectedVal, const ComparisonKind kind)
     : op(std::move(operation)), controlBit(cBit), expectedValue(expectedVal),
       comparisonKind(kind) {
   name = "c_" + shortName(op->getType());
