@@ -134,14 +134,14 @@ void ClassicControlledOperation::dumpOpenQASM(
   of << "if (";
   if (controlRegister.has_value()) {
     assert(!controlBit.has_value());
-    of << controlRegister->getName();
+    of << controlRegister->getName() << " " << comparisonKind << " "
+       << expectedValue;
   }
   if (controlBit.has_value()) {
     assert(!controlRegister.has_value());
-    const auto& creg = bitMap.at(*controlBit);
-    of << creg.second;
+    of << (expectedValue == 0 ? "!" : "") << bitMap.at(*controlBit).second;
   }
-  of << " " << comparisonKind << " " << expectedValue << ") ";
+  of << ") ";
   if (openQASM3) {
     of << "{\n";
   }
