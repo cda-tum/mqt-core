@@ -70,5 +70,3 @@ TEST_P(StatePreparation, StatePreparationCircuitSimulation) {
     ASSERT_NEAR(expectedAmplitudes[i].imag(), result[i].imag(), EPS);
   }
 }
-
-TEST_P(StatePreparation, StatePreparationCircuit) {}
