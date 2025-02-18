@@ -128,6 +128,13 @@ inaccuracies that arise in practice.
 
 # Acknowledgements
 
+We would like to thank all past and present contributors to the MQT Core project, including (in alphabetical order):
+Hartwig Bauer, Martin Fink, Ioan-Albert Florea, Elias Foramitti, Rebecca Ghidini, Thomas Grurl,
+Stefan Hillmich, Fabian Hingerl, Daniel Lummerstorfer, Joachim Marin, Katrin Muck, Christoph Pichler,
+Tobias Prienberger, Parham Rahimi, Janez Rotman, Damian Rovara, Roope Salmi, Aaron Sander,
+Ludwig Schmid, Sarah Schneider, Tianyi Wang, Theresa Wasserer, and Alwin Zulehner.
+Their contributions have been instrumental in making MQT Core a robust and feature-rich library.
+
 The Munich Quantum Toolkit has been supported by the European Research Council (ERC) under the
 European Union's Horizon 2020 research and innovation program (grant agreement No. 101001318), the
 Bavarian State Ministry for Science and Arts through the Distinguished Professorship Program, as
