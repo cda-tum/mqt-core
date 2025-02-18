@@ -19,6 +19,8 @@
 #include <map>
 #include <string>
 #include <utility>
+#include <cmath>
+#include <complex>
 
 namespace dd {
 using namespace qc;

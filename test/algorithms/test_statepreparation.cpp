@@ -7,10 +7,7 @@
  * Licensed under the MIT License
  */
 
-#include "Definitions.hpp"
 #include "algorithms/StatePreparation.hpp"
-#include "dd/DDDefinitions.hpp"
-#include "dd/FunctionalityConstruction.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 #include "ir/QuantumComputation.hpp"
@@ -18,8 +15,8 @@
 #include <cmath>
 #include <complex>
 #include <gtest/gtest.h>
-#include <sstream>
-#include <string>
+#include <memory>
+#include <stddef.h>
 #include <vector>
 
 constexpr double EPS = 1e-10;
@@ -27,7 +24,7 @@ constexpr double EPS = 1e-10;
 class StatePreparation
     : public testing::TestWithParam<std::vector<std::complex<double>>> {
 protected:
-  std::vector<std::complex<double>> amplitudes{};
+  std::vector<std::complex<double>> amplitudes;
 
   void TearDown() override {}
   void SetUp() override { amplitudes = GetParam(); }
@@ -36,8 +33,8 @@ protected:
 INSTANTIATE_TEST_SUITE_P(
     StatePreparation, StatePreparation,
     testing::Values(
-        std::vector{std::complex{1 / std::sqrt(2)},
-                    std::complex{-1 / std::sqrt(2)}},
+        std::vector<std::complex<double>>{std::complex{1 / std::sqrt(2)},
+                                          std::complex{-1 / std::sqrt(2)}},
         std::vector<std::complex<double>>{
             std::complex<double>{1 / std::sqrt(2)},
             std::complex<double>{0, -1 / std::sqrt(2)}},
