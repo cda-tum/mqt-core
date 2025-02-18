@@ -14,7 +14,7 @@ authors:
   - name: Lukas Burgholzer
     corresponding: true
     orcid: 0000-0003-4699-1316
-    affiliation: 1
+    affiliation: "1, 2"
   - name: Yannick Stade
     orcid: 0000-0001-5785-2528
     affiliation: 1
@@ -23,12 +23,14 @@ authors:
     affiliation: 1
   - name: Robert Wille
     orcid: 0000-0002-4993-7860
-    affiliation: "1, 2"
+    affiliation: "1, 2, 3"
 affiliations:
   - name: Chair for Design Automation, Technical University of Munich, Germany
     index: 1
-  - name: Software Competence Center Hagenberg GmbH, Hagenberg, Austria
+  - name: Munich Quantum Software Company GmbH, Garching near Munich, Germany
     index: 2
+  - name: Software Competence Center Hagenberg GmbH, Hagenberg, Austria
+    index: 3
 date: 7 November 2024
 bibliography: paper.bib
 ---

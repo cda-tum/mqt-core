@@ -7,7 +7,10 @@
       "@type": "Person",
       "email": "lukas.burgholzer@tum.de",
       "name": "Lukas Burgholzer",
-      "affiliation": "Chair for Design Automation, Technical University of Munich, Germany"
+      "affiliation": [
+        "Chair for Design Automation, Technical University of Munich, Germany",
+        "Munich Quantum Software Company GmbH, Garching near Munich, Germany"
+      ]
     },
     {
       "@id": "https://orcid.org/0000-0001-5785-2528",
@@ -28,7 +31,11 @@
       "@type": "Person",
       "email": "robert.wille@tum.de",
       "name": "Robert Wille",
-      "affiliation": "Chair for Design Automation, Technical University of Munich, Germany"
+      "affiliation": [
+        "Chair for Design Automation, Technical University of Munich, Germany",
+        "Munich Quantum Software Company GmbH, Garching near Munich, Germany",
+        "Software Competence Center Hagenberg GmbH, Hagenberg, Austria"
+      ]
     }
   ],
   "identifier": "",
