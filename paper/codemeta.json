@@ -40,5 +40,5 @@
   "keywords": "Python, C++, MQT, Quantum Computing, Design Automation, Intermediate Representation, Data Structures, Decision Diagrams, ZX-Calculus",
   "license": "MIT",
   "title": "MQT Core",
-  "version": "v2.7.0"
+  "version": "v3.0.0"
 }
