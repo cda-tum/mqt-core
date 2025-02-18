@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <memory>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -66,7 +67,15 @@ ClassicControlledOperation::ClassicControlledOperation(
     const std::uint64_t expectedVal, const ComparisonKind kind)
     : op(std::move(operation)), controlBit(cBit), expectedValue(expectedVal),
       comparisonKind(kind) {
+  if (expectedVal > 1) {
+    throw std::invalid_argument(
+        "Expected value for single bit comparison must be 0 or 1.");
+  }
   name = "c_" + shortName(op->getType());
+  if (comparisonKind != Eq) {
+    throw std::invalid_argument(
+        "Inequality comparisons on a single bit are not supported.");
+  }
   parameter.reserve(2);
   parameter.emplace_back(static_cast<fp>(cBit));
   parameter.emplace_back(static_cast<fp>(expectedValue));
