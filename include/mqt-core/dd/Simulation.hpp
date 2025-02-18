@@ -40,6 +40,19 @@ VectorDD simulate(const QuantumComputation& qc, const VectorDD& in,
   }
   changePermutation(e, permutation, qc.outputPermutation, dd);
   e = dd.reduceGarbage(e, qc.getGarbage());
+
+  // properly account for the global phase of the circuit
+  if (std::abs(qc.getGlobalPhase()) > 0) {
+    // create a temporary copy for reference counting
+    auto oldW = e.w;
+    // adjust for global phase
+    const auto globalPhase = ComplexValue{std::polar(1.0, qc.getGlobalPhase())};
+    e.w = dd.cn.lookup(e.w * globalPhase);
+    // adjust reference count
+    dd.cn.incRef(e.w);
+    dd.cn.decRef(oldW);
+  }
+
   return e;
 }
 
