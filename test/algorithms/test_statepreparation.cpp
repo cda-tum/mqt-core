@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+constexpr double EPS = 1e-10;
+
 class StatePreparation
     : public testing::TestWithParam<std::vector<std::complex<double>>> {
 protected:
@@ -33,11 +35,29 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(
     StatePreparation, StatePreparation,
-    testing::Values(std::vector{std::complex{1 / std::sqrt(2)},
-                                std::complex{-1 / std::sqrt(2)}},
-                    std::vector<std::complex<double>>{
-                        0, std::complex{1 / std::sqrt(2)},
-                        std::complex{-1 / std::sqrt(2)}, 0}));
+    testing::Values(
+        std::vector{std::complex{1 / std::sqrt(2)},
+                    std::complex{-1 / std::sqrt(2)}},
+        std::vector<std::complex<double>>{
+            std::complex<double>{1 / std::sqrt(2)},
+            std::complex<double>{0, -1 / std::sqrt(2)}},
+        std::vector<std::complex<double>>{0, std::complex{1 / std::sqrt(2)},
+                                          std::complex{-1 / std::sqrt(2)}, 0},
+        std::vector<std::complex<double>>{
+            std::complex<double>{1 / std::sqrt(13)},
+            std::complex<double>{-1 / std::sqrt(13)},
+            std::complex<double>{1 / std::sqrt(13), -1 / std::sqrt(13)},
+            std::complex<double>{0, 3 / std::sqrt(13)}},
+        std::vector<std::complex<double>>{
+            std::complex<double>{1. / 4}, std::complex<double>{1. / 4},
+            std::complex<double>{1. / 4}, std::complex<double>{1. / 4},
+            std::complex<double>{1. / 4}, std::complex<double>{1. / 4},
+            std::complex<double>{1. / 4}, std::complex<double>{3. / 4}},
+        std::vector<std::complex<double>>{
+            std::complex<double>{1. / 4}, std::complex<double>{0, 1. / 4},
+            std::complex<double>{1. / 4}, std::complex<double>{0, 1. / 4},
+            std::complex<double>{0, 1. / 4}, std::complex<double>{1. / 4},
+            std::complex<double>{1. / 4}, std::complex<double>{3. / 4}}));
 
 TEST_P(StatePreparation, StatePreparationCircuitSimulation) {
   const auto expectedAmplitudes = GetParam();
@@ -48,7 +68,10 @@ TEST_P(StatePreparation, StatePreparationCircuitSimulation) {
   ASSERT_NO_THROW(
       { e = dd::simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd); });
   auto result = e.getVector();
-  ASSERT_EQ(expectedAmplitudes, result);
+  for (size_t i = 0; i < expectedAmplitudes.size(); ++i) {
+    ASSERT_NEAR(expectedAmplitudes[i].real(), result[i].real(), EPS);
+    ASSERT_NEAR(expectedAmplitudes[i].imag(), result[i].imag(), EPS);
+  }
 }
 
 TEST_P(StatePreparation, StatePreparationCircuit) {}

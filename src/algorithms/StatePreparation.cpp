@@ -259,8 +259,8 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
     }
   }
   // adjust global phase according to the last e^(it)
-  double const arg = -std::arg(std::accumulate(
-      amplitudes.begin(), amplitudes.end(), std::complex<double>(0, 0)));
+  double const arg = std::arg(std::accumulate(
+    amplitudes.begin(), amplitudes.end(), std::complex<double>(0, 0)));
   if (std::abs(arg) > eps) {
     disentangler.gphase(arg);
   }
