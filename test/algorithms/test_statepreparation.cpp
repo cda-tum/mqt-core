@@ -16,7 +16,7 @@
 #include <complex>
 #include <gtest/gtest.h>
 #include <memory>
-#include <stddef.h>
+#include <cstddef.h>
 #include <vector>
 
 constexpr double EPS = 1e-10;
