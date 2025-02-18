@@ -81,8 +81,7 @@ more than 30 research papers over its first five years of development [@willeDec
 @burgholzerExploitingArbitraryPaths2022; @burgholzerSimulationPathsQuantum2022;
 @burgholzerEfficientConstructionFunctional2021; @hillmichAccurateNeededEfficient2020;
 @hillmichConcurrencyDDbasedQuantum2020; @hillmichExploitingQuantumTeleportation2021;
-@burgholzerLimitingSearchSpace2022; @pehamDepthoptimalSynthesisClifford2023;
-@schneiderSATEncodingOptimal2023; @pehamOptimalSubarchitecturesQuantum2023;
+@burgholzerLimitingSearchSpace2022; @pehamDepthoptimalSynthesisClifford2023; @pehamOptimalSubarchitecturesQuantum2023;
 @schmidComputationalCapabilitiesCompiler2024; @schmidHybridCircuitMapping2024;
 @burgholzerAdvancedEquivalenceChecking2021; @burgholzerImprovedDDbasedEquivalence2020;
 @burgholzerPowerSimulationEquivalence2020; @burgholzerRandomStimuliGeneration2021;
