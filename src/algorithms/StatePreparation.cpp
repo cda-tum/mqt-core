@@ -63,8 +63,7 @@ template <typename T>
           // Each element of matrix A is
           // multiplied by whole Matrix B
           // resp and stored as Matrix C
-          newMatrix[i * rowB + k][j * colB + l] = 
-            matrixA[i][j] * matrixB[k][l];
+          newMatrix[i * rowB + k][j * colB + l] = matrixA[i][j] * matrixB[k][l];
         }
       }
     }
