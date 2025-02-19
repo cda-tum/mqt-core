@@ -70,3 +70,20 @@ TEST_P(StatePreparation, StatePreparationCircuitSimulation) {
     ASSERT_NEAR(expectedAmplitudes[i].imag(), result[i].imag(), EPS);
   }
 }
+
+TEST(StatePreparation, StatePreparationAmplitudesNotNormalized) {
+  const auto amplitudes = std::vector<std::complex<double>>{
+      std::complex<double>{1}, std::complex<double>{1}};
+
+  ASSERT_THROW(qc::createStatePreparationCircuit(amplitudes),
+               std::invalid_argument);
+}
+
+TEST(StatePreparation, StatePreparationsAmplitudesNotPowerOf2) {
+  const auto amplitudes =
+      std::vector<std::complex<double>>{std::complex<double>{1 / std::sqrt(3)},
+                                        std::complex<double>{1 / std::sqrt(3)},
+                                        std::complex<double>{1 / std::sqrt(3)}};
+  ASSERT_THROW(qc::createStatePreparationCircuit(amplitudes),
+               std::invalid_argument);
+}
