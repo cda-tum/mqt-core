@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 constexpr double EPS = 1e-10;
@@ -75,7 +76,8 @@ TEST(StatePreparation, StatePreparationAmplitudesNotNormalized) {
   const auto amplitudes = std::vector<std::complex<double>>{
       std::complex<double>{1}, std::complex<double>{1}};
 
-  ASSERT_THROW(qc::createStatePreparationCircuit(amplitudes),
+  // cast to avoid linting nodiscard
+  ASSERT_THROW(static_cast<void>(qc::createStatePreparationCircuit(amplitudes)),
                std::invalid_argument);
 }
 
@@ -84,6 +86,8 @@ TEST(StatePreparation, StatePreparationsAmplitudesNotPowerOf2) {
       std::vector<std::complex<double>>{std::complex<double>{1 / std::sqrt(3)},
                                         std::complex<double>{1 / std::sqrt(3)},
                                         std::complex<double>{1 / std::sqrt(3)}};
-  ASSERT_THROW(qc::createStatePreparationCircuit(amplitudes),
+
+  // cast to avoid linting nodiscard
+  ASSERT_THROW(static_cast<void>(qc::createStatePreparationCircuit(amplitudes)),
                std::invalid_argument);
 }
