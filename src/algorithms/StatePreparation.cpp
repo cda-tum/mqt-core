@@ -39,7 +39,8 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto isNormalized(const std::vector<T>& vec, double eps) -> bool {
+[[nodiscard]] auto isNormalized(const std::vector<T>& vec, const double eps)
+    -> bool {
   return std::abs(1 - twoNorm(vec)) < eps;
 }
 
@@ -62,7 +63,8 @@ template <typename T>
           // Each element of matrix A is
           // multiplied by whole Matrix B
           // resp and stored as Matrix C
-          newMatrix[i * rowB + k][j * colB + l] = matrixA[i][j] * matrixB[k][l];
+          newMatrix[i * rowB + k][j * colB + l] = 
+            matrixA[i][j] * matrixB[k][l];
         }
       }
     }
@@ -70,9 +72,8 @@ template <typename T>
   return newMatrix;
 }
 
-[[nodiscard]] auto createIdentity(size_t size) -> Matrix {
-  Matrix identity{
-      std::vector<std::vector<double>>(size, std::vector<double>(size, 0))};
+[[nodiscard]] auto createIdentity(const size_t size) -> Matrix {
+  auto identity{std::vector(size, std::vector<double>(size, 0))};
   for (size_t i = 0; i < size; ++i) {
     identity[i][i] = 1;
   }
@@ -96,14 +97,14 @@ template <typename T>
 
 /**
  * @brief recursive implementation that returns multiplexer circuit
- * @param target_gate : Ry or Rz gate to apply to target qubit, multiplexed
+ * @param targetGate : Ry or Rz gate to apply to target qubit, multiplexed
  * over all other "select" qubits
  * @param angles : list of rotation angles to apply Ry and Rz
- * @param lastCnot : add last cnot if true
+ * @param lastCnot : add last CNOT if true
  * @return multiplexer circuit as QuantumComputation
  */
 [[nodiscard]] auto multiplex(OpType targetGate, std::vector<double> angles,
-                             bool lastCnot) -> QuantumComputation {
+                             const bool lastCnot) -> QuantumComputation {
   size_t const listLen = angles.size();
   auto const localNumQubits = static_cast<Qubit>(
       std::floor(std::log2(static_cast<double>(listLen))) + 1);
@@ -115,8 +116,7 @@ template <typename T>
     return multiplexer;
   }
 
-  Matrix const matrix{std::vector<double>{0.5, 0.5},
-                      std::vector<double>{0.5, -0.5}};
+  Matrix const matrix{std::vector{0.5, 0.5}, std::vector{0.5, -0.5}};
   Matrix const identity = createIdentity(1 << (localNumQubits - 2));
   Matrix const angleWeights = kroneckerProduct(matrix, identity);
 
@@ -155,7 +155,8 @@ template <typename T>
 }
 
 [[nodiscard]] auto blochAngles(std::complex<double> const complexA,
-                               std::complex<double> const complexB, double eps)
+                               std::complex<double> const complexB,
+                               const double eps)
     -> std::tuple<std::complex<double>, double, double> {
   double theta{0};
   double phi{0};
@@ -170,14 +171,14 @@ template <typename T>
     finalT = aAngle + bAngle;
     phi = bAngle - aAngle;
   }
-  return {finalR * exp(std::complex<double>{0, 1} * finalT / 2.), theta, phi};
+  return {std::polar(finalR, finalT / 2.), theta, phi};
 }
 
 // works out Ry and Rz rotation angles used to disentangle LSB qubit
 // rotations make up block diagonal matrix U
 [[nodiscard]] auto
 rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes,
-                       double eps)
+                       const double eps)
     -> std::tuple<std::vector<std::complex<double>>, std::vector<double>,
                   std::vector<double>> {
   size_t const amplitudesHalf = amplitudes.size() / 2;
@@ -191,7 +192,7 @@ rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes,
 
   for (size_t i = 0; i < amplitudesHalf; ++i) {
     auto [remains, theta, phi] =
-        blochAngles(amplitudes[2 * i], amplitudes[2 * i + 1], eps);
+        blochAngles(amplitudes[2 * i], amplitudes[(2 * i) + 1], eps);
     remainingVector.emplace_back(remains);
     // minus sign because we move it to zero
     thetas.emplace_back(-theta);
@@ -203,7 +204,8 @@ rotationsToDisentangle(const std::vector<std::complex<double>>& amplitudes,
 // creates circuit that takes desired vector to zero
 [[nodiscard]] auto
 gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
-                 size_t numQubits, double eps) -> QuantumComputation {
+                 const size_t numQubits, const double eps)
+    -> QuantumComputation {
   QuantumComputation disentangler{numQubits};
   for (size_t i = 0; i < numQubits; ++i) {
     // rotations to disentangle LSB
@@ -222,13 +224,13 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
       QuantumComputation rzMultiplexer = multiplex(RZ, phis, addLastCnot);
       // append rzMultiplexer to disentangler, but it should only attach on
       // qubits i-numQubits, thus "i" is added to the local qubit indices
-      for (auto& op : rzMultiplexer) {
+      for (const auto& op : rzMultiplexer) {
         for (auto& target : op->getTargets()) {
           target += static_cast<Qubit>(i);
         }
         // as there were some systematic compiler errors with accessing the
         // qubit directly the controls are collected and then newly set
-        qc::Controls newControls;
+        Controls newControls;
         for (const auto& control : op->getControls()) {
           newControls.emplace(control.qubit + static_cast<Qubit>(i));
         }
@@ -243,13 +245,13 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
       // attach on qubits i-numQubits, thus "i" is added to the local qubit
       // indices
       ryMultiplexer.reverse();
-      for (auto& op : ryMultiplexer) {
+      for (const auto& op : ryMultiplexer) {
         for (auto& target : op->getTargets()) {
           target += static_cast<Qubit>(i);
         }
         // as there were some systematic compiler errors with accessing the
         // qubit directly the controls are collected and then newly set
-        qc::Controls newControls;
+        Controls newControls;
         for (const auto& control : op->getControls()) {
           newControls.emplace(control.qubit + static_cast<Qubit>(i));
         }
@@ -268,7 +270,7 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
 }
 
 auto createStatePreparationCircuit(
-    const std::vector<std::complex<double>>& amplitudes, double eps)
+    const std::vector<std::complex<double>>& amplitudes, const double eps)
     -> QuantumComputation {
 
   auto amplitudesCopy = amplitudes;
