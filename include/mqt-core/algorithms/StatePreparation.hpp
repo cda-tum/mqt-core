@@ -37,6 +37,6 @@ namespace qc {
  * not a power of two.
  **/
 [[nodiscard]] auto
-createStatePreparationCircuit(std::vector<std::complex<double>>& amplitudes,
+createStatePreparationCircuit(const std::vector<std::complex<double>>& amplitudes,
                               double eps = 1e-10) -> QuantumComputation;
 } // namespace qc

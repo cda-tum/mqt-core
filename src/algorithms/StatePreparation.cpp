@@ -268,8 +268,10 @@ gatesToUncompute(std::vector<std::complex<double>>& amplitudes,
 }
 
 auto createStatePreparationCircuit(
-    std::vector<std::complex<double>>& amplitudes, double eps)
+    const std::vector<std::complex<double>>& amplitudes, double eps)
     -> QuantumComputation {
+
+  auto amplitudesCopy = amplitudes;
 
   if (!isNormalized(amplitudes, eps)) {
     throw std::invalid_argument{
@@ -284,7 +286,7 @@ auto createStatePreparationCircuit(
   }
   const auto numQubits = static_cast<size_t>(std::log2(amplitudes.size()));
   QuantumComputation toZeroCircuit =
-      gatesToUncompute(amplitudes, numQubits, eps);
+      gatesToUncompute(amplitudesCopy, numQubits, eps);
 
   // invert circuit
   toZeroCircuit.invert();
