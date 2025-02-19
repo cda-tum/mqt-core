@@ -36,7 +36,7 @@ namespace qc {
  * @throws invalid_argument If @p amplitudes is not normalized or its length is
  * not a power of two.
  **/
-[[nodiscard]] auto
-createStatePreparationCircuit(const std::vector<std::complex<double>>& amplitudes,
-                              double eps = 1e-10) -> QuantumComputation;
+[[nodiscard]] auto createStatePreparationCircuit(
+    const std::vector<std::complex<double>>& amplitudes, double eps = 1e-10)
+    -> QuantumComputation;
 } // namespace qc
