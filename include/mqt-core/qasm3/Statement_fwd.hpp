@@ -23,6 +23,8 @@ class AssignmentStatement;
 class VersionDeclaration;
 class DeclarationExpression;
 class DeclarationStatement;
+class IndexOperator;
+class IndexedIdentifier;
 class GateOperand;
 class GateModifier;
 class QuantumStatement;

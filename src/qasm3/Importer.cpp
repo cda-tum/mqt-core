@@ -38,8 +38,10 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace qasm3 {
@@ -98,66 +100,166 @@ Importer::initializeBuiltins() {
 void Importer::translateGateOperand(
     const std::shared_ptr<GateOperand>& gateOperand,
     std::vector<qc::Qubit>& qubits, const qc::QuantumRegisterMap& qregs,
-    const std::shared_ptr<DebugInfo>& debugInfo) {
-  translateGateOperand(gateOperand->identifier, gateOperand->expression, qubits,
-                       qregs, debugInfo);
-}
+    const std::shared_ptr<DebugInfo>& debugInfo) const {
+  if (gateOperand->isHardwareQubit()) {
+    const auto hardwareQubit = gateOperand->getHardwareQubit();
+    // Ensure that the circuit has enough qubits.
+    // Currently, we emulate hardware qubits via a single quantum register q.
+    for (size_t i = qc->getNqubits(); i <= hardwareQubit; ++i) {
+      const auto q = static_cast<qc::Qubit>(i);
+      qc->addQubit(q, q, q);
+    }
 
-void Importer::translateGateOperand(
-    const std::string& gateIdentifier,
-    const std::shared_ptr<Expression>& indexExpr,
-    std::vector<qc::Qubit>& qubits, const qc::QuantumRegisterMap& qregs,
-    const std::shared_ptr<DebugInfo>& debugInfo) {
-  const auto qubitIter = qregs.find(gateIdentifier);
-  if (qubitIter == qregs.end()) {
+    qubits.emplace_back(
+        static_cast<qc::Qubit>(gateOperand->getHardwareQubit()));
+    return;
+  }
+  const auto indexedIdentifier = gateOperand->getIdentifier();
+  const auto qregIterator = qregs.find(indexedIdentifier->identifier);
+  if (qregIterator == qregs.end()) {
     throw CompilerError("Usage of unknown quantum register.", debugInfo);
   }
-  auto qubit = qubitIter->second;
+  const auto& qreg = qregIterator->second;
 
-  if (indexExpr != nullptr) {
-    const auto result = evaluatePositiveConstant(indexExpr, debugInfo);
-
-    if (result >= qubit.getSize()) {
-      throw CompilerError(
-          "Index expression must be smaller than the width of the "
-          "quantum register.",
-          debugInfo);
+  // full register
+  if (indexedIdentifier->indices.empty()) {
+    for (size_t i = 0; i < qreg.getSize(); ++i) {
+      qubits.emplace_back(static_cast<qc::Qubit>(qreg.getStartIndex() + i));
     }
-    qubit.getStartIndex() += static_cast<qc::Qubit>(result);
-    qubit.getSize() = 1;
+    return;
   }
 
-  for (uint64_t i = 0; i < qubit.getSize(); ++i) {
-    qubits.emplace_back(static_cast<qc::Qubit>(qubit.getStartIndex() + i));
+  if (indexedIdentifier->indices.size() > 1) {
+    throw CompilerError("Only single index expressions are supported.",
+                        debugInfo);
   }
+  const auto indexOperator = indexedIdentifier->indices[0];
+  if (indexOperator->indexExpressions.size() > 1) {
+    throw CompilerError("Only single index expressions are supported.",
+                        debugInfo);
+  }
+  const auto indexExpression = indexOperator->indexExpressions[0];
+  const auto result = evaluatePositiveConstant(indexExpression, debugInfo);
+
+  if (result >= qreg.getSize()) {
+    throw CompilerError(
+        "Index expression must be smaller than the width of the "
+        "quantum register.",
+        debugInfo);
+  }
+  qubits.emplace_back(qreg.getStartIndex() + static_cast<qc::Qubit>(result));
 }
 
 void Importer::translateBitOperand(
-    const std::string& bitIdentifier,
-    const std::shared_ptr<Expression>& indexExpr, std::vector<qc::Bit>& bits,
+    const std::shared_ptr<IndexedIdentifier>& indexedIdentifier,
+    std::vector<qc::Bit>& bits,
     const std::shared_ptr<DebugInfo>& debugInfo) const {
-  const auto iter = qc->getClassicalRegisters().find(bitIdentifier);
+  const auto iter =
+      qc->getClassicalRegisters().find(indexedIdentifier->identifier);
   if (iter == qc->getClassicalRegisters().end()) {
     throw CompilerError("Usage of unknown classical register.", debugInfo);
   }
-  auto creg = iter->second;
+  const auto& creg = iter->second;
+  const auto& indices = indexedIdentifier->indices;
+  // full register
+  if (indices.empty()) {
+    for (size_t i = 0; i < creg.getSize(); ++i) {
+      bits.emplace_back(creg.getStartIndex() + i);
+    }
+    return;
+  }
 
-  if (indexExpr != nullptr) {
-    const auto index = evaluatePositiveConstant(indexExpr, debugInfo);
-    if (index >= creg.getSize()) {
-      throw CompilerError(
-          "Index expression must be smaller than the width of the "
-          "classical register.",
-          debugInfo);
+  if (indices.size() > 1) {
+    throw CompilerError("Only single index expressions are supported.",
+                        debugInfo);
+  }
+  const auto& indexExpressions = indices[0]->indexExpressions;
+  if (indexExpressions.size() > 1) {
+    throw CompilerError("Only single index expressions are supported.",
+                        debugInfo);
+  }
+  const auto& indexExpression = indexExpressions[0];
+  const auto index = evaluatePositiveConstant(indexExpression, debugInfo);
+  if (index >= creg.getSize()) {
+    throw CompilerError(
+        "Index expression must be smaller than the width of the "
+        "classical register.",
+        debugInfo);
+  }
+  bits.emplace_back(creg.getStartIndex() + index);
+}
+
+std::variant<std::pair<qc::Bit, bool>,
+             std::tuple<qc::ClassicalRegister, qc::ComparisonKind, uint64_t>>
+Importer::translateCondition(
+    const std::shared_ptr<Expression>& condition,
+    const std::shared_ptr<DebugInfo>& debugInfo) const {
+  if (const auto binaryExpression =
+          std::dynamic_pointer_cast<BinaryExpression>(condition);
+      binaryExpression != nullptr) {
+    const auto comparisonKind = getComparisonKind(binaryExpression->op);
+    if (!comparisonKind) {
+      throw CompilerError("Unsupported comparison operator.", debugInfo);
+    }
+    auto lhsIsIdentifier = true;
+    std::shared_ptr<Expression> lhs =
+        std::dynamic_pointer_cast<IndexedIdentifier>(binaryExpression->lhs);
+    if (lhs == nullptr) {
+      lhsIsIdentifier = false;
+      lhs = std::dynamic_pointer_cast<Constant>(binaryExpression->lhs);
+    }
+    std::shared_ptr<Expression> rhs{};
+    if (lhsIsIdentifier) {
+      rhs = std::dynamic_pointer_cast<Constant>(binaryExpression->rhs);
+    } else {
+      rhs = std::dynamic_pointer_cast<IndexedIdentifier>(binaryExpression->rhs);
+    }
+    if (lhs == nullptr || rhs == nullptr) {
+      throw CompilerError("Only classical registers and constants are "
+                          "supported in conditions.",
+                          debugInfo);
     }
 
-    creg.getStartIndex() += index;
-    creg.getSize() = 1;
-  }
+    const auto& indexedIdentifier =
+        lhsIsIdentifier ? std::dynamic_pointer_cast<IndexedIdentifier>(lhs)
+                        : std::dynamic_pointer_cast<IndexedIdentifier>(rhs);
+    const auto& identifier = indexedIdentifier->identifier;
+    const auto val = lhsIsIdentifier
+                         ? std::dynamic_pointer_cast<Constant>(rhs)->getUInt()
+                         : std::dynamic_pointer_cast<Constant>(lhs)->getUInt();
 
-  for (uint64_t i = 0; i < creg.getSize(); ++i) {
-    bits.emplace_back(creg.getStartIndex() + i);
+    const auto creg = qc->getClassicalRegisters().find(identifier);
+    if (creg == qc->getClassicalRegisters().end()) {
+      throw CompilerError("Usage of unknown or invalid identifier '" +
+                              identifier + "' in condition.",
+                          debugInfo);
+    }
+    return std::tuple{creg->second, *comparisonKind, val};
   }
+  if (const auto unaryExpression =
+          std::dynamic_pointer_cast<UnaryExpression>(condition);
+      unaryExpression != nullptr) {
+    // This should already be caught by the type checker.
+    assert(unaryExpression->op == UnaryExpression::LogicalNot ||
+           unaryExpression->op == UnaryExpression::BitwiseNot);
+    const auto& indexedIdentifier =
+        std::dynamic_pointer_cast<IndexedIdentifier>(unaryExpression->operand);
+    std::vector<qc::Bit> bits{};
+    translateBitOperand(indexedIdentifier, bits, debugInfo);
+    // This should already be caught by the type checker.
+    assert(bits.size() == 1);
+    return std::pair{bits[0], false};
+  }
+  // must be a single bit at this point
+  const auto& indexedIdentifier =
+      std::dynamic_pointer_cast<IndexedIdentifier>(condition);
+  // should also be caught by the type checker
+  assert(indexedIdentifier != nullptr);
+  std::vector<qc::Bit> bits{};
+  translateBitOperand(indexedIdentifier, bits, debugInfo);
+  // This should already be caught by the type checker.
+  assert(bits.size() == 1);
+  return std::pair{bits[0], true};
 }
 
 uint64_t
@@ -261,8 +363,8 @@ void Importer::visitDeclarationStatement(
               declarationStatement->expression->expression)) {
     assert(!declarationStatement->isConst &&
            "Type check pass should catch this");
-    visitMeasureAssignment(identifier, nullptr, measureExpression,
-                           declarationStatement->debugInfo);
+    visitMeasureAssignment(std::make_shared<IndexedIdentifier>(identifier),
+                           measureExpression, declarationStatement->debugInfo);
     return;
   }
   if (declarationStatement->isConst) {
@@ -285,8 +387,8 @@ void Importer::visitAssignmentStatement(
   if (const auto measureExpression =
           std::dynamic_pointer_cast<MeasureExpression>(
               assignmentStatement->expression->expression)) {
-    visitMeasureAssignment(identifier, assignmentStatement->indexExpression,
-                           measureExpression, assignmentStatement->debugInfo);
+    visitMeasureAssignment(assignmentStatement->identifier, measureExpression,
+                           assignmentStatement->debugInfo);
     return;
   }
 
@@ -550,42 +652,38 @@ std::unique_ptr<qc::Operation> Importer::evaluateGateCall(
     i++;
   }
 
-  // check if any of the bits are duplicate
-  std::unordered_set<qc::Qubit> allQubits;
-  for (const auto& control : controlBits) {
-    if (allQubits.find(control.qubit) != allQubits.end()) {
-      throw CompilerError("Duplicate qubit in control list.",
-                          gateCallStatement->debugInfo);
-    }
-    allQubits.emplace(control.qubit);
-  }
-  for (const auto& qubit : targetBits) {
-    if (allQubits.find(qubit) != allQubits.end()) {
-      throw CompilerError("Duplicate qubit in target list.",
-                          gateCallStatement->debugInfo);
-    }
-    allQubits.emplace(qubit);
-  }
-
-  if (broadcastingWidth == 1) {
-    return applyQuantumOperation(gate, targetBits, controlBits,
-                                 evaluatedParameters, invertOperation,
-                                 gateCallStatement->debugInfo);
-  }
-
-  // if we are broadcasting, we need to create a compound operation
   auto op = std::make_unique<qc::CompoundOperation>();
   for (size_t j = 0; j < broadcastingWidth; ++j) {
+    // check if any of the bits are duplicate
+    std::unordered_set<qc::Qubit> allQubits;
+    for (const auto& control : controlBits) {
+      if (allQubits.find(control.qubit) != allQubits.end()) {
+        throw CompilerError("Duplicate qubit in control list.",
+                            gateCallStatement->debugInfo);
+      }
+      allQubits.emplace(control.qubit);
+    }
+    for (const auto& qubit : targetBits) {
+      if (allQubits.find(qubit) != allQubits.end()) {
+        throw CompilerError("Duplicate qubit in target list.",
+                            gateCallStatement->debugInfo);
+      }
+      allQubits.emplace(qubit);
+    }
+
     // first we apply the operation
     auto nestedOp = applyQuantumOperation(gate, targetBits, controlBits,
                                           evaluatedParameters, invertOperation,
                                           gateCallStatement->debugInfo);
-    if (nestedOp == nullptr) {
-      return nullptr;
+    if (nestedOp == nullptr || broadcastingWidth == 1) {
+      return nestedOp;
     }
     op->getOps().emplace_back(std::move(nestedOp));
 
     // after applying the operation, we update the broadcast bits
+    if (j == broadcastingWidth - 1) {
+      break;
+    }
     for (auto index : targetBroadcastingIndices) {
       targetBits[index] = qc::Qubit{targetBits[index] + 1};
     }
@@ -610,8 +708,8 @@ Importer::getMcGateDefinition(const std::string& identifier, size_t operandSize,
   for (size_t i = 0; i < operandSize; ++i) {
     targetParams.emplace_back("q" + std::to_string(i));
     if (i < nTargets) {
-      operands.emplace_back(
-          std::make_shared<GateOperand>("q" + std::to_string(i), nullptr));
+      operands.emplace_back(std::make_shared<GateOperand>(
+          std::make_shared<IndexedIdentifier>("q" + std::to_string(i))));
     }
   }
   const size_t nControls = nTargets - 1;
@@ -645,12 +743,11 @@ std::unique_ptr<qc::Operation> Importer::applyQuantumOperation(
     const std::shared_ptr<DebugInfo>& debugInfo) {
   if (auto* standardGate = dynamic_cast<StandardGate*>(gate.get())) {
     auto op = std::make_unique<qc::StandardOperation>(
-        qc::Controls{}, targetBits, standardGate->info.type,
-        evaluatedParameters);
+        qc::Controls{controlBits.begin(), controlBits.end()}, targetBits,
+        standardGate->info.type, evaluatedParameters);
     if (invertOperation) {
       op->invert();
     }
-    op->setControls(qc::Controls{controlBits.begin(), controlBits.end()});
     return op;
   }
   if (auto* compoundGate = dynamic_cast<CompoundGate*>(gate.get())) {
@@ -691,10 +788,15 @@ std::unique_ptr<qc::Operation> Importer::applyQuantumOperation(
                      std::dynamic_pointer_cast<GateCallStatement>(nestedGate);
                  gateCallStatement != nullptr) {
         for (const auto& operand : gateCallStatement->operands) {
+          if (operand->isHardwareQubit()) {
+            continue;
+          }
+          const auto& identifier = operand->getIdentifier();
           // OpenQASM 3.0 doesn't support indexing of gate arguments.
-          if (operand->expression != nullptr &&
+          if (!identifier->indices.empty() &&
               std::find(compoundGate->targetNames.begin(),
-                        compoundGate->targetNames.end(), operand->identifier) !=
+                        compoundGate->targetNames.end(),
+                        identifier->identifier) !=
                   compoundGate->targetNames.end()) {
             throw CompilerError(
                 "Gate arguments cannot be indexed within gate body.",
@@ -732,10 +834,10 @@ std::unique_ptr<qc::Operation> Importer::applyQuantumOperation(
 }
 
 void Importer::visitMeasureAssignment(
-    const std::string& identifier,
-    const std::shared_ptr<Expression>& indexExpression,
+    const std::shared_ptr<IndexedIdentifier>& indexedIdentifier,
     const std::shared_ptr<MeasureExpression>& measureExpression,
     const std::shared_ptr<DebugInfo>& debugInfo) {
+  const auto& identifier = indexedIdentifier->identifier;
   const auto decl = declarations.find(identifier);
   if (!decl.has_value()) {
     throw CompilerError("Usage of unknown identifier '" + identifier + "'.",
@@ -752,7 +854,7 @@ void Importer::visitMeasureAssignment(
   std::vector<qc::Bit> bits{};
   translateGateOperand(measureExpression->gate, qubits,
                        qc->getQuantumRegisters(), debugInfo);
-  translateBitOperand(identifier, indexExpression, bits, debugInfo);
+  translateBitOperand(indexedIdentifier, bits, debugInfo);
 
   if (qubits.size() != bits.size()) {
     throw CompilerError(
@@ -760,7 +862,7 @@ void Importer::visitMeasureAssignment(
         "measure statement. Classical register '" +
             identifier + "' has " + std::to_string(bits.size()) +
             " bits, but quantum register '" +
-            measureExpression->gate->identifier + "' has " +
+            measureExpression->gate->getName() + "' has " +
             std::to_string(qubits.size()) + " qubits.",
         debugInfo);
   }
@@ -788,55 +890,40 @@ void Importer::visitResetStatement(
 
 void Importer::visitIfStatement(
     const std::shared_ptr<IfStatement> ifStatement) {
-  // TODO: for now we only support statements comparing a classical bit reg
-  // to a constant.
-  const auto condition =
-      std::dynamic_pointer_cast<BinaryExpression>(ifStatement->condition);
-  if (condition == nullptr) {
-    throw CompilerError("Condition not supported for if statement.",
-                        ifStatement->debugInfo);
-  }
-
-  const auto comparisonKind = getComparisonKind(condition->op);
-  if (!comparisonKind) {
-    throw CompilerError("Unsupported comparison operator.",
-                        ifStatement->debugInfo);
-  }
-
-  const auto lhs =
-      std::dynamic_pointer_cast<IdentifierExpression>(condition->lhs);
-  const auto rhs = std::dynamic_pointer_cast<Constant>(condition->rhs);
-
-  if (lhs == nullptr) {
-    throw CompilerError("Only classical registers are supported in conditions.",
-                        ifStatement->debugInfo);
-  }
-  if (rhs == nullptr) {
-    throw CompilerError("Can only compare to constants.",
-                        ifStatement->debugInfo);
-  }
-
-  const auto creg = qc->getClassicalRegisters().find(lhs->identifier);
-  if (creg == qc->getClassicalRegisters().end()) {
-    throw CompilerError("Usage of unknown or invalid identifier '" +
-                            lhs->identifier + "' in condition.",
-                        ifStatement->debugInfo);
-  }
+  const auto& condition =
+      translateCondition(ifStatement->condition, ifStatement->debugInfo);
 
   // translate statements in then/else blocks
   if (!ifStatement->thenStatements.empty()) {
     auto thenOps = translateBlockOperations(ifStatement->thenStatements);
-    qc->emplace_back<qc::ClassicControlledOperation>(
-        std::move(thenOps), creg->second, rhs->getUInt(), *comparisonKind);
+    if (std::holds_alternative<std::pair<qc::Bit, bool>>(condition)) {
+      const auto& [bit, val] = std::get<std::pair<qc::Bit, bool>>(condition);
+      qc->emplace_back<qc::ClassicControlledOperation>(std::move(thenOps), bit,
+                                                       val ? 1 : 0);
+    } else {
+      const auto& [creg, comparisonKind, rhs] = std::get<
+          std::tuple<qc::ClassicalRegister, qc::ComparisonKind, uint64_t>>(
+          condition);
+      qc->emplace_back<qc::ClassicControlledOperation>(std::move(thenOps), creg,
+                                                       rhs, comparisonKind);
+    }
   }
 
   if (!ifStatement->elseStatements.empty()) {
-    const auto invertedComparisonKind =
-        qc::getInvertedComparisonKind(*comparisonKind);
     auto elseOps = translateBlockOperations(ifStatement->elseStatements);
-    qc->emplace_back<qc::ClassicControlledOperation>(
-        std::move(elseOps), creg->second, rhs->getUInt(),
-        invertedComparisonKind);
+    if (std::holds_alternative<std::pair<qc::Bit, bool>>(condition)) {
+      const auto& [bit, val] = std::get<std::pair<qc::Bit, bool>>(condition);
+      qc->emplace_back<qc::ClassicControlledOperation>(std::move(elseOps), bit,
+                                                       val ? 0 : 1);
+    } else {
+      const auto& [creg, comparisonKind, rhs] = std::get<
+          std::tuple<qc::ClassicalRegister, qc::ComparisonKind, uint64_t>>(
+          condition);
+      const auto invertedComparisonKind =
+          qc::getInvertedComparisonKind(comparisonKind);
+      qc->emplace_back<qc::ClassicControlledOperation>(
+          std::move(elseOps), creg, rhs, invertedComparisonKind);
+    }
   }
 }
 

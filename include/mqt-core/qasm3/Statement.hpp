@@ -51,7 +51,7 @@ class Expression {
 public:
   virtual ~Expression() = default;
 
-  virtual std::string getName() = 0;
+  [[nodiscard]] virtual std::string getName() const = 0;
 };
 
 class DeclarationExpression final {
@@ -100,7 +100,7 @@ public:
   }
   [[nodiscard]] bool getBool() const { return std::get<2>(val); }
 
-  std::string getName() override { return "Constant"; }
+  [[nodiscard]] std::string getName() const override { return "Constant"; }
 };
 
 class BinaryExpression final
@@ -137,7 +137,7 @@ public:
                    std::shared_ptr<Expression> r)
       : op(opcode), lhs(std::move(l)), rhs(std::move(r)) {}
 
-  std::string getName() override { return "BinaryExpr"; }
+  [[nodiscard]] std::string getName() const override { return "BinaryExpr"; }
 };
 
 std::optional<qc::ComparisonKind> getComparisonKind(BinaryExpression::Op op);
@@ -165,7 +165,7 @@ public:
   UnaryExpression(const Op opcode, std::shared_ptr<Expression> expr)
       : operand(std::move(expr)), op(opcode) {}
 
-  std::string getName() override { return "UnaryExpr"; }
+  [[nodiscard]] std::string getName() const override { return "UnaryExpr"; }
 };
 
 class IdentifierExpression final
@@ -176,7 +176,7 @@ public:
 
   explicit IdentifierExpression(std::string id) : identifier(std::move(id)) {}
 
-  std::string getName() override {
+  [[nodiscard]] std::string getName() const override {
     return std::string{"IdentifierExpr ("} + identifier + ")";
   }
 };
@@ -193,17 +193,62 @@ public:
 
   explicit IdentifierList() = default;
 
-  std::string getName() override { return "IdentifierList"; }
+  [[nodiscard]] std::string getName() const override {
+    return "IdentifierList";
+  }
 };
 
-// TODO: physical qubits are currently not supported
-class GateOperand {
+class IndexOperator {
+public:
+  std::vector<std::shared_ptr<Expression>> indexExpressions;
+
+  explicit IndexOperator(std::vector<std::shared_ptr<Expression>> indices)
+      : indexExpressions(std::move(indices)) {}
+};
+
+class IndexedIdentifier final
+    : public Expression,
+      public std::enable_shared_from_this<IndexedIdentifier> {
 public:
   std::string identifier;
-  std::shared_ptr<Expression> expression;
+  std::vector<std::shared_ptr<IndexOperator>> indices;
 
-  GateOperand(std::string id, std::shared_ptr<Expression> expr)
-      : identifier(std::move(id)), expression(std::move(expr)) {}
+  explicit IndexedIdentifier(
+      std::string id, std::vector<std::shared_ptr<IndexOperator>> idxs = {})
+      : identifier(std::move(id)), indices(std::move(idxs)) {}
+
+  [[nodiscard]] std::string getName() const override {
+    return std::string{"IndexedIdentifier ("} + identifier + ")";
+  }
+};
+
+class GateOperand final : public Expression,
+                          public std::enable_shared_from_this<GateOperand> {
+public:
+  std::variant<std::shared_ptr<IndexedIdentifier>, uint64_t> operand;
+
+  explicit GateOperand(std::shared_ptr<IndexedIdentifier> id)
+      : operand(std::move(id)) {}
+
+  explicit GateOperand(const uint64_t qubit) : operand(qubit) {}
+
+  [[nodiscard]] bool isHardwareQubit() const {
+    return std::holds_alternative<uint64_t>(operand);
+  }
+
+  [[nodiscard]] uint64_t getHardwareQubit() const {
+    return std::get<uint64_t>(operand);
+  }
+
+  [[nodiscard]] const std::shared_ptr<IndexedIdentifier>&
+  getIdentifier() const {
+    return std::get<std::shared_ptr<IndexedIdentifier>>(operand);
+  }
+
+  [[nodiscard]] std::string getName() const override {
+    return isHardwareQubit() ? "$" + std::to_string(getHardwareQubit())
+                             : getIdentifier()->getName();
+  }
 };
 
 class MeasureExpression final
@@ -215,7 +260,9 @@ public:
   explicit MeasureExpression(std::shared_ptr<GateOperand> gateOperand)
       : gate(std::move(gateOperand)) {}
 
-  std::string getName() override { return "MeasureExpression"; }
+  [[nodiscard]] std::string getName() const override {
+    return "MeasureExpression";
+  }
 };
 
 // Statements
@@ -381,16 +428,14 @@ public:
     ModuloAssignment,
     PowerAssignment,
   } type;
-  std::shared_ptr<IdentifierExpression> identifier;
-  std::shared_ptr<Expression> indexExpression;
+  std::shared_ptr<IndexedIdentifier> identifier;
   std::shared_ptr<DeclarationExpression> expression;
 
   AssignmentStatement(std::shared_ptr<DebugInfo> debug, const Type ty,
-                      std::shared_ptr<IdentifierExpression> id,
-                      std::shared_ptr<Expression> indexExpr,
+                      std::shared_ptr<IndexedIdentifier> id,
                       std::shared_ptr<DeclarationExpression> expr)
       : Statement(std::move(debug)), type(ty), identifier(std::move(id)),
-        indexExpression(std::move(indexExpr)), expression(std::move(expr)) {}
+        expression(std::move(expr)) {}
 
   void accept(InstVisitor* visitor) override;
 };
