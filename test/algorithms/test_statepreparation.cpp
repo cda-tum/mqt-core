@@ -76,8 +76,7 @@ TEST(StatePreparation, StatePreparationAmplitudesNotNormalized) {
   const auto amplitudes = std::vector<std::complex<double>>{
       std::complex<double>{1}, std::complex<double>{1}};
 
-  // cast to avoid linting nodiscard
-  ASSERT_THROW(static_cast<void>(qc::createStatePreparationCircuit(amplitudes)),
+  ASSERT_THROW(std::ignore = qc::createStatePreparationCircuit(amplitudes),
                std::invalid_argument);
 }
 
@@ -87,7 +86,6 @@ TEST(StatePreparation, StatePreparationsAmplitudesNotPowerOf2) {
                                         std::complex<double>{1 / std::sqrt(3)},
                                         std::complex<double>{1 / std::sqrt(3)}};
 
-  // cast to avoid linting nodiscard
-  ASSERT_THROW(static_cast<void>(qc::createStatePreparationCircuit(amplitudes)),
+  ASSERT_THROW(std::ignore = qc::createStatePreparationCircuit(amplitudes),
                std::invalid_argument);
 }
