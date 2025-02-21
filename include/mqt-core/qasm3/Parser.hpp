@@ -123,6 +123,10 @@ public:
 
   std::shared_ptr<GateModifier> parseGateModifier();
 
+  std::shared_ptr<IndexOperator> parseIndexOperator();
+
+  std::shared_ptr<IndexedIdentifier> parseIndexedIdentifier();
+
   std::shared_ptr<GateOperand> parseGateOperand();
 
   std::shared_ptr<DeclarationExpression> parseDeclarationExpression();

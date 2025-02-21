@@ -23,20 +23,23 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
+// forward declarations
 namespace qc {
+enum ComparisonKind : std::uint8_t;
+class ClassicalRegister;
 struct Control;
 class QuantumRegister;
-// forward declarations
 class Operation;
 class QuantumComputation;
 using QuantumRegisterMap = std::unordered_map<std::string, QuantumRegister>;
 } // namespace qc
 namespace qasm3 {
-// forward declarations
 class Statement;
 struct Gate;
 
@@ -102,16 +105,24 @@ private:
                        const qc::QuantumRegisterMap& qregs,
                        const std::shared_ptr<DebugInfo>& debugInfo);
 
-  static void translateGateOperand(const std::string& gateIdentifier,
-                                   const std::shared_ptr<Expression>& indexExpr,
-                                   std::vector<qc::Qubit>& qubits,
-                                   const qc::QuantumRegisterMap& qregs,
-                                   const std::shared_ptr<DebugInfo>& debugInfo);
+  void translateBitOperand(
+      const std::shared_ptr<IndexedIdentifier>& indexedIdentifier,
+      std::vector<qc::Bit>& bits,
+      const std::shared_ptr<DebugInfo>& debugInfo) const;
 
-  void translateBitOperand(const std::string& bitIdentifier,
-                           const std::shared_ptr<Expression>& indexExpr,
-                           std::vector<qc::Bit>& bits,
-                           const std::shared_ptr<DebugInfo>& debugInfo) const;
+  /**
+   * @brief Translates a condition expression
+   * @param condition The condition expression to translate.
+   * @param debugInfo The debug information of the condition expression.
+   * @return Either a pair of a bit and a boolean value, or a triple of a
+   * classical register, a comparison kind, and an integer value.
+   * @throws CompilerError If the condition is neither of the expected types.
+   */
+  [[nodiscard]] std::variant<
+      std::pair<qc::Bit, bool>,
+      std::tuple<qc::ClassicalRegister, qc::ComparisonKind, uint64_t>>
+  translateCondition(const std::shared_ptr<Expression>& condition,
+                     const std::shared_ptr<DebugInfo>& debugInfo) const;
 
   static uint64_t
   evaluatePositiveConstant(const std::shared_ptr<Expression>& expr,
@@ -159,8 +170,7 @@ private:
       -> std::unique_ptr<qc::Operation>;
 
   void visitMeasureAssignment(
-      const std::string& identifier,
-      const std::shared_ptr<Expression>& indexExpression,
+      const std::shared_ptr<IndexedIdentifier>& indexedIdentifier,
       const std::shared_ptr<MeasureExpression>& measureExpression,
       const std::shared_ptr<DebugInfo>& debugInfo);
 

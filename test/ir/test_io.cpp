@@ -118,7 +118,7 @@ TEST_F(IO, importFromStringQASM) {
 TEST_F(IO, controlledOpActingOnWholeRegister) {
   EXPECT_THROW(qc = qasm3::Importer::imports("qreg q[2];"
                                              "cx q,q[1];"),
-               qc::QFRException);
+               qasm3::CompilerError);
 }
 
 TEST_F(IO, insufficientRegistersQelib) {
@@ -624,7 +624,7 @@ TEST_F(IO, classicalControlledOperationToOpenQASM3) {
                                "include \"stdgates.inc\";\n"
                                "qubit[2] q;\n"
                                "bit[2] c;\n"
-                               "if (c[0] == 1) {\n"
+                               "if (c[0]) {\n"
                                "  x q[0];\n"
                                "}\n"
                                "if (c == 1) {\n"

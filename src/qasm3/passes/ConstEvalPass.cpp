@@ -81,11 +81,16 @@ void ConstEvalPass::visitGateCallStatement(
     }
   }
   for (auto& op : gateCallStatement->operands) {
-    if (op->expression == nullptr) {
+    if (op->isHardwareQubit()) {
       continue;
     }
-    if (auto evaluatedArg = visit(op->expression)) {
-      op->expression = evaluatedArg->toExpr();
+    auto id = op->getIdentifier();
+    for (auto& indexOperator : id->indices) {
+      for (auto& index : indexOperator->indexExpressions) {
+        if (auto evaluatedArg = visit(index)) {
+          index = evaluatedArg->toExpr();
+        }
+      }
     }
   }
   for (auto& modifier : gateCallStatement->modifiers) {
@@ -569,6 +574,16 @@ std::optional<ConstEvalValue> ConstEvalPass::visitIdentifierExpression(
 
 std::optional<ConstEvalValue> ConstEvalPass::visitIdentifierList(
     std::shared_ptr<IdentifierList> /*identifierList*/) {
+  return std::nullopt;
+}
+
+std::optional<ConstEvalValue> ConstEvalPass::visitIndexedIdentifier(
+    std::shared_ptr<IndexedIdentifier> indexedIdentifier) {
+  if (indexedIdentifier->indices.empty()) {
+    return visitIdentifierExpression(
+        std::make_shared<IdentifierExpression>(indexedIdentifier->identifier));
+  }
+  // Cannot yet evaluate indexed expressions
   return std::nullopt;
 }
 

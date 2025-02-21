@@ -78,6 +78,8 @@ public:
       std::shared_ptr<IdentifierExpression> identifierExpression) = 0;
   virtual T
   visitIdentifierList(std::shared_ptr<IdentifierList> identifierList) = 0;
+  virtual T visitIndexedIdentifier(
+      std::shared_ptr<IndexedIdentifier> indexedIdentifier) = 0;
   virtual T visitMeasureExpression(
       std::shared_ptr<MeasureExpression> measureExpression) = 0;
 
@@ -107,6 +109,10 @@ public:
     if (const auto identifierList =
             std::dynamic_pointer_cast<IdentifierList>(expression)) {
       return visitIdentifierList(identifierList);
+    }
+    if (const auto indexedIdentifier =
+            std::dynamic_pointer_cast<IndexedIdentifier>(expression)) {
+      return visitIndexedIdentifier(indexedIdentifier);
     }
     if (const auto measureExpression =
             std::dynamic_pointer_cast<MeasureExpression>(expression)) {
