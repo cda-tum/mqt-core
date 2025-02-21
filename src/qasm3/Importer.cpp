@@ -100,8 +100,16 @@ Importer::initializeBuiltins() {
 void Importer::translateGateOperand(
     const std::shared_ptr<GateOperand>& gateOperand,
     std::vector<qc::Qubit>& qubits, const qc::QuantumRegisterMap& qregs,
-    const std::shared_ptr<DebugInfo>& debugInfo) {
+    const std::shared_ptr<DebugInfo>& debugInfo) const {
   if (gateOperand->isHardwareQubit()) {
+    const auto hardwareQubit = gateOperand->getHardwareQubit();
+    // Ensure that the circuit has enough qubits.
+    // Currently, we emulate hardware qubits via a single quantum register q.
+    for (size_t i = qc->getNqubits(); i <= hardwareQubit; ++i) {
+      const auto q = static_cast<qc::Qubit>(i);
+      qc->addQubit(q, q, q);
+    }
+
     qubits.emplace_back(
         static_cast<qc::Qubit>(gateOperand->getHardwareQubit()));
     return;

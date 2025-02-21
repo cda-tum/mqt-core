@@ -99,11 +99,10 @@ private:
                                          type_checking::InferredType>>
   initializeBuiltins();
 
-  static void
-  translateGateOperand(const std::shared_ptr<GateOperand>& gateOperand,
-                       std::vector<qc::Qubit>& qubits,
-                       const qc::QuantumRegisterMap& qregs,
-                       const std::shared_ptr<DebugInfo>& debugInfo);
+  void translateGateOperand(const std::shared_ptr<GateOperand>& gateOperand,
+                            std::vector<qc::Qubit>& qubits,
+                            const qc::QuantumRegisterMap& qregs,
+                            const std::shared_ptr<DebugInfo>& debugInfo) const;
 
   void translateBitOperand(
       const std::shared_ptr<IndexedIdentifier>& indexedIdentifier,
