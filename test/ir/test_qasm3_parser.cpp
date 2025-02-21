@@ -387,6 +387,60 @@ TEST_F(Qasm3ParserTest, ImportQasm3InvertedSingleBitIfStatement) {
   EXPECT_EQ(out, expected);
 }
 
+TEST_F(Qasm3ParserTest, ImportQasm3SingleBitIfStatementRegister) {
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c = measure q[0];\n"
+                               "if (c == 1) {\n"
+                               "  x q[0];\n"
+                               "}";
+  const auto qc = qasm3::Importer::imports(testfile);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0\n"
+                               "// o 0\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c = measure q;\n"
+                               "if (c == 1) {\n"
+                               "  x q[0];\n"
+                               "}\n";
+  EXPECT_EQ(out, expected);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasm3SingleBitIfStatementRegisterFlipped) {
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c = measure q[0];\n"
+                               "if (1 == c) {\n"
+                               "  x q[0];\n"
+                               "}";
+  const auto qc = qasm3::Importer::imports(testfile);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0\n"
+                               "// o 0\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c = measure q;\n"
+                               "if (c == 1) {\n"
+                               "  x q[0];\n"
+                               "}\n";
+  EXPECT_EQ(out, expected);
+}
+
 TEST_F(Qasm3ParserTest, ImportQasm3IfElseStatement) {
   const std::string testfile = "OPENQASM 3.0;\n"
                                "include \"stdgates.inc\";\n"
@@ -414,6 +468,40 @@ TEST_F(Qasm3ParserTest, ImportQasm3IfElseStatement) {
                                "  x q[1];\n"
                                "}\n"
                                "if (!c[0]) {\n"
+                               "  x q[0];\n"
+                               "  x q[1];\n"
+                               "}\n";
+  EXPECT_EQ(out, expected);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasm3IfElseStatementRegister) {
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c = measure q[0];\n"
+                               "if (c == 1) {\n"
+                               "  x q[1];\n"
+                               "} else {\n"
+                               "  x q[0];\n"
+                               "  x q[1];\n"
+                               "}";
+  const auto qc = qasm3::Importer::imports(testfile);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0 1\n"
+                               "// o 0\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[1] c;\n"
+                               "h q[0];\n"
+                               "c[0] = measure q[0];\n"
+                               "if (c == 1) {\n"
+                               "  x q[1];\n"
+                               "}\n"
+                               "if (c != 1) {\n"
                                "  x q[0];\n"
                                "  x q[1];\n"
                                "}\n";
@@ -847,6 +935,59 @@ TEST_F(Qasm3ParserTest, ImportMSGate) {
                                "rxx(0.844396) q[0], q[2];\n"
                                "rxx(0.844396) q[1], q[2];\n"
                                "c = measure q;\n";
+  EXPECT_EQ(out, expected);
+}
+
+TEST_F(Qasm3ParserTest, HardwareQubitsInGates) {
+  const std::string testfile = "OPENQASM 3.0;"
+                               "h $0;"
+                               "cx $0, $1;";
+
+  const auto qc = qasm3::Importer::imports(testfile);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "h q[0];\n"
+                               "cx q[0], q[1];\n";
+  EXPECT_EQ(out, expected);
+}
+
+TEST_F(Qasm3ParserTest, HardwareQubitInMeasurement) {
+  const std::string testfile = "OPENQASM 3.0;"
+                               "bit c = measure $0;";
+
+  const auto qc = qasm3::Importer::imports(testfile);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0\n"
+                               "// o 0\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[1] q;\n"
+                               "bit[1] c;\n"
+                               "c = measure q;\n";
+  EXPECT_EQ(out, expected);
+}
+
+TEST_F(Qasm3ParserTest, HardwareQubitsNonConsecutive) {
+  const std::string testfile = "OPENQASM 3.0;"
+                               "h $0;"
+                               "cx $0, $2;";
+
+  const auto qc = qasm3::Importer::imports(testfile);
+
+  const std::string out = qc.toQASM();
+  const std::string expected = "// i 0 1 2\n"
+                               "// o 0 1 2\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[3] q;\n"
+                               "h q[0];\n"
+                               "cx q[0], q[2];\n";
   EXPECT_EQ(out, expected);
 }
 
@@ -1621,6 +1762,38 @@ TEST_F(Qasm3ParserTest, ImportQasmNegativeTypeDesignator) {
           EXPECT_EQ(
               e.message,
               "Type Check Error: Designator expression type check failed.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmDuplicateQubitBroadcast) {
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "qubit[2] q;\n"
+                               "cx q, q[1];\n";
+  EXPECT_THROW(
+      {
+        try {
+          const auto qc = qasm3::Importer::imports(testfile);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Duplicate qubit in target list.");
+          throw;
+        }
+      },
+      qasm3::CompilerError);
+}
+
+TEST_F(Qasm3ParserTest, ImportQasmDuplicateQubitBroadcastInControls) {
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "qubit[2] q;\n"
+                               "ccx q, q[0], q[1];\n";
+  EXPECT_THROW(
+      {
+        try {
+          const auto qc = qasm3::Importer::imports(testfile);
+        } catch (const qasm3::CompilerError& e) {
+          EXPECT_EQ(e.message, "Duplicate qubit in control list.");
           throw;
         }
       },

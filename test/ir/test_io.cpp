@@ -9,6 +9,7 @@
 
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
@@ -27,6 +28,7 @@
 #include <iterator>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -113,12 +115,6 @@ TEST_F(IO, importFromStringQASM) {
                                 "U(pi/2,0,pi) q[0];"
                                 "CX q[0],q[1];");
   std::cout << qc << "\n";
-}
-
-TEST_F(IO, controlledOpActingOnWholeRegister) {
-  EXPECT_THROW(qc = qasm3::Importer::imports("qreg q[2];"
-                                             "cx q,q[1];"),
-               qasm3::CompilerError);
 }
 
 TEST_F(IO, insufficientRegistersQelib) {
@@ -298,16 +294,6 @@ TEST_F(IO, CommentInDeclaration) {
   EXPECT_EQ(comp->size(), 2);
   EXPECT_EQ(comp->at(0)->getType(), qc::H);
   EXPECT_EQ(comp->at(1)->getType(), qc::H);
-}
-
-TEST_F(IO, classicControlled) {
-  qc = qasm3::Importer::imports("qreg q[1];"
-                                "creg c[1];"
-                                "h q[0];"
-                                "measure q->c;"
-                                "// test classic controlled operation\n"
-                                "if (c==1) x q[0];");
-  std::cout << qc << "\n";
 }
 
 TEST_F(IO, iSWAPDumpIsValid) {
@@ -633,6 +619,36 @@ TEST_F(IO, classicalControlledOperationToOpenQASM3) {
 
   const auto actual = qc.toQASM();
   EXPECT_EQ(expected, actual);
+}
+
+TEST_F(IO, classicalControlledOperationExpectedValueTooLarge) {
+  qc.addQubitRegister(1);
+  qc.addClassicalRegister(1);
+  try {
+    qc.classicControlled(qc::X, 0, 0, 2);
+    FAIL() << "Expected an exception for invalid expected value.";
+  } catch (const std::invalid_argument& e) {
+    EXPECT_STREQ(e.what(),
+                 "Expected value for single bit comparison must be 0 or 1.");
+    SUCCEED();
+  } catch (...) {
+    FAIL() << "Expected an invalid_argument exception.";
+  }
+}
+
+TEST_F(IO, classicalControlledOperationInvalidBitComparison) {
+  qc.addQubitRegister(1);
+  qc.addClassicalRegister(1);
+  try {
+    qc.classicControlled(qc::X, 0, 0, 1, qc::Lt);
+    FAIL() << "Expected an exception for invalid expected value.";
+  } catch (const std::invalid_argument& e) {
+    EXPECT_STREQ(e.what(),
+                 "Inequality comparisons on a single bit are not supported.");
+    SUCCEED();
+  } catch (...) {
+    FAIL() << "Expected an invalid_argument exception.";
+  }
 }
 
 TEST_F(IO, dumpingIncompleteOutputPermutationNotStartingAtZero) {
