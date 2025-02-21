@@ -22,7 +22,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-algorithms)
   target_link_libraries(
     ${MQT_CORE_TARGET_NAME}-algorithms
     PUBLIC MQT::CoreIR
-    PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
+    PRIVATE MQT::CoreCircuitOptimizer MQT::ProjectOptions MQT::ProjectWarnings)
 
   # set include directories
   target_include_directories(
