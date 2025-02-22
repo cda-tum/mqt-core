@@ -49,12 +49,12 @@ std::size_t localCompSimp(ZXDiagram& diag) {
   return simplifyVertices(diag, checkLocalComp, localComp);
 }
 
-std::size_t pivotPauliSimp(ZXDiagram& diag) {
-  return simplifyEdges(diag, checkPivotPauli, pivotPauli);
-}
-
 std::size_t pivotSimp(ZXDiagram& diag) {
   return simplifyEdges(diag, checkPivot, pivot);
+}
+
+std::size_t pivotPauliSimp(ZXDiagram& diag) {
+  return simplifyEdges(diag, checkPivotPauli, pivotPauli);
 }
 
 std::size_t interiorCliffordSimp(ZXDiagram& diag) {

@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -104,6 +103,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f0/3c/adaf39ce1fb4afdd21b611e3d530b183bb7759c9b673d60db0e347fd4439/beautifulsoup4-4.13.3.tar.gz", hash = "sha256:1bd32405dacc920b42b83ba01644747ed77456a65760e285fbc47633ceddaf8b", size = 619516 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/49/6abb616eb3cbab6a7cca303dc02fdf3836de2e0b834bf966a7f5271a34d8/beautifulsoup4-4.13.3-py3-none-any.whl", hash = "sha256:99045d7d3f08f91f0d656bc9b7efbae189426cd913d830294a15eefa0ea4df16", size = 186015 },
+]
+
+[[package]]
+name = "breathe"
+version = "4.36.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx", version = "7.4.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/01/56/99bf7d0799d95ad485d95596dc01c2a5b3dda58ebf50a94f6f73b33bacdf/breathe-4.36.0.tar.gz", hash = "sha256:14860b73118ac140b7a3f55446890c777d1b67149cb024279fe3710dad7f535c", size = 154842 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2c/bc/d67ef1e11ed6e6343c135bf605aa9d5734ff0cc77eb42a2a41f182abc9d9/breathe-4.36.0-py3-none-any.whl", hash = "sha256:af85436f1f09e842bd1fd95617281211c635f8768d245ff830c59b979888d1d5", size = 97231 },
 ]
 
 [[package]]
@@ -1429,6 +1441,7 @@ build = [
     { name = "setuptools-scm" },
 ]
 dev = [
+    { name = "breathe" },
     { name = "furo" },
     { name = "myst-nb" },
     { name = "openqasm-pygments" },
@@ -1448,6 +1461,7 @@ dev = [
     { name = "sphinxext-opengraph" },
 ]
 docs = [
+    { name = "breathe" },
     { name = "furo" },
     { name = "myst-nb" },
     { name = "openqasm-pygments" },
@@ -1474,7 +1488,6 @@ requires-dist = [
     { name = "pandas", extras = ["output-formatting"], marker = "extra == 'evaluation'", specifier = ">=2.1.2" },
     { name = "qiskit", extras = ["qasm3-import"], marker = "extra == 'qiskit'", specifier = ">=1.0.0" },
 ]
-provides-extras = ["evaluation", "qiskit"]
 
 [package.metadata.requires-dev]
 build = [
@@ -1483,6 +1496,7 @@ build = [
     { name = "setuptools-scm", specifier = ">=8.1" },
 ]
 dev = [
+    { name = "breathe", specifier = ">=4.36.0" },
     { name = "furo", specifier = ">=2024.8.6" },
     { name = "myst-nb", specifier = ">=1.1.2" },
     { name = "openqasm-pygments", specifier = ">=0.1.2" },
@@ -1504,6 +1518,7 @@ dev = [
     { name = "sphinxext-opengraph", specifier = ">=0.9.1" },
 ]
 docs = [
+    { name = "breathe", specifier = ">=4.36.0" },
     { name = "furo", specifier = ">=2024.8.6" },
     { name = "myst-nb", specifier = ">=1.1.2" },
     { name = "openqasm-pygments", specifier = ">=0.1.2" },

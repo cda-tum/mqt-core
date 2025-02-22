@@ -37,7 +37,7 @@ void ZXDiagram::addEdge(const Vertex from, const Vertex to,
 }
 
 void ZXDiagram::addEdgeParallelAware(const Vertex from, const Vertex to,
-                                     const EdgeType eType) { // TODO: Scalars
+                                     const EdgeType eType) {
   if (from == to) {
     if (type(from) != VertexType::Boundary && eType == EdgeType::Hadamard) {
       addPhase(from, PiExpression(PiRational(1, 1)));

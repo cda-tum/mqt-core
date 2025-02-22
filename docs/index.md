@@ -58,7 +58,15 @@ DevelopmentGuide
 
 ```{toctree}
 :hidden:
-:caption: API Reference
+:caption: Python API Reference
 
 api/mqt/core/index
+```
+
+```{toctree}
+:hidden:
+:glob:
+:caption: C++ API Reference
+
+api/cpp/namespace/namespacezx
 ```
