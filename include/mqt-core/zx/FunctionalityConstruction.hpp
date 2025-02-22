@@ -56,7 +56,6 @@ public:
    * @return true if the Operation can be transformed to a ZXDiagram, false
    * otherwise
    */
-
   static bool transformableToZX(const qc::Operation* op);
 
 protected:

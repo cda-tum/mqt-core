@@ -34,7 +34,10 @@ namespace zx {
 class ZXDiagram {
 public:
   ZXDiagram() = default;
-  // Create an n_qubit identity diagram.
+  /**
+   * @brief Create an nqubit identity diagram.
+   * @param nqubits number of qubits
+   */
   explicit ZXDiagram(std::size_t nqubits);
 
   /**
@@ -393,9 +396,8 @@ public:
 
   /**
    * @brief Convert a qubit to an ancilla initialized and post-selected on |0>.
-   * @param qubit initialized in |0>
-   * @param qubit post-selected in |0>
-   * @param out ancilla qubit
+   * @param in qubit initialized in |0>
+   * @param out qubit post-selected in |0>
    */
   void makeAncilla(Qubit in, Qubit out);
 

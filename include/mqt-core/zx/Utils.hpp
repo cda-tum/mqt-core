@@ -123,6 +123,10 @@ public:
         const std::vector<std::optional<VertexData>>& verts)
       : edges(edgs), vertices(verts) {};
 
+  /**
+   * @brief Class wrapping an iterator to iterate over all edges in a
+   * ZX-diagram.
+   */
   class EdgeIterator {
   public:
     using iterator_category = std::forward_iterator_tag;
