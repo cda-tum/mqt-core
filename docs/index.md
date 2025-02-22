@@ -34,6 +34,8 @@ self
 
 installation
 mqt_core_ir
+dd_package
+references
 ```
 
 ````{only} not latex

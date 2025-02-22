@@ -131,7 +131,7 @@ class CDAStyle(UnsrtStyle):
 
 pybtex.plugin.register_plugin("pybtex.style.formatting", "cda_style", CDAStyle)
 
-bibtex_bibfiles = ["refs.bib"]
+bibtex_bibfiles = ["lit_header.bib", "refs.bib"]
 bibtex_default_style = "cda_style"
 
 copybutton_prompt_text = r"(?:\(\.?venv\) )?(?:\[.*\] )?\$ "
