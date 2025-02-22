@@ -69,7 +69,7 @@ AodOperation::AodOperation(const std::string& typeName,
                            const std::vector<uint32_t>& dirs,
                            const std::vector<qc::fp>& start,
                            const std::vector<qc::fp>& end)
-    : AodOperation(qc::OP_NAME_TO_TYPE.at(typeName), std::move(qubits),
+    : AodOperation(qc::opTypeFromString(typeName), std::move(qubits),
                    convertToDimension(dirs), start, end) {}
 
 AodOperation::AodOperation(

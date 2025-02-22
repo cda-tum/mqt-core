@@ -15,26 +15,26 @@
 
 #pragma once
 
-#include "Exception.hpp"
 #include "Scanner.hpp"
-#include "Statement.hpp"
-#include "StdGates.hpp"
+#include "Statement_fwd.hpp"
 #include "Token.hpp"
-#include "Types.hpp"
-#include "ir/Permutation.hpp"
+#include "Types_fwd.hpp"
 
-#include <iostream>
+#include <iosfwd>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <stack>
-#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
+namespace qc {
+// forward declarations
+class Permutation;
+} // namespace qc
+
 namespace qasm3 {
-class Parser {
+class Parser final {
   struct ScannerState {
   private:
     std::unique_ptr<std::istream> is;
@@ -79,60 +79,21 @@ class Parser {
   std::stack<ScannerState> scanner;
   std::shared_ptr<DebugInfo> includeDebugInfo{nullptr};
 
-  [[noreturn]] void error(const Token& token, const std::string& msg) {
-    throw CompilerError(msg, makeDebugInfo(token));
-  }
+  [[noreturn]] void error(const Token& token, const std::string& msg);
 
-  [[nodiscard]] Token last() const {
-    if (scanner.empty()) {
-      throw std::runtime_error("No scanner available");
-    }
-    return scanner.top().last;
-  }
+  [[nodiscard]] Token last() const;
 
-  [[nodiscard]] Token current() const {
-    if (scanner.empty()) {
-      throw std::runtime_error("No scanner available");
-    }
-    return scanner.top().t;
-  }
+  [[nodiscard]] Token current() const;
 
-  [[nodiscard]] Token peek() const {
-    if (scanner.empty()) {
-      throw std::runtime_error("No scanner available");
-    }
-    return scanner.top().next;
-  }
+  [[nodiscard]] Token peek() const;
 
   Token expect(const Token::Kind& expected,
-               const std::optional<std::string>& context = std::nullopt) {
-    if (current().kind != expected) {
-      std::string message = "Expected '" + Token::kindToString(expected) +
-                            "', got '" + Token::kindToString(current().kind) +
-                            "'.";
-      if (context.has_value()) {
-        message += " " + context.value();
-      }
-      error(current(), message);
-    }
-
-    auto token = current();
-    scan();
-    return token;
-  }
+               const std::optional<std::string>& context = std::nullopt);
 
 public:
-  explicit Parser(std::istream* is, bool implicitlyIncludeStdgates = true) {
-    scanner.emplace(is);
-    scan();
-    if (implicitlyIncludeStdgates) {
-      scanner.emplace(std::make_unique<std::istringstream>(STDGATES),
-                      "stdgates.inc", true);
-      scan();
-    }
-  }
+  explicit Parser(std::istream& is, bool implicitlyIncludeStdgates = true);
 
-  virtual ~Parser() = default;
+  ~Parser() = default;
 
   std::shared_ptr<VersionDeclaration> parseVersionDeclaration();
 
@@ -162,6 +123,10 @@ public:
 
   std::shared_ptr<GateModifier> parseGateModifier();
 
+  std::shared_ptr<IndexOperator> parseIndexOperator();
+
+  std::shared_ptr<IndexedIdentifier> parseIndexedIdentifier();
+
   std::shared_ptr<GateOperand> parseGateOperand();
 
   std::shared_ptr<DeclarationExpression> parseDeclarationExpression();
@@ -180,7 +145,8 @@ public:
 
   std::shared_ptr<IdentifierList> parseIdentifierList();
 
-  std::pair<std::shared_ptr<TypeExpr>, bool> parseType();
+  std::pair<std::shared_ptr<Type<std::shared_ptr<Expression>>>, bool>
+  parseType();
 
   std::shared_ptr<Expression> parseTypeDesignator();
 
@@ -189,18 +155,9 @@ public:
   void scan();
 
   std::shared_ptr<DebugInfo> makeDebugInfo(Token const& begin,
-                                           Token const& /*end*/) {
-    // Parameter `end` is currently not used.
-    return std::make_shared<DebugInfo>(
-        begin.line, begin.col, scanner.top().filename.value_or("<input>"),
-        includeDebugInfo);
-  }
+                                           Token const& /*end*/);
 
-  std::shared_ptr<DebugInfo> makeDebugInfo(Token const& token) {
-    return std::make_shared<DebugInfo>(
-        token.line, token.col, scanner.top().filename.value_or("<input>"),
-        includeDebugInfo);
-  }
+  std::shared_ptr<DebugInfo> makeDebugInfo(Token const& token);
 
   [[nodiscard]] bool isAtEnd() const {
     return current().kind == Token::Kind::Eof;

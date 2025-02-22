@@ -9,29 +9,13 @@
 
 #pragma once
 
+#include "Statement_fwd.hpp"
+
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
 
 namespace qasm3 {
-class GateDeclaration;
-class GateCallStatement;
-class VersionDeclaration;
-class DeclarationStatement;
-class InitialLayout;
-class OutputPermutation;
-class AssignmentStatement;
-class BarrierStatement;
-class ResetStatement;
-
-class Expression;
-class BinaryExpression;
-class UnaryExpression;
-class IdentifierExpression;
-class IdentifierList;
-class Constant;
-class MeasureExpression;
-class IfStatement;
 
 class InstVisitor {
 public:
@@ -94,6 +78,8 @@ public:
       std::shared_ptr<IdentifierExpression> identifierExpression) = 0;
   virtual T
   visitIdentifierList(std::shared_ptr<IdentifierList> identifierList) = 0;
+  virtual T visitIndexedIdentifier(
+      std::shared_ptr<IndexedIdentifier> indexedIdentifier) = 0;
   virtual T visitMeasureExpression(
       std::shared_ptr<MeasureExpression> measureExpression) = 0;
 
@@ -123,6 +109,10 @@ public:
     if (const auto identifierList =
             std::dynamic_pointer_cast<IdentifierList>(expression)) {
       return visitIdentifierList(identifierList);
+    }
+    if (const auto indexedIdentifier =
+            std::dynamic_pointer_cast<IndexedIdentifier>(expression)) {
+      return visitIndexedIdentifier(indexedIdentifier);
     }
     if (const auto measureExpression =
             std::dynamic_pointer_cast<MeasureExpression>(expression)) {

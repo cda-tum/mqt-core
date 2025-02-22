@@ -7,11 +7,12 @@
  * Licensed under the MIT License
  */
 
-#include "ir/parsers/qasm3_parser/passes/ConstEvalPass.hpp"
+#include "qasm3/passes/ConstEvalPass.hpp"
 
-#include "ir/parsers/qasm3_parser/Exception.hpp"
-#include "ir/parsers/qasm3_parser/Statement.hpp"
-#include "ir/parsers/qasm3_parser/Types.hpp"
+#include "Definitions.hpp"
+#include "qasm3/Exception.hpp"
+#include "qasm3/Statement.hpp"
+#include "qasm3/Types.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -41,6 +42,14 @@ template <typename T> T power(T base, T exponent) {
   return result;
 }
 } // namespace
+
+void ConstEvalPass::processStatement(Statement& statement) {
+  try {
+    statement.accept(this);
+  } catch (const ConstEvalError& e) {
+    throw CompilerError(e.what(), statement.debugInfo);
+  }
+}
 
 void ConstEvalPass::visitDeclarationStatement(
     const std::shared_ptr<DeclarationStatement> declarationStatement) {
@@ -72,11 +81,16 @@ void ConstEvalPass::visitGateCallStatement(
     }
   }
   for (auto& op : gateCallStatement->operands) {
-    if (op->expression == nullptr) {
+    if (op->isHardwareQubit()) {
       continue;
     }
-    if (auto evaluatedArg = visit(op->expression)) {
-      op->expression = evaluatedArg->toExpr();
+    auto id = op->getIdentifier();
+    for (auto& indexOperator : id->indices) {
+      for (auto& index : indexOperator->indexExpressions) {
+        if (auto evaluatedArg = visit(index)) {
+          index = evaluatedArg->toExpr();
+        }
+      }
     }
   }
   for (auto& modifier : gateCallStatement->modifiers) {
@@ -93,6 +107,40 @@ void ConstEvalPass::visitGateCallStatement(
       }
     }
   }
+}
+
+std::shared_ptr<Constant> ConstEvalValue::toExpr() const {
+  switch (type) {
+  case ConstInt:
+    return std::make_shared<Constant>(Constant(std::get<0>(value), true));
+  case ConstUint:
+    return std::make_shared<Constant>(Constant(std::get<0>(value), false));
+  case ConstFloat:
+    return std::make_shared<Constant>(Constant(std::get<1>(value)));
+  case ConstBool:
+    return std::make_shared<Constant>(Constant(std::get<2>(value)));
+  default:
+    qc::unreachable();
+  }
+}
+
+bool ConstEvalValue::operator==(const ConstEvalValue& rhs) const {
+  if (type != rhs.type) {
+    return false;
+  }
+
+  switch (type) {
+  case ConstInt:
+  case ConstUint:
+    return std::get<0>(value) == std::get<0>(rhs.value);
+  case ConstFloat:
+    return std::abs(std::get<1>(value) - std::get<1>(rhs.value)) <
+           std::numeric_limits<double>::epsilon() * 1024;
+  case ConstBool:
+    return std::get<2>(value) == std::get<2>(rhs.value);
+  }
+
+  return false;
 }
 
 std::string ConstEvalValue::toString() const {
@@ -115,9 +163,13 @@ std::string ConstEvalValue::toString() const {
   return ss.str();
 }
 
-ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
-                                                int64_t lhs, int64_t rhs,
-                                                size_t width, bool isSigned) {
+namespace {
+template <typename T> int64_t castToWidth(const int64_t value) {
+  return static_cast<int64_t>(static_cast<T>(value));
+}
+
+ConstEvalValue evalIntExpression(BinaryExpression::Op op, int64_t lhs,
+                                 int64_t rhs, size_t width, bool isSigned) {
   auto lhsU = static_cast<uint64_t>(lhs);
   auto rhsU = static_cast<uint64_t>(rhs);
   ConstEvalValue result{0, isSigned, width};
@@ -260,8 +312,8 @@ ConstEvalValue ConstEvalPass::evalIntExpression(BinaryExpression::Op op,
   return result;
 }
 
-ConstEvalValue ConstEvalPass::evalFloatExpression(BinaryExpression::Op op,
-                                                  double lhs, double rhs) {
+ConstEvalValue evalFloatExpression(const BinaryExpression::Op op,
+                                   const double lhs, const double rhs) {
   ConstEvalValue result{0.0};
 
   switch (op) {
@@ -314,9 +366,9 @@ ConstEvalValue ConstEvalPass::evalFloatExpression(BinaryExpression::Op op,
 
   return result;
 }
-ConstEvalValue ConstEvalPass::evalBoolExpression(const BinaryExpression::Op op,
-                                                 const bool lhs,
-                                                 const bool rhs) {
+
+ConstEvalValue evalBoolExpression(const BinaryExpression::Op op, const bool lhs,
+                                  const bool rhs) {
   ConstEvalValue result{false};
 
   switch (op) {
@@ -347,6 +399,7 @@ ConstEvalValue ConstEvalPass::evalBoolExpression(const BinaryExpression::Op op,
 
   return result;
 }
+} // namespace
 
 std::optional<ConstEvalValue> ConstEvalPass::visitBinaryExpression(
     const std::shared_ptr<BinaryExpression> binaryExpression) {
@@ -521,6 +574,16 @@ std::optional<ConstEvalValue> ConstEvalPass::visitIdentifierExpression(
 
 std::optional<ConstEvalValue> ConstEvalPass::visitIdentifierList(
     std::shared_ptr<IdentifierList> /*identifierList*/) {
+  return std::nullopt;
+}
+
+std::optional<ConstEvalValue> ConstEvalPass::visitIndexedIdentifier(
+    std::shared_ptr<IndexedIdentifier> indexedIdentifier) {
+  if (indexedIdentifier->indices.empty()) {
+    return visitIdentifierExpression(
+        std::make_shared<IdentifierExpression>(indexedIdentifier->identifier));
+  }
+  // Cannot yet evaluate indexed expressions
   return std::nullopt;
 }
 

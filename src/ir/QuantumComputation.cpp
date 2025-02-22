@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -31,7 +30,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <istream>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -248,64 +246,6 @@ std::size_t QuantumComputation::getDepth() const {
   return *std::max_element(depths.begin(), depths.end());
 }
 
-void QuantumComputation::import(const std::string& filename) {
-  const std::size_t dot = filename.find_last_of('.');
-  std::string extension = filename.substr(dot + 1);
-  std::transform(
-      extension.begin(), extension.end(), extension.begin(),
-      [](unsigned char ch) { return static_cast<char>(::tolower(ch)); });
-  if (extension == "real") {
-    import(filename, Format::Real);
-  } else if (extension == "qasm") {
-    import(filename, Format::OpenQASM3);
-  } else if (extension == "tfc") {
-    import(filename, Format::TFC);
-  } else if (extension == "qc") {
-    import(filename, Format::QC);
-  } else {
-    throw QFRException("[import] extension " + extension + " not recognized");
-  }
-}
-
-void QuantumComputation::import(const std::string& filename, Format format) {
-  const std::size_t slash = filename.find_last_of('/');
-  const std::size_t dot = filename.find_last_of('.');
-  name = filename.substr(slash + 1, dot - slash - 1);
-
-  auto ifs = std::ifstream(filename);
-  if (ifs.good()) {
-    import(ifs, format);
-  } else {
-    throw QFRException("[import] Error processing input stream: " + name);
-  }
-}
-
-void QuantumComputation::import(std::istream& is, Format format) {
-  // reset circuit before importing
-  reset();
-
-  switch (format) {
-  case Format::Real:
-    importReal(is);
-    break;
-  case Format::OpenQASM2:
-  case Format::OpenQASM3:
-    importOpenQASM3(is);
-    break;
-  case Format::TFC:
-    importTFC(is);
-    break;
-  case Format::QC:
-    importQC(is);
-    break;
-  default:
-    throw QFRException("[import] format not recognized");
-  }
-
-  // initialize the initial layout and output permutation
-  initializeIOMapping();
-}
-
 void QuantumComputation::initializeIOMapping() {
   // if no initial layout was found during parsing the identity mapping is
   // assumed
@@ -422,7 +362,8 @@ void QuantumComputation::addQubitRegister(std::size_t nq,
         "qubits have been added");
   }
 
-  quantumRegisters.try_emplace(regName, nqubits, nq, regName);
+  quantumRegisters.try_emplace(regName, static_cast<Qubit>(nqubits), nq,
+                               regName);
   for (std::size_t i = 0; i < nq; ++i) {
     auto j = static_cast<Qubit>(nqubits + i);
     initialLayout.insert({j, j});
@@ -464,7 +405,7 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
         "[addAncillaryRegister] New register size must be larger than 0");
   }
 
-  const auto totalqubits = nqubits + nancillae;
+  const auto totalqubits = static_cast<Qubit>(nqubits + nancillae);
   ancillaRegisters.try_emplace(regName, totalqubits, nq, regName);
   ancillary.resize(totalqubits + nq);
   garbage.resize(totalqubits + nq);
@@ -696,29 +637,6 @@ std::ostream& QuantumComputation::printStatistics(std::ostream& os) const {
   return os;
 }
 
-void QuantumComputation::dump(const std::string& filename) const {
-  const std::size_t dot = filename.find_last_of('.');
-  assert(dot != std::string::npos);
-  std::string extension = filename.substr(dot + 1);
-  std::transform(
-      extension.begin(), extension.end(), extension.begin(),
-      [](unsigned char c) { return static_cast<char>(::tolower(c)); });
-  if (extension == "real") {
-    dump(filename, Format::Real);
-  } else if (extension == "qasm") {
-    dump(filename, Format::OpenQASM3);
-  } else if (extension == "qc") {
-    dump(filename, Format::QC);
-  } else if (extension == "tfc") {
-    dump(filename, Format::TFC);
-  } else if (extension == "tensor") {
-    dump(filename, Format::Tensor);
-  } else {
-    throw QFRException("[dump] Extension " + extension +
-                       " not recognized/supported for dumping.");
-  }
-}
-
 void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) const {
   // dump initial layout and output permutation
 
@@ -824,33 +742,15 @@ void QuantumComputation::reset() {
 }
 
 void QuantumComputation::dump(const std::string& filename,
-                              Format format) const {
+                              const Format format) const {
   auto of = std::ofstream(filename);
   if (!of.good()) {
     throw QFRException("[dump] Error opening file: " + filename);
   }
-  dump(of, format);
-}
-
-void QuantumComputation::dump(std::ostream& of, Format format) const {
-  switch (format) {
-  case Format::OpenQASM3:
+  if (format == Format::OpenQASM3) {
     dumpOpenQASM(of, true);
-    break;
-  case Format::OpenQASM2:
+  } else {
     dumpOpenQASM(of, false);
-    break;
-  case Format::Real:
-    std::cerr << "Dumping in real format currently not supported\n";
-    break;
-  case Format::TFC:
-    std::cerr << "Dumping in TFC format currently not supported\n";
-    break;
-  case Format::QC:
-    std::cerr << "Dumping in QC format currently not supported\n";
-    break;
-  default:
-    throw QFRException("[dump] Format not recognized/supported for dumping.");
   }
 }
 
@@ -1144,23 +1044,7 @@ QuantumComputation::QuantumComputation(const std::size_t nq,
     mt.seed(seeds);
   }
 }
-QuantumComputation::QuantumComputation(const std::string& filename,
-                                       const std::size_t s)
-    : seed(s) {
-  import(filename);
-  if (seed != 0U) {
-    mt.seed(seed);
-  } else {
-    // create and properly seed rng
-    std::array<std::mt19937_64::result_type, std::mt19937_64::state_size>
-        randomData{};
-    std::random_device rd;
-    std::generate(std::begin(randomData), std::end(randomData),
-                  [&rd]() { return rd(); });
-    std::seed_seq seeds(std::begin(randomData), std::end(randomData));
-    mt.seed(seeds);
-  }
-}
+
 QuantumComputation::QuantumComputation(const QuantumComputation& qc)
     : nqubits(qc.nqubits), nclassics(qc.nclassics), nancillae(qc.nancillae),
       name(qc.name), quantumRegisters(qc.quantumRegisters),
@@ -1376,15 +1260,6 @@ bool QuantumComputation::isDynamic() const {
   });
 }
 
-QuantumComputation QuantumComputation::fromQASM(const std::string& qasm) {
-  std::stringstream ss{};
-  ss << qasm;
-  QuantumComputation qc{};
-  qc.importOpenQASM3(ss);
-  qc.initializeIOMapping();
-  return qc;
-}
-
 QuantumComputation
 QuantumComputation::fromCompoundOperation(const CompoundOperation& op) {
   QuantumComputation qc{};
@@ -1450,8 +1325,7 @@ void QuantumComputation::gphase(const fp angle) {
   void QuantumComputation::mc##op(const Controls& controls,                    \
                                   const Qubit target) {                        \
     checkQubitRange(target, controls);                                         \
-    emplace_back<StandardOperation>(controls, target,                          \
-                                    OP_NAME_TO_TYPE.at(#op));                  \
+    emplace_back<StandardOperation>(controls, target, opTypeFromString(#op));  \
   }
 
 DEFINE_SINGLE_TARGET_OPERATION(i)
@@ -1484,13 +1358,12 @@ DEFINE_SINGLE_TARGET_OPERATION(sxdg)
                                   const Qubit target) {                        \
     checkQubitRange(target, controls);                                         \
     if (std::holds_alternative<fp>(param)) {                                   \
-      emplace_back<StandardOperation>(controls, target,                        \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+      emplace_back<StandardOperation>(controls, target, opTypeFromString(#op), \
                                       std::vector{std::get<fp>(param)});       \
     } else {                                                                   \
       addVariables(param);                                                     \
-      emplace_back<SymbolicOperation>(                                         \
-          controls, target, OP_NAME_TO_TYPE.at(#op), std::vector{param});      \
+      emplace_back<SymbolicOperation>(controls, target, opTypeFromString(#op), \
+                                      std::vector{param});                     \
     }                                                                          \
   }
 
@@ -1519,12 +1392,11 @@ DEFINE_SINGLE_TARGET_SINGLE_PARAMETER_OPERATION(p, theta)
     if (std::holds_alternative<fp>(param0) &&                                  \
         std::holds_alternative<fp>(param1)) {                                  \
       emplace_back<StandardOperation>(                                         \
-          controls, target, OP_NAME_TO_TYPE.at(#op),                           \
+          controls, target, opTypeFromString(#op),                             \
           std::vector{std::get<fp>(param0), std::get<fp>(param1)});            \
     } else {                                                                   \
       addVariables(param0, param1);                                            \
-      emplace_back<SymbolicOperation>(controls, target,                        \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+      emplace_back<SymbolicOperation>(controls, target, opTypeFromString(#op), \
                                       std::vector{param0, param1});            \
     }                                                                          \
   }
@@ -1554,14 +1426,13 @@ DEFINE_SINGLE_TARGET_TWO_PARAMETER_OPERATION(u2, phi, lambda)
     if (std::holds_alternative<fp>(param0) &&                                  \
         std::holds_alternative<fp>(param1) &&                                  \
         std::holds_alternative<fp>(param2)) {                                  \
-      emplace_back<StandardOperation>(                                         \
-          controls, target, OP_NAME_TO_TYPE.at(#op),                           \
-          std::vector{std::get<fp>(param0), std::get<fp>(param1),              \
-                      std::get<fp>(param2)});                                  \
+      emplace_back<StandardOperation>(controls, target, opTypeFromString(#op), \
+                                      std::vector{std::get<fp>(param0),        \
+                                                  std::get<fp>(param1),        \
+                                                  std::get<fp>(param2)});      \
     } else {                                                                   \
       addVariables(param0, param1, param2);                                    \
-      emplace_back<SymbolicOperation>(controls, target,                        \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+      emplace_back<SymbolicOperation>(controls, target, opTypeFromString(#op), \
                                       std::vector{param0, param1, param2});    \
     }                                                                          \
   }
@@ -1582,7 +1453,7 @@ DEFINE_SINGLE_TARGET_THREE_PARAMETER_OPERATION(u, theta, phi, lambda)
                                   const Qubit target0, const Qubit target1) {  \
     checkQubitRange(target0, target1, controls);                               \
     emplace_back<StandardOperation>(controls, target0, target1,                \
-                                    OP_NAME_TO_TYPE.at(#op));                  \
+                                    opTypeFromString(#op));                    \
   }
 
 DEFINE_TWO_TARGET_OPERATION(swap) // NOLINT: bugprone-exception-escape
@@ -1612,12 +1483,12 @@ DEFINE_TWO_TARGET_OPERATION(move)
     checkQubitRange(target0, target1, controls);                               \
     if (std::holds_alternative<fp>(param)) {                                   \
       emplace_back<StandardOperation>(controls, target0, target1,              \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      opTypeFromString(#op),                   \
                                       std::vector{std::get<fp>(param)});       \
     } else {                                                                   \
       addVariables(param);                                                     \
       emplace_back<SymbolicOperation>(controls, target0, target1,              \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      opTypeFromString(#op),                   \
                                       std::vector{param});                     \
     }                                                                          \
   }
@@ -1647,12 +1518,12 @@ DEFINE_TWO_TARGET_SINGLE_PARAMETER_OPERATION(rzx, theta)
     if (std::holds_alternative<fp>(param0) &&                                  \
         std::holds_alternative<fp>(param1)) {                                  \
       emplace_back<StandardOperation>(                                         \
-          controls, target0, target1, OP_NAME_TO_TYPE.at(#op),                 \
+          controls, target0, target1, opTypeFromString(#op),                   \
           std::vector{std::get<fp>(param0), std::get<fp>(param1)});            \
     } else {                                                                   \
       addVariables(param0, param1);                                            \
       emplace_back<SymbolicOperation>(controls, target0, target1,              \
-                                      OP_NAME_TO_TYPE.at(#op),                 \
+                                      opTypeFromString(#op),                   \
                                       std::vector{param0, param1});            \
     }                                                                          \
   }

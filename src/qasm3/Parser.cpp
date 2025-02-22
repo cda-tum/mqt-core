@@ -7,18 +7,21 @@
  * Licensed under the MIT License
  */
 
-#include "ir/parsers/qasm3_parser/Parser.hpp"
+#include "qasm3/Parser.hpp"
 
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
-#include "ir/parsers/qasm3_parser/Statement.hpp"
-#include "ir/parsers/qasm3_parser/StdGates.hpp"
-#include "ir/parsers/qasm3_parser/Token.hpp"
-#include "ir/parsers/qasm3_parser/Types.hpp"
+#include "qasm3/Exception.hpp"
+#include "qasm3/Statement.hpp"
+#include "qasm3/StdGates.hpp"
+#include "qasm3/Token.hpp"
+#include "qasm3/Types.hpp"
 
+#include <cstdint>
 #include <fstream>
 #include <istream>
 #include <memory>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -37,6 +40,72 @@ void Parser::scan() {
     if (includeDebugInfo) {
       includeDebugInfo = includeDebugInfo->parent;
     }
+  }
+}
+
+std::shared_ptr<DebugInfo> Parser::makeDebugInfo(Token const& begin,
+                                                 Token const& /*end*/) {
+  // Parameter `end` is currently not used.
+  return std::make_shared<DebugInfo>(begin.line, begin.col,
+                                     scanner.top().filename.value_or("<input>"),
+                                     includeDebugInfo);
+}
+
+std::shared_ptr<DebugInfo> Parser::makeDebugInfo(Token const& token) {
+  return std::make_shared<DebugInfo>(token.line, token.col,
+                                     scanner.top().filename.value_or("<input>"),
+                                     includeDebugInfo);
+}
+
+void Parser::error(const Token& token, const std::string& msg) {
+  throw CompilerError(msg, makeDebugInfo(token));
+}
+
+Token Parser::last() const {
+  if (scanner.empty()) {
+    throw std::runtime_error("No scanner available");
+  }
+  return scanner.top().last;
+}
+
+Token Parser::current() const {
+  if (scanner.empty()) {
+    throw std::runtime_error("No scanner available");
+  }
+  return scanner.top().t;
+}
+
+Token Parser::peek() const {
+  if (scanner.empty()) {
+    throw std::runtime_error("No scanner available");
+  }
+  return scanner.top().next;
+}
+
+Token Parser::expect(const Token::Kind& expected,
+                     const std::optional<std::string>& context) {
+  if (current().kind != expected) {
+    std::string message = "Expected '" + Token::kindToString(expected) +
+                          "', got '" + Token::kindToString(current().kind) +
+                          "'.";
+    if (context.has_value()) {
+      message += " " + context.value();
+    }
+    error(current(), message);
+  }
+
+  auto token = current();
+  scan();
+  return token;
+}
+
+Parser::Parser(std::istream& is, const bool implicitlyIncludeStdgates) {
+  scanner.emplace(&is);
+  scan();
+  if (implicitlyIncludeStdgates) {
+    scanner.emplace(std::make_unique<std::istringstream>(STDGATES),
+                    "stdgates.inc", true);
+    scan();
   }
 }
 
@@ -211,20 +280,8 @@ void Parser::parseInclude() {
 }
 
 std::shared_ptr<AssignmentStatement> Parser::parseAssignmentStatement() {
-  auto identifierToken = expect(Token::Kind::Identifier);
-  auto identifier = std::make_shared<IdentifierExpression>(identifierToken.str);
-  std::shared_ptr<Expression> indexExpression{nullptr};
-
-  if (current().kind == Token::Kind::LBracket) {
-    scan();
-    indexExpression = parseExpression();
-    expect(Token::Kind::RBracket);
-  }
-
-  if (current().kind == Token::Kind::LBracket) {
-    error(current(), "Multidimensional indexing not supported yet.");
-  }
-
+  const auto indexedIdentifierToken = current();
+  auto indexedIdentifier = parseIndexedIdentifier();
   AssignmentStatement::Type type{};
   switch (current().kind) {
   case Token::Kind::Equals:
@@ -277,7 +334,7 @@ std::shared_ptr<AssignmentStatement> Parser::parseAssignmentStatement() {
   auto const tEnd = expect(Token::Kind::Semicolon);
 
   return std::make_shared<AssignmentStatement>(
-      makeDebugInfo(identifierToken, tEnd), type, identifier, indexExpression,
+      makeDebugInfo(indexedIdentifierToken, tEnd), type, indexedIdentifier,
       declarationExpression);
 }
 
@@ -288,14 +345,7 @@ std::shared_ptr<AssignmentStatement> Parser::parseMeasureStatement() {
 
   expect(Token::Kind::Arrow);
 
-  auto cbitIdentifier = std::make_shared<IdentifierExpression>(
-      expect(Token::Kind::Identifier).str);
-  std::shared_ptr<Expression> cbitIndexExpr{nullptr};
-  if (current().kind == Token::Kind::LBracket) {
-    scan();
-    cbitIndexExpr = parseExpression();
-    expect(Token::Kind::RBracket);
-  }
+  auto cbitIdentifier = parseIndexedIdentifier();
 
   auto const tEnd = expect(Token::Kind::Semicolon);
 
@@ -303,8 +353,7 @@ std::shared_ptr<AssignmentStatement> Parser::parseMeasureStatement() {
       std::make_shared<MeasureExpression>(gateOperand)};
   return std::make_shared<AssignmentStatement>(
       makeDebugInfo(tBegin, tEnd), AssignmentStatement::Type::Assignment,
-      cbitIdentifier, cbitIndexExpr,
-      std::make_shared<DeclarationExpression>(gateOperandExpr));
+      cbitIdentifier, std::make_shared<DeclarationExpression>(gateOperandExpr));
 }
 
 std::shared_ptr<ResetStatement> Parser::parseResetStatement() {
@@ -466,18 +515,35 @@ std::shared_ptr<GateModifier> Parser::parseGateModifier() {
   error(current(), "Expected gate modifier");
 }
 
-std::shared_ptr<GateOperand> Parser::parseGateOperand() {
-  // TODO: support hardware qubits
-  const auto identifier = expect(Token::Kind::Identifier);
-
-  std::shared_ptr<Expression> expression{nullptr};
-  if (current().kind == Token::Kind::LBracket) {
-    scan();
-    expression = parseExpression();
-    expect(Token::Kind::RBracket);
+std::shared_ptr<IndexOperator> Parser::parseIndexOperator() {
+  expect(Token::Kind::LBracket);
+  std::vector<std::shared_ptr<Expression>> indices{};
+  while (current().kind != Token::Kind::RBracket) {
+    indices.push_back(parseExpression());
+    if (current().kind != Token::Kind::RBracket) {
+      expect(Token::Kind::Comma);
+    }
   }
+  expect(Token::Kind::RBracket);
+  return std::make_shared<IndexOperator>(indices);
+}
 
-  return std::make_shared<GateOperand>(GateOperand{identifier.str, expression});
+std::shared_ptr<IndexedIdentifier> Parser::parseIndexedIdentifier() {
+  const auto identifier = expect(Token::Kind::Identifier);
+  std::vector<std::shared_ptr<IndexOperator>> indexOperators{};
+  while (current().kind == Token::Kind::LBracket) {
+    indexOperators.push_back(parseIndexOperator());
+  }
+  return std::make_shared<IndexedIdentifier>(identifier.str, indexOperators);
+}
+
+std::shared_ptr<GateOperand> Parser::parseGateOperand() {
+  if (current().kind == Token::Kind::HardwareQubit) {
+    const auto qubit = current().val;
+    scan();
+    return std::make_shared<GateOperand>(static_cast<uint64_t>(qubit));
+  }
+  return std::make_shared<GateOperand>(parseIndexedIdentifier());
 }
 
 std::shared_ptr<Statement> Parser::parseDeclaration(bool isConst) {
@@ -604,9 +670,7 @@ std::shared_ptr<Expression> Parser::exponentiation() {
     return std::make_shared<Constant>(Constant{val, isSigned});
   }
   case Token::Kind::Identifier: {
-    auto const str = current().str;
-    scan();
-    return std::make_shared<IdentifierExpression>(IdentifierExpression{str});
+    return parseIndexedIdentifier();
   }
   case Token::Kind::False: {
     scan();
@@ -668,8 +732,7 @@ std::shared_ptr<Expression> Parser::factor() {
   while (current().kind == Token::Kind::Caret) {
     scan();
     const auto y = exponentiation();
-    x = std::make_shared<BinaryExpression>(
-        BinaryExpression{BinaryExpression::Op::Power, x, y});
+    x = std::make_shared<BinaryExpression>(BinaryExpression::Op::Power, x, y);
   }
   return x;
 }
@@ -683,7 +746,7 @@ std::shared_ptr<Expression> Parser::term() {
                         : BinaryExpression::Op::Divide;
     scan();
     const auto y = factor();
-    x = std::make_shared<BinaryExpression>(BinaryExpression{op, x, y});
+    x = std::make_shared<BinaryExpression>(op, x, y);
   }
   return x;
 }
@@ -721,7 +784,7 @@ std::shared_ptr<Expression> Parser::comparison() {
     }
     scan();
     const auto y = term();
-    x = std::make_shared<BinaryExpression>(BinaryExpression{op, x, y});
+    x = std::make_shared<BinaryExpression>(op, x, y);
   }
   return x;
 }

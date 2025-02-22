@@ -33,7 +33,7 @@ auto appendGroverOracle(QuantumComputation& qc,
                         const GroverBitString& targetValue) -> void {
   const auto nDataQubits = static_cast<Qubit>(qc.getNqubits() - 1);
   Controls controls{};
-  for (std::size_t i = 0; i < nDataQubits; ++i) {
+  for (Qubit i = 0; i < nDataQubits; ++i) {
     controls.emplace(i, targetValue.test(i) ? Control::Type::Pos
                                             : Control::Type::Neg);
   }

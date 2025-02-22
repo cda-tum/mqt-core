@@ -9,12 +9,10 @@
 
 #pragma once
 
-#include "InstVisitor.hpp"
-#include "Types.hpp"
+#include "Statement_fwd.hpp" // IWYU pragma: export
+#include "Types_fwd.hpp"
 #include "ir/Permutation.hpp"
-#include "ir/operations/ClassicControlledOperation.hpp"
 
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -24,7 +22,13 @@
 #include <variant>
 #include <vector>
 
+namespace qc {
+// forward declarations
+enum ComparisonKind : std::uint8_t;
+} // namespace qc
+
 namespace qasm3 {
+class InstVisitor;
 
 struct DebugInfo {
   size_t line;
@@ -47,7 +51,7 @@ class Expression {
 public:
   virtual ~Expression() = default;
 
-  virtual std::string getName() = 0;
+  [[nodiscard]] virtual std::string getName() const = 0;
 };
 
 class DeclarationExpression final {
@@ -57,7 +61,7 @@ public:
   explicit DeclarationExpression(std::shared_ptr<Expression> expr)
       : expression(std::move(expr)) {}
 
-  virtual ~DeclarationExpression() = default;
+  ~DeclarationExpression() = default;
 };
 
 class Constant final : public Expression {
@@ -96,7 +100,7 @@ public:
   }
   [[nodiscard]] bool getBool() const { return std::get<2>(val); }
 
-  std::string getName() override { return "Constant"; }
+  [[nodiscard]] std::string getName() const override { return "Constant"; }
 };
 
 class BinaryExpression final
@@ -133,7 +137,7 @@ public:
                    std::shared_ptr<Expression> r)
       : op(opcode), lhs(std::move(l)), rhs(std::move(r)) {}
 
-  std::string getName() override { return "BinaryExpr"; }
+  [[nodiscard]] std::string getName() const override { return "BinaryExpr"; }
 };
 
 std::optional<qc::ComparisonKind> getComparisonKind(BinaryExpression::Op op);
@@ -161,7 +165,7 @@ public:
   UnaryExpression(const Op opcode, std::shared_ptr<Expression> expr)
       : operand(std::move(expr)), op(opcode) {}
 
-  std::string getName() override { return "UnaryExpr"; }
+  [[nodiscard]] std::string getName() const override { return "UnaryExpr"; }
 };
 
 class IdentifierExpression final
@@ -172,7 +176,7 @@ public:
 
   explicit IdentifierExpression(std::string id) : identifier(std::move(id)) {}
 
-  std::string getName() override {
+  [[nodiscard]] std::string getName() const override {
     return std::string{"IdentifierExpr ("} + identifier + ")";
   }
 };
@@ -189,17 +193,62 @@ public:
 
   explicit IdentifierList() = default;
 
-  std::string getName() override { return "IdentifierList"; }
+  [[nodiscard]] std::string getName() const override {
+    return "IdentifierList";
+  }
 };
 
-// TODO: physical qubits are currently not supported
-class GateOperand {
+class IndexOperator {
+public:
+  std::vector<std::shared_ptr<Expression>> indexExpressions;
+
+  explicit IndexOperator(std::vector<std::shared_ptr<Expression>> indices)
+      : indexExpressions(std::move(indices)) {}
+};
+
+class IndexedIdentifier final
+    : public Expression,
+      public std::enable_shared_from_this<IndexedIdentifier> {
 public:
   std::string identifier;
-  std::shared_ptr<Expression> expression;
+  std::vector<std::shared_ptr<IndexOperator>> indices;
 
-  GateOperand(std::string id, std::shared_ptr<Expression> expr)
-      : identifier(std::move(id)), expression(std::move(expr)) {}
+  explicit IndexedIdentifier(
+      std::string id, std::vector<std::shared_ptr<IndexOperator>> idxs = {})
+      : identifier(std::move(id)), indices(std::move(idxs)) {}
+
+  [[nodiscard]] std::string getName() const override {
+    return std::string{"IndexedIdentifier ("} + identifier + ")";
+  }
+};
+
+class GateOperand final : public Expression,
+                          public std::enable_shared_from_this<GateOperand> {
+public:
+  std::variant<std::shared_ptr<IndexedIdentifier>, uint64_t> operand;
+
+  explicit GateOperand(std::shared_ptr<IndexedIdentifier> id)
+      : operand(std::move(id)) {}
+
+  explicit GateOperand(const uint64_t qubit) : operand(qubit) {}
+
+  [[nodiscard]] bool isHardwareQubit() const {
+    return std::holds_alternative<uint64_t>(operand);
+  }
+
+  [[nodiscard]] uint64_t getHardwareQubit() const {
+    return std::get<uint64_t>(operand);
+  }
+
+  [[nodiscard]] const std::shared_ptr<IndexedIdentifier>&
+  getIdentifier() const {
+    return std::get<std::shared_ptr<IndexedIdentifier>>(operand);
+  }
+
+  [[nodiscard]] std::string getName() const override {
+    return isHardwareQubit() ? "$" + std::to_string(getHardwareQubit())
+                             : getIdentifier()->getName();
+  }
 };
 
 class MeasureExpression final
@@ -211,7 +260,9 @@ public:
   explicit MeasureExpression(std::shared_ptr<GateOperand> gateOperand)
       : gate(std::move(gateOperand)) {}
 
-  std::string getName() override { return "MeasureExpression"; }
+  [[nodiscard]] std::string getName() const override {
+    return "MeasureExpression";
+  }
 };
 
 // Statements
@@ -246,18 +297,9 @@ public:
                            std::shared_ptr<IdentifierList> params,
                            std::shared_ptr<IdentifierList> qbits,
                            std::vector<std::shared_ptr<QuantumStatement>> stmts,
-                           const bool opaque = false)
-      : Statement(std::move(debug)), identifier(std::move(id)),
-        parameters(std::move(params)), qubits(std::move(qbits)),
-        statements(std::move(stmts)), isOpaque(opaque) {
-    if (opaque) {
-      assert(statements.empty() && "Opaque gate should not have statements.");
-    }
-  }
+                           bool opaque = false);
 
-  void accept(InstVisitor* visitor) override {
-    visitor->visitGateStatement(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class VersionDeclaration final
@@ -270,9 +312,7 @@ public:
                               const double versionNum)
       : Statement(std::move(debug)), version(versionNum) {}
 
-  void accept(InstVisitor* visitor) override {
-    visitor->visitVersionDeclaration(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class InitialLayout final : public Statement,
@@ -284,9 +324,7 @@ public:
       : Statement(std::move(debug)), permutation(std::move(perm)) {}
 
 private:
-  void accept(InstVisitor* visitor) override {
-    visitor->visitInitialLayout(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class OutputPermutation final
@@ -300,9 +338,7 @@ public:
       : Statement(std::move(debug)), permutation(std::move(perm)) {}
 
 private:
-  void accept(InstVisitor* visitor) override {
-    visitor->visitOutputPermutation(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class DeclarationStatement final
@@ -320,9 +356,7 @@ public:
       : Statement(std::move(debug)), isConst(declIsConst), type(ty),
         identifier(std::move(id)), expression(std::move(expr)) {}
 
-  void accept(InstVisitor* visitor) override {
-    visitor->visitDeclarationStatement(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class GateModifier : public std::enable_shared_from_this<GateModifier> {
@@ -372,9 +406,7 @@ public:
         modifiers(std::move(modifierList)), arguments(std::move(argumentList)),
         operands(std::move(operandList)) {}
 
-  void accept(InstVisitor* visitor) override {
-    visitor->visitGateCallStatement(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class AssignmentStatement final
@@ -396,20 +428,16 @@ public:
     ModuloAssignment,
     PowerAssignment,
   } type;
-  std::shared_ptr<IdentifierExpression> identifier;
-  std::shared_ptr<Expression> indexExpression;
+  std::shared_ptr<IndexedIdentifier> identifier;
   std::shared_ptr<DeclarationExpression> expression;
 
   AssignmentStatement(std::shared_ptr<DebugInfo> debug, const Type ty,
-                      std::shared_ptr<IdentifierExpression> id,
-                      std::shared_ptr<Expression> indexExpr,
+                      std::shared_ptr<IndexedIdentifier> id,
                       std::shared_ptr<DeclarationExpression> expr)
       : Statement(std::move(debug)), type(ty), identifier(std::move(id)),
-        indexExpression(std::move(indexExpr)), expression(std::move(expr)) {}
+        expression(std::move(expr)) {}
 
-  void accept(InstVisitor* visitor) override {
-    visitor->visitAssignmentStatement(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class BarrierStatement final
@@ -422,9 +450,7 @@ public:
                             std::vector<std::shared_ptr<GateOperand>> gateList)
       : QuantumStatement(std::move(debug)), gates(std::move(gateList)) {}
 
-  void accept(InstVisitor* visitor) override {
-    visitor->visitBarrierStatement(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class ResetStatement final
@@ -437,9 +463,7 @@ public:
                           std::shared_ptr<GateOperand> g)
       : QuantumStatement(std::move(debug)), gate(std::move(g)) {}
 
-  void accept(InstVisitor* visitor) override {
-    visitor->visitResetStatement(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 
 class IfStatement final : public Statement,
@@ -456,8 +480,6 @@ public:
       : Statement(std::move(debug)), condition(cond), thenStatements(thenStmts),
         elseStatements(elseStmts) {}
 
-  void accept(InstVisitor* visitor) override {
-    visitor->visitIfStatement(shared_from_this());
-  }
+  void accept(InstVisitor* visitor) override;
 };
 } // namespace qasm3

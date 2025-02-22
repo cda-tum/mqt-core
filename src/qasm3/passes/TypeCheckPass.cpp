@@ -7,11 +7,11 @@
  * Licensed under the MIT License
  */
 
-#include "ir/parsers/qasm3_parser/passes/TypeCheckPass.hpp"
+#include "qasm3/passes/TypeCheckPass.hpp"
 
-#include "ir/parsers/qasm3_parser/Exception.hpp"
-#include "ir/parsers/qasm3_parser/Statement.hpp"
-#include "ir/parsers/qasm3_parser/Types.hpp"
+#include "qasm3/Exception.hpp"
+#include "qasm3/Statement.hpp"
+#include "qasm3/Types.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -31,7 +31,45 @@ InferredType TypeCheckPass::error(const std::string& msg,
     std::cerr << "  " << debugInfo->toString() << '\n';
   }
   hasError = true;
+  errMessage = msg;
   return InferredType::error();
+}
+
+void TypeCheckPass::processStatement(Statement& statement) {
+  try {
+    statement.accept(this);
+
+    if (hasError) {
+      throw TypeCheckError(errMessage);
+    }
+  } catch (const TypeCheckError& e) {
+    throw CompilerError(e.what(), statement.debugInfo);
+  }
+}
+
+void TypeCheckPass::checkIndexOperator(const IndexOperator& indexOperator) {
+  for (const auto& index : indexOperator.indexExpressions) {
+    if (const auto type = visit(index); !type.isError && !type.type->isUint()) {
+      error("Index must be an unsigned integer");
+    }
+  }
+}
+
+void TypeCheckPass::checkIndexedIdentifier(const IndexedIdentifier& id) {
+
+  if (const auto it = env.find(id.identifier); it == env.end()) {
+    error("Unknown identifier '" + id.identifier + "'.");
+  }
+  for (const auto& index : id.indices) {
+    checkIndexOperator(*index);
+  }
+}
+
+void TypeCheckPass::checkGateOperand(const GateOperand& operand) {
+  if (operand.isHardwareQubit()) {
+    return;
+  }
+  checkIndexedIdentifier(*operand.getIdentifier());
 }
 
 void TypeCheckPass::visitGateStatement(
@@ -115,14 +153,7 @@ void TypeCheckPass::visitGateCallStatement(
 
 void TypeCheckPass::visitAssignmentStatement(
     const std::shared_ptr<AssignmentStatement> assignmentStatement) {
-  if (assignmentStatement->indexExpression != nullptr) {
-    auto indexTy = visit(assignmentStatement->indexExpression);
-    if (!indexTy.isError && !indexTy.type->isUint()) {
-      error("Index must be an unsigned integer.",
-            assignmentStatement->debugInfo);
-      return;
-    }
-  }
+  checkIndexedIdentifier(*assignmentStatement->identifier);
 
   const auto exprTy = visit(assignmentStatement->expression->expression);
   const auto idTy = env.find(assignmentStatement->identifier->identifier);
@@ -148,9 +179,6 @@ void TypeCheckPass::visitAssignmentStatement(
 void TypeCheckPass::visitBarrierStatement(
     const std::shared_ptr<BarrierStatement> barrierStatement) {
   for (auto& gate : barrierStatement->gates) {
-    if (!gate->expression) {
-      continue;
-    }
     checkGateOperand(*gate);
   }
 }
@@ -172,7 +200,9 @@ InferredType TypeCheckPass::visitBinaryExpression(
   }
 
   auto ty = lhs;
-  if (lhs.type->isNumber() && rhs.type->isNumber()) {
+  if (lhs.type->isConvertibleToBool() && rhs.type->isConvertibleToBool()) {
+    ty = InferredType{UnsizedType<uint64_t>::getBoolTy()};
+  } else if (lhs.type->isNumber() && rhs.type->isNumber()) {
     if (rhs.type->isFP() || lhs.type->isUint()) {
       // coerce to float or signed int
       ty = rhs;
@@ -243,7 +273,7 @@ InferredType TypeCheckPass::visitUnaryExpression(
     }
     break;
   case UnaryExpression::LogicalNot:
-    if (!type.type->isBool()) {
+    if (!type.type->isConvertibleToBool()) {
       return error("Cannot apply logical not to non-boolean type.");
     }
     break;
@@ -301,26 +331,43 @@ InferredType TypeCheckPass::visitIdentifierExpression(
   return type->second;
 }
 
-[[noreturn]] InferredType TypeCheckPass::visitIdentifierList(
+InferredType TypeCheckPass::visitIdentifierList(
     std::shared_ptr<IdentifierList> /*identifierList*/) {
   throw TypeCheckError("TypeCheckPass::visitIdentifierList not implemented");
 }
 
+InferredType TypeCheckPass::visitIndexedIdentifier(
+    const std::shared_ptr<IndexedIdentifier> indexedIdentifier) {
+  auto type = visitIdentifierExpression(
+      std::make_shared<IdentifierExpression>(indexedIdentifier->identifier));
+  if (indexedIdentifier->indices.empty()) {
+    return type;
+  }
+  // Assume that indexed access always results in a single element
+  type.type->setDesignator(1);
+  return type;
+}
+
 InferredType TypeCheckPass::visitMeasureExpression(
     const std::shared_ptr<MeasureExpression> measureExpression) {
-  size_t width = 1;
-  if (measureExpression->gate->expression != nullptr) {
-    visit(measureExpression->gate->expression);
-  } else {
-    const auto gate = env.find(measureExpression->gate->identifier);
-    if (gate == env.end()) {
-      error("Unknown identifier '" + measureExpression->gate->identifier +
-            "'.");
-      return InferredType::error();
-    }
-    width = gate->second.type->getDesignator();
+  if (measureExpression->gate->isHardwareQubit()) {
+    return InferredType{std::dynamic_pointer_cast<ResolvedType>(
+        DesignatedType<uint64_t>::getBitTy(1))};
   }
 
+  const auto indexedIdentifier = measureExpression->gate->getIdentifier();
+  checkIndexedIdentifier(*indexedIdentifier);
+  if (!indexedIdentifier->indices.empty()) {
+    // This will need modification once we want to support index ranges.
+    return InferredType{std::dynamic_pointer_cast<ResolvedType>(
+        DesignatedType<uint64_t>::getBitTy(1))};
+  }
+  const auto it = env.find(indexedIdentifier->identifier);
+  if (it == env.end()) {
+    error("Unknown identifier '" + indexedIdentifier->identifier + "'.");
+    return InferredType::error();
+  }
+  const auto width = it->second.type->getDesignator();
   return InferredType{std::dynamic_pointer_cast<ResolvedType>(
       DesignatedType<uint64_t>::getBitTy(width))};
 }
@@ -328,8 +375,8 @@ InferredType TypeCheckPass::visitMeasureExpression(
 void TypeCheckPass::visitIfStatement(
     const std::shared_ptr<IfStatement> ifStatement) {
   // We support ifs on bits and bools
-  const auto ty = visit(ifStatement->condition);
-  if (!ty.isError && !ty.type->isBool()) {
+  if (const auto ty = visit(ifStatement->condition);
+      !ty.isError && !ty.type->isConvertibleToBool()) {
     error("Condition expression must be bool.");
   }
 

@@ -12,16 +12,16 @@
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/OpType.hpp"
+#include "qasm3/Importer.hpp"
 
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 namespace qc {
 TEST(RemoveFinalMeasurements, removeFinalMeasurements) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   qc.h(0);
   qc.h(1);
@@ -47,7 +47,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurements) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsTwoQubitMeasurement) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   qc.h(0);
   qc.h(1);
@@ -72,7 +72,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsTwoQubitMeasurement) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompound) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
@@ -100,7 +100,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompound) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompoundDegraded) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
@@ -125,7 +125,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompoundDegraded) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsCompoundEmpty) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   QuantumComputation comp(nqubits, nqubits);
   comp.measure(0, 0);
@@ -147,10 +147,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsWithOperationsInFront) {
   const std::string circ =
       "OPENQASM 2.0;include \"qelib1.inc\";qreg q[3];qreg r[3];h q;cx q, "
       "r;creg c[3];creg d[3];barrier q;measure q->c;measure r->d;\n";
-  std::stringstream ss{};
-  ss << circ;
-  QuantumComputation qc{};
-  qc.import(ss, qc::Format::OpenQASM2);
+  auto qc = qasm3::Importer::imports(circ);
   std::cout << "-----------------------------\n";
   qc.print(std::cout);
   CircuitOptimizer::removeFinalMeasurements(qc);
@@ -161,7 +158,7 @@ TEST(RemoveFinalMeasurements, removeFinalMeasurementsWithOperationsInFront) {
 }
 
 TEST(RemoveFinalMeasurements, removeFinalMeasurementsWithBarrier) {
-  const std::size_t nqubits = 2;
+  constexpr std::size_t nqubits = 2;
   QuantumComputation qc(nqubits, nqubits);
   qc.barrier({0, 1});
   qc.measure(0, 0);

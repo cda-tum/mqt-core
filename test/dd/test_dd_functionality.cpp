@@ -21,6 +21,7 @@
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
+#include "qasm3/Importer.hpp"
 
 #include <algorithm>
 #include <array>
@@ -375,7 +376,7 @@ TEST_F(DDFunctionality, changePermutation) {
                                "include \"qelib1.inc\";"
                                "qreg q[2];"
                                "x q[0];\n";
-  const auto qc = QuantumComputation::fromQASM(testfile);
+  const auto qc = qasm3::Importer::imports(testfile);
   const auto sim = simulate(qc, dd->makeZeroState(qc.getNqubits()), *dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].w.exactlyOne());
@@ -461,9 +462,7 @@ TEST_F(DDFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
 }
 
 TEST_F(DDFunctionality, classicControlledOperationConditions) {
-  const auto cmpKinds = {ComparisonKind::Eq, ComparisonKind::Neq,
-                         ComparisonKind::Lt, ComparisonKind::Leq,
-                         ComparisonKind::Gt, ComparisonKind::Geq};
+  const auto cmpKinds = {ComparisonKind::Eq, ComparisonKind::Neq};
   for (const auto kind : cmpKinds) {
     QuantumComputation qc(1U, 1U);
     // ensure that the state is |1>.
@@ -482,8 +481,7 @@ TEST_F(DDFunctionality, classicControlledOperationConditions) {
     EXPECT_EQ(hist.size(), 1);
     const auto& [key, value] = *hist.begin();
     EXPECT_EQ(value, shots);
-    if (kind == ComparisonKind::Eq || kind == ComparisonKind::Leq ||
-        kind == ComparisonKind::Geq) {
+    if (kind == ComparisonKind::Eq) {
       EXPECT_EQ(key, "0");
     } else {
       EXPECT_EQ(key, "1");

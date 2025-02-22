@@ -14,6 +14,7 @@
 #include "ir/operations/Expression.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
+#include "qasm3/Importer.hpp"
 #include "zx/FunctionalityConstruction.hpp"
 #include "zx/Simplify.hpp"
 #include "zx/ZXDefinitions.hpp"
@@ -38,7 +39,7 @@ TEST_F(ZXFunctionalityTest, parseQasm) {
                                "qreg q[2];"
                                "h q[0];"
                                "cx q[0],q[1];\n";
-  qc = qc::QuantumComputation::fromQASM(testfile);
+  qc = qasm3::Importer::imports(testfile);
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   const zx::ZXDiagram diag =
       zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -152,7 +153,7 @@ TEST_F(ZXFunctionalityTest, complexCircuit) {
      << "z q[1];"
      << "cx q[0],q[1];"
      << "h q[0];\n";
-  qc.import(ss, qc::Format::OpenQASM3);
+  qc = qasm3::Importer::import(ss);
 
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
@@ -208,7 +209,7 @@ TEST_F(ZXFunctionalityTest, Compound) {
       "qreg q[3];"
       "toff q[0],q[1],q[2];"
       "ccx q[0],q[1],q[2];\n";
-  qc = qc::QuantumComputation::fromQASM(testfile);
+  qc = qasm3::Importer::imports(testfile);
   EXPECT_TRUE(zx::FunctionalityConstruction::transformableToZX(&qc));
   zx::ZXDiagram diag = zx::FunctionalityConstruction::buildFunctionality(&qc);
   zx::fullReduce(diag);

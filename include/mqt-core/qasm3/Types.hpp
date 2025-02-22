@@ -10,6 +10,7 @@
 #pragma once
 
 #include "InstVisitor.hpp"
+#include "Types_fwd.hpp" // IWYU pragma: export
 
 #include <cstddef>
 #include <cstdint>
@@ -18,11 +19,6 @@
 #include <string>
 
 namespace qasm3 {
-class Expression;
-
-template <typename T> class Type;
-using TypeExpr = Type<std::shared_ptr<Expression>>;
-using ResolvedType = Type<uint64_t>;
 
 template <typename T> class Type {
 public:
@@ -48,6 +44,7 @@ public:
   virtual bool isUint() { return false; }
   virtual bool isBit() { return false; }
 
+  virtual bool isConvertibleToBool() { return isBool(); }
   virtual bool fits(const Type& other) { return *this == other; }
 
   virtual std::string toString() = 0;
@@ -120,6 +117,14 @@ public:
   bool isBit() override { return type == Bit; }
 
   bool isFP() override { return type == Float; }
+
+  bool isConvertibleToBool() override {
+    if constexpr (std::is_integral_v<T>) {
+      return type == Bit && designator == 1;
+    } else {
+      return false;
+    }
+  }
 
   bool fits(const Type<T>& other) override;
 
