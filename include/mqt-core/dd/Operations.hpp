@@ -257,7 +257,7 @@ template <class Config>
 qc::VectorDD
 applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
                                 const qc::VectorDD& in, Package<Config>& dd,
-                                std::vector<bool>& measurements,
+                                const std::vector<bool>& measurements,
                                 const qc::Permutation& permutation = {}) {
   const auto& expectedValue = op.getExpectedValue();
   const auto& comparisonKind = op.getComparisonKind();
