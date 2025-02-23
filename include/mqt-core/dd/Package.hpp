@@ -624,6 +624,22 @@ public:
   }
 
   /**
+   * @brief Creates the DD for a two-qubit gate
+   * @param mat Matrix representation of the gate
+   * @param control Control qubit of the two-qubit gate
+   * @param target0 First target qubit
+   * @param target1 Second target qubit
+   * @return DD representing the gate
+   * @throws std::runtime_error if the number of qubits is larger than the
+   * package configuration
+   */
+  mEdge makeTwoQubitGateDD(const TwoQubitGateMatrix& mat,
+                           const qc::Control& control, const qc::Qubit target0,
+                           const qc::Qubit target1) {
+    return makeTwoQubitGateDD(mat, qc::Controls{control}, target0, target1);
+  }
+
+  /**
   Creates the DD for a two-qubit gate
   @param mat Matrix representation of the gate
   @param controls Control qubits of the two-qubit gate
