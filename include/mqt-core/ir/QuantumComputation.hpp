@@ -371,13 +371,16 @@ public:
       const std::string& registerName = "c");
 
   // this function augments a given circuit by additional registers
-  void addQubitRegister(std::size_t nq, const std::string& regName = "q");
+  const QuantumRegister& addQubitRegister(std::size_t nq,
+                                          const std::string& regName = "q");
   const ClassicalRegister&
   addClassicalRegister(std::size_t nc, const std::string& regName = "c");
-  void addAncillaryRegister(std::size_t nq, const std::string& regName = "anc");
+  const QuantumRegister&
+  addAncillaryRegister(std::size_t nq, const std::string& regName = "anc");
   // a function to combine all quantum registers (qregs and ancregs) into a
   // single register (useful for circuits mapped to a device)
-  void unifyQuantumRegisters(const std::string& regName = "q");
+  const QuantumRegister&
+  unifyQuantumRegisters(const std::string& regName = "q");
 
   /**
    * @brief Removes a logical qubit

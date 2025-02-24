@@ -344,8 +344,9 @@ void QuantumComputation::initializeIOMapping() {
   }
 }
 
-void QuantumComputation::addQubitRegister(std::size_t nq,
-                                          const std::string& regName) {
+const QuantumRegister&
+QuantumComputation::addQubitRegister(std::size_t nq,
+                                     const std::string& regName) {
   if (quantumRegisters.count(regName) != 0) {
     throw QFRException("[addQubitRegister] Register " + regName +
                        " already exists");
@@ -372,6 +373,7 @@ void QuantumComputation::addQubitRegister(std::size_t nq,
   nqubits += nq;
   ancillary.resize(nqubits + nancillae);
   garbage.resize(nqubits + nancillae);
+  return quantumRegisters.at(regName);
 }
 
 const ClassicalRegister&
@@ -393,8 +395,9 @@ QuantumComputation::addClassicalRegister(std::size_t nc,
   return it->second;
 }
 
-void QuantumComputation::addAncillaryRegister(std::size_t nq,
-                                              const std::string& regName) {
+const QuantumRegister&
+QuantumComputation::addAncillaryRegister(std::size_t nq,
+                                         const std::string& regName) {
   if (ancillaRegisters.count(regName) != 0) {
     throw QFRException("[addAncillaryRegister] Register " + regName +
                        " already exists");
@@ -416,6 +419,7 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
     ancillary[j] = true;
   }
   nancillae += nq;
+  return ancillaRegisters.at(regName);
 }
 
 std::pair<Qubit, std::optional<Qubit>>
@@ -938,12 +942,14 @@ bool QuantumComputation::isLastOperationOnQubit(
   return true;
 }
 
-void QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
+const QuantumRegister&
+QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
   ancillaRegisters.clear();
   quantumRegisters.clear();
   nqubits += nancillae;
   nancillae = 0;
   quantumRegisters.try_emplace(regName, 0, nqubits, regName);
+  return quantumRegisters.at(regName);
 }
 
 void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(
