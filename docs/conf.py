@@ -198,8 +198,15 @@ latex_elements = {
     "printindex": r"\footnotesize\raggedright\printindex",
     "tableofcontents": "",
     "sphinxsetup": "iconpackage=fontawesome",
-    "extrapackages": r"\usepackage{qrcode,graphicx,calc,amsthm}",
+    "extrapackages": r"\usepackage{qrcode,graphicx,calc,amsthm,etoolbox,flushend,mathtools}",
     "preamble": r"""
+\patchcmd{\thebibliography}{\addcontentsline{toc}{section}{\refname}}{}{}{}
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}
+\DeclarePairedDelimiter\mket{\lvert}{\rangle}
+\DeclarePairedDelimiter\mbra{\langle}{\rvert}
+
+\newcommand*{\ket}[1]{\ensuremath{\mket{\mkern1mu#1}}}
+\newcommand*{\bra}[1]{\ensuremath{\mbra{\mkern1mu#1}}}
 \newtheorem{example}{Example}
 \clubpenalty=10000
 \widowpenalty=10000
@@ -208,6 +215,7 @@ latex_elements = {
 """,
     "extraclassoptions": r"journal, onecolumn",
     "fvset": r"\fvset{fontsize=\small}",
+    "figure_align": "htb",
 }
 latex_domain_indices = False
 latex_docclass = {
