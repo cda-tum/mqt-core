@@ -1,19 +1,214 @@
-# Decision Diagram (DD) Package
+---
+file_format: mystnb
+kernelspec:
+  name: python3
+mystnb:
+  number_source_lines: true
+---
+
+```{code-cell} ipython3
+:tags: [remove-cell]
+%config InlineBackend.figure_formats = ['svg']
+```
+
+# MQT Core DD
+
+MQT Core provides a fully-fledged, high-performance decision diagram package for quantum computing.
+The resulting library allows for the efficient representation and manipulation of quantum states and operations.
+If you are not yet familiar with decision diagrams as a data structure, you might want to start with the [introduction to quantum decision diagrams](#how-do-quantum-decision-diagrams-work) below.
+
+Throughout the MQT, this library enables many classical simulation, synthesis, or verification techniques.
+While primarily developed in C++, the corresponding functionality is also exposed to Python users in the form of the {py:mod}`mqt.core.dd` module.
+The following section provides an overview on how to work with decision diagrams in MQT Core from Python.
+
+## Quickstart
+
+In its simplest use case, the MQT Core DD package can be used as a classical circuit simulator using the
+{py:func}`~mqt.core.dd.sample` function.
+The underlying simulation approach supports mid-circuit measurements, reset operations, as well as classically-controlled operations. For example, the following code snippet demonstrates how to simulate the iterative quantum phase estimation algorithm shown in [the MQT Core IR Quickstart guide](mqt_core_ir).
+
+```{code-cell} ipython3
+from mqt.core.dd import sample
+from mqt.core.ir import QuantumComputation
+
+from math import pi
+
+theta = 3 * pi / 8
+precision = 3
+
+# Create an empty quantum computation
+qc = QuantumComputation()
+
+# Counting register
+q = qc.add_qubit_register(1, "q")
+
+# Eigenstate register
+psi = qc.add_qubit_register(1, "psi")
+
+# Classical register for the result, the estimated phase is `0.c_2 c_1 c_0 * pi`
+c = qc.add_classical_register(precision, "c")
+
+# Prepare psi in the eigenstate |1>
+qc.x(psi[0])
+
+for i in range(precision):
+  # Hadamard on the working qubit
+  qc.h(q[0])
+
+  # Controlled phase gate
+  qc.cp(2**(precision - i - 1) * theta, q[0], psi[0])
+
+  # Iterative inverse QFT
+  for j in range(i):
+    qc.classic_controlled(op="p", target=q[0], cbit=c[j], params=[-pi / 2**(i - j)])
+  qc.h(q[0])
+
+  # Measure the result
+  qc.measure(q[0], c[i])
+
+  # Reset the qubit if not finished
+  if i < precision - 1:
+    qc.reset(q[0])
+
+# Run the simulation
+counts = sample(qc, 1024)
+```
+
+```{code-cell} ipython3
+---
+tags: [remove-cell]
+---
+from matplotlib import pyplot as plt
+
+def generate_plot(counts: dict[str, int], name: str, light: bool) -> None:
+    if light:
+        plt.style.use('default')
+    else:
+        plt.style.use('dark_background')
+
+    # Create the bar plot
+    fig, ax = plt.subplots()
+    bars = ax.bar(counts.keys(), counts.values(), color='#0065bd')
+
+    # Annotate counts above the bars
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{height}',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
+
+    # Set background to transparent
+    fig.patch.set_alpha(0.0)
+    ax.patch.set_alpha(0.0)
+
+    # Remove top and right borders
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.xlabel("Measurement Outcome")
+    plt.ylabel("Counts")
+
+    # export to SVG
+    filename = "fig-" + name + ("-light" if light else "-dark") + ".svg"
+    plt.savefig(filename, format="svg")
+
+name = 'qpe'
+generate_plot(counts, name, light=True)
+generate_plot(counts, name, light=False)
+```
+
+```{figure} fig-qpe-light.svg
+:align: center
+:width: 75%
+:figclass: only-light
+```
+
+```{figure} fig-qpe-dark.svg
+:align: center
+:width: 75%
+:figclass: only-dark
+```
+
+The {py:func}`~mqt.core.dd.sample` function is a high-level interface to the decision diagram package that does not require any knowledge of the underlying data structure.
+In a similar fashion, the {py:func}`~mqt.core.dd.simulate_statevector` and {py:func}`~mqt.core.dd.build_unitary` functions can be used to perform statevector simulation or to construct the unitary matrix representation of a quantum circuit, respectively.
+
+```{code-cell} ipython3
+from mqt.core.dd import simulate_statevector
+
+import numpy as np
+
+qc = QuantumComputation(2)
+qc.h(0)
+qc.cx(0, 1)
+
+vec = np.array(simulate_statevector(qc), copy=False)
+with np.printoptions(precision=3, suppress=True):
+  print(vec)
+```
+
+```{code-cell} ipython3
+from mqt.core.dd import build_unitary
+
+unitary = np.array(build_unitary(qc), copy=False)
+with np.printoptions(precision=3, suppress=True):
+  print(unitary)
+```
+
+Both of these functions are inherently limited in their scalability due to the exponential growth of the resulting data structures.
+MQT Core also allows one to work with decision diagrams directly, which is particularly useful for larger quantum circuits.
+To this end, the {py:class}`~mqt.core.dd.DDPackage` class provides a low-level interface to the decision diagram package.
+An instance of this class can be used to simulate quantum circuits (see {py:func}`~mqt.core.dd.simulate`),
+construct unitary matrices (see {py:func}`~mqt.core.dd.build_functionality`), or perform other operations on decision diagrams.
+
+```{code-cell} ipython3
+from mqt.core.dd import DDPackage, simulate
+
+dd = DDPackage(qc.num_qubits)
+zero_state_dd = dd.zero_state(qc.num_qubits)
+out_state_dd = simulate(qc, zero_state_dd, dd)
+```
+
+If the [Graphviz](https://www.graphviz.org/) library is installed, the `graphviz` Python package can be used to visualize resulting
+decision diagram via the {py:meth}`~mqt.core.dd.VectorDD.to_dot` method.
+To directly, generate SVG files, the {py:meth}`~mqt.core.dd.VectorDD.to_svg` method can be used.
+
+```{code-cell} ipython3
+---
+tags: [remove-output]
+---
+import graphviz
+
+# Output hidden due to LaTeX build error
+graphviz.Source(out_state_dd.to_dot())
+```
+
+```{code-cell} ipython3
+---
+tags: [remove-cell]
+---
+graphviz.Source(out_state_dd.to_dot()).render("out_state_dd", format="svg", cleanup=True)
+```
+
+````{only} not latex
+```{figure} out_state_dd.svg
+:align: center
+:width: 20%
+```
+````
+
+The DD package provides list of additional functionality when it comes to working with decision diagrams.
+Check out the full API documentation of the {py:class}`~mqt.core.dd.DDPackage` class for more details.
+
+## How do Quantum Decision Diagrams Work?
 
 Decision diagrams were introduced in the 1980s as a data structure for the efficient representation and manipulation of Boolean functions {cite:p}`bryantGraphbasedAlgorithmsBoolean1986`.
 This led to the emergence of a wide variety of decision diagrams, including BDDs, FBDDs, KFDDs, MTBDDs, and ZDDs (see, for example, {cite:p}`bryantSymbolicBooleanManipulation1992,wegenerBranchingProgramsBinary2000,gergovEfficientBooleanManipulation1994,drechslerEfficientRepresentationManipulation1994,baharAlgebraicDecisionDiagrams1993,minatoZerosuppressedBDDsSet1993`), which made them a crucial tool in the development of modern circuits and systems.
 Because of their previous success, decision diagrams have been proposed for application in the realm of quantum computing {cite:p}`willeDecisionDiagramsQuantum2023,willeToolsQuantumComputing2022,millerQMDDDecisionDiagram2006,niemannQMDDsEfficientQuantum2016,zulehnerHowEfficientlyHandle2019,hongTensorNetworkBased2020,vinkhuijzenLIMDDDecisionDiagram2021`.
 Particularly for design tasks like _simulation_ {cite:p}`viamontesImprovingGatelevelSimulation2003,zulehnerAdvancedSimulationQuantum2019,hillmichJustRealThing2020,burgholzerHybridSchrodingerFeynmanSimulation2021,vinkhuijzenLIMDDDecisionDiagram2021,hillmichApproximatingDecisionDiagrams2022,burgholzerSimulationPathsQuantum2022,grurlNoiseawareQuantumCircuit2023,matoMixeddimensionalQuantumCircuit2023,sanderHamiltonianSimulationDecision2023`, _synthesis_ {cite:p}`niemannEfficientSynthesisQuantum2014,abdollahiAnalysisSynthesisQuantum2006,soekenSynthesisReversibleCircuits2012,zulehnerOnepassDesignReversible2018,adarshSyReCSynthesizerMQT2022,matoMixeddimensionalQuditState2024`, and _verification_ {cite:p}`burgholzerAdvancedEquivalenceChecking2021,burgholzerRandomStimuliGeneration2021,burgholzerVerifyingResultsIBM2020,wangXQDDbasedVerificationMethod2008,smithQuantumLogicSynthesis2019,hongEquivalenceCheckingDynamic2021` of quantum circuits, they recently attracted great attention.
 
-In fact, decision diagrams form the foundation for a large part of the Munich Quantum Toolkit's approaches for classical quantum circuit simulation and verification.
-To this end, MQT Core provides a fully-fledged, high-performance decision diagram package for quantum computing.
-This page provides a comprehensive introduction to quantum computing with decision diagrams and a quickstart guide on how to work with decision diagrams in MQT Core.
-
-## How do Quantum Decision Diagrams Work?
-
 The following sections provide a comprehensive guide for quantum computing with decision diagrams, including the representation of quantum states and operations and the fundamental operations on decision diagrams.
-
-If you are already familiar with decision diagrams, you might want to jump directly to the [](#working-with-decision-diagrams-in-mqt-core) section.
 
 ### Representation of Quantum States
 
@@ -391,7 +586,3 @@ In the decision-diagram formalism, this has the following form
 ```
 
 Overall, this results in a complexity that, just as in addition, scales linearly with the size of the larger decision diagram.
-
-## Working with Decision Diagrams in MQT Core
-
-TODO: Add a section on how to work with decision diagrams in MQT Core.
