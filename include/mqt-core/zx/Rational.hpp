@@ -72,13 +72,6 @@ public:
    */
   explicit PiRational(double val);
 
-  /** @name Arithmetic operators
-   * @brief Arithmetic operators for PiRational. Fractions are normalized after
-   * each operation to be in the interval (-1,1]
-   * @param rhs Right hand side of the operation.
-   * @return Reference to the modified PiRational.
-   */
-  ///@{
   PiRational& operator+=(const PiRational& rhs);
   PiRational& operator+=(int64_t rhs);
 
@@ -90,7 +83,6 @@ public:
 
   PiRational& operator/=(const PiRational& rhs);
   PiRational& operator/=(int64_t rhs);
-  ///@}
 
   /**
    * @brief Check if the fraction is an integer, i.e., the denominator is 1.

@@ -166,7 +166,7 @@ napoleon_numpy_docstring = False
 breathe_projects = {"mqt.core": "doxygen/xml"}
 breathe_default_project = "mqt.core"
 subprocess.call("doxygen", shell=True)  # noqa: S602, S607
-subprocess.call("mkdir api/cpp & breathe-apidoc -o api/cpp -g namespace doxygen/xml/", shell=True)  # noqa: S602, S607
+subprocess.call("mkdir api/cpp & breathe-apidoc -o api/cpp -m -f -T doxygen/xml/", shell=True)  # noqa: S602, S607
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "furo"
