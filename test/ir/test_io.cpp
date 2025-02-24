@@ -661,3 +661,26 @@ TEST_F(IO, dumpingIncompleteOutputPermutationNotStartingAtZero) {
   const auto qc2 = qasm3::Importer::imports(qasm);
   EXPECT_EQ(qc, qc2);
 }
+
+TEST_F(IO, indexedRegisterOperands) {
+  const auto& q = qc.addQubitRegister(2);
+  const auto& c = qc.addClassicalRegister(2);
+
+  qc.h(q[0]);
+  qc.cx(q[0], q[1]);
+  qc.measure(q[0], c[0]);
+  qc.measure(q[1], c[1]);
+
+  const auto qasm = qc.toQASM();
+  const auto* const expected = "// i 0 1\n"
+                               "// o 0 1\n"
+                               "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[2] q;\n"
+                               "bit[2] c;\n"
+                               "h q[0];\n"
+                               "cx q[0], q[1];\n"
+                               "c[0] = measure q[0];\n"
+                               "c[1] = measure q[1];\n";
+  EXPECT_EQ(qasm, expected);
+}
