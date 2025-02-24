@@ -24,8 +24,10 @@ __all__ = [
     "Vector",
     "VectorDD",
     "build_functionality",
+    "build_unitary",
     "sample",
     "simulate",
+    "simulate_statevector",
 ]
 
 def sample(qc: QuantumComputation, shots: int = 1024, seed: int = 0) -> dict[str, int]:
@@ -54,6 +56,73 @@ def sample(qc: QuantumComputation, shots: int = 1024, seed: int = 0) -> dict[str
         the output distribution. Otherwise, all qubits in the circuit are measured.
     """
 
+def simulate_statevector(qc: QuantumComputation) -> Vector:
+    """Simulate the quantum computation and return the final state vector.
+
+    This function classically simulates the quantum computation and returns the
+    state vector of the final state.
+    It does not support measurements, resets, or classical control.
+
+    Since the state vector is guaranteed to be exponentially large in the number
+    of qubits, this function is only suitable for small quantum computations.
+    Consider using the :func:`~mqt.core.dd.simulate` or the
+    :func:`~mqt.core.dd.sample` functions, which never explicitly construct
+    the state vector, for larger quantum computations.
+
+    Args:
+        qc: The quantum computation.
+            Must only contain unitary operations.
+
+    Returns:
+        The state vector of the final state.
+
+    Notes:
+        This function internally constructs a :class:`~mqt.core.dd.DDPackage`, creates the
+        zero state, and simulates the quantum computation via the :func:`simulate`
+        function.
+        The state vector is then extracted from the resulting DD via the :meth:`~mqt.core.dd.VectorDD.get_vector`
+        method.
+        The resulting :class:`~mqt.core.dd.Vector` can be converted to a NumPy array without copying
+        the data by calling :func:`numpy.array` with the `copy=False` argument.
+    """
+
+def build_unitary(qc: QuantumComputation, recursive: bool = False) -> Matrix:
+    """Build a unitary matrix representation of a quantum computation.
+
+    This function builds a matrix representation of the unitary representing the
+    functionality of a quantum computation.
+    This function does not support measurements, resets, or classical control,
+    as the corresponding operations are non-unitary.
+
+    Since the unitary matrix is guaranteed to be exponentially large in the number
+    of qubits, this function is only suitable for small quantum computations.
+    Consider using the :func:`~mqt.core.dd.build_functionality` function, which
+    never explicitly constructs the unitary matrix, for larger quantum computations.
+
+    Args:
+        qc: The quantum computation.
+            Must only contain unitary operations.
+        recursive: Whether to build the unitary matrix recursively.
+                   If set to True, the unitary matrix is built recursively by
+                   pairwise grouping the operations of the quantum computation.
+                   If set to False, the unitary matrix is built by sequentially
+                   applying the operations of the quantum computation to the
+                   identity matrix.
+                   Defaults to False.
+
+    Returns:
+        The unitary matrix representing the functionality of the quantum computation.
+
+    Notes:
+        This function internally constructs a :class:`~mqt.core.dd.DDPackage`, creates the
+        identity matrix, and builds the unitary matrix via the :func:`~mqt.core.dd.build_functionality`
+        function.
+        The unitary matrix is then extracted from the resulting DD via the :meth:`~mqt.core.dd.MatrixDD.get_matrix`
+        method.
+        The resulting :class:`~mqt.core.dd.Matrix` can be converted to a NumPy array without copying
+        the data by calling :func:`numpy.array` with the `copy=False` argument.
+    """
+
 def simulate(qc: QuantumComputation, initial_state: VectorDD, dd_package: DDPackage) -> VectorDD:
     """Simulate a quantum computation.
 
@@ -66,7 +135,8 @@ def simulate(qc: QuantumComputation, initial_state: VectorDD, dd_package: DDPack
     of the quantum computation to the initial state.
 
     Args:
-        qc: The quantum computation. Must only contain unitary operations.
+        qc: The quantum computation.
+            Must only contain unitary operations.
         initial_state: The initial state as a DD. Must have the same number of qubits
                        as the quantum computation. The reference count of the initial
                        state is decremented during the simulation, so the caller must
@@ -88,9 +158,11 @@ def build_functionality(qc: QuantumComputation, dd_package: DDPackage, recursive
     are non-unitary.
 
     Args:
-        qc: The quantum computation. Must only contain unitary operations.
-        dd_package: The DD package. Must be configured with a sufficient number
-                    of qubits to accommodate the quantum computation.
+        qc: The quantum computation.
+            Must only contain unitary operations.
+        dd_package: The DD package.
+                    Must be configured with a sufficient number of qubits to
+                    accommodate the quantum computation.
         recursive: Whether to build the functionality matrix recursively. If set
                    to True, the functionality matrix is built recursively by
                    pairwise grouping the operations of the quantum computation.

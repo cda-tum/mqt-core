@@ -26,6 +26,26 @@ namespace mqt {
 namespace py = pybind11;
 using namespace pybind11::literals;
 
+struct Matrix {
+  std::vector<std::complex<dd::fp>> data;
+  size_t n;
+};
+
+Matrix getMatrix(const dd::mEdge& m, const size_t numQubits,
+                 const dd::fp threshold = 0.) {
+  if (numQubits == 0U) {
+    return Matrix{{static_cast<std::complex<dd::fp>>(m.w)}, 1};
+  }
+  const size_t dim = 1ULL << numQubits;
+  auto data = std::vector<std::complex<dd::fp>>(dim * dim);
+  m.traverseMatrix(
+      std::complex<dd::fp>{1., 0.}, 0ULL, 0ULL,
+      [&data, dim](const std::size_t i, const std::size_t j,
+                   const std::complex<dd::fp>& c) { data[(i * dim) + j] = c; },
+      numQubits, threshold);
+  return Matrix{data, dim};
+}
+
 void registerMatrixDDs(const py::module& mod) {
   auto mat = py::class_<dd::mEdge>(mod, "MatrixDD");
 
@@ -41,10 +61,6 @@ void registerMatrixDDs(const py::module& mod) {
   mat.def("get_entry_by_path", &dd::mEdge::getValueByPath, "num_qubits"_a,
           "decisions"_a);
 
-  struct Matrix {
-    std::vector<std::complex<dd::fp>> data;
-    size_t n;
-  };
   py::class_<Matrix>(mod, "Matrix", py::buffer_protocol())
       .def_buffer([](Matrix& matrix) -> py::buffer_info {
         return py::buffer_info(
@@ -55,25 +71,7 @@ void registerMatrixDDs(const py::module& mod) {
              sizeof(std::complex<dd::fp>)});
       });
 
-  mat.def(
-      "get_matrix",
-      [](const dd::mEdge& m, const size_t numQubits,
-         const dd::fp threshold = 0.) {
-        if (numQubits == 0U) {
-          return Matrix{{static_cast<std::complex<dd::fp>>(m.w)}, 1};
-        }
-        const size_t dim = 1ULL << numQubits;
-        auto data = std::vector<std::complex<dd::fp>>(dim * dim);
-        m.traverseMatrix(
-            std::complex<dd::fp>{1., 0.}, 0ULL, 0ULL,
-            [&data, dim](const std::size_t i, const std::size_t j,
-                         const std::complex<dd::fp>& c) {
-              data[(i * dim) + j] = c;
-            },
-            numQubits, threshold);
-        return Matrix{data, dim};
-      },
-      "num_qubits"_a, "threshold"_a = 0.);
+  mat.def("get_matrix", &getMatrix, "num_qubits"_a, "threshold"_a = 0.);
 
   mat.def(
       "to_dot",
