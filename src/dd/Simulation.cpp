@@ -124,22 +124,24 @@ sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
     dd.decRef(e);
 
     std::map<std::string, std::size_t> actualCounts{};
+    const auto numBits =
+        qc.getClassicalRegisters().empty() ? qc.getNqubits() : qc.getNcbits();
     for (const auto& [bitstring, count] : counts) {
-      std::string measurement(qc.getNcbits(), '0');
+      std::string measurement(numBits, '0');
       if (hasMeasurements) {
         // if the circuit contains measurements, we only want to return the
         // measured bits
         for (const auto& [qubit, bit] : measurementMap) {
           // measurement map specifies that the circuit `qubit` is measured into
           // a certain `bit`
-          measurement[qc.getNcbits() - 1U - bit] =
+          measurement[numBits - 1U - bit] =
               bitstring[bitstring.size() - 1U - qc.outputPermutation.at(qubit)];
         }
       } else {
         // otherwise, we consider the output permutation for determining where
         // to measure the qubits to
         for (const auto& [qubit, bit] : qc.outputPermutation) {
-          measurement[qc.getNcbits() - 1U - bit] =
+          measurement[numBits - 1U - bit] =
               bitstring[bitstring.size() - 1U - qubit];
         }
       }
@@ -214,16 +216,7 @@ std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
   return sample(qc, dd->makeZeroState(nqubits), *dd, shots, seed);
 }
 
-template <class Config>
-void extractProbabilityVector(const QuantumComputation& qc, const VectorDD& in,
-                              SparsePVec& probVector, Package<Config>& dd) {
-  auto permutation = qc.initialLayout;
-  dd.incRef(in);
-  extractProbabilityVectorRecursive(qc, in, qc.begin(), permutation,
-                                    std::map<std::size_t, char>{}, 1.,
-                                    probVector, dd);
-}
-
+namespace {
 template <class Config>
 void extractProbabilityVectorRecursive(const QuantumComputation& qc,
                                        const VectorDD& currentState,
@@ -430,6 +423,17 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
     }
   }
 }
+} // namespace
+
+template <class Config>
+void extractProbabilityVector(const QuantumComputation& qc, const VectorDD& in,
+                              SparsePVec& probVector, Package<Config>& dd) {
+  auto permutation = qc.initialLayout;
+  dd.incRef(in);
+  extractProbabilityVectorRecursive(qc, in, qc.begin(), permutation,
+                                    std::map<std::size_t, char>{}, 1.,
+                                    probVector, dd);
+}
 
 template std::map<std::string, std::size_t>
 sample<DDPackageConfig>(const QuantumComputation& qc, const VectorDD& in,
@@ -437,9 +441,4 @@ sample<DDPackageConfig>(const QuantumComputation& qc, const VectorDD& in,
 template void extractProbabilityVector<DDPackageConfig>(
     const QuantumComputation& qc, const VectorDD& in, SparsePVec& probVector,
     Package<>& dd);
-template void extractProbabilityVectorRecursive<DDPackageConfig>(
-    const QuantumComputation& qc, const VectorDD& in,
-    decltype(qc.begin()) currentIt, Permutation& permutation,
-    std::map<std::size_t, char> measurements, fp commonFactor,
-    SparsePVec& probVector, Package<>& dd);
 } // namespace dd

@@ -164,9 +164,8 @@ ComplexValue operator/(const ComplexValue& c1, const ComplexValue& c2);
 std::ostream& operator<<(std::ostream& os, const ComplexValue& c);
 } // namespace dd
 
-namespace std {
 /// Hash function for complex values
-template <> struct hash<dd::ComplexValue> {
+template <> struct std::hash<dd::ComplexValue> {
   /**
    * @brief Compute the hash value for the given complex value.
    * @details The hash value is computed by scaling the real and imaginary part
@@ -182,4 +181,3 @@ template <> struct hash<dd::ComplexValue> {
    */
   std::size_t operator()(dd::ComplexValue const& c) const noexcept;
 };
-} // namespace std

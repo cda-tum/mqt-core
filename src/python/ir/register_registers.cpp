@@ -11,7 +11,9 @@
 #include "ir/Register.hpp"
 #include "python/pybind11.hpp"
 
+#include <cstddef>
 #include <pybind11/operators.h>
+#include <string>
 
 namespace mqt {
 
@@ -35,6 +37,7 @@ void registerRegisters(py::module& m) {
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def(hash(py::self))
+      .def("__getitem__", &qc::QuantumRegister::getGlobalIndex, "key"_a)
       .def("__contains__", &qc::QuantumRegister::contains)
       .def("__repr__", [](const qc::QuantumRegister& reg) {
         return "QuantumRegister(name=" + reg.getName() +
@@ -62,6 +65,7 @@ void registerRegisters(py::module& m) {
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def(hash(py::self))
+      .def("__getitem__", &qc::ClassicalRegister::getGlobalIndex, "key"_a)
       .def("__contains__", &qc::ClassicalRegister::contains)
       .def("__repr__", [](const qc::ClassicalRegister& reg) {
         return "ClassicalRegister(name=" + reg.getName() +

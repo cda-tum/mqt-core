@@ -484,8 +484,8 @@ void Edge<Node>::traverseMatrix(const std::complex<fp>& amp,
   const std::size_t x = i | (1ULL << nextLevel);
   const std::size_t y = j | (1ULL << nextLevel);
   if (isTerminal() || p->v < nextLevel) {
-    traverseMatrix(c, i, j, f, nextLevel, threshold);
-    traverseMatrix(c, x, y, f, nextLevel, threshold);
+    traverseMatrix(amp, i, j, f, nextLevel, threshold);
+    traverseMatrix(amp, x, y, f, nextLevel, threshold);
     return;
   }
 

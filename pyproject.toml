@@ -43,7 +43,7 @@ qiskit = [
 ]
 
 [project.scripts]
-mqt-core-dd-compare = "mqt.core.dd.evaluation:main"
+mqt-core-dd-compare = "mqt.core.dd_evaluation:main"
 mqt-core-cli = "mqt.core.__main__:main"
 
 [project.urls]
@@ -79,6 +79,7 @@ build.targets = [
   "mqt-core-ds",
   "mqt-core-na",
   "ir",
+  "dd",
 ]
 
 metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
@@ -213,7 +214,7 @@ isort.required-imports = ["from __future__ import annotations"]
     "I002", # Allow missing `from __future__ import annotations` import
 ]
 "src/mqt/core/_compat/**.py" = ["TID251", "A005"]
-"src/mqt/core/dd/evaluation.py" = ["T201"]
+"src/mqt/core/dd_evaluation.py" = ["T201"]
 "src/mqt/core/__main__.py" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]
@@ -297,6 +298,8 @@ docs = [
   "qiskit[qasm3-import,visualization]>=1.0.0",
   "openqasm-pygments>=0.1.2",
   "breathe>=4.36.0",
+  "graphviz>=0.20.3",
+  "sphinx<8.2",  # due to https://github.com/missinglinkelectronics/sphinxcontrib-svg2pdfconverter/issues/26
 ]
 test = [
   "pytest>=8.3.3",

@@ -54,8 +54,19 @@ public:
     return globalIndex - startIndex;
   }
 
+  [[nodiscard]] BitType getGlobalIndex(const BitType localIndex) const {
+    if (localIndex >= size) {
+      throw std::out_of_range("Index out of range");
+    }
+    return startIndex + localIndex;
+  }
+
   [[nodiscard]] std::string toString(const BitType globalIndex) const {
     return name + "[" + std::to_string(getLocalIndex(globalIndex)) + "]";
+  }
+
+  [[nodiscard]] BitType operator[](const BitType localIndex) const {
+    return getGlobalIndex(localIndex);
   }
 
 private:

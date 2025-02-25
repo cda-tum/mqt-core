@@ -175,8 +175,6 @@ template <typename Node> struct CachedEdge {
 
 } // namespace dd
 
-namespace std {
-template <class Node> struct hash<dd::CachedEdge<Node>> {
+template <class Node> struct std::hash<dd::CachedEdge<Node>> {
   std::size_t operator()(dd::CachedEdge<Node> const& e) const noexcept;
 };
-} // namespace std

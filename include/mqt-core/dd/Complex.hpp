@@ -138,9 +138,8 @@ ComplexValue operator/(const Complex& c1, fp real);
 
 } // namespace dd
 
-namespace std {
 /// Hash function for complex numbers.
-template <> struct hash<dd::Complex> {
+template <> struct std::hash<dd::Complex> {
   /**
    * @brief Compute the hash value for a complex number.
    * @details Reinterprets the pointers to the real and imaginary part as
@@ -157,4 +156,3 @@ template <> struct hash<dd::Complex> {
     return qc::combineHash(h1, h2);
   }
 };
-} // namespace std

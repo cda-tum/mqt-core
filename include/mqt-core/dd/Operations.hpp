@@ -36,8 +36,22 @@
 
 namespace dd {
 
+/**
+ * @brief Get the decision diagram representation of an operation based on its
+ * constituent parts.
+ *
+ * @note This function is only intended for internal use and should not be
+ * called directly.
+ *
+ * @tparam Config The configuration of the DD package
+ * @param type The operation type
+ * @param params The operation parameters
+ * @param controls The operation controls
+ * @param targets The operation targets
+ * @return The decision diagram representation of the operation
+ */
 template <class Config>
-qc::MatrixDD getStandardOperationDD(Package<Config>& dd, qc::OpType type,
+qc::MatrixDD getStandardOperationDD(Package<Config>& dd, const qc::OpType type,
                                     const std::vector<fp>& params,
                                     const qc::Controls& controls,
                                     const std::vector<qc::Qubit>& targets) {
@@ -59,6 +73,20 @@ qc::MatrixDD getStandardOperationDD(Package<Config>& dd, qc::OpType type,
   throw qc::QFRException("Unexpected operation type");
 }
 
+/**
+ * @brief Get the decision diagram representation of a @ref StandardOperation.
+ *
+ * @note This function is only intended for internal use and should not be
+ * called directly.
+ *
+ * @tparam Config The configuration of the DD package
+ * @param op The operation to get the DD for
+ * @param dd The DD package to use
+ * @param controls The operation controls
+ * @param targets The operation targets
+ * @param inverse Whether to get the inverse of the operation
+ * @return The decision diagram representation of the operation
+ */
 template <class Config>
 qc::MatrixDD getStandardOperationDD(const qc::StandardOperation& op,
                                     Package<Config>& dd,
@@ -144,12 +172,17 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation& op,
   return getStandardOperationDD(dd, type, params, controls, targetQubits);
 }
 
-// The methods with a permutation parameter apply these Operations according to
-// the mapping specified by the permutation, e.g.
-//      if perm[0] = 1 and perm[1] = 0
-//      then cx 0 1 will be translated to cx perm[0] perm[1] == cx 1 0
-// An empty permutation marks the identity permutation.
-
+/**
+ * @brief Get the decision diagram representation of an operation.
+ *
+ * @tparam Config The configuration of the DD package
+ * @param op The operation to get the DD for
+ * @param dd The DD package to use
+ * @param permutation The permutation to apply to the operation's qubits. An
+ * empty permutation marks the identity permutation.
+ * @param inverse Whether to get the inverse of the operation
+ * @return The decision diagram representation of the operation
+ */
 template <class Config>
 qc::MatrixDD getDD(const qc::Operation& op, Package<Config>& dd,
                    const qc::Permutation& permutation = {},
@@ -203,12 +236,41 @@ qc::MatrixDD getDD(const qc::Operation& op, Package<Config>& dd,
   throw qc::QFRException("DD for non-unitary operation not available!");
 }
 
+/**
+ * @brief Get the decision diagram representation of the inverse of an
+ * operation.
+ *
+ * @see getDD
+ *
+ * @tparam Config The configuration of the DD package
+ * @param op The operation to get the inverse DD for
+ * @param dd The DD package to use
+ * @param permutation The permutation to apply to the operation's qubits. An
+ * empty permutation marks the identity permutation.
+ * @return The decision diagram representation of the inverse of the operation
+ */
 template <class Config>
 qc::MatrixDD getInverseDD(const qc::Operation& op, Package<Config>& dd,
                           const qc::Permutation& permutation = {}) {
   return getDD(op, dd, permutation, true);
 }
 
+/**
+ * @brief Apply a unitary operation to a given DD.
+ *
+ * @details This is a convenience function that realizes @p op times @p in and
+ * correctly accounts for the permutation of the operation's qubits as well as
+ * automatically handles reference counting.
+ *
+ * @tparam Config The configuration of the DD package
+ * @tparam Node The type of the DD nodes
+ * @param op The operation to apply
+ * @param in The input DD
+ * @param dd The DD package to use
+ * @param permutation The permutation to apply to the operation's qubits. An
+ * empty permutation marks the identity permutation.
+ * @return The output DD
+ */
 template <class Config, class Node>
 Edge<Node> applyUnitaryOperation(const qc::Operation& op, const Edge<Node>& in,
                                  Package<Config>& dd,
@@ -218,6 +280,26 @@ Edge<Node> applyUnitaryOperation(const qc::Operation& op, const Edge<Node>& in,
   return dd.applyOperation(getDD(op, dd, permutation), in);
 }
 
+/**
+ * @brief Apply a measurement operation to a given DD.
+ *
+ * @details This is a convenience function that realizes the measurement @p op
+ * on @p in and stores the measurement results in @p measurements. The result is
+ * determined based on the RNG @p rng. The function correctly accounts for the
+ * permutation of the operation's qubits as well as automatically handles
+ * reference counting.
+ *
+ * @tparam Config The configuration of the DD package
+ * @tparam Node The type of the DD nodes
+ * @param op The measurement operation to apply
+ * @param in The input DD
+ * @param dd The DD package to use
+ * @param rng The random number generator to use
+ * @param measurements The vector to store the measurement results in
+ * @param permutation The permutation to apply to the operation's qubits. An
+ * empty permutation marks the identity permutation.
+ * @return The output DD
+ */
 template <class Config>
 qc::VectorDD applyMeasurement(const qc::NonUnitaryOperation& op,
                               qc::VectorDD in, Package<Config>& dd,
@@ -235,6 +317,24 @@ qc::VectorDD applyMeasurement(const qc::NonUnitaryOperation& op,
   return in;
 }
 
+/**
+ * @brief Apply a reset operation to a given DD.
+ *
+ * @details This is a convenience function that realizes the reset @p op on @p
+ * in. To this end, it measures the qubit and applies an X operation if the
+ * measurement result is one. The result is determined based on the RNG @p rng.
+ * The function correctly accounts for the permutation of the operation's
+ * qubits as well as automatically handles reference counting.
+ *
+ * @tparam Config The configuration of the DD package
+ * @param op The reset operation to apply
+ * @param in The input DD
+ * @param dd The DD package to use
+ * @param rng The random number generator to use
+ * @param permutation The permutation to apply to the operation's qubits. An
+ * empty permutation marks the identity permutation.
+ * @return The output DD
+ */
 template <class Config>
 qc::VectorDD applyReset(const qc::NonUnitaryOperation& op, qc::VectorDD in,
                         Package<Config>& dd, std::mt19937_64& rng,
@@ -253,11 +353,30 @@ qc::VectorDD applyReset(const qc::NonUnitaryOperation& op, qc::VectorDD in,
   return in;
 }
 
+/**
+ * @brief Apply a classic controlled operation to a given DD.
+ *
+ * @details This is a convenience function that realizes the classic controlled
+ * operation @p op on @p in. It applies the underlying operation if the actual
+ * value stored in the measurement results matches the expected value according
+ * to the comparison kind. The function correctly accounts for the permutation
+ * of the operation's qubits as well as automatically handles reference
+ * counting.
+ *
+ * @tparam Config The configuration of the DD package
+ * @param op The classic controlled operation to apply
+ * @param in The input DD
+ * @param dd The DD package to use
+ * @param measurements The vector of measurement results
+ * @param permutation The permutation to apply to the operation's qubits. An
+ * empty permutation marks the identity permutation.
+ * @return The output DD
+ */
 template <class Config>
 qc::VectorDD
 applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
                                 const qc::VectorDD& in, Package<Config>& dd,
-                                std::vector<bool>& measurements,
+                                const std::vector<bool>& measurements,
                                 const qc::Permutation& permutation = {}) {
   const auto& expectedValue = op.getExpectedValue();
   const auto& comparisonKind = op.getComparisonKind();
@@ -307,8 +426,22 @@ applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
   return applyUnitaryOperation(op, in, dd, permutation);
 }
 
-// apply swaps 'on' DD in order to change 'from' to 'to'
-// where |from| >= |to|
+/**
+ * @brief Change the permutation of a given DD.
+ *
+ * @details This function changes the permutation of the given DD @p on from
+ * @p from to @p to by applying SWAP gates. The @p from permutation must be at
+ * least as large as the @p to permutation.
+ *
+ * @tparam DDType The type of the DD
+ * @tparam Config The configuration of the DD package
+ * @param on The DD to change the permutation of
+ * @param from The current permutation
+ * @param to The target permutation
+ * @param dd The DD package to use
+ * @param regular Whether to apply the permutation from the left (true) or from
+ * the right (false)
+ */
 template <class DDType, class Config>
 void changePermutation(DDType& on, qc::Permutation& from,
                        const qc::Permutation& to, Package<Config>& dd,
