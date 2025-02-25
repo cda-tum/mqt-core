@@ -79,7 +79,7 @@ if(BUILD_MQT_CORE_TESTS)
       ON
       CACHE BOOL "" FORCE)
   set(GTEST_VERSION
-      1.14.0
+      1.16.0
       CACHE STRING "Google Test version")
   set(GTEST_URL https://github.com/google/googletest/archive/refs/tags/v${GTEST_VERSION}.tar.gz)
   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
