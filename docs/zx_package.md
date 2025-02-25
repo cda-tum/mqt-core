@@ -40,6 +40,13 @@ qc.cx(2, 0);
 auto diag = zx::FunctionalityConstruction.buildFunctionality(&qc);
 ```
 
+This yields the following ZX-diagram.
+
+```{image} _static/ghz.svg
+:width: 40%
+:align: center
+```
+
 The other way is to manipulate the diagram directly.
 Let's create the ZX-diagram for the GHZ circuit above directly.
 
@@ -113,3 +120,39 @@ diag.addEdge(ctrl2, diag.getOutputs()[0]);
 diag.addEdge(trgt1, diag.getOutputs()[1]);
 diag.addEdge(trgt2, diag.getOutputs()[2]);
 ```
+
+Let us return to the matter of symbolic phases and phases in general.
+Phases of vertices in a ZX-diagram are all of type `zx::PiExpression` even if the phases are variable-free.
+In the variable-free case, the `zx::PiExpression` consists only of a constant of type `zx::PiRational`.
+The `zx::PiRational` class represents angles in the half-open interval $(-\pi, \pi]$ as a fraction of $\pi$.
+For example, the number $\pi$ itself would be represented by the fraction $\frac{1}{1}$, the number $-\pi / 2$ would be $\frac{-1}{2}$.
+This is because phases in terms of fractions of $\pi$ appear frequently in the ZX-calculus.
+For more on symbolic expressions we refer to the code documentation.
+
+## Rewriting
+
+The true power of ZX-diagrams lies in the ZX-calculus which allows for manipulating ZX-diagrams.
+The MQT Core ZX-calculus library provides some rewriting rules for ZX-diagrams in the header `Rules.hpp`.
+The simplification routines are provided in the header `Simplify.hpp`.
+
+For example, the previous diagram has multiple connected Z-vertices on qubit 0.
+According to the axioms of the ZX-calculus, these can be merged via spider fusion.
+We can perform this simplification on the diagram as follows.
+
+```cpp
+#include "zx/Simplify.hpp"
+
+auto n_simplifications = spiderSimp(diag);
+```
+
+This results in the following diagram.
+
+```{image} _static/ghz_simp.svg
+:width: 40%
+:align: center
+```
+
+`n_simplifications` will be two when executing this code since two spiders can be fused.
+The diagrams are manipulated inplace for performance reasons.
+
+For an overview on simplifications, we refer to the code documentation.
