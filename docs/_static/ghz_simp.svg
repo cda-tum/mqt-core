@@ -9,7 +9,9 @@
 -->
 
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="92.67pt" height="76.39pt" viewBox="0 0 92.67 76.39" version="1.1">
-<g id="surface1">
+  <!-- Background rectangle with a white fill -->
+<rect x="0" y="0" width="92.67" height="76.39" fill="white"/>
+  <g id="surface1">
 <path style="fill:none;stroke-width:0.79701;stroke-linecap:butt;stroke-linejoin:miter;stroke:rgb(26.667786%,53.33252%,100%);stroke-opacity:1;stroke-dasharray:1.99255,0.49814;stroke-miterlimit:10;" d="M -56.692594 70.86775 L -31.380094 70.86775 " transform="matrix(1,0,0,-1,60.509,73.899)"/>
 <path style="fill:none;stroke-width:0.3985;stroke-linecap:butt;stroke-linejoin:miter;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M -56.692594 42.520094 L -31.380094 42.520094 " transform="matrix(1,0,0,-1,60.509,73.899)"/>
 <path style="fill:none;stroke-width:0.3985;stroke-linecap:butt;stroke-linejoin:miter;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M -56.692594 14.172438 L -3.032438 14.172438 " transform="matrix(1,0,0,-1,60.509,73.899)"/>
