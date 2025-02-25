@@ -176,27 +176,15 @@ To directly, generate SVG files, the {py:meth}`~mqt.core.dd.VectorDD.to_svg` met
 
 ```{code-cell} ipython3
 ---
-tags: [remove-output]
+mystnb:
+  image:
+    width: 20%
+    align: center
 ---
 import graphviz
 
-# Output hidden due to LaTeX build error
 graphviz.Source(out_state_dd.to_dot())
 ```
-
-```{code-cell} ipython3
----
-tags: [remove-cell]
----
-graphviz.Source(out_state_dd.to_dot()).render("out_state_dd", format="svg", cleanup=True)
-```
-
-````{only} not latex
-```{figure} out_state_dd.svg
-:align: center
-:width: 20%
-```
-````
 
 The DD package provides list of additional functionality when it comes to working with decision diagrams.
 Check out the full API documentation of the {py:class}`~mqt.core.dd.DDPackage` class for more details.

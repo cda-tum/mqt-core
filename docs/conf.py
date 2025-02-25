@@ -64,7 +64,7 @@ extensions = [
     "sphinx_design",
     "sphinxext.opengraph",
     "sphinx.ext.viewcode",
-    "sphinx.ext.imgconverter",
+    "sphinxcontrib.inkscapeconverter",
     "sphinxcontrib.bibtex",
 ]
 
