@@ -35,6 +35,7 @@ self
 installation
 mqt_core_ir
 dd_package
+zx_package
 references
 ```
 
