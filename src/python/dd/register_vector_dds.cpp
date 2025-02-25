@@ -25,6 +25,14 @@ namespace mqt {
 namespace py = pybind11;
 using namespace pybind11::literals;
 
+struct Vector {
+  dd::CVec v;
+};
+
+Vector getVector(const dd::vEdge& v, const dd::fp threshold = 0.) {
+  return {v.getVector(threshold)};
+}
+
 void registerVectorDDs(const py::module& mod) {
   auto vec = py::class_<dd::vEdge>(mod, "VectorDD");
 
@@ -48,9 +56,6 @@ void registerVectorDDs(const py::module& mod) {
       },
       "num_qubits"_a, "decisions"_a);
 
-  struct Vector {
-    dd::CVec v;
-  };
   py::class_<Vector>(mod, "Vector", py::buffer_protocol())
       .def_buffer([](Vector& vector) -> py::buffer_info {
         return py::buffer_info(
@@ -59,12 +64,7 @@ void registerVectorDDs(const py::module& mod) {
             {vector.v.size()}, {sizeof(std::complex<dd::fp>)});
       });
 
-  vec.def(
-      "get_vector",
-      [](const dd::vEdge& v, const dd::fp threshold = 0.) {
-        return Vector{v.getVector(threshold)};
-      },
-      "threshold"_a = 0.);
+  vec.def("get_vector", &getVector, "threshold"_a = 0.);
 
   vec.def(
       "to_dot",

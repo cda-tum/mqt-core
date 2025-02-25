@@ -21,28 +21,43 @@
 
 namespace dd {
 
-/// Data structure for caching computed results
-/// \tparam LeftOperandType type of the operation's left operand
-/// \tparam RightOperandType type of the operation's right operand
-/// \tparam ResultType type of the operation's result
-/// \tparam NBUCKET number of hash buckets to use (has to be a power of two)
+/**
+ * @brief Data structure for caching computed results of binary operations
+ * @tparam LeftOperandType type of the operation's left operand
+ * @tparam RightOperandType type of the operation's right operand
+ * @tparam ResultType type of the operation's result
+ * @tparam NBUCKET number of hash buckets to use (has to be a power of two)
+ */
 template <class LeftOperandType, class RightOperandType, class ResultType,
           std::size_t NBUCKET = 16384>
 class ComputeTable {
 public:
+  /// Default constructor
   ComputeTable() {
     stats.entrySize = sizeof(Entry);
     stats.numBuckets = NBUCKET;
   }
 
+  /**
+   * @brief An entry in the compute table
+   * @details A triple consisting of the left operand, the right operand, and
+   * the result of a binary operation.
+   */
   struct Entry {
     LeftOperandType leftOperand;
     RightOperandType rightOperand;
     ResultType result;
   };
 
+  /// Bitmask used in the hash function
   static constexpr std::size_t MASK = NBUCKET - 1;
 
+  /**
+   * @brief Compute the hash value for a given pair of operands
+   * @param leftOperand The left operand
+   * @param rightOperand The right operand
+   * @return The hash value
+   */
   static std::size_t hash(const LeftOperandType& leftOperand,
                           const RightOperandType& rightOperand) {
     auto h1 = std::hash<LeftOperandType>{}(leftOperand);
@@ -63,12 +78,19 @@ public:
     return hash & MASK;
   }
 
-  /// Get a reference to the table
+  /// Get a reference to the underlying table
   [[nodiscard]] const auto& getTable() const { return table; }
 
   /// Get a reference to the statistics
   [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
+  /**
+   * @brief Insert a new entry into the compute table
+   * @details Any existing entry for the resulting hash value will be replaced.
+   * @param leftOperand The left operand
+   * @param rightOperand The right operand
+   * @param result The result of the operation
+   */
   void insert(const LeftOperandType& leftOperand,
               const RightOperandType& rightOperand, const ResultType& result) {
     const auto key = hash(leftOperand, rightOperand);
@@ -81,6 +103,12 @@ public:
     table[key] = {leftOperand, rightOperand, result};
   }
 
+  /**
+   * @brief Look up a result in the compute table
+   * @param leftOperand The left operand
+   * @param rightOperand The right operand
+   * @return A pointer to the result if it is found, otherwise nullptr.
+   */
   ResultType* lookup(const LeftOperandType& leftOperand,
                      const RightOperandType& rightOperand,
                      [[maybe_unused]] const bool useDensityMatrix = false) {
@@ -114,18 +142,27 @@ public:
     return &entry.result;
   }
 
-  void clear() {
-    valid.reset();
-    stats.reset();
-  }
+  /**
+   * @brief Clear the compute table
+   * @details Sets all entries to invalid.
+   */
+  void clear() { valid.reset(); }
 
-  std::ostream& printStatistics(std::ostream& os = std::cout) {
+  /**
+   * @brief Print the statistics of the compute table
+   * @param os The output stream to print to
+   * @return The output stream
+   */
+  std::ostream& printStatistics(std::ostream& os = std::cout) const {
     return os << stats;
   }
 
 private:
+  /// The actual table storing the entries
   std::array<Entry, NBUCKET> table{};
+  /// Bitset to mark valid entries
   std::bitset<NBUCKET> valid{};
+  /// Statistics of the compute table
   TableStatistics stats{};
 };
 } // namespace dd

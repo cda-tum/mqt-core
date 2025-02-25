@@ -25,6 +25,27 @@
 namespace dd {
 using namespace qc;
 
+/**
+ * @brief Simulate a purely-quantum @ref QuantumComputation on a given input
+ * state using decision diagrams.
+ *
+ * @details This method classically simulates the quantum computation @p qc on
+ * the input state @p in by sequentially applying the operations in the circuit
+ * to the initial state via decision diagram multiplication.
+ *
+ * This simple simulation method can only handle circuits that do not contain
+ * any classical control operations or measurements.
+ * Its main purpose is to construct a representation of the statevector after
+ * simulating the quantum computation for the given input state.
+ * For more elaborate simulation methods that can handle classical control and
+ * mid-circuit measurements, see @ref sample.
+ *
+ * @param qc The quantum computation to simulate
+ * @param in The input state to simulate. Represented as a vector DD.
+ * @param dd The DD package to use for the simulation
+ * @tparam Config The configuration of the DD package
+ * @return A vector DD representing the output state of the simulation
+ */
 template <class Config>
 VectorDD simulate(const QuantumComputation& qc, const VectorDD& in,
                   Package<Config>& dd) {
@@ -58,17 +79,23 @@ VectorDD simulate(const QuantumComputation& qc, const VectorDD& in,
   return e;
 }
 
-template <class Config>
-std::map<std::string, std::size_t>
-sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
-       std::size_t shots, std::size_t seed = 0U);
-
 /**
- * Sample from the output distribution of a quantum computation
+ * @brief Sample from the output distribution of a quantum computation
  *
- * This method classically simulates the quantum computation @p qc and samples
- * @p shots times from the output distribution. The seed for the random number
- * generator can be set using the @p seed parameter.
+ * @details This method classically simulates the quantum computation @p qc
+ * starting from the all-zero state and samples @p shots times from the output
+ * distribution.
+ * The seed for the random number generator can be set using @p seed.
+ *
+ * For a circuit without mid-circuit measurements, this function will construct
+ * a representation of the final statevector similar to @ref simulate and then
+ * repeatedly sample from the resulting decision diagram, without actually
+ * collapsing the state. For a fixed number of qubits, each sample can be drawn
+ * in constant time, which is a significant of the decision diagram structure.
+ *
+ * For a circuit with mid-circuit measurements, this function will separately
+ * execute the circuit for each sample, probabilistically collapsing the state
+ * after each measurement.
  *
  * @param qc The quantum computation to simulate
  * @param shots The number of shots to sample
@@ -79,16 +106,40 @@ std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
                                           std::size_t shots = 1024U,
                                           std::size_t seed = 0U);
 
+/**
+ * @brief Sample from the output distribution of a quantum computation
+ *
+ * @details This is a more general version of @ref sample that allows for
+ * choosing the input state to simulate as well as the DD package to use for the
+ * simulation.
+ *
+ * @tparam Config The configuration of the DD package
+ * @param qc The quantum computation to simulate
+ * @param in The input state to simulate. Represented as a vector DD.
+ * @param dd The DD package to use for the simulation
+ * @param shots The number of shots to sample
+ * @param seed The seed for the random number generator
+ * @return A histogram of the measurement results
+ */
+template <class Config>
+std::map<std::string, std::size_t>
+sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
+       std::size_t shots, std::size_t seed = 0U);
+
+/**
+ * @brief Extract the probability vector from a dynamic quantum circuit.
+ * @details This method allows one to reconstruct the probability vector of a
+ * dynamic quantum circuit (a circuit that contains mid-circuit measurements
+ * or resets) as if the circuit would not contain these dynamic circuit
+ * primitives at all.
+ * @see https://arxiv.org/abs/2106.01099 Section 5 for more details.
+ * @tparam Config The configuration of the DD package
+ * @param qc The quantum computation to extract the probability vector from
+ * @param in The input state to use. Represented as a vector DD.
+ * @param probVector The sparse probability vector to store the result in
+ * @param dd The DD package to use for the extraction
+ */
 template <class Config>
 void extractProbabilityVector(const QuantumComputation& qc, const VectorDD& in,
                               SparsePVec& probVector, Package<Config>& dd);
-
-template <class Config>
-void extractProbabilityVectorRecursive(const QuantumComputation& qc,
-                                       const VectorDD& currentState,
-                                       decltype(qc.begin()) currentIt,
-                                       Permutation& permutation,
-                                       std::map<std::size_t, char> measurements,
-                                       fp commonFactor, SparsePVec& probVector,
-                                       Package<Config>& dd);
 } // namespace dd
