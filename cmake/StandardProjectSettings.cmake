@@ -57,7 +57,8 @@ if(DEPLOY)
       CACHE STRING "" FORCE)
 endif()
 
-if(NOT DEPLOY)
+# try to enable inter-procedural optimization per default for Release builds outside of deployment
+if(NOT DEPLOY AND CMAKE_BUILD_TYPE STREQUAL "Release")
   option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" ON)
 else()
   option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" OFF)
