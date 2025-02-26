@@ -1,10 +1,10 @@
 # MQT Core ZX
 
 MQT Core provides a minimal library for creating ZX-diagrams and rewriting them using the ZX-calculus.
-The main use of this library within the Munich Quantum Toolkit is as a tool for equivalence checking of quantum circuits especially with a focus on symbolic quantum circuits.
+The main use of this library within the Munich Quantum Toolkit is as a tool for equivalence checking of quantum circuits, especially with a focus on symbolic quantum circuits.
 Other uses for the ZX-calculus and ZX-diagrams include compilation and optimization.
 Furthermore, other diagrammatic rewriting systems exist for reasoning about different aspects of quantum circuits such as the ZH-calculus.
-If you are looking for general-purpose libraries that encompass these functionalities, we recommend [PyZX](https://pyzx.readthedocs.io/en/latest/) or [QuiZx](https://github.com/zxcalc/quizx).
+If you are looking for general-purpose libraries that encompass these functionalities, we recommend [PyZX](https://pyzx.readthedocs.io/en/latest/) or [QuiZX](https://github.com/zxcalc/quizx).
 For an introduction to the ZX-calculus, we recommend the excellent [ZX-calculus for the working quantum computer scientist](https://arxiv.org/abs/2012.13966).
 
 ## Quickstart
