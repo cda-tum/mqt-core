@@ -93,7 +93,7 @@ auto trgt1 = diag.addVertex(1, 0, zx::PiExpression(), zx::VertexType::X);
 auto trgt2 = diag.addVertex(2, 0, zx::PiExpression(), zx::VertexType::X);
 
 // connect vertices to their respective qubit lines.
-diag.addEdge(newVertex, ctrl1); # omitting the edge type adds a non-Hadamard edge
+diag.addEdge(newVertex, ctrl1); // omitting the edge type adds a non-Hadamard edge
 diag.addEdge(ctrl1, ctrl2);
 diag.addEdge(in1, trgt1);
 diag.addEdge(in2, trgt2);
