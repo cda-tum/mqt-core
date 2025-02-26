@@ -32,7 +32,7 @@ You can contribute in several ways:
 Ready to contribute? Check out the {doc}`Development Guide <DevelopmentGuide>` to set up MQT Core for local development and learn about the style guidelines and conventions used throughout the project.
 
 We value contributions from people with all levels of experience.
-In particular if this is your first PR not everything has to be perfect.
+In particular, if this is your first PR, not everything has to be perfect.
 We will guide you through the PR process.
 Nevertheless, please try to follow the guidelines below as well as you can to help make the PR process quick and smooth.
 
