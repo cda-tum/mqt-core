@@ -17,13 +17,13 @@ The simplest way is from a quantum circuit, or rather, an MQT Core `QuantumCompu
 #include "ir/QuantumComputation.hpp"
 #include "zx/FunctionalityConstruction"
 
-# Create GHZ state preparation circuit
+// Create GHZ state preparation circuit
 ir::QuantumComputation qc{3};
 qc.h(0);
 qc.cx(1, 0);
 qc.cx(2, 0);
 
-# Create ZX-diagram from circuit
+// Create ZX-diagram from circuit
 auto diag = zx::FunctionalityConstruction.buildFunctionality(&qc);
 ```
 
@@ -92,17 +92,17 @@ auto ctrl2 = diag.addVertex(1, 0, zx::PiExpression(), zx::VertexType::Z);
 auto trgt1 = diag.addVertex(1, 0, zx::PiExpression(), zx::VertexType::X);
 auto trgt2 = diag.addVertex(2, 0, zx::PiExpression(), zx::VertexType::X);
 
-# connect vertices to their respective qubit lines.
+// connect vertices to their respective qubit lines.
 diag.addEdge(newVertex, ctrl1); # omitting the edge type adds a non-Hadamard edge
 diag.addEdge(ctrl1, ctrl2);
 diag.addEdge(in1, trgt1);
 diag.addEdge(in2, trgt2);
 
-# add edges for CNOTs
+// add edges for CNOTs
 diag.addEdge(ctrl1, trgt1);
 diag.addEdge(ctrl2, trgt2);
 
-# complete diagram by connecting last vertices to the outputs
+// complete diagram by connecting last vertices to the outputs
 diag.addEdge(ctrl2, diag.getOutputs()[0]);
 diag.addEdge(trgt1, diag.getOutputs()[1]);
 diag.addEdge(trgt2, diag.getOutputs()[2]);
