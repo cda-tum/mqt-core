@@ -47,7 +47,6 @@ public:
     return cachedMessage.c_str();
   }
 };
-} // namespace qasm3
 
 class ConstEvalError final : public std::exception {
 public:
@@ -82,3 +81,4 @@ public:
     return cachedMessage.c_str();
   }
 };
+} // namespace qasm3
