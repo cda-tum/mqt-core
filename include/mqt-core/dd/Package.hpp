@@ -353,7 +353,8 @@ public:
   ///
 
   /**
-   * @brief Construct the all-zero density operator $|0...0\rangle\langle0...0|$
+   * @brief Construct the all-zero density operator
+            \f$|0...0\rangle\langle0...0|\f$
    * @param n The number of qubits
    * @return A decision diagram for the all-zero density operator
    */
@@ -369,8 +370,9 @@ public:
   }
 
   /**
-   * @brief Construct the all-zero state $|0...0\rangle$
+   * @brief Construct the all-zero state \f$|0...0\rangle\f$
    * @param n The number of qubits
+   * @param start The starting qubit index. Default is 0.
    * @return A decision diagram for the all-zero state
    */
   vEdge makeZeroState(const std::size_t n, const std::size_t start = 0) {
@@ -390,7 +392,7 @@ public:
   }
 
   /**
-   * @brief Construct a computational basis state $|b_{n-1}...b_0\rangle$
+   * @brief Construct a computational basis state \f$|b_{n-1}...b_0\rangle\f$
    * @param n The number of qubits
    * @param state The state to construct
    * @param start The starting qubit index. Default is 0.
@@ -418,7 +420,8 @@ public:
   }
 
   /**
-   * @brief Construct a product state out of $\{0, 1, +, -, R, L\}^{\otimes n}$.
+   * @brief Construct a product state out of
+   *        \f$\{0, 1, +, -, R, L\}^{\otimes n}\f$.
    * @param n The number of qubits
    * @param state The state to construct
    * @param start The starting qubit index. Default is 0.
@@ -479,7 +482,7 @@ public:
   }
 
   /**
-   * @brief Construct a GHZ state $|0...0\rangle + |1...1\rangle$
+   * @brief Construct a GHZ state \f$|0...0\rangle + |1...1\rangle\f$
    * @param n The number of qubits
    * @return A decision diagram for the GHZ state
    */
@@ -518,7 +521,9 @@ public:
   /**
    * @brief Construct a W state
    * @details The W state is defined as
-   * $$ |0...01\rangle + |0...10\rangle + |10...0\rangle$$
+   * \f[
+   * |0...01\rangle + |0...10\rangle + |10...0\rangle
+   * \f]
    * @param n The number of qubits
    * @return A decision diagram for the W state
    */

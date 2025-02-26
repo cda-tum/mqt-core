@@ -20,6 +20,9 @@
 
 namespace zx {
 
+/**
+ * @brief Struct to represent a (half-)edge in a ZX-diagram
+ */
 struct Edge {
   Vertex to;
   EdgeType type;
@@ -35,6 +38,9 @@ struct Edge {
   }
 };
 
+/**
+ * @brief Struct storing all data corresponding to a vertex in a ZX-diagram
+ */
 struct VertexData {
   Col col;
   Qubit qubit;
@@ -42,6 +48,14 @@ struct VertexData {
   VertexType type;
 };
 
+/**
+ * @brief Class to represent a collection of vertices in a ZX-diagram.
+ * @details The ZXDiagram class stores vertices in a vector of optional
+ * VertexData objects to allow for fast deletion without changing the indices of
+ * the other vertices. The Vertices class provides an iterator to iterate over
+ * all vertices in the diagram. This avoids the need to iterate over all indices
+ * and check if the vertex at that index is valid.
+ */
 class Vertices {
 public:
   explicit Vertices(const std::vector<std::optional<VertexData>>& verts)
@@ -96,12 +110,23 @@ private:
   const std::vector<std::optional<VertexData>>& vertices;
 };
 
+/**
+ * @brief Class to represent a collection of edges in a ZX-diagram.
+ * @details The ZXDiagram class stores edges in a vector of vectors of Edge
+ * objects. The Edges class provides an iterator to iterate over all edges in
+ * the diagram. This avoids the need to iterate over all vertices and check if
+ * the vertex has an edge to another vertex.
+ */
 class Edges {
 public:
   Edges(const std::vector<std::vector<Edge>>& edgs,
         const std::vector<std::optional<VertexData>>& verts)
       : edges(edgs), vertices(verts) {};
 
+  /**
+   * @brief Class wrapping an iterator to iterate over all edges in a
+   * ZX-diagram.
+   */
   class EdgeIterator {
   public:
     using iterator_category = std::forward_iterator_tag;
@@ -152,9 +177,35 @@ private:
   const std::vector<std::optional<VertexData>>& vertices;
 };
 
+/**
+ * @brief Check whether a PiExpression is a constant multiple of pi
+ * @param expr PiExpression to check
+ * @return true if the expression is a constant multiple of pi, false otherwise
+ */
 bool isPauli(const PiExpression& expr);
+
+/**
+ * @brief Check whether a PiExpression is a constant multiple of pi/2
+ * @param expr PiExpression to check
+ * @return true if the expression is a constant multiple of pi/2, false
+ * otherwise
+ */
 bool isClifford(const PiExpression& expr);
+
+/**
+ * @brief Check whether a PiExpression is a constant multiple of pi/2 but not a
+ * multiple of pi
+ * @param expr PiExpression to check
+ * @return true if the expression is a constant multiple of pi/2 but not a
+ * multiple of pi, false otherwise
+ */
 bool isProperClifford(const PiExpression& expr);
 
+/**
+ * @brief Round phase to the nearest multiple of pi/2. The phase has to be
+ * non-symbolic.
+ * @param expr PiExpression to round
+ * @param tolerance Tolerance for rounding
+ */
 void roundToClifford(PiExpression& expr, fp tolerance);
 } // namespace zx

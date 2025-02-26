@@ -365,7 +365,7 @@ private:
 
   /**
   Searches for a node in the hash table with the given key.
-  @param e The node to search for.
+  @param p The node to search for.
   @param key The hashed value used to search the table.
   @return The Edge<Node> found in the hash table or Edge<Node>::zero if not
   found.

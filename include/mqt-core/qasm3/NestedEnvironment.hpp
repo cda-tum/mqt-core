@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+namespace qasm3 {
 template <typename T> class NestedEnvironment {
   std::vector<std::map<std::string, T>> env{};
 
@@ -36,3 +37,4 @@ public:
 
   void emplace(std::string key, T value) { env.back().emplace(key, value); }
 };
+} // namespace qasm3

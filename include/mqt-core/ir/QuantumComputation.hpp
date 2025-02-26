@@ -199,10 +199,6 @@ public:
   [[nodiscard]] std::pair<bool, std::optional<Qubit>>
   containsLogicalQubit(Qubit logicalQubitIndex) const;
 
-  ///---------------------------------------------------------------------------
-  ///                            \n Operations \n
-  ///---------------------------------------------------------------------------
-
   /// Adds a global phase to the quantum circuit.
   /// \param angle the angle to add
   void gphase(fp angle);

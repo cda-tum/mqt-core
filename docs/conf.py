@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 import warnings
 from importlib import metadata
 from pathlib import Path
@@ -66,6 +68,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinxcontrib.inkscapeconverter",
     "sphinxcontrib.bibtex",
+    "breathe",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -161,6 +164,15 @@ python_use_unqualified_type_names = True
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 
+
+breathe_projects = {"mqt.core": "_build/doxygen/xml"}
+breathe_default_project = "mqt.core"
+
+read_the_docs_build = os.environ.get("READTHEDOCS", None) == "True"
+if read_the_docs_build:
+    subprocess.call("doxygen", shell=True)  # noqa: S602, S607
+    subprocess.call("mkdir api/cpp & breathe-apidoc -o api/cpp -m -f -T _build/doxygen/xml/", shell=True)  # noqa: S602, S607
+
 # -- Options for HTML output -------------------------------------------------
 html_theme = "furo"
 html_static_path = ["_static"]
@@ -204,6 +216,7 @@ latex_elements = {
 \DeclarePairedDelimiter\abs{\lvert}{\rvert}
 \DeclarePairedDelimiter\mket{\lvert}{\rangle}
 \DeclarePairedDelimiter\mbra{\langle}{\rvert}
+\DeclareUnicodeCharacter{03C0}{$\pi$}
 
 \newcommand*{\ket}[1]{\ensuremath{\mket{\mkern1mu#1}}}
 \newcommand*{\bra}[1]{\ensuremath{\mbra{\mkern1mu#1}}}

@@ -19,11 +19,15 @@ using namespace qc;
  * @brief Sequentially build a decision diagram representation for the
  * functionality of a purely-quantum @ref QuantumComputation.
  *
- * @details For a circuit $G$ with $|G|$ gates $g_0, g_1, \ldots, g_{|G|-1}$,
- * the functionality of $G$ is defined as the unitary matrix $U$ such that
- * $$ U = U_{|G|-1}) \cdot U_{|G|-2} \cdot \ldots \cdot U_1 \cdot U_0, $$
- * where $U_i$ is the unitary matrix corresponding to gate $g_i$. For an
- * $n$-qubit quantum computation, $U$ is a $2^n \times 2^n$ matrix.
+ * @details For a circuit \f$G\f$ with \f$|G|\f$ gates
+ * \f$g_0, g_1, \ldots, g_{|G|-1}\f$, the functionality of \f$G\f$ is defined as
+ * the unitary matrix \f$U\f$ such that
+ * \f[
+ * U = U_{|G|-1}) \cdot U_{|G|-2} \cdot \ldots \cdot U_1 \cdot U_0,
+ * \f]
+ * where \f$U_i\f$ is the unitary matrix corresponding to gate \f$g_i\f$.
+ * For an \f$n\f$-qubit quantum computation, \f$U\f$ is a \f$2^n \times 2^n\f$
+ * matrix.
  *
  * By representing every single operation in the circuit as a decision diagram
  * instead of a unitary matrix and performing the matrix multiplication directly
@@ -32,9 +36,11 @@ using namespace qc;
  * and runtime.
  *
  * This function effectively computes
- * $$ DD(U) = DD(g_{|G|-1}) \otimes DD(g_{|G|-2}) \otimes \ldots \otimes DD(g_0)
- * $$ by sequentially applying the decision diagrams of the gates in the circuit
- * to the current decision diagram representing the functionality of the quantum
+ * \f[
+ * DD(U) = DD(g_{|G|-1}) \otimes DD(g_{|G|-2}) \otimes \ldots \otimes DD(g_0)
+ * \f]
+ * by sequentially applying the decision diagrams of the gates in the circuit to
+ * the current decision diagram representing the functionality of the quantum
  * computation.
  *
  * @param qc The quantum computation to construct the functionality for
