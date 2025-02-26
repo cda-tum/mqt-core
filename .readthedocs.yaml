@@ -31,8 +31,6 @@ build:
     build:
       html:
         - uv run --frozen --no-dev --group docs -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/html
-        - uv run --frozen --no-dev --group docs -m sphinx -T -b latex -d docs/_build/doctrees -D language=en docs docs/_build/latex
-        - cd docs/_build/latex && latexmk -pdf -f -dvi- -ps- -interaction=nonstopmode -jobname=$READTHEDOCS_PROJECT
       htmlzip:
         - uv run --frozen --no-dev --group docs -m sphinx -T -b dirhtml -d docs/_build/doctrees -D language=en docs docs/_build/dirhtml
         - mkdir -p $READTHEDOCS_OUTPUT/htmlzip
