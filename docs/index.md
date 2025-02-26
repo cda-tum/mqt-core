@@ -71,6 +71,5 @@ api/mqt/core/index
 :glob:
 :caption: C++ API Reference
 
-api/cpp/namespace/namespacezx
-api/cpp/namespace/namespacedd
+api/cpp/namespacelist
 ```

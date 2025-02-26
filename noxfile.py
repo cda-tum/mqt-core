@@ -118,6 +118,7 @@ def docs(session: nox.Session) -> None:
         if shutil.which("doxygen") is None:
             session.error("doxygen is required to build the C++ API docs")
 
+        Path("_build/doxygen").mkdir(parents=True, exist_ok=True)
         session.run("doxygen", "Doxyfile", external=True)
         Path("api/cpp").mkdir(parents=True, exist_ok=True)
         session.run(
@@ -126,7 +127,8 @@ def docs(session: nox.Session) -> None:
             "api/cpp",
             "-m",
             "-f",
-            "-T",
+            "-g",
+            "namespace",
             "_build/doxygen/xml/",
             external=True,
         )
