@@ -216,6 +216,7 @@ latex_elements = {
 \DeclarePairedDelimiter\abs{\lvert}{\rvert}
 \DeclarePairedDelimiter\mket{\lvert}{\rangle}
 \DeclarePairedDelimiter\mbra{\langle}{\rvert}
+\DeclareUnicodeCharacter{03C0}{$\pi$}
 
 \newcommand*{\ket}[1]{\ensuremath{\mket{\mkern1mu#1}}}
 \newcommand*{\bra}[1]{\ensuremath{\mbra{\mkern1mu#1}}}
