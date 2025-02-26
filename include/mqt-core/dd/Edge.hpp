@@ -22,18 +22,12 @@
 
 namespace dd {
 
-///-----------------------------------------------------------------------------
-///                          \n Forward declarations \n
-///-----------------------------------------------------------------------------
 struct vNode;
 struct mNode;
 struct dNode;
 class ComplexNumbers;
 template <typename T> class MemoryManager;
 
-///-----------------------------------------------------------------------------
-///                        \n Type traits and typedefs \n
-///-----------------------------------------------------------------------------
 template <typename T>
 using isVector = std::enable_if_t<std::is_same_v<T, vNode>, bool>;
 template <typename T>
@@ -84,10 +78,6 @@ template <class Node> struct Edge {
    * @return the one terminal
    */
   static constexpr Edge one() { return terminal(Complex::one()); }
-
-  ///---------------------------------------------------------------------------
-  ///                     \n General purpose methods \n
-  ///---------------------------------------------------------------------------
 
   /**
    * @brief Get a terminal DD with a given edge weight
@@ -150,9 +140,6 @@ private:
   [[nodiscard]] std::size_t
   size(std::unordered_set<const Node*>& visited) const;
 
-  ///---------------------------------------------------------------------------
-  ///                     \n Methods for vector DDs \n
-  ///---------------------------------------------------------------------------
 public:
   /**
    * @brief Get a normalized vector DD from a fresh node and a list of edges
@@ -229,9 +216,6 @@ private:
   void traverseVector(const std::complex<fp>& amp, std::size_t i,
                       AmplitudeFunc f, fp threshold = 0.) const;
 
-  ///---------------------------------------------------------------------------
-  ///                     \n Methods for matrix DDs \n
-  ///---------------------------------------------------------------------------
 public:
   /**
    * @brief Get a normalized (density) matrix DD from a fresh node and a list
@@ -327,9 +311,6 @@ public:
                       MatrixEntryFunc f, std::size_t level,
                       fp threshold = 0.) const;
 
-  ///---------------------------------------------------------------------------
-  ///                  \n Methods for density matrix DDs \n
-  ///---------------------------------------------------------------------------
   template <typename T = Node, isDensityMatrix<T> = true>
   [[maybe_unused]] static void setDensityConjugateTrue(Edge& e) {
     Node::setConjugateTempFlagTrue(e.p);
@@ -413,10 +394,6 @@ private:
                         std::size_t level, fp threshold = 0.) const;
 };
 } // namespace dd
-
-///-----------------------------------------------------------------------------
-///                         \n Hash related code \n
-///-----------------------------------------------------------------------------
 
 template <class Node> struct std::hash<dd::Edge<Node>> {
   std::size_t operator()(dd::Edge<Node> const& e) const noexcept;

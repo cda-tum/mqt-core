@@ -107,6 +107,7 @@ public:
    * @brief Look up a result in the compute table
    * @param leftOperand The left operand
    * @param rightOperand The right operand
+   * @param useDensityMatrix Whether a density matrix is expected
    * @return A pointer to the result if it is found, otherwise nullptr.
    */
   ResultType* lookup(const LeftOperandType& leftOperand,

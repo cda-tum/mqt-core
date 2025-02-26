@@ -371,6 +371,7 @@ public:
   /**
    * @brief Construct the all-zero state $|0...0\rangle$
    * @param n The number of qubits
+   * @param start The starting qubit index. Default is 0.
    * @return A decision diagram for the all-zero state
    */
   vEdge makeZeroState(const std::size_t n, const std::size_t start = 0) {
@@ -518,7 +519,9 @@ public:
   /**
    * @brief Construct a W state
    * @details The W state is defined as
-   * $$ |0...01\rangle + |0...10\rangle + |10...0\rangle$$
+   * \f[
+   * |0...01\rangle + |0...10\rangle + |10...0\rangle
+   * \f]
    * @param n The number of qubits
    * @return A decision diagram for the W state
    */

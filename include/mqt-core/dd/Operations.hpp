@@ -44,6 +44,7 @@ namespace dd {
  * called directly.
  *
  * @tparam Config The configuration of the DD package
+ * @param dd The DD package to use
  * @param type The operation type
  * @param params The operation parameters
  * @param controls The operation controls

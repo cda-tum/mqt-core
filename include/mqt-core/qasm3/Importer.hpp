@@ -46,25 +46,25 @@ struct Gate;
 class Importer final : public InstVisitor {
 public:
   /**
-   * Imports a QASM3 file into a @ref QuantumComputation instance
+   * Imports a QASM3 file into a @ref qc::QuantumComputation instance
    * @param filename The path to the QASM3 file to import
-   * @return The imported @ref QuantumComputation instance
+   * @return The imported @ref qc::QuantumComputation instance
    */
   [[nodiscard]] static auto importf(const std::string& filename)
       -> qc::QuantumComputation;
 
   /**
-   * Imports a QASM3 program from a string into a @ref QuantumComputation
+   * Imports a QASM3 program from a string into a @ref qc::QuantumComputation
    * @param qasm The QASM3 program to import
-   * @return The imported @ref QuantumComputation instance
+   * @return The imported @ref qc::QuantumComputation instance
    */
   [[nodiscard]] static auto imports(const std::string& qasm)
       -> qc::QuantumComputation;
 
   /**
-   * Imports a QASM3 program from a stream into a @ref QuantumComputation
+   * Imports a QASM3 program from a stream into a @ref qc::QuantumComputation
    * @param is The input stream to read the QASM3 program from
-   * @return The imported @ref QuantumComputation instance
+   * @return The imported @ref qc::QuantumComputation instance
    */
   [[nodiscard]] static auto import(std::istream& is) -> qc::QuantumComputation;
 
@@ -77,7 +77,7 @@ private:
   explicit Importer(qc::QuantumComputation& quantumComputation);
 
   /**
-   * @brief Import the given QASM3 program into the quantum computation
+   * @brief Import the given QASM3 program into the @ref qc::QuantumComputation
    * @param program The parsed QASM3 program AST
    */
   void visitProgram(const std::vector<std::shared_ptr<Statement>>& program);

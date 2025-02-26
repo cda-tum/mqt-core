@@ -21,18 +21,12 @@
 
 namespace dd {
 
-///-----------------------------------------------------------------------------
-///                        \n Forward declarations \n
-///-----------------------------------------------------------------------------
 struct vNode; // NOLINT(readability-identifier-naming)
 struct mNode; // NOLINT(readability-identifier-naming)
 struct dNode; // NOLINT(readability-identifier-naming)
 class ComplexNumbers;
 template <typename T> class MemoryManager;
 
-///-----------------------------------------------------------------------------
-///                        \n Type traits and typedefs \n
-///-----------------------------------------------------------------------------
 template <typename T>
 using isVector = std::enable_if_t<std::is_same_v<T, vNode>, bool>;
 template <typename T>
@@ -119,10 +113,6 @@ template <typename Node> struct CachedEdge {
     return Node::isTerminal(p);
   }
 
-  ///---------------------------------------------------------------------------
-  ///                     \n Methods for vector DDs \n
-  ///---------------------------------------------------------------------------
-
   /**
    * @brief Get a normalized vector DD from a fresh node and a list of edges.
    * @tparam T template parameter to enable this method only for vNode
@@ -136,10 +126,6 @@ template <typename Node> struct CachedEdge {
   template <typename T = Node, isVector<T> = true>
   static CachedEdge normalize(Node* p, const std::array<CachedEdge, RADIX>& e,
                               MemoryManager<Node>& mm, ComplexNumbers& cn);
-
-  ///---------------------------------------------------------------------------
-  ///                     \n Methods for matrix DDs \n
-  ///---------------------------------------------------------------------------
 
   /**
    * @brief Get a normalized (density) matrix) DD from a fresh node and a list

@@ -167,11 +167,16 @@ public:
   Term operator-() const { return Term(var, -coeff); }
 
   /**
+   * @brief Add to the coefficient of the term.
+   * @param rhs Value to add to the coefficient.
+   */
+  void addCoeff(const T& rhs) { coeff += rhs; }
+
+  /**
    * @brief Multiply the term by a scalar (add coefficients).
    * @param rhs Scalar to multiply the term by.
    * @return Reference to the term.
    */
-  void addCoeff(const T& r) { coeff += r; }
   Term& operator*=(const T& rhs) {
     coeff *= rhs;
     return *this;
@@ -314,9 +319,11 @@ public:
   using const_iterator = typename std::vector<Term<T>>::const_iterator;
 
   /**
-   * @brief Cosntruct an Expression from a varargs list of terms. Constant is
+   * @brief Construct an Expression from a varargs list of terms. Constant is
    * set to 0.
-   * @param ts List of terms.
+   * @tparam Args Variadic template parameter for the terms.
+   * @param t First term.
+   * @param ms Remaining terms.
    */
   template <typename... Args> explicit Expression(Term<T> t, Args&&... ms) {
     terms.emplace_back(t);
@@ -328,7 +335,9 @@ public:
   /**
    * @brief Construct an Expression from a varargs list of variables. Constant
    * is set to 0 and coefficients of the variables are set to 1.
-   * @param ts List of terms.
+   * @tparam Args Variadic template parameter for the variables.
+   * @param v First variable.
+   * @param ms Remaining variables.
    */
   template <typename... Args> explicit Expression(Variable v, Args&&... ms) {
     terms.emplace_back(Term<T>(v));
