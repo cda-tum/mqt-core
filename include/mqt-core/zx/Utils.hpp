@@ -28,7 +28,7 @@ struct Edge {
   EdgeType type;
 
   Edge() = default;
-  Edge(const Vertex t, const EdgeType typ) : to(t), type(typ) {};
+  Edge(const Vertex t, const EdgeType typo) : to(t), type(typo) {};
   void toggle() {
     if (type == EdgeType::Simple) {
       type = EdgeType::Hadamard;
