@@ -299,7 +299,7 @@ docs = [
   "openqasm-pygments>=0.1.2",
   "breathe>=4.36.0",
   "graphviz>=0.20.3",
-  "sphinx>=7.4.7,<8.2",  # due to https://github.com/missinglinkelectronics/sphinxcontrib-svg2pdfconverter/issues/26
+  "sphinx>=8.2.1,<9",  # due to https://github.com/missinglinkelectronics/sphinxcontrib-svg2pdfconverter/issues/26
 ]
 test = [
   "pytest>=8.3.3",
