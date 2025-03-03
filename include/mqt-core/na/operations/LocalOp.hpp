@@ -13,6 +13,7 @@
 #include "na/entities/Atom.hpp"
 #include "na/operations/Op.hpp"
 
+#include <string>
 #include <utility>
 #include <vector>
 

@@ -9,6 +9,7 @@
 
 #include "na/operations/MoveOp.hpp"
 
+#include <cstddef>
 #include <sstream>
 #include <string>
 

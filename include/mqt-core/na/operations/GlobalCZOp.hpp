@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "na/entities/Zone.hpp"
 #include "na/operations/GlobalOp.hpp"
 
 namespace na {

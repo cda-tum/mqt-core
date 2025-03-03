@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <ostream>
 #include <string>
 #include <utility>
 

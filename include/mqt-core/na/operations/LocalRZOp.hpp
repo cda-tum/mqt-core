@@ -9,9 +9,13 @@
 
 #pragma once
 
+#include "Definitions.hpp"
+#include "na/entities/Atom.hpp"
 #include "na/operations/LocalOp.hpp"
 
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace na {
 class LocalRZOp final : public LocalOp {

@@ -17,8 +17,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <ostream>
-#include <string>
+#include <utility>
 
 namespace na {
 /**

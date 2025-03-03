@@ -10,6 +10,7 @@
 #pragma once
 
 #include "na/entities/Atom.hpp"
+#include "na/entities/Location.hpp"
 #include "na/operations/Op.hpp"
 
 #include <utility>

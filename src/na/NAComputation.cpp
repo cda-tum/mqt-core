@@ -9,9 +9,12 @@
 
 #include "na/NAComputation.hpp"
 
+#include "na/entities/Atom.hpp"
+#include "na/entities/Location.hpp"
 #include "na/operations/LoadOp.hpp"
 #include "na/operations/LocalOp.hpp"
 #include "na/operations/MoveOp.hpp"
+#include "na/operations/Op.hpp"
 #include "na/operations/ShuttlingOp.hpp"
 #include "na/operations/StoreOp.hpp"
 
@@ -22,6 +25,8 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 namespace na {
 auto NAComputation::getLocationOfAtomAfterOperation(const Atom* atom,

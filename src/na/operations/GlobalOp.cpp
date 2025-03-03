@@ -7,7 +7,7 @@
  * Licensed under the MIT License
  */
 
-#include "na/operations/GlobalRYOp.hpp"
+#include "na/operations/GlobalOp.hpp"
 
 #include <iomanip>
 #include <ios>

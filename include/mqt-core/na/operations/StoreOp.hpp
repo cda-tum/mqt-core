@@ -13,6 +13,7 @@
 #include "na/entities/Location.hpp"
 #include "na/operations/ShuttlingOp.hpp"
 
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>

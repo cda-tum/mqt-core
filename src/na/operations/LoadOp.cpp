@@ -9,6 +9,7 @@
 
 #include "na/operations/LoadOp.hpp"
 
+#include <cstddef>
 #include <sstream>
 #include <string>
 

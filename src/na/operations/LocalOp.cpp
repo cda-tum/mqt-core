@@ -10,6 +10,7 @@
 #include "na/operations/LocalOp.hpp"
 
 #include <iomanip>
+#include <ios>
 #include <sstream>
 #include <string>
 
