@@ -65,6 +65,7 @@ def _run_tests(
         "build",
         "--only-group",
         "test",
+        "--verbose",
         *install_args,
         env=env,
     )
@@ -74,6 +75,7 @@ def _run_tests(
         "--no-dev",  # do not auto-install dev dependencies
         "--no-build-isolation-package",
         "mqt-core",  # build the project without isolation
+        "--verbose",
         *install_args,
         "pytest",
         *run_args,
@@ -113,6 +115,19 @@ def docs(session: nox.Session) -> None:
     if serve:
         session.install("sphinx-autobuild")
 
+    env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
+    # install build and docs dependencies on top of the existing environment
+    session.run(
+        "uv",
+        "sync",
+        "--inexact",
+        "--only-group",
+        "build",
+        "--only-group",
+        "docs",
+        env=env,
+    )
+
     # build the C++ API docs using doxygen
     with session.chdir("docs"):
         if shutil.which("doxygen") is None:
@@ -132,19 +147,6 @@ def docs(session: nox.Session) -> None:
             "_build/doxygen/xml/",
             external=True,
         )
-
-    env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
-    # install build and docs dependencies on top of the existing environment
-    session.run(
-        "uv",
-        "sync",
-        "--inexact",
-        "--only-group",
-        "build",
-        "--only-group",
-        "docs",
-        env=env,
-    )
 
     shared_args = [
         "-n",  # nitpicky mode
