@@ -20,7 +20,7 @@
 
 namespace na {
 
-class MoveOp : public ShuttlingOp {
+class MoveOp final : public ShuttlingOp {
 protected:
   std::vector<Location> targetLocations;
 

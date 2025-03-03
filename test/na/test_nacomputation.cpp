@@ -11,6 +11,7 @@
 #include "ir/operations/OpType.hpp"
 #include "na/NAComputation.hpp"
 #include "na/NAUtils.hpp"
+#include "na/operations/GlobalCZOp.hpp"
 #include "na/operations/GlobalRYOp.hpp"
 #include "na/operations/LoadOp.hpp"
 #include "na/operations/LocalRZOp.hpp"
@@ -40,6 +41,7 @@ TEST(NAComputation, General) {
                          std::vector{Location{4, 1}, Location{5, 1}});
   qc.emplaceBack<StoreOp>(std::vector{atom0, atom1},
                           std::vector{Location{4, 0}, Location{5, 0}});
+  qc.emplaceBack(GlobalCZOp(globalZone));
   std::stringstream ss;
   ss << qc;
   EXPECT_EQ(ss.str(), "atom (0.000, 0.000) atom0\n"
@@ -58,7 +60,8 @@ TEST(NAComputation, General) {
                       "@+ store [\n"
                       "    (4.000, 0.000) atom0\n"
                       "    (5.000, 0.000) atom1\n"
-                      "]\n");
+                      "]\n"
+                      "@+ cz global\n");
 }
 
 TEST(NAComputation, EmptyPrint) {

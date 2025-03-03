@@ -20,7 +20,7 @@
 
 namespace na {
 
-class StoreOp : public ShuttlingOp {
+class StoreOp final : public ShuttlingOp {
 protected:
   std::optional<std::vector<Location>> targetLocations = std::nullopt;
 

@@ -13,6 +13,7 @@
 #include "na/entities/Location.hpp"
 #include "na/operations/ShuttlingOp.hpp"
 
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -20,7 +21,7 @@
 
 namespace na {
 
-class LoadOp : public ShuttlingOp {
+class LoadOp final : public ShuttlingOp {
 protected:
   std::optional<std::vector<Location>> targetLocations = std::nullopt;
 
