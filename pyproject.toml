@@ -10,12 +10,12 @@ authors = [
     { name = "Lukas Burgholzer", email = "burgholzer@me.com" }
 ]
 keywords = ["MQT", "quantum-computing", "design-automation", "decision-diagrams", "zx-calculus"]
-license = { file = "LICENSE.md" }
+license = "MIT"
+license-files = ["LICENSE.md"]
 
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
   "Natural Language :: English",
   "Operating System :: MacOS",
   "Operating System :: Microsoft :: Windows",
