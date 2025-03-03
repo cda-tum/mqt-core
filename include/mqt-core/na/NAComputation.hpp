@@ -15,6 +15,7 @@
 #include "na/operations/Op.hpp"
 
 #include <iterator>
+#include <memory>
 #include <ostream>
 #include <string>
 #include <unordered_map>
