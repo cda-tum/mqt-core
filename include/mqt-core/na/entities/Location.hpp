@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <iomanip>
 #include <ostream>
@@ -35,19 +36,19 @@ struct Location final {
       : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
   Location(const std::size_t x, const std::size_t y)
       : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
-  explicit Location(const std::pair<float, float> p)
+  explicit Location(const std::pair<float, float>& p)
       : Location(p.first, p.second) {};
-  explicit Location(const std::pair<double, double> p)
+  explicit Location(const std::pair<double, double>& p)
       : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::int32_t, std::int32_t> p)
+  explicit Location(const std::pair<std::int32_t, std::int32_t>& p)
       : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::int64_t, std::int64_t> p)
+  explicit Location(const std::pair<std::int64_t, std::int64_t>& p)
       : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::uint32_t, std::uint32_t> p)
+  explicit Location(const std::pair<std::uint32_t, std::uint32_t>& p)
       : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::uint64_t, std::uint64_t> p)
+  explicit Location(const std::pair<std::uint64_t, std::uint64_t>& p)
       : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::size_t, std::size_t> p)
+  explicit Location(const std::pair<std::size_t, std::size_t>& p)
       : Location(p.first, p.second) {};
   Location() = default;
   Location(const Location& loc) = default;
