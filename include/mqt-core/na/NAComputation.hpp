@@ -98,6 +98,13 @@ public:
       -> std::ostream& {
     return os << qc.toString();
   }
+  /// Validates the NAComputation and checks whether all AOD constraints are
+  /// fulfilled.
+  /// I.e.,
+  /// - each atom is loaded before it is moved
+  /// - the relative order of loaded atoms is preserved
+  /// - each atom is loaded before it is stored
+  /// - each atom is stored before it is loaded (again)
   [[nodiscard]] auto validate() const -> bool;
 };
 } // namespace na

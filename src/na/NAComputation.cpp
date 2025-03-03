@@ -66,18 +66,34 @@ auto NAComputation::toString() const -> std::string {
   return ss.str();
 }
 auto NAComputation::validate() const -> bool {
-  std::size_t counter = 1; // the first operation is `init at ...;`
+  // This counter is used to display the operation number where an error
+  // occurred.
+  // As every operation might not correspond to one line in the output,
+  // this may not be identical with the line number in the output.
+  // However, the first operation initializes the atom and because of that, the
+  // counter starts with 1.
+  std::size_t counter = 1;
   if (atoms.size() != initialLocations.size()) {
     std::cout << "Number of atoms and initial locations must be equal\n";
   }
+  // This map is used to keep track of each atom's current location to check
+  // the constraints when shuttling atoms.
   std::unordered_map<const Atom*, Location> currentLocations = initialLocations;
+  // This set is used to keep track of the atoms that are currently shuttling,
+  // i.e., they are loaded but not yet stored again.
   std::unordered_set<const Atom*> currentlyShuttling{};
   for (const auto& op : *this) {
     ++counter;
     if (op->is<ShuttlingOp>()) {
+      //===----------------------------------------------------------------===//
+      // Shuttling Operations
+      //===----------------------------------------------------------------===//
       const auto& shuttlingOp = op->as<ShuttlingOp>();
       const auto& opAtoms = shuttlingOp.getAtoms();
       if (shuttlingOp.is<LoadOp>()) {
+        //===-----------------------------------------------------------------//
+        // Load Operations
+        //-----------------------------------------------------------------===//
         if (std::any_of(opAtoms.begin(), opAtoms.end(),
                         [&currentlyShuttling](const auto* atom) {
                           return currentlyShuttling.find(atom) !=
@@ -92,6 +108,9 @@ auto NAComputation::validate() const -> bool {
                         currentlyShuttling.insert(atom);
                       });
       } else {
+        //===-----------------------------------------------------------------//
+        // Move and Store Operations
+        //-----------------------------------------------------------------===//
         if (std::any_of(opAtoms.begin(), opAtoms.end(),
                         [&currentlyShuttling](const auto* atom) {
                           return currentlyShuttling.find(atom) ==
@@ -102,8 +121,12 @@ auto NAComputation::validate() const -> bool {
           return false;
         }
       }
+      //===----------------------------------------------------------------===//
+      // All Shuttling Operations that move atoms
+      //===----------------------------------------------------------------===//
       if ((op->is<LoadOp>() && op->as<LoadOp>().hasTargetLocations()) ||
-          (op->is<StoreOp>() && op->as<StoreOp>().hasTargetLocations())) {
+          (op->is<StoreOp>() && op->as<StoreOp>().hasTargetLocations()) ||
+          op->is<MoveOp>()) {
         const auto& targetLocations = shuttlingOp.getTargetLocations();
         for (std::size_t i = 0; i < opAtoms.size(); ++i) {
           const auto* a = opAtoms[i];
@@ -160,11 +183,17 @@ auto NAComputation::validate() const -> bool {
         }
       }
       if (shuttlingOp.is<StoreOp>()) {
+        //===-----------------------------------------------------------------//
+        // Store Operations
+        //-----------------------------------------------------------------===//
         std::for_each(opAtoms.begin(), opAtoms.end(), [&](const auto* atom) {
           currentlyShuttling.erase(atom);
         });
       }
     } else if (op->is<LocalOp>()) {
+      //===----------------------------------------------------------------===//
+      // Local Operations
+      //===----------------------------------------------------------------===//
       const auto& opAtoms = op->as<LocalOp>().getAtoms();
       for (std::size_t i = 0; i < opAtoms.size(); ++i) {
         const auto* a = opAtoms[i];
