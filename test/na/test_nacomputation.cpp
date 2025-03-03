@@ -31,6 +31,7 @@ TEST(NAComputation, General) {
   qc.emplaceInitialLocation(atom1, 1, 0);
   qc.emplaceInitialLocation(atom2, 2, 0);
   qc.emplaceBack<LocalRZOp>(qc::PI_2, atom0);
+  qc.emplaceBack<LocalRZOp>(qc::PI_2, std::vector{atom1, atom2});
   qc.emplaceBack<GlobalRYOp>(qc::PI_2, globalZone);
   qc.emplaceBack<LoadOp>(std::vector{atom0, atom1},
                          std::vector{Location{0, 1}, Location{1, 1}});
@@ -45,6 +46,10 @@ TEST(NAComputation, General) {
                       "atom (1.000, 0.000) atom1\n"
                       "atom (2.000, 0.000) atom2\n"
                       "@+ rz 1.57080 atom0\n"
+                      "@+ rz [\n"
+                      "    1.57080 atom1\n"
+                      "    1.57080 atom2\n"
+                      "]\n"
                       "@+ ry 1.57080 global\n"
                       "@+ load [\n"
                       "    (0.000, 1.000) atom0\n"
@@ -143,6 +148,17 @@ TEST(NAComputation, ValidateAODConstraints) {
   qc.clear();
   // store unloaded atom
   qc.emplaceBack<StoreOp>(std::vector{atom0});
+  EXPECT_FALSE(qc.validate());
+  qc.clear();
+  qc.emplaceBack<LoadOp>(std::vector{atom2, atom1});
+  // row order not preserved
+  qc.emplaceBack<StoreOp>(std::vector{atom2, atom1},
+                          std::vector{Location{0, 1}, Location{2, 2}});
+  EXPECT_FALSE(qc.validate());
+  qc.clear();
+  qc.emplaceBack<LoadOp>(std::vector{atom1});
+  qc.emplaceBack<StoreOp>(std::vector{atom1});
+  qc.emplaceBack<StoreOp>(std::vector{atom1});
   EXPECT_FALSE(qc.validate());
 }
 
