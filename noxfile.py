@@ -65,6 +65,7 @@ def _run_tests(
         "build",
         "--only-group",
         "test",
+        "--verbose",
         *install_args,
         env=env,
     )
@@ -74,6 +75,7 @@ def _run_tests(
         "--no-dev",  # do not auto-install dev dependencies
         "--no-build-isolation-package",
         "mqt-core",  # build the project without isolation
+        "--verbose",
         *install_args,
         "pytest",
         *run_args,
