@@ -146,31 +146,60 @@ auto NAComputation::validate() const -> bool {
                         << " (two end points identical)\n";
               return false;
             }
+            // Exp.:
+            //  o -----> o
+            //  o --> o
             if (s1.x == s2.x && e1.x != e2.x) {
               std::cout << "Error in op number " << counter
                         << " (columns not preserved)\n";
               return false;
             }
+            // Exp.:
+            // o   o
+            // |   |
+            // v   |
+            // o   v
+            //     o
             if (s1.y == s2.y && e1.y != e2.y) {
               std::cout << "Error in op number " << counter
                         << " (rows not preserved)\n";
               return false;
             }
+            // Exp.:
+            // o -------> o
+            //    o--> o
             if (s1.x < s2.x && e1.x >= e2.x) {
               std::cout << "Error in op number " << counter
                         << " (column order not preserved)\n";
               return false;
             }
+            // Exp.:
+            // o
+            // |  o
+            // |  |
+            // |  v
+            // v  o
+            // o
             if (s1.y < s2.y && e1.y >= e2.y) {
               std::cout << "Error in op number " << counter
                         << " (row order not preserved)\n";
               return false;
             }
+            // Exp.:
+            //    o--> o
+            // o -------> o
             if (s1.x > s2.x && e1.x <= e2.x) {
               std::cout << "Error in op number " << counter
                         << " (column order not preserved)\n";
               return false;
             }
+            // Exp.:
+            //   o
+            // o |
+            // | |
+            // v |
+            // o v
+            //   o
             if (s1.y > s2.y && e1.y <= e2.y) {
               std::cout << "Error in op number " << counter
                         << " (row order not preserved)\n";
