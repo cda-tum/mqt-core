@@ -8,9 +8,7 @@
  */
 
 #include "Definitions.hpp"
-#include "ir/operations/OpType.hpp"
 #include "na/NAComputation.hpp"
-#include "na/NAUtils.hpp"
 #include "na/operations/GlobalCZOp.hpp"
 #include "na/operations/GlobalRYOp.hpp"
 #include "na/operations/LoadOp.hpp"
@@ -19,7 +17,6 @@
 #include "na/operations/StoreOp.hpp"
 
 #include <gtest/gtest.h>
-#include <memory>
 #include <sstream>
 #include <vector>
 

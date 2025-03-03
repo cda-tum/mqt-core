@@ -9,6 +9,7 @@
 
 #include "na/operations/StoreOp.hpp"
 
+#include <cstddef>
 #include <sstream>
 #include <string>
 
