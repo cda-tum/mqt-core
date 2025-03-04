@@ -91,6 +91,11 @@ if(BUILD_MQT_CORE_BENCHMARKS)
   add_subdirectory(eval)
 endif()
 
+option(BUILD_MQT_CORE_MLIR "Build MLIR for the MQT Core project" ON)
+if (BUILD_MQT_CORE_MLIR)
+  add_subdirectory(mlir)
+endif()
+
 if(MQT_CORE_MASTER_PROJECT)
   if(NOT TARGET mqt-core-uninstall)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in
