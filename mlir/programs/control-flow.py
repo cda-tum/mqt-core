@@ -1,6 +1,15 @@
-from catalyst import qjit, measure, cond, for_loop, while_loop, grad
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
+from __future__ import annotations
+
 import pennylane as qml
-from jax import numpy as jnp
+from catalyst import for_loop, qjit
+
 
 @for_loop(0, 3, 1)
 def loop_body(i, *args):
@@ -11,6 +20,7 @@ def loop_body(i, *args):
     qml.Hadamard(wires=i + 1)
     return args
 
+
 @qjit
 @qml.qnode(qml.device("lightning.qubit", wires=4))
 def circuit():
@@ -19,9 +29,10 @@ def circuit():
     loop_body()
     return qml.probs(wires=3)
 
+
 def main() -> None:
-    print(circuit())
-    print(circuit.mlir)
+    pass
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,13 @@
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 # pylint: disable=undefined-variable
+from __future__ import annotations
+
 import os
 
 import lit.formats
@@ -22,6 +31,6 @@ try:
     # From within a build target we have access to cmake variables configured in lit.site.cfg.py.in.
     llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)  # FileCheck
     llvm_config.with_environment("PATH", config.quantum_bin_dir, append_path=True)  # quantum-opt
-except AttributeError as e:
+except AttributeError:
     # The system PATH is available by default.
     pass
