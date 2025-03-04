@@ -394,3 +394,21 @@ def test_final_layout_with_permutation_ancilla_in_front_and_back(backend: Generi
 
     # Check that output_permutation matches the result of applying the routing permutation to input_layout
     assert mqt_qc.output_permutation == {idx: routing_permutation[key] for idx, key in enumerate(initial_layout)}
+
+
+def test_empty_quantum_register() -> None:
+    """Test an empty quantum register (valid in Qiskit) is handled correctly."""
+    qr = QuantumRegister(0)
+    qc = QuantumCircuit(qr)
+    mqt_qc = qiskit_to_mqt(qc)
+    assert mqt_qc.num_qubits == 0
+    assert mqt_qc.num_ops == 0
+
+
+def test_empty_classical_register() -> None:
+    """Test an empty classical register (valid in Qiskit) is handled correctly."""
+    cr = ClassicalRegister(0)
+    qc = QuantumCircuit(cr)
+    mqt_qc = qiskit_to_mqt(qc)
+    assert mqt_qc.num_classical_bits == 0
+    assert mqt_qc.num_ops == 0

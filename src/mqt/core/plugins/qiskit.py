@@ -50,6 +50,8 @@ def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
     qubit_map: dict[Qubit, int] = {}
     for reg in circ.qregs:
         size = reg.size
+        if size == 0:
+            continue
         if isinstance(reg, AncillaRegister):
             qc.add_ancillary_register(size, reg.name)
         else:
@@ -62,6 +64,8 @@ def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
     clbit_map: dict[Clbit, int] = {}
     for reg in circ.cregs:
         size = reg.size
+        if size == 0:
+            continue
         qc.add_classical_register(size, reg.name)
         for bit in reg:
             clbit_map[bit] = clbit_index
