@@ -19,26 +19,42 @@
 #include <vector>
 
 namespace na {
-
+/// Represents a move operation in the NA computation.
 class MoveOp final : public ShuttlingOp {
 protected:
   std::vector<Location> targetLocations_;
 
 public:
+  /// Creates a new move operation with the given atoms and target locations.
+  /// @param atoms The atoms to move.
+  /// @param targetLocations The target locations to move the atoms to.
   MoveOp(std::vector<const Atom*> atoms, std::vector<Location> targetLocations)
       : ShuttlingOp(std::move(atoms)),
         targetLocations_(std::move(targetLocations)) {
-    if (this->atoms.size() != this->targetLocations_.size()) {
+    if (this->atoms_.size() != this->targetLocations_.size()) {
       throw std::invalid_argument(
           "Number of atoms and target locations must be equal.");
     }
   }
+  /// Creates a new move operation with the given atom and target location.
+  /// @param atom The atom to move.
+  /// @param targetLocation The target location to move the atom to.
   MoveOp(const Atom& atom, const Location& targetLocation)
       : MoveOp({&atom}, {targetLocation}) {}
+  /// Returns true if the move operation has target locations set.
+  /// @return True if the move operation has target locations set, false
+  /// otherwise.
+  [[nodiscard]] auto hasTargetLocations() const -> bool override {
+    return true;
+  }
+  /// Returns the target locations of the move operation.
+  /// @return The target locations of the move operation.
   [[nodiscard]] auto getTargetLocations() const -> const
       decltype(targetLocations_)& override {
     return targetLocations_;
   }
+  /// Returns a string representation of the operation.
+  /// @return A string representation of the operation.
   [[nodiscard]] auto toString() const -> std::string override;
 };
 } // namespace na

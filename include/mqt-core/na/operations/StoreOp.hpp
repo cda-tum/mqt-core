@@ -20,35 +20,60 @@
 #include <vector>
 
 namespace na {
-
+/// Represents a store operation in the NA computation.
 class StoreOp final : public ShuttlingOp {
 protected:
-  std::optional<std::vector<Location>> targetLocations = std::nullopt;
+  std::optional<std::vector<Location>> targetLocations_ = std::nullopt;
 
 public:
+  /// Creates a new store operation with the given atoms and target locations.
+  /// @details The target locations can be used if the store operation
+  /// incorporates some offset.
+  /// @param atoms The atoms to store.
+  /// @param targetLocations The target locations to store the atoms to.
   StoreOp(std::vector<const Atom*> atoms, std::vector<Location> targetLocations)
       : ShuttlingOp(std::move(atoms)),
-        targetLocations(std::move(targetLocations)) {
-    if (this->atoms.size() != this->targetLocations->size()) {
+        targetLocations_(std::move(targetLocations)) {
+    if (this->atoms_.size() != this->targetLocations_->size()) {
       throw std::invalid_argument(
           "Number of atoms and target locations must be equal.");
     }
   }
+  /// Creates a new store operation with the given atoms and target locations.
+  /// @details Here, the target locations are not used, i.e., this store does
+  /// not contain any offset.
+  /// @param atoms The atoms to store.
   explicit StoreOp(std::vector<const Atom*> atoms)
       : ShuttlingOp(std::move(atoms)) {}
+  /// Creates a new store operation with the given atom and target location.
+  /// @details The target location can be used if the store operation
+  /// incorporates some offset.
+  /// @param atom The atom to store.
+  /// @param targetLocation The target location to store the atom to.
   StoreOp(const Atom& atom, const Location& targetLocation)
       : StoreOp({&atom}, {targetLocation}) {}
+  /// Creates a new store operation with the given atom and target locations.
+  /// @details Here, the target locations are not used, i.e., this store does
+  /// not contain any offset.
+  /// @param atom The atom to store.
   explicit StoreOp(const Atom& atom) : StoreOp({&atom}) {}
-  [[nodiscard]] auto hasTargetLocations() const -> bool {
-    return targetLocations.has_value();
+  /// Returns true if the store operation has target locations set.
+  /// @return True if the store operation has target locations set, false
+  /// otherwise.
+  [[nodiscard]] auto hasTargetLocations() const -> bool override {
+    return targetLocations_.has_value();
   }
+  /// Returns the target locations of the store operation.
+  /// @return The target locations of the store operation.
   [[nodiscard]] auto getTargetLocations() const
       -> const std::vector<Location>& override {
-    if (!targetLocations.has_value()) {
+    if (!targetLocations_.has_value()) {
       throw std::logic_error("Operation has no target locations set.");
     }
-    return *targetLocations;
+    return *targetLocations_;
   }
+  /// Returns a string representation of the operation.
+  /// @return A string representation of the operation.
   [[nodiscard]] auto toString() const -> std::string override;
 };
 } // namespace na

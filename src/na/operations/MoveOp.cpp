@@ -17,12 +17,12 @@ namespace na {
 auto MoveOp::toString() const -> std::string {
   std::stringstream ss;
   ss << "@+ move";
-  if (atoms.size() == 1) {
-    ss << " " << targetLocations_.front() << " " << *(atoms.front());
+  if (atoms_.size() == 1) {
+    ss << " " << targetLocations_.front() << " " << *(atoms_.front());
   } else {
     ss << " [\n";
-    for (std::size_t i = 0; i < atoms.size(); ++i) {
-      ss << "    " << targetLocations_[i] << " " << *(atoms[i]) << "\n";
+    for (std::size_t i = 0; i < atoms_.size(); ++i) {
+      ss << "    " << targetLocations_[i] << " " << *(atoms_[i]) << "\n";
     }
     ss << "]";
   }

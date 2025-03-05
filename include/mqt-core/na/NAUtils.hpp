@@ -27,6 +27,9 @@ namespace na {
  * StandardOperations of the same type with the same parameters acting on all
  * qubits. The latter is what a QASM line like `ry(π) q;` is translated to in
  * MQT-core. All other operations are not global.
+ * @param op The operation to check.
+ * @param nQubits The number of qubits in the circuit.
+ * @return True if the operation is global, false otherwise.
  */
 [[nodiscard]] inline auto isGlobal(const qc::Operation& op,
                                    const std::size_t nQubits) -> bool {
@@ -49,20 +52,23 @@ namespace na {
 }
 } // namespace na
 
-template <> struct std::hash<std::pair<qc::OpType, std::size_t>> {
-  std::size_t
-  operator()(const std::pair<qc::OpType, std::size_t>& t) const noexcept {
-    const std::size_t h1 = std::hash<qc::OpType>{}(t.first);
-    const std::size_t h2 = std::hash<std::size_t>{}(t.second);
+/// @brief Specialization of std::hash for std::pair<qc::OpType, std::size_t>.
+template <> struct std::hash<std::pair<qc::OpType, size_t>> {
+  /// @brief Hashes a pair of qc::OpType and size_t values.
+  auto operator()(const std::pair<qc::OpType, size_t>& t) const noexcept
+      -> size_t {
+    const size_t h1 = std::hash<qc::OpType>{}(t.first);
+    const size_t h2 = std::hash<size_t>{}(t.second);
     return qc::combineHash(h1, h2);
   }
 };
 
-template <> struct std::hash<std::pair<std::size_t, std::size_t>> {
-  std::size_t
-  operator()(const std::pair<std::size_t, std::size_t>& p) const noexcept {
-    const std::size_t h1 = std::hash<std::size_t>{}(p.first);
-    const std::size_t h2 = std::hash<std::size_t>{}(p.second);
+/// @brief Specialization of std::hash for std::pair<size_t, size_t>.
+template <> struct std::hash<std::pair<size_t, size_t>> {
+  /// @brief Hashes a pair of size_t values.
+  auto operator()(const std::pair<size_t, size_t>& p) const noexcept -> size_t {
+    const size_t h1 = std::hash<size_t>{}(p.first);
+    const size_t h2 = std::hash<size_t>{}(p.second);
     return qc::combineHash(h1, h2);
   }
 };

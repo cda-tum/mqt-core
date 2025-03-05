@@ -101,9 +101,8 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
                           return currentlyShuttling.find(atom) !=
                                  currentlyShuttling.end();
                         })) {
-          std::cout << "Error in op number " << counter
-                    << " (atom already loaded)\n";
-          return false;
+          ss << "Error in op number " << counter << " (atom already loaded)\n";
+          return {false, ss.str()};
         }
         for (const auto* atom : opAtoms) {
           currentlyShuttling.emplace(atom);
@@ -117,9 +116,8 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
                           return currentlyShuttling.find(atom) ==
                                  currentlyShuttling.end();
                         })) {
-          std::cout << "Error in op number " << counter
-                    << " (atom not loaded)\n";
-          return false;
+          ss << "Error in op number " << counter << " (atom not loaded)\n";
+          return {false, ss.str()};
         }
       }
       //===----------------------------------------------------------------===//
@@ -134,26 +132,26 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
           for (std::size_t j = i + 1; j < opAtoms.size(); ++j) {
             const auto* b = opAtoms[j];
             if (a == b) {
-              std::cout << "Error in op number " << counter
-                        << " (two atoms identical)\n";
-              return false;
+              ss << "Error in op number " << counter
+                 << " (two atoms identical)\n";
+              return {false, ss.str()};
             }
             const auto& s1 = currentLocations[a];
             const auto& s2 = currentLocations[b];
             const auto& e1 = targetLocations[i];
             const auto& e2 = targetLocations[j];
             if (e1 == e2) {
-              std::cout << "Error in op number " << counter
-                        << " (two end points identical)\n";
-              return false;
+              ss << "Error in op number " << counter
+                 << " (two end points identical)\n";
+              return {false, ss.str()};
             }
             // Exp.:
             //  o -----> o
             //  o --> o
             if (s1.x == s2.x && e1.x != e2.x) {
-              std::cout << "Error in op number " << counter
-                        << " (columns not preserved)\n";
-              return false;
+              ss << "Error in op number " << counter
+                 << " (columns not preserved)\n";
+              return {false, ss.str()};
             }
             // Exp.:
             // o   o
@@ -162,17 +160,17 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
             // o   v
             //     o
             if (s1.y == s2.y && e1.y != e2.y) {
-              std::cout << "Error in op number " << counter
-                        << " (rows not preserved)\n";
-              return false;
+              ss << "Error in op number " << counter
+                 << " (rows not preserved)\n";
+              return {false, ss.str()};
             }
             // Exp.:
             // o -------> o
             //    o--> o
             if (s1.x < s2.x && e1.x >= e2.x) {
-              std::cout << "Error in op number " << counter
-                        << " (column order not preserved)\n";
-              return false;
+              ss << "Error in op number " << counter
+                 << " (column order not preserved)\n";
+              return {false, ss.str()};
             }
             // Exp.:
             // o
@@ -182,17 +180,17 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
             // v  o
             // o
             if (s1.y < s2.y && e1.y >= e2.y) {
-              std::cout << "Error in op number " << counter
-                        << " (row order not preserved)\n";
-              return false;
+              ss << "Error in op number " << counter
+                 << " (row order not preserved)\n";
+              return {false, ss.str()};
             }
             // Exp.:
             //    o--> o
             // o -------> o
             if (s1.x > s2.x && e1.x <= e2.x) {
-              std::cout << "Error in op number " << counter
-                        << " (column order not preserved)\n";
-              return false;
+              ss << "Error in op number " << counter
+                 << " (column order not preserved)\n";
+              return {false, ss.str()};
             }
             // Exp.:
             //   o
@@ -202,9 +200,9 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
             // o v
             //   o
             if (s1.y > s2.y && e1.y <= e2.y) {
-              std::cout << "Error in op number " << counter
-                        << " (row order not preserved)\n";
-              return false;
+              ss << "Error in op number " << counter
+                 << " (row order not preserved)\n";
+              return {false, ss.str()};
             }
           }
         }
@@ -229,9 +227,9 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
         const auto* a = opAtoms[i];
         for (std::size_t j = i + 1; j < opAtoms.size(); ++j) {
           if (const auto* b = opAtoms[j]; a == b) {
-            std::cout << "Error in op number " << counter
-                      << " (two atoms identical)\n";
-            return false;
+            ss << "Error in op number " << counter
+               << " (two atoms identical)\n";
+            return {false, ss.str()};
           }
         }
       }

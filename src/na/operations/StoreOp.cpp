@@ -17,19 +17,19 @@ namespace na {
 auto StoreOp::toString() const -> std::string {
   std::stringstream ss;
   ss << "@+ store";
-  if (atoms.size() == 1) {
-    if (targetLocations) {
-      ss << " " << targetLocations->front();
+  if (atoms_.size() == 1) {
+    if (targetLocations_) {
+      ss << " " << targetLocations_->front();
     }
-    ss << " " << *(atoms.front());
+    ss << " " << *(atoms_.front());
   } else {
     ss << " [\n";
-    for (std::size_t i = 0; i < atoms.size(); ++i) {
+    for (std::size_t i = 0; i < atoms_.size(); ++i) {
       ss << "    ";
-      if (targetLocations) {
-        ss << (*targetLocations)[i] << " ";
+      if (targetLocations_) {
+        ss << (*targetLocations_)[i] << " ";
       }
-      ss << *(atoms[i]) << "\n";
+      ss << *(atoms_[i]) << "\n";
     }
     ss << "]";
   }
