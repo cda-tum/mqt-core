@@ -22,17 +22,17 @@ auto StoreOp::toString() const -> std::string {
       ss << " " << targetLocations_->front();
     }
     ss << " " << *(atoms_.front());
-  } else {
-    ss << " [\n";
-    for (std::size_t i = 0; i < atoms_.size(); ++i) {
-      ss << "    ";
-      if (targetLocations_) {
-        ss << (*targetLocations_)[i] << " ";
-      }
-      ss << *(atoms_[i]) << "\n";
-    }
-    ss << "]";
+    return ss.str();
   }
+  ss << " [\n";
+  for (std::size_t i = 0; i < atoms_.size(); ++i) {
+    ss << "    ";
+    if (targetLocations_) {
+      ss << (*targetLocations_)[i] << " ";
+    }
+    ss << *(atoms_[i]) << "\n";
+  }
+  ss << "]";
   return ss.str();
 }
 } // namespace na

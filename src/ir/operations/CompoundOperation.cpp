@@ -74,6 +74,17 @@ bool CompoundOperation::isCompoundOperation() const noexcept { return true; }
 
 bool CompoundOperation::isCustomGate() const noexcept { return customGate; }
 
+bool CompoundOperation::isGlobal(const size_t nQubits) const noexcept {
+  const auto& type = ops.at(0)->getType();
+  return getUsedQubits().size() == nQubits &&
+         std::all_of(ops.cbegin(), ops.cend(), [&](const auto& operation) {
+           return operation->isStandardOperation() &&
+                  operation->getNcontrols() == 0 &&
+                  operation->getType() == type &&
+                  operation->getParameter() == parameter;
+         });
+}
+
 bool CompoundOperation::isSymbolicOperation() const {
   return std::any_of(ops.begin(), ops.end(),
                      [](const auto& op) { return op->isSymbolicOperation(); });

@@ -81,6 +81,8 @@ public:
 
   [[nodiscard]] bool isStandardOperation() const override { return true; }
 
+  [[nodiscard]] bool isGlobal(size_t nQubits) const override;
+
   void addControl(const Control c) override {
     if (actsOn(c.qubit)) {
       throw QFRException("Cannot add control on qubit " +

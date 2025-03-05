@@ -26,19 +26,19 @@ auto LocalOp::toString() const -> std::string {
       }
     }
     ss << " " << *(atoms_.front());
-  } else {
-    ss << " [\n";
-    for (const auto* const atom : atoms_) {
-      ss << "    ";
-      if (!params_.empty()) {
-        for (const auto& p : params_) {
-          ss << p << " ";
-        }
-      }
-      ss << *atom << "\n";
-    }
-    ss << "]";
+    return ss.str();
   }
+  ss << " [\n";
+  for (const auto* const atom : atoms_) {
+    ss << "    ";
+    if (!params_.empty()) {
+      for (const auto& p : params_) {
+        ss << p << " ";
+      }
+    }
+    ss << *atom << "\n";
+  }
+  ss << "]";
   return ss.str();
 }
 } // namespace na

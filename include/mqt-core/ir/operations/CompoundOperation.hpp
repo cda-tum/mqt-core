@@ -55,6 +55,8 @@ public:
 
   [[nodiscard]] bool isCustomGate() const noexcept;
 
+  [[nodiscard]] bool isGlobal(size_t nQubits) const noexcept override;
+
   void addControl(Control c) override;
 
   void clearControls() override;

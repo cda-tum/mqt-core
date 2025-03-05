@@ -19,13 +19,13 @@ auto MoveOp::toString() const -> std::string {
   ss << "@+ move";
   if (atoms_.size() == 1) {
     ss << " " << targetLocations_.front() << " " << *(atoms_.front());
-  } else {
-    ss << " [\n";
-    for (std::size_t i = 0; i < atoms_.size(); ++i) {
-      ss << "    " << targetLocations_[i] << " " << *(atoms_[i]) << "\n";
-    }
-    ss << "]";
+    return ss.str();
   }
+  ss << " [\n";
+  for (std::size_t i = 0; i < atoms_.size(); ++i) {
+    ss << "    " << targetLocations_[i] << " " << *(atoms_[i]) << "\n";
+  }
+  ss << "]";
   return ss.str();
 }
 } // namespace na
