@@ -9,14 +9,16 @@
 
 #pragma once
 
+#include "Definitions.hpp"
+
 #include <cmath>
-#include <cstdint>
+#include <cstddef>
+#include <functional>
 #include <iomanip>
 #include <ios>
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <utility>
 
 namespace na {
 /// Class to store two-dimensional coordinates of type double.
@@ -115,3 +117,13 @@ struct Location final {
   }
 };
 } // namespace na
+
+/// @brief Specialization of std::hash for na::Location.
+template <> struct std::hash<na::Location> {
+  /// @brief Hashes a pair of qc::OpType and size_t values.
+  auto operator()(const na::Location& loc) const noexcept -> size_t {
+    const size_t h1 = std::hash<double>{}(loc.x);
+    const size_t h2 = std::hash<double>{}(loc.y);
+    return qc::combineHash(h1, h2);
+  }
+};

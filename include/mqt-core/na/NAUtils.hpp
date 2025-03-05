@@ -9,15 +9,11 @@
 
 #pragma once
 
-#include "Definitions.hpp"
 #include "ir/operations/CompoundOperation.hpp"
-#include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 
 #include <algorithm>
 #include <cstddef>
-#include <functional>
-#include <utility>
 
 namespace na {
 /**
@@ -26,7 +22,7 @@ namespace na {
  * A CompoundOperation is global if all its sub-operations are
  * StandardOperations of the same type with the same parameters acting on all
  * qubits. The latter is what a QASM line like `ry(π) q;` is translated to in
- * MQT-core. All other operations are not global.
+ * MQT Core. All other operations are not global.
  * @param op The operation to check.
  * @param nQubits The number of qubits in the circuit.
  * @return True if the operation is global, false otherwise.
@@ -51,24 +47,3 @@ namespace na {
   return false;
 }
 } // namespace na
-
-/// @brief Specialization of std::hash for std::pair<qc::OpType, std::size_t>.
-template <> struct std::hash<std::pair<qc::OpType, size_t>> {
-  /// @brief Hashes a pair of qc::OpType and size_t values.
-  auto operator()(const std::pair<qc::OpType, size_t>& t) const noexcept
-      -> size_t {
-    const size_t h1 = std::hash<qc::OpType>{}(t.first);
-    const size_t h2 = std::hash<size_t>{}(t.second);
-    return qc::combineHash(h1, h2);
-  }
-};
-
-/// @brief Specialization of std::hash for std::pair<size_t, size_t>.
-template <> struct std::hash<std::pair<size_t, size_t>> {
-  /// @brief Hashes a pair of size_t values.
-  auto operator()(const std::pair<size_t, size_t>& p) const noexcept -> size_t {
-    const size_t h1 = std::hash<size_t>{}(p.first);
-    const size_t h2 = std::hash<size_t>{}(p.second);
-    return qc::combineHash(h1, h2);
-  }
-};

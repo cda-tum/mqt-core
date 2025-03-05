@@ -115,9 +115,9 @@ public:
   /// @param atom The atom to set the initial location for.
   /// @param loc The location of the atom.
   /// @return A reference to the newly created location.
-  auto emplaceInitialLocation(const Atom* atom, const Location& loc)
+  auto emplaceInitialLocation(const Atom& atom, const Location& loc)
       -> const Location& {
-    return initialLocations_.emplace(atom, loc).first->second;
+    return initialLocations_.emplace(&atom, loc).first->second;
   }
   /// Emplaces a new initial location for the given atom with the given
   /// arguments and returns a reference to the newly created location.
@@ -125,9 +125,11 @@ public:
   /// @param loc The parameters for the location of the atom.
   /// @return A reference to the newly created location.
   template <typename... Args>
-  auto emplaceInitialLocation(const Atom* atom, Args&&... loc)
+  auto emplaceInitialLocation(const Atom& atom, Args&&... loc)
       -> const Location& {
-    return initialLocations_.emplace(atom, Location{std::forward<Args>(loc)...})
+    return initialLocations_
+        .emplace(&atom,
+                 Location{static_cast<double>(std::forward<Args>(loc))...})
         .first->second;
   }
   /// Emplaces a new operation of type T with the given operation and returns a
@@ -136,8 +138,7 @@ public:
   /// @param op The operation to emplace.
   /// @return A reference to the newly created operation.
   template <class T> auto emplaceBack(T&& op) -> const Op& {
-    return *std::vector<std::unique_ptr<Op>>::emplace_back(
-        std::make_unique<T>(std::forward<T>(op)));
+    return *operations_.emplace_back(std::make_unique<T>(std::forward<T>(op)));
   }
   /// Emplaces a new operation of type T with the given arguments and returns a
   /// reference to the newly created operation.
@@ -146,7 +147,7 @@ public:
   /// @return A reference to the newly created operation.
   template <class T, typename... Args>
   auto emplaceBack(Args&&... args) -> const Op& {
-    return *std::vector<std::unique_ptr<Op>>::emplace_back(
+    return *operations_.emplace_back(
         std::make_unique<T>(std::forward<Args>(args)...));
   }
   /// Returns a string representation of the NAComputation.

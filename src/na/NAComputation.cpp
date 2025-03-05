@@ -54,8 +54,10 @@ auto NAComputation::getLocationOfAtomAfterOperation(const Atom& atom,
 }
 auto NAComputation::toString() const -> std::string {
   std::stringstream ss;
-  const std::map<Location, const Atom*> initialLocationsAsc(
-      initialLocations_.begin(), initialLocations_.end());
+  std::map<Location, const Atom*> initialLocationsAsc;
+  for (const auto& location : initialLocations_) {
+    initialLocationsAsc.emplace(location.second, location.first);
+  }
   for (const auto& [loc, atom] : initialLocationsAsc) {
     ss << "atom " << loc << " " << *atom << "\n";
   }
@@ -235,6 +237,6 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
       }
     }
   }
-  return true;
+  return {true, ""};
 }
 } // namespace na
