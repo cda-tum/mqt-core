@@ -240,6 +240,7 @@ StandardOperation::StandardOperation(const Controls& c, const Qubit target0,
                                      const Qubit target1, const OpType g,
                                      const std::vector<fp>& params)
     : StandardOperation(c, {target0, target1}, g, params) {}
+
 bool StandardOperation::isGlobal(const size_t nQubits) const {
   return getUsedQubits().size() == nQubits;
 }
