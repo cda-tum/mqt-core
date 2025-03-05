@@ -26,8 +26,7 @@ protected:
   std::optional<std::vector<Location>> targetLocations = std::nullopt;
 
 public:
-  explicit StoreOp(std::vector<const Atom*> atoms,
-                   std::vector<Location> targetLocations)
+  StoreOp(std::vector<const Atom*> atoms, std::vector<Location> targetLocations)
       : ShuttlingOp(std::move(atoms)),
         targetLocations(std::move(targetLocations)) {
     if (this->atoms.size() != this->targetLocations->size()) {
@@ -37,14 +36,11 @@ public:
   }
   explicit StoreOp(std::vector<const Atom*> atoms)
       : ShuttlingOp(std::move(atoms)) {}
+  StoreOp(const Atom& atom, const Location& targetLocation)
+      : StoreOp({&atom}, {targetLocation}) {}
+  explicit StoreOp(const Atom& atom) : StoreOp({&atom}) {}
   [[nodiscard]] auto hasTargetLocations() const -> bool {
     return targetLocations.has_value();
-  }
-  [[nodiscard]] auto getTargetLocations() -> std::vector<Location>& override {
-    if (!targetLocations.has_value()) {
-      throw std::logic_error("Operation has no target locations set.");
-    }
-    return *targetLocations;
   }
   [[nodiscard]] auto getTargetLocations() const
       -> const std::vector<Location>& override {

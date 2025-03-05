@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -29,23 +30,23 @@
 #include <vector>
 
 namespace na {
-auto NAComputation::getLocationOfAtomAfterOperation(const Atom* atom,
-                                                    const Op* op) const
+auto NAComputation::getLocationOfAtomAfterOperation(const Atom& atom,
+                                                    const Op& op) const
     -> Location {
-  auto currentLocation = initialLocations.at(atom);
+  auto currentLocation = initialLocations_.at(&atom);
   for (const auto& opUniquePtr : *this) {
     if (opUniquePtr->is<MoveOp>()) {
       const auto& moveOp = opUniquePtr->as<MoveOp>();
       const auto& opAtoms = moveOp.getAtoms();
       const auto& targetLocations = moveOp.getTargetLocations();
       for (std::size_t k = 0; k < opAtoms.size(); ++k) {
-        if (opAtoms[k] == atom) {
+        if (opAtoms[k] == &atom) {
           currentLocation = targetLocations[k];
           break;
         }
       }
     }
-    if (opUniquePtr.get() == op) {
+    if (opUniquePtr.get() == &op) {
       break;
     }
   }
@@ -53,11 +54,9 @@ auto NAComputation::getLocationOfAtomAfterOperation(const Atom* atom,
 }
 auto NAComputation::toString() const -> std::string {
   std::stringstream ss;
-  std::vector<std::pair<const Atom*, Location>> initialLocationsAsc(
-      initialLocations.begin(), initialLocations.end());
-  std::sort(initialLocationsAsc.begin(), initialLocationsAsc.end(),
-            [](const auto& a, const auto& b) { return a.second < b.second; });
-  for (const auto& [atom, loc] : initialLocationsAsc) {
+  const std::map<Location, const Atom*> initialLocationsAsc(
+      initialLocations_.begin(), initialLocations_.end());
+  for (const auto& [loc, atom] : initialLocationsAsc) {
     ss << "atom " << loc << " " << *atom << "\n";
   }
   for (const auto& op : *this) {
@@ -65,7 +64,7 @@ auto NAComputation::toString() const -> std::string {
   }
   return ss.str();
 }
-auto NAComputation::validate() const -> bool {
+auto NAComputation::validate() const -> std::pair<bool, std::string> {
   // This counter is used to display the operation number where an error
   // occurred.
   // As every operation might not correspond to one line in the output,
@@ -73,12 +72,15 @@ auto NAComputation::validate() const -> bool {
   // However, the first operation initializes the atom and because of that, the
   // counter starts with 1.
   std::size_t counter = 1;
-  if (atoms.size() != initialLocations.size()) {
-    std::cout << "Number of atoms and initial locations must be equal\n";
+  std::stringstream ss;
+  if (atoms_.size() != initialLocations_.size()) {
+    ss << "Number of atoms and initial locations must be equal\n";
+    return {false, ss.str()};
   }
   // This map is used to keep track of each atom's current location to check
   // the constraints when shuttling atoms.
-  std::unordered_map<const Atom*, Location> currentLocations = initialLocations;
+  std::unordered_map<const Atom*, Location> currentLocations =
+      initialLocations_;
   // This set is used to keep track of the atoms that are currently shuttling,
   // i.e., they are loaded but not yet stored again.
   std::unordered_set<const Atom*> currentlyShuttling{};
@@ -103,10 +105,9 @@ auto NAComputation::validate() const -> bool {
                     << " (atom already loaded)\n";
           return false;
         }
-        std::for_each(opAtoms.begin(), opAtoms.end(),
-                      [&currentlyShuttling](const auto* atom) {
-                        currentlyShuttling.insert(atom);
-                      });
+        for (const auto* atom : opAtoms) {
+          currentlyShuttling.emplace(atom);
+        }
       } else {
         //===-----------------------------------------------------------------//
         // Move and Store Operations
@@ -215,9 +216,9 @@ auto NAComputation::validate() const -> bool {
         //===-----------------------------------------------------------------//
         // Store Operations
         //-----------------------------------------------------------------===//
-        std::for_each(opAtoms.begin(), opAtoms.end(), [&](const auto* atom) {
+        for (const auto& atom : opAtoms) {
           currentlyShuttling.erase(atom);
-        });
+        }
       }
     } else if (op->is<LocalOp>()) {
       //===----------------------------------------------------------------===//

@@ -20,21 +20,18 @@
 namespace na {
 class GlobalOp : public Op {
 protected:
-  std::string name;
-  std::vector<qc::fp> params;
-  const Zone* zone;
-  GlobalOp(std::vector<qc::fp> params, const Zone* zone)
-      : params(std::move(params)), zone(zone) {}
-  explicit GlobalOp(const Zone* zone) : GlobalOp({}, zone) {}
+  std::string name_;
+  std::vector<qc::fp> params_;
+  const Zone* zone_;
+  GlobalOp(const Zone& zone, std::vector<qc::fp> params)
+      : params_(std::move(params)), zone_(&zone) {}
 
 public:
   GlobalOp() = delete;
-  [[nodiscard]] auto getParams() -> decltype(params)& { return params; }
-  [[nodiscard]] auto getParams() const -> const decltype(params)& {
-    return params;
+  [[nodiscard]] auto getParams() const -> const decltype(params_)& {
+    return params_;
   }
-  [[nodiscard]] auto getZone() -> const Zone*& { return zone; }
-  [[nodiscard]] auto getZone() const -> const Zone* { return zone; }
+  [[nodiscard]] auto getZone() const -> const Zone& { return *zone_; }
   [[nodiscard]] auto toString() const -> std::string override;
 };
 } // namespace na

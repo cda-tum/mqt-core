@@ -18,16 +18,16 @@ auto LoadOp::toString() const -> std::string {
   std::stringstream ss;
   ss << "@+ load";
   if (atoms.size() == 1) {
-    if (targetLocations) {
-      ss << " " << targetLocations->front();
+    if (targetLocations_) {
+      ss << " " << targetLocations_->front();
     }
     ss << " " << *(atoms.front());
   } else {
     ss << " [\n";
     for (std::size_t i = 0; i < atoms.size(); ++i) {
       ss << "    ";
-      if (targetLocations) {
-        ss << (*targetLocations)[i] << " ";
+      if (targetLocations_) {
+        ss << (*targetLocations_)[i] << " ";
       }
       ss << *(atoms[i]) << "\n";
     }

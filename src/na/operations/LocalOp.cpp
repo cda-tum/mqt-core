@@ -18,20 +18,20 @@ namespace na {
 auto LocalOp::toString() const -> std::string {
   std::stringstream ss;
   ss << std::setprecision(5) << std::fixed;
-  ss << "@+ " << name;
-  if (atoms.size() == 1) {
-    if (!params.empty()) {
-      for (const auto& p : params) {
+  ss << "@+ " << name_;
+  if (atoms_.size() == 1) {
+    if (!params_.empty()) {
+      for (const auto& p : params_) {
         ss << " " << p;
       }
     }
-    ss << " " << *(atoms.front());
+    ss << " " << *(atoms_.front());
   } else {
     ss << " [\n";
-    for (const auto* const atom : atoms) {
+    for (const auto* const atom : atoms_) {
       ss << "    ";
-      if (!params.empty()) {
-        for (const auto& p : params) {
+      if (!params_.empty()) {
+        for (const auto& p : params_) {
           ss << p << " ";
         }
       }

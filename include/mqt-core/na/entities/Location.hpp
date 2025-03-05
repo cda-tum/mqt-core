@@ -23,50 +23,13 @@ namespace na {
 struct Location final {
   double x = 0;
   double y = 0;
-  Location(const float x, const float y)
-      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
-  Location(const double x, const double y) : x(x), y(y) {};
-  Location(const std::int32_t x, const std::int32_t y)
-      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
-  Location(const std::int64_t x, const std::int64_t y)
-      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
-  Location(const std::uint32_t x, const std::uint32_t y)
-      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
-  Location(const std::uint64_t x, const std::uint64_t y)
-      : x(static_cast<double>(x)), y(static_cast<double>(y)) {};
-  explicit Location(const std::pair<float, float>& p)
-      : Location(p.first, p.second) {};
-  explicit Location(const std::pair<double, double>& p)
-      : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::int32_t, std::int32_t>& p)
-      : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::int64_t, std::int64_t>& p)
-      : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::uint32_t, std::uint32_t>& p)
-      : Location(p.first, p.second) {};
-  explicit Location(const std::pair<std::uint64_t, std::uint64_t>& p)
-      : Location(p.first, p.second) {};
-  Location() = default;
-  Location(const Location& loc) = default;
-  Location(Location&& loc) noexcept = default;
-  Location& operator=(const Location& loc) = default;
-  Location& operator=(Location&& loc) noexcept = default;
-  ~Location() = default;
   Location operator-(const Location& loc) const {
-    return {x - loc.x, y - loc.y};
-  }
-  Location operator-(const Location&& loc) const {
     return {x - loc.x, y - loc.y};
   }
   Location operator+(const Location& loc) const {
     return {x + loc.x, y + loc.y};
   }
-  Location operator+(const Location&& loc) const {
-    return {x + loc.x, y + loc.y};
-  }
-  [[nodiscard]] auto length() const -> double {
-    return std::sqrt((x * x) + (y * y));
-  }
+  [[nodiscard]] auto length() const -> double { return std::hypot(x, y); }
   [[nodiscard]] auto toString() const -> std::string {
     std::stringstream ss;
     ss << std::setprecision(3) << std::fixed;
@@ -87,24 +50,23 @@ struct Location final {
     return x < other.x || (x == other.x && y < other.y);
   }
   [[nodiscard]] auto operator>(const Location& other) const -> bool {
-    return x > other.x || (x == other.x && y > other.y);
-  }
-  [[nodiscard]] auto operator<=(const Location& other) const -> bool {
-    return x <= other.x || (x == other.x && y <= other.y);
+    return other < *this;
   }
   [[nodiscard]] auto operator>=(const Location& other) const -> bool {
-    return x >= other.x || (x == other.x && y >= other.y);
+    return !(other < *this);
   }
-  [[maybe_unused]] [[nodiscard]] auto
-  getEuclideanDistance(const Location& loc) const -> double {
+  [[nodiscard]] auto operator<=(const Location& other) const -> bool {
+    return *this >= other;
+  }
+  [[nodiscard]] auto getEuclideanDistance(const Location& loc) const -> double {
     return (*this - loc).length();
   }
-  [[maybe_unused]] [[nodiscard]] auto
-  getManhattanDistanceX(const Location& loc) const -> double {
+  [[nodiscard]] auto getManhattanDistanceX(const Location& loc) const
+      -> double {
     return std::abs(x - loc.x);
   }
-  [[maybe_unused]] [[nodiscard]] auto
-  getManhattanDistanceY(const Location& loc) const -> double {
+  [[nodiscard]] auto getManhattanDistanceY(const Location& loc) const
+      -> double {
     return std::abs(y - loc.y);
   }
 };

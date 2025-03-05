@@ -18,13 +18,13 @@ namespace na {
 auto GlobalOp::toString() const -> std::string {
   std::stringstream ss;
   ss << std::setprecision(5) << std::fixed;
-  ss << "@+ " << name;
-  if (!params.empty()) {
-    for (const auto& p : params) {
+  ss << "@+ " << name_;
+  if (!params_.empty()) {
+    for (const auto& p : params_) {
       ss << " " << p;
     }
   }
-  ss << " " << *zone;
+  ss << " " << *zone_;
   return ss.str();
 }
 } // namespace na

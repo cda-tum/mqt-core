@@ -20,27 +20,20 @@
 namespace na {
 class LocalOp : public Op {
 protected:
-  std::string name;
-  std::vector<qc::fp> params;
-  std::vector<const Atom*> atoms;
+  std::string name_;
+  std::vector<qc::fp> params_;
+  std::vector<const Atom*> atoms_;
 
-  LocalOp(std::vector<qc::fp> params, std::vector<const Atom*> atoms)
-      : params(std::move(params)), atoms(std::move(atoms)) {}
-  explicit LocalOp(std::vector<const Atom*>& atoms)
-      : LocalOp({}, std::move(atoms)) {}
-  explicit LocalOp(std::vector<qc::fp> params, const Atom* atom)
-      : LocalOp(std::move(params), std::vector{atom}) {}
-  explicit LocalOp(const Atom* atom) : LocalOp({}, atom) {}
+  LocalOp(std::vector<const Atom*> atoms, std::vector<qc::fp> params)
+      : params_(std::move(params)), atoms_(std::move(atoms)) {}
 
 public:
   LocalOp() = delete;
-  [[nodiscard]] auto getAtoms() -> decltype(atoms)& { return atoms; }
-  [[nodiscard]] auto getAtoms() const -> const decltype(atoms)& {
-    return atoms;
+  [[nodiscard]] auto getAtoms() const -> const decltype(atoms_)& {
+    return atoms_;
   }
-  [[nodiscard]] auto getParams() -> decltype(params)& { return params; }
-  [[nodiscard]] auto getParams() const -> const decltype(params)& {
-    return params;
+  [[nodiscard]] auto getParams() const -> const decltype(params_)& {
+    return params_;
   }
   [[nodiscard]] auto toString() const -> std::string override;
 };

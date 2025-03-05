@@ -16,8 +16,8 @@
 namespace na {
 class GlobalRYOp final : public GlobalOp {
 public:
-  GlobalRYOp(qc::fp angle, const Zone* zone) : GlobalOp({angle}, zone) {
-    name = "ry";
+  GlobalRYOp(const Zone& zone, qc::fp angle) : GlobalOp(zone, {angle}) {
+    name_ = "ry";
   }
 };
 } // namespace na

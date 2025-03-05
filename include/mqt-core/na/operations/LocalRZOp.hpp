@@ -20,12 +20,12 @@
 namespace na {
 class LocalRZOp final : public LocalOp {
 public:
-  LocalRZOp(qc::fp angle, const Atom* atom) : LocalOp({angle}, atom) {
-    name = "rz";
+  LocalRZOp(std::vector<const Atom*> atom, const qc::fp angle)
+      : LocalOp(std::move(atom), {angle}) {
+    name_ = "rz";
   }
-  LocalRZOp(qc::fp angle, std::vector<const Atom*> atom)
-      : LocalOp({angle}, std::move(atom)) {
-    name = "rz";
+  LocalRZOp(const Atom& atom, const qc::fp angle) : LocalRZOp({&atom}, angle) {
+    name_ = "rz";
   }
 };
 } // namespace na

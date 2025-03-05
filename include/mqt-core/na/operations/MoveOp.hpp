@@ -22,25 +22,22 @@ namespace na {
 
 class MoveOp final : public ShuttlingOp {
 protected:
-  std::vector<Location> targetLocations;
+  std::vector<Location> targetLocations_;
 
 public:
-  explicit MoveOp(std::vector<const Atom*> atoms,
-                  std::vector<Location> targetLocations)
+  MoveOp(std::vector<const Atom*> atoms, std::vector<Location> targetLocations)
       : ShuttlingOp(std::move(atoms)),
-        targetLocations(std::move(targetLocations)) {
-    if (this->atoms.size() != this->targetLocations.size()) {
+        targetLocations_(std::move(targetLocations)) {
+    if (this->atoms.size() != this->targetLocations_.size()) {
       throw std::invalid_argument(
           "Number of atoms and target locations must be equal.");
     }
   }
-  [[nodiscard]] auto getTargetLocations()
-      -> decltype(targetLocations)& override {
-    return targetLocations;
-  }
+  MoveOp(const Atom& atom, const Location& targetLocation)
+      : MoveOp({&atom}, {targetLocation}) {}
   [[nodiscard]] auto getTargetLocations() const -> const
-      decltype(targetLocations)& override {
-    return targetLocations;
+      decltype(targetLocations_)& override {
+    return targetLocations_;
   }
   [[nodiscard]] auto toString() const -> std::string override;
 };

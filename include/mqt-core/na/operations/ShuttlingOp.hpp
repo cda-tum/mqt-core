@@ -24,11 +24,10 @@ protected:
       : atoms(std::move(atoms)) {}
 
 public:
-  [[nodiscard]] auto getAtoms() -> decltype(atoms)& { return atoms; }
+  ShuttlingOp() = delete;
   [[nodiscard]] auto getAtoms() const -> const decltype(atoms)& {
     return atoms;
   }
-  [[nodiscard]] virtual auto getTargetLocations() -> std::vector<Location>& = 0;
   [[nodiscard]] virtual auto getTargetLocations() const
       -> const std::vector<Location>& = 0;
 };

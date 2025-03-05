@@ -15,26 +15,20 @@
 
 namespace na {
 class Zone final {
-  std::string name;
+  std::string name_;
 
 public:
   Zone() = default;
-  explicit Zone(std::string name) : name(std::move(name)) {}
-  Zone(const Zone& zone) = default;
-  Zone(Zone&& zone) noexcept = default;
-  Zone& operator=(const Zone& zone) = default;
-  Zone& operator=(Zone&& zone) noexcept = default;
-  ~Zone() = default;
-  [[nodiscard]] auto getName() const -> std::string { return name; }
-  [[nodiscard]] auto toString() const -> std::string { return name; }
+  explicit Zone(std::string name) : name_(std::move(name)) {}
+  [[nodiscard]] auto getName() const -> std::string { return name_; }
   friend auto operator<<(std::ostream& os, const Zone& obj) -> std::ostream& {
-    return os << obj.toString();
+    return os << obj.getName();
   }
   [[nodiscard]] auto operator==(const Zone& other) const -> bool {
     if (this == &other) {
       return true;
     }
-    return name == other.name;
+    return name_ == other.name_;
   }
   [[nodiscard]] auto operator!=(const Zone& other) const -> bool {
     return !(*this == other);

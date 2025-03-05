@@ -23,35 +23,31 @@ namespace na {
 
 class LoadOp final : public ShuttlingOp {
 protected:
-  std::optional<std::vector<Location>> targetLocations = std::nullopt;
+  std::optional<std::vector<Location>> targetLocations_ = std::nullopt;
 
 public:
-  explicit LoadOp(std::vector<const Atom*> atoms,
-                  std::vector<Location> targetLocations)
+  LoadOp(std::vector<const Atom*> atoms, std::vector<Location> targetLocations)
       : ShuttlingOp(std::move(atoms)),
-        targetLocations(std::move(targetLocations)) {
-    if (this->atoms.size() != this->targetLocations->size()) {
+        targetLocations_(std::move(targetLocations)) {
+    if (this->atoms.size() != this->targetLocations_->size()) {
       throw std::invalid_argument(
           "Number of atoms and target locations must be equal.");
     }
   }
   explicit LoadOp(std::vector<const Atom*> atoms)
       : ShuttlingOp(std::move(atoms)) {}
+  LoadOp(const Atom& atom, const Location& targetLocation)
+      : LoadOp({&atom}, {targetLocation}) {}
+  explicit LoadOp(const Atom& atom) : LoadOp({&atom}) {}
   [[nodiscard]] auto hasTargetLocations() const -> bool {
-    return targetLocations.has_value();
-  }
-  [[nodiscard]] auto getTargetLocations() -> std::vector<Location>& override {
-    if (!targetLocations.has_value()) {
-      throw std::logic_error("Operation has no target locations set.");
-    }
-    return *targetLocations;
+    return targetLocations_.has_value();
   }
   [[nodiscard]] auto getTargetLocations() const
       -> const std::vector<Location>& override {
-    if (!targetLocations.has_value()) {
+    if (!targetLocations_.has_value()) {
       throw std::logic_error("Operation has no target locations set.");
     }
-    return *targetLocations;
+    return *targetLocations_;
   }
   [[nodiscard]] auto toString() const -> std::string override;
 };

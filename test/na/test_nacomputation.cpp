@@ -9,6 +9,9 @@
 
 #include "Definitions.hpp"
 #include "na/NAComputation.hpp"
+#include "na/entities/Atom.hpp"
+#include "na/entities/Location.hpp"
+#include "na/entities/Zone.hpp"
 #include "na/operations/GlobalCZOp.hpp"
 #include "na/operations/GlobalRYOp.hpp"
 #include "na/operations/LoadOp.hpp"
@@ -21,12 +24,39 @@
 #include <vector>
 
 namespace na {
+TEST(NAComputation, Atom) {
+  const auto atom = Atom("atom");
+  EXPECT_EQ(atom.getName(), "atom");
+  std::stringstream ss;
+  ss << atom;
+  EXPECT_EQ(ss.str(), "atom");
+}
+
+TEST(NAComputation, Zone) {
+  const auto zone = Zone("zone");
+  EXPECT_EQ(zone.getName(), "zone");
+  std::stringstream ss;
+  ss << zone;
+  EXPECT_EQ(ss.str(), "zone");
+}
+
+TEST(NAComputation, Location) {
+  const Location loc{3, 4};
+  EXPECT_EQ(loc, (Location{3, 4}));
+  std::stringstream ss;
+  ss << loc;
+  EXPECT_EQ(ss.str(), "(3.000, 4.000)");
+  EXPECT_DOUBLE_EQ(loc.getEuclideanDistance(loc), 5.0);
+  EXPECT_DOUBLE_EQ(loc.getManhattanDistanceX(loc), 3);
+  EXPECT_DOUBLE_EQ(loc.getManhattanDistanceX(loc), 4);
+}
+
 TEST(NAComputation, General) {
   auto qc = NAComputation();
-  const auto* const atom0 = qc.emplaceBackAtom("atom0");
-  const auto* const atom1 = qc.emplaceBackAtom("atom1");
-  const auto* const atom2 = qc.emplaceBackAtom("atom2");
-  const auto* const globalZone = qc.emplaceBackZone("global");
+  const auto& atom0 = qc.emplaceBackAtom("atom0");
+  const auto& atom1 = qc.emplaceBackAtom("atom1");
+  const auto& atom2 = qc.emplaceBackAtom("atom2");
+  const auto& globalZone = qc.emplaceBackZone("global");
   qc.emplaceInitialLocation(atom0, 0, 0);
   qc.emplaceInitialLocation(atom1, 1, 0);
   qc.emplaceInitialLocation(atom2, 2, 0);
@@ -75,10 +105,10 @@ TEST(NAComputation, EmptyPrint) {
 
 TEST(NAComputation, ValidateAODConstraints) {
   auto qc = NAComputation();
-  const auto* const atom0 = qc.emplaceBackAtom("atom0");
-  const auto* const atom1 = qc.emplaceBackAtom("atom1");
-  const auto* const atom2 = qc.emplaceBackAtom("atom2");
-  const auto* const atom3 = qc.emplaceBackAtom("atom3");
+  const auto& atom0 = qc.emplaceBackAtom("atom0");
+  const auto& atom1 = qc.emplaceBackAtom("atom1");
+  const auto& atom2 = qc.emplaceBackAtom("atom2");
+  const auto& atom3 = qc.emplaceBackAtom("atom3");
   qc.emplaceInitialLocation(atom0, 0, 0);
   qc.emplaceInitialLocation(atom1, 1, 0);
   qc.emplaceInitialLocation(atom2, 0, 2);
