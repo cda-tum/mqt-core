@@ -154,6 +154,19 @@ public:
 
   [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }
 
+  /**
+   * @brief Checks whether a gate is global.
+   * @details A StandardOperation is global if it acts on all qubits.
+   * A CompoundOperation is global if all its sub-operations are
+   * StandardOperations of the same type with the same parameters acting on all
+   * qubits. The latter is what a QASM line like `ry(π) q;` is translated to in
+   * MQT Core. All other operations are not global.
+   * @return True if the operation is global, false otherwise.
+   */
+  [[nodiscard]] virtual bool isGlobal(size_t /* unused */) const {
+    return false;
+  }
+
   [[nodiscard]] virtual bool actsOn(const Qubit i) const {
     for (const auto& t : targets) {
       if (t == i) {

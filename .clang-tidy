@@ -55,7 +55,7 @@ CheckOptions:
   - key: readability-identifier-naming.MemberCase
     value: camelBack
   - key: readability-identifier-naming.MemberIgnoredRegexp
-    value: ".*ZX.*|.*SWAP.*|.*CEX.*|.*DD.*|.*EQ.*"
+    value: ".*ZX.*|.*SWAP.*|.*CEX.*|.*DD.*|.*EQ.*|.*_"
   - key: readability-identifier-naming.MethodCase
     value: camelBack
   - key: readability-identifier-naming.ParameterCase
