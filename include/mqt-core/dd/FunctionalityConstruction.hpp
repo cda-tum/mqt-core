@@ -17,7 +17,7 @@ using namespace qc;
 
 /**
  * @brief Sequentially build a decision diagram representation for the
- * functionality of a purely-quantum @ref QuantumComputation.
+ * functionality of a purely-quantum @ref qc::QuantumComputation.
  *
  * @details For a circuit \f$G\f$ with \f$|G|\f$ gates
  * \f$g_0, g_1, \ldots, g_{|G|-1}\f$, the functionality of \f$G\f$ is defined as
@@ -54,7 +54,7 @@ MatrixDD buildFunctionality(const QuantumComputation& qc, Package<Config>& dd);
 
 /**
  * @brief Recursively build a decision diagram representation for the
- * functionality of a purely-quantum @ref QuantumComputation.
+ * functionality of a purely-quantum @ref qc::QuantumComputation.
  *
  * @see buildFunctionality
  * @details Instead of sequentially applying the decision diagrams of the gates

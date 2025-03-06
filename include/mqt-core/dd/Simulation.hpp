@@ -7,6 +7,10 @@
  * Licensed under the MIT License
  */
 
+/** @file
+ * @brief Defines functions for classically simulating quantum circuits.
+ */
+
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
@@ -26,7 +30,7 @@ namespace dd {
 using namespace qc;
 
 /**
- * @brief Simulate a purely-quantum @ref QuantumComputation on a given input
+ * @brief Simulate a purely-quantum @ref qc::QuantumComputation on a given input
  * state using decision diagrams.
  *
  * @details This method classically simulates the quantum computation @p qc on
@@ -38,7 +42,8 @@ using namespace qc;
  * Its main purpose is to construct a representation of the statevector after
  * simulating the quantum computation for the given input state.
  * For more elaborate simulation methods that can handle classical control and
- * mid-circuit measurements, see @ref sample.
+ * mid-circuit measurements, see @ref sample(const QuantumComputation&,
+ * std::size_t, std::size_t).
  *
  * @param qc The quantum computation to simulate
  * @param in The input state to simulate. Represented as a vector DD.

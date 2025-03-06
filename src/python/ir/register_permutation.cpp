@@ -35,10 +35,11 @@ void registerPermutation(py::module& m) {
            py::overload_cast<const qc::Targets&>(&qc::Permutation::apply,
                                                  py::const_),
            "targets"_a)
+      .def("clear", [](qc::Permutation& p) { p.clear(); })
       .def("__getitem__",
            [](const qc::Permutation& p, const qc::Qubit q) { return p.at(q); })
       .def("__setitem__", [](qc::Permutation& p, const qc::Qubit q,
-                             const qc::Qubit r) { p.at(q) = r; })
+                             const qc::Qubit r) { p[q] = r; })
       .def("__delitem__",
            [](qc::Permutation& p, const qc::Qubit q) { p.erase(q); })
       .def("__len__", &qc::Permutation::size)
@@ -55,8 +56,11 @@ void registerPermutation(py::module& m) {
            [](const qc::Permutation& p) {
              std::stringstream ss;
              ss << "{";
-             for (const auto& [k, v] : p) {
-               ss << k << ": " << v << ", ";
+             for (auto it = p.cbegin(); it != p.cend(); ++it) {
+               ss << it->first << ": " << it->second;
+               if (std::next(it) != p.cend()) {
+                 ss << ", ";
+               }
              }
              ss << "}";
              return ss.str();
@@ -64,8 +68,11 @@ void registerPermutation(py::module& m) {
       .def("__repr__", [](const qc::Permutation& p) {
         std::stringstream ss;
         ss << "Permutation({";
-        for (const auto& [k, v] : p) {
-          ss << k << ": " << v << ", ";
+        for (auto it = p.cbegin(); it != p.cend(); ++it) {
+          ss << it->first << ": " << it->second;
+          if (std::next(it) != p.cend()) {
+            ss << ", ";
+          }
         }
         ss << "})";
         return ss.str();

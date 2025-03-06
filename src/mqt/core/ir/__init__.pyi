@@ -28,7 +28,7 @@ class Permutation(MutableMapping[int, int]):
 
     """
 
-    def __init__(self, permutation: dict[int, int] | None = None) -> None:
+    def __init__(self, permutation: dict[int, int]) -> None:
         """Initialize the permutation."""
 
     def __getitem__(self, idx: int) -> int:
@@ -70,6 +70,9 @@ class Permutation(MutableMapping[int, int]):
 
     def __hash__(self) -> int:
         """Return the hash of the permutation."""
+
+    def clear(self) -> None:
+        """Clear the permutation of all indices and values."""
 
     @overload
     def apply(self, controls: set[Control]) -> set[Control]:
