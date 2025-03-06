@@ -7,6 +7,11 @@
  * Licensed under the MIT License
  */
 
+/** @file
+ * @brief Defines a class for representing global operations in the
+ * NAComputation.
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
@@ -18,14 +23,18 @@
 #include <vector>
 
 namespace na {
-/// Represents a global operation in the NA computation.
+/// Represents a global operation in the NAComputation.
 /// @details Global operations are applied to entire zones instead of to
 /// individual atoms.
 class GlobalOp : public Op {
 protected:
+  /// The name of the operation.
   std::string name_;
+  /// The parameters of the operation.
   std::vector<qc::fp> params_;
+  /// The zone the operation is applied to.
   const Zone* zone_;
+
   /// Creates a new global operation in the given zone with the given
   /// parameters.
   /// @param zone The zone the operation is applied to.
@@ -35,16 +44,14 @@ protected:
 
 public:
   GlobalOp() = delete;
+
   /// Returns the parameters of the operation.
-  /// @return The parameters of the operation.
-  [[nodiscard]] auto getParams() const -> const decltype(params_)& {
-    return params_;
-  }
+  [[nodiscard]] auto getParams() const -> auto& { return params_; }
+
   /// Returns the zone the operation is applied to.
-  /// @return The zone the operation is applied to.
   [[nodiscard]] auto getZone() const -> const Zone& { return *zone_; }
+
   /// Returns a string representation of the operation.
-  /// @return A string representation of the operation.
   [[nodiscard]] auto toString() const -> std::string override;
 };
 } // namespace na

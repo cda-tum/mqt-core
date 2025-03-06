@@ -7,6 +7,10 @@
  * Licensed under the MIT License
  */
 
+/** @file
+ * @brief Defines a class for representing neutral atom computations.
+ */
+
 #pragma once
 
 #include "na/entities/Atom.hpp"
@@ -23,72 +27,67 @@
 #include <vector>
 
 namespace na {
+/// Represents a neutral atom computation.
 class NAComputation final {
 protected:
+  /// The operations in the NA computation.
   std::vector<std::unique_ptr<Op>> operations_;
+  /// The atoms used in the NA computation.
   std::vector<std::unique_ptr<Atom>> atoms_;
+  /// The zones used in the NA computation.
   std::vector<std::unique_ptr<Zone>> zones_;
+  /// The initial locations of the atoms.
   std::unordered_map<const Atom*, Location> initialLocations_;
 
 public:
   /// Returns an iterator to the beginning of the operations.
-  /// @return An iterator to the beginning of the operations.
-  [[nodiscard]] auto begin() -> decltype(operations_.begin()) {
-    return operations_.begin();
-  }
+  [[nodiscard]] auto begin() -> auto { return operations_.begin(); }
+
   /// Returns an iterator to the beginning of the operations.
-  /// @return An iterator to the beginning of the operations.
-  [[nodiscard]] auto begin() const -> decltype(operations_.begin()) {
-    return operations_.begin();
-  }
+  [[nodiscard]] auto begin() const -> auto { return operations_.begin(); }
+
   /// Returns an iterator to the end of the operations.
-  /// @return An iterator to the end of the operations.
-  [[nodiscard]] auto end() -> decltype(operations_.end()) {
-    return operations_.end();
-  }
+  [[nodiscard]] auto end() -> auto { return operations_.end(); }
+
   /// Returns an iterator to the end of the operations.
-  /// @return An iterator to the end of the operations.
-  [[nodiscard]] auto end() const -> decltype(operations_.end()) {
-    return operations_.end();
-  }
+  [[nodiscard]] auto end() const -> auto { return operations_.end(); }
+
   /// Returns the number of operations in the NAComputation.
-  /// @return The number of operations in the NAComputation.
   [[nodiscard]] auto size() const -> std::size_t { return operations_.size(); }
+
   /// Returns a reference to the operation at the given index.
   /// @param i The index of the operation.
   /// @return A reference to the operation at the given index.
-  [[nodiscard]] auto operator[](std::size_t i) -> Op& {
+  [[nodiscard]] auto operator[](const std::size_t i) -> Op& {
     return *operations_[i];
   }
-  /// Returns a reference to the operation at the given index.
+
+  /// Returns a const reference to the operation at the given index.
   /// @param i The index of the operation.
-  /// @return A reference to the operation at the given index.
-  [[nodiscard]] auto operator[](std::size_t i) const -> const Op& {
+  /// @return A const reference to the operation at the given index.
+  [[nodiscard]] auto operator[](const std::size_t i) const -> const Op& {
     return *operations_[i];
   }
+
   /// Clears the operations in the NAComputation.
   auto clear() -> void { operations_.clear(); }
+
   /// Returns the number of atoms used in the NAComputation.
-  /// @return The number of atoms used in the NAComputation.
   [[nodiscard]] auto getAtomsSize() const -> std::size_t {
     return atoms_.size();
   }
+
   /// Returns the atoms used in the NAComputation.
-  /// @return The atoms used in the NAComputation.
-  [[nodiscard]] auto getAtoms() const -> const decltype(atoms_)& {
-    return atoms_;
-  }
+  [[nodiscard]] auto getAtoms() const -> auto& { return atoms_; }
+
   /// Returns the zones used in global operations within the NAComputation.
-  /// @return The zones used in global operations within the NAComputation.
-  [[nodiscard]] auto getZones() const -> const decltype(zones_)& {
-    return zones_;
-  }
+  [[nodiscard]] auto getZones() const -> auto& { return zones_; }
+
   /// Returns the initial locations of the atoms.
-  /// @return The initial locations of the atoms.
-  [[nodiscard]] auto getInitialLocations() const -> const
-      decltype(initialLocations_)& {
+  [[nodiscard]] auto getInitialLocations() const -> auto& {
     return initialLocations_;
   }
+
   /// Returns the location of the given atom after the given operation.
   /// @param atom The atom to get the location for.
   /// @param op The operation to get the location after.
@@ -96,6 +95,7 @@ public:
   [[nodiscard]] auto getLocationOfAtomAfterOperation(const Atom& atom,
                                                      const Op& op) const
       -> Location;
+
   /// Emplaces a new atom with the given name and returns a reference to the
   /// newly created atom.
   /// @param name The name of the atom.
@@ -103,6 +103,7 @@ public:
   auto emplaceBackAtom(std::string name) -> const Atom& {
     return *atoms_.emplace_back(std::make_unique<Atom>(std::move(name)));
   }
+
   /// Emplaces a new zone with the given name and returns a reference to the
   /// newly created zone.
   /// @param name The name of the zone.
@@ -110,6 +111,7 @@ public:
   auto emplaceBackZone(std::string name) -> const Zone& {
     return *zones_.emplace_back(std::make_unique<Zone>(std::move(name)));
   }
+
   /// Emplaces a new initial location for the given atom with the given location
   /// and returns a reference to the newly created location.
   /// @param atom The atom to set the initial location for.
@@ -119,6 +121,7 @@ public:
       -> const Location& {
     return initialLocations_.emplace(&atom, loc).first->second;
   }
+
   /// Emplaces a new initial location for the given atom with the given
   /// arguments and returns a reference to the newly created location.
   /// @param atom The atom to set the initial location for.
@@ -132,6 +135,7 @@ public:
                  Location{static_cast<double>(std::forward<Args>(loc))...})
         .first->second;
   }
+
   /// Emplaces a new operation of type T with the given operation and returns a
   /// reference to the newly created operation.
   /// @tparam T The concrete type of the operation.
@@ -140,6 +144,7 @@ public:
   template <class T> auto emplaceBack(T&& op) -> const Op& {
     return *operations_.emplace_back(std::make_unique<T>(std::forward<T>(op)));
   }
+
   /// Emplaces a new operation of type T with the given arguments and returns a
   /// reference to the newly created operation.
   /// @tparam T The concrete type of the operation.
@@ -150,8 +155,8 @@ public:
     return *operations_.emplace_back(
         std::make_unique<T>(std::forward<Args>(args)...));
   }
+
   /// Returns a string representation of the NAComputation.
-  /// @return A string representation of the NAComputation.
   [[nodiscard]] auto toString() const -> std::string;
   /// Outputs the NAComputation to the given output stream, i.e., the string
   /// returned by toString().
@@ -162,14 +167,15 @@ public:
       -> std::ostream& {
     return os << qc.toString();
   }
+
   /// Validates the NAComputation and checks whether all AOD constraints are
   /// fulfilled.
-  /// I.e.,
+  /// Specifically,
   /// - each atom is loaded before it is moved
   /// - the relative order of loaded atoms is preserved
   /// - each atom is loaded before it is stored
   /// - each atom is stored before it is loaded (again)
-  /// @returns a pair of a boolean indicating whether the NAComputation is valid
+  /// @returns a pair of a Boolean indicating whether the NAComputation is valid
   /// and a string containing the error message if the NAComputation is invalid.
   [[nodiscard]] auto validate() const -> std::pair<bool, std::string>;
 };

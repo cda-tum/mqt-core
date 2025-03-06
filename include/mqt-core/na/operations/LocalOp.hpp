@@ -7,6 +7,11 @@
  * Licensed under the MIT License
  */
 
+/** @file
+ * @brief Defines a class for representing local operations in the
+ * NAComputation.
+ */
+
 #pragma once
 
 #include "Definitions.hpp"
@@ -18,13 +23,17 @@
 #include <vector>
 
 namespace na {
-/// Represents a local operation in the NA computation.
+/// Represents a local operation in the NAComputation.
 /// @details A local operation is applied to individual atoms.
 class LocalOp : public Op {
 protected:
+  /// The name of the operation.
   std::string name_;
+  /// The parameters of the operation.
   std::vector<qc::fp> params_;
+  /// The atoms the operation is applied to.
   std::vector<const Atom*> atoms_;
+
   /// Creates a new local operation with the given atoms and parameters.
   /// @param atoms The atoms the operation is applied to.
   /// @param params The parameters of the operation.
@@ -33,18 +42,14 @@ protected:
 
 public:
   LocalOp() = delete;
+
   /// Returns the atoms the operation is applied to.
-  /// @return The atoms the operation is applied to.
-  [[nodiscard]] auto getAtoms() const -> const decltype(atoms_)& {
-    return atoms_;
-  }
+  [[nodiscard]] auto getAtoms() const -> auto& { return atoms_; }
+
   /// Returns the parameters of the operation.
-  /// @return The parameters of the operation.
-  [[nodiscard]] auto getParams() const -> const decltype(params_)& {
-    return params_;
-  }
+  [[nodiscard]] auto getParams() const -> auto& { return params_; }
+
   /// Returns a string representation of the operation.
-  /// @return A string representation of the operation.
   [[nodiscard]] auto toString() const -> std::string override;
 };
 } // namespace na
