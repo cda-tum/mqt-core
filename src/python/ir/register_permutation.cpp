@@ -55,8 +55,11 @@ void registerPermutation(py::module& m) {
            [](const qc::Permutation& p) {
              std::stringstream ss;
              ss << "{";
-             for (const auto& [k, v] : p) {
-               ss << k << ": " << v << ", ";
+             for (auto it = p.cbegin(); it != p.cend(); ++it) {
+               ss << it->first << ": " << it->second;
+               if (std::next(it) != p.cend()) {
+                 ss << ", ";
+               }
              }
              ss << "}";
              return ss.str();
@@ -64,8 +67,11 @@ void registerPermutation(py::module& m) {
       .def("__repr__", [](const qc::Permutation& p) {
         std::stringstream ss;
         ss << "Permutation({";
-        for (const auto& [k, v] : p) {
-          ss << k << ": " << v << ", ";
+        for (auto it = p.cbegin(); it != p.cend(); ++it) {
+          ss << it->first << ": " << it->second;
+          if (std::next(it) != p.cend()) {
+            ss << ", ";
+          }
         }
         ss << "})";
         return ss.str();
