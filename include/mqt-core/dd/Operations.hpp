@@ -75,7 +75,8 @@ qc::MatrixDD getStandardOperationDD(Package<Config>& dd, const qc::OpType type,
 }
 
 /**
- * @brief Get the decision diagram representation of a @ref StandardOperation.
+ * @brief Get the decision diagram representation of a @ref
+ * qc::StandardOperation.
  *
  * @note This function is only intended for internal use and should not be
  * called directly.
