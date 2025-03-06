@@ -71,6 +71,9 @@ class Permutation(MutableMapping[int, int]):
     def __hash__(self) -> int:
         """Return the hash of the permutation."""
 
+    def clear(self) -> None:
+        """Clear the permutation of all indices and values."""
+
     @overload
     def apply(self, controls: set[Control]) -> set[Control]:
         """Apply the permutation to a set of controls.

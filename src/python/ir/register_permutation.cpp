@@ -35,6 +35,7 @@ void registerPermutation(py::module& m) {
            py::overload_cast<const qc::Targets&>(&qc::Permutation::apply,
                                                  py::const_),
            "targets"_a)
+      .def("clear", [](qc::Permutation& p) { p.clear(); })
       .def("__getitem__",
            [](const qc::Permutation& p, const qc::Qubit q) { return p.at(q); })
       .def("__setitem__", [](qc::Permutation& p, const qc::Qubit q,
