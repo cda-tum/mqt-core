@@ -7,6 +7,10 @@
  * Licensed under the MIT License
  */
 
+/** @file
+ * @brief Common definitions used throughout the library.
+ */
+
 #pragma once
 
 #include <cstddef>
@@ -18,7 +22,8 @@
 #include <vector>
 
 namespace qc {
-class QFRException : public std::invalid_argument {
+/// A dedicated exception type for the library.
+class QFRException final : public std::invalid_argument {
   std::string msg;
 
 public:
@@ -30,27 +35,55 @@ public:
   }
 };
 
+/**
+ * @brief Type alias for qubit indices.
+ * @details This type (alias) is used to represent qubit indices in the library.
+ * It has been chosen to be an unsigned 32-bit integer to allow for up to
+ * 4,294,967,295 qubits, which should be enough for most use cases.
+ */
 using Qubit = std::uint32_t;
+/**
+ * @brief Type alias for classical bit indices.
+ * @details This type (alias) is used to represent classical bit indices in the
+ * library. The choice of 64-bits is arbitrary and can be changed if necessary.
+ */
 using Bit = std::uint64_t;
 
+/// A type alias for a vector of qubits which are supposed to act as targets.
 using Targets = std::vector<Qubit>;
 
-// floating-point type used throughout the library
+/// Floating-point type used throughout the library
 using fp = double;
 
-static constexpr fp PI = static_cast<fp>(
+/// A constant for the value of \f$\pi\f$.
+static constexpr auto PI = static_cast<fp>(
     3.141592653589793238462643383279502884197169399375105820974L);
-static constexpr fp PI_2 = static_cast<fp>(
+/// A constant for the value of \f$\frac{\pi}{2}\f$.
+static constexpr auto PI_2 = static_cast<fp>(
     1.570796326794896619231321691639751442098584699687552910487L);
-static constexpr fp PI_4 = static_cast<fp>(
+/// A constant for the value of \f$\frac{\pi}{4}\f$.
+static constexpr auto PI_4 = static_cast<fp>(
     0.785398163397448309615660845819875721049292349843776455243L);
-static constexpr fp TAU = static_cast<fp>(
+/// A constant for the value of \f$\tau\f$.
+static constexpr auto TAU = static_cast<fp>(
     6.283185307179586476925286766559005768394338798750211641950L);
-static constexpr fp E = static_cast<fp>(
+/// A constant for the value of \f$e\f$.
+static constexpr auto E = static_cast<fp>(
     2.718281828459045235360287471352662497757247093699959574967L);
 
-// supported file formats
-enum class Format : uint8_t { OpenQASM2, OpenQASM3 };
+/// Supported file formats
+enum class Format : uint8_t {
+  /**
+   * @brief OpenQASM 2.0 format
+   * @see https://arxiv.org/abs/1707.03429
+   */
+  OpenQASM2,
+  /**
+   * @brief OpenQASM 3 format
+   * @see https://openqasm.com/index.html
+   */
+  OpenQASM3
+};
 
 /**
  * @brief 64bit mixing hash (from MurmurHash3)
