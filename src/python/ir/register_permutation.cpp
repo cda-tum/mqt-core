@@ -38,7 +38,7 @@ void registerPermutation(py::module& m) {
       .def("__getitem__",
            [](const qc::Permutation& p, const qc::Qubit q) { return p.at(q); })
       .def("__setitem__", [](qc::Permutation& p, const qc::Qubit q,
-                             const qc::Qubit r) { p.at(q) = r; })
+                             const qc::Qubit r) { p[q] = r; })
       .def("__delitem__",
            [](qc::Permutation& p, const qc::Qubit q) { p.erase(q); })
       .def("__len__", &qc::Permutation::size)
