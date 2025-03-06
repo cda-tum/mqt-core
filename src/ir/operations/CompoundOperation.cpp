@@ -76,12 +76,11 @@ bool CompoundOperation::isCustomGate() const noexcept { return customGate; }
 
 bool CompoundOperation::isGlobal(const size_t nQubits) const noexcept {
   const auto& params = ops.front()->getParameter();
-  const auto& type = ops.front()->getType();
+  const auto& t = ops.front()->getType();
   return getUsedQubits().size() == nQubits &&
          std::all_of(ops.cbegin() + 1, ops.cend(), [&](const auto& operation) {
            return operation->isStandardOperation() &&
-                  operation->getNcontrols() == 0 &&
-                  operation->getType() == type &&
+                  operation->getNcontrols() == 0 && operation->getType() == t &&
                   operation->getParameter() == params;
          });
 }
