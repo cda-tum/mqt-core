@@ -13,7 +13,7 @@ import re
 import warnings
 from typing import TYPE_CHECKING, cast
 
-from qiskit.circuit import AncillaQubit, AncillaRegister, Clbit, Qubit
+from qiskit.circuit import AncillaRegister, Clbit, Qubit
 
 from ..ir import QuantumComputation
 from ..ir.operations import (
@@ -378,40 +378,29 @@ def _add_two_target_operation(
 
 
 def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
-    layout = circ.layout
-    initial_layout = layout.initial_layout
+    qc.initial_layout.clear()
+    initial_index_layout = circ.layout.initial_index_layout()
+    for virtual, physical in enumerate(initial_index_layout):
+        qc.initial_layout[physical] = virtual
 
-    # The following creates a map of virtual qubits in the layout to an integer index.
-    # Using the `get_virtual_bits()` method of the layout guarantees that the order
-    # of the qubits is the same as in the original circuit. In contrast, the
-    # `get_registers()` method does not guarantee this as it returns a set that
-    # reorders the qubits.
-    qubit_to_idx: dict[Qubit, int] = {}
-    for idx, qubit in enumerate(initial_layout.get_virtual_bits()):
-        qubit_to_idx[qubit] = idx
-        if isinstance(qubit, AncillaQubit):
-            qc.set_circuit_qubit_ancillary(idx)
+    qc.output_permutation.clear()
+    final_index_layout = circ.layout.final_index_layout()
+    for virtual, physical in enumerate(final_index_layout):
+        qc.output_permutation[physical] = virtual
 
-    for register in initial_layout.get_registers():
-        is_ancilla = register.name == "ancilla" or isinstance(register, AncillaRegister)
-        if not is_ancilla:
+    # Properly mark ancillary qubits
+    for register in circ.layout.initial_layout.get_registers():
+        if register.name != "ancilla" and not isinstance(register, AncillaRegister):
             continue
         for qubit in reversed(register):
-            qc.set_circuit_qubit_ancillary(qubit_to_idx[qubit])
+            physical_qubit = circ.layout.initial_layout[qubit]
+            virtual_qubit = qc.initial_layout[physical_qubit]
+            qc.set_circuit_qubit_ancillary(virtual_qubit)
 
-    # create initial layout (and assume identical output permutation)
-    for device_qubit, circuit_qubit in initial_layout.get_physical_bits().items():
-        idx = qubit_to_idx[circuit_qubit]
-        qc.initial_layout[device_qubit] = idx
-
-    if layout.final_layout is None:
-        qc.output_permutation = qc.initial_layout
-        return
-
-    # final_index_layout creates a list of final positions for input circuit qubits
-    final_index_layout = layout.final_index_layout(filter_ancillas=False)
-    for idx, value in enumerate(final_index_layout):
-        qc.output_permutation[value] = idx
+    # Properly mark garbage qubits
+    # Any qubit in the initial layout that is not in the final layout is garbage
+    for virtual_qubit in range(len(final_index_layout), len(initial_index_layout)):
+        qc.set_circuit_qubit_garbage(virtual_qubit)
 
 
 def _import_definition(
