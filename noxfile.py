@@ -104,6 +104,19 @@ def minimums(session: nox.Session) -> None:
     session.run("uv", "lock", "--refresh", env=env)
 
 
+def process_file(filepath: Path) -> None:
+    """Process a file to remove tags that cause issues with Furo and Sphinx."""
+    with filepath.open(encoding="utf-8") as file:
+        content = file.read()
+
+    # Remove the tags that cause issues with Furo and Sphinx
+    content = content.replace('<div class="contents">', "")
+    content = content.replace("</div><!-- contents -->", "")
+
+    with filepath.open(mode="w", encoding="utf-8") as file:
+        file.write(content)
+
+
 @nox.session(reuse_venv=True)
 def docs(session: nox.Session) -> None:
     """Build the docs. Use "--non-interactive" to avoid serving. Pass "-b linkcheck" to check links."""
@@ -130,23 +143,18 @@ def docs(session: nox.Session) -> None:
 
     # build the C++ API docs using doxygen
     with session.chdir("docs"):
-        if shutil.which("doxygen") is None:
-            session.error("doxygen is required to build the C++ API docs")
-
-        Path("_build/doxygen").mkdir(parents=True, exist_ok=True)
         session.run("doxygen", "Doxyfile", external=True)
-        Path("api/cpp").mkdir(parents=True, exist_ok=True)
         session.run(
-            "breathe-apidoc",
-            "-o",
-            "api/cpp",
-            "-m",
-            "-f",
-            "-g",
-            "namespace",
-            "_build/doxygen/xml/",
+            "doxysphinx",
+            "build",
+            ".",
+            "_build/html",
+            "Doxyfile",
             external=True,
         )
+        for file in Path("doxygen/html").rglob("*"):
+            if file.is_file() and file.suffix in {".html", ".rst"}:
+                process_file(file)
 
     shared_args = [
         "-n",  # nitpicky mode

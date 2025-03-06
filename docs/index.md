@@ -71,5 +71,5 @@ api/mqt/core/index
 :glob:
 :caption: C++ API Reference
 
-api/cpp/namespacelist
+doxygen/html/index
 ```

@@ -60,6 +60,7 @@ endif()
 option(MQT_CORE_INSTALL "Generate installation instructions for MQT Core"
        ${MQT_CORE_MASTER_PROJECT})
 option(BUILD_MQT_CORE_TESTS "Also build tests for the MQT Core project" ${MQT_CORE_MASTER_PROJECT})
+option(BUILD_MQT_CORE_DOCS "Build the MQT Core documentation" OFF)
 
 # try to determine the project version
 include(cmake/GetVersion.cmake)
@@ -84,6 +85,10 @@ if(BUILD_MQT_CORE_TESTS)
   enable_testing()
   include(GoogleTest)
   add_subdirectory(test)
+endif()
+
+if(BUILD_MQT_CORE_DOCS)
+  add_subdirectory(docs)
 endif()
 
 option(BUILD_MQT_CORE_BENCHMARKS "Also build benchmarks for the MQT Core project" OFF)

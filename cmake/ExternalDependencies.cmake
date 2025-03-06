@@ -94,5 +94,32 @@ if(BUILD_MQT_CORE_TESTS)
   endif()
 endif()
 
+if(BUILD_MQT_CORE_DOCS)
+  find_package(Doxygen 1.12.0 REQUIRED)
+  set(DOXYGEN_AWESOME_VERSION
+      1.12.0
+      CACHE STRING "Doxygen Awesome version")
+  set(DOXYGEN_AWESOME_REV
+      "af1d9030b3ffa7b483fa9997a7272fb12af6af4c"
+      CACHE STRING "Doxygen Awesome identifier (tag, branch or commit hash)")
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+    FetchContent_Declare(
+      doxygen-awesome-css
+      GIT_REPOSITORY https://github.com/jothepro/doxygen-awesome-css.git
+      GIT_TAG ${DOXYGEN_AWESOME_REV}
+      FIND_PACKAGE_ARGS ${DOXYGEN_AWESOME_VERSION})
+    list(APPEND FETCH_PACKAGES doxygen-awesome-css)
+  else()
+    find_package(doxygen-awesome-css ${DOXYGEN_AWESOME_VERSION} QUIET)
+    if(NOT doxygen-awesome-css_FOUND)
+      FetchContent_Declare(
+        doxygen-awesome-css
+        GIT_REPOSITORY https://github.com/jothepro/doxygen-awesome-css.git
+        GIT_TAG ${DOXYGEN_AWESOME_REV})
+      list(APPEND FETCH_PACKAGES doxygen-awesome-css)
+    endif()
+  endif()
+endif()
+
 # Make all declared dependencies available.
 FetchContent_MakeAvailable(${FETCH_PACKAGES})
