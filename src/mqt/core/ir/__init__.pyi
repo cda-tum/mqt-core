@@ -28,7 +28,7 @@ class Permutation(MutableMapping[int, int]):
 
     """
 
-    def __init__(self, permutation: dict[int, int] | None = None) -> None:
+    def __init__(self, permutation: dict[int, int]) -> None:
         """Initialize the permutation."""
 
     def __getitem__(self, idx: int) -> int:
