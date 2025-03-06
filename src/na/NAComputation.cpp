@@ -34,7 +34,7 @@ auto NAComputation::getLocationOfAtomAfterOperation(const Atom& atom,
                                                     const Op& op) const
     -> Location {
   auto currentLocation = initialLocations_.at(&atom);
-  for (const auto& opUniquePtr : *this) {
+  for (const auto& opUniquePtr : operations_) {
     if (opUniquePtr->is<MoveOp>()) {
       const auto& moveOp = opUniquePtr->as<MoveOp>();
       const auto& opAtoms = moveOp.getAtoms();
@@ -55,13 +55,13 @@ auto NAComputation::getLocationOfAtomAfterOperation(const Atom& atom,
 auto NAComputation::toString() const -> std::string {
   std::stringstream ss;
   std::map<Location, const Atom*> initialLocationsAsc;
-  for (const auto& location : initialLocations_) {
-    initialLocationsAsc.emplace(location.second, location.first);
+  for (const auto& [atom, loc] : initialLocations_) {
+    initialLocationsAsc.emplace(loc, atom);
   }
   for (const auto& [loc, atom] : initialLocationsAsc) {
     ss << "atom " << loc << " " << *atom << "\n";
   }
-  for (const auto& op : *this) {
+  for (const auto& op : operations_) {
     ss << *op << "\n";
   }
   return ss.str();
@@ -86,7 +86,7 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
   // This set is used to keep track of the atoms that are currently shuttling,
   // i.e., they are loaded but not yet stored again.
   std::unordered_set<const Atom*> currentlyShuttling{};
-  for (const auto& op : *this) {
+  for (const auto& op : operations_) {
     ++counter;
     if (op->is<ShuttlingOp>()) {
       //===----------------------------------------------------------------===//
@@ -125,9 +125,7 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
       //===----------------------------------------------------------------===//
       // All Shuttling Operations that move atoms
       //===----------------------------------------------------------------===//
-      if ((op->is<LoadOp>() && op->as<LoadOp>().hasTargetLocations()) ||
-          (op->is<StoreOp>() && op->as<StoreOp>().hasTargetLocations()) ||
-          op->is<MoveOp>()) {
+      if (shuttlingOp.hasTargetLocations()) {
         const auto& targetLocations = shuttlingOp.getTargetLocations();
         for (std::size_t i = 0; i < opAtoms.size(); ++i) {
           const auto* a = opAtoms[i];
