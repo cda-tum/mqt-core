@@ -36,11 +36,6 @@ namespace dd {
  */
 template <class Node, std::size_t NBUCKET = 32768> class UniqueTable {
 
-  static_assert(
-      std::disjunction_v<std::is_same<Node, vNode>, std::is_same<Node, mNode>,
-                         std::is_same<Node, dNode>>,
-      "Node type must be one of vNode, mNode, dNode");
-
 public:
   /**
    * @brief The initial garbage collection limit.
