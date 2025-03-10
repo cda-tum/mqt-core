@@ -6,7 +6,7 @@
 # Licensed under the MIT License
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, MutableSequence, Sequence
 from typing import ClassVar, overload
 
 from .registers import ClassicalRegister
@@ -665,7 +665,7 @@ class NonUnitaryOperation(Operation):
     def invert(self) -> None:
         """Non-unitary operations are, per definition, not invertible."""
 
-class CompoundOperation(Operation):
+class CompoundOperation(Operation, MutableSequence[Operation]):
     """Compound quantum operation.
 
     This class is used to aggregate and group multiple operations into a single
@@ -712,11 +712,56 @@ class CompoundOperation(Operation):
             This gives direct access to the operations in the compound operation.
         """
 
+    @overload
+    def __setitem__(self, idx: int, op: Operation) -> None:
+        """Set the operation at the given index.
+
+        Args:
+            idx: The index of the operation to set.
+            op: The operation to set at the given index.
+        """
+
+    @overload
+    def __setitem__(self, idx: slice, ops: Iterable[Operation]) -> None:
+        """Set the operations in the given slice.
+
+        Args:
+            idx: The slice of operations to set.
+            ops: The operations to set in the given slice.
+        """
+
+    @overload
+    def __delitem__(self, idx: int) -> None:
+        """Delete the operation at the given index.
+
+        Args:
+            idx: The index of the operation to delete.
+        """
+
+    @overload
+    def __delitem__(self, idx: slice) -> None:
+        """Delete the operations in the given slice.
+
+        Args:
+            idx: The slice of operations to delete.
+        """
+
+    def insert(self, idx: int, op: Operation) -> None:
+        """Insert an operation at the given index.
+
+        Args:
+            idx: The index to insert the operation at.
+            op: The operation to insert.
+        """
+
     def append(self, op: Operation) -> None:
         """Append an operation to the compound operation."""
 
     def empty(self) -> bool:
         """Check if the compound operation is empty."""
+
+    def clear(self) -> None:
+        """Clear all operations in the compound operation."""
 
     def add_control(self, control: Control) -> None:
         """Add a control to the operation.

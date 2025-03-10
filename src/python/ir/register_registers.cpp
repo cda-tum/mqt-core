@@ -21,7 +21,8 @@ void registerRegisters(py::module& m) {
   py::class_<qc::QuantumRegister>(m, "QuantumRegister")
       .def(py::init<const qc::Qubit, const std::size_t, const std::string&>(),
            "start"_a, "size"_a, "name"_a = "")
-      .def_property_readonly("name", &qc::QuantumRegister::getName)
+      .def_property_readonly(
+          "name", [](const qc::QuantumRegister& reg) { return reg.getName(); })
       .def_property(
           "start",
           [](const qc::QuantumRegister& reg) { return reg.getStartIndex(); },
@@ -33,7 +34,9 @@ void registerRegisters(py::module& m) {
           [](qc::QuantumRegister& reg, const std::size_t size) {
             reg.getSize() = size;
           })
-      .def_property_readonly("end", &qc::QuantumRegister::getEndIndex)
+      .def_property_readonly(
+          "end",
+          [](const qc::QuantumRegister& reg) { return reg.getEndIndex(); })
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def(hash(py::self))
@@ -48,7 +51,9 @@ void registerRegisters(py::module& m) {
   py::class_<qc::ClassicalRegister>(m, "ClassicalRegister")
       .def(py::init<const qc::Bit, const std::size_t, const std::string&>(),
            "start"_a, "size"_a, "name"_a = "")
-      .def_property_readonly("name", &qc::ClassicalRegister::getName)
+      .def_property_readonly(
+          "name",
+          [](const qc::ClassicalRegister& reg) { return reg.getName(); })
       .def_property(
           "start",
           [](const qc::ClassicalRegister& reg) { return reg.getStartIndex(); },
@@ -61,7 +66,9 @@ void registerRegisters(py::module& m) {
           [](qc::ClassicalRegister& reg, const std::size_t size) {
             reg.getSize() = size;
           })
-      .def_property_readonly("end", &qc::ClassicalRegister::getEndIndex)
+      .def_property_readonly(
+          "end",
+          [](const qc::ClassicalRegister& reg) { return reg.getEndIndex(); })
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def(hash(py::self))

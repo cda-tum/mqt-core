@@ -44,8 +44,12 @@ void registerPermutation(py::module& m) {
       .def("__delitem__",
            [](qc::Permutation& p, const qc::Qubit q) { p.erase(q); })
       .def("__len__", &qc::Permutation::size)
+      .def("__iter__",
+           [](const qc::Permutation& p) {
+             return py::make_key_iterator(p.begin(), p.end());
+           })
       .def(
-          "__iter__",
+          "items",
           [](const qc::Permutation& p) {
             return py::make_iterator(p.begin(), p.end());
           },

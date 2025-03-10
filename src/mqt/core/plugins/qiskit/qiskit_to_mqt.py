@@ -5,7 +5,7 @@
 #
 # Licensed under the MIT License
 
-"""Functionality for interoperability with Qiskit."""
+"""Functionality for translating from Qiskit to the MQT."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, cast
 
 from qiskit.circuit import AncillaRegister, Clbit, Qubit
 
-from ..ir import QuantumComputation
-from ..ir.operations import (
+from ...ir import QuantumComputation
+from ...ir.operations import (
     CompoundOperation,
     Control,
     NonUnitaryOperation,
@@ -24,12 +24,19 @@ from ..ir.operations import (
     StandardOperation,
     SymbolicOperation,
 )
-from ..ir.symbolic import Expression, Term, Variable
+from ...ir.symbolic import Expression, Term, Variable
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from qiskit.circuit import Instruction, ParameterExpression, QuantumCircuit
+
+
+__all__ = ["qiskit_to_mqt"]
+
+
+def __dir__() -> list[str]:
+    return __all__
 
 
 def qiskit_to_mqt(circ: QuantumCircuit) -> QuantumComputation:
@@ -125,6 +132,8 @@ _NATIVELY_SUPPORTED_GATES = frozenset({
     "cx",
     "cy",
     "cz",
+    "cs",
+    "csdg",
     "cp",
     "cu1",
     "ch",
@@ -209,10 +218,10 @@ def _emplace_operation(
     if name in {"h", "ch"}:
         return _add_operation(qc, OpType.h, qargs, params, qubit_map)
 
-    if name == "s":
+    if name in {"s", "cs"}:
         return _add_operation(qc, OpType.s, qargs, params, qubit_map)
 
-    if name == "sdg":
+    if name in {"sdg", "csdg"}:
         return _add_operation(qc, OpType.sdg, qargs, params, qubit_map)
 
     if name == "t":
@@ -437,6 +446,3 @@ def _import_definition(
         )
         params.extend(new_params)
     return params
-
-
-__all__ = ["qiskit_to_mqt"]
