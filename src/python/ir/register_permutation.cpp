@@ -19,6 +19,7 @@ namespace mqt {
 
 void registerPermutation(py::module& m) {
   py::class_<qc::Permutation>(m, "Permutation")
+      .def(py::init<>())
       .def(py::init([](const py::dict& p) {
              qc::Permutation perm;
              for (const auto& [key, value] : p) {
