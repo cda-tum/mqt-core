@@ -247,14 +247,6 @@ std::size_t QuantumComputation::getDepth() const {
 }
 
 void QuantumComputation::initializeIOMapping() {
-  // if no initial layout was found during parsing the identity mapping is
-  // assumed
-  if (initialLayout.empty()) {
-    for (Qubit i = 0; i < nqubits; ++i) {
-      initialLayout.emplace(i, i);
-    }
-  }
-
   // try gathering (additional) output permutation information from
   // measurements, e.g., a measurement
   //      `measure q[i] -> c[j];`
@@ -286,8 +278,8 @@ void QuantumComputation::initializeIOMapping() {
         if (outputPermutationFound) {
           // output permutation was already set before -> permute existing
           // values
-          const auto current = outputPermutation.at(qubitidx);
-          if (static_cast<std::size_t>(current) != bitidx) {
+          if (const auto current = outputPermutation.at(qubitidx);
+              static_cast<std::size_t>(current) != bitidx) {
             for (auto& p : outputPermutation) {
               if (static_cast<std::size_t>(p.second) == bitidx) {
                 p.second = current;
@@ -319,16 +311,8 @@ void QuantumComputation::initializeIOMapping() {
     }
   }
 
-  const bool buildOutputPermutation = outputPermutation.empty();
   garbage.assign(nqubits + nancillae, false);
   for (const auto& [physicalIn, logicalIn] : initialLayout) {
-    const bool isIdle = isIdleQubit(physicalIn);
-
-    // if no output permutation was found, build it from the initial layout
-    if (buildOutputPermutation && !isIdle) {
-      outputPermutation.emplace(physicalIn, logicalIn);
-    }
-
     // if the qubit is not an output, mark it as garbage
     const bool isOutput = std::any_of(
         outputPermutation.begin(), outputPermutation.end(),
@@ -338,7 +322,8 @@ void QuantumComputation::initializeIOMapping() {
     }
 
     // if the qubit is an ancillary and idle, mark it as garbage
-    if (logicalQubitIsAncillary(logicalIn) && isIdle) {
+    if (const bool isIdle = isIdleQubit(physicalIn);
+        logicalQubitIsAncillary(logicalIn) && isIdle) {
       setLogicalQubitGarbage(logicalIn);
     }
   }
