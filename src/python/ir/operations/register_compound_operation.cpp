@@ -71,12 +71,76 @@ void registerCompoundOperation(const py::module& m) {
           },
           py::return_value_policy::reference_internal, "slice"_a)
       .def(
+          "__setitem__",
+          [&wrap](qc::CompoundOperation& compOp, DiffType i,
+                  const qc::Operation& op) {
+            i = wrap(i, compOp.size());
+            compOp[static_cast<SizeType>(i)] = op.clone();
+          },
+          "idx"_a, "op"_a)
+      .def(
+          "__setitem__",
+          [](qc::CompoundOperation& compOp, const py::slice& slice,
+             const std::vector<qc::Operation*>& ops) {
+            std::size_t start{};
+            std::size_t stop{};
+            std::size_t step{};
+            std::size_t sliceLength{};
+            if (!slice.compute(compOp.size(), &start, &stop, &step,
+                               &sliceLength)) {
+              throw py::error_already_set();
+            }
+            if (sliceLength != ops.size()) {
+              throw std::runtime_error(
+                  "Length of slice and number of operations do not match.");
+            }
+            for (std::size_t i = 0; i < sliceLength; ++i) {
+              compOp[start] = ops[i]->clone();
+              start += step;
+            }
+          },
+          "slice"_a, "ops"_a)
+      .def(
+          "__delitem__",
+          [&wrap](qc::CompoundOperation& compOp, DiffType i) {
+            i = wrap(i, compOp.size());
+            compOp.erase(compOp.begin() + i);
+          },
+          "idx"_a)
+      .def(
+          "__delitem__",
+          [](qc::CompoundOperation& compOp, const py::slice& slice) {
+            std::size_t start{};
+            std::size_t stop{};
+            std::size_t step{};
+            std::size_t sliceLength{};
+            if (!slice.compute(compOp.size(), &start, &stop, &step,
+                               &sliceLength)) {
+              throw py::error_already_set();
+            }
+            // delete in reverse order to not invalidate indices
+            for (std::size_t i = sliceLength; i > 0; --i) {
+              compOp.erase(compOp.begin() +
+                           static_cast<int64_t>(start + (i - 1) * step));
+            }
+          },
+          "slice"_a)
+      .def(
           "append",
           [](qc::CompoundOperation& compOp, const qc::Operation& op) {
             compOp.emplace_back(op.clone());
           },
           "op"_a)
+      .def(
+          "insert",
+          [](qc::CompoundOperation& compOp, const std::size_t idx,
+             const qc::Operation& op) {
+            compOp.insert(compOp.begin() + static_cast<int64_t>(idx),
+                          op.clone());
+          },
+          "idx"_a, "op"_a)
       .def("empty", &qc::CompoundOperation::empty)
+      .def("clear", &qc::CompoundOperation::clear)
       .def("__repr__", [](const qc::CompoundOperation& op) {
         std::stringstream ss;
         ss << "CompoundOperation([..." << op.size() << " ops...])";
