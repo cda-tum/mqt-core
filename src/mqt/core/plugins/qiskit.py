@@ -383,11 +383,6 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
     for virtual, physical in enumerate(initial_index_layout):
         qc.initial_layout[physical] = virtual
 
-    qc.output_permutation.clear()
-    final_index_layout = circ.layout.final_index_layout()
-    for virtual, physical in enumerate(final_index_layout):
-        qc.output_permutation[physical] = virtual
-
     # Properly mark ancillary qubits
     for register in circ.layout.initial_layout.get_registers():
         if register.name != "ancilla" and not isinstance(register, AncillaRegister):
@@ -396,6 +391,15 @@ def _import_layouts(qc: QuantumComputation, circ: QuantumCircuit) -> None:
             physical_qubit = circ.layout.initial_layout[qubit]
             virtual_qubit = qc.initial_layout[physical_qubit]
             qc.set_circuit_qubit_ancillary(virtual_qubit)
+
+    if circ.layout.final_layout is None:
+        qc.output_permutation = qc.initial_layout
+        return
+
+    qc.output_permutation.clear()
+    final_index_layout = circ.layout.final_index_layout()
+    for virtual, physical in enumerate(final_index_layout):
+        qc.output_permutation[physical] = virtual
 
     # Properly mark garbage qubits
     # Any qubit in the initial layout that is not in the final layout is garbage

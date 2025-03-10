@@ -331,10 +331,13 @@ InferredType TypeCheckPass::visitIdentifierExpression(
   return type->second;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 InferredType TypeCheckPass::visitIdentifierList(
     std::shared_ptr<IdentifierList> /*identifierList*/) {
   throw TypeCheckError("TypeCheckPass::visitIdentifierList not implemented");
 }
+#pragma GCC diagnostic pop
 
 InferredType TypeCheckPass::visitIndexedIdentifier(
     const std::shared_ptr<IndexedIdentifier> indexedIdentifier) {
