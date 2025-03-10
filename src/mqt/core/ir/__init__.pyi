@@ -7,7 +7,7 @@
 
 """MQT Core IR  - The MQT Core Intermediate Representation (IR) module."""
 
-from collections.abc import Iterable, Iterator, Mapping, MutableMapping, MutableSequence, Sequence
+from collections.abc import ItemsView, Iterable, Iterator, Mapping, MutableMapping, MutableSequence, Sequence
 from os import PathLike
 from typing import overload
 
@@ -58,6 +58,9 @@ class Permutation(MutableMapping[int, int]):
 
     def __iter__(self) -> Iterator[int]:
         """Return an iterator over the indices of the permutation."""
+
+    def items(self) -> ItemsView[int, int]:
+        """Return an iterable over the items of the permutation."""
 
     def __len__(self) -> int:
         """Return the number of indices in the permutation."""
