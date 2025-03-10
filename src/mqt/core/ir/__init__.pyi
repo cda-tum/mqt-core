@@ -353,6 +353,18 @@ class QuantumComputation(MutableSequence[Operation]):
             The unified quantum register.
         """
 
+    @property
+    def qregs(self) -> dict[str, QuantumRegister]:
+        """The quantum registers in the quantum computation."""
+
+    @property
+    def cregs(self) -> dict[str, ClassicalRegister]:
+        """The classical registers in the quantum computation."""
+
+    @property
+    def ancregs(self) -> dict[str, QuantumRegister]:
+        """The ancillary registers in the quantum computation."""
+
     # --------------------------------------------------------------------------
     #                  Initial Layout and Output Permutation
     # --------------------------------------------------------------------------
