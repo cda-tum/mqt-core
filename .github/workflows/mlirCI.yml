@@ -2,10 +2,10 @@ name: MLIR Workflow
 on:
   push:
     paths:
-      - 'mlir/**'
+      - "mlir/**"
   pull_request:
     paths:
-      - 'mlir/**'
+      - "mlir/**"
 
 jobs:
   change-detection:
