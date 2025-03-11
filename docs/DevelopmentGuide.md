@@ -493,11 +493,6 @@ You can build the documentation using the {code}`nox` session {code}`docs`.
 $ nox -s docs
 ```
 
-:::{note}
-In order to properly build the notebooks in the documentation, you need to have {code}`pandoc` installed.
-See [the pandoc documentation](https://pandoc.org/installing.html) for installation instructions.
-:::
-
 This will install all dependencies for building the documentation in an isolated environment, build the Python package, and then build the documentation.
 Finally, it will host the documentation on a local web server for you to view.
 
