@@ -22,6 +22,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 namespace qc {
 class Operation {
@@ -153,6 +154,22 @@ public:
   }
 
   [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }
+
+  [[nodiscard]] virtual bool isClifford() const {
+    static const std::unordered_set<std::string> cliffordGateNames = {
+    "X",    // Pauli-X
+    "Y",    // Pauli-Y
+    "Z",    // Pauli-Z
+    "H",    // Hadamard
+    "S",    // Phase gate
+    "Sdag", // Inverse phase gate
+    "CNOT",
+    "CZ",
+    "SWAP"  // Often SWAP is Clifford, but include only if your usage agrees
+  };
+
+  const std::string opName = this->getName();
+  return (cliffordGateNames.find(opName) != cliffordGateNames.end());}
 
   /**
    * @brief Checks whether a gate is global.
