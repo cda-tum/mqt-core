@@ -49,7 +49,7 @@ release = version.split("+")[0]
 project = "MQT Core"
 author = "Chair for Design Automation, Technical University of Munich"
 language = "en"
-project_copyright = "2024, Chair for Design Automation, Technical University of Munich"
+project_copyright = "2025, Chair for Design Automation, Technical University of Munich"
 
 master_doc = "index"
 
