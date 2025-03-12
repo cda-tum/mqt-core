@@ -1,0 +1,24 @@
+name: Qiskit Upstream Tests
+on:
+  schedule:
+    # Run every Monday at 00:00 UTC
+    - cron: "0 0 * * 1"
+  pull_request:
+    paths:
+      - ".github/workflows/upstream.yml"
+  workflow_dispatch: # Allow manual triggering
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  qiskit-upstream-tests:
+    name: 🐍⚛️
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2025]
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-qiskit-upstream.yml@v1.7
+    with:
+      runs-on: ${{ matrix.os }}
