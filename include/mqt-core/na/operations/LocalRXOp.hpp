@@ -23,19 +23,19 @@
 
 namespace na {
 /// Represents a local RZ operation in the NAComputation.
-class LocalRZOp final : public LocalOp {
+class LocalRXOp final : public LocalOp {
 public:
   /// Creates a new RZ operation with the given atoms and angle.
   /// @param atom The atoms the operation is applied to.
   /// @param angle The angle of the operation.
-  LocalRZOp(std::vector<const Atom*> atom, const qc::fp angle)
+  LocalRXOp(std::vector<const Atom*> atom, const qc::fp angle)
       : LocalOp(std::move(atom), {angle}) {
-    name_ = "rz";
+    name_ = "rx";
   }
 
   /// Creates a new RZ operation with the given atom and angle.
   /// @param atom The atom the operation is applied to.
   /// @param angle The angle of the operation.
-  LocalRZOp(const Atom& atom, const qc::fp angle) : LocalRZOp({&atom}, angle) {}
+  LocalRXOp(const Atom& atom, const qc::fp angle) : LocalRXOp({&atom}, angle) {}
 };
 } // namespace na

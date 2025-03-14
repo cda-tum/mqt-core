@@ -13,29 +13,33 @@
 
 #pragma once
 
-#include "Definitions.hpp"
 #include "na/entities/Atom.hpp"
 #include "na/operations/LocalOp.hpp"
 
+#include <array>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace na {
 /// Represents a local RZ operation in the NAComputation.
-class LocalRZOp final : public LocalOp {
+class LocalCZOp final : public LocalOp {
 public:
   /// Creates a new RZ operation with the given atoms and angle.
-  /// @param atom The atoms the operation is applied to.
-  /// @param angle The angle of the operation.
-  LocalRZOp(std::vector<const Atom*> atom, const qc::fp angle)
-      : LocalOp(std::move(atom), {angle}) {
-    name_ = "rz";
+  /// @param atoms The atoms the operation is applied to.
+  explicit LocalCZOp(const std::vector<std::array<const Atom*, 2>>& atoms)
+      : LocalOp(atoms, {}) {
+    name_ = "cz";
   }
 
   /// Creates a new RZ operation with the given atom and angle.
   /// @param atom The atom the operation is applied to.
-  /// @param angle The angle of the operation.
-  LocalRZOp(const Atom& atom, const qc::fp angle) : LocalRZOp({&atom}, angle) {}
+  explicit LocalCZOp(const std::array<const Atom*, 2>& atom)
+      : LocalCZOp(std::vector{atom}) {}
+
+  /// Creates a new RZ operation with the given atom and angle.
+  /// @param atom1 The atom the operation is applied to.
+  /// @param atom2 The atom the operation is applied to.
+  explicit LocalCZOp(const Atom& atom1, const Atom& atom2)
+      : LocalCZOp(std::vector{std::array{&atom1, &atom2}}) {}
 };
 } // namespace na

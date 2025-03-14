@@ -15,7 +15,14 @@
 #include "na/operations/GlobalCZOp.hpp"
 #include "na/operations/GlobalRYOp.hpp"
 #include "na/operations/LoadOp.hpp"
+#include "na/operations/LocalCZOp.hpp"
+#include "na/operations/LocalHOp.hpp"
+#include "na/operations/LocalRXOp.hpp"
+#include "na/operations/LocalRYOp.hpp"
 #include "na/operations/LocalRZOp.hpp"
+#include "na/operations/LocalXOp.hpp"
+#include "na/operations/LocalYOp.hpp"
+#include "na/operations/LocalZOp.hpp"
 #include "na/operations/MoveOp.hpp"
 #include "na/operations/StoreOp.hpp"
 
@@ -49,6 +56,55 @@ TEST(NAComputation, Location) {
   EXPECT_DOUBLE_EQ((Location{0, 0}).getEuclideanDistance(loc), 5.0);
   EXPECT_DOUBLE_EQ((Location{0, 0}).getManhattanDistanceX(loc), 3);
   EXPECT_DOUBLE_EQ((Location{0, 0}).getManhattanDistanceY(loc), 4);
+}
+
+TEST(NAComputation, LocalRXOp) {
+  const Atom atom("atom");
+  const LocalRXOp op(atom, 0.0);
+  EXPECT_EQ(op.toString(), "@+ rx 0.00000 atom");
+}
+
+TEST(NAComputation, LocalRYOp) {
+  const Atom atom("atom");
+  const LocalRYOp op(atom, 0.0);
+  EXPECT_EQ(op.toString(), "@+ ry 0.00000 atom");
+}
+
+TEST(NAComputation, LocalRZOp) {
+  const Atom atom("atom");
+  const LocalRZOp op(atom, 0.0);
+  EXPECT_EQ(op.toString(), "@+ rz 0.00000 atom");
+}
+
+TEST(NAComputation, LocalXOp) {
+  const Atom atom("atom");
+  const LocalXOp op(atom);
+  EXPECT_EQ(op.toString(), "@+ x atom");
+}
+
+TEST(NAComputation, LocalYOp) {
+  const Atom atom("atom");
+  const LocalYOp op(atom);
+  EXPECT_EQ(op.toString(), "@+ y atom");
+}
+
+TEST(NAComputation, LocalZOp) {
+  const Atom atom("atom");
+  const LocalZOp op(atom);
+  EXPECT_EQ(op.toString(), "@+ z atom");
+}
+
+TEST(NAComputation, LocalHOp) {
+  const Atom atom("atom");
+  const LocalHOp op(atom);
+  EXPECT_EQ(op.toString(), "@+ h atom");
+}
+
+TEST(NAComputation, LocalCZOp) {
+  const Atom atom1("atom1");
+  const Atom atom2("atom2");
+  const LocalCZOp op(atom1, atom2);
+  EXPECT_EQ(op.toString(), "@+ cz {atom1, atom2}");
 }
 
 TEST(NAComputation, General) {

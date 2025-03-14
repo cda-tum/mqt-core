@@ -20,7 +20,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
@@ -223,10 +222,10 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
       // Local Operations
       //===----------------------------------------------------------------===//
       const auto& opAtoms = op->as<LocalOp>().getAtoms();
-      for (std::size_t i = 0; i < opAtoms.size(); ++i) {
-        const auto* a = opAtoms[i];
-        for (std::size_t j = i + 1; j < opAtoms.size(); ++j) {
-          if (const auto* b = opAtoms[j]; a == b) {
+      std::unordered_set<const Atom*> usedAtoms;
+      for (const auto& atoms : opAtoms) {
+        for (const auto* const atom : atoms) {
+          if (!usedAtoms.emplace(atom).second) {
             ss << "Error in op number " << counter
                << " (two atoms identical)\n";
             return {false, ss.str()};
