@@ -28,6 +28,8 @@
 
 #include <gtest/gtest.h>
 #include <sstream>
+#include <stdexcept>
+#include <tuple>
 #include <vector>
 
 namespace na {
@@ -45,6 +47,13 @@ TEST(NAComputation, Zone) {
   std::stringstream ss;
   ss << zone;
   EXPECT_EQ(ss.str(), "zone");
+}
+TEST(NAComputation, ZonesExtent) {
+  const auto zone = Zone("zone", {0, 0, 2, 2});
+  EXPECT_TRUE(zone.contains({1., 1.}));
+  EXPECT_FALSE(zone.contains({1., 3.}));
+  EXPECT_THROW(std::ignore = Zone("zone").contains({0., 0.}),
+               std::runtime_error);
 }
 
 TEST(NAComputation, Location) {
@@ -270,5 +279,39 @@ TEST(NAComputation, GetPositionOfAtomAfterOperation) {
   qc.emplaceBack<StoreOp>(atom0);
   EXPECT_EQ(qc.getLocationOfAtomAfterOperation(atom0, qc[0]), (Location{0, 0}));
   EXPECT_EQ(qc.getLocationOfAtomAfterOperation(atom0, qc[2]), (Location{1, 1}));
+}
+
+TEST(NAComputation, ConvertToLocalGates) {
+  auto qc = NAComputation();
+  const auto& atom0 = qc.emplaceBackAtom("atom0");
+  const auto& atom1 = qc.emplaceBackAtom("atom1");
+  const auto& atom2 = qc.emplaceBackAtom("atom2");
+  const auto& atom3 = qc.emplaceBackAtom("atom3");
+  qc.emplaceInitialLocation(atom0, 1, 0);
+  qc.emplaceInitialLocation(atom1, 2, 0);
+  qc.emplaceInitialLocation(atom2, 1, 4);
+  qc.emplaceInitialLocation(atom3, 2, 4);
+  const auto& global = qc.emplaceBackZone("global", Zone::Extent{0, 0, 3, 5});
+  const auto& czZone = qc.emplaceBackZone("zone_cz0", Zone::Extent{0, 0, 3, 2});
+  qc.emplaceBack<GlobalRYOp>(global, 0.1);
+  qc.emplaceBack<GlobalCZOp>(czZone);
+  EXPECT_EQ(qc.toString(), "atom (1.000, 0.000) atom0\n"
+                           "atom (1.000, 4.000) atom2\n"
+                           "atom (2.000, 0.000) atom1\n"
+                           "atom (2.000, 4.000) atom3\n"
+                           "@+ ry 0.10000 global\n"
+                           "@+ cz zone_cz0\n");
+  qc.convertToLocalGates(3.);
+  EXPECT_EQ(qc.toString(), "atom (1.000, 0.000) atom0\n"
+                           "atom (1.000, 4.000) atom2\n"
+                           "atom (2.000, 0.000) atom1\n"
+                           "atom (2.000, 4.000) atom3\n"
+                           "@+ ry [\n"
+                           "    0.10000 atom0\n"
+                           "    0.10000 atom2\n"
+                           "    0.10000 atom1\n"
+                           "    0.10000 atom3\n"
+                           "]\n"
+                           "@+ cz {atom0, atom1}\n");
 }
 } // namespace na

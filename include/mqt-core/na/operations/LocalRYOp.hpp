@@ -18,7 +18,6 @@
 #include "na/operations/LocalOp.hpp"
 
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace na {
@@ -28,8 +27,8 @@ public:
   /// Creates a new RZ operation with the given atoms and angle.
   /// @param atom The atoms the operation is applied to.
   /// @param angle The angle of the operation.
-  LocalRYOp(std::vector<const Atom*> atom, const qc::fp angle)
-      : LocalOp(std::move(atom), {angle}) {
+  LocalRYOp(const std::vector<const Atom*>& atom, const qc::fp angle)
+      : LocalOp(atom, {angle}) {
     name_ = "ry";
   }
 

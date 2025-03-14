@@ -15,10 +15,15 @@
 #pragma once
 
 #include "Definitions.hpp"
+#include "LocalOp.hpp"
+#include "na/entities/Atom.hpp"
+#include "na/entities/Location.hpp"
 #include "na/entities/Zone.hpp"
 #include "na/operations/Op.hpp"
 
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -53,5 +58,12 @@ public:
 
   /// Returns a string representation of the operation.
   [[nodiscard]] auto toString() const -> std::string override;
+
+  /// Returns a local representation of the operation.
+  /// @param atomsLocations The locations of the atoms.
+  /// @param rydbergRange The range of the Rydberg interaction.
+  [[nodiscard]] virtual auto
+  toLocal(const std::unordered_map<const Atom*, Location>& atomsLocations,
+          double rydbergRange) const -> std::unique_ptr<LocalOp> = 0;
 };
 } // namespace na

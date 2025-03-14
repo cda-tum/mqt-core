@@ -11,6 +11,7 @@
 
 #include "na/entities/Atom.hpp"
 #include "na/entities/Location.hpp"
+#include "na/operations/GlobalOp.hpp"
 #include "na/operations/LoadOp.hpp"
 #include "na/operations/LocalOp.hpp"
 #include "na/operations/MoveOp.hpp"
@@ -34,14 +35,16 @@ auto NAComputation::getLocationOfAtomAfterOperation(const Atom& atom,
     -> Location {
   auto currentLocation = initialLocations_.at(&atom);
   for (const auto& opUniquePtr : operations_) {
-    if (opUniquePtr->is<MoveOp>()) {
-      const auto& moveOp = opUniquePtr->as<MoveOp>();
-      const auto& opAtoms = moveOp.getAtoms();
-      const auto& targetLocations = moveOp.getTargetLocations();
-      for (std::size_t k = 0; k < opAtoms.size(); ++k) {
-        if (opAtoms[k] == &atom) {
-          currentLocation = targetLocations[k];
-          break;
+    if (opUniquePtr->is<ShuttlingOp>()) {
+      if (const auto& shuttlingOp = opUniquePtr->as<ShuttlingOp>();
+          shuttlingOp.hasTargetLocations()) {
+        const auto& opAtoms = shuttlingOp.getAtoms();
+        const auto& targetLocations = shuttlingOp.getTargetLocations();
+        for (std::size_t k = 0; k < opAtoms.size(); ++k) {
+          if (opAtoms[k] == &atom) {
+            currentLocation = targetLocations[k];
+            break;
+          }
         }
       }
     }
@@ -235,5 +238,24 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
     }
   }
   return {true, ""};
+}
+auto NAComputation::convertToLocalGates(const double rydbergRange) -> void {
+  auto currentLocations = initialLocations_;
+  for (auto& operation : operations_) {
+    // update current locations
+    if (operation->is<ShuttlingOp>()) {
+      if (const auto& shuttlingOp = operation->as<ShuttlingOp>();
+          shuttlingOp.hasTargetLocations()) {
+        const auto& opAtoms = shuttlingOp.getAtoms();
+        const auto& targetLocations = shuttlingOp.getTargetLocations();
+        for (std::size_t k = 0; k < opAtoms.size(); ++k) {
+          currentLocations[opAtoms[k]] = targetLocations[k];
+        }
+      }
+    } else if (operation->is<GlobalOp>()) {
+      operation =
+          operation->as<GlobalOp>().toLocal(currentLocations, rydbergRange);
+    }
+  }
 }
 } // namespace na
