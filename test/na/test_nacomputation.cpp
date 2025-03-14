@@ -287,25 +287,53 @@ TEST(NAComputation, ConvertToLocalGates) {
   const auto& atom1 = qc.emplaceBackAtom("atom1");
   const auto& atom2 = qc.emplaceBackAtom("atom2");
   const auto& atom3 = qc.emplaceBackAtom("atom3");
-  qc.emplaceInitialLocation(atom0, 1, 0);
-  qc.emplaceInitialLocation(atom1, 2, 0);
+  qc.emplaceInitialLocation(atom0, 1, 3);
+  qc.emplaceInitialLocation(atom1, 2, 3);
   qc.emplaceInitialLocation(atom2, 1, 4);
   qc.emplaceInitialLocation(atom3, 2, 4);
   const auto& global = qc.emplaceBackZone("global", Zone::Extent{0, 0, 3, 5});
   const auto& czZone = qc.emplaceBackZone("zone_cz0", Zone::Extent{0, 0, 3, 2});
+  qc.emplaceBack<LoadOp>(std::vector{&atom0, &atom1});
+  qc.emplaceBack<MoveOp>(std::vector{&atom0, &atom1},
+                         std::vector<Location>{{1, 0}, {2, 0}});
+  qc.emplaceBack<StoreOp>(std::vector{&atom0, &atom1});
   qc.emplaceBack<GlobalRYOp>(global, 0.1);
   qc.emplaceBack<GlobalCZOp>(czZone);
-  EXPECT_EQ(qc.toString(), "atom (1.000, 0.000) atom0\n"
+  EXPECT_EQ(qc.toString(), "atom (1.000, 3.000) atom0\n"
                            "atom (1.000, 4.000) atom2\n"
-                           "atom (2.000, 0.000) atom1\n"
+                           "atom (2.000, 3.000) atom1\n"
                            "atom (2.000, 4.000) atom3\n"
+                           "@+ load [\n"
+                           "    atom0\n"
+                           "    atom1\n"
+                           "]\n"
+                           "@+ move [\n"
+                           "    (1.000, 0.000) atom0\n"
+                           "    (2.000, 0.000) atom1\n"
+                           "]\n"
+                           "@+ store [\n"
+                           "    atom0\n"
+                           "    atom1\n"
+                           "]\n"
                            "@+ ry 0.10000 global\n"
                            "@+ cz zone_cz0\n");
   qc.convertToLocalGates(3.);
-  EXPECT_EQ(qc.toString(), "atom (1.000, 0.000) atom0\n"
+  EXPECT_EQ(qc.toString(), "atom (1.000, 3.000) atom0\n"
                            "atom (1.000, 4.000) atom2\n"
-                           "atom (2.000, 0.000) atom1\n"
+                           "atom (2.000, 3.000) atom1\n"
                            "atom (2.000, 4.000) atom3\n"
+                           "@+ load [\n"
+                           "    atom0\n"
+                           "    atom1\n"
+                           "]\n"
+                           "@+ move [\n"
+                           "    (1.000, 0.000) atom0\n"
+                           "    (2.000, 0.000) atom1\n"
+                           "]\n"
+                           "@+ store [\n"
+                           "    atom0\n"
+                           "    atom1\n"
+                           "]\n"
                            "@+ ry [\n"
                            "    0.10000 atom0\n"
                            "    0.10000 atom2\n"

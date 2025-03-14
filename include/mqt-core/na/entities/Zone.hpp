@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include "Location.hpp"
+
 #include <optional>
 #include <ostream>
 #include <stdexcept>

@@ -17,7 +17,6 @@
 #include "na/operations/LocalOp.hpp"
 
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace na {
@@ -26,8 +25,7 @@ class LocalZOp final : public LocalOp {
 public:
   /// Creates a new RZ operation with the given atoms and angle.
   /// @param atom The atoms the operation is applied to.
-  explicit LocalZOp(std::vector<const Atom*> atom)
-      : LocalOp(std::move(atom), {}) {
+  explicit LocalZOp(const std::vector<const Atom*>& atom) : LocalOp(atom, {}) {
     name_ = "z";
   }
 
