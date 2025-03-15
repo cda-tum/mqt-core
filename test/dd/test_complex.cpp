@@ -28,7 +28,7 @@ using namespace dd;
 
 class CNTest : public testing::Test {
 protected:
-  MemoryManager<RealNumber> mm;
+  MemoryManager mm{MemoryManager::Create<dd::RealNumber>()};
   RealNumberUniqueTable ut{mm};
   ComplexNumbers cn{ut};
 };
@@ -98,7 +98,7 @@ TEST_F(CNTest, SortedBuckets) {
   std::size_t counter = 0;
   while (p != nullptr) {
     ASSERT_LT(last, p->value);
-    p = p->next;
+    p = p->next();
     ++counter;
   }
   std::cout << ut.getStats();
@@ -128,14 +128,14 @@ TEST_F(CNTest, GarbageCollectSomeInBucket) {
   const auto* p = table[static_cast<std::size_t>(key)];
   EXPECT_NEAR(p->value, num, RealNumber::eps);
 
-  ASSERT_NE(p->next, nullptr);
-  EXPECT_NEAR((p->next)->value, num2, RealNumber::eps);
+  ASSERT_NE(p->next(), nullptr);
+  EXPECT_NEAR((p->next())->value, num2, RealNumber::eps);
 
   ut.garbageCollect(true); // num should be collected
   const auto* q = table[static_cast<std::size_t>(key)];
   ASSERT_NE(q, nullptr);
   EXPECT_NEAR(q->value, num2, RealNumber::eps);
-  EXPECT_EQ(q->next, nullptr);
+  EXPECT_EQ(q->next(), nullptr);
 }
 
 TEST_F(CNTest, LookupInNeighbouringBuckets) {
@@ -431,21 +431,20 @@ TEST_F(CNTest, MaxRefCountReached) {
 }
 
 TEST_F(CNTest, ComplexTableAllocation) {
-  auto mem = MemoryManager<RealNumber>{};
+  auto mem = MemoryManager::Create<RealNumber>();
   auto allocs = mem.getStats().numAllocated;
   std::cout << allocs << "\n";
   std::vector<RealNumber*> nums{allocs};
   // get all the numbers that are pre-allocated
   for (auto i = 0U; i < allocs; ++i) {
-    nums[i] = mem.get();
+    nums[i] = mem.get<RealNumber>();
   }
 
   // trigger new allocation
   const auto* num = mem.get();
   ASSERT_NE(num, nullptr);
   EXPECT_EQ(mem.getStats().numAllocated,
-            (1. + MemoryManager<RealNumber>::GROWTH_FACTOR) *
-                static_cast<fp>(allocs));
+            (1. + MemoryManager::GROWTH_FACTOR) * static_cast<fp>(allocs));
 
   // clearing the complex table should reduce the allocated size to the original
   // size
