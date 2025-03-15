@@ -57,7 +57,7 @@ public:
    * @param manager The memory manager to use for allocating new numbers.
    * @param initialGCLim The initial garbage collection limit.
    */
-  explicit RealNumberUniqueTable(MemoryManager<RealNumber>& manager,
+  explicit RealNumberUniqueTable(MemoryManager& manager,
                                  std::size_t initialGCLim = INITIAL_GC_LIMIT);
 
   /**
@@ -176,7 +176,7 @@ private:
   std::array<RealNumber*, NBUCKET> tailTable{};
 
   /// A pointer to the memory manager for the numbers stored in the table.
-  MemoryManager<RealNumber>* memoryManager{};
+  MemoryManager* memoryManager{};
 
   /// A collection of statistics
   UniqueTableStatistics stats{};

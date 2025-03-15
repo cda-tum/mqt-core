@@ -119,9 +119,9 @@ void RealNumber::readBinary(dd::fp& num, std::istream& is) {
 
 namespace constants {
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
-RealNumber zero{0., nullptr, 1U};
-RealNumber one{1., nullptr, 1U};
-RealNumber sqrt2over2{SQRT2_2, nullptr, 1U};
+RealNumber zero{{nullptr}, 0., 1U};
+RealNumber one{{nullptr}, 1., 1U};
+RealNumber sqrt2over2{{nullptr}, SQRT2_2, 1U};
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 } // namespace constants
 } // namespace dd

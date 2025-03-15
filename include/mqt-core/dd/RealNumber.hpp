@@ -10,6 +10,7 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
+#include "dd/LinkedListBase.hpp"
 #include "mqt_core_dd_export.h"
 
 #include <istream>
@@ -25,7 +26,11 @@ namespace dd {
  * be taken when accessing the value. The static functions in this struct
  * provide safe access to the value of a RealNumber* pointer.
  */
-struct RealNumber {
+struct RealNumber : public LLBase {
+
+  RealNumber* next() const noexcept {
+    return reinterpret_cast<RealNumber*>(next_);
+  }
 
   /**
    * @brief Check whether the number points to the zero number.
@@ -216,14 +221,7 @@ struct RealNumber {
    * accessed using the static functions of this struct.
    */
   fp value{};
-  /**
-   * @brief The next pointer of the number.
-   * @details The next pointer is used to from linked lists.The next pointer
-   * is part of this class for efficiency reasons. It could be stored
-   * separately, but that would require many small allocations. This way, the
-   * entries can be allocated in chunks, which is much more efficient.
-   */
-  RealNumber* next{};
+
   /**
    * @brief The reference count of the number.
    * @details The reference count is used to determine whether a number is
