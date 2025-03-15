@@ -25,7 +25,7 @@ struct vNode; // NOLINT(readability-identifier-naming)
 struct mNode; // NOLINT(readability-identifier-naming)
 struct dNode; // NOLINT(readability-identifier-naming)
 class ComplexNumbers;
-template <typename T> class MemoryManager;
+class MemoryManager;
 
 template <typename T>
 using isVector = std::enable_if_t<std::is_same_v<T, vNode>, bool>;
@@ -125,7 +125,7 @@ template <typename Node> struct CachedEdge {
    */
   template <typename T = Node, isVector<T> = true>
   static CachedEdge normalize(Node* p, const std::array<CachedEdge, RADIX>& e,
-                              MemoryManager<Node>& mm, ComplexNumbers& cn);
+                              MemoryManager& mm, ComplexNumbers& cn);
 
   /**
    * @brief Get a normalized (density) matrix) DD from a fresh node and a list
@@ -140,7 +140,7 @@ template <typename Node> struct CachedEdge {
    */
   template <typename T = Node, isMatrixVariant<T> = true>
   static CachedEdge normalize(Node* p, const std::array<CachedEdge, NEDGE>& e,
-                              MemoryManager<Node>& mm, ComplexNumbers& cn);
+                              MemoryManager& mm, ComplexNumbers& cn);
 
   /**
    * @brief Check whether the matrix represented by the DD is the identity.

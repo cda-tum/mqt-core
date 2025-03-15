@@ -141,17 +141,20 @@ private:
 
 public:
   /// The memory manager for vector nodes
-  MemoryManager<vNode> vMemoryManager{Config::UT_VEC_INITIAL_ALLOCATION_SIZE};
+  MemoryManager vMemoryManager{
+      MemoryManager::Create<vNode>(Config::UT_VEC_INITIAL_ALLOCATION_SIZE)};
   /// The memory manager for matrix nodes
-  MemoryManager<mNode> mMemoryManager{Config::UT_MAT_INITIAL_ALLOCATION_SIZE};
+  MemoryManager mMemoryManager{
+      MemoryManager::Create<mNode>(Config::UT_MAT_INITIAL_ALLOCATION_SIZE)};
   /// The memory manager for density matrix nodes
-  MemoryManager<dNode> dMemoryManager{Config::UT_DM_INITIAL_ALLOCATION_SIZE};
+  MemoryManager dMemoryManager{
+      MemoryManager::Create<dNode>(Config::UT_DM_INITIAL_ALLOCATION_SIZE)};
   /**
    * @brief The memory manager for complex numbers
    * @note The real and imaginary part of complex numbers are treated
    * separately. Hence, it suffices for the manager to only manage real numbers.
    */
-  MemoryManager<RealNumber> cMemoryManager;
+  MemoryManager cMemoryManager{MemoryManager::Create<RealNumber>()};
 
   /**
    * @brief Get the memory manager for a given type
@@ -184,11 +187,11 @@ public:
   }
 
   /// The unique table used for vector nodes
-  UniqueTable<vNode, Config::UT_VEC_NBUCKET> vUniqueTable{0U, vMemoryManager};
+  UniqueTable vUniqueTable{vMemoryManager, {0U, Config::UT_VEC_NBUCKET}};
   /// The unique table used for matrix nodes
-  UniqueTable<mNode, Config::UT_MAT_NBUCKET> mUniqueTable{0U, mMemoryManager};
+  UniqueTable mUniqueTable{mMemoryManager, {0U, Config::UT_MAT_NBUCKET}};
   /// The unique table used for density matrix nodes
-  UniqueTable<dNode, Config::UT_DM_NBUCKET> dUniqueTable{0U, dMemoryManager};
+  UniqueTable dUniqueTable{dMemoryManager, {0U, Config::UT_DM_NBUCKET}};
   /**
    * @brief The unique table used for complex numbers
    * @note The table actually only stores real numbers in the interval [0, 1],
@@ -988,7 +991,7 @@ public:
                               std::tuple_size_v<decltype(Node::e)>>& edges,
              [[maybe_unused]] const bool generateDensityMatrix = false) {
     auto& memoryManager = getMemoryManager<Node>();
-    auto p = memoryManager.get();
+    auto p = memoryManager.template get<Node>();
     assert(p->ref == 0U);
 
     p->v = var;
