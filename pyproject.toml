@@ -88,7 +88,9 @@ sdist.exclude = [
     "**/.github",
     "**/doc",
     "**/docs",
+    "**/eval",
     "**/meta",
+    "**/paper",
     "**/plots",
     "**/test",
     "**/tests",
@@ -231,6 +233,7 @@ default.extend-ignore-re = [
 wille = "wille"
 anc = "anc"
 mch = "mch"
+ket = "ket"
 
 
 [tool.repo-review]
