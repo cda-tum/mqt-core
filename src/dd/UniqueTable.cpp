@@ -11,7 +11,8 @@
 
 namespace dd {
 
-UniqueTable::UniqueTable(MemoryManager& manager, UniqueTableConfig config)
+UniqueTable::UniqueTable(MemoryManager& manager,
+                         const UniqueTableConfig& config)
     : cfg(config), gcLimit(config.initialGCLimit), memoryManager(&manager),
       tables(config.nVars), stats(config.nVars) {
   for (auto& stat : stats) {
@@ -20,7 +21,7 @@ UniqueTable::UniqueTable(MemoryManager& manager, UniqueTableConfig config)
   }
 }
 
-void UniqueTable::resize(std::size_t nVars) {
+void UniqueTable::resize(const std::size_t nVars) {
   cfg.nVars = nVars;
   tables.resize(nVars, Table(cfg.nBuckets));
   // TODO: if the new size is smaller than the old one we might have to
@@ -52,7 +53,7 @@ bool UniqueTable::possiblyNeedsCollection() const {
   return getNumEntries() >= gcLimit;
 }
 
-std::size_t UniqueTable::garbageCollect(bool force) {
+std::size_t UniqueTable::garbageCollect(const bool force) {
   const std::size_t numEntriesBefore = getNumEntries();
   if ((!force && numEntriesBefore < gcLimit) || numEntriesBefore == 0U) {
     return 0U;

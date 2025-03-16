@@ -15,7 +15,6 @@
 #include "dd/Node.hpp"
 #include "dd/statistics/UniqueTableStatistics.hpp"
 
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -46,7 +45,7 @@ public:
     /// The number of variables
     std::size_t nVars = 0U;
 
-    /// number of hash buckets to use (has to be a power of two)
+    /// The number of hash buckets to use (has to be a power of two)
     const std::size_t nBuckets = 32768;
 
     /// The initial garbage collection limit
@@ -60,7 +59,7 @@ public:
    * @details The MemoryManager shall be constructed from the same type that the
    * unique table is then used for in the lookup method.
    */
-  UniqueTable(MemoryManager& manager, UniqueTableConfig config);
+  UniqueTable(MemoryManager& manager, const UniqueTableConfig& config);
 
   void resize(std::size_t nVars);
 
@@ -95,7 +94,9 @@ public:
   // if it has not been found NOTE: reference counting is to be adjusted by
   // function invoking the table lookup and only normalized nodes shall be
   // stored.
-  template <class Node> Node* lookup(Node* p) {
+  template <class Node> [[nodiscard]] Node* lookup(Node* p) {
+    static_assert(std::is_base_of_v<NodeBase, Node>,
+                  "Node must be derived from NodeBase");
     // there are unique terminal nodes
     if (NodeBase::isTerminal(p)) {
       return p;
@@ -126,20 +127,21 @@ public:
   [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
   /// Get a reference to individual statistics
-  const UniqueTableStatistics& getStats(const std::size_t idx) const noexcept;
+  [[nodiscard]] const UniqueTableStatistics&
+  getStats(std::size_t idx) const noexcept;
 
   /// Get a JSON object with the statistics
-  nlohmann::basic_json<>
-  getStatsJson(const bool includeIndividualTables = false) const;
+  [[nodiscard]] nlohmann::basic_json<>
+  getStatsJson(bool includeIndividualTables = false) const;
 
   /// Get the total number of entries
-  std::size_t getNumEntries() const noexcept;
+  [[nodiscard]] std::size_t getNumEntries() const noexcept;
 
   /// Get the total number of active entries
-  std::size_t getNumActiveEntries() const noexcept;
+  [[nodiscard]] std::size_t getNumActiveEntries() const noexcept;
 
   /// Get the peak total number of active entries
-  std::size_t getPeakNumActiveEntries() const noexcept;
+  [[nodiscard]] std::size_t getPeakNumActiveEntries() const noexcept;
 
   /**
    * @brief Increment the reference count of a node.
@@ -151,7 +153,7 @@ public:
    * @returns Whether the reference count was increased.
    * @see Node::incRef(Node*)
    */
-  bool incRef(NodeBase* p) noexcept;
+  [[nodiscard]] bool incRef(NodeBase* p) noexcept;
   /**
    * @brief Decrement the reference count of a node.
    * @details This is a pass-through function that calls the decrement function
@@ -162,15 +164,17 @@ public:
    * @returns Whether the reference count was decreased.
    * @see Node::decRef(Node*)
    */
-  bool decRef(NodeBase* p) noexcept;
+  [[nodiscard]] bool decRef(NodeBase* p) noexcept;
 
-  bool possiblyNeedsCollection() const;
+  [[nodiscard]] bool possiblyNeedsCollection() const;
 
   std::size_t garbageCollect(bool force = false);
 
   void clear();
 
   template <class Node> void print() {
+    static_assert(std::is_base_of_v<NodeBase, Node>,
+                  "Node must be derived from NodeBase");
     auto q = cfg.nVars - 1U;
     for (auto it = tables.rbegin(); it != tables.rend(); ++it) {
       auto& table = *it;
