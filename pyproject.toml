@@ -94,7 +94,7 @@ sdist.exclude = [
     "**/tests",
 ]
 
-cmake.verbose = true
+build.verbose = true
 logging.level = "DEBUG"
 
 [tool.check-sdist]
