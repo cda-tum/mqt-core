@@ -142,12 +142,21 @@ public:
     return permutation.emplace(std::forward<Args>(args)...);
   }
 
+  // NOLINTBEGIN(readability-identifier-naming)
+
   /// Inserts in-place if the key does not exist, does nothing otherwise
   template <class... Args>
-  // NOLINTNEXTLINE(readability-identifier-naming)
   auto try_emplace(const Qubit key, Args&&... args) -> auto {
     return permutation.try_emplace(key, std::forward<Args>(args)...);
   }
+
+  /// Inserts an element or assigns to the current element if the key already
+  /// exists
+  auto insert_or_assign(const Qubit key, const Qubit value) -> auto {
+    return permutation.insert_or_assign(key, value);
+  }
+
+  // NOLINTEND(readability-identifier-naming)
 
   /// Erases elements
   auto erase(const Qubit qubit) -> std::size_t {
