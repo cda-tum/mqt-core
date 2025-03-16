@@ -29,10 +29,5 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: false
-      # explicitly set CC and CXX to gcc and g++ as GitHub environment variables
-      - name: Set CC and CXX to gcc and g++
-        run: |
-          echo "CC=gcc" >> $GITHUB_ENV
-          echo "CXX=g++" >> $GITHUB_ENV
       - name: 🐍 Test
         run: uvx nox -s tests --verbose
