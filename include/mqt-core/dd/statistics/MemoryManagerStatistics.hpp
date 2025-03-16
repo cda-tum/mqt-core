@@ -26,10 +26,10 @@ struct MemoryManagerStatistics final : Statistics {
    * @param entrySize The size of a single entry
    */
   explicit MemoryManagerStatistics(const std::size_t entrySize)
-      : entrySize(entrySize) {}
+      : entrySize_(entrySize) {}
 
   /// The size of a single entry
-  std::size_t entrySize;
+  std::size_t entrySize_;
 
   [[nodiscard]] double entryMemoryMIB() const;
 

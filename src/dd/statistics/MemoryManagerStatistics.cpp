@@ -20,7 +20,7 @@
 namespace dd {
 
 double MemoryManagerStatistics::entryMemoryMIB() const {
-  return static_cast<double>(entrySize) / (1ULL << 20U);
+  return static_cast<double>(entrySize_) / (1ULL << 20U);
 }
 
 std::size_t
