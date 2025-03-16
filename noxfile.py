@@ -45,7 +45,8 @@ def _run_tests(
     session: nox.Session,
     *,
     install_args: Sequence[str] = (),
-    run_args: Sequence[str] = (),
+    extra_command: Sequence[str] = (),
+    pytest_run_args: Sequence[str] = (),
 ) -> None:
     env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
     if os.environ.get("CI", None) and sys.platform == "win32":
@@ -65,20 +66,28 @@ def _run_tests(
         "build",
         "--only-group",
         "test",
-        "--verbose",
         *install_args,
         env=env,
     )
     session.run(
         "uv",
-        "run",
+        "sync",
+        "--inexact",
         "--no-dev",  # do not auto-install dev dependencies
         "--no-build-isolation-package",
         "mqt-core",  # build the project without isolation
-        "--verbose",
+        *install_args,
+        env=env,
+    )
+    if extra_command:
+        session.run(*extra_command, env=env)
+    session.run(
+        "uv",
+        "run",
+        "--no-sync",  # do not sync as everything is already installed
         *install_args,
         "pytest",
-        *run_args,
+        *pytest_run_args,
         *session.posargs,
         "--cov-config=pyproject.toml",
         env=env,
@@ -97,11 +106,22 @@ def minimums(session: nox.Session) -> None:
     _run_tests(
         session,
         install_args=["--resolution=lowest-direct"],
-        run_args=["-Wdefault"],
+        pytest_run_args=["-Wdefault"],
     )
     env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
     session.run("uv", "tree", "--frozen", env=env)
     session.run("uv", "lock", "--refresh", env=env)
+
+
+@nox.session(reuse_venv=True, venv_backend="uv", python=PYTHON_ALL_VERSIONS)
+def qiskit(session: nox.Session) -> None:
+    """Tests against the latest version of Qiskit."""
+    _run_tests(
+        session,
+        extra_command=["uv", "pip", "install", "qiskit[qasm3-import] @ git+https://github.com/Qiskit/qiskit.git"],
+    )
+    env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
+    session.run("uv", "pip", "show", "qiskit", env=env)
 
 
 @nox.session(reuse_venv=True)
