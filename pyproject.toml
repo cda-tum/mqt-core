@@ -65,7 +65,6 @@ wheel.packages = ["src/mqt"]
 
 # Set required Ninja version
 ninja.version = ">=1.10"
-cmake.version = "<3.31"
 
 # Setuptools-style build caching in a local directory
 build-dir = "build/{wheel_tag}/{build_type}"
