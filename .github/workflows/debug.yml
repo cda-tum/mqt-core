@@ -24,14 +24,10 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      # set up mold as linker for faster C++ builds (Linux only)
-      - name: Set up mold as linker (Linux only)
-        uses: rui314/setup-mold@v1
       # set up uv for faster Python package management
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: false
-      - run: /usr/local/bin/cmake -E capabilities
       - name: 🐍 Test
         run: uvx nox -s tests --verbose
