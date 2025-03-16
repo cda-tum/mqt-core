@@ -441,7 +441,7 @@ TEST_F(CNTest, ComplexTableAllocation) {
   }
 
   // trigger new allocation
-  const auto* num = mem.get();
+  const auto* num = mem.get<RealNumber>();
   ASSERT_NE(num, nullptr);
   EXPECT_EQ(mem.getStats().numAllocated,
             (1. + MemoryManager::GROWTH_FACTOR) * static_cast<fp>(allocs));
@@ -453,12 +453,12 @@ TEST_F(CNTest, ComplexTableAllocation) {
 
   EXPECT_EQ(mem.getStats().numAvailableForReuse, 0U);
   // obtain entry
-  auto* entry = mem.get();
+  auto* entry = mem.get<RealNumber>();
   // immediately return entry
   mem.returnEntry(entry);
   EXPECT_EQ(mem.getStats().numAvailableForReuse, 1U);
   // obtain the same entry again, but this time from the available stack
-  auto* entry2 = mem.get();
+  auto* entry2 = mem.get<RealNumber>();
   EXPECT_EQ(entry, entry2);
 }
 

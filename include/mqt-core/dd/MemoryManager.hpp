@@ -94,8 +94,6 @@ public:
     return static_cast<T*>(get());
   }
 
-  LLBase* get();
-
   /**
    * @brief Return an entry to the manager.
    * @details The entry is added to the list of available entries. The entry
@@ -126,6 +124,9 @@ public:
   [[nodiscard]] const auto& getStats() const noexcept { return stats; }
 
 private:
+  /// Get an entry from the manager
+  [[nodiscard]] LLBase* get();
+
   /**
    * @brief Check whether an entry is available for reuse
    * @return true if an entry is available for reuse, false otherwise
