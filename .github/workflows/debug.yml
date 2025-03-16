@@ -30,5 +30,7 @@ jobs:
       # set up uv for faster Python package management
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
       - name: 🐍 Test with minimal versions
         run: uvx nox -s tests --verbose
