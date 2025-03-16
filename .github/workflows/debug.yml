@@ -37,6 +37,5 @@ jobs:
       # set up uv for faster Python package management
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
-      # run the nox minimums session (assumes a nox session named "minimums" exists) with coverage
       - name: 🐍 Test with minimal versions
-        run: uvx nox -s minimums --verbose
+        run: uvx nox -s tests --verbose
