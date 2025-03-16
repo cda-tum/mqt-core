@@ -56,9 +56,9 @@ def _run_tests(
     if shutil.which("ninja") is None:
         session.install("ninja")
 
-    # Output the value of the CC and CXX environment variables
-    session.run("echo", f"CC (before uv sync): {env.get('CC', '')}", external=True)
-    session.run("echo", f"CXX (before uv sync): {env.get('CXX', '')}", external=True)
+    import sysconfig
+
+    print(f"Python sysconfig CXX: {sysconfig.get_config_var('CXX')}")
 
     # install build and test dependencies on top of the existing environment
     session.run(
@@ -73,11 +73,6 @@ def _run_tests(
         *install_args,
         env=env,
     )
-
-    # Output the value of the CC and CXX environment variables
-    session.run("echo", f"CC (after uv sync): {env.get('CC', '')}", external=True)
-    session.run("echo", f"CXX (after uv sync): {env.get('CXX', '')}", external=True)
-
     session.run(
         "uv",
         "run",
