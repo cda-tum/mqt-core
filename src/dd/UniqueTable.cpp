@@ -73,7 +73,7 @@ std::size_t UniqueTable::garbageCollect(bool force) {
           } else {
             lastp->setNext(next);
           }
-          memoryManager->returnEntry(p);
+          memoryManager->returnEntry(*p);
           p = next;
           --stat.numEntries;
         } else {

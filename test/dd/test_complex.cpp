@@ -455,7 +455,7 @@ TEST_F(CNTest, ComplexTableAllocation) {
   // obtain entry
   auto* entry = mem.get<RealNumber>();
   // immediately return entry
-  mem.returnEntry(entry);
+  mem.returnEntry(*entry);
   EXPECT_EQ(mem.getStats().numAvailableForReuse, 1U);
   // obtain the same entry again, but this time from the available stack
   auto* entry2 = mem.get<RealNumber>();

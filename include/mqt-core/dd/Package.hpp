@@ -1011,7 +1011,7 @@ public:
             (es[0].w.exactlyOne() && es[1].w.exactlyZero() &&
              es[2].w.exactlyZero() && es[3].w.exactlyOne())) {
           auto* ptr = es[0].p;
-          memoryManager.returnEntry(e.p);
+          memoryManager.returnEntry(*e.p);
           return EdgeType<Node>{ptr, e.w};
         }
       }

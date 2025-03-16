@@ -43,7 +43,7 @@ CachedEdge<Node>::normalize(Node* p,
 
   if (zero[0]) {
     if (zero[1]) {
-      mm.returnEntry(p);
+      mm.returnEntry(*p);
       return CachedEdge::zero();
     }
     p->e = {vEdge::zero(), {e[1].p, Complex::one()}};
@@ -103,7 +103,7 @@ CachedEdge<Node>::normalize(Node* p,
                  e[2].w.approximatelyZero(), e[3].w.approximatelyZero()};
 
   if (std::all_of(zero.begin(), zero.end(), [](auto b) { return b; })) {
-    mm.returnEntry(p);
+    mm.returnEntry(*p);
     return CachedEdge::zero();
   }
 

@@ -116,7 +116,7 @@ Edge<Node> Edge<Node>::normalize(Node* p,
 
   if (zero[0]) {
     if (zero[1]) {
-      mm.returnEntry(p);
+      mm.returnEntry(*p);
       return Edge::zero();
     }
     p->e = e;
@@ -300,7 +300,7 @@ Edge<Node> Edge<Node>::normalize(Node* p,
                                e[2].w.exactlyZero(), e[3].w.exactlyZero()};
 
   if (std::all_of(zero.begin(), zero.end(), [](auto b) { return b; })) {
-    mm.returnEntry(p);
+    mm.returnEntry(*p);
     return Edge::zero();
   }
 

@@ -9,6 +9,8 @@
 
 #include "dd/MemoryManager.hpp"
 
+#include "dd/LinkedListBase.hpp"
+
 #include <cassert>
 #include <cstddef>
 
@@ -36,11 +38,9 @@ LLBase* MemoryManager::get() {
   return getEntryFromChunk();
 }
 
-void MemoryManager::returnEntry(LLBase* entry) noexcept {
-  assert(entry != nullptr);
-
-  entry->setNext(available);
-  available = entry;
+void MemoryManager::returnEntry(LLBase& entry) noexcept {
+  entry.setNext(available);
+  available = &entry;
   stats.trackReturnedEntry();
 }
 

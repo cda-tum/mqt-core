@@ -10,7 +10,6 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
-#include "dd/LinkedListBase.hpp"
 #include "dd/statistics/MemoryManagerStatistics.hpp"
 
 #include <cassert>
@@ -99,15 +98,9 @@ public:
    * @brief Return an entry to the manager.
    * @details The entry is added to the list of available entries. The entry
    * must not be used after it has been returned to the manager.
-   * @param entry A pointer to an entry that is no longer in use.
+   * @param entry A reference to an entry that is no longer in use.
    */
-  template <class T> void returnEntry(T* entry) noexcept {
-    static_assert(std::is_base_of_v<LLBase, T>,
-                  "T must be derived from LLBase");
-    returnEntry(static_cast<LLBase*>(entry));
-  }
-
-  void returnEntry(LLBase* entry) noexcept;
+  void returnEntry(LLBase& entry) noexcept;
 
   /**
    * @brief Reset the manager.

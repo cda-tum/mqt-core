@@ -165,7 +165,7 @@ std::size_t RealNumberUniqueTable::garbageCollect(const bool force) noexcept {
         } else {
           lastp->setNext(next);
         }
-        memoryManager->returnEntry(p);
+        memoryManager->returnEntry(*p);
         p = next;
         --stats.numEntries;
       } else {
