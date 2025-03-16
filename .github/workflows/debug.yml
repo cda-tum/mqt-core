@@ -1,0 +1,42 @@
+name: Debug
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  python-tests:
+    name: 🐍 Debug
+    runs-on: ubuntu-24.04-arm
+    env:
+      FORCE_COLOR: 3
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      # check out the repository (including submodules and all history)
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      # set up ccache for faster C++ builds
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc
+          override_cache_key: python-debug
+      # set up mold as linker for faster C++ builds (Linux only)
+      - name: Set up mold as linker (Linux only)
+        uses: rui314/setup-mold@v1
+      # set up uv for faster Python package management
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      # run the nox minimums session (assumes a nox session named "minimums" exists) with coverage
+      - name: 🐍 Test with minimal versions
+        run: uvx nox -s minimums --verbose

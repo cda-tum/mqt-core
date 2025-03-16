@@ -16,38 +16,14 @@ jobs:
     name: 🔍 Change
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-change-detection.yml@v1.7
 
-  python-tests:
-    name: 🐍 Test
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-python-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@v1.7
-    with:
-      # Runs to enable
-      enable-ubuntu2404: false
-      enable-ubuntu2404-arm: true
-      enable-macos13: false
-      enable-macos14: false
-      enable-windows2022: false
-      # Runs to disable
-      enable-ubuntu2204: false
-      enable-ubuntu2204-arm: false
-      enable-macos15: false
-      enable-windows2025: false
-
   required-checks-pass: # This job does nothing and is only used for branch protection
     name: 🚦 Check
     if: always()
     needs:
       - change-detection
-      - python-tests
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
         uses: re-actors/alls-green@release/v1
         with:
-          allowed-skips: >-
-            ${{
-              fromJSON(needs.change-detection.outputs.run-python-tests)
-              && '' || 'python-tests,'
-            }}
           jobs: ${{ toJSON(needs) }}
