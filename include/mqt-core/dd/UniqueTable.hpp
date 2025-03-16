@@ -71,22 +71,24 @@ public:
    * @param p The node to hash.
    * @returns The hash value of the node.
    */
-  template <class Node> std::size_t hash(const Node* p) {
+  template <class Node> [[nodiscard]] std::size_t hash(const Node& p) {
+    static_assert(std::is_base_of_v<NodeBase, Node>,
+                  "Node must be derived from NodeBase");
     const std::size_t MASK = cfg.nBuckets - 1;
     std::size_t key = 0U;
-    for (std::size_t i = 0U; i < p->e.size(); ++i) {
-      qc::hashCombine(key, std::hash<Edge<Node>>{}(p->e[i]));
+    for (const auto& succ : p.e) {
+      qc::hashCombine(key, std::hash<Edge<Node>>{}(succ));
     }
     key &= MASK;
     return key;
   }
 
   template <class Node>
-  static bool nodesAreEqual(const Node* p, const Node* q) {
+  [[nodiscard]] static bool nodesAreEqual(const Node& p, const Node& q) {
     if constexpr (std::is_same_v<Node, dNode>) {
-      return (p->e == q->e && (p->flags == q->flags));
+      return (p.e == q.e && (p.flags == q.flags));
     } else {
-      return p->e == q->e;
+      return p.e == q.e;
     }
   }
 
@@ -102,13 +104,14 @@ public:
       return p;
     }
 
-    const auto key = hash(p);
+    const auto key = hash(*p);
     const auto v = p->v;
     ++stats[v].lookups;
 
     // search bucket in table corresponding to hashed value for the given node
     // and return it if found.
-    if (auto* hashedNode = searchTable(p, key); !Node::isTerminal(hashedNode)) {
+    if (auto* hashedNode = searchTable(*p, key);
+        !Node::isTerminal(hashedNode)) {
       return hashedNode;
     }
 
@@ -234,13 +237,16 @@ private:
   @return The Edge<Node> found in the hash table or Edge<Node>::zero if not
   found.
   **/
-  template <class Node> Node* searchTable(Node* p, const std::size_t& key) {
-    const auto v = p->v;
+  template <class Node>
+  [[nodiscard]] Node* searchTable(Node& p, const std::size_t& key) {
+    static_assert(std::is_base_of_v<NodeBase, Node>,
+                  "Node must be derived from NodeBase");
+    const auto v = p.v;
     Node* bucket = static_cast<Node*>(tables[v][key]);
     while (bucket != nullptr) {
-      if (nodesAreEqual(p, bucket)) {
+      if (nodesAreEqual(p, *bucket)) {
         // Match found
-        if (p != bucket) {
+        if (&p != bucket) {
           // put node pointed to by p on available chain
           memoryManager->returnEntry(p);
         }

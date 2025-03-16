@@ -957,7 +957,7 @@ TEST(DDPackageTest, PackageReset) {
 
   const auto& unique = dd->mUniqueTable.getTables();
   const auto& table = unique[0];
-  auto ihash = dd->mUniqueTable.hash(xGate.p);
+  auto ihash = dd->mUniqueTable.hash(*xGate.p);
   const auto* node = table[ihash];
   std::cout << ihash << ": " << reinterpret_cast<uintptr_t>(xGate.p) << "\n";
   // node should be the first in this unique table bucket
