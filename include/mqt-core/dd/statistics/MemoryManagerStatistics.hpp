@@ -19,19 +19,19 @@ namespace dd {
 /**
  * @brief A utility class for storing statistics of a memory manager
  */
-struct MemoryManagerStatistics : public Statistics {
+struct MemoryManagerStatistics final : Statistics {
 
   /**
    * @brief Construct a new Memory Manager Statistics object
    * @param entrySize The size of a single entry
    */
-  explicit MemoryManagerStatistics(std::size_t entrySize)
+  explicit MemoryManagerStatistics(const std::size_t entrySize)
       : entrySize(entrySize) {}
 
   /// The size of a single entry
-  const std::size_t entrySize;
+  std::size_t entrySize;
 
-  double entryMemoryMIB() const;
+  [[nodiscard]] double entryMemoryMIB() const;
 
   /// The number of allocations performed
   std::size_t numAllocations = 0U;
