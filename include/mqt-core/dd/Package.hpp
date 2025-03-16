@@ -142,19 +142,19 @@ private:
 public:
   /// The memory manager for vector nodes
   MemoryManager vMemoryManager{
-      MemoryManager::Create<vNode>(Config::UT_VEC_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<vNode>(Config::UT_VEC_INITIAL_ALLOCATION_SIZE)};
   /// The memory manager for matrix nodes
   MemoryManager mMemoryManager{
-      MemoryManager::Create<mNode>(Config::UT_MAT_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<mNode>(Config::UT_MAT_INITIAL_ALLOCATION_SIZE)};
   /// The memory manager for density matrix nodes
   MemoryManager dMemoryManager{
-      MemoryManager::Create<dNode>(Config::UT_DM_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<dNode>(Config::UT_DM_INITIAL_ALLOCATION_SIZE)};
   /**
    * @brief The memory manager for complex numbers
    * @note The real and imaginary part of complex numbers are treated
    * separately. Hence, it suffices for the manager to only manage real numbers.
    */
-  MemoryManager cMemoryManager{MemoryManager::Create<RealNumber>()};
+  MemoryManager cMemoryManager{MemoryManager::create<RealNumber>()};
 
   /**
    * @brief Get the memory manager for a given type

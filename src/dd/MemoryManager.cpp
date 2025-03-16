@@ -14,10 +14,10 @@
 
 namespace dd {
 
-MemoryManager::MemoryManager(unsigned entrySize,
+MemoryManager::MemoryManager(size_t entrySize,
                              const std::size_t initialAllocationSize)
-    : entrySize(entrySize), available(nullptr),
-      chunks(1, chunk_t(initialAllocationSize * entrySize)),
+    : entrySize_(entrySize), available(nullptr),
+      chunks(1, Chunk(initialAllocationSize * entrySize)),
       chunkIt(chunks[0].begin()), chunkEndIt(chunks[0].end()),
       stats(entrySize) {
   stats.numAllocations = 1U;
@@ -50,7 +50,7 @@ void MemoryManager::reset(const bool resizeToTotal) noexcept {
   auto numAllocations = stats.numAllocations;
   chunks.resize(1U);
   if (resizeToTotal) {
-    chunks[0].resize(stats.numAllocated * entrySize);
+    chunks[0].resize(stats.numAllocated * entrySize_);
     ++numAllocations;
   }
 
@@ -59,7 +59,7 @@ void MemoryManager::reset(const bool resizeToTotal) noexcept {
 
   stats.reset();
   stats.numAllocations = numAllocations;
-  stats.numAllocated = chunks[0].size() / entrySize;
+  stats.numAllocated = chunks[0].size() / entrySize_;
 }
 
 bool MemoryManager::entryAvailableForReuse() const noexcept {
@@ -78,11 +78,11 @@ LLBase* MemoryManager::getEntryFromAvailableList() noexcept {
 void MemoryManager::allocateNewChunk() {
   assert(!entryAvailableInChunk());
 
-  const auto numPrevEntries = chunks.back().size() / entrySize;
+  const auto numPrevEntries = chunks.back().size() / entrySize_;
   const auto numNewEntries = static_cast<std::size_t>(
       static_cast<double>(numPrevEntries) * GROWTH_FACTOR);
 
-  chunks.emplace_back(numNewEntries * entrySize);
+  chunks.emplace_back(numNewEntries * entrySize_);
   chunkIt = chunks.back().begin();
   chunkEndIt = chunks.back().end();
   ++stats.numAllocations;
@@ -94,7 +94,7 @@ LLBase* MemoryManager::getEntryFromChunk() noexcept {
   assert(entryAvailableInChunk());
 
   auto* entry = &(*chunkIt);
-  chunkIt += entrySize;
+  chunkIt += static_cast<Chunk::difference_type>(entrySize_);
   stats.trackUsedEntries();
   return reinterpret_cast<LLBase*>(entry);
 }

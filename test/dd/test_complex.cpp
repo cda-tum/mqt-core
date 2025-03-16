@@ -28,7 +28,7 @@ using namespace dd;
 
 class CNTest : public testing::Test {
 protected:
-  MemoryManager mm{MemoryManager::Create<dd::RealNumber>()};
+  MemoryManager mm{MemoryManager::create<RealNumber>()};
   RealNumberUniqueTable ut{mm};
   ComplexNumbers cn{ut};
 };
@@ -431,7 +431,7 @@ TEST_F(CNTest, MaxRefCountReached) {
 }
 
 TEST_F(CNTest, ComplexTableAllocation) {
-  auto mem = MemoryManager::Create<RealNumber>();
+  auto mem = MemoryManager::create<RealNumber>();
   auto allocs = mem.getStats().numAllocated;
   std::cout << allocs << "\n";
   std::vector<RealNumber*> nums{allocs};

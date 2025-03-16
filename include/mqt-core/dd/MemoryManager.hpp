@@ -41,7 +41,7 @@ struct LLBase;
  * edge weights, etc.
  */
 class MemoryManager {
-  MemoryManager(unsigned entrySize, const std::size_t initialAllocationSize);
+  MemoryManager(size_t entrySize, std::size_t initialAllocationSize);
 
 public:
   // delete copy construction and assignment
@@ -68,10 +68,11 @@ public:
   /**
    * @brief Construct a new MemoryManager object for objects of type T.
    * @param initialAllocationSize The initial number of entries to allocate
+   * @tparam T The type of the entries
    */
   template <class T>
   static MemoryManager
-  Create(const std::size_t initialAllocationSize = INITIAL_ALLOCATION_SIZE) {
+  create(const std::size_t initialAllocationSize = INITIAL_ALLOCATION_SIZE) {
     return MemoryManager(sizeof(T), initialAllocationSize);
   }
 
@@ -89,7 +90,7 @@ public:
   template <class T> [[nodiscard]] T* get() {
     static_assert(std::is_base_of_v<LLBase, T>,
                   "T must be derived from LLBase");
-    assert(sizeof(T) == entrySize && "Cannot get entry of different size");
+    assert(sizeof(T) == entrySize_ && "Cannot get entry of different size");
 
     return static_cast<T*>(get());
   }
@@ -131,20 +132,20 @@ private:
    * @brief Check whether an entry is available for reuse
    * @return true if an entry is available for reuse, false otherwise
    */
-  bool entryAvailableForReuse() const noexcept;
+  [[nodiscard]] bool entryAvailableForReuse() const noexcept;
 
   /**
    * @brief Get an entry from the list of available entries
    * @return A pointer to an entry ready for reuse
    */
-  LLBase* getEntryFromAvailableList() noexcept;
+  [[nodiscard]] LLBase* getEntryFromAvailableList() noexcept;
 
   /**
    * @brief Check whether an entry is available in the current chunk
    * @return true if an entry is available in the current chunk, false
    * otherwise
    */
-  bool entryAvailableInChunk() const noexcept;
+  [[nodiscard]] bool entryAvailableInChunk() const noexcept;
 
   /// Allocate a new chunk of memory
   void allocateNewChunk();
@@ -155,8 +156,12 @@ private:
    */
   [[nodiscard]] LLBase* getEntryFromChunk() noexcept;
 
-  const unsigned entrySize;
-  using chunk_t = std::vector<std::byte>;
+  /// The size of an entry in bytes (as reported by `sizeof`)
+  size_t entrySize_;
+
+  /// A chunk of memory as a vector of bytes
+  using Chunk = std::vector<std::byte>;
+
   /**
    * @brief A linked list of entries that are available for (re-)use
    * @details The MemoryManager maintains a linked list of entries that are
@@ -172,21 +177,21 @@ private:
    * @details The MemoryManager maintains a vector of chunks. Each chunk is a
    * vector of entries. Entries in a chunk are allocated contiguously.
    */
-  std::vector<chunk_t> chunks;
+  std::vector<Chunk> chunks;
 
   /**
    * @brief Iterator to the next available entry in the current chunk
    * @details This iterator points to the next available entry in the current
    * chunk. If the current chunk is full, it points to the end of the chunk.
    */
-  typename chunk_t::iterator chunkIt;
+  Chunk::iterator chunkIt;
 
   /**
    * @brief Iterator to the end of the current chunk
    * @details This iterator points to the end of the current chunk. It is used
    * to determine whether the current chunk is full.
    */
-  typename chunk_t::iterator chunkEndIt;
+  Chunk::iterator chunkEndIt;
 
   /// Memory manager statistics
   MemoryManagerStatistics stats;
