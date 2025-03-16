@@ -24,13 +24,6 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      # set up ccache for faster C++ builds
-      - name: Setup ccache
-        uses: Chocobo1/setup-ccache-action@v1
-        with:
-          prepend_symlinks_to_path: false
-          windows_compile_environment: msvc
-          override_cache_key: python-debug
       # set up mold as linker for faster C++ builds (Linux only)
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
