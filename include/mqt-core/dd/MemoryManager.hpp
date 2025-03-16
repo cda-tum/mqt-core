@@ -44,11 +44,9 @@ class MemoryManager {
   MemoryManager(unsigned entrySize, const std::size_t initialAllocationSize);
 
 public:
-  // delete copy/move construction and assignment
+  // delete copy construction and assignment
   MemoryManager(const MemoryManager&) = delete;
   MemoryManager& operator=(const MemoryManager&) = delete;
-  MemoryManager(MemoryManager&&) = delete;
-  MemoryManager& operator=(MemoryManager&&) = delete;
 
   /**
    * @brief The number of initially allocated entries.
