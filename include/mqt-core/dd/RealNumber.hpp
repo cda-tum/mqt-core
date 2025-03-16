@@ -26,9 +26,10 @@ namespace dd {
  * be taken when accessing the value. The static functions in this struct
  * provide safe access to the value of a RealNumber* pointer.
  */
-struct RealNumber : public LLBase {
+struct RealNumber final : LLBase {
 
-  RealNumber* next() const noexcept {
+  /// Getter for the next object.
+  [[nodiscard]] RealNumber* next() const noexcept {
     return reinterpret_cast<RealNumber*>(next_);
   }
 
