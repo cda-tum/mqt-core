@@ -462,9 +462,7 @@ TEST_F(DDFunctionality, FuseSingleQubitGatesAcrossOtherGates) {
 }
 
 TEST_F(DDFunctionality, classicControlledOperationConditions) {
-  const auto cmpKinds = {ComparisonKind::Eq, ComparisonKind::Neq,
-                         ComparisonKind::Lt, ComparisonKind::Leq,
-                         ComparisonKind::Gt, ComparisonKind::Geq};
+  const auto cmpKinds = {ComparisonKind::Eq, ComparisonKind::Neq};
   for (const auto kind : cmpKinds) {
     QuantumComputation qc(1U, 1U);
     // ensure that the state is |1>.
@@ -483,8 +481,7 @@ TEST_F(DDFunctionality, classicControlledOperationConditions) {
     EXPECT_EQ(hist.size(), 1);
     const auto& [key, value] = *hist.begin();
     EXPECT_EQ(value, shots);
-    if (kind == ComparisonKind::Eq || kind == ComparisonKind::Leq ||
-        kind == ComparisonKind::Geq) {
+    if (kind == ComparisonKind::Eq) {
       EXPECT_EQ(key, "0");
     } else {
       EXPECT_EQ(key, "1");

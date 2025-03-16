@@ -247,14 +247,6 @@ std::size_t QuantumComputation::getDepth() const {
 }
 
 void QuantumComputation::initializeIOMapping() {
-  // if no initial layout was found during parsing the identity mapping is
-  // assumed
-  if (initialLayout.empty()) {
-    for (Qubit i = 0; i < nqubits; ++i) {
-      initialLayout.emplace(i, i);
-    }
-  }
-
   // try gathering (additional) output permutation information from
   // measurements, e.g., a measurement
   //      `measure q[i] -> c[j];`
@@ -286,8 +278,8 @@ void QuantumComputation::initializeIOMapping() {
         if (outputPermutationFound) {
           // output permutation was already set before -> permute existing
           // values
-          const auto current = outputPermutation.at(qubitidx);
-          if (static_cast<std::size_t>(current) != bitidx) {
+          if (const auto current = outputPermutation.at(qubitidx);
+              static_cast<std::size_t>(current) != bitidx) {
             for (auto& p : outputPermutation) {
               if (static_cast<std::size_t>(p.second) == bitidx) {
                 p.second = current;
@@ -319,16 +311,8 @@ void QuantumComputation::initializeIOMapping() {
     }
   }
 
-  const bool buildOutputPermutation = outputPermutation.empty();
   garbage.assign(nqubits + nancillae, false);
   for (const auto& [physicalIn, logicalIn] : initialLayout) {
-    const bool isIdle = isIdleQubit(physicalIn);
-
-    // if no output permutation was found, build it from the initial layout
-    if (buildOutputPermutation && !isIdle) {
-      outputPermutation.insert({physicalIn, logicalIn});
-    }
-
     // if the qubit is not an output, mark it as garbage
     const bool isOutput = std::any_of(
         outputPermutation.begin(), outputPermutation.end(),
@@ -338,14 +322,16 @@ void QuantumComputation::initializeIOMapping() {
     }
 
     // if the qubit is an ancillary and idle, mark it as garbage
-    if (logicalQubitIsAncillary(logicalIn) && isIdle) {
+    if (const bool isIdle = isIdleQubit(physicalIn);
+        logicalQubitIsAncillary(logicalIn) && isIdle) {
       setLogicalQubitGarbage(logicalIn);
     }
   }
 }
 
-void QuantumComputation::addQubitRegister(std::size_t nq,
-                                          const std::string& regName) {
+const QuantumRegister&
+QuantumComputation::addQubitRegister(std::size_t nq,
+                                     const std::string& regName) {
   if (quantumRegisters.count(regName) != 0) {
     throw QFRException("[addQubitRegister] Register " + regName +
                        " already exists");
@@ -366,12 +352,13 @@ void QuantumComputation::addQubitRegister(std::size_t nq,
                                regName);
   for (std::size_t i = 0; i < nq; ++i) {
     auto j = static_cast<Qubit>(nqubits + i);
-    initialLayout.insert({j, j});
-    outputPermutation.insert({j, j});
+    initialLayout.emplace(j, j);
+    outputPermutation.emplace(j, j);
   }
   nqubits += nq;
   ancillary.resize(nqubits + nancillae);
   garbage.resize(nqubits + nancillae);
+  return quantumRegisters.at(regName);
 }
 
 const ClassicalRegister&
@@ -393,8 +380,9 @@ QuantumComputation::addClassicalRegister(std::size_t nc,
   return it->second;
 }
 
-void QuantumComputation::addAncillaryRegister(std::size_t nq,
-                                              const std::string& regName) {
+const QuantumRegister&
+QuantumComputation::addAncillaryRegister(std::size_t nq,
+                                         const std::string& regName) {
   if (ancillaRegisters.count(regName) != 0) {
     throw QFRException("[addAncillaryRegister] Register " + regName +
                        " already exists");
@@ -411,11 +399,12 @@ void QuantumComputation::addAncillaryRegister(std::size_t nq,
   garbage.resize(totalqubits + nq);
   for (std::size_t i = 0; i < nq; ++i) {
     auto j = static_cast<Qubit>(totalqubits + i);
-    initialLayout.insert({j, j});
-    outputPermutation.insert({j, j});
+    initialLayout.emplace(j, j);
+    outputPermutation.emplace(j, j);
     ancillary[j] = true;
   }
   nancillae += nq;
+  return ancillaRegisters.at(regName);
 }
 
 std::pair<Qubit, std::optional<Qubit>>
@@ -491,12 +480,12 @@ void QuantumComputation::addAncillaryQubit(
   ancillary[logicalQubitIndex] = true;
 
   // adjust initial layout
-  initialLayout.insert(
-      {physicalQubitIndex, static_cast<Qubit>(logicalQubitIndex)});
+  initialLayout.emplace(physicalQubitIndex,
+                        static_cast<Qubit>(logicalQubitIndex));
 
   // adjust output permutation
   if (outputQubitIndex.has_value()) {
-    outputPermutation.insert({physicalQubitIndex, *outputQubitIndex});
+    outputPermutation.emplace(physicalQubitIndex, *outputQubitIndex);
   } else {
     // if a qubit is not relevant for the output, it is considered garbage
     garbage[logicalQubitIndex] = true;
@@ -526,10 +515,10 @@ void QuantumComputation::addQubit(const Qubit logicalQubitIndex,
   // increase qubit count
   nqubits++;
   // adjust initial layout
-  initialLayout.insert({physicalQubitIndex, logicalQubitIndex});
+  initialLayout.emplace(physicalQubitIndex, logicalQubitIndex);
   if (outputQubitIndex.has_value()) {
     // adjust output permutation
-    outputPermutation.insert({physicalQubitIndex, *outputQubitIndex});
+    outputPermutation.emplace(physicalQubitIndex, *outputQubitIndex);
   }
 
   // update ancillary and garbage tracking
@@ -938,12 +927,14 @@ bool QuantumComputation::isLastOperationOnQubit(
   return true;
 }
 
-void QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
+const QuantumRegister&
+QuantumComputation::unifyQuantumRegisters(const std::string& regName) {
   ancillaRegisters.clear();
   quantumRegisters.clear();
   nqubits += nancillae;
   nancillae = 0;
   quantumRegisters.try_emplace(regName, 0, nqubits, regName);
+  return quantumRegisters.at(regName);
 }
 
 void QuantumComputation::appendMeasurementsAccordingToOutputPermutation(

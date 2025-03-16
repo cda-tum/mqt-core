@@ -23,45 +23,48 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
+// forward declarations
 namespace qc {
+enum ComparisonKind : std::uint8_t;
+class ClassicalRegister;
 struct Control;
 class QuantumRegister;
-// forward declarations
 class Operation;
 class QuantumComputation;
 using QuantumRegisterMap = std::unordered_map<std::string, QuantumRegister>;
 } // namespace qc
 namespace qasm3 {
-// forward declarations
 class Statement;
 struct Gate;
 
 class Importer final : public InstVisitor {
 public:
   /**
-   * Imports a QASM3 file into a @ref QuantumComputation instance
+   * Imports a QASM3 file into a @ref qc::QuantumComputation instance
    * @param filename The path to the QASM3 file to import
-   * @return The imported @ref QuantumComputation instance
+   * @return The imported @ref qc::QuantumComputation instance
    */
   [[nodiscard]] static auto importf(const std::string& filename)
       -> qc::QuantumComputation;
 
   /**
-   * Imports a QASM3 program from a string into a @ref QuantumComputation
+   * Imports a QASM3 program from a string into a @ref qc::QuantumComputation
    * @param qasm The QASM3 program to import
-   * @return The imported @ref QuantumComputation instance
+   * @return The imported @ref qc::QuantumComputation instance
    */
   [[nodiscard]] static auto imports(const std::string& qasm)
       -> qc::QuantumComputation;
 
   /**
-   * Imports a QASM3 program from a stream into a @ref QuantumComputation
+   * Imports a QASM3 program from a stream into a @ref qc::QuantumComputation
    * @param is The input stream to read the QASM3 program from
-   * @return The imported @ref QuantumComputation instance
+   * @return The imported @ref qc::QuantumComputation instance
    */
   [[nodiscard]] static auto import(std::istream& is) -> qc::QuantumComputation;
 
@@ -74,7 +77,7 @@ private:
   explicit Importer(qc::QuantumComputation& quantumComputation);
 
   /**
-   * @brief Import the given QASM3 program into the quantum computation
+   * @brief Import the given QASM3 program into the @ref qc::QuantumComputation
    * @param program The parsed QASM3 program AST
    */
   void visitProgram(const std::vector<std::shared_ptr<Statement>>& program);
@@ -96,22 +99,29 @@ private:
                                          type_checking::InferredType>>
   initializeBuiltins();
 
-  static void
-  translateGateOperand(const std::shared_ptr<GateOperand>& gateOperand,
-                       std::vector<qc::Qubit>& qubits,
-                       const qc::QuantumRegisterMap& qregs,
-                       const std::shared_ptr<DebugInfo>& debugInfo);
+  void translateGateOperand(const std::shared_ptr<GateOperand>& gateOperand,
+                            std::vector<qc::Qubit>& qubits,
+                            const qc::QuantumRegisterMap& qregs,
+                            const std::shared_ptr<DebugInfo>& debugInfo) const;
 
-  static void translateGateOperand(const std::string& gateIdentifier,
-                                   const std::shared_ptr<Expression>& indexExpr,
-                                   std::vector<qc::Qubit>& qubits,
-                                   const qc::QuantumRegisterMap& qregs,
-                                   const std::shared_ptr<DebugInfo>& debugInfo);
+  void translateBitOperand(
+      const std::shared_ptr<IndexedIdentifier>& indexedIdentifier,
+      std::vector<qc::Bit>& bits,
+      const std::shared_ptr<DebugInfo>& debugInfo) const;
 
-  void translateBitOperand(const std::string& bitIdentifier,
-                           const std::shared_ptr<Expression>& indexExpr,
-                           std::vector<qc::Bit>& bits,
-                           const std::shared_ptr<DebugInfo>& debugInfo) const;
+  /**
+   * @brief Translates a condition expression
+   * @param condition The condition expression to translate.
+   * @param debugInfo The debug information of the condition expression.
+   * @return Either a pair of a bit and a boolean value, or a triple of a
+   * classical register, a comparison kind, and an integer value.
+   * @throws CompilerError If the condition is neither of the expected types.
+   */
+  [[nodiscard]] std::variant<
+      std::pair<qc::Bit, bool>,
+      std::tuple<qc::ClassicalRegister, qc::ComparisonKind, uint64_t>>
+  translateCondition(const std::shared_ptr<Expression>& condition,
+                     const std::shared_ptr<DebugInfo>& debugInfo) const;
 
   static uint64_t
   evaluatePositiveConstant(const std::shared_ptr<Expression>& expr,
@@ -159,8 +169,7 @@ private:
       -> std::unique_ptr<qc::Operation>;
 
   void visitMeasureAssignment(
-      const std::string& identifier,
-      const std::shared_ptr<Expression>& indexExpression,
+      const std::shared_ptr<IndexedIdentifier>& indexedIdentifier,
       const std::shared_ptr<MeasureExpression>& measureExpression,
       const std::shared_ptr<DebugInfo>& debugInfo);
 

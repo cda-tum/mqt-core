@@ -13,6 +13,7 @@ import argparse
 import os
 import shutil
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import nox
@@ -64,6 +65,7 @@ def _run_tests(
         "build",
         "--only-group",
         "test",
+        "--verbose",
         *install_args,
         env=env,
     )
@@ -73,6 +75,7 @@ def _run_tests(
         "--no-dev",  # do not auto-install dev dependencies
         "--no-build-isolation-package",
         "mqt-core",  # build the project without isolation
+        "--verbose",
         *install_args,
         "pytest",
         *run_args,
@@ -124,6 +127,26 @@ def docs(session: nox.Session) -> None:
         "docs",
         env=env,
     )
+
+    # build the C++ API docs using doxygen
+    with session.chdir("docs"):
+        if shutil.which("doxygen") is None:
+            session.error("doxygen is required to build the C++ API docs")
+
+        Path("_build/doxygen").mkdir(parents=True, exist_ok=True)
+        session.run("doxygen", "Doxyfile", external=True)
+        Path("api/cpp").mkdir(parents=True, exist_ok=True)
+        session.run(
+            "breathe-apidoc",
+            "-o",
+            "api/cpp",
+            "-m",
+            "-f",
+            "-g",
+            "namespace",
+            "_build/doxygen/xml/",
+            external=True,
+        )
 
     shared_args = [
         "-n",  # nitpicky mode

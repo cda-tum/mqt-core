@@ -86,6 +86,8 @@ public:
       std::shared_ptr<IdentifierExpression> identifierExpression) override;
   std::optional<ConstEvalValue>
   visitIdentifierList(std::shared_ptr<IdentifierList> identifierList) override;
+  std::optional<ConstEvalValue> visitIndexedIdentifier(
+      std::shared_ptr<IndexedIdentifier> indexedIdentifier) override;
   std::optional<ConstEvalValue> visitMeasureExpression(
       std::shared_ptr<MeasureExpression> measureExpression) override;
 

@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <memory>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -51,7 +52,7 @@ std::ostream& operator<<(std::ostream& os, const ComparisonKind& kind) {
 
 ClassicControlledOperation::ClassicControlledOperation(
     std::unique_ptr<Operation>&& operation, ClassicalRegister controlReg,
-    const std::uint64_t expectedVal, ComparisonKind kind)
+    const std::uint64_t expectedVal, const ComparisonKind kind)
     : op(std::move(operation)), controlRegister(std::move(controlReg)),
       expectedValue(expectedVal), comparisonKind(kind) {
   name = "c_" + shortName(op->getType());
@@ -63,10 +64,23 @@ ClassicControlledOperation::ClassicControlledOperation(
 }
 ClassicControlledOperation::ClassicControlledOperation(
     std::unique_ptr<Operation>&& operation, const Bit cBit,
-    const std::uint64_t expectedVal, ComparisonKind kind)
+    const std::uint64_t expectedVal, const ComparisonKind kind)
     : op(std::move(operation)), controlBit(cBit), expectedValue(expectedVal),
       comparisonKind(kind) {
+  if (expectedVal > 1) {
+    throw std::invalid_argument(
+        "Expected value for single bit comparison must be 0 or 1.");
+  }
   name = "c_" + shortName(op->getType());
+  // Canonicalize comparisons on a single bit.
+  if (comparisonKind == Neq) {
+    comparisonKind = Eq;
+    expectedValue = 1 - expectedValue;
+  }
+  if (comparisonKind != Eq) {
+    throw std::invalid_argument(
+        "Inequality comparisons on a single bit are not supported.");
+  }
   parameter.reserve(2);
   parameter.emplace_back(static_cast<fp>(cBit));
   parameter.emplace_back(static_cast<fp>(expectedValue));
@@ -120,14 +134,14 @@ void ClassicControlledOperation::dumpOpenQASM(
   of << "if (";
   if (controlRegister.has_value()) {
     assert(!controlBit.has_value());
-    of << controlRegister->getName();
+    of << controlRegister->getName() << " " << comparisonKind << " "
+       << expectedValue;
   }
   if (controlBit.has_value()) {
     assert(!controlRegister.has_value());
-    const auto& creg = bitMap.at(*controlBit);
-    of << creg.second;
+    of << (expectedValue == 0 ? "!" : "") << bitMap.at(*controlBit).second;
   }
-  of << " " << comparisonKind << " " << expectedValue << ") ";
+  of << ") ";
   if (openQASM3) {
     of << "{\n";
   }

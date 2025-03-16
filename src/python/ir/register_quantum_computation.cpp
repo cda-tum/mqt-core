@@ -195,6 +195,13 @@ void registerQuantumComputation(py::module& m) {
   qc.def("unify_quantum_registers",
          &qc::QuantumComputation::unifyQuantumRegisters, "name"_a = "q");
 
+  qc.def_property_readonly("qregs",
+                           &qc::QuantumComputation::getQuantumRegisters);
+  qc.def_property_readonly("cregs",
+                           &qc::QuantumComputation::getClassicalRegisters);
+  qc.def_property_readonly("ancregs",
+                           &qc::QuantumComputation::getAncillaRegisters);
+
   ///---------------------------------------------------------------------------
   ///               \n Input Layout and Output Permutation \n
   ///---------------------------------------------------------------------------
@@ -274,6 +281,9 @@ void registerQuantumComputation(py::module& m) {
   });
   qc.def("__repr__", [](const qc::QuantumComputation& circ) {
     auto ss = std::stringstream();
+    ss << "QuantumComputation(num_qubits=" << circ.getNqubits()
+       << ", num_bits=" << circ.getNcbits() << ", num_ops=" << circ.getNops()
+       << ")";
     circ.print(ss);
     return ss.str();
   });

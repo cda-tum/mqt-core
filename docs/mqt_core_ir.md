@@ -47,35 +47,35 @@ precision = 3
 qc = QuantumComputation()
 
 # Counting register
-qc.add_qubit_register(1, "q")
+q = qc.add_qubit_register(1, "q")
 
 # Eigenstate register
-qc.add_qubit_register(1, "psi")
+psi = qc.add_qubit_register(1, "psi")
 
 # Classical register for the result, the estimated phase is `0.c_2 c_1 c_0 * pi`
-qc.add_classical_register(precision, "c")
+c = qc.add_classical_register(precision, "c")
 
 # Prepare psi in the eigenstate |1>
-qc.x(1)
+qc.x(psi[0])
 
 for i in range(precision):
   # Hadamard on the working qubit
-  qc.h(0)
+  qc.h(q[0])
 
   # Controlled phase gate
-  qc.cp(2**(precision - i - 1) * theta, 0, 1)
+  qc.cp(2**(precision - i - 1) * theta, q[0], psi[0])
 
   # Iterative inverse QFT
   for j in range(i):
-    qc.classic_controlled(op="p", target=0, cbit=j, params=[-pi / 2**(i - j)])
-  qc.h(0)
+    qc.classic_controlled(op="p", target=q[0], cbit=c[j], params=[-pi / 2**(i - j)])
+  qc.h(q[0])
 
   # Measure the result
-  qc.measure(0, i)
+  qc.measure(q[0], c[i])
 
   # Reset the qubit if not finished
   if i < precision - 1:
-    qc.reset(0)
+    qc.reset(q[0])
 ```
 
 The circuit class provides lots of flexibility when it comes to the kind of gates that can be applied.

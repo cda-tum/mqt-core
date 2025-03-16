@@ -55,6 +55,8 @@ public:
 
   [[nodiscard]] bool isCustomGate() const noexcept;
 
+  [[nodiscard]] bool isGlobal(size_t nQubits) const noexcept override;
+
   void addControl(Control c) override;
 
   void clearControls() override;
@@ -187,7 +189,16 @@ public:
     return ops.insert(iter, std::forward<decltype(op)>(op));
   }
 
+  // Element access (pass-through)
   [[nodiscard]] const auto& at(const std::size_t i) const { return ops.at(i); }
+  [[nodiscard]] auto& operator[](const std::size_t i) { return ops[i]; }
+  [[nodiscard]] const auto& operator[](const std::size_t i) const {
+    return ops[i];
+  }
+  [[nodiscard]] auto& front() { return ops.front(); }
+  [[nodiscard]] const auto& front() const { return ops.front(); }
+  [[nodiscard]] auto& back() { return ops.back(); }
+  [[nodiscard]] const auto& back() const { return ops.back(); }
 };
 } // namespace qc
 

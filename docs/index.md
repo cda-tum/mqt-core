@@ -34,6 +34,9 @@ self
 
 installation
 mqt_core_ir
+dd_package
+zx_package
+references
 ```
 
 ````{only} not latex
@@ -58,7 +61,15 @@ DevelopmentGuide
 
 ```{toctree}
 :hidden:
-:caption: API Reference
+:caption: Python API Reference
 
 api/mqt/core/index
+```
+
+```{toctree}
+:hidden:
+:glob:
+:caption: C++ API Reference
+
+api/cpp/namespacelist
 ```

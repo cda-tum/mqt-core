@@ -59,7 +59,7 @@ repos:
 
   # Python linting using ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.6
+    rev: v0.9.10
     hooks:
       - id: ruff
         args: ["--fix", "--show-fixes"]
@@ -108,14 +108,14 @@ repos:
 
   # Format configuration files with prettier
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.5.1
+    rev: v3.5.3
     hooks:
       - id: prettier
         types_or: [yaml, markdown, html, css, scss, javascript, json]
 
   # Check for spelling
   - repo: https://github.com/crate-ci/typos
-    rev: v1.29.7
+    rev: v1.30.1
     hooks:
       - id: typos
 
@@ -137,7 +137,7 @@ repos:
 
   # Check JSON schemata
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.31.1
+    rev: 0.31.3
     hooks:
       - id: check-dependabot
       - id: check-github-workflows

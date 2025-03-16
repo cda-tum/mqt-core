@@ -21,7 +21,7 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-na)
   # add link libraries
   target_link_libraries(
     ${MQT_CORE_TARGET_NAME}-na
-    PUBLIC MQT::CoreIR MQT::CoreDS
+    PUBLIC MQT::CoreIR
     PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
 
   # set include directories

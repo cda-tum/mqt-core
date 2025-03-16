@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from mqt.core.dd.evaluation import __aggregate, __flatten_dict, __post_processing
+from mqt.core.dd_evaluation import __aggregate, __flatten_dict, __post_processing
 
 if TYPE_CHECKING:
     from pytest_console_scripts import ScriptRunner

@@ -58,6 +58,7 @@ class TypeCheckPass final : public CompilerPass,
                             public InstVisitor,
                             public ExpressionVisitor<InferredType> {
   bool hasError = false;
+  std::string errMessage;
   std::map<std::string, InferredType> env;
   // We need a reference to a const eval pass to evaluate types before type
   // checking.
@@ -78,6 +79,8 @@ public:
 
   void processStatement(Statement& statement) override;
 
+  void checkIndexOperator(const IndexOperator& indexOperator);
+  void checkIndexedIdentifier(const IndexedIdentifier& id);
   void checkGateOperand(const GateOperand& operand);
 
   // Types
@@ -112,6 +115,8 @@ public:
       std::shared_ptr<IdentifierExpression> identifierExpression) override;
   InferredType
   visitIdentifierList(std::shared_ptr<IdentifierList> identifierList) override;
+  InferredType visitIndexedIdentifier(
+      std::shared_ptr<IndexedIdentifier> indexedIdentifier) override;
   InferredType visitMeasureExpression(
       std::shared_ptr<MeasureExpression> measureExpression) override;
 };

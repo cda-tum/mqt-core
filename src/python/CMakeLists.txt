@@ -7,3 +7,6 @@
 
 # add the IR bindings package
 add_subdirectory(ir)
+
+# add the DD bindings package
+add_subdirectory(dd)

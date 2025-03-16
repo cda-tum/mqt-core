@@ -11,7 +11,9 @@
 #include "ir/Register.hpp"
 #include "python/pybind11.hpp"
 
+#include <cstddef>
 #include <pybind11/operators.h>
+#include <string>
 
 namespace mqt {
 
@@ -19,7 +21,8 @@ void registerRegisters(py::module& m) {
   py::class_<qc::QuantumRegister>(m, "QuantumRegister")
       .def(py::init<const qc::Qubit, const std::size_t, const std::string&>(),
            "start"_a, "size"_a, "name"_a = "")
-      .def_property_readonly("name", &qc::QuantumRegister::getName)
+      .def_property_readonly(
+          "name", [](const qc::QuantumRegister& reg) { return reg.getName(); })
       .def_property(
           "start",
           [](const qc::QuantumRegister& reg) { return reg.getStartIndex(); },
@@ -31,10 +34,13 @@ void registerRegisters(py::module& m) {
           [](qc::QuantumRegister& reg, const std::size_t size) {
             reg.getSize() = size;
           })
-      .def_property_readonly("end", &qc::QuantumRegister::getEndIndex)
+      .def_property_readonly(
+          "end",
+          [](const qc::QuantumRegister& reg) { return reg.getEndIndex(); })
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def(hash(py::self))
+      .def("__getitem__", &qc::QuantumRegister::getGlobalIndex, "key"_a)
       .def("__contains__", &qc::QuantumRegister::contains)
       .def("__repr__", [](const qc::QuantumRegister& reg) {
         return "QuantumRegister(name=" + reg.getName() +
@@ -45,7 +51,9 @@ void registerRegisters(py::module& m) {
   py::class_<qc::ClassicalRegister>(m, "ClassicalRegister")
       .def(py::init<const qc::Bit, const std::size_t, const std::string&>(),
            "start"_a, "size"_a, "name"_a = "")
-      .def_property_readonly("name", &qc::ClassicalRegister::getName)
+      .def_property_readonly(
+          "name",
+          [](const qc::ClassicalRegister& reg) { return reg.getName(); })
       .def_property(
           "start",
           [](const qc::ClassicalRegister& reg) { return reg.getStartIndex(); },
@@ -58,10 +66,13 @@ void registerRegisters(py::module& m) {
           [](qc::ClassicalRegister& reg, const std::size_t size) {
             reg.getSize() = size;
           })
-      .def_property_readonly("end", &qc::ClassicalRegister::getEndIndex)
+      .def_property_readonly(
+          "end",
+          [](const qc::ClassicalRegister& reg) { return reg.getEndIndex(); })
       .def(py::self == py::self)
       .def(py::self != py::self)
       .def(hash(py::self))
+      .def("__getitem__", &qc::ClassicalRegister::getGlobalIndex, "key"_a)
       .def("__contains__", &qc::ClassicalRegister::contains)
       .def("__repr__", [](const qc::ClassicalRegister& reg) {
         return "ClassicalRegister(name=" + reg.getName() +

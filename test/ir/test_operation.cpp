@@ -9,6 +9,7 @@
 
 #include "Definitions.hpp"
 #include "ir/Permutation.hpp"
+#include "ir/QuantumComputation.hpp"
 #include "ir/Register.hpp"
 #include "ir/operations/AodOperation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
@@ -18,10 +19,12 @@
 #include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
 #include "ir/operations/SymbolicOperation.hpp"
+#include "qasm3/Importer.hpp"
 
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <sstream>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -149,6 +152,18 @@ TEST(Operation, IsDiagonalGate) {
   EXPECT_FALSE(op1.isDiagonalGate());
   const qc::StandardOperation op2(0, qc::Z);
   EXPECT_TRUE(op2.isDiagonalGate());
+}
+
+TEST(Operation, IsGlobalGate) {
+  const std::string testfile = "OPENQASM 3.0;\n"
+                               "include \"stdgates.inc\";\n"
+                               "qubit[3] q;\n"
+                               "rz(pi/4) q[0];\n"
+                               "ry(pi/2) q;\n";
+  const auto qc = qasm3::Importer::imports(testfile);
+  EXPECT_EQ(qc.getHighestLogicalQubitIndex(), 2);
+  EXPECT_FALSE(qc.at(0)->isGlobal(3));
+  EXPECT_TRUE(qc.at(1)->isGlobal(3));
 }
 
 TEST(Operation, Equality) {

@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 import warnings
 from importlib import metadata
 from pathlib import Path
@@ -47,7 +49,7 @@ release = version.split("+")[0]
 project = "MQT Core"
 author = "Chair for Design Automation, Technical University of Munich"
 language = "en"
-project_copyright = "2024, Chair for Design Automation, Technical University of Munich"
+project_copyright = "2025, Chair for Design Automation, Technical University of Munich"
 
 master_doc = "index"
 
@@ -64,8 +66,9 @@ extensions = [
     "sphinx_design",
     "sphinxext.opengraph",
     "sphinx.ext.viewcode",
-    "sphinx.ext.imgconverter",
+    "sphinxcontrib.inkscapeconverter",
     "sphinxcontrib.bibtex",
+    "breathe",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -85,6 +88,7 @@ pygments_style = "colorful"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
     "qiskit": ("https://docs.quantum.ibm.com/api/qiskit", None),
     "mqt": ("https://mqt.readthedocs.io/en/latest", None),
     "ddsim": ("https://mqt.readthedocs.io/projects/ddsim/en/latest", None),
@@ -130,7 +134,7 @@ class CDAStyle(UnsrtStyle):
 
 pybtex.plugin.register_plugin("pybtex.style.formatting", "cda_style", CDAStyle)
 
-bibtex_bibfiles = ["refs.bib"]
+bibtex_bibfiles = ["lit_header.bib", "refs.bib"]
 bibtex_default_style = "cda_style"
 
 copybutton_prompt_text = r"(?:\(\.?venv\) )?(?:\[.*\] )?\$ "
@@ -159,6 +163,15 @@ toc_object_entries_show_parents = "hide"
 python_use_unqualified_type_names = True
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
+
+
+breathe_projects = {"mqt.core": "_build/doxygen/xml"}
+breathe_default_project = "mqt.core"
+
+read_the_docs_build = os.environ.get("READTHEDOCS", None) == "True"
+if read_the_docs_build:
+    subprocess.call("doxygen", shell=True)  # noqa: S602, S607
+    subprocess.call("mkdir api/cpp & breathe-apidoc -o api/cpp -m -f -T _build/doxygen/xml/", shell=True)  # noqa: S602, S607
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "furo"
@@ -197,8 +210,16 @@ latex_elements = {
     "printindex": r"\footnotesize\raggedright\printindex",
     "tableofcontents": "",
     "sphinxsetup": "iconpackage=fontawesome",
-    "extrapackages": r"\usepackage{qrcode,graphicx,calc,amsthm}",
+    "extrapackages": r"\usepackage{qrcode,graphicx,calc,amsthm,etoolbox,flushend,mathtools}",
     "preamble": r"""
+\patchcmd{\thebibliography}{\addcontentsline{toc}{section}{\refname}}{}{}{}
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}
+\DeclarePairedDelimiter\mket{\lvert}{\rangle}
+\DeclarePairedDelimiter\mbra{\langle}{\rvert}
+\DeclareUnicodeCharacter{03C0}{$\pi$}
+
+\newcommand*{\ket}[1]{\ensuremath{\mket{\mkern1mu#1}}}
+\newcommand*{\bra}[1]{\ensuremath{\mbra{\mkern1mu#1}}}
 \newtheorem{example}{Example}
 \clubpenalty=10000
 \widowpenalty=10000
@@ -207,6 +228,7 @@ latex_elements = {
 """,
     "extraclassoptions": r"journal, onecolumn",
     "fvset": r"\fvset{fontsize=\small}",
+    "figure_align": "htb",
 }
 latex_domain_indices = False
 latex_docclass = {

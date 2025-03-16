@@ -7,12 +7,12 @@
 
 """MQT Core IR  - The MQT Core Intermediate Representation (IR) module."""
 
-from collections.abc import Iterable, Iterator, Mapping, MutableMapping, MutableSequence, Sequence
+from collections.abc import ItemsView, Iterable, Iterator, Mapping, MutableMapping, MutableSequence, Sequence
 from os import PathLike
 from typing import overload
 
 from .operations import ComparisonKind, Control, Operation, OpType
-from .registers import ClassicalRegister
+from .registers import ClassicalRegister, QuantumRegister
 from .symbolic import Expression, Variable
 
 __all__ = [
@@ -59,6 +59,9 @@ class Permutation(MutableMapping[int, int]):
     def __iter__(self) -> Iterator[int]:
         """Return an iterator over the indices of the permutation."""
 
+    def items(self) -> ItemsView[int, int]:
+        """Return an iterable over the items of the permutation."""
+
     def __len__(self) -> int:
         """Return the number of indices in the permutation."""
 
@@ -70,6 +73,9 @@ class Permutation(MutableMapping[int, int]):
 
     def __hash__(self) -> int:
         """Return the hash of the permutation."""
+
+    def clear(self) -> None:
+        """Clear the permutation of all indices and values."""
 
     @overload
     def apply(self, controls: set[Control]) -> set[Control]:
@@ -307,12 +313,15 @@ class QuantumComputation(MutableSequence[Operation]):
     #                          (Qu)Bit Registers
     # --------------------------------------------------------------------------
 
-    def add_ancillary_register(self, n: int, name: str = "anc") -> None:
+    def add_ancillary_register(self, n: int, name: str = "anc") -> QuantumRegister:
         """Add an ancillary register to the quantum computation.
 
         Args:
             n: The number of qubits in the ancillary register.
             name: The name of the ancillary register.
+
+        Returns:
+            The ancillary register added to the quantum computation.
         """
 
     def add_classical_register(self, n: int, name: str = "c") -> ClassicalRegister:
@@ -326,20 +335,38 @@ class QuantumComputation(MutableSequence[Operation]):
             The classical register added to the quantum computation.
         """
 
-    def add_qubit_register(self, n: int, name: str = "q") -> None:
+    def add_qubit_register(self, n: int, name: str = "q") -> QuantumRegister:
         """Add a qubit register to the quantum computation.
 
         Args:
             n: The number of qubits in the qubit register.
             name: The name of the qubit register.
+
+        Returns:
+            The qubit register added to the quantum computation.
         """
 
-    def unify_quantum_registers(self, name: str = "q") -> None:
+    def unify_quantum_registers(self, name: str = "q") -> QuantumRegister:
         """Unify all quantum registers in the quantum computation.
 
         Args:
             name: The name of the unified quantum register.
+
+        Returns:
+            The unified quantum register.
         """
+
+    @property
+    def qregs(self) -> dict[str, QuantumRegister]:
+        """The quantum registers in the quantum computation."""
+
+    @property
+    def cregs(self) -> dict[str, ClassicalRegister]:
+        """The classical registers in the quantum computation."""
+
+    @property
+    def ancregs(self) -> dict[str, QuantumRegister]:
+        """The ancillary registers in the quantum computation."""
 
     # --------------------------------------------------------------------------
     #                  Initial Layout and Output Permutation

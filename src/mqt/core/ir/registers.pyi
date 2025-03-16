@@ -42,6 +42,9 @@ class QuantumRegister:
     def __hash__(self) -> int:
         """Return the hash of the quantum register."""
 
+    def __getitem__(self, key: int) -> int:
+        """Get the qubit at the specified index."""
+
     def __contains__(self, qubit: int) -> bool:
         """Check if the quantum register contains a qubit."""
 
@@ -79,6 +82,9 @@ class ClassicalRegister:
 
     def __hash__(self) -> int:
         """Return the hash of the classical register."""
+
+    def __getitem__(self, key: int) -> int:
+        """Get the bit at the specified index."""
 
     def __contains__(self, bit: int) -> bool:
         """Check if the classical register contains a bit."""
