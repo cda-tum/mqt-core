@@ -24,22 +24,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - run: |
-          echo "CC (before mold) = $CC"
-          echo "CXX (before mold) = $CXX"
       # set up mold as linker for faster C++ builds (Linux only)
       - name: Set up mold as linker (Linux only)
         uses: rui314/setup-mold@v1
-      - run: |
-          echo "CC (after mold) = $CC"
-          echo "CXX (after mold) = $CXX"
       # set up uv for faster Python package management
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: false
-      - run: |
-          echo "CC (after setup-uv) = $CC"
-          echo "CXX (after setup-uv) = $CXX"
-      - name: 🐍 Test
+      - name: 🐍 Test with minimal versions
         run: uvx nox -s tests --verbose
