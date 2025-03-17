@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include "dd/DDDefinitions.hpp"
 #include "dd/statistics/MemoryManagerStatistics.hpp"
 
 #include <cassert>
