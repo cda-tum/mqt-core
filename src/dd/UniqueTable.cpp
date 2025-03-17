@@ -9,6 +9,15 @@
 
 #include "dd/UniqueTable.hpp"
 
+#include "dd/MemoryManager.hpp"
+#include "dd/Node.hpp"
+
+#include <algorithm>
+#include <cstddef>
+#include <nlohmann/json.hpp>
+#include <numeric>
+#include <string>
+
 namespace dd {
 
 UniqueTable::UniqueTable(MemoryManager& manager,

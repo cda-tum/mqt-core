@@ -21,7 +21,6 @@
 #include <functional>
 #include <iostream>
 #include <nlohmann/json.hpp>
-#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -46,10 +45,10 @@ public:
     std::size_t nVars = 0U;
 
     /// The number of hash buckets to use (has to be a power of two)
-    const std::size_t nBuckets = 32768;
+    std::size_t nBuckets = 32768;
 
     /// The initial garbage collection limit
-    const std::size_t initialGCLimit = INITIAL_GC_LIMIT;
+    std::size_t initialGCLimit = INITIAL_GC_LIMIT;
   };
 
   /**
@@ -74,12 +73,12 @@ public:
   template <class Node> [[nodiscard]] std::size_t hash(const Node& p) {
     static_assert(std::is_base_of_v<NodeBase, Node>,
                   "Node must be derived from NodeBase");
-    const std::size_t MASK = cfg.nBuckets - 1;
+    const std::size_t mask = cfg.nBuckets - 1;
     std::size_t key = 0U;
     for (const auto& succ : p.e) {
       qc::hashCombine(key, std::hash<Edge<Node>>{}(succ));
     }
-    key &= MASK;
+    key &= mask;
     return key;
   }
 

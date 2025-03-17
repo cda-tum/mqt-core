@@ -48,6 +48,7 @@ struct NodeBase : LLBase {
 
   /// Getter for the next object.
   [[nodiscard]] NodeBase* next() const noexcept {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
     return static_cast<NodeBase*>(next_);
   }
 
@@ -75,6 +76,7 @@ struct vNode final : NodeBase {       // NOLINT(readability-identifier-naming)
 
   /// Getter for the next object
   [[nodiscard]] vNode* next() const noexcept {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
     return static_cast<vNode*>(next_);
   }
   /// Getter for the terminal object
@@ -92,6 +94,7 @@ struct mNode final : NodeBase {       // NOLINT(readability-identifier-naming)
 
   /// Getter for the next object
   [[nodiscard]] mNode* next() const noexcept {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
     return static_cast<mNode*>(next_);
   }
   /// Getter for the terminal object
@@ -109,6 +112,7 @@ struct dNode final : NodeBase {       // NOLINT(readability-identifier-naming)
 
   /// Getter for the next object
   [[nodiscard]] dNode* next() const noexcept {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
     return static_cast<dNode*>(next_);
   }
   /// Getter for the terminal object

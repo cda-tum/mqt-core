@@ -9,8 +9,6 @@
 
 #include "dd/statistics/MemoryManagerStatistics.hpp"
 
-#include "dd/Node.hpp"
-#include "dd/RealNumber.hpp"
 #include "dd/statistics/Statistics.hpp"
 
 #include <algorithm>

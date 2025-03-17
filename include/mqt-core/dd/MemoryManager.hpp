@@ -71,7 +71,7 @@ public:
   template <class T>
   static MemoryManager
   create(const std::size_t initialAllocationSize = INITIAL_ALLOCATION_SIZE) {
-    return MemoryManager(sizeof(T), initialAllocationSize);
+    return {sizeof(T), initialAllocationSize};
   }
 
   /// default destructor
