@@ -159,7 +159,7 @@ private:
    * @brief A linked list of entries that are available for (re-)use
    * @details The MemoryManager maintains a linked list of entries that are
    * available for (re-)use. This list is implemented as a singly linked list
-   * using the `next()` mothod of the entries. The `available` member points to
+   * using the `next()` method of the entries. The `available` member points to
    * the first entry in the list. If the list is empty, `available` is
    * `nullptr`.
    */
