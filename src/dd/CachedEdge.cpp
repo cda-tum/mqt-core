@@ -36,14 +36,14 @@ template <typename T, isVector<T>>
 CachedEdge<Node>
 CachedEdge<Node>::normalize(Node* p,
                             const std::array<CachedEdge<Node>, RADIX>& e,
-                            MemoryManager<Node>& mm, ComplexNumbers& cn) {
+                            MemoryManager& mm, ComplexNumbers& cn) {
   assert(p != nullptr && "Node pointer passed to normalize is null.");
   const auto zero =
       std::array{e[0].w.approximatelyZero(), e[1].w.approximatelyZero()};
 
   if (zero[0]) {
     if (zero[1]) {
-      mm.returnEntry(p);
+      mm.returnEntry(*p);
       return CachedEdge::zero();
     }
     p->e = {vEdge::zero(), {e[1].p, Complex::one()}};
@@ -96,14 +96,14 @@ template <typename T, isMatrixVariant<T>>
 CachedEdge<Node>
 CachedEdge<Node>::normalize(Node* p,
                             const std::array<CachedEdge<Node>, NEDGE>& e,
-                            MemoryManager<Node>& mm, ComplexNumbers& cn) {
+                            MemoryManager& mm, ComplexNumbers& cn) {
   assert(p != nullptr && "Node pointer passed to normalize is null.");
   const auto zero =
       std::array{e[0].w.approximatelyZero(), e[1].w.approximatelyZero(),
                  e[2].w.approximatelyZero(), e[3].w.approximatelyZero()};
 
   if (std::all_of(zero.begin(), zero.end(), [](auto b) { return b; })) {
-    mm.returnEntry(p);
+    mm.returnEntry(*p);
     return CachedEdge::zero();
   }
 
@@ -161,17 +161,17 @@ template struct CachedEdge<dNode>;
 template CachedEdge<vNode>
 CachedEdge<vNode>::normalize(vNode* p,
                              const std::array<CachedEdge<vNode>, RADIX>& e,
-                             MemoryManager<vNode>& mm, ComplexNumbers& cn);
+                             MemoryManager& mm, ComplexNumbers& cn);
 
 template CachedEdge<mNode>
 CachedEdge<mNode>::normalize(mNode* p,
                              const std::array<CachedEdge<mNode>, NEDGE>& e,
-                             MemoryManager<mNode>& mm, ComplexNumbers& cn);
+                             MemoryManager& mm, ComplexNumbers& cn);
 
 template CachedEdge<dNode>
 CachedEdge<dNode>::normalize(dNode* p,
                              const std::array<CachedEdge<dNode>, NEDGE>& e,
-                             MemoryManager<dNode>& mm, ComplexNumbers& cn);
+                             MemoryManager& mm, ComplexNumbers& cn);
 
 } // namespace dd
 
