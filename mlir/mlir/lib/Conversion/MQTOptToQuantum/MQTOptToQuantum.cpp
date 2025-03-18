@@ -7,7 +7,7 @@
  * Licensed under the MIT License
  */
 
-#include "mlir/Conversion/QuantumToMQTOpt/QuantumToMQTOpt.h"
+#include "mlir/Conversion/MQTOptToQuantum/MQTOptToQuantum.h"
 
 #include "Quantum/IR/QuantumDialect.h"
 #include "Quantum/IR/QuantumOps.h"
@@ -36,64 +36,63 @@
 
 namespace mlir::mqt::ir::conversions {
 
-#define GEN_PASS_DEF_QUANTUMTOMQTOPT
-#include "mlir/Conversion/QuantumToMQTOpt/QuantumToMQTOpt.h.inc"
+#define GEN_PASS_DEF_MQTOPTTOQUANTUM
+#include "mlir/Conversion/MQTOptToQuantum/MQTOptToQuantum.h.inc"
 
 using namespace mlir;
 
-class QuantumToMQTOptTypeConverter : public TypeConverter {
+class MQTOptToQuantumTypeConverter : public TypeConverter {
 public:
-  explicit QuantumToMQTOptTypeConverter(MLIRContext* ctx) {
+  explicit MQTOptToQuantumTypeConverter(MLIRContext* ctx) {
     // Identity conversion: Allow all types to pass through unmodified if
     // needed.
     addConversion([](Type type) { return type; });
 
-    // Convert QuregType to QubitRegisterType
-    addConversion([ctx](catalyst::quantum::QuregType /*type*/) -> Type {
-      return ::mqt::ir::opt::QubitRegisterType::get(ctx);
+    // Convert QubitRegisterType to QuregType
+    addConversion([ctx](::mqt::ir::opt::QubitRegisterType /*type*/) -> Type {
+      return catalyst::quantum::QuregType::get(ctx);
     });
 
-    // Convert QubitType to QubitType in the new dialect
-    addConversion([ctx](catalyst::quantum::QubitType /*type*/) -> Type {
-      return ::mqt::ir::opt::QubitType::get(ctx);
+    // Convert QubitType in the new dialect to Catalyst's QubitType
+    addConversion([ctx](::mqt::ir::opt::QubitType /*type*/) -> Type {
+      return catalyst::quantum::QubitType::get(ctx);
     });
   }
 };
 
-struct ConvertAlloc : public OpConversionPattern<catalyst::quantum::AllocOp> {
+struct ConvertAlloc : public OpConversionPattern<::mqt::ir::opt::AllocOp> {
 
   ConvertAlloc(const TypeConverter& typeConverter, MLIRContext* context)
-      : OpConversionPattern<catalyst::quantum::AllocOp>(typeConverter,
-                                                        context) {}
+      : OpConversionPattern<::mqt::ir::opt::AllocOp>(typeConverter, context) {}
 
   LogicalResult
-  matchAndRewrite(catalyst::quantum::AllocOp op, OpAdaptor adaptor,
+  matchAndRewrite(::mqt::ir::opt::AllocOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
 
     // Extract operand(s) and attribute(s)
-    auto const nQubitsValue = adaptor.getNqubits();
-    auto const nQubitsIntegerAttr = adaptor.getNqubitsAttrAttr();
+    auto const nQubitsValue = adaptor.getSize();
+    auto const nQubitsIntegerAttr = adaptor.getSizeAttrAttr();
 
     // Prepare the result type(s)
-    auto resultType =
-        ::mqt::ir::opt::QubitRegisterType::get(rewriter.getContext());
+    auto resultType = catalyst::quantum::QuregType::get(rewriter.getContext());
 
-    // Create the new operation
-    auto mqtoptOp = rewriter.create<::mqt::ir::opt::AllocOp>(
+    // Create the original Catalyst operation
+    auto catalystOp = rewriter.create<catalyst::quantum::AllocOp>(
         op.getLoc(), resultType, nQubitsValue, nQubitsIntegerAttr);
 
     // Get the result of the new operation, which represents the qubit register
-    auto trgtQreg = mqtoptOp->getResult(0);
+    auto trgtQreg = catalystOp->getResult(0);
 
     // Collect the users of the original operation to update their operands
     std::vector<mlir::Operation*> users(op->getUsers().begin(),
                                         op->getUsers().end());
 
-    // Iterate over the users in reverse order
+    // Iterate over the users in (TODO: reverse?) order
     for (auto* user : llvm::reverse(users)) {
-      // Registers should only be used in Extract or Insert operations
-      if (mlir::isa<catalyst::quantum::ExtractOp>(user) ||
-          mlir::isa<catalyst::quantum::InsertOp>(user)) {
+      // Registers should only be used in Extract, Insert or Dealloc operations
+      if (mlir::isa<::mqt::ir::opt::ExtractOp>(user) ||
+          mlir::isa<::mqt::ir::opt::InsertOp>(user) ||
+          mlir::isa<::mqt::ir::opt::DeallocOp>(user)) {
         // Update the operand of the user operation to the new qubit register
         user->setOperand(0, trgtQreg);
       }
@@ -104,94 +103,92 @@ struct ConvertAlloc : public OpConversionPattern<catalyst::quantum::AllocOp> {
   }
 };
 
-struct ConvertDealloc
-    : public OpConversionPattern<catalyst::quantum::DeallocOp> {
+struct ConvertDealloc : public OpConversionPattern<::mqt::ir::opt::DeallocOp> {
 
   ConvertDealloc(const TypeConverter& typeConverter, MLIRContext* context)
-      : OpConversionPattern<catalyst::quantum::DeallocOp>(typeConverter,
-                                                          context) {}
+      : OpConversionPattern<::mqt::ir::opt::DeallocOp>(typeConverter, context) {
+  }
 
   LogicalResult
-  matchAndRewrite(catalyst::quantum::DeallocOp op, OpAdaptor adaptor,
+  matchAndRewrite(::mqt::ir::opt::DeallocOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
 
-    // Extract operand(s) and attribute(s)
-    auto qregValue = adaptor.getQreg();
+    // Extract operand(s)
+    auto qregValue = adaptor.getQureg();
 
     // Prepare the result type(s)
     auto resultTypes = ::mlir::TypeRange({});
 
-    // Create the new operation
-    auto mqtoptOp = rewriter.create<::mqt::ir::opt::DeallocOp>(
+    // Create the original Catalyst operation
+    auto catalystOp = rewriter.create<catalyst::quantum::DeallocOp>(
         op.getLoc(), resultTypes, qregValue);
 
-    // Replace the original with the new operation
-    rewriter.replaceOp(op, mqtoptOp);
+    // Replace the MQT operation with the Catalyst operation
+    rewriter.replaceOp(op, catalystOp);
     return success();
   }
 };
 
-struct ConvertExtract
-    : public OpConversionPattern<catalyst::quantum::ExtractOp> {
+struct ConvertExtract : public OpConversionPattern<::mqt::ir::opt::ExtractOp> {
 
   ConvertExtract(const TypeConverter& typeConverter, MLIRContext* context)
-      : OpConversionPattern<catalyst::quantum::ExtractOp>(typeConverter,
-                                                          context) {
+      : OpConversionPattern<::mqt::ir::opt::ExtractOp>(typeConverter, context) {
     this->setHasBoundedRewriteRecursion(true);
   }
 
   LogicalResult
-  matchAndRewrite(catalyst::quantum::ExtractOp op, OpAdaptor adaptor,
+  matchAndRewrite(::mqt::ir::opt::ExtractOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
 
     // Extract operand(s), and attribute(s)
-    auto qregValue = adaptor.getQreg();
-    auto idxValue = adaptor.getIdx();
-    auto idxIntegerAttr = adaptor.getIdxAttrAttr();
+    auto qregValue = adaptor.getInQureg();
+    auto idxValue = adaptor.getIndex();
+    auto idxIntegerAttr = adaptor.getIndexAttrAttr();
 
     // Prepare the result type(s)
-    auto resultType0 =
-        ::mqt::ir::opt::QubitRegisterType::get(rewriter.getContext());
-    auto resultType1 = ::mqt::ir::opt::QubitType::get(rewriter.getContext());
+    auto resultType = catalyst::quantum::QubitType::get(rewriter.getContext());
 
     // Create the new operation
-    auto mqtoptOp = rewriter.create<::mqt::ir::opt::ExtractOp>(
-        op.getLoc(), resultType0, resultType1, qregValue, idxValue,
-        idxIntegerAttr);
+    auto catalystOp = rewriter.create<catalyst::quantum::ExtractOp>(
+        op.getLoc(), resultType, qregValue, idxValue, idxIntegerAttr);
 
-    auto inQreg = op->getOperand(0);
-    auto outQreg = mqtoptOp->getResult(0);
+    auto mqtQreg = op.getOperand(0);
+    auto catalystQreg = catalystOp->getResult(0);
 
     // Collect the users of the original input qubit register to update their
     // operands
-    std::vector<mlir::Operation*> users(inQreg.getUsers().begin(),
-                                        inQreg.getUsers().end());
+    std::vector<mlir::Operation*> users(mqtQreg.getUsers().begin(),
+                                        mqtQreg.getUsers().end());
 
-    // Iterate over users in reverse order to update their operands properly
+    // Iterate over users in (TODO: reverse?) order to update their operands
+    // properly
     for (auto* user : llvm::reverse(users)) {
 
       // Only consider operations after the current operation
-      if (!user->isBeforeInBlock(mqtoptOp) && user != mqtoptOp && user != op) {
+      if (!user->isBeforeInBlock(catalystOp) && user != catalystOp &&
+          user != op) {
         // Update operands in the user operation
-        if (mlir::isa<catalyst::quantum::ExtractOp>(user) ||
-            mlir::isa<catalyst::quantum::InsertOp>(user)) {
-          user->setOperand(0, outQreg);
+        if (mlir::isa<::mqt::ir::opt::ExtractOp>(user) ||
+            mlir::isa<::mqt::ir::opt::InsertOp>(user) ||
+            mlir::isa<::mqt::ir::opt::DeallocOp>(user)) {
+          user->setOperand(0, catalystQreg);
         }
       }
     }
 
     // Collect the users of the original output qubit
-    auto oldQubit = op->getResult(0);
-    auto newQubit = mqtoptOp->getResult(1);
+    auto oldQubit = op->getResult(1);
+    auto newQubit = catalystOp->getResult(0);
 
     std::vector<mlir::Operation*> qubitUsers(oldQubit.getUsers().begin(),
                                              oldQubit.getUsers().end());
 
-    // Iterate over qubit users in reverse order
+    // Iterate over qubit users in (TODO: reverse?) order
     for (auto* user : llvm::reverse(qubitUsers)) {
 
       // Only consider operations after the current operation
-      if (!user->isBeforeInBlock(mqtoptOp) && user != mqtoptOp && user != op) {
+      if (!user->isBeforeInBlock(catalystOp) && user != catalystOp &&
+          user != op) {
 
         auto operandIdx = 0;
         for (auto operand : user->getOperands()) {
@@ -209,35 +206,33 @@ struct ConvertExtract
   }
 };
 
-struct ConvertInsert : public OpConversionPattern<catalyst::quantum::InsertOp> {
+struct ConvertInsert : public OpConversionPattern<::mqt::ir::opt::InsertOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
   ConvertInsert(const TypeConverter& typeConverter, MLIRContext* context)
-      : OpConversionPattern<catalyst::quantum::InsertOp>(typeConverter,
-                                                         context) {}
+      : OpConversionPattern<::mqt::ir::opt::InsertOp>(typeConverter, context) {}
 
   LogicalResult
-  matchAndRewrite(catalyst::quantum::InsertOp op, OpAdaptor adaptor,
+  matchAndRewrite(::mqt::ir::opt::InsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
 
     // Extract operand(s) and attribute(s)
-    auto inQregValue = adaptor.getInQreg();
-    auto qubitValue = adaptor.getQubit();
-    auto idxValue = adaptor.getIdx();
-    auto idxIntegerAttr = adaptor.getIdxAttrAttr();
+    auto inQregValue = adaptor.getInQureg();
+    auto qubitValue = adaptor.getInQubit();
+    auto idxValue = adaptor.getIndex();
+    auto idxIntegerAttr = adaptor.getIndexAttrAttr();
 
     // Prepare the result type(s)
-    auto resultType =
-        ::mqt::ir::opt::QubitRegisterType::get(rewriter.getContext());
+    auto resultType = catalyst::quantum::QuregType::get(rewriter.getContext());
 
-    // Create the new operation
-    auto mqtoptOp = rewriter.create<::mqt::ir::opt::InsertOp>(
-        op.getLoc(), resultType, inQregValue, qubitValue, idxValue,
-        idxIntegerAttr);
+    // Create the original Catalyst operation
+    auto catalystOp = rewriter.create<catalyst::quantum::InsertOp>(
+        op.getLoc(), resultType, inQregValue, idxValue, idxIntegerAttr,
+        qubitValue);
 
-    // Replace the original with the new operation
-    rewriter.replaceOp(op, mqtoptOp);
+    // Replace the MQT operation with the Catalyst operation
+    rewriter.replaceOp(op, catalystOp);
     return success();
   }
 };
@@ -272,45 +267,45 @@ struct ConvertCustom : public OpConversionPattern<catalyst::quantum::CustomOp> {
     auto outQubitTypes = mlir::TypeRange(qubitTypes);
 
     // Create the new operation
-    Operation* mqtoptOp = nullptr;
+    Operation* catalystOp = nullptr;
 
     if (gateName.compare("Hadamard") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::HOp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::HOp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else if (gateName.compare("PauliX") == 0 ||
                gateName.compare("CNOT") == 0 ||
                gateName.compare("Toffoli") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::XOp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::XOp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else if (gateName.compare("PauliY") == 0 || gateName.compare("CY") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::YOp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::YOp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else if (gateName.compare("PauliZ") == 0 || gateName.compare("CZ") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::ZOp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::ZOp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else if (gateName.compare("SWAP") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::SWAPOp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::SWAPOp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else if (gateName.compare("RX") == 0 || gateName.compare("CRX") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::RXOp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::RXOp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else if (gateName.compare("RY") == 0 || gateName.compare("CRY") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::RYOp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::RYOp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else if (gateName.compare("RZ") == 0 || gateName.compare("CRZ") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::RZOp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::RZOp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else if (gateName.compare("PhaseShift") == 0 ||
                gateName.compare("ControlledPhaseShift") == 0) {
-      mqtoptOp = rewriter.create<::mqt::ir::opt::POp>(
+      catalystOp = rewriter.create<::mqt::ir::opt::POp>(
           op.getLoc(), outQubitTypes, staticParams, paramsMask, paramsValues,
           inQubitsValues, inCtrlQubitsValues, inNegCtrlQubitsValues);
     } else {
@@ -319,37 +314,24 @@ struct ConvertCustom : public OpConversionPattern<catalyst::quantum::CustomOp> {
     }
 
     // Replace the original with the new operation
-    rewriter.replaceOp(op, mqtoptOp);
+    rewriter.replaceOp(op, catalystOp);
     return success();
   }
 };
 
-struct QuantumToMQTOpt : impl::QuantumToMQTOptBase<QuantumToMQTOpt> {
-  using QuantumToMQTOptBase::QuantumToMQTOptBase;
+struct MQTOptToQuantum : impl::MQTOptToQuantumBase<MQTOptToQuantum> {
+  using MQTOptToQuantumBase::MQTOptToQuantumBase;
 
   void runOnOperation() override {
     MLIRContext* context = &getContext();
     auto* module = getOperation();
 
-    if (cMap.size() > 0) {
-      llvm::outs() << "cMap size: " << cMap.size() << "\n";
-    }
-
     ConversionTarget target(*context);
-    target.addLegalDialect<::mqt::ir::opt::MQTOptDialect>();
-    target.addIllegalDialect<catalyst::quantum::QuantumDialect>();
-
-    // Mark operations legal, that have now equivalent in the new dialect
-    target.addLegalOp<catalyst::quantum::DeviceInitOp>();
-    target.addLegalOp<catalyst::quantum::DeviceReleaseOp>();
-    target.addLegalOp<catalyst::quantum::NamedObsOp>();
-    target.addLegalOp<catalyst::quantum::ExpvalOp>();
-    target.addLegalOp<catalyst::quantum::FinalizeOp>();
-    target.addLegalOp<catalyst::quantum::ComputationalBasisOp>();
-    target.addLegalOp<catalyst::quantum::StateOp>();
+    target.addLegalDialect<catalyst::quantum::QuantumDialect>();
+    target.addIllegalDialect<::mqt::ir::opt::MQTOptDialect>();
 
     RewritePatternSet patterns(context);
-    QuantumToMQTOptTypeConverter typeConverter(context);
+    MQTOptToQuantumTypeConverter typeConverter(context);
 
     patterns.add<ConvertAlloc, ConvertDealloc, ConvertExtract, ConvertInsert,
                  ConvertCustom>(typeConverter, context);

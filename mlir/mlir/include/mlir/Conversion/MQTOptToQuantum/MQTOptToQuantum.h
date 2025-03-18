@@ -7,19 +7,19 @@
  * Licensed under the MIT License
  */
 
-#ifndef LIB_CONVERSION_QUANTUMTOMQTOPT_QUANTUMTOMQTOPT_H_
-#define LIB_CONVERSION_QUANTUMTOMQTOPT_QUANTUMTOMQTOPT_H_
+#ifndef LIB_CONVERSION_MQTOPTTOQUANTUM_MQTOPTTOQUANTUM_H_
+#define LIB_CONVERSION_MQTOPTTOQUANTUM_MQTOPTTOQUANTUM_H_
 
 #include "mlir/Pass/Pass.h" // from @llvm-project
 
 namespace mlir::mqt::ir::conversions {
 
 #define GEN_PASS_DECL
-#include "mlir/Conversion/QuantumToMQTOpt/QuantumToMQTOpt.h.inc"
+#include "mlir/Conversion/MQTOptToQuantum/MQTOptToQuantum.h.inc"
 
 #define GEN_PASS_REGISTRATION
-#include "mlir/Conversion/QuantumToMQTOpt/QuantumToMQTOpt.h.inc"
+#include "mlir/Conversion/MQTOptToQuantum/MQTOptToQuantum.h.inc"
 
 } // namespace mlir::mqt::ir::conversions
 
-#endif // LIB_CONVERSION_QUANTUMTOMQTOPT_QUANTUMTOMQTOPT_H_
+#endif // LIB_CONVERSION_MQTOPTTOQUANTUM_MQTOPTTOQUANTUM_H_
