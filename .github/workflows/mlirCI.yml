@@ -6,6 +6,11 @@ on:
   pull_request:
     paths:
       - "mlir/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   change-detection:
@@ -70,48 +75,6 @@ jobs:
       # General settings
       cmake-args: -DBUILD_MQT_CORE_MLIR=ON
 
-  cpp-coverage:
-    name: 🇨‌ Coverage
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-coverage.yml@v1.7
-
-  cpp-linter:
-    name: 🇨‌ Lint
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@v1.7
-    with:
-      cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON
-
-  python-tests:
-    name: 🐍 Test
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-python-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-ci.yml@v1.7
-    with:
-      # Runs to enable
-      enable-ubuntu2404: true
-      enable-ubuntu2404-arm: true
-
-  python-linter:
-    name: 🐍 Lint
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-python-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-linter.yml@v1.7
-
-  code-ql:
-    name: 📝 CodeQL
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-code-ql)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-code-ql.yml@v1.7
-
-  cd:
-    name: 🚀 CD
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cd)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-python-packaging.yml@v1.7
-
   required-checks-pass: # This job does nothing and is only used for branch protection
     name: 🚦 Check
     if: always()
@@ -119,12 +82,6 @@ jobs:
       - change-detection
       - cpp-tests
       - cpp-tests-extensive
-      - cpp-coverage
-      - cpp-linter
-      - python-tests
-      - python-linter
-      - code-ql
-      - cd
     runs-on: ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
@@ -142,29 +99,5 @@ jobs:
             ${{
               fromJSON(needs.change-detection.outputs.run-cpp-tests)
               && '' || 'cpp-coverage,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-cpp-linter)
-              && '' || 'cpp-linter,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-python-tests)
-              && '' || 'python-tests,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-python-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-python-ci')
-              && '' || 'python-tests-extensive,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-python-tests)
-              && '' || 'python-linter,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-code-ql)
-              && '' || 'code-ql,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-cd)
-              && '' || 'cd,'
             }}
           jobs: ${{ toJSON(needs) }}
