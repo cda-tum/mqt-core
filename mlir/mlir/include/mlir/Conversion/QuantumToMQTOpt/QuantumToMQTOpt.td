@@ -1,0 +1,40 @@
+//===-- Passes.td - Arith pass definition file --------*- tablegen -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LIB_CONVERSION_QUANTUMTOMQTOPT
+#define LIB_CONVERSION_QUANTUMTOMQTOPT
+
+include "mlir/Pass/PassBase.td"
+
+def QuantumToMQTOpt : Pass<"quantum-to-mqtopt"> {
+  let summary = "Lower `quantum` to `mqtopt` dialect.";
+
+  let description = [{
+    This pass lowers the `quantum` to `mqtopt` dialect.
+  }];
+
+  // Declare options here
+  let options = [
+    Option<
+        /*C++ var name=*/"cMap",
+        /*CLI arg name=*/"cmap",
+        /*type=*/"std::string",
+        /*default=*/"",
+        /*description=*/
+        "Coupling map (e.g., adjacency list or matrix)"
+    >
+  ];
+
+  // Define dependent dialects
+  let dependentDialects = [
+    "catalyst::quantum::QuantumDialect",
+    "::mqt::ir::opt::MQTOptDialect"
+  ];
+}
+
+#endif  // LIB_CONVERSION_QUANTUMTOMQTOPT
