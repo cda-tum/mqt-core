@@ -5,7 +5,4 @@
 #
 # Licensed under the MIT License
 
-project(
-  mqt-mlir
-  LANGUAGES C CXX
-  DESCRIPTION "MQT MLIR - Interfacing between the Munich Quantum Toolkit and MLIR")
+add_subdirectory(mlir)

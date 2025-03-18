@@ -108,3 +108,5 @@ else()
       TRUE
       CACHE INTERNAL "True if mqt-core is found on the system")
 endif()
+
+add_subdirectory(mlir)
