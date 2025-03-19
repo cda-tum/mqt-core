@@ -8,7 +8,9 @@
   "include": ["**/*"],
   "style_override_for_suffix": {
     ".pyi": "DOCSTRING_STYLE",
-    ".in": "POUND_STYLE"
+    ".in": "POUND_STYLE",
+    ".mlir": "SLASH_STYLE",
+    ".td": "SLASH_STYLE"
   },
   "exclude": [
     "^\\.[^/]+",
