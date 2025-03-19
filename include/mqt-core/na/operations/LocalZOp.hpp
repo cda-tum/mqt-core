@@ -8,7 +8,7 @@
  */
 
 /** @file
- * @brief Defines a class for representing local RZ operations.
+ * @brief Defines a class for representing local Z operations.
  */
 
 #pragma once
@@ -20,16 +20,16 @@
 #include <vector>
 
 namespace na {
-/// Represents a local RZ operation in the NAComputation.
+/// Represents a local Z operation in the NAComputation.
 class LocalZOp final : public LocalOp {
 public:
-  /// Creates a new RZ operation with the given atoms and angle.
+  /// Creates a new Z operation with the given atoms.
   /// @param atom The atoms the operation is applied to.
   explicit LocalZOp(const std::vector<const Atom*>& atom) : LocalOp(atom, {}) {
     name_ = "z";
   }
 
-  /// Creates a new RZ operation with the given atom and angle.
+  /// Creates a new Z operation with the given atom.
   /// @param atom The atom the operation is applied to.
   explicit LocalZOp(const Atom& atom) : LocalZOp({&atom}) {}
 };

@@ -8,7 +8,7 @@
  */
 
 /** @file
- * @brief Defines a class for representing local RZ operations.
+ * @brief Defines a class for representing local CZ operations.
  */
 
 #pragma once
@@ -21,24 +21,24 @@
 #include <vector>
 
 namespace na {
-/// Represents a local RZ operation in the NAComputation.
+/// Represents a local CZ operation in the NAComputation.
 class LocalCZOp final : public LocalOp {
 public:
-  /// Creates a new RZ operation with the given atoms and angle.
-  /// @param atoms The atoms the operation is applied to.
+  /// Creates a new CZ operation with the given atom pairs.
+  /// @param atoms The atom pairs the operation is applied to.
   explicit LocalCZOp(const std::vector<std::array<const Atom*, 2>>& atoms)
       : LocalOp(atoms, {}) {
     name_ = "cz";
   }
 
-  /// Creates a new RZ operation with the given atom and angle.
-  /// @param atom The atom the operation is applied to.
+  /// Creates a new CZ operation with the given pair of atoms.
+  /// @param atom The pair of atoms the operation is applied to.
   explicit LocalCZOp(const std::array<const Atom*, 2>& atom)
       : LocalCZOp(std::vector{atom}) {}
 
-  /// Creates a new RZ operation with the given atom and angle.
-  /// @param atom1 The atom the operation is applied to.
-  /// @param atom2 The atom the operation is applied to.
+  /// Creates a new CZ operation with the given atom pair.
+  /// @param atom1 The first atom of the pair the operation is applied to.
+  /// @param atom2 The second atom of the pair the operation is applied to.
   explicit LocalCZOp(const Atom& atom1, const Atom& atom2)
       : LocalCZOp(std::vector{std::array{&atom1, &atom2}}) {}
 };

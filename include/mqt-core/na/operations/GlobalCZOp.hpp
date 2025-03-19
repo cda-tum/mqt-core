@@ -56,7 +56,7 @@ public:
       const auto& [loc1, atom1] = *it1;
       for (auto it2 = std::next(it1); it2 != affectedAtoms.cend(); ++it2) {
         const auto& [loc2, atom2] = *it2;
-        if ((loc1 - loc2).length() <= rydbergRange) {
+        if (Location::distance(loc1, loc2) <= rydbergRange) {
           atomPairs.emplace_back(std::array{atom1, atom2});
         }
       }

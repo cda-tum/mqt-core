@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
+/** @file
+ * @brief Defines a class for representing local U3 operations.
+ */
+
+#pragma once
+
+#include "Definitions.hpp"
+#include "na/entities/Atom.hpp"
+#include "na/operations/LocalOp.hpp"
+
+#include <string>
+#include <vector>
+
+namespace na {
+/// Represents a local U3 operation in the NAComputation.
+class LocalUOp final : public LocalOp {
+public:
+  /// Creates a new U3 operation with the given atoms and angles.
+  /// @param atom The atoms the operation is applied to.
+  /// @param theta The first parameter of the operation.
+  /// @param phi The second parameter of the operation.
+  /// @param lambda The third parameter of the operation.
+  LocalUOp(const std::vector<const Atom*>& atom, const qc::fp theta,
+           const qc::fp phi, const qc::fp lambda)
+      : LocalOp(atom, {theta, phi, lambda}) {
+    name_ = "u";
+  }
+
+  /// Creates a new U3 operation with the given atom and angle.
+  /// @param atom The atom the operation is applied to.
+  /// @param theta The first parameter of the operation.
+  /// @param phi The second parameter of the operation.
+  /// @param lambda The third parameter of the operation.
+  LocalUOp(const Atom& atom, const qc::fp theta, const qc::fp phi,
+           const qc::fp lambda)
+      : LocalUOp({&atom}, theta, phi, lambda) {}
+};
+} // namespace na

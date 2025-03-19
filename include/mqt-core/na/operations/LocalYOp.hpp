@@ -8,7 +8,7 @@
  */
 
 /** @file
- * @brief Defines a class for representing local RZ operations.
+ * @brief Defines a class for representing local Y operations.
  */
 
 #pragma once
@@ -20,16 +20,16 @@
 #include <vector>
 
 namespace na {
-/// Represents a local RZ operation in the NAComputation.
+/// Represents a local Y operation in the NAComputation.
 class LocalYOp final : public LocalOp {
 public:
-  /// Creates a new RZ operation with the given atoms and angle.
+  /// Creates a new Y operation with the given atoms.
   /// @param atom The atoms the operation is applied to.
   explicit LocalYOp(const std::vector<const Atom*>& atom) : LocalOp(atom, {}) {
     name_ = "y";
   }
 
-  /// Creates a new RZ operation with the given atom and angle.
+  /// Creates a new Y operation with the given atom.
   /// @param atom The atom the operation is applied to.
   explicit LocalYOp(const Atom& atom) : LocalYOp({&atom}) {}
 };
