@@ -5,8 +5,6 @@
 #
 # Licensed under the MIT License
 
-# pylint: disable=undefined-variable
-
 # ruff: noqa: INP001
 
 """LIT Configuration file for the MQT MLIR test suite.
@@ -28,7 +26,7 @@ if config is None:
     raise RuntimeError(msg)
 
 config.name = "MQT MLIR test suite"
-config.test_format = lit.formats.ShTest(True)  # noqa: FBT003
+config.test_format = lit.formats.ShTest(execute_external=True)
 
 # Define the file extensions to treat as test files.
 config.suffixes = [".mlir"]
