@@ -11,16 +11,15 @@
 
 #include "na/entities/Atom.hpp"
 #include "na/entities/Location.hpp"
+#include "na/operations/GlobalOp.hpp"
 #include "na/operations/LoadOp.hpp"
 #include "na/operations/LocalOp.hpp"
-#include "na/operations/MoveOp.hpp"
 #include "na/operations/Op.hpp"
 #include "na/operations/ShuttlingOp.hpp"
 #include "na/operations/StoreOp.hpp"
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
@@ -35,14 +34,16 @@ auto NAComputation::getLocationOfAtomAfterOperation(const Atom& atom,
     -> Location {
   auto currentLocation = initialLocations_.at(&atom);
   for (const auto& opUniquePtr : operations_) {
-    if (opUniquePtr->is<MoveOp>()) {
-      const auto& moveOp = opUniquePtr->as<MoveOp>();
-      const auto& opAtoms = moveOp.getAtoms();
-      const auto& targetLocations = moveOp.getTargetLocations();
-      for (std::size_t k = 0; k < opAtoms.size(); ++k) {
-        if (opAtoms[k] == &atom) {
-          currentLocation = targetLocations[k];
-          break;
+    if (opUniquePtr->is<ShuttlingOp>()) {
+      if (const auto& shuttlingOp = opUniquePtr->as<ShuttlingOp>();
+          shuttlingOp.hasTargetLocations()) {
+        const auto& opAtoms = shuttlingOp.getAtoms();
+        const auto& targetLocations = shuttlingOp.getTargetLocations();
+        for (std::size_t k = 0; k < opAtoms.size(); ++k) {
+          if (opAtoms[k] == &atom) {
+            currentLocation = targetLocations[k];
+            break;
+          }
         }
       }
     }
@@ -223,10 +224,10 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
       // Local Operations
       //===----------------------------------------------------------------===//
       const auto& opAtoms = op->as<LocalOp>().getAtoms();
-      for (std::size_t i = 0; i < opAtoms.size(); ++i) {
-        const auto* a = opAtoms[i];
-        for (std::size_t j = i + 1; j < opAtoms.size(); ++j) {
-          if (const auto* b = opAtoms[j]; a == b) {
+      std::unordered_set<const Atom*> usedAtoms;
+      for (const auto& atoms : opAtoms) {
+        for (const auto* const atom : atoms) {
+          if (!usedAtoms.emplace(atom).second) {
             ss << "Error in op number " << counter
                << " (two atoms identical)\n";
             return {false, ss.str()};
@@ -236,5 +237,24 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
     }
   }
   return {true, ""};
+}
+auto NAComputation::convertToLocalGates(const double rydbergRadius) -> void {
+  auto currentLocations = initialLocations_;
+  for (auto& operation : operations_) {
+    // update current locations
+    if (operation->is<ShuttlingOp>()) {
+      if (const auto& shuttlingOp = operation->as<ShuttlingOp>();
+          shuttlingOp.hasTargetLocations()) {
+        const auto& opAtoms = shuttlingOp.getAtoms();
+        const auto& targetLocations = shuttlingOp.getTargetLocations();
+        for (std::size_t k = 0; k < opAtoms.size(); ++k) {
+          currentLocations[opAtoms[k]] = targetLocations[k];
+        }
+      }
+    } else if (operation->is<GlobalOp>()) {
+      operation =
+          operation->as<GlobalOp>().toLocal(currentLocations, rydbergRadius);
+    }
+  }
 }
 } // namespace na

@@ -8,34 +8,33 @@
  */
 
 /** @file
- * @brief Defines a class for representing global RY operations.
+ * @brief Defines a class for representing global RZ operations.
  */
 
 #pragma once
 
 #include "Definitions.hpp"
 #include "LocalOp.hpp"
-#include "LocalRYOp.hpp"
+#include "LocalRZOp.hpp"
 #include "na/entities/Atom.hpp"
 #include "na/entities/Location.hpp"
 #include "na/entities/Zone.hpp"
 #include "na/operations/GlobalOp.hpp"
 
-#include <algorithm>
 #include <map>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 namespace na {
-/// Represents a global RY operation in the NAComputation.
-class GlobalRYOp final : public GlobalOp {
+/// Represents a global RZ operation in the NAComputation.
+class GlobalRZOp final : public GlobalOp {
 public:
-  /// Creates a new RY operation in the given zone with the given angle.
+  /// Creates a new RZ operation in the given zone with the given angle.
   /// @param zone The zone the operation is applied to.
   /// @param angle The angle of the operation.
-  GlobalRYOp(const Zone& zone, qc::fp angle) : GlobalOp(zone, {angle}) {
-    name_ = "ry";
+  GlobalRZOp(const Zone& zone, qc::fp angle) : GlobalOp(zone, {angle}) {
+    name_ = "rz";
   }
 
   /// Returns a local representation of the operation.
@@ -51,15 +50,12 @@ public:
       sortedAtoms.emplace(loc, atom);
     }
     std::vector<const Atom*> affectedAtoms;
-    for (const auto& atomLoc : sortedAtoms) {
-      if (std::any_of(zones_.cbegin(), zones_.cend(),
-                      [&atomLoc](const Zone* zone) {
-                        return zone->contains(atomLoc.first);
-                      })) {
-        affectedAtoms.emplace_back(atomLoc.second);
+    for (const auto& [loc, atom] : sortedAtoms) {
+      if (zone_->contains(loc)) {
+        affectedAtoms.emplace_back(atom);
       }
     }
-    return std::make_unique<LocalRYOp>(affectedAtoms, params_.front());
+    return std::make_unique<LocalRZOp>(affectedAtoms, params_.front());
   }
 };
 } // namespace na

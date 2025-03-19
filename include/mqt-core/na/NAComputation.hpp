@@ -106,10 +106,12 @@ public:
 
   /// Emplaces a new zone with the given name and returns a reference to the
   /// newly created zone.
-  /// @param name The name of the zone.
+  /// @param args The name of the zone and, optionally, the extent of the zone.
   /// @return A reference to the newly created zone.
-  auto emplaceBackZone(std::string name) -> const Zone& {
-    return *zones_.emplace_back(std::make_unique<Zone>(std::move(name)));
+  template <typename... Args>
+  auto emplaceBackZone(Args&&... args) -> const Zone& {
+    return *zones_.emplace_back(
+        std::make_unique<Zone>(std::forward<Args>(args)...));
   }
 
   /// Emplaces a new initial location for the given atom with the given location
@@ -178,5 +180,11 @@ public:
   /// @returns a pair of a Boolean indicating whether the NAComputation is valid
   /// and a string containing the error message if the NAComputation is invalid.
   [[nodiscard]] auto validate() const -> std::pair<bool, std::string>;
+
+  /// Calculates the position of each atom at every stage and replaces global
+  /// gates by local gates with the atoms that are affected by the global gate.
+  /// @param rydbergRadius The range of the Rydberg interaction.
+  /// @note There is no way back after this function has been called.
+  auto convertToLocalGates(double rydbergRadius) -> void;
 };
 } // namespace na

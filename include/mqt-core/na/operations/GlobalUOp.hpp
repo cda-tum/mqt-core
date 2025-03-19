@@ -8,7 +8,7 @@
  */
 
 /** @file
- * @brief Defines a class for representing global RY operations.
+ * @brief Defines a class for representing global U3 operations.
  */
 
 #pragma once
@@ -21,21 +21,21 @@
 #include "na/entities/Zone.hpp"
 #include "na/operations/GlobalOp.hpp"
 
-#include <algorithm>
 #include <map>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 namespace na {
-/// Represents a global RY operation in the NAComputation.
-class GlobalRYOp final : public GlobalOp {
+/// Represents a global U3 operation in the NAComputation.
+class GlobalUOp final : public GlobalOp {
 public:
   /// Creates a new RY operation in the given zone with the given angle.
   /// @param zone The zone the operation is applied to.
   /// @param angle The angle of the operation.
-  GlobalRYOp(const Zone& zone, qc::fp angle) : GlobalOp(zone, {angle}) {
-    name_ = "ry";
+  GlobalUOp(const Zone& zone, qc::fp theta, qc::fp phi, qc::fp lambda)
+      : GlobalOp(zone, {theta, phi, lambda}) {
+    name_ = "u";
   }
 
   /// Returns a local representation of the operation.
@@ -51,12 +51,9 @@ public:
       sortedAtoms.emplace(loc, atom);
     }
     std::vector<const Atom*> affectedAtoms;
-    for (const auto& atomLoc : sortedAtoms) {
-      if (std::any_of(zones_.cbegin(), zones_.cend(),
-                      [&atomLoc](const Zone* zone) {
-                        return zone->contains(atomLoc.first);
-                      })) {
-        affectedAtoms.emplace_back(atomLoc.second);
+    for (const auto& [loc, atom] : sortedAtoms) {
+      if (zone_->contains(loc)) {
+        affectedAtoms.emplace_back(atom);
       }
     }
     return std::make_unique<LocalRYOp>(affectedAtoms, params_.front());
