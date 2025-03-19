@@ -30,10 +30,12 @@
 namespace qc {
 
 // Overload pattern for std::visit
+namespace {
 template <typename... Ts> struct Overload : Ts... {
   using Ts::operator()...;
 };
 template <class... Ts> Overload(Ts...) -> Overload<Ts...>;
+} // namespace
 
 void SymbolicOperation::storeSymbolOrNumber(const SymbolOrNumber& param,
                                             const std::size_t i) {
@@ -257,6 +259,7 @@ SymbolOrNumber SymbolicOperation::getParameter(const std::size_t i) const {
 }
 std::vector<SymbolOrNumber> SymbolicOperation::getParameters() const {
   std::vector<SymbolOrNumber> params{};
+  params.reserve(parameter.size());
   for (std::size_t i = 0; i < parameter.size(); ++i) {
     params.emplace_back(getParameter(i));
   }

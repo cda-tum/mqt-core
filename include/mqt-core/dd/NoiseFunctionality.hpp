@@ -90,9 +90,9 @@ public:
                            vEdge& state, std::mt19937_64& generator);
 
 protected:
-  [[nodiscard]] mEdge stackOperation(mEdge operation, qc::Qubit target,
+  [[nodiscard]] mEdge stackOperation(const mEdge& operation, qc::Qubit target,
                                      qc::OpType noiseOperation,
-                                     GateMatrix matrix);
+                                     const GateMatrix& matrix) const;
 
   mEdge generateNoiseOperation(mEdge operation, qc::Qubit target,
                                std::mt19937_64& generator,
@@ -135,9 +135,9 @@ private:
 
   static void applyPhaseFlipToEdges(ArrayOfEdges& e, double probability);
 
-  void applyAmplitudeDampingToEdges(ArrayOfEdges& e, double probability);
+  void applyAmplitudeDampingToEdges(ArrayOfEdges& e, double probability) const;
 
-  void applyDepolarisationToEdges(ArrayOfEdges& e, double probability);
+  void applyDepolarisationToEdges(ArrayOfEdges& e, double probability) const;
 };
 
 } // namespace dd

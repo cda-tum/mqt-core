@@ -159,7 +159,7 @@ std::ostream& CompoundOperation::print(std::ostream& os,
     op->print(os, permutation, prefixWidth, nqubits);
     os << "\n";
   }
-  os << prefix << std::string(4 * nqubits + 1, '-');
+  os << prefix << std::string((4 * nqubits) + 1, '-');
   return os;
 }
 

@@ -12,6 +12,7 @@
 #include "Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
+#include "ir/operations/Control.hpp"
 #include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
@@ -35,16 +36,18 @@
 #include <vector>
 
 namespace qc {
+namespace {
 void addToDag(CircuitOptimizer::DAG& dag, std::unique_ptr<Operation>* op) {
   const auto usedQubits = (*op)->getUsedQubits();
   for (const auto q : usedQubits) {
     dag.at(q).push_back(op);
   }
 }
+} // namespace
 
 void CircuitOptimizer::removeIdentities(QuantumComputation& qc) {
   // delete the identities from circuit
-  CircuitOptimizer::removeOperation(qc, {I}, 0);
+  removeOperation(qc, {I}, 0);
 }
 
 void CircuitOptimizer::removeOperation(
@@ -268,6 +271,7 @@ void CircuitOptimizer::singleQubitGateFusion(QuantumComputation& qc) {
   removeIdentities(qc);
 }
 
+namespace {
 bool removeDiagonalGate(CircuitOptimizer::DAG& dag,
                         CircuitOptimizer::DAGReverseIterators& dagIterators,
                         Qubit idx, CircuitOptimizer::DAGReverseIterator& it,
@@ -321,7 +325,7 @@ void removeDiagonalGatesBeforeMeasureRecursive(
       bool onlyDiagonalGates = true;
       auto cit = compOp->rbegin();
       while (cit != compOp->rend()) {
-        auto* cop = (*cit).get();
+        auto* cop = cit->get();
         onlyDiagonalGates = removeDiagonalGate(dag, dagIterators, idx, it, cop);
         if (!onlyDiagonalGates) {
           break;
@@ -433,6 +437,7 @@ bool removeDiagonalGate(CircuitOptimizer::DAG& dag,
   op->setGate(I);
   return true;
 }
+} // namespace
 
 void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
     QuantumComputation& qc) {
@@ -456,9 +461,11 @@ void CircuitOptimizer::removeDiagonalGatesBeforeMeasure(
   removeIdentities(qc);
 }
 
+namespace {
 bool removeFinalMeasurement(CircuitOptimizer::DAG& dag,
                             CircuitOptimizer::DAGReverseIterators& dagIterators,
-                            Qubit idx, CircuitOptimizer::DAGReverseIterator& it,
+                            Qubit idx,
+                            const CircuitOptimizer::DAGReverseIterator& it,
                             Operation* op);
 
 void removeFinalMeasurementsRecursive(
@@ -503,7 +510,7 @@ void removeFinalMeasurementsRecursive(
       bool onlyMeasurement = true;
       auto cit = compOp->rbegin();
       while (cit != compOp->rend()) {
-        auto* cop = (*cit).get();
+        auto* cop = cit->get();
         if (cop->getNtargets() > 0 && cop->getTargets()[0] != idx) {
           ++cit;
           continue;
@@ -532,7 +539,8 @@ void removeFinalMeasurementsRecursive(
 
 bool removeFinalMeasurement(CircuitOptimizer::DAG& dag,
                             CircuitOptimizer::DAGReverseIterators& dagIterators,
-                            Qubit idx, CircuitOptimizer::DAGReverseIterator& it,
+                            const Qubit idx,
+                            const CircuitOptimizer::DAGReverseIterator& it,
                             Operation* op) {
   if (op->getNtargets() != 0) {
     // need to check all targets
@@ -566,6 +574,7 @@ bool removeFinalMeasurement(CircuitOptimizer::DAG& dag,
   }
   return false;
 }
+} // namespace
 
 void CircuitOptimizer::removeFinalMeasurements(QuantumComputation& qc) {
   auto dag = constructDAG(qc);
@@ -643,9 +652,7 @@ void CircuitOptimizer::decomposeSWAP(QuantumComputation& qc,
   }
 }
 
-void CircuitOptimizer::decomposeTeleport(
-    [[maybe_unused]] QuantumComputation& qc) {}
-
+namespace {
 void changeTargets(Targets& targets,
                    const std::map<Qubit, Qubit>& replacementMap) {
   for (auto& target : targets) {
@@ -672,6 +679,7 @@ void changeControls(Controls& controls,
     }
   }
 }
+} // namespace
 
 void CircuitOptimizer::eliminateResets(QuantumComputation& qc) {
   //      ┌───┐┌─┐     ┌───┐┌─┐            ┌───┐┌─┐ ░
@@ -807,7 +815,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
         }
 
         if (const auto* measurement2 =
-                dynamic_cast<NonUnitaryOperation*>((*opIt).get());
+                dynamic_cast<NonUnitaryOperation*>(opIt->get());
             measurement2 != nullptr && operation->getType() == Measure) {
           const auto& targets2 = measurement2->getTargets();
           const auto& classics2 = measurement2->getClassics();
@@ -939,7 +947,7 @@ void CircuitOptimizer::printDAG(const DAG& dag) {
   for (const auto& qubitDag : dag) {
     std::cout << " - ";
     for (const auto& op : qubitDag) {
-      std::cout << std::hex << (*op).get() << std::dec << "("
+      std::cout << std::hex << op->get() << std::dec << "("
                 << toString((*op)->getType()) << ") - ";
     }
     std::cout << "\n";
@@ -949,13 +957,14 @@ void CircuitOptimizer::printDAG(const DAG& dag, const DAGIterators& iterators) {
   for (std::size_t i = 0; i < dag.size(); ++i) {
     std::cout << " - ";
     for (auto it = iterators.at(i); it != dag.at(i).end(); ++it) {
-      std::cout << std::hex << (**it).get() << std::dec << "("
+      std::cout << std::hex << (*it)->get() << std::dec << "("
                 << toString((**it)->getType()) << ") - ";
     }
     std::cout << "\n";
   }
 }
 
+namespace {
 using Iterator = QuantumComputation::iterator;
 void flattenCompoundOperation(QuantumComputation& qc, Iterator& it) {
   assert((*it)->isCompoundOperation());
@@ -982,6 +991,7 @@ void flattenCompoundOperation(QuantumComputation& qc, Iterator& it) {
   // move the general iterator back to the position of the last moved operation
   std::advance(it, -movedOperations);
 }
+} // namespace
 
 void CircuitOptimizer::flattenOperations(QuantumComputation& qc,
                                          bool customGatesOnly) {
@@ -1161,6 +1171,7 @@ void CircuitOptimizer::cancelCNOTs(QuantumComputation& qc) {
   removeIdentities(qc);
 }
 
+namespace {
 void replaceMCXWithMCZ(
     Iterator begin, const std::function<Iterator()>& end,
     const std::function<Iterator(Iterator, std::unique_ptr<Operation>&&)>&
@@ -1195,6 +1206,7 @@ void replaceMCXWithMCZ(
     }
   }
 }
+} // namespace
 
 void CircuitOptimizer::replaceMCXWithMCZ(QuantumComputation& qc) {
   ::qc::replaceMCXWithMCZ(
@@ -1205,6 +1217,7 @@ void CircuitOptimizer::replaceMCXWithMCZ(QuantumComputation& qc) {
       [&qc](auto it) { return qc.erase(it); });
 }
 
+namespace {
 using ConstReverseIterator = QuantumComputation::const_reverse_iterator;
 void backpropagateOutputPermutation(
     const ConstReverseIterator& rbegin, const ConstReverseIterator& rend,
@@ -1273,6 +1286,7 @@ void backpropagateOutputPermutation(
     }
   }
 }
+} // namespace
 
 void CircuitOptimizer::backpropagateOutputPermutation(QuantumComputation& qc) {
   auto permutation = qc.outputPermutation;
@@ -1579,6 +1593,7 @@ void CircuitOptimizer::collectBlocks(QuantumComputation& qc,
   removeIdentities(qc);
 }
 
+namespace {
 void elidePermutations(Iterator begin, const std::function<Iterator()>& end,
                        const std::function<Iterator(Iterator)>& erase,
                        Permutation& permutation) {
@@ -1618,6 +1633,7 @@ void elidePermutations(Iterator begin, const std::function<Iterator()>& end,
     ++it;
   }
 }
+} // namespace
 
 void CircuitOptimizer::elidePermutations(QuantumComputation& qc) {
   if (qc.empty()) {
