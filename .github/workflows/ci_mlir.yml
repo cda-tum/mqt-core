@@ -64,6 +64,8 @@ jobs:
       # set up uv for faster Python package management
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
+        with:
+          python-version: 3.13
 
       # make sure ninja is installed
       - name: Install Ninja
