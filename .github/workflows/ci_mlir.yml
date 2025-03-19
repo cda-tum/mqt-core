@@ -69,9 +69,18 @@ jobs:
       - name: Install Ninja
         run: uv tool install ninja
 
+      # make sure the lit test runner is installed
+      - name: Install lit
+        run: uv pip install lit
+
+      # configure the project with CMake
       - name: Configure CMake for MLIR
         run: |
-          cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_MQT_CORE_MLIR=ON
+          cmake -G Ninja -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_MQT_CORE_MLIR=ON \
+            -DLLVM_EXTERNAL_LIT=.venv/bin/lit
 
+      # build the project and run the tests
       - name: Build MLIR components and directly run lit tests
         run: cmake --build build --config Release --target check-quantum-opt
