@@ -156,20 +156,38 @@ public:
   [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }
 
   [[nodiscard]] virtual bool isClifford() const {
-    static const std::unordered_set<std::string> cliffordGateNames = {
-    "X",    // Pauli-X
-    "Y",    // Pauli-Y
-    "Z",    // Pauli-Z
-    "H",    // Hadamard
-    "S",    // Phase gate
-    "Sdag", // Inverse phase gate
-    "CNOT",
-    "CZ",
-    "SWAP"  // Often SWAP is Clifford, but include only if your usage agrees
-  };
-
-  const std::string opName = this->getName();
-  return (cliffordGateNames.find(opName) != cliffordGateNames.end());}
+    OpType opType = this->getType();
+    bool controlled = this->isControlled();
+    std::size_t number_of_controls = this->getNcontrols();
+    std::size_t number_of_targets = this->getNtargets();
+    switch (opType) {
+      case I:
+      case X:
+        if  ((controlled) && ((number_of_controls >= 2))){
+          return false;
+        }
+      case Y:
+        if  ((controlled) && ((number_of_controls >= 2))){
+          return false;
+        }
+      case Z:
+        if  ((controlled) && ((number_of_controls >= 2))){
+          return false;
+        }
+      case H:
+      case S:
+      case Sdg:
+      case SX:
+      case SXdg:
+      case DCX:
+      case SWAP:
+      case iSWAP:
+      case ECR:
+        return true;
+      default:
+        return false;
+      }
+}
 
   /**
    * @brief Checks whether a gate is global.
