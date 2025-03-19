@@ -124,7 +124,7 @@ jobs:
     uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@update-cpp-linter
     with:
       cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON -DBUILD_MQT_CORE_MLIR=ON
-      clang-version: 19
+      clang-version: 20
       files-changed-only: false # remove after testing
 
   python-tests:
