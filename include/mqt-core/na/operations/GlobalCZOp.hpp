@@ -23,17 +23,15 @@ namespace na {
 /// Represents a global CZ operation in the NAComputation.
 class GlobalCZOp final : public GlobalOp {
 public:
-  /// Creates a new CZ operation in the given zone.
-  /// @param zone The zone the operation is applied to.
-  explicit GlobalCZOp(const Zone& zone) : GlobalOp({&zone}, {}) {
-    name_ = "cz";
-  }
-
   /// Creates a new CZ operation in the given zones.
   /// @param zones The zones the operation is applied to.
   explicit GlobalCZOp(std::vector<const Zone*> zones)
       : GlobalOp(std::move(zones), {}) {
     name_ = "cz";
   }
+
+  /// Creates a new CZ operation in the given zone.
+  /// @param zone The zone the operation is applied to.
+  explicit GlobalCZOp(const Zone& zone) : GlobalCZOp({&zone}) {}
 };
 } // namespace na
