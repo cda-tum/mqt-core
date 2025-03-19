@@ -81,7 +81,7 @@ jobs:
           cmake -G Ninja -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_MQT_CORE_MLIR=ON \
-            -DLLVM_EXTERNAL_LIT=.venv/bin/lit
+            -DLLVM_EXTERNAL_LIT=$(which lit)
 
       # build the project and run the tests
       - name: Build MLIR components and directly run lit tests
