@@ -6,6 +6,34 @@ on:
   pull_request:
     paths:
       - "mlir/**"
+  workflow_call:
+    inputs:
+      runs-on:
+        description: >
+          The ubuntu runner image to use. Defaults to 'ubuntu-latest'.
+          This can be any valid ubuntu runner image, such as 'ubuntu-22.04', 'ubuntu-24.04', or their ARM variants 'ubuntu-22.04-arm', 'ubuntu-24.04-arm'.
+        default: "ubuntu-latest"
+        type: string
+      config:
+        description: >
+          The build type to use. Defaults to 'Release'.
+          This can be any valid CMake build type, such as 'Debug' or 'Release'.
+        default: "Release"
+        type: string
+      compiler:
+        description: >
+          The compiler to use. Defaults to 'gcc'.
+          This can be 'gcc' or 'clang'.
+          If 'gcc' is selected, this will use the default GCC compiler.
+          If 'clang' is selected, this will use the default Clang compiler.
+        default: "gcc"
+        type: string
+      cmake-args:
+        description: >
+          Additional arguments to pass to CMake. Defaults to an empty string.
+          This can be any valid CMake argument, such as '-DBUILD_SHARED_LIBS=ON' or '-DMLIR_DIR=/path/to/mlir'.
+        default: ""
+        type: string
   workflow_dispatch:
 
 concurrency:
@@ -13,91 +41,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  change-detection:
-    name: 🔍 Change
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-change-detection.yml@v1.7
-
-  cpp-tests:
-    name: 🇨‌ Test
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.7
-    with:
-      # Runs to enable
-      enable-ubuntu2404-gcc-release: true
-      enable-ubuntu2404-arm-gcc-release: true
-      # Runs to disable
-      enable-ubuntu2404-gcc-debug: false
-      enable-ubuntu2404-clang-release: false
-      enable-ubuntu2404-clang-debug: false
-      enable-ubuntu2404-arm-gcc-debug: false
-      enable-ubuntu2404-arm-clang-release: false
-      enable-ubuntu2404-arm-clang-debug: false
-      # General settings
-      cmake-args-macos: -DMQT_CORE_WITH_GMP=ON
-
-  # run extensive C++ tests whenever this is on a PR and the PR has the `extensive-cpp-ci` label
-  cpp-tests-extensive:
-    name: 🇨‌ Test (Extensive)
-    needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.7
-    with:
-      # Runs to enable
-      enable-ubuntu2404-gcc-debug: true
-      enable-ubuntu2404-clang-release: true
-      enable-ubuntu2404-clang-debug: true
-      enable-ubuntu2404-arm-gcc-debug: true
-      enable-ubuntu2404-arm-clang-release: true
-      enable-ubuntu2404-arm-clang-debug: true
-      # Runs to disable (these are already enabled in the non-extensive run)
-      enable-ubuntu2404-gcc-release: false
-      enable-ubuntu2404-arm-gcc-release: false
-      # General settings
-      cmake-args-macos: -DMQT_CORE_WITH_GMP=ON
+  #  Commented this part out for the moment, I think it should be useful to update reusable-change-detection.yml in order
+  #  to test for the mlir part of the project as well.
+  #  change-detection:
+  #    name: 🔍 Change
+  #    uses: cda-tum/mqt-workflows/.github/workflows/reusable-change-detection.yml@v1.7
 
   cpp-test-mlir:
     name: 🇨‌ Test MLIR
-    needs: change-detection
-    # Question: should the parameter in the parentheses be something like *.run-mlir-tests?
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.7
-    with:
-      # Runs to enable
-      enable-ubuntu2404-gcc-debug: true
-      enable-ubuntu2404-gcc-release: true
-      enable-ubuntu2404-clang-debug: true
-      enable-ubuntu2404-clang-release: true
-      enable-ubuntu2404-arm-gcc-debug: true
-      enable-ubuntu2404-arm-gcc-release: true
-      enable-ubuntu2404-arm-clang-debug: true
-      enable-ubuntu2404-arm-clang-release: true
-      # General settings
-      cmake-args: -DBUILD_MQT_CORE_MLIR=ON
-
-  required-checks-pass: # This job does nothing and is only used for branch protection
-    name: 🚦 Check
-    if: always()
-    needs:
-      - change-detection
-      - cpp-tests
-      - cpp-tests-extensive
+    #    needs: change-detection
+    #    if: fromJSON(needs.change-detection.outputs.run-mlir-tests)
+    #    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.7
     runs-on: ubuntu-latest
     steps:
-      - name: Decide whether the needed jobs succeeded or failed
-        uses: re-actors/alls-green@release/v1
-        with:
-          allowed-skips: >-
-            ${{
-              fromJSON(needs.change-detection.outputs.run-cpp-tests)
-              && '' || 'cpp-tests,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-cpp-tests) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
-              && '' || 'cpp-tests-extensive,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-cpp-tests)
-              && '' || 'cpp-coverage,'
-            }}
-          jobs: ${{ toJSON(needs) }}
+      - name: Install MLIR
+        run: |
+          sudo apt update
+          sudo apt install -y mlir
+
+      - name: Configure CMake for MLIR
+        run: |
+          cmake -G Ninja -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DMLIR_DIR=${MLIR_DIR} \
+            -DLLVM_DIR=${LLVM_DIR} \
+            -DBUILD_MQT_CORE_MLIR=ON
+
+      - name: Build MLIR components
+        run: cmake --build build --config Release
+#      - name: Run MLIR Tests
+#        run: TODO

@@ -6,22 +6,36 @@
 # Licensed under the MIT License
 
 # pylint: disable=undefined-variable
+
+# ruff: noqa: INP001
+
+"""LIT Configuration file for the MQT MLIR test suite.
+
+This file configures the LLVM LIT testing infrastructure for MLIR dialect tests.
+"""
+
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 import lit.formats
 from lit.llvm import llvm_config
 
+# Use `lit_config` to access `config` from lit.site.cfg.py
+config = globals().get("config")
+if config is None:
+    msg = "LIT config object is missing. Ensure lit.site.cfg.py is loaded first."
+    raise RuntimeError(msg)
+
 config.name = "MQT MLIR test suite"
-config.test_format = lit.formats.ShTest(True)
+config.test_format = lit.formats.ShTest(True)  # noqa: FBT003
 
 # Define the file extensions to treat as test files.
 config.suffixes = [".mlir"]
 config.excludes = ["lit.cfg.py"]
 
 # Define the root path of where to look for tests.
-config.test_source_root = os.path.dirname(__file__)
+config.test_source_root = Path(__file__).parent
 
 # Define where to execute tests (and produce the output).
 config.test_exec_root = getattr(config, "quantum_test_dir", ".lit")
