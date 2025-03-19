@@ -101,6 +101,7 @@ sdist-only = ["src/mqt/core/_version.py"]
 git-only = [
     "docs/*",
     "test/*",
+    "mlir/*",
 ]
 
 [tool.scikit-build.cmake.define]
