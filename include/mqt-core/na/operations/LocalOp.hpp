@@ -57,9 +57,5 @@ private:
   /// Print the parameters of the operation to the output stream.
   static auto printParams(const std::vector<qc::fp>& params, std::ostream& os)
       -> void;
-
-  /// Print the atoms of the operation to the output stream.
-  static auto printAtoms(const std::vector<const Atom*>& atoms,
-                         std::ostream& os) -> void;
 };
 } // namespace na
