@@ -13,15 +13,15 @@
 
 #pragma once
 
-#include "Location.hpp"
-
 #include <optional>
 #include <ostream>
-#include <stdexcept>
 #include <string>
 #include <utility>
 
 namespace na {
+
+struct Location;
+
 /// Represents a zone in the NAComputation.
 /// @details The name of the zone is used for printing the NAComputation.
 /// To maintain the uniqueness of zones, the name of the zone should be unique
@@ -64,13 +64,7 @@ public:
   /// Sets the extent of the zone.
   void setExtent(const Extent& extent) { extent_ = extent; }
 
-  [[nodiscard]] auto contains(const Location& location) const -> bool {
-    if (!extent_) {
-      throw std::runtime_error("Zone's extent is not set.");
-    }
-    return extent_->minX <= location.x && location.x <= extent_->maxX &&
-           extent_->minY <= location.y && location.y <= extent_->maxY;
-  }
+  [[nodiscard]] auto contains(const Location& location) const -> bool;
 
   /// Prints the zone to the given output stream.
   /// @param os The output stream to print the zone to.
