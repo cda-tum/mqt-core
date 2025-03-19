@@ -47,6 +47,8 @@ jobs:
           fi
           echo "CC=clang-${{ env.llvm-version }}" >> $GITHUB_ENV
           echo "CXX=clang++-${{ env.llvm-version }}" >> $GITHUB_ENV
+          echo "MLIR_DIR=/usr/lib/llvm-${{ env.llvm-version }}/lib/cmake/mlir" >> $GITHUB_ENV
+          echo "LLVM_DIR=/usr/lib/llvm-${{ env.llvm-version }}/lib/cmake/llvm" >> $GITHUB_ENV
 
       # set up ccache for faster C++ builds
       - name: Setup ccache
