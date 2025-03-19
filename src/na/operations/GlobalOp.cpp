@@ -24,7 +24,7 @@ auto GlobalOp::toString() const -> std::string {
       ss << " " << p;
     }
   }
-  ss << " " << *zone_;
+  ss << " " << *zones_;
   return ss.str();
 }
 } // namespace na

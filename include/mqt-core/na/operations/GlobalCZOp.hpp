@@ -20,6 +20,7 @@
 #include "na/entities/Zone.hpp"
 #include "na/operations/GlobalOp.hpp"
 
+#include <algorithm>
 #include <array>
 #include <iterator>
 #include <map>
@@ -35,6 +36,13 @@ public:
   /// @param zone The zone the operation is applied to.
   explicit GlobalCZOp(const Zone& zone) : GlobalOp(zone, {}) { name_ = "cz"; }
 
+  /// Creates a new CZ operation in the given zones.
+  /// @param zones The zones the operation is applied to.
+  explicit GlobalCZOp(const std::vector<const Zone*>& zones)
+      : GlobalOp(zones, {}) {
+    name_ = "cz";
+  }
+
   /// Returns a local representation of the operation.
   /// @param atomsLocations The locations of the atoms.
   /// @param rydbergRange The range of the Rydberg interaction.
@@ -46,7 +54,9 @@ public:
     // of the atoms
     std::map<Location, const Atom*> affectedAtoms;
     for (const auto& [atom, loc] : atomsLocations) {
-      if (zone_->contains(loc)) {
+      if (std::any_of(zones_.cbegin(), zones_.cend(), [&loc](const Zone* zone) {
+            return zone->contains(loc);
+          })) {
         affectedAtoms.emplace(loc, atom);
       }
     }

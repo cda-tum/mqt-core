@@ -51,7 +51,7 @@ public:
     }
     std::vector<const Atom*> affectedAtoms;
     for (const auto& [loc, atom] : sortedAtoms) {
-      if (zone_->contains(loc)) {
+      if (zones_->contains(loc)) {
         affectedAtoms.emplace_back(atom);
       }
     }
