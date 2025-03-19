@@ -9,22 +9,42 @@
 
 #include "na/operations/GlobalOp.hpp"
 
+#include "Definitions.hpp"
+
 #include <iomanip>
 #include <ios>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace na {
-auto GlobalOp::toString() const -> std::string {
-  std::stringstream ss;
-  ss << std::setprecision(5) << std::fixed;
-  ss << "@+ " << name_;
-  if (!params_.empty()) {
-    for (const auto& p : params_) {
-      ss << " " << p;
+namespace {
+auto printParams(const std::vector<qc::fp>& params, std::ostringstream& os)
+    -> void {
+  if (!params.empty()) {
+    for (const auto& p : params) {
+      os << p << " ";
     }
   }
-  ss << " " << *zone_;
+}
+} // namespace
+
+auto GlobalOp::toString() const -> std::string {
+  std::ostringstream ss;
+  ss << std::setprecision(5) << std::fixed;
+  ss << "@+ " << name_ << " ";
+  if (zones_.size() == 1) {
+    printParams(params_, ss);
+    ss << *zones_.front();
+    return ss.str();
+  }
+  ss << "[\n";
+  for (const auto& atom : zones_) {
+    ss << "    ";
+    printParams(params_, ss);
+    ss << *atom << "\n";
+  }
+  ss << "]";
   return ss.str();
 }
 } // namespace na
