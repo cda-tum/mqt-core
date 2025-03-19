@@ -54,19 +54,19 @@ public:
                                << paramsMask->size() << " entries";
       }
       if (paramsMask.has_value()) {
-        const auto true_entries = static_cast<std::size_t>(std::count_if(
+        const auto trueEntries = static_cast<std::size_t>(std::count_if(
             paramsMask->begin(), paramsMask->end(), [](bool b) { return b; }));
         if ((!staticParams.has_value() || staticParams->empty()) &&
-            true_entries != 0) {
+            trueEntries != 0) {
           return op->emitError() << "operation has no static parameter but has "
                                     "a parameter mask with "
-                                 << true_entries << " true entries";
+                                 << trueEntries << " true entries";
         }
-        if (const auto size = staticParams->size(); size != true_entries) {
+        if (const auto size = staticParams->size(); size != trueEntries) {
           return op->emitError()
                  << "operation has " << size
                  << " static parameter(s) but has a parameter mask with "
-                 << true_entries << " true entries";
+                 << trueEntries << " true entries";
         }
       }
       return mlir::success();
