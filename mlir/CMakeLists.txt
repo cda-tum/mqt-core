@@ -26,7 +26,7 @@ include(HandleLLVMOptions)
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${MQT_MLIR_INCLUDE_BUILD_DIR})
-include_directories(${PROJECT_BINARY_DIR}/mlir/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_definitions(${LLVM_DEFINITIONS})
 
