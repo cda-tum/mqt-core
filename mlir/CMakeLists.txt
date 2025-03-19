@@ -40,8 +40,4 @@ add_subdirectory(lib)
 add_subdirectory(tools)
 
 # add test code
-if(BUILD_MQT_MLIR_TESTS)
-  enable_testing()
-  include(GoogleTest)
-  add_subdirectory(test)
-endif()
+add_subdirectory(test)
