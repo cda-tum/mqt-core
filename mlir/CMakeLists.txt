@@ -1,30 +1,47 @@
-# set required cmake version
-cmake_minimum_required(VERSION 3.24...3.30)
+# Copyright (c) 2025 Chair for Design Automation, TUM
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
 
-project(
-  mqt-mlir
-  LANGUAGES C CXX
-  DESCRIPTION "MQT MLIR - Interfacing between the Munich Quantum Toolkit and MLIR")
+# set the include directory for the build tree
+set(MQT_MLIR_INCLUDE_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-set(CMAKE_CXX_STANDARD
-    17
-    CACHE STRING "C++ standard to conform to")
+# MLIR must be installed on the system
+find_package(MLIR REQUIRED CONFIG)
+message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-# Add path for custom modules
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+# Add the paths to the MLIR and LLVM CMake modules.
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 
-# check if this is the master project or used via add_subdirectory
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  set(MQT_MLIR_MASTER_PROJECT ON)
-else()
-  set(MQT_MLIR_MASTER_PROJECT OFF)
-endif()
+# Include the TableGen, LLVM and MLIR CMake modules.
+include(TableGen)
+include(AddLLVM)
+include(AddMLIR)
+include(HandleLLVMOptions)
 
-option(BUILD_MQT_MLIR_TESTS "Also build tests for the MQT MLIR project" ${MQT_MLIR_MASTER_PROJECT})
-option(BUILD_MLIR_DIALECT "Build the MQT MLIR dialect" ${MQT_MLIR_MASTER_PROJECT})
+include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(${MLIR_INCLUDE_DIRS})
+include_directories(${MQT_MLIR_INCLUDE_BUILD_DIR})
+include_directories(${PROJECT_BINARY_DIR}/mlir/include)
+link_directories(${LLVM_BUILD_LIBRARY_DIR})
+add_definitions(${LLVM_DEFINITIONS})
 
-include(cmake/ExternalDependencies.cmake)
+# set the binary directory for the build tree such that, e.g., docs can be generated in the build
+# tree
+set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
 
-if(BUILD_MLIR_DIALECT)
-  add_subdirectory(mlir)
+# add main library code
+add_subdirectory(include)
+add_subdirectory(lib)
+add_subdirectory(tools)
+
+# add test code
+if(BUILD_MQT_MLIR_TESTS)
+  enable_testing()
+  include(GoogleTest)
+  add_subdirectory(test)
 endif()
