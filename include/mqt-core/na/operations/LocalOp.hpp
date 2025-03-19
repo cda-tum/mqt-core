@@ -18,7 +18,6 @@
 #include "na/entities/Atom.hpp"
 #include "na/operations/Op.hpp"
 
-#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -52,10 +51,5 @@ public:
 
   /// Returns a string representation of the operation.
   [[nodiscard]] auto toString() const -> std::string override;
-
-private:
-  /// Print the parameters of the operation to the output stream.
-  static auto printParams(const std::vector<qc::fp>& params, std::ostream& os)
-      -> void;
 };
 } // namespace na

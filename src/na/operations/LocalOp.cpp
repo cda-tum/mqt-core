@@ -14,13 +14,13 @@
 
 #include <iomanip>
 #include <ios>
-#include <ostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
 namespace na {
-auto LocalOp::printParams(const std::vector<qc::fp>& params, std::ostream& os)
+namespace {
+auto printParams(const std::vector<qc::fp>& params, std::ostringstream& os)
     -> void {
   if (!params.empty()) {
     for (const auto& p : params) {
@@ -28,8 +28,10 @@ auto LocalOp::printParams(const std::vector<qc::fp>& params, std::ostream& os)
     }
   }
 }
+} // namespace
+
 auto LocalOp::toString() const -> std::string {
-  std::stringstream ss;
+  std::ostringstream ss;
   ss << std::setprecision(5) << std::fixed;
   ss << "@+ " << name_ << " ";
   if (atoms_.size() == 1) {
