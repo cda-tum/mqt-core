@@ -13,7 +13,11 @@
 
 #pragma once
 
+#include "Location.hpp"
+
+#include <optional>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -23,16 +27,50 @@ namespace na {
 /// To maintain the uniqueness of zones, the name of the zone should be unique
 /// for this zone.
 class Zone final {
+public:
+  /// A simple struct to represent the extent of a zone.
+  struct Extent {
+    double minX = 0.0;
+    double minY = 0.0;
+    double maxX = 0.0;
+    double maxY = 0.0;
+  };
+
+private:
   /// The identifier of the zone.
   std::string name_;
+  /// The extent of the zone.
+  std::optional<Extent> extent_;
 
 public:
   /// Creates a new zone with the given name.
   /// @param name The name of the zone.
   explicit Zone(std::string name) : name_(std::move(name)) {}
 
+  /// Creates a new zone with the given name.
+  /// @param name The name of the zone.
+  /// @param extent The extent of the zone.
+  Zone(std::string name, const Extent& extent)
+      : name_(std::move(name)), extent_(extent) {}
+
   /// Returns the name of the zone.
   [[nodiscard]] auto getName() const -> std::string { return name_; }
+
+  /// Returns the extent of the zone.
+  [[nodiscard]] const std::optional<Extent>& getExtent() const {
+    return extent_;
+  }
+
+  /// Sets the extent of the zone.
+  void setExtent(const Extent& extent) { extent_ = extent; }
+
+  [[nodiscard]] auto contains(const Location& location) const -> bool {
+    if (!extent_) {
+      throw std::runtime_error("Zone's extent is not set.");
+    }
+    return extent_->minX <= location.x && location.x <= extent_->maxX &&
+           extent_->minY <= location.y && location.y <= extent_->maxY;
+  }
 
   /// Prints the zone to the given output stream.
   /// @param os The output stream to print the zone to.
