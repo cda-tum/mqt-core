@@ -45,10 +45,10 @@ public:
 
   /// Returns a local representation of the operation.
   /// @param atomsLocations The locations of the atoms.
-  /// @param rydbergRange The range of the Rydberg interaction.
+  /// @param rydbergRadius The range of the Rydberg interaction.
   [[nodiscard]] auto
   toLocal(const std::unordered_map<const Atom*, Location>& atomsLocations,
-          const double rydbergRange) const
+          const double rydbergRadius) const
       -> std::unique_ptr<LocalOp> override {
     // use a map here with the location as keys to ensure a deterministic order
     // of the atoms
@@ -66,7 +66,7 @@ public:
       const auto& [loc1, atom1] = *it1;
       for (auto it2 = std::next(it1); it2 != affectedAtoms.cend(); ++it2) {
         const auto& [loc2, atom2] = *it2;
-        if (Location::distance(loc1, loc2) <= rydbergRange) {
+        if (Location::distance(loc1, loc2) <= rydbergRadius) {
           atomPairs.emplace_back(std::array{atom1, atom2});
         }
       }

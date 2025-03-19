@@ -238,7 +238,7 @@ auto NAComputation::validate() const -> std::pair<bool, std::string> {
   }
   return {true, ""};
 }
-auto NAComputation::convertToLocalGates(const double rydbergRange) -> void {
+auto NAComputation::convertToLocalGates(const double rydbergRadius) -> void {
   auto currentLocations = initialLocations_;
   for (auto& operation : operations_) {
     // update current locations
@@ -253,7 +253,7 @@ auto NAComputation::convertToLocalGates(const double rydbergRange) -> void {
       }
     } else if (operation->is<GlobalOp>()) {
       operation =
-          operation->as<GlobalOp>().toLocal(currentLocations, rydbergRange);
+          operation->as<GlobalOp>().toLocal(currentLocations, rydbergRadius);
     }
   }
 }

@@ -183,8 +183,8 @@ public:
 
   /// Calculates the position of each atom at every stage and replaces global
   /// gates by local gates with the atoms that are affected by the global gate.
-  /// @param rydbergRange The range of the Rydberg interaction.
+  /// @param rydbergRadius The range of the Rydberg interaction.
   /// @note There is no way back after this function has been called.
-  auto convertToLocalGates(double rydbergRange) -> void;
+  auto convertToLocalGates(double rydbergRadius) -> void;
 };
 } // namespace na

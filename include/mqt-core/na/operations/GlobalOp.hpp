@@ -68,9 +68,14 @@ public:
 
   /// Returns a local representation of the operation.
   /// @param atomsLocations The locations of the atoms.
-  /// @param rydbergRange The range of the Rydberg interaction.
+  /// @param rydbergRadius The range of the Rydberg interaction.
   [[nodiscard]] virtual auto
   toLocal(const std::unordered_map<const Atom*, Location>& atomsLocations,
-          double rydbergRange) const -> std::unique_ptr<LocalOp> = 0;
+          double rydbergRadius) const -> std::unique_ptr<LocalOp> = 0;
+
+private:
+  /// Prints the parameters of the operation.
+  static auto printParams(const std::vector<qc::fp>& params, std::ostream& os)
+      -> void;
 };
 } // namespace na
