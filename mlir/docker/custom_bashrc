@@ -1,2 +1,0 @@
-export PS1="\\033[1;36m\\w\\033[0m "
-alias ls='ls --color=auto'
