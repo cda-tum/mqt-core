@@ -10,6 +10,9 @@ categories:
   - title: "🕸️ MQT Core ZX Package"
     labels:
       - "ZX"
+  - title: "🐉 MQT Core MLIR"
+    labels:
+      - "MLIR"
   - title: "🚀 Features and Enhancements"
     labels:
       - "feature"
