@@ -91,7 +91,7 @@ if(BUILD_MQT_CORE_BENCHMARKS)
   add_subdirectory(eval)
 endif()
 
-option(BUILD_MQT_CORE_MLIR "Build MLIR for the MQT Core project" OFF)
+option(BUILD_MQT_CORE_MLIR "Build the MLIR submodule of the MQT Core project" OFF)
 if(BUILD_MQT_CORE_MLIR)
   add_subdirectory(mlir)
 endif()
