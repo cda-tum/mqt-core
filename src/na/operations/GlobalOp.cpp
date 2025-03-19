@@ -9,10 +9,14 @@
 
 #include "na/operations/GlobalOp.hpp"
 
+#include "Definitions.hpp"
+
 #include <iomanip>
 #include <ios>
+#include <ostream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace na {
 auto GlobalOp::printParams(const std::vector<qc::fp>& params, std::ostream& os)

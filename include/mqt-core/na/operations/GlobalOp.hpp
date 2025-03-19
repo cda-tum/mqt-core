@@ -15,7 +15,6 @@
 #pragma once
 
 #include "Definitions.hpp"
-#include "LocalOp.hpp"
 #include "na/entities/Zone.hpp"
 #include "na/operations/Op.hpp"
 
