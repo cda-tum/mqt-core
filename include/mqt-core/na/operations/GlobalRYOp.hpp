@@ -21,6 +21,7 @@
 #include "na/entities/Zone.hpp"
 #include "na/operations/GlobalOp.hpp"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <unordered_map>
@@ -43,16 +44,19 @@ public:
   toLocal(const std::unordered_map<const Atom*, Location>& atomsLocations,
           const double /* unused */) const
       -> std::unique_ptr<LocalOp> override {
-    // make sure atoms are added always in the same order based on their
+    // make sure atoms are always added in the same order based on their
     // location
     std::map<Location, const Atom*> sortedAtoms;
     for (const auto& [atom, loc] : atomsLocations) {
       sortedAtoms.emplace(loc, atom);
     }
     std::vector<const Atom*> affectedAtoms;
-    for (const auto& [loc, atom] : sortedAtoms) {
-      if (zones_->contains(loc)) {
-        affectedAtoms.emplace_back(atom);
+    for (const auto& atomLoc : sortedAtoms) {
+      if (std::any_of(zones_.cbegin(), zones_.cend(),
+                      [&atomLoc](const Zone* zone) {
+                        return zone->contains(atomLoc.first);
+                      })) {
+        affectedAtoms.emplace_back(atomLoc.second);
       }
     }
     return std::make_unique<LocalRYOp>(affectedAtoms, params_.front());

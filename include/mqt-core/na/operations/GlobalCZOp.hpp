@@ -53,11 +53,12 @@ public:
     // use a map here with the location as keys to ensure a deterministic order
     // of the atoms
     std::map<Location, const Atom*> affectedAtoms;
-    for (const auto& [atom, loc] : atomsLocations) {
-      if (std::any_of(zones_.cbegin(), zones_.cend(), [&loc](const Zone* zone) {
-            return zone->contains(loc);
-          })) {
-        affectedAtoms.emplace(loc, atom);
+    for (const auto& atomLoc : atomsLocations) {
+      if (std::any_of(zones_.cbegin(), zones_.cend(),
+                      [&atomLoc](const Zone* zone) {
+                        return zone->contains(atomLoc.second);
+                      })) {
+        affectedAtoms.emplace(atomLoc.second, atomLoc.first);
       }
     }
     std::vector<std::array<const Atom*, 2>> atomPairs;

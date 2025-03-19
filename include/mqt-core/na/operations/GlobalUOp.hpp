@@ -44,7 +44,7 @@ public:
   toLocal(const std::unordered_map<const Atom*, Location>& atomsLocations,
           const double /* unused */) const
       -> std::unique_ptr<LocalOp> override {
-    // make sure atoms are added always in the same order based on their
+    // make sure atoms are always added in the same order based on their
     // location
     std::map<Location, const Atom*> sortedAtoms;
     for (const auto& [atom, loc] : atomsLocations) {
