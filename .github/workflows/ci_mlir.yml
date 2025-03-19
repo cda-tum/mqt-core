@@ -27,6 +27,8 @@ jobs:
     steps:
       # check out the repository
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # install a specific version of the LLVM toolchain
       - name: Install llvm and mlir
