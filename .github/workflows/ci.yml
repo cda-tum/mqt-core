@@ -121,9 +121,11 @@ jobs:
     name: 🇨‌ Lint
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@v1.7
+    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-linter.yml@update-cpp-linter
     with:
-      cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON
+      cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON -DBUILD_MQT_CORE_MLIR=ON
+      clang-version: 19
+      files-changed-only: false # remove after testing
 
   python-tests:
     name: 🐍 Test
