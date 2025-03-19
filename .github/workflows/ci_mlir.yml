@@ -1,39 +1,14 @@
-name: MLIR Workflow
+name: MLIR CI
 on:
   push:
+    branches:
+      - main
     paths:
       - "mlir/**"
   pull_request:
     paths:
       - "mlir/**"
-  workflow_call:
-    inputs:
-      runs-on:
-        description: >
-          The ubuntu runner image to use. Defaults to 'ubuntu-latest'.
-          This can be any valid ubuntu runner image, such as 'ubuntu-22.04', 'ubuntu-24.04', or their ARM variants 'ubuntu-22.04-arm', 'ubuntu-24.04-arm'.
-        default: "ubuntu-latest"
-        type: string
-      config:
-        description: >
-          The build type to use. Defaults to 'Release'.
-          This can be any valid CMake build type, such as 'Debug' or 'Release'.
-        default: "Release"
-        type: string
-      compiler:
-        description: >
-          The compiler to use. Defaults to 'gcc'.
-          This can be 'gcc' or 'clang'.
-          If 'gcc' is selected, this will use the default GCC compiler.
-          If 'clang' is selected, this will use the default Clang compiler.
-        default: "gcc"
-        type: string
-      cmake-args:
-        description: >
-          Additional arguments to pass to CMake. Defaults to an empty string.
-          This can be any valid CMake argument, such as '-DBUILD_SHARED_LIBS=ON' or '-DMLIR_DIR=/path/to/mlir'.
-        default: ""
-        type: string
+  merge_group:
   workflow_dispatch:
 
 concurrency:
@@ -41,33 +16,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  #  Commented this part out for the moment, I think it should be useful to update reusable-change-detection.yml in order
-  #  to test for the mlir part of the project as well.
-  #  change-detection:
-  #    name: 🔍 Change
-  #    uses: cda-tum/mqt-workflows/.github/workflows/reusable-change-detection.yml@v1.7
-
   cpp-test-mlir:
     name: 🇨‌ Test MLIR
-    #    needs: change-detection
-    #    if: fromJSON(needs.change-detection.outputs.run-mlir-tests)
-    #    uses: cda-tum/mqt-workflows/.github/workflows/reusable-cpp-ci.yml@v1.7
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      llvm-version: 19
+      CMAKE_BUILD_PARALLEL_LEVEL: 4
+      CTEST_PARALLEL_LEVEL: 4
+      FORCE_COLOR: 3
     steps:
-      - name: Install MLIR
+      # check out the repository
+      - uses: actions/checkout@v4
+
+      # install a specific version of the LLVM toolchain
+      - name: Install llvm and mlir
         run: |
-          sudo apt update
-          sudo apt install -y mlir
+          sudo apt-get update
+          wget https://apt.llvm.org/llvm.sh -O ${{ runner.temp }}/llvm_install.sh
+          chmod +x ${{ runner.temp }}/llvm_install.sh
+          if sudo ${{ runner.temp }}/llvm_install.sh ${{ env.llvm-version }}; then
+            sudo apt-get install -y libmlir-${{ env.llvm-version }}-dev \
+                                    mlir-${{ env.llvm-version }}-tools \
+                                    clang-${{ env.llvm-version}} \
+             || exit 1
+          else
+            echo "Installation from script failed."
+            exit 1
+          fi
+          echo "CC=clang-${{ env.llvm-version }}" >> $GITHUB_ENV
+          echo "CXX=clang++-${{ env.llvm-version }}" >> $GITHUB_ENV
+
+      # set up ccache for faster C++ builds
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          prepend_symlinks_to_path: false
+          override_cache_key: c++-tests-mlir
+
+      # set up mold as linker for faster C++ builds
+      - name: Set up mold as linker
+        uses: rui314/setup-mold@v1
+
+      # set up uv for faster Python package management
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+
+      # make sure ninja is installed
+      - name: Install Ninja
+        run: uv tool install ninja
 
       - name: Configure CMake for MLIR
         run: |
-          cmake -G Ninja -S . -B build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DMLIR_DIR=${MLIR_DIR} \
-            -DLLVM_DIR=${LLVM_DIR} \
-            -DBUILD_MQT_CORE_MLIR=ON
+          cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_MQT_CORE_MLIR=ON
 
-      - name: Build MLIR components
-        run: cmake --build build --config Release
-#      - name: Run MLIR Tests
-#        run: TODO
+      - name: Build MLIR components and directly run lit tests
+        run: cmake --build build --config Release --target check-quantum-opt
