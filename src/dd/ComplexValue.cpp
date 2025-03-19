@@ -251,7 +251,8 @@ ComplexValue operator*(fp r, const ComplexValue& c1) {
 }
 
 /// Computes an approximation of ac+bd
-inline fp kahan(const fp a, const fp b, const fp c, const fp d) {
+namespace {
+fp kahan(const fp a, const fp b, const fp c, const fp d) {
   // w = RN(b * d)
   const auto w = b * d;
   // e = RN(b * d - w)
@@ -261,6 +262,7 @@ inline fp kahan(const fp a, const fp b, const fp c, const fp d) {
   // g = RN(f + e)
   return f + e;
 }
+} // namespace
 
 ComplexValue operator*(const ComplexValue& c1, const ComplexValue& c2) {
   // Implements the CMulKahan algorithm from https://hal.science/hal-01512760v2

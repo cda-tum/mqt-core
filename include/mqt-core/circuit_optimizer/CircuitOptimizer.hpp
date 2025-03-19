@@ -53,8 +53,6 @@ public:
   static void decomposeSWAP(QuantumComputation& qc,
                             bool isDirectedArchitecture);
 
-  static void decomposeTeleport(QuantumComputation& qc);
-
   static void eliminateResets(QuantumComputation& qc);
 
   static void deferMeasurements(QuantumComputation& qc);

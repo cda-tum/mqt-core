@@ -14,7 +14,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <llvm/Support/raw_ostream.h>
 #include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
@@ -56,7 +55,7 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
         mlir::TypeRange{QubitRegisterType::get(rewriter.getContext()),
                         QubitType::get(rewriter.getContext())},
         reg.getResult(), nullptr,
-        rewriter.getI64IntegerAttr(static_cast<int64_t>(index)));
+        rewriter.getI64IntegerAttr(static_cast<std::int64_t>(index)));
   }
 
   /**
@@ -142,7 +141,7 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
     auto newAlloc = rewriter.create<AllocOp>(
         op.getLoc(), QubitRegisterType::get(rewriter.getContext()), nullptr,
         rewriter.getIntegerAttr(rewriter.getI64Type(),
-                                static_cast<int64_t>(numQubits)));
+                                static_cast<std::int64_t>(numQubits)));
     newAlloc->setAttr("mqt_core", rewriter.getUnitAttr());
 
     // We start by first extracting each qubit from the register. The current

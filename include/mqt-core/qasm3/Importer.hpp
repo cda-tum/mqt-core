@@ -92,8 +92,8 @@ private:
 
   bool openQASM2CompatMode{false};
 
-  qc::Permutation initialLayout{};
-  qc::Permutation outputPermutation{};
+  qc::Permutation initialLayout;
+  qc::Permutation outputPermutation;
 
   static std::map<std::string, std::pair<const_eval::ConstEvalValue,
                                          type_checking::InferredType>>

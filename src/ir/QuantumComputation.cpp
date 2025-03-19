@@ -1212,6 +1212,7 @@ void QuantumComputation::reorderOperations() {
   std::move(newOps.begin(), newOps.end(), std::back_inserter(ops));
 }
 
+namespace {
 bool isDynamicCircuit(const std::unique_ptr<Operation>* op,
                       std::vector<bool>& measured) {
   assert(op != nullptr);
@@ -1242,6 +1243,7 @@ bool isDynamicCircuit(const std::unique_ptr<Operation>* op,
       compOp.cbegin(), compOp.cend(),
       [&measured](const auto& g) { return isDynamicCircuit(&g, measured); });
 }
+} // namespace
 
 bool QuantumComputation::isDynamic() const {
   // marks whether a qubit in the DAG has been measured

@@ -8,6 +8,7 @@
  */
 
 #include "ir/QuantumComputation.hpp"
+#include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/StandardOperation.hpp"
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
@@ -21,7 +22,6 @@
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/Value.h>
-#include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
 #include <set>
