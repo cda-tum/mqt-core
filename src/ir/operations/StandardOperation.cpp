@@ -184,7 +184,7 @@ void StandardOperation::checkUgate() {
 }
 
 void StandardOperation::setup() {
-  // checkUgate();
+  checkUgate();
   name = toString(type);
 }
 
