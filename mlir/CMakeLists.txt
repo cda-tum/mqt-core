@@ -34,6 +34,9 @@ add_definitions(${LLVM_DEFINITIONS})
 # tree
 set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
 
+# add a compile feature for C++17
+set(CMAKE_CXX_STANDARD 17)
+
 # add main library code
 add_subdirectory(include)
 add_subdirectory(lib)
