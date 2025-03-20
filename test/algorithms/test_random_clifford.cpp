@@ -37,13 +37,16 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(RandomClifford, simulate) {
   const auto nq = GetParam();
+  constexpr auto numReps = 10U;
 
   auto dd = std::make_unique<dd::Package<>>(nq);
-  auto qc = qc::createRandomCliffordCircuit(
-      nq, static_cast<std::size_t>(nq) * nq, 12345);
-  auto in = dd->makeZeroState(nq);
-  ASSERT_NO_THROW({ dd::simulate(qc, in, *dd); });
-  qc.printStatistics(std::cout);
+  for (size_t i = 0; i < numReps; ++i) {
+    auto qc =
+        qc::createRandomCliffordCircuit(nq, static_cast<std::size_t>(nq) * nq);
+    auto in = dd->makeZeroState(nq);
+    ASSERT_NO_THROW({ dd::simulate(qc, in, *dd); });
+    qc.printStatistics(std::cout);
+  }
 }
 
 TEST_P(RandomClifford, buildFunctionality) {
