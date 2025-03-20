@@ -11,6 +11,7 @@
 
 #include <cstddef>
 #include <mlir/IR/OpDefinition.h>
+#include <mlir/IR/Operation.h>
 #include <mlir/Support/LLVM.h>
 
 namespace mqt::ir::opt {

@@ -964,6 +964,7 @@ void CircuitOptimizer::printDAG(const DAG& dag, const DAGIterators& iterators) {
   }
 }
 
+namespace {
 using Iterator = QuantumComputation::iterator;
 void flattenCompoundOperation(QuantumComputation& qc, Iterator& it) {
   assert((*it)->isCompoundOperation());
@@ -990,6 +991,7 @@ void flattenCompoundOperation(QuantumComputation& qc, Iterator& it) {
   // move the general iterator back to the position of the last moved operation
   std::advance(it, -movedOperations);
 }
+} // namespace
 
 void CircuitOptimizer::flattenOperations(QuantumComputation& qc,
                                          bool customGatesOnly) {
@@ -1591,6 +1593,7 @@ void CircuitOptimizer::collectBlocks(QuantumComputation& qc,
   removeIdentities(qc);
 }
 
+namespace {
 void elidePermutations(Iterator begin, const std::function<Iterator()>& end,
                        const std::function<Iterator(Iterator)>& erase,
                        Permutation& permutation) {
@@ -1630,6 +1633,7 @@ void elidePermutations(Iterator begin, const std::function<Iterator()>& end,
     ++it;
   }
 }
+} // namespace
 
 void CircuitOptimizer::elidePermutations(QuantumComputation& qc) {
   if (qc.empty()) {

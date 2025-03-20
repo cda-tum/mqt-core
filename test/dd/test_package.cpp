@@ -138,8 +138,10 @@ TEST(DDPackageTest, BellState) {
 }
 
 TEST(DDPackageTest, QFTState) {
+  // Create a package with 3 qubits
   auto dd = std::make_unique<Package<>>(3);
 
+  // Simulate a QFT on 3 qubits
   auto h0Gate = getDD(qc::StandardOperation(0, qc::H), *dd);
   auto s0Gate = getDD(qc::StandardOperation(1_pc, 0, qc::S), *dd);
   auto t0Gate = getDD(qc::StandardOperation(2_pc, 0, qc::T), *dd);
@@ -160,14 +162,13 @@ TEST(DDPackageTest, QFTState) {
 
   qftState.printVector();
 
-  for (Qubit qubit = 0; qubit < 7; ++qubit) {
-    ASSERT_NEAR(
-        qftState.getValueByIndex(static_cast<std::size_t>(qubit)).real(),
-        0.5 * SQRT2_2, RealNumber::eps);
-    ASSERT_EQ(qftState.getValueByIndex(static_cast<std::size_t>(qubit)).imag(),
-              0);
+  for (size_t qubit = 0; qubit < 7; ++qubit) {
+    ASSERT_NEAR(qftState.getValueByIndex(qubit).real(), 0.5 * SQRT2_2,
+                RealNumber::eps);
+    ASSERT_EQ(qftState.getValueByIndex(qubit).imag(), 0);
   }
 
+  // export in all different variations
   export2Dot(qftState, "qft_state_colored_labels.dot", true, true, false, false,
              false);
   export2Dot(qftState, "qft_state_colored_labels_classic.dot", true, true, true,
@@ -252,6 +253,7 @@ TEST(DDPackageTest, QFTState) {
                           "qft_op_rectangular_mono_classic.dot",
                           "qft_op_rectangular_memory.dot"};
 
+  // cleanup files
   for (const auto* const filename : filenames) {
     std::ifstream ifs(filename);
     ASSERT_TRUE(ifs.good());
@@ -259,7 +261,6 @@ TEST(DDPackageTest, QFTState) {
     ifs.close();
     std::filesystem::remove(filename);
   }
-
   printStatistics(dd.get());
 }
 

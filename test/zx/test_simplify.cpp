@@ -77,7 +77,7 @@ TEST_F(SimplifyTest, idSimp2) {
   diag.addEdge(50, 150);
 
   const std::size_t removed = idSimp(diag);
-  EXPECT_EQ(removed, nqubits * 100 - 2);
+  EXPECT_EQ(removed, (nqubits * 100) - 2);
   EXPECT_EQ(diag.getNVertices(), (nqubits * 2) + 2);
   EXPECT_EQ(diag.getNEdges(), 5);
   EXPECT_TRUE(diag.globalPhaseIsZero());
