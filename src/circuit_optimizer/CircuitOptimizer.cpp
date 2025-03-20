@@ -1440,6 +1440,7 @@ void CircuitOptimizer::collectBlocks(QuantumComputation& qc,
     auto& op = *opIt;
     bool canProcess = true;
     bool makesTooBig = false;
+    bool isClifford = false;
 
     // check if the operation can be processed
     if (!op->isUnitary()) {
@@ -1448,7 +1449,11 @@ void CircuitOptimizer::collectBlocks(QuantumComputation& qc,
 
     // check if the operation is a Clifford operation
     if (collectCliffords && op->isClifford()) {
-      bool isClifford = true;
+      isClifford = true;
+    }
+
+    if (collectCliffords && !isClifford){
+      canProcess = false;
     }
 
     const auto usedQubits = op->getUsedQubits();
