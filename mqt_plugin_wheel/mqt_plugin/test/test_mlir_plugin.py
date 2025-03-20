@@ -31,11 +31,8 @@ running -apply-transform-sequence.
 # pylint: disable=line-too-long
 from __future__ import annotations
 
-from pathlib import Path
-
 import pennylane as qml
 from catalyst import CompileError, pipeline
-from pennylane.configuration import Configuration
 from utils import print_jaxpr, print_mlir
 from utils import qjit_for_tests as qjit
 
@@ -116,20 +113,13 @@ def test_MQT_plugin() -> bool | None:
     """
     my_pipeline = {
         "mqt.mqt-core-round-trip": {"cmap": [[0, 1], [1, 0]]},
-        # "mqt.mqt-core-round-trip": {},
     }
-
-    config_path = Path(__file__).parent / "dev_config.toml"
-    Configuration(config_path)
-    dev = qml.device(
-        name="lightning.qubit", wires=2
-    )  # config=conf)#"lightning.qubit", {'wires': 2, 'cmap': [[0, 1], [1, 0]]})
 
     try:
 
         @qjit(keep_intermediate=True, verbose=True)
         @pipeline(my_pipeline)
-        @qml.qnode(dev)
+        @qml.qnode(qml.device(name="lightning.qubit", wires=2))
         def test_pipeline_mqtplugin_workflow() -> None:
             qml.Hadamard(wires=[0])
 

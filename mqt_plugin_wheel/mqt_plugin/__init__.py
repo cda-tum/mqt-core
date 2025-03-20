@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import platform
 from pathlib import Path
 
 import pennylane as qml
@@ -31,8 +32,7 @@ from catalyst.passes import PassPlugin
 
 def getMQTPluginAbsolutePath():
     """Returns the absolute path to the MQT plugin."""
-    ext = "dylib"  # TODO: we should provide "so" as well
-    # ext = "so" if platform.system() == "Linux" else "dylib"
+    ext = "so" if platform.system() == "Linux" else "dylib"
     return Path(Path(__file__).parent.absolute(), f"MQTPlugin.{ext}")
 
 

@@ -1,6 +1,0 @@
-# PennyLane dvice configuration file
-
-["main"]
-shots = 1024
-wires = 2
-cmap = [[0, 1], [1, 0]]
