@@ -276,7 +276,7 @@ struct ConvertCustom : public OpConversionPattern<::mqt::ir::opt::XOp> {
     }
 
     auto positive = rewriter.getIntegerAttr(rewriter.getI1Type(), 1);
-    ValueRange ctrlValues = {positive};
+    auto ctrlValues = ValueRange(inCtrlQubitsValues);
 
     // TODO: check arguments
     auto catalystOp = rewriter.create<catalyst::quantum::CustomOp>(
