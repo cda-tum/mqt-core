@@ -6,3 +6,4 @@
 # Licensed under the MIT License
 
 add_subdirectory(quantum-opt)
+add_subdirectory(mqt-plugin)
