@@ -10,7 +10,6 @@
 #include "Quantum/IR/QuantumDialect.h"
 #include "mlir/Conversion/MQTOptToQuantum/MQTOptToQuantum.h"
 #include "mlir/Conversion/QuantumToMQTOpt/QuantumToMQTOpt.h"
-
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
