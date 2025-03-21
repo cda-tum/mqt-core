@@ -1511,4 +1511,27 @@ TEST_F(QFRFunctionality, stripIdleQubits) {
   const auto qc2 = qasm3::Importer::imports(expected);
   EXPECT_EQ(qc2.toQASM(), expected);
 }
+
+TEST_F(QFRFunctionality, failOnAddingExistingQubit) {
+  QuantumComputation qc(1);
+  EXPECT_THROW(qc.addQubit(0, 0, 0);, std::runtime_error);
+  EXPECT_THROW(qc.addAncillaryQubit(0, 0);, std::runtime_error);
+}
+
+TEST_F(QFRFunctionality, failOnAddingNonConsecutiveQubit) {
+  QuantumComputation qc(1);
+  EXPECT_THROW(qc.addQubit(2, 2, 2);, std::runtime_error);
+}
+
+TEST_F(QFRFunctionality, failOnGettingIndexOfNonExistingQubit) {
+  const QuantumComputation qc(1);
+  EXPECT_THROW(std::ignore = qc.getPhysicalQubitIndex(1);, std::runtime_error);
+}
+
+TEST_F(QFRFunctionality, failOnRegisterMisconfigurationWithMeasurements) {
+  QuantumComputation qc(2);
+  qc.addClassicalRegister(1, "c");
+  EXPECT_THROW(qc.appendMeasurementsAccordingToOutputPermutation("c");
+               , std::runtime_error);
+}
 } // namespace qc
