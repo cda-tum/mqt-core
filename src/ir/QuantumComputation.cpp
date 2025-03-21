@@ -815,7 +815,8 @@ QuantumComputation::getQubitRegister(const Qubit physicalQubitIndex) {
                            " not found in any register");
 }
 
-Qubit QuantumComputation::getPhysicalQubitIndex(const Qubit logicalQubitIndex) {
+Qubit QuantumComputation::getPhysicalQubitIndex(
+    const Qubit logicalQubitIndex) const {
   for (const auto& [physical, logical] : initialLayout) {
     if (logical == logicalQubitIndex) {
       return physical;
