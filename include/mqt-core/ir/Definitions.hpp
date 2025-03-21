@@ -15,8 +15,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <stdexcept>
 #include <vector>
 
 namespace qc {

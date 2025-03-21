@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <memory>
 #include <ostream>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 #include <vector>
