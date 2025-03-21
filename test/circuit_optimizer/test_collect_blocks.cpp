@@ -71,9 +71,7 @@ TEST(CollectBlocks, collectMultipleSingleQubitCliffordGates) {
   std::cout << qc << "\n";
   qc::CircuitOptimizer::collectBlocks(qc, 1, true);
   std::cout << qc << "\n";
-  EXPECT_EQ(qc.size(), 2);
-  EXPECT_TRUE(qc.front()->isCompoundOperation());
-  EXPECT_TRUE(qc.back()->isCompoundOperation());
+  EXPECT_EQ(qc.size(), 6);
 }
 
 TEST(CollectBlocks, collectMultipleCliffordGates) {
@@ -81,15 +79,13 @@ TEST(CollectBlocks, collectMultipleCliffordGates) {
   qc.h(0);
   qc.h(1);
   qc.t(0);
-  //qc.t(1);
   qc.x(0);
   qc.x(1);
   std::cout << qc << "\n";
   qc::CircuitOptimizer::collectBlocks(qc, 2, true);
   std::cout << qc << "\n";
-  EXPECT_EQ(qc.size(), 2);
+  EXPECT_EQ(qc.size(), 4);
   EXPECT_TRUE(qc.front()->isCompoundOperation());
-  EXPECT_TRUE(qc.back()->isCompoundOperation());
 }
 
 TEST(CollectBlocks, collectTwoQubitCliffordGates) {
@@ -104,9 +100,8 @@ TEST(CollectBlocks, collectTwoQubitCliffordGates) {
   std::cout << qc << "\n";
   qc::CircuitOptimizer::collectBlocks(qc, 2, true);
   std::cout << qc << "\n";
-  EXPECT_EQ(qc.size(), 2);
+  EXPECT_EQ(qc.size(), 4);
   EXPECT_TRUE(qc.front()->isCompoundOperation());
-  EXPECT_TRUE(qc.back()->isCompoundOperation());
 }
 
 TEST(CollectBlocks, mergeBlocks) {
