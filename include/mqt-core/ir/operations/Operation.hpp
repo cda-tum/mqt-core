@@ -159,20 +159,25 @@ public:
     OpType opType = this->getType();
     bool controlled = this->isControlled();
     std::size_t number_of_controls = this->getNcontrols();
-    std::size_t number_of_targets = this->getNtargets();
     switch (opType) {
       case I:
       case X:
         if  ((controlled) && ((number_of_controls >= 2))){
           return false;
+        }else{
+          return true;
         }
       case Y:
         if  ((controlled) && ((number_of_controls >= 2))){
           return false;
+        }else{
+          return true;
         }
       case Z:
         if  ((controlled) && ((number_of_controls >= 2))){
           return false;
+        }else{
+          return true;
         }
       case H:
       case S:
