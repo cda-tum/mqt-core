@@ -26,16 +26,9 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
 
       # then, we create a target that will be used to export the include directory
       add_library(multiprecision INTERFACE)
-      target_include_directories(
-        multiprecision SYSTEM INTERFACE $<BUILD_INTERFACE:${MULTIPRECISION_INCLUDE_DIR}>
-                                        $<INSTALL_INTERFACE:${MQT_CORE_INCLUDE_INSTALL_DIR}>)
+      target_include_directories(multiprecision SYSTEM
+                                 INTERFACE $<BUILD_INTERFACE:${MULTIPRECISION_INCLUDE_DIR}>)
       add_library(MQT::Multiprecision ALIAS multiprecision)
-
-      if(MQT_CORE_INSTALL)
-        # finally, we create install instructions for the respective header files
-        install(DIRECTORY ${MULTIPRECISION_INCLUDE_DIR}/boost
-                DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
-      endif()
 
       set(MQT_CORE_ZX_SYSTEM_BOOST
           FALSE
@@ -85,16 +78,11 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
   # generate export header
   include(GenerateExportHeader)
   generate_export_header(${MQT_CORE_TARGET_NAME}-zx BASE_NAME mqt_core_zx)
-  target_include_directories(${MQT_CORE_TARGET_NAME}-zx
-                             PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+  target_sources(
+    ${MQT_CORE_TARGET_NAME}-zx PUBLIC FILE_SET HEADERS BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/..
+                                      FILES ${CMAKE_CURRENT_BINARY_DIR}/mqt_core_zx_export.h)
   if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(${MQT_CORE_TARGET_NAME}-zx PUBLIC MQT_CORE_ZX_STATIC_DEFINE)
-  endif()
-
-  # install export header
-  if(MQT_CORE_INSTALL)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mqt_core_zx_export.h
-            DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
   endif()
 
   # add to list of MQT core targets

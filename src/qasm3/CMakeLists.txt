@@ -40,16 +40,11 @@ if(NOT TARGET MQT::CoreQASM)
   # generate export header
   include(GenerateExportHeader)
   generate_export_header(${MQT_CORE_TARGET_NAME}-qasm BASE_NAME mqt_core_qasm)
-  target_include_directories(${MQT_CORE_TARGET_NAME}-qasm
-                             PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+  target_sources(
+    ${MQT_CORE_TARGET_NAME}-qasm PUBLIC FILE_SET HEADERS BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/..
+                                        FILES ${CMAKE_CURRENT_BINARY_DIR}/mqt_core_qasm_export.h)
   if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(${MQT_CORE_TARGET_NAME}-qasm PUBLIC MQT_CORE_QASM_STATIC_DEFINE)
-  endif()
-
-  # install export header
-  if(MQT_CORE_INSTALL)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/mqt_core_qasm_export.h
-            DESTINATION ${MQT_CORE_INCLUDE_INSTALL_DIR})
   endif()
 
   # add to list of MQT core target
