@@ -126,7 +126,7 @@ jobs:
       cmake-args: -DBUILD_MQT_CORE_BENCHMARKS=ON -DBUILD_MQT_CORE_MLIR=ON
       clang-version: 20
       files-changed-only: false # remove after testing
-      cpp-linter-extra-args: "-std=c++17 -I${{github.workspace}}/build/mlir/include"
+      cpp-linter-extra-args: "-std=c++17"
 
   python-tests:
     name: 🐍 Test
