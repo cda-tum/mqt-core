@@ -942,27 +942,6 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
   qc.initializeIOMapping();
 }
 
-void CircuitOptimizer::printDAG(const DAG& dag) {
-  for (const auto& qubitDag : dag) {
-    std::cout << " - ";
-    for (const auto& op : qubitDag) {
-      std::cout << std::hex << op->get() << std::dec << "("
-                << toString((*op)->getType()) << ") - ";
-    }
-    std::cout << "\n";
-  }
-}
-void CircuitOptimizer::printDAG(const DAG& dag, const DAGIterators& iterators) {
-  for (std::size_t i = 0; i < dag.size(); ++i) {
-    std::cout << " - ";
-    for (auto it = iterators.at(i); it != dag.at(i).end(); ++it) {
-      std::cout << std::hex << (*it)->get() << std::dec << "("
-                << toString((**it)->getType()) << ") - ";
-    }
-    std::cout << "\n";
-  }
-}
-
 namespace {
 using Iterator = QuantumComputation::iterator;
 void flattenCompoundOperation(QuantumComputation& qc, Iterator& it) {
