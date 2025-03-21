@@ -38,6 +38,9 @@ struct MQTCoreRoundTrip final : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
 
     // Apply patterns in an iterative and greedy manner.
     if (mlir::failed(
+            // This was deprecated in LLVM@20, but the alternative does not yet
+            // exist in LLVM@19.
+            // NOLINTNEXTLINE(clang-diagnostic-deprecated-declarations)
             mlir::applyPatternsAndFoldGreedily(op, std::move(patterns)))) {
       signalPassFailure();
     }

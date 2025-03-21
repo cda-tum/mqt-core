@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <llvm/Support/raw_ostream.h>
 #include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
@@ -34,6 +35,8 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
                                          qc::QuantumComputation& qc)
       : OpRewritePattern(context), circuit(qc) {}
 
+  // clang-tidy false positive
+  // NOLINTNEXTLINE(*-convert-member-functions-to-static)
   [[nodiscard]] mlir::LogicalResult match(const AllocOp op) const override {
     return op->hasAttr("to_replace") ? mlir::success() : mlir::failure();
   }
