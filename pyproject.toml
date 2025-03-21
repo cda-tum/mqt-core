@@ -88,7 +88,9 @@ sdist.exclude = [
     "**/.github",
     "**/doc",
     "**/docs",
+    "**/eval",
     "**/meta",
+    "**/paper",
     "**/plots",
     "**/test",
     "**/tests",
@@ -99,6 +101,7 @@ sdist-only = ["src/mqt/core/_version.py"]
 git-only = [
     "docs/*",
     "test/*",
+    "mlir/*",
 ]
 
 [tool.scikit-build.cmake.define]
@@ -138,6 +141,7 @@ filterwarnings = [
   # Qiskit 1.3 deprecations
   'ignore:.*``qiskit.dagcircuit.dagcircuit.DAGCircuit.*`` is deprecated as of qiskit 1.3.0.*:DeprecationWarning:',
   'ignore:.*``qiskit.circuit.library.standard_gates.x.*`` is pending deprecation as of qiskit 1.3.*:PendingDeprecationWarning:',
+  'ignore:.*``qiskit.circuit.instruction.Instruction.condition`` is deprecated as of qiskit 1.3.0.*:DeprecationWarning:',
 ]
 log_cli_level = "info"
 testpaths = ["test/python"]
@@ -230,6 +234,7 @@ default.extend-ignore-re = [
 wille = "wille"
 anc = "anc"
 mch = "mch"
+ket = "ket"
 
 
 [tool.repo-review]

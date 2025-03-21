@@ -903,7 +903,7 @@ qc::Permutation Parser::parsePermutation(std::string s) {
   qc::Qubit logicalQubit = 0;
   for (std::smatch m; std::regex_search(s, m, QUBIT_REGEX); s = m.suffix()) {
     auto physicalQubit = static_cast<qc::Qubit>(std::stoul(m.str()));
-    permutation.insert({physicalQubit, logicalQubit});
+    permutation.emplace(physicalQubit, logicalQubit);
     ++logicalQubit;
   }
   return permutation;

@@ -19,6 +19,7 @@ namespace mqt {
 
 void registerPermutation(py::module& m) {
   py::class_<qc::Permutation>(m, "Permutation")
+      .def(py::init<>())
       .def(py::init([](const py::dict& p) {
              qc::Permutation perm;
              for (const auto& [key, value] : p) {
@@ -43,8 +44,12 @@ void registerPermutation(py::module& m) {
       .def("__delitem__",
            [](qc::Permutation& p, const qc::Qubit q) { p.erase(q); })
       .def("__len__", &qc::Permutation::size)
+      .def("__iter__",
+           [](const qc::Permutation& p) {
+             return py::make_key_iterator(p.begin(), p.end());
+           })
       .def(
-          "__iter__",
+          "items",
           [](const qc::Permutation& p) {
             return py::make_iterator(p.begin(), p.end());
           },

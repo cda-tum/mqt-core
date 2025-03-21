@@ -52,7 +52,7 @@ struct Experiment {
   [[nodiscard]] virtual bool success() const noexcept { return false; }
 };
 
-struct SimulationExperiment final : public Experiment {
+struct SimulationExperiment final : Experiment {
   SimulationExperiment() = default;
   VectorDD sim{};
 
@@ -61,7 +61,7 @@ struct SimulationExperiment final : public Experiment {
   }
 };
 
-struct FunctionalityConstructionExperiment final : public Experiment {
+struct FunctionalityConstructionExperiment final : Experiment {
   MatrixDD func{};
 
   [[nodiscard]] bool success() const noexcept override {
@@ -81,7 +81,7 @@ benchmarkSimulate(const QuantumComputation& qc) {
   const auto end = std::chrono::high_resolution_clock::now();
   exp->runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  exp->stats = dd::getStatistics(exp->dd.get());
+  exp->stats = getStatistics(exp->dd.get());
   return exp;
 }
 
@@ -95,7 +95,7 @@ benchmarkFunctionalityConstruction(const QuantumComputation& qc) {
   const auto end = std::chrono::high_resolution_clock::now();
   exp->runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  exp->stats = dd::getStatistics(exp->dd.get());
+  exp->stats = getStatistics(exp->dd.get());
   return exp;
 }
 
@@ -136,7 +136,7 @@ benchmarkSimulateGrover(const qc::Qubit nq,
   const auto end = std::chrono::high_resolution_clock::now();
   exp->runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  exp->stats = dd::getStatistics(exp->dd.get());
+  exp->stats = getStatistics(exp->dd.get());
   return exp;
 }
 
@@ -184,7 +184,7 @@ benchmarkFunctionalityConstructionGrover(const qc::Qubit nq,
   const auto end = std::chrono::high_resolution_clock::now();
   exp->runtime =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-  exp->stats = dd::getStatistics(exp->dd.get());
+  exp->stats = getStatistics(exp->dd.get());
   return exp;
 }
 } // namespace
@@ -230,12 +230,14 @@ protected:
     constexpr std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running GHZ Simulation..." << '\n';
     for (const auto& nq : nqubits) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createGHZState(nq);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("GHZ", "Simulation", qc, *exp);
     }
     std::cout << "Running GHZ Functionality..." << '\n';
     for (const auto& nq : nqubits) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createGHZState(nq);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("GHZ", "Functionality", qc, *exp);
@@ -246,12 +248,14 @@ protected:
     constexpr std::array nqubits = {256U, 512U, 1024U, 2048U, 4096U};
     std::cout << "Running WState Simulation..." << '\n';
     for (const auto& nq : nqubits) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createWState(nq);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("WState", "Simulation", qc, *exp);
     }
     std::cout << "Running WState Functionality..." << '\n';
     for (const auto& nq : nqubits) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createWState(nq);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("WState", "Functionality", qc, *exp);
@@ -262,6 +266,7 @@ protected:
     constexpr std::array nqubits = {255U, 511U, 1023U, 2047U, 4095U};
     std::cout << "Running BV Simulation..." << '\n';
     for (const auto& nq : nqubits) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createBernsteinVazirani(nq, SEED);
       CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkSimulate(qc);
@@ -269,6 +274,7 @@ protected:
     }
     std::cout << "Running BV Functionality..." << '\n';
     for (const auto& nq : nqubits) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createBernsteinVazirani(nq, SEED);
       CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkFunctionalityConstruction(qc);
@@ -277,16 +283,18 @@ protected:
   }
 
   void runQFT() const {
-    constexpr std::array nqubitsSim = {256U, 512U, 1024U, 2048U, 4096U};
+    constexpr std::array nqubitsSim = {64U, 128U, 256U, 512U, 1024U};
     std::cout << "Running QFT Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createQFT(nq, false);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("QFT", "Simulation", qc, *exp);
     }
-    constexpr std::array nqubitsFunc = {18U, 19U, 20U, 21U, 22U};
+    constexpr std::array nqubitsFunc = {16U, 17U, 18U, 19U, 20U};
     std::cout << "Running QFT Functionality..." << '\n';
     for (const auto& nq : nqubitsFunc) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createQFT(nq, false);
       auto exp = benchmarkFunctionalityConstruction(qc);
       verifyAndSave("QFT", "Functionality", qc, *exp);
@@ -294,9 +302,10 @@ protected:
   }
 
   void runGrover() const {
-    constexpr std::array nqubits = {27U, 31U, 35U, 39U, 41U};
+    constexpr std::array nqubits = {27U, 31U, 35U, 39U};
     std::cout << "Running Grover Simulation..." << '\n';
     for (const auto& nq : nqubits) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       GroverBitString targetValue;
       targetValue.set();
       auto qc = createGrover(nq, targetValue);
@@ -306,6 +315,7 @@ protected:
 
     std::cout << "Running Grover Functionality..." << '\n';
     for (const auto& nq : nqubits) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       GroverBitString targetValue;
       targetValue.set();
       auto qc = createGrover(nq, targetValue);
@@ -318,6 +328,7 @@ protected:
     constexpr std::array nqubitsSim = {14U, 15U, 16U, 17U, 18U};
     std::cout << "Running QPE Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createQPE(nq, false, SEED);
       CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkSimulate(qc);
@@ -326,6 +337,7 @@ protected:
     std::cout << "Running QPE Functionality..." << '\n';
     constexpr std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
     for (const auto& nq : nqubitsFunc) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createQPE(nq, false, SEED);
       CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkFunctionalityConstruction(qc);
@@ -334,17 +346,19 @@ protected:
   }
 
   void runExactQPE() const {
-    constexpr std::array nqubitsSim = {8U, 16U, 32U, 48U, 64U};
-    std::cout << "Running QPE Simulation..." << '\n';
+    constexpr std::array nqubitsSim = {8U, 16U, 32U, 48U};
+    std::cout << "Running QPE (exact) Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createQPE(nq, true, SEED);
       CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkSimulate(qc);
       verifyAndSave("QPE_Exact", "Simulation", qc, *exp);
     }
-    std::cout << "Running QPE Functionality..." << '\n';
+    std::cout << "Running QPE (exakt) Functionality..." << '\n';
     constexpr std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
     for (const auto& nq : nqubitsFunc) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc = createQPE(nq, true, SEED);
       CircuitOptimizer::removeFinalMeasurements(qc);
       auto exp = benchmarkFunctionalityConstruction(qc);
@@ -356,6 +370,7 @@ protected:
     constexpr std::array nqubitsSim = {14U, 15U, 16U, 17U, 18U};
     std::cout << "Running RandomClifford Simulation..." << '\n';
     for (const auto& nq : nqubitsSim) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc =
           createRandomCliffordCircuit(nq, static_cast<size_t>(nq) * nq, SEED);
       auto exp = benchmarkSimulate(qc);
@@ -364,6 +379,7 @@ protected:
     std::cout << "Running RandomClifford Functionality..." << '\n';
     constexpr std::array nqubitsFunc = {7U, 8U, 9U, 10U, 11U};
     for (const auto& nq : nqubitsFunc) {
+      std::cout << "... with " << nq << " qubits" << '\n';
       auto qc =
           createRandomCliffordCircuit(nq, static_cast<size_t>(nq) * nq, SEED);
       auto exp = benchmarkFunctionalityConstruction(qc);
@@ -382,6 +398,7 @@ public:
     runQFT();
     runGrover();
     runQPE();
+    runExactQPE();
     runRandomClifford();
   }
 };

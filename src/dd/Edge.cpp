@@ -110,13 +110,13 @@ template <class Node>
 template <typename T, isVector<T>>
 Edge<Node> Edge<Node>::normalize(Node* p,
                                  const std::array<Edge<Node>, RADIX>& e,
-                                 MemoryManager<Node>& mm, ComplexNumbers& cn) {
+                                 MemoryManager& mm, ComplexNumbers& cn) {
   assert(p != nullptr && "Node pointer passed to normalize is null.");
   const auto zero = std::array{e[0].w.exactlyZero(), e[1].w.exactlyZero()};
 
   if (zero[0]) {
     if (zero[1]) {
-      mm.returnEntry(p);
+      mm.returnEntry(*p);
       return Edge::zero();
     }
     p->e = e;
@@ -294,13 +294,13 @@ template <class Node>
 template <typename T, isMatrixVariant<T>>
 Edge<Node> Edge<Node>::normalize(Node* p,
                                  const std::array<Edge<Node>, NEDGE>& e,
-                                 MemoryManager<Node>& mm, ComplexNumbers& cn) {
+                                 MemoryManager& mm, ComplexNumbers& cn) {
   assert(p != nullptr && "Node pointer passed to normalize is null.");
   const auto zero = std::array{e[0].w.exactlyZero(), e[1].w.exactlyZero(),
                                e[2].w.exactlyZero(), e[3].w.exactlyZero()};
 
   if (std::all_of(zero.begin(), zero.end(), [](auto b) { return b; })) {
-    mm.returnEntry(p);
+    mm.returnEntry(*p);
     return Edge::zero();
   }
 
@@ -594,9 +594,10 @@ template struct Edge<vNode>;
 template struct Edge<mNode>;
 template struct Edge<dNode>;
 
-template Edge<vNode> Edge<vNode>::normalize<vNode, true>(
-    vNode* p, const std::array<Edge<vNode>, RADIX>& e, MemoryManager<vNode>& mm,
-    ComplexNumbers& cn);
+template Edge<vNode>
+Edge<vNode>::normalize<vNode, true>(vNode* p,
+                                    const std::array<Edge<vNode>, RADIX>& e,
+                                    MemoryManager& mm, ComplexNumbers& cn);
 template std::complex<fp>
 Edge<vNode>::getValueByIndex<vNode, true>(const std::size_t i) const;
 template CVec Edge<vNode>::getVector<vNode, true>(const fp threshold) const;
@@ -609,9 +610,10 @@ Edge<vNode>::traverseVector<vNode, true>(const std::complex<fp>& amp,
                                          const std::size_t i, AmplitudeFunc f,
                                          const fp threshold) const;
 
-template Edge<mNode> Edge<mNode>::normalize<mNode, true>(
-    mNode* p, const std::array<Edge<mNode>, NEDGE>& e, MemoryManager<mNode>& mm,
-    ComplexNumbers& cn);
+template Edge<mNode>
+Edge<mNode>::normalize<mNode, true>(mNode* p,
+                                    const std::array<Edge<mNode>, NEDGE>& e,
+                                    MemoryManager& mm, ComplexNumbers& cn);
 template std::complex<fp>
 Edge<mNode>::getValueByIndex<mNode, true>(const std::size_t numQubits,
                                           const std::size_t i,
@@ -627,9 +629,10 @@ template void Edge<mNode>::traverseMatrix<mNode, true>(
     const std::complex<fp>& amp, const std::size_t i, const std::size_t j,
     MatrixEntryFunc f, const std::size_t level, const fp threshold) const;
 
-template Edge<dNode> Edge<dNode>::normalize<dNode, true>(
-    dNode* p, const std::array<Edge<dNode>, NEDGE>& e, MemoryManager<dNode>& mm,
-    ComplexNumbers& cn);
+template Edge<dNode>
+Edge<dNode>::normalize<dNode, true>(dNode* p,
+                                    const std::array<Edge<dNode>, NEDGE>& e,
+                                    MemoryManager& mm, ComplexNumbers& cn);
 template CMat Edge<dNode>::getMatrix<dNode, true>(const std::size_t numQubits,
                                                   const fp threshold) const;
 template SparseCMat

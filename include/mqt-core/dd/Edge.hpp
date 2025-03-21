@@ -26,7 +26,7 @@ struct vNode;
 struct mNode;
 struct dNode;
 class ComplexNumbers;
-template <typename T> class MemoryManager;
+class MemoryManager;
 
 template <typename T>
 using isVector = std::enable_if_t<std::is_same_v<T, vNode>, bool>;
@@ -153,7 +153,7 @@ public:
    */
   template <typename T = Node, isVector<T> = true>
   static Edge<Node> normalize(Node* p, const std::array<Edge<Node>, RADIX>& e,
-                              MemoryManager<Node>& mm, ComplexNumbers& cn);
+                              MemoryManager& mm, ComplexNumbers& cn);
 
   /**
    * @brief Get a single element of the vector represented by the DD
@@ -230,7 +230,7 @@ public:
    */
   template <typename T = Node, isMatrixVariant<T> = true>
   static Edge<Node> normalize(Node* p, const std::array<Edge<Node>, NEDGE>& e,
-                              MemoryManager<Node>& mm, ComplexNumbers& cn);
+                              MemoryManager& mm, ComplexNumbers& cn);
 
   /**
    * @brief Check whether the matrix represented by the DD is the identity

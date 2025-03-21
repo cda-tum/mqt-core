@@ -16,11 +16,14 @@
 #include "na/operations/GlobalRYOp.hpp"
 #include "na/operations/LoadOp.hpp"
 #include "na/operations/LocalRZOp.hpp"
+#include "na/operations/LocalUOp.hpp"
 #include "na/operations/MoveOp.hpp"
 #include "na/operations/StoreOp.hpp"
 
 #include <gtest/gtest.h>
 #include <sstream>
+#include <stdexcept>
+#include <tuple>
 #include <vector>
 
 namespace na {
@@ -39,6 +42,13 @@ TEST(NAComputation, Zone) {
   ss << zone;
   EXPECT_EQ(ss.str(), "zone");
 }
+TEST(NAComputation, ZonesExtent) {
+  const auto zone = Zone("zone", {0, 0, 2, 2});
+  EXPECT_TRUE(zone.contains({1., 1.}));
+  EXPECT_FALSE(zone.contains({1., 3.}));
+  EXPECT_THROW(std::ignore = Zone("zone").contains({0., 0.}),
+               std::runtime_error);
+}
 
 TEST(NAComputation, Location) {
   constexpr Location loc{3, 4};
@@ -49,6 +59,18 @@ TEST(NAComputation, Location) {
   EXPECT_DOUBLE_EQ((Location{0, 0}).getEuclideanDistance(loc), 5.0);
   EXPECT_DOUBLE_EQ((Location{0, 0}).getManhattanDistanceX(loc), 3);
   EXPECT_DOUBLE_EQ((Location{0, 0}).getManhattanDistanceY(loc), 4);
+}
+
+TEST(NAComputation, LocalRXOp) {
+  const Atom atom("atom");
+  const LocalUOp op(atom, 0.0, 0.0, 0.0);
+  EXPECT_EQ(op.toString(), "@+ u 0.00000 0.00000 0.00000 atom");
+}
+
+TEST(NAComputation, LocalRZOp) {
+  const Atom atom("atom");
+  const LocalRZOp op(atom, 0.0);
+  EXPECT_EQ(op.toString(), "@+ rz 0.00000 atom");
 }
 
 TEST(NAComputation, General) {
