@@ -7,8 +7,8 @@
  * Licensed under the MIT License
  */
 
-#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
-#include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"  // IWYU pragma: keep
+#include "mlir/Dialect/MQTOpt/Transforms/Passes.h" // IWYU pragma: keep
 
 #include <mlir/Dialect/Func/Extensions/AllExtensions.h>
 #include <mlir/IR/DialectRegistry.h>

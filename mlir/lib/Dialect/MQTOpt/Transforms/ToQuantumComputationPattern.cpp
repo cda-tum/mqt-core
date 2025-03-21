@@ -22,13 +22,10 @@
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/Value.h>
-#include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
-#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <vector>
 
 namespace mqt::ir::opt {
 /// Analysis pattern that filters out all quantum operations from a given
@@ -40,6 +37,8 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
                                        qc::QuantumComputation& qc)
       : OpRewritePattern(context), circuit(qc) {}
 
+  // clang-tidy false positive
+  // NOLINTNEXTLINE(*-convert-member-functions-to-static)
   [[nodiscard]] mlir::LogicalResult match(const AllocOp op) const override {
     return (op->hasAttr("to_replace") || op->hasAttr("mqt_core"))
                ? mlir::failure()

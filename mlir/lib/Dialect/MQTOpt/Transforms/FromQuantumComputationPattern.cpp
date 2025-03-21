@@ -9,11 +9,10 @@
 
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/OpType.hpp"
-#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h" // IWYU pragma: keep
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 
 #include <cstddef>
-#include <cstdint>
 #include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
@@ -21,7 +20,6 @@
 #include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LogicalResult.h>
 #include <stdexcept>
-#include <vector>
 
 namespace mqt::ir::opt {
 /// Analysis pattern that creates MLIR instructions from a given
@@ -34,6 +32,8 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
                                          qc::QuantumComputation& qc)
       : OpRewritePattern(context), circuit(qc) {}
 
+  // clang-tidy false positive
+  // NOLINTNEXTLINE(*-convert-member-functions-to-static)
   [[nodiscard]] mlir::LogicalResult match(const AllocOp op) const override {
     return op->hasAttr("to_replace") ? mlir::success() : mlir::failure();
   }
