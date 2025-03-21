@@ -150,7 +150,7 @@ public:
    * @param logicalQubitIndex The logical qubit index to look for
    * @return The physical qubit index of the given logical qubit index
    */
-  [[nodiscard]] Qubit getPhysicalQubitIndex(Qubit logicalQubitIndex);
+  [[nodiscard]] Qubit getPhysicalQubitIndex(Qubit logicalQubitIndex) const;
   [[nodiscard]] bool isIdleQubit(Qubit physicalQubit) const;
   [[nodiscard]] bool isLastOperationOnQubit(const const_iterator& opIt,
                                             const const_iterator& end) const;
