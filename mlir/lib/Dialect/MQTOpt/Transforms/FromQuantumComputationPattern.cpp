@@ -20,6 +20,7 @@
 #include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LogicalResult.h>
 #include <stdexcept>
+#include <vector>
 
 namespace mqt::ir::opt {
 /// Analysis pattern that creates MLIR instructions from a given

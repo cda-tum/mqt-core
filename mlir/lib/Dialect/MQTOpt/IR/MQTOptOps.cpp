@@ -7,9 +7,9 @@
  * Licensed under the MIT License
  */
 
-// IWYU pragma: begin_keep
-#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h" // IWYU pragma: associated
 
+// IWYU pragma: begin_keep
 #include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/DialectImplementation.h>
