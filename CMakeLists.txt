@@ -6,7 +6,7 @@
 # Licensed under the MIT License
 
 # set required cmake version
-cmake_minimum_required(VERSION 3.19...3.30)
+cmake_minimum_required(VERSION 3.24...3.31)
 
 project(
   mqt-core
