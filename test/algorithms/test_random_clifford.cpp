@@ -37,7 +37,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_P(RandomClifford, simulate) {
   const auto nq = GetParam();
-  constexpr auto numReps = 10U;
+  constexpr auto numReps = 16U;
 
   auto dd = std::make_unique<dd::Package<>>(nq);
   for (size_t i = 0; i < numReps; ++i) {
