@@ -47,8 +47,16 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
   file(GLOB_RECURSE ZX_HEADERS ${MQT_CORE_INCLUDE_BUILD_DIR}/zx/*.hpp)
   file(GLOB_RECURSE ZX_SOURCES **.cpp)
 
-  # add ZX package library
-  add_library(${MQT_CORE_TARGET_NAME}-zx ${ZX_HEADERS} ${ZX_SOURCES})
+  # create the library target (initially empty)
+  add_library(${MQT_CORE_TARGET_NAME}-zx)
+
+  # add sources to target
+  target_sources(${MQT_CORE_TARGET_NAME}-zx PRIVATE ${ZX_SOURCES})
+
+  # add headers using file sets
+  target_sources(
+    ${MQT_CORE_TARGET_NAME}-zx PUBLIC FILE_SET HEADERS BASE_DIRS ${MQT_CORE_INCLUDE_BUILD_DIR}
+                                      FILES ${ZX_HEADERS})
 
   # add link libraries
   target_link_libraries(
@@ -64,11 +72,6 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
     target_link_libraries(${MQT_CORE_TARGET_NAME}-zx PUBLIC GMP::gmp GMP::gmpxx)
   endif()
 
-  # set include directories
-  target_include_directories(
-    ${MQT_CORE_TARGET_NAME}-zx PUBLIC $<BUILD_INTERFACE:${MQT_CORE_INCLUDE_BUILD_DIR}>
-                                      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
-
   # add MQT alias
   add_library(MQT::CoreZX ALIAS ${MQT_CORE_TARGET_NAME}-zx)
 
@@ -82,6 +85,8 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-zx)
   # generate export header
   include(GenerateExportHeader)
   generate_export_header(${MQT_CORE_TARGET_NAME}-zx BASE_NAME mqt_core_zx)
+  target_include_directories(${MQT_CORE_TARGET_NAME}-zx
+                             PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
   if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(${MQT_CORE_TARGET_NAME}-zx PUBLIC MQT_CORE_ZX_STATIC_DEFINE)
   endif()

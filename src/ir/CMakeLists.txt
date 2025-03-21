@@ -5,26 +5,24 @@
 #
 # Licensed under the MIT License
 
-#
-# This file is part of the MQT CORE library released under the MIT license. See README.md or go to
-# https://github.com/cda-tum/mqt-core for more information.
-#
-
 if(NOT TARGET MQT::CoreIR)
   # collect headers and source files
   file(GLOB_RECURSE IR_HEADERS ${MQT_CORE_INCLUDE_BUILD_DIR}/ir/*.hpp)
   file(GLOB_RECURSE IR_SOURCES **.cpp)
 
-  # add IR Package library
-  add_library(${MQT_CORE_TARGET_NAME}-ir ${IR_HEADERS} ${IR_SOURCES})
+  # create the library target (initially empty)
+  add_library(${MQT_CORE_TARGET_NAME}-ir)
+
+  # add sources to target
+  target_sources(${MQT_CORE_TARGET_NAME}-ir PRIVATE ${IR_SOURCES})
+
+  # add headers using file sets
+  target_sources(
+    ${MQT_CORE_TARGET_NAME}-ir PUBLIC FILE_SET HEADERS BASE_DIRS ${MQT_CORE_INCLUDE_BUILD_DIR}
+                                      FILES ${IR_HEADERS})
 
   # add link libraries
   target_link_libraries(${MQT_CORE_TARGET_NAME}-ir PRIVATE MQT::ProjectOptions MQT::ProjectWarnings)
-
-  # set include directories
-  target_include_directories(
-    ${MQT_CORE_TARGET_NAME}-ir PUBLIC $<BUILD_INTERFACE:${MQT_CORE_INCLUDE_BUILD_DIR}>
-                                      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
   # add MQT alias
   add_library(MQT::CoreIR ALIAS ${MQT_CORE_TARGET_NAME}-ir)
@@ -42,6 +40,8 @@ if(NOT TARGET MQT::CoreIR)
   # generate export header
   include(GenerateExportHeader)
   generate_export_header(${MQT_CORE_TARGET_NAME}-ir BASE_NAME mqt_core_ir)
+  target_include_directories(${MQT_CORE_TARGET_NAME}-ir
+                             PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
   if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(${MQT_CORE_TARGET_NAME}-ir PUBLIC MQT_CORE_IR_STATIC_DEFINE)
   endif()
