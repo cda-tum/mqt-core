@@ -29,6 +29,9 @@ if(NOT TARGET MQT::CoreIR)
   # add MQT alias
   add_library(MQT::CoreIR ALIAS ${MQT_CORE_TARGET_NAME}-ir)
 
+  # set required C++ standard
+  target_compile_features(${MQT_CORE_TARGET_NAME}-ir PUBLIC cxx_std_17)
+
   # set versioning information
   set_target_properties(
     ${MQT_CORE_TARGET_NAME}-ir
