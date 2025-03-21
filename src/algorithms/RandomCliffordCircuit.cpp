@@ -9,7 +9,7 @@
 
 #include "algorithms/RandomCliffordCircuit.hpp"
 
-#include "Definitions.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
 

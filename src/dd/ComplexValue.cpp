@@ -9,9 +9,9 @@
 
 #include "dd/ComplexValue.hpp"
 
-#include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/RealNumber.hpp"
+#include "ir/Definitions.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -303,9 +303,9 @@ std::ostream& operator<<(std::ostream& os, const ComplexValue& c) {
 namespace std {
 std::size_t
 hash<dd::ComplexValue>::operator()(const dd::ComplexValue& c) const noexcept {
-  const auto h1 = qc::murmur64(
+  const auto h1 = dd::murmur64(
       static_cast<std::size_t>(std::round(c.r / dd::RealNumber::eps)));
-  const auto h2 = qc::murmur64(
+  const auto h2 = dd::murmur64(
       static_cast<std::size_t>(std::round(c.i / dd::RealNumber::eps)));
   return qc::combineHash(h1, h2);
 }

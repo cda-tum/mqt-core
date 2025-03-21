@@ -9,7 +9,7 @@
 
 #include "ir/operations/StandardOperation.hpp"
 
-#include "Definitions.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/Register.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
@@ -499,7 +499,7 @@ void StandardOperation::dumpGateType(
 void StandardOperation::dumpOpenQASMTeleportation(
     std::ostream& of, const QubitIndexToRegisterMap& qubitMap) const {
   if (!controls.empty() || targets.size() != 3) {
-    throw QFRException("Teleportation needs three targets");
+    throw std::runtime_error("Teleportation needs three targets");
   }
   /*
                                       ░      ┌───┐ ░ ┌─┐    ░
@@ -662,8 +662,8 @@ void StandardOperation::invert() {
     type = iSWAP;
     break;
   default:
-    throw QFRException("Inverting gate" + toString(type) +
-                       " is not supported.");
+    throw std::runtime_error("Inverting gate" + toString(type) +
+                             " is not supported.");
   }
 }
 

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "Definitions.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/Permutation.hpp"
 #include "qasm3/InstVisitor.hpp"
 #include "qasm3/NestedEnvironment.hpp"

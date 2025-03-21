@@ -9,7 +9,7 @@
 
 #include "ir/operations/SymbolicOperation.hpp"
 
-#include "Definitions.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/Register.hpp"
 #include "ir/operations/Control.hpp"
@@ -363,10 +363,10 @@ bool SymbolicOperation::equals(const Operation& op, const Permutation& perm1,
     [[maybe_unused]] const BitIndexToRegisterMap& bitMap,
     [[maybe_unused]] size_t indent, bool openQASM3) const {
   if (openQASM3) {
-    throw QFRException(
+    throw std::runtime_error(
         "Printing OpenQASM 3.0 parameterized gates is not supported yet!");
   }
-  throw QFRException("OpenQASM 2.0 doesn't support parameterized gates!");
+  throw std::runtime_error("OpenQASM 2.0 doesn't support parameterized gates!");
 }
 
 StandardOperation SymbolicOperation::getInstantiatedOperation(

@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/DDpackageConfig.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/operations/OpType.hpp"
 #include "ir/operations/Operation.hpp"
 

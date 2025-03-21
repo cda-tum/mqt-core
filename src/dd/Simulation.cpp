@@ -9,11 +9,11 @@
 
 #include "dd/Simulation.hpp"
 
-#include "Definitions.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "dd/RealNumber.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/ClassicControlledOperation.hpp"
 #include "ir/operations/NonUnitaryOperation.hpp"
@@ -282,7 +282,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
 
       const auto& targets = op->getTargets();
       if (targets.size() != 1) {
-        throw qc::QFRException(
+        throw std::runtime_error(
             "Resets on multiple qubits are currently not supported. Please "
             "split them into multiple single resets.");
       }
@@ -304,8 +304,9 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
       }
 
       if (!RealNumber::approximatelyEquals(pzero, 1.)) {
-        throw qc::QFRException("Reset on non basis state encountered. This is "
-                               "not supported in this method.");
+        throw std::runtime_error(
+            "Reset on non basis state encountered. This is "
+            "not supported in this method.");
       }
 
       continue;
@@ -317,7 +318,7 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
       const auto& targets = measurement.getTargets();
       const auto& classics = measurement.getClassics();
       if (targets.size() != 1U || classics.size() != 1U) {
-        throw qc::QFRException(
+        throw std::runtime_error(
             "Measurements on multiple qubits are not supported right now. "
             "Split your measurements into individual operations.");
       }
@@ -347,8 +348,8 @@ void extractProbabilityVectorRecursive(const QuantumComputation& qc,
             // sanity check
             auto findIt = measurements.find(i);
             if (findIt == measurements.end()) {
-              throw qc::QFRException("No information on classical bit " +
-                                     std::to_string(i));
+              throw std::runtime_error("No information on classical bit " +
+                                       std::to_string(i));
             }
             // if i-th bit is set increase the index appropriately
             if (findIt->second == '1') {
