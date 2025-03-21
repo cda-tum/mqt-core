@@ -21,6 +21,7 @@
 #include <memory>
 #include <ostream>
 #include <set>
+#include <stdexcept>
 #include <vector>
 
 namespace qc {

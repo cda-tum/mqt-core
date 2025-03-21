@@ -25,6 +25,7 @@
 #include <memory>
 #include <ostream>
 #include <set>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 

@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <numeric>
 #include <optional>
 #include <ostream>

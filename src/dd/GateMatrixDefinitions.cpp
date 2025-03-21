@@ -10,7 +10,6 @@
 #include "dd/GateMatrixDefinitions.hpp"
 
 #include "dd/DDDefinitions.hpp"
-#include "ir/Definitions.hpp"
 #include "ir/operations/OpType.hpp"
 
 #include <cassert>
