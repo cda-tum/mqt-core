@@ -33,8 +33,6 @@ public:
   using DAGReverseIterators = std::vector<DAGReverseIterator>;
 
   static DAG constructDAG(QuantumComputation& qc);
-  static void printDAG(const DAG& dag);
-  static void printDAG(const DAG& dag, const DAGIterators& iterators);
 
   static void swapReconstruction(QuantumComputation& qc);
 
