@@ -9,7 +9,7 @@
 
 #include "circuit_optimizer/CircuitOptimizer.hpp"
 
-#include "Definitions.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
 #include "ir/operations/Control.hpp"
@@ -357,7 +357,7 @@ void removeDiagonalGatesBeforeMeasureRecursive(
       // non-unitary operation is not diagonal
       it = dag.at(idx).rend();
     } else {
-      throw QFRException("Unexpected operation encountered");
+      throw std::runtime_error("Unexpected operation encountered");
     }
   }
 
@@ -771,7 +771,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
       const auto classics = measurement->getClassics();
 
       if (targets.size() != 1 && classics.size() != 1) {
-        throw QFRException(
+        throw std::runtime_error(
             "Deferring measurements with more than 1 target is not yet "
             "supported. Try decomposing your measurements.");
       }
@@ -809,7 +809,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
         }
 
         if (operation->getType() == Reset) {
-          throw QFRException(
+          throw std::runtime_error(
               "Reset encountered in deferMeasurements routine. Please use the "
               "eliminateResets method before deferring measurements.");
         }
@@ -840,7 +840,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
               controlRegister.has_value()) {
             assert(!classicOp->getControlBit().has_value());
             if (controlRegister->getSize() != 1) {
-              throw QFRException(
+              throw std::runtime_error(
                   "Classic-controlled operations targeted at more than one bit "
                   "are currently not supported. Try decomposing the operation "
                   "into individual contributions.");
@@ -870,7 +870,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
             ss << "Underlying operation of classic-controlled operation is "
                   "not a StandardOperation.\n";
             classicOp->print(ss, qc.getNqubits());
-            throw QFRException(ss.str());
+            throw std::runtime_error(ss.str());
           }
 
           // get all the necessary information for reconstructing the
@@ -879,7 +879,7 @@ void CircuitOptimizer::deferMeasurements(QuantumComputation& qc) {
           const auto targs = standardOp->getTargets();
           for (const auto& target : targs) {
             if (target == measurementQubit) {
-              throw QFRException(
+              throw std::runtime_error(
                   "Implicit reset operation in circuit detected. Measuring a "
                   "qubit and then targeting the same qubit with a "
                   "classic-controlled operation is not allowed at the "

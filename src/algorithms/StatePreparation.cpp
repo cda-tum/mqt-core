@@ -9,8 +9,8 @@
 
 #include "algorithms/StatePreparation.hpp"
 
-#include "Definitions.hpp"
 #include "circuit_optimizer/CircuitOptimizer.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 #include "ir/operations/Control.hpp"
 #include "ir/operations/OpType.hpp"
