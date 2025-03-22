@@ -17,7 +17,7 @@ template <size_t N> class TargetArity {
 public:
   template <typename ConcreteOp>
   class Impl : public mlir::OpTrait::TraitBase<ConcreteOp, Impl> {
-    static llvm::LogicalResult verifyTrait(mlir::Operation* op) {
+    static mlir::LogicalResult verifyTrait(mlir::Operation* op) {
       auto unitaryOp = mlir::cast<ConcreteOp>(op);
       if (const auto size = unitaryOp.getInQubits().size(); size != N) {
         return op->emitError()
@@ -32,7 +32,7 @@ template <size_t N> class ParameterArity {
 public:
   template <typename ConcreteOp>
   class Impl : public mlir::OpTrait::TraitBase<ConcreteOp, Impl> {
-    static llvm::LogicalResult verifyTrait(mlir::Operation* op) {
+    static mlir::LogicalResult verifyTrait(mlir::Operation* op) {
       auto paramOp = mlir::cast<ConcreteOp>(op);
       const auto& params = paramOp.getParams();
       const auto& staticParams = paramOp.getStaticParams();
