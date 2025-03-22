@@ -9,18 +9,19 @@
 
 #pragma once
 
-#include "Control.hpp"
-#include "Definitions.hpp"
-#include "OpType.hpp"
-#include "Operation.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/Permutation.hpp"
 #include "ir/Register.hpp"
+#include "ir/operations/Control.hpp"
+#include "ir/operations/OpType.hpp"
+#include "ir/operations/Operation.hpp"
 
 #include <cmath>
 #include <cstddef>
 #include <memory>
 #include <ostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -85,9 +86,9 @@ public:
 
   void addControl(const Control c) override {
     if (actsOn(c.qubit)) {
-      throw QFRException("Cannot add control on qubit " +
-                         std::to_string(c.qubit) +
-                         " to operation it already acts on the qubit.");
+      throw std::runtime_error("Cannot add control on qubit " +
+                               std::to_string(c.qubit) +
+                               " to operation it already acts on the qubit.");
     }
 
     controls.emplace(c);
@@ -97,9 +98,9 @@ public:
 
   void removeControl(const Control c) override {
     if (controls.erase(c) == 0) {
-      throw QFRException("Cannot remove control on qubit " +
-                         std::to_string(c.qubit) +
-                         " from operation as it is not a control.");
+      throw std::runtime_error("Cannot remove control on qubit " +
+                               std::to_string(c.qubit) +
+                               " from operation as it is not a control.");
     }
   }
 
