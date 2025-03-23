@@ -666,11 +666,6 @@ void QuantumComputation::dumpOpenQASM(std::ostream& of, bool openQASM3) const {
     of << "OPENQASM 2.0;\n";
     of << "include \"qelib1.inc\";\n";
   }
-  if (std::any_of(std::begin(ops), std::end(ops), [](const auto& op) {
-        return op->getType() == OpType::Teleportation;
-      })) {
-    of << "opaque teleport src, anc, tgt;\n";
-  }
 
   // combine qregs and ancregs
   auto combinedRegs = quantumRegisters;
