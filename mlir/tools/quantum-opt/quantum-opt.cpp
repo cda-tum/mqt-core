@@ -12,13 +12,13 @@
 #include "mlir/Conversion/QuantumToMQTOpt/QuantumToMQTOpt.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h" // IWYU pragma: keep
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
+#include "mlir/Dialect/MQTOpt/Transforms/Passes.h" // IWYU pragma: keep
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
-#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"  // IWYU pragma: keep
-#include "mlir/Dialect/MQTOpt/Transforms/Passes.h" // IWYU pragma: keep
 
 #include <mlir/Dialect/Func/Extensions/AllExtensions.h>
 #include <mlir/IR/DialectRegistry.h>
