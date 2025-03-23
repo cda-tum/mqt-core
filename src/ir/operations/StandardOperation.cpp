@@ -280,8 +280,7 @@ void StandardOperation::dumpOpenQASM2(
   // safe the numbers of controls as a prefix to the operation name
   op << std::string(controls.size(), 'c');
 
-  const bool isSpecialGate =
-      type == Peres || type == Peresdg || type == Teleportation;
+  const bool isSpecialGate = type == Peres || type == Peresdg;
 
   if (!isSpecialGate) {
     // apply X operations to negate the respective controls
@@ -462,9 +461,6 @@ void StandardOperation::dumpGateType(
     of << " " << qubitMap.at(targets[1]).second << ", "
        << qubitMap.at(targets[0]).second << ";\n";
     return;
-  case Teleportation:
-    dumpOpenQASMTeleportation(of, qubitMap);
-    return;
   default:
     std::cerr << "gate type " << toString(type)
               << " could not be converted to OpenQASM\n.";
@@ -495,29 +491,6 @@ void StandardOperation::dumpGateType(
     }
   }
   of << ";\n";
-}
-
-void StandardOperation::dumpOpenQASMTeleportation(
-    std::ostream& of, const QubitIndexToRegisterMap& qubitMap) const {
-  if (!controls.empty() || targets.size() != 3) {
-    throw std::runtime_error("Teleportation needs three targets");
-  }
-  /*
-                                      ░      ┌───┐ ░ ┌─┐    ░
-                  |ψ⟩ q_0: ───────────░───■──┤ H ├─░─┤M├────░─────────────── |0⟩
-     or |1⟩ ┌───┐      ░ ┌─┴─┐└───┘ ░ └╥┘┌─┐ ░ |0⟩ a_0: ┤ H ├──■───░─┤ X
-     ├──────░──╫─┤M├─░─────────────── |0⟩ or |1⟩ └───┘┌─┴─┐ ░ └───┘      ░  ║
-     └╥┘ ░  ┌───┐  ┌───┐ |0⟩ a_1: ─────┤ X ├─░────────────░──╫──╫──░──┤ X ├──┤ Z
-     ├─ |ψ⟩ └───┘ ░            ░  ║  ║  ░  └─┬─┘  └─┬─┘ ║  ║    ┌──┴──┐   │
-                bitflip: 1/═══════════════════════════╩══╬════╡ = 1 ╞═══╪═══
-                                                      0  ║    └─────┘┌──┴──┐
-              phaseflip: 1/══════════════════════════════╩═══════════╡ = 1 ╞
-                                                         0           └─────┘
-          */
-  of << "// teleport q_0, a_0, a_1; q_0 --> a_1  via a_0\n";
-  of << "teleport " << qubitMap.at(targets[0]).second << ", "
-     << qubitMap.at(targets[1]).second << ", " << qubitMap.at(targets[2]).second
-     << ";\n";
 }
 
 auto StandardOperation::commutesAtQubit(const Operation& other,

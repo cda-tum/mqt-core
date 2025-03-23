@@ -691,18 +691,6 @@ TEST_F(QFRFunctionality, OpNameToTypeSimple) {
                std::invalid_argument);
 }
 
-TEST_F(QFRFunctionality, dumpAndImportTeleportation) {
-  QuantumComputation qc(3);
-  qc.emplace_back<StandardOperation>(Targets{0, 1, 2}, OpType::Teleportation);
-  std::stringstream ss;
-  qc.dumpOpenQASM(ss, false);
-  EXPECT_TRUE(ss.str().find("teleport") != std::string::npos);
-
-  auto qcImported = qasm3::Importer::import(ss);
-  ASSERT_EQ(qcImported.size(), 1);
-  EXPECT_EQ(qcImported.at(0)->getType(), OpType::Teleportation);
-}
-
 TEST_F(QFRFunctionality, addControlStandardOperation) {
   auto op = StandardOperation(0, OpType::X);
   op.addControl(1);

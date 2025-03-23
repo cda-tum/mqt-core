@@ -52,9 +52,6 @@ protected:
   void checkUgate();
   void setup();
 
-  void dumpOpenQASMTeleportation(std::ostream& of,
-                                 const QubitIndexToRegisterMap& qreg) const;
-
 public:
   StandardOperation() = default;
 
