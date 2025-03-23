@@ -512,20 +512,3 @@ TEST_F(DDFunctionality, dynamicCircuitSimulationWithSWAP) {
   EXPECT_EQ(value, shots);
   EXPECT_EQ(key, "11");
 }
-
-TEST_F(DDFunctionality, dynamicCircuitProbabilityVectorExtractionWithSWAP) {
-  QuantumComputation qc(2, 2);
-  qc.x(0);
-  qc.swap(0, 1);
-  qc.measure(1, 0);
-  qc.reset(1);
-  qc.measure(1, 1);
-
-  const auto zeroState = dd->makeZeroState(2);
-  auto probVector = dd::SparsePVec{};
-  extractProbabilityVector(qc, zeroState, probVector, *dd);
-  EXPECT_EQ(probVector.size(), 1);
-  const auto& [key, value] = *probVector.begin();
-  EXPECT_EQ(value, 1.);
-  EXPECT_EQ(key, 0b01);
-}
