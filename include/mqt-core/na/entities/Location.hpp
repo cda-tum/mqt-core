@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "Definitions.hpp"
+#include "ir/Definitions.hpp"
 
 #include <cmath>
 #include <cstddef>
@@ -48,6 +48,12 @@ struct Location final {
 
   /// Returns the length of the vector from the origin to this location.
   [[nodiscard]] auto length() const -> double { return std::hypot(x, y); }
+
+  /// Returns the distance between two locations.
+  [[nodiscard]] static auto distance(const Location& loc1, const Location& loc2)
+      -> double {
+    return (loc1 - loc2).length();
+  }
 
   /// Returns a string representation of the location in the format "(x, y)".
   [[nodiscard]] auto toString() const -> std::string {

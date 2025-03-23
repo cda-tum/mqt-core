@@ -17,8 +17,16 @@
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"  // IWYU pragma: keep
+#include "mlir/Dialect/MQTOpt/Transforms/Passes.h" // IWYU pragma: keep
 
-int main(int argc, char** argv) {
+#include <mlir/Dialect/Func/Extensions/AllExtensions.h>
+#include <mlir/IR/DialectRegistry.h>
+#include <mlir/InitAllDialects.h>
+#include <mlir/InitAllPasses.h>
+#include <mlir/Tools/mlir-opt/MlirOptMain.h>
+
+int main(const int argc, char** argv) {
   mlir::registerAllPasses();
   mqt::ir::opt::registerMQTOptPasses();
 
@@ -33,5 +41,5 @@ int main(int argc, char** argv) {
   mlir::mqt::ir::conversions::registerQuantumToMQTOpt();
 
   return mlir::asMainReturnCode(
-      mlir::MlirOptMain(argc, argv, "Quantum optimizer driver\n", registry));
+      MlirOptMain(argc, argv, "Quantum optimizer driver\n", registry));
 }

@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "Definitions.hpp"
+#include "ir/Definitions.hpp"
 #include "na/entities/Atom.hpp"
 #include "na/operations/LocalOp.hpp"
 
@@ -26,18 +26,16 @@ namespace na {
 class LocalRZOp final : public LocalOp {
 public:
   /// Creates a new RZ operation with the given atoms and angle.
-  /// @param atom The atoms the operation is applied to.
+  /// @param atoms The atoms the operation is applied to.
   /// @param angle The angle of the operation.
-  LocalRZOp(std::vector<const Atom*> atom, const qc::fp angle)
-      : LocalOp(std::move(atom), {angle}) {
+  LocalRZOp(std::vector<const Atom*> atoms, const qc::fp angle)
+      : LocalOp(std::move(atoms), {angle}) {
     name_ = "rz";
   }
 
   /// Creates a new RZ operation with the given atom and angle.
   /// @param atom The atom the operation is applied to.
   /// @param angle The angle of the operation.
-  LocalRZOp(const Atom& atom, const qc::fp angle) : LocalRZOp({&atom}, angle) {
-    name_ = "rz";
-  }
+  LocalRZOp(const Atom& atom, const qc::fp angle) : LocalRZOp({&atom}, angle) {}
 };
 } // namespace na

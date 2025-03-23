@@ -106,10 +106,12 @@ public:
 
   /// Emplaces a new zone with the given name and returns a reference to the
   /// newly created zone.
-  /// @param name The name of the zone.
+  /// @param args The name of the zone and, optionally, the extent of the zone.
   /// @return A reference to the newly created zone.
-  auto emplaceBackZone(std::string name) -> const Zone& {
-    return *zones_.emplace_back(std::make_unique<Zone>(std::move(name)));
+  template <typename... Args>
+  auto emplaceBackZone(Args&&... args) -> const Zone& {
+    return *zones_.emplace_back(
+        std::make_unique<Zone>(std::forward<Args>(args)...));
   }
 
   /// Emplaces a new initial location for the given atom with the given location

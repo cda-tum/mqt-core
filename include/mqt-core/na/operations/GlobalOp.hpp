@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "Definitions.hpp"
+#include "ir/Definitions.hpp"
 #include "na/entities/Zone.hpp"
 #include "na/operations/Op.hpp"
 
@@ -32,15 +32,15 @@ protected:
   std::string name_;
   /// The parameters of the operation.
   std::vector<qc::fp> params_;
-  /// The zone the operation is applied to.
-  const Zone* zone_;
+  /// The zones the operation is applied to.
+  std::vector<const Zone*> zones_;
 
   /// Creates a new global operation in the given zone with the given
   /// parameters.
-  /// @param zone The zone the operation is applied to.
+  /// @param zones The zones the operation is applied to.
   /// @param params The parameters of the operation.
-  GlobalOp(const Zone& zone, std::vector<qc::fp> params)
-      : params_(std::move(params)), zone_(&zone) {}
+  GlobalOp(std::vector<const Zone*> zones, std::vector<qc::fp> params)
+      : params_(std::move(params)), zones_(std::move(zones)) {}
 
 public:
   GlobalOp() = delete;
@@ -49,7 +49,7 @@ public:
   [[nodiscard]] auto getParams() const -> auto& { return params_; }
 
   /// Returns the zone the operation is applied to.
-  [[nodiscard]] auto getZone() const -> const Zone& { return *zone_; }
+  [[nodiscard]] auto getZones() const -> auto& { return zones_; }
 
   /// Returns a string representation of the operation.
   [[nodiscard]] auto toString() const -> std::string override;
