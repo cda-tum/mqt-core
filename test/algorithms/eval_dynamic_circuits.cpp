@@ -7,7 +7,6 @@
  * Licensed under the MIT License
  */
 
-#include "Definitions.hpp"
 #include "algorithms/BernsteinVazirani.hpp"
 #include "algorithms/QFT.hpp"
 #include "algorithms/QPE.hpp"
@@ -16,6 +15,7 @@
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
+#include "ir/Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
 
 #include <bitset>
