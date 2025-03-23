@@ -44,7 +44,6 @@ namespace dd {
  * @note This function is only intended for internal use and should not be
  * called directly.
  *
- * @tparam Config The configuration of the DD package
  * @param dd The DD package to use
  * @param type The operation type
  * @param params The operation parameters
@@ -52,11 +51,10 @@ namespace dd {
  * @param targets The operation targets
  * @return The decision diagram representation of the operation
  */
-template <class Config>
-qc::MatrixDD getStandardOperationDD(Package<Config>& dd, const qc::OpType type,
-                                    const std::vector<fp>& params,
-                                    const qc::Controls& controls,
-                                    const std::vector<qc::Qubit>& targets) {
+MatrixDD getStandardOperationDD(Package& dd, const qc::OpType type,
+                                const std::vector<fp>& params,
+                                const qc::Controls& controls,
+                                const std::vector<qc::Qubit>& targets) {
   if (qc::isSingleQubitGate(type)) {
     if (targets.size() != 1) {
       throw std::invalid_argument(
@@ -83,7 +81,6 @@ qc::MatrixDD getStandardOperationDD(Package<Config>& dd, const qc::OpType type,
  * @note This function is only intended for internal use and should not be
  * called directly.
  *
- * @tparam Config The configuration of the DD package
  * @param op The operation to get the DD for
  * @param dd The DD package to use
  * @param controls The operation controls
@@ -91,12 +88,10 @@ qc::MatrixDD getStandardOperationDD(Package<Config>& dd, const qc::OpType type,
  * @param inverse Whether to get the inverse of the operation
  * @return The decision diagram representation of the operation
  */
-template <class Config>
-qc::MatrixDD getStandardOperationDD(const qc::StandardOperation& op,
-                                    Package<Config>& dd,
-                                    const qc::Controls& controls,
-                                    const std::vector<qc::Qubit>& targets,
-                                    const bool inverse) {
+MatrixDD getStandardOperationDD(const qc::StandardOperation& op, Package& dd,
+                                const qc::Controls& controls,
+                                const std::vector<qc::Qubit>& targets,
+                                const bool inverse) {
   auto type = op.getType();
 
   if (!inverse) {
@@ -176,10 +171,12 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation& op,
   return getStandardOperationDD(dd, type, params, controls, targetQubits);
 }
 
+MatrixDD getInverseDD(const qc::Operation& op, Package& dd,
+                      const qc::Permutation& permutation = {});
+
 /**
  * @brief Get the decision diagram representation of an operation.
  *
- * @tparam Config The configuration of the DD package
  * @param op The operation to get the DD for
  * @param dd The DD package to use
  * @param permutation The permutation to apply to the operation's qubits. An
@@ -187,10 +184,9 @@ qc::MatrixDD getStandardOperationDD(const qc::StandardOperation& op,
  * @param inverse Whether to get the inverse of the operation
  * @return The decision diagram representation of the operation
  */
-template <class Config>
-qc::MatrixDD getDD(const qc::Operation& op, Package<Config>& dd,
-                   const qc::Permutation& permutation = {},
-                   const bool inverse = false) {
+MatrixDD getDD(const qc::Operation& op, Package& dd,
+               const qc::Permutation& permutation = {},
+               const bool inverse = false) {
   const auto type = op.getType();
 
   if (type == qc::Barrier) {
@@ -246,16 +242,14 @@ qc::MatrixDD getDD(const qc::Operation& op, Package<Config>& dd,
  *
  * @see getDD
  *
- * @tparam Config The configuration of the DD package
  * @param op The operation to get the inverse DD for
  * @param dd The DD package to use
  * @param permutation The permutation to apply to the operation's qubits. An
  * empty permutation marks the identity permutation.
  * @return The decision diagram representation of the inverse of the operation
  */
-template <class Config>
-qc::MatrixDD getInverseDD(const qc::Operation& op, Package<Config>& dd,
-                          const qc::Permutation& permutation = {}) {
+MatrixDD getInverseDD(const qc::Operation& op, Package& dd,
+                      const qc::Permutation& permutation) {
   return getDD(op, dd, permutation, true);
 }
 
@@ -266,7 +260,6 @@ qc::MatrixDD getInverseDD(const qc::Operation& op, Package<Config>& dd,
  * correctly accounts for the permutation of the operation's qubits as well as
  * automatically handles reference counting.
  *
- * @tparam Config The configuration of the DD package
  * @tparam Node The type of the DD nodes
  * @param op The operation to apply
  * @param in The input DD
@@ -275,12 +268,11 @@ qc::MatrixDD getInverseDD(const qc::Operation& op, Package<Config>& dd,
  * empty permutation marks the identity permutation.
  * @return The output DD
  */
-template <class Config, class Node>
+template <class Node>
 Edge<Node> applyUnitaryOperation(const qc::Operation& op, const Edge<Node>& in,
-                                 Package<Config>& dd,
+                                 Package& dd,
                                  const qc::Permutation& permutation = {}) {
-  static_assert(std::is_same_v<Node, dd::vNode> ||
-                std::is_same_v<Node, dd::mNode>);
+  static_assert(std::is_same_v<Node, vNode> || std::is_same_v<Node, mNode>);
   return dd.applyOperation(getDD(op, dd, permutation), in);
 }
 
@@ -293,8 +285,6 @@ Edge<Node> applyUnitaryOperation(const qc::Operation& op, const Edge<Node>& in,
  * permutation of the operation's qubits as well as automatically handles
  * reference counting.
  *
- * @tparam Config The configuration of the DD package
- * @tparam Node The type of the DD nodes
  * @param op The measurement operation to apply
  * @param in The input DD
  * @param dd The DD package to use
@@ -304,12 +294,10 @@ Edge<Node> applyUnitaryOperation(const qc::Operation& op, const Edge<Node>& in,
  * empty permutation marks the identity permutation.
  * @return The output DD
  */
-template <class Config>
-qc::VectorDD applyMeasurement(const qc::NonUnitaryOperation& op,
-                              qc::VectorDD in, Package<Config>& dd,
-                              std::mt19937_64& rng,
-                              std::vector<bool>& measurements,
-                              const qc::Permutation& permutation = {}) {
+VectorDD applyMeasurement(const qc::NonUnitaryOperation& op, VectorDD in,
+                          Package& dd, std::mt19937_64& rng,
+                          std::vector<bool>& measurements,
+                          const qc::Permutation& permutation = {}) {
   assert(op.getType() == qc::Measure);
   const auto& qubits = permutation.apply(op.getTargets());
   const auto& bits = op.getClassics();
@@ -330,7 +318,6 @@ qc::VectorDD applyMeasurement(const qc::NonUnitaryOperation& op,
  * The function correctly accounts for the permutation of the operation's
  * qubits as well as automatically handles reference counting.
  *
- * @tparam Config The configuration of the DD package
  * @param op The reset operation to apply
  * @param in The input DD
  * @param dd The DD package to use
@@ -339,10 +326,9 @@ qc::VectorDD applyMeasurement(const qc::NonUnitaryOperation& op,
  * empty permutation marks the identity permutation.
  * @return The output DD
  */
-template <class Config>
-qc::VectorDD applyReset(const qc::NonUnitaryOperation& op, qc::VectorDD in,
-                        Package<Config>& dd, std::mt19937_64& rng,
-                        const qc::Permutation& permutation = {}) {
+VectorDD applyReset(const qc::NonUnitaryOperation& op, VectorDD in, Package& dd,
+                    std::mt19937_64& rng,
+                    const qc::Permutation& permutation = {}) {
   assert(op.getType() == qc::Reset);
   const auto& qubits = permutation.apply(op.getTargets());
   for (const auto& qubit : qubits) {
@@ -367,7 +353,6 @@ qc::VectorDD applyReset(const qc::NonUnitaryOperation& op, qc::VectorDD in,
  * of the operation's qubits as well as automatically handles reference
  * counting.
  *
- * @tparam Config The configuration of the DD package
  * @param op The classic controlled operation to apply
  * @param in The input DD
  * @param dd The DD package to use
@@ -376,10 +361,9 @@ qc::VectorDD applyReset(const qc::NonUnitaryOperation& op, qc::VectorDD in,
  * empty permutation marks the identity permutation.
  * @return The output DD
  */
-template <class Config>
-qc::VectorDD
+VectorDD
 applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
-                                const qc::VectorDD& in, Package<Config>& dd,
+                                const VectorDD& in, Package& dd,
                                 const std::vector<bool>& measurements,
                                 const qc::Permutation& permutation = {}) {
   const auto& expectedValue = op.getExpectedValue();
@@ -438,7 +422,6 @@ applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
  * least as large as the @p to permutation.
  *
  * @tparam DDType The type of the DD
- * @tparam Config The configuration of the DD package
  * @param on The DD to change the permutation of
  * @param from The current permutation
  * @param to The target permutation
@@ -446,9 +429,9 @@ applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
  * @param regular Whether to apply the permutation from the left (true) or from
  * the right (false)
  */
-template <class DDType, class Config>
+template <class DDType>
 void changePermutation(DDType& on, qc::Permutation& from,
-                       const qc::Permutation& to, Package<Config>& dd,
+                       const qc::Permutation& to, Package& dd,
                        const bool regular = true) {
   assert(from.size() >= to.size());
   if (on.isZeroTerminal()) {
@@ -484,7 +467,7 @@ void changePermutation(DDType& on, qc::Permutation& from,
     auto saved = on;
     const auto swapDD = dd.makeTwoQubitGateDD(opToTwoQubitGateMatrix(qc::SWAP),
                                               from.at(i), from.at(j));
-    if constexpr (std::is_same_v<DDType, qc::VectorDD>) {
+    if constexpr (std::is_same_v<DDType, VectorDD>) {
       on = dd.multiply(swapDD, on);
     } else {
       // the regular flag only has an effect on matrix DDs

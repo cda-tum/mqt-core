@@ -12,7 +12,6 @@
 #include "dd/Complex.hpp"
 #include "dd/ComplexNumbers.hpp"
 #include "dd/ComplexValue.hpp"
-#include "dd/DDpackageConfig.hpp"
 #include "dd/Edge.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
@@ -46,18 +45,16 @@ static constexpr auto D_EDGE_MEMORY_MIB =
  * @details The estimate is based on the number of active entries in the
  * respective unique tables. It accounts for the memory used by DD nodes, DD
  * edges, and real numbers.
- * @tparam Config The package configuration
  * @param package The package instance
  * @return The estimated memory usage in MiB
  */
-template <class Config>
-[[nodiscard]] static double computeActiveMemoryMiB(Package<Config>* package) {
+[[nodiscard]] static double computeActiveMemoryMiB(const Package& package) {
   const auto vActiveEntries =
-      static_cast<double>(package->vUniqueTable.getNumActiveEntries());
+      static_cast<double>(package.vUniqueTable.getNumActiveEntries());
   const auto mActiveEntries =
-      static_cast<double>(package->mUniqueTable.getNumActiveEntries());
+      static_cast<double>(package.mUniqueTable.getNumActiveEntries());
   const auto dActiveEntries =
-      static_cast<double>(package->dUniqueTable.getNumActiveEntries());
+      static_cast<double>(package.dUniqueTable.getNumActiveEntries());
 
   const auto vMemoryForNodes = vActiveEntries * V_NODE_MEMORY_MIB;
   const auto mMemoryForNodes = mActiveEntries * M_NODE_MEMORY_MIB;
@@ -72,7 +69,7 @@ template <class Config>
       vMemoryForEdges + mMemoryForEdges + dMemoryForEdges;
 
   const auto activeRealNumbers =
-      static_cast<double>(package->cUniqueTable.getStats().numActiveEntries);
+      static_cast<double>(package.cUniqueTable.getStats().numActiveEntries);
   const auto memoryForRealNumbers = activeRealNumbers * REAL_NUMBER_MEMORY_MIB;
 
   return memoryForNodes + memoryForEdges + memoryForRealNumbers;
@@ -83,18 +80,16 @@ template <class Config>
  * @details The estimate is based on the peak number of used entries in the
  * respective memory managers. It accounts for the memory used by DD nodes, DD
  * edges, and real numbers.
- * @tparam Config The package configuration
  * @param package The package instance
  * @return The estimated memory usage in MiB
  */
-template <class Config>
-[[nodiscard]] static double computePeakMemoryMiB(Package<Config>* package) {
+[[nodiscard]] static double computePeakMemoryMiB(const Package& package) {
   const auto vPeakUsedEntries =
-      static_cast<double>(package->vMemoryManager.getStats().peakNumUsed);
+      static_cast<double>(package.vMemoryManager.getStats().peakNumUsed);
   const auto mPeakUsedEntries =
-      static_cast<double>(package->mMemoryManager.getStats().peakNumUsed);
+      static_cast<double>(package.mMemoryManager.getStats().peakNumUsed);
   const auto dPeakUsedEntries =
-      static_cast<double>(package->dMemoryManager.getStats().peakNumUsed);
+      static_cast<double>(package.dMemoryManager.getStats().peakNumUsed);
 
   const auto vMemoryForNodes = vPeakUsedEntries * V_NODE_MEMORY_MIB;
   const auto mMemoryForNodes = mPeakUsedEntries * M_NODE_MEMORY_MIB;
@@ -109,59 +104,56 @@ template <class Config>
       vMemoryForEdges + mMemoryForEdges + dMemoryForEdges;
 
   const auto peakRealNumbers =
-      static_cast<double>(package->cMemoryManager.getStats().peakNumUsed);
+      static_cast<double>(package.cMemoryManager.getStats().peakNumUsed);
   const auto memoryForRealNumbers = peakRealNumbers * REAL_NUMBER_MEMORY_MIB;
 
   return memoryForNodes + memoryForEdges + memoryForRealNumbers;
 }
 
-template <class Config = DDPackageConfig>
 [[nodiscard]] static nlohmann::basic_json<>
-getStatistics(Package<Config>* package,
+getStatistics(const Package& package,
               const bool includeIndividualTables = false) {
   nlohmann::basic_json<> j;
 
   auto& vector = j["vector"];
   vector["unique_table"] =
-      package->vUniqueTable.getStatsJson(includeIndividualTables);
-  vector["memory_manager"] = package->vMemoryManager.getStats().json();
+      package.vUniqueTable.getStatsJson(includeIndividualTables);
+  vector["memory_manager"] = package.vMemoryManager.getStats().json();
 
   auto& matrix = j["matrix"];
   matrix["unique_table"] =
-      package->mUniqueTable.getStatsJson(includeIndividualTables);
-  matrix["memory_manager"] = package->mMemoryManager.getStats().json();
+      package.mUniqueTable.getStatsJson(includeIndividualTables);
+  matrix["memory_manager"] = package.mMemoryManager.getStats().json();
 
   auto& densityMatrix = j["density_matrix"];
   densityMatrix["unique_table"] =
-      package->dUniqueTable.getStatsJson(includeIndividualTables);
-  densityMatrix["memory_manager"] = package->dMemoryManager.getStats().json();
+      package.dUniqueTable.getStatsJson(includeIndividualTables);
+  densityMatrix["memory_manager"] = package.dMemoryManager.getStats().json();
 
   auto& realNumbers = j["real_numbers"];
-  realNumbers["unique_table"] = package->cUniqueTable.getStats().json();
-  realNumbers["memory_manager"] = package->cMemoryManager.getStats().json();
+  realNumbers["unique_table"] = package.cUniqueTable.getStats().json();
+  realNumbers["memory_manager"] = package.cMemoryManager.getStats().json();
 
   auto& computeTables = j["compute_tables"];
-  computeTables["vector_add"] = package->vectorAdd.getStats().json();
-  computeTables["matrix_add"] = package->matrixAdd.getStats().json();
-  computeTables["density_matrix_add"] = package->densityAdd.getStats().json();
+  computeTables["vector_add"] = package.vectorAdd.getStats().json();
+  computeTables["matrix_add"] = package.matrixAdd.getStats().json();
+  computeTables["density_matrix_add"] = package.densityAdd.getStats().json();
   computeTables["matrix_conjugate_transpose"] =
-      package->conjugateMatrixTranspose.getStats().json();
+      package.conjugateMatrixTranspose.getStats().json();
   computeTables["matrix_vector_mult"] =
-      package->matrixVectorMultiplication.getStats().json();
+      package.matrixVectorMultiplication.getStats().json();
   computeTables["matrix_matrix_mult"] =
-      package->matrixMatrixMultiplication.getStats().json();
+      package.matrixMatrixMultiplication.getStats().json();
   computeTables["density_density_mult"] =
-      package->densityDensityMultiplication.getStats().json();
-  computeTables["vector_kronecker"] =
-      package->vectorKronecker.getStats().json();
-  computeTables["matrix_kronecker"] =
-      package->matrixKronecker.getStats().json();
+      package.densityDensityMultiplication.getStats().json();
+  computeTables["vector_kronecker"] = package.vectorKronecker.getStats().json();
+  computeTables["matrix_kronecker"] = package.matrixKronecker.getStats().json();
   computeTables["vector_inner_product"] =
-      package->vectorInnerProduct.getStats().json();
+      package.vectorInnerProduct.getStats().json();
   computeTables["stochastic_noise_operations"] =
-      package->stochasticNoiseOperationCache.getStats().json();
+      package.stochasticNoiseOperationCache.getStats().json();
   computeTables["density_noise_operations"] =
-      package->densityNoise.getStats().json();
+      package.densityNoise.getStats().json();
 
   j["active_memory_mib"] = computeActiveMemoryMiB(package);
   j["peak_memory_mib"] = computePeakMemoryMiB(package);
@@ -171,20 +163,18 @@ getStatistics(Package<Config>* package,
 
 /**
  * @brief Get some key statistics about data structures used by the DD package
- * @tparam Config The package configuration
  * @param package The package instance
  * @return A JSON representation of the statistics
  */
-template <class Config = DDPackageConfig>
 [[nodiscard]] static nlohmann::basic_json<>
-getDataStructureStatistics(Package<Config>* package) {
+getDataStructureStatistics(const Package& package) {
   nlohmann::basic_json<> j;
 
   // Information about key data structures
   // For every entry, we store the size in bytes and the alignment in bytes
   auto& ddPackage = j["Package"];
-  ddPackage["size_B"] = sizeof(Package<Config>);
-  ddPackage["alignment_B"] = alignof(Package<Config>);
+  ddPackage["size_B"] = sizeof(Package);
+  ddPackage["alignment_B"] = alignof(Package);
 
   auto& vectorNode = j["vNode"];
   vectorNode["size_B"] = sizeof(vNode);
@@ -230,72 +220,70 @@ getDataStructureStatistics(Package<Config>* package) {
   // For every entry, we store the size in bytes and the alignment in bytes
   auto& ctEntries = j["ComplexTableEntries"];
   auto& vectorAdd = ctEntries["vector_add"];
-  vectorAdd["size_B"] = sizeof(typename decltype(package->vectorAdd)::Entry);
+  vectorAdd["size_B"] = sizeof(typename decltype(package.vectorAdd)::Entry);
   vectorAdd["alignment_B"] =
-      alignof(typename decltype(package->vectorAdd)::Entry);
+      alignof(typename decltype(package.vectorAdd)::Entry);
 
   auto& matrixAdd = ctEntries["matrix_add"];
-  matrixAdd["size_B"] = sizeof(typename decltype(package->matrixAdd)::Entry);
+  matrixAdd["size_B"] = sizeof(typename decltype(package.matrixAdd)::Entry);
   matrixAdd["alignment_B"] =
-      alignof(typename decltype(package->matrixAdd)::Entry);
+      alignof(typename decltype(package.matrixAdd)::Entry);
 
   auto& densityAdd = ctEntries["density_add"];
-  densityAdd["size_B"] = sizeof(typename decltype(package->densityAdd)::Entry);
+  densityAdd["size_B"] = sizeof(typename decltype(package.densityAdd)::Entry);
   densityAdd["alignment_B"] =
-      alignof(typename decltype(package->densityAdd)::Entry);
+      alignof(typename decltype(package.densityAdd)::Entry);
 
   auto& conjugateMatrixTranspose = ctEntries["conjugate_matrix_transpose"];
   conjugateMatrixTranspose["size_B"] =
-      sizeof(typename decltype(package->conjugateMatrixTranspose)::Entry);
+      sizeof(typename decltype(package.conjugateMatrixTranspose)::Entry);
   conjugateMatrixTranspose["alignment_B"] =
-      alignof(typename decltype(package->conjugateMatrixTranspose)::Entry);
+      alignof(typename decltype(package.conjugateMatrixTranspose)::Entry);
 
   auto& matrixVectorMult = ctEntries["matrix_vector_mult"];
   matrixVectorMult["size_B"] =
-      sizeof(typename decltype(package->matrixVectorMultiplication)::Entry);
+      sizeof(typename decltype(package.matrixVectorMultiplication)::Entry);
   matrixVectorMult["alignment_B"] =
-      alignof(typename decltype(package->matrixVectorMultiplication)::Entry);
+      alignof(typename decltype(package.matrixVectorMultiplication)::Entry);
 
   auto& matrixMatrixMult = ctEntries["matrix_matrix_mult"];
   matrixMatrixMult["size_B"] =
-      sizeof(typename decltype(package->matrixMatrixMultiplication)::Entry);
+      sizeof(typename decltype(package.matrixMatrixMultiplication)::Entry);
   matrixMatrixMult["alignment_B"] =
-      alignof(typename decltype(package->matrixMatrixMultiplication)::Entry);
+      alignof(typename decltype(package.matrixMatrixMultiplication)::Entry);
 
   auto& densityDensityMult = ctEntries["density_density_mult"];
   densityDensityMult["size_B"] =
-      sizeof(typename decltype(package->densityDensityMultiplication)::Entry);
+      sizeof(typename decltype(package.densityDensityMultiplication)::Entry);
   densityDensityMult["alignment_B"] =
-      alignof(typename decltype(package->densityDensityMultiplication)::Entry);
+      alignof(typename decltype(package.densityDensityMultiplication)::Entry);
 
   auto& vectorKronecker = ctEntries["vector_kronecker"];
   vectorKronecker["size_B"] =
-      sizeof(typename decltype(package->vectorKronecker)::Entry);
+      sizeof(typename decltype(package.vectorKronecker)::Entry);
   vectorKronecker["alignment_B"] =
-      alignof(typename decltype(package->vectorKronecker)::Entry);
+      alignof(typename decltype(package.vectorKronecker)::Entry);
 
   auto& matrixKronecker = ctEntries["matrix_kronecker"];
   matrixKronecker["size_B"] =
-      sizeof(typename decltype(package->matrixKronecker)::Entry);
+      sizeof(typename decltype(package.matrixKronecker)::Entry);
   matrixKronecker["alignment_B"] =
-      alignof(typename decltype(package->matrixKronecker)::Entry);
+      alignof(typename decltype(package.matrixKronecker)::Entry);
 
   auto& vectorInnerProduct = ctEntries["vector_inner_product"];
   vectorInnerProduct["size_B"] =
-      sizeof(typename decltype(package->vectorInnerProduct)::Entry);
+      sizeof(typename decltype(package.vectorInnerProduct)::Entry);
   vectorInnerProduct["alignment_B"] =
-      alignof(typename decltype(package->vectorInnerProduct)::Entry);
+      alignof(typename decltype(package.vectorInnerProduct)::Entry);
 
   return j;
 }
 
-template <class Config = DDPackageConfig>
-[[nodiscard]] static std::string getStatisticsString(Package<Config>* package) {
+[[nodiscard]] static std::string getStatisticsString(const Package& package) {
   return getStatistics(package).dump(2U);
 }
 
-template <class Config = DDPackageConfig>
-static void printStatistics(Package<Config>* package,
+static void printStatistics(const Package& package,
                             std::ostream& os = std::cout) {
   os << getStatisticsString(package);
 }

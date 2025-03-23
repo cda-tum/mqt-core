@@ -26,10 +26,10 @@
 #include <vector>
 
 namespace dd {
-template <class Config>
-std::map<std::string, std::size_t>
-sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
-       const std::size_t shots, const std::size_t seed) {
+std::map<std::string, std::size_t> sample(const qc::QuantumComputation& qc,
+                                          const VectorDD& in, Package& dd,
+                                          const std::size_t shots,
+                                          const std::size_t seed) {
   auto isDynamicCircuit = false;
   auto hasMeasurements = false;
   auto measurementsLast = true;
@@ -97,7 +97,7 @@ sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
       }
 
       // SWAP gates can be executed virtually by changing the permutation
-      if (op->getType() == OpType::SWAP && !op->isControlled()) {
+      if (op->getType() == qc::OpType::SWAP && !op->isControlled()) {
         const auto& targets = op->getTargets();
         std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
         continue;
@@ -158,7 +158,7 @@ sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
     for (const auto& op : qc) {
       if (op->isUnitary()) {
         // SWAP gates can be executed virtually by changing the permutation
-        if (op->getType() == OpType::SWAP && !op->isControlled()) {
+        if (op->getType() == qc::OpType::SWAP && !op->isControlled()) {
           const auto& targets = op->getTargets();
           std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
           continue;
@@ -168,21 +168,21 @@ sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
         continue;
       }
 
-      if (op->getType() == Measure) {
-        const auto& measure = dynamic_cast<const NonUnitaryOperation&>(*op);
+      if (op->getType() == qc::OpType::Measure) {
+        const auto& measure = dynamic_cast<const qc::NonUnitaryOperation&>(*op);
         e = applyMeasurement(measure, e, dd, mt, measurements, permutation);
         continue;
       }
 
-      if (op->getType() == Reset) {
-        const auto& reset = dynamic_cast<const NonUnitaryOperation&>(*op);
+      if (op->getType() == qc::OpType::Reset) {
+        const auto& reset = dynamic_cast<const qc::NonUnitaryOperation&>(*op);
         e = applyReset(reset, e, dd, mt, permutation);
         continue;
       }
 
       if (op->isClassicControlledOperation()) {
         const auto& classic =
-            dynamic_cast<const ClassicControlledOperation&>(*op);
+            dynamic_cast<const qc::ClassicControlledOperation&>(*op);
         e = applyClassicControlledOperation(classic, e, dd, measurements,
                                             permutation);
         continue;
@@ -205,15 +205,11 @@ sample(const QuantumComputation& qc, const VectorDD& in, Package<Config>& dd,
   return counts;
 }
 
-std::map<std::string, std::size_t> sample(const QuantumComputation& qc,
+std::map<std::string, std::size_t> sample(const qc::QuantumComputation& qc,
                                           const std::size_t shots,
                                           const std::size_t seed) {
   const auto nqubits = qc.getNqubits();
-  auto dd = std::make_unique<dd::Package<>>(nqubits);
+  auto dd = std::make_unique<Package<>>(nqubits);
   return sample(qc, dd->makeZeroState(nqubits), *dd, shots, seed);
 }
-
-template std::map<std::string, std::size_t>
-sample<DDPackageConfig>(const QuantumComputation& qc, const VectorDD& in,
-                        Package<>& dd, std::size_t shots, std::size_t seed);
 } // namespace dd

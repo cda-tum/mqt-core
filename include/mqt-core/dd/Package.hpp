@@ -21,7 +21,6 @@
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/MemoryManager.hpp"
 #include "dd/Node.hpp"
-#include "dd/Package_fwd.hpp" // IWYU pragma: export
 #include "dd/RealNumber.hpp"
 #include "dd/RealNumberUniqueTable.hpp"
 #include "dd/StochasticNoiseOperationTable.hpp"
@@ -70,19 +69,14 @@ namespace dd {
  * - perform collapsing measurements on decision diagrams,
  * - sample from decision diagrams.
  *
- * To this end, it maintains several internal data strutcures, such as unique
+ * To this end, it maintains several internal data structures, such as unique
  * tables, compute tables, and memory managers, which are used to manage the
  * nodes of the decision diagrams.
- *
- * @tparam Config The configuration to use for the package-internal data
- * structures
  */
-template <class Config> class Package {
-  static_assert(std::is_base_of_v<DDPackageConfig, Config>,
-                "Config must be derived from DDPackageConfig");
+class Package {
 
   ///
-  /// Construction, destruction, information and reset
+  /// Construction, destruction, information, and reset
   ///
 public:
   static constexpr std::size_t MAX_POSSIBLE_QUBITS =
@@ -93,8 +87,11 @@ public:
    *
    * @param nq The maximum number of qubits to allocate memory for. This can
    * always be extended later using @ref resize.
+   * @param config The configuration of the package
    */
-  explicit Package(std::size_t nq = DEFAULT_QUBITS) : nqubits(nq) {
+  explicit Package(const std::size_t nq = DEFAULT_QUBITS,
+                   DDPackageConfig config = DDPackageConfig{})
+      : nqubits(nq), config_(std::move(config)) {
     resize(nq);
   };
   ~Package() = default;
@@ -138,17 +135,18 @@ public:
 
 private:
   std::size_t nqubits;
+  DDPackageConfig config_;
 
 public:
   /// The memory manager for vector nodes
   MemoryManager vMemoryManager{
-      MemoryManager::create<vNode>(Config::UT_VEC_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<vNode>(config_.UT_VEC_INITIAL_ALLOCATION_SIZE)};
   /// The memory manager for matrix nodes
   MemoryManager mMemoryManager{
-      MemoryManager::create<mNode>(Config::UT_MAT_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<mNode>(config_.UT_MAT_INITIAL_ALLOCATION_SIZE)};
   /// The memory manager for density matrix nodes
   MemoryManager dMemoryManager{
-      MemoryManager::create<dNode>(Config::UT_DM_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<dNode>(config_.UT_DM_INITIAL_ALLOCATION_SIZE)};
   /**
    * @brief The memory manager for complex numbers
    * @note The real and imaginary part of complex numbers are treated
@@ -187,11 +185,11 @@ public:
   }
 
   /// The unique table used for vector nodes
-  UniqueTable vUniqueTable{vMemoryManager, {0U, Config::UT_VEC_NBUCKET}};
+  UniqueTable vUniqueTable{vMemoryManager, {0U, config_.UT_VEC_NBUCKET}};
   /// The unique table used for matrix nodes
-  UniqueTable mUniqueTable{mMemoryManager, {0U, Config::UT_MAT_NBUCKET}};
+  UniqueTable mUniqueTable{mMemoryManager, {0U, config_.UT_MAT_NBUCKET}};
   /// The unique table used for density matrix nodes
-  UniqueTable dUniqueTable{dMemoryManager, {0U, Config::UT_DM_NBUCKET}};
+  UniqueTable dUniqueTable{dMemoryManager, {0U, config_.UT_DM_NBUCKET}};
   /**
    * @brief The unique table used for complex numbers
    * @note The table actually only stores real numbers in the interval [0, 1],
@@ -295,15 +293,15 @@ public:
       return false;
     }
 
-    auto cCollect = cUniqueTable.garbageCollect(force);
+    const auto cCollect = cUniqueTable.garbageCollect(force);
     if (cCollect > 0) {
       // Collecting garbage in the complex numbers table requires collecting the
       // node tables as well
       force = true;
     }
-    auto vCollect = vUniqueTable.garbageCollect(force);
-    auto mCollect = mUniqueTable.garbageCollect(force);
-    auto dCollect = dUniqueTable.garbageCollect(force);
+    const auto vCollect = vUniqueTable.garbageCollect(force);
+    const auto mCollect = mUniqueTable.garbageCollect(force);
+    const auto dCollect = dUniqueTable.garbageCollect(force);
 
     // invalidate all compute tables involving vectors if any vector node has
     // been collected
@@ -1410,14 +1408,12 @@ public:
   ///
   /// Addition
   ///
-  ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge,
-               Config::CT_VEC_ADD_NBUCKET>
-      vectorAdd{};
-  ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge,
-               Config::CT_MAT_ADD_NBUCKET>
-      matrixAdd{};
-  ComputeTable<dCachedEdge, dCachedEdge, dCachedEdge, Config::CT_DM_ADD_NBUCKET>
-      densityAdd{};
+  ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge> vectorAdd{
+      config_.CT_VEC_ADD_NBUCKET};
+  ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge> matrixAdd{
+      config_.CT_MAT_ADD_NBUCKET};
+  ComputeTable<dCachedEdge, dCachedEdge, dCachedEdge> densityAdd{
+      config_.CT_DM_ADD_NBUCKET};
 
   /**
    * @brief Get the compute table for addition operations.
@@ -1436,12 +1432,10 @@ public:
     }
   }
 
-  ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge,
-               Config::CT_VEC_ADD_MAG_NBUCKET>
-      vectorAddMagnitudes{};
-  ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge,
-               Config::CT_MAT_ADD_MAG_NBUCKET>
-      matrixAddMagnitudes{};
+  ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge> vectorAddMagnitudes{
+      config_.CT_VEC_ADD_MAG_NBUCKET};
+  ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge> matrixAddMagnitudes{
+      config_.CT_MAT_ADD_MAG_NBUCKET};
 
   /**
    * @brief Get the compute table for addition operations with magnitudes.
@@ -1680,8 +1674,8 @@ public:
   ///
   /// Vector conjugation
   ///
-  UnaryComputeTable<vNode*, vCachedEdge, Config::CT_VEC_CONJ_NBUCKET>
-      conjugateVector{};
+  UnaryComputeTable<vNode*, vCachedEdge> conjugateVector{
+      config_.CT_VEC_CONJ_NBUCKET};
 
   /**
    * @brief Conjugates a given decision diagram edge.
@@ -1724,8 +1718,8 @@ public:
   ///
   /// Matrix (conjugate) transpose
   ///
-  UnaryComputeTable<mNode*, mCachedEdge, Config::CT_MAT_CONJ_TRANS_NBUCKET>
-      conjugateMatrixTranspose{};
+  UnaryComputeTable<mNode*, mCachedEdge> conjugateMatrixTranspose{
+      config_.CT_MAT_CONJ_TRANS_NBUCKET};
 
   /**
    * @brief Computes the conjugate transpose of a given matrix edge.
@@ -1773,12 +1767,12 @@ public:
   ///
   /// Multiplication
   ///
-  ComputeTable<mNode*, vNode*, vCachedEdge, Config::CT_MAT_VEC_MULT_NBUCKET>
-      matrixVectorMultiplication{};
-  ComputeTable<mNode*, mNode*, mCachedEdge, Config::CT_MAT_MAT_MULT_NBUCKET>
-      matrixMatrixMultiplication{};
-  ComputeTable<dNode*, dNode*, dCachedEdge, Config::CT_DM_DM_MULT_NBUCKET>
-      densityDensityMultiplication{};
+  ComputeTable<mNode*, vNode*, vCachedEdge> matrixVectorMultiplication{
+      config_.CT_MAT_VEC_MULT_NBUCKET};
+  ComputeTable<mNode*, mNode*, mCachedEdge> matrixMatrixMultiplication{
+      config_.CT_MAT_MAT_MULT_NBUCKET};
+  ComputeTable<dNode*, dNode*, dCachedEdge> densityDensityMultiplication{
+      config_.CT_DM_DM_MULT_NBUCKET};
 
   /**
    * @brief Get the compute table for multiplication operations.
@@ -2058,8 +2052,8 @@ private:
   /// Inner product, fidelity, expectation value
   ///
 public:
-  ComputeTable<vNode*, vNode*, vCachedEdge, Config::CT_VEC_INNER_PROD_NBUCKET>
-      vectorInnerProduct{};
+  ComputeTable<vNode*, vNode*, vCachedEdge> vectorInnerProduct{
+      config_.CT_VEC_INNER_PROD_NBUCKET};
 
   /**
    * @brief Calculates the inner product of two vector decision diagrams.
@@ -2260,10 +2254,10 @@ public:
   /// Kronecker/tensor product
   ///
 
-  ComputeTable<vNode*, vNode*, vCachedEdge, Config::CT_VEC_KRON_NBUCKET>
-      vectorKronecker{};
-  ComputeTable<mNode*, mNode*, mCachedEdge, Config::CT_MAT_KRON_NBUCKET>
-      matrixKronecker{};
+  ComputeTable<vNode*, vNode*, vCachedEdge> vectorKronecker{
+      config_.CT_VEC_KRON_NBUCKET};
+  ComputeTable<mNode*, mNode*, mCachedEdge> matrixKronecker{
+      config_.CT_MAT_KRON_NBUCKET};
 
   /**
    * @brief Get the compute table for Kronecker product operations.
@@ -2395,10 +2389,10 @@ private:
   /// (Partial) trace
   ///
 public:
-  UnaryComputeTable<dNode*, dCachedEdge, Config::CT_DM_TRACE_NBUCKET>
-      densityTrace{};
-  UnaryComputeTable<mNode*, mCachedEdge, Config::CT_MAT_TRACE_NBUCKET>
-      matrixTrace{};
+  UnaryComputeTable<dNode*, dCachedEdge> densityTrace{
+      config_.CT_DM_TRACE_NBUCKET};
+  UnaryComputeTable<mNode*, mCachedEdge> matrixTrace{
+      config_.CT_MAT_TRACE_NBUCKET};
 
   /**
    * @brief Get the compute table for trace operations.
@@ -2661,9 +2655,9 @@ public:
   ///
   /// Noise Operations
   ///
-  StochasticNoiseOperationTable<mEdge, Config::STOCHASTIC_CACHE_OPS>
-      stochasticNoiseOperationCache{nqubits};
-  DensityNoiseTable<dEdge, dEdge, Config::CT_DM_NOISE_NBUCKET> densityNoise{};
+  StochasticNoiseOperationTable<mEdge> stochasticNoiseOperationCache{
+      nqubits, config_.STOCHASTIC_CACHE_OPS};
+  DensityNoiseTable<dEdge, dEdge> densityNoise{config_.CT_DM_NOISE_NBUCKET};
 
   ///
   /// Ancillary and garbage reduction
@@ -3336,7 +3330,5 @@ private:
     return r;
   }
 };
-
-using UnitarySimulatorDDPackage = Package<UnitarySimulatorDDPackageConfig>;
 
 } // namespace dd

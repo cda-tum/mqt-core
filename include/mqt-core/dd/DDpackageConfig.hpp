@@ -38,13 +38,13 @@ struct DDPackageConfig {
   static constexpr std::size_t CT_DM_DM_MULT_NBUCKET = 1U;
   static constexpr std::size_t CT_DM_ADD_NBUCKET = 1U;
 
-  // The number of different quantum operations. I.e., the number of operations
+  // The number of different quantum operations. i.e., the number of operations
   // defined in OpType.hpp. This parameter is required to initialize the
   // StochasticNoiseOperationTable.hpp
   static constexpr std::size_t STOCHASTIC_CACHE_OPS = 1;
 };
 
-struct StochasticNoiseSimulatorDDPackageConfig : public dd::DDPackageConfig {
+struct StochasticNoiseSimulatorDDPackageConfig : DDPackageConfig {
   static constexpr std::size_t STOCHASTIC_CACHE_OPS = qc::OpType::OpTypeEnd;
 
   static constexpr std::size_t CT_VEC_ADD_MAG_NBUCKET = 1U;
@@ -52,7 +52,7 @@ struct StochasticNoiseSimulatorDDPackageConfig : public dd::DDPackageConfig {
   static constexpr std::size_t CT_VEC_CONJ_NBUCKET = 1U;
 };
 
-struct DensityMatrixSimulatorDDPackageConfig : public dd::DDPackageConfig {
+struct DensityMatrixSimulatorDDPackageConfig : DDPackageConfig {
   static constexpr std::size_t UT_DM_NBUCKET = 65536U;
   static constexpr std::size_t UT_DM_INITIAL_ALLOCATION_SIZE = 4096U;
 
@@ -81,7 +81,7 @@ struct DensityMatrixSimulatorDDPackageConfig : public dd::DDPackageConfig {
   static constexpr std::size_t CT_VEC_CONJ_NBUCKET = 1U;
 };
 
-struct UnitarySimulatorDDPackageConfig : public dd::DDPackageConfig {
+struct UnitarySimulatorDDPackageConfig : DDPackageConfig {
   // unitary simulation requires more resources for matrices.
   static constexpr std::size_t UT_MAT_NBUCKET = 65'536U;
   static constexpr std::size_t CT_MAT_ADD_NBUCKET = 65'536U;

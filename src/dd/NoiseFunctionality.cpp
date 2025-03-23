@@ -61,11 +61,10 @@ initializeNoiseEffects(const std::string& cNoiseEffects) {
 
 namespace dd {
 StochasticNoiseFunctionality::StochasticNoiseFunctionality(
-    const std::unique_ptr<Package<StochasticNoiseSimulatorDDPackageConfig>>& dd,
-    const std::size_t nq, const double gateNoiseProbability,
+    Package& dd, const std::size_t nq, const double gateNoiseProbability,
     const double amplitudeDampingProb, const double multiQubitGateFactor,
     const std::string& cNoiseEffects)
-    : package(dd.get()), nQubits(nq), dist(0.0, 1.0L),
+    : package(&dd), nQubits(nq), dist(0.0, 1.0L),
       noiseProbability(gateNoiseProbability),
       noiseProbabilityMulti(gateNoiseProbability * multiQubitGateFactor),
       sqrtAmplitudeDampingProbability(std::sqrt(amplitudeDampingProb)),
@@ -237,12 +236,11 @@ qc::OpType StochasticNoiseFunctionality::returnNoiseOperation(
 }
 
 DeterministicNoiseFunctionality::DeterministicNoiseFunctionality(
-    const std::unique_ptr<Package<DensityMatrixSimulatorDDPackageConfig>>& dd,
-    const std::size_t nq, const double noiseProbabilitySingleQubit,
+    Package& dd, const std::size_t nq, const double noiseProbabilitySingleQubit,
     const double noiseProbabilityMultiQubit,
     const double ampDampProbSingleQubit, const double ampDampProbMultiQubit,
     const std::string& cNoiseEffects)
-    : package(dd.get()), nQubits(nq),
+    : package(&dd), nQubits(nq),
       noiseProbSingleQubit(noiseProbabilitySingleQubit),
       noiseProbMultiQubit(noiseProbabilityMultiQubit),
       ampDampingProbSingleQubit(ampDampProbSingleQubit),
