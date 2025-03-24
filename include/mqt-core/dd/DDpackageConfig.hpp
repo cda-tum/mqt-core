@@ -44,62 +44,60 @@ struct DDPackageConfig {
   std::size_t STOCHASTIC_CACHE_OPS = 1;
 };
 
-constexpr auto StochasticNoiseSimulatorDDPackageConfig = DDPackageConfig{
-    .STOCHASTIC_CACHE_OPS = qc::OpType::OpTypeEnd,
-    .CT_VEC_ADD_MAG_NBUCKET = 1U,
-    .CT_MAT_ADD_MAG_NBUCKET = 1U,
-    .CT_VEC_CONJ_NBUCKET = 1U,
-};
+constexpr auto StochasticNoiseSimulatorDDPackageConfig = []() {
+  DDPackageConfig config{};
+  config.STOCHASTIC_CACHE_OPS = qc::OpType::OpTypeEnd;
+  config.CT_VEC_ADD_MAG_NBUCKET = 1U;
+  config.CT_MAT_ADD_MAG_NBUCKET = 1U;
+  config.CT_VEC_CONJ_NBUCKET = 1U;
+  return config;
+}();
 
-constexpr auto DensityMatrixSimulatorDDPackageConfig = DDPackageConfig{
-    .UT_DM_NBUCKET = 65536U,
-    .UT_DM_INITIAL_ALLOCATION_SIZE = 4096U,
+constexpr auto DensityMatrixSimulatorDDPackageConfig = []() {
+  DDPackageConfig config{};
+  config.UT_DM_NBUCKET = 65536U;
+  config.UT_DM_INITIAL_ALLOCATION_SIZE = 4096U;
+  config.CT_DM_DM_MULT_NBUCKET = 16384U;
+  config.CT_DM_ADD_NBUCKET = 16384U;
+  config.CT_DM_NOISE_NBUCKET = 4096U;
+  config.UT_MAT_NBUCKET = 16384U;
+  config.CT_MAT_ADD_NBUCKET = 4096U;
+  config.CT_VEC_ADD_NBUCKET = 4096U;
+  config.CT_MAT_CONJ_TRANS_NBUCKET = 4096U;
+  config.CT_MAT_MAT_MULT_NBUCKET = 1U;
+  config.CT_MAT_VEC_MULT_NBUCKET = 1U;
+  config.UT_VEC_NBUCKET = 1U;
+  config.UT_VEC_INITIAL_ALLOCATION_SIZE = 1U;
+  config.UT_MAT_INITIAL_ALLOCATION_SIZE = 1U;
+  config.CT_VEC_KRON_NBUCKET = 1U;
+  config.CT_MAT_KRON_NBUCKET = 1U;
+  config.CT_DM_TRACE_NBUCKET = 4096U;
+  config.CT_MAT_TRACE_NBUCKET = 1U;
+  config.CT_VEC_INNER_PROD_NBUCKET = 1U;
+  config.STOCHASTIC_CACHE_OPS = 1U;
+  config.CT_VEC_ADD_MAG_NBUCKET = 1U;
+  config.CT_MAT_ADD_MAG_NBUCKET = 1U;
+  config.CT_VEC_CONJ_NBUCKET = 1U;
+  return config;
+}();
 
-    .CT_DM_DM_MULT_NBUCKET = 16384U,
-    .CT_DM_ADD_NBUCKET = 16384U,
-    .CT_DM_NOISE_NBUCKET = 4096U,
-
-    .UT_MAT_NBUCKET = 16384U,
-    .CT_MAT_ADD_NBUCKET = 4096U,
-    .CT_VEC_ADD_NBUCKET = 4096U,
-    .CT_MAT_CONJ_TRANS_NBUCKET = 4096U,
-
-    .CT_MAT_MAT_MULT_NBUCKET = 1U,
-    .CT_MAT_VEC_MULT_NBUCKET = 1U,
-    .UT_VEC_NBUCKET = 1U,
-    .UT_VEC_INITIAL_ALLOCATION_SIZE = 1U,
-    .UT_MAT_INITIAL_ALLOCATION_SIZE = 1U,
-    .CT_VEC_KRON_NBUCKET = 1U,
-    .CT_MAT_KRON_NBUCKET = 1U,
-    .CT_DM_TRACE_NBUCKET = 4096U,
-    .CT_MAT_TRACE_NBUCKET = 1U,
-    .CT_VEC_INNER_PROD_NBUCKET = 1U,
-    .STOCHASTIC_CACHE_OPS = 1U,
-    .CT_VEC_ADD_MAG_NBUCKET = 1U,
-    .CT_MAT_ADD_MAG_NBUCKET = 1U,
-    .CT_VEC_CONJ_NBUCKET = 1U,
-};
-
-constexpr auto UnitarySimulatorDDPackageConfig = DDPackageConfig{
-    // unitary simulation requires more resources for matrices.
-    .UT_MAT_NBUCKET = 65'536U,
-    .CT_MAT_ADD_NBUCKET = 65'536U,
-    .CT_MAT_MAT_MULT_NBUCKET = 65'536U,
-
-    // unitary simulation does not need any vector nodes
-    .UT_VEC_NBUCKET = 1U,
-    .UT_VEC_INITIAL_ALLOCATION_SIZE = 1U,
-
-    // unitary simulation needs no vector functionality
-    .CT_VEC_ADD_NBUCKET = 1U,
-    .CT_VEC_ADD_MAG_NBUCKET = 1U,
-    .CT_MAT_ADD_MAG_NBUCKET = 1U,
-    .CT_VEC_CONJ_NBUCKET = 1U,
-    .CT_MAT_CONJ_TRANS_NBUCKET = 1U,
-    .CT_MAT_VEC_MULT_NBUCKET = 1U,
-    .CT_VEC_KRON_NBUCKET = 1U,
-    .CT_MAT_KRON_NBUCKET = 1U,
-    .CT_MAT_TRACE_NBUCKET = 1U,
-    .CT_VEC_INNER_PROD_NBUCKET = 1U,
-};
+constexpr auto UnitarySimulatorDDPackageConfig = []() {
+  DDPackageConfig config{};
+  config.UT_MAT_NBUCKET = 65'536U;
+  config.CT_MAT_ADD_NBUCKET = 65'536U;
+  config.CT_MAT_MAT_MULT_NBUCKET = 65'536U;
+  config.UT_VEC_NBUCKET = 1U;
+  config.UT_VEC_INITIAL_ALLOCATION_SIZE = 1U;
+  config.CT_VEC_ADD_NBUCKET = 1U;
+  config.CT_VEC_ADD_MAG_NBUCKET = 1U;
+  config.CT_MAT_ADD_MAG_NBUCKET = 1U;
+  config.CT_VEC_CONJ_NBUCKET = 1U;
+  config.CT_MAT_CONJ_TRANS_NBUCKET = 1U;
+  config.CT_MAT_VEC_MULT_NBUCKET = 1U;
+  config.CT_VEC_KRON_NBUCKET = 1U;
+  config.CT_MAT_KRON_NBUCKET = 1U;
+  config.CT_MAT_TRACE_NBUCKET = 1U;
+  config.CT_VEC_INNER_PROD_NBUCKET = 1U;
+  return config;
+}();
 } // namespace dd
