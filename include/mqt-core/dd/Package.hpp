@@ -116,13 +116,13 @@ private:
 public:
   /// The memory manager for vector nodes
   MemoryManager vMemoryManager{
-      MemoryManager::create<vNode>(config_.UT_VEC_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<vNode>(config_.utVecInitialAllocationSize)};
   /// The memory manager for matrix nodes
   MemoryManager mMemoryManager{
-      MemoryManager::create<mNode>(config_.UT_MAT_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<mNode>(config_.utMatInitialAllocationSize)};
   /// The memory manager for density matrix nodes
   MemoryManager dMemoryManager{
-      MemoryManager::create<dNode>(config_.UT_DM_INITIAL_ALLOCATION_SIZE)};
+      MemoryManager::create<dNode>(config_.utDmInitialAllocationSize)};
   /**
    * @brief The memory manager for complex numbers
    * @note The real and imaginary part of complex numbers are treated
@@ -156,11 +156,11 @@ public:
   void resetMemoryManagers(bool resizeToTotal = false);
 
   /// The unique table used for vector nodes
-  UniqueTable vUniqueTable{vMemoryManager, {0U, config_.UT_VEC_NBUCKET}};
+  UniqueTable vUniqueTable{vMemoryManager, {0U, config_.utVecNumBucket}};
   /// The unique table used for matrix nodes
-  UniqueTable mUniqueTable{mMemoryManager, {0U, config_.UT_MAT_NBUCKET}};
+  UniqueTable mUniqueTable{mMemoryManager, {0U, config_.utMatNumBucket}};
   /// The unique table used for density matrix nodes
-  UniqueTable dUniqueTable{dMemoryManager, {0U, config_.UT_DM_NBUCKET}};
+  UniqueTable dUniqueTable{dMemoryManager, {0U, config_.utDmNumBucket}};
   /**
    * @brief The unique table used for complex numbers
    * @note The table actually only stores real numbers in the interval [0, 1],
@@ -676,11 +676,11 @@ public:
   /// Addition
   ///
   ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge> vectorAdd{
-      config_.CT_VEC_ADD_NBUCKET};
+      config_.ctVecAddNumBucket};
   ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge> matrixAdd{
-      config_.CT_MAT_ADD_NBUCKET};
+      config_.ctMatAddNumBucket};
   ComputeTable<dCachedEdge, dCachedEdge, dCachedEdge> densityAdd{
-      config_.CT_DM_ADD_NBUCKET};
+      config_.ctDmAddNumBucket};
 
   /**
    * @brief Get the compute table for addition operations.
@@ -700,9 +700,9 @@ public:
   }
 
   ComputeTable<vCachedEdge, vCachedEdge, vCachedEdge> vectorAddMagnitudes{
-      config_.CT_VEC_ADD_MAG_NBUCKET};
+      config_.ctVecAddMagNumBucket};
   ComputeTable<mCachedEdge, mCachedEdge, mCachedEdge> matrixAddMagnitudes{
-      config_.CT_MAT_ADD_MAG_NBUCKET};
+      config_.ctMatAddMagNumBucket};
 
   /**
    * @brief Get the compute table for addition operations with magnitudes.
@@ -942,7 +942,7 @@ public:
   /// Vector conjugation
   ///
   UnaryComputeTable<vNode*, vCachedEdge> conjugateVector{
-      config_.CT_VEC_CONJ_NBUCKET};
+      config_.ctVecConjNumBucket};
 
   /**
    * @brief Conjugates a given decision diagram edge.
@@ -963,7 +963,7 @@ public:
   /// Matrix (conjugate) transpose
   ///
   UnaryComputeTable<mNode*, mCachedEdge> conjugateMatrixTranspose{
-      config_.CT_MAT_CONJ_TRANS_NBUCKET};
+      config_.ctMatConjTransNumBucket};
 
   /**
    * @brief Computes the conjugate transpose of a given matrix edge.
@@ -984,11 +984,11 @@ public:
   /// Multiplication
   ///
   ComputeTable<mNode*, vNode*, vCachedEdge> matrixVectorMultiplication{
-      config_.CT_MAT_VEC_MULT_NBUCKET};
+      config_.ctMatVecMultNumBucket};
   ComputeTable<mNode*, mNode*, mCachedEdge> matrixMatrixMultiplication{
-      config_.CT_MAT_MAT_MULT_NBUCKET};
+      config_.ctMatMatMultNumBucket};
   ComputeTable<dNode*, dNode*, dCachedEdge> densityDensityMultiplication{
-      config_.CT_DM_DM_MULT_NBUCKET};
+      config_.ctDmDmMultNumBucket};
 
   /**
    * @brief Get the compute table for multiplication operations.
@@ -1264,7 +1264,7 @@ private:
   ///
 public:
   ComputeTable<vNode*, vNode*, vCachedEdge> vectorInnerProduct{
-      config_.CT_VEC_INNER_PROD_NBUCKET};
+      config_.ctVecInnerProdNumBucket};
 
   /**
    * @brief Calculates the inner product of two vector decision diagrams.
@@ -1361,9 +1361,9 @@ public:
   ///
 
   ComputeTable<vNode*, vNode*, vCachedEdge> vectorKronecker{
-      config_.CT_VEC_KRON_NBUCKET};
+      config_.ctVecKronNumBucket};
   ComputeTable<mNode*, mNode*, mCachedEdge> matrixKronecker{
-      config_.CT_MAT_KRON_NBUCKET};
+      config_.ctMatKronNumBucket};
 
   /**
    * @brief Get the compute table for Kronecker product operations.
@@ -1496,9 +1496,9 @@ private:
   ///
 public:
   UnaryComputeTable<dNode*, dCachedEdge> densityTrace{
-      config_.CT_DM_TRACE_NBUCKET};
+      config_.ctDmTraceNumBucket};
   UnaryComputeTable<mNode*, mCachedEdge> matrixTrace{
-      config_.CT_MAT_TRACE_NBUCKET};
+      config_.ctMatTraceNumBucket};
 
   /**
    * @brief Get the compute table for trace operations.
@@ -1680,8 +1680,8 @@ public:
   /// Noise Operations
   ///
   StochasticNoiseOperationTable<mEdge> stochasticNoiseOperationCache{
-      nqubits, config_.STOCHASTIC_CACHE_OPS};
-  DensityNoiseTable<dEdge, dEdge> densityNoise{config_.CT_DM_NOISE_NBUCKET};
+      nqubits, config_.stochasticCacheOps};
+  DensityNoiseTable<dEdge, dEdge> densityNoise{config_.ctDmNoiseNumBucket};
 
   ///
   /// Ancillary and garbage reduction

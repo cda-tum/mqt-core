@@ -1500,7 +1500,7 @@ TEST(DDPackageTest, dNodeMultiply) {
   // Multiply dNode with mNode (MxMxM)
   constexpr auto nrQubits = 3U;
   const auto dd = std::make_unique<Package>(
-      nrQubits, DensityMatrixSimulatorDDPackageConfig);
+      nrQubits, DENSITY_MATRIX_SIMULATOR_DD_PACKAGE_CONFIG);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(dd->qubits());
   std::vector<mEdge> operations = {};
@@ -1547,7 +1547,7 @@ TEST(DDPackageTest, dNodeMultiply2) {
   // Multiply dNode with mNode (MxMxM)
   constexpr auto nrQubits = 3U;
   const auto dd = std::make_unique<Package>(
-      nrQubits, DensityMatrixSimulatorDDPackageConfig);
+      nrQubits, DENSITY_MATRIX_SIMULATOR_DD_PACKAGE_CONFIG);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(dd->qubits());
   std::vector<mEdge> operations = {};
@@ -1587,7 +1587,7 @@ TEST(DDPackageTest, dNodeMulCache1) {
   // Make caching test with dNodes
   constexpr auto nrQubits = 1U;
   const auto dd = std::make_unique<Package>(
-      nrQubits, DensityMatrixSimulatorDDPackageConfig);
+      nrQubits, DENSITY_MATRIX_SIMULATOR_DD_PACKAGE_CONFIG);
   // Make zero density matrix
   auto state = dd->makeZeroDensityOperator(nrQubits);
 
@@ -1670,7 +1670,7 @@ TEST(DDPackageTest, calCulpDistance) {
 TEST(DDPackageTest, dStochCache) {
   constexpr auto nrQubits = 4U;
   const auto dd = std::make_unique<Package>(
-      nrQubits, StochasticNoiseSimulatorDDPackageConfig);
+      nrQubits, STOCHASTIC_NOISE_SIMULATOR_DD_PACKAGE_CONFIG);
 
   std::vector<mEdge> operations = {};
   operations.emplace_back(getDD(qc::StandardOperation(0, qc::X), *dd));
