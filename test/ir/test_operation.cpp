@@ -13,6 +13,7 @@
 #include "ir/Register.hpp"
 #include "ir/operations/AodOperation.hpp"
 #include "ir/operations/CompoundOperation.hpp"
+#include "ir/operations/Control.hpp"
 #include "ir/operations/Expression.hpp"
 #include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
@@ -158,7 +159,7 @@ TEST(Operation, IsClifford) {
   EXPECT_TRUE(z.isClifford());
   const qc::StandardOperation t(0, qc::T);
   EXPECT_FALSE(t.isClifford());
-  qc::Controls controls = {qc::Control(0), qc::Control(1)};
+  const qc::Controls controls = {qc::Control(0), qc::Control(1)};
   const qc::StandardOperation ccx(controls, 2, qc::X);
   EXPECT_FALSE(ccx.isClifford());
   const qc::StandardOperation ccy(controls, 2, qc::Y);
