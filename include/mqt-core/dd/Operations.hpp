@@ -51,10 +51,10 @@ namespace dd {
  * @param targets The operation targets
  * @return The decision diagram representation of the operation
  */
-MatrixDD getStandardOperationDD(Package& dd, const qc::OpType type,
-                                const std::vector<fp>& params,
-                                const qc::Controls& controls,
-                                const std::vector<qc::Qubit>& targets) {
+inline MatrixDD getStandardOperationDD(Package& dd, const qc::OpType type,
+                                       const std::vector<fp>& params,
+                                       const qc::Controls& controls,
+                                       const std::vector<qc::Qubit>& targets) {
   if (qc::isSingleQubitGate(type)) {
     if (targets.size() != 1) {
       throw std::invalid_argument(
@@ -88,10 +88,11 @@ MatrixDD getStandardOperationDD(Package& dd, const qc::OpType type,
  * @param inverse Whether to get the inverse of the operation
  * @return The decision diagram representation of the operation
  */
-MatrixDD getStandardOperationDD(const qc::StandardOperation& op, Package& dd,
-                                const qc::Controls& controls,
-                                const std::vector<qc::Qubit>& targets,
-                                const bool inverse) {
+inline MatrixDD getStandardOperationDD(const qc::StandardOperation& op,
+                                       Package& dd,
+                                       const qc::Controls& controls,
+                                       const std::vector<qc::Qubit>& targets,
+                                       const bool inverse) {
   auto type = op.getType();
 
   if (!inverse) {
@@ -184,9 +185,9 @@ MatrixDD getInverseDD(const qc::Operation& op, Package& dd,
  * @param inverse Whether to get the inverse of the operation
  * @return The decision diagram representation of the operation
  */
-MatrixDD getDD(const qc::Operation& op, Package& dd,
-               const qc::Permutation& permutation = {},
-               const bool inverse = false) {
+inline MatrixDD getDD(const qc::Operation& op, Package& dd,
+                      const qc::Permutation& permutation = {},
+                      const bool inverse = false) {
   const auto type = op.getType();
 
   if (type == qc::Barrier) {
@@ -248,8 +249,8 @@ MatrixDD getDD(const qc::Operation& op, Package& dd,
  * empty permutation marks the identity permutation.
  * @return The decision diagram representation of the inverse of the operation
  */
-MatrixDD getInverseDD(const qc::Operation& op, Package& dd,
-                      const qc::Permutation& permutation) {
+inline MatrixDD getInverseDD(const qc::Operation& op, Package& dd,
+                             const qc::Permutation& permutation) {
   return getDD(op, dd, permutation, true);
 }
 
@@ -294,10 +295,10 @@ Edge<Node> applyUnitaryOperation(const qc::Operation& op, const Edge<Node>& in,
  * empty permutation marks the identity permutation.
  * @return The output DD
  */
-VectorDD applyMeasurement(const qc::NonUnitaryOperation& op, VectorDD in,
-                          Package& dd, std::mt19937_64& rng,
-                          std::vector<bool>& measurements,
-                          const qc::Permutation& permutation = {}) {
+inline VectorDD applyMeasurement(const qc::NonUnitaryOperation& op, VectorDD in,
+                                 Package& dd, std::mt19937_64& rng,
+                                 std::vector<bool>& measurements,
+                                 const qc::Permutation& permutation = {}) {
   assert(op.getType() == qc::Measure);
   const auto& qubits = permutation.apply(op.getTargets());
   const auto& bits = op.getClassics();
@@ -326,9 +327,9 @@ VectorDD applyMeasurement(const qc::NonUnitaryOperation& op, VectorDD in,
  * empty permutation marks the identity permutation.
  * @return The output DD
  */
-VectorDD applyReset(const qc::NonUnitaryOperation& op, VectorDD in, Package& dd,
-                    std::mt19937_64& rng,
-                    const qc::Permutation& permutation = {}) {
+inline VectorDD applyReset(const qc::NonUnitaryOperation& op, VectorDD in,
+                           Package& dd, std::mt19937_64& rng,
+                           const qc::Permutation& permutation = {}) {
   assert(op.getType() == qc::Reset);
   const auto& qubits = permutation.apply(op.getTargets());
   for (const auto& qubit : qubits) {
@@ -361,7 +362,7 @@ VectorDD applyReset(const qc::NonUnitaryOperation& op, VectorDD in, Package& dd,
  * empty permutation marks the identity permutation.
  * @return The output DD
  */
-VectorDD
+inline VectorDD
 applyClassicControlledOperation(const qc::ClassicControlledOperation& op,
                                 const VectorDD& in, Package& dd,
                                 const std::vector<bool>& measurements,

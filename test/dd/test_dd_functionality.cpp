@@ -51,7 +51,7 @@ protected:
 
   void SetUp() override {
     // dd
-    dd = std::make_unique<dd::Package<>>(nqubits);
+    dd = std::make_unique<dd::Package>(nqubits);
     initialComplexCount = dd->cn.realCount();
 
     // initial state preparation
@@ -69,8 +69,8 @@ protected:
 
   std::size_t nqubits = 4U;
   std::size_t initialComplexCount = 0U;
-  qc::MatrixDD e{}, ident{};
-  std::unique_ptr<dd::Package<>> dd;
+  dd::MatrixDD e{}, ident{};
+  std::unique_ptr<dd::Package> dd;
   std::mt19937_64 mt;
   std::uniform_real_distribution<dd::fp> dist;
 };
@@ -365,8 +365,8 @@ TEST_F(DDFunctionality, CircuitEquivalence) {
   qc2.sx(0);
   qc2.rz(PI_2, 0);
 
-  const qc::MatrixDD dd1 = buildFunctionality(qc1, *dd);
-  const qc::MatrixDD dd2 = buildFunctionality(qc2, *dd);
+  const dd::MatrixDD dd1 = buildFunctionality(qc1, *dd);
+  const dd::MatrixDD dd2 = buildFunctionality(qc2, *dd);
 
   EXPECT_EQ(dd1.p, dd2.p);
 }

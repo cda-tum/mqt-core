@@ -39,7 +39,7 @@ protected:
 
   void SetUp() override {
     std::tie(nqubits, seed) = GetParam();
-    dd = std::make_unique<dd::Package<>>(nqubits + 1);
+    dd = std::make_unique<dd::Package>(nqubits + 1);
     qc = qc::createGrover(nqubits, seed);
     qc.printStatistics(std::cout);
 

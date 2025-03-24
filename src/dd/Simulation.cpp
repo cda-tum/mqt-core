@@ -209,7 +209,7 @@ std::map<std::string, std::size_t> sample(const qc::QuantumComputation& qc,
                                           const std::size_t shots,
                                           const std::size_t seed) {
   const auto nqubits = qc.getNqubits();
-  auto dd = std::make_unique<Package<>>(nqubits);
+  const auto dd = std::make_unique<Package>(nqubits);
   return sample(qc, dd->makeZeroState(nqubits), *dd, shots, seed);
 }
 } // namespace dd

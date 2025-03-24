@@ -47,8 +47,8 @@ namespace dd {
  * @param dd The DD package to use for the simulation
  * @return A vector DD representing the output state of the simulation
  */
-VectorDD simulate(const qc::QuantumComputation& qc, const VectorDD& in,
-                  Package& dd) {
+inline VectorDD simulate(const qc::QuantumComputation& qc, const VectorDD& in,
+                         Package& dd) {
   auto permutation = qc.initialLayout;
   auto e = in;
   for (const auto& op : qc) {
