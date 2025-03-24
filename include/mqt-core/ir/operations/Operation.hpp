@@ -21,8 +21,8 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 namespace qc {
 class Operation {
@@ -160,39 +160,39 @@ public:
     bool controlled = this->isControlled();
     std::size_t number_of_controls = this->getNcontrols();
     switch (opType) {
-      case I:
-      case X:
-        if  ((controlled) && ((number_of_controls >= 2))){
-          return false;
-        }else{
-          return true;
-        }
-      case Y:
-        if  ((controlled) && ((number_of_controls >= 2))){
-          return false;
-        }else{
-          return true;
-        }
-      case Z:
-        if  ((controlled) && ((number_of_controls >= 2))){
-          return false;
-        }else{
-          return true;
-        }
-      case H:
-      case S:
-      case Sdg:
-      case SX:
-      case SXdg:
-      case DCX:
-      case SWAP:
-      case iSWAP:
-      case ECR:
-        return true;
-      default:
+    case I:
+    case X:
+      if ((controlled) && ((number_of_controls >= 2))) {
         return false;
+      } else {
+        return true;
       }
-}
+    case Y:
+      if ((controlled) && ((number_of_controls >= 2))) {
+        return false;
+      } else {
+        return true;
+      }
+    case Z:
+      if ((controlled) && ((number_of_controls >= 2))) {
+        return false;
+      } else {
+        return true;
+      }
+    case H:
+    case S:
+    case Sdg:
+    case SX:
+    case SXdg:
+    case DCX:
+    case SWAP:
+    case iSWAP:
+    case ECR:
+      return true;
+    default:
+      return false;
+    }
+  }
 
   /**
    * @brief Checks whether a gate is global.

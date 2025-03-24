@@ -94,7 +94,8 @@ public:
    * @param qc the quantum circuit
    * @param maxBlockSize the maximum size of a block
    */
-  static void collectBlocks(QuantumComputation& qc, std::size_t maxBlockSize, bool collectCliffords);
+  static void collectBlocks(QuantumComputation& qc, std::size_t maxBlockSize,
+                            bool collectCliffords);
 
   /**
    * @brief Elide permutations by propagating them through the circuit.
