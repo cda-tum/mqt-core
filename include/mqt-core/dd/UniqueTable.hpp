@@ -20,7 +20,6 @@
 #include "dd/statistics/UniqueTableStatistics.hpp"
 #include "ir/Definitions.hpp"
 
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <functional>

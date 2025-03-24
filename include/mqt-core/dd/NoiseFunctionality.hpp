@@ -10,7 +10,6 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
-#include "dd/DDpackageConfig.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
 #include "ir/Definitions.hpp"
@@ -21,7 +20,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <random>
 #include <set>
 #include <string>
