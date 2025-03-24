@@ -1794,23 +1794,45 @@ public:
   }
 
   /**
-   * @brief Applies a matrix operation to a matrix or vector.
+   * @brief Applies a matrix operation to a vector.
    *
-   * @details The reference count of the input matrix or vector is decreased,
+   * @details The reference count of the input vector is decreased,
    * while the reference count of the result is increased. After the operation,
    * garbage collection is triggered.
    *
-   * @tparam Node Node type
    * @param operation Matrix operation to apply
-   * @param e Matrix or vector to apply the operation to
+   * @param e Vector to apply the operation to
    * @return The appropriately reference-counted result.
    */
-  template <class Node>
-  Edge<Node> applyOperation(const mEdge& operation, const Edge<Node>& e) {
-    static_assert(std::disjunction_v<std::is_same<Node, vNode>,
-                                     std::is_same<Node, mNode>>,
-                  "Node must be a vector or matrix node.");
+  VectorDD applyOperation(const MatrixDD& operation, const VectorDD& e) {
     const auto tmp = multiply(operation, e);
+    incRef(tmp);
+    decRef(e);
+    garbageCollect();
+    return tmp;
+  }
+
+  /**
+   * @brief Applies a matrix operation to a matrix.
+   *
+   * @details The reference count of the input matrix is decreased,
+   * while the reference count of the result is increased. After the operation,
+   * garbage collection is triggered.
+   *
+   * @param operation Matrix operation to apply
+   * @param e Matrix to apply the operation to
+   * @param applyFromLeft Flag to indicate if the operation should be applied
+   * from the left (default) or right.
+   * @return The appropriately reference-counted result.
+   */
+  MatrixDD applyOperation(const MatrixDD& operation, const MatrixDD& e,
+                          const bool applyFromLeft = true) {
+    MatrixDD tmp{};
+    if (applyFromLeft) {
+      tmp = multiply(operation, e);
+    } else {
+      tmp = multiply(e, operation);
+    }
     incRef(tmp);
     decRef(e);
     garbageCollect();
