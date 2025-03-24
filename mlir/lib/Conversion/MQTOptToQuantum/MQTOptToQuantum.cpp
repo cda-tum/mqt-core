@@ -365,7 +365,6 @@ struct ConvertMeasure : public OpConversionPattern<::mqt::ir::opt::MeasureOp> {
 
     llvm::outs() << "Replaced outQubits\n"; // DEBUGGING
 
-
     // Iterate over all uses of the outBits and replace with the new bits
     int bitIdx = 0;
     for (auto outBit : outBits) {
@@ -373,7 +372,8 @@ struct ConvertMeasure : public OpConversionPattern<::mqt::ir::opt::MeasureOp> {
       for (auto user : outBit.getUsers()) {
         user->emitRemark() << "Replacing " << outBit << " with "
                            << catalystOp.getResult(qubitIdx + bitIdx);
-        user->replaceUsesOfWith(outBit, catalystOp.getResult(qubitIdx + bitIdx));
+        user->replaceUsesOfWith(outBit,
+                                catalystOp.getResult(qubitIdx + bitIdx));
       }
       bitIdx++;
     }

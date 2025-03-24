@@ -27,7 +27,7 @@ module {
         %4 = quantum.insert %0[ 1], %out_qubits_1#0 : !quantum.reg, !quantum.bit
         %5 = quantum.insert %4[ 0], %out_qubits_2#1 : !quantum.reg, !quantum.bit
         %6 = quantum.insert %5[ 2], %out_qubits_2#0 : !quantum.reg, !quantum.bit
-        
+
         quantum.dealloc %6 : !quantum.reg
         return
     }
