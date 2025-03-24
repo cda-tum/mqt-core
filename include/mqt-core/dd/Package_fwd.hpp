@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "dd/Edge.hpp"
 #include "dd/Node.hpp"
 
 namespace dd {

@@ -21,6 +21,8 @@
 #include <cstddef>
 #include <functional>
 #include <iostream>
+#include <stdexcept>
+#include <vector>
 
 namespace dd {
 

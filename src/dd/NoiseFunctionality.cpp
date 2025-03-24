@@ -11,7 +11,6 @@
 
 #include "dd/ComplexNumbers.hpp"
 #include "dd/DDDefinitions.hpp"
-#include "dd/DDpackageConfig.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
@@ -80,7 +79,7 @@ StochasticNoiseFunctionality::StochasticNoiseFunctionality(
       ampDampingFalseMulti(
           {1, 0, 0, oneMinusSqrtAmplitudeDampingProbabilityMulti}),
       noiseEffects(initializeNoiseEffects(cNoiseEffects)),
-      identityDD(package->makeIdent()) {
+      identityDD(Package::makeIdent()) {
   sanityCheckOfNoiseProbabilities(gateNoiseProbability, amplitudeDampingProb,
                                   multiQubitGateFactor);
   package->incRef(identityDD);

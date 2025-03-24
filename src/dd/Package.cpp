@@ -50,7 +50,7 @@
 #include <vector>
 
 namespace dd {
-Package::Package(const std::size_t nq, DDPackageConfig config)
+Package::Package(const std::size_t nq, const DDPackageConfig& config)
     : nqubits(nq), config_(config) {
   resize(nq);
 }

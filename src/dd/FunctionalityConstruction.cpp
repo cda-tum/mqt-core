@@ -53,7 +53,7 @@ bool buildFunctionalityRecursive(const qc::QuantumComputation& qc,
                                  qc::Permutation& permutation, Package& dd) {
   // base case
   if (depth == 1U) {
-    auto e = dd.makeIdent();
+    auto e = Package::makeIdent();
     if (const auto& op = qc.at(opIdx);
         op->getType() == qc::OpType::SWAP && !op->isControlled()) {
       const auto& targets = op->getTargets();
@@ -68,7 +68,7 @@ bool buildFunctionalityRecursive(const qc::QuantumComputation& qc,
       dd.incRef(e);
       return false;
     }
-    auto f = dd.makeIdent();
+    auto f = Package::makeIdent();
     if (const auto& op = qc.at(opIdx);
         op->getType() == qc::OpType::SWAP && !op->isControlled()) {
       const auto& targets = op->getTargets();

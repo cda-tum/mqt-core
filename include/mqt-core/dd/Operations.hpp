@@ -10,7 +10,6 @@
 #pragma once
 
 #include "dd/DDDefinitions.hpp"
-#include "dd/Edge.hpp"
 #include "dd/GateMatrixDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "ir/Definitions.hpp"
@@ -22,9 +21,7 @@
 #include "ir/operations/Operation.hpp"
 #include "ir/operations/StandardOperation.hpp"
 
-#include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <random>
 #include <stdexcept>
 #include <string>

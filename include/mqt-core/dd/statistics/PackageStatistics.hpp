@@ -11,7 +11,7 @@
 
 #include "dd/Package.hpp"
 
-#include <iosfwd>
+#include <iostream>
 #include <nlohmann/json_fwd.hpp>
 #include <string>
 

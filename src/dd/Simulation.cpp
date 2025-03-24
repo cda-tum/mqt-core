@@ -17,6 +17,7 @@
 #include "ir/operations/NonUnitaryOperation.hpp"
 #include "ir/operations/OpType.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <complex>

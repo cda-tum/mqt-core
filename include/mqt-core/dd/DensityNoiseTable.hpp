@@ -19,6 +19,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <stdexcept>
 #include <vector>
 
 namespace dd {

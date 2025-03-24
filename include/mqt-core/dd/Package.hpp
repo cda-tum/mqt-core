@@ -32,14 +32,12 @@
 
 #include <algorithm>
 #include <array>
-#include <bitset>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <limits>
 #include <random>
 #include <regex>
@@ -87,7 +85,7 @@ public:
    * @param config The configuration of the package
    */
   explicit Package(std::size_t nq = DEFAULT_QUBITS,
-                   DDPackageConfig config = DDPackageConfig{});
+                   const DDPackageConfig& config = DDPackageConfig{});
   ~Package() = default;
   Package(const Package& package) = delete;
 
@@ -668,9 +666,8 @@ public:
    * @param measureZero whether or not to measure '0' (otherwise '1' is
    * measured)
    */
-  void performCollapsingMeasurement(vEdge& rootEdge, const Qubit index,
-                                    const fp probability,
-                                    const bool measureZero);
+  void performCollapsingMeasurement(vEdge& rootEdge, Qubit index,
+                                    fp probability, bool measureZero);
 
   ///
   /// Addition
@@ -1035,7 +1032,7 @@ public:
    * @return The appropriately reference-counted result.
    */
   MatrixDD applyOperation(const MatrixDD& operation, const MatrixDD& e,
-                          const bool applyFromLeft = true);
+                          bool applyFromLeft = true);
 
   dEdge applyOperationToDensity(dEdge& e, const mEdge& operation);
 
@@ -1554,9 +1551,9 @@ public:
    * @param checkCloseToOne If false, the function only checks if the matrix is
    * close to a diagonal matrix.
    */
-  bool isCloseToIdentity(const mEdge& m, fp tol = 1e-10,
-                         const std::vector<bool>& garbage = {},
-                         bool checkCloseToOne = true) const;
+  [[nodiscard]] bool isCloseToIdentity(const mEdge& m, fp tol = 1e-10,
+                                       const std::vector<bool>& garbage = {},
+                                       bool checkCloseToOne = true) const;
 
 private:
   /**

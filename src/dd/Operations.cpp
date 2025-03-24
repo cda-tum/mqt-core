@@ -145,7 +145,7 @@ MatrixDD getDD(const qc::Operation& op, Package& dd,
   const auto type = op.getType();
 
   if (type == qc::Barrier) {
-    return dd.makeIdent();
+    return Package::makeIdent();
   }
 
   if (type == qc::GPhase) {
@@ -153,7 +153,7 @@ MatrixDD getDD(const qc::Operation& op, Package& dd,
     if (inverse) {
       phase = -phase;
     }
-    auto id = dd.makeIdent();
+    auto id = Package::makeIdent();
     id.w = dd.cn.lookup(std::cos(phase), std::sin(phase));
     return id;
   }
@@ -168,7 +168,7 @@ MatrixDD getDD(const qc::Operation& op, Package& dd,
 
   if (op.isCompoundOperation()) {
     const auto& compoundOp = dynamic_cast<const qc::CompoundOperation&>(op);
-    auto e = dd.makeIdent();
+    auto e = Package::makeIdent();
     if (inverse) {
       for (const auto& operation : compoundOp) {
         e = dd.multiply(e, getInverseDD(*operation, dd, permutation));

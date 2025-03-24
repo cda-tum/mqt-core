@@ -322,7 +322,7 @@ TEST(DDPackageTest, NegativeControl) {
 
 TEST(DDPackageTest, IdentityTrace) {
   auto dd = std::make_unique<Package>(4);
-  auto fullTrace = dd->trace(dd->makeIdent(), 4);
+  auto fullTrace = dd->trace(Package::makeIdent(), 4);
 
   ASSERT_EQ(fullTrace.r, 1.);
 }
@@ -337,7 +337,7 @@ TEST(DDPackageTest, CNotKronTrace) {
 
 TEST(DDPackageTest, PartialIdentityTrace) {
   auto dd = std::make_unique<Package>(2);
-  auto tr = dd->partialTrace(dd->makeIdent(), {false, true});
+  auto tr = dd->partialTrace(Package::makeIdent(), {false, true});
   auto mul = dd->multiply(tr, tr);
   EXPECT_EQ(RealNumber::val(mul.w.r), 1.);
 }
@@ -439,7 +439,7 @@ TEST(DDPackageTest, PartialTraceComplexity) {
   for (std::size_t i = 0; i < numQubits - 2; ++i) {
     hKron = dd->kronecker(hKron, hGate, 1);
   }
-  hKron = dd->kronecker(hKron, dd->makeIdent(), 1);
+  hKron = dd->kronecker(hKron, Package::makeIdent(), 1);
 
   constexpr std::size_t maxNodeVal = 6;
   std::array<std::size_t, maxNodeVal + 1> lookupValues{};
@@ -876,7 +876,7 @@ TEST(DDPackageTest, ReduceGarbageMatrixNoGarbage) {
   const auto tdgGate0 = getDD(qc::StandardOperation(0, qc::Tdg), *dd);
   const auto tdgGate1 = getDD(qc::StandardOperation(1, qc::Tdg), *dd);
 
-  auto c1 = dd->makeIdent();
+  auto c1 = Package::makeIdent();
   auto c2 = dd->multiply(tdgGate0, tdgGate1);
 
   std::cout << "c2:\n";
@@ -895,7 +895,7 @@ TEST(DDPackageTest, ReduceGarbageMatrixTGate) {
   const auto tdgGate0 = getDD(qc::StandardOperation(0, qc::Tdg), *dd);
   const auto tdgGate1 = getDD(qc::StandardOperation(1, qc::Tdg), *dd);
 
-  auto c1 = dd->makeIdent();
+  auto c1 = Package::makeIdent();
   auto c2 = dd->multiply(tdgGate0, tdgGate1);
 
   std::cout << "c1:\n";
@@ -1075,7 +1075,7 @@ TEST(DDPackageTest, KroneckerIdentityHandling) {
   // create a Hadamard gate on the middle qubit
   auto h = getDD(qc::StandardOperation(1U, qc::H), *dd);
   // create a single qubit identity
-  auto id = dd->makeIdent();
+  auto id = Package::makeIdent();
   // kronecker both DDs
   const auto combined = dd->kronecker(h, id, 1);
   const auto matrix = combined.getMatrix(dd->qubits());
@@ -1382,7 +1382,7 @@ TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
 
 TEST(DDPackageTest, CloseToIdentity) {
   auto dd = std::make_unique<Package>(3);
-  auto id = dd->makeIdent();
+  auto id = Package::makeIdent();
   EXPECT_TRUE(dd->isCloseToIdentity(id));
   mEdge close{};
   close.p = id.p;
@@ -2120,7 +2120,7 @@ TEST(DDPackageTest, RZZGateDDConstruction) {
     }
   }
 
-  const auto identity = dd->makeIdent();
+  const auto identity = Package::makeIdent();
   const auto rzzZero = getDD(qc::StandardOperation({0, 1}, qc::RZZ, {0.}), *dd);
   EXPECT_EQ(rzzZero, identity);
 
@@ -2172,7 +2172,7 @@ TEST(DDPackageTest, RYYGateDDConstruction) {
     }
   }
 
-  const auto identity = dd->makeIdent();
+  const auto identity = Package::makeIdent();
   const auto ryyZero = getDD(qc::StandardOperation({0, 1}, qc::RYY, {0.}), *dd);
   EXPECT_EQ(ryyZero, identity);
 
@@ -2215,7 +2215,7 @@ TEST(DDPackageTest, RXXGateDDConstruction) {
     }
   }
 
-  const auto identity = dd->makeIdent();
+  const auto identity = Package::makeIdent();
   const auto rxxZero = getDD(qc::StandardOperation({0, 1}, qc::RXX, {0.}), *dd);
   EXPECT_EQ(rxxZero, identity);
 
@@ -2256,7 +2256,7 @@ TEST(DDPackageTest, RZXGateDDConstruction) {
     }
   }
 
-  const auto identity = dd->makeIdent();
+  const auto identity = Package::makeIdent();
   const auto rzxZero = getDD(qc::StandardOperation({0, 1}, qc::RZX, {0.}), *dd);
   EXPECT_EQ(rzxZero, identity);
 
@@ -2577,7 +2577,7 @@ TEST(DDPackageTest, VectorConjugate) {
 
 TEST(DDPackageTest, ReduceAncillaIdentity) {
   const auto dd = std::make_unique<Package>(2);
-  auto inputDD = dd->makeIdent();
+  auto inputDD = Package::makeIdent();
   const auto outputDD = dd->reduceAncillae(inputDD, {true, true});
 
   const auto outputMatrix = outputDD.getMatrix(dd->qubits());
@@ -2629,7 +2629,7 @@ TEST(DDPackageTest, ReduceAncillaIdentityBetweenTwoNodes) {
 
 TEST(DDPackageTest, ReduceGarbageIdentity) {
   const auto dd = std::make_unique<Package>(2);
-  auto inputDD = dd->makeIdent();
+  auto inputDD = Package::makeIdent();
   auto outputDD = dd->reduceGarbage(inputDD, {true, true});
 
   auto outputMatrix = outputDD.getMatrix(dd->qubits());

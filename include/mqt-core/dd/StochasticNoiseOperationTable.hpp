@@ -29,13 +29,11 @@ public:
   explicit StochasticNoiseOperationTable(
       const std::size_t nv,
       const size_t numberOfStochasticOperations = qc::OpType::OpTypeEnd)
-      : nvars(nv), numberOfStochasticOperations_(numberOfStochasticOperations) {
-    resize(nv);
+      : nvars(nv), numberOfStochasticOperations_(numberOfStochasticOperations),
+        table(nv, std::vector<Edge>(numberOfStochasticOperations)) {
     stats.entrySize = sizeof(Edge);
     stats.numBuckets = nv * numberOfStochasticOperations;
-    table = std::vector<std::vector<Edge>>(
-        nv, std::vector<Edge>(numberOfStochasticOperations));
-  };
+  }
 
   /// Get a reference to the table
   [[nodiscard]] const auto& getTable() const { return table; }
