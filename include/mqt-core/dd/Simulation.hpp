@@ -14,11 +14,14 @@
 #pragma once
 
 #include "dd/Package_fwd.hpp"
-#include "ir/QuantumComputation.hpp"
 
 #include <cstddef>
 #include <map>
 #include <string>
+
+namespace qc {
+class QuantumComputation;
+}
 
 namespace dd {
 
