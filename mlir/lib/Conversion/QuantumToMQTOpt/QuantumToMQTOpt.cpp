@@ -242,11 +242,11 @@ struct ConvertInsert : public OpConversionPattern<catalyst::quantum::InsertOp> {
   }
 };
 
-struct ConvertCustom : public OpConversionPattern<catalyst::quantum::CustomOp> {
+struct ConvertX : public OpConversionPattern<catalyst::quantum::CustomOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
-  ConvertCustom(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertX(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::CustomOp>(typeConverter,
                                                          context) {}
 
@@ -348,7 +348,7 @@ struct QuantumToMQTOpt : impl::QuantumToMQTOptBase<QuantumToMQTOpt> {
     QuantumToMQTOptTypeConverter typeConverter(context);
 
     patterns.add<ConvertAlloc, ConvertDealloc, ConvertExtract, ConvertInsert,
-                 ConvertCustom>(typeConverter, context);
+                 ConvertX>(typeConverter, context);
 
     // Boilerplate code to prevent: unresolved materialization
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(

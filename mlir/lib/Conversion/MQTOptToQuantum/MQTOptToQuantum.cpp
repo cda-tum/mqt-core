@@ -238,11 +238,11 @@ struct ConvertInsert : public OpConversionPattern<::mqt::ir::opt::InsertOp> {
   }
 };
 
-struct ConvertCustom : public OpConversionPattern<::mqt::ir::opt::XOp> {
+struct ConvertX : public OpConversionPattern<::mqt::ir::opt::XOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
-  ConvertCustom(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertX(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::XOp>(typeConverter, context) {}
 
   LogicalResult
@@ -276,6 +276,52 @@ struct ConvertCustom : public OpConversionPattern<::mqt::ir::opt::XOp> {
     }
 
     auto positive = rewriter.getIntegerAttr(rewriter.getI1Type(), 1);
+    auto ctrlValues = ValueRange(inCtrlQubitsValues);
+
+    // TODO: check arguments
+    auto catalystOp = rewriter.create<catalyst::quantum::CustomOp>(
+        op.getLoc(), outQubitTypes, paramsValues, inQubitsValues, gateName,
+        nullptr, inCtrlQubitsValues, ctrlValues);
+
+    catalystOp->emitRemark() << "In count: " << inQubitsValues.size()
+                             << " Ctrl count: " << inCtrlQubitsValues.size();
+
+    catalystOp.getProperties().setResultSegmentSizes(
+        {static_cast<int>(inQubitsValues.size()),
+         static_cast<int>(inCtrlQubitsValues.size())}); // TODO: necessary?
+
+    // Replace the original with the new operation
+    rewriter.replaceOp(op, catalystOp);
+    return success();
+  }
+};
+
+struct ConvertH : public OpConversionPattern<::mqt::ir::opt::HOp> {
+
+  // Explicit constructor that initializes the reference and passes to the base
+  // constructor
+  ConvertH(const TypeConverter& typeConverter, MLIRContext* context)
+      : OpConversionPattern<::mqt::ir::opt::HOp>(typeConverter, context) {}
+
+  LogicalResult
+  matchAndRewrite(::mqt::ir::opt::HOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter& rewriter) const override {
+    // Extract operand(s) and attribute(s)
+    auto paramsValues = adaptor.getParams();
+    auto inQubitsValues = adaptor.getInQubits();
+    auto inCtrlQubitsValues = adaptor.getPosCtrlQubits();
+    // auto inNegCtrlQubitsValues = adaptor.getNegCtrlQubits();
+
+    // Prepare the result type(s)
+    mlir::Type qubitType =
+        catalyst::quantum::QubitType::get(rewriter.getContext());
+    std::vector<mlir::Type> qubitTypes(
+        inQubitsValues.size() + inCtrlQubitsValues.size(), qubitType);
+    auto outQubitTypes = mlir::TypeRange(qubitTypes);
+
+    // Create the new operation
+    llvm::StringRef gateName = "Hadamard";
+
     auto ctrlValues = ValueRange(inCtrlQubitsValues);
 
     // TODO: check arguments
@@ -403,7 +449,7 @@ struct MQTOptToQuantum : impl::MQTOptToQuantumBase<MQTOptToQuantum> {
     MQTOptToQuantumTypeConverter typeConverter(context);
 
     patterns.add<ConvertAlloc, ConvertDealloc, ConvertExtract, ConvertInsert,
-                 ConvertMeasure, ConvertCustom>(typeConverter, context);
+                 ConvertMeasure, ConvertX, ConvertH>(typeConverter, context);
 
     // Boilerplate code to prevent: unresolved materialization
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
