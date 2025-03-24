@@ -94,7 +94,6 @@ TEST(CollectBlocks, collectTwoQubitCliffordGates) {
   qc.h(1);
   qc.cx(0, 1);
   qc.t(0);
-  // qc.t(1);
   qc.x(0);
   qc.x(1);
   std::cout << qc << "\n";
