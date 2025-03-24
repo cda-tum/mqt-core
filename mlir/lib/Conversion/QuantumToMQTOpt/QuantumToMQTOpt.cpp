@@ -60,9 +60,10 @@ public:
   }
 };
 
-struct ConvertAlloc : public OpConversionPattern<catalyst::quantum::AllocOp> {
+struct ConvertQuantumAlloc
+    : public OpConversionPattern<catalyst::quantum::AllocOp> {
 
-  ConvertAlloc(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertQuantumAlloc(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::AllocOp>(typeConverter,
                                                         context) {}
 
@@ -104,10 +105,11 @@ struct ConvertAlloc : public OpConversionPattern<catalyst::quantum::AllocOp> {
   }
 };
 
-struct ConvertDealloc
+struct ConvertQuantumDealloc
     : public OpConversionPattern<catalyst::quantum::DeallocOp> {
 
-  ConvertDealloc(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertQuantumDealloc(const TypeConverter& typeConverter,
+                        MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::DeallocOp>(typeConverter,
                                                           context) {}
 
@@ -131,10 +133,11 @@ struct ConvertDealloc
   }
 };
 
-struct ConvertExtract
+struct ConvertQuantumExtract
     : public OpConversionPattern<catalyst::quantum::ExtractOp> {
 
-  ConvertExtract(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertQuantumExtract(const TypeConverter& typeConverter,
+                        MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::ExtractOp>(typeConverter,
                                                           context) {
     this->setHasBoundedRewriteRecursion(true);
@@ -209,11 +212,12 @@ struct ConvertExtract
   }
 };
 
-struct ConvertInsert : public OpConversionPattern<catalyst::quantum::InsertOp> {
+struct ConvertQuantumInsert
+    : public OpConversionPattern<catalyst::quantum::InsertOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
-  ConvertInsert(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertQuantumInsert(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::InsertOp>(typeConverter,
                                                          context) {}
 
@@ -242,11 +246,13 @@ struct ConvertInsert : public OpConversionPattern<catalyst::quantum::InsertOp> {
   }
 };
 
-struct ConvertX : public OpConversionPattern<catalyst::quantum::CustomOp> {
+struct ConvertQuantumCustomOp
+    : public OpConversionPattern<catalyst::quantum::CustomOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
-  ConvertX(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertQuantumCustomOp(const TypeConverter& typeConverter,
+                         MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::CustomOp>(typeConverter,
                                                          context) {}
 
@@ -347,8 +353,10 @@ struct QuantumToMQTOpt : impl::QuantumToMQTOptBase<QuantumToMQTOpt> {
     RewritePatternSet patterns(context);
     QuantumToMQTOptTypeConverter typeConverter(context);
 
-    patterns.add<ConvertAlloc, ConvertDealloc, ConvertExtract, ConvertInsert,
-                 ConvertX>(typeConverter, context);
+    patterns
+        .add<ConvertQuantumAlloc, ConvertQuantumDealloc, ConvertQuantumExtract,
+             ConvertQuantumInsert, ConvertQuantumCustomOp>(typeConverter,
+                                                           context);
 
     // Boilerplate code to prevent: unresolved materialization
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(

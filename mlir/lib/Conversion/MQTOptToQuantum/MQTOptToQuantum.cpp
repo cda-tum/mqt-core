@@ -61,9 +61,10 @@ public:
   }
 };
 
-struct ConvertAlloc : public OpConversionPattern<::mqt::ir::opt::AllocOp> {
+struct ConvertMQTOptAlloc
+    : public OpConversionPattern<::mqt::ir::opt::AllocOp> {
 
-  ConvertAlloc(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertMQTOptAlloc(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::AllocOp>(typeConverter, context) {}
 
   LogicalResult
@@ -104,9 +105,10 @@ struct ConvertAlloc : public OpConversionPattern<::mqt::ir::opt::AllocOp> {
   }
 };
 
-struct ConvertDealloc : public OpConversionPattern<::mqt::ir::opt::DeallocOp> {
+struct ConvertMQTOptDealloc
+    : public OpConversionPattern<::mqt::ir::opt::DeallocOp> {
 
-  ConvertDealloc(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertMQTOptDealloc(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::DeallocOp>(typeConverter, context) {
   }
 
@@ -130,9 +132,10 @@ struct ConvertDealloc : public OpConversionPattern<::mqt::ir::opt::DeallocOp> {
   }
 };
 
-struct ConvertExtract : public OpConversionPattern<::mqt::ir::opt::ExtractOp> {
+struct ConvertMQTOptExtract
+    : public OpConversionPattern<::mqt::ir::opt::ExtractOp> {
 
-  ConvertExtract(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertMQTOptExtract(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::ExtractOp>(typeConverter, context) {
     this->setHasBoundedRewriteRecursion(true);
   }
@@ -207,11 +210,12 @@ struct ConvertExtract : public OpConversionPattern<::mqt::ir::opt::ExtractOp> {
   }
 };
 
-struct ConvertInsert : public OpConversionPattern<::mqt::ir::opt::InsertOp> {
+struct ConvertMQTOptInsert
+    : public OpConversionPattern<::mqt::ir::opt::InsertOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
-  ConvertInsert(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertMQTOptInsert(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::InsertOp>(typeConverter, context) {}
 
   LogicalResult
@@ -238,11 +242,11 @@ struct ConvertInsert : public OpConversionPattern<::mqt::ir::opt::InsertOp> {
   }
 };
 
-struct ConvertX : public OpConversionPattern<::mqt::ir::opt::XOp> {
+struct ConvertMQTOptX : public OpConversionPattern<::mqt::ir::opt::XOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
-  ConvertX(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertMQTOptX(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::XOp>(typeConverter, context) {}
 
   LogicalResult
@@ -296,11 +300,11 @@ struct ConvertX : public OpConversionPattern<::mqt::ir::opt::XOp> {
   }
 };
 
-struct ConvertH : public OpConversionPattern<::mqt::ir::opt::HOp> {
+struct ConvertMQTOptH : public OpConversionPattern<::mqt::ir::opt::HOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
-  ConvertH(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertMQTOptH(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::HOp>(typeConverter, context) {}
 
   LogicalResult
@@ -342,11 +346,12 @@ struct ConvertH : public OpConversionPattern<::mqt::ir::opt::HOp> {
   }
 };
 
-struct ConvertMeasure : public OpConversionPattern<::mqt::ir::opt::MeasureOp> {
+struct ConvertMQTOptMeasure
+    : public OpConversionPattern<::mqt::ir::opt::MeasureOp> {
 
   // Explicit constructor that initializes the reference and passes to the base
   // constructor
-  ConvertMeasure(const TypeConverter& typeConverter, MLIRContext* context)
+  ConvertMQTOptMeasure(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::MeasureOp>(typeConverter, context) {
   }
 
@@ -448,8 +453,9 @@ struct MQTOptToQuantum : impl::MQTOptToQuantumBase<MQTOptToQuantum> {
     RewritePatternSet patterns(context);
     MQTOptToQuantumTypeConverter typeConverter(context);
 
-    patterns.add<ConvertAlloc, ConvertDealloc, ConvertExtract, ConvertInsert,
-                 ConvertMeasure, ConvertX, ConvertH>(typeConverter, context);
+    patterns.add<ConvertMQTOptAlloc, ConvertMQTOptDealloc, ConvertMQTOptExtract,
+                 ConvertMQTOptInsert, ConvertMQTOptMeasure, ConvertMQTOptX,
+                 ConvertMQTOptH>(typeConverter, context);
 
     // Boilerplate code to prevent: unresolved materialization
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
