@@ -21,7 +21,6 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 namespace qc {
@@ -156,29 +155,17 @@ public:
   [[nodiscard]] virtual bool isControlled() const { return !controls.empty(); }
 
   [[nodiscard]] virtual bool isClifford() const {
-    OpType opType = this->getType();
-    bool controlled = this->isControlled();
-    std::size_t number_of_controls = this->getNcontrols();
+    const OpType opType = this->getType();
+    const bool controlled = this->isControlled();
+    const std::size_t numberOfControls = this->getNcontrols();
+    if ((controlled) && ((numberOfControls >= 2))) {
+      return false;
+    }
     switch (opType) {
     case I:
     case X:
-      if ((controlled) && ((number_of_controls >= 2))) {
-        return false;
-      } else {
-        return true;
-      }
     case Y:
-      if ((controlled) && ((number_of_controls >= 2))) {
-        return false;
-      } else {
-        return true;
-      }
     case Z:
-      if ((controlled) && ((number_of_controls >= 2))) {
-        return false;
-      } else {
-        return true;
-      }
     case H:
     case S:
     case Sdg:
