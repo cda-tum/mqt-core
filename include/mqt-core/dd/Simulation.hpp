@@ -13,16 +13,12 @@
 
 #pragma once
 
-#include "dd/Operations.hpp"
+#include "dd/Package_fwd.hpp"
 #include "ir/QuantumComputation.hpp"
-#include "ir/operations/OpType.hpp"
 
-#include <cmath>
-#include <complex>
 #include <cstddef>
 #include <map>
 #include <string>
-#include <utility>
 
 namespace dd {
 
@@ -47,37 +43,8 @@ namespace dd {
  * @param dd The DD package to use for the simulation
  * @return A vector DD representing the output state of the simulation
  */
-inline VectorDD simulate(const qc::QuantumComputation& qc, const VectorDD& in,
-                         Package& dd) {
-  auto permutation = qc.initialLayout;
-  auto e = in;
-  for (const auto& op : qc) {
-    // SWAP gates can be executed virtually by changing the permutation
-    if (op->getType() == qc::SWAP && !op->isControlled()) {
-      const auto& targets = op->getTargets();
-      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
-      continue;
-    }
-
-    e = applyUnitaryOperation(*op, e, dd, permutation);
-  }
-  changePermutation(e, permutation, qc.outputPermutation, dd);
-  e = dd.reduceGarbage(e, qc.getGarbage());
-
-  // properly account for the global phase of the circuit
-  if (std::abs(qc.getGlobalPhase()) > 0) {
-    // create a temporary copy for reference counting
-    auto oldW = e.w;
-    // adjust for global phase
-    const auto globalPhase = ComplexValue{std::polar(1.0, qc.getGlobalPhase())};
-    e.w = dd.cn.lookup(e.w * globalPhase);
-    // adjust reference count
-    dd.cn.incRef(e.w);
-    dd.cn.decRef(oldW);
-  }
-
-  return e;
-}
+VectorDD simulate(const qc::QuantumComputation& qc, const VectorDD& in,
+                  Package& dd);
 
 /**
  * @brief Sample from the output distribution of a quantum computation

@@ -9,6 +9,7 @@
 
 #include "dd/Simulation.hpp"
 
+#include "dd/Operations.hpp"
 #include "dd/Package.hpp"
 #include "ir/Definitions.hpp"
 #include "ir/QuantumComputation.hpp"
@@ -17,6 +18,8 @@
 #include "ir/operations/OpType.hpp"
 
 #include <array>
+#include <cmath>
+#include <complex>
 #include <cstddef>
 #include <map>
 #include <memory>
@@ -203,6 +206,38 @@ std::map<std::string, std::size_t> sample(const qc::QuantumComputation& qc,
     counts[shot]++;
   }
   return counts;
+}
+
+VectorDD simulate(const qc::QuantumComputation& qc, const VectorDD& in,
+                  Package& dd) {
+  auto permutation = qc.initialLayout;
+  auto e = in;
+  for (const auto& op : qc) {
+    // SWAP gates can be executed virtually by changing the permutation
+    if (op->getType() == qc::SWAP && !op->isControlled()) {
+      const auto& targets = op->getTargets();
+      std::swap(permutation.at(targets[0U]), permutation.at(targets[1U]));
+      continue;
+    }
+
+    e = applyUnitaryOperation(*op, e, dd, permutation);
+  }
+  changePermutation(e, permutation, qc.outputPermutation, dd);
+  e = dd.reduceGarbage(e, qc.getGarbage());
+
+  // properly account for the global phase of the circuit
+  if (std::abs(qc.getGlobalPhase()) > 0) {
+    // create a temporary copy for reference counting
+    auto oldW = e.w;
+    // adjust for global phase
+    const auto globalPhase = ComplexValue{std::polar(1.0, qc.getGlobalPhase())};
+    e.w = dd.cn.lookup(e.w * globalPhase);
+    // adjust reference count
+    dd.cn.incRef(e.w);
+    dd.cn.decRef(oldW);
+  }
+
+  return e;
 }
 
 std::map<std::string, std::size_t> sample(const qc::QuantumComputation& qc,
