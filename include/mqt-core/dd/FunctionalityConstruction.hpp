@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "dd/Package.hpp"
+#include "dd/Package_fwd.hpp"
 
 namespace qc {
 class QuantumComputation;
