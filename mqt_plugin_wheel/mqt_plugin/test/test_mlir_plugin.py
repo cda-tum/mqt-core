@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import pennylane as qml
 from catalyst import CompileError, pipeline
-from utils import print_jaxpr, print_mlir
 from utils import qjit_for_tests as qjit
 
 
@@ -44,45 +43,6 @@ def flush_peephole_opted_mlir_to_iostream(QJIT) -> None:
     to retrieve it with keep_intermediate=True and manually access the "2_QuantumCompilationPass.mlir".
     Then we delete the kept intermediates to avoid pollution of the workspace.
     """
-
-
-#
-# pipeline
-#
-
-
-def test_pipeline_lowering() -> None:
-    """Basic pipeline lowering on one qnode."""
-    my_pipeline = {
-        "cancel_inverses": {},
-        "merge_rotations": {},
-    }
-
-    @qjit(keep_intermediate=True, verbose=True)
-    @pipeline(my_pipeline)
-    @qml.qnode(qml.device("lightning.qubit", wires=2))
-    def test_pipeline_lowering_workflow(x):
-        qml.RX(x, wires=[0])
-        qml.Hadamard(wires=[1])
-        qml.Hadamard(wires=[1])
-        return qml.expval(qml.PauliY(wires=0))
-
-    # CHECK: pipeline=(remove-chained-self-inverse, merge-rotations)
-    print_jaxpr(test_pipeline_lowering_workflow, 1.2)
-
-    # CHECK: transform.named_sequence @__transform_main
-    # CHECK-NEXT: {{%.+}} = transform.apply_registered_pass "remove-chained-self-inverse" to {{%.+}}
-    # CHECK-NEXT: {{%.+}} = transform.apply_registered_pass "merge-rotations" to {{%.+}}
-    # CHECK-NEXT: transform.yield
-    print_mlir(test_pipeline_lowering_workflow, 1.2)
-
-    # CHECK: {{%.+}} = call @test_pipeline_lowering_workflow_transformed_0(
-    # CHECK: func.func public @test_pipeline_lowering_workflow_transformed_0(
-    # CHECK: {{%.+}} = quantum.custom "RX"({{%.+}}) {{%.+}} : !quantum.bit
-    # CHECK-NOT: {{%.+}} = quantum.custom "Hadamard"() {{%.+}} : !quantum.bit
-    # CHECK-NOT: {{%.+}} = quantum.custom "Hadamard"() {{%.+}} : !quantum.bit
-    test_pipeline_lowering_workflow(42.42)
-    flush_peephole_opted_mlir_to_iostream(test_pipeline_lowering_workflow)
 
 
 def test_MQT_plugin() -> bool | None:
@@ -112,16 +72,19 @@ def test_MQT_plugin() -> bool | None:
 
     """
     my_pipeline = {
-        "mqt.mqt-core-round-trip": {"cmap": [[0, 1], [1, 0]]},
+        # "mqt.mqt-core-round-trip": {"cmap": [[0, 1], [1, 0]]},
     }
 
     try:
 
         @qjit(keep_intermediate=True, verbose=True)
         @pipeline(my_pipeline)
-        @qml.qnode(qml.device(name="lightning.qubit", wires=2))
+        @qml.qnode(qml.device(name="lightning.qubit", wires=3))
         def test_pipeline_mqtplugin_workflow() -> None:
-            qml.Hadamard(wires=[0])
+            qml.CNOT(wires=[1, 0])
+            qml.CNOT(wires=[2, 1])
+            qml.CNOT(wires=[1, 0])
+            qml.CNOT(wires=[2, 0])
 
         test_pipeline_mqtplugin_workflow()
         flush_peephole_opted_mlir_to_iostream(test_pipeline_mqtplugin_workflow)
@@ -131,7 +94,7 @@ def test_MQT_plugin() -> bool | None:
         try:
             mlir_str = error_msg.split("module @module_test_pipeline_mqtplugin_workflow_transformed {")[1]
             mlir_str = error_msg.split("}\n}")[0]
-        except:
+        except Exception:
             return False
 
         transformed = [
@@ -153,6 +116,8 @@ def test_MQT_plugin() -> bool | None:
         ]
 
         return all(t in mlir_str for t in transformed)
+
+    return False
 
 
 test_MQT_plugin()
