@@ -25,17 +25,6 @@ def QuantumToMQTOpt : Pass<"quantum-to-mqtopt"> {
     This pass lowers the `quantum` to `mqtopt` dialect.
   }];
 
-  // Declare options here
-  let options = [
-    Option<
-        /*C++ var name=*/"cMap",
-        /*CLI arg name=*/"cmap",
-        /*type=*/"std::string",
-        /*default=*/"",
-        /*description=*/
-        "Coupling map (e.g., adjacency list or matrix)"
-    >
-  ];
 
   // Define dependent dialects
   let dependentDialects = [

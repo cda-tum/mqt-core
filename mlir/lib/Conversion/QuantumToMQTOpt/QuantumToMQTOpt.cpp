@@ -331,10 +331,6 @@ struct QuantumToMQTOpt : impl::QuantumToMQTOptBase<QuantumToMQTOpt> {
     MLIRContext* context = &getContext();
     auto* module = getOperation();
 
-    if (cMap.size() > 0) {
-      llvm::outs() << "cMap size: " << cMap.size() << "\n";
-    }
-
     ConversionTarget target(*context);
     target.addLegalDialect<::mqt::ir::opt::MQTOptDialect>();
     target.addIllegalDialect<catalyst::quantum::QuantumDialect>();
