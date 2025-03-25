@@ -263,12 +263,36 @@ struct ConvertQuantumCustomOp
 
     // Extract operand(s) and attribute(s)
     auto paramsValues = adaptor.getParams();
-    auto inQubitsValues = adaptor.getInQubits();
-    auto inCtrlQubitsValues = adaptor.getInCtrlQubits();
+    auto allQubitsValues = adaptor.getInQubits();
+
     // TODO: extract actual values
-    auto inNegCtrlQubitsValues = mlir::ValueRange({});
+    llvm::SmallVector<mlir::Value> inQubitsVec(allQubitsValues.begin(),
+                                               allQubitsValues.end());
+    llvm::SmallVector<mlir::Value> inCtrlQubitsVec;
+    auto inNegCtrlQubitsValues = mlir::ValueRange(); // still unused
+
     auto staticParams = ::mlir::DenseF64ArrayAttr();
     auto paramsMask = ::mlir::DenseBoolArrayAttr();
+
+    if (gateName == "CNOT" || gateName == "CY" || gateName == "CZ" ||
+        gateName == "CRX" || gateName == "CRY" || gateName == "CRZ" ||
+        gateName == "ControlledPhaseShift") {
+
+      assert(inQubitsVec.size() == 2 && "Expected 1 control + 1 target qubit");
+      inCtrlQubitsVec.push_back(inQubitsVec[0]);
+      inQubitsVec = {inQubitsVec[1]};
+
+    } else if (gateName == "Toffoli") {
+
+      assert(inQubitsVec.size() == 3 && "Expected 2 controls + 1 target qubit");
+      inCtrlQubitsVec.push_back(inQubitsVec[0]);
+      inCtrlQubitsVec.push_back(inQubitsVec[1]);
+      inQubitsVec = {inQubitsVec[2]};
+    }
+
+    // Final ValueRanges to pass into create<> ops
+    mlir::ValueRange inQubitsValues(inQubitsVec);
+    mlir::ValueRange inCtrlQubitsValues(inCtrlQubitsVec);
 
     // Prepare the result type(s)
     mlir::Type qubitType =
