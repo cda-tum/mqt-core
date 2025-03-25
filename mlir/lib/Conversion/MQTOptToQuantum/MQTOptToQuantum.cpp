@@ -11,6 +11,7 @@
 
 #include "Quantum/IR/QuantumDialect.h"
 #include "Quantum/IR/QuantumOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -242,63 +243,158 @@ struct ConvertMQTOptInsert
   }
 };
 
-struct ConvertMQTOptX : public OpConversionPattern<::mqt::ir::opt::XOp> {
-
-  // Explicit constructor that initializes the reference and passes to the base
-  // constructor
-  ConvertMQTOptX(const TypeConverter& typeConverter, MLIRContext* context)
-      : OpConversionPattern<::mqt::ir::opt::XOp>(typeConverter, context) {}
+template <typename MQTGateOp>
+struct ConvertMQTOptSimpleGate : public OpConversionPattern<MQTGateOp> {
+  using OpConversionPattern<MQTGateOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(::mqt::ir::opt::XOp op, OpAdaptor adaptor,
+  matchAndRewrite(MQTGateOp op, typename MQTGateOp::Adaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    // Extract operand(s) and attribute(s)
     auto paramsValues = adaptor.getParams();
-    auto inQubitsValues = adaptor.getInQubits();
-    auto inCtrlQubitsValues = adaptor.getPosCtrlQubits();
-    // auto inNegCtrlQubitsValues = adaptor.getNegCtrlQubits();
+    auto inQubitsValues = adaptor.getInQubits(); // excl. controls
+    auto posCtrlQubitsValues = adaptor.getPosCtrlQubits();
+    auto negCtrlQubitsValues = adaptor.getNegCtrlQubits();
 
-    // Prepare the result type(s)
+    llvm::SmallVector<mlir::Value> inCtrlQubits;
+    inCtrlQubits.append(posCtrlQubitsValues.begin(), posCtrlQubitsValues.end());
+    inCtrlQubits.append(negCtrlQubitsValues.begin(), negCtrlQubitsValues.end());
+
+    // Output type
     mlir::Type qubitType =
         catalyst::quantum::QubitType::get(rewriter.getContext());
     std::vector<mlir::Type> qubitTypes(
-        inQubitsValues.size() + inCtrlQubitsValues.size(), qubitType);
+        inQubitsValues.size() + inCtrlQubits.size(), qubitType);
     auto outQubitTypes = mlir::TypeRange(qubitTypes);
 
-    // Create the new operation
-    llvm::StringRef gateName;
-
-    if (inCtrlQubitsValues.empty()) {
-      gateName = "PauliX";
-    } else if (inCtrlQubitsValues.size() == 1) {
-      gateName = "CNOT";
-    } else if (inCtrlQubitsValues.size() > 1) {
-      gateName = "Toffoli";
-    } else {
-      llvm::errs() << "Unsupported gate\n";
+    // Determine gate name depending on control count
+    llvm::StringRef gateName = getGateName(inCtrlQubits.size());
+    if (gateName.empty()) {
+      llvm::errs() << "Unsupported controlled gate for op: " << op->getName()
+                   << "\n";
       return failure();
     }
 
-    auto positive = rewriter.getIntegerAttr(rewriter.getI1Type(), 1);
-    auto ctrlValues = ValueRange(inCtrlQubitsValues);
+    // TODO: This is not nice (HACK) but controlled gates expect runtime values.
+    llvm::SmallVector<mlir::Value> i1Values;
+    if (!inCtrlQubits.empty()) {
+      mlir::Type i1Type = rewriter.getI1Type();
+      auto constTrue = rewriter.create<mlir::arith::ConstantOp>(
+          op.getLoc(), i1Type, rewriter.getBoolAttr(true));
+      for (size_t i = 0; i < inCtrlQubits.size(); ++i) {
+        i1Values.push_back(constTrue.getResult());
+      }
+    }
+    mlir::ValueRange inCtrlQubitsValues(i1Values);
 
-    // TODO: check arguments
     auto catalystOp = rewriter.create<catalyst::quantum::CustomOp>(
         op.getLoc(), outQubitTypes, paramsValues, inQubitsValues, gateName,
-        nullptr, inCtrlQubitsValues, ctrlValues);
-
-    catalystOp->emitRemark() << "In count: " << inQubitsValues.size()
-                             << " Ctrl count: " << inCtrlQubitsValues.size();
+        nullptr, inCtrlQubits, inCtrlQubitsValues);
 
     catalystOp.getProperties().setResultSegmentSizes(
         {static_cast<int>(inQubitsValues.size()),
-         static_cast<int>(inCtrlQubitsValues.size())}); // TODO: necessary?
+         static_cast<int>(inCtrlQubits.size())});
 
-    // Replace the original with the new operation
     rewriter.replaceOp(op, catalystOp);
     return success();
   }
+
+private:
+  // Specialize this for each gate type
+  static llvm::StringRef getGateName(std::size_t numControls);
 };
+
+// -- XOp (PauliX, CNOT, Toffoli)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::XOp>::getGateName(
+    std::size_t numControls) {
+  if (numControls == 0)
+    return "PauliX";
+  if (numControls == 1)
+    return "CNOT";
+  if (numControls == 2)
+    return "Toffoli";
+  return "";
+}
+
+// -- YOp (PauliY, CY)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::YOp>::getGateName(
+    std::size_t numControls) {
+  if (numControls == 0)
+    return "PauliY";
+  if (numControls == 1)
+    return "CY";
+  return "";
+}
+
+// -- ZOp (PauliZ, CZ)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::ZOp>::getGateName(
+    std::size_t numControls) {
+  if (numControls == 0)
+    return "PauliZ";
+  if (numControls == 1)
+    return "CZ";
+  return "";
+}
+
+// -- HOp (Hadamard)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::HOp>::getGateName(
+    std::size_t numControls) {
+  return "Hadamard";
+}
+
+// -- SWAPOp (SWAP)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::SWAPOp>::getGateName(
+    std::size_t numControls) {
+  return "SWAP";
+}
+
+// -- RXOp (RX, CRX)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::RXOp>::getGateName(
+    std::size_t numControls) {
+  if (numControls == 0)
+    return "RX";
+  if (numControls == 1)
+    return "CRX";
+  return "";
+}
+
+// -- RYOp (RY, CRY)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::RYOp>::getGateName(
+    std::size_t numControls) {
+  if (numControls == 0)
+    return "RY";
+  if (numControls == 1)
+    return "CRY";
+  return "";
+}
+
+// -- RZOp (RZ, CRZ)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::RZOp>::getGateName(
+    std::size_t numControls) {
+  if (numControls == 0)
+    return "RZ";
+  if (numControls == 1)
+    return "CRZ";
+  return "";
+}
+
+// -- POp (PhaseShift, ControlledPhaseShift)
+template <>
+llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::POp>::getGateName(
+    std::size_t numControls) {
+  if (numControls == 0)
+    return "PhaseShift";
+  if (numControls == 1)
+    return "ControlledPhaseShift";
+  return "";
+}
 
 struct ConvertMQTOptH : public OpConversionPattern<::mqt::ir::opt::HOp> {
 
@@ -454,8 +550,29 @@ struct MQTOptToQuantum : impl::MQTOptToQuantumBase<MQTOptToQuantum> {
     MQTOptToQuantumTypeConverter typeConverter(context);
 
     patterns.add<ConvertMQTOptAlloc, ConvertMQTOptDealloc, ConvertMQTOptExtract,
-                 ConvertMQTOptInsert, ConvertMQTOptMeasure, ConvertMQTOptX,
-                 ConvertMQTOptH>(typeConverter, context);
+                 ConvertMQTOptInsert, ConvertMQTOptMeasure>(typeConverter,
+                                                            context);
+
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::XOp>>(typeConverter,
+                                                               context);
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::YOp>>(typeConverter,
+                                                               context);
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::ZOp>>(typeConverter,
+                                                               context);
+
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::RXOp>>(typeConverter,
+                                                                context);
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::RYOp>>(typeConverter,
+                                                                context);
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::RZOp>>(typeConverter,
+                                                                context);
+
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::HOp>>(typeConverter,
+                                                               context);
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::SWAPOp>>(typeConverter,
+                                                                  context);
+    patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::POp>>(typeConverter,
+                                                               context);
 
     // Boilerplate code to prevent: unresolved materialization
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
