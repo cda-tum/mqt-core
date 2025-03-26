@@ -16,8 +16,8 @@ add_compile_options(-fexceptions)
 # Add include directory for MLIRQuantum headers
 include_directories(${MLIRQUANTUM_INCLUDE_DIR})
 
-# Optionally, if using TableGen-generated headers, include build/include
-# (skip if not depending on generated .inc files)
+# Optionally, if using TableGen-generated headers, include build/include (skip if not depending on
+# generated .inc files)
 include_directories("${CATALYST_BASE_DIR}/build/include")
 
 # Register conversion subdirectories
