@@ -43,16 +43,17 @@ MatrixDD getStandardOperationDD(Package& dd, const qc::OpType type,
       throw std::invalid_argument(
           "Expected exactly one target qubit for single-qubit gate");
     }
-    return dd.matrices().makeGateDD(opToSingleQubitGateMatrix(type, params), controls,
-                         targets[0U]);
+    return dd.matrices().makeGateDD(opToSingleQubitGateMatrix(type, params),
+                                    controls, targets[0U]);
   }
   if (qc::isTwoQubitGate(type)) {
     if (targets.size() != 2) {
       throw std::invalid_argument(
           "Expected two target qubits for two-qubit gate");
     }
-    return dd.matrices().makeTwoQubitGateDD(opToTwoQubitGateMatrix(type, params), controls,
-                                 targets[0U], targets[1U]);
+    return dd.matrices().makeTwoQubitGateDD(
+        opToTwoQubitGateMatrix(type, params), controls, targets[0U],
+        targets[1U]);
   }
   throw std::runtime_error("Unexpected operation type");
 }

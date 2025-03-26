@@ -113,11 +113,11 @@ public:
 public:
   std::size_t nqubits;
   DDPackageConfig config_;
-  
+
   MemoryManager cMm{MemoryManager::create<RealNumber>()};
   RealNumberUniqueTable cUt{cMm};
   ComplexNumbers cn{cUt};
-  
+
 private:
   VectorDDContainer vectors_{nqubits, cUt, cn, {/*todo: add config here */}};
   MatrixDDContainer matrices_{nqubits, cUt, cn, {/*todo: add config here */}};
@@ -126,14 +126,12 @@ private:
 public:
   VectorDDContainer& vectors() { return vectors_; }
   const VectorDDContainer& vectors() const { return vectors_; }
-  
+
   MatrixDDContainer& matrices() { return matrices_; }
   const MatrixDDContainer& matrices() const { return matrices_; }
-  
+
   DensityDDContainer& densities() { return densities_; }
   const DensityDDContainer& densities() const { return densities_; }
-  
-  
 
   void incRef(const vEdge& e) { vectors().incRef(e); }
   void incRef(const mEdge& e) { matrices().incRef(e); }

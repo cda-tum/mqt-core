@@ -371,7 +371,8 @@ TEST_F(DDFunctionality, changePermutation) {
                                "qreg q[2];"
                                "x q[0];\n";
   const auto qc = qasm3::Importer::imports(testfile);
-  const auto sim = simulate(qc, dd->vectors().makeZeroState(qc.getNqubits()), *dd);
+  const auto sim =
+      simulate(qc, dd->vectors().makeZeroState(qc.getNqubits()), *dd);
   EXPECT_TRUE(sim.p->e[0].isZeroTerminal());
   EXPECT_TRUE(sim.p->e[1].w.exactlyOne());
   EXPECT_TRUE(sim.p->e[1].p->e[1].isZeroTerminal());

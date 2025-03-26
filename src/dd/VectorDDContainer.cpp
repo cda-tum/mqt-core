@@ -1,11 +1,22 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/VectorDDContainer.hpp"
+
 #include "dd/GateMatrixDefinitions.hpp"
 
 #include <queue>
 
 namespace dd {
 
-vEdge VectorDDContainer::makeZeroState(const std::size_t n, const std::size_t start) {
+vEdge VectorDDContainer::makeZeroState(const std::size_t n,
+                                       const std::size_t start) {
   if (n + start > nqubits) {
     throw std::runtime_error{
         "Requested state with " + std::to_string(n + start) +
@@ -22,8 +33,8 @@ vEdge VectorDDContainer::makeZeroState(const std::size_t n, const std::size_t st
 }
 
 vEdge VectorDDContainer::makeBasisState(const std::size_t n,
-                               const std::vector<bool>& state,
-                               const std::size_t start) {
+                                        const std::vector<bool>& state,
+                                        const std::size_t start) {
   if (n + start > nqubits) {
     throw std::runtime_error{
         "Requested state with " + std::to_string(n + start) +
@@ -44,8 +55,8 @@ vEdge VectorDDContainer::makeBasisState(const std::size_t n,
 }
 
 vEdge VectorDDContainer::makeBasisState(const std::size_t n,
-                               const std::vector<BasisStates>& state,
-                               const std::size_t start) {
+                                        const std::vector<BasisStates>& state,
+                                        const std::size_t start) {
   if (n + start > nqubits) {
     throw std::runtime_error{
         "Requested state with " + std::to_string(n + start) +
@@ -186,9 +197,10 @@ vEdge VectorDDContainer::makeStateFromVector(const CVec& stateVector) {
   return e;
 }
 
-vCachedEdge VectorDDContainer::makeStateFromVector(const CVec::const_iterator& begin,
-                                          const CVec::const_iterator& end,
-                                          const Qubit level) {
+vCachedEdge
+VectorDDContainer::makeStateFromVector(const CVec::const_iterator& begin,
+                                       const CVec::const_iterator& end,
+                                       const Qubit level) {
   if (level == 0U) {
     assert(std::distance(begin, end) == 2);
     const auto zeroSuccessor = vCachedEdge::terminal(*begin);
@@ -204,7 +216,8 @@ vCachedEdge VectorDDContainer::makeStateFromVector(const CVec::const_iterator& b
 }
 
 std::string VectorDDContainer::measureAll(vEdge& rootEdge, const bool collapse,
-                                 std::mt19937_64& mt, const fp epsilon) {
+                                          std::mt19937_64& mt,
+                                          const fp epsilon) {
   if (std::abs(ComplexNumbers::mag2(rootEdge.w) - 1.0) > epsilon) {
     if (rootEdge.w.approximatelyZero()) {
       throw std::runtime_error(
@@ -267,8 +280,8 @@ std::string VectorDDContainer::measureAll(vEdge& rootEdge, const bool collapse,
   return std::string{result.rbegin(), result.rend()};
 }
 
-fp VectorDDContainer::assignProbabilities(const vEdge& edge,
-                                std::unordered_map<const vNode*, fp>& probs) {
+fp VectorDDContainer::assignProbabilities(
+    const vEdge& edge, std::unordered_map<const vNode*, fp>& probs) {
   auto it = probs.find(edge.p);
   if (it != probs.end()) {
     return ComplexNumbers::mag2(edge.w) * it->second;
@@ -285,7 +298,7 @@ fp VectorDDContainer::assignProbabilities(const vEdge& edge,
 }
 std::pair<fp, fp>
 VectorDDContainer::determineMeasurementProbabilities(const vEdge& rootEdge,
-                                           const Qubit index) {
+                                                     const Qubit index) {
   std::map<const vNode*, fp> measurementProbabilities;
   std::set<const vNode*> visited;
   std::queue<const vNode*> q;
@@ -390,9 +403,9 @@ fp VectorDDContainer::fidelity(const vEdge& x, const vEdge& y) {
   return innerProduct(x, y).mag2();
 }
 
-fp VectorDDContainer::fidelityOfMeasurementOutcomes(const vEdge& e,
-                                          const SparsePVec& probs,
-                                          const qc::Permutation& permutation) {
+fp VectorDDContainer::fidelityOfMeasurementOutcomes(
+    const vEdge& e, const SparsePVec& probs,
+    const qc::Permutation& permutation) {
   if (e.w.approximatelyZero()) {
     return 0.;
   }
@@ -401,7 +414,7 @@ fp VectorDDContainer::fidelityOfMeasurementOutcomes(const vEdge& e,
 }
 
 ComplexValue VectorDDContainer::innerProduct(const vEdge& x, const vEdge& y,
-                                   const Qubit var) {
+                                             const Qubit var) {
   const auto xWeight = static_cast<ComplexValue>(x.w);
   if (xWeight.approximatelyZero()) {
     return 0;
@@ -480,8 +493,9 @@ fp VectorDDContainer::fidelityOfMeasurementOutcomesRecursive(
   return top * (leftContribution + rightContribution);
 }
 
-vEdge VectorDDContainer::reduceGarbage(vEdge& e, const std::vector<bool>& garbage,
-                             const bool normalizeWeights) {
+vEdge VectorDDContainer::reduceGarbage(vEdge& e,
+                                       const std::vector<bool>& garbage,
+                                       const bool normalizeWeights) {
   // return if no more garbage left
   if (!normalizeWeights &&
       (std::none_of(garbage.begin(), garbage.end(), [](bool v) { return v; }) ||
@@ -510,10 +524,9 @@ vEdge VectorDDContainer::reduceGarbage(vEdge& e, const std::vector<bool>& garbag
   return res;
 }
 
-vCachedEdge VectorDDContainer::reduceGarbageRecursion(vNode* p,
-                                            const std::vector<bool>& garbage,
-                                            const Qubit lowerbound,
-                                            const bool normalizeWeights) {
+vCachedEdge VectorDDContainer::reduceGarbageRecursion(
+    vNode* p, const std::vector<bool>& garbage, const Qubit lowerbound,
+    const bool normalizeWeights) {
   if (!normalizeWeights && p->v < lowerbound) {
     return {p, 1.};
   }

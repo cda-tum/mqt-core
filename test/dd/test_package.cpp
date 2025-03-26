@@ -1407,7 +1407,8 @@ TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
   SparsePVec probs{};
   probs[0] = 0.5;
   probs[7] = 0.5;
-  const auto fidelity = VectorDDContainer::fidelityOfMeasurementOutcomes(ghzState, probs);
+  const auto fidelity =
+      VectorDDContainer::fidelityOfMeasurementOutcomes(ghzState, probs);
   EXPECT_NEAR(fidelity, 1.0, RealNumber::eps);
 }
 
@@ -1464,9 +1465,9 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheBeginning) {
   auto c1MultipliedWithC2 = dd->multiply(c1, dd->conjugateTranspose(c2));
 
   EXPECT_TRUE(dd->matrices().isCloseToIdentity(c1MultipliedWithC2, tol,
-                                    {false, true, true}, false));
+                                               {false, true, true}, false));
   EXPECT_FALSE(dd->matrices().isCloseToIdentity(c1MultipliedWithC2, tol,
-                                     {false, false, true}, false));
+                                                {false, false, true}, false));
 }
 
 TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheEnd) {
@@ -1491,11 +1492,11 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheEnd) {
   const auto c3MultipliedWithC4 = dd->multiply(c3, dd->conjugateTranspose(c4));
 
   EXPECT_FALSE(dd->matrices().isCloseToIdentity(c3MultipliedWithC4, tol,
-                                     {false, true, true}, false));
+                                                {false, true, true}, false));
   EXPECT_FALSE(dd->matrices().isCloseToIdentity(c3MultipliedWithC4, tol,
-                                     {true, false, true}, false));
+                                                {true, false, true}, false));
   EXPECT_TRUE(dd->matrices().isCloseToIdentity(c3MultipliedWithC4, tol,
-                                    {true, true, false}, false));
+                                               {true, true, false}, false));
 }
 
 TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
@@ -1520,11 +1521,11 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
   const auto c5MultipliedWithC6 = dd->multiply(c5, dd->conjugateTranspose(c6));
 
   EXPECT_FALSE(dd->matrices().isCloseToIdentity(c5MultipliedWithC6, tol,
-                                     {false, true, true}, false));
+                                                {false, true, true}, false));
   EXPECT_FALSE(dd->matrices().isCloseToIdentity(c5MultipliedWithC6, tol,
-                                     {true, true, false}, false));
+                                                {true, true, false}, false));
   EXPECT_TRUE(dd->matrices().isCloseToIdentity(c5MultipliedWithC6, tol,
-                                    {true, false, true}, false));
+                                               {true, false, true}, false));
 }
 
 TEST(DDPackageTest, dNodeMultiply) {
@@ -1950,8 +1951,8 @@ TEST(DDPackageTest, TwoQubitControlledGateDDConstruction) {
         if (control == target) {
           continue;
         }
-        const auto controlledGateDD =
-            dd->matrices().makeTwoQubitGateDD(controlledGateMatrix, control, target);
+        const auto controlledGateDD = dd->matrices().makeTwoQubitGateDD(
+            controlledGateMatrix, control, target);
         const auto gateDD = dd->matrices().makeGateDD(
             gateMatrix, qc::Control{static_cast<qc::Qubit>(control)}, target);
         EXPECT_EQ(controlledGateDD, gateDD);
@@ -2650,7 +2651,8 @@ TEST(DDPackageTest, ReduceAncillaIdentityBetweenTwoNodes) {
   auto state = dd->multiply(xGate0, xGate2);
 
   dd->incRef(state);
-  const auto outputDD = dd->matrices().reduceAncillae(state, {false, true, false});
+  const auto outputDD =
+      dd->matrices().reduceAncillae(state, {false, true, false});
   const auto outputMatrix = outputDD.getMatrix(dd->qubits());
   const auto expected =
       CMat{{0, 0, 0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0, 0, 0},

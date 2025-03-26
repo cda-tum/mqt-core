@@ -77,9 +77,12 @@ TEST(WState, WStateEdgeCasesTest) {
   dd::ComplexNumbers::setTolerance(0.1);
 
   ASSERT_THROW(dd->vectors().makeWState(101), std::runtime_error);
-  EXPECT_EQ(dd->vectors().makeWState(0), dd->vectors().makeBasisState(0, {dd::BasisStates::zero}));
-  EXPECT_EQ(dd->vectors().makeWState(0), dd->vectors().makeBasisState(0, {dd::BasisStates::one}));
-  EXPECT_EQ(dd->vectors().makeWState(1), dd->vectors().makeBasisState(1, {dd::BasisStates::one}));
+  EXPECT_EQ(dd->vectors().makeWState(0),
+            dd->vectors().makeBasisState(0, {dd::BasisStates::zero}));
+  EXPECT_EQ(dd->vectors().makeWState(0),
+            dd->vectors().makeBasisState(0, {dd::BasisStates::one}));
+  EXPECT_EQ(dd->vectors().makeWState(1),
+            dd->vectors().makeBasisState(1, {dd::BasisStates::one}));
   ASSERT_THROW(dd->vectors().makeWState(127), std::runtime_error);
   dd::ComplexNumbers::setTolerance(tolerance);
 }

@@ -82,7 +82,8 @@ void Package::reset() {
 bool Package::garbageCollect(bool force) {
   // return immediately if no table needs collection
   if (!force && !cUt.possiblyNeedsCollection() &&
-      !matrices().possiblyNeedsCollection() && !densities().possiblyNeedsCollection() &&
+      !matrices().possiblyNeedsCollection() &&
+      !densities().possiblyNeedsCollection() &&
       !vectors().possiblyNeedsCollection()) {
     return false;
   }
@@ -170,7 +171,7 @@ char Package::measureOneCollapsing(vEdge& rootEdge, const Qubit index,
 }
 
 char Package::measureOneCollapsing(dEdge& e, const Qubit index,
-                                              std::mt19937_64& mt) {
+                                   std::mt19937_64& mt) {
   char measuredResult = '0';
   dEdge::alignDensityEdge(e);
   const auto nrQubits = e.p->v + 1U;

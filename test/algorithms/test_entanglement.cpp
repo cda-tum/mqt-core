@@ -62,6 +62,7 @@ TEST(Entanglement, GHZStateEdgeCasesTest) {
 
   EXPECT_EQ(dd->vectors().makeGHZState(0),
             dd->vectors().makeBasisState(0, {dd::BasisStates::zero}));
-  EXPECT_EQ(dd->vectors().makeGHZState(0), dd->vectors().makeBasisState(0, {dd::BasisStates::one}));
+  EXPECT_EQ(dd->vectors().makeGHZState(0),
+            dd->vectors().makeBasisState(0, {dd::BasisStates::one}));
   ASSERT_THROW(dd->vectors().makeGHZState(6), std::runtime_error);
 }

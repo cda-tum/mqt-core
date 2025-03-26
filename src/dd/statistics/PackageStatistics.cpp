@@ -26,11 +26,10 @@ namespace dd {
 static constexpr auto REAL_NUMBER_MEMORY_MIB =
     static_cast<double>(sizeof(RealNumber)) / static_cast<double>(1ULL << 20U);
 
-
 double computeActiveMemoryMiB(const Package& package) {
-    const auto vectorMem = package.vectors().computeActiveMemoryMiB();
-    const auto matrixMem = package.matrices().computeActiveMemoryMiB();
-    const auto densityMem = package.densities().computeActiveMemoryMiB();
+  const auto vectorMem = package.vectors().computeActiveMemoryMiB();
+  const auto matrixMem = package.matrices().computeActiveMemoryMiB();
+  const auto densityMem = package.densities().computeActiveMemoryMiB();
 
   const auto activeRealNumbers =
       static_cast<double>(package.cUt.getStats().numActiveEntries);
@@ -40,15 +39,15 @@ double computeActiveMemoryMiB(const Package& package) {
 }
 
 double computePeakMemoryMiB(const Package& package) {
-    const auto vectorMem = package.vectors().computePeakMemoryMiB();
-    const auto matrixMem = package.matrices().computePeakMemoryMiB();
-    const auto densityMem = package.densities().computePeakMemoryMiB();
+  const auto vectorMem = package.vectors().computePeakMemoryMiB();
+  const auto matrixMem = package.matrices().computePeakMemoryMiB();
+  const auto densityMem = package.densities().computePeakMemoryMiB();
 
   const auto peakRealNumbers =
       static_cast<double>(package.cMm.getStats().peakNumUsed);
   const auto memoryForRealNumbers = peakRealNumbers * REAL_NUMBER_MEMORY_MIB;
 
-    return vectorMem + matrixMem + densityMem + memoryForRealNumbers;
+  return vectorMem + matrixMem + densityMem + memoryForRealNumbers;
 }
 
 nlohmann::basic_json<> getStatistics(const Package& package,
@@ -61,7 +60,7 @@ nlohmann::basic_json<> getStatistics(const Package& package,
   package.vectors().addStatsJson(vector, includeIndividualTables);
 
   auto& matrix = j["matrix"];
-    package.matrices().addStatsJson(matrix, includeIndividualTables);
+  package.matrices().addStatsJson(matrix, includeIndividualTables);
 
   auto& densityMatrix = j["density_matrix"];
   package.densities().addStatsJson(densityMatrix, includeIndividualTables);
@@ -73,7 +72,8 @@ nlohmann::basic_json<> getStatistics(const Package& package,
   // TODO: auto& computeTables = j["compute_tables"];
   // TODO: computeTables["vector_add"] = package.vectorAdd.getStats().json();
   // TODO: computeTables["matrix_add"] = package.matrixAdd.getStats().json();
-  // TODO: computeTables["density_matrix_add"] = package.densityAdd.getStats().json();
+  // TODO: computeTables["density_matrix_add"] =
+  // package.densityAdd.getStats().json();
   // TODO: computeTables["matrix_conjugate_transpose"] =
   // TODO:     package.conjugateMatrixTranspose.getStats().json();
   // TODO: computeTables["matrix_vector_mult"] =
@@ -82,8 +82,10 @@ nlohmann::basic_json<> getStatistics(const Package& package,
   // TODO:     package.matrixMatrixMultiplication.getStats().json();
   // TODO: computeTables["density_density_mult"] =
   // TODO:     package.densityDensityMultiplication.getStats().json();
-  // TODO: computeTables["vector_kronecker"] = package.vectorKronecker.getStats().json();
-  // TODO: computeTables["matrix_kronecker"] = package.matrixKronecker.getStats().json();
+  // TODO: computeTables["vector_kronecker"] =
+  // package.vectorKronecker.getStats().json();
+  // TODO: computeTables["matrix_kronecker"] =
+  // package.matrixKronecker.getStats().json();
   // TODO: computeTables["vector_inner_product"] =
   // TODO:     package.vectorInnerProduct.getStats().json();
   // TODO: computeTables["stochastic_noise_operations"] =
@@ -150,62 +152,70 @@ nlohmann::basic_json<> getDataStructureStatistics() {
   // For every entry, we store the size in bytes and the alignment in bytes
   auto& ctEntries = j["ComplexTableEntries"];
   // TODO: auto& vectorAdd = ctEntries["vector_add"];
-  // TODO: vectorAdd["size_B"] = sizeof(typename decltype(Package::vectorAdd)::Entry);
+  // TODO: vectorAdd["size_B"] = sizeof(typename
+  // decltype(Package::vectorAdd)::Entry);
   // TODO: vectorAdd["alignment_B"] =
   // TODO:     alignof(typename decltype(Package::vectorAdd)::Entry);
-//  TODO:
+  //  TODO:
   // TODO: auto& matrixAdd = ctEntries["matrix_add"];
-  // TODO: matrixAdd["size_B"] = sizeof(typename decltype(Package::matrixAdd)::Entry);
+  // TODO: matrixAdd["size_B"] = sizeof(typename
+  // decltype(Package::matrixAdd)::Entry);
   // TODO: matrixAdd["alignment_B"] =
   // TODO:     alignof(typename decltype(Package::matrixAdd)::Entry);
-//  TODO:
+  //  TODO:
   // TODO: auto& densityAdd = ctEntries["density_add"];
-  // TODO: densityAdd["size_B"] = sizeof(typename decltype(Package::densityAdd)::Entry);
+  // TODO: densityAdd["size_B"] = sizeof(typename
+  // decltype(Package::densityAdd)::Entry);
   // TODO: densityAdd["alignment_B"] =
   // TODO:     alignof(typename decltype(Package::densityAdd)::Entry);
 
-  // TODO: auto& conjugateMatrixTranspose = ctEntries["conjugate_matrix_transpose"];
+  // TODO: auto& conjugateMatrixTranspose =
+  // ctEntries["conjugate_matrix_transpose"];
   // TODO: conjugateMatrixTranspose["size_B"] =
-  // TODO:     sizeof(typename decltype(Package::conjugateMatrixTranspose)::Entry);
+  // TODO:     sizeof(typename
+  // decltype(Package::conjugateMatrixTranspose)::Entry);
   // TODO: conjugateMatrixTranspose["alignment_B"] =
-  // TODO:     alignof(typename decltype(Package::conjugateMatrixTranspose)::Entry);
+  // TODO:     alignof(typename
+  // decltype(Package::conjugateMatrixTranspose)::Entry);
 
   // auto& matrixVectorMult = ctEntries["matrix_vector_mult"];
   // matrixVectorMult["size_B"] =
   //     sizeof(typename decltype(Package::matrixVectorMultiplication)::Entry);
   // matrixVectorMult["alignment_B"] =
   //     alignof(typename decltype(Package::matrixVectorMultiplication)::Entry);
-// 
+  //
   // auto& matrixMatrixMult = ctEntries["matrix_matrix_mult"];
   // matrixMatrixMult["size_B"] =
   //     sizeof(typename decltype(Package::matrixMatrixMultiplication)::Entry);
   // matrixMatrixMult["alignment_B"] =
   //     alignof(typename decltype(Package::matrixMatrixMultiplication)::Entry);
-// 
+  //
   // auto& densityDensityMult = ctEntries["density_density_mult"];
   // densityDensityMult["size_B"] =
-  //     sizeof(typename decltype(Package::densityDensityMultiplication)::Entry);
+  //     sizeof(typename
+  //     decltype(Package::densityDensityMultiplication)::Entry);
   // densityDensityMult["alignment_B"] =
-  //     alignof(typename decltype(Package::densityDensityMultiplication)::Entry);
-// 
+  //     alignof(typename
+  //     decltype(Package::densityDensityMultiplication)::Entry);
+  //
   // auto& vectorKronecker = ctEntries["vector_kronecker"];
   // vectorKronecker["size_B"] =
   //     sizeof(typename decltype(Package::vectorKronecker)::Entry);
   // vectorKronecker["alignment_B"] =
   //     alignof(typename decltype(Package::vectorKronecker)::Entry);
-// 
+  //
   // auto& matrixKronecker = ctEntries["matrix_kronecker"];
   // matrixKronecker["size_B"] =
   //     sizeof(typename decltype(Package::matrixKronecker)::Entry);
   // matrixKronecker["alignment_B"] =
   //     alignof(typename decltype(Package::matrixKronecker)::Entry);
-// 
+  //
   // auto& vectorInnerProduct = ctEntries["vector_inner_product"];
   // vectorInnerProduct["size_B"] =
   //     sizeof(typename decltype(Package::vectorInnerProduct)::Entry);
   // vectorInnerProduct["alignment_B"] =
   //     alignof(typename decltype(Package::vectorInnerProduct)::Entry);
-// 
+  //
   return j;
 }
 

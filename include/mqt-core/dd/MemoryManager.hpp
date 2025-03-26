@@ -39,7 +39,7 @@ struct LLBase;
  * edge weights, etc.
  */
 class MemoryManager {
-public:  
+public:
   struct Config {
     std::size_t initialAllocationSize = INITIAL_ALLOCATION_SIZE;
     std::size_t entrySize;

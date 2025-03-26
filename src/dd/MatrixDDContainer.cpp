@@ -1,18 +1,30 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #include "dd/MatrixDDContainer.hpp"
 
 namespace dd {
 
-mEdge MatrixDDContainer::makeGateDD(const GateMatrix& mat, const qc::Qubit target) {
+mEdge MatrixDDContainer::makeGateDD(const GateMatrix& mat,
+                                    const qc::Qubit target) {
   return makeGateDD(mat, qc::Controls{}, target);
 }
 
-mEdge MatrixDDContainer::makeGateDD(const GateMatrix& mat, const qc::Control& control,
-                           const qc::Qubit target) {
+mEdge MatrixDDContainer::makeGateDD(const GateMatrix& mat,
+                                    const qc::Control& control,
+                                    const qc::Qubit target) {
   return makeGateDD(mat, qc::Controls{control}, target);
 }
 
-mEdge MatrixDDContainer::makeGateDD(const GateMatrix& mat, const qc::Controls& controls,
-                           const qc::Qubit target) {
+mEdge MatrixDDContainer::makeGateDD(const GateMatrix& mat,
+                                    const qc::Controls& controls,
+                                    const qc::Qubit target) {
   if (std::any_of(controls.begin(), controls.end(),
                   [this](const auto& c) {
                     return c.qubit > static_cast<Qubit>(nqubits - 1U);
@@ -76,22 +88,22 @@ mEdge MatrixDDContainer::makeGateDD(const GateMatrix& mat, const qc::Controls& c
 }
 
 mEdge MatrixDDContainer::makeTwoQubitGateDD(const TwoQubitGateMatrix& mat,
-                                   const qc::Qubit target0,
-                                   const qc::Qubit target1) {
+                                            const qc::Qubit target0,
+                                            const qc::Qubit target1) {
   return makeTwoQubitGateDD(mat, qc::Controls{}, target0, target1);
 }
 
 mEdge MatrixDDContainer::makeTwoQubitGateDD(const TwoQubitGateMatrix& mat,
-                                   const qc::Control& control,
-                                   const qc::Qubit target0,
-                                   const qc::Qubit target1) {
+                                            const qc::Control& control,
+                                            const qc::Qubit target0,
+                                            const qc::Qubit target1) {
   return makeTwoQubitGateDD(mat, qc::Controls{control}, target0, target1);
 }
 
 mEdge MatrixDDContainer::makeTwoQubitGateDD(const TwoQubitGateMatrix& mat,
-                                   const qc::Controls& controls,
-                                   const qc::Qubit target0,
-                                   const qc::Qubit target1) {
+                                            const qc::Controls& controls,
+                                            const qc::Qubit target0,
+                                            const qc::Qubit target1) {
   // sanity check
   if (std::any_of(controls.begin(), controls.end(),
                   [this](const auto& c) {
@@ -221,15 +233,17 @@ mEdge MatrixDDContainer::makeDDFromMatrix(const CMat& matrix) {
   }
 
   const auto level = static_cast<Qubit>(std::log2(length) - 1);
-  const auto MatrixDDContainer = makeDDFromMatrix(matrix, level, 0, length, 0, width);
+  const auto MatrixDDContainer =
+      makeDDFromMatrix(matrix, level, 0, length, 0, width);
   return {MatrixDDContainer.p, getCn().lookup(MatrixDDContainer.w)};
 }
 
-mCachedEdge MatrixDDContainer::makeDDFromMatrix(const CMat& matrix, const Qubit level,
-                                       const std::size_t rowStart,
-                                       const std::size_t rowEnd,
-                                       const std::size_t colStart,
-                                       const std::size_t colEnd) {
+mCachedEdge MatrixDDContainer::makeDDFromMatrix(const CMat& matrix,
+                                                const Qubit level,
+                                                const std::size_t rowStart,
+                                                const std::size_t rowEnd,
+                                                const std::size_t colStart,
+                                                const std::size_t colEnd) {
   // base case
   if (level == 0U) {
     assert(rowEnd - rowStart == 2);
@@ -286,8 +300,8 @@ mCachedEdge MatrixDDContainer::conjugateTransposeRec(const mEdge& a) {
 }
 
 bool MatrixDDContainer::isCloseToIdentity(const mEdge& m, const fp tol,
-                                const std::vector<bool>& garbage,
-                                const bool checkCloseToOne) const {
+                                          const std::vector<bool>& garbage,
+                                          const bool checkCloseToOne) const {
   std::unordered_set<decltype(m.p)> visited{};
   visited.reserve(ut.getNumActiveEntries());
   return isCloseToIdentityRecursive(m, visited, tol, garbage, checkCloseToOne);
@@ -365,11 +379,13 @@ bool MatrixDDContainer::isCloseToIdentityRecursive(
   return ident3;
 }
 mEdge MatrixDDContainer::makeIdent() { return mEdge::one(); }
-mEdge MatrixDDContainer::createInitialMatrix(const std::vector<bool>& ancillary) {
+mEdge MatrixDDContainer::createInitialMatrix(
+    const std::vector<bool>& ancillary) {
   return reduceAncillae(makeIdent(), ancillary);
 }
-mEdge MatrixDDContainer::reduceAncillae(mEdge e, const std::vector<bool>& ancillary,
-                              const bool regular) {
+mEdge MatrixDDContainer::reduceAncillae(mEdge e,
+                                        const std::vector<bool>& ancillary,
+                                        const bool regular) {
   // return if no more ancillaries left
   if (std::none_of(ancillary.begin(), ancillary.end(),
                    [](const bool v) { return v; }) ||
@@ -417,8 +433,10 @@ mEdge MatrixDDContainer::reduceAncillae(mEdge e, const std::vector<bool>& ancill
   return res;
 }
 
-mEdge MatrixDDContainer::reduceGarbage(const mEdge& e, const std::vector<bool>& garbage,
-                             const bool regular, const bool normalizeWeights) {
+mEdge MatrixDDContainer::reduceGarbage(const mEdge& e,
+                                       const std::vector<bool>& garbage,
+                                       const bool regular,
+                                       const bool normalizeWeights) {
   // return if no more garbage left
   if (!normalizeWeights &&
       (std::none_of(garbage.begin(), garbage.end(), [](bool v) { return v; }) ||
@@ -482,10 +500,9 @@ mEdge MatrixDDContainer::reduceGarbage(const mEdge& e, const std::vector<bool>& 
   decRef(e);
   return res;
 }
-mCachedEdge MatrixDDContainer::reduceAncillaeRecursion(mNode* p,
-                                             const std::vector<bool>& ancillary,
-                                             const Qubit lowerbound,
-                                             const bool regular) {
+mCachedEdge MatrixDDContainer::reduceAncillaeRecursion(
+    mNode* p, const std::vector<bool>& ancillary, const Qubit lowerbound,
+    const bool regular) {
   if (p->v < lowerbound) {
     return {p, 1.};
   }
@@ -556,11 +573,9 @@ mCachedEdge MatrixDDContainer::reduceAncillaeRecursion(mNode* p,
                                      mCachedEdge::zero()});
 }
 
-mCachedEdge MatrixDDContainer::reduceGarbageRecursion(mNode* p,
-                                            const std::vector<bool>& garbage,
-                                            const Qubit lowerbound,
-                                            const bool regular,
-                                            const bool normalizeWeights) {
+mCachedEdge MatrixDDContainer::reduceGarbageRecursion(
+    mNode* p, const std::vector<bool>& garbage, const Qubit lowerbound,
+    const bool regular, const bool normalizeWeights) {
   if (!normalizeWeights && p->v < lowerbound) {
     return {p, 1.};
   }

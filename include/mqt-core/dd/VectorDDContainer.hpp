@@ -1,20 +1,33 @@
+/*
+ * Copyright (c) 2025 Chair for Design Automation, TUM
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
 #pragma once
 
 #include "dd/DesicionDiagramContainer.hpp"
-#include "ir/Permutation.hpp"
 #include "dd/UnaryComputeTable.hpp"
+#include "ir/Permutation.hpp"
 
 namespace dd {
 
 class VectorDDContainer : public DDContainer<vNode> {
 public:
   struct Config : public DDContainer<vNode>::Config {
-    std::size_t ctVecConjNumBucket = UnaryComputeTable<vNode*, vCachedEdge>::DEFAULT_NUM_BUCKETS;
-    std::size_t vectorInnerProduct = ComputeTable<vNode*, vNode*, vCachedEdge>::DEFAULT_NUM_BUCKETS;
+    std::size_t ctVecConjNumBucket =
+        UnaryComputeTable<vNode*, vCachedEdge>::DEFAULT_NUM_BUCKETS;
+    std::size_t vectorInnerProduct =
+        ComputeTable<vNode*, vNode*, vCachedEdge>::DEFAULT_NUM_BUCKETS;
   };
 
-  VectorDDContainer(std::size_t nqubits, RealNumberUniqueTable& cUt, ComplexNumbers& cn, const Config& config)
-      : DDContainer<vNode>(nqubits, cUt, cn, config), conjugateVector(config.ctVecConjNumBucket),
+  VectorDDContainer(std::size_t nqubits, RealNumberUniqueTable& cUt,
+                    ComplexNumbers& cn, const Config& config)
+      : DDContainer<vNode>(nqubits, cUt, cn, config),
+        conjugateVector(config.ctVecConjNumBucket),
         vectorInnerProduct(config.vectorInnerProduct) {}
 
   void reset();
@@ -261,7 +274,7 @@ public:
    * @return DD representing the reduced matrix/vector.
    */
   [[nodiscard]] vEdge reduceGarbage(vEdge& e, const std::vector<bool>& garbage,
-                      bool normalizeWeights = false);
+                                    bool normalizeWeights = false);
 
 private:
   vCachedEdge reduceGarbageRecursion(vNode* p, const std::vector<bool>& garbage,
