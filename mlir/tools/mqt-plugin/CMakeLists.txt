@@ -20,8 +20,7 @@ add_llvm_library(
   catalyst-cli
   LINK_LIBS
   MLIRMQTOpt
-  MLIRMQTOptTransforms
-)
+  MLIRMQTOptTransforms)
 
 # Set output directory for the plugin to be shipped with the wheel
 set_target_properties(MQTPlugin PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PLUGIN_OUTPUT_DIR}")
