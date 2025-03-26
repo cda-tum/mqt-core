@@ -395,97 +395,6 @@ llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::POp>::getGateName(
   return "";
 }
 
-struct ConvertMQTOptMeasure
-    : public OpConversionPattern<::mqt::ir::opt::MeasureOp> {
-
-  ConvertMQTOptMeasure(const TypeConverter& typeConverter, MLIRContext* context)
-      : OpConversionPattern<::mqt::ir::opt::MeasureOp>(typeConverter, context) {
-  }
-
-  LogicalResult
-  matchAndRewrite(::mqt::ir::opt::MeasureOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter& rewriter) const override {
-
-    // Extract operand(s) and attribute(s)
-    auto qubitValues = adaptor.getInQubits();
-
-    // Prepare the result type(s)
-    auto bitType = rewriter.getI1Type();
-    auto qubitType = catalyst::quantum::QubitType::get(rewriter.getContext());
-
-    std::vector<mlir::Type> bitTypes(qubitValues.size(), bitType);
-    std::vector<mlir::Type> qubitTypes(qubitValues.size(), qubitType);
-
-    // Fill the resultTypes: qubitTypes + bitTypes
-    auto resultTypesVec = std::vector<mlir::Type>();
-    for (auto qubitType : qubitTypes) {
-      resultTypesVec.push_back(qubitType);
-    }
-    for (auto qubitType : qubitTypes) {
-      resultTypesVec.push_back(qubitType);
-    }
-    auto resultTypesRange = mlir::TypeRange(resultTypesVec);
-
-    llvm::outs() << "Reached MeasureOp\n"; // DEBUGGING
-
-    // Create the new operation
-    auto catalystOp = rewriter.create<catalyst::quantum::MeasureOp>(
-        op.getLoc(), resultTypesRange, qubitValues);
-
-    llvm::outs() << "Replaced MeasureOp\n"; // DEBUGGING
-
-    // Collect all original outQubits and outBits
-    std::vector<mlir::Value> outQubits;
-    std::vector<mlir::Value> outBits;
-
-    for (auto result : op->getResults()) {
-      if (mlir::isa<::mqt::ir::opt::QubitType>(result.getType())) {
-        outQubits.push_back(result);
-      } else {
-        outBits.push_back(result);
-      }
-    }
-
-    llvm::outs() << "Found " << outQubits.size() << " outQubits\n"; // DEBUGGING
-    llvm::outs() << "Found " << outBits.size() << " outBits\n";     // DEBUGGING
-
-    // Iterate over all uses of the outQubits and replace with the inQubit
-    int qubitIdx = 0;
-    for (auto outQubit : outQubits) {
-      op.emitRemark() << "Looking for users of " << outQubit;
-      for (auto user : outQubit.getUsers()) {
-        user->emitRemark() << "Replacing " << outQubit << " with "
-                           << qubitValues[qubitIdx];
-        user->replaceUsesOfWith(outQubit, qubitValues[qubitIdx]);
-      }
-      qubitIdx++;
-    }
-
-    llvm::outs() << "Replaced outQubits\n"; // DEBUGGING
-
-    // Iterate over all uses of the outBits and replace with the new bits
-    int bitIdx = 0;
-    for (auto outBit : outBits) {
-      catalystOp.emitRemark() << "Looking for users of " << outBit;
-      for (auto user : outBit.getUsers()) {
-        user->emitRemark() << "Replacing " << outBit << " with "
-                           << catalystOp.getResult(qubitIdx + bitIdx);
-        user->replaceUsesOfWith(outBit,
-                                catalystOp.getResult(qubitIdx + bitIdx));
-      }
-      bitIdx++;
-    }
-
-    llvm::outs() << "Replaced outBits\n"; // DEBUGGING
-
-    rewriter.eraseOp(op);
-
-    llvm::outs() << "Erased MeasureOp\n"; // DEBUGGING
-
-    return success();
-  }
-};
-
 struct MQTOptToQuantum : impl::MQTOptToQuantumBase<MQTOptToQuantum> {
   using MQTOptToQuantumBase::MQTOptToQuantumBase;
 
@@ -501,8 +410,7 @@ struct MQTOptToQuantum : impl::MQTOptToQuantumBase<MQTOptToQuantum> {
     MQTOptToQuantumTypeConverter typeConverter(context);
 
     patterns.add<ConvertMQTOptAlloc, ConvertMQTOptDealloc, ConvertMQTOptExtract,
-                 ConvertMQTOptInsert, ConvertMQTOptMeasure>(typeConverter,
-                                                            context);
+                 ConvertMQTOptInsert>(typeConverter, context);
 
     patterns.add<ConvertMQTOptSimpleGate<::mqt::ir::opt::XOp>>(typeConverter,
                                                                context);
