@@ -254,7 +254,7 @@ void changePermutation(DDType& on, qc::Permutation& from,
 
     // swap i and j
     auto saved = on;
-    const auto swapDD = dd.makeTwoQubitGateDD(opToTwoQubitGateMatrix(qc::SWAP),
+    const auto swapDD = dd.matrices().makeTwoQubitGateDD(opToTwoQubitGateMatrix(qc::SWAP),
                                               from.at(i), from.at(j));
     if constexpr (std::is_same_v<DDType, VectorDD>) {
       on = dd.multiply(swapDD, on);

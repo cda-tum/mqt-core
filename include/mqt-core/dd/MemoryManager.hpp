@@ -39,9 +39,14 @@ struct LLBase;
  * edge weights, etc.
  */
 class MemoryManager {
-  MemoryManager(size_t entrySize, std::size_t initialAllocationSize);
+public:  
+  struct Config {
+    std::size_t initialAllocationSize = INITIAL_ALLOCATION_SIZE;
+    std::size_t entrySize;
+  };
 
-public:
+  MemoryManager(const Config& config);
+
   // delete copy construction and assignment
   MemoryManager(const MemoryManager&) = delete;
   MemoryManager& operator=(const MemoryManager&) = delete;
@@ -71,7 +76,7 @@ public:
   template <class T>
   static MemoryManager
   create(const std::size_t initialAllocationSize = INITIAL_ALLOCATION_SIZE) {
-    return {sizeof(T), initialAllocationSize};
+    return {{sizeof(T), initialAllocationSize}};
   }
 
   /// default destructor
