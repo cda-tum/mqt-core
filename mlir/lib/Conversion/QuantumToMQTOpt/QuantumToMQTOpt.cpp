@@ -92,9 +92,10 @@ struct ConvertQuantumAlloc
 
     // Iterate over the users in reverse order
     for (auto* user : llvm::reverse(users)) {
-      // Registers should only be used in Extract or Insert operations
+      // Registers should only be used in Extract, Insert or Dealloc operations
       if (mlir::isa<catalyst::quantum::ExtractOp>(user) ||
-          mlir::isa<catalyst::quantum::InsertOp>(user)) {
+          mlir::isa<catalyst::quantum::InsertOp>(user) ||
+          mlir::isa<catalyst::quantum::DeallocOp>(user)) {
         // Update the operand of the user operation to the new qubit register
         user->setOperand(0, trgtQreg);
       }

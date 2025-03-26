@@ -79,7 +79,7 @@ struct ConvertMQTOptAlloc
     // Prepare the result type(s)
     auto resultType = catalyst::quantum::QuregType::get(rewriter.getContext());
 
-    // Create the original Catalyst operation
+    // Create the new operation
     auto catalystOp = rewriter.create<catalyst::quantum::AllocOp>(
         op.getLoc(), resultType, nQubitsValue, nQubitsIntegerAttr);
 
@@ -90,7 +90,7 @@ struct ConvertMQTOptAlloc
     std::vector<mlir::Operation*> users(op->getUsers().begin(),
                                         op->getUsers().end());
 
-    // Iterate over the users in (TODO: reverse?) order
+    // Iterate over the users in reverse order
     for (auto* user : llvm::reverse(users)) {
       // Registers should only be used in Extract, Insert or Dealloc operations
       if (mlir::isa<::mqt::ir::opt::ExtractOp>(user) ||
@@ -123,7 +123,7 @@ struct ConvertMQTOptDealloc
     // Prepare the result type(s)
     auto resultTypes = ::mlir::TypeRange({});
 
-    // Create the original Catalyst operation
+    // Create the new operation
     auto catalystOp = rewriter.create<catalyst::quantum::DeallocOp>(
         op.getLoc(), resultTypes, qregValue);
 
@@ -232,7 +232,7 @@ struct ConvertMQTOptInsert
     // Prepare the result type(s)
     auto resultType = catalyst::quantum::QuregType::get(rewriter.getContext());
 
-    // Create the original Catalyst operation
+    // Create the new operation
     auto catalystOp = rewriter.create<catalyst::quantum::InsertOp>(
         op.getLoc(), resultType, inQregValue, idxValue, idxIntegerAttr,
         qubitValue);
@@ -477,7 +477,7 @@ struct ConvertMQTOptMeasure
 
     llvm::outs() << "Reached MeasureOp\n"; // DEBUGGING
 
-    // Create the original Catalyst operation
+    // Create the new operation
     auto catalystOp = rewriter.create<catalyst::quantum::MeasureOp>(
         op.getLoc(), resultTypesRange, qubitValues);
 
