@@ -50,12 +50,12 @@ public:
     // needed.
     addConversion([](Type type) { return type; });
 
-    // Convert QubitRegisterType to QuregType
+    // Convert source QubitRegisterType to target QuregType
     addConversion([ctx](::mqt::ir::opt::QubitRegisterType /*type*/) -> Type {
       return catalyst::quantum::QuregType::get(ctx);
     });
 
-    // Convert QubitType in the new dialect to Catalyst's QubitType
+    // Convert source QubitType to target QubitType
     addConversion([ctx](::mqt::ir::opt::QubitType /*type*/) -> Type {
       return catalyst::quantum::QubitType::get(ctx);
     });
@@ -212,8 +212,6 @@ struct ConvertMQTOptExtract
 struct ConvertMQTOptInsert
     : public OpConversionPattern<::mqt::ir::opt::InsertOp> {
 
-  // Explicit constructor that initializes the reference and passes to the base
-  // constructor
   ConvertMQTOptInsert(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::InsertOp>(typeConverter, context) {}
 
@@ -248,6 +246,7 @@ struct ConvertMQTOptSimpleGate : public OpConversionPattern<MQTGateOp> {
   LogicalResult
   matchAndRewrite(MQTGateOp op, typename MQTGateOp::Adaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
+    // Extract operand(s) and attribute(s)
     auto paramsValues = adaptor.getParams();
     auto inQubitsValues = adaptor.getInQubits(); // excl. controls
     auto posCtrlQubitsValues = adaptor.getPosCtrlQubits();
@@ -272,7 +271,7 @@ struct ConvertMQTOptSimpleGate : public OpConversionPattern<MQTGateOp> {
       return failure();
     }
 
-    // TODO: This is not nice (HACK) but controlled gates expect runtime values.
+    // TODO: This is an ugly HACK(?) but controlled gates expect runtime values.
     llvm::SmallVector<mlir::Value> i1Values;
     if (!inCtrlQubits.empty()) {
       mlir::Type i1Type = rewriter.getI1Type();
@@ -284,6 +283,7 @@ struct ConvertMQTOptSimpleGate : public OpConversionPattern<MQTGateOp> {
     }
     mlir::ValueRange inCtrlQubitsValues(i1Values);
 
+    // Create the new operation
     auto catalystOp = rewriter.create<catalyst::quantum::CustomOp>(
         op.getLoc(), outQubitTypes, paramsValues, inQubitsValues, gateName,
         nullptr, inCtrlQubits, inCtrlQubitsValues);
@@ -292,12 +292,13 @@ struct ConvertMQTOptSimpleGate : public OpConversionPattern<MQTGateOp> {
         {static_cast<int>(inQubitsValues.size()),
          static_cast<int>(inCtrlQubits.size())});
 
+    // Replace the original with the new operation
     rewriter.replaceOp(op, catalystOp);
     return success();
   }
 
 private:
-  // Specialize this for each gate type
+  // Is specialized for each gate type
   static llvm::StringRef getGateName(std::size_t numControls);
 };
 
@@ -394,57 +395,9 @@ llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::POp>::getGateName(
   return "";
 }
 
-struct ConvertMQTOptH : public OpConversionPattern<::mqt::ir::opt::HOp> {
-
-  // Explicit constructor that initializes the reference and passes to the base
-  // constructor
-  ConvertMQTOptH(const TypeConverter& typeConverter, MLIRContext* context)
-      : OpConversionPattern<::mqt::ir::opt::HOp>(typeConverter, context) {}
-
-  LogicalResult
-  matchAndRewrite(::mqt::ir::opt::HOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter& rewriter) const override {
-    // Extract operand(s) and attribute(s)
-    auto paramsValues = adaptor.getParams();
-    auto inQubitsValues = adaptor.getInQubits();
-    auto inCtrlQubitsValues = adaptor.getPosCtrlQubits();
-    // auto inNegCtrlQubitsValues = adaptor.getNegCtrlQubits();
-
-    // Prepare the result type(s)
-    mlir::Type qubitType =
-        catalyst::quantum::QubitType::get(rewriter.getContext());
-    std::vector<mlir::Type> qubitTypes(
-        inQubitsValues.size() + inCtrlQubitsValues.size(), qubitType);
-    auto outQubitTypes = mlir::TypeRange(qubitTypes);
-
-    // Create the new operation
-    llvm::StringRef gateName = "Hadamard";
-
-    auto ctrlValues = ValueRange(inCtrlQubitsValues);
-
-    // TODO: check arguments
-    auto catalystOp = rewriter.create<catalyst::quantum::CustomOp>(
-        op.getLoc(), outQubitTypes, paramsValues, inQubitsValues, gateName,
-        nullptr, inCtrlQubitsValues, ctrlValues);
-
-    catalystOp->emitRemark() << "In count: " << inQubitsValues.size()
-                             << " Ctrl count: " << inCtrlQubitsValues.size();
-
-    catalystOp.getProperties().setResultSegmentSizes(
-        {static_cast<int>(inQubitsValues.size()),
-         static_cast<int>(inCtrlQubitsValues.size())}); // TODO: necessary?
-
-    // Replace the original with the new operation
-    rewriter.replaceOp(op, catalystOp);
-    return success();
-  }
-};
-
 struct ConvertMQTOptMeasure
     : public OpConversionPattern<::mqt::ir::opt::MeasureOp> {
 
-  // Explicit constructor that initializes the reference and passes to the base
-  // constructor
   ConvertMQTOptMeasure(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::MeasureOp>(typeConverter, context) {
   }

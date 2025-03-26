@@ -48,12 +48,12 @@ public:
     // needed.
     addConversion([](Type type) { return type; });
 
-    // Convert QuregType to QubitRegisterType
+    // Convert source QuregType to target QubitRegisterType
     addConversion([ctx](catalyst::quantum::QuregType /*type*/) -> Type {
       return ::mqt::ir::opt::QubitRegisterType::get(ctx);
     });
 
-    // Convert QubitType to QubitType in the new dialect
+    // Convert source QubitType to target QubitType
     addConversion([ctx](catalyst::quantum::QubitType /*type*/) -> Type {
       return ::mqt::ir::opt::QubitType::get(ctx);
     });
@@ -215,8 +215,6 @@ struct ConvertQuantumExtract
 struct ConvertQuantumInsert
     : public OpConversionPattern<catalyst::quantum::InsertOp> {
 
-  // Explicit constructor that initializes the reference and passes to the base
-  // constructor
   ConvertQuantumInsert(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::InsertOp>(typeConverter,
                                                          context) {}
@@ -249,8 +247,6 @@ struct ConvertQuantumInsert
 struct ConvertQuantumCustomOp
     : public OpConversionPattern<catalyst::quantum::CustomOp> {
 
-  // Explicit constructor that initializes the reference and passes to the base
-  // constructor
   ConvertQuantumCustomOp(const TypeConverter& typeConverter,
                          MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::CustomOp>(typeConverter,
@@ -259,17 +255,16 @@ struct ConvertQuantumCustomOp
   LogicalResult
   matchAndRewrite(catalyst::quantum::CustomOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    auto gateName = op.getGateName();
-
     // Extract operand(s) and attribute(s)
+    auto gateName = op.getGateName();
     auto paramsValues = adaptor.getParams();
     auto allQubitsValues = adaptor.getInQubits();
+    auto inNegCtrlQubitsValues = mlir::ValueRange(); // TODO: not available yet
 
-    // TODO: extract actual values
+    // Can be manipulated later
     llvm::SmallVector<mlir::Value> inQubitsVec(allQubitsValues.begin(),
                                                allQubitsValues.end());
     llvm::SmallVector<mlir::Value> inCtrlQubitsVec;
-    auto inNegCtrlQubitsValues = mlir::ValueRange(); // still unused
 
     auto staticParams = ::mlir::DenseF64ArrayAttr();
     auto paramsMask = ::mlir::DenseBoolArrayAttr();
@@ -365,7 +360,7 @@ struct QuantumToMQTOpt : impl::QuantumToMQTOptBase<QuantumToMQTOpt> {
     target.addLegalDialect<::mqt::ir::opt::MQTOptDialect>();
     target.addIllegalDialect<catalyst::quantum::QuantumDialect>();
 
-    // Mark operations legal, that have now equivalent in the new dialect
+    // Mark operations legal, that have no equivalent in the target dialect
     target.addLegalOp<catalyst::quantum::DeviceInitOp>();
     target.addLegalOp<catalyst::quantum::DeviceReleaseOp>();
     target.addLegalOp<catalyst::quantum::NamedObsOp>();
