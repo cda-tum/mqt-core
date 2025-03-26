@@ -53,7 +53,7 @@ public:
                                double multiQubitGateFactor,
                                const std::string& cNoiseEffects);
 
-  ~StochasticNoiseFunctionality() { package->decRef(identityDD); }
+  ~StochasticNoiseFunctionality() { package->matrices().decRef(identityDD); }
 
 protected:
   Package* package;

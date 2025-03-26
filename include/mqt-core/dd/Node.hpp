@@ -84,7 +84,6 @@ struct vNode final : NodeBase {       // NOLINT(readability-identifier-naming)
 };
 using vEdge = Edge<vNode>;
 using vCachedEdge = CachedEdge<vNode>;
-using VectorDD = vEdge;
 
 /**
  * @brief A matrix DD node
@@ -103,7 +102,6 @@ struct mNode final : NodeBase {       // NOLINT(readability-identifier-naming)
 };
 using mEdge = Edge<mNode>;
 using mCachedEdge = CachedEdge<mNode>;
-using MatrixDD = mEdge;
 
 /**
  * @brief A density matrix DD node
