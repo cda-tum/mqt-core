@@ -117,16 +117,13 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
   void handleUnitaryOp(UnitaryInterface op,
                        std::vector<mlir::Value>& currentQubitVariables) const {
 
-
     // Add the operation to the QuantumComputation.
     qc::OpType opType;
     if (llvm::isa<HOp>(op)) {
       opType = qc::OpType::H;
-    }
-    else if (llvm::isa<XOp>(op)) {
+    } else if (llvm::isa<XOp>(op)) {
       opType = qc::OpType::X;
-    }
-    else {
+    } else {
       throw std::runtime_error("Unsupported operation type!");
     }
 
@@ -282,8 +279,7 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
       } else if (llvm::isa<HOp>(current)) {
         HOp hOp = mlir::dyn_cast<HOp>(current);
         handleUnitaryOp(hOp, currentQubitVariables);
-      }
-      else if (llvm::isa<ExtractOp>(current)) {
+      } else if (llvm::isa<ExtractOp>(current)) {
         ExtractOp extractOp = mlir::dyn_cast<ExtractOp>(current);
 
         if (!extractOp.getIndexAttr().has_value()) {
