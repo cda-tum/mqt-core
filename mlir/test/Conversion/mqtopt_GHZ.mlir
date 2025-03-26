@@ -9,8 +9,6 @@
 
 // CHECK-LABEL: func @bar()
 func.func @bar() {
-  %c0_i64 = arith.constant 0 : i64
-
   // CHECK: %[[QREG:.*]] = quantum.alloc( 3) : !quantum.reg
   %0 = "mqtopt.allocQubitRegister"() <{size_attr = 3 : i64}> : () -> !mqtopt.QubitRegister
 

@@ -10,9 +10,6 @@
 module {
   // CHECK-LABEL: func @bar()
   func.func @bar() {
-    // CHECK: %c0_i64 = arith.constant 0 : i64
-    %c0_i64 = arith.constant 0 : i64
-
     // CHECK: %[[QREG:.*]] = "mqtopt.allocQubitRegister"() <{size_attr = 3 : i64}> : () -> !mqtopt.QubitRegister
     %0 = quantum.alloc( 3) : !quantum.reg
 
@@ -24,12 +21,10 @@ module {
     %3 = quantum.extract %0[ 2] : !quantum.reg -> !quantum.bit
 
     // CHECK: %[[H:.*]] = mqtopt.H() %[[Q0]] : !mqtopt.Qubit
+    // CHECK: %[[CX1:.*]]:2 = mqtopt.x() %[[Q1]] ctrl %[[H]] : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[CX2:.*]]:2 = mqtopt.x() %[[Q2]] ctrl %[[CX1]]#1 : !mqtopt.Qubit, !mqtopt.Qubit
     %out_h = quantum.custom "Hadamard"() %1 : !quantum.bit
-
-    // CHECK: %[[CX1:.*]]:2 = mqtopt.x() %[[H]], %[[Q1]] : !mqtopt.Qubit, !mqtopt.Qubit
     %out_qubits:2 = quantum.custom "CNOT"() %out_h, %2 : !quantum.bit, !quantum.bit
-
-    // CHECK: %[[CX2:.*]]:2 = mqtopt.x() %[[CX1]]#1, %[[Q2]] : !mqtopt.Qubit, !mqtopt.Qubit
     %out_qubits_0:2 = quantum.custom "CNOT"() %out_qubits#1, %3 : !quantum.bit, !quantum.bit
 
     // CHECK: %[[R0:.*]] = "mqtopt.insertQubit"(%[[QR3]], %[[CX1]]#0) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister

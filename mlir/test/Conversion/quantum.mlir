@@ -10,11 +10,11 @@
 module {
   // CHECK-LABEL: func @bar()
   func.func @bar() {
-    // CHECK: %[[QREG:.*]] = "mqtopt.allocQubitRegister"() <{size_attr = 3 : i64}> : () -> !mqtopt.QubitRegister
-    %r0 = quantum.alloc( 3) : !quantum.reg
-
     // CHECK: %[[PHI:.*]] = arith.constant 3.000000e-01 : f64
     %phi0 = arith.constant 3.000000e-01 : f64
+
+    // CHECK: %[[QREG:.*]] = "mqtopt.allocQubitRegister"() <{size_attr = 3 : i64}> : () -> !mqtopt.QubitRegister
+    %r0 = quantum.alloc( 3) : !quantum.reg
 
     // CHECK: %[[QR1:.*]], %[[Q0:.*]] = "mqtopt.extractQubit"(%[[QREG]]) <{index_attr = 0 : i64}>
     // CHECK: %[[QR2:.*]], %[[Q1:.*]] = "mqtopt.extractQubit"(%[[QR1]]) <{index_attr = 1 : i64}>
@@ -32,11 +32,11 @@ module {
     %out_y = quantum.custom "PauliY"() %out_x : !quantum.bit
     %out_z = quantum.custom "PauliZ"() %out_y : !quantum.bit
 
-    // CHECK: %[[CNOT:.*]]:2 = mqtopt.x() %[[Q1]], %[[Q0]] : !mqtopt.Qubit, !mqtopt.Qubit
-    // CHECK: %[[CY:.*]]:2 = mqtopt.y() %[[CNOT]]#1, %[[CNOT]]#0
-    // CHECK: %[[CZ:.*]]:2 = mqtopt.z() %[[CY]]#1, %[[CY]]#0
-    // CHECK: %[[SWAP:.*]]:2 = mqtopt.swap() %[[CZ]]#1, %[[CZ]]#0
-    // CHECK: %[[TOF:.*]]:3 = mqtopt.x() %[[Q2]], %[[SWAP]]#1, %[[SWAP]]#0
+    // CHECK: %[[CNOT:.*]]:2 = mqtopt.x() %[[Q0]] ctrl %[[Q1]] : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[CY:.*]]:2 = mqtopt.y() %[[CNOT]]#0 ctrl %[[CNOT]]#1 : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[CZ:.*]]:2 = mqtopt.z() %[[CY]]#0 ctrl %[[CY]]#1 : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[SWAP:.*]]:2 = mqtopt.swap() %[[CZ]]#1, %[[CZ]]#0 : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[TOF:.*]]:3 = mqtopt.x() %[[SWAP]]#0 ctrl %[[Q2]], %[[SWAP]]#1 : !mqtopt.Qubit, !mqtopt.Qubit, !mqtopt.Qubit
     %cnot:2 = quantum.custom "CNOT"() %q1, %q0 : !quantum.bit, !quantum.bit
     %cy:2 = quantum.custom "CY"() %cnot#1, %cnot#0 : !quantum.bit, !quantum.bit
     %cz:2 = quantum.custom "CZ"() %cy#1, %cy#0 : !quantum.bit, !quantum.bit
@@ -52,10 +52,10 @@ module {
     %rz = quantum.custom "RZ"(%phi0) %ry : !quantum.bit
     %phaseShift = quantum.custom "PhaseShift"(%phi0) %rz : !quantum.bit
 
-    // CHECK: %[[CRX:.*]]:2 = mqtopt.rx(%[[PHI]]) %[[TOF]]#1, %[[P]]
-    // CHECK: %[[CRY:.*]]:2 = mqtopt.ry(%[[PHI]]) %[[CRX]]#1, %[[CRX]]#0
-    // CHECK: %[[CRZ:.*]]:2 = mqtopt.ry(%[[PHI]]) %[[CRY]]#1, %[[CRY]]#0
-    // CHECK: %[[CPS:.*]]:2 = mqtopt.p(%[[PHI]]) %[[CRZ]]#1, %[[CRZ]]#0
+    // CHECK: %[[CRX:.*]]:2 = mqtopt.rx(%[[PHI]]) %[[P]] ctrl %[[TOF]]#1 : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[CRY:.*]]:2 = mqtopt.ry(%[[PHI]]) %[[CRX]]#0 ctrl %[[CRX]]#1 : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[CRZ:.*]]:2 = mqtopt.ry(%[[PHI]]) %[[CRY]]#0 ctrl %[[CRY]]#1 : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[CPS:.*]]:2 = mqtopt.p(%[[PHI]]) %[[CRZ]]#0 ctrl %[[CRZ]]#1 : !mqtopt.Qubit, !mqtopt.Qubit
     %crx:2 = quantum.custom "CRX"(%phi0) %toffoli#1, %phaseShift : !quantum.bit, !quantum.bit
     %cry:2 = quantum.custom "CRY"(%phi0) %crx#1, %crx#0 : !quantum.bit, !quantum.bit
     %crz:2 = quantum.custom "CRY"(%phi0) %cry#1, %cry#0 : !quantum.bit, !quantum.bit
