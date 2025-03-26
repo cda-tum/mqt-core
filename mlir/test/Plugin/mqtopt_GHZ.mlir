@@ -8,7 +8,7 @@
 // RUN: quantum-opt %s \
 // RUN: --load-pass-plugin=/Users/patrickhopf/Code/mqt/mqt-core/mqt_plugin_wheel/mqt_plugin/MQTPlugin.dylib \
 // RUN: --load-dialect-plugin=/Users/patrickhopf/Code/mqt/mqt-core/mqt_plugin_wheel/mqt_plugin/MQTPlugin.dylib \
-// RUN: --pass-pipeline='builtin.module(mqt-core-round-trip)' --debug | FileCheck %s
+// RUN: --pass-pipeline='builtin.module(mqt-core-round-trip)' | FileCheck %s
 
 // CHECK-LABEL: func @bar()
 func.func @bar() {

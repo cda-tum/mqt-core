@@ -5,7 +5,6 @@
 //
 // Licensed under the MIT License
 
-// XFAIL: *
 // RUN: quantum-opt %s | FileCheck %s
 
 module {

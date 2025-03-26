@@ -14,6 +14,8 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
@@ -204,12 +206,13 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
       }
     }
 
-    // Finally, the return operation needs to be updated with the measurement
-    // results and then replace the original `alloc` operation with the updated
-    // one.
-    // TODO: Implement return operation update.
-    // auto returnOperation = *op->getUsers().begin();
-    // updateReturnOperation(returnOperation, measurementValues, rewriter);
+    // Finally, check if the return operation needs to be updated with the
+    // measurement results and then replace the original `alloc` operation with
+    // the updated one.
+    if (measurementValues[0]) {
+      auto returnOperation = *op->getUsers().begin();
+      updateReturnOperation(returnOperation, measurementValues, rewriter);
+    }
     rewriter.replaceOp(op, newAlloc);
   }
 };
