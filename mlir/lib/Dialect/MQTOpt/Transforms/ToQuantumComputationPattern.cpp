@@ -116,6 +116,20 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
    */
   void handleUnitaryOp(UnitaryInterface op,
                        std::vector<mlir::Value>& currentQubitVariables) const {
+
+
+    // Add the operation to the QuantumComputation.
+    qc::OpType opType;
+    if (llvm::isa<HOp>(op)) {
+      opType = qc::OpType::H;
+    }
+    else if (llvm::isa<XOp>(op)) {
+      opType = qc::OpType::X;
+    }
+    else {
+      throw std::runtime_error("Unsupported operation type!");
+    }
+
     const auto in = op.getInQubits()[0];
     const auto ctrlIns = op.getCtrlQubits();
     const auto outs = op.getOutQubits();
@@ -139,7 +153,7 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
     // Add the operation to the QuantumComputation.
     auto operation = qc::StandardOperation(
         qc::Controls{ctrlInsIndices.cbegin(), ctrlInsIndices.cend()},
-        targetIndex, qc::OpType::X);
+        targetIndex, opType);
     circuit.push_back(operation);
   }
 
@@ -265,7 +279,11 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
       if (llvm::isa<XOp>(current)) {
         XOp xOp = mlir::dyn_cast<XOp>(current);
         handleUnitaryOp(xOp, currentQubitVariables);
-      } else if (llvm::isa<ExtractOp>(current)) {
+      } else if (llvm::isa<HOp>(current)) {
+        HOp hOp = mlir::dyn_cast<HOp>(current);
+        handleUnitaryOp(hOp, currentQubitVariables);
+      }
+      else if (llvm::isa<ExtractOp>(current)) {
         ExtractOp extractOp = mlir::dyn_cast<ExtractOp>(current);
 
         if (!extractOp.getIndexAttr().has_value()) {
@@ -284,6 +302,7 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
         MeasureOp measureOp = mlir::dyn_cast<MeasureOp>(current);
         handleMeasureOp(measureOp, currentQubitVariables);
       } else {
+        llvm::outs() << "Skipping unsupported operation: " << *current << "\n";
         continue;
       }
 

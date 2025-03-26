@@ -81,6 +81,11 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
                                   mlir::DenseBoolArrayAttr{},
                                   mlir::ValueRange{}, mlir::ValueRange{inQubit},
                                   controlQubitsPositive, controlQubitsNegative);
+    case qc::OpType::H:
+      return rewriter.create<HOp>(loc, outTypes, mlir::DenseF64ArrayAttr{},
+                                  mlir::DenseBoolArrayAttr{},
+                                  mlir::ValueRange{}, mlir::ValueRange{inQubit},
+                                  controlQubitsPositive, controlQubitsNegative);
     default:
       throw std::runtime_error("Unsupported operation type");
     }
@@ -166,7 +171,7 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
         }
       }
 
-      if (o->getType() == qc::OpType::X) {
+      if (o->getType() == qc::OpType::X || o->getType() == qc::OpType::H) {
         // For unitary operations, we call the `createUnitaryOp` function. We
         // then have to update the `currentQubitVariables` vector with the new
         // qubit values.
@@ -202,8 +207,9 @@ struct FromQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
     // Finally, the return operation needs to be updated with the measurement
     // results and then replace the original `alloc` operation with the updated
     // one.
-    auto returnOperation = *op->getUsers().begin();
-    updateReturnOperation(returnOperation, measurementValues, rewriter);
+    // TODO: Implement return operation update.
+    //auto returnOperation = *op->getUsers().begin();
+    //updateReturnOperation(returnOperation, measurementValues, rewriter);
     rewriter.replaceOp(op, newAlloc);
   }
 };
