@@ -127,7 +127,7 @@ struct ConvertMQTOptDealloc
     auto catalystOp = rewriter.create<catalyst::quantum::DeallocOp>(
         op.getLoc(), resultTypes, qregValue);
 
-    // Replace the MQT operation with the Catalyst operation
+    // Replace the original with the new operation
     rewriter.replaceOp(op, catalystOp);
     return success();
   }
@@ -138,7 +138,6 @@ struct ConvertMQTOptExtract
 
   ConvertMQTOptExtract(const TypeConverter& typeConverter, MLIRContext* context)
       : OpConversionPattern<::mqt::ir::opt::ExtractOp>(typeConverter, context) {
-    this->setHasBoundedRewriteRecursion(true);
   }
 
   LogicalResult
@@ -165,8 +164,7 @@ struct ConvertMQTOptExtract
     std::vector<mlir::Operation*> users(mqtQreg.getUsers().begin(),
                                         mqtQreg.getUsers().end());
 
-    // Iterate over users in (TODO: reverse?) order to update their operands
-    // properly
+    // Iterate over users in reverse order to update their operands properly
     for (auto* user : llvm::reverse(users)) {
 
       // Only consider operations after the current operation
@@ -188,7 +186,7 @@ struct ConvertMQTOptExtract
     std::vector<mlir::Operation*> qubitUsers(oldQubit.getUsers().begin(),
                                              oldQubit.getUsers().end());
 
-    // Iterate over qubit users in (TODO: reverse?) order
+    // Iterate over qubit users in reverse order
     for (auto* user : llvm::reverse(qubitUsers)) {
 
       // Only consider operations after the current operation
@@ -237,7 +235,7 @@ struct ConvertMQTOptInsert
         op.getLoc(), resultType, inQregValue, idxValue, idxIntegerAttr,
         qubitValue);
 
-    // Replace the MQT operation with the Catalyst operation
+    // Replace the original with the new operation
     rewriter.replaceOp(op, catalystOp);
     return success();
   }

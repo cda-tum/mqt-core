@@ -118,7 +118,7 @@ struct ConvertQuantumDealloc
   matchAndRewrite(catalyst::quantum::DeallocOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
 
-    // Extract operand(s) and attribute(s)
+    // Extract operand(s)
     auto qregValue = adaptor.getQreg();
 
     // Prepare the result type(s)
@@ -140,9 +140,7 @@ struct ConvertQuantumExtract
   ConvertQuantumExtract(const TypeConverter& typeConverter,
                         MLIRContext* context)
       : OpConversionPattern<catalyst::quantum::ExtractOp>(typeConverter,
-                                                          context) {
-    this->setHasBoundedRewriteRecursion(true);
-  }
+                                                          context) {}
 
   LogicalResult
   matchAndRewrite(catalyst::quantum::ExtractOp op, OpAdaptor adaptor,
@@ -178,7 +176,8 @@ struct ConvertQuantumExtract
       if (!user->isBeforeInBlock(mqtoptOp) && user != mqtoptOp && user != op) {
         // Update operands in the user operation
         if (mlir::isa<catalyst::quantum::ExtractOp>(user) ||
-            mlir::isa<catalyst::quantum::InsertOp>(user)) {
+            mlir::isa<catalyst::quantum::InsertOp>(user) ||
+            mlir::isa<catalyst::quantum::DeallocOp>(user)) {
           user->setOperand(0, outQreg);
         }
       }
