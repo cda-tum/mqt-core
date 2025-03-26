@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.19...3.30)
 
 project(
   mqt-core
-  LANGUAGES CXX
+  LANGUAGES CXX C
   DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
 
 # Add path for custom modules
@@ -67,10 +67,11 @@ get_mqt_core_version()
 
 project(
   mqt-core
-  LANGUAGES CXX
+  LANGUAGES CXX C
   VERSION ${MQT_CORE_VERSION}
   DESCRIPTION "MQT Core - The Backbone of the Munich Quantum Toolkit")
 
+find_package(Catalyst REQUIRED CONFIG)
 include(cmake/ExternalDependencies.cmake)
 
 # set the include directory for the build tree
