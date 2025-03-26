@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import pennylane as qml
 from catalyst import CompileError, pipeline
+from catalyst.debug import get_compilation_stage
 from utils import qjit_for_tests as qjit
 
 
@@ -43,6 +44,7 @@ def flush_peephole_opted_mlir_to_iostream(QJIT) -> None:
     to retrieve it with keep_intermediate=True and manually access the "2_QuantumCompilationPass.mlir".
     Then we delete the kept intermediates to avoid pollution of the workspace.
     """
+    print(get_compilation_stage(QJIT, "QuantumCompilationPass"))
 
 
 def test_MQT_plugin() -> bool | None:
@@ -72,7 +74,7 @@ def test_MQT_plugin() -> bool | None:
 
     """
     my_pipeline = {
-        # "mqt.mqt-core-round-trip": {"cmap": [[0, 1], [1, 0]]},
+        "mqt.mqt-core-round-trip": {"cmap": [[0, 1], [1, 0]]},
     }
 
     try:
@@ -80,14 +82,13 @@ def test_MQT_plugin() -> bool | None:
         @qjit(keep_intermediate=True, verbose=True)
         @pipeline(my_pipeline)
         @qml.qnode(qml.device(name="lightning.qubit", wires=3))
-        def test_pipeline_mqtplugin_workflow() -> None:
-            qml.CNOT(wires=[1, 0])
-            qml.CNOT(wires=[2, 1])
-            qml.CNOT(wires=[1, 0])
-            qml.CNOT(wires=[2, 0])
-
-        test_pipeline_mqtplugin_workflow()
-        flush_peephole_opted_mlir_to_iostream(test_pipeline_mqtplugin_workflow)
+        def GHZ_circuit() -> None:
+            qml.Hadamard(wires=0)
+            qml.CNOT(wires=[0, 1])
+            qml.CNOT(wires=[1, 2])
+        
+        GHZ_circuit()
+        flush_peephole_opted_mlir_to_iostream(GHZ_circuit)
 
     except CompileError as error:  # Expecting failure, because MQT plugin does not cover full roundtrip (yet)
         error_msg = str(error)  # Recover the output after application of the MQT conversion pass
