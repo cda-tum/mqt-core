@@ -68,10 +68,13 @@ func.func @bar() {
   %16:2 = mqtopt.ry(%cst) %15#0 ctrl %15#1 : !mqtopt.Qubit, !mqtopt.Qubit
   %17:2 = mqtopt.p(%cst) %16#0 ctrl %16#1 : !mqtopt.Qubit, !mqtopt.Qubit
 
-  // CHECK: %[[R1:.*]] = quantum.insert %[[QREG]][ 2], %[[CT1]]#1 : !quantum.reg, !quantum.bit
+  // CHECK: %[[MRES:.*]], %[[QMEAS:.*]] = quantum.measure %[[CT1]]#1 : i1, !quantum.bit
+  %q_meas, %c0_0 = "mqtopt.measure"(%9#2) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
+
+  // CHECK: %[[R1:.*]] = quantum.insert %[[QREG]][ 2], %[[QMEAS]] : !quantum.reg, !quantum.bit
   // CHECK: %[[R2:.*]] = quantum.insert %[[R1]][ 1], %[[CR4]] : !quantum.reg, !quantum.bit
   // CHECK: %[[R3:.*]] = quantum.insert %[[R2]][ 0], %[[CPS]] : !quantum.reg, !quantum.bit
-  %18 = "mqtopt.insertQubit"(%out_qureg_2, %9#2) <{index_attr = 2 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+  %18 = "mqtopt.insertQubit"(%out_qureg_2, %q_meas) <{index_attr = 2 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
   %19 = "mqtopt.insertQubit"(%18, %17#1) <{index_attr = 1 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
   %20 = "mqtopt.insertQubit"(%19, %17#0) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
 
