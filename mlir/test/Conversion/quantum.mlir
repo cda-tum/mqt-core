@@ -61,10 +61,13 @@ module {
     %crz:2 = quantum.custom "CRY"(%phi0) %cry#1, %cry#0 : !quantum.bit, !quantum.bit
     %cps:2 = quantum.custom "ControlledPhaseShift"(%phi0) %crz#1, %crz#0 : !quantum.bit, !quantum.bit
 
-    // CHECK: %[[R1:.*]] = "mqtopt.insertQubit"(%[[QR3]], %[[TOF]]#2) <{index_attr = 2 : i64}>
+    // CHECK: %[[QMEAS:.*]], %[[MEAS:.*]] = "mqtopt.measure"(%[[TOF]]#2) : (!mqtopt.Qubit) -> (!mqtopt.Qubit, i1)
+    %meas:2 = quantum.measure %toffoli#2 : i1, !quantum.bit
+
+    // CHECK: %[[R1:.*]] = "mqtopt.insertQubit"(%[[QR3]], %[[QMEAS]]) <{index_attr = 2 : i64}>
     // CHECK: %[[R2:.*]] = "mqtopt.insertQubit"(%[[R1]], %[[CPS]]#1) <{index_attr = 1 : i64}>
     // CHECK: %[[R3:.*]] = "mqtopt.insertQubit"(%[[R2]], %[[CPS]]#0) <{index_attr = 0 : i64}>
-    %r1_2 = quantum.insert %r0[2], %toffoli#2 : !quantum.reg, !quantum.bit
+    %r1_2 = quantum.insert %r0[2], %meas#1 : !quantum.reg, !quantum.bit
     %r1_1 = quantum.insert %r1_2[1], %cps#1 : !quantum.reg, !quantum.bit
     %r1_0 = quantum.insert %r1_1[0], %cps#0 : !quantum.reg, !quantum.bit
 

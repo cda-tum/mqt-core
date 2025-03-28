@@ -161,6 +161,9 @@ struct ConvertMQTOptMeasure
     auto mqtQubit = op->getResult(0);
     auto catalystQubit = catalystOp->getResult(1);
 
+    auto mqtMeasure = op->getResult(1);
+    auto catalystMeasure = catalystOp->getResult(0);
+
     // Collect the users of the original input qubit register to update their
     // operands
     std::vector<mlir::Operation*> qubitUsers(mqtQubit.getUsers().begin(),
@@ -176,10 +179,6 @@ struct ConvertMQTOptMeasure
         user->replaceUsesOfWith(mqtQubit, catalystQubit);
       }
     }
-
-    // Collect the users of the original output qubit
-    auto mqtMeasure = op->getResult(1);
-    auto catalystMeasure = catalystOp->getResult(0);
 
     std::vector<mlir::Operation*> measureUsers(mqtMeasure.getUsers().begin(),
                                                mqtMeasure.getUsers().end());

@@ -134,6 +134,72 @@ struct ConvertQuantumDealloc
   }
 };
 
+struct ConvertQuantumMeasure
+    : public OpConversionPattern<catalyst::quantum::MeasureOp> {
+
+  ConvertQuantumMeasure(const TypeConverter& typeConverter,
+                        MLIRContext* context)
+      : OpConversionPattern<catalyst::quantum::MeasureOp>(typeConverter,
+                                                          context) {}
+
+  LogicalResult
+  matchAndRewrite(catalyst::quantum::MeasureOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter& rewriter) const override {
+
+    // Extract operand(s)
+    auto inQubit = adaptor.getInQubit();
+
+    // Prepare the result type(s)
+    auto qubitType = ::mqt::ir::opt::QubitType::get(rewriter.getContext());
+    auto bitType = rewriter.getI1Type();
+
+    // Create the new operation
+    auto mqtOp = rewriter.create<::mqt::ir::opt::MeasureOp>(
+        op.getLoc(), mlir::TypeRange{qubitType}, mlir::TypeRange{bitType},
+        mlir::ValueRange{inQubit});
+
+    // Because the results (bit and qubit) have changed order, we need to
+    // manually update their uses
+    auto catalystMeasure = op->getResult(0); // bit
+    auto catalystQubit = op->getResult(1);   // qubit
+
+    auto mqtQubit = mqtOp->getResult(0);
+    auto mqtMeasure = mqtOp->getResult(1);
+
+    // Collect the users of the original qubit
+    std::vector<mlir::Operation*> qubitUsers(catalystQubit.getUsers().begin(),
+                                             catalystQubit.getUsers().end());
+
+    // Iterate over users in reverse order to update their operands properly
+    for (auto* user : llvm::reverse(qubitUsers)) {
+
+      // Only consider operations after the current operation
+      if (!user->isBeforeInBlock(mqtOp) && user != mqtOp && user != op) {
+        // Update operands in the user operation
+        user->replaceUsesOfWith(catalystQubit, mqtQubit);
+      }
+    }
+
+    // Collect the users of the original measurement bit
+    std::vector<mlir::Operation*> measureUsers(
+        catalystMeasure.getUsers().begin(), catalystMeasure.getUsers().end());
+
+    // Iterate over users in reverse order to update their operands properly
+    for (auto* user : llvm::reverse(measureUsers)) {
+
+      // Only consider operations after the current operation
+      if (!user->isBeforeInBlock(mqtOp) && user != mqtOp && user != op) {
+        // Update operands in the user operation
+        user->replaceUsesOfWith(catalystMeasure, mqtMeasure);
+      }
+    }
+
+    // Erase the old operation
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 struct ConvertQuantumExtract
     : public OpConversionPattern<catalyst::quantum::ExtractOp> {
 
@@ -372,10 +438,10 @@ struct QuantumToMQTOpt : impl::QuantumToMQTOptBase<QuantumToMQTOpt> {
     RewritePatternSet patterns(context);
     QuantumToMQTOptTypeConverter typeConverter(context);
 
-    patterns
-        .add<ConvertQuantumAlloc, ConvertQuantumDealloc, ConvertQuantumExtract,
-             ConvertQuantumInsert, ConvertQuantumCustomOp>(typeConverter,
-                                                           context);
+    patterns.add<ConvertQuantumAlloc, ConvertQuantumDealloc,
+                 ConvertQuantumExtract, ConvertQuantumMeasure,
+                 ConvertQuantumInsert, ConvertQuantumCustomOp>(typeConverter,
+                                                               context);
 
     // Boilerplate code to prevent: unresolved materialization
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
