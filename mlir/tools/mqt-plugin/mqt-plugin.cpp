@@ -15,8 +15,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Quantum/IR/QuantumDialect.h"
 #include "mlir/Dialect/MQTOpt/IR/MQTOptDialect.h"
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
+#include "mlir/Conversion/MQTOptToQuantum/MQTOptToQuantum.h"
+#include "mlir/Conversion/QuantumToMQTOpt/QuantumToMQTOpt.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Tools/Plugins/DialectPlugin.h"
 #include "mlir/Tools/Plugins/PassPlugin.h"
@@ -34,7 +37,11 @@ mlirGetDialectPluginInfo() {
   return {MLIR_PLUGIN_API_VERSION, "MQTOpt", LLVM_VERSION_STRING,
           [](DialectRegistry* registry) {
             registry->insert<::mqt::ir::opt::MQTOptDialect>();
-            mqt::ir::opt::registerMQTOptPasses();
+            registry->insert<::catalyst::quantum::QuantumDialect>();
+
+            ::mqt::ir::opt::registerMQTOptPasses();
+            ::mlir::mqt::ir::conversions::registerMQTOptToQuantumPasses();
+            ::mlir::mqt::ir::conversions::registerQuantumToMQTOptPasses();
           }};
 }
 
@@ -42,5 +49,9 @@ mlirGetDialectPluginInfo() {
 /// Necessary symbol to register the pass plugin.
 extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo mlirGetPassPluginInfo() {
   return {MLIR_PLUGIN_API_VERSION, "MQTOptPasses", LLVM_VERSION_STRING,
-          []() { mqt::ir::opt::registerMQTOptPasses(); }};
+          []() { 
+            ::mqt::ir::opt::registerMQTOptPasses(); 
+            ::mlir::mqt::ir::conversions::registerMQTOptToQuantumPasses();
+            ::mlir::mqt::ir::conversions::registerQuantumToMQTOptPasses();
+            }};
 }
