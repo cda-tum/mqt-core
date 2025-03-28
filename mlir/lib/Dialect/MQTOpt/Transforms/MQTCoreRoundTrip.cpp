@@ -22,8 +22,8 @@ namespace mqt::ir::opt {
 #define GEN_PASS_DEF_MQTCOREROUNDTRIP
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
-struct MQTCoreRoundTrip final : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
-
+struct MQTCoreRoundTrip : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
+  using MQTCoreRoundTripBase::MQTCoreRoundTripBase;
   qc::QuantumComputation circuit;
 
   void runOnOperation() override {

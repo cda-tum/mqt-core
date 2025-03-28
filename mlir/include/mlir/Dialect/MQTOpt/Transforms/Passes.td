@@ -33,6 +33,14 @@ def MQTCoreRoundTrip : Pass<"mqt-core-round-trip", "mlir::ModuleOp"> {
     - Measurements/Operations may only target a single qubit. Unitary operations may also use any number of (positive) controls.
     - Supported operations are `x`, `y`, `z`, `h`, and `measure`.
   }];
+  let options = [
+    Option<
+      /*C++ var name=*/"cMap",
+      /*CLI arg name=*/"cmap",
+      /*type=*/"std::string",
+      /*default=*/[{""}],
+      /*description=*/"The device coupling map.">,
+    ];
 }
 
 #endif // MQTO_PASSES
