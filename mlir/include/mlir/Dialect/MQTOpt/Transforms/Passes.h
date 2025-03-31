@@ -24,7 +24,9 @@ namespace mqt::ir::opt {
 #define GEN_PASS_DECL
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc" // IWYU pragma: export
 
-void populateThePassPatterns(mlir::RewritePatternSet& patterns);
+void populateCancelSelfInversePatterns(mlir::RewritePatternSet& patterns);
+void populateQuantumSinkShiftPatterns(mlir::RewritePatternSet& patterns);
+void populateQuantumSinkPushPatterns(mlir::RewritePatternSet& patterns);
 void populateToQuantumComputationPatterns(mlir::RewritePatternSet& patterns,
                                           qc::QuantumComputation& circuit);
 void populateFromQuantumComputationPatterns(mlir::RewritePatternSet& patterns,
