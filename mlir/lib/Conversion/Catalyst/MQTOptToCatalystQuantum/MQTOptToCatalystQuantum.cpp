@@ -462,7 +462,8 @@ llvm::StringRef ConvertMQTOptSimpleGate<::mqt::ir::opt::POp>::getGateName(
   return "";
 }
 
-struct MQTOptToCatalystQuantum : impl::MQTOptToCatalystQuantumBase<MQTOptToCatalystQuantum> {
+struct MQTOptToCatalystQuantum
+    : impl::MQTOptToCatalystQuantumBase<MQTOptToCatalystQuantum> {
   using MQTOptToCatalystQuantumBase::MQTOptToCatalystQuantumBase;
 
   void runOnOperation() override {

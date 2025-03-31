@@ -415,7 +415,8 @@ struct ConvertQuantumCustomOp
   }
 };
 
-struct CatalystQuantumToMQTOpt : impl::CatalystQuantumToMQTOptBase<CatalystQuantumToMQTOpt> {
+struct CatalystQuantumToMQTOpt
+    : impl::CatalystQuantumToMQTOptBase<CatalystQuantumToMQTOpt> {
   using CatalystQuantumToMQTOptBase::CatalystQuantumToMQTOptBase;
 
   void runOnOperation() override {

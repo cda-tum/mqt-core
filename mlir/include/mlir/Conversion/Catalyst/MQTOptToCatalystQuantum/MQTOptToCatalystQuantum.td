@@ -5,7 +5,6 @@
 //
 // Licensed under the MIT License
 
-
 include "mlir/Pass/PassBase.td"
 
 def MQTOptToCatalystQuantum : Pass<"mqtopt-to-quantum"> {
@@ -19,4 +18,3 @@ def MQTOptToCatalystQuantum : Pass<"mqtopt-to-quantum"> {
     "::mqt::ir::opt::MQTOptDialect"
   ];
 }
-

@@ -21,4 +21,3 @@ def CatalystQuantumToMQTOpt : Pass<"quantum-to-mqtopt"> {
     "::mqt::ir::opt::MQTOptDialect"
   ];
 }
-
