@@ -5,23 +5,18 @@
 //
 // Licensed under the MIT License
 
-#pragma once
 
 include "mlir/Pass/PassBase.td"
 
-def CatalystQuantumToMQTOpt : Pass<"quantum-to-mqtopt"> {
-  let summary = "Lower `quantum` to `mqtopt` dialect.";
+def MQTOptToCatalystQuantum : Pass<"mqtopt-to-quantum"> {
+  let summary = "Lower `mqtopt` to `quantum` dialect.";
 
   let description = [{
-    This pass lowers the `quantum` to `mqtopt` dialect.
+    This pass lowers the `mqtopt` to `quantum` dialect.
   }];
-
-
-  // Define dependent dialects
   let dependentDialects = [
     "catalyst::quantum::QuantumDialect",
     "::mqt::ir::opt::MQTOptDialect"
   ];
 }
 
-#endif  // LIB_CONVERSION_QUANTUMTOMQTOPT

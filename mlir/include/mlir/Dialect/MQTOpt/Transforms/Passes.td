@@ -5,8 +5,6 @@
 //
 // Licensed under the MIT License
 
-#pragma once
-
 include "mlir/Pass/PassBase.td"
 
 def MQTCoreRoundTrip : Pass<"mqt-core-round-trip", "mlir::ModuleOp"> {
@@ -25,5 +23,3 @@ def MQTCoreRoundTrip : Pass<"mqt-core-round-trip", "mlir::ModuleOp"> {
     - Supported operations are `x`, `y`, `z`, `h`, and `measure`.
   }];
 }
-
-#endif // MQTO_PASSES

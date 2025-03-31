@@ -14,11 +14,9 @@
 namespace mlir::mqt::ir::conversions {
 
 #define GEN_PASS_DECL
-#include "mlir/Conversion/MQTOptToCatalystQuantum/MQTOptToCatalystQuantum.h.inc"
+#include "mlir/Conversion/Catalyst/CatalystQuantumToMQTOpt/CatalystQuantumToMQTOpt.h.inc"
 
 #define GEN_PASS_REGISTRATION
-#include "mlir/Conversion/MQTOptToCatalystQuantum/MQTOptToCatalystQuantum.h.inc"
+#include "mlir/Conversion/Catalyst/CatalystQuantumToMQTOpt/CatalystQuantumToMQTOpt.h.inc"
 
 } // namespace mlir::mqt::ir::conversions
-
-#endif // LIB_CONVERSION_MQTOPTTOQUANTUM_MQTOPTTOQUANTUM_H_

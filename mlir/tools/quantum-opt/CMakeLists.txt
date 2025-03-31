@@ -16,8 +16,8 @@ set(LIBS
     ${passes_libs}
     MLIROptLib
     MLIRMQTOptTransforms
-    MQTOptToQuantum
-    QuantumToMQTOpt
+    MQTOptToCatalystQuantum
+    CatalystQuantumToMQTOpt
     MLIRQuantum)
 
 add_mlir_tool(quantum-opt quantum-opt.cpp DEPENDS ${LIBS} SUPPORT_PLUGINS)
