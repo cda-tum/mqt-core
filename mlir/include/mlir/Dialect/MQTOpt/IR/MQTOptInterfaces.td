@@ -5,8 +5,7 @@
 //
 // Licensed under the MIT License
 
-#ifndef MQTOPT_INTERFACES
-#define MQTOPT_INTERFACES
+#pragma once
 
 include "mlir/IR/OpBase.td"
 

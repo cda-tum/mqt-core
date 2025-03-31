@@ -5,20 +5,11 @@
 //
 // Licensed under the MIT License
 
-//===-- Passes.td - Arith pass definition file --------*- tablegen -*-===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
-#ifndef LIB_CONVERSION_QUANTUMTOMQTOPT
-#define LIB_CONVERSION_QUANTUMTOMQTOPT
+#pragma once
 
 include "mlir/Pass/PassBase.td"
 
-def QuantumToMQTOpt : Pass<"quantum-to-mqtopt"> {
+def CatalystQuantumToMQTOpt : Pass<"quantum-to-mqtopt"> {
   let summary = "Lower `quantum` to `mqtopt` dialect.";
 
   let description = [{

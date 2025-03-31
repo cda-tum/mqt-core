@@ -5,8 +5,7 @@
 //
 // Licensed under the MIT License
 
-#ifndef MQTOPT_OPS
-#define MQTOPT_OPS
+#pragma once
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/EnumAttr.td"

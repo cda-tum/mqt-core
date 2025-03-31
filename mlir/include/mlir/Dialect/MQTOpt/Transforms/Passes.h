@@ -25,10 +25,10 @@ namespace mqt::ir::opt {
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc" // IWYU pragma: export
 
 void populateThePassPatterns(mlir::RewritePatternSet& patterns);
-void populateToQuantumComputationPatterns(mlir::RewritePatternSet& patterns,
-                                          qc::QuantumComputation& circuit);
-void populateFromQuantumComputationPatterns(mlir::RewritePatternSet& patterns,
-                                            qc::QuantumComputation& circuit);
+void populateToCatalystQuantumComputationPatterns(
+    mlir::RewritePatternSet& patterns, qc::QuantumComputation& circuit);
+void populateFromCatalystQuantumComputationPatterns(
+    mlir::RewritePatternSet& patterns, qc::QuantumComputation& circuit);
 
 //===----------------------------------------------------------------------===//
 // Registration
