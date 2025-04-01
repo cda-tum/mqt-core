@@ -26,21 +26,28 @@ struct CancelConsecutiveSelfInversePattern final
   explicit CancelConsecutiveSelfInversePattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern(context) {}
 
+  bool areUsersUnique(mlir::ResultRange::user_range users) const {
+    return std::none_of(users.begin(), users.end(),
+                        [&](auto* user) { return user != *users.begin(); });
+  }
+
   mlir::LogicalResult match(UnitaryInterface op) const override {
     if (!(mlir::isa<XOp>(op) || mlir::isa<YOp>(op) || mlir::isa<ZOp>(op) ||
           mlir::isa<HOp>(op) || mlir::isa<IOp>(op) || mlir::isa<SWAPOp>(op))) {
       return mlir::failure();
     }
     const auto& users = op->getUsers();
-    if (std::distance(users.begin(), users.end()) != 1) {
+    if (!areUsersUnique(users)) {
       return mlir::failure();
     }
     auto user = *users.begin();
     if (op->getName() != user->getName()) {
+      llvm::outs() << "Not a valid operation\n";
       return mlir::failure();
     }
     auto unitaryUser = mlir::dyn_cast<UnitaryInterface>(user);
-    if (op.getOutQubits() != unitaryUser.getInQubits()) {
+    if (op.getOutQubits() != unitaryUser.getAllInQubits()) {
+      llvm::outs() << "Not asame qubits\n";
       return mlir::failure();
     }
     return mlir::success();
@@ -62,7 +69,7 @@ struct CancelConsecutiveSelfInversePattern final
         }
         const auto idx = std::distance(user.getOutQubits().begin(), found);
         rewriter.modifyOpInPlace(childUser, [&] {
-          childUser->setOperand(i, op.getInQubits()[idx]);
+          childUser->setOperand(i, op.getAllInQubits()[idx]);
         });
       }
     }
