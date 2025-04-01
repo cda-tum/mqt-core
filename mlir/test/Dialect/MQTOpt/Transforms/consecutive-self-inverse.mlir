@@ -5,6 +5,13 @@
 //
 // Licensed under the MIT License
 
+// This test checks if single-qubit consecutive self-inverses are canceled correctly.
+// In this example, most operations should be canceled including cases where:
+//   - The operations are directly consecutive
+//   - There are operations on other qubits interleaved between them
+//   - There are operations on the same qubits interleaved between them that will also get canceled,
+//     allowing the outer consecutive pair to be canceled as well
+
 // RUN: quantum-opt %s --cancel-consecutive-self-inverse | FileCheck %s
 
 module {
