@@ -34,6 +34,83 @@ struct QuantumSinkPushPattern final
   explicit QuantumSinkPushPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern(context) {}
 
+  /**
+   * @brief Returns the block distance between a block and an operation that
+   * precedes it.
+   *
+   * @param toCheck The block to check.
+   * @param op The operation to find the distance to.
+   * @return The distance between the block and the operation or -1 if the
+   * operation is not in a predecessor block.
+   */
+  int getDepth(mlir::Block* toCheck, UnitaryInterface op) const {
+    auto* originalBlock = op->getBlock();
+    if (toCheck == originalBlock) {
+      return 0;
+    }
+    int depth = -1;
+    for (auto* pred : toCheck->getPredecessors()) {
+      const auto result = getDepth(pred, op);
+      if (result == -1) {
+        continue;
+      }
+      if (depth == -1) {
+        depth = result + 1;
+      } else {
+        depth = std::min(depth, result + 1);
+      }
+    }
+    return depth;
+  }
+
+  /**
+   * @brief Out of a set of users, returns the closes one.
+   *
+   * In this case, "closest" denotes the operation that is in the closest
+   * successor block of the original operation.
+   *
+   * @param users The set of users to consider.
+   * @param op The operation to find the closest user for.
+   * @return The closest user operation.
+   */
+  mlir::Operation* getNext(mlir::ResultRange::user_range users,
+                           UnitaryInterface op) const {
+    mlir::Operation* next = nullptr;
+    int minDepth = 0;
+    for (auto* user : users) {
+      const auto depth = getDepth(user->getBlock(), op);
+      if (depth == -1) {
+        continue;
+      }
+      if (next == nullptr || depth < minDepth) {
+        next = user;
+        minDepth = depth;
+      }
+    }
+    return next;
+  }
+
+  /**
+   * @brief Returns the next branch operation that uses the given operation.
+   *
+   * In this case, "next" denotes the operation that is in the closest successor
+   * block of the original operation.
+   *
+   * @param op The operation to find the next branch operation for.
+   * @return The next branch operation that uses the given operation.
+   */
+  mlir::Operation* getNextBranchOpUser(UnitaryInterface op) const {
+    auto allUsers = op->getUsers();
+    std::vector<mlir::Operation*> output;
+    std::copy_if(allUsers.begin(), allUsers.end(), std::back_inserter(output),
+                 [&](auto* user) {
+                   return mlir::isa<mlir::cf::BranchOp>(user) ||
+                          mlir::isa<mlir::cf::CondBranchOp>(user);
+                 });
+    auto* nextBranch = getNext(allUsers, op);
+    return nextBranch;
+  }
+
   mlir::LogicalResult match(UnitaryInterface op) const override {
     // We only consider 1-qubit gates.
     if (op.getOutQubits().size() != 1) {
@@ -45,22 +122,25 @@ struct QuantumSinkPushPattern final
       return mlir::failure();
     }
 
-    auto* user = *users.begin();
+    auto* nextBranch = getNextBranchOpUser(op);
+    if (nextBranch == nullptr) {
+      return mlir::failure();
+    }
 
     // This pattern only applies to operations in the same block.
-    if (user->getBlock() != op->getBlock()) {
+    if (nextBranch->getBlock() != op->getBlock()) {
       return mlir::failure();
     }
 
     // The pattern can always be applied if the user is a conditional branch
     // operation.
-    if (mlir::isa<mlir::cf::CondBranchOp>(user)) {
+    if (mlir::isa<mlir::cf::CondBranchOp>(nextBranch)) {
       return mlir::success();
     }
 
     // For normal branch operations, we can only apply the pattern if the
     // successor block only has one predecessor.
-    if (auto branchOp = mlir::dyn_cast<mlir::cf::BranchOp>(user)) {
+    if (auto branchOp = mlir::dyn_cast<mlir::cf::BranchOp>(nextBranch)) {
       auto* successor = branchOp.getDest();
       if (std::distance(successor->getPredecessors().begin(),
                         successor->getPredecessors().end()) == 1) {
@@ -68,6 +148,41 @@ struct QuantumSinkPushPattern final
       }
     }
     return mlir::failure();
+  }
+
+  /**
+   * @brief Replaces all uses of a given operation with the results of a clone,
+   * but only in the current block and all successor blocks.
+   *
+   * This differs from MLIR's `Operation::replaceAllUsesWith` in that it does
+   * not replace uses in parallel blocks.
+   *
+   * @param original The original operation to replace.
+   * @param clone The clone to replace with.
+   * @param block The block to start replacing in.
+   * @param visited A set of blocks that have already been visited to prevent
+   * endless loops.
+   */
+  void replaceAllChildUsesWith(mlir::Operation* original,
+                               mlir::Operation* clone, mlir::Block* block,
+                               std::set<mlir::Block*>& visited) const {
+    if (visited.find(block) != visited.end()) {
+      return;
+    }
+    visited.insert(block);
+
+    for (auto& op : block->getOperations()) {
+      if (&op == original) {
+        continue;
+      }
+      for (size_t i = 0; i < original->getResults().size(); i++) {
+        op.replaceUsesOfWith(original->getResult(i), clone->getResult(i));
+      }
+    }
+
+    for (auto* successor : block->getSuccessors()) {
+      replaceAllChildUsesWith(original, clone, successor, visited);
+    }
   }
 
   /**
@@ -91,7 +206,7 @@ struct QuantumSinkPushPattern final
 
     // We iterate over all block args: If any of them involved the result of the
     // pushed operation, they can be removed, as the operation is now already in
-    // the block. However, this means
+    // the block.
     for (int i = static_cast<int>(blockArgs.size()) - 1; i >= 0; i--) {
       auto arg = blockArgs[i];
       auto found =
@@ -104,6 +219,9 @@ struct QuantumSinkPushPattern final
       block->getArgument(i).replaceAllUsesWith(clone->getResult(idx));
       block->eraseArgument(i);
     }
+
+    std::set<mlir::Block*> visited;
+    replaceAllChildUsesWith(op, clone, block, visited);
 
     // Now, the block instead needs to be passed the inputs of the pushed
     // operation so we extend the block with new arguments.
@@ -174,6 +292,7 @@ struct QuantumSinkPushPattern final
     rewriter.replaceOpWithNewOp<mlir::cf::CondBranchOp>(
         condBranchOp, condBranchOp.getCondition(), targetBlockTrue,
         newBlockArgsTrue, targetBlockFalse, newBlockArgsFalse);
+
     rewriter.eraseOp(op);
   }
 
@@ -200,7 +319,7 @@ struct QuantumSinkPushPattern final
 
   void rewrite(UnitaryInterface op,
                mlir::PatternRewriter& rewriter) const override {
-    auto* user = *op->getUsers().begin();
+    auto* user = getNextBranchOpUser(op);
     if (auto condBranchOp = mlir::dyn_cast<mlir::cf::CondBranchOp>(user)) {
       rewriteCondBranch(op, condBranchOp, rewriter);
       return;

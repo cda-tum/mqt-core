@@ -30,6 +30,52 @@ struct QuantumSinkShiftPattern final
   explicit QuantumSinkShiftPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern(context) {}
 
+  /**
+   * @brief Recursively checks if a block is a successor of another block or the
+   * same block.
+   *
+   * @param successor The block that might be after the other block.
+   * @param predecessor The block to check against.
+   */
+  bool isAfterOrEqual(mlir::Block* successor, mlir::Block* predecessor,
+                      std::set<mlir::Block*>& visited) const {
+    if (visited.find(successor) != visited.end()) {
+      return false;
+    }
+    visited.insert(successor);
+    if (successor == predecessor) {
+      return true;
+    }
+    auto parents = successor->getPredecessors();
+    return std::any_of(parents.begin(), parents.end(), [&](auto* parent) {
+      return isAfterOrEqual(parent, predecessor, visited);
+    });
+  }
+
+  /**
+   * @brief Returns the earliest users of a given operation.
+   *
+   * In this case, "earliest" denotes all operations that are not preceded
+   * another operation in the list of users.
+   *
+   * @param users The users to find the earliest users for.
+   * @return A vector of all earliest users of the given operation.
+   */
+  std::vector<mlir::Operation*>
+  getEarliestUsers(mlir::ResultRange::user_range users) const {
+    std::vector<mlir::Operation*> earliestUsers;
+    std::copy_if(
+        users.begin(), users.end(), std::back_inserter(earliestUsers),
+        [&](auto* user) {
+          return std::none_of(users.begin(), users.end(), [&](auto* other) {
+            std::set<mlir::Block*> visited;
+            return user != other &&
+                   isAfterOrEqual(user->getBlock(), other->getBlock(), visited);
+          });
+        });
+    return earliestUsers;
+  }
+
   mlir::LogicalResult match(UnitaryInterface op) const override {
     // We only consider 1-qubit gates.
     if (op.getOutQubits().size() != 1) {
@@ -42,12 +88,26 @@ struct QuantumSinkShiftPattern final
       return mlir::failure();
     }
 
-    // There will only ever be one user
-    auto* user = *users.begin();
-    return user->getBlock() != op->getBlock() ? mlir::success()
-                                              : mlir::failure();
+    // There may be multiple users if canonicalization has deemed a branch
+    // operand as pass-through and therefore removed it. If more than one user
+    // is in the same block, then the `QuantumSinkShiftPattern` cannot be
+    // applied
+    return std::all_of(
+               users.begin(), users.end(),
+               [&](auto* user) { return user->getBlock() != op->getBlock(); })
+               ? mlir::success()
+               : mlir::failure();
   }
 
+  /**
+   * @brief Repdoes not precede the block.laces all uses of a given operation
+   * with the results of a clone,
+   *
+   * @param rewriter The pattern rewriter to use.
+   * @param original The original operation to replace.
+   * @param clone The clone to replace with.
+   * @param user The user operation to replace the inputs in.
+   */
   void replaceInputsWithClone(mlir::PatternRewriter& rewriter,
                               mlir::Operation* original, mlir::Operation* clone,
                               mlir::Operation* user) const {
@@ -66,15 +126,14 @@ struct QuantumSinkShiftPattern final
 
   void rewrite(UnitaryInterface op,
                mlir::PatternRewriter& rewriter) const override {
-    llvm::outs() << "PUSH: looking at op: " << op << "\n";
+    auto users = getEarliestUsers(op->getUsers());
 
-    auto* user = *op->getUsers().begin();
-    auto* block = user->getBlock();
-
-    rewriter.setInsertionPoint(&block->front());
-    auto* clone = rewriter.clone(*op);
-    // replaceInputsWithClone(rewriter, op, clone, user);
-    op->replaceAllUsesWith(clone);
+    for (auto* user : users) {
+      auto* block = user->getBlock();
+      rewriter.setInsertionPoint(&block->front());
+      auto* clone = rewriter.clone(*op);
+      replaceInputsWithClone(rewriter, op, clone, user);
+    }
     rewriter.eraseOp(op);
   }
 };
