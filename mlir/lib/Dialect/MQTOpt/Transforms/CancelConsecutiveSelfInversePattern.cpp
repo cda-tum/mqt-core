@@ -11,9 +11,11 @@
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
+#include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
 
@@ -28,7 +30,8 @@ struct CancelConsecutiveSelfInversePattern final
   explicit CancelConsecutiveSelfInversePattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern(context) {}
 
-  bool areUsersUnique(mlir::ResultRange::user_range users) const {
+  [[nodiscard]] static bool
+  areUsersUnique(mlir::ResultRange::user_range users) {
     return std::none_of(users.begin(), users.end(),
                         [&](auto* user) { return user != *users.begin(); });
   }
@@ -42,7 +45,7 @@ struct CancelConsecutiveSelfInversePattern final
     if (!areUsersUnique(users)) {
       return mlir::failure();
     }
-    auto user = *users.begin();
+    auto* user = *users.begin();
     if (op->getName() != user->getName()) {
       return mlir::failure();
     }

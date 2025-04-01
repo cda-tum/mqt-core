@@ -11,10 +11,13 @@
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
 #include <mlir/Dialect/ControlFlow/IR/ControlFlowOps.h>
+#include <mlir/IR/Block.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/PatternMatch.h>
+#include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
 #include <set>
@@ -74,8 +77,8 @@ struct QuantumSinkPushPattern final
    * @param op The operation to find the closest user for.
    * @return The closest user operation.
    */
-  mlir::Operation* getNext(mlir::ResultRange::user_range users,
-                           UnitaryInterface op) const {
+  [[nodiscard]] mlir::Operation* getNext(mlir::ResultRange::user_range users,
+                                         UnitaryInterface op) const {
     mlir::Operation* next = nullptr;
     int minDepth = 0;
     for (auto* user : users) {
@@ -100,7 +103,8 @@ struct QuantumSinkPushPattern final
    * @param op The operation to find the next branch operation for.
    * @return The next branch operation that uses the given operation.
    */
-  mlir::Operation* getNextBranchOpUser(UnitaryInterface op) const {
+  [[nodiscard]] mlir::Operation*
+  getNextBranchOpUser(UnitaryInterface op) const {
     auto allUsers = op->getUsers();
     std::vector<mlir::Operation*> output;
     std::copy_if(allUsers.begin(), allUsers.end(), std::back_inserter(output),
@@ -245,9 +249,9 @@ struct QuantumSinkPushPattern final
    * @param rewriter The pattern rewriter to use.
    * @return The new block that was created.
    */
-  mlir::Block* breakCriticalEdge(mlir::Block* oldTarget,
-                                 mlir::Operation* branchOp,
-                                 mlir::PatternRewriter& rewriter) const {
+  static mlir::Block* breakCriticalEdge(mlir::Block* oldTarget,
+                                        mlir::Operation* branchOp,
+                                        mlir::PatternRewriter& rewriter) {
     auto* newBlock = rewriter.createBlock(oldTarget->getParent());
     std::vector<mlir::Value> newBlockOutputs;
     for (auto arg : oldTarget->getArguments()) {
@@ -323,10 +327,8 @@ struct QuantumSinkPushPattern final
     auto* user = getNextBranchOpUser(op);
     if (auto condBranchOp = mlir::dyn_cast<mlir::cf::CondBranchOp>(user)) {
       rewriteCondBranch(op, condBranchOp, rewriter);
-      return;
     } else {
       rewriteBranch(op, mlir::dyn_cast<mlir::cf::BranchOp>(user), rewriter);
-      return;
     }
   }
 };

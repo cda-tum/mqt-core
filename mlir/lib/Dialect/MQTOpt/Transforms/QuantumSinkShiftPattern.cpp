@@ -11,9 +11,11 @@
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
-#include <mlir/IR/BuiltinTypes.h>
+#include <mlir/IR/Block.h>
 #include <mlir/IR/MLIRContext.h>
+#include <mlir/IR/Operation.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
@@ -63,7 +65,7 @@ struct QuantumSinkShiftPattern final
    * @param users The users to find the earliest users for.
    * @return A vector of all earliest users of the given operation.
    */
-  std::vector<mlir::Operation*>
+  [[nodiscard]] std::vector<mlir::Operation*>
   getEarliestUsers(mlir::ResultRange::user_range users) const {
     std::vector<mlir::Operation*> earliestUsers;
     std::copy_if(
@@ -110,9 +112,10 @@ struct QuantumSinkShiftPattern final
    * @param clone The clone to replace with.
    * @param user The user operation to replace the inputs in.
    */
-  void replaceInputsWithClone(mlir::PatternRewriter& rewriter,
-                              mlir::Operation* original, mlir::Operation* clone,
-                              mlir::Operation* user) const {
+  static void replaceInputsWithClone(mlir::PatternRewriter& rewriter,
+                                     mlir::Operation* original,
+                                     mlir::Operation* clone,
+                                     mlir::Operation* user) {
     for (size_t i = 0; i < user->getOperands().size(); i++) {
       const auto& operand = user->getOperand(i);
       const auto found = std::find(original->getResults().begin(),
