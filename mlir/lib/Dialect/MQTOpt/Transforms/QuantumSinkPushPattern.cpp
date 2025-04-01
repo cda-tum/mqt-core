@@ -17,6 +17,7 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
+#include <set>
 #include <vector>
 
 namespace mqt::ir::opt {
