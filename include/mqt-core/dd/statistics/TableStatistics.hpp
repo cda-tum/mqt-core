@@ -12,7 +12,7 @@
 #include "dd/statistics/Statistics.hpp"
 
 #include <cstddef>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 
 namespace dd {
 

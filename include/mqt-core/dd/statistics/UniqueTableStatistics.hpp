@@ -12,7 +12,7 @@
 #include "dd/statistics/TableStatistics.hpp"
 
 #include <cstddef>
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
 
 namespace dd {
 /// \brief A class for storing statistics of a unique table
