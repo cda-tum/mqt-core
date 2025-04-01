@@ -42,12 +42,10 @@ struct CancelConsecutiveSelfInversePattern final
     }
     auto user = *users.begin();
     if (op->getName() != user->getName()) {
-      llvm::outs() << "Not a valid operation\n";
       return mlir::failure();
     }
     auto unitaryUser = mlir::dyn_cast<UnitaryInterface>(user);
     if (op.getOutQubits() != unitaryUser.getAllInQubits()) {
-      llvm::outs() << "Not asame qubits\n";
       return mlir::failure();
     }
     return mlir::success();
