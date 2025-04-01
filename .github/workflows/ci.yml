@@ -116,6 +116,9 @@ jobs:
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-coverage.yml@v1.7
+    permissions:
+      contents: read
+      id-token: write
 
   cpp-linter:
     name: 🇨‌ Lint
@@ -144,6 +147,9 @@ jobs:
       enable-ubuntu2204-arm: false
       enable-macos15: false
       enable-windows2025: false
+    permissions:
+      contents: read
+      id-token: write
 
   # run extensive Python tests whenever this is on a PR and the PR has the `extensive-python-ci` label
   python-tests-extensive:
@@ -163,6 +169,9 @@ jobs:
       enable-macos13: false
       enable-macos14: false
       enable-windows2022: false
+    permissions:
+      contents: read
+      id-token: write
 
   python-linter:
     name: 🐍 Lint
