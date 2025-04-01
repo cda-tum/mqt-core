@@ -338,15 +338,17 @@ struct ConvertQuantumCustomOp
 
     // Read attributes
     auto maskAttr = op->getAttrOfType<DenseBoolArrayAttr>("params_mask");
-    auto staticParamsAttr = op->getAttrOfType<DenseF64ArrayAttr>("static_params");
+    auto staticParamsAttr =
+        op->getAttrOfType<DenseF64ArrayAttr>("static_params");
 
     // Total length of combined parameter list
     size_t totalParams = 0;
     if (maskAttr) {
       totalParams = maskAttr.size();
     } else {
-      totalParams = staticParamsAttr ? staticParamsAttr.size() + paramsValues.size()
-                                      : paramsValues.size();
+      totalParams = staticParamsAttr
+                        ? staticParamsAttr.size() + paramsValues.size()
+                        : paramsValues.size();
     }
 
     // Pointers to step through static/dynamic values
@@ -363,13 +365,16 @@ struct ConvertQuantumCustomOp
         assert(staticParamsAttr && "Missing static_params for static mask");
         staticParamsVec.emplace_back(staticParamsAttr[staticIdx++]);
       } else {
-        assert(dynamicIdx < paramsValues.size() && "Too few dynamic parameters");
+        assert(dynamicIdx < paramsValues.size() &&
+               "Too few dynamic parameters");
         finalParamValues.emplace_back(paramsValues[dynamicIdx++]);
       }
     }
 
-    auto staticParams = DenseF64ArrayAttr::get(rewriter.getContext(), staticParamsVec);
-    auto paramsMask = DenseBoolArrayAttr::get(rewriter.getContext(), paramsMaskVec);
+    auto staticParams =
+        DenseF64ArrayAttr::get(rewriter.getContext(), staticParamsVec);
+    auto paramsMask =
+        DenseBoolArrayAttr::get(rewriter.getContext(), paramsMaskVec);
 
     if (gateName == "CNOT" || gateName == "CY" || gateName == "CZ" ||
         gateName == "CRX" || gateName == "CRY" || gateName == "CRZ" ||
