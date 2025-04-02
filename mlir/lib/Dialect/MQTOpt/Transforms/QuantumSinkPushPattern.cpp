@@ -68,7 +68,7 @@ struct QuantumSinkPushPattern final
   }
 
   /**
-   * @brief Out of a set of users, returns the closes one.
+   * @brief Out of a set of users, returns the closest one.
    *
    * In this case, "closest" denotes the operation that is in the closest
    * successor block of the original operation.
