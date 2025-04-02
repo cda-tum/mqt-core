@@ -27,8 +27,8 @@ def MQTCoreRoundTrip : Pass<"mqt-core-round-trip", "mlir::ModuleOp"> {
   }];
 }
 
-def CancelConsecutiveSelfInverse : Pass<"cancel-consecutive-self-inverse", "mlir::ModuleOp"> {
-  let summary = "This pass searches for consecutive applications of self-inverse gates and cancels them.";
+def CancelConsecutiveInverses : Pass<"cancel-consecutive-inverses", "mlir::ModuleOp"> {
+  let summary = "This pass searches for consecutive applications of gates and their inverses and cancels them.";
   let description = [{
     This pass searches for applications of gates that are their own inverses. Walking down their def-use chain,
     it then checks if the same gate is applied once again. In that case, the two gates are cancelled.

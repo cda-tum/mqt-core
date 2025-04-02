@@ -12,7 +12,7 @@
 //   - There are operations on the same qubits interleaved between them that will also get canceled,
 //     allowing the outer consecutive pair to be canceled as well
 
-// RUN: quantum-opt %s --cancel-consecutive-self-inverse | FileCheck %s
+// RUN: quantum-opt %s --cancel-consecutive-inverses | FileCheck %s
 
 module {
   func.func @main() {

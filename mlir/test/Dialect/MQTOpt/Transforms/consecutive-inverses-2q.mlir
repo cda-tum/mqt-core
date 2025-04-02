@@ -8,7 +8,7 @@
 // This test checks if two-qubit consecutive self-inverses are canceled correctly.
 // For this, the operations must involve exactly the same qubits.
 
-// RUN: quantum-opt %s --cancel-consecutive-self-inverse | FileCheck %s
+// RUN: quantum-opt %s --cancel-consecutive-inverses | FileCheck %s
 
 module {
   func.func @main() {

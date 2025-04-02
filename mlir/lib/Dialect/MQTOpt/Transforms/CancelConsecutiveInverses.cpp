@@ -16,14 +16,14 @@
 
 namespace mqt::ir::opt {
 
-#define GEN_PASS_DEF_CANCELCONSECUTIVESELFINVERSE
+#define GEN_PASS_DEF_CANCELCONSECUTIVEINVERSES
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
 /**
  * @brief This pass attempts to cancel consecutive self-inverse operations.
  */
-struct CancelConsecutiveSelfInverse final
-    : impl::CancelConsecutiveSelfInverseBase<CancelConsecutiveSelfInverse> {
+struct CancelConsecutiveInverses final
+    : impl::CancelConsecutiveInversesBase<CancelConsecutiveInverses> {
 
   void runOnOperation() override {
     // Get the current operation being operated on.
@@ -32,7 +32,7 @@ struct CancelConsecutiveSelfInverse final
 
     // Define the set of patterns to use.
     mlir::RewritePatternSet patterns(ctx);
-    populateCancelSelfInversePatterns(patterns);
+    populateCancelInversesPatterns(patterns);
 
     // Apply patterns in an iterative and greedy manner.
     if (mlir::failed(mlir::applyPatternsGreedily(op, std::move(patterns)))) {

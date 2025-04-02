@@ -24,10 +24,10 @@ namespace mqt::ir::opt {
 /**
  * @brief This pattern attempts to cancel consecutive self-inverse operations.
  */
-struct CancelConsecutiveSelfInversePattern final
+struct CancelConsecutiveInversesPattern final
     : mlir::OpInterfaceRewritePattern<UnitaryInterface> {
 
-  explicit CancelConsecutiveSelfInversePattern(mlir::MLIRContext* context)
+  explicit CancelConsecutiveInversesPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern(context) {}
 
   /**
@@ -111,12 +111,12 @@ struct CancelConsecutiveSelfInversePattern final
 
 /**
  * @brief Populates the given pattern set with the
- * `CancelConsecutiveSelfInversePattern`.
+ * `CancelConsecutiveInversePattern`.
  *
  * @param patterns The pattern set to populate.
  */
-void populateCancelSelfInversePatterns(mlir::RewritePatternSet& patterns) {
-  patterns.add<CancelConsecutiveSelfInversePattern>(patterns.getContext());
+void populateCancelInversesPatterns(mlir::RewritePatternSet& patterns) {
+  patterns.add<CancelConsecutiveInversesPattern>(patterns.getContext());
 }
 
 } // namespace mqt::ir::opt
