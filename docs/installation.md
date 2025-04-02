@@ -120,7 +120,7 @@ $ uv add mqt.core
 ```toml
 [project]
 # ...
-dependencies = ["mqt.core>=2.7.0"]
+dependencies = ["mqt.core>=3.0.0"]
 # ...
 ```
 
@@ -133,7 +133,7 @@ from setuptools import setup
 
 setup(
     # ...
-    install_requires=["mqt.core>=2.7.0"],
+    install_requires=["mqt.core>=3.0.0"],
     # ...
 )
 ```
@@ -158,30 +158,19 @@ include(FetchContent)
 set(FETCH_PACKAGES "")
 
 # cmake-format: off
-set(MQT_CORE_VERSION 2.7.0
+set(MQT_CORE_VERSION 3.0.0
     CACHE STRING "MQT Core version")
 set(MQT_CORE_REV "2ccf532b66998af376c256ae94a39eed802b990c"
     CACHE STRING "MQT Core identifier (tag, branch or commit hash)")
 set(MQT_CORE_REPO_OWNER "cda-tum"
     CACHE STRING "MQT Core repository owner (change when using a fork)")
 # cmake-format: on
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
-  FetchContent_Declare(
-    mqt-core
-    GIT_REPOSITORY https://github.com/${MQT_CORE_REPO_OWNER}/mqt-core.git
-    GIT_TAG ${MQT_CORE_REV}
-    FIND_PACKAGE_ARGS ${MQT_CORE_VERSION})
-  list(APPEND FETCH_PACKAGES mqt-core)
-else()
-  find_package(mqt-core ${MQT_CORE_VERSION} QUIET)
-  if(NOT mqt-core_FOUND)
-    FetchContent_Declare(
-      mqt-core
-      GIT_REPOSITORY https://github.com/${MQT_CORE_REPO_OWNER}/mqt-core.git
-      GIT_TAG ${MQT_CORE_REV})
-    list(APPEND FETCH_PACKAGES mqt-core)
-  endif()
-endif()
+FetchContent_Declare(
+  mqt-core
+  GIT_REPOSITORY https://github.com/${MQT_CORE_REPO_OWNER}/mqt-core.git
+  GIT_TAG ${MQT_CORE_REV}
+  FIND_PACKAGE_ARGS ${MQT_CORE_VERSION})
+list(APPEND FETCH_PACKAGES mqt-core)
 
 # Make all declared dependencies available.
 FetchContent_MakeAvailable(${FETCH_PACKAGES})
@@ -254,7 +243,7 @@ $ cmake --install build
 Then, in your project's `CMakeLists.txt`, you can use the `find_package` command to locate the installed library:
 
 ```cmake
-find_package(mqt-core 2.7.0 REQUIRED)
+find_package(mqt-core 3.0.0 REQUIRED)
 ```
 
 ::::
