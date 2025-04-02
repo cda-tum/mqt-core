@@ -98,7 +98,7 @@ $ uv pip install mqt.core --no-binary mqt.core
 
 This requires a [C++ compiler supporting C++17](https://en.wikipedia.org/wiki/List_of_compilers#C++_compilers) and a minimum [CMake](https://cmake.org/) version of 3.24.
 The library is continuously tested under Linux, MacOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/virtual-environments).
-In order to access the latest build logs, visit the [GitHub Actions page](https://github.com/cda-tum/mqt-core/actions/workflows/ci.yml).
+In order to access the latest build logs, visit the [GitHub Actions page](https://github.com/munich-quantum-toolkit/core/actions/workflows/ci.yml).
 
 ## Integrating MQT Core into your project
 
@@ -214,7 +214,7 @@ concurrency:
 jobs:
   update-mqt-core:
     name: Update MQT Core
-    uses: cda-tum/mqt-workflows/.github/workflows/reusable-mqt-core-update.yml@v1.7
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-mqt-core-update.yml@v1.7
     with:
       update-to-head: ${{ github.event.inputs.update-to-head == 'true' }}
 ```
@@ -228,7 +228,7 @@ However, handling git submodules can be cumbersome, especially when working with
 First, add the submodule to your project (e.g., in the `external` directory) via:
 
 ```console
-$ git submodule add https://github.com/cda-tum/mqt-core.git external/mqt-core
+$ git submodule add https://github.com/munich-quantum-toolkit/core.git external/mqt-core
 ```
 
 Then, add the following lines to your `CMakeLists.txt` to make the library's targets available in your project:
@@ -244,7 +244,7 @@ add_subdirectory(external/mqt-core)
 MQT Core can be installed on your system after building it from source.
 
 ```console
-$ git clone https://github.com/cda-tum/mqt-core.git
+$ git clone https://github.com/munich-quantum-toolkit/core.git mqt-core
 $ cd mqt-core
 $ cmake -S . -B build
 $ cmake --build build
