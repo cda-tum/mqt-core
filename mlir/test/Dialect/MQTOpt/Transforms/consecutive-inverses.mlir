@@ -91,3 +91,68 @@ module {
     return
   }
 }
+
+// -----
+// Checks if `dagger` gates correctly cancel their inverses, too
+
+module {
+  func.func @testCancelMultiQubitGates() {
+    // CHECK: %[[Reg_0:.*]] = "mqtopt.allocQubitRegister"
+    %reg_0 = "mqtopt.allocQubitRegister"() <{size_attr = 1 : i64}> : () -> !mqtopt.QubitRegister
+
+    // CHECK: %[[Reg_1:.*]], %[[Q_0:.*]] = "mqtopt.extractQubit"(%[[Reg_0]]) <{index_attr = 0 : i64}>
+    %reg_1, %q_0 = "mqtopt.extractQubit"(%reg_0) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
+
+    // ========================== Check for operations that should not be canceled ==========================
+    // CHECK: %[[Q_1:.*]] = mqtopt.sx() %[[Q_0]]
+    // CHECK: %[[Q_2:.*]] = mqtopt.sx() %[[Q_1]]
+
+    // ========================== Check for operations that should be canceled ==============================
+    // CHECK-NOT: %[[ANY:.*]] = mqtopt.s()
+    // CHECK-NOT: %[[ANY:.*]] = mqtopt.tdg()
+    // CHECK-NOT: %[[ANY:.*]] = mqtopt.t()
+    // CHECK-NOT: %[[ANY:.*]] = mqtopt.sdg()
+
+    %q_1 = mqtopt.s() %q_0 : !mqtopt.Qubit
+    %q_2 = mqtopt.tdg() %q_1 : !mqtopt.Qubit
+    %q_3 = mqtopt.t() %q_2 : !mqtopt.Qubit
+    %q_4 = mqtopt.sdg() %q_3 : !mqtopt.Qubit
+    %q_5 = mqtopt.sx() %q_4 : !mqtopt.Qubit
+    %q_6 = mqtopt.sx() %q_5 : !mqtopt.Qubit
+
+
+    // CHECK: %[[Reg_2:.*]] = "mqtopt.insertQubit"(%[[Reg_1]], %[[Q_2]])  <{index_attr = 0 : i64}>
+    %reg_2 = "mqtopt.insertQubit"(%reg_1, %q_6) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+    "mqtopt.deallocQubitRegister"(%reg_2) : (!mqtopt.QubitRegister) -> ()
+    return
+  }
+}
+
+
+// -----
+// Checks that controlled gates with different control polarities are not cancelled
+
+module {
+  func.func @testDontCancelDifferingControlPolarities() {
+    // CHECK: %[[Reg_0:.*]] = "mqtopt.allocQubitRegister"
+    %reg_0 = "mqtopt.allocQubitRegister"() <{size_attr = 2 : i64}> : () -> !mqtopt.QubitRegister
+
+    // CHECK: %[[Reg_1:.*]], %[[Q0_0:.*]] = "mqtopt.extractQubit"(%[[Reg_0]]) <{index_attr = 0 : i64}>
+    %reg_1, %q0_0 = "mqtopt.extractQubit"(%reg_0) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
+
+    // CHECK: %[[Reg_2:.*]], %[[Q1_0:.*]] = "mqtopt.extractQubit"(%[[Reg_1]]) <{index_attr = 1 : i64}>
+    %reg_2, %q1_0 = "mqtopt.extractQubit"(%reg_1) <{index_attr = 1 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
+
+    // CHECK: %[[Q12_1:.*]]:2 = mqtopt.x() %[[Q1_0]] ctrl %[[Q0_0]] : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[Q12_2:.*]]:2 = mqtopt.x() %[[Q12_1]]#0 nctrl %[[Q12_1]]#1 : !mqtopt.Qubit, !mqtopt.Qubit
+
+    %q1_1, %q0_1 = mqtopt.x() %q1_0 ctrl %q0_0 : !mqtopt.Qubit, !mqtopt.Qubit
+    %q1_2, %q0_2 = mqtopt.x() %q1_1 nctrl %q0_1 : !mqtopt.Qubit, !mqtopt.Qubit
+
+
+    %reg_3 = "mqtopt.insertQubit"(%reg_2, %q0_2) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+    %reg_4 = "mqtopt.insertQubit"(%reg_3, %q1_2) <{index_attr = 1 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+    "mqtopt.deallocQubitRegister"(%reg_4) : (!mqtopt.QubitRegister) -> ()
+    return
+  }
+}
