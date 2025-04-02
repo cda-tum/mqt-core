@@ -22,7 +22,7 @@ namespace mqt::ir::opt {
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
 /**
- * @brief This pass attempty to cancel consecutive self-inverse operations.
+ * @brief This pass attempts to cancel consecutive self-inverse operations.
  */
 struct CancelConsecutiveSelfInverse final
     : impl::CancelConsecutiveSelfInverseBase<CancelConsecutiveSelfInverse> {
