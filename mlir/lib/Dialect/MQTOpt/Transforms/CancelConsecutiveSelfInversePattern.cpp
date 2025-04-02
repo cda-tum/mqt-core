@@ -22,7 +22,7 @@
 namespace mqt::ir::opt {
 
 /**
- * @brief This pattern attempty to cancel consecutive self-inverse operations.
+ * @brief This pattern attempts to cancel consecutive self-inverse operations.
  */
 struct CancelConsecutiveSelfInversePattern final
     : mlir::OpInterfaceRewritePattern<UnitaryInterface> {
