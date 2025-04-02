@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2023 - 2025 Chair for Design Automation, TUM
- * Copyright (c) 2025 Munich Quantum Software Company GmbH
+ * Copyright (c) 2025 Chair for Design Automation, TUM
  * All rights reserved.
  *
  * SPDX-License-Identifier: MIT
@@ -17,6 +16,7 @@
 #include <mlir/Dialect/ControlFlow/IR/ControlFlowOps.h>
 #include <mlir/IR/Block.h>
 #include <mlir/IR/MLIRContext.h>
+#include <mlir/IR/Operation.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2023 - 2025 Chair for Design Automation, TUM
- * Copyright (c) 2025 Munich Quantum Software Company GmbH
+ * Copyright (c) 2025 Chair for Design Automation, TUM
  * All rights reserved.
  *
  * SPDX-License-Identifier: MIT
@@ -14,11 +13,14 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
+#include <map>
 #include <mlir/IR/MLIRContext.h>
+#include <mlir/IR/Operation.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
+#include <string>
 
 namespace mqt::ir::opt {
 
@@ -40,7 +42,7 @@ struct CancelConsecutiveInversesPattern final
    */
   [[nodiscard]] static bool areGatesInverse(mlir::Operation* a,
                                             mlir::Operation* b) {
-    static const std::map<std::string, std::string> inversePairs = {
+    static const std::map<std::string, std::string> INVERSE_PAIRS = {
         {"x", "x"},           {"y", "y"},   {"z", "z"},
         {"h", "h"},           {"i", "i"},   {"swap", "swap"},
         {"ecr", "ecr"},       {"t", "tdg"}, {"s", "sdg"},
@@ -50,10 +52,10 @@ struct CancelConsecutiveInversesPattern final
 
     const auto aName = a->getName().stripDialect().str();
     const auto bName = b->getName().stripDialect().str();
-    return (inversePairs.find(aName) != inversePairs.end() &&
-            inversePairs.at(aName) == bName) ||
-           (inversePairs.find(bName) != inversePairs.end() &&
-            inversePairs.at(bName) == aName);
+    return (INVERSE_PAIRS.find(aName) != INVERSE_PAIRS.end() &&
+            INVERSE_PAIRS.at(aName) == bName) ||
+           (INVERSE_PAIRS.find(bName) != INVERSE_PAIRS.end() &&
+            INVERSE_PAIRS.at(bName) == aName);
   }
 
   /**
