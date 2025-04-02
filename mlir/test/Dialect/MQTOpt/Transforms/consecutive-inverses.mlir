@@ -5,6 +5,9 @@
 //
 // Licensed under the MIT License
 
+// RUN: quantum-opt %s -split-input-file --cancel-consecutive-inverses | FileCheck %s
+
+// -----
 // This test checks if single-qubit consecutive self-inverses are canceled correctly.
 // In this example, most operations should be canceled including cases where:
 //   - The operations are directly consecutive
@@ -12,10 +15,8 @@
 //   - There are operations on the same qubits interleaved between them that will also get canceled,
 //     allowing the outer consecutive pair to be canceled as well
 
-// RUN: quantum-opt %s --cancel-consecutive-inverses | FileCheck %s
-
 module {
-  func.func @main() {
+  func.func @testCancelSingleQubitGates() {
     // CHECK: %[[Reg_0:.*]] = "mqtopt.allocQubitRegister"
     %reg_0 = "mqtopt.allocQubitRegister"() <{size_attr = 2 : i64}> : () -> !mqtopt.QubitRegister
 
@@ -24,10 +25,10 @@ module {
     // CHECK: %[[Reg_2:.*]], %[[Q1_0:.*]] = "mqtopt.extractQubit"(%[[Reg_1]]) <{index_attr = 1 : i64}>
     %reg_2, %q1_0 = "mqtopt.extractQubit"(%reg_1) <{index_attr = 1 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
 
-    // --------------------- Check for operations that should not be canceled -----------------------------------
+    // ========================== Check for operations that should not be canceled ==========================
     // CHECK: %[[Q0_1:.*]] = mqtopt.z() %[[Q0_0]] : !mqtopt.Qubit
 
-    // --------------------- Check for operations that should be canceled -----------------------------------
+    // ========================== Check for operations that should be canceled ==============================
     // CHECK-NOT: %[[ANY:.*]] = mqtopt.x() %[[ANY:.*]] : !mqtopt.Qubit
     // CHECK-NOT: %[[ANY:.*]] = mqtopt.z() %[[ANY:.*]] : !mqtopt.Qubit
 
@@ -47,6 +48,46 @@ module {
     %reg_4 = "mqtopt.insertQubit"(%reg_3, %q1_6) <{index_attr = 1 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
     // CHECK: "mqtopt.deallocQubitRegister"(%[[Reg_4]])
     "mqtopt.deallocQubitRegister"(%reg_4) : (!mqtopt.QubitRegister) -> ()
+    return
+  }
+}
+
+// -----
+// This test checks if two-qubit consecutive self-inverses are canceled correctly.
+// For this, the operations must involve exactly the same qubits.
+
+module {
+  func.func @testCancelMultiQubitGates() {
+    // CHECK: %[[Reg_0:.*]] = "mqtopt.allocQubitRegister"
+    %reg_0 = "mqtopt.allocQubitRegister"() <{size_attr = 3 : i64}> : () -> !mqtopt.QubitRegister
+
+    // CHECK: %[[Reg_1:.*]], %[[Q0_0:.*]] = "mqtopt.extractQubit"(%[[Reg_0]]) <{index_attr = 0 : i64}>
+    %reg_1, %q0_0 = "mqtopt.extractQubit"(%reg_0) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
+    // CHECK: %[[Reg_2:.*]], %[[Q1_0:.*]] = "mqtopt.extractQubit"(%[[Reg_1]]) <{index_attr = 1 : i64}>
+    %reg_2, %q1_0 = "mqtopt.extractQubit"(%reg_1) <{index_attr = 1 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
+    // CHECK: %[[Reg_3:.*]], %[[Q2_0:.*]] = "mqtopt.extractQubit"(%[[Reg_2]]) <{index_attr = 2 : i64}>
+    %reg_3, %q2_0 = "mqtopt.extractQubit"(%reg_2) <{index_attr = 2 : i64}> : (!mqtopt.QubitRegister) -> (!mqtopt.QubitRegister, !mqtopt.Qubit)
+
+    // ========================== Check for operations that should not be canceled ==========================
+    // CHECK: %[[Q12_1:.*]]:2 = mqtopt.x() %[[Q1_0]] ctrl %[[Q2_0]] : !mqtopt.Qubit, !mqtopt.Qubit
+    // CHECK: %[[Q12_2:.*]]:2 = mqtopt.x() %[[Q12_1]]#1 ctrl %[[Q12_1]]#0 : !mqtopt.Qubit, !mqtopt.Qubit
+
+    // ========================== Check for operations that should be canceled ==============================
+    // CHECK-NOT: %[[ANY:.*]], %[[ANY:.*]] = mqtopt.x() %[[ANY:.*]] ctrl %[[Q0_0]] : !mqtopt.Qubit, !mqtopt.Qubit
+
+    %q1_1, %q0_1 = mqtopt.x() %q1_0 ctrl %q0_0 : !mqtopt.Qubit, !mqtopt.Qubit
+    %q1_2, %q0_2 = mqtopt.x() %q1_1 ctrl %q0_1 : !mqtopt.Qubit, !mqtopt.Qubit
+    %q1_3, %q2_1 = mqtopt.x() %q1_2 ctrl %q2_0 : !mqtopt.Qubit, !mqtopt.Qubit
+    %q2_2, %q1_4 = mqtopt.x() %q2_1 ctrl %q1_3 : !mqtopt.Qubit, !mqtopt.Qubit
+
+    // CHECK: %[[Reg_4:.*]] = "mqtopt.insertQubit"(%[[Reg_3]], %[[Q0_0]])  <{index_attr = 0 : i64}>
+    %reg_4 = "mqtopt.insertQubit"(%reg_3, %q0_2) <{index_attr = 0 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+    // CHECK: %[[Reg_5:.*]] = "mqtopt.insertQubit"(%[[Reg_4]], %[[Q12_2]]#1)  <{index_attr = 1 : i64}>
+    %reg_5 = "mqtopt.insertQubit"(%reg_4, %q1_4) <{index_attr = 1 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+    // CHECK: %[[Reg_6:.*]] = "mqtopt.insertQubit"(%[[Reg_5]], %[[Q12_2]]#0)  <{index_attr = 2 : i64}>
+    %reg_6 = "mqtopt.insertQubit"(%reg_5, %q2_2) <{index_attr = 2 : i64}> : (!mqtopt.QubitRegister, !mqtopt.Qubit) -> !mqtopt.QubitRegister
+    // CHECK: "mqtopt.deallocQubitRegister"(%[[Reg_6]])
+    "mqtopt.deallocQubitRegister"(%reg_6) : (!mqtopt.QubitRegister) -> ()
     return
   }
 }
