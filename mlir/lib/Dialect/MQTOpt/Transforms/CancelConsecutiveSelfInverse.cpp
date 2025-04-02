@@ -9,8 +9,6 @@
 
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 
-#include <mlir/IR/MLIRContext.h>
-#include <mlir/IR/Operation.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Transforms/GreedyPatternRewriteDriver.h>
@@ -29,8 +27,8 @@ struct CancelConsecutiveSelfInverse final
 
   void runOnOperation() override {
     // Get the current operation being operated on.
-    mlir::Operation* op = getOperation();
-    mlir::MLIRContext* ctx = &getContext();
+    auto op = getOperation();
+    auto* ctx = &getContext();
 
     // Define the set of patterns to use.
     mlir::RewritePatternSet patterns(ctx);
