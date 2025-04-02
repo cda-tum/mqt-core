@@ -105,8 +105,7 @@ struct QuantumSinkShiftPattern final
   }
 
   /**
-   * @brief Repdoes not precede the block.laces all uses of a given operation
-   * with the results of a clone,
+   * @brief Replaces all uses of a given operation with the results of a clone,
    *
    * @param rewriter The pattern rewriter to use.
    * @param original The original operation to replace.
