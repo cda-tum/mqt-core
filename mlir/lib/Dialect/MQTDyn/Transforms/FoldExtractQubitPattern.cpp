@@ -11,18 +11,11 @@
 #include "mlir/Dialect/MQTDyn/IR/MQTDynDialect.h"
 #include "mlir/Dialect/MQTDyn/Transforms/Passes.h"
 
-#include <algorithm>
-#include <cstddef>
-#include <iterator>
-#include <map>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/MLIRContext.h>
-#include <mlir/IR/Operation.h>
 #include <mlir/IR/PatternMatch.h>
-#include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
-#include <string>
 
 namespace mqt::ir::dyn {
 

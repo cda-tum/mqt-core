@@ -10,10 +10,12 @@
 
 #include "mlir/Dialect/MQTDyn/IR/MQTDynDialect.h"
 
+// The following headers are needed for some template instantiations.
+// IWYU pragma: begin_keep
 #include <llvm/ADT/TypeSwitch.h>
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/DialectImplementation.h>
-#include <mlir/Support/LLVM.h>
+// IWYU pragma: end_keep
 
 //===----------------------------------------------------------------------===//
 // Dialect
