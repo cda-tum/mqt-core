@@ -321,18 +321,20 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
 
     // Update the inputs of all non-mqtopt operations that use mqtopt operations
     // as inputs, as these will be deleted later.
-    for (auto operation = visited.begin(); operation != visited.end(); operation++) {
-      if ((*operation)->getDialect()->getNamespace() != DIALECT_NAME_MQTOPT) {
-        updateMQTOptInputs(**operation, rewriter, newAlloc.getQureg(),
+    // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
+    for (auto* operation : visited) {
+      if (operation->getDialect()->getNamespace() != DIALECT_NAME_MQTOPT) {
+        updateMQTOptInputs(*operation, rewriter, newAlloc.getQureg(),
                            measureCount);
       }
     }
 
     // Delete all operations that are part of the mqtopt dialect (except for
     // `AllocOp`).
-    for (auto operation = visited.begin(); operation != visited.end(); operation++) {
-      if ((*operation)->getDialect()->getNamespace() == DIALECT_NAME_MQTOPT) {
-        deleteRecursively(**operation, rewriter);
+    // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
+    for (auto* operation : visited) {
+      if (operation->getDialect()->getNamespace() == DIALECT_NAME_MQTOPT) {
+        deleteRecursively(*operation, rewriter);
       }
     }
 
