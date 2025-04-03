@@ -41,8 +41,8 @@ struct CancelConsecutiveInversesPattern final
    * @param b The second gate.
    * @return True if the gates are inverse to each other, false otherwise.
    */
-  [[nodiscard]] static bool areGatesInverse(mlir::Operation* a,
-                                            mlir::Operation* b) {
+  [[nodiscard]] static bool areGatesInverse(mlir::Operation& a,
+                                            mlir::Operation& b) {
     static const std::map<std::string, std::string> INVERSE_PAIRS = {
         {"x", "x"},           {"y", "y"},   {"z", "z"},
         {"h", "h"},           {"i", "i"},   {"swap", "swap"},
@@ -51,12 +51,13 @@ struct CancelConsecutiveInversesPattern final
         {"peres", "peresdg"},
     };
 
-    const auto aName = a->getName().stripDialect().str();
-    const auto bName = b->getName().stripDialect().str();
-    return (INVERSE_PAIRS.find(aName) != INVERSE_PAIRS.end() &&
-            INVERSE_PAIRS.at(aName) == bName) ||
-           (INVERSE_PAIRS.find(bName) != INVERSE_PAIRS.end() &&
-            INVERSE_PAIRS.at(bName) == aName);
+    const auto aName = a.getName().stripDialect().str();
+    const auto bName = b.getName().stripDialect().str();
+    const auto foundA = INVERSE_PAIRS.find(aName);
+    const auto foundB = INVERSE_PAIRS.find(bName);
+
+    return (foundA != INVERSE_PAIRS.end() && foundA->second == bName) ||
+           (foundB != INVERSE_PAIRS.end() && foundB->second == aName);
   }
 
   /**
@@ -66,7 +67,7 @@ struct CancelConsecutiveInversesPattern final
    * @return True if all users are the same, false otherwise.
    */
   [[nodiscard]] static bool
-  areUsersUnique(mlir::ResultRange::user_range users) {
+  areUsersUnique(const mlir::ResultRange::user_range& users) {
     return std::none_of(users.begin(), users.end(),
                         [&](auto* user) { return user != *users.begin(); });
   }
@@ -77,7 +78,7 @@ struct CancelConsecutiveInversesPattern final
       return mlir::failure();
     }
     auto* user = *users.begin();
-    if (!areGatesInverse(op, user)) {
+    if (!areGatesInverse(*op, *user)) {
       return mlir::failure();
     }
     auto unitaryUser = mlir::dyn_cast<UnitaryInterface>(user);

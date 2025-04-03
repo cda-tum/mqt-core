@@ -43,18 +43,18 @@ struct QuantumSinkShiftPattern final
    * @param successor The block that might be after the other block.
    * @param predecessor The block to check against.
    */
-  bool isAfterOrEqual(mlir::Block* successor, mlir::Block* predecessor,
+  bool isAfterOrEqual(mlir::Block& successor, mlir::Block& predecessor,
                       std::unordered_set<mlir::Block*>& visited) const {
-    if (visited.find(successor) != visited.end()) {
+    if (visited.find(&successor) != visited.end()) {
       return false;
     }
-    visited.insert(successor);
-    if (successor == predecessor) {
+    visited.insert(&successor);
+    if (&successor == &predecessor) {
       return true;
     }
-    auto parents = successor->getPredecessors();
+    auto parents = successor.getPredecessors();
     return std::any_of(parents.begin(), parents.end(), [&](auto* parent) {
-      return isAfterOrEqual(parent, predecessor, visited);
+      return isAfterOrEqual(*parent, predecessor, visited);
     });
   }
 
@@ -75,8 +75,8 @@ struct QuantumSinkShiftPattern final
         [&](auto* user) {
           return std::none_of(users.begin(), users.end(), [&](auto* other) {
             std::unordered_set<mlir::Block*> visited;
-            return user != other &&
-                   isAfterOrEqual(user->getBlock(), other->getBlock(), visited);
+            return user != other && isAfterOrEqual(*user->getBlock(),
+                                                   *other->getBlock(), visited);
           });
         });
     return earliestUsers;
@@ -114,19 +114,19 @@ struct QuantumSinkShiftPattern final
    * @param user The user operation to replace the inputs in.
    */
   static void replaceInputsWithClone(mlir::PatternRewriter& rewriter,
-                                     mlir::Operation* original,
-                                     mlir::Operation* clone,
-                                     mlir::Operation* user) {
-    for (size_t i = 0; i < user->getOperands().size(); i++) {
-      const auto& operand = user->getOperand(i);
-      const auto found = std::find(original->getResults().begin(),
-                                   original->getResults().end(), operand);
-      if (found == original->getResults().end()) {
+                                     mlir::Operation& original,
+                                     mlir::Operation& clone,
+                                     mlir::Operation& user) {
+    for (size_t i = 0; i < user.getOperands().size(); i++) {
+      const auto& operand = user.getOperand(i);
+      const auto found = std::find(original.getResults().begin(),
+                                   original.getResults().end(), operand);
+      if (found == original.getResults().end()) {
         continue;
       }
-      const auto idx = std::distance(original->getResults().begin(), found);
+      const auto idx = std::distance(original.getResults().begin(), found);
       rewriter.modifyOpInPlace(
-          user, [&] { user->setOperand(i, clone->getResults()[idx]); });
+          &user, [&] { user.setOperand(i, clone.getResults()[idx]); });
     }
   }
 
@@ -138,7 +138,7 @@ struct QuantumSinkShiftPattern final
       auto* block = user->getBlock();
       rewriter.setInsertionPoint(&block->front());
       auto* clone = rewriter.clone(*op);
-      replaceInputsWithClone(rewriter, op, clone, user);
+      replaceInputsWithClone(rewriter, *op, *clone, *user);
     }
     rewriter.eraseOp(op);
   }

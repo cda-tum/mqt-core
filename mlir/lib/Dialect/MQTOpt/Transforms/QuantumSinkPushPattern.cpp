@@ -49,14 +49,14 @@ struct QuantumSinkPushPattern final
    * @return The distance between the block and the operation or -1 if the
    * operation is not in a predecessor block.
    */
-  int getDepth(mlir::Block* toCheck, UnitaryInterface op) const {
-    auto* originalBlock = op->getBlock();
-    if (toCheck == originalBlock) {
+  int getDepth(mlir::Block& toCheck, const UnitaryInterface& op) const {
+    auto& originalBlock = *op->getBlock();
+    if (&toCheck == &originalBlock) {
       return 0;
     }
     int depth = -1;
-    for (auto* pred : toCheck->getPredecessors()) {
-      const auto result = getDepth(pred, op);
+    for (auto* pred : toCheck.getPredecessors()) {
+      const auto result = getDepth(*pred, op);
       if (result == -1) {
         continue;
       }
@@ -79,12 +79,13 @@ struct QuantumSinkPushPattern final
    * @param op The operation to find the closest user for.
    * @return The closest user operation.
    */
-  [[nodiscard]] mlir::Operation* getNext(mlir::ResultRange::user_range users,
-                                         UnitaryInterface op) const {
+  [[nodiscard]] mlir::Operation*
+  getNext(const mlir::ResultRange::user_range& users,
+          const UnitaryInterface& op) const {
     mlir::Operation* next = nullptr;
     int minDepth = 0;
     for (auto* user : users) {
-      const auto depth = getDepth(user->getBlock(), op);
+      const auto depth = getDepth(*user->getBlock(), op);
       if (depth == -1) {
         continue;
       }
@@ -106,7 +107,7 @@ struct QuantumSinkPushPattern final
    * @return The next branch operation that uses the given operation.
    */
   [[nodiscard]] mlir::Operation*
-  getNextBranchOpUser(UnitaryInterface op) const {
+  getNextBranchOpUser(const UnitaryInterface& op) const {
     auto allUsers = op->getUsers();
     std::vector<mlir::Operation*> output;
     std::copy_if(allUsers.begin(), allUsers.end(), std::back_inserter(output),
@@ -171,25 +172,25 @@ struct QuantumSinkPushPattern final
    * endless loops.
    */
   void
-  replaceAllChildUsesWith(mlir::Operation* original, mlir::Operation* clone,
-                          mlir::Block* block,
+  replaceAllChildUsesWith(mlir::Operation& original, mlir::Operation& clone,
+                          mlir::Block& block,
                           std::unordered_set<mlir::Block*>& visited) const {
-    if (visited.find(block) != visited.end()) {
+    if (visited.find(&block) != visited.end()) {
       return;
     }
-    visited.insert(block);
+    visited.insert(&block);
 
-    for (auto& op : block->getOperations()) {
-      if (&op == original) {
+    for (auto& op : block.getOperations()) {
+      if (&op == &original) {
         continue;
       }
-      for (size_t i = 0; i < original->getResults().size(); i++) {
-        op.replaceUsesOfWith(original->getResult(i), clone->getResult(i));
+      for (size_t i = 0; i < original.getResults().size(); i++) {
+        op.replaceUsesOfWith(original.getResult(i), clone.getResult(i));
       }
     }
 
-    for (auto* successor : block->getSuccessors()) {
-      replaceAllChildUsesWith(original, clone, successor, visited);
+    for (auto* successor : block.getSuccessors()) {
+      replaceAllChildUsesWith(original, clone, *successor, visited);
     }
   }
 
@@ -204,12 +205,12 @@ struct QuantumSinkPushPattern final
    * @return The new arguments to call the block with.
    */
   std::vector<mlir::Value>
-  pushIntoBlock(UnitaryInterface op, mlir::Block* block,
-                mlir::OperandRange blockArgs,
+  pushIntoBlock(const UnitaryInterface& op, mlir::Block& block,
+                const mlir::OperandRange blockArgs,
                 mlir::PatternRewriter& rewriter) const {
     std::vector<mlir::Value> newBlockArgs;
     // We start by inserting the operation at the beginning of the block.
-    rewriter.setInsertionPointToStart(block);
+    rewriter.setInsertionPointToStart(&block);
     auto* clone = rewriter.clone(*op);
 
     // We iterate over all block args: If any of them involved the result of the
@@ -224,18 +225,18 @@ struct QuantumSinkPushPattern final
         continue;
       }
       auto idx = std::distance(op->getResults().begin(), found);
-      block->getArgument(i).replaceAllUsesWith(clone->getResult(idx));
-      block->eraseArgument(i);
+      block.getArgument(i).replaceAllUsesWith(clone->getResult(idx));
+      block.eraseArgument(i);
     }
 
     std::unordered_set<mlir::Block*> visited;
-    replaceAllChildUsesWith(op, clone, block, visited);
+    replaceAllChildUsesWith(*op, *clone, block, visited);
 
     // Now, the block instead needs to be passed the inputs of the pushed
     // operation so we extend the block with new arguments.
     for (size_t i = 0; i < clone->getOperands().size(); i++) {
       auto in = clone->getOperand(i);
-      auto newArg = block->addArgument(in.getType(), clone->getLoc());
+      auto newArg = block.addArgument(in.getType(), clone->getLoc());
       rewriter.modifyOpInPlace(clone, [&]() { clone->setOperand(i, newArg); });
       newBlockArgs.emplace_back(in);
     }
@@ -252,18 +253,18 @@ struct QuantumSinkPushPattern final
    * @param rewriter The pattern rewriter to use.
    * @return The new block that was created.
    */
-  static mlir::Block* breakCriticalEdge(mlir::Block* oldTarget,
-                                        mlir::Operation* branchOp,
+  static mlir::Block* breakCriticalEdge(mlir::Block& oldTarget,
+                                        mlir::Operation& branchOp,
                                         mlir::PatternRewriter& rewriter) {
-    auto* newBlock = rewriter.createBlock(oldTarget->getParent());
+    auto* newBlock = rewriter.createBlock(oldTarget.getParent());
     std::vector<mlir::Value> newBlockOutputs;
-    newBlockOutputs.reserve(oldTarget->getNumArguments());
-    for (auto arg : oldTarget->getArguments()) {
-      auto newArg = newBlock->addArgument(arg.getType(), branchOp->getLoc());
+    newBlockOutputs.reserve(oldTarget.getNumArguments());
+    for (auto arg : oldTarget.getArguments()) {
+      auto newArg = newBlock->addArgument(arg.getType(), branchOp.getLoc());
       newBlockOutputs.emplace_back(newArg);
     }
     rewriter.setInsertionPointToEnd(newBlock);
-    rewriter.create<mlir::cf::BranchOp>(branchOp->getLoc(), oldTarget,
+    rewriter.create<mlir::cf::BranchOp>(branchOp.getLoc(), &oldTarget,
                                         newBlockOutputs);
     return newBlock;
   }
@@ -276,26 +277,26 @@ struct QuantumSinkPushPattern final
    * @param condBranchOp The conditional branch operation to push through.
    * @param rewriter The pattern rewriter to use.
    */
-  void rewriteCondBranch(UnitaryInterface op,
+  void rewriteCondBranch(const UnitaryInterface& op,
                          mlir::cf::CondBranchOp condBranchOp,
                          mlir::PatternRewriter& rewriter) const {
     auto* targetBlockTrue =
         std::distance(condBranchOp.getTrueDest()->getPredecessors().begin(),
                       condBranchOp.getTrueDest()->getPredecessors().end()) == 1
             ? condBranchOp.getTrueDest()
-            : breakCriticalEdge(condBranchOp.getTrueDest(), condBranchOp,
+            : breakCriticalEdge(*condBranchOp.getTrueDest(), *condBranchOp,
                                 rewriter);
     auto newBlockArgsTrue = pushIntoBlock(
-        op, targetBlockTrue, condBranchOp.getTrueOperands(), rewriter);
+        op, *targetBlockTrue, condBranchOp.getTrueOperands(), rewriter);
 
     auto* targetBlockFalse =
         std::distance(condBranchOp.getFalseDest()->getPredecessors().begin(),
                       condBranchOp.getFalseDest()->getPredecessors().end()) == 1
             ? condBranchOp.getFalseDest()
-            : breakCriticalEdge(condBranchOp.getFalseDest(), condBranchOp,
+            : breakCriticalEdge(*condBranchOp.getFalseDest(), *condBranchOp,
                                 rewriter);
     auto newBlockArgsFalse = pushIntoBlock(
-        op, targetBlockFalse, condBranchOp.getFalseOperands(), rewriter);
+        op, *targetBlockFalse, condBranchOp.getFalseOperands(), rewriter);
 
     rewriter.setInsertionPoint(condBranchOp);
     rewriter.replaceOpWithNewOp<mlir::cf::CondBranchOp>(
@@ -316,10 +317,10 @@ struct QuantumSinkPushPattern final
    * @param branchOp The branch operation to push through.
    * @param rewriter The pattern rewriter to use.
    */
-  void rewriteBranch(UnitaryInterface op, mlir::cf::BranchOp branchOp,
+  void rewriteBranch(const UnitaryInterface& op, mlir::cf::BranchOp& branchOp,
                      mlir::PatternRewriter& rewriter) const {
-    auto newBlockArgs =
-        pushIntoBlock(op, branchOp.getDest(), branchOp.getOperands(), rewriter);
+    auto newBlockArgs = pushIntoBlock(op, *branchOp.getDest(),
+                                      branchOp.getOperands(), rewriter);
     rewriter.modifyOpInPlace(branchOp, [&]() {
       branchOp.getDestOperandsMutable().assign(newBlockArgs);
     });
@@ -332,7 +333,8 @@ struct QuantumSinkPushPattern final
     if (auto condBranchOp = mlir::dyn_cast<mlir::cf::CondBranchOp>(user)) {
       rewriteCondBranch(op, condBranchOp, rewriter);
     } else {
-      rewriteBranch(op, mlir::dyn_cast<mlir::cf::BranchOp>(user), rewriter);
+      auto branchOp = mlir::dyn_cast<mlir::cf::BranchOp>(user);
+      rewriteBranch(op, branchOp, rewriter);
     }
   }
 };
