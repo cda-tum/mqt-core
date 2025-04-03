@@ -21,10 +21,10 @@ namespace mqt::ir::dyn {
 #include "mlir/Dialect/MQTDyn/Transforms/Passes.h.inc"
 
 /**
- * @brief This pass attempts to perform constant folding for some `mqtdyn` operations.
+ * @brief This pass attempts to perform constant folding for some `mqtdyn`
+ * operations.
  */
-struct ConstantFolding final
-    : impl::ConstantFoldingBase<ConstantFolding> {
+struct ConstantFolding final : impl::ConstantFoldingBase<ConstantFolding> {
 
   void runOnOperation() override {
     // Get the current operation being operated on.

@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <iterator>
 #include <map>
+#include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/Operation.h>
 #include <mlir/IR/PatternMatch.h>
@@ -26,21 +27,34 @@
 namespace mqt::ir::dyn {
 
 /**
- * @brief This pattern attempts to fold constants of `mqtdyn.extractQubit` operations.
+ * @brief This pattern attempts to fold constants of `mqtdyn.extractQubit`
+ * operations.
  */
-struct FoldExtractQubitPattern final
-    : mlir::OpRewritePattern<ExtractOp> {
+struct FoldExtractQubitPattern final : mlir::OpRewritePattern<ExtractOp> {
 
   explicit FoldExtractQubitPattern(mlir::MLIRContext* context)
       : OpRewritePattern(context) {}
 
   mlir::LogicalResult match(ExtractOp op) const override {
+    auto index = op.getIndex();
+    if (!index) {
+      return mlir::failure();
+    }
+    auto* definition = index.getDefiningOp();
+    if (!mlir::isa<mlir::arith::ConstantOp>(definition)) {
+      return mlir::failure();
+    }
     return mlir::success();
   }
 
-  void rewrite(ExtractOp op,
-               mlir::PatternRewriter& rewriter) const override {
-    
+  void rewrite(ExtractOp op, mlir::PatternRewriter& rewriter) const override {
+    auto index = op.getIndex();
+    auto definition =
+        mlir::cast<mlir::arith::ConstantOp>(index.getDefiningOp());
+    auto value = mlir::cast<mlir::IntegerAttr>(definition.getValue()).getInt();
+    rewriter.replaceOpWithNewOp<ExtractOp>(op, op.getOutQubit().getType(),
+                                           op.getInQureg(), mlir::Value(),
+                                           rewriter.getI64IntegerAttr(value));
   }
 };
 
@@ -54,4 +68,4 @@ void populateFoldExtractQubitPatterns(mlir::RewritePatternSet& patterns) {
   patterns.add<FoldExtractQubitPattern>(patterns.getContext());
 }
 
-} // namespace mqt::ir::opt
+} // namespace mqt::ir::dyn
