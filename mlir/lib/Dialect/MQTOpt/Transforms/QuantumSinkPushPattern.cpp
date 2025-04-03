@@ -50,8 +50,8 @@ struct QuantumSinkPushPattern final
    * operation is not in a predecessor block.
    */
   int getDepth(mlir::Block& toCheck, const UnitaryInterface& op) const {
-    auto& originalBlock = *op->getBlock();
-    if (&toCheck == &originalBlock) {
+    auto* originalBlock = op->getBlock();
+    if (&toCheck == originalBlock) {
       return 0;
     }
     int depth = -1;
