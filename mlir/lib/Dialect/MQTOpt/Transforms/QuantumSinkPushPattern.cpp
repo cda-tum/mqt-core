@@ -22,7 +22,7 @@
 #include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
-#include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace mqt::ir::opt {
@@ -170,9 +170,10 @@ struct QuantumSinkPushPattern final
    * @param visited A set of blocks that have already been visited to prevent
    * endless loops.
    */
-  void replaceAllChildUsesWith(mlir::Operation* original,
-                               mlir::Operation* clone, mlir::Block* block,
-                               std::set<mlir::Block*>& visited) const {
+  void
+  replaceAllChildUsesWith(mlir::Operation* original, mlir::Operation* clone,
+                          mlir::Block* block,
+                          std::unordered_set<mlir::Block*>& visited) const {
     if (visited.find(block) != visited.end()) {
       return;
     }
@@ -227,7 +228,7 @@ struct QuantumSinkPushPattern final
       block->eraseArgument(i);
     }
 
-    std::set<mlir::Block*> visited;
+    std::unordered_set<mlir::Block*> visited;
     replaceAllChildUsesWith(op, clone, block, visited);
 
     // Now, the block instead needs to be passed the inputs of the pushed

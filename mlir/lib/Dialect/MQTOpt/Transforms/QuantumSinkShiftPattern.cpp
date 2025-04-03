@@ -21,7 +21,7 @@
 #include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
-#include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace mqt::ir::opt {
@@ -44,7 +44,7 @@ struct QuantumSinkShiftPattern final
    * @param predecessor The block to check against.
    */
   bool isAfterOrEqual(mlir::Block* successor, mlir::Block* predecessor,
-                      std::set<mlir::Block*>& visited) const {
+                      std::unordered_set<mlir::Block*>& visited) const {
     if (visited.find(successor) != visited.end()) {
       return false;
     }
@@ -74,7 +74,7 @@ struct QuantumSinkShiftPattern final
         users.begin(), users.end(), std::back_inserter(earliestUsers),
         [&](auto* user) {
           return std::none_of(users.begin(), users.end(), [&](auto* other) {
-            std::set<mlir::Block*> visited;
+            std::unordered_set<mlir::Block*> visited;
             return user != other &&
                    isAfterOrEqual(user->getBlock(), other->getBlock(), visited);
           });

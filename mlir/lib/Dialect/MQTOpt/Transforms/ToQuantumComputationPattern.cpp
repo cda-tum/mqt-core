@@ -25,10 +25,10 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/Value.h>
 #include <mlir/Support/LogicalResult.h>
-#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace mqt::ir::opt {
@@ -266,7 +266,7 @@ struct ToQuantumComputationPattern final : mlir::OpRewritePattern<AllocOp> {
     circuit.addQubitRegister(numQubits, regName);
     circuit.addClassicalRegister(numQubits);
 
-    std::set<mlir::Operation*> visited{};
+    std::unordered_set<mlir::Operation*> visited{};
 
     // Visit all operations in the AST using Breadth-First Search.
     while (!toVisit.empty()) {
