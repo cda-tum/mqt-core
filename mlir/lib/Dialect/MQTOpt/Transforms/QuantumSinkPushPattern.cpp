@@ -257,6 +257,7 @@ struct QuantumSinkPushPattern final
                                         mlir::PatternRewriter& rewriter) {
     auto* newBlock = rewriter.createBlock(oldTarget->getParent());
     std::vector<mlir::Value> newBlockOutputs;
+    newBlockOutputs.reserve(oldTarget->getNumArguments());
     for (auto arg : oldTarget->getArguments()) {
       auto newArg = newBlock->addArgument(arg.getType(), branchOp->getLoc());
       newBlockOutputs.emplace_back(newArg);
