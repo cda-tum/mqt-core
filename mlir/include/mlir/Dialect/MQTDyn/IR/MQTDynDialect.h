@@ -21,24 +21,25 @@
 // Dialect
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQTDyn/IR/MQTDynOpsDialect.h.inc"
+#include "mlir/Dialect/MQTDyn/IR/MQTDynOpsDialect.h.inc" // IWYU pragma: export
 
 //===----------------------------------------------------------------------===//
 // Types
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/MQTDyn/IR/MQTDynOpsTypes.h.inc"
+#include "mlir/Dialect/MQTDyn/IR/MQTDynOpsTypes.h.inc" // IWYU pragma: export
 
 //===----------------------------------------------------------------------===//
 // Interfaces
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MQTDyn/IR/MQTDynInterfaces.h.inc"
+#include "mlir/Dialect/MQTDyn/IR/MQTDynInterfaces.h.inc" // IWYU pragma: export
+#include "mlir/Dialect/MQTDyn/IR/MQTDynTraits.h"         // IWYU pragma: export
 
 //===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/MQTDyn/IR/MQTDynOps.h.inc"
+#include "mlir/Dialect/MQTDyn/IR/MQTDynOps.h.inc" // IWYU pragma: export

@@ -58,6 +58,29 @@ def QuregType : MQTDynType<"QubitRegister", "QubitRegister"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Traits
+//===----------------------------------------------------------------------===//
+
+class TargetArity<int N>
+    : ParamNativeOpTrait<"TargetArity", !cast<string>(N)> {
+    let cppNamespace = "::mqt::ir::dyn";
+}
+
+def NoTarget : TargetArity<0>;
+def OneTarget : TargetArity<1>;
+def TwoTarget : TargetArity<2>;
+
+class ParameterArity<int N>
+    : ParamNativeOpTrait<"ParameterArity", !cast<string>(N)> {
+    let cppNamespace = "::mqt::ir::dyn";
+}
+
+def NoParameter : ParameterArity<0>;
+def OneParameter : ParameterArity<1>;
+def TwoParameters : ParameterArity<2>;
+def ThreeParameters : ParameterArity<3>;
+
+//===----------------------------------------------------------------------===//
 // Operations
 //===----------------------------------------------------------------------===//
 
@@ -89,7 +112,7 @@ class UnitaryOp<string mnemonic, list<Trait> traits = []> :
     }];
 }
 
-def XOp : UnitaryOp<"x", [NoParametersInterface, UnaryInterface]> {
+def XOp : UnitaryOp<"x", [OneTarget, NoParameter]> {
     let summary = "X operation";
 
     let description = [{
@@ -97,19 +120,19 @@ def XOp : UnitaryOp<"x", [NoParametersInterface, UnaryInterface]> {
     }];
 }
 
-def RZOp : UnitaryOp<"rz", [OneParameterInterface, UnaryInterface]> {
+def RZOp : UnitaryOp<"rz", [OneTarget, OneParameter]> {
     let summary = "RZ operation";
 
     let description = [{}]; // todo: add description
 }
 
-def UOp : UnitaryOp<"u", [ThreeParametersInterface, UnaryInterface]> {
+def UOp : UnitaryOp<"u", [OneTarget, ThreeParameters]> {
     let summary = "U operation";
 
     let description = [{}]; // todo: add description
 }
 
-def MeasureOp : GateOp<"measure"> {
+def MeasureOp : GateOp<"measure", [SameVariadicResultSize]> {
     let summary = "A measure operation";
 
     let description = [{
