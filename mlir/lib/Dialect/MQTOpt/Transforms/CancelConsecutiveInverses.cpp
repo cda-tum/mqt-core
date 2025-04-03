@@ -8,7 +8,6 @@
  * Licensed under the MIT License
  */
 
-#include "ir/QuantumComputation.hpp"
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h"
 
 #include <mlir/IR/PatternMatch.h>
@@ -18,12 +17,14 @@
 
 namespace mqt::ir::opt {
 
-#define GEN_PASS_DEF_MQTCOREROUNDTRIP
+#define GEN_PASS_DEF_CANCELCONSECUTIVEINVERSES
 #include "mlir/Dialect/MQTOpt/Transforms/Passes.h.inc"
 
-struct MQTCoreRoundTrip final : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
-
-  qc::QuantumComputation circuit;
+/**
+ * @brief This pass attempts to cancel consecutive self-inverse operations.
+ */
+struct CancelConsecutiveInverses final
+    : impl::CancelConsecutiveInversesBase<CancelConsecutiveInverses> {
 
   void runOnOperation() override {
     // Get the current operation being operated on.
@@ -32,15 +33,10 @@ struct MQTCoreRoundTrip final : impl::MQTCoreRoundTripBase<MQTCoreRoundTrip> {
 
     // Define the set of patterns to use.
     mlir::RewritePatternSet patterns(ctx);
-    populateToQuantumComputationPatterns(patterns, circuit);
-    populateFromQuantumComputationPatterns(patterns, circuit);
+    populateCancelInversesPatterns(patterns);
 
     // Apply patterns in an iterative and greedy manner.
-    if (mlir::failed(
-            // This was deprecated in LLVM@20, but the alternative does not yet
-            // exist in LLVM@19.
-            // NOLINTNEXTLINE(clang-diagnostic-deprecated-declarations)
-            mlir::applyPatternsGreedily(op, std::move(patterns)))) {
+    if (mlir::failed(mlir::applyPatternsGreedily(op, std::move(patterns)))) {
       signalPassFailure();
     }
   }
