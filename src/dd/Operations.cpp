@@ -44,16 +44,17 @@ MatrixDD getStandardOperationDD(Package& dd, const qc::OpType type,
       throw std::invalid_argument(
           "Expected exactly one target qubit for single-qubit gate");
     }
-    return dd.makeGateDD(opToSingleQubitGateMatrix(type, params), controls,
-                         targets[0U]);
+    return dd.matrices().makeGateDD(opToSingleQubitGateMatrix(type, params),
+                                    controls, targets[0U]);
   }
   if (qc::isTwoQubitGate(type)) {
     if (targets.size() != 2) {
       throw std::invalid_argument(
           "Expected two target qubits for two-qubit gate");
     }
-    return dd.makeTwoQubitGateDD(opToTwoQubitGateMatrix(type, params), controls,
-                                 targets[0U], targets[1U]);
+    return dd.matrices().makeTwoQubitGateDD(
+        opToTwoQubitGateMatrix(type, params), controls, targets[0U],
+        targets[1U]);
   }
   throw std::runtime_error("Unexpected operation type");
 }
@@ -146,7 +147,7 @@ MatrixDD getDD(const qc::Operation& op, Package& dd,
   const auto type = op.getType();
 
   if (type == qc::Barrier) {
-    return Package::makeIdent();
+    return MatrixDDContainer::makeIdent();
   }
 
   if (type == qc::GPhase) {
@@ -154,7 +155,7 @@ MatrixDD getDD(const qc::Operation& op, Package& dd,
     if (inverse) {
       phase = -phase;
     }
-    auto id = Package::makeIdent();
+    auto id = MatrixDDContainer::makeIdent();
     id.w = dd.cn.lookup(std::cos(phase), std::sin(phase));
     return id;
   }
@@ -169,7 +170,7 @@ MatrixDD getDD(const qc::Operation& op, Package& dd,
 
   if (op.isCompoundOperation()) {
     const auto& compoundOp = dynamic_cast<const qc::CompoundOperation&>(op);
-    auto e = Package::makeIdent();
+    auto e = MatrixDDContainer::makeIdent();
     if (inverse) {
       for (const auto& operation : compoundOp) {
         e = dd.multiply(e, getInverseDD(*operation, dd, permutation));
