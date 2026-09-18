@@ -67,7 +67,7 @@ QCO, and `jeff` dialects, so each output checkpoint names its dialect.
 | Expressions                | Scalar arithmetic, comparisons, Boolean expressions, and the supported math functions are type checked before translation. Initialized bit registers support `~`, `&`, `\|`, `^`, `<<`, `>>`, `popcount`, `rotl`, and `rotr`.                                      |
 | Structured control         | `if`, `switch`, supported range-based `for`, and `while`. `break` exits the innermost enclosing loop; `continue` advances to its next iteration. Both may appear inside conditional and switch bodies.                                                             |
 | Dynamic indexing           | Classical bit and array indices can be dynamic and must remain in bounds. A nonconstant qubit index must be a proven affine expression as described below.                                                                                                         |
-| Classical arrays           | Global, fixed-size, one-dimensional arrays of `bool`, `int`, `uint`, `float`, and `angle`, with the scalar widths above.                                                                                                                                           |
+| Classical arrays           | Global, fixed-size arrays of `bool`, `int`, `uint`, `float`, and `angle`, with up to seven dimensions and the scalar widths above.                                                                                                                                 |
 | Unsupported language areas | Subroutines, `extern`, calibration and timing constructs, and other array forms are diagnosed.                                                                                                                                                                     |
 
 The importer recognizes custom gates containing unitary gate calls and
@@ -77,12 +77,14 @@ quantum action. A modifier on a custom gate requires that the gate and its
 callees contain no loops.
 
 Declare a classical array with `array[int[8], 3] values = {1, 2, 3};`. Arrays
-have a nonnegative compile-time length, and initializer lists must match that
-length. Empty arrays are valid. The combined number of register and array
-elements is limited to 100,000. Multidimensional arrays, slices, whole-array
-copies, and whole-array inputs or outputs are unsupported. To pass or return
-array values, select individual entries as gate parameters or scalar outputs;
-gate definitions cannot capture mutable arrays.
+have one through seven nonnegative compile-time dimensions. Nested initializer
+lists must match each dimension; for example,
+`array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};`. Zero-length dimensions are
+valid. The combined number of register and array elements is limited to 100,000.
+Subarray access, slices, whole-array copies, and whole-array inputs or outputs
+are unsupported. To pass or return array values, select individual entries as
+gate parameters or scalar outputs; gate definitions cannot capture mutable
+arrays.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
@@ -172,9 +174,11 @@ an entry's value in radians; this cast is an MQT Core extension to OpenQASM.
 
 ### Indexing and initialization
 
-Read or assign array elements with integer indices. Negative indices count from
-the end (`values[-1]` is the last element). The frontend diagnoses constant
-out-of-range indices; runtime indices must stay in bounds.
+Read or assign array elements with one comma-separated integer index per
+dimension (`a[1, 2]`). Negative indices count from the end of each dimension
+(`a[-1, -1]` is the last element of the last row). The frontend diagnoses
+constant out-of-range indices; runtime indices must stay in bounds in each
+dimension.
 
 The frontend accepts a nonconstant qubit index only when it proves that every
 value is in the register and that operands of one gate or explicit barrier are
