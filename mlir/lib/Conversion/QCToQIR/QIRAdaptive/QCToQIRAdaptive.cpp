@@ -918,8 +918,16 @@ protected:
     // Stage 5: Convert QC dialect to LLVM (QIR calls)
     {
       RewritePatternSet patterns(ctx);
-      target.addIllegalDialect<cbit::CBitDialect, QCDialect,
-                               memref::MemRefDialect>();
+      target.addIllegalDialect<cbit::CBitDialect, QCDialect>();
+      // Classical storage is lowered by the upstream MemRef-to-LLVM patterns.
+      target.addDynamicallyLegalDialect<memref::MemRefDialect>(
+          [&](Operation* op) {
+            return llvm::all_of(
+                llvm::concat<Type>(op->getOperandTypes(), op->getResultTypes()),
+                [&](Type type) {
+                  return !isa<MemRefType>(type) || typeConverter.isLegal(type);
+                });
+          });
 
       populateQCToQIRAdaptivePatterns(patterns, typeConverter, ctx, state);
 

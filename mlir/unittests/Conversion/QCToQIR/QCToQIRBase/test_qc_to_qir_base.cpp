@@ -681,7 +681,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsNonMeasurementStoreAfterMeasurement) {
                                    "stores to returned CBit registers");
 }
 
-TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedIntegerMemref) {
+TEST_F(QCToQIRBaseNativeTest, RejectsClassicalMemrefOutput) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   const auto type = MemRefType::get({1}, builder.getI8Type());
@@ -690,7 +690,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedIntegerMemref) {
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 
-  expectConversionFailure(*module, "only supports generic memrefs for");
+  expectConversionFailure(*module, "does not support memref outputs");
 }
 
 TEST_F(QCToQIRBaseNativeTest, RejectsDynamicClassicalRegisterIndex) {

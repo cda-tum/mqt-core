@@ -1219,7 +1219,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RecordsComputedStoreAfterMeasurement) {
   EXPECT_EQ(combinations, 1U);
 }
 
-TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedIntegerMemref) {
+TEST_F(QCToQIRAdaptiveNativeTest, RejectsClassicalMemrefOutput) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   const auto type = MemRefType::get({1}, builder.getI8Type());
@@ -1228,7 +1228,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedIntegerMemref) {
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 
-  expectConversionFailure(*module, "only supports generic memrefs for",
+  expectConversionFailure(*module, "does not support memref outputs",
                           runQCToQIRAdaptiveConversion);
 }
 
