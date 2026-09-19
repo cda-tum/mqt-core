@@ -31,6 +31,7 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -55,6 +56,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -105,6 +107,25 @@ LogicalResult finalizeQIRConversion(ModuleOp moduleOp, ConversionTarget& target,
     return failure();
   }
 
+  if (moduleOp
+          .walk([](Operation* op) {
+            if (isa<memref::AllocOp, memref::DeallocOp, memref::ReallocOp>(
+                    op)) {
+              op->emitError("QIR classical storage requires stack allocation");
+              return WalkResult::interrupt();
+            }
+            if (auto alloca = dyn_cast<memref::AllocaOp>(op);
+                alloca && !alloca.getType().hasStaticShape()) {
+              op->emitError(
+                  "QIR classical stack storage requires a static shape");
+              return WalkResult::interrupt();
+            }
+            return WalkResult::advance();
+          })
+          .wasInterrupted()) {
+    return failure();
+  }
+
   RewritePatternSet patterns(ctx);
   target.addIllegalDialect<arith::ArithDialect, cf::ControlFlowDialect,
                            math::MathDialect, memref::MemRefDialect,
@@ -120,6 +141,7 @@ LogicalResult finalizeQIRConversion(ModuleOp moduleOp, ConversionTarget& target,
   }
   PassManager manager(ctx);
   manager.addPass(createReconcileUnrealizedCastsPass());
+  manager.addPass(createCanonicalizerPass());
   return manager.run(moduleOp);
 }
 

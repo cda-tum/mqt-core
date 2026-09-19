@@ -38,6 +38,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -585,7 +586,9 @@ TEST_F(QCToQIRAdaptiveNativeTest, LowersPopulationCountThroughMathToLLVM) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto value = LLVM::UndefOp::create(builder, builder.getIntegerType(5));
-  (void)math::CtPopOp::create(builder, value);
+  auto count = math::CtPopOp::create(builder, value);
+  auto angle = arith::UIToFPOp::create(builder, builder.getF64Type(), count);
+  builder.rx(angle, builder.allocQubit());
   auto module = builder.finalize();
   ASSERT_TRUE(module);
   ASSERT_TRUE(succeeded(verify(*module)));
