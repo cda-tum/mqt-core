@@ -484,9 +484,7 @@ static int runCompiler(int argc, char** argv) {
   }
   if (qdmiListDevices) {
     auto deviceIds = registeredQDMIDeviceIds();
-    if (!deviceIds) {
-      llvm::errs() << "Failed to list configured QDMI devices: "
-                   << llvm::toString(deviceIds.takeError()) << '\n';
+    if (failed(deviceIds)) {
       return 1;
     }
     for (const auto& id : *deviceIds) {
@@ -528,10 +526,7 @@ static int runCompiler(int argc, char** argv) {
   }
   if (!qdmiDevice.empty()) {
     auto target = compilerTargetFromDeviceId(qdmiDevice.getValue());
-    if (!target) {
-      llvm::errs() << "Failed to create compiler target from QDMI device '"
-                   << qdmiDevice << "': " << llvm::toString(target.takeError())
-                   << '\n';
+    if (failed(target)) {
       return 1;
     }
     compilerTarget.emplace(std::move(*target));
@@ -571,16 +566,14 @@ static int runCompiler(int argc, char** argv) {
   if (!payloadSpecification.empty()) {
     const auto attribute = parseAttribute(payloadSpecification, context.get());
     const auto payloadAttr =
-        dyn_cast_if_present<mqt::PayloadSpecAttr>(attribute);
+        dyn_cast_if_present<mlir::mqt::PayloadSpecAttr>(attribute);
     if (!payloadAttr) {
       llvm::errs()
           << "--payload-spec must be a valid #mqt.payload_spec attribute.\n";
       return 1;
     }
     auto payload = PayloadSpecification::create(payloadAttr);
-    if (!payload) {
-      llvm::errs() << "Invalid --payload-spec: "
-                   << llvm::toString(payload.takeError()) << '\n';
+    if (failed(payload)) {
       return 1;
     }
     selectedPayload.emplace(std::move(*payload));
@@ -589,8 +582,7 @@ static int runCompiler(int argc, char** argv) {
   std::optional<TargetEnvironment> targetEnvironment;
   if (compilerTarget) {
     auto compilerOutput = selectedPayload->compilerOutput();
-    if (!compilerOutput) {
-      llvm::errs() << llvm::toString(compilerOutput.takeError()) << '\n';
+    if (failed(compilerOutput)) {
       return 1;
     }
     if (outputFormat.getNumOccurrences() == 0) {
@@ -756,7 +748,7 @@ static int runCompiler(int argc, char** argv) {
 
   if (*parsedOutputFormat == OutputFormat::Jeff &&
       failed(runPasses([](OpPassManager& pm) {
-        pm.addPass(mqt::createUnrollModifiers());
+        pm.addPass(mlir::mqt::createUnrollModifiers());
         pm.addPass(createQCOToJeff());
         populateJeffCleanupPipeline(pm);
         return success();
