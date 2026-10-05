@@ -41,6 +41,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -338,7 +339,7 @@ static ParsedProgram loadJeffFile(const StringRef filename,
     return {};
   }
   pm.addPass(createJeffToQCO());
-  if (pm.run(*mod).failed()) {
+  if (failed(pm.run(*mod))) {
     llvm::errs() << "Failed to convert jeff input to QCO.\n";
     return {};
   }
@@ -458,28 +459,25 @@ static int runCompiler(int argc, char** argv) {
     return 1;
   }
 
-  if ((!qdmiConfig.empty() && configureQDMIRegistry(qdmiConfig).failed()) ||
-      reportQDMIErrorIf(!qdmiDevice.empty() && hasExplicitTarget,
-                        "--qdmi-device and --target are mutually exclusive.")
-          .failed() ||
-      reportQDMIErrorIf(
+  if ((!qdmiConfig.empty() && failed(configureQDMIRegistry(qdmiConfig))) ||
+      failed(reportQDMIErrorIf(
+          !qdmiDevice.empty() && hasExplicitTarget,
+          "--qdmi-device and --target are mutually exclusive.")) ||
+      failed(reportQDMIErrorIf(
           qdmiListDevices && hasTarget,
-          "--qdmi-list-devices cannot be combined with target compilation.")
-          .failed() ||
-      reportQDMIErrorIf(hasTarget == payloadSpecification.empty(),
-                        "--qdmi-device or --target and --payload-spec must be "
-                        "provided together.")
-          .failed() ||
-      reportQDMIErrorIf(
+          "--qdmi-list-devices cannot be combined with target compilation.")) ||
+      failed(reportQDMIErrorIf(
+          hasTarget == payloadSpecification.empty(),
+          "--qdmi-device or --target and --payload-spec must be "
+          "provided together.")) ||
+      failed(reportQDMIErrorIf(
           hasTarget && outputFormat.getNumOccurrences() != 0 &&
               outputFormat != "qco-optimized",
           "Only --emit=qco-optimized can be combined with target compilation; "
-          "--payload-spec selects the executable output.")
-          .failed() ||
-      reportQDMIErrorIf(
+          "--payload-spec selects the executable output.")) ||
+      failed(reportQDMIErrorIf(
           !qdmiConfig.empty() && !qdmiListDevices && qdmiDevice.empty(),
-          "--qdmi-config requires --qdmi-device or --qdmi-list-devices.")
-          .failed()) {
+          "--qdmi-config requires --qdmi-device or --qdmi-list-devices."))) {
     return 1;
   }
   if (qdmiListDevices) {
@@ -511,16 +509,14 @@ static int runCompiler(int argc, char** argv) {
 
   std::optional<CompilerTarget> compilerTarget;
   if (hasTarget) {
-    if (reportQDMIErrorIf(
+    if (failed(reportQDMIErrorIf(
             passPipeline.getNumOccurrences() != 0,
-            "Target compilation cannot be combined with --pass-pipeline.")
-            .failed() ||
-        reportQDMIErrorIf(
+            "Target compilation cannot be combined with --pass-pipeline.")) ||
+        failed(reportQDMIErrorIf(
             enableDecomposeMultiControlled,
             "Target compilation cannot be combined with "
             "--decompose-multi-controlled; target compilation already "
-            "performs the required decomposition.")
-            .failed()) {
+            "performs the required decomposition."))) {
       return 1;
     }
   }
@@ -820,12 +816,11 @@ static int runCompiler(int argc, char** argv) {
             ? std::optional(
                   targetEnvironment->payloadSpecification().format().encoding)
             : std::nullopt;
-    if (writeOutput<llvm::Module*>(llvmMod.get(), outputFilename, qirEncoding)
-            .failed()) {
+    if (failed(writeOutput<llvm::Module*>(llvmMod.get(), outputFilename,
+                                          qirEncoding))) {
       return 1;
     }
-  } else if (writeOutput<ModuleOp>(program.mod.get(), outputFilename)
-                 .failed()) {
+  } else if (failed(writeOutput<ModuleOp>(program.mod.get(), outputFilename))) {
     return 1;
   }
 
