@@ -639,7 +639,7 @@ private:
     static RoutingState fromLayout(ArrayRef<WireIterator> roots, Region& region,
                                    const Layout<QubitIndex>& layout,
                                    const Environment& env) {
-      RoutingState state(Wires(layout.nHardwareQubits()), layout, env);
+      RoutingState state(Wires(layout.nHardwareQubits()), region, layout, env);
       for (auto [program, wire] : enumerate(roots)) {
         state.wires[layout.getHardwareIndex(program)] = wire;
       }
@@ -647,8 +647,9 @@ private:
     }
 
     /// Construct a routing state from a vector of wires and a layout.
-    RoutingState(Wires wires, Layout<QubitIndex> layout, const Environment& env)
-        : wires(std::move(wires)), layout(std::move(layout)) {
+    RoutingState(Wires wires, Region& region, Layout<QubitIndex> layout,
+                 const Environment& env)
+        : wires(std::move(wires)), layout(std::move(layout)), region(region) {
       if (env.nativeCosts) {
         costs.emplace(env.target, env.seed, env.nativeCosts.get());
       }
@@ -657,6 +658,7 @@ private:
     Wires wires;
     Layout<QubitIndex> layout;
     std::optional<NativeCostTracker> costs;
+    Region& region;
   };
 
   /// Describes a SWAP and its associated costs.
@@ -1063,7 +1065,7 @@ private:
       }
       return nullptr;
     }
-
+    
     /// Return the next (or previous) operation in block-order.
     static Operation* next(Operation* op) {
       return Direction == WireDirection::Forward ? op->getNextNode()
@@ -1150,7 +1152,7 @@ protected:
     }
 
     Statistics stats;
-    RoutingState state(std::move(*wires), layout, env);
+    RoutingState state(std::move(*wires), func.getFunctionBody(), layout, env);
     switch (policyTag) {
     case RoutingPolicy::Serial:
       stats = route<WireDirection::Forward, SerialPolicy, RoutingMode::Hot>(
@@ -1418,7 +1420,7 @@ private:
     if (!collectInteractionWeights(wires, weights, 1, maximumWeight)) {
       return std::nullopt;
     }
-
+    
     if (llvm::all_of(weights, [&](const auto& interaction) {
           const auto [a, b] = interaction.first;
           return env.target.areAdjacent(a, b);
@@ -2313,7 +2315,7 @@ private:
     children.reserve(op->getNumRegions());
 
     for (auto [index, region] : enumerate(op->getRegions())) {
-      auto& child = children.emplace_back(Wires(env.target.numSites()),
+      auto& child = children.emplace_back(Wires(env.target.numSites()), region,
                                           parent.layout, env);
 
       auto roots = getQubitValues(Direction == WireDirection::Forward
