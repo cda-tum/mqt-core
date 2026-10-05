@@ -70,6 +70,7 @@
 #include <deque>
 #include <iterator>
 #include <limits>
+#include <llvm/Support/Debug.h>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -110,8 +111,8 @@ struct Computation {
 /// Consume source labels while the existing placement loop replaces roots.
 class LayoutRecorder {
 public:
-  LayoutRecorder(func::FuncOp function, const CompilerTarget& target)
-      : module_(function->getParentOfType<ModuleOp>()) {
+  LayoutRecorder(func::FuncOp func, const CompilerTarget& target)
+      : module_(func->getParentOfType<ModuleOp>()) {
     auto count =
         module_->getAttrOfType<IntegerAttr>(mqt::kSourceQubitCountAttr);
     if (!count) {
@@ -131,7 +132,7 @@ public:
     auto initial = circuit.getAs<DenseI64ArrayAttr>("initial");
     circuitRouting_ = circuit.getAs<DenseI64ArrayAttr>("routing");
     // Layout positions are compact; source labels can have gaps after cleanup.
-    for (Operation& operation : function.getBody().front()) {
+    for (Operation& operation : func.getBody().front()) {
       if (auto indices = operation.getAttrOfType<DenseI64ArrayAttr>(
               mqt::kSourceQubitIndicesAttr)) {
         llvm::append_range(circuitSources_, indices.asArrayRef());
@@ -222,34 +223,38 @@ static LogicalResult validateRoutingOperations(func::FuncOp func) {
   if (!llvm::hasSingleElement(func.getBody())) {
     return func.emitError("mapping requires a single-block entry function");
   }
+
   const auto result =
-      func.walk([](Operation* operation) {
-        if (isa<CallOpInterface>(operation) &&
-            (llvm::any_of(operation->getOperandTypes(), isLinearQubitType) ||
-             llvm::any_of(operation->getResultTypes(), isLinearQubitType))) {
-          operation->emitError("inline calls that carry qubits before mapping");
+      func.walk([](Operation* op) {
+        if (isa<CallOpInterface>(op) &&
+            (llvm::any_of(op->getOperandTypes(), isLinearQubitType) ||
+             llvm::any_of(op->getResultTypes(), isLinearQubitType))) {
+          op->emitError("inline calls that carry qubits before mapping");
           return WalkResult::interrupt();
         }
-        if (operation->getNumRegions() == 0 &&
+
+        if (op->getNumRegions() == 0 &&
             !isa<QCODialect, qtensor::QTensorDialect, cbit::CBitDialect>(
-                operation->getDialect()) &&
-            !isMemoryEffectFree(operation)) {
-          operation->emitError(
+                op->getDialect()) &&
+            !isMemoryEffectFree(op)) {
+          op->emitError(
               "mapping supports classical side effects only through CBit "
               "operations; lower other side effects before mapping");
           return WalkResult::interrupt();
         }
-        if (auto unitary = dyn_cast<UnitaryOpInterface>(operation);
-            unitary && !isa<BarrierOp>(operation) &&
-            unitary.getNumQubits() > 2) {
+
+        if (auto unitary = dyn_cast<UnitaryOpInterface>(op);
+            unitary && !isa<BarrierOp>(op) && unitary.getNumQubits() > 2) {
           unitary.emitError()
               << "cannot route an operation acting on "
               << unitary.getNumQubits()
               << " qubits; decompose it to one- and two-qubit operations first";
           return WalkResult::interrupt();
         }
+
         return WalkResult::advance();
       });
+
   return result.wasInterrupted() ? failure() : success();
 }
 
@@ -271,7 +276,7 @@ static LogicalResult validateRoutingOperations(func::FuncOp func) {
 static FailureOr<Computation> discoverComputation(func::FuncOp func) {
   Computation computation;
 
-  for (Operation& op : func.getBody().front()) {
+  for (Operation& op : func.getOps()) {
     TypeSwitch<Operation*>(&op)
         .Case([&](AllocOp alloc) {
           computation.scalarAllocations.emplace_back(alloc);
@@ -332,6 +337,7 @@ static LogicalResult checkCapacity(func::FuncOp func,
            << "target site count exceeds mapping index capacity ("
            << +std::numeric_limits<QubitIndex>::max() << ")";
   }
+
   if (computation.wires.size() <= target.numSites()) {
     return success();
   }
@@ -349,9 +355,8 @@ static LogicalResult checkCapacity(func::FuncOp func,
 static FailureOr<Wires> applyPlacement(Region& body,
                                        const CompilerTarget& target,
                                        const Layout<QubitIndex>& layout,
-                                       Computation& computation,
+                                       const Computation& computation,
                                        IRRewriter& rewriter) {
-  LayoutRecorder recorder(cast<func::FuncOp>(body.getParentOp()), target);
   SmallVector<Value> staticQubits;
   const auto nhardware = layout.nHardwareQubits();
   staticQubits.reserve(nhardware);
@@ -366,6 +371,7 @@ static FailureOr<Wires> applyPlacement(Region& body,
 
   size_t prog = 0;
 
+  LayoutRecorder recorder(cast<func::FuncOp>(body.getParentOp()), target);
   for (auto alloc : computation.scalarAllocations) {
     const auto vertex = layout.getHardwareIndex(prog++);
     recorder.record(alloc, 0, vertex);
@@ -375,7 +381,7 @@ static FailureOr<Wires> applyPlacement(Region& body,
     rewriter.eraseOp(alloc);
   }
 
-  for (auto& tensor : computation.tensorAllocations) {
+  for (const auto& tensor : computation.tensorAllocations) {
     for (Operation* operation : tensor.operations) {
       TypeSwitch<Operation*>(operation)
           .Case([&](ExtractOp op) {
@@ -411,21 +417,22 @@ static FailureOr<Wires> applyPlacement(Region& body,
   if (failed(recorder.finish())) {
     return failure();
   }
+
   return map_to_vector(staticQubits,
                        [](Value qubit) { return WireIterator(qubit); });
 }
 
 /// Assign allocation slots to sites without traversing or expanding their uses.
-static LogicalResult placeIndexedAllocations(func::FuncOp function,
-                                             const CompilerTarget& target) {
-  LayoutRecorder recorder(function, target);
+static LogicalResult placeIndexedAllocations(func::FuncOp func,
+                                             const CompilerTarget& target,
+                                             IRRewriter& rewriter) {
   SmallVector<Operation*> allocations;
   size_t required = 0;
-  for (Operation& operation : function.getBody().front()) {
+  for (Operation& op : func.getOps()) {
     size_t width = 0;
-    if (isa<AllocOp>(operation)) {
+    if (isa<AllocOp>(op)) {
       width = 1;
-    } else if (auto tensor = dyn_cast<qtensor::AllocOp>(operation)) {
+    } else if (auto tensor = dyn_cast<qtensor::AllocOp>(op)) {
       auto type = tensor.getResult().getType();
       if (!type.hasStaticShape()) {
         return tensor.emitError(
@@ -436,53 +443,57 @@ static LogicalResult placeIndexedAllocations(func::FuncOp function,
       continue;
     }
     if (required > target.numSites() || width > target.numSites() - required) {
-      return function.emitError()
+      return func.emitError()
              << "requires more program qubits than the target site count of "
              << target.numSites();
     }
     required += width;
-    allocations.push_back(&operation);
+    allocations.push_back(&op);
   }
-  IRRewriter rewriter(function.getContext());
+
   size_t vertex = 0;
-  for (Operation* allocation : allocations) {
-    rewriter.setInsertionPoint(allocation);
+  LayoutRecorder recorder(func, target);
+  for (Operation* alloc : allocations) {
+    rewriter.setInsertionPoint(alloc);
     int64_t slot = 0;
     const auto nextQubit = [&] {
-      recorder.record(allocation, slot++, vertex);
-      return StaticOp::create(rewriter, allocation->getLoc(),
+      recorder.record(alloc, slot++, vertex);
+      return StaticOp::create(rewriter, alloc->getLoc(),
                               target.siteForVertex(vertex++));
     };
-    if (isa<AllocOp>(allocation)) {
+    if (isa<AllocOp>(alloc)) {
       auto qubit = nextQubit();
-      allocation->removeAttr(mqt::kSourceQubitIndicesAttr);
-      qubit->setDiscardableAttrs(allocation->getDiscardableAttrDictionary());
-      rewriter.replaceOp(allocation, qubit.getQubit());
+      alloc->removeAttr(mqt::kSourceQubitIndicesAttr);
+      qubit->setDiscardableAttrs(alloc->getDiscardableAttrDictionary());
+      rewriter.replaceOp(alloc, qubit.getQubit());
       continue;
     }
-    auto type = cast<RankedTensorType>(allocation->getResult(0).getType());
+    auto type = cast<RankedTensorType>(alloc->getResult(0).getType());
     SmallVector<Value> qubits;
     qubits.reserve(static_cast<size_t>(type.getNumElements()));
     for (int64_t index = 0; index < type.getNumElements(); ++index) {
       qubits.push_back(nextQubit().getQubit());
     }
-    auto tensor = qtensor::FromElementsOp::create(
-        rewriter, allocation->getLoc(), type, qubits);
-    allocation->removeAttr(mqt::kSourceQubitIndicesAttr);
-    tensor->setDiscardableAttrs(allocation->getDiscardableAttrDictionary());
-    rewriter.replaceOp(allocation, tensor.getResult());
+    auto tensor = qtensor::FromElementsOp::create(rewriter, alloc->getLoc(),
+                                                  type, qubits);
+    alloc->removeAttr(mqt::kSourceQubitIndicesAttr);
+    tensor->setDiscardableAttrs(alloc->getDiscardableAttrDictionary());
+    rewriter.replaceOp(alloc, tensor.getResult());
   }
+
   return recorder.finish();
 }
 
-static bool needsPlacement(func::FuncOp function) {
-  if (!function.getOps<StaticOp>().empty()) {
+/// Returns true, if a function has not been placed before.
+static bool needsPlacement(func::FuncOp func) {
+  if (!func.getOps<StaticOp>().empty()) {
     return false;
   }
-  auto moduleOp = function->getParentOfType<ModuleOp>();
+
+  auto moduleOp = func->getParentOfType<ModuleOp>();
   return moduleOp->hasAttr(mqt::kSourceQubitCountAttr) ||
-         !function.getOps<AllocOp>().empty() ||
-         !function.getOps<qtensor::AllocOp>().empty();
+         !func.getOps<AllocOp>().empty() ||
+         !func.getOps<qtensor::AllocOp>().empty();
 }
 
 namespace {
@@ -490,9 +501,6 @@ namespace {
 struct PlacementPass final
     : PassWrapper<PlacementPass, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PlacementPass)
-
-  explicit PlacementPass(const CompilerTarget& compilerTarget)
-      : target(compilerTarget) {}
 
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<QCODialect, qtensor::QTensorDialect>();
@@ -518,37 +526,44 @@ protected:
       return;
     }
 
-    const auto& environment = getAnalysis<TargetEnvironmentAnalysis>();
-    if (environment && environment.environment().supportsIndexedQubits()) {
-      if (failed(placeIndexedAllocations(func, target))) {
-        signalPassFailure();
-      }
+    const auto& targetAnalysis = getAnalysis<TargetEnvironmentAnalysis>();
+    if (!targetAnalysis) {
+      moduleOp.emitError() << "expected a valid mqt.target_env: "
+                           << targetAnalysis.error();
+      signalPassFailure();
       return;
     }
 
-    auto computation = discoverComputation(func);
+    const auto& target = targetAnalysis.environment().target();
+    const auto computation = discoverComputation(func);
     if (failed(computation) ||
         failed(checkCapacity(func, target, *computation))) {
       signalPassFailure();
       return;
     }
 
-    const auto layout = Layout<QubitIndex>::identity(computation->wires.size());
     IRRewriter rewriter(&getContext());
+    if (targetAnalysis.environment().supportsIndexedQubits()) {
+      if (failed(placeIndexedAllocations(func, target, rewriter))) {
+        signalPassFailure();
+      }
+      return;
+    }
+
+    const auto layout = Layout<QubitIndex>::identity(computation->wires.size());
     if (failed(applyPlacement(func.getFunctionBody(), target, layout,
                               *computation, rewriter))) {
       signalPassFailure();
     }
   }
-
-private:
-  CompilerTarget target;
 };
 
 struct MappingPass : impl::MappingPassBase<MappingPass> {
 private:
   using Window = SmallVector<QubitIndexPair>;
   using Score = std::pair<size_t, size_t>;
+
+  enum class RoutingMode : bool { Cold, Hot };
 
   /// Invocation data is prepared before trials, then borrowed read-only.
   struct Environment {
@@ -579,8 +594,7 @@ private:
     }
   };
 
-  enum class RoutingMode : bool { Cold, Hot };
-
+  /// Describes a control-flow operation that acts on qubits.
   struct CompositeUnitary {
     /// The composite op (e.g. SCF).
     Operation* op = nullptr;
@@ -2273,8 +2287,8 @@ private:
 
 } // namespace
 
-std::unique_ptr<Pass> createPlacementPass(const CompilerTarget& target) {
-  return std::make_unique<PlacementPass>(target);
+std::unique_ptr<Pass> createPlacementPass() {
+  return std::make_unique<PlacementPass>();
 }
 
 } // namespace mlir::qco

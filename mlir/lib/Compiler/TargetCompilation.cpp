@@ -246,7 +246,7 @@ void populateTargetCompilationPipeline(OpPassManager& pm,
     break;
   }
   case CompilerTarget::Connectivity::Kind::AllToAll:
-    pm.addPass(qco::createPlacementPass(target));
+    pm.addPass(qco::createPlacementPass());
     break;
   }
   qco::populateTargetNativeSynthesisPipeline(pm);
@@ -273,7 +273,7 @@ void populateTargetSynthesisPipeline(OpPassManager& pm,
     pm.addPass(qco::createFuseSingleQubitUnitaryRuns(target));
   }
   pm.addPass(mqt::createUnrollModifiers());
-  pm.addPass(qco::createPlacementPass(target));
+  pm.addPass(qco::createPlacementPass());
   qco::populateTargetNativeSynthesisPipeline(pm);
 }
 
