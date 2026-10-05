@@ -636,10 +636,10 @@ private:
   /// Wire slots are physical sites; layout alone tracks logical qubits.
   struct RoutingState {
     /// Create state from layout, enforcing wire[i] = i-th site.
-    static RoutingState fromLayout(ArrayRef<WireIterator> roots, Region& region,
+    static RoutingState fromLayout(ArrayRef<WireIterator> roots,
                                    const Layout<QubitIndex>& layout,
                                    const Environment& env) {
-      RoutingState state(Wires(layout.nHardwareQubits()), region, layout, env);
+      RoutingState state(Wires(layout.nHardwareQubits()), layout, env);
       for (auto [program, wire] : enumerate(roots)) {
         state.wires[layout.getHardwareIndex(program)] = wire;
       }
@@ -647,9 +647,8 @@ private:
     }
 
     /// Construct a routing state from a vector of wires and a layout.
-    RoutingState(Wires wires, Region& region, Layout<QubitIndex> layout,
-                 const Environment& env)
-        : wires(std::move(wires)), layout(std::move(layout)), region(region) {
+    RoutingState(Wires wires, Layout<QubitIndex> layout, const Environment& env)
+        : wires(std::move(wires)), layout(std::move(layout)) {
       if (env.nativeCosts) {
         costs.emplace(env.target, env.seed, env.nativeCosts.get());
       }
@@ -658,7 +657,6 @@ private:
     Wires wires;
     Layout<QubitIndex> layout;
     std::optional<NativeCostTracker> costs;
-    Region& region;
   };
 
   /// Describes a SWAP and its associated costs.
@@ -1065,7 +1063,7 @@ private:
       }
       return nullptr;
     }
-    
+
     /// Return the next (or previous) operation in block-order.
     static Operation* next(Operation* op) {
       return Direction == WireDirection::Forward ? op->getNextNode()
@@ -1152,7 +1150,7 @@ protected:
     }
 
     Statistics stats;
-    RoutingState state(std::move(*wires), func.getFunctionBody(), layout, env);
+    RoutingState state(std::move(*wires), layout, env);
     switch (policyTag) {
     case RoutingPolicy::Serial:
       stats = route<WireDirection::Forward, SerialPolicy, RoutingMode::Hot>(
@@ -1420,7 +1418,7 @@ private:
     if (!collectInteractionWeights(wires, weights, 1, maximumWeight)) {
       return std::nullopt;
     }
-    
+
     if (llvm::all_of(weights, [&](const auto& interaction) {
           const auto [a, b] = interaction.first;
           return env.target.areAdjacent(a, b);
@@ -1573,7 +1571,7 @@ private:
     Arena arena(env.target.numSites(), searchMemoryLimit);
 
     {
-      auto state = RoutingState::fromLayout(wires, region, trial.layout, env);
+      auto state = RoutingState::fromLayout(wires, trial.layout, env);
       for (size_t i = 0; i < niterations; ++i) {
         route<WireDirection::Forward, Policy>(region, state, arena, env);
         route<WireDirection::Backward, Policy>(region, state, arena, env);
@@ -1582,7 +1580,7 @@ private:
       trial.layout = std::move(state.layout);
     }
 
-    auto state = RoutingState::fromLayout(wires, region, trial.layout, env);
+    auto state = RoutingState::fromLayout(wires, trial.layout, env);
     const auto stats =
         route<WireDirection::Forward, Policy>(region, state, arena, env);
 
@@ -2315,7 +2313,7 @@ private:
     children.reserve(op->getNumRegions());
 
     for (auto [index, region] : enumerate(op->getRegions())) {
-      auto& child = children.emplace_back(Wires(env.target.numSites()), region,
+      auto& child = children.emplace_back(Wires(env.target.numSites()),
                                           parent.layout, env);
 
       auto roots = getQubitValues(Direction == WireDirection::Forward
