@@ -70,6 +70,7 @@
 #include <deque>
 #include <iterator>
 #include <limits>
+#include <llvm/Support/Debug.h>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -533,19 +534,19 @@ protected:
       return;
     }
 
-    IRRewriter rewriter(&getContext());
     const auto& target = targetAnalysis.environment().target();
-    if (targetAnalysis.environment().supportsIndexedQubits()) {
-      if (failed(placeIndexedAllocations(func, target, rewriter))) {
-        signalPassFailure();
-      }
-      return;
-    }
-
     const auto computation = discoverComputation(func);
     if (failed(computation) ||
         failed(checkCapacity(func, target, *computation))) {
       signalPassFailure();
+      return;
+    }
+
+    IRRewriter rewriter(&getContext());
+    if (targetAnalysis.environment().supportsIndexedQubits()) {
+      if (failed(placeIndexedAllocations(func, target, rewriter))) {
+        signalPassFailure();
+      }
       return;
     }
 
