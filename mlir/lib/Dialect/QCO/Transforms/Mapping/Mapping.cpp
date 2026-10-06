@@ -59,7 +59,9 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Debug.h"
 
 #include <algorithm>
 #include <array>
@@ -1923,13 +1925,12 @@ private:
   /// Leave wires at non-executable gates, composites, terminal measurements, or
   /// sink-like operations. Backward traversal can exhaust block arguments.
   template <WireDirection Direction>
-  std::optional<CompositeUnitary> advance(RoutingState& state,
-                                          const Boundary<Direction>& boundary,
-                                          const Environment& env) {
-    auto& wires = state.wires;
-    std::optional<CompositeUnitary> composite;
-    // Advancement only moves iterators. Discard classifications before routing
-    // inserts SWAPs or replaces composites.
+  std::optional<CompositeUnitary>
+  prepareFront(RoutingState& state, SmallVector<QubitIndexPair>& front,
+               const Boundary<Direction>& boundary, const Environment& env) {
+
+    /// Advancement only moves iterators. Discard classifications before routing
+    /// inserts SWAPs or replaces composites.
     DenseMap<Operation*, bool> measurementRouting;
 
     // The wire traversal does not follow classical dependencies. Defer a
@@ -1937,7 +1938,7 @@ private:
     // composites pass terminal wires. Reverse block order for backward routing.
 
     const auto defer = [&](Operation* candidate) {
-      return any_of(wires, [&](WireIterator& it) {
+      return llvm::any_of(state.wires, [&](WireIterator& it) {
         if (it == std::default_sentinel) {
           return false;
         }
@@ -1952,6 +1953,7 @@ private:
             std::default_sentinel) {
           return false;
         }
+
         if constexpr (Direction == WireDirection::Forward) {
           if (auto measurement = dyn_cast<MeasureOp>(op);
               measurement &&
@@ -1965,15 +1967,16 @@ private:
       });
     };
 
-    // Keep the earliest ready region in block order. Hot placement threads
-    // every wire through it, so later regions must wait for its exit layout.
+    llvm::SmallPtrSet<Operation*, 16> stale;
+    std::optional<CompositeUnitary> composite;
 
-    walkProgramGraph<Direction>(wires, [&](const Frontier& frontier,
-                                           SmallVectorImpl<Operation*>&
-                                               released) {
+    walkProgramGraph<Direction>(state.wires, [&](const Frontier& frontier,
+                                                 SmallVectorImpl<Operation*>&
+                                                     released) {
       for (const auto& [op, indices] : frontier) {
-        if (boundary.operation() != nullptr &&
-            precedes<Direction>(boundary.operation(), op)) {
+        if (stale.contains(op) ||
+            (boundary.operation() != nullptr &&
+             precedes<Direction>(boundary.operation(), op))) {
           continue;
         }
 
@@ -1984,7 +1987,19 @@ private:
                   if (indices.size() == 1) {
                     return true;
                   }
-                  return env.target.areAdjacent(indices[0], indices[1]);
+                  const auto adjacent =
+                      env.target.areAdjacent(indices[0], indices[1]);
+                  if (!adjacent) {
+                    const auto [prog0, prog1] =
+                        state.layout.getProgramIndices(indices[0], indices[1]);
+                    front.emplace_back(std::make_pair(prog0, prog1));
+
+                    // To not revisit the same un-executable two-qubit
+                    // interaction again later, mark it as "stale".
+
+                    stale.insert(op);
+                  }
+                  return adjacent;
                 })
                 .Case([](ResetOp) { return true; })
                 .Case([&](MeasureOp m) {
@@ -2017,7 +2032,7 @@ private:
             // Frontier indices are in traversal order, not operand order.
             if (auto gate = dyn_cast<UnitaryOpInterface>(op);
                 gate && gate.isTwoQubit() &&
-                wires[indices[0]].qubit() != gate.getOutputQubit(0)) {
+                state.wires[indices[0]].qubit() != gate.getOutputQubit(0)) {
               std::swap(vertices[0], vertices[1]);
             }
             state.costs->append(op, vertices);
@@ -2268,8 +2283,10 @@ private:
     Statistics stats;
     Boundary<Direction> boundary(region.front());
 
+    SmallVector<QubitIndexPair> front;
     while (true) {
-      auto composite = advance<Direction>(state, boundary, env);
+      front.clear();
+      auto composite = prepareFront<Direction>(state, front, boundary, env);
       if (composite) {
         assert(composite->op == boundary.operation());
         boundary.advance();
@@ -2294,6 +2311,19 @@ private:
         if (window.empty()) {
           break;
         }
+
+        llvm::dbgs() << "window= ";
+        for (const auto [i0, i1] : window) {
+          llvm::dbgs() << "(" << i0 << ", " << i1 << ") ";
+        }
+        llvm::dbgs() << "\n";
+
+        llvm::dbgs() << "front= ";
+        for (const auto [i0, i1] : front) {
+          llvm::dbgs() << "(" << i0 << ", " << i1 << ") ";
+        }
+        llvm::dbgs() << "\n";
+        llvm::dbgs() << "---------\n";
 
         const auto swaps = search(window, state, arena, env);
         insertSWAPs<Mode>(swaps, state, stats, rewriter);
