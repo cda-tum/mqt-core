@@ -666,8 +666,7 @@ private:
 
     /// Append a single element to the current active layer.
     void push(const QubitIndexPair& gate) {
-      assert(offsets_.size() > 1 &&
-             "No active layer. Call startNextLayer() first.");
+      assert(offsets_.size() > 1 && "No active layer. Call next() first.");
       storage_.emplace_back(gate);
       offsets_.back() = storage_.size();
     }
@@ -2036,9 +2035,6 @@ private:
     llvm::SmallPtrSet<Operation*, 16> stale;
     std::optional<CompositeUnitary> composite;
 
-    assert(horizon.empty());
-    horizon.next();
-
     walkProgramGraph<Direction>(state.wires, [&](const Frontier& frontier,
                                                  SmallVectorImpl<Operation*>&
                                                      released) {
@@ -2369,7 +2365,9 @@ private:
     Boundary<Direction> boundary(region.front());
 
     while (true) {
-      horizon.reset();
+      horizon.reset(); // Reset horizon for new iteration.
+      horizon.next();  // Add empty front.
+
       auto composite = prepareFront<Direction>(state, horizon, boundary, env);
       if (composite) {
         assert(composite->op == boundary.operation());
