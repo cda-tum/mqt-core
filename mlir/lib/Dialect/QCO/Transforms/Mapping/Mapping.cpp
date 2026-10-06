@@ -1788,25 +1788,8 @@ private:
   void setLookahead(Wires wires, Horizon& horizon,
                     const Layout<QubitIndex>& layout,
                     const Boundary<Direction>& boundary) {
-    assert(horizon.nlayers() == 1 && "expected only a front layer");
-
-    // Advance past the front gates without invoking the driver.
-
-    constexpr auto stride = WireTraversalTraits<Direction>::stride();
-
-    SmallVector<QubitIndexPair> prev;
+    SmallVector<QubitIndexPair> prev(horizon.get(0));
     SmallVector<QubitIndexPair> next;
-
-    const auto front = horizon.get(0);
-    prev.reserve(front.size());
-
-    for (const auto progs : front) {
-      const auto [hw0, hw1] =
-          layout.getHardwareIndices(progs.first, progs.second);
-      std::ranges::advance(wires[hw0], stride);
-      std::ranges::advance(wires[hw1], stride);
-      prev.emplace_back(progs);
-    }
 
     walkProgramGraph<Direction>(
         MutableArrayRef(wires.data(), wires.size()),
@@ -2377,10 +2360,8 @@ private:
           place(*composite, state, *rewriter);
         }
 
-        const auto localStats = routeComposite<Direction, Mode>(
-            *composite, state, arena, env, rewriter);
-        stats.merge(localStats);
-
+        stats.merge(routeComposite<Direction, Mode>(*composite, state, arena,
+                                                    env, rewriter));
       } else if (horizon.empty()) {
         break;
       } else {
