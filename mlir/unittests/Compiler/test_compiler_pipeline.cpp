@@ -1096,7 +1096,8 @@ result = measure q;
   EXPECT_TRUE(succeeded(qir->llvmIR()));
 }
 
-TEST_F(CompilerPipelineTest, BaseProfileLowersCompleteTensorLifetime) {
+TEST_F(CompilerPipelineTest,
+       BaseProfileLowersCompleteTensorLifetimeAfterCleanup) {
   auto program = QCOProgram::fromMLIRString(R"mlir(module {
     func.func @main() -> i1 attributes {mqt.entry_point} {
       %c0 = arith.constant 0 : index
@@ -1110,6 +1111,7 @@ TEST_F(CompilerPipelineTest, BaseProfileLowersCompleteTensorLifetime) {
     }
   })mlir");
   ASSERT_TRUE(mlir::succeeded(program));
+  ASSERT_TRUE(succeeded(program->cleanup()));
   auto qc = std::move(*program).intoQC();
   ASSERT_TRUE(mlir::succeeded(qc));
   auto qir = std::move(*qc).intoQIR(QIRProfile::Base);
