@@ -2482,6 +2482,8 @@ TEST_F(CompilerPipelineTest, TargetLayoutRecoversRoutedUnitary) {
     for (const auto* gates : {
              "h q[0]; rx(0.3) q[1]; rz(0.7) q[3]; "
              "cx q[0], q[3]; cx q[1], q[3];",
+             "h q[0]; rx(0.3) q[1]; rz(0.7) q[3]; "
+             "swap q[0], q[2]; cx q[0], q[3]; cx q[1], q[3];",
              "h q[0]; rx(0.3) q[2]; rz(0.7) q[3]; "
              "cx q[0], q[3]; cx q[2], q[3]; cx q[0], q[2]; "
              "swap q[0], q[2]; ry(0.41) q[0]; "
@@ -4840,6 +4842,9 @@ TEST_F(CompilerPipelineTest, ElidesTensorBackedSwapsBeforeFusionAndRouting) {
              cx q[0], q[1]; rz(0.27) q[0];
              cx q[0], q[1]; swap q[0], q[1];)qasm",
                       1U, "001"},
+           std::tuple{R"qasm(h q[0]; swap q[0], q[1];
+             z q[1]; swap q[1], q[2]; h q[2]; cx q[2], q[0];)qasm",
+                      1U, "101"},
        }) {
     SCOPED_TRACE(gates);
     auto qc = QCProgram::fromOpenQASMString(
@@ -4851,6 +4856,7 @@ TEST_F(CompilerPipelineTest, ElidesTensorBackedSwapsBeforeFusionAndRouting) {
     ASSERT_TRUE(program);
     auto cleaned = program->copy();
     ASSERT_TRUE(cleaned.cleanup());
+    ASSERT_TRUE(cleaned.runPassPipeline("elide-permutations"));
     cleaned.module().walk([](qco::SWAPOp) { ADD_FAILURE(); });
     auto restored = std::move(cleaned).intoQC();
     ASSERT_TRUE(restored);
