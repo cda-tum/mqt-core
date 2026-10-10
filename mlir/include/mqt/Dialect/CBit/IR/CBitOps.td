@@ -14,6 +14,7 @@ include "mqt/Dialect/CBit/IR/CBitDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -25,7 +26,7 @@ def CBit_InitializationAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
-def CBit_RegisterType : TypeDef<CBitDialect, "Register"> {
+def CBit_RegisterType : TypeDef<CBitDialect, "Register", [OpAsmTypeInterface]> {
   let mnemonic = "reg";
   let summary = "A static classical-bit register";
   let description = [{
@@ -35,6 +36,11 @@ def CBit_RegisterType : TypeDef<CBitDialect, "Register"> {
   let parameters = (ins "int64_t":$width);
   let assemblyFormat = "`<` $width `>`";
   let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    void getAsmName(::mlir::OpAsmSetNameFn setNameFn) const {
+      setNameFn("c");
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

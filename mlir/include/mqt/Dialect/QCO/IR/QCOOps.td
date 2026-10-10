@@ -98,7 +98,9 @@ def StaticOp : QCOOp<"static", [Pure]> {
 // Measurement and Reset Operations
 //===----------------------------------------------------------------------===//
 
-def MeasureOp : QCOOp<"measure", [Pure]> {
+def MeasureOp
+    : QCOOp<"measure", [Pure, DeclareOpInterfaceMethods<
+                                  OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Measure a qubit in the computational basis";
   let description = [{
         Measures a qubit in the computational (Z) basis, collapsing the state

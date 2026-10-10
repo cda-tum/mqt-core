@@ -230,6 +230,14 @@ private:
     return uniqueName("q", nextQubit);
   }
 
+  [[nodiscard]] std::string classicalRegisterName(const StringRef requested) {
+    if (isValidDeclarationName(requested) &&
+        usedNames.insert(requested).second) {
+      return requested.str();
+    }
+    return uniqueName("c", nextBit);
+  }
+
   [[nodiscard]] func::FuncOp resolveGateCallee(Operation* operation) {
     FlatSymbolRefAttr callee;
     if (auto call = dyn_cast<qc::CallOp>(operation)) {
@@ -426,7 +434,8 @@ private:
         const auto requested = name ? name.getValue() : StringRef{};
         Resource resource{
             .kind = ResourceKind::Bit,
-            .name = isOutput ? outputName(requested) : uniqueName("c", nextBit),
+            .name = isOutput ? outputName(requested)
+                             : classicalRegisterName(requested),
             .width = width,
             .output = isOutput,
             .initialization = alloc.getInitialization(),
@@ -1851,6 +1860,23 @@ private:
         controls.push_back(std::move(*qubit));
       }
       call.qubits.insert(call.qubits.begin(), controls.begin(), controls.end());
+      if ((controls.size() == 1 || controls.size() == 2) &&
+          call.modifiers.empty()) {
+        const auto alias =
+            (Twine(controls.size() == 1 ? "c" : "cc") + call.symbol).str();
+        const auto* gate = openqasm::frontend::lookupGate(alias);
+        if (gate && gate->controlCount == controls.size() &&
+            gate->targetCount + controls.size() == call.qubits.size() &&
+            !gate->inverse && !gate->variadicControls &&
+            (gate->availability ==
+                 openqasm::frontend::GateAvailability::StandardLibrary ||
+             gate->availability == openqasm::frontend::GateAvailability::
+                                       StandardLibraryAndQELib1) &&
+            openqasm::frontend::canonicalGateName(gate->gate) == call.symbol) {
+          call.symbol = alias;
+          return call;
+        }
+      }
       call.modifiers =
           (Twine("ctrl") +
            (controls.size() == 1 ? Twine{}
@@ -2045,59 +2071,59 @@ private:
                                   "  s q0;\n"
                                   "  s q1;\n"
                                   "  h q0;\n"
-                                  "  ctrl @ x q0, q1;\n"
-                                  "  ctrl @ x q1, q0;\n"
+                                  "  cx q0, q1;\n"
+                                  "  cx q1, q0;\n"
                                   "  h q1;\n"
                                   "}\n"},
         HelperDefinition{"dcx", "gate dcx q0, q1 {\n"
-                                "  ctrl @ x q0, q1;\n"
-                                "  ctrl @ x q1, q0;\n"
+                                "  cx q0, q1;\n"
+                                "  cx q1, q0;\n"
                                 "}\n"},
         HelperDefinition{"rxx", "gate rxx(p0) q0, q1 {\n"
                                 "  h q0;\n"
                                 "  h q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rz(p0) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  h q0;\n"
                                 "  h q1;\n"
                                 "}\n"},
         HelperDefinition{"ryy", "gate ryy(p0) q0, q1 {\n"
                                 "  rx(pi / 2) q0;\n"
                                 "  rx(pi / 2) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rz(p0) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rx(-pi / 2) q0;\n"
                                 "  rx(-pi / 2) q1;\n"
                                 "}\n"},
         HelperDefinition{"rzz", "gate rzz(p0) q0, q1 {\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rz(p0) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "}\n"},
         HelperDefinition{"rzx", "gate rzx(p0) q0, q1 {\n"
                                 "  h q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rz(p0) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  h q1;\n"
                                 "}\n"},
         HelperDefinition{"ecr", "gate ecr q0, q1 {\n"
                                 "  gphase(-pi / 4);\n"
                                 "  s q0;\n"
                                 "  sx q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  x q0;\n"
                                 "}\n"},
         HelperDefinition{"rccx", "gate rccx q0, q1, q2 {\n"
                                  "  h q2;\n"
                                  "  t q2;\n"
-                                 "  ctrl @ x q1, q2;\n"
+                                 "  cx q1, q2;\n"
                                  "  tdg q2;\n"
-                                 "  ctrl @ x q0, q2;\n"
+                                 "  cx q0, q2;\n"
                                  "  t q2;\n"
-                                 "  ctrl @ x q1, q2;\n"
+                                 "  cx q1, q2;\n"
                                  "  tdg q2;\n"
                                  "  h q2;\n"
                                  "}\n"},
@@ -2107,10 +2133,10 @@ private:
                                        "  s q0;\n"
                                        "  sx q1;\n"
                                        "  s q1;\n"
-                                       "  ctrl @ x q1, q0;\n"
+                                       "  cx q1, q0;\n"
                                        "  ry(-p0 / 2) q0;\n"
                                        "  ry(-p0 / 2) q1;\n"
-                                       "  ctrl @ x q1, q0;\n"
+                                       "  cx q1, q0;\n"
                                        "  sdg q0;\n"
                                        "  sdg q1;\n"
                                        "  rz(-p1) q0;\n"
@@ -2123,10 +2149,10 @@ private:
                                         "  sx q0;\n"
                                         "  s q1;\n"
                                         "  s q0;\n"
-                                        "  ctrl @ x q0, q1;\n"
+                                        "  cx q0, q1;\n"
                                         "  ry(p0 / 2) q0;\n"
                                         "  ry(-p0 / 2) q1;\n"
-                                        "  ctrl @ x q0, q1;\n"
+                                        "  cx q0, q1;\n"
                                         "  sdg q0;\n"
                                         "  sdg q1;\n"
                                         "  inv @ sx q0;\n"

@@ -66,6 +66,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -254,6 +255,27 @@ TEST_F(QCOTest, BuilderReturnsTrackedQubit) {
 
   EXPECT_DEATH(builder.x(qubit), "Invalid qubit value used");
   EXPECT_NO_FATAL_FAILURE(builder.x(output));
+}
+
+TEST_F(QCOTest, PrintsReadableQubitAndClassicalNames) {
+  QCOProgramBuilder builder(context.get());
+  builder.initialize();
+  std::ignore = builder.allocClassicalBitRegister(1);
+  auto [measured, bit] = builder.measure(builder.h(builder.allocQubit()));
+  std::ignore = measured;
+  std::ignore = bit;
+  auto moduleOp = builder.finalize();
+  ASSERT_TRUE(moduleOp);
+
+  std::string text;
+  llvm::raw_string_ostream stream(text);
+  moduleOp->print(stream);
+  stream.flush();
+  EXPECT_NE(text.find("%q = qco.alloc"), std::string::npos) << text;
+  EXPECT_NE(text.find("%c = cbit.alloc"), std::string::npos) << text;
+  EXPECT_NE(text.find(", %c_"), std::string::npos) << text;
+  EXPECT_NE(text.find(" = qco.measure"), std::string::npos) << text;
+  EXPECT_TRUE(parseSourceString<ModuleOp>(text, context.get()));
 }
 
 TEST_F(QCOTest, BuilderDisposesScalarsInDefinitionOrder) {

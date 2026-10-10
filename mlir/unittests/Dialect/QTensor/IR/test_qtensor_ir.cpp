@@ -43,6 +43,8 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -93,6 +95,34 @@ protected:
     return count;
   }
 };
+
+TEST_F(QTensorTest, PrintsReadableTensorAndQubitNames) {
+  auto loc = UnknownLoc::get(context.get());
+  auto moduleOp = ModuleOp::create(loc);
+  ImplicitLocOpBuilder builder(loc, context.get());
+  builder.setInsertionPointToStart(moduleOp.getBody());
+  auto tensorType =
+      RankedTensorType::get({1}, qco::QubitType::get(context.get()));
+  auto zero = arith::ConstantIndexOp::create(builder, 0);
+  auto one = arith::ConstantIndexOp::create(builder, 1);
+  auto tensor = qtensor::AllocOp::create(builder, tensorType, one.getResult());
+  auto extracted =
+      qtensor::ExtractOp::create(builder, tensor, zero.getResult());
+  auto restored =
+      qtensor::InsertOp::create(builder, extracted.getResult(),
+                                extracted.getOutTensor(), zero.getResult());
+  qtensor::DeallocOp::create(builder, restored.getResult());
+
+  std::string text;
+  llvm::raw_string_ostream stream(text);
+  moduleOp.print(stream);
+  stream.flush();
+  EXPECT_NE(text.find("%qs = qtensor.alloc"), std::string::npos) << text;
+  EXPECT_NE(text.find(", %q = qtensor.extract"), std::string::npos) << text;
+  auto reparsed = parseSourceString<ModuleOp>(text, context.get());
+  ASSERT_TRUE(reparsed);
+  EXPECT_TRUE(succeeded(verify(*reparsed)));
+}
 
 // ============================================================================
 // AllocOp
