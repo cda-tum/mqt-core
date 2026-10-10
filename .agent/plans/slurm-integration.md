@@ -1,54 +1,50 @@
-# Shared Slurm playground for QDMI workflows
+# Shared HPCQC playground for QDMI workflows
 
-Status: complete; the shared cluster is implemented and validated locally.
+Status: complete; the playground uses the existing QDMI APIs and supports a
+shared quantum partition.
 
 ## Scope and decisions
 
-`examples/slurm` provides a login node, scalable classical compute nodes,
-dedicated IQM and Braket quantum access nodes, and persistent slurmdbd/MariaDB
-accounting. Partitions route allocations; licenses limit concurrent access.
-Neither grants remote device authorization. All nodes share one installed
-software environment and catalogue; users and monitors authenticate separately.
+`examples/slurm` provides login submission, scalable classical and quantum
+access nodes, and persistent slurmdbd/MariaDB accounting. Every QAN can compile
+circuits and reach all configured devices. One environment and catalogue serve
+all implementations. Partitions place jobs; licenses limit concurrent device
+access. Device services enforce authorization.
 
-Use standard Slurm accounting and job dependencies. The application belongs in
-its own repository: measurement jobs use a QAN and device license, then
-classical propagation runs in a dependent compute job. Tightly coupled workflows
-require an allocation spanning their resources, rather than nested submissions
-to another partition. Docker supplies hosts for this disposable cgroup-v2
-playground.
+Applications receive explicit device IDs and open independent sessions through
+the generic built-in driver API. The playground monitor probes status in a
+bounded child process and updates license-only reservations. Scheduler policy
+stays outside the installed package. The released C++/Python Slurm adapters and
+the proposed native checker are removed; the PR describes the API migration.
 
-Accounting stores job metadata and license TRES, not environments or scripts.
-Private generated database credentials and Munge keys stay outside images.
-Database and controller state survive normal restarts; deleting volumes resets
-history. Operational monitoring accepts IDLE/BUSY for the monitor identity. It
-cannot establish user authorization or predict queueing at a remote device.
+Site monitor credentials and workload credentials remain separate. Device output
+is suppressed before loading libraries. Failed probes leave admission closed,
+and systemd cleans descendants when a monitor exits. Availability is a snapshot
+for the monitor identity. Controller communication failures can leave the
+previous scheduler state active and require administrator attention.
+
+The scientific application remains separate. The guide demonstrates ordinary
+Slurm job dependencies for quantum measurement and classical propagation.
 
 ## Validation
 
-The release build and all 597 QDMI CTest cases completed with one existing skip
-and no failures. The installed Python 3.15 command, discovery, and Slurm tests
-passed, as did the 20 runner/monitor cases and full-file C++ lint. The complete
-Sphinx build executed all 18 notebooks and passed internal-link checks.
+The Clang release build with IPO passed 591 QDMI CTest cases with one existing
+skip and no failures. The installed candidate wheel passed 378 Python tests with
+one skip; the runner/monitor suite passed 21 cases. Generated bindings,
+full-file C++ lint, repository lint, and the complete Sphinx build passed. All
+18 executable notebooks and internal documentation links were checked.
 
-`test/slurm/run_integration.py --nodes 3` passed with the freshly rebased wheel:
-login environment, QAN placement, DDSIM/SC execution, license contention,
-failed-probe admission, recovery, environment export, and accounting after
-service recreation. Repository lint passed. Native/wheel authenticated device
-workloads are maintained and run in the respective device repositories.
+The real cluster passed with three classical nodes and two QANs using both an
+unmodified main wheel and the candidate wheel: login submission, quantum
+placement, device execution, capacity contention, failed-probe admission,
+recovery, environment export, and accounting after service recreation.
 
-## Test boundaries
+IQM and Braket passed their package/adapter tests against current MQT Core main
+and authenticated native/wheel Slurm workloads in the shared quantum partition.
+The runs used the Emerald mock and SV1, including loaded-library checks. Device
+CI pins the playground revision separately from its main package pin.
 
-Tests cover real DDSIM/SC execution, capacity contention, failed-probe
-admission, recovery, and job/daemon environment separation. The device
-repositories test actual authenticated executions and selected native/wheel
-libraries. The manual multivendor harness was removed; simultaneous cross-vendor
-qualification belongs with the scientific application. Duplicate Bell
-assertions, wrapper scripts, synthetic job-script checker scenarios, and
-redundant state matrices are omitted. Runner unit tests cover resource cleanup
-and invalid external inputs.
-
-## Dependency boundary
-
-Device package dependencies track current MQT Core main. Their Slurm CI must
-build this integration PR until its checker and Slurm Python API reach main; a
-main-only wheel cannot yet run the shared deployment.
+The removed tests belonged to the removed adapters/checker or repeated static
+container checks. Actual workload, admission, credential, and cleanup coverage
+remains in the owning integration suites. Dynamic-node recreation requires
+removing obsolete node records when retaining controller state.

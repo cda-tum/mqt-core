@@ -1,7 +1,7 @@
 # Use QDMI devices with Slurm
 
 Slurm schedules access to a QDMI device through a cluster-wide license named
-after its device ID. MQT Core's QDMI driver opens the allocated device. One
+after its device ID. Applications open the device through the QDMI driver. One
 administrator-maintained environment can serve several device implementations,
 each with its own authentication and independent sessions.
 
@@ -17,19 +17,22 @@ submit it with `sbatch job.sh`:
 
 ```bash
 #!/bin/bash
+#SBATCH --partition=quantum
 #SBATCH --licenses=mqt.ddsim.default
 #SBATCH --time=00:05:00
 set -eu
 
-srun python workload.py
+srun python workload.py mqt.ddsim.default
 ```
 
 For example, `workload.py` can execute a Bell circuit on DDSIM:
 
 ```python
-from mqt.core.qdmi import ProgramFormat, slurm
+import sys
 
-device = slurm.open_device_from_license()
+from mqt.core.qdmi import ProgramFormat, builtin_driver
+
+device = builtin_driver.open_device(sys.argv[1])
 program = """OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[2];
@@ -44,18 +47,22 @@ if not job.wait(60):
 print(job.get_counts())
 ```
 
-For a remote device, select the site's quantum access partition as well as its
-license, for example
-`sbatch --partition=iqm --licenses=iqm.emerald.mock job.sh`. Partitions choose
-where the classical part of a quantum workload runs; licenses are cluster-wide.
-See the {doc}`workflow playground <slurm_cluster>` for a login node, classical
-nodes, quantum access nodes, and persistent accounting.
+Select the site's quantum access partition for a remote device, for example
+`sbatch --partition=quantum --licenses=iqm.emerald.mock iqm-job.sh`. The script
+passes `iqm.emerald.mock` to the application. Partitions choose the nodes on
+which an application runs; licenses limit concurrent access to devices across
+the cluster. The application receives its device IDs as ordinary inputs.
 
 The same `device` can be passed to a {doc}`Qiskit <qdmi_backend>` or
-{doc}`PennyLane <pennylane_device>` adapter. The Slurm convenience function
-accepts one local license, `ID` or `ID:1`, and requires status `IDLE` or `BUSY`.
-It opens only that device. An application using several devices requests their
-licenses together and opens separate {doc}`built-in driver sessions <driver>`.
+{doc}`PennyLane <pennylane_device>` adapter. C++ applications use
+{cpp-api:func}`qdmi::builtin_driver::openDevice` with their device ID.
+Applications using several devices request their licenses together and open an
+independent session for each ID. The driver initializes only the selected device
+for each session, so different implementations and credentials can coexist in
+one application.
+
+See the {doc}`workflow playground <slurm_cluster>` for a login node, classical
+nodes, a shared quantum partition, and persistent accounting.
 
 Slurm
 [exports the submission environment by default](https://slurm.schedmd.com/sbatch.html#OPT_export).
@@ -86,7 +93,7 @@ users' jobs.
 Use matching software paths and numeric user/group IDs across nodes. A shared
 filesystem or identical per-node installations both work. The
 {doc}`example cluster <slurm_cluster>` supplies this environment and includes
-login submission, device partitions, availability checks, and accounting.
+login submission, quantum access nodes, availability checks, and accounting.
 
 ## Schedule available devices
 
@@ -99,10 +106,15 @@ Licenses=mqt.ddsim.default:2,iqm.emerald.mock:1,amazon.braket.sv1:2
 The example runs one administrative monitor per device license. Before probing,
 it creates a
 [license-only reservation](https://slurm.schedmd.com/reservations.html) for the
-full license count. It removes that reservation only after the
-[availability command](driver.md#probe-device-availability) succeeds. Failed or
-timed-out checks leave new jobs pending with reason `Licenses`; running jobs and
-other devices continue.
+full license count. It then opens that device in a separate Python process using
+the built-in driver and queries its status. An `IDLE` or `BUSY` result releases
+the reservation. Failed or timed-out checks leave new jobs pending with reason
+`Licenses`; running jobs and other devices continue.
+
+The monitor and its systemd units are deployment tools in `examples/slurm`.
+Their policy can be adapted to the site's devices and scheduling requirements.
+Probe output is suppressed because device diagnostics can contain credentials;
+check failures are reported in the service journal.
 
 Run monitors outside Slurm daemons, with the shared QDMI environment and
 site-owned credentials, with one monitor per device ID across the cluster.
@@ -113,9 +125,8 @@ reservation updates can leave the last scheduler state in effect. Availability
 is a snapshot, so a device can fail after allocation.
 
 Slurm licenses, reservations, and environment export provide this integration;
-no Slurm plugin is required. `SLURM_JOB_LICENSES` is mutable process data: MQT
-Core uses it for selection, while device services and operating-system
-permissions enforce access.
+no Slurm plugin is required. Applications select devices through the ordinary
+QDMI API. Device services and operating-system permissions enforce access.
 
 ## Configure compute resources
 

@@ -16,6 +16,6 @@ done
 for license in $licenses; do
     systemctl start "qdmi-availability@$license.service"
 done
-for partition in compute iqm braket; do
+for partition in compute quantum; do
     scontrol update "PartitionName=$partition" State=UP
 done

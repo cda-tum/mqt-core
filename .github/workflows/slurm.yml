@@ -11,14 +11,14 @@ on:
       - "cmake/**"
       - "include/mqt-core/qdmi/**"
       - "pyproject.toml"
-      - "python/mqt/core/_commands.py"
+      - "python/mqt/core/_qdmi_discovery.py"
       - "python/mqt/core/qdmi/**"
       - "src/qdmi/**"
       - "examples/slurm/**"
       - "test/slurm/**"
       - "test/qdmi/**"
       - "test/python/qdmi/**"
-      - "test/python/test_slurm_integration.py"
+      - "test/python/test_slurm_*.py"
       - "uv.lock"
   pull_request:
     paths:
@@ -28,14 +28,14 @@ on:
       - "cmake/**"
       - "include/mqt-core/qdmi/**"
       - "pyproject.toml"
-      - "python/mqt/core/_commands.py"
+      - "python/mqt/core/_qdmi_discovery.py"
       - "python/mqt/core/qdmi/**"
       - "src/qdmi/**"
       - "examples/slurm/**"
       - "test/slurm/**"
       - "test/qdmi/**"
       - "test/python/qdmi/**"
-      - "test/python/test_slurm_integration.py"
+      - "test/python/test_slurm_*.py"
       - "uv.lock"
   workflow_dispatch:
 

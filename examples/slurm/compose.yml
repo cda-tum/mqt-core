@@ -150,23 +150,13 @@ services:
     scale: 2
     command: [/usr/local/sbin/mqt-slurm-start, node]
 
-  qan-iqm:
+  qan:
     <<: *compute
-    hostname: qan-iqm
+    scale: 2
     command: [/usr/local/sbin/mqt-slurm-start, qan]
     networks:
-      cluster:
-        aliases: [qan-iqm-cluster]
-      egress:
-
-  qan-braket:
-    <<: *compute
-    hostname: qan-braket
-    command: [/usr/local/sbin/mqt-slurm-start, qan]
-    networks:
-      cluster:
-        aliases: [qan-braket-cluster]
-      egress:
+      - cluster
+      - egress
 
 networks:
   cluster:

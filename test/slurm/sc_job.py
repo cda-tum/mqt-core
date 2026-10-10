@@ -6,21 +6,25 @@
 #
 # Licensed under the MIT License
 
-"""Open the SC device named by the license environment on a free processor."""
+"""Open the SC device selected by its device ID on a free processor."""
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 from pathlib import Path
 
-from mqt.core.qdmi import slurm
+from mqt.core.qdmi import builtin_driver
 
 
 def main() -> None:
-    """Query the license-selected SC device and record the compute node."""
+    """Query the selected SC device and record the compute node."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("device")
+    args = parser.parse_args()
     job_id = os.environ["SLURM_JOB_ID"]
-    device = slurm.open_device_from_license()
+    device = builtin_driver.open_device(args.device)
     result = {
         "device": device.name(),
         "job_id": job_id,

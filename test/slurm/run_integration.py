@@ -35,6 +35,7 @@ CLUSTER = ROOT / "examples" / "slurm"
 DIST = ROOT / "dist"
 RUNTIME = ROOT / "build" / "slurm-tests" / uuid.uuid4().hex
 NODES: list[str] = []
+QANS: list[str] = []
 COMPOSE = (
     "docker",
     "compose",
@@ -126,11 +127,6 @@ def controller(*command: str, check: bool = True, timeout: float = COMMAND_TIMEO
     return compose("exec", "-T", "controller", *command, check=check, timeout=timeout)
 
 
-def compute(node: str, *command: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    """Run a diagnostic command in one compute container."""
-    return compose("exec", "-T", "--index", str(NODES.index(node) + 1), "node", *command, check=check)
-
-
 def job(*command: str, check: bool = True, timeout: float = COMMAND_TIMEOUT) -> subprocess.CompletedProcess[str]:
     """Submit workloads from the login node as an ordinary cluster user."""
     return compose(
@@ -162,10 +158,10 @@ def node_record(node: str) -> str:
     return controller("scontrol", "show", "node", node, "--oneliner").stdout.strip()
 
 
-def node_is_idle(node: str) -> bool:
+def node_is_idle(node: str, cpus: int, memory: int) -> bool:
     """Return whether a compute node has registered and is idle."""
     record = node_record(node)
-    return "State=IDLE" in record and "CPUTot=2" in record
+    return "State=IDLE" in record and f"CPUTot={cpus} " in record and f"RealMemory={memory} " in record
 
 
 def job_record(job_id: str) -> tuple[str, str, str] | None:
@@ -213,6 +209,7 @@ def submit(script: str, license_expression: str, *, node: str | None = None, hol
         "--nodes=1",
         "--ntasks=1",
         "--cpus-per-task=1",
+        "--partition=quantum",
         "--time=5",
         f"--licenses={license_expression}",
         "--chdir=/workspace",
@@ -220,7 +217,7 @@ def submit(script: str, license_expression: str, *, node: str | None = None, hol
     ]
     if node is not None:
         command.append(f"--nodelist={node}")
-    payload = ["python3", f"/workspace/test/slurm/{script}"]
+    payload = ["python3", f"/workspace/test/slurm/{script}", license_expression.removesuffix(":1")]
     if hold:
         payload.append("--hold")
     command.extend(("--wrap", shlex.join(payload)))
@@ -307,7 +304,7 @@ def print_diagnostics() -> None:
     for service, index, units in [
         ("controller", 1, ("munge.service", "slurmctld.service")),
         ("accounting", 1, ("slurmdbd.service", "slurm-accounting.service")),
-        *((f"qan-{device}", 1, ("slurmd.service",)) for device in ("iqm", "braket")),
+        *(("qan", index, ("slurmd.service",)) for index in range(1, len(QANS) + 1)),
         *(("node", index, ("munge.service", "slurmd.service")) for index in range(1, len(NODES) + 1)),
     ]:
         prefix = ("exec", "-T", "--index", str(index), service)
@@ -329,14 +326,14 @@ def test_core() -> None:
     assert_license("mqt.ddsim.default", total=2, used=0, free=2)
     assert_license("mqt.sc.default", total=1, used=0, free=1)
 
-    first = submit("bell_job.py", "mqt.ddsim.default:1", node=NODES[0], hold=True)
-    second = submit("bell_job.py", "mqt.ddsim.default:1", node=NODES[1], hold=True)
+    first = submit("bell_job.py", "mqt.ddsim.default:1", node=QANS[0], hold=True)
+    second = submit("bell_job.py", "mqt.ddsim.default:1", node=QANS[1], hold=True)
     wait_for_result("ddsim", first, "the first DDSIM Bell result")
     wait_for_result("ddsim", second, "the second DDSIM Bell result")
-    wait_for("the first DDSIM job to hold on its node", lambda: job_matches(first, "RUNNING", node=NODES[0]))
-    wait_for("the second DDSIM job to hold on its node", lambda: job_matches(second, "RUNNING", node=NODES[1]))
-    if "CPUAlloc=1" not in node_record(NODES[0]) or "CPUAlloc=1" not in node_record(NODES[1]):
-        msg = "Each held DDSIM job must leave one processor free on its compute node"
+    wait_for("the first DDSIM job to hold on its node", lambda: job_matches(first, "RUNNING", node=QANS[0]))
+    wait_for("the second DDSIM job to hold on its node", lambda: job_matches(second, "RUNNING", node=QANS[1]))
+    if "CPUAlloc=1" not in node_record(QANS[0]) or "CPUAlloc=1" not in node_record(QANS[1]):
+        msg = "Each held DDSIM job must leave processors free on its quantum access node"
         raise AssertionError(msg)
 
     third = submit("bell_job.py", "mqt.ddsim.default:1")
@@ -350,10 +347,10 @@ def test_core() -> None:
     wait_for_result("sc", sc_job, "the SC job to execute on a free CPU")
     wait_for("the SC job to complete", lambda: job_finished(sc_job))
     sc_result = load_result("sc", sc_job)
-    if sc_result["node"] not in NODES or sc_result["qubits"] <= 0:
+    if sc_result["node"] not in QANS or sc_result["qubits"] <= 0:
         msg = f"Unexpected SC job result: {sc_result}"
         raise AssertionError(msg)
-    if not job_matches(first, "RUNNING", node=NODES[0]) or not job_matches(second, "RUNNING", node=NODES[1]):
+    if not job_matches(first, "RUNNING", node=QANS[0]) or not job_matches(second, "RUNNING", node=QANS[1]):
         msg = "The SC job did not complete while both DDSIM licenses remained held"
         raise AssertionError(msg)
 
@@ -374,15 +371,17 @@ def test_core() -> None:
         wait_for(f"the released DDSIM job {job_id} to finish", lambda job_id=job_id: job_finished(job_id))
     assert_license("mqt.ddsim.default", total=2, used=0, free=2)
     controller(*monitor, "--block-only")
-    job("srun", "--immediate=5", "--time=1", "--licenses=mqt.sc.default", "/bin/true", timeout=60)
+    job(
+        "srun", "--immediate=5", "--time=1", "--partition=quantum", "--licenses=mqt.sc.default", "/bin/true", timeout=60
+    )
     assert job_matches(third, "PENDING", node="", reason="Licenses")
     assert job("scontrol", "delete", "ReservationName=qdmi-unavailable-mqt.ddsim.default", check=False).returncode != 0
 
     controller("systemctl", "start", monitor_service)
     wait_for_result("ddsim", third, "the pending DDSIM job to execute after recovery")
     wait_for("the third DDSIM job to finish", lambda: job_finished(third))
-    assert_allocation(first, NODES[0])
-    assert_allocation(second, NODES[1])
+    assert_allocation(first, QANS[0])
+    assert_allocation(second, QANS[1])
     assert_allocation(third)
     compose("up", "--detach", "--no-deps", "--force-recreate", "--wait", "accounting", timeout=120)
     accounting = job(
@@ -394,7 +393,7 @@ def test_core() -> None:
         third,
         "--format=User,Account,Partition,AllocTRES%200",
     ).stdout.strip()
-    assert accounting.startswith("mqt-test|research|compute|"), accounting
+    assert accounting.startswith("mqt-dev|research|quantum|"), accounting
     assert "license/mqt.ddsim.default=1" in accounting, accounting
     assert_license("mqt.ddsim.default", total=2, used=0, free=2)
     assert license_record("mqt.ddsim.default")["Reserved"] == "0"
@@ -414,12 +413,11 @@ def parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--setup-script", default="")
     parser.add_argument("--compose-file", type=Path)
     parser.add_argument("--device-license")
-    parser.add_argument("--partition", default="compute")
     parser.add_argument("--qdmi-config-file")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     options = parser.parse_args(arguments)
-    if options.nodes < 2:
-        parser.error("--nodes must be at least two for the admission tests")
+    if options.nodes < 1:
+        parser.error("--nodes must be positive")
     if options.command[:1] == ["--"]:
         options.command = options.command[1:]
     if bool(options.command) != bool(options.device_license):
@@ -441,19 +439,29 @@ def test_provider(options: argparse.Namespace) -> None:
         "--immediate=5",
         "--time=5",
         "--ntasks=1",
-        f"--partition={options.partition}",
+        "--partition=quantum",
         f"--licenses={options.device_license}:1",
     )
     job("env", *environment, *allocation, *options.command, timeout=300)
 
 
 def test_partitions() -> None:
-    """Route each quantum allocation to its QAN and classical work to compute."""
+    """Allocate both QANs together and keep classical work on compute nodes."""
     executable = job("bash", "--login", "-c", "command -v python").stdout.strip()
     assert executable == "/opt/venv/bin/python", executable
-    for partition in ("iqm", "braket"):
-        hostname = job("srun", "--immediate=5", "--time=1", f"--partition={partition}", "hostname").stdout.strip()
-        assert hostname == f"qan-{partition}", hostname
+    hostnames = job(
+        "srun",
+        "--immediate=5",
+        "--time=1",
+        "--partition=quantum",
+        "--nodes=2",
+        "--ntasks=2",
+        "--ntasks-per-node=1",
+        "--cpus-per-task=4",
+        "--mem=8192M",
+        "hostname",
+    ).stdout.split()
+    assert set(hostnames) == set(QANS), hostnames
     hostname = job("srun", "--immediate=5", "--time=1", "hostname").stdout.strip()
     assert hostname in NODES, hostname
 
@@ -543,10 +551,11 @@ def main(arguments: Sequence[str] = ()) -> None:
             timeout=1800,
             capture_output=False,
         )
-        NODES[:] = [
-            compose("exec", "-T", "--index", str(index), "node", "hostname").stdout.strip()
-            for index in range(1, options.nodes + 1)
-        ]
+        for service, nodes, count in (("node", NODES, options.nodes), ("qan", QANS, 2)):
+            nodes[:] = [
+                compose("exec", "-T", "--index", str(index), service, "hostname").stdout.strip()
+                for index in range(1, count + 1)
+            ]
         LOGGER.info("Slurm image build and startup: %.2fs", time.monotonic() - started_at)
         testing_at = time.monotonic()
 
@@ -556,25 +565,16 @@ def main(arguments: Sequence[str] = ()) -> None:
             msg = f"The fixture requires Slurm 25.11 or newer, got {version_output!r}"
             raise RuntimeError(msg)
 
-        for node in NODES:
-            compute(node, "test", "-r", "/sys/fs/cgroup/cgroup.controllers")
-            delegate = compute(
-                node,
-                "systemctl",
-                "show",
-                "slurmd.service",
-                "--property=Delegate",
-                "--value",
-            ).stdout.strip()
-            if delegate != "yes":
-                msg = f"The packaged slurmd.service on {node} must set Delegate=yes, got {delegate!r}"
-                raise RuntimeError(msg)
-            wait_for(f"{node} to become IDLE with two processors", lambda node=node: node_is_idle(node))
-
-        registered = set(
-            controller("sinfo", "--partition=compute", "--Node", "--noheader", "--format=%N").stdout.split()
-        )
-        assert registered == set(NODES), registered
+        for partition, nodes, cpus, memory in (("compute", NODES, 2, 2048), ("quantum", QANS, 4, 8192)):
+            for node in nodes:
+                wait_for(
+                    f"{node} to become IDLE with {cpus} processors and {memory} MiB",
+                    lambda node=node, cpus=cpus, memory=memory: node_is_idle(node, cpus, memory),
+                )
+            registered = set(
+                controller("sinfo", f"--partition={partition}", "--Node", "--noheader", "--format=%N").stdout.split()
+            )
+            assert registered == set(nodes), registered
         healthy_licenses = (
             "mqt.ddsim.default",
             "mqt.sc.default",

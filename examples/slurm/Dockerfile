@@ -35,14 +35,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && uv venv --python 3.15 /opt/venv
 COPY --chmod=755 start.sh /usr/local/sbin/mqt-slurm-start
 COPY --chmod=755 admission.sh /usr/local/sbin/mqt-qdmi-admission
-COPY --chmod=755 monitor.sh /usr/local/sbin/mqt-qdmi-monitor
 COPY --chmod=755 update_availability.py /usr/local/libexec/mqt-qdmi-availability.py
 COPY qdmi-*.service slurm-accounting.service /etc/systemd/system/
 COPY --chmod=755 accounting.sh /usr/local/sbin/mqt-slurm-accounting
 COPY node.conf qan.conf slurmdbd.conf /usr/local/share/mqt-slurm/
 COPY profile.sh /etc/profile.d/mqt-qdmi.sh
 
-RUN useradd --uid 10000 --user-group --create-home mqt-test \
+RUN useradd --uid 10000 --user-group --create-home mqt-dev \
     && systemctl disable slurmctld.service slurmd.service slurmdbd.service
 
 FROM scratch AS provider-source

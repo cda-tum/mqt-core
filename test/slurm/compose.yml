@@ -9,4 +9,4 @@
 services:
   node:
     volumes:
-      - ../../test/slurm/mqt-slurm-test-environment.conf:/etc/systemd/system/slurmd.service.d/mqt-test.conf:ro
+      - ../../test/slurm/mqt-slurm-test-environment.conf:/etc/systemd/system/slurmd.service.d/mqt-dev.conf:ro

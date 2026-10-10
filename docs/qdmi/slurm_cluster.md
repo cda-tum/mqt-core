@@ -3,26 +3,30 @@
 Use this cluster to prototype scientific workflows that combine classical
 computation with QDMI devices. Submit jobs from a login node, place quantum
 stages on dedicated {term}`quantum access nodes <quantum access node>` (QANs),
-and inspect their resource use and outcomes through Slurm accounting. The same
-software environment supports DDSIM, IQM, and Amazon Braket.
+and inspect their resource use and outcomes through Slurm accounting. Each QAN
+has access to all connected QDMI devices and provides CPU and memory for circuit
+compilation and quantum job submission. Device implementations share one
+software environment; DDSIM, IQM, and Amazon Braket are examples of connections
+it can provide.
 
 The
 [cluster sources](https://github.com/munich-quantum-toolkit/core/tree/main/examples/slurm)
 provide these hosts:
 
-| Host                     | Role                                                       |
-| ------------------------ | ---------------------------------------------------------- |
-| `login`                  | User shell, Slurm clients, and shared software environment |
-| `controller`             | Scheduling and device availability monitors                |
-| `node` (two by default)  | Classical computation in the default `compute` partition   |
-| `qan-iqm`, `qan-braket`  | Quantum access through the `iqm` and `braket` partitions   |
-| `accounting`, `database` | Slurm accounting and persistent MariaDB storage            |
+| Host                     | Role                                                             |
+| ------------------------ | ---------------------------------------------------------------- |
+| `login`                  | User shell, Slurm clients, and shared software environment       |
+| `controller`             | Scheduling and device availability monitors                      |
+| `node` (two by default)  | Classical computation in the default `compute` partition         |
+| `qan` (two by default)   | Compilation and access to all devices in the `quantum` partition |
+| `accounting`, `database` | Slurm accounting and persistent MariaDB storage                  |
 
-Each compute node and QAN supplies two CPUs and 2 GiB of scheduled memory. Jobs
-run as `mqt-test` (UID/GID 10000), with cgroup v2 enforcing allocations. One
-Python 3.15 environment at `/opt/venv` contains MQT Core and the installed
-device implementations. The administrator maintains the catalogue; users supply
-their credentials. See {doc}`slurm` for deployment on an existing cluster.
+Each classical node supplies two CPUs and 2 GiB of scheduled memory; each QAN
+supplies four CPUs and 8 GiB. Jobs run as `mqt-dev` (UID/GID 10000), with cgroup
+v2 enforcing allocations. One Python environment managed by uv at `/opt/venv`
+contains MQT Core and the installed device implementations. The administrator
+maintains the catalogue; users supply their credentials. See {doc}`slurm` for
+deployment on an existing cluster.
 
 ## Start the cluster and log in
 
@@ -35,7 +39,7 @@ From an MQT Core checkout with the {doc}`build prerequisites <../installation>`
 installed:
 
 ```console
-uv build --python 3.15 --wheel --out-dir dist -Ccmake.define.DEPLOY=ON
+uv build --wheel --out-dir dist -Ccmake.define.DEPLOY=ON
 sh examples/slurm/prepare.sh
 docker compose -f examples/slurm/compose.yml up --build -d --wait --scale node=2
 docker compose -f examples/slurm/compose.yml exec --user 10000:10000 login bash --login
@@ -49,13 +53,13 @@ shell:
 ```console
 sinfo
 scontrol show licenses
-sbatch --wait --licenses=mqt.ddsim.default --time=00:05:00 \
+sbatch --wait --partition=quantum --licenses=mqt.ddsim.default --time=00:05:00 \
   --output=/jobs/slurm-%j.out \
-  --wrap='srun python /workspace/test/slurm/bell_job.py'
+  --wrap='srun python /workspace/test/slurm/bell_job.py mqt.ddsim.default'
 sacct -X --format=JobID,JobName,Partition,State,ExitCode,Elapsed,AllocTRES%80
 ```
 
-This executes a Bell circuit through DDSIM in the `compute` partition. Results
+This executes a Bell circuit through DDSIM in the `quantum` partition. Results
 appear in `/jobs`, shared by all nodes and backed by `build/slurm/jobs` on the
 host. Put application inputs, scripts, and outputs there, or add a shared
 application mount. The MQT Core checkout is available read-only at `/workspace`.
@@ -64,8 +68,8 @@ application mount. The MQT Core checkout is available read-only at `/workspace`.
 
 ## Connect quantum devices
 
-Build compatible Python 3.15 device wheels and place them alongside MQT Core in
-`dist` before building the cluster image:
+Build device wheels compatible with the cluster's Python environment and place
+them alongside MQT Core in `dist` before building the cluster image:
 
 ```text
 dist/
@@ -108,13 +112,17 @@ usual mechanism. Slurm exports their environment to jobs; credential files must
 also be readable by the user on the relevant QAN. Environment variables set for
 a daemon do not configure user jobs.
 
-Submit IQM jobs with `--partition=iqm --licenses=iqm.emerald.mock` and Braket
-jobs with `--partition=braket --licenses=amazon.braket.sv1`. Classical nodes use
-an internal network; QANs, the login node, and the monitoring controller also
-have outbound connectivity. Partitions route jobs to the appropriate nodes,
-while licenses limit concurrency across the cluster. Neither restricts which
-remote API a process may call: apply site egress policies and device
-authorization when access must be restricted to a particular QAN.
+Use `--partition=quantum` for every connected quantum device and request its
+license, for example `--licenses=iqm.emerald.mock` or
+`--licenses=amazon.braket.sv1`. Pass the same device ID to the application.
+Every QAN runs the same environment and can open sessions to several devices.
+Adding a device requires its implementation, catalogue entry, license, and
+credentials; it does not require a new partition or node type.
+
+Classical nodes use an internal network; QANs, the login node, and the
+monitoring controller also have outbound connectivity. Partitions place jobs and
+licenses limit concurrency. Device authentication and site network policy govern
+access to remote APIs.
 
 ## Chain quantum and classical stages
 
@@ -123,7 +131,7 @@ its results to `/jobs`, and propagate classical walkers on compute nodes. From
 the login shell, submit the application's two batch scripts:
 
 ```console
-measurement=$(sbatch --parsable --partition=iqm --licenses=iqm.emerald.mock measure.sh)
+measurement=$(sbatch --parsable --partition=quantum --licenses=iqm.emerald.mock measure.sh)
 sbatch --partition=compute --dependency=afterok:"$measurement" propagate.sh
 ```
 
@@ -142,7 +150,7 @@ cannot move an ordinary compute job into a QAN partition.
 
 `slurmdbd` records jobs in MariaDB, including user, account, partition, state,
 exit code, elapsed time, and allocated license TRES. The `research` account and
-`mqt-test` association are created at startup. Database and controller state
+`mqt-dev` association are created at startup. Database and controller state
 persist in named volumes. `sacct` can therefore inspect completed jobs after
 service restarts. Job environments and scripts are not archived. Applications
 should save software versions, input digests, and remote job IDs alongside
@@ -168,10 +176,10 @@ because reserved tokens can still appear in `Free`. A successful check is a
 snapshot for the monitor's identity, not a promise of user authorization or
 prompt execution at the remote service.
 
-Scale classical computation from the host:
+Scale classical and quantum access nodes from the host:
 
 ```console
-docker compose -f examples/slurm/compose.yml up -d --wait --scale node=4
+docker compose -f examples/slurm/compose.yml up -d --wait --scale node=4 --scale qan=3
 ```
 
 The cluster accepts up to 128 registered nodes. Drain nodes and wait for their
@@ -197,8 +205,9 @@ license contention, unavailable-device admission and recovery, job environment
 export, and accounting using the bundled DDSIM and SC implementations.
 
 The IQM and Braket repositories run their own authenticated simulator workloads
-on their QANs, in native and wheel installation modes. They supply credentials
-and an optional native build through a Compose overlay and setup script. Native
-libraries are compiled independently of the MQT Core image layer, and Python
-adapters share the common environment in either mode. IQM uses the Emerald
-Resonance mock and Braket uses SV1; these tests can incur service charges.
+in the shared quantum partition, in native and wheel installation modes. They
+supply credentials and an optional native build through a Compose overlay and
+setup script. Native libraries are compiled independently of the MQT Core image
+layer, and Python adapters share the common environment in either mode. IQM uses
+the Emerald Resonance mock and Braket uses SV1; these tests can incur service
+charges.

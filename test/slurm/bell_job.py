@@ -6,7 +6,7 @@
 #
 # Licensed under the MIT License
 
-"""Execute a Bell circuit on the DDSIM device named by the license environment."""
+"""Execute a Bell circuit on the DDSIM device selected by its device ID."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import os
 import time
 from pathlib import Path
 
-from mqt.core.qdmi import ProgramFormat, slurm
+from mqt.core.qdmi import ProgramFormat, builtin_driver
 
 BELL_PROGRAM = """OPENQASM 2.0;
 include "qelib1.inc";
@@ -32,11 +32,12 @@ SHOTS = 256
 def main() -> None:
     """Run the circuit, write its result, and optionally retain the allocation."""
     parser = argparse.ArgumentParser()
+    parser.add_argument("device")
     parser.add_argument("--hold", action="store_true")
     args = parser.parse_args()
 
     job_id = os.environ["SLURM_JOB_ID"]
-    device = slurm.open_device_from_license()
+    device = builtin_driver.open_device(args.device)
     job = device.submit_job(BELL_PROGRAM, ProgramFormat.QASM2, SHOTS)
     if not job.wait(60):
         msg = "DDSIM did not complete the Bell circuit within 60 seconds"

@@ -17,8 +17,6 @@ from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 from typing import NoReturn
 
-from ._qdmi_discovery import discover_qdmi_manifests
-
 
 def compiler() -> NoReturn:
     """Launch the bundled MQT compiler."""
@@ -30,19 +28,11 @@ def benchmark() -> NoReturn:
     run_tool("mqt-core-bench")
 
 
-def qdmi_check() -> NoReturn:
-    """Probe whether a QDMI device is operational."""
-    arguments: list[str] = []
-    if sys.argv[1:] != ["--help"]:
-        discover_qdmi_manifests(lambda path: arguments.extend(("--manifest", str(path))))
-    run_tool("mqt-core-qdmi-check", *arguments)
-
-
-def run_tool(name: str, *extra_arguments: str) -> NoReturn:
+def run_tool(name: str) -> NoReturn:
     """Run a bundled native tool and preserve its exit status."""
     suffix = ".exe" if sys.platform == "win32" else ""
     executable = Path(str(distribution("mqt-core").locate_file(f"mqt/core/bin/{name}{suffix}")))
-    arguments = [str(executable), *sys.argv[1:], *extra_arguments]
+    arguments = [str(executable), *sys.argv[1:]]
     if sys.platform == "win32":
         # Windows exec exits the launcher without waiting for the native tool.
         sys.exit(subprocess.run(arguments, check=False).returncode)  # ruff: ignore[subprocess-without-shell-equals-true]

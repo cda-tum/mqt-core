@@ -65,7 +65,7 @@ def test_probe_failure_keeps_block_until_recovery(
     monkeypatch.setattr(monitor, "scontrol", scontrol)
     monkeypatch.setattr(monitor.subprocess, "run", probe)
     arguments = ("--license", "example.device:2")
-    assert monitor.main(arguments) == 1
+    assert monitor.main((*arguments, "--watch")) == 1
     assert reservations[name] == "example.device:2"
     failure = 0
     assert monitor.main(arguments) == 0

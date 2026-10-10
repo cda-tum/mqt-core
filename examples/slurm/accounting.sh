@@ -17,7 +17,7 @@ account=$(sacctmgr --noheader --parsable2 show account research format=Account)
 if [ -z "$account" ]; then
     sacctmgr --immediate add account research Description="QDMI workloads" Organization=MQT
 fi
-association=$(sacctmgr --noheader --parsable2 show association where Cluster=mqt-core Account=research User=mqt-test format=User)
+association=$(sacctmgr --noheader --parsable2 show association where Cluster=mqt-core Account=research User=mqt-dev format=User)
 if [ -z "$association" ]; then
-    sacctmgr --immediate add user mqt-test Cluster=mqt-core Account=research DefaultAccount=research
+    sacctmgr --immediate add user mqt-dev Cluster=mqt-core Account=research DefaultAccount=research
 fi

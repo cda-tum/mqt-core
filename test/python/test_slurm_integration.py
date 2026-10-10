@@ -44,9 +44,10 @@ def load_runner() -> ModuleType:
 runner = load_runner()
 
 
-def test_runner_accepts_scaled_nodes() -> None:
-    """Run the same cluster with more compute nodes without a new Compose file."""
-    assert runner.parse_arguments(("--nodes", "3")).nodes == 3
+@pytest.mark.parametrize("nodes", [1, 3])
+def test_runner_accepts_scaled_nodes(nodes: int) -> None:
+    """Scale the classical pool independently of the quantum access nodes."""
+    assert runner.parse_arguments(("--nodes", str(nodes))).nodes == nodes
 
 
 def test_prepare_keeps_private_key_and_preserves_existing_cluster(tmp_path: Path) -> None:
