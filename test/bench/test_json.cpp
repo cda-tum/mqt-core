@@ -309,6 +309,16 @@ TEST(BenchmarkJSON, RejectsAlteredOrUnresolvedManifestData) {
       "counts.json:$/schema_version");
 }
 
+TEST(BenchmarkJSON, EvaluatesAResolvedManifest) {
+  const auto ghz = ::mqt::test::value(GHZ::create({.qubits = 2}));
+  const Counts counts{{"00", 5}, {"11", 3}};
+  EXPECT_EQ(::mqt::test::value(evaluateJSON(
+                toManifestJSON(ghz),
+                R"({"schema_version":1,"counts":{"00":5,"11":3}})")),
+            ::mqt::test::value(evaluationToJSON(
+                caseId(ghz), 8, ::mqt::test::value(ghz.evaluate(counts)))));
+}
+
 TEST(BenchmarkJSON, ListsBenchmarksAndRejectsUnknownSchemas) {
   EXPECT_EQ(
       listBenchmarksJSON(),

@@ -28,6 +28,7 @@
 #include "mlir/IR/MLIRContext.h"
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
@@ -129,6 +130,11 @@ struct Execution {
     const llvm::StringRef irBytes(program_.data(), program_.size());
     const bool sampling = numShots_ != 0;
     std::optional<std::ostringstream> output;
+    const auto captureOutput = llvm::scope_exit([&] {
+      if (output) {
+        qirOutput_ = std::move(*output).str();
+      }
+    });
     auto jitSession = qir::JitSession::create(
         irBytes, "QDMI job",
         sampling ? qir::Execution::Sampling : qir::Execution::StateExtraction,
@@ -219,6 +225,7 @@ struct Execution {
                             ->sampleWithRuntime(*worker, count, parts[i], false)
                       : (i == 0 ? **jitSession : *peer)
                             .sample(count, parts[i], nullptr, i == 0);
+              peer.reset();
               if (i != 0 && captureQIROutput_) {
                 records[i] = std::move(localOutput).str();
               }
@@ -249,9 +256,6 @@ struct Execution {
           *output << records[i];
         }
       }
-    }
-    if (output) {
-      qirOutput_ = std::move(*output).str();
     }
     for (auto& shot : shots_) {
       // QDMI spells the highest-index output bit first.

@@ -85,41 +85,6 @@ protected:
   std::ostringstream sink;
 };
 
-TEST_F(JitSessionTest, BindsRuntimeForStaticConstructorsAndDestructors) {
-  constexpr llvm::StringRef ir = R"(
-@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
-    [{ i32, ptr, ptr } { i32 65535, ptr @setup, ptr null }]
-@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }]
-    [{ i32, ptr, ptr } { i32 65535, ptr @cleanup, ptr null }]
-define void @setup() {
-  call void @__quantum__qis__x__body(ptr null)
-  ret void
-}
-define void @cleanup() {
-  call void @__quantum__rt__int_record_output(i64 3, ptr null)
-  ret void
-}
-define i64 @main() #0 {
-  call void @__quantum__qis__mz__body(ptr null, ptr null)
-  %measured = call i1 @__quantum__rt__read_result(ptr null)
-  %value = zext i1 %measured to i64
-  ret i64 %value
-}
-declare void @__quantum__qis__x__body(ptr)
-declare void @__quantum__qis__mz__body(ptr, ptr)
-declare i1 @__quantum__rt__read_result(ptr)
-declare void @__quantum__rt__int_record_output(i64, ptr)
-attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" }
-)";
-  std::async(std::launch::async, [&] {
-    qir::JitSession session(ir, "static-lifecycle", qir::Execution::Sampling,
-                            42);
-    session.runtime().setOstream(sink);
-    EXPECT_EQ(session.run(), 1);
-  }).get();
-  EXPECT_EQ(sink.str(), "OUTPUT\tINT\t3\n");
-}
-
 TEST(OpenQASMExecutionTest, ExecutesAffineQuantumSlices) {
   expectOpenQASMSampling(R"qasm(OPENQASM 3.1;
 qubit[4] q;
@@ -1485,6 +1450,7 @@ TEST(QIRJIT, KeepsConstructorAllocationsUntilSessionDestruction) {
 define void @initialize() {
   %array = call ptr @__quantum__rt__array_create_1d(i32 1, i64 3)
   store ptr %array, ptr @array
+  call void @__quantum__qis__x__body(ptr null)
   ret void
 }
 define void @finalize() {
@@ -1497,13 +1463,20 @@ define void @finalize() {
 define i64 @main() #0 {
   %array = load ptr, ptr @array
   %size = call i64 @__quantum__rt__array_get_size_1d(ptr %array)
-  ret i64 %size
+  call void @__quantum__qis__mz__body(ptr null, ptr null)
+  %measured = call i1 @__quantum__rt__read_result(ptr null)
+  %bit = zext i1 %measured to i64
+  %value = add i64 %size, %bit
+  ret i64 %value
 }
+declare void @__quantum__qis__x__body(ptr)
+declare void @__quantum__qis__mz__body(ptr, ptr)
+declare i1 @__quantum__rt__read_result(ptr)
 declare ptr @__quantum__rt__array_create_1d(i32, i64)
 declare i64 @__quantum__rt__array_get_size_1d(ptr)
 declare void @__quantum__rt__array_update_reference_count(ptr, i32)
 declare void @__quantum__rt__int_record_output(i64, ptr)
-attributes #0 = { "entry_point" }
+attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" }
 )";
   std::ostringstream output;
   auto created = std::async(std::launch::async, [ir] {
@@ -1511,7 +1484,7 @@ attributes #0 = { "entry_point" }
   });
   auto session = ::mqt::test::value(created.get());
   session->runtime().setOstream(output);
-  EXPECT_EQ(session->run(), 3);
+  EXPECT_EQ(session->run(), 4);
   session.reset();
   EXPECT_EQ(output.str(), "OUTPUT\tINT\t3\n");
 }

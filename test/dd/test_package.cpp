@@ -882,22 +882,28 @@ TEST(DDPackageTest, SerializationReportsWriteFailures) {
     GTEST_SKIP() << "Requires /dev/full to reject writes after opening";
   }
   for (const bool binary : {false, true}) {
-    EXPECT_THROW(serialize(vEdge::one(), "/dev/full", binary),
-                 std::runtime_error);
-    EXPECT_THROW(serialize(mEdge::one(), "/dev/full", binary),
-                 std::runtime_error);
+    EXPECT_EQ(::mqt::test::errorKind(
+                  [&] { return serialize(vEdge::one(), "/dev/full", binary); }),
+              ::mqt::ErrorCategory::IO);
+    EXPECT_EQ(::mqt::test::errorKind(
+                  [&] { return serialize(mEdge::one(), "/dev/full", binary); }),
+              ::mqt::ErrorCategory::IO);
   }
 }
 
 TEST(DDPackageTest, DeserializationPreservesImaginaryUnits) {
-  Package package(1);
+  auto package = ::mqt::test::value(Package::create(1));
   for (const auto* unit : {"i", "I", "+i", "+I", "-i", "-I"}) {
     SCOPED_TRACE(unit);
     const std::complex<fp> phase{0., *unit == '-' ? -1. : 1.};
     std::istringstream root(std::string("1\n") + unit + "\n");
-    EXPECT_EQ(dd::getValueByIndex(package.deserialize<vNode>(root), 0), phase);
+    EXPECT_EQ(::mqt::test::value(dd::getValueByIndex(
+                  ::mqt::test::value(package->deserialize<vNode>(root)), 0)),
+              phase);
     std::istringstream edge(std::string("1\n1\n0 0 (-1 ") + unit + ") ()\n");
-    EXPECT_EQ(dd::getValueByIndex(package.deserialize<vNode>(edge), 0), phase);
+    EXPECT_EQ(::mqt::test::value(dd::getValueByIndex(
+                  ::mqt::test::value(package->deserialize<vNode>(edge)), 0)),
+              phase);
   }
 }
 
@@ -2421,26 +2427,32 @@ TEST(DDPackageTest, FidelityOfMeasurementOutcomes) {
 }
 
 TEST(DDPackageTest, MeasurementFidelityValidatesWidthAndPermutation) {
-  EXPECT_EQ(Package::fidelityOfMeasurementOutcomes(vEdge::one(), {{0, 1.}}),
-            1.);
-  EXPECT_EQ(Package::fidelityOfMeasurementOutcomes(vEdge::zero(), {{0, 1.}}),
-            0.);
+  const auto fidelity = [](const vEdge& state, const SparsePVec& probs,
+                           const Permutation& permutation = {}) {
+    return ::mqt::test::value(
+        Package::fidelityOfMeasurementOutcomes(state, probs, permutation));
+  };
+  EXPECT_EQ(fidelity(vEdge::one(), {{0, 1.}}), 1.);
+  EXPECT_EQ(fidelity(vEdge::zero(), {{0, 1.}}), 0.);
   constexpr size_t width = std::numeric_limits<size_t>::digits;
-  Package package(width + 1);
-  EXPECT_EQ(Package::fidelityOfMeasurementOutcomes(
-                makeZeroState(width, package), {{0, 1.}}),
-            1.);
-  EXPECT_THROW(Package::fidelityOfMeasurementOutcomes(
-                   makeZeroState(width + 1, package), {{0, 1.}}),
-               std::out_of_range);
-  const auto state = makeBasisState(2, std::vector<bool>{true, false}, package);
-  EXPECT_EQ(Package::fidelityOfMeasurementOutcomes(state, {{2, 1.}},
-                                                   Permutation{{0, 1}, {1, 0}}),
-            1.);
+  auto package = ::mqt::test::value(Package::create(width + 1));
+  EXPECT_EQ(
+      fidelity(::mqt::test::value(makeZeroState(width, *package)), {{0, 1.}}),
+      1.);
+  const auto wide = ::mqt::test::value(makeZeroState(width + 1, *package));
+  EXPECT_EQ(::mqt::test::errorKind([&] {
+              return Package::fidelityOfMeasurementOutcomes(wide, {{0, 1.}});
+            }),
+            ::mqt::ErrorCategory::OutOfRange);
+  const auto state = ::mqt::test::value(
+      makeBasisState(2, std::vector<bool>{true, false}, *package));
+  EXPECT_EQ(fidelity(state, {{2, 1.}}, {{0, 1}, {1, 0}}), 1.);
   for (const auto& permutation : {Permutation{{2, 0}}, Permutation{{0, 1}}}) {
-    EXPECT_THROW(
-        Package::fidelityOfMeasurementOutcomes(state, {{0, 1.}}, permutation),
-        std::out_of_range);
+    EXPECT_EQ(::mqt::test::errorKind([&] {
+                return Package::fidelityOfMeasurementOutcomes(state, {{0, 1.}},
+                                                              permutation);
+              }),
+              ::mqt::ErrorCategory::OutOfRange);
   }
 }
 
@@ -3598,9 +3610,16 @@ TEST(DDPackageTest, RejectsInvalidConfigurationBeforeAllocation) {
   EXPECT_EQ(::mqt::test::errorKind([&] { return Package::create(1, config); }),
             ::mqt::ErrorCategory::InvalidArgument);
   config.utMatNumBucket = 1;
-  config.utVecInitialAllocationSize = 0;
-  EXPECT_EQ(::mqt::test::errorKind([&] { return Package::create(1, config); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+  for (const auto member : {
+           &DDPackageConfig::utVecInitialAllocationSize,
+           &DDPackageConfig::utMatInitialAllocationSize,
+       }) {
+    config.*member = 0;
+    EXPECT_EQ(
+        ::mqt::test::errorKind([&] { return Package::create(1, config); }),
+        ::mqt::ErrorCategory::InvalidArgument);
+    config.*member = 1;
+  }
   auto package = ::mqt::test::value(Package::create(1));
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return package->resize(Package::MAX_POSSIBLE_QUBITS + 1);
@@ -3620,24 +3639,4 @@ TEST(DDPackageTest, DeserializationRejectsThrowingInputStream) {
             ::mqt::ErrorCategory::IO);
 }
 
-TEST(DDPackageTest, RejectsUnrepresentableMeasurementOutcomes) {
-  auto package = ::mqt::test::value(Package::create(65));
-  const auto wide = ::mqt::test::value(makeZeroState(65, *package));
-  EXPECT_EQ(::mqt::test::errorKind([&] {
-              return Package::fidelityOfMeasurementOutcomes(wide, {{0, 1.}});
-            }),
-            ::mqt::ErrorCategory::OutOfRange);
-  const auto state = ::mqt::test::value(makeZeroState(2, *package));
-  for (const auto& permutation :
-       {Permutation{{Qubit{2}, Qubit{0}}}, Permutation{{Qubit{0}, Qubit{1}}}}) {
-    EXPECT_EQ(::mqt::test::errorKind([&] {
-                return Package::fidelityOfMeasurementOutcomes(state, {{0, 1.}},
-                                                              permutation);
-              }),
-              ::mqt::ErrorCategory::OutOfRange);
-  }
-  EXPECT_EQ(::mqt::test::value(Package::fidelityOfMeasurementOutcomes(
-                vEdge::zero(), {{0, 1.}})),
-            0.);
-}
 } // namespace dd

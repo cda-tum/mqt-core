@@ -256,7 +256,14 @@ TEST(DDComplexTest, ParsesFiniteSerializedNumbers) {
            {"+1.25", {1.25}},
            {"-2.5e-3", {-0.0025}},
            {"i", {0., 1.}},
+           {"I", {0., 1.}},
+           {"+i", {0., 1.}},
+           {"+I", {0., 1.}},
+           {"-i", {0., -1.}},
            {"-I", {0., -1.}},
+           {"0.5+i", {0.5, 1.}},
+           {"0.5-I", {0.5, -1.}},
+           {"0.5", {0.5, 0.}},
            {"-2.5e+3i", {0., -2500.}},
            {"1.25 - 2.5e-3i", {1.25, -0.0025}},
            {"0e-400", {}},
@@ -663,18 +670,4 @@ TEST(DDComplexTest, ComplexTextRejectsUnrepresentableValues) {
     EXPECT_EQ(::mqt::test::errorKind([&] { return ComplexValue::parse(text); }),
               ::mqt::ErrorCategory::InvalidArgument);
   }
-}
-
-TEST(DDComplexTest, ParsesImaginaryUnits) {
-  for (const auto* imaginary : {"i", "I", "+i", "+I", "-i", "-I"}) {
-    SCOPED_TRACE(imaginary);
-    ComplexValue value;
-    value.fromString("0.5", imaginary);
-    EXPECT_EQ(value.r, 0.5);
-    EXPECT_EQ(value.i, *imaginary == '-' ? -1. : 1.);
-  }
-  ComplexValue value;
-  value.fromString("0.5", "");
-  EXPECT_EQ(value.r, 0.5);
-  EXPECT_EQ(value.i, 0.);
 }
