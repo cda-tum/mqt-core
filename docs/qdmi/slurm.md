@@ -31,7 +31,9 @@ Save the following as `job.sh`, alongside your application, and submit it with
 {doc}`workflow playground <slurm_cluster>` uses this name for its quantum access
 nodes.
 
-```bash
+```{code-block} bash
+:caption: job.sh
+
 #!/bin/bash
 #SBATCH --partition=quantum
 #SBATCH --licenses=mqt.ddsim.default
@@ -43,7 +45,9 @@ srun python workload.py
 
 This `workload.py` executes a Bell circuit on DDSIM:
 
-```python
+```{code-block} python
+:caption: workload.py
+
 import os
 
 from mqt.core.qdmi import ProgramFormat

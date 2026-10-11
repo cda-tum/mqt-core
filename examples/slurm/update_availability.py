@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run --no-project --offline --no-python-downloads
+#!/usr/bin/env -S uv run --no-project --python 3.15 --offline --no-python-downloads
 # Copyright (c) 2023 - 2026 Chair for Design Automation, TUM
 # Copyright (c) 2025 - 2026 Munich Quantum Software Company GmbH
 # All rights reserved.
@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-__lazy_modules__ = ["argparse", "json", "logging", "pathlib", "re", "subprocess"]
+__lazy_modules__ = ["argparse", "json", "logging", "mqt.core.qdmi", "pathlib", "re", "subprocess"]
 
 import argparse
 import json
@@ -22,6 +22,9 @@ import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from mqt.core.qdmi import Device
+from mqt.core.qdmi import builtin_driver as qdmi_driver
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -34,9 +37,6 @@ def probe(device_id: str) -> int:
         Zero for an operational device, one for any failure.
     """
     try:
-        from mqt.core.qdmi import Device  # ruff: ignore[import-outside-top-level]
-        from mqt.core.qdmi import builtin_driver as qdmi_driver  # ruff: ignore[import-outside-top-level]
-
         device = qdmi_driver.open_device(device_id)
         return int(device.status() not in {Device.Status.IDLE, Device.Status.BUSY})
     except Exception:  # ruff: ignore[blind-except]

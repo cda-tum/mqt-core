@@ -126,35 +126,10 @@ def test_failed_accounting_record_is_not_success(monkeypatch: pytest.MonkeyPatch
         runner.job_finished("42")
 
 
-def test_preflight_does_not_touch_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A missing wheel must fail before starting Docker or writing a Munge key."""
-    runtime = tmp_path / "runtime"
-    monkeypatch.setattr(runner, "DIST", tmp_path)
-    monkeypatch.setattr(runner, "RUNTIME", runtime)
-    with pytest.raises(RuntimeError, match="exactly one MQT Core wheel"):
-        runner.main()
-    assert not runtime.exists()
-
-
-@pytest.mark.parametrize("platform", ["macosx_14_0_arm64", "manylinux_2_28_x86_64"])
-def test_preflight_rejects_incompatible_wheel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, platform: str) -> None:
-    """A host-built or wrong-architecture wheel cannot run in the Linux VM."""
-    (tmp_path / f"mqt_core-0-cp311-abi3-{platform}.whl").touch()
-    runtime = tmp_path / "runtime"
-    monkeypatch.setattr(runner, "DIST", tmp_path)
-    monkeypatch.setattr(runner, "RUNTIME", runtime)
-    monkeypatch.setattr(runner, "run", lambda *args: subprocess.CompletedProcess(args, 0, "aarch64 2", ""))
-    with pytest.raises(RuntimeError, match="requires a Linux aarch64 wheel"):
-        runner.main()
-    assert not runtime.exists()
-
-
 def test_diagnostic_failure_still_tears_down(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An unavailable diagnostic service must not orphan a failed cluster."""
-    (tmp_path / "mqt_core-0-cp311-abi3-linux_aarch64.whl").touch()
-    monkeypatch.setattr(runner, "DIST", tmp_path)
     monkeypatch.setattr(runner, "RUNTIME", tmp_path / "runtime")
-    monkeypatch.setattr(runner, "run", lambda *args: subprocess.CompletedProcess(args, 0, "aarch64 2", ""))
+    monkeypatch.setattr(runner, "run", lambda *args: subprocess.CompletedProcess(args, 0, "2", ""))
     commands = []
 
     def compose(*args: str, **_kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -202,6 +177,10 @@ def test_provider_options_preserve_command_arguments(tmp_path: Path) -> None:
         str(tmp_path),
         "--setup-script",
         "setup.sh",
+        "--package",
+        "iqm-qdmi[qiskit] @ git+https://github.com/iqm-finland/QDMI-on-IQM@main",
+        "--package",
+        "/workload[extras]",
         "--device-license",
         "provider.device",
         "--",
@@ -211,6 +190,10 @@ def test_provider_options_preserve_command_arguments(tmp_path: Path) -> None:
         "one argument",
     ))
     assert options.workload == tmp_path
+    assert options.package == [
+        "iqm-qdmi[qiskit] @ git+https://github.com/iqm-finland/QDMI-on-IQM@main",
+        "/workload[extras]",
+    ]
     assert options.command == ["python3", "probe.py", "--label", "one argument"]
 
 

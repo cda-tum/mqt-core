@@ -28,61 +28,41 @@ provide these hosts:
 | `accounting`, `database` | Slurm accounting and persistent MariaDB storage                  |
 
 Each classical node advertises two CPUs and 2 GiB of scheduled memory; each QAN
-advertises four CPUs and 8 GiB. These containers share the host or VM resources;
-scaling nodes does not add physical capacity. Jobs run as `mqt-dev` (UID/GID
-10000), with cgroup v2 enforcing allocations. One Python environment managed by
-uv at `/opt/venv` contains MQT Core and the installed device implementations.
-The administrator maintains the catalogue; users supply their credentials. See
-{doc}`slurm` for deployment on an existing cluster.
+advertises four CPUs and 8 GiB. These containers share the Docker engine's
+resources; scaling nodes does not add physical capacity. Jobs run as `mqt-dev`
+(UID/GID 10000), with cgroup v2 enforcing allocations. One Python environment
+managed by uv at `/opt/venv` contains MQT Core and the installed device
+implementations. The administrator maintains the catalogue; users supply their
+credentials. See {doc}`slurm` for deployment on an existing cluster.
 
 ## Start the cluster and log in
 
-Docker Compose supplies the hosts. The containers need rootful Docker and cgroup
-v2 on Linux, with privileged access for systemd and Slurm resource isolation.
-Use a disposable development host or Linux VM; this playground is not a security
-boundary for untrusted users.
+Use Docker Engine on Linux or Docker Desktop on macOS, with Docker Compose.
+Apple Silicon builds use native Linux ARM64. Docker builds MQT Core from your
+checkout, downloads its LLVM/MLIR toolchain with
+[setup-mlir](https://github.com/munich-quantum-software/setup-mlir), and
+installs the workload environment with uv. Build tools and source trees stay
+outside the runtime image.
 
-### Prepare a Linux host or an Apple Silicon Mac
+The cluster requires a rootful Linux Docker engine with cgroup v2 and privileged
+containers for systemd and Slurm resource isolation. Its Compose configuration
+uses
+[Docker Desktop's systemd setup](https://docs.docker.com/desktop/release-notes/#430),
+including the host cgroup namespace. Enhanced Container Isolation must be
+disabled for this playground. For small demonstrations, allocate at least four
+CPUs and 12 GiB of RAM to Docker; size workloads against these shared resources.
+Use this playground for trusted development workloads.
 
-On Linux, use an MQT Core checkout with the
-{doc}`build prerequisites <../installation>` installed. On macOS, run the same
-setup inside a Linux VM. For example, with
-[Lima's rootful Docker template](https://lima-vm.io/docs/examples/containers/docker/):
-
-```bash
-limactl start --name=mqt-slurm --vm-type=vz \
-  --cpus=4 --memory=12 --disk=80 template:docker-rootful
-limactl shell mqt-slurm
-```
-
-Inside the VM, clone the repositories under the guest's `$HOME` and install the
-Linux build prerequisites. Keep the checkout and runtime files on the guest
-filesystem, rather than Lima's shared macOS home mount: Munge keys and job files
-need Linux ownership and permissions. Apple Silicon uses native Linux ARM64
-images and wheels; no x86 emulation is needed.
-
-:::{note}
-Build wheels **inside Linux**, or download Linux wheels matching the Docker
-engine's architecture. A wheel built on macOS cannot be installed in the
-cluster. The integration runs on Linux ARM64; the macOS VM route has not been
-exercised in CI. Docker Desktop's privileged cgroup setup is not covered by
-these checks.
-:::
-
-### Build the environment and open a login shell
-
-Run these commands on the Linux host or inside the Linux VM:
+From the MQT Core checkout:
 
 ```bash
-uv build --wheel --out-dir dist -Ccmake.define.DEPLOY=ON
 sh examples/slurm/prepare.sh
-docker compose -f examples/slurm/compose.yml up --build -d --wait --scale node=2
+docker compose -f examples/slurm/compose.yml up --build -d --wait
 docker compose -f examples/slurm/compose.yml exec --user 10000:10000 login bash --login
 ```
 
-`dist` must contain exactly one Linux MQT Core wheel matching the Docker engine
-architecture. The cluster installs the wheels into its common environment and
-puts its executables on `PATH`; jobs need no activation or package installation.
+The image supplies one environment on `PATH`; jobs need no activation or package
+installation. Subsequent builds reuse the downloaded toolchain and uv caches.
 The following commands run in the login shell:
 
 ```bash
@@ -103,22 +83,36 @@ application mount. The MQT Core checkout is available read-only at `/workspace`.
 
 ## Connect quantum devices
 
-Build Linux device wheels matching the cluster's architecture and Python
-environment, and place them alongside MQT Core in `dist` before building the
-cluster image:
+Add packages to `MQT_CORE_SLURM_PACKAGES` using
+[uv requirements](https://docs.astral.sh/uv/pip/dependencies/). For example,
+save this as `devices.txt` to build both device implementations from their
+current sources:
 
-```text
-dist/
-  mqt_core-....whl
-  iqm_qdmi-....whl
-  amazon_braket_qdmi-....whl
+```{code-block} text
+:caption: devices.txt
+
+iqm-qdmi[qiskit] @ git+https://github.com/iqm-finland/QDMI-on-IQM.git@main
+amazon-braket-qdmi[qiskit] @ git+https://github.com/munich-quantum-software/amazon-braket-qdmi-device.git@main
 ```
 
-Subdirectories are accepted. Use the device implementations' current `main`
-branches for this development setup. All implementations and Qiskit adapters
-share `/opt/venv`; MQT Core's PennyLane adapter is included too. Installed
-wheels supply device manifests. Targeted driver sessions open only their
-selected device, so sessions for several implementations can coexist.
+Then rebuild the shared environment:
+
+```bash
+export MQT_CORE_SLURM_PACKAGES="$(cat devices.txt)"
+docker compose -f examples/slurm/compose.yml up --build -d --wait
+```
+
+Replace `main` with a full commit SHA to fix the source revision. For published
+packages, use names such as `iqm-qdmi[qiskit]` and optional version constraints.
+To build a local checkout, set `MQT_CORE_SLURM_WORKLOAD` to its absolute parent
+directory and use a container path such as `/workload/QDMI-on-IQM[qiskit]` in
+the requirements. Source packages are compiled inside Docker for its
+architecture.
+
+All implementations and adapters share `/opt/venv`; MQT Core's Qiskit and
+PennyLane adapters are included. Installed packages supply device manifests.
+Targeted driver sessions open only their selected device, so sessions for
+several implementations can coexist.
 
 Before startup, configure concurrency limits and their accounting records in
 `build/slurm/slurm.conf`:

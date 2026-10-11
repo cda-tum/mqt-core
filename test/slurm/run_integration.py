@@ -32,7 +32,6 @@ if TYPE_CHECKING:
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "test" / "slurm"
 CLUSTER = ROOT / "examples" / "slurm"
-DIST = ROOT / "dist"
 RUNTIME = ROOT / "build" / "slurm-tests" / uuid.uuid4().hex
 NODES: list[str] = []
 QANS: list[str] = []
@@ -408,7 +407,7 @@ def parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     """Read the device build inputs and the command to run in an allocation."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workload", type=Path, default=CLUSTER)
-    parser.add_argument("--dist", type=Path, default=DIST)
+    parser.add_argument("--package", action="append", default=[], help="additional uv requirement (repeatable)")
     parser.add_argument("--nodes", type=int, default=2)
     parser.add_argument("--setup-script", default="")
     parser.add_argument("--compose-file", type=Path)
@@ -500,14 +499,10 @@ def test_job_environment() -> None:
 def main(arguments: Sequence[str] = ()) -> None:
     """Build the shared cluster and run its MQT Core or external device workload."""
     options = parse_arguments(arguments)
-    wheels = tuple(options.dist.glob("mqt_core-*.whl"))
-    if len(wheels) != 1:
-        msg = f"Build exactly one MQT Core wheel in {options.dist}, found {len(wheels)}"
-        raise RuntimeError(msg)
     COMPOSE_ENV.update({
         "MQT_CORE_SLURM_CORE": str(ROOT),
         "MQT_CORE_SLURM_WORKLOAD": str(options.workload.resolve()),
-        "MQT_CORE_SLURM_DIST": str(options.dist.resolve()),
+        "MQT_CORE_SLURM_PACKAGES": "\n".join(options.package) or os.environ.get("MQT_CORE_SLURM_PACKAGES", ""),
         "MQT_CORE_SLURM_SETUP_SCRIPT": options.setup_script,
     })
     COMPOSE_FILES[:] = ("--file", str(options.compose_file.resolve())) if options.compose_file else ()
@@ -517,24 +512,9 @@ def main(arguments: Sequence[str] = ()) -> None:
     success = False
     started = False
     try:
-        architecture, cgroup_version = run((
-            "docker",
-            "info",
-            "--format",
-            "{{.Architecture}} {{.CgroupVersion}}",
-        )).stdout.split()
+        cgroup_version = run(("docker", "info", "--format", "{{.CgroupVersion}}")).stdout.strip()
         if cgroup_version != "2":
             msg = f"The Slurm integration requires Docker on cgroup v2, got {cgroup_version!r}"
-            raise RuntimeError(msg)
-        architecture = {"arm64": "aarch64", "amd64": "x86_64"}.get(architecture, architecture)
-        wheel_platforms = wheels[0].stem.rsplit("-", maxsplit=1)[-1].split(".")
-        if not any(
-            tag.startswith(("linux_", "manylinux")) and tag.endswith(f"_{architecture}") for tag in wheel_platforms
-        ):
-            msg = (
-                f"The Docker engine requires a Linux {architecture} wheel, got {wheels[0].name}. "
-                "Build MQT Core inside the Linux VM or download its matching Linux CI wheel."
-            )
             raise RuntimeError(msg)
 
         clean_runtime()
