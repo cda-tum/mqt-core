@@ -22,7 +22,6 @@
 #include "mqt/Dialect/QCO/Transforms/NativeSynthesis/NativeCost.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Utils/Drivers.h"
-#include "mqt/Dialect/QCO/Utils/FunctionUtils.h"
 #include "mqt/Dialect/QCO/Utils/Graph.h"
 #include "mqt/Dialect/QCO/Utils/Layout.h"
 #include "mqt/Dialect/QCO/Utils/Sorting.h"
@@ -502,7 +501,8 @@ struct PlacementPass final
 protected:
   void runOnOperation() override {
     auto moduleOp = getOperation();
-    if (failed(mqt::verifyQuantumAllocations(moduleOp))) {
+    if (failed(verifyLinearity(moduleOp)) ||
+        failed(mqt::verifyQuantumAllocations(moduleOp))) {
       signalPassFailure();
       return;
     }
@@ -913,7 +913,8 @@ protected:
       return;
     }
 
-    if (failed(mqt::verifyQuantumAllocations(moduleOp))) {
+    if (failed(verifyLinearity(moduleOp)) ||
+        failed(mqt::verifyQuantumAllocations(moduleOp))) {
       signalPassFailure();
       return;
     }
@@ -1181,12 +1182,6 @@ private:
                 const auto position =
                     cast<OpResult>(wires[index].qubit()).getResultNumber();
                 auto argument = loop.getRegionIterArgs()[position];
-                const auto origin = traceQubitArgument(
-                    *loop.getBody(), loop.getYieldedValues()[position]);
-                if (failed(origin) || *origin != argument.getArgNumber()) {
-                  supported = false;
-                  return WalkResult::interrupt();
-                }
                 children[index] = WireIterator(argument);
               }
               const size_t iterations =
@@ -1218,8 +1213,8 @@ private:
 
   /// Return an initial layout and whether it is known to need no routing.
   ///
-  /// Counted loops contribute interactions only when their scalar wires retain
-  /// positional correspondence. Other regions use identity and random starts.
+  /// Counted scalar loops contribute weighted interactions. Other regions use
+  /// identity and random starts.
   [[nodiscard]] std::optional<std::pair<Layout<QubitIndex>, bool>>
   generateGreedyLayout(const Wires& wires, const Environment& env) const {
     DenseMap<QubitIndexPair, size_t> weights;

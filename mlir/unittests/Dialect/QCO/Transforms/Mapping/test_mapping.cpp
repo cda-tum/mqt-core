@@ -3013,6 +3013,18 @@ TEST_F(MappingPassFixture, KeepFallbackForUnsupportedLoopInteractions) {
                                       : "%u, %w, %t");
     auto moduleOp = parseSourceString<ModuleOp>(source, context.get());
     ASSERT_TRUE(moduleOp);
+    if (mode == "permuted") {
+      attachTestEnvironment(*moduleOp, target);
+      const auto before = printModule(*moduleOp);
+      ScopedDiagnosticHandler handler(context.get(),
+                                      [](Diagnostic&) { return success(); });
+      EXPECT_TRUE(failed(verifyLinearity(*moduleOp)));
+      EXPECT_TRUE(failed(runPass(
+          *moduleOp, target,
+          MappingPassOptions{.niterations = 0, .ntrials = 1, .seed = 42})));
+      EXPECT_EQ(printModule(*moduleOp), before);
+      continue;
+    }
     ASSERT_TRUE(succeeded(verifyLinearity(*moduleOp)));
     ASSERT_TRUE(succeeded(runPass(
         *moduleOp, target,

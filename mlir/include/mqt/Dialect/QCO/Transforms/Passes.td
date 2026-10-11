@@ -139,10 +139,8 @@ def UnrollLoopsForPayload : Pass<"unroll-loops-for-payload", "mlir::ModuleOp"> {
     require fixed quantum indices and specialize these loops. Scalar loops
     remain when supported by the payload. Run QCO cleanup first to move
     complete constant-slot tensor accesses outside structured control flow.
-    Specialize a constant inner sweep and canonicalize tensor accesses in its
-    enclosing loop chain before reconsidering those loops. Enclosing loops can
-    then remain as scalar-qubit iterations. Unknown inner bounds keep outer
-    specialization; this search does not cross conditional branches.
+    Constant inner sweeps can become scalar-qubit loops after tensor cleanup,
+    preserving enclosing loops. This analysis stays within nested loop chains.
     The `max-operations` option limits cloned body operations to one billion by default.
     Run constant propagation and QCO cleanup again after this pass, then
     `legalize-control-flow` to check the remaining branches and loops.
@@ -291,10 +289,9 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     For programs with two-qubit interactions, the pass also constructs an
     interaction-weighted greedy layout. Statically counted scalar-qubit
     `scf.for` loops contribute their body interactions weighted by the trip
-    count, including nested loops. Each loop must yield the same wires in
-    argument order. Zero or unknown trip counts, other control flow, and
-    permuted loop state keep the identity/random fallback. Weights saturate below the overflow
-    limit for layout costs. Routing restores the layout at loop boundaries.
+    count, including nested loops. Zero or unknown trip counts and other control
+    flow keep the identity/random fallback. Layout costs use saturating weights;
+    routing restores the layout at loop boundaries.
     For disjoint interaction paths and isolated qubits, it first tries to place
     them along one path through the target sites. The walk prefers neighbors
     with fewer unused edges and accepts only a complete placement; it does not
@@ -619,10 +616,8 @@ def DecomposeMultiControlled
     restores them coherently. The decomposition preserves phase, including
     the conditional phase of a rotation by `2π`.
 
-    Phase synthesis uses the same decompositions for constant and runtime
-    angles, with no additional qubits and quadratic gate count in the number
-    of controls. Runtime arithmetic only scales the angle by powers of two;
-    constant angles retain the specialized `±π` path.
+    Phase synthesis needs no additional qubits and uses a quadratic number of
+    gates. Runtime angles require only power-of-two scaling.
 
     For controlled SWAP, `C ∪ {b}` is the original control set together with
     SWAP target `b`, and the MCX target is the other SWAP qubit `a`. The

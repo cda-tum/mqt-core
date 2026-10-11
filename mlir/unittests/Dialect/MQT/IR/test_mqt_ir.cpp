@@ -751,7 +751,9 @@ TEST_F(MQTIRTest, RejectsNonUnitaryLoopBodiesAndQubitPermutations) {
     std::string diagnostics;
     ScopedDiagnosticHandler handler(context.get(), [&](Diagnostic& diagnostic) {
       diagnostics += diagnostic.str();
-      rejectedBody |= StringRef(diagnostic.str()).contains("unitary QC");
+      rejectedBody |= StringRef(diagnostic.str()).contains("unitary QC") ||
+                      StringRef(diagnostic.str())
+                          .contains("positional quantum state correspondence");
       return success();
     });
     EXPECT_FALSE(parse(source));
@@ -786,10 +788,11 @@ TEST_F(MQTIRTest, RejectsEmptyUnitaryBodies) {
 }
 
 TEST_F(MQTIRTest, RejectsCyclicUnitaryQubitFlow) {
-  bool sawCycle = false;
+  bool sawInvalidFlow = false;
   ScopedDiagnosticHandler handler(context.get(), [&](Diagnostic& diagnostic) {
-    sawCycle |= StringRef(diagnostic.str())
-                    .contains("unitary QCO result has cyclic qubit flow");
+    sawInvalidFlow |=
+        StringRef(diagnostic.str())
+            .contains("must return its quantum arguments positionally");
     return success();
   });
   EXPECT_FALSE(parse(R"mlir(
@@ -800,7 +803,7 @@ TEST_F(MQTIRTest, RejectsCyclicUnitaryQubitFlow) {
       return %b : !qco.qubit
     }
   )mlir"));
-  EXPECT_TRUE(sawCycle);
+  EXPECT_TRUE(sawInvalidFlow);
 }
 
 TEST_F(MQTIRTest, RejectsMalformedUnitaryBodyOperations) {
