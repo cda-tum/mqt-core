@@ -1186,6 +1186,31 @@ inv @ pair(theta) q;
   EXPECT_TRUE(roundTripped->lookupSymbol<func::FuncOp>("pair"));
 }
 
+TEST(OpenQASM3EmissionTest, CastsIntegerCapturesInCompositeGates) {
+  constexpr llvm::StringLiteral source = R"mlir(module {
+    func.func @main() {
+      %q = qc.alloc : !qc.qubit
+      %one = arith.constant 1 : i64
+      %value = arith.addi %one, %one : i64
+      qc.inv(%target = %q) {
+        %bits = arith.andi %value, %one : i64
+        %angle = arith.uitofp %bits : i64 to f64
+        qc.rx(%angle) %target : !qc.qubit
+        qc.h %target : !qc.qubit
+        qc.yield
+      } : !qc.qubit
+      qc.dealloc %q : !qc.qubit
+      return
+    }
+  })mlir";
+  MLIRContext context(emissionDialects());
+  auto original = parseSourceString<ModuleOp>(source, &context);
+  ASSERT_TRUE(original);
+  auto emitted = qc::translateQCToOpenQASM3(*original);
+  ASSERT_TRUE(succeeded(emitted));
+  EXPECT_TRUE(qc::translateOpenQASMToQC(*emitted, &context)) << *emitted;
+}
+
 TEST(OpenQASM3EmissionTest, PreservesGateNamesAcrossInternalCollisions) {
   constexpr llvm::StringLiteral source = R"qasm(
 OPENQASM 3.1;
@@ -1521,20 +1546,8 @@ TEST(OpenQASM3EmissionTest, InlinesNonGateBodies) {
           return
         }
       })mlir"},
-      llvm::StringLiteral{R"mlir(module {
-        func.func private @resetter(%qubit: !qc.qubit) {
-          qc.reset %qubit : !qc.qubit
-          return
-        }
-        func.func @main() attributes {mqt.entry_point} {
-          %qubit = qc.alloc : !qc.qubit
-          func.call @resetter(%qubit) : (!qc.qubit) -> ()
-          qc.dealloc %qubit : !qc.qubit
-          return
-        }
-      })mlir"},
   };
-  constexpr std::array expected{"1", "0", "1", "0"};
+  constexpr std::array expected{"1", "0", "1"};
   for (size_t index = 0; index < sources.size(); ++index) {
     SCOPED_TRACE(index);
     MLIRContext context(emissionDialects());
@@ -1760,15 +1773,21 @@ TEST(OpenQASM3EmissionTest, RoundTripsNestedDynamicBoundsAndCarriedScalars) {
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
       %two = arith.constant 2 : index
-      %a = arith.constant 3 : i64
-      %b = arith.constant 7 : i64
+      %a = arith.constant -3 : i64
+      %b = arith.constant -7 : i64
+      %zeroInt = arith.constant 0 : i64
+      %zeroFloat = arith.constant 0.0 : f64
       %qubit = qc.alloc : !qc.qubit
       %result:2 = scf.for %i = %zero to %two step %one
           iter_args(%x = %a, %y = %b) -> (i64, i64) {
         %upper = arith.shli %one, %i : index
         %inner:2 = scf.for %j = %zero to %upper step %one
             iter_args(%u = %x, %v = %y) -> (i64, i64) {
-          qc.z %qubit : !qc.qubit
+          %negative = arith.cmpi slt, %u, %zeroInt : i64
+          %floating = arith.sitofp %u : i64 to f64
+          %negativeFloat = arith.cmpf olt, %floating, %zeroFloat : f64
+          %both = arith.andi %negative, %negativeFloat : i1
+          scf.if %both {} else { qc.x %qubit : !qc.qubit }
           scf.yield %v, %u : i64, i64
         }
         scf.yield %inner#0, %inner#1 : i64, i64

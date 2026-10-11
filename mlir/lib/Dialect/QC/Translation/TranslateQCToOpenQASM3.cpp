@@ -223,6 +223,7 @@ private:
   size_t expressionWork = 0;
   size_t numClassicalBits = 0;
   bool supportsDispatch = true;
+  bool inCompositeHelper_ = false;
 
   static constexpr size_t MAX_EXPRESSION_NESTING = 256;
   static constexpr size_t MAX_EXPRESSION_WORK = 4096;
@@ -1070,6 +1071,16 @@ private:
                                     "signed integers support at most 64 bits")
                    : text;
       }
+      auto loop = scf::getForInductionVarOwner(operand);
+      if (width > 1 && !inCompositeHelper_ && valueNames.contains(operand) &&
+          isSigned == (operand.getType().isIndex() ||
+                       (loop && loop.getInductionVar() == operand))) {
+        return text;
+      }
+      if (auto constant = operand.getDefiningOp<arith::ConstantOp>();
+          constant && isSigned && width == 64) {
+        return emitConstant(constant.getValue(), constant.getLoc());
+      }
       return (Twine(isSigned ? "int[" : "uint[") + Twine(width) + "](" + *text +
               ")")
           .str();
@@ -1105,27 +1116,35 @@ private:
           "(" + *rhs + " ^ ((" + *lhs + " ^ " + *rhs + ") & " + mask + "))";
       return type.isInteger(1) ? "bool(" + selected + ")" : selected;
     }
-    if (isa<arith::ExtUIOp, arith::ExtSIOp, arith::TruncIOp>(operation)) {
+    if (isa<arith::ExtUIOp, arith::ExtSIOp, arith::TruncIOp, arith::IndexCastOp,
+            arith::IndexCastUIOp>(operation)) {
       auto input = operation->getOperand(0);
-      if (cast<IntegerType>(type).getWidth() > 64 ||
-          (cast<IntegerType>(input.getType()).getWidth() > 64 &&
+      const auto inputType = dyn_cast<IntegerType>(input.getType());
+      const auto outputType = dyn_cast<IntegerType>(type);
+      const auto inputWidth = inputType ? inputType.getWidth() : 64U;
+      const auto width = outputType ? outputType.getWidth() : 64U;
+      if (width > 64 ||
+          (inputWidth > 64 &&
            (input.getDefiningOp() == nullptr ||
             input.getDefiningOp()->getName().getStringRef() != "math.ctpop"))) {
         return failExpression(value, "integer casts support at most 64 bits");
       }
-      auto operand = integer(input, isa<arith::ExtSIOp>(operation));
+      auto operand =
+          integer(input, isa<arith::ExtSIOp, arith::IndexCastOp>(operation));
       if (failed(operand)) {
         return failure();
       }
-      const auto width = cast<IntegerType>(type).getWidth();
       if (width == 1) {
         return (Twine("((") + *operand + " & uint[" +
-                Twine(std::min(cast<IntegerType>(input.getType()).getWidth(),
-                               64U)) +
-                "](1)) != 0)")
+                Twine(std::min(inputWidth, 64U)) + "](1)) != 0)")
             .str();
       }
-      return (Twine("uint[") + Twine(width) + "](" + *operand + ")").str();
+      if (width == inputWidth) {
+        return operand;
+      }
+      return (Twine(type.isIndex() ? "int[" : "uint[") + Twine(width) + "](" +
+              *operand + ")")
+          .str();
     }
     if (isa<arith::AddIOp, arith::SubIOp, arith::MulIOp, arith::DivUIOp,
             arith::DivSIOp, arith::RemUIOp, arith::RemSIOp, arith::AndIOp,
@@ -1153,7 +1172,7 @@ private:
       if (failed(lhs) || failed(rhs)) {
         return failure();
       }
-      if (!boundedArithmetic &&
+      if (width < 64 && !boundedArithmetic &&
           isa<arith::AddIOp, arith::SubIOp, arith::MulIOp>(operation)) {
         // Unsigned machine arithmetic preserves every narrower modular result.
         *lhs = "uint[64](" + *lhs + ")";
@@ -1184,7 +1203,7 @@ private:
       if (width == 1) {
         return (Twine("(uint[1](") + expression + ") != 0)").str();
       }
-      return width > 64 || boundedArithmetic
+      return width >= 64 || boundedArithmetic
                  ? expression
                  : (Twine("uint[") + Twine(width) + "](" + expression + ")")
                        .str();
@@ -1263,26 +1282,6 @@ private:
         return failure();
       }
       return (Twine("(-") + *operand + ")").str();
-    }
-    if (isa<arith::IndexCastOp, arith::IndexCastUIOp>(operation)) {
-      auto input = operation->getOperand(0);
-      const auto inputType = dyn_cast<IntegerType>(input.getType());
-      const auto outputType = dyn_cast<IntegerType>(type);
-      if ((inputType && inputType.getWidth() > 64) ||
-          (outputType && outputType.getWidth() > 64)) {
-        return failExpression(value, "index casts support at most 64 bits");
-      }
-      auto operand = integer(input, isa<arith::IndexCastOp>(operation));
-      if (failed(operand)) {
-        return failure();
-      }
-      if (type.isInteger(1)) {
-        return "((uint[64](" + *operand + ") & uint[64](1)) != 0)";
-      }
-      const auto width = outputType ? outputType.getWidth() : 64U;
-      return (Twine(type.isIndex() ? "int[" : "uint[") + Twine(width) + "](" +
-              *operand + ")")
-          .str();
     }
     if (isScalarCast(name)) {
       auto input = operation->getOperand(0);
@@ -1528,7 +1527,9 @@ private:
   }
 
   [[nodiscard]] FailureOr<std::string> localType(Value value) {
-    auto kind = inferScalarKind(value);
+    auto kind = value.getType().isInteger(64) ? "uint[64]"
+                : value.getType().isIndex()   ? "int[64]"
+                                              : inferScalarKind(value);
     if (kind == "bit") {
       kind = "bool";
     }
@@ -1581,7 +1582,8 @@ private:
     if (failed(type) || failed(expression)) {
       return failure();
     }
-    if (integer && integer.getWidth() > 1 && !wide) {
+    if (value.getDefiningOp<cbit::ReadOp>() && integer.getWidth() > 1 &&
+        !wide) {
       *expression = *type + "(" + *expression + ")";
     }
     auto name = uniqueName("v", nextScalar);
@@ -2092,6 +2094,7 @@ private:
     definitionOutput << ' ' << llvm::join(qubitNames, ", ") << " {\n";
     definitionOutput.indent();
     llvm::SaveAndRestore outputGuard(output, &definitionOutput);
+    llvm::SaveAndRestore compositeGuard(inCompositeHelper_, true);
     for (auto* operation : unitaries) {
       auto call = emitGateCall(cast<UnitaryOpInterface>(operation));
       if (failed(call)) {

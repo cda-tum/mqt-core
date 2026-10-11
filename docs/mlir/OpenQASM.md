@@ -309,6 +309,10 @@ subtraction, and multiplication of index or 64-bit integer values use signed
 expressions when range analysis proves they cannot overflow. This preserves
 affine bounds through negative temporaries, including bounds of empty nested
 loops. Other integer arithmetic keeps its modular unsigned representation.
+Private integer temporaries use `uint[n]`; index temporaries use `int[64]`.
+Assignments use OpenQASM's implicit numeric conversions. Explicit casts preserve
+signed operations, integer widths, and conversions from bit registers. Scalar
+outputs keep the canonical types below.
 
 For loops preserve their exclusive upper bound when exported to an inclusive
 OpenQASM range. Dynamic bounds are supported in the entry function and are
