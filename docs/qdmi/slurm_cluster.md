@@ -9,6 +9,12 @@ compilation and quantum job submission. Device implementations share one
 software environment; DDSIM, IQM, and Amazon Braket are examples of connections
 it can provide.
 
+```{figure} ../_static/slurm-playground.svg
+:alt: Login submission through Slurm to classical or quantum access nodes, with shared QDMI devices and persistent accounting.
+
+Separate classical and quantum stages while sharing one QDMI environment.
+```
+
 The
 [cluster sources](https://github.com/munich-quantum-toolkit/core/tree/main/examples/slurm)
 provide these hosts:
@@ -21,36 +27,65 @@ provide these hosts:
 | `qan` (two by default)   | Compilation and access to all devices in the `quantum` partition |
 | `accounting`, `database` | Slurm accounting and persistent MariaDB storage                  |
 
-Each classical node supplies two CPUs and 2 GiB of scheduled memory; each QAN
-supplies four CPUs and 8 GiB. Jobs run as `mqt-dev` (UID/GID 10000), with cgroup
-v2 enforcing allocations. One Python environment managed by uv at `/opt/venv`
-contains MQT Core and the installed device implementations. The administrator
-maintains the catalogue; users supply their credentials. See {doc}`slurm` for
-deployment on an existing cluster.
+Each classical node advertises two CPUs and 2 GiB of scheduled memory; each QAN
+advertises four CPUs and 8 GiB. These containers share the host or VM resources;
+scaling nodes does not add physical capacity. Jobs run as `mqt-dev` (UID/GID
+10000), with cgroup v2 enforcing allocations. One Python environment managed by
+uv at `/opt/venv` contains MQT Core and the installed device implementations.
+The administrator maintains the catalogue; users supply their credentials. See
+{doc}`slurm` for deployment on an existing cluster.
 
 ## Start the cluster and log in
 
-Docker Compose supplies the hosts. Use rootful Docker on a disposable Linux host
-with cgroup v2: the containers run systemd with privileged access to the host
-cgroup hierarchy. This is a development playground, not a security boundary for
-untrusted users.
+Docker Compose supplies the hosts. The containers need rootful Docker and cgroup
+v2 on Linux, with privileged access for systemd and Slurm resource isolation.
+Use a disposable development host or Linux VM; this playground is not a security
+boundary for untrusted users.
 
-From an MQT Core checkout with the {doc}`build prerequisites <../installation>`
-installed:
+### Prepare a Linux host or an Apple Silicon Mac
 
-```console
+On Linux, use an MQT Core checkout with the
+{doc}`build prerequisites <../installation>` installed. On macOS, run the same
+setup inside a Linux VM. For example, with
+[Lima's rootful Docker template](https://lima-vm.io/docs/examples/containers/docker/):
+
+```bash
+limactl start --name=mqt-slurm --vm-type=vz \
+  --cpus=4 --memory=12 --disk=80 template:docker-rootful
+limactl shell mqt-slurm
+```
+
+Inside the VM, clone the repositories under the guest's `$HOME` and install the
+Linux build prerequisites. Keep the checkout and runtime files on the guest
+filesystem, rather than Lima's shared macOS home mount: Munge keys and job files
+need Linux ownership and permissions. Apple Silicon uses native Linux ARM64
+images and wheels; no x86 emulation is needed.
+
+:::{note}
+Build wheels **inside Linux**, or download Linux wheels matching the Docker
+engine's architecture. A wheel built on macOS cannot be installed in the
+cluster. The integration runs on Linux ARM64; the macOS VM route has not been
+exercised in CI. Docker Desktop's privileged cgroup setup is not covered by
+these checks.
+:::
+
+### Build the environment and open a login shell
+
+Run these commands on the Linux host or inside the Linux VM:
+
+```bash
 uv build --wheel --out-dir dist -Ccmake.define.DEPLOY=ON
 sh examples/slurm/prepare.sh
 docker compose -f examples/slurm/compose.yml up --build -d --wait --scale node=2
 docker compose -f examples/slurm/compose.yml exec --user 10000:10000 login bash --login
 ```
 
-`dist` must contain exactly one MQT Core wheel. The cluster installs the wheels
-into its common environment and puts its executables on `PATH`; jobs need no
-activation or package installation. The following commands run in the login
-shell:
+`dist` must contain exactly one Linux MQT Core wheel matching the Docker engine
+architecture. The cluster installs the wheels into its common environment and
+puts its executables on `PATH`; jobs need no activation or package installation.
+The following commands run in the login shell:
 
-```console
+```bash
 sinfo
 scontrol show licenses
 sbatch --wait --partition=quantum --licenses=mqt.ddsim.default --time=00:05:00 \
@@ -68,8 +103,9 @@ application mount. The MQT Core checkout is available read-only at `/workspace`.
 
 ## Connect quantum devices
 
-Build device wheels compatible with the cluster's Python environment and place
-them alongside MQT Core in `dist` before building the cluster image:
+Build Linux device wheels matching the cluster's architecture and Python
+environment, and place them alongside MQT Core in `dist` before building the
+cluster image:
 
 ```text
 dist/
@@ -79,10 +115,10 @@ dist/
 ```
 
 Subdirectories are accepted. Use the device implementations' current `main`
-branches while QDMI 1.4 and MQT Core 4.1 are unreleased. All implementations and
-Qiskit adapters share `/opt/venv`; MQT Core's PennyLane adapter is included too.
-Installed wheels supply device manifests. Targeted driver sessions open only
-their selected device, so sessions for several implementations can coexist.
+branches for this development setup. All implementations and Qiskit adapters
+share `/opt/venv`; MQT Core's PennyLane adapter is included too. Installed
+wheels supply device manifests. Targeted driver sessions open only their
+selected device, so sessions for several implementations can coexist.
 
 Before startup, configure concurrency limits and their accounting records in
 `build/slurm/slurm.conf`:
@@ -131,7 +167,7 @@ A quantum-assisted AFQMC application can measure a trial state on a QAN, save
 its results to `/jobs`, and propagate classical walkers on compute nodes. From
 the login shell, submit the application's two batch scripts:
 
-```console
+```bash
 measurement=$(sbatch --parsable --partition=quantum --licenses=iqm.emerald.mock measure.sh)
 sbatch --partition=compute --dependency=afterok:"$measurement" propagate.sh
 ```
@@ -164,7 +200,7 @@ success. Stopping a monitor closes its license; failed checks keep new jobs
 pending without interrupting running work. From an administrator shell on the
 controller:
 
-```console
+```bash
 systemctl stop qdmi-availability@mqt.ddsim.default:2.service
 systemctl start qdmi-availability@mqt.ddsim.default:2.service
 ```
@@ -179,7 +215,7 @@ prompt execution at the remote service.
 
 Scale classical and quantum access nodes from the host:
 
-```console
+```bash
 docker compose -f examples/slurm/compose.yml up -d --wait --scale node=4 --scale qan=3
 ```
 
@@ -190,7 +226,7 @@ removed with `scontrol delete NodeName=...` or the cluster is reset.
 `docker compose -f examples/slurm/compose.yml down` stops the cluster while
 preserving accounting. To discard the cluster, including its accounting history:
 
-```console
+```bash
 docker compose -f examples/slurm/compose.yml down --volumes
 rm -r build/slurm
 ```

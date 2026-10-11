@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["importlib.metadata", "pathlib", "subprocess", "typing"]
+
 import os
 import subprocess
 import sys

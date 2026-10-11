@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["argparse", "json", "logging", "pathlib", "re", "subprocess"]
+
 import argparse
 import json
 import logging
@@ -23,8 +25,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-LOGGER = logging.getLogger("qdmi-slurm-availability")
 
 
 def probe(device_id: str) -> int:
@@ -93,6 +93,7 @@ def update_availability(license_spec: str, timeout: int, *, block_only: bool) ->
     Returns:
         Zero for success, one for a failed probe, or two for a controller error.
     """
+    logger = logging.getLogger("qdmi-slurm-availability")
     device = license_spec.rsplit(":", maxsplit=1)[0]
     name = f"qdmi-unavailable-{device}"
     try:
@@ -110,7 +111,7 @@ def update_availability(license_spec: str, timeout: int, *, block_only: bool) ->
             f"Licenses={license_spec}",
         )
     except (OSError, subprocess.SubprocessError, ValueError, KeyError):
-        LOGGER.exception("Could not block %s", device)
+        logger.exception("Could not block %s", device)
         return 2
 
     if block_only:
@@ -127,16 +128,16 @@ def update_availability(license_spec: str, timeout: int, *, block_only: bool) ->
             timeout=timeout,
         )
     except (OSError, subprocess.SubprocessError):
-        LOGGER.exception("Availability probe failed; %s remains blocked", device)
+        logger.exception("Availability probe failed; %s remains blocked", device)
         return 1
     if result.returncode != 0:
-        LOGGER.error("Availability probe failed; %s remains blocked", device)
+        logger.error("Availability probe failed; %s remains blocked", device)
         return 1
 
     try:
         scontrol("delete", f"ReservationName={name}")
     except (OSError, subprocess.SubprocessError):
-        LOGGER.exception("Could not reopen %s", device)
+        logger.exception("Could not reopen %s", device)
         return 2
     return 0
 

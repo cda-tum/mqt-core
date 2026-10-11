@@ -517,9 +517,24 @@ def main(arguments: Sequence[str] = ()) -> None:
     success = False
     started = False
     try:
-        cgroup_version = run(("docker", "info", "--format", "{{.CgroupVersion}}")).stdout.strip()
+        architecture, cgroup_version = run((
+            "docker",
+            "info",
+            "--format",
+            "{{.Architecture}} {{.CgroupVersion}}",
+        )).stdout.split()
         if cgroup_version != "2":
             msg = f"The Slurm integration requires Docker on cgroup v2, got {cgroup_version!r}"
+            raise RuntimeError(msg)
+        architecture = {"arm64": "aarch64", "amd64": "x86_64"}.get(architecture, architecture)
+        wheel_platforms = wheels[0].stem.rsplit("-", maxsplit=1)[-1].split(".")
+        if not any(
+            tag.startswith(("linux_", "manylinux")) and tag.endswith(f"_{architecture}") for tag in wheel_platforms
+        ):
+            msg = (
+                f"The Docker engine requires a Linux {architecture} wheel, got {wheels[0].name}. "
+                "Build MQT Core inside the Linux VM or download its matching Linux CI wheel."
+            )
             raise RuntimeError(msg)
 
         clean_runtime()

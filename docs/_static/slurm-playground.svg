@@ -1,0 +1,50 @@
+<!--
+ Copyright (c) 2023 - 2026 Chair for Design Automation, TUM
+ Copyright (c) 2025 - 2026 Munich Quantum Software Company GmbH
+ All rights reserved.
+
+ SPDX-License-Identifier: MIT
+
+ Licensed under the MIT License
+-->
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 340" role="img" aria-labelledby="title desc">
+  <title id="title">One cluster, classical and quantum stages</title>
+  <desc id="desc">Users submit from a login node. Slurm places jobs on classical nodes or quantum access nodes. All quantum access nodes share a QDMI environment and connect to all configured devices. The controller monitors availability, and an accounting service records jobs.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7" fill="#526578"/></marker>
+  </defs>
+  <rect width="840" height="340" rx="12" fill="#f4f7fb"/>
+  <g fill="none" stroke="#526578" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M172 164 H203"/>
+    <path d="M377 160 H398 V68 H420"/>
+    <path d="M377 172 H420"/>
+    <path d="M624 178 H662"/>
+    <path d="M290 210 V254"/>
+  </g>
+  <g font-family="system-ui, sans-serif" font-size="16" fill="#172d43" text-anchor="middle">
+    <rect x="20" y="123" width="152" height="83" rx="8" fill="#ffffff" stroke="#a5b9ce"/>
+    <text x="96" y="153" font-weight="600">Login node</text>
+    <text x="96" y="180" font-size="14">sbatch · squeue</text>
+    <rect x="205" y="112" width="172" height="98" rx="8" fill="#e3effc" stroke="#4678aa"/>
+    <text x="291" y="141" font-weight="600">Slurm controller</text>
+    <text x="291" y="167" font-size="14">Scheduling</text>
+    <text x="291" y="190" font-size="14">Device monitoring</text>
+    <rect x="420" y="27" width="204" height="82" rx="8" fill="#ffffff" stroke="#a5b9ce"/>
+    <text x="522" y="56" font-weight="600">Classical nodes</text>
+    <text x="522" y="82" font-size="14">compute partition</text>
+    <rect x="420" y="134" width="204" height="108" rx="8" fill="#e0f3ee" stroke="#408572"/>
+    <text x="522" y="163" font-weight="600">Quantum access nodes</text>
+    <text x="522" y="189" font-size="14">quantum partition</text>
+    <text x="522" y="215" font-size="14">One QDMI environment</text>
+    <rect x="665" y="113" width="155" height="128" rx="8" fill="#ffffff" stroke="#a5b9ce"/>
+    <text x="743" y="144" font-weight="600">QDMI devices</text>
+    <text x="743" y="172" font-size="14">DDSIM · IQM</text>
+    <text x="743" y="196" font-size="14">Amazon Braket</text>
+    <text x="743" y="222" font-size="13">Other implementations</text>
+    <rect x="205" y="256" width="172" height="59" rx="8" fill="#ffffff" stroke="#a5b9ce"/>
+    <text x="291" y="281" font-weight="600">Accounting</text>
+    <text x="291" y="302" font-size="14">slurmdbd · MariaDB</text>
+    <text x="525" y="284" font-size="14">Shared application files and results</text>
+  </g>
+</svg>

@@ -136,12 +136,25 @@ def test_preflight_does_not_touch_runtime(tmp_path: Path, monkeypatch: pytest.Mo
     assert not runtime.exists()
 
 
+@pytest.mark.parametrize("platform", ["macosx_14_0_arm64", "manylinux_2_28_x86_64"])
+def test_preflight_rejects_incompatible_wheel(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, platform: str) -> None:
+    """A host-built or wrong-architecture wheel cannot run in the Linux VM."""
+    (tmp_path / f"mqt_core-0-cp311-abi3-{platform}.whl").touch()
+    runtime = tmp_path / "runtime"
+    monkeypatch.setattr(runner, "DIST", tmp_path)
+    monkeypatch.setattr(runner, "RUNTIME", runtime)
+    monkeypatch.setattr(runner, "run", lambda *args: subprocess.CompletedProcess(args, 0, "aarch64 2", ""))
+    with pytest.raises(RuntimeError, match="requires a Linux aarch64 wheel"):
+        runner.main()
+    assert not runtime.exists()
+
+
 def test_diagnostic_failure_still_tears_down(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """An unavailable diagnostic service must not orphan a failed cluster."""
-    (tmp_path / "mqt_core-0.whl").touch()
+    (tmp_path / "mqt_core-0-cp311-abi3-linux_aarch64.whl").touch()
     monkeypatch.setattr(runner, "DIST", tmp_path)
     monkeypatch.setattr(runner, "RUNTIME", tmp_path / "runtime")
-    monkeypatch.setattr(runner, "run", lambda *args: subprocess.CompletedProcess(args, 0, "2", ""))
+    monkeypatch.setattr(runner, "run", lambda *args: subprocess.CompletedProcess(args, 0, "aarch64 2", ""))
     commands = []
 
     def compose(*args: str, **_kwargs: object) -> subprocess.CompletedProcess[str]:
