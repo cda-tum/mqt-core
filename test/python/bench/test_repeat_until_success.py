@@ -15,8 +15,9 @@ import math
 
 import pytest
 
-from bench.utils import assert_generates
 from mqt.core.bench import repeat_until_success
+
+from .utils import assert_generates
 
 
 def test_repeat_until_success_reference() -> None:

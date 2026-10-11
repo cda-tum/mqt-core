@@ -332,7 +332,7 @@ preview = true
 docstring-code-format = true
 
 [tool.ruff.lint.per-file-ignores]
-"test/python/**" = [ "INP001", "T20" ]
+"test/python/**" = [ "INP001", "T20", "TID252" ]
 "test/slurm/**" = [ "DOC201", "DOC501", "INP001" ]
 "docs/**" = [ "INP001", "T20" ]
 "noxfile.py" = [ "PLC0415", "T20", "TID251" ]
@@ -467,7 +467,7 @@ exclude_also = [
 
 
 [tool.flake8-lazy.standalone]
-# Importing the backend registers the built-in OpenQASM serializers.
+# Importing the backend registers the built-in OpenQASM serializers
 lazy-exclude-modules = [ "mqt.core.plugins.qiskit.backend" ]
 
 
