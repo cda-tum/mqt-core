@@ -94,7 +94,7 @@ bit[2] c = measure q;
 
 TEST(OpenQASM3EmissionTest, PreservesIndexCastBitPatterns) {
   constexpr llvm::StringLiteral source = R"mlir(module {
-    func.func @main() -> !cbit.reg<7> {
+    func.func @main() -> !cbit.reg<9> {
       %byte = arith.constant -1 : i8
       %unsigned = arith.index_castui %byte : i8 to index
       %signed = arith.index_cast %byte : i8 to index
@@ -115,22 +115,29 @@ TEST(OpenQASM3EmissionTest, PreservesIndexCastBitPatterns) {
       %sb = arith.cmpi eq, %signedBool, %expectedSigned : index
       %oneIndex = arith.constant 1 : index
       %ub = arith.cmpi eq, %unsignedBool, %oneIndex : index
-      %bits = cbit.alloc(#cbit.init<zero>) : !cbit.reg<7>
+      %bits = cbit.alloc(#cbit.init<zero>) : !cbit.reg<9>
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
       %two = arith.constant 2 : index
       %three = arith.constant 3 : index
       %four = arith.constant 4 : index
-      cbit.store %u, %bits[%zero] : !cbit.reg<7>
-      cbit.store %s, %bits[%one] : !cbit.reg<7>
-      cbit.store %h, %bits[%two] : !cbit.reg<7>
-      cbit.store %unsignedBit, %bits[%three] : !cbit.reg<7>
-      cbit.store %signedBit, %bits[%four] : !cbit.reg<7>
+      cbit.store %u, %bits[%zero] : !cbit.reg<9>
+      cbit.store %s, %bits[%one] : !cbit.reg<9>
+      cbit.store %h, %bits[%two] : !cbit.reg<9>
+      cbit.store %unsignedBit, %bits[%three] : !cbit.reg<9>
+      cbit.store %signedBit, %bits[%four] : !cbit.reg<9>
       %five = arith.constant 5 : index
       %six = arith.constant 6 : index
-      cbit.store %sb, %bits[%five] : !cbit.reg<7>
-      cbit.store %ub, %bits[%six] : !cbit.reg<7>
-      return %bits : !cbit.reg<7>
+      cbit.store %sb, %bits[%five] : !cbit.reg<9>
+      cbit.store %ub, %bits[%six] : !cbit.reg<9>
+      %negativeOdd = arith.constant -3 : index
+      %negativeBit = arith.index_cast %negativeOdd : index to i1
+      %highBit = arith.trunci %high : i64 to i1
+      %seven = arith.constant 7 : index
+      %eight = arith.constant 8 : index
+      cbit.store %negativeBit, %bits[%seven] : !cbit.reg<9>
+      cbit.store %highBit, %bits[%eight] : !cbit.reg<9>
+      return %bits : !cbit.reg<9>
     }
   })mlir";
   MLIRContext context(emissionDialects());
@@ -140,7 +147,7 @@ TEST(OpenQASM3EmissionTest, PreservesIndexCastBitPatterns) {
   ASSERT_TRUE(succeeded(emitted));
   auto restored = qc::translateOpenQASMToQC(*emitted, &context);
   ASSERT_TRUE(restored) << *emitted;
-  expectOneSample(*restored, "1100111");
+  expectOneSample(*restored, "011100111");
 }
 
 TEST(OpenQASM3EmissionTest, PreservesOverflowingIndexArithmetic) {
@@ -1186,29 +1193,81 @@ inv @ pair(theta) q;
   EXPECT_TRUE(roundTripped->lookupSymbol<func::FuncOp>("pair"));
 }
 
-TEST(OpenQASM3EmissionTest, CastsIntegerCapturesInCompositeGates) {
+TEST(OpenQASM3EmissionTest, CapturesFinalParametersInCompositeGates) {
   constexpr llvm::StringLiteral source = R"mlir(module {
-    func.func @main() {
+    func.func private @rotate(%angle: f64, %q: !qc.qubit)
+        attributes {mqt.unitary} {
+      qc.rx(%angle) %q : !qc.qubit
+      return
+    }
+    func.func @main() attributes {mqt.entry_point} {
+      %control = qc.alloc : !qc.qubit
       %q = qc.alloc : !qc.qubit
       %one = arith.constant 1 : i64
-      %value = arith.addi %one, %one : i64
-      qc.inv(%target = %q) {
-        %bits = arith.andi %value, %one : i64
-        %angle = arith.uitofp %bits : i64 to f64
-        qc.rx(%angle) %target : !qc.qubit
-        qc.h %target : !qc.qubit
+      %six = arith.constant 6 : i64
+      %value = arith.addi %one, %six : i64
+      %tau = arith.constant 6.283185307179586 : f64
+      %four = arith.constant 4.0 : f64
+      %exponent = arith.addf %four, %four : f64
+      qc.ctrl(%control) targets (%target = %q) {
+        qc.inv(%inner = %target) {
+          %bits = arith.andi %value, %one : i64
+          %float = arith.uitofp %bits : i64 to f64
+          %angle = arith.mulf %float, %tau : f64
+          qc.call @rotate(%angle, %inner) : f64, !qc.qubit
+          qc.h %inner : !qc.qubit
+          qc.yield
+        } : !qc.qubit
+        qc.pow(%exponent) (%inner = %target) {
+          qc.z %inner : !qc.qubit
+          qc.yield
+        } : !qc.qubit
         qc.yield
-      } : !qc.qubit
+      } : {!qc.qubit}, {!qc.qubit}
       qc.dealloc %q : !qc.qubit
+      qc.dealloc %control : !qc.qubit
       return
     }
   })mlir";
-  MLIRContext context(emissionDialects());
+  auto registry = emissionDialects();
+  func::registerInlinerExtension(registry);
+  LLVM::registerInlinerInterface(registry);
+  MLIRContext context(registry);
   auto original = parseSourceString<ModuleOp>(source, &context);
   ASSERT_TRUE(original);
   auto emitted = qc::translateQCToOpenQASM3(*original);
   ASSERT_TRUE(succeeded(emitted));
-  EXPECT_TRUE(qc::translateOpenQASMToQC(*emitted, &context)) << *emitted;
+  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+  ASSERT_TRUE(restored) << *emitted;
+  for (auto function : restored->getOps<func::FuncOp>()) {
+    if (mlir::mqt::isUnitaryFunction(function)) {
+      function.walk([&](arith::AndIOp) {
+        ADD_FAILURE() << "integer computation must precede the gate boundary\n"
+                      << *emitted;
+      });
+    }
+  }
+  PassManager manager(&context);
+  manager.addPass(createInlinerPass());
+  manager.addPass(createCanonicalizerPass());
+  manager.addPass(createQCToQCO());
+  ASSERT_TRUE(succeeded(manager.run(*original)));
+  ASSERT_TRUE(succeeded(manager.run(*restored)));
+  dd::Package package(2);
+  auto before =
+      qco::buildFunctionality(mlir::mqt::getEntryPoint(*original), package);
+  auto after =
+      qco::buildFunctionality(mlir::mqt::getEntryPoint(*restored), package);
+  ASSERT_TRUE(succeeded(before));
+  ASSERT_TRUE(succeeded(after));
+  const auto expected = dd::getMatrix(*before, 2);
+  const auto actual = dd::getMatrix(*after, 2);
+  for (size_t row = 0; row < 4; ++row) {
+    for (size_t column = 0; column < 4; ++column) {
+      EXPECT_NEAR(std::abs(actual[row][column] - expected[row][column]), 0.,
+                  1e-12);
+    }
+  }
 }
 
 TEST(OpenQASM3EmissionTest, PreservesGateNamesAcrossInternalCollisions) {
@@ -1411,7 +1470,7 @@ TEST(OpenQASM3EmissionTest, PreservesStructuredGateFunctions) {
   constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
 include "stdgates.inc";
 gate repeated(theta) q {
-  for int i in [0:2] { rx(theta + i) q; }
+  for int i in [0:2] { rx(theta) q; rx(float(i)) q; }
   while (false) { x q; }
 }
 gate wrapper(theta) q { repeated(theta) q; }
@@ -1546,8 +1605,60 @@ TEST(OpenQASM3EmissionTest, InlinesNonGateBodies) {
           return
         }
       })mlir"},
+      llvm::StringLiteral{R"mlir(module {
+        func.func private @integer_parameter(%value: f64, %qubit: !qc.qubit) {
+          %integer = arith.fptoui %value : f64 to i64
+          %one = arith.constant 1 : i64
+          %bit = arith.andi %integer, %one : i64
+          %float = arith.uitofp %bit : i64 to f64
+          %pi = arith.constant 3.141592653589793 : f64
+          %angle = arith.mulf %float, %pi : f64
+          qc.rx(%angle) %qubit : !qc.qubit
+          return
+        }
+        func.func @main() attributes {mqt.entry_point} {
+          %qubit = qc.alloc : !qc.qubit
+          %four = arith.constant 4.0 : f64
+          %five = arith.constant 5.0 : f64
+          %value = arith.addf %four, %five : f64
+          func.call @integer_parameter(%value, %qubit) : (f64, !qc.qubit) -> ()
+          qc.dealloc %qubit : !qc.qubit
+          return
+        }
+      })mlir"},
+      llvm::StringLiteral{R"mlir(module {
+        func.func private @power(%exponent: f64, %qubit: !qc.qubit) {
+          qc.pow(%exponent) (%target = %qubit) {
+            qc.x %target : !qc.qubit
+            qc.yield
+          } : !qc.qubit
+          return
+        }
+        func.func @main() attributes {mqt.entry_point} {
+          %qubit = qc.alloc : !qc.qubit
+          %exponent = arith.constant 9.0 : f64
+          func.call @power(%exponent, %qubit) : (f64, !qc.qubit) -> ()
+          qc.dealloc %qubit : !qc.qubit
+          return
+        }
+      })mlir"},
+      llvm::StringLiteral{R"mlir(module {
+        func.func private @multiply(%left: f64, %right: f64, %qubit: !qc.qubit) {
+          %angle = arith.mulf %left, %right : f64
+          qc.rx(%angle) %qubit : !qc.qubit
+          return
+        }
+        func.func @main() attributes {mqt.entry_point} {
+          %qubit = qc.alloc : !qc.qubit
+          %left = arith.constant 3.141592653589793 : f64
+          %right = arith.constant 1.0 : f64
+          func.call @multiply(%left, %right, %qubit) : (f64, f64, !qc.qubit) -> ()
+          qc.dealloc %qubit : !qc.qubit
+          return
+        }
+      })mlir"},
   };
-  constexpr std::array expected{"1", "0", "1"};
+  constexpr std::array expected{"1", "0", "1", "1", "1", "1"};
   for (size_t index = 0; index < sources.size(); ++index) {
     SCOPED_TRACE(index);
     MLIRContext context(emissionDialects());
@@ -2689,6 +2800,24 @@ TEST(OpenQASM3EmissionTest, RejectsUnsupportedSubsetConcerns) {
           .source = R"mlir(module {
         func.func @main() {
           %memory = memref.alloc() : memref<2x2xi1>
+          return
+        }
+      })mlir",
+      },
+      Fixture{
+          .name = "nested-dynamic-power-in-composite-gate",
+          .source = R"mlir(module {
+        func.func @main(%exponent: f64 {mqt.input_name = "exponent"}) {
+          %q = qc.alloc : !qc.qubit
+          qc.inv(%target = %q) {
+            qc.pow(%exponent) (%inner = %target) {
+              qc.z %inner : !qc.qubit
+              qc.yield
+            } : !qc.qubit
+            qc.h %target : !qc.qubit
+            qc.yield
+          } : !qc.qubit
+          qc.dealloc %q : !qc.qubit
           return
         }
       })mlir",

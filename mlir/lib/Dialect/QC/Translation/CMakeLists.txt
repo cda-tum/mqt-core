@@ -51,6 +51,7 @@ add_mlir_library(
   MLIRMathDialect
   MLIRMemRefDialect
   MLIRMQTDialect
+  MLIRMQTUtils
   MLIRSCFDialect
   MLIRTensorDialect
   MLIRUBDialect

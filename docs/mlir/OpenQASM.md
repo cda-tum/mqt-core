@@ -301,7 +301,11 @@ including functions with integer or register arguments or classical results, are
 inlined on a copy of the module using MLIR's inliner. Their supported structured
 control flow remains structured. Recursive calls, non-gate helpers marked
 `no_inline`, and constructs outside the export subset still produce diagnostics.
-The exporter does not emit OpenQASM `def` subroutines.
+Retained gates forward their `f64` parameters directly to gates or other
+retained helpers. Helpers that compute with these parameters, including `pow`
+exponents, are inlined because OpenQASM gate parameters are angles. Constant
+expressions and calculations using loop indices remain supported in retained
+gates. The exporter does not emit OpenQASM `def` subroutines.
 
 Signed and unsigned index casts preserve sign extension, zero extension, and
 truncation, including truncation to one bit. Indices use 64 bits. Addition,
@@ -423,7 +427,10 @@ content inside modifier regions. CBit loads, stores, whole-register reads and
 writes, fixed-width bitwise operations, dynamic bit indices, SCF results, and
 loop-carried values are supported in the entry function. Multi-operation
 modifier bodies must have a target qubit and cannot capture additional qubits
-from an enclosing scope.
+from an enclosing scope. Their generated gate parameters carry evaluated gate
+angles; supporting integer calculations remain at the call site. A `pow` nested
+inside a generated composite gate requires a constant exponent. A runtime
+exponent applied to the whole composite remains at its call site.
 
 OpenQASM export supports arbitrary bit-register widths for bitwise operations,
 unsigned comparisons, `popcount`, `rotl`, and `rotr`. Scalar arithmetic, integer

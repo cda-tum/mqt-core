@@ -16,6 +16,7 @@
 #include "mqt/Dialect/CBit/IR/CBitOps.h"
 #include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
+#include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
 #include "mqt/Dialect/QC/IR/QCDialect.h"
 #include "mqt/Dialect/QC/IR/QCInterfaces.h"
 #include "mqt/Dialect/QC/IR/QCOps.h"
@@ -147,6 +148,15 @@ public:
   }
 
   [[nodiscard]] static bool hasGateBody(func::FuncOp function) {
+    for (auto argument : function.getArguments()) {
+      if (argument.getType().isF64() &&
+          llvm::any_of(argument.getUsers(), [](Operation* user) {
+            return isa<PowOp>(user) ||
+                   !isa<UnitaryOpInterface, func::CallOp>(user);
+          })) {
+        return false;
+      }
+    }
     return !function
                 .walk([](Operation* operation) {
                   return canEmitGateOperation(*operation)
@@ -223,7 +233,6 @@ private:
   size_t expressionWork = 0;
   size_t numClassicalBits = 0;
   bool supportsDispatch = true;
-  bool inCompositeHelper_ = false;
 
   static constexpr size_t MAX_EXPRESSION_NESTING = 256;
   static constexpr size_t MAX_EXPRESSION_WORK = 4096;
@@ -1072,7 +1081,7 @@ private:
                    : text;
       }
       auto loop = scf::getForInductionVarOwner(operand);
-      if (width > 1 && !inCompositeHelper_ && valueNames.contains(operand) &&
+      if (width > 1 && valueNames.contains(operand) &&
           isSigned == (operand.getType().isIndex() ||
                        (loop && loop.getInductionVar() == operand))) {
         return text;
@@ -1135,9 +1144,7 @@ private:
         return failure();
       }
       if (width == 1) {
-        return (Twine("((") + *operand + " & uint[" +
-                Twine(std::min(inputWidth, 64U)) + "](1)) != 0)")
-            .str();
+        return "bool(" + *operand + " % 2)";
       }
       if (width == inputWidth) {
         return operand;
@@ -2033,23 +2040,38 @@ private:
 
     SmallVector<Value> captures;
     DenseSet<Value> captured;
-    Value capturedQubit;
-    modifier.getRegion().walk([&](Operation* operation) {
+    SmallVector<std::pair<Value, Attribute>> exponents;
+    const auto walk = modifier.getRegion().walk([&](Operation* operation) {
       for (auto operand : operation->getOperands()) {
-        if (modifier.getRegion().isAncestor(operand.getParentRegion())) {
-          continue;
-        }
-        if (isa<QubitType>(operand.getType())) {
-          capturedQubit = operand;
-        } else if (captured.insert(operand).second) {
-          captures.push_back(operand);
+        if (isa<QubitType>(operand.getType()) &&
+            !modifier.getRegion().isAncestor(operand.getParentRegion())) {
+          std::ignore = fail(
+              modifier,
+              "multi-operation modifier bodies cannot capture extra qubits");
+          return WalkResult::interrupt();
         }
       }
+      if (auto power = dyn_cast<PowOp>(operation)) {
+        const auto exponent = mqt::valueToConstantAttr(power.getExponent());
+        if (!exponent) {
+          std::ignore = fail(power, "powers nested in composite gates require "
+                                    "constant exponents");
+          return WalkResult::interrupt();
+        }
+        exponents.emplace_back(power.getExponent(), *exponent);
+      } else if (auto unitary = dyn_cast<UnitaryOpInterface>(operation)) {
+        // Gate parameters are angles; evaluate their scalar dependencies before
+        // crossing the generated gate boundary.
+        for (auto parameter : unitary.getParameters()) {
+          if (captured.insert(parameter).second) {
+            captures.push_back(parameter);
+          }
+        }
+      }
+      return WalkResult::advance();
     });
-    if (capturedQubit) {
-      return fail(
-          modifier,
-          "multi-operation modifier bodies cannot capture extra qubits");
+    if (walk.wasInterrupted()) {
+      return failure();
     }
 
     GateCall helperCall;
@@ -2062,20 +2084,36 @@ private:
       helperCall.parameters.push_back(std::move(*expression));
     }
 
-    DenseMap<Value, std::string> savedNames;
+    DenseMap<Value, std::optional<std::string>> savedNames;
     auto saveAndMap = [&](Value value, std::string name) {
-      if (const auto found = valueNames.find(value);
-          found != valueNames.end()) {
-        savedNames.try_emplace(value, found->second);
-      }
+      const auto found = valueNames.find(value);
+      savedNames.try_emplace(value, found == valueNames.end()
+                                        ? std::nullopt
+                                        : std::optional(found->second));
       valueNames[value] = std::move(name);
     };
+    const auto namesGuard = llvm::scope_exit([&] {
+      for (const auto& [value, name] : savedNames) {
+        if (name) {
+          valueNames[value] = *name;
+        } else {
+          valueNames.erase(value);
+        }
+      }
+    });
 
     SmallVector<std::string> parameterNames;
     for (const auto [index, value] : llvm::enumerate(captures)) {
       auto name = (Twine("p") + Twine(index)).str();
       parameterNames.push_back(name);
       saveAndMap(value, std::move(name));
+    }
+    for (const auto& [value, attribute] : exponents) {
+      auto literal = emitConstant(attribute, value.getLoc());
+      if (failed(literal)) {
+        return failure();
+      }
+      saveAndMap(value, std::move(*literal));
     }
     SmallVector<std::string> qubitNames;
     for (const auto [index, argument] : llvm::enumerate(body.getArguments())) {
@@ -2094,7 +2132,6 @@ private:
     definitionOutput << ' ' << llvm::join(qubitNames, ", ") << " {\n";
     definitionOutput.indent();
     llvm::SaveAndRestore outputGuard(output, &definitionOutput);
-    llvm::SaveAndRestore compositeGuard(inCompositeHelper_, true);
     for (auto* operation : unitaries) {
       auto call = emitGateCall(cast<UnitaryOpInterface>(operation));
       if (failed(call)) {
@@ -2109,22 +2146,6 @@ private:
     definitionOutput.flush();
     gateDefinitions_.push_back(std::move(definition));
 
-    for (auto value : captures) {
-      if (const auto found = savedNames.find(value);
-          found != savedNames.end()) {
-        valueNames[value] = found->second;
-      } else {
-        valueNames.erase(value);
-      }
-    }
-    for (auto argument : body.getArguments()) {
-      if (const auto found = savedNames.find(argument);
-          found != savedNames.end()) {
-        valueNames[argument] = found->second;
-      } else {
-        valueNames.erase(argument);
-      }
-    }
     return helperCall;
   }
 
