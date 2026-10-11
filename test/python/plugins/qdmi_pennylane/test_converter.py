@@ -30,8 +30,7 @@ from mqt.core.plugins.pennylane import (
     QDMIDevice,
 )
 from mqt.core.qdmi import ProgramFormat
-
-from .helpers import StubDevice, operation, patch_open_device
+from qdmi_pennylane.helpers import StubDevice, operation, patch_open_device
 
 
 def test_qasm3_prefers_and_resolves_braket_spellings(monkeypatch: pytest.MonkeyPatch) -> None:

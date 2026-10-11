@@ -35,8 +35,7 @@ from mqt.core.plugins.pennylane import (
 from mqt.core.qdmi import Device as QDMIDeviceHandle
 from mqt.core.qdmi import Job as QDMIJobHandle
 from mqt.core.qdmi import ProgramFormat
-
-from .helpers import StubDevice, patch_open_device, rotation_results, stub_device
+from qdmi_pennylane.helpers import StubDevice, patch_open_device, rotation_results, stub_device
 
 
 def test_uses_already_open_qdmi_device(monkeypatch: pytest.MonkeyPatch) -> None:

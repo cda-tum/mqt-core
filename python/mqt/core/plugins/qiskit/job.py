@@ -13,6 +13,18 @@ Provides a Qiskit JobV1-compatible wrapper for QDMI job execution and results.
 
 from __future__ import annotations
 
+__lazy_modules__ = {
+    "collections",
+    "copy",
+    "datetime",
+    "mqt.core.plugins.qdmi_batch",
+    "mqt.core.plugins.qiskit.exceptions",
+    "mqt.core.qdmi",
+    "numbers",
+    "qiskit.result",
+    "qiskit.result.models",
+}
+
 import datetime
 from collections import Counter
 from copy import deepcopy
@@ -23,20 +35,18 @@ from qiskit.providers import JobError, JobStatus, JobV1
 from qiskit.result import Result
 from qiskit.result.models import ExperimentResult
 
+from mqt.core.plugins.qdmi_batch import Batch, BatchEntry
+from mqt.core.plugins.qiskit.exceptions import JobExecutionError, JobSubmissionError
 from mqt.core.qdmi import Job as QDMIJobHandle
-
-from ..qdmi_batch import Batch, BatchEntry
-from .exceptions import JobExecutionError, JobSubmissionError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from qiskit.circuit import QuantumCircuit
 
+    from mqt.core.plugins.qiskit.backend import QDMIBackend
     from mqt.core.qdmi import ProgramFormat
     from mqt.core.typing import QDMIJobParameters
-
-    from .backend import QDMIBackend
 
 __all__ = ["QDMIJob"]
 

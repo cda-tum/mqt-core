@@ -41,12 +41,14 @@ reports.
 
 from __future__ import annotations
 
+__lazy_modules__ = {"importlib.metadata", "warnings"}
+
 import warnings
 from enum import Enum, auto
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Protocol
 
-from ...qdmi import ProgramFormat
+from mqt.core.qdmi import ProgramFormat
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -54,7 +56,7 @@ if TYPE_CHECKING:
 
     from qiskit.circuit import QuantumCircuit
 
-    from .backend import QDMIBackend
+    from mqt.core.plugins.qiskit.backend import QDMIBackend
 
 __all__ = [
     "ENTRY_POINT_GROUP",

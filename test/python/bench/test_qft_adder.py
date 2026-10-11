@@ -14,9 +14,8 @@ import json
 
 import pytest
 
+from bench.utils import assert_generates
 from mqt.core.bench import qft_adder
-
-from .utils import assert_generates
 
 
 @pytest.mark.parametrize("method", [qft_adder.Method.REGISTER, qft_adder.Method.CONSTANT])

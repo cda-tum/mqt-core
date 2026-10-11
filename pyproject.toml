@@ -320,7 +320,7 @@ test-sources = []
 
 [tool.ruff]
 line-length = 120
-namespace-packages = [ "mqt" ]
+namespace-packages = [ "python/mqt" ]
 src = [ "python" ]
 preview = true
 fix = true
@@ -345,6 +345,9 @@ docstring-code-format = true
 ]
 "python/mqt/core/__main__.py" = [ "T201" ]
 
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
 [tool.ruff.lint.isort]
 known-first-party = [ "mqt.core" ]
 
@@ -360,7 +363,6 @@ ignore = [
   "PLR2004", # Magic value used in comparison
   "S101",    # Use of assert detected
   "S404",    # `subprocess` module is possibly insecure
-  "TID252"  # Prefer absolute imports over relative imports from parent modules
 ]
 future-annotations = true
 
@@ -462,6 +464,11 @@ exclude_also = [
   "raise AssertionError",
   "raise NotImplementedError"
 ]
+
+
+[tool.flake8-lazy.standalone]
+# Importing the backend registers the built-in OpenQASM serializers.
+lazy-exclude-modules = [ "mqt.core.plugins.qiskit.backend" ]
 
 
 [[tool.dynamic-metadata]]

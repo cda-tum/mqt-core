@@ -13,6 +13,21 @@ Provides a Qiskit BackendV2-compatible interface to QDMI devices.
 
 from __future__ import annotations
 
+__lazy_modules__ = {
+    "inspect",
+    "math",
+    "mqt.core.plugins.qiskit.exceptions",
+    "mqt.core.plugins.qiskit.job",
+    "mqt.core.qdmi.builtin_driver",
+    "numbers",
+    "qiskit",
+    "qiskit.circuit",
+    "qiskit.circuit.library",
+    "qiskit.primitives",
+    "qiskit.transpiler",
+    "warnings",
+}
+
 import inspect
 import warnings
 from functools import cached_property
@@ -31,18 +46,22 @@ from qiskit.primitives import BackendEstimatorV2, BackendSamplerV2
 from qiskit.providers import BackendV2, Options
 from qiskit.transpiler import InstructionProperties, Target
 
-from ...qdmi import Device as QDMIDevice
-from ...qdmi import ProgramFormat, is_binary_program_format
-from ...qdmi.builtin_driver import open_device
-from .exceptions import (
+from mqt.core.plugins.qiskit.exceptions import (
     CircuitValidationError,
     TranslationError,
     UnsupportedDeviceError,
     UnsupportedFormatError,
     UnsupportedOperationError,
 )
-from .job import QDMIJob
-from .serializers import preferred_program_formats, program_serializer, register_program_serializer
+from mqt.core.plugins.qiskit.job import QDMIJob
+from mqt.core.plugins.qiskit.serializers import (
+    preferred_program_formats,
+    program_serializer,
+    register_program_serializer,
+)
+from mqt.core.qdmi import Device as QDMIDevice
+from mqt.core.qdmi import ProgramFormat, is_binary_program_format
+from mqt.core.qdmi.builtin_driver import open_device
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, MutableSet, Sequence
@@ -51,8 +70,8 @@ if TYPE_CHECKING:
     from qiskit.circuit import Instruction, Parameter
     from qiskit.circuit.parameterexpression import ParameterValueType
 
-    from ...typing import QDMIJobParameters, QDMISessionParameters, QiskitEstimatorOptions, QiskitSamplerOptions
-    from .provider import QDMIProvider
+    from mqt.core.plugins.qiskit.provider import QDMIProvider
+    from mqt.core.typing import QDMIJobParameters, QDMISessionParameters, QiskitEstimatorOptions, QiskitSamplerOptions
 
     ParametersType = Mapping[Parameter, ParameterValueType] | Iterable[ParameterValueType]
 

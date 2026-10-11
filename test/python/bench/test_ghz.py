@@ -14,10 +14,9 @@ import importlib
 
 import pytest
 
+from bench.utils import assert_generates
 from mqt.core import bench
 from mqt.core.bench import ghz
-
-from .utils import assert_generates
 
 
 def _make_benchmark() -> ghz.GHZ:

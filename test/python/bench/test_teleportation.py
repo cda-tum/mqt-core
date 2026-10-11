@@ -14,9 +14,8 @@ import json
 
 import pytest
 
+from bench.utils import assert_generates
 from mqt.core.bench import teleportation
-
-from .utils import assert_generates
 
 
 def test_teleportation_reference() -> None:

@@ -10,6 +10,19 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = {
+    "mqt.core.plugins.pennylane.converter",
+    "mqt.core.plugins.pennylane.exceptions",
+    "mqt.core.plugins.pennylane.job",
+    "mqt.core.qdmi",
+    "mqt.core.qdmi.builtin_driver",
+    "numbers",
+    "operator",
+    "pennylane.devices.preprocess",
+    "pennylane.transforms",
+    "pennylane.transforms.core",
+}
+
 import operator
 from numbers import Integral
 from typing import TYPE_CHECKING, Any, cast
@@ -26,24 +39,15 @@ from pennylane.measurements import CountsMP, ExpectationMP, ProbabilityMP, Sampl
 from pennylane.transforms import broadcast_expand, defer_measurements, split_non_commuting
 from pennylane.transforms.core import CompilePipeline
 
+from mqt.core.plugins.pennylane.converter import _ProgramConverter
+from mqt.core.plugins.pennylane.exceptions import PennyLaneConfigurationError as ConfigurationError
+from mqt.core.plugins.pennylane.exceptions import PennyLaneUnsupportedFormatError as UnsupportedFormatError
+from mqt.core.plugins.pennylane.exceptions import PennyLaneUnsupportedOperationError as UnsupportedOperationError
+from mqt.core.plugins.pennylane.exceptions import PennyLaneValidationError as ValidationError
+from mqt.core.plugins.pennylane.job import PennyLaneJob
 from mqt.core.qdmi import Device as QDMIDeviceHandle
 from mqt.core.qdmi import ProgramFormat
 from mqt.core.qdmi.builtin_driver import open_device
-
-from .converter import _ProgramConverter
-from .exceptions import (
-    PennyLaneConfigurationError as ConfigurationError,
-)
-from .exceptions import (
-    PennyLaneUnsupportedFormatError as UnsupportedFormatError,
-)
-from .exceptions import (
-    PennyLaneUnsupportedOperationError as UnsupportedOperationError,
-)
-from .exceptions import (
-    PennyLaneValidationError as ValidationError,
-)
-from .job import PennyLaneJob
 
 if TYPE_CHECKING:
     from collections.abc import Hashable, Mapping, Sequence

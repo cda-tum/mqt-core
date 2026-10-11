@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import pytest
 
+from bench.utils import assert_generates
 from mqt.core.bench import qft
-
-from .utils import assert_generates
 
 METHODS = (qft.Method.STANDARD, qft.Method.SEMICLASSICAL)
 

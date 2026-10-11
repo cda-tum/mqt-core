@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import pytest
 
+from bench.utils import assert_generates
 from mqt.core.bench import bv
-
-from .utils import assert_generates
 
 METHODS = (bv.Method.STATIC, bv.Method.DYNAMIC)
 

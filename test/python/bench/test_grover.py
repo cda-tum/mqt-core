@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import pytest
 
+from bench.utils import assert_generates
 from mqt.core.bench import grover
-
-from .utils import assert_generates
 
 
 def _make_benchmark() -> grover.Grover:
