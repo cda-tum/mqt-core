@@ -11,13 +11,11 @@
 #include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/QCO/IR/QCOInterfaces.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
-#include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 
 #include "mlir/IR/Block.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/ValueRange.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -30,13 +28,13 @@
 
 namespace mlir::qco {
 
-#define GEN_PASS_DEF_COALESCECONTROLLEDGATES
+#define GEN_PASS_DEF_COMBINECONTROLLEDGATES
 #include "mqt/Dialect/QCO/Transforms/Passes.h.inc"
 
 namespace {
 
-struct CoalesceControls final : OpRewritePattern<CtrlOp> {
-  CoalesceControls(MLIRContext* context, const CompilerTarget* target)
+struct CombineControls final : OpRewritePattern<CtrlOp> {
+  CombineControls(MLIRContext* context, const CompilerTarget* target)
       : OpRewritePattern(context), target_(target) {}
 
   LogicalResult matchAndRewrite(CtrlOp op,
@@ -44,19 +42,10 @@ struct CoalesceControls final : OpRewritePattern<CtrlOp> {
     if (op.getNumControls() == 0) {
       return failure();
     }
-    // Cross only scalar computations; barriers and other quantum operations
-    // retain their position even when they act on disjoint wires.
-    auto* candidate = op->getNextNode();
-    while (candidate != nullptr && candidate->getNumRegions() == 0 &&
-           !isa<UnitaryOpInterface>(candidate) &&
-           isMemoryEffectFree(candidate) &&
-           !llvm::any_of(candidate->getOperandTypes(), isLinearQubitType) &&
-           !llvm::any_of(candidate->getResultTypes(), isLinearQubitType)) {
-      candidate = candidate->getNextNode();
-    }
-    auto next = dyn_cast_or_null<CtrlOp>(candidate);
-    if (!next || op.getNumControls() != next.getNumControls() ||
-        !llvm::equal(op.getResults(), next.getOperands())) {
+    auto next = dyn_cast<CtrlOp>(*op.getOutputControl(0).user_begin());
+    if (!next || next->getBlock() != op->getBlock() ||
+        op.getNumControls() != next.getNumControls() ||
+        !llvm::equal(op.getOutputQubits(), next.getInputQubits())) {
       return failure();
     }
     if (target_ != nullptr) {
@@ -71,8 +60,8 @@ struct CoalesceControls final : OpRewritePattern<CtrlOp> {
       }
     }
 
-    // Move the existing shell to retain parameter dominance without moving
-    // the accumulated body again for each member of a long control chain.
+    // Linear wires bypass intervening operations; moving the shell preserves
+    // parameter dominance and appends each body only once in long chains.
     rewriter.moveOpBefore(op, next);
     rewriter.modifyOpInPlace(op, [&] {
       auto* yield = op.getBody()->getTerminator();
@@ -88,20 +77,19 @@ private:
   const CompilerTarget* target_;
 };
 
-struct CoalesceControlledGates final
-    : impl::CoalesceControlledGatesBase<CoalesceControlledGates> {
+struct CombineControlledGates final
+    : impl::CombineControlledGatesBase<CombineControlledGates> {
   using Base::Base;
 
-  CoalesceControlledGates() = default;
+  CombineControlledGates() = default;
 
-  explicit CoalesceControlledGates(const CompilerTarget& target)
+  explicit CombineControlledGates(const CompilerTarget& target)
       : target_(target) {}
 
 protected:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    patterns.add<CoalesceControls>(&getContext(),
-                                   target_ ? &*target_ : nullptr);
+    patterns.add<CombineControls>(&getContext(), target_ ? &*target_ : nullptr);
     if (failed(applyPatternsGreedily(
             getOperation(), std::move(patterns),
             GreedyRewriteConfig{}.setUseTopDownTraversal()))) {
@@ -116,8 +104,8 @@ private:
 } // namespace
 
 std::unique_ptr<Pass>
-createCoalesceControlledGates(const CompilerTarget& target) {
-  return std::make_unique<CoalesceControlledGates>(target);
+createCombineControlledGates(const CompilerTarget& target) {
+  return std::make_unique<CombineControlledGates>(target);
 }
 
 } // namespace mlir::qco

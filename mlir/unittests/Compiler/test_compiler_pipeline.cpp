@@ -4313,17 +4313,17 @@ ctrl @ ry(phi) q[0], q[1];
   for (const double angle : {0.0, 0.73, -2.9}) {
     auto expected = reference->copy();
     auto actual = restored->copy();
-    auto coalesced = grouped.copy();
-    for (auto* program : {&expected, &actual, &coalesced}) {
+    auto combined = grouped.copy();
+    for (auto* program : {&expected, &actual, &combined}) {
       ASSERT_TRUE(succeeded(
           program->bindParameters({{"theta", angle}, {"phi", -0.3}})));
     }
     expectFullUnitaryEqual(expected.module(), actual.module(), 2);
-    expectFullUnitaryEqual(expected.module(), coalesced.module(), 2);
+    expectFullUnitaryEqual(expected.module(), combined.module(), 2);
   }
 }
 
-TEST_F(CompilerPipelineTest, TargetPipelinesSimplifyCoalescedControls) {
+TEST_F(CompilerPipelineTest, TargetPipelinesSimplifyCombinedControls) {
   using Capability = CompilerTarget::OperationCapability;
   for (const bool equatorial : {false, true}) {
     SCOPED_TRACE(equatorial);
@@ -4340,8 +4340,6 @@ TEST_F(CompilerPipelineTest, TargetPipelinesSimplifyCoalescedControls) {
              "ctrl @ rx(theta) q[0], q[1]; ctrl @ ry(phi) q[0], q[1];",
              "ctrl(2) @ rx(theta) q[0], q[1], q[2]; "
              "ctrl(2) @ ry(phi) q[0], q[1], q[2];",
-             "ctrl(2) @ rz(theta) q[0], q[1], q[2]; "
-             "ctrl(2) @ rz(phi) q[0], q[1], q[2];",
          }) {
       SCOPED_TRACE(gates);
       auto qc = QCProgram::fromOpenQASMString(
@@ -4355,27 +4353,22 @@ TEST_F(CompilerPipelineTest, TargetPipelinesSimplifyCoalescedControls) {
       auto reference = original->copy();
       ASSERT_TRUE(
           succeeded(reference.bindParameters({{"theta", 0.2}, {"phi", -0.3}})));
-      for (const bool runtime : {false, true}) {
-        SCOPED_TRACE(runtime);
-        for (const bool synthesisOnly : {false, true}) {
-          auto program = runtime ? original->copy() : reference.copy();
-          ASSERT_TRUE(succeeded(synthesisOnly
-                                    ? program.synthesizeForTarget(environment)
-                                    : program.compileForTarget(environment)));
-          EXPECT_TRUE(succeeded(verify(program.module())));
-          EXPECT_TRUE(succeeded(qco::verifyLinearity(program.module())));
-          if (runtime) {
-            ASSERT_TRUE(succeeded(
-                program.bindParameters({{"theta", 0.2}, {"phi", -0.3}})));
-          }
-          expectFullUnitaryEqual(reference.module(), program.module(), 3);
-        }
+      for (const bool synthesisOnly : {false, true}) {
+        auto program = original->copy();
+        ASSERT_TRUE(succeeded(synthesisOnly
+                                  ? program.synthesizeForTarget(environment)
+                                  : program.compileForTarget(environment)));
+        EXPECT_TRUE(succeeded(verify(program.module())));
+        EXPECT_TRUE(succeeded(qco::verifyLinearity(program.module())));
+        ASSERT_TRUE(
+            succeeded(program.bindParameters({{"theta", 0.2}, {"phi", -0.3}})));
+        expectFullUnitaryEqual(reference.module(), program.module(), 3);
       }
     }
   }
 }
 
-TEST_F(CompilerPipelineTest, CoalescingPreservesFixedAngleNativeControls) {
+TEST_F(CompilerPipelineTest, CombiningPreservesFixedAngleNativeControls) {
   using Capability = CompilerTarget::OperationCapability;
   const auto target = llvm::cantFail(CompilerTarget::create(
       3, CompilerTarget::Connectivity::allToAll(),

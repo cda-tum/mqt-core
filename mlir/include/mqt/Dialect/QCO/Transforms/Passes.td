@@ -11,26 +11,24 @@
 
 include "mlir/Pass/PassBase.td"
 
-def CoalesceControlledGates
-    : Pass<"coalesce-controlled-gates", "mlir::ModuleOp"> {
+def CombineControlledGates
+    : Pass<"combine-controlled-gates", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::qco::QCODialect"];
-  let summary =
-      "Combine adjacent gates with the same ordered controls and targets";
+  let summary = "Combine gates along the same ordered control and target wires";
   let description = [{
-    Combines successive `qco.ctrl` operations into one ordered body when every
-    control and target result is the corresponding input of the next operation.
-    The control/target partition must match. Only regionless, memory-effect-free
-    classical computations may intervene; quantum operations, barriers, and
-    region boundaries stop coalescing. Captured parameters retain dominance.
+    Combines `qco.ctrl` operations in the same block when every control and
+    target result is the corresponding input of the next operation. The
+    control/target partition must match. Linear qubit values make intervening
+    operations independent of these wires. The combined body is placed at the
+    second operation, retaining dominance of captured parameters. Bodies stay
+    within their block; the pass does not combine across loop iterations.
 
-    The pass concatenates bodies without commuting or synthesizing gates.
-    Follow it with canonicalization or rotation fusion to simplify the body.
-    Target pipelines simplify first, retaining native controlled U fusion, then
-    unroll surviving composites before routing and native synthesis.
-    Coalescing is deliberately not a canonicalization
-    rule, so later cleanup cannot recreate composite target operations.
-    The target-aware factory preserves already-native control groups and their
-    bodies, including fixed-parameter operations.
+    The pass concatenates bodies in order. Canonicalization or rotation fusion
+    can simplify the combined body. Target pipelines preserve native control
+    groups and their bodies, including fixed-parameter operations. They retain
+    native controlled U fusion, then unroll surviving composites before routing
+    and native synthesis. Combining is a separate pass so canonicalization does
+    not recreate composite target operations.
   }];
 }
 

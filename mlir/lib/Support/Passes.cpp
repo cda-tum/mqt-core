@@ -64,7 +64,7 @@ void registerMQTCompilerPasses() {
   static const auto REGISTERED = [] {
     registerTransformsPasses();
     registerConvertCBitToMemRef();
-    qco::registerCoalesceControlledGates();
+    qco::registerCombineControlledGates();
     qco::registerDecomposeMultiControlled();
     qco::registerFuseSingleQubitUnitaryRuns();
     qco::registerHadamardLifting();
@@ -100,7 +100,7 @@ void registerMQTCompilerPasses() {
 
 void populateDefaultQCOOptimizationPipeline(OpPassManager& pm) {
   pm.addPass(qco::createMergeSingleQubitRotationGates());
-  pm.addPass(qco::createCoalesceControlledGates());
+  pm.addPass(qco::createCombineControlledGates());
   pm.addPass(createCanonicalizerPass());
 }
 

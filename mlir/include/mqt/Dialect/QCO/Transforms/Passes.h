@@ -43,9 +43,9 @@ namespace mlir::qco {
 /// Runs remain unchanged when numerical decomposition fails.
 [[nodiscard]] std::unique_ptr<Pass> createFuseTwoQubitGates();
 
-/// Coalesce controls without changing target-native operations or their bodies.
+/// Combine controls without changing target-native operations or their bodies.
 [[nodiscard]] std::unique_ptr<Pass>
-createCoalesceControlledGates(const CompilerTarget& target);
+createCombineControlledGates(const CompilerTarget& target);
 
 /// Fuse single-qubit runs in the native basis without assigning physical sites.
 [[nodiscard]] std::unique_ptr<Pass>
