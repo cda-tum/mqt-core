@@ -4276,6 +4276,184 @@ ctrl @ )" + modifier + "composite q[0], q[1], q[2], q[3];";
   }
 }
 
+TEST_F(CompilerPipelineTest, DefaultPipelinePreservesSymbolicControlBodies) {
+  constexpr llvm::StringLiteral source = R"(OPENQASM 3.1;
+include "stdgates.inc";
+input float[64] theta;
+input float[64] phi;
+qubit[2] q;
+ctrl @ rx(theta) q[0], q[1];
+ctrl @ ry(phi) q[0], q[1];
+)";
+  auto optimized =
+      runDefaultPipeline(CompilerInput(OpenQASMProgram(source.str())),
+                         ProgramFormat::QCOOptimized);
+  ASSERT_TRUE(succeeded(optimized));
+  auto& grouped = std::get<QCOProgram>(*optimized);
+  size_t controls = 0;
+  grouped.module().walk([&](qco::CtrlOp op) {
+    ++controls;
+    EXPECT_EQ(op.getNumBodyUnitaries(), 2U);
+  });
+  EXPECT_EQ(controls, 1U);
+  auto emitted = runDefaultPipeline(
+      CompilerInput(OpenQASMProgram(source.str())), ProgramFormat::OpenQASM3);
+  ASSERT_TRUE(succeeded(emitted));
+  auto reparsed = QCProgram::fromOpenQASMString(
+      std::get<OpenQASMProgram>(*emitted).source());
+  ASSERT_TRUE(succeeded(reparsed));
+  auto restored = std::move(*reparsed).intoQCO();
+  ASSERT_TRUE(succeeded(restored));
+  ASSERT_TRUE(succeeded(restored->runPassPipeline("inline")));
+  ASSERT_TRUE(succeeded(restored->cleanup()));
+  auto referenceQC = QCProgram::fromOpenQASMString(source.str());
+  ASSERT_TRUE(succeeded(referenceQC));
+  auto reference = std::move(*referenceQC).intoQCO();
+  ASSERT_TRUE(succeeded(reference));
+  for (const double angle : {0.0, 0.73, -2.9}) {
+    auto expected = reference->copy();
+    auto actual = restored->copy();
+    auto combined = grouped.copy();
+    for (auto* program : {&expected, &actual, &combined}) {
+      ASSERT_TRUE(succeeded(
+          program->bindParameters({{"theta", angle}, {"phi", -0.3}})));
+    }
+    expectFullUnitaryEqual(expected.module(), actual.module(), 2);
+    expectFullUnitaryEqual(expected.module(), combined.module(), 2);
+  }
+}
+
+TEST_F(CompilerPipelineTest, TargetPipelinesSimplifyCombinedControls) {
+  using Capability = CompilerTarget::OperationCapability;
+  for (const bool equatorial : {false, true}) {
+    SCOPED_TRACE(equatorial);
+    const auto target = llvm::cantFail(CompilerTarget::create(
+        3, CompilerTarget::Connectivity::allToAll(),
+        CompilerTarget::NativeOperations::fromOperations({
+            llvm::cantFail(Capability::create(equatorial ? "r" : "u", 1,
+                                              equatorial ? 2 : 3)),
+            llvm::cantFail(Capability::create("cz", 2, 0)),
+            llvm::cantFail(Capability::create("gphase", 0, 1)),
+        })));
+    const TargetEnvironment environment(target, makePayloadSpecification());
+    for (const auto* gates : {
+             "ctrl @ rx(theta) q[0], q[1]; ctrl @ ry(phi) q[0], q[1];",
+             "ctrl(2) @ rx(theta) q[0], q[1], q[2]; "
+             "ctrl(2) @ ry(phi) q[0], q[1], q[2];",
+         }) {
+      SCOPED_TRACE(gates);
+      auto qc = QCProgram::fromOpenQASMString(
+          std::string("OPENQASM 3.1; include \"stdgates.inc\"; qubit[3] q; "
+                      "input float[64] theta; input float[64] phi; ") +
+          gates);
+      ASSERT_TRUE(succeeded(qc));
+      auto original = std::move(*qc).intoQCO();
+      ASSERT_TRUE(succeeded(original));
+      ASSERT_TRUE(succeeded(original->cleanup()));
+      auto reference = original->copy();
+      ASSERT_TRUE(
+          succeeded(reference.bindParameters({{"theta", 0.2}, {"phi", -0.3}})));
+      for (const bool synthesisOnly : {false, true}) {
+        auto program = original->copy();
+        ASSERT_TRUE(succeeded(synthesisOnly
+                                  ? program.synthesizeForTarget(environment)
+                                  : program.compileForTarget(environment)));
+        EXPECT_TRUE(succeeded(verify(program.module())));
+        EXPECT_TRUE(succeeded(qco::verifyLinearity(program.module())));
+        ASSERT_TRUE(
+            succeeded(program.bindParameters({{"theta", 0.2}, {"phi", -0.3}})));
+        expectFullUnitaryEqual(reference.module(), program.module(), 3);
+      }
+    }
+  }
+}
+
+TEST_F(CompilerPipelineTest, CombiningPreservesFixedAngleNativeControls) {
+  using Capability = CompilerTarget::OperationCapability;
+  const auto target = llvm::cantFail(CompilerTarget::create(
+      3, CompilerTarget::Connectivity::allToAll(),
+      CompilerTarget::NativeOperations::fromOperations({
+          llvm::cantFail(Capability::create("u", 1, 3)),
+          llvm::cantFail(Capability::create("cz", 2, 0)),
+          llvm::cantFail(
+              Capability::create("rz", Capability::Arity::variadic(3), 1, {},
+                                 std::nullopt, std::nullopt, {0.2})),
+      })));
+  const TargetEnvironment environment(target, makePayloadSpecification());
+  auto qc = QCProgram::fromOpenQASMString(R"(OPENQASM 3.1;
+include "stdgates.inc";
+qubit[3] q;
+ctrl(2) @ rz(0.2) q[0], q[1], q[2];
+ctrl(2) @ rz(0.2) q[0], q[1], q[2];
+)");
+  ASSERT_TRUE(succeeded(qc));
+  auto original = std::move(*qc).intoQCO();
+  ASSERT_TRUE(succeeded(original));
+  for (const bool synthesisOnly : {false, true}) {
+    auto program = original->copy();
+    ASSERT_TRUE(succeeded(synthesisOnly
+                              ? program.synthesizeForTarget(environment)
+                              : program.compileForTarget(environment)));
+    size_t controls = 0;
+    program.module().walk([&](qco::CtrlOp op) {
+      ++controls;
+      EXPECT_EQ(op.getNumControls(), 2U);
+      EXPECT_TRUE(target.supports(op));
+    });
+    EXPECT_EQ(controls, 2U);
+    expectFullUnitaryEqual(original->module(), program.module(), 3);
+  }
+}
+
+TEST_F(CompilerPipelineTest, TargetOpenQASMRetainsExportableControlledAngles) {
+  using Capability = CompilerTarget::OperationCapability;
+  const auto target = llvm::cantFail(
+      CompilerTarget::create(2, CompilerTarget::Connectivity::allToAll(),
+                             CompilerTarget::NativeOperations::fromOperations({
+                                 llvm::cantFail(Capability::create("u", 1, 3)),
+                                 llvm::cantFail(Capability::create("cz", 2, 0)),
+                                 llvm::cantFail(Capability::create(
+                                     "u", Capability::Arity::variadic(2), 3)),
+                             })));
+  const TargetEnvironment environment(
+      target, llvm::cantFail(PayloadSpecification::create(
+                  {.id = "openqasm", .version = "3.1.0", .profile = ""})));
+  auto qc = QCProgram::fromOpenQASMString(R"(OPENQASM 3.1;
+include "stdgates.inc";
+input float[64] theta;
+input float[64] phi;
+qubit[2] q;
+ctrl @ rx(theta) q[0], q[1];
+ctrl @ ry(phi) q[0], q[1];
+)");
+  ASSERT_TRUE(succeeded(qc));
+  auto original = std::move(*qc).intoQCO();
+  ASSERT_TRUE(succeeded(original));
+  for (const bool synthesisOnly : {false, true}) {
+    auto program = original->copy();
+    ASSERT_TRUE(succeeded(synthesisOnly
+                              ? program.synthesizeForTarget(environment)
+                              : program.compileForTarget(environment)));
+    auto loweredQC = std::move(program).intoQC();
+    ASSERT_TRUE(succeeded(loweredQC));
+    auto exported = loweredQC->toOpenQASM3();
+    ASSERT_TRUE(succeeded(exported));
+    auto reparsed = QCProgram::fromOpenQASMString(exported->source());
+    ASSERT_TRUE(succeeded(reparsed));
+    auto restored = std::move(*reparsed).intoQCO();
+    ASSERT_TRUE(succeeded(restored));
+    ASSERT_TRUE(succeeded(restored->runPassPipeline("inline")));
+    ASSERT_TRUE(succeeded(restored->cleanup()));
+    auto reference = original->copy();
+    for (auto* bound : {&reference, &*restored}) {
+      ASSERT_TRUE(
+          succeeded(bound->bindParameters({{"theta", 0.73}, {"phi", -0.3}})));
+      ASSERT_TRUE(succeeded(bound->cleanup()));
+    }
+    expectFullUnitaryEqual(reference.module(), restored->module(), 2);
+  }
+}
+
 TEST_F(CompilerPipelineTest, TargetSynthesisResynthesizesTwoQubitBlocks) {
   auto ownedContext = createCompilerContext();
   auto moduleOp = QCOProgramBuilder::build(

@@ -361,6 +361,15 @@ decomposition before native synthesis and routing, unless the target supports
 them natively. Explicit-topology routing handles only one- and two-qubit gates;
 static circuits may keep native wider gates at supported device sites.
 
+Before decomposition, the pipelines group adjacent non-native controlled gates
+with the same ordered controls and targets so existing canonicalization can
+simplify their bodies. Already-native groups remain unchanged, including gates
+with fixed supported angles. Runtime body fusion produces controlled U only when
+the target supports it. After this fusion opportunity, remaining composites are
+split before routing or placement and native synthesis. OpenQASM payloads keep
+runtime rotations separate when fusion would require unsupported quaternion
+extraction expressions.
+
 Synthesis runs in place and raises `RuntimeError` with MLIR diagnostics on
 failure. Earlier pass changes may remain on the program, so copy it first when
 the input must be preserved. The C++ counterpart is

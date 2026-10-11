@@ -11,6 +11,27 @@
 
 include "mlir/Pass/PassBase.td"
 
+def CombineControlledGates
+    : Pass<"combine-controlled-gates", "mlir::ModuleOp"> {
+  let dependentDialects = ["mlir::qco::QCODialect"];
+  let summary = "Combine gates along the same ordered control and target wires";
+  let description = [{
+    Combines `qco.ctrl` operations in the same block when every control and
+    target result is the corresponding input of the next operation. The
+    control/target partition must match. Linear qubit values make intervening
+    operations independent of these wires. The combined body is placed at the
+    second operation, retaining dominance of captured parameters. Bodies stay
+    within their block; the pass does not combine across loop iterations.
+
+    The pass concatenates bodies in order. Canonicalization or rotation fusion
+    can simplify the combined body. Target pipelines preserve native control
+    groups and their bodies, including fixed-parameter operations. They retain
+    native controlled U fusion, then unroll surviving composites before routing
+    and native synthesis. Combining is a separate pass so canonicalization does
+    not recreate composite target operations.
+  }];
+}
+
 def MergeSingleQubitRotationGates
     : Pass<"merge-single-qubit-rotation-gates", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::qco::QCODialect",

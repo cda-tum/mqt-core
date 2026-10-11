@@ -208,6 +208,8 @@ void populateTargetCompilationPipeline(OpPassManager& pm,
   pm.addPass(createInlinerPass({}, [](OpPassManager&) {}));
   // Fold tensor accesses before SCCP; defer liveness until after placement.
   populateQCOCleanupPipeline(pm, /*removeDeadValues=*/false);
+  pm.addPass(qco::createCombineControlledGates(target));
+  pm.addPass(createCanonicalizerPass());
   pm.addPass(createSCCPPass());
   pm.addPass(qco::createUnrollLoopsForPayload());
   pm.addPass(createSCCPPass());
@@ -229,6 +231,8 @@ void populateTargetCompilationPipeline(OpPassManager& pm,
       basis && basis->singleQubit == CompilerTarget::SingleQubitBasis::U) {
     pm.addPass(qco::createFuseSingleQubitUnitaryRuns(target));
   }
+  // Keep native controlled U bodies; distribute other composites for lowering.
+  pm.addPass(mqt::createUnrollModifiers());
   switch (target.connectivityKind()) {
   case CompilerTarget::Connectivity::Kind::Explicit: {
     qco::MappingPassOptions mappingOptions;
@@ -258,10 +262,17 @@ void populateTargetSynthesisPipeline(OpPassManager& pm,
   pm.addPass(createInlinerPass({}, [](OpPassManager&) {}));
   // Placement changes region results; run liveness once afterwards.
   populateQCOCleanupPipeline(pm, /*removeDeadValues=*/false);
+  pm.addPass(qco::createCombineControlledGates(target));
+  pm.addPass(createCanonicalizerPass());
   pm.addPass(qco::createLegalizeControlFlow());
   pm.addPass(qco::createDecomposeMultiControlled(target));
   pm.addPass(qco::createElideTerminalSwapsPass());
   pm.addPass(qco::createFuseTwoQubitGates(target));
+  if (const auto basis = target.synthesisBasis();
+      basis && basis->singleQubit == CompilerTarget::SingleQubitBasis::U) {
+    pm.addPass(qco::createFuseSingleQubitUnitaryRuns(target));
+  }
+  pm.addPass(mqt::createUnrollModifiers());
   pm.addPass(qco::createPlacementPass(target));
   qco::populateTargetNativeSynthesisPipeline(pm);
 }
