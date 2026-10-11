@@ -4116,3 +4116,107 @@ TEST_F(QCOTest, BuilderRejectsMissingBorrowedRegisterSlots) {
       },
       "must restore all extracted slots");
 }
+
+TEST(QCOVerificationTest, RejectsNonPositionalControlFlowResults) {
+  DialectRegistry registry;
+  registry.insert<qco::QCODialect, arith::ArithDialect, func::FuncDialect,
+                  scf::SCFDialect>();
+  MLIRContext context(registry);
+  context.loadAllAvailableDialects();
+  const std::array bodies = {
+      R"mlir(
+      %r:2 = qco.if %flag args(%u = %a, %v = %b)
+          -> (!qco.qubit, !qco.qubit) {
+        qco.yield %v, %u : !qco.qubit, !qco.qubit
+      } else args(%u = %a, %v = %b) {
+        qco.yield %u, %v : !qco.qubit, !qco.qubit
+      }
+    )mlir",
+      R"mlir(
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      %r:2 = scf.for %i = %c0 to %index step %c1
+          iter_args(%u = %a, %v = %b) -> (!qco.qubit, !qco.qubit) {
+        scf.yield %v, %u : !qco.qubit, !qco.qubit
+      }
+    )mlir",
+      R"mlir(
+      %r:3 = scf.while (%u = %a, %v = %b)
+          : (!qco.qubit, !qco.qubit) -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+        %extra = qco.alloc : !qco.qubit
+        scf.condition(%flag) %u, %v, %extra
+            : !qco.qubit, !qco.qubit, !qco.qubit
+      } do {
+      ^bb0(%u: !qco.qubit, %v: !qco.qubit, %extra: !qco.qubit):
+        qco.sink %extra : !qco.qubit
+        scf.yield %u, %v : !qco.qubit, !qco.qubit
+      }
+      qco.sink %r#2 : !qco.qubit
+    )mlir",
+      R"mlir(
+      %r:2 = qco.index_switch %index -> (!qco.qubit, !qco.qubit)
+      case 0 args(%u = %a, %v = %b) {
+        qco.yield %v, %u : !qco.qubit, !qco.qubit
+      }
+      default args(%u = %a, %v = %b) {
+        qco.yield %u, %v : !qco.qubit, !qco.qubit
+      }
+    )mlir",
+      R"mlir(
+      %r:2 = scf.while (%u = %a, %v = %b)
+          : (!qco.qubit, !qco.qubit) -> (!qco.qubit, !qco.qubit) {
+        scf.condition(%flag) %v, %u : !qco.qubit, !qco.qubit
+      } do {
+      ^bb0(%u: !qco.qubit, %v: !qco.qubit):
+        scf.yield %u, %v : !qco.qubit, !qco.qubit
+      }
+    )mlir",
+      R"mlir(
+      %r:2 = scf.while (%u = %a, %v = %b)
+          : (!qco.qubit, !qco.qubit) -> (!qco.qubit, !qco.qubit) {
+        scf.condition(%flag) %u, %v : !qco.qubit, !qco.qubit
+      } do {
+      ^bb0(%u: !qco.qubit, %v: !qco.qubit):
+        scf.yield %v, %u : !qco.qubit, !qco.qubit
+      }
+    )mlir",
+  };
+  for (const auto* body : bodies) {
+    SCOPED_TRACE(body);
+    for (const bool tensor : {false, true}) {
+      SCOPED_TRACE(tensor);
+      if (tensor && StringRef(body).contains("qco.alloc")) {
+        continue;
+      }
+      std::string source = std::string(R"mlir(
+      func.func @test(%flag: i1, %index: index,
+                      %a: !qco.qubit, %b: !qco.qubit)
+          -> (!qco.qubit, !qco.qubit) {
+    )mlir") + body + R"mlir(
+        return %r#0, %r#1 : !qco.qubit, !qco.qubit
+      }
+    )mlir";
+      if (tensor) {
+        constexpr StringRef qubitType = "!qco.qubit";
+        constexpr StringRef tensorType = "tensor<1x!qco.qubit>";
+        size_t position = 0;
+        while ((position = source.find(qubitType, position)) !=
+               std::string::npos) {
+          source.replace(position, qubitType.size(), tensorType);
+          position += tensorType.size();
+        }
+      }
+      auto moduleOp = parseSourceString<ModuleOp>(source, &context);
+      ASSERT_TRUE(moduleOp);
+      std::string diagnostics;
+      ScopedDiagnosticHandler handler(&context, [&](Diagnostic& diagnostic) {
+        diagnostics += diagnostic.str();
+        return success();
+      });
+      EXPECT_TRUE(failed(qco::verifyLinearity(*moduleOp)));
+      EXPECT_NE(diagnostics.find("positional quantum state correspondence"),
+                std::string::npos);
+      EXPECT_TRUE(succeeded(verify(*moduleOp)));
+    }
+  }
+}

@@ -82,14 +82,14 @@ protected:
 TEST_F(QCOMeasurementLiftingTest, MeasuresBlockArguments) {
   auto parsed = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @direct(%q: !qco.qubit) -> (!qco.qubit, i1) {
+      func.func @direct(%q: !qco.qubit) -> (i1, !qco.qubit) {
         %out, %bit = qco.measure %q : !qco.qubit
-        return %out, %bit : !qco.qubit, i1
+        return %bit, %out : i1, !qco.qubit
       }
-      func.func @hadamard(%q: !qco.qubit) -> (!qco.qubit, i1) {
+      func.func @hadamard(%q: !qco.qubit) -> (i1, !qco.qubit) {
         %h = qco.h %q : !qco.qubit
         %out, %bit = qco.measure %h : !qco.qubit
-        return %out, %bit : !qco.qubit, i1
+        return %bit, %out : i1, !qco.qubit
       }
     }
   )mlir",

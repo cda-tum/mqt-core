@@ -100,8 +100,9 @@ comment, data-structure, diagnostic, and debugging guidance.
   subsets. Failed rewrite matches leave IR unchanged. Do not silently broaden
   support or emit partial success.
 - QCO qubits and QTensors have exactly one use in valid IR. Validate with
-  `qco::verifyLinearity` at boundaries; avoid redundant rewrite guards.
-  Linearity does not imply positional wire correspondence.
+  `qco::verifyLinearity` at boundaries; avoid redundant rewrite guards. The same
+  verifier checks positional quantum function and region results;
+  exactly-one-use alone does not establish wire correspondence.
 - Search upstream MLIR before adding operations, interfaces, traits,
   conversions, or utilities. Reuse folding, canonicalization, and analysis
   facilities. Keep custom state only for a concrete correctness or complexity

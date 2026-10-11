@@ -86,14 +86,14 @@ protected:
 TEST_F(QCOHadamardLiftingTest, MeasuresBlockArguments) {
   auto parsed = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @direct(%q: !qco.qubit) -> (!qco.qubit, i1) {
+      func.func @direct(%q: !qco.qubit) -> (i1, !qco.qubit) {
         %out, %bit = qco.measure %q : !qco.qubit
-        return %out, %bit : !qco.qubit, i1
+        return %bit, %out : i1, !qco.qubit
       }
-      func.func @hadamard(%q: !qco.qubit) -> (!qco.qubit, i1) {
+      func.func @hadamard(%q: !qco.qubit) -> (i1, !qco.qubit) {
         %h = qco.h %q : !qco.qubit
         %out, %bit = qco.measure %h : !qco.qubit
-        return %out, %bit : !qco.qubit, i1
+        return %bit, %out : i1, !qco.qubit
       }
     }
   )mlir",
@@ -118,18 +118,18 @@ TEST_F(QCOHadamardLiftingTest, LeavesUnsupportedControlShapesUnchanged) {
   for (const auto* source : {
            R"mlir(
         func.func @test(%control: !qco.qubit, %unused: !qco.qubit, %target: !qco.qubit)
-            -> (!qco.qubit, !qco.qubit, !qco.qubit, i1) {
+            -> (i1, !qco.qubit, !qco.qubit, !qco.qubit) {
           %c, %u, %t = qco.ctrl(%control) targets(%a = %unused, %b = %target) {
             %x = qco.x %b : !qco.qubit
             qco.yield %a, %x : !qco.qubit, !qco.qubit
           } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
           %h = qco.h %u : !qco.qubit
           %out, %bit = qco.measure %h : !qco.qubit
-          return %c, %out, %t, %bit : !qco.qubit, !qco.qubit, !qco.qubit, i1
+          return %bit, %c, %out, %t : i1, !qco.qubit, !qco.qubit, !qco.qubit
         }
       )mlir",
            R"mlir(
-        func.func @test(%q: !qco.qubit) -> (!qco.qubit, i1) {
+        func.func @test(%q: !qco.qubit) -> (i1, !qco.qubit) {
           %t = "qco.ctrl"(%q) <{operandSegmentSizes = array<i32: 0, 1>, resultSegmentSizes = array<i32: 0, 1>}> ({
           ^bb0(%a: !qco.qubit):
             %x = qco.x %a : !qco.qubit
@@ -137,7 +137,7 @@ TEST_F(QCOHadamardLiftingTest, LeavesUnsupportedControlShapesUnchanged) {
           }) : (!qco.qubit) -> !qco.qubit
           %h = qco.h %t : !qco.qubit
           %out, %bit = qco.measure %h : !qco.qubit
-          return %out, %bit : !qco.qubit, i1
+          return %bit, %out : i1, !qco.qubit
         }
       )mlir",
        }) {

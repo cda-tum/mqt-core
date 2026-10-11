@@ -501,7 +501,8 @@ struct PlacementPass final
 protected:
   void runOnOperation() override {
     auto moduleOp = getOperation();
-    if (failed(mqt::verifyQuantumAllocations(moduleOp))) {
+    if (failed(verifyLinearity(moduleOp)) ||
+        failed(mqt::verifyQuantumAllocations(moduleOp))) {
       signalPassFailure();
       return;
     }
@@ -912,7 +913,8 @@ protected:
       return;
     }
 
-    if (failed(mqt::verifyQuantumAllocations(moduleOp))) {
+    if (failed(verifyLinearity(moduleOp)) ||
+        failed(mqt::verifyQuantumAllocations(moduleOp))) {
       signalPassFailure();
       return;
     }
@@ -1159,32 +1161,68 @@ private:
     return iterator.qubit();
   }
 
-  /// Return an initial layout and whether it is known to need no routing.
-  ///
-  /// Otherwise, place frequently interacting qubits near each other. Nested
-  /// control flow has no single interaction frequency, so leave those programs
-  /// to the identity and random starts.
-  [[nodiscard]] std::optional<std::pair<Layout<QubitIndex>, bool>>
-  generateGreedyLayout(Wires wires, const Environment& env) const {
-    DenseMap<QubitIndexPair, size_t> weights;
+  /// Collect bounded interaction frequencies through wire-preserving loops.
+  static bool
+  collectInteractionWeights(Wires wires,
+                            DenseMap<QubitIndexPair, size_t>& weights,
+                            size_t repetitions, size_t maximumWeight) {
     bool supported = true;
     walkProgramGraph<WireDirection::Forward>(
         MutableArrayRef(wires.data(), wires.size()),
         [&](const Frontier& frontier, SmallVectorImpl<Operation*>& released) {
           for (const auto& [op, indices] : frontier) {
-            if (op->getNumRegions() != 0 && !isa<UnitaryOpInterface>(op)) {
+            if (auto loop = dyn_cast<scf::ForOp>(op)) {
+              const auto tripCount = loop.getStaticTripCount();
+              if (!tripCount || tripCount->isZero()) {
+                supported = false;
+                return WalkResult::interrupt();
+              }
+              Wires children(wires.size());
+              for (size_t index : indices) {
+                const auto position =
+                    cast<OpResult>(wires[index].qubit()).getResultNumber();
+                auto argument = loop.getRegionIterArgs()[position];
+                children[index] = WireIterator(argument);
+              }
+              const size_t iterations =
+                  tripCount->getLimitedValue(maximumWeight);
+              const size_t weight = repetitions > maximumWeight / iterations
+                                        ? maximumWeight
+                                        : repetitions * iterations;
+              if (!collectInteractionWeights(std::move(children), weights,
+                                             weight, maximumWeight)) {
+                supported = false;
+                return WalkResult::interrupt();
+              }
+            } else if (op->getNumRegions() != 0 &&
+                       !isa<UnitaryOpInterface>(op)) {
               supported = false;
               return WalkResult::interrupt();
             }
             if (indices.size() == 2 && !isa<BarrierOp>(op) &&
                 isa<UnitaryOpInterface>(op)) {
-              ++weights[std::minmax(indices[0], indices[1])];
+              auto& weight = weights[std::minmax(indices[0], indices[1])];
+              weight += std::min(repetitions, maximumWeight - weight);
             }
             released.emplace_back(op);
           }
           return WalkResult::advance();
         });
-    if (!supported) {
+    return supported;
+  }
+
+  /// Return an initial layout and whether it is known to need no routing.
+  ///
+  /// Counted scalar loops contribute weighted interactions. Other regions use
+  /// identity and random starts.
+  [[nodiscard]] std::optional<std::pair<Layout<QubitIndex>, bool>>
+  generateGreedyLayout(const Wires& wires, const Environment& env) const {
+    DenseMap<QubitIndexPair, size_t> weights;
+    // Bound both sums over neighbors and their distance-weighted costs.
+    const size_t maximumWeight = std::numeric_limits<size_t>::max() /
+                                 std::max(wires.size(), size_t{1}) /
+                                 env.target.numSites();
+    if (!collectInteractionWeights(wires, weights, 1, maximumWeight)) {
       return std::nullopt;
     }
     if (llvm::all_of(weights, [&](const auto& interaction) {

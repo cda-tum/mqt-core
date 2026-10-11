@@ -2900,6 +2900,148 @@ TEST_F(MappingPassFixture, ScoreGreedyLayoutWithoutRefinement) {
   }
 }
 
+TEST_F(MappingPassFixture, PlaceCountedLoopInteractionsWithoutRouting) {
+  const auto target = getSquareGridTarget(2);
+  for (const bool nested : {false, true}) {
+    SCOPED_TRACE(nested);
+    QCOProgramBuilder builder(context.get());
+    builder.initialize({cbit::RegisterType::get(context.get(), 3)});
+    auto bits = builder.allocClassicalBitRegister(3);
+    SmallVector<Value> qubits;
+    for (size_t i = 0; i < 3; ++i) {
+      qubits.push_back(builder.allocQubit());
+    }
+    qubits[0] = builder.x(qubits[0]);
+    const auto body = [&builder](Value, ValueRange args) {
+      SmallVector<Value> wires(args);
+      std::tie(wires[0], wires[1]) = builder.cx(wires[0], wires[1]);
+      std::tie(wires[1], wires[2]) = builder.cx(wires[1], wires[2]);
+      return wires;
+    };
+    qubits = llvm::to_vector(
+        builder.scfFor(0, 101, 1, qubits, [&](Value iv, ValueRange args) {
+          return nested ? llvm::to_vector(builder.scfFor(0, 3, 1, args, body))
+                        : body(iv, args);
+        }));
+    for (size_t i = 0; i < qubits.size(); ++i) {
+      std::tie(qubits[i], std::ignore) =
+          builder.measure(qubits[i], bits, static_cast<int64_t>(i));
+      builder.sink(qubits[i]);
+    }
+    auto moduleOp = builder.finalize({bits});
+    const auto expected = qco::sample(getEntryPoint(*moduleOp), 128, 42);
+    ASSERT_TRUE(succeeded(expected));
+    ASSERT_TRUE(succeeded(runPass(
+        *moduleOp, target,
+        MappingPassOptions{.niterations = 0, .ntrials = 1, .seed = 42})));
+    EXPECT_TRUE(succeeded(verify(*moduleOp)));
+    EXPECT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+    EXPECT_TRUE(isExecutable(getEntryPoint(*moduleOp), target));
+    size_t swaps = 0;
+    size_t loops = 0;
+    moduleOp->walk([&](SWAPOp) { ++swaps; });
+    moduleOp->walk([&](scf::ForOp) { ++loops; });
+    EXPECT_EQ(swaps, 0U);
+    EXPECT_EQ(loops, nested ? 2U : 1U);
+    const auto actual = qco::sample(getEntryPoint(*moduleOp), 128, 42);
+    ASSERT_TRUE(succeeded(actual));
+    EXPECT_EQ(*actual, *expected);
+  }
+}
+
+TEST_F(MappingPassFixture, KeepFallbackForUnsupportedLoopInteractions) {
+  const auto target = getSquareGridTarget(2);
+  for (const StringRef mode :
+       {"permuted", "unknown", "branch", "zero", "overflow"}) {
+    SCOPED_TRACE(mode.str());
+    std::string source = R"mlir(module {
+      func.func @main(%count: index, %condition: i1) attributes {mqt.entry_point} {
+        %c0 = arith.constant 0 : index
+        %c1 = arith.constant 1 : index
+        %c100 = arith.constant 100 : index
+        %huge = arith.constant 9223372036854775807 : index
+        %q0 = qco.alloc : !qco.qubit
+        %q1 = qco.alloc : !qco.qubit
+        %q2 = qco.alloc : !qco.qubit
+        %out:3 = scf.for %i = %c0 to UPPER step %c1
+            iter_args(%a = %q0, %b = %q1, %c = %q2)
+            -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+          %inner:3 = scf.for %j = %c0 to UPPER step %c1
+              iter_args(%x = %a, %y = %b, %z = %c)
+              -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+            %u, %v = qco.ctrl(%x) targets (%target = %y) {
+              %next = qco.x %target : !qco.qubit
+              qco.yield %next : !qco.qubit
+            } : ({!qco.qubit}, {!qco.qubit})
+            %w, %t = qco.ctrl(%v) targets (%target = %z) {
+              %next = qco.x %target : !qco.qubit
+              qco.yield %next : !qco.qubit
+            } : ({!qco.qubit}, {!qco.qubit})
+            BRANCH
+            scf.yield YIELD : !qco.qubit, !qco.qubit, !qco.qubit
+          }
+          scf.yield %inner#0, %inner#1, %inner#2
+              : !qco.qubit, !qco.qubit, !qco.qubit
+        }
+        qco.sink %out#0 : !qco.qubit
+        qco.sink %out#1 : !qco.qubit
+        qco.sink %out#2 : !qco.qubit
+        return
+      }
+    })mlir";
+    const StringRef bound = mode == "unknown"    ? "%count"
+                            : mode == "zero"     ? "%c0"
+                            : mode == "overflow" ? "%huge"
+                                                 : "%c100";
+    for (auto position = source.find("UPPER"); position != std::string::npos;
+         position = source.find("UPPER")) {
+      source.replace(position, 5, bound.str());
+    }
+    source.replace(source.find("BRANCH"), 6,
+                   mode == "branch" ? R"mlir(
+              %branch = qco.if %condition args(%q = %u) -> (!qco.qubit) {
+                %h = qco.h %q : !qco.qubit
+                qco.yield %h : !qco.qubit
+              } else args(%q = %u) {
+                qco.yield %q : !qco.qubit
+              }
+            )mlir"
+                                    : "");
+    source.replace(source.find("YIELD"), 5,
+                   mode == "permuted" ? "%t, %w, %u"
+                   : mode == "branch" ? "%branch, %w, %t"
+                                      : "%u, %w, %t");
+    auto moduleOp = parseSourceString<ModuleOp>(source, context.get());
+    ASSERT_TRUE(moduleOp);
+    if (mode == "permuted") {
+      attachTestEnvironment(*moduleOp, target);
+      const auto before = printModule(*moduleOp);
+      ScopedDiagnosticHandler handler(context.get(),
+                                      [](Diagnostic&) { return success(); });
+      EXPECT_TRUE(failed(verifyLinearity(*moduleOp)));
+      EXPECT_TRUE(failed(runPass(
+          *moduleOp, target,
+          MappingPassOptions{.niterations = 0, .ntrials = 1, .seed = 42})));
+      EXPECT_EQ(printModule(*moduleOp), before);
+      continue;
+    }
+    ASSERT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+    ASSERT_TRUE(succeeded(runPass(
+        *moduleOp, target,
+        MappingPassOptions{.niterations = 0, .ntrials = 1, .seed = 42})));
+    EXPECT_TRUE(succeeded(verify(*moduleOp)));
+    EXPECT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+    size_t swaps = 0;
+    moduleOp->walk([&](SWAPOp) { ++swaps; });
+    if (mode == "overflow") {
+      EXPECT_EQ(swaps, 0U);
+    } else {
+      // The fallback's identity start cannot embed the 0-1-2 path.
+      EXPECT_GT(swaps, 0U);
+    }
+  }
+}
+
 TEST_F(MappingPassFixture, ProduceStableOutputForFixedSeed) {
   constexpr size_t repetitions = 4;
   const auto target = getSquareGridTarget(10);
