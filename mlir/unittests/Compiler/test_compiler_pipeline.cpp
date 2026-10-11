@@ -124,6 +124,21 @@ namespace jeff = mlir::jeff;
 using QCProgramBuilderFn = NamedMLIRBuilder<QCProgramBuilder>;
 using QIRProgramBuilderFn = NamedMLIRBuilder<QIRProgramBuilder>;
 
+TEST(CompilerContextTest, SharesWorkersBetweenIndependentContexts) {
+  auto first = createCompilerContext();
+  auto second = createCompilerContext();
+  ASSERT_NE(first.get(), second.get());
+  if (!first->isMultithreadingEnabled()) {
+    GTEST_SKIP() << "LLVM multithreading is disabled";
+  }
+  ASSERT_TRUE(second->isMultithreadingEnabled());
+  EXPECT_EQ(&first->getThreadPool(), &second->getThreadPool());
+  first->disableMultithreading();
+  EXPECT_TRUE(second->isMultithreadingEnabled());
+  first->enableMultithreading();
+  EXPECT_EQ(&first->getThreadPool(), &second->getThreadPool());
+}
+
 namespace {
 
 struct CompilerPipelineTestCase {
