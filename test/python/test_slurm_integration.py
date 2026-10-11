@@ -170,13 +170,9 @@ def test_invocations_use_distinct_projects_and_artifacts(monkeypatch: pytest.Mon
 
 def test_provider_options_preserve_command_arguments(tmp_path: Path) -> None:
     """Keep workload arguments separate from fixture options."""
-    setup = tmp_path / "setup.sh"
-    setup.touch()
     options = runner.parse_arguments((
         "--workload",
         str(tmp_path),
-        "--setup-script",
-        "setup.sh",
         "--package",
         "iqm-qdmi[qiskit] @ git+https://github.com/iqm-finland/QDMI-on-IQM@main",
         "--package",
@@ -209,16 +205,6 @@ def test_invalid_provider_inputs_fail_before_docker(arguments: tuple[str, ...]) 
     """Reject incomplete or unrepresentable fixture inputs at the CLI."""
     with pytest.raises(SystemExit) as error:
         runner.parse_arguments(arguments)
-    assert error.value.code == 2
-
-
-def test_setup_script_must_stay_inside_workload(tmp_path: Path) -> None:
-    """Do not accept a setup script that the workload build context cannot supply."""
-    workload = tmp_path / "workload"
-    workload.mkdir()
-    (tmp_path / "outside.sh").touch()
-    with pytest.raises(SystemExit) as error:
-        runner.parse_arguments(("--workload", str(workload), "--setup-script", "../outside.sh"))
     assert error.value.code == 2
 
 

@@ -1,7 +1,5 @@
 # Slurm playground for hybrid workflows
 
-The [cluster guide](../../docs/qdmi/slurm_cluster.md) covers login submission,
-classical and quantum access partitions, device availability, accounting, and
-scientific workflow stages. The
-[Slurm integration guide](../../docs/qdmi/slurm.md) explains how to provide the
-shared QDMI environment on an existing cluster.
+The [Slurm guide](../../docs/qdmi/slurm.md) covers cluster startup, job
+submission, shared QDMI devices, availability, accounting, and hybrid workflow
+stages. It also explains deployment on an existing cluster.

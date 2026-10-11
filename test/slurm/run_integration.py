@@ -409,10 +409,8 @@ def parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--workload", type=Path, default=CLUSTER)
     parser.add_argument("--package", action="append", default=[], help="additional uv requirement (repeatable)")
     parser.add_argument("--nodes", type=int, default=2)
-    parser.add_argument("--setup-script", default="")
     parser.add_argument("--compose-file", type=Path)
     parser.add_argument("--device-license")
-    parser.add_argument("--qdmi-config-file")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     options = parser.parse_args(arguments)
     if options.nodes < 1:
@@ -423,16 +421,11 @@ def parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         parser.error("--device-license and a command after -- must be supplied together")
     if options.device_license and re.search(r"[\s,:|@]", options.device_license):
         parser.error("--device-license must be one local device ID without a count")
-    if options.setup_script:
-        setup = (options.workload / options.setup_script).resolve()
-        if not setup.is_relative_to(options.workload.resolve()) or not setup.is_file():
-            parser.error("--setup-script must name a file inside --workload")
     return options
 
 
 def test_provider(options: argparse.Namespace) -> None:
     """Execute a device workload with its submission environment."""
-    environment = [f"MQT_CORE_QDMI_CONFIG_FILE={options.qdmi_config_file}"] if options.qdmi_config_file else []
     allocation = (
         "srun",
         "--immediate=5",
@@ -441,7 +434,7 @@ def test_provider(options: argparse.Namespace) -> None:
         "--partition=quantum",
         f"--licenses={options.device_license}:1",
     )
-    job("env", *environment, *allocation, *options.command, timeout=300)
+    job(*allocation, *options.command, timeout=300)
 
 
 def test_partitions() -> None:
@@ -503,7 +496,6 @@ def main(arguments: Sequence[str] = ()) -> None:
         "MQT_CORE_SLURM_CORE": str(ROOT),
         "MQT_CORE_SLURM_WORKLOAD": str(options.workload.resolve()),
         "MQT_CORE_SLURM_PACKAGES": "\n".join(options.package) or os.environ.get("MQT_CORE_SLURM_PACKAGES", ""),
-        "MQT_CORE_SLURM_SETUP_SCRIPT": options.setup_script,
     })
     COMPOSE_FILES[:] = ("--file", str(options.compose_file.resolve())) if options.compose_file else ()
 
@@ -530,8 +522,6 @@ def main(arguments: Sequence[str] = ()) -> None:
                 flags=re.MULTILINE,
             )
             (RUNTIME / "slurm.conf").write_text(configuration, encoding="utf-8")
-        if options.qdmi_config_file:
-            (RUNTIME / "qdmi.env").write_text(f"MQT_CORE_QDMI_CONFIG_FILE={options.qdmi_config_file}\n")
         LOGGER.info("Slurm runtime directory: %s", RUNTIME)
         started = True
         compose(

@@ -30,7 +30,7 @@ clients must use those queries to prepare compatible jobs.
 | {doc}`Driver and application APIs <driver>`  | Load device libraries and provide C++ and Python access to sessions, queries, and jobs. |
 | Device implementation                        | Translate QDMI calls into simulator operations or a provider's API.                     |
 | {doc}`SDK adapters <qdmi_backend>`           | Execute Qiskit and PennyLane programs through QDMI.                                     |
-| {doc}`Slurm playground <slurm_cluster>`      | Schedule hybrid workflows using the ordinary QDMI APIs.                                 |
+| {doc}`Slurm playground <slurm>`              | Schedule hybrid workflows using the ordinary QDMI APIs.                                 |
 
 Compilation and submission remain separate: `compile_program` prepares a
 `CompiledProgram`; `submit_program` submits it to a matching execution device.
@@ -54,8 +54,8 @@ states.
   topology, native operations, and calibration. They do not execute programs.
 - **Use an SDK:** connect through {doc}`Qiskit <qdmi_backend>` or
   {doc}`PennyLane <pennylane_device>`.
-- **Run on a cluster:** use the {doc}`Slurm guide <slurm>` and
-  {doc}`hybrid-workflow playground <slurm_cluster>`.
+- **Run on a cluster:** use the
+  {doc}`Slurm guide and workflow playground <slurm>`.
 - **Implement a device:** follow the
   [QDMI device interface](https://munich-quantum-software-stack.github.io/QDMI/)
   and use MQT Core's bundled devices as implementation examples.
@@ -91,8 +91,7 @@ QDMI driver <driver>
 QDMI device configuration <configuration>
 DDSIM QDMI Device <ddsim_device>
 SC QDMI Device <sc_device>
-Slurm integration <slurm>
-Example Slurm cluster <slurm_cluster>
+Slurm workflows and playground <slurm>
 QDMI-Qiskit Backend <qdmi_backend>
 PennyLane interface for QDMI devices <pennylane_device>
 ```

@@ -1,105 +1,82 @@
 # Shared HPCQC playground for QDMI workflows
 
-Status: implementation and local validation complete. Docker Desktop on macOS
-has not been run locally.
+Status: implementation and local validation complete. Docker Desktop on Mac
+hardware remains untested.
 
-## Scope and decisions
+## Supported deployment
 
 `examples/slurm` provides login submission, scalable classical and quantum
-access nodes, and persistent slurmdbd/MariaDB accounting. Every QAN can compile
-circuits and reach all configured devices. One environment and catalogue serve
-all implementations. Partitions place jobs; licenses limit concurrent device
-access. Device services enforce authorization.
+access nodes, and persistent SlurmDBD/MariaDB accounting. Every QAN can compile
+circuits and reach all configured devices through QDMI. One environment and
+catalogue serve all implementations. Shared application files connect workflow
+stages. Partitions place jobs; licenses limit concurrent device access; device
+services authorize requests.
 
-The single-device examples derive their device ID from `SLURM_JOB_LICENSES` and
-request one unit of a local license. Applications using several devices receive
-explicit IDs and open independent sessions through the generic built-in driver
-API. The playground monitor probes status in a bounded child process and updates
-license-only reservations. Scheduler policy stays outside the installed package.
-The released C++/Python Slurm adapters and the proposed native checker are
-removed; the PR describes the API migration.
+Single-device examples derive a catalogue ID from `SLURM_JOB_LICENSES`,
+requesting one unit of one local license. Applications using several devices
+pass explicit IDs to independent driver sessions. Scheduler policy stays in the
+playground, outside the installed MQT Core library. The released C++/Python
+Slurm adapters and proposed native checker are removed; the PR describes the API
+migration.
 
-Site monitor credentials and workload credentials remain separate. Device output
-is suppressed before loading libraries. Failed probes leave admission closed,
-and systemd cleans descendants when a monitor exits. Availability is a snapshot
-for the monitor identity. Controller communication failures can leave the
-previous scheduler state active and require administrator attention.
+The monitor probes status in a bounded, quiet child process and updates
+license-only reservations. Its credentials remain separate from workload
+credentials. Failed probes close admission; systemd cleans descendants when a
+monitor exits. Availability is a snapshot for the monitor identity. Controller
+communication failures can leave previous scheduler state active and require
+administrator attention. QDMI imports resolve lazily inside the worker's
+exception boundary in the playground's Python runtime.
 
-The scientific application remains separate. The guide demonstrates ordinary
-Slurm job dependencies for quantum measurement and classical propagation.
+## Installation and portability
 
-## Performance and portability
+Docker builds the checked-out MQT Core source with the official setup-mlir
+installer, using the private package version 4.1.0. Ordinary uv requirements
+select additional PyPI, Git, or local-source packages. Wheels include device
+libraries and manifests; all workloads use those installed packages. A separate
+native installation mode and catalogue-generation callback are unnecessary. MQT
+Core supplies Qiskit and PennyLane extras. Applications add further requirements
+when needed, such as IQM's estimator dependencies.
 
-The monitor and command-line entry points use Python 3.15 lazy imports for
-modules that are unused on their startup paths. Earlier supported Python
-versions keep eager import behavior. QDMI imports are lazy too, first resolved
-within the quiet worker and its exception boundary in the playground's Python
-runtime. Optional adapter initialization remains unchanged. A local flake8-lazy
-audit informed these choices without adding a CI dependency.
+The completed environment is copied into the runtime image; compilers and the
+LLVM SDK stay in builder stages. Linux Docker Engine and macOS Docker Desktop
+use the same Compose settings. Privileged containers, the host cgroup namespace,
+and the cgroup-v2 mount follow Docker Desktop's documented systemd setup;
+Enhanced Container Isolation is incompatible with this access.
 
-On Linux ARM64 with Python 3.15, alternating warm subprocess measurements gave
-median DDSIM probe startup of 27.2 to 22.3 ms (40 samples per version), and CLI
-help of 29.8 to 23.1 ms (22 samples). These measure startup, not device-service
-latency or end-to-end cluster throughput.
+## Documentation and device CI
 
-Docker builds MQT Core from the checked-out source for its target architecture,
-using the official setup-mlir installer. Standard uv requirement lines select
-additional PyPI, Git, or local-source packages. The completed environment is
-copied into the runtime image; compilers, toolchains, and sources stay in
-builder stages. Native/wheel device checks reuse independent device compilation.
+`docs/qdmi/slurm.md` is the canonical guide for the playground and existing
+clusters. Its topology shows the shared filesystem and the QDMI interface
+between QANs and individual device implementations. IQM and Braket link to that
+guide. The scientific application remains separate; the guide demonstrates
+dependencies between quantum measurement and classical propagation jobs.
 
-Linux Docker Engine and macOS Docker Desktop use the same Compose setup. The
-privileged container, host cgroup namespace, and cgroup-v2 mount match Docker
-Desktop's documented systemd setup. Enhanced Container Isolation is incompatible
-with this access. Native Linux ARM64 validation does not prove execution on Mac
-hardware.
-
-Fork and Dependabot CI runs without credentials. Device repositories retain
-meaningful native and Python checks and visibly skip authenticated jobs. A
-maintainer can dispatch Slurm tests from upstream main against the reviewed,
-immutable PR head SHA. The workflow checks the SHA before passing credentials;
-GitHub environments alone do not bypass fork secret restrictions. Full
-credentialed CI and executable notebooks run on trusted branches. The manual
-entry point becomes usable after its workflow reaches main.
+Device repositories skip authenticated jobs for upstream PRs from forks while
+retaining ordinary unit and Python checks. Contributors can run credentialed CI
+inside their own forks using their own repository secrets; those secrets do not
+reach upstream PR jobs. There is no reviewed-SHA dispatch workflow or
+Dependabot-specific branch. Secret requirements remain explicit for trusted
+runs. IQM quantum-computer identifiers and aliases remain distinct from
+site-defined Slurm license names.
 
 ## Validation
 
-Rebased on MQT Core main `974e4fdc`. The runner/monitor suite passes 16 cases
-after removing host-wheel checks, and the CLI suite passes 14 cases on Python
-3.11, 3.14, and 3.15. Repository lint and the complete Sphinx build pass,
-including all 18 executable notebooks and internal-link checks. Chrome DevTools
-inspection covers the Core, IQM, and Braket guides at desktop and mobile widths,
-including console and network checks. The topology uses presentation-style
-pictograms and the official QDMI mark; measured label bounds and screenshots
-confirm that its text fits. Examples use syntax highlighting and named file
-captions.
+All PR bases are current: Core `974e4fdc`, IQM `d6b57cc7`, Braket `95719f9d`.
+The simplified runner/monitor suite passes 15 cases. The source-built Core
+cluster passes with three classical nodes and two QANs: DDSIM/SC execution,
+license selection and contention, failed-probe admission and recovery,
+environment export, partition placement, and persistent accounting. The full run
+took 148 seconds and installed MQT Core 4.1.0.
 
-The source-built cluster passed with three classical nodes and two QANs: login
-submission, license-derived device selection, placement, DDSIM/SC execution,
-contention, failed-probe admission, recovery, environment export, and accounting
-after service recreation. The full run completed in 254 seconds including MQT
-Core compilation. A shared environment installed local IQM source, a pinned
-Braket Git revision, and a PyPI package; all 33 packages passed dependency
-checks and 23 catalogue devices were found. Independent DDSIM and SC sessions
-reported `IDLE`. The final runtime's monitor help and DDSIM probe also passed
-with networking disabled.
+Authenticated package-only workloads passed on Emerald (73 seconds) and SV1 (340
+seconds), including verification of the installed device libraries. Full lint
+passes in all three repositories. Strict Core documentation and generated site
+links pass; all five device notebooks executed. IQM's normal documentation gate
+retains 19 existing reference/rendering warnings; Braket's strict build is
+clean. Chrome inspection found no layout, console, or network errors at desktop
+and mobile widths. Hosted status must be reported for the published heads,
+separately from local checks.
 
-The package/API removal at `c9be8c8f` previously passed the Clang release build
-with IPO, 591 QDMI CTest cases with one existing skip, and 378 installed-wheel
-Python tests with one skip. Generated bindings and full-file C++ lint passed.
-The startup and documentation changes do not alter those native interfaces.
-
-Device CI pins the playground revision separately from its MQT Core main package
-pin. Authenticated Emerald mock and SV1 workloads test native and wheel modes,
-including loaded-library checks. Their repositories provide package, native, and
-executable-documentation validation. Timeout and controller-failure coverage
-remains in the runner suite; real admission, recovery, device isolation,
-credentials, and cleanup are exercised in the cluster.
-
-Both device repositories passed authenticated native and wheel workloads and
-fresh execution of all five documentation notebooks. IQM fork CI passed 175
-native unit tests and 98 Python tests, with seven existing live-test skips. Both
-repositories passed lint and reviewed-SHA workflow policy probes.
-
-Dynamic-node recreation requires removing obsolete node records when retaining
-controller state.
+A cache-preserving requirements change reran the shared environment stage in 1.9
+seconds (5.64 seconds for the build) without recompiling Braket or its SDK. The
+resulting image passes dependency checks and reports MQT Core 4.1.0.

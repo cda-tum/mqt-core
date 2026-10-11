@@ -54,11 +54,11 @@ RUN --mount=type=bind,from=core-source,source=/core,target=/core,rw \
     --mount=type=cache,target=/root/.cache/uv \
     --mount=type=cache,id=mqt-slurm-core-${TARGETARCH},target=/tmp/core-build,sharing=locked \
     CC=clang CXX=clang++ MLIR_DIR=/opt/llvm/lib/cmake/mlir \
-    VCS_VERSIONING_PRETEND_VERSION_FOR_MQT_CORE=0.0.0+local \
+    VCS_VERSIONING_PRETEND_VERSION_FOR_MQT_CORE=4.1.0 \
     uv build /core --wheel --out-dir /opt/core-wheel -Cbuild-dir=/tmp/core-build \
         -Ccmake.define.DEPLOY=ON -Ccmake.define.CMAKE_LINKER_TYPE=LLD
 
-FROM scratch AS provider-source
+FROM scratch AS workload-source
 
 COPY --from=workload \
     --exclude=**/.git --exclude=**/.github --exclude=**/.env* --exclude=**/build --exclude=**/build-* --exclude=**/cmake-build-* \
@@ -67,36 +67,15 @@ COPY --from=workload \
     --exclude=**/__pycache__ --exclude=**/dist --exclude=test/slurm/runtime --exclude=test/slurm/dist \
     . /workload
 
-FROM build-tools AS provider-build
-
-ARG TARGETARCH
-ARG SETUP_SCRIPT=""
-ARG PROVIDER_RUNTIME_COMPONENT=""
-RUN --mount=type=bind,from=provider-source,source=/workload,target=/workload \
-    --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=cache,id=mqt-slurm-provider-${TARGETARCH}-${PROVIDER_RUNTIME_COMPONENT},target=/tmp/provider-build,sharing=locked \
-    mkdir -p /opt/provider/wheels /opt/provider/native \
-    && if [ -n "$SETUP_SCRIPT" ]; then \
-        uv build /workload --wheel --out-dir /opt/provider/wheels \
-            --config-setting=build-dir=/tmp/provider-build \
-        && cmake --install /tmp/provider-build --prefix /opt/provider/native \
-            --component "${PROVIDER_RUNTIME_COMPONENT:?Set the device Runtime component}"; \
-    fi
-
 FROM build-tools AS environment
 
 ARG PACKAGES=""
 RUN --mount=type=bind,from=core-build,source=/opt/core-wheel,target=/tmp/core-wheel \
-    --mount=type=bind,from=provider-source,source=/workload,target=/workload,rw \
-    --mount=type=bind,from=provider-build,source=/opt/provider/wheels,target=/tmp/provider-wheels \
+    --mount=type=bind,from=workload-source,source=/workload,target=/workload,rw \
     --mount=type=cache,target=/root/.cache/uv \
     set -- /tmp/core-wheel/*.whl \
     && printf 'mqt-core[qiskit,pennylane] @ file://%s\n' "$1" > /tmp/core-override.txt \
     && printf '%s[qiskit,pennylane]\n%s\n' "$1" "$PACKAGES" > /tmp/packages.txt \
-    && for wheel in /tmp/provider-wheels/*.whl; do \
-        [ -f "$wheel" ] || continue; \
-        printf '%s[qiskit]\n' "$wheel" >> /tmp/packages.txt; \
-    done \
     && uv pip install --compile-bytecode --overrides /tmp/core-override.txt -r /tmp/packages.txt
 
 FROM python AS runtime
@@ -116,15 +95,6 @@ COPY node.conf qan.conf slurmdbd.conf /usr/local/share/mqt-slurm/
 COPY profile.sh /etc/profile.d/mqt-qdmi.sh
 RUN useradd --uid 10000 --user-group --create-home mqt-dev \
     && systemctl disable slurmctld.service slurmd.service slurmdbd.service
-ARG SETUP_SCRIPT=""
-ARG PROVIDER_INSTALL_MODE="native"
-RUN --mount=type=bind,from=provider-source,source=/workload,target=/workload \
-    --mount=type=bind,from=provider-build,source=/opt/provider/native,target=/tmp/provider-native \
-    if [ -n "$SETUP_SCRIPT" ]; then \
-        case "$PROVIDER_INSTALL_MODE" in native|wheel) ;; *) exit 1 ;; esac \
-        && if [ "$PROVIDER_INSTALL_MODE" = native ]; then cp -a /tmp/provider-native /opt/provider-native; fi \
-        && /bin/sh "/workload/$SETUP_SCRIPT"; \
-    fi
 
 STOPSIGNAL SIGRTMIN+3
 CMD ["/usr/local/sbin/mqt-slurm-start", "node"]
