@@ -127,6 +127,7 @@ def QuantumLoopUnroll
 
 def UnrollLoopsForPayload : Pass<"unroll-loops-for-payload", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::arith::ArithDialect",
+                           "mlir::qtensor::QTensorDialect",
                            "mlir::scf::SCFDialect"];
   let summary =
       "Unroll static loops required by the payload or qubit placement";
@@ -138,6 +139,10 @@ def UnrollLoopsForPayload : Pass<"unroll-loops-for-payload", "mlir::ModuleOp"> {
     require fixed quantum indices and specialize these loops. Scalar loops
     remain when supported by the payload. Run QCO cleanup first to move
     complete constant-slot tensor accesses outside structured control flow.
+    Specialize a constant inner sweep and canonicalize tensor accesses in its
+    enclosing loop chain before reconsidering those loops. Enclosing loops can
+    then remain as scalar-qubit iterations. Unknown inner bounds keep outer
+    specialization; this search does not cross conditional branches.
     The `max-operations` option limits cloned body operations to one billion by default.
     Run constant propagation and QCO cleanup again after this pass, then
     `legalize-control-flow` to check the remaining branches and loops.
@@ -268,7 +273,7 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     made during that traversal. By performing multiple traversals, the pass can iteratively refine the mapping and
     potentially find a more optimal solution. This behavior is controlled by the `niterations` parameter.
 
-    Programs without nested control flow keep the identity layout immediately
+    Programs with supported control flow keep the identity layout immediately
     when all two-qubit interactions are already adjacent on the target.
     This avoids constructing and refining alternative layouts.
 
@@ -283,8 +288,13 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     Set both `ntrials` and `seed` explicitly for reproducible results across
     machines with different CPU counts.
 
-    For programs with two-qubit interactions and no nested control flow on their
-    wires, the pass also constructs an interaction-weighted greedy layout.
+    For programs with two-qubit interactions, the pass also constructs an
+    interaction-weighted greedy layout. Statically counted scalar-qubit
+    `scf.for` loops contribute their body interactions weighted by the trip
+    count, including nested loops. Each loop must yield the same wires in
+    argument order. Zero or unknown trip counts, other control flow, and
+    permuted loop state keep the identity/random fallback. Weights saturate below the overflow
+    limit for layout costs. Routing restores the layout at loop boundaries.
     For disjoint interaction paths and isolated qubits, it first tries to place
     them along one path through the target sites. The walk prefers neighbors
     with fewer unused edges and accepts only a complete placement; it does not
@@ -574,8 +584,8 @@ def DecomposeMultiControlled
     Decomposes multi-qubit controlled operations that act on at least
     `min-qubits` qubits (default 3: everything wider than a two-qubit gate).
     Supported shapes: `qco.ctrl` with a sole `qco.x`, `qco.y`, `qco.z`,
-    `qco.rx`, `qco.ry`, `qco.rz`, `qco.swap`, or constant-angle `qco.p` body, and
-    `qco.rccx`. Rotation angles may be constants or runtime SSA values,
+    `qco.rx`, `qco.ry`, `qco.rz`, `qco.swap`, or `qco.p` body, and
+    `qco.rccx`. Rotation and phase angles may be constants or runtime SSA values,
     including classical expressions inside the control region.
     Controls over composite bodies are distributed across their operations
     before decomposition, subject to the same width threshold. Nested inverse
@@ -591,10 +601,11 @@ def DecomposeMultiControlled
     | X/Z | ≥34 | Huang-Palsberg (HP24) borrowed-helper synthesis with partitioned incrementers |
     | Y | ≥3 | X decomposition with `S†` before and `S` after on the target |
     | RX/RY/RZ | ≥3 | Balanced control halves with exact MCX and quarter-angle rotations; RX uses H-conjugated RZ |
-    | Phase | 3 | Optimized `C^2(P)` |
-    | Phase | 4–5 | Vale (Barenco-relative residual) |
-    | Phase | ≥6 | da Silva-Park SP22 linear-depth |
-    | Phase | any (`±π`) | Routed through the Z path |
+    | Constant phase | 3 | Optimized `C^2(P)` |
+    | Constant phase | 4–5 | Vale (Barenco-relative residual) |
+    | Constant phase | ≥6 | da Silva-Park SP22 linear-depth |
+    | Constant phase | any (`±π`) | Routed through the Z path |
+    | Runtime phase | ≥3 | Controlled RZ plus recursive phase on the controls |
     | SWAP | ≥ `min-qubits` | `MCSWAP(C, a, b) = CX(a,b) · MCX(C ∪ {b}, a) · CX(a,b)` |
 
     Width is the total number of qubits the gate acts on (controls plus
@@ -608,6 +619,13 @@ def DecomposeMultiControlled
     qubits. Each half-MCX may borrow controls from the opposite half and
     restores them coherently. The decomposition preserves phase, including
     the conditional phase of a rotation by `2π`.
+
+    Runtime phase synthesis uses the exact identity
+    `C^k P(theta) = C^k RZ(theta) C^(k-1) P(theta/2)`. The residual phase acts
+    on the control register and is recursively decomposed under the same width
+    threshold. This path needs no additional qubits and has quadratic gate
+    count in the number of controls. Constant angles use the specialized paths
+    in the table.
 
     For controlled SWAP, `C ∪ {b}` is the original control set together with
     SWAP target `b`, and the MCX target is the other SWAP qubit `a`. The

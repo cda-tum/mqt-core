@@ -2988,6 +2988,173 @@ TEST_F(CompilerPipelineTest,
   EXPECT_EQ(loops, 1);
 }
 
+TEST_F(CompilerPipelineTest, PayloadSpecializesInnerTensorSweepWithinBudget) {
+  for (const uint64_t budget : {5U, 6U}) {
+    auto program = QCOProgram::fromMLIRString(R"mlir(module {
+      func.func @main() attributes {mqt.entry_point} {
+        %c0 = arith.constant 0 : index
+        %c1 = arith.constant 1 : index
+        %c3 = arith.constant 3 : index
+        %c100 = arith.constant 100 : index
+        %tensor = qtensor.alloc(%c3) : tensor<3x!qco.qubit>
+        %result = scf.for %i = %c0 to %c100 step %c1
+            iter_args(%outer = %tensor) -> tensor<3x!qco.qubit> {
+          %middle = scf.for %k = %c0 to %c100 step %c1
+              iter_args(%middleTensor = %outer) -> tensor<3x!qco.qubit> {
+            %sweep = scf.for %j = %c0 to %c3 step %c1
+                iter_args(%inner = %middleTensor) -> tensor<3x!qco.qubit> {
+              %rest, %q = qtensor.extract %inner[%j] : tensor<3x!qco.qubit>
+              %out = qco.x %q : !qco.qubit
+              %updated = qtensor.insert %out into %rest[%j]
+                  : tensor<3x!qco.qubit>
+              scf.yield %updated : tensor<3x!qco.qubit>
+            }
+            scf.yield %sweep : tensor<3x!qco.qubit>
+          }
+          scf.yield %middle : tensor<3x!qco.qubit>
+        }
+        qtensor.dealloc %result : tensor<3x!qco.qubit>
+        return
+      }
+    })mlir");
+    ASSERT_TRUE(mlir::succeeded(program));
+    attachTargetEnvironment(
+        program->module(),
+        TargetEnvironment(
+            makeUnrestrictedTarget(),
+            makeControlPayloadSpecification(
+                {{.id = ProgramCapability::COUNTED_ITERATION.str()}})));
+    ScopedDiagnosticHandler handler(program->module()->getContext(),
+                                    [](Diagnostic&) { return success(); });
+    EXPECT_EQ(succeeded(program->runPassPipeline(
+                  "unroll-loops-for-payload{max-operations=" +
+                  std::to_string(budget) + "}")),
+              budget == 6U);
+    EXPECT_TRUE(succeeded(verify(program->module())));
+    EXPECT_TRUE(succeeded(qco::verifyLinearity(program->module())));
+    if (budget == 6U) {
+      size_t loops = 0;
+      program->module().walk([&](scf::ForOp loop) {
+        ++loops;
+        EXPECT_EQ(loop.getStaticTripCount()->getZExtValue(), 100U);
+        EXPECT_TRUE(llvm::all_of(loop.getResultTypes(), [](Type type) {
+          return isa<qco::QubitType>(type);
+        }));
+      });
+      EXPECT_EQ(loops, 2U);
+    }
+  }
+}
+
+TEST_F(CompilerPipelineTest, PayloadSpecializationRemovesIdentityRepetition) {
+  auto program = QCOProgram::fromMLIRString(R"mlir(module {
+    func.func @main() attributes {mqt.entry_point} {
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      %c2 = arith.constant 2 : index
+      %c100 = arith.constant 100 : index
+      %a = qtensor.alloc(%c1) : tensor<1x!qco.qubit>
+      %b = qtensor.alloc(%c1) : tensor<1x!qco.qubit>
+      %out:2 = scf.for %i = %c0 to %c100 step %c1
+          iter_args(%x = %a, %y = %b)
+          -> (tensor<1x!qco.qubit>, tensor<1x!qco.qubit>) {
+        %inner:2 = scf.for %j = %c0 to %c2 step %c1
+            iter_args(%u = %x, %v = %y)
+            -> (tensor<1x!qco.qubit>, tensor<1x!qco.qubit>) {
+          scf.yield %v, %u : tensor<1x!qco.qubit>, tensor<1x!qco.qubit>
+        }
+        scf.yield %inner#0, %inner#1
+            : tensor<1x!qco.qubit>, tensor<1x!qco.qubit>
+      }
+      qtensor.dealloc %out#0 : tensor<1x!qco.qubit>
+      qtensor.dealloc %out#1 : tensor<1x!qco.qubit>
+      return
+    }
+  })mlir");
+  ASSERT_TRUE(succeeded(program));
+  attachTargetEnvironment(
+      program->module(),
+      TargetEnvironment(
+          makeUnrestrictedTarget(),
+          makeControlPayloadSpecification(
+              {{.id = ProgramCapability::COUNTED_ITERATION.str()}})));
+  ASSERT_TRUE(succeeded(program->runPassPipeline("unroll-loops-for-payload")));
+  EXPECT_TRUE(succeeded(verify(program->module())));
+  EXPECT_TRUE(succeeded(qco::verifyLinearity(program->module())));
+  EXPECT_FALSE(StringRef(program->str()).contains("scf.for"));
+}
+
+TEST_F(CompilerPipelineTest, PayloadSpecializesDependentOuterLoops) {
+  using Capability = CompilerTarget::OperationCapability;
+  const auto target = llvm::cantFail(CompilerTarget::create(
+      3, CompilerTarget::Connectivity::fromCouplings({{0, 1}, {1, 2}}),
+      CompilerTarget::NativeOperations::fromOperations({
+          llvm::cantFail(Capability::create("u", 1, 3)),
+          llvm::cantFail(Capability::create("cz", 2, 0)),
+          llvm::cantFail(Capability::create("gphase", 0, 1)),
+      })));
+  for (const auto& [body, retainsLoop] : {
+           std::pair{
+               StringRef(
+                   "for int i in [0:2] { for int j in [0:i] { x q[j]; } }"),
+               false},
+           std::pair{
+               StringRef(
+                   "float theta = 0.13; for int i in [0:2] { "
+                   "for int j in [0:2] { rx(theta) q[j]; } "
+                   "ctrl(2) @ p(theta) q[0], q[1], q[2]; theta *= 0.5; }"),
+               true},
+       }) {
+    SCOPED_TRACE(body.str());
+    const std::string source =
+        "OPENQASM 3.1; include \"stdgates.inc\"; qubit[3] q; " + body.str();
+    auto qc = QCProgram::fromOpenQASMString(source);
+    ASSERT_TRUE(mlir::succeeded(qc));
+    auto program = std::move(*qc).intoQCO();
+    ASSERT_TRUE(mlir::succeeded(program));
+    ASSERT_TRUE(StringRef(program->str()).contains("scf.for"));
+    auto package = std::make_unique<dd::Package>(3);
+    const auto expectedDD = qco::buildFunctionality(
+        mlir::mqt::getEntryPoint(program->module()), *package);
+    ASSERT_TRUE(succeeded(expectedDD));
+    const auto expected = dd::getMatrix(*expectedDD, 3);
+    package->decRef(*expectedDD);
+    ASSERT_TRUE(succeeded(program->compileForTarget(TargetEnvironment(
+        target, makeControlPayloadSpecification(
+                    {{.id = ProgramCapability::COUNTED_ITERATION.str()}})))));
+    EXPECT_EQ(StringRef(program->str()).contains("scf.for"), retainsLoop);
+    EXPECT_TRUE(succeeded(verify(program->module())));
+    EXPECT_TRUE(succeeded(qco::verifyLinearity(program->module())));
+    auto layout = mlir::mqt::QubitLayout::fromAttr(
+        program->module()->getAttr("mqt.layout"),
+        [&] { return program->module().emitError(); });
+    ASSERT_TRUE(succeeded(layout));
+    const auto actualDD = qco::buildFunctionality(
+        mlir::mqt::getEntryPoint(program->module()), *package);
+    ASSERT_TRUE(succeeded(actualDD));
+    const auto actual = dd::getMatrix(*actualDD, 3);
+    package->decRef(*actualDD);
+    const auto physicalIndex = [&](size_t basis, bool output) {
+      size_t physical = 0;
+      for (auto [qubit, initial] : llvm::enumerate(layout->initial)) {
+        const auto site =
+            output && layout->routing ? (*layout->routing)[initial] : initial;
+        physical |= ((basis >> qubit) & 1U) << static_cast<size_t>(site);
+      }
+      return physical;
+    };
+    for (size_t row = 0; row < 8; ++row) {
+      for (size_t column = 0; column < 8; ++column) {
+        EXPECT_LE(
+            std::abs(
+                actual[physicalIndex(row, true)][physicalIndex(column, false)] -
+                expected[row][column]),
+            1e-12);
+      }
+    }
+  }
+}
+
 TEST_F(CompilerPipelineTest, TargetCompilationShrinksTensorAfterUnrolling) {
   constexpr llvm::StringLiteral source = R"qasm(
 OPENQASM 3.0;

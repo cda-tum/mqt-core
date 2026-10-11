@@ -1286,6 +1286,35 @@ struct DecomposeControlledGatePattern final : OpRewritePattern<CtrlOp> {
                                  op.getInputTarget(0), inner));
       return success();
     }
+    if (auto phase = dyn_cast<POp>(inner.getOperation());
+        phase && !mqt::valueToDouble(phase.getTheta())) {
+      // P(θ) = exp(iθ/2) RZ(θ). Under k controls, the scalar phase becomes
+      // a (k-1)-controlled P(θ/2) on the control register (Barenco et al.,
+      // Lemma 5.2, https://arxiv.org/abs/quant-ph/9503016).
+      mqt::hoistSupportingOpsBefore(*op.getBody(), inner.getOperation(), op,
+                                    rewriter);
+      rewriter.setInsertionPoint(op);
+      auto loc = op.getLoc();
+      auto rotation = CtrlOp::create(
+          rewriter, loc, op.getControlsIn(), op.getInputTarget(0),
+          [&](Value target) {
+            return RZOp::create(rewriter, loc, target, phase.getTheta())
+                .getOutputQubit(0);
+          });
+      auto half =
+          arith::MulFOp::create(rewriter, loc, phase.getTheta(),
+                                mqt::constantFromScalar(rewriter, loc, 0.5));
+      auto residual = CtrlOp::create(
+          rewriter, loc, rotation.getOutputControls().drop_back(),
+          rotation.getOutputControl(numControls - 1), [&](Value target) {
+            return POp::create(rewriter, loc, target, half.getResult())
+                .getOutputQubit(0);
+          });
+      SmallVector<Value> results(residual.getResults());
+      results.push_back(rotation.getOutputTarget(0));
+      rewriter.replaceOp(op, results);
+      return success();
+    }
     const auto spec = matchControlledTarget(inner);
     if (!spec) {
       return failure();

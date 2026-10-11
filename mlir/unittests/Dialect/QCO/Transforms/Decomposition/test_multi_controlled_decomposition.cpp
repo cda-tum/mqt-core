@@ -472,14 +472,15 @@ static void expectMatchesMcpOnCoherentState(func::FuncOp funcOp,
                                         phaseMatrix(theta));
 }
 
-static void expectImplementsMcp(func::FuncOp funcOp, size_t numControls,
-                                double theta) {
+static void
+expectImplementsMcp(func::FuncOp funcOp, size_t numControls, double theta,
+                    const DDArgumentBindings& bindings = DDArgumentBindings()) {
   const auto numQubits = countStaticQubits(funcOp);
   ASSERT_EQ(numQubits, numControls + 1);
   expectFullyDecomposed(funcOp);
 
   const auto dd = std::make_unique<dd::Package>(numQubits);
-  const auto decomposedDD = buildFunctionality(funcOp, *dd);
+  const auto decomposedDD = buildFunctionality(funcOp, *dd, bindings);
   ASSERT_TRUE(succeeded(decomposedDD));
 
   const auto referenceDD =
@@ -628,6 +629,66 @@ TEST_F(MultiControlledDecompositionTest, RotationsPreserveRuntimeAngles) {
         };
         expectImplementsControlledRotation(
             funcOp, numControls, axis, regionLocal ? -theta : theta, bindings);
+      }
+    }
+  }
+}
+
+TEST_F(MultiControlledDecompositionTest, PhasesPreserveRuntimeAngles) {
+  for (const size_t numControls : {2U, 3U, 5U, 8U}) {
+    for (const bool nested : {false, true}) {
+      SCOPED_TRACE(testing::Message()
+                   << "controls=" << numControls << " nested=" << nested);
+      Value parameter;
+      auto moduleOp =
+          QCOProgramBuilder::build(context(), [&](QCOProgramBuilder& builder) {
+            parameter = builder.floatConstant(0.73);
+            SmallVector<Value> wires;
+            for (size_t i = 0; i <= numControls; ++i) {
+              wires.push_back(builder.staticQubit(i));
+            }
+            const auto phase = [&](Value target) {
+              // Exercise supporting arithmetic inside the modifier body.
+              auto angle = arith::NegFOp::create(builder, parameter);
+              return builder.p(angle, target);
+            };
+            if (nested) {
+              builder.ctrl(wires.front(), ValueRange(wires).drop_front(),
+                           [&](ValueRange targets) {
+                             auto [controls, target] = builder.ctrl(
+                                 targets.drop_back(), targets.back(), phase);
+                             SmallVector<Value> results(controls);
+                             results.push_back(target);
+                             return results;
+                           });
+            } else {
+              builder.ctrl(ValueRange(wires).drop_back(), wires.back(), phase);
+            }
+            return SmallVector<Value>{};
+          });
+      ASSERT_TRUE(moduleOp);
+      auto funcOp = *moduleOp->getBody()->getOps<func::FuncOp>().begin();
+      ASSERT_TRUE(succeeded(funcOp.insertArgument(
+          0, Float64Type::get(context()), {}, funcOp.getLoc())));
+      parameter.replaceAllUsesWith(funcOp.getArgument(0));
+      ASSERT_TRUE(succeeded(runDecomposeMultiControlled(moduleOp.get())));
+      expectFullyLowered(moduleOp.get());
+      size_t cxBudget = 2; // The residual single-controlled phase.
+      for (size_t k = 2; k <= numControls; ++k) {
+        cxBudget += expectedMcrCxBudget(k);
+      }
+      EXPECT_LE(countEffectiveCxOps(moduleOp.get()), cxBudget);
+      funcOp.walk([](AllocOp) { ADD_FAILURE() << "unexpected helper qubit"; });
+      for (const double theta : {0.0, 0.73, -1.21, 2 * std::numbers::pi}) {
+        SCOPED_TRACE(testing::Message() << "theta=" << theta);
+        const DDArgumentBindings bindings{
+            {
+                funcOp.getArgument(0),
+                FloatAttr::get(Float64Type::get(context()), theta),
+            },
+        };
+        // Full operator equality includes the phase on coherent controls.
+        expectImplementsMcp(funcOp, numControls, -theta, bindings);
       }
     }
   }
