@@ -329,8 +329,8 @@ independent_qubits = """module {
   func.func @main() -> (i1, i1) attributes {mqt.entry_point} {
     %q0 = qco.alloc : !qco.qubit
     %q1 = qco.alloc : !qco.qubit
-    %h0 = qco.h %q0 : !qco.qubit -> !qco.qubit
-    %h1 = qco.h %q1 : !qco.qubit -> !qco.qubit
+    %h0 = qco.h %q0 : !qco.qubit
+    %h1 = qco.h %q1 : !qco.qubit
     %m0, %c0 = qco.measure %h0 : !qco.qubit
     %m1, %c1 = qco.measure %h1 : !qco.qubit
     qco.sink %m0 : !qco.qubit

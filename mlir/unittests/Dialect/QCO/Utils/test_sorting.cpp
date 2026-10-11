@@ -58,10 +58,10 @@ protected:
 TEST_F(TopologicalSortingTest, RetainsSSAForEffectBearingQubits) {
   auto moduleOp = parse(R"mlir(
     func.func @test(%q: !qco.qubit, %power: f64) -> !qco.qubit {
-      %a = qco.x %q : !qco.qubit -> !qco.qubit
-      %b = qco.h %a : !qco.qubit -> !qco.qubit
+      %a = qco.x %q : !qco.qubit
+      %b = qco.h %a : !qco.qubit
       %r = qco.pow(%power) (%t = %b) {
-        %u = qco.s %t : !qco.qubit -> !qco.qubit
+        %u = qco.s %t : !qco.qubit
         qco.yield %u : !qco.qubit
       } : {!qco.qubit} -> {!qco.qubit}
       return %r : !qco.qubit
@@ -152,7 +152,7 @@ TEST_F(TopologicalSortingTest, PreservesRepeatedStoresToSameRegisterElement) {
         -> (!qco.qubit, !qco.qubit) {
       %index = arith.constant 0 : index
       %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
-      %flipped = qco.x %q0 : !qco.qubit -> !qco.qubit
+      %flipped = qco.x %q0 : !qco.qubit
       %out0, %bit0 = qco.measure %flipped : !qco.qubit
       cbit.store %bit0, %reg[%index] : !cbit.reg<1>
       %out1, %bit1 = qco.measure %q1 : !qco.qubit

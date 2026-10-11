@@ -584,14 +584,14 @@ TEST_F(QTensorTest, FreshSlotResetFoldingStopsAtUnknownIndices) {
       %two = arith.constant 2 : index
       %tensor = qtensor.alloc(%size) : tensor<4x!qco.qubit>
       %t0, %q0 = qtensor.extract %tensor[%zero] : tensor<4x!qco.qubit>
-      %r0 = qco.reset %q0 : !qco.qubit -> !qco.qubit
-      %h0 = qco.h %r0 : !qco.qubit -> !qco.qubit
+      %r0 = qco.reset %q0 : !qco.qubit
+      %h0 = qco.h %r0 : !qco.qubit
       %t1 = qtensor.insert %h0 into %t0[%zero] : tensor<4x!qco.qubit>
       %t2, %q1 = qtensor.extract %t1[%index] : tensor<4x!qco.qubit>
-      %h1 = qco.h %q1 : !qco.qubit -> !qco.qubit
+      %h1 = qco.h %q1 : !qco.qubit
       %t3 = qtensor.insert %h1 into %t2[%index] : tensor<4x!qco.qubit>
       %t4, %q2 = qtensor.extract %t3[%two] : tensor<4x!qco.qubit>
-      %r2 = qco.reset %q2 : !qco.qubit -> !qco.qubit
+      %r2 = qco.reset %q2 : !qco.qubit
       %t5 = qtensor.insert %r2 into %t4[%two] : tensor<4x!qco.qubit>
       qtensor.dealloc %t5 : tensor<4x!qco.qubit>
       return
@@ -657,7 +657,7 @@ func.func @f(%t: tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit> {
   // Takes element 0 out, applies a gate, and puts it back.
   auto program = parse(R"mlir(
   %out, %q = qtensor.extract %t[%c0] : tensor<2x!qco.qubit>
-  %g = qco.h %q : !qco.qubit -> !qco.qubit
+  %g = qco.h %q : !qco.qubit
   %r = qtensor.insert %g into %out[%c0] : tensor<2x!qco.qubit>
   return %r : tensor<2x!qco.qubit>)mlir");
 
@@ -666,21 +666,21 @@ func.func @f(%t: tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit> {
   %spare, %idle = qtensor.extract %t[%c1] : tensor<2x!qco.qubit>
   %restored = qtensor.insert %idle into %spare[%c1] : tensor<2x!qco.qubit>
   %out, %q = qtensor.extract %restored[%c0] : tensor<2x!qco.qubit>
-  %g = qco.h %q : !qco.qubit -> !qco.qubit
+  %g = qco.h %q : !qco.qubit
   %r = qtensor.insert %g into %out[%c0] : tensor<2x!qco.qubit>
   return %r : tensor<2x!qco.qubit>)mlir");
 
   // A different gate on the same element.
   auto otherGate = parse(R"mlir(
   %out, %q = qtensor.extract %t[%c0] : tensor<2x!qco.qubit>
-  %g = qco.x %q : !qco.qubit -> !qco.qubit
+  %g = qco.x %q : !qco.qubit
   %r = qtensor.insert %g into %out[%c0] : tensor<2x!qco.qubit>
   return %r : tensor<2x!qco.qubit>)mlir");
 
   // The same gate on the other element.
   auto otherElement = parse(R"mlir(
   %out, %q = qtensor.extract %t[%c1] : tensor<2x!qco.qubit>
-  %g = qco.h %q : !qco.qubit -> !qco.qubit
+  %g = qco.h %q : !qco.qubit
   %r = qtensor.insert %g into %out[%c1] : tensor<2x!qco.qubit>
   return %r : tensor<2x!qco.qubit>)mlir");
 
@@ -713,7 +713,7 @@ func.func @f(%arg: tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit> {
   %own = qtensor.alloc(%c2) : tensor<2x!qco.qubit>
   %out, %q = qtensor.extract %)mlir") +
                                worked + R"mlir([%c0] : tensor<2x!qco.qubit>
-  %g = qco.h %q : !qco.qubit -> !qco.qubit
+  %g = qco.h %q : !qco.qubit
   %back = qtensor.insert %g into %out[%c0] : tensor<2x!qco.qubit>
   qtensor.dealloc %)mlir" + released +
                                R"mlir( : tensor<2x!qco.qubit>

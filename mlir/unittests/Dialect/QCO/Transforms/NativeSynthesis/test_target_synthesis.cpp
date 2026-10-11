@@ -594,9 +594,9 @@ TEST_F(TargetSynthesisTest, FixedRXGateRZMergingPreservesParameterDominance) {
     module {
       func.func @main(%a: f64, %b: f64) {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.rz(%a) %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.rz(%a) %q : !qco.qubit
         %late = arith.negf %b : f64
-        %q2 = qco.rz(%late) %q1 : !qco.qubit -> !qco.qubit
+        %q2 = qco.rz(%late) %q1 : !qco.qubit
         qco.sink %q2 : !qco.qubit
         return
       }
@@ -1075,7 +1075,7 @@ module {
   func.func @main(%angle: f64) {
     %a = qco.static 0 : !qco.qubit
     %b = qco.static 1 : !qco.qubit
-    %c, %d = qco.rxx(%angle) %a, %b : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+    %c, %d = qco.rxx(%angle) %a, %b : !qco.qubit, !qco.qubit
     qco.sink %c : !qco.qubit
     qco.sink %d : !qco.qubit
     return
@@ -1120,9 +1120,9 @@ module {
     %c = qco.static 0 : !qco.qubit
     %q = qco.static 1 : !qco.qubit
     %c1, %q1 = qco.ctrl(%c) targets(%arg = %q) {
-      %p = qco.p(%theta) %arg : !qco.qubit -> !qco.qubit
+      %p = qco.p(%theta) %arg : !qco.qubit
       qco.yield %p : !qco.qubit
-    } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+    } : ({!qco.qubit}, {!qco.qubit})
     qco.sink %c1 : !qco.qubit
     qco.sink %q1 : !qco.qubit
     return
@@ -1544,8 +1544,8 @@ TEST_F(TargetSynthesisTest,
       func.func @main(%theta: f64) -> (!qco.qubit, !qco.qubit) {
         %q0 = qco.static 0 : !qco.qubit
         %q1 = qco.static 1 : !qco.qubit
-        %q2, %q3 = qco.rxx(%theta) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-        %q4, %q5 = qco.rxx(%theta) %q2, %q3 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q2, %q3 = qco.rxx(%theta) %q0, %q1 : !qco.qubit, !qco.qubit
+        %q4, %q5 = qco.rxx(%theta) %q2, %q3 : !qco.qubit, !qco.qubit
         return %q4, %q5 : !qco.qubit, !qco.qubit
       }
     }
@@ -1899,9 +1899,9 @@ TEST_F(TargetSynthesisTest, RejectsUnknownSitesWithoutWideningNativeSupport) {
           scf.yield %q0 : !qco.qubit
         }
         %c, %t = qco.ctrl(%r) targets(%a = %q1) {
-          %x = qco.x %a : !qco.qubit -> !qco.qubit
+          %x = qco.x %a : !qco.qubit
           qco.yield %x : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         qco.sink %c : !qco.qubit
         qco.sink %t : !qco.qubit
         return
@@ -1974,25 +1974,25 @@ TEST_F(TargetSynthesisTest,
         %f0, %f1 = scf.for %i = %c0 to %c1 step %c1
             iter_args(%a = %q0, %b = %q1)
             -> (!qco.qubit, !qco.qubit) {
-          %h0 = qco.h %a : !qco.qubit -> !qco.qubit
-          %h1 = qco.h %b : !qco.qubit -> !qco.qubit
+          %h0 = qco.h %a : !qco.qubit
+          %h1 = qco.h %b : !qco.qubit
           scf.yield %h0, %h1 : !qco.qubit, !qco.qubit
         }
         %w0, %w1 = scf.while (%a = %f0, %b = %f1)
             : (!qco.qubit, !qco.qubit) -> (!qco.qubit, !qco.qubit) {
-          %h0 = qco.h %a : !qco.qubit -> !qco.qubit
-          %h1 = qco.h %b : !qco.qubit -> !qco.qubit
+          %h0 = qco.h %a : !qco.qubit
+          %h1 = qco.h %b : !qco.qubit
           scf.condition(%false) %h0, %h1 : !qco.qubit, !qco.qubit
         } do {
         ^bb0(%a: !qco.qubit, %b: !qco.qubit):
-          %h0 = qco.h %a : !qco.qubit -> !qco.qubit
-          %h1 = qco.h %b : !qco.qubit -> !qco.qubit
+          %h0 = qco.h %a : !qco.qubit
+          %h1 = qco.h %b : !qco.qubit
           scf.yield %h0, %h1 : !qco.qubit, !qco.qubit
         }
         %i0, %i1 = qco.index_switch %c0 -> (!qco.qubit, !qco.qubit)
         case 0 args(%a = %w0, %b = %w1) {
-          %h0 = qco.h %a : !qco.qubit -> !qco.qubit
-          %h1 = qco.h %b : !qco.qubit -> !qco.qubit
+          %h0 = qco.h %a : !qco.qubit
+          %h1 = qco.h %b : !qco.qubit
           qco.yield %h0, %h1 : !qco.qubit, !qco.qubit
         }
         default args(%a = %w0, %b = %w1) {
@@ -2057,10 +2057,9 @@ TEST_F(TargetSynthesisTest, TargetNativeSynthesisRejectsAmbiguousBranchSites) {
           qco.yield %b, %a : !qco.qubit, !qco.qubit
         }
         %c, %t = qco.ctrl(%r0) targets(%arg = %r1) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.yield %x : !qco.qubit
         } : ({!qco.qubit}, {!qco.qubit})
-            -> ({!qco.qubit}, {!qco.qubit})
         qco.sink %c : !qco.qubit
         qco.sink %t : !qco.qubit
         return
@@ -2134,9 +2133,9 @@ TEST_F(TargetSynthesisTest, WhileResultsMayDifferFromLoopEntrySites) {
           scf.yield %b, %a : !qco.qubit, !qco.qubit
         }
         %c, %t = qco.ctrl(%r0) targets(%a = %r1) {
-          %x = qco.x %a : !qco.qubit -> !qco.qubit
+          %x = qco.x %a : !qco.qubit
           qco.yield %x : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         qco.sink %c : !qco.qubit
         qco.sink %t : !qco.qubit
         return
@@ -2320,9 +2319,9 @@ TEST_F(TargetSynthesisTest, SingleQubitFusionResumesAfterSymbolicGate) {
     module {
       func.func @main(%theta: f64) -> !qco.qubit {
         %q0 = qco.static 0 : !qco.qubit
-        %q1 = qco.u(%theta, %theta, %theta) %q0 : !qco.qubit -> !qco.qubit
-        %q2 = qco.h %q1 : !qco.qubit -> !qco.qubit
-        %q3 = qco.t %q2 : !qco.qubit -> !qco.qubit
+        %q1 = qco.u(%theta, %theta, %theta) %q0 : !qco.qubit
+        %q2 = qco.h %q1 : !qco.qubit
+        %q3 = qco.t %q2 : !qco.qubit
         return %q3 : !qco.qubit
       }
     }
@@ -2350,8 +2349,8 @@ TEST_F(TargetSynthesisTest, SingleQubitFusionPreservesNativeSymbolicRuns) {
     module {
       func.func @main(%theta: f64) -> !qco.qubit {
         %q0 = qco.static 0 : !qco.qubit
-        %q1 = qco.u(%theta, %theta, %theta) %q0 : !qco.qubit -> !qco.qubit
-        %q2 = qco.u(%theta, %theta, %theta) %q1 : !qco.qubit -> !qco.qubit
+        %q1 = qco.u(%theta, %theta, %theta) %q0 : !qco.qubit
+        %q2 = qco.u(%theta, %theta, %theta) %q1 : !qco.qubit
         return %q2 : !qco.qubit
       }
     }
@@ -2385,9 +2384,9 @@ TEST_F(TargetSynthesisTest,
         %c = qco.static 0 : !qco.qubit
         %q = qco.static 1 : !qco.qubit
         %c1, %q1 = qco.ctrl(%c) targets(%arg = %q) {
-          %rotated = qco.rx(%theta) %arg : !qco.qubit -> !qco.qubit
+          %rotated = qco.rx(%theta) %arg : !qco.qubit
           qco.yield %rotated : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         return %c1, %q1 : !qco.qubit, !qco.qubit
       }
     }
@@ -2418,8 +2417,8 @@ TEST_F(TargetSynthesisTest,
     module {
       func.func @main(%theta: f64) -> !qco.qubit {
         %q0 = qco.static 0 : !qco.qubit
-        %q1 = qco.rz(%theta) %q0 : !qco.qubit -> !qco.qubit
-        %q2 = qco.ry(%theta) %q1 : !qco.qubit -> !qco.qubit
+        %q1 = qco.rz(%theta) %q0 : !qco.qubit
+        %q2 = qco.ry(%theta) %q1 : !qco.qubit
         return %q2 : !qco.qubit
       }
     }
@@ -2462,21 +2461,20 @@ TEST_F(TargetSynthesisTest, EquatorialFrameAbsorptionPreservesScalarDominance) {
           %axis = arith.constant 0.4 : f64
     )mlir";
     // H creates its residual constant frame after the emitted R.
-    source +=
-        timing == "constant" ? "%q2 = qco.h %q : !qco.qubit -> !qco.qubit\n"
-        : timing == "early"
-            ? "%q1 = qco.rz(%theta) %q : !qco.qubit -> !qco.qubit\n"
-              "%q2 = qco.r(%polar, %axis) %q1 : !qco.qubit -> !qco.qubit\n"
-            : "%q2 = qco.r(%polar, %axis) %q : !qco.qubit -> !qco.qubit\n";
+    source += timing == "constant" ? "%q2 = qco.h %q : !qco.qubit\n"
+              : timing == "early"
+                  ? "%q1 = qco.rz(%theta) %q : !qco.qubit\n"
+                    "%q2 = qco.r(%polar, %axis) %q1 : !qco.qubit\n"
+                  : "%q2 = qco.r(%polar, %axis) %q : !qco.qubit\n";
     source += R"mlir(
           %q3, %c1 = qco.ctrl(%q2) targets(%arg = %c) {
-            %z = qco.z %arg : !qco.qubit -> !qco.qubit
+            %z = qco.z %arg : !qco.qubit
             qco.yield %z : !qco.qubit
-          } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+          } : ({!qco.qubit}, {!qco.qubit})
     )mlir";
     if (timing == "late") {
       source += "%angle = math.sin %theta : f64\n"
-                "%q4 = qco.rz(%angle) %q3 : !qco.qubit -> !qco.qubit\n";
+                "%q4 = qco.rz(%angle) %q3 : !qco.qubit\n";
     }
     source += "return " + std::string(timing == "late" ? "%q4" : "%q3") +
               ", %c1 : !qco.qubit, !qco.qubit\n}}";
@@ -2611,14 +2609,13 @@ TEST_F(TargetSynthesisTest, RuntimePauliRotationsShareNativeSynthesisAndCosts) {
           %c1, %q1 = qco.ctrl(%c) targets(%arg = %q) {
             %angle = arith.negf %theta : f64
             %p = qco.)mlir" +
-                gate + R"mlir((%angle) %arg : !qco.qubit -> !qco.qubit
+                gate + R"mlir((%angle) %arg : !qco.qubit
             qco.yield %p : !qco.qubit
-          } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+          } : ({!qco.qubit}, {!qco.qubit})
       )mlir";
     } else {
-      source +=
-          "%c1, %q1 = qco." + gate +
-          R"mlir((%theta) %c, %q : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+      source += "%c1, %q1 = qco." + gate +
+                R"mlir((%theta) %c, %q : !qco.qubit, !qco.qubit
       )mlir";
     }
     source += R"mlir(
@@ -2735,39 +2732,39 @@ TEST_F(TargetSynthesisTest, RuntimePauliRotationsShareNativeSynthesisAndCosts) {
 TEST_F(TargetSynthesisTest, CommutingPauliRunsPreservePhaseAndNativeBounds) {
   for (const auto& [body, expectedEntanglers] : {
            std::pair{R"mlir(
-             %u0, %u1 = qco.rzx(%a) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-             %v1, %v0 = qco.ryy(%b) %u1, %u0 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-             %out0, %out1 = qco.rzx(%offset) %v0, %v1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+             %u0, %u1 = qco.rzx(%a) %q0, %q1 : !qco.qubit, !qco.qubit
+             %v1, %v0 = qco.ryy(%b) %u1, %u0 : !qco.qubit, !qco.qubit
+             %out0, %out1 = qco.rzx(%offset) %v0, %v1 : !qco.qubit, !qco.qubit
            )mlir",
                      2U},
            std::pair{R"mlir(
              %negative = arith.negf %a : f64
-             %u0, %u1 = qco.rzz(%a) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-             %v1, %v0 = qco.rzz(%negative) %u1, %u0 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-             %out0, %out1 = qco.rzz(%offset) %v0, %v1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+             %u0, %u1 = qco.rzz(%a) %q0, %q1 : !qco.qubit, !qco.qubit
+             %v1, %v0 = qco.rzz(%negative) %u1, %u0 : !qco.qubit, !qco.qubit
+             %out0, %out1 = qco.rzz(%offset) %v0, %v1 : !qco.qubit, !qco.qubit
            )mlir",
                      2U},
            std::pair{R"mlir(
              %u0, %u1 = qco.ctrl(%q0) targets(%arg = %q1) {
-               %p = qco.p(%a) %arg : !qco.qubit -> !qco.qubit
+               %p = qco.p(%a) %arg : !qco.qubit
                qco.yield %p : !qco.qubit
-             } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+             } : ({!qco.qubit}, {!qco.qubit})
              %out1, %out0 = qco.ctrl(%u1) targets(%arg = %u0) {
-               %p = qco.p(%b) %arg : !qco.qubit -> !qco.qubit
+               %p = qco.p(%b) %arg : !qco.qubit
                qco.yield %p : !qco.qubit
-             } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+             } : ({!qco.qubit}, {!qco.qubit})
            )mlir",
                      2U},
            std::pair{R"mlir(
-             %u0, %u1 = qco.rxx(%a) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-             %v1, %v0 = qco.ryy(%b) %u1, %u0 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-             %out0, %out1 = qco.rzz(%offset) %v0, %v1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+             %u0, %u1 = qco.rxx(%a) %q0, %q1 : !qco.qubit, !qco.qubit
+             %v1, %v0 = qco.ryy(%b) %u1, %u0 : !qco.qubit, !qco.qubit
+             %out0, %out1 = qco.rzz(%offset) %v0, %v1 : !qco.qubit, !qco.qubit
            )mlir",
                      3U},
            std::pair{R"mlir(
-             %u0, %u1 = qco.rzx(%a) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-             %v0, %v1 = qco.ryy(%b) %u0, %u1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-             %out1, %out0 = qco.rzx(%offset) %v1, %v0 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+             %u0, %u1 = qco.rzx(%a) %q0, %q1 : !qco.qubit, !qco.qubit
+             %v0, %v1 = qco.ryy(%b) %u0, %u1 : !qco.qubit, !qco.qubit
+             %out1, %out0 = qco.rzx(%offset) %v1, %v0 : !qco.qubit, !qco.qubit
            )mlir",
                      3U},
        }) {
@@ -2845,16 +2842,16 @@ TEST_F(TargetSynthesisTest, MergesDiagonalPairsWithoutCrossingBarriers) {
           %q1 = qco.static 1 : !qco.qubit
           %q2 = qco.static 2 : !qco.qubit
           %negative = arith.negf %a : f64
-          %u0, %u1 = qco.rzz(%a) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-          %v1, %v2 = qco.rzz(%b) %u1, %q2 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+          %u0, %u1 = qco.rzz(%a) %q0, %q1 : !qco.qubit, !qco.qubit
+          %v1, %v2 = qco.rzz(%b) %u1, %q2 : !qco.qubit, !qco.qubit
     )mlir") +
                                (barrier ? R"mlir(
-          %v0 = qco.barrier %u0 : !qco.qubit -> !qco.qubit
+          %v0 = qco.barrier %u0 : !qco.qubit
     )mlir"
                                         : R"mlir(
-          %v0 = qco.rz(%b) %u0 : !qco.qubit -> !qco.qubit
+          %v0 = qco.rz(%b) %u0 : !qco.qubit
     )mlir") + R"mlir(
-          %out0, %out1 = qco.rzz(%negative) %v0, %v1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+          %out0, %out1 = qco.rzz(%negative) %v0, %v1 : !qco.qubit, !qco.qubit
           return %out0, %out1, %v2 : !qco.qubit, !qco.qubit, !qco.qubit
         }
       }
@@ -2893,9 +2890,9 @@ TEST_F(TargetSynthesisTest, NativeRuntimeControlledPhaseStaysUntouched) {
         %c = qco.static 0 : !qco.qubit
         %q = qco.static 1 : !qco.qubit
         %c1, %q1 = qco.ctrl(%c) targets(%arg = %q) {
-          %p = qco.p(%theta) %arg : !qco.qubit -> !qco.qubit
+          %p = qco.p(%theta) %arg : !qco.qubit
           qco.yield %p : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         return %c1, %q1 : !qco.qubit, !qco.qubit
       }
     }
@@ -2930,9 +2927,9 @@ TEST_F(TargetSynthesisTest, UnsupportedRuntimeControlledBodyStaysUntouched) {
         %q = qco.static 1 : !qco.qubit
         %c1, %q1 = qco.ctrl(%c) targets(%arg = %q) {
           %angle = arith.negf %theta : f64
-          %r = qco.r(%angle, %angle) %arg : !qco.qubit -> !qco.qubit
+          %r = qco.r(%angle, %angle) %arg : !qco.qubit
           qco.yield %r : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         return %c1, %q1 : !qco.qubit, !qco.qubit
       }
     }
@@ -2985,11 +2982,11 @@ TEST_F(TargetSynthesisTest, FusionPhasePreservesFollowingControlSite) {
         %c = qco.static 0 : !qco.qubit
         %q = qco.static 1 : !qco.qubit
         %c1, %q1 = qco.ctrl(%c) targets(%arg = %q) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
-          %y = qco.y %x : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
+          %y = qco.y %x : !qco.qubit
           qco.yield %y : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
-        %c2 = qco.h %c1 : !qco.qubit -> !qco.qubit
+        } : ({!qco.qubit}, {!qco.qubit})
+        %c2 = qco.h %c1 : !qco.qubit
         return %c2, %q1 : !qco.qubit, !qco.qubit
       }
     }
@@ -3020,9 +3017,9 @@ TEST_F(TargetSynthesisTest, TargetNativeSynthesisRestoresControlledU2) {
         %c = qco.static 0 : !qco.qubit
         %q = qco.static 1 : !qco.qubit
         %c1, %q1 = qco.ctrl(%c) targets(%arg = %q) {
-          %rotated = qco.u2(%theta, %theta) %arg : !qco.qubit -> !qco.qubit
+          %rotated = qco.u2(%theta, %theta) %arg : !qco.qubit
           qco.yield %rotated : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         return %c1, %q1 : !qco.qubit, !qco.qubit
       }
     }
@@ -3050,7 +3047,7 @@ TEST_F(TargetSynthesisTest, RuntimeSingleQubitSynthesisNeedsNoEntangler) {
     module {
       func.func @main(%theta: f64) -> !qco.qubit {
         %q0 = qco.static 0 : !qco.qubit
-        %q1 = qco.ry(%theta) %q0 : !qco.qubit -> !qco.qubit
+        %q1 = qco.ry(%theta) %q0 : !qco.qubit
         return %q1 : !qco.qubit
       }
     }
@@ -3105,7 +3102,7 @@ TEST(TargetSynthesisPassContract, LoadsMathDialectForRuntimeSynthesis) {
     module {
       func.func @main(%theta: f64) -> !qco.qubit {
         %q0 = qco.static 0 : !qco.qubit
-        %q1 = qco.rz(%theta) %q0 : !qco.qubit -> !qco.qubit
+        %q1 = qco.rz(%theta) %q0 : !qco.qubit
         return %q1 : !qco.qubit
       }
     }
@@ -3285,7 +3282,7 @@ TEST_F(TargetSynthesisTest,
         %q = qco.static 0 : !qco.qubit
         %f = scf.for %i = %c0 to %bound step %c1 iter_args(%a = %q) -> (!qco.qubit) {
           qco.gphase(%theta)
-          %p = qco.p(%theta) %a : !qco.qubit -> !qco.qubit
+          %p = qco.p(%theta) %a : !qco.qubit
           scf.yield %p : !qco.qubit
         }
         %w = scf.while (%a = %f) : (!qco.qubit) -> (!qco.qubit) {
@@ -3293,12 +3290,12 @@ TEST_F(TargetSynthesisTest,
           scf.condition(%condition) %a : !qco.qubit
         } do {
         ^bb0(%a: !qco.qubit):
-          %p = qco.p(%theta) %a : !qco.qubit -> !qco.qubit
+          %p = qco.p(%theta) %a : !qco.qubit
           scf.yield %p : !qco.qubit
         }
         %b = qco.if %condition args(%a = %w) -> (!qco.qubit) {
           qco.gphase(%theta)
-          %p = qco.p(%theta) %a : !qco.qubit -> !qco.qubit
+          %p = qco.p(%theta) %a : !qco.qubit
           qco.yield %p : !qco.qubit
         } else args(%a = %w) {
           qco.yield %a : !qco.qubit
@@ -3306,7 +3303,7 @@ TEST_F(TargetSynthesisTest,
         %s = qco.index_switch %bound -> (!qco.qubit)
         case 0 args(%a = %b) {
           qco.gphase(%theta)
-          %p = qco.p(%theta) %a : !qco.qubit -> !qco.qubit
+          %p = qco.p(%theta) %a : !qco.qubit
           qco.yield %p : !qco.qubit
         }
         default args(%a = %b) {
@@ -3352,7 +3349,7 @@ TEST_F(TargetSynthesisTest,
         %theta = arith.constant 0.371 : f64
         %q = qco.static 0 : !qco.qubit
         %p = qco.pow(%exponent) (%a = %q) {
-          %x = qco.x %a : !qco.qubit -> !qco.qubit
+          %x = qco.x %a : !qco.qubit
           qco.gphase(%theta)
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
@@ -3515,9 +3512,9 @@ TEST_F(TargetSynthesisTest, RejectsUnsupportedMultiTargetControlShell) {
         }> ({
         ^bb0(%a: !qco.qubit, %b: !qco.qubit):
           %c, %t = qco.ctrl(%b) targets(%x = %a) {
-            %flipped = qco.x %x : !qco.qubit -> !qco.qubit
+            %flipped = qco.x %x : !qco.qubit
             qco.yield %flipped : !qco.qubit
-          } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+          } : ({!qco.qubit}, {!qco.qubit})
           qco.yield %t, %c : !qco.qubit, !qco.qubit
         }) : (!qco.qubit, !qco.qubit) -> (!qco.qubit, !qco.qubit)
         qco.sink %r0 : !qco.qubit
@@ -3578,9 +3575,9 @@ TEST_F(TargetSynthesisTest, SupportedRuntimeParameterizedGateStaysUntouched) {
       func.func @main(%theta: f64) -> (!qco.qubit, !qco.qubit) {
         %q0 = qco.static 0 : !qco.qubit
         %q1 = qco.static 1 : !qco.qubit
-        %q2, %q3 = qco.rxx(%theta) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-        %q4 = qco.rx(%theta) %q2 : !qco.qubit -> !qco.qubit
-        %q5 = qco.h %q3 : !qco.qubit -> !qco.qubit
+        %q2, %q3 = qco.rxx(%theta) %q0, %q1 : !qco.qubit, !qco.qubit
+        %q4 = qco.rx(%theta) %q2 : !qco.qubit
+        %q5 = qco.h %q3 : !qco.qubit
         return %q4, %q5 : !qco.qubit, !qco.qubit
       }
     }
@@ -3612,7 +3609,7 @@ TEST_F(TargetSynthesisTest,
       func.func @main(%theta: f64) -> (!qco.qubit, !qco.qubit) {
         %q0 = qco.static 0 : !qco.qubit
         %q1 = qco.static 1 : !qco.qubit
-        %q2, %q3 = qco.rxx(%theta) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q2, %q3 = qco.rxx(%theta) %q0, %q1 : !qco.qubit, !qco.qubit
         return %q2, %q3 : !qco.qubit, !qco.qubit
       }
     }
@@ -3652,7 +3649,7 @@ TEST_F(TargetSynthesisTest,
       func.func @main(%theta: f64) -> (!qco.qubit, !qco.qubit) {
         %q0 = qco.static 0 : !qco.qubit
         %q1 = qco.static 1 : !qco.qubit
-        %q2, %q3 = qco.xx_plus_yy(%theta, %theta) %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q2, %q3 = qco.xx_plus_yy(%theta, %theta) %q0, %q1 : !qco.qubit, !qco.qubit
         return %q2, %q3 : !qco.qubit, !qco.qubit
       }
     }
@@ -3680,8 +3677,8 @@ TEST_F(TargetSynthesisTest,
         %q1 = qco.static 1 : !qco.qubit
         %phase = arith.constant 0.25 : f64
         qco.gphase(%phase)
-        %q2 = qco.rz(%theta) %q0 : !qco.qubit -> !qco.qubit
-        %q3, %q4 = qco.xx_plus_yy(%theta, %theta) %q2, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q2 = qco.rz(%theta) %q0 : !qco.qubit
+        %q3, %q4 = qco.xx_plus_yy(%theta, %theta) %q2, %q1 : !qco.qubit, !qco.qubit
         return %q3, %q4 : !qco.qubit, !qco.qubit
       }
     }
@@ -3759,7 +3756,7 @@ TEST_F(TargetSynthesisTest, ConformanceRejectsQuantumFunctionInputs) {
   auto module = mlir::parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @main(%qubit: !qco.qubit) -> !qco.qubit {
-        %result = qco.x %qubit : !qco.qubit -> !qco.qubit
+        %result = qco.x %qubit : !qco.qubit
         return %result : !qco.qubit
       }
     }

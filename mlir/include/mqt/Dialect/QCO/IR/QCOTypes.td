@@ -32,8 +32,8 @@ def QubitType
         Example:
         ```mlir
         %q0 = qco.alloc : !qco.qubit
-        %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
-        %q2 = qco.x %q1 : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q0 : !qco.qubit
+        %q2 = qco.x %q1 : !qco.qubit
         ```
     }];
   let extraClassDeclaration = [{

@@ -36,16 +36,16 @@ TEST(QCOModifierVerificationTest, RequiresUniqueInputsAndPositionalYields) {
         -> (!qco.qubit, !qco.qubit, !qco.qubit) {
       %two = arith.constant 2.0 : f64
       %i0, %i1 = qco.inv(%a = %q0, %b = %q1) {
-        %x, %y = qco.swap %b, %a : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %x, %y = qco.swap %b, %a : !qco.qubit, !qco.qubit
         qco.yield %y, %x : !qco.qubit, !qco.qubit
       } : {!qco.qubit, !qco.qubit} -> {!qco.qubit, !qco.qubit}
       %p0, %p1 = qco.pow(%two) (%a = %i0, %b = %i1) {
-        %x = qco.s %a : !qco.qubit -> !qco.qubit
+        %x = qco.s %a : !qco.qubit
         qco.yield %x, %b : !qco.qubit, !qco.qubit
       } : {!qco.qubit, !qco.qubit} -> {!qco.qubit, !qco.qubit}
       %c, %t0, %t1 = qco.ctrl(%q2) targets(%a = %p0, %b = %p1) {
         qco.yield %a, %b : !qco.qubit, !qco.qubit
-      } : ({!qco.qubit}, {!qco.qubit, !qco.qubit}) -> ({!qco.qubit}, {!qco.qubit, !qco.qubit})
+      } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
       return %t0, %t1, %c : !qco.qubit, !qco.qubit, !qco.qubit
     }
   )mlir",
@@ -116,8 +116,8 @@ TEST(QCOModifierVerificationTest, RejectsCyclicWireProducers) {
     func.func @test(%q0: !qco.qubit, %q1: !qco.qubit)
         -> (!qco.qubit, !qco.qubit) {
       %r0, %r1 = qco.inv(%a = %q0, %b = %q1) {
-        %x = qco.x %y : !qco.qubit -> !qco.qubit
-        %y = qco.x %x : !qco.qubit -> !qco.qubit
+        %x = qco.x %y : !qco.qubit
+        %y = qco.x %x : !qco.qubit
         qco.yield %y, %b : !qco.qubit, !qco.qubit
       } : {!qco.qubit, !qco.qubit} -> {!qco.qubit, !qco.qubit}
       return %r0, %r1 : !qco.qubit, !qco.qubit

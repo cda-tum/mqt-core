@@ -54,7 +54,7 @@ TEST(QCOControlFlowCanonicalization, RemovesForwardedIdleLoopQubit) {
         %out:2 = scf.for %i = %zero to %count step %one
             iter_args(%a = %active, %b = %idle)
             -> (!qco.qubit, !qco.qubit) {
-          %next = qco.x %a : !qco.qubit -> !qco.qubit
+          %next = qco.x %a : !qco.qubit
           scf.yield %next, %b : !qco.qubit, !qco.qubit
         }
         qco.sink %out#1 : !qco.qubit

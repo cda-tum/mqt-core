@@ -666,7 +666,7 @@ TEST_F(QCODDFunctionalityTest, FuncArgs) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @main(%c: i32, %q: !qco.qubit) -> !qco.qubit {
-        %q1 = qco.h %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q : !qco.qubit
         return %q1 : !qco.qubit
       }
     }
@@ -682,8 +682,8 @@ TEST_F(QCODDFunctionalityTest, ReturnedQubitsMustPreserveWireOrder) {
     module {
       func.func @main(%q0: !qco.qubit, %q1: !qco.qubit)
           -> (!qco.qubit, !qco.qubit) {
-        %q0_out = qco.h %q0 : !qco.qubit -> !qco.qubit
-        %q1_out = qco.x %q1 : !qco.qubit -> !qco.qubit
+        %q0_out = qco.h %q0 : !qco.qubit
+        %q1_out = qco.x %q1 : !qco.qubit
         return %q0_out, %q1_out : !qco.qubit, !qco.qubit
       }
     }
@@ -693,8 +693,8 @@ TEST_F(QCODDFunctionalityTest, ReturnedQubitsMustPreserveWireOrder) {
     module {
       func.func @main(%q0: !qco.qubit, %q1: !qco.qubit)
           -> (!qco.qubit, !qco.qubit) {
-        %q0_out = qco.h %q0 : !qco.qubit -> !qco.qubit
-        %q1_out = qco.x %q1 : !qco.qubit -> !qco.qubit
+        %q0_out = qco.h %q0 : !qco.qubit
+        %q1_out = qco.x %q1 : !qco.qubit
         return %q1_out, %q0_out : !qco.qubit, !qco.qubit
       }
     }
@@ -824,7 +824,7 @@ TEST_F(QCODDFunctionalityTest,
     module {
       func.func @main(%q0: !qco.qubit) {
         %q1 = qco.alloc : !qco.qubit
-        %q2 = qco.x %q1 : !qco.qubit -> !qco.qubit
+        %q2 = qco.x %q1 : !qco.qubit
         qco.sink %q0 : !qco.qubit
         qco.sink %q2 : !qco.qubit
         return
@@ -1453,10 +1453,10 @@ TEST_F(QCODDFunctionalityTest, BranchesThroughCountedMeasurementsAndResets) {
         %three = arith.constant 3 : index
         %out = scf.for %i = %zero to %three step %one
             iter_args(%current = %q) -> !qco.qubit {
-          %h = qco.h %current : !qco.qubit -> !qco.qubit
+          %h = qco.h %current : !qco.qubit
           %measured, %bit = qco.measure %h : !qco.qubit
           cbit.store %bit, %reg[%i] : !cbit.reg<3>
-          %reset = qco.reset %measured : !qco.qubit -> !qco.qubit
+          %reset = qco.reset %measured : !qco.qubit
           scf.yield %reset : !qco.qubit
         }
         qco.sink %out : !qco.qubit
@@ -1501,10 +1501,10 @@ TEST_F(QCODDFunctionalityTest, BranchesThroughNestedCountedLoops) {
               iter_args(%innerq = %outerq) -> !qco.qubit {
             %offset = arith.muli %i, %two : index
             %index = arith.addi %offset, %j : index
-            %h = qco.h %innerq : !qco.qubit -> !qco.qubit
+            %h = qco.h %innerq : !qco.qubit
             %measured, %bit = qco.measure %h : !qco.qubit
             cbit.store %bit, %reg[%index] : !cbit.reg<4>
-            %reset = qco.reset %measured : !qco.qubit -> !qco.qubit
+            %reset = qco.reset %measured : !qco.qubit
             scf.yield %reset : !qco.qubit
           }
           scf.yield %inner : !qco.qubit
@@ -1590,7 +1590,7 @@ TEST_F(QCODDFunctionalityTest, SampleHandlesZeroShotsAndSimulationFailure) {
     module {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
-        %out = qco.rz(%theta) %q : !qco.qubit -> !qco.qubit
+        %out = qco.rz(%theta) %q : !qco.qubit
         qco.sink %out : !qco.qubit
         return
       }
@@ -1605,7 +1605,7 @@ TEST_F(QCODDFunctionalityTest, SampleHandlesZeroShotsAndSimulationFailure) {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
         %measured, %bit = qco.measure %q : !qco.qubit
-        %out = qco.rz(%theta) %measured : !qco.qubit -> !qco.qubit
+        %out = qco.rz(%theta) %measured : !qco.qubit
         qco.sink %out : !qco.qubit
         return
       }
@@ -1761,7 +1761,7 @@ TEST_F(QCODDFunctionalityTest, BindsClassicalIfResults) {
         %q2 = qco.if %flag args(%arg = %q1) -> (!qco.qubit) {
           qco.yield %arg : !qco.qubit
         } else args(%arg = %q1) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.yield %x : !qco.qubit
         }
         qco.sink %q2 : !qco.qubit
@@ -1799,7 +1799,7 @@ TEST_F(QCODDFunctionalityTest, BindsClassicalIndexResults) {
         }
         %q2 = qco.index_switch %index -> !qco.qubit
         case 1 args(%arg = %q1) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.yield %x : !qco.qubit
         }
         default args(%arg = %q1) {
@@ -1906,7 +1906,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
     module {
       func.func @main(%qarg: !qco.qubit) {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.h %qarg : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %qarg : !qco.qubit
         qco.sink %q : !qco.qubit
         qco.sink %q1 : !qco.qubit
         return
@@ -1917,7 +1917,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
     module {
       func.func @main(%qarg: !qco.qubit) {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.barrier %qarg : !qco.qubit -> !qco.qubit
+        %q1 = qco.barrier %qarg : !qco.qubit
         qco.sink %q : !qco.qubit
         qco.sink %q1 : !qco.qubit
         return
@@ -1929,7 +1929,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
       func.func @main(%qarg: !qco.qubit) {
         %q = qco.static 0 : !qco.qubit
         %q_out = qco.inv (%q_in = %qarg) {
-          %q1 = qco.x %q_in : !qco.qubit -> !qco.qubit
+          %q1 = qco.x %q_in : !qco.qubit
           qco.yield %q1 : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         qco.sink %q : !qco.qubit
@@ -1943,9 +1943,9 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
       func.func @main(%qarg: !qco.qubit) {
         %q = qco.static 0 : !qco.qubit
         %c_out, %t_out = qco.ctrl(%qarg) targets(%t = %q) {
-          %t1 = qco.x %t : !qco.qubit -> !qco.qubit
+          %t1 = qco.x %t : !qco.qubit
           qco.yield %t1 : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         qco.sink %c_out : !qco.qubit
         qco.sink %t_out : !qco.qubit
         return
@@ -1956,7 +1956,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
     module {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.rz(%theta) %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.rz(%theta) %q : !qco.qubit
         qco.sink %q1 : !qco.qubit
         return
       }
@@ -1975,7 +1975,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
         %q_out = qco.inv (%q_in = %q) {
-          %q1 = qco.rz(%theta) %q_in : !qco.qubit -> !qco.qubit
+          %q1 = qco.rz(%theta) %q_in : !qco.qubit
           qco.yield %q1 : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         qco.sink %q_out : !qco.qubit
@@ -1989,9 +1989,9 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
         %q0 = qco.static 0 : !qco.qubit
         %q1 = qco.static 1 : !qco.qubit
         %c_out, %t_out = qco.ctrl(%q0) targets(%t = %q1) {
-          %t1 = qco.rz(%theta) %t : !qco.qubit -> !qco.qubit
+          %t1 = qco.rz(%theta) %t : !qco.qubit
           qco.yield %t1 : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         qco.sink %c_out : !qco.qubit
         qco.sink %t_out : !qco.qubit
         return
@@ -2031,7 +2031,7 @@ TEST_F(QCODDFunctionalityTest, ExecuteParameterizedGateCallsWithGlobalPhase) {
       %scale = arith.constant -0.5 : f64
       %phase = arith.mulf %angle, %scale : f64
       qco.gphase(%phase)
-      %out = qco.rx(%angle) %q : !qco.qubit -> !qco.qubit
+      %out = qco.rx(%angle) %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func @main(%angle: f64) {
@@ -2069,7 +2069,7 @@ TEST_F(QCODDFunctionalityTest, SimulateScfForAndFuncCallWithClassicalValues) {
         %at_zero = arith.cmpi eq, %i, %c0 : index
         %cond = arith.andi %bit, %at_zero : i1
         %q1 = qco.if %cond args(%qin = %q) -> (!qco.qubit) {
-          %qx = qco.x %qin : !qco.qubit -> !qco.qubit
+          %qx = qco.x %qin : !qco.qubit
           qco.yield %qx : !qco.qubit
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
@@ -2113,7 +2113,7 @@ TEST_F(QCODDFunctionalityTest, ScfForCarriesQubitsSimultaneously) {
             -> (!qco.qubit, !qco.qubit) {
           scf.yield %y, %x : !qco.qubit, !qco.qubit
         }
-        %flipped = qco.x %a : !qco.qubit -> !qco.qubit
+        %flipped = qco.x %a : !qco.qubit
         qco.sink %flipped : !qco.qubit
         qco.sink %b : !qco.qubit
         return
@@ -2144,7 +2144,7 @@ TEST_F(QCODDFunctionalityTest, ScfForCarriesScalarsSimultaneously) {
         }
         %is_zero = arith.cmpi eq, %a, %zero : i8
         %out = qco.if %is_zero args(%arg = %q) -> (!qco.qubit) {
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           qco.yield %flipped : !qco.qubit
         } else args(%arg = %q) {
           qco.yield %arg : !qco.qubit
@@ -2179,7 +2179,7 @@ TEST_F(QCODDFunctionalityTest, ScfForCarriesRegistersSimultaneously) {
         %out = qco.if %bit args(%arg = %q) -> (!qco.qubit) {
           qco.yield %arg : !qco.qubit
         } else args(%arg = %q) {
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           qco.yield %flipped : !qco.qubit
         }
         qco.sink %out : !qco.qubit
@@ -2205,7 +2205,7 @@ TEST_F(QCODDFunctionalityTest, ScfForSnapshotsYieldedInductionValue) {
             iter_args(%qarg = %q, %prev = %cm1) -> (!qco.qubit, index) {
           %same = arith.cmpi eq, %prev, %iv : index
           %next = qco.if %same args(%arg = %qarg) -> (!qco.qubit) {
-            %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+            %flipped = qco.x %arg : !qco.qubit
             qco.yield %flipped : !qco.qubit
           } else args(%arg = %qarg) {
             qco.yield %arg : !qco.qubit
@@ -2226,12 +2226,12 @@ TEST_F(QCODDFunctionalityTest, RepeatedCallsRespectNearestSymbolTable) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @gate(%q: !qco.qubit) -> !qco.qubit {
-        %out = qco.x %q : !qco.qubit -> !qco.qubit
+        %out = qco.x %q : !qco.qubit
         return %out : !qco.qubit
       }
       module @nested {
         func.func @gate(%q: !qco.qubit) -> !qco.qubit {
-          %out = qco.h %q : !qco.qubit -> !qco.qubit
+          %out = qco.h %q : !qco.qubit
           return %out : !qco.qubit
         }
         func.func @main(%q: !qco.qubit) -> !qco.qubit {
@@ -2257,7 +2257,7 @@ TEST_F(QCODDFunctionalityTest, ParameterizedUnitaryCallsUseClassicalBindings) {
       func.func private @rotate(%theta: f64, %q: !qco.qubit) -> !qco.qubit
           attributes {mqt.unitary} {
         qco.gphase(%theta)
-        %out = qco.rx(%theta) %q : !qco.qubit -> !qco.qubit
+        %out = qco.rx(%theta) %q : !qco.qubit
         return %out : !qco.qubit
       }
       func.func private @twice(%theta: f64, %q: !qco.qubit) -> !qco.qubit
@@ -2406,7 +2406,7 @@ TEST_F(QCODDFunctionalityTest, HandlesScfForBounds) {
         %step = arith.constant 1 : index
         %result = scf.for unsigned %iv = %lower to %upper step %step
             iter_args(%qarg = %q) -> !qco.qubit {
-          %next = qco.x %qarg : !qco.qubit -> !qco.qubit
+          %next = qco.x %qarg : !qco.qubit
           scf.yield %next : !qco.qubit
         }
         qco.sink %result : !qco.qubit
@@ -2442,7 +2442,7 @@ TEST_F(QCODDFunctionalityTest, HandlesScfForBounds) {
         %step = arith.constant 9223372036854775807 : index
         %result = scf.for unsigned %iv = %lower to %upper step %step
             iter_args(%qarg = %q) -> !qco.qubit {
-          %next = qco.x %qarg : !qco.qubit -> !qco.qubit
+          %next = qco.x %qarg : !qco.qubit
           scf.yield %next : !qco.qubit
         }
         qco.sink %result : !qco.qubit
@@ -2731,7 +2731,7 @@ TEST_F(QCODDFunctionalityTest,
         %memory = memref.alloc() : memref<1xi1>
         %zero = arith.constant 0 : index
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.h %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q : !qco.qubit
         %q2, %bit = qco.measure %q1 : !qco.qubit
         memref.store %bit, %memory[%zero] : memref<1xi1>
         %loaded = memref.load %memory[%zero] : memref<1xi1>
@@ -2768,7 +2768,7 @@ TEST_F(QCODDFunctionalityTest, FuncCallSharesClassicalCBitStorage) {
         %value = cbit.load %reg[%i0] : !cbit.reg<1>
         %q = qco.static 0 : !qco.qubit
         %q1 = qco.if %value args(%qin = %q) -> (!qco.qubit) {
-          %qx = qco.x %qin : !qco.qubit -> !qco.qubit
+          %qx = qco.x %qin : !qco.qubit
           qco.yield %qx : !qco.qubit
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
@@ -2925,7 +2925,7 @@ TEST_F(QCODDFunctionalityTest, SamplingAnalysisHandlesSharedCallees) {
            "func.call @decl() : () -> ()",
            "func.call @f0() : () -> ()",
            R"mlir(%q = qco.static 0 : !qco.qubit
-             %r = qco.reset %q : !qco.qubit -> !qco.qubit
+             %r = qco.reset %q : !qco.qubit
              qco.sink %r : !qco.qubit)mlir",
        }) {
     SCOPED_TRACE(leafBody.str());
@@ -2973,9 +2973,9 @@ TEST_F(QCODDFunctionalityTest,
       }
       func.func @main() {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.h %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q : !qco.qubit
         %q2 = func.call @measure(%q1) : (!qco.qubit) -> !qco.qubit
-        %q3 = qco.h %q2 : !qco.qubit -> !qco.qubit
+        %q3 = qco.h %q2 : !qco.qubit
         qco.sink %q3 : !qco.qubit
         return
       }
@@ -3011,7 +3011,7 @@ TEST_F(QCODDFunctionalityTest, SampleDefersNestedTerminalMeasurement) {
         %reg = cbit.alloc(#cbit.init<undefined>) : !cbit.reg<1>
         %true = arith.constant true
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.h %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q : !qco.qubit
         %q2 = qco.if %true args(%qin = %q1) -> (!qco.qubit) {
           %measured, %bit = qco.measure %qin : !qco.qubit
           %i0 = arith.constant 0 : index
@@ -3043,7 +3043,7 @@ TEST_F(QCODDFunctionalityTest, FixedGatePowersPreserveFullMatrix) {
         %q = qco.static 0 : !qco.qubit
         %out = qco.pow(%exponent) (%a = %q) {
           %b = qco.)mlir") + gate +
-                               R"mlir( %a : !qco.qubit -> !qco.qubit
+                               R"mlir( %a : !qco.qubit
           qco.yield %b : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         qco.sink %out : !qco.qubit
@@ -3103,7 +3103,7 @@ TEST_F(QCODDFunctionalityTest, SymbolicParametersUseBindings) {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
         %twice = arith.addf %theta, %theta : f64
-        %q1 = qco.rx(%twice) %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.rx(%twice) %q : !qco.qubit
         qco.gphase(%theta)
         qco.sink %q1 : !qco.qubit
         return
@@ -3160,7 +3160,7 @@ TEST_F(QCODDFunctionalityTest, RejectsNonFiniteParameters) {
     module {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
-        %out = qco.rx(%theta) %q : !qco.qubit -> !qco.qubit
+        %out = qco.rx(%theta) %q : !qco.qubit
         qco.sink %out : !qco.qubit
         return
       }
@@ -3226,7 +3226,7 @@ TEST_F(QCODDFunctionalityTest, StructuredScfAndWhileCarryValues) {
     module {
       func.func @main() {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.x %q : !qco.qubit
         %true = arith.constant true
         %selector = scf.if %true -> index {
           %one = arith.constant 1 : index
@@ -3245,7 +3245,7 @@ TEST_F(QCODDFunctionalityTest, StructuredScfAndWhileCarryValues) {
           scf.yield %no : i1
         }
         %q2 = qco.if %apply_z args(%qarg = %q1) -> (!qco.qubit) {
-          %out = qco.z %qarg : !qco.qubit -> !qco.qubit
+          %out = qco.z %qarg : !qco.qubit
           qco.yield %out : !qco.qubit
         } else args(%qarg = %q1) {
           qco.yield %qarg : !qco.qubit
@@ -3258,7 +3258,7 @@ TEST_F(QCODDFunctionalityTest, StructuredScfAndWhileCarryValues) {
           scf.condition(%condition) %qarg, %i : !qco.qubit, index
         } do {
         ^bb0(%qarg: !qco.qubit, %i: index):
-          %out = qco.x %qarg : !qco.qubit -> !qco.qubit
+          %out = qco.x %qarg : !qco.qubit
           %one = arith.constant 1 : index
           %next = arith.addi %i, %one : index
           scf.yield %out, %next : !qco.qubit, index
@@ -3269,7 +3269,7 @@ TEST_F(QCODDFunctionalityTest, StructuredScfAndWhileCarryValues) {
           scf.condition(%false) %qarg : !qco.qubit
         } do {
         ^bb0(%qarg: !qco.qubit):
-          %unreachable = qco.h %qarg : !qco.qubit -> !qco.qubit
+          %unreachable = qco.h %qarg : !qco.qubit
           scf.yield %unreachable : !qco.qubit
         }
         qco.sink %final : !qco.qubit
@@ -3375,7 +3375,7 @@ TEST_F(QCODDFunctionalityTest, DynamicQTensorArgumentUsesBoundExtent) {
         %one = arith.constant 1 : index
         %remaining, %q = qtensor.extract %arg0[%one]
             : tensor<?x!qco.qubit>
-        %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.x %q : !qco.qubit
         %result = qtensor.insert %q1 into %remaining[%one]
             : tensor<?x!qco.qubit>
         return %result : tensor<?x!qco.qubit>
@@ -3421,7 +3421,7 @@ TEST_F(QCODDFunctionalityTest, QTensorFlowsThroughLoopAndCall) {
         %zero = arith.constant 0 : index
         %remaining, %q = qtensor.extract %arg[%zero]
             : tensor<1x!qco.qubit>
-        %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.x %q : !qco.qubit
         %result = qtensor.insert %q1 into %remaining[%zero]
             : tensor<1x!qco.qubit>
         return %result : tensor<1x!qco.qubit>
@@ -3504,7 +3504,7 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
         %condition = arith.andi %all_integers_ok, %floats_ok : i1
         %q = qco.static 0 : !qco.qubit
         %q1 = qco.if %condition args(%qin = %q) -> (!qco.qubit) {
-          %out = qco.x %qin : !qco.qubit -> !qco.qubit
+          %out = qco.x %qin : !qco.qubit
           qco.yield %out : !qco.qubit
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
@@ -3534,7 +3534,7 @@ TEST_F(QCODDFunctionalityTest, BindingsDriveObservableClassicalPath) {
         %condition = arith.select %flag, %both, %unbound : i1
         %q = qco.static 0 : !qco.qubit
         %out = qco.if %condition args(%arg = %q) -> (!qco.qubit) {
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           qco.yield %flipped : !qco.qubit
         } else args(%arg = %q) {
           qco.yield %arg : !qco.qubit
@@ -3575,7 +3575,7 @@ TEST_F(QCODDFunctionalityTest, RepeatedSimulationPreservesFoldableIR) {
         %equal = arith.cmpi eq, %wide, %wide_again : i16
         %q = qco.static 0 : !qco.qubit
         %out = qco.if %equal args(%arg = %q) -> (!qco.qubit) {
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           qco.yield %flipped : !qco.qubit
         } else args(%arg = %q) {
           qco.yield %arg : !qco.qubit
@@ -3733,7 +3733,7 @@ TEST_F(QCODDFunctionalityTest, BuildFunctionalityRestrictsRuntimeAllocations) {
     module {
       func.func @main() {
         %q = qco.alloc : !qco.qubit
-        %out = qco.x %q : !qco.qubit -> !qco.qubit
+        %out = qco.x %q : !qco.qubit
         qco.sink %out : !qco.qubit
         return
       }
@@ -4048,7 +4048,7 @@ TEST_F(QCODDFunctionalityTest,
           %ok = arith.cmpi eq, %result, %expected : {2}
           %q = qco.static 0 : !qco.qubit
           %out = qco.if %ok args(%arg = %q) -> (!qco.qubit) {{
-            %x = qco.x %arg : !qco.qubit -> !qco.qubit
+            %x = qco.x %arg : !qco.qubit
             qco.yield %x : !qco.qubit
           } else args(%arg = %q) {{
             qco.yield %arg : !qco.qubit
@@ -4271,7 +4271,7 @@ TEST_F(QCODDFunctionalityTest,
           {7}
           %q = qco.static 0 : !qco.qubit
           %out = qco.if %ok args(%arg = %q) -> (!qco.qubit) {{
-            %x = qco.x %arg : !qco.qubit -> !qco.qubit
+            %x = qco.x %arg : !qco.qubit
             qco.yield %x : !qco.qubit
           } else args(%arg = %q) {{
             qco.yield %arg : !qco.qubit

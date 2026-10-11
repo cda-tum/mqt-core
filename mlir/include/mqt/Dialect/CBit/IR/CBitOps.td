@@ -72,7 +72,8 @@ def AllocOp : CBitOp<"alloc"> {
   }];
 }
 
-def LoadOp : CBitOp<"load"> {
+def LoadOp : CBitOp<"load", [DeclareOpInterfaceMethods<
+                                OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Load a classical bit";
   let description = [{
     Reads one `i1` value from a classical-bit register. A constant index must
@@ -94,7 +95,8 @@ def LoadOp : CBitOp<"load"> {
   let hasVerifier = 1;
 }
 
-def ReadOp : CBitOp<"read"> {
+def ReadOp : CBitOp<"read", [DeclareOpInterfaceMethods<
+                                OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Read a classical-bit register as an integer";
   let description = [{
     Reads the complete register as an exact-width integer bit pattern. Register

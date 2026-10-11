@@ -619,7 +619,7 @@ TEST_F(QCOMatrixTest, ComposeNTargetRejectsRuntimeGphase) {
         %q_in = qco.alloc : !qco.qubit
         %q_out = qco.inv (%q = %q_in) {
           qco.gphase(%theta)
-          %q_1 = qco.x %q : !qco.qubit -> !qco.qubit
+          %q_1 = qco.x %q : !qco.qubit
           qco.yield %q_1 : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %q_out : !qco.qubit
@@ -639,7 +639,7 @@ TEST_F(QCOMatrixTest, ComposeNTargetRejectsRuntimeUnitaryMatrix) {
       func.func @test(%theta: f64) -> !qco.qubit {
         %q_in = qco.alloc : !qco.qubit
         %q_out = qco.inv (%q = %q_in) {
-          %q_1 = qco.rx(%theta) %q : !qco.qubit -> !qco.qubit
+          %q_1 = qco.rx(%theta) %q : !qco.qubit
           qco.yield %q_1 : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %q_out : !qco.qubit
@@ -801,7 +801,6 @@ TEST_F(QCOMatrixTest, PhaseProducingPowFoldsPreserveFullMatrixUnderControl) {
               } : {!qco.qubit} -> {!qco.qubit}
               qco.yield %pow_out : !qco.qubit
             } : ({!qco.qubit}, {!qco.qubit})
-              -> ({!qco.qubit}, {!qco.qubit})
             return %control_out, %target_out
                 : !qco.qubit, !qco.qubit
           }
@@ -1082,8 +1081,8 @@ TEST_F(QCOMatrixTest, InverseDynamicRzXOpMatrix) {
       func.func @test(%theta: f64) -> !qco.qubit {
         %q_in = qco.alloc : !qco.qubit
         %q_out = qco.inv (%q = %q_in) {
-          %q_1 = qco.rz(%theta) %q : !qco.qubit -> !qco.qubit
-          %q_2 = qco.x %q_1 : !qco.qubit -> !qco.qubit
+          %q_1 = qco.rz(%theta) %q : !qco.qubit
+          %q_2 = qco.x %q_1 : !qco.qubit
           qco.yield %q_2 : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %q_out : !qco.qubit

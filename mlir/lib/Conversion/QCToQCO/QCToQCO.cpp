@@ -1513,9 +1513,9 @@ struct ConvertQCBarrierOp final : StatefulOpConversionPattern<qc::BarrierOp> {
 /// is converted to
 /// ```mlir
 /// %controls_out, %targets_out = qco.ctrl(%q0_in) targets(%a_in = %q1_in) {
-///   %a_res = qco.x %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.x %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
-/// } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+/// } : ({!qco.qubit}, {!qco.qubit})
 /// ```
 struct ConvertQCCtrlOp final : StatefulOpConversionPattern<qc::CtrlOp> {
   using StatefulOpConversionPattern::StatefulOpConversionPattern;
@@ -1568,7 +1568,7 @@ struct ConvertQCCtrlOp final : StatefulOpConversionPattern<qc::CtrlOp> {
 /// is converted to
 /// ```mlir
 /// %q0_out = qco.inv (%a0_in = %q0_in) {
-///   %a0_res = qco.s %a0_in : !qco.qubit -> !qco.qubit
+///   %a0_res = qco.s %a0_in : !qco.qubit
 ///   qco.yield %a0_res : !qco.qubit
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1616,7 +1616,7 @@ struct ConvertQCInvOp final : StatefulOpConversionPattern<qc::InvOp> {
 /// is converted to
 /// ```mlir
 /// %q0_out = qco.pow(%exponent) (%a0_in = %q0_in) {
-///   %a0_res = qco.s %a0_in : !qco.qubit -> !qco.qubit
+///   %a0_res = qco.s %a0_in : !qco.qubit
 ///   qco.yield %a0_res
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1701,7 +1701,7 @@ struct ConvertQCYieldOp final : StatefulOpConversionPattern<qc::YieldOp> {
 /// %targets_out = scf.for %iv = %lb to %ub step %step iter_args(%arg0 =
 /// %qtensor) -> (tensor<3x!qco.qubit) {
 ///   %t0, %q0 = qtensor.extract %arg0[%iv] : tensor<3x!qco.qubit>
-///   %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %q0 : !qco.qubit
 ///   %t1 = qtensor.insert %q1 into %t0[%iv] : tensor<3x!qco.qubit>
 ///   scf.yield %t1 : tensor<3x!qco.qubit>
 /// }
@@ -1785,7 +1785,7 @@ struct ConvertSCFForOp final : StatefulOpConversionPattern<scf::ForOp> {
 ///   scf.condition(%cond) %q1 : !qco.qubit
 /// } do {
 /// ^bb0(%arg0: !qco.qubit):
-///   %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.h %arg0 : !qco.qubit
 ///   scf.yield %q2 : !qco.qubit
 /// }
 /// ```
@@ -1887,7 +1887,7 @@ struct ConvertSCFWhileOp final : StatefulOpConversionPattern<scf::WhileOp> {
 /// is converted to
 /// ```mlir
 /// %targets_out = qco.if %cond args(%arg0 = %q0) -> (!qco.qubit) {
-///   %q1 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %arg0 : !qco.qubit
 ///   qco.yield %q1 : !qco.qubit
 /// } else args(%arg0 = %q0) {
 ///   qco.yield %arg0 : !qco.qubit
@@ -1977,11 +1977,11 @@ struct ConvertSCFIfOp final : StatefulOpConversionPattern<scf::IfOp> {
 /// ```mlir
 /// %result = qco.index_switch %condition -> !qco.qubit
 /// case 0 args(%arg0 = %q0) {
-///   %q1 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.x %arg0 : !qco.qubit
 ///   qco.yield %q1 : !qco.qubit
 /// }
 /// default args(%arg0 = %q0) {
-///   %q2 = qco.z %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.z %arg0 : !qco.qubit
 ///   qco.yield %q2 : !qco.qubit
 /// }
 /// ```

@@ -659,7 +659,7 @@ TEST_F(MQTIRTest, UnitaryFunctionsAllowNonSpeculatableParameterComputation) {
                %one = arith.constant 1 : i64
                %d = arith.divsi %one, %n : i64
                %angle = arith.sitofp %d : i64 to f64
-               %out = qco.rx(%angle) %q : !qco.qubit -> !qco.qubit
+               %out = qco.rx(%angle) %q : !qco.qubit
                return %out : !qco.qubit
              }
            )mlir",
@@ -680,9 +680,9 @@ TEST_F(MQTIRTest, UnitaryLoopsAllowScalarStateAndSwapGates) {
           iter_args(%a = %q, %angle = %theta, %b = %r)
           -> (!qco.qubit, f64, !qco.qubit) {
         %next = arith.addf %angle, %theta : f64
-        %rotated = qco.rx(%angle) %a : !qco.qubit -> !qco.qubit
+        %rotated = qco.rx(%angle) %a : !qco.qubit
         %x, %y = qco.swap %rotated, %b
-            : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+            : !qco.qubit, !qco.qubit
         scf.yield %x, %next, %y : !qco.qubit, f64, !qco.qubit
       }
       return %out#0, %out#2 : !qco.qubit, !qco.qubit
@@ -739,7 +739,7 @@ TEST_F(MQTIRTest, RejectsNonUnitaryLoopBodiesAndQubitPermutations) {
                %end = arith.index_cast %integer : i64 to index
                %out = scf.for %i = %c0 to %end step %c1
                    iter_args(%a = %q) -> (!qco.qubit) {
-                 %b = qco.x %a : !qco.qubit -> !qco.qubit
+                 %b = qco.x %a : !qco.qubit
                  scf.yield %b : !qco.qubit
                }
                return %out : !qco.qubit
@@ -795,8 +795,8 @@ TEST_F(MQTIRTest, RejectsCyclicUnitaryQubitFlow) {
   EXPECT_FALSE(parse(R"mlir(
     func.func private @cyclic(%q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %a = qco.h %b : !qco.qubit -> !qco.qubit
-      %b = qco.h %a : !qco.qubit -> !qco.qubit
+      %a = qco.h %b : !qco.qubit
+      %b = qco.h %a : !qco.qubit
       return %b : !qco.qubit
     }
   )mlir"));

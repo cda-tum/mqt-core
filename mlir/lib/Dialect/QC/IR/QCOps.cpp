@@ -77,6 +77,11 @@ static void printTargetAliasing(OpAsmPrinter& printer, Operation* /*op*/,
   mqt::printTargetAliasing(printer, region, targetsIn);
 }
 
+void MeasureOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "bit");
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect
 //===----------------------------------------------------------------------===//

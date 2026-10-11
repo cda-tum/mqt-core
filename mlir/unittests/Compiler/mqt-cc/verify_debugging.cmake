@@ -54,8 +54,8 @@ file(
   [=[
 module {
   func.func @f(%q: !qco.qubit) -> !qco.qubit {
-    %h0 = qco.h %q : !qco.qubit -> !qco.qubit
-    %h1 = qco.h %h0 : !qco.qubit -> !qco.qubit
+    %h0 = qco.h %q : !qco.qubit
+    %h1 = qco.h %h0 : !qco.qubit
     return %h1 : !qco.qubit
   }
 }
@@ -274,7 +274,7 @@ file(
   [=[
 module {
   func.func private @flip(%q: !qco.qubit) -> !qco.qubit attributes {mqt.unitary} {
-    %out = qco.x %q : !qco.qubit -> !qco.qubit
+    %out = qco.x %q : !qco.qubit
     return %out : !qco.qubit
   }
   func.func @main() attributes {mqt.entry_point} {

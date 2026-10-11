@@ -80,16 +80,16 @@ protected:
           %i2 = arith.constant 2 : index
           %i3 = arith.constant 1 : index
           %r0, %q0 = qtensor.extract %tensor[%i0] : tensor<4x!qco.qubit>
-          %h0 = qco.h %q0 : !qco.qubit -> !qco.qubit
+          %h0 = qco.h %q0 : !qco.qubit
           %t0 = qtensor.insert %h0 into %r0[%i0] : tensor<4x!qco.qubit>
           %r1, %q1 = qtensor.extract %t0[%i1] : tensor<4x!qco.qubit>
-          %h1 = qco.h %q1 : !qco.qubit -> !qco.qubit
+          %h1 = qco.h %q1 : !qco.qubit
           %t1 = qtensor.insert %h1 into %r1[%i1] : tensor<4x!qco.qubit>
           %r2, %q2 = qtensor.extract %t1[%i2] : tensor<4x!qco.qubit>
-          %h2 = qco.h %q2 : !qco.qubit -> !qco.qubit
+          %h2 = qco.h %q2 : !qco.qubit
           %t2 = qtensor.insert %h2 into %r2[%i2] : tensor<4x!qco.qubit>
           %r3, %q3 = qtensor.extract %t2[%i3] : tensor<4x!qco.qubit>
-          %h3 = qco.h %q3 : !qco.qubit -> !qco.qubit
+          %h3 = qco.h %q3 : !qco.qubit
           %t3 = qtensor.insert %h3 into %r3[%i3] : tensor<4x!qco.qubit>
           return %t3 : tensor<4x!qco.qubit>
         }
@@ -256,10 +256,10 @@ TEST_F(QTensorPairCanonicalizationTest, ChecksOperationOrderInGraphRegions) {
         %c2 = arith.constant 2 : index
         %tensor = qtensor.alloc(%c2) : tensor<2x!qco.qubit>
         %r0, %q0 = qtensor.extract %tensor[%c0] : tensor<2x!qco.qubit>
-        %h0 = qco.h %q0 : !qco.qubit -> !qco.qubit
+        %h0 = qco.h %q0 : !qco.qubit
         %t0 = qtensor.insert %h0 into %r0[%c0] : tensor<2x!qco.qubit>
         %r1, %q1 = qtensor.extract %t0[%c1] : tensor<2x!qco.qubit>
-        %h1 = qco.h %q1 : !qco.qubit -> !qco.qubit
+        %h1 = qco.h %q1 : !qco.qubit
         %t1 = qtensor.insert %h1 into %r1[%c1] : tensor<2x!qco.qubit>
         qtensor.dealloc %t1 : tensor<2x!qco.qubit>
       }

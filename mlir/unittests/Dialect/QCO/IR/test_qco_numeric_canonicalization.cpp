@@ -93,8 +93,8 @@ TEST_F(QCONumericCanonicalizationTest, RMergePreservesLargeAxisAngles) {
         %theta0 = arith.constant 0.1 : f64
         %theta1 = arith.constant 0.2 : f64
         %phi = arith.constant 1.0e16 : f64
-        %a = qco.r(%theta0, %phi) %q : !qco.qubit -> !qco.qubit
-        %b = qco.r(%theta1, %phi) %a : !qco.qubit -> !qco.qubit
+        %a = qco.r(%theta0, %phi) %q : !qco.qubit
+        %b = qco.r(%theta1, %phi) %a : !qco.qubit
         return %b : !qco.qubit
       }
     }
@@ -142,7 +142,7 @@ TEST_F(QCONumericCanonicalizationTest, RPowerPreservesLargeAxisAngles) {
         %theta = arith.constant 0.1 : f64
         %phi = arith.constant 1.0e16 : f64
         %o = qco.pow(%exponent) (%a = %q) {
-          %r = qco.r(%theta, %phi) %a : !qco.qubit -> !qco.qubit
+          %r = qco.r(%theta, %phi) %a : !qco.qubit
           qco.yield %r : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -218,7 +218,7 @@ TEST_F(QCONumericCanonicalizationTest, UToU2PreservesLargeEulerAngles) {
         %theta = arith.constant 1.5707963267948966 : f64
         %phi = arith.constant 1.0e308 : f64
         %lambda = arith.constant 1.0e308 : f64
-        %out = qco.u(%theta, %phi, %lambda) %q : !qco.qubit -> !qco.qubit
+        %out = qco.u(%theta, %phi, %lambda) %q : !qco.qubit
         return %out : !qco.qubit
       }
     }
@@ -251,7 +251,7 @@ TEST_F(QCONumericCanonicalizationTest, LargeEvenPauliPowerBecomesIdentity) {
       func.func @test(%q: !qco.qubit) -> !qco.qubit {
         %exponent = arith.constant 10000.0 : f64
         %o = qco.pow(%exponent) (%a = %q) {
-          %x = qco.x %a : !qco.qubit -> !qco.qubit
+          %x = qco.x %a : !qco.qubit
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -273,7 +273,7 @@ TEST_F(QCONumericCanonicalizationTest, LargeOddPauliPowerPreservesUnitary) {
       func.func @test(%q: !qco.qubit) -> !qco.qubit {
         %exponent = arith.constant 9007199254740991.0 : f64
         %o = qco.pow(%exponent) (%a = %q) {
-          %x = qco.x %a : !qco.qubit -> !qco.qubit
+          %x = qco.x %a : !qco.qubit
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -283,7 +283,7 @@ TEST_F(QCONumericCanonicalizationTest, LargeOddPauliPowerPreservesUnitary) {
   auto reference = parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @test(%q: !qco.qubit) -> !qco.qubit {
-        %x = qco.x %q : !qco.qubit -> !qco.qubit
+        %x = qco.x %q : !qco.qubit
         return %x : !qco.qubit
       }
     }
@@ -303,7 +303,7 @@ TEST_F(QCONumericCanonicalizationTest, PowerRetainsDynamicAngle) {
       func.func @test(%q: !qco.qubit, %angle: f64) -> !qco.qubit {
         %exponent = arith.constant 2.0 : f64
         %o = qco.pow(%exponent) (%a = %q) {
-          %r = qco.rx(%angle) %a : !qco.qubit -> !qco.qubit
+          %r = qco.rx(%angle) %a : !qco.qubit
           qco.yield %r : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -328,7 +328,7 @@ TEST_F(QCONumericCanonicalizationTest, PowerRetainsUnsafeConstantProducts) {
         %exponent = arith.constant 2.0 : f64
         %angle = arith.constant 1.0e308 : f64
         %o = qco.pow(%exponent) (%a = %q) {
-          %r = qco.rx(%angle) %a : !qco.qubit -> !qco.qubit
+          %r = qco.rx(%angle) %a : !qco.qubit
           qco.yield %r : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -337,7 +337,7 @@ TEST_F(QCONumericCanonicalizationTest, PowerRetainsUnsafeConstantProducts) {
         %exponent = arith.constant 3.0 : f64
         %angle = arith.constant 1.0000000000000002e16 : f64
         %o = qco.pow(%exponent) (%a = %q) {
-          %r = qco.rx(%angle) %a : !qco.qubit -> !qco.qubit
+          %r = qco.rx(%angle) %a : !qco.qubit
           qco.yield %r : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -383,8 +383,8 @@ TEST_F(QCONumericCanonicalizationTest, NestedPowerOverflowKeepsParameterScope) {
         %o = qco.pow(%exponent) (%a = %q) {
           %square = arith.mulf %angle, %angle : f64
           %i = qco.pow(%exponent) (%b = %a) {
-            %h = qco.h %b : !qco.qubit -> !qco.qubit
-            %r = qco.rx(%square) %h : !qco.qubit -> !qco.qubit
+            %h = qco.h %b : !qco.qubit
+            %r = qco.rx(%square) %h : !qco.qubit
             qco.yield %r : !qco.qubit
           } : {!qco.qubit} -> {!qco.qubit}
           qco.yield %i : !qco.qubit
@@ -419,8 +419,8 @@ TEST_F(QCONumericCanonicalizationTest, NestedPowerRetainsDynamicExponentScope) {
         %o = qco.pow(%two) (%a = %q) {
           %square = arith.mulf %exponent, %exponent : f64
           %i = qco.pow(%square) (%b = %a) {
-            %h = qco.h %b : !qco.qubit -> !qco.qubit
-            %s = qco.s %h : !qco.qubit -> !qco.qubit
+            %h = qco.h %b : !qco.qubit
+            %s = qco.s %h : !qco.qubit
             qco.yield %s : !qco.qubit
           } : {!qco.qubit} -> {!qco.qubit}
           qco.yield %i : !qco.qubit
@@ -450,8 +450,8 @@ TEST_F(QCONumericCanonicalizationTest, RotationMergeRetainsOverflowingAngles) {
     module {
       func.func @test(%q: !qco.qubit) -> !qco.qubit {
         %angle = arith.constant 1.0e308 : f64
-        %a = qco.rx(%angle) %q : !qco.qubit -> !qco.qubit
-        %b = qco.rx(%angle) %a : !qco.qubit -> !qco.qubit
+        %a = qco.rx(%angle) %q : !qco.qubit
+        %b = qco.rx(%angle) %a : !qco.qubit
         return %b : !qco.qubit
       }
     }
@@ -467,8 +467,8 @@ TEST_F(QCONumericCanonicalizationTest, RotationMergeRetainsLargeRoundingError) {
       func.func @test(%q: !qco.qubit) -> !qco.qubit {
         %large = arith.constant 1.0e16 : f64
         %small = arith.constant 1.0 : f64
-        %a = qco.rx(%large) %q : !qco.qubit -> !qco.qubit
-        %b = qco.rx(%small) %a : !qco.qubit -> !qco.qubit
+        %a = qco.rx(%large) %q : !qco.qubit
+        %b = qco.rx(%small) %a : !qco.qubit
         return %b : !qco.qubit
       }
     }
@@ -486,8 +486,8 @@ TEST_F(QCONumericCanonicalizationTest, RotationMergeRetainsDynamicAngles) {
   auto moduleOp = canonicalize(R"mlir(
     module {
       func.func @test(%q: !qco.qubit, %theta: f64, %phi: f64) -> !qco.qubit {
-        %a = qco.rx(%theta) %q : !qco.qubit -> !qco.qubit
-        %b = qco.rx(%phi) %a : !qco.qubit -> !qco.qubit
+        %a = qco.rx(%theta) %q : !qco.qubit
+        %b = qco.rx(%phi) %a : !qco.qubit
         return %b : !qco.qubit
       }
     }
@@ -505,8 +505,8 @@ TEST_F(QCONumericCanonicalizationTest,
       func.func @test(%q: !qco.qubit) -> !qco.qubit {
         %theta = arith.constant 0.1 : f64
         %phi = arith.constant 0.2 : f64
-        %a = qco.rx(%theta) %q : !qco.qubit -> !qco.qubit
-        %b = qco.rx(%phi) %a : !qco.qubit -> !qco.qubit
+        %a = qco.rx(%theta) %q : !qco.qubit
+        %b = qco.rx(%phi) %a : !qco.qubit
         return %b : !qco.qubit
       }
     }
@@ -533,8 +533,8 @@ TEST_F(QCONumericCanonicalizationTest, NestedPowerAcrossBranchCutDoesNotMerge) {
         %two = arith.constant 2.0 : f64
         %o = qco.pow(%half) (%a = %q) {
           %i = qco.pow(%two) (%b = %a) {
-            %x = qco.x %b : !qco.qubit -> !qco.qubit
-            %s = qco.s %x : !qco.qubit -> !qco.qubit
+            %x = qco.x %b : !qco.qubit
+            %s = qco.s %x : !qco.qubit
             qco.yield %s : !qco.qubit
           } : {!qco.qubit} -> {!qco.qubit}
           qco.yield %i : !qco.qubit

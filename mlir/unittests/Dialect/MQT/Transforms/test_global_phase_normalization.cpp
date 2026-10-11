@@ -283,7 +283,7 @@ TEST_F(GlobalPhaseNormalizationTest, CombinesQCOConstantsAtBlockExit) {
         %c0 = arith.constant 0.25 : f64
         %c1 = arith.constant 0.5 : f64
         qco.gphase(%c0)
-        %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.x %q : !qco.qubit
         qco.gphase(%c1)
         return %q1 : !qco.qubit
       }
@@ -536,13 +536,13 @@ TEST_F(GlobalPhaseNormalizationTest, FactorsInverseAndIntegralPower) {
           -> (!qco.qubit, !qco.qubit) {
         %c0 = arith.constant 0.25 : f64
         %i = qco.inv (%arg0 = %q0) {
-          %x = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg0 : !qco.qubit
           qco.gphase(%c0)
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         %two = arith.constant 2.0 : f64
         %p = qco.pow(%two) (%arg1 = %q1) {
-          %x = qco.x %arg1 : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg1 : !qco.qubit
           qco.gphase(%c0)
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
@@ -568,7 +568,7 @@ TEST_F(GlobalPhaseNormalizationTest, FractionalPowerRemainsBoundary) {
         %half = arith.constant 0.5 : f64
         %phase = arith.constant 4.71238898038469 : f64
         %p = qco.pow(%half) (%arg = %q) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.gphase(%phase)
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
@@ -590,7 +590,7 @@ TEST_F(GlobalPhaseNormalizationTest, DynamicPowerRemainsBoundary) {
       func.func @test(%q: !qco.qubit, %exponent: f64) -> !qco.qubit {
         %phase = arith.constant 0.371 : f64
         %p = qco.pow(%exponent) (%arg = %q) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.gphase(%phase)
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
@@ -615,11 +615,10 @@ TEST_F(GlobalPhaseNormalizationTest, FactorsControlledPhaseOntoControl) {
         %phase = arith.constant 0.25 : f64
         %control_out, %target_out = qco.ctrl(%control)
             targets(%arg = %target) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.gphase(%phase)
           qco.yield %x : !qco.qubit
         } : ({!qco.qubit}, {!qco.qubit})
-          -> ({!qco.qubit}, {!qco.qubit})
         return %control_out, %target_out : !qco.qubit, !qco.qubit
       }
     }
@@ -650,7 +649,6 @@ TEST_F(GlobalPhaseNormalizationTest,
           qco.gphase(%phase)
           qco.yield %lhs_arg, %rhs_arg : !qco.qubit, !qco.qubit
         } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
-          -> ({!qco.qubit}, {!qco.qubit, !qco.qubit})
         return %control_out, %lhs_out, %rhs_out
             : !qco.qubit, !qco.qubit, !qco.qubit
       }
@@ -685,15 +683,13 @@ TEST_F(GlobalPhaseNormalizationTest,
             targets(%inner_arg = %inner, %target_arg = %target) {
           %inner_control_out, %inner_target_out = qco.ctrl(%inner_arg)
               targets(%arg = %target_arg) {
-            %x = qco.x %arg : !qco.qubit -> !qco.qubit
+            %x = qco.x %arg : !qco.qubit
             qco.gphase(%phase)
             qco.yield %x : !qco.qubit
           } : ({!qco.qubit}, {!qco.qubit})
-            -> ({!qco.qubit}, {!qco.qubit})
           qco.yield %inner_control_out, %inner_target_out
               : !qco.qubit, !qco.qubit
         } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
-          -> ({!qco.qubit}, {!qco.qubit, !qco.qubit})
         return %outer_out, %inner_out, %target_out
             : !qco.qubit, !qco.qubit, !qco.qubit
       }
@@ -712,12 +708,11 @@ TEST_F(GlobalPhaseNormalizationTest, ThreeControlsPreserveFullUnitary) {
         %phase = arith.constant -1.137 : f64
         %q0_out, %q1_out, %q2_out, %target_out =
             qco.ctrl(%q0, %q1, %q2) targets(%arg = %target) {
-          %h = qco.h %arg : !qco.qubit -> !qco.qubit
-          %x = qco.x %h : !qco.qubit -> !qco.qubit
+          %h = qco.h %arg : !qco.qubit
+          %x = qco.x %h : !qco.qubit
           qco.gphase(%phase)
           qco.yield %x : !qco.qubit
         } : ({!qco.qubit, !qco.qubit, !qco.qubit}, {!qco.qubit})
-          -> ({!qco.qubit, !qco.qubit, !qco.qubit}, {!qco.qubit})
         return %q0_out, %q1_out, %q2_out, %target_out
             : !qco.qubit, !qco.qubit, !qco.qubit, !qco.qubit
       }
@@ -742,11 +737,10 @@ TEST_F(GlobalPhaseNormalizationTest, ReorderedQCOControlsThreadCorrectResults) {
         %phase = arith.constant -1.137 : f64
         %q2_out, %q0_out, %q1_out, %target_out =
             qco.ctrl(%q2, %q0, %q1) targets(%arg = %target) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.gphase(%phase)
           qco.yield %x : !qco.qubit
         } : ({!qco.qubit, !qco.qubit, !qco.qubit}, {!qco.qubit})
-          -> ({!qco.qubit, !qco.qubit, !qco.qubit}, {!qco.qubit})
         return %q0_out, %q1_out, %q2_out, %target_out
             : !qco.qubit, !qco.qubit, !qco.qubit, !qco.qubit
       }
@@ -775,12 +769,11 @@ TEST_F(GlobalPhaseNormalizationTest, MultipleTargetsPreserveFullUnitary) {
         %phase = arith.constant 2.173 : f64
         %c0_out, %c1_out, %t0_out, %t1_out =
             qco.ctrl(%c0, %c1) targets(%a = %t0, %b = %t1) {
-          %x = qco.x %a : !qco.qubit -> !qco.qubit
-          %h = qco.h %b : !qco.qubit -> !qco.qubit
+          %x = qco.x %a : !qco.qubit
+          %h = qco.h %b : !qco.qubit
           qco.gphase(%phase)
           qco.yield %x, %h : !qco.qubit, !qco.qubit
         } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit})
-          -> ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit})
         return %c0_out, %c1_out, %t0_out, %t1_out
             : !qco.qubit, !qco.qubit, !qco.qubit, !qco.qubit
       }
@@ -801,7 +794,7 @@ TEST_F(GlobalPhaseNormalizationTest,
         exponent + R"mlir( : f64
             %phase = arith.constant 0.371 : f64
             %out = qco.pow(%exponent) (%arg = %q) {
-              %h = qco.h %arg : !qco.qubit -> !qco.qubit
+              %h = qco.h %arg : !qco.qubit
               qco.gphase(%phase)
               qco.yield %h : !qco.qubit
             } : {!qco.qubit} -> {!qco.qubit}
@@ -827,7 +820,7 @@ TEST_F(GlobalPhaseNormalizationTest,
         %two = arith.constant 2.0 : f64
         %a = qco.inv (%outer_arg = %q0) {
           %inner = qco.pow(%two) (%inner_arg = %outer_arg) {
-            %h = qco.h %inner_arg : !qco.qubit -> !qco.qubit
+            %h = qco.h %inner_arg : !qco.qubit
             qco.gphase(%phase)
             qco.yield %h : !qco.qubit
           } : {!qco.qubit} -> {!qco.qubit}
@@ -835,7 +828,7 @@ TEST_F(GlobalPhaseNormalizationTest,
         } : {!qco.qubit} -> {!qco.qubit}
         %b = qco.pow(%two) (%outer_arg = %q1) {
           %inner = qco.inv (%inner_arg = %outer_arg) {
-            %x = qco.x %inner_arg : !qco.qubit -> !qco.qubit
+            %x = qco.x %inner_arg : !qco.qubit
             qco.gphase(%phase)
             qco.yield %x : !qco.qubit
           } : {!qco.qubit} -> {!qco.qubit}
@@ -890,7 +883,7 @@ TEST_F(GlobalPhaseNormalizationTest,
         %c0 = arith.constant 0 : index
         %phase = memref.load %angles[%c0] : memref<1xf64>
         %out = qco.inv (%arg = %q) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.gphase(%phase)
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
@@ -1070,11 +1063,10 @@ TEST_F(GlobalPhaseNormalizationTest,
         angle + R"mlir( : f64
             %control_out, %target_out = qco.ctrl(%control)
                 targets(%arg = %target) {
-              %x = qco.x %arg : !qco.qubit -> !qco.qubit
+              %x = qco.x %arg : !qco.qubit
               qco.gphase(%phase)
               qco.yield %x : !qco.qubit
             } : ({!qco.qubit}, {!qco.qubit})
-              -> ({!qco.qubit}, {!qco.qubit})
             return %control_out, %target_out : !qco.qubit, !qco.qubit
           }
         })mlir";
