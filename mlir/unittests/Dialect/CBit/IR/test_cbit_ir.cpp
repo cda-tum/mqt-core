@@ -87,8 +87,8 @@ TEST_F(CBitIRTest, ParsesAndPrintsRegisterOperations) {
   EXPECT_NE(printed.find("cbit.store"), std::string::npos);
   EXPECT_NE(printed.find("cbit.load"), std::string::npos);
   EXPECT_NE(printed.find("cbit.read"), std::string::npos);
-  EXPECT_NE(printed.find("%bit = cbit.load"), std::string::npos) << printed;
-  EXPECT_NE(printed.find("%value = cbit.read"), std::string::npos) << printed;
+  EXPECT_NE(printed.find("%b = cbit.load"), std::string::npos) << printed;
+  EXPECT_NE(printed.find("%val = cbit.read"), std::string::npos) << printed;
   EXPECT_NE(printed.find("cbit.write"), std::string::npos);
   EXPECT_TRUE(parse(printed));
 }

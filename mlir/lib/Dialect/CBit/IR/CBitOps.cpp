@@ -37,11 +37,11 @@ using namespace mlir;
 using namespace mlir::cbit;
 
 void LoadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "bit");
+  setNameFn(getResult(), "b");
 }
 
 void ReadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "value");
+  setNameFn(getResult(), "val");
 }
 
 #include "mqt/Dialect/CBit/IR/CBitOpsDialect.cpp.inc"

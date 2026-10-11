@@ -97,7 +97,7 @@ static void printTargetAliasing(OpAsmPrinter& printer, Operation* /*op*/,
 void MeasureOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getQubitOut(), "q");
-  setNameFn(getResult(), "c");
+  setNameFn(getResult(), "b");
 }
 
 ParseResult IfOp::parse(::mlir::OpAsmParser& parser,

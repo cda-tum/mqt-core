@@ -275,7 +275,7 @@ TEST_F(QCOTest, PrintsReadableQubitAndClassicalNames) {
   stream.flush();
   EXPECT_NE(text.find("%q = qco.alloc"), std::string::npos) << text;
   EXPECT_NE(text.find("%c = cbit.alloc"), std::string::npos) << text;
-  EXPECT_NE(text.find(", %c_"), std::string::npos) << text;
+  EXPECT_NE(text.find(", %b = qco.measure"), std::string::npos) << text;
   EXPECT_NE(text.find(" = qco.measure"), std::string::npos) << text;
   EXPECT_TRUE(parseSourceString<ModuleOp>(text, context.get()));
 }

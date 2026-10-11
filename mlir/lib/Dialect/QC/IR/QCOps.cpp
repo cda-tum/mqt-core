@@ -79,7 +79,7 @@ static void printTargetAliasing(OpAsmPrinter& printer, Operation* /*op*/,
 
 void MeasureOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "bit");
+  setNameFn(getResult(), "b");
 }
 
 //===----------------------------------------------------------------------===//

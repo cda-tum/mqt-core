@@ -168,7 +168,7 @@ TEST_F(QCTest, PrintsReadableQubitAndMeasurementNames) {
   moduleOp->print(stream);
   stream.flush();
   EXPECT_NE(text.find("%q = qc.alloc"), std::string::npos) << text;
-  EXPECT_NE(text.find("%bit = qc.measure"), std::string::npos) << text;
+  EXPECT_NE(text.find("%b = qc.measure"), std::string::npos) << text;
   auto reparsed = parseSourceString<ModuleOp>(text, context.get());
   ASSERT_TRUE(reparsed);
   EXPECT_TRUE(succeeded(verify(*reparsed)));
