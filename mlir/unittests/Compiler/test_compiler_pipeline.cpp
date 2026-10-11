@@ -1065,6 +1065,27 @@ TEST_F(CompilerPipelineTest, BaseMeasurementMayBeInsertedIntoFreedQTensor) {
             std::string::npos);
 }
 
+TEST_F(CompilerPipelineTest, QIRCleanupPromotesClassicalStorage) {
+  auto qc = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.1;
+qubit q;
+h q;
+bit feedback = measure q;
+if (feedback) { x q; }
+output bit result;
+result = measure q;
+)qasm");
+  ASSERT_TRUE(succeeded(qc));
+  auto qir = std::move(*qc).intoQIR(QIRProfile::Adaptive);
+  ASSERT_TRUE(succeeded(qir));
+  bool hasRuntimeStorage = false;
+  qir->module().walk([&](LLVM::AllocaOp allocation) {
+    EXPECT_FALSE(allocation.getElemType().isInteger());
+    hasRuntimeStorage |= isa<LLVM::LLVMPointerType>(allocation.getElemType());
+  });
+  EXPECT_TRUE(hasRuntimeStorage);
+  EXPECT_TRUE(succeeded(qir->llvmIR()));
+}
+
 TEST_F(CompilerPipelineTest, BaseProfileLowersCompleteTensorLifetime) {
   auto program = QCOProgram::fromMLIRString(R"mlir(module {
     func.func @main() -> i1 attributes {mqt.entry_point} {

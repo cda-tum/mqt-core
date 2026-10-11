@@ -199,6 +199,7 @@ void populateQCOCleanupPipeline(OpPassManager& pm, bool removeDeadValues) {
 
 void populateQIRCleanupPipeline(OpPassManager& pm, bool useAdaptive) {
   addSimplificationPasses(pm);
+  pm.addPass(createMem2Reg());
   pm.addPass(qir::createQIRCleanupPass());
   pm.addPass(createRemoveDeadValuesPass());
   pm.addPass(qir::createQIRSetAttributesAndMetadata({useAdaptive}));

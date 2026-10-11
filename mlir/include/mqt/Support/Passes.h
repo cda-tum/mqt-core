@@ -86,8 +86,7 @@ void populateQCOCleanupPipeline(mlir::OpPassManager& pm,
 
 /// Populate a QIR-oriented cleanup pipeline on the given pass manager.
 ///
-/// Adds generic cleanup and QIR-specific simplifications. Updates the
-/// metadata accordingly.
+/// Promotes local memory to SSA values, simplifies QIR, and refreshes metadata.
 void populateQIRCleanupPipeline(mlir::OpPassManager& pm, bool useAdaptive);
 
 /// Populate a `jeff`-oriented cleanup pipeline on the given pass manager.
