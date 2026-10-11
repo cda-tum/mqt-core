@@ -54,7 +54,7 @@ def _encode_bits(bits: str, width: int) -> str:
     Raises:
         JobError: If the bitstring has the wrong width or contains nonbinary digits.
     """
-    if len(bits) != width or any(bit not in "01" for bit in bits):
+    if len(bits) != width or bits.strip("01"):
         msg = f"Invalid QDMI bitstring {bits!r}: expected {width} binary digits in classical-bit order."
         raise JobError(msg)
     return hex(int(bits, 2)) if bits else "0x0"

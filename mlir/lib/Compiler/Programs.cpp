@@ -50,6 +50,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
@@ -80,7 +81,11 @@ std::shared_ptr<MLIRContext> createCompilerContext() {
   registerBuiltinDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
 
-  auto context = std::make_shared<MLIRContext>(registry);
+  // Retained programs share workers instead of keeping one pool each.
+  static llvm::DefaultThreadPool threadPool;
+  auto context =
+      std::make_shared<MLIRContext>(registry, MLIRContext::Threading::DISABLED);
+  context->setThreadPool(threadPool);
   ensureInlinerExtensions(context.get());
   context->loadAllAvailableDialects();
   return context;

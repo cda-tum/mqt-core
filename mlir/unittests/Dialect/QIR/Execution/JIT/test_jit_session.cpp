@@ -131,6 +131,33 @@ result = measure r;
                          "0101");
 }
 
+TEST(OpenQASMExecutionTest, ExecutesMeasurementDependentArithmetic) {
+  auto qc = mlir::QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.1;
+qubit q;
+h q;
+bit feedback = measure q;
+int[64] limit = 10000;
+if (feedback) { limit = 20000; }
+int[64] sum = 0;
+for int i in [0:limit-1] { sum += i; }
+if (sum == 199990000) { x q; }
+output bit result;
+result = measure q;
+)qasm");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  auto qir = std::move(*qc).intoQIR(mlir::QIRProfile::Adaptive);
+  ASSERT_TRUE(mlir::succeeded(qir));
+  const auto ir = qir->llvmIR();
+  ASSERT_TRUE(mlir::succeeded(ir));
+  qir::JitSession session(*ir, "feedback-arithmetic", qir::Execution::Sampling,
+                          42);
+  session.runtime().disableOutput();
+  EXPECT_FALSE(session.canSampleTerminal());
+  std::vector<std::string> shots;
+  ASSERT_EQ(session.sample(64, shots), 0);
+  EXPECT_EQ(shots, std::vector<std::string>(64, "0"));
+}
+
 TEST(OpenQASMExecutionTest, PreservesBitstringAndSliceOrder) {
   expectOpenQASMSampling(R"qasm(OPENQASM 3.1;
 output bit[6] literal;

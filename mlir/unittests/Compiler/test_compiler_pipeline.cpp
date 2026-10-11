@@ -124,6 +124,21 @@ namespace jeff = mlir::jeff;
 using QCProgramBuilderFn = NamedMLIRBuilder<QCProgramBuilder>;
 using QIRProgramBuilderFn = NamedMLIRBuilder<QIRProgramBuilder>;
 
+TEST(CompilerContextTest, SharesWorkersBetweenIndependentContexts) {
+  auto first = createCompilerContext();
+  auto second = createCompilerContext();
+  ASSERT_NE(first.get(), second.get());
+  if (!first->isMultithreadingEnabled()) {
+    GTEST_SKIP() << "LLVM multithreading is disabled";
+  }
+  ASSERT_TRUE(second->isMultithreadingEnabled());
+  EXPECT_EQ(&first->getThreadPool(), &second->getThreadPool());
+  first->disableMultithreading();
+  EXPECT_TRUE(second->isMultithreadingEnabled());
+  first->enableMultithreading();
+  EXPECT_EQ(&first->getThreadPool(), &second->getThreadPool());
+}
+
 namespace {
 
 struct CompilerPipelineTestCase {
@@ -1048,6 +1063,27 @@ TEST_F(CompilerPipelineTest, BaseMeasurementMayBeInsertedIntoFreedQTensor) {
   ASSERT_TRUE(mlir::succeeded(llvmIR));
   EXPECT_NE(llvmIR->find("call void @__quantum__qis__mz__body"),
             std::string::npos);
+}
+
+TEST_F(CompilerPipelineTest, QIRCleanupPromotesClassicalStorage) {
+  auto qc = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.1;
+qubit q;
+h q;
+bit feedback = measure q;
+if (feedback) { x q; }
+output bit result;
+result = measure q;
+)qasm");
+  ASSERT_TRUE(succeeded(qc));
+  auto qir = std::move(*qc).intoQIR(QIRProfile::Adaptive);
+  ASSERT_TRUE(succeeded(qir));
+  bool hasRuntimeStorage = false;
+  qir->module().walk([&](LLVM::AllocaOp allocation) {
+    EXPECT_FALSE(allocation.getElemType().isInteger());
+    hasRuntimeStorage |= isa<LLVM::LLVMPointerType>(allocation.getElemType());
+  });
+  EXPECT_TRUE(hasRuntimeStorage);
+  EXPECT_TRUE(succeeded(qir->llvmIR()));
 }
 
 TEST_F(CompilerPipelineTest, BaseProfileLowersCompleteTensorLifetime) {

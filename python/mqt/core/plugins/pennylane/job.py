@@ -92,11 +92,11 @@ class PennyLaneJob:
         )
 
     @staticmethod
-    def _shots_or_counts(job: Job, program_index: int = 0) -> list[str]:
-        """Read ordered shots, falling back to an equivalent expansion of counts.
+    def _shots_or_counts(job: Job, program_index: int = 0) -> tuple[list[str], list[int] | None]:
+        """Read ordered shots or distinct outcomes with their multiplicities.
 
         Returns:
-            One QDMI bit string per shot.
+            Bit strings and optional repetition counts for histogram results.
 
         Raises:
             PennyLaneExecutionError: If the job exposes neither result representation.
@@ -104,7 +104,7 @@ class PennyLaneJob:
         shots_error = None
         try:
             if shots := job.get_shots(program_index):
-                return shots
+                return shots, None
         except RuntimeError as exc:
             shots_error = exc
 
@@ -114,7 +114,8 @@ class PennyLaneJob:
             msg = f"Could not read QDMI samples: shots: {shots_error}; counts: {exc}"
             causes = [cause for cause in (shots_error, exc) if cause is not None]
             raise PennyLaneExecutionError(msg) from ExceptionGroup("QDMI result retrieval failed", causes)
-        return [bitstring for bitstring, count in sorted(counts.items()) for _ in range(count)]
+        bitstrings = sorted(bitstring for bitstring, count in counts.items() if count)
+        return bitstrings, [counts[bitstring] for bitstring in bitstrings]
 
     def _samples(self, index: int, job: Job, program_index: int) -> np.ndarray:
         """Convert QDMI bit strings to PennyLane sample rows.
@@ -126,9 +127,10 @@ class PennyLaneJob:
             PennyLaneExecutionError: If QDMI returns malformed or incomplete results.
         """
         converted, shots = self._prepared[index]
-        bitstrings = self._shots_or_counts(job, program_index)
-        if len(bitstrings) != shots:
-            msg = f"QDMI returned {len(bitstrings)} samples for a {shots}-shot job."
+        bitstrings, repeats = self._shots_or_counts(job, program_index)
+        num_samples = len(bitstrings) if repeats is None else sum(repeats)
+        if num_samples != shots:
+            msg = f"QDMI returned {num_samples} samples for a {shots}-shot job."
             raise PennyLaneExecutionError(msg)
 
         width = len(converted.wire_map)
@@ -141,9 +143,10 @@ class PennyLaneJob:
             cleaned.append(clean)
         if not bitstrings:
             return np.asarray([], dtype=np.int8)
-        packed = np.frombuffer("".join(cleaned).encode("ascii"), dtype=np.int8).reshape(shots, width)
+        packed = np.frombuffer("".join(cleaned).encode("ascii"), dtype=np.int8).reshape(len(bitstrings), width)
         # QDMI spells the highest-index site first; PennyLane starts with wire zero.
-        return packed[:, ::-1][:, converted.measurement_order] - ord("0")
+        samples = packed[:, ::-1][:, converted.measurement_order] - ord("0")
+        return samples if repeats is None else np.repeat(samples, repeats, axis=0)
 
     def _record_submission(self, indices: Sequence[int]) -> None:
         self._device._submitted_jobs += 1  # ruff:ignore[private-member-access] Update the device's read-only total.
