@@ -1510,6 +1510,18 @@ TEST(OpenQASM3EmissionTest, InlinesNonGateBodies) {
         }
       })mlir"},
       llvm::StringLiteral{R"mlir(module {
+        func.func @public_helper(%qubit: !qc.qubit) {
+          qc.x %qubit : !qc.qubit
+          return
+        }
+        func.func @main() attributes {mqt.entry_point} {
+          %qubit = qc.alloc : !qc.qubit
+          func.call @public_helper(%qubit) : (!qc.qubit) -> ()
+          qc.dealloc %qubit : !qc.qubit
+          return
+        }
+      })mlir"},
+      llvm::StringLiteral{R"mlir(module {
         func.func private @resetter(%qubit: !qc.qubit) {
           qc.reset %qubit : !qc.qubit
           return
@@ -1522,7 +1534,7 @@ TEST(OpenQASM3EmissionTest, InlinesNonGateBodies) {
         }
       })mlir"},
   };
-  constexpr std::array expected{"1", "0", "0"};
+  constexpr std::array expected{"1", "0", "1", "0"};
   for (size_t index = 0; index < sources.size(); ++index) {
     SCOPED_TRACE(index);
     MLIRContext context(emissionDialects());
@@ -1534,7 +1546,7 @@ TEST(OpenQASM3EmissionTest, InlinesNonGateBodies) {
     ASSERT_TRUE(restored) << *emitted;
     expectOneSample(*restored, expected[index]);
     for (auto function : original->getOps<func::FuncOp>()) {
-      if (function.isPrivate()) {
+      if (function.getName() != "main") {
         EXPECT_FALSE(function.getNoInline());
         function.setNoInline(true);
       }

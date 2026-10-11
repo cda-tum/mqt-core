@@ -296,12 +296,12 @@ bypasses that QCO optimization round trip.
 | Structured control        | `scf.if`, `scf.index_switch`, signed `scf.for` with positive constant steps, and general two-region `scf.while`, including scalar arguments and results. Index switches use native `switch`, `case`, and `default`.                                                 |
 | Results                   | Multiple scalar and bit-register outputs using the canonical type and naming rules below.                                                                                                                                                                           |
 
-Export retains gate-shaped helper functions. Other defined helpers, including
-functions with integer or register arguments or classical results, are inlined
-on a copy of the module using MLIR's inliner. Their supported structured control
-flow remains structured. Recursive calls, helpers marked `no_inline`, and
-constructs outside the export subset still produce diagnostics. The exporter
-does not emit OpenQASM `def` subroutines.
+Export retains private gate-shaped helper functions. Other defined helpers,
+including functions with integer or register arguments or classical results, are
+inlined on a copy of the module using MLIR's inliner. Their supported structured
+control flow remains structured. Recursive calls, non-gate helpers marked
+`no_inline`, and constructs outside the export subset still produce diagnostics.
+The exporter does not emit OpenQASM `def` subroutines.
 
 Signed and unsigned index casts preserve sign extension, zero extension, and
 truncation, including truncation to one bit. Indices use 64 bits. Addition,
@@ -404,22 +404,22 @@ expressions emitted by the exporter, including Boolean/integer conversions.
 ### Export limitations
 
 Export requires one defined entry function whose arguments are named `f64`
-inputs. Additional functions must be private, defined gate functions with
-leading `f64` parameters followed by scalar qubit arguments and no results. Gate
-functions may contain supported scalar expressions, quantum operations, calls,
-and loops. Measurement, reset, barrier, allocation, classical storage,
-conditionals, switches, and `arith.select` are rejected in gate functions.
-For-loop bounds in gate functions must remain constant. Gate while loops require
-a pure condition region and no loop-carried values.
+inputs. Functions that remain after helper inlining must be private, defined
+gate functions with leading `f64` parameters followed by scalar qubit arguments
+and no results. Gate functions may contain supported scalar expressions, quantum
+operations, calls, and loops. Measurement, reset, barrier, allocation, classical
+storage, conditionals, switches, and `arith.select` are rejected in gate
+functions. For-loop bounds in gate functions must remain constant. Gate while
+loops require a pure condition region and no loop-carried values.
 
 The exporter rejects arbitrary CFGs, multi-block SCF regions, recursive or
-unresolved calls, dynamic qubit indices, dynamic for-loop steps, unsigned
-`scf.for` comparisons, general memrefs, unsupported integer widths, unknown
-operations, and non-unitary content inside modifier regions. CBit loads, stores,
-whole-register reads and writes, fixed-width bitwise operations, dynamic bit
-indices, SCF results, and loop-carried values are supported in the entry
-function. Multi-operation modifier bodies must have a target qubit and cannot
-capture additional qubits from an enclosing scope.
+unresolved calls, dynamic for-loop steps, unsigned `scf.for` comparisons,
+general memrefs, unsupported integer widths, unknown operations, and non-unitary
+content inside modifier regions. CBit loads, stores, whole-register reads and
+writes, fixed-width bitwise operations, dynamic bit indices, SCF results, and
+loop-carried values are supported in the entry function. Multi-operation
+modifier bodies must have a target qubit and cannot capture additional qubits
+from an enclosing scope.
 
 OpenQASM export supports arbitrary bit-register widths for bitwise operations,
 unsigned comparisons, `popcount`, `rotl`, and `rotr`. Scalar arithmetic, integer

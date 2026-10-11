@@ -149,7 +149,7 @@ public:
   [[nodiscard]] static bool hasGateBody(func::FuncOp function) {
     return !function
                 .walk([](Operation* operation) {
-                  return gateOperationError(*operation).empty()
+                  return canEmitGateOperation(*operation)
                              ? WalkResult::advance()
                              : WalkResult::interrupt();
                 })
@@ -158,12 +158,6 @@ public:
 
   [[nodiscard]] FailureOr<std::string> emit() {
     if (failed(preflight()) || failed(collectProgramShape())) {
-      return failure();
-    }
-    ranges.load<dataflow::DeadCodeAnalysis>();
-    ranges.load<dataflow::SparseConstantPropagation>();
-    ranges.load<dataflow::IntegerRangeAnalysis>();
-    if (failed(ranges.initializeAndRun(moduleOp))) {
       return failure();
     }
     measurementStores = findMeasurementStores(function);
@@ -203,6 +197,7 @@ public:
 private:
   DenseMap<Operation*, cbit::StoreOp> measurementStores;
   ModuleOp moduleOp;
+  OwningOpRef<ModuleOp> preparedModule_;
   func::FuncOp function;
   raw_indented_ostream* output = nullptr;
   DenseMap<Value, Resource> resources;
@@ -217,7 +212,7 @@ private:
   llvm::StringSet<> fixedHelpers;
   std::string uHelperName_;
   SmallVector<std::string> gateDefinitions_;
-  DataFlowSolver ranges;
+  std::optional<DataFlowSolver> ranges;
   Operation* expressionConsumer = nullptr;
   size_t nextQubit = 0;
   size_t nextBit = 0;
@@ -295,8 +290,10 @@ private:
     return target != nullptr && gateNames_.contains(target) ? target : nullptr;
   }
 
-  [[nodiscard]] LogicalResult orderGateFunctions() {
+  [[nodiscard]] LogicalResult prepareFunctions() {
     const CallGraph callGraph(moduleOp);
+    DenseSet<CallGraphNode*> gates;
+    bool needsInlining = false;
     for (auto component =
              llvm::scc_iterator<CallGraphNode*,
                                 llvm::GraphTraits<const CallGraphNode*>>::
@@ -315,9 +312,43 @@ private:
         if (!gate) {
           return fail(current, "gate calls must target func.func definitions");
         }
-        gateFunctions_.push_back(gate);
+        if (gate.isPrivate() && !gate.isExternal() &&
+            gate.getBody().hasOneBlock() && hasGateSignature(gate) &&
+            hasGateBody(gate) &&
+            llvm::all_of(*node, [&](const CallGraphNode::Edge& edge) {
+              return gates.contains(edge.getTarget());
+            })) {
+          gates.insert(node);
+          gateFunctions_.push_back(gate);
+        } else {
+          needsInlining = true;
+        }
       }
     }
+    if (!needsInlining) {
+      return success();
+    }
+    preparedModule_ = moduleOp.clone();
+    for (auto gate : gateFunctions_) {
+      preparedModule_->lookupSymbol<func::FuncOp>(gate.getName())
+          .setNoInline(true);
+    }
+    DialectRegistry registry;
+    func::registerInlinerExtension(registry);
+    LLVM::registerInlinerInterface(registry);
+    moduleOp.getContext()->appendDialectRegistry(registry);
+    PassManager manager(moduleOp.getContext());
+    // Keep gate definitions and structured loops while expanding other helpers.
+    manager.addPass(createInlinerPass({}, [](OpPassManager&) {}));
+    if (failed(manager.run(*preparedModule_))) {
+      return failure();
+    }
+    function = preparedModule_->lookupSymbol<func::FuncOp>(function.getName());
+    for (auto& gate : gateFunctions_) {
+      gate = preparedModule_->lookupSymbol<func::FuncOp>(gate.getName());
+    }
+    llvm::erase_if(gateFunctions_, [](func::FuncOp gate) { return !gate; });
+    moduleOp = *preparedModule_;
     return success();
   }
 
@@ -343,6 +374,9 @@ private:
     if (function.isExternal() || function.getBody().getBlocks().size() != 1) {
       return fail(function,
                   "expected one defined function with one entry block");
+    }
+    if (failed(prepareFunctions())) {
+      return failure();
     }
     for (const auto [index, argument] :
          llvm::enumerate(function.getArguments())) {
@@ -373,20 +407,7 @@ private:
       return failure();
     }
 
-    if (failed(orderGateFunctions())) {
-      return failure();
-    }
     for (auto current : gateFunctions_) {
-      if (!current.isPrivate() || current.isExternal() ||
-          !current.getBody().hasOneBlock() || current.getNumResults() != 0) {
-        return fail(current, "gate functions must be private, defined, "
-                             "single-block, and return no values");
-      }
-      if (!hasGateSignature(current)) {
-        return fail(current,
-                    "gate function arguments must be leading f64 "
-                    "parameters followed by at least one scalar qubit");
-      }
       if (checkRegions(current).wasInterrupted()) {
         return failure();
       }
@@ -645,20 +666,20 @@ private:
     return success();
   }
 
-  [[nodiscard]] static StringRef gateOperationError(Operation& operation) {
+  [[nodiscard]] static bool canEmitGateOperation(Operation& operation) {
     if (operation.getName().getDialectNamespace() ==
             cbit::CBitDialect::getDialectNamespace() ||
         isa<memref::LoadOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp,
             tensor::ExtractOp, memref::DeallocOp, qc::AllocOp, qc::DeallocOp,
             qc::StaticOp, qc::MeasureOp, qc::ResetOp, qc::BarrierOp, scf::IfOp,
             scf::IndexSwitchOp, ub::PoisonOp, arith::SelectOp>(&operation)) {
-      return "operation is not supported in an OpenQASM gate function";
+      return false;
     }
     if (auto loop = dyn_cast<scf::ForOp>(&operation)) {
       if (loop.getNumResults() != 0 ||
           !getConstantInteger(loop.getLowerBound()) ||
           !getConstantInteger(loop.getUpperBound())) {
-        return "gate for loops require constant bounds and no carried values";
+        return false;
       }
     }
     if (auto loop = dyn_cast<scf::WhileOp>(&operation)) {
@@ -668,24 +689,18 @@ private:
                           return isInlineExpressionOperation(nested) &&
                                  isMemoryEffectFree(&nested);
                         })) {
-        return "gate while loops require a pure condition and no carried "
-               "values";
+        return false;
       }
     }
     if (auto cast = dyn_cast<arith::SIToFPOp>(&operation);
         cast && cast.getIn().getType().isInteger(1)) {
-      return "signed i1-to-float conversion is not supported in gate functions";
+      return false;
     }
-    return {};
+    return true;
   }
 
   [[nodiscard]] LogicalResult emitOperation(Operation& operation) {
     llvm::SaveAndRestore consumerGuard(expressionConsumer, &operation);
-    if (gateNames_.contains(function)) {
-      if (const auto error = gateOperationError(operation); !error.empty()) {
-        return fail(&operation, error);
-      }
-    }
     const auto resultType =
         operation.getNumResults() == 1
             ? dyn_cast<IntegerType>(operation.getResult(0).getType())
@@ -937,7 +952,7 @@ private:
     return (Twine(resource->second.name) + "[" + *dynamicIndex + "]").str();
   }
 
-  [[nodiscard]] bool canEmitSignedArithmetic(Operation* operation) {
+  [[nodiscard]] FailureOr<bool> canEmitSignedArithmetic(Operation* operation) {
     if (!isa<arith::AddIOp, arith::SubIOp, arith::MulIOp>(operation)) {
       return false;
     }
@@ -945,10 +960,19 @@ private:
     if (!type.isIndex() && !type.isInteger(64)) {
       return false;
     }
+    if (!ranges) {
+      ranges.emplace();
+      ranges->load<dataflow::DeadCodeAnalysis>();
+      ranges->load<dataflow::SparseConstantPropagation>();
+      ranges->load<dataflow::IntegerRangeAnalysis>();
+      if (failed(ranges->initializeAndRun(moduleOp))) {
+        return failure();
+      }
+    }
     SmallVector<ConstantIntRanges, 2> operands;
     for (auto operand : operation->getOperands()) {
       const auto* lattice =
-          ranges.lookupState<dataflow::IntegerValueRangeLattice>(operand);
+          ranges->lookupState<dataflow::IntegerValueRangeLattice>(operand);
       if (lattice == nullptr || lattice->getValue().isUninitialized()) {
         return false;
       }
@@ -1115,7 +1139,11 @@ private:
         return failExpression(value,
                               "integer arithmetic supports at most 64 bits");
       }
-      const bool boundedArithmetic = canEmitSignedArithmetic(operation);
+      const auto bounded = canEmitSignedArithmetic(operation);
+      if (failed(bounded)) {
+        return failure();
+      }
+      const bool boundedArithmetic = *bounded;
       const bool isSigned =
           boundedArithmetic ||
           isa<arith::DivSIOp, arith::RemSIOp, arith::ShRSIOp>(operation);
@@ -2279,64 +2307,7 @@ FailureOr<std::string> translateQCToOpenQASM3(ModuleOp moduleOp) {
   if (failed(verify(moduleOp))) {
     return failure();
   }
-  auto entry = mqt::getEntryPoint(moduleOp);
-  const auto functions = moduleOp.getOps<func::FuncOp>();
-  if (entry == nullptr && llvm::hasSingleElement(functions)) {
-    entry = *functions.begin();
-  }
-  if (entry == nullptr || entry.isExternal()) {
-    return OpenQASMEmitter(moduleOp).emit();
-  }
-  const CallGraph graph(moduleOp);
-  DenseSet<CallGraphNode*> gates;
-  bool needsInlining = false;
-  for (auto component =
-           llvm::scc_iterator<CallGraphNode*,
-                              llvm::GraphTraits<const CallGraphNode*>>::
-               begin(graph.lookupNode(&entry.getBody()));
-       !component.isAtEnd(); ++component) {
-    auto* node = component->front();
-    if (component.hasCycle()) {
-      return OpenQASMEmitter(moduleOp).emit();
-    }
-    if (node->isExternal()) {
-      continue;
-    }
-    auto function =
-        dyn_cast<func::FuncOp>(node->getCallableRegion()->getParentOp());
-    if (!function || function == entry) {
-      continue;
-    }
-    if (OpenQASMEmitter::hasGateSignature(function) &&
-        OpenQASMEmitter::hasGateBody(function) &&
-        llvm::all_of(*node, [&](const CallGraphNode::Edge& edge) {
-          return gates.contains(edge.getTarget());
-        })) {
-      gates.insert(node);
-    } else {
-      needsInlining = true;
-    }
-  }
-  if (!needsInlining) {
-    return OpenQASMEmitter(moduleOp).emit();
-  }
-  OwningOpRef<ModuleOp> prepared = moduleOp.clone();
-  for (auto* gate : gates) {
-    auto function =
-        cast<func::FuncOp>(gate->getCallableRegion()->getParentOp());
-    prepared->lookupSymbol<func::FuncOp>(function.getName()).setNoInline(true);
-  }
-  DialectRegistry registry;
-  func::registerInlinerExtension(registry);
-  LLVM::registerInlinerInterface(registry);
-  moduleOp.getContext()->appendDialectRegistry(registry);
-  PassManager manager(moduleOp.getContext());
-  // Keep gate definitions and structured loops while expanding other helpers.
-  manager.addPass(createInlinerPass({}, [](OpPassManager&) {}));
-  if (failed(manager.run(*prepared))) {
-    return failure();
-  }
-  return OpenQASMEmitter(*prepared).emit();
+  return OpenQASMEmitter(moduleOp).emit();
 }
 
 } // namespace mlir::qc
