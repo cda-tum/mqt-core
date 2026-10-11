@@ -55,7 +55,7 @@ sinfo
 scontrol show licenses
 sbatch --wait --partition=quantum --licenses=mqt.ddsim.default --time=00:05:00 \
   --output=/jobs/slurm-%j.out \
-  --wrap='srun python /workspace/test/slurm/bell_job.py mqt.ddsim.default'
+  --wrap='srun python /workspace/test/slurm/bell_job.py'
 sacct -X --format=JobID,JobName,Partition,State,ExitCode,Elapsed,AllocTRES%80
 ```
 
@@ -114,10 +114,11 @@ a daemon do not configure user jobs.
 
 Use `--partition=quantum` for every connected quantum device and request its
 license, for example `--licenses=iqm.emerald.mock` or
-`--licenses=amazon.braket.sv1`. Pass the same device ID to the application.
-Every QAN runs the same environment and can open sessions to several devices.
-Adding a device requires its implementation, catalogue entry, license, and
-credentials; it does not require a new partition or node type.
+`--licenses=amazon.braket.sv1`. The single-device examples read the device ID
+from `SLURM_JOB_LICENSES`. Every QAN runs the same environment and can open
+sessions to several devices. Adding a device requires its implementation,
+catalogue entry, license, and credentials; it does not require a new partition
+or node type.
 
 Classical nodes use an internal network; QANs, the login node, and the
 monitoring controller also have outbound connectivity. Partitions place jobs and

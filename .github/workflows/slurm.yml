@@ -70,7 +70,7 @@ jobs:
       - name: Check the Slurm test runner
         run: >-
           uv run --no-project --with 'pytest>=9.0.1' --python 3.15
-          pytest -o addopts= -q test/python/test_slurm_integration.py test/python/test_slurm_availability.py
+          pytest -o addopts= -q test/python/test_slurm_integration.py
 
       - name: Set up MLIR
         uses: munich-quantum-software/setup-mlir@8d3eae73d0f0196fd30c787d91ebd2018cb6c709 # v1.5.0

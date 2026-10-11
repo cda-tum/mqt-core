@@ -22,17 +22,19 @@ submit it with `sbatch job.sh`:
 #SBATCH --time=00:05:00
 set -eu
 
-srun python workload.py mqt.ddsim.default
+srun python workload.py
 ```
 
 For example, `workload.py` can execute a Bell circuit on DDSIM:
 
 ```python
-import sys
+import os
 
-from mqt.core.qdmi import ProgramFormat, builtin_driver
+from mqt.core.qdmi import ProgramFormat
+from mqt.core.qdmi import builtin_driver as qdmi_driver
 
-device = builtin_driver.open_device(sys.argv[1])
+device_id = os.environ["SLURM_JOB_LICENSES"].removesuffix(":1")
+device = qdmi_driver.open_device(device_id)
 program = """OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[2];
@@ -47,19 +49,22 @@ if not job.wait(60):
 print(job.get_counts())
 ```
 
-Select the site's quantum access partition for a remote device, for example
-`sbatch --partition=quantum --licenses=iqm.emerald.mock iqm-job.sh`. The script
-passes `iqm.emerald.mock` to the application. Partitions choose the nodes on
-which an application runs; licenses limit concurrent access to devices across
-the cluster. The application receives its device IDs as ordinary inputs.
+This example requests one unit of a local device license. Slurm exposes its name
+and count in
+[`SLURM_JOB_LICENSES`](https://slurm.schedmd.com/sbatch.html#OPT_SLURM_JOB_LICENSES),
+so the application derives its device ID from that allocation. Select the site's
+quantum access partition for a remote device, for example
+`sbatch --partition=quantum --licenses=iqm.emerald.mock iqm-job.sh`. Partitions
+choose the nodes on which an application runs; licenses limit concurrent access
+to devices across the cluster.
 
 The same `device` can be passed to a {doc}`Qiskit <qdmi_backend>` or
 {doc}`PennyLane <pennylane_device>` adapter. C++ applications use
 {cpp-api:func}`qdmi::builtin_driver::openDevice` with their device ID.
-Applications using several devices request their licenses together and open an
-independent session for each ID. The driver initializes only the selected device
-for each session, so different implementations and credentials can coexist in
-one application.
+Applications using several devices pass explicit device IDs, request their
+licenses together, and open an independent session for each ID. The driver
+initializes only the selected device for each session, so different
+implementations and credentials can coexist in one application.
 
 See the {doc}`workflow playground <slurm_cluster>` for a login node, classical
 nodes, a shared quantum partition, and persistent accounting.

@@ -217,7 +217,7 @@ def submit(script: str, license_expression: str, *, node: str | None = None, hol
     ]
     if node is not None:
         command.append(f"--nodelist={node}")
-    payload = ["python3", f"/workspace/test/slurm/{script}", license_expression.removesuffix(":1")]
+    payload = ["python3", f"/workspace/test/slurm/{script}"]
     if hold:
         payload.append("--hold")
     command.extend(("--wrap", shlex.join(payload)))

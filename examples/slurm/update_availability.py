@@ -34,9 +34,10 @@ def probe(device_id: str) -> int:
         Zero for an operational device, one for any failure.
     """
     try:
-        from mqt.core.qdmi import Device, builtin_driver  # ruff: ignore[import-outside-top-level]
+        from mqt.core.qdmi import Device  # ruff: ignore[import-outside-top-level]
+        from mqt.core.qdmi import builtin_driver as qdmi_driver  # ruff: ignore[import-outside-top-level]
 
-        device = builtin_driver.open_device(device_id)
+        device = qdmi_driver.open_device(device_id)
         return int(device.status() not in {Device.Status.IDLE, Device.Status.BUSY})
     except Exception:  # ruff: ignore[blind-except]
         # Device diagnostics may contain credentials.

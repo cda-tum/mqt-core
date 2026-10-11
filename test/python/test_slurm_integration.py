@@ -26,14 +26,13 @@ if sys.platform == "win32":
     pytest.skip("the Slurm fixture requires a POSIX Docker host", allow_module_level=True)
 
 
-def load_runner() -> ModuleType:
-    """Load an independent fixture invocation without creating its resources.
+def load_script(script: Path) -> ModuleType:
+    """Load an independent script invocation without creating its resources.
 
     Returns:
-        The isolated runner module.
+        The isolated script module.
     """
-    script = Path(__file__).parents[1] / "slurm" / "run_integration.py"
-    spec = importlib.util.spec_from_file_location("slurm_integration", script)
+    spec = importlib.util.spec_from_file_location(script.stem, script)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -41,13 +40,39 @@ def load_runner() -> ModuleType:
     return module
 
 
-runner = load_runner()
+runner = load_script(Path(__file__).parents[1] / "slurm" / "run_integration.py")
+monitor = load_script(runner.CLUSTER / "update_availability.py")
 
 
-@pytest.mark.parametrize("nodes", [1, 3])
-def test_runner_accepts_scaled_nodes(nodes: int) -> None:
-    """Scale the classical pool independently of the quantum access nodes."""
-    assert runner.parse_arguments(("--nodes", str(nodes))).nodes == nodes
+def test_probe_timeout_keeps_admission_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A hung device leaves its license reserved until a later successful probe."""
+    commands = []
+
+    def scontrol(*arguments: str) -> str:
+        commands.append(arguments)
+        return '{"reservations": []}'
+
+    def probe(*_arguments: object, **_options: object) -> None:
+        assert commands[-1][0] == "create"
+        msg = "probe"
+        raise subprocess.TimeoutExpired(msg, 10)
+
+    monkeypatch.setattr(monitor, "scontrol", scontrol)
+    monkeypatch.setattr(monitor.subprocess, "run", probe)
+    assert monitor.main(("--license", "example.device:2", "--watch")) == 1
+    assert all(command[0] != "delete" for command in commands)
+
+
+def test_controller_failure_never_runs_probe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed admission update cannot produce a healthy, open result."""
+
+    def unavailable(*_arguments: str) -> str:
+        msg = "scontrol"
+        raise subprocess.TimeoutExpired(msg, 10)
+
+    monkeypatch.setattr(monitor, "scontrol", unavailable)
+    monkeypatch.setattr(monitor.subprocess, "run", lambda *_args, **_kwargs: pytest.fail("probe ran before blocking"))
+    assert monitor.main(("--license", "example.device:2")) == 2
 
 
 def test_prepare_keeps_private_key_and_preserves_existing_cluster(tmp_path: Path) -> None:
@@ -139,7 +164,8 @@ def test_diagnostic_failure_still_tears_down(tmp_path: Path, monkeypatch: pytest
 
 def test_invocations_use_distinct_projects_and_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
     """Concurrent worktrees or runs must not stop or clean each other's cluster."""
-    first, second = load_runner(), load_runner()
+    script = runner.FIXTURE / "run_integration.py"
+    first, second = load_script(script), load_script(script)
     calls = []
 
     def run(command: tuple[str, ...], **kwargs: object) -> subprocess.CompletedProcess[str]:
