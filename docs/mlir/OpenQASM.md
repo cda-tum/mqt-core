@@ -289,12 +289,26 @@ bypasses that QCO optimization round trip.
 | Qubits and classical bits | Logical and physical qubits, scalar qubit allocations, static rank-one qubit memrefs, and CBit registers. Logical qubit and CBit indices can be dynamic. Mapped programs require static physical qubits; indexed tensor loops must be specialized before export.    |
 | Quantum operations        | Measurement, reset, barrier, deallocation, global phase, and QC unitary operations. The exporter uses standard gates where available; for example, `sxdg` becomes `inv @ sx` and `u` and `u2` use a shared helper that compensates the OpenQASM 3 `U` global phase. |
 | Program parameters        | Named `f64` entry-point arguments become `input float[64]` declarations in argument order. Names must be unique, valid OpenQASM identifiers that do not conflict with standard gates or use the reserved `_mqt_` prefix.                                            |
-| Reusable gates            | Private functions with leading `f64` parameters followed by scalar qubit arguments and no results. Unitary functions, including statically bounded `for` loops over unitary gates, use `qc.call`. Other structured gate functions use `func.call`.                  |
+| Reusable gates            | Private single-block functions with leading `f64` parameters followed by scalar qubit arguments and no results. Unitary functions, including statically bounded `for` loops over unitary gates, use `qc.call`. Other structured gate functions use `func.call`.     |
 | Gate modifiers            | Nested `ctrl`, `inv`, and `pow`. A multi-operation modifier body with target qubits becomes a private generated gate.                                                                                                                                               |
 | Scalar values             | Integers of widths 1–64, `f64`, and internal `index` values, including arithmetic, comparisons, Boolean operations, value-preserving casts, and supported math functions.                                                                                           |
 | Constant tables           | Reads from non-empty constant rank-one `f64` tensors. Constant indices and splats become scalar values; other reads use switches with shared cases for equal values.                                                                                                |
 | Structured control        | `scf.if`, `scf.index_switch`, signed `scf.for` with positive constant steps, and general two-region `scf.while`, including scalar arguments and results. Index switches use native `switch`, `case`, and `default`.                                                 |
 | Results                   | Multiple scalar and bit-register outputs using the canonical type and naming rules below.                                                                                                                                                                           |
+
+Export retains gate-shaped helper functions. Other defined helpers, including
+functions with integer or register arguments or classical results, are inlined
+on a copy of the module using MLIR's inliner. Their supported structured control
+flow remains structured. Recursive calls, helpers marked `no_inline`, and
+constructs outside the export subset still produce diagnostics. The exporter
+does not emit OpenQASM `def` subroutines.
+
+Signed and unsigned index casts preserve sign extension, zero extension, and
+truncation, including truncation to one bit. Indices use 64 bits. Addition,
+subtraction, and multiplication of index or 64-bit integer values use signed
+expressions when range analysis proves they cannot overflow. This preserves
+affine bounds through negative temporaries, including bounds of empty nested
+loops. Other integer arithmetic keeps its modular unsigned representation.
 
 For loops preserve their exclusive upper bound when exported to an inclusive
 OpenQASM range. Dynamic bounds are supported in the entry function and are

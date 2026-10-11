@@ -92,6 +92,168 @@ ctrl @ x q[0], q[1];
 bit[2] c = measure q;
 )qasm";
 
+TEST(OpenQASM3EmissionTest, PreservesIndexCastBitPatterns) {
+  constexpr llvm::StringLiteral source = R"mlir(module {
+    func.func @main() -> !cbit.reg<7> {
+      %byte = arith.constant -1 : i8
+      %unsigned = arith.index_castui %byte : i8 to index
+      %signed = arith.index_cast %byte : i8 to index
+      %expectedUnsigned = arith.constant 255 : index
+      %expectedSigned = arith.constant -1 : index
+      %u = arith.cmpi eq, %unsigned, %expectedUnsigned : index
+      %s = arith.cmpi eq, %signed, %expectedSigned : index
+      %high = arith.constant -9223372036854775808 : i64
+      %index = arith.index_castui %high : i64 to index
+      %restored = arith.index_castui %index : index to i64
+      %h = arith.cmpi eq, %restored, %high : i64
+      %even = arith.constant 2 : index
+      %unsignedBit = arith.index_castui %even : index to i1
+      %signedBit = arith.index_cast %even : index to i1
+      %true = arith.constant true
+      %signedBool = arith.index_cast %true : i1 to index
+      %unsignedBool = arith.index_castui %true : i1 to index
+      %sb = arith.cmpi eq, %signedBool, %expectedSigned : index
+      %oneIndex = arith.constant 1 : index
+      %ub = arith.cmpi eq, %unsignedBool, %oneIndex : index
+      %bits = cbit.alloc(#cbit.init<zero>) : !cbit.reg<7>
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %two = arith.constant 2 : index
+      %three = arith.constant 3 : index
+      %four = arith.constant 4 : index
+      cbit.store %u, %bits[%zero] : !cbit.reg<7>
+      cbit.store %s, %bits[%one] : !cbit.reg<7>
+      cbit.store %h, %bits[%two] : !cbit.reg<7>
+      cbit.store %unsignedBit, %bits[%three] : !cbit.reg<7>
+      cbit.store %signedBit, %bits[%four] : !cbit.reg<7>
+      %five = arith.constant 5 : index
+      %six = arith.constant 6 : index
+      cbit.store %sb, %bits[%five] : !cbit.reg<7>
+      cbit.store %ub, %bits[%six] : !cbit.reg<7>
+      return %bits : !cbit.reg<7>
+    }
+  })mlir";
+  MLIRContext context(emissionDialects());
+  auto original = parseSourceString<ModuleOp>(source, &context);
+  ASSERT_TRUE(original);
+  auto emitted = qc::translateQCToOpenQASM3(*original);
+  ASSERT_TRUE(succeeded(emitted));
+  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+  ASSERT_TRUE(restored) << *emitted;
+  expectOneSample(*restored, "1100111");
+}
+
+TEST(OpenQASM3EmissionTest, PreservesOverflowingIndexArithmetic) {
+  constexpr std::array fixtures{
+      std::array{"addi", "9223372036854775807", "1", "-9223372036854775808"},
+      std::array{"subi", "-9223372036854775808", "1", "9223372036854775807"},
+      std::array{"muli", "-9223372036854775808", "-1", "-9223372036854775808"},
+  };
+  for (const auto& [operation, lhs, rhs, expected] : fixtures) {
+    SCOPED_TRACE(operation);
+    const auto source = std::string(R"mlir(module {
+      func.func @main() {
+        %q = qc.alloc : !qc.qubit
+        %bits = cbit.alloc(#cbit.init<undefined>) : !cbit.reg<64>
+        %initial = arith.constant )mlir") +
+                        lhs + R"mlir( : i64
+        cbit.write %initial, %bits : i64, !cbit.reg<64>
+        %read = cbit.read %bits : !cbit.reg<64> -> i64
+        %lhs = arith.index_castui %read : i64 to index
+        %rhs = arith.constant )mlir" +
+                        rhs + R"mlir( : index
+        %expected = arith.constant )mlir" +
+                        expected + R"mlir( : index
+        %result = arith.)mlir" +
+                        operation + R"mlir( %lhs, %rhs : index
+        %correct = arith.cmpi eq, %result, %expected : index
+        scf.if %correct { qc.x %q : !qc.qubit }
+        qc.dealloc %q : !qc.qubit
+        return
+      }
+    })mlir";
+    MLIRContext context(emissionDialects());
+    auto original = parseSourceString<ModuleOp>(source, &context);
+    ASSERT_TRUE(original);
+    auto emitted = qc::translateQCToOpenQASM3(*original);
+    ASSERT_TRUE(succeeded(emitted));
+    auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+    ASSERT_TRUE(restored) << *emitted;
+    expectOneSample(*restored);
+  }
+}
+
+TEST(OpenQASM3EmissionTest, PreservesBoundsAcrossEmptyNestedIndexLoops) {
+  constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
+include "stdgates.inc";
+qubit[4] q;
+for int i in [0:3] {
+  int last = 2 - i;
+  for int j in [0:last] { x q[last - j]; }
+}
+output bit[4] result;
+result = measure q;
+)qasm";
+  MLIRContext context;
+  auto original = qc::translateOpenQASMToQC(source, &context);
+  ASSERT_TRUE(original);
+  auto emitted = qc::translateQCToOpenQASM3(*original);
+  ASSERT_TRUE(succeeded(emitted));
+  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+  ASSERT_TRUE(restored) << *emitted;
+  size_t loops = 0;
+  restored->walk([&](scf::ForOp) { ++loops; });
+  EXPECT_EQ(loops, 2);
+  expectOneSample(*restored, "0101");
+}
+
+TEST(OpenQASM3EmissionTest, InlinesClassicalHelpersAndPreservesGates) {
+  constexpr llvm::StringLiteral source = R"mlir(module {
+    func.func private @flip(%q: !qc.qubit) attributes {mqt.unitary} {
+      qc.x %q : !qc.qubit
+      return
+    }
+    func.func private @helper(%q: !qc.qubit, %count: index) -> i1 {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      scf.for %i = %zero to %count step %one {
+        qc.call @flip(%q) : !qc.qubit
+      }
+      %bit = qc.measure %q : !qc.qubit -> i1
+      return %bit : i1
+    }
+    func.func private @wrapper(%q: !qc.qubit) {
+      %three = arith.constant 3 : index
+      %bit = func.call @helper(%q, %three) : (!qc.qubit, index) -> i1
+      scf.if %bit {
+        qc.reset %q : !qc.qubit
+        qc.x %q : !qc.qubit
+      }
+      return
+    }
+    func.func @main() -> i1 attributes {mqt.entry_point} {
+      %q = qc.alloc : !qc.qubit
+      func.call @wrapper(%q) : (!qc.qubit) -> ()
+      %bit = qc.measure %q : !qc.qubit -> i1
+      qc.dealloc %q : !qc.qubit
+      return %bit : i1
+    }
+  })mlir";
+  MLIRContext context(emissionDialects());
+  auto original = parseSourceString<ModuleOp>(source, &context);
+  ASSERT_TRUE(original);
+  auto emitted = qc::translateQCToOpenQASM3(*original);
+  ASSERT_TRUE(succeeded(emitted));
+  EXPECT_TRUE(original->lookupSymbol<func::FuncOp>("helper"));
+  EXPECT_NE(emitted->find("gate flip"), std::string::npos) << *emitted;
+  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+  ASSERT_TRUE(restored) << *emitted;
+  size_t loops = 0;
+  restored->walk([&](scf::ForOp) { ++loops; });
+  EXPECT_EQ(loops, 1);
+  expectOneSample(*restored);
+}
+
 TEST(OpenQASM3EmissionTest, EmitsStrictPortableBellProgram) {
   MLIRContext context;
   auto moduleOp = qc::translateOpenQASMToQC(BELL, &context);
@@ -1312,7 +1474,7 @@ TEST(OpenQASM3EmissionTest, DropsUnreachableGateFunctions) {
   EXPECT_EQ(emitted->find("gate unused"), std::string::npos) << *emitted;
 }
 
-TEST(OpenQASM3EmissionTest, RejectsInvalidGateFunctions) {
+TEST(OpenQASM3EmissionTest, InlinesNonGateBodies) {
   constexpr std::array sources{
       llvm::StringLiteral{R"mlir(module {
         func.func private @condition_effect(%qubit: !qc.qubit) {
@@ -1323,7 +1485,7 @@ TEST(OpenQASM3EmissionTest, RejectsInvalidGateFunctions) {
           } do { scf.yield }
           return
         }
-        func.func @entry() attributes {mqt.entry_point} {
+        func.func @main() attributes {mqt.entry_point} {
           %qubit = qc.alloc : !qc.qubit
           func.call @condition_effect(%qubit) : (!qc.qubit) -> ()
           qc.dealloc %qubit : !qc.qubit
@@ -1340,7 +1502,7 @@ TEST(OpenQASM3EmissionTest, RejectsInvalidGateFunctions) {
           }
           return
         }
-        func.func @entry() attributes {mqt.entry_point} {
+        func.func @main() attributes {mqt.entry_point} {
           %qubit = qc.alloc : !qc.qubit
           func.call @dynamic(%qubit) : (!qc.qubit) -> ()
           qc.dealloc %qubit : !qc.qubit
@@ -1352,13 +1514,37 @@ TEST(OpenQASM3EmissionTest, RejectsInvalidGateFunctions) {
           qc.reset %qubit : !qc.qubit
           return
         }
-        func.func @entry() attributes {mqt.entry_point} {
+        func.func @main() attributes {mqt.entry_point} {
           %qubit = qc.alloc : !qc.qubit
           func.call @resetter(%qubit) : (!qc.qubit) -> ()
           qc.dealloc %qubit : !qc.qubit
           return
         }
       })mlir"},
+  };
+  constexpr std::array expected{"1", "0", "0"};
+  for (size_t index = 0; index < sources.size(); ++index) {
+    SCOPED_TRACE(index);
+    MLIRContext context(emissionDialects());
+    auto original = parseSourceString<ModuleOp>(sources[index], &context);
+    ASSERT_TRUE(original);
+    auto emitted = qc::translateQCToOpenQASM3(*original);
+    ASSERT_TRUE(succeeded(emitted));
+    auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+    ASSERT_TRUE(restored) << *emitted;
+    expectOneSample(*restored, expected[index]);
+    for (auto function : original->getOps<func::FuncOp>()) {
+      if (function.isPrivate()) {
+        EXPECT_FALSE(function.getNoInline());
+        function.setNoInline(true);
+      }
+    }
+    EXPECT_TRUE(failed(qc::translateQCToOpenQASM3(*original)));
+  }
+}
+
+TEST(OpenQASM3EmissionTest, RejectsInvalidGateFunctions) {
+  constexpr std::array sources{
       llvm::StringLiteral{R"mlir(module {
         func.func private @left(%qubit: !qc.qubit) {
           func.call @right(%qubit) : (!qc.qubit) -> ()
@@ -1376,7 +1562,7 @@ TEST(OpenQASM3EmissionTest, RejectsInvalidGateFunctions) {
         }
       })mlir"},
       llvm::StringLiteral{R"mlir(module {
-        func.func private @invalid(%qubit: !qc.qubit) {
+        func.func private @invalid(%qubit: !qc.qubit) attributes {no_inline} {
           %true = arith.constant true
           %angle = arith.sitofp %true : i1 to f64
           qc.rx(%angle) %qubit : !qc.qubit

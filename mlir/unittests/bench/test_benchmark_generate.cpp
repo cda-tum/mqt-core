@@ -36,6 +36,8 @@
 
 #include "gtest/gtest.h"
 
+#include "mlir/Dialect/SCF/IR/SCF.h"
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/LogicalResult.h"
 
@@ -209,8 +211,7 @@ TEST(GenerateProgramTest, ExecutesRuntimePhasesThroughJeffAndAdaptiveQIR) {
 
 TEST(GenerateProgramTest, RoundTripsRuntimePhasesThroughOpenQASM) {
   for (auto method : {QPEMethod::Standard, QPEMethod::Iterative}) {
-    // Direct import cannot prove nested QFT indices for larger registers.
-    const size_t precision = method == QPEMethod::Standard ? 1U : 8U;
+    const size_t precision = 8;
     const auto phase =
         method == QPEMethod::Standard
             ? Phase(uint64_t{1} << 63U, std::numeric_limits<uint64_t>::max())
@@ -232,6 +233,57 @@ TEST(GenerateProgramTest, RoundTripsRuntimePhasesThroughOpenQASM) {
     ASSERT_TRUE(succeeded(counts));
     expectReference(benchmark, *counts);
   }
+}
+
+template <class Benchmark>
+static void expectOpenQASMRoundTrip(const Benchmark& benchmark, size_t shots) {
+  SCOPED_TRACE(toManifestJSON(benchmark));
+  auto qc = generate(benchmark);
+  ASSERT_TRUE(mlir::succeeded(qc));
+  const bool hasLoop = test::countOps<scf::ForOp>(qc->module()) != 0;
+  for (const bool optimize : {false, true}) {
+    SCOPED_TRACE(optimize);
+    FailureOr<OpenQASMProgram> qasm = failure();
+    if (optimize) {
+      auto compiled = runDefaultPipeline(CompilerInput{qc->copy()},
+                                         ProgramFormat::OpenQASM3);
+      ASSERT_TRUE(mlir::succeeded(compiled));
+      qasm = std::get<OpenQASMProgram>(std::move(*compiled));
+    } else {
+      qasm = qc->toOpenQASM3();
+    }
+    ASSERT_TRUE(mlir::succeeded(qasm));
+    auto restored = QCProgram::fromOpenQASMString(qasm->source());
+    ASSERT_TRUE(mlir::succeeded(restored));
+    if (hasLoop) {
+      EXPECT_GT(test::countOps<scf::ForOp>(restored->module()), 0);
+    }
+    auto qco = std::move(*restored).intoQCO();
+    ASSERT_TRUE(mlir::succeeded(qco));
+    auto counts =
+        qco::sample(mlir::mqt::getEntryPoint(qco->module()), shots, 17);
+    ASSERT_TRUE(succeeded(counts));
+    expectReference(benchmark, *counts);
+  }
+}
+
+TEST(GenerateProgramTest,
+     RoundTripsStructuredOpenQASMThroughBothCompilerPaths) {
+  expectOpenQASMRoundTrip(QFT{{.qubits = 4, .periodExponent = 1}}, 2048);
+  for (auto method : {QFTAdderMethod::Constant, QFTAdderMethod::Register}) {
+    expectOpenQASMRoundTrip(
+        QFTAdder{{.addend = "101", .accumulator = "011", .method = method}},
+        2048);
+  }
+  expectOpenQASMRoundTrip(ModularMultiplier{{
+                              .multiplier = "011",
+                              .modulus = "101",
+                              .multiplicand = "+++",
+                              .control = '+',
+                          }},
+                          2048);
+  expectOpenQASMRoundTrip(MagicStateDistillation{{.levels = 1}}, 512);
+  expectOpenQASMRoundTrip(Shor{{.number = 15}}, 64);
 }
 
 template <class Benchmark>

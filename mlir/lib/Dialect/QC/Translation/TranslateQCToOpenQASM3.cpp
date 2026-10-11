@@ -25,8 +25,14 @@
 #include "mqt/Target/OpenQASM/GateCatalog.h"
 
 #include "mlir/Analysis/CallGraph.h"
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -36,15 +42,19 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/WalkResult.h"
+#include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -119,9 +129,41 @@ class OpenQASMEmitter {
 public:
   explicit OpenQASMEmitter(ModuleOp moduleOp) : moduleOp(moduleOp) {}
 
+  [[nodiscard]] static bool hasGateSignature(func::FuncOp function) {
+    if (function.getNumResults() != 0) {
+      return false;
+    }
+    bool sawQubit = false;
+    for (Type type : function.getArgumentTypes()) {
+      if (!sawQubit && type.isF64()) {
+        continue;
+      }
+      if (!isa<QubitType>(type)) {
+        return false;
+      }
+      sawQubit = true;
+    }
+    return sawQubit;
+  }
+
+  [[nodiscard]] static bool hasGateBody(func::FuncOp function) {
+    return !function
+                .walk([](Operation* operation) {
+                  return gateOperationError(*operation).empty()
+                             ? WalkResult::advance()
+                             : WalkResult::interrupt();
+                })
+                .wasInterrupted();
+  }
+
   [[nodiscard]] FailureOr<std::string> emit() {
-    if (failed(verify(moduleOp)) || failed(preflight()) ||
-        failed(collectProgramShape())) {
+    if (failed(preflight()) || failed(collectProgramShape())) {
+      return failure();
+    }
+    ranges.load<dataflow::DeadCodeAnalysis>();
+    ranges.load<dataflow::SparseConstantPropagation>();
+    ranges.load<dataflow::IntegerRangeAnalysis>();
+    if (failed(ranges.initializeAndRun(moduleOp))) {
       return failure();
     }
     measurementStores = findMeasurementStores(function);
@@ -175,6 +217,7 @@ private:
   llvm::StringSet<> fixedHelpers;
   std::string uHelperName_;
   SmallVector<std::string> gateDefinitions_;
+  DataFlowSolver ranges;
   Operation* expressionConsumer = nullptr;
   size_t nextQubit = 0;
   size_t nextBit = 0;
@@ -339,19 +382,10 @@ private:
         return fail(current, "gate functions must be private, defined, "
                              "single-block, and return no values");
       }
-      bool sawQubit = false;
-      for (Type type : current.getArgumentTypes()) {
-        if (!sawQubit && type.isF64()) {
-          continue;
-        }
-        if (!isa<qc::QubitType>(type)) {
-          return fail(current, "gate function arguments must be leading f64 "
-                               "parameters followed by scalar qubits");
-        }
-        sawQubit = true;
-      }
-      if (!sawQubit) {
-        return fail(current, "gate functions require a qubit argument");
+      if (!hasGateSignature(current)) {
+        return fail(current,
+                    "gate function arguments must be leading f64 "
+                    "parameters followed by at least one scalar qubit");
       }
       if (checkRegions(current).wasInterrupted()) {
         return failure();
@@ -611,21 +645,46 @@ private:
     return success();
   }
 
+  [[nodiscard]] static StringRef gateOperationError(Operation& operation) {
+    if (operation.getName().getDialectNamespace() ==
+            cbit::CBitDialect::getDialectNamespace() ||
+        isa<memref::LoadOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp,
+            tensor::ExtractOp, memref::DeallocOp, qc::AllocOp, qc::DeallocOp,
+            qc::StaticOp, qc::MeasureOp, qc::ResetOp, qc::BarrierOp, scf::IfOp,
+            scf::IndexSwitchOp, ub::PoisonOp, arith::SelectOp>(&operation)) {
+      return "operation is not supported in an OpenQASM gate function";
+    }
+    if (auto loop = dyn_cast<scf::ForOp>(&operation)) {
+      if (loop.getNumResults() != 0 ||
+          !getConstantInteger(loop.getLowerBound()) ||
+          !getConstantInteger(loop.getUpperBound())) {
+        return "gate for loops require constant bounds and no carried values";
+      }
+    }
+    if (auto loop = dyn_cast<scf::WhileOp>(&operation)) {
+      if (!loop.getInits().empty() || loop.getNumResults() != 0 ||
+          !llvm::all_of(loop.getBefore().front().without_terminator(),
+                        [](Operation& nested) {
+                          return isInlineExpressionOperation(nested) &&
+                                 isMemoryEffectFree(&nested);
+                        })) {
+        return "gate while loops require a pure condition and no carried "
+               "values";
+      }
+    }
+    if (auto cast = dyn_cast<arith::SIToFPOp>(&operation);
+        cast && cast.getIn().getType().isInteger(1)) {
+      return "signed i1-to-float conversion is not supported in gate functions";
+    }
+    return {};
+  }
+
   [[nodiscard]] LogicalResult emitOperation(Operation& operation) {
     llvm::SaveAndRestore consumerGuard(expressionConsumer, &operation);
-    if (gateNames_.contains(function) &&
-        (operation.getName().getDialectNamespace() ==
-             cbit::CBitDialect::getDialectNamespace() ||
-         isa<memref::LoadOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp,
-             tensor::ExtractOp, memref::DeallocOp, qc::AllocOp, qc::DeallocOp,
-             qc::StaticOp, qc::MeasureOp, qc::ResetOp, qc::BarrierOp, scf::IfOp,
-             scf::IndexSwitchOp, ub::PoisonOp>(&operation))) {
-      return fail(&operation,
-                  "operation is not supported in an OpenQASM gate function");
-    }
-    if (gateNames_.contains(function) && isa<arith::SelectOp>(&operation)) {
-      return fail(&operation,
-                  "arith.select is not supported in an OpenQASM gate function");
+    if (gateNames_.contains(function)) {
+      if (const auto error = gateOperationError(operation); !error.empty()) {
+        return fail(&operation, error);
+      }
     }
     const auto resultType =
         operation.getNumResults() == 1
@@ -878,6 +937,41 @@ private:
     return (Twine(resource->second.name) + "[" + *dynamicIndex + "]").str();
   }
 
+  [[nodiscard]] bool canEmitSignedArithmetic(Operation* operation) {
+    if (!isa<arith::AddIOp, arith::SubIOp, arith::MulIOp>(operation)) {
+      return false;
+    }
+    const auto type = operation->getResult(0).getType();
+    if (!type.isIndex() && !type.isInteger(64)) {
+      return false;
+    }
+    SmallVector<ConstantIntRanges, 2> operands;
+    for (auto operand : operation->getOperands()) {
+      const auto* lattice =
+          ranges.lookupState<dataflow::IntegerValueRangeLattice>(operand);
+      if (lattice == nullptr || lattice->getValue().isUninitialized()) {
+        return false;
+      }
+      operands.push_back(lattice->getValue().getValue());
+    }
+    for (const auto& lhs : {operands[0].smin(), operands[0].smax()}) {
+      for (const auto& rhs : {operands[1].smin(), operands[1].smax()}) {
+        bool overflow = false;
+        if (isa<arith::AddIOp>(operation)) {
+          std::ignore = lhs.sadd_ov(rhs, overflow);
+        } else if (isa<arith::SubIOp>(operation)) {
+          std::ignore = lhs.ssub_ov(rhs, overflow);
+        } else {
+          std::ignore = lhs.smul_ov(rhs, overflow);
+        }
+        if (overflow) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   enum class ExpressionContext : uint8_t { Scalar, BitVector };
 
   [[nodiscard]] FailureOr<std::string>
@@ -1021,7 +1115,9 @@ private:
         return failExpression(value,
                               "integer arithmetic supports at most 64 bits");
       }
+      const bool boundedArithmetic = canEmitSignedArithmetic(operation);
       const bool isSigned =
+          boundedArithmetic ||
           isa<arith::DivSIOp, arith::RemSIOp, arith::ShRSIOp>(operation);
       auto lhs = integer(operation->getOperand(0), isSigned);
       auto rhs = integer(operation->getOperand(1),
@@ -1029,7 +1125,8 @@ private:
       if (failed(lhs) || failed(rhs)) {
         return failure();
       }
-      if (isa<arith::AddIOp, arith::SubIOp, arith::MulIOp>(operation)) {
+      if (!boundedArithmetic &&
+          isa<arith::AddIOp, arith::SubIOp, arith::MulIOp>(operation)) {
         // Unsigned machine arithmetic preserves every narrower modular result.
         *lhs = "uint[64](" + *lhs + ")";
         *rhs = "uint[64](" + *rhs + ")";
@@ -1059,7 +1156,7 @@ private:
       if (width == 1) {
         return (Twine("(uint[1](") + expression + ") != 0)").str();
       }
-      return width > 64
+      return width > 64 || boundedArithmetic
                  ? expression
                  : (Twine("uint[") + Twine(width) + "](" + expression + ")")
                        .str();
@@ -1139,6 +1236,26 @@ private:
       }
       return (Twine("(-") + *operand + ")").str();
     }
+    if (isa<arith::IndexCastOp, arith::IndexCastUIOp>(operation)) {
+      auto input = operation->getOperand(0);
+      const auto inputType = dyn_cast<IntegerType>(input.getType());
+      const auto outputType = dyn_cast<IntegerType>(type);
+      if ((inputType && inputType.getWidth() > 64) ||
+          (outputType && outputType.getWidth() > 64)) {
+        return failExpression(value, "index casts support at most 64 bits");
+      }
+      auto operand = integer(input, isa<arith::IndexCastOp>(operation));
+      if (failed(operand)) {
+        return failure();
+      }
+      if (type.isInteger(1)) {
+        return "((uint[64](" + *operand + ") & uint[64](1)) != 0)";
+      }
+      const auto width = outputType ? outputType.getWidth() : 64U;
+      return (Twine(type.isIndex() ? "int[" : "uint[") + Twine(width) + "](" +
+              *operand + ")")
+          .str();
+    }
     if (isScalarCast(name)) {
       auto input = operation->getOperand(0);
       auto operand = isa<IntegerType>(input.getType())
@@ -1148,17 +1265,7 @@ private:
         return failure();
       }
       if (gateNames_.contains(function) && name == "arith.sitofp") {
-        if (input.getType().isInteger(1)) {
-          return failExpression(value, "signed i1-to-float conversion is not "
-                                       "supported in gate functions");
-        }
         return (Twine("(1.0 * ") + *operand + ")").str();
-      }
-      if (name == "arith.index_cast" &&
-          (operation->getOperand(0).getType().isInteger(64) ||
-           operation->getOperand(0).getType().isIndex()) &&
-          (value.getType().isInteger(64) || value.getType().isIndex())) {
-        return operand;
       }
       auto type = castTarget(name, value.getType());
       if (type.empty()) {
@@ -1302,7 +1409,7 @@ private:
 
   [[nodiscard]] static bool isScalarCast(const StringRef name) {
     return llvm::StringSwitch<bool>(name)
-        .Case("arith.index_cast", true)
+        .Cases({"arith.index_cast", "arith.index_castui"}, true)
         .Cases({"arith.sitofp", "arith.uitofp"}, true)
         .Cases({"arith.fptosi", "arith.fptoui"}, true)
         .Default(false);
@@ -1541,9 +1648,6 @@ private:
       return success();
     }
     const bool dynamicBounds = !lower || !upper;
-    if (dynamicBounds && gateNames_.contains(function)) {
-      return fail(forOp, "dynamic scf.for bounds require the entry function");
-    }
     std::string first;
     std::string last;
     if (dynamicBounds) {
@@ -1600,15 +1704,6 @@ private:
     auto conditionOp = cast<scf::ConditionOp>(before.getTerminator());
     auto yieldOp = cast<scf::YieldOp>(after.getTerminator());
     if (gateNames_.contains(function)) {
-      if (!whileOp.getInits().empty() || whileOp.getNumResults() != 0 ||
-          !llvm::all_of(before.without_terminator(), [](Operation& operation) {
-            return isInlineExpressionOperation(operation) &&
-                   isMemoryEffectFree(&operation);
-          })) {
-        return fail(
-            whileOp,
-            "gate while loops require a pure condition and no carried values");
-      }
       auto condition = emitExpression(conditionOp.getCondition());
       if (failed(condition)) {
         return failure();
@@ -2181,7 +2276,67 @@ LogicalResult translateQCToOpenQASM3(ModuleOp moduleOp,
 }
 
 FailureOr<std::string> translateQCToOpenQASM3(ModuleOp moduleOp) {
-  return OpenQASMEmitter(moduleOp).emit();
+  if (failed(verify(moduleOp))) {
+    return failure();
+  }
+  auto entry = mqt::getEntryPoint(moduleOp);
+  const auto functions = moduleOp.getOps<func::FuncOp>();
+  if (entry == nullptr && llvm::hasSingleElement(functions)) {
+    entry = *functions.begin();
+  }
+  if (entry == nullptr || entry.isExternal()) {
+    return OpenQASMEmitter(moduleOp).emit();
+  }
+  const CallGraph graph(moduleOp);
+  DenseSet<CallGraphNode*> gates;
+  bool needsInlining = false;
+  for (auto component =
+           llvm::scc_iterator<CallGraphNode*,
+                              llvm::GraphTraits<const CallGraphNode*>>::
+               begin(graph.lookupNode(&entry.getBody()));
+       !component.isAtEnd(); ++component) {
+    auto* node = component->front();
+    if (component.hasCycle()) {
+      return OpenQASMEmitter(moduleOp).emit();
+    }
+    if (node->isExternal()) {
+      continue;
+    }
+    auto function =
+        dyn_cast<func::FuncOp>(node->getCallableRegion()->getParentOp());
+    if (!function || function == entry) {
+      continue;
+    }
+    if (OpenQASMEmitter::hasGateSignature(function) &&
+        OpenQASMEmitter::hasGateBody(function) &&
+        llvm::all_of(*node, [&](const CallGraphNode::Edge& edge) {
+          return gates.contains(edge.getTarget());
+        })) {
+      gates.insert(node);
+    } else {
+      needsInlining = true;
+    }
+  }
+  if (!needsInlining) {
+    return OpenQASMEmitter(moduleOp).emit();
+  }
+  OwningOpRef<ModuleOp> prepared = moduleOp.clone();
+  for (auto* gate : gates) {
+    auto function =
+        cast<func::FuncOp>(gate->getCallableRegion()->getParentOp());
+    prepared->lookupSymbol<func::FuncOp>(function.getName()).setNoInline(true);
+  }
+  DialectRegistry registry;
+  func::registerInlinerExtension(registry);
+  LLVM::registerInlinerInterface(registry);
+  moduleOp.getContext()->appendDialectRegistry(registry);
+  PassManager manager(moduleOp.getContext());
+  // Keep gate definitions and structured loops while expanding other helpers.
+  manager.addPass(createInlinerPass({}, [](OpPassManager&) {}));
+  if (failed(manager.run(*prepared))) {
+    return failure();
+  }
+  return OpenQASMEmitter(*prepared).emit();
 }
 
 } // namespace mlir::qc

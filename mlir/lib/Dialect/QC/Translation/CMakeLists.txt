@@ -39,6 +39,9 @@ add_mlir_library(
   LINK_LIBS
   MQTCompilerTarget
   MLIRAnalysis
+  MLIRFuncInlinerExtension
+  MLIRLLVMIRTransforms
+  MLIRTransforms
   MLIRArithDialect
   MLIRCBitDialect
   MLIRFuncDialect
