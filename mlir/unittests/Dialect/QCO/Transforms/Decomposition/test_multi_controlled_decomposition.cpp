@@ -635,7 +635,7 @@ TEST_F(MultiControlledDecompositionTest, RotationsPreserveRuntimeAngles) {
 }
 
 TEST_F(MultiControlledDecompositionTest, PhasesPreserveRuntimeAngles) {
-  for (const size_t numControls : {2U, 3U, 5U, 8U}) {
+  for (const size_t numControls : {2U, 3U, 4U, 5U, 8U}) {
     for (const bool nested : {false, true}) {
       SCOPED_TRACE(testing::Message()
                    << "controls=" << numControls << " nested=" << nested);
@@ -673,11 +673,8 @@ TEST_F(MultiControlledDecompositionTest, PhasesPreserveRuntimeAngles) {
       parameter.replaceAllUsesWith(funcOp.getArgument(0));
       ASSERT_TRUE(succeeded(runDecomposeMultiControlled(moduleOp.get())));
       expectFullyLowered(moduleOp.get());
-      size_t cxBudget = 2; // The residual single-controlled phase.
-      for (size_t k = 2; k <= numControls; ++k) {
-        cxBudget += expectedMcrCxBudget(k);
-      }
-      EXPECT_LE(countEffectiveCxOps(moduleOp.get()), cxBudget);
+      EXPECT_LE(countEffectiveCxOps(moduleOp.get()),
+                expectedMcpCx(numControls));
       funcOp.walk([](AllocOp) { ADD_FAILURE() << "unexpected helper qubit"; });
       for (const double theta : {0.0, 0.73, -1.21, 2 * std::numbers::pi}) {
         SCOPED_TRACE(testing::Message() << "theta=" << theta);

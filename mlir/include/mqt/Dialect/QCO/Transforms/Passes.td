@@ -601,11 +601,10 @@ def DecomposeMultiControlled
     | X/Z | ≥34 | Huang-Palsberg (HP24) borrowed-helper synthesis with partitioned incrementers |
     | Y | ≥3 | X decomposition with `S†` before and `S` after on the target |
     | RX/RY/RZ | ≥3 | Balanced control halves with exact MCX and quarter-angle rotations; RX uses H-conjugated RZ |
-    | Constant phase | 3 | Optimized `C^2(P)` |
-    | Constant phase | 4–5 | Vale (Barenco-relative residual) |
-    | Constant phase | ≥6 | da Silva-Park SP22 linear-depth |
+    | Phase | 3 | Optimized `C^2(P)` |
+    | Phase | 4–5 | Vale (Barenco-relative residual) |
+    | Phase | ≥6 | da Silva-Park SP22 linear-depth |
     | Constant phase | any (`±π`) | Routed through the Z path |
-    | Runtime phase | ≥3 | Controlled RZ plus recursive phase on the controls |
     | SWAP | ≥ `min-qubits` | `MCSWAP(C, a, b) = CX(a,b) · MCX(C ∪ {b}, a) · CX(a,b)` |
 
     Width is the total number of qubits the gate acts on (controls plus
@@ -620,12 +619,10 @@ def DecomposeMultiControlled
     restores them coherently. The decomposition preserves phase, including
     the conditional phase of a rotation by `2π`.
 
-    Runtime phase synthesis uses the exact identity
-    `C^k P(theta) = C^k RZ(theta) C^(k-1) P(theta/2)`. The residual phase acts
-    on the control register and is recursively decomposed under the same width
-    threshold. This path needs no additional qubits and has quadratic gate
-    count in the number of controls. Constant angles use the specialized paths
-    in the table.
+    Phase synthesis uses the same decompositions for constant and runtime
+    angles, with no additional qubits and quadratic gate count in the number
+    of controls. Runtime arithmetic only scales the angle by powers of two;
+    constant angles retain the specialized `±π` path.
 
     For controlled SWAP, `C ∪ {b}` is the original control set together with
     SWAP target `b`, and the MCX target is the other SWAP qubit `a`. The

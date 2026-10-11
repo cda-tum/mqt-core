@@ -22,6 +22,7 @@
 #include "mqt/Dialect/QCO/Transforms/NativeSynthesis/NativeCost.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Utils/Drivers.h"
+#include "mqt/Dialect/QCO/Utils/FunctionUtils.h"
 #include "mqt/Dialect/QCO/Utils/Graph.h"
 #include "mqt/Dialect/QCO/Utils/Layout.h"
 #include "mqt/Dialect/QCO/Utils/Sorting.h"
@@ -1180,14 +1181,9 @@ private:
                 const auto position =
                     cast<OpResult>(wires[index].qubit()).getResultNumber();
                 auto argument = loop.getRegionIterArgs()[position];
-                WireIterator exit(loop.getYieldedValues()[position]);
-                while (exit.operation() != nullptr &&
-                       isa<UnitaryOpInterface, MeasureOp, ResetOp, scf::ForOp>(
-                           exit.operation())) {
-                  --exit;
-                }
-                // Linearity alone does not prove positional loop state.
-                if (exit.qubit() != argument) {
+                const auto origin = traceQubitArgument(
+                    *loop.getBody(), loop.getYieldedValues()[position]);
+                if (failed(origin) || *origin != argument.getArgNumber()) {
                   supported = false;
                   return WalkResult::interrupt();
                 }
