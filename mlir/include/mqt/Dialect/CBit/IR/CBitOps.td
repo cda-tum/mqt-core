@@ -50,7 +50,8 @@ def CBit_RegisterType : TypeDef<CBitDialect, "Register", [OpAsmTypeInterface]> {
 class CBitOp<string mnemonic, list<Trait> traits = []>
     : Op<CBitDialect, mnemonic, traits>;
 
-def AllocOp : CBitOp<"alloc"> {
+def AllocOp : CBitOp<"alloc", [DeclareOpInterfaceMethods<
+                                  OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Allocate a classical-bit register";
   let description = [{
     Allocates a static classical-bit register. `zero` initialization defines

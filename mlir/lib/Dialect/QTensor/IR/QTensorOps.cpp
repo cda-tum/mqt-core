@@ -75,12 +75,16 @@ void QTensorDialect::initialize() {
 
 void AllocOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "qs");
+  const auto name =
+      getOperation()->getAttrOfType<StringAttr>("mqt.register_name");
+  setNameFn(getResult(), name ? name.getValue() : "qs");
 }
 
 void FromElementsOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "qs");
+  const auto name =
+      getOperation()->getAttrOfType<StringAttr>("mqt.register_name");
+  setNameFn(getResult(), name ? name.getValue() : "qs");
 }
 
 void ExtractOp::getAsmResultNames(

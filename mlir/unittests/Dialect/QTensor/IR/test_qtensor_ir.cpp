@@ -124,6 +124,33 @@ TEST_F(QTensorTest, PrintsReadableTensorAndQubitNames) {
   EXPECT_TRUE(succeeded(verify(*reparsed)));
 }
 
+TEST_F(QTensorTest, PrintsSourceRegisterNames) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @main() {
+        %size = arith.constant 2 : index
+        %alloc = qtensor.alloc(%size) {mqt.register_name = "qubits"} : tensor<2x!qco.qubit>
+        %q = qco.alloc : !qco.qubit
+        %elements = qtensor.from_elements %q {mqt.register_name = "ancilla pair"} : tensor<1x!qco.qubit>
+        return
+      }
+    }
+  )mlir",
+                                              context.get());
+  ASSERT_TRUE(moduleOp);
+
+  std::string printed;
+  llvm::raw_string_ostream stream(printed);
+  moduleOp->print(stream);
+  EXPECT_NE(printed.find("%qubits = qtensor.alloc"), std::string::npos)
+      << printed;
+  EXPECT_NE(printed.find("%ancilla_pair = qtensor.from_elements"),
+            std::string::npos)
+      << printed;
+  auto reparsed = parseSourceString<ModuleOp>(printed, context.get());
+  EXPECT_TRUE(reparsed);
+}
+
 // ============================================================================
 // AllocOp
 // ============================================================================

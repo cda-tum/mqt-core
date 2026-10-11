@@ -36,6 +36,13 @@
 using namespace mlir;
 using namespace mlir::cbit;
 
+void AllocOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  const auto name =
+      getOperation()->getAttrOfType<StringAttr>("mqt.register_name");
+  setNameFn(getResult(), name ? name.getValue() : "c");
+}
+
 void LoadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "b");
 }
