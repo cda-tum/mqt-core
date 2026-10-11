@@ -48,6 +48,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <array>
 #include <complex>
@@ -152,6 +153,25 @@ TEST_F(QCTest, QubitIsVectorElement) {
       dyn_cast<VectorType>(function.getArgument(0).getType());
   ASSERT_TRUE(vectorType);
   EXPECT_TRUE(isa<QubitType>(vectorType.getElementType()));
+}
+
+TEST_F(QCTest, PrintsReadableQubitAndMeasurementNames) {
+  QCProgramBuilder builder(context.get());
+  builder.initialize();
+  auto bit = builder.measure(builder.allocQubit());
+  builder.retype({bit.getType()});
+  auto moduleOp = builder.finalize({bit});
+  ASSERT_TRUE(moduleOp);
+
+  std::string text;
+  llvm::raw_string_ostream stream(text);
+  moduleOp->print(stream);
+  stream.flush();
+  EXPECT_NE(text.find("%q = qc.alloc"), std::string::npos) << text;
+  EXPECT_NE(text.find("%b = qc.measure"), std::string::npos) << text;
+  auto reparsed = parseSourceString<ModuleOp>(text, context.get());
+  ASSERT_TRUE(reparsed);
+  EXPECT_TRUE(succeeded(verify(*reparsed)));
 }
 
 TEST_F(QCTest, CleanupHoistsAndCoalescesStaticQubits) {

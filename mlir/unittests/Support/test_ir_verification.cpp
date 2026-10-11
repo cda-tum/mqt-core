@@ -100,10 +100,10 @@ TEST(IRVerificationTest, QCOConditionMatters) {
   const std::string lhs =
       R"(func.func @f(%a: i1, %b: i1, %q: !qco.qubit) -> !qco.qubit {
     %r = qco.if %a args(%t = %q) -> !qco.qubit {
-      %h = qco.h %t : !qco.qubit -> !qco.qubit
+      %h = qco.h %t : !qco.qubit
       qco.yield %h : !qco.qubit
     } else args(%t = %q) {
-      %x = qco.x %t : !qco.qubit -> !qco.qubit
+      %x = qco.x %t : !qco.qubit
       qco.yield %x : !qco.qubit
     }
     return %r : !qco.qubit
@@ -119,11 +119,11 @@ TEST(IRVerificationTest, QCOSwitchSelectorMatters) {
       R"(func.func @f(%a: index, %b: index, %q: !qco.qubit) -> !qco.qubit {
     %r = qco.index_switch %a -> !qco.qubit
     case 0 args(%t = %q) {
-      %h = qco.h %t : !qco.qubit -> !qco.qubit
+      %h = qco.h %t : !qco.qubit
       qco.yield %h : !qco.qubit
     }
     default args(%t = %q) {
-      %x = qco.x %t : !qco.qubit -> !qco.qubit
+      %x = qco.x %t : !qco.qubit
       qco.yield %x : !qco.qubit
     }
     return %r : !qco.qubit
@@ -169,13 +169,13 @@ TEST(IRVerificationTest, ModuleAttributesMatter) {
 TEST(IRVerificationTest, IndependentQCOGatesCanBeReordered) {
   expectComparison(
       R"(func.func @f(%a: !qco.qubit, %b: !qco.qubit) -> (!qco.qubit, !qco.qubit) {
-    %h = qco.h %a : !qco.qubit -> !qco.qubit
-    %x = qco.x %b : !qco.qubit -> !qco.qubit
+    %h = qco.h %a : !qco.qubit
+    %x = qco.x %b : !qco.qubit
     return %h, %x : !qco.qubit, !qco.qubit
   })",
       R"(func.func @f(%a: !qco.qubit, %b: !qco.qubit) -> (!qco.qubit, !qco.qubit) {
-    %x = qco.x %b : !qco.qubit -> !qco.qubit
-    %h = qco.h %a : !qco.qubit -> !qco.qubit
+    %x = qco.x %b : !qco.qubit
+    %h = qco.h %a : !qco.qubit
     return %h, %x : !qco.qubit, !qco.qubit
   })",
       true);
@@ -338,7 +338,7 @@ TEST(IRVerificationTest, TensorComparisonWaitsForItsAllocation) {
     %length = arith.addi %size, %one : index
     %tensor = qtensor.alloc(%length) : tensor<?x!qco.qubit>
     %rest, %q = qtensor.extract %tensor[%zero] : tensor<?x!qco.qubit>
-    %h = qco.h %q : !qco.qubit -> !qco.qubit
+    %h = qco.h %q : !qco.qubit
     qtensor.dealloc %rest : tensor<?x!qco.qubit>
     return %h : !qco.qubit
   })";

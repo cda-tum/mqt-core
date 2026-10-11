@@ -135,7 +135,7 @@ TEST(ProgramInspection, QCOCountsNativeThreeQubitGates) {
         %a = qco.alloc : !qco.qubit
         %b = qco.alloc : !qco.qubit
         %c = qco.alloc : !qco.qubit
-        %x, %y, %z = qco.rccx %a, %b, %c : !qco.qubit, !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit, !qco.qubit
+        %x, %y, %z = qco.rccx %a, %b, %c : !qco.qubit, !qco.qubit, !qco.qubit
         qco.sink %x : !qco.qubit
         qco.sink %y : !qco.qubit
         qco.sink %z : !qco.qubit

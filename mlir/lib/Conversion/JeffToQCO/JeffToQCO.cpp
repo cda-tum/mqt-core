@@ -795,7 +795,6 @@ struct ConvertJeffCustomOpToQCO final : OpConversionPattern<jeff::CustomOp> {
 /// is converted to
 /// ```mlir
 /// %q0_out, %q1_out = qco.rxx(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit
-/// -> !qco.qubit, !qco.qubit
 /// ```
 struct ConvertJeffPPROpToQCO final : OpConversionPattern<jeff::PPROp> {
   using OpConversionPattern::OpConversionPattern;
@@ -853,7 +852,7 @@ struct ConvertJeffPPROpToQCO final : OpConversionPattern<jeff::PPROp> {
 /// is converted to
 /// ```mlir
 /// %q_out = qco.if %condition args(%a = %q_in) -> (!qco.qubit) {
-///   %q_res = qco.x %a : !qco.qubit -> !qco.qubit
+///   %q_res = qco.x %a : !qco.qubit
 ///   qco.yield %q_res : !qco.qubit
 /// } else args(%a = %q_in) {
 ///   qco.yield %a : !qco.qubit
@@ -956,7 +955,7 @@ struct ConvertJeffSwitchOpToQCO final : OpConversionPattern<jeff::SwitchOp> {
 /// %reg_out = scf.for %iv = %start to %stop step %step iter_args(%a = %reg_in)
 /// -> (tensor<2x!qco.qubit>) {
 ///   %reg0, %q0 = qtensor.extract %a[%iv] : tensor<2x!qco.qubit>
-///   %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %q0 : !qco.qubit
 ///   %reg1 = qtensor.insert %q1 into %reg0[%iv] : tensor<2x!qco.qubit>
 ///   scf.yield %reg1 : tensor<2x!qco.qubit>
 /// }
@@ -1019,7 +1018,7 @@ struct ConvertJeffForOpToQCO final : OpConversionPattern<jeff::ForOp> {
 ///   scf.condition(%cond) %q1 : !qco.qubit
 /// } do {
 /// ^bb0(%arg0: !qco.qubit):
-///   %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.h %arg0 : !qco.qubit
 ///   scf.yield %q2 : !qco.qubit
 /// }
 /// ```

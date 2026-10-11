@@ -65,7 +65,7 @@ passing the complete register to the next loop iteration:
 
 ```mlir
 func.func private @flip(%q: !qco.qubit) -> !qco.qubit {
-  %out = qco.x %q : !qco.qubit -> !qco.qubit
+  %out = qco.x %q : !qco.qubit
   return %out : !qco.qubit
 }
 func.func @main() attributes {mqt.entry_point} {

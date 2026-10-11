@@ -67,21 +67,21 @@ TEST_F(QTensorCanonicalizationTest, ScalarizesWhileOnlyWithConstantIndices) {
         %count, %second, %result = scf.while (%t = %tensor, %i = %zero, %s = %other)
             : (tensor<2x!qco.qubit>, i32, tensor<1x!qco.qubit>) -> (i32, tensor<1x!qco.qubit>, tensor<2x!qco.qubit>) {
           %rest, %q = qtensor.extract %t[%c0] : tensor<2x!qco.qubit>
-          %h = qco.h %q : !qco.qubit -> !qco.qubit
+          %h = qco.h %q : !qco.qubit
           %out, %condition = qco.measure %h : !qco.qubit
           %updated = qtensor.insert %out into %rest[%c0] : tensor<2x!qco.qubit>
           %srest, %sq = qtensor.extract %s[%c0] : tensor<1x!qco.qubit>
-          %sx = qco.x %sq : !qco.qubit -> !qco.qubit
+          %sx = qco.x %sq : !qco.qubit
           %supdated = qtensor.insert %sx into %srest[%c0] : tensor<1x!qco.qubit>
           scf.condition(%condition) %i, %supdated, %updated : i32, tensor<1x!qco.qubit>, tensor<2x!qco.qubit>
         } do {
         ^bb0(%i: i32, %s: tensor<1x!qco.qubit>, %t: tensor<2x!qco.qubit>):
           %rest, %q = qtensor.extract %t[%c1] : tensor<2x!qco.qubit>
-          %out = qco.x %q : !qco.qubit -> !qco.qubit
+          %out = qco.x %q : !qco.qubit
           %updated = qtensor.insert %out into %rest[%c1] : tensor<2x!qco.qubit>
           %next = arith.addi %i, %one : i32
           %srest, %sq = qtensor.extract %s[%c0] : tensor<1x!qco.qubit>
-          %sy = qco.y %sq : !qco.qubit -> !qco.qubit
+          %sy = qco.y %sq : !qco.qubit
           %supdated = qtensor.insert %sy into %srest[%c0] : tensor<1x!qco.qubit>
           scf.yield %updated, %next, %supdated : tensor<2x!qco.qubit>, i32, tensor<1x!qco.qubit>
         }
@@ -131,7 +131,7 @@ TEST_F(QTensorCanonicalizationTest, CleansUpNestedSingletonLoops) {
         %inner = scf.for %j = %c0 to %c1 step %c1
             iter_args(%u = %t) -> tensor<2x!qco.qubit> {
           %rest, %q = qtensor.extract %u[%j] : tensor<2x!qco.qubit>
-          %out = qco.x %q : !qco.qubit -> !qco.qubit
+          %out = qco.x %q : !qco.qubit
           %updated = qtensor.insert %out into %rest[%j] : tensor<2x!qco.qubit>
           scf.yield %updated : tensor<2x!qco.qubit>
         }
@@ -166,7 +166,7 @@ TEST_F(QTensorCanonicalizationTest, ScalarizesForWithoutExpandingItsBody) {
         %count, %result = scf.for %iv = %c0 to %limit step %c1
             iter_args(%n = %zero, %t = %tensor) -> (i32, tensor<4x!qco.qubit>) {
           %rest, %q = qtensor.extract %t[%c1] : tensor<4x!qco.qubit>
-          %out = qco.x %q : !qco.qubit -> !qco.qubit
+          %out = qco.x %q : !qco.qubit
           %updated = qtensor.insert %out into %rest[%c1] : tensor<4x!qco.qubit>
           %next = arith.addi %n, %one : i32
           scf.yield %next, %updated : i32, tensor<4x!qco.qubit>
@@ -226,7 +226,7 @@ TEST_F(QTensorCanonicalizationTest,
           %tensor3, %q1 = qtensor.extract %tensor2[%c1]
               : tensor<3x!qco.qubit>
           %q2, %q3 = qco.swap %q0, %q1
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           %tensor4 = qtensor.insert %q3 into %tensor3[%c1]
               : tensor<3x!qco.qubit>
           %tensor5 = qtensor.insert %q2 into %tensor4[%c0]
@@ -236,7 +236,7 @@ TEST_F(QTensorCanonicalizationTest,
         } else args(%arg0 = %tensor0) {
           %tensor2, %q0 = qtensor.extract %arg0[%c2]
               : tensor<3x!qco.qubit>
-          %q1 = qco.z %q0 : !qco.qubit -> !qco.qubit
+          %q1 = qco.z %q0 : !qco.qubit
           %tensor3 = qtensor.insert %q1 into %tensor2[%c2]
               : tensor<3x!qco.qubit>
           %false = arith.constant false
@@ -308,7 +308,7 @@ TEST_F(QTensorCanonicalizationTest, ScalarizesOnlyAccessedQTensorElements) {
             args(%arg0 = %tensor0) -> (tensor<3x!qco.qubit>) {
           %tensor2, %q0 = qtensor.extract %arg0[%c1]
               : tensor<3x!qco.qubit>
-          %q1 = qco.x %q0 : !qco.qubit -> !qco.qubit
+          %q1 = qco.x %q0 : !qco.qubit
           %tensor3 = qtensor.insert %q1 into %tensor2[%c1]
               : tensor<3x!qco.qubit>
           qco.yield %tensor3 : tensor<3x!qco.qubit>
@@ -363,7 +363,7 @@ TEST_F(QTensorCanonicalizationTest, ForwardsUnaccessedQTensorAroundIf) {
         %tensor1, %q1 = qco.if %condition
             args(%tensor = %tensor0, %q = %q0)
             -> (tensor<2x!qco.qubit>, !qco.qubit) {
-          %q2 = qco.h %q : !qco.qubit -> !qco.qubit
+          %q2 = qco.h %q : !qco.qubit
           qco.yield %tensor, %q2 : tensor<2x!qco.qubit>, !qco.qubit
         } else args(%tensor = %tensor0, %q = %q0) {
           qco.yield %tensor, %q : tensor<2x!qco.qubit>, !qco.qubit
@@ -420,14 +420,14 @@ TEST_F(QTensorCanonicalizationTest,
           %tensorA2, %tensorAQubit = qtensor.extract %tensorA[%c0]
               : tensor<1x!qco.qubit>
           %tensorAQubitOut = qco.x %tensorAQubit
-              : !qco.qubit -> !qco.qubit
+              : !qco.qubit
           %tensorA3 = qtensor.insert %tensorAQubitOut into %tensorA2[%c0]
               : tensor<1x!qco.qubit>
-          %middleOut = qco.y %middle : !qco.qubit -> !qco.qubit
+          %middleOut = qco.y %middle : !qco.qubit
           %tensorB2, %tensorBQubit = qtensor.extract %tensorB[%c0]
               : tensor<1x!qco.qubit>
           %tensorBQubitOut = qco.z %tensorBQubit
-              : !qco.qubit -> !qco.qubit
+              : !qco.qubit
           %tensorB3 = qtensor.insert %tensorBQubitOut into %tensorB2[%c0]
               : tensor<1x!qco.qubit>
           qco.yield %tensorA3, %middleOut, %tensorB3
@@ -437,7 +437,7 @@ TEST_F(QTensorCanonicalizationTest,
           qco.yield %tensorA, %middle, %tensorB
               : tensor<1x!qco.qubit>, !qco.qubit, tensor<1x!qco.qubit>
         }
-        %middle2 = qco.t %middle1 : !qco.qubit -> !qco.qubit
+        %middle2 = qco.t %middle1 : !qco.qubit
         qtensor.dealloc %tensorA1 : tensor<1x!qco.qubit>
         qco.sink %middle2 : !qco.qubit
         qtensor.dealloc %tensorB1 : tensor<1x!qco.qubit>
@@ -501,7 +501,7 @@ TEST_F(QTensorCanonicalizationTest, LeavesUnsupportedQTensorIfUnchanged) {
                 args(%arg0 = %tensor0) -> (tensor<2x!qco.qubit>) {
               %tensor2, %q0 = qtensor.extract %arg0[%index]
                   : tensor<2x!qco.qubit>
-              %q1 = qco.x %q0 : !qco.qubit -> !qco.qubit
+              %q1 = qco.x %q0 : !qco.qubit
               %tensor3 = qtensor.insert %q1 into %tensor2[%index]
                   : tensor<2x!qco.qubit>
               qco.yield %tensor3 : tensor<2x!qco.qubit>
@@ -522,7 +522,7 @@ TEST_F(QTensorCanonicalizationTest, LeavesUnsupportedQTensorIfUnchanged) {
                 args(%arg0 = %tensor0) -> (tensor<?x!qco.qubit>) {
               %tensor2, %q0 = qtensor.extract %arg0[%c0]
                   : tensor<?x!qco.qubit>
-              %q1 = qco.x %q0 : !qco.qubit -> !qco.qubit
+              %q1 = qco.x %q0 : !qco.qubit
               %tensor3 = qtensor.insert %q1 into %tensor2[%c0]
                   : tensor<?x!qco.qubit>
               qco.yield %tensor3 : tensor<?x!qco.qubit>

@@ -98,7 +98,9 @@ def StaticOp : QCOOp<"static", [Pure]> {
 // Measurement and Reset Operations
 //===----------------------------------------------------------------------===//
 
-def MeasureOp : QCOOp<"measure", [Pure]> {
+def MeasureOp
+    : QCOOp<"measure", [Pure, DeclareOpInterfaceMethods<
+                                  OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Measure a qubit in the computational basis";
   let description = [{
         Measures a qubit in the computational (Z) basis, collapsing the state
@@ -125,14 +127,13 @@ def ResetOp : QCOOp<"reset", [Idempotent, SameOperandsAndResultType, Pure]> {
 
         Example:
         ```mlir
-        %q_out = qco.reset %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.reset %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the qubit to reset">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
   let hasFolder = 1;
 }
 
@@ -199,14 +200,13 @@ def IdOp
 
         Example:
         ```mlir
-        %q_out = qco.id %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.id %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "id"; }
@@ -224,14 +224,13 @@ def XOp
 
         Example:
         ```mlir
-        %q_out = qco.x %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.x %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "x"; }
@@ -249,14 +248,13 @@ def YOp
 
         Example:
         ```mlir
-        %q_out = qco.y %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.y %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "y"; }
@@ -274,14 +272,13 @@ def ZOp
 
         Example:
         ```mlir
-        %q_out = qco.z %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.z %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "z"; }
@@ -299,14 +296,13 @@ def HOp
 
         Example:
         ```mlir
-        %q_out = qco.h %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.h %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "h"; }
@@ -324,14 +320,13 @@ def SOp
 
         Example:
         ```mlir
-        %q_out = qco.s %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.s %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "s"; }
@@ -349,14 +344,13 @@ def SdgOp : QCOOp<"sdg",
 
         Example:
         ```mlir
-        %q_out = qco.sdg %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.sdg %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "sdg"; }
@@ -374,14 +368,13 @@ def TOp
 
         Example:
         ```mlir
-        %q_out = qco.t %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.t %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "t"; }
@@ -399,14 +392,13 @@ def TdgOp : QCOOp<"tdg",
 
         Example:
         ```mlir
-        %q_out = qco.tdg %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.tdg %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "tdg"; }
@@ -424,14 +416,13 @@ def SXOp
 
         Example:
         ```mlir
-        %q_out = qco.sx %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.sx %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "sx"; }
@@ -449,14 +440,13 @@ def SXdgOp : QCOOp<"sxdg", traits = [UnitaryOpInterface, OneTargetZeroParameter,
 
         Example:
         ```mlir
-        %q_out = qco.sxdg %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.sxdg %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat =
-      "$qubit_in attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+  let assemblyFormat = "$qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "sxdg"; }
@@ -474,15 +464,14 @@ def RXOp
 
         Example:
         ```mlir
-        %q_out = qco.rx(%theta) %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.rx(%theta) %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in,
       Arg<F64, "the rotation angle theta in radians">:$theta);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat = "`(` $theta `)` $qubit_in attr-dict `:` type($qubit_in) "
-                       "`->` type($qubit_out)";
+  let assemblyFormat = "`(` $theta `)` $qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "rx"; }
@@ -505,15 +494,14 @@ def RYOp
 
         Example:
         ```mlir
-        %q_out = qco.ry(%theta) %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.ry(%theta) %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in,
       Arg<F64, "the rotation angle theta in radians">:$theta);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat = "`(` $theta `)` $qubit_in attr-dict `:` type($qubit_in) "
-                       "`->` type($qubit_out)";
+  let assemblyFormat = "`(` $theta `)` $qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "ry"; }
@@ -536,15 +524,14 @@ def RZOp
 
         Example:
         ```mlir
-        %q_out = qco.rz(%theta) %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.rz(%theta) %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in,
       Arg<F64, "the rotation angle theta in radians">:$theta);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat = "`(` $theta `)` $qubit_in attr-dict `:` type($qubit_in) "
-                       "`->` type($qubit_out)";
+  let assemblyFormat = "`(` $theta `)` $qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "rz"; }
@@ -567,15 +554,14 @@ def POp
 
         Example:
         ```mlir
-        %q_out = qco.p(%theta) %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.p(%theta) %q_in : !qco.qubit
         ```
     }];
 
   let arguments = (ins Arg<QubitType, "the target qubit">:$qubit_in,
       Arg<F64, "the rotation angle theta in radians">:$theta);
   let results = (outs QubitType:$qubit_out);
-  let assemblyFormat = "`(` $theta `)` $qubit_in attr-dict `:` type($qubit_in) "
-                       "`->` type($qubit_out)";
+  let assemblyFormat = "`(` $theta `)` $qubit_in attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "p"; }
@@ -598,7 +584,7 @@ def ROp
 
         Example:
         ```mlir
-        %q_out = qco.r(%theta, %phi) %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.r(%theta, %phi) %q_in : !qco.qubit
         ```
     }];
 
@@ -607,7 +593,7 @@ def ROp
       Arg<F64, "the rotation angle phi in radians">:$phi);
   let results = (outs QubitType:$qubit_out);
   let assemblyFormat = "`(` $theta `,` $phi `)` $qubit_in attr-dict `:` "
-                       "type($qubit_in) `->` type($qubit_out)";
+                       "type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "r"; }
@@ -630,7 +616,7 @@ def U2Op
 
         Example:
         ```mlir
-        %q_out = qco.u2(%phi, %lambda) %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.u2(%phi, %lambda) %q_in : !qco.qubit
         ```
     }];
 
@@ -639,7 +625,7 @@ def U2Op
       Arg<F64, "the rotation angle lambda in radians">:$lambda);
   let results = (outs QubitType:$qubit_out);
   let assemblyFormat = "`(` $phi `,` $lambda `)` $qubit_in attr-dict `:` "
-                       "type($qubit_in) `->` type($qubit_out)";
+                       "type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "u2"; }
@@ -662,7 +648,7 @@ def UOp
 
         Example:
         ```mlir
-        %q_out = qco.u(%theta, %phi, %lambda) %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.u(%theta, %phi, %lambda) %q_in : !qco.qubit
         ```
     }];
 
@@ -672,7 +658,7 @@ def UOp
       Arg<F64, "the rotation angle lambda in radians">:$lambda);
   let results = (outs QubitType:$qubit_out);
   let assemblyFormat = "`(` $theta `,` $phi `,` $lambda `)` $qubit_in "
-                       "attr-dict `:` type($qubit_in) `->` type($qubit_out)";
+                       "attr-dict `:` type($qubit_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "u"; }
@@ -697,7 +683,7 @@ def SWAPOp : QCOOp<"swap", traits = [UnitaryOpInterface, TwoTargetZeroParameter,
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.swap %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.swap %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -706,7 +692,7 @@ def SWAPOp : QCOOp<"swap", traits = [UnitaryOpInterface, TwoTargetZeroParameter,
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat =
       "$qubit0_in `,` $qubit1_in attr-dict `:` type($qubit0_in) `,` "
-      "type($qubit1_in) `->` type($qubit0_out) `,` type($qubit1_out)";
+      "type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "swap"; }
@@ -724,7 +710,7 @@ def iSWAPOp : QCOOp<"iswap", traits = [UnitaryOpInterface,
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.iswap %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.iswap %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -733,7 +719,7 @@ def iSWAPOp : QCOOp<"iswap", traits = [UnitaryOpInterface,
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat =
       "$qubit0_in `,` $qubit1_in attr-dict `:` type($qubit0_in) `,` "
-      "type($qubit1_in) `->` type($qubit0_out) `,` type($qubit1_out)";
+      "type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "iswap"; }
@@ -749,7 +735,7 @@ def DCXOp : QCOOp<"dcx",
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.dcx %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.dcx %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -758,7 +744,7 @@ def DCXOp : QCOOp<"dcx",
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat =
       "$qubit0_in `,` $qubit1_in attr-dict `:` type($qubit0_in) `,` "
-      "type($qubit1_in) `->` type($qubit0_out) `,` type($qubit1_out)";
+      "type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "dcx"; }
@@ -776,7 +762,7 @@ def ECROp : QCOOp<"ecr",
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.ecr %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.ecr %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -785,7 +771,7 @@ def ECROp : QCOOp<"ecr",
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat =
       "$qubit0_in `,` $qubit1_in attr-dict `:` type($qubit0_in) `,` "
-      "type($qubit1_in) `->` type($qubit0_out) `,` type($qubit1_out)";
+      "type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "ecr"; }
@@ -803,7 +789,7 @@ def RXXOp
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.rxx(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.rxx(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -813,7 +799,7 @@ def RXXOp
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat =
       "`(` $theta `)` $qubit0_in `,` $qubit1_in attr-dict `:` type($qubit0_in) "
-      "`,` type($qubit1_in) `->` type($qubit0_out) `,` type($qubit1_out)";
+      "`,` type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "rxx"; }
@@ -836,7 +822,7 @@ def RYYOp
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.ryy(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.ryy(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -846,7 +832,7 @@ def RYYOp
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat =
       "`(` $theta `)` $qubit0_in `,` $qubit1_in attr-dict `:` type($qubit0_in) "
-      "`,` type($qubit1_in) `->` type($qubit0_out) `,` type($qubit1_out)";
+      "`,` type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "ryy"; }
@@ -869,7 +855,7 @@ def RZXOp
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.rzx(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.rzx(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -879,7 +865,7 @@ def RZXOp
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat =
       "`(` $theta `)` $qubit0_in `,` $qubit1_in attr-dict `:` type($qubit0_in) "
-      "`,` type($qubit1_in) `->` type($qubit0_out) `,` type($qubit1_out)";
+      "`,` type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "rzx"; }
@@ -902,7 +888,7 @@ def RZZOp
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.rzz(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.rzz(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -912,7 +898,7 @@ def RZZOp
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat =
       "`(` $theta `)` $qubit0_in `,` $qubit1_in attr-dict `:` type($qubit0_in) "
-      "`,` type($qubit1_in) `->` type($qubit0_out) `,` type($qubit1_out)";
+      "`,` type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "rzz"; }
@@ -935,7 +921,7 @@ def XXPlusYYOp : QCOOp<"xx_plus_yy", traits = [UnitaryOpInterface,
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.xx_plus_yy(%theta, %beta) %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.xx_plus_yy(%theta, %beta) %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -945,8 +931,7 @@ def XXPlusYYOp : QCOOp<"xx_plus_yy", traits = [UnitaryOpInterface,
       Arg<F64, "the rotation angle beta in radians">:$beta);
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat = "`(` $theta `,` $beta `)` $qubit0_in `,` $qubit1_in "
-                       "attr-dict `:` type($qubit0_in) `,` type($qubit1_in) "
-                       "`->` type($qubit0_out) `,` type($qubit1_out)";
+                       "attr-dict `:` type($qubit0_in) `,` type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "xx_plus_yy"; }
@@ -970,7 +955,7 @@ def XXMinusYYOp : QCOOp<"xx_minus_yy", traits = [UnitaryOpInterface,
 
         Example:
         ```mlir
-        %q0_out, %q1_out = qco.xx_minus_yy(%theta, %beta) %q0_in, %q1_in : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %q0_out, %q1_out = qco.xx_minus_yy(%theta, %beta) %q0_in, %q1_in : !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -980,8 +965,7 @@ def XXMinusYYOp : QCOOp<"xx_minus_yy", traits = [UnitaryOpInterface,
       Arg<F64, "the rotation angle beta in radians">:$beta);
   let results = (outs QubitType:$qubit0_out, QubitType:$qubit1_out);
   let assemblyFormat = "`(` $theta `,` $beta `)` $qubit0_in `,` $qubit1_in "
-                       "attr-dict `:` type($qubit0_in) `,` type($qubit1_in) "
-                       "`->` type($qubit0_out) `,` type($qubit1_out)";
+                       "attr-dict `:` type($qubit0_in) `,` type($qubit1_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "xx_minus_yy"; }
@@ -1006,7 +990,7 @@ def RCCXOp : QCOOp<"rccx", traits = [UnitaryOpInterface,
 
         Example:
         ```mlir
-        %q0_out, %q1_out, %q2_out = qco.rccx %q0_in, %q1_in, %q2_in : !qco.qubit, !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit, !qco.qubit
+        %q0_out, %q1_out, %q2_out = qco.rccx %q0_in, %q1_in, %q2_in : !qco.qubit, !qco.qubit, !qco.qubit
         ```
     }];
 
@@ -1017,8 +1001,7 @@ def RCCXOp : QCOOp<"rccx", traits = [UnitaryOpInterface,
       QubitType:$qubit2_out);
   let assemblyFormat =
       "$qubit0_in `,` $qubit1_in `,` $qubit2_in attr-dict `:` type($qubit0_in) "
-      "`,` type($qubit1_in) `,` type($qubit2_in) `->` type($qubit0_out) `,` "
-      "type($qubit1_out) `,` type($qubit2_out)";
+      "`,` type($qubit1_in) `,` type($qubit2_in)";
 
   let extraClassDeclaration = [{
         [[nodiscard]] static StringRef getBaseSymbol() { return "rccx"; }
@@ -1028,7 +1011,11 @@ def RCCXOp : QCOOp<"rccx", traits = [UnitaryOpInterface,
   let hasCanonicalizer = 1;
 }
 
-def UnitaryOp : QCOOp<"unitary", traits = [UnitaryOpInterface, Pure]> {
+def UnitaryOp
+    : QCOOp<"unitary", traits = [UnitaryOpInterface, Pure,
+                                 RangedTypesMatchWith<
+                                     "input and output qubit types match",
+                                     "qubits_in", "qubits_out", "$_self">]> {
   let summary = "Apply an explicitly represented unitary matrix";
   let description = [{
         Applies a dense unitary matrix and returns the transformed qubits. The
@@ -1044,15 +1031,14 @@ def UnitaryOp : QCOOp<"unitary", traits = [UnitaryOpInterface, Pure]> {
         %q_out = qco.unitary dense<[[(0.0,0.0), (1.0,0.0)],
                                     [(1.0,0.0), (0.0,0.0)]]>
             : tensor<2x2xcomplex<f64>> %q_in
-            : !qco.qubit -> !qco.qubit
+            : !qco.qubit
         ```
     }];
 
   let arguments = (ins ElementsAttr:$matrix,
       Arg<Variadic<QubitType>, "the input qubits">:$qubits_in);
   let results = (outs Variadic<QubitType>:$qubits_out);
-  let assemblyFormat = "$matrix $qubits_in attr-dict `:` type($qubits_in)"
-                       " `->` type($qubits_out)";
+  let assemblyFormat = "$matrix $qubits_in attr-dict `:` type($qubits_in)";
 
   let extraClassDeclaration = [{
         size_t getNumQubits() { return getNumTargets(); }
@@ -1087,7 +1073,11 @@ def UnitaryOp : QCOOp<"unitary", traits = [UnitaryOpInterface, Pure]> {
   let hasVerifier = 1;
 }
 
-def BarrierOp : QCOOp<"barrier", traits = [UnitaryOpInterface, Pure]> {
+def BarrierOp
+    : QCOOp<"barrier", traits = [UnitaryOpInterface, Pure,
+                                 RangedTypesMatchWith<
+                                     "input and output qubit types match",
+                                     "qubits_in", "qubits_out", "$_self">]> {
   let summary = "Apply a barrier operation to a set of qubits";
   let description = [{
         Marks a barrier and transfers ownership of the input qubits to the results
@@ -1095,15 +1085,14 @@ def BarrierOp : QCOOp<"barrier", traits = [UnitaryOpInterface, Pure]> {
 
         Example:
         ```mlir
-        %q_out = qco.barrier %q_in : !qco.qubit -> !qco.qubit
+        %q_out = qco.barrier %q_in : !qco.qubit
         ```
     }];
 
   let arguments =
       (ins Arg<Variadic<QubitType>, "the target qubits">:$qubits_in);
   let results = (outs Variadic<QubitType>:$qubits_out);
-  let assemblyFormat =
-      "$qubits_in attr-dict `:` type($qubits_in) `->` type($qubits_out)";
+  let assemblyFormat = "$qubits_in attr-dict `:` type($qubits_in)";
 
   let extraClassDeclaration = [{
         size_t getNumQubits() { return getNumTargets(); }
@@ -1234,9 +1223,9 @@ def YieldOp
         Example:
         ```mlir
         %res_ctrl, %res_tgt:2 = qco.ctrl(%ctrl) targets(%a0 = %q0, %a1 = %q1) {
-            %a0_1, %a1_1 = qco.swap %a0, %a1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+            %a0_1, %a1_1 = qco.swap %a0, %a1 : !qco.qubit, !qco.qubit
             qco.yield %a0_1, %a1_1 : !qco.qubit, !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit, !qco.qubit}) -> ({!qco.qubit}, {!qco.qubit, !qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
         ```
     }];
 
@@ -1245,12 +1234,18 @@ def YieldOp
   let hasVerifier = 1;
 }
 
-def CtrlOp : QCOOp<"ctrl",
-                   traits = [UnitaryOpInterface, AttrSizedOperandSegments,
-                             AttrSizedResultSegments, SameOperandsAndResultType,
-                             SameOperandsAndResultShape,
-                             SingleBlockImplicitTerminator<"YieldOp">,
-                             RecursivelySpeculatable, RecursiveMemoryEffects]> {
+def CtrlOp
+    : QCOOp<"ctrl",
+            traits =
+                [UnitaryOpInterface, AttrSizedOperandSegments,
+                 AttrSizedResultSegments,
+                 RangedTypesMatchWith<"control qubit types match",
+                                      "controls_in", "controls_out", "$_self">,
+                 RangedTypesMatchWith<"target qubit types match", "targets_in",
+                                      "targets_out", "$_self">,
+                 SameOperandsAndResultShape,
+                 SingleBlockImplicitTerminator<"YieldOp">,
+                 RecursivelySpeculatable, RecursiveMemoryEffects]> {
   let summary = "Apply a control modifier to a collection of gates";
   let description = [{
         A modifier operation that adds control qubits to the gates defined in its body region.
@@ -1270,9 +1265,9 @@ def CtrlOp : QCOOp<"ctrl",
         Example:
         ```mlir
         %res_ctrl, %res_tgt:2 = qco.ctrl(%ctrl) targets(%a0 = %q0, %a1 = %q1) {
-            %a0_1, %a1_1 = qco.swap %a0, %a1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+            %a0_1, %a1_1 = qco.swap %a0, %a1 : !qco.qubit, !qco.qubit
             qco.yield %a0_1, %a1_1 : !qco.qubit, !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit, !qco.qubit}) -> ({!qco.qubit}, {!qco.qubit, !qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
         ```
     }];
 
@@ -1287,8 +1282,6 @@ def CtrlOp : QCOOp<"ctrl",
         `targets`
         custom<TargetAliasing>($region, $targets_in)
         attr-dict `:`
-        `(` `{` type($controls_in) `}` ( `,` `{` type($targets_in)^ `}` )? `)`
-        `->`
         `(` `{` type($controls_out) `}` ( `,` `{` type($targets_out)^ `}` )? `)`
     }];
 
@@ -1358,7 +1351,7 @@ def InvOp
         Example:
         ```mlir
         %q_out = qco.inv (%q = %q_in) {
-            %q_1 = qco.s %q : !qco.qubit -> !qco.qubit
+            %q_1 = qco.s %q : !qco.qubit
             qco.yield %q_1 : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         ```
@@ -1443,7 +1436,7 @@ def PowOp
         Example:
         ```mlir
         %q_out = qco.pow(%exponent) (%q = %q_in) {
-            %q_1 = qco.s %q : !qco.qubit -> !qco.qubit
+            %q_1 = qco.s %q : !qco.qubit
             qco.yield %q_1
         } : {!qco.qubit} -> {!qco.qubit}
         ```
@@ -1554,7 +1547,7 @@ def IfOp
         ```mlir
         %flag, %result = qco.if %condition args(%arg0 = %q0)
             -> (i1, !qco.qubit) {
-            %q1 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+            %q1 = qco.h %arg0 : !qco.qubit
             qco.yield %true, %q1 : i1, !qco.qubit
          } else args(%arg0 = %q0) {
             qco.yield %false, %arg0 : i1, !qco.qubit
@@ -1700,11 +1693,11 @@ def IndexSwitchOp
         ```mlir
         %flag, %result = qco.index_switch %index -> (i1, !qco.qubit)
         case 0 args(%arg0 = %q0) {
-          %q1 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+          %q1 = qco.h %arg0 : !qco.qubit
           qco.yield %true, %q1 : i1, !qco.qubit
         }
         case 1 args(%arg0 = %q0) {
-          %q1 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q1 = qco.x %arg0 : !qco.qubit
           qco.yield %false, %q1 : i1, !qco.qubit
         }
         default args(%arg0 = %q0) {

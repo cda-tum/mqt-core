@@ -71,7 +71,7 @@ TEST_F(QCOModifierCanonicalizationTest, InverseU2PreservesLargeAngles) {
         %phi = arith.constant 1.0e16 : f64
         %lambda = arith.constant 0.0 : f64
         %o = qco.inv(%a = %q) {
-          %u = qco.u2(%phi, %lambda) %a : !qco.qubit -> !qco.qubit
+          %u = qco.u2(%phi, %lambda) %a : !qco.qubit
           qco.yield %u : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -104,7 +104,7 @@ TEST_F(QCOModifierCanonicalizationTest, InverseU2PreservesDynamicAngles) {
     module {
       func.func @test(%q: !qco.qubit, %phi: f64, %lambda: f64) -> !qco.qubit {
         %o = qco.inv(%a = %q) {
-          %u = qco.u2(%phi, %lambda) %a : !qco.qubit -> !qco.qubit
+          %u = qco.u2(%phi, %lambda) %a : !qco.qubit
           qco.yield %u : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -134,7 +134,7 @@ TEST_F(QCOModifierCanonicalizationTest, InverseU2PreservesFullUnitary) {
         %phi = arith.constant 2.5745926535897929 : f64
         %lambda = arith.constant -3.3755926535897931 : f64
         %o = qco.inv(%a = %q) {
-          %u = qco.u2(%phi, %lambda) %a : !qco.qubit -> !qco.qubit
+          %u = qco.u2(%phi, %lambda) %a : !qco.qubit
           qco.yield %u : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -147,7 +147,7 @@ TEST_F(QCOModifierCanonicalizationTest, InverseU2PreservesFullUnitary) {
       func.func @test(%q: !qco.qubit) -> !qco.qubit {
         %phi = arith.constant 0.234 : f64
         %lambda = arith.constant 0.567 : f64
-        %u = qco.u2(%phi, %lambda) %q : !qco.qubit -> !qco.qubit
+        %u = qco.u2(%phi, %lambda) %q : !qco.qubit
         return %u : !qco.qubit
       }
     }
@@ -167,9 +167,9 @@ TEST_F(QCOModifierCanonicalizationTest,
         %lambda = arith.constant -3.3755926535897931 : f64
         %o0, %o1, %o2 = qco.inv(%a = %q0, %b = %q1, %c = %q2) {
           %i0, %i1, %i2 = qco.ctrl(%a, %b) targets(%d = %c) {
-            %u = qco.u2(%phi, %lambda) %d : !qco.qubit -> !qco.qubit
+            %u = qco.u2(%phi, %lambda) %d : !qco.qubit
             qco.yield %u : !qco.qubit
-          } : ({!qco.qubit, !qco.qubit}, {!qco.qubit}) -> ({!qco.qubit, !qco.qubit}, {!qco.qubit})
+          } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})
           qco.yield %i0, %i1, %i2 : !qco.qubit, !qco.qubit, !qco.qubit
         } : {!qco.qubit, !qco.qubit, !qco.qubit} -> {!qco.qubit, !qco.qubit, !qco.qubit}
         return %o0, %o1, %o2 : !qco.qubit, !qco.qubit, !qco.qubit
@@ -184,9 +184,9 @@ TEST_F(QCOModifierCanonicalizationTest,
         %phi = arith.constant 0.234 : f64
         %lambda = arith.constant 0.567 : f64
         %o0, %o1, %o2 = qco.ctrl(%q0, %q1) targets(%a = %q2) {
-          %u = qco.u2(%phi, %lambda) %a : !qco.qubit -> !qco.qubit
+          %u = qco.u2(%phi, %lambda) %a : !qco.qubit
           qco.yield %u : !qco.qubit
-        } : ({!qco.qubit, !qco.qubit}, {!qco.qubit}) -> ({!qco.qubit, !qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})
         return %o0, %o1, %o2 : !qco.qubit, !qco.qubit, !qco.qubit
       }
     }
@@ -205,7 +205,6 @@ TEST_F(QCOModifierCanonicalizationTest, ControlledPhaseDropsUnusedTargets) {
           qco.gphase(%angle)
           qco.yield %t : !qco.qubit
         } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})
-          -> ({!qco.qubit, !qco.qubit}, {!qco.qubit})
         return %o0, %o1, %o2 : !qco.qubit, !qco.qubit, !qco.qubit
       }
     }
@@ -241,7 +240,7 @@ TEST_F(QCOModifierCanonicalizationTest,
           %square = arith.mulf %angle, %angle : f64
           qco.gphase(%square)
           qco.yield
-        } : ({!qco.qubit, !qco.qubit}) -> ({!qco.qubit, !qco.qubit})
+        } : ({!qco.qubit, !qco.qubit})
         return %o0, %o1 : !qco.qubit, !qco.qubit
       }
     }
@@ -269,8 +268,8 @@ TEST_F(QCOModifierCanonicalizationTest, ZeroControlsInlineMultipleGates) {
         }> ({
         ^bb0(%a: !qco.qubit, %b: !qco.qubit):
           %square = arith.mulf %angle, %angle : f64
-          %h = qco.h %b : !qco.qubit -> !qco.qubit
-          %r = qco.rx(%square) %h : !qco.qubit -> !qco.qubit
+          %h = qco.h %b : !qco.qubit
+          %r = qco.rx(%square) %h : !qco.qubit
           qco.yield %a, %r : !qco.qubit, !qco.qubit
         }) : (!qco.qubit, !qco.qubit) -> (!qco.qubit, !qco.qubit)
         return %o0, %o1 : !qco.qubit, !qco.qubit
@@ -300,12 +299,11 @@ TEST_F(QCOModifierCanonicalizationTest,
         %o0, %o1, %o2 = qco.ctrl(%c0) targets(%a = %c1, %b = %q) {
           %square = arith.mulf %angle, %angle : f64
           %i0, %i1 = qco.ctrl(%a) targets(%t = %b) {
-            %r = qco.rx(%square) %t : !qco.qubit -> !qco.qubit
+            %r = qco.rx(%square) %t : !qco.qubit
             qco.yield %r : !qco.qubit
-          } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+          } : ({!qco.qubit}, {!qco.qubit})
           qco.yield %i0, %i1 : !qco.qubit, !qco.qubit
         } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
-          -> ({!qco.qubit}, {!qco.qubit, !qco.qubit})
         return %o0, %o1, %o2 : !qco.qubit, !qco.qubit, !qco.qubit
       }
     }
@@ -334,14 +332,13 @@ TEST_F(QCOModifierCanonicalizationTest, NestedControlsRetainOtherBodyGates) {
       func.func @test(%c0: !qco.qubit, %c1: !qco.qubit, %q: !qco.qubit)
           -> (!qco.qubit, !qco.qubit, !qco.qubit) {
         %o0, %o1, %o2 = qco.ctrl(%c0) targets(%a = %c1, %b = %q) {
-          %h = qco.h %a : !qco.qubit -> !qco.qubit
+          %h = qco.h %a : !qco.qubit
           %i0, %i1 = qco.ctrl(%h) targets(%t = %b) {
-            %x = qco.x %t : !qco.qubit -> !qco.qubit
+            %x = qco.x %t : !qco.qubit
             qco.yield %x : !qco.qubit
-          } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+          } : ({!qco.qubit}, {!qco.qubit})
           qco.yield %i0, %i1 : !qco.qubit, !qco.qubit
         } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
-          -> ({!qco.qubit}, {!qco.qubit, !qco.qubit})
         return %o0, %o1, %o2 : !qco.qubit, !qco.qubit, !qco.qubit
       }
     }
@@ -362,7 +359,7 @@ TEST_F(QCOModifierCanonicalizationTest, DoubleInversePreservesOutputOrder) {
         %o0, %o1 = qco.inv (%a = %q0, %b = %q1) {
           %i0, %i1 = qco.inv (%c = %b, %d = %a) {
             %s0, %s1 = qco.iswap %c, %d
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
             qco.yield %s0, %s1 : !qco.qubit, !qco.qubit
           } : {!qco.qubit, !qco.qubit} -> {!qco.qubit, !qco.qubit}
           qco.yield %i1, %i0 : !qco.qubit, !qco.qubit
@@ -393,8 +390,8 @@ TEST_F(QCOModifierCanonicalizationTest, DoubleInverseInlinesMultipleGates) {
         %o0, %o1 = qco.inv (%a = %q0, %b = %q1) {
           %square = arith.mulf %angle, %angle : f64
           %i = qco.inv (%t = %b) {
-            %h = qco.h %t : !qco.qubit -> !qco.qubit
-            %r = qco.rx(%square) %h : !qco.qubit -> !qco.qubit
+            %h = qco.h %t : !qco.qubit
+            %r = qco.rx(%square) %h : !qco.qubit
             qco.yield %r : !qco.qubit
           } : {!qco.qubit} -> {!qco.qubit}
           qco.yield %a, %i : !qco.qubit, !qco.qubit
@@ -422,8 +419,8 @@ TEST_F(QCOModifierCanonicalizationTest, SingleInverseRetainsMultipleGates) {
     module {
       func.func @test(%q: !qco.qubit, %angle: f64) -> !qco.qubit {
         %o = qco.inv (%a = %q) {
-          %h = qco.h %a : !qco.qubit -> !qco.qubit
-          %r = qco.rx(%angle) %h : !qco.qubit -> !qco.qubit
+          %h = qco.h %a : !qco.qubit
+          %r = qco.rx(%angle) %h : !qco.qubit
           qco.yield %r : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         return %o : !qco.qubit
@@ -443,7 +440,7 @@ TEST_F(QCOModifierCanonicalizationTest, KnownInversePreservesUnusedQubits) {
     module {
       func.func @test(%q0: !qco.qubit, %q1: !qco.qubit) -> (!qco.qubit, !qco.qubit) {
         %o0, %o1 = qco.inv (%a = %q0, %b = %q1) {
-          %t = qco.t %b : !qco.qubit -> !qco.qubit
+          %t = qco.t %b : !qco.qubit
           qco.yield %a, %t : !qco.qubit, !qco.qubit
         } : {!qco.qubit, !qco.qubit} -> {!qco.qubit, !qco.qubit}
         return %o0, %o1 : !qco.qubit, !qco.qubit

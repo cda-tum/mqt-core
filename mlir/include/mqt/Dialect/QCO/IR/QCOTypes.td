@@ -13,13 +13,16 @@ include "mqt/Dialect/QCO/IR/QCODialect.td"
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 
 class QCOType<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<QCODialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
 
-def QubitType : QCOType<"Qubit", "qubit", [VectorElementTypeInterface]> {
+def QubitType
+    : QCOType<"Qubit",
+              "qubit", [VectorElementTypeInterface, OpAsmTypeInterface]> {
   let summary = "QCO qubit value type";
   let description = [{
         The `!qco.qubit` type represents an SSA value holding a quantum bit
@@ -29,10 +32,15 @@ def QubitType : QCOType<"Qubit", "qubit", [VectorElementTypeInterface]> {
         Example:
         ```mlir
         %q0 = qco.alloc : !qco.qubit
-        %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
-        %q2 = qco.x %q1 : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q0 : !qco.qubit
+        %q2 = qco.x %q1 : !qco.qubit
         ```
     }];
+  let extraClassDeclaration = [{
+    void getAsmName(::mlir::OpAsmSetNameFn setNameFn) const {
+      setNameFn("q");
+    }
+  }];
 }
 
 def LinearType : AnyTypeOf<[QubitType, 1DTensorOf<[QubitType]>]>;

@@ -14,6 +14,7 @@ include "mqt/Dialect/CBit/IR/CBitDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -25,7 +26,7 @@ def CBit_InitializationAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
-def CBit_RegisterType : TypeDef<CBitDialect, "Register"> {
+def CBit_RegisterType : TypeDef<CBitDialect, "Register", [OpAsmTypeInterface]> {
   let mnemonic = "reg";
   let summary = "A static classical-bit register";
   let description = [{
@@ -35,6 +36,11 @@ def CBit_RegisterType : TypeDef<CBitDialect, "Register"> {
   let parameters = (ins "int64_t":$width);
   let assemblyFormat = "`<` $width `>`";
   let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    void getAsmName(::mlir::OpAsmSetNameFn setNameFn) const {
+      setNameFn("c");
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -44,7 +50,8 @@ def CBit_RegisterType : TypeDef<CBitDialect, "Register"> {
 class CBitOp<string mnemonic, list<Trait> traits = []>
     : Op<CBitDialect, mnemonic, traits>;
 
-def AllocOp : CBitOp<"alloc"> {
+def AllocOp : CBitOp<"alloc", [DeclareOpInterfaceMethods<
+                                  OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Allocate a classical-bit register";
   let description = [{
     Allocates a static classical-bit register. `zero` initialization defines
@@ -66,7 +73,8 @@ def AllocOp : CBitOp<"alloc"> {
   }];
 }
 
-def LoadOp : CBitOp<"load"> {
+def LoadOp : CBitOp<"load", [DeclareOpInterfaceMethods<
+                                OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Load a classical bit";
   let description = [{
     Reads one `i1` value from a classical-bit register. A constant index must
@@ -88,7 +96,8 @@ def LoadOp : CBitOp<"load"> {
   let hasVerifier = 1;
 }
 
-def ReadOp : CBitOp<"read"> {
+def ReadOp : CBitOp<"read", [DeclareOpInterfaceMethods<
+                                OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Read a classical-bit register as an integer";
   let description = [{
     Reads the complete register as an exact-width integer bit pattern. Register

@@ -15,6 +15,7 @@ include "mqt/Dialect/QC/IR/QCTypes.td"
 
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -99,7 +100,8 @@ def StaticOp : QCOp<"static", [Pure]> {
 // Measurement and Reset Operations
 //===----------------------------------------------------------------------===//
 
-def MeasureOp : QCOp<"measure"> {
+def MeasureOp : QCOp<"measure", [DeclareOpInterfaceMethods<
+                                    OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Measure a qubit in the computational basis";
   let description = [{
         Measures a qubit in the computational (Z) basis, collapsing the state

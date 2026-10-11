@@ -87,7 +87,7 @@ TEST_F(QCOMeasurementLiftingTest, MeasuresBlockArguments) {
         return %out, %bit : !qco.qubit, i1
       }
       func.func @hadamard(%q: !qco.qubit) -> (!qco.qubit, i1) {
-        %h = qco.h %q : !qco.qubit -> !qco.qubit
+        %h = qco.h %q : !qco.qubit
         %out, %bit = qco.measure %h : !qco.qubit
         return %out, %bit : !qco.qubit, i1
       }

@@ -151,7 +151,7 @@ TEST_F(QCModifierCanonicalizationTest, InverseU2PreservesFullUnitary) {
       func.func @test(%q: !qco.qubit) -> !qco.qubit {
         %phi = arith.constant 0.234 : f64
         %lambda = arith.constant 0.567 : f64
-        %u = qco.u2(%phi, %lambda) %q : !qco.qubit -> !qco.qubit
+        %u = qco.u2(%phi, %lambda) %q : !qco.qubit
         return %u : !qco.qubit
       }
     }
@@ -193,9 +193,9 @@ TEST_F(QCModifierCanonicalizationTest,
         %phi = arith.constant 0.234 : f64
         %lambda = arith.constant 0.567 : f64
         %o0, %o1, %o2 = qco.ctrl(%q0, %q1) targets(%a = %q2) {
-          %u = qco.u2(%phi, %lambda) %a : !qco.qubit -> !qco.qubit
+          %u = qco.u2(%phi, %lambda) %a : !qco.qubit
           qco.yield %u : !qco.qubit
-        } : ({!qco.qubit, !qco.qubit}, {!qco.qubit}) -> ({!qco.qubit, !qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})
         return %o0, %o1, %o2 : !qco.qubit, !qco.qubit, !qco.qubit
       }
     }

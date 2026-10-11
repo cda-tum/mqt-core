@@ -346,12 +346,12 @@ constexpr llvm::StringLiteral QCO_INDEX_SWITCH_SOURCE = R"mlir(
       %q0 = qco.alloc : !qco.qubit
       %state, %q1 = qco.index_switch %selector -> (i64, !qco.qubit)
       case 0 args(%arg0 = %q0) {
-        %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+        %q2 = qco.x %arg0 : !qco.qubit
         %value = arith.constant 0 : i64
         qco.yield %value, %q2 : i64, !qco.qubit
       }
       case 1 args(%arg0 = %q0) {
-        %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+        %q2 = qco.h %arg0 : !qco.qubit
         %value = arith.constant 1 : i64
         qco.yield %value, %q2 : i64, !qco.qubit
       }
@@ -1657,7 +1657,7 @@ TEST_F(CompilerPipelineTest, TypedProgramsNormalizeGlobalPhases) {
     func.func @test(%q: !qco.qubit) -> !qco.qubit {
       %a = arith.constant 0.25 : f64
       qco.gphase(%a)
-      %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+      %q1 = qco.x %q : !qco.qubit
       %b = arith.constant 0.5 : f64
       qco.gphase(%b)
       return %q1 : !qco.qubit
@@ -1747,7 +1747,7 @@ TEST_F(CompilerPipelineTest, CallerOwnedContextSupportsTextualInlining) {
   constexpr StringLiteral source = R"mlir(module {
     func.func private @flip(%q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %out = qco.x %q : !qco.qubit -> !qco.qubit
+      %out = qco.x %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func @main() attributes {mqt.entry_point} {
@@ -1806,7 +1806,7 @@ TEST_F(CompilerPipelineTest, QCOProgramInlinesNestedUnitaryCallsIntoJeff) {
   constexpr llvm::StringLiteral source = R"mlir(module {
     func.func private @flip(%q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %out = qco.x %q : !qco.qubit -> !qco.qubit
+      %out = qco.x %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func @main() attributes {mqt.entry_point} {
@@ -1853,14 +1853,14 @@ TEST_F(CompilerPipelineTest, JeffBinaryRoundTripPreservesReusableFunctions) {
       %q = qco.alloc : !qco.qubit
       %a = qco.call @rotate(%angle, %q) : (f64, !qco.qubit) -> !qco.qubit
       %b = qco.call @rotate(%angle, %a) : (f64, !qco.qubit) -> !qco.qubit
-      %c = qco.sx %b : !qco.qubit -> !qco.qubit
+      %c = qco.sx %b : !qco.qubit
       %bit, %out = func.call @read(%c) : (!qco.qubit) -> (i1, !qco.qubit)
       qco.sink %out : !qco.qubit
       return %bit : i1
     }
     func.func private @rotate(%angle: f64, %q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %out = qco.ry(%angle) %q : !qco.qubit -> !qco.qubit
+      %out = qco.ry(%angle) %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func private @read(%q: !qco.qubit) -> (i1, !qco.qubit) {
@@ -2071,7 +2071,7 @@ TEST_F(CompilerPipelineTest, JeffProgramsRoundTripThroughSegmentedMessages) {
   auto qco = QCOProgram::fromMLIRString(R"mlir(module {
     func.func @main() attributes {mqt.entry_point} {
       %q = qco.alloc : !qco.qubit
-      %r = qco.h %q : !qco.qubit -> !qco.qubit
+      %r = qco.h %q : !qco.qubit
       qco.sink %r : !qco.qubit
       return
     }
@@ -2411,7 +2411,6 @@ TEST_F(CompilerPipelineTest, TerminalSwapElisionLeavesStructuredPackingIntact) {
             %rest0, %q0 = qtensor.extract %tensor[%c0] : tensor<2x!qco.qubit>
             %rest1, %q1 = qtensor.extract %rest0[%c1] : tensor<2x!qco.qubit>
             %s0, %s1 = qco.swap %q0, %q1 : !qco.qubit, !qco.qubit
-                -> !qco.qubit, !qco.qubit
         )mlir") +
         tail + R"mlir(
             qtensor.dealloc %packed1 : tensor<2x!qco.qubit>
@@ -2642,7 +2641,7 @@ TEST_F(CompilerPipelineTest,
       func.func @main(%condition: i1) attributes {mqt.entry_point} {
         %q0 = qco.alloc : !qco.qubit
         %q1 = qco.if %condition args(%arg0 = %q0) -> (!qco.qubit) {
-          %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.x %arg0 : !qco.qubit
           qco.yield %q2 : !qco.qubit
         } else args(%arg0 = %q0) {
           qco.yield %arg0 : !qco.qubit
@@ -2660,7 +2659,7 @@ TEST_F(CompilerPipelineTest,
         %q0 = qco.alloc : !qco.qubit
         %q1 = scf.for %index = %c0 to %upper step %c1
             iter_args(%arg0 = %q0) -> (!qco.qubit) {
-          %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.x %arg0 : !qco.qubit
           scf.yield %q2 : !qco.qubit
         }
         qco.sink %q1 : !qco.qubit
@@ -2676,7 +2675,7 @@ TEST_F(CompilerPipelineTest,
           scf.condition(%condition) %arg0 : !qco.qubit
         } do {
         ^bb0(%arg0: !qco.qubit):
-          %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.x %arg0 : !qco.qubit
           scf.yield %q2 : !qco.qubit
         }
         qco.sink %q1 : !qco.qubit
@@ -2873,7 +2872,7 @@ TEST_F(CompilerPipelineTest, PayloadControlPromotesNestedSingleIterationState) {
           %next = scf.for %inner = %outer to %c3 step %c1
               iter_args(%innerArg = %arg) -> (!qco.qubit) {
             func.call @observe(%outer, %inner) : (index, index) -> ()
-            %x = qco.x %innerArg : !qco.qubit -> !qco.qubit
+            %x = qco.x %innerArg : !qco.qubit
             scf.yield %x : !qco.qubit
           }
           scf.yield %next : !qco.qubit
@@ -2919,7 +2918,7 @@ TEST_F(CompilerPipelineTest,
       %result = scf.for %i = %c0 to %c2 step %c1
           iter_args(%t = %tensor) -> tensor<2x!qco.qubit> {
         %rest, %q = qtensor.extract %t[%i] : tensor<2x!qco.qubit>
-        %out = qco.x %q : !qco.qubit -> !qco.qubit
+        %out = qco.x %q : !qco.qubit
         %updated = qtensor.insert %out into %rest[%i] : tensor<2x!qco.qubit>
         scf.yield %updated : tensor<2x!qco.qubit>
       }
@@ -2927,7 +2926,7 @@ TEST_F(CompilerPipelineTest,
       %q = qco.alloc : !qco.qubit
       %out = scf.for %i = %c0 to %c2 step %c1
           iter_args(%arg = %q) -> !qco.qubit {
-        %next = qco.x %arg : !qco.qubit -> !qco.qubit
+        %next = qco.x %arg : !qco.qubit
         scf.yield %next : !qco.qubit
       }
       qco.sink %out : !qco.qubit
@@ -2996,7 +2995,7 @@ TEST_F(CompilerPipelineTest, OverCapacityInputsCompileWithoutLayout) {
       %c2 = arith.constant 2 : index
       %tensor = qtensor.alloc(%c2) : tensor<2x!qco.qubit>
       %rest, %q = qtensor.extract %tensor[%c0] : tensor<2x!qco.qubit>
-      %out = qco.x %q : !qco.qubit -> !qco.qubit
+      %out = qco.x %q : !qco.qubit
       qco.sink %out : !qco.qubit
       qtensor.dealloc %rest : tensor<2x!qco.qubit>
       return
@@ -3018,7 +3017,7 @@ TEST_F(CompilerPipelineTest, PreplacedQubitWithoutIndexedPlacementHasNoLayout) {
   auto program = QCOProgram::fromMLIRString(R"mlir(module {
     func.func @main() attributes {mqt.entry_point} {
       %q = qco.static 1 : !qco.qubit
-      %out = qco.x %q : !qco.qubit -> !qco.qubit
+      %out = qco.x %q : !qco.qubit
       qco.sink %out : !qco.qubit
       return
     }
@@ -3047,8 +3046,7 @@ TEST_F(CompilerPipelineTest, StaticQubitsKeepTheirSitesOnExplicitTopology) {
           "%b = qco.static " +
           std::to_string(secondSite) +
           " : !qco.qubit "
-          "%x, %y = qco.swap %a, %b : !qco.qubit, !qco.qubit -> "
-          "!qco.qubit, !qco.qubit "
+          "%x, %y = qco.swap %a, %b : !qco.qubit, !qco.qubit "
           "qco.sink %x : !qco.qubit "
           "qco.sink %y : !qco.qubit return } }");
       ASSERT_TRUE(mlir::succeeded(program));
@@ -3084,7 +3082,7 @@ TEST_F(CompilerPipelineTest, StaticNativeThreeQubitGateSurvives) {
       %a = qco.static 0 : !qco.qubit
       %b = qco.static 1 : !qco.qubit
       %c = qco.static 2 : !qco.qubit
-      %x, %y, %z = qco.rccx %a, %b, %c : !qco.qubit, !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit, !qco.qubit
+      %x, %y, %z = qco.rccx %a, %b, %c : !qco.qubit, !qco.qubit, !qco.qubit
       qco.sink %x : !qco.qubit
       qco.sink %y : !qco.qubit
       qco.sink %z : !qco.qubit
@@ -3110,7 +3108,7 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
           iter_args(%t = %tensor) -> tensor<2x!qco.qubit> {
         %slot = arith.remui %i, %c2 : index
         %rest, %q = qtensor.extract %t[%slot] : tensor<2x!qco.qubit>
-        %out = qco.x %q : !qco.qubit -> !qco.qubit
+        %out = qco.x %q : !qco.qubit
         %updated = qtensor.insert %out into %rest[%slot] : tensor<2x!qco.qubit>
         scf.yield %updated : tensor<2x!qco.qubit>
       }
@@ -3242,7 +3240,7 @@ TEST_F(CompilerPipelineTest, PayloadControlBoundsFullUnrolling) {
         %q0 = qco.alloc : !qco.qubit
         %q1 = scf.for %index = %c0 to %limit step %c1
             iter_args(%arg0 = %q0) -> (!qco.qubit) {
-          %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.x %arg0 : !qco.qubit
           scf.yield %q2 : !qco.qubit
         }
         qco.sink %q1 : !qco.qubit
@@ -3268,7 +3266,7 @@ TEST_F(CompilerPipelineTest, PayloadControlBoundsFullUnrolling) {
         %q0 = qco.alloc : !qco.qubit
         %q1 = scf.for %index = %lower to %upper step %c1
             iter_args(%arg0 = %q0) -> (!qco.qubit) {
-          %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.x %arg0 : !qco.qubit
           scf.yield %q2 : !qco.qubit
         }
         qco.sink %q1 : !qco.qubit
@@ -3291,7 +3289,7 @@ TEST_F(CompilerPipelineTest, PayloadControlBoundsFullUnrolling) {
         %q0 = qco.alloc : !qco.qubit
         %q1 = scf.for %index = %min to %max step %c1
             iter_args(%arg0 = %q0) -> (!qco.qubit) {
-          %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.x %arg0 : !qco.qubit
           scf.yield %q2 : !qco.qubit
         }
         qco.sink %q1 : !qco.qubit
@@ -3382,7 +3380,7 @@ TEST_F(CompilerPipelineTest, PayloadControlChecksUnrolledStepWidth) {
            << "%i = %lower to %upper step %step "
               "iter_args(%state = %q) -> (!qco.qubit) : i8 {\n"
            << "      func.call @observe(%i) : (i8) -> ()\n"
-           << "      %next = qco.x %state : !qco.qubit -> !qco.qubit\n"
+           << "      %next = qco.x %state : !qco.qubit\n"
            << "      scf.yield %next : !qco.qubit\n"
            << "    }\n    return %result : !qco.qubit\n  }\n}\n";
     SCOPED_TRACE(source);
@@ -3434,7 +3432,7 @@ TEST_F(CompilerPipelineTest, PayloadControlUnrollsBeyondTheOldBudget) {
       %limit = arith.constant 70000 : index
       %out = scf.for %i = %zero to %limit step %one
           iter_args(%state = %q) -> !qco.qubit {
-        %next = qco.x %state : !qco.qubit -> !qco.qubit
+        %next = qco.x %state : !qco.qubit
         scf.yield %next : !qco.qubit
       }
       return %out : !qco.qubit
@@ -3476,7 +3474,7 @@ TEST_F(CompilerPipelineTest, PayloadControlBoundsTotalLoopCloning) {
              << " = %c0 to %limit step %c1 iter_args(%state" << index << " = "
              << (index == 0 ? "%q" : "%out0") << ") -> (!qco.qubit) {\n"
              << "      %next" << index << " = qco.x %state" << index
-             << " : !qco.qubit -> !qco.qubit\n"
+             << " : !qco.qubit\n"
              << "      scf.yield %next" << index << " : !qco.qubit\n    }\n";
     }
     stream << "    return %out1 : !qco.qubit\n  }\n}\n";
@@ -3517,7 +3515,7 @@ TEST_F(CompilerPipelineTest, PayloadControlRejectsUnrepresentableTripCount) {
       %limit = arith.constant 18446744073709551616 : i128
       %out = scf.for %i = %zero to %limit step %one
           iter_args(%state = %q) -> !qco.qubit : i128 {
-        %next = qco.x %state : !qco.qubit -> !qco.qubit
+        %next = qco.x %state : !qco.qubit
         scf.yield %next : !qco.qubit
       }
       return %out : !qco.qubit
@@ -3847,10 +3845,10 @@ TEST_F(CompilerPipelineTest,
       func.func @main(%condition: i1, %left: !qco.qubit, %right: !qco.qubit)
           attributes {mqt.entry_point} {
         %result = scf.if %condition -> !qco.qubit {
-          %x = qco.x %left : !qco.qubit -> !qco.qubit
+          %x = qco.x %left : !qco.qubit
           scf.yield %x : !qco.qubit
         } else {
-          %h = qco.h %right : !qco.qubit -> !qco.qubit
+          %h = qco.h %right : !qco.qubit
           scf.yield %h : !qco.qubit
         }
         qco.sink %result : !qco.qubit
@@ -3881,7 +3879,7 @@ TEST_F(CompilerPipelineTest,
         %c0 = arith.constant 0 : index
         %c1 = arith.constant 1 : index
         scf.for %index = %c0 to %upper step %c1 {
-          %next = qco.x %q : !qco.qubit -> !qco.qubit
+          %next = qco.x %q : !qco.qubit
           qco.sink %next : !qco.qubit
         }
         return
@@ -3895,7 +3893,7 @@ TEST_F(CompilerPipelineTest,
         scf.while : () -> () {
           scf.condition(%condition)
         } do {
-          %next = qco.x %q : !qco.qubit -> !qco.qubit
+          %next = qco.x %q : !qco.qubit
           qco.sink %next : !qco.qubit
           scf.yield
         }
@@ -3911,7 +3909,7 @@ TEST_F(CompilerPipelineTest,
         %c1 = arith.constant 1 : index
         scf.for %outer = %c0 to %upper step %c1 {
           scf.for %inner = %c0 to %c1 step %c1 {
-            %next = qco.x %q : !qco.qubit -> !qco.qubit
+            %next = qco.x %q : !qco.qubit
             qco.sink %next : !qco.qubit
           }
         }
@@ -4098,11 +4096,11 @@ TEST_F(CompilerPipelineTest, PayloadControlPreservesSingleCaseNativeSwitches) {
         %q = qco.alloc : !qco.qubit
         %r = qco.index_switch %selector -> (!qco.qubit)
         case 0 args(%a = %q) {
-          %x = qco.x %a : !qco.qubit -> !qco.qubit
+          %x = qco.x %a : !qco.qubit
           qco.yield %x : !qco.qubit
         }
         default args(%a = %q) {
-          %h = qco.h %a : !qco.qubit -> !qco.qubit
+          %h = qco.h %a : !qco.qubit
           qco.yield %h : !qco.qubit
         }
         qco.sink %r : !qco.qubit
@@ -4148,7 +4146,7 @@ TEST_F(CompilerPipelineTest,
           scf.condition(%condition) %arg0 : !qco.qubit
         } do {
         ^bb0(%arg0: !qco.qubit):
-          %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.x %arg0 : !qco.qubit
           scf.yield %q2 : !qco.qubit
         }
         qco.sink %q1 : !qco.qubit
@@ -4513,7 +4511,7 @@ TEST_F(CompilerPipelineTest, TargetCompilationInlinesReusableFunctions) {
   constexpr llvm::StringLiteral source = R"mlir(module {
     func.func private @flip(%q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %out = qco.x %q : !qco.qubit -> !qco.qubit
+      %out = qco.x %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func @main() attributes {mqt.entry_point} {
@@ -4594,15 +4592,14 @@ TEST_F(CompilerPipelineTest,
             -> (!qco.qubit, !qco.qubit) {
           %controlOut, %targetOut = qco.ctrl(%control)
               targets(%targetArg = %target) {
-            %x = qco.x %targetArg : !qco.qubit -> !qco.qubit
+            %x = qco.x %targetArg : !qco.qubit
             qco.yield %x : !qco.qubit
           } : ({!qco.qubit}, {!qco.qubit})
-              -> ({!qco.qubit}, {!qco.qubit})
-          %h = qco.h %controlOut : !qco.qubit -> !qco.qubit
+          %h = qco.h %controlOut : !qco.qubit
           qco.yield %h, %targetOut : !qco.qubit, !qco.qubit
         } else args(%control = %q0, %target = %q1) {
-          %x0 = qco.x %control : !qco.qubit -> !qco.qubit
-          %x1 = qco.x %target : !qco.qubit -> !qco.qubit
+          %x0 = qco.x %control : !qco.qubit
+          %x1 = qco.x %target : !qco.qubit
           qco.yield %x0, %x1 : !qco.qubit, !qco.qubit
         }
         qco.sink %q2 : !qco.qubit
@@ -4790,8 +4787,8 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesDynamicRunForSupportedTargets) {
   constexpr llvm::StringLiteral source = R"mlir(module {
     func.func @main(%theta: f64 {mqt.input_name = "theta"}) attributes {mqt.entry_point} {
       %q0 = qco.alloc : !qco.qubit
-      %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
-      %q2 = qco.rz(%theta) %q1 : !qco.qubit -> !qco.qubit
+      %q1 = qco.h %q0 : !qco.qubit
+      %q2 = qco.rz(%theta) %q1 : !qco.qubit
       qco.sink %q2 : !qco.qubit
       return
     }
@@ -4896,13 +4893,12 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesDynamicRunForSupportedTargets) {
 }
 
 TEST_F(CompilerPipelineTest, QCOProgramMergesDynamicRunInNativeCtrlBody) {
-  for (
-      const auto* body : {
-          R"mlir(%h = qco.h %arg : !qco.qubit -> !qco.qubit
-                  %rz = qco.rz(%theta) %h : !qco.qubit -> !qco.qubit)mlir",
-          R"mlir(%u = qco.u(%theta, %theta, %theta) %arg : !qco.qubit -> !qco.qubit
-                  %rz = qco.u(%theta, %theta, %theta) %u : !qco.qubit -> !qco.qubit)mlir",
-      }) {
+  for (const auto* body : {
+           R"mlir(%h = qco.h %arg : !qco.qubit
+                  %rz = qco.rz(%theta) %h : !qco.qubit)mlir",
+           R"mlir(%u = qco.u(%theta, %theta, %theta) %arg : !qco.qubit
+                  %rz = qco.u(%theta, %theta, %theta) %u : !qco.qubit)mlir",
+       }) {
     SCOPED_TRACE(body);
     const auto source = std::string(R"mlir(module {
     func.func @main(%theta: f64 {mqt.input_name = "theta"}) attributes {mqt.entry_point} {
@@ -4911,7 +4907,7 @@ TEST_F(CompilerPipelineTest, QCOProgramMergesDynamicRunInNativeCtrlBody) {
       %control, %target = qco.ctrl(%q0) targets(%arg = %q1) {
   )mlir") + body + R"mlir(
         qco.yield %rz : !qco.qubit
-      } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+      } : ({!qco.qubit}, {!qco.qubit})
       qco.sink %control : !qco.qubit
       qco.sink %target : !qco.qubit
       return

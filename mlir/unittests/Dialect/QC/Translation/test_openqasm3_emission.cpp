@@ -110,11 +110,69 @@ TEST(OpenQASM3EmissionTest, EmitsStrictPortableBellProgram) {
   EXPECT_EQ(streamedSource, *source);
   EXPECT_TRUE(source->starts_with("OPENQASM 3.1;\n"));
   EXPECT_NE(source->find("include \"stdgates.inc\";"), std::string::npos);
-  EXPECT_NE(source->find("ctrl @ x"), std::string::npos);
+  EXPECT_NE(source->find("cx q[0], q[1];"), std::string::npos);
   EXPECT_NE(source->find("output bit[2] c;"), std::string::npos);
   EXPECT_TRUE(openqasm::frontend::analyzeOpenQASM(
       *source, openqasm::frontend::GatePolicy::Strict));
   EXPECT_TRUE(qc::translateOpenQASMToQC(*source, &context));
+}
+
+TEST(OpenQASM3EmissionTest, UsesStandardControlledGateNames) {
+  constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
+include "stdgates.inc";
+qubit[3] q;
+ctrl @ x q[0], q[1];
+ctrl @ y q[0], q[1];
+ctrl @ z q[0], q[1];
+ctrl @ h q[0], q[1];
+ctrl @ p(0.2) q[0], q[1];
+ctrl @ rx(0.2) q[0], q[1];
+ctrl @ ry(0.2) q[0], q[1];
+ctrl @ rz(0.2) q[0], q[1];
+ctrl @ swap q[0], q[1], q[2];
+ctrl(2) @ x q[0], q[1], q[2];
+ctrl(2) @ z q[0], q[1], q[2];
+)qasm";
+  MLIRContext context;
+  auto original = qc::translateOpenQASMToQC(source, &context);
+  ASSERT_TRUE(original);
+  auto emitted = qc::translateQCToOpenQASM3(*original);
+  ASSERT_TRUE(succeeded(emitted));
+  for (const auto* gate : {
+           "cx q[0]",
+           "cy q[0]",
+           "cz q[0]",
+           "ch q[0]",
+           "cp(",
+           "crx(",
+           "cry(",
+           "crz(",
+           "cswap q[0], q[1], q[2]",
+           "ccx q[0], q[1], q[2]",
+       }) {
+    EXPECT_NE(emitted->find(gate), std::string::npos) << gate << "\n"
+                                                      << *emitted;
+  }
+  EXPECT_NE(emitted->find("ctrl(2) @ z"), std::string::npos);
+  EXPECT_TRUE(qc::translateOpenQASMToQC(*emitted, &context));
+}
+
+TEST(OpenQASM3EmissionTest, ReusesInternalClassicalRegisterNames) {
+  constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
+qubit q;
+bit scratch = measure q;
+output bit result;
+result = scratch;
+)qasm";
+  MLIRContext context;
+  auto original = qc::translateOpenQASMToQC(source, &context);
+  ASSERT_TRUE(original);
+  auto emitted = qc::translateQCToOpenQASM3(*original);
+  ASSERT_TRUE(succeeded(emitted));
+  EXPECT_NE(emitted->find("bit[1] scratch;"), std::string::npos) << *emitted;
+  EXPECT_NE(emitted->find("output bit[1] result;"), std::string::npos)
+      << *emitted;
+  EXPECT_TRUE(qc::translateOpenQASMToQC(*emitted, &context));
 }
 
 TEST(OpenQASM3EmissionTest, NormalizesSliceImportExtensions) {
@@ -1979,7 +2037,7 @@ TEST(OpenQASM3EmissionTest, DefinesECRWithOneEntanglingGate) {
   ASSERT_TRUE(succeeded(emitted));
   EXPECT_NE(emitted->find("gate ecr"), std::string::npos);
   EXPECT_NE(emitted->find("gphase(-pi / 4);"), std::string::npos);
-  EXPECT_EQ(llvm::StringRef(*emitted).count("ctrl @ x"), 1U);
+  EXPECT_NE(emitted->find("cx q0, q1;"), std::string::npos);
 }
 
 TEST(OpenQASM3EmissionTest, RoundTripsRuntimeIndicesAndIntegerPowers) {

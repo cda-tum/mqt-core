@@ -54,18 +54,21 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <array>
+#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
 #include <memory>
 #include <ostream>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -254,6 +257,62 @@ TEST_F(QCOTest, BuilderReturnsTrackedQubit) {
 
   EXPECT_DEATH(builder.x(qubit), "Invalid qubit value used");
   EXPECT_NO_FATAL_FAILURE(builder.x(output));
+}
+
+TEST_F(QCOTest, PrintsReadableQubitAndClassicalNames) {
+  QCOProgramBuilder builder(context.get());
+  builder.initialize();
+  std::ignore = builder.allocClassicalBitRegister(1);
+  auto [measured, bit] = builder.measure(builder.h(builder.allocQubit()));
+  std::ignore = measured;
+  std::ignore = bit;
+  auto moduleOp = builder.finalize();
+  ASSERT_TRUE(moduleOp);
+
+  std::string text;
+  llvm::raw_string_ostream stream(text);
+  moduleOp->print(stream);
+  stream.flush();
+  EXPECT_NE(text.find("%q = qco.alloc"), std::string::npos) << text;
+  EXPECT_NE(text.find("%c = cbit.alloc"), std::string::npos) << text;
+  EXPECT_NE(text.find(", %b = qco.measure"), std::string::npos) << text;
+  EXPECT_NE(text.find(" = qco.measure"), std::string::npos) << text;
+  EXPECT_TRUE(parseSourceString<ModuleOp>(text, context.get()));
+}
+
+TEST_F(QCOTest, PrintsCompactGateAndControlTypes) {
+  QCOProgramBuilder builder(context.get());
+  builder.initialize();
+  auto control = builder.allocQubit();
+  auto target = builder.rx(0.25, builder.allocQubit());
+  auto [controlled, transformed] = builder.ctrl(
+      control, target, [&](Value qubit) { return builder.x(qubit); });
+  auto [left, right] = builder.swap(controlled, transformed);
+  auto matrixType =
+      RankedTensorType::get({2, 2}, ComplexType::get(builder.getF64Type()));
+  const std::array<std::complex<double>, 4> identity{1.0, 0.0, 0.0, 1.0};
+  auto matrix = DenseElementsAttr::get(matrixType, ArrayRef(identity));
+  auto transformedLeft = builder.unitary({left}, matrix);
+  auto barrier = builder.barrier({transformedLeft.front(), right});
+  std::ignore = builder.reset(barrier.front());
+  std::ignore = barrier.back();
+  auto moduleOp = builder.finalize();
+  ASSERT_TRUE(moduleOp);
+
+  std::string text;
+  llvm::raw_string_ostream stream(text);
+  moduleOp->print(stream);
+  stream.flush();
+  EXPECT_NE(text.find(" = qco.rx("), std::string::npos) << text;
+  EXPECT_NE(text.find(" = qco.swap "), std::string::npos) << text;
+  EXPECT_NE(text.find(" = qco.ctrl("), std::string::npos) << text;
+  EXPECT_NE(text.find(" = qco.unitary "), std::string::npos) << text;
+  EXPECT_NE(text.find(" = qco.barrier "), std::string::npos) << text;
+  EXPECT_EQ(text.find(" -> !qco.qubit"), std::string::npos) << text;
+  EXPECT_EQ(text.find(") -> ({!qco.qubit}"), std::string::npos) << text;
+  auto reparsed = parseSourceString<ModuleOp>(text, context.get());
+  ASSERT_TRUE(reparsed);
+  EXPECT_TRUE(succeeded(verify(*reparsed)));
 }
 
 TEST_F(QCOTest, BuilderDisposesScalarsInDefinitionOrder) {
@@ -876,7 +935,7 @@ TEST_F(QCOTest, UnitaryVerifierRejectsInvalidFunctionAndCallContracts) {
       R"mlir(module {
         func.func private @bad(%q: !qco.qubit) -> !qco.qubit
             attributes {mqt.unitary} {
-          %out = qco.reset %q : !qco.qubit -> !qco.qubit
+          %out = qco.reset %q : !qco.qubit
           return %out : !qco.qubit
         }
       })mlir",
@@ -913,7 +972,7 @@ TEST_F(QCOTest, UnitaryVerifierRejectsInvalidFunctionAndCallContracts) {
       R"mlir(module {
         func.func private @flip(%q: !qco.qubit) -> !qco.qubit
             attributes {mqt.unitary} {
-          %out = qco.x %q : !qco.qubit -> !qco.qubit
+          %out = qco.x %q : !qco.qubit
           return %out : !qco.qubit
         }
         func.func @main(%left: !qco.qubit, %right: !qco.qubit)
@@ -955,17 +1014,17 @@ TEST_F(QCOTest, CleanupPrunesUnitaryFunctionsAndSignatures) {
   auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
     func.func private @used(%unusedTheta: f64, %q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %out = qco.x %q : !qco.qubit -> !qco.qubit
+      %out = qco.x %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func private @unused(%q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %out = qco.h %q : !qco.qubit -> !qco.qubit
+      %out = qco.h %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func private @conditional(%q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %out = qco.z %q : !qco.qubit -> !qco.qubit
+      %out = qco.z %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func @main() attributes {mqt.entry_point} {
@@ -1066,7 +1125,7 @@ TEST_F(QCOTest, UnitaryVerifierRejectsNonFiniteConstantParameters) {
           func.func @main(%input: f64) {
             %q = qco.alloc : !qco.qubit
             %infinity = arith.constant 0x7FF0000000000000 : f64
-            %out = qco.rx(%infinity) %q : !qco.qubit -> !qco.qubit
+            %out = qco.rx(%infinity) %q : !qco.qubit
             qco.sink %out : !qco.qubit
             return
           }
@@ -1078,7 +1137,7 @@ TEST_F(QCOTest, UnitaryVerifierRejectsNonFiniteConstantParameters) {
             %q = qco.alloc : !qco.qubit
             %nan = arith.constant 0x7FF8000000000000 : f64
             %out = qco.pow(%nan) (%arg = %q) {
-              %body = qco.x %arg : !qco.qubit -> !qco.qubit
+              %body = qco.x %arg : !qco.qubit
               qco.yield %body : !qco.qubit
             } : {!qco.qubit} -> {!qco.qubit}
             qco.sink %out : !qco.qubit
@@ -1422,7 +1481,7 @@ TEST_F(QCOTest, UnitaryCallEffectsRemainConservativeAcrossCalleeChanges) {
     module {
       func.func private @leaf(%q: !qco.qubit) -> !qco.qubit
           attributes {mqt.unitary} {
-        %out = qco.x %q : !qco.qubit -> !qco.qubit
+        %out = qco.x %q : !qco.qubit
         return %out : !qco.qubit
       }
       func.func private @left(%q: !qco.qubit) -> !qco.qubit
@@ -1659,12 +1718,12 @@ TEST_F(QCOTest, IfOpParser) {
             %c1 = arith.constant 1 : index
             %q0_0 = qco.alloc : !qco.qubit
             %t0 = qtensor.alloc(%c1) : tensor<1x!qco.qubit>
-            %q0_1 = qco.h %q0_0 : !qco.qubit -> !qco.qubit
+            %q0_1 = qco.h %q0_0 : !qco.qubit
             %q0_2, %cond = qco.measure %q0_1 : !qco.qubit
             %q0_4, %t3 = qco.if %cond args(%arg0 = %q0_2, %arg1 = %t0) -> (!qco.qubit, tensor<1x!qco.qubit>) {
-                %q0_3 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+                %q0_3 = qco.x %arg0 : !qco.qubit
                 %t1, %q1_0 = qtensor.extract %arg1[%c0] : tensor<1x!qco.qubit>
-                %q1_1 = qco.x %q1_0 : !qco.qubit -> !qco.qubit
+                %q1_1 = qco.x %q1_0 : !qco.qubit
                 %t2 = qtensor.insert %q1_1 into %t1[%c0] : tensor<1x!qco.qubit>
                 qco.yield %q0_3, %t2 : !qco.qubit, tensor<1x!qco.qubit>
             } else args(%arg0 = %q0_2, %arg1 = %t0) {
@@ -1702,7 +1761,7 @@ TEST_F(QCOTest, IfOpWithClassicalResultRoundTripsAndPreservesTies) {
         %false = arith.constant false
         %flag, %q1 = qco.if %condition args(%arg0 = %q0)
             -> (i1, !qco.qubit) {
-          %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.h %arg0 : !qco.qubit
           qco.yield %true, %q2 : i1, !qco.qubit
         } else args(%arg0 = %q0) {
           qco.yield %false, %arg0 : i1, !qco.qubit
@@ -1829,7 +1888,7 @@ TEST_F(QCOTest, CanonicalizesConstantIfWithClassicalResult) {
         %false = arith.constant false
         %flag, %q1 = qco.if %condition args(%arg0 = %q0)
             -> (i1, !qco.qubit) {
-          %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.h %arg0 : !qco.qubit
           qco.yield %true, %q2 : i1, !qco.qubit
         } else args(%arg0 = %q0) {
           qco.yield %false, %arg0 : i1, !qco.qubit
@@ -1867,13 +1926,13 @@ TEST_F(QCOTest, CanonicalizesRedundantClassicalIfResults) {
                 -> (i64, i64, i64, i64, !qco.qubit) {
           %value = arith.constant 1 : i64
           %dead = arith.constant 3 : i64
-          %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.h %arg0 : !qco.qubit
           qco.yield %shared, %value, %value, %dead, %q2
               : i64, i64, i64, i64, !qco.qubit
         } else args(%arg0 = %q0) {
           %value = arith.constant 2 : i64
           %dead = arith.constant 4 : i64
-          %q2 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.x %arg0 : !qco.qubit
           qco.yield %shared, %value, %value, %dead, %q2
               : i64, i64, i64, i64, !qco.qubit
         }
@@ -1929,16 +1988,16 @@ TEST_F(QCOTest, IndexSwitchParser) {
             %out_tensor_9, %result_10 = qtensor.extract %arg1[%arg0] : tensor<3x!qco.qubit>
             %6 = qco.index_switch %5 -> !qco.qubit
             case 0 args(%arg2 = %result_10) {
-                %8 = qco.x %arg2 : !qco.qubit -> !qco.qubit
+                %8 = qco.x %arg2 : !qco.qubit
                 qco.yield %8 : !qco.qubit
             }
             case 1 args(%arg2 = %result_10) {
-                %8 = qco.y %arg2 : !qco.qubit -> !qco.qubit
+                %8 = qco.y %arg2 : !qco.qubit
                 qco.yield %8 : !qco.qubit
             }
             case 2 args(%arg2 = %result_10) {
-                %8 = qco.x %arg2 : !qco.qubit -> !qco.qubit
-                %9 = qco.y %8 : !qco.qubit -> !qco.qubit
+                %8 = qco.x %arg2 : !qco.qubit
+                %9 = qco.y %8 : !qco.qubit
                 qco.yield %9 : !qco.qubit
             }
             default args(%arg2 = %result_10) {
@@ -2018,7 +2077,7 @@ TEST_F(QCOTest, IndexSwitchWithClassicalResultRoundTripsAndPreservesTies) {
         %q0 = qco.alloc : !qco.qubit
         %state, %q1 = qco.index_switch %index -> (i64, !qco.qubit)
         case 0 args(%arg0 = %q0) {
-          %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+          %q2 = qco.h %arg0 : !qco.qubit
           %case = arith.constant 1 : i64
           qco.yield %case, %q2 : i64, !qco.qubit
         }
@@ -2377,16 +2436,16 @@ TEST_F(QCOTest, CanonicalizesConstantIndexSwitchToSelectedCaseOrDefault) {
         %q0 = qco.alloc : !qco.qubit
         %number, %q1 = qco.index_switch %c1 -> (i64, !qco.qubit)
         case 1 args(%arg0 = %q0) {
-          %caseQubit = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %caseQubit = qco.x %arg0 : !qco.qubit
           %caseNumber = arith.constant 11 : i64
           qco.yield %caseNumber, %caseQubit : i64, !qco.qubit
         }
         default args(%arg0 = %q0) {
-          %defaultQubit = qco.z %arg0 : !qco.qubit -> !qco.qubit
+          %defaultQubit = qco.z %arg0 : !qco.qubit
           %defaultNumber = arith.constant 12 : i64
           qco.yield %defaultNumber, %defaultQubit : i64, !qco.qubit
         }
-        %q2 = qco.h %q1 : !qco.qubit -> !qco.qubit
+        %q2 = qco.h %q1 : !qco.qubit
         qco.sink %q2 : !qco.qubit
         return %number : i64
       }
@@ -2396,16 +2455,16 @@ TEST_F(QCOTest, CanonicalizesConstantIndexSwitchToSelectedCaseOrDefault) {
         %q0 = qco.alloc : !qco.qubit
         %number, %q1 = qco.index_switch %c7 -> (i64, !qco.qubit)
         case 1 args(%arg0 = %q0) {
-          %caseQubit = qco.x %arg0 : !qco.qubit -> !qco.qubit
+          %caseQubit = qco.x %arg0 : !qco.qubit
           %caseNumber = arith.constant 21 : i64
           qco.yield %caseNumber, %caseQubit : i64, !qco.qubit
         }
         default args(%arg0 = %q0) {
-          %defaultQubit = qco.z %arg0 : !qco.qubit -> !qco.qubit
+          %defaultQubit = qco.z %arg0 : !qco.qubit
           %defaultNumber = arith.constant 22 : i64
           qco.yield %defaultNumber, %defaultQubit : i64, !qco.qubit
         }
-        %q2 = qco.h %q1 : !qco.qubit -> !qco.qubit
+        %q2 = qco.h %q1 : !qco.qubit
         qco.sink %q2 : !qco.qubit
         return %number : i64
       }
@@ -2576,18 +2635,18 @@ TEST_F(QCOTest, UnboundedGateParametersRetainDominance) {
     module {
       func.func @rx(%a: f64, %b: f64) {
         %q0 = qco.alloc : !qco.qubit
-        %q1 = qco.rx(%a) %q0 : !qco.qubit -> !qco.qubit
+        %q1 = qco.rx(%a) %q0 : !qco.qubit
         %later = arith.mulf %b, %b : f64
-        %q2 = qco.rx(%later) %q1 : !qco.qubit -> !qco.qubit
+        %q2 = qco.rx(%later) %q1 : !qco.qubit
         qco.sink %q2 : !qco.qubit
         return
       }
       func.func @r(%a: f64, %b: f64) {
         %phi = arith.constant 0.25 : f64
         %q0 = qco.alloc : !qco.qubit
-        %q1 = qco.r(%a, %phi) %q0 : !qco.qubit -> !qco.qubit
+        %q1 = qco.r(%a, %phi) %q0 : !qco.qubit
         %later = arith.mulf %b, %b : f64
-        %q2 = qco.r(%later, %phi) %q1 : !qco.qubit -> !qco.qubit
+        %q2 = qco.r(%later, %phi) %q1 : !qco.qubit
         qco.sink %q2 : !qco.qubit
         return
       }
@@ -2595,10 +2654,8 @@ TEST_F(QCOTest, UnboundedGateParametersRetainDominance) {
         %q0 = qco.alloc : !qco.qubit
         %q1 = qco.alloc : !qco.qubit
         %q2, %q3 = qco.rxx(%a) %q0, %q1 : !qco.qubit, !qco.qubit
-          -> !qco.qubit, !qco.qubit
         %later = arith.mulf %b, %b : f64
         %q4, %q5 = qco.rxx(%later) %q2, %q3 : !qco.qubit, !qco.qubit
-          -> !qco.qubit, !qco.qubit
         qco.sink %q4 : !qco.qubit
         qco.sink %q5 : !qco.qubit
         return
@@ -3994,13 +4051,13 @@ TEST_F(QCOTest, BarrierRejectsMismatchedQubitArity) {
   });
   auto program = parseSourceString<ModuleOp>(R"mlir(
     func.func @test(%q: !qco.qubit) -> (!qco.qubit, !qco.qubit) {
-      %out:2 = qco.barrier %q : !qco.qubit -> !qco.qubit, !qco.qubit
+      %out:2 = "qco.barrier"(%q) : (!qco.qubit) -> (!qco.qubit, !qco.qubit)
       return %out#0, %out#1 : !qco.qubit, !qco.qubit
     }
   )mlir",
                                              context.get());
   EXPECT_FALSE(program);
-  EXPECT_NE(diagnostics.find("one output qubit for each input qubit"),
+  EXPECT_NE(diagnostics.find("input and output qubit types match"),
             std::string::npos);
 }
 
