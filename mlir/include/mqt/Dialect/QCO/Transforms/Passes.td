@@ -11,6 +11,29 @@
 
 include "mlir/Pass/PassBase.td"
 
+def CoalesceControlledGates
+    : Pass<"coalesce-controlled-gates", "mlir::ModuleOp"> {
+  let dependentDialects = ["mlir::qco::QCODialect"];
+  let summary =
+      "Combine adjacent gates with the same ordered controls and targets";
+  let description = [{
+    Combines successive `qco.ctrl` operations into one ordered body when every
+    control and target result is the corresponding input of the next operation.
+    The control/target partition must match. Only regionless, memory-effect-free
+    classical computations may intervene; quantum operations, barriers, and
+    region boundaries stop coalescing. Captured parameters retain dominance.
+
+    The pass concatenates bodies without commuting or synthesizing gates.
+    Follow it with canonicalization or rotation fusion to simplify the body.
+    Target pipelines simplify first, retaining native controlled U fusion, then
+    unroll surviving composites before routing and native synthesis.
+    Coalescing is deliberately not a canonicalization
+    rule, so later cleanup cannot recreate composite target operations.
+    The target-aware factory preserves already-native control groups and their
+    bodies, including fixed-parameter operations.
+  }];
+}
+
 def MergeSingleQubitRotationGates
     : Pass<"merge-single-qubit-rotation-gates", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::qco::QCODialect",

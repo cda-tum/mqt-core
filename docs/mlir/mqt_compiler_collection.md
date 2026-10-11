@@ -170,6 +170,14 @@ Select an output format to stop the pipeline at a particular representation:
 | Convert to the jeff dialect              | `OutputFormat.JEFF`                                    | `JeffProgram`     |
 | Generate QIR                             | `OutputFormat.QIR_BASE` or `OutputFormat.QIR_ADAPTIVE` | `QIRProgram`      |
 
+After rotation merging, the default pipeline groups adjacent controlled gates
+with the same ordered controls and targets. Canonicalization cancels named
+inverses and combines constant rotations inside each group, retaining controlled
+phase. Runtime bodies remain grouped for later binding or explicit fusion.
+Quantum operations, barriers, and region boundaries stop grouping; scalar
+parameter computations may intervene. The standalone pass is
+`coalesce-controlled-gates`.
+
 For example, select optimized QCO to inspect the representation after the
 default QCO pass pipeline:
 

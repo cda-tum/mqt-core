@@ -16,7 +16,6 @@
 
 #include "gtest/gtest.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -39,7 +38,6 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <array>
@@ -57,7 +55,7 @@ protected:
   MLIRContext context_;
 
   void SetUp() override {
-    context_.loadDialect<QCODialect, arith::ArithDialect, func::FuncDialect>();
+    context_.loadDialect<QCODialect, func::FuncDialect>();
   }
 
   OwningOpRef<ModuleOp> singleQubitFunction() {
@@ -120,44 +118,6 @@ protected:
     EXPECT_TRUE(function.getBody().getOps<GateOp>().empty());
     EXPECT_EQ(returned.getOperand(0), function.getArgument(0));
   }
-
-  template <typename GateOp, typename InverseOp = GateOp>
-  void checkControlledPairCancellation() {
-    auto moduleOp = twoQubitFunction();
-    ASSERT_TRUE(moduleOp);
-    auto function = moduleOp->lookupSymbol<func::FuncOp>("main");
-    auto returned = cast<func::ReturnOp>(function.getBody().front().back());
-    OpBuilder builder(returned);
-    auto first = CtrlOp::create(
-        builder, function.getLoc(), function.getArgument(0),
-        function.getArgument(1), [&](Value target) -> Value {
-          return GateOp::create(builder, function.getLoc(), target).getResult();
-        });
-    auto second = CtrlOp::create(
-        builder, function.getLoc(), first.getControlsOut().front(),
-        first.getTargetsOut().front(), [&](Value target) -> Value {
-          return InverseOp::create(builder, function.getLoc(), target)
-              .getResult();
-        });
-    returned->setOperands(second.getResults());
-    ASSERT_TRUE(succeeded(verify(*moduleOp)));
-    ASSERT_TRUE(succeeded(verifyLinearity(*moduleOp)));
-    OwningOpRef<ModuleOp> original(moduleOp->clone());
-
-    RewritePatternSet patterns(&context_);
-    CtrlOp::getCanonicalizationPatterns(patterns, &context_);
-    FrozenRewritePatternSet frozen(std::move(patterns));
-    PatternApplicator applicator(frozen);
-    applicator.applyDefaultCostModel();
-    PatternRewriter rewriter(&context_);
-    rewriter.setInsertionPoint(first);
-    ASSERT_TRUE(succeeded(applicator.matchAndRewrite(first, rewriter)));
-    ASSERT_TRUE(succeeded(verify(*moduleOp)));
-    ASSERT_TRUE(succeeded(verifyLinearity(*moduleOp)));
-    EXPECT_TRUE(function.getBody().getOps<CtrlOp>().empty());
-    EXPECT_TRUE(llvm::equal(returned.getOperands(), function.getArguments()));
-    ::mqt::test::expectFullUnitaryEqual(*original, *moduleOp, 2);
-  }
 };
 
 TEST_F(QCOCanonicalizationTest, HadamardPairCancellationPreservesLinearity) {
@@ -171,122 +131,6 @@ TEST_F(QCOCanonicalizationTest, PauliYPairCancellationPreservesLinearity) {
 }
 TEST_F(QCOCanonicalizationTest, PauliZPairCancellationPreservesLinearity) {
   checkPairCancellation<ZOp>();
-}
-
-TEST_F(QCOCanonicalizationTest, ControlledInversePairsPreserveLinearity) {
-  checkControlledPairCancellation<HOp>();
-  checkControlledPairCancellation<XOp>();
-  checkControlledPairCancellation<YOp>();
-  checkControlledPairCancellation<ZOp>();
-  checkControlledPairCancellation<SOp, SdgOp>();
-  checkControlledPairCancellation<SdgOp, SOp>();
-  checkControlledPairCancellation<TOp, TdgOp>();
-  checkControlledPairCancellation<TdgOp, TOp>();
-  checkControlledPairCancellation<SXOp, SXdgOp>();
-  checkControlledPairCancellation<SXdgOp, SXOp>();
-}
-
-TEST_F(QCOCanonicalizationTest, ControlledPairsRespectWiresAndBoundaries) {
-  for (const auto* boundary : {
-           "target gate",
-           "control gate",
-           "barrier",
-           "reversed wires",
-           "different control",
-           "different gate",
-           "relative phase",
-       }) {
-    SCOPED_TRACE(boundary);
-    auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
-      module {
-        func.func @main(%q0: !qco.qubit, %q1: !qco.qubit, %q2: !qco.qubit)
-            -> (!qco.qubit, !qco.qubit, !qco.qubit) {
-          return %q0, %q1, %q2 : !qco.qubit, !qco.qubit, !qco.qubit
-        }
-      }
-    )mlir",
-                                                &context_);
-    ASSERT_TRUE(moduleOp);
-    auto function = moduleOp->lookupSymbol<func::FuncOp>("main");
-    auto returned = cast<func::ReturnOp>(function.getBody().front().back());
-    OpBuilder builder(returned);
-    const auto loc = function.getLoc();
-    auto first =
-        CtrlOp::create(builder, loc, function.getArgument(0),
-                       function.getArgument(1), [&](Value target) -> Value {
-                         return XOp::create(builder, loc, target).getResult();
-                       });
-    SmallVector<Value> qubits(first.getResults());
-    qubits.push_back(function.getArgument(2));
-    const StringRef kind(boundary);
-    if (kind == "target gate") {
-      qubits[1] = HOp::create(builder, loc, qubits[1]).getResult();
-    } else if (kind == "control gate") {
-      qubits[0] = HOp::create(builder, loc, qubits[0]).getResult();
-    } else if (kind == "barrier") {
-      auto barrier = BarrierOp::create(builder, loc, ValueRange{qubits[0]});
-      qubits[0] = barrier.getResult(0);
-    }
-    const size_t control = kind == "reversed wires"      ? 1
-                           : kind == "different control" ? 2
-                                                         : 0;
-    const size_t target = kind == "reversed wires" ? 0 : 1;
-    auto second =
-        CtrlOp::create(builder, loc, qubits[control], qubits[target],
-                       [&](Value input) -> Value {
-                         if (kind == "relative phase") {
-                           auto theta = arith::ConstantOp::create(
-                               builder, loc, builder.getF64FloatAttr(0.125));
-                           GPhaseOp::create(builder, loc, theta.getResult());
-                         }
-                         if (kind == "different gate") {
-                           return YOp::create(builder, loc, input).getResult();
-                         }
-                         return XOp::create(builder, loc, input).getResult();
-                       });
-    qubits[control] = second.getControlsOut().front();
-    qubits[target] = second.getTargetsOut().front();
-    returned->setOperands(qubits);
-    OwningOpRef<ModuleOp> original(moduleOp->clone());
-
-    ASSERT_NO_FATAL_FAILURE(canonicalize(*moduleOp));
-    EXPECT_EQ(llvm::range_size(function.getBody().getOps<CtrlOp>()), 2);
-    ::mqt::test::expectFullUnitaryEqual(*original, *moduleOp, 3);
-  }
-}
-
-TEST_F(QCOCanonicalizationTest, NestedControlledPairsCancelExactly) {
-  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
-    module {
-      func.func @main(%q0: !qco.qubit, %q1: !qco.qubit, %q2: !qco.qubit)
-          -> (!qco.qubit, !qco.qubit, !qco.qubit) {
-        %a0, %a1, %a2 = qco.ctrl(%q0) targets(%a = %q1, %b = %q2) {
-          %c, %d = qco.ctrl(%a) targets(%t = %b) {
-            %x = qco.x %t : !qco.qubit
-            qco.yield %x : !qco.qubit
-          } : ({!qco.qubit}, {!qco.qubit})
-          qco.yield %c, %d : !qco.qubit, !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
-        %b0, %b1, %b2 = qco.ctrl(%a0) targets(%a = %a1, %b = %a2) {
-          %c, %d = qco.ctrl(%a) targets(%t = %b) {
-            %x = qco.x %t : !qco.qubit
-            qco.yield %x : !qco.qubit
-          } : ({!qco.qubit}, {!qco.qubit})
-          qco.yield %c, %d : !qco.qubit, !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
-        return %b0, %b1, %b2 : !qco.qubit, !qco.qubit, !qco.qubit
-      }
-    }
-  )mlir",
-                                              &context_);
-  ASSERT_TRUE(moduleOp);
-  OwningOpRef<ModuleOp> original(moduleOp->clone());
-  ASSERT_NO_FATAL_FAILURE(canonicalize(*moduleOp));
-  auto function = moduleOp->lookupSymbol<func::FuncOp>("main");
-  EXPECT_TRUE(function.getBody().getOps<CtrlOp>().empty());
-  auto returned = cast<func::ReturnOp>(function.getBody().front().back());
-  EXPECT_TRUE(llvm::equal(returned.getOperands(), function.getArguments()));
-  ::mqt::test::expectFullUnitaryEqual(*original, *moduleOp, 3);
 }
 
 TEST_F(QCOCanonicalizationTest, PairCancellationPreservesDifferentGates) {

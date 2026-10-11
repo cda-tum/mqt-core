@@ -8,6 +8,7 @@
  * Licensed under the MIT License
  */
 
+#include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/Transforms/GlobalPhaseNormalization.h"
 #include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
 #include "mqt/Dialect/MQT/Utils/Parameters.h"
@@ -23,6 +24,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -726,13 +728,26 @@ struct MergeSingleQubitRotationGatesPattern final
   /// U and applies its intrinsic global-phase correction:
   ///   correction = totalInputPhase - (phi + lambda) / 2
   /// Pass-level global-phase normalization combines and normalizes the result.
-  static LogicalResult
-  mergeDynamicChain(MutableArrayRef<UnitaryOpInterface> chain,
-                    RewriterBase& rewriter,
-                    const CompilerTarget::SynthesisBasis& synthesisBasis) {
+  LogicalResult mergeDynamicChain(
+      MutableArrayRef<UnitaryOpInterface> chain, RewriterBase& rewriter,
+      const CompilerTarget::SynthesisBasis& synthesisBasis) const {
     const auto basis = synthesisBasis.singleQubit;
     if (succeeded(tryMergeDirectChain(chain, rewriter, synthesisBasis))) {
       return success();
+    }
+    // OpenQASM supports direct Euler identities, but not the scalar expressions
+    // used for quaternion extraction. Distribute these controlled bodies later.
+    if (target != nullptr && chain.front()->getParentOfType<CtrlOp>()) {
+      if (auto moduleOp = chain.front()->getParentOfType<ModuleOp>()) {
+        const auto environment = moduleOp->getAttrOfType<mqt::TargetEnvAttr>(
+            mqt::TargetEnvAttr::name);
+        if (environment && environment.getPayloadSpecification()
+                                   .getFormat()
+                                   .getId()
+                                   .getValue() == "openqasm") {
+          return failure();
+        }
+      }
     }
     const Location loc = chain.front()->getLoc();
     const auto consts = makeConsts(rewriter, loc);
@@ -783,10 +798,35 @@ struct MergeSingleQubitRotationGatesPattern final
   LogicalResult matchAndRewrite(UnitaryOpInterface op,
                                 PatternRewriter& rewriter) const override {
     auto control = op->getParentOfType<CtrlOp>();
-    if (((target != nullptr) && target->synthesisBasis()->singleQubit !=
-                                    decomposition::SingleQubitBasis::U) &&
-        control) {
-      return failure();
+    if (target != nullptr && control) {
+      // Runtime quaternion composition emits U. Keep separately lowerable
+      // controlled rotations unless that controlled U is itself native.
+      using Arity = CompilerTarget::OperationCapability::Arity;
+      size_t width = 1;
+      for (auto enclosing = control; enclosing;
+           enclosing = enclosing->getParentOfType<CtrlOp>()) {
+        if (enclosing.getNumTargets() != 1) {
+          return failure();
+        }
+        width += enclosing.getNumControls();
+      }
+      const bool nativeU =
+          target->nativeOperationsKind() ==
+              CompilerTarget::NativeOperations::Kind::Unrestricted ||
+          llvm::any_of(target->operations(), [&](const auto& capability) {
+            return capability.canonicalName() == "u" &&
+                   capability.arity().kind() == Arity::Kind::Variadic &&
+                   capability.arity().accepts(width) &&
+                   capability.numParameters() == 3 &&
+                   llvm::all_of(llvm::seq<size_t>(0, 3), [&](size_t index) {
+                     return capability.acceptsParameter(index, std::nullopt);
+                   });
+          });
+      if (target->synthesisBasis()->singleQubit !=
+              decomposition::SingleQubitBasis::U ||
+          !nativeU) {
+        return failure();
+      }
     }
     if (!isChainStart(op)) {
       return failure();

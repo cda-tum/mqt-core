@@ -39,33 +39,6 @@
 using namespace mlir;
 using namespace mlir::qco;
 
-/// Cancel exact named inverse gates with the same ordered controls and target.
-template <typename GateOp, typename InverseOp = GateOp>
-static LogicalResult removeControlledInversePair(CtrlOp op,
-                                                 PatternRewriter& rewriter) {
-  if (op.getNumTargets() != 1) {
-    return failure();
-  }
-  auto inner = mqt::getSoleBodyUnitary<UnitaryOpInterface>(*op.getBody());
-  if (!inner || !isa<GateOp>(inner.getOperation())) {
-    return failure();
-  }
-
-  auto next = dyn_cast<CtrlOp>(*op.getResult(0).user_begin());
-  if (!next || next.getNumTargets() != 1 ||
-      !llvm::equal(next.getOperands(), op.getResults())) {
-    return failure();
-  }
-  auto nextInner = mqt::getSoleBodyUnitary<UnitaryOpInterface>(*next.getBody());
-  if (!nextInner || !isa<InverseOp>(nextInner.getOperation())) {
-    return failure();
-  }
-
-  rewriter.replaceOp(next, op.getOperands());
-  rewriter.eraseOp(op);
-  return success();
-}
-
 namespace {
 
 /// Merge nested control modifiers into a single one.
@@ -310,16 +283,6 @@ void CtrlOp::getCanonicalizationPatterns(RewritePatternSet& results,
                                          MLIRContext* context) {
   results.add<MergeNestedCtrl, ReduceCtrl, EraseEmptyCtrl, DropUnusedTargets>(
       context);
-  results.add(&removeControlledInversePair<HOp>);
-  results.add(&removeControlledInversePair<XOp>);
-  results.add(&removeControlledInversePair<YOp>);
-  results.add(&removeControlledInversePair<ZOp>);
-  results.add(&removeControlledInversePair<SOp, SdgOp>);
-  results.add(&removeControlledInversePair<SdgOp, SOp>);
-  results.add(&removeControlledInversePair<TOp, TdgOp>);
-  results.add(&removeControlledInversePair<TdgOp, TOp>);
-  results.add(&removeControlledInversePair<SXOp, SXdgOp>);
-  results.add(&removeControlledInversePair<SXdgOp, SXOp>);
 }
 
 bool CtrlOp::hasCompileTimeKnownUnitaryMatrix() {
