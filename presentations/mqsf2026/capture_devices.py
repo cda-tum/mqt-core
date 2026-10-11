@@ -25,6 +25,7 @@ import sys
 from datetime import UTC, datetime
 from math import pi, remainder
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any
 
 from capture_programs import ROOT, capture_circuit, capture_variant, stage
@@ -425,7 +426,7 @@ def compile_device(target: dict[str, Any], source: str, compiler: Path, library:
                 exported["id"] = "openqasm3-core"
                 exported["label"] = "OpenQASM 3 · compiler R pulse representation"
         result["exports"].append(stage("openqasm3", "OpenQASM 3 · native GPI/GPI2/RZZ", "qasm", ionq_openqasm3(native)))
-    artifact = stage("source", "Actual LiH shadow circuit · OpenQASM 2.0", "qasm", source)
+    artifact = stage("source", "Actual PennyLane shadow payload · OpenQASM 3", "qasm", source)
     artifact["circuit"] = capture_circuit(qc.to_qiskit())
     result["stages"].insert(0, artifact)
     result["metrics"] = {s["id"]: circuit_metrics(s["circuit"]) for s in result["stages"] if "circuit" in s}
@@ -530,15 +531,18 @@ def main() -> None:
         process = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true] - executes this capture script
             [sys.executable, str(Path(__file__).resolve()), "--worker"],
             input=json.dumps(request),
-            capture_output=True,
+            stdout=subprocess.PIPE,
             text=True,
             check=True,
             timeout=900,
         )
         targets[index] = captured = json.loads(process.stdout)
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(data, indent=2) + "\n")
         print(captured["id"], captured["compilation"]["metrics"], flush=True)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=args.output.parent, prefix=".mqsf-capture-") as directory:
+        temporary = Path(directory) / args.output.name
+        temporary.write_text(json.dumps(data, indent=2) + "\n")
+        temporary.replace(args.output)
 
 
 if __name__ == "__main__":

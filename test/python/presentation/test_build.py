@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import base64
 import gzip
 import hashlib
 import importlib.util
@@ -67,6 +66,7 @@ def sample_target_capture() -> dict:
     source_hash = hashlib.sha256(code.encode()).hexdigest()
     data["application"] = {
         "representative_source": {"code": code, "sha256": source_hash},
+        "snapshots": [{"payload": code, "payload_sha256": source_hash}],
         "provenance": {"core_revision": data["provenance"]["core_revision"]},
     }
     data["provenance"].update({"compiler_sha256": "c" * 64, "execution_script_sha256": "d" * 64})
@@ -109,6 +109,7 @@ def sample_target_capture() -> dict:
     "failure",
     [
         "application-source",
+        "submitted-source",
         "target-source",
         "target-digest",
         "stage-source",
@@ -128,6 +129,10 @@ def test_rejects_inconsistent_application_target_merge(failure: str) -> None:
     compilation = target["compilation"]
     if failure == "application-source":
         data["application"]["representative_source"]["code"] += "changed"
+    elif failure == "submitted-source":
+        snapshot = data["application"]["snapshots"][0]
+        snapshot["payload"] += "changed"
+        snapshot["payload_sha256"] = hashlib.sha256(snapshot["payload"].encode()).hexdigest()
     elif failure == "target-source":
         stage = compilation["stages"][0]
         stage["code"] += "changed"
@@ -249,6 +254,11 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
         (root / "assets/logo-LICENSE.txt").write_text("Upstream license", encoding="utf-8")
         source = root / "capture.json"
         data = sample_target_capture()
+        data["application"].update({
+            "workload": {"snapshots": 1},
+            "shadow": {"raw": "scientific evidence"},
+            "propagation": {"curves": [{"energy": [1], "walker_energies": [[1]], "walker_weights": [[1]]}]},
+        })
         source.write_text(json.dumps(data), encoding="utf-8")
         result = BUILDER.build(root / "output", source, root)
         html = result.read_text(encoding="utf-8")
@@ -262,10 +272,15 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
         assert "data:font/woff2;base64," in html
         packaged = json.loads(html.split("window.MQSF_DATA=", 1)[1].split(";</script>", 1)[0])
         assert packaged["target_provenance"] == data["target_provenance"]
+        assert "snapshots" not in packaged["application"]
+        assert "shadow" not in packaged["application"]
+        assert packaged["application"]["workload"]["snapshots"] == 1
+        assert packaged["application"]["propagation"]["curves"] == [{"energy": [1]}]
         for target, original in zip(packaged["targets"], data["targets"], strict=True):
             assert target["provenance"] == original["provenance"]
             assert target["compilation"]["stages"][0]["code"] == data["application"]["representative_source"]["code"]
             assert target["compilation"]["stages"][0]["lines_html"]
+            assert "html" not in target["compilation"]["stages"][0]
         with zipfile.ZipFile(result.parent / "mqsf-2026.zip") as archive:
             assert archive.read("index.html") == result.read_bytes()
             for asset in (root / "assets").iterdir():
@@ -273,7 +288,7 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
             assert json.loads(gzip.decompress(archive.read("evidence.json.gz"))) == data
 
 
-def test_large_artifacts_keep_exact_source_in_compressed_download() -> None:
+def test_large_artifacts_keep_exact_source_in_evidence() -> None:
     """Bound highlighted excerpts while preserving the complete source."""
     data = sample_capture()
     code = "line\n" * 201
@@ -293,4 +308,6 @@ def test_large_artifacts_keep_exact_source_in_compressed_download() -> None:
         assert artifact["sha256"] == hashlib.sha256(code.encode()).hexdigest()
         assert artifact["line_count"] == 201
         assert artifact["code"] == "line\n" * 200
-        assert gzip.decompress(base64.b64decode(artifact["full_code_gzip"])).decode() == code
+        assert "full_code_gzip" not in artifact
+        with zipfile.ZipFile(root / "output/mqsf-2026.zip") as archive:
+            assert json.loads(gzip.decompress(archive.read("evidence.json.gz"))) == data

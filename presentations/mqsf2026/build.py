@@ -48,13 +48,17 @@ def validate_capture(data: dict[str, Any]) -> None:
         application = data.get("application", {})
         source = application.get("representative_source", {})
         source_hash = hashlib.sha256(source.get("code", "").encode()).hexdigest()
+        snapshots = application.get("snapshots", [])
         provenance = data.get("target_provenance", {})
         if (
             not source.get("code")
             or source.get("sha256") != source_hash
             or provenance.get("source_sha256") != source_hash
+            or not snapshots
+            or snapshots[0].get("payload") != source["code"]
+            or snapshots[0].get("payload_sha256") != source_hash
         ):
-            msg = "Target captures must identify the exact application source"
+            msg = "Target captures must identify the exact submitted application source"
             raise ValueError(msg)
         if application.get("provenance", {}).get("core_revision") != data["provenance"]["core_revision"] or any(
             not provenance.get(key) or provenance[key] != data["provenance"].get(key)
@@ -181,7 +185,6 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
                 lines = code.splitlines(keepends=True)
                 artifact["line_count"] = len(lines)
                 if len(lines) > 200:
-                    artifact["full_code_gzip"] = base64.b64encode(gzip.compress(code.encode(), mtime=0)).decode("ascii")
                     focus_line = artifact.get("focus_line", 1)
                     if artifact.get("language") == "mlir":
                         focus_line = next(
@@ -191,11 +194,9 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
                     start = max(0, min(focus_line - 2, len(lines) - 200))
                     excerpt = lines[start : start + 200]
                     artifact["code"] = "".join(excerpt)
-                    artifact["excerpt_lines"] = len(excerpt)
                     artifact["excerpt_start_line"] = start + 1
                 language = artifact.get("language", "text")
                 lexer = get_lexer_by_name("openqasm3" if language == "qasm" else language)
-                artifact["html"] = highlight(artifact["code"], lexer, formatter)
                 artifact["lines_html"] = [
                     highlight(line, lexer, line_formatter).rstrip("\n") for line in artifact["code"].splitlines()
                 ]
@@ -207,6 +208,12 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
                     for line in execution["client_source"].splitlines()
                 ]
     application = data.get("application", {})
+    # Full scientific observations stay in evidence.json.gz; the browser uses their summaries.
+    application.pop("snapshots", None)
+    application.pop("shadow", None)
+    for curve in application.get("propagation", {}).get("curves", []):
+        curve.pop("walker_energies", None)
+        curve.pop("walker_weights", None)
     for key in ("source", "batch_source", "classical_source"):
         if application.get(key):
             application[key + "_lines_html"] = [

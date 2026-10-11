@@ -27,8 +27,10 @@ Open `build/mqsf2026/index.html` directly in a browser. Use full screen at 1920
 while retaining its 16:9 canvas. The build also creates
 `build/mqsf2026/mqsf-2026.zip`, containing the self-contained HTML, the full
 capture as `evidence.json.gz`, this README, the presenter notes, and editable
-assets with their source attributions and licenses. Code highlighting, data, SVG
-illustrations, logos, and fonts are embedded. External links and QR destinations
+assets with their source attributions and licenses. Code highlighting, display
+data, SVG illustrations, logos, and fonts are embedded. Raw payloads, shot
+records and per-walker observations remain in the evidence file; the browser
+loads only the summaries used by the slides. External links and QR destinations
 are optional audience resources.
 
 | Action                              | Keys                                                 |
@@ -106,8 +108,12 @@ process assignments, task intervals, and completion observations are recorded.
 The example uses ideal local DDSIM and makes no hardware or quantum-advantage
 claim.
 
-One actual six-wire LiH shadow circuit then passes through QC, QCO,
-optimization, placement, routing, and target synthesis. Device metadata is dated
+The exact OpenQASM 3 payload submitted by the PennyLane adapter for snapshot 0
+then passes through QC, QCO, optimization, placement, routing, and target
+synthesis. It retains `rxx` rotations instead of taking a separate OpenQASM 2
+serialization path. Packaging checks its bytes and hash against the submitted
+payload and every target compilation. The classical AFQMC propagation remains
+NumPy/PySCF code outside this compiler pipeline. Device metadata is dated
 evidence:
 
 - IQM Emerald: AWS Braket `GetDevice` response, with 54 qubits and 85 undirected
@@ -176,7 +182,9 @@ imported files against pinned hashes.
 ```console
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
   python presentations/mqsf2026/capture_afqmc.py \
-  --source /path/to/Quantum_Monte_Carlo_Chemistry --bond-length 2.4 --steps 480
+  --source /path/to/Quantum_Monte_Carlo_Chemistry \
+  --snapshots 2048 --shots 256 --walkers 128 --steps 480 \
+  --dtau 0.02 --seed 17 --processes 4 --bond-length 2.4
 
 python presentations/mqsf2026/capture_execution.py \
   --library build/release-clang-ipo/lib/libmqt-core-qdmi-ddsim-device.so \
@@ -224,6 +232,11 @@ data["target_provenance"] = devices["provenance"]
 data["references"] = json.loads((captures / "references.json").read_text())
 fixture.write_bytes(gzip.compress((json.dumps(data, indent=2) + "\n").encode(), mtime=0))
 ```
+
+The recorders replace outputs only after the requested work succeeds. A failed
+required export fails the execution capture, instead of publishing partial
+results. The AFQMC JSON and source are individually replaced after chemistry and
+serialization succeed; source hashes reject an interrupted pair.
 
 Preserve the curated compressed fixture and its scripts together. Intermediate
 program/application JSON is untracked. Provenance retains source, script,

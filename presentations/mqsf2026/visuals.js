@@ -18,8 +18,6 @@
   const gold = "#C58B42";
   const text = (x, y, value, size = 34, anchor = "middle", extra = "") =>
     `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" ${extra}>${value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</text>`;
-  const reveal = (step, at, body) =>
-    `<g opacity="${step >= at ? 1 : 0}" aria-hidden="${step < at}">${body}</g>`;
   const path = (d, color = blue, width = 5, extra = "") =>
     `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" ${extra}/>`;
   const logo = (name, x, y, width, height) =>
@@ -161,7 +159,7 @@
     };
     const problem = mode === "problem";
     const core = mode === "core";
-    const products = ["detail", "ecosystem", "title", "core"].includes(mode);
+    const products = ["detail", "ecosystem", "core"].includes(mode);
     const assembly = problem ? 0 : mode === "stack" ? ramp(p, 0, 0.66) : 1;
     const modules = problem ? 0 : mode === "stack" ? ramp(p, 0.68, 0.96) : 1;
     const productTime = mode === "detail" ? p : products ? 1 : 0;
@@ -697,18 +695,6 @@
     );
   }
 
-  function bridge() {
-    return architecture("title");
-  }
-
-  function ecosystem(step = 3) {
-    return architecture(step < 3 ? "problem" : "ecosystem");
-  }
-
-  function stack() {
-    return architecture("detail");
-  }
-
   function application(
     progress = 1,
     app = window.MQSF_DATA?.application || {},
@@ -817,182 +803,5 @@
     );
   }
 
-  function molecule(step = 3) {
-    const contours = [1, 0.82, 0.65, 0.48]
-      .map(
-        (s, i) =>
-          `<path data-morph="lih-density-${i}" d="M-265 0C-265-155-70-170 20-82C100-142 242-105 242 0C242 105 100 142 20 82C-70 170-265 155-265 0Z" transform="translate(402 283) scale(${s})" fill="${i ? "none" : pale}" stroke="${blue}" stroke-width="${i ? 2 : 0}" opacity="${0.13 + i * 0.12}"/>`,
-      )
-      .join("");
-    const atoms =
-      keyed("lih-bond", path("M270 301L551 263", navy, 14)) +
-      keyed(
-        "lih-lithium",
-        `<circle cx="270" cy="301" r="74" fill="${blue}"/><circle cx="250" cy="278" r="19" fill="white" opacity=".5"/>${text(270, 313, "Li", 41, "middle", 'fill="white" font-weight="600"')}`,
-      ) +
-      keyed(
-        "lih-hydrogen",
-        `<circle cx="551" cy="263" r="43" fill="${cyan}"/><circle cx="540" cy="249" r="11" fill="white" opacity=".5"/>${text(551, 275, "H", 36, "middle", 'fill="white" font-weight="600"')}`,
-      );
-    const orbitals = [0, 1, 2]
-      .map((i) => {
-        const x = 916 + i * 196;
-        return keyed(
-          `lih-orbital-${i}`,
-          `<ellipse cx="${x - 24}" cy="240" rx="46" ry="79" transform="rotate(-22 ${x - 24} 240)" fill="${blue}" opacity=".16"/><ellipse cx="${x + 24}" cy="240" rx="46" ry="79" transform="rotate(22 ${x + 24} 240)" fill="${cyan}" opacity=".22"/>` +
-            text(x, 365, `Orbital ${i + 1}`, 30) +
-            path(`M${x - 67} 438H${x - 8}M${x + 8} 438H${x + 67}`, blue, 4) +
-            text(x - 39, 491, "α", 31) +
-            text(x + 39, 491, "β", 31),
-          "translate(0 0) scale(1)",
-          step >= 1 ? 1 : 0,
-        );
-      })
-      .join("");
-    return scene(
-      "molecule",
-      "Conceptual lithium hydride molecule with frozen lithium 1s and an active space of two electrons in three spatial orbitals, corresponding to six spin orbitals",
-      contours +
-        atoms +
-        text(400, 487, "Lithium hydride · LiH", 39) +
-        keyed(
-          "lih-frozen",
-          text(400, 548, "Freeze the Li 1s core", 31),
-          "translate(0 0) scale(1)",
-          step >= 1 ? 1 : 0,
-        ) +
-        keyed(
-          "lih-active-title",
-          text(1112, 107, "Active space", 38, "middle", 'font-weight="600"'),
-          "translate(0 0) scale(1)",
-          step >= 1 ? 1 : 0,
-        ) +
-        orbitals +
-        keyed(
-          "lih-space",
-          text(1112, 559, "2 electrons · 6 spin orbitals", 33),
-          "translate(0 0) scale(1)",
-          step >= 2 ? 1 : 0,
-        ) +
-        keyed(
-          "lih-caption",
-          text(800, 630, "Conceptual molecular and orbital illustration", 26),
-          "translate(0 0) scale(1)",
-          step >= 0 ? 1 : 0,
-        ),
-    );
-  }
-
-  function shadows(step = 99, bits = "measured bits") {
-    const wires = [190, 240, 290, 340, 390, 440]
-      .map((y) => path(`M65 ${y}H1115`, navy, 3))
-      .join("");
-    const state = `<path d="M220 180Q300 146 380 180V480Q300 514 220 480Z" fill="${pale}" stroke="${blue}" stroke-width="3"/>
-      ${text(300, 305, "Trial", 38)}${text(300, 353, "state", 38)}${text(300, 552, "Prepare", 38)}`;
-    const rotation = `<path d="M555 180Q635 146 715 180V480Q635 514 555 480Z" fill="#D5EAF2" stroke="${cyan}" stroke-width="3"/>
-      ${text(635, 305, "Random", 36)}${text(635, 353, "basis", 36)}${text(635, 552, "Rotate", 38)}`;
-    const meters = [155, 205, 255, 305, 355, 405]
-      .map((y) => icon("measurement", 911, y, 57))
-      .join("");
-    const samples = [
-      { x: 1250, y: 170, angle: -9, basis: "U₁" },
-      { x: 1280, y: 218, angle: -1, basis: "U₂" },
-      { x: 1310, y: 270, angle: 8, basis: "U₃" },
-    ]
-      .map(
-        (
-          { x, y, angle, basis },
-          index,
-        ) => `<g transform="translate(${x} ${y}) rotate(${angle} 80 90)">
-      <path d="M0 0H137L164 27V180H0Z" fill="white" stroke="${blue}" stroke-width="3"/>
-      <path d="M137 0V27H164" fill="${pale}" stroke="${blue}" stroke-width="2"/>
-      ${text(82, 65, basis, 36)}${index === 2 ? (bits === "measured bits" ? text(82, 116, "measured", 30) + text(82, 151, "bits", 30) : text(82, 126, bits, 34)) : ""}
-    </g>`,
-      )
-      .join("");
-    return scene(
-      "shadows",
-      "Prepare a quantum trial state, rotate into a random basis, and measure to collect classical shadows",
-      wires +
-        state +
-        text(300, 97, "Quantum work", 36) +
-        reveal(step, 1, rotation) +
-        reveal(step, 2, meters + text(945, 552, "Measure", 38)) +
-        reveal(
-          step,
-          3,
-          `${path("M1115 330H1200", blue, 5, 'marker-end="url(#shadows-arrow)"')}${samples}
-        ${text(1370, 552, "Classical shadows", 34)}${text(800, 626, "Repeat with a new basis · keep the basis and the measured bits", 30)}`,
-        ),
-    );
-  }
-
-  function walkers(step = 99) {
-    const points = [
-      [860, 245],
-      [922, 274],
-      [989, 246],
-      [1070, 280],
-      [1151, 258],
-      [1214, 307],
-      [876, 342],
-      [950, 366],
-      [1015, 324],
-      [1105, 367],
-      [1180, 384],
-      [1270, 352],
-      [885, 440],
-      [970, 453],
-      [1040, 418],
-      [1110, 472],
-      [1190, 455],
-      [1290, 438],
-    ];
-    const field = `<path d="M735 510C850 335 937 532 1040 411S1260 365 1390 222" fill="none" stroke="${pale}" stroke-width="80" stroke-linecap="round"/>
-      ${[0, 1, 2].map((n) => path(`M735 ${520 - n * 48}C850 ${345 - n * 48} 937 ${542 - n * 48} 1040 ${421 - n * 48}S1260 ${375 - n * 48} 1390 ${232 - n * 48}`, "#C8DBEF", 2)).join("")}`;
-    const swarm = points
-      .map(
-        ([x, y], i) =>
-          `<g>${path(`M${x - 42} ${y - 41}Q${x - 24} ${y - 6} ${x} ${y}`, "#A9C9E7", 2)}<circle cx="${x}" cy="${y}" r="${7 + (i % 4) * 2}" fill="${i % 3 ? blue : cyan}" opacity=".85"/></g>`,
-      )
-      .join("");
-    return scene(
-      "walkers",
-      "Quantum shadows inform a classical ensemble of walkers in auxiliary-field quantum Monte Carlo; the diagram is schematic",
-      icon("molecule", 25, 225, 245) +
-        text(150, 543, "Molecule", 36) +
-        reveal(
-          step,
-          1,
-          `${path("M280 337H377", blue, 5, 'marker-end="url(#walkers-arrow)"')}
-        ${icon("circuit", 408, 181, 230)}
-        <path d="M440 411H600M451 435H588M465 459H576" stroke="${blue}" stroke-width="5" stroke-linecap="round"/>
-        ${text(520, 543, "Quantum shadows", 34)}`,
-        ) +
-        reveal(
-          step,
-          2,
-          `${path("M650 337H745", blue, 5, 'marker-end="url(#walkers-arrow)"')}${field}${swarm}
-        ${text(1055, 130, "Classical walker ensemble", 38)}${text(1060, 543, "Parallel propagation", 34)}`,
-        ) +
-        reveal(
-          step,
-          3,
-          `${icon("server", 1395, 340, 145)}${text(1465, 543, "HPC", 34)}
-        ${text(800, 626, "Schematic workflow · measured results shown separately", 28)}`,
-        ),
-    );
-  }
-
-  window.MQSF_VIZ = {
-    icon,
-    architecture,
-    application,
-    bridge,
-    ecosystem,
-    stack,
-    molecule,
-    shadows,
-    walkers,
-  };
+  window.MQSF_VIZ = { architecture, application };
 })();

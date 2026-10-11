@@ -32,6 +32,7 @@ from datetime import UTC, datetime
 from functools import partial
 from itertools import combinations, starmap
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from time import perf_counter_ns
 from typing import TYPE_CHECKING, Any, TypeVar
 from unittest.mock import patch
@@ -66,6 +67,21 @@ SOURCE_HASHES = {
 
 
 DETERMINANTS = np.asarray(list(combinations(range(6), 2)))
+
+
+def write_capture(data: dict[str, Any], output: Path) -> None:
+    """Publish completed evidence only after JSON and source serialization succeed."""
+    encoded = json.dumps(data, indent=2, allow_nan=False) + "\n"
+    payload = data["representative_source"]["code"].encode()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=output.parent, prefix=".mqsf-capture-") as directory:
+        temporary = Path(directory) / output.name
+        source = Path(directory) / "afqmc-source.qasm"
+        temporary.write_text(encoded)
+        source.write_bytes(payload)
+        # An interrupted pair replacement is rejected by the recorded source hash.
+        temporary.replace(output)
+        source.replace(output.with_name(source.name))
 
 
 def validate_native_batch(submitted_jobs: int, snapshot_count: int, snapshots: list[dict]) -> None:
@@ -627,10 +643,6 @@ def main() -> None:
     if device.last_job is None or len(device.last_job.entries) != args.snapshots:
         msg = "PennyLane did not retain one batch entry per snapshot"
         raise ValueError(msg)
-    representative_tape = qml.workflow.construct_tape(lithium_hydride_shadow_circuit)(angles[0], paulis[0])
-    representative_source = qml.to_openqasm(representative_tape, wires=range(6))
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.with_name("afqmc-source.qasm").write_text(representative_source)
     compact = {name: [] for name in ("perm", "sign", "bits", "count", "snap_id")}
     snapshots = []
     variants = []
@@ -667,7 +679,12 @@ def main() -> None:
             }
         ]
 
-        if job is None or observe("Job.check()", job.check, events) != qdmi.Job.Status.DONE:
+        if (
+            job is None
+            or attempt.status != qdmi.Job.Status.DONE
+            or attempt.failures
+            or observe("Job.check()", job.check, events) != qdmi.Job.Status.DONE
+        ):
             msg = "A shadow job did not succeed"
             raise ValueError(msg)
         events[-1]["status"] = "DONE"
@@ -710,6 +727,8 @@ def main() -> None:
             "terminal_status": "DONE",
             "majorana_max_error": errors[index],
         })
+        if index != 0:
+            continue
         variants.append({
             "id": f"snapshot-{index}",
             "label": f"Matchgate snapshot {index + 1}",
@@ -726,7 +745,7 @@ def main() -> None:
             ],
             "layout": {"initial": [], "final": [], "swaps": []},
             "execution": {
-                "format": "QASM3",
+                "format": job.program_format.name,
                 "native_program_index": program_index,
                 "native_job_num_programs": job.num_programs,
                 "backend": "MQT DDSIM",
@@ -744,6 +763,11 @@ def main() -> None:
             },
         })
     validate_native_batch(device.submitted_jobs, args.snapshots, snapshots)
+    representative = snapshots[0]
+    representative_source = representative["payload"]
+    representative_format = representative["program_format"]
+    assert isinstance(representative_source, str)
+    assert isinstance(representative_format, str)
     science = capture_lih_afqmc(
         compact, args.walkers, args.steps, args.dtau, args.seed, args.processes, args.bond_length
     )
@@ -797,10 +821,11 @@ def main() -> None:
         ),
         "representative_source": {
             "code": representative_source,
-            "sha256": hashlib.sha256(representative_source.encode()).hexdigest(),
+            "sha256": representative["payload_sha256"],
             "language": "qasm",
-            "format": "OpenQASM 2.0",
-            "label": "Actual first LiH shadow circuit before device compilation",
+            "program_format": representative_format,
+            "format": representative_format.replace("QASM", "OpenQASM "),
+            "label": "Actual snapshot 0 payload submitted by the Core PennyLane adapter",
         },
         "source": inspect.getsource(lithium_hydride_shadow_circuit.func),
         "trial_source": inspect.getsource(lithium_hydride_trial),
@@ -825,7 +850,7 @@ def main() -> None:
             ),
             "parameters": {"qubits": 6, "snapshots": args.snapshots, "shots_per_snapshot": args.shots},
             "device_label": "Local ideal six-wire DDSIM; application capture",
-            "variants": variants[:1],
+            "variants": variants,
         },
         "provenance": {
             "source_url": SOURCE_URL,
@@ -858,8 +883,7 @@ def main() -> None:
             "omitted": "Hardware noise, large active spaces, population resampling, and full uncertainty analysis",
         },
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")
+    write_capture(data, args.output)
 
 
 if __name__ == "__main__":

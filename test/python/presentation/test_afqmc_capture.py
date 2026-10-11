@@ -34,6 +34,23 @@ CAPTURE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(CAPTURE)
 
 
+def test_capture_publication_preserves_both_files_on_invalid_science(tmp_path: Path) -> None:
+    """Non-finite chemistry must not replace a valid capture or its submitted source."""
+    output = tmp_path / "afqmc.json"
+    source = tmp_path / "afqmc-source.qasm"
+    output.write_bytes(b"previous capture")
+    source.write_bytes(b"previous source")
+    data = {"representative_source": {"code": "OPENQASM 3.0;\n"}, "energy": float("nan")}
+    with pytest.raises(ValueError, match="JSON compliant"):
+        CAPTURE.write_capture(data, output)
+    assert output.read_bytes() == b"previous capture"
+    assert source.read_bytes() == b"previous source"
+    data["energy"] = -7.8
+    CAPTURE.write_capture(data, output)
+    assert json.loads(output.read_text()) == data
+    assert source.read_bytes() == b"OPENQASM 3.0;\n"
+
+
 def test_determinant_expansion_preserves_complex_phase_and_antisymmetry() -> None:
     """Cached overlaps retain the phase and orbital ordering of a complex walker."""
     walker = np.array([[1, 0], [0, 1j], [1j, 0], [0, 1]], dtype=complex) / np.sqrt(2)
@@ -78,6 +95,11 @@ def test_committed_afqmc_energies_recompute_from_actual_walkers() -> None:
     CAPTURE.validate_native_batch(
         application["workload"]["submitted_qdmi_jobs"], application["workload"]["snapshots"], application["snapshots"]
     )
+    first_snapshot = application["snapshots"][0]
+    source = application["representative_source"]
+    assert source["code"] == first_snapshot["payload"]
+    assert source["sha256"] == first_snapshot["payload_sha256"]
+    assert source["program_format"] == first_snapshot["program_format"] == "QASM3"
     chemistry = application["chemistry"]
     hamiltonian = np.asarray(chemistry["hamiltonian_real"])
     np.testing.assert_allclose(hamiltonian, hamiltonian.T, atol=1e-12)

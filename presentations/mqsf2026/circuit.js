@@ -164,6 +164,7 @@ window.MQSF_CIRCUIT = (() => {
                 rz: "Rz",
                 rx: "Rx",
                 ry: "Ry",
+                rxx: "XX",
                 rzz: "ZZ",
                 gpi: "GPI",
                 gpi2: "GPI₂",

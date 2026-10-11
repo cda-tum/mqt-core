@@ -11,13 +11,70 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import runpy
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
 import pytest
 
 SCRIPT = Path(__file__).resolve().parents[3] / "presentations/mqsf2026/capture_execution.py"
+
+
+def test_failed_later_export_preserves_previous_capture(tmp_path: Path) -> None:
+    """A failed required worker must fail the CLI without publishing earlier successes."""
+    input_path = tmp_path / "programs.json"
+    input_path.write_text(
+        json.dumps({
+            "provenance": {},
+            "scenarios": [
+                {
+                    "id": "example",
+                    "variants": [
+                        {
+                            "id": "structured",
+                            "exports": [{"id": name, "code": name} for name in ("openqasm3", "qir-adaptive")],
+                        }
+                    ],
+                }
+            ],
+        })
+    )
+    output_path = tmp_path / "demo.json.gz"
+    output_path.write_bytes(b"previous verified capture")
+    # Run the real CLI with two controlled native worker outcomes.
+    harness = """
+import runpy, subprocess, sys
+from unittest.mock import patch
+sys.argv = sys.argv[1:]
+with patch("subprocess.run", side_effect=[
+    subprocess.CompletedProcess([], 0, stdout='{"duration_ms": 1}'),
+    subprocess.CalledProcessError(1, "native worker", stderr="execution failed"),
+]):
+    runpy.run_path(sys.argv[0], run_name="__main__")
+"""
+    result = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true] - exercise the local capture CLI
+        [
+            sys.executable,
+            "-c",
+            harness,
+            str(SCRIPT),
+            "--library",
+            str(tmp_path / "unused.so"),
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "Captured example/structured/openqasm3" in result.stdout
+    assert output_path.read_bytes() == b"previous verified capture"
 
 
 def test_shot_timing_matches_results_and_measured_execution_window() -> None:

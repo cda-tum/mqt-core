@@ -317,11 +317,6 @@ def main() -> None:
         if "scenario" in application:
             data["scenarios"].append(application["scenario"])
 
-    def save() -> None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        encoded = (json.dumps(data, indent=2) + "\n").encode()
-        args.output.write_bytes(gzip.compress(encoded, mtime=0) if args.output.suffix == ".gz" else encoded)
-
     successes = 0
     for scenario in data["scenarios"]:
         if scenario.get("application"):
@@ -341,46 +336,38 @@ def main() -> None:
                 }
                 label = f"{scenario['id']}/{variant['id']}/{exported['id']}"
                 print(f"Capturing {label}", flush=True)
-                try:
-                    process = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true] - execute only this capture script, never payload code
-                        [
-                            sys.executable,
-                            "-B",
-                            str(Path(__file__).resolve()),
-                            "--worker",
-                            "--library",
-                            str(args.library),
-                        ],
-                        input=json.dumps(request),
-                        capture_output=True,
-                        text=True,
-                        timeout=330,
-                        check=True,
-                    )
-                    executions[exported["id"]] = json.loads(process.stdout)
-                    print(f"Captured {label}: {executions[exported['id']]['duration_ms']:.1f} ms", flush=True)
-                except subprocess.TimeoutExpired:
-                    exported["capture_error"] = "Offline capture exceeded its 330-second wall-clock limit"
-                    print(f"Timed out: {label}", flush=True)
-                except subprocess.CalledProcessError as error:
-                    exported["capture_error"] = error.stderr[-4000:]
-                    print(f"Failed: {label}: {error.stderr[-1000:]}", flush=True)
-                if executions:
-                    variant["executions"] = executions
-                    variant["execution"] = executions.get("qir-adaptive", next(iter(executions.values())))
-                save()
+                process = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true] - execute only this capture script, never payload code
+                    [
+                        sys.executable,
+                        "-B",
+                        str(Path(__file__).resolve()),
+                        "--worker",
+                        "--library",
+                        str(args.library),
+                    ],
+                    input=json.dumps(request),
+                    stdout=subprocess.PIPE,
+                    text=True,
+                    timeout=330,
+                    check=True,
+                )
+                executions[exported["id"]] = json.loads(process.stdout)
+                print(f"Captured {label}: {executions[exported['id']]['duration_ms']:.1f} ms", flush=True)
             if executions:
                 variant["executions"] = executions
                 variant["execution"] = executions.get("qir-adaptive", next(iter(executions.values())))
                 successes += 1
             else:
-                variant["execution"] = {
-                    "unavailable_reason": "No export completed the bounded offline execution capture"
-                }
+                variant["execution"] = {"unavailable_reason": "No executable export is available for this variant"}
     if successes == 0:
         msg = "No executable exports found"
         raise ValueError(msg)
-    save()
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    encoded = (json.dumps(data, indent=2) + "\n").encode()
+    with TemporaryDirectory(dir=args.output.parent, prefix=".mqsf-capture-") as directory:
+        temporary = Path(directory) / args.output.name
+        temporary.write_bytes(gzip.compress(encoded, mtime=0) if args.output.suffix == ".gz" else encoded)
+        temporary.replace(args.output)
 
 
 if __name__ == "__main__":

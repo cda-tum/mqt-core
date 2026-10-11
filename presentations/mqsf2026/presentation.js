@@ -315,8 +315,6 @@
       );
     return `<div class="energy-chart">${svg(body, "0 0 1640 555", "All recorded AFQMC energy estimates and shadow-trial walker-only standard error")}</div>`;
   }
-  const appCircuit = () =>
-    app.scenario?.variants?.[0]?.stages?.find((a) => a.circuit)?.circuit;
   const appStage = (id) => {
     const v = targets[0]?.compilation || {};
     return [...(v.stages || []), ...(v.exports || [])].find((a) => a.id === id);
@@ -398,9 +396,9 @@
         elapsed >= e.time_ms + e.duration_ms,
     );
     const count = retrieved.length,
-      snapshots = app.snapshots || [],
+      snapshots = app.workload.snapshots,
       cells = 128,
-      perCell = Math.ceil(snapshots.length / cells);
+      perCell = Math.ceil(snapshots / cells);
     let body = "";
     for (let i = 0; i < cells; i++) {
       const x = 20 + (i % 16) * 44,
@@ -410,7 +408,7 @@
     body += text(
       360,
       357,
-      `${fmt(count, 0)} / ${fmt(snapshots.length, 0)} program results`,
+      `${fmt(count, 0)} / ${fmt(snapshots, 0)} program results`,
       30,
       "#2f70b8",
     );
@@ -421,7 +419,7 @@
       22,
       "#526d88",
     );
-    return `<div class="execution-grid batch-grid" data-programs="${count}"><div>${client}<p class="batch-phase">${preparing ? "Prepare and lower the circuit collection" : count === snapshots.length ? "All indexed samples retrieved" : "Submit → wait → retrieve by program index"}</p>${sequence(capture, elapsed)}</div><div><div class="runtime-strip"><span>QDMI window · slowed replay</span><span>${fmt(elapsed - begin, 1)} / ${fmt(duration - begin, 1)} ms</span></div><div class="clock-line"><div style="width:${((elapsed - begin) / (duration - begin)) * 100}%"></div></div><div class="batch-result">${svg(body, "0 0 750 420", "Captured indexed program results arriving at their actual retrieval times")}</div><div class="metric-row">${metric(fmt(app.workload?.snapshots, 0), "programs")}${metric(fmt(count * (app.workload?.shots_per_snapshot || 0), 0), "shots retrieved")}</div></div></div>`;
+    return `<div class="execution-grid batch-grid" data-programs="${count}"><div>${client}<p class="batch-phase">${preparing ? "Prepare and lower the circuit collection" : count === snapshots ? "All indexed samples retrieved" : "Submit → wait → retrieve by program index"}</p>${sequence(capture, elapsed)}</div><div><div class="runtime-strip"><span>QDMI window · slowed replay</span><span>${fmt(elapsed - begin, 1)} / ${fmt(duration - begin, 1)} ms</span></div><div class="clock-line"><div style="width:${((elapsed - begin) / (duration - begin)) * 100}%"></div></div><div class="batch-result">${svg(body, "0 0 750 420", "Captured indexed program results arriving at their actual retrieval times")}</div><div class="metric-row">${metric(fmt(app.workload?.snapshots, 0), "programs")}${metric(fmt(count * (app.workload?.shots_per_snapshot || 0), 0), "shots retrieved")}</div></div></div>`;
   }
   function deviceView(
     target = targets[0],
@@ -617,9 +615,7 @@
       step >= 3 ? "target-native-synthesis" : "place-and-route",
     );
     const circuitData =
-      step < 2
-        ? targetStage(target, "optimized")?.circuit || appCircuit()
-        : stage?.circuit;
+      step < 2 ? targetStage(target, "optimized")?.circuit : stage?.circuit;
     const ops = window.MQSF_CIRCUIT.schedule(circuitData);
     const lastColumn = Math.max(0, ...ops.map((o) => o.column));
     const layerPosition = Math.min(
@@ -775,7 +771,7 @@
           !/(?:\b(?:br |phi |icmp |ret |add )|__(?:reset|mz)__|__read_result)/u.test(
             l,
           )
-        : /^\s*(?:r\(|ctrl @ z |rx\(|rz\()/u.test(l);
+        : /^\s*(?:r\(|ctrl @ z |cz |rx\(|rz\()/u.test(l);
     for (let i = Math.max(0, start); i < end;) {
       if (!lines[i].trim()) {
         i++;

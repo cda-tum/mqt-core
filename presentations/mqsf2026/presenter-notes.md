@@ -105,10 +105,13 @@ independently checked classical calculation.
 ## 6–8 · Device-aware compilation · 10 minutes
 
 **6. From circuit to physical target.** A simulator is only the beginning. Keep
-one actual six-wire LiH measurement circuit beside Emerald. First explain
-placement; then let the forward/backward refinement move the logical qubits. The
-endpoints come from actual search diagnostics. Movement between them is
-interpolation, not additional compiler-search observations.
+the exact OpenQASM 3 payload submitted by PennyLane for shadow snapshot 0 beside
+Emerald. The same bytes enter every target compilation; `rxx` rotations survive
+the adapter boundary. Classical NumPy/PySCF propagation is separate from this
+quantum compiler pipeline. First explain placement; then let the
+forward/backward refinement move the logical qubits. The endpoints come from
+actual search diagnostics. Movement between them is interpolation, not
+additional compiler-search observations.
 
 Next follow the emitted routed operations and SWAPs on the architecture, then
 native synthesis. The counters show introspected operations, two-qubit
