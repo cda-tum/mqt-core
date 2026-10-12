@@ -45,6 +45,7 @@ __lazy_modules__ = {"importlib.metadata", "warnings"}
 
 import warnings
 from enum import Enum, auto
+from functools import cached_property
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Protocol
 
@@ -159,13 +160,14 @@ class _LoadState(Enum):
 class _ProgramSerializerRegistry:
     """The serializers for one process, and the entry points behind them.
 
+    Built-in serializers are initialized on the first registry operation.
     The registry reads :data:`ENTRY_POINT_GROUP` once, on the first lookup
     rather than at import, because loading an entry point imports the package
     that advertises it. The registry does not synchronize concurrent first use.
     """
 
     def __init__(self, discover: Callable[[], Iterable[EntryPoint]]) -> None:
-        """Initialize an empty registry.
+        """Initialize a registry with lazy built-in serializers.
 
         Args:
             discover: Returns the entry points that advertise a serializer.
@@ -173,8 +175,20 @@ class _ProgramSerializerRegistry:
                 installed distributions.
         """
         self._discover = discover
-        self._serializers: dict[ProgramFormat, ProgramSerializer] = {}
         self._load_state = _LoadState.NOT_STARTED
+
+    @cached_property
+    def _serializers(self) -> dict[ProgramFormat, ProgramSerializer]:
+        """Initialize the built-in serializers on first use."""
+        from mqt.core.plugins.qiskit.backend import (  # ruff:ignore[import-outside-top-level] Avoid a circular import
+            _serialize_to_qasm2,
+            _serialize_to_qasm3,
+        )
+
+        return {
+            ProgramFormat.QASM2: _serialize_to_qasm2,
+            ProgramFormat.QASM3: _serialize_to_qasm3,
+        }
 
     def register(self, fmt: ProgramFormat, serializer: ProgramSerializer, *, replace: bool = False) -> None:
         """Add a serializer for one program format.

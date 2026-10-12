@@ -18,6 +18,8 @@ __lazy_modules__ = {
     "math",
     "mqt.core.plugins.qiskit.exceptions",
     "mqt.core.plugins.qiskit.job",
+    "mqt.core.plugins.qiskit.serializers",
+    "mqt.core.qdmi",
     "mqt.core.qdmi.builtin_driver",
     "numbers",
     "qiskit",
@@ -54,11 +56,7 @@ from mqt.core.plugins.qiskit.exceptions import (
     UnsupportedOperationError,
 )
 from mqt.core.plugins.qiskit.job import QDMIJob
-from mqt.core.plugins.qiskit.serializers import (
-    preferred_program_formats,
-    program_serializer,
-    register_program_serializer,
-)
+from mqt.core.plugins.qiskit.serializers import preferred_program_formats, program_serializer
 from mqt.core.qdmi import Device as QDMIDevice
 from mqt.core.qdmi import ProgramFormat, is_binary_program_format
 from mqt.core.qdmi.builtin_driver import open_device
@@ -903,8 +901,3 @@ class QDMIBackend(BackendV2):
         self.last_job = job
         job.submit()
         return job
-
-
-# Register bundled OpenQASM serializers when the Qiskit adapter is imported.
-register_program_serializer(ProgramFormat.QASM3, _serialize_to_qasm3)
-register_program_serializer(ProgramFormat.QASM2, _serialize_to_qasm2)

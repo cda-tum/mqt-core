@@ -56,9 +56,6 @@ if TYPE_CHECKING or HAS_QISKIT:
         unregister_program_serializer,
     )
 
-    # Load the backend now to register the built-in OpenQASM serializers
-    import_module("mqt.core.plugins.qiskit.backend")
-
     __all__ += [
         "CircuitValidationError",
         "JobExecutionError",
