@@ -11,12 +11,95 @@
 from __future__ import annotations
 
 import runpy
+from math import pi
 from pathlib import Path
 
 import pytest
 from qiskit import QuantumCircuit
 
+from mqt.core.mlir import QCProgram, QIRProfile
+
 SCRIPT = Path(__file__).resolve().parents[3] / "presentations/mqsf2026/capture_programs.py"
+
+
+def test_compact_syndrome_source_preserves_data_and_ancilla_roles() -> None:
+    """Register slices must prepare only data and broadcast both parity CXs."""
+    source = runpy.run_path(str(SCRIPT))["PARITY_SOURCE"]
+    program = QCProgram.from_openqasm_str(source)
+    circuit = program.to_qiskit()
+    hadamards = [circuit.find_bit(op.qubits[0]).index for op in circuit.data if op.operation.name == "h"]
+    assert hadamards == [0, 1]
+    loop = next(op.operation.blocks[0] for op in circuit.data if op.operation.name == "for_loop")
+    controls = [[loop.find_bit(q).index for q in op.qubits] for op in loop.data if op.operation.name == "cx"]
+    assert controls == [[0, 2], [1, 2]]
+    qir = program.to_qir(QIRProfile.ADAPTIVE).llvm_ir
+    assert "__quantum__qis__reset__body" in qir
+    assert "br i1" in qir
+    assert "phi" in qir
+
+
+def test_rus_source_implements_the_literature_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Failure branches must restore arbitrary data before retrying."""
+    monkeypatch.syspath_prepend(str(SCRIPT.parent))
+    helpers = runpy.run_path(str(SCRIPT.with_name("capture_compiler_evidence.py")))
+    semantics = helpers["rus_semantics"]()
+    assert semantics["success_probability"] == pytest.approx(5 / 8)
+    assert semantics["max_residual"] < 1e-12
+    source = runpy.run_path(str(SCRIPT))["RUS_SOURCE"]
+    qir = QCProgram.from_openqasm_str(source).to_qir(QIRProfile.ADAPTIVE).llvm_ir
+    assert "br i1" in qir
+    assert "__quantum__qis__reset__body" in qir
+    monkeypatch.setitem(
+        helpers["rus_semantics"].__globals__,
+        "RUS_SOURCE",
+        source.replace("if (second) { z q[2]; }", "if (second) { x q[2]; }"),
+    )
+    with pytest.raises(AssertionError):
+        helpers["rus_semantics"]()
+
+
+def test_grover_size_measures_real_fully_unrolled_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Read measured files back and catch a preserved loop on the unrolled path."""
+    monkeypatch.syspath_prepend(str(SCRIPT.parent))
+    helpers = runpy.run_path(str(SCRIPT.with_name("capture_compiler_evidence.py")))
+    result = helpers["grover_size"](tmp_path, (4, 8))
+    for point in result["points"]:
+        for label in ("preserved", "unrolled"):
+            source = (tmp_path / point[f"{label}_file"]).read_text(encoding="utf-8")
+            assert len(source.encode()) == point[f"{label}_bytes"]
+            assert helpers["digest"](source) == point[f"{label}_sha256"]
+            assert ("for " in source) == (label == "preserved")
+    assert result["points"][-1]["unrolled_bytes"] > result["points"][-1]["preserved_bytes"]
+
+
+def test_routing_trace_rejects_invented_layouts(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Trace steps and A* parent edges must compose the recorded permutations."""
+    monkeypatch.syspath_prepend(str(SCRIPT.parent))
+    validate = runpy.run_path(str(SCRIPT.with_name("capture_compiler_evidence.py")))["validate_routing_trace"]
+    event = {
+        "before": [0, 2, 1],
+        "after": [1, 2, 0],
+        "swaps": 1,
+        "steps": [{"operation": "qco.swap", "sites": [0, 1], "logical": [0, 2]}],
+    }
+    validate([event], [[0, 1], [1, 2]])
+    event["after"] = [0, 2, 1]
+    with pytest.raises(AssertionError):
+        validate([event], [[0, 1], [1, 2]])
+
+
+def test_weyl_capture_checks_recorded_unitaries(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Known CZ coordinates anchor the chamber; invalid matrix traces fail."""
+    monkeypatch.syspath_prepend(str(SCRIPT.parent))
+    helpers = runpy.run_path(str(SCRIPT.with_name("capture_compiler_evidence.py")))
+    matrix = [[[float((1 if i < 3 else -1) if i == j else 0), 0.0] for j in range(4)] for i in range(4)]
+    block = {"matrix": matrix, "operations": ["qco.cz"], "two_qubit_before": 2, "basis_uses_after": 1}
+    target = {"id": "iqm.test", "compilation": {"synthesis_trace": [block], "source_sha256": "test"}}
+    point = helpers["weyl"]([target])["points"][0]
+    assert point["coordinates"] == pytest.approx([pi / 4, 0, 0])
+    matrix[0][0][0] = 2.0
+    with pytest.raises(AssertionError):
+        helpers["weyl"]([target])
 
 
 def test_extract_mapping_composes_permutations_and_keeps_branch_context() -> None:
@@ -131,14 +214,16 @@ def test_four_qubit_qpe_resolves_non_exact_phase() -> None:
 
 
 def test_repeat_until_success_retains_conditional_loop_and_heralded_state() -> None:
-    """The retry loop must survive compilation and terminate in the heralded state."""
+    """The retry loop must survive and prepare the non-Clifford V3 state."""
     from mqt.core.mlir import QCProgram  # ruff: ignore[import-outside-top-level]
 
     source = runpy.run_path(str(SCRIPT))["RUS_SOURCE"]
     program = QCProgram.from_openqasm_str(source).to_qco()
     program.cleanup()
     assert "scf.while" in program.ir
-    assert program.sample(128, 7) == {"11": 128}
+    counts = program.sample(2048, 7)
+    assert set(counts) == {"0001", "1001"}
+    assert counts["1001"] / 2048 == pytest.approx(4 / 5, abs=0.04)
 
 
 @pytest.mark.parametrize(

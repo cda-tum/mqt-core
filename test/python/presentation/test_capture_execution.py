@@ -95,6 +95,10 @@ def test_shot_timing_matches_results_and_measured_execution_window() -> None:
         ],
     }
     validate(execution)
+    validate(execution | {"runtime_events": [{"time_ms": 2.5}, {"time_ms": 4.5}]})
+    for times in ([4.5, 2.5], [1.5], [5.5]):
+        with pytest.raises(ValueError, match="Runtime observations"):
+            validate(execution | {"runtime_events": [{"time_ms": time} for time in times]})
     for invalid in ({"time_ms": 6.0}, {"outcome": "00"}, {"shot_index": 0}):
         shots = [execution["shot_events"][0], execution["shot_events"][1] | invalid]
         with pytest.raises(ValueError, match="Shot completion"):

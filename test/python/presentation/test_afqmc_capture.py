@@ -69,6 +69,20 @@ def test_six_orbital_expansion_matches_independent_minor_determinants() -> None:
     np.testing.assert_allclose(np.vdot(expected, expected), 1, atol=1e-14)
 
 
+def test_hydrogen_trial_preserves_the_shadow_vacuum_reference() -> None:
+    """The trial retains exactly two electrons while leaving the interference reference unchanged."""
+    qml = pytest.importorskip("pennylane")
+    with qml.queuing.AnnotatedQueue() as queue:
+        CAPTURE.hydrogen_trial()
+    unitary = np.asarray(qml.matrix(qml.tape.QuantumScript.from_queue(queue), wire_order=range(4)))
+    original = np.asarray(qml.matrix(qml.DoubleExcitation(0.6, wires=range(4))))
+    np.testing.assert_allclose(unitary[:, [0, 12]], original[:, [0, 12]], atol=1e-14)
+    np.testing.assert_allclose(unitary[:, 0], np.eye(16)[:, 0], atol=1e-14)
+    state = unitary[:, 12]
+    np.testing.assert_allclose(state[[12, 3]], [np.cos(0.3), -np.sin(0.3)], atol=1e-14)
+    np.testing.assert_allclose(np.sum(abs(state[[12, 3]]) ** 2), 1, atol=1e-14)
+
+
 def test_walker_uncertainty_is_invariant_to_common_weight_normalization() -> None:
     """Weight normalization must preserve the energy, SE, and effective population."""
     energies = np.array([-1.1, -1.2, -1.3])
@@ -125,7 +139,8 @@ def test_committed_afqmc_parallel_records_share_one_observed_clock() -> None:
     capture_path = Path(__file__).resolve().parents[3] / "presentations/mqsf2026/captures/demo.json.gz"
     application = json.loads(gzip.decompress(capture_path.read_bytes()))["application"]
     propagation = application["propagation"]
-    assert len(propagation["worker_pids"]) == propagation["processes"] == 4
+    assert len(propagation["workers"]) == propagation["processes"] == 4
+    assert len({worker["node"] for worker in propagation["workers"]}) == 2
     tasks = {(task["label"], task["walker_id"]): task for task in propagation["tasks"]}
     assert len(tasks) == 2 * propagation["walkers"]
     assert len(propagation["events"]) == len(tasks)
@@ -136,9 +151,10 @@ def test_committed_afqmc_parallel_records_share_one_observed_clock() -> None:
         assert event["worker_pid"] == task["worker_pid"]
         assert task["seed"] == propagation["walker_seeds"][task["walker_id"]]
         assert 0 <= task["started_ms"] <= task["finished_ms"] <= event["time_ms"] <= propagation["duration_ms"]
-    for pid in propagation["worker_pids"]:
+    for worker in propagation["workers"]:
         assigned = sorted(
-            (task for task in tasks.values() if task["worker_pid"] == pid), key=operator.itemgetter("started_ms")
+            (task for task in tasks.values() if (task["node"], task["worker_pid"]) == (worker["node"], worker["pid"])),
+            key=operator.itemgetter("started_ms"),
         )
         assert all(first["finished_ms"] <= second["started_ms"] for first, second in pairwise(assigned))
     for label, curve in zip(("quantum", "classical"), propagation["curves"], strict=True):
@@ -147,7 +163,23 @@ def test_committed_afqmc_parallel_records_share_one_observed_clock() -> None:
             for walker in frame["walkers"]:
                 task = tasks[label, walker["id"]]
                 assert task["worker_pid"] == walker["worker_pid"]
+                assert task["node"] == walker["node"]
                 assert task["started_ms"] <= walker["completed_ms"] <= task["finished_ms"]
+
+    scheduler = application["slurm"]
+    quantum = application["execution"]["slurm"]["job_id"]
+    classical = propagation["slurm"]["job_id"]
+    assert scheduler["dependencies"] == [{"job_id": classical, "afterok": quantum}]
+    for job_id, partition in ((quantum, "quantum"), (classical, "compute")):
+        allocation = scheduler["jobs"][job_id]
+        assert allocation["State"] == "COMPLETED"
+        assert allocation["ExitCode"] == "0:0"
+        assert allocation["Partition"] == partition
+    assert "license/mqt.ddsim.default=1" in scheduler["jobs"][quantum]["AllocTRES"]
+    states = [event["state"] for event in application["execution"]["lifecycle"]]
+    assert states[0] == "submitted"
+    assert "running" in states
+    assert states[-2:] == ["extracting-results", "done"]
 
 
 def test_committed_afqmc_batch_trace_points_into_captured_client_source() -> None:

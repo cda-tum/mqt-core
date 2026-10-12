@@ -110,16 +110,37 @@ struct Execution {
   bool qirProgram() {
     const llvm::StringRef irBytes(program_.data(), program_.size());
     const bool sampling = numShots_ != 0;
+    std::ofstream trace;
+    if (const auto* path = std::getenv("MQT_MQSF_SHOT_TRACE");
+        sampling && path != nullptr) {
+      trace.open(path);
+      if (!trace) {
+        std::cerr << "Cannot open MQSF shot trace" << '\n';
+        return false;
+      }
+    }
+    const auto record = [&](const std::string_view kind,
+                            const std::string_view value) {
+      if (trace.is_open()) {
+        const auto now =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count();
+        trace << now << '\t' << kind << '\t' << value << '\n';
+      }
+    };
     std::optional<std::ostringstream> output;
     const auto captureOutput = llvm::scope_exit([&] {
       if (output) {
         qirOutput_ = std::move(*output).str();
       }
     });
+    record("runtime", "JIT compilation begins");
     auto jitSession = qir::JitSession(
         irBytes, "QDMI job",
         sampling ? qir::Execution::Sampling : qir::Execution::StateExtraction,
         sampling ? seed_ : std::nullopt);
+    record("runtime", "JIT runtime ready");
     auto& runtime = jitSession.runtime();
     if (sampling && captureQIROutput_) {
       runtime.setOstream(output.emplace());
@@ -139,28 +160,20 @@ struct Execution {
     }
     if (workers == 1) {
       int64_t rc = 0;
-      if (const auto* tracePath = std::getenv("MQT_MQSF_SHOT_TRACE");
-          sampling && tracePath != nullptr) {
+      if (trace.is_open()) {
         // Demo-only serial capture preserves this session's RNG between shots.
-        std::ofstream trace(tracePath);
-        if (!trace) {
-          std::cerr << "Cannot open MQSF shot trace" << '\n';
-          return false;
-        }
+        record("runtime", "Serial adaptive sampling begins");
         std::vector<std::string> shot;
         for (size_t i = 0; i < numShots_; ++i) {
           rc = jitSession.sample(1, shot, &stateAvailable, i == 0);
           if (rc != 0 || shot.size() != 1) {
             return false;
           }
-          const auto completed =
-              std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  std::chrono::steady_clock::now().time_since_epoch())
-                  .count();
           shots_.push_back(shot.front());
           std::ranges::reverse(shot.front());
-          trace << completed << '\t' << shot.front() << '\n';
+          record("shot", shot.front());
         }
+        record("runtime", "Sampling complete");
         trace.flush();
         if (!trace) {
           return false;

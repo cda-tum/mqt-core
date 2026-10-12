@@ -37,27 +37,36 @@ ROOT = Path(__file__).resolve().parents[2]
 PARITY_SOURCE = """OPENQASM 3.1;
 include "stdgates.inc";
 qubit[3] q;
-bit syndrome; bit[2] result;
-h q[0]; h q[1];
+bit syndrome;
+h q[0:1];
 for int round in [0:1] {
   reset q[2];
-  cx q[0], q[2]; cx q[1], q[2];
+  cx q[0:1], q[2];
   syndrome = measure q[2];
   if (syndrome) { x q[1]; }
 }
-result[0] = measure q[0]; result[1] = measure q[1];
+bit[2] result = measure q[0:1];
 """
 RUS_SOURCE = """OPENQASM 3.1;
 include "stdgates.inc";
-qubit[2] q;
-bit accepted = 0; bit result;
+qubit[3] q;
+bit accepted = 0; bit first = 0; bit second = 0;
+h q[2];
 while (!accepted) {
-  reset q[0]; reset q[1];
-  h q[0];
-  cx q[0], q[1];
-  accepted = measure q[1];
+  reset q[0:1];
+  h q[0:1];
+  tdg q[0]; cx q[1], q[0]; t q[0]; h q[0];
+  first = measure q[0];
+  if (!first) {
+    t q[2]; z q[2]; cx q[2], q[1];
+    t q[1]; h q[1];
+    second = measure q[1];
+    if (second) { z q[2]; }
+    else { accepted = 1; }
+  }
 }
-result = measure q[0];
+h q[2];
+bit result = measure q[2];
 """
 
 
@@ -368,6 +377,11 @@ def compile_target(
         environment.pop("MQT_MQSF_MAPPING_TRACE", None)
     mapping = mapping or {"trials": 1, "iterations": 0, "lookahead": 8, "search-memory-limit": 4194304}
     with TemporaryDirectory(prefix="mqsf-compiler-") as directory:
+        synthesis_trace = Path(directory) / "synthesis.jsonl"
+        if trace:
+            environment["MQT_MQSF_SYNTHESIS_TRACE"] = str(synthesis_trace)
+        else:
+            environment.pop("MQT_MQSF_SYNTHESIS_TRACE", None)
         source = Path(directory) / "input.mlir"
         source.write_text(program.ir, encoding="utf-8")
         command = [
@@ -387,7 +401,12 @@ def compile_target(
         result = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
             command, capture_output=True, text=True, check=True, env=environment, timeout=timeout
         )
-    return result.stdout, result.stderr
+        synthesis = (
+            "".join(f"MQSF_SYNTHESIS_TRACE {line}\n" for line in synthesis_trace.read_text().splitlines())
+            if synthesis_trace.exists()
+            else ""
+        )
+    return result.stdout, result.stderr + synthesis
 
 
 def render_qiskit(circuit: QuantumCircuit) -> str:
@@ -455,7 +474,12 @@ def capture_variant(
             for line in dumps.splitlines()
             if line.startswith("MQSF_MAPPING_TRACE ")
         ]
-    dumps = re.sub(r"^MQSF_MAPPING_TRACE .*\n", "", dumps, flags=re.MULTILINE)
+        variant["synthesis_trace"] = [
+            json.loads(line.removeprefix("MQSF_SYNTHESIS_TRACE "))
+            for line in dumps.splitlines()
+            if line.startswith("MQSF_SYNTHESIS_TRACE ")
+        ]
+    dumps = re.sub(r"^MQSF_(MAPPING|SYNTHESIS)_TRACE .*\n", "", dumps, flags=re.MULTILINE)
     if trace:
         fused = QCOProgram.from_mlir_str(extract_pass_ir(dumps, "FuseTwoQubitGatesPass"))
         variant["stages"].append(stage("two-qubit-fusion", "Fuse neighboring two-qubit operations", "mlir", fused.ir))
@@ -576,9 +600,9 @@ def capture(compiler: Path, selected: str, timeout: int) -> dict[str, Any]:
         ),
         (
             "rus",
-            "Repeat until heralded success",
-            "Prepare a Bell pair, measure its ancilla, and retry until the measurement heralds |1>.",
-            {"qubits": 2, "success_probability_per_attempt": 0.5},
+            "Repeat until a non-Clifford rotation succeeds",
+            "Paetznick-Svore V3 = (I + 2iZ)/sqrt(5); correct failed attempts and preserve the data qubit.",
+            {"qubits": 3, "success_probability_per_attempt": 0.625, "result_one_probability": 0.8},
             RUS_SOURCE,
         ),
     )

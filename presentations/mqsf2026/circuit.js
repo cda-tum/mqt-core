@@ -114,13 +114,15 @@ window.MQSF_CIRCUIT = (() => {
     operations.forEach((o) =>
       o.region.forEach((r) => {
         if (!["for_loop", "while_loop"].includes(r.name)) return;
+        if (!o.qubits.some((q) => row.has(q))) return;
         const span = regions.get(r.id) || { first: x(o), last: x(o), r };
         span.last = x(o);
         regions.set(r.id, span);
       }),
     );
     regions.forEach(({ first, last, r }) => {
-      body += `<g data-morph="${key}-region-${r.id}"><rect x="${first - 35}" y="${top - 46}" width="${last - first + 70}" height="${(c.qubits.length - 1) * dy + 70}" rx="12" fill="#eaf2fa" fill-opacity=".35" stroke="#87acd0" stroke-width="2" stroke-dasharray="7 5"/>${txt((first + last) / 2, top - 60, r.name === "while_loop" ? "repeat until success" : `${r.iterations} rounds`, 24, "#2f70b8")}</g>`;
+      const padding = Math.min(35, pitch / 2 - 1);
+      body += `<g data-morph="${key}-region-${r.id}"><rect x="${first - padding}" y="${top - 46}" width="${last - first + padding * 2}" height="${(c.qubits.length - 1) * dy + 70}" rx="12" fill="#eaf2fa" fill-opacity=".35" stroke="#87acd0" stroke-width="2" stroke-dasharray="7 5"/>${txt((first + last) / 2, top - 60, r.name === "while_loop" ? "repeat until success" : `${r.iterations} rounds`, 24, "#2f70b8")}</g>`;
     });
     const measured = new Map();
     operations.forEach((o) => {
@@ -170,36 +172,34 @@ window.MQSF_CIRCUIT = (() => {
                 gpi2: "GPI₂",
                 ms: "MS",
               }[o.name] || o.name.toUpperCase();
-            return box + txt(0, yy + 9, name, name.length > 3 ? 23 : 27);
+            return box + txt(0, yy + 9, name, Math.min(27, 70 / name.length));
           })
           .join("");
       }
       if (o.name === "measure")
         (o.clbits || []).forEach((b) => measured.set(b, { x: xx, y: ys[0] }));
-      const condition = o.region.find((r) => r.name === "if_else");
-      if (condition) {
-        const m = (condition.condition_bits || [])
-          .map((b) => measured.get(b))
-          .find(Boolean);
-        if (m) {
-          const bend = top + c.qubits.length * dy + 4;
-          body += `<path data-morph="${key}-classical-${o.id}" d="M${m.x} ${m.y + 25}V${bend}H${xx}V${ys[0] + 26}" fill="none" stroke="#087d92" stroke-width="3"/>`;
-          body += `<circle cx="${xx}" cy="${ys[0] + 27}" r="5" fill="#087d92"/>${txt((m.x + xx) / 2, bend + 28, "= 1", 23, "#087d92")}`;
-        } else gate += txt(0, ys.at(-1) + 50, "if 1", 22, "#087d92");
+      const conditions = o.region.filter((r) => r.name === "if_else");
+      if (conditions.length) {
+        const bits = [
+          ...new Set(conditions.flatMap((r) => r.condition_bits || [])),
+        ];
+        bits.forEach((bit, index) => {
+          const m = measured.get(bit);
+          if (!m) return;
+          const bend = top + c.qubits.length * dy + 4 + index * 12;
+          body += `<path data-morph="${key}-classical-${o.id}-${bit}" data-condition-bit="${bit}" data-feedback-to="${o.id}" d="M${m.x} ${m.y + 25}V${bend}H${xx}V${ys[0] + 26}" fill="none" stroke="#087d92" stroke-width="3"/>`;
+        });
+        gate += `<circle cx="0" cy="${ys[0] + 27}" r="5" fill="#087d92"><title>Classical feedback</title></circle>`;
       }
       body += `<g data-morph="${key}-op-${o.id}" data-column="${o.column}" data-operation="${esc(o.name)}" transform="translate(${xx} 0)" class="${hot ? "gate-highlight" : ""}">${gate}<title>${esc(o.name)} ${esc((o.parameters || []).join(", "))}</title></g>`;
     });
     if (firstColumn + columns <= maximum) body += txt(1085, top + 8, "…", 32);
-    body += txt(
-      550,
-      height - 5,
+    const caption =
       label ||
-        (firstColumn || maximum >= limit
-          ? `Circuit layers ${Math.ceil(firstColumn) + 1}–${Math.floor(firstColumn + columns)} of ${maximum + 1}`
-          : "Parallel gates share a column · loop bodies shown once"),
-      22,
-      "#5b7088",
-    );
+      (firstColumn || maximum >= limit
+        ? `Circuit layers ${Math.ceil(firstColumn) + 1}–${Math.floor(firstColumn + columns)} of ${maximum + 1}`
+        : "");
+    if (caption) body += txt(550, height - 5, caption, 22, "#5b7088");
     return `<div class="circuit" data-op-count="${all.length}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Captured program circuit">${body}</svg></div>`;
   }
   return { flatten, schedule, render };

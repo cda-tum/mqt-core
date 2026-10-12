@@ -68,6 +68,7 @@ window.MQSF_MOTION = (() => {
       "opacity",
       "fill-opacity",
       "stroke-width",
+      "stroke-dashoffset",
       "transform",
       "d",
       "points",

@@ -509,6 +509,9 @@ def main() -> None:
             "mapping_source_sha256": digest(
                 (ROOT / "mlir/lib/Dialect/QCO/Transforms/Mapping/Mapping.cpp").read_bytes()
             ),
+            "synthesis_source_sha256": digest(
+                (ROOT / "mlir/lib/Dialect/QCO/Transforms/NativeSynthesis/TargetSynthesis.cpp").read_bytes()
+            ),
             "compiler_sha256": digest(args.compiler.read_bytes()),
             "library_sha256": digest(args.library.read_bytes()),
             "worker_binary_sha256": digest(args.library.with_name("mqt-core-ddsim-worker").read_bytes()),

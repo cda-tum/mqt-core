@@ -150,85 +150,113 @@
   ) =>
     `<g data-morph="${key}" transform="${transform}" opacity="${opacity}">${body}</g>`;
 
-  // Every mode keeps the same keyed objects; replay changes only their geometry and opacity.
-  function architecture(mode = "stack", progress = 1) {
-    const p = Math.max(0, Math.min(1, progress ?? 1));
-    const ramp = (value, start, end) => {
-      const t = Math.max(0, Math.min(1, (value - start) / (end - start)));
-      return t * t * (3 - 2 * t);
-    };
+  const architecturePhases = {
+    problem: [
+      "Quantum processors",
+      "Researchers",
+      "Classical compute",
+      "One quantum system",
+      "A second system",
+      "Every modality",
+      "Cloud compute",
+      "HPC",
+      "Every user",
+    ],
+    stack: [
+      "A shared stack",
+      "Qiskit",
+      "Program and runtime",
+      "One interface",
+      "Quantum devices",
+      "Classical resources",
+      "OpenQASM",
+      "PennyLane and more",
+    ],
+    detail: [
+      "The QDMI standard",
+      "QDMI on IQM",
+      "Amazon Braket",
+      "MQT DDSIM",
+      "IBM Quantum and more",
+      "Compiler Collection",
+      "Orchestrator",
+      "Our principles",
+    ],
+  };
+
+  function qdmiBadge(x = 0, y = 0, width = 190, label = "Powered by") {
+    return `<g transform="translate(${x} ${y}) scale(${width / 190})" role="img" aria-label="${label} QDMI"><rect width="190" height="39" rx="19.5" fill="white" stroke="#8DB4D8" stroke-width="1.5"/>${text(13, 25, label, 15, "start", `fill="${blue}"`)}${logo("qdmi", 100, 7, 78, 26)}</g>`;
+  }
+
+  // Click phases change targets only; the presentation owns all transition timing.
+  function architecture(mode = "stack", phase = Infinity) {
     const problem = mode === "problem";
-    const core = mode === "core";
-    const products = ["detail", "ecosystem", "core"].includes(mode);
-    const assembly = problem ? 0 : mode === "stack" ? ramp(p, 0, 0.66) : 1;
-    const modules = problem ? 0 : mode === "stack" ? ramp(p, 0.68, 0.96) : 1;
-    const productTime = mode === "detail" ? p : products ? 1 : 0;
-    const qdmi = ramp(productTime, 0.17, 0.3);
-    const physical = 1 - ramp(productTime, 0.04, 0.15);
-    const compiler = ramp(productTime, 0.46, 0.6);
-    const orchestrator = ramp(productTime, 0.79, 0.94);
-    const closing = mode === "ecosystem";
-    const external = core ? 0 : closing ? ramp(p, 0.2, 0.72) : 1;
-    const visible = (start, end) => (problem ? ramp(p, start, end) : 1);
-    const mix = (a, b) => a + (b - a) * assembly;
+    const detail = ["detail", "ecosystem", "core"].includes(mode);
+    const closing = mode === "ecosystem" || mode === "core";
+    const phases = architecturePhases[mode] || architecturePhases.detail;
+    const p = Math.max(
+      0,
+      Math.min(phases.length - 1, Math.floor(phase ?? Infinity)),
+    );
+    const on = (step) => Number(p >= step);
+    const stack = (step) => Number(!problem && (detail || p >= step));
+    const product = (step) => Number(detail && (closing || p >= step));
+    const physical = 1 - product(1);
     const users = [
-      { name: "Researchers", icon: "researcher", badge: "molecule", y: 73 },
-      { name: "Experimentalists", icon: "researcher", badge: "chip", y: 218 },
+      { name: "Researchers", icon: "researcher", badge: "molecule", y: 114 },
+      { name: "Experimentalists", icon: "researcher", badge: "chip", y: 267 },
       {
-        name: "Software",
-        second: "developers",
+        name: "Software developers",
         icon: "developer",
         badge: "circuit",
-        y: 363,
+        y: 420,
       },
-      { name: "End users", icon: "user", badge: "measurement", y: 508 },
+      { name: "End users", icon: "user", badge: "measurement", y: 573 },
     ];
     const computes = [
-      { name: "Workstation", y: 108 },
-      { name: "Cloud compute", y: 303 },
-      { name: "HPC", y: 498 },
+      { name: "Workstation", kind: "workstation", y: 128 },
+      { name: "Cloud compute", kind: "cloud", y: 332 },
+      { name: "HPC", kind: "server", y: 536 },
     ].map((compute, i) => ({
       ...compute,
-      x: mix(650, 410 + i * 285),
-      y: mix(compute.y, 574),
+      x: problem ? 650 : 443 + i * 278,
+      y: problem ? compute.y : 599,
     }));
     const qpus = [
-      { kind: "cryostat", name: "Superconducting", y: 103 },
-      { kind: "iontrap", name: "Trapped ions", y: 179 },
-      { kind: "neutralatom", name: "Neutral atoms", y: 255 },
-      { kind: "cryostat", name: "Superconducting", y: 398 },
-      { kind: "photonics", name: "Photonics", y: 474 },
-      { kind: "spin", name: "Spin qubits", y: 550 },
+      { kind: "cryostat", name: "Superconducting", y: 130 },
+      { kind: "iontrap", name: "Trapped ions", y: 232 },
+      { kind: "neutralatom", name: "Neutral atoms", y: 334 },
+      { kind: "photonics", name: "Photonics", y: 436 },
+      { kind: "spin", name: "Spin qubits", y: 538 },
     ];
     const arrow = 'marker-end="url(#architecture-arrow)"';
-    const route = (key, d, opacity, extra = "", color = blue, width = 3) =>
+    const route = (key, d, visible, extra = "", color = blue, width = 3) =>
       path(
         d,
         color,
         width,
-        `data-morph="${key}" opacity="${opacity}" ${extra}`,
+        `data-morph="${key}" opacity="${visible}" pathLength="1" stroke-dasharray="1" stroke-dashoffset="${visible ? 0 : 1}" ${extra}`,
       );
-    const module = (key, x, y, width, height, body, opacity = modules) =>
+    const module = (key, x, y, width, height, body, visible) =>
       keyed(
         key,
-        `<rect width="${width}" height="${height}" rx="12" fill="#EEF5FB" stroke="#A9C6E1" stroke-width="2"/>${body}`,
+        `<rect width="${width}" height="${height}" rx="16" fill="#F4F8FC" stroke="#A9C6E1" stroke-width="2"/>${body}`,
         `translate(${x} ${y}) scale(1)`,
-        opacity,
+        visible,
       );
+    const workstation = `<rect x="5" y="6" width="92" height="65" rx="5" fill="${pale}" stroke="${navy}" stroke-width="2"/><rect x="13" y="14" width="76" height="47" rx="2" fill="white" stroke="${blue}"/><path d="M41 72V85H62V72M29 87H74" fill="none" stroke="${navy}" stroke-width="3"/><path d="M23 49L38 32L51 43L71 24" fill="none" stroke="${cyan}" stroke-width="3"/>`;
 
     const rawRoutes =
       users
         .flatMap((user, u) =>
           computes.map((compute, c) => {
-            const at = u === 0 ? [0.27, 0.58, 0.72][c] : 0.85;
-            const reveal = visible(at, at + 0.1);
+            const visible = Number(problem && p >= (u ? 8 : [3, 6, 7][c]));
             return route(
               `world-user-compute-${u}-${c}`,
-              `M220 ${user.y}C360 ${user.y} 450 ${compute.y} ${compute.x - 72} ${compute.y}`,
-              reveal * (1 - assembly) * external * 0.65,
-              `data-route="user-classical" data-from="user-${u}" data-to="compute-${c}" pathLength="1" stroke-dasharray="1" stroke-dashoffset="${1 - reveal}"`,
-              "#8AAFCB",
-              3,
+              `M236 ${user.y}C350 ${user.y} 462 ${compute.y} ${compute.x - 72} ${compute.y}`,
+              visible * 0.6,
+              `data-route="user-classical" data-from="user-${u}" data-to="compute-${c}"`,
+              c === 2 ? "#16899D" : blue,
             );
           }),
         )
@@ -236,73 +264,32 @@
       computes
         .flatMap((compute, c) =>
           qpus.map((qpu, q) => {
-            const at =
-              c === 0 && q < 3
-                ? [0.29, 0.4, 0.48][q]
-                : c === 1 && q < 3
-                  ? 0.58
-                  : c === 2
-                    ? 0.72
-                    : 0.85;
-            const reveal = visible(at, at + 0.1);
+            const visible = Number(
+              problem && p >= (c === 0 ? (q < 2 ? 3 + q : 5) : c === 1 ? 6 : 7),
+            );
             return route(
               `world-compute-qpu-${c}-${q}`,
-              `M${compute.x + 72} ${compute.y}C855 ${compute.y} 1010 ${qpu.y} 1152 ${qpu.y}`,
-              reveal * (1 - assembly) * external * 0.65,
-              `data-route="classical-qpu" data-from="compute-${c}" data-to="qpu-${q}" pathLength="1" stroke-dasharray="1" stroke-dashoffset="${1 - reveal}"`,
-              "#8AAFCB",
-              3,
+              `M${compute.x + 72} ${compute.y}C860 ${compute.y} 1055 ${qpu.y} 1203 ${qpu.y}`,
+              visible * 0.58,
+              `data-route="classical-qpu" data-from="compute-${c}" data-to="qpu-${q}" data-hosting="${c === 2 ? "cloud-or-on-premises" : "cloud"}"`,
+              c === 2 ? "#16899D" : blue,
             );
           }),
         )
         .join("");
-    const userInput = users
-      .map((user, i) =>
-        route(
-          `world-user-frontend-${i}`,
-          `M220 ${user.y}C280 ${user.y} 280 167 326 167`,
-          modules * external * 0.7,
-          `${arrow} data-route="user-classical"`,
-        ),
-      )
-      .join("");
-    const deviceOutput = qpus
-      .map((qpu, i) =>
-        route(
-          `world-backend-qpu-${i}`,
-          `M1118 496C1140 496 1105 ${qpu.y} 1152 ${qpu.y}`,
-          modules * physical * external * 0.7,
-          `${arrow} data-route="classical-qpu"`,
-        ),
-      )
-      .join("");
-    const hosting = keyed(
-      "world-hosting",
-      route(
-        "hosting-bus",
-        "M410 546V538H1130V354H1117M695 546V538M980 546V538",
-        1,
-        arrow,
-        "#739BBE",
-        3,
-      ),
-      "translate(0 0) scale(1)",
-      modules * external,
-    );
+
     const people = users
       .map((user, i) =>
         keyed(
           `world-user-${i}`,
-          icon(user.icon, 25, 0, 94) +
-            icon(user.badge, 114, 44, 38) +
-            text(83, user.second ? 112 : 126, user.name, 26) +
-            text(83, 147, user.second || "", 26),
-          `translate(42 ${user.y - 48}) scale(1)`,
-          visible(0, 0.09) * external,
+          icon(user.icon, 61, 0, 87) +
+            icon(user.badge, 139, 38, 36) +
+            text(118, 115, user.name, 25),
+          `translate(10 ${user.y - 56}) scale(1)`,
+          problem ? on(i ? 8 : 1) : 1,
         ),
       )
       .join("");
-    const workstation = `<rect x="5" y="6" width="92" height="65" rx="5" fill="${pale}" stroke="${navy}" stroke-width="2"/><rect x="13" y="14" width="76" height="47" rx="2" fill="white" stroke="${blue}"/><path d="M41 72V85H62V72M29 87H74" fill="none" stroke="${navy}" stroke-width="3"/><path d="M23 49L38 32L51 43L71 24" fill="none" stroke="${cyan}" stroke-width="3"/>`;
     const classical = computes
       .map((compute, i) =>
         keyed(
@@ -312,298 +299,325 @@
             : i === 1
               ? icon("cloud", 0, 0, 102)
               : icon("server", -9, 0, 88) + icon("server", 42, 0, 88)) +
-            text(51, 123, compute.name, mix(27, 39)),
-          `translate(${compute.x - 51 * mix(1, 0.64)} ${compute.y - 45 * mix(1, 0.64)}) scale(${mix(1, 0.64)})`,
-          visible(0.09, 0.18) * external,
+            text(51, 129, compute.name, problem ? 28 : 39),
+          `translate(${compute.x - (problem ? 51 : 30.6)} ${compute.y - (problem ? 45 : 27)}) scale(${problem ? 1 : 0.6})`,
+          problem ? on(2) : 1,
         ),
       )
       .join("");
-    const deviceGroups = keyed(
-      "world-device-groups",
-      `<rect x="1141" y="48" width="448" height="276" rx="16" fill="#F7FAFD" stroke="#C4D6E7" stroke-width="2"/><rect x="1141" y="347" width="448" height="281" rx="16" fill="#F7FAFD" stroke="#C4D6E7" stroke-width="2"/>` +
-        text(1160, 81, "Cloud-hosted QPUs", 27, "start") +
-        text(1160, 382, "On-premises QPUs", 27, "start"),
-      "translate(0 0) scale(1)",
-      visible(0.18, 0.27) * physical * external,
-    );
     const devices = qpus
       .map((qpu, i) =>
         keyed(
           `world-qpu-${i}`,
-          icon(qpu.kind, 0, 0, 65) + text(85, 41, qpu.name, 26, "start"),
-          `translate(1157 ${qpu.y - 14}) scale(1)`,
-          visible(0.18, 0.27) * physical * external,
+          icon(qpu.kind, 0, 0, 80) + text(98, 48, qpu.name, 27, "start"),
+          `translate(1209 ${qpu.y - 37}) scale(1)`,
+          physical,
         ),
       )
       .join("");
-    const headings = keyed(
-      "world-column-labels",
-      text(126, 31, "Users", 29) +
-        text(650, 31, "Classical compute", 29) +
-        text(1364, 31, "Quantum processors", 29),
-      "translate(0 0) scale(1)",
-      (problem ? 1 : mode === "stack" ? 1 - ramp(p, 0, 0.18) : 0) * external,
+    const headings =
+      keyed(
+        "world-column-labels",
+        text(128, 25, "Users", 28) + text(650, 25, "Classical compute", 28),
+        "translate(0 0) scale(1)",
+        Number(problem),
+      ) +
+      keyed(
+        "world-device-label",
+        text(1389, 25, "Quantum processors", 28) +
+          text(
+            1389,
+            65,
+            "Cloud-hosted or on-premises",
+            21,
+            "middle",
+            'fill="#5B7088"',
+          ),
+        "translate(0 0) scale(1)",
+        physical,
+      ) +
+      keyed(
+        "world-cloud-access",
+        text(858, 76, "Cloud access", 23, "middle", `fill="${blue}"`),
+        "translate(0 0) scale(1)",
+        Number(problem && p >= 3),
+      ) +
+      keyed(
+        "world-hpc-access",
+        text(
+          960,
+          626,
+          "HPC also reaches on-premises QPUs",
+          22,
+          "middle",
+          'fill="#16899D"',
+        ),
+        "translate(0 0) scale(1)",
+        Number(problem && p >= 7),
+      );
+    const userInput = users
+      .map((user, i) =>
+        route(
+          `world-user-frontend-${i}`,
+          `M236 ${user.y}C275 ${user.y} 272 81 305 81`,
+          stack(1) * 0.45,
+          `${arrow} data-route="user-classical"`,
+          "#739BBE",
+          2.5,
+        ),
+      )
+      .join("");
+    const deviceOutput = qpus
+      .map((qpu, i) =>
+        route(
+          `world-backend-qpu-${i}`,
+          `M1148 503C1186 503 1162 ${qpu.y} 1203 ${qpu.y}`,
+          stack(4) * physical * 0.65,
+          `${arrow} data-route="classical-qpu"`,
+        ),
+      )
+      .join("");
+    const hosting = route(
+      "hosting-bus",
+      "M443 576V563H1127V409M721 576V563M999 576V563",
+      stack(5) * 0.7,
+      `${arrow} data-flow="classical-hosting"`,
+      "#739BBE",
+      2.5,
     );
 
-    const frontends = [
-      { name: "Qiskit", brand: "qiskit", program: true, runtime: "Runtime" },
-      { name: "OpenQASM 3", program: true, runtime: "via host" },
-      { name: "jeff", brand: "jeff", program: true, runtime: "via host" },
-      {
-        name: "PennyLane",
-        brand: "pennylane",
-        program: false,
-        runtime: "Runtime",
-      },
-      {
-        name: "CUDA-Q",
-        brand: "cuda-q",
-        program: false,
-        runtime: "Planned",
-        planned: true,
-      },
-    ];
-    const frontendCards = keyed(
-      "stack-frontends",
-      text(724, 29, "Frontends & Programming Models", 28) +
-        frontends
-          .map((frontend, i) =>
-            keyed(
-              `frontend-${i}`,
-              `<rect width="151" height="109" rx="8" fill="${frontend.planned ? "white" : pale}" stroke="${frontend.planned ? "#91A2B5" : "#A9C6E1"}" stroke-width="2" ${frontend.planned ? 'stroke-dasharray="7 5"' : ""}/>` +
-                (frontend.brand === "pennylane"
-                  ? logo(frontend.brand, 13, 7, 125, 33)
-                  : frontend.brand
-                    ? logo(frontend.brand, 12, 7, 31, 31) +
-                      text(96, 32, frontend.name, 24)
-                    : text(75, 32, frontend.name, 23)) +
-                text(
-                  69,
-                  66,
-                  frontend.planned ? "Planned" : "Program",
-                  23,
-                  "middle",
-                  `fill="${frontend.program ? blue : "#8394A5"}"`,
-                ) +
-                text(
-                  69,
-                  97,
-                  frontend.runtime,
-                  23,
-                  "middle",
-                  `fill="${frontend.planned ? "#8394A5" : blue}"`,
-                ) +
-                `<circle cx="142" cy="60" r="4" fill="${frontend.program ? blue : "white"}" stroke="${frontend.program ? blue : "#8394A5"}" stroke-width="2"/><circle cx="142" cy="91" r="4" fill="${frontend.planned ? "white" : blue}" stroke="${frontend.planned ? "#8394A5" : blue}" stroke-width="2"/>`,
-              `translate(${328 + i * 160} 47) scale(1)`,
-            ),
-          )
-          .join("") +
-        frontends
-          .map((frontend, i) =>
-            route(
-              `frontend-program-${i}`,
-              `M${470 + i * 160} 107H${483 + i * 160}V167H505V224`,
-              frontend.program || frontend.planned ? 1 : 0,
-              `${arrow} data-lane="program" data-support="${frontend.planned ? "planned" : frontend.program ? "supported" : "unsupported"}" ${frontend.planned ? 'stroke-dasharray="6 5"' : ""}`,
-              frontend.planned ? "#91A2B5" : blue,
-              2.5,
-            ),
-          )
-          .join("") +
-        frontends
-          .map((frontend, i) =>
-            route(
-              `frontend-runtime-${i}`,
-              `M${470 + i * 160} 138H${486 + i * 160}V185H968V224`,
-              1,
-              `${arrow} data-lane="runtime" data-support="${frontend.planned ? "planned" : frontend.runtime === "via host" ? "host" : "supported"}" ${frontend.planned || frontend.runtime === "via host" ? 'stroke-dasharray="6 5"' : ""}`,
-              frontend.planned ? "#91A2B5" : blue,
-              2.5,
-            ),
-          )
-          .join("") +
-        `<rect x="363" y="174" width="298" height="30" fill="white"/><rect x="822" y="193" width="176" height="29" fill="white"/>` +
-        text(512, 197, "Program representation", 25) +
-        text(909, 217, "Runtime API", 25),
-      "translate(0 0) scale(1)",
-      modules * (core ? 0 : closing ? ramp(p, 0.25, 0.55) : 1),
-    );
-    const boundary = keyed(
-      "stack-core-boundary",
-      `<rect x="319" y="210" width="814" height="250" rx="15" fill="#F9FBFE" stroke="${blue}" stroke-width="2.5"/>` +
-        keyed(
-          "stack-core-brand",
-          `<rect x="650" y="193" width="154" height="35" fill="white"/>` +
-            text(727, 222, "MQT Core", 26),
-          "translate(0 0) scale(1)",
-          Math.max(qdmi, compiler, orchestrator),
-        ),
-      "translate(0 0) scale(1)",
-      modules,
-    );
+    const frontendCards =
+      [
+        { name: "Qiskit", brand: "qiskit", x: 305, reveal: 1 },
+        { name: "OpenQASM 3", x: 594, reveal: 6 },
+        { name: "PennyLane", brand: "pennylane", x: 883, reveal: 7 },
+      ]
+        .map((frontend, i) =>
+          keyed(
+            `frontend-${i}`,
+            `<rect width="244" height="76" rx="12" fill="white" stroke="#A9C6E1" stroke-width="2"/>` +
+              (frontend.brand === "pennylane"
+                ? logo(frontend.brand, 22, 25, 200, 26)
+                : frontend.brand
+                  ? logo(frontend.brand, 19, 16, 43, 43) +
+                    text(155, 48, frontend.name, 29)
+                  : text(122, 48, frontend.name, 29)),
+            `translate(${frontend.x} 43) scale(1)`,
+            stack(frontend.reveal),
+          ),
+        )
+        .join("") +
+      keyed(
+        "frontend-more",
+        text(1166, 87, "…", 43),
+        "translate(0 0) scale(1)",
+        stack(7),
+      );
+    const frontendFlow =
+      [427, 716, 1005]
+        .map((x, i) =>
+          route(
+            `frontend-junction-${i}`,
+            `M${x} 119V150H716`,
+            stack([2, 6, 7][i]),
+            `data-lane="program-runtime"`,
+          ),
+        )
+        .join("") +
+      route(
+        "frontend-program",
+        "M716 150V166H497V213",
+        stack(2),
+        `${arrow} data-lane="program"`,
+      ) +
+      route(
+        "frontend-runtime",
+        "M716 150V166H942V213",
+        stack(2),
+        `${arrow} data-lane="runtime"`,
+        "#16899D",
+      ) +
+      keyed(
+        "frontend-lane-labels",
+        `<rect x="443" y="181" width="108" height="28" fill="white"/><rect x="886" y="181" width="112" height="28" fill="white"/>` +
+          text(497, 203, "Program", 24, "middle", `fill="${blue}"`) +
+          text(942, 203, "Runtime", 24, "middle", 'fill="#16899D"'),
+        "translate(0 0) scale(1)",
+        stack(2),
+      );
+
     const compilerPanel = module(
       "stack-compiler",
-      336,
-      227,
-      356,
-      150,
+      305,
+      220,
+      399,
+      178,
       keyed(
         "stack-compiler-generic",
-        text(178, 31, "Compiler", 27) + text(178, 64, "Infrastructure", 27),
+        text(199.5, 45, "Compiler", 30) +
+          text(199.5, 82, "Infrastructure", 30) +
+          text(
+            199.5,
+            133,
+            "Optimize · Map · Synthesize",
+            25,
+            "middle",
+            'fill="#5B7088"',
+          ),
         "translate(0 0) scale(1)",
-        1 - ramp(productTime, 0.34, 0.45),
+        1 - product(5),
       ) +
         keyed(
           "stack-compiler-product",
-          logo("mqt", 14, 20, 77, 49) +
-            text(222, 31, "MQT Compiler", 26) +
-            text(222, 64, "Collection", 26),
+          logo("mqt", 20, 25, 126, 58) +
+            text(272, 50, "Compiler", 29) +
+            text(272, 86, "Collection", 29) +
+            logo("mlir", 23, 122, 73, 39) +
+            logo("llvm", 113, 120, 72, 43) +
+            logo("qir", 206, 120, 64, 43) +
+            logo("jeff", 291, 116, 83, 47),
           "translate(0 0) scale(1)",
-          compiler,
-        ) +
-        keyed(
-          "stack-compiler-formats",
-          text(178, 101, "OpenQASM 3 · QIR 2", 25) +
-            text(178, 135, "Qiskit · jeff", 25),
-          "translate(0 0) scale(1)",
-          1 - ramp(productTime, 0.34, 0.45),
-        ) +
-        keyed(
-          "stack-compiler-integrations",
-          logo("mlir", 31, 97, 79, 42) +
-            logo("llvm", 144, 97, 80, 42) +
-            logo("qir", 256, 97, 63, 42),
-          "translate(0 0) scale(1)",
-          compiler,
+          product(5),
         ),
+      stack(2),
     );
     const orchestratorPanel = module(
       "stack-orchestrator",
-      753,
-      227,
-      364,
-      150,
+      755,
+      220,
+      393,
+      178,
       keyed(
         "stack-orchestrator-generic",
-        text(182, 46, "Resource Management", 25) +
-          text(182, 79, "& Orchestration", 28),
+        text(196.5, 45, "Resource Management", 28) +
+          text(196.5, 82, "& Orchestration", 30) +
+          text(
+            196.5,
+            133,
+            "Schedule · Execute · Collect",
+            25,
+            "middle",
+            'fill="#5B7088"',
+          ),
         "translate(0 0) scale(1)",
-        1 - ramp(productTime, 0.65, 0.78),
+        1 - product(6),
       ) +
         keyed(
           "stack-orchestrator-product",
-          logo("mqsc", 13, 23, 90, 49) +
-            text(240, 44, "MQSC", 29) +
-            text(240, 77, "Orchestrator", 26),
+          logo("mqsc", 21, 25, 106, 67) +
+            text(263, 65, "Orchestrator", 29) +
+            logo("slurm", 38, 115, 82, 46) +
+            qdmiBadge(172, 118, 194, "Built on"),
           "translate(0 0) scale(1)",
-          orchestrator,
-        ) +
-        keyed(
-          "stack-orchestrator-description",
-          text(182, 111, "Compile · submit · retrieve", 24),
-          "translate(0 0) scale(1)",
-          1 - ramp(productTime, 0.65, 0.78),
-        ) +
-        keyed(
-          "stack-orchestrator-integrations",
-          logo("slurm", 33, 104, 122, 36) + logo("qdmi", 205, 104, 118, 36),
-          "translate(0 0) scale(1)",
-          orchestrator,
+          product(6),
         ),
+      stack(2),
     );
-    const compilerFlow = keyed(
-      "stack-compiler-flow",
+    const compilerFlow =
       route(
         "compile-request",
-        "M932 377V393H514V380",
-        1,
+        "M755 272H709",
+        stack(2),
         `${arrow} data-flow="compile-request"`,
+        "#16899D",
+        2.5,
       ) +
-        route(
-          "compiled-program",
-          "M542 377V429H961V380",
-          1,
-          `${arrow} data-flow="compiled-program"`,
-        ) +
-        `<rect x="630" y="380" width="200" height="29" fill="#F9FBFE"/><rect x="595" y="414" width="276" height="32" fill="#F9FBFE"/>` +
-        text(730, 401, "Compile request", 23) +
-        text(733, 437, "Compiled program", 25),
-      "translate(0 0) scale(1)",
-      modules,
-    );
+      route(
+        "compiled-program",
+        "M704 348H750",
+        stack(2),
+        `${arrow} data-flow="compiled-program"`,
+        blue,
+        2.5,
+      );
     const backend = module(
       "stack-backends",
-      336,
-      465,
-      781,
-      61,
-      text(28, 39, "Backend Interface", 29, "start") +
+      305,
+      468,
+      843,
+      70,
+      keyed(
+        "stack-backend-symbol",
+        path(
+          "M22 18L43 35L22 52M43 35L64 18M43 35L64 52M43 8V35M43 35V62",
+          blue,
+          2.5,
+        ) +
+          [
+            [22, 18],
+            [22, 52],
+            [64, 18],
+            [64, 52],
+            [43, 8],
+            [43, 62],
+          ]
+            .map(
+              ([x, y]) =>
+                `<circle cx="${x}" cy="${y}" r="3.5" fill="${blue}"/>`,
+            )
+            .join(""),
+      ) +
         keyed(
-          "stack-backends-product",
-          logo("qdmi", 560, 4, 161, 51),
+          "stack-backend-generic",
+          text(468, 45, "Backend Interface", 30),
           "translate(0 0) scale(1)",
-          qdmi,
+          1 - product(0),
+        ) +
+        keyed(
+          "stack-backend-standard",
+          text(468, 44, "Quantum Device Management Interface (QDMI)", 28),
+          "translate(0 0) scale(1)",
+          product(0),
         ),
+      stack(3),
     );
-    const backendFlow = keyed(
-      "stack-backend-flow",
+    const backendFlow =
       route(
         "device-capabilities",
-        "M355 465V380",
-        1,
+        "M408 468V402",
+        stack(3),
         `${arrow} data-flow="device-capabilities"`,
+        blue,
+        2.5,
       ) +
-        route(
-          "job-submission",
-          "M1007 377V462",
-          1,
-          `${arrow} data-flow="submission"`,
-        ) +
-        route(
-          "execution-results",
-          "M1092 465V380",
-          1,
-          `${arrow} data-flow="results"`,
-        ) +
-        route(
-          "frontend-results",
-          "M1092 227V180H981",
-          1,
-          `${arrow} data-flow="runtime-results"`,
-        ) +
-        text(443, 405, "Device", 25) +
-        text(443, 440, "capabilities", 25) +
-        text(
-          0,
-          0,
-          "Submit",
-          25,
-          "middle",
-          'transform="translate(994 416) rotate(-90)"',
-        ) +
-        text(
-          0,
-          0,
-          "Results",
-          25,
-          "middle",
-          'transform="translate(1077 416) rotate(-90)"',
-        ),
-      "translate(0 0) scale(1)",
-      modules,
-    );
+      route(
+        "job-submission",
+        "M856 398V462",
+        stack(3),
+        `${arrow} data-flow="submission"`,
+        "#16899D",
+        2.5,
+      ) +
+      route(
+        "execution-results",
+        "M1060 468V402",
+        stack(3),
+        `${arrow} data-flow="results"`,
+        "#16899D",
+        2.5,
+      ) +
+      keyed(
+        "stack-backend-labels",
+        `<rect x="316" y="422" width="184" height="26" fill="white"/><rect x="808" y="422" width="96" height="26" fill="white"/><rect x="1010" y="422" width="100" height="26" fill="white"/>` +
+          text(408, 442, "Device capabilities", 21) +
+          text(856, 442, "Submit", 21) +
+          text(1060, 442, "Results", 21),
+        "translate(0 0) scale(1)",
+        stack(3),
+      );
+
     const adapters = [
-      ["iqm", "QDMI for IQM", "IQM quantum computers"],
+      ["iqm", "QDMI on IQM", "IQM quantum computers"],
       ["aws", "Amazon Braket", "Cloud quantum devices"],
-      ["mqt", "DDSIM", "Quantum simulation"],
+      ["mqt", "MQT DDSIM", "Classical quantum circuit simulation"],
       ["ibm", "IBM Quantum", "IBM quantum devices"],
     ];
     const adapterPaths = adapters
       .map((_, i) =>
         route(
           `backend-adapter-${i}`,
-          `M1117 496C1160 496 1132 ${101 + i * 151} 1180 ${101 + i * 151}`,
-          qdmi * external,
+          `M1148 503C1188 503 1173 ${99 + i * 130} 1212 ${99 + i * 130}`,
+          product(i + 1) * 0.6,
           `${arrow} data-route="classical-qpu"`,
         ),
       )
@@ -612,196 +626,64 @@
       .map(([brand, name, description], i) =>
         keyed(
           `world-adapter-${i}`,
-          `<rect width="399" height="126" rx="12" fill="#F7FAFD" stroke="#A9C6E1" stroke-width="2"/>` +
-            logo(brand, 15, 19, 87, 55) +
-            text(249, 43, name, 27) +
-            text(249, 77, description, 22) +
-            text(249, 108, "QDMI implementation", 23),
-          `translate(1180 ${39 + i * 151}) scale(1)`,
-          qdmi * external,
+          `<rect width="372" height="112" rx="14" fill="#F7FAFD" stroke="#A9C6E1" stroke-width="2"/>` +
+            logo(brand, 15, 14, 88, 42) +
+            text(235, 43, name, 26) +
+            text(186, 75, description, i === 2 ? 20 : 22) +
+            qdmiBadge(104, 85, 164, "Powered by"),
+          `translate(1215 ${40 + i * 130}) scale(1)`,
+          product(i + 1),
         ),
       )
       .join("");
-    const adapterCredit = keyed(
-      "world-adapter-credit",
-      text(1380, 644, "Developed & maintained by MQSC", 22),
+    const adapterFuture = keyed(
+      "world-adapter-future",
+      `<rect x="1215" y="570" width="372" height="60" rx="14" fill="white" stroke="#A9C6E1" stroke-width="2" stroke-dasharray="5 7"/>` +
+        text(1401, 608, "Your device could be next", 24),
       "translate(0 0) scale(1)",
-      qdmi * external,
+      product(4),
     );
-    const coreDetail = keyed(
-      "core-detail",
-      text(729, 56, "Quantum programs, shared infrastructure", 32) +
-        text(729, 102, "OpenQASM 3 · QIR 2 · Qiskit · jeff", 29) +
-        logo("llvm", 460, 127, 112, 56) +
-        logo("mlir", 613, 127, 105, 56) +
-        logo("qir", 760, 127, 87, 56) +
-        logo("slurm", 891, 127, 128, 56) +
-        path(
-          "M126 243L75 299M126 243L177 299M75 299L103 348M177 299L103 348M177 299L216 348",
-          blue,
-          3,
-        ) +
-        [
-          [126, 243],
-          [75, 299],
-          [177, 299],
-          [103, 348],
-          [216, 348],
-        ]
-          .map(
-            ([x, y], i) =>
-              `<circle cx="${x}" cy="${y}" r="17" fill="${i < 3 ? pale : blue}" stroke="${blue}" stroke-width="2"/>`,
-          )
-          .join("") +
-        text(143, 415, "Quantum IR", 26) +
-        text(143, 452, "Decision diagrams", 26) +
-        text(143, 489, "ZX calculus", 26) +
-        icon("server", 1338, 268, 119) +
-        text(1400, 415, "DDSIM", 26) +
-        text(1400, 452, "Dynamic execution", 26) +
-        text(1400, 489, "Verification", 26) +
-        text(
-          729,
-          600,
-          "C++20 · Python · SDK integrations · reusable libraries",
-          27,
-        ),
+    const principles = keyed(
+      "stack-principles",
+      text(
+        726,
+        20,
+        "Open by Design · Community-Driven · No Lock-Ins",
+        24,
+        "middle",
+        `fill="${blue}"`,
+      ),
       "translate(0 0) scale(1)",
-      core ? 1 : closing ? 1 - ramp(p, 0, 0.2) : 0,
+      product(7),
     );
     return scene(
       "architecture",
-      "Users run programs on workstation, cloud and HPC systems; shared compiler and orchestration infrastructure connects them to quantum devices through a backend interface",
+      "Users and classical resources connect to quantum systems through compiler infrastructure, resource orchestration, and the open Quantum Device Management Interface standard. Workstations access cloud-hosted systems; HPC also reaches on-premises devices.",
       rawRoutes +
         userInput +
         deviceOutput +
         adapterPaths +
         hosting +
         headings +
-        deviceGroups +
         people +
         classical +
         devices +
-        boundary +
         frontendCards +
+        frontendFlow +
         compilerPanel +
         orchestratorPanel +
         compilerFlow +
         backend +
         backendFlow +
         adapterCards +
-        adapterCredit +
-        coreDetail,
+        adapterFuture +
+        principles,
     );
   }
 
-  function application(
-    progress = 1,
-    app = window.MQSF_DATA?.application || {},
-  ) {
-    const p = Math.max(0, Math.min(1, progress));
-    const fade = (start) => Math.max(0.14, Math.min(1, (p - start) * 5));
-    const count = (value) =>
-      value == null ? "" : Number(value).toLocaleString("en-US");
-    const track = "M335 205H411M844 205H910M1255 315V385H1096V428M890 513H806";
-    const quantum = keyed(
-      "app-quantum",
-      `<rect x="411" y="56" width="868" height="268" rx="18" fill="#EFF6FC" stroke="#A9C6E1" stroke-width="2"/>` +
-        icon("chip", 444, 71, 57) +
-        text(519, 110, "Quantum device / simulator", 30, "start") +
-        icon("circuit", 441, 153, 105) +
-        path("M554 198H597", blue, 3, 'marker-end="url(#application-arrow)"') +
-        `<rect x="614" y="159" width="169" height="85" rx="8" fill="white" stroke="${blue}" stroke-width="2"/>` +
-        text(698, 193, "Random", 28) +
-        text(698, 227, "basis", 28) +
-        icon("measurement", 807, 166, 76) +
-        path("M884 200H942", blue, 3, 'marker-end="url(#application-arrow)"') +
-        text(
-          650,
-          290,
-          `${count(app.workload?.snapshots)} shadow circuits · ${count(app.workload?.shots_per_snapshot)} shots each`,
-          24,
-        ) +
-        [0, 1, 2]
-          .map(
-            (i) =>
-              `<g transform="translate(${970 + i * 21} ${132 + i * 16}) rotate(${i * 5 - 5} 85 51)"><rect width="173" height="101" rx="6" fill="white" stroke="${blue}" stroke-width="2"/>${i === 2 ? text(86, 42, "Basis + bits", 27) : path("M28 35H80M90 35H145", "#A9C6E1", 3)}${path("M28 67H55M65 67H89M101 67H146", cyan, 5)}</g>`,
-          )
-          .join("") +
-        text(1091, 304, "Classical shadows", 27),
-      "translate(0 0) scale(1)",
-      fade(0.05),
-    );
-    const classical = keyed(
-      "app-classical",
-      `<rect x="346" y="421" width="929" height="192" rx="18" fill="#E7F1FA" stroke="#A9C6E1" stroke-width="2"/>` +
-        path(
-          "M891 516H820M580 516H545",
-          blue,
-          3,
-          'marker-end="url(#application-arrow)"',
-        ) +
-        icon("server", 1170, 443, 71) +
-        text(1147, 480, "Classical CPUs", 29, "end") +
-        text(1096, 548, "Parallel AFQMC", 32) +
-        text(
-          1096,
-          584,
-          `${count(app.propagation?.walkers)} walkers · ${count(app.propagation?.steps)} steps`,
-          25,
-        ) +
-        [0, 1, 2, 3]
-          .map((row) =>
-            [0, 1, 2, 3, 4, 5]
-              .map(
-                (col) =>
-                  `<circle cx="${601 + col * 34}" cy="${460 + row * 34}" r="9" fill="${(row + col) % 3 ? blue : cyan}" opacity=".8"/>`,
-              )
-              .join(""),
-          )
-          .join("") +
-        text(660, 599, "Walker ensemble", 24) +
-        path(
-          "M845 460C885 393 983 390 1016 428",
-          "#16899D",
-          3,
-          'marker-end="url(#application-arrow)"',
-        ) +
-        text(914, 401, "Reuse the shadows", 25) +
-        text(460, 483, "Energy", 31) +
-        text(460, 520, "estimate", 31) +
-        text(460, 565, "Weighted average", 23),
-      "translate(0 0) scale(1)",
-      fade(0.48),
-    );
-    return scene(
-      "application",
-      "Quantum-assisted AFQMC: a molecular problem produces shadow circuits; a quantum device or simulator returns classical shadows, then parallel classical CPUs reuse them to propagate a walker ensemble and estimate energy",
-      keyed(
-        "app-molecule",
-        icon("molecule", 111, 122, 151) +
-          text(188, 306, "Molecular problem", 32) +
-          text(188, 349, "LiH · small active space", 25) +
-          text(188, 391, "Trial state + integrals", 25),
-      ) +
-        path(track, "#A9C6E1", 4) +
-        path(
-          track,
-          blue,
-          5,
-          `class="flow-particles" stroke-dasharray="8 52" opacity="${p > 0.15 ? 0.8 : 0}"`,
-        ) +
-        quantum +
-        classical +
-        keyed(
-          "app-data-transfer",
-          text(1408, 358, "Quantum data", 27) +
-            text(1408, 396, "for classical CPUs", 25),
-          "translate(0 0) scale(1)",
-          fade(0.35),
-        ),
-    );
-  }
-
-  window.MQSF_VIZ = { architecture, application };
+  window.MQSF_VIZ = {
+    architecture,
+    architecturePhases,
+    qdmiBadge,
+  };
 })();

@@ -53,7 +53,7 @@
         "Josh Izaac",
         "Seyon Sivarajah",
         "Robert Wille",
-        "August\u00edn Borgna",
+        "Agust\u00edn Borgna",
         "Lukas Burgholzer",
         "Brad Chase",
         "Olivia Di Matteo",
@@ -139,7 +139,7 @@
     }
   },
   "scientific_illustrations": {
-    "molecule": "Schematic LiH and active-space occupancy; no measured geometry, orbital densities, or energy curves are encoded."
+    "molecule": "Schematic H2 molecule; measured chemistry parameters and energy estimates are retained separately in the AFQMC capture."
   },
   "qdmi_stats": {
     "github_api_url": "https://api.github.com/repos/Munich-Quantum-Software-Stack/QDMI",

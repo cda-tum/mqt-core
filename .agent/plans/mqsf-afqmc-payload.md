@@ -1,5 +1,8 @@
 # AFQMC payload and presentation simplification
 
+Historical iteration. The current implementation and validation are recorded in
+[mqsf-click-driven-workflow.md](mqsf-click-driven-workflow.md).
+
 Status: complete. The canonical payload, refreshed scientific evidence and
 smaller offline presentation pass the checks below.
 

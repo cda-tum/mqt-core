@@ -13,6 +13,7 @@ import tempfile
 import zipfile
 from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -36,12 +37,12 @@ def sample_capture() -> dict:
         "device": {"sites": [{"id": 0, "name": "QB1"}], "edges": []},
         "scenarios": [
             {
-                "id": "test",
+                "id": "parity",
                 "variants": [
                     {
-                        "id": "preserved",
-                        "stages": [{"id": "input", "language": "text", "code": code}],
-                        "exports": [{"id": "qasm", "language": "text", "code": code}],
+                        "id": "structured",
+                        "stages": [{"id": "source", "language": "text", "code": code}],
+                        "exports": [{"id": "qir-adaptive", "language": "text", "code": code}],
                         "layout": {"initial": [0], "final": [0], "swaps": []},
                         "execution": {
                             "payload_sha256": hashlib.sha256(code.encode()).hexdigest(),
@@ -66,7 +67,7 @@ def sample_target_capture() -> dict:
     source_hash = hashlib.sha256(code.encode()).hexdigest()
     data["application"] = {
         "representative_source": {"code": code, "sha256": source_hash},
-        "snapshots": [{"payload": code, "payload_sha256": source_hash}],
+        "snapshots": [{"payload": code, "payload_sha256": source_hash, "native_program_index": 0, "shots": ["0"]}],
         "provenance": {"core_revision": data["provenance"]["core_revision"]},
     }
     data["provenance"].update({"compiler_sha256": "c" * 64, "execution_script_sha256": "d" * 64})
@@ -109,6 +110,7 @@ def sample_target_capture() -> dict:
     "failure",
     [
         "application-source",
+        "application-provenance",
         "submitted-source",
         "target-source",
         "target-digest",
@@ -129,6 +131,8 @@ def test_rejects_inconsistent_application_target_merge(failure: str) -> None:
     compilation = target["compilation"]
     if failure == "application-source":
         data["application"]["representative_source"]["code"] += "changed"
+    elif failure == "application-provenance":
+        del data["application"]["provenance"]["core_revision"]
     elif failure == "submitted-source":
         snapshot = data["application"]["snapshots"][0]
         snapshot["payload"] += "changed"
@@ -159,12 +163,54 @@ def test_rejects_inconsistent_application_target_merge(failure: str) -> None:
         BUILDER.validate_capture(data)
 
 
+def test_application_recording_can_precede_compiler_capture() -> None:
+    """Compile the same retained payload with a newer compiler without rewriting its history."""
+    data = sample_target_capture()
+    data["application"]["provenance"]["core_revision"] = "b" * 40
+    original = deepcopy(data)
+    BUILDER.validate_capture(data)
+    assert data == original
+
+
 def test_embedded_source_cannot_end_script_and_roundtrips() -> None:
     """Keep source text intact without allowing script injection."""
     data = sample_capture()
     encoded = BUILDER.encode_data(data)
     assert "</script" not in encoded
     assert json.loads(encoded) == data
+
+
+@pytest.mark.parametrize("failure", ["revision", "optimization", "weyl-target", "weyl-program", "weyl-trace"])
+def test_rejects_compiler_evidence_from_different_capture(failure: str) -> None:
+    """Bind displayed optimization and Weyl evidence before creating browser excerpts."""
+    data = sample_target_capture()
+    target = data["targets"][0]
+    target["compilation"]["synthesis_trace"] = [{"matrix": "recorded fusion"}]
+    data["compiler_evidence"] = {
+        "provenance": {"core_revision": data["provenance"]["core_revision"]},
+        "optimization": {"after": deepcopy(target["compilation"]["stages"][0])},
+        "weyl": {
+            "target_id": target["id"],
+            "program_sha256": target["compilation"]["source_sha256"],
+            "input_sha256": hashlib.sha256(
+                json.dumps(target["compilation"]["synthesis_trace"], sort_keys=True).encode()
+            ).hexdigest(),
+        },
+    }
+    BUILDER.validate_capture(data)
+    evidence: dict[str, Any] = data["compiler_evidence"]
+    if failure == "revision":
+        evidence["provenance"]["core_revision"] = "b" * 40
+    elif failure == "optimization":
+        evidence["optimization"]["after"]["code"] += "changed"
+    elif failure == "weyl-target":
+        evidence["weyl"]["target_id"] = "missing-target"
+    elif failure == "weyl-program":
+        evidence["weyl"]["program_sha256"] = "b" * 64
+    else:
+        target["compilation"]["synthesis_trace"].append({"matrix": "another fusion"})
+    with pytest.raises(ValueError, match=r"Compiler evidence|Optimization artifact|Weyl evidence"):
+        BUILDER.validate_capture(data)
 
 
 def test_rejects_histogram_that_does_not_match_shots() -> None:
@@ -257,7 +303,23 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
         data["application"].update({
             "workload": {"snapshots": 1},
             "shadow": {"raw": "scientific evidence"},
-            "propagation": {"curves": [{"energy": [1], "walker_energies": [[1]], "walker_weights": [[1]]}]},
+            "propagation": {
+                "curves": [
+                    {
+                        "energy": [1],
+                        "walker_energies": [[1]],
+                        "walker_weights": [[1]],
+                        "frames": [{"tau": 0, "walkers": [{"id": 0, "weight": 1, "energy": 2}]}],
+                    },
+                    {"energy": [2], "frames": [{"tau": 0, "walkers": [{"id": 0, "weight": 1}]}]},
+                ]
+            },
+        })
+        data["targets"][0]["compilation"]["stages"].append({
+            "id": "unused-intermediate",
+            "language": "text",
+            "code": "retained only in evidence",
+            "sha256": hashlib.sha256(b"retained only in evidence").hexdigest(),
         })
         source.write_text(json.dumps(data), encoding="utf-8")
         result = BUILDER.build(root / "output", source, root)
@@ -271,21 +333,27 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
         assert "data:image/svg+xml;base64," in html
         assert "data:font/woff2;base64," in html
         packaged = json.loads(html.split("window.MQSF_DATA=", 1)[1].split(";</script>", 1)[0])
-        assert packaged["target_provenance"] == data["target_provenance"]
         assert "snapshots" not in packaged["application"]
         assert "shadow" not in packaged["application"]
         assert packaged["application"]["workload"]["snapshots"] == 1
-        assert packaged["application"]["propagation"]["curves"] == [{"energy": [1]}]
+        assert packaged["application"]["propagation"]["curves"] == [
+            {"energy": [1], "frames": [{"tau": 0, "walkers": [{"id": 0, "weight": 1}]}]},
+            {"energy": [2]},
+        ]
+        first, second = packaged["targets"]
+        assert first["compilation"]["stages"][0]["code"] == data["application"]["representative_source"]["code"]
+        assert first["compilation"]["stages"][0]["lines_html"]
+        assert all(stage["id"] != "unused-intermediate" for stage in first["compilation"]["stages"])
+        assert "code" not in second["compilation"]["stages"][0]
         for target, original in zip(packaged["targets"], data["targets"], strict=True):
-            assert target["provenance"] == original["provenance"]
-            assert target["compilation"]["stages"][0]["code"] == data["application"]["representative_source"]["code"]
-            assert target["compilation"]["stages"][0]["lines_html"]
-            assert "html" not in target["compilation"]["stages"][0]
+            assert "provenance" not in target
+            assert target["compilation"]["stages"][0]["circuit"] == original["compilation"]["stages"][0]["circuit"]
         with zipfile.ZipFile(result.parent / "mqsf-2026.zip") as archive:
             assert archive.read("index.html") == result.read_bytes()
             for asset in (root / "assets").iterdir():
                 assert archive.read(f"assets/{asset.name}") == asset.read_bytes()
             assert json.loads(gzip.decompress(archive.read("evidence.json.gz"))) == data
+            assert gzip.decompress(archive.read("evidence.json.gz")) == source.read_bytes()
 
 
 def test_large_artifacts_keep_exact_source_in_evidence() -> None:
@@ -304,10 +372,11 @@ def test_large_artifacts_keep_exact_source_in_evidence() -> None:
         packaged = json.loads(html.split("window.MQSF_DATA=", 1)[1].split(";</script>", 1)[0])
         artifact = packaged["scenarios"][0]["variants"][0]["stages"][0]
         variant = packaged["scenarios"][0]["variants"][0]
-        assert variant["exports"][0]["sha256"] == variant["execution"]["payload_sha256"]
+        assert variant["exports"][0]["sha256"] == data["scenarios"][0]["variants"][0]["execution"]["payload_sha256"]
         assert artifact["sha256"] == hashlib.sha256(code.encode()).hexdigest()
         assert artifact["line_count"] == 201
         assert artifact["code"] == "line\n" * 200
         assert "full_code_gzip" not in artifact
         with zipfile.ZipFile(root / "output/mqsf-2026.zip") as archive:
+            assert archive.read("evidence.json.gz") == capture.read_bytes()
             assert json.loads(gzip.decompress(archive.read("evidence.json.gz"))) == data

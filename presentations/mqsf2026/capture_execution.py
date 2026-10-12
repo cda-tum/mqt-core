@@ -78,6 +78,12 @@ def validate_execution(execution: dict[str, Any]) -> None:
     if times != sorted(times):
         msg = "Native calls are not in capture order"
         raise ValueError(msg)
+    runtime_times = [event["time_ms"] for event in execution.get("runtime_events", [])]
+    if runtime_times != sorted(runtime_times) or any(
+        not execution["submitted_ms"] <= time <= execution["completed_ms"] for time in runtime_times
+    ):
+        msg = "Runtime observations are outside the ordered execution window"
+        raise ValueError(msg)
     if "shot_events" in execution:
         shots = execution["shot_events"]
         completion_times = [shot["time_ms"] for shot in shots]
@@ -237,7 +243,12 @@ class DDSIMCapture:
             records = [line.split("\t") for line in Path(trace_path).read_text(encoding="utf-8").splitlines()]
             result["shot_events"] = [
                 {"time_ms": (int(timestamp) - self.start) / 1e6, "shot_index": index, "outcome": outcome}
-                for index, (timestamp, outcome) in enumerate(records)
+                for index, (timestamp, _, outcome) in enumerate(record for record in records if record[1] == "shot")
+            ]
+            result["runtime_events"] = [
+                {"time_ms": (int(timestamp) - self.start) / 1e6, "actor": "DDSIM worker", "operation": operation}
+                for timestamp, kind, operation in records
+                if kind == "runtime"
             ]
             result["shot_timing"] = (
                 "Actual serial completions with per-shot circuit execution; "

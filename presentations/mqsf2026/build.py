@@ -44,6 +44,27 @@ def validate_capture(data: dict[str, Any]) -> None:
     if data.get("schema_version") != 1 or not data.get("provenance", {}).get("core_revision"):
         msg = "Capture must identify its schema and Core revision"
         raise ValueError(msg)
+    if evidence := data.get("compiler_evidence"):
+        if evidence.get("provenance", {}).get("core_revision") != data["provenance"]["core_revision"]:
+            msg = "Compiler evidence revision differs from the captured programs"
+            raise ValueError(msg)
+        for key in ("source", "before", "after", "implementation"):
+            if (artifact := evidence.get("optimization", {}).get(key)) and artifact.get("sha256") != hashlib.sha256(
+                artifact["code"].encode()
+            ).hexdigest():
+                msg = "Optimization artifact hash differs from its original source"
+                raise ValueError(msg)
+        if weyl := evidence.get("weyl"):
+            target = next((target for target in data.get("targets", []) if target["id"] == weyl.get("target_id")), None)
+            compilation = target["compilation"] if target else {}
+            trace_hash = hashlib.sha256(json.dumps(compilation.get("synthesis_trace", []), sort_keys=True).encode())
+            if (
+                target is None
+                or weyl.get("program_sha256") != compilation.get("source_sha256")
+                or weyl.get("input_sha256") != trace_hash.hexdigest()
+            ):
+                msg = "Weyl evidence differs from its captured target program or fusion trace"
+                raise ValueError(msg)
     if targets := data.get("targets"):
         application = data.get("application", {})
         source = application.get("representative_source", {})
@@ -60,7 +81,8 @@ def validate_capture(data: dict[str, Any]) -> None:
         ):
             msg = "Target captures must identify the exact submitted application source"
             raise ValueError(msg)
-        if application.get("provenance", {}).get("core_revision") != data["provenance"]["core_revision"] or any(
+        # Execution and compilation may be recorded separately; their shared input is checked above.
+        if not application.get("provenance", {}).get("core_revision") or any(
             not provenance.get(key) or provenance[key] != data["provenance"].get(key)
             for key in ("compiler_sha256", "execution_script_sha256")
         ):
@@ -161,6 +183,90 @@ def validate_capture(data: dict[str, Any]) -> None:
                     raise ValueError(msg)
 
 
+def browser_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Select the recorded fields consumed by the deck; retain full evidence in the ZIP.
+
+    Returns:
+        The explicit browser projection, sharing unchanged records with the capture.
+    """
+    scenarios = []
+    for scenario in data["scenarios"]:
+        if scenario["id"] not in {"parity", "rus", "qpe"}:
+            continue
+        variant = next(variant for variant in scenario["variants"] if variant["id"] == "structured")
+        shown = {
+            "id": variant["id"],
+            "stages": [stage for stage in variant["stages"] if stage["id"] == "source"],
+            "exports": [
+                artifact
+                for artifact in variant["exports"]
+                if scenario["id"] != "qpe" and artifact["id"] == "qir-adaptive"
+            ],
+        }
+        if scenario["id"] == "qpe":
+            shown["executions"] = {"qir-adaptive": variant["executions"]["qir-adaptive"]}
+        scenarios.append({"id": scenario["id"], "variants": [shown]})
+    targets = []
+    for index, target in enumerate(data.get("targets", [])):
+        compilation = target["compilation"]
+        stages = []
+        for stage in compilation["stages"]:
+            if stage["id"] not in {"source", "qc", "qco", "optimized", "place-and-route", "target-native-synthesis"}:
+                continue
+            # Only the first target's input IR is displayed as source; all target circuits are replayed.
+            stages.append(
+                stage
+                if index == 0 and stage["id"] in {"source", "qc", "qco"}
+                else {key: value for key, value in stage.items() if key in {"id", "label", "circuit"}}
+            )
+        targets.append({
+            **{key: target[key] for key in ("id", "label", "metadata", "compiler_model") if key in target},
+            "compilation": {
+                **{key: compilation[key] for key in ("layout", "routing_trace", "metrics") if key in compilation},
+                "stages": stages,
+                "exports": [
+                    artifact for artifact in compilation["exports"] if index == 0 and artifact["id"] == "qir-adaptive"
+                ],
+            },
+        })
+    application = data.get("application", {})
+    propagation = application.get("propagation", {})
+    curves = []
+    for index, curve in enumerate(propagation.get("curves", [])):
+        shown = {key: curve[key] for key in ("label", "energy", "stderr") if key in curve}
+        if index == 0 and "frames" in curve:
+            shown["frames"] = [
+                {"tau": frame["tau"], "walkers": [{"id": w["id"], "weight": w["weight"]} for w in frame["walkers"]]}
+                for frame in curve["frames"]
+            ]
+        curves.append(shown)
+    return {
+        **{key: data[key] for key in ("schema_version", "provenance", "device", "references") if key in data},
+        "scenarios": scenarios,
+        "targets": targets,
+        "compiler_evidence": {
+            key: value
+            for key, value in data.get("compiler_evidence", {}).items()
+            if key in {"grover_size", "optimization", "weyl"}
+        },
+        "application": {
+            **{
+                key: application[key]
+                for key in ("source", "batch_source", "workload", "chemistry", "execution")
+                if key in application
+            },
+            "shadow_preview": [
+                {"program_index": snapshot["native_program_index"], "outcome": snapshot["shots"][0]}
+                for snapshot in application.get("snapshots", [])[:3]
+            ],
+            "propagation": {
+                **{key: propagation[key] for key in ("tau", "walkers", "workers") if key in propagation},
+                "curves": curves,
+            },
+        },
+    }
+
+
 def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: Path = HERE) -> Path:
     """Build a standalone HTML file and ZIP from verified capture fixtures.
 
@@ -173,15 +279,19 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
     raw = capture.read_bytes()
     data = json.loads(gzip.decompress(raw) if capture.suffix == ".gz" else raw)
     validate_capture(data)
+    data = browser_data(data)
     formatter = HtmlFormatter(cssclass="highlight", nowrap=False, style="friendly")
     line_formatter = HtmlFormatter(nowrap=True, style="friendly")
     variants = [variant for scenario in data["scenarios"] for variant in scenario["variants"]]
     variants.extend(target["compilation"] for target in data.get("targets", []))
+    optimization = data.get("compiler_evidence", {}).get("optimization", {})
+    variants.append({"stages": [optimization[key] for key in ("before", "after") if key in optimization]})
     for variant in variants:
         for artifact in [*variant.get("stages", []), *variant.get("exports", [])]:
             if "code" in artifact:
                 code = artifact["code"]
-                artifact["sha256"] = hashlib.sha256(code.encode()).hexdigest()
+                if "sha256" not in artifact:
+                    artifact["sha256"] = hashlib.sha256(code.encode()).hexdigest()
                 lines = code.splitlines(keepends=True)
                 artifact["line_count"] = len(lines)
                 if len(lines) > 200:
@@ -200,32 +310,13 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
                 artifact["lines_html"] = [
                     highlight(line, lexer, line_formatter).rstrip("\n") for line in artifact["code"].splitlines()
                 ]
-    for variant in variants:
-        for execution in [variant.get("execution"), *variant.get("executions", {}).values()]:
-            if execution and execution.get("client_source"):
-                execution["client_source_lines_html"] = [
-                    highlight(line, get_lexer_by_name("python"), line_formatter).rstrip("\n")
-                    for line in execution["client_source"].splitlines()
-                ]
     application = data.get("application", {})
-    # Full scientific observations stay in evidence.json.gz; the browser uses their summaries.
-    application.pop("snapshots", None)
-    application.pop("shadow", None)
-    for curve in application.get("propagation", {}).get("curves", []):
-        curve.pop("walker_energies", None)
-        curve.pop("walker_weights", None)
-    for key in ("source", "batch_source", "classical_source"):
+    for key in ("source", "batch_source"):
         if application.get(key):
             application[key + "_lines_html"] = [
                 highlight(line, get_lexer_by_name("python"), line_formatter).rstrip("\n")
                 for line in application[key].splitlines()
             ]
-    if application.get("execution", {}).get("client_source"):
-        execution = application["execution"]
-        execution["client_source_lines_html"] = [
-            highlight(line, get_lexer_by_name("python"), line_formatter).rstrip("\n")
-            for line in execution["client_source"].splitlines()
-        ]
     css = source.joinpath("presentation.css").read_text(encoding="utf-8")
     css = formatter.get_style_defs(".highlight") + "\n" + css
     script = source.joinpath("presentation.js").read_text(encoding="utf-8")
@@ -269,9 +360,7 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
     result.write_text(html, encoding="utf-8")
     with zipfile.ZipFile(output / "mqsf-2026.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(result, "index.html")
-        archive.writestr(
-            "evidence.json.gz", gzip.compress(gzip.decompress(raw) if capture.suffix == ".gz" else raw, mtime=0)
-        )
+        archive.writestr("evidence.json.gz", raw if capture.suffix == ".gz" else gzip.compress(raw, mtime=0))
         for asset in sorted(source.joinpath("assets").glob("*")):
             if asset.is_file():
                 archive.write(asset, f"assets/{asset.name}")

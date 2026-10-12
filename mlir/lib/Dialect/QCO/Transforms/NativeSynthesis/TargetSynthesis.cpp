@@ -58,6 +58,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
 
 #include <algorithm>
@@ -65,10 +68,12 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <optional>
 #include <span>
+#include <system_error>
 #include <utility>
 
 namespace mlir::qco {
@@ -1213,6 +1218,38 @@ static bool fuseTwoQubitGateRun(IRRewriter& rewriter, UnitaryOpInterface head,
                                               *target, sites, analysis)
                          : native->numBasisUses >= run.numTwoQ)) {
     return false;
+  }
+
+  // Opt-in evidence capture; the presentation compiler disables threading.
+  if (const auto* tracePath = std::getenv("MQT_MQSF_SYNTHESIS_TRACE")) {
+    llvm::json::Array matrix;
+    for (size_t row = 0; row < 4; ++row) {
+      llvm::json::Array entries;
+      for (size_t col = 0; col < 4; ++col) {
+        const auto value = run.composed(row, col);
+        entries.push_back(llvm::json::Array{value.real(), value.imag()});
+      }
+      matrix.push_back(std::move(entries));
+    }
+    llvm::json::Array operations;
+    for (auto* operation : run.ops) {
+      operations.push_back(operation->getName().getStringRef());
+    }
+    std::error_code error;
+    llvm::raw_fd_ostream stream(tracePath, error, llvm::sys::fs::OF_Append);
+    if (!error) {
+      stream << llvm::json::Value(llvm::json::Object{
+                    {.K = "matrix", .V = std::move(matrix)},
+                    {.K = "operations", .V = std::move(operations)},
+                    {.K = "two_qubit_before", .V = run.numTwoQ},
+                    {.K = "basis_uses_after", .V = native->numBasisUses},
+                    {.K = "reverse_entangler", .V = reverseEntangler},
+                })
+             << '\n';
+    } else {
+      llvm::errs() << "Cannot write MQSF synthesis trace: " << error.message()
+                   << '\n';
+    }
   }
 
   Value input0 = head.getInputQubit(0);

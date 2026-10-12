@@ -47,6 +47,11 @@ EQUATIONS = {
             "The displayed estimator uses nonnegative walker weights."
         ),
     ),
+    "eq-afqmc-mean": (
+        "Energy estimate from weighted local walker energies",
+        [r"$\widehat{E}(\tau)=\frac{\sum_w W_w(\tau)\,\mathrm{Re}\,E_L[\phi_w(\tau)]}{\sum_w W_w(\tau)}$"],
+        "The displayed estimator uses nonnegative walker weights and the trial-state local energy.",
+    ),
     "eq-qpe-phase": (
         "Quantum phase estimation: eigenphase and measured binary fraction",
         [

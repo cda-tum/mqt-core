@@ -60,6 +60,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -657,6 +658,26 @@ private:
     Wires wires;
     Layout<QubitIndex> layout;
     std::optional<NativeCostTracker> costs;
+    bool trace = std::getenv("MQT_MQSF_MAPPING_TRACE") != nullptr;
+    llvm::json::Array steps;
+    llvm::json::Object searchTrace;
+
+    void record(StringRef name, ArrayRef<size_t> vertices) {
+      if (!trace) {
+        return;
+      }
+      llvm::json::Array sites;
+      llvm::json::Array logical;
+      for (const auto site : vertices) {
+        sites.push_back(site);
+        logical.push_back(layout.getProgramIndex(site));
+      }
+      steps.push_back(llvm::json::Object{
+          {.K = "operation", .V = name},
+          {.K = "sites", .V = std::move(sites)},
+          {.K = "logical", .V = std::move(logical)},
+      });
+    }
   };
 
   /// Describes a SWAP and its associated costs.
@@ -1058,6 +1079,8 @@ protected:
           {.K = "before", .V = traceLayout(layout)},
           {.K = "after", .V = traceLayout(state.layout)},
           {.K = "swaps", .V = stats.nswaps},
+          {.K = "steps", .V = std::exchange(state.steps, {})},
+          {.K = "search", .V = std::exchange(state.searchTrace, {})},
       });
     }
 
@@ -1531,6 +1554,8 @@ private:
                 {.K = "before", .V = std::move(before)},
                 {.K = "after", .V = traceLayout(state.layout)},
                 {.K = "swaps", .V = forward.nswaps},
+                {.K = "steps", .V = std::exchange(state.steps, {})},
+                {.K = "search", .V = std::exchange(state.searchTrace, {})},
             });
           }
           before = trace ? traceLayout(state.layout) : llvm::json::Array{};
@@ -1543,6 +1568,8 @@ private:
                 {.K = "before", .V = std::move(before)},
                 {.K = "after", .V = traceLayout(state.layout)},
                 {.K = "swaps", .V = backward.nswaps},
+                {.K = "steps", .V = std::exchange(state.steps, {})},
+                {.K = "search", .V = std::exchange(state.searchTrace, {})},
             });
           }
         }
@@ -1564,6 +1591,8 @@ private:
             {.K = "before", .V = traceLayout(t.layout)},
             {.K = "after", .V = traceLayout(state.layout)},
             {.K = "swaps", .V = score.nswaps},
+            {.K = "steps", .V = std::exchange(state.steps, {})},
+            {.K = "search", .V = std::exchange(state.searchTrace, {})},
             {
                 .K = "native_count",
                 .V = quality ? llvm::json::Value(quality->first)
@@ -1617,16 +1646,78 @@ private:
       return SmallVector<QubitIndexPair>{};
     }
 
+    const bool trace = state.trace && state.searchTrace.empty();
+    DenseMap<const Node*, size_t> nodeIds;
+    llvm::json::Array nodes;
+    llvm::json::Array visited;
+    size_t generated = 0;
+    const auto recordNode = [&](const Node* node) {
+      if (!trace) {
+        return;
+      }
+      const auto id = generated++;
+      nodeIds.try_emplace(node, id);
+      // Keep offline captures bounded; the terminal summary reports truncation.
+      if (id >= 256) {
+        return;
+      }
+      nodes.push_back(llvm::json::Object{
+          {.K = "id", .V = id},
+          {
+              .K = "parent",
+              .V = node->parent
+                       ? llvm::json::Value(nodeIds.lookup(node->parent))
+                       : llvm::json::Value(nullptr),
+          },
+          {.K = "layout", .V = traceLayout(node->layout)},
+          {
+              .K = "swap",
+              .V = llvm::json::Array{node->swap.first, node->swap.second},
+          },
+          {.K = "cost", .V = node->cost},
+          {.K = "priority", .V = node->f},
+          {.K = "depth", .V = node->depth},
+      });
+    };
+    const auto finishTrace = [&](const Node* goal) {
+      if (trace) {
+        state.searchTrace = llvm::json::Object{
+            {
+                .K = "front",
+                .V =
+                    llvm::json::Array{
+                        window.front().first,
+                        window.front().second,
+                    },
+            },
+            {.K = "nodes", .V = std::move(nodes)},
+            {.K = "visited", .V = std::move(visited)},
+            {
+                .K = "goal",
+                .V = goal ? llvm::json::Value(nodeIds.lookup(goal))
+                          : llvm::json::Value(nullptr),
+            },
+            {.K = "generated", .V = generated},
+            {.K = "truncated", .V = generated > 256},
+            {.K = "fallback", .V = goal == nullptr},
+        };
+      }
+    };
+    recordNode(root);
     SearchFrontier frontier;
     frontier.push(root);
 
     Node* curr = frontier.pop();
     for (; curr != nullptr; curr = frontier.pop()) {
+      if (trace) {
+        visited.push_back(nodeIds.lookup(curr));
+      }
 
       // If the currently visited node is a goal node, reconstruct the
       // sequence of SWAPs from this node to the root.
 
       if (curr->isGoal(window.front(), env.target)) {
+        finishTrace(curr);
         return curr->swaps();
       }
 
@@ -1657,6 +1748,7 @@ private:
             };
 
             child->initializeChild(curr, candidate, window, env.target, params);
+            recordNode(child);
             seen.insert(indices);
             frontier.push(child);
           }
@@ -1664,6 +1756,7 @@ private:
       }
     }
 
+    finishTrace(nullptr);
     // Fallback to shortest-path swapping, if the budget is exhausted.
     // Greedy completion can cost later gates. Thus, increase the search
     // budget when routing quality matters more than memory use.
@@ -1881,6 +1974,7 @@ private:
   static void insertSWAPs(ArrayRef<QubitIndexPair> swaps, RoutingState& state,
                           Statistics& stats, IRRewriter* rewriter) {
     for (const auto& [a, b] : swaps) {
+      state.record("qco.swap", std::array<size_t, 2>{a, b});
       if (state.costs) {
         state.costs->appendSwap(a, b);
       }
@@ -2101,7 +2195,7 @@ private:
         if (release) {
           released.emplace_back(op);
 
-          if (state.costs) {
+          if (state.costs || state.trace) {
             SmallVector<size_t, 2> vertices(indices.begin(), indices.end());
             // Frontier indices are in traversal order, not operand order.
             if (auto gate = dyn_cast<UnitaryOpInterface>(op);
@@ -2109,7 +2203,12 @@ private:
                 wires[indices[0]].qubit() != gate.getOutputQubit(0)) {
               std::swap(vertices[0], vertices[1]);
             }
-            state.costs->append(op, vertices);
+            if (isa<UnitaryOpInterface, MeasureOp, ResetOp>(op)) {
+              state.record(op->getName().getStringRef(), vertices);
+            }
+            if (state.costs) {
+              state.costs->append(op, vertices);
+            }
           }
         }
       }
@@ -2393,8 +2492,9 @@ private:
       for (auto [site, wire] : enumerate(state.wires)) {
         while (wire != std::default_sentinel &&
                isa_and_nonnull<MeasureOp>(wire.operation())) {
+          const std::array vertex{site};
+          state.record("qco.measure", vertex);
           if (state.costs) {
-            const std::array vertex{site};
             state.costs->append(wire.operation(), vertex);
           }
           ++wire;

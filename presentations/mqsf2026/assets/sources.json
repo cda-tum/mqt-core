@@ -60,11 +60,6 @@
     "retrieved_at": "2026-10-10T01:04:42.166493+00:00",
     "sha256": "980839fdc6f96db353d00224187c4008bb6ca854731fb933fcb64a14652f8a8a"
   },
-  "cuda-q": {
-    "url": "https://munichquantum.software/frontend-logos/cuda-q.svg",
-    "retrieved_at": "2026-10-10T01:04:42.346953+00:00",
-    "sha256": "b52cf9c53abc81ec4807106bf556ed22f966c94756da8c987488ba60fd2a1748"
-  },
   "qir": {
     "url": "https://munichquantum.software/frontend-logos/qir.svg",
     "retrieved_at": "2026-10-10T01:04:42.464085+00:00",
@@ -178,18 +173,16 @@
     "rights": "IBM/Qiskit trademark; used to identify the Qiskit interface."
   },
   "iqm": {
-    "url": "https://raw.githubusercontent.com/iqm-finland/QDMI-on-IQM/27fd009c1b6aff55bd79ae8c5f9314e0c6c4eebe/docs/_static/iqm_logo.svg",
-    "retrieved_at": "2026-10-10T20:14:35.963930+00:00",
-    "source_sha256": "a644ed5f3418f9ac0419e5a3584a37df9fff7f9692e321b6150a25b02cc13c55",
-    "sha256": "c1377b948fd0d07bba0c024338e74dad437b6786b67c952f63f9f489c23bea24",
-    "adaptation": "Original drawing and colors; trailing whitespace normalized and final newline ensured. Embedded source and attribution comment.",
-    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the project or organization.",
-    "revision": "27fd009c1b6aff55bd79ae8c5f9314e0c6c4eebe",
-    "license": "Apache-2.0 WITH LLVM-exception",
-    "license_url": "https://raw.githubusercontent.com/iqm-finland/QDMI-on-IQM/27fd009c1b6aff55bd79ae8c5f9314e0c6c4eebe/LICENSE",
-    "license_file": "iqm-LICENSE.txt",
-    "license_sha256": "da7abc08783858324d64d98396ad57eb01583a25e3824c94adf304e4b3ed702f",
-    "license_source_sha256": "da7abc08783858324d64d98396ad57eb01583a25e3824c94adf304e4b3ed702f"
+    "url": "https://iqm.tech/wp-content/uploads/2025/03/IQM-logo-pack.zip",
+    "source_page": "https://iqm.tech/company/press-releases/press-kit/",
+    "source_member": "IQM-Logo-black.svg",
+    "source_container_sha256": "b4c23a1bf46f67e20eb6c9f7d08a7afe53bbfc2463b7ccadf58650982b15ab85",
+    "retrieved_at": "2026-10-12T13:10:44.160101+00:00",
+    "source_sha256": "78d7f08ad6255a3cdbd830f3c62d7ce8119ae4e54ab75b5b17d219c1f1062339",
+    "sha256": "076faef59f44098b3369b822c6a36d7b47cc6d738e881917c6f2c80bbaaa3795",
+    "adaptation": "Original black vector drawing retained unchanged. XML declaration removed, attribution comment added, trailing whitespace normalized.",
+    "rights": "Copyright and trademark rights remain with IQM; included to identify the organization.",
+    "guidelines_url": "https://iqm.tech/wp-content/uploads/2025/03/IQM-logo-guidelines.pdf"
   },
   "aws": {
     "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/5b50bb661031632342d93672dcdda0d0bc69f2f5/docs/_static/logos/aws.svg",
@@ -265,5 +258,55 @@
     "license_sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
     "license_source_sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
     "license_text_source": "/usr/share/common-licenses/GPL-2 (unmodified GNU GPL version 2 text, whitespace normalized)"
+  },
+  "oxford": {
+    "url": "https://www.cs.ox.ac.uk/img/Oxford-dept-of-Computer-Science-POS-KEY_RGB-optimised.svg",
+    "retrieved_at": "2026-10-12T12:46:16.542891+00:00",
+    "source_sha256": "37a53ce8a290a26a1fd2a8e44b084d34df946f4466b53299b5588c3e11c70689",
+    "sha256": "4d48186f86d4ee430898deb49d1eac3f3b674213d4a9af1d6ec34db72f79314a",
+    "adaptation": "Original path geometry retained; SVG viewport normalized for standalone embedding.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify author affiliation."
+  },
+  "quantinuum": {
+    "url": "https://www.quantinuum.com/",
+    "retrieved_at": "2026-10-12T12:46:16.543120+00:00",
+    "source_sha256": "07757bb87a8c52741617049730e6b6b0a1dc890ae9a24b5c1b100648a78f8c19",
+    "sha256": "9722343337ca70de8ddeeb666ae7c7cb2706c6578131eede804b63416b893a82",
+    "adaptation": "Original path geometry retained; SVG viewport normalized for standalone embedding. Extracted official page-header inline SVG.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify author affiliation."
+  },
+  "ubc": {
+    "url": "https://science.ubc.ca/faculty/communications/vi",
+    "retrieved_at": "2026-10-12T12:46:16.543330+00:00",
+    "source_sha256": "81dac8be0a8f702a7d187d69dfaaf5ff330bc47b9d7db43955322920c423769b",
+    "sha256": "c32f2b9e174b95acfc25fe22df70cfa4714179f711fedc5aa2128df3b85cca74",
+    "adaptation": "Original path geometry retained; SVG viewport normalized for standalone embedding. Extracted official UBC crest symbol; currentColor set to official UBC Blue #002145.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify author affiliation."
+  },
+  "xanadu": {
+    "source_file": "2026-10-07_MQSC_Summary.pptx",
+    "source_member": "ppt/media/image59.svg",
+    "source_container_sha256": "4261d296730b7ba11e759c20b0436389e49ac1d4648981c302158a8e85af6a3b",
+    "source_sha256": "01236c5dc2418a1dc556b8e2cf1ea8fb72cef03cb099433bb354446bb91f6c33",
+    "sha256": "f06f5aa1fe0eb9fd7145c89654a1a2eda7a54c9262306f1d66ccba53d5ceb93a",
+    "adaptation": "Original SVG extracted from user-provided presentation; XML declaration removed and trailing whitespace normalized.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify author affiliation."
+  },
+  "unitary": {
+    "source_file": "2026-10-07_MQSC_Summary.pptx",
+    "source_member": "ppt/media/image60.svg",
+    "source_container_sha256": "4261d296730b7ba11e759c20b0436389e49ac1d4648981c302158a8e85af6a3b",
+    "source_sha256": "08c8090cac1c0a477403f11c43f2204c4f1ff23c8efec76b240abb108fcf1461",
+    "sha256": "929ec9547bb6c0675b5eb3ce7c77583d2c16bc8efb78c81eb48946d448e05e7d",
+    "adaptation": "Original SVG extracted from user-provided presentation; XML declaration removed and trailing whitespace normalized.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify author affiliation."
+  },
+  "eq-afqmc-mean": {
+    "generator": "render_equations.py; Matplotlib 3.11.2; STIX mathtext; SVG path glyphs; tight text bounds with 0.04-inch padding",
+    "equations": [
+      "$\\widehat{E}(\\tau)=\\frac{\\sum_w W_w(\\tau)\\,\\mathrm{Re}\\,E_L[\\phi_w(\\tau)]}{\\sum_w W_w(\\tau)}$"
+    ],
+    "scope": "The displayed estimator uses nonnegative walker weights and the trial-state local energy.",
+    "sha256": "21b04ca62c47ebf05a9c551dfe7da3bc7771903b085dc3ecfe2a1594b0bd1109"
   }
 }

@@ -2,285 +2,123 @@
 
 ## System Software for Quantum Computing: From the Metal to the User
 
-A 12-slide, 35-minute keynote for a 1920 × 1080 projector. The white and blue
-MQSC presentation opens with a static event title and a staged deployment story
-that becomes the shared software stack. It follows a LiH quantum-classical
-application, compiles one of its measurement programs for three device models,
-and then shows structured programs and adaptive execution. See
-[presenter-notes.md](presenter-notes.md) for the rehearsal narrative.
-
-Every slide and progressive build works with a Logitech Spotlight configured to
-send standard forward/back keys. The browser renders saved evidence and replays
-measured events. Native compilation, simulation, metadata capture, and AFQMC run
-before packaging. The presentation needs no server or network.
+A nine-slide keynote for a 1920 × 1080 projector and a forward/backward clicker.
+The story follows the shared software stack through an H₂ AFQMC workflow,
+device-aware compilation, structured programs, and adaptive execution.
 
 ## Build and present
-
-From the repository root:
 
 ```console
 uv run --no-project presentations/mqsf2026/build.py
 ```
 
-Open `build/mqsf2026/index.html` directly in a browser. Use full screen at 1920
-× 1080 and rehearse with the actual clicker. The layout scales with the window
-while retaining its 16:9 canvas. The build also creates
-`build/mqsf2026/mqsf-2026.zip`, containing the self-contained HTML, the full
-capture as `evidence.json.gz`, this README, the presenter notes, and editable
-assets with their source attributions and licenses. Code highlighting, display
-data, SVG illustrations, logos, and fonts are embedded. Raw payloads, shot
-records and per-walker observations remain in the evidence file; the browser
-loads only the summaries used by the slides. External links and QR destinations
-are optional audience resources.
+Open `build/mqsf2026/index.html` directly. No server or network is needed.
+`build/mqsf2026/mqsf-2026.zip` includes the HTML, complete `evidence.json.gz`,
+SVG assets with provenance and licenses, and these rehearsal notes. The browser
+loads only the summaries needed for display; the ZIP retains full observations.
 
-| Action                              | Keys                                                 |
-| ----------------------------------- | ---------------------------------------------------- |
-| Next build, then next slide         | Right arrow, Page Down, Space, Enter                 |
-| Previous build, then previous slide | Left arrow, Page Up, Backspace                       |
-| First / last slide                  | Home / End                                           |
-| Jump to a slide                     | Type its number, then Enter                          |
-| Slide overview                      | G or Escape; arrows and Enter select; Escape returns |
-| Full screen                         | F                                                    |
-| Blackout                            | B                                                    |
-| Show inline speaker notes           | P                                                    |
+| Action                      | Keys                                 |
+| --------------------------- | ------------------------------------ |
+| Next build or slide         | Right, Page Down, Space, Enter       |
+| Previous build or slide     | Left, Page Up, Backspace             |
+| First / last slide          | Home / End                           |
+| Jump                        | Slide number, then Enter             |
+| Overview                    | G or Escape; arrows and Enter select |
+| Full screen / blackout      | F / B                                |
+| Show notes on the projector | P                                    |
 
-`P` displays notes on the projector; use the separate notes file for private
-rehearsal. A URL fragment such as `#9.0` opens a slide and build. Printing
-produces the final build of each slide.
+Every narrative change waits for a click. A click may start a finite replay,
+which holds its final frame. Another forward click finishes any current replay
+and advances immediately. Back, direct jumps, printing, and reduced-motion mode
+show settled states. No narrative autoplays and no animation loops indefinitely.
+A fragment such as `#5.9` opens a particular slide and build. References never
+require a separate reveal. Printing creates one page per slide.
 
-Forward starts a playback when it enters that build. During a one-shot replay,
-forward finishes the current replay; the next press advances. During a looping
-replay, forward stops it and advances immediately. Back cancels playback and
-restores the previous build. Playback never changes slides automatically.
+## Scientific evidence
 
-| Slide | Playback                                                                             |
-| ----- | ------------------------------------------------------------------------------------ |
-| 2     | Deployment paths: 22 seconds; shared architecture: 8.5 seconds; products: 10 seconds |
-| 3     | AFQMC workflow unfolds over 6.5 seconds; one further build shows source              |
-| 4     | QDMI submission window over 8.5 seconds; parallel CPU/walker replay over 11 seconds  |
-| 5     | Energy and walker weights evolve over a 12-second loop                               |
-| 6     | Placement refinement, routing and synthesis: 10 / 10 / 8 seconds                     |
-| 7     | Each device selection replays query, placement, routing and synthesis                |
-| 10    | One QPE replay over 9.5 seconds, with API calls and shots on one clock               |
-| 12    | Return to the complete product architecture over 9.5 seconds                         |
+The bounded chemistry example is stretched H₂, STO-3G, 1.6 Å: two electrons in
+four spin orbitals, six determinants. The fixed trial rotation is 0.6 radians.
+Its pair-encoded preparation is checked against the original DoubleExcitation on
+the vacuum and Hartree–Fock states actually used. This is a subspace identity,
+not a general replacement for the four-qubit gate.
 
-Forward entry starts a build-zero replay automatically. Direct jumps, backward
-navigation, printing, and reduced-motion mode show settled final states. Looping
-builds hold their final frame for 2.4 seconds before restarting. The quantum
-batch replay omits preprocessing and starts at the recorded submission call; its
-displayed time is relative to that boundary. CPU task time and imaginary time
-are separate, explicitly labelled coordinates.
+The quantum allocation submits 4,096 programs with 256 shots each as one native
+QDMI job. Classical shadows supply determinant overlaps. A dependent Slurm
+allocation propagates 128 walkers for 480 steps per trial at Δτ = 0.02 Ha⁻¹,
+using four ranks on two compute nodes. Both shadow-derived and Hartree–Fock
+trials use the same auxiliary-field seeds. All nodes are containers on one
+physical host: this validates scheduler integration and distribution, not
+cluster scaling. See the
+[Slurm capture guide](https://github.com/munich-quantum-toolkit/core/blob/codex/mqsf-2026/presentations/mqsf2026/slurm/README.md)
+for the capture setup.
 
-SVG nodes persist across timeline frames. Morphs start at their current
-intermediate geometry when interrupted; hidden future elements remain hidden.
-References are present with the substantive content and never require a separate
-click. Code is not shortened horizontally. Structured outputs use explicitly
-labelled display folds with original source line numbers; the bundle retains all
-unmodified artifacts.
+Curves are recomputed from retained local energies and weights. The band is one
+pointwise walker standard error, conditional on the shared shadow data. It
+excludes finite-shadow error, finite-step/projection bias, and phaseless bias.
+Both curves and the full measured range remain visible. There is no population
+resampling or quantum-advantage claim. Dense six-determinant contractions are an
+explicit small-example simplification, not a scalable AFQMC algorithm.
 
-## Evidence and its limits
+Snapshot 0's exact submitted OpenQASM 3 payload is the source of every device
+compilation. Packaging checks source bytes, hashes, common stages, and executed
+exports. Application execution and compilation may be recorded on different Core
+revisions; each retains its original provenance, tied by the exact submitted
+payload. Target metadata comes from retained provider snapshots:
 
-The LiH example uses STO-3G at a stretched 2.4 Å bond, with the Li 1s core
-frozen and two active electrons in three sigma spatial orbitals: six spin
-orbitals and 15 possible two-electron determinants. The exact reference is FCI
-within that active space, including the frozen-core and nuclear energy. The
-fixed trial parameters were tuned classically at 1.6 Å and reused at 2.4 Å. This
-more demanding geometry makes the projection visible without enlarging the
-circuit. It is not a quantum VQE or a quantum advantage demonstration.
+- IQM Emerald: 54 qubits; R/CZ native operations.
+- IBM Nighthawk: the official public `ibm_miami` r1 snapshot, dated April 2026.
+- IonQ Forte-1: 36 all-to-all connected qubits; GPI/GPI2/RZZ with documented
+  equatorial-pulse and bounded-angle constraints.
 
-The recorded workflow submits 2,048 matchgate measurement programs with 256
-shots each as one native QDMI job. Measured shadows supply 15 determinant
-overlaps. Four local CPU processes then propagate 128 walkers for 480 steps per
-trial, comparing the shadow-derived and Hartree–Fock trials. The step size is
-0.02 Ha⁻¹. A checked Givens-angle sign adaptation enforces the Majorana
-convention. Dense active-space energy and force-bias contractions replace the
-pinned helper's larger-space estimator; the upstream phaseless propagation
-update is unchanged. The 15-state cache is exact within this example and is not
-a scalable general overlap algorithm.
+The compiler queries local SC QDMI models populated from this metadata; these
+are not live vendor-device calls. Compiled payloads execute unchanged on ideal
+DDSIM. No hardware jobs are submitted. Layout positions are schematic. Routing
+steps, SWAPs, search parents, costs, and layouts come from compiler telemetry;
+intermediate visual motion between recorded endpoints is interpolation.
 
-Every curve can be recomputed from saved local energies and importance weights.
-The band is one pointwise independent-walker standard error conditional on the
-shared shadow data. It excludes shadow error and systematic effects from finite
-projection time, finite step size, and the phaseless approximation. The two
-curves reuse per-walker auxiliary-field seeds and are correlated. There is no
-population resampling. Walker-grid positions are schematic; states, weights,
-process assignments, task intervals, and completion observations are recorded.
-The example uses ideal local DDSIM and makes no hardware or quantum-advantage
-claim.
+Grover program sizes are actual emitted UTF-8 OpenQASM bytes for 2–22 qubits,
+with preserved and fully unrolled forms. Weyl coordinates are decompositions of
+actual accepted two-qubit fusion matrices, with the signed convention recorded
+in the evidence. The H2 example has one accepted CX-plus-SWAP fusion,
+synthesized using two CZ gates. The canonicalization example includes source,
+before/after IR, and a matrix-equivalence check.
 
-The exact OpenQASM 3 payload submitted by the PennyLane adapter for snapshot 0
-then passes through QC, QCO, optimization, placement, routing, and target
-synthesis. It retains `rxx` rotations instead of taking a separate OpenQASM 2
-serialization path. Packaging checks its bytes and hash against the submitted
-payload and every target compilation. The classical AFQMC propagation remains
-NumPy/PySCF code outside this compiler pipeline. Device metadata is dated
-evidence:
+The compact syndrome example keeps reset, counted loops, and feedback through
+native adaptive QIR. The literature RUS example implements V₃ with its required
+failure correction; imported-circuit Kraus matrices verify its semantics.
+Scratch bits remain top-level: region-local classical declarations are not
+supported by all current import/export paths. `h q[0:1]` preserves the two data
+qubits' role; `h q` would also initialize the ancilla and change this example.
 
-- IQM Emerald: AWS Braket `GetDevice` response, with 54 qubits and 85 undirected
-  couplings in the saved snapshot. PRX is represented by the compiler's
-  `R(theta, phi)` operation; CZ retains its physical operands.
-- IBM Nighthawk: the official `ibm_miami` public r1 snapshot, calibrated on 17
-  April 2026, pinned in Qiskit IBM Runtime. It is not a current r2 calibration.
-- IonQ Forte-1: an AWS Braket response with 36 all-to-all connected qubits. The
-  compiler synthesizes to GPI/GPI2/RZZ. The local target adds explicit pulse
-  constraints absent from the QDMI metadata API: fixed equatorial rotations and
-  RZZ angles in [0, π/2]. MLIR/QIR retain their exact R representations; the
-  target-aware Qiskit export and native OpenQASM definitions preserve global
-  phase. Units are radians, as in Braket, rather than direct IonQ API turns.
+Four-qubit iterative QPE estimates phase 1/3 into eight output bits. The DDSIM
+capture records native device calls, JIT initialization, and 2,048 ordered shot
+completions on one monotonic clock. It intentionally samples serially for
+visible shot timing. It is neither a throughput benchmark nor a demonstration of
+the optimized shot-branching path.
 
-The compiler queries the real local QDMI SC provider (`mqt.sc.default`),
-populated with those recorded models. The IonQ snapshot is extended with its
-recorded native-pulse constraints and passed as an explicit compiler target.
-These are not calls to the live vendor QDMI providers. Target-specific payloads
-execute unchanged on DDSIM; no physical hardware job is submitted. Calibration
-summaries are source-reported values, not an execution noise model. Topology
-positions are schematic. The routing animation uses actual recorded refinement
-endpoints and emitted operations, with interpolated motion between them.
+## Capture and validate
 
-A separate three-qubit parity-feedback program exposes counted loops, reset, and
-conditional correction. Its bounded-unrolled form still contains adaptive
-feedback. Repeat-until-success illustrates a runtime-dependent loop. Four-qubit
-iterative QPE, with eight output bits and phase 1/3, supplies the 2,048-shot
-adaptive runtime distribution.
+Native capture is separate from static packaging. Use the repository build
+instructions and the machine's supported optimized preset. The recorders are:
 
-These teaching programs use the bundled Emerald demonstration model with
-explicit reset and control-flow capabilities. Their execution on DDSIM does not
-certify those capabilities on the dated physical-device snapshots.
-
-The QIR replay uses opt-in `MQT_MQSF_SHOT_TRACE` instrumentation in an isolated
-single-program DDSIM worker. Each `JitSession.sample(1)` executes one circuit,
-preserves the RNG stream, and timestamps completion. On Linux the worker clock
-is aligned with the client's monotonic call timestamps and checked against the
-submit/wait interval and returned shot order. This mode disables terminal batch
-sampling and includes instrumentation overhead. It demonstrates real execution
-rather than ordinary simulator throughput. OpenQASM captures have no per-shot
-trace. The AFQMC batch instead records actual Python adapter call boundaries,
-including native waits and indexed result decoding.
-
-## Refresh native captures
-
-Use native bindings, `mqt-cc`, the DDSIM shared library, and its adjacent worker
-from the same checkout and build. Follow the repository and machine-local build
-instructions. Commands below assume that environment's `python` is active; the
-static packaging command above needs no native components.
+- `capture_slurm_afqmc.py`: dependent scheduler allocations and accounting.
+- `capture_afqmc.py`: chemistry checks, actual batch payloads and observations,
+  distributed walker tasks, scientific reductions.
+- `capture_programs.py`: compact structured examples and compiler outputs.
+- `capture_devices.py`: the same submitted source across three target models.
+- `capture_compiler_evidence.py`: measured Grover sizes, canonicalization,
+  routing consistency, and Weyl coordinates.
+- `capture_execution.py`: unchanged QDMI device payloads, native calls, and JIT
+  runtime/shot observations in isolated workers.
 
 ```console
-python presentations/mqsf2026/capture_programs.py \
-  --compiler build/release-clang-ipo/mlir/tools/mqt-cc/mqt-cc
+uv run --no-sync pytest test/python/presentation
+uv run --no-project presentations/mqsf2026/build.py
+uv run --no-project --with playwright presentations/mqsf2026/check_browser.py --browser /usr/bin/google-chrome
 ```
 
-This writes `captures/programs.json`. The default captures parity, iterative
-QPE, and repeat-until-success; `--scenario parity`, `qpe`, or `rus` limits the
-run. The timeout is configurable with `--timeout`.
-
-AFQMC also needs PennyLane, NumPy, SciPy, PySCF, OpenFermion, and Numba. Check
-out the
-[public AFQMC example](https://github.com/amazon-braket/amazon-braket-examples/tree/16cd791da7c3ec7e104851eb3bc502d00be1c1c3/examples/hybrid_quantum_algorithms/Quantum_Monte_Carlo_Chemistry)
-at the linked revision outside this repository. The recorder verifies its
-imported files against pinned hashes.
-
-```console
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
-  python presentations/mqsf2026/capture_afqmc.py \
-  --source /path/to/Quantum_Monte_Carlo_Chemistry \
-  --snapshots 2048 --shots 256 --walkers 128 --steps 480 \
-  --dtau 0.02 --seed 17 --processes 4 --bond-length 2.4
-
-python presentations/mqsf2026/capture_execution.py \
-  --library build/release-clang-ipo/lib/libmqt-core-qdmi-ddsim-device.so \
-  --application presentations/mqsf2026/captures/afqmc.json
-```
-
-AFQMC defaults are `--snapshots 2048 --shots 256 --walkers 128 --steps 240`,
-with `--dtau 0.02 --seed 17 --processes 4 --bond-length 1.6`. The committed
-presentation capture selects `--bond-length 2.4 --steps 480`. Its
-permutation/propagation seed does not seed the DDSIM measurement stream; actual
-ordered outcomes are retained. The execution recorder defaults to
-`--shots 2048 --seed 7`, requires Linux for QIR clock alignment, and writes
-`captures/demo.json.gz` with the application merged.
-
-To refresh device compilation, provide already downloaded AWS responses and the
-[official pinned IBM configuration and properties](https://github.com/Qiskit/qiskit-ibm-runtime/tree/fa4cecc76321f9559456b132cfdfc7d06999f802/qiskit_ibm_runtime/fake_provider/backends/miami):
-
-```console
-python presentations/mqsf2026/capture_devices.py \
-  --emerald /path/to/emerald-get-device.json \
-  --ibm-config /path/to/conf_miami.json \
-  --ibm-properties /path/to/props_miami.json \
-  --ionq /path/to/forte-get-device.json \
-  --source presentations/mqsf2026/captures/afqmc-source.qasm \
-  --compiler build/release-clang-ipo/mlir/tools/mqt-cc/mqt-cc \
-  --library build/release-clang-ipo/lib/libmqt-core-qdmi-ddsim-device.so
-```
-
-This script only reads metadata files, compiles locally, and executes on DDSIM.
-It writes `captures/devices.json`. Use the same source circuit generated by the
-AFQMC capture. After regenerating the execution fixture, merge the saved targets
-and reference metadata before packaging:
-
-```python
-import gzip
-import json
-from pathlib import Path
-
-captures = Path("presentations/mqsf2026/captures")
-fixture = captures / "demo.json.gz"
-data = json.loads(gzip.decompress(fixture.read_bytes()))
-devices = json.loads((captures / "devices.json").read_text())
-data["targets"] = devices["targets"]
-data["target_provenance"] = devices["provenance"]
-data["references"] = json.loads((captures / "references.json").read_text())
-fixture.write_bytes(gzip.compress((json.dumps(data, indent=2) + "\n").encode(), mtime=0))
-```
-
-The recorders replace outputs only after the requested work succeeds. A failed
-required export fails the execution capture, instead of publishing partial
-results. The AFQMC JSON and source are individually replaced after chemistry and
-serialization succeed; source hashes reject an interrupted pair.
-
-Preserve the curated compressed fixture and its scripts together. Intermediate
-program/application JSON is untracked. Provenance retains source, script,
-payload, and binary hashes as well as dependency versions and adaptations. Use
-`--help` for each recorder's options. Rebuild and validate after any refresh.
-
-## Packaging and validation
-
-Read the Docs builds only the presentation with
-`python -m uv run --no-project presentations/mqsf2026/build.py` into its HTML
-output directory. It exposes the same ZIP as the HTML download. Native capture
-generation stays outside Read the Docs. This presentation-branch override must
-remain separate from Core's normal documentation build.
-
-```console
-uv run --no-project --with pygments --with mlir-pygments \
-  --with openqasm-pygments --with pytest \
-  pytest -o addopts= -q test/python/presentation/test_build.py
-
-python -m pytest -o addopts= -q test/python/presentation
-
-uv run --no-project --with playwright playwright install chromium
-uv run --no-project --with playwright presentations/mqsf2026/check_browser.py
-uv run --no-project --with playwright playwright install firefox
-uv run --no-project --with playwright presentations/mqsf2026/check_browser.py --engine firefox
-```
-
-Run the full presentation suite in the native environment; AFQMC tests need
-NumPy and PennyLane. The offline browser check accepts `--html`, `--browser`,
-`--screenshot`, `--screenshots-dir`, and `--engine chromium|firefox`. The
-screenshot directory option saves every final slide at FullHD. The check covers
-text overlap and bounds at every build endpoint and six points in each timed
-animation. Repository lint and native checks are separate; local success does
-not establish hosted CI or Read the Docs status.
-
-Asset and reference provenance is recorded in `assets/sources.json` and
-`captures/references.json`. The QDMI wordmark is the official MQSC website SVG,
-adapted to the white background. Regenerate tightly cropped equation paths and
-the repository/device QR codes with
-`uv run presentations/mqsf2026/render_equations.py`.
-
-The opening credits distinguish project origins, community development and
-current maintenance. Its frontend ports distinguish compiler input formats from
-runtime SDK APIs; CUDA-Q integration is explicitly work in progress. MQSS and
-structured-program citations use the same author/year style. Public source
-metadata and logo provenance are bundled; the QDMI card shows verified GitHub
-stars without inventing a package-download count.
+The browser check blocks networking and verifies every build, complete control
+boundaries, circuit dependencies, recorded result progression, navigation,
+interrupted animations, reduced motion, and print output. Rendered Chrome
+inspection remains necessary for visual judgment. Rehearse on the actual laptop,
+projector, and clicker before the event.
