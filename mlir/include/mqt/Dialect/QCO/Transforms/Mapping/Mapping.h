@@ -18,8 +18,6 @@
 
 namespace mlir {
 
-class CompilerTarget;
-
 namespace qco {
 
 /// Create a deterministic placement pass for a compiler target.
