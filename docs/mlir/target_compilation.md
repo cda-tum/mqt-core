@@ -179,6 +179,18 @@ it has no occurrences. These patterns describe connectivity only, not native
 gate availability or direction. No architecture classification is performed.
 Placement and mapping do not consume this cache yet.
 
+The C++ placement helpers in `Mapping/Placement.h` build a circuit connectivity
+graph from a verified, single-block QCO region and decompose its edges into
+these pattern types. The graph retains idle qubits and records each logical
+qubit's root value and tensor slot. Repeated interactions add one undirected
+edge; barriers add none. VF2 matches are non-induced, so extra edges are
+allowed. Decomposition prefers four-cycles, then stars, then pairs; shared
+vertex IDs identify the overlap between slices. The caller selects the available
+types. Dynamic tensor sizes or indices, nested control flow, quantum calls, and
+gates with more than two qubits require lowering or separate region analysis
+first. These helpers do not yet join target occurrences or choose a start
+layout.
+
 Use `CompilerTarget.Connectivity.all_to_all()` for an all-to-all target. An
 empty `CompilerTarget.NativeOperations([])` reports that no quantum operation is
 native. It can be used with passes that need only topology, but target

@@ -36,6 +36,9 @@ public:
   /// Implicitly adds nodes.
   void addEdge(size_t u, size_t v);
 
+  /// Remove all directed edges from u to v, keeping both nodes.
+  void removeEdge(size_t u, size_t v);
+
   /// Return the neighbours of a node.
   [[nodiscard]] ArrayRef<size_t> getNeighbours(size_t id) const;
 

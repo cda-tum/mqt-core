@@ -29,6 +29,12 @@ void Graph::addEdge(size_t u, size_t v) {
   std::ignore = adj_[v]; // Ensure v exists in the map.
 }
 
+void Graph::removeEdge(size_t u, size_t v) {
+  if (auto it = adj_.find(u); it != adj_.end()) {
+    llvm::erase(it->second, v);
+  }
+}
+
 ArrayRef<size_t> Graph::getNeighbours(size_t id) const { return adj_.at(id); }
 
 SmallVector<size_t> Graph::getNodes() const { return to_vector(adj_.keys()); }

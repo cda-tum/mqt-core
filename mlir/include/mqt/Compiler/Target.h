@@ -457,19 +457,20 @@ public:
   /// Return sorted canonical undirected couplings in target site IDs.
   [[nodiscard]] llvm::ArrayRef<Coupling> couplings() const noexcept;
 
-  /// Return four-cycle, qubit-pair, and star groups in that order, with
-  /// deterministic occurrence order. Pairs store each edge once, smaller vertex
-  /// first. Each four-cycle starts at its smallest vertex and its second vertex
-  /// is smaller than its last. Chords are allowed; distinct cycles on the same
-  /// four vertices remain distinct. Stars store their center followed by three
-  /// sorted neighbors; edges between those neighbors are allowed.
-  /// No architecture classification is performed.
+  /// Return four-cycle, qubit-pair, and star groups in that order.
+  ///
+  /// Occurrence order is deterministic. Pairs store each edge once, smaller
+  /// vertex first. Each four-cycle starts at its smallest vertex and its second
+  /// vertex is smaller than its last. Chords are allowed; distinct cycles on
+  /// the same four vertices remain distinct. Stars store their center followed
+  /// by three sorted neighbors; edges between those neighbors are allowed. No
+  /// architecture classification is performed.
   ///
   /// All-to-all connectivity returns nullopt, representing topology patterns
   /// implicitly. Explicit topologies retain a group for each selected type,
   /// even if empty. They enumerate lazily, with storage proportional to the
-  /// number of cycles. The thread-safe cache is shared by copies; the returned
-  /// view stays valid while any copy of this target lives.
+  /// number of occurrences. The thread-safe cache is shared by copies; the
+  /// returned view stays valid while any copy of this target lives.
   [[nodiscard]] std::optional<llvm::ArrayRef<TopologyPatterns::Group>>
   topologyPatterns() const;
 
