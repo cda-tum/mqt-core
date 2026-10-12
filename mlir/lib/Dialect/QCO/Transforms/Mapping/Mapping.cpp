@@ -655,12 +655,6 @@ private:
 
   /// Describes a node in the A* search graph.
   struct Node {
-    struct ComparePointer {
-      bool operator()(const Node* lhs, const Node* rhs) const {
-        return lhs->f > rhs->f;
-      }
-    };
-
     Layout<QubitIndex> layout;
     QubitIndexPair swap;
     Node* parent = nullptr;
@@ -739,6 +733,7 @@ private:
         costs += decay * static_cast<float>(nswaps);
         decay *= params.lambda;
       }
+
       return costs;
     }
   };
@@ -775,8 +770,14 @@ private:
     }
 
   private:
+    struct CompareNodePointer {
+      bool operator()(const Node* lhs, const Node* rhs) const {
+        return lhs->f > rhs->f;
+      }
+    };
+
     /// Priority queue of node pointers managed by the caller.
-    llvm::PriorityQueue<Node*, std::vector<Node*>, Node::ComparePointer> queue;
+    llvm::PriorityQueue<Node*, std::vector<Node*>, CompareNodePointer> queue;
     /// Maps a layout to the node that reached it using the lowest cost.
     DenseMap<ArrayRef<QubitIndex>, Node*> best;
   };
@@ -908,6 +909,53 @@ private:
     const CompilerTarget* target_;
   };
 
+  /// A stateful iterator over routing boundaries in a block.
+  ///
+  /// A routing boundary is a control flow operation (IfOp, IndexSwitchOp,
+  /// scf::ForOp, scf::WhileOp) that produces qubit types. These boundaries
+  /// delimit regions where qubit routing must account for control flow.
+  template <WireDirection Direction> struct Boundary {
+    /// Initialize the routing boundary.
+    explicit Boundary(Block& block) {
+      if constexpr (Direction == WireDirection::Forward) {
+        boundary_ = findNextBoundary(&block.front());
+      } else {
+        boundary_ = findNextBoundary(&block.back());
+      }
+    }
+
+    /// Advance before rewriting the current routing boundary.
+    void advance() {
+      assert(boundary_ != nullptr && "cannot advance an exhausted boundary");
+      boundary_ = findNextBoundary(next(boundary_));
+    }
+
+    /// Return the current boundary operation, or nullptr if exhausted.
+    [[nodiscard]] Operation* operation() const { return boundary_; }
+
+  private:
+    /// Starting from op, walk the IR in block-order until a boundary operation
+    /// is discovered or the block is exhausted.
+    Operation* findNextBoundary(Operation* op) {
+      for (; op != nullptr; op = next(op)) {
+        if (isa<IfOp, IndexSwitchOp, scf::ForOp, scf::WhileOp>(op) &&
+            any_of(op->getResultTypes(),
+                   [](Type type) { return isa<QubitType>(type); })) {
+          return op;
+        }
+      }
+      return nullptr;
+    }
+
+    /// Return the next (or previous) operation in block-order.
+    static Operation* next(Operation* op) {
+      return Direction == WireDirection::Forward ? op->getNextNode()
+                                                 : op->getPrevNode();
+    }
+
+    Operation* boundary_;
+  };
+
 public:
   /// Construct default mapping pass.
   MappingPass() = default;
@@ -983,10 +1031,10 @@ protected:
       signalPassFailure();
       return;
     }
-    RoutingState state(std::move(*wires), layout, env);
 
+    RoutingState state(std::move(*wires), layout, env);
     const auto stats = route<WireDirection::Forward, RoutingMode::Hot>(
-        state, arena, env, &rewriter);
+        func.getFunctionBody().front(), state, arena, env, &rewriter);
 
     assert((!expectedScore ||
             (state.costs ? state.costs->score() : std::nullopt)
@@ -1020,6 +1068,23 @@ protected:
   }
 
 private:
+  /// Return true, if a precedes b (or b precedes a for backwards iteration).
+  template <WireDirection Direction>
+  static bool precedes(Operation* a, Operation* b) {
+    if constexpr (Direction == WireDirection::Forward) {
+      return a->isBeforeInBlock(b);
+    }
+    return b->isBeforeInBlock(a);
+  }
+
+  /// Return values carried by a supported region terminator.
+  static ValueRange yieldedValues(Block& block) {
+    return TypeSwitch<Operation*, ValueRange>(block.getTerminator())
+        .Case([](scf::YieldOp op) { return op.getResults(); })
+        .Case([](scf::ConditionOp op) { return op.getArgs(); })
+        .Case([](YieldOp op) { return op.getTargets(); });
+  }
+
   /// Return the qubit values in `values`, preserving their relative order.
   static SmallVector<Value> getQubitValues(ValueRange values) {
     return llvm::filter_to_vector(
@@ -1162,18 +1227,6 @@ private:
     return newWhileOp;
   }
 
-  /// Thread the value before the next pending operation through the region.
-  ///
-  /// In particular, terminal measurements must remain after the region.
-  static Value valueBeforeBoundary(WireIterator iterator, Operation* boundary) {
-    --iterator;
-    while (iterator.operation() != nullptr &&
-           !iterator.operation()->isBeforeInBlock(boundary)) {
-      --iterator;
-    }
-    return iterator.qubit();
-  }
-
   /// Collect bounded interaction frequencies through wire-preserving loops.
   static bool
   collectInteractionWeights(Wires wires,
@@ -1238,6 +1291,7 @@ private:
     if (!collectInteractionWeights(wires, weights, 1, maximumWeight)) {
       return std::nullopt;
     }
+
     if (llvm::all_of(weights, [&](const auto& interaction) {
           const auto [a, b] = interaction.first;
           return env.target.areAdjacent(a, b);
@@ -1426,14 +1480,15 @@ private:
 
     assert(ntrials == trials.size());
 
+    Block& block = func.getFunctionBody().front();
     parallelForEach(&getContext(), trials, [&, this](Trial& t) {
       Arena arena(env.target.numSites(), searchMemoryLimit);
 
       {
         auto state = RoutingState::fromLayout(wires, t.layout, env);
         for (size_t i = 0; i < niterations; ++i) {
-          route<WireDirection::Forward>(state, arena, env);
-          route<WireDirection::Backward>(state, arena, env);
+          route<WireDirection::Forward>(block, state, arena, env);
+          route<WireDirection::Backward>(block, state, arena, env);
         }
         t.layout = std::move(state.layout);
       }
@@ -1442,7 +1497,8 @@ private:
       // preserving only the initial layout selected for final placement.
       auto state = RoutingState::fromLayout(wires, t.layout, env);
 
-      const auto score = route<WireDirection::Forward>(state, arena, env);
+      const auto score =
+          route<WireDirection::Forward>(block, state, arena, env);
       const auto quality = state.costs ? state.costs->score() : std::nullopt;
       t.score = quality.value_or(
           std::pair{std::numeric_limits<size_t>::max(), score.nswaps});
@@ -1675,19 +1731,11 @@ private:
     return curr;
   }
 
-  template <WireDirection Direction>
-  static bool precedes(Operation* a, Operation* b) {
-    if constexpr (Direction == WireDirection::Forward) {
-      return a->isBeforeInBlock(b);
-    }
-    return b->isBeforeInBlock(a);
-  }
-
   /// Collect a routing lookahead window of up to `1 + nlookahead` ready
   /// two-qubit gates, while skipping qubit-pair blocks.
   template <WireDirection Direction>
   Window getWindow(Wires wires, const Layout<QubitIndex>& layout,
-                   Operation* boundary) {
+                   const Boundary<Direction>& boundary) {
     Window window;
 
     SmallVector<QubitIndexPair> prev;
@@ -1698,14 +1746,16 @@ private:
         [&](const Frontier& frontier, SmallVectorImpl<Operation*>& released) {
           for (const auto& [op, indices] : frontier) {
             if (indices.size() == 1 &&
-                (boundary == nullptr || precedes<Direction>(op, boundary))) {
+                (boundary.operation() == nullptr ||
+                 precedes<Direction>(op, boundary.operation()))) {
               released.emplace_back(op);
             }
           }
 
           if (released.empty()) {
             for (const auto& [op, indices] : frontier) {
-              if (boundary != nullptr && !precedes<Direction>(op, boundary)) {
+              if (boundary.operation() != nullptr &&
+                  !precedes<Direction>(op, boundary.operation())) {
                 continue;
               }
               if (!isa<BarrierOp>(op) && isa<UnitaryOpInterface>(op)) {
@@ -1873,8 +1923,9 @@ private:
   /// Leave wires at non-executable gates, composites, terminal measurements, or
   /// sink-like operations. Backward traversal can exhaust block arguments.
   template <WireDirection Direction>
-  std::optional<CompositeUnitary>
-  advance(RoutingState& state, Operation* boundary, const Environment& env) {
+  std::optional<CompositeUnitary> advance(RoutingState& state,
+                                          const Boundary<Direction>& boundary,
+                                          const Environment& env) {
     auto& wires = state.wires;
     std::optional<CompositeUnitary> composite;
     // Advancement only moves iterators. Discard classifications before routing
@@ -1885,7 +1936,7 @@ private:
     // composite until earlier routing work is complete, but let independent
     // composites pass terminal wires. Reverse block order for backward routing.
 
-    const auto defer = [&wires, &measurementRouting](Operation* candidate) {
+    const auto defer = [&](Operation* candidate) {
       return any_of(wires, [&](WireIterator& it) {
         if (it == std::default_sentinel) {
           return false;
@@ -1921,35 +1972,34 @@ private:
                                            SmallVectorImpl<Operation*>&
                                                released) {
       for (const auto& [op, indices] : frontier) {
-        if (boundary != nullptr && precedes<Direction>(boundary, op)) {
+        if (boundary.operation() != nullptr &&
+            precedes<Direction>(boundary.operation(), op)) {
           continue;
         }
 
         const auto release =
             TypeSwitch<Operation*, bool>(op)
-                .Case([](BarrierOp&) { return true; })
-                .Case([&](UnitaryOpInterface&) {
+                .Case([](BarrierOp) { return true; })
+                .Case([&](UnitaryOpInterface) {
                   if (indices.size() == 1) {
                     return true;
                   }
-
                   return env.target.areAdjacent(indices[0], indices[1]);
                 })
-                .Case([](ResetOp&) { return true; })
-                .Case([&](MeasureOp& m) {
+                .Case([](ResetOp) { return true; })
+                .Case([&](MeasureOp m) {
                   if (Direction == WireDirection::Backward) {
                     return true;
                   }
-
                   return measurementNeedsRouting(m, measurementRouting);
                 })
                 .template Case<AllocOp, StaticOp, qtensor::ExtractOp>(
-                    [](auto&) { return Direction == WireDirection::Forward; })
+                    [](auto) { return Direction == WireDirection::Forward; })
                 .template Case<SinkOp, qtensor::InsertOp, YieldOp, scf::YieldOp,
                                scf::ConditionOp>(
-                    [](auto&) { return Direction == WireDirection::Backward; })
+                    [](auto) { return Direction == WireDirection::Backward; })
                 .template Case<IfOp, IndexSwitchOp, scf::ForOp, scf::WhileOp>(
-                    [&](auto& cf) {
+                    [&](auto cf) {
                       if (!defer(cf) &&
                           (!composite ||
                            precedes<Direction>(op, composite->op))) {
@@ -1991,21 +2041,36 @@ private:
   /// Keeps the parent cursors at the corresponding physical results.
   void place(CompositeUnitary& composite, RoutingState& parent,
              IRRewriter& rewriter) {
-    SmallVector<unsigned> resultNumbers(parent.wires.size());
     SmallVector<Value> addons;
-    for (auto [site, wire] : enumerate(parent.wires)) {
-      if (wire.operation() == composite.op) {
-        resultNumbers[site] = cast<OpResult>(wire.qubit()).getResultNumber();
+    SmallVector<unsigned> resultNumbers(parent.wires.size());
+
+    for (size_t site = 0; site < parent.wires.size(); ++site) {
+      WireIterator it(parent.wires[site]);
+      if (it.operation() == composite.op) {
+        resultNumbers[site] = cast<OpResult>(it.qubit()).getResultNumber();
       } else {
         resultNumbers[site] = composite.op->getNumResults() + addons.size();
-        addons.push_back(valueBeforeBoundary(wire, composite.op));
+
+        // Thread the value before the next pending operation through the
+        // region. Particularly, terminal measurements must remain after the
+        // region.
+
+        --it;
+        while (it.operation() != nullptr &&
+               !it.operation()->isBeforeInBlock(composite.op)) {
+          --it;
+        }
+
+        addons.push_back(it.qubit());
       }
     }
+
     composite.op =
         TypeSwitch<Operation*, Operation*>(composite.op)
             .Case<scf::ForOp, scf::WhileOp, IfOp, IndexSwitchOp>(
                 [&](auto op) { return extend(op, addons, rewriter); });
     composite.indices = to_vector(llvm::seq(parent.wires.size()));
+
     for (auto [site, result] : enumerate(resultNumbers)) {
       parent.wires[site] = WireIterator(composite.op->getResult(result));
     }
@@ -2065,14 +2130,6 @@ private:
     }
   }
 
-  /// Values carried by a supported region terminator.
-  static ValueRange yieldedValues(Block& block) {
-    return TypeSwitch<Operation*, ValueRange>(block.getTerminator())
-        .Case([](scf::YieldOp op) { return op.getResults(); })
-        .Case([](scf::ConditionOp op) { return op.getArgs(); })
-        .Case([](YieldOp op) { return op.getTargets(); });
-  }
-
   /// Construct child states, route their bodies, reconcile layouts, then
   /// publish the physical result order to the parent.
   template <WireDirection Direction, RoutingMode Mode>
@@ -2127,7 +2184,8 @@ private:
         }
       }
 
-      totalStats.merge(route<Direction, Mode>(child, arena, env, rewriter));
+      totalStats.merge(
+          route<Direction, Mode>(region.front(), child, arena, env, rewriter));
     }
 
     Layout<QubitIndex> exit =
@@ -2195,51 +2253,26 @@ private:
     return totalStats;
   }
 
-  /// Regions fence every traversal, independent of native-cost availability.
-  template <WireDirection Direction>
-  static Operation* nextRoutingBoundary(Operation* op) {
-    for (; op != nullptr; op = Direction == WireDirection::Forward
-                                   ? op->getNextNode()
-                                   : op->getPrevNode()) {
-      if (isa<IfOp, IndexSwitchOp, scf::ForOp, scf::WhileOp>(op) &&
-          any_of(op->getResultTypes(),
-                 [](Type type) { return isa<QubitType>(type); })) {
-        return op;
-      }
-    }
-    return nullptr;
-  }
-
   /// Advance executable operations, route ready regions, or search for SWAPs
   /// that release the next interaction.
   ///
   /// Finish terminal measurements last.
   template <WireDirection Direction, RoutingMode Mode = RoutingMode::Cold>
     requires(Mode != RoutingMode::Hot || Direction == WireDirection::Forward)
-  Statistics route(RoutingState& state, Arena& arena, const Environment& env,
-                   IRRewriter* rewriter = nullptr) {
+  Statistics route(Block& block, RoutingState& state, Arena& arena,
+                   const Environment& env, IRRewriter* rewriter = nullptr) {
     if (state.costs) {
       state.costs->reset(Direction);
     }
-    Operation* boundary = nullptr;
-    for (auto& wire : state.wires) {
-      if (wire != std::default_sentinel) {
-        auto* block = wire.qubit().getParentBlock();
-        boundary = nextRoutingBoundary<Direction>(
-            Direction == WireDirection::Forward ? &block->front()
-                                                : &block->back());
-        break;
-      }
-    }
 
     Statistics stats;
+    Boundary<Direction> boundary(block);
+
     while (true) {
       auto composite = advance<Direction>(state, boundary, env);
       if (composite) {
-        assert(composite->op == boundary);
-        boundary = nextRoutingBoundary<Direction>(
-            Direction == WireDirection::Forward ? boundary->getNextNode()
-                                                : boundary->getPrevNode());
+        assert(composite->op == boundary.operation());
+        boundary.advance();
 
         if constexpr (Mode == RoutingMode::Hot) {
           place(*composite, state, *rewriter);
@@ -2247,6 +2280,7 @@ private:
 
         stats.merge(routeComposite<Direction, Mode>(*composite, state, arena,
                                                     env, rewriter));
+
         for (auto& wire : state.wires) {
           if (wire != std::default_sentinel &&
               wire.operation() == composite->op) {
@@ -2254,17 +2288,16 @@ private:
                                  WireTraversalTraits<Direction>::stride());
           }
         }
-        continue;
-      }
+      } else {
+        const auto window =
+            getWindow<Direction>(state.wires, state.layout, boundary);
+        if (window.empty()) {
+          break;
+        }
 
-      const auto window =
-          getWindow<Direction>(state.wires, state.layout, boundary);
-      if (window.empty()) {
-        break;
+        const auto swaps = search(window, state, arena, env);
+        insertSWAPs<Mode>(swaps, state, stats, rewriter);
       }
-
-      const auto swaps = search(window, state, arena, env);
-      insertSWAPs<Mode>(swaps, state, stats, rewriter);
     }
 
     if constexpr (Direction == WireDirection::Forward) {
