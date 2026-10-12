@@ -94,9 +94,11 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
     ValueRange outputs;
   };
   SmallVector<Frame> stack;
-  stack.push_back({.next = region.front().begin(),
-                   .end = region.front().end(),
-                   .outputs = {}});
+  stack.push_back({
+      .next = region.front().begin(),
+      .end = region.front().end(),
+      .outputs = {},
+  });
   while (!stack.empty()) {
     auto& frame = stack.back();
     if (frame.next == frame.end) {
@@ -145,9 +147,11 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
                  quantum(body.getArguments()), quantum(op.getResults()))) {
           wires[argument] = wires.at(output);
         }
-        stack.push_back({.next = body.front().begin(),
-                         .end = body.front().end(),
-                         .outputs = op.getResults()});
+        stack.push_back({
+            .next = body.front().begin(),
+            .end = body.front().end(),
+            .outputs = op.getResults(),
+        });
       }
     } else if (isa<AllocOp, StaticOp, qtensor::AllocOp>(op)) {
       if (failed(addRoot(op.getResult(0)))) {
