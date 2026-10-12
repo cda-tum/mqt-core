@@ -163,6 +163,43 @@ def test_rejects_inconsistent_application_target_merge(failure: str) -> None:
         BUILDER.validate_capture(data)
 
 
+@pytest.mark.parametrize("failure", ["source", "input-hash", "output-hash", "index", "duplicate", "missing"])
+def test_application_compilation_binds_each_input_to_its_executable(failure: str) -> None:
+    """Reject a stale or incomplete QASM-to-QIR batch before packaging its replay."""
+    data = sample_target_capture()
+    application = data["application"]
+    snapshot = application["snapshots"][0]
+    snapshot["input_payload"] = snapshot["payload"]
+    snapshot["input_payload_sha256"] = snapshot["payload_sha256"]
+    snapshot["payload"] = "; distinct executable QIR payload\n"
+    snapshot["payload_sha256"] = hashlib.sha256(snapshot["payload"].encode()).hexdigest()
+    application["snapshots"].append(deepcopy(snapshot))
+    events = [
+        {
+            "program_index": i,
+            "input_sha256": snapshot["input_payload_sha256"],
+            "output_sha256": snapshot["payload_sha256"],
+        }
+        for i in range(2)
+    ]
+    application["execution"] = {"compilation": events}
+    BUILDER.validate_capture(data)
+    if failure == "source":
+        application["snapshots"][1]["input_payload"] += "changed"
+    elif failure == "input-hash":
+        events[1]["input_sha256"] = "b" * 64
+    elif failure == "output-hash":
+        events[1]["output_sha256"] = "b" * 64
+    elif failure == "index":
+        events[1]["program_index"] = -1
+    elif failure == "duplicate":
+        events[1]["program_index"] = 0
+    else:
+        events.clear()
+    with pytest.raises(ValueError, match="Application compil"):
+        BUILDER.validate_capture(data)
+
+
 def test_application_recording_can_precede_compiler_capture() -> None:
     """Compile the same retained payload with a newer compiler without rewriting its history."""
     data = sample_target_capture()
@@ -301,6 +338,12 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
         source = root / "capture.json"
         data = sample_target_capture()
         data["application"].update({
+            "source": "    @decorator\n    def shadow_circuit():\n        return 1\n",
+            "batch_source": "compiled = [1]\nschedule = compiled[0]",
+            "source_definitions": {
+                name: f'def {name}():\n    """Description only."""\n    return 1\n'
+                for name in ("hydrogen_trial", "apply_gaussian_givens", "apply_pauli_layer")
+            },
             "workload": {"snapshots": 1},
             "shadow": {"raw": "scientific evidence"},
             "propagation": {
@@ -333,6 +376,10 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
         assert "data:image/svg+xml;base64," in html
         assert "data:font/woff2;base64," in html
         packaged = json.loads(html.split("window.MQSF_DATA=", 1)[1].split(";</script>", 1)[0])
+        display = packaged["application"]["presentation_source"]
+        assert "\n@decorator\ndef shadow_circuit():" in display["right"]
+        assert "Description only" not in display["left"]
+        assert "<span" in "".join(display["right_lines_html"])
         assert "snapshots" not in packaged["application"]
         assert "shadow" not in packaged["application"]
         assert packaged["application"]["workload"]["snapshots"] == 1
@@ -357,7 +404,7 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
 
 
 def test_large_artifacts_keep_exact_source_in_evidence() -> None:
-    """Bound highlighted excerpts while preserving the complete source."""
+    """Keep full highlighted programs and identical downloadable evidence."""
     data = sample_capture()
     code = "line\n" * 201
     data["scenarios"][0]["variants"][0]["stages"][0]["code"] = code
@@ -375,7 +422,8 @@ def test_large_artifacts_keep_exact_source_in_evidence() -> None:
         assert variant["exports"][0]["sha256"] == data["scenarios"][0]["variants"][0]["execution"]["payload_sha256"]
         assert artifact["sha256"] == hashlib.sha256(code.encode()).hexdigest()
         assert artifact["line_count"] == 201
-        assert artifact["code"] == "line\n" * 200
+        assert artifact["code"] == code
+        assert len(artifact["lines_html"]) == 201
         assert "full_code_gzip" not in artifact
         with zipfile.ZipFile(root / "output/mqsf-2026.zip") as archive:
             assert archive.read("evidence.json.gz") == capture.read_bytes()

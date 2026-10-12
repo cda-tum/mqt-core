@@ -139,17 +139,21 @@ window.MQSF_MOTION = (() => {
           );
       }
     }
-    // New content enters gently; shared SVG objects follow their actual geometry.
-    if (!old.size)
-      animations.push(
-        root.animate(
-          [
-            { opacity: 0, transform: "translateY(14px)" },
-            { opacity: 1, transform: "none" },
-          ],
-          { duration: 450 },
-        ),
+    // Fade new chapter/content roots; preserve geometry shared with the previous slide.
+    for (const node of root.children) {
+      const shared = [node, ...node.querySelectorAll("[data-morph]")].some(
+        (element) => old.has(element.dataset.morph),
       );
+      const opacity = Number(getComputedStyle(node).opacity);
+      if (!shared && opacity > 0)
+        animations.push(
+          node.animate([{ opacity: 0 }, { opacity }], {
+            duration: 450,
+            easing: "ease-out",
+            fill: "backwards",
+          }),
+        );
+    }
     let begin, frame;
     const finish = (settle = true) => {
       cancelAnimationFrame(frame);

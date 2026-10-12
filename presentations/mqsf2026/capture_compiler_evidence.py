@@ -138,25 +138,22 @@ def syntax_checks() -> dict[str, Any]:
     """
     from mqt.core.mlir import QCProgram, QIRProfile  # ruff: ignore[import-outside-top-level]
 
-    local = PARITY_SOURCE.replace("bit syndrome;\n", "").replace("syndrome = measure", "bit syndrome = measure")
-    program = QCProgram.from_openqasm_str(local)
+    program = QCProgram.from_openqasm_str(PARITY_SOURCE)
     qir = program.copy().to_qir(QIRProfile.ADAPTIVE).llvm_ir
-    try:
-        program.to_qiskit()
-    except RuntimeError as error:
-        reason = str(error)
-        assert "cannot allocate" in reason
-    else:
-        reason = "supported"
-    all_h = QCProgram.from_openqasm_str(PARITY_SOURCE.replace("h q[0:1];", "h q;")).to_qiskit()
-    assert all_h.count_ops()["h"] == 3
+    circuit = program.to_qiskit()
+    emitted = program.to_openqasm3().source
+    QCProgram.from_openqasm_str(emitted).to_qiskit()
+    assert circuit.count_ops()["h"] == 2
     return {
-        "accepted": ["h q[0:1];", "cx q[0:1], q[2];", "bit[2] result = measure q[0:1];"],
-        "local_syndrome_declaration": {"import": True, "adaptive_qir": bool(qir), "qiskit": reason},
-        "all_register_h": (
-            "h q is accepted but also acts on the ancilla; h q[0:1] preserves the original data-only preparation."
-        ),
-        "display_choice": "Top-level syndrome storage keeps the same source exportable as a circuit and Adaptive QIR.",
+        "accepted": ["h data;", "cx data, flag;", "bit syndrome = measure flag;", "bit[2] result = measure data;"],
+        "local_syndrome_declaration": {
+            "import": True,
+            "adaptive_qir": bool(qir),
+            "qiskit": "supported",
+            "openqasm3": True,
+        },
+        "all_register_h": "The two-qubit data register broadcasts H without changing the flag preparation.",
+        "display_choice": "Local syndrome storage preserves the lexical scope in the compact source.",
     }
 
 

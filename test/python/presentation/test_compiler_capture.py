@@ -52,7 +52,7 @@ def test_rus_source_implements_the_literature_gate(monkeypatch: pytest.MonkeyPat
     monkeypatch.setitem(
         helpers["rus_semantics"].__globals__,
         "RUS_SOURCE",
-        source.replace("if (second) { z q[2]; }", "if (second) { x q[2]; }"),
+        source.replace("if (second) { z data; }", "if (second) { x data; }"),
     )
     with pytest.raises(AssertionError):
         helpers["rus_semantics"]()
@@ -86,6 +86,23 @@ def test_routing_trace_rejects_invented_layouts(monkeypatch: pytest.MonkeyPatch)
     event["after"] = [0, 2, 1]
     with pytest.raises(AssertionError):
         validate([event], [[0, 1], [1, 2]])
+
+
+def test_routing_trace_normalizes_reordered_compiler_roots() -> None:
+    """Cancellation may change discovery order without changing source-wire identity."""
+    normalize = runpy.run_path(str(SCRIPT))["normalize_routing_roots"]
+    event = {
+        "before": [2, 1, 0],
+        "after": [0, 1, 2],
+        "steps": [{"logical": [0, 2], "sites": [2, 0]}],
+        "search": {"front": [2, 0], "nodes": [{"layout": [2, 1, 0]}]},
+    }
+    assert normalize([event], [2, 0, 1]) == [0, 2, 1]
+    assert event["before"] == [2, 0, 1]
+    assert event["after"] == [0, 2, 1]
+    assert event["steps"][0]["logical"] == [0, 1]
+    assert event["search"]["front"] == [1, 0]
+    assert event["search"]["nodes"][0]["layout"] == [2, 0, 1]
 
 
 def test_weyl_capture_checks_recorded_unitaries(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -171,6 +188,9 @@ def test_circuit_metadata_keeps_control_flow_and_physical_sites() -> None:
     assert diagram["operations"][1]["clbits"] == [0]
     assert branch["condition_bits"] == [0]
     assert branch["blocks"][0][0]["qubits"] == [2, 1]
+    assert branch["blocks"][0][0]["base_gate"] == "x"
+    assert branch["blocks"][0][0]["controls"] == 1
+    assert branch["blocks"][0][0]["control_state"] == 1
     loop = QuantumCircuit(54)
     body = QuantumCircuit(54)
     body.cx(2, 1)
@@ -195,7 +215,7 @@ def test_parity_example_retains_loop_feedback_and_even_data_parity() -> None:
     branch = next(op for op in loop["blocks"][0] if op["name"] == "if_else")
     assert branch["condition_bits"] == [0]
     counts = program.sample(128, 7)
-    assert set(counts) == {"000", "110"}
+    assert set(counts) == {"00", "11"}
 
 
 def test_four_qubit_qpe_resolves_non_exact_phase() -> None:
@@ -222,8 +242,8 @@ def test_repeat_until_success_retains_conditional_loop_and_heralded_state() -> N
     program.cleanup()
     assert "scf.while" in program.ir
     counts = program.sample(2048, 7)
-    assert set(counts) == {"0001", "1001"}
-    assert counts["1001"] / 2048 == pytest.approx(4 / 5, abs=0.04)
+    assert set(counts) == {"01", "11"}
+    assert counts["11"] / 2048 == pytest.approx(4 / 5, abs=0.04)
 
 
 @pytest.mark.parametrize(

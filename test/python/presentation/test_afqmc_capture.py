@@ -111,9 +111,16 @@ def test_committed_afqmc_energies_recompute_from_actual_walkers() -> None:
     )
     first_snapshot = application["snapshots"][0]
     source = application["representative_source"]
-    assert source["code"] == first_snapshot["payload"]
-    assert source["sha256"] == first_snapshot["payload_sha256"]
-    assert source["program_format"] == first_snapshot["program_format"] == "QASM3"
+    assert source["code"] == first_snapshot["input_payload"]
+    assert source["sha256"] == first_snapshot["input_payload_sha256"]
+    assert source["program_format"] == "QASM3"
+    assert first_snapshot["program_format"] == "QIR_BASE_STRING"
+    execution = application["execution"]
+    assert len(execution["compilation"]) == len(application["snapshots"])
+    for snapshot, compilation in zip(application["snapshots"], execution["compilation"], strict=True):
+        assert snapshot["native_program_index"] == compilation["program_index"]
+        assert snapshot["input_payload_sha256"] == compilation["input_sha256"]
+        assert snapshot["payload_sha256"] == compilation["output_sha256"]
     chemistry = application["chemistry"]
     hamiltonian = np.asarray(chemistry["hamiltonian_real"])
     np.testing.assert_allclose(hamiltonian, hamiltonian.T, atol=1e-12)
@@ -140,7 +147,7 @@ def test_committed_afqmc_parallel_records_share_one_observed_clock() -> None:
     application = json.loads(gzip.decompress(capture_path.read_bytes()))["application"]
     propagation = application["propagation"]
     assert len(propagation["workers"]) == propagation["processes"] == 4
-    assert len({worker["node"] for worker in propagation["workers"]}) == 2
+    assert len({worker["node"] for worker in propagation["workers"]}) == 4
     tasks = {(task["label"], task["walker_id"]): task for task in propagation["tasks"]}
     assert len(tasks) == 2 * propagation["walkers"]
     assert len(propagation["events"]) == len(tasks)
@@ -177,7 +184,8 @@ def test_committed_afqmc_parallel_records_share_one_observed_clock() -> None:
         assert allocation["Partition"] == partition
     assert "license/mqt.ddsim.default=1" in scheduler["jobs"][quantum]["AllocTRES"]
     states = [event["state"] for event in application["execution"]["lifecycle"]]
-    assert states[0] == "submitted"
+    assert states[:3] == ["preparing", "compiling", "compiled"]
+    assert "submitted" in states
     assert "running" in states
     assert states[-2:] == ["extracting-results", "done"]
 
@@ -204,7 +212,29 @@ def test_committed_afqmc_batch_trace_points_into_captured_client_source() -> Non
     assert [event["program_index"] for event in events if "program_index" in event] == list(
         range(application["workload"]["snapshots"])
     )
-    assert len(application["batch_source"].splitlines()) == 3
+    assert "schedule = compiled[0][0]" in application["batch_source"]
+    assert "compiled = [matchgate.compile_gaussian_givens" in application["batch_source"]
+    completions = {event["program_index"]: event for event in execution["program_completions"]}
+    assert set(completions) == set(range(application["workload"]["snapshots"]))
+    assert len(execution["retrievals"]) == len(completions)
+    for event in execution["retrievals"]:
+        completed = completions[event["program_index"]]
+        assert completed["time_ms"] <= event["time_ms"] <= execution["duration_ms"]
+        assert completed["executor_slots"] == execution["simulator_threads"] == 4
+        assert completed["program_slots"] == 1
+
+
+def test_native_completion_trace_rejects_missing_duplicate_or_failed_programs(tmp_path: Path) -> None:
+    """Every colored completion cell must correspond to an actual successful native program."""
+    path = tmp_path / "trace.tsv"
+    path.write_text("200\t1\t4\t4\t1\n300\t0\t4\t4\t1\n")
+    events = CAPTURE.read_program_completions(path, 100, 2, 4)
+    assert [event["program_index"] for event in events] == [1, 0]
+    assert [event["time_ms"] for event in events] == [0.0001, 0.0002]
+    for records in ("200\t0\t4\t4\t1\n", "200\t0\t4\t4\t1\n300\t0\t4\t4\t1\n", "200\t0\t5\t4\t1\n", "99\t0\t4\t4\t1\n"):
+        path.write_text(records)
+        with pytest.raises(ValueError, match="Native"):
+            CAPTURE.read_program_completions(path, 100, 2, 4)
 
 
 @pytest.mark.parametrize("failure", ["fallback", "reordered", "incomplete", "single-program"])

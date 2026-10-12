@@ -308,5 +308,79 @@
     ],
     "scope": "The displayed estimator uses nonnegative walker weights and the trial-state local energy.",
     "sha256": "21b04ca62c47ebf05a9c551dfe7da3bc7771903b085dc3ecfe2a1594b0bd1109"
+  },
+  "github": {
+    "url": "https://mq.sc/",
+    "retrieved_at": "2026-10-12T20:26:52.817199+00:00",
+    "source_sha256": "2dd13d3a9d806429bb59168997218c0851e15495901ba0c0bba38c0579614f6c",
+    "sha256": "98f67fba8260192e3237b42e9003140dc931cdfb49d4f37f4e8ac7356acb6b89",
+    "adaptation": "Extracted social logo SVG unchanged from the MQSC website; fixed navy fill and removed build-only attributes.",
+    "rights": "Copyright and trademark rights remain with the original owners; included to identify the organization or reproduce MQSC principles."
+  },
+  "linkedin": {
+    "url": "https://mq.sc/",
+    "retrieved_at": "2026-10-12T20:26:52.817471+00:00",
+    "source_sha256": "2dd13d3a9d806429bb59168997218c0851e15495901ba0c0bba38c0579614f6c",
+    "sha256": "b4fe9ec99c50797bdfebb6e3de5b3a120e654ecafbb6bb9ee79264e5eede155f",
+    "adaptation": "Extracted social logo SVG unchanged from the MQSC website; fixed navy fill and removed build-only attributes.",
+    "rights": "Copyright and trademark rights remain with the original owners; included to identify the organization or reproduce MQSC principles."
+  },
+  "principle-open": {
+    "url": "https://mq.sc/",
+    "retrieved_at": "2026-10-12T20:26:52.817670+00:00",
+    "source_sha256": "2dd13d3a9d806429bb59168997218c0851e15495901ba0c0bba38c0579614f6c",
+    "sha256": "04a1124256cb6ba46f8fc0bff371dd30b80b4e134997f6a38e8229cfc1d5ddfe",
+    "adaptation": "Extracted principle icon paths unchanged; website CSS animation is reproduced in opening.css on the inline SVG.",
+    "rights": "Copyright and trademark rights remain with the original owners; included to identify the organization or reproduce MQSC principles."
+  },
+  "principle-community": {
+    "url": "https://mq.sc/",
+    "retrieved_at": "2026-10-12T20:26:52.817804+00:00",
+    "source_sha256": "2dd13d3a9d806429bb59168997218c0851e15495901ba0c0bba38c0579614f6c",
+    "sha256": "fa810cf1fb7305eb47ca5b69348b1ac289a24af77d7aa15ff90c01746b11bbe9",
+    "adaptation": "Extracted principle icon paths unchanged; website CSS animation is reproduced in opening.css on the inline SVG.",
+    "rights": "Copyright and trademark rights remain with the original owners; included to identify the organization or reproduce MQSC principles."
+  },
+  "principle-unlocked": {
+    "url": "https://mq.sc/",
+    "retrieved_at": "2026-10-12T20:26:52.817929+00:00",
+    "source_sha256": "2dd13d3a9d806429bb59168997218c0851e15495901ba0c0bba38c0579614f6c",
+    "sha256": "8195bd29fa6d96e20ed29ab5cf34aa4c7f8e95486911208de567eaa28854a3e4",
+    "adaptation": "Extracted principle icon paths unchanged; website CSS animation is reproduced in opening.css on the inline SVG.",
+    "rights": "Copyright and trademark rights remain with the original owners; included to identify the organization or reproduce MQSC principles."
+  },
+  "principle-practice": {
+    "url": "https://mq.sc/",
+    "retrieved_at": "2026-10-12T20:26:52.818053+00:00",
+    "source_sha256": "2dd13d3a9d806429bb59168997218c0851e15495901ba0c0bba38c0579614f6c",
+    "sha256": "142566102f2752fcae2c343f1df67b468bcb59ca4cccfc4ae6e87deafcbb9982",
+    "adaptation": "Extracted principle icon paths unchanged; website CSS animation is reproduced in opening.css on the inline SVG.",
+    "rights": "Copyright and trademark rights remain with the original owners; included to identify the organization or reproduce MQSC principles."
+  },
+  "principle-performance": {
+    "url": "https://mq.sc/",
+    "retrieved_at": "2026-10-12T20:26:52.818171+00:00",
+    "source_sha256": "2dd13d3a9d806429bb59168997218c0851e15495901ba0c0bba38c0579614f6c",
+    "sha256": "6d71048d83f590d255440b6a4845a1577f446b8c9d8212dd5a00dc2b598b9f73",
+    "adaptation": "Extracted principle icon paths unchanged; website CSS animation is reproduced in opening.css on the inline SVG.",
+    "rights": "Copyright and trademark rights remain with the original owners; included to identify the organization or reproduce MQSC principles."
+  },
+  "tum-mark": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/5b50bb661031632342d93672dcdda0d0bc69f2f5/docs/_static/logos/tum.svg",
+    "retrieved_at": "2026-10-10T20:14:36.110909+00:00",
+    "source_sha256": "a983693f0201cd71b31c3bf48eeaa17a53cdd488327564222c2c789fc88e765e",
+    "sha256": "16486d49ee12f3fb3717b33141ea754e72c840b3f46e9d6fd1ac5657d214f83c",
+    "adaptation": "Cropped viewport to the existing lettermark; all original path geometry and colors retained.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the project or organization.",
+    "source_asset": "tum.svg"
+  },
+  "lrz-mark": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/5b50bb661031632342d93672dcdda0d0bc69f2f5/docs/_static/logos/lrz.svg",
+    "retrieved_at": "2026-10-10T20:14:36.110693+00:00",
+    "source_sha256": "c6a4bbef55dd13a5334a7d8f9336326ba2d454dab8c9398c0809cf5b5cbb486d",
+    "sha256": "62e384c0754144104ace2b76b863d0c0a67f348d4e2377429335c6926a53dfad",
+    "adaptation": "Cropped viewport to the existing lettermark; all original path geometry and colors retained.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the project or organization.",
+    "source_asset": "lrz.svg"
   }
 }

@@ -433,7 +433,8 @@ def compile_device(target: dict[str, Any], source: str, compiler: Path, library:
     result["source_sha256"] = digest(source)
     result["mapping_options"] = MAPPING
     result["routing_trace_note"] = (
-        "Actual placement refinement, not quantum execution. Before/after arrays map compiler roots to physical sites. "
+        "Actual placement refinement, not quantum execution. Before/after arrays map source wires to physical sites; "
+        "routing_root_to_source records normalization of the compiler's root order. "
         "native_count and depth are predicted native two-qubit count/depth; they exclude one-qubit gates."
     )
     final_route = result["routing_trace"][-1]
@@ -442,6 +443,29 @@ def compile_device(target: dict[str, Any], source: str, compiler: Path, library:
     inputs = len(result["layout"]["initial"])
     assert final_route["before"][:inputs] == result["layout"]["initial"]
     assert final_route["after"][:inputs] == result["layout"]["final"]
+    optimized = next(s["circuit"] for s in result["stages"] if s["id"] == "optimized")
+    interactions = {
+        tuple(sorted(operation["qubits"])) for operation in optimized["operations"] if len(operation["qubits"]) == 2
+    }
+
+    def has_triangle(edges: set[tuple[int, int]]) -> bool:
+        neighbors: dict[int, set[int]] = {}
+        for first, second in edges:
+            neighbors.setdefault(first, set()).add(second)
+            neighbors.setdefault(second, set()).add(first)
+        return any(neighbors[first] & neighbors[second] for first, second in edges)
+
+    requires_routing = has_triangle(interactions) and not has_triangle({
+        tuple(sorted(edge)) for edge in model["couplings"]
+    })
+    assert final_route["steps"][0]["operation"] != "qco.swap", "Routing starts with an avoidable SWAP"
+    result["routing_evidence"] = {
+        "interaction_edges": [list(edge) for edge in sorted(interactions)],
+        "triangle_requires_routing": requires_routing,
+        "swap_lower_bound": 1 if requires_routing else 0,
+        "observed_swaps": len(result["layout"]["swaps"]),
+        "leading_swap": False,
+    }
     result["provider"] = "mqt.sc.default (local QDMI SC model populated from the recorded source)"
     for s in result["stages"]:
         if s["id"] == "place-and-route":

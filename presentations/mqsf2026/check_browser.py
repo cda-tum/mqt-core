@@ -101,8 +101,7 @@ LAYOUT_CHECK = """() => {
 EVIDENCE_CHECK = """() => {
     const id = document.querySelector('.batch-grid') ? 'afqmc-execution' :
         document.querySelector('.histogram') ? 'adaptive-execution' : '';
-    const clock = document.querySelector('.batch-grid .clock-line > div, .execution-grid .clock-line > div');
-    const fraction = clock ? parseFloat(clock.style.width) / 100 : 1;
+
     let capture, actual, expected;
     const elapsed = Number(document.querySelector('.batch-grid, .histogram')?.dataset.elapsedMs);
     if (id === 'adaptive-execution') {
@@ -116,15 +115,20 @@ EVIDENCE_CHECK = """() => {
         expected = {count:shots.length, bins:counts};
     } else if (id === 'afqmc-execution') {
         capture = MQSF_DATA.application.execution;
-        expected = {count:capture.events.filter(e => Number.isInteger(e.program_index) &&
-            e.time_ms + e.duration_ms <= elapsed).length};
-        actual = {count:Number(document.querySelector('.batch-grid').dataset.programs)};
+        const grid = document.querySelector('.batch-grid');
+        const complete = rows => rows.filter(e => e.time_ms + (e.duration_ms || 0) <= elapsed).length;
+        expected = {compiled:complete(capture.compilation), completed:complete(capture.program_completions),
+            count:complete(capture.retrievals)};
+        actual = {compiled:Number(grid.dataset.compiled), completed:Number(grid.dataset.completed),
+            count:Number(grid.dataset.programs)};
+        expected.cells = [capture.num_programs - expected.compiled, expected.compiled - expected.completed,
+            expected.completed - expected.count, expected.count];
+        actual.cells = [...grid.querySelectorAll('svg > path')]
+            .map(p => (p.getAttribute('d').match(/M/g) || []).length);
     } else return null;
-    const event = [...capture.events].reverse().find(e => e.time_ms <= elapsed);
-    const checkLine = !!document.querySelector('.code-line.hot');
-    return {actual, expected, fraction,
-        actualLine:checkLine ? Number(document.querySelector('.code-line.hot .line-no')?.textContent) : null,
-        expectedLine:checkLine ? event?.source_line || 1 : null};
+    const state = MQSF_DECK.getState(), progress = document.querySelector('#slide').dataset.progress;
+    const fraction = state.step === (id === 'afqmc-execution' ? 2 : 1) && progress !== '' ? Number(progress) : 1;
+    return {actual, expected, fraction};
 }"""
 
 CIRCUIT_CHECK = """() => {
@@ -162,9 +166,10 @@ CIRCUIT_CHECK = """() => {
         const active = Array.isArray(options.active) ? options.active : [options.active];
         if (holder.querySelectorAll('.gate-highlight').length !== active.length)
             failures.push(`${label}: active gates missing`);
+        const wire = holder.querySelector('.circuit').dataset;
         for (const gate of holder.querySelectorAll('[data-operation]')) {
             const x = Number(gate.getAttribute('transform').match(/translate\\(([-.\\d]+)/)[1]);
-            if (x < 143 || x > 1075) failures.push(`${label}: gate outside wires`);
+            if (x < Number(wire.left) || x > Number(wire.right)) failures.push(`${label}: gate outside wires`);
         }
         windows++;
     }
@@ -240,6 +245,23 @@ REAL_MOTION_CHECK = """async () => {
         failures.push('An entrance overrode a later hidden state');
     MQSF_MOTION.finish();
     root.remove();
+    const applicationIndex = MQSF_DECK.slides.findIndex(s => s.id === 'afqmc-execution');
+    MQSF_DECK.go(applicationIndex, MQSF_DECK.slides[applicationIndex].builds);
+    MQSF_DECK.finishMotion();
+    MQSF_DECK.next();
+    const chapter = document.querySelector('.chapter-separator');
+    if (!chapter) failures.push('The compiler chapter did not follow the AFQMC application');
+    else {
+        if (Number(getComputedStyle(chapter).opacity) !== 0)
+            failures.push('The new compiler chapter flashed before its entrance');
+        await waitFrames(140);
+        const opacity = Number(getComputedStyle(chapter).opacity);
+        if (!(opacity > 0 && opacity < 1))
+            failures.push('The compiler chapter did not fade through an intermediate frame');
+        MQSF_DECK.finishMotion();
+        if (Number(getComputedStyle(chapter).opacity) !== 1)
+            failures.push('The compiler chapter did not finish fully visible');
+    }
     const targetIndex = MQSF_DECK.slides.findIndex(s => s.id === 'routing');
     const positions = () => new Map([...document.querySelectorAll('[data-morph^="device-node-"]')]
         .map(node => {
@@ -247,7 +269,7 @@ REAL_MOTION_CHECK = """async () => {
             const {e, f} = node.transform.baseVal.getItem(0).matrix;
             return [node.dataset.morph, [e, f]];
         }));
-    for (const [source, target] of [[1,9],[9,11]]) {
+    for (const [source, target] of [[1,7],[7,9]]) {
         MQSF_DECK.go(targetIndex, target); MQSF_DECK.finishMotion();
         const destination = positions();
         MQSF_DECK.go(targetIndex, source); MQSF_DECK.finishMotion();
@@ -366,19 +388,17 @@ def check(
         page.clock.pause_at("2026-10-14T08:00:00Z")
         assert page.title() == TITLE
         slides = page.evaluate("window.MQSF_DECK.slides")
-        assert slides
+        assert len(slides) == 17
         assert len({slide["id"] for slide in slides}) == len(slides), "Slide IDs must be unique"
         states = [(index, step) for index, slide in enumerate(slides) for step in range(slide["builds"] + 1)]
         ids = {slide["id"]: index for index, slide in enumerate(slides)}
-        expected_mapping = page.evaluate("MQSF_DATA.targets[0].compilation.layout.final.slice(0,6)")
-        expected_swaps = page.evaluate("MQSF_DATA.targets[0].compilation.layout.swaps.length")
         opening = page.evaluate("""() => {
             const holder = document.createElement('div');
             const routes = p => {
                 holder.innerHTML = MQSF_VIZ.architecture('problem', p);
-                return [...holder.querySelectorAll('path[data-from]')]
+                return [...holder.querySelectorAll('path[data-morph^="world-"], path[data-morph="hpc-cloud-burst"]')]
                     .filter(n => Number(n.getAttribute('opacity')) > 0)
-                    .map(n => [n.dataset.from, n.dataset.to]);
+                    .map(n => n.dataset.morph);
             };
             const keys = [];
             for (const [mode, phases] of Object.entries(MQSF_VIZ.architecturePhases))
@@ -386,23 +406,23 @@ def check(
                     holder.innerHTML = MQSF_VIZ.architecture(mode, phase);
                     keys.push([...holder.querySelectorAll('[data-morph]')].map(n => n.dataset.morph));
                 }
-            holder.innerHTML = MQSF_VIZ.architecture('problem', 8);
-            const workstation = [...holder.querySelectorAll('[data-from="compute-0"]')]
-                .map(n => n.dataset.hosting);
-            return {start:routes(0), first:routes(3), complete:routes(8), keys, workstation};
+            return {start:routes(0), first:routes(3), complete:routes(8), keys};
         }""")
         assert not opening["start"], "Future deployment paths must not flash on entry"
-        assert opening["first"] == [["user-0", "compute-0"], ["compute-0", "qpu-0"]]
-        assert {tuple(edge) for edge in opening["complete"]} == {
-            *((f"user-{u}", f"compute-{c}") for u in range(4) for c in range(3)),
-            *((f"compute-{c}", f"qpu-{q}") for c in range(3) for q in range(5)),
+        assert opening["first"] == ["world-user-compute-0-0", "world-compute-qpu-0-0"]
+        assert set(opening["complete"]) == {
+            *(f"world-user-compute-{u}-{c}" for u in range(4) for c in range(3)),
+            *(f"world-compute-qpu-{c}-{q}" for c in range(3) for q in range(5)),
+            "hpc-cloud-burst",
         }, "Every deployment route must pass through classical compute"
-        assert set(opening["workstation"]) == {"cloud"}, "Workstations must not bypass HPC for on-premises QPUs"
-        assert len(opening["keys"]) == 25
+        assert len(opening["keys"]) == 26
         expected_keys = set(opening["keys"][0])
-        assert all(len(keys) == len(expected_keys) and set(keys) == expected_keys for keys in opening["keys"]), (
-            "Every architecture phase must retain the same unique morph keys"
-        )
+        for phase, keys in enumerate(opening["keys"]):
+            additions = {"principles-reveal", "principles"} if phase == 25 else set()
+            assert len(keys) == len(set(keys)), "Architecture morph keys must be unique"
+            assert set(keys) == expected_keys | additions, (
+                "Every architecture phase must retain its shared, unique morph keys"
+            )
         probe = page.evaluate(CIRCUIT_CHECK)
         assert not probe["failures"], probe["failures"]
         assert probe["dependencies"]
@@ -419,7 +439,6 @@ def check(
             evidence = page.evaluate(EVIDENCE_CHECK)
             if evidence:
                 assert evidence["actual"] == evidence["expected"], evidence
-                assert evidence["actualLine"] == evidence["expectedLine"], evidence
             return evidence
 
         def inspect_slide(index: int, step: int) -> None:
@@ -431,59 +450,49 @@ def check(
             assert not duplicate_keys, f"Slide {index + 1} build {step} has duplicate motion keys: {duplicate_keys}"
             for issue in page.evaluate(LAYOUT_CHECK):
                 geometry.setdefault((index, issue), step)
-            assert page.locator("#slide-number").inner_text().startswith(f"{index + 1:02d} / {len(slides)}")
+            assert page.locator("#slide-number").inner_text().startswith(f"{index + 1} / {len(slides)}")
             assert page.locator("#section-label").inner_text().strip()
-            if index == 0:
-                assert page.locator("#mqsc-logo").is_hidden(), "The title must not duplicate the MQSC logo"
-                assert page.locator(".title-brand").is_visible()
-            else:
-                assert page.locator("#mqsc-logo").is_visible()
+            assert page.locator("#mqsc-logo").is_visible()
             inspect_evidence()
-            if slides[index]["id"] == "structured" and step in {1, 3, 4, 5, 6, 7, 8}:
-                is_source = step in {1, 7}
-                source = page.evaluate(
-                    """([scenario, id]) => {
-                    const v = MQSF_DATA.scenarios.find(s => s.id === scenario).variants
-                        .find(v => v.id === 'structured');
-                    return [...v.stages, ...v.exports].find(a => a.id === id).code;
+            if slides[index]["id"] == "structured":
+                for artifact, container in (("source", ".structured-source"), ("qir-adaptive", ".structured-qir")):
+                    source = page.evaluate(
+                        """([scenario, id]) => {
+                        const v = MQSF_DATA.scenarios.find(s => s.id === scenario).variants
+                            .find(v => v.id === 'structured');
+                        return [...v.stages, ...v.exports].find(a => a.id === id).code;
+                    }""",
+                        ["rus" if step >= 5 else "parity", artifact],
+                    )
+                    visible = {
+                        line.strip() for line in page.locator(f"{container} .full-code .code-text").all_text_contents()
+                    }
+                    required = {line.strip() for line in source.splitlines() if line.strip()}
+                    assert required
+                    missing = sorted(required - visible)
+                    assert not missing, f"Structured build {step} omits {artifact} lines: {missing}"
+                assert page.locator(".structured-qir").evaluate(
+                    "(node, hidden) => node.classList.contains('future') === hidden", step in {0, 5}
+                ), "The source enters before its complete QIR counterpart"
+            if slides[index]["id"] == "routing" and step in {3, 4, 5, 6, 8, 10}:
+                target = 1 if step == 8 else 2 if step == 10 else 0
+                mapping, swaps = page.evaluate(
+                    """([target, initial]) => {
+                    const c = MQSF_DATA.targets[target].compilation;
+                    return [initial ? c.layout.initial : c.layout.final.slice(0, c.layout.initial.length),
+                        initial ? 0 : c.layout.swaps.length];
                 }""",
-                    ["rus" if step >= 7 else "parity", "source" if is_source else "qir-adaptive"],
+                    [target, step == 3],
                 )
-                visible = {line.strip() for line in page.locator("#slide .code-text").all_text_contents()}
-                pattern = (
-                    r"[{}]|\b(?:for|if|while|reset|measure)\b"
-                    if is_source
-                    else r"\bcall\b.*(?:__reset__|__mz__|__read_result)|\b(?:br|phi|icmp)\b"
-                )
-                required = [line.strip() for line in source.splitlines() if re.search(pattern, line)]
-                assert required
-                missing = [line for line in required if line not in visible]
-                assert not missing, f"Structured build {step} hides source control or quantum effects: {missing}"
-            if slides[index]["id"] == "routing" and step == 6 and not assert_state((index, step))["animating"]:
-                expected = [f"q{i} → {site}" for i, site in enumerate(expected_mapping)]
-                assert page.locator(".mapping-legend span").all_text_contents() == expected
-                for i, site in enumerate(expected_mapping):
+                for i, site in enumerate(mapping):
                     marker = page.locator(f'[data-morph="logical-qubit-{i}"]')
                     physical = page.locator(f'[data-morph="device-node-{site}"]')
                     assert marker.get_attribute("transform") == physical.get_attribute("transform"), (
-                        "Visual movement must finish at the captured physical placement"
+                        f"Target {target}, build {step}: logical qubit {i} must match captured site {site}"
                     )
-            if slides[index]["id"] == "routing" and step in {3, 6} and not assert_state((index, step))["animating"]:
-                swaps = int(page.locator(".telemetry strong").inner_text().split()[0])
-                assert swaps == (0 if step == 3 else expected_swaps), "SWAP telemetry must follow the routing stage"
-            if slides[index]["id"] == "compiler-stages" and step == 3 and not assert_state((index, step))["animating"]:
-                goal_layout = page.evaluate("""() => {
-                    const compilation = MQSF_DATA.targets[0].compilation;
-                    const search = compilation.routing_trace.find(e => e.search?.nodes?.length).search;
-                    return search.nodes.find(n => n.id === search.goal).layout
-                        .slice(0, compilation.layout.initial.length);
-                }""")
-                for i, site in enumerate(goal_layout):
-                    marker = page.locator(f'[data-morph="logical-qubit-{i}"]')
-                    physical = page.locator(f'[data-morph="device-node-{site}"]')
-                    assert marker.get_attribute("transform") == physical.get_attribute("transform"), (
-                        "A* replay must finish on the captured goal, not the last generated candidate"
-                    )
+                if step in {3, 4, 5}:
+                    heading = page.locator('[data-morph="stage-place-and-route"] h3').inner_text()
+                    assert re.search(rf"\b{swaps} SWAP", heading), "SWAP telemetry must follow the routing stage"
             page.evaluate("Promise.all([...document.querySelectorAll('#deck img')].map(i => i.decode()))")
             assets = page.evaluate("""() => [...document.querySelectorAll('#deck img, #deck svg image')].map(i =>
                 i.currentSrc || i.getAttribute('href') || i.getAttribute('xlink:href'))""")
@@ -499,29 +508,37 @@ def check(
         def inspect_progress(index: int, step: int, playback: dict[str, Any]) -> None:
             fractions = page.evaluate(
                 """() => {
-                const c = document.querySelector('.histogram')
-                    ? MQSF_DATA.scenarios.find(s => s.id === 'qpe').variants[0].executions['qir-adaptive']
-                    : MQSF_DATA.application.execution;
-                const times = c.shot_events?.map(e => e.time_ms) || c.events
-                    .filter(e => Number.isInteger(e.program_index)).map(e => e.time_ms + e.duration_ms);
-                const eventEnd = Math.max(...c.events.map(e => e.time_ms + e.duration_ms));
-                const duration = c.shot_events ? Math.max(c.completed_ms, eventEnd) :
-                    Math.max(eventEnd, ...c.lifecycle.map(e => e.time_ms));
-                const begin = c.events.find(e => /try_submit_job|job_submit/.test(e.operation))?.time_ms || 0;
-                return [0.25,0.5,0.75].map(f => (times[Math.floor(f * times.length)] - begin) / (duration - begin));
+                if (document.querySelector('.batch-grid')) return [.1, .4, .8, .95];
+                const c = MQSF_DATA.scenarios.find(s => s.id === 'qpe').variants[0].executions['qir-adaptive'];
+                const end = Math.max(0, c.completed_ms || 0, c.duration_ms || 0,
+                    ...c.events.map(e => e.time_ms + (e.duration_ms || 0)),
+                    ...(c.lifecycle || []).map(e => e.time_ms));
+                const quantile = (rows, f) => rows.map(e => e.time_ms + (e.duration_ms || 0))
+                    .sort((a,b) => a-b)[Math.floor(rows.length * f)];
+                const times = [0.25, 0.5, 0.75].map(f => quantile(c.shot_events, f));
+                const begin = c.submission_started_ms ??
+                    c.events.find(e => /try_submit_job|job_submit/.test(e.operation))?.time_ms ?? 0;
+                return times.sort((a,b) => a-b).map(t => (t - begin) / (end - begin));
             }""",
             )
             last = 0.0
-            counts = []
+            observations = []
             for fraction in fractions:
                 page.clock.fast_forward(round(playback["duration"] * (fraction - last)))
                 evidence = inspect_evidence()
                 assert evidence is not None
-                counts.append(evidence["actual"]["count"])
+                observations.append(evidence["actual"])
                 for issue in page.evaluate(LAYOUT_CHECK):
                     geometry.setdefault((index, issue), step)
                 last = fraction
-            assert 0 < counts[0] < counts[-1], f"No growing in-progress results on {slides[index]['id']}: {counts}"
+            if "completed" in observations[0]:
+                assert 0 < observations[0]["compiled"] <= observations[-1]["compiled"], observations
+                assert observations[0]["completed"] < observations[-1]["completed"], observations
+                assert observations[0]["count"] < observations[-1]["count"], observations
+                assert any(o["completed"] != o["count"] for o in observations), observations
+            else:
+                counts = [o["count"] for o in observations]
+                assert 0 < counts[0] < counts[-1], f"No growing in-progress results on {slides[index]['id']}: {counts}"
 
         page.keyboard.press("Home")
         completed = loops = 0

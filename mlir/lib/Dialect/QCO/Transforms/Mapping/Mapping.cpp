@@ -15,6 +15,8 @@
 #include "mqt/Dialect/CBit/IR/CBitDialect.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/MQT/IR/QubitLayout.h"
+#include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
+#include "mqt/Dialect/MQT/Utils/Modifiers.h"
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
 #include "mqt/Dialect/QCO/IR/QCOInterfaces.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
@@ -662,7 +664,8 @@ private:
     llvm::json::Array steps;
     llvm::json::Object searchTrace;
 
-    void record(StringRef name, ArrayRef<size_t> vertices) {
+    void record(StringRef name, ArrayRef<size_t> vertices,
+                Operation* operation = nullptr) {
       if (!trace) {
         return;
       }
@@ -672,11 +675,33 @@ private:
         sites.push_back(site);
         logical.push_back(layout.getProgramIndex(site));
       }
-      steps.push_back(llvm::json::Object{
+      llvm::json::Object event{
           {.K = "operation", .V = name},
           {.K = "sites", .V = std::move(sites)},
           {.K = "logical", .V = std::move(logical)},
-      });
+      };
+      if (operation != nullptr) {
+        auto* gate = operation;
+        if (auto controlled = dyn_cast<CtrlOp>(operation)) {
+          event["controls"] = controlled.getNumControls();
+          auto inner = mqt::getSoleBodyUnitary<UnitaryOpInterface>(
+              *controlled.getBody());
+          if (inner) {
+            gate = inner.getOperation();
+          }
+        }
+        event["base_gate"] = gate->getName().getStringRef();
+        llvm::json::Array parameters;
+        for (auto operand : gate->getOperands()) {
+          if (operand.getType().isF64()) {
+            if (const auto value = mqt::valueToDouble(operand)) {
+              parameters.push_back(*value);
+            }
+          }
+        }
+        event["parameters"] = std::move(parameters);
+      }
+      steps.push_back(std::move(event));
     }
   };
 
@@ -2204,7 +2229,7 @@ private:
               std::swap(vertices[0], vertices[1]);
             }
             if (isa<UnitaryOpInterface, MeasureOp, ResetOp>(op)) {
-              state.record(op->getName().getStringRef(), vertices);
+              state.record(op->getName().getStringRef(), vertices, op);
             }
             if (state.costs) {
               state.costs->append(op, vertices);

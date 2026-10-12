@@ -54,9 +54,9 @@ def main() -> None:
     parser.add_argument("--project", default="mqsf-afqmc")
     parser.add_argument("--compose-file", type=Path, help="Additional playground image/environment overlay")
     parser.add_argument("--snapshots", type=int, default=4096)
-    parser.add_argument("--shots", type=int, default=256)
+    parser.add_argument("--shots", type=int, default=1024)
     parser.add_argument("--walkers", type=int, default=128)
-    parser.add_argument("--steps", type=int, default=480)
+    parser.add_argument("--steps", type=int, default=240)
     args = parser.parse_args()
     runtime = args.runtime.resolve()
     environment = {**os.environ, "MQT_CORE_SLURM_RUNTIME": str(runtime), "MQT_CORE_SLURM_CORE": str(ROOT)}
@@ -79,6 +79,7 @@ def main() -> None:
     capture = [
         "env",
         f"MQT_MQSF_CORE_REVISION={revision}",
+        "MQT_CORE_DD_WORKER_BUDGET=4",
         "python3",
         "/workspace/presentations/mqsf2026/capture_afqmc.py",
         "--source",
@@ -134,9 +135,9 @@ def main() -> None:
         "afqmc-walkers",
         [
             "--partition=compute",
-            "--nodes=2",
+            "--nodes=4",
             "--ntasks=4",
-            "--ntasks-per-node=2",
+            "--ntasks-per-node=1",
             "--cpus-per-task=1",
             "--mem=2048M",
             f"--dependency=afterok:{quantum}",
@@ -196,7 +197,7 @@ def main() -> None:
     if (
         data["execution"]["slurm"]["job_id"] != quantum
         or data["propagation"]["slurm"]["job_id"] != classical
-        or len({worker["node"] for worker in data["propagation"]["workers"]}) != 2
+        or len({worker["node"] for worker in data["propagation"]["workers"]}) != 4
         or len(data["propagation"]["workers"]) != 4
     ):
         msg = "The capture does not match the two requested Slurm allocations and four distributed ranks"

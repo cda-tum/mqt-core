@@ -9,11 +9,12 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import base64
 import gzip
 import hashlib
 import json
-import re
+import textwrap
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -76,11 +77,32 @@ def validate_capture(data: dict[str, Any]) -> None:
             or source.get("sha256") != source_hash
             or provenance.get("source_sha256") != source_hash
             or not snapshots
-            or snapshots[0].get("payload") != source["code"]
-            or snapshots[0].get("payload_sha256") != source_hash
+            or snapshots[0].get("input_payload", snapshots[0].get("payload")) != source["code"]
+            or snapshots[0].get("input_payload_sha256", snapshots[0].get("payload_sha256")) != source_hash
         ):
             msg = "Target captures must identify the exact submitted application source"
             raise ValueError(msg)
+        for snapshot in snapshots:
+            payload = snapshot.get("payload", "")
+            if hashlib.sha256(payload.encode()).hexdigest() != snapshot.get("payload_sha256"):
+                msg = "Submitted application payload hash disagrees"
+                raise ValueError(msg)
+        compilations = application.get("execution", {}).get("compilation")
+        if compilations is not None:
+            if len(compilations) != len(snapshots) or {event["program_index"] for event in compilations} != set(
+                range(len(snapshots))
+            ):
+                msg = "Application compilation indices differ from submitted programs"
+                raise ValueError(msg)
+            for event in compilations:
+                snapshot = snapshots[event["program_index"]]
+                if (
+                    hashlib.sha256(snapshot["input_payload"].encode()).hexdigest() != snapshot["input_payload_sha256"]
+                    or event["input_sha256"] != snapshot["input_payload_sha256"]
+                    or event["output_sha256"] != snapshot["payload_sha256"]
+                ):
+                    msg = "Application compiler input/output binding differs"
+                    raise ValueError(msg)
         # Execution and compilation may be recorded separately; their shared input is checked above.
         if not application.get("provenance", {}).get("core_revision") or any(
             not provenance.get(key) or provenance[key] != data["provenance"].get(key)
@@ -222,11 +244,13 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
         targets.append({
             **{key: target[key] for key in ("id", "label", "metadata", "compiler_model") if key in target},
             "compilation": {
-                **{key: compilation[key] for key in ("layout", "routing_trace", "metrics") if key in compilation},
+                **{
+                    key: compilation[key]
+                    for key in ("layout", "routing_trace", "metrics", "synthesis_trace")
+                    if key in compilation
+                },
                 "stages": stages,
-                "exports": [
-                    artifact for artifact in compilation["exports"] if index == 0 and artifact["id"] == "qir-adaptive"
-                ],
+                "exports": [artifact for artifact in compilation["exports"] if artifact["id"] == "qir-adaptive"],
             },
         })
     application = data.get("application", {})
@@ -252,7 +276,17 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
         "application": {
             **{
                 key: application[key]
-                for key in ("source", "batch_source", "workload", "chemistry", "execution")
+                for key in (
+                    "source",
+                    "batch_source",
+                    "source_definitions",
+                    "presentation_source",
+                    "circuit_sections",
+                    "workload",
+                    "chemistry",
+                    "execution",
+                    "slurm",
+                )
                 if key in application
             },
             "shadow_preview": [
@@ -260,7 +294,11 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
                 for snapshot in application.get("snapshots", [])[:3]
             ],
             "propagation": {
-                **{key: propagation[key] for key in ("tau", "walkers", "workers") if key in propagation},
+                **{
+                    key: propagation[key]
+                    for key in ("tau", "walkers", "workers", "duration_ms", "wall_time_ms")
+                    if key in propagation
+                },
                 "curves": curves,
             },
         },
@@ -294,23 +332,45 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
                     artifact["sha256"] = hashlib.sha256(code.encode()).hexdigest()
                 lines = code.splitlines(keepends=True)
                 artifact["line_count"] = len(lines)
-                if len(lines) > 200:
-                    focus_line = artifact.get("focus_line", 1)
-                    if artifact.get("language") == "mlir":
-                        focus_line = next(
-                            (i + 1 for i, line in enumerate(lines) if re.search(r"\b(?:qc|qco)\.(?!static)", line)),
-                            focus_line,
-                        )
-                    start = max(0, min(focus_line - 2, len(lines) - 200))
-                    excerpt = lines[start : start + 200]
-                    artifact["code"] = "".join(excerpt)
-                    artifact["excerpt_start_line"] = start + 1
                 language = artifact.get("language", "text")
                 lexer = get_lexer_by_name("openqasm3" if language == "qasm" else language)
+                if artifact.get("display_code"):
+                    artifact["display_lines_html"] = [
+                        highlight(line, lexer, line_formatter).rstrip("\n")
+                        for line in artifact["display_code"].splitlines()
+                    ]
                 artifact["lines_html"] = [
                     highlight(line, lexer, line_formatter).rstrip("\n") for line in artifact["code"].splitlines()
                 ]
     application = data.get("application", {})
+    definitions = application.get("source_definitions", {})
+    if definitions:
+
+        def executable_lines(code: str) -> str:
+            code = textwrap.dedent(code)
+            lines = code.splitlines()
+            omitted = set()
+            for node in ast.walk(ast.parse(code)):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and ast.get_docstring(node):
+                    docstring = node.body[0]
+                    omitted.update(range(docstring.lineno - 1, docstring.end_lineno))
+            return "\n".join(line for i, line in enumerate(lines) if i not in omitted and line.strip())
+
+        application["presentation_source"] = {
+            "left": "\n\n".join(
+                executable_lines(definitions[name]) for name in ("hydrogen_trial", "apply_gaussian_givens")
+            ),
+            "right": "\n\n".join((
+                executable_lines(definitions["apply_pauli_layer"]),
+                textwrap.dedent(application["source"]).strip(),
+                application["batch_source"],
+            )),
+            "overview": textwrap.dedent(application["source"]).strip() + "\n\n" + application["batch_source"],
+        }
+        for key, code in list(application["presentation_source"].items()):
+            application["presentation_source"][key + "_lines_html"] = [
+                highlight(line, get_lexer_by_name("python"), line_formatter).rstrip("\n") for line in code.splitlines()
+            ]
     for key in ("source", "batch_source"):
         if application.get(key):
             application[key + "_lines_html"] = [
@@ -318,12 +378,14 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
                 for line in application[key].splitlines()
             ]
     css = source.joinpath("presentation.css").read_text(encoding="utf-8")
+    if source.joinpath("opening.css").exists():
+        css += "\n" + source.joinpath("opening.css").read_text(encoding="utf-8")
     css = formatter.get_style_defs(".highlight") + "\n" + css
     script = source.joinpath("presentation.js").read_text(encoding="utf-8")
     script = (
         "\n".join(
             source.joinpath(name).read_text(encoding="utf-8")
-            for name in ("visuals.js", "circuit.js", "motion.js")
+            for name in ("visuals.js", "circuit.js", "motion.js", "opening.js")
             if source.joinpath(name).exists()
         )
         + "\n"

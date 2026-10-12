@@ -36,37 +36,39 @@ if TYPE_CHECKING:
 ROOT = Path(__file__).resolve().parents[2]
 PARITY_SOURCE = """OPENQASM 3.1;
 include "stdgates.inc";
-qubit[3] q;
-bit syndrome;
-h q[0:1];
+qubit[2] data;
+qubit flag;
+h data;
 for int round in [0:1] {
-  reset q[2];
-  cx q[0:1], q[2];
-  syndrome = measure q[2];
-  if (syndrome) { x q[1]; }
+  reset flag;
+  cx data, flag;
+  bit syndrome = measure flag;
+  if (syndrome) { x data[1]; }
 }
-bit[2] result = measure q[0:1];
+bit[2] result = measure data;
 """
 RUS_SOURCE = """OPENQASM 3.1;
 include "stdgates.inc";
-qubit[3] q;
-bit accepted = 0; bit first = 0; bit second = 0;
-h q[2];
+qubit[2] ancilla;
+qubit data;
+bit accepted = 0;
+h data;
 while (!accepted) {
-  reset q[0:1];
-  h q[0:1];
-  tdg q[0]; cx q[1], q[0]; t q[0]; h q[0];
-  first = measure q[0];
+  reset ancilla;
+  h ancilla;
+  tdg ancilla[0]; cx ancilla[1], ancilla[0];
+  t ancilla[0]; h ancilla[0];
+  bit first = measure ancilla[0];
   if (!first) {
-    t q[2]; z q[2]; cx q[2], q[1];
-    t q[1]; h q[1];
-    second = measure q[1];
-    if (second) { z q[2]; }
+    t data; z data; cx data, ancilla[1];
+    t ancilla[1]; h ancilla[1];
+    bit second = measure ancilla[1];
+    if (second) { z data; }
     else { accepted = 1; }
   }
 }
-h q[2];
-bit result = measure q[2];
+h data;
+bit result = measure data;
 """
 
 
@@ -134,6 +136,11 @@ def capture_circuit(circuit: QuantumCircuit, sites: list[int] | None = None) -> 
                 "clbits": classical,
                 "parameters": [] if hasattr(operation, "blocks") else [str(value) for value in operation.params],
             }
+            base = getattr(operation, "base_gate", None)
+            if base is not None:
+                item["base_gate"] = base.name
+                item["controls"] = operation.num_ctrl_qubits
+                item["control_state"] = operation.ctrl_state
             if operation.name == "store":
                 reads = expression_bits(operation.rvalue)
                 item["classical_reads"] = reads
@@ -167,18 +174,26 @@ def capture_circuit(circuit: QuantumCircuit, sites: list[int] | None = None) -> 
 
     active = sorted(used_wires(circuit, list(range(circuit.num_qubits))))
     wires = [active.index(index) if index in active else -1 for index in range(circuit.num_qubits)]
+
+    def label(index: int, *, classical: bool = False) -> str:
+        location = circuit.find_bit((circuit.clbits if classical else circuit.qubits)[index])
+        if location.registers:
+            register, offset = location.registers[0]
+            return register.name if len(register) == 1 else f"{register.name}[{offset}]"
+        return f"{'c' if classical else 'q'}[{index}]"
+
     return {
         "kind": "physical" if sites is not None else "logical",
         "order": "Static program structure; branches and loops are not an execution trace.",
         "qubits": [
             {
                 "id": identifier,
-                "label": f"${sites[index]}" if sites is not None else f"q[{index}]",
+                "label": f"${sites[index]}" if sites is not None else label(index),
                 "site": sites[index] if sites is not None else None,
             }
             for identifier, index in enumerate(active)
         ],
-        "clbits": [{"id": index, "label": f"c[{index}]"} for index in range(circuit.num_clbits)],
+        "clbits": [{"id": index, "label": label(index, classical=True)} for index in range(circuit.num_clbits)],
         "operations": operations(circuit, wires, list(range(circuit.num_clbits))),
     }
 
@@ -319,6 +334,35 @@ def stage(identifier: str, label: str, language: str, code: str) -> dict[str, An
     }
 
 
+def normalize_routing_roots(trace: list[dict[str, Any]], initial: list[int]) -> list[int]:
+    """Translate compiler-root trace indices into the layout's source-wire order.
+
+    Returns:
+        The recorded permutation from compiler roots to source wires.
+    """
+    root_to_source = [initial.index(site) for site in trace[-1]["before"]]
+    assert sorted(root_to_source) == list(range(len(initial)))
+
+    def layout(values: list[int]) -> list[int]:
+        result = [0] * len(values)
+        for root, source in enumerate(root_to_source):
+            result[source] = values[root]
+        return result
+
+    for event in trace:
+        for key in ("before", "after"):
+            if key in event:
+                event[key] = layout(event[key])
+        for step in event.get("steps", []):
+            step["logical"] = [root_to_source[root] for root in step["logical"]]
+        search = event.get("search", {})
+        if "front" in search:
+            search["front"] = [root_to_source[root] for root in search["front"]]
+        for node in search.get("nodes", []):
+            node["layout"] = layout(node["layout"])
+    return root_to_source
+
+
 def program_stage(
     identifier: str, label: str, program: QCProgram | QCOProgram, target: CompilerTarget | None = None
 ) -> dict[str, Any]:
@@ -331,6 +375,12 @@ def program_stage(
     artifact["circuit"] = capture_circuit(
         program.to_qiskit(target=target), [site.id for site in target.sites] if target else None
     )
+    if identifier in {"qc", "qco"}:
+        display = program.copy()
+        display.cleanup()
+        artifact["display_code"] = display.ir
+        artifact["display_sha256"] = hashlib.sha256(display.ir.encode()).hexdigest()
+        artifact["display_passes"] = ["cleanup (canonicalization and common subexpression elimination)"]
     return artifact
 
 
@@ -479,6 +529,15 @@ def capture_variant(
             for line in dumps.splitlines()
             if line.startswith("MQSF_SYNTHESIS_TRACE ")
         ]
+        for event in variant["synthesis_trace"]:
+            for when in ("before", "after"):
+                program = QCOProgram.from_mlir_str(event[f"{when}_ir"])
+                # Before placement the circuit is logical; mapped modules carry a layout.
+                environment = target if "mqt.layout" in event[f"{when}_ir"] else None
+                event[when] = program_stage(when, f"Fusion {when}", program, environment)
+                indices = event["input_indices" if when == "before" else "output_indices"]
+                assert all(index < len(event[when]["circuit"]["operations"]) for index in indices)
+                del event[f"{when}_ir"]
     dumps = re.sub(r"^MQSF_(MAPPING|SYNTHESIS)_TRACE .*\n", "", dumps, flags=re.MULTILINE)
     if trace:
         fused = QCOProgram.from_mlir_str(extract_pass_ir(dumps, "FuseTwoQubitGatesPass"))
@@ -496,6 +555,10 @@ def capture_variant(
     routed_qasm = routed.to_qc(copy=True).to_openqasm3().source
     variant["layout"] = extract_layout(native_ir, routed_qasm)
     variant["layout"]["routed_openqasm3"] = routed_qasm
+    if trace:
+        variant["routing_root_to_source"] = normalize_routing_roots(
+            variant["routing_trace"], variant["layout"]["metadata"]["initial"]
+        )
     edges = {tuple(sorted(edge)) for edge in model["couplings"]}
     if any(tuple(sorted(swap)) not in edges for swap in variant["layout"]["swaps"]):
         message = "captured routing SWAP uses an edge absent from the Emerald model"

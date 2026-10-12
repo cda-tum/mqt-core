@@ -29,7 +29,8 @@ import socket
 import subprocess
 import sys
 from collections import Counter
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from dataclasses import replace
 from datetime import UTC, datetime
 from functools import partial
 from itertools import combinations, starmap
@@ -105,6 +106,67 @@ def validate_native_batch(submitted_jobs: int, snapshot_count: int, snapshots: l
     ):
         msg = "All shadow circuits must occupy one native QDMI job with sequential program indices"
         raise ValueError(msg)
+
+
+def read_program_completions(path: Path, started: int, programs: int, done_status: int) -> list[dict]:
+    """Read real native completion boundaries for one isolated multi-program job.
+
+    Returns:
+        Ordered program completions on the Python/native host monotonic clock.
+
+    Raises:
+        ValueError: If native results are missing, duplicated, failed, or before submission.
+    """
+    events = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        timestamp, index, status, executor_slots, program_slots = map(int, line.split("\t"))
+        if status != done_status or timestamp < started:
+            msg = "Native program completion failed or precedes the capture"
+            raise ValueError(msg)
+        events.append({
+            "time_ms": (timestamp - started) / 1e6,
+            "program_index": index,
+            "executor_slots": executor_slots,
+            "program_slots": program_slots,
+        })
+    if sorted(event["program_index"] for event in events) != list(range(programs)):
+        msg = "Native trace must contain each completed program exactly once"
+        raise ValueError(msg)
+    return sorted(events, key=op.itemgetter("time_ms"))
+
+
+def compile_payload(index: int, source: str, directory: Path, compiler: str, started: int) -> tuple[str, dict]:
+    """Compile one actual OpenQASM payload through the live DDSIM QDMI target.
+
+    Returns:
+        Executable QIR and measured compiler subprocess boundaries.
+    """
+    path = directory / f"program-{index}.qasm"
+    path.write_text(source)
+    command = [
+        compiler,
+        str(path),
+        "--qdmi-device=mqt.ddsim.default",
+        (
+            '--payload-spec=#mqt.payload_spec<format = <id = "qir", version = "2.1.0", '
+            'profile = "base", encoding = text>, capabilities = [], optional_capabilities_known = true>'
+        ),
+        "--mlir-disable-threading",
+        "--seed=17",
+    ]
+    begin = perf_counter_ns()
+    result = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true] - explicit compiler argv
+        command, capture_output=True, text=True, check=True, timeout=120
+    )
+    end = perf_counter_ns()
+    return result.stdout, {
+        "program_index": index,
+        "time_ms": (begin - started) / 1e6,
+        "duration_ms": (end - begin) / 1e6,
+        "input_sha256": hashlib.sha256(source.encode()).hexdigest(),
+        "output_sha256": hashlib.sha256(result.stdout.encode()).hexdigest(),
+        "command": command,
+    }
 
 
 def determinant_amplitudes(walker: NDArray[np.complex128]) -> NDArray[np.complex128]:
@@ -580,10 +642,10 @@ def main() -> None:
     parser.add_argument("--classical-input", type=Path, help="Propagate walkers from a completed quantum capture")
     parser.add_argument("--worker", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--snapshots", type=int, default=4096)
-    parser.add_argument("--shots", type=int, default=256)
+    parser.add_argument("--shots", type=int, default=1024)
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--walkers", type=int, default=128)
-    parser.add_argument("--steps", type=int, default=480)
+    parser.add_argument("--steps", type=int, default=240)
     parser.add_argument("--dtau", type=float, default=0.02)
     parser.add_argument("--processes", type=int, default=4)
     parser.add_argument("--bond-length", type=float, default=1.6, help="H-H distance in angstrom")
@@ -629,6 +691,15 @@ def main() -> None:
     apply_gaussian_givens = matchgate.apply_gaussian_givens
     apply_pauli_layer = matchgate.apply_pauli_layer
 
+    started = perf_counter_ns()
+    lifecycle = [
+        {
+            "time_ms": 0.0,
+            "state": "preparing",
+            "actor": "PennyLane application",
+            "operation": "Build trial and shadow batch",
+        }
+    ]
     np.random.seed(args.seed)  # ruff: ignore[numpy-legacy-random] - upstream helpers consume the legacy global RNG
     rotations = [shadow.random_signed_permutation(8) for _ in range(max(32, args.snapshots))]
     compiled = [matchgate.compile_gaussian_givens(rotation) for rotation in rotations]
@@ -689,8 +760,14 @@ def main() -> None:
     methods = (original_submit, original_result, original_samples)
     client_source = "\n".join(inspect.getsource(method) for method in methods)
     source_lines = client_source.splitlines()
-    batch_events, lifecycle = [], []
-    started = perf_counter_ns()
+    batch_events, compilation_events, retrievals = [], [], []
+    input_payloads = []
+    compiler = str(Path(qdmi.__file__).parent / "bin/mqt-cc")
+    if not Path(compiler).is_file():
+        msg = "mqt-cc must be installed for the AFQMC compilation stage"
+        raise ValueError(msg)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    program_trace = args.output.with_name("program-completions.tsv")
 
     def lifecycle_event(state: str, actor: str, operation: str) -> None:
         lifecycle.append({
@@ -716,7 +793,26 @@ def main() -> None:
         })
         return value
 
-    def submit(batch: object, indices: list) -> object:
+    def submit(batch: PennyLaneJob, indices: list) -> object:
+        lifecycle_event("compiling", "MQT Compiler Collection", "mqt-cc --qdmi-device=mqt.ddsim.default")
+        prepared = list(batch._prepared)  # ruff: ignore[private-member-access] - presentation-only compiler insertion
+        input_payloads.extend(program.payload for program, _ in prepared)
+        with TemporaryDirectory(prefix="mqsf-afqmc-qir-") as directory, ThreadPoolExecutor(max_workers=4) as pool:
+            futures = {
+                pool.submit(compile_payload, index, input_payloads[index], Path(directory), compiler, started): index
+                for index in indices
+            }
+            for future in as_completed(futures):
+                index = futures[future]
+                payload, event = future.result()
+                original, shots = prepared[index]
+                prepared[index] = (
+                    replace(original, payload=payload, program_format=qdmi.ProgramFormat.QIR_BASE_STRING),
+                    shots,
+                )
+                compilation_events.append(event)
+        batch._prepared = tuple(prepared)  # ruff: ignore[private-member-access] - preserve actual adapter measurement metadata
+        lifecycle_event("compiled", "MQT Compiler Collection", "All OpenQASM payloads compiled to QIR")
         value = traced_call(
             "Device.try_submit_job(programs)",
             "self._device.qdmi_device.try_submit_job(",
@@ -752,7 +848,7 @@ def main() -> None:
     def samples(batch: object, index: int, job: object, program_index: int) -> object:
         if program_index == 0:
             lifecycle_event("extracting-results", "Core PennyLane adapter", "Job.get_shots(program_index)")
-        return traced_call(
+        value = traced_call(
             "QDMI indexed shots and PennyLane decoding",
             "self._shots_or_counts(job, program_index)",
             original_samples,
@@ -762,15 +858,19 @@ def main() -> None:
             program_index,
             program_index=program_index,
         )
+        retrievals.append({"time_ms": (perf_counter_ns() - started) / 1e6, "program_index": program_index})
+        return value
 
     with (
         patch.object(job_class, "_submit_programs", submit),
         patch.object(job_class, "result", collect),
         patch.object(job_class, "_samples", samples),
+        patch.dict(os.environ, {"MQT_MQSF_PROGRAM_TRACE": str(program_trace)}),
     ):
         samples_batch, counts_batch = shadow_circuit(angles, paulis)
     finished = perf_counter_ns()
     batch_ms = (finished - started) / 1e6
+    program_completions = read_program_completions(program_trace, started, args.snapshots, qdmi.Job.Status.DONE.value)
     if device.last_job is None or len(device.last_job.entries) != args.snapshots:
         msg = "PennyLane did not retain one batch entry per snapshot"
         raise ValueError(msg)
@@ -852,6 +952,8 @@ def main() -> None:
             "qdmi_shots": shots,
             "qdmi_counts": raw_counts,
             "program_format": job.program_format.name,
+            "input_payload": input_payloads[index],
+            "input_payload_sha256": hashlib.sha256(input_payloads[index].encode()).hexdigest(),
             "payload": program,
             "payload_sha256": hashlib.sha256(program.encode()).hexdigest(),
             "payload_identity_verified": True,
@@ -872,7 +974,13 @@ def main() -> None:
                 }
             ],
             "exports": [
-                {"id": "openqasm3", "label": "Actual Core PennyLane payload", "language": "qasm", "code": program}
+                {
+                    "id": "openqasm3",
+                    "label": "Actual Core PennyLane payload",
+                    "language": "qasm",
+                    "code": input_payloads[index],
+                },
+                {"id": "qir-base", "label": "Compiled QIR for DDSIM", "language": "llvm", "code": program},
             ],
             "layout": {"initial": [], "final": [], "swaps": []},
             "execution": {
@@ -880,7 +988,7 @@ def main() -> None:
                 "native_program_index": program_index,
                 "native_job_num_programs": job.num_programs,
                 "backend": "MQT DDSIM",
-                "compilation_target": "DDSIM native gate set via the PennyLane adapter",
+                "compilation_target": "mqt.ddsim.default queried by mqt-cc; QIR 2.1 Base Profile",
                 "payload_sha256": hashlib.sha256(program.encode()).hexdigest(),
                 "payload_identity_verified": True,
                 "num_shots": args.shots,
@@ -895,10 +1003,16 @@ def main() -> None:
         })
     validate_native_batch(device.submitted_jobs, args.snapshots, snapshots)
     representative = snapshots[0]
-    representative_source = representative["payload"]
-    representative_format = representative["program_format"]
+    representative_source = representative["input_payload"]
+    representative_format = "QASM3"
     assert isinstance(representative_source, str)
     assert isinstance(representative_format, str)
+    # The adapter emits this fixed four-wire payload with three declarations and one measurement.
+    shadow_operations = len(schedule) + paulis.shape[-1]
+    trial_operations = len(representative_source.splitlines()) - 4 - shadow_operations
+    if trial_operations != 11 or not representative_source.endswith("c = measure q;\n"):
+        msg = "The fixed H2 payload no longer matches the recorded trial/shadow visual boundary"
+        raise ValueError(msg)
     science = (
         {}
         if args.quantum_only
@@ -927,6 +1041,12 @@ def main() -> None:
         "execution": {
             "events": sorted(batch_events, key=op.itemgetter("time_ms")),
             "lifecycle": lifecycle,
+            "compilation": sorted(compilation_events, key=op.itemgetter("program_index")),
+            "program_completions": program_completions,
+            "retrievals": retrievals,
+            "compiler_workers": 4,
+            "simulator_threads": program_completions[0]["executor_slots"],
+            "submission_started_ms": next(event["time_ms"] for event in batch_events if "programs" in event),
             "slurm": slurm_allocation(),
             "client_source": client_source,
             "client_source_note": (
@@ -939,7 +1059,7 @@ def main() -> None:
             "shots_per_program": args.shots,
             "terminal_status": "DONE",
             "submitted_qdmi_jobs": device.submitted_jobs,
-            "trace_kind": "python-observed-adapter-calls",
+            "trace_kind": "python-adapter-and-native-program-completions",
             "backend": "Ideal MQT DDSIM on a Slurm quantum access node"
             if slurm_allocation()
             else "Local ideal MQT DDSIM",
@@ -950,19 +1070,39 @@ def main() -> None:
             if line.strip().startswith((
                 "angles = -np.stack",
                 "paulis = np.stack",
+                "rotations = [",
+                "compiled = [",
+                "schedule = ",
                 "samples_batch, counts_batch = shadow_circuit",
             ))
         ),
         "representative_source": {
             "code": representative_source,
-            "sha256": representative["payload_sha256"],
+            "sha256": representative["input_payload_sha256"],
             "language": "qasm",
             "program_format": representative_format,
             "format": representative_format.replace("QASM", "OpenQASM "),
-            "label": "Actual snapshot 0 payload submitted by the Core PennyLane adapter",
+            "label": "Actual snapshot 0 OpenQASM payload generated by the Core PennyLane adapter",
         },
         "source": inspect.getsource(shadow_circuit.func),
         "trial_source": inspect.getsource(hydrogen_trial),
+        "source_definitions": {
+            "hydrogen_trial": inspect.getsource(hydrogen_trial),
+            "apply_gaussian_givens": inspect.getsource(apply_gaussian_givens),
+            "apply_pauli_layer": inspect.getsource(apply_pauli_layer),
+            "compile_payload": inspect.getsource(compile_payload),
+            "submit": inspect.getsource(submit),
+        },
+        "circuit_sections": {
+            "trial_primitive_operations": trial_operations,
+            "shadow_primitive_operations": shadow_operations,
+            "labels": ["Trial State + Vacuum Reference", "Classical Shadow"],
+            "barrier_is_visual_only": True,
+            "cancellation_note": (
+                "The reference CX and trial-decoding CX cancel. SingleExcitation's decomposed leading H then "
+                "cancels the reference H. These arise from composing verified state preparations."
+            ),
+        },
         "classical_source": inspect.getsource(capture_h2_afqmc),
         "snapshots": snapshots,
         "shadow": compact,
@@ -1001,6 +1141,10 @@ def main() -> None:
             ).strip(),
             "command": "OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python " + " ".join(sys.argv),
             "capture_script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "compiler_sha256": hashlib.sha256(Path(compiler).read_bytes()).hexdigest(),
+            "native_trace_source_sha256": hashlib.sha256(
+                (HERE.parents[1] / "src/qdmi/devices/dd/Device.cpp").read_bytes()
+            ).hexdigest(),
             "generated_at": datetime.now(UTC).isoformat(),
             "patches": [
                 (

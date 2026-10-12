@@ -2,9 +2,9 @@
 
 ## System Software for Quantum Computing: From the Metal to the User
 
-A nine-slide keynote for a 1920 × 1080 projector and a forward/backward clicker.
-The story follows the shared software stack through an H₂ AFQMC workflow,
-device-aware compilation, structured programs, and adaptive execution.
+A seventeen-slide keynote for a 1920 × 1080 projector and a forward/backward
+clicker. The story follows the shared software stack through an H₂ AFQMC
+workflow, device-aware compilation, structured programs, and adaptive execution.
 
 ## Build and present
 
@@ -30,9 +30,10 @@ loads only the summaries needed for display; the ZIP retains full observations.
 Every narrative change waits for a click. A click may start a finite replay,
 which holds its final frame. Another forward click finishes any current replay
 and advances immediately. Back, direct jumps, printing, and reduced-motion mode
-show settled states. No narrative autoplays and no animation loops indefinitely.
-A fragment such as `#5.9` opens a particular slide and build. References never
-require a separate reveal. Printing creates one page per slide.
+show completed replays. The two explicitly illustrative compiler caricatures
+loop until the next click; reduced motion shows a settled frame. A fragment such
+as `#8.5` opens a particular slide and build. References never require a
+separate reveal. Printing creates one page per slide.
 
 ## Scientific evidence
 
@@ -42,12 +43,12 @@ Its pair-encoded preparation is checked against the original DoubleExcitation on
 the vacuum and Hartree–Fock states actually used. This is a subspace identity,
 not a general replacement for the four-qubit gate.
 
-The quantum allocation submits 4,096 programs with 256 shots each as one native
-QDMI job. Classical shadows supply determinant overlaps. A dependent Slurm
-allocation propagates 128 walkers for 480 steps per trial at Δτ = 0.02 Ha⁻¹,
-using four ranks on two compute nodes. Both shadow-derived and Hartree–Fock
-trials use the same auxiliary-field seeds. All nodes are containers on one
-physical host: this validates scheduler integration and distribution, not
+The quantum allocation submits 4,096 programs with 1,024 shots each as one
+native QDMI job. Classical shadows supply determinant overlaps. A dependent
+Slurm allocation propagates 128 walkers for 240 steps per trial at Δτ = 0.02
+Ha⁻¹, using four ranks on four compute nodes. Both shadow-derived and
+Hartree–Fock trials use the same auxiliary-field seeds. All nodes are containers
+on one physical host: this validates scheduler integration and distribution, not
 cluster scaling. See the
 [Slurm capture guide](https://github.com/munich-quantum-toolkit/core/blob/codex/mqsf-2026/presentations/mqsf2026/slurm/README.md)
 for the capture setup.
@@ -59,11 +60,13 @@ Both curves and the full measured range remain visible. There is no population
 resampling or quantum-advantage claim. Dense six-determinant contractions are an
 explicit small-example simplification, not a scalable AFQMC algorithm.
 
-Snapshot 0's exact submitted OpenQASM 3 payload is the source of every device
-compilation. Packaging checks source bytes, hashes, common stages, and executed
+Snapshot 0's exact adapter-generated OpenQASM 3 payload is the source of every
+device compilation. Each batch program is compiled to QIR against the DDSIM QDMI
+device before submission. Packaging binds raw-source and executable hashes to
+each measured compiler invocation, then checks target stages and executed
 exports. Application execution and compilation may be recorded on different Core
 revisions; each retains its original provenance, tied by the exact submitted
-payload. Target metadata comes from retained provider snapshots:
+input. Target metadata comes from retained provider snapshots:
 
 - IQM Emerald: 54 qubits; R/CZ native operations.
 - IBM Nighthawk: the official public `ibm_miami` r1 snapshot, dated April 2026.
@@ -74,7 +77,20 @@ The compiler queries local SC QDMI models populated from this metadata; these
 are not live vendor-device calls. Compiled payloads execute unchanged on ideal
 DDSIM. No hardware jobs are submitted. Layout positions are schematic. Routing
 steps, SWAPs, search parents, costs, and layouts come from compiler telemetry;
-intermediate visual motion between recorded endpoints is interpolation.
+intermediate visual motion between recorded endpoints is interpolation. Logical
+qubits move on the device map; the routed circuit uses physical wire labels.
+Actual native completion and indexed retrieval timestamps drive separate matrix
+colors. The replay rescales preparation, compilation, execution and retrieval
+for readability; the quantum replay clock reports the recorded application time.
+The walker replay instead displays imaginary time, without implying a wall-clock
+relationship. The final overview reports the complete recorded Slurm workflow
+duration, including scheduler and worker startup.
+
+Full compiler listings remain in the browser and evidence. Compact QC/QCO views
+are produced by recorded cleanup passes. Complete QIR sheets use a small font;
+control-flow highlights add readable excerpts while retaining the full listing.
+The AFQMC Python view omits docstrings and blank lines, and removes the common
+indentation of definitions extracted from the capture function.
 
 Grover program sizes are actual emitted UTF-8 OpenQASM bytes for 2–22 qubits,
 with preserved and fully unrolled forms. Weyl coordinates are decompositions of
@@ -86,9 +102,11 @@ before/after IR, and a matrix-equivalence check.
 The compact syndrome example keeps reset, counted loops, and feedback through
 native adaptive QIR. The literature RUS example implements V₃ with its required
 failure correction; imported-circuit Kraus matrices verify its semantics.
-Scratch bits remain top-level: region-local classical declarations are not
-supported by all current import/export paths. `h q[0:1]` preserves the two data
-qubits' role; `h q` would also initialize the ancilla and change this example.
+Scratch bits are declared inside the loops and branches. OpenQASM keeps their
+scope; the Qiskit export reuses storage and initializes zero-initialized locals
+on each region entry. Data and ancilla declarations are separate so broadcasting
+retains the intended qubit roles. The RUS construction follows
+[Paetznick and Svore (2014)](https://www.rintonpress.com/xxqic14/qic-14-1516/1277-1301.pdf).
 
 Four-qubit iterative QPE estimates phase 1/3 into eight output bits. The DDSIM
 capture records native device calls, JIT initialization, and 2,048 ordered shot

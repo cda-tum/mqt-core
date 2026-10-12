@@ -1221,7 +1221,22 @@ static bool fuseTwoQubitGateRun(IRRewriter& rewriter, UnitaryOpInterface head,
   }
 
   // Opt-in evidence capture; the presentation compiler disables threading.
-  if (const auto* tracePath = std::getenv("MQT_MQSF_SYNTHESIS_TRACE")) {
+  const auto* tracePath = std::getenv("MQT_MQSF_SYNTHESIS_TRACE");
+  llvm::json::Object event;
+  auto moduleOp = head->getParentOfType<ModuleOp>();
+  auto* block = head->getBlock();
+  auto* previous = head->getPrevNode();
+  const auto text = [](Operation* operation) {
+    std::string result;
+    llvm::raw_string_ostream stream(result);
+    operation->print(stream);
+    return result;
+  };
+  const auto visible = [](Operation* operation) {
+    return !isa<GPhaseOp>(operation) &&
+           isa<UnitaryOpInterface, MeasureOp, ResetOp, BarrierOp>(operation);
+  };
+  if (tracePath != nullptr) {
     llvm::json::Array matrix;
     for (size_t row = 0; row < 4; ++row) {
       llvm::json::Array entries;
@@ -1232,24 +1247,26 @@ static bool fuseTwoQubitGateRun(IRRewriter& rewriter, UnitaryOpInterface head,
       matrix.push_back(std::move(entries));
     }
     llvm::json::Array operations;
+    llvm::json::Array indices;
+    size_t index = 0;
+    for (auto& operation : *block) {
+      if (llvm::is_contained(run.ops, &operation)) {
+        indices.push_back(index);
+      }
+      if (visible(&operation)) {
+        ++index;
+      }
+    }
     for (auto* operation : run.ops) {
       operations.push_back(operation->getName().getStringRef());
     }
-    std::error_code error;
-    llvm::raw_fd_ostream stream(tracePath, error, llvm::sys::fs::OF_Append);
-    if (!error) {
-      stream << llvm::json::Value(llvm::json::Object{
-                    {.K = "matrix", .V = std::move(matrix)},
-                    {.K = "operations", .V = std::move(operations)},
-                    {.K = "two_qubit_before", .V = run.numTwoQ},
-                    {.K = "basis_uses_after", .V = native->numBasisUses},
-                    {.K = "reverse_entangler", .V = reverseEntangler},
-                })
-             << '\n';
-    } else {
-      llvm::errs() << "Cannot write MQSF synthesis trace: " << error.message()
-                   << '\n';
-    }
+    event["matrix"] = std::move(matrix);
+    event["operations"] = std::move(operations);
+    event["input_indices"] = std::move(indices);
+    event["before_ir"] = text(moduleOp);
+    event["two_qubit_before"] = run.numTwoQ;
+    event["basis_uses_after"] = native->numBasisUses;
+    event["reverse_entangler"] = reverseEntangler;
   }
 
   Value input0 = head.getInputQubit(0);
@@ -1266,7 +1283,39 @@ static bool fuseTwoQubitGateRun(IRRewriter& rewriter, UnitaryOpInterface head,
                                                           : synthesized.qubit0);
   rewriter.replaceAllUsesWith(run.tailB, reverseEntangler ? synthesized.qubit0
                                                           : synthesized.qubit1);
+  SmallVector<Operation*> emitted;
+  if (tracePath != nullptr) {
+    for (auto* operation = previous != nullptr ? previous->getNextNode()
+                                               : &block->front();
+         operation != head; operation = operation->getNextNode()) {
+      if (visible(operation)) {
+        emitted.push_back(operation);
+      }
+    }
+  }
   eraseFusableRun(rewriter, run);
+  if (tracePath != nullptr) {
+    llvm::json::Array indices;
+    size_t index = 0;
+    for (auto& operation : *block) {
+      if (llvm::is_contained(emitted, &operation)) {
+        indices.push_back(index);
+      }
+      if (visible(&operation)) {
+        ++index;
+      }
+    }
+    event["output_indices"] = std::move(indices);
+    event["after_ir"] = text(moduleOp);
+    std::error_code error;
+    llvm::raw_fd_ostream stream(tracePath, error, llvm::sys::fs::OF_Append);
+    if (!error) {
+      stream << llvm::json::Value(std::move(event)) << '\n';
+    } else {
+      llvm::errs() << "Cannot write MQSF synthesis trace: " << error.message()
+                   << '\n';
+    }
+  }
   return true;
 }
 

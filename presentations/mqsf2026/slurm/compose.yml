@@ -18,3 +18,4 @@ services:
     image: mqsf-afqmc-slurm:latest
   node:
     image: mqsf-afqmc-slurm:latest
+    scale: 4
