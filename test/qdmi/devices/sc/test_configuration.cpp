@@ -24,9 +24,11 @@
 #include <fstream>
 #include <functional>
 #include <ios>
+#include <istream>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <streambuf>
 #include <string>
 #include <utility>
 #include <vector>
@@ -245,9 +247,22 @@ TEST(ScConfigurationTest, ReportsMissingNestedFieldsAndUnknownKeys) {
 }
 
 TEST(ScConfigurationTest, ReportsInputFailuresWithTheirSource) {
+  class FailingBuffer : public std::streambuf {
+  protected:
+    int_type underflow() override {
+      throw std::ios_base::failure("read failed");
+    }
+  } buffer;
+  std::istream failingInput(&buffer);
+  auto error = ::mqt::test::diagnostic(
+      [&] { return readJSON(failingInput, "failing-stream"); });
+  ASSERT_TRUE(error);
+  EXPECT_EQ(error->status, QDMI_ERROR_FATAL);
+  EXPECT_THAT(error->message, testing::HasSubstr("failing-stream"));
+
   std::istringstream input;
   input.setstate(std::ios::badbit);
-  auto error =
+  error =
       ::mqt::test::diagnostic([&] { return readJSON(input, "broken-stream"); });
   ASSERT_TRUE(error);
   EXPECT_EQ(error->status, QDMI_ERROR_FATAL);

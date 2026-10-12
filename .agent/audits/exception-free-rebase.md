@@ -1,7 +1,8 @@
 # Exception-free API audit
 
 Baseline: PR #2545 rebased from `de76629b0` onto main `1133ad276`. LLVM/MLIR
-23.1.0, C++20. Integration fixes are applied; final validation is in progress.
+23.1.0, C++20. Integration fixes and the four independent audit findings are
+addressed. Hosted checks, packaging, and performance acceptance remain open.
 
 ## Findings addressed
 
@@ -25,6 +26,19 @@ Baseline: PR #2545 rebased from `de76629b0` onto main `1133ad276`. LLVM/MLIR
   definition and the unreachable JSON parser exception catch. Make the shared
   binding fallback message apply to any operation. Correct the runtime's
   classical-allocation lifetime comment; allocations survive quantum resets.
+- **Python diagnostic ownership:** bindings require shared Core libraries so
+  extensions and the DD library share one handler stack. CMake rejects static
+  Core with bindings; the lint preset and source-build guide use shared mode.
+  Standalone native builds still support static libraries.
+- **Stream reads:** the SC JSON boundary converts `ios_base::failure` from
+  stream-buffer reads to a source-labelled `QDMI_ERROR_FATAL`. The regression
+  test covers a throwing buffer alongside bad-stream and missing-file errors.
+- **Python compatibility:** gate operand errors, matrix capacity errors, and
+  skipped vector levels retain their `RuntimeError` category. Correct the owning
+  native diagnostics and restore the Python test expectations.
+- **Successful QDMI queries:** custom-property helpers accept synchronous
+  `Twine` descriptions. They render descriptions only on failure, retaining
+  successful absence and existing status/message semantics.
 
 ## Design decisions
 

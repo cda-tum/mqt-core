@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <fstream>
 #include <initializer_list>
+#include <ios>
 #include <istream>
 #include <iterator>
 #include <limits>
@@ -557,7 +558,13 @@ llvm::FailureOr<Device> readJSON(const std::string_view json,
 
 llvm::FailureOr<Device> readJSON(std::istream& stream,
                                  const std::string_view source) {
-  const std::string json{std::istreambuf_iterator<char>(stream), {}};
+  std::string json;
+  try {
+    json.assign(std::istreambuf_iterator<char>(stream), {});
+  } catch (const std::ios_base::failure&) {
+    return qdmi::emitError(QDMI_ERROR_FATAL,
+                           "Failed to read JSON: " + std::string(source));
+  }
   if (stream.bad()) {
     return qdmi::emitError(QDMI_ERROR_FATAL,
                            "Failed to read JSON: " + std::string(source));

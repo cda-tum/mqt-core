@@ -152,21 +152,21 @@ parseShots(std::string_view shots, size_t numShots);
 
 template <custom_property_value T, typename Query>
 [[nodiscard]] llvm::FailureOr<std::optional<T>>
-queryCustomValue(Query query, const std::string_view description) {
+queryCustomValue(Query query, const llvm::Twine& description) {
   size_t size = 0;
   const auto sizeResult = query(0, nullptr, &size);
   if (sizeResult == QDMI_ERROR_NOTSUPPORTED) {
     return std::optional<T>{};
   }
-  if (llvm::failed(checkError(
-          sizeResult, "Querying " + llvm::Twine(description) + " size"))) {
+  if (llvm::failed(
+          checkError(sizeResult, "Querying " + description + " size"))) {
     return llvm::failure();
   }
 
   std::vector<std::byte> bytes(size);
   if (size != 0) {
     if (llvm::failed(checkError(query(size, bytes.data(), nullptr),
-                                "Querying " + llvm::Twine(description)))) {
+                                "Querying " + description))) {
       return llvm::failure();
     }
   }
@@ -175,9 +175,10 @@ queryCustomValue(Query query, const std::string_view description) {
     return std::optional<std::vector<std::byte>>{std::move(bytes)};
   } else if constexpr (std::same_as<T, std::string>) {
     if (bytes.empty() || bytes.back() != std::byte{0}) {
-      return qdmi::emitError(QDMI_ERROR_INVALIDARGUMENT,
-                             "Cannot decode " + std::string(description) +
-                                 " as a null-terminated string");
+      return qdmi::emitError(
+          QDMI_ERROR_INVALIDARGUMENT,
+          ("Cannot decode " + description + " as a null-terminated string")
+              .str());
     }
     return std::optional<std::string>{
         std::in_place, reinterpret_cast<const char*>(bytes.data()),
@@ -185,10 +186,11 @@ queryCustomValue(Query query, const std::string_view description) {
   } else {
     if (bytes.size() != sizeof(T)) {
       return qdmi::emitError(QDMI_ERROR_INVALIDARGUMENT,
-                             "Cannot decode " + std::string(description) +
-                                 ": expected " + std::to_string(sizeof(T)) +
-                                 " bytes, but the device reported " +
-                                 std::to_string(bytes.size()));
+                             ("Cannot decode " + description + ": expected " +
+                              llvm::Twine(sizeof(T)) +
+                              " bytes, but the device reported " +
+                              llvm::Twine(bytes.size()))
+                                 .str());
     }
     T value{};
     std::memcpy(&value, bytes.data(), sizeof(T));
@@ -198,27 +200,28 @@ queryCustomValue(Query query, const std::string_view description) {
 
 template <typename Element>
 llvm::LogicalResult validateArraySize(const size_t size,
-                                      const std::string_view description) {
+                                      const llvm::Twine& description) {
   if (size % sizeof(Element) != 0U) {
     return qdmi::emitError(QDMI_ERROR_INVALIDARGUMENT,
-                           "Cannot decode " + std::string(description) +
-                               ": the device reported " + std::to_string(size) +
-                               " bytes, which is not a multiple of " +
-                               std::to_string(sizeof(Element)));
+                           ("Cannot decode " + description +
+                            ": the device reported " + llvm::Twine(size) +
+                            " bytes, which is not a multiple of " +
+                            llvm::Twine(sizeof(Element)))
+                               .str());
   }
   return llvm::success();
 }
 
 template <typename Handle, typename Query>
 [[nodiscard]] llvm::FailureOr<std::optional<std::vector<Handle>>>
-queryHandleArray(Query query, const std::string_view description) {
+queryHandleArray(Query query, const llvm::Twine& description) {
   size_t size = 0;
   const auto sizeResult = query(0, nullptr, &size);
   if (sizeResult == QDMI_ERROR_NOTSUPPORTED) {
     return std::optional<std::vector<Handle>>{};
   }
-  if (llvm::failed(checkError(
-          sizeResult, "Querying " + llvm::Twine(description) + " size"))) {
+  if (llvm::failed(
+          checkError(sizeResult, "Querying " + description + " size"))) {
     return llvm::failure();
   }
   if (llvm::failed(validateArraySize<Handle>(size, description))) {
@@ -229,7 +232,7 @@ queryHandleArray(Query query, const std::string_view description) {
   if (size != 0) {
     if (llvm::failed(
             checkError(query(size, static_cast<void*>(handles.data()), nullptr),
-                       "Querying " + llvm::Twine(description)))) {
+                       "Querying " + description))) {
       return llvm::failure();
     }
   }
@@ -770,7 +773,7 @@ public:
               device_, qdmiProperty, size, value, sizeRet);
         },
         "custom device property CUSTOM" +
-            std::to_string(static_cast<unsigned>(property)));
+            llvm::Twine(static_cast<unsigned>(property)));
   }
 
   /// Queries a custom device property containing operation handles.
@@ -1020,7 +1023,7 @@ public:
                                           sizeRet);
         },
         "custom job property CUSTOM" +
-            std::to_string(static_cast<unsigned>(property)));
+            llvm::Twine(static_cast<unsigned>(property)));
   }
 
   /// Retrieves an implementation-defined custom job result.
@@ -1047,7 +1050,7 @@ public:
                                        size, value, sizeRet);
         },
         "custom job result CUSTOM" +
-            std::to_string(static_cast<unsigned>(property)));
+            llvm::Twine(static_cast<unsigned>(property)));
   }
 
   /// Returns the measurement shots as a vector of bitstrings.
@@ -1188,7 +1191,7 @@ public:
               device_, site_, qdmiProperty, size, value, sizeRet);
         },
         "custom site property CUSTOM" +
-            std::to_string(static_cast<unsigned>(property)));
+            llvm::Twine(static_cast<unsigned>(property)));
   }
 
   auto operator<=>(const Site&) const noexcept = default;
@@ -1345,7 +1348,7 @@ public:
               params.size(), params.data(), qdmiProperty, size, value, sizeRet);
         },
         "custom operation property CUSTOM" +
-            std::to_string(static_cast<unsigned>(property)));
+            llvm::Twine(static_cast<unsigned>(property)));
   }
 
   auto operator<=>(const Operation&) const noexcept = default;

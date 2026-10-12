@@ -497,7 +497,7 @@ public:
     const auto levels = std::bit_width(dimension) - 1;
     if (levels > qubits()) {
       return ::mqt::emitError("Matrix exceeds the package qubit capacity.",
-                              ::mqt::ErrorCategory::InvalidArgument);
+                              ::mqt::ErrorCategory::Runtime);
     }
     if (levels == 0) {
       return cn.lookup(mCachedEdge::terminal(entry(0, 0)));

@@ -246,7 +246,7 @@ def test_invalid_path(decisions: str) -> None:
 @pytest.mark.parametrize("data", [b"1\n1\n0 2 (-1 1) ()\n", b"1\n1\n0 0 (-1 1) ()\n1 2 (0 1) ()\n"])
 def test_deserialize_skipped_levels(data: bytes) -> None:
     """Reject malformed vectors before measurement can encounter a missing qubit."""
-    with pytest.raises(ValueError, match="consecutive qubit levels"):
+    with pytest.raises(RuntimeError, match="consecutive qubit levels"):
         VectorDD.from_bytes(DDPackage(3), data, binary=False)
 
 

@@ -1007,7 +1007,7 @@ TEST(DDPackageTest, DeserializationRejectsSkippedVectorLevels) {
       EXPECT_EQ(::mqt::test::errorKind([&] {
                   return package->deserialize<vNode>(stream, binary);
                 }),
-                ::mqt::ErrorCategory::InvalidArgument);
+                ::mqt::ErrorCategory::Runtime);
     }
   }
 }
@@ -1302,20 +1302,20 @@ TEST(DDPackageTest, InvalidMakeBasisStateAndGate) {
   auto const nqubits = 2U;
   auto dd = ::mqt::test::value(Package::create(nqubits));
   EXPECT_EQ(::mqt::test::errorKind([&] { return dd->makeGateDD(X_MAT, 3); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
 }
 
 TEST(DDPackageTest, RejectsGateConstructionInEmptyPackage) {
   auto dd = ::mqt::test::value(Package::create(0U));
   EXPECT_EQ(::mqt::test::errorKind([&] { return dd->makeGateDD(X_MAT, 0U); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return dd->makeTwoQubitGateDD(SWAP_MAT, 0U, 0U); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return dd->makeThreeQubitGateDD(THREE_QUBIT_MAT, 0U, 0U, 0U);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
 }
 
 TEST(DDPackageTest, RejectsOverlappingGateQubits) {
@@ -1324,42 +1324,42 @@ TEST(DDPackageTest, RejectsOverlappingGateQubits) {
   // Duplicate two-qubit targets
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return dd->makeTwoQubitGateDD(SWAP_MAT, 1U, 1U); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
 
   // Control coincides with single-qubit target
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return dd->makeGateDD(X_MAT, Controls{{1}}, 1U); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
 
   // Duplicate three-qubit targets
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return dd->makeThreeQubitGateDD(THREE_QUBIT_MAT, 0U, 0U, 1U);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return dd->makeThreeQubitGateDD(THREE_QUBIT_MAT, 0U, 1U, 0U);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return dd->makeThreeQubitGateDD(THREE_QUBIT_MAT, 2U, 1U, 2U);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return dd->makeThreeQubitGateDD(THREE_QUBIT_MAT, 1U, 1U, 1U);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
 
   // Extra control coincides with a target
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return dd->makeThreeQubitGateDD(THREE_QUBIT_MAT, Controls{{1}},
                                               0U, 1U, 2U);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return dd->makeThreeQubitGateDD(THREE_QUBIT_MAT, Control{0}, 0U,
                                               1U, 2U);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
 }
 
 TEST(DDPackageTest, RejectsConflictingControlPolarities) {
@@ -1368,16 +1368,16 @@ TEST(DDPackageTest, RejectsConflictingControlPolarities) {
   const Controls controls{{0, Control::Type::Neg}, {0, Control::Type::Pos}};
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return package.makeGateDD(X_MAT, controls, 1); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return package.makeTwoQubitGateDD(SWAP_MAT, controls, 1, 2);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind([&] {
               return package.makeThreeQubitGateDD(THREE_QUBIT_MAT, controls, 1,
                                                   2, 3);
             }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
 }
 
 TEST(DDPackageTest, PackageReset) {
@@ -1794,10 +1794,10 @@ TEST(DDPackageTest, MatrixViewsValidateDimensionsAndQubits) {
             ::mqt::ErrorCategory::InvalidArgument);
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return package.makeDDFromMatrix(32, entry); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return package.makeDDFromMatrix(CMat(32, CVec(32))); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   const std::array<Qubit, 4> targets{3, 0, 2, 1};
   const std::vector<std::complex<fp>> matrix(256);
   EXPECT_EQ(::mqt::test::errorKind(
@@ -1813,11 +1813,11 @@ TEST(DDPackageTest, MatrixViewsValidateDimensionsAndQubits) {
   const std::array<Qubit, 4> duplicates{3, 0, 2, 2};
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return package.makeGateDD(matrix, duplicates); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   const std::array<Qubit, 4> outside{4, 0, 2, 1};
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return package.makeGateDD(matrix, outside); }),
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
   const std::array<Qubit, std::numeric_limits<size_t>::digits> tooMany{};
   EXPECT_EQ(::mqt::test::errorKind(
                 [&] { return package.makeGateDD(scalar, tooMany); }),

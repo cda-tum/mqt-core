@@ -226,7 +226,7 @@ gateQubitOutOfRange(const std::size_t nqubits) {
   if (nqubits == 0U) {
     return ::mqt::emitError(
         "Cannot construct a gate in a package with zero qubits.",
-        ::mqt::ErrorCategory::InvalidArgument);
+        ::mqt::ErrorCategory::Runtime);
   }
   return ::mqt::emitError(
       "Requested gate acting on qubit(s) with index larger than " +
@@ -234,13 +234,13 @@ gateQubitOutOfRange(const std::size_t nqubits) {
           " while the package configuration only supports up to " +
           std::to_string(nqubits) +
           " qubits. Please allocate a larger package instance.",
-      ::mqt::ErrorCategory::InvalidArgument);
+      ::mqt::ErrorCategory::Runtime);
 }
 
 [[nodiscard]] llvm::LogicalResult gateQubitsNotDistinct() {
   return ::mqt::emitError(
       "Requested gate has duplicate or overlapping control/target qubits.",
-      ::mqt::ErrorCategory::InvalidArgument);
+      ::mqt::ErrorCategory::Runtime);
 }
 
 llvm::LogicalResult

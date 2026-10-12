@@ -77,7 +77,7 @@ Package::deserializeNode(const int64_t index, const Qubit v,
         return ::mqt::emitError(
             "Serialized vector DD edges must follow consecutive qubit "
             "levels.",
-            ::mqt::ErrorCategory::InvalidArgument);
+            ::mqt::ErrorCategory::Runtime);
       }
     }
   }

@@ -790,8 +790,7 @@ Device::queryCustomOperations(const CustomProperty property) const {
         return api().device_query_device_property(device_, qdmiProperty, size,
                                                   value, sizeRet);
       },
-      "custom operation list " +
-          std::to_string(static_cast<unsigned>(property)));
+      "custom operation list " + llvm::Twine(static_cast<unsigned>(property)));
   if (llvm::failed(handlesResult)) {
     return llvm::failure();
   }

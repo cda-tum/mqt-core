@@ -10,6 +10,9 @@ packaging, and whole-PR performance acceptance remain open. See the
       tests.
 - [x] Reaudit result APIs, diagnostics, JSON, Python, QDMI, and QIR boundaries.
 - [x] Rebuild and validate the rebased implementation before publication.
+- [x] Address the independent audit: shared Python diagnostic runtime, contained
+      stream-read errors, Python exception compatibility, and lazy QDMI
+      messages.
 - [ ] Compare matched successful workloads against upstream, including cold and
   reused DDSIM workers and state transfer.
 - [ ] Validate the published revision's Windows/macOS packages and hosted
@@ -24,6 +27,9 @@ Successful absence remains `optional<T>`, and borrowed results use pointers.
 Scoped thread-local diagnostics preserve severity, category, message, and QDMI
 status. Binding invocation and test capture each share one implementation. See
 [native error handling](../../docs/cpp_api.md#handle-native-errors).
+
+Python bindings require shared Core libraries so diagnostics reach handlers
+across extensions and the DD library. Static native builds remain supported.
 
 Standalone driver and device builds embed diagnostic support. QDMI C interfaces
 carry status codes and use local logging. Private driver APIs and their static
@@ -68,19 +74,29 @@ contracts.
 
 Linux aarch64, GCC 13.3, LLVM/MLIR 23.1.0:
 
-- `cmake --preset release -DENABLE_IPO=OFF` and the release build pass.
+- The static release build passes with IPO and Python bindings disabled.
 - `ctest --preset release -j 8` passes 4,062 runnable tests, with the existing
   unsupported `ScQDMIJobSpecificationTest.QueryJobId` skip. All 226 DD tests
   also pass after the final direct-include fix.
-- The rebuilt package passes all 1,976 Python tests. The serial/parallel
-  sampling-diagnostic fixture uses main's compact QCO reset syntax.
-- `uvx nox -s stubs` passes without generated API changes.
-- Whole-file C++ lint checked 177 selected files. Its missing direct include is
-  fixed; the affected DD test and compiler forwarding test are checked again.
-- Doxygen, Sphinx, executable documentation, and internal links pass. Removed
-  stale generated Slurm API pages before rebuilding. Browser inspection of the
-  native-error and QIR-failure guides found readable content and working assets;
-  the preview server had only the default favicon 404.
+- The rebuilt package passes all 1,976 Python tests; all 428 QDMI Python tests
+  pass again after the final stream-read fix.
+- Repository lint and whole-file C++ lint pass for all six implementation/test
+  files changed by the audit fixes. An expanded header scan reports naming,
+  conversion, and const warnings on unchanged lines, outside these fixes.
+- Before the audit fixes, `uvx nox -s stubs` passed without generated API
+  changes, and whole-file C++ lint checked 177 selected files.
+- Before the audit fixes, Doxygen, Sphinx, executable documentation, and
+  internal links passed. Removed stale generated Slurm API pages before
+  rebuilding. Browser inspection of the native-error and QIR-failure guides
+  found readable content and working assets; the preview server had only the
+  default favicon 404.
+
+The independent audit fixes also pass a fresh shared source build of the DD
+Python module. Invalid construction and matrix capacity preserve their Python
+exception categories and full diagnostic text, with no stderr output. CMake
+rejects bindings with static Core support. The SC throwing-stream test and
+Python category tests reproduced the defects before the fixes. QDMI custom
+queries retain their existing success, unsupported-property, and error tests.
 
 The previous head `de76629b0` passed hosted native and Python checks on Linux,
 macOS, and Windows. Those results predate this rebase. Installed-consumer,
