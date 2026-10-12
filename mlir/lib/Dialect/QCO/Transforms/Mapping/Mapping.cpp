@@ -728,14 +728,7 @@ private:
   struct SerialPolicy {
     explicit SerialPolicy(Horizon horizon, const Layout<QubitIndex>& layout,
                           const CompilerTarget& target)
-        : horizon_(std::move(horizon)) {
-      for (size_t i = 0; i < horizon_.nlayers(); ++i) {
-        llvm::stable_sort(horizon_.get(i), [&](const auto& lhs,
-                                               const auto& rhs) {
-          return distance(lhs, layout, target) < distance(rhs, layout, target);
-        });
-      }
-    }
+        : horizon_(std::move(horizon)) {}
 
     /// Estimates routing cost by summing distance-based SWAP counts over the
     /// lookahead horizon with exponential decay.
@@ -772,12 +765,7 @@ private:
   struct WavePolicy {
     explicit WavePolicy(Horizon horizon, const Layout<QubitIndex>& layout,
                         const CompilerTarget& target)
-        : horizon_(std::move(horizon)) {
-      objective_ = *llvm::min_element(horizon_.get(0), [&](const auto& lhs,
-                                                           const auto& rhs) {
-        return distance(lhs, layout, target) < distance(rhs, layout, target);
-      });
-    }
+        : horizon_(std::move(horizon)) {}
 
     [[nodiscard]] float heuristic(const Layout<QubitIndex>& layout,
                                   const CompilerTarget& target,
@@ -800,11 +788,12 @@ private:
     }
 
     /// Return the to be routed gate, i.e., the objective.
-    [[nodiscard]] QubitIndexPair objective() const { return objective_; }
+    [[nodiscard]] QubitIndexPair objective() const {
+      return horizon_.get(0).front();
+    }
 
   private:
     Horizon horizon_;
-    QubitIndexPair objective_;
   };
 
   /// Describes a node in the A* search graph.
@@ -1625,9 +1614,10 @@ private:
       layouts.emplace_back(greedy->first);
     }
 
-    auto rng = makeMt19937(env.seed);
     if (layouts.size() < nlayouts) {
       layouts.emplace_back(Layout<QubitIndex>::identity(env.target.numSites()));
+
+      auto rng = makeMt19937(env.seed);
       while (layouts.size() < nlayouts) {
         layouts.emplace_back(Layout<QubitIndex>::random(
             env.target.numSites(), env.target.numSites(), rng()));
@@ -2082,7 +2072,6 @@ private:
   std::optional<CompositeUnitary> advance(RoutingState& state,
                                           const Boundary<Direction>& boundary,
                                           const Environment& env) {
-
     // Unexecutable gates are not released and may thus be revisited multiple
     // times while advancing. Stale gates are immediately skipped to avoid the
     // overhead of isa-checks and layout lookups.
