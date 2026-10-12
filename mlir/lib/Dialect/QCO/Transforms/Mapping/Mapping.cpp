@@ -620,7 +620,7 @@ private:
   /// Wire slots are physical sites; layout alone tracks logical qubits.
   struct RoutingState {
     /// Create state from layout, enforcing wire[i] = i-th site.
-    static RoutingState fromLayout(ArrayRef<WireIterator> roots, Region& region,
+    static RoutingState fromLayout(ArrayRef<WireIterator> roots,
                                    const Layout<QubitIndex>& layout,
                                    const Environment& env) {
       RoutingState state(Wires(layout.nHardwareQubits()), layout, env);
@@ -924,8 +924,11 @@ private:
       }
     }
 
-    /// Advance to the next routing boundary.
-    void setNextBoundary() { boundary_ = findNextBoundary(next(boundary_)); }
+    /// Advance before rewriting the current routing boundary.
+    void advance() {
+      assert(boundary_ != nullptr && "cannot advance an exhausted boundary");
+      boundary_ = findNextBoundary(next(boundary_));
+    }
 
     /// Return the current boundary operation, or nullptr if exhausted.
     [[nodiscard]] Operation* operation() const { return boundary_; }
@@ -1031,7 +1034,7 @@ protected:
 
     RoutingState state(std::move(*wires), layout, env);
     const auto stats = route<WireDirection::Forward, RoutingMode::Hot>(
-        func.getFunctionBody(), state, arena, env, &rewriter);
+        func.getFunctionBody().front(), state, arena, env, &rewriter);
 
     assert((!expectedScore ||
             (state.costs ? state.costs->score() : std::nullopt)
@@ -1477,25 +1480,25 @@ private:
 
     assert(ntrials == trials.size());
 
-    Region& region = func.getFunctionBody();
+    Block& block = func.getFunctionBody().front();
     parallelForEach(&getContext(), trials, [&, this](Trial& t) {
       Arena arena(env.target.numSites(), searchMemoryLimit);
 
       {
-        auto state = RoutingState::fromLayout(wires, region, t.layout, env);
+        auto state = RoutingState::fromLayout(wires, t.layout, env);
         for (size_t i = 0; i < niterations; ++i) {
-          route<WireDirection::Forward>(region, state, arena, env);
-          route<WireDirection::Backward>(region, state, arena, env);
+          route<WireDirection::Forward>(block, state, arena, env);
+          route<WireDirection::Backward>(block, state, arena, env);
         }
         t.layout = std::move(state.layout);
       }
 
-      /// Refinement may permute wire cursors. Score from the original roots,
-      /// preserving only the initial layout selected for final placement.
-      auto state = RoutingState::fromLayout(wires, region, t.layout, env);
+      // Refinement may permute wire cursors. Score from the original roots,
+      // preserving only the initial layout selected for final placement.
+      auto state = RoutingState::fromLayout(wires, t.layout, env);
 
       const auto score =
-          route<WireDirection::Forward>(region, state, arena, env);
+          route<WireDirection::Forward>(block, state, arena, env);
       const auto quality = state.costs ? state.costs->score() : std::nullopt;
       t.score = quality.value_or(
           std::pair{std::numeric_limits<size_t>::max(), score.nswaps});
@@ -2048,9 +2051,9 @@ private:
       } else {
         resultNumbers[site] = composite.op->getNumResults() + addons.size();
 
-        /// Thread the value before the next pending operation through the
-        /// region. Particularly, terminal measurements must remain after the
-        /// region.
+        // Thread the value before the next pending operation through the
+        // region. Particularly, terminal measurements must remain after the
+        // region.
 
         --it;
         while (it.operation() != nullptr &&
@@ -2182,7 +2185,7 @@ private:
       }
 
       totalStats.merge(
-          route<Direction, Mode>(region, child, arena, env, rewriter));
+          route<Direction, Mode>(region.front(), child, arena, env, rewriter));
     }
 
     Layout<QubitIndex> exit =
@@ -2256,20 +2259,20 @@ private:
   /// Finish terminal measurements last.
   template <WireDirection Direction, RoutingMode Mode = RoutingMode::Cold>
     requires(Mode != RoutingMode::Hot || Direction == WireDirection::Forward)
-  Statistics route(Region& region, RoutingState& state, Arena& arena,
+  Statistics route(Block& block, RoutingState& state, Arena& arena,
                    const Environment& env, IRRewriter* rewriter = nullptr) {
     if (state.costs) {
       state.costs->reset(Direction);
     }
 
     Statistics stats;
-    Boundary<Direction> boundary(region.front());
+    Boundary<Direction> boundary(block);
 
     while (true) {
       auto composite = advance<Direction>(state, boundary, env);
       if (composite) {
         assert(composite->op == boundary.operation());
-        boundary.setNextBoundary();
+        boundary.advance();
 
         if constexpr (Mode == RoutingMode::Hot) {
           place(*composite, state, *rewriter);
