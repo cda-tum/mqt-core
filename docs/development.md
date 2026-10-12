@@ -404,17 +404,21 @@ what failed and, when useful, which form is supported.
 
 Every `!qco.qubit` and one-dimensional qubit tensor or vector SSA value in valid
 QCO IR has exactly one use, including block arguments. `qco::verifyLinearity`
-owns this whole-IR check; ordinary MLIR operation verification alone does not
-establish it. Builders and transformations must preserve the invariant, and
-public QCO pipeline boundaries must validate it.
+owns this whole-IR check and positional quantum state correspondence through
+`scf.for`, both `scf.while` regions, `qco.if`, and `qco.index_switch`. Functions
+return their quantum arguments as trailing results in argument order. Classical
+state can change shape across `scf.while` regions. Ordinary MLIR operation
+verification alone does not establish these QCO invariants. Builders and
+transformations must preserve the invariant, and public QCO pipeline boundaries
+must validate it.
 
 Rewrites on valid QCO IR can use `*value.user_begin()` to obtain the sole
 consumer, or `*value.use_begin()` for its `OpOperand` and operand number. Do not
 repeat `hasOneUse()` guards in these rewrites. Keep linearity checks in the
 verifier and optional debug assertions at internal boundaries. This rule does
-not apply to QC references or classical SSA values, and does not permit assuming
-that results preserve wire order: linearity and wire correspondence are separate
-contracts.
+not apply to QC references or classical SSA values, and permits relying on the
+positional correspondence checked by `qco::verifyLinearity`. Exactly-one-use and
+wire correspondence remain separate checks.
 
 When forwarding a linear value requires deleting its producer, use a rewrite
 that removes both operations. A fold can only change its root; do not rely on
@@ -499,8 +503,8 @@ Save this reduced example as `reduced.mlir`:
 ```mlir
 module {
   func.func @f(%q: !qco.qubit) -> !qco.qubit {
-    %h0 = qco.h %q : !qco.qubit -> !qco.qubit
-    %h1 = qco.h %h0 : !qco.qubit -> !qco.qubit
+    %h0 = qco.h %q : !qco.qubit
+    %h1 = qco.h %h0 : !qco.qubit
     return %h1 : !qco.qubit
   }
 }

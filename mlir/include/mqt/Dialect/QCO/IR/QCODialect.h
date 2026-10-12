@@ -13,6 +13,7 @@
 #include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
 
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/LLVM.h"
 

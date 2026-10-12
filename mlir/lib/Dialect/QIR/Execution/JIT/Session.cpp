@@ -18,6 +18,8 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -40,8 +42,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -755,6 +760,30 @@ void JitSession::initialize(
         }))) {
       throw std::runtime_error(llvm::toString(std::move(err)));
     }
+  }
+
+  // Avoid optimizer startup for programs eligible for terminal sampling.
+  if (execution == Execution::Sampling && !samplingOutputs_) {
+    loadedModule.withModuleDo([&](llvm::Module& module) {
+      module.setDataLayout(jit_->getDataLayout());
+      module.setTargetTriple(jit_->getTargetTriple());
+      llvm::LoopAnalysisManager loopAnalyses;
+      llvm::FunctionAnalysisManager functionAnalyses;
+      llvm::CGSCCAnalysisManager cgsccAnalyses;
+      llvm::ModuleAnalysisManager moduleAnalyses;
+      llvm::PipelineTuningOptions tuning;
+      tuning.LoopUnrolling = false;
+      llvm::PassBuilder passBuilder(nullptr, tuning);
+      passBuilder.registerModuleAnalyses(moduleAnalyses);
+      passBuilder.registerCGSCCAnalyses(cgsccAnalyses);
+      passBuilder.registerFunctionAnalyses(functionAnalyses);
+      passBuilder.registerLoopAnalyses(loopAnalyses);
+      passBuilder.crossRegisterProxies(loopAnalyses, functionAnalyses,
+                                       cgsccAnalyses, moduleAnalyses);
+      auto pipeline = passBuilder.buildPerModuleDefaultPipeline(
+          llvm::OptimizationLevel::O1);
+      pipeline.run(module, moduleAnalyses);
+    });
   }
 
   if (auto err = jit_->addIRModule(std::move(loadedModule))) {

@@ -61,20 +61,20 @@ MLIR_STRING = r"""module {
     %c1 = arith.constant 1 : index
     %c0 = arith.constant 0 : index
     %alloc = memref.alloc() : memref<2x!qc.qubit>
-    %0 = memref.load %alloc[%c0] : memref<2x!qc.qubit>
-    qc.h %0 : !qc.qubit
-    %1 = memref.load %alloc[%c1] : memref<2x!qc.qubit>
-    qc.ctrl(%0) targets (%arg0 = %1) {
-      qc.x %arg0 : !qc.qubit
+    %q = memref.load %alloc[%c0] : memref<2x!qc.qubit>
+    qc.h %q : !qc.qubit
+    %q_0 = memref.load %alloc[%c1] : memref<2x!qc.qubit>
+    qc.ctrl(%q) targets (%q_3 = %q_0) {
+      qc.x %q_3 : !qc.qubit
       qc.yield
     } : {!qc.qubit}, {!qc.qubit}
-    %alloc_0 = memref.alloc() : memref<2xi1>
-    %2 = qc.measure %0 : !qc.qubit -> i1
-    memref.store %2, %alloc_0[%c0] : memref<2xi1>
-    %3 = qc.measure %1 : !qc.qubit -> i1
-    memref.store %3, %alloc_0[%c1] : memref<2xi1>
+    %alloc_1 = memref.alloc() : memref<2xi1>
+    %b = qc.measure %q : !qc.qubit -> i1
+    memref.store %b, %alloc_1[%c0] : memref<2xi1>
+    %b_2 = qc.measure %q_0 : !qc.qubit -> i1
+    memref.store %b_2, %alloc_1[%c1] : memref<2xi1>
     memref.dealloc %alloc : memref<2x!qc.qubit>
-    return %alloc_0 : memref<2xi1>
+    return %alloc_1 : memref<2xi1>
   }
 }
 """
@@ -1819,8 +1819,8 @@ module {
   func.func @main() attributes {mqt.entry_point} {
     %q0 = qco.alloc : !qco.qubit
     %q1 = qco.alloc : !qco.qubit
-    %q0_h = qco.h %q0 : !qco.qubit -> !qco.qubit
-    %q1_h = qco.h %q1 : !qco.qubit -> !qco.qubit
+    %q0_h = qco.h %q0 : !qco.qubit
+    %q1_h = qco.h %q1 : !qco.qubit
     %q0_m, %c0 = qco.measure %q0_h : !qco.qubit
     %q1_m, %c1 = qco.measure %q1_h : !qco.qubit
     qco.sink %q0_m : !qco.qubit
@@ -1867,7 +1867,7 @@ def test_typed_programs_normalize_global_phases() -> None:
           func.func @test(%q: !qco.qubit) -> !qco.qubit {
             %a = arith.constant 0.25 : f64
             qco.gphase(%a)
-            %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+            %q1 = qco.x %q : !qco.qubit
             %b = arith.constant 0.5 : f64
             qco.gphase(%b)
             return %q1 : !qco.qubit

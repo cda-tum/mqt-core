@@ -153,7 +153,7 @@ repos:
 
   ## Format pyproject.toml with pyproject-fmt
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.30.0
+    rev: v2.30.1
     hooks:
       - id: pyproject-fmt
         priority: 5
@@ -207,5 +207,5 @@ repos:
     rev: v0.0.84
     hooks:
       - id: ty
-        args: [--only-dev]
+        args: [--no-install-project]
         priority: 9

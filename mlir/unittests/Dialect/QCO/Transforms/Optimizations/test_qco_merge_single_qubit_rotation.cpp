@@ -1243,9 +1243,9 @@ TEST_F(MergeSingleQubitRotationGatesTest,
           %half = arith.divf %theta, %two : f64
           %middle = arith.constant 0.37 : f64
           %q = qco.static 0 : !qco.qubit
-          %q1 = qco.rz(%half) %q : !qco.qubit -> !qco.qubit
-          %q2 = qco.rx(%middle) %q1 : !qco.qubit -> !qco.qubit
-          %q3 = qco.rz(%theta) %q2 : !qco.qubit -> !qco.qubit
+          %q1 = qco.rz(%half) %q : !qco.qubit
+          %q2 = qco.rx(%middle) %q1 : !qco.qubit
+          %q3 = qco.rz(%theta) %q2 : !qco.qubit
           return %q3 : !qco.qubit
         }
       })mlir",

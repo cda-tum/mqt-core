@@ -25,7 +25,9 @@ namespace qc {
 
 /// Translate a QC module to portable OpenQASM.
 ///
-/// Translation is buffered. The output stream is unchanged when the
+/// Non-gate helpers are inlined on a copy; gate definitions and supported
+/// structured control flow are preserved. Translation is buffered.
+/// The output stream is unchanged when the
 /// module contains an unsupported construct or cannot be translated.
 LogicalResult translateQCToOpenQASM3(ModuleOp moduleOp,
                                      llvm::raw_ostream& output);

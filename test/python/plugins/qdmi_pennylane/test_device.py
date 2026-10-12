@@ -82,7 +82,7 @@ def test_samples_counts_probabilities_expectations_and_variances(monkeypatch: py
 
 def test_histogram_only_device_reconstructs_samples(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reconstruct raw samples when a QDMI implementation exposes only counts."""
-    qdmi = stub_device(expose_shots=False)
+    qdmi = stub_device(expose_shots=False, result_factory=lambda _program, _shots: ["10"] * 3 + ["01"] * 5)
     patch_open_device(monkeypatch, qdmi)
     device = QDMIDevice("fake.qdmi", wires=2)
 
@@ -93,7 +93,7 @@ def test_histogram_only_device_reconstructs_samples(monkeypatch: pytest.MonkeyPa
     samples = circuit()
 
     assert samples.shape == (8, 2)
-    assert Counter(map(tuple, samples.tolist())) == {(0, 0): 4, (1, 1): 4}
+    assert Counter(map(tuple, samples.tolist())) == {(0, 1): 3, (1, 0): 5}
 
 
 def test_execution_time_accumulates_batch_wall_time(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -388,9 +388,12 @@ def test_sample_decoding_preserves_wire_order_and_dtype(monkeypatch: pytest.Monk
 
 
 @pytest.mark.parametrize("bitstrings", [["001", "0"], ["0x", "10"], ["0é", "10"], ["01"]])
-def test_sample_decoding_rejects_malformed_shots(monkeypatch: pytest.MonkeyPatch, bitstrings: list[str]) -> None:
+@pytest.mark.parametrize("expose_shots", [False, True])
+def test_sample_decoding_rejects_malformed_shots(
+    monkeypatch: pytest.MonkeyPatch, bitstrings: list[str], *, expose_shots: bool
+) -> None:
     """Validate each shot before packing; total character count is insufficient."""
-    qdmi = stub_device(result_factory=lambda _program, _shots: bitstrings)
+    qdmi = stub_device(result_factory=lambda _program, _shots: bitstrings, expose_shots=expose_shots)
     patch_open_device(monkeypatch, qdmi)
     device = QDMIDevice("fake.qdmi", wires=2)
     tape = qp.tape.QuantumScript([], [qp.sample(wires=[0, 1])], shots=2)

@@ -1347,7 +1347,7 @@ private:
 ///
 /// @par Example:
 /// ```mlir
-/// %q_out = qco.u2(%phi, %lambda) %q_in : !qco.qubit -> !qco.qubit
+/// %q_out = qco.u2(%phi, %lambda) %q_in : !qco.qubit
 /// ```
 /// is converted to
 /// ```mlir
@@ -1415,9 +1415,9 @@ struct ConvertQCOBarrierOpToJeff final
 /// @par Example:
 /// ```mlir
 /// %controls_out, %targets_out = qco.ctrl(%q0_in) targets(%a_in = %q1_in) {
-///   %a_res = qco.x %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.x %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
-/// } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+/// } : ({!qco.qubit}, {!qco.qubit})
 /// ```
 /// is converted to
 /// ```mlir
@@ -1467,7 +1467,7 @@ struct ConvertQCOCtrlOpToJeff final : StatefulOpConversionPattern<CtrlOp> {
 /// @par Example:
 /// ```mlir
 /// %q_out = qco.inv (%a_in = %q_in) {
-///   %a_res = qco.s %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.s %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1511,7 +1511,7 @@ struct ConvertQCOInvOpToJeff final : StatefulOpConversionPattern<InvOp> {
 /// @par Example:
 /// ```mlir
 /// %q_out = qco.pow(%exponent) (%a_in = %q_in) {
-///   %a_res = qco.u(%theta, %phi, %lambda) %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.u(%theta, %phi, %lambda) %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1620,7 +1620,7 @@ struct ConvertQCOYieldOpToJeff final : StatefulOpConversionPattern<YieldOp> {
 /// @par Example:
 /// ```mlir
 /// %q_out = qco.if %condition args(%a = %q_in) -> (!qco.qubit) {
-///   %q_res = qco.x %a : !qco.qubit -> !qco.qubit
+///   %q_res = qco.x %a : !qco.qubit
 ///   qco.yield %q_res : !qco.qubit
 /// } else args(%a = %q_in) {
 ///   qco.yield %a : !qco.qubit
@@ -1746,7 +1746,7 @@ struct ConvertIfOpToJeff final : RegionMovingConversionPattern<IfOpType> {
 /// %reg_out = scf.for %iv = %start to %stop step %step iter_args(%a = %reg_in)
 /// -> (tensor<2x!qco.qubit>) {
 ///   %reg0, %q0 = qtensor.extract %a[%iv] : tensor<2x!qco.qubit>
-///   %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %q0 : !qco.qubit
 ///   %reg1 = qtensor.insert %q1 into %reg0[%iv] : tensor<2x!qco.qubit>
 ///   scf.yield %reg1 : tensor<2x!qco.qubit>
 /// }
@@ -1829,7 +1829,7 @@ struct ConvertSCFForOpToJeff final : RegionMovingConversionPattern<scf::ForOp> {
 ///   scf.condition(%cond) %q1 : !qco.qubit
 /// } do {
 /// ^bb0(%arg0: !qco.qubit):
-///   %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.h %arg0 : !qco.qubit
 ///   scf.yield %q2 : !qco.qubit
 /// }
 /// ```

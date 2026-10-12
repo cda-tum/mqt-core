@@ -72,3 +72,28 @@ void QTensorDialect::initialize() {
 
 #define GET_OP_CLASSES
 #include "mqt/Dialect/QTensor/IR/QTensorOps.cpp.inc"
+
+void AllocOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  const auto name =
+      getOperation()->getAttrOfType<StringAttr>("mqt.register_name");
+  setNameFn(getResult(), name ? name.getValue() : "qs");
+}
+
+void FromElementsOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  const auto name =
+      getOperation()->getAttrOfType<StringAttr>("mqt.register_name");
+  setNameFn(getResult(), name ? name.getValue() : "qs");
+}
+
+void ExtractOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getOutTensor(), "qs");
+  setNameFn(getResult(), "q");
+}
+
+void InsertOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "qs");
+}

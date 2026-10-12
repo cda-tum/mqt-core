@@ -16,6 +16,7 @@
 #include "mqt/Dialect/CBit/IR/CBitOps.h"
 #include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
+#include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
 #include "mqt/Dialect/QC/IR/QCDialect.h"
 #include "mqt/Dialect/QC/IR/QCInterfaces.h"
 #include "mqt/Dialect/QC/IR/QCOps.h"
@@ -25,8 +26,14 @@
 #include "mqt/Target/OpenQASM/GateCatalog.h"
 
 #include "mlir/Analysis/CallGraph.h"
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -36,15 +43,19 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/WalkResult.h"
+#include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -119,9 +130,44 @@ class OpenQASMEmitter {
 public:
   explicit OpenQASMEmitter(ModuleOp moduleOp) : moduleOp(moduleOp) {}
 
+  [[nodiscard]] static bool hasGateSignature(func::FuncOp function) {
+    if (function.getNumResults() != 0) {
+      return false;
+    }
+    bool sawQubit = false;
+    for (Type type : function.getArgumentTypes()) {
+      if (!sawQubit && type.isF64()) {
+        continue;
+      }
+      if (!isa<QubitType>(type)) {
+        return false;
+      }
+      sawQubit = true;
+    }
+    return sawQubit;
+  }
+
+  [[nodiscard]] static bool hasGateBody(func::FuncOp function) {
+    for (auto argument : function.getArguments()) {
+      if (argument.getType().isF64() &&
+          llvm::any_of(argument.getUsers(), [](Operation* user) {
+            return isa<PowOp>(user) ||
+                   !isa<UnitaryOpInterface, func::CallOp>(user);
+          })) {
+        return false;
+      }
+    }
+    return !function
+                .walk([](Operation* operation) {
+                  return canEmitGateOperation(*operation)
+                             ? WalkResult::advance()
+                             : WalkResult::interrupt();
+                })
+                .wasInterrupted();
+  }
+
   [[nodiscard]] FailureOr<std::string> emit() {
-    if (failed(verify(moduleOp)) || failed(preflight()) ||
-        failed(collectProgramShape())) {
+    if (failed(preflight()) || failed(collectProgramShape())) {
       return failure();
     }
     measurementStores = findMeasurementStores(function);
@@ -161,6 +207,7 @@ public:
 private:
   DenseMap<Operation*, cbit::StoreOp> measurementStores;
   ModuleOp moduleOp;
+  OwningOpRef<ModuleOp> preparedModule_;
   func::FuncOp function;
   raw_indented_ostream* output = nullptr;
   DenseMap<Value, Resource> resources;
@@ -175,6 +222,7 @@ private:
   llvm::StringSet<> fixedHelpers;
   std::string uHelperName_;
   SmallVector<std::string> gateDefinitions_;
+  std::optional<DataFlowSolver> ranges;
   Operation* expressionConsumer = nullptr;
   size_t nextQubit = 0;
   size_t nextBit = 0;
@@ -230,6 +278,14 @@ private:
     return uniqueName("q", nextQubit);
   }
 
+  [[nodiscard]] std::string classicalRegisterName(const StringRef requested) {
+    if (isValidDeclarationName(requested) &&
+        usedNames.insert(requested).second) {
+      return requested.str();
+    }
+    return uniqueName("c", nextBit);
+  }
+
   [[nodiscard]] func::FuncOp resolveGateCallee(Operation* operation) {
     FlatSymbolRefAttr callee;
     if (auto call = dyn_cast<qc::CallOp>(operation)) {
@@ -244,8 +300,10 @@ private:
     return target != nullptr && gateNames_.contains(target) ? target : nullptr;
   }
 
-  [[nodiscard]] LogicalResult orderGateFunctions() {
+  [[nodiscard]] LogicalResult prepareFunctions() {
     const CallGraph callGraph(moduleOp);
+    DenseSet<CallGraphNode*> gates;
+    bool needsInlining = false;
     for (auto component =
              llvm::scc_iterator<CallGraphNode*,
                                 llvm::GraphTraits<const CallGraphNode*>>::
@@ -264,9 +322,43 @@ private:
         if (!gate) {
           return fail(current, "gate calls must target func.func definitions");
         }
-        gateFunctions_.push_back(gate);
+        if (gate.isPrivate() && !gate.isExternal() &&
+            gate.getBody().hasOneBlock() && hasGateSignature(gate) &&
+            hasGateBody(gate) &&
+            llvm::all_of(*node, [&](const CallGraphNode::Edge& edge) {
+              return gates.contains(edge.getTarget());
+            })) {
+          gates.insert(node);
+          gateFunctions_.push_back(gate);
+        } else {
+          needsInlining = true;
+        }
       }
     }
+    if (!needsInlining) {
+      return success();
+    }
+    preparedModule_ = moduleOp.clone();
+    for (auto gate : gateFunctions_) {
+      preparedModule_->lookupSymbol<func::FuncOp>(gate.getName())
+          .setNoInline(true);
+    }
+    DialectRegistry registry;
+    func::registerInlinerExtension(registry);
+    LLVM::registerInlinerInterface(registry);
+    moduleOp.getContext()->appendDialectRegistry(registry);
+    PassManager manager(moduleOp.getContext());
+    // Keep gate definitions and structured loops while expanding other helpers.
+    manager.addPass(createInlinerPass({}, [](OpPassManager&) {}));
+    if (failed(manager.run(*preparedModule_))) {
+      return failure();
+    }
+    function = preparedModule_->lookupSymbol<func::FuncOp>(function.getName());
+    for (auto& gate : gateFunctions_) {
+      gate = preparedModule_->lookupSymbol<func::FuncOp>(gate.getName());
+    }
+    llvm::erase_if(gateFunctions_, [](func::FuncOp gate) { return !gate; });
+    moduleOp = *preparedModule_;
     return success();
   }
 
@@ -292,6 +384,9 @@ private:
     if (function.isExternal() || function.getBody().getBlocks().size() != 1) {
       return fail(function,
                   "expected one defined function with one entry block");
+    }
+    if (failed(prepareFunctions())) {
+      return failure();
     }
     for (const auto [index, argument] :
          llvm::enumerate(function.getArguments())) {
@@ -322,29 +417,7 @@ private:
       return failure();
     }
 
-    if (failed(orderGateFunctions())) {
-      return failure();
-    }
     for (auto current : gateFunctions_) {
-      if (!current.isPrivate() || current.isExternal() ||
-          !current.getBody().hasOneBlock() || current.getNumResults() != 0) {
-        return fail(current, "gate functions must be private, defined, "
-                             "single-block, and return no values");
-      }
-      bool sawQubit = false;
-      for (Type type : current.getArgumentTypes()) {
-        if (!sawQubit && type.isF64()) {
-          continue;
-        }
-        if (!isa<qc::QubitType>(type)) {
-          return fail(current, "gate function arguments must be leading f64 "
-                               "parameters followed by scalar qubits");
-        }
-        sawQubit = true;
-      }
-      if (!sawQubit) {
-        return fail(current, "gate functions require a qubit argument");
-      }
       if (checkRegions(current).wasInterrupted()) {
         return failure();
       }
@@ -426,7 +499,8 @@ private:
         const auto requested = name ? name.getValue() : StringRef{};
         Resource resource{
             .kind = ResourceKind::Bit,
-            .name = isOutput ? outputName(requested) : uniqueName("c", nextBit),
+            .name = isOutput ? outputName(requested)
+                             : classicalRegisterName(requested),
             .width = width,
             .output = isOutput,
             .initialization = alloc.getInitialization(),
@@ -602,22 +676,41 @@ private:
     return success();
   }
 
+  [[nodiscard]] static bool canEmitGateOperation(Operation& operation) {
+    if (operation.getName().getDialectNamespace() ==
+            cbit::CBitDialect::getDialectNamespace() ||
+        isa<memref::LoadOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp,
+            tensor::ExtractOp, memref::DeallocOp, qc::AllocOp, qc::DeallocOp,
+            qc::StaticOp, qc::MeasureOp, qc::ResetOp, qc::BarrierOp, scf::IfOp,
+            scf::IndexSwitchOp, ub::PoisonOp, arith::SelectOp>(&operation)) {
+      return false;
+    }
+    if (auto loop = dyn_cast<scf::ForOp>(&operation)) {
+      if (loop.getNumResults() != 0 ||
+          !getConstantInteger(loop.getLowerBound()) ||
+          !getConstantInteger(loop.getUpperBound())) {
+        return false;
+      }
+    }
+    if (auto loop = dyn_cast<scf::WhileOp>(&operation)) {
+      if (!loop.getInits().empty() || loop.getNumResults() != 0 ||
+          !llvm::all_of(loop.getBefore().front().without_terminator(),
+                        [](Operation& nested) {
+                          return isInlineExpressionOperation(nested) &&
+                                 isMemoryEffectFree(&nested);
+                        })) {
+        return false;
+      }
+    }
+    if (auto cast = dyn_cast<arith::SIToFPOp>(&operation);
+        cast && cast.getIn().getType().isInteger(1)) {
+      return false;
+    }
+    return true;
+  }
+
   [[nodiscard]] LogicalResult emitOperation(Operation& operation) {
     llvm::SaveAndRestore consumerGuard(expressionConsumer, &operation);
-    if (gateNames_.contains(function) &&
-        (operation.getName().getDialectNamespace() ==
-             cbit::CBitDialect::getDialectNamespace() ||
-         isa<memref::LoadOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp,
-             tensor::ExtractOp, memref::DeallocOp, qc::AllocOp, qc::DeallocOp,
-             qc::StaticOp, qc::MeasureOp, qc::ResetOp, qc::BarrierOp, scf::IfOp,
-             scf::IndexSwitchOp, ub::PoisonOp>(&operation))) {
-      return fail(&operation,
-                  "operation is not supported in an OpenQASM gate function");
-    }
-    if (gateNames_.contains(function) && isa<arith::SelectOp>(&operation)) {
-      return fail(&operation,
-                  "arith.select is not supported in an OpenQASM gate function");
-    }
     const auto resultType =
         operation.getNumResults() == 1
             ? dyn_cast<IntegerType>(operation.getResult(0).getType())
@@ -869,6 +962,50 @@ private:
     return (Twine(resource->second.name) + "[" + *dynamicIndex + "]").str();
   }
 
+  [[nodiscard]] FailureOr<bool> canEmitSignedArithmetic(Operation* operation) {
+    if (!isa<arith::AddIOp, arith::SubIOp, arith::MulIOp>(operation)) {
+      return false;
+    }
+    const auto type = operation->getResult(0).getType();
+    if (!type.isIndex() && !type.isInteger(64)) {
+      return false;
+    }
+    if (!ranges) {
+      ranges.emplace();
+      ranges->load<dataflow::DeadCodeAnalysis>();
+      ranges->load<dataflow::SparseConstantPropagation>();
+      ranges->load<dataflow::IntegerRangeAnalysis>();
+      if (failed(ranges->initializeAndRun(moduleOp))) {
+        return failure();
+      }
+    }
+    SmallVector<ConstantIntRanges, 2> operands;
+    for (auto operand : operation->getOperands()) {
+      const auto* lattice =
+          ranges->lookupState<dataflow::IntegerValueRangeLattice>(operand);
+      if (lattice == nullptr || lattice->getValue().isUninitialized()) {
+        return false;
+      }
+      operands.push_back(lattice->getValue().getValue());
+    }
+    for (const auto& lhs : {operands[0].smin(), operands[0].smax()}) {
+      for (const auto& rhs : {operands[1].smin(), operands[1].smax()}) {
+        bool overflow = false;
+        if (isa<arith::AddIOp>(operation)) {
+          std::ignore = lhs.sadd_ov(rhs, overflow);
+        } else if (isa<arith::SubIOp>(operation)) {
+          std::ignore = lhs.ssub_ov(rhs, overflow);
+        } else {
+          std::ignore = lhs.smul_ov(rhs, overflow);
+        }
+        if (overflow) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   enum class ExpressionContext : uint8_t { Scalar, BitVector };
 
   [[nodiscard]] FailureOr<std::string>
@@ -943,6 +1080,16 @@ private:
                                     "signed integers support at most 64 bits")
                    : text;
       }
+      auto loop = scf::getForInductionVarOwner(operand);
+      if (width > 1 && valueNames.contains(operand) &&
+          isSigned == (operand.getType().isIndex() ||
+                       (loop && loop.getInductionVar() == operand))) {
+        return text;
+      }
+      if (auto constant = operand.getDefiningOp<arith::ConstantOp>();
+          constant && isSigned && width == 64) {
+        return emitConstant(constant.getValue(), constant.getLoc());
+      }
       return (Twine(isSigned ? "int[" : "uint[") + Twine(width) + "](" + *text +
               ")")
           .str();
@@ -978,27 +1125,33 @@ private:
           "(" + *rhs + " ^ ((" + *lhs + " ^ " + *rhs + ") & " + mask + "))";
       return type.isInteger(1) ? "bool(" + selected + ")" : selected;
     }
-    if (isa<arith::ExtUIOp, arith::ExtSIOp, arith::TruncIOp>(operation)) {
+    if (isa<arith::ExtUIOp, arith::ExtSIOp, arith::TruncIOp, arith::IndexCastOp,
+            arith::IndexCastUIOp>(operation)) {
       auto input = operation->getOperand(0);
-      if (cast<IntegerType>(type).getWidth() > 64 ||
-          (cast<IntegerType>(input.getType()).getWidth() > 64 &&
+      const auto inputType = dyn_cast<IntegerType>(input.getType());
+      const auto outputType = dyn_cast<IntegerType>(type);
+      const auto inputWidth = inputType ? inputType.getWidth() : 64U;
+      const auto width = outputType ? outputType.getWidth() : 64U;
+      if (width > 64 ||
+          (inputWidth > 64 &&
            (input.getDefiningOp() == nullptr ||
             input.getDefiningOp()->getName().getStringRef() != "math.ctpop"))) {
         return failExpression(value, "integer casts support at most 64 bits");
       }
-      auto operand = integer(input, isa<arith::ExtSIOp>(operation));
+      auto operand =
+          integer(input, isa<arith::ExtSIOp, arith::IndexCastOp>(operation));
       if (failed(operand)) {
         return failure();
       }
-      const auto width = cast<IntegerType>(type).getWidth();
       if (width == 1) {
-        return (Twine("((") + *operand + " & uint[" +
-                Twine(std::min(cast<IntegerType>(input.getType()).getWidth(),
-                               64U)) +
-                "](1)) != 0)")
-            .str();
+        return "bool(" + *operand + " % 2)";
       }
-      return (Twine("uint[") + Twine(width) + "](" + *operand + ")").str();
+      if (width == inputWidth) {
+        return operand;
+      }
+      return (Twine(type.isIndex() ? "int[" : "uint[") + Twine(width) + "](" +
+              *operand + ")")
+          .str();
     }
     if (isa<arith::AddIOp, arith::SubIOp, arith::MulIOp, arith::DivUIOp,
             arith::DivSIOp, arith::RemUIOp, arith::RemSIOp, arith::AndIOp,
@@ -1012,7 +1165,13 @@ private:
         return failExpression(value,
                               "integer arithmetic supports at most 64 bits");
       }
+      const auto bounded = canEmitSignedArithmetic(operation);
+      if (failed(bounded)) {
+        return failure();
+      }
+      const bool boundedArithmetic = *bounded;
       const bool isSigned =
+          boundedArithmetic ||
           isa<arith::DivSIOp, arith::RemSIOp, arith::ShRSIOp>(operation);
       auto lhs = integer(operation->getOperand(0), isSigned);
       auto rhs = integer(operation->getOperand(1),
@@ -1020,7 +1179,8 @@ private:
       if (failed(lhs) || failed(rhs)) {
         return failure();
       }
-      if (isa<arith::AddIOp, arith::SubIOp, arith::MulIOp>(operation)) {
+      if (width < 64 && !boundedArithmetic &&
+          isa<arith::AddIOp, arith::SubIOp, arith::MulIOp>(operation)) {
         // Unsigned machine arithmetic preserves every narrower modular result.
         *lhs = "uint[64](" + *lhs + ")";
         *rhs = "uint[64](" + *rhs + ")";
@@ -1050,7 +1210,7 @@ private:
       if (width == 1) {
         return (Twine("(uint[1](") + expression + ") != 0)").str();
       }
-      return width > 64
+      return width >= 64 || boundedArithmetic
                  ? expression
                  : (Twine("uint[") + Twine(width) + "](" + expression + ")")
                        .str();
@@ -1139,17 +1299,7 @@ private:
         return failure();
       }
       if (gateNames_.contains(function) && name == "arith.sitofp") {
-        if (input.getType().isInteger(1)) {
-          return failExpression(value, "signed i1-to-float conversion is not "
-                                       "supported in gate functions");
-        }
         return (Twine("(1.0 * ") + *operand + ")").str();
-      }
-      if (name == "arith.index_cast" &&
-          (operation->getOperand(0).getType().isInteger(64) ||
-           operation->getOperand(0).getType().isIndex()) &&
-          (value.getType().isInteger(64) || value.getType().isIndex())) {
-        return operand;
       }
       auto type = castTarget(name, value.getType());
       if (type.empty()) {
@@ -1293,7 +1443,7 @@ private:
 
   [[nodiscard]] static bool isScalarCast(const StringRef name) {
     return llvm::StringSwitch<bool>(name)
-        .Case("arith.index_cast", true)
+        .Cases({"arith.index_cast", "arith.index_castui"}, true)
         .Cases({"arith.sitofp", "arith.uitofp"}, true)
         .Cases({"arith.fptosi", "arith.fptoui"}, true)
         .Default(false);
@@ -1384,7 +1534,9 @@ private:
   }
 
   [[nodiscard]] FailureOr<std::string> localType(Value value) {
-    auto kind = inferScalarKind(value);
+    auto kind = value.getType().isInteger(64) ? "uint[64]"
+                : value.getType().isIndex()   ? "int[64]"
+                                              : inferScalarKind(value);
     if (kind == "bit") {
       kind = "bool";
     }
@@ -1437,7 +1589,8 @@ private:
     if (failed(type) || failed(expression)) {
       return failure();
     }
-    if (integer && integer.getWidth() > 1 && !wide) {
+    if (value.getDefiningOp<cbit::ReadOp>() && integer.getWidth() > 1 &&
+        !wide) {
       *expression = *type + "(" + *expression + ")";
     }
     auto name = uniqueName("v", nextScalar);
@@ -1532,9 +1685,6 @@ private:
       return success();
     }
     const bool dynamicBounds = !lower || !upper;
-    if (dynamicBounds && gateNames_.contains(function)) {
-      return fail(forOp, "dynamic scf.for bounds require the entry function");
-    }
     std::string first;
     std::string last;
     if (dynamicBounds) {
@@ -1591,15 +1741,6 @@ private:
     auto conditionOp = cast<scf::ConditionOp>(before.getTerminator());
     auto yieldOp = cast<scf::YieldOp>(after.getTerminator());
     if (gateNames_.contains(function)) {
-      if (!whileOp.getInits().empty() || whileOp.getNumResults() != 0 ||
-          !llvm::all_of(before.without_terminator(), [](Operation& operation) {
-            return isInlineExpressionOperation(operation) &&
-                   isMemoryEffectFree(&operation);
-          })) {
-        return fail(
-            whileOp,
-            "gate while loops require a pure condition and no carried values");
-      }
       auto condition = emitExpression(conditionOp.getCondition());
       if (failed(condition)) {
         return failure();
@@ -1851,6 +1992,23 @@ private:
         controls.push_back(std::move(*qubit));
       }
       call.qubits.insert(call.qubits.begin(), controls.begin(), controls.end());
+      if ((controls.size() == 1 || controls.size() == 2) &&
+          call.modifiers.empty()) {
+        const auto alias =
+            (Twine(controls.size() == 1 ? "c" : "cc") + call.symbol).str();
+        const auto* gate = openqasm::frontend::lookupGate(alias);
+        if (gate && gate->controlCount == controls.size() &&
+            gate->targetCount + controls.size() == call.qubits.size() &&
+            !gate->inverse && !gate->variadicControls &&
+            (gate->availability ==
+                 openqasm::frontend::GateAvailability::StandardLibrary ||
+             gate->availability == openqasm::frontend::GateAvailability::
+                                       StandardLibraryAndQELib1) &&
+            openqasm::frontend::canonicalGateName(gate->gate) == call.symbol) {
+          call.symbol = alias;
+          return call;
+        }
+      }
       call.modifiers =
           (Twine("ctrl") +
            (controls.size() == 1 ? Twine{}
@@ -1882,23 +2040,38 @@ private:
 
     SmallVector<Value> captures;
     DenseSet<Value> captured;
-    Value capturedQubit;
-    modifier.getRegion().walk([&](Operation* operation) {
+    SmallVector<std::pair<Value, Attribute>> exponents;
+    const auto walk = modifier.getRegion().walk([&](Operation* operation) {
       for (auto operand : operation->getOperands()) {
-        if (modifier.getRegion().isAncestor(operand.getParentRegion())) {
-          continue;
-        }
-        if (isa<QubitType>(operand.getType())) {
-          capturedQubit = operand;
-        } else if (captured.insert(operand).second) {
-          captures.push_back(operand);
+        if (isa<QubitType>(operand.getType()) &&
+            !modifier.getRegion().isAncestor(operand.getParentRegion())) {
+          std::ignore = fail(
+              modifier,
+              "multi-operation modifier bodies cannot capture extra qubits");
+          return WalkResult::interrupt();
         }
       }
+      if (auto power = dyn_cast<PowOp>(operation)) {
+        const auto exponent = mqt::valueToConstantAttr(power.getExponent());
+        if (!exponent) {
+          std::ignore = fail(power, "powers nested in composite gates require "
+                                    "constant exponents");
+          return WalkResult::interrupt();
+        }
+        exponents.emplace_back(power.getExponent(), *exponent);
+      } else if (auto unitary = dyn_cast<UnitaryOpInterface>(operation)) {
+        // Gate parameters are angles; evaluate their scalar dependencies before
+        // crossing the generated gate boundary.
+        for (auto parameter : unitary.getParameters()) {
+          if (captured.insert(parameter).second) {
+            captures.push_back(parameter);
+          }
+        }
+      }
+      return WalkResult::advance();
     });
-    if (capturedQubit) {
-      return fail(
-          modifier,
-          "multi-operation modifier bodies cannot capture extra qubits");
+    if (walk.wasInterrupted()) {
+      return failure();
     }
 
     GateCall helperCall;
@@ -1911,20 +2084,36 @@ private:
       helperCall.parameters.push_back(std::move(*expression));
     }
 
-    DenseMap<Value, std::string> savedNames;
+    DenseMap<Value, std::optional<std::string>> savedNames;
     auto saveAndMap = [&](Value value, std::string name) {
-      if (const auto found = valueNames.find(value);
-          found != valueNames.end()) {
-        savedNames.try_emplace(value, found->second);
-      }
+      const auto found = valueNames.find(value);
+      savedNames.try_emplace(value, found == valueNames.end()
+                                        ? std::nullopt
+                                        : std::optional(found->second));
       valueNames[value] = std::move(name);
     };
+    const auto namesGuard = llvm::scope_exit([&] {
+      for (const auto& [value, name] : savedNames) {
+        if (name) {
+          valueNames[value] = *name;
+        } else {
+          valueNames.erase(value);
+        }
+      }
+    });
 
     SmallVector<std::string> parameterNames;
     for (const auto [index, value] : llvm::enumerate(captures)) {
       auto name = (Twine("p") + Twine(index)).str();
       parameterNames.push_back(name);
       saveAndMap(value, std::move(name));
+    }
+    for (const auto& [value, attribute] : exponents) {
+      auto literal = emitConstant(attribute, value.getLoc());
+      if (failed(literal)) {
+        return failure();
+      }
+      saveAndMap(value, std::move(*literal));
     }
     SmallVector<std::string> qubitNames;
     for (const auto [index, argument] : llvm::enumerate(body.getArguments())) {
@@ -1957,22 +2146,6 @@ private:
     definitionOutput.flush();
     gateDefinitions_.push_back(std::move(definition));
 
-    for (auto value : captures) {
-      if (const auto found = savedNames.find(value);
-          found != savedNames.end()) {
-        valueNames[value] = found->second;
-      } else {
-        valueNames.erase(value);
-      }
-    }
-    for (auto argument : body.getArguments()) {
-      if (const auto found = savedNames.find(argument);
-          found != savedNames.end()) {
-        valueNames[argument] = found->second;
-      } else {
-        valueNames.erase(argument);
-      }
-    }
     return helperCall;
   }
 
@@ -2045,59 +2218,59 @@ private:
                                   "  s q0;\n"
                                   "  s q1;\n"
                                   "  h q0;\n"
-                                  "  ctrl @ x q0, q1;\n"
-                                  "  ctrl @ x q1, q0;\n"
+                                  "  cx q0, q1;\n"
+                                  "  cx q1, q0;\n"
                                   "  h q1;\n"
                                   "}\n"},
         HelperDefinition{"dcx", "gate dcx q0, q1 {\n"
-                                "  ctrl @ x q0, q1;\n"
-                                "  ctrl @ x q1, q0;\n"
+                                "  cx q0, q1;\n"
+                                "  cx q1, q0;\n"
                                 "}\n"},
         HelperDefinition{"rxx", "gate rxx(p0) q0, q1 {\n"
                                 "  h q0;\n"
                                 "  h q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rz(p0) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  h q0;\n"
                                 "  h q1;\n"
                                 "}\n"},
         HelperDefinition{"ryy", "gate ryy(p0) q0, q1 {\n"
                                 "  rx(pi / 2) q0;\n"
                                 "  rx(pi / 2) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rz(p0) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rx(-pi / 2) q0;\n"
                                 "  rx(-pi / 2) q1;\n"
                                 "}\n"},
         HelperDefinition{"rzz", "gate rzz(p0) q0, q1 {\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rz(p0) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "}\n"},
         HelperDefinition{"rzx", "gate rzx(p0) q0, q1 {\n"
                                 "  h q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  rz(p0) q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  h q1;\n"
                                 "}\n"},
         HelperDefinition{"ecr", "gate ecr q0, q1 {\n"
                                 "  gphase(-pi / 4);\n"
                                 "  s q0;\n"
                                 "  sx q1;\n"
-                                "  ctrl @ x q0, q1;\n"
+                                "  cx q0, q1;\n"
                                 "  x q0;\n"
                                 "}\n"},
         HelperDefinition{"rccx", "gate rccx q0, q1, q2 {\n"
                                  "  h q2;\n"
                                  "  t q2;\n"
-                                 "  ctrl @ x q1, q2;\n"
+                                 "  cx q1, q2;\n"
                                  "  tdg q2;\n"
-                                 "  ctrl @ x q0, q2;\n"
+                                 "  cx q0, q2;\n"
                                  "  t q2;\n"
-                                 "  ctrl @ x q1, q2;\n"
+                                 "  cx q1, q2;\n"
                                  "  tdg q2;\n"
                                  "  h q2;\n"
                                  "}\n"},
@@ -2107,10 +2280,10 @@ private:
                                        "  s q0;\n"
                                        "  sx q1;\n"
                                        "  s q1;\n"
-                                       "  ctrl @ x q1, q0;\n"
+                                       "  cx q1, q0;\n"
                                        "  ry(-p0 / 2) q0;\n"
                                        "  ry(-p0 / 2) q1;\n"
-                                       "  ctrl @ x q1, q0;\n"
+                                       "  cx q1, q0;\n"
                                        "  sdg q0;\n"
                                        "  sdg q1;\n"
                                        "  rz(-p1) q0;\n"
@@ -2123,10 +2296,10 @@ private:
                                         "  sx q0;\n"
                                         "  s q1;\n"
                                         "  s q0;\n"
-                                        "  ctrl @ x q0, q1;\n"
+                                        "  cx q0, q1;\n"
                                         "  ry(p0 / 2) q0;\n"
                                         "  ry(-p0 / 2) q1;\n"
-                                        "  ctrl @ x q0, q1;\n"
+                                        "  cx q0, q1;\n"
                                         "  sdg q0;\n"
                                         "  sdg q1;\n"
                                         "  inv @ sx q0;\n"
@@ -2155,6 +2328,9 @@ LogicalResult translateQCToOpenQASM3(ModuleOp moduleOp,
 }
 
 FailureOr<std::string> translateQCToOpenQASM3(ModuleOp moduleOp) {
+  if (failed(verify(moduleOp))) {
+    return failure();
+  }
   return OpenQASMEmitter(moduleOp).emit();
 }
 

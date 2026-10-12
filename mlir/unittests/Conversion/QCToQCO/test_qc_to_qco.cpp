@@ -2264,7 +2264,7 @@ TEST_F(QCToQCORegressionTest, RoundTripsStableBorrowedRegister) {
       %one = arith.constant 1 : index
       %rest0, %left = qtensor.extract %reg[%zero] : tensor<2x!qco.qubit>
       %rest1, %right = qtensor.extract %rest0[%one] : tensor<2x!qco.qubit>
-      %swapped:2 = qco.swap %left, %right : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+      %swapped:2 = qco.swap %left, %right : !qco.qubit, !qco.qubit
       %rest2 = qtensor.insert %swapped#0 into %rest1[%zero] : tensor<2x!qco.qubit>
       %out = qtensor.insert %swapped#1 into %rest2[%one] : tensor<2x!qco.qubit>
       return %out : tensor<2x!qco.qubit>
@@ -2275,7 +2275,7 @@ TEST_F(QCToQCORegressionTest, RoundTripsStableBorrowedRegister) {
       %two = arith.constant 2 : index
       %reg = qtensor.alloc(%two) : tensor<2x!qco.qubit>
       %rest, %q = qtensor.extract %reg[%zero] : tensor<2x!qco.qubit>
-      %x = qco.x %q : !qco.qubit -> !qco.qubit
+      %x = qco.x %q : !qco.qubit
       %in = qtensor.insert %x into %rest[%zero] : tensor<2x!qco.qubit>
       %out = func.call @exchange(%in) : (tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit>
       %r0, %q0 = qtensor.extract %out[%zero] : tensor<2x!qco.qubit>
@@ -2301,7 +2301,7 @@ TEST_F(QCToQCORegressionTest, RoundTripsStableBorrowedRegister) {
           input.find(allocation), allocation.size(),
           "%p0 = qco.static 0 : !qco.qubit\n"
           "%p1 = qco.static 1 : !qco.qubit\n"
-          "%flipped = qco.x %p0 : !qco.qubit -> !qco.qubit\n"
+          "%flipped = qco.x %p0 : !qco.qubit\n"
           "%reg = qtensor.from_elements %flipped, %p1 : tensor<2x!qco.qubit>");
     }
     auto moduleOp = parseSourceString<ModuleOp>(input, &context);

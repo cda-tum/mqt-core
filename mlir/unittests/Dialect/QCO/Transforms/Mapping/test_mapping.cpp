@@ -807,7 +807,7 @@ module {
     %q1 = qco.alloc : !qco.qubit
     %out0, %out1 = qco.if %c args(%a = %q0, %b = %q1) -> (!qco.qubit, !qco.qubit) {
       %inner = qco.if %innerCondition args(%i = %a) -> (!qco.qubit) {
-        %x = qco.x %i : !qco.qubit -> !qco.qubit
+        %x = qco.x %i : !qco.qubit
         qco.yield %x : !qco.qubit
       } else args(%i = %a) {
         qco.yield %i : !qco.qubit
@@ -842,14 +842,14 @@ module {
     %q1 = qco.alloc : !qco.qubit
     %angle, %out = qco.if %condition args(%a = %q0) -> (f64, !qco.qubit) {
       %v = arith.constant 1.0 : f64
-      %x = qco.x %a : !qco.qubit -> !qco.qubit
+      %x = qco.x %a : !qco.qubit
       qco.yield %v, %x : f64, !qco.qubit
     } else args(%a = %q0) {
       %v = arith.constant 2.0 : f64
-      %h = qco.h %a : !qco.qubit -> !qco.qubit
+      %h = qco.h %a : !qco.qubit
       qco.yield %v, %h : f64, !qco.qubit
     }
-    %rotated = qco.rx(%angle) %q1 : !qco.qubit -> !qco.qubit
+    %rotated = qco.rx(%angle) %q1 : !qco.qubit
     %done0, %bit0 = qco.measure %out : !qco.qubit
     %done1, %bit1 = qco.measure %rotated : !qco.qubit
     qco.sink %done0 : !qco.qubit
@@ -1299,7 +1299,7 @@ TEST_F(MappingPassFixture, PreserveStoredRegisterControlDuringRouting) {
         %controlled1 = qco.if %condition args(%arg = %q1) -> (!qco.qubit) {
           %prev_bit = cbit.read %reg : !cbit.reg<1> -> i1
 
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           %cond_meas, %next_bit = qco.measure %flipped : !qco.qubit
 
           %changed = arith.xori %prev_bit, %next_bit : i1
@@ -1310,7 +1310,7 @@ TEST_F(MappingPassFixture, PreserveStoredRegisterControlDuringRouting) {
           qco.yield %arg : !qco.qubit
         }
         %next1, %next2 = qco.swap %controlled1, %q2
-            : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+            : !qco.qubit, !qco.qubit
         qco.sink %next1 : !qco.qubit
         qco.sink %next2 : !qco.qubit
         return %extra : !cbit.reg<1>
@@ -1861,28 +1861,28 @@ TEST_P(MappingPassTest, MapParallelLoopsWithClassicalDependencies) {
             iter_args(%x = %q0, %y = %q1, %s = %c1)
             -> (!qco.qubit, !qco.qubit, index) {
           %nx, %ny = qco.swap %x, %y
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           scf.yield %nx, %ny, %s : !qco.qubit, !qco.qubit, index
         }
         %b0, %b1, %s2 = scf.for %i = %c0 to %s1 step %c1
             iter_args(%x = %q2, %y = %q3, %s = %s1)
             -> (!qco.qubit, !qco.qubit, index) {
           %nx, %ny = qco.swap %x, %y
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           scf.yield %nx, %ny, %s : !qco.qubit, !qco.qubit, index
         }
         %d0, %d1, %s3 = scf.for %i = %c0 to %s2 step %c1
             iter_args(%x = %q4, %y = %q5, %s = %s2)
             -> (!qco.qubit, !qco.qubit, index) {
           %nx, %ny = qco.swap %x, %y
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           scf.yield %nx, %ny, %s : !qco.qubit, !qco.qubit, index
         }
         %e0, %e1, %s4 = scf.for %i = %c0 to %s3 step %c1
             iter_args(%x = %q6, %y = %q7, %s = %s3)
             -> (!qco.qubit, !qco.qubit, index) {
           %nx, %ny = qco.swap %x, %y
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           scf.yield %nx, %ny, %s : !qco.qubit, !qco.qubit, index
         }
         qco.sink %a0 : !qco.qubit
@@ -1928,7 +1928,7 @@ TEST_P(MappingPassTest, MapForWithClassicalIterArg) {
           %updated_state = arith.addi %iter_state, %one : i64
           %updated_q0, %updated_q1 =
               qco.swap %iter_q0, %iter_q1
-                  : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+                  : !qco.qubit, !qco.qubit
           scf.yield %updated_state, %updated_q0, %updated_q1
               : i64, !qco.qubit, !qco.qubit
         }
@@ -1972,7 +1972,7 @@ TEST_P(MappingPassTest, MapTypeChangingWhileWithClassicalState) {
           %extended_state = arith.extsi %iter_state : i32 to i64
           %updated_q0, %updated_q1 =
               qco.swap %iter_q0, %iter_q1
-                  : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+                  : !qco.qubit, !qco.qubit
           scf.condition(%false) %extended_state, %updated_q0, %updated_q1
               : i64, !qco.qubit, !qco.qubit
         } do {
@@ -2015,13 +2015,13 @@ TEST_P(MappingPassTest, MapIfWithClassicalResult) {
             : tensor<2x!qco.qubit>
         %tensor2, %q1 = qtensor.extract %tensor1[%c1]
             : tensor<2x!qco.qubit>
-        %q2 = qco.h %q0 : !qco.qubit -> !qco.qubit
+        %q2 = qco.h %q0 : !qco.qubit
         %q3, %condition = qco.measure %q2 : !qco.qubit
         %state, %q4, %q5 = qco.if %condition
             args(%arg0 = %q3, %arg1 = %q1)
             -> (i64, !qco.qubit, !qco.qubit) {
           %next0, %next1 = qco.swap %arg0, %arg1
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           %then = arith.constant 1 : i64
           qco.yield %then, %next0, %next1
               : i64, !qco.qubit, !qco.qubit
@@ -2078,14 +2078,14 @@ TEST_P(MappingPassTest, MapIndexSwitchWithClassicalResult) {
             -> (i64, !qco.qubit, !qco.qubit)
         case 0 args(%arg0 = %q0, %arg1 = %q1) {
           %next0, %next1 = qco.swap %arg0, %arg1
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           %case = arith.constant 1 : i64
           qco.yield %case, %next0, %next1
               : i64, !qco.qubit, !qco.qubit
         }
         case 1 args(%arg0 = %q0, %arg1 = %q1) {
           %next0, %next1 = qco.swap %arg0, %arg1
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           %case = arith.constant 2 : i64
           qco.yield %case, %next0, %next1
               : i64, !qco.qubit, !qco.qubit
@@ -2147,19 +2147,19 @@ TEST_P(MappingPassTest, MapIndexSwitchRegions) {
             -> (!qco.qubit, !qco.qubit, !qco.qubit)
         case 0 args(%arg0 = %q0, %arg1 = %q1, %arg2 = %q2) {
           %next0, %next1 = qco.swap %arg0, %arg1
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           qco.yield %next0, %next1, %arg2
               : !qco.qubit, !qco.qubit, !qco.qubit
         }
         case 1 args(%arg0 = %q0, %arg1 = %q1, %arg2 = %q2) {
           %next1, %next2 = qco.swap %arg1, %arg2
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           qco.yield %arg0, %next1, %next2
               : !qco.qubit, !qco.qubit, !qco.qubit
         }
         default args(%arg0 = %q0, %arg1 = %q1, %arg2 = %q2) {
           %next0, %next2 = qco.swap %arg0, %arg2
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           qco.yield %next0, %arg1, %next2
               : !qco.qubit, !qco.qubit, !qco.qubit
         }
@@ -2212,16 +2212,16 @@ TEST_P(MappingPassTest, MapNestedOperationOnceWhileIndependentWiresAdvance) {
             -> (!qco.qubit, !qco.qubit)
         case 0 args(%arg0 = %q0, %arg1 = %q1) {
           %next0, %next1 = qco.swap %arg0, %arg1
-              : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+              : !qco.qubit, !qco.qubit
           qco.yield %next0, %next1 : !qco.qubit, !qco.qubit
         }
         default args(%arg0 = %q0, %arg1 = %q1) {
           qco.yield %arg0, %arg1 : !qco.qubit, !qco.qubit
         }
         %q6, %q7 = qco.barrier %q2, %q3
-            : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+            : !qco.qubit, !qco.qubit
         %q8, %q9 = qco.barrier %q6, %q7
-            : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+            : !qco.qubit, !qco.qubit
         %tensor5 = qtensor.insert %q4 into %tensor4[%c0]
             : tensor<4x!qco.qubit>
         %tensor6 = qtensor.insert %q5 into %tensor5[%c1]
@@ -2900,6 +2900,148 @@ TEST_F(MappingPassFixture, ScoreGreedyLayoutWithoutRefinement) {
   }
 }
 
+TEST_F(MappingPassFixture, PlaceCountedLoopInteractionsWithoutRouting) {
+  const auto target = getSquareGridTarget(2);
+  for (const bool nested : {false, true}) {
+    SCOPED_TRACE(nested);
+    QCOProgramBuilder builder(context.get());
+    builder.initialize({cbit::RegisterType::get(context.get(), 3)});
+    auto bits = builder.allocClassicalBitRegister(3);
+    SmallVector<Value> qubits;
+    for (size_t i = 0; i < 3; ++i) {
+      qubits.push_back(builder.allocQubit());
+    }
+    qubits[0] = builder.x(qubits[0]);
+    const auto body = [&builder](Value, ValueRange args) {
+      SmallVector<Value> wires(args);
+      std::tie(wires[0], wires[1]) = builder.cx(wires[0], wires[1]);
+      std::tie(wires[1], wires[2]) = builder.cx(wires[1], wires[2]);
+      return wires;
+    };
+    qubits = llvm::to_vector(
+        builder.scfFor(0, 101, 1, qubits, [&](Value iv, ValueRange args) {
+          return nested ? llvm::to_vector(builder.scfFor(0, 3, 1, args, body))
+                        : body(iv, args);
+        }));
+    for (size_t i = 0; i < qubits.size(); ++i) {
+      std::tie(qubits[i], std::ignore) =
+          builder.measure(qubits[i], bits, static_cast<int64_t>(i));
+      builder.sink(qubits[i]);
+    }
+    auto moduleOp = builder.finalize({bits});
+    const auto expected = qco::sample(getEntryPoint(*moduleOp), 128, 42);
+    ASSERT_TRUE(succeeded(expected));
+    ASSERT_TRUE(succeeded(runPass(
+        *moduleOp, target,
+        MappingPassOptions{.niterations = 0, .ntrials = 1, .seed = 42})));
+    EXPECT_TRUE(succeeded(verify(*moduleOp)));
+    EXPECT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+    EXPECT_TRUE(isExecutable(getEntryPoint(*moduleOp), target));
+    size_t swaps = 0;
+    size_t loops = 0;
+    moduleOp->walk([&](SWAPOp) { ++swaps; });
+    moduleOp->walk([&](scf::ForOp) { ++loops; });
+    EXPECT_EQ(swaps, 0U);
+    EXPECT_EQ(loops, nested ? 2U : 1U);
+    const auto actual = qco::sample(getEntryPoint(*moduleOp), 128, 42);
+    ASSERT_TRUE(succeeded(actual));
+    EXPECT_EQ(*actual, *expected);
+  }
+}
+
+TEST_F(MappingPassFixture, KeepFallbackForUnsupportedLoopInteractions) {
+  const auto target = getSquareGridTarget(2);
+  for (const StringRef mode :
+       {"permuted", "unknown", "branch", "zero", "overflow"}) {
+    SCOPED_TRACE(mode.str());
+    std::string source = R"mlir(module {
+      func.func @main(%count: index, %condition: i1) attributes {mqt.entry_point} {
+        %c0 = arith.constant 0 : index
+        %c1 = arith.constant 1 : index
+        %c100 = arith.constant 100 : index
+        %huge = arith.constant 9223372036854775807 : index
+        %q0 = qco.alloc : !qco.qubit
+        %q1 = qco.alloc : !qco.qubit
+        %q2 = qco.alloc : !qco.qubit
+        %out:3 = scf.for %i = %c0 to UPPER step %c1
+            iter_args(%a = %q0, %b = %q1, %c = %q2)
+            -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+          %inner:3 = scf.for %j = %c0 to UPPER step %c1
+              iter_args(%x = %a, %y = %b, %z = %c)
+              -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+            %u, %v = qco.ctrl(%x) targets (%target = %y) {
+              %next = qco.x %target : !qco.qubit
+              qco.yield %next : !qco.qubit
+            } : ({!qco.qubit}, {!qco.qubit})
+            %w, %t = qco.ctrl(%v) targets (%target = %z) {
+              %next = qco.x %target : !qco.qubit
+              qco.yield %next : !qco.qubit
+            } : ({!qco.qubit}, {!qco.qubit})
+            BRANCH
+            scf.yield YIELD : !qco.qubit, !qco.qubit, !qco.qubit
+          }
+          scf.yield %inner#0, %inner#1, %inner#2
+              : !qco.qubit, !qco.qubit, !qco.qubit
+        }
+        qco.sink %out#0 : !qco.qubit
+        qco.sink %out#1 : !qco.qubit
+        qco.sink %out#2 : !qco.qubit
+        return
+      }
+    })mlir";
+    const StringRef bound = mode == "unknown"    ? "%count"
+                            : mode == "zero"     ? "%c0"
+                            : mode == "overflow" ? "%huge"
+                                                 : "%c100";
+    for (auto position = source.find("UPPER"); position != std::string::npos;
+         position = source.find("UPPER")) {
+      source.replace(position, 5, bound.str());
+    }
+    source.replace(source.find("BRANCH"), 6,
+                   mode == "branch" ? R"mlir(
+              %branch = qco.if %condition args(%q = %u) -> (!qco.qubit) {
+                %h = qco.h %q : !qco.qubit
+                qco.yield %h : !qco.qubit
+              } else args(%q = %u) {
+                qco.yield %q : !qco.qubit
+              }
+            )mlir"
+                                    : "");
+    source.replace(source.find("YIELD"), 5,
+                   mode == "permuted" ? "%t, %w, %u"
+                   : mode == "branch" ? "%branch, %w, %t"
+                                      : "%u, %w, %t");
+    auto moduleOp = parseSourceString<ModuleOp>(source, context.get());
+    ASSERT_TRUE(moduleOp);
+    if (mode == "permuted") {
+      attachTestEnvironment(*moduleOp, target);
+      const auto before = printModule(*moduleOp);
+      ScopedDiagnosticHandler handler(context.get(),
+                                      [](Diagnostic&) { return success(); });
+      EXPECT_TRUE(failed(verifyLinearity(*moduleOp)));
+      EXPECT_TRUE(failed(runPass(
+          *moduleOp, target,
+          MappingPassOptions{.niterations = 0, .ntrials = 1, .seed = 42})));
+      EXPECT_EQ(printModule(*moduleOp), before);
+      continue;
+    }
+    ASSERT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+    ASSERT_TRUE(succeeded(runPass(
+        *moduleOp, target,
+        MappingPassOptions{.niterations = 0, .ntrials = 1, .seed = 42})));
+    EXPECT_TRUE(succeeded(verify(*moduleOp)));
+    EXPECT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+    size_t swaps = 0;
+    moduleOp->walk([&](SWAPOp) { ++swaps; });
+    if (mode == "overflow") {
+      EXPECT_EQ(swaps, 0U);
+    } else {
+      // The fallback's identity start cannot embed the 0-1-2 path.
+      EXPECT_GT(swaps, 0U);
+    }
+  }
+}
+
 TEST_F(MappingPassFixture, ProduceStableOutputForFixedSeed) {
   constexpr size_t repetitions = 4;
   const auto target = getSquareGridTarget(10);
@@ -2988,10 +3130,10 @@ TEST_P(MappingPassTest, MapClassicalResultCapturedByNestedRegion) {
             args(%arg0 = %q0_0, %arg1 = %q1_0)
             -> (i1, !qco.qubit, !qco.qubit) {
           %local_classical = arith.addi %classical, %b0 : i1
-          %then0, %then1 = qco.swap %arg0, %arg1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+          %then0, %then1 = qco.swap %arg0, %arg1 : !qco.qubit, !qco.qubit
           qco.yield %local_classical, %then0, %then1 : i1, !qco.qubit, !qco.qubit
         } else args(%arg0 = %q0_0, %arg1 = %q1_0) {
-          %else0, %else1 = qco.swap %arg0, %arg1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+          %else0, %else1 = qco.swap %arg0, %arg1 : !qco.qubit, !qco.qubit
           qco.yield %b0, %else0, %else1 : i1, !qco.qubit, !qco.qubit
         }
 
@@ -3937,9 +4079,9 @@ module {
     %a = qco.alloc : !qco.qubit
     %b = qco.alloc : !qco.qubit
     %c = qco.alloc : !qco.qubit
-    %a1, %b1 = qco.xx_plus_yy(%angle, %angle) %a, %b : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-    %b2, %c1 = qco.xx_plus_yy(%angle, %angle) %b1, %c : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
-    %c2, %a2 = qco.xx_plus_yy(%angle, %angle) %c1, %a1 : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+    %a1, %b1 = qco.xx_plus_yy(%angle, %angle) %a, %b : !qco.qubit, !qco.qubit
+    %b2, %c1 = qco.xx_plus_yy(%angle, %angle) %b1, %c : !qco.qubit, !qco.qubit
+    %c2, %a2 = qco.xx_plus_yy(%angle, %angle) %c1, %a1 : !qco.qubit, !qco.qubit
     %a3, %r0 = qco.measure %a2 : !qco.qubit
     %b3, %r1 = qco.measure %b2 : !qco.qubit
     %c3, %r2 = qco.measure %c2 : !qco.qubit

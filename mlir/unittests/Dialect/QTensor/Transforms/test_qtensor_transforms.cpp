@@ -52,7 +52,7 @@ TEST(QTensorTransformsTest, ShrinkToFitPreservesMetadata) {
         %reg = qtensor.alloc(%c3) {mqt.register_name = "q"}
             : tensor<3x!qco.qubit>
         %rest, %qubit = qtensor.extract %reg[%c1] : tensor<3x!qco.qubit>
-        %rotated = qco.x %qubit : !qco.qubit -> !qco.qubit
+        %rotated = qco.x %qubit : !qco.qubit
         %updated = qtensor.insert %rotated into %rest[%c1]
             : tensor<3x!qco.qubit>
         qtensor.dealloc %updated : tensor<3x!qco.qubit>
@@ -93,7 +93,7 @@ TEST(QTensorTransformsTest, HugeDeclaredTensorUsesSparseShrinkPlan) {
         %reg = qtensor.alloc(%huge) : tensor<1099511627776x!qco.qubit>
         %rest, %qubit = qtensor.extract %reg[%c7]
             : tensor<1099511627776x!qco.qubit>
-        %flipped = qco.x %qubit : !qco.qubit -> !qco.qubit
+        %flipped = qco.x %qubit : !qco.qubit
         %updated = qtensor.insert %flipped into %rest[%c7]
             : tensor<1099511627776x!qco.qubit>
         qtensor.dealloc %updated : tensor<1099511627776x!qco.qubit>

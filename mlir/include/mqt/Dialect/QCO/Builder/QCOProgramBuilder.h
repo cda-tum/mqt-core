@@ -492,7 +492,7 @@ public:
   /// q = builder.reset(q);
   /// ```
   /// ```mlir
-  /// %q_out = qco.reset %q : !qco.qubit -> !qco.qubit
+  /// %q_out = qco.reset %q : !qco.qubit
   /// ```
   Value reset(Value qubit);
 
@@ -532,7 +532,7 @@ public:
    * %q_out = qco.ctrl(%q_in) {                                                \
    *   qco.OP_NAME(%PARAM)                                                     \
    *   qco.yield                                                               \
-   * } : ({!qco.qubit}) -> ({!qco.qubit})                                      \
+   * } : ({!qco.qubit})                                                        \
    * ```                                                                       \
    */                                                                          \
   Value c##OP_NAME(const mqt::FloatParameter&(PARAM), Value control);          \
@@ -551,7 +551,7 @@ public:
    * %q0_out, %q1_out = qco.ctrl(%q0_in, %q1_in) {                             \
    *   qco.OP_NAME(%PARAM)                                                     \
    *   qco.yield                                                               \
-   * } : ({!qco.qubit, !qco.qubit}) -> ({!qco.qubit, !qco.qubit})              \
+   * } : ({!qco.qubit, !qco.qubit})                                            \
    * ```                                                                       \
    */                                                                          \
   ValueRange mc##OP_NAME(const mqt::FloatParameter&(PARAM),                    \
@@ -579,7 +579,7 @@ public:
    * q_out = builder.OP_NAME(q_in);                                            \
    * ```                                                                       \
    * ```mlir                                                                   \
-   * %q_out = qco.OP_NAME %q_in : !qco.qubit -> !qco.qubit                     \
+   * %q_out = qco.OP_NAME %q_in : !qco.qubit                                   \
    * ```                                                                       \
    */                                                                          \
   Value OP_NAME(Value qubit);                                                  \
@@ -600,9 +600,9 @@ public:
    * ```                                                                       \
    * ```mlir                                                                   \
    * %q0_out, %q1_out = qco.ctrl(%q0_in) %q1_in {                              \
-   *   %q1_res = qco.OP_NAME %q1_in : !qco.qubit -> !qco.qubit                 \
+   *   %q1_res = qco.OP_NAME %q1_in : !qco.qubit                               \
    *   qco.yield %q1_res : !qco.qubit                                          \
-   * } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})          \
+   * } : ({!qco.qubit}, {!qco.qubit})                                          \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, Value> c##OP_NAME(Value control, Value target);             \
@@ -624,10 +624,9 @@ public:
    * ```                                                                       \
    * ```mlir                                                                   \
    * %controls_out, %target_out = qco.ctrl(%q0_in, %q1_in) %q2_in {            \
-   *   %q2_res = qco.OP_NAME %q2_in : !qco.qubit -> !qco.qubit                 \
+   *   %q2_res = qco.OP_NAME %q2_in : !qco.qubit                               \
    *   qco.yield %q2_res : !qco.qubit                                          \
-   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit}) -> ({!qco.qubit,             \
-   * !qco.qubit}, {!qco.qubit})                                                \
+   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})                              \
    * ```                                                                       \
    */                                                                          \
   std::pair<ValueRange, Value> mc##OP_NAME(ValueRange controls, Value target);
@@ -665,7 +664,7 @@ public:
    * q_out = builder.OP_NAME(PARAM, q_in);                                     \
    * ```                                                                       \
    * ```mlir                                                                   \
-   * %q_out = qco.OP_NAME(%PARAM) %q_in : !qco.qubit -> !qco.qubit             \
+   * %q_out = qco.OP_NAME(%PARAM) %q_in : !qco.qubit                           \
    * ```                                                                       \
    */                                                                          \
   Value OP_NAME(const mqt::FloatParameter&(PARAM), Value qubit);               \
@@ -687,9 +686,9 @@ public:
    * ```                                                                       \
    * ```mlir                                                                   \
    * %q0_out, %q1_out = qco.ctrl(%q0_in) %q1_in {                              \
-   *   %q1_res = qco.OP_NAME(%PARAM) %q1_in : !qco.qubit -> !qco.qubit         \
+   *   %q1_res = qco.OP_NAME(%PARAM) %q1_in : !qco.qubit                       \
    *   qco.yield %q1_res : !qco.qubit                                          \
-   * } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})          \
+   * } : ({!qco.qubit}, {!qco.qubit})                                          \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, Value> c##OP_NAME(const mqt::FloatParameter&(PARAM),        \
@@ -713,10 +712,9 @@ public:
    * ```                                                                       \
    * ```mlir                                                                   \
    * %controls_out, %target_out = qco.ctrl(%q0_in, %q1_in) %q2_in {            \
-   *   %q2_res = qco.OP_NAME(%PARAM) %q2_in : !qco.qubit -> !qco.qubit         \
+   *   %q2_res = qco.OP_NAME(%PARAM) %q2_in : !qco.qubit                       \
    *   qco.yield %q2_res : !qco.qubit                                          \
-   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit}) -> ({!qco.qubit,             \
-   * !qco.qubit}, {!qco.qubit})                                                \
+   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})                              \
    * ```                                                                       \
    */                                                                          \
   std::pair<ValueRange, Value> mc##OP_NAME(const mqt::FloatParameter&(PARAM),  \
@@ -749,8 +747,7 @@ public:
    * q_out = builder.OP_NAME(PARAM1, PARAM2, q_in);                            \
    * ```                                                                       \
    * ```mlir                                                                   \
-   * %q_out = qco.OP_NAME(%PARAM1, %PARAM2) %q_in : !qco.qubit ->              \
-   * !qco.qubit                                                                \
+   * %q_out = qco.OP_NAME(%PARAM1, %PARAM2) %q_in : !qco.qubit                 \
    * ```                                                                       \
    */                                                                          \
   Value OP_NAME(const mqt::FloatParameter&(PARAM1),                            \
@@ -774,10 +771,9 @@ public:
    * ```                                                                       \
    * ```mlir                                                                   \
    * %q0_out, %q1_out = qco.ctrl(%q0_in) %q1_in {                              \
-   *   %q1_res = qco.OP_NAME(%PARAM1, %PARAM2) %q1_in : !qco.qubit ->          \
-   * !qco.qubit                                                                \
+   *   %q1_res = qco.OP_NAME(%PARAM1, %PARAM2) %q1_in : !qco.qubit             \
    *   qco.yield %q1_res : !qco.qubit                                          \
-   * } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})          \
+   * } : ({!qco.qubit}, {!qco.qubit})                                          \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, Value> c##OP_NAME(const mqt::FloatParameter&(PARAM1),       \
@@ -803,11 +799,9 @@ public:
    * ```                                                                       \
    * ```mlir                                                                   \
    * %controls_out, %target_out = qco.ctrl(%q0_in, %q1_in) %q2_in {            \
-   *   %q2_res = qco.OP_NAME(%PARAM1, %PARAM2) %q2_in : !qco.qubit ->          \
-   * !qco.qubit                                                                \
+   *   %q2_res = qco.OP_NAME(%PARAM1, %PARAM2) %q2_in : !qco.qubit             \
    *   qco.yield %q2_res : !qco.qubit                                          \
-   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit}) -> ({!qco.qubit,             \
-   * !qco.qubit}, {!qco.qubit})                                                \
+   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})                              \
    * ```                                                                       \
    */                                                                          \
   std::pair<ValueRange, Value> mc##OP_NAME(const mqt::FloatParameter&(PARAM1), \
@@ -841,8 +835,7 @@ public:
    * q_out = builder.OP_NAME(PARAM1, PARAM2, PARAM3, q_in);                    \
    * ```                                                                       \
    * ```mlir                                                                   \
-   * %q_out = qco.OP_NAME(%PARAM1, %PARAM2, %PARAM3) %q_in : !qco.qubit ->     \
-   * !qco.qubit                                                                \
+   * %q_out = qco.OP_NAME(%PARAM1, %PARAM2, %PARAM3) %q_in : !qco.qubit        \
    * ```                                                                       \
    */                                                                          \
   Value OP_NAME(const mqt::FloatParameter&(PARAM1),                            \
@@ -870,9 +863,8 @@ public:
    * ```mlir                                                                   \
    * %q0_out, %q1_out = qco.ctrl(%q0_in) %q1_in {                              \
    *   %q1_res = qco.OP_NAME(%PARAM1, %PARAM2, %PARAM3) %q1_in : !qco.qubit    \
-   * -> !qco.qubit                                                             \
    *   qco.yield %q1_res : !qco.qubit                                          \
-   * } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})          \
+   * } : ({!qco.qubit}, {!qco.qubit})                                          \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, Value> c##OP_NAME(                                          \
@@ -900,10 +892,8 @@ public:
    * ```mlir                                                                   \
    * %controls_out, %target_out = qco.ctrl(%q0_in, %q1_in) %q2_in {            \
    *   %q2_res = qco.OP_NAME(%PARAM1, %PARAM2, %PARAM3) %q2_in : !qco.qubit    \
-   * -> !qco.qubit                                                             \
    *   qco.yield %q2_res : !qco.qubit                                          \
-   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit}) -> ({!qco.qubit,             \
-   * !qco.qubit}, {!qco.qubit})                                                \
+   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})                              \
    * ```                                                                       \
    */                                                                          \
   std::pair<ValueRange, Value> mc##OP_NAME(                                    \
@@ -934,7 +924,6 @@ public:
    * ```                                                                       \
    * ```mlir                                                                   \
    * %q0_out, %q1_out = qco.OP_NAME %q0_in, %q1_in : !qco.qubit, !qco.qubit    \
-   * -> !qco.qubit, !qco.qubit                                                 \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, Value> OP_NAME(Value qubit0, Value qubit1);                 \
@@ -958,10 +947,9 @@ public:
    * ```mlir                                                                   \
    * %q0_out, %q1_out, %q2_out = qco.ctrl(%q0_in) %q1_in, %q2_in {             \
    *   %q1_res, %q2_res = qco.OP_NAME %q1_in, %q2_in : !qco.qubit,             \
-   * !qco.qubit -> !qco.qubit, !qco.qubit                                      \
+   * !qco.qubit                                                                \
    *   qco.yield %q1_res, %q2_res : !qco.qubit, !qco.qubit                     \
-   * } : ({!qco.qubit}, {!qco.qubit, !qco.qubit}) -> ({!qco.qubit},            \
-   * {!qco.qubit, !qco.qubit})                                                 \
+   * } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})                              \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, std::pair<Value, Value>> c##OP_NAME(                        \
@@ -988,10 +976,9 @@ public:
    * %controls_out, %q1_out, %q2_out = qco.ctrl(%q0_in, %q1_in) %q2_in,        \
    * %q3_in {                                                                  \
    *   %q2_res, %q3_res = qco.OP_NAME %q2_in, %q3_in : !qco.qubit,             \
-   * !qco.qubit -> !qco.qubit, !qco.qubit                                      \
+   * !qco.qubit                                                                \
    *   qco.yield %q2_res, %q3_res : !qco.qubit, !qco.qubit                     \
-   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit}) ->               \
-   * ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit})                      \
+   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit})                  \
    * ```                                                                       \
    */                                                                          \
   std::pair<ValueRange, std::pair<Value, Value>> mc##OP_NAME(                  \
@@ -1026,7 +1013,6 @@ public:
    * ```mlir                                                                   \
    * %q0_out, %q1_out = qco.OP_NAME(%PARAM) %q0_in, %q1_in : !qco.qubit,       \
    * !qco.qubit                                                                \
-   * -> !qco.qubit, !qco.qubit                                                 \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, Value> OP_NAME(const mqt::FloatParameter&(PARAM),           \
@@ -1053,10 +1039,9 @@ public:
    * ```mlir                                                                   \
    * %q0_out, %q1_out, %q2_out = qco.ctrl(%q0_in) %q1_in, %q2_in {             \
    *   %q1_res, %q2_res = qco.OP_NAME(%PARAM) %q1_in, %q2_in : !qco.qubit,     \
-   * !qco.qubit -> !qco.qubit, !qco.qubit                                      \
+   * !qco.qubit                                                                \
    *   qco.yield %q1_res, %q2_res : !qco.qubit, !qco.qubit                     \
-   * } : ({!qco.qubit}, {!qco.qubit, !qco.qubit}) -> ({!qco.qubit},            \
-   * {!qco.qubit, !qco.qubit})                                                 \
+   * } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})                              \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, std::pair<Value, Value>> c##OP_NAME(                        \
@@ -1085,10 +1070,9 @@ public:
    * %controls_out, %q1_out, %q2_out = qco.ctrl(%q0_in, %q1_in) %q2_in,        \
    * %q3_in {                                                                  \
    *   %q2_res, %q3_res = qco.OP_NAME(%PARAM) %q2_in, %q3_in : !qco.qubit,     \
-   * !qco.qubit -> !qco.qubit, !qco.qubit                                      \
+   * !qco.qubit                                                                \
    *   qco.yield %q2_res, %q3_res : !qco.qubit, !qco.qubit                     \
-   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit}) ->               \
-   * ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit})                      \
+   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit})                  \
    * ```                                                                       \
    */                                                                          \
   std::pair<ValueRange, std::pair<Value, Value>> mc##OP_NAME(                  \
@@ -1124,7 +1108,7 @@ public:
    * ```                                                                       \
    * ```mlir                                                                   \
    * %q0_out, %q1_out = qco.OP_NAME(%PARAM1, %PARAM2) %q0_in, %q1_in :         \
-   * !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit                          \
+   * !qco.qubit, !qco.qubit                                                    \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, Value> OP_NAME(const mqt::FloatParameter&(PARAM1),          \
@@ -1153,10 +1137,9 @@ public:
    * ```mlir                                                                   \
    * %q0_out, %q1_out, %q2_out = qco.ctrl(%q0_in) %q1_in, %q2_in {             \
    *   %q1_res, %q2_res = qco.OP_NAME(%PARAM1, %PARAM2) %q1_in, %q2_in :       \
-   * !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit                          \
+   * !qco.qubit, !qco.qubit                                                    \
    *   qco.yield %q1_res, %q2_res : !qco.qubit, !qco.qubit                     \
-   * } : ({!qco.qubit}, {!qco.qubit, !qco.qubit}) ->                           \
-   * ({!qco.qubit}, {!qco.qubit, !qco.qubit})                                  \
+   * } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})                              \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, std::pair<Value, Value>> c##OP_NAME(                        \
@@ -1186,10 +1169,9 @@ public:
    * %controls_out, %q1_out, %q2_out = qco.ctrl(%q0_in, %q1_in) %q2_in,        \
    * %q3_in {                                                                  \
    *   %q2_res, %q3_res = qco.OP_NAME(%PARAM1, %PARAM2) %q2_in, %q3_in :       \
-   * !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit                          \
+   * !qco.qubit, !qco.qubit                                                    \
    *   qco.yield %q2_res, %q3_res : !qco.qubit, !qco.qubit                     \
-   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit}) ->               \
-   * ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit})                      \
+   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit})                  \
    * ```                                                                       \
    */                                                                          \
   std::pair<ValueRange, std::pair<Value, Value>> mc##OP_NAME(                  \
@@ -1223,7 +1205,6 @@ public:
    * ```mlir                                                                   \
    * %q0_out, %q1_out, %q2_out = qco.OP_NAME %q0_in, %q1_in, %q2_in :          \
    * !qco.qubit, !qco.qubit, !qco.qubit                                        \
-   * -> !qco.qubit, !qco.qubit, !qco.qubit                                     \
    * ```                                                                       \
    */                                                                          \
   std::tuple<Value, Value, Value> OP_NAME(Value qubit0, Value qubit1,          \
@@ -1253,11 +1234,9 @@ public:
    * %q3_in {                                                                  \
    *   %q1_res, %q2_res, %q3_res = qco.OP_NAME %q1_in, %q2_in, %q3_in :        \
    * !qco.qubit, !qco.qubit, !qco.qubit                                        \
-   * -> !qco.qubit, !qco.qubit, !qco.qubit                                     \
    *   qco.yield %q1_res, %q2_res, %q3_res : !qco.qubit, !qco.qubit,           \
    * !qco.qubit                                                                \
-   * } : ({!qco.qubit}, {!qco.qubit, !qco.qubit, !qco.qubit}) ->               \
-   * ({!qco.qubit}, {!qco.qubit, !qco.qubit, !qco.qubit})                      \
+   * } : ({!qco.qubit}, {!qco.qubit, !qco.qubit, !qco.qubit})                  \
    * ```                                                                       \
    */                                                                          \
   std::pair<Value, std::tuple<Value, Value, Value>> c##OP_NAME(                \
@@ -1287,11 +1266,9 @@ public:
    * %q2_in, %q3_in, %q4_in {                                                  \
    *   %q2_res, %q3_res, %q4_res = qco.OP_NAME %q2_in, %q3_in, %q4_in :        \
    * !qco.qubit, !qco.qubit, !qco.qubit                                        \
-   * -> !qco.qubit, !qco.qubit, !qco.qubit                                     \
    *   qco.yield %q2_res, %q3_res, %q4_res : !qco.qubit, !qco.qubit,           \
    * !qco.qubit                                                                \
-   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit, !qco.qubit}) ->   \
-   * ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit, !qco.qubit})          \
+   * } : ({!qco.qubit, !qco.qubit}, {!qco.qubit, !qco.qubit, !qco.qubit})      \
    * ```                                                                       \
    */                                                                          \
   std::pair<ValueRange, std::tuple<Value, Value, Value>> mc##OP_NAME(          \
@@ -1313,8 +1290,7 @@ public:
   /// builder.barrier({q0, q1});
   /// ```
   /// ```mlir
-  /// qco.barrier %q0, %q1 : !qco.qubit, !qco.qubit -> !qco.qubit,
-  /// !qco.qubit
+  /// qco.barrier %q0, %q1 : !qco.qubit, !qco.qubit
   /// ```
   ValueRange barrier(ValueRange qubits);
 
@@ -1347,9 +1323,9 @@ public:
   /// ```
   /// ```mlir
   /// %controls_out, %targets_out = qco.ctrl(%q0_in) targets(%t = %q1_in) {
-  ///   %q1_res = qco.x %t : !qco.qubit -> !qco.qubit
+  ///   %q1_res = qco.x %t : !qco.qubit
   ///   qco.yield %q1_res : !qco.qubit
-  /// } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+  /// } : ({!qco.qubit}, {!qco.qubit})
   /// ```
   std::pair<ValueRange, ValueRange>
   ctrl(ValueRange controls, ValueRange targets,
@@ -1405,7 +1381,7 @@ public:
   /// ```
   /// ```mlir
   /// %qubits_out = qco.inv (%q = %q0_in) {
-  ///   %q_res = qco.s %q : !qco.qubit -> !qco.qubit
+  ///   %q_res = qco.s %q : !qco.qubit
   ///   qco.yield %q_res : !qco.qubit
   /// } : {!qco.qubit} -> {!qco.qubit}
   /// ```
@@ -1446,7 +1422,7 @@ public:
   /// ```
   /// ```mlir
   /// %q_out = qco.pow(%exponent) (%q = %q_in) {
-  ///   %q_res = qco.s %q : !qco.qubit -> !qco.qubit
+  ///   %q_res = qco.s %q : !qco.qubit
   ///   qco.yield %q_res
   /// } : {!qco.qubit} -> {!qco.qubit}
   /// ```
@@ -1527,10 +1503,10 @@ public:
   /// ```
   /// ```mlir
   /// %q3 = qco.if %condition args(%arg0 = %q0) -> (!qco.qubit) {
-  ///   %q1 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+  ///   %q1 = qco.x %arg0 : !qco.qubit
   ///   qco.yield %q1 : !qco.qubit
   /// } else args(%arg0 = %q0) {
-  ///   %q2 = qco.z %arg0 : !qco.qubit -> !qco.qubit
+  ///   %q2 = qco.z %arg0 : !qco.qubit
   ///   qco.yield %q2 : !qco.qubit
   /// }
   /// ```
@@ -1584,10 +1560,10 @@ public:
   /// ```
   /// ```mlir
   /// %q3 = qco.if %condition args(%arg0 = %q0) -> (!qco.qubit) {
-  ///   %q1 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+  ///   %q1 = qco.x %arg0 : !qco.qubit
   ///   qco.yield %q1 : !qco.qubit
   /// } else args(%arg0 = %q0) {
-  ///   %q2 = qco.z %arg0 : !qco.qubit -> !qco.qubit
+  ///   %q2 = qco.z %arg0 : !qco.qubit
   ///   qco.yield %q2 : !qco.qubit
   /// }
   /// ```
@@ -1630,11 +1606,11 @@ public:
   /// ```mlir
   /// %result = qco.index_switch %arg -> !qco.qubit
   /// case 0 args(%arg0 = %q0) {
-  ///   %q1 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+  ///   %q1 = qco.x %arg0 : !qco.qubit
   ///   qco.yield %q1 : !qco.qubit
   /// }
   /// default args(%arg0 = %q0) {
-  ///   %q2 = qco.z %arg0 : !qco.qubit -> !qco.qubit
+  ///   %q2 = qco.z %arg0 : !qco.qubit
   ///   qco.yield %q2 : !qco.qubit
   /// }
   /// ```
@@ -1699,7 +1675,7 @@ public:
   /// %t3 = scf.for %iv = %lb to %ub step %step iter_args(%arg0 = %t0)
   /// -> (tensor<3x!qco.qubit>) {
   ///   %t1, %q0 = qtensor.extract %arg0[%iv] : tensor<3x!qco.qubit>
-  ///   %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
+  ///   %q1 = qco.h %q0 : !qco.qubit
   ///   %t2 = qtensor.insert %q1 into %t1[%iv] : tensor<3x!qco.qubit>
   ///   scf.yield %t2 : tensor<3x!qco.qubit>
   /// }
@@ -1744,7 +1720,7 @@ public:
   ///   scf.condition(%cond) %q1 : !qco.qubit
   /// } do {
   /// ^bb0(%arg0 : !qco.qubit):
-  ///   %q1 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+  ///   %q1 = qco.h %arg0 : !qco.qubit
   ///   scf.yield %q1 : !qco.qubit
   /// }
   /// ```

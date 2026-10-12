@@ -301,6 +301,13 @@ random-number generator, and output settings. QIR jobs can therefore execute
 concurrently without sharing measurements or output records. DDSIM records
 result bits directly and formats textual records only when capture is enabled.
 
+For sampling programs that cannot use terminal sampling, the JIT applies LLVM O1
+optimization with automatic loop unrolling disabled. This reduces repeated
+classical work at the cost of additional compilation time. State extraction and
+programs eligible for terminal sampling skip this optimization. Exported QIR
+uses profile-preserving cleanup, including promotion of local classical storage
+to SSA values; host optimization applies only to the JIT's private module.
+
 QIR runtime functions do not propagate C++ exceptions. Allocations report
 invalid resource requests and runtime limits through the QIR error-output
 pointer when one is supplied. Other failures, including host-memory exhaustion,

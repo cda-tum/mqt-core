@@ -170,6 +170,14 @@ Select an output format to stop the pipeline at a particular representation:
 | Convert to the jeff dialect              | `OutputFormat.JEFF`                                    | `JeffProgram`     |
 | Generate QIR                             | `OutputFormat.QIR_BASE` or `OutputFormat.QIR_ADAPTIVE` | `QIRProgram`      |
 
+After rotation merging, the default pipeline groups controlled gates with the
+same ordered controls and targets. Canonicalization cancels named inverses and
+combines constant rotations inside each group, retaining controlled phase.
+Runtime bodies remain grouped for later binding or explicit fusion. Grouping
+follows the same linear wires within one block, across independent operations
+and scalar parameter computations. It preserves loop structure and does not
+combine across iterations. The standalone pass is `combine-controlled-gates`.
+
 For example, select optimized QCO to inspect the representation after the
 default QCO pass pipeline:
 
@@ -329,8 +337,8 @@ independent_qubits = """module {
   func.func @main() -> (i1, i1) attributes {mqt.entry_point} {
     %q0 = qco.alloc : !qco.qubit
     %q1 = qco.alloc : !qco.qubit
-    %h0 = qco.h %q0 : !qco.qubit -> !qco.qubit
-    %h1 = qco.h %q1 : !qco.qubit -> !qco.qubit
+    %h0 = qco.h %q0 : !qco.qubit
+    %h1 = qco.h %q1 : !qco.qubit
     %m0, %c0 = qco.measure %h0 : !qco.qubit
     %m1, %c1 = qco.measure %h1 : !qco.qubit
     qco.sink %m0 : !qco.qubit

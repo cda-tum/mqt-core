@@ -14,7 +14,6 @@ from collections.abc import Sequence
 from typing import overload
 
 from mqt.core.qdmi import builtin_driver as builtin_driver
-from mqt.core.qdmi import slurm as slurm
 
 class Session:
     """One initialized QDMI driver session."""

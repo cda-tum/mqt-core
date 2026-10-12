@@ -94,6 +94,12 @@ static void printTargetAliasing(OpAsmPrinter& printer, Operation* /*op*/,
   mqt::printTargetAliasing(printer, region, targetsIn);
 }
 
+void MeasureOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getQubitOut(), "q");
+  setNameFn(getResult(), "b");
+}
+
 ParseResult IfOp::parse(::mlir::OpAsmParser& parser,
                         ::mlir::OperationState& result) {
   auto& builder = parser.getBuilder();

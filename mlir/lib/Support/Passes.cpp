@@ -64,6 +64,7 @@ void registerMQTCompilerPasses() {
   static const auto REGISTERED = [] {
     registerTransformsPasses();
     registerConvertCBitToMemRef();
+    qco::registerCombineControlledGates();
     qco::registerDecomposeMultiControlled();
     qco::registerFuseSingleQubitUnitaryRuns();
     qco::registerHadamardLifting();
@@ -99,6 +100,8 @@ void registerMQTCompilerPasses() {
 
 void populateDefaultQCOOptimizationPipeline(OpPassManager& pm) {
   pm.addPass(qco::createMergeSingleQubitRotationGates());
+  pm.addPass(qco::createCombineControlledGates());
+  pm.addPass(createCanonicalizerPass());
 }
 
 void populateQIRPreparationPipeline(OpPassManager& pm) {
@@ -199,6 +202,7 @@ void populateQCOCleanupPipeline(OpPassManager& pm, bool removeDeadValues) {
 
 void populateQIRCleanupPipeline(OpPassManager& pm, bool useAdaptive) {
   addSimplificationPasses(pm);
+  pm.addPass(createMem2Reg());
   pm.addPass(qir::createQIRCleanupPass());
   pm.addPass(createRemoveDeadValuesPass());
   pm.addPass(qir::createQIRSetAttributesAndMetadata({useAdaptive}));

@@ -46,6 +46,9 @@ QC, QCO, and QTensor share these requirements for semantic round trips:
 - Quantum results of helpers and structured control flow correspond to quantum
   inputs in the same order. Updated quantum arguments form a suffix after the
   ordinary function results. Quantum values in QCO have exactly one use.
+  `qco::verifyLinearity` checks both use counts and positional correspondence
+  after ordinary MLIR verification. Public QCO program boundaries run this
+  check; parsing MLIR alone does not establish it.
 
 Indices must be in bounds. Distinct runtime indices used together must select
 non-overlapping resources; extraction and reinsertion indices must select the
@@ -65,7 +68,7 @@ passing the complete register to the next loop iteration:
 
 ```mlir
 func.func private @flip(%q: !qco.qubit) -> !qco.qubit {
-  %out = qco.x %q : !qco.qubit -> !qco.qubit
+  %out = qco.x %q : !qco.qubit
   return %out : !qco.qubit
 }
 func.func @main() attributes {mqt.entry_point} {

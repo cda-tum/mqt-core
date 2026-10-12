@@ -195,10 +195,10 @@ TEST_F(QCOQubitReuseTest, preserveEffectfulUserOrder) {
       func.func @main() attributes {mqt.entry_point} {
         %q0 = qco.alloc : !qco.qubit
         %q1 = qco.alloc : !qco.qubit
-        %q1_h = qco.h %q1 : !qco.qubit -> !qco.qubit
+        %q1_h = qco.h %q1 : !qco.qubit
         %q1_m, %c1 = qco.measure %q1_h : !qco.qubit
         func.call @record1(%c1) : (i1) -> ()
-        %q0_h = qco.h %q0 : !qco.qubit -> !qco.qubit
+        %q0_h = qco.h %q0 : !qco.qubit
         %q0_m, %c0 = qco.measure %q0_h : !qco.qubit
         func.call @record0(%c0) : (i1) -> ()
         qco.sink %q0_m : !qco.qubit
@@ -232,7 +232,7 @@ TEST_F(QCOQubitReuseTest, PreservesHelpersInsideNestedSymbolTables) {
           func.func private @helper(%q: !qco.qubit) -> !qco.qubit
               attributes {mqt.unitary} {
             %unused = arith.constant 0.25 : f64
-            %out = qco.x %q : !qco.qubit -> !qco.qubit
+            %out = qco.x %q : !qco.qubit
             return %out : !qco.qubit
           }
           func.func @inner() {
@@ -267,7 +267,7 @@ TEST_F(QCOQubitReuseTest, ReuseAcrossTransitivePhaseFreeUnitaryCalls) {
         func.func private @record1(i1)
         func.func private @flip(%q: !qco.qubit) -> !qco.qubit
             attributes {mqt.unitary, no_inline} {
-          %out = qco.x %q : !qco.qubit -> !qco.qubit
+          %out = qco.x %q : !qco.qubit
           return %out : !qco.qubit
         }
         func.func private @left(%q: !qco.qubit) -> !qco.qubit
@@ -286,7 +286,7 @@ TEST_F(QCOQubitReuseTest, ReuseAcrossTransitivePhaseFreeUnitaryCalls) {
         }
         func.func @main() attributes {mqt.entry_point} {
           %q0 = qco.alloc : !qco.qubit
-          %h = qco.h %q0 : !qco.qubit -> !qco.qubit
+          %h = qco.h %q0 : !qco.qubit
           %q1 = qco.alloc : !qco.qubit
           %x = qco.call @diamond(%q1) : (!qco.qubit) -> !qco.qubit
           %m0, %b0 = qco.measure %h : !qco.qubit
@@ -339,7 +339,7 @@ TEST_F(QCOQubitReuseTest, skipReuseAcrossBlocks) {
         qco.sink %q0_m : !qco.qubit
         cf.br ^next
       ^next:
-        %q1_h = qco.h %q1 : !qco.qubit -> !qco.qubit
+        %q1_h = qco.h %q1 : !qco.qubit
         %q1_m, %c1 = qco.measure %q1_h : !qco.qubit
         qco.sink %q1_m : !qco.qubit
         return %c0, %c1 : i1, i1

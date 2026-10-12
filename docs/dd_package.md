@@ -66,11 +66,11 @@ module {
   func.func @main() attributes {mqt.entry_point} {
     %q0 = qco.static 0 : !qco.qubit
     %q1 = qco.static 1 : !qco.qubit
-    %q0_h = qco.h %q0 : !qco.qubit -> !qco.qubit
+    %q0_h = qco.h %q0 : !qco.qubit
     %q0_out, %q1_out = qco.ctrl(%q0_h) targets(%target = %q1) {
-      %target_out = qco.x %target : !qco.qubit -> !qco.qubit
+      %target_out = qco.x %target : !qco.qubit
       qco.yield %target_out : !qco.qubit
-    } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+    } : ({!qco.qubit}, {!qco.qubit})
     qco.sink %q0_out : !qco.qubit
     qco.sink %q1_out : !qco.qubit
     return

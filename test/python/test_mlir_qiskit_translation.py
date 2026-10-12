@@ -204,7 +204,9 @@ def test_dense_unitary_import_converts_qiskit_qubit_order() -> None:
     entries = [complex(float(real), float(imaginary)) for real, imaginary in matches]
     imported = np.asarray(entries).reshape((4, 4))
     assert np.allclose(imported, matrix)
-    assert "%1, %0 : !qc.qubit, !qc.qubit" in ir
+    loaded_qubits = re.findall(r"(?m)^\s*(%\w+) = memref.load %alloc\[%c[01]\]", ir)
+    assert len(loaded_qubits) == 2
+    assert f"{loaded_qubits[1]}, {loaded_qubits[0]} : !qc.qubit, !qc.qubit" in ir
 
 
 @pytest.mark.parametrize("num_qubits", [1, 2, 3])

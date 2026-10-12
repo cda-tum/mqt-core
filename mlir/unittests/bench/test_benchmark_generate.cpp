@@ -36,6 +36,8 @@
 
 #include "gtest/gtest.h"
 
+#include "mlir/Dialect/SCF/IR/SCF.h"
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/LogicalResult.h"
 
@@ -207,31 +209,60 @@ TEST(GenerateProgramTest, ExecutesRuntimePhasesThroughJeffAndAdaptiveQIR) {
   expectPortableExecution(Shor{{.number = 15}}, 64);
 }
 
-TEST(GenerateProgramTest, RoundTripsRuntimePhasesThroughOpenQASM) {
-  for (auto method : {QPEMethod::Standard, QPEMethod::Iterative}) {
-    // Direct import cannot prove nested QFT indices for larger registers.
-    const size_t precision = method == QPEMethod::Standard ? 1U : 8U;
-    const auto phase =
-        method == QPEMethod::Standard
-            ? Phase(uint64_t{1} << 63U, std::numeric_limits<uint64_t>::max())
-            : Phase(3, 8);
-    SCOPED_TRACE(static_cast<int>(method));
-    SCOPED_TRACE(phase.numerator());
-    const QPE benchmark{
-        {.precision = precision, .phase = phase, .method = method}};
-    auto qc = generate(benchmark);
-    ASSERT_TRUE(mlir::succeeded(qc));
-    auto qasm = qc->toOpenQASM3();
+template <class Benchmark>
+static void expectOpenQASMRoundTrip(const Benchmark& benchmark, size_t shots) {
+  SCOPED_TRACE(toManifestJSON(benchmark));
+  auto qc = generate(benchmark);
+  ASSERT_TRUE(mlir::succeeded(qc));
+  const bool hasLoop = test::countOps<scf::ForOp>(qc->module()) != 0;
+  for (const bool optimize : {false, true}) {
+    SCOPED_TRACE(optimize);
+    FailureOr<OpenQASMProgram> qasm = failure();
+    if (optimize) {
+      auto compiled = runDefaultPipeline(CompilerInput{qc->copy()},
+                                         ProgramFormat::OpenQASM3);
+      ASSERT_TRUE(mlir::succeeded(compiled));
+      qasm = std::get<OpenQASMProgram>(std::move(*compiled));
+    } else {
+      qasm = qc->toOpenQASM3();
+    }
     ASSERT_TRUE(mlir::succeeded(qasm));
     auto restored = QCProgram::fromOpenQASMString(qasm->source());
     ASSERT_TRUE(mlir::succeeded(restored));
+    if (hasLoop) {
+      EXPECT_GT(test::countOps<scf::ForOp>(restored->module()), 0);
+    }
     auto qco = std::move(*restored).intoQCO();
     ASSERT_TRUE(mlir::succeeded(qco));
     auto counts =
-        qco::sample(mlir::mqt::getEntryPoint(qco->module()), 2048, 17);
+        qco::sample(mlir::mqt::getEntryPoint(qco->module()), shots, 17);
     ASSERT_TRUE(succeeded(counts));
     expectReference(benchmark, *counts);
   }
+}
+
+TEST(GenerateProgramTest,
+     RoundTripsStructuredOpenQASMThroughBothCompilerPaths) {
+  expectOpenQASMRoundTrip(
+      QPE{{
+          .precision = 8,
+          .phase =
+              Phase(uint64_t{1} << 63U, std::numeric_limits<uint64_t>::max()),
+      }},
+      2048);
+  expectOpenQASMRoundTrip(QPE{{
+                              .precision = 8,
+                              .phase = Phase(3, 8),
+                              .method = QPEMethod::Iterative,
+                          }},
+                          2048);
+  expectOpenQASMRoundTrip(QFTAdder{{
+                              .addend = "101",
+                              .accumulator = "011",
+                              .method = QFTAdderMethod::Register,
+                          }},
+                          2048);
+  expectOpenQASMRoundTrip(Shor{{.number = 15}}, 64);
 }
 
 template <class Benchmark>
@@ -266,17 +297,6 @@ static void expectStaticTargetExecution(const Benchmark& benchmark) {
   auto sampled = qco::sample(mlir::mqt::getEntryPoint(qco->module()), 2048, 17);
   ASSERT_TRUE(succeeded(sampled));
   expectReference(benchmark, *sampled);
-}
-
-TEST(GenerateProgramTest, ExportsConstantAdderRuntimePhasesToOpenQASM) {
-  auto program = generate(QFTAdder{{
-      .addend = "101",
-      .accumulator = "001",
-      .method = QFTAdderMethod::Constant,
-      .overflow = QFTAdderOverflow::Carry,
-  }});
-  ASSERT_TRUE(mlir::succeeded(program));
-  EXPECT_TRUE(mlir::succeeded(program->toOpenQASM3()));
 }
 
 TEST(GenerateProgramTest, CompilesRuntimePhasesForStaticTargets) {

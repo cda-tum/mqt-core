@@ -29,6 +29,7 @@ if(NOT TARGET ${TARGET_NAME})
     orcdebugging
     orcjit
     orctargetprocess
+    passes
     support
     targetparser
     transformutils)
