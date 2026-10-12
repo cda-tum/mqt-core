@@ -67,7 +67,7 @@ analyzeQTensorBranch(Block* block, size_t qTensorArgumentIndex,
   bool reachedInsertPhase = false;
 
   while (true) {
-    /// SCF folding may temporarily leave a loop-carried argument unused.
+    // SCF folding may temporarily leave a loop-carried argument unused.
     if (!currentQTensor.hasOneUse()) {
       return std::nullopt;
     }
@@ -148,6 +148,7 @@ static Value insertQTensorScalars(Value tensor, ValueRange scalars,
 
 namespace {
 
+// TensorSlots exceeds LLVM's size limit for default inline capacity.
 struct TensorSlots {
   Value original;
   Value remaining;

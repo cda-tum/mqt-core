@@ -19,6 +19,7 @@
 
 #include "gtest/gtest.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <vector>
 
@@ -39,13 +40,26 @@ TEST(ResultsProbabilities, DenseSumToOneAndBufferTooSmall) {
   }
   EXPECT_NEAR(sum, 1.0, 1e-6);
 
+  std::vector<double> reused(4, -1.);
+  for (size_t query = 0; query < 2; ++query) {
+    std::ranges::fill(reused, -1.);
+    ASSERT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
+                  j.job, 0U, QDMI_JOB_RESULT_PROBABILITIES_DENSE,
+                  reused.size() * sizeof(double), reused.data(), nullptr),
+              QDMI_SUCCESS);
+    EXPECT_NEAR(reused[0], 0.5, 1e-12);
+    EXPECT_EQ(reused[1], 0.);
+    EXPECT_EQ(reused[2], 0.);
+    EXPECT_NEAR(reused[3], 0.5, 1e-12);
+  }
+
   const size_t sz =
       qdmi_test::querySize(j.job, QDMI_JOB_RESULT_PROBABILITIES_DENSE);
   if (sz > 0) {
     std::vector<char> tooSmall(sz - 1);
     EXPECT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
-                  j.job, QDMI_JOB_RESULT_PROBABILITIES_DENSE, tooSmall.size(),
-                  tooSmall.data(), nullptr),
+                  j.job, 0U, QDMI_JOB_RESULT_PROBABILITIES_DENSE,
+                  tooSmall.size(), tooSmall.data(), nullptr),
               QDMI_ERROR_INVALIDARGUMENT);
   }
 }
@@ -72,7 +86,7 @@ TEST(ResultsProbabilities, SparseSumToOneAndBufferTooSmall) {
   if (ksz > 0) {
     std::vector<char> tooSmall(ksz - 1);
     EXPECT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
-                  j.job, QDMI_JOB_RESULT_PROBABILITIES_SPARSE_KEYS,
+                  j.job, 0U, QDMI_JOB_RESULT_PROBABILITIES_SPARSE_KEYS,
                   tooSmall.size(), tooSmall.data(), nullptr),
               QDMI_ERROR_INVALIDARGUMENT);
   }
@@ -81,7 +95,7 @@ TEST(ResultsProbabilities, SparseSumToOneAndBufferTooSmall) {
   if (vsz > 0) {
     std::vector<char> tooSmall(vsz - 1);
     EXPECT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
-                  j.job, QDMI_JOB_RESULT_PROBABILITIES_SPARSE_VALUES,
+                  j.job, 0U, QDMI_JOB_RESULT_PROBABILITIES_SPARSE_VALUES,
                   tooSmall.size(), tooSmall.data(), nullptr),
               QDMI_ERROR_INVALIDARGUMENT);
   }

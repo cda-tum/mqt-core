@@ -204,14 +204,16 @@ void populateTargetCompilationPipeline(OpPassManager& pm,
   pm.addPass(std::make_unique<PrepareTargetCompilationPass>(environment, false,
                                                             mapping));
   const auto& target = environment.target();
-  /// The module cleanup below owns canonicalization and dead symbols.
+  // The module cleanup below owns canonicalization and dead symbols.
   pm.addPass(createInlinerPass({}, [](OpPassManager&) {}));
-  pm.addPass(createSCCPPass());
-  /// Placement changes region results; run liveness once afterwards.
+  // Fold tensor accesses before SCCP; defer liveness until after placement.
   populateQCOCleanupPipeline(pm, /*removeDeadValues=*/false);
+  pm.addPass(qco::createCombineControlledGates(target));
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createSCCPPass());
   pm.addPass(qco::createUnrollLoopsForPayload());
   pm.addPass(createSCCPPass());
-  /// Unrolling exposes static tensor slots and unreachable callees.
+  // Unrolling exposes static tensor slots and unreachable callees.
   pm.addPass(mqt::createSimplifyClassicalControl());
   pm.addPass(createCanonicalizerPass(
       GreedyRewriteConfig{}.setUseTopDownTraversal().setMaxIterations(
@@ -221,13 +223,16 @@ void populateTargetCompilationPipeline(OpPassManager& pm,
   pm.addPass(createSymbolDCEPass());
   pm.addPass(qco::createLegalizeControlFlow());
   pm.addPass(qco::createDecomposeMultiControlled(target));
+  pm.addPass(qco::createElideTerminalSwapsPass());
   pm.addPass(qco::createFuseTwoQubitGates(target));
-  /// U fusion shrinks runs before routing. Other bases can expand symbolic
-  /// runs, so emit them once during native synthesis, after cleanup.
+  // U fusion shrinks runs before routing. Other bases can expand symbolic
+  // runs, so emit them once during native synthesis, after cleanup.
   if (const auto basis = target.synthesisBasis();
       basis && basis->singleQubit == CompilerTarget::SingleQubitBasis::U) {
     pm.addPass(qco::createFuseSingleQubitUnitaryRuns(target));
   }
+  // Keep native controlled U bodies; distribute other composites for lowering.
+  pm.addPass(mqt::createUnrollModifiers());
   switch (target.connectivityKind()) {
   case CompilerTarget::Connectivity::Kind::Explicit: {
     qco::MappingPassOptions mappingOptions;
@@ -253,13 +258,21 @@ void populateTargetSynthesisPipeline(OpPassManager& pm,
   pm.addPass(std::make_unique<PrepareTargetCompilationPass>(environment, true,
                                                             mapping));
   const auto& target = environment.target();
-  /// The module cleanup below owns canonicalization and dead symbols.
+  // The module cleanup below owns canonicalization and dead symbols.
   pm.addPass(createInlinerPass({}, [](OpPassManager&) {}));
-  /// Placement changes region results; run liveness once afterwards.
+  // Placement changes region results; run liveness once afterwards.
   populateQCOCleanupPipeline(pm, /*removeDeadValues=*/false);
+  pm.addPass(qco::createCombineControlledGates(target));
+  pm.addPass(createCanonicalizerPass());
   pm.addPass(qco::createLegalizeControlFlow());
   pm.addPass(qco::createDecomposeMultiControlled(target));
+  pm.addPass(qco::createElideTerminalSwapsPass());
   pm.addPass(qco::createFuseTwoQubitGates(target));
+  if (const auto basis = target.synthesisBasis();
+      basis && basis->singleQubit == CompilerTarget::SingleQubitBasis::U) {
+    pm.addPass(qco::createFuseSingleQubitUnitaryRuns(target));
+  }
+  pm.addPass(mqt::createUnrollModifiers());
   pm.addPass(qco::createPlacementPass(target));
   qco::populateTargetNativeSynthesisPipeline(pm);
 }

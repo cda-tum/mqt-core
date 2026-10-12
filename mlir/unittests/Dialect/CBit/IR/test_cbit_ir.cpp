@@ -87,7 +87,33 @@ TEST_F(CBitIRTest, ParsesAndPrintsRegisterOperations) {
   EXPECT_NE(printed.find("cbit.store"), std::string::npos);
   EXPECT_NE(printed.find("cbit.load"), std::string::npos);
   EXPECT_NE(printed.find("cbit.read"), std::string::npos);
+  EXPECT_NE(printed.find("%b = cbit.load"), std::string::npos) << printed;
+  EXPECT_NE(printed.find("%val = cbit.read"), std::string::npos) << printed;
   EXPECT_NE(printed.find("cbit.write"), std::string::npos);
+  EXPECT_TRUE(parse(printed));
+}
+
+TEST_F(CBitIRTest, PrintsSourceRegisterNames) {
+  auto moduleOp = parse(R"mlir(
+    module {
+      func.func @main() {
+        %first = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "result"} : !cbit.reg<2>
+        %second = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "7 bits"} : !cbit.reg<2>
+        %third = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
+        return
+      }
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+
+  std::string printed;
+  llvm::raw_string_ostream stream(printed);
+  moduleOp->print(stream);
+  EXPECT_NE(printed.find("%result = cbit.alloc"), std::string::npos) << printed;
+  EXPECT_NE(printed.find("%_7_bits = cbit.alloc"), std::string::npos)
+      << printed;
+  EXPECT_NE(printed.find("%c = cbit.alloc"), std::string::npos) << printed;
+  EXPECT_TRUE(parse(printed));
 }
 
 TEST_F(CBitIRTest, RejectsReadWidthMismatch) {

@@ -13,6 +13,8 @@
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
+#include "mqt/Dialect/QTensor/IR/QTensorDialect.h"
+#include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -272,8 +274,8 @@ getExactConstantTripCount(scf::ForOp loop) {
 
 static LogicalResult foldStaticBranches(ModuleOp moduleOp) {
   mqt::simplifyClassicalControl(moduleOp);
-  /// Fold branches without transforming loops before the capture and unroll
-  /// safety checks below.
+  // Fold branches without transforming loops before the capture and unroll
+  // safety checks below.
   RewritePatternSet patterns(moduleOp.getContext());
   populateFoldStaticIfPatterns(patterns);
   IndexSwitchOp::getCanonicalizationPatterns(patterns, moduleOp.getContext());
@@ -503,6 +505,28 @@ struct UnrollLoopsForPayload final
     : impl::UnrollLoopsForPayloadBase<UnrollLoopsForPayload> {
   using UnrollLoopsForPayloadBase::UnrollLoopsForPayloadBase;
 
+  static bool carriesQTensor(scf::ForOp loop) {
+    return llvm::any_of(loop.getInitArgs(), [](Value value) {
+      auto type = dyn_cast<RankedTensorType>(value.getType());
+      return type && isa<QubitType>(type.getElementType());
+    });
+  }
+
+  /// Specialize a nested sweep before expanding its enclosing repetition.
+  static std::pair<scf::ForOp, llvm::APInt>
+  selectTensorLoop(scf::ForOp loop, const llvm::APInt& tripCount) {
+    if (tripCount.ugt(1)) {
+      // Do not cross branches: an outer induction value may make them dead.
+      for (auto nested : loop.getBody()->getOps<scf::ForOp>()) {
+        if (const auto nestedCount = getExactConstantTripCount(nested);
+            nestedCount && carriesQTensor(nested)) {
+          return selectTensorLoop(nested, *nestedCount);
+        }
+      }
+    }
+    return {loop, tripCount};
+  }
+
 protected:
   void runOnOperation() override {
     const auto support = PayloadControlSupport::read(
@@ -525,14 +549,11 @@ protected:
     IRRewriter rewriter(&getContext());
     while (true) {
       SmallVector<std::pair<scf::ForOp, llvm::APInt>> loops;
+      SmallVector<scf::ForOp> repetitions;
       getOperation().walk<WalkOrder::PreOrder>([&](scf::ForOp loop) {
         const auto tripCount = getExactConstantTripCount(loop);
-        const bool carriesQTensor =
-            llvm::any_of(loop.getInitArgs(), [](Value value) {
-              auto type = dyn_cast<RankedTensorType>(value.getType());
-              return type && isa<QubitType>(type.getElementType());
-            });
-        if ((!carriesQTensor || indexed) &&
+        const bool tensor = carriesQTensor(loop);
+        if ((!tensor || indexed) &&
             support->coversIteration(ControlFeature::CountedIteration, loop,
                                      tripCount)) {
           return WalkResult::advance();
@@ -540,7 +561,18 @@ protected:
         if (!tripCount) {
           return WalkResult::skip();
         }
-        loops.emplace_back(loop, *tripCount);
+        auto selected = tensor && !indexed ? selectTensorLoop(loop, *tripCount)
+                                           : std::pair{loop, *tripCount};
+        if (selected.first != loop) {
+          for (auto parent = selected.first->getParentOfType<scf::ForOp>();;
+               parent = parent->getParentOfType<scf::ForOp>()) {
+            repetitions.push_back(parent);
+            if (parent == loop) {
+              break;
+            }
+          }
+        }
+        loops.push_back(selected);
         return WalkResult::skip();
       });
       if (loops.empty()) {
@@ -563,8 +595,8 @@ protected:
             signalPassFailure();
             return;
           }
-          /// Promotion preserves child operations and can make their bounds
-          /// literal. Defer larger loops until static branches have folded.
+          // Promotion preserves child operations and can make their bounds
+          // literal. Defer larger loops until static branches have folded.
           for (auto nested : nestedLoops) {
             const auto nestedTripCount = getExactConstantTripCount(nested);
             if (nestedTripCount && *nestedTripCount == 1 &&
@@ -590,8 +622,8 @@ protected:
         loop.getRegion().walk([&](Operation* operation) {
           bodyOperations += operation != terminator;
         });
-        /// LLVM skips terminator-only bodies. Budget a temporary constant so
-        /// its unroller can remap iteration arguments and induction values.
+        // LLVM skips terminator-only bodies. Budget a temporary constant so
+        // its unroller can remap iteration arguments and induction values.
         const bool emptyBody = bodyOperations == 0U;
         bodyOperations = std::max(bodyOperations, uint64_t{1});
         const uint64_t remaining = maxOperations - clonedOperations;
@@ -614,8 +646,8 @@ protected:
         if (emptyBody) {
           OpBuilder::InsertionGuard guard(rewriter);
           rewriter.setInsertionPointToStart(loop.getBody());
-          /// Remove this workaround when LLVM unrolls empty bodies. The
-          /// static-branch cleanup below removes the unused constants.
+          // Remove this workaround when LLVM unrolls empty bodies. The
+          // static-branch cleanup below removes the unused constants.
           arith::ConstantIndexOp::create(rewriter, loop.getLoc(), 0);
         }
         if (failed(loopUnrollFull(loop))) {
@@ -625,6 +657,33 @@ protected:
         }
       }
 
+      if (!repetitions.empty()) {
+        RewritePatternSet patterns(&getContext());
+        getContext()
+            .getLoadedDialect<qtensor::QTensorDialect>()
+            ->getCanonicalizationPatterns(patterns);
+        qtensor::ExtractOp::getCanonicalizationPatterns(patterns,
+                                                        &getContext());
+        qtensor::InsertOp::getCanonicalizationPatterns(patterns, &getContext());
+        SmallVector<Operation*> operations;
+        for (auto repetition : repetitions) {
+          operations.push_back(repetition);
+          for (Operation& operation : repetition.getBody()->getOperations()) {
+            if (operation.getNumRegions() == 0) {
+              operations.push_back(&operation);
+            }
+          }
+        }
+        // Canonicalize the enclosing loop chain without visiting unrelated
+        // regions. General folding below may erase these saved roots.
+        if (failed(applyOpPatternsGreedily(
+                operations, std::move(patterns),
+                GreedyRewriteConfig{}.setStrictness(
+                    GreedyRewriteStrictness::ExistingAndNewOps)))) {
+          signalPassFailure();
+          return;
+        }
+      }
       if (failed(foldStaticBranches(getOperation()))) {
         signalPassFailure();
         return;

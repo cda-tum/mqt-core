@@ -107,6 +107,7 @@ template <typename JeffOpType>
 }
 
 /// Nest jeff modifiers in QCO's canonical `ctrl { pow { inv { ... } } }` order.
+///
 /// @param lambda Build the inner operation from its targets and return its
 /// results.
 template <typename JeffOpType>
@@ -263,6 +264,7 @@ static cbit::RegisterType getCBitType(Type type) {
 }
 
 /// Earlier bit reads and static length queries need no snapshot.
+///
 /// Other users may keep old array contents live after the update.
 static bool needsArrayCopy(Value value, Operation* update) {
   return llvm::any_of(value.getUsers(), [&](Operation* user) {
@@ -835,7 +837,6 @@ struct ConvertJeffCustomOpToQCO final : OpConversionPattern<jeff::CustomOp> {
 /// is converted to
 /// ```mlir
 /// %q0_out, %q1_out = qco.rxx(%theta) %q0_in, %q1_in : !qco.qubit, !qco.qubit
-/// -> !qco.qubit, !qco.qubit
 /// ```
 struct ConvertJeffPPROpToQCO final : OpConversionPattern<jeff::PPROp> {
   using OpConversionPattern::OpConversionPattern;
@@ -893,7 +894,7 @@ struct ConvertJeffPPROpToQCO final : OpConversionPattern<jeff::PPROp> {
 /// is converted to
 /// ```mlir
 /// %q_out = qco.if %condition args(%a = %q_in) -> (!qco.qubit) {
-///   %q_res = qco.x %a : !qco.qubit -> !qco.qubit
+///   %q_res = qco.x %a : !qco.qubit
 ///   qco.yield %q_res : !qco.qubit
 /// } else args(%a = %q_in) {
 ///   qco.yield %a : !qco.qubit
@@ -996,7 +997,7 @@ struct ConvertJeffSwitchOpToQCO final : OpConversionPattern<jeff::SwitchOp> {
 /// %reg_out = scf.for %iv = %start to %stop step %step iter_args(%a = %reg_in)
 /// -> (tensor<2x!qco.qubit>) {
 ///   %reg0, %q0 = qtensor.extract %a[%iv] : tensor<2x!qco.qubit>
-///   %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %q0 : !qco.qubit
 ///   %reg1 = qtensor.insert %q1 into %reg0[%iv] : tensor<2x!qco.qubit>
 ///   scf.yield %reg1 : tensor<2x!qco.qubit>
 /// }
@@ -1059,7 +1060,7 @@ struct ConvertJeffForOpToQCO final : OpConversionPattern<jeff::ForOp> {
 ///   scf.condition(%cond) %q1 : !qco.qubit
 /// } do {
 /// ^bb0(%arg0: !qco.qubit):
-///   %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.h %arg0 : !qco.qubit
 ///   scf.yield %q2 : !qco.qubit
 /// }
 /// ```
@@ -1134,7 +1135,7 @@ struct ConvertJeffWhileOpToQCO final : OpConversionPattern<jeff::WhileOp> {
          llvm::zip_equal(conditionIndices, scfWhile.getResults())) {
       results[index - 1] = result;
     }
-    /// Each region has its own argument tuple; CBit references remain captures.
+    // Each region has its own argument tuple; CBit references remain captures.
     moveRegion<scf::ConditionOp>(op.getBefore(), scfWhile.getBefore(), rewriter,
                                  typeConverter, inValues, conditionIndices,
                                  capturedInputs);
@@ -1310,8 +1311,8 @@ protected:
         }
         sharedArrayUpdates.insert(update);
       }
-      /// ponytail: reject live arrays across any mutating region; track region
-      /// argument aliases if independent live arrays need support.
+      // Live arrays across mutating regions require region argument alias
+      // tracking.
       if (isa<jeff::SwitchOp, jeff::ForOp, jeff::WhileOp>(operation) &&
           llvm::any_of(operation->getOperands(), [&](Value value) {
             return getCBitType(value.getType()) &&

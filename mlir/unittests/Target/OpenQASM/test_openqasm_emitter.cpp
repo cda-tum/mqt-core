@@ -908,8 +908,9 @@ gate repeated(theta) q {
   for int i in [0:2] { rx(theta + pi + i) q; }
   while (false) { x q; }
 }
+gate wrapper(theta) q { repeated(theta) q; }
 qubit q;
-repeated(0.5) q;
+wrapper(0.5) q;
 bit result = measure q;
 )qasm";
 
@@ -929,6 +930,9 @@ bit result = measure q;
   auto repeated = moduleOp->lookupSymbol<func::FuncOp>("repeated");
   ASSERT_TRUE(repeated);
   EXPECT_FALSE(mqt::isUnitaryFunction(repeated));
+  auto wrapper = moduleOp->lookupSymbol<func::FuncOp>("wrapper");
+  ASSERT_TRUE(wrapper);
+  EXPECT_FALSE(mqt::isUnitaryFunction(wrapper));
   EXPECT_EQ(std::distance(repeated.getOps<scf::ForOp>().begin(),
                           repeated.getOps<scf::ForOp>().end()),
             1);
@@ -936,7 +940,7 @@ bit result = measure q;
   ASSERT_TRUE(entry);
   auto calls = entry.getOps<func::CallOp>();
   ASSERT_EQ(std::distance(calls.begin(), calls.end()), 1);
-  EXPECT_EQ((*calls.begin()).getCallee(), "repeated");
+  EXPECT_EQ((*calls.begin()).getCallee(), "wrapper");
 
   EXPECT_TRUE(succeeded(verify(*moduleOp)));
 }
@@ -1711,7 +1715,7 @@ switch (int(choose)) {
   size_t switches = 0;
   moduleOp->walk([&](scf::IndexSwitchOp switchOp) {
     ++switches;
-    /// Only the enclosing result is carried; branch locals must not escape.
+    // Only the enclosing result is carried; branch locals must not escape.
     EXPECT_EQ(switchOp.getNumResults(), 1);
   });
   EXPECT_EQ(switches, 1);
@@ -2115,10 +2119,10 @@ x q;
   auto wrapper = moduleOp->lookupSymbol<func::FuncOp>("wrapper");
   ASSERT_TRUE(looped);
   ASSERT_TRUE(wrapper);
-  EXPECT_FALSE(mqt::isUnitaryFunction(looped));
-  EXPECT_FALSE(mqt::isUnitaryFunction(wrapper));
-  EXPECT_EQ(std::distance(wrapper.getOps<func::CallOp>().begin(),
-                          wrapper.getOps<func::CallOp>().end()),
+  EXPECT_TRUE(mqt::isUnitaryFunction(looped));
+  EXPECT_TRUE(mqt::isUnitaryFunction(wrapper));
+  EXPECT_EQ(std::distance(wrapper.getOps<qc::CallOp>().begin(),
+                          wrapper.getOps<qc::CallOp>().end()),
             1);
 }
 

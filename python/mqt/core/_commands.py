@@ -6,12 +6,39 @@
 #
 # Licensed under the MIT License
 
-"""Useful commands for obtaining information about mqt-core."""
+"""Commands for the bundled native tools and installation paths."""
 
 from __future__ import annotations
 
+__lazy_modules__ = ["importlib.metadata", "pathlib", "subprocess", "typing"]
+
+import os
+import subprocess
+import sys
 from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
+from typing import NoReturn
+
+
+def compiler() -> NoReturn:
+    """Launch the bundled MQT compiler."""
+    run_tool("mqt-cc")
+
+
+def benchmark() -> NoReturn:
+    """Launch the bundled MQT benchmark driver."""
+    run_tool("mqt-core-bench")
+
+
+def run_tool(name: str) -> NoReturn:
+    """Run a bundled native tool and preserve its exit status."""
+    suffix = ".exe" if sys.platform == "win32" else ""
+    executable = Path(str(distribution("mqt-core").locate_file(f"mqt/core/bin/{name}{suffix}")))
+    arguments = [str(executable), *sys.argv[1:]]
+    if sys.platform == "win32":
+        # Windows exec exits the launcher without waiting for the native tool.
+        sys.exit(subprocess.run(arguments, check=False).returncode)  # ruff: ignore[subprocess-without-shell-equals-true]
+    os.execv(executable, arguments)  # ruff: ignore[start-process-with-no-shell]
 
 
 def include_dir() -> Path:

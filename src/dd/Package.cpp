@@ -37,6 +37,7 @@
 #include <initializer_list>
 #include <iostream>
 #include <limits>
+#include <memory_resource>
 #include <numeric>
 #include <queue>
 #include <random>
@@ -154,12 +155,11 @@ bool Package::garbageCollect(bool force) {
     matrixTrace.clear();
   }
 
-  /// Invalidate every affected cache before growth can allocate and fail.
+  // Invalidate every affected cache before growth can allocate and fail.
   const auto& stats = matrixVectorMultiplication.getStats();
   constexpr size_t limit = 1U << 20U;
   if (invV && stats.numBuckets < limit && stats.hits >= stats.numBuckets) {
-    /// ponytail: live nodes estimate working-set size; measure cache reuse
-    /// between collections before replacing this bounded growth heuristic.
+    // Use live nodes to estimate the working-set size for bounded cache growth.
     const auto live = vUniqueTable.getNumEntries();
     const auto buckets = live > limit / 4U ? limit : std::bit_ceil(4U * live);
     if (buckets > stats.numBuckets) {
@@ -406,9 +406,9 @@ template <typename Matrix>
 buildThreeQubitGateDD(Package& dd, const Matrix& mat, const Controls& controls,
                       const Qubit target0, const Qubit target1,
                       const Qubit target2) {
-  /// Reduce 8x8 terminals to 4x4, then four edges, then the root, inserting
-  /// controls between target levels. Matrix bits are MSB-first; DD levels
-  /// follow ascending qubit indices.
+  // Reduce 8x8 terminals to 4x4, then four edges, then the root, inserting
+  // controls between target levels. Matrix bits are MSB-first; DD levels
+  // follow ascending qubit indices.
   const std::array targets{target0, target1, target2};
   ensureGateQubitsInRange(dd.qubits(), controls, targets);
 
@@ -417,10 +417,10 @@ buildThreeQubitGateDD(Package& dd, const Matrix& mat, const Controls& controls,
       em{};
   fillTerminalMatrix(em, mat);
 
-  std::array<std::pair<Qubit, std::uint8_t>, 3> ordered{
-      {{target0, 2}, {target1, 1}, {target2, 0}},
+  std::array<std::pair<Qubit, uint32_t>, 3> ordered{
+      {{target0, 2U}, {target1, 1U}, {target2, 0U}},
   };
-  std::ranges::sort(ordered, {}, &std::pair<Qubit, std::uint8_t>::first);
+  std::ranges::sort(ordered, {}, &std::pair<Qubit, uint32_t>::first);
   const auto qLow = ordered[0].first;
   const auto qMid = ordered[1].first;
   const auto qHigh = ordered[2].first;
@@ -432,7 +432,7 @@ buildThreeQubitGateDD(Package& dd, const Matrix& mat, const Controls& controls,
   const auto endIt = controls.end();
   wrapControlsUntil(dd, it, endIt, qLow, em);
 
-  /// Remaining-bit index: bit(mid) + 2 * bit(high).
+  // Remaining-bit index: bit(mid) + 2 * bit(high).
   std::array<std::array<mCachedEdge, NEDGE>, NEDGE> emMid{};
   for (std::size_t rMH = 0; rMH < NEDGE; ++rMH) {
     for (std::size_t cMH = 0; cMH < NEDGE; ++cMH) {
@@ -569,7 +569,7 @@ mEdge Package::makeGateDD(const std::span<const std::complex<fp>> matrix,
   if (targets.empty()) {
     return cn.lookup(mCachedEdge::terminal(matrix[0]));
   }
-  /// The matrix-size check bounds the number of operands by the size_t width.
+  // The matrix-size check bounds the number of operands by the size_t width.
   std::array<std::pair<Qubit, size_t>, std::numeric_limits<size_t>::digits / 2>
       storage{};
   const auto operands = std::span{storage}.first(targets.size());
@@ -711,11 +711,17 @@ Package::determineMeasurementProbabilities(const vEdge& rootEdge,
             one.approximatelyZero() ? 0. : probability * one.mag2()};
   }
 
+#ifdef __cpp_lib_memory_resource
+  std::pmr::monotonic_buffer_resource memory;
+  std::pmr::unordered_map<const vNode*, fp> measurementProbabilities{&memory};
+#else
+  // macOS deployment targets before 14 do not provide memory resources.
   std::unordered_map<const vNode*, fp> measurementProbabilities;
+#endif
   std::queue<const vNode*> q;
 
-  measurementProbabilities.emplace(rootEdge.p,
-                                   ComplexNumbers::mag2(rootEdge.w));
+  measurementProbabilities.try_emplace(rootEdge.p,
+                                       ComplexNumbers::mag2(rootEdge.w));
   q.push(rootEdge.p);
 
   while (q.front()->v != index) {
@@ -922,11 +928,21 @@ fp Package::fidelity(const vEdge& x, const vEdge& y) {
 fp Package::fidelityOfMeasurementOutcomes(const vEdge& e,
                                           const SparsePVec& probs,
                                           const Permutation& permutation) {
+  const auto numQubits =
+      e.isTerminal() ? size_t{0} : static_cast<size_t>(e.p->v) + 1U;
+  if (numQubits > std::numeric_limits<size_t>::digits) {
+    throw std::out_of_range("Measurement outcomes must fit size_t.");
+  }
+  for (const auto& [physical, logical] : permutation) {
+    if (physical >= numQubits || logical >= permutation.size()) {
+      throw std::out_of_range("Measurement permutation index is out of range.");
+    }
+  }
   if (e.w.approximatelyZero()) {
     return 0.;
   }
   return fidelityOfMeasurementOutcomesRecursive(e, probs, 0, permutation,
-                                                e.p->v + 1U);
+                                                numQubits);
 }
 ComplexValue Package::innerProduct(const vEdge& x, const vEdge& y,
                                    const Qubit var) {
@@ -1031,7 +1047,7 @@ mEdge Package::partialTrace(const mEdge& a,
   return cn.lookup(r);
 }
 ComplexValue Package::trace(const mEdge& a, const std::size_t numQubits) {
-  if (a.isIdentity()) {
+  if (dd::isIdentity(a)) {
     return static_cast<ComplexValue>(a.w);
   }
   std::vector<size_t> eliminatedBelow(numQubits + 1);
@@ -1051,7 +1067,7 @@ mCachedEdge Package::trace(const mEdge& a,
   if (aWeight.exactlyZero()) {
     return mCachedEdge::zero();
   }
-  if (a.isIdentity()) {
+  if (dd::isIdentity(a)) {
     return {a.p, aWeight};
   }
 
@@ -1063,7 +1079,7 @@ mCachedEdge Package::trace(const mEdge& a,
   }
 
   if (through != below) {
-    /// Only complete traces are independent of the elimination mask.
+    // Only complete traces are independent of the elimination mask.
     const bool eliminateAll = through == static_cast<size_t>(v) + 1;
     if (eliminateAll) {
       if (const auto* r = getTraceComputeTable().lookup(a.p); r != nullptr) {
@@ -1173,7 +1189,7 @@ mEdge Package::reduceAncillae(mEdge e, const std::vector<bool>& ancillary,
     return e;
   }
 
-  if (e.isIdentity()) {
+  if (dd::isIdentity(e)) {
     auto g = e;
     for (auto i = 0U; i < ancillary.size(); ++i) {
       if (ancillary[i]) {
@@ -1250,7 +1266,7 @@ mEdge Package::reduceGarbage(const mEdge& e, const std::vector<bool>& garbage,
     return e;
   }
 
-  if (e.isIdentity()) {
+  if (dd::isIdentity(e)) {
     auto g = e;
     for (auto i = 0U; i < garbage.size(); ++i) {
       if (garbage[i]) {
@@ -1331,7 +1347,7 @@ mCachedEdge Package::reduceAncillaeRecursion(mNode* p,
       continue;
     }
 
-    if (p->e[i].isIdentity()) {
+    if (dd::isIdentity(p->e[i])) {
       auto g = mCachedEdge::one();
       for (auto j = lowerbound; j < p->v; ++j) {
         if (ancillary[j]) {
@@ -1460,7 +1476,7 @@ mCachedEdge Package::reduceGarbageRecursion(mNode* p,
       continue;
     }
 
-    if (p->e[i].isIdentity()) {
+    if (dd::isIdentity(p->e[i])) {
       edges[i] = mCachedEdge::one();
       for (auto j = lowerbound; j < p->v; ++j) {
         if (garbage[j]) {

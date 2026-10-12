@@ -9,6 +9,7 @@
  */
 
 #include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
 #include "dd/Node.hpp"
 
 #include "register_dd_export.hpp"
@@ -19,7 +20,6 @@
 #include "nanobind/stl/string.h"  // NOLINT(misc-include-cleaner)
 #include "nanobind/stl/vector.h"  // NOLINT(misc-include-cleaner)
 
-#include <cmath>
 #include <complex>
 #include <cstddef>
 #include <limits>
@@ -35,7 +35,7 @@ using Vector = nb::ndarray<nb::numpy, std::complex<dd::fp>, nb::ndim<1>>;
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 Vector getVector(const dd::vEdge& v, const dd::fp threshold) {
-  auto dataPtr = std::make_unique<dd::CVec>(v.getVector(threshold));
+  auto dataPtr = std::make_unique<dd::CVec>(dd::getVector(v, threshold));
   auto* const data = dataPtr->data();
   const auto size = dataPtr->size();
   const nb::capsule owner(dataPtr.get(), [](void* ptr) noexcept {
@@ -78,14 +78,14 @@ void registerVectorDDs(const nb::module_& m) {
             throw nb::index_error();
           }
         } else if (idx < 0 && numQubits > digits) {
-          /// Sign-extend negative indices beyond the native index width.
+          // Sign-extend negative indices beyond the native index width.
           auto decisions = std::string(numQubits, '1');
           for (auto bit = 0U; bit < digits; ++bit) {
             decisions[bit] = ((index >> bit) & 1U) != 0U ? '1' : '0';
           }
           return v.getValueByPath(numQubits, decisions);
         }
-        return v.getValueByIndex(index);
+        return dd::getValueByIndex(v, index);
       },
       "key"_a, "Get the amplitude of a basis state by index.");
 

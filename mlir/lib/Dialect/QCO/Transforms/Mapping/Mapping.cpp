@@ -51,12 +51,14 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/WalkResult.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <algorithm>
@@ -69,6 +71,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <random>
 #include <ranges>
@@ -109,19 +112,42 @@ class LayoutRecorder {
 public:
   LayoutRecorder(func::FuncOp function, const CompilerTarget& target)
       : module_(function->getParentOfType<ModuleOp>()) {
-    if (auto count =
-            module_->getAttrOfType<IntegerAttr>(mqt::kSourceQubitCountAttr)) {
-      layout_.emplace();
-      layout_->initial.assign(target.numSites(), -1);
-      layout_->inputCount = count.getInt();
-      layout_->sites.emplace(target.siteIds().begin(), target.siteIds().end());
-      valid_ = count.getInt() >= 0 &&
-               std::cmp_less_equal(count.getInt(), target.numSites());
+    auto count =
+        module_->getAttrOfType<IntegerAttr>(mqt::kSourceQubitCountAttr);
+    if (!count) {
+      return;
     }
+    layout_.emplace();
+    layout_->initial.assign(target.numSites(), -1);
+    layout_->inputCount = count.getInt();
+    layout_->sites.emplace(target.siteIds().begin(), target.siteIds().end());
+    valid_ = count.getInt() >= 0 &&
+             std::cmp_less_equal(count.getInt(), target.numSites());
+
+    auto circuit = module_->getAttrOfType<DictionaryAttr>("mqt.layout");
+    if (!circuit) {
+      return;
+    }
+    auto initial = circuit.getAs<DenseI64ArrayAttr>("initial");
+    circuitRouting_ = circuit.getAs<DenseI64ArrayAttr>("routing");
+    // Layout positions are compact; source labels can have gaps after cleanup.
+    for (Operation& operation : function.getBody().front()) {
+      if (auto indices = operation.getAttrOfType<DenseI64ArrayAttr>(
+              mqt::kSourceQubitIndicesAttr)) {
+        llvm::append_range(circuitSources_, indices.asArrayRef());
+      }
+    }
+    valid_ &= !circuit.contains("sites") && circuitRouting_ &&
+              llvm::equal(initial.asArrayRef(),
+                          llvm::seq<int64_t>(0, static_cast<int64_t>(
+                                                    circuitSources_.size()))) &&
+              llvm::all_of(circuitSources_, [&](int64_t source) {
+                return source >= 0 && source < layout_->inputCount;
+              });
   }
 
   void record(Operation* root, std::optional<int64_t> slot, size_t vertex) {
-    if (!layout_) {
+    if (!layout_ || !valid_) {
       return;
     }
     auto indices =
@@ -149,7 +175,7 @@ public:
     if (!layout_) {
       return success();
     }
-    std::vector<bool> used(layout_->initial.size(), false);
+    llvm::SmallBitVector used(layout_->initial.size());
     for (const auto vertex : layout_->initial) {
       if (vertex >= 0) {
         if (used[vertex]) {
@@ -168,6 +194,15 @@ public:
         used[next] = true;
       }
     }
+    if (circuitRouting_) {
+      // Translate the circuit permutation into placed device positions.
+      auto& routing = layout_->routing.emplace(layout_->initial.size());
+      std::iota(routing.begin(), routing.end(), int64_t{0});
+      for (auto [wire, source] : llvm::enumerate(circuitSources_)) {
+        const auto destination = circuitSources_[circuitRouting_[wire]];
+        routing[layout_->initial[source]] = layout_->initial[destination];
+      }
+    }
     module_->setAttr("mqt.layout", layout_->toAttr(module_.getContext()));
     return success();
   }
@@ -175,6 +210,8 @@ public:
 private:
   ModuleOp module_;
   std::optional<mqt::QubitLayout> layout_;
+  SmallVector<int64_t> circuitSources_;
+  DenseI64ArrayAttr circuitRouting_;
   bool valid_ = true;
 };
 
@@ -464,7 +501,8 @@ struct PlacementPass final
 protected:
   void runOnOperation() override {
     auto moduleOp = getOperation();
-    if (failed(mqt::verifyQuantumAllocations(moduleOp))) {
+    if (failed(verifyLinearity(moduleOp)) ||
+        failed(mqt::verifyQuantumAllocations(moduleOp))) {
       signalPassFailure();
       return;
     }
@@ -528,7 +566,7 @@ private:
       }
       nativeCosts = NativeCostTable::precompute(root, *basis->entangler, seed);
 
-      /// Uniform SWAP costs keep the distance heuristic in native-gate units.
+      // Uniform SWAP costs keep the distance heuristic in native-gate units.
       NativeCostAnalysis analysis(seed, nativeCosts.get());
       for (const auto& [a, b] : target.couplings()) {
         const auto next = analysis.swapCost(target, std::array{a, b});
@@ -569,7 +607,7 @@ private:
   /// Wire slots are physical sites; layout alone tracks logical qubits.
   struct RoutingState {
     /// Create state from layout, enforcing wire[i] = i-th site.
-    static RoutingState fromLayout(const Wires& roots,
+    static RoutingState fromLayout(ArrayRef<WireIterator> roots,
                                    const Layout<QubitIndex>& layout,
                                    const Environment& env) {
       RoutingState state(Wires(layout.nHardwareQubits()), layout, env);
@@ -629,7 +667,8 @@ private:
 
     /// Initialize a child from its parent while reusing layout capacity.
     void initializeChild(Node* nextParent, const SwapCandidate& candidate,
-                         const Window& window, const CompilerTarget& target,
+                         ArrayRef<QubitIndexPair> window,
+                         const CompilerTarget& target,
                          const Parameters& params) {
       layout = nextParent->layout;
       layout.swap(candidate.indices.first, candidate.indices.second);
@@ -674,7 +713,8 @@ private:
     /// between its hardware qubits. Intuitively, this is the number of SWAPs
     /// that a naive router would insert to route the layers (with a constant
     /// layout).
-    [[nodiscard]] float h(const Window& window, const CompilerTarget& target,
+    [[nodiscard]] float h(ArrayRef<QubitIndexPair> window,
+                          const CompilerTarget& target,
                           const Parameters& params) const {
       float costs{0};
       float decay{1.};
@@ -729,10 +769,13 @@ private:
   };
 
   /// Memory arena for A* search nodes, enabling reuse across searches to reduce
-  /// allocation overhead. Initializing a retained node reuses its layout.
+  /// allocation overhead.
+  ///
+  /// Initializing a retained node reuses its layout.
   class Arena {
   public:
     /// Constructs an arena with a limited memory budget.
+    ///
     /// The budget of nodes is derived as
     ///
     ///    `searchMemoryLimit / (sizeof(Node) + 2 * nsites *
@@ -756,16 +799,22 @@ private:
       return &nodes[index++];
     }
 
-    /// Resets the arena for a new search. Retains allocated storage. Only the
-    /// logical size (index) is reset to zero.
+    /// Resets the arena for a new search.
+    ///
+    /// Retains allocated storage. Only the logical size (index) is reset to
+    /// zero.
     void reset() { index = 0; }
 
   private:
-    /// Storage for nodes. Uses deque for stable pointers across insertions.
+    /// Storage for nodes.
+    ///
+    /// Uses deque for stable pointers across insertions.
     std::deque<Node> nodes;
     /// Maximum number of nodes permitted by the memory budget.
     size_t budget;
-    /// Next available slot in nodes. Acts as the logical size counter.
+    /// Next available slot in nodes.
+    ///
+    /// Acts as the logical size counter.
     size_t index{0};
   };
 
@@ -776,6 +825,7 @@ private:
           target_(&target) {};
 
     /// Build F-graph: Add edges to F for each edge in the coupling graph.
+    ///
     /// Note that this assumes that the coupling graph is directed, but
     /// symmetric (essentially: undirected).
     void construct(const Layout<QubitIndex>& from,
@@ -789,11 +839,12 @@ private:
       }
     }
 
-    /// Try to find a directed cycle in the F graph. If there is one,
-    /// we can apply a happy swap chain. Note that this happy swap chain
-    /// does not include the final back edge closing the cycle because the
-    /// first SWAP changes the token (the qubit) on the target, invalidating
-    /// the edge in F.
+    /// Try to find a directed cycle in the F graph.
+    ///
+    /// If there is one, we can apply a happy swap chain. Note that this happy
+    /// swap chain does not include the final back edge closing the cycle
+    /// because the first SWAP changes the token (the qubit) on the target,
+    /// invalidating the edge in F.
     [[nodiscard]] std::optional<SmallVector<QubitIndexPair>>
     findHappySWAPChain() const {
       const auto optCycle = f_.findCycle();
@@ -809,9 +860,11 @@ private:
       return swaps;
     }
 
-    /// Find an unhappy SWAP. That is, find an edge (u, v), where exchanging u
-    /// and v, reduces u's distance to its target location (by one) and
-    /// increases v's distance from 0 (already at the correct location) to one.
+    /// Find an unhappy SWAP.
+    ///
+    /// That is, find an edge (u, v), where exchanging u and v, reduces u's
+    /// distance to its target location (by one) and increases v's distance from
+    /// 0 (already at the correct location) to one.
     [[nodiscard]] std::optional<QubitIndexPair> findUnhappySWAP() const {
       for (const auto u : f_.getNodes()) {
         for (const auto v : f_.getNeighbours(u)) {
@@ -860,7 +913,8 @@ protected:
       return;
     }
 
-    if (failed(mqt::verifyQuantumAllocations(moduleOp))) {
+    if (failed(verifyLinearity(moduleOp)) ||
+        failed(mqt::verifyQuantumAllocations(moduleOp))) {
       signalPassFailure();
       return;
     }
@@ -929,8 +983,17 @@ protected:
 
     if (auto attr = moduleOp->getAttrOfType<DictionaryAttr>("mqt.layout")) {
       const auto permutation = sitePermutation(layout, state.layout);
-      const SmallVector<int64_t> routing(permutation.begin(),
-                                         permutation.end());
+      auto previous = attr.getAs<DenseI64ArrayAttr>("routing");
+      if (previous && std::cmp_not_equal(previous.size(), permutation.size())) {
+        moduleOp.emitError("routing layout width does not match the target");
+        signalPassFailure();
+        return;
+      }
+      const auto routing =
+          map_to_vector(llvm::seq<size_t>(0, permutation.size()),
+                        [&](size_t site) -> int64_t {
+                          return permutation[previous ? previous[site] : site];
+                        });
       NamedAttrList fields(attr);
       fields.set("routing", rewriter.getDenseI64ArrayAttr(routing));
       moduleOp->setAttr("mqt.layout", fields.getDictionary(&getContext()));
@@ -951,8 +1014,9 @@ private:
   }
 
   /// Extend the init arguments of an `scf::ForOp` by adding a given range of
-  /// additional SSA values. Replaces the existing operation and returns the
-  /// newly created one.
+  /// additional SSA values.
+  ///
+  /// Replaces the existing operation and returns the newly created one.
   static scf::ForOp extend(scf::ForOp forOp, ValueRange addons,
                            IRRewriter& rewriter) {
     OpBuilder::InsertionGuard guard(rewriter);
@@ -971,8 +1035,9 @@ private:
   }
 
   /// Extend the qubit arguments of an `IfOp` by adding a given range of
-  /// additional SSA values. Replaces the existing operation and returns the
-  /// newly created one.
+  /// additional SSA values.
+  ///
+  /// Replaces the existing operation and returns the newly created one.
   static IfOp extend(IfOp ifOp, ValueRange addons, IRRewriter& rewriter) {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(ifOp);
@@ -988,8 +1053,9 @@ private:
   }
 
   /// Extend the target arguments of an `IndexSwitchOp` by adding a given range
-  /// of additional SSA values. Replaces the existing operation and returns the
-  /// newly created one.
+  /// of additional SSA values.
+  ///
+  /// Replaces the existing operation and returns the newly created one.
   static IndexSwitchOp extend(IndexSwitchOp switchOp, ValueRange addons,
                               IRRewriter& rewriter) {
     OpBuilder::InsertionGuard guard(rewriter);
@@ -1004,8 +1070,9 @@ private:
   }
 
   /// Extend the arguments of an `scf::WhileOp` by adding a given range of
-  /// additional SSA values. Replaces the existing operation and returns the
-  /// newly created one.
+  /// additional SSA values.
+  ///
+  /// Replaces the existing operation and returns the newly created one.
   static scf::WhileOp extend(scf::WhileOp whileOp, ValueRange addons,
                              IRRewriter& rewriter) {
     OpBuilder::InsertionGuard guard(rewriter);
@@ -1083,6 +1150,7 @@ private:
   }
 
   /// Thread the value before the next pending operation through the region.
+  ///
   /// In particular, terminal measurements must remain after the region.
   static Value valueBeforeBoundary(WireIterator iterator, Operation* boundary) {
     --iterator;
@@ -1093,32 +1161,68 @@ private:
     return iterator.qubit();
   }
 
-  /// Return an initial layout and whether identity needs no routing.
-  ///
-  /// Otherwise, place frequently interacting qubits near each other. Nested
-  /// control flow has no single interaction frequency, so leave those programs
-  /// to the identity and random starts.
-  [[nodiscard]] std::optional<std::pair<Layout<QubitIndex>, bool>>
-  generateGreedyLayout(Wires wires, const Environment& env) const {
-    DenseMap<QubitIndexPair, size_t> weights;
+  /// Collect bounded interaction frequencies through wire-preserving loops.
+  static bool
+  collectInteractionWeights(Wires wires,
+                            DenseMap<QubitIndexPair, size_t>& weights,
+                            size_t repetitions, size_t maximumWeight) {
     bool supported = true;
     walkProgramGraph<WireDirection::Forward>(
         MutableArrayRef(wires.data(), wires.size()),
-        [&](const Frontier& frontier, ReleasedOps& released) {
+        [&](const Frontier& frontier, SmallVectorImpl<Operation*>& released) {
           for (const auto& [op, indices] : frontier) {
-            if (op->getNumRegions() != 0 && !isa<UnitaryOpInterface>(op)) {
+            if (auto loop = dyn_cast<scf::ForOp>(op)) {
+              const auto tripCount = loop.getStaticTripCount();
+              if (!tripCount || tripCount->isZero()) {
+                supported = false;
+                return WalkResult::interrupt();
+              }
+              Wires children(wires.size());
+              for (size_t index : indices) {
+                const auto position =
+                    cast<OpResult>(wires[index].qubit()).getResultNumber();
+                auto argument = loop.getRegionIterArgs()[position];
+                children[index] = WireIterator(argument);
+              }
+              const size_t iterations =
+                  tripCount->getLimitedValue(maximumWeight);
+              const size_t weight = repetitions > maximumWeight / iterations
+                                        ? maximumWeight
+                                        : repetitions * iterations;
+              if (!collectInteractionWeights(std::move(children), weights,
+                                             weight, maximumWeight)) {
+                supported = false;
+                return WalkResult::interrupt();
+              }
+            } else if (op->getNumRegions() != 0 &&
+                       !isa<UnitaryOpInterface>(op)) {
               supported = false;
               return WalkResult::interrupt();
             }
             if (indices.size() == 2 && !isa<BarrierOp>(op) &&
                 isa<UnitaryOpInterface>(op)) {
-              ++weights[std::minmax(indices[0], indices[1])];
+              auto& weight = weights[std::minmax(indices[0], indices[1])];
+              weight += std::min(repetitions, maximumWeight - weight);
             }
             released.emplace_back(op);
           }
           return WalkResult::advance();
         });
-    if (!supported) {
+    return supported;
+  }
+
+  /// Return an initial layout and whether it is known to need no routing.
+  ///
+  /// Counted scalar loops contribute weighted interactions. Other regions use
+  /// identity and random starts.
+  [[nodiscard]] std::optional<std::pair<Layout<QubitIndex>, bool>>
+  generateGreedyLayout(const Wires& wires, const Environment& env) const {
+    DenseMap<QubitIndexPair, size_t> weights;
+    // Bound both sums over neighbors and their distance-weighted costs.
+    const size_t maximumWeight = std::numeric_limits<size_t>::max() /
+                                 std::max(wires.size(), size_t{1}) /
+                                 env.target.numSites();
+    if (!collectInteractionWeights(wires, weights, 1, maximumWeight)) {
       return std::nullopt;
     }
     if (llvm::all_of(weights, [&](const auto& interaction) {
@@ -1142,9 +1246,9 @@ private:
       degree[b] += weight;
     }
 
-    /// Embed disjoint logical paths along one path through the target sites.
-    /// ponytail: One hardware walk; add bounded backtracking only for measured
-    /// missed embeddings.
+    // Embed disjoint logical paths along one path through the target sites.
+    // Use one hardware walk to bound the search; this can miss valid
+    // embeddings.
     if (llvm::all_of(neighbours, [](const auto& adjacent) {
           return adjacent.size() <= 2;
         })) {
@@ -1201,7 +1305,7 @@ private:
               mapping[placed++] = static_cast<QubitIndex>(hw);
             }
           }
-          return std::pair{Layout<QubitIndex>::fromMapping(mapping), false};
+          return std::pair{Layout<QubitIndex>::fromMapping(mapping), true};
         }
       }
     }
@@ -1268,11 +1372,13 @@ private:
   }
 
   /// Refine greedy, identity, and random starts with forward/backward routing.
+  ///
   /// Score each candidate with a forward traversal, preserving its start
   /// layout.
   std::pair<Layout<QubitIndex>, std::optional<Score>>
-  generateLayout(const Wires& wires, func::FuncOp func, Environment& env) {
-    const auto greedy = generateGreedyLayout(wires, env);
+  generateLayout(ArrayRef<WireIterator> wires, func::FuncOp func,
+                 Environment& env) {
+    const auto greedy = generateGreedyLayout(Wires(wires), env);
     if (greedy && greedy->second) {
       return {greedy->first, std::nullopt};
     }
@@ -1281,10 +1387,13 @@ private:
 
     struct Trial {
       Layout<QubitIndex> layout;
-      /// Synthesis available: (native-count, depth). Otherwise, (max(), swaps).
+      /// Synthesis available: (native-count, depth).
+      ///
+      /// Otherwise, (max(), swaps).
       Score score;
     };
 
+    // Avoid embedding a layout in the vector object.
     SmallVector<Trial, 0> trials;
     trials.reserve(ntrials);
 
@@ -1316,8 +1425,8 @@ private:
         t.layout = std::move(state.layout);
       }
 
-      /// Refinement may permute wire cursors. Score from the original roots,
-      /// preserving only the initial layout selected for final placement.
+      // Refinement may permute wire cursors. Score from the original roots,
+      // preserving only the initial layout selected for final placement.
       auto state = RoutingState::fromLayout(wires, t.layout, env);
 
       const auto score = route<WireDirection::Forward>(state, arena, env);
@@ -1334,9 +1443,10 @@ private:
   }
 
   /// Route the leading interaction with bounded A* node storage.
+  ///
   /// Drain queued states at the limit, then use distance-reducing SWAPs.
   [[nodiscard]] SmallVector<QubitIndexPair>
-  search(const Window& window, RoutingState& state, Arena& arena,
+  search(ArrayRef<QubitIndexPair> window, RoutingState& state, Arena& arena,
          const Environment& env) const {
     const Parameters params{.alpha = alpha, .lambda = lambda};
 
@@ -1396,9 +1506,9 @@ private:
       }
     }
 
-    /// Fallback to shortest-path swapping, if the budget is exhausted.
-    /// Greedy completion can cost later gates. Thus, increase the search
-    /// budget when routing quality matters more than memory use.
+    // Fallback to shortest-path swapping, if the budget is exhausted.
+    // Greedy completion can cost later gates. Thus, increase the search
+    // budget when routing quality matters more than memory use.
 
     const auto [prog0, prog1] = window.front();
     const auto [hw0, hw1] = state.layout.getHardwareIndices(prog0, prog1);
@@ -1413,6 +1523,7 @@ private:
   }
 
   /// Return the SWAP sequence to move from one layout to another.
+  ///
   /// Implements the 4-Approximation algorithm described in arXiv:1602.05150v3.
   [[nodiscard]] SmallVector<QubitIndexPair>
   restore(const Layout<QubitIndex>& from, const Layout<QubitIndex>& to,
@@ -1454,6 +1565,7 @@ private:
   }
 
   /// Return a pair of SWAP sequences to transform two layouts into each other.
+  ///
   /// Inspired by the 4-Approximation algorithm described in arXiv:1602.05150v3,
   /// with the key difference that the goal permutation is not static.
   [[nodiscard]] std::tuple<Layout<QubitIndex>, SmallVector<QubitIndexPair>,
@@ -1517,6 +1629,7 @@ private:
   }
 
   /// Compute a routing-friendly layout compromise between a range of layouts.
+  ///
   /// Using the first layout of the range as an anchor, the function repeatedly
   /// nudges the current layout towards the next one using happy SWAP chains.
   /// Inspired by SABRE and to reduce ordering bias, the function performs an
@@ -1569,7 +1682,7 @@ private:
 
     walkProgramGraph<Direction>(
         MutableArrayRef(wires.data(), wires.size()),
-        [&](const Frontier& frontier, ReleasedOps& released) {
+        [&](const Frontier& frontier, SmallVectorImpl<Operation*>& released) {
           for (const auto& [op, indices] : frontier) {
             if (indices.size() == 1 &&
                 (boundary == nullptr || precedes<Direction>(op, boundary))) {
@@ -1640,7 +1753,9 @@ private:
   }
 
   /// Classify a consecutive measurement run from its end, so each suffix is
-  /// visited once. The cache is valid only while the IR remains unchanged.
+  /// visited once.
+  ///
+  /// The cache is valid only while the IR remains unchanged.
   static bool measurementNeedsRouting(MeasureOp measurement,
                                       DenseMap<Operation*, bool>& cache) {
     SmallVector<MeasureOp> measurements;
@@ -1656,7 +1771,7 @@ private:
         measurements.push_back(next);
         continue;
       }
-      /// Validated tensor insertion tails become sinks during placement.
+      // Validated tensor insertion tails become sinks during placement.
       needsRouting = !isa<SinkOp, qtensor::InsertOp>(op);
       break;
     }
@@ -1683,8 +1798,8 @@ private:
       for (; cursor < worklist.size(); ++cursor) {
         Operation* op = worklist[cursor];
 
-        /// Quantum consumers require the measurement to advance, independent
-        /// of the selected target's permission to reuse measured qubits.
+        // Quantum consumers require the measurement to advance, independent
+        // of the selected target's permission to reuse measured qubits.
 
         if (any_of(op->getOperandTypes(),
                    [](auto type) { return isa<QubitType>(type); })) {
@@ -1741,15 +1856,16 @@ private:
   }
 
   /// Advance past executable gates and return the first ready composite.
-  /// Leave wires at non-executable gates, composites, terminal measurements,
-  /// or sink-like operations. Backward traversal can exhaust block arguments.
+  ///
+  /// Leave wires at non-executable gates, composites, terminal measurements, or
+  /// sink-like operations. Backward traversal can exhaust block arguments.
   template <WireDirection Direction>
   std::optional<CompositeUnitary>
   advance(RoutingState& state, Operation* boundary, const Environment& env) {
     auto& wires = state.wires;
     std::optional<CompositeUnitary> composite;
-    /// Advancement only moves iterators. Discard classifications before routing
-    /// inserts SWAPs or replaces composites.
+    // Advancement only moves iterators. Discard classifications before routing
+    // inserts SWAPs or replaces composites.
     DenseMap<Operation*, bool> measurementRouting;
 
     // The wire traversal does not follow classical dependencies. Defer a
@@ -1785,11 +1901,12 @@ private:
       });
     };
 
-    /// Keep the earliest ready region in block order. Hot placement threads
-    /// every wire through it, so later regions must wait for its exit layout.
+    // Keep the earliest ready region in block order. Hot placement threads
+    // every wire through it, so later regions must wait for its exit layout.
 
     walkProgramGraph<Direction>(wires, [&](const Frontier& frontier,
-                                           ReleasedOps& released) {
+                                           SmallVectorImpl<Operation*>&
+                                               released) {
       for (const auto& [op, indices] : frontier) {
         if (boundary != nullptr && precedes<Direction>(boundary, op)) {
           continue;
@@ -1834,7 +1951,7 @@ private:
 
           if (state.costs) {
             SmallVector<size_t, 2> vertices(indices.begin(), indices.end());
-            /// Frontier indices are in traversal order, not operand order.
+            // Frontier indices are in traversal order, not operand order.
             if (auto gate = dyn_cast<UnitaryOpInterface>(op);
                 gate && gate.isTwoQubit() &&
                 wires[indices[0]].qubit() != gate.getOutputQubit(0)) {
@@ -1856,8 +1973,9 @@ private:
   }
 
   /// Extends the composite unitary's operation to cover all target qubits by
-  /// adding operands for sites outside the composite. Keeps the parent cursors
-  /// at the corresponding physical results.
+  /// adding operands for sites outside the composite.
+  ///
+  /// Keeps the parent cursors at the corresponding physical results.
   void place(CompositeUnitary& composite, RoutingState& parent,
              IRRewriter& rewriter) {
     SmallVector<unsigned> resultNumbers(parent.wires.size());
@@ -1906,7 +2024,8 @@ private:
     return permutation;
   }
 
-  static void permuteWires(Wires& wires, ArrayRef<QubitIndex> permutation) {
+  static void permuteWires(SmallVectorImpl<WireIterator>& wires,
+                           ArrayRef<QubitIndex> permutation) {
     Wires reordered(wires.size());
     for (size_t site = 0; site < wires.size(); ++site) {
       reordered[permutation[site]] = wires[site];
@@ -1968,6 +2087,7 @@ private:
 
     Statistics totalStats;
 
+    // RoutingState exceeds LLVM's size limit for default inline capacity.
     SmallVector<RoutingState, 0> children;
     children.reserve(op->getNumRegions());
 
@@ -1983,7 +2103,7 @@ private:
       }
 
       if (isa<scf::WhileOp>(op) && index == 1) {
-        /// The before-region exit places the after region and loop results.
+        // The before-region exit places the after region and loop results.
         child.layout = children[0].layout;
         const auto permutation = sitePermutation(parent.layout, child.layout);
         if constexpr (Mode == RoutingMode::Hot) {
@@ -2078,7 +2198,9 @@ private:
   }
 
   /// Advance executable operations, route ready regions, or search for SWAPs
-  /// that release the next interaction. Finish terminal measurements last.
+  /// that release the next interaction.
+  ///
+  /// Finish terminal measurements last.
   template <WireDirection Direction, RoutingMode Mode = RoutingMode::Cold>
     requires(Mode != RoutingMode::Hot || Direction == WireDirection::Forward)
   Statistics route(RoutingState& state, Arena& arena, const Environment& env,

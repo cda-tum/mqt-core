@@ -42,16 +42,16 @@ template <typename Node> struct CachedEdge {
   CachedEdge(Node* n, const Complex& c)
       : p(n), w(static_cast<ComplexValue>(c)) {}
 
-  /// Comparing two DD edges with another involves comparing the respective
-  /// pointers and checking whether the corresponding weights are "close enough"
-  /// according to a given tolerance this notion of equivalence is chosen to
-  /// counter floating point inaccuracies
+  /// Compares node pointers and approximately compares the weights.
+  ///
+  /// Weight comparison uses a tolerance to account for floating-point error.
   bool operator==(const CachedEdge& other) const {
     return p == other.p && w.approximatelyEquals(other.w);
   }
   bool operator!=(const CachedEdge& other) const { return !operator==(other); }
 
   /// Create a terminal edge with the given weight.
+  ///
   /// @param w The weight of the terminal edge.
   /// @return A terminal edge with the given weight.
   [[nodiscard]] static constexpr CachedEdge terminal(const ComplexValue& w) {
@@ -59,6 +59,7 @@ template <typename Node> struct CachedEdge {
   }
 
   /// Create a terminal edge with the given weight.
+  ///
   /// @param w The weight of the terminal edge.
   /// @return A terminal edge with the given weight.
   [[nodiscard]] static constexpr CachedEdge
@@ -67,6 +68,7 @@ template <typename Node> struct CachedEdge {
   }
 
   /// Create a terminal edge with the given weight.
+  ///
   /// @param w The weight of the terminal edge.
   /// @return A terminal edge with the given weight.
   [[nodiscard]] static constexpr CachedEdge terminal(const Complex& w) {
@@ -74,60 +76,62 @@ template <typename Node> struct CachedEdge {
   }
 
   /// Create a zero terminal edge.
+  ///
   /// @return A zero terminal edge.
   [[nodiscard]] static constexpr CachedEdge zero() {
     return terminal(ComplexValue(0.));
   }
 
   /// Create a one terminal edge.
+  ///
   /// @return A one terminal edge.
   [[nodiscard]] static constexpr CachedEdge one() {
     return terminal(ComplexValue(1.));
   }
 
   /// Check whether this is a terminal.
+  ///
   /// @return whether this is a terminal
   [[nodiscard]] constexpr bool isTerminal() const {
     return Node::isTerminal(p);
   }
-
-  /// Get a normalized vector DD from a fresh node and a list of edges.
-  /// @param p the fresh node
-  /// @param e the list of edges that form the successor nodes
-  /// @param mm a reference to the memory manager (for returning unused nodes)
-  /// @param cn a reference to the complex number manager (for adding new
-  /// complex numbers)
-  /// @return the normalized vector DD
-  static auto normalize(Node* p, const std::array<CachedEdge, RADIX>& e,
-                        MemoryManager& mm, ComplexNumbers& cn) -> CachedEdge
-    requires IsVector<Node>;
-
-  /// Get a normalized matrix DD from a fresh node and a list
-  /// of edges.
-  /// @param p the fresh node
-  /// @param e the list of edges that form the successor nodes
-  /// @param mm a reference to the memory manager (for returning unused nodes)
-  /// @param cn a reference to the complex number manager (for adding new
-  /// complex numbers)
-  /// @return the normalized matrix DD
-  static auto normalize(Node* p, const std::array<CachedEdge, NEDGE>& e,
-                        MemoryManager& mm, ComplexNumbers& cn) -> CachedEdge
-    requires IsMatrix<Node>;
-
-  /// Check whether the matrix represented by the DD is the identity.
-  /// @return whether the matrix is the identity
-  [[nodiscard]] bool isIdentity(const bool upToGlobalPhase = true) const
-    requires IsMatrix<Node>
-  {
-    if (!isTerminal()) {
-      return false;
-    }
-    if (upToGlobalPhase) {
-      return !w.exactlyZero();
-    }
-    return w.exactlyOne();
-  }
 };
+
+/// Get a normalized vector DD from a fresh node and a list of edges.
+///
+/// @param p the fresh node
+/// @param e the list of edges that form the successor nodes
+/// @param mm a reference to the memory manager (for returning unused nodes)
+/// @param cn a reference to the complex number manager (for adding new
+/// complex numbers)
+/// @return the normalized vector DD
+auto normalize(vNode* p, const std::array<CachedEdge<vNode>, RADIX>& e,
+               MemoryManager& mm, ComplexNumbers& cn) -> CachedEdge<vNode>;
+
+/// Get a normalized matrix DD from a fresh node and a list of edges.
+///
+/// @param p the fresh node
+/// @param e the list of edges that form the successor nodes
+/// @param mm a reference to the memory manager (for returning unused nodes)
+/// @param cn a reference to the complex number manager (for adding new
+/// complex numbers)
+/// @return the normalized matrix DD
+auto normalize(mNode* p, const std::array<CachedEdge<mNode>, NEDGE>& e,
+               MemoryManager& mm, ComplexNumbers& cn) -> CachedEdge<mNode>;
+
+/// Check whether the matrix represented by the DD is the identity.
+///
+/// @return whether the matrix is the identity
+[[nodiscard]] inline bool isIdentity(const CachedEdge<mNode>& edge,
+                                     const bool upToGlobalPhase = true) {
+  if (edge.p != nullptr) {
+    return false;
+  }
+  if (upToGlobalPhase) {
+    return !edge.w.exactlyZero();
+  }
+  return edge.w.exactlyOne();
+}
 
 // Deduction guide for constructor: CachedEdge(Node*, const ComplexValue&)
 template <class Node>

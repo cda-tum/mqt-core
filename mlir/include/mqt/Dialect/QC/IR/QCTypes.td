@@ -13,20 +13,25 @@ include "mqt/Dialect/QC/IR/QCDialect.td"
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 
 class QCType<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<QCDialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
 
-def QubitType
-    : QCType<
-          "Qubit",
-          "qubit", [MemRefElementTypeInterface, VectorElementTypeInterface]> {
+def QubitType : QCType<"Qubit", "qubit",
+                       [MemRefElementTypeInterface, VectorElementTypeInterface,
+                        OpAsmTypeInterface]> {
   let summary = "QC qubit reference type";
   let description = [{
     The `!qc.qubit` type represents a reference to a quantum bit in the QC dialect.
     Operations using this type modify qubits in place using reference semantics, similar to how classical imperative languages handle mutable references.
+  }];
+  let extraClassDeclaration = [{
+    void getAsmName(::mlir::OpAsmSetNameFn setNameFn) const {
+      setNameFn("q");
+    }
   }];
 }
 

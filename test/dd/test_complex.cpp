@@ -111,7 +111,7 @@ TEST_F(CNTest, NearestEntriesAcrossCellBoundaries) {
   EXPECT_EQ(ut.lookup(border - (tolerance / 4)), lower);
   EXPECT_EQ(ut.lookup(-border), RealNumber::getNegativePointer(lower));
 
-  /// Rounded endpoints must not skip a cell containing an existing match.
+  // Rounded endpoints must not skip a cell containing an existing match.
   auto* half = ut.lookup(0.5);
   EXPECT_EQ(ut.lookup(std::nextafter(0.5, 0.)), half);
   EXPECT_EQ(ut.lookup(std::nextafter(0.5, 1.)), half);
@@ -181,7 +181,7 @@ TEST_F(CNTest, ToleranceChangesPreserveNearestLookup) {
   EXPECT_EQ(ut.lookup(first->value), first);
   EXPECT_TRUE(RealNumber::isMarked(first));
 
-  /// Compare against every retained entry, independently of index layout.
+  // Compare against every retained entry, independently of index layout.
   for (const fp tolerance : {
            1e-12,
            savedTolerance,
@@ -617,4 +617,18 @@ TEST(DDComplexTest, ComplexTextRejectsUnrepresentableValues) {
   EXPECT_THROW(value.fromString("1e-400", ""), std::out_of_range);
   EXPECT_THROW(value.fromString("", "1e400i"), std::out_of_range);
   EXPECT_THROW(value.fromString("invalid", ""), std::invalid_argument);
+}
+
+TEST(DDComplexTest, ParsesImaginaryUnits) {
+  for (const auto* imaginary : {"i", "I", "+i", "+I", "-i", "-I"}) {
+    SCOPED_TRACE(imaginary);
+    ComplexValue value;
+    value.fromString("0.5", imaginary);
+    EXPECT_EQ(value.r, 0.5);
+    EXPECT_EQ(value.i, *imaginary == '-' ? -1. : 1.);
+  }
+  ComplexValue value;
+  value.fromString("0.5", "");
+  EXPECT_EQ(value.r, 0.5);
+  EXPECT_EQ(value.i, 0.);
 }

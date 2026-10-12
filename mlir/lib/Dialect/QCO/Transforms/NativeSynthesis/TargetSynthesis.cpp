@@ -41,6 +41,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -83,7 +84,7 @@ namespace {
 
 /// Composed unitary and metadata for a fusable two-qubit run.
 struct FusableTwoQubitRun {
-  SmallVector<Operation*, 8> ops; ///< Members in dependency order.
+  SmallVector<Operation*> ops; ///< Members in dependency order.
   Matrix4x4 composed = Matrix4x4::identity();
   size_t numTwoQ = 0; ///< Number of two-qubit members.
   Value tailA;        ///< Current output wires of the run's tail.
@@ -94,8 +95,10 @@ struct FusableTwoQubitRun {
 
 // --- Run membership ------------------------------------------------------- //
 
-/// Whether `op` is nested under a modifier body. Such unitaries are handled
-/// through their shell op, so the top-level walk skips them.
+/// Whether `op` is nested under a modifier body.
+///
+/// Such unitaries are handled through their shell op, so the top-level walk
+/// skips them.
 static bool isExcludedFromTopLevelUnitaryWalk(Operation* op) {
   return op->getParentOfType<CtrlOp>() || op->getParentOfType<InvOp>() ||
          op->getParentOfType<PowOp>();
@@ -199,9 +202,10 @@ static bool feedsFromSameTwoQubitRun(UnitaryOpInterface op) {
 
 // --- Run scanning --------------------------------------------------------- //
 
-/// Appends a two-qubit gate to `run`, composing its matrix. No-op unless both
-/// of `op`'s inputs are the run's current tail wires (in either order), keeping
-/// the run confined to a single pair of wires.
+/// Appends a two-qubit gate to `run`, composing its matrix.
+///
+/// No-op unless both of `op`'s inputs are the run's current tail wires (in
+/// either order), keeping the run confined to a single pair of wires.
 static void absorbTwoQubitIntoRun(FusableTwoQubitRun& run,
                                   UnitaryOpInterface op,
                                   const Matrix4x4& opMatrix) {
@@ -236,9 +240,10 @@ static void absorbOneQubitIntoRun(FusableTwoQubitRun& run,
   (wireIndex == 0 ? run.tailA : run.tailB) = op.getOutputQubit(0);
 }
 
-/// Walks forward from `head`, composing the run's matrix and metadata. Absorbs
-/// a following two-qubit gate when it keeps both run wires together, otherwise
-/// single-qubit gates on either wire; stops at the first boundary
+/// Walks forward from `head`, composing the run's matrix and metadata.
+///
+/// Absorbs a following two-qubit gate when it keeps both run wires together,
+/// otherwise single-qubit gates on either wire; stops at the first boundary
 /// that would split the run's two wires.
 static FusableTwoQubitRun scanFusableTwoQubitRun(UnitaryOpInterface head,
                                                  const Matrix4x4& headMatrix) {
@@ -346,8 +351,10 @@ static LogicalResult propagateSites(ValueRange inputs, ValueRange outputs,
   return success();
 }
 
-/// Visit each region once. Branches must agree and loop backedges must retain
-/// the entry sites; neither rule is implied by all-to-all placement.
+/// Visit each region once.
+///
+/// Branches must agree and loop backedges must retain the entry sites; neither
+/// rule is implied by all-to-all placement.
 static FailureOr<SiteMap> collectStaticSites(Operation* root, bool indexed) {
   SiteMap sites;
   auto result = root->walk([&](Operation* operation, const WalkStage& stage) {
@@ -439,6 +446,8 @@ static FailureOr<SiteMap> collectStaticSites(Operation* root, bool indexed) {
 }
 
 /// Collection has validated the inputs of every unitary, reset, and measure.
+///
+/// Keep the common one- and two-qubit cases inline.
 static SmallVector<SiteId, 2> getOperationSites(Operation* operation,
                                                 const SiteMap& sites) {
   SmallVector<SiteId, 2> result;
@@ -491,8 +500,8 @@ static LogicalResult prepareGlobalPhases(ModuleOp moduleOp,
     return success();
   }
   entryPoint.walk([](GPhaseOp phase) {
-    /// Each classical execution path has its own unobservable global phase.
-    /// QCO modifiers must retain phases that normalization cannot extract.
+    // Each classical execution path has its own unobservable global phase.
+    // QCO modifiers must retain phases that normalization cannot extract.
     if (!isExcludedFromTopLevelUnitaryWalk(phase)) {
       phase.erase();
     }
@@ -551,8 +560,10 @@ NativeCostAnalysis::entanglerOrientation(const CompilerTarget& target,
   return std::nullopt;
 }
 
-/// Hashes only accelerate lookup. Bitwise equality below keeps collisions,
-/// signed zeros, and non-finite numerical failures from producing false hits.
+/// Hashes only accelerate lookup.
+///
+/// Bitwise equality below keeps collisions, signed zeros, and non-finite
+/// numerical failures from producing false hits.
 static uint64_t matrixHash(const Matrix4x4& matrix,
                            CompilerTarget::Entangler entangler) {
   return llvm::xxh3_64bits(reinterpret_cast<const uint8_t*>(matrix.data.data()),
@@ -591,7 +602,7 @@ std::unique_ptr<const NativeCostTable> NativeCostTable::precompute(
       return;
     }
     const auto hash = matrixHash(matrix, entangler);
-    /// Keep one entry per fingerprint; collisions remain cache misses.
+    // Keep one entry per fingerprint; collisions remain cache misses.
     if (result->index_.contains(hash)) {
       return;
     }
@@ -832,7 +843,7 @@ void NativeCostTracker::charge(size_t cost, size_t a, size_t b) {
 
 size_t NativeCostTracker::pendingCost(size_t a, size_t b) {
   const auto& run = runs_[a];
-  /// Emission preserves a lone native gate, even if its matrix is local.
+  // Emission preserves a lone native gate, even if its matrix is local.
   return run.canFuse ? analysis_.runCost(run.matrix, run.separateCost, target_,
                                          std::array{
                                              target_.siteForVertex(a),
@@ -916,8 +927,8 @@ void NativeCostTracker::append(Operation* operation,
     }
     return;
   }
-  /// Adjacent inverses must not split an earlier pending run on another pair.
-  /// Their shared wires keep both gates together in either traversal direction.
+  // Adjacent inverses must not split an earlier pending run on another pair.
+  // Their shared wires keep both gates together in either traversal direction.
   const auto twoQubitMatrix = twoQubitRunMemberMatrix(unitary);
   if (twoQubitMatrix) {
     const auto neighbour = [&](unsigned index) {
@@ -1059,8 +1070,8 @@ static LogicalResult synthesizeTargetOperation(
   }
   if (auto u2 = singleControlledGate<U2Op>(operation);
       u2 && basis->singleQubit == CompilerTarget::SingleQubitBasis::U) {
-    /// Canonicalization may shorten a native controlled U(pi/2, phi, lambda)
-    /// to U2. Restore its native form before attempting matrix synthesis.
+    // Canonicalization may shorten a native controlled U(pi/2, phi, lambda)
+    // to U2. Restore its native form before attempting matrix synthesis.
     decomposition::synthesizeParameterizedUnitary1Q(rewriter, u2.getOperation(),
                                                     *basis);
     if (sites ? target.supports(operation, *sites)
@@ -1172,6 +1183,7 @@ static bool reducesNativeCost(const FusableTwoQubitRun& run, size_t fusedCost,
 }
 
 /// Fuses a constant run only when resynthesis reduces its two-qubit cost.
+///
 /// Without a target, the original operation count is a conservative bound.
 static bool fuseTwoQubitGateRun(IRRewriter& rewriter, UnitaryOpInterface head,
                                 const Matrix4x4& headMatrix,
@@ -1230,7 +1242,7 @@ fuseGateRuns(IRRewriter& rewriter, ModuleOp moduleOp,
              const SiteMap* sites = nullptr, bool shrinkOnly = false,
              decomposition::SingleQubitRunFusion* oneQubitFusion = nullptr) {
   bool twoQubitChanged = false;
-  /// A run's successors have already been visited when its head erases them.
+  // A run's successors have already been visited when its head erases them.
   const auto result = moduleOp->walk<WalkOrder::PostOrder, ReverseIterator>(
       [&](Operation* operation) {
         auto unitary = dyn_cast<UnitaryOpInterface>(operation);
@@ -1311,7 +1323,7 @@ public:
         for (auto [input, output] :
              llvm::zip_equal(getQubitValues(operation->getOperands()),
                              getQubitValues(operation->getResults()))) {
-          /// Modifier builders also insert detached bodies with unplaced args.
+          // Modifier builders also insert detached bodies with unplaced args.
           if (auto found = sites_.find(input); found != sites_.end()) {
             const auto site = found->second;
             sites_.insert_or_assign(output, site);
@@ -1398,10 +1410,10 @@ protected:
         targetBasis &&
         targetBasis->singleQubit == CompilerTarget::SingleQubitBasis::R;
     if (equatorial) {
-      /// Keep local factors compact until their Z frames can be propagated.
+      // Keep local factors compact until their Z frames can be propagated.
       emissionBasis->singleQubit = CompilerTarget::SingleQubitBasis::ZYZ;
     }
-    /// Preserve native operations outside the explicit composition patterns.
+    // Preserve native operations outside the explicit composition patterns.
     const auto compositionConfig = GreedyRewriteConfig{}
                                        .setUseTopDownTraversal()
                                        .enableFolding(false)
@@ -1456,8 +1468,8 @@ protected:
       signalPassFailure();
       return;
     }
-    /// Rewrite users before producers so each unvisited operation retains its
-    /// original operands and their collected sites.
+    // Rewrite users before producers so each unvisited operation retains its
+    // original operands and their collected sites.
     const auto result = moduleOp->walk<WalkOrder::PostOrder, ReverseIterator>(
         [&](Operation* operation) {
           auto unitary = dyn_cast<UnitaryOpInterface>(operation);
@@ -1494,8 +1506,8 @@ protected:
       }
       listener.foldPending();
     }
-    /// Propagate frames after local fusion: resynthesizing the shifted runs
-    /// can trade virtual Z gates for additional physical rotations.
+    // Propagate frames after local fusion: resynthesizing the shifted runs
+    // can trade virtual Z gates for additional physical rotations.
     if (targetBasis) {
       if (failed(decomposition::propagateZFrames(
               rewriter, moduleOp, target,
@@ -1578,6 +1590,54 @@ protected:
   }
 };
 
+/// After canonicalization and CSE, skip liveness for flat, call-free
+/// public functions.
+class TargetDeadValueCleanupPass final
+    : public PassWrapper<TargetDeadValueCleanupPass, OperationPass<ModuleOp>> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TargetDeadValueCleanupPass)
+
+  void getDependentDialects(DialectRegistry& registry) const override {
+    createRemoveDeadValuesPass()->getDependentDialects(registry);
+  }
+
+protected:
+  void runOnOperation() override {
+    auto moduleOp = getOperation();
+    const auto needsLiveness =
+        moduleOp->walk<WalkOrder::PreOrder>([&](Operation* operation) {
+          if (operation == moduleOp.getOperation()) {
+            return WalkResult::advance();
+          }
+          if (auto function = dyn_cast<FunctionOpInterface>(operation)) {
+            return function.isPublic() &&
+                           function.getFunctionBody().hasOneBlock()
+                       ? WalkResult::advance()
+                       : WalkResult::interrupt();
+          }
+          // Modifier bodies contain only unitaries and regionless classical
+          // operations; they cannot introduce dead loop-carried values.
+          if (isa<CtrlOp, InvOp, PowOp>(operation)) {
+            return WalkResult::skip();
+          }
+          return operation->getNumRegions() != 0 ||
+                         operation->getNumSuccessors() != 0 ||
+                         isa<CallOpInterface>(operation)
+                     ? WalkResult::interrupt()
+                     : WalkResult::advance();
+        });
+    if (!needsLiveness.wasInterrupted()) {
+      markAllAnalysesPreserved();
+      return;
+    }
+    OpPassManager cleanup(ModuleOp::getOperationName());
+    cleanup.addPass(createRemoveDeadValuesPass());
+    if (failed(runPipeline(cleanup, moduleOp))) {
+      signalPassFailure();
+    }
+  }
+};
+
 } // namespace
 
 std::unique_ptr<Pass> createFuseTwoQubitGates() {
@@ -1589,12 +1649,12 @@ std::unique_ptr<Pass> createFuseTwoQubitGates(const CompilerTarget& target) {
 }
 
 void populateTargetNativeSynthesisPipeline(OpPassManager& pm) {
-  /// Placement consumes allocations; native synthesis normalizes phases.
+  // Placement consumes allocations; native synthesis normalizes phases.
   pm.addPass(createCanonicalizerPass(
       GreedyRewriteConfig{}.setMaxIterations(GreedyRewriteConfig::kNoLimit)));
-  /// Reuse unchanged classical reads before native synthesis splits their uses.
+  // Reuse unchanged classical reads before native synthesis splits their uses.
   pm.addPass(createCSEPass());
-  pm.addPass(createRemoveDeadValuesPass());
+  pm.addPass(std::make_unique<TargetDeadValueCleanupPass>());
   pm.addPass(createTargetNativeSynthesis());
   pm.addPass(createCSEPass());
   pm.addPass(createVerifyTargetConformance());

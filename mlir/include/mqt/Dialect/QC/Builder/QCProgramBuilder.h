@@ -11,6 +11,7 @@
 #pragma once
 
 #include "mqt/Dialect/CBit/IR/CBitAttributes.h"
+#include "mqt/Dialect/MQT/Utils/Parameters.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -68,7 +69,9 @@ namespace qc {
 class QCProgramBuilder final : public ImplicitLocOpBuilder {
 public:
   /// Build a reference-semantic loop with early exits, then lift its CFG to
-  /// SCF. All exit and continuation edges carry the current values of the same
+  /// SCF.
+  ///
+  /// All exit and continuation edges carry the current values of the same
   /// slots.
   class LoopBuilder {
   public:
@@ -90,6 +93,7 @@ public:
   };
 
   /// Construct a new QCProgramBuilder
+  ///
   /// @param context The MLIR context to use for building operations
   explicit QCProgramBuilder(MLIRContext* context);
 
@@ -104,8 +108,9 @@ public:
   /// called before adding operations.
   void initialize();
 
-  /// Initialize the builder and prepare for program construction
-  /// with specified return types.
+  /// Initialize the builder and prepare for program construction with specified
+  /// return types.
+  ///
   /// @param returnTypes The return types for the main function
   ///
   /// Creates a main function with an `mqt.entry_point` attribute. Must be
@@ -113,6 +118,7 @@ public:
   void initialize(TypeRange returnTypes);
 
   /// Modify the return types of the main function after initialization.
+  ///
   /// @param returnTypes The new return types for the main function
   void retype(TypeRange returnTypes);
 
@@ -163,17 +169,21 @@ public:
     SmallVector<Value> qubits;
 
     /// Access a specific qubit in the register
+    ///
     /// @param index The index of the qubit to access
     /// @return The specified qubit value
     Value operator[](size_t index) const;
 
     /// Conversion to the backing memref value
+    ///
     /// @return The memref value representing the qubit register
     explicit operator Value() const { return value; }
   };
 
-  /// Allocate a single qubit initialized to |0⟩
+  /// Allocate a single qubit initialized to |0⟩.
+  ///
   /// Requires an insertion point in the entry block of `mqt.entry_point`.
+  ///
   /// @return A qubit reference
   ///
   /// @par Example:
@@ -186,6 +196,7 @@ public:
   Value allocQubit();
 
   /// Get a static qubit by index
+  ///
   /// @param index The qubit index
   /// @return A qubit reference
   ///
@@ -366,7 +377,7 @@ public:
    * qc.OP_NAME(%PARAM)                                                        \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& OP_NAME(const std::variant<double, Value>&(PARAM));        \
+  QCProgramBuilder& OP_NAME(const mqt::FloatParameter&(PARAM));                \
   /**                                                                          \
    * Apply a controlled OP_CLASS                                               \
    *                                                                           \
@@ -384,7 +395,7 @@ public:
    * } : !qc.qubit                                                             \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& c##OP_NAME(const std::variant<double, Value>&(PARAM),      \
+  QCProgramBuilder& c##OP_NAME(const mqt::FloatParameter&(PARAM),              \
                                Value control);                                 \
   /**                                                                          \
    * @brief Apply a multi-controlled OP_CLASS                                  \
@@ -403,7 +414,7 @@ public:
    * } : !qc.qubit, !qc.qubit                                                  \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& mc##OP_NAME(const std::variant<double, Value>&(PARAM),     \
+  QCProgramBuilder& mc##OP_NAME(const mqt::FloatParameter&(PARAM),             \
                                 ValueRange controls);
 
   DECLARE_ZERO_TARGET_ONE_PARAMETER(GPhaseOp, gphase, theta)
@@ -497,8 +508,7 @@ public:
    * qc.OP_NAME(%PARAM) %q : !qc.qubit                                         \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& OP_NAME(const std::variant<double, Value>&(PARAM),         \
-                            Value qubit);                                      \
+  QCProgramBuilder& OP_NAME(const mqt::FloatParameter&(PARAM), Value qubit);   \
   /**                                                                          \
    * @brief Apply a controlled OP_CLASS                                        \
    *                                                                           \
@@ -517,7 +527,7 @@ public:
    * } : !qc.qubit                                                             \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& c##OP_NAME(const std::variant<double, Value>&(PARAM),      \
+  QCProgramBuilder& c##OP_NAME(const mqt::FloatParameter&(PARAM),              \
                                Value control, Value target);                   \
   /**                                                                          \
    * @brief Apply a multi-controlled OP_CLASS                                  \
@@ -537,7 +547,7 @@ public:
    * } : !qc.qubit, !qc.qubit                                                  \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& mc##OP_NAME(const std::variant<double, Value>&(PARAM),     \
+  QCProgramBuilder& mc##OP_NAME(const mqt::FloatParameter&(PARAM),             \
                                 ValueRange controls, Value target);
 
   DECLARE_ONE_TARGET_ONE_PARAMETER(RXOp, rx, theta)
@@ -566,9 +576,8 @@ public:
    * qc.OP_NAME(%PARAM1, %PARAM2) %q : !qc.qubit                               \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& OP_NAME(const std::variant<double, Value>&(PARAM1),        \
-                            const std::variant<double, Value>&(PARAM2),        \
-                            Value qubit);                                      \
+  QCProgramBuilder& OP_NAME(const mqt::FloatParameter&(PARAM1),                \
+                            const mqt::FloatParameter&(PARAM2), Value qubit);  \
   /**                                                                          \
    * @brief Apply a controlled OP_CLASS                                        \
    *                                                                           \
@@ -588,8 +597,8 @@ public:
    * } : !qc.qubit                                                             \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& c##OP_NAME(const std::variant<double, Value>&(PARAM1),     \
-                               const std::variant<double, Value>&(PARAM2),     \
+  QCProgramBuilder& c##OP_NAME(const mqt::FloatParameter&(PARAM1),             \
+                               const mqt::FloatParameter&(PARAM2),             \
                                Value control, Value target);                   \
   /**                                                                          \
    * @brief Apply a multi-controlled OP_CLASS                                  \
@@ -610,8 +619,8 @@ public:
    * } : !qc.qubit, !qc.qubit                                                  \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& mc##OP_NAME(const std::variant<double, Value>&(PARAM1),    \
-                                const std::variant<double, Value>&(PARAM2),    \
+  QCProgramBuilder& mc##OP_NAME(const mqt::FloatParameter&(PARAM1),            \
+                                const mqt::FloatParameter&(PARAM2),            \
                                 ValueRange controls, Value target);
 
   DECLARE_ONE_TARGET_TWO_PARAMETER(ROp, r, theta, phi)
@@ -640,10 +649,9 @@ public:
    * qc.OP_NAME(%PARAM1, %PARAM2, %PARAM3) %q : !qc.qubit                      \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& OP_NAME(const std::variant<double, Value>&(PARAM1),        \
-                            const std::variant<double, Value>&(PARAM2),        \
-                            const std::variant<double, Value>&(PARAM3),        \
-                            Value qubit);                                      \
+  QCProgramBuilder& OP_NAME(const mqt::FloatParameter&(PARAM1),                \
+                            const mqt::FloatParameter&(PARAM2),                \
+                            const mqt::FloatParameter&(PARAM3), Value qubit);  \
   /**                                                                          \
    * @brief Apply a controlled OP_CLASS                                        \
    *                                                                           \
@@ -664,10 +672,9 @@ public:
    * } : !qc.qubit                                                             \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& c##OP_NAME(const std::variant<double, Value>&(PARAM1),     \
-                               const std::variant<double, Value>&(PARAM2),     \
-                               const std::variant<double, Value>&(PARAM3),     \
-                               Value control, Value target);                   \
+  QCProgramBuilder& c##OP_NAME(                                                \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      const mqt::FloatParameter&(PARAM3), Value control, Value target);        \
   /**                                                                          \
    * @brief Apply a multi-controlled OP_CLASS                                  \
    *                                                                           \
@@ -688,10 +695,9 @@ public:
    * } : !qc.qubit, !qc.qubit                                                  \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& mc##OP_NAME(const std::variant<double, Value>&(PARAM1),    \
-                                const std::variant<double, Value>&(PARAM2),    \
-                                const std::variant<double, Value>&(PARAM3),    \
-                                ValueRange controls, Value target);
+  QCProgramBuilder& mc##OP_NAME(                                               \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      const mqt::FloatParameter&(PARAM3), ValueRange controls, Value target);
 
   DECLARE_ONE_TARGET_THREE_PARAMETER(UOp, u, theta, phi, lambda)
 
@@ -782,8 +788,8 @@ public:
    * qc.OP_NAME(%PARAM) %q0, %q1 : !qc.qubit, !qc.qubit                        \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& OP_NAME(const std::variant<double, Value>&(PARAM),         \
-                            Value qubit0, Value qubit1);                       \
+  QCProgramBuilder& OP_NAME(const mqt::FloatParameter&(PARAM), Value qubit0,   \
+                            Value qubit1);                                     \
   /**                                                                          \
    * @brief Apply a controlled OP_CLASS                                        \
    *                                                                           \
@@ -803,7 +809,7 @@ public:
    * } : !qc.qubit                                                             \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& c##OP_NAME(const std::variant<double, Value>&(PARAM),      \
+  QCProgramBuilder& c##OP_NAME(const mqt::FloatParameter&(PARAM),              \
                                Value control, Value qubit0, Value qubit1);     \
   /**                                                                          \
    * @brief Apply a multi-controlled OP_CLASS                                  \
@@ -824,7 +830,7 @@ public:
    * } : !qc.qubit, !qc.qubit                                                  \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& mc##OP_NAME(const std::variant<double, Value>&(PARAM),     \
+  QCProgramBuilder& mc##OP_NAME(const mqt::FloatParameter&(PARAM),             \
                                 ValueRange controls, Value qubit0,             \
                                 Value qubit1);
 
@@ -855,9 +861,9 @@ public:
    * qc.OP_NAME(%PARAM1, %PARAM2) %q0, %q1 : !qc.qubit, !qc.qubit              \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& OP_NAME(const std::variant<double, Value>&(PARAM1),        \
-                            const std::variant<double, Value>&(PARAM2),        \
-                            Value qubit0, Value qubit1);                       \
+  QCProgramBuilder& OP_NAME(const mqt::FloatParameter&(PARAM1),                \
+                            const mqt::FloatParameter&(PARAM2), Value qubit0,  \
+                            Value qubit1);                                     \
   /**                                                                          \
    * @brief Apply a controlled OP_CLASS                                        \
    *                                                                           \
@@ -879,8 +885,8 @@ public:
    * } : !qc.qubit                                                             \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& c##OP_NAME(const std::variant<double, Value>&(PARAM1),     \
-                               const std::variant<double, Value>&(PARAM2),     \
+  QCProgramBuilder& c##OP_NAME(const mqt::FloatParameter&(PARAM1),             \
+                               const mqt::FloatParameter&(PARAM2),             \
                                Value control, Value qubit0, Value qubit1);     \
   /**                                                                          \
    * @brief Apply a multi-controlled OP_CLASS                                  \
@@ -902,10 +908,9 @@ public:
    * } : !qc.qubit, !qc.qubit                                                  \
    * ```                                                                       \
    */                                                                          \
-  QCProgramBuilder& mc##OP_NAME(const std::variant<double, Value>&(PARAM1),    \
-                                const std::variant<double, Value>&(PARAM2),    \
-                                ValueRange controls, Value qubit0,             \
-                                Value qubit1);
+  QCProgramBuilder& mc##OP_NAME(                                               \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      ValueRange controls, Value qubit0, Value qubit1);
 
   DECLARE_TWO_TARGET_TWO_PARAMETER(XXPlusYYOp, xx_plus_yy, theta, beta)
   DECLARE_TWO_TARGET_TWO_PARAMETER(XXMinusYYOp, xx_minus_yy, theta, beta)
@@ -1114,8 +1119,7 @@ public:
   ///   qc.s %a0 : !qc.qubit
   /// } : !qc.qubit
   /// ```
-  QCProgramBuilder& pow(const std::variant<double, Value>& exponent,
-                        ValueRange qubits,
+  QCProgramBuilder& pow(const mqt::FloatParameter& exponent, ValueRange qubits,
                         const function_ref<void(ValueRange)>& body);
 
   /// Apply a power modifier on a single qubit.
@@ -1130,8 +1134,8 @@ public:
   /// ```c++
   /// builder.pow(2.0, q0, [&](Value qubit) { builder.s(qubit); });
   /// ```
-  QCProgramBuilder& pow(const std::variant<double, Value>& exponent,
-                        Value qubit, const function_ref<void(Value)>& body);
+  QCProgramBuilder& pow(const mqt::FloatParameter& exponent, Value qubit,
+                        const function_ref<void(Value)>& body);
 
   //===--------------------------------------------------------------------===//
   // Deallocation
@@ -1323,13 +1327,14 @@ public:
 
   /// Finalize the program with the given return values and return the
   /// constructed module
+  ///
   /// @param returnValues Values representing the return values of the main
   /// function.
   ///
   /// Automatically deallocates all remaining valid qubits and tensors of
   /// qubits, adds a return statement with the given return values, and
-  /// transfers ownership of the module to the caller. The builder should not
-  /// be used after calling this method.
+  /// transfers ownership of the module to the caller. The builder should not be
+  /// used after calling this method.
   ///
   /// The return values must have the types indicated by the function signature
   /// of the main function, which returns an `i64` by default and can be
@@ -1339,6 +1344,7 @@ public:
   OwningOpRef<ModuleOp> finalize(ValueRange returnValues);
 
   /// Convenience method for building quantum programs.
+  ///
   /// @param context The MLIR context to use for building the program
   /// @param buildFunc A function that takes a reference to a QCProgramBuilder
   /// and uses it to build the desired quantum program. The builder will be
@@ -1350,8 +1356,8 @@ public:
   build(MLIRContext* context,
         const function_ref<SmallVector<Value>(QCProgramBuilder&)>& buildFunc);
 
-  /// Convenience method for building quantum programs with one return
-  /// value.
+  /// Convenience method for building quantum programs with one return value.
+  ///
   /// @param context The MLIR context to use for building the program
   /// @param buildFunc A function that takes a reference to a QCProgramBuilder
   /// and returns the single result value of the desired quantum program.
@@ -1382,6 +1388,7 @@ private:
   AllocationMode allocationMode = AllocationMode::Unset;
 
   /// Ensure static and dynamic qubit allocation modes are not mixed.
+  ///
   /// Dynamic allocation also requires the entry-point entry block.
   void ensureAllocationMode(AllocationMode requestedMode);
 };

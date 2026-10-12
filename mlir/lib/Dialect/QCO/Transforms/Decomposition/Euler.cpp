@@ -18,7 +18,6 @@
 #include "mqt/Dialect/QCO/Utils/Matrix.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
@@ -109,6 +108,7 @@ bool isSingleQubitBasisGate(Operation* op, SingleQubitBasis basis) {
 }
 
 /// Whether `angle` is numerically zero for gate-emission purposes.
+///
 /// Use matrix precision here; fixed target capabilities remain exact.
 ///
 /// @param angle Rotation angle in radians.
@@ -245,31 +245,21 @@ struct Unitary1QEulerPlan {
 
 } // namespace
 
-static std::optional<double> constantParameter(const RotationParameter& value) {
-  if (const auto* scalar = std::get_if<double>(&value)) {
-    return *scalar;
-  }
-  return mqt::valueToConstantDouble(std::get<Value>(value));
-}
-
 RotationParameter normalizeRotationParameter(OpBuilder& builder, Location loc,
                                              RotationParameter angle) {
-  if (const auto value = constantParameter(angle)) {
+  if (const auto value = mqt::parameterToConstantDouble(angle)) {
     return std::abs(*value) <= 2. * std::numbers::pi
                ? *value
                : 4. * std::atan(std::tan(*value / 4.));
   }
-  auto four = mqt::constantFromScalar(builder, loc, 4.);
-  auto scaled =
-      builder.createOrFold<arith::DivFOp>(loc, std::get<Value>(angle), four);
-  auto tangent = math::TanOp::create(builder, loc, scaled);
-  auto principal = math::AtanOp::create(builder, loc, tangent);
-  return builder.createOrFold<arith::MulFOp>(loc, principal, four);
+  const auto four = mqt::FloatExpression::constant(builder, loc, 4.);
+  const mqt::FloatExpression value(builder, loc, std::get<Value>(angle));
+  return ((value / four).tan().atan() * four).getValue();
 }
 
 void emitGPhaseIfNeeded(OpBuilder& builder, Location loc, Value phase) {
   const auto normalized = normalizeRotationParameter(builder, loc, phase);
-  if (const auto constant = constantParameter(normalized)) {
+  if (const auto constant = mqt::parameterToConstantDouble(normalized)) {
     emitGPhaseIfNeeded(builder, loc, *constant);
   } else {
     GPhaseOp::create(builder, loc, std::get<Value>(normalized));
@@ -282,6 +272,7 @@ void simplifyRotationAngles(SmallVectorImpl<RotationAngleTerm>& angles) {
     return std::abs(scale) <= 1. &&
            std::frexp(std::abs(scale), &exponent) == 0.5;
   };
+  // Keep per-key storage compact.
   DenseMap<std::pair<Value, uint64_t>, SmallVector<size_t, 1>> unmatched;
   for (auto [index, term] : llvm::enumerate(angles)) {
     if (term.scale == 0.) {
@@ -373,39 +364,33 @@ Value sumRotationAngles(OpBuilder& builder, Location loc,
 
 static bool isConstantParameter(const RotationParameter& value,
                                 double expected = 0.) {
-  const auto scalar = constantParameter(value);
+  const auto scalar = mqt::parameterToConstantDouble(value);
   return scalar && isNearZeroRotationAngle(*scalar - expected);
 }
 
-/// Constants stay in host arithmetic; SSA expressions use the dialect folder.
-static RotationParameter addParameters(OpBuilder& builder, Location loc,
-                                       const RotationParameter& lhs,
-                                       const RotationParameter& rhs) {
-  const auto a = constantParameter(lhs);
-  const auto b = constantParameter(rhs);
-  if (a && b) {
+/// A finite rotation angle has an exact additive identity.
+///
+/// Keep this policy outside scalar arithmetic, where signed zero and nonfinite
+/// values matter.
+static RotationParameter addRotationParameters(OpBuilder& builder, Location loc,
+                                               const RotationParameter& lhs,
+                                               const RotationParameter& rhs) {
+  const auto foldedLhs = mqt::foldParameter(lhs);
+  const auto foldedRhs = mqt::foldParameter(rhs);
+  const auto* a = std::get_if<double>(&foldedLhs);
+  const auto* b = std::get_if<double>(&foldedRhs);
+  if (a != nullptr && b != nullptr) {
     return *a + *b;
   }
-  if (a == 0.) {
+  if (a != nullptr && *a == 0.) {
     return rhs;
   }
-  if (b == 0.) {
+  if (b != nullptr && *b == 0.) {
     return lhs;
   }
-  return builder.createOrFold<arith::AddFOp>(
-      loc, mqt::variantToValue(builder, loc, lhs),
-      mqt::variantToValue(builder, loc, rhs));
-}
-
-static RotationParameter scaleParameter(OpBuilder& builder, Location loc,
-                                        const RotationParameter& angle,
-                                        double scale) {
-  if (const auto value = constantParameter(angle)) {
-    return *value * scale;
-  }
-  return builder.createOrFold<arith::MulFOp>(
-      loc, std::get<Value>(angle),
-      mqt::constantFromScalar(builder, loc, scale));
+  return (mqt::FloatExpression(builder, loc, foldedLhs) +
+          mqt::FloatExpression(builder, loc, foldedRhs))
+      .getValue();
 }
 
 /// One emission recipe serves extracted numeric angles and known SSA angles.
@@ -416,15 +401,15 @@ planEulerAngles(OpBuilder& builder, Location loc,
   const auto& [theta, phi, lambda, phase] = angles;
   Unitary1QEulerPlan plan{.phase = phase};
   const auto add = [&](const RotationParameter& a, const RotationParameter& b) {
-    return addParameters(builder, loc, a, b);
+    return addRotationParameters(builder, loc, a, b);
   };
   const auto rotation = [&](SynthesisStep::Kind kind,
                             const RotationParameter& angle,
                             const RotationParameter& axis = 0.) {
     RotationParameter normalized = angle;
-    if (const auto value = constantParameter(angle)) {
+    if (const auto value = mqt::parameterToConstantDouble(angle)) {
       const double wrapped = mod2pi(*value);
-      /// Removing a full Pauli turn contributes a minus sign.
+      // Removing a full Pauli turn contributes a minus sign.
       plan.phase = add(plan.phase, 0.5 * (*value - wrapped));
       normalized = wrapped;
     }
@@ -439,15 +424,16 @@ planEulerAngles(OpBuilder& builder, Location loc,
   using Kind = SynthesisStep::Kind;
   if (basis.singleQubit == SingleQubitBasis::R) {
     constexpr double pi = std::numbers::pi;
-    const auto sum = constantParameter(add(phi, lambda));
+    const auto sum = mqt::parameterToConstantDouble(add(phi, lambda));
     if (sum && std::abs(std::sin(*sum / 2.)) < MATRIX_TOLERANCE) {
       plan.phase = add(plan.phase, *sum / 2.);
       rotation(Kind::R, theta, add(phi, pi / 2.));
     } else {
-      /// RZ(phi) RY(theta) RZ(lambda) is a product of two equatorial rotations.
-      const auto negativeLambda = scaleParameter(builder, loc, lambda, -1.);
-      const auto axis =
-          scaleParameter(builder, loc, add(add(phi, negativeLambda), pi), 0.5);
+      // RZ(phi) RY(theta) RZ(lambda) is a product of two equatorial rotations.
+      const auto negativeLambda =
+          mqt::scaleParameter(builder, loc, lambda, -1.);
+      const auto axis = mqt::scaleParameter(
+          builder, loc, add(add(phi, negativeLambda), pi), 0.5);
       rotation(Kind::R,
                add(normalizeRotationParameter(builder, loc, theta), -pi),
                add(negativeLambda, pi / 2.));
@@ -469,7 +455,8 @@ planEulerAngles(OpBuilder& builder, Location loc,
     case SingleQubitBasis::R:
       llvm_unreachable("R synthesis handled above");
     case SingleQubitBasis::U:
-      if (const auto p = constantParameter(phi), l = constantParameter(lambda);
+      if (const auto p = mqt::parameterToConstantDouble(phi),
+          l = mqt::parameterToConstantDouble(lambda);
           !p || !l || !isNearZeroRotationAngle(mod2pi(*p + *l))) {
         plan.steps.push_back(
             {.kind = Kind::U, .theta = 0., .phi = phi, .lambda = lambda});
@@ -504,7 +491,7 @@ planEulerAngles(OpBuilder& builder, Location loc,
     constexpr double halfPi = pi / 2.;
     const bool inverse =
         basis.quarterTurnGates && basis.quarterTurnGates->quarterTurnAngle < 0.;
-    /// RY(t) = RZ(pi/2) RX(t) RZ(-pi/2); absorb this frame in the outer RZs.
+    // RY(t) = RZ(pi/2) RX(t) RZ(-pi/2); absorb this frame in the outer RZs.
     const double azimuth =
         basis.quarterTurnGates &&
                 basis.quarterTurnGates->gate == CompilerTarget::GateKind::RY
@@ -521,10 +508,10 @@ planEulerAngles(OpBuilder& builder, Location loc,
       break;
     }
     if (basis.hasHalfTurn && isConstantParameter(theta, pi)) {
-      /// A half turn reverses the Z axis, so the outer rotations combine.
+      // A half turn reverses the Z axis, so the outer rotations combine.
       plan.steps.push_back({.kind = Kind::X});
       rotation(Kind::RZ,
-               add(add(phi, scaleParameter(builder, loc, lambda, -1.)),
+               add(add(phi, mqt::scaleParameter(builder, loc, lambda, -1.)),
                    pi - 2. * azimuth));
       plan.phase = add(plan.phase, -halfPi);
       break;
@@ -567,7 +554,7 @@ emitEulerPlan(OpBuilder& builder, Location loc, Value qubit,
           : basis.quarterTurnGates->gate == CompilerTarget::GateKind::RY
               ? RYOp::create(builder, loc, qubit, *nativeAngle).getQubitOut()
               : RXOp::create(builder, loc, qubit, *nativeAngle).getQubitOut();
-      phase = addParameters(builder, loc, phase, *nativeAngle / 2.);
+      phase = addRotationParameters(builder, loc, phase, *nativeAngle / 2.);
       continue;
     }
     switch (kind) {
@@ -638,8 +625,8 @@ synthesizeUnitary1QEuler(OpBuilder& builder, Location loc, Value qubit,
                                angles.phase,
                            },
                            basis);
-    /// K(phi) A(theta) K(lambda) = K(phi+pi) A(-theta) K(lambda-pi).
-    /// Keep the alternate Euler representative only when it removes gates.
+    // K(phi) A(theta) K(lambda) = K(phi+pi) A(-theta) K(lambda-pi).
+    // Keep the alternate Euler representative only when it removes gates.
     constexpr double pi = std::numbers::pi;
     if (basis.singleQubit != SingleQubitBasis::U && plan.steps.size() > 1 &&
         (isNearZeroRotationAngle(mod2pi(angles.phi + pi)) ||
@@ -679,7 +666,7 @@ Value synthesizePauliRotation1Q(OpBuilder& builder, Location loc, Value qubit,
   if (axis == PauliAxis::I) {
     llvm_unreachable("single-qubit synthesis requires a nonidentity Pauli");
   }
-  if (const auto constant = constantParameter(angle)) {
+  if (const auto constant = mqt::parameterToConstantDouble(angle)) {
     const auto frame = pauliFrame(axis);
     const auto matrix =
         frame * RZOp::unitaryMatrix(*constant) * frame.adjoint();
@@ -735,8 +722,8 @@ Value synthesizePauliRotation1Q(OpBuilder& builder, Location loc, Value qubit,
   if (axis == PauliAxis::Z && supportsZ) {
     return RZOp::create(builder, loc, qubit, rotationAngle).getQubitOut();
   }
-  /// Pick a native rotation and a constant frame; rotationAngle remains
-  /// untouched.
+  // Pick a native rotation and a constant frame; rotationAngle remains
+  // untouched.
   const auto nativeAxis = supportsY || basis.singleQubit == SingleQubitBasis::R
                               ? PauliAxis::Y
                           : supportsX ? PauliAxis::X
@@ -767,11 +754,11 @@ directEulerAngles(OpBuilder& builder, Location loc,
     return normalizeRotationParameter(builder, loc, angle);
   };
   const auto add = [&](const RotationParameter& a, const RotationParameter& b) {
-    return addParameters(builder, loc, a, b);
+    return addRotationParameters(builder, loc, a, b);
   };
   const auto scale = [&](const RotationParameter& value,
                          double factor) -> RotationParameter {
-    return scaleParameter(builder, loc, value, factor);
+    return mqt::scaleParameter(builder, loc, value, factor);
   };
   constexpr double halfPi = std::numbers::pi / 2.;
   std::array<RotationParameter, 4> result{0., 0., 0., 0.};
@@ -805,7 +792,7 @@ directEulerAngles(OpBuilder& builder, Location loc,
     phi = add(phi, halfPi);
     lambda = add(lambda, -halfPi);
   } else if (basis == SingleQubitBasis::U) {
-    /// P/U2 already have U's phase; R/RX/RY have cancelling outer angles.
+    // P/U2 already have U's phase; R/RX/RY have cancelling outer angles.
     phase = isa<RZOp>(op) ? scale(lambda, -0.5) : RotationParameter{0.};
   }
   return result;

@@ -378,10 +378,9 @@ static LogicalResult convertJeffToQCO(ModuleOp moduleOp) {
 
 TEST_F(JeffRoundTripTest, RejectsNonNormalizedModifiersBeforeMutation) {
   for (const auto* body : {
-           "%s = qco.s %a : !qco.qubit -> !qco.qubit\n"
+           "%s = qco.s %a : !qco.qubit\n"
            "qco.yield %s, %b : !qco.qubit, !qco.qubit",
-           "%x, %y = qco.swap %b, %a : !qco.qubit, !qco.qubit -> "
-           "!qco.qubit, !qco.qubit\n"
+           "%x, %y = qco.swap %b, %a : !qco.qubit, !qco.qubit\n"
            "qco.yield %y, %x : !qco.qubit, !qco.qubit",
        }) {
     const std::string source = std::string(R"mlir(
@@ -432,7 +431,7 @@ TEST(JeffRoundTripRegressionTest, PreservesPhaseOfControlledFunctionCall) {
     }
     func.func private @flip(%q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %out = qco.x %q : !qco.qubit -> !qco.qubit
+      %out = qco.x %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func @main() attributes {mqt.entry_point} {
@@ -441,7 +440,7 @@ TEST(JeffRoundTripRegressionTest, PreservesPhaseOfControlledFunctionCall) {
       %c, %q = qco.ctrl(%control) targets(%arg = %target) {
         %out = qco.call @phased_x(%arg) : (!qco.qubit) -> !qco.qubit
         qco.yield %out : !qco.qubit
-      } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+      } : ({!qco.qubit}, {!qco.qubit})
       qco.sink %c : !qco.qubit
       qco.sink %q : !qco.qubit
       return
@@ -858,7 +857,7 @@ TEST(JeffRoundTripRegressionTest, CapturesHelperArgumentsInLoop) {
       %c2 = arith.constant 2 : index
       %out = scf.for %i = %c0 to %c2 step %c1 iter_args(%current = %q) -> !qco.qubit {
         %angle = tensor.extract %angles[%i] : tensor<2xf64>
-        %next = qco.p(%angle) %current : !qco.qubit -> !qco.qubit
+        %next = qco.p(%angle) %current : !qco.qubit
         scf.yield %next : !qco.qubit
       }
       return %out : !qco.qubit
@@ -866,9 +865,9 @@ TEST(JeffRoundTripRegressionTest, CapturesHelperArgumentsInLoop) {
     func.func @main() -> !cbit.reg<1> attributes {mqt.entry_point} {
       %angles = arith.constant dense<[0.0, 3.141592653589793]> : tensor<2xf64>
       %q = qco.alloc : !qco.qubit
-      %h = qco.h %q : !qco.qubit -> !qco.qubit
+      %h = qco.h %q : !qco.qubit
       %rotated = func.call @rotate(%angles, %h) : (tensor<2xf64>, !qco.qubit) -> !qco.qubit
-      %final = qco.h %rotated : !qco.qubit -> !qco.qubit
+      %final = qco.h %rotated : !qco.qubit
       %out, %bit = qco.measure %final : !qco.qubit
       %result = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
       %c0 = arith.constant 0 : index
@@ -946,6 +945,69 @@ TEST(JeffRoundTripRegressionTest, PreservesPromotedSignedMinMax) {
       qco::sample(program->lookupSymbol<func::FuncOp>("main"), 1, 1);
   ASSERT_TRUE(succeeded(histogram));
   EXPECT_EQ(histogram->at("010101"), 1);
+}
+
+TEST(JeffRoundTripRegressionTest, PreservesIntegerWidthsInIndexCasts) {
+  MLIRContext context;
+  context.loadDialect<cbit::CBitDialect, qco::QCODialect, arith::ArithDialect,
+                      func::FuncDialect, scf::SCFDialect,
+                      mlir::jeff::JeffDialect>();
+  for (const auto* cast : {"index_cast", "index_castui"}) {
+    const auto source = std::string(R"mlir(module {
+      func.func @main() -> !cbit.reg<64> attributes {mqt.entry_point} {
+        %q = qco.alloc : !qco.qubit
+        %zero = arith.constant 0 : index
+        %one = arith.constant 1 : index
+        %four = arith.constant 4 : index
+        %initial = arith.constant 0 : i64
+        %sum = scf.for %index = %zero to %four step %one
+            iter_args(%total = %initial) -> i64 {
+          %wide = arith.)mlir") +
+                        cast + R"mlir( %index : index to i64
+          %next = arith.addi %total, %wide : i64
+          scf.yield %next : i64
+        }
+        %result = cbit.alloc(#cbit.init<zero>) : !cbit.reg<64>
+        cbit.write %sum, %result : i64, !cbit.reg<64>
+        qco.sink %q : !qco.qubit
+        return %result : !cbit.reg<64>
+      }
+    })mlir";
+    auto program = parseSourceString<ModuleOp>(source, &context);
+    ASSERT_TRUE(program);
+    ASSERT_TRUE(succeeded(convertQCOToJeff(*program)));
+    auto bytes = serialize(*program);
+    program = deserialize(&context, bytes);
+    ASSERT_TRUE(program);
+    ASSERT_TRUE(succeeded(convertJeffToQCO(*program)));
+    auto counts =
+        qco::sample(program->lookupSymbol<func::FuncOp>("main"), 1, 1);
+    ASSERT_TRUE(succeeded(counts));
+    EXPECT_EQ(counts->at(std::string(61, '0') + "110"), 1U);
+  }
+}
+
+TEST(JeffRoundTripRegressionTest, RejectsUnsupportedIndexCasts) {
+  MLIRContext context;
+  context.loadDialect<arith::ArithDialect, func::FuncDialect,
+                      mlir::jeff::JeffDialect>();
+  for (
+      const auto* source : {
+          R"mlir(module { func.func @main(%value: index) -> i64 attributes {mqt.entry_point} {
+             %wide = arith.index_cast %value : index to i128
+             %result = arith.trunci %wide : i128 to i64
+             return %result : i64
+           } })mlir",
+          R"mlir(module { func.func @main(%value: vector<2xindex>) -> vector<2xi64>
+               attributes {mqt.entry_point} {
+             %result = arith.index_cast %value : vector<2xindex> to vector<2xi64>
+             return %result : vector<2xi64>
+           } })mlir",
+      }) {
+    auto program = parseSourceString<ModuleOp>(source, &context);
+    ASSERT_TRUE(program);
+    EXPECT_TRUE(failed(convertQCOToJeff(*program)));
+  }
 }
 
 TEST(JeffRoundTripRegressionTest, RejectsPromotedUnsupportedMath) {

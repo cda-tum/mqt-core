@@ -9,6 +9,7 @@
  */
 
 #include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
 #include "mqt/Dialect/QCO/Utils/DDAdapter.h"
 #include "mqt/Dialect/QIR/Execution/Runtime/QIR.h"
@@ -30,6 +31,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #ifdef _WIN32
 #define SYSTEM _wsystem
@@ -52,22 +54,24 @@ protected:
 };
 
 TEST(QIRRuntimeArgumentsTest, RejectsInvalidArrayDimensions) {
-  EXPECT_THROW(__quantum__rt__array_create_1d(0, 1), std::invalid_argument);
-  EXPECT_THROW(__quantum__rt__array_create_1d(sizeof(Qubit*), -1),
-               std::invalid_argument);
-  EXPECT_THROW(
+  EXPECT_DEATH(__quantum__rt__array_create_1d(0, 1),
+               "element size must be positive");
+  EXPECT_DEATH(__quantum__rt__array_create_1d(sizeof(Qubit*), -1),
+               "length nonnegative");
+  EXPECT_DEATH(
       __quantum__rt__array_create_1d(2, std::numeric_limits<int64_t>::max()),
-      std::length_error);
+      "allocation size overflow");
 }
 
 TEST(QIRRuntimeArgumentsTest, RejectsInvalidTupleSizes) {
-  EXPECT_THROW(__quantum__rt__tuple_create(-1), std::invalid_argument);
-  EXPECT_THROW(__quantum__rt__tuple_create(std::numeric_limits<int64_t>::max()),
-               std::length_error);
+  EXPECT_DEATH(__quantum__rt__tuple_create(-1), "size must not be negative");
+  EXPECT_DEATH(__quantum__rt__tuple_create(std::numeric_limits<int64_t>::max()),
+               "allocation size overflow");
 
   auto* controls = __quantum__rt__array_create_1d(sizeof(Qubit*), 0);
   auto* tuple = __quantum__rt__tuple_create(1);
-  EXPECT_THROW(__quantum__qis__rx__ctl(controls, tuple), std::invalid_argument);
+  EXPECT_DEATH(__quantum__qis__rx__ctl(controls, tuple),
+               "tuple has an invalid size");
   __quantum__rt__tuple_update_reference_count(tuple, -1);
   __quantum__rt__array_update_reference_count(controls, -1);
 }
@@ -79,26 +83,90 @@ TEST_F(QIRRuntimeTest, RejectsInvalidDynamicResourceUse) {
   __quantum__rt__qubit_release(qubit);
   __quantum__rt__result_release(result);
 
-  EXPECT_THROW(__quantum__qis__x__body(qubit), std::out_of_range);
-  EXPECT_THROW(__quantum__rt__read_result(result), std::out_of_range);
-  EXPECT_THROW(__quantum__rt__qubit_release(qubit), std::out_of_range);
-  EXPECT_THROW(__quantum__rt__result_release(result), std::out_of_range);
+  EXPECT_DEATH(__quantum__qis__x__body(qubit), "Qubit not allocated");
+  EXPECT_DEATH(__quantum__rt__read_result(result), "Result not allocated");
+  EXPECT_DEATH(__quantum__rt__qubit_release(qubit),
+               "qubit was not dynamically allocated");
+  EXPECT_DEATH(__quantum__rt__result_release(result),
+               "result was not dynamically allocated");
 }
 
 TEST_F(QIRRuntimeTest, RejectsMixedStaticAndDynamicResourceManagement) {
   __quantum__rt__initialize(nullptr);
   __quantum__qis__x__body(nullptr);
-  EXPECT_THROW(__quantum__rt__qubit_allocate(nullptr), std::logic_error);
+  EXPECT_DEATH(__quantum__rt__qubit_allocate(nullptr),
+               "Cannot dynamically allocate qubits");
 
   __quantum__rt__initialize(nullptr);
   __quantum__qis__mz__body(nullptr, nullptr);
-  EXPECT_THROW(__quantum__rt__result_allocate(nullptr), std::logic_error);
+  EXPECT_DEATH(__quantum__rt__result_allocate(nullptr),
+               "Cannot dynamically allocate results");
+}
+
+TEST_F(QIRRuntimeTest, ReportsAllocationFailuresThroughErrorOutput) {
+  __quantum__rt__initialize(nullptr);
+  __quantum__qis__x__body(nullptr);
+  bool error = false;
+  EXPECT_EQ(__quantum__rt__qubit_allocate(&error), nullptr);
+  EXPECT_TRUE(error);
+
+  __quantum__rt__initialize(nullptr);
+  __quantum__qis__mz__body(nullptr, nullptr);
+  error = false;
+  EXPECT_EQ(__quantum__rt__result_allocate(&error), nullptr);
+  EXPECT_TRUE(error);
+  __quantum__rt__initialize(nullptr);
+}
+
+TEST_F(QIRRuntimeTest, ReportsInvalidBulkAllocationArguments) {
+  __quantum__rt__initialize(nullptr);
+  for (const int64_t size : {-1, 1}) {
+    bool error = false;
+    __quantum__rt__qubit_array_allocate(size, nullptr, &error);
+    EXPECT_TRUE(error);
+    error = false;
+    __quantum__rt__result_array_allocate(size, nullptr, &error);
+    EXPECT_TRUE(error);
+    EXPECT_DEATH(__quantum__rt__qubit_array_allocate(size, nullptr, nullptr),
+                 "Invalid QIR resource array allocation");
+    EXPECT_DEATH(__quantum__rt__result_array_allocate(size, nullptr, nullptr),
+                 "Invalid QIR resource array allocation");
+  }
+  bool error = true;
+  __quantum__rt__qubit_array_allocate(0, nullptr, &error);
+  EXPECT_FALSE(error);
+  error = true;
+  __quantum__rt__result_array_allocate(0, nullptr, &error);
+  EXPECT_FALSE(error);
+}
+
+TEST_F(QIRRuntimeTest, RollsBackFailedBulkQubitAllocation) {
+  __quantum__rt__initialize(nullptr);
+  auto* retained = __quantum__rt__qubit_allocate(nullptr);
+  std::vector<Qubit*> qubits(dd::Package::MAX_POSSIBLE_QUBITS);
+  bool error = false;
+  __quantum__rt__qubit_array_allocate(static_cast<int64_t>(qubits.size()),
+                                      qubits.data(), &error);
+  EXPECT_TRUE(error);
+  EXPECT_TRUE(std::ranges::all_of(
+      qubits, [](const auto* qubit) { return qubit == nullptr; }));
+
+  // Reuse every released wire while preserving the earlier allocation.
+  qubits.pop_back();
+  __quantum__rt__qubit_array_allocate(static_cast<int64_t>(qubits.size()),
+                                      qubits.data(), &error);
+  ASSERT_FALSE(error);
+  __quantum__rt__qubit_array_release(static_cast<int64_t>(qubits.size()),
+                                     qubits.data());
+  __quantum__rt__qubit_release(retained);
+  __quantum__rt__initialize(nullptr);
 }
 
 TEST_F(QIRRuntimeTest, RejectsStaticQubitBeyondDDRange) {
   __quantum__rt__initialize(nullptr);
   auto* qubit = reinterpret_cast<Qubit*>(dd::Package::MAX_POSSIBLE_QUBITS);
-  EXPECT_THROW(__quantum__qis__x__body(qubit), std::out_of_range);
+  EXPECT_DEATH(__quantum__qis__x__body(qubit),
+               "exceeds the supported qubit range");
 
   __quantum__rt__initialize(nullptr);
   constexpr std::array<dd::fp, 0> params{};
@@ -120,8 +188,8 @@ TEST_F(QIRRuntimeTest, RejectsDynamicQubitBeyondDDRange) {
 
 } // namespace
 
-/// HEADER/START/METADATA/END frame the per-shot OUTPUT block.
-/// The default Labeled schema emits `labeled` in HEADER and METADATA.
+// HEADER/START/METADATA/END frame the per-shot OUTPUT block.
+// The default Labeled schema emits `labeled` in HEADER and METADATA.
 TEST_F(QIRRuntimeTest, OutputFraming) {
   auto& runtime = Runtime::getInstance();
   runtime.outputProgramHeader();
@@ -266,7 +334,7 @@ TEST_F(QIRRuntimeTest, GlobalPhase) {
   __quantum__qis__gphase__body(dd::PI_2);
 
   const auto state = Runtime::getInstance().takeState();
-  const auto vector = state.edge.getVector();
+  const auto vector = dd::getVector(state.edge);
   ASSERT_EQ(vector.size(), 2);
   EXPECT_NEAR(vector[0].real(), 0., 1e-12);
   EXPECT_NEAR(vector[0].imag(), 1., 1e-12);
@@ -798,7 +866,7 @@ TEST_F(QIRRuntimeTest, GHZ4Dynamic) {
 }
 
 TEST_F(QIRRuntimeTest, PackageResizeWhenEnlargingState) {
-  /// Acting on qubit 32 must extend the initially empty state.
+  // Acting on qubit 32 must extend the initially empty state.
   auto* q32 = reinterpret_cast<Qubit*>(32UL);
   __quantum__rt__initialize(nullptr);
   __quantum__qis__h__body(q32);
@@ -911,7 +979,7 @@ TEST_F(QIRRuntimeTest, PreservesPhaseBeforeFirstQubitAndFollowingGates) {
   __quantum__qis__x__body(nullptr);
   auto state = Runtime::getInstance().takeState();
   state.dd->garbageCollect(true);
-  const auto values = state.edge.getVector();
+  const auto values = dd::getVector(state.edge);
   ASSERT_EQ(values.size(), 2);
   EXPECT_NEAR(std::abs(values[0] - std::polar(1., 0.7)), 0., 1e-12);
   EXPECT_EQ(values[1], 0.);
@@ -928,7 +996,7 @@ TEST_F(QIRRuntimeTest, ExtractsLogicalOrderAfterSwapCycle) {
   __quantum__qis__swap__body(q0, q1);
   __quantum__qis__swap__body(q1, q2);
   auto state = Runtime::getInstance().takeState();
-  const auto values = state.edge.getVector();
+  const auto values = dd::getVector(state.edge);
   ASSERT_EQ(values.size(), 8);
   for (size_t i = 0; i < values.size(); ++i) {
     EXPECT_EQ(values[i], i == 4 ? 1. : 0.);
@@ -949,7 +1017,7 @@ TEST_F(QIRRuntimeTest, ReusesReleasedWiresWithoutReusingHandles) {
     __quantum__qis__x__body(qubit);
     __quantum__rt__qubit_release(qubit);
   }
-  EXPECT_THROW(__quantum__qis__x__body(first), std::out_of_range);
+  EXPECT_DEATH(__quantum__qis__x__body(first), "Qubit not allocated");
   auto state = Runtime::getInstance().takeState();
   EXPECT_EQ(state.numQubits, 1);
   state.dd->decRef(state.edge);

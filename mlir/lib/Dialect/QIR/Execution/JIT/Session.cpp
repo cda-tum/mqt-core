@@ -17,6 +17,9 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -28,13 +31,22 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -69,6 +81,41 @@ static auto isEntryPoint(const llvm::Function& function) -> bool {
   return function.hasFnAttribute(ENTRY_POINT_ATTR);
 }
 
+static void validateNativeABI(llvm::CallingConv::ID convention,
+                              llvm::AttributeList attributes,
+                              const llvm::Twine& description) {
+  if (convention != llvm::CallingConv::C) {
+    throw std::runtime_error(
+        (description + " must use the C calling convention").str());
+  }
+  for (const auto index : attributes.indexes()) {
+    if (index == llvm::AttributeList::FunctionIndex) {
+      continue;
+    }
+    const auto attributeSet = attributes.getAttributes(index);
+    for (const auto kind : {
+             llvm::Attribute::StructRet,
+             llvm::Attribute::ByVal,
+             llvm::Attribute::InAlloca,
+             llvm::Attribute::InReg,
+             llvm::Attribute::StackAlignment,
+             llvm::Attribute::SwiftSelf,
+             llvm::Attribute::SwiftAsync,
+             llvm::Attribute::SwiftError,
+             llvm::Attribute::Preallocated,
+             llvm::Attribute::ByRef,
+             llvm::Attribute::Nest,
+         }) {
+      if (attributeSet.hasAttribute(kind)) {
+        throw std::runtime_error((description +
+                                  " has unsupported ABI attribute " +
+                                  attributeSet.getAttribute(kind).getAsString())
+                                     .str());
+      }
+    }
+  }
+}
+
 static auto selectEntryPoint(llvm::Module& module) -> llvm::Function& {
   llvm::Function* selected = nullptr;
   for (auto& function : module) {
@@ -83,6 +130,8 @@ static auto selectEntryPoint(llvm::Module& module) -> llvm::Function& {
     throw std::runtime_error("No QIR entry point was found");
   }
   auto& entryPoint = *selected;
+  validateNativeABI(entryPoint.getCallingConv(), entryPoint.getAttributes(),
+                    "QIR entry point '" + entryPoint.getName() + "'");
   const auto* type = entryPoint.getFunctionType();
   if (type->isVarArg() || type->getNumParams() != 0 ||
       !type->getReturnType()->isIntegerTy(64)) {
@@ -334,6 +383,8 @@ static auto selectRuntimeSymbols(const llvm::Module& module)
       throw std::runtime_error("Unsupported QIR runtime declaration '" +
                                function.getName().str() + "'");
     }
+    validateNativeABI(function.getCallingConv(), function.getAttributes(),
+                      "QIR runtime declaration '" + function.getName() + "'");
     const auto& symbol = it->second;
     if (!matches(*function.getFunctionType(), symbol)) {
       std::string actual;
@@ -346,6 +397,27 @@ static auto selectRuntimeSymbols(const llvm::Module& module)
       throw std::runtime_error(message.str());
     }
     selected.emplace_back(function.getName().str(), symbol.address);
+  }
+  for (const auto& function : module) {
+    for (const auto& instruction : llvm::instructions(function)) {
+      const auto* call = llvm::dyn_cast<llvm::CallBase>(&instruction);
+      if (call == nullptr) {
+        continue;
+      }
+      const auto* callee = llvm::dyn_cast<llvm::Function>(
+          call->getCalledOperand()->stripPointerCastsAndAliases());
+      if (callee == nullptr || !callee->isDeclaration() ||
+          !callee->getName().starts_with("__quantum__")) {
+        continue;
+      }
+      validateNativeABI(call->getCallingConv(), call->getAttributes(),
+                        "QIR runtime call to '" + callee->getName() + "'");
+      if (call->getFunctionType() != callee->getFunctionType()) {
+        throw std::runtime_error("QIR runtime call to '" +
+                                 callee->getName().str() +
+                                 "' must match its declaration");
+      }
+    }
   }
   return selected;
 }
@@ -383,15 +455,17 @@ JitSession::JitSession(const llvm::StringRef irBytes,
 
 JitSession::~JitSession() { deinitialize(); }
 
-int64_t JitSession::run() {
-  if (runtime_->extractState_ && !initializesRuntime_) {
-    runtime_->reset();
+int64_t JitSession::run() { return runWithRuntime(*runtime_); }
+
+int64_t JitSession::runWithRuntime(Runtime& runtime) {
+  if (runtime.extractState_ && !initializesRuntime_) {
+    runtime.reset();
   }
-  auto* previous = Runtime::bind(runtime_.get());
+  auto* previous = Runtime::bind(&runtime);
   const auto restoreRuntime =
-      llvm::make_scope_exit([previous] { Runtime::bind(previous); });
+      llvm::scope_exit([previous] { Runtime::bind(previous); });
   const auto code = entryPointFn_();
-  if (runtime_->invalidStateExtraction_) {
+  if (runtime.invalidStateExtraction_) {
     throw std::invalid_argument(
         "QIR state extraction cannot reset or operate on a measured qubit");
   }
@@ -399,7 +473,17 @@ int64_t JitSession::run() {
 }
 
 int64_t JitSession::sample(size_t shots, std::vector<std::string>& results,
-                           bool* stateAvailable) {
+                           bool* stateAvailable, bool emitHeader) {
+  return sampleWithRuntime(*runtime_, shots, results, emitHeader,
+                           stateAvailable);
+}
+
+int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
+                                      std::vector<std::string>& results,
+                                      bool emitHeader, bool* stateAvailable) {
+  if (&runtime != runtime_.get() && !shareCompiledCode_) {
+    throw std::logic_error("QIR entry point cannot be shared across workers");
+  }
   if (stateAvailable != nullptr) {
     *stateAvailable = false;
   }
@@ -408,24 +492,26 @@ int64_t JitSession::sample(size_t shots, std::vector<std::string>& results,
   }
   results.clear();
   results.reserve(shots);
-  runtime_->outputProgramHeader();
+  if (emitHeader) {
+    runtime.outputProgramHeader();
+  }
   const auto execute = [&] {
     if (!initializesRuntime_) {
-      runtime_->reset();
+      runtime.reset();
     }
-    runtime_->outputShotStart();
-    const auto code = run();
-    runtime_->outputShotEnd(code);
+    runtime.outputShotStart();
+    const auto code = runWithRuntime(runtime);
+    runtime.outputShotEnd(code);
     return code;
   };
-  if (samplingOutputs_ && !runtime_->hasOutput() && shots != 0) {
-    runtime_->deferMeasurements_ = true;
+  if (samplingOutputs_ && !runtime.hasOutput() && shots != 0) {
+    runtime.deferMeasurements_ = true;
     const auto restore =
-        llvm::make_scope_exit([&] { runtime_->deferMeasurements_ = false; });
+        llvm::scope_exit([&] { runtime.deferMeasurements_ = false; });
     if (const auto code = execute(); code != 0) {
       return code;
     }
-    runtime_->sampleMeasurements(*samplingOutputs_, shots, results);
+    runtime.sampleMeasurements(*samplingOutputs_, shots, results);
     if (stateAvailable != nullptr) {
       *stateAvailable = true;
     }
@@ -435,12 +521,30 @@ int64_t JitSession::sample(size_t shots, std::vector<std::string>& results,
     if (const auto code = execute(); code != 0) {
       return code;
     }
-    results.push_back(runtime_->getMeasurements());
+    results.push_back(runtime.getMeasurements());
   }
   return 0;
 }
 
 auto JitSession::runtime() -> Runtime& { return *runtime_; }
+
+bool JitSession::canSampleTerminal() const {
+  return samplingOutputs_.has_value() && !runtime_->hasOutput();
+}
+
+bool JitSession::canShareCompiledCode() const { return shareCompiledCode_; }
+
+std::unique_ptr<Runtime> JitSession::makeWorkerRuntime(uint64_t seed) const {
+  if (!shareCompiledCode_ || execution_ != Execution::Sampling) {
+    throw std::logic_error("QIR entry point cannot be shared across workers");
+  }
+  auto worker = std::make_unique<Runtime>(seed);
+  worker->outputSchema = runtime_->outputSchema;
+  worker->metadata = runtime_->metadata;
+  worker->configureStaticResources(runtime_->staticQubits_,
+                                   runtime_->staticResults_);
+  return worker;
+}
 
 void JitSession::initNativeTargets() {
   static std::once_flag flag;
@@ -493,6 +597,37 @@ void JitSession::initialize(
   std::string entryPointName;
   std::vector<std::pair<std::string, void*>> runtimeSymbols;
   loadedModule.withModuleDo([&](llvm::Module& module) {
+    std::string verification;
+    llvm::raw_string_ostream diagnostics(verification);
+    if (llvm::verifyModule(module, &diagnostics)) {
+      throw std::runtime_error("Invalid QIR module: " + verification);
+    }
+    for (const auto& function : module) {
+      for (const auto& block : function) {
+        for (const auto& instruction : block) {
+          const auto* call = llvm::dyn_cast<llvm::CallBase>(&instruction);
+          const auto* callee =
+              call == nullptr ? nullptr : call->getCalledFunction();
+          if (callee != nullptr &&
+              callee->getName().starts_with("__quantum__qis__") &&
+              !callee->getName().starts_with("__quantum__qis__mz")) {
+            ++quantumCallSites_;
+          }
+        }
+      }
+    }
+    shareCompiledCode_ =
+        execution == Execution::Sampling &&
+        llvm::all_of(module.globals(),
+                     [](const auto& global) {
+                       return global.isConstant() && !global.isDeclaration();
+                     }) &&
+        module.aliases().empty() && module.ifuncs().empty() &&
+        llvm::all_of(module, [](const auto& function) {
+          return !function.isDeclaration() || function.use_empty() ||
+                 function.isIntrinsic() ||
+                 function.getName().starts_with("__quantum__");
+        });
     auto& entryPoint = selectEntryPoint(module);
     entryPointName = entryPoint.getName().str();
     runtime_->setOutputSchema(readOutputSchema(entryPoint));
@@ -541,7 +676,7 @@ void JitSession::initialize(
     }
   });
 
-  /// Use the ordinary module JIT; no function-lazy modules are submitted.
+  // Use the ordinary module JIT; no function-lazy modules are submitted.
   llvm::orc::LLJITBuilder builder;
 
   // Use the module's target triple if set, otherwise detect the host's.
@@ -559,7 +694,7 @@ void JitSession::initialize(
   }
   builder.setJITTargetMachineBuilder(*host);
 
-  /// Apply the module's explicit data layout if present.
+  // Apply the module's explicit data layout if present.
   if (dl) {
     builder.setDataLayout(dl);
   }
@@ -627,11 +762,38 @@ void JitSession::initialize(
     }
   }
 
+  // Avoid optimizer startup for programs eligible for terminal sampling.
+  if (execution == Execution::Sampling && !samplingOutputs_) {
+    loadedModule.withModuleDo([&](llvm::Module& module) {
+      module.setDataLayout(jit_->getDataLayout());
+      module.setTargetTriple(jit_->getTargetTriple());
+      llvm::LoopAnalysisManager loopAnalyses;
+      llvm::FunctionAnalysisManager functionAnalyses;
+      llvm::CGSCCAnalysisManager cgsccAnalyses;
+      llvm::ModuleAnalysisManager moduleAnalyses;
+      llvm::PipelineTuningOptions tuning;
+      tuning.LoopUnrolling = false;
+      llvm::PassBuilder passBuilder(nullptr, tuning);
+      passBuilder.registerModuleAnalyses(moduleAnalyses);
+      passBuilder.registerCGSCCAnalyses(cgsccAnalyses);
+      passBuilder.registerFunctionAnalyses(functionAnalyses);
+      passBuilder.registerLoopAnalyses(loopAnalyses);
+      passBuilder.crossRegisterProxies(loopAnalyses, functionAnalyses,
+                                       cgsccAnalyses, moduleAnalyses);
+      auto pipeline = passBuilder.buildPerModuleDefaultPipeline(
+          llvm::OptimizationLevel::O1);
+      pipeline.run(module, moduleAnalyses);
+    });
+  }
+
   if (auto err = jit_->addIRModule(std::move(loadedModule))) {
     throw std::runtime_error(llvm::toString(std::move(err)));
   }
 
   // Run any static constructors.
+  auto* previous = Runtime::bind(runtime_.get());
+  const auto restore =
+      llvm::scope_exit([previous] { Runtime::bind(previous); });
   if (auto err = jit_->initialize(jit_->getMainJITDylib())) {
     throw std::runtime_error(llvm::toString(std::move(err)));
   }
@@ -648,6 +810,9 @@ void JitSession::deinitialize() const {
   if (!jit_) {
     return;
   }
+  auto* previous = Runtime::bind(runtime_.get());
+  const auto restore =
+      llvm::scope_exit([previous] { Runtime::bind(previous); });
   if (auto err = jit_->deinitialize(jit_->getMainJITDylib())) {
     llvm::errs() << "JitSession deinitialize failed: "
                  << llvm::toString(std::move(err)) << "\n";

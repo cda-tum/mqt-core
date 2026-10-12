@@ -93,8 +93,8 @@ void registerQIRClassicalTensorDialects(DialectRegistry& registry) {
 LogicalResult finalizeQIRConversion(ModuleOp moduleOp, ConversionTarget& target,
                                     LLVMTypeConverter& typeConverter) {
   auto* ctx = moduleOp.getContext();
-  /// Constant tensors and element reads require no allocation or alias
-  /// analysis.
+  // Constant tensors and element reads require no allocation or alias
+  // analysis.
   bufferization::BufferizationOptions options;
   options.allowUnknownOps = true;
   options.opFilter.allowOperation<arith::ConstantOp, tensor::ExtractOp>();
@@ -294,14 +294,19 @@ struct ConvertQCCtrlOp final : StatefulOpConversionPattern<CtrlOp> {
                                          "Nested CtrlOps are not supported");
     }
 
-    if (op.getNumBodyUnitaries() > 1) {
-      return rewriter.notifyMatchFailure(
-          op, "CtrlOps with multiple body unitaries are not supported. Run the "
-              "unroll-modifiers pass before the conversion");
+    auto unitaries = op.getBody()->getOps<UnitaryOpInterface>();
+    auto it = unitaries.begin();
+    UnitaryOpInterface bodyUnitary;
+    if (it != unitaries.end()) {
+      bodyUnitary = *it;
+      if (++it != unitaries.end()) {
+        return rewriter.notifyMatchFailure(
+            op,
+            "CtrlOps with multiple body unitaries are not supported. Run the "
+            "unroll-modifiers pass before the conversion");
+      }
     }
 
-    auto bodyUnitary = op.getNumBodyUnitaries() == 1 ? op.getBodyUnitary(0)
-                                                     : UnitaryOpInterface{};
     if (bodyUnitary && !isa<BarrierOp, IdOp>(bodyUnitary.getOperation())) {
       state.controlledGates.try_emplace(bodyUnitary.getOperation(),
                                         llvm::to_vector(adaptor.getControls()));
@@ -395,6 +400,7 @@ Value getResultPtr(LoweringState& state, Operation* op,
 }
 
 /// Summarize the interference before each store in one block traversal.
+///
 /// Only disjoint constant-index stores to the same register can be crossed.
 static DenseSet<Operation*> findStoreFusionCandidates(Block* block) {
   DenseSet<Operation*> candidates;
@@ -436,7 +442,7 @@ static DenseSet<Operation*> findStoreFusionCandidates(Block* block) {
       }
       continue;
     }
-    /// These unscoped quantum effects cannot access CBit storage.
+    // These unscoped quantum effects cannot access CBit storage.
     if (isa<qc::AllocOp, qc::DeallocOp, qc::GPhaseOp>(operation)) {
       continue;
     }

@@ -3,7 +3,7 @@
 The
 [Quantum Device Management Interface (QDMI)](https://munich-quantum-software-stack.github.io/QDMI/)
 provides a standardized interface for describing and interacting with quantum
-devices. MQT Core supplies a driver, C++ and Python client interfaces, device
+devices. MQT Core supplies a driver, C++ and Python APIs, device
 implementations, and SDK and HPC integrations.
 
 ## What QDMI standardizes
@@ -24,12 +24,13 @@ clients must use those queries to prepare compatible jobs.
 
 ## How MQT Core uses QDMI
 
-| Layer                                                                   | Responsibility                                                                          |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| {doc}`Compiler <../mlir/target_compilation>`                            | Query a target's capabilities and compile a compatible program.                         |
-| {doc}`Driver and client interfaces <driver>`                            | Load device libraries and provide C++ and Python access to sessions, queries, and jobs. |
-| Device implementation                                                   | Translate QDMI calls into simulator operations or a provider's API.                     |
-| {doc}`SDK adapters <qdmi_backend>` and {doc}`Slurm integration <slurm>` | Connect user workflows and resource management to QDMI devices.                         |
+| Layer                                        | Responsibility                                                                          |
+| -------------------------------------------- | --------------------------------------------------------------------------------------- |
+| {doc}`Compiler <../mlir/target_compilation>` | Query a target's capabilities and compile a compatible program.                         |
+| {doc}`Driver and application APIs <driver>`  | Load device libraries and provide C++ and Python access to sessions, queries, and jobs. |
+| Device implementation                        | Translate QDMI calls into simulator operations or a provider's API.                     |
+| {doc}`SDK adapters <qdmi_backend>`           | Execute Qiskit and PennyLane programs through QDMI.                                     |
+| {doc}`Slurm playground <slurm>`              | Schedule hybrid workflows using the ordinary QDMI APIs.                                 |
 
 Compilation and submission remain separate: `compile_program` prepares a
 `CompiledProgram`; `submit_program` submits it to a matching execution device.
@@ -51,8 +52,10 @@ states.
   {doc}`configuration` guides.
 - **Compile for hardware:** the {doc}`superconducting models <sc_device>` supply
   topology, native operations, and calibration. They do not execute programs.
-- **Use another interface:** connect through {doc}`Qiskit <qdmi_backend>`,
-  {doc}`PennyLane <pennylane_device>`, or {doc}`Slurm <slurm>`.
+- **Use an SDK:** connect through {doc}`Qiskit <qdmi_backend>` or
+  {doc}`PennyLane <pennylane_device>`.
+- **Run on a cluster:** use the
+  {doc}`Slurm guide and workflow playground <slurm>`.
 - **Implement a device:** follow the
   [QDMI device interface](https://munich-quantum-software-stack.github.io/QDMI/)
   and use MQT Core's bundled devices as implementation examples.
@@ -84,11 +87,11 @@ program formats, authentication, and scheduling constraints. See
 :maxdepth: 1
 :caption: Table of Contents
 
-QDMI Driver <driver>
+QDMI driver <driver>
 QDMI device configuration <configuration>
 DDSIM QDMI Device <ddsim_device>
 SC QDMI Device <sc_device>
-Slurm integration <slurm>
+Slurm workflows and playground <slurm>
 QDMI-Qiskit Backend <qdmi_backend>
 PennyLane interface for QDMI devices <pennylane_device>
 ```

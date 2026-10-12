@@ -84,7 +84,7 @@ def _x_program() -> QCOProgram:
 module {
   func.func @main() attributes {mqt.entry_point} {
     %q = qco.static 0 : !qco.qubit
-    %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+    %q1 = qco.x %q : !qco.qubit
     qco.sink %q1 : !qco.qubit
     return
   }
@@ -102,10 +102,10 @@ def _measure_program() -> QCOProgram:
 module {
   func.func @main() attributes {mqt.entry_point} {
     %q = qco.static 0 : !qco.qubit
-    %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+    %q1 = qco.x %q : !qco.qubit
     %q2, %bit = qco.measure %q1 : !qco.qubit
     %q3 = qco.if %bit args(%q_in = %q2) -> (!qco.qubit) {
-      %qx = qco.x %q_in : !qco.qubit -> !qco.qubit
+      %qx = qco.x %q_in : !qco.qubit
       qco.yield %qx : !qco.qubit
     } else args(%q_in = %q2) {
       qco.yield %q_in : !qco.qubit

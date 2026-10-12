@@ -10,19 +10,28 @@
 
 #include "mqt/Dialect/QCO/Utils/FunctionUtils.h"
 
+#include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
+#include "mqt/Dialect/QCO/IR/QCOInterfaces.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
+#include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Utils/WireIterator.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 #include "mqt/Dialect/QTensor/Utils/TensorIterator.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Visitors.h"
+#include "mlir/Support/WalkResult.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 
+#include <cstdint>
 #include <iterator>
 
 using namespace mlir;
@@ -118,12 +127,8 @@ FailureOr<unsigned> mlir::qco::traceQubitArgument(func::FuncOp function,
   return traceQubitArgument(function.getBody().front(), value);
 }
 
-/// Require dynamic tensor slots to be restored before leaving each region.
-/// Slot identity and disjoint extractions are program preconditions; known
-/// violations and positional region correspondence are checked separately.
 bool mlir::qco::hasCompleteTensorLifetime(Value tensor, unsigned depth) {
-  /// ponytail: reject deeper nesting; use a worklist if proving
-  /// completeness beyond 64 nested regions becomes necessary.
+  // Reject nesting at depth 64 to bound recursive stack use.
   if (depth == 64) {
     return false;
   }
@@ -190,4 +195,185 @@ bool mlir::qco::hasCompleteTensorLifetime(Value tensor, unsigned depth) {
     }
   }
   return false;
+}
+
+LogicalResult mlir::qco::collectWireOrigins(Operation* root,
+                                            DenseMap<Value, Value>& origins) {
+  const auto origin = [&](Value value) {
+    auto known = origins.lookup(value);
+    return known ? known : value;
+  };
+  const auto quantum = [](ValueRange values) {
+    SmallVector<Value> result;
+    llvm::copy_if(values, std::back_inserter(result), [](Value value) {
+      return isLinearQubitType(value.getType());
+    });
+    return result;
+  };
+  const auto corresponds = [&](ValueRange inputs, ValueRange outputs) {
+    auto quantumInputs = quantum(inputs);
+    auto quantumOutputs = quantum(outputs);
+    if (quantumInputs.size() != quantumOutputs.size()) {
+      return false;
+    }
+    return llvm::all_of(llvm::zip_equal(quantumInputs, quantumOutputs),
+                        [&](auto pair) {
+                          auto [input, output] = pair;
+                          return input.getType() == output.getType() &&
+                                 origin(input) == origin(output);
+                        });
+  };
+  const auto tie = [&](ValueRange inputs, ValueRange outputs) {
+    auto quantumInputs = quantum(inputs);
+    auto quantumOutputs = quantum(outputs);
+    if (quantumInputs.size() != quantumOutputs.size()) {
+      return;
+    }
+    for (auto [input, output] :
+         llvm::zip_equal(quantumInputs, quantumOutputs)) {
+      origins[output] = origin(input);
+    }
+  };
+  auto result = root->walk([&](Operation* op, const WalkStage& stage) {
+    if (auto unitary = dyn_cast<qco::UnitaryOpInterface>(op)) {
+      tie(unitary.getInputQubits(), unitary.getOutputQubits());
+      return WalkResult::skip();
+    }
+    if (!stage.isAfterAllRegions()) {
+      return WalkResult::advance();
+    }
+    bool positional = true;
+    if (auto loop = dyn_cast<scf::ForOp>(op)) {
+      positional = corresponds(loop.getRegionIterArgs(),
+                               loop.getBody()->getTerminator()->getOperands());
+      tie(loop.getInitArgs(), loop.getResults());
+    } else if (auto loop = dyn_cast<scf::WhileOp>(op)) {
+      positional =
+          corresponds(loop.getBeforeArguments(),
+                      loop.getConditionOp().getArgs()) &&
+          corresponds(loop.getAfterArguments(), loop.getYieldOp().getResults());
+      tie(loop.getInits(), loop.getResults());
+    } else if (isa<qco::IfOp, qco::IndexSwitchOp>(op)) {
+      for (auto& region : op->getRegions()) {
+        positional &=
+            region.hasOneBlock() &&
+            corresponds(region.front().getArguments(),
+                        region.front().getTerminator()->getOperands());
+      }
+      tie(op->getOperands(), op->getResults());
+    } else if (auto function = dyn_cast<func::FuncOp>(op)) {
+      auto arguments = getQuantumArgumentIndices(function.getArgumentTypes());
+      if (arguments.empty()) {
+        return WalkResult::advance();
+      }
+      if (function.getNumResults() < arguments.size() ||
+          !llvm::all_of(
+              llvm::zip_equal(arguments, function.getResultTypes().take_back(
+                                             arguments.size())),
+              [&](auto pair) {
+                auto [argument, type] = pair;
+                return function.getArgumentTypes()[argument] == type;
+              })) {
+        function.emitOpError(
+            "must return one trailing quantum value for each quantum argument");
+        return WalkResult::interrupt();
+      }
+      if (function.isDeclaration()) {
+        return WalkResult::advance();
+      }
+      if (!function.getBody().hasOneBlock()) {
+        function.emitOpError(
+            "with quantum arguments must have one outer block");
+        return WalkResult::interrupt();
+      }
+      auto returned =
+          dyn_cast<func::ReturnOp>(function.getBody().front().back());
+      if (!returned ||
+          !corresponds(function.getArguments(),
+                       returned.getOperands().take_back(arguments.size()))) {
+        function.emitOpError("must return its quantum arguments positionally");
+        return WalkResult::interrupt();
+      }
+    } else if (auto measure = dyn_cast<qco::MeasureOp>(op)) {
+      tie(ValueRange{measure.getQubitIn()}, ValueRange{measure.getQubitOut()});
+    } else if (auto reset = dyn_cast<qco::ResetOp>(op)) {
+      tie(ValueRange{reset.getQubitIn()}, ValueRange{reset.getQubitOut()});
+    } else if (auto extract = dyn_cast<qtensor::ExtractOp>(op)) {
+      origins[extract->getResult(0)] = origin(extract.getTensor());
+    } else if (auto insert = dyn_cast<qtensor::InsertOp>(op)) {
+      origins[insert.getResult()] = origin(insert.getDest());
+    } else if (auto call = dyn_cast<func::CallOp>(op)) {
+      for (auto [index, result] : llvm::enumerate(call.getResults())) {
+        if (auto argument = qco::getCallArgumentForResult(call, index);
+            succeeded(argument)) {
+          origins[result] = origin(call.getOperand(*argument));
+        }
+      }
+    }
+    if (!positional) {
+      op->emitOpError("requires positional quantum state "
+                      "correspondence through region terminators");
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return success(!result.wasInterrupted());
+}
+
+[[nodiscard]] static LogicalResult verifyLinearValue(Value value) {
+  if (!isLinearQubitType(value.getType()) || value.hasOneUse()) {
+    return success();
+  }
+  return emitError(value.getLoc())
+         << "expected linear QCO value to have exactly one use, but found "
+         << value.getNumUses();
+}
+
+LogicalResult mlir::qco::verifyLinearity(Operation* root) {
+  func::FuncOp entryPoint;
+  if (auto moduleOp = dyn_cast<ModuleOp>(root)) {
+    entryPoint = mqt::getEntryPoint(moduleOp);
+  }
+
+  DenseSet<uint64_t> staticIndices;
+  const auto walkResult = root->walk([&](Operation* op) {
+    if (auto staticOp = dyn_cast<StaticOp>(op)) {
+      if (entryPoint &&
+          (entryPoint.isDeclaration() ||
+           staticOp->getBlock() != &entryPoint.getBody().front())) {
+        staticOp.emitError()
+            << "expected static qubits in the entry block of program entry "
+               "function @"
+            << entryPoint.getSymName();
+        return WalkResult::interrupt();
+      }
+      if (!staticIndices.insert(staticOp.getIndex()).second) {
+        staticOp.emitError()
+            << "expected each static qubit index to identify one linear "
+               "value, but found duplicate index "
+            << staticOp.getIndex();
+        return WalkResult::interrupt();
+      }
+    }
+    for (auto result : op->getResults()) {
+      if (failed(verifyLinearValue(result))) {
+        return WalkResult::interrupt();
+      }
+    }
+    for (Region& region : op->getRegions()) {
+      for (Block& block : region) {
+        for (auto argument : block.getArguments()) {
+          if (failed(verifyLinearValue(argument))) {
+            return WalkResult::interrupt();
+          }
+        }
+      }
+    }
+    return WalkResult::advance();
+  });
+  if (walkResult.wasInterrupted()) {
+    return failure();
+  }
+  DenseMap<Value, Value> origins;
+  return collectWireOrigins(root, origins);
 }

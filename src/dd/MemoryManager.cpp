@@ -16,19 +16,23 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
+#include <stdexcept>
 
 namespace dd {
 
 MemoryManager::MemoryManager(size_t entrySize,
                              const std::size_t initialAllocationSize)
     : entrySize_(entrySize), chunks(1), stats(entrySize) {
+  if (initialAllocationSize == 0) {
+    throw std::invalid_argument("Initial DD allocation size must be positive.");
+  }
   chunks[0] = {std::make_unique_for_overwrite<Storage>(initialAllocationSize *
                                                        entrySize),
                initialAllocationSize * entrySize};
-  /// The first slab must exist before its bounds can be initialized.
-  /// NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
+  // The first slab must exist before its bounds can be initialized.
+  // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
   chunkIt = chunks[0].first.get();
-  /// NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer,cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer,cppcoreguidelines-pro-bounds-pointer-arithmetic)
   chunkEndIt = chunks[0].first.get() + chunks[0].second;
   stats.numAllocations = 1U;
   stats.numAllocated = initialAllocationSize;
@@ -65,7 +69,7 @@ void MemoryManager::reset(const bool resizeToTotal) noexcept {
   }
 
   chunkIt = chunks[0].first.get();
-  /// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   chunkEndIt = chunks[0].first.get() + chunks[0].second;
 
   stats.reset();
@@ -96,7 +100,7 @@ void MemoryManager::allocateNewChunk() {
       std::make_unique_for_overwrite<Storage>(numNewEntries * entrySize_),
       numNewEntries * entrySize_);
   chunkIt = chunks.back().first.get();
-  /// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   chunkEndIt = chunks.back().first.get() + chunks.back().second;
   ++stats.numAllocations;
   stats.numAllocated += numNewEntries;
@@ -107,9 +111,9 @@ LLBase* MemoryManager::getEntryFromChunk() noexcept {
   assert(entryAvailableInChunk());
 
   auto* entry = chunkIt;
-  /// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   chunkIt += entrySize_;
-  /// Fresh vector nodes must start with cleared collection flags.
+  // Fresh vector nodes must start with cleared collection flags.
   std::memset(entry, 0, entrySize_);
   stats.trackUsedEntries();
   return reinterpret_cast<LLBase*>(entry);

@@ -21,23 +21,27 @@ if(BUILD_MQT_CORE_BINDINGS)
   find_package(nanobind CONFIG REQUIRED)
 endif()
 
-if(BUILD_MQT_CORE_MLIR)
-  # Fetch jeff-mlir
-  FetchContent_Declare(
-    jeff-mlir
-    GIT_REPOSITORY https://github.com/unitaryfoundation/jeff-mlir.git
-    GIT_TAG 9e79c4ba850300385ce97c6dc8fc728004f30aa8
-    EXCLUDE_FROM_ALL)
-  block()
-  # Cap'n Proto, which is fetched transitively by jeff-mlir, uses the generic BUILD_TESTING option
-  # and defines a global `check` target when it is enabled. Do not let an embedding project's test
-  # setting leak into this third-party dependency.
-  set(BUILD_TESTING OFF)
-  # jeff's transitive Cap'n Proto dependency contains source files that cannot share a unity
-  # translation unit. Keep the complete dependency subtree out of unity builds.
-  set(CMAKE_UNITY_BUILD OFF)
-  FetchContent_MakeAvailable(jeff-mlir)
-  endblock()
+# Fetch jeff-mlir
+FetchContent_Declare(
+  jeff-mlir
+  GIT_REPOSITORY https://github.com/unitaryfoundation/jeff-mlir.git
+  GIT_TAG 9e79c4ba850300385ce97c6dc8fc728004f30aa8
+  EXCLUDE_FROM_ALL)
+block()
+# Cap'n Proto, which is fetched transitively by jeff-mlir, uses the generic BUILD_TESTING option and
+# defines a global `check` target when it is enabled. Do not let an embedding project's test setting
+# leak into this third-party dependency.
+set(BUILD_TESTING OFF)
+# jeff's transitive Cap'n Proto dependency contains source files that cannot share a unity
+# translation unit. Keep the complete dependency subtree out of unity builds.
+set(CMAKE_UNITY_BUILD OFF)
+# Cap'n Proto requires compiler extensions.
+set(CMAKE_CXX_EXTENSIONS ON)
+FetchContent_MakeAvailable(jeff-mlir)
+endblock()
+if(MSVC AND TARGET capnp)
+  # shortcut: Cap'n Proto has GCC-only pragmas; remove when guarded upstream.
+  target_compile_options(capnp PRIVATE /wd4068)
 endif()
 
 set(JSON_VERSION
@@ -68,7 +72,7 @@ set(QDMI_MINIMUM_VERSION 1.4.0
         CACHE STRING "Minimum QDMI version")
 set(QDMI_VERSION 1.4.0
         CACHE STRING "QDMI version")
-set(QDMI_REV "691226d44394cdda28036be2045eeba948111986"
+set(QDMI_REV "6db03d83ad602aaa9fe928b5c3fc5cce84b10061" # v1.4.0
         CACHE STRING "QDMI identifier (tag, branch or commit hash)")
 set(QDMI_REPO_OWNER "Munich-Quantum-Software-Stack"
         CACHE STRING "QDMI repository owner (change when using a fork)")

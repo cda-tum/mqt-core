@@ -123,6 +123,13 @@ quantum assembly language
   QASM. A generic category of assembly-like languages for quantum programs. Do
   not use QASM as an alias for a specific OpenQASM version.
 
+QAN
+quantum access node
+  **Preferred term:** quantum access node. **Accepted abbreviation:** QAN. A
+  cluster node from which jobs can reach a quantum device service. Its Slurm
+  partition determines job placement; device credentials and site network
+  policies determine access.
+
 QDMI
 Quantum Device Management Interface
   **Preferred term:** Quantum Device Management Interface. **Accepted
@@ -130,6 +137,27 @@ Quantum Device Management Interface
   [interface](https://munich-quantum-software-stack.github.io/QDMI/) for
   discovering quantum-device properties and submitting and controlling work
   without coupling software to one device implementation.
+
+QDMI Client interface
+  **Preferred term:** QDMI Client interface. The standard C interface consumed by
+  applications to open sessions, query devices, and manage jobs. MQT Core's C++ and
+  Python Client wrappers consume this interface; they are not a driver.
+
+QDMI driver
+  **Preferred term:** QDMI driver. An implementation of the QDMI Client interface.
+  The builtin MQT Core QDMI driver loads QDMI device libraries. A replacement driver owns
+  its own discovery, configuration, and device access; applications must not
+  assume it provides MQT Core's private driver extension.
+
+QDMI session
+  **Preferred term:** QDMI session. A connection to a QDMI driver, represented
+  by `qdmi::Session` in C++ and `mqt.core.qdmi.Session` in Python. A device
+  session is the driver's connection to one device implementation.
+
+C++ QDMI library
+  **Preferred term:** C++ QDMI library. MQT Core's owning C++ wrappers around
+  the QDMI Client Interface. The driver manages device libraries and their
+  configuration; the C++ library is independent of that implementation.
 
 QIR
 Quantum Intermediate Representation
@@ -211,6 +239,10 @@ legalization
   The act of replacing or rejecting IR until every remaining operation and type
   satisfies a declared conversion target or target capability.
 
+native multi-program job
+  One submitted job containing an ordered list of programs with common
+  parameters. Results and optional individual outcomes use the input indices.
+
 compiler target
   An immutable MQT description of the operations, topology, and properties that
   a compiler pipeline may use for one destination. It is a snapshot used for
@@ -261,6 +293,16 @@ dynamic
   Known only while executing the compiled program or interacting with a target.
   A dynamic quantum allocation acquires resources during execution, even when
   its size is a compile-time constant.
+
+floating-point parameter
+  **Preferred term:** floating-point parameter. **Accepted alias:**
+  `FloatParameter` in C++. A host double or an f64 SSA value supplied to a
+  builder or synthesis utility.
+
+floating-point expression
+  **Preferred term:** floating-point expression. **Accepted alias:**
+  `FloatExpression` in C++. An f64 SSA expression built and locally folded with
+  an MLIR builder. Rotation utilities own angle and phase handling.
 
 static gate count
   **Preferred term:** static gate count. **Accepted aliases:** none. The number
@@ -334,8 +376,8 @@ manifest
 magic state
   **Preferred term:** magic state. **Accepted aliases:** none. A non-stabilizer
   quantum state consumed by protocols that implement non-Clifford operations
-  using Clifford operations and measurements. The distillation benchmark uses
-  $|T\rangle = T|+\rangle$.
+  using Clifford operations and measurements. The distillation benchmark retains
+  $T^\dagger|+\rangle$ states, which are Clifford-equivalent to $T|+\rangle$.
 
 magic-state distillation
   **Preferred term:** magic-state distillation. **Accepted aliases:** none. A

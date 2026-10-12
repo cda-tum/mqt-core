@@ -1794,7 +1794,7 @@ static void validateClassicalSnapshot(mlir::Value expression,
                                       const ExportState& state) {
   llvm::DenseSet<mlir::Value> visited;
   llvm::SmallVector<std::pair<mlir::Operation*, mlir::Value>> reads;
-  llvm::SmallVector<mlir::Value, 16> worklist{expression};
+  llvm::SmallVector<mlir::Value> worklist{expression};
   while (!worklist.empty()) {
     auto value = worklist.pop_back_val();
     if (!visited.insert(value).second || state.locals.contains(value)) {
@@ -2938,7 +2938,7 @@ nb::object exportCircuit(const mlir::QCProgram& program,
   }
   mlir::RewritePatternSet patterns(moduleOp.getContext());
   mlir::mqt::populateIntegerExpansionPatterns(patterns);
-  /// Fold scalar expressions without applying resource or snapshot rewrites.
+  // Fold scalar expressions without applying resource or snapshot rewrites.
   if (mlir::failed(
           mlir::applyPatternsGreedily(moduleOp, std::move(patterns)))) {
     throw std::runtime_error("failed to normalize arithmetic for Qiskit");

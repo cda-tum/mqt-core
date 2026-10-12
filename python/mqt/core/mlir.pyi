@@ -271,7 +271,10 @@ class CompilerTarget:
 
         @staticmethod
         def variadic(minimum: int) -> CompilerTarget.OperationArity:
-            """Create an operation arity with an inclusive minimum. Capability construction requires a positive minimum."""
+            """Create an operation arity with an inclusive minimum.
+
+            Capability construction requires a positive minimum.
+            """
 
         @property
         def kind(self) -> CompilerTarget.OperationArityKind:
@@ -326,7 +329,10 @@ class CompilerTarget:
 
         @property
         def fixed_parameters(self) -> list[float | None]:
-            """Fixed values or None per parameter; empty means unrestricted. Constants use absolute tolerance 1e-15 without angle wrapping."""
+            """Fixed values or None per parameter; empty means unrestricted.
+
+            Constants use absolute tolerance 1e-15 without angle wrapping.
+            """
 
         @property
         def duration(self) -> int | None:
@@ -517,7 +523,7 @@ class CompilerTarget:
 
     @staticmethod
     def from_device_id(device_id: str, **session_parameters: Unpack[QDMISessionParameters]) -> CompilerTarget:
-        """Open a registered device and snapshot its compiler target."""
+        """Open a client-visible device and snapshot its compiler target."""
 
     @property
     def name(self) -> str | None:
@@ -602,6 +608,13 @@ class Program:
     def is_valid(self) -> bool:
         """Whether this program still owns its module."""
 
+    def operation_counts(self) -> dict[str, int]:
+        """Count every operation by its full MLIR name.
+
+        Includes the root module, helper functions, modifier bodies, terminators,
+        and nested modules.
+        """
+
     @property
     def ir(self) -> str:
         """The textual MLIR representation of this program."""
@@ -637,13 +650,19 @@ class MappingOptions:
     def lookahead(self, arg: int, /) -> None: ...
     @property
     def search_memory_limit(self) -> int:
-        """Estimated node and layout bytes per routing search, per concurrent trial. Zero disables node expansion. Container overhead, caches, and IR are extra."""
+        """Estimated node and layout bytes per routing search, per concurrent trial.
+
+        Zero disables node expansion. Container overhead, caches, and IR are extra.
+        """
 
     @search_memory_limit.setter
     def search_memory_limit(self, arg: int, /) -> None: ...
 
 class CompilationOptions:
-    """Shared compiler controls. An explicit seed overrides all compiler randomness; None preserves pass defaults and custom pipeline seeds."""
+    """Shared compiler controls.
+
+    An explicit seed overrides all compiler randomness; None preserves pass defaults and custom pipeline seeds.
+    """
 
     def __init__(
         self,
@@ -670,6 +689,78 @@ class CompilationOptions:
     @mapping.setter
     def mapping(self, arg: MappingOptions, /) -> None: ...
 
+class QuantumProgramInfo:
+    """Quantum resources and static IR statistics.
+
+    Use :meth:`QCProgram.inspect` or :meth:`QCOProgram.inspect` to collect a snapshot.
+    """
+
+    @property
+    def num_qubits(self) -> int | None:
+        """Declared quantum capacity.
+
+        Counts allocated qubits or distinct static site IDs. ``None`` means the width
+        is unknown. Resource inspection includes helper functions and excludes nested
+        modules; it describes declared capacity rather than peak live width.
+        """
+
+    @property
+    def static_qubits(self) -> list[int]:
+        """Sorted distinct physical site IDs.
+
+        Includes declarations in helper functions and excludes nested modules.
+        """
+
+    @property
+    def has_control_flow(self) -> bool:
+        """Whether the module contains control flow.
+
+        Includes branches and region-control operations in helper functions, but
+        excludes nested modules.
+        """
+
+    @property
+    def num_gates(self) -> int:
+        """Static entry-point gate count.
+
+        See :meth:`QCProgram.num_gates`.
+        """
+
+    @property
+    def num_single_qubit_gates(self) -> int:
+        """Static single-qubit gate count.
+
+        See :meth:`QCProgram.num_single_qubit_gates`.
+        """
+
+    @property
+    def num_two_qubit_gates(self) -> int:
+        """Static two-qubit gate count.
+
+        See :meth:`QCProgram.num_two_qubit_gates`.
+        """
+
+    @property
+    def gate_counts(self) -> dict[str, int]:
+        """Entry-point gate histogram.
+
+        See :meth:`QCProgram.gate_counts`.
+        """
+
+    @property
+    def control_flow_counts(self) -> dict[str, int]:
+        """Entry-point control-flow histogram.
+
+        See :meth:`QCProgram.control_flow_counts`.
+        """
+
+    @property
+    def operation_counts(self) -> dict[str, int]:
+        """Full module operation histogram.
+
+        See :meth:`Program.operation_counts`.
+        """
+
 class QCProgram(Program):
     """A compiler program in the QC dialect.
 
@@ -687,11 +778,17 @@ class QCProgram(Program):
 
     @staticmethod
     def from_openqasm_str(source: str) -> QCProgram:
-        """Translate supported OpenQASM to QC MLIR. Accepts versionless input and versions 2.0, 3.0, and 3.1."""
+        """Translate supported OpenQASM to QC MLIR.
+
+        Accepts versionless input and versions 2.0, 3.0, and 3.1.
+        """
 
     @staticmethod
     def from_openqasm_file(path: str | os.PathLike) -> QCProgram:
-        """Translate a supported OpenQASM file to QC MLIR. Accepts versionless input and versions 2.0, 3.0, and 3.1."""
+        """Translate a supported OpenQASM file to QC MLIR.
+
+        Accepts versionless input and versions 2.0, 3.0, and 3.1.
+        """
 
     @staticmethod
     def from_qiskit(circuit: qiskit.circuit.QuantumCircuit) -> QCProgram:
@@ -739,31 +836,50 @@ class QCProgram(Program):
         Set ``copy=True`` to preserve it.
         """
 
+    def inspect(self) -> QuantumProgramInfo:
+        """Inspect quantum resources and static IR statistics.
+
+        Returns a :class:`QuantumProgramInfo` snapshot with gate, control-flow, and
+        full operation counts.
+        """
+
     def num_gates(self) -> int:
         """Return the static gate count of the entry-point IR.
 
-        Any entry-point operation that implements the ``UnitaryOpInterface`` is counted. Operations
-        in every structured control-flow region are counted once, regardless of how
-        often the region executes. Operations within modifiers are not counted
-        recursively, and barriers are skipped.
+        Unitary operations, measurements, and resets each count once. Barriers are
+        excluded. Modifiers and calls count atomically. Gates in every control-flow
+        region count once, regardless of runtime paths or loop iterations.
         """
 
     def num_single_qubit_gates(self) -> int:
-        """Return the static single-qubit gate count of the entry-point IR.
+        """Count gates acting on exactly one qubit.
 
-        Any entry-point operation that implements the ``UnitaryOpInterface`` and acts on one qubit
-        is counted. Operations in every structured control-flow region are counted
-        once, regardless of how often the region executes. Operations within modifiers
-        are not counted recursively, and barriers are skipped.
+        Uses the counting rules of :meth:`num_gates`, including measurements and resets.
         """
 
     def num_two_qubit_gates(self) -> int:
-        """Return the static two-qubit gate count of the entry-point IR.
+        """Count gates acting on exactly two qubits.
 
-        Any entry-point operation that implements the ``UnitaryOpInterface`` and acts on two qubits
-        is counted. Operations in every structured control-flow region are counted
-        once, regardless of how often the region executes. Operations within modifiers
-        are not counted recursively, and barriers are skipped.
+        Uses the counting rules of :meth:`num_gates`.
+        """
+
+    def gate_counts(self) -> dict[str, int]:
+        """Count entry-point gates by name.
+
+        Uses the counting rules of :meth:`num_gates`. Controls on a single primitive
+        gate add a ``c`` per control: ``cx``, ``ccx``.
+        Other single-gate modifiers use ``inv(h)``, ``pow(rx)``, or ``ctrl(inv(x))``;
+        multiple controls use ``ctrl(2,inv(x))``. Parameters do not split buckets.
+        Composite bodies or unused modifier targets retain ``ctrl``, ``inv``, or
+        ``pow``. Calls use the callee name; explicit phases use ``gphase``.
+        """
+
+    def control_flow_counts(self) -> dict[str, int]:
+        """Count entry-point control-flow operations.
+
+        Keys are full MLIR names such as ``scf.for`` and ``qco.if``. Every region is
+        visited once, without expanding calls. Region terminators
+        such as ``scf.yield`` are excluded.
         """
 
     @property
@@ -825,15 +941,28 @@ class QCOProgram(Program):
         """Prepare the program for qubit reuse and reuse eligible qubits."""
 
     def decompose_multi_controlled(self, *, min_qubits: int = 3) -> None:
-        """Decompose controlled X/Y/Z/SWAP and RX/RY/RZ gates, qco.rccx, and constant-angle phase gates that act on at least min_qubits qubits (min_qubits must be at least 3; default 3 means wider than two-qubit)."""
+        """Decompose gates that act on at least min_qubits qubits.
+
+        Supports controlled X/Y/Z/SWAP and RX/RY/RZ gates, qco.rccx, and constant-angle phase gates. min_qubits must be
+        at least 3; default 3 means wider than two-qubit.
+        """
 
     def compile_for_target(self, target_environment: TargetEnvironment, *, options: CompilationOptions = ...) -> None:
-        """Compile for the target and attach layout metadata when possible. Reject existing layout metadata. Do not rely on program contents if compilation fails. Failures raise RuntimeError with MLIR diagnostics."""
+        """Compile for the target and attach layout metadata when possible.
+
+        Reject existing layout metadata. Do not rely on program contents if compilation fails. Failures raise
+        RuntimeError with MLIR diagnostics.
+        """
 
     def synthesize_for_target(
         self, target_environment: TargetEnvironment, *, options: CompilationOptions = ...
     ) -> None:
-        """Synthesize native operations without routing. Dynamic qubits require all-to-all connectivity and receive layout metadata when possible. Static qubits keep their device site IDs and must fit the target topology. Do not rely on the program contents if synthesis fails. Failures raise RuntimeError with the emitted MLIR diagnostics."""
+        """Synthesize native operations without routing.
+
+        Dynamic qubits require all-to-all connectivity and receive layout metadata when possible. Static qubits keep
+        their device site IDs and must fit the target topology. Do not rely on the program contents if synthesis fails.
+        Failures raise RuntimeError with the emitted MLIR diagnostics.
+        """
 
     def to_qiskit(self, *, target: CompilerTarget | None = None) -> qiskit.circuit.QuantumCircuit:
         """Export a Qiskit circuit without consuming or modifying this program.
@@ -858,6 +987,52 @@ class QCOProgram(Program):
         """Convert this program to ``jeff`` MLIR.
 
         Set ``copy=True`` to preserve it.
+        """
+
+    def inspect(self) -> QuantumProgramInfo:
+        """Inspect quantum resources and static IR statistics.
+
+        Returns a :class:`QuantumProgramInfo` snapshot with gate, control-flow, and
+        full operation counts.
+        """
+
+    def num_gates(self) -> int:
+        """Return the static gate count of the entry-point IR.
+
+        Unitary operations, measurements, and resets each count once. Barriers are
+        excluded. Modifiers and calls count atomically. Gates in every control-flow
+        region count once, regardless of runtime paths or loop iterations.
+        """
+
+    def num_single_qubit_gates(self) -> int:
+        """Count gates acting on exactly one qubit.
+
+        Uses the counting rules of :meth:`num_gates`, including measurements and resets.
+        """
+
+    def num_two_qubit_gates(self) -> int:
+        """Count gates acting on exactly two qubits.
+
+        Uses the counting rules of :meth:`num_gates`.
+        """
+
+    def gate_counts(self) -> dict[str, int]:
+        """Count entry-point gates by name.
+
+        Uses the counting rules of :meth:`num_gates`. Controls on a single primitive
+        gate add a ``c`` per control: ``cx``, ``ccx``.
+        Other single-gate modifiers use ``inv(h)``, ``pow(rx)``, or ``ctrl(inv(x))``;
+        multiple controls use ``ctrl(2,inv(x))``. Parameters do not split buckets.
+        Composite bodies or unused modifier targets retain ``ctrl``, ``inv``, or
+        ``pow``. Calls use the callee name; explicit phases use ``gphase``.
+        """
+
+    def control_flow_counts(self) -> dict[str, int]:
+        """Count entry-point control-flow operations.
+
+        Keys are full MLIR names such as ``scf.for`` and ``qco.if``. Every region is
+        visited once, without expanding calls. Region terminators
+        such as ``scf.yield`` are excluded.
         """
 
     @property
@@ -932,18 +1107,37 @@ class JeffProgram(Program):
     """
 
     @staticmethod
-    def from_file(path: str | os.PathLike) -> JeffProgram:
-        """Read a ``jeff`` program from a file."""
+    def from_segments(
+        segments: Sequence[bytes | bytearray | memoryview | np.ndarray],
+    ) -> JeffProgram:
+        """Deserialize a ``jeff`` program from Cap'n Proto segments.
+
+        Each segment must be a contiguous one-dimensional byte buffer whose size is a
+        multiple of eight. Keep the buffers unchanged until this call returns. Aligned
+        buffers are borrowed; unaligned buffers are copied into aligned storage. The
+        returned program does not retain the buffers.
+        """
 
     @staticmethod
     def from_bytes(data: bytes) -> JeffProgram:
         """Deserialize a ``jeff`` program from bytes."""
+
+    @staticmethod
+    def from_file(path: str | os.PathLike) -> JeffProgram:
+        """Read a ``jeff`` program from a file."""
 
     def copy(self) -> JeffProgram:
         """Return an independent copy of this program."""
 
     def cleanup(self) -> None:
         """Run the standard ``jeff`` cleanup pipeline in place."""
+
+    def to_segment_views(self) -> list[memoryview]:
+        """Serialize this program into read-only Cap'n Proto segment views.
+
+        The views keep their message storage alive independently of this program. No
+        segment data is copied or flattened.
+        """
 
     def to_bytes(self) -> bytes:
         """Serialize this program to its ``jeff`` byte representation."""

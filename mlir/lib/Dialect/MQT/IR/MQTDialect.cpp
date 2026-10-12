@@ -19,6 +19,7 @@
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
 #include "mqt/Dialect/QCO/IR/QCOInterfaces.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
+#include "mqt/Dialect/QCO/Utils/FunctionUtils.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 #include "mqt/Support/RandomSeed.h"
 
@@ -36,6 +37,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -44,6 +46,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -177,7 +180,12 @@ verifyNoUnitaryRecursion(func::FuncOp function) {
     if (isa<func::ReturnOp>(nested)) {
       return;
     }
-    if (isa<qc::UnitaryOpInterface, qc::YieldOp>(nested)) {
+    if (isa<qc::UnitaryOpInterface, qc::YieldOp>(nested) ||
+        (isa<scf::YieldOp>(nested) && isa<scf::ForOp>(nested->getParentOp()))) {
+      return;
+    }
+    if (auto loop = dyn_cast<scf::ForOp>(nested)) {
+      valid = loop.getStaticTripCount().has_value();
       return;
     }
     valid =
@@ -188,20 +196,24 @@ verifyNoUnitaryRecursion(func::FuncOp function) {
   });
   if (!valid) {
     return function.emitError()
-           << "unitary QC function body contains a non-unitary operation";
+           << "unitary QC function body contains an unsupported operation";
   }
 
   return verifyNoUnitaryRecursion<qc::CallOp>(function);
 }
 
-[[nodiscard]] static LogicalResult verifyQCOUnitaryBody(func::FuncOp function,
-                                                        unsigned firstQubit) {
+[[nodiscard]] static LogicalResult verifyQCOUnitaryBody(func::FuncOp function) {
   bool valid = true;
   function.walk([&](Operation* nested) {
     if (!valid || nested == function.getOperation()) {
       return;
     }
-    if (isa<func::ReturnOp, qco::UnitaryOpInterface, qco::YieldOp>(nested)) {
+    if (isa<func::ReturnOp, qco::UnitaryOpInterface, qco::YieldOp>(nested) ||
+        (isa<scf::YieldOp>(nested) && isa<scf::ForOp>(nested->getParentOp()))) {
+      return;
+    }
+    if (auto loop = dyn_cast<scf::ForOp>(nested)) {
+      valid = loop.getStaticTripCount().has_value();
       return;
     }
     valid =
@@ -212,37 +224,12 @@ verifyNoUnitaryRecursion(func::FuncOp function) {
   });
   if (!valid) {
     return function.emitError()
-           << "unitary QCO function body contains a non-unitary operation";
+           << "unitary QCO function body contains an unsupported operation";
   }
 
-  auto returnOp = cast<func::ReturnOp>(function.getBody().front().back());
-  for (auto [resultIndex, returned] : llvm::enumerate(returnOp.getOperands())) {
-    Value current = returned;
-    llvm::SmallDenseSet<Value> visited;
-    while (auto result = dyn_cast<OpResult>(current)) {
-      if (!visited.insert(current).second) {
-        return function.emitError("unitary QCO result has cyclic qubit flow");
-      }
-      auto unitary = dyn_cast<qco::UnitaryOpInterface>(result.getOwner());
-      if (!unitary) {
-        return function.emitError()
-               << "unitary QCO result does not originate from a qubit "
-                  "argument";
-      }
-      current = unitary.getInputForOutput(current);
-      if (!current) {
-        return function.emitError()
-               << "unitary QCO operation has no input corresponding to its "
-                  "returned qubit";
-      }
-    }
-    auto argument = dyn_cast<BlockArgument>(current);
-    if (!argument || argument.getOwner() != &function.getBody().front() ||
-        argument.getArgNumber() != firstQubit + resultIndex) {
-      return function.emitError()
-             << "unitary QCO results must continue qubit arguments "
-                "positionally";
-    }
+  DenseMap<Value, Value> origins;
+  if (failed(qco::collectWireOrigins(function, origins))) {
+    return failure();
   }
   return verifyNoUnitaryRecursion<qco::CallOp>(function);
 }
@@ -317,7 +304,7 @@ verifyUnitaryFunction(Operation* operation, const NamedAttribute attribute) {
     }
   }
   return usesQC ? verifyQCUnitaryBody(function)
-                : verifyQCOUnitaryBody(function, firstQubit);
+                : verifyQCOUnitaryBody(function);
 }
 
 [[nodiscard]] static LogicalResult verifyName(Operation* operation,
@@ -592,8 +579,8 @@ LogicalResult MQTDialect::verifyRegionArgAttribute(
     return failure();
   }
 
-  /// The first named input owns cross-argument checks. Register-name
-  /// verification owns collisions between inputs and registers.
+  // The first named input owns cross-argument checks. Register-name
+  // verification owns collisions between inputs and registers.
   for (unsigned index = 0; index < argIndex; ++index) {
     if (function.getArgAttr(index, attributeName)) {
       return success();

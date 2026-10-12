@@ -22,7 +22,9 @@ class OpPassManager;
 class PassManager;
 } // namespace mlir
 
-/// Populate the pass manager and run it on the module.
+/// Run a pass pipeline on valid IR and verify its output.
+///
+/// Also verify after each pass when assertions are enabled.
 /// Clear layout metadata unless the pipeline preserves resource
 /// identity and order and the caller sets preservesLayout.
 mlir::LogicalResult runWithPassManager(
@@ -32,6 +34,7 @@ mlir::LogicalResult runWithPassManager(
     bool preservesLayout = false);
 
 /// Run passes with scoped compilation options and clear layout metadata.
+///
 /// Set preservesLayout only when the pipeline preserves wire identity and
 /// order.
 mlir::LogicalResult
@@ -69,6 +72,7 @@ runPassPipeline(mlir::ModuleOp moduleOp, mlir::StringRef pipeline,
 void populateQCCleanupPipeline(mlir::OpPassManager& pm);
 
 /// Run QC cleanup that preserves defined values on every syntactic loop edge.
+///
 /// Source formats cannot represent the poison backedge values introduced by
 /// RemoveDeadValues, even when those edges are unreachable.
 void populateQCExportPipeline(mlir::OpPassManager& pm);
@@ -82,8 +86,7 @@ void populateQCOCleanupPipeline(mlir::OpPassManager& pm,
 
 /// Populate a QIR-oriented cleanup pipeline on the given pass manager.
 ///
-/// Adds generic cleanup and QIR-specific simplifications. Updates the
-/// metadata accordingly.
+/// Promotes local memory to SSA values, simplifies QIR, and refreshes metadata.
 void populateQIRCleanupPipeline(mlir::OpPassManager& pm, bool useAdaptive);
 
 /// Populate a `jeff`-oriented cleanup pipeline on the given pass manager.

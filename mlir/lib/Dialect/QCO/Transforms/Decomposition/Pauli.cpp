@@ -19,7 +19,6 @@
 #include "mqt/Dialect/QCO/Transforms/Decomposition/Weyl.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
@@ -71,7 +70,7 @@ Matrix2x2 pauliFrame(PauliAxis axis, PauliAxis from) {
 }
 
 FoldedPauliAngle foldPauliAngle(double angle) {
-  /// Reduce with trigonometry before subtracting pi, including large angles.
+  // Reduce with trigonometry before subtracting pi, including large angles.
   const double principal = std::abs(angle) <= 2. * std::numbers::pi
                                ? angle
                                : 4. * std::atan(std::tan(angle / 4.));
@@ -224,8 +223,10 @@ static CliffordPaulis conjugatedPaulis(CompilerTarget::GateKind gate) {
   }
 }
 
-/// Emit C E^dagger (R_A(a) tensor R_B(b)) E C^dagger. Either angle
-/// may be absent. The same sandwich handles one or two commuting generators.
+/// Emit C E^dagger (R_A(a) tensor R_B(b)) E C^dagger.
+///
+/// Either angle may be absent. The same sandwich handles one or two commuting
+/// generators.
 static SmallVector<Value, 2>
 emitCliffordSandwich(RewriterBase& rewriter, Location loc, Value wire0,
                      Value wire1, std::array<Matrix2x2, 2> frames,
@@ -246,8 +247,8 @@ emitCliffordSandwich(RewriterBase& rewriter, Location loc, Value wire0,
           },
   };
   double phase = 0.;
-  /// E^dagger = D E. D is identity for CX/CZ/ECR, ZZ for iSWAP,
-  /// and i times the generator for a fixed Pauli rotation at pi/2.
+  // E^dagger = D E. D is identity for CX/CZ/ECR, ZZ for iSWAP,
+  // and i times the generator for a fixed Pauli rotation at pi/2.
   if (basis.entangler->gate == CompilerTarget::GateKind::ISWAP) {
     frames[0] = frames[0] * ZOp::getUnitaryMatrix();
     frames[1] = frames[1] * ZOp::getUnitaryMatrix();
@@ -354,36 +355,29 @@ emitPauliSequence(RewriterBase& rewriter, Location loc, ValueRange inputs,
       continue;
     }
     if (basis.entangler->gate == CompilerTarget::GateKind::SQRTISWAP) {
-      /// S^dagger (I X) S = (I X - Y Z)/sqrt(2). Symmetric RX
-      /// corrections cancel the local X component, leaving R_YZ(theta).
-      /// Reduce modulo pi; the removed turns are local Pauli rotations.
-      auto normalized = mqt::variantToValue(
+      // S^dagger (I X) S = (I X - Y Z)/sqrt(2). Symmetric RX
+      // corrections cancel the local X component, leaving R_YZ(theta).
+      // Reduce modulo pi; the removed turns are local Pauli rotations.
+      const mqt::FloatExpression normalized(
           rewriter, loc, normalizeRotationParameter(rewriter, loc, angle));
-      auto reduced = rewriter.createOrFold<math::AtanOp>(
-          loc, rewriter.createOrFold<math::TanOp>(loc, normalized));
-      auto half = mqt::constantFromScalar(rewriter, loc, 0.5);
-      auto sine = rewriter.createOrFold<math::SinOp>(
-          loc, rewriter.createOrFold<arith::MulFOp>(loc, reduced, half));
-      auto cosine = rewriter.createOrFold<math::CosOp>(loc, reduced);
-      auto root = rewriter.createOrFold<math::PowFOp>(loc, cosine, half);
-      auto ratio = rewriter.createOrFold<arith::DivFOp>(loc, sine, root);
-      auto alpha = rewriter.createOrFold<math::AtanOp>(loc, ratio);
-      auto beta = rewriter.createOrFold<arith::MulFOp>(
-          loc, mqt::constantFromScalar(rewriter, loc, -2.),
-          rewriter.createOrFold<math::AtanOp>(
-              loc, rewriter.createOrFold<arith::MulFOp>(
-                       loc, ratio,
-                       mqt::constantFromScalar(rewriter, loc,
-                                               std::numbers::sqrt2))));
-      auto turns =
-          rewriter.createOrFold<arith::SubFOp>(loc, normalized, reduced);
+      const auto scalar = [&](double value) {
+        return mqt::FloatExpression::constant(rewriter, loc, value);
+      };
+      const auto reduced = normalized.tan().atan();
+      const auto half = scalar(0.5);
+      const auto ratio = (reduced * half).sin() / reduced.cos().pow(half);
+      const auto alpha = ratio.atan();
+      const auto beta =
+          scalar(-2.) * (ratio * scalar(std::numbers::sqrt2)).atan();
+      const auto turns = normalized - reduced;
       const auto frame0 = pauliFrame(axis0, PauliAxis::Y);
       const auto frame1 = pauliFrame(axis1, PauliAxis::Z);
       emitFactor(wire0, frame0.adjoint());
       emitFactor(wire1, frame1.adjoint());
-      const auto rotate = [&](Value& wire, PauliAxis axis, Value value) {
-        wire =
-            synthesizePauliRotation1Q(rewriter, loc, wire, axis, value, basis);
+      const auto rotate = [&](Value& wire, PauliAxis axis,
+                              mqt::FloatExpression value) {
+        wire = synthesizePauliRotation1Q(rewriter, loc, wire, axis,
+                                         value.getValue(), basis);
       };
       const auto entangle = [&] {
         auto native = XXPlusYYOp::create(
@@ -404,11 +398,10 @@ emitPauliSequence(RewriterBase& rewriter, Location loc, ValueRange inputs,
       rotate(wire1, PauliAxis::Z, turns);
       emitFactor(wire0, frame0);
       emitFactor(wire1, frame1);
-      GPhaseOp::create(rewriter, loc,
-                       rewriter.createOrFold<arith::MulFOp>(loc, turns, half));
+      GPhaseOp::create(rewriter, loc, (turns * half).getValue());
       continue;
     }
-    /// Bounded rotations supply the fixed Clifford endpoint at pi/2.
+    // Bounded rotations supply the fixed Clifford endpoint at pi/2.
     const auto axes = conjugatedPaulis(basis.entangler->gate);
     const auto outputs = emitCliffordSandwich(
         rewriter, loc, wire0, wire1,
@@ -446,7 +439,7 @@ void mergeDiagonalRotations(RewriterBase& rewriter, ModuleOp moduleOp) {
         };
         DenseMap<Value, size_t> wires;
         DenseMap<std::tuple<size_t, size_t, unsigned>, size_t> indices;
-        SmallVector<Group, 4> groups;
+        SmallVector<Group> groups;
         size_t nextWire = 0;
         const auto flush = [&] {
           for (auto& group : groups) {
@@ -524,7 +517,7 @@ void mergeDiagonalRotations(RewriterBase& rewriter, ModuleOp moduleOp) {
               !isa<RZZOp, RZOp, POp>(body.getOperation())) {
             continue;
           }
-          /// Controlled RZ is directional; controlled P and RZZ are symmetric.
+          // Controlled RZ is directional; controlled P and RZZ are symmetric.
           const unsigned kind = isa<RZZOp>(body.getOperation())  ? 0
                                 : isa<RZOp>(body.getOperation()) ? 1
                                                                  : 2;
@@ -566,8 +559,8 @@ pauliRotationEntanglerCount(const PauliRotationSequence& sequence,
     for (const auto& term : sequence.rotations) {
       if (term.axes[0] != PauliAxis::I && term.axes[1] != PauliAxis::I) {
         const double value = *angle * term.angleScale;
-        /// Let the Weyl planner shorten near-Clifford rotations using its
-        /// fidelity policy, including negligible entangling angles.
+        // Let the Weyl planner shorten near-Clifford rotations using its
+        // fidelity policy, including negligible entangling angles.
         const double delta = std::remainder(value, std::numbers::pi / 2.);
         if (traceToFidelity(4. * std::cos(delta / 2.)) >=
             WEYL_DEFAULT_FIDELITY) {
@@ -642,7 +635,7 @@ fusePauliRotationRun(PatternRewriter& rewriter, Operation* head,
     if (!sequence) {
       break;
     }
-    /// Numerical fusion owns constant heads; runtime runs may absorb constants.
+    // Numerical fusion owns constant heads; runtime runs may absorb constants.
     if (operations.empty() && mqt::valueToConstantDouble(sequence->angle)) {
       return failure();
     }

@@ -9,6 +9,7 @@
  */
 
 #include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
 #include "dd/Node.hpp"
 #include "dd/Package.hpp"
 #include "dd/StateGeneration.hpp"
@@ -55,6 +56,7 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
+#include <future>
 #include <initializer_list>
 #include <limits>
 #include <map>
@@ -128,35 +130,29 @@ toDynamicMatrix(const LiteralMatrix<Dimension>& source) -> DynamicMatrix {
 namespace {
 
 struct ReferenceGate {
-  DynamicMatrix (*matrix)(llvm::ArrayRef<double>);
+  DynamicMatrix matrix;
   dd::Targets targets;
-  std::vector<double> params;
   dd::Controls controls;
 };
 
 } // namespace
 
-template <typename GateOp>
+template <typename GateOp, size_t NumParams = 0>
 [[nodiscard]] static ReferenceGate
-referenceGate(dd::Targets targets, std::vector<double> params = {},
+referenceGate(dd::Targets targets,
+              const std::array<double, NumParams>& params = {},
               dd::Controls controls = {}) {
   return {
-      [](const llvm::ArrayRef<double> parameters) {
-        return DynamicMatrix{getStandardGateMatrix<GateOp>(parameters)};
-      },
-      std::move(targets),
-      std::move(params),
-      std::move(controls),
+      .matrix = DynamicMatrix{getStandardGateMatrix<GateOp>(params)},
+      .targets = std::move(targets),
+      .controls = std::move(controls),
   };
 }
 
 template <typename GateOp>
 [[nodiscard]] static dd::MatrixDD
-referenceGateDD(dd::Package& package, llvm::ArrayRef<dd::Qubit> targets,
-                llvm::ArrayRef<double> params = {},
-                const dd::Controls& controls = {}) {
-  return makeGateDD(package, getStandardGateMatrix<GateOp>(params),
-                    package.qubits(), targets, controls);
+referenceGateDD(dd::Package& package, llvm::ArrayRef<dd::Qubit> targets) {
+  return makeGateDD(package, GateOp::getUnitaryMatrix(), targets);
 }
 
 namespace {
@@ -198,8 +194,8 @@ protected:
     auto referenceFn = dd::MatrixDD::one();
     auto referenceSim = dd::makeZeroState(numQubits, *dd);
     for (const auto& gate : gates) {
-      const auto operation = makeGateDD(*dd, gate.matrix(gate.params),
-                                        numQubits, gate.targets, gate.controls);
+      const auto operation =
+          makeGateDD(*dd, gate.matrix, gate.targets, gate.controls);
       referenceFn = dd->applyOperation(operation, referenceFn);
       referenceSim = dd->applyOperation(operation, referenceSim);
     }
@@ -214,7 +210,7 @@ protected:
     const auto fromQcoSim =
         simulate(func, dd::makeZeroState(numQubits, *dd), *dd, rng);
     ASSERT_TRUE(succeeded(fromQcoSim));
-    EXPECT_EQ(fromQcoSim->getVector(), referenceSim.getVector());
+    EXPECT_EQ(dd::getVector(*fromQcoSim), dd::getVector(referenceSim));
     dd->decRef(*fromQcoSim);
     dd->decRef(referenceSim);
   }
@@ -234,7 +230,7 @@ protected:
     }
     const auto out = simulate(func, dd::makeZeroState(1, *dd), *dd, rng);
     ASSERT_TRUE(succeeded(out));
-    EXPECT_EQ(out->getVector(), expected.getVector());
+    EXPECT_EQ(dd::getVector(*out), dd::getVector(expected));
     dd->decRef(*out);
     dd->decRef(expected);
   }
@@ -260,9 +256,8 @@ TEST(DDAdapterTest, MatchesRawSingleQubitConstructor) {
   const dd::Controls controls{{0, dd::Control::Type::Neg}, {3}};
   dd::Package package(numQubits);
 
-  EXPECT_EQ(
-      makeGateDD(package, toDynamicMatrix(literal), numQubits, {2}, controls),
-      package.makeGateDD(raw, controls, 2));
+  EXPECT_EQ(makeGateDD(package, toDynamicMatrix(literal), {2}, controls),
+            package.makeGateDD(raw, controls, 2));
 }
 
 TEST(DDAdapterTest, PreservesTwoQubitOperandOrder) {
@@ -275,8 +270,7 @@ TEST(DDAdapterTest, PreservesTwoQubitOperandOrder) {
   for (const std::array<dd::Qubit, 2> targets :
        {std::array<dd::Qubit, 2>{3, 1}, {1, 3}}) {
     EXPECT_EQ(
-        makeGateDD(package, toDynamicMatrix(literal), numQubits, targets,
-                   controls),
+        makeGateDD(package, toDynamicMatrix(literal), targets, controls),
         package.makeTwoQubitGateDD(literal, controls, targets[0], targets[1]));
   }
 }
@@ -290,8 +284,7 @@ TEST(DDAdapterTest, PreservesThreeQubitOperandOrder) {
 
   for (const std::array<dd::Qubit, 3> targets :
        {std::array<dd::Qubit, 3>{4, 1, 3}, {1, 3, 4}}) {
-    EXPECT_EQ(makeGateDD(package, toDynamicMatrix(literal), numQubits, targets,
-                         controls),
+    EXPECT_EQ(makeGateDD(package, toDynamicMatrix(literal), targets, controls),
               package.makeThreeQubitGateDD(literal, controls, targets[0],
                                            targets[1], targets[2]));
   }
@@ -306,7 +299,7 @@ TEST(DDAdapterTest, EmbedsFourQubitMatrixOnNoncontiguousTargets) {
   constexpr std::array<dd::Qubit, 4> targets{4, 1, 5, 2};
   dd::Package package(numQubits);
 
-  EXPECT_EQ(makeGateDD(package, toDynamicMatrix(literal), numQubits, targets),
+  EXPECT_EQ(makeGateDD(package, toDynamicMatrix(literal), targets),
             package.makeDDFromMatrix(
                 embedPermutation(numQubits, targets, rowForColumn)));
 }
@@ -325,9 +318,8 @@ TEST(DDAdapterTest, PreservesComplexMatricesAcrossIdleWires) {
            std::array<dd::Qubit, 4>{0, 1, 2, 3},
            std::array<dd::Qubit, 4>{4, 1, 5, 2},
        }) {
-    const auto matrix =
-        makeGateDD(package, toDynamicMatrix(local), numQubits, targets)
-            .getMatrix(numQubits);
+    const auto matrix = dd::getMatrix(
+        makeGateDD(package, toDynamicMatrix(local), targets), numQubits);
     size_t targetMask = 0;
     for (const auto wire : targets) {
       targetMask |= size_t{1} << wire;
@@ -351,15 +343,15 @@ TEST(DDAdapterTest, PreservesComplexMatricesAcrossIdleWires) {
 }
 
 TEST(DDAdapterTest, PreservesScalarMatricesWithAndWithoutIdleWires) {
-  dd::Package package(4);
   for (const size_t numQubits : {0U, 4U}) {
+    dd::Package package(numQubits);
     for (const auto scalar : {
              std::complex<double>{},
              std::polar(1., 0.37),
              std::complex<double>{1e-15, 0.},
          }) {
       const std::array matrix{scalar};
-      EXPECT_EQ(makeGateDD(package, std::span{matrix}, numQubits, {}),
+      EXPECT_EQ(makeGateDD(package, std::span{matrix}, {}),
                 dd::mEdge::terminal(package.cn.lookup(scalar)));
     }
   }
@@ -434,25 +426,25 @@ TEST_F(QCODDFunctionalityTest, ExercisesStandardGatePaths) {
           referenceGate<TdgOp>({0}),
           referenceGate<SXOp>({0}),
           referenceGate<SXdgOp>({0}),
-          referenceGate<RXOp>({0}, {theta}),
-          referenceGate<RYOp>({0}, {theta}),
-          referenceGate<RZOp>({0}, {theta}),
-          referenceGate<POp>({0}, {theta}),
-          referenceGate<ROp>({0}, {theta, phi}),
-          referenceGate<U2Op>({0}, {phi, lambda}),
-          referenceGate<UOp>({0}, {theta, phi, lambda}),
+          referenceGate<RXOp>({0}, std::array{theta}),
+          referenceGate<RYOp>({0}, std::array{theta}),
+          referenceGate<RZOp>({0}, std::array{theta}),
+          referenceGate<POp>({0}, std::array{theta}),
+          referenceGate<ROp>({0}, std::array{theta, phi}),
+          referenceGate<U2Op>({0}, std::array{phi, lambda}),
+          referenceGate<UOp>({0}, std::array{theta, phi, lambda}),
           referenceGate<SWAPOp>({0, 1}),
           referenceGate<iSWAPOp>({0, 1}),
           referenceGate<DCXOp>({0, 1}),
           referenceGate<ECROp>({0, 1}),
-          referenceGate<RXXOp>({0, 1}, {theta}),
-          referenceGate<RYYOp>({0, 1}, {theta}),
-          referenceGate<RZZOp>({0, 1}, {theta}),
-          referenceGate<RZXOp>({0, 1}, {theta}),
-          referenceGate<XXPlusYYOp>({0, 1}, {theta, beta}),
-          referenceGate<XXMinusYYOp>({0, 1}, {theta, beta}),
+          referenceGate<RXXOp>({0, 1}, std::array{theta}),
+          referenceGate<RYYOp>({0, 1}, std::array{theta}),
+          referenceGate<RZZOp>({0, 1}, std::array{theta}),
+          referenceGate<RZXOp>({0, 1}, std::array{theta}),
+          referenceGate<XXPlusYYOp>({0, 1}, std::array{theta, beta}),
+          referenceGate<XXMinusYYOp>({0, 1}, std::array{theta, beta}),
           referenceGate<XOp>({1}, {}, {{0}}),
-          referenceGate<POp>({2}, {std::numbers::pi / 5.0}, {{1}}),
+          referenceGate<POp>({2}, std::array{std::numbers::pi / 5.0}, {{1}}),
           referenceGate<XOp>({2}, {}, {{0}, {1}}),
           referenceGate<SdgOp>({2}),
       });
@@ -540,9 +532,9 @@ TEST_F(QCODDFunctionalityTest, DensePaths) {
     ASSERT_TRUE(mod);
     expectEqualToReference(mainFunc(*mod), 3,
                            {
-                               referenceGate<RXOp>({0}, {-0.2}),
-                               referenceGate<RYOp>({1}, {-0.3}),
-                               referenceGate<RZOp>({2}, {-0.4}),
+                               referenceGate<RXOp>({0}, std::array{-0.2}),
+                               referenceGate<RYOp>({1}, std::array{-0.3}),
+                               referenceGate<RZOp>({2}, std::array{-0.4}),
                            });
   }
   {
@@ -563,9 +555,9 @@ TEST_F(QCODDFunctionalityTest, DensePaths) {
     ASSERT_TRUE(mod);
     expectEqualToReference(mainFunc(*mod), 4,
                            {
-                               referenceGate<RXOp>({0}, {-0.2}),
-                               referenceGate<RYOp>({1}, {-0.3}),
-                               referenceGate<RZOp>({2}, {-0.4}),
+                               referenceGate<RXOp>({0}, std::array{-0.2}),
+                               referenceGate<RYOp>({1}, std::array{-0.3}),
+                               referenceGate<RZOp>({2}, std::array{-0.4}),
                            });
   }
   {
@@ -595,9 +587,9 @@ TEST_F(QCODDFunctionalityTest, DensePaths) {
     ASSERT_TRUE(mod);
     expectEqualToReference(mainFunc(*mod), 5,
                            {
-                               referenceGate<RXOp>({0}, {-0.2}),
-                               referenceGate<RYOp>({1}, {-0.3}),
-                               referenceGate<RZOp>({2}, {-0.4}),
+                               referenceGate<RXOp>({0}, std::array{-0.2}),
+                               referenceGate<RYOp>({1}, std::array{-0.3}),
+                               referenceGate<RZOp>({2}, std::array{-0.4}),
                                referenceGate<HOp>({4}),
                            });
   }
@@ -652,8 +644,8 @@ TEST_F(QCODDFunctionalityTest, Gphase) {
   ASSERT_TRUE(succeeded(u0));
   ASSERT_TRUE(succeeded(u1));
   const auto phase = std::polar(1.0, 0.25);
-  const auto m0 = u0->getMatrix(1);
-  const auto m1 = u1->getMatrix(1);
+  const auto m0 = dd::getMatrix(*u0, 1);
+  const auto m1 = dd::getMatrix(*u1, 1);
   for (size_t r = 0; r < 2; ++r) {
     for (size_t c = 0; c < 2; ++c) {
       EXPECT_TRUE(std::abs(m1[r][c] - (m0[r][c] * phase)) < 1e-10);
@@ -674,7 +666,7 @@ TEST_F(QCODDFunctionalityTest, FuncArgs) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @main(%c: i32, %q: !qco.qubit) -> !qco.qubit {
-        %q1 = qco.h %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q : !qco.qubit
         return %q1 : !qco.qubit
       }
     }
@@ -690,8 +682,8 @@ TEST_F(QCODDFunctionalityTest, ReturnedQubitsMustPreserveWireOrder) {
     module {
       func.func @main(%q0: !qco.qubit, %q1: !qco.qubit)
           -> (!qco.qubit, !qco.qubit) {
-        %q0_out = qco.h %q0 : !qco.qubit -> !qco.qubit
-        %q1_out = qco.x %q1 : !qco.qubit -> !qco.qubit
+        %q0_out = qco.h %q0 : !qco.qubit
+        %q1_out = qco.x %q1 : !qco.qubit
         return %q0_out, %q1_out : !qco.qubit, !qco.qubit
       }
     }
@@ -701,8 +693,8 @@ TEST_F(QCODDFunctionalityTest, ReturnedQubitsMustPreserveWireOrder) {
     module {
       func.func @main(%q0: !qco.qubit, %q1: !qco.qubit)
           -> (!qco.qubit, !qco.qubit) {
-        %q0_out = qco.h %q0 : !qco.qubit -> !qco.qubit
-        %q1_out = qco.x %q1 : !qco.qubit -> !qco.qubit
+        %q0_out = qco.h %q0 : !qco.qubit
+        %q1_out = qco.x %q1 : !qco.qubit
         return %q1_out, %q0_out : !qco.qubit, !qco.qubit
       }
     }
@@ -724,6 +716,25 @@ TEST_F(QCODDFunctionalityTest, ReturnedQubitsMustPreserveWireOrder) {
   EXPECT_TRUE(failed(buildFunctionality(mainFunc(*swapped), *dd)));
   EXPECT_TRUE(failed(
       simulate(mainFunc(*swapped), dd::makeZeroState(2, *dd), *dd, rng)));
+}
+
+TEST_F(QCODDFunctionalityTest, FailedScalarConstructionReleasesPhase) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @main() {
+        %phase = arith.constant 0.5 : f64
+        qco.gphase(%phase)
+        %false = arith.constant false
+        cf.assert %false, "unsupported"
+        return
+      }
+    }
+  )mlir",
+                                         context.get());
+  ASSERT_TRUE(mod);
+  auto dd = std::make_unique<dd::Package>(0);
+  EXPECT_TRUE(failed(buildFunctionality(mainFunc(*mod), *dd)));
+  EXPECT_TRUE(dd->getRootSet<dd::mNode>().empty());
 }
 
 TEST_F(QCODDFunctionalityTest, RejectsUnmappedReturnedQubit) {
@@ -797,7 +808,7 @@ TEST_F(QCODDFunctionalityTest, SimulationConsumesInputReference) {
   const auto widerOutput = simulate(
       mainFunc(*valid), dd::makeZeroState(2, *twoQubitDd), *twoQubitDd, rng);
   ASSERT_TRUE(succeeded(widerOutput));
-  EXPECT_EQ(widerOutput->getVector().size(), 4U);
+  EXPECT_EQ(dd::getVector(*widerOutput).size(), 4U);
   twoQubitDd->decRef(*widerOutput);
   EXPECT_TRUE(twoQubitDd->getRootSet<dd::vNode>().empty());
 
@@ -813,7 +824,7 @@ TEST_F(QCODDFunctionalityTest,
     module {
       func.func @main(%q0: !qco.qubit) {
         %q1 = qco.alloc : !qco.qubit
-        %q2 = qco.x %q1 : !qco.qubit -> !qco.qubit
+        %q2 = qco.x %q1 : !qco.qubit
         qco.sink %q0 : !qco.qubit
         qco.sink %q2 : !qco.qubit
         return
@@ -832,7 +843,7 @@ TEST_F(QCODDFunctionalityTest,
   auto expected = dd->applyOperation(referenceGateDD<XOp>(*dd, {1}),
                                      dd::makeZeroState(3, *dd));
   expected = dd->applyOperation(referenceGateDD<XOp>(*dd, {2}), expected);
-  EXPECT_EQ(output->getVector(), expected.getVector());
+  EXPECT_EQ(dd::getVector(*output), dd::getVector(expected));
   dd->decRef(*output);
   dd->decRef(expected);
 }
@@ -853,13 +864,13 @@ TEST_F(QCODDFunctionalityTest, SimulateMeasureCollapsesLikePackage) {
   auto ref = dd::makeZeroState(1, *dd);
   ref = dd->applyOperation(referenceGateDD<HOp>(*dd, {0}), ref);
   static_cast<void>(dd->measureOneCollapsing(ref, 0, refRng));
-  const auto expected = ref.getVector();
+  const auto expected = dd::getVector(ref);
 
   std::mt19937_64 rng(seed);
   const auto out =
       simulate(mainFunc(*mod), dd::makeZeroState(1, *dd), *dd, rng);
   ASSERT_TRUE(succeeded(out));
-  EXPECT_EQ(out->getVector(), expected);
+  EXPECT_EQ(dd::getVector(*out), expected);
   dd->decRef(*out);
   dd->decRef(ref);
 }
@@ -879,7 +890,7 @@ TEST_F(QCODDFunctionalityTest, SimulateResetForcesZero) {
   const auto out =
       simulate(mainFunc(*mod), dd::makeZeroState(1, *dd), *dd, rng);
   ASSERT_TRUE(succeeded(out));
-  EXPECT_EQ(out->getVector(), expected.getVector());
+  EXPECT_EQ(dd::getVector(*out), dd::getVector(expected));
   dd->decRef(*out);
   dd->decRef(expected);
 }
@@ -958,7 +969,7 @@ TEST_F(QCODDFunctionalityTest, SimulateMeasureFeedsIf) {
   const auto out =
       simulate(mainFunc(*mod), dd::makeZeroState(1, *dd), *dd, rng);
   ASSERT_TRUE(succeeded(out));
-  EXPECT_EQ(out->getVector(), one.getVector());
+  EXPECT_EQ(dd::getVector(*out), dd::getVector(one));
   dd->decRef(*out);
   dd->decRef(one);
 }
@@ -997,12 +1008,12 @@ TEST_F(QCODDFunctionalityTest, SimulateCBitConditionAndMeasurementUpdate) {
   const auto zeroOut =
       simulate(mainFunc(*zeroCondition), dd::makeZeroState(1, *dd), *dd, rng);
   ASSERT_TRUE(succeeded(zeroOut));
-  EXPECT_EQ(zeroOut->getVector(), zero.getVector());
+  EXPECT_EQ(dd::getVector(*zeroOut), dd::getVector(zero));
 
   const auto measurementOut = simulate(mainFunc(*measurementCondition),
                                        dd::makeZeroState(1, *dd), *dd, rng);
   ASSERT_TRUE(succeeded(measurementOut));
-  EXPECT_EQ(measurementOut->getVector(), one.getVector());
+  EXPECT_EQ(dd::getVector(*measurementOut), dd::getVector(one));
 
   dd->decRef(*zeroOut);
   dd->decRef(*measurementOut);
@@ -1130,7 +1141,7 @@ TEST_F(QCODDFunctionalityTest, SimulateMeasureFeedsIndexSwitch) {
   const auto out =
       simulate(mainFunc(*mod), dd::makeZeroState(1, *dd), *dd, rng);
   ASSERT_TRUE(succeeded(out));
-  EXPECT_EQ(out->getVector(), zero.getVector());
+  EXPECT_EQ(dd::getVector(*out), dd::getVector(zero));
   dd->decRef(*out);
   dd->decRef(zero);
 }
@@ -1206,7 +1217,7 @@ TEST_F(QCODDFunctionalityTest, SimulateAndiOriShliClassical) {
   const auto out =
       simulate(mainFunc(*mod), dd::makeZeroState(3, *dd), *dd, rng);
   ASSERT_TRUE(succeeded(out));
-  EXPECT_EQ(out->getVector(), expected.getVector());
+  EXPECT_EQ(dd::getVector(*out), dd::getVector(expected));
   dd->decRef(*out);
   dd->decRef(expected);
 }
@@ -1235,7 +1246,7 @@ TEST_F(QCODDFunctionalityTest, AcceptsLargestValidShift) {
   ASSERT_TRUE(succeeded(out));
   auto expected = dd->applyOperation(referenceGateDD<XOp>(*dd, {0}),
                                      dd::makeZeroState(1, *dd));
-  EXPECT_EQ(out->getVector(), expected.getVector());
+  EXPECT_EQ(dd::getVector(*out), dd::getVector(expected));
   dd->decRef(*out);
   dd->decRef(expected);
 }
@@ -1359,6 +1370,206 @@ TEST_F(QCODDFunctionalityTest, SampleDynamicMeasureIf) {
   EXPECT_EQ(hist->begin()->second, shots);
 }
 
+TEST_F(QCODDFunctionalityTest, AdaptiveWorkersAndTopLevelBranches) {
+  auto mod = buildModule([](QCOProgramBuilder& b) {
+    auto [q, bit] = b.measure(b.h(b.staticQubit(0)));
+    q = b.qcoIf(
+        bit, q, [&](Value arg) { return b.h(arg); },
+        [&](Value arg) { return arg; });
+    b.sink(q);
+    return b.intConstant(0);
+  });
+  ASSERT_TRUE(mod);
+
+  for (const size_t workers : {1U, 2U, 4U, 0U}) {
+    std::vector<std::string> first;
+    std::vector<std::string> second;
+    const auto a = sample(mainFunc(*mod), 512, 19, DDArgumentBindings{}, &first,
+                          nullptr, {}, workers);
+    const auto b = sample(mainFunc(*mod), 512, 19, DDArgumentBindings{},
+                          &second, nullptr, {}, workers);
+    ASSERT_TRUE(succeeded(a));
+    ASSERT_TRUE(succeeded(b));
+    EXPECT_EQ(first, second);
+    EXPECT_EQ(*a, *b);
+    EXPECT_EQ(first.size(), 512U);
+    EXPECT_NEAR(static_cast<double>(a->at("1")), 128., 50.);
+  }
+}
+
+TEST_F(QCODDFunctionalityTest, TopLevelResetBranchesPreserveCorrelations) {
+  for (const bool entangled : {false, true}) {
+    auto mod = buildModule([entangled](QCOProgramBuilder& b) {
+      auto q0 = b.h(b.staticQubit(0));
+      auto q1 = b.staticQubit(1);
+      if (entangled) {
+        std::tie(q0, q1) = b.cx(q0, q1);
+      } else {
+        q1 = b.x(q1);
+      }
+      b.sink(b.reset(q0));
+      b.sink(q1);
+      return b.intConstant(0);
+    });
+    ASSERT_TRUE(mod);
+    const auto hist = sample(mainFunc(*mod), 2000, 31, DDArgumentBindings{},
+                             nullptr, nullptr, {}, 2);
+    ASSERT_TRUE(succeeded(hist));
+    if (entangled) {
+      EXPECT_NEAR(static_cast<double>(hist->at("10")), 1000., 120.);
+      EXPECT_EQ(hist->at("00") + hist->at("10"), 2000U);
+    } else {
+      EXPECT_EQ(*hist, (std::map<std::string, size_t>{{"10", 2000}}));
+    }
+  }
+}
+
+TEST_F(QCODDFunctionalityTest, BranchesCopyClassicalRegisterStorage) {
+  auto mod = buildModule([](QCOProgramBuilder& b) {
+    auto reg =
+        b.allocClassicalBitRegister(1, {}, cbit::Initialization::Undefined);
+    auto [q, bit] = b.measure(b.h(b.staticQubit(0)), reg, 0);
+    q = b.qcoIf(
+        bit, q, [&](Value arg) { return arg; }, [&](Value arg) { return arg; });
+    b.sink(q);
+    return reg;
+  });
+  ASSERT_TRUE(mod);
+  const auto hist = sample(mainFunc(*mod), 1024, 23, DDArgumentBindings{},
+                           nullptr, nullptr, {}, 2);
+  ASSERT_TRUE(succeeded(hist));
+  EXPECT_NEAR(static_cast<double>(hist->at("0")), 512., 90.);
+  EXPECT_NEAR(static_cast<double>(hist->at("1")), 512., 90.);
+}
+
+TEST_F(QCODDFunctionalityTest, BranchesThroughCountedMeasurementsAndResets) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @main() -> !cbit.reg<3> {
+        %reg = cbit.alloc(#cbit.init<undefined>) : !cbit.reg<3>
+        %q = qco.static 0 : !qco.qubit
+        %zero = arith.constant 0 : index
+        %one = arith.constant 1 : index
+        %three = arith.constant 3 : index
+        %out = scf.for %i = %zero to %three step %one
+            iter_args(%current = %q) -> !qco.qubit {
+          %h = qco.h %current : !qco.qubit
+          %measured, %bit = qco.measure %h : !qco.qubit
+          cbit.store %bit, %reg[%i] : !cbit.reg<3>
+          %reset = qco.reset %measured : !qco.qubit
+          scf.yield %reset : !qco.qubit
+        }
+        qco.sink %out : !qco.qubit
+        return %reg : !cbit.reg<3>
+      }
+    }
+  )mlir",
+                                         context.get());
+  ASSERT_TRUE(mod);
+
+  for (const size_t workers : {1U, 4U}) {
+    std::vector<std::string> first;
+    std::vector<std::string> second;
+    const auto a = sample(mainFunc(*mod), 2048, 41, DDArgumentBindings{},
+                          &first, nullptr, {}, workers);
+    const auto b = sample(mainFunc(*mod), 2048, 41, DDArgumentBindings{},
+                          &second, nullptr, {}, workers);
+    ASSERT_TRUE(succeeded(a));
+    ASSERT_TRUE(succeeded(b));
+    EXPECT_EQ(first, second);
+    EXPECT_EQ(*a, *b);
+    EXPECT_EQ(a->size(), 8U);
+    for (const auto& [outcome, count] : *a) {
+      EXPECT_EQ(outcome.size(), 3U);
+      EXPECT_NEAR(static_cast<double>(count), 256., 70.);
+    }
+  }
+}
+
+TEST_F(QCODDFunctionalityTest, BranchesThroughNestedCountedLoops) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @main() -> !cbit.reg<4> {
+        %reg = cbit.alloc(#cbit.init<undefined>) : !cbit.reg<4>
+        %q = qco.static 0 : !qco.qubit
+        %zero = arith.constant 0 : index
+        %one = arith.constant 1 : index
+        %two = arith.constant 2 : index
+        %out = scf.for %i = %zero to %two step %one
+            iter_args(%outerq = %q) -> !qco.qubit {
+          %inner = scf.for %j = %zero to %two step %one
+              iter_args(%innerq = %outerq) -> !qco.qubit {
+            %offset = arith.muli %i, %two : index
+            %index = arith.addi %offset, %j : index
+            %h = qco.h %innerq : !qco.qubit
+            %measured, %bit = qco.measure %h : !qco.qubit
+            cbit.store %bit, %reg[%index] : !cbit.reg<4>
+            %reset = qco.reset %measured : !qco.qubit
+            scf.yield %reset : !qco.qubit
+          }
+          scf.yield %inner : !qco.qubit
+        }
+        qco.sink %out : !qco.qubit
+        return %reg : !cbit.reg<4>
+      }
+    }
+  )mlir",
+                                         context.get());
+  ASSERT_TRUE(mod);
+
+  const auto counts = sample(mainFunc(*mod), 1024, 43, DDArgumentBindings{},
+                             nullptr, nullptr, {}, 4);
+  ASSERT_TRUE(succeeded(counts));
+  EXPECT_EQ(counts->size(), 16U);
+  for (const auto& [outcome, count] : *counts) {
+    EXPECT_EQ(outcome.size(), 4U);
+    EXPECT_GT(count, 0U);
+  }
+}
+
+TEST_F(QCODDFunctionalityTest, ConcurrentSamplingSharesReadOnlyContext) {
+  auto mod = buildModule([](QCOProgramBuilder& b) {
+    auto [q, bit] = b.measure(b.h(b.staticQubit(0)));
+    q = b.qcoIf(
+        bit, q, [&](Value arg) { return b.h(arg); },
+        [&](Value arg) { return arg; });
+    b.sink(q);
+    return b.intConstant(0);
+  });
+  ASSERT_TRUE(mod);
+  const auto run = [&] {
+    return sample(mainFunc(*mod), 128, 29, DDArgumentBindings{}, nullptr,
+                  nullptr, {}, 4);
+  };
+  auto first = std::async(std::launch::async, run);
+  auto second = std::async(std::launch::async, run);
+  auto a = first.get();
+  auto b = second.get();
+  ASSERT_TRUE(succeeded(a));
+  ASSERT_TRUE(succeeded(b));
+  EXPECT_EQ(*a, *b);
+}
+
+TEST_F(QCODDFunctionalityTest, DisabledContextUsesOneSamplingWorker) {
+  auto mod = buildModule([](QCOProgramBuilder& b) {
+    auto [q, bit] = b.measure(b.h(b.staticQubit(0)));
+    q = b.qcoIf(
+        bit, q, [&](Value arg) { return b.x(arg); },
+        [&](Value arg) { return arg; });
+    b.sink(q);
+    return bit;
+  });
+  ASSERT_TRUE(mod);
+  context->disableMultithreading();
+  std::vector<std::string> serial;
+  std::vector<std::string> capped;
+  ASSERT_TRUE(succeeded(sample(mainFunc(*mod), 512, 29, DDArgumentBindings{},
+                               &serial, nullptr, {}, 1)));
+  ASSERT_TRUE(succeeded(sample(mainFunc(*mod), 512, 29, DDArgumentBindings{},
+                               &capped, nullptr, {}, 4)));
+  EXPECT_EQ(capped, serial);
+}
+
 TEST_F(QCODDFunctionalityTest, SampleHandlesZeroShotsAndSimulationFailure) {
   auto unitary = buildModule([](QCOProgramBuilder& b) {
     auto q = b.x(b.staticQubit(0));
@@ -1370,12 +1581,16 @@ TEST_F(QCODDFunctionalityTest, SampleHandlesZeroShotsAndSimulationFailure) {
   const auto empty = sample(mainFunc(*unitary), 0, 1);
   ASSERT_TRUE(succeeded(empty));
   EXPECT_TRUE(empty->empty());
+  const auto emptyParallel = sample(
+      mainFunc(*unitary), 0, 1, DDArgumentBindings{}, nullptr, nullptr, {}, 8);
+  ASSERT_TRUE(succeeded(emptyParallel));
+  EXPECT_TRUE(emptyParallel->empty());
 
   auto dynamic = parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
-        %out = qco.rz(%theta) %q : !qco.qubit -> !qco.qubit
+        %out = qco.rz(%theta) %q : !qco.qubit
         qco.sink %out : !qco.qubit
         return
       }
@@ -1390,7 +1605,7 @@ TEST_F(QCODDFunctionalityTest, SampleHandlesZeroShotsAndSimulationFailure) {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
         %measured, %bit = qco.measure %q : !qco.qubit
-        %out = qco.rz(%theta) %measured : !qco.qubit -> !qco.qubit
+        %out = qco.rz(%theta) %measured : !qco.qubit
         qco.sink %out : !qco.qubit
         return
       }
@@ -1431,9 +1646,9 @@ TEST_F(QCODDFunctionalityTest, EmbedsWideLocalMatrixWithoutRegisterLimit) {
 
   expectEqualToReference(mainFunc(*mod), 13,
                          {
-                             referenceGate<RXOp>({0}, {-0.2}),
-                             referenceGate<RYOp>({4}, {-0.3}),
-                             referenceGate<RZOp>({8}, {-0.4}),
+                             referenceGate<RXOp>({0}, std::array{-0.2}),
+                             referenceGate<RYOp>({4}, std::array{-0.3}),
+                             referenceGate<RZOp>({8}, std::array{-0.4}),
                              referenceGate<HOp>({12}),
                          });
 }
@@ -1546,7 +1761,7 @@ TEST_F(QCODDFunctionalityTest, BindsClassicalIfResults) {
         %q2 = qco.if %flag args(%arg = %q1) -> (!qco.qubit) {
           qco.yield %arg : !qco.qubit
         } else args(%arg = %q1) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.yield %x : !qco.qubit
         }
         qco.sink %q2 : !qco.qubit
@@ -1563,7 +1778,7 @@ TEST_F(QCODDFunctionalityTest, BindsClassicalIfResults) {
   ASSERT_TRUE(succeeded(out));
   auto expected = dd->applyOperation(referenceGateDD<XOp>(*dd, {0}),
                                      dd::makeZeroState(1, *dd));
-  EXPECT_EQ(out->getVector(), expected.getVector());
+  EXPECT_EQ(dd::getVector(*out), dd::getVector(expected));
   dd->decRef(*out);
   dd->decRef(expected);
 }
@@ -1584,7 +1799,7 @@ TEST_F(QCODDFunctionalityTest, BindsClassicalIndexResults) {
         }
         %q2 = qco.index_switch %index -> !qco.qubit
         case 1 args(%arg = %q1) {
-          %x = qco.x %arg : !qco.qubit -> !qco.qubit
+          %x = qco.x %arg : !qco.qubit
           qco.yield %x : !qco.qubit
         }
         default args(%arg = %q1) {
@@ -1604,7 +1819,7 @@ TEST_F(QCODDFunctionalityTest, BindsClassicalIndexResults) {
   ASSERT_TRUE(succeeded(out));
   auto expected = dd->applyOperation(referenceGateDD<XOp>(*dd, {0}),
                                      dd::makeZeroState(1, *dd));
-  EXPECT_EQ(out->getVector(), expected.getVector());
+  EXPECT_EQ(dd::getVector(*out), dd::getVector(expected));
   dd->decRef(*out);
   dd->decRef(expected);
 }
@@ -1691,7 +1906,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
     module {
       func.func @main(%qarg: !qco.qubit) {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.h %qarg : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %qarg : !qco.qubit
         qco.sink %q : !qco.qubit
         qco.sink %q1 : !qco.qubit
         return
@@ -1702,7 +1917,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
     module {
       func.func @main(%qarg: !qco.qubit) {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.barrier %qarg : !qco.qubit -> !qco.qubit
+        %q1 = qco.barrier %qarg : !qco.qubit
         qco.sink %q : !qco.qubit
         qco.sink %q1 : !qco.qubit
         return
@@ -1714,7 +1929,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
       func.func @main(%qarg: !qco.qubit) {
         %q = qco.static 0 : !qco.qubit
         %q_out = qco.inv (%q_in = %qarg) {
-          %q1 = qco.x %q_in : !qco.qubit -> !qco.qubit
+          %q1 = qco.x %q_in : !qco.qubit
           qco.yield %q1 : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         qco.sink %q : !qco.qubit
@@ -1728,9 +1943,9 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
       func.func @main(%qarg: !qco.qubit) {
         %q = qco.static 0 : !qco.qubit
         %c_out, %t_out = qco.ctrl(%qarg) targets(%t = %q) {
-          %t1 = qco.x %t : !qco.qubit -> !qco.qubit
+          %t1 = qco.x %t : !qco.qubit
           qco.yield %t1 : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         qco.sink %c_out : !qco.qubit
         qco.sink %t_out : !qco.qubit
         return
@@ -1741,7 +1956,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
     module {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.rz(%theta) %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.rz(%theta) %q : !qco.qubit
         qco.sink %q1 : !qco.qubit
         return
       }
@@ -1760,7 +1975,7 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
         %q_out = qco.inv (%q_in = %q) {
-          %q1 = qco.rz(%theta) %q_in : !qco.qubit -> !qco.qubit
+          %q1 = qco.rz(%theta) %q_in : !qco.qubit
           qco.yield %q1 : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         qco.sink %q_out : !qco.qubit
@@ -1774,9 +1989,9 @@ TEST_F(QCODDFunctionalityTest, Rejects) {
         %q0 = qco.static 0 : !qco.qubit
         %q1 = qco.static 1 : !qco.qubit
         %c_out, %t_out = qco.ctrl(%q0) targets(%t = %q1) {
-          %t1 = qco.rz(%theta) %t : !qco.qubit -> !qco.qubit
+          %t1 = qco.rz(%theta) %t : !qco.qubit
           qco.yield %t1 : !qco.qubit
-        } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+        } : ({!qco.qubit}, {!qco.qubit})
         qco.sink %c_out : !qco.qubit
         qco.sink %t_out : !qco.qubit
         return
@@ -1816,7 +2031,7 @@ TEST_F(QCODDFunctionalityTest, ExecuteParameterizedGateCallsWithGlobalPhase) {
       %scale = arith.constant -0.5 : f64
       %phase = arith.mulf %angle, %scale : f64
       qco.gphase(%phase)
-      %out = qco.rx(%angle) %q : !qco.qubit -> !qco.qubit
+      %out = qco.rx(%angle) %q : !qco.qubit
       return %out : !qco.qubit
     }
     func.func @main(%angle: f64) {
@@ -1836,7 +2051,7 @@ TEST_F(QCODDFunctionalityTest, ExecuteParameterizedGateCallsWithGlobalPhase) {
   dd::Package package(1);
   auto result = buildFunctionality(function, package, bindings);
   ASSERT_TRUE(succeeded(result));
-  const auto matrix = result->getMatrix(1);
+  const auto matrix = dd::getMatrix(*result, 1);
   for (size_t row = 0; row < 2; ++row) {
     for (size_t column = 0; column < 2; ++column) {
       EXPECT_NEAR(std::abs(matrix[row][column] - (row == column ? 0. : -1.)),
@@ -1854,7 +2069,7 @@ TEST_F(QCODDFunctionalityTest, SimulateScfForAndFuncCallWithClassicalValues) {
         %at_zero = arith.cmpi eq, %i, %c0 : index
         %cond = arith.andi %bit, %at_zero : i1
         %q1 = qco.if %cond args(%qin = %q) -> (!qco.qubit) {
-          %qx = qco.x %qin : !qco.qubit -> !qco.qubit
+          %qx = qco.x %qin : !qco.qubit
           qco.yield %qx : !qco.qubit
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
@@ -1898,7 +2113,7 @@ TEST_F(QCODDFunctionalityTest, ScfForCarriesQubitsSimultaneously) {
             -> (!qco.qubit, !qco.qubit) {
           scf.yield %y, %x : !qco.qubit, !qco.qubit
         }
-        %flipped = qco.x %a : !qco.qubit -> !qco.qubit
+        %flipped = qco.x %a : !qco.qubit
         qco.sink %flipped : !qco.qubit
         qco.sink %b : !qco.qubit
         return
@@ -1929,7 +2144,7 @@ TEST_F(QCODDFunctionalityTest, ScfForCarriesScalarsSimultaneously) {
         }
         %is_zero = arith.cmpi eq, %a, %zero : i8
         %out = qco.if %is_zero args(%arg = %q) -> (!qco.qubit) {
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           qco.yield %flipped : !qco.qubit
         } else args(%arg = %q) {
           qco.yield %arg : !qco.qubit
@@ -1964,7 +2179,7 @@ TEST_F(QCODDFunctionalityTest, ScfForCarriesRegistersSimultaneously) {
         %out = qco.if %bit args(%arg = %q) -> (!qco.qubit) {
           qco.yield %arg : !qco.qubit
         } else args(%arg = %q) {
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           qco.yield %flipped : !qco.qubit
         }
         qco.sink %out : !qco.qubit
@@ -1990,7 +2205,7 @@ TEST_F(QCODDFunctionalityTest, ScfForSnapshotsYieldedInductionValue) {
             iter_args(%qarg = %q, %prev = %cm1) -> (!qco.qubit, index) {
           %same = arith.cmpi eq, %prev, %iv : index
           %next = qco.if %same args(%arg = %qarg) -> (!qco.qubit) {
-            %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+            %flipped = qco.x %arg : !qco.qubit
             qco.yield %flipped : !qco.qubit
           } else args(%arg = %qarg) {
             qco.yield %arg : !qco.qubit
@@ -2011,12 +2226,12 @@ TEST_F(QCODDFunctionalityTest, RepeatedCallsRespectNearestSymbolTable) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @gate(%q: !qco.qubit) -> !qco.qubit {
-        %out = qco.x %q : !qco.qubit -> !qco.qubit
+        %out = qco.x %q : !qco.qubit
         return %out : !qco.qubit
       }
       module @nested {
         func.func @gate(%q: !qco.qubit) -> !qco.qubit {
-          %out = qco.h %q : !qco.qubit -> !qco.qubit
+          %out = qco.h %q : !qco.qubit
           return %out : !qco.qubit
         }
         func.func @main(%q: !qco.qubit) -> !qco.qubit {
@@ -2042,7 +2257,7 @@ TEST_F(QCODDFunctionalityTest, ParameterizedUnitaryCallsUseClassicalBindings) {
       func.func private @rotate(%theta: f64, %q: !qco.qubit) -> !qco.qubit
           attributes {mqt.unitary} {
         qco.gphase(%theta)
-        %out = qco.rx(%theta) %q : !qco.qubit -> !qco.qubit
+        %out = qco.rx(%theta) %q : !qco.qubit
         return %out : !qco.qubit
       }
       func.func private @twice(%theta: f64, %q: !qco.qubit) -> !qco.qubit
@@ -2069,7 +2284,7 @@ TEST_F(QCODDFunctionalityTest, ParameterizedUnitaryCallsUseClassicalBindings) {
   dd::Package package(1);
   auto matrix = buildFunctionality(func, package, bindings);
   ASSERT_TRUE(succeeded(matrix));
-  const auto dense = matrix->getMatrix(1);
+  const auto dense = dd::getMatrix(*matrix, 1);
   // Two rotations and their global phases give iX, checking the phase too.
   EXPECT_NEAR(std::abs(dense[0][0]), 0., 1e-12);
   EXPECT_NEAR(std::abs(dense[1][1]), 0., 1e-12);
@@ -2078,7 +2293,7 @@ TEST_F(QCODDFunctionalityTest, ParameterizedUnitaryCallsUseClassicalBindings) {
   package.decRef(*matrix);
   auto state = simulateStatevector(func, package, bindings);
   ASSERT_TRUE(succeeded(state));
-  EXPECT_NEAR(std::abs(state->getVector()[1] - std::complex<double>(0., 1.)),
+  EXPECT_NEAR(std::abs(dd::getVector(*state)[1] - std::complex<double>(0., 1.)),
               0., 1e-12);
   package.decRef(*state);
   auto counts = sample(func, 8, 17, bindings);
@@ -2191,7 +2406,7 @@ TEST_F(QCODDFunctionalityTest, HandlesScfForBounds) {
         %step = arith.constant 1 : index
         %result = scf.for unsigned %iv = %lower to %upper step %step
             iter_args(%qarg = %q) -> !qco.qubit {
-          %next = qco.x %qarg : !qco.qubit -> !qco.qubit
+          %next = qco.x %qarg : !qco.qubit
           scf.yield %next : !qco.qubit
         }
         qco.sink %result : !qco.qubit
@@ -2227,7 +2442,7 @@ TEST_F(QCODDFunctionalityTest, HandlesScfForBounds) {
         %step = arith.constant 9223372036854775807 : index
         %result = scf.for unsigned %iv = %lower to %upper step %step
             iter_args(%qarg = %q) -> !qco.qubit {
-          %next = qco.x %qarg : !qco.qubit -> !qco.qubit
+          %next = qco.x %qarg : !qco.qubit
           scf.yield %next : !qco.qubit
         }
         qco.sink %result : !qco.qubit
@@ -2516,7 +2731,7 @@ TEST_F(QCODDFunctionalityTest,
         %memory = memref.alloc() : memref<1xi1>
         %zero = arith.constant 0 : index
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.h %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q : !qco.qubit
         %q2, %bit = qco.measure %q1 : !qco.qubit
         memref.store %bit, %memory[%zero] : memref<1xi1>
         %loaded = memref.load %memory[%zero] : memref<1xi1>
@@ -2553,7 +2768,7 @@ TEST_F(QCODDFunctionalityTest, FuncCallSharesClassicalCBitStorage) {
         %value = cbit.load %reg[%i0] : !cbit.reg<1>
         %q = qco.static 0 : !qco.qubit
         %q1 = qco.if %value args(%qin = %q) -> (!qco.qubit) {
-          %qx = qco.x %qin : !qco.qubit -> !qco.qubit
+          %qx = qco.x %qin : !qco.qubit
           qco.yield %qx : !qco.qubit
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
@@ -2593,6 +2808,38 @@ TEST_F(QCODDFunctionalityTest, ReadsDenseFloatTablesInStructuredLoops) {
     const auto counts = sample(mainFunc(*moduleOp), 8, 1);
     ASSERT_TRUE(succeeded(counts));
     EXPECT_EQ(*counts, (std::map<std::string, size_t>{{"1", 8}}));
+  }
+}
+
+TEST_F(QCODDFunctionalityTest, ReadsDenseIntegerInputsInStructuredLoops) {
+  for (const unsigned width : {1U, 64U}) {
+    auto moduleOp = buildModule([&](QCOProgramBuilder& b) {
+      auto type = RankedTensorType::get({2}, b.getIntegerType(width));
+      const std::array values{
+          llvm::APInt(width, 0),
+          llvm::APInt::getAllOnes(width),
+      };
+      auto table = arith::ConstantOp::create(
+          b, DenseElementsAttr::get(type, ArrayRef<llvm::APInt>(values)));
+      auto q = b.h(b.staticQubit(0));
+      auto result = b.scfFor(
+          0, 2, 1, ValueRange{q},
+          [&](Value index, ValueRange args) -> SmallVector<Value> {
+            auto value = tensor::ExtractOp::create(b, table, ValueRange{index});
+            auto bit = arith::AndIOp::create(
+                b, value,
+                arith::ConstantOp::create(
+                    b, b.getIntegerAttr(type.getElementType(), 1)));
+            auto angle = arith::UIToFPOp::create(b, b.getF64Type(), bit);
+            auto phase = arith::MulFOp::create(
+                b, angle, b.floatConstant(std::numbers::pi));
+            return {b.p(phase, args[0])};
+          });
+      b.sink(b.h(result[0]));
+      return b.intConstant(0);
+    });
+    ASSERT_TRUE(moduleOp);
+    expectEqualToReference(mainFunc(*moduleOp), 1, {referenceGate<XOp>({0})});
   }
 }
 
@@ -2678,7 +2925,7 @@ TEST_F(QCODDFunctionalityTest, SamplingAnalysisHandlesSharedCallees) {
            "func.call @decl() : () -> ()",
            "func.call @f0() : () -> ()",
            R"mlir(%q = qco.static 0 : !qco.qubit
-             %r = qco.reset %q : !qco.qubit -> !qco.qubit
+             %r = qco.reset %q : !qco.qubit
              qco.sink %r : !qco.qubit)mlir",
        }) {
     SCOPED_TRACE(leafBody.str());
@@ -2691,7 +2938,7 @@ TEST_F(QCODDFunctionalityTest, SamplingAnalysisHandlesSharedCallees) {
          << "() : () -> () func.call @f" << level - 1
          << "() : () -> () return }\n";
     }
-    /// The unreachable branch isolates analysis from the expanded call count.
+    // The unreachable branch isolates analysis from the expanded call count.
     os << R"mlir(func.func @main() {
       %false = arith.constant false
       scf.if %false { func.call @f20() : () -> () }
@@ -2726,9 +2973,9 @@ TEST_F(QCODDFunctionalityTest,
       }
       func.func @main() {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.h %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q : !qco.qubit
         %q2 = func.call @measure(%q1) : (!qco.qubit) -> !qco.qubit
-        %q3 = qco.h %q2 : !qco.qubit -> !qco.qubit
+        %q3 = qco.h %q2 : !qco.qubit
         qco.sink %q3 : !qco.qubit
         return
       }
@@ -2737,10 +2984,24 @@ TEST_F(QCODDFunctionalityTest,
                                          context.get());
   ASSERT_TRUE(mod);
 
-  const auto histogram = sample(mainFunc(*mod), 128, 9);
-  ASSERT_TRUE(succeeded(histogram));
-  ASSERT_EQ(histogram->size(), 2U);
-  EXPECT_EQ(histogram->at("0") + histogram->at("1"), 128U);
+  for (const size_t workers : {1U, 4U}) {
+    const auto histogram = sample(mainFunc(*mod), 128, 9, DDArgumentBindings{},
+                                  nullptr, nullptr, {}, workers);
+    ASSERT_TRUE(succeeded(histogram));
+    ASSERT_EQ(histogram->size(), 2U);
+    EXPECT_EQ(histogram->at("0") + histogram->at("1"), 128U);
+
+    std::vector<std::string> shots;
+    const auto withShots = sample(mainFunc(*mod), 128, 9, DDArgumentBindings{},
+                                  &shots, nullptr, {}, workers);
+    ASSERT_TRUE(succeeded(withShots));
+    EXPECT_EQ(*withShots, *histogram);
+    std::map<std::string, size_t> counts;
+    for (const auto& shot : shots) {
+      ++counts[shot];
+    }
+    EXPECT_EQ(counts, *histogram);
+  }
 }
 
 TEST_F(QCODDFunctionalityTest, SampleDefersNestedTerminalMeasurement) {
@@ -2750,7 +3011,7 @@ TEST_F(QCODDFunctionalityTest, SampleDefersNestedTerminalMeasurement) {
         %reg = cbit.alloc(#cbit.init<undefined>) : !cbit.reg<1>
         %true = arith.constant true
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.h %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.h %q : !qco.qubit
         %q2 = qco.if %true args(%qin = %q1) -> (!qco.qubit) {
           %measured, %bit = qco.measure %qin : !qco.qubit
           %i0 = arith.constant 0 : index
@@ -2782,7 +3043,7 @@ TEST_F(QCODDFunctionalityTest, FixedGatePowersPreserveFullMatrix) {
         %q = qco.static 0 : !qco.qubit
         %out = qco.pow(%exponent) (%a = %q) {
           %b = qco.)mlir") + gate +
-                               R"mlir( %a : !qco.qubit -> !qco.qubit
+                               R"mlir( %a : !qco.qubit
           qco.yield %b : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
         qco.sink %out : !qco.qubit
@@ -2817,12 +3078,12 @@ TEST_F(QCODDFunctionalityTest, FixedGatePowersPreserveFullMatrix) {
       auto expected =
           buildFunctionality(before, package, {{before.getArgument(0), value}});
       ASSERT_TRUE(succeeded(expected));
-      const auto left = expected->getMatrix(1);
+      const auto left = dd::getMatrix(*expected, 1);
       for (auto function : {after, constantFunction}) {
         auto actual = buildFunctionality(function, package,
                                          {{function.getArgument(0), value}});
         ASSERT_TRUE(succeeded(actual));
-        const auto right = actual->getMatrix(1);
+        const auto right = dd::getMatrix(*actual, 1);
         for (size_t row = 0; row < 2; ++row) {
           for (size_t column = 0; column < 2; ++column) {
             EXPECT_NEAR(std::abs(left[row][column] - right[row][column]), 0.,
@@ -2842,7 +3103,7 @@ TEST_F(QCODDFunctionalityTest, SymbolicParametersUseBindings) {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
         %twice = arith.addf %theta, %theta : f64
-        %q1 = qco.rx(%twice) %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.rx(%twice) %q : !qco.qubit
         qco.gphase(%theta)
         qco.sink %q1 : !qco.qubit
         return
@@ -2869,7 +3130,7 @@ TEST_F(QCODDFunctionalityTest, SymbolicParametersUseBindings) {
   auto expected = buildFunctionality(mainFunc(*concrete), *dd);
   ASSERT_TRUE(succeeded(actual));
   ASSERT_TRUE(succeeded(expected));
-  EXPECT_EQ(actual->getMatrix(1), expected->getMatrix(1));
+  EXPECT_EQ(dd::getMatrix(*actual, 1), dd::getMatrix(*expected, 1));
   dd->decRef(*actual);
   dd->decRef(*expected);
 
@@ -2879,7 +3140,7 @@ TEST_F(QCODDFunctionalityTest, SymbolicParametersUseBindings) {
 
   const auto state = simulateStatevector(func, *dd, bindings);
   ASSERT_TRUE(succeeded(state));
-  const auto vector = state->getVector();
+  const auto vector = dd::getVector(*state);
   ASSERT_EQ(vector.size(), 2U);
   EXPECT_NEAR(std::norm(vector[0]), 0.0, 1e-12);
   EXPECT_NEAR(std::norm(vector[1]), 1.0, 1e-12);
@@ -2899,7 +3160,7 @@ TEST_F(QCODDFunctionalityTest, RejectsNonFiniteParameters) {
     module {
       func.func @main(%theta: f64) {
         %q = qco.static 0 : !qco.qubit
-        %out = qco.rx(%theta) %q : !qco.qubit -> !qco.qubit
+        %out = qco.rx(%theta) %q : !qco.qubit
         qco.sink %out : !qco.qubit
         return
       }
@@ -2965,7 +3226,7 @@ TEST_F(QCODDFunctionalityTest, StructuredScfAndWhileCarryValues) {
     module {
       func.func @main() {
         %q = qco.static 0 : !qco.qubit
-        %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.x %q : !qco.qubit
         %true = arith.constant true
         %selector = scf.if %true -> index {
           %one = arith.constant 1 : index
@@ -2984,7 +3245,7 @@ TEST_F(QCODDFunctionalityTest, StructuredScfAndWhileCarryValues) {
           scf.yield %no : i1
         }
         %q2 = qco.if %apply_z args(%qarg = %q1) -> (!qco.qubit) {
-          %out = qco.z %qarg : !qco.qubit -> !qco.qubit
+          %out = qco.z %qarg : !qco.qubit
           qco.yield %out : !qco.qubit
         } else args(%qarg = %q1) {
           qco.yield %qarg : !qco.qubit
@@ -2997,7 +3258,7 @@ TEST_F(QCODDFunctionalityTest, StructuredScfAndWhileCarryValues) {
           scf.condition(%condition) %qarg, %i : !qco.qubit, index
         } do {
         ^bb0(%qarg: !qco.qubit, %i: index):
-          %out = qco.x %qarg : !qco.qubit -> !qco.qubit
+          %out = qco.x %qarg : !qco.qubit
           %one = arith.constant 1 : index
           %next = arith.addi %i, %one : index
           scf.yield %out, %next : !qco.qubit, index
@@ -3008,7 +3269,7 @@ TEST_F(QCODDFunctionalityTest, StructuredScfAndWhileCarryValues) {
           scf.condition(%false) %qarg : !qco.qubit
         } do {
         ^bb0(%qarg: !qco.qubit):
-          %unreachable = qco.h %qarg : !qco.qubit -> !qco.qubit
+          %unreachable = qco.h %qarg : !qco.qubit
           scf.yield %unreachable : !qco.qubit
         }
         qco.sink %final : !qco.qubit
@@ -3058,13 +3319,13 @@ TEST_F(QCODDFunctionalityTest, AllocationPreservesComplexInputAmplitudes) {
                  dd::makeStateFromVector(input, package), package, rng);
     ASSERT_TRUE(succeeded(state));
     const dd::CVec expected{input[0], input[1], 0., 0.};
-    const auto actual = state->getVector();
+    const auto actual = dd::getVector(*state);
     ASSERT_EQ(actual.size(), expected.size());
     for (size_t i = 0; i < actual.size(); ++i) {
       EXPECT_NEAR(std::abs(actual[i] - expected[i]), 0., 1e-12);
     }
     package.garbageCollect(true);
-    EXPECT_EQ(state->getVector(), actual);
+    EXPECT_EQ(dd::getVector(*state), actual);
     package.decRef(*state);
     package.garbageCollect(true);
     EXPECT_EQ(package.vUniqueTable.getNumEntries(), 0);
@@ -3114,7 +3375,7 @@ TEST_F(QCODDFunctionalityTest, DynamicQTensorArgumentUsesBoundExtent) {
         %one = arith.constant 1 : index
         %remaining, %q = qtensor.extract %arg0[%one]
             : tensor<?x!qco.qubit>
-        %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.x %q : !qco.qubit
         %result = qtensor.insert %q1 into %remaining[%one]
             : tensor<?x!qco.qubit>
         return %result : tensor<?x!qco.qubit>
@@ -3160,7 +3421,7 @@ TEST_F(QCODDFunctionalityTest, QTensorFlowsThroughLoopAndCall) {
         %zero = arith.constant 0 : index
         %remaining, %q = qtensor.extract %arg[%zero]
             : tensor<1x!qco.qubit>
-        %q1 = qco.x %q : !qco.qubit -> !qco.qubit
+        %q1 = qco.x %q : !qco.qubit
         %result = qtensor.insert %q1 into %remaining[%zero]
             : tensor<1x!qco.qubit>
         return %result : tensor<1x!qco.qubit>
@@ -3243,7 +3504,7 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
         %condition = arith.andi %all_integers_ok, %floats_ok : i1
         %q = qco.static 0 : !qco.qubit
         %q1 = qco.if %condition args(%qin = %q) -> (!qco.qubit) {
-          %out = qco.x %qin : !qco.qubit -> !qco.qubit
+          %out = qco.x %qin : !qco.qubit
           qco.yield %out : !qco.qubit
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
@@ -3273,7 +3534,7 @@ TEST_F(QCODDFunctionalityTest, BindingsDriveObservableClassicalPath) {
         %condition = arith.select %flag, %both, %unbound : i1
         %q = qco.static 0 : !qco.qubit
         %out = qco.if %condition args(%arg = %q) -> (!qco.qubit) {
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           qco.yield %flipped : !qco.qubit
         } else args(%arg = %q) {
           qco.yield %arg : !qco.qubit
@@ -3314,7 +3575,7 @@ TEST_F(QCODDFunctionalityTest, RepeatedSimulationPreservesFoldableIR) {
         %equal = arith.cmpi eq, %wide, %wide_again : i16
         %q = qco.static 0 : !qco.qubit
         %out = qco.if %equal args(%arg = %q) -> (!qco.qubit) {
-          %flipped = qco.x %arg : !qco.qubit -> !qco.qubit
+          %flipped = qco.x %arg : !qco.qubit
           qco.yield %flipped : !qco.qubit
         } else args(%arg = %q) {
           qco.yield %arg : !qco.qubit
@@ -3472,7 +3733,7 @@ TEST_F(QCODDFunctionalityTest, BuildFunctionalityRestrictsRuntimeAllocations) {
     module {
       func.func @main() {
         %q = qco.alloc : !qco.qubit
-        %out = qco.x %q : !qco.qubit -> !qco.qubit
+        %out = qco.x %q : !qco.qubit
         qco.sink %out : !qco.qubit
         return
       }
@@ -3607,7 +3868,7 @@ TEST_F(QCODDFunctionalityTest, StatevectorSupportsTerminalMeasurements) {
   const auto state = simulateStatevector(mainFunc(*mod), *dd);
   ASSERT_TRUE(succeeded(state));
   EXPECT_EQ(dd->qubits(), 1U);
-  const auto vector = state->getVector();
+  const auto vector = dd::getVector(*state);
   ASSERT_EQ(vector.size(), 2U);
   EXPECT_NEAR(std::norm(vector[0]), 0.5, 1e-12);
   EXPECT_NEAR(std::norm(vector[1]), 0.5, 1e-12);
@@ -3664,7 +3925,7 @@ TEST_F(QCODDFunctionalityTest, LifetimeMarkersPreserveEntangledState) {
   auto dd = std::make_unique<dd::Package>(0);
   const auto state = simulateStatevector(mainFunc(*mod), *dd);
   ASSERT_TRUE(succeeded(state));
-  const auto vector = state->getVector();
+  const auto vector = dd::getVector(*state);
   ASSERT_EQ(vector.size(), 8U);
   EXPECT_NEAR(std::norm(vector[4]), 0.5, 1e-12);
   EXPECT_NEAR(std::norm(vector[7]), 0.5, 1e-12);
@@ -3699,7 +3960,7 @@ TEST_F(QCODDFunctionalityTest, StatevectorSkipsUnreachedAllocations) {
   const auto state = simulateStatevector(mainFunc(*mod), *dd);
   ASSERT_TRUE(succeeded(state));
   EXPECT_EQ(dd->qubits(), 0U);
-  const auto vector = state->getVector();
+  const auto vector = dd::getVector(*state);
   ASSERT_EQ(vector.size(), 1U);
   EXPECT_NEAR(std::norm(vector[0]), 1.0, 1e-12);
   dd->decRef(*state);
@@ -3787,7 +4048,7 @@ TEST_F(QCODDFunctionalityTest,
           %ok = arith.cmpi eq, %result, %expected : {2}
           %q = qco.static 0 : !qco.qubit
           %out = qco.if %ok args(%arg = %q) -> (!qco.qubit) {{
-            %x = qco.x %arg : !qco.qubit -> !qco.qubit
+            %x = qco.x %arg : !qco.qubit
             qco.yield %x : !qco.qubit
           } else args(%arg = %q) {{
             qco.yield %arg : !qco.qubit
@@ -4010,7 +4271,7 @@ TEST_F(QCODDFunctionalityTest,
           {7}
           %q = qco.static 0 : !qco.qubit
           %out = qco.if %ok args(%arg = %q) -> (!qco.qubit) {{
-            %x = qco.x %arg : !qco.qubit -> !qco.qubit
+            %x = qco.x %arg : !qco.qubit
             qco.yield %x : !qco.qubit
           } else args(%arg = %q) {{
             qco.yield %arg : !qco.qubit

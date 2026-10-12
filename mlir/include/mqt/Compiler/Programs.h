@@ -12,9 +12,15 @@
 
 #include "mqt/Compiler/CompilationOptions.h"
 
+#include "capnp/message.h"
+#include "jeff.capnp.h"
+
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/Support/LLVM.h"
+
+#include "llvm/Support/LogicalResult.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -37,6 +43,30 @@ class JeffProgram;
 class OpenQASMProgram;
 class QIRProgram;
 class TargetEnvironment;
+
+/// Quantum resources and static IR statistics.
+struct QuantumProgramInfo {
+  /// Declared quantum capacity.
+  ///
+  /// Counts allocated qubits or distinct static site IDs.
+  /// Unknown for runtime-sized allocations, quantum inputs, size overflow,
+  /// or no entry point. Includes helpers and excludes nested modules.
+  std::optional<uint64_t> numQubits;
+  /// Sorted, distinct physical site IDs declared in the module.
+  std::vector<uint64_t> staticQubits;
+  /// Whether the module contains branching or region-based control flow.
+  bool hasControlFlow = false;
+  /// Entry-point gate counts with the same semantics as QCProgram::numGates.
+  size_t numGates = 0;
+  size_t numSingleQubitGates = 0;
+  size_t numTwoQubitGates = 0;
+  /// Entry-point gate histogram, as in QCProgram::gateCounts().
+  std::map<std::string, size_t> gateCounts;
+  /// Entry-point branches and region-based control flow by MLIR operation name.
+  std::map<std::string, size_t> controlFlowCounts;
+  /// All operations in the module, as in Program::operationCounts().
+  std::map<std::string, size_t> operationCounts;
+};
 
 /// The QIR profile represented by a QIR program.
 enum class QIRProfile : uint8_t {
@@ -85,6 +115,12 @@ public:
   /// Return the program as textual MLIR.
   [[nodiscard]] std::string str() const;
 
+  /// Count every operation by its full MLIR name.
+  ///
+  /// Includes the root module, helper functions, modifier bodies, terminators,
+  /// and nested modules.
+  [[nodiscard]] std::map<std::string, size_t> operationCounts() const;
+
   /// Borrow the owned MLIR module.
   ///
   /// The returned operation remains valid while this program owns its
@@ -99,7 +135,9 @@ protected:
 
   explicit Program(Storage storage);
 
-  /// Return the owned module. Requires a valid program.
+  /// Return the owned module.
+  ///
+  /// Requires a valid program.
   [[nodiscard]] ModuleOp mod() const;
 
   /// Clone the owned module while sharing its immutable dialect context.
@@ -124,7 +162,7 @@ public:
   [[nodiscard]] const std::string& str() const noexcept;
 
   /// Write the OpenQASM source to a file.
-  [[nodiscard]] bool write(const std::filesystem::path& path) const;
+  [[nodiscard]] LogicalResult write(const std::filesystem::path& path) const;
 
 private:
   std::string source_;
@@ -136,23 +174,23 @@ public:
   explicit QCProgram(Storage storage) : Program(std::move(storage)) {}
 
   /// Parse QC MLIR assembly.
-  [[nodiscard]] static std::optional<QCProgram>
+  [[nodiscard]] static FailureOr<QCProgram>
   fromMLIRString(std::string_view source);
 
   /// Parse QC MLIR assembly from a file.
-  [[nodiscard]] static std::optional<QCProgram>
+  [[nodiscard]] static FailureOr<QCProgram>
   fromMLIRFile(const std::filesystem::path& path);
 
   /// Translate supported OpenQASM source to QC.
   ///
   /// Accepts versionless input and versions 2.0, 3.0, and 3.1.
-  [[nodiscard]] static std::optional<QCProgram>
+  [[nodiscard]] static FailureOr<QCProgram>
   fromOpenQASMString(std::string_view source);
 
   /// Translate a supported OpenQASM file to QC.
   ///
   /// Accepts versionless input and versions 2.0, 3.0, and 3.1.
-  [[nodiscard]] static std::optional<QCProgram>
+  [[nodiscard]] static FailureOr<QCProgram>
   fromOpenQASMFile(const std::filesystem::path& path);
 
   /// Take ownership of an MLIR module that contains a QC program.
@@ -162,72 +200,87 @@ public:
   /// QCO and QTensor operations. QC operations are not required. Dynamic
   /// quantum allocations require an `mqt.entry_point` function and must appear
   /// directly in its entry block.
-  [[nodiscard]] static std::optional<QCProgram>
+  [[nodiscard]] static FailureOr<QCProgram>
   fromModule(std::shared_ptr<MLIRContext> context,
              OwningOpRef<ModuleOp> moduleOp);
   /// Create an independent QC program copy.
   [[nodiscard]] QCProgram copy() const;
 
+  /// Inspect quantum resources and static IR statistics.
+  ///
+  /// Returns resource information and gate, control-flow, and operation counts.
+  [[nodiscard]] QuantumProgramInfo inspect() const;
+
   /// Return named f64 entry-point inputs in function argument order.
   [[nodiscard]] std::vector<std::string> parameters() const;
 
   /// Bind named f64 inputs in place, preserving unbound inputs and metadata.
+  ///
   /// Reject unknown names, non-finite values, or references to the entry point
   /// without changing the program. Does not run cleanup or fold expressions.
-  [[nodiscard]] bool
+  [[nodiscard]] LogicalResult
   bindParameters(const std::map<std::string, double>& values);
 
   /// Run the standard QC cleanup passes in place.
-  [[nodiscard]] bool cleanup();
+  [[nodiscard]] LogicalResult cleanup();
 
   /// Normalize scoped global phases in place.
-  [[nodiscard]] bool normalizeGlobalPhases();
+  [[nodiscard]] LogicalResult normalizeGlobalPhases();
 
   /// Translate this program to portable OpenQASM 3.1 without consuming it.
-  [[nodiscard]] std::optional<OpenQASMProgram> toOpenQASM3() const;
+  [[nodiscard]] FailureOr<OpenQASMProgram> toOpenQASM3() const;
 
   /// Consume this program and convert it to QCO.
-  [[nodiscard]] std::optional<QCOProgram> intoQCO() &&;
+  [[nodiscard]] FailureOr<QCOProgram> intoQCO() &&;
 
   /// Consume this program and lower it to QIR.
-  [[nodiscard]] std::optional<QIRProgram> intoQIR(QIRProfile profile) &&;
+  [[nodiscard]] FailureOr<QIRProgram> intoQIR(QIRProfile profile) &&;
 
   /// Return the static gate count of the entry-point IR.
   ///
-  /// Any entry-point operation that implements the `UnitaryOpInterface` is
-  /// counted. The count includes operations in every structured control-flow
-  /// region once, regardless of how often the region executes. Operations
-  /// within modifiers are not counted recursively, and barriers are skipped.
+  /// Unitary operations, measurements, and resets each count once. Barriers
+  /// are excluded. Modifiers and calls count atomically. Gates in every
+  /// control-flow region count once, regardless of runtime paths or loop
+  /// iterations.
   [[nodiscard]] size_t numGates() const;
 
-  /// Return the static single-qubit gate count of the entry-point IR.
+  /// Count gates acting on exactly one qubit.
   ///
-  /// Any entry-point operation that implements the `UnitaryOpInterface` and
-  /// acts on one qubit is counted. The count includes operations in every
-  /// structured control-flow region once, regardless of how often the region
-  /// executes. Operations within modifiers are not counted recursively, and
-  /// barriers are skipped.
+  /// Uses the rules of numGates(), including measurements and resets.
   [[nodiscard]] size_t numSingleQubitGates() const;
 
-  /// Return the static two-qubit gate count of the entry-point IR.
+  /// Count gates acting on exactly two qubits.
   ///
-  /// Any entry-point operation that implements the `UnitaryOpInterface` and
-  /// acts on two qubits is counted. The count includes operations in every
-  /// structured control-flow region once, regardless of how often the region
-  /// executes. Operations within modifiers are not counted recursively, and
-  /// barriers are skipped.
+  /// Uses the rules of numGates().
   [[nodiscard]] size_t numTwoQubitGates() const;
+
+  /// Count entry-point gates by name.
+  ///
+  /// Uses the rules of numGates(). Controls on a single primitive gate add a
+  /// `c` per control: `cx`, `ccx`.
+  /// Other single-gate modifiers use `inv(h)`, `pow(rx)`, or `ctrl(inv(x))`;
+  /// multiple controls use `ctrl(2,inv(x))`. Parameters do not split buckets.
+  /// Composite bodies or unused modifier targets retain `ctrl`, `inv`, or
+  /// `pow`. Unitary calls use the callee name; explicit phases use `gphase`.
+  [[nodiscard]] std::map<std::string, size_t> gateCounts() const;
+
+  /// Count entry-point control-flow operations.
+  ///
+  /// Keys are full MLIR names such as `scf.for` and `qco.if`.
+  /// Visit every region once, without expanding calls.
+  /// Region terminators such as `scf.yield` are excluded.
+  [[nodiscard]] std::map<std::string, size_t> controlFlowCounts() const;
 };
 
 /// A QCO program with value semantics.
 class QCOProgram final : public Program {
 public:
   /// Parse QCO MLIR assembly.
-  [[nodiscard]] static std::optional<QCOProgram>
+  [[nodiscard]] static FailureOr<QCOProgram>
   fromMLIRString(std::string_view source);
 
   /// Parse QCO MLIR assembly from a file.
-  [[nodiscard]] static std::optional<QCOProgram>
+  [[nodiscard]] static FailureOr<QCOProgram>
   fromMLIRFile(const std::filesystem::path& path);
 
   /// Take ownership of an MLIR module that contains a QCO program.
@@ -237,80 +290,115 @@ public:
   /// linearity and rejects QC operations. QCO operations are not required.
   /// Dynamic quantum allocations require an `mqt.entry_point` function and
   /// must appear directly in its entry block.
-  [[nodiscard]] static std::optional<QCOProgram>
+  [[nodiscard]] static FailureOr<QCOProgram>
   fromModule(std::shared_ptr<MLIRContext> context,
              OwningOpRef<ModuleOp> moduleOp);
 
   /// Create an independent QCO program copy.
   [[nodiscard]] QCOProgram copy() const;
 
+  /// Inspect quantum resources and static IR statistics.
+  ///
+  /// Uses the rules of QCProgram::inspect().
+  [[nodiscard]] QuantumProgramInfo inspect() const;
+
   /// Return named f64 entry-point inputs in function argument order.
   [[nodiscard]] std::vector<std::string> parameters() const;
 
   /// Bind named f64 inputs in place under the same contract as QCProgram.
-  [[nodiscard]] bool
+  [[nodiscard]] LogicalResult
   bindParameters(const std::map<std::string, double>& values);
 
   /// Run the standard QCO cleanup passes in place.
-  [[nodiscard]] bool cleanup();
+  [[nodiscard]] LogicalResult cleanup();
 
   /// Normalize scoped global phases in place.
-  [[nodiscard]] bool normalizeGlobalPhases();
+  [[nodiscard]] LogicalResult normalizeGlobalPhases();
 
   /// Run an MLIR textual QCO pass pipeline in place.
-  [[nodiscard]] bool runPassPipeline(std::string_view pipeline,
-                                     const CompilationOptions& options = {});
+  [[nodiscard]] LogicalResult
+  runPassPipeline(std::string_view pipeline,
+                  const CompilationOptions& options = {});
 
   /// Merge consecutive single-qubit rotation gates.
-  [[nodiscard]] bool mergeSingleQubitRotationGates();
+  [[nodiscard]] LogicalResult mergeSingleQubitRotationGates();
 
   /// Fuse single-qubit unitary runs into the selected Euler basis.
-  [[nodiscard]] bool fuseSingleQubitUnitaryRuns(std::string_view basis = "zyz");
+  [[nodiscard]] LogicalResult
+  fuseSingleQubitUnitaryRuns(std::string_view basis = "zyz");
 
   /// Unroll loops containing quantum operations.
-  [[nodiscard]] bool unrollQuantumLoops(int64_t factor = -1);
+  [[nodiscard]] LogicalResult unrollQuantumLoops(int64_t factor = -1);
 
   /// Lift Hadamard gates away from measurements.
-  [[nodiscard]] bool liftHadamards();
+  [[nodiscard]] LogicalResult liftHadamards();
 
   /// Reuse independent single-qubit allocations.
-  [[nodiscard]] bool reuseQubits();
+  [[nodiscard]] LogicalResult reuseQubits();
 
   /// Prepare the program for qubit reuse and reuse eligible qubits.
-  [[nodiscard]] bool runQubitReusePipeline();
+  [[nodiscard]] LogicalResult runQubitReusePipeline();
 
-  /// Decompose controlled X/Y/Z/SWAP and RX/RY/RZ gates, `qco.rccx`, and
-  /// constant-angle phase gates that act on at least @p minQubits qubits
-  /// (@p minQubits must be at least 3; default 3 means wider than two-qubit).
-  [[nodiscard]] bool decomposeMultiControlled(uint64_t minQubits = 3);
+  /// Decompose gates that act on at least @p minQubits qubits.
+  ///
+  /// Supports controlled X/Y/Z/SWAP and RX/RY/RZ gates, `qco.rccx`, and
+  /// constant-angle phase gates. @p minQubits must be at least 3; default 3
+  /// means wider than two-qubit.
+  [[nodiscard]] LogicalResult decomposeMultiControlled(uint64_t minQubits = 3);
 
   /// Compile for a target and attach layout metadata when possible.
-  /// Reject a program with attached layout metadata.
-  /// Do not rely on the program contents if compilation fails.
-  [[nodiscard]] bool compileForTarget(const TargetEnvironment& environment,
-                                      const CompilationOptions& options = {});
+  ///
+  /// Reject a program with attached layout metadata. Do not rely on the program
+  /// contents if compilation fails.
+  [[nodiscard]] LogicalResult
+  compileForTarget(const TargetEnvironment& environment,
+                   const CompilationOptions& options = {});
 
   /// Synthesize native operations without routing.
   ///
   /// Dynamic qubits require all-to-all connectivity and receive layout metadata
   /// when possible. Static qubits keep their device site IDs and must fit the
   /// target topology. Do not rely on the program contents if synthesis fails.
-  [[nodiscard]] bool
+  [[nodiscard]] LogicalResult
   synthesizeForTarget(const TargetEnvironment& environment,
                       const CompilationOptions& options = {});
 
   /// Consume this program and convert it to QC.
-  [[nodiscard]] std::optional<QCProgram> intoQC() &&;
+  [[nodiscard]] FailureOr<QCProgram> intoQC() &&;
 
   /// Consume this program and convert it to `jeff` MLIR.
-  [[nodiscard]] std::optional<JeffProgram> intoJeff() &&;
+  [[nodiscard]] FailureOr<JeffProgram> intoJeff() &&;
+
+  /// Return the static entry-point gate count.
+  ///
+  /// Uses the rules of QCProgram::numGates().
+  [[nodiscard]] size_t numGates() const;
+
+  /// Count static single-qubit gates.
+  ///
+  /// Uses the rules of QCProgram::numSingleQubitGates().
+  [[nodiscard]] size_t numSingleQubitGates() const;
+
+  /// Count static two-qubit gates.
+  ///
+  /// Uses the rules of QCProgram::numTwoQubitGates().
+  [[nodiscard]] size_t numTwoQubitGates() const;
+
+  /// Count entry-point gates by name.
+  ///
+  /// Uses the rules of QCProgram::gateCounts().
+  [[nodiscard]] std::map<std::string, size_t> gateCounts() const;
+
+  /// Count entry-point control-flow operations.
+  ///
+  /// Uses the rules of QCProgram::controlFlowCounts().
+  [[nodiscard]] std::map<std::string, size_t> controlFlowCounts() const;
 
 private:
   friend class QCProgram;
   friend class JeffProgram;
 
   explicit QCOProgram(Storage storage) : Program(std::move(storage)) {}
-  [[nodiscard]] bool hasValidLinearity() const;
 };
 
 /// A serializable compiler program in the `jeff` dialect.
@@ -318,29 +406,44 @@ class JeffProgram final : public Program {
 public:
   explicit JeffProgram(Storage storage) : Program(std::move(storage)) {}
 
-  /// Deserialize a `jeff` binary file.
-  [[nodiscard]] static std::optional<JeffProgram>
-  fromFile(const std::filesystem::path& path);
+  /// Deserialize an existing jeff message.
+  ///
+  /// Keep the reader's backing storage alive and unchanged until this function
+  /// returns. Return failure and emit a diagnostic if deserialization fails.
+  [[nodiscard]] static FailureOr<JeffProgram>
+  fromMessage(::jeff::Module::Reader module);
 
   /// Deserialize a `jeff` binary buffer.
-  [[nodiscard]] static std::optional<JeffProgram>
+  [[nodiscard]] static FailureOr<JeffProgram>
   fromBytes(std::span<const std::byte> bytes);
+
+  /// Deserialize a `jeff` binary file.
+  [[nodiscard]] static FailureOr<JeffProgram>
+  fromFile(const std::filesystem::path& path);
 
   /// Create an independent `jeff` program copy.
   [[nodiscard]] JeffProgram copy() const;
 
   /// Run the standard `jeff` cleanup passes in place.
-  [[nodiscard]] bool cleanup();
+  [[nodiscard]] LogicalResult cleanup();
+
+  /// Serialize this program into a fresh caller-owned Cap'n Proto message.
+  ///
+  /// Keep the message alive and unchanged while using its root or the views
+  /// returned by `getSegmentsForOutput()`. Discard the message if encoding
+  /// fails.
+  void toMessage(capnp::MessageBuilder& message) const;
 
   /// Serialize this program to a binary `jeff` buffer.
+  ///
   /// Return an empty vector and emit a diagnostic if serialization fails.
   [[nodiscard]] std::vector<std::byte> toBytes() const;
 
   /// Serialize this program to a binary `jeff` file.
-  [[nodiscard]] bool write(const std::filesystem::path& path) const;
+  [[nodiscard]] LogicalResult write(const std::filesystem::path& path) const;
 
   /// Consume this program and convert it to QCO.
-  [[nodiscard]] std::optional<QCOProgram> intoQCO() &&;
+  [[nodiscard]] FailureOr<QCOProgram> intoQCO() &&;
 };
 
 /// A QIR program.
@@ -352,19 +455,20 @@ public:
   [[nodiscard]] QIRProgram copy() const;
 
   /// Run QIR cleanup passes in place.
-  [[nodiscard]] bool cleanup();
+  [[nodiscard]] LogicalResult cleanup();
 
   /// Return the selected QIR profile.
   [[nodiscard]] QIRProfile profile() const noexcept;
 
   /// Translate this QIR MLIR program to LLVM IR text.
-  [[nodiscard]] std::optional<std::string> llvmIR() const;
+  [[nodiscard]] FailureOr<std::string> llvmIR() const;
 
   /// Translate this QIR program to LLVM bitcode in memory.
-  [[nodiscard]] std::optional<std::vector<std::byte>> toBitcode() const;
+  [[nodiscard]] FailureOr<std::vector<std::byte>> toBitcode() const;
 
   /// Translate and write this QIR program as LLVM bitcode.
-  [[nodiscard]] bool writeBitcode(const std::filesystem::path& path) const;
+  [[nodiscard]] LogicalResult
+  writeBitcode(const std::filesystem::path& path) const;
 
 private:
   QIRProfile profile_;
@@ -388,7 +492,7 @@ using CompilerProgram = std::variant<QCProgram, QCOProgram, JeffProgram,
 ///
 /// The supplied program is consumed. Call `copy()` before this function
 /// when the source program must remain available for another pipeline branch.
-[[nodiscard]] std::optional<CompilerProgram>
+[[nodiscard]] FailureOr<CompilerProgram>
 runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
                    std::string_view qcoPipeline = "mqt-qco-default",
                    const CompilationOptions& options = {});
@@ -397,7 +501,7 @@ runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
 ///
 /// The supplied program is consumed. Call `copy()` before this function
 /// when the source program must remain available for another pipeline branch.
-[[nodiscard]] std::optional<CompilerProgram>
+[[nodiscard]] FailureOr<CompilerProgram>
 runDefaultPipeline(CompilerInput&& program,
                    const TargetEnvironment& environment,
                    const CompilationOptions& options = {});

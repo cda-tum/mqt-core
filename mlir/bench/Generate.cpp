@@ -19,91 +19,60 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <array>
-#include <optional>
-#include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 namespace mqt::bench {
 
 using namespace mlir;
 
-[[nodiscard]] static std::optional<QCProgram> buildProgram(
+[[nodiscard]] static FailureOr<QCProgram> buildProgram(
     const llvm::StringRef name,
     const llvm::function_ref<SmallVector<Value>(qc::QCProgramBuilder&)>& emit) {
   auto context = createCompilerContext();
   auto moduleOp = qc::QCProgramBuilder::build(context.get(), emit);
   if (!moduleOp) {
     llvm::errs() << name << ": failed to build the module\n";
-    return std::nullopt;
+    return failure();
   }
 
   auto program = QCProgram::fromModule(context, std::move(moduleOp));
-  if (!program || !program->cleanup()) {
+  if (failed(program) || failed(program->cleanup())) {
     llvm::errs() << name << ": failed to clean up the module\n";
-    return std::nullopt;
+    return failure();
   }
   return program;
 }
 
 #define MQT_BENCHMARK_FAMILY(TYPE, STEM, ID, DEFINITION_VERSION)               \
-  std::optional<QCProgram> generate(const TYPE& benchmark) {                   \
+  FailureOr<QCProgram> generate(const TYPE& benchmark) {                       \
     return buildProgram(ID, [&](qc::QCProgramBuilder& builder) {               \
       return STEM(builder, benchmark);                                         \
     });                                                                        \
   }
 #include "bench/BenchmarkFamilies.inc"
 
-template <class Benchmark>
-[[nodiscard]] static std::optional<GeneratedBenchmark>
-generateInstance(const std::string_view id, const Benchmark& benchmark) {
-  auto program = generate(benchmark);
-  if (!program) {
-    return std::nullopt;
-  }
-  return GeneratedBenchmark{
-      std::string(id),
-      caseId(benchmark),
-      toManifestJSON(benchmark),
-      std::move(*program),
-  };
-}
-
-using GenerateFunction =
-    std::optional<GeneratedBenchmark> (*)(std::string_view, std::string_view);
-
-namespace {
-struct RegistryEntry {
-  std::string_view id;
-  GenerateFunction generate;
-};
-} // namespace
-
-#define MQT_BENCHMARK_FAMILY(TYPE, STEM, ID, DEFINITION_VERSION)               \
-  RegistryEntry{ID, [](const std::string_view instanceSpecificationJSON,       \
-                       const std::string_view source) {                        \
-                  return generateInstance(                                     \
-                      ID, STEM##FromInstanceSpecificationJSON(                 \
-                              instanceSpecificationJSON, source));             \
-                }},
-static const std::array REGISTRY{
-#include "bench/BenchmarkFamilies.inc"
-};
-
-std::optional<GeneratedBenchmark>
+FailureOr<GeneratedBenchmark>
 generate(const std::string_view instanceSpecificationJSON,
          const std::string_view source) {
-  const auto id = benchmarkIdFromInstanceSpecificationJSON(
-      instanceSpecificationJSON, source);
-  for (const auto& entry : REGISTRY) {
-    if (entry.id == id) {
-      return entry.generate(instanceSpecificationJSON, source);
-    }
+  auto parsed =
+      parseInstanceSpecificationJSON(instanceSpecificationJSON, source);
+  auto program =
+      std::visit([](const auto& benchmark) { return generate(benchmark); },
+                 parsed.instance);
+  if (failed(program)) {
+    return failure();
   }
-  return std::nullopt;
+  return GeneratedBenchmark{
+      .benchmarkId = std::move(parsed.benchmarkId),
+      .caseId = std::move(parsed.caseId),
+      .manifestJSON = std::move(parsed.manifestJSON),
+      .program = std::move(*program),
+  };
 }
 
 } // namespace mqt::bench

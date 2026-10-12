@@ -14,7 +14,10 @@
 #pragma once
 
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <optional>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -59,13 +62,41 @@ private:
     return _putenv_s(name_.c_str(), value.value_or("").c_str()) == 0;
 #else
     const auto* const name = name_.c_str();
-    /// NOLINTNEXTLINE(misc-include-cleaner): POSIX environment functions.
+    // NOLINTNEXTLINE(misc-include-cleaner): POSIX environment functions.
     return (value ? setenv(name, value->c_str(), 1) : unsetenv(name)) == 0;
 #endif
   }
 
   std::string name_;
   std::optional<std::string> previous_;
+};
+
+class TemporaryDirectory {
+public:
+  TemporaryDirectory() {
+    path_ = std::filesystem::temp_directory_path() /
+            ("mqt-core-qdmi-registry-test-" +
+             std::to_string(std::random_device{}()));
+    std::filesystem::remove_all(path_);
+    std::filesystem::create_directories(path_);
+  }
+
+  ~TemporaryDirectory() { std::filesystem::remove_all(path_); }
+
+  [[nodiscard]] const std::filesystem::path& path() const { return path_; }
+
+  [[nodiscard]] std::filesystem::path
+  write(const std::filesystem::path& relative,
+        const std::string& contents) const {
+    const auto path = path_ / relative;
+    std::filesystem::create_directories(path.parent_path());
+    std::ofstream output(path);
+    output << contents;
+    return path;
+  }
+
+private:
+  std::filesystem::path path_;
 };
 
 } // namespace mqt::test

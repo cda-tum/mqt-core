@@ -58,10 +58,12 @@ struct Scale final {
 
 using PhaseInstruction = std::variant<double, Value, Add, Negate, Scale>;
 
-/// A postfix phase expression. Keeping modifier transformations symbolic avoids
-/// repeatedly walking and moving an ever-growing SSA arithmetic chain through
-/// nested modifiers. The expression is materialized exactly once at the scope
-/// where the phase stops bubbling.
+/// A postfix phase expression.
+///
+/// Keeping modifier transformations symbolic avoids repeatedly walking and
+/// moving an ever-growing SSA arithmetic chain through nested modifiers. The
+/// expression is materialized exactly once at the scope where the phase stops
+/// bubbling.
 class PhaseExpression final {
 public:
   explicit PhaseExpression(Value angle) {
@@ -134,7 +136,7 @@ public:
 
   [[nodiscard]] Value materialize(RewriterBase& rewriter,
                                   const Location loc) const {
-    SmallVector<Value, 4> stack;
+    SmallVector<Value> stack;
     for (const auto& instruction : instructions) {
       if (const auto* constant = std::get_if<double>(&instruction)) {
         stack.push_back(constantFromScalar(rewriter, loc, *constant));
@@ -182,8 +184,8 @@ private:
     return std::nullopt;
   }
 
-  SmallVector<PhaseInstruction, 4> instructions;
-  SmallVector<Value, 2> leaves;
+  SmallVector<PhaseInstruction> instructions;
+  SmallVector<Value> leaves;
 };
 
 enum class PhaseDialect : std::uint8_t { QC, QCO };
@@ -203,6 +205,7 @@ struct PhaseContribution final {
 } // namespace
 
 /// Collect a memory-effect-free, body-local dependency slice in order.
+///
 /// Extraction crosses only eager quantum modifiers, never classical branches.
 static bool collectHoistableSlice(Value value, Block& body,
                                   SmallPtrSetImpl<Operation*>& visiting,
@@ -240,7 +243,7 @@ static bool hoistExpressionBefore(const PhaseExpression& expression,
                                   RewriterBase& rewriter) {
   SmallPtrSet<Operation*, 8> visiting;
   SmallPtrSet<Operation*, 8> collected;
-  SmallVector<Operation*, 8> ordered;
+  SmallVector<Operation*> ordered;
   bool hoistable = true;
   expression.forEachValue([&](Value value) {
     if (hoistable &&
@@ -405,8 +408,8 @@ private:
 
   [[nodiscard]] std::optional<PhaseContribution>
   normalizeBlock(Block& block, Operation* extractionBoundary) {
-    SmallVector<PhaseContribution, 4> contributions;
-    SmallVector<Operation*, 4> directPhases;
+    SmallVector<PhaseContribution> contributions;
+    SmallVector<Operation*> directPhases;
     bool hasNestedContribution = false;
 
     for (auto& op : llvm::make_early_inc_range(block.without_terminator())) {
@@ -432,7 +435,7 @@ private:
     if (contributions.empty()) {
       return std::nullopt;
     }
-    /// Keep accumulated phase depth logarithmic for symbolic exporters.
+    // Keep accumulated phase depth logarithmic for symbolic exporters.
     for (size_t stride = 1; stride < contributions.size(); stride *= 2) {
       for (size_t i = 0; i + stride < contributions.size(); i += 2 * stride) {
         contributions[i].add(std::move(contributions[i + stride]));

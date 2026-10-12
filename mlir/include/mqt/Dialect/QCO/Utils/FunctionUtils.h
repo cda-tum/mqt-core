@@ -16,9 +16,18 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LogicalResult.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir::qco {
+/// Collect quantum wire roots and verify positional function and region
+/// results.
+///
+/// Requires ordinary MLIR verification first. Region arguments remain local
+/// roots; verified region results continue their corresponding inputs.
+[[nodiscard]] LogicalResult collectWireOrigins(Operation* root,
+                                               DenseMap<Value, Value>& origins);
+
 /// Positions of scalar qubits and qubit tensors in argument order.
 [[nodiscard]] SmallVector<unsigned> getQuantumArgumentIndices(TypeRange types);
 
@@ -38,7 +47,8 @@ namespace mlir::qco {
 [[nodiscard]] FailureOr<unsigned> traceQubitArgument(Block& block, Value value);
 
 /// Check that extracted tensor slots are restored at calls and region exits.
-/// Matching slot indices are a program precondition; correspondence is checked
-/// separately.
+///
+/// Slot identity and disjoint extractions are program preconditions; known
+/// violations and positional region correspondence are checked separately.
 [[nodiscard]] bool hasCompleteTensorLifetime(Value tensor, unsigned depth = 0);
 } // namespace mlir::qco

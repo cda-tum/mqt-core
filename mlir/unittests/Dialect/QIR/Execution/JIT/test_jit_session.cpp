@@ -9,6 +9,7 @@
  */
 
 #include "dd/DDDefinitions.hpp"
+#include "dd/Edge.hpp"
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
@@ -20,7 +21,8 @@
 #include "gtest/gtest.h"
 
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/Support/LogicalResult.h"
+
+#include "llvm/Support/LogicalResult.h"
 
 #include <array>
 #include <complex>
@@ -28,6 +30,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iterator>
 #include <sstream>
 #include <stdexcept>
@@ -48,26 +51,26 @@ static std::string getProgram(const std::string_view file) {
 static void expectOpenQASMSampling(std::string_view source,
                                    std::string_view expected) {
   auto qc = mlir::QCProgram::fromOpenQASMString(source);
-  ASSERT_TRUE(qc);
+  ASSERT_TRUE(mlir::succeeded(qc));
   auto qco = std::move(*qc).intoQCO();
-  ASSERT_TRUE(qco);
+  ASSERT_TRUE(mlir::succeeded(qco));
   auto sampled =
       mlir::qco::sample(mlir::mqt::getEntryPoint(qco->module()), 1, 42);
   ASSERT_TRUE(mlir::succeeded(sampled));
   ASSERT_EQ(sampled->size(), 1);
   EXPECT_EQ(sampled->begin()->first, expected);
   auto restored = std::move(*qco).intoQC();
-  ASSERT_TRUE(restored);
+  ASSERT_TRUE(mlir::succeeded(restored));
   auto qir = std::move(*restored).intoQIR(mlir::QIRProfile::Adaptive);
-  ASSERT_TRUE(qir);
+  ASSERT_TRUE(mlir::succeeded(qir));
   const auto ir = qir->llvmIR();
-  ASSERT_TRUE(ir);
+  ASSERT_TRUE(mlir::succeeded(ir));
   qir::JitSession session(*ir, "openqasm-slices", qir::Execution::Sampling, 42);
   session.runtime().disableOutput();
   std::vector<std::string> shots;
   ASSERT_EQ(session.sample(1, shots), 0);
-  /// The JIT exposes recording order; DD strings put output bit zero on the
-  /// right.
+  // The JIT exposes recording order; DD strings put output bit zero on the
+  // right.
   EXPECT_EQ(shots, std::vector<std::string>(
                        1, std::string(expected.rbegin(), expected.rend())));
 }
@@ -78,6 +81,41 @@ class JitSessionTest : public testing::Test {
 protected:
   std::ostringstream sink;
 };
+
+TEST_F(JitSessionTest, BindsRuntimeForStaticConstructorsAndDestructors) {
+  constexpr llvm::StringRef ir = R"(
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
+    [{ i32, ptr, ptr } { i32 65535, ptr @setup, ptr null }]
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }]
+    [{ i32, ptr, ptr } { i32 65535, ptr @cleanup, ptr null }]
+define void @setup() {
+  call void @__quantum__qis__x__body(ptr null)
+  ret void
+}
+define void @cleanup() {
+  call void @__quantum__rt__int_record_output(i64 3, ptr null)
+  ret void
+}
+define i64 @main() #0 {
+  call void @__quantum__qis__mz__body(ptr null, ptr null)
+  %measured = call i1 @__quantum__rt__read_result(ptr null)
+  %value = zext i1 %measured to i64
+  ret i64 %value
+}
+declare void @__quantum__qis__x__body(ptr)
+declare void @__quantum__qis__mz__body(ptr, ptr)
+declare i1 @__quantum__rt__read_result(ptr)
+declare void @__quantum__rt__int_record_output(i64, ptr)
+attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" }
+)";
+  std::async(std::launch::async, [&] {
+    qir::JitSession session(ir, "static-lifecycle", qir::Execution::Sampling,
+                            42);
+    session.runtime().setOstream(sink);
+    EXPECT_EQ(session.run(), 1);
+  }).get();
+  EXPECT_EQ(sink.str(), "OUTPUT\tINT\t3\n");
+}
 
 TEST(OpenQASMExecutionTest, ExecutesAffineQuantumSlices) {
   expectOpenQASMSampling(R"qasm(OPENQASM 3.1;
@@ -91,6 +129,33 @@ output bit[4] result;
 result = measure r;
 )qasm",
                          "0101");
+}
+
+TEST(OpenQASMExecutionTest, ExecutesMeasurementDependentArithmetic) {
+  auto qc = mlir::QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.1;
+qubit q;
+h q;
+bit feedback = measure q;
+int[64] limit = 10000;
+if (feedback) { limit = 20000; }
+int[64] sum = 0;
+for int i in [0:limit-1] { sum += i; }
+if (sum == 199990000) { x q; }
+output bit result;
+result = measure q;
+)qasm");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  auto qir = std::move(*qc).intoQIR(mlir::QIRProfile::Adaptive);
+  ASSERT_TRUE(mlir::succeeded(qir));
+  const auto ir = qir->llvmIR();
+  ASSERT_TRUE(mlir::succeeded(ir));
+  qir::JitSession session(*ir, "feedback-arithmetic", qir::Execution::Sampling,
+                          42);
+  session.runtime().disableOutput();
+  EXPECT_FALSE(session.canSampleTerminal());
+  std::vector<std::string> shots;
+  ASSERT_EQ(session.sample(64, shots), 0);
+  EXPECT_EQ(shots, std::vector<std::string>(64, "0"));
 }
 
 TEST(OpenQASMExecutionTest, PreservesBitstringAndSliceOrder) {
@@ -198,7 +263,7 @@ TEST_F(JitSessionTest, StateExtractionSupportsAdaptiveControlAndLifetimes) {
     EXPECT_TRUE(sink.str().empty());
     auto state = session.runtime().takeState();
     EXPECT_EQ(state.numQubits, 4);
-    const auto values = state.edge.getVector();
+    const auto values = dd::getVector(state.edge);
     ASSERT_EQ(values.size(), 16);
     for (size_t i = 0; i < values.size(); ++i) {
       const auto expected = i == 4 || i == 7 ? std::polar(dd::SQRT2_2, 0.3)
@@ -477,6 +542,121 @@ attributes #0 = { "entry_point" }
   EXPECT_THROW(qir::JitSession(ir, "BadEntrySignature.ll"), std::runtime_error);
 }
 
+TEST(JitSessionErrors, RejectsNonCEntryPointCallingConvention) {
+  constexpr std::string_view ir = R"(
+define preserve_allcc i64 @main() #0 { ret i64 0 }
+attributes #0 = { "entry_point" }
+)";
+  EXPECT_THAT([&] { qir::JitSession(ir, "entry-convention"); },
+              testing::ThrowsMessage<std::runtime_error>(
+                  testing::HasSubstr("C calling convention")));
+}
+
+TEST(JitSessionErrors, RejectsEntryPointABIAttributes) {
+  constexpr std::string_view ir = R"(
+define inreg i64 @main() #0 { ret i64 0 }
+attributes #0 = { "entry_point" }
+)";
+  EXPECT_THAT([&] { qir::JitSession(ir, "entry-attribute"); },
+              testing::ThrowsMessage<std::runtime_error>(
+                  testing::HasSubstr("unsupported ABI attribute inreg")));
+}
+
+TEST(JitSessionErrors, RejectsNonCRuntimeCallingConventions) {
+  for (const auto& [declaration, call] :
+       std::array<std::pair<std::string_view, std::string_view>, 3>{
+           {
+               {"preserve_allcc ", "preserve_allcc "},
+               {"preserve_allcc ", ""},
+               {"", "preserve_allcc "},
+           },
+       }) {
+    const auto ir = std::string("declare ") + std::string(declaration) +
+                    "void @__quantum__qis__h__body(ptr)\n"
+                    "define i64 @main() #0 { call " +
+                    std::string(call) +
+                    "void @__quantum__qis__h__body(ptr null)\nret i64 0 }\n"
+                    "attributes #0 = { \"entry_point\" }";
+    SCOPED_TRACE(ir);
+    EXPECT_THAT([&] { qir::JitSession(ir, "runtime-convention"); },
+                testing::ThrowsMessage<std::runtime_error>(
+                    testing::HasSubstr("C calling convention")));
+  }
+}
+
+TEST(JitSessionErrors, RejectsRuntimeABIAttributes) {
+  for (const auto* attribute : {
+           "byval(i8)",
+           "byref(i8)",
+           "sret(i8)",
+           "inreg",
+           "nest",
+           "swiftself",
+           "swiftasync",
+       }) {
+    for (const bool onDeclaration : {false, true}) {
+      const auto ir =
+          std::string("declare void @__quantum__qis__h__body(ptr ") +
+          (onDeclaration ? attribute : "") +
+          ")\ndefine i64 @main() #0 { %q = alloca i8\n"
+          "call void @__quantum__qis__h__body(ptr " +
+          (onDeclaration ? "" : attribute) +
+          " %q)\nret i64 0 }\n"
+          "attributes #0 = { \"entry_point\" }";
+      SCOPED_TRACE(ir);
+      EXPECT_THAT([&] { qir::JitSession(ir, "runtime-attribute"); },
+                  testing::ThrowsMessage<std::runtime_error>(
+                      testing::HasSubstr("unsupported ABI attribute")));
+    }
+  }
+}
+
+TEST(JitSessionErrors, RejectsMismatchedRuntimeCallType) {
+  constexpr std::string_view ir = R"(
+declare void @__quantum__qis__h__body(ptr)
+define i64 @main() #0 {
+  call void @__quantum__qis__h__body(double 0.0)
+  ret i64 0
+}
+attributes #0 = { "entry_point" }
+)";
+  EXPECT_THAT([&] { qir::JitSession(ir, "runtime-call-type"); },
+              testing::ThrowsMessage<std::runtime_error>(
+                  testing::HasSubstr("must match its declaration")));
+}
+
+TEST(JitSessionErrors, RejectsInvalidModulesBeforeExecution) {
+  constexpr std::string_view ir = R"(
+define i64 @main() #0 {
+entry:
+  br label %exit
+exit:
+  %x = phi i64 [0, %exit]
+  ret i64 %x
+}
+attributes #0 = { "entry_point" }
+)";
+  EXPECT_THAT([&] { qir::JitSession(ir, "invalid-module"); },
+              testing::ThrowsMessage<std::runtime_error>(
+                  testing::HasSubstr("Invalid QIR module")));
+}
+
+TEST(QIRJIT, AcceptsInternalCallingConventionsAndSemanticAttributes) {
+  constexpr std::string_view ir = R"(
+declare void @__quantum__rt__initialize(ptr noundef) nounwind
+declare preserve_allcc void @__quantum__qis__h__body(ptr byval(i8))
+define noundef i64 @main() #0 {
+  call void @__quantum__rt__initialize(ptr noundef null)
+  %code = call fastcc i64 @helper()
+  ret i64 %code
+}
+define internal fastcc i64 @helper() { ret i64 7 }
+attributes #0 = { nounwind alignstack=16 "entry_point" }
+)";
+  qir::JitSession session(ir, "internal-convention");
+  EXPECT_EQ(session.run(), 7);
+}
+
 TEST(JitSessionErrors, RejectsMultipleEntryPoints) {
   constexpr std::string_view ir = R"(
 define i64 @first() #0 { ret i64 0 }
@@ -580,7 +760,7 @@ attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" "required_num_
     EXPECT_FALSE(available);
   }
   EXPECT_EQ(state.numQubits, 2);
-  const auto vector = state.edge.getVector();
+  const auto vector = dd::getVector(state.edge);
   ASSERT_EQ(vector.size(), 4);
   EXPECT_NEAR(std::abs(vector[2] - std::polar(1., 0.3)), 0., 1e-12);
   EXPECT_NEAR(std::abs(vector[0]) + std::abs(vector[1]) + std::abs(vector[3]),
@@ -618,10 +798,37 @@ define i64 @main() #0 {
 attributes #0 = { "entry_point" "qir_profiles"="base_profile" }
 )";
   qir::JitSession session(ir, "side-effects");
+  EXPECT_FALSE(session.canShareCompiledCode());
   session.runtime().disableOutput();
   std::vector<std::string> results;
+  qir::Runtime worker(17);
+  EXPECT_THROW(session.sampleWithRuntime(worker, 1, results), std::logic_error);
   EXPECT_EQ(session.sample(5, results), 1);
   EXPECT_EQ(results.size(), 2);
+}
+
+TEST(QIRBatchSampling, SharesCompiledCodeWithPrivateConcurrentRuntimes) {
+  const auto ir = getProgram("BellPairAdaptive.ll");
+  qir::JitSession shared(ir, "shared", qir::Execution::Sampling, 17);
+  ASSERT_TRUE(shared.canShareCompiledCode());
+  std::array<std::vector<std::string>, 2> actual;
+  std::array<std::future<int64_t>, 2> tasks;
+  for (size_t i = 0; i < tasks.size(); ++i) {
+    tasks[i] = std::async(std::launch::async, [&, i] {
+      auto worker = shared.makeWorkerRuntime(21 + i);
+      worker->disableOutput();
+      return shared.sampleWithRuntime(*worker, 128, actual[i], false);
+    });
+  }
+  for (size_t i = 0; i < tasks.size(); ++i) {
+    EXPECT_EQ(tasks[i].get(), 0);
+    qir::JitSession reference(ir, "reference", qir::Execution::Sampling,
+                              21 + i);
+    reference.runtime().disableOutput();
+    std::vector<std::string> expected;
+    ASSERT_EQ(reference.sample(128, expected), 0);
+    EXPECT_EQ(actual[i], expected);
+  }
 }
 
 TEST(QIRBatchSampling, ResetsProgramsWithoutInitializeBetweenShots) {
@@ -662,7 +869,7 @@ attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubi
     auto state = session.runtime().takeState();
     EXPECT_EQ(state.numQubits, 3);
     EXPECT_EQ(state.dd->qubits(), 3);
-    const auto values = state.edge.getVector();
+    const auto values = dd::getVector(state.edge);
     ASSERT_EQ(values.size(), 8);
     EXPECT_EQ(values[1], 1.);
     state.dd->decRef(state.edge);
@@ -825,6 +1032,7 @@ declare void @__quantum__rt__bool_record_output(i1, ptr)
 attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubits"="1" "required_num_results"="1" }
 )";
   qir::JitSession session(ir, "boolean-output", qir::Execution::Sampling);
+  EXPECT_EQ(session.quantumCallSites(), 1U);
   session.runtime().disableOutput();
   std::vector<std::string> shots;
   bool available = false;

@@ -43,6 +43,8 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/Support/raw_ostream.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -94,11 +96,66 @@ protected:
   }
 };
 
+TEST_F(QTensorTest, PrintsReadableTensorAndQubitNames) {
+  auto loc = UnknownLoc::get(context.get());
+  auto moduleOp = ModuleOp::create(loc);
+  ImplicitLocOpBuilder builder(loc, context.get());
+  builder.setInsertionPointToStart(moduleOp.getBody());
+  auto tensorType =
+      RankedTensorType::get({1}, qco::QubitType::get(context.get()));
+  auto zero = arith::ConstantIndexOp::create(builder, 0);
+  auto one = arith::ConstantIndexOp::create(builder, 1);
+  auto tensor = qtensor::AllocOp::create(builder, tensorType, one.getResult());
+  auto extracted =
+      qtensor::ExtractOp::create(builder, tensor, zero.getResult());
+  auto restored =
+      qtensor::InsertOp::create(builder, extracted.getResult(),
+                                extracted.getOutTensor(), zero.getResult());
+  qtensor::DeallocOp::create(builder, restored.getResult());
+
+  std::string text;
+  llvm::raw_string_ostream stream(text);
+  moduleOp.print(stream);
+  stream.flush();
+  EXPECT_NE(text.find("%qs = qtensor.alloc"), std::string::npos) << text;
+  EXPECT_NE(text.find(", %q = qtensor.extract"), std::string::npos) << text;
+  auto reparsed = parseSourceString<ModuleOp>(text, context.get());
+  ASSERT_TRUE(reparsed);
+  EXPECT_TRUE(succeeded(verify(*reparsed)));
+}
+
+TEST_F(QTensorTest, PrintsSourceRegisterNames) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @main() {
+        %size = arith.constant 2 : index
+        %alloc = qtensor.alloc(%size) {mqt.register_name = "qubits"} : tensor<2x!qco.qubit>
+        %q = qco.alloc : !qco.qubit
+        %elements = qtensor.from_elements %q {mqt.register_name = "ancilla pair"} : tensor<1x!qco.qubit>
+        return
+      }
+    }
+  )mlir",
+                                              context.get());
+  ASSERT_TRUE(moduleOp);
+
+  std::string printed;
+  llvm::raw_string_ostream stream(printed);
+  moduleOp->print(stream);
+  EXPECT_NE(printed.find("%qubits = qtensor.alloc"), std::string::npos)
+      << printed;
+  EXPECT_NE(printed.find("%ancilla_pair = qtensor.from_elements"),
+            std::string::npos)
+      << printed;
+  auto reparsed = parseSourceString<ModuleOp>(printed, context.get());
+  EXPECT_TRUE(reparsed);
+}
+
 // ============================================================================
 // AllocOp
 // ============================================================================
 
-/// AllocOp with a constant size ≤ 0 must fail verification.
+// AllocOp with a constant size ≤ 0 must fail verification.
 TEST_F(QTensorTest, AllocOpZeroSizeFailsVerification) {
   auto loc = UnknownLoc::get(context.get());
   auto module = ModuleOp::create(loc);
@@ -113,7 +170,7 @@ TEST_F(QTensorTest, AllocOpZeroSizeFailsVerification) {
   EXPECT_TRUE(verify(module).failed());
 }
 
-/// AllocOp where static result type dim ≠ constant size must fail.
+// AllocOp where static result type dim ≠ constant size must fail.
 TEST_F(QTensorTest, AllocOpStaticTypeMismatchFailsVerification) {
   auto loc = UnknownLoc::get(context.get());
   auto module = ModuleOp::create(loc);
@@ -128,7 +185,7 @@ TEST_F(QTensorTest, AllocOpStaticTypeMismatchFailsVerification) {
   EXPECT_TRUE(verify(module).failed());
 }
 
-/// AllocOp with a dynamic result type but a constant size operand is valid.
+// AllocOp with a dynamic result type but a constant size operand is valid.
 TEST_F(QTensorTest, AllocOpDynamicTypeWithConstantSizeVerifies) {
   auto loc = UnknownLoc::get(context.get());
   auto module = ModuleOp::create(loc);
@@ -143,7 +200,7 @@ TEST_F(QTensorTest, AllocOpDynamicTypeWithConstantSizeVerifies) {
   EXPECT_TRUE(verify(module).succeeded());
 }
 
-/// AllocOp with a static result type but a dynamic size fails verification.
+// AllocOp with a static result type but a dynamic size fails verification.
 TEST_F(QTensorTest, AllocOpStaticTypeWithDynamicSizeOperandFailsVerification) {
   auto loc = UnknownLoc::get(context.get());
   auto module = ModuleOp::create(loc);
@@ -171,7 +228,7 @@ TEST_F(QTensorTest, AllocOpStaticTypeWithDynamicSizeOperandFailsVerification) {
 // DeallocOp
 // ============================================================================
 
-/// An alloc immediately followed by dealloc should be eliminated entirely.
+// An alloc immediately followed by dealloc should be eliminated entirely.
 TEST_F(QTensorTest, DeallocOpAllocDeallocPairIsRemoved) {
   auto canonicalized = buildAndCanonicalize([](QCOProgramBuilder& b) {
     b.qtensorAlloc(3);
@@ -188,7 +245,7 @@ TEST_F(QTensorTest, DeallocOpAllocDeallocPairIsRemoved) {
 // ExtractOp
 // ============================================================================
 
-/// An extract at a negative constant index fails verification.
+// An extract at a negative constant index fails verification.
 TEST_F(QTensorTest, ExtractOpNegativeIndexFailsVerification) {
   QCOProgramBuilder builder(context.get());
   builder.initialize();
@@ -201,7 +258,7 @@ TEST_F(QTensorTest, ExtractOpNegativeIndexFailsVerification) {
   EXPECT_TRUE(verify(*module).failed());
 }
 
-/// An extract at an index equal to the tensor dimension fails verification.
+// An extract at an index equal to the tensor dimension fails verification.
 TEST_F(QTensorTest, ExtractOpIndexAtDimFailsVerification) {
   QCOProgramBuilder builder(context.get());
   builder.initialize();
@@ -218,7 +275,7 @@ TEST_F(QTensorTest, ExtractOpIndexAtDimFailsVerification) {
 // InsertOp
 // ============================================================================
 
-/// An insert at a negative constant index fails verification.
+// An insert at a negative constant index fails verification.
 TEST_F(QTensorTest, InsertOpNegativeIndexFailsVerification) {
   QCOProgramBuilder builder(context.get());
   builder.initialize();
@@ -232,7 +289,7 @@ TEST_F(QTensorTest, InsertOpNegativeIndexFailsVerification) {
   EXPECT_TRUE(verify(*module).failed());
 }
 
-/// An insert at an index equal to the destination dimension fails verification.
+// An insert at an index equal to the destination dimension fails verification.
 TEST_F(QTensorTest, InsertOpIndexAtDimFailsVerification) {
   QCOProgramBuilder builder(context.get());
   builder.initialize();
@@ -554,14 +611,14 @@ TEST_F(QTensorTest, FreshSlotResetFoldingStopsAtUnknownIndices) {
       %two = arith.constant 2 : index
       %tensor = qtensor.alloc(%size) : tensor<4x!qco.qubit>
       %t0, %q0 = qtensor.extract %tensor[%zero] : tensor<4x!qco.qubit>
-      %r0 = qco.reset %q0 : !qco.qubit -> !qco.qubit
-      %h0 = qco.h %r0 : !qco.qubit -> !qco.qubit
+      %r0 = qco.reset %q0 : !qco.qubit
+      %h0 = qco.h %r0 : !qco.qubit
       %t1 = qtensor.insert %h0 into %t0[%zero] : tensor<4x!qco.qubit>
       %t2, %q1 = qtensor.extract %t1[%index] : tensor<4x!qco.qubit>
-      %h1 = qco.h %q1 : !qco.qubit -> !qco.qubit
+      %h1 = qco.h %q1 : !qco.qubit
       %t3 = qtensor.insert %h1 into %t2[%index] : tensor<4x!qco.qubit>
       %t4, %q2 = qtensor.extract %t3[%two] : tensor<4x!qco.qubit>
-      %r2 = qco.reset %q2 : !qco.qubit -> !qco.qubit
+      %r2 = qco.reset %q2 : !qco.qubit
       %t5 = qtensor.insert %r2 into %t4[%two] : tensor<4x!qco.qubit>
       qtensor.dealloc %t5 : tensor<4x!qco.qubit>
       return
@@ -594,20 +651,20 @@ TEST_F(QTensorTest, ResetAfterExtractThroughSameIndexInsertIsNotEliminated) {
       areModulesEquivalentWithPermutations(program.get(), reference.get()));
 }
 
-/// Qubit tensors that do not descend from an allocation are compared
-/// through the regular SSA mapping.
-///
-/// A tensor arriving as a function argument has no equivalence group, and the
-/// threaded tensor an extraction hands back is only covered once it is mapped
-/// explicitly. Both used to abort inside the comparison instead of reporting a
-/// result.
-///
-/// The two equivalent programs are written differently and converge under the
-/// cleanup pipeline, so the comparison is reached from distinct sources. Note
-/// that it cannot be reached from distinct *results*: the permutation matching
-/// is keyed off the equivalence groups seeded by `qtensor.alloc`, which a
-/// function argument never joins, so on this path the comparison is structural.
-/// The negative cases below pin down how little it takes to break it.
+// Qubit tensors that do not descend from an allocation are compared
+// through the regular SSA mapping.
+//
+// A tensor arriving as a function argument has no equivalence group, and the
+// threaded tensor an extraction hands back is only covered once it is mapped
+// explicitly. Both used to abort inside the comparison instead of reporting a
+// result.
+//
+// The two equivalent programs are written differently and converge under the
+// cleanup pipeline, so the comparison is reached from distinct sources. Note
+// that it cannot be reached from distinct *results*: the permutation matching
+// is keyed off the equivalence groups seeded by `qtensor.alloc`, which a
+// function argument never joins, so on this path the comparison is structural.
+// The negative cases below pin down how little it takes to break it.
 TEST_F(QTensorTest, ComparesQubitTensorsThatDoNotDescendFromAnAllocation) {
   const auto parse = [&](const char* body) {
     const std::string source = std::string(R"mlir(
@@ -627,7 +684,7 @@ func.func @f(%t: tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit> {
   // Takes element 0 out, applies a gate, and puts it back.
   auto program = parse(R"mlir(
   %out, %q = qtensor.extract %t[%c0] : tensor<2x!qco.qubit>
-  %g = qco.h %q : !qco.qubit -> !qco.qubit
+  %g = qco.h %q : !qco.qubit
   %r = qtensor.insert %g into %out[%c0] : tensor<2x!qco.qubit>
   return %r : tensor<2x!qco.qubit>)mlir");
 
@@ -636,21 +693,21 @@ func.func @f(%t: tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit> {
   %spare, %idle = qtensor.extract %t[%c1] : tensor<2x!qco.qubit>
   %restored = qtensor.insert %idle into %spare[%c1] : tensor<2x!qco.qubit>
   %out, %q = qtensor.extract %restored[%c0] : tensor<2x!qco.qubit>
-  %g = qco.h %q : !qco.qubit -> !qco.qubit
+  %g = qco.h %q : !qco.qubit
   %r = qtensor.insert %g into %out[%c0] : tensor<2x!qco.qubit>
   return %r : tensor<2x!qco.qubit>)mlir");
 
   // A different gate on the same element.
   auto otherGate = parse(R"mlir(
   %out, %q = qtensor.extract %t[%c0] : tensor<2x!qco.qubit>
-  %g = qco.x %q : !qco.qubit -> !qco.qubit
+  %g = qco.x %q : !qco.qubit
   %r = qtensor.insert %g into %out[%c0] : tensor<2x!qco.qubit>
   return %r : tensor<2x!qco.qubit>)mlir");
 
   // The same gate on the other element.
   auto otherElement = parse(R"mlir(
   %out, %q = qtensor.extract %t[%c1] : tensor<2x!qco.qubit>
-  %g = qco.h %q : !qco.qubit -> !qco.qubit
+  %g = qco.h %q : !qco.qubit
   %r = qtensor.insert %g into %out[%c1] : tensor<2x!qco.qubit>
   return %r : tensor<2x!qco.qubit>)mlir");
 
@@ -667,13 +724,13 @@ func.func @f(%t: tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit> {
       areModulesEquivalentWithPermutations(program.get(), otherElement.get()));
 }
 
-/// A tracked tensor is never matched against an untracked one.
-///
-/// Only tensors descending from a `qtensor.alloc` join an equivalence group.
-/// The `rhs` guard is what stops a tracked left-hand tensor from being compared
-/// against a right-hand one that has no group, which would look the group up on
-/// a missing key. It is only reachable once the left-hand side is tracked, so
-/// it needs a case where the two sides disagree about that.
+// A tracked tensor is never matched against an untracked one.
+//
+// Only tensors descending from a `qtensor.alloc` join an equivalence group.
+// The `rhs` guard is what stops a tracked left-hand tensor from being compared
+// against a right-hand one that has no group, which would look the group up on
+// a missing key. It is only reachable once the left-hand side is tracked, so
+// it needs a case where the two sides disagree about that.
 TEST_F(QTensorTest, DoesNotMatchATrackedTensorAgainstAnUntrackedOne) {
   const auto parse = [&](const char* worked, const char* released) {
     const std::string source = std::string(R"mlir(
@@ -683,7 +740,7 @@ func.func @f(%arg: tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit> {
   %own = qtensor.alloc(%c2) : tensor<2x!qco.qubit>
   %out, %q = qtensor.extract %)mlir") +
                                worked + R"mlir([%c0] : tensor<2x!qco.qubit>
-  %g = qco.h %q : !qco.qubit -> !qco.qubit
+  %g = qco.h %q : !qco.qubit
   %back = qtensor.insert %g into %out[%c0] : tensor<2x!qco.qubit>
   qtensor.dealloc %)mlir" + released +
                                R"mlir( : tensor<2x!qco.qubit>

@@ -12,8 +12,7 @@
 
 #include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
-#include "qdmi/Client.hpp"
-#include "qdmi/driver/Driver.hpp"
+#include "qdmi/QDMI.hpp"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
@@ -28,6 +27,7 @@
 #include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <algorithm>
 #include <array>
@@ -47,6 +47,7 @@
 namespace mlir {
 
 /// Target facts that QDMI v1.3 cannot encode compactly.
+///
 /// TODO(#2093): Remove these compatibility markers when QDMI standardizes
 /// explicit unrestricted connectivity, operation applicability, and operation
 /// arity ranges.
@@ -552,9 +553,9 @@ compilerTargetFromDeviceId(const std::string_view deviceId) {
 
 llvm::Expected<std::vector<std::string>> registeredQDMIDeviceIds() {
   try {
-    return qdmi::Driver::get().registeredDeviceIds();
+    return qdmi::Session{}.getDeviceIds();
   } catch (...) {
-    return qdmiError("Failed to discover registered QDMI devices",
+    return qdmiError("Failed to discover QDMI devices",
                      std::current_exception());
   }
 }
@@ -832,7 +833,7 @@ CompiledProgram::compile(CompilerInput&& program,
     return format.takeError();
   }
   auto result = runDefaultPipeline(std::move(program), environment, options);
-  if (!result) {
+  if (failed(result)) {
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Compilation failed for selected payload " +
@@ -849,7 +850,7 @@ CompiledProgram::compile(CompilerInput&& program,
   if (entryPoint && !entryPoint.isVarArg() &&
       entryPoint.getNumArguments() == 0 &&
       isa<LLVM::LLVMVoidType>(entryPoint.getFunctionType().getReturnType())) {
-    /// A program without a return value completes with success status.
+    // A program without a return value completes with success status.
     OpBuilder builder(qir.module().getContext());
     entryPoint.setFunctionType(
         LLVM::LLVMFunctionType::get(builder.getI64Type(), {}));
@@ -873,14 +874,14 @@ CompiledProgram::compile(CompilerInput&& program,
     return error;
   }
   if (qdmi::isBinaryProgramFormat(*format)) {
-    if (auto bytes = qir.toBitcode()) {
+    if (auto bytes = qir.toBitcode(); succeeded(bytes)) {
       return CompiledProgram(
           environment,
           std::string(reinterpret_cast<const char*>(bytes->data()),
                       bytes->size()),
           *format);
     }
-  } else if (auto text = qir.llvmIR()) {
+  } else if (auto text = qir.llvmIR(); succeeded(text)) {
     return CompiledProgram(environment, std::move(*text), *format);
   }
   return llvm::createStringError(
@@ -909,12 +910,13 @@ submitPayload(const qdmi::Device& device, const CompiledProgram& program,
               const std::optional<qdmi::CustomJobParameter>& custom5) {
   try {
     if (qdmi::isBinaryProgramFormat(program.programFormat())) {
-      return device.submitJob(std::as_bytes(std::span(program.payload())),
-                              program.programFormat(),
+      const auto payload = std::as_bytes(std::span(program.payload()));
+      return device.submitJob(payload, program.programFormat(),
                               static_cast<size_t>(numShots), custom1, custom2,
                               custom3, custom4, custom5);
     }
-    return device.submitJob(program.payload(), program.programFormat(),
+    const auto& payload = program.payload();
+    return device.submitJob(payload, program.programFormat(),
                             static_cast<size_t>(numShots), custom1, custom2,
                             custom3, custom4, custom5);
   } catch (...) {

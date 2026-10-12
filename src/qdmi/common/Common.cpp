@@ -21,7 +21,6 @@
 #include <string>
 
 namespace qdmi {
-
 auto throwIfError(const int result, const std::string& msg) -> void {
   switch (const auto res = static_cast<QDMI_STATUS>(result)) {
   case QDMI_SUCCESS:

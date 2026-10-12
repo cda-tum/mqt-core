@@ -13,6 +13,7 @@ include "mqt/Dialect/QCO/IR/QCOTypes.td"
 include "mqt/Dialect/QTensor/IR/QTensorDialect.td"
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
@@ -39,7 +40,10 @@ def Static1DQubitTensor
 // Operations
 //===----------------------------------------------------------------------===//
 
-def AllocOp : QTensorOp<"alloc", [MemoryEffects<[MemAlloc]>]> {
+def AllocOp
+    : QTensorOp<"alloc", [MemoryEffects<[MemAlloc]>,
+                          DeclareOpInterfaceMethods<
+                              OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Tensor alloc operation";
   let description = [{
         Allocates a one-dimensional qubit tensor with the given size and returns the allocated tensor.
@@ -84,9 +88,10 @@ def FromElementsOp
     : QTensorOp<
           "from_elements",
           [Pure,
+           DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
            TypesMatchWith<
                "operand types match result element type", "result", "elements",
-               "SmallVector<Type, 2>("
+               "SmallVector<Type>("
                "cast<RankedTensorType>($_self).getNumElements(), "
                "cast<RankedTensorType>($_self).getElementType())">]> {
   let summary = "Create a tensor from a range of values";
@@ -111,13 +116,15 @@ def FromElementsOp
 }
 
 def ExtractOp
-    : QTensorOp<"extract",
-                [Pure,
-                 TypesMatchWith<"result type matches element type of tensor",
-                                "tensor", "result",
-                                "cast<TensorType>($_self).getElementType()">,
-                 TypesMatchWith<"returned tensor type matches input tensor",
-                                "tensor", "out_tensor", "$_self">]> {
+    : QTensorOp<
+          "extract",
+          [Pure,
+           DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+           TypesMatchWith<"result type matches element type of tensor",
+                          "tensor", "result",
+                          "cast<TensorType>($_self).getElementType()">,
+           TypesMatchWith<"returned tensor type matches input tensor", "tensor",
+                          "out_tensor", "$_self">]> {
   let summary = "Extract element from tensor";
   let description = [{
         Consume a tensor and return its qubit at the given index together with
@@ -140,13 +147,15 @@ def ExtractOp
 }
 
 def InsertOp
-    : QTensorOp<"insert", [Pure,
-                           TypesMatchWith<"result type matches type of dest",
-                                          "dest", "result", "$_self">,
-                           TypesMatchWith<
-                               "scalar type matches element type of dest",
-                               "dest", "scalar",
-                               "cast<TensorType>($_self).getElementType()">]> {
+    : QTensorOp<
+          "insert",
+          [Pure,
+           DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+           TypesMatchWith<"result type matches type of dest", "dest", "result",
+                          "$_self">,
+           TypesMatchWith<"scalar type matches element type of dest", "dest",
+                          "scalar",
+                          "cast<TensorType>($_self).getElementType()">]> {
   let summary = "Insert element into tensor";
   let description = [{
         Consume an extracted qubit and the remaining tensor, restoring the

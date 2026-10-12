@@ -58,6 +58,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -349,7 +350,7 @@ static void updateTargetsIn(ValueRange qubitsIn, LoweringState& state) {
 /// @tparam ParamIndices QCO parameter indices to forward
 template <typename QCOOpType, typename JeffOpType, bool ExtraAdjoint = false,
           std::size_t... TargetIndices, std::size_t... ParamIndices>
-static LogicalResult
+static void
 convertJeffGate(QCOOpType op, typename QCOOpType::Adaptor adaptor,
                 ConversionPatternRewriter& rewriter, LoweringState& state,
                 std::index_sequence<TargetIndices...> /*targetIndices*/,
@@ -373,7 +374,6 @@ convertJeffGate(QCOOpType op, typename QCOOpType::Adaptor adaptor,
   auto results = jeffOp->getResults();
   handleResult(op, rewriter, state, results.take_front(numTargets),
                results.drop_front(numTargets));
-  return success();
 }
 
 /// Converts an arbitrary QCO operation to a jeff.custom operation
@@ -419,7 +419,7 @@ static void createCustomOp(QCOOpType& op, ConversionPatternRewriter& rewriter,
 template <typename QCOOpType>
 static void createPPROp(QCOOpType& op, ConversionPatternRewriter& rewriter,
                         LoweringState& state, ValueRange targets,
-                        const SmallVector<int32_t>& pauliGates) {
+                        ArrayRef<int32_t> pauliGates) {
   auto pauliGatesAttr =
       DenseI32ArrayAttr::get(rewriter.getContext(), pauliGates);
 
@@ -509,11 +509,11 @@ static LogicalResult cleanUp(ModuleOp moduleOp, LoweringState& state) {
 }
 
 /// Moves a region from a QCO/SCF operation to a jeff operation
-static LogicalResult moveRegion(Region& source, Region& dest,
-                                ConversionPatternRewriter& rewriter,
-                                const TypeConverter* typeConverter,
-                                const SetVector<Value>& aboveValues,
-                                LoweringState& state) {
+static void moveRegion(Region& source, Region& dest,
+                       ConversionPatternRewriter& rewriter,
+                       const TypeConverter* typeConverter,
+                       const SetVector<Value>& aboveValues,
+                       LoweringState& state) {
   if (source.empty()) {
     auto* block = &dest.emplaceBlock();
     for (auto value : aboveValues) {
@@ -522,7 +522,7 @@ static LogicalResult moveRegion(Region& source, Region& dest,
     }
     rewriter.setInsertionPointToEnd(block);
     jeff::YieldOp::create(rewriter, dest.getLoc(), block->getArguments());
-    return success();
+    return;
   }
   auto* oldBlock = &source.back();
   auto* newBlock = &dest.emplaceBlock();
@@ -556,8 +556,6 @@ static LogicalResult moveRegion(Region& source, Region& dest,
   llvm::append_range(yields,
                      newBlock->getArguments().take_back(aboveValues.size()));
   rewriter.replaceOpWithNewOp<jeff::YieldOp>(oldTerminator, yields);
-
-  return success();
 }
 
 /// Collects values used in the region and defined outside of it.
@@ -673,15 +671,15 @@ static Value integerConstant(OpBuilder& builder, Location loc, IntegerType type,
       builder.getIntegerAttr(type, value.zextOrTrunc(type.getWidth()));
   switch (type.getWidth()) {
   case 1:
-    return {jeff::IntConst1Op::create(builder, loc, attribute)};
+    return jeff::IntConst1Op::create(builder, loc, attribute).getResult();
   case 8:
-    return {jeff::IntConst8Op::create(builder, loc, attribute)};
+    return jeff::IntConst8Op::create(builder, loc, attribute).getResult();
   case 16:
-    return {jeff::IntConst16Op::create(builder, loc, attribute)};
+    return jeff::IntConst16Op::create(builder, loc, attribute).getResult();
   case 32:
-    return {jeff::IntConst32Op::create(builder, loc, attribute)};
+    return jeff::IntConst32Op::create(builder, loc, attribute).getResult();
   case 64:
-    return {jeff::IntConst64Op::create(builder, loc, attribute)};
+    return jeff::IntConst64Op::create(builder, loc, attribute).getResult();
   default:
     llvm_unreachable("unsupported jeff integer width");
   }
@@ -853,6 +851,25 @@ struct ConvertIntegerExpression final : ConversionPattern {
                   ConversionPatternRewriter& rewriter) const override {
     if (op->getName().getDialectNamespace() != "arith") {
       return failure();
+    }
+    if (isa<arith::IndexCastOp, arith::IndexCastUIOp>(op)) {
+      auto source = op->getOperand(0).getType();
+      auto target = op->getResult(0).getType();
+      if (!isa<IntegerType, IndexType>(source) ||
+          !isa<IntegerType, IndexType>(target)) {
+        return rewriter.notifyMatchFailure(op, "expected scalar index cast");
+      }
+      auto sourceInteger = dyn_cast<IntegerType>(source);
+      auto targetInteger = dyn_cast<IntegerType>(target);
+      const auto sourceWidth = sourceInteger ? sourceInteger.getWidth() : 32U;
+      const auto targetWidth = targetInteger ? targetInteger.getWidth() : 32U;
+      auto targetType =
+          cast<IntegerType>(getTypeConverter()->convertType(target));
+      // jeff indices are i32; preserve casts to other integer widths.
+      rewriter.replaceOp(op, castInteger(rewriter, op->getLoc(), operands[0],
+                                         sourceWidth, targetType, targetWidth,
+                                         isa<arith::IndexCastOp>(op)));
+      return success();
     }
     if (getTypeConverter()->isLegal(op) &&
         !isa<arith::CmpIOp, arith::ShRUIOp, arith::ShRSIOp>(op)) {
@@ -1098,9 +1115,10 @@ struct LowerRegisterComparison final : OpRewritePattern<arith::CmpIOp> {
         [&](int64_t index) -> Value {
           auto position =
               arith::ConstantIndexOp::create(rewriter, read.getLoc(), index);
-          return {cbit::LoadOp::create(rewriter, read.getLoc(),
-                                       rewriter.getI1Type(), read.getReg(),
-                                       position)};
+          return cbit::LoadOp::create(rewriter, read.getLoc(),
+                                      rewriter.getI1Type(), read.getReg(),
+                                      position)
+              .getResult();
         });
     rewriter.replaceOp(op, result);
     if (read->use_empty()) {
@@ -1270,6 +1288,7 @@ struct ConvertQCOGPhaseOpToJeff final : StatefulOpConversionPattern<GPhaseOp> {
 };
 
 /// Convert a QCO gate to a standard jeff gate, preserving active modifiers.
+///
 /// @tparam JeffBaseAdjoint XOR with the inverse modifier, e.g. S† maps to an
 /// adjoint jeff.s operation.
 template <typename QCOOpType, typename JeffOpType, std::size_t NumTargets,
@@ -1283,9 +1302,10 @@ struct ConvertQCOWellKnownGateToJeff final
                   ConversionPatternRewriter& rewriter) const override {
     auto& state = this->getState();
 
-    return convertJeffGate<QCOOpType, JeffOpType, JeffBaseAdjoint>(
+    convertJeffGate<QCOOpType, JeffOpType, JeffBaseAdjoint>(
         op, adaptor, rewriter, state, std::make_index_sequence<NumTargets>{},
         std::make_index_sequence<NumParams>{});
+    return success();
   }
 };
 
@@ -1374,7 +1394,7 @@ private:
 ///
 /// @par Example:
 /// ```mlir
-/// %q_out = qco.u2(%phi, %lambda) %q_in : !qco.qubit -> !qco.qubit
+/// %q_out = qco.u2(%phi, %lambda) %q_in : !qco.qubit
 /// ```
 /// is converted to
 /// ```mlir
@@ -1442,9 +1462,9 @@ struct ConvertQCOBarrierOpToJeff final
 /// @par Example:
 /// ```mlir
 /// %controls_out, %targets_out = qco.ctrl(%q0_in) targets(%a_in = %q1_in) {
-///   %a_res = qco.x %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.x %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
-/// } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+/// } : ({!qco.qubit}, {!qco.qubit})
 /// ```
 /// is converted to
 /// ```mlir
@@ -1458,10 +1478,9 @@ struct ConvertQCOCtrlOpToJeff final : StatefulOpConversionPattern<CtrlOp> {
   LogicalResult
   matchAndRewrite(CtrlOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    if (op.getNumBodyUnitaries() != 1) {
+    if (!llvm::hasSingleElement(op.getBody()->getOps<UnitaryOpInterface>())) {
       return rewriter.notifyMatchFailure(
-          op,
-          "Control modifiers with multiple body unitaries are not supported.");
+          op, "Control modifiers require exactly one body unitary.");
     }
 
     auto& state = getState();
@@ -1495,7 +1514,7 @@ struct ConvertQCOCtrlOpToJeff final : StatefulOpConversionPattern<CtrlOp> {
 /// @par Example:
 /// ```mlir
 /// %q_out = qco.inv (%a_in = %q_in) {
-///   %a_res = qco.s %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.s %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1510,10 +1529,9 @@ struct ConvertQCOInvOpToJeff final : StatefulOpConversionPattern<InvOp> {
   LogicalResult
   matchAndRewrite(InvOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    if (op.getNumBodyUnitaries() != 1) {
-      return rewriter.notifyMatchFailure(op,
-                                         "Inversion modifiers with multiple "
-                                         "body unitaries are not supported.");
+    if (!llvm::hasSingleElement(op.getBody()->getOps<UnitaryOpInterface>())) {
+      return rewriter.notifyMatchFailure(
+          op, "Inversion modifiers require exactly one body unitary.");
     }
 
     auto& state = getState();
@@ -1540,7 +1558,7 @@ struct ConvertQCOInvOpToJeff final : StatefulOpConversionPattern<InvOp> {
 /// @par Example:
 /// ```mlir
 /// %q_out = qco.pow(%exponent) (%a_in = %q_in) {
-///   %a_res = qco.u(%theta, %phi, %lambda) %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.u(%theta, %phi, %lambda) %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1555,10 +1573,9 @@ struct ConvertQCOPowOpToJeff final : StatefulOpConversionPattern<PowOp> {
   LogicalResult
   matchAndRewrite(PowOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    if (op.getNumBodyUnitaries() != 1) {
-      return rewriter.notifyMatchFailure(op,
-                                         "Power modifiers with multiple body "
-                                         "unitaries are not supported.");
+    if (!llvm::hasSingleElement(op.getBody()->getOps<UnitaryOpInterface>())) {
+      return rewriter.notifyMatchFailure(
+          op, "Power modifiers require exactly one body unitary.");
     }
 
     auto& state = getState();
@@ -1650,7 +1667,7 @@ struct ConvertQCOYieldOpToJeff final : StatefulOpConversionPattern<YieldOp> {
 /// @par Example:
 /// ```mlir
 /// %q_out = qco.if %condition args(%a = %q_in) -> (!qco.qubit) {
-///   %q_res = qco.x %a : !qco.qubit -> !qco.qubit
+///   %q_res = qco.x %a : !qco.qubit
 ///   qco.yield %q_res : !qco.qubit
 /// } else args(%a = %q_in) {
 ///   qco.yield %a : !qco.qubit
@@ -1721,14 +1738,10 @@ struct ConvertIfOpToJeff final : RegionMovingConversionPattern<IfOpType> {
     auto jeffSwitch = jeff::SwitchOp::create(
         rewriter, loc, outTypes, adaptor.getCondition(), initArgs, 2);
 
-    if (failed(moveRegion(op.getElseRegion(), jeffSwitch.getBranches()[0],
-                          rewriter, getTypeConverter(), aboveValues, state))) {
-      return failure();
-    }
-    if (failed(moveRegion(op.getThenRegion(), jeffSwitch.getBranches()[1],
-                          rewriter, getTypeConverter(), aboveValues, state))) {
-      return failure();
-    }
+    moveRegion(op.getElseRegion(), jeffSwitch.getBranches()[0], rewriter,
+               getTypeConverter(), aboveValues, state);
+    moveRegion(op.getThenRegion(), jeffSwitch.getBranches()[1], rewriter,
+               getTypeConverter(), aboveValues, state);
 
     // Add trivial default case
     {
@@ -1742,7 +1755,7 @@ struct ConvertIfOpToJeff final : RegionMovingConversionPattern<IfOpType> {
       }
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(block);
-      /// Both Boolean cases are explicit, so the default cannot execute.
+      // Both Boolean cases are explicit, so the default cannot execute.
       SmallVector<Value> values;
       for (auto type : classicalTypes) {
         auto converted = getTypeConverter()->convertType(type);
@@ -1780,7 +1793,7 @@ struct ConvertIfOpToJeff final : RegionMovingConversionPattern<IfOpType> {
 /// %reg_out = scf.for %iv = %start to %stop step %step iter_args(%a = %reg_in)
 /// -> (tensor<2x!qco.qubit>) {
 ///   %reg0, %q0 = qtensor.extract %a[%iv] : tensor<2x!qco.qubit>
-///   %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %q0 : !qco.qubit
 ///   %reg1 = qtensor.insert %q1 into %reg0[%iv] : tensor<2x!qco.qubit>
 ///   scf.yield %reg1 : tensor<2x!qco.qubit>
 /// }
@@ -1836,10 +1849,8 @@ struct ConvertSCFForOpToJeff final : RegionMovingConversionPattern<scf::ForOp> {
         rewriter, op.getLoc(), outTypes, adaptor.getLowerBound(),
         adaptor.getUpperBound(), adaptor.getStep(), initArgs);
 
-    if (failed(moveRegion(op.getRegion(), jeffFor.getRegion(), rewriter,
-                          getTypeConverter(), aboveValues, state))) {
-      return failure();
-    }
+    moveRegion(op.getRegion(), jeffFor.getRegion(), rewriter,
+               getTypeConverter(), aboveValues, state);
 
     // Update tensor values
     const auto numResults = op.getNumResults();
@@ -1865,7 +1876,7 @@ struct ConvertSCFForOpToJeff final : RegionMovingConversionPattern<scf::ForOp> {
 ///   scf.condition(%cond) %q1 : !qco.qubit
 /// } do {
 /// ^bb0(%arg0: !qco.qubit):
-///   %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.h %arg0 : !qco.qubit
 ///   scf.yield %q2 : !qco.qubit
 /// }
 /// ```
@@ -1920,14 +1931,10 @@ struct ConvertSCFWhileOpToJeff final
     auto jeffWhile =
         jeff::WhileOp::create(rewriter, op.getLoc(), outTypes, inits);
 
-    if (failed(moveRegion(op.getBefore(), jeffWhile.getBefore(), rewriter,
-                          getTypeConverter(), aboveValues, state))) {
-      return failure();
-    }
-    if (failed(moveRegion(op.getAfter(), jeffWhile.getAfter(), rewriter,
-                          getTypeConverter(), aboveValues, state))) {
-      return failure();
-    }
+    moveRegion(op.getBefore(), jeffWhile.getBefore(), rewriter,
+               getTypeConverter(), aboveValues, state);
+    moveRegion(op.getAfter(), jeffWhile.getAfter(), rewriter,
+               getTypeConverter(), aboveValues, state);
 
     // Update tensor values
     const auto numResults = op.getNumResults();
@@ -2052,6 +2059,7 @@ struct PPRPaulis {
 } // namespace
 
 /// Register a gate pattern selected by its jeff representation and arity.
+///
 /// @param state Lowering state borrowed by every registered pattern.
 /// @param customName Name used only for JeffKind::Custom.
 /// @param ppr Pauli indices used only for JeffKind::PPR.
@@ -2138,7 +2146,18 @@ protected:
       signalPassFailure();
       return;
     }
-    const auto unsupportedMath = moduleOp.walk([](Operation* op) {
+    const auto unsupportedExpressions = moduleOp.walk([](Operation* op) {
+      if (isa<arith::IndexCastOp, arith::IndexCastUIOp>(op)) {
+        for (auto type :
+             {op->getOperand(0).getType(), op->getResult(0).getType()}) {
+          auto integer = dyn_cast<IntegerType>(type);
+          if (integer && integer.getWidth() > 64) {
+            op->emitError(
+                "jeff supports general integer expressions only up to 64 bits");
+            return WalkResult::interrupt();
+          }
+        }
+      }
       if (isa<math::AbsIOp, math::IPowIOp>(op)) {
         auto type = dyn_cast<IntegerType>(op->getResult(0).getType());
         if (type && nativeIntegerWidth(type.getWidth()) != type.getWidth()) {
@@ -2149,7 +2168,7 @@ protected:
       }
       return WalkResult::advance();
     });
-    if (unsupportedMath.wasInterrupted()) {
+    if (unsupportedExpressions.wasInterrupted()) {
       signalPassFailure();
       return;
     }
@@ -2284,8 +2303,8 @@ protected:
                  ConvertSCFWhileOpToJeff, ConvertQCOCallToJeff,
                  ConvertFuncReturnOpToJeff>(typeConverter, context, &state);
 
-    /// Cloned region arguments already have target types. Convert their users
-    /// before source folds inspect typed quantum operands.
+    // Cloned region arguments already have target types. Convert their users
+    // before source folds inspect typed quantum operands.
     ConversionConfig config;
     config.foldingMode = DialectConversionFoldingMode::AfterPatterns;
     if (failed(applyPartialConversion(moduleOp, target, std::move(patterns),

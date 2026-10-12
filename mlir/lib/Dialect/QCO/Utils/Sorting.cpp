@@ -30,6 +30,7 @@ void reorderTopologically(Block& block, IRRewriter& rewriter) {
 
   struct Dependencies {
     size_t pending = 0;
+    // Keep per-operation storage compact.
     SmallVector<Operation*, 2> successors;
   };
   const auto numOperations = llvm::range_size(block);
@@ -37,8 +38,8 @@ void reorderTopologically(Block& block, IRRewriter& rewriter) {
   dependencies.reserve(numOperations);
   DenseMap<Value, Operation*> lastEffect;
 
-  /// Count repeated edges on both ends instead of maintaining deduplication
-  /// sets.
+  // Count repeated edges on both ends instead of maintaining deduplication
+  // sets.
   const auto addDependency = [&](Operation* predecessor, Operation* successor) {
     assert(predecessor != successor);
     ++dependencies[successor].pending;
@@ -48,8 +49,8 @@ void reorderTopologically(Block& block, IRRewriter& rewriter) {
   for (Operation& op : block) {
     dependencies.try_emplace(&op);
 
-    /// Preserve the order of effects on each SSA value, including nested
-    /// effects.
+    // Preserve the order of effects on each SSA value, including nested
+    // effects.
     const auto effects = getEffectsRecursively(&op);
     if (effects) {
       for (const auto& effect : *effects) {
@@ -65,9 +66,9 @@ void reorderTopologically(Block& block, IRRewriter& rewriter) {
       }
     }
 
-    /// An effect edge need not lead back to the value's defining operation.
-    /// Always retain SSA dependencies, including those of effect-bearing
-    /// inputs.
+    // An effect edge need not lead back to the value's defining operation.
+    // Always retain SSA dependencies, including those of effect-bearing
+    // inputs.
     for (auto v : op.getOperands()) {
       Operation* def = v.getDefiningOp();
       if (def != nullptr && v.getParentBlock() == &block) {
@@ -75,7 +76,7 @@ void reorderTopologically(Block& block, IRRewriter& rewriter) {
       }
     }
 
-    /// A nested capture makes its enclosing operation depend on the producer.
+    // A nested capture makes its enclosing operation depend on the producer.
     for (Operation* user : op.getUsers()) {
       if (user->getBlock() == &block) {
         continue;

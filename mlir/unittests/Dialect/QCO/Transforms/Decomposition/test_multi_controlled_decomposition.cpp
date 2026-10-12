@@ -59,10 +59,11 @@
 using namespace mlir;
 using namespace mlir::qco;
 
-/// DD for k=2…20 plus the first HP24 width (k=33): full matrix DD through k=8
-/// (MCX/MCY/MCZ) or k=6 (MCP); basis-state DD for larger Pauli widths;
-/// coherent-state DD at SP22/HP24 boundaries and representative larger
-/// MCP widths.
+/// DD coverage for k=2…20 and the first HP24 width (k=33).
+///
+/// Full matrix DD through k=8 (MCX/MCY/MCZ) or k=6 (MCP); basis-state DD for
+/// larger Pauli widths; coherent-state DD at SP22/HP24 boundaries and
+/// representative larger MCP widths.
 static constexpr std::array<size_t, 20> K_DD_CONTROL_COUNTS = {
     2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 33,
 };
@@ -75,17 +76,19 @@ static constexpr std::array<size_t, 12> K_COHERENT_PAULI_CONTROL_COUNTS = {
 };
 static constexpr std::array<size_t, 2> K_COHERENT_MCP_CONTROL_COUNTS = {7, 12};
 /// Additional fully-lowered/CX smoke checks for k > 20 through the SP22 MCX
-/// limit (k=32) and the first HP24 width (k=33). Selected widths also receive
-/// coherent DD coverage above.
+/// limit (k=32) and the first HP24 width (k=33).
+///
+/// Selected widths also receive coherent DD coverage above.
 static constexpr std::array<size_t, 13> K_SMOKE_CONTROL_COUNTS = {
     21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
 };
 
 /// Expected elementary Ctrl@X counts after default `min-qubits=3` lowering.
-/// Defined for control counts through the first HP24 width, k=33.
-/// For `5 ≤ k ≤ 32`, MCX uses SP22 MCP(π); each CRX expands to 2 Ctrl@X while
-/// CP stays as Ctrl@P, so elementary CX is `4k² − 8k + 4`. k=33 is the first
-/// HP24 width (pinned measured CX).
+///
+/// Defined for control counts through the first HP24 width, k=33. For `5 ≤ k ≤
+/// 32`, MCX uses SP22 MCP(π); each CRX expands to 2 Ctrl@X while CP stays as
+/// Ctrl@P, so elementary CX is `4k² − 8k + 4`. k=33 is the first HP24 width
+/// (pinned measured CX).
 [[nodiscard]] static constexpr size_t expectedMcxCx(size_t k) {
   assert(k <= 33);
   if (k == 33) {
@@ -99,8 +102,9 @@ static constexpr std::array<size_t, 13> K_SMOKE_CONTROL_COUNTS = {
 }
 
 /// Effective CX for MCP: elementary Ctrl@X plus ~2 CX per leftover
-/// single-controlled P. For `k >= 5` this matches the SP22 LDD bound
-/// `4k^2 - 4k + 2`.
+/// single-controlled P.
+///
+/// For `k >= 5` this matches the SP22 LDD bound `4k^2 - 4k + 2`.
 [[nodiscard]] static constexpr size_t expectedMcpCx(size_t k) {
   if (k >= 5) {
     return (4 * k * k) - (4 * k) + 2;
@@ -110,9 +114,10 @@ static constexpr std::array<size_t, 13> K_SMOKE_CONTROL_COUNTS = {
 }
 
 /// CX regression budget for the borrowed-helper rotation construction.
-/// Each half-MCX occurs twice and costs 1/6/14 CX at 1/2/3 controls.
-/// Above that, its two passes each use a 6-CX CCX, a 3-CX RCCX,
-/// and 2(n-3) two-CX gadgets: 8n-6 CX. Both halves reach this case at k=8.
+///
+/// Each half-MCX occurs twice and costs 1/6/14 CX at 1/2/3 controls. Above
+/// that, its two passes each use a 6-CX CCX, a 3-CX RCCX, and 2(n-3) two-CX
+/// gadgets: 8n-6 CX. Both halves reach this case at k=8.
 [[nodiscard]] static constexpr size_t expectedMcrCxBudget(size_t k) {
   if (k >= 8) {
     return (16 * k) - 24;
@@ -272,7 +277,10 @@ buildMcrModule(MLIRContext* context, size_t numControls, RotationAxis axis,
       });
   if (moduleOp && runtimeAngle) {
     auto funcOp = *moduleOp->getBody()->getOps<func::FuncOp>().begin();
-    funcOp.insertArgument(0, Float64Type::get(context), {}, funcOp.getLoc());
+    if (failed(funcOp.insertArgument(0, Float64Type::get(context), {},
+                                     funcOp.getLoc()))) {
+      return {};
+    }
     parameter.replaceAllUsesWith(funcOp.getArgument(0));
   }
   return moduleOp;
@@ -464,14 +472,15 @@ static void expectMatchesMcpOnCoherentState(func::FuncOp funcOp,
                                         phaseMatrix(theta));
 }
 
-static void expectImplementsMcp(func::FuncOp funcOp, size_t numControls,
-                                double theta) {
+static void
+expectImplementsMcp(func::FuncOp funcOp, size_t numControls, double theta,
+                    const DDArgumentBindings& bindings = DDArgumentBindings()) {
   const auto numQubits = countStaticQubits(funcOp);
   ASSERT_EQ(numQubits, numControls + 1);
   expectFullyDecomposed(funcOp);
 
   const auto dd = std::make_unique<dd::Package>(numQubits);
-  const auto decomposedDD = buildFunctionality(funcOp, *dd);
+  const auto decomposedDD = buildFunctionality(funcOp, *dd, bindings);
   ASSERT_TRUE(succeeded(decomposedDD));
 
   const auto referenceDD =
@@ -605,8 +614,8 @@ TEST_F(MultiControlledDecompositionTest, RotationsPreserveRuntimeAngles) {
           });
       ASSERT_TRUE(moduleOp);
       auto funcOp = *moduleOp->getBody()->getOps<func::FuncOp>().begin();
-      funcOp.insertArgument(0, Float64Type::get(context()), {},
-                            funcOp.getLoc());
+      ASSERT_TRUE(succeeded(funcOp.insertArgument(
+          0, Float64Type::get(context()), {}, funcOp.getLoc())));
       parameter.replaceAllUsesWith(funcOp.getArgument(0));
       ASSERT_TRUE(succeeded(runDecomposeMultiControlled(moduleOp.get())));
       expectFullyLowered(moduleOp.get());
@@ -620,6 +629,63 @@ TEST_F(MultiControlledDecompositionTest, RotationsPreserveRuntimeAngles) {
         };
         expectImplementsControlledRotation(
             funcOp, numControls, axis, regionLocal ? -theta : theta, bindings);
+      }
+    }
+  }
+}
+
+TEST_F(MultiControlledDecompositionTest, PhasesPreserveRuntimeAngles) {
+  for (const size_t numControls : {2U, 3U, 4U, 5U, 8U}) {
+    for (const bool nested : {false, true}) {
+      SCOPED_TRACE(testing::Message()
+                   << "controls=" << numControls << " nested=" << nested);
+      Value parameter;
+      auto moduleOp =
+          QCOProgramBuilder::build(context(), [&](QCOProgramBuilder& builder) {
+            parameter = builder.floatConstant(0.73);
+            SmallVector<Value> wires;
+            for (size_t i = 0; i <= numControls; ++i) {
+              wires.push_back(builder.staticQubit(i));
+            }
+            const auto phase = [&](Value target) {
+              // Exercise supporting arithmetic inside the modifier body.
+              auto angle = arith::NegFOp::create(builder, parameter);
+              return builder.p(angle, target);
+            };
+            if (nested) {
+              builder.ctrl(wires.front(), ValueRange(wires).drop_front(),
+                           [&](ValueRange targets) {
+                             auto [controls, target] = builder.ctrl(
+                                 targets.drop_back(), targets.back(), phase);
+                             SmallVector<Value> results(controls);
+                             results.push_back(target);
+                             return results;
+                           });
+            } else {
+              builder.ctrl(ValueRange(wires).drop_back(), wires.back(), phase);
+            }
+            return SmallVector<Value>{};
+          });
+      ASSERT_TRUE(moduleOp);
+      auto funcOp = *moduleOp->getBody()->getOps<func::FuncOp>().begin();
+      ASSERT_TRUE(succeeded(funcOp.insertArgument(
+          0, Float64Type::get(context()), {}, funcOp.getLoc())));
+      parameter.replaceAllUsesWith(funcOp.getArgument(0));
+      ASSERT_TRUE(succeeded(runDecomposeMultiControlled(moduleOp.get())));
+      expectFullyLowered(moduleOp.get());
+      EXPECT_LE(countEffectiveCxOps(moduleOp.get()),
+                expectedMcpCx(numControls));
+      funcOp.walk([](AllocOp) { ADD_FAILURE() << "unexpected helper qubit"; });
+      for (const double theta : {0.0, 0.73, -1.21, 2 * std::numbers::pi}) {
+        SCOPED_TRACE(testing::Message() << "theta=" << theta);
+        const DDArgumentBindings bindings{
+            {
+                funcOp.getArgument(0),
+                FloatAttr::get(Float64Type::get(context()), theta),
+            },
+        };
+        // Full operator equality includes the phase on coherent controls.
+        expectImplementsMcp(funcOp, numControls, -theta, bindings);
       }
     }
   }
@@ -994,8 +1060,8 @@ TEST_F(MultiControlledDecompositionTest, DecomposesSingleControlledSwap) {
   const auto decomposedDD = buildFunctionality(funcOp, *dd);
   ASSERT_TRUE(succeeded(decomposedDD));
 
-  const auto referenceDD = makeGateDD(
-      *dd, DynamicMatrix{SWAPOp::getUnitaryMatrix()}, numQubits, {1, 2}, {{0}});
+  const auto referenceDD =
+      makeGateDD(*dd, DynamicMatrix{SWAPOp::getUnitaryMatrix()}, {1, 2}, {{0}});
   EXPECT_EQ(*decomposedDD, referenceDD);
   dd->decRef(*decomposedDD);
 }
@@ -1021,9 +1087,8 @@ TEST_F(MultiControlledDecompositionTest, DecomposesMultipleControlledSwap) {
   const auto decomposedDD = buildFunctionality(funcOp, *dd);
   ASSERT_TRUE(succeeded(decomposedDD));
 
-  const auto referenceDD =
-      makeGateDD(*dd, DynamicMatrix{SWAPOp::getUnitaryMatrix()}, numQubits,
-                 {2, 3}, {{0}, {1}});
+  const auto referenceDD = makeGateDD(
+      *dd, DynamicMatrix{SWAPOp::getUnitaryMatrix()}, {2, 3}, {{0}, {1}});
   EXPECT_EQ(*decomposedDD, referenceDD);
   dd->decRef(*decomposedDD);
 }
@@ -1093,9 +1158,9 @@ TEST_F(MultiControlledDecompositionTest, LeavesUnsupportedCtrlUntouched) {
   size_t mchCount = 0;
   size_t controlledDcx = 0;
   moduleOp->walk([&](CtrlOp op) {
+    auto inner =
+        mlir::mqt::getSoleBodyUnitary<UnitaryOpInterface>(*op.getBody());
     if (op.getNumTargets() == 2) {
-      auto inner =
-          mlir::mqt::getSoleBodyUnitary<UnitaryOpInterface>(*op.getBody());
       if (inner && isa<DCXOp>(inner.getOperation())) {
         ++controlledDcx;
       }
@@ -1103,8 +1168,7 @@ TEST_F(MultiControlledDecompositionTest, LeavesUnsupportedCtrlUntouched) {
     if (op.getNumControls() < 2) {
       return;
     }
-    if (op.getNumBodyUnitaries() == 1 &&
-        isa<HOp>(op.getBodyUnitary(0).getOperation())) {
+    if (inner && isa<HOp>(inner.getOperation())) {
       ++mchCount;
     }
   });
@@ -1220,8 +1284,8 @@ TEST_F(MultiControlledDecompositionTest, CompositePowerLimits) {
         });
     if (runtime) {
       auto function = *moduleOp->getOps<func::FuncOp>().begin();
-      function.insertArgument(0, Float64Type::get(context()), {},
-                              function.getLoc());
+      ASSERT_TRUE(succeeded(function.insertArgument(
+          0, Float64Type::get(context()), {}, function.getLoc())));
       parameter.replaceAllUsesWith(function.getArgument(0));
       auto* constant = parameter.getDefiningOp();
       parameter = function.getArgument(0);

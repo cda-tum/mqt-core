@@ -14,6 +14,9 @@
 
 #include "qdmi/device.h"
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Process.h"
+
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -34,33 +37,16 @@
 #include <windows.h>
 #else
 #include <dlfcn.h>
+#ifdef __linux__
+#include <elf.h>
+#include <sys/auxv.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
+#include <vector>
+#endif
 #endif
 
 namespace qdmi::detail {
-[[nodiscard]] std::optional<std::string>
-environment(const std::string_view name) {
-#ifdef _WIN32
-  char* raw = nullptr;
-  size_t size = 0;
-  const std::string ownedName(name);
-  if (_dupenv_s(&raw, &size, ownedName.c_str()) != 0 || raw == nullptr) {
-    return std::nullopt;
-  }
-  const std::unique_ptr<char, decltype(&std::free)> value(raw, &std::free);
-  if (*value == '\0') {
-    return std::nullopt;
-  }
-  return std::string(value.get());
-#else
-  const std::string ownedName(name);
-  const auto* value = std::getenv(ownedName.c_str());
-  if (value == nullptr || *value == '\0') {
-    return std::nullopt;
-  }
-  return std::string(value);
-#endif
-}
-
 [[nodiscard]] std::filesystem::path moduleDirectory(const void* anchor) {
 #ifdef _WIN32
   HMODULE module = nullptr;
@@ -87,7 +73,32 @@ environment(const std::string_view name) {
   if (dladdr(anchor, &info) == 0 || info.dli_fname == nullptr) {
     return {};
   }
-  return std::filesystem::path(info.dli_fname).parent_path();
+  auto path = std::filesystem::path(info.dli_fname);
+  if (!path.is_absolute()) {
+#ifdef __linux__
+    Dl_info executable{};
+    const auto* headers = reinterpret_cast<const void*>(getauxval(AT_PHDR));
+    if (dladdr(headers, &executable) != 0 &&
+        info.dli_fbase == executable.dli_fbase) {
+      std::error_code error;
+      path = std::filesystem::read_symlink("/proc/self/exe", error);
+      if (error) {
+        return {};
+      }
+    }
+#elif defined(__APPLE__)
+    if (info.dli_fbase == _dyld_get_image_header(0)) {
+      uint32_t size = 0;
+      static_cast<void>(_NSGetExecutablePath(nullptr, &size));
+      std::vector<char> buffer(size);
+      if (_NSGetExecutablePath(buffer.data(), &size) != 0) {
+        return {};
+      }
+      path = buffer.data();
+    }
+#endif
+  }
+  return std::filesystem::weakly_canonical(path).parent_path();
 #endif
 }
 
@@ -215,8 +226,8 @@ loadDeviceConfiguration(const std::optional<std::string>& inlineJson,
   if (file) {
     return readFile(*file, false, status);
   }
-  const auto environmentJson = environment(inlineEnvironment);
-  const auto environmentFile = environment(fileEnvironment);
+  const auto environmentJson = llvm::sys::Process::GetEnv(inlineEnvironment);
+  const auto environmentFile = llvm::sys::Process::GetEnv(fileEnvironment);
   if (environmentJson && environmentFile) {
     qdmi::diagnostics::error("Both {} and {} are set", inlineEnvironment,
                              fileEnvironment);

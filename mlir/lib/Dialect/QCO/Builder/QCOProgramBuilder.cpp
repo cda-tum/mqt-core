@@ -42,6 +42,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -118,7 +119,7 @@ func::FuncOp QCOProgramBuilder::createFunction(
   auto savedQubits = std::move(validQubits);
   auto savedTensors = std::move(validTensors);
   const auto savedTensorCounter = tensorCounter;
-  auto stateGuard = llvm::make_scope_exit([&] {
+  auto stateGuard = llvm::scope_exit([&] {
     validQubits = std::move(savedQubits);
     validTensors = std::move(savedTensors);
     tensorCounter = savedTensorCounter;
@@ -351,7 +352,7 @@ void QCOProgramBuilder::storeClassicalBit(
 }
 
 //===----------------------------------------------------------------------===//
-/// Linear Ownership Tracking Helpers
+// Linear Ownership Tracking Helpers
 //===----------------------------------------------------------------------===//
 
 void QCOProgramBuilder::validateQubitValue(Value qubit) const {
@@ -414,6 +415,7 @@ void QCOProgramBuilder::updateTensorTracking(Value inputTensor,
 }
 
 /// Live values dominate the insertion point, so their blocks are nested.
+///
 /// Order definitions within a block, including argument and result positions.
 static bool isDefinedBefore(Value lhs, Value rhs) {
   if (lhs.getParentBlock() != rhs.getParentBlock()) {
@@ -680,12 +682,12 @@ Value QCOProgramBuilder::reset(Value qubit) {
 // ZeroTargetOneParameter
 
 #define DEFINE_ZERO_TARGET_ONE_PARAMETER(OP_CLASS, OP_NAME, PARAM)             \
-  void QCOProgramBuilder::OP_NAME(const std::variant<double, Value>&(PARAM)) { \
+  void QCOProgramBuilder::OP_NAME(const mqt::FloatParameter&(PARAM)) {         \
     checkFinalized();                                                          \
     OP_CLASS::create(*this, PARAM);                                            \
   }                                                                            \
-  Value QCOProgramBuilder::c##OP_NAME(                                         \
-      const std::variant<double, Value>&(PARAM), Value control) {              \
+  Value QCOProgramBuilder::c##OP_NAME(const mqt::FloatParameter&(PARAM),       \
+                                      Value control) {                         \
     checkFinalized();                                                          \
     auto param = variantToValue(*this, getLoc(), PARAM);                       \
     auto controlsOut =                                                         \
@@ -695,8 +697,8 @@ Value QCOProgramBuilder::reset(Value qubit) {
         }).first;                                                              \
     return controlsOut[0];                                                     \
   }                                                                            \
-  ValueRange QCOProgramBuilder::mc##OP_NAME(                                   \
-      const std::variant<double, Value>&(PARAM), ValueRange controls) {        \
+  ValueRange QCOProgramBuilder::mc##OP_NAME(const mqt::FloatParameter&(PARAM), \
+                                            ValueRange controls) {             \
     checkFinalized();                                                          \
     auto param = variantToValue(*this, getLoc(), PARAM);                       \
     auto controlsOut =                                                         \
@@ -753,7 +755,7 @@ DEFINE_ONE_TARGET_ZERO_PARAMETER(SXdgOp, sxdg)
 // OneTargetOneParameter
 
 #define DEFINE_ONE_TARGET_ONE_PARAMETER(OP_CLASS, OP_NAME, PARAM)              \
-  Value QCOProgramBuilder::OP_NAME(const std::variant<double, Value>&(PARAM),  \
+  Value QCOProgramBuilder::OP_NAME(const mqt::FloatParameter&(PARAM),          \
                                    Value qubit) {                              \
     checkFinalized();                                                          \
     auto op = OP_CLASS::create(*this, qubit, PARAM);                           \
@@ -762,8 +764,7 @@ DEFINE_ONE_TARGET_ZERO_PARAMETER(SXdgOp, sxdg)
     return qubitOut;                                                           \
   }                                                                            \
   std::pair<Value, Value> QCOProgramBuilder::c##OP_NAME(                       \
-      const std::variant<double, Value>&(PARAM), Value control,                \
-      Value target) {                                                          \
+      const mqt::FloatParameter&(PARAM), Value control, Value target) {        \
     checkFinalized();                                                          \
     auto param = variantToValue(*this, getLoc(), PARAM);                       \
     auto [controlsOut, targetsOut] = ctrl(control, target, [&](Value target) { \
@@ -772,8 +773,7 @@ DEFINE_ONE_TARGET_ZERO_PARAMETER(SXdgOp, sxdg)
     return {controlsOut, targetsOut};                                          \
   }                                                                            \
   std::pair<ValueRange, Value> QCOProgramBuilder::mc##OP_NAME(                 \
-      const std::variant<double, Value>&(PARAM), ValueRange controls,          \
-      Value target) {                                                          \
+      const mqt::FloatParameter&(PARAM), ValueRange controls, Value target) {  \
     checkFinalized();                                                          \
     auto param = variantToValue(*this, getLoc(), PARAM);                       \
     auto [controlsOut, targetsOut] =                                           \
@@ -792,8 +792,8 @@ DEFINE_ONE_TARGET_ONE_PARAMETER(POp, p, phi)
 // OneTargetTwoParameter
 
 #define DEFINE_ONE_TARGET_TWO_PARAMETER(OP_CLASS, OP_NAME, PARAM1, PARAM2)     \
-  Value QCOProgramBuilder::OP_NAME(const std::variant<double, Value>&(PARAM1), \
-                                   const std::variant<double, Value>&(PARAM2), \
+  Value QCOProgramBuilder::OP_NAME(const mqt::FloatParameter&(PARAM1),         \
+                                   const mqt::FloatParameter&(PARAM2),         \
                                    Value qubit) {                              \
     checkFinalized();                                                          \
     auto op = OP_CLASS::create(*this, qubit, PARAM1, PARAM2);                  \
@@ -802,9 +802,8 @@ DEFINE_ONE_TARGET_ONE_PARAMETER(POp, p, phi)
     return qubitOut;                                                           \
   }                                                                            \
   std::pair<Value, Value> QCOProgramBuilder::c##OP_NAME(                       \
-      const std::variant<double, Value>&(PARAM1),                              \
-      const std::variant<double, Value>&(PARAM2), Value control,               \
-      Value target) {                                                          \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      Value control, Value target) {                                           \
     checkFinalized();                                                          \
     auto param1 = variantToValue(*this, getLoc(), PARAM1);                     \
     auto param2 = variantToValue(*this, getLoc(), PARAM2);                     \
@@ -814,9 +813,8 @@ DEFINE_ONE_TARGET_ONE_PARAMETER(POp, p, phi)
     return {controlsOut, targetsOut};                                          \
   }                                                                            \
   std::pair<ValueRange, Value> QCOProgramBuilder::mc##OP_NAME(                 \
-      const std::variant<double, Value>&(PARAM1),                              \
-      const std::variant<double, Value>&(PARAM2), ValueRange controls,         \
-      Value target) {                                                          \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      ValueRange controls, Value target) {                                     \
     checkFinalized();                                                          \
     auto param1 = variantToValue(*this, getLoc(), PARAM1);                     \
     auto param2 = variantToValue(*this, getLoc(), PARAM2);                     \
@@ -835,10 +833,9 @@ DEFINE_ONE_TARGET_TWO_PARAMETER(U2Op, u2, phi, lambda)
 
 #define DEFINE_ONE_TARGET_THREE_PARAMETER(OP_CLASS, OP_NAME, PARAM1, PARAM2,   \
                                           PARAM3)                              \
-  Value QCOProgramBuilder::OP_NAME(const std::variant<double, Value>&(PARAM1), \
-                                   const std::variant<double, Value>&(PARAM2), \
-                                   const std::variant<double, Value>&(PARAM3), \
-                                   Value qubit) {                              \
+  Value QCOProgramBuilder::OP_NAME(                                            \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      const mqt::FloatParameter&(PARAM3), Value qubit) {                       \
     checkFinalized();                                                          \
     auto op = OP_CLASS::create(*this, qubit, PARAM1, PARAM2, PARAM3);          \
     auto qubitOut = op.getQubitOut();                                          \
@@ -846,10 +843,8 @@ DEFINE_ONE_TARGET_TWO_PARAMETER(U2Op, u2, phi, lambda)
     return qubitOut;                                                           \
   }                                                                            \
   std::pair<Value, Value> QCOProgramBuilder::c##OP_NAME(                       \
-      const std::variant<double, Value>&(PARAM1),                              \
-      const std::variant<double, Value>&(PARAM2),                              \
-      const std::variant<double, Value>&(PARAM3), Value control,               \
-      Value target) {                                                          \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      const mqt::FloatParameter&(PARAM3), Value control, Value target) {       \
     checkFinalized();                                                          \
     auto param1 = variantToValue(*this, getLoc(), PARAM1);                     \
     auto param2 = variantToValue(*this, getLoc(), PARAM2);                     \
@@ -860,10 +855,8 @@ DEFINE_ONE_TARGET_TWO_PARAMETER(U2Op, u2, phi, lambda)
     return {controlsOut, targetsOut};                                          \
   }                                                                            \
   std::pair<ValueRange, Value> QCOProgramBuilder::mc##OP_NAME(                 \
-      const std::variant<double, Value>&(PARAM1),                              \
-      const std::variant<double, Value>&(PARAM2),                              \
-      const std::variant<double, Value>&(PARAM3), ValueRange controls,         \
-      Value target) {                                                          \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      const mqt::FloatParameter&(PARAM3), ValueRange controls, Value target) { \
     checkFinalized();                                                          \
     auto param1 = variantToValue(*this, getLoc(), PARAM1);                     \
     auto param2 = variantToValue(*this, getLoc(), PARAM2);                     \
@@ -927,7 +920,7 @@ DEFINE_TWO_TARGET_ZERO_PARAMETER(ECROp, ecr)
 
 #define DEFINE_TWO_TARGET_ONE_PARAMETER(OP_CLASS, OP_NAME, PARAM)              \
   std::pair<Value, Value> QCOProgramBuilder::OP_NAME(                          \
-      const std::variant<double, Value>&(PARAM), Value qubit0, Value qubit1) { \
+      const mqt::FloatParameter&(PARAM), Value qubit0, Value qubit1) {         \
     checkFinalized();                                                          \
     auto op = OP_CLASS::create(*this, qubit0, qubit1, PARAM);                  \
     auto qubit0Out = op.getQubit0Out();                                        \
@@ -937,7 +930,7 @@ DEFINE_TWO_TARGET_ZERO_PARAMETER(ECROp, ecr)
     return {qubit0Out, qubit1Out};                                             \
   }                                                                            \
   std::pair<Value, std::pair<Value, Value>> QCOProgramBuilder::c##OP_NAME(     \
-      const std::variant<double, Value>&(PARAM), Value control, Value qubit0,  \
+      const mqt::FloatParameter&(PARAM), Value control, Value qubit0,          \
       Value qubit1) {                                                          \
     checkFinalized();                                                          \
     auto param = variantToValue(*this, getLoc(), PARAM);                       \
@@ -950,9 +943,9 @@ DEFINE_TWO_TARGET_ZERO_PARAMETER(ECROp, ecr)
     return {controlsOut[0], {targetsOut[0], targetsOut[1]}};                   \
   }                                                                            \
   std::pair<ValueRange, std::pair<Value, Value>>                               \
-      QCOProgramBuilder::mc##OP_NAME(                                          \
-          const std::variant<double, Value>&(PARAM), ValueRange controls,      \
-          Value qubit0, Value qubit1) {                                        \
+      QCOProgramBuilder::mc##OP_NAME(const mqt::FloatParameter&(PARAM),        \
+                                     ValueRange controls, Value qubit0,        \
+                                     Value qubit1) {                           \
     checkFinalized();                                                          \
     auto param = variantToValue(*this, getLoc(), PARAM);                       \
     auto [controlsOut, targetsOut] =                                           \
@@ -975,9 +968,8 @@ DEFINE_TWO_TARGET_ONE_PARAMETER(RZZOp, rzz, theta)
 
 #define DEFINE_TWO_TARGET_TWO_PARAMETER(OP_CLASS, OP_NAME, PARAM1, PARAM2)     \
   std::pair<Value, Value> QCOProgramBuilder::OP_NAME(                          \
-      const std::variant<double, Value>&(PARAM1),                              \
-      const std::variant<double, Value>&(PARAM2), Value qubit0,                \
-      Value qubit1) {                                                          \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      Value qubit0, Value qubit1) {                                            \
     checkFinalized();                                                          \
     auto op = OP_CLASS::create(*this, qubit0, qubit1, PARAM1, PARAM2);         \
     auto qubit0Out = op.getQubit0Out();                                        \
@@ -987,9 +979,8 @@ DEFINE_TWO_TARGET_ONE_PARAMETER(RZZOp, rzz, theta)
     return {qubit0Out, qubit1Out};                                             \
   }                                                                            \
   std::pair<Value, std::pair<Value, Value>> QCOProgramBuilder::c##OP_NAME(     \
-      const std::variant<double, Value>&(PARAM1),                              \
-      const std::variant<double, Value>&(PARAM2), Value control, Value qubit0, \
-      Value qubit1) {                                                          \
+      const mqt::FloatParameter&(PARAM1), const mqt::FloatParameter&(PARAM2),  \
+      Value control, Value qubit0, Value qubit1) {                             \
     checkFinalized();                                                          \
     auto param1 = variantToValue(*this, getLoc(), PARAM1);                     \
     auto param2 = variantToValue(*this, getLoc(), PARAM2);                     \
@@ -1003,10 +994,10 @@ DEFINE_TWO_TARGET_ONE_PARAMETER(RZZOp, rzz, theta)
     return {controlsOut[0], {targetsOut[0], targetsOut[1]}};                   \
   }                                                                            \
   std::pair<ValueRange, std::pair<Value, Value>>                               \
-      QCOProgramBuilder::mc##OP_NAME(                                          \
-          const std::variant<double, Value>&(PARAM1),                          \
-          const std::variant<double, Value>&(PARAM2), ValueRange controls,     \
-          Value qubit0, Value qubit1) {                                        \
+      QCOProgramBuilder::mc##OP_NAME(const mqt::FloatParameter&(PARAM1),       \
+                                     const mqt::FloatParameter&(PARAM2),       \
+                                     ValueRange controls, Value qubit0,        \
+                                     Value qubit1) {                           \
     checkFinalized();                                                          \
     auto param1 = variantToValue(*this, getLoc(), PARAM1);                     \
     auto param2 = variantToValue(*this, getLoc(), PARAM2);                     \
@@ -1171,8 +1162,7 @@ QCOProgramBuilder::inv(ValueRange qubits,
 }
 
 ValueRange
-QCOProgramBuilder::pow(const std::variant<double, Value>& exponent,
-                       ValueRange qubits,
+QCOProgramBuilder::pow(const mqt::FloatParameter& exponent, ValueRange qubits,
                        function_ref<SmallVector<Value>(ValueRange)> body) {
   checkFinalized();
 
@@ -1206,8 +1196,8 @@ QCOProgramBuilder::pow(const std::variant<double, Value>& exponent,
   return targetsOut;
 }
 
-Value QCOProgramBuilder::pow(const std::variant<double, Value>& exponent,
-                             Value qubit, function_ref<Value(Value)> body) {
+Value QCOProgramBuilder::pow(const mqt::FloatParameter& exponent, Value qubit,
+                             function_ref<Value(Value)> body) {
   checkFinalized();
 
   Value innerQubitOut;
@@ -1502,7 +1492,7 @@ ValueRange QCOProgramBuilder::qcoIndexSwitch(
   const InsertionGuard guard(*this);
   const SmallVector locs(ntargets, getLoc());
 
-  const auto buildRegion = [&](Region& region, SmallVector<Value>& prev,
+  const auto buildRegion = [&](Region& region, SmallVectorImpl<Value>& prev,
                                function_ref<SmallVector<Value>(ValueRange)> f) {
     Block* const block = createBlock(&region, {}, types, locs);
     updateQubitValueTracking(prev, block->getArguments());
@@ -1542,7 +1532,7 @@ Value QCOProgramBuilder::qcoIndexSwitch(
           return SmallVector<Value>{body(args.front())};
         };
       });
-  /// Keep the adapted callbacks alive until the range overload returns.
+  // Keep the adapted callbacks alive until the range overload returns.
   SmallVector<function_ref<SmallVector<Value>(ValueRange)>> callbacks(
       bodies.begin(), bodies.end());
   return qcoIndexSwitch(arg, ValueRange{target}, cases, callbacks,

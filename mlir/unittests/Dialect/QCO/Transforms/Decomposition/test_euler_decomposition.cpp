@@ -112,6 +112,7 @@ class EulerSynthesisExactTest
 } // namespace
 
 /// Measures the given qubits and returns the measurement outcomes.
+///
 /// @param b The `ProgramBuilder` used to perform the measurements.
 /// @param qubits The qubits to be measured.
 /// @return The result values.
@@ -1054,7 +1055,8 @@ TEST(FuseSingleQubitUnitaryRunsTest, IgnoresDynamicPowerExponent) {
   ASSERT_TRUE(owned);
   auto funcOp = owned->lookupSymbol<func::FuncOp>("main");
   ASSERT_TRUE(funcOp);
-  funcOp.insertArgument(0, Float64Type::get(fx.ctx()), {}, funcOp.getLoc());
+  ASSERT_TRUE(succeeded(funcOp.insertArgument(0, Float64Type::get(fx.ctx()), {},
+                                              funcOp.getLoc())));
   auto powOp = *funcOp.getBody().getOps<PowOp>().begin();
   powOp->setOperand(0, funcOp.getArgument(0));
   ASSERT_TRUE(succeeded(verify(*owned)));
@@ -1077,8 +1079,10 @@ TEST(FuseSingleQubitUnitaryRunsTest, MergesUnboundedShortSameAxisRun) {
 
   auto funcOp = owned->lookupSymbol<func::FuncOp>("main");
   ASSERT_TRUE(funcOp);
-  funcOp.insertArgument(0, Float64Type::get(fx.ctx()), {}, funcOp.getLoc());
-  funcOp.insertArgument(1, Float64Type::get(fx.ctx()), {}, funcOp.getLoc());
+  ASSERT_TRUE(succeeded(funcOp.insertArgument(0, Float64Type::get(fx.ctx()), {},
+                                              funcOp.getLoc())));
+  ASSERT_TRUE(succeeded(funcOp.insertArgument(1, Float64Type::get(fx.ctx()), {},
+                                              funcOp.getLoc())));
   SmallVector<RZOp> rotations;
   funcOp.walk([&](RZOp op) { rotations.push_back(op); });
   ASSERT_EQ(rotations.size(), 2U);
@@ -1092,8 +1096,8 @@ TEST(FuseSingleQubitUnitaryRunsTest, MergesUnboundedShortSameAxisRun) {
   ASSERT_TRUE(succeeded(verifyLinearity(*owned)));
   rotations.clear();
   funcOp.walk([&](RZOp op) { rotations.push_back(op); });
-  /// Normalize the evaluated inputs before adding, including finite values
-  /// whose direct sum would overflow.
+  // Normalize the evaluated inputs before adding, including finite values
+  // whose direct sum would overflow.
   ASSERT_EQ(rotations.size(), 1U);
 
   for (auto [firstAngle, secondAngle] : std::array{
@@ -1139,8 +1143,8 @@ TEST(FuseSingleQubitUnitaryRunsTest, FusesNamedDynamicGatesInAllBases) {
       auto funcOp = mlirModule.lookupSymbol<func::FuncOp>("main");
       ASSERT_TRUE(funcOp);
       for (size_t i = 0; i < gateCase.numParameters; ++i) {
-        funcOp.insertArgument(i, Float64Type::get(fx.ctx()), {},
-                              funcOp.getLoc());
+        ASSERT_TRUE(succeeded(funcOp.insertArgument(
+            i, Float64Type::get(fx.ctx()), {}, funcOp.getLoc())));
       }
 
       SmallVector<UnitaryOpInterface> parameterizedGates;
@@ -1235,8 +1239,8 @@ TEST(FuseSingleQubitUnitaryRunsTest,
       auto funcOp = mlirModule.lookupSymbol<func::FuncOp>("main");
       ASSERT_TRUE(funcOp);
       for (size_t i = 0; i < gateCase.numParameters; ++i) {
-        funcOp.insertArgument(i, Float64Type::get(fx.ctx()), {},
-                              funcOp.getLoc());
+        ASSERT_TRUE(succeeded(funcOp.insertArgument(
+            i, Float64Type::get(fx.ctx()), {}, funcOp.getLoc())));
       }
 
       UnitaryOpInterface parameterizedGate;
@@ -1295,7 +1299,8 @@ TEST(FuseSingleQubitUnitaryRunsTest, DirectlySynthesizesCardinalAxesInRBasis) {
     ASSERT_TRUE(owned);
     auto funcOp = owned->lookupSymbol<func::FuncOp>("main");
     ASSERT_TRUE(funcOp);
-    funcOp.insertArgument(0, Float64Type::get(fx.ctx()), {}, funcOp.getLoc());
+    ASSERT_TRUE(succeeded(funcOp.insertArgument(0, Float64Type::get(fx.ctx()),
+                                                {}, funcOp.getLoc())));
     UnitaryOpInterface gate;
     funcOp.walk([&](UnitaryOpInterface op) {
       if (op.getBaseSymbol() == gateCase.name) {
@@ -1375,7 +1380,8 @@ TEST(FuseSingleQubitUnitaryRunsTest,
     auto funcOp = mlirModule.lookupSymbol<func::FuncOp>("main");
     ASSERT_TRUE(funcOp);
     for (size_t i = 0; i < numParameters; ++i) {
-      funcOp.insertArgument(i, Float64Type::get(fx.ctx()), {}, funcOp.getLoc());
+      ASSERT_TRUE(succeeded(funcOp.insertArgument(i, Float64Type::get(fx.ctx()),
+                                                  {}, funcOp.getLoc())));
     }
 
     UOp uOp = nullptr;
@@ -1700,7 +1706,7 @@ TEST(EulerSynthesisTest, PauliRotationsPreserveRuntimeAnglesAndFullPhase) {
         }
       });
       EXPECT_TRUE(preservesAngle);
-      /// Bound phases must remain within the gphase verifier's 1e4 limit.
+      // Bound phases must remain within the gphase verifier's 1e4 limit.
       for (const double angle : {
                0.,
                1.e-8,

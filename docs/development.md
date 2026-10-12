@@ -71,11 +71,25 @@ includes belong to the private project header group.
 
 ### C++ documentation comments
 
-Use `///` for Doxygen documentation comments. The first sentence is the summary;
-separate additional paragraphs with a blank `///` line instead of using `\brief`
-or `\details`. Document parameters and return values only when the explanation
-adds information that the name and signature do not already provide. Preserve
-existing documentation when changing comment style.
+Use `//` for ordinary code comments. Never use `///` for them.
+
+Use `///` for Doxygen documentation. Keep public API documentation at the
+declaration; do not duplicate it in the implementation.
+
+Start descriptions with a short sentence stating the entity's purpose or
+observable behavior, on one source line where practical. Separate any further
+content, including `\param` and `\returns`, with a blank `///` line. Add details
+only when they explain something the summary and signature leave unclear.
+Separate further paragraphs with blank `///` lines. Do not use `\brief` or
+`\details` outside the macro exception below.
+
+Structural commands such as `@defgroup` and `@name` remain valid; marker-only
+blocks such as `@{` and `@}` need no summary. Do not add a summary solely to
+precede an `@see` cross-reference.
+
+Preserve existing documentation when changing comment style. Inline `/* ... */`
+comments remain valid, including unused parameter names
+(`OpAdaptor /*adaptor*/`) and argument labels (`/*isSigned=*/false`).
 
 Prefer Unicode for simple mathematical notation in comments, such as `π`,
 `R(θ, φ)`, `U†`, and `|0⟩`. Put spaces around arrows in prose and rewrite
@@ -92,7 +106,8 @@ expansion.
 
 The `cpp-documentation-style` lint hook checks project-owned C++ files. It
 rejects block documentation and explicit summary or detail commands, except on
-continued macro lines.
+continued macro lines. It also rejects lint directives written as documentation
+comments.
 
 Keep top-level `@file` documentation and put its summary on the next line,
 without `@brief`:
@@ -116,14 +131,6 @@ without `@brief`:
 /// \returns The created operation.
 Operation apply(llvm::ArrayRef<Qubit> qubits);
 ```
-
-Keep public API documentation in the declaration and do not duplicate it in the
-implementation. Use ordinary implementation comments for details that do not
-belong to the API contract.
-
-Use `//` for ordinary implementation and namespace closing comments. Inline
-`/* ... */` comments remain valid, including unused parameter names such as
-`OpAdaptor /*adaptor*/` and argument labels such as `/*isSigned=*/false`.
 
 ### Reproduce C++ lint locally
 
@@ -152,6 +159,29 @@ uvx nox -s cpp-lint -- --all
 Changed-line `clang-tidy` commands remain useful for quick iteration, but they
 do not reproduce CI's whole-changed-file scope. Update this session when the
 reusable C++ lint workflow changes its action version or inputs.
+
+## Python docstrings
+
+Use [Google-style docstrings][google-python-docstrings], consistent with
+[PEP 257][pep-257], including in nanobind binding strings and generated stubs.
+Start with a short sentence on one line stating the Python API's purpose or
+observable behavior. Separate any further content, including `Args:`,
+`Returns:`, and `Raises:`, with a blank line. Add input, output, side-effect,
+and failure details only when the summary and signature leave them unclear.
+Separate further paragraphs and sections with blank lines.
+
+```python
+"""Applies an operation to the selected qubits.
+
+Qubit indices follow application order. Duplicate indices raise ValueError.
+"""
+```
+
+Change binding docstrings in the C++ source and regenerate stubs with
+`uvx nox -s stubs`; never edit generated `.pyi` files manually.
+
+[google-python-docstrings]: https://google.github.io/styleguide/pyguide.html#381-docstrings
+[pep-257]: https://peps.python.org/pep-0257/#multi-line-docstrings
 
 ## Commit messages
 
@@ -374,17 +404,21 @@ what failed and, when useful, which form is supported.
 
 Every `!qco.qubit` and one-dimensional qubit tensor or vector SSA value in valid
 QCO IR has exactly one use, including block arguments. `qco::verifyLinearity`
-owns this whole-IR check; ordinary MLIR operation verification alone does not
-establish it. Builders and transformations must preserve the invariant, and
-public QCO pipeline boundaries must validate it.
+owns this whole-IR check and positional quantum state correspondence through
+`scf.for`, both `scf.while` regions, `qco.if`, and `qco.index_switch`. Functions
+return their quantum arguments as trailing results in argument order. Classical
+state can change shape across `scf.while` regions. Ordinary MLIR operation
+verification alone does not establish these QCO invariants. Builders and
+transformations must preserve the invariant, and public QCO pipeline boundaries
+must validate it.
 
 Rewrites on valid QCO IR can use `*value.user_begin()` to obtain the sole
 consumer, or `*value.use_begin()` for its `OpOperand` and operand number. Do not
 repeat `hasOneUse()` guards in these rewrites. Keep linearity checks in the
 verifier and optional debug assertions at internal boundaries. This rule does
-not apply to QC references or classical SSA values, and does not permit assuming
-that results preserve wire order: linearity and wire correspondence are separate
-contracts.
+not apply to QC references or classical SSA values, and permits relying on the
+positional correspondence checked by `qco::verifyLinearity`. Exactly-one-use and
+wire correspondence remain separate checks.
 
 When forwarding a linear value requires deleting its producer, use a rewrite
 that removes both operations. A fold can only change its root; do not rely on
@@ -396,6 +430,23 @@ Use LLVM views and abstract range types at MLIR-facing boundaries. Prefer an
 LLVM data structure such as `SmallVector`, `DenseMap`, or `MapVector` when its
 storage, lookup, ordering, or API behavior provides a concrete benefit. Keep a
 standard-library type when it already expresses the required contract.
+
+Follow [LLVM's `SmallVector` guidance][llvm-smallvector]: use `SmallVector<T>`
+without an explicit inline capacity by default. Retain `SmallVector<T, N>` when
+a known bound or measured storage need justifies `N`, such as synthesis results
+containing one or two qubits. `N` sets inline storage, not a size limit. Keep
+explicit capacities required by LLVM for large element types. Comment only on
+reasons that are not clear from the type, contract, or nearby code. Keep the
+rationale near the owning type or declaration; do not repeat it at each use or
+restate how inline capacity works. Consider `std::array` for exactly fixed-size
+data; do not change unrelated APIs merely to use it.
+
+For parameters that borrow a sequence, use `ArrayRef<T>` or a suitable MLIR
+range when only reading elements, `MutableArrayRef<T>` when changing elements in
+place, and `SmallVectorImpl<T>&` when resizing or appending. These interfaces do
+not depend on inline capacity. A function that transfers ownership may use a
+concrete container type. Audit unexplained capacity choices individually; do not
+replace explicit capacities in bulk or claim performance gains without evidence.
 
 When code in the `mlir` namespace or one of its nested namespaces uses an LLVM
 name that `mlir/Support/LLVM.h` imports, include that header and use the
@@ -452,8 +503,8 @@ Save this reduced example as `reduced.mlir`:
 ```mlir
 module {
   func.func @f(%q: !qco.qubit) -> !qco.qubit {
-    %h0 = qco.h %q : !qco.qubit -> !qco.qubit
-    %h1 = qco.h %h0 : !qco.qubit -> !qco.qubit
+    %h0 = qco.h %q : !qco.qubit
+    %h1 = qco.h %h0 : !qco.qubit
     return %h1 : !qco.qubit
   }
 }
@@ -549,3 +600,4 @@ platform and are unsuitable regression assertions.
 [mlir-developer-guide]: https://mlir.llvm.org/getting_started/DeveloperGuide/
 [mlir-faq]: https://mlir.llvm.org/getting_started/Faq/
 [mlir-testing]: https://mlir.llvm.org/getting_started/TestingGuide/
+[llvm-smallvector]: https://llvm.org/docs/ProgrammersManual.html#llvm-adt-smallvector-h

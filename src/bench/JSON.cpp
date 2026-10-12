@@ -26,10 +26,12 @@
 #include "bench/WState.hpp"
 #include "bench/WeakMeasurementGrover.hpp"
 
-#include "SHA256.hpp"
-
 #include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
+
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/SHA256.h"
 
 #include <algorithm>
 #include <array>
@@ -45,6 +47,7 @@
 #include <string_view>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace mqt::bench {
@@ -63,20 +66,16 @@ template <class Benchmark> struct BenchmarkMetadata;
     static constexpr uint64_t definitionVersion = DEFINITION_VERSION;          \
   };                                                                           \
   [[nodiscard]] Json STEM##InstanceSpecificationSchema();                      \
-  [[nodiscard]] std::string evaluate##TYPE(std::string_view manifest,          \
-                                           std::string_view source,            \
-                                           const Counts& counts);
+  [[nodiscard]] ParsedBenchmark parse##TYPE##Instance(                         \
+      const Json& parameters, std::string_view source);
 #include "bench/BenchmarkFamilies.inc"
 
 using InstanceSpecificationSchemaFunction = Json (*)();
-using EvaluationFunction = std::string (*)(std::string_view, std::string_view,
-                                           const Counts&);
-
 struct RegistryEntry {
   std::string_view id;
   uint64_t definitionVersion;
   InstanceSpecificationSchemaFunction instanceSpecificationSchema;
-  EvaluationFunction evaluate;
+  ParsedBenchmark (*parse)(const Json&, std::string_view);
 };
 constexpr std::array REGISTRY{
 #define MQT_BENCHMARK_FAMILY(TYPE, STEM, ID, DEFINITION_VERSION)               \
@@ -84,7 +83,7 @@ constexpr std::array REGISTRY{
                 .definitionVersion = (DEFINITION_VERSION),                     \
                 .instanceSpecificationSchema =                                 \
                     STEM##InstanceSpecificationSchema,                         \
-                .evaluate = evaluate##TYPE},
+                .parse = parse##TYPE##Instance},
 #include "bench/BenchmarkFamilies.inc"
 };
 static_assert(
@@ -844,7 +843,9 @@ template <class Benchmark>
   auto input = std::string(CASE_DOMAIN);
   input.push_back('\0');
   input += semantic.dump();
-  return "sha256-" + detail::sha256Hex(input);
+  return "sha256-" +
+         llvm::toHex(llvm::SHA256::hash(llvm::arrayRefFromStringRef(input)),
+                     true);
 }
 
 template <class Benchmark>
@@ -874,6 +875,14 @@ parseInstanceSpecification(const std::string_view text,
   return parseParameters(root.at("parameters"), source);
 }
 
+void requireManifest(const Json& root, const std::string_view resolved,
+                     const std::string_view source) {
+  if (root.dump() != resolved) {
+    fail(source, "$",
+         "does not match its resolved benchmark instance and case ID");
+  }
+}
+
 template <class Benchmark, class ParseParameters>
 [[nodiscard]] Benchmark parseManifest(const std::string_view text,
                                       const std::string_view source,
@@ -881,10 +890,7 @@ template <class Benchmark, class ParseParameters>
   const auto root = manifestEnvelope(text, source);
   requireBenchmark(root, BenchmarkMetadata<Benchmark>::id, source);
   auto benchmark = parseParameters(root.at("parameters"), source);
-  if (root.dump() != manifestJSON(benchmark).dump()) {
-    fail(source, "$",
-         "does not match its resolved benchmark instance and case ID");
-  }
+  requireManifest(root, manifestJSON(benchmark).dump(), source);
   return benchmark;
 }
 
@@ -1057,7 +1063,7 @@ template <class Benchmark>
                   {
                       {"default", 1},
                       {"minimum", 1},
-                      {"maximum", 4},
+                      {"maximum", std::numeric_limits<int64_t>::max() / 5},
                       {"type", "integer"},
                   },
               },
@@ -1418,20 +1424,20 @@ template <class Benchmark>
 }
 
 template <class Benchmark>
-[[nodiscard]] std::string evaluateBenchmark(const Benchmark& benchmark,
-                                            const Counts& counts) {
-  const auto shots = std::accumulate(
-      counts.begin(), counts.end(), size_t{0},
-      [](const size_t sum, const auto& item) { return sum + item.second; });
-  return evaluationToJSON(caseId(benchmark), shots, benchmark.evaluate(counts));
+[[nodiscard]] ParsedBenchmark resolveInstance(Benchmark benchmark) {
+  const Json manifest = manifestJSON(benchmark);
+  return {
+      .instance = std::move(benchmark),
+      .benchmarkId = std::string(BenchmarkMetadata<Benchmark>::id),
+      .caseId = manifest.at("case_id").template get<std::string>(),
+      .manifestJSON = manifest.dump(),
+  };
 }
 
 #define MQT_BENCHMARK_FAMILY(TYPE, STEM, ID, DEFINITION_VERSION)               \
-  std::string evaluate##TYPE(const std::string_view manifest,                  \
-                             const std::string_view source,                    \
-                             const Counts& counts) {                           \
-    return evaluateBenchmark(STEM##FromManifestJSON(manifest, source),         \
-                             counts);                                          \
+  ParsedBenchmark parse##TYPE##Instance(const Json& parameters,                \
+                                        const std::string_view source) {       \
+    return resolveInstance(parse##TYPE##Parameters(parameters, source));       \
   }
 #include "bench/BenchmarkFamilies.inc"
 
@@ -1446,6 +1452,13 @@ template <class Benchmark>
 }
 
 } // namespace
+
+ParsedBenchmark parseInstanceSpecificationJSON(const std::string_view json,
+                                               const std::string_view source) {
+  const auto root = instanceSpecificationEnvelope(json, source);
+  const auto& id = root.at("benchmark").get_ref<const std::string&>();
+  return findBenchmark(id)->parse(root.at("parameters"), source);
+}
 
 std::string
 benchmarkIdFromInstanceSpecificationJSON(const std::string_view json,
@@ -1542,9 +1555,21 @@ std::string evaluateJSON(const std::string_view manifest,
                          const std::string_view counts,
                          const std::string_view manifestSource,
                          const std::string_view countsSource) {
-  const auto id = benchmarkIdFromManifestJSON(manifest, manifestSource);
+  const auto root = manifestEnvelope(manifest, manifestSource);
   const auto parsedCounts = countsFromJSON(counts, countsSource);
-  return findBenchmark(id)->evaluate(manifest, manifestSource, parsedCounts);
+  const auto& id = root.at("benchmark").get_ref<const std::string&>();
+  const auto parsed =
+      findBenchmark(id)->parse(root.at("parameters"), manifestSource);
+  requireManifest(root, parsed.manifestJSON, manifestSource);
+  const auto shots = std::accumulate(
+      parsedCounts.begin(), parsedCounts.end(), size_t{0},
+      [](const size_t sum, const auto& item) { return sum + item.second; });
+  return std::visit(
+      [&](const auto& benchmark) {
+        return evaluationToJSON(parsed.caseId, shots,
+                                benchmark.evaluate(parsedCounts));
+      },
+      parsed.instance);
 }
 
 std::string evaluationToJSON(const std::string_view caseIdValue,

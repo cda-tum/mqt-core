@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import math
 from collections import Counter
-from typing import TYPE_CHECKING, cast
+from typing import cast
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -36,9 +37,6 @@ from mqt.core.qdmi import Job as QDMIJobHandle
 from mqt.core.qdmi import ProgramFormat
 
 from .helpers import StubDevice, patch_open_device, rotation_results, stub_device
-
-if TYPE_CHECKING:
-    from unittest.mock import Mock
 
 
 def test_uses_already_open_qdmi_device(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,7 +82,7 @@ def test_samples_counts_probabilities_expectations_and_variances(monkeypatch: py
 
 def test_histogram_only_device_reconstructs_samples(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reconstruct raw samples when a QDMI implementation exposes only counts."""
-    qdmi = stub_device(expose_shots=False)
+    qdmi = stub_device(expose_shots=False, result_factory=lambda _program, _shots: ["10"] * 3 + ["01"] * 5)
     patch_open_device(monkeypatch, qdmi)
     device = QDMIDevice("fake.qdmi", wires=2)
 
@@ -95,7 +93,7 @@ def test_histogram_only_device_reconstructs_samples(monkeypatch: pytest.MonkeyPa
     samples = circuit()
 
     assert samples.shape == (8, 2)
-    assert Counter(map(tuple, samples.tolist())) == {(0, 0): 4, (1, 1): 4}
+    assert Counter(map(tuple, samples.tolist())) == {(0, 1): 3, (1, 0): 5}
 
 
 def test_execution_time_accumulates_batch_wall_time(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -164,7 +162,7 @@ def test_batches_execute_in_input_order(monkeypatch: pytest.MonkeyPatch) -> None
 def test_execution_failure_preserves_submitted_jobs(monkeypatch: pytest.MonkeyPatch) -> None:
     """Collect later jobs and retain successful samples without any cancellation."""
     qdmi = stub_device()
-    submit_job = qdmi.submit_job
+    submit_one = qdmi.submit_job
 
     def fail_wait() -> bool:
         msg = "wait failed"
@@ -176,7 +174,7 @@ def test_execution_failure_preserves_submitted_jobs(monkeypatch: pytest.MonkeyPa
         num_shots: int,
         **parameters: object,
     ) -> QDMIJobHandle:
-        job = submit_job(program, program_format, num_shots, **parameters)
+        job = submit_one(program, program_format, num_shots, **parameters)
         if job.id == "2":
             monkeypatch.setattr(job, "wait", fail_wait)
         return job
@@ -390,9 +388,12 @@ def test_sample_decoding_preserves_wire_order_and_dtype(monkeypatch: pytest.Monk
 
 
 @pytest.mark.parametrize("bitstrings", [["001", "0"], ["0x", "10"], ["0é", "10"], ["01"]])
-def test_sample_decoding_rejects_malformed_shots(monkeypatch: pytest.MonkeyPatch, bitstrings: list[str]) -> None:
+@pytest.mark.parametrize("expose_shots", [False, True])
+def test_sample_decoding_rejects_malformed_shots(
+    monkeypatch: pytest.MonkeyPatch, bitstrings: list[str], *, expose_shots: bool
+) -> None:
     """Validate each shot before packing; total character count is insufficient."""
-    qdmi = stub_device(result_factory=lambda _program, _shots: bitstrings)
+    qdmi = stub_device(result_factory=lambda _program, _shots: bitstrings, expose_shots=expose_shots)
     patch_open_device(monkeypatch, qdmi)
     device = QDMIDevice("fake.qdmi", wires=2)
     tape = qp.tape.QuantumScript([], [qp.sample(wires=[0, 1])], shots=2)
@@ -562,3 +563,40 @@ def test_tracking_interruption_keeps_accepted_handle(monkeypatch: pytest.MonkeyP
     batch.submit([1])
     assert [samples.shape for samples in batch.result()] == [(2, 2), (3, 2)]
     assert device.submitted_jobs == 2
+
+
+def test_native_groups_preserve_heterogeneous_shot_partitions(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Group equal shots without changing tape order, custom parameters, or tracking."""
+    qdmi = stub_device()
+    groups = []
+
+    def submit(programs: list[str], program_format: ProgramFormat, shots: int, **parameters: object):
+        handle = Mock()
+        handle.wait.return_value = True
+        handle.check.return_value = QDMIJobHandle.Status.DONE
+        handle.get_program_status.return_value = None
+        handle.get_shots.side_effect = lambda program_index: [str(program_index) * 2] * shots
+        groups.append((programs, program_format, shots, parameters, handle))
+        return handle
+
+    monkeypatch.setattr(qdmi, "try_submit_job", submit)
+    device = QDMIDevice(device=cast("QDMIDeviceHandle", qdmi), wires=2, job_parameters={"custom1": 42})
+    tapes = (
+        qp.tape.QuantumScript([], [qp.sample(wires=[0, 1])], shots=[2, 3, 2]),
+        qp.tape.QuantumScript([], [qp.sample(wires=[0, 1])], shots=3),
+    )
+    with qp.Tracker(device) as tracker:
+        results = qp.execute(tapes, device, diff_method=None)
+    assert [group[2] for group in groups] == [2, 3]
+    assert all(len(group[0]) == 2 and group[3] == {"custom1": 42} for group in groups)
+    assert not qdmi.submissions
+    assert device.submitted_jobs == 2
+    assert tracker.totals["executions"] == 4
+    assert tracker.totals["shots"] == 10
+    for result, expected in zip(
+        (*results[0], results[1]), (np.zeros((2, 2)), np.zeros((3, 2)), np.ones((2, 2)), np.ones((3, 2))), strict=True
+    ):
+        np.testing.assert_array_equal(result, expected)
+    for *_, handle in groups:
+        handle.check.assert_called_once()
+        handle.wait.assert_called_once()

@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -236,14 +237,14 @@ TwoQubitBasisDecomposer::twoQubitDecompose(
   };
 }
 
-void TwoQubitBasisDecomposer::decomp0(SmallVector<Matrix2x2>& out,
+void TwoQubitBasisDecomposer::decomp0(SmallVectorImpl<Matrix2x2>& out,
                                       const TwoQubitWeylDecomposition& target) {
   out.emplace_back(target.k1r() * target.k2r());
   out.emplace_back(target.k1l() * target.k2l());
 }
 
 void TwoQubitBasisDecomposer::decomp1(
-    SmallVector<Matrix2x2>& out,
+    SmallVectorImpl<Matrix2x2>& out,
     const TwoQubitWeylDecomposition& target) const {
   out.emplace_back(basisWeyl.k2r().adjoint() * target.k2r());
   out.emplace_back(basisWeyl.k2l().adjoint() * target.k2l());
@@ -252,7 +253,7 @@ void TwoQubitBasisDecomposer::decomp1(
 }
 
 void TwoQubitBasisDecomposer::decomp2Supercontrolled(
-    SmallVector<Matrix2x2>& out,
+    SmallVectorImpl<Matrix2x2>& out,
     const TwoQubitWeylDecomposition& target) const {
   out.emplace_back(smb.u3r * target.k2r());
   out.emplace_back(smb.u3l * target.k2l());
@@ -263,7 +264,7 @@ void TwoQubitBasisDecomposer::decomp2Supercontrolled(
 }
 
 void TwoQubitBasisDecomposer::decomp3Supercontrolled(
-    SmallVector<Matrix2x2>& out,
+    SmallVectorImpl<Matrix2x2>& out,
     const TwoQubitWeylDecomposition& target) const {
   out.emplace_back(smb.u3r * target.k2r());
   out.emplace_back(smb.u3l * target.k2l());
@@ -279,7 +280,7 @@ SmallVector<Value, 2> TwoQubitBasisDecomposer::emitCartan(
     RewriterBase& rewriter, Location loc, Value qubit0, Value qubit1,
     std::array<Value, 3> angles, const std::array<Matrix2x2, 2>& frames,
     const CompilerTarget::SynthesisBasis& basis) const {
-  /// Split the same three-gate template at its parameterized RZ factors.
+  // Split the same three-gate template at its parameterized RZ factors.
   const std::array<TwoQubitNativeDecomposition, 3> stages{
       {
           {

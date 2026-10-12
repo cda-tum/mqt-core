@@ -20,6 +20,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -29,9 +30,11 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <bit>
 #include <cstdint>
+#include <string>
 
 using namespace mlir;
 
@@ -46,8 +49,12 @@ runWithPassManager(ModuleOp mod,
                    const StringRef errorMessage,
                    const CompilationOptions& options, bool preservesLayout) {
   PassManager pm(mod.getContext());
+#ifdef NDEBUG
+  pm.enableVerifier(false);
+#endif
   populatePasses(pm);
-  if (failed(runWithCompilationOptions(pm, mod, options, preservesLayout))) {
+  if (failed(runWithCompilationOptions(pm, mod, options, preservesLayout)) ||
+      failed(verify(mod))) {
     return mod.emitError(errorMessage);
   }
   return success();
@@ -57,6 +64,7 @@ void registerMQTCompilerPasses() {
   static const auto REGISTERED = [] {
     registerTransformsPasses();
     registerConvertCBitToMemRef();
+    qco::registerCombineControlledGates();
     qco::registerDecomposeMultiControlled();
     qco::registerFuseSingleQubitUnitaryRuns();
     qco::registerHadamardLifting();
@@ -92,6 +100,8 @@ void registerMQTCompilerPasses() {
 
 void populateDefaultQCOOptimizationPipeline(OpPassManager& pm) {
   pm.addPass(qco::createMergeSingleQubitRotationGates());
+  pm.addPass(qco::createCombineControlledGates());
+  pm.addPass(createCanonicalizerPass());
 }
 
 void populateQIRPreparationPipeline(OpPassManager& pm) {
@@ -123,9 +133,11 @@ LogicalResult runPassPipeline(ModuleOp mod, const StringRef pipeline,
                               const CompilationOptions& options) {
   registerMQTCompilerPasses();
   PassManager pm(mod.getContext());
-  if (failed(parsePassPipeline(pipeline, pm))) {
+  std::string diagnostics;
+  llvm::raw_string_ostream errorStream(diagnostics);
+  if (failed(parsePassPipeline(pipeline, pm, errorStream))) {
     return mod.emitError() << "failed to parse pass pipeline '" << pipeline
-                           << "'";
+                           << "': " << diagnostics;
   }
   return runWithCompilationOptions(pm, mod, options);
 }
@@ -143,7 +155,7 @@ LogicalResult runWithCompilationOptions(PassManager& pm, ModuleOp moduleOp,
     pm.enableStatistics();
   }
   auto previous = moduleOp->getAttr(COMPILATION_SEED_ATTR);
-  const auto restoreSeed = llvm::make_scope_exit([&] {
+  const auto restoreSeed = llvm::scope_exit([&] {
     if (previous) {
       moduleOp->setAttr(COMPILATION_SEED_ATTR, previous);
     } else {
@@ -190,6 +202,7 @@ void populateQCOCleanupPipeline(OpPassManager& pm, bool removeDeadValues) {
 
 void populateQIRCleanupPipeline(OpPassManager& pm, bool useAdaptive) {
   addSimplificationPasses(pm);
+  pm.addPass(createMem2Reg());
   pm.addPass(qir::createQIRCleanupPass());
   pm.addPass(createRemoveDeadValuesPass());
   pm.addPass(qir::createQIRSetAttributesAndMetadata({useAdaptive}));

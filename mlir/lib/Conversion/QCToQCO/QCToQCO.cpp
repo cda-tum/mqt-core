@@ -105,11 +105,13 @@ struct LoweringState {
   };
 
   /// Per-region map from original QC qubit reference to its latest QCO SSA
-  /// value. Consumed qubits retain a null entry to avoid linear-time erasure
-  /// from the ordered map; the entries are discarded with the region.
+  /// value.
   ///
-  /// Keys are `Operation::getParentRegion()` for ops being converted
-  /// (typically a `func.func` body or a modifier region).
+  /// Consumed qubits retain a null entry to avoid linear-time erasure from the
+  /// ordered map; the entries are discarded with the region.
+  ///
+  /// Keys are `Operation::getParentRegion()` for ops being converted (typically
+  /// a `func.func` body or a modifier region).
   DenseMap<Region*, llvm::MapVector<Value, Value>> qubitMap;
 
   /// Per-region map from stable register identifiers to their latest QTensor
@@ -138,6 +140,7 @@ struct LoweringState {
   DenseMap<Operation*, SetVector<RegisterId>> regionRegisterMap;
 
   /// Original QC value order for already-converted structured operations.
+  ///
   /// Kept separate from the legality maps above so converted SCF operations
   /// remain legal.
   DenseMap<Operation*, StructuredValues> structuredValues;
@@ -181,6 +184,7 @@ public:
 private:
   LoweringState* state_;
   /// Quantum operands use region-local state, not automatic materializations.
+  ///
   /// The converter is needed only for signatures and explicit result types.
   TypeConverter* typeConverter_;
 };
@@ -619,10 +623,8 @@ collectRegisterAccesses(Operation* root, LoweringState& state) {
     const auto reg = state.registerIds.size();
     state.registerIds.try_emplace(allocation, reg);
     Operation* finalInitialization = nullptr;
-    /// Find initializers in block order; later identity stores share the
-    /// register-slot validation below.
-    /// ponytail: scan once per buffer; sort store users if many buffers make
-    /// this costly.
+    // Find initializers in block order with one scan per buffer; later identity
+    // stores share the register-slot validation below.
     for (auto store : allocation->getBlock()->getOps<memref::StoreOp>()) {
       if (store.getMemref() != allocation) {
         continue;
@@ -1327,7 +1329,7 @@ struct ConvertQCDeallocOp final : StatefulOpConversionPattern<DeallocOp> {
 
     rewriter.replaceOpWithNewOp<SinkOp>(op, qcoQubit);
 
-    /// Retain the slot so deallocation does not shift the ordered map.
+    // Retain the slot so deallocation does not shift the ordered map.
     qubitMap[qcQubit] = nullptr;
 
     return success();
@@ -1511,9 +1513,9 @@ struct ConvertQCBarrierOp final : StatefulOpConversionPattern<qc::BarrierOp> {
 /// is converted to
 /// ```mlir
 /// %controls_out, %targets_out = qco.ctrl(%q0_in) targets(%a_in = %q1_in) {
-///   %a_res = qco.x %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.x %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
-/// } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+/// } : ({!qco.qubit}, {!qco.qubit})
 /// ```
 struct ConvertQCCtrlOp final : StatefulOpConversionPattern<qc::CtrlOp> {
   using StatefulOpConversionPattern::StatefulOpConversionPattern;
@@ -1566,7 +1568,7 @@ struct ConvertQCCtrlOp final : StatefulOpConversionPattern<qc::CtrlOp> {
 /// is converted to
 /// ```mlir
 /// %q0_out = qco.inv (%a0_in = %q0_in) {
-///   %a0_res = qco.s %a0_in : !qco.qubit -> !qco.qubit
+///   %a0_res = qco.s %a0_in : !qco.qubit
 ///   qco.yield %a0_res : !qco.qubit
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1614,7 +1616,7 @@ struct ConvertQCInvOp final : StatefulOpConversionPattern<qc::InvOp> {
 /// is converted to
 /// ```mlir
 /// %q0_out = qco.pow(%exponent) (%a0_in = %q0_in) {
-///   %a0_res = qco.s %a0_in : !qco.qubit -> !qco.qubit
+///   %a0_res = qco.s %a0_in : !qco.qubit
 ///   qco.yield %a0_res
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1699,7 +1701,7 @@ struct ConvertQCYieldOp final : StatefulOpConversionPattern<qc::YieldOp> {
 /// %targets_out = scf.for %iv = %lb to %ub step %step iter_args(%arg0 =
 /// %qtensor) -> (tensor<3x!qco.qubit) {
 ///   %t0, %q0 = qtensor.extract %arg0[%iv] : tensor<3x!qco.qubit>
-///   %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %q0 : !qco.qubit
 ///   %t1 = qtensor.insert %q1 into %t0[%iv] : tensor<3x!qco.qubit>
 ///   scf.yield %t1 : tensor<3x!qco.qubit>
 /// }
@@ -1783,7 +1785,7 @@ struct ConvertSCFForOp final : StatefulOpConversionPattern<scf::ForOp> {
 ///   scf.condition(%cond) %q1 : !qco.qubit
 /// } do {
 /// ^bb0(%arg0: !qco.qubit):
-///   %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.h %arg0 : !qco.qubit
 ///   scf.yield %q2 : !qco.qubit
 /// }
 /// ```
@@ -1885,7 +1887,7 @@ struct ConvertSCFWhileOp final : StatefulOpConversionPattern<scf::WhileOp> {
 /// is converted to
 /// ```mlir
 /// %targets_out = qco.if %cond args(%arg0 = %q0) -> (!qco.qubit) {
-///   %q1 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %arg0 : !qco.qubit
 ///   qco.yield %q1 : !qco.qubit
 /// } else args(%arg0 = %q0) {
 ///   qco.yield %arg0 : !qco.qubit
@@ -1975,11 +1977,11 @@ struct ConvertSCFIfOp final : StatefulOpConversionPattern<scf::IfOp> {
 /// ```mlir
 /// %result = qco.index_switch %condition -> !qco.qubit
 /// case 0 args(%arg0 = %q0) {
-///   %q1 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.x %arg0 : !qco.qubit
 ///   qco.yield %q1 : !qco.qubit
 /// }
 /// default args(%arg0 = %q0) {
-///   %q2 = qco.z %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.z %arg0 : !qco.qubit
 ///   qco.yield %q2 : !qco.qubit
 /// }
 /// ```
@@ -2104,8 +2106,10 @@ struct ConvertSCFConditionOp final
 };
 
 /// Convert QC references to QCO values, threading quantum state through
-/// functions and structured control flow. Lower terminators after their regions
-/// so they yield the final mapped values independently of rewrite order.
+/// functions and structured control flow.
+///
+/// Lower terminators after their regions so they yield the final mapped values
+/// independently of rewrite order.
 struct QCToQCO final : impl::QCToQCOBase<QCToQCO> {
   using QCToQCOBase::QCToQCOBase;
 
@@ -2121,7 +2125,7 @@ protected:
       return;
     }
 
-    /// Register indices still need normalization for alias validation.
+    // Register indices still need normalization for alias validation.
     if ((!preflightState.registerIds.empty() ||
          !staticsAlreadyNormalized(moduleOp)) &&
         failed(normalizeStaticQubits(moduleOp))) {
@@ -2147,7 +2151,7 @@ protected:
         function->removeAttr(mqt::MQTDialect::UnitaryAttrHelper::getNameStr());
       }
     }
-    auto unitaryGuard = llvm::make_scope_exit([&] {
+    auto unitaryGuard = llvm::scope_exit([&] {
       for (auto function : unitaryFunctions) {
         mqt::setUnitaryFunction(function);
       }
@@ -2209,8 +2213,8 @@ protected:
              typeConverter.isLegal(&op.getBody());
     });
 
-    /// Convert returns until borrowed results and local resource releases
-    /// have been emitted, even if the original result types are already legal.
+    // Convert returns until borrowed results and local resource releases
+    // have been emitted, even if the original result types are already legal.
     patterns.add<ConvertFuncReturnOp>(typeConverter, context, &state);
     target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
       if (!typeConverter.isLegal(op)) {

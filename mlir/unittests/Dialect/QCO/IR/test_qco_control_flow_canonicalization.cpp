@@ -54,7 +54,7 @@ TEST(QCOControlFlowCanonicalization, RemovesForwardedIdleLoopQubit) {
         %out:2 = scf.for %i = %zero to %count step %one
             iter_args(%a = %active, %b = %idle)
             -> (!qco.qubit, !qco.qubit) {
-          %next = qco.x %a : !qco.qubit -> !qco.qubit
+          %next = qco.x %a : !qco.qubit
           scf.yield %next, %b : !qco.qubit, !qco.qubit
         }
         qco.sink %out#1 : !qco.qubit
@@ -72,8 +72,8 @@ TEST(QCOControlFlowCanonicalization, RemovesForwardedIdleLoopQubit) {
   auto originalLoop = *function.getOps<scf::ForOp>().begin();
   auto idleResult = originalLoop.getResult(1);
   Operation* sink = *idleResult.getUsers().begin();
-  /// Exercise the transient state after SCF forwards an invariant result,
-  /// before it removes the corresponding loop argument.
+  // Exercise the transient state after SCF forwards an invariant result,
+  // before it removes the corresponding loop argument.
   idleResult.replaceAllUsesWith(originalLoop.getInitArgs()[1]);
   RewritePatternSet patterns(&context);
   qco::SinkOp::getCanonicalizationPatterns(patterns, &context);

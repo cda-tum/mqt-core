@@ -128,6 +128,16 @@ Generation returns a {py:class}`~mqt.core.mlir.QCProgram`, the program type used
 by the [MQT Compiler Collection](mlir/mqt_compiler_collection.md). The program
 can enter the normal compiler pipeline.
 
+QPE keeps phase residues as exact unsigned integers and converts them to `f64`
+angles after modular reduction. Constant QFT addition and modular multiplication
+consume bits from least to most significant using
+$\theta \gets \theta/2 \pm \pi b$, with angles in $[-2\pi, 2\pi]$. Constant
+addition stores the input bits; Shor stores modular powers and their inverses.
+Iterative QPE, semiclassical QFT, and Shor carry one measurement correction:
+$c \gets c/2 \pm \pi b/2$. The correction stays in $[-\pi, \pi]$ and needs
+constant work per measurement. This scalar arithmetic executes with the quantum
+operations, so measure compilation and sampling costs separately.
+
 ```{code-cell} ipython3
 program = benchmark.generate()
 assert program.is_valid
@@ -205,8 +215,9 @@ The output format changes the file name, but not the semantic case ID.
 
 ## C++ API
 
-The installed `MQT::CoreBench` target provides typed parameters, references,
-evaluation, instances, instance specifications, and manifests.
+A source installation provides the `MQT::CoreBench` target with typed
+parameters, references, evaluation, instances, instance specifications, and
+manifests.
 
 ```cpp
 #include "bench/Grover.hpp"
@@ -221,14 +232,14 @@ int main() {
 ```
 
 ```cmake
-find_package(mqt-core CONFIG REQUIRED)
+find_package(mqt-core CONFIG REQUIRED COMPONENTS Development)
 target_link_libraries(my-benchmark PRIVATE MQT::CoreBench)
 ```
 
 The source build also provides `MQT::CoreBenchGenerate`. It exposes typed
 `mqt::bench::generate(...)` overloads from `mqt/bench/Generate.h` and returns a
-`mlir::QCProgram`. This target is not installed until MQT Core installs the
-wider MLIR compiler API.
+`llvm::FailureOr<mlir::QCProgram>`. This target is only available in source
+builds.
 
 ## Add a benchmark
 
@@ -303,28 +314,30 @@ assert mlir.sample(benchmark.generate(), shots=128, seed=17) == {"101": 128}
 ### Magic-state distillation
 
 The `magic-state-distillation` family implements concatenated 15-to-1
-Reed–Muller distillation of $|T\rangle = T|+\rangle$ states. It follows the
-direct input-state protocol in
-[Bravyi and Haah, Appendix A](https://arxiv.org/pdf/1209.2426), using the
-15-qubit code of [Bravyi and Kitaev](https://arxiv.org/abs/quant-ph/0403025).
-Each block measures Z checks, applies conditional Clifford corrections, measures
-X checks, and decodes one retained state.
+distillation with the five-qubit circuit in
+[Litinski, Figure 3](https://arxiv.org/html/1905.06903v3#S0.F3).
+Each block starts in $|+\rangle^{\otimes 5}$ and applies the figure's 15 Pauli
+rotations $P_{\pi/8}=e^{-i\pi P/8}$ in order. It measures the last four qubits
+in the X basis and accepts only when all four outcomes are $+1$. The first qubit
+retains $T^\dagger|+\rangle$ in the ideal case.
 
-Set `levels` to 1–4 (default 1). A level consumes the actual retained quantum
-outputs of the preceding level. The circuit allocates exactly
-$15^{\mathrm{levels}}$ qubits: 15, 225, 3,375, or 50,625.
+Set `levels` to a positive integer (default 1). The first level uses ideal
+rotations; higher levels consume lower-level output states through Clifford
+gates and measurement feedback. Resetting and reusing workspace requires
+`5 * levels` qubits, while each shot executes `15**levels` leaf rotations. The
+qubit count must fit signed 64-bit circuit dimensions. Generation, compilation,
+and execution remain subject to available resources and backend limits; backends
+that inline function calls can expand the circuit exponentially.
 
-The two-bit `result` combines a sticky rejection flag in bit 1 with a root-state
-check in bit 0. Ideal input states give `00` with probability one. Every block
-runs once, including blocks whose inputs come from a rejected subtree. The
-benchmark does not model input noise, physical error correction, or retries, so
-this example does not measure fidelity improvement from noisy inputs.
+The two-bit `result` reports any rejected block in bit 1 and a failed root-state
+check in bit 0. The root check applies $T$ then $H$ before measurement. Ideal
+execution returns `00`. All blocks execute once, regardless of rejection. The
+benchmark models ideal logical circuits without input noise, physical error
+correction, or retries.
 
-#### Sample the 15-qubit circuit directly
+#### Sample the five-qubit circuit directly
 
-This example uses 16 shots to keep execution short. The circuit runs once per
-shot because later gates depend on intermediate measurements. Increase the shot
-count when collecting statistics; the ideal output here is deterministic.
+This example samples the deterministic ideal output with 16 shots.
 
 ```{code-cell} ipython3
 from mqt.core.bench import magic_state_distillation
@@ -336,10 +349,7 @@ assert direct_counts == {"00": 16}
 print(direct_counts)
 ```
 
-Higher levels provide larger structured programs; support for their generation
-does not guarantee a given device's capacity. For device execution, see
-{doc}`qdmi/ddsim_device`; adaptive jobs expose counts, not an uncollapsed
-statevector.
+For device execution, see {doc}`qdmi/ddsim_device`.
 
 ### Modular multiplier
 
@@ -432,7 +442,7 @@ from fractions import Fraction
 
 from mqt.core.bench import qpe
 from mqt.core.mlir import compile_program, submit_program
-from mqt.core.qdmi.driver import open_device
+from mqt.core.qdmi import open_device
 
 device = open_device("mqt.ddsim.default")
 for method in (qpe.Method.STANDARD, qpe.Method.ITERATIVE):
@@ -495,7 +505,7 @@ for the basic compile-and-submit workflow and {doc}`installation` for setup.
 ```{code-cell} ipython3
 from mqt.core.bench import repeat_until_success
 from mqt.core.mlir import compile_program, submit_program
-from mqt.core.qdmi.driver import open_device
+from mqt.core.qdmi import open_device
 
 rus = repeat_until_success.RepeatUntilSuccess(
     repeat_until_success.Options(data_qubits=4)

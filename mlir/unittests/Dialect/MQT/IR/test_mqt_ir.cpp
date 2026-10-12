@@ -17,6 +17,7 @@
 #include "mqt/Dialect/MQT/IR/QubitLayout.h"
 #include "mqt/Dialect/QC/IR/QCDialect.h"
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
+#include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QTensor/IR/QTensorDialect.h"
 
 #include "gtest/gtest.h"
@@ -658,13 +659,105 @@ TEST_F(MQTIRTest, UnitaryFunctionsAllowNonSpeculatableParameterComputation) {
                %one = arith.constant 1 : i64
                %d = arith.divsi %one, %n : i64
                %angle = arith.sitofp %d : i64 to f64
-               %out = qco.rx(%angle) %q : !qco.qubit -> !qco.qubit
+               %out = qco.rx(%angle) %q : !qco.qubit
                return %out : !qco.qubit
              }
            )mlir",
        }) {
     SCOPED_TRACE(source.str());
     EXPECT_TRUE(parse(source));
+  }
+}
+
+TEST_F(MQTIRTest, UnitaryLoopsAllowScalarStateAndSwapGates) {
+  constexpr StringRef source = R"mlir(
+    func.func private @looped(%theta: f64, %q: !qco.qubit, %r: !qco.qubit)
+        -> (!qco.qubit, !qco.qubit) attributes {mqt.unitary} {
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      %c2 = arith.constant 2 : index
+      %out:3 = scf.for %i = %c0 to %c2 step %c1
+          iter_args(%a = %q, %angle = %theta, %b = %r)
+          -> (!qco.qubit, f64, !qco.qubit) {
+        %next = arith.addf %angle, %theta : f64
+        %rotated = qco.rx(%angle) %a : !qco.qubit
+        %x, %y = qco.swap %rotated, %b
+            : !qco.qubit, !qco.qubit
+        scf.yield %x, %next, %y : !qco.qubit, f64, !qco.qubit
+      }
+      return %out#0, %out#2 : !qco.qubit, !qco.qubit
+    }
+  )mlir";
+  auto moduleOp = parse(source);
+  ASSERT_TRUE(moduleOp);
+  EXPECT_TRUE(succeeded(qco::verifyLinearity(*moduleOp)));
+}
+
+TEST_F(MQTIRTest, RejectsNonUnitaryLoopBodiesAndQubitPermutations) {
+  for (StringRef source : {
+           R"mlir(module {
+             func.func private @reset(%q: !qc.qubit) attributes {mqt.unitary} {
+               %c0 = arith.constant 0 : index
+               %c1 = arith.constant 1 : index
+               scf.for %i = %c0 to %c1 step %c1 {
+                 qc.reset %q : !qc.qubit
+               }
+               return
+             }
+           })mlir",
+           R"mlir(module {
+             func.func private @dynamic(%n: f64, %q: !qc.qubit)
+                 attributes {mqt.unitary} {
+               %c0 = arith.constant 0 : i64
+               %c1 = arith.constant 1 : i64
+               %end = arith.fptosi %n : f64 to i64
+               scf.for %i = %c0 to %end step %c1 : i64 {
+                 qc.x %q : !qc.qubit
+               }
+               return
+             }
+           })mlir",
+           R"mlir(module {
+             func.func private @permuted(%q: !qco.qubit, %r: !qco.qubit)
+                 -> (!qco.qubit, !qco.qubit) attributes {mqt.unitary} {
+               %c0 = arith.constant 0 : index
+               %c1 = arith.constant 1 : index
+               %out:2 = scf.for %i = %c0 to %c1 step %c1
+                   iter_args(%a = %q, %b = %r)
+                   -> (!qco.qubit, !qco.qubit) {
+                 scf.yield %b, %a : !qco.qubit, !qco.qubit
+               }
+               return %out#0, %out#1 : !qco.qubit, !qco.qubit
+             }
+           })mlir",
+           R"mlir(module {
+             func.func private @dynamic(%n: f64, %q: !qco.qubit)
+                 -> !qco.qubit attributes {mqt.unitary} {
+               %c0 = arith.constant 0 : index
+               %c1 = arith.constant 1 : index
+               %integer = arith.fptosi %n : f64 to i64
+               %end = arith.index_cast %integer : i64 to index
+               %out = scf.for %i = %c0 to %end step %c1
+                   iter_args(%a = %q) -> (!qco.qubit) {
+                 %b = qco.x %a : !qco.qubit
+                 scf.yield %b : !qco.qubit
+               }
+               return %out : !qco.qubit
+             }
+           })mlir",
+       }) {
+    SCOPED_TRACE(source.str());
+    bool rejectedBody = false;
+    std::string diagnostics;
+    ScopedDiagnosticHandler handler(context.get(), [&](Diagnostic& diagnostic) {
+      diagnostics += diagnostic.str();
+      rejectedBody |= StringRef(diagnostic.str()).contains("unitary QC") ||
+                      StringRef(diagnostic.str())
+                          .contains("positional quantum state correspondence");
+      return success();
+    });
+    EXPECT_FALSE(parse(source));
+    EXPECT_TRUE(rejectedBody) << diagnostics;
   }
 }
 
@@ -695,21 +788,22 @@ TEST_F(MQTIRTest, RejectsEmptyUnitaryBodies) {
 }
 
 TEST_F(MQTIRTest, RejectsCyclicUnitaryQubitFlow) {
-  bool sawCycle = false;
+  bool sawInvalidFlow = false;
   ScopedDiagnosticHandler handler(context.get(), [&](Diagnostic& diagnostic) {
-    sawCycle |= StringRef(diagnostic.str())
-                    .contains("unitary QCO result has cyclic qubit flow");
+    sawInvalidFlow |=
+        StringRef(diagnostic.str())
+            .contains("must return its quantum arguments positionally");
     return success();
   });
   EXPECT_FALSE(parse(R"mlir(
     func.func private @cyclic(%q: !qco.qubit) -> !qco.qubit
         attributes {mqt.unitary} {
-      %a = qco.h %b : !qco.qubit -> !qco.qubit
-      %b = qco.h %a : !qco.qubit -> !qco.qubit
+      %a = qco.h %b : !qco.qubit
+      %b = qco.h %a : !qco.qubit
       return %b : !qco.qubit
     }
   )mlir"));
-  EXPECT_TRUE(sawCycle);
+  EXPECT_TRUE(sawInvalidFlow);
 }
 
 TEST_F(MQTIRTest, RejectsMalformedUnitaryBodyOperations) {

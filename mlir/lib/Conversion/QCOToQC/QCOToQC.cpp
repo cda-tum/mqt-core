@@ -23,7 +23,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -35,6 +34,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -61,9 +61,10 @@ enum class AllocationMode : std::uint8_t {
   Dynamic, //!< The module uses dynamic qubit allocation.
 };
 
-/// Track function argument positions and
-/// the module's allocation mode. Dynamic qubits require deallocation at sinks;
-/// static qubits do not. Mixed allocation modes are rejected before conversion.
+/// Track function argument positions and the module's allocation mode.
+///
+/// Dynamic qubits require deallocation at sinks; static qubits do not. Mixed
+/// allocation modes are rejected before conversion.
 struct LoweringState {
   /// Function symbols remain in place while their signatures are converted.
   SymbolTableCollection symbolTables;
@@ -248,139 +249,42 @@ public:
 
 } // namespace
 
-/// Proves the positional wire correspondence required by reference semantics.
-/// Region arguments are local roots; a region result is tied to its input only
-/// after both the region body and its terminator have been checked.
+/// Check statically known slot identity before lowering tensors to references.
 [[nodiscard]] static LogicalResult
-collectWireOrigins(ModuleOp moduleOp, DenseMap<Value, Value>& origins) {
+verifyTensorSlots(ModuleOp moduleOp, const DenseMap<Value, Value>& origins) {
   const auto origin = [&](Value value) {
     auto known = origins.lookup(value);
     return known ? known : value;
   };
-  const auto quantum = [](ValueRange values) {
-    SmallVector<Value> result;
-    llvm::copy_if(values, std::back_inserter(result), [](Value value) {
-      return isQuantumStateType(value.getType());
-    });
-    return result;
-  };
-  const auto corresponds = [&](ValueRange inputs, ValueRange outputs) {
-    auto quantumInputs = quantum(inputs);
-    auto quantumOutputs = quantum(outputs);
-    if (quantumInputs.size() != quantumOutputs.size()) {
-      return false;
-    }
-    return llvm::all_of(llvm::zip_equal(quantumInputs, quantumOutputs),
-                        [&](auto pair) {
-                          auto [input, output] = pair;
-                          return input.getType() == output.getType() &&
-                                 origin(input) == origin(output);
-                        });
-  };
-  const auto tie = [&](ValueRange inputs, ValueRange outputs) {
-    auto quantumInputs = quantum(inputs);
-    auto quantumOutputs = quantum(outputs);
-    if (quantumInputs.size() != quantumOutputs.size()) {
-      return;
-    }
-    for (auto [input, output] :
-         llvm::zip_equal(quantumInputs, quantumOutputs)) {
-      origins[output] = origin(input);
-    }
-  };
-  auto result = moduleOp.walk([&](Operation* op, const WalkStage& stage) {
-    if (auto unitary = dyn_cast<qco::UnitaryOpInterface>(op)) {
-      tie(unitary.getInputQubits(), unitary.getOutputQubits());
-      return WalkResult::skip();
-    }
-    if (!stage.isAfterAllRegions()) {
-      return WalkResult::advance();
-    }
-    bool positional = true;
-    if (auto loop = dyn_cast<scf::ForOp>(op)) {
-      positional = corresponds(loop.getRegionIterArgs(),
-                               loop.getBody()->getTerminator()->getOperands());
-      tie(loop.getInitArgs(), loop.getResults());
-    } else if (auto loop = dyn_cast<scf::WhileOp>(op)) {
-      auto before = quantum(loop.getBeforeArguments());
-      auto after = quantum(loop.getAfterArguments());
-      positional =
-          before.size() == after.size() &&
-          llvm::equal(ValueRange(before).getTypes(),
-                      ValueRange(after).getTypes()) &&
-          corresponds(loop.getBeforeArguments(),
-                      loop.getConditionOp().getArgs()) &&
-          corresponds(loop.getAfterArguments(), loop.getYieldOp().getResults());
-      tie(loop.getInits(), loop.getResults());
-    } else if (isa<qco::IfOp, qco::IndexSwitchOp>(op)) {
-      for (auto& region : op->getRegions()) {
-        positional &=
-            region.hasOneBlock() &&
-            corresponds(region.front().getArguments(),
-                        region.front().getTerminator()->getOperands());
-      }
-      tie(op->getOperands(), op->getResults());
-    } else if (auto measure = dyn_cast<qco::MeasureOp>(op)) {
-      tie(ValueRange{measure.getQubitIn()}, ValueRange{measure.getQubitOut()});
-    } else if (auto reset = dyn_cast<qco::ResetOp>(op)) {
-      tie(ValueRange{reset.getQubitIn()}, ValueRange{reset.getQubitOut()});
-    } else if (auto extract = dyn_cast<qtensor::ExtractOp>(op)) {
-      origins[extract->getResult(0)] = origin(extract.getTensor());
-    } else if (auto insert = dyn_cast<qtensor::InsertOp>(op)) {
-      auto extract =
-          origin(insert.getScalar()).getDefiningOp<qtensor::ExtractOp>();
-      if (!extract || origin(extract.getTensor()) != origin(insert.getDest())) {
-        insert.emitOpError(
-            "must restore the extracted qubit to its original register slot");
-        return WalkResult::interrupt();
-      }
-      const auto source = getConstantIntValue(extract.getIndex());
-      const auto dest = getConstantIntValue(insert.getIndex());
-      if (source && dest && *source != *dest) {
-        insert.emitOpError(
-            "must restore the extracted qubit to its original register slot");
-        return WalkResult::interrupt();
-      }
-      /// Equality of dynamic slot indices is a program precondition.
-      origins[insert.getResult()] = origin(insert.getDest());
-    } else if (auto call = dyn_cast<func::CallOp>(op)) {
-      for (auto [index, result] : llvm::enumerate(call.getResults())) {
-        if (auto argument = qco::getCallArgumentForResult(call, index);
-            succeeded(argument)) {
-          origins[result] = origin(call.getOperand(*argument));
-        }
-      }
-    }
-    if (!positional) {
-      op->emitOpError("QCO-to-QC requires positional quantum state "
-                      "correspondence through region terminators");
+  auto result = moduleOp.walk([&](qtensor::InsertOp insert) {
+    auto extract =
+        origin(insert.getScalar()).getDefiningOp<qtensor::ExtractOp>();
+    if (!extract || origin(extract.getTensor()) != origin(insert.getDest())) {
+      insert.emitOpError(
+          "must restore the extracted qubit to its original register slot");
       return WalkResult::interrupt();
     }
+    const auto source = getConstantIntValue(extract.getIndex());
+    const auto dest = getConstantIntValue(insert.getIndex());
+    if (source && dest && *source != *dest) {
+      insert.emitOpError(
+          "must restore the extracted qubit to its original register slot");
+      return WalkResult::interrupt();
+    }
+    // Equality of dynamic slot indices is a program precondition.
     return WalkResult::advance();
   });
   return success(!result.wasInterrupted());
 }
 
 [[nodiscard]] static LogicalResult
-collectFunctionQubitArguments(ModuleOp moduleOp, LoweringState& state,
-                              const DenseMap<Value, Value>& origins) {
+collectFunctionQubitArguments(ModuleOp moduleOp, LoweringState& state) {
   for (auto function : moduleOp.getOps<func::FuncOp>()) {
     auto& qubitArguments = state.qubitArguments[function];
     qubitArguments =
         qco::getQuantumArgumentIndices(function.getArgumentTypes());
-    if (function.getNumResults() < qubitArguments.size()) {
-      return function.emitOpError(
-          "must return one trailing quantum value for each quantum argument");
-    }
-    auto returnedTypes =
-        function.getResultTypes().take_back(qubitArguments.size());
-    for (auto [argument, result] :
-         llvm::zip_equal(qubitArguments, returnedTypes)) {
+    for (auto argument : qubitArguments) {
       const auto type = function.getArgumentTypes()[argument];
-      if (type != result) {
-        return function.emitOpError(
-            "must return one trailing quantum value for each quantum argument");
-      }
       if (auto tensor = dyn_cast<RankedTensorType>(type)) {
         if (!function.isPrivate() || tensor.getRank() != 1 ||
             !tensor.hasStaticShape() || tensor.getEncoding()) {
@@ -414,27 +318,6 @@ collectFunctionQubitArguments(ModuleOp moduleOp, LoweringState& state,
           attrs && !attrs.empty()) {
         return function.emitOpError(
             "cannot preserve attributes on pass-through qubit results in QC");
-      }
-    }
-    if (function.isDeclaration()) {
-      continue;
-    }
-    if (!function.getBody().hasOneBlock()) {
-      return function.emitOpError()
-             << "with qubit arguments must have one outer block";
-    }
-    auto returnOp = dyn_cast<func::ReturnOp>(function.getBody().front().back());
-    if (!returnOp) {
-      return function.emitOpError("must terminate with func.return");
-    }
-    auto returnedQubits =
-        returnOp.getOperands().take_back(qubitArguments.size());
-    for (auto [argument, value] :
-         llvm::zip_equal(qubitArguments, returnedQubits)) {
-      auto origin = origins.lookup(value);
-      if ((origin ? origin : value) != function.getArgument(argument)) {
-        return function.emitOpError()
-               << "must return its qubit arguments positionally";
       }
     }
   }
@@ -708,7 +591,9 @@ struct ConvertQCOGateToQC final : OpConversionPattern<QCOOpType> {
   using OpConversionPattern<QCOOpType>::OpConversionPattern;
 
   /// Forward the adapted operands in QCO's declared order: NumTargets qubits,
-  /// then NumParams parameters. Dialect conversion preserves this order.
+  /// then NumParams parameters.
+  ///
+  /// Dialect conversion preserves this order.
   template <std::size_t... TargetIndices, std::size_t... ParamIndices>
   static void createGate(ConversionPatternRewriter& rewriter, Location loc,
                          ValueRange qcOperands,
@@ -895,7 +780,7 @@ struct ConvertQCOMeasureOp final : OpConversionPattern<qco::MeasureOp> {
 ///
 /// Example transformation:
 /// ```mlir
-/// %q_out = qco.reset %q_in : !qco.qubit -> !qco.qubit
+/// %q_out = qco.reset %q_in : !qco.qubit
 /// // becomes:
 /// qc.reset %q : !qc.qubit
 /// // %q_out uses are replaced with %q (the adaptor-converted input)
@@ -954,9 +839,9 @@ struct ConvertQCOBarrierOp final : OpConversionPattern<qco::BarrierOp> {
 /// @par Example:
 /// ```mlir
 /// %controls_out, %targets_out = qco.ctrl(%q0_in) targets(%a_in = %q1_in) {
-///   %a_res = qco.x %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.x %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
-/// } : ({!qco.qubit}, {!qco.qubit}) -> ({!qco.qubit}, {!qco.qubit})
+/// } : ({!qco.qubit}, {!qco.qubit})
 /// ```
 /// is converted to
 /// ```mlir
@@ -990,7 +875,7 @@ struct ConvertQCOCtrlOp final : OpConversionPattern<qco::CtrlOp> {
 /// @par Example:
 /// ```mlir
 /// %q0_out = qco.inv (%a_in = %q0_in) {
-///   %a_res = qco.s %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.s %a_in : !qco.qubit
 ///   qco.yield %a_res : !qco.qubit
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1025,7 +910,7 @@ struct ConvertQCOInvOp final : OpConversionPattern<qco::InvOp> {
 /// @par Example:
 /// ```mlir
 /// %q0_out = qco.pow(%exponent) (%a_in = %q0_in) {
-///   %a_res = qco.s %a_in : !qco.qubit -> !qco.qubit
+///   %a_res = qco.s %a_in : !qco.qubit
 ///   qco.yield %a_res
 /// } : {!qco.qubit} -> {!qco.qubit}
 /// ```
@@ -1096,7 +981,7 @@ struct ConvertQCOYieldOp final : OpConversionPattern<qco::YieldOp> {
 /// %targets_out = scf.for %iv = %lb to %ub step %step iter_args(%arg0 =
 /// %qtensor) -> (tensor<3x!qco.qubit) {
 ///   %t0, %q0 = qtensor.extract %arg0[%iv] : tensor<3x!qco.qubit>
-///   %q1 = qco.h %q0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %q0 : !qco.qubit
 ///   %insert = qtensor.insert %q1 into %t1[%iv] : tensor<3x!qco.qubit>
 ///   scf.yield %t1 : tensor<3x!qco.qubit>
 /// }
@@ -1148,7 +1033,7 @@ struct ConvertQCOSCFForOp final : OpConversionPattern<scf::ForOp> {
 ///   scf.condition(%cond) %q1 : !qco.qubit
 /// } do {
 /// ^bb0(%arg0: !qco.qubit):
-///   %q2 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.h %arg0 : !qco.qubit
 ///   scf.yield %q2 : !qco.qubit
 /// }
 /// ```
@@ -1202,7 +1087,7 @@ struct ConvertQCOSCFWhileOp final : OpConversionPattern<scf::WhileOp> {
 /// @par Example:
 /// ```mlir
 /// %targets_out = qco.if %cond args(%arg0 = %q0) -> (!qco.qubit) {
-///   %q1 = qco.h %arg0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.h %arg0 : !qco.qubit
 ///   qco.yield %q1 : !qco.qubit
 /// } else args(%arg0 = %q0) {
 ///   qco.yield %arg0 : !qco.qubit
@@ -1262,11 +1147,11 @@ struct ConvertQCOIfOp final : OpConversionPattern<IfOp> {
 /// ```mlir
 /// %result = qco.index_switch %condition -> !qco.qubit
 /// case 0 args(%arg0 = %q0) {
-///   %q1 = qco.x %arg0 : !qco.qubit -> !qco.qubit
+///   %q1 = qco.x %arg0 : !qco.qubit
 ///   qco.yield %q1 : !qco.qubit
 /// }
 /// default args(%arg0 = %q0) {
-///   %q2 = qco.z %arg0 : !qco.qubit -> !qco.qubit
+///   %q2 = qco.z %arg0 : !qco.qubit
 ///   qco.yield %q2 : !qco.qubit
 /// }
 /// ```
@@ -1362,6 +1247,7 @@ struct ConvertQCOSCFConditionOp final : OpConversionPattern<scf::ConditionOp> {
 };
 
 /// Convert QCO's linear SSA chains to QC qubit references.
+///
 /// Check allocation mode, wire correspondence, and tensor lifetimes before
 /// rewriting. Adapted operands carry the converted references into gate and
 /// control-flow patterns.
@@ -1382,7 +1268,8 @@ protected:
     {
       DenseMap<Value, Value> origins;
       if (failed(collectWireOrigins(moduleOp, origins)) ||
-          failed(collectFunctionQubitArguments(moduleOp, state, origins))) {
+          failed(verifyTensorSlots(moduleOp, origins)) ||
+          failed(collectFunctionQubitArguments(moduleOp, state))) {
         signalPassFailure();
         return;
       }
@@ -1424,7 +1311,8 @@ protected:
     RewritePatternSet patterns(context);
     QCOToQCTypeConverter typeConverter(context);
 
-    // Configure conversion target
+    target.markUnknownOpDynamicallyLegal(
+        [&](Operation* op) { return typeConverter.isLegal(op); });
     target.addIllegalDialect<QCODialect, qtensor::QTensorDialect>();
     target.addLegalDialect<cbit::CBitDialect, QCDialect, memref::MemRefDialect,
                            arith::ArithDialect>();
@@ -1476,10 +1364,11 @@ protected:
 
     patterns.add<ConvertQCOCallOp>(typeConverter, context);
 
-    // Conversion of qco types in control-flow ops (e.g., cf.br, cf.cond_br)
-    populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
-
-    if (failed(applyPartialConversion(moduleOp, target, std::move(patterns)))) {
+    // Avoid retaining replaced operations and SSA uses until conversion ends.
+    ConversionConfig config;
+    config.allowPatternRollback = false;
+    if (failed(applyPartialConversion(moduleOp, target, std::move(patterns),
+                                      config))) {
       signalPassFailure();
       return;
     }

@@ -23,6 +23,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <cstddef>
 
@@ -32,7 +33,7 @@ using namespace mlir;
 
 TEST(GenerateProgramTest, EmitsRepeatUntilSuccessAlgorithm) {
   auto program = generate(RepeatUntilSuccess{{.dataQubits = 5}});
-  ASSERT_TRUE(program);
+  ASSERT_TRUE(mlir::succeeded(program));
   auto moduleOp = program->module();
   SmallVector<scf::WhileOp> loops;
   moduleOp.walk([&](scf::WhileOp loop) { loops.push_back(loop); });
@@ -95,8 +96,8 @@ TEST(GenerateProgramTest, EmitsRepeatUntilSuccessAlgorithm) {
 }
 
 TEST(GenerateProgramTest, SamplesRepeatUntilSuccessAgainstReference) {
-  /// At 16,384 shots the binomial tail bound for a 0.01 error is below 7e-12.
-  /// An all-zero sampler has error 0.0286 and must fail this check.
+  // At 16,384 shots the binomial tail bound for a 0.01 error is below 7e-12.
+  // An all-zero sampler has error 0.0286 and must fail this check.
   for (const size_t width : {1U, 2U, 5U, 32U}) {
     SCOPED_TRACE(width);
     test::expectSamplingMatchesReference(
@@ -108,8 +109,8 @@ TEST(GenerateProgramTest, KeepsRepeatUntilSuccessGenerationCompact) {
   auto small = generate(RepeatUntilSuccess{{.dataQubits = 5}});
   auto large = generate(RepeatUntilSuccess{
       {.dataQubits = RepeatUntilSuccessOptions::MAX_DATA_QUBITS}});
-  ASSERT_TRUE(small);
-  ASSERT_TRUE(large);
+  ASSERT_TRUE(mlir::succeeded(small));
+  ASSERT_TRUE(mlir::succeeded(large));
   EXPECT_EQ(test::countOperations(small->module()),
             test::countOperations(large->module()));
 }

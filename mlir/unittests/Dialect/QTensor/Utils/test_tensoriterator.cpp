@@ -278,7 +278,7 @@ func.func @main() {
   %in = qtensor.alloc(%c2) : tensor<2x!qco.qubit>
   %out = func.call @relabel(%in) : (tensor<2x!qco.qubit>) -> tensor<2x!qco.qubit>
   %rest, %q = qtensor.extract %out[%c0] : tensor<2x!qco.qubit>
-  %h = qco.h %q : !qco.qubit -> !qco.qubit
+  %h = qco.h %q : !qco.qubit
   %back = qtensor.insert %h into %rest[%c0] : tensor<2x!qco.qubit>
   qtensor.dealloc %back : tensor<2x!qco.qubit>
   return
