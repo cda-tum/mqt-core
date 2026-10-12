@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 __lazy_modules__ = {
+    "mqt.core.plugins.qiskit.backend",
     "mqt.core.plugins.qiskit.exceptions",
     "mqt.core.plugins.qiskit.job",
     "mqt.core.plugins.qiskit.provider",
@@ -54,6 +55,9 @@ if TYPE_CHECKING or HAS_QISKIT:
         register_program_serializer,
         unregister_program_serializer,
     )
+
+    # Load the backend now to register the built-in OpenQASM serializers
+    import_module("mqt.core.plugins.qiskit.backend")
 
     __all__ += [
         "CircuitValidationError",

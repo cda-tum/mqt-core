@@ -14,7 +14,12 @@ devices through Qiskit's BackendV2 interface.
 
 from __future__ import annotations
 
-__lazy_modules__ = {"mqt.core.plugins.qiskit.exceptions", "mqt.core.qdmi.builtin_driver", "warnings"}
+__lazy_modules__ = {
+    "mqt.core.plugins.qiskit.backend",
+    "mqt.core.plugins.qiskit.exceptions",
+    "mqt.core.qdmi.builtin_driver",
+    "warnings",
+}
 
 import warnings
 from typing import TYPE_CHECKING

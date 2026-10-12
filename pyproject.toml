@@ -466,11 +466,6 @@ exclude_also = [
 ]
 
 
-[tool.flake8-lazy.standalone]
-# Importing the backend registers the built-in OpenQASM serializers
-lazy-exclude-modules = [ "mqt.core.plugins.qiskit.backend" ]
-
-
 [[tool.dynamic-metadata]]
 provider = "vcs_versioning"
 
