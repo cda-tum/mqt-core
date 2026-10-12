@@ -677,7 +677,7 @@ def test_qco_sampling_preserves_worker_diagnostics(shots: int, capfd: pytest.Cap
         return
       }
       func.func private @helper(%q: !qco.qubit) -> !qco.qubit {
-        %r = qco.reset %q : !qco.qubit -> !qco.qubit
+        %r = qco.reset %q : !qco.qubit
         %zero = arith.constant 0 : i8
         %invalid = arith.divui %zero, %zero : i8
         return %r : !qco.qubit

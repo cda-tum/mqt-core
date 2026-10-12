@@ -261,25 +261,25 @@ static void expectOpenQASMRoundTrip(const Benchmark& benchmark, size_t shots) {
 TEST(GenerateProgramTest,
      RoundTripsStructuredOpenQASMThroughBothCompilerPaths) {
   expectOpenQASMRoundTrip(
-      QPE{{
+      ::mqt::test::value(QPE::create({
           .precision = 8,
-          .phase =
-              Phase(uint64_t{1} << 63U, std::numeric_limits<uint64_t>::max()),
-      }},
+          .phase = ::mqt::test::value(Phase::create(
+              uint64_t{1} << 63U, std::numeric_limits<uint64_t>::max())),
+      })),
       2048);
-  expectOpenQASMRoundTrip(QPE{{
+  expectOpenQASMRoundTrip(::mqt::test::value(QPE::create({
                               .precision = 8,
-                              .phase = Phase(3, 8),
+                              .phase = ::mqt::test::value(Phase::create(3, 8)),
                               .method = QPEMethod::Iterative,
-                          }},
+                          })),
                           2048);
-  expectOpenQASMRoundTrip(QFTAdder{{
+  expectOpenQASMRoundTrip(::mqt::test::value(QFTAdder::create({
                               .addend = "101",
                               .accumulator = "011",
                               .method = QFTAdderMethod::Register,
-                          }},
+                          })),
                           2048);
-  expectOpenQASMRoundTrip(Shor{{.number = 15}}, 64);
+  expectOpenQASMRoundTrip(::mqt::test::value(Shor::create({.number = 15})), 64);
 }
 
 template <class Benchmark>

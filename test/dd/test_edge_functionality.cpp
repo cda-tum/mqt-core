@@ -20,6 +20,8 @@
 
 #include "gtest/gtest.h"
 
+#include "llvm/Support/LogicalResult.h"
+
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -74,16 +76,17 @@ TEST(VectorFunctionality, WideIndices) {
   EXPECT_EQ(::mqt::test::value(
                 dd::getValueByIndex(zero, std::numeric_limits<size_t>::max())),
             0.);
-  EXPECT_EQ(
-      ::mqt::test::errorKind([&] { return dd::getValueByIndex(vEdge::one(), 1); }),
-      ::mqt::ErrorCategory::OutOfRange);
-  EXPECT_EQ(
-      ::mqt::test::errorKind([&] {
-        return dd::getValueByIndex(::mqt::test::value(makeZeroState(3, *dd)), 8);
-      }),
-      ::mqt::ErrorCategory::OutOfRange);
+  EXPECT_EQ(::mqt::test::errorKind(
+                [&] { return dd::getValueByIndex(vEdge::one(), 1); }),
+            ::mqt::ErrorCategory::OutOfRange);
   EXPECT_EQ(::mqt::test::errorKind([&] {
-              return dd::traverseVector(zero, [](size_t, const std::complex<fp>&) {});
+              return dd::getValueByIndex(
+                  ::mqt::test::value(makeZeroState(3, *dd)), 8);
+            }),
+            ::mqt::ErrorCategory::OutOfRange);
+  EXPECT_EQ(::mqt::test::errorKind([&] {
+              return dd::traverseVector(zero,
+                                        [](size_t, const std::complex<fp>&) {});
             }),
             ::mqt::ErrorCategory::OutOfRange);
 }
@@ -199,16 +202,16 @@ TEST(VectorFunctionality, GetSparseVectorTerminal) {
 }
 
 TEST(VectorFunctionality, TraversalPreservesBasisOrderAndThreshold) {
-  Package package(2);
-  const auto state =
-      makeStateFromVector({0.5, 0., {0., -0.5}, std::sqrt(0.5)}, package);
+  auto package = ::mqt::test::value(Package::create(2));
+  const auto state = ::mqt::test::value(
+      makeStateFromVector({0.5, 0., {0., -0.5}, std::sqrt(0.5)}, *package));
   std::vector<size_t> indices;
   CVec amplitudes;
   const auto collect = [&](const size_t index, const std::complex<fp>& value) {
     indices.push_back(index);
     amplitudes.push_back(value);
   };
-  dd::traverseVector(state, collect);
+  ASSERT_TRUE(llvm::succeeded(dd::traverseVector(state, collect)));
   EXPECT_EQ(indices, (std::vector<size_t>{0, 2, 3}));
   ASSERT_EQ(amplitudes.size(), 3U);
   EXPECT_NEAR(std::abs(amplitudes[0] - 0.5), 0., 1e-12);
@@ -216,7 +219,7 @@ TEST(VectorFunctionality, TraversalPreservesBasisOrderAndThreshold) {
   EXPECT_NEAR(std::abs(amplitudes[2] - std::sqrt(0.5)), 0., 1e-12);
 
   indices.clear();
-  dd::traverseVector(state, collect, 0.6);
+  ASSERT_TRUE(llvm::succeeded(dd::traverseVector(state, collect, 0.6)));
   EXPECT_EQ(indices, (std::vector<size_t>{3}));
 }
 

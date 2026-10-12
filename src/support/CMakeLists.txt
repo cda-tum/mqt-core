@@ -10,7 +10,6 @@ add_mqt_core_library(${MQT_CORE_TARGET_NAME}-support ALIAS_NAME Support)
 get_target_property(support_library_type ${MQT_CORE_TARGET_NAME}-support TYPE)
 if(support_library_type STREQUAL "STATIC_LIBRARY")
   # Each standalone library owns its diagnostic handlers.
-  target_compile_definitions(${MQT_CORE_TARGET_NAME}-support PUBLIC MQT_CORE_SUPPORT_STATIC_DEFINE)
   set_target_properties(${MQT_CORE_TARGET_NAME}-support PROPERTIES CXX_VISIBILITY_PRESET hidden
                                                                    VISIBILITY_INLINES_HIDDEN ON)
 endif()

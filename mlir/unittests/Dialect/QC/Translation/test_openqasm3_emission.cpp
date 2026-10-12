@@ -1255,11 +1255,11 @@ TEST(OpenQASM3EmissionTest, CapturesFinalParametersInCompositeGates) {
   manager.addPass(createQCToQCO());
   ASSERT_TRUE(succeeded(manager.run(*original)));
   ASSERT_TRUE(succeeded(manager.run(*restored)));
-  dd::Package package(2);
+  auto package = ::mqt::test::value(dd::Package::create(2));
   auto before =
-      qco::buildFunctionality(mlir::mqt::getEntryPoint(*original), package);
+      qco::buildFunctionality(mlir::mqt::getEntryPoint(*original), *package);
   auto after =
-      qco::buildFunctionality(mlir::mqt::getEntryPoint(*restored), package);
+      qco::buildFunctionality(mlir::mqt::getEntryPoint(*restored), *package);
   ASSERT_TRUE(succeeded(before));
   ASSERT_TRUE(succeeded(after));
   const auto expected = dd::getMatrix(*before, 2);

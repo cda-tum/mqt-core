@@ -73,6 +73,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/Threading.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
@@ -208,6 +209,15 @@ TEST(CompilerProgramDiagnosticsTest,
   ASSERT_EQ(native.size(), 1);
   EXPECT_EQ(native.front().message, "forwarded warning");
   EXPECT_EQ(native.front().severity, ::mqt::DiagnosticSeverity::Warning);
+
+  ASSERT_TRUE(succeeded(
+      mlir::failableParallelForEachN(context.get(), 0, 2, [&](size_t index) {
+        emitWarning(UnknownLoc::get(context.get())) << "worker " << index;
+        return success();
+      })));
+  ASSERT_EQ(native.size(), 3);
+  EXPECT_EQ(native[1].message, "worker 0");
+  EXPECT_EQ(native[2].message, "worker 1");
 }
 
 TEST(CompilerProgramDiagnosticsTest, KeepsCallerOwnedContextPolicy) {
@@ -3118,8 +3128,9 @@ TEST_F(CompilerPipelineTest, PayloadSpecializesInnerTensorSweepWithinBudget) {
             makeUnrestrictedTarget(),
             makeControlPayloadSpecification(
                 {{.id = ProgramCapability::COUNTED_ITERATION.str()}})));
-    ScopedDiagnosticHandler handler(program->module()->getContext(),
-                                    [](Diagnostic&) { return success(); });
+    mlir::ScopedDiagnosticHandler handler(
+        program->module()->getContext(),
+        [](mlir::Diagnostic&) { return success(); });
     EXPECT_EQ(succeeded(program->runPassPipeline(
                   "unroll-loops-for-payload{max-operations=" +
                   std::to_string(budget) + "}")),
@@ -3180,12 +3191,12 @@ TEST_F(CompilerPipelineTest, PayloadSpecializationRemovesIdentityRepetition) {
 
 TEST_F(CompilerPipelineTest, PayloadSpecializesDependentOuterLoops) {
   using Capability = CompilerTarget::OperationCapability;
-  const auto target = llvm::cantFail(CompilerTarget::create(
+  const auto target = ::mqt::test::value(CompilerTarget::create(
       3, CompilerTarget::Connectivity::fromCouplings({{0, 1}, {1, 2}}),
       CompilerTarget::NativeOperations::fromOperations({
-          llvm::cantFail(Capability::create("u", 1, 3)),
-          llvm::cantFail(Capability::create("cz", 2, 0)),
-          llvm::cantFail(Capability::create("gphase", 0, 1)),
+          ::mqt::test::value(Capability::create("u", 1, 3)),
+          ::mqt::test::value(Capability::create("cz", 2, 0)),
+          ::mqt::test::value(Capability::create("gphase", 0, 1)),
       })));
   for (const auto& [body, retainsLoop] : {
            std::pair{
@@ -3207,7 +3218,7 @@ TEST_F(CompilerPipelineTest, PayloadSpecializesDependentOuterLoops) {
     auto program = std::move(*qc).intoQCO();
     ASSERT_TRUE(mlir::succeeded(program));
     ASSERT_TRUE(StringRef(program->str()).contains("scf.for"));
-    auto package = std::make_unique<dd::Package>(3);
+    auto package = ::mqt::test::value(dd::Package::create(3));
     const auto expectedDD = qco::buildFunctionality(
         mlir::mqt::getEntryPoint(program->module()), *package);
     ASSERT_TRUE(succeeded(expectedDD));
@@ -4575,13 +4586,13 @@ TEST_F(CompilerPipelineTest, TargetPipelinesSimplifyCombinedControls) {
   using Capability = CompilerTarget::OperationCapability;
   for (const bool equatorial : {false, true}) {
     SCOPED_TRACE(equatorial);
-    const auto target = llvm::cantFail(CompilerTarget::create(
+    const auto target = ::mqt::test::value(CompilerTarget::create(
         3, CompilerTarget::Connectivity::allToAll(),
         CompilerTarget::NativeOperations::fromOperations({
-            llvm::cantFail(Capability::create(equatorial ? "r" : "u", 1,
-                                              equatorial ? 2 : 3)),
-            llvm::cantFail(Capability::create("cz", 2, 0)),
-            llvm::cantFail(Capability::create("gphase", 0, 1)),
+            ::mqt::test::value(Capability::create(equatorial ? "r" : "u", 1,
+                                                  equatorial ? 2 : 3)),
+            ::mqt::test::value(Capability::create("cz", 2, 0)),
+            ::mqt::test::value(Capability::create("gphase", 0, 1)),
         })));
     const TargetEnvironment environment(target, makePayloadSpecification());
     for (const auto* gates : {
@@ -4618,12 +4629,12 @@ TEST_F(CompilerPipelineTest, TargetPipelinesSimplifyCombinedControls) {
 
 TEST_F(CompilerPipelineTest, CombiningPreservesFixedAngleNativeControls) {
   using Capability = CompilerTarget::OperationCapability;
-  const auto target = llvm::cantFail(CompilerTarget::create(
+  const auto target = ::mqt::test::value(CompilerTarget::create(
       3, CompilerTarget::Connectivity::allToAll(),
       CompilerTarget::NativeOperations::fromOperations({
-          llvm::cantFail(Capability::create("u", 1, 3)),
-          llvm::cantFail(Capability::create("cz", 2, 0)),
-          llvm::cantFail(
+          ::mqt::test::value(Capability::create("u", 1, 3)),
+          ::mqt::test::value(Capability::create("cz", 2, 0)),
+          ::mqt::test::value(
               Capability::create("rz", Capability::Arity::variadic(3), 1, {},
                                  std::nullopt, std::nullopt, {0.2})),
       })));
@@ -4655,16 +4666,16 @@ ctrl(2) @ rz(0.2) q[0], q[1], q[2];
 
 TEST_F(CompilerPipelineTest, TargetOpenQASMRetainsExportableControlledAngles) {
   using Capability = CompilerTarget::OperationCapability;
-  const auto target = llvm::cantFail(
-      CompilerTarget::create(2, CompilerTarget::Connectivity::allToAll(),
-                             CompilerTarget::NativeOperations::fromOperations({
-                                 llvm::cantFail(Capability::create("u", 1, 3)),
-                                 llvm::cantFail(Capability::create("cz", 2, 0)),
-                                 llvm::cantFail(Capability::create(
-                                     "u", Capability::Arity::variadic(2), 3)),
-                             })));
+  const auto target = ::mqt::test::value(CompilerTarget::create(
+      2, CompilerTarget::Connectivity::allToAll(),
+      CompilerTarget::NativeOperations::fromOperations({
+          ::mqt::test::value(Capability::create("u", 1, 3)),
+          ::mqt::test::value(Capability::create("cz", 2, 0)),
+          ::mqt::test::value(
+              Capability::create("u", Capability::Arity::variadic(2), 3)),
+      })));
   const TargetEnvironment environment(
-      target, llvm::cantFail(PayloadSpecification::create(
+      target, ::mqt::test::value(PayloadSpecification::create(
                   {.id = "openqasm", .version = "3.1.0", .profile = ""})));
   auto qc = QCProgram::fromOpenQASMString(R"(OPENQASM 3.1;
 include "stdgates.inc";

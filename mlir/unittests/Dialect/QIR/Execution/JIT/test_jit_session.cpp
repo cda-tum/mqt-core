@@ -117,12 +117,12 @@ result = measure q;
   ASSERT_TRUE(mlir::succeeded(qir));
   const auto ir = qir->llvmIR();
   ASSERT_TRUE(mlir::succeeded(ir));
-  qir::JitSession session(*ir, "feedback-arithmetic", qir::Execution::Sampling,
-                          42);
-  session.runtime().disableOutput();
-  EXPECT_FALSE(session.canSampleTerminal());
+  auto session = ::mqt::test::value(qir::JitSession::create(
+      *ir, "feedback-arithmetic", qir::Execution::Sampling, 42));
+  session->runtime().disableOutput();
+  EXPECT_FALSE(session->canSampleTerminal());
   std::vector<std::string> shots;
-  ASSERT_EQ(session.sample(64, shots), 0);
+  ASSERT_EQ(::mqt::test::value(session->sample(64, shots)), 0);
   EXPECT_EQ(shots, std::vector<std::string>(64, "0"));
 }
 

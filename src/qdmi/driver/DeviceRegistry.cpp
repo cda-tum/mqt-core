@@ -654,8 +654,6 @@ auto parseDeviceSessionJson(const char* const data, const size_t size,
     return QDMI_SUCCESS;
   } catch (const std::bad_alloc&) {
     return QDMI_ERROR_OUTOFMEM;
-  } catch (const Json::parse_error&) {
-    return QDMI_ERROR_INVALIDARGUMENT;
   } catch (const std::invalid_argument&) {
     return QDMI_ERROR_INVALIDARGUMENT;
   } catch (...) {

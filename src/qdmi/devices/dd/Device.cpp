@@ -1053,7 +1053,8 @@ auto qdmi::dd::ProgramResult::getSparseResults(const QDMI_Job_Result result,
   }
   std::call_once(stateVecSparseOnce_, [this] {
     stateVecSparse_.clear();
-    ::dd::traverseVector(
+    // The width check above guarantees representable basis indices.
+    std::ignore = ::dd::traverseVector(
         stateVecDD_,
         [this](const size_t index, const std::complex<::dd::fp>& amplitude) {
           stateVecSparse_.emplace_back(index, amplitude);
@@ -1146,7 +1147,8 @@ auto qdmi::dd::ProgramResult::getProbabilities(const size_t size, void* data,
     }
     const std::span probabilities(static_cast<double*>(data), dimension);
     std::ranges::fill(probabilities, 0.);
-    ::dd::traverseVector(
+    // The dense result size check also bounds every basis index.
+    std::ignore = ::dd::traverseVector(
         stateVecDD_, [probabilities](const size_t index,
                                      const std::complex<::dd::fp>& amplitude) {
           probabilities[index] = std::norm(amplitude);

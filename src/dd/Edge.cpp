@@ -317,12 +317,14 @@ auto getSparseVector(const vEdge& edge, const fp threshold) -> SparseCVec {
   return vec;
 }
 
-void traverseVector(const vEdge& edge, const AmplitudeFunc& f,
-                    const fp threshold) {
+auto traverseVector(const vEdge& edge, const AmplitudeFunc& f,
+                    const fp threshold) -> llvm::LogicalResult {
   if (!edge.isTerminal() && edge.p->v >= std::numeric_limits<size_t>::digits) {
-    throw std::out_of_range("Vector basis indices do not fit in size_t.");
+    return ::mqt::emitError("Vector basis indices do not fit in size_t.",
+                            ::mqt::ErrorCategory::OutOfRange);
   }
   traverseVectorImpl(edge, 1., 0, f, threshold);
+  return llvm::success();
 }
 
 auto printVector(const vEdge& edge) -> void {

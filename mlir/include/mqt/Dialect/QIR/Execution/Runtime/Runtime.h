@@ -118,7 +118,7 @@ private:
   std::vector<ResultStruct> resultValues_;
   bool deferMeasurements_ = false;
   bool extractState_ = false;
-  /// Own C ABI allocations until explicit release or the next reset.
+  /// Own C ABI allocations until explicit release or runtime destruction.
   std::unordered_map<void*, std::unique_ptr<void, void (*)(void*)>>
       allocations_;
   std::unordered_set<dd::Qubit> measuredQubits_;

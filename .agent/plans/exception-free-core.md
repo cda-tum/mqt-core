@@ -1,12 +1,15 @@
 # Exception-free Core APIs
 
-Status: in progress. The migration is based on main `62125acad`. Platform checks
-and whole-PR performance acceptance remain open. See the
-[audit](../audits/exception-free-rebase.md) for integration fixes and retained
-coverage.
+Status: rebased and audited on main `1133ad276`. Hosted checks, release
+packaging, and whole-PR performance acceptance remain open. See the
+[audit](../audits/exception-free-rebase.md) for decisions and integration fixes.
 
 ## Work remaining
 
+- [x] Integrate upstream DD traversal, QCO builders, compiler threading, and
+      tests.
+- [x] Reaudit result APIs, diagnostics, JSON, Python, QDMI, and QIR boundaries.
+- [x] Rebuild and validate the rebased implementation before publication.
 - [ ] Compare matched successful workloads against upstream, including cold and
   reused DDSIM workers and state transfer.
 - [ ] Validate the published revision's Windows/macOS packages and hosted
@@ -46,12 +49,12 @@ callback; hashing uses LLVM SHA-256.
 The JIT validates C calling conventions, native ABI attributes, and runtime call
 signatures before binding host functions. ORC errors use scoped diagnostics. QIR
 resource-allocation failures with explicit error outputs remain recoverable and
-release partial allocations. Host allocation failures and other unhandled
-runtime failures diagnose and terminate. The thin `noexcept` ABI facade retains
-exception support; algorithms do not. Setup and compilation errors remain
-recoverable. Session-owned classical allocations survive quantum resets until
-reference-count release or session destruction. JIT constructors and destructors
-bind the session runtime, as entry-point execution does.
+release partial allocations. Host allocation failures terminate; diagnosed
+unhandled runtime failures also terminate. The thin `noexcept` ABI facade
+retains exception support; algorithms do not. Setup and compilation errors
+remain recoverable. Session-owned classical allocations survive quantum resets
+until reference-count release or session destruction. JIT constructors and
+destructors bind the session runtime, as entry-point execution does.
 
 DDSIM worker isolation and concurrency are supplied by the parent multi-program
 change. This layer adapts worker compilation and compact DD reconstruction to
@@ -63,25 +66,26 @@ contracts.
 
 ## Validation
 
-Validation on Linux aarch64 with GCC 13.3 and LLVM/MLIR 23.1.0:
+Linux aarch64, GCC 13.3, LLVM/MLIR 23.1.0:
 
-- `cmake --preset release -DENABLE_IPO=OFF`, the release build, and
-  `ctest --preset release -j 8` pass: 4,046 runnable tests and the existing
-  unsupported `ScQDMIJobSpecificationTest.QueryJobId` skip.
-- The rebuilt package passes all 1,976 Python tests with
-  `uv run --no-sync pytest`.
-- `uvx nox -s stubs` passes with no generated API changes.
-- `uvx nox --non-interactive -s docs` passes Doxygen, Sphinx, executable
-  examples, and internal links.
-- Repository lint passes. Whole-file C++ lint checked all 179 selected files;
-  its trailing-comma finding is fixed. The final affected-file check also
-  includes the newly changed allocator source. All 129 DD package tests pass
-  after the formatting fix.
+- `cmake --preset release -DENABLE_IPO=OFF` and the release build pass.
+- `ctest --preset release -j 8` passes 4,062 runnable tests, with the existing
+  unsupported `ScQDMIJobSpecificationTest.QueryJobId` skip. All 226 DD tests
+  also pass after the final direct-include fix.
+- The rebuilt package passes all 1,976 Python tests. The serial/parallel
+  sampling-diagnostic fixture uses main's compact QCO reset syntax.
+- `uvx nox -s stubs` passes without generated API changes.
+- Whole-file C++ lint checked 177 selected files. Its missing direct include is
+  fixed; the affected DD test and compiler forwarding test are checked again.
+- Doxygen, Sphinx, executable documentation, and internal links pass. Removed
+  stale generated Slurm API pages before rebuilding. Browser inspection of the
+  native-error and QIR-failure guides found readable content and working assets;
+  the preview server had only the default favicon 404.
 
-Earlier installed GCC Development/default consumers built and ran, missing-SDK
-lookups behaved as specified, and wheel libraries exported no LLVM-owned
-symbols. Those checks predate this rebase. Windows/macOS packaging and hosted
-checks remain unverified.
+The previous head `de76629b0` passed hosted native and Python checks on Linux,
+macOS, and Windows. Those results predate this rebase. Installed-consumer,
+coverage-build, symbol-export, and release-package checks were not repeated.
+Final-head hosted and Windows/macOS packaging validation remain open.
 
 Performance acceptance requires matched upstream and revised builds using the
 external harness. Report successful workloads separately, including cold and

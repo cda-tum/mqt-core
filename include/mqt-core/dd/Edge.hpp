@@ -179,9 +179,10 @@ getValueByIndex(const Edge<vNode>& edge, size_t i);
 ///
 /// Zero-weight child edges and paths below @p threshold are skipped. The
 /// callback is borrowed for this call. Basis indices must fit in size_t.
-/// @throws std::out_of_range if the DD has more qubits than size_t has bits.
-void traverseVector(const Edge<vNode>& edge, const AmplitudeFunc& f,
-                    fp threshold = 0.);
+/// Fails before invoking the callback if a basis index cannot fit in size_t.
+[[nodiscard]] llvm::LogicalResult traverseVector(const Edge<vNode>& edge,
+                                                 const AmplitudeFunc& f,
+                                                 fp threshold = 0.);
 
 /// Print the vector represented by the DD
 ///

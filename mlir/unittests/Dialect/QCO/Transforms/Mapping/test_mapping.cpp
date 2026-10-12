@@ -354,7 +354,8 @@ protected:
       PayloadFormat format;
       format.id = "test.payload";
       format.version = "1.0.0";
-      return ::mqt::test::value(PayloadSpecification::create(std::move(format)));
+      return ::mqt::test::value(
+          PayloadSpecification::create(std::move(format)));
     }();
     attachTargetEnvironment(moduleOp, TargetEnvironment(target, PAYLOAD));
   }
@@ -1308,7 +1309,7 @@ TEST_F(MappingPassFixture, KeepWorkspaceSparseOnLargeTarget) {
 }
 
 TEST_F(MappingPassFixture, PreserveStoredRegisterControlDuringRouting) {
-  const auto target = llvm::cantFail(
+  const auto target = ::mqt::test::value(
       CompilerTarget::create(3, Connectivity::fromCouplings({{0, 1}, {1, 2}}),
                              NativeOperations::unrestricted()));
 
@@ -1451,7 +1452,7 @@ TEST_P(MappingPassTest, MapScalarAllocation) {
 }
 
 TEST_F(MappingPassFixture, ExpandNonAdjacentTwoQubitIfOnLineTarget) {
-  const auto target = llvm::cantFail(
+  const auto target = ::mqt::test::value(
       CompilerTarget::create(3, Connectivity::fromCouplings({{0, 1}, {1, 2}}),
                              NativeOperations::unrestricted()));
   QCOProgramBuilder builder(context.get());
