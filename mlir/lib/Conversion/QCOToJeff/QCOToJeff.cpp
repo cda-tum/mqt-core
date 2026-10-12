@@ -22,9 +22,16 @@
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 #include "mqt/Support/IntegerExpressions.h"
 
+#include "capnp/any.h"
+#include "capnp/blob.h"
+#include "capnp/list.h"
+#include "capnp/message.h"
+#include "jeff.capnp.h"
 #include "jeff/Conversion/NativeToJeff/NativeToJeff.h"
 #include "jeff/IR/JeffDialect.h"
 #include "jeff/IR/JeffOps.h"
+#include "jeff/Translation/Metadata.hpp"
+#include "kj/exception.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -56,6 +63,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -73,6 +81,45 @@ using namespace qco;
 
 #define GEN_PASS_DEF_QCOTOJEFF
 #include "mqt/Conversion/QCOToJeff/QCOToJeff.h.inc"
+
+/// Encode input names as jeff text metadata.
+static LogicalResult encodeInputNames(func::FuncOp function) {
+  auto* context = function.getContext();
+  const auto key = mqt::MQTDialect::InputNameAttrHelper::getNameStr();
+  const std::array<std::string, 1> names{key.str()};
+  auto exception = kj::runCatchingExceptions([&] {
+    for (auto argument : function.getArguments()) {
+      auto name =
+          function.getArgAttrOfType<StringAttr>(argument.getArgNumber(), key);
+      if (!name) {
+        continue;
+      }
+      capnp::MallocMessageBuilder message;
+      auto entries = message.initRoot<capnp::List<::jeff::Meta>>(1);
+      entries[0].setName(0);
+      entries[0].getValue().setAs<capnp::Text>(name.getValue().str());
+      auto encoded =
+          jeff::deserializeMetadata(context, entries.asReader(), names);
+      SmallVector<Attribute> metadata;
+      if (auto existing = jeff::getMetadata(argument)) {
+        for (auto entry : existing) {
+          if (cast<DictionaryAttr>(entry)
+                  .getAs<StringAttr>("name")
+                  .getValue() != key) {
+            metadata.push_back(entry);
+          }
+        }
+      }
+      metadata.push_back(encoded[0]);
+      jeff::setMetadata(argument, ArrayAttr::get(context, metadata));
+    }
+  });
+  KJ_IF_MAYBE (error, exception) {
+    return function.emitError("failed to encode input name metadata: ")
+           << error->getDescription().cStr();
+  }
+  return success();
+}
 
 namespace {
 
@@ -2130,12 +2177,10 @@ protected:
         return;
       }
       function->removeAttr(mqt::MQTDialect::UnitaryAttrHelper::getNameStr());
-      for (unsigned index = 0; index < function.getNumArguments(); ++index) {
-        if (auto name = function.getArgAttrOfType<StringAttr>(
-                index, mqt::MQTDialect::InputNameAttrHelper::getNameStr())) {
-          // Input identities and parameter groups still need the MQT name.
-          function.setArgAttr(index, "jeff.input_name", name);
-        }
+      // Input identities and parameter groups still need the MQT name.
+      if (failed(encodeInputNames(function))) {
+        signalPassFailure();
+        return;
       }
     }
     state.cbitState.recordRegisterUses(moduleOp);
