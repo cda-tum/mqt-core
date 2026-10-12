@@ -259,14 +259,9 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "13.3" }
 
 [tool.cibuildwheel.windows]
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt --ignore-existing"
-before-test = "uv pip install --group test"
-# cibuildwheel 4.2 passes expanded dependency groups through cmd.exe, which interprets version
-# operators as redirections. Let uv resolve the group itself.
-test-groups = []
 
 [[tool.cibuildwheel.overrides]]
 select = [ "cp*-win_arm64", "cp3??t-*" ]
-before-test = ""
 test-command = 'python -c "import mqt.core.dd, mqt.core.ir, mqt.core.qdmi"'
 test-groups = []
 test-sources = []
