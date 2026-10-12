@@ -49,10 +49,14 @@ using namespace mlir::qco;
 namespace {
 using PatternType = CompilerTarget::TopologyPatterns::Type;
 using Edges = std::set<std::pair<size_t, size_t>>;
-constexpr std::array TYPES{PatternType::FourCycle, PatternType::Star,
-                           PatternType::QubitPair};
+constexpr std::array TYPES{
+    PatternType::FourCycle,
+    PatternType::Star,
+    PatternType::QubitPair,
+};
+} // namespace
 
-Edges getEdges(const Graph& graph) {
+static Edges getEdges(const Graph& graph) {
   Edges edges;
   for (const auto a : graph.getNodes()) {
     for (const auto b : graph.getNeighbours(a)) {
@@ -64,7 +68,7 @@ Edges getEdges(const Graph& graph) {
   return edges;
 }
 
-Edges matchEdges(PatternType type, ArrayRef<size_t> vertices) {
+static Edges matchEdges(PatternType type, ArrayRef<size_t> vertices) {
   Edges edges;
   const auto add = [&](size_t a, size_t b) {
     edges.insert(std::minmax(vertices[a], vertices[b]));
@@ -81,6 +85,7 @@ Edges matchEdges(PatternType type, ArrayRef<size_t> vertices) {
   return edges;
 }
 
+namespace {
 class PlacementAnalysisTest : public testing::Test {
 protected:
   MLIRContext context;
@@ -208,7 +213,7 @@ TEST_F(PlacementAnalysisTest, AnalyzeNestedRegionSeparately) {
 }
 
 TEST_F(PlacementAnalysisTest, RejectUnsupportedConnectivity) {
-  for (const auto source : {
+  for (const auto* source : {
            R"mlir(func.func @dynamic_size(%n: index) {
              %q = qtensor.alloc(%n) : tensor<?x!qco.qubit>
              qtensor.dealloc %q : tensor<?x!qco.qubit>
@@ -245,7 +250,8 @@ TEST_F(PlacementAnalysisTest, RejectUnsupportedConnectivity) {
              cf.br ^exit
            ^exit:
              return
-           })mlir"}) {
+           })mlir",
+       }) {
     auto moduleOp = parse(source);
     ASSERT_TRUE(moduleOp);
     auto func =
@@ -283,14 +289,13 @@ TEST(TopologyPatternMatching, ExhaustiveFiveVertexGraphs) {
       std::optional<SmallVector<size_t, 4>> expected;
       do {
         const auto candidateEdges = matchEdges(type, permutation);
-        if (std::includes(edges.begin(), edges.end(), candidateEdges.begin(),
-                          candidateEdges.end())) {
+        if (std::ranges::includes(edges, candidateEdges)) {
           expected = SmallVector<size_t, 4>(
               permutation.begin(),
               permutation.begin() + (type == PatternType::QubitPair ? 2 : 4));
           break;
         }
-      } while (std::next_permutation(permutation.begin(), permutation.end()));
+      } while (std::ranges::next_permutation(permutation).found);
       EXPECT_EQ(matchTopologyPattern(graph, type), expected);
       EXPECT_EQ(matchTopologyPattern(reversed, type), expected);
     }

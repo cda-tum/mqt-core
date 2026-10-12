@@ -58,7 +58,7 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
     for (int64_t i = 0; i < size; ++i) {
       indices.push_back(result.qubits.size());
       result.qubits.push_back(
-          {value, scalar ? std::nullopt : std::optional(i)});
+          {.root = value, .slot = scalar ? std::nullopt : std::optional(i)});
     }
     return success();
   };
@@ -164,22 +164,22 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
 namespace {
 using Pattern = CompilerTarget::TopologyPatterns::Type;
 using Edge = std::pair<size_t, size_t>;
+} // namespace
 
-ArrayRef<Edge> patternEdges(Pattern type) {
-  static constexpr std::array<Edge, 4> cycle{{{0, 1}, {1, 2}, {2, 3}, {3, 0}}};
-  static constexpr std::array<Edge, 3> star{{{0, 1}, {0, 2}, {0, 3}}};
-  static constexpr std::array<Edge, 1> pair{{{0, 1}}};
+static ArrayRef<Edge> patternEdges(Pattern type) {
+  static constexpr std::array<Edge, 4> CYCLE{{{0, 1}, {1, 2}, {2, 3}, {3, 0}}};
+  static constexpr std::array<Edge, 3> STAR{{{0, 1}, {0, 2}, {0, 3}}};
+  static constexpr std::array<Edge, 1> PAIR{{{0, 1}}};
   switch (type) {
   case Pattern::FourCycle:
-    return cycle;
+    return CYCLE;
   case Pattern::Star:
-    return star;
+    return STAR;
   case Pattern::QubitPair:
-    return pair;
+    return PAIR;
   }
   llvm_unreachable("unknown topology pattern");
 }
-} // namespace
 
 std::optional<SmallVector<size_t, 4>> matchTopologyPattern(const Graph& graph,
                                                            Pattern type) {
@@ -274,7 +274,7 @@ decomposeConnectivityGraph(Graph graph, ArrayRef<Pattern> available) {
         graph.removeEdge((*match)[a], (*match)[b]);
         graph.removeEdge((*match)[b], (*match)[a]);
       }
-      slices.push_back({type, std::move(*match)});
+      slices.push_back({.type = type, .vertices = std::move(*match)});
     }
   }
   if (llvm::any_of(graph.getNodes(),
