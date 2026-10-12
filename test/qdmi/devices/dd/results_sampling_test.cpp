@@ -13,6 +13,7 @@
  */
 #include "mqt_ddsim_qdmi/constants.h"
 #include "mqt_ddsim_qdmi/device.h"
+#include "qdmi/TestUtils.hpp"
 
 #include "helpers/circuits.hpp"
 #include "helpers/test_utils.hpp"
@@ -36,11 +37,16 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
+#include <fstream>
+#include <istream>
 #include <map>
 #include <memory>
 #include <numeric>
 #include <optional>
 #include <ranges>
+#include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -594,4 +600,163 @@ exit:
               std::string::npos);
   }
   EXPECT_NE(output.find("\t  hamming_weight\n"), std::string::npos);
+}
+
+TEST(PresentationTelemetry, RecordsEachNativeProgramCompletion) {
+  const mqt::test::TemporaryDirectory directory;
+  const auto path = directory.path() / "programs.tsv";
+  const mqt::test::ScopedEnvironmentVariable trace("MQT_MQSF_PROGRAM_TRACE",
+                                                   path.string());
+  const qdmi_test::SessionGuard session;
+  const qdmi_test::JobGuard job(session.session);
+  const std::array<std::string_view, 3> programs{
+      qdmi_test::QASM3_BELL_SAMPLING,
+      qdmi_test::QASM3_BELL_SAMPLING,
+      "invalid program",
+  };
+  std::array<const void*, programs.size()> payloads{};
+  std::array<size_t, programs.size()> sizes{};
+  for (size_t i = 0; i < programs.size(); ++i) {
+    payloads[i] = programs[i].data();
+    sizes[i] = programs[i].size() + 1;
+  }
+  ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_programs(
+                job.job, QDMI_PROGRAM_FORMAT_QASM3, programs.size(),
+                sizes.data(), payloads.data()),
+            QDMI_SUCCESS);
+  constexpr size_t shots = 4;
+  ASSERT_EQ(qdmi_test::setShots(job.job, shots), QDMI_SUCCESS);
+  ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
+
+  std::ifstream input(path);
+  ASSERT_TRUE(input);
+  std::set<size_t> completed;
+  int64_t previousTime = 0;
+  for (std::string line; std::getline(input, line);) {
+    std::istringstream row(line);
+    int64_t time = 0;
+    size_t index = 0;
+    int status = 0;
+    size_t budget = 0;
+    size_t slots = 0;
+    ASSERT_TRUE(row >> time >> index >> status >> budget >> slots);
+    EXPECT_TRUE((row >> std::ws).eof());
+    EXPECT_GT(time, 0);
+    EXPECT_GE(time, previousTime);
+    previousTime = time;
+    ASSERT_LT(index, programs.size());
+    EXPECT_TRUE(completed.insert(index).second);
+    EXPECT_GE(budget, 1U);
+    EXPECT_EQ(slots, 1U);
+    QDMI_Job_Status actual{};
+    ASSERT_EQ(
+        MQT_DDSIM_QDMI_device_job_get_program_status(job.job, index, &actual),
+        QDMI_SUCCESS);
+    EXPECT_EQ(status, actual);
+    EXPECT_EQ(actual,
+              index == 2 ? QDMI_JOB_STATUS_FAILED : QDMI_JOB_STATUS_DONE);
+    if (actual == QDMI_JOB_STATUS_DONE) {
+      size_t bytes = 0;
+      ASSERT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
+                    job.job, index, QDMI_JOB_RESULT_SHOTS, 0, nullptr, &bytes),
+                QDMI_SUCCESS);
+      std::string results(bytes, '\0');
+      ASSERT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
+                    job.job, index, QDMI_JOB_RESULT_SHOTS, bytes,
+                    results.data(), nullptr),
+                QDMI_SUCCESS);
+      ASSERT_FALSE(results.empty());
+      results.pop_back();
+      EXPECT_EQ(qdmi_test::splitCSV(results).size(), shots);
+    }
+  }
+  EXPECT_EQ(completed.size(), programs.size());
+}
+
+TEST(PresentationTelemetry, ShotTracePreservesSeededAdaptiveResults) {
+  const mqt::test::TemporaryDirectory directory;
+  const auto path = directory.path() / "shots.tsv";
+  const mqt::test::ScopedEnvironmentVariable disabled("MQT_MQSF_SHOT_TRACE",
+                                                      std::nullopt);
+  const auto program = qdmi_test::getQIRProgram("AdaptiveRecordOutputs.ll");
+  const auto run = [&] {
+    const qdmi_test::SessionGuard session;
+    const qdmi_test::JobGuard job(session.session);
+    EXPECT_EQ(qdmi_test::setProgram(
+                  job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, program),
+              QDMI_SUCCESS);
+    EXPECT_EQ(qdmi_test::setShots(job.job, 8), QDMI_SUCCESS);
+    EXPECT_EQ(qdmi_test::setSeed(job.job, 42), QDMI_SUCCESS);
+    const size_t workers = 1;
+    EXPECT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
+                  job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM3, sizeof(workers),
+                  &workers),
+              QDMI_SUCCESS);
+    EXPECT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
+    return getShots(job.job);
+  };
+  const auto expected = run();
+  ASSERT_EQ(expected.size(), 8U);
+  const mqt::test::ScopedEnvironmentVariable enabled("MQT_MQSF_SHOT_TRACE",
+                                                     path.string());
+  EXPECT_EQ(run(), expected);
+  std::ifstream input(path);
+  ASSERT_TRUE(input);
+  std::vector<std::pair<std::string, std::string>> events;
+  int64_t previousTime = 0;
+  for (std::string line; std::getline(input, line);) {
+    std::istringstream row(line);
+    int64_t time = 0;
+    std::string kind;
+    std::string value;
+    ASSERT_TRUE(row >> time >> kind);
+    ASSERT_TRUE(std::getline(row >> std::ws, value));
+    EXPECT_GT(time, 0);
+    EXPECT_GE(time, previousTime);
+    previousTime = time;
+    events.emplace_back(kind, value);
+  }
+  std::vector<std::pair<std::string, std::string>> expectedEvents{
+      {"runtime", "JIT compilation begins"},
+      {"runtime", "JIT runtime ready"},
+      {"runtime", "Serial adaptive sampling begins"},
+  };
+  for (const auto& shot : expected) {
+    expectedEvents.emplace_back("shot", shot);
+  }
+  expectedEvents.emplace_back("runtime", "Sampling complete");
+  EXPECT_EQ(events, expectedEvents);
+}
+
+TEST(PresentationTelemetry, RejectsUnwritablePathsWithoutBreakingLaterJobs) {
+  const mqt::test::TemporaryDirectory directory;
+  const auto path = directory.path() / "missing-parent" / "trace.tsv";
+  const auto program = qdmi_test::getQIRProgram("AdaptiveRecordOutputs.ll");
+  for (const auto* variable :
+       {"MQT_MQSF_PROGRAM_TRACE", "MQT_MQSF_SHOT_TRACE"}) {
+    SCOPED_TRACE(variable);
+    const mqt::test::ScopedEnvironmentVariable trace(variable, path.string());
+    const qdmi_test::SessionGuard session;
+    const qdmi_test::JobGuard job(session.session);
+    ASSERT_EQ(qdmi_test::setProgram(
+                  job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, program),
+              QDMI_SUCCESS);
+    ASSERT_EQ(qdmi_test::setShots(job.job, 1), QDMI_SUCCESS);
+    const bool programTrace =
+        std::string_view(variable) == "MQT_MQSF_PROGRAM_TRACE";
+    EXPECT_EQ(qdmi_test::submitAndWait(job.job, 0),
+              programTrace ? QDMI_ERROR_FATAL : QDMI_SUCCESS);
+    QDMI_Job_Status status{};
+    ASSERT_EQ(MQT_DDSIM_QDMI_device_job_check(job.job, &status), QDMI_SUCCESS);
+    EXPECT_EQ(status,
+              programTrace ? QDMI_JOB_STATUS_CREATED : QDMI_JOB_STATUS_FAILED);
+  }
+  const qdmi_test::SessionGuard session;
+  const qdmi_test::JobGuard job(session.session);
+  ASSERT_EQ(qdmi_test::setProgram(
+                job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, program),
+            QDMI_SUCCESS);
+  ASSERT_EQ(qdmi_test::setShots(job.job, 1), QDMI_SUCCESS);
+  ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
+  EXPECT_EQ(getShots(job.job).size(), 1U);
 }
