@@ -25,6 +25,7 @@
 #include <optional>
 
 namespace mlir {
+class Operation;
 class Region;
 
 namespace qco {
@@ -47,13 +48,32 @@ struct RegionConnectivity {
 ///
 /// Requires a single-block region that passes verification and verifyLinearity.
 /// Root values remain valid only while their IR exists.
+/// Includes interactions from every branch and loop body of qco.if,
+/// qco.index_switch, scf.for, and scf.while, without unrolling loops.
 /// Supports scalar QCO and statically sized qtensors with constant indices.
+/// Tensor slots must retain their wire identities through region terminators.
 /// Barriers add no edges; repeated interactions add one undirected edge.
-/// Diagnoses nested control flow, dynamic tensor accesses, undecomposed gates
-/// with more than two qubits, and unknown operations carrying qubits. Analyze
-/// nested regions separately; their block arguments define local wire roots.
+/// Diagnoses dynamic tensor accesses, quantum calls, undecomposed gates with
+/// more than two qubits, and unsupported operations carrying qubits or regions.
 [[nodiscard]] FailureOr<RegionConnectivity>
 buildConnectivityGraph(Region& region);
+
+/// Cached connectivity of an operation with one region, such as func.func.
+///
+/// Uses buildConnectivityGraph's input contract. MLIR invalidates this analysis
+/// unless a pass explicitly preserves it, including the stored root values.
+class RegionConnectivityAnalysis {
+public:
+  explicit RegionConnectivityAnalysis(Operation* operation);
+
+  /// Return the graph, or failure if the region is unsupported.
+  [[nodiscard]] const FailureOr<RegionConnectivity>& getConnectivity() const {
+    return connectivity_;
+  }
+
+private:
+  FailureOr<RegionConnectivity> connectivity_ = failure();
+};
 
 struct TopologyPatternMatch {
   CompilerTarget::TopologyPatterns::Type type;

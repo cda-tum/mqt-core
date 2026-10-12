@@ -39,6 +39,9 @@ public:
   /// Remove all directed edges from u to v, keeping both nodes.
   void removeEdge(size_t u, size_t v);
 
+  /// Return whether a directed edge from u to v exists.
+  [[nodiscard]] bool hasEdge(size_t u, size_t v) const;
+
   /// Return the neighbours of a node.
   [[nodiscard]] ArrayRef<size_t> getNeighbours(size_t id) const;
 

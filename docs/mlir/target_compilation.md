@@ -183,13 +183,18 @@ The C++ placement helpers in `Mapping/Placement.h` build a circuit connectivity
 graph from a verified, single-block QCO region and decompose its edges into
 these pattern types. The graph retains idle qubits and records each logical
 qubit's root value and tensor slot. Repeated interactions add one undirected
-edge; barriers add none. VF2 matches are non-induced, so extra edges are
-allowed. Decomposition prefers four-cycles, then stars, then pairs; shared
-vertex IDs identify the overlap between slices. The caller selects the available
-types. Dynamic tensor sizes or indices, nested control flow, quantum calls, and
-gates with more than two qubits require lowering or separate region analysis
-first. These helpers do not yet join target occurrences or choose a start
-layout.
+edge; barriers add none. Nested `qco.if`, `qco.index_switch`, `scf.for`, and
+`scf.while` contribute interactions from every branch and loop body. Traversal
+uses an explicit stack and does not unroll loops. Tensor slots must retain their
+wire identities through region terminators. `RegionConnectivityAnalysis` caches
+the graph for a single-region operation through MLIR's analysis manager; passes
+must explicitly preserve it to retain the cache across transformations. VF2
+matches are non-induced, so extra edges are allowed. Decomposition prefers
+four-cycles, then stars, then pairs; shared vertex IDs identify the overlap
+between slices. The caller selects the available types. Dynamic tensor sizes or
+indices, other region operations, quantum calls, and gates with more than two
+qubits require lowering first. These helpers do not yet join target occurrences
+or choose a start layout.
 
 Use `CompilerTarget.Connectivity.all_to_all()` for an all-to-all target. An
 empty `CompilerTarget.NativeOperations([])` reports that no quantum operation is

@@ -37,6 +37,11 @@ void Graph::removeEdge(size_t u, size_t v) {
 
 ArrayRef<size_t> Graph::getNeighbours(size_t id) const { return adj_.at(id); }
 
+bool Graph::hasEdge(size_t u, size_t v) const {
+  auto it = adj_.find(u);
+  return it != adj_.end() && llvm::is_contained(it->second, v);
+}
+
 SmallVector<size_t> Graph::getNodes() const { return to_vector(adj_.keys()); }
 
 void Graph::clearEdges() {

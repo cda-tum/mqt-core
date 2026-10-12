@@ -21,12 +21,14 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Pass/AnalysisManager.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -91,9 +93,9 @@ protected:
   MLIRContext context;
 
   void SetUp() override {
-    context
-        .loadDialect<QCODialect, qtensor::QTensorDialect, arith::ArithDialect,
-                     cf::ControlFlowDialect, func::FuncDialect>();
+    context.loadDialect<QCODialect, qtensor::QTensorDialect,
+                        arith::ArithDialect, cf::ControlFlowDialect,
+                        func::FuncDialect, scf::SCFDialect>();
   }
 
   OwningOpRef<ModuleOp> parse(StringRef source) {
@@ -186,30 +188,167 @@ TEST_F(PlacementAnalysisTest, TensorSlotsAndFromElementsKeepWireIdentity) {
   EXPECT_EQ(connectivity->graph.getDegree(1), 0);
 }
 
-TEST_F(PlacementAnalysisTest, AnalyzeNestedRegionSeparately) {
+TEST_F(PlacementAnalysisTest, NestedControlFlowUnionsInteractions) {
   auto moduleOp = parse(R"mlir(
-    func.func @circuit(%condition: i1, %a: !qco.qubit, %b: !qco.qubit)
-        -> (!qco.qubit, !qco.qubit) {
-      %x, %y = qco.if %condition args(%qa = %a, %qb = %b)
-          -> (!qco.qubit, !qco.qubit) {
-        %u, %v = qco.swap %qa, %qb : !qco.qubit, !qco.qubit
-        qco.yield %u, %v : !qco.qubit, !qco.qubit
-      } else args(%qa = %a, %qb = %b) {
-        qco.yield %qa, %qb : !qco.qubit, !qco.qubit
+    func.func @circuit(%condition: i1, %n: index, %a: !qco.qubit,
+                      %b: !qco.qubit, %c: !qco.qubit)
+        -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %x, %y, %z = scf.for %i = %zero to %n step %one
+          iter_args(%fa = %a, %fb = %b, %fc = %c)
+          -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+        %u, %v, %w = qco.if %condition args(%qa = %fa, %qb = %fb, %qc = %fc)
+            -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+          %sa, %sb = qco.swap %qa, %qb : !qco.qubit, !qco.qubit
+          qco.yield %sa, %sb, %qc : !qco.qubit, !qco.qubit, !qco.qubit
+        } else args(%qa = %fa, %qb = %fb, %qc = %fc) {
+          %flag, %wa, %wb, %wc = scf.while
+              (%state = %n, %aa = %qa, %ab = %qb, %ac = %qc)
+              : (index, !qco.qubit, !qco.qubit, !qco.qubit)
+              -> (i1, !qco.qubit, !qco.qubit, !qco.qubit) {
+            %ha = qco.h %aa : !qco.qubit
+            scf.condition(%condition) %condition, %ha, %ab, %ac
+                : i1, !qco.qubit, !qco.qubit, !qco.qubit
+          } do {
+          ^bb0(%flag_arg: i1, %ba: !qco.qubit, %bb: !qco.qubit, %bc: !qco.qubit):
+            %sb, %sc = qco.swap %bb, %bc : !qco.qubit, !qco.qubit
+            scf.yield %n, %ba, %sb, %sc
+                : index, !qco.qubit, !qco.qubit, !qco.qubit
+          }
+          qco.yield %wa, %wb, %wc : !qco.qubit, !qco.qubit, !qco.qubit
+        }
+        scf.yield %u, %v, %w : !qco.qubit, !qco.qubit, !qco.qubit
       }
+      %r, %s, %t = qco.index_switch %n
+          -> (!qco.qubit, !qco.qubit, !qco.qubit)
+      case 0 args(%qa = %x, %qb = %y, %qc = %z) {
+        %sa, %sc = qco.swap %qa, %qc : !qco.qubit, !qco.qubit
+        qco.yield %sa, %qb, %sc : !qco.qubit, !qco.qubit, !qco.qubit
+      }
+      default args(%qa = %x, %qb = %y, %qc = %z) {
+        qco.yield %qa, %qb, %qc : !qco.qubit, !qco.qubit, !qco.qubit
+      }
+      return %r, %s, %t : !qco.qubit, !qco.qubit, !qco.qubit
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+  auto func = *moduleOp->getOps<func::FuncOp>().begin();
+  auto connectivity = buildConnectivityGraph(func.getBody());
+  ASSERT_TRUE(succeeded(connectivity));
+  EXPECT_EQ(connectivity->qubits.size(), 3);
+  EXPECT_EQ(getEdges(connectivity->graph), (Edges{{0, 1}, {1, 2}, {0, 2}}));
+  EXPECT_EQ(connectivity->qubits[0].root, func.getArgument(2));
+  auto loop = *func.getOps<scf::ForOp>().begin();
+  auto branch = *loop.getBody()->getOps<IfOp>().begin();
+  connectivity = buildConnectivityGraph(branch.getThenRegion());
+  ASSERT_TRUE(succeeded(connectivity));
+  EXPECT_EQ(getEdges(connectivity->graph), (Edges{{0, 1}}));
+  EXPECT_EQ(connectivity->qubits[0].root,
+            branch.getThenRegion().getArgument(0));
+}
+
+TEST_F(PlacementAnalysisTest, TensorSlotsAcrossControlFlow) {
+  auto moduleOp = parse(R"mlir(
+    func.func @circuit(%q: tensor<3x!qco.qubit>, %n: index)
+        -> tensor<3x!qco.qubit> {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %two = arith.constant 2 : index
+      %result = scf.for %i = %zero to %n step %one
+          iter_args(%qs = %q) -> tensor<3x!qco.qubit> {
+        %t1, %a = qtensor.extract %qs[%zero] : tensor<3x!qco.qubit>
+        %t2, %b = qtensor.extract %t1[%two] : tensor<3x!qco.qubit>
+        %x, %y = qco.swap %a, %b : !qco.qubit, !qco.qubit
+        %t3 = qtensor.insert %x into %t2[%zero] : tensor<3x!qco.qubit>
+        %t4 = qtensor.insert %y into %t3[%two] : tensor<3x!qco.qubit>
+        scf.yield %t4 : tensor<3x!qco.qubit>
+      }
+      %t5, %c = qtensor.extract %result[%one] : tensor<3x!qco.qubit>
+      %t6, %d = qtensor.extract %t5[%zero] : tensor<3x!qco.qubit>
+      %u, %v = qco.swap %c, %d : !qco.qubit, !qco.qubit
+      %t7 = qtensor.insert %u into %t6[%one] : tensor<3x!qco.qubit>
+      %t8 = qtensor.insert %v into %t7[%zero] : tensor<3x!qco.qubit>
+      return %t8 : tensor<3x!qco.qubit>
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+  auto func = *moduleOp->getOps<func::FuncOp>().begin();
+  auto connectivity = buildConnectivityGraph(func.getBody());
+  ASSERT_TRUE(succeeded(connectivity));
+  EXPECT_EQ(connectivity->qubits.size(), 3);
+  EXPECT_EQ(getEdges(connectivity->graph), (Edges{{0, 1}, {0, 2}}));
+  EXPECT_EQ(connectivity->qubits[2].slot, 2);
+}
+
+TEST_F(PlacementAnalysisTest, CachesAndInvalidatesConnectivity) {
+  auto moduleOp = parse(R"mlir(
+    func.func @circuit(%a: !qco.qubit, %b: !qco.qubit)
+        -> (!qco.qubit, !qco.qubit) {
+      %x, %y = qco.swap %a, %b : !qco.qubit, !qco.qubit
       return %x, %y : !qco.qubit, !qco.qubit
     }
   )mlir");
   ASSERT_TRUE(moduleOp);
   auto func = *moduleOp->getOps<func::FuncOp>().begin();
-  ScopedDiagnosticHandler handler(&context,
-                                  [](Diagnostic&) { return success(); });
+  ModuleAnalysisManager manager(moduleOp.get(), nullptr);
+  auto analyses = AnalysisManager(manager).nest(func);
+  EXPECT_FALSE(analyses.getCachedAnalysis<RegionConnectivityAnalysis>());
+  const auto& initial = analyses.getAnalysis<RegionConnectivityAnalysis>();
+  ASSERT_TRUE(succeeded(initial.getConnectivity()));
+  EXPECT_EQ(getEdges(initial.getConnectivity()->graph), (Edges{{0, 1}}));
+  EXPECT_EQ(&initial, &analyses.getAnalysis<RegionConnectivityAnalysis>());
+  AnalysisManager::PreservedAnalyses preserved;
+  preserved.preserve<RegionConnectivityAnalysis>();
+  analyses.invalidate(preserved);
+  ASSERT_TRUE(analyses.getCachedAnalysis<RegionConnectivityAnalysis>());
+  EXPECT_EQ(&initial, &analyses.getAnalysis<RegionConnectivityAnalysis>());
+
+  auto swap = *func.getOps<SWAPOp>().begin();
+  swap->replaceAllUsesWith(swap->getOperands());
+  swap.erase();
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  ASSERT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+  analyses.invalidate(AnalysisManager::PreservedAnalyses{});
+  EXPECT_FALSE(analyses.getCachedAnalysis<RegionConnectivityAnalysis>());
+  const auto& updated = analyses.getAnalysis<RegionConnectivityAnalysis>();
+  ASSERT_TRUE(succeeded(updated.getConnectivity()));
+  EXPECT_TRUE(getEdges(updated.getConnectivity()->graph).empty());
+}
+
+TEST_F(PlacementAnalysisTest, RejectTensorPermutationAtRegionBoundary) {
+  auto moduleOp = parse(R"mlir(
+    func.func @circuit(%q: tensor<2x!qco.qubit>, %condition: i1)
+        -> tensor<2x!qco.qubit> {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %result = qco.if %condition args(%qs = %q) -> tensor<2x!qco.qubit> {
+        %t1, %a = qtensor.extract %qs[%zero] : tensor<2x!qco.qubit>
+        %t2, %b = qtensor.extract %t1[%one] : tensor<2x!qco.qubit>
+        %t3 = qtensor.insert %a into %t2[%one] : tensor<2x!qco.qubit>
+        %t4 = qtensor.insert %b into %t3[%zero] : tensor<2x!qco.qubit>
+        qco.yield %t4 : tensor<2x!qco.qubit>
+      } else args(%qs = %q) {
+        qco.yield %qs : tensor<2x!qco.qubit>
+      }
+      return %result : tensor<2x!qco.qubit>
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+  auto func = *moduleOp->getOps<func::FuncOp>().begin();
+  std::string diagnostic;
+  ScopedDiagnosticHandler handler(&context, [&](Diagnostic& message) {
+    diagnostic = message.str();
+    return success();
+  });
   EXPECT_TRUE(failed(buildConnectivityGraph(func.getBody())));
+  EXPECT_NE(diagnostic.find("unchanged tensor-slot identities"),
+            std::string::npos);
   auto branch = *func.getOps<IfOp>().begin();
+  EXPECT_TRUE(failed(RegionConnectivityAnalysis(branch).getConnectivity()));
   auto connectivity = buildConnectivityGraph(branch->getRegion(0));
   ASSERT_TRUE(succeeded(connectivity));
-  EXPECT_EQ(getEdges(connectivity->graph), (Edges{{0, 1}}));
-  EXPECT_EQ(connectivity->qubits[0].root, branch->getRegion(0).getArgument(0));
+  EXPECT_TRUE(getEdges(connectivity->graph).empty());
 }
 
 TEST_F(PlacementAnalysisTest, RejectUnsupportedConnectivity) {
@@ -259,8 +398,19 @@ TEST_F(PlacementAnalysisTest, RejectUnsupportedConnectivity) {
                        [](func::FuncOp op) { return !op.isExternal(); });
     ScopedDiagnosticHandler handler(&context,
                                     [](Diagnostic&) { return success(); });
-    EXPECT_TRUE(failed(buildConnectivityGraph(func.getBody())));
+    EXPECT_TRUE(failed(RegionConnectivityAnalysis(func).getConnectivity()));
   }
+}
+
+TEST(ConnectivityGraph, DirectedEdgeLookup) {
+  Graph graph({0, 1});
+  graph.addEdge(0, 1);
+  EXPECT_TRUE(graph.hasEdge(0, 1));
+  EXPECT_FALSE(graph.hasEdge(1, 0));
+  EXPECT_FALSE(graph.hasEdge(0, 0));
+  EXPECT_FALSE(graph.hasEdge(2, 0));
+  graph.removeEdge(0, 1);
+  EXPECT_FALSE(graph.hasEdge(0, 1));
 }
 
 TEST(TopologyPatternMatching, ExhaustiveFiveVertexGraphs) {

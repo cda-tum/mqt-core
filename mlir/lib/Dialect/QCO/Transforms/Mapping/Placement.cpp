@@ -16,11 +16,14 @@
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
+#include "mlir/IR/ValueRange.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -34,6 +37,15 @@
 #include <utility>
 
 namespace mlir::qco {
+
+RegionConnectivityAnalysis::RegionConnectivityAnalysis(Operation* operation) {
+  if (operation->getNumRegions() != 1) {
+    operation->emitError(
+        "connectivity analysis requires an operation with one region");
+    return;
+  }
+  connectivity_ = buildConnectivityGraph(operation->getRegion(0));
+}
 
 FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
   if (!llvm::hasSingleElement(region)) {
@@ -67,12 +79,31 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
     wires.erase(value);
     return indices;
   };
+  const auto quantum = [](ValueRange values) {
+    return llvm::make_filter_range(
+        values, [](Value value) { return isLinearQubitType(value.getType()); });
+  };
   for (Value argument : region.getArguments()) {
     if (isLinearQubitType(argument.getType()) && failed(addRoot(argument))) {
       return failure();
     }
   }
-  for (Operation& op : region.front()) {
+  struct Frame {
+    Block::iterator next;
+    Block::iterator end;
+    ValueRange outputs;
+  };
+  SmallVector<Frame> stack;
+  stack.push_back({.next = region.front().begin(),
+                   .end = region.front().end(),
+                   .outputs = {}});
+  while (!stack.empty()) {
+    auto& frame = stack.back();
+    if (frame.next == frame.end) {
+      stack.pop_back();
+      continue;
+    }
+    Operation& op = *frame.next++;
     if (isa<CallOp>(op)) {
       return op.emitError("inline quantum calls before connectivity analysis");
     }
@@ -80,7 +111,8 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
       if (!isLinearQubitType(operand.getType()) || wires.contains(operand)) {
         continue;
       }
-      if (operand.getParentRegion() == &region || failed(addRoot(operand))) {
+      if (operand.getParentRegion() == op.getParentRegion() ||
+          failed(addRoot(operand))) {
         return op.emitError("cannot identify an input qubit for connectivity");
       }
     }
@@ -98,6 +130,24 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
       }
       for (Value input : unitary.getInputQubits()) {
         wires[unitary.getOutputForInput(input)] = consume(input);
+      }
+    } else if (isa<IfOp, IndexSwitchOp, scf::ForOp, scf::WhileOp>(op)) {
+      // Linearity verification establishes positional quantum correspondence.
+      for (auto [input, output] : llvm::zip_equal(quantum(op.getOperands()),
+                                                  quantum(op.getResults()))) {
+        wires[output] = consume(input);
+      }
+      for (Region& body : llvm::reverse(op.getRegions())) {
+        if (!llvm::hasSingleElement(body)) {
+          return op.emitError("connectivity requires single-block regions");
+        }
+        for (auto [argument, output] : llvm::zip_equal(
+                 quantum(body.getArguments()), quantum(op.getResults()))) {
+          wires[argument] = wires.at(output);
+        }
+        stack.push_back({.next = body.front().begin(),
+                         .end = body.front().end(),
+                         .outputs = op.getResults()});
       }
     } else if (isa<AllocOp, StaticOp, qtensor::AllocOp>(op)) {
       if (failed(addRoot(op.getResult(0)))) {
@@ -142,14 +192,25 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
       }
     } else if (isa<SinkOp, qtensor::DeallocOp>(op) ||
                op.hasTrait<OpTrait::IsTerminator>()) {
+      if (op.hasTrait<OpTrait::IsTerminator>() && stack.size() > 1) {
+        // Tensor-level correspondence alone does not establish slot identity.
+        for (auto [yielded, output] : llvm::zip_equal(quantum(op.getOperands()),
+                                                      quantum(frame.outputs))) {
+          if (wires.at(yielded) != wires.at(output)) {
+            return op.emitError("connectivity requires unchanged tensor-slot "
+                                "identities through region terminators");
+          }
+        }
+      }
       for (Value operand : op.getOperands()) {
         wires.erase(operand);
       }
     } else if (op.getNumRegions() != 0 ||
                llvm::any_of(op.getOperandTypes(), isLinearQubitType) ||
                llvm::any_of(op.getResultTypes(), isLinearQubitType)) {
-      return op.emitError("unsupported connectivity operation; analyze nested "
-                          "regions separately and inline quantum calls");
+      return op.emitError(
+          "unsupported connectivity operation; lower unsupported "
+          "regions and inline quantum calls");
     }
   }
   result.graph =
@@ -194,9 +255,6 @@ std::optional<SmallVector<size_t, 4>> matchTopologyPattern(const Graph& graph,
     neighbours[b].push_back(a);
   }
   SmallVector<size_t, 4> match;
-  const auto adjacent = [&](size_t a, size_t b) {
-    return llvm::is_contained(graph.getNeighbours(a), b);
-  };
   // All templates have a connected prefix, so extend along its frontier.
   const auto search = [&](auto&& self) -> bool {
     const auto depth = match.size();
@@ -218,7 +276,7 @@ std::optional<SmallVector<size_t, 4>> matchTopologyPattern(const Graph& graph,
         continue;
       }
       if (llvm::any_of(neighbours[depth], [&](size_t other) {
-            return other < depth && !adjacent(candidate, match[other]);
+            return other < depth && !graph.hasEdge(candidate, match[other]);
           })) {
         continue;
       }
@@ -236,8 +294,8 @@ std::optional<SmallVector<size_t, 4>> matchTopologyPattern(const Graph& graph,
       for (const auto next : graph.getNeighbours(candidate)) {
         if (!llvm::is_contained(match, next)) {
           ++graphRemaining;
-          graphFrontier +=
-              llvm::any_of(match, [&](size_t n) { return adjacent(next, n); });
+          graphFrontier += llvm::any_of(
+              match, [&](size_t n) { return graph.hasEdge(next, n); });
         }
       }
       // Non-induced matches may map new pattern vertices into the graph
