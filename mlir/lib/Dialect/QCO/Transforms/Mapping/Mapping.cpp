@@ -1288,7 +1288,7 @@ private:
     if (!collectInteractionWeights(wires, weights, 1, maximumWeight)) {
       return std::nullopt;
     }
-    
+
     if (llvm::all_of(weights, [&](const auto& interaction) {
           const auto [a, b] = interaction.first;
           return env.target.areAdjacent(a, b);
