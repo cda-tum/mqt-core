@@ -6,15 +6,11 @@ of changes including minor and patch releases, please refer to the
 
 ## [4.1.0]
 
-This section describes changes since **v4.0.0**. When upgrading from v3, first
-follow the [v3-to-v4 migration](#400). See the
-[v4.1 release overview](CHANGELOG.md#410---2026-10-13) for new features.
+### Compilation options and device targets
 
-### Compiler options and device targets
-
-Replace separate timing/statistics arguments with `CompilationOptions` in
-`compile_program`, source `submit_program`, `run_pass_pipeline`,
-`compile_for_target`, and `synthesize_for_target`:
+When compiling or submitting source, move `enable_timing` and
+`enable_statistics` into a `CompilationOptions` object. Direct program
+compilation and pass pipelines use the same options:
 
 ```python
 from mqt.core.mlir import CompilationOptions, compile_program
@@ -23,107 +19,118 @@ source = "OPENQASM 3.0; qubit q;"
 compiled = compile_program(source, options=CompilationOptions(enable_timing=True))
 ```
 
-Explicit native-operation targets require a common single-qubit synthesis basis
-across sites and a common entangler across routing edges for two-qubit
-synthesis. `synthesis_basis.entangler` is now an `Entangler`, with `gate`,
-`angles`, and `parameterized` fields, or `None`. Target compilation rejects
-attached layout metadata; compile the original logical circuit for a new
-placement. See the
-[target guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/target_compilation.html).
+Explicit native-operation targets now need a single-qubit synthesis basis
+available on every site. Two-qubit synthesis also needs a common entangler on
+the routing edges. `synthesis_basis.entangler` now holds an `Entangler` object
+or `None`. Read its `gate` field where code previously used the gate kind. To
+request a new placement for a Qiskit circuit, compile the original logical
+circuit. Target compilation rejects attached layout metadata. The
+[target compilation guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/target_compilation.html)
+describes these requirements and the mapping options.
+
+### Quantum program contracts
+
+OpenQASM import no longer inserts runtime assertions. Validate runtime inputs
+before execution: classical indices must stay in bounds after negative-index
+wrapping, range steps must be nonzero, and integer arithmetic exponents must be
+nonnegative. Integer quantum-power exponents must be exactly representable as a
+64-bit floating-point value. Static diagnostics remain, but invalid runtime
+values have no guaranteed result or diagnostic. OpenQASM and QIR export reject
+explicit `cf.assert` operations. See the
+[OpenQASM guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/OpenQASM.html)
+for the supported inputs.
+
+Quantum helpers and structured regions must return quantum values in the order
+of their inputs. Return extracted qubits to their original register slots and
+carry complete registers across region and function boundaries. Use SWAP gates
+to exchange states instead of permuting result handles. Runtime quantum indices
+must stay in bounds. Quantum operands of the same operation must be disjoint.
+The
+[quantum resource contract](https://mqt.readthedocs.io/projects/core/en/latest/mlir/index.html#quantum-resource-contract)
+explains the rules for program builders.
+
+QC gate totals and single-qubit counts now include measurements and resets.
+Update checks that assumed these counts covered only unitary operations.
+Barriers remain excluded.
+
+Regenerate saved custom QCO assembly or remove its repeated result-type lists.
+For example, `qco.h %q : !qco.qubit` replaces
+`qco.h %q : !qco.qubit -> !qco.qubit`.
 
 ### QDMI device access
 
-Move manifest-based imports from `mqt.core.qdmi.driver` to
-`mqt.core.qdmi.builtin_driver`, including `open_device` and
-`registered_device_ids`. Replace `DeviceDefinition`, `register_device`, and
-`register_device_if_absent` with JSON manifests and
-`builtin_driver.add_manifest(path)` before first device access. Top-level
-`device_ids()` now queries a driver session.
+For manifest-based device access, replace imports from `mqt.core.qdmi.driver`
+with `mqt.core.qdmi.builtin_driver`. This includes `open_device` and
+`registered_device_ids`. Replace runtime `DeviceDefinition` registration with
+JSON manifests and register them with `builtin_driver.add_manifest(path)` before
+the first device lookup. Top-level `device_ids()` now queries a driver session.
+Use `builtin_driver.registered_device_ids()` for the local catalogue. The
+[configuration guide](https://mqt.readthedocs.io/projects/core/en/latest/qdmi/configuration.html)
+covers manifest registration and driver selection.
 
-C++ clients replace `qdmi/Client.hpp` with `qdmi/QDMI.hpp` and obtain owning
-devices through `qdmi::Session` or `qdmi::builtin_driver::openDevice`;
-`createSessionlessDevice` is removed. External drivers and devices must use QDMI
-1.4; driver ABI major/minor versions must match Core. See the
-[configuration guide](https://mqt.readthedocs.io/projects/core/en/latest/qdmi/configuration.html).
-
-The Slurm `open_device_from_license`/`openDeviceFromLicense` adapters are
-removed. Pass explicit device IDs and request the matching license in the job
-script; see the
-[Slurm guide](https://mqt.readthedocs.io/projects/core/en/latest/qdmi/slurm.html).
+The Slurm device-opening adapters are removed. Pass the device ID to
+`builtin_driver.open_device` and request its matching license in the job script.
+The
+[Slurm guide](https://mqt.readthedocs.io/projects/core/en/latest/qdmi/slurm.html)
+covers the shared playground and site setup.
 
 ### QDMI jobs and DDSIM sampling
 
 Replace `Job.program` with `Job.get_program()` and `Job.program_bytes` with
-`Job.get_program(bytes)`. Result methods default to program index zero.
-`ProgramFormat.BATCH_JOB` is removed; submit an ordered program list with one
-format and shared parameters. Calibration APIs and `ProgramFormat.CALIBRATION`
-are removed without replacement; use provider-specific calibration services.
+`Job.get_program(bytes)`. Result queries default to program index zero. Submit a
+program list with one format and shared parameters instead of using
+`ProgramFormat.BATCH_JOB`. Calibration APIs and `ProgramFormat.CALIBRATION` are
+removed. Use provider-specific APIs for calibration.
 
-DDSIM now samples eligible programs in parallel by default. A fixed seed
-reproduces shots only for the same effective worker count; use `custom3=1` for
-serial adaptive sampling. QIR runtime failures no longer propagate C++
-exceptions; handle failed programs through their QDMI job. See the
-[DDSIM guide](https://mqt.readthedocs.io/projects/core/en/latest/qdmi/ddsim_device.html).
-
-### Quantum program contracts
-
-OpenQASM import no longer emits runtime assertions. Check classical indices are
-in bounds after negative-index wrapping, range steps are nonzero, and integer
-arithmetic exponents are nonnegative. Integer quantum-power exponents must be
-exactly representable as `f64`. Static diagnostics remain. Invalid runtime
-values have no guaranteed result or diagnostic. OpenQASM and QIR export reject
-explicit `cf.assert`.
-
-Runtime quantum indices must stay in bounds and select disjoint operands.
-Quantum helpers return their quantum inputs as trailing results in argument
-order; region results preserve input identity and order. Restore extracted
-qubits to their original register slots and carry complete registers across
-boundaries; use SWAP gates to exchange states. See the
-[resource contract](https://mqt.readthedocs.io/projects/core/en/latest/mlir/index.html#quantum-resource-contract)
-and
-[OpenQASM guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/OpenQASM.html).
-
-QC gate totals and single-qubit counts now include measurements and resets;
-barriers remain excluded. Regenerate saved custom QCO assembly without repeated
-result types: `qco.h %q : !qco.qubit` replaces
-`qco.h %q : !qco.qubit -> !qco.qubit`.
+DDSIM samples eligible programs in parallel by default. A fixed seed reproduces
+shots for the same effective worker count. Use `custom3=1` for serial adaptive
+sampling. QIR runtime failures now fail the affected QDMI program rather than
+propagating C++ exceptions. Handle them through the job. The
+[DDSIM guide](https://mqt.readthedocs.io/projects/core/en/latest/qdmi/ddsim_device.html)
+describes worker controls and result handling.
 
 ### C++ libraries and source builds
 
-All source builds require **LLVM/MLIR 23.1+**. Remove `BUILD_MQT_CORE_MLIR=OFF`
-and replace no-MLIR presets with `debug` or `release`. Set `MLIR_DIR` to the
-SDK's `lib/cmake/mlir` directory.
+All source builds now require **LLVM/MLIR 23.1 or newer**. Remove
+`BUILD_MQT_CORE_MLIR=OFF` and use the `debug` or `release` presets instead of
+their no-MLIR variants. Set `MLIR_DIR` to the SDK's `lib/cmake/mlir` directory.
 
-Wheels no longer provide C++ DD, QDMI client, or benchmark development
-libraries. Install from source and request `COMPONENTS Development` with a
-matching LLVM major/minor SDK. The DD library is static. Wheels retain the C
-runtime and tools. Rebuild native consumers and update explicit ABI suffixes
-from `4.0` to `4.1`; wheel libraries are unversioned. Set project policies in
-the consuming build; the exported policy modules and
+Python wheels retain the QDMI C runtime and native tools, but no longer provide
+the C++ development libraries. For C++ DD, QDMI client, or benchmark use,
+install from source and request `COMPONENTS Development`. Use an LLVM SDK with
+the same major and minor version as the one used to build Core. The DD library
+is now static. Rebuild native consumers and update explicit shared-library ABI
+suffixes from `4.0` to `4.1`. Wheel libraries use unversioned filenames.
+
+Set build policies in the consuming project. The exported policy modules and
 `MQT::ProjectOptions`/`MQT::ProjectWarnings` are removed. See the
-[installation guide](https://mqt.readthedocs.io/projects/core/en/latest/installation.html).
+[installation guide](https://mqt.readthedocs.io/projects/core/en/latest/installation.html)
+for the runtime and development components.
 
-### Decision-diagram C++ APIs
+### C++ interfaces
 
-Replace constrained edge methods with free functions from `dd/Edge.hpp`, such as
-`dd::getVector(edge)`, `dd::getMatrix(edge, n)`, and `dd::normalize(...)`.
-Python methods remain unchanged. `dd::ComplexNumbers::setTolerance` requires a
-positive normal floating-point value; set it before creating DD packages. Unique
-table capacities must be powers of two; `MemoryManager::create(0)` is rejected.
-See the
+QDMI clients replace `qdmi/Client.hpp` with `qdmi/QDMI.hpp`. Open devices
+through `qdmi::Session` or `qdmi::builtin_driver::openDevice` instead of the
+removed sessionless raw-handle factory. External QDMI drivers and devices must
+use the QDMI 1.4 interfaces. Driver ABI major and minor versions must match
+Core.
+
+DD edge methods such as vector and matrix extraction move to free functions. For
+example, replace `edge.getVector()` with `dd::getVector(edge)` and
+`edge.getMatrix(n)` with `dd::getMatrix(edge, n)`. Include `dd/Edge.hpp`. Python
+DD methods keep their interfaces. Use `dd::ComplexNumbers::setTolerance` to set
+a positive normal floating-point tolerance before creating DD packages. Invalid
+values now throw `std::invalid_argument`. See the
 [DD guide](https://mqt.readthedocs.io/projects/core/en/latest/dd_package.html).
 
-### C++ compiler APIs
-
-Fallible Program and benchmark APIs return `LogicalResult` or `FailureOr<T>`
-instead of `bool` or `std::optional<T>`; check with `mlir::failed` or
-`mlir::succeeded`. Use `CompilationOptions` instead of trailing
-timing/statistics booleans. `qco::Layout` becomes `qco::Layout<T>` (`size_t`
-keeps the old type). Call `createPlacementPass()` without a target argument.
-Direct `verifyLinearity` callers must link `MLIRQCOUtils`. Replace
-`qdmi::unreachable()` with `llvm_unreachable("reason")` from
-`llvm/Support/ErrorHandling.h`. See the
-[C++ compiler guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/target_compilation.html#c-source-tree-api).
+Fallible compiler Program APIs and benchmark generators now return LLVM
+`LogicalResult` or `FailureOr<T>`. Replace boolean and `has_value()` checks with
+`mlir::failed` or `mlir::succeeded`, then access successful results as before.
+C++ compilation methods also take `CompilationOptions` in place of separate
+timing and statistics booleans. Direct callers of `qco::verifyLinearity` must
+link `MLIRQCOUtils`. The
+[C++ compiler guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/target_compilation.html#c-source-tree-api)
+covers the source-tree interfaces.
 
 ## [4.0.0]
 

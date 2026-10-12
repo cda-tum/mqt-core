@@ -10,16 +10,16 @@ releases may include breaking changes.
 
 ## [4.1.0] - 2026-10-13
 
+_If you are upgrading: please see [`UPGRADING.md`](UPGRADING.md#410)._
+
 MQT Core 4.1 adds program inspection and parameter binding, broader device
-compilation, native multi-program execution, and new adaptive benchmarks.
-Performance work reduces compiler overhead, DD allocations, and result copies;
-parallelizes eligible adaptive sampling; and optimizes release builds and
+compilation, native multi-program execution, and new structured benchmarks.
+Performance work reduces compiler overhead, DD allocations, and result copies.
+It parallelizes eligible adaptive sampling and optimizes release builds and
 wheels.
 
 **Performance measurements pending:** final v4.0.0-to-v4.1.0 figures for
 compilation, native gate count, simulation, memory, wheel size, and build time.
-
-See the [v4.1 upgrade guide](UPGRADING.md#410) for API and build changes.
 
 ### Added
 
@@ -27,32 +27,32 @@ See the [v4.1 upgrade guide](UPGRADING.md#410) for API and build changes.
 
 - ✨ Add QC/QCO resource inspection, gate and operation histograms, and native
   partial binding of named floating-point parameters. ([#2260], [#2660])
-  ([**@burgholzer**], [**@denialhaag**], [**@simon1hofmann**])
+  ([**@denialhaag**], [**@simon1hofmann**], [**@burgholzer**])
 
 #### Compilation for devices
 
 - ✨ Expose shared compilation and mapping options, and preserve placement and
   routing metadata through QC/QCO and Qiskit exchange. ([#2551], [#2553],
-  [#2615]) ([**@burgholzer**], [**@simon1hofmann**])
+  [#2615]) ([**@simon1hofmann**], [**@burgholzer**])
 - ✨ Import Qiskit device targets and support fixed or bounded native
   parameters. Add structural IBM Heron and Nighthawk device models. ([#2575],
-  [#2578], [#2655]) ([**@burgholzer**], [**@simon1hofmann**])
+  [#2578], [#2655]) ([**@simon1hofmann**], [**@burgholzer**])
 
 #### Optimization and synthesis
 
 - ✨ Synthesize native parameterized gate sets and constant two-qubit blocks.
   Decompose runtime multi-controlled phases without additional qubits. ([#2537],
-  [#2575], [#2578], [#2743]) ([**@burgholzer**], [**@simon1hofmann**])
+  [#2575], [#2578], [#2743]) ([**@simon1hofmann**], [**@burgholzer**])
 
 #### Program import and exchange
 
 - ✨ Support OpenQASM register slices, floating-point inputs, and bounded
   unitary gate loops. Preserve borrowed registers and structured loops through
   supported compilation and execution paths. ([#2546], [#2566], [#2567],
-  [#2660], [#2679], [#2743]) ([**@burgholzer**], [**@simon1hofmann**])
-- ✨ Exchange jeff through C++ Cap'n Proto messages and Python segment views
-  without flattening messages into bytes. ([#2707]) ([**@burgholzer**],
-  [**@denialhaag**])
+  [#2660], [#2679], [#2743]) ([**@simon1hofmann**], [**@burgholzer**])
+- ✨ Exchange `jeff` through C++ Cap'n Proto messages and Python segment views
+  without flattening messages into bytes. ([#2707]) ([**@denialhaag**],
+  [**@burgholzer**])
 
 #### Decision diagrams and execution
 
@@ -60,8 +60,8 @@ See the [v4.1 upgrade guide](UPGRADING.md#410) for API and build changes.
   recover partial Qiskit and PennyLane batches. ([#2373], [#2625])
   ([**@burgholzer**])
 - ✨ Forward device-specific Qiskit execution options and accept exact byte
-  payloads for custom QDMI job parameters. ([#2618], [#2629])
-  ([**@burgholzer**], [**@marcelwa**])
+  payloads for custom QDMI job parameters. ([#2618], [#2629]) ([**@marcelwa**],
+  [**@burgholzer**])
 - ✨ Use optional PyGraphviz 2 or newer for DD SVG export, retaining the system
   Graphviz fallback. ([#2563]) ([**@denialhaag**])
 
@@ -75,29 +75,29 @@ See the [v4.1 upgrade guide](UPGRADING.md#410) for API and build changes.
 #### Documentation and development
 
 - 📝 Provide a shared Slurm playground for classical and quantum workloads, QDMI
-  device monitoring, and persistent accounting. ([#2599]) ([**@burgholzer**],
-  [**@flowerthrower**])
+  device monitoring, and persistent accounting. ([#2599]) ([**@flowerthrower**],
+  [**@burgholzer**])
 
 ### Changed
 
 #### Compiler APIs and representations
 
-- 💥 Adopt `CompilationOptions`, LLVM results for fallible C++ Program APIs, and
-  shorter custom QCO assembly. ([#2551], [#2733], [#2738]) ([**@burgholzer**],
-  [**@simon1hofmann**])
-- 💥 Include measurements and resets in QC gate counts, require positional
-  quantum results, and treat OpenQASM runtime checks as caller preconditions.
-  ([#2260], [#2546], [#2743]) ([**@burgholzer**], [**@denialhaag**],
+- ♻️ Adopt `CompilationOptions`, LLVM results for fallible C++ Program APIs, and
+  shorter custom QCO assembly. ([#2551], [#2733], [#2738])
+  ([**@simon1hofmann**], [**@burgholzer**])
+- ♻️ Include measurements and resets in QC gate counts and require positional
+  quantum results. Stop inserting OpenQASM runtime assertions and require caller
+  validation. ([#2260], [#2546], [#2743]) ([**@denialhaag**], [**@burgholzer**],
   [**@simon1hofmann**])
 - ⚡ Reduce conversion and pipeline verification overhead, share compiler
-  workers, and compute benchmark phases at runtime. ([#2654], [#2687], [#2690],
-  [#2695], [#2697], [#2698], [#2740]) ([**@burgholzer**], [**@denialhaag**],
-  [**@simon1hofmann**])
+  workers, and compute benchmark phases at runtime. ([#2647], [#2654], [#2687],
+  [#2690], [#2695], [#2697], [#2698], [#2740]) ([**@simon1hofmann**],
+  [**@denialhaag**], [**@burgholzer**])
 
 #### Compilation for devices
 
-- 💥 Require a common single-qubit synthesis basis for explicit native-operation
-  targets. ([#2575]) ([**@burgholzer**], [**@simon1hofmann**])
+- ♻️ Require a common single-qubit synthesis basis for explicit native-operation
+  targets. ([#2575]) ([**@simon1hofmann**], [**@burgholzer**])
 - ⚡ Rank routes by estimated native gate cost, skip executable layout trials,
   and bound and reuse search storage. Elide terminal SWAPs and fuse successive
   controlled gates. ([#2544], [#2547], [#2549], [#2607], [#2612], [#2653],
@@ -106,24 +106,24 @@ See the [v4.1 upgrade guide](UPGRADING.md#410) for API and build changes.
 
 #### Builds and supported configurations
 
-- 💥 Require LLVM/MLIR for all source builds and provide the C++ SDK through
-  source installations. Wheels retain the QDMI C runtime and include `mqt-cc`.
-  ([#2715], [#2732]) ([**@burgholzer**])
-- ⚡ Optimize release wheels with assertion-free LLVM/MLIR SDKs and ThinLTO,
+- 🔧 Require LLVM/MLIR 23.1 or newer for all source builds and provide the C++
+  SDK through source installations. Wheels retain the QDMI C runtime and include
+  `mqt-cc`. ([#2715], [#2732]) ([**@burgholzer**])
+- ⚡ Optimize release wheels with assertion-free LLVM/MLIR 23.1.2 SDKs and LTO,
   share native code, and cache incremental links. ([#2678], [#2715], [#2726],
   [#2730]) ([**@burgholzer**], [**@denialhaag**])
-- 📦 Emit [PEP 794] import metadata, use QDMI 1.4.0 and nanobind 3.1, constrain
-  Qiskit to 2.x, and test Python 3.15. ([#2229], [#2233], [#2608], [#2623],
-  [#2633], [#2646], [#2739]) ([**@burgholzer**], [**@denialhaag**],
-  [**@ystade**])
+- 📦 Emit [PEP 794] import metadata, use QDMI 1.4.0 and nanobind 3.1, limit the
+  optional Qiskit integration to 2.x, and test Python 3.15. ([#2229], [#2233],
+  [#2608], [#2623], [#2633], [#2646], [#2739]) ([**@denialhaag**],
+  [**@burgholzer**], [**@ystade**])
 
 #### Runtime and client behavior
 
-- 💥 Support replaceable QDMI drivers and session-based discovery; move manifest
+- ♻️ Support replaceable QDMI drivers and session-based discovery. Move manifest
   configuration to `builtin_driver`. ([#2229]) ([**@burgholzer**],
   [**@ystade**])
-- 💥 Replace C++ DD edge operations with concrete vector and matrix free
-  functions. ([#2718]) ([**@burgholzer**])
+- ♻️ Replace C++ DD edge methods with free functions for vector and matrix DDs.
+  ([#2718]) ([**@burgholzer**])
 - ⚡ Parallelize eligible adaptive sampling, reduce DD allocation and
   result-copy overhead, optimize nonterminal QIR JIT code, and reduce SDK result
   decoding work. ([#2561], [#2604], [#2637], [#2644], [#2730], [#2737], [#2740])
@@ -131,32 +131,48 @@ See the [v4.1 upgrade guide](UPGRADING.md#410) for API and build changes.
 
 ### Fixed
 
-#### Compiler transformations and exchange
+#### Program import and exchange
 
-- 🐛 Preserve Qiskit parameter identities, controlled composites, structured
-  quantum and classical state, and helper captures through compilation and
-  OpenQASM/jeff exchange. Fix array-valued Qiskit imports and generated
-  gate-name collisions. ([#2550], [#2552], [#2559], [#2560], [#2565], [#2567],
-  [#2594], [#2610], [#2624], [#2647], [#2680], [#2742]) ([**@burgholzer**],
-  [**@denialhaag**], [**@simon1hofmann**])
+- 🐛 Import array-valued Qiskit gate parameters and preserve free-parameter
+  identities and controlled composite gates. ([#2550], [#2552], [#2565])
+  ([**@simon1hofmann**], [**@burgholzer**])
+- 🐛 Preserve structured OpenQASM export and source gate names, and avoid
+  generated-helper collisions. ([#2680], [#2742]) ([**@simon1hofmann**],
+  [**@burgholzer**])
+- 🐛 Preserve classical-register initialization and helper captures through
+  structured `jeff` round trips. ([#2567], [#2624]) ([**@denialhaag**],
+  [**@simon1hofmann**], [**@burgholzer**])
+
+#### Compiler transformations
+
+- 🐛 Preserve symbolic Euler chains and lower nested modifiers in controlled
+  composites. Handle runtime phases and global phases in classical control flow.
+  ([#2559], [#2594], [#2624]) ([**@simon1hofmann**], [**@denialhaag**],
+  [**@burgholzer**])
+- 🐛 Preserve classical QCO builder values and forwarded idle-loop qubit
+  producers. ([#2560], [#2610]) ([**@simon1hofmann**], [**@burgholzer**])
 
 #### Decision diagrams
 
-- 🐛 Preserve wide states, extreme magnitude sums, matrix root scales, and
-  consistent hashing. Reject malformed DD records and invalid capacities or
-  fidelity indices, and report file-write failures. ([#2606], [#2609], [#2617],
-  [#2636], [#2637], [#2731], [#2734]) ([**@burgholzer**], [**@simon1hofmann**])
+- 🐛 Preserve wide states, extreme magnitude sums, and matrix root scales. Keep
+  hashing and shared addition caches consistent. ([#2606], [#2609], [#2617],
+  [#2636], [#2637]) ([**@burgholzer**], [**@simon1hofmann**])
+- 🐛 Fix DD text parsing, reject malformed records and invalid capacities or
+  fidelity indices, and report file-write failures. ([#2731], [#2734])
+  ([**@burgholzer**])
 
 #### Device access and builds
 
-- 🐛 Contain native allocation failures, validate QIR ABI and runtime calls, and
-  preserve JIT output through teardown. Fix consumer CMake settings, Windows
-  exports, and relative provider paths. ([#2668], [#2715], [#2717], [#2719],
-  [#2730], [#2731], [#2734]) ([**@akshaysoftware**], [**@burgholzer**])
+- 🐛 Contain native allocation failures and isolate unrecoverable DDSIM runtime
+  failures. ([#2668], [#2715]) ([**@akshaysoftware**], [**@burgholzer**])
+- 🐛 Validate QIR ABI and runtime calls, and preserve output through JIT
+  teardown. ([#2731], [#2734]) ([**@burgholzer**])
+- 🐛 Preserve consumer CMake settings and fix Windows exports and relative
+  provider paths. ([#2717], [#2719], [#2730], [#2731]) ([**@burgholzer**])
 
 ### Removed
 
-- 💥 Remove obsolete QDMI metadata and calibration APIs and packaged Slurm
+- 🔥 Remove obsolete QDMI metadata and calibration APIs and packaged Slurm
   adapters. Use native program lists for batches, provider APIs for calibration,
   and explicit device IDs for Slurm jobs. ([#2233], [#2373], [#2599])
   ([**@burgholzer**], [**@flowerthrower**])
@@ -458,8 +474,7 @@ relative to v3.10.0. The entries below retain the contributing PRs and authors.
 
 ## [3.10.0] - 2026-09-05
 
-_If you are upgrading: please see
-[`UPGRADING.md`](UPGRADING.md#3100)._
+_If you are upgrading: please see [`UPGRADING.md`](UPGRADING.md#3100)._
 
 ### Added
 
