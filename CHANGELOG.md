@@ -18,8 +18,9 @@ Performance work reduces compiler overhead, DD allocations, and result copies.
 It parallelizes eligible adaptive sampling and optimizes release builds and
 wheels.
 
-**Performance measurements pending:** final v4.0.0-to-v4.1.0 figures for
-compilation, native gate count, simulation, memory, wheel size, and build time.
+⚠️ **Performance measurements pending:** add the final v4.0.0-to-v4.1.0 figures
+for compilation, native gate count, simulation, memory, wheel size, and build
+time before the release. ⚠️
 
 ### Added
 
