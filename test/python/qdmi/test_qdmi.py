@@ -804,7 +804,7 @@ def test_simulator_job_result_bindings(ddsim_device: Device) -> None:
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="Requires POSIX named pipes")
-@pytest.mark.parametrize("entrypoint", ["driver", "builtin_driver", "slurm", "compiler"])
+@pytest.mark.parametrize("entrypoint", ["driver", "builtin_driver", "compiler"])
 def test_device_open_releases_gil(tmp_path: Path, entrypoint: str) -> None:
     """A Python thread can supply configuration while native opening waits."""
     script = """
@@ -815,7 +815,7 @@ from pathlib import Path
 from threading import Thread
 
 from mqt.core.mlir import CompilerTarget
-from mqt.core.qdmi import builtin_driver, slurm
+from mqt.core.qdmi import builtin_driver
 from mqt.core.qdmi import open_device
 
 fifo = Path(sys.argv[1]) / "device.json"
@@ -828,7 +828,6 @@ os.environ["MQT_CORE_QDMI_CONFIG_JSON"] = json.dumps({
         "session": {"device-config": {"file": str(fifo)}},
     }]},
 })
-os.environ["SLURM_JOB_LICENSES"] = "mqt.sc.default:1"
 
 def supply_configuration():
     # Opening the write end blocks until the native reader opens the FIFO.
@@ -842,8 +841,6 @@ if entrypoint == "driver":
     assert open_device("mqt.sc.default").qubits_num() > 0
 elif entrypoint == "builtin_driver":
     assert builtin_driver.open_device("mqt.sc.default").qubits_num() > 0
-elif entrypoint == "slurm":
-    assert slurm.open_device_from_license().qubits_num() > 0
 else:
     assert CompilerTarget.from_device_id("mqt.sc.default").num_sites > 0
 writer.join()

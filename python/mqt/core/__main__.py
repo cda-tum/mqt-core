@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+__lazy_modules__ = ["mqt.core._commands"]
+
 import argparse
 import sys
 

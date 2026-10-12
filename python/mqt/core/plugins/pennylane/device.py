@@ -135,8 +135,7 @@ class QDMIDevice(Device):
             argument or ``device``.
         wires: PennyLane wire labels or number of wires. By default all QDMI
             qubits are exposed as consecutive integer wires.
-        device: An already-open QDMI device. Use this for a session selected by
-            an integration such as Slurm.
+        device: An already-open QDMI device.
         session_parameters: Device-session parameters for the MQT Core QDMI driver.
         job_parameters: QDMI custom job keyword arguments.
         max_retries: Maximum automatic replacements per failed entry; disabled by default.

@@ -40,13 +40,13 @@ if(TARGET MQT::CoreQDMI)
     mqt-core-qdmi-incompatible-client mqt-core-qdmi-session-device)
   mqt_copy_qdmi_runtime(mqt-core-qdmi-client-runtime-test)
 
-  package_add_test(${TARGET_NAME} MQT::CoreQDMI test_client.cpp test_slurm.cpp)
+  package_add_test(${TARGET_NAME} MQT::CoreQDMI test_client.cpp)
   set(client_test_config "$<TARGET_FILE_DIR:${TARGET_NAME}>/client-test-catalog.json")
   file(
     GENERATE
     OUTPUT "${client_test_config}"
     CONTENT
-      "{\n  \"schema-version\": 1,\n  \"qdmi\": {\n    \"devices\": [\n      {\"id\": \"test.unsupported-program-formats\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\"},\n      {\"id\": \"test.slurm.idle\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"idle\"}},\n      {\"id\": \"test.slurm.busy\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"busy\"}},\n      {\"id\": \"test.slurm.grammar\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"idle\"}},\n      {\"id\": \"test.slurm.single\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"idle\"}},\n      {\"id\": \"test.slurm.offline\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"offline\"}},\n      {\"id\": \"test.slurm.error\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"error\"}},\n      {\"id\": \"test.slurm.maintenance\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"maintenance\"}},\n      {\"id\": \"test.slurm.calibration\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"calibration\"}},\n      {\"id\": \"test.slurm.max\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\", \"session\": {\"custom4\": \"max\"}}\n    ]\n  }\n}\n"
+      "{\n  \"schema-version\": 1,\n  \"qdmi\": {\n    \"devices\": [\n      {\"id\": \"test.unsupported-program-formats\", \"library\": \"$<TARGET_FILE_NAME:mqt-core-qdmi-session-device>\", \"prefix\": \"TEST_SESSION\"}\n    ]\n  }\n}\n"
   )
   add_custom_command(
     TARGET ${TARGET_NAME}

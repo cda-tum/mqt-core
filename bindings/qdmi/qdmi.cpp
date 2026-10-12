@@ -43,10 +43,6 @@ namespace mqt {
 namespace nb = nanobind;
 using namespace nb::literals;
 
-namespace bindings {
-void registerSlurm(nb::module_& qdmiModule);
-} // namespace bindings
-
 namespace {
 using PythonCustomJobParameter =
     std::variant<std::string, bool, int, double, nb::bytes>;
@@ -212,7 +208,6 @@ NB_MODULE(MQT_CORE_MODULE_NAME, qdmiModule) {
   qdmiModule.doc() = "QDMI sessions, devices, and jobs.";
   auto builtinDriver = qdmiModule.def_submodule(
       "builtin_driver", "Configure the MQT Core QDMI driver.");
-  bindings::registerSlurm(qdmiModule);
 
   nb::class_<qdmi::Session>(qdmiModule, "Session",
                             "One initialized QDMI driver session.")
