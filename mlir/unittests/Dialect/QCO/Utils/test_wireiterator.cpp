@@ -49,10 +49,15 @@ TEST(QuantumValues, FiltersInOrderAndCountsValuesNotTensorSlots) {
   Block block;
   auto qubit = QubitType::get(&context);
   auto location = UnknownLoc::get(&context);
-  block.addArguments({IntegerType::get(&context, 1), qubit,
-                      RankedTensorType::get({3}, qubit),
-                      IndexType::get(&context), qubit},
-                     SmallVector<Location>(5, location));
+  block.addArguments(
+      {
+          IntegerType::get(&context, 1),
+          qubit,
+          RankedTensorType::get({3}, qubit),
+          IndexType::get(&context),
+          qubit,
+      },
+      SmallVector<Location>(5, location));
   EXPECT_EQ(llvm::to_vector(quantumValues(block.getArguments())),
             (SmallVector<Value>{block.getArgument(1), block.getArgument(2),
                                 block.getArgument(4)}));
