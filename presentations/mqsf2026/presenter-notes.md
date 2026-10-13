@@ -43,19 +43,22 @@ Braket example.
 ## 4 · Execute the hybrid workflow
 
 Reveal the actual payload-generation code, then shrink it as the quantum batch
-expands. One QDMI job contains 4,096 programs and 1,048,576 shots. The replay
-starts at submission, omitting preparation. Job states and indexed results are
-observations, not simulated durations.
+expands. One QDMI job contains 4,096 programs with 1,024 shots each: 4,194,304
+shots in total. Trace basis generation, exact matrix validation, and PennyLane
+preprocessing before program conversion. Job states and indexed results are
+recorded observations; playback rescales their timing.
 
-Reveal classical propagation: four Slurm ranks on two compute nodes, 128 walkers
-and 480 imaginary-time steps for each trial. These are real Docker-playground
-allocations on one host, not a cluster-scaling experiment. Wall time and
-imaginary time are different coordinates.
+Reveal classical propagation: four Slurm ranks on four compute nodes, 128
+walkers and 240 imaginary-time steps for each trial. These are real
+Docker-playground allocations on one host, not a cluster-scaling experiment.
+Wall time and imaginary time are different coordinates.
 
-The first curve uses quantum-shadow overlaps. The next click overlays the
-Hartree–Fock trial. Show the complete observed range. The reference is exact FCI
-within this basis; the band covers only walker uncertainty conditional on the
-shared shadows. No conclusion about quantum advantage follows from these curves.
+Animate the quantum-shadow trial, then the Hartree–Fock trial. Interpolation
+connects recorded walker states and energy estimates; the walker rings remain
+visible at zero weight. Show the complete observed range. The reference is exact
+FCI within this basis; the band covers only walker uncertainty conditional on
+the shared shadows. No conclusion about quantum advantage follows from these
+curves.
 
 ## 5 · Compile for a physical target
 
@@ -69,12 +72,12 @@ forward route. Gate highlights and SWAP counters come from recorded operations;
 visual interpolation does not add search states. Completed tiles retain visual
 reminders of the pipeline.
 
-Change the device card, then recompile on another click. Show IBM's public
-Nighthawk model and IonQ's all-to-all GPI/GPI2/RZZ model. The same payload
-enters each compilation. Metadata is captured in advance, compiled through local
-QDMI models, and checked by executing the resulting payload on DDSIM. No
-hardware jobs are submitted. End with the extensible interface and abstract
-compiler flow.
+Each target change updates the device and recorded compiler stages together.
+Show IBM's public Nighthawk model and IonQ's all-to-all GPI/GPI2/RZZ model. The
+same payload enters each compilation. Metadata is captured in advance, compiled
+through local QDMI models, and checked by executing the resulting payload on
+DDSIM. No hardware jobs are submitted. End with the extensible interface and
+abstract compiler flow.
 
 ## 6 · Inside the compiler
 
@@ -86,6 +89,9 @@ Show real cancellation/rotation merging, a bounded recorded A* search, and fused
 two-qubit interactions in the Weyl chamber. The chamber shows measured matrix
 coordinates, not a simulated synthesis-search trajectory. Finish with real QIR
 and return to the abstract architecture.
+
+The [compiler change inventory](compiler-fixes.md) identifies the reusable
+compiler fixes, opt-in presentation traces, and remaining interchange limits.
 
 ## 7 · Why are we unrolling?
 
@@ -104,8 +110,17 @@ The literature RUS V₃ example is retained in the downloadable evidence.
 ## 8 · Execute adaptive QIR
 
 DDSIM runs QIR 2.1 Adaptive Profile using a JIT, including the program's
-classical computation. Iterative QPE uses four logical qubits, eight output
-bits, phase 1/3, and 8,192 shots. Controlled-U powers remain counted loops.
+classical computation. Iterative QPE uses a four-qubit U plus a recycled
+control: five qubits in total, eight output bits, phase 1/3, and 8,192 shots.
+U = P(π/6)⊗⁴ acts on |1111⟩. The outer loop resets the control for each bit;
+the nested loop repeats controlled-U 2^(7−k) times. P(θ) applies the feedback
+accumulated so far, and measurement updates θ ← θ/2 − (π/2) result[k] for the
+next round. These loops and runtime calculations remain in the compiled QIR.
+
+The diagram comes from the exact submitted OpenQASM syntax, without expanding
+the loops. Qiskit export is unavailable for this program's dynamic bounds and
+classical indexing. The evidence records that limit and retains the real
+QC/QCO/QIR artifacts; it does not replace the program with a Qiskit surrogate.
 
 Four native workers execute in parallel. Their progress and the histogram share
 actual 64-shot batch-completion observations with the QDMI/JIT trace. Each
@@ -118,6 +133,6 @@ benchmark. QCO measurement-branch sharing is a separate path from adaptive QIR.
 Zoom back out to the shared architecture. Common interfaces, compilation, and
 orchestration connect different users, classical infrastructure, and devices.
 
-“Built with the MQT and QDMI communities — driven into practice by MQSC.”
+“Built with the Community. Driven into practice by MQSC.”
 
 Leave the mq.sc QR code visible for discussion.

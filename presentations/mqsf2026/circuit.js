@@ -327,5 +327,100 @@ window.MQSF_CIRCUIT = (() => {
     if (label) body += txt(width / 2, height - 5, label, 23, "#5b7088");
     return `<div class="circuit" data-morph="circuit-${key}" data-op-count="${all.length}" data-fold-rows="${bands}" data-first-column="${firstColumn}" data-left="${first}" data-right="${width - 28}"><svg xmlns="http://www.w3.org/2000/svg" data-morph="${key}-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMid meet" role="img" aria-label="Captured program circuit${bands > 1 ? `, ${bands} rows read left to right, top to bottom` : ""}">${body}</svg></div>`;
   }
-  return { flatten, schedule, render };
+  function renderQPE(c) {
+    const outer = c.operations.find(
+        (operation) => operation.name === "for_loop",
+      ),
+      body = outer?.blocks?.[0] || [],
+      inner = body.find((operation) => operation.name === "for_loop"),
+      unitary = inner?.blocks?.[0] || [],
+      measurement = body.find((operation) => operation.name === "measure"),
+      feedback = body.find((operation) => operation.name === "store"),
+      preparation = c.operations.filter((operation) => operation.name === "x");
+    // This compact view groups only the captured four-CP controlled-U.
+    if (
+      c.qubits.length !== 5 ||
+      preparation.length !== 4 ||
+      c.operations.map((operation) => operation.name).join() !==
+        "x,x,x,x,for_loop" ||
+      preparation.some(
+        (operation, i) => operation.qubits.join() !== String(i + 1),
+      ) ||
+      !outer ||
+      !inner ||
+      !measurement ||
+      !feedback ||
+      body.map((operation) => operation.name).join() !==
+        "reset,h,for_loop,p,h,measure,store" ||
+      [0, 1, 3, 4, 5].some((index) => body[index].qubits.join() !== "0") ||
+      unitary.length !== 4 ||
+      unitary.some(
+        (operation, i) =>
+          operation.name !== "cp" ||
+          operation.qubits.join() !== `0,${i + 1}` ||
+          operation.parameters[0] !== unitary[0].parameters[0],
+      )
+    )
+      throw new Error(
+        "The captured QPE source no longer matches its compact diagram",
+      );
+    const formula = (value) =>
+        esc(value)
+          .replaceAll("theta", "θ")
+          .replaceAll("pi", "π")
+          .replaceAll("*", "×")
+          .replaceAll(" - ", " − ")
+          .replace(/float\[64\]\(([^)]+)\)/g, "$1")
+          .replace(" = ", " ← ")
+          .replace(/;$/, ""),
+      label = (x, y, value, size = 27, color = "#142b45") =>
+        `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="${color}">${value}</text>`,
+      wireY = (wire) => 86 + wire * 36,
+      gate = (operation, x, value) =>
+        `<g data-operation="${operation.name}" data-source-line="${operation.source_line}"><rect x="${x - Math.max(26, value.length * 8)}" y="${wireY(operation.qubits[0]) - 17}" width="${Math.max(52, value.length * 16)}" height="34" rx="5" fill="white" stroke="#2f70b8" stroke-width="2"/>${label(x, wireY(operation.qubits[0]) + 9, value)}</g>`,
+      power = inner.range.match(/^1:1 << (\d+) - (\w+)$/),
+      repetitions = power
+        ? `2<tspan baseline-shift="super" font-size="70%">${power[1]}−${esc(power[2])}</tspan>`
+        : esc(inner.range),
+      angle = formula(unitary[0].parameters[0]);
+    let drawing = `<g data-control-flow="for_loop" data-iterations="${outer.iterations}" data-source-line="${outer.source_line}"><rect x="158" y="37" width="950" height="264" rx="14" fill="#eaf2fa" fill-opacity=".4" stroke="#87acd0" stroke-width="2"/>${label(630, 26, `${esc(outer.variable)} = ${esc(outer.range.replace(":", ", …, "))} · ${outer.iterations} Rounds`, 29)}</g>`;
+    drawing += c.qubits
+      .map(
+        (qubit) =>
+          `<line x1="70" y1="${wireY(qubit.id)}" x2="1092" y2="${wireY(qubit.id)}" stroke="#b6c9dc" stroke-width="2"/>${label(32, wireY(qubit.id) + 8, esc(qubit.label), 23)}`,
+      )
+      .join("");
+    drawing += preparation
+      .map((operation) => gate(operation, 112, "X"))
+      .join("");
+    drawing += gate(body[0], 204, "|0⟩") + gate(body[1], 282, "H");
+    drawing += `<g data-control-flow="for_loop" data-range="${esc(inner.range)}" data-source-line="${inner.source_line}"><rect x="330" y="57" width="302" height="181" rx="10" fill="white" fill-opacity=".7" stroke="#2f70b8" stroke-width="2" stroke-dasharray="7 4"/>${label(480, 268, `Repeat ${repetitions} Times`, 27)}</g>`;
+    drawing += unitary
+      .map((operation, i) => {
+        const x = 364 + i * 76,
+          target = wireY(operation.qubits[1]);
+        return `<g data-operation="cp" data-source-line="${operation.source_line}"><line x1="${x}" y1="86" x2="${x}" y2="${target}" stroke="#2f70b8" stroke-width="2.5"/><circle cx="${x}" cy="86" r="6" fill="#2f70b8"/><circle cx="${x}" cy="${target}" r="6" fill="#2f70b8"/>${label(x + 20, target - 9, "P", 24, "#2f70b8")}</g>`;
+      })
+      .join("");
+    drawing += label(
+      480,
+      326,
+      `Controlled-U · U = P(${angle})<tspan baseline-shift="super" font-size="75%">⊗4</tspan>`,
+      23,
+    );
+    drawing +=
+      gate(body[3], 710, `P(${formula(body[3].parameters[0])})`) +
+      gate(body[4], 794, "H");
+    drawing += `<g data-operation="measure" data-classical-target="${esc(measurement.classical_target)}" data-source-line="${measurement.source_line}"><rect x="859" y="64" width="52" height="44" rx="6" fill="white" stroke="#2f70b8" stroke-width="2"/><path d="M869 93a16 16 0 0 1 32 0M885 93l11 -18" fill="none" stroke="#2f70b8" stroke-width="2"/>${label(1004, 76, esc(measurement.classical_target), 26, "#087d92")}<path d="M885 109V252" fill="none" stroke="#087d92" stroke-width="2" stroke-dasharray="5 4"/></g>`;
+    const initialization = c.classical_initializers.find((statement) =>
+      statement.startsWith("float[64] theta ="),
+    );
+    if (!initialization)
+      throw new Error(
+        "The QPE diagram requires its captured feedback initializer",
+      );
+    drawing += `<g data-classical-expression="${esc(feedback.expression)}" data-source-line="${feedback.source_line}"><rect x="676" y="252" width="416" height="40" rx="8" fill="#e8f5f0" stroke="#55a194"/>${label(884, 279, formula(feedback.expression), 24, "#087d92")}</g>${label(885, 326, `${formula(initialization.replace("float[64] ", ""))} Initially · Next-Round Feedback`, 22, "#087d92")}`;
+    return `<div class="circuit qpe-nested" data-source-sha256="${esc(c.source_sha256)}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 342" role="img" aria-label="Complete source-derived iterative QPE with an outer loop, nested controlled-U loop, measurement and runtime phase feedback">${drawing}</svg></div>`;
+  }
+  return { flatten, schedule, render, renderQPE };
 })();

@@ -175,6 +175,27 @@ EVIDENCE_CHECK = """() => {
 
 CIRCUIT_CHECK = """() => {
     const {schedule, render, flatten} = MQSF_CIRCUIT, failures = [];
+    const qpe = MQSF_DATA.scenarios.find(s => s.id === 'qpe').variants[0].stages.find(s => s.id === 'source').circuit;
+    const qpeView = document.createElement('div');
+    qpeView.innerHTML = MQSF_CIRCUIT.renderQPE(qpe);
+    const capturedGates = flatten(qpe).filter(op => op.qubits.length).map(op => `${op.name}:${op.source_line}`);
+    const shownGates = [...qpeView.querySelectorAll('[data-operation]')].map(op =>
+        `${op.dataset.operation}:${op.dataset.sourceLine}`);
+    if (shownGates.join('|') !== capturedGates.join('|') ||
+        qpeView.querySelectorAll('[data-control-flow="for_loop"]').length !== 2)
+        failures.push('The complete QPE diagram loses source gates or one of its nested loops');
+    for (const mutate of [
+        c => c.operations.push({name:'h', qubits:[1]}),
+        c => c.operations[0].qubits = [2],
+        c => c.operations.at(-1).blocks[0][0].qubits = [1],
+        c => c.operations.at(-1).blocks[0][3].qubits = [1],
+        c => c.operations.at(-1).blocks[0][5].qubits = [1],
+    ]) {
+        const altered = structuredClone(qpe); mutate(altered);
+        let rejected = false;
+        try { MQSF_CIRCUIT.renderQPE(altered); } catch { rejected = true; }
+        if (!rejected) failures.push('The QPE diagram silently substitutes the original program after a source change');
+    }
     const parity = MQSF_DATA.scenarios.find(s => s.id === 'parity').variants[0];
     const source = parity.stages.find(s => s.id === 'source').circuit;
     const h = schedule(source).filter(o => o.name === 'h');

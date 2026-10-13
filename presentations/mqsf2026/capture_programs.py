@@ -29,6 +29,8 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from qiskit import QuantumCircuit
 
     from mqt.core.mlir import CompilerTarget, QCOProgram, QCProgram
@@ -73,24 +75,146 @@ bit result = measure data;
 
 
 def qpe_source(precision: int = 8) -> str:
-    """Return iterative QPE for phase 1/3 on a three-qubit eigenstate.
+    """Return iterative QPE for phase 1/3 on a four-qubit eigenstate.
 
-    The three controlled phase gates each contribute 1/9 of a turn. One query
+    The four controlled phase gates each contribute 1/12 of a turn. One query
     qubit is reset and reused; classical feedback implements the inverse QFT.
     """
-    lines = [
-        'OPENQASM 3.1;\ninclude "stdgates.inc";',
-        f"qubit[4] q; bit[{precision}] result;",
-        "x q[1]; x q[2]; x q[3];",
-    ]
-    for bit in range(precision):
-        lines.extend((f"// Phase bit {bit}: power 2^{precision - bit - 1}", "h q[0];"))
-        lines.append(f"for int power in [1:{2 ** (precision - bit - 1)}] {{")
-        lines.extend(f"  cp(2*pi/9) q[0], q[{target}];" for target in range(1, 4))
-        lines.append("}")
-        lines.extend(f"if (result[{previous}]) {{ p(-pi/{2 ** (bit - previous)}) q[0]; }}" for previous in range(bit))
-        lines.extend(("h q[0];", f"result[{bit}] = measure q[0];", "reset q[0];"))
-    return "\n".join(lines) + "\n"
+    return f"""OPENQASM 3.1;
+include "stdgates.inc";
+qubit[5] q; bit[{precision}] result = 0;
+x q[1]; x q[2]; x q[3]; x q[4];
+if (true) {{
+  float[64] theta = 0;
+  for uint k in [0:{precision - 1}] {{
+    reset q[0];
+    h q[0];
+    for int power in [1:1 << ({precision - 1}-k)] {{
+      cp(pi/6) q[0], q[1];
+      cp(pi/6) q[0], q[2];
+      cp(pi/6) q[0], q[3];
+      cp(pi/6) q[0], q[4];
+    }}
+    p(theta) q[0];
+    h q[0];
+    result[k] = measure q[0];
+    theta = theta / 2 - pi / 2 * float[64](result[k]);
+  }}
+}}
+"""
+
+
+def capture_openqasm_circuit(source: str) -> dict[str, Any]:
+    """Read the submitted source when dynamic classical data prevents Qiskit export.
+
+    Returns:
+        Static gate operands, nested loops, and exact classical expressions.
+
+    Unsupported statements or operands fail with ValueError.
+    """
+    import openqasm3  # ruff: ignore[import-outside-top-level]
+    from openqasm3 import ast  # ruff: ignore[import-outside-top-level]
+
+    qubits, clbits, initializers = [], [], []
+    registers: dict[str, list[int]] = {}
+
+    def operand(node: ast.IndexedIdentifier | ast.Identifier) -> int:
+        if not isinstance(node, ast.IndexedIdentifier) or len(node.indices) != 1:
+            msg = "Source diagrams require one static qubit index"
+            raise ValueError(msg)
+        group = node.indices[0]
+        if not isinstance(group, list) or len(group) != 1:
+            msg = "Source diagrams require one static qubit index"
+            raise ValueError(msg)
+        index = group[0]
+        if not isinstance(index, ast.IntegerLiteral) or not 0 <= index.value < len(registers.get(node.name.name, [])):
+            msg = "Source diagram qubit index is dynamic or out of bounds"
+            raise ValueError(msg)
+        return registers[node.name.name][index.value]
+
+    def operations(statements: Sequence[ast.Statement | ast.Pragma], prefix: str = "") -> list[dict[str, Any]]:
+        result = []
+        for index, node in enumerate(statements):
+            assert node.span is not None, "Parsed source nodes must retain their locations"
+            item: dict[str, Any] = {
+                "id": f"{prefix}{index}",
+                "source_line": node.span.start_line,
+                "qubits": [],
+                "clbits": [],
+                "parameters": [],
+            }
+            if isinstance(node, ast.Include):
+                continue
+            if isinstance(node, ast.QubitDeclaration) and isinstance(node.size, ast.IntegerLiteral):
+                registers[node.qubit.name] = list(range(len(qubits), len(qubits) + node.size.value))
+                qubits.extend(
+                    {"id": wire, "label": f"{node.qubit.name}[{i}]"}
+                    for i, wire in enumerate(registers[node.qubit.name])
+                )
+                continue
+            if isinstance(node, ast.ClassicalDeclaration):
+                if isinstance(node.type, ast.BitType):
+                    size = node.type.size.value if isinstance(node.type.size, ast.IntegerLiteral) else 1
+                    base = len(clbits)
+                    clbits.extend({"id": base + i, "label": f"{node.identifier.name}[{i}]"} for i in range(size))
+                if node.init_expression is not None:
+                    initializers.append(openqasm3.dumps(node).strip())
+                continue
+            if (
+                isinstance(node, ast.BranchingStatement)
+                and isinstance(node.condition, ast.BooleanLiteral)
+                and node.condition.value
+                and not node.else_block
+            ):
+                result.extend(operations(node.if_block, f"{prefix}{index}."))
+                continue
+            if isinstance(node, ast.ForInLoop) and isinstance(node.set_declaration, ast.RangeDefinition):
+                bounds = node.set_declaration
+                item.update(
+                    name="for_loop",
+                    variable=node.identifier.name,
+                    range=openqasm3.dumps(bounds).strip(),
+                    blocks=[operations(node.block, f"{prefix}{index}.")],
+                )
+                item["qubits"] = sorted({wire for child in item["blocks"][0] for wire in child["qubits"]})
+                if (
+                    isinstance(bounds.start, ast.IntegerLiteral)
+                    and isinstance(bounds.end, ast.IntegerLiteral)
+                    and bounds.step is None
+                ):
+                    item["iterations"] = bounds.end.value - bounds.start.value + 1
+            elif isinstance(node, ast.QuantumGate) and not node.modifiers:
+                item.update(
+                    name=node.name.name,
+                    qubits=[operand(q) for q in node.qubits],
+                    parameters=[openqasm3.dumps(value).strip() for value in node.arguments],
+                )
+            elif isinstance(node, ast.QuantumReset):
+                item.update(name="reset", qubits=[operand(node.qubits)])
+            elif isinstance(node, ast.QuantumMeasurementStatement) and node.target is not None:
+                item.update(
+                    name="measure",
+                    qubits=[operand(node.measure.qubit)],
+                    classical_target=openqasm3.dumps(node.target).strip(),
+                )
+            elif isinstance(node, ast.ClassicalAssignment):
+                item.update(name="store", expression=openqasm3.dumps(node).strip())
+            else:
+                msg = f"Unsupported source diagram statement: {type(node).__name__}"
+                raise ValueError(msg)
+            result.append(item)
+        return result
+
+    captured = operations(openqasm3.parse(source).statements)
+    return {
+        "kind": "logical",
+        "order": "Parsed OpenQASM input; nested loop bodies occur once and classical expressions are retained.",
+        "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
+        "qubits": qubits,
+        "clbits": clbits,
+        "classical_initializers": initializers,
+        "operations": captured,
+    }
 
 
 def capture_circuit(circuit: QuantumCircuit, sites: list[int] | None = None) -> dict[str, Any]:
@@ -591,25 +715,41 @@ def capture_variant(
     return variant
 
 
-def capture_portable_variant(qc: QCProgram, *, unroll: bool) -> dict[str, Any]:
+def capture_portable_variant(qc: QCProgram, *, unroll: bool, source_diagram: bool = False) -> dict[str, Any]:
     """Capture device-independent optimization and its portable exports.
 
     Returns:
         Exact QC, QCO, optimized QC, and export artifacts without target synthesis.
+
+    Raises:
+        RuntimeError: If a required Qiskit diagram cannot be exported.
     """
     from mqt.core.mlir import QIRProfile  # ruff: ignore[import-outside-top-level]
 
-    stages = [program_stage("qc", "Import into QC", qc)]
+    def captured_stage(identifier: str, label: str, program: QCProgram | QCOProgram) -> dict[str, Any]:
+        return (
+            stage(identifier, label, "mlir", program.ir)
+            if source_diagram
+            else program_stage(identifier, label, program)
+        )
+
+    stages = [captured_stage("qc", "Import into QC", qc)]
     qco = qc.to_qco(copy=True)
-    stages.append(program_stage("qco", "Value-based QCO", qco))
+    stages.append(captured_stage("qco", "Value-based QCO", qco))
     qco.run_pass_pipeline("mqt-qco-default")
-    stages.append(program_stage("optimized", "Device-independent optimization", qco))
+    stages.append(captured_stage("optimized", "Device-independent optimization", qco))
     if unroll:
         qco.unroll_quantum_loops()
         qco.cleanup()
-        stages.append(program_stage("unrolled", "Unroll bounded quantum loops", qco))
+        stages.append(captured_stage("unrolled", "Unroll bounded quantum loops", qco))
     optimized_qc = qco.to_qc(copy=True)
-    stages.append(program_stage("qc-optimized", "Return to QC", optimized_qc))
+    stages.append(captured_stage("qc-optimized", "Return to QC", optimized_qc))
+    try:
+        qiskit = stage("qiskit", "Qiskit circuit", "text", render_qiskit(optimized_qc.to_qiskit()))
+    except RuntimeError as error:
+        if not source_diagram:
+            raise
+        qiskit = {"id": "qiskit", "label": "Qiskit circuit", "unavailable_reason": str(error)}
     return {
         "id": "unrolled" if unroll else "structured",
         "label": "Bounded loops unrolled" if unroll else "Preserve supported structure",
@@ -617,7 +757,7 @@ def capture_portable_variant(qc: QCProgram, *, unroll: bool) -> dict[str, Any]:
         "exports": [
             stage("qir-adaptive", "QIR Adaptive", "llvm", optimized_qc.to_qir(QIRProfile.ADAPTIVE, copy=True).llvm_ir),
             stage("openqasm3", "OpenQASM 3", "qasm", optimized_qc.to_openqasm3().source),
-            stage("qiskit", "Qiskit circuit", "text", render_qiskit(optimized_qc.to_qiskit())),
+            qiskit,
         ],
         "layout": {"initial": [], "final": [], "swaps": []},
     }
@@ -672,8 +812,8 @@ def capture(compiler: Path, selected: str) -> dict[str, Any]:
         (
             "qpe",
             "Iterative phase estimation",
-            "Eight phase bits from four qubits. Phase 1/3 lies between output bins, producing a visible distribution.",
-            {"qubits": 4, "precision": 8, "phase_numerator": 1, "phase_denominator": 3},
+            "Eight phase bits from a four-qubit U and one recycled control. Phase 1/3 lies between output bins.",
+            {"qubits": 5, "unitary_qubits": 4, "precision": 8, "phase_numerator": 1, "phase_denominator": 3},
             qpe_source(),
         ),
         (
@@ -697,9 +837,11 @@ def capture(compiler: Path, selected: str) -> dict[str, Any]:
         }
         for unroll in (False, True) if identifier == "parity" else (False,):
             sys.stderr.write(f"Capturing {identifier}: {'unrolled' if unroll else 'structured'}\n")
-            variant = capture_portable_variant(qc, unroll=unroll)
+            variant = capture_portable_variant(qc, unroll=unroll, source_diagram=identifier == "qpe")
             source_stage = stage("source", "OpenQASM input", "qasm", source)
-            source_stage["circuit"] = capture_circuit(qc.to_qiskit())
+            source_stage["circuit"] = (
+                capture_openqasm_circuit(source) if identifier == "qpe" else capture_circuit(qc.to_qiskit())
+            )
             variant["stages"].insert(0, source_stage)
             scenario["variants"].append(variant)
         data["scenarios"].append(scenario)

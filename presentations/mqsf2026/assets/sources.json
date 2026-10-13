@@ -470,5 +470,28 @@
     "generator": "qrcode SvgPathImage; error correction M; border 4",
     "url": "https://arxiv.org/abs/2506.22408",
     "sha256": "417a01bc9798b82998d990af1fbd2271315f1a9631e8396808559b020bb96b86"
+  },
+  "cineca": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/cineca.png",
+    "retrieved_at": "2026-10-13T16:48:35.975455+00:00",
+    "source_sha256": "11eca0c302f5d650a645fbb97850bad1e47c843f5e1c82f45cf931138a25f472",
+    "sha256": "269a8175ac4b5b6d72ffc03277e720ac219131aef09a6aa195e306b26fbb5022",
+    "adaptation": "Vector contours of the authentic raster artwork at native resolution, 1 original solid colors, alpha threshold 127 and contour level 0.5. Transparent margins trimmed; original letter and mark geometry retained to raster precision. No font substitutions or embedded bitmap. Official media-kit download was inaccessible; the identical 3454x942 PNG is maintained by the QDMI integration project.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "cesga": {
+    "url": "https://www.cesga.es/download/imagen-grafica-del-cesga-svg/?wpdmdl=1288",
+    "retrieved_at": "2026-10-13T16:48:36.042881+00:00",
+    "source_sha256": "c0958353009dbd2e593da281739bbe9eba02a028981448c0a838b833d5de12e5",
+    "sha256": "5946ff3abed746696c0bcffae8ea64f2605359379eb0e19ea4c1d0529ef7d8c2",
+    "adaptation": "Vector contours of the authentic raster artwork at native resolution, 2 original solid colors, alpha threshold 127 and contour level 0.5. Transparent margins trimmed; original letter and mark geometry retained to raster precision. No font substitutions or embedded bitmap. Official SVG embeds a PNG; its clipped logo viewport was converted to paths.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "eviden": {
+    "url": "https://docs.eviden.com/eviden-logo-orange.svg",
+    "retrieved_at": "2026-10-13T16:48:36.043108+00:00",
+    "sha256": "69e15d0f1e2bf422b9c8648582adfe55c9d98bafd67b2b5bb2eaf5e3e2e72810",
+    "adaptation": "Original official SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
   }
 }

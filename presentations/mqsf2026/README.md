@@ -118,14 +118,25 @@ separate so broadcasting retains the intended qubit roles. The RUS construction
 follows
 [Paetznick and Svore (2014)](https://www.rintonpress.com/xxqic14/qic-14-1516/1277-1301.pdf).
 
-Four-qubit iterative QPE estimates phase 1/3 into eight output bits.
-Controlled-U powers remain counted loops through compilation. Four native DDSIM
-workers execute 8,192 shots. Device calls, JIT initialization, and actual
-64-shot batch completions share one monotonic clock. Shot indices connect
-concurrent arrivals to the ordered QDMI result; worker bars and the histogram
-use those observations. Instrumentation overhead is included. This is not a
-throughput benchmark. The QCO branch-sharing sampler is a separate execution
-path from adaptive QIR.
+Iterative QPE uses a four-qubit unitary and one recycled control to estimate
+phase 1/3 into eight output bits. The eigenstate is |1111⟩ and
+U = P(π/6)⊗⁴. The outer loop resets and reuses the control for each bit; its
+nested loop repeats controlled-U 2^(7−k) times. Measurement updates the runtime
+phase correction θ ← θ/2 − (π/2) result[k] for the next round. Both loops and
+classical feedback survive the portable compiler path.
+
+The complete diagram is parsed from the exact submitted OpenQASM source. Qiskit
+cannot export this combination of dynamic loop bounds, indexed measurement
+destinations, and runtime feedback; the evidence records its unavailability
+instead of substituting an unrolled circuit. QC, QCO, optimized QC, OpenQASM,
+and QIR artifacts remain available.
+
+Four native DDSIM workers execute 8,192 shots. Device calls, JIT initialization,
+and actual 64-shot batch completions share one monotonic clock. Shot indices
+connect concurrent arrivals to the ordered QDMI result; worker bars and the
+histogram use those observations. Instrumentation overhead is included. This is
+not a throughput benchmark. The QCO branch-sharing sampler is a separate
+execution path from adaptive QIR.
 
 ## Capture and validate
 
@@ -141,6 +152,11 @@ instructions and the machine's supported optimized preset. The recorders are:
   routing consistency, and Weyl coordinates.
 - `capture_execution.py`: unchanged QDMI device payloads, native calls, and JIT
   runtime/shot observations in isolated workers.
+
+The [compiler change inventory](compiler-fixes.md) separates reusable compiler
+fixes, presentation telemetry, and source-diagram limitations. AFQMC retains its
+original execution provenance when portable examples and target compiler
+artifacts are recaptured; it is not relabeled as a new application run.
 
 ```console
 uv run --no-sync pytest test/python/presentation

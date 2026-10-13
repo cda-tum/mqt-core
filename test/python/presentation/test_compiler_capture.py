@@ -218,24 +218,50 @@ def test_parity_example_retains_loop_feedback_and_even_data_parity() -> None:
     assert set(counts) == {"00", "11"}
 
 
-def test_four_qubit_qpe_resolves_non_exact_phase() -> None:
-    """Check the two dominant bins against the analytical QPE distribution."""
+def test_four_qubit_unitary_iqpe_resolves_non_exact_phase() -> None:
+    """Four eigenstate qubits plus one recycled control retain the QPE distribution."""
     import math  # ruff: ignore[import-outside-top-level]
 
     from mqt.core.mlir import QCProgram  # ruff: ignore[import-outside-top-level]
 
-    source = runpy.run_path(str(SCRIPT))["qpe_source"]()
+    helpers = runpy.run_path(str(SCRIPT))
+    source = helpers["qpe_source"]()
     program = QCProgram.from_openqasm_str(source).to_qco()
     program.run_pass_pipeline("mqt-qco-default")
-    loops = [
-        instruction.operation for instruction in program.to_qiskit().data if instruction.operation.name == "for_loop"
-    ]
-    assert [len(loop.params[0]) for loop in loops] == [128, 64, 32, 16, 8, 4, 2]
+    assert program.control_flow_counts() == {"scf.for": 1, "scf.while": 1}
+    assert program.gate_counts() == {"x": 4, "reset": 1, "h": 2, "cp": 4, "p": 1, "measure": 1}
+    circuit = helpers["capture_openqasm_circuit"](source)
+    outer = next(op for op in circuit["operations"] if op["name"] == "for_loop")
+    assert outer["variable"] == "k"
+    assert outer["iterations"] == 8
+    body = outer["blocks"][0]
+    assert [op["name"] for op in body] == ["reset", "h", "for_loop", "p", "h", "measure", "store"]
+    inner = body[2]
+    assert inner["variable"] == "power"
+    assert inner["range"] == "1:1 << 7 - k"
+    assert len(circuit["qubits"]) == 5
+    assert [op["qubits"] for op in inner["blocks"][0]] == [[0, 1], [0, 2], [0, 3], [0, 4]]
+    assert {op["parameters"][0] for op in inner["blocks"][0]} == {"pi / 6"}
+    assert body[-2]["classical_target"] == "result[k]"
+    assert body[-1]["expression"] == "theta = theta / 2 - pi / 2 * float[64](result[k]);"
     counts = program.sample(2048, 7)
     for bin_value in (85, 86):
         difference = 1 / 3 - bin_value / 256
         expected = (math.sin(256 * math.pi * difference) / (256 * math.sin(math.pi * difference))) ** 2
         assert counts[f"{bin_value:08b}"] / 2048 == pytest.approx(expected, abs=0.05)
+
+
+def test_source_diagram_preserves_operands_and_rejects_unsupported_nodes() -> None:
+    """Source-backed diagrams must change with the source, never assume the QPE gates."""
+    capture = runpy.run_path(str(SCRIPT))["capture_openqasm_circuit"]
+    source = 'OPENQASM 3.1; include "stdgates.inc"; qubit[3] q; bit c; rz(pi/3) q[2]; c = measure q[1];'
+    circuit = capture(source)
+    assert circuit["operations"][0]["qubits"] == [2]
+    assert circuit["operations"][0]["parameters"] == ["pi / 3"]
+    assert circuit["operations"][1]["qubits"] == [1]
+    assert circuit["operations"][1]["classical_target"] == "c"
+    with pytest.raises(ValueError, match="Unsupported source diagram statement"):
+        capture(source + " barrier q;")
 
 
 @pytest.mark.parametrize("example", ["PARITY_SOURCE", "RUS_SOURCE", "qpe_source"])
@@ -244,7 +270,7 @@ def test_portable_capture_preserves_control_flow_without_target_synthesis(exampl
     helpers = runpy.run_path(str(SCRIPT))
     source = helpers[example]() if example == "qpe_source" else helpers[example]
     qc = QCProgram.from_openqasm_str(source)
-    variant = helpers["capture_portable_variant"](qc, unroll=False)
+    variant = helpers["capture_portable_variant"](qc, unroll=False, source_diagram=example == "qpe_source")
     stages = {stage["id"]: stage for stage in variant["stages"]}
     assert set(stages) == {"qc", "qco", "optimized", "qc-optimized"}
     assert "mqt.layout" not in stages["optimized"]["code"]
@@ -253,6 +279,10 @@ def test_portable_capture_preserves_control_flow_without_target_synthesis(exampl
     assert "__quantum__qis__reset__body" in qir
     assert "br i1" in qir
     assert "phi" in qir
+    if example == "qpe_source":
+        qiskit = next(artifact for artifact in variant["exports"] if artifact["id"] == "qiskit")
+        assert "dynamic classical destination" in qiskit["unavailable_reason"]
+        assert "circuit" not in stages["optimized"]
     if example == "PARITY_SOURCE":
         assert "__quantum__qis__cx__body" in qir
         assert "__quantum__qis__cz__body" not in qir

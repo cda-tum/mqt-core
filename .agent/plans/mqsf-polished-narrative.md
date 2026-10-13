@@ -3,6 +3,17 @@
 Status: October 13 revision implemented and locally validated. Publication
 through draft PR #2685 includes a final hosted-package comparison.
 
+## October 13 Fourth Feedback Round
+
+- [x] Stabilize opening anchors, all-to-all paths, product badges and cards.
+- [x] Refine AFQMC spacing, combined ecosystem, references and feature order.
+- [x] Capture fully nested iterative QPE and its actual source-derived diagram.
+- [x] Build the community/product-tower close and shared social footer.
+- [x] Reproduce and fix the CPU-count assumption behind four native CI failures.
+- [x] Inventory the remaining compiler changes, scope and upstream readiness.
+- [x] Inspect all changed states and validate offline packages.
+- [ ] Verify publication and final-head CI.
+
 ## October 13 Follow-up
 
 Implement the next detailed feedback in four coordinated areas. Keep existing

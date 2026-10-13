@@ -121,21 +121,23 @@ window.MQSF_OPENING = (() => {
       url: "https://github.com/munich-quantum-software/ibm-qdmi-device",
     },
   ];
-  // The badge straddles the incoming connection and the top edge of each card.
-  function deviceCard(index, x = 0, y = 0, width = 398) {
+  // Keep the powered-by badge inset from the device card's incoming edge.
+  function deviceCard(index, x = 0, y = 0, width = 350) {
     const d = devices[index];
     const identity =
       index === 0
-        ? text(18, 53, "QDMI on", 25, "start") + logo("iqm", 132, 31, 78, 26)
+        ? text(18, 53, "QDMI on", 24, "start") + logo("iqm", 127, 31, 72, 26)
         : index === 1
-          ? logo("aws", 18, 32, 55, 30) +
-            text(85, 54, "Amazon Braket", 24, "start")
+          ? logo("aws", 18, 32, 43, 30) +
+            text(72, 54, "Amazon Braket", 22, "start")
           : index === 2
-            ? logo("mqt", 18, 27, 105, 37) + text(140, 54, "DDSIM", 27, "start")
-            : logo("ibm", 18, 32, 80, 30) +
-              text(112, 54, "Quantum", 27, "start");
-    const stats = repoStats[d.url];
-    return `<g transform="translate(${x} ${y}) scale(${width / 398})" role="img" aria-label="${d.label}"><rect width="398" height="140" rx="15" fill="#F7FAFD" stroke="#A9C6E1" stroke-width="1.7"/><g font-weight="700">${identity}</g>${d.description.map((line, i) => text(18, 83 + i * 20, line, 17, "start", index === 3 ? orange : muted)).join("")}<a href="${d.url}" tabindex="-1">${logo(d.qr, 308, 20, 76, 76)}${logo("github", 18, 117, 16, 16)}${text(41, 129, d.short, d.short.length > 42 ? 10 : 12.5, "start", blue)}${stats ? text(319, 111, "★", 17, "start", "#E6AF20") + text(339, 111, stats.stars, 14, "start", navy) + (stats.downloads ? text(347, 129, "960k+ downloads", 10, "middle", muted) : "") : ""}</a>${qdmiBadge(-25, -14, 163)}</g>`;
+            ? logo("mqt", 18, 27, 100, 37) + text(132, 54, "DDSIM", 26, "start")
+            : logo("ibm", 18, 32, 72, 30) +
+              text(104, 54, "Quantum", 26, "start");
+    return `<g transform="translate(${x} ${y}) scale(${width / 350})" role="img" aria-label="${d.label}"><rect width="350" height="140" rx="15" fill="#F7FAFD" stroke="#A9C6E1" stroke-width="1.7"/><g font-weight="700">${identity}</g>${d.description.map((line, i) => text(18, 83 + i * 20, line, 16, "start", index === 3 ? orange : muted)).join("")}<a href="${d.url}" tabindex="-1">${logo(d.qr, 262, 25, 76, 76)}${logo("github", 18, 117, 16, 16)}${text(41, 129, d.short, d.short.length > 42 ? 10 : 12, "start", blue)}</a>${qdmiBadge(18, -14, 163)}</g>`;
+  }
+  function integrationBadge(x, y, brand = "qdmi") {
+    return `<g transform="translate(${x - 38} ${y - 51})" role="img" aria-label="${brand === "qdmi" ? "Integrated with QDMI" : "Works with Slurm"}"><rect width="76" height="102" rx="15" fill="white" stroke="#8DB4D8" stroke-width="1.5"/>${text(38, 23, brand === "qdmi" ? "Integrated" : "Works", 13, "middle", blue)}${text(38, 42, "with", 13, "middle", blue)}${logo(brand, 7, 54, 62, 36)}</g>`;
   }
   function compilerBadge(x = 0, y = 0, width = 350) {
     return `<g transform="translate(${x} ${y}) scale(${width / 350})" font-weight="700">${logo("mqt", 21, 25, 129, 64)}${text(258, 48, "Compiler", 26)}${text(258, 82, "Collection", 26)}</g>`;
@@ -218,7 +220,7 @@ window.MQSF_OPENING = (() => {
             : reveal(step, order / count, (order + 1) / count);
         body += route(
           `world-user-compute-${i}-${j}`,
-          `M220 ${u.y}C410 ${u.y} 490 ${c.y} ${c.x - 72} ${c.y}`,
+          `M182 ${u.y}C390 ${u.y} 490 ${c.y} ${c.x - 72} ${c.y}`,
           problem ? amount : 0,
           j === 2 ? orange : blue,
         );
@@ -231,7 +233,7 @@ window.MQSF_OPENING = (() => {
         const count = i === 0 ? (j < 2 ? 1 : 3) : i === 1 ? 6 : 7;
         body += route(
           `world-compute-qpu-${i}-${j}`,
-          `M${c.x + 72} ${c.y}C1040 ${c.y} 1120 ${q.y} 1350 ${q.y}`,
+          `M${c.x + 72} ${c.y}C1040 ${c.y} 1200 ${q.y} 1410 ${q.y}`,
           problem
             ? step === 1
               ? reveal(1, 0.55, 0.84)
@@ -257,7 +259,7 @@ window.MQSF_OPENING = (() => {
     users.forEach((u, i) => {
       body += route(
         `user-frontend-${i}`,
-        `M220 ${u.y}C268 ${u.y} 263 107 307 107`,
+        `M182 ${u.y}C243 ${u.y} 246 107 307 107`,
         s(1, i / 5, (i + 1) / 5) * retiring(4),
       );
     });
@@ -275,11 +277,15 @@ window.MQSF_OPENING = (() => {
         start + (i ? 0.12 : 0),
         start + (i ? 0.28 : 0.25),
       );
-      body += route(
-        `user-other-frontend-${i}`,
-        `M266 107C289 107 264 ${y + 36} 307 ${y + 36}`,
-        i ? s(4, start, start + 0.12) * retiring(4) : 0,
-      );
+      users.forEach((u, j) => {
+        body += route(
+          `user-other-frontend-${i}-${j}`,
+          `M182 ${u.y}C243 ${u.y} 246 ${y + 36} 307 ${y + 36}`,
+          i
+            ? s(4, start + j * 0.025, start + 0.12 + j * 0.025) * retiring(4)
+            : 0,
+        );
+      });
       body += module(
         `frontend-${i}`,
         307,
@@ -320,7 +326,7 @@ window.MQSF_OPENING = (() => {
     body += group(
       "lane-labels",
       text(610, 130, "Program", 19, "middle", blue) +
-        text(607, 453, "Runtime", 19, "middle", orange),
+        text(571, 453, "Runtime", 19, "middle", orange),
       s(2, 0.6, 0.85),
     );
     body += group(
@@ -351,11 +357,11 @@ window.MQSF_OPENING = (() => {
       ) +
         group(
           "compiler-product",
-          compilerBadge() +
+          compilerBadge(0, 0, 310) +
             logo("mlir", 23, 113, 77, 40) +
-            logo("llvm", 108, 113, 65, 40) +
-            logo("qir", 199, 116, 54, 38) +
-            logo("jeff", 275, 113, 54, 40),
+            logo("llvm", 107, 113, 62, 40) +
+            logo("qir", 188, 116, 48, 38) +
+            logo("jeff", 251, 113, 48, 40),
           d(2),
         ) +
         productPulse(2, 350, 180),
@@ -376,8 +382,8 @@ window.MQSF_OPENING = (() => {
       ) +
         group(
           "orchestrator-product",
-          logo("mqsc", 22, 49, 115, 72) +
-            `<g font-weight="700">${text(234, 93, "Orchestrator", 27)}</g>`,
+          logo("mqsc", 46, 49, 104, 72) +
+            `<g font-weight="700">${text(230, 93, "Orchestrator", 24)}</g>`,
           d(3),
         ) +
         productPulse(3, 350, 180),
@@ -420,7 +426,7 @@ window.MQSF_OPENING = (() => {
     );
     body += route(
       "device-capabilities",
-      "M1184 236H1012",
+      "M1184 155H1012",
       s(3, 0.12, 0.3),
       blue,
       true,
@@ -441,33 +447,27 @@ window.MQSF_OPENING = (() => {
     );
     body += group(
       "backend-labels",
-      text(1095, 182, "Device", 16) +
-        text(1095, 203, "Capabilities", 16) +
+      text(1110, 116, "Device", 16) +
+        text(1110, 137, "Capabilities", 16) +
         text(1095, 374, "Submit", 17) +
         text(1095, 501, "Results", 17),
       s(3, 0.18, 0.35),
     );
-    body += group(
-      "compiler-qdmi-connector",
-      qdmiBadge(986, 219, 192, "Integrated with"),
-      d(2),
-    );
+    body += group("compiler-qdmi-connector", integrationBadge(1008, 155), d(2));
     body += group(
       "orchestrator-qdmi-connector",
-      qdmiBadge(986, 391, 192, "Integrated with"),
+      integrationBadge(1008, 427),
       d(3),
     );
     body += group(
       "orchestrator-slurm",
-      '<rect x="486" y="398" width="160" height="38" rx="19" fill="white" stroke="#A9C6E1" stroke-width="1.5"/>' +
-        text(499, 422, "Works with", 15, "start", blue) +
-        logo("slurm", 581, 401, 54, 30),
+      integrationBadge(658, 427, "slurm"),
       d(3),
     );
     qpus.forEach((q, i) => {
       body += route(
         `backend-qpu-${i}`,
-        `M1358 290C1372 290 1360 ${q.y} 1390 ${q.y}`,
+        `M1358 290C1384 290 1384 ${q.y} 1410 ${q.y}`,
         s(3, 0.25 + i * 0.13, 0.38 + i * 0.13) * retiring(1),
       );
     });
@@ -476,12 +476,12 @@ window.MQSF_OPENING = (() => {
         start = 0.18 + i * 0.2;
       body += route(
         `backend-device-${i}`,
-        `M1358 290C1375 290 1342 ${y + 4} 1357 ${y + 4}`,
+        `M1358 290C1394 290 1394 ${y + 66} 1430 ${y + 66}`,
         d(1, start, start + 0.1),
       );
       body += group(
         `world-device-${i}`,
-        deviceCard(i, 1380, y, 368),
+        deviceCard(i, 1430, y, 330),
         d(1, start + 0.1, start + 0.2),
       );
     });
@@ -498,7 +498,7 @@ window.MQSF_OPENING = (() => {
     );
     body += group(
       "users-heading",
-      text(118, 15, "Users", 27),
+      text(80, 15, "Users", 27),
       (problem ? on(1) : 1) * retiring(4),
     );
     body += group(
@@ -508,7 +508,7 @@ window.MQSF_OPENING = (() => {
     );
     body += group(
       "qpu-heading",
-      text(1510, 15, "Quantum Processors", 27),
+      text(1590, 15, "Quantum Processors", 27),
       retiring(1),
     );
     body += group(
@@ -526,9 +526,11 @@ window.MQSF_OPENING = (() => {
         `world-user-${i}`,
         icon(u.icon, 48, 0, 77) +
           icon(u.badge, 121, 37, 32) +
-          text(99, 103, u.name, 21),
+          (i === 2
+            ? text(99, 98, "Software", 21) + text(99, 123, "Developers", 21)
+            : text(99, 103, u.name, i === 1 ? 19.5 : 21)),
         (problem ? (i ? on(6) : reveal(1, 0, 0.18)) : 1) * retiring(4),
-        `translate(18 ${u.y - 37}) scale(1)`,
+        `translate(-20 ${u.y - 37}) scale(1)`,
       );
     });
     computes.forEach((c, i) => {
@@ -549,12 +551,12 @@ window.MQSF_OPENING = (() => {
         `world-qpu-${i}`,
         icon(q.kind, 0, 0, 80) + text(96, 46, q.name, 26, "start"),
         retiring(1),
-        `translate(${problem ? 1360 : 1400} ${q.y - 40}) scale(1)`,
+        `translate(1420 ${q.y - 40}) scale(1)`,
       );
     });
     body += group(
       "future-device",
-      text(1564, 651, "Your Device Could Be Next", 22, "middle", blue),
+      text(1595, 651, "Your Device Could Be Next", 22, "middle", blue),
       d(1, 0.9, 1),
     );
     body += group("principles-reveal", principleScene(), principles);
@@ -633,7 +635,16 @@ window.MQSF_OPENING = (() => {
     return `<div class="opening-title"><p class="talk-date">MQSF 2026 · Munich · 14–15 October</p><h1>System Software<br>for Quantum Computing</h1><p class="opening-slogan">From the Metal to the User</p><div class="opening-speaker"><b>Lukas Burgholzer</b><div class="opening-affiliations"><div>${image("mqsc")}<p>CTO &amp; Co-founder<span>Munich Quantum Software Company</span></p></div><div>${image("tum-cda")}<p>Senior Researcher<span>Chair for Design Automation · TUM</span></p></div></div>${social()}</div></div>`;
   }
   function conclusion() {
-    return `<div class="opening-conclusion"><h1>From the Metal<br>To the User</h1><p class="opening-closing-credit">Built with the <b>MQT and QDMI communities</b><br>Driven into practice by <b>MQSC</b>.</p><div class="opening-closing-products"><div>${image("qdmi")}<span>-powered Solutions</span></div><div>${image("mqt")}<span>Compiler Collection</span></div><div>${image("mqsc")}<span>Orchestrator</span></div></div><div class="opening-closing-bottom"><div><div class="opening-community-logos">${["mqsc", "tum-cda", "mqv", "fullstaqd", "eqs3", "jeff", "openqse"].map((n) => image(n)).join("")}</div>${social()}</div><a class="opening-contact" href="https://mq.sc">${image("qr-company", "", "MQSC website QR code")}<span>mq.sc</span></a></div></div>`;
+    const endpoint = (kind, label) =>
+      `<div class="opening-tower-endpoint"><svg viewBox="0 0 100 100" aria-hidden="true">${icon(kind)}</svg><span>${label}</span></div>`;
+    return `<div class="opening-conclusion"><div class="opening-closing-community"><h1>From the Metal<br>To the User</h1><p class="opening-closing-credit">Built with the <b>Community</b>.<br>Driven into practice by <b>MQSC</b>.</p><div class="opening-community-logos">${[
+      ["mqsc", "tum-cda", "mqv", "fullstaqd"],
+      ["eqs3", "jeff", "openqse"],
+    ]
+      .map((row) => `<div>${row.map((n) => image(n)).join("")}</div>`)
+      .join(
+        "",
+      )}</div></div><div class="opening-closing-tower" role="img" aria-label="From the metal through QDMI, MQT Compiler Collection and MQSC Orchestrator to the user">${endpoint("user", "To the User")}<div class="opening-product-layer opening-orchestrator-layer">${image("mqsc")}<strong>Orchestrator</strong></div><div class="opening-product-layer opening-compiler-layer">${image("mqt")}<strong>Compiler<br>Collection</strong></div><div class="opening-product-layer opening-qdmi-layer">${image("qdmi")}<strong>Quantum Device<br>Management Interface</strong></div>${endpoint("chip", "From the Metal")}</div></div>`;
   }
   window.MQSF_VIZ.architecturePhases = phases;
   return {

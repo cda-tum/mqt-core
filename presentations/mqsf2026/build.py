@@ -444,7 +444,7 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
         for asset in sorted(source.joinpath("assets").glob("*")):
             if asset.is_file():
                 archive.write(asset, f"assets/{asset.name}")
-        for name in ("presenter-notes.md", "README.md"):
+        for name in ("presenter-notes.md", "README.md", "compiler-fixes.md"):
             if source.joinpath(name).exists():
                 archive.write(source / name, name)
     return result
