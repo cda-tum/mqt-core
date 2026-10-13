@@ -34,6 +34,9 @@ show completed replays. Reduced motion shows a settled frame. A fragment such as
 `#9.4` opens a particular slide and build. References never require a separate
 reveal. Printing creates one page per slide.
 
+Press F before presenting from the hosted preview. Fullscreen mode hides Read
+the Docs controls that would otherwise cover the slide corners.
+
 ## Scientific evidence
 
 The bounded chemistry example is stretched H₂, STO-3G, 1.6 Å: two electrons in

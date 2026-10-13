@@ -30,6 +30,18 @@ a {
 [hidden] {
   display: none !important;
 }
+/* Hosted documentation controls must not cover the projected presentation. */
+:root:fullscreen
+  :is(
+    readthedocs-flyout,
+    readthedocs-notification,
+    readthedocs-search,
+    readthedocs-hotkeys,
+    readthedocs-filetreediff,
+    readthedocs-docdiff
+  ) {
+  display: none !important;
+}
 #deck {
   position: absolute;
   width: 1920px;
