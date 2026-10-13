@@ -8,6 +8,13 @@ The format is based on a mixture of [Keep a Changelog] and [Common Changelog].
 This project adheres to [Semantic Versioning], with the exception that minor
 releases may include breaking changes.
 
+## [4.1.1] - 2026-10-13
+
+### Fixed
+
+- 🐛 Fix release wheel tests by including the Slurm example files and preserving
+  programs reused after Qiskit export. ([#2758]) ([**@burgholzer**])
+
 ## [4.1.0] - 2026-10-13
 
 _If you are upgrading: please see [`UPGRADING.md`](UPGRADING.md#410)._
@@ -1309,6 +1316,7 @@ for previous changelogs._
 
 <!-- Version links -->
 
+[4.1.1]: https://github.com/munich-quantum-toolkit/core/releases/tag/v4.1.1
 [4.1.0]: https://github.com/munich-quantum-toolkit/core/releases/tag/v4.1.0
 [4.0.0]: https://github.com/munich-quantum-toolkit/core/releases/tag/v4.0.0
 [3.10.0]: https://github.com/munich-quantum-toolkit/core/releases/tag/v3.10.0
@@ -1337,6 +1345,7 @@ for previous changelogs._
 
 <!-- PR links -->
 
+[#2758]: https://github.com/munich-quantum-toolkit/core/pull/2758
 [#2757]: https://github.com/munich-quantum-toolkit/core/pull/2757
 [#2756]: https://github.com/munich-quantum-toolkit/core/pull/2756
 [#2755]: https://github.com/munich-quantum-toolkit/core/pull/2755

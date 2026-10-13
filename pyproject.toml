@@ -275,6 +275,7 @@ test-command = "pytest test/python"
 test-groups = [ "test" ]
 test-sources = [
   "bindings/mlir/qiskit/SupportedVersions.inc",
+  "examples/slurm",
   "json",
   "scripts/check_docs_links.py",
   "scripts/qiskit_c_api_adopt.py",
