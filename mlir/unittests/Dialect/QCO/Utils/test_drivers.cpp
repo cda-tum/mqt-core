@@ -13,6 +13,7 @@
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
 #include "mqt/Dialect/QCO/IR/QCOInterfaces.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
+#include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Utils/Drivers.h"
 #include "mqt/Dialect/QCO/Utils/WireIterator.h"
 
@@ -29,6 +30,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/WalkResult.h"
 
@@ -156,6 +158,49 @@ TEST_F(DriversFixture, ProgramWalkVisitsAllOps) {
   ASSERT_TRUE(llvm::all_of(wires, [](const WireIterator& it) {
     return it == std::default_sentinel;
   }));
+}
+
+TEST_F(DriversFixture, ProgramWalkWaitsForAllYieldInputs) {
+  for (const bool stagger : {false, true}) {
+    SCOPED_TRACE(stagger ? "staggered arrivals" : "simultaneous arrivals");
+    QCOProgramBuilder builder(context.get());
+    builder.initialize();
+    auto q0 = builder.allocQubit();
+    auto q1 = builder.allocQubit();
+    SmallVector<WireIterator> wires;
+    builder.scfFor(0, 2, 1, {q0, q1}, [&](Value, ValueRange args) {
+      wires.emplace_back(args[0]);
+      wires.emplace_back(args[1]);
+      return SmallVector<Value>{
+          args[0],
+          stagger ? builder.h(builder.h(args[1])) : args[1],
+      };
+    });
+    auto moduleOp = builder.finalize();
+    ASSERT_TRUE(succeeded(verify(*moduleOp)));
+    ASSERT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+
+    size_t yieldVisits = 0;
+    walkProgramGraph<WireDirection::Forward>(
+        wires,
+        [&](const Frontier& frontier, SmallVectorImpl<Operation*>& released) {
+          for (const auto& [op, indices] : frontier) {
+            if (isa<scf::YieldOp>(op)) {
+              ++yieldVisits;
+              EXPECT_EQ(indices.size(), 2U);
+              EXPECT_TRUE(llvm::all_of(wires, [op](WireIterator& it) {
+                return it != std::default_sentinel && it.operation() == op;
+              }));
+            }
+            released.emplace_back(op);
+          }
+          return WalkResult::advance();
+        });
+    EXPECT_EQ(yieldVisits, 1U);
+    EXPECT_TRUE(llvm::all_of(wires, [](const WireIterator& it) {
+      return it == std::default_sentinel;
+    }));
+  }
 }
 
 TEST_F(DriversFixture, StopProgramWalkWithInterrupt) {
