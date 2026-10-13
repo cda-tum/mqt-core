@@ -10,14 +10,9 @@
 
 #pragma once
 
-#include "mqt/Dialect/QCO/IR/QCOInterfaces.h"
-#include "mqt/Dialect/QCO/IR/QCOOps.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Utils/WireIterator.h"
-#include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
@@ -25,17 +20,13 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <cassert>
 #include <cstddef>
 #include <functional>
 #include <iterator>
-#include <limits>
-#include <llvm/Support/Debug.h>
 #include <numeric>
 #include <utility>
 
