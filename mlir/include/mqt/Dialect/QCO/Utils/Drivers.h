@@ -113,13 +113,7 @@ void walkProgramGraph(MutableArrayRef<WireIterator> wires,
             frontier.try_emplace(it.operation(), item.indices_);
           }
         } else {
-          const auto nqubits = countIfQubit([&it] {
-            if constexpr (Direction == WireDirection::Forward) {
-              return it.operation()->getResults(); // From Inputs to Outputs.
-            } else {
-              return it.operation()->getOperands(); // From Outputs to Inputs.
-            }
-          }());
+          const auto nqubits = countIfQubit(it.operation()->getOperands());
 
           // If there are fewer wires than the operation requires inputs,
           // it's impossible to release the operation. Hence, fail.
@@ -129,9 +123,7 @@ void walkProgramGraph(MutableArrayRef<WireIterator> wires,
             return;
           }
 
-          // One-qubit gates are immediately ready.
-          // Hence, add them to the frontier.
-
+          // Single-qubit operations and sources are immediately ready.
           if (nqubits <= 1) {
             frontier.try_emplace(it.operation(), SmallVector{i});
           }
