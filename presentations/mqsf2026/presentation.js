@@ -128,7 +128,7 @@
       const y = y0 - f * plotH;
       body +=
         line(x0, y, x0 + w, y, "#e0e9f2", 1) +
-        text(x0 - 12, y + 8, String(Math.round(max * f)), 30, "#5b7088", "end");
+        text(x0 - 12, y + 7, String(Math.round(max * f)), 25, "#5b7088", "end");
     });
     const latest = shots.length ? parseInt(shots.at(-1), 2) : -100;
     values.forEach((n, i) => {
@@ -141,24 +141,16 @@
               ? `>${hi}`
               : String(lo + i - 1);
       body += `<rect class="bar ${Number(key) === latest ? "hot" : ""}" x="${x}" y="${y0 - h}" width="${bw - 9}" height="${h}" data-count="${n}"/>`;
-      if (n > max * 0.07) body += text(x + (bw - 9) / 2, y0 - h - 10, n, 30);
+      if (n > max * 0.07) body += text(x + (bw - 9) / 2, y0 - h - 12, n, 25);
       if (
         i === 0 ||
         i === values.length - 1 ||
         (i % 2 === 0 && i < values.length - 2) ||
         key === "85"
       )
-        body += text(x + (bw - 9) / 2, y0 + 35, key, 30, "#5b7088");
+        body += text(x + (bw - 9) / 2, y0 + 32, key, 25, "#5b7088");
     });
-    body +=
-      text(450, 326, "Phase Estimate · Integer / 256", 29, "#5b7088") +
-      text(
-        450,
-        366,
-        `${fmt(shots.length, 0)} / ${fmt(capture.num_shots || 0, 0)} actual shots`,
-        34,
-        "#2f70b8",
-      );
+    body += text(450, 318, "Phase Estimate · Integer / 256", 26, "#5b7088");
     return `<div class="histogram" data-shots="${shots.length}" data-elapsed-ms="${elapsed}" data-observed-bins="${all.length}">${svg(body, box, "Actual QPE measurement distribution")}</div>`;
   }
   const appStage = (id) => {
@@ -658,11 +650,15 @@
       };
       if (!j)
         body += `<polygon points="${[...coords(1), ...coords(-1).reverse()].join(" ")}" fill="#2f70b8" opacity=".12"/>`;
-      body += `<polyline data-morph="energy-${j}" data-points="${count}" points="${coords().join(" ")}" stroke="${j ? "#8998a8" : "#2f70b8"}" stroke-width="${j ? 3 : 4}" fill="none" ${j ? 'stroke-dasharray="8 5"' : ""}/>`;
+      body += `<polyline data-morph="energy-${j}" data-points="${count}" points="${coords().join(" ")}" stroke="${j ? "#5b7088" : "#2f70b8"}" stroke-width="${j ? 3 : 4}" fill="none" ${j ? 'stroke-dasharray="8 5"' : ""}/>`;
     });
     body +=
-      text(280, 423, "Quantum-Assisted Trial", 24, "#2f70b8") +
-      (compare ? text(615, 423, "Hartree–Fock trial", 24, "#778899") : "");
+      line(80, 415, 125, 415, "#2f70b8", 4) +
+      text(140, 423, "Quantum-Assisted Trial", 24, "#2f70b8", "start") +
+      (compare
+        ? `<path d="M475 415h45" stroke="#5b7088" stroke-width="3" stroke-dasharray="8 5"/>` +
+          text(535, 423, "Hartree–Fock Trial", 24, "#5b7088", "start")
+        : "");
     return `<div class="energy-chart">${svg(body, "0 0 820 440", "Measured energy convergence, both full time ranges retained")}</div>`;
   }
   function batchState(elapsed) {
@@ -1120,19 +1116,27 @@
       ["unrolled_bytes", "#cc704b", "Fully unrolled"],
       ["preserved_bytes", "#2f70b8", "Structure preserved"],
     ]) {
-      const fraction =
-        key === "unrolled_bytes"
-          ? Math.min(1, progress * 2)
-          : Math.max(0, progress * 2 - 1);
+      const unrolled = key === "unrolled_bytes";
+      const fraction = unrolled
+        ? Math.min(1, progress * 2)
+        : Math.max(0, progress * 2 - 1);
       const shown = points.slice(0, Math.ceil(fraction * points.length));
-      body += `<polyline points="${shown.map((p) => `${x(p.qubits)},${y(p[key])}`).join(" ")}" fill="none" stroke="${color}" stroke-width="5"/>`;
+      const dash = unrolled ? 'stroke-dasharray="14 9"' : "";
+      body += `<polyline points="${shown.map((p) => `${x(p.qubits)},${y(p[key])}`).join(" ")}" fill="none" stroke="${color}" stroke-width="5" ${dash}/>`;
       body += shown
-        .map(
-          (p) =>
-            `<circle cx="${x(p.qubits)}" cy="${y(p[key])}" r="5" fill="${color}"/>`,
+        .map((p) =>
+          unrolled
+            ? `<rect x="${x(p.qubits) - 6}" y="${y(p[key]) - 6}" width="12" height="12" fill="${color}"/>`
+            : `<circle cx="${x(p.qubits)}" cy="${y(p[key])}" r="6" fill="${color}"/>`,
         )
         .join("");
-      body += text(1220, key === "unrolled_bytes" ? 50 : 90, label, 30, color);
+      const legendY = unrolled ? 42 : 82;
+      body +=
+        `<path d="M990 ${legendY}h70" stroke="${color}" stroke-width="5" ${dash}/>` +
+        (unrolled
+          ? `<rect x="1019" y="${legendY - 6}" width="12" height="12" fill="${color}"/>`
+          : `<circle cx="1025" cy="${legendY}" r="6" fill="${color}"/>`) +
+        text(1075, legendY + 8, label, 30, color, "start");
     }
     points
       .filter((_, i) => i % 2 === 0)

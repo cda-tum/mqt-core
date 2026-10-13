@@ -8,6 +8,13 @@
   font-size: 57px;
   max-width: 1660px;
 }
+.opening-frame h2 small {
+  margin-left: 20px;
+  font-size: 23px;
+  letter-spacing: 0;
+  color: var(--blue);
+  white-space: nowrap;
+}
 .opening-scene {
   position: absolute;
   top: 79px;

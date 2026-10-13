@@ -423,6 +423,8 @@ svg {
 }
 .histogram .bar.hot {
   fill: var(--accent);
+  stroke: var(--navy);
+  stroke-width: 3px;
 }
 .energy-chart {
   height: 255px;

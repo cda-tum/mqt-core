@@ -725,12 +725,22 @@ def check(
                     .map(n => n.dataset.morph);
             };
             const keys = [];
+            const frontends = p => {
+                holder.innerHTML = MQSF_VIZ.architecture('stack', p);
+                const visible = selector => [...holder.querySelectorAll(selector)]
+                    .filter(n => Number(n.getAttribute('opacity')) > 0).length;
+                return {
+                    cards: visible('g[data-morph^="frontend-"]:not([data-morph="frontend-split"])'),
+                    routes: visible('path[data-morph^="user-frontend-"], path[data-morph^="user-other-frontend-"]'),
+                };
+            };
             for (const [mode, phases] of Object.entries(MQSF_VIZ.architecturePhases))
                 for (const phase of phases.keys()) {
                     holder.innerHTML = MQSF_VIZ.architecture(mode, phase);
                     keys.push([...holder.querySelectorAll('[data-morph]')].map(n => n.dataset.morph));
                 }
-            return {start:routes(0), first:routes(1), complete:routes(6), keys};
+            return {start:routes(0), first:routes(1), complete:routes(6), keys,
+                beforeFrontends:frontends(0), afterFrontends:frontends(1)};
         }""")
         assert not opening["start"], "Future deployment paths must not flash on entry"
         assert opening["first"] == ["world-user-compute-0-0", "world-compute-qpu-0-0"]
@@ -739,7 +749,9 @@ def check(
             *(f"world-compute-qpu-{c}-{q}" for c in range(3) for q in range(5)),
             "hpc-cloud-burst",
         }, "Every deployment route must pass through classical compute"
-        assert len(opening["keys"]) == 17
+        assert opening["beforeFrontends"] == {"cards": 0, "routes": 0}
+        assert opening["afterFrontends"] == {"cards": 4, "routes": 16}
+        assert len(opening["keys"]) == 16
         expected_keys = set(opening["keys"][0])
         for _phase, keys in enumerate(opening["keys"]):
             additions = set()

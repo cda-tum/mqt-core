@@ -4,22 +4,23 @@ Allow about 35 minutes. Each click changes one narrative step. Motion within a
 step ends and holds; clicking during playback advances immediately. Use the
 separate notes file privately: the P shortcut displays notes on the projector.
 
-## 1 · Introduction
+## F1 · Introduction
 
 Introduce the MQSC CTO/co-founder role and the Senior Researcher role at TUM
 CDA. Keep the title still. The subtitle is “From the Metal to the User.”
 
-## 2 · From diverse paths to a shared stack
+## F2–F4 · From diverse paths to a shared stack
 
 Begin with quantum processors, then a researcher and their classical resources.
 Follow workstation → cloud-hosted quantum systems; then cloud compute and HPC.
 On-premise quantum access goes through HPC. Add the other user groups. Software
 must connect this growing ecosystem without a bespoke solution for every path.
 
-Move classical compute to the bottom. Build Qiskit's program/runtime split,
-compiler infrastructure, orchestration, and shared backend interface. Add
-devices, classical hosting, OpenQASM, and PennyLane. Modularity, efficiency, and
-extensibility motivate the published MQSS architecture.
+Move classical compute to the bottom. Reveal Qiskit, PennyLane, OpenQASM 3, and
+the SDK extension point, with paths from every user group. Then follow programs
+and runtime calls into compilation, orchestration, and the shared backend
+interface. Modularity, efficiency, and extensibility motivate the published MQSS
+architecture.
 
 Replace the boxes with products, from the device interface upward: QDMI device
 implementations, the MQT Compiler Collection, and MQSC Orchestrator. Both upper
@@ -28,7 +29,7 @@ the implementation work; it does not own the standard. Credit TUM CDA as MQT's
 origin, the MQT community, TUM CAPS/LRZ/MQV, and the wider QDMI community.
 Downloads are recorded cumulative downloads, not unique users.
 
-## 3 · A practical hybrid application
+## F5–F6 · A practical hybrid application
 
 Introduce quantum-assisted auxiliary-field Quantum Monte Carlo as a software
 workflow, without claiming application expertise or quantum advantage. The
@@ -40,7 +41,7 @@ for overlap estimates. Circle area represents recorded importance weight; the
 weighted reduction produces the energy estimate. Attribute the adapted Amazon
 Braket example.
 
-## 4 · Execute the hybrid workflow
+## F7 · Execute the hybrid workflow
 
 Reveal the actual payload-generation code, then shrink it as the quantum batch
 expands. One QDMI job contains 4,096 programs with 1,024 shots each: 4,194,304
@@ -60,7 +61,7 @@ FCI within this basis; the band covers only walker uncertainty conditional on
 the shared shadows. No conclusion about quantum advantage follows from these
 curves.
 
-## 5 · Compile for a physical target
+## F8–F9 · Compile for a physical target
 
 Keep snapshot 0's actual submitted payload. A physical device adds a topology
 and native operations. Emerald supplies 54 qubits and R/CZ constraints. Follow
@@ -79,21 +80,7 @@ through local QDMI models, and checked by executing the resulting payload on
 DDSIM. No hardware jobs are submitted. End with the extensible interface and
 abstract compiler flow.
 
-## 6 · Inside the compiler
-
-Open the machine room: actual OpenQASM → QC references → QCO values. Explain
-quantum dependencies and the reuse of classical MLIR dialects. Windows retain
-original line numbers; full generated programs are in the evidence bundle.
-
-Show real cancellation/rotation merging, a bounded recorded A* search, and fused
-two-qubit interactions in the Weyl chamber. The chamber shows measured matrix
-coordinates, not a simulated synthesis-search trajectory. Finish with real QIR
-and return to the abstract architecture.
-
-The [compiler change inventory](compiler-fixes.md) identifies the reusable
-compiler fixes, opt-in presentation traces, and remaining interchange limits.
-
-## 7 · Why are we unrolling?
+## F10–F12 · Why are we unrolling?
 
 Begin only with measured Grover program sizes. At 22 qubits the structured
 output is about 1.25 KB; the fully unrolled output is about 2.32 MB. The graph
@@ -107,7 +94,7 @@ Scratch bit `s` is local to the loop. Credit the “Why Are We Unrolling?”
 collaborators and jeff as an exchange format for structured quantum programs.
 The literature RUS V₃ example is retained in the downloadable evidence.
 
-## 8 · Execute adaptive QIR
+## F13–F14 · Execute adaptive QIR
 
 DDSIM runs QIR 2.1 Adaptive Profile using a JIT, including the program's
 classical computation. Iterative QPE uses a four-qubit U plus a recycled
@@ -128,11 +115,14 @@ arrival retains its index in the returned result. The replay is slowed for
 inspection and includes instrumentation overhead; it is not a throughput
 benchmark. QCO measurement-branch sharing is a separate path from adaptive QIR.
 
-## 9 · Conclusion
+## F15–F17 · Features and conclusion
 
-Zoom back out to the shared architecture. Common interfaces, compilation, and
-orchestration connect different users, classical infrastructure, and devices.
+Build the feature overview: OpenQASM 3.1, QIR 2.1, Qiskit, PennyLane, packaged
+binaries, and developer resources. Then zoom back out to the shared
+architecture. Common interfaces, compilation, and orchestration connect
+different users, classical infrastructure, and devices.
 
 “Built with the Community. Driven into practice by MQSC.”
 
-Leave the mq.sc QR code visible for discussion.
+Leave the product tower and community credits visible for discussion; mq.sc and
+the social links remain in the shared footer.

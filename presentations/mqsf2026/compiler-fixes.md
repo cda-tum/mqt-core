@@ -1,54 +1,27 @@
 # Keynote compiler changes
 
-This inventories the changes still carried by `codex/mqsf-2026` relative to
-upstream `main` at `7e3f1289e` (13 October 2026). Counts are added/deleted
-source lines from `git diff --numstat`, including comments and includes. They
-describe review scope, not implementation effort. Implementation totals include
-C++ Python bindings. Presentation assets, capture scripts, documentation, the
-generated Python enum stub, and Python presentation tests are excluded.
+All four compiler changes prepared for this keynote are merged into upstream
+`main`. The remaining native changes are optional compiler and DDSIM tracing.
+The capture retains the revision that produced each artifact; rebasing the
+presentation does not relabel those observations as a new run.
 
-The compiler delta is **678 added / 72 deleted implementation lines**, plus
-**667 added / 9 deleted test and test-configuration lines**. Of the
-implementation, 305 added / 5 deleted lines are opt-in presentation telemetry.
-The remaining 373 added / 67 deleted lines implement the four changes below.
-DDSIM runtime telemetry is counted separately below; including it brings the C++
-implementation total to **781 added / 81 deleted lines**. The compiler test
-total includes 155 added lines of Python Qiskit round-trip tests.
+## Upstream compiler changes
 
-## Compiler behavior
+| Change                                    | Upstream PR                                                       | Scope                                                                                                                                                             |
+| ----------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Adjacent controlled-gate canonicalization | [#2752](https://github.com/munich-quantum-toolkit/core/pull/2752) | Combines matching control shells while preserving wire order and controlled relative phase. Target-aware synthesis retains responsibility for native constraints. |
+| Fixed equatorial-pulse synthesis          | [#2753](https://github.com/munich-quantum-toolkit/core/pull/2753) | Adds the `GPI` synthesis basis for fixed π and π/2 equatorial pulses, including runtime-angle synthesis and full-unitary tests.                                   |
+| Explicit compiler target on the CLI       | [#2754](https://github.com/munich-quantum-toolkit/core/pull/2754) | Accepts validated `--target` attributes and Python target serialization, including empty-input diagnostics.                                                       |
+| Scoped classical storage and source names | [#2755](https://github.com/munich-quantum-toolkit/core/pull/2755) | Preserves local OpenQASM declarations and labels, and initializes reusable Qiskit storage at each region entry.                                                   |
 
-| Change                                                              | Implementation scope                                                    | Complexity and readiness                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Fixed equatorial-pulse synthesis for IonQ-style GPI/GPI2            | 74 added / 10 deleted lines across seven files                          | **Medium; general implementation with semantic tests.** Adds `r-fixed` as a synthesis basis, exposes `R_FIXED` in Python, recognizes fixed π and π/2 equatorial pulses, and decomposes constant and runtime-angle rotations into that basis. This belongs in the compiler, although the provider-specific parameter and phase convention still needs integration review before a separate upstream PR.                                                                                                                                                                                    |
-| Adjacent controlled-gate canonicalization                           | 77 added / 2 deleted lines in `CtrlOp.cpp`                              | **Medium; deliberately narrow, reusable optimization.** Combines adjacent matching control shells so existing canonicalizers can cancel inverse gates or merge constant rotations. Requires identical SSA qubit order and sole-unitary bodies. Rotation merging defers to target-aware synthesis when a target environment exists. It is not a general controlled-block optimizer.                                                                                                                                                                                                        |
-| Region-local classical bits and source names in OpenQASM and Qiskit | 168 added / 42 deleted lines across three files                         | **Low–medium; reusable correctness and readability fixes.** Keeps OpenQASM declarations in their loop/branch scope and tolerates an unattached while-region during import. Qiskit export collects nested classical storage and inserts zero stores at each block entry when initialization requires them. Both exporters preserve scalar/scratch labels through optional MLIR `NameLoc` metadata. Declared register names win over debug hints; colliding or empty hints receive generated names. This does not add general dynamic-bound or classical-indexing support to Qiskit export. |
-| Explicit compiler target on the CLI                                 | 54 added / 13 deleted lines across `mqt-cc.cpp` and the Python bindings | **Low–medium; general mechanism, provisional public interface.** Adds `--target=#mqt.compilation_target<…>` using the existing validated target representation and `CompilerTarget.__str__()` to serialize that representation from Python. This lets the recorder compile against queried/snapshotted capabilities without fabricating a live device. It is mutually exclusive with `--qdmi-device`, and uses the same payload and compilation path. A standalone upstream change should document the option and review its CLI ergonomics.                                              |
+The changes use the existing compiler and exporter infrastructure. Their PRs
+contain the focused diffs and semantic regression coverage. They do not add
+general runtime bounds or classical indexing to Qiskit export.
 
-Relevant implementation:
-
-- [Target basis detection](../../mlir/lib/Compiler/Target.cpp),
-  [Euler synthesis](../../mlir/lib/Dialect/QCO/Transforms/Decomposition/Euler.cpp).
-- [Controlled-gate canonicalization](../../mlir/lib/Dialect/QCO/IR/Modifiers/CtrlOp.cpp).
-- [OpenQASM import](../../mlir/lib/Dialect/QC/Translation/OpenQASMToQCEmitter.cpp)
-  and
-  [export](../../mlir/lib/Dialect/QC/Translation/TranslateQCToOpenQASM3.cpp),
-  and [Qiskit export](../../bindings/mlir/qiskit/QiskitExport.cpp).
-- [Compiler CLI](../../mlir/tools/mqt-cc/mqt-cc.cpp) and
-  [Python target bindings](../../bindings/mlir/register_mlir.cpp).
-
-The fixed-pulse basis participates in the existing Euler tests, including bound
-runtime parameters. A dedicated target test checks full-unitary equivalence and
-native-gate conformance, including phase. Controlled-gate tests cover inverse
-pairs, relative phase in controlled rotations, and distinct axes that must not
-merge. OpenQASM/Qiskit round trips check local initialization, while-loops,
-source-name collisions, empty names, and diagnostic locations. The Qiskit
-exporter changes contribute 88 added / 17 deleted lines; the target bindings
-contribute 12 added lines, split between the synthesis enum and serialization.
-
-The CLI tests cover accepted/rejected combinations, malformed target attributes,
-and successful target compilation. A small additional test-only adjustment
-refreshes QIR CLI diagnostics after upstream wording changed; it does not relax
-validation or add compiler functionality.
+Relative to main `ee77292f8`, compiler tracing adds **305 lines and removes 5**;
+DDSIM tracing adds **103 lines and removes 9**. Their native tests and CMake
+configuration add **505 lines and remove 4**. Counts include comments and
+includes, and exclude presentation sources, capture scripts, and Python tests.
 
 ## Presentation telemetry
 
@@ -66,9 +39,9 @@ Mapping tests compare traced/untraced output and replay the emitted routing
 steps. Synthesis tests compare full unitaries, exact unchanged final IR, and
 highlight indices. DDSIM tests compare seeded traced/untraced ordered results,
 validate every indexed arrival and worker partition, and exercise unwritable
-trace paths. The CI fix in this round makes that test honor the runtime's actual
-worker count: requesting four workers does not override a two-CPU runner or an
-explicit worker budget. Production sampling is unchanged by that fix.
+trace paths. The worker-partition test honors the runtime's actual worker count:
+requesting four workers does not override a two-CPU runner or an explicit worker
+budget. Production sampling is unchanged by that fix.
 
 ## Capture assumptions and work that is not a compiler fix
 
@@ -91,18 +64,7 @@ explicit worker budget. Production sampling is unchanged by that fix.
   adaptive QIR. Qiskit export currently cannot represent this combination of
   dynamic bounds, classical indexing, and runtime feedback; its diagram is
   derived from the submitted OpenQASM source instead.
-- These counts deliberately exclude fixes already merged upstream. They are an
-  inventory of the remaining branch delta, not an attribution of all work that
-  made the keynote possible.
 
-## Suggested upstream split
-
-The four compiler behavior changes can be reviewed independently, each with its
-own semantic tests. The local-bit and controlled-gate fixes have the smallest
-review scope. Fixed-pulse synthesis merits a dedicated target/convention review.
-The explicit-target CLI deserves a separate API/documentation decision.
-
-Keep the three trace mechanisms on the keynote branch unless a concrete public
-telemetry use case justifies a shared design. Their captured results are tested,
-but their environment-variable interfaces, output schemas, bounds, and timing
-cost are intentionally tailored to this presentation.
+Keep these trace mechanisms on the keynote branch unless a concrete public
+telemetry use case justifies a shared design. Their schemas, bounds, and timing
+cost are tailored to this presentation.

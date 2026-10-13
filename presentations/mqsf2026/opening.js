@@ -51,10 +51,9 @@ window.MQSF_OPENING = (() => {
     ],
     stack: [
       "A Shared Stack",
-      "Qiskit",
+      "Frontends and Programming Models",
       "Program and Runtime",
       "One Interface, Many Devices",
-      "PennyLane, OpenQASM and Your SDK",
     ],
     detail: [
       "Our Approach: From the Metal to the User",
@@ -75,10 +74,9 @@ window.MQSF_OPENING = (() => {
     },
     stack: {
       0: { duration: 2100, transition: 1800 },
-      1: { duration: 1500 },
+      1: { duration: 2600 },
       2: { duration: 1100 },
       3: { duration: 2600 },
-      4: { duration: 2100 },
     },
     detail: {
       1: { duration: 4400 },
@@ -260,29 +258,25 @@ window.MQSF_OPENING = (() => {
       body += route(
         `user-frontend-${i}`,
         `M182 ${u.y}C243 ${u.y} 246 107 307 107`,
-        s(1, i / 5, (i + 1) / 5) * retiring(4),
+        s(1, i * 0.015, 0.12 + i * 0.015) * retiring(4),
       );
     });
     const fronts = [
-      { name: "Qiskit", brand: "qiskit", step: 1 },
-      { name: "PennyLane", brand: "pennylane", step: 4 },
-      { name: "OpenQASM 3", step: 4 },
-      { name: "Your Favorite SDK", step: 4 },
+      { name: "Qiskit", brand: "qiskit" },
+      { name: "PennyLane", brand: "pennylane" },
+      { name: "OpenQASM 3" },
+      { name: "Your Favorite SDK" },
     ];
     fronts.forEach((f, i) => {
       const y = 71 + i * 122;
-      const start = i ? (i - 1) / 3 : 0;
-      const visible = s(
-        f.step,
-        start + (i ? 0.12 : 0),
-        start + (i ? 0.28 : 0.25),
-      );
+      const start = i / 4;
+      const visible = s(1, start + 0.1, start + 0.22);
       users.forEach((u, j) => {
         body += route(
           `user-other-frontend-${i}-${j}`,
           `M182 ${u.y}C243 ${u.y} 246 ${y + 36} 307 ${y + 36}`,
           i
-            ? s(4, start + j * 0.025, start + 0.12 + j * 0.025) * retiring(4)
+            ? s(1, start + j * 0.015, start + 0.12 + j * 0.015) * retiring(4)
             : 0,
         );
       });
@@ -306,7 +300,7 @@ window.MQSF_OPENING = (() => {
       body += route(
         `frontend-junction-${i}`,
         `M528 ${y + 36}C551 ${y + 36} 539 279 568 279`,
-        i ? s(4, start + 0.18, Math.min(1, start + 0.33)) : s(2, 0, 0.4),
+        s(2, i * 0.06, 0.2 + i * 0.06),
       );
     });
     body += route(
@@ -492,11 +486,6 @@ window.MQSF_OPENING = (() => {
       problem ? 0 : 1,
     );
     body += group(
-      "stack-principles",
-      text(1000, 25, "Modular · Efficient · Extensible", 27, "middle", blue),
-      problem ? 0 : 1,
-    );
-    body += group(
       "users-heading",
       text(80, 15, "Users", 27),
       (problem ? on(1) : 1) * retiring(4),
@@ -618,7 +607,7 @@ window.MQSF_OPENING = (() => {
   function render(mode, phase, progress = 1) {
     const title = {
       problem: "Software that connects the quantum ecosystem",
-      stack: "A shared software stack",
+      stack: "A Shared Software Stack",
       detail: "Our Approach: From the Metal to the User",
     }[mode];
     const refs =
@@ -627,7 +616,7 @@ window.MQSF_OPENING = (() => {
         : mode === "detail"
           ? `<div class="opening-references">${phase >= 2 ? projectReference("core") : "<div></div>"}${phase >= 1 ? projectReference("qdmi") : ""}</div>`
           : "";
-    return `<div class="opening-frame"><h2 data-morph="heading">${title}</h2><div class="opening-scene" data-morph="world">${architecture(mode, phase, progress)}</div>${refs}</div>`;
+    return `<div class="opening-frame"><h2 data-morph="heading">${title}${mode === "problem" ? "" : "<small>Modular · Efficient · Extensible</small>"}</h2><div class="opening-scene" data-morph="world">${architecture(mode, phase, progress)}</div>${refs}</div>`;
   }
   function title() {
     return `<div class="opening-title"><p class="talk-date">MQSF 2026 · Munich · 14–15 October</p><h1>System Software<br>for Quantum Computing</h1><p class="opening-slogan">From the Metal to the User</p><div class="opening-speaker"><b>Lukas Burgholzer</b><div class="opening-affiliations"><div>${image("mqsc")}<p>CTO &amp; Co-founder<span>Munich Quantum Software Company</span></p></div><div>${image("tum-cda")}<p>Senior Researcher<span>Chair for Design Automation · TUM</span></p></div></div></div></div>`;
