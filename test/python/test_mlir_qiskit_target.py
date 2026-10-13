@@ -489,6 +489,35 @@ def test_native_r_capabilities(name: str, *, symbolic: bool) -> None:
         CompilerTarget.from_qiskit(source, operation_names=[name])
 
 
+@pytest.mark.parametrize("runtime", [False, True])
+def test_gpi_target_preserves_phase(*, runtime: bool) -> None:
+    """Fixed pulses synthesize gates and retain the native GPI phase convention."""
+    phi = Parameter("phi")
+    source = Target(num_qubits=1)
+    for name, theta in (("gpi", pi), ("gpi2", pi / 2)):
+        gate = Gate(name, 1, [phi])
+        gate.definition = QuantumCircuit(1, global_phase=pi / 2 if name == "gpi" else 0)
+        gate.definition.r(theta, phi, 0)
+        source.add_instruction(gate)
+    target = CompilerTarget.from_qiskit(source)
+    assert target.synthesis_basis is not None
+    assert target.synthesis_basis.single_qubit == CompilerTarget.SingleQubitBasis.GPI
+    theta = Parameter("theta") if runtime else 0.37
+    circuit = QuantumCircuit(1, global_phase=0.29)
+    circuit.u(theta, -0.41, 0.73, 0)
+    circuit.rz(theta, 0)
+    program = QCProgram.from_qiskit(circuit).to_qco()
+    program.compile_for_target(TargetEnvironment(target, PayloadSpecification(PayloadFormat("openqasm", "3.0"))))
+    assert program.is_valid
+    result = program.to_qiskit(target=target)
+    assert set(result.count_ops()) <= {"gpi", "gpi2"}
+    if runtime:
+        assert result.num_parameters == 1
+        result = result.assign_parameters({theta: -0.63})
+        circuit = circuit.assign_parameters({theta: -0.63})
+    assert np.allclose(Operator(result).data, Operator(circuit).data)
+
+
 @pytest.mark.parametrize("name", ["gpi", "gpi2"])
 def test_native_r_names_require_exact_definitions(name: str) -> None:
     """Reserved native names cannot relabel another gate or change its arity."""

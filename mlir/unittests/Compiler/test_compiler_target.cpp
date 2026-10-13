@@ -1111,6 +1111,49 @@ TEST(CompilerTargetTest, FixedPauliSynthesisRequiresFreeRZ) {
   }
 }
 
+TEST(CompilerTargetTest, GPIBasisRequiresBothPulsesOnEverySite) {
+  auto operations = std::vector<OperationCapability>{};
+  for (const auto site : {0U, 1U}) {
+    for (const double theta : {std::numbers::pi, std::numbers::pi / 2.}) {
+      EXPECT_FALSE(
+          valid(Target::create(2, Connectivity::allToAll(),
+                               NativeOperations::fromOperations(operations)))
+              .synthesisBasis());
+      operations.push_back(valid(OperationCapability::create(
+          "r", 1, 2, {valid(SiteTuple::create({site}))}, std::nullopt,
+          std::nullopt, {theta, std::nullopt})));
+    }
+  }
+  const auto target =
+      valid(Target::create(2, Connectivity::allToAll(),
+                           NativeOperations::fromOperations(operations)));
+  ASSERT_TRUE(target.synthesisBasis());
+  EXPECT_EQ(target.synthesisBasis()->singleQubit,
+            Target::SingleQubitBasis::GPI);
+  EXPECT_FALSE(target.synthesisBasis()->entangler);
+}
+
+TEST(CompilerTargetTest, GPIBasisRequiresUnrestrictedAzimuth) {
+  for (const bool fixedAzimuth : {false, true}) {
+    auto operations = std::vector<OperationCapability>{};
+    for (const double theta : {std::numbers::pi, std::numbers::pi / 2.}) {
+      operations.push_back(valid(OperationCapability::create(
+          "r", 1, 2, {}, std::nullopt, std::nullopt,
+          {theta, fixedAzimuth ? std::optional{0.} : std::nullopt},
+          std::nullopt,
+          {
+              std::nullopt,
+              fixedAzimuth ? std::nullopt
+                           : std::optional{std::pair{0., std::numbers::pi}},
+          })));
+    }
+    EXPECT_FALSE(
+        valid(Target::create(1, Connectivity::allToAll(),
+                             NativeOperations::fromOperations(operations)))
+            .synthesisBasis());
+  }
+}
+
 TEST(CompilerTargetTest, ResolvesSingleQubitBasisWithoutEntangler) {
   for (size_t numSites : {1U, 2U}) {
     SCOPED_TRACE(numSites);
