@@ -124,12 +124,23 @@ a positive normal floating-point tolerance before creating DD packages. Invalid
 values now throw `std::invalid_argument`. See the
 [DD guide](https://mqt.readthedocs.io/projects/core/en/latest/dd_package.html).
 
+Replace static calls to `dd::RealNumberUniqueTable::hash(value)` with
+`table.hash(value)` on the relevant table instance. Bucket indices now depend on
+that table's capacity and indexed tolerance. Table growth and tolerance changes
+invalidate bucket iterators and reorder chains returned by `getTable()`; entry
+addresses remain valid until collection or reset.
+
 Fallible compiler Program APIs and benchmark generators now return LLVM
 `LogicalResult` or `FailureOr<T>`. Replace boolean and `has_value()` checks with
 `mlir::failed` or `mlir::succeeded`, then access successful results as before.
 C++ compilation methods also take `CompilationOptions` in place of separate
 timing and statistics booleans. Direct callers of `qco::verifyLinearity` must
-link `MLIRQCOUtils`. The
+link `MLIRQCOUtils`.
+
+Callbacks passed to `mlir::qco::walkProgramGraph` now accept
+`llvm::SmallVectorImpl<mlir::Operation*>&` as their second parameter. Replace
+explicit `mlir::qco::ReleasedOps&` callback parameters with this type;
+`ReleasedOps` remains available for owning storage. The
 [C++ compiler guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/target_compilation.html#c-source-tree-api)
 covers the source-tree interfaces.
 

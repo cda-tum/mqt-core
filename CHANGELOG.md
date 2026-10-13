@@ -69,10 +69,11 @@ time before the release. ⚠️
 
 - ✨ Submit program lists as native QDMI jobs with per-program status and
   results. Execute DDSIM programs in isolated workers so a failed program does
-  not discard successful siblings. ([#2373]) ([**@burgholzer**])
+  not discard successful siblings. ([#2373]) ([**@burgholzer**], [**@ystade**])
 - ✨ Recover partial Qiskit and PennyLane batches while retaining accepted work
   and successful results. Retries are explicit or opt-in; uncertain outcomes do
-  not trigger automatic resubmission. ([#2373], [#2625]) ([**@burgholzer**])
+  not trigger automatic resubmission. ([#2373], [#2625]) ([**@burgholzer**],
+  [**@ystade**])
 - ✨ Forward device-specific Qiskit execution options and accept exact byte
   payloads for custom QDMI job parameters. ([#2618], [#2629]) ([**@marcelwa**],
   [**@burgholzer**])
@@ -110,8 +111,9 @@ time before the release. ⚠️
   ([#2546], [#2743]) ([**@burgholzer**], [**@simon1hofmann**])
 - ♻️ Stop inserting OpenQASM runtime assertions and require caller validation.
   ([#2546]) ([**@burgholzer**], [**@simon1hofmann**])
-- ⚡ Reduce conversion and pipeline verification overhead and share compiler
-  workers between retained programs. ([#2647], [#2654], [#2687], [#2690],
+- ⚡ Reduce conversion and pipeline verification overhead, skip redundant target
+  liveness analysis for eligible flat programs, and share compiler workers
+  between retained programs. ([#2647], [#2654], [#2687], [#2690], [#2691],
   [#2695], [#2698], [#2740]) ([**@simon1hofmann**], [**@denialhaag**],
   [**@burgholzer**])
 
@@ -214,7 +216,8 @@ time before the release. ⚠️
 
 - 🔥 Remove obsolete QDMI metadata, calibration APIs, and
   `ProgramFormat.BATCH_JOB`. Use provider APIs for calibration and native
-  program lists for batches. ([#2233], [#2373]) ([**@burgholzer**])
+  program lists for batches. ([#2233], [#2373]) ([**@burgholzer**],
+  [**@ystade**])
 - 🔥 Remove packaged Slurm device-opening adapters. Pass explicit device IDs to
   the built-in driver and request the matching Slurm licenses. ([#2599])
   ([**@flowerthrower**], [**@burgholzer**])
@@ -1344,6 +1347,7 @@ for previous changelogs._
 [#2698]: https://github.com/munich-quantum-toolkit/core/pull/2698
 [#2697]: https://github.com/munich-quantum-toolkit/core/pull/2697
 [#2695]: https://github.com/munich-quantum-toolkit/core/pull/2695
+[#2691]: https://github.com/munich-quantum-toolkit/core/pull/2691
 [#2690]: https://github.com/munich-quantum-toolkit/core/pull/2690
 [#2687]: https://github.com/munich-quantum-toolkit/core/pull/2687
 [#2686]: https://github.com/munich-quantum-toolkit/core/pull/2686
