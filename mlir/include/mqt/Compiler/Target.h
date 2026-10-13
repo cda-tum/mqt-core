@@ -54,11 +54,17 @@ public:
     /// allocation.
     class Group {
     public:
+      using Edge = std::pair<size_t, size_t>;
+
       /// Return the topology pattern type shared by all occurrences in this
       /// group.
       [[nodiscard]] Type type() const noexcept;
       /// Return the number of vertices per occurrence (four for a four-cycle).
       [[nodiscard]] size_t arity() const noexcept;
+      /// Return undirected template edges, each listed once in local indices.
+      [[nodiscard]] llvm::ArrayRef<Edge> edges() const noexcept;
+      /// Return template neighbours of a local vertex; vertex < arity().
+      [[nodiscard]] llvm::ArrayRef<size_t> neighbours(size_t vertex) const;
       /// Return the number of stored occurrences, not the number of vertices.
       [[nodiscard]] size_t size() const noexcept;
       /// Return the dense vertex indices of occurrence index; index < size().
@@ -66,9 +72,12 @@ public:
 
     private:
       friend class CompilerTarget;
-      Group(Type type, size_t arity);
+      Group(Type type, size_t arity, llvm::ArrayRef<Edge> edges);
       Type type_;
-      size_t arity_;
+      llvm::ArrayRef<Edge> edges_;
+      // Templates have at most four vertices, each with at most three
+      // neighbours.
+      llvm::SmallVector<llvm::SmallVector<size_t, 3>, 4> neighbours_;
       llvm::SmallVector<size_t, 0> vertices_;
     };
   };

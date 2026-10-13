@@ -30,10 +30,8 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
-#include <array>
 #include <limits>
 #include <utility>
 
@@ -273,35 +271,15 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
 
 namespace {
 using Pattern = CompilerTarget::TopologyPatterns::Type;
-using Edge = std::pair<size_t, size_t>;
+using PatternGroup = CompilerTarget::TopologyPatterns::Group;
 } // namespace
 
-static ArrayRef<Edge> patternEdges(Pattern type) {
-  static constexpr std::array<Edge, 4> CYCLE{{{0, 1}, {1, 2}, {2, 3}, {3, 0}}};
-  static constexpr std::array<Edge, 3> STAR{{{0, 1}, {0, 2}, {0, 3}}};
-  static constexpr std::array<Edge, 1> PAIR{{{0, 1}}};
-  switch (type) {
-  case Pattern::FourCycle:
-    return CYCLE;
-  case Pattern::Star:
-    return STAR;
-  case Pattern::QubitPair:
-    return PAIR;
-  }
-  llvm_unreachable("unknown topology pattern");
-}
-
-std::optional<SmallVector<size_t, 4>> matchTopologyPattern(const Graph& graph,
-                                                           Pattern type) {
-  const size_t arity = type == Pattern::QubitPair ? 2 : 4;
+std::optional<SmallVector<size_t, 4>>
+matchTopologyPattern(const Graph& graph, const PatternGroup& pattern) {
+  const auto arity = pattern.arity();
   auto nodes = graph.getNodes();
   if (nodes.size() < arity) {
     return std::nullopt;
-  }
-  std::array<SmallVector<size_t, 3>, 4> neighbours;
-  for (const auto& [a, b] : patternEdges(type)) {
-    neighbours[a].push_back(b);
-    neighbours[b].push_back(a);
   }
   SmallVector<size_t, 4> match;
   // All templates have a connected prefix, so extend along its frontier.
@@ -311,7 +289,8 @@ std::optional<SmallVector<size_t, 4>> matchTopologyPattern(const Graph& graph,
       return true;
     }
     ArrayRef<size_t> candidateRange = nodes;
-    for (const auto previous : neighbours[depth]) {
+    const auto neighbours = pattern.neighbours(depth);
+    for (const auto previous : neighbours) {
       if (previous < depth) {
         candidateRange = graph.getNeighbours(match[previous]);
         break;
@@ -321,20 +300,20 @@ std::optional<SmallVector<size_t, 4>> matchTopologyPattern(const Graph& graph,
     llvm::sort(candidates);
     for (const auto candidate : candidates) {
       if (llvm::is_contained(match, candidate) ||
-          graph.getDegree(candidate) < neighbours[depth].size()) {
+          graph.getDegree(candidate) < neighbours.size()) {
         continue;
       }
-      if (llvm::any_of(neighbours[depth], [&](size_t other) {
+      if (llvm::any_of(neighbours, [&](size_t other) {
             return other < depth && !graph.hasEdge(candidate, match[other]);
           })) {
         continue;
       }
       size_t patternFrontier = 0;
       size_t patternRemaining = 0;
-      for (const auto next : neighbours[depth]) {
+      for (const auto next : neighbours) {
         if (next > depth) {
           ++patternRemaining;
-          patternFrontier += llvm::any_of(neighbours[next],
+          patternFrontier += llvm::any_of(pattern.neighbours(next),
                                           [&](size_t n) { return n < depth; });
         }
       }
@@ -368,16 +347,19 @@ std::optional<SmallVector<size_t, 4>> matchTopologyPattern(const Graph& graph,
 }
 
 FailureOr<SmallVector<TopologyPatternMatch>>
-decomposeConnectivityGraph(Graph graph, ArrayRef<Pattern> available) {
+decomposeConnectivityGraph(Graph graph, ArrayRef<PatternGroup> available) {
   SmallVector<TopologyPatternMatch> slices;
   // Removing edges cannot create a new non-induced match of an exhausted type.
   for (const auto type :
        {Pattern::FourCycle, Pattern::Star, Pattern::QubitPair}) {
-    if (!llvm::is_contained(available, type)) {
+    const auto* pattern = llvm::find_if(available, [type](const auto& group) {
+      return group.type() == type && group.size() != 0;
+    });
+    if (pattern == available.end()) {
       continue;
     }
-    while (auto match = matchTopologyPattern(graph, type)) {
-      for (const auto& [a, b] : patternEdges(type)) {
+    while (auto match = matchTopologyPattern(graph, *pattern)) {
+      for (const auto& [a, b] : pattern->edges()) {
         graph.removeEdge((*match)[a], (*match)[b]);
         graph.removeEdge((*match)[b], (*match)[a]);
       }

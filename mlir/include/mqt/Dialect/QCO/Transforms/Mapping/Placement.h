@@ -91,17 +91,18 @@ struct TopologyPatternMatch {
 /// Search depth is bounded by the pattern's arity (at most four).
 [[nodiscard]] std::optional<SmallVector<size_t, 4>>
 matchTopologyPattern(const Graph& graph,
-                     CompilerTarget::TopologyPatterns::Type type);
+                     const CompilerTarget::TopologyPatterns::Group& pattern);
 
 /// Cover each graph edge once using available pattern types.
 ///
 /// Prefers four-cycles, then stars, then pairs. Retains shared boundary
 /// vertices while removing matched edges from a copy. Isolated vertices need no
-/// slice. Fails if the available patterns cannot cover all edges. This does not
-/// yet join target occurrences or construct a placement.
+/// slice. Ignores groups without target occurrences. Fails if the available
+/// patterns cannot cover all edges. This does not yet join target occurrences
+/// or construct a placement.
 [[nodiscard]] FailureOr<SmallVector<TopologyPatternMatch>>
 decomposeConnectivityGraph(
-    Graph graph, ArrayRef<CompilerTarget::TopologyPatterns::Type> available);
+    Graph graph, ArrayRef<CompilerTarget::TopologyPatterns::Group> available);
 
 } // namespace qco
 } // namespace mlir

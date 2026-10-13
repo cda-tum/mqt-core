@@ -34,6 +34,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -51,10 +52,15 @@ using namespace mlir::qco;
 namespace {
 using PatternType = CompilerTarget::TopologyPatterns::Type;
 using Edges = std::set<std::pair<size_t, size_t>>;
-constexpr std::array TYPES{
-    PatternType::FourCycle,
-    PatternType::Star,
-    PatternType::QubitPair,
+class TopologyPatternMatching : public testing::Test {
+protected:
+  const CompilerTarget target = llvm::cantFail(
+      CompilerTarget::create(4,
+                             CompilerTarget::Connectivity::fromCouplings(
+                                 {{0, 1}, {1, 2}, {2, 3}, {0, 3}, {0, 2}}),
+                             CompilerTarget::NativeOperations::unrestricted()));
+  const ArrayRef<CompilerTarget::TopologyPatterns::Group> patterns =
+      *target.topologyPatterns();
 };
 } // namespace
 
@@ -466,7 +472,7 @@ TEST(ConnectivityGraph, DirectedEdgeLookup) {
   EXPECT_FALSE(graph.hasEdge(0, 1));
 }
 
-TEST(TopologyPatternMatching, ExhaustiveFiveVertexGraphs) {
+TEST_F(TopologyPatternMatching, ExhaustiveFiveVertexGraphs) {
   // Sparse IDs and reversed edge insertion also exercise determinism.
   constexpr std::array<size_t, 5> nodes{2, 5, 11, 17, 23};
   for (size_t mask = 0; mask < (1U << 10U); ++mask) {
@@ -487,7 +493,8 @@ TEST(TopologyPatternMatching, ExhaustiveFiveVertexGraphs) {
       reversed.addEdge(b, a);
       reversed.addEdge(a, b);
     }
-    for (const auto type : TYPES) {
+    for (const auto& pattern : patterns) {
+      const auto type = pattern.type();
       auto permutation = nodes;
       std::optional<SmallVector<size_t, 4>> expected;
       do {
@@ -499,10 +506,10 @@ TEST(TopologyPatternMatching, ExhaustiveFiveVertexGraphs) {
           break;
         }
       } while (std::ranges::next_permutation(permutation).found);
-      EXPECT_EQ(matchTopologyPattern(graph, type), expected);
-      EXPECT_EQ(matchTopologyPattern(reversed, type), expected);
+      EXPECT_EQ(matchTopologyPattern(graph, pattern), expected);
+      EXPECT_EQ(matchTopologyPattern(reversed, pattern), expected);
     }
-    auto slices = decomposeConnectivityGraph(graph, TYPES);
+    auto slices = decomposeConnectivityGraph(graph, patterns);
     ASSERT_TRUE(succeeded(slices));
     Edges reconstructed;
     for (const auto& slice : *slices) {
@@ -515,20 +522,29 @@ TEST(TopologyPatternMatching, ExhaustiveFiveVertexGraphs) {
   }
 }
 
-TEST(TopologyPatternMatching, PatternAvailabilityAndPreference) {
+TEST_F(TopologyPatternMatching, PatternAvailabilityAndPreference) {
   Graph graph({0, 1, 2, 3, 4});
   EXPECT_TRUE(succeeded(decomposeConnectivityGraph(graph, {})));
-  EXPECT_FALSE(matchTopologyPattern(Graph({}), PatternType::QubitPair));
+  EXPECT_FALSE(matchTopologyPattern(Graph({}), patterns[1]));
   for (const auto& [a, b] : Edges{{0, 1}, {1, 2}, {2, 3}, {0, 3}, {0, 2}}) {
     graph.addEdge(a, b);
     graph.addEdge(b, a);
   }
-  EXPECT_TRUE(
-      failed(decomposeConnectivityGraph(graph, {PatternType::FourCycle})));
-  auto slices = decomposeConnectivityGraph(graph, TYPES);
+  EXPECT_TRUE(failed(decomposeConnectivityGraph(graph, patterns.take_front())));
+  auto slices = decomposeConnectivityGraph(graph, patterns);
   ASSERT_TRUE(succeeded(slices));
   ASSERT_EQ(slices->size(), 2);
   EXPECT_EQ((*slices)[0].type, PatternType::FourCycle);
   EXPECT_EQ((*slices)[1].type, PatternType::QubitPair);
   EXPECT_EQ((*slices)[1].vertices, (SmallVector<size_t, 4>{0, 2}));
+  const auto pairTarget = llvm::cantFail(CompilerTarget::create(
+      2, CompilerTarget::Connectivity::fromCouplings({{0, 1}}),
+      CompilerTarget::NativeOperations::unrestricted()));
+  auto pairs =
+      decomposeConnectivityGraph(graph, *pairTarget.topologyPatterns());
+  ASSERT_TRUE(succeeded(pairs));
+  ASSERT_EQ(pairs->size(), 5);
+  for (const auto& pair : *pairs) {
+    EXPECT_EQ(pair.type, PatternType::QubitPair);
+  }
 }

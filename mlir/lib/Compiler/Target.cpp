@@ -1301,8 +1301,14 @@ ArrayRef<CompilerTarget::Coupling> CompilerTarget::couplings() const noexcept {
   return storage_->couplings;
 }
 
-CompilerTarget::TopologyPatterns::Group::Group(Type type, size_t arity)
-    : type_(type), arity_(arity) {}
+CompilerTarget::TopologyPatterns::Group::Group(Type type, size_t arity,
+                                               ArrayRef<Edge> edges)
+    : type_(type), edges_(edges), neighbours_(arity) {
+  for (const auto& [a, b] : edges_) {
+    neighbours_[a].push_back(b);
+    neighbours_[b].push_back(a);
+  }
+}
 
 CompilerTarget::TopologyPatterns::Type
 CompilerTarget::TopologyPatterns::Group::type() const noexcept {
@@ -1310,17 +1316,28 @@ CompilerTarget::TopologyPatterns::Group::type() const noexcept {
 }
 
 size_t CompilerTarget::TopologyPatterns::Group::arity() const noexcept {
-  return arity_;
+  return neighbours_.size();
+}
+
+ArrayRef<CompilerTarget::TopologyPatterns::Group::Edge>
+CompilerTarget::TopologyPatterns::Group::edges() const noexcept {
+  return edges_;
+}
+
+ArrayRef<size_t>
+CompilerTarget::TopologyPatterns::Group::neighbours(size_t vertex) const {
+  assert(vertex < arity() && "Topology pattern vertex is out of range");
+  return neighbours_[vertex];
 }
 
 size_t CompilerTarget::TopologyPatterns::Group::size() const noexcept {
-  return vertices_.size() / arity_;
+  return vertices_.size() / arity();
 }
 
 ArrayRef<size_t>
 CompilerTarget::TopologyPatterns::Group::operator[](size_t index) const {
   assert(index < size() && "Topology pattern occurrence index is out of range");
-  return ArrayRef<size_t>(vertices_).slice(index * arity_, arity_);
+  return ArrayRef<size_t>(vertices_).slice(index * arity(), arity());
 }
 
 std::optional<ArrayRef<CompilerTarget::TopologyPatterns::Group>>
@@ -1329,9 +1346,14 @@ CompilerTarget::topologyPatterns() const {
     return std::nullopt;
   }
   std::call_once(storage_->topologyPatternsOnce, [&] {
-    TopologyPatterns::Group cycles(TopologyPatterns::Type::FourCycle, 4);
-    TopologyPatterns::Group pairs(TopologyPatterns::Type::QubitPair, 2);
-    TopologyPatterns::Group stars(TopologyPatterns::Type::Star, 4);
+    using Edge = TopologyPatterns::Group::Edge;
+    static constexpr std::array<Edge, 4> CYCLE{
+        {{0, 1}, {1, 2}, {2, 3}, {3, 0}}};
+    static constexpr std::array<Edge, 1> PAIR{{{0, 1}}};
+    static constexpr std::array<Edge, 3> STAR{{{0, 1}, {0, 2}, {0, 3}}};
+    TopologyPatterns::Group cycles(TopologyPatterns::Type::FourCycle, 4, CYCLE);
+    TopologyPatterns::Group pairs(TopologyPatterns::Type::QubitPair, 2, PAIR);
+    TopologyPatterns::Group stars(TopologyPatterns::Type::Star, 4, STAR);
     const auto& adjacency = storage_->adjacency;
     for (size_t a = 0; a < numSites(); ++a) {
       const auto& neighbours = adjacency[a];

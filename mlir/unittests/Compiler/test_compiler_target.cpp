@@ -543,13 +543,17 @@ TEST(CompilerTargetTest, TopologyPatternsShareCacheAndAllowChords) {
   ASSERT_TRUE(topologyPatterns.has_value());
   ASSERT_EQ(topologyPatterns->size(), 3);
   const auto& cycles = topologyPatterns->front();
+  using Edge = Target::TopologyPatterns::Group::Edge;
   EXPECT_EQ(cycles.type(), Target::TopologyPatterns::Type::FourCycle);
   EXPECT_EQ(cycles.arity(), 4);
+  EXPECT_EQ(cycles.edges(),
+            (llvm::ArrayRef<Edge>{{0, 1}, {1, 2}, {2, 3}, {3, 0}}));
   ASSERT_EQ(cycles.size(), 1);
   EXPECT_EQ(cycles[0], (llvm::ArrayRef<size_t>{0, 1, 2, 3}));
   const auto& pairs = (*topologyPatterns)[1];
   EXPECT_EQ(pairs.type(), Target::TopologyPatterns::Type::QubitPair);
   EXPECT_EQ(pairs.arity(), 2);
+  EXPECT_EQ(pairs.edges(), (llvm::ArrayRef<Edge>{{0, 1}}));
   const std::array<std::array<size_t, 2>, 5> expectedPairs{
       {
           {0, 1},
@@ -566,9 +570,23 @@ TEST(CompilerTargetTest, TopologyPatternsShareCacheAndAllowChords) {
   const auto& stars = (*topologyPatterns)[2];
   EXPECT_EQ(stars.type(), Target::TopologyPatterns::Type::Star);
   EXPECT_EQ(stars.arity(), 4);
+  EXPECT_EQ(stars.edges(), (llvm::ArrayRef<Edge>{{0, 1}, {0, 2}, {0, 3}}));
   ASSERT_EQ(stars.size(), 2);
   EXPECT_EQ(stars[0], (llvm::ArrayRef<size_t>{0, 1, 2, 3}));
   EXPECT_EQ(stars[1], (llvm::ArrayRef<size_t>{2, 0, 1, 3}));
+  for (const auto& group : *topologyPatterns) {
+    for (size_t vertex = 0; vertex < group.arity(); ++vertex) {
+      llvm::SmallVector<size_t, 3> expected;
+      for (const auto& [a, b] : group.edges()) {
+        if (a == vertex) {
+          expected.push_back(b);
+        } else if (b == vertex) {
+          expected.push_back(a);
+        }
+      }
+      EXPECT_EQ(group.neighbours(vertex), llvm::ArrayRef<size_t>(expected));
+    }
+  }
   auto shared = second.get();
   ASSERT_TRUE(shared.has_value());
   EXPECT_EQ(topologyPatterns->data(), shared->data());
