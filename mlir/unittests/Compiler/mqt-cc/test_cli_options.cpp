@@ -56,8 +56,8 @@ TEST(CompilerCLI, ValidatesMappingOptionArguments) {
            InvalidOptions{
                .argument = "--mapping-iterations=0",
                .hasDevice = true,
-               .diagnostic =
-                   "--qdmi-device and --payload-spec must be provided together",
+               .diagnostic = "--qdmi-device or --target and --payload-spec "
+                             "must be provided together",
            },
        }) {
     SCOPED_TRACE(test.argument.str());
@@ -78,6 +78,132 @@ TEST(CompilerCLI, ValidatesMappingOptionArguments) {
     ASSERT_TRUE(diagnostics);
     EXPECT_TRUE((*diagnostics)->getBuffer().contains(test.diagnostic));
   }
+}
+
+TEST(CompilerCLI, ValidatesExplicitTarget) {
+  const llvm::StringRef target =
+      "--target=#mqt.compilation_target<sites = [<id = 0>, <id = 1>], "
+      "connectivity = all_to_all, couplings = [], native_operations = "
+      "unrestricted, operations = []>";
+  const llvm::StringRef payload =
+      "--payload-spec=#mqt.payload_spec<format = <id = \"openqasm\", "
+      "version = \"3.1.0\", profile = \"\", encoding = text>, capabilities = "
+      "[], optional_capabilities_known = false>";
+  struct InvalidOptions {
+    llvm::SmallVector<llvm::StringRef> arguments;
+    llvm::StringRef diagnostic;
+  };
+  for (const auto& test : {
+           InvalidOptions{
+               .arguments = {"--target=invalid", payload},
+               .diagnostic = "--target must be a valid",
+           },
+           InvalidOptions{
+               .arguments = {"--target=", payload},
+               .diagnostic = "--target must be a valid",
+           },
+           InvalidOptions{
+               .arguments = {"--target= \t", payload},
+               .diagnostic = "--target must be a valid",
+           },
+           InvalidOptions{
+               .arguments = {"--target=42 : i64", payload},
+               .diagnostic = "--target must be a valid",
+           },
+           InvalidOptions{
+               .arguments =
+                   {
+                       "--target=#mqt.compilation_target<sites = [], "
+                       "connectivity = all_to_all, couplings = [], "
+                       "native_operations = unrestricted, operations = []>",
+                       payload,
+                   },
+               .diagnostic = "must contain at least one site",
+           },
+           InvalidOptions{
+               .arguments = {target, payload, "--qdmi-device=mqt.sc.default"},
+               .diagnostic = "mutually exclusive",
+           },
+           InvalidOptions{
+               .arguments = {target},
+               .diagnostic = "must be provided together",
+           },
+           InvalidOptions{
+               .arguments = {payload},
+               .diagnostic = "must be provided together",
+           },
+           InvalidOptions{
+               .arguments = {target, payload, "--emit=qc"},
+               .diagnostic = "Only --emit=qco-optimized",
+           },
+           InvalidOptions{
+               .arguments = {target, payload, "--qdmi-list-devices"},
+               .diagnostic = "cannot be combined with target compilation",
+           },
+           InvalidOptions{
+               .arguments = {target, payload, "--pass-pipeline=canonicalize"},
+               .diagnostic = "cannot be combined with --pass-pipeline",
+           },
+           InvalidOptions{
+               .arguments = {target, payload, "--decompose-multi-controlled"},
+               .diagnostic =
+                   "cannot be combined with --decompose-multi-controlled",
+           },
+           InvalidOptions{
+               .arguments = {target, payload, "--run-reproducer"},
+               .diagnostic = "without --emit, target compilation",
+           },
+       }) {
+    SCOPED_TRACE(test.diagnostic.str());
+    llvm::SmallString<128> stderrPath;
+    ASSERT_FALSE(
+        llvm::sys::fs::createTemporaryFile("mqt-cc-target", "err", stderrPath));
+    const llvm::FileRemover cleanup(stderrPath);
+    llvm::SmallVector<llvm::StringRef> args{
+        MQT_CORE_MQT_CC,
+        MQT_CORE_MQT_CC_INPUT,
+    };
+    args.append(test.arguments);
+    EXPECT_EQ(llvm::sys::ExecuteAndWait(
+                  MQT_CORE_MQT_CC, args, std::nullopt,
+                  {std::nullopt, std::nullopt, stderrPath.str()}, 10),
+              1);
+    auto diagnostics = llvm::MemoryBuffer::getFile(stderrPath);
+    ASSERT_TRUE(diagnostics);
+    EXPECT_TRUE((*diagnostics)->getBuffer().contains(test.diagnostic))
+        << (*diagnostics)->getBuffer().str();
+  }
+}
+
+TEST(CompilerCLI, CompilesForExplicitTarget) {
+  llvm::SmallString<128> outputPath;
+  ASSERT_FALSE(
+      llvm::sys::fs::createTemporaryFile("mqt-cc-target", "mlir", outputPath));
+  const llvm::FileRemover cleanup(outputPath);
+  const llvm::StringRef target =
+      "--target=#mqt.compilation_target<sites = [<id = 0>, <id = 1>], "
+      "connectivity = all_to_all, couplings = [], native_operations = "
+      "unrestricted, operations = []>";
+  const llvm::StringRef payload =
+      "--payload-spec=#mqt.payload_spec<format = <id = \"openqasm\", "
+      "version = \"3.1.0\", profile = \"\", encoding = text>, capabilities = "
+      "[], optional_capabilities_known = false>";
+  llvm::SmallVector<llvm::StringRef> args{
+      MQT_CORE_MQT_CC,
+      MQT_CORE_MQT_CC_INPUT,
+      "--emit=qco-optimized",
+      "--mapping-trials=1",
+      target,
+      payload,
+  };
+  ASSERT_EQ(llvm::sys::ExecuteAndWait(
+                MQT_CORE_MQT_CC, args, std::nullopt,
+                {std::nullopt, outputPath.str(), std::nullopt}, 10),
+            0);
+  auto output = llvm::MemoryBuffer::getFile(outputPath);
+  ASSERT_TRUE(output);
+  EXPECT_TRUE((*output)->getBuffer().contains("mqt.target_env"));
+  EXPECT_TRUE((*output)->getBuffer().contains("mqt.layout"));
 }
 
 TEST(CompilerCLI, SeedOverridesCustomPassWithoutDevice) {
