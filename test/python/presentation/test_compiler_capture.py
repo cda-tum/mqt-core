@@ -226,11 +226,40 @@ def test_four_qubit_qpe_resolves_non_exact_phase() -> None:
 
     source = runpy.run_path(str(SCRIPT))["qpe_source"]()
     program = QCProgram.from_openqasm_str(source).to_qco()
+    program.run_pass_pipeline("mqt-qco-default")
+    loops = [
+        instruction.operation for instruction in program.to_qiskit().data if instruction.operation.name == "for_loop"
+    ]
+    assert [len(loop.params[0]) for loop in loops] == [128, 64, 32, 16, 8, 4, 2]
     counts = program.sample(2048, 7)
     for bin_value in (85, 86):
         difference = 1 / 3 - bin_value / 256
         expected = (math.sin(256 * math.pi * difference) / (256 * math.sin(math.pi * difference))) ** 2
         assert counts[f"{bin_value:08b}"] / 2048 == pytest.approx(expected, abs=0.05)
+
+
+@pytest.mark.parametrize("example", ["PARITY_SOURCE", "RUS_SOURCE", "qpe_source"])
+def test_portable_capture_preserves_control_flow_without_target_synthesis(example: str) -> None:
+    """Curated examples must export their own gates, loops, and feedback to QIR."""
+    helpers = runpy.run_path(str(SCRIPT))
+    source = helpers[example]() if example == "qpe_source" else helpers[example]
+    qc = QCProgram.from_openqasm_str(source)
+    variant = helpers["capture_portable_variant"](qc, unroll=False)
+    stages = {stage["id"]: stage for stage in variant["stages"]}
+    assert set(stages) == {"qc", "qco", "optimized", "qc-optimized"}
+    assert "mqt.layout" not in stages["optimized"]["code"]
+    qir = next(artifact["code"] for artifact in variant["exports"] if artifact["id"] == "qir-adaptive")
+    assert "__quantum__qis__prx__body" not in qir
+    assert "__quantum__qis__reset__body" in qir
+    assert "br i1" in qir
+    assert "phi" in qir
+    if example == "PARITY_SOURCE":
+        assert "__quantum__qis__cx__body" in qir
+        assert "__quantum__qis__cz__body" not in qir
+        unrolled = helpers["capture_portable_variant"](qc, unroll=True)
+        unrolled_qc = next(stage["code"] for stage in unrolled["stages"] if stage["id"] == "qc-optimized")
+        assert "scf.for" not in unrolled_qc
+        assert "scf.if" in unrolled_qc
 
 
 def test_repeat_until_success_retains_conditional_loop_and_heralded_state() -> None:

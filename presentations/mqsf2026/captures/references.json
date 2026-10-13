@@ -317,5 +317,69 @@
         "sha256": "505a9485451c52b781b12a058b8ec8163b3e173454ba667cce651412ff561cfe"
       }
     }
+  },
+  "repo_stats": {
+    "https://github.com/munich-quantum-toolkit/core": {
+      "stars": 135,
+      "source": "https://api.github.com/repos/munich-quantum-toolkit/core",
+      "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+      "source_sha256": "d3696daddeba702dfae9cf3ca204253d01036091ac008ec9c73a78faa67bfb3a",
+      "downloads": "960k+ PyPI downloads",
+      "scope": "Presenter-specified rounded release snapshot; downloads are cumulative package downloads, not users."
+    },
+    "https://github.com/Munich-Quantum-Software-Stack/QDMI": {
+      "stars": 85,
+      "source": "https://api.github.com/repos/Munich-Quantum-Software-Stack/QDMI",
+      "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+      "source_sha256": "7c73be8ed60b46299b823e307afbb90e968d1abfa3f4db4b4444456e50de418e",
+      "scope": "Presenter-specified release snapshot."
+    },
+    "https://github.com/iqm-finland/QDMI-on-IQM": {
+      "stars": 11,
+      "source": "https://api.github.com/repos/iqm-finland/QDMI-on-IQM",
+      "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+      "source_sha256": "a7be4a2d3090904ebe0450572f9dc9607248acc614a9d74f0d8a651cae5846c9"
+    },
+    "https://github.com/munich-quantum-software/amazon-braket-qdmi-device": {
+      "stars": 9,
+      "source": "https://api.github.com/repos/munich-quantum-software/amazon-braket-qdmi-device",
+      "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+      "source_sha256": "6d7bc67a35b2ea742b5e44661def4c0d94e12c6bad1a7d41ac1eaaca2ddd59a7"
+    },
+    "https://github.com/munich-quantum-software/ibm-qdmi-device": {
+      "stars": 8,
+      "source": "https://api.github.com/repos/munich-quantum-software/ibm-qdmi-device",
+      "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+      "source_sha256": "6e27555325fad5c702db0b7eae309cd1364e94668184086749df524ff5ae752e"
+    },
+    "https://github.com/amazon-braket/amazon-braket-examples": {
+      "stars": 589,
+      "source": "https://api.github.com/repos/amazon-braket/amazon-braket-examples",
+      "retrieved_at": "2026-10-13T15:03:24.373766+00:00",
+      "source_sha256": "11a50d65f12f018850868eabf25af6e17b8a9fc00da8f57fcaa9f1e8ca37b7a9"
+    }
+  },
+  "ecosystem": {
+    "source": "https://munich-quantum-software-stack.github.io/QDMI/v1.4.0/md_docs_2ecosystem.html",
+    "source_markdown": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/ecosystem.md",
+    "regions": {
+      "Munich": {
+        "logos": ["mqv", "mqss", "lrz"],
+        "relationship": "Origins and deployment"
+      },
+      "Germany": {
+        "logos": ["fullstaqd"],
+        "relationship": "Reference architecture"
+      },
+      "Europe": {
+        "logos": ["eqs3", "lrz", "psnc", "vtt"],
+        "names": ["CESGA", "CINECA"],
+        "relationship": "EuroHPC and EQS3 integration work; exploration at European centres"
+      },
+      "International": {
+        "logos": ["openqse", "ornl"],
+        "relationship": "Interface exploration and reference architecture"
+      }
+    }
   }
 }

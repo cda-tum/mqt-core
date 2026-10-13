@@ -87,12 +87,16 @@ p {
   margin: 0px;
 }
 h1 {
+  position: relative;
+  top: -18px;
   font-size: 78px;
   letter-spacing: -3.2px;
   line-height: 1.13;
   font-weight: 650;
 }
 h2 {
+  position: relative;
+  top: -18px;
   font-size: 62px;
   line-height: 1.13;
   letter-spacing: -2px;
@@ -428,6 +432,17 @@ svg {
   width: 95px;
   height: 36px;
 }
+.application-heading {
+  font-size: 47px;
+  letter-spacing: -1.4px;
+  max-width: none;
+}
+.application-heading small {
+  font-size: 23px;
+  letter-spacing: 0;
+  margin-left: 20px;
+  color: var(--blue);
+}
 .app-panels {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -493,6 +508,23 @@ svg {
 .app-panel .circuit {
   height: 230px;
 }
+.preparation-sketch {
+  height: 100%;
+}
+.preparation-sketch > svg {
+  width: 100%;
+  height: 55%;
+}
+.compact-shadow-batch {
+  height: 220px;
+}
+.compact-shadow-batch svg {
+  width: 100%;
+  height: 100%;
+}
+.preparation-sketch .compact-shadow-batch {
+  height: 45%;
+}
 .sample-stream {
   display: flex;
   gap: 8px;
@@ -518,8 +550,15 @@ svg {
 .sample-stream strong {
   display: block;
   font-family: monospace;
-  font-size: 27px;
+  font-size: 21px;
+  line-height: 1.18;
   margin-top: 7px;
+}
+.sample-stream strong span {
+  display: block;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.2;
 }
 .app-panel-body > svg[viewBox="0 0 1160 220"] {
   height: 100px;
@@ -537,6 +576,21 @@ svg {
   display: flex;
   gap: 22px;
   align-items: center;
+}
+.application-paper-reference {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+}
+.application-paper-reference .qr-block > img {
+  width: 65px;
+  height: 65px;
+}
+.application-paper-reference .url {
+  font-size: 19px;
+}
+.application-paper-reference .caption {
+  font-size: 17px;
 }
 .application-reference > .logo {
   width: 90px;
@@ -579,7 +633,7 @@ svg {
 }
 .execution.focus-1 > .app-panel:not(:nth-child(2)) .app-panel-body,
 .execution.focus-2 > .app-panel:not(:nth-child(3)) .app-panel-body {
-  height: 370px;
+  height: 390px;
 }
 .execution.focus-1 > .app-panel:not(:nth-child(2)) .panel-kicker,
 .execution.focus-2 > .app-panel:not(:nth-child(3)) .panel-kicker {
@@ -607,6 +661,48 @@ svg {
 .preparation-code > div:first-child .full-code {
   height: 315px;
 }
+.preprocessing-trace {
+  height: 315px;
+  display: grid;
+  grid-template-rows: repeat(5, 1fr);
+  gap: 6px;
+}
+.preprocessing-trace > div {
+  min-width: 0;
+  padding: 7px 11px;
+  border-left: 4px solid #d9e5ef;
+  border-radius: 5px;
+  background: #f1f5f9;
+}
+.preprocessing-trace .active {
+  border-color: #d6882f;
+  background: #fff4e5;
+}
+.preprocessing-trace .done {
+  border-color: var(--blue);
+  background: #eaf2fa;
+}
+.preprocessing-trace > div > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 17px;
+}
+.preprocessing-trace time {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--blue);
+  font-size: 15px;
+}
+.preprocessing-trace code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 4px;
+  font-size: 15px;
+  color: var(--muted);
+}
 .preparation-grid {
   padding: 0 18px;
 }
@@ -629,7 +725,10 @@ svg {
 }
 .batch-grid > svg {
   width: 100%;
-  max-height: 370px;
+  max-height: 390px;
+}
+.execution.focus-1 .batch-grid > svg {
+  max-height: 350px;
 }
 .batch-counts {
   display: flex;
@@ -704,6 +803,45 @@ svg {
 }
 .execution.focus--1 .slurm-allocation {
   font-size: 16px;
+}
+.walker-comparison {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  min-width: 0;
+  color: var(--blue);
+}
+.walker-comparison > div:nth-child(2) {
+  color: #778899;
+}
+.walker-comparison b {
+  display: block;
+  font-size: 18px;
+}
+.walker-comparison svg {
+  width: 100%;
+  height: 112px;
+}
+.walker-comparison small {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.execution.focus--1 .walker-comparison {
+  gap: 3px;
+}
+.execution.focus--1 .walker-comparison b {
+  font-size: 12px;
+}
+.execution.focus--1 .walker-comparison svg {
+  height: 58px;
+}
+.execution.focus--1 .walker-comparison small {
+  font-size: 10px;
+}
+.execution.focus--1 .energy-chart {
+  height: 190px;
 }
 .workflow-clock {
   position: absolute;
@@ -831,7 +969,7 @@ svg {
 }
 .qpe-banner {
   display: grid;
-  grid-template-columns: 1fr 530px;
+  grid-template-columns: 1fr 635px;
   gap: 40px;
   height: 215px;
   margin-top: 20px;
@@ -845,14 +983,14 @@ svg {
 }
 .runtime-products {
   display: grid;
-  grid-template-columns: 80px 20px 90px 80px 20px 80px 42px;
+  grid-template-columns: 115px 24px 115px 78px 24px 112px 42px;
   gap: 8px;
   align-items: center;
   justify-content: center;
 }
 .runtime-products .logo {
-  width: 85px;
-  height: 54px;
+  width: 112px;
+  height: 76px;
 }
 .runtime-products b {
   font-size: 23px;
@@ -981,6 +1119,9 @@ svg {
 .app-panel .energy-chart {
   height: 222px;
 }
+.app-panels.intro .energy-chart {
+  height: 210px;
+}
 .application-reference,
 .structure-footer,
 .feature-resources {
@@ -1007,7 +1148,7 @@ svg {
 
 .compiler-workbench {
   display: grid;
-  grid-template-columns: 370px minmax(0, 1fr);
+  grid-template-columns: 445px minmax(0, 1fr);
   grid-template-rows: 210px 391px;
   gap: 16px 20px;
   margin-top: 18px;
@@ -1020,32 +1161,59 @@ svg {
 }
 .compiled-stage {
   position: relative;
+  z-index: 1;
   min-width: 0;
   min-height: 0;
-  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 65px;
+  grid-template-rows: 26px minmax(0, 1fr);
+  column-gap: 12px;
+  padding: 12px 14px;
+}
+/* The frame and circuit shrink independently, preserving the starting geometry. */
+.stage-shell {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   background: #f8fbfe;
   border: 1px solid #cbdced;
   border-left: 4px solid var(--blue);
   border-radius: 10px;
 }
+.compiled-stage > :not(.stage-shell) {
+  position: relative;
+}
+.stage-place-and-route {
+  z-index: 2;
+}
 .compiled-stage h3 {
+  grid-column: 1 / -1;
   font-size: 21px;
   margin: 0;
 }
 .compiled-stage .circuit {
-  height: calc(100% - 73px);
-  margin-top: 8px;
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
 }
 .compiled-stage .circuit svg {
   object-position: left center;
 }
 .compiled-stage .program-metrics {
-  gap: 20px;
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
   margin: 0;
-  height: 31px;
 }
 .compiled-stage .program-metrics > div {
-  gap: 5px;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
 }
 .compiled-stage .program-metrics b {
   font-size: 23px;
@@ -1059,8 +1227,11 @@ svg {
   min-width: 0;
 }
 .spec-card {
+  position: relative;
   height: 391px;
-  padding: 13px 17px;
+  display: grid;
+  grid-template-rows: 49px minmax(0, 1fr) 24px 58px;
+  padding: 12px 14px;
   border: 1.5px solid #a9c6e1;
   border-radius: 16px;
   background: #f7fafd;
@@ -1086,55 +1257,54 @@ svg {
   width: 53px;
   height: 22px;
 }
-.spec-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  margin-top: 6px;
+.spec-brand {
+  position: absolute;
+  top: 10px;
+  right: 12px;
 }
-.spec-title .logo {
-  width: 72px;
-  height: 31px;
-}
-.spec-title h3 {
-  font-size: 20px;
-  margin: 0;
+.spec-brand .logo {
+  width: 68px;
+  height: 35px;
 }
 .spec-card .target-map {
-  height: 152px;
+  height: 100%;
+  min-height: 0;
 }
 .spec-details {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  font-size: 16px;
+  gap: 7px;
+  white-space: nowrap;
+  font-size: 11px;
 }
-.spec-formats {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  height: 25px;
-  font-size: 13px;
-  color: var(--muted);
+.spec-details > span::before {
+  content: "·";
+  margin-right: 7px;
+  color: #91a9c0;
 }
-.spec-formats .logo {
-  width: 35px;
-  height: 22px;
+.spec-details b {
+  color: var(--blue);
+}
+.spec-card[data-target="ibm.ibm_miami"] .spec-details {
+  gap: 4px;
+  font-size: 10px;
+}
+.spec-card[data-target="ibm.ibm_miami"] .spec-details > span::before {
+  margin-right: 4px;
 }
 .spec-repository {
   display: flex;
   align-items: center;
   gap: 12px;
   border-top: 1px solid #d8e4ef;
-  margin-top: 8px;
-  padding-top: 9px;
+  padding-top: 7px;
   color: var(--blue);
   text-decoration: none;
 }
 .spec-repository > img {
-  width: 54px;
-  height: 54px;
+  width: 46px;
+  height: 46px;
 }
 .spec-repository > span {
   display: flex;
@@ -1148,55 +1318,32 @@ svg {
   width: 20px;
   height: 20px;
 }
+.spec-repository .repo-stars {
+  white-space: nowrap;
+  margin-left: 5px;
+}
+.spec-repository .repo-stars > span {
+  color: #d5a200;
+}
 .compiler-stages {
   display: grid;
   grid-column: 2;
   grid-row: 2;
-  grid-template-rows: 130px minmax(0, 1fr);
+  grid-template-rows: 143px minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
 }
 .compiler-stages > .compiled-stage:only-child {
   grid-row: 1 / -1;
 }
-.compiler-stages > .compiled-stage:only-child .circuit {
-  height: 290px;
-}
-.compiler-stages > .stage-place-and-route:not(:only-child) .circuit {
-  height: 65px;
-  margin-top: 1px;
+.compiler-stages > .stage-place-and-route:not(:only-child) .program-metrics {
+  gap: 5px;
 }
 .compiler-stages > .stage-place-and-route:not(:only-child) .program-metrics b {
-  font-size: 18px;
-}
-.compiler-stages
-  > .stage-place-and-route:not(:only-child)
-  .program-metrics
-  span {
-  font-size: 12px;
-}
-.compiler-stages > .stage-place-and-route:not(:only-child) .program-metrics {
-  gap: 18px;
-  height: 20px;
+  font-size: 21px;
 }
 .compiler-workbench.with-qir {
-  grid-template-columns: 370px 520px minmax(0, 1fr);
-}
-.compiler-workbench.with-qir .compiler-stages {
-  grid-template-rows: 150px minmax(0, 1fr);
-}
-.with-qir .compiler-stages .program-metrics {
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.with-qir .compiler-stages .program-metrics b {
-  font-size: 19px;
-}
-.with-qir .compiler-stages .program-metrics span {
-  font-size: 12px;
-}
-.with-qir .compiler-stages .program-metrics > div:last-child {
-  display: none;
+  grid-template-columns: 445px 565px minmax(0, 1fr);
 }
 .compiler-qir {
   grid-column: 3;
@@ -1208,62 +1355,44 @@ svg {
 }
 .compiler-qir .code-frame {
   height: auto;
-  padding: 12px;
+  padding: 12px 9px;
   border-radius: 10px;
 }
 .compiler-qir .code-title {
   font-size: 19px;
 }
 .compiler-qir pre {
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.22;
-  letter-spacing: -0.35px;
+  letter-spacing: -0.3px;
 }
 .compiler-qir .code-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .compiler-qir .line-no {
-  flex-basis: 22px;
-  padding-right: 5px;
+  flex-basis: 21px;
+  padding-right: 4px;
 }
 .code-continuation {
   font-size: 13px;
   color: var(--muted);
-  margin: 2px 16px;
-}
-.target-change .compiler-device {
-  transform: translateX(calc(8px * var(--shuffle)))
-    rotate(calc(2deg * var(--shuffle)));
-  transform-origin: 0 100%;
-  opacity: calc(1 - var(--shuffle) * 0.55);
-}
-.target-change .compiled-stage,
-.target-change .compiler-qir {
-  transition: opacity 0.25s ease;
-}
-.refresh-0 .compiler-stages,
-.refresh-0 .compiler-qir {
-  opacity: 0.6;
-}
-.refresh-1 .stage-target-native-synthesis,
-.refresh-1 .compiler-qir {
-  opacity: 0.6;
-}
-.refresh-2 .compiler-qir {
-  opacity: 0.6;
+  margin: 2px 12px;
 }
 .compiler-ecosystem {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 26px;
-  margin-top: 50px;
+  grid-template-columns: 235px 620px minmax(0, 1fr) 235px;
+  gap: 20px;
+  margin-top: 34px;
 }
 .compiler-ecosystem section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   border: 1px solid #caddec;
   border-radius: 16px;
   background: #f8fbfe;
-  padding: 24px;
+  padding: 20px 18px;
 }
 .compiler-ecosystem h3 {
   font-size: 26px;
@@ -1271,46 +1400,116 @@ svg {
   margin: 0;
   text-align: center;
 }
-.compiler-ecosystem section > div {
-  height: 315px;
+.compiler-ecosystem .ecosystem-body {
+  height: 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-evenly;
-  gap: 20px;
-  font-size: 25px;
+  gap: 15px;
+  font-size: 23px;
 }
-.compiler-ecosystem section > div > .logo {
-  max-width: 165px;
-  height: 54px;
+.ecosystem-frontends .ecosystem-body > .logo,
+.ecosystem-outputs .ecosystem-body > .logo {
+  max-width: 170px;
+  height: 65px;
 }
-.compiler-ecosystem section > div > span {
+.compiler-ecosystem .ecosystem-body > span,
+.compiler-ecosystem .ecosystem-logos > span,
+.compiler-tools,
+.compiler-tools > span {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 17px;
+  gap: 12px;
 }
-.compiler-ecosystem span .logo {
+.ecosystem-frontends span .logo,
+.ecosystem-outputs span .logo {
+  width: 60px;
+  height: 60px;
+}
+.compiler-ecosystem .ecosystem-group {
+  width: 100%;
+  text-align: center;
+}
+.ecosystem-group h4 {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 15px;
+}
+.ecosystem-logos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px 22px;
+  font-size: 19px;
+}
+.ecosystem-logos .logo {
+  width: 90px;
+  height: 46px;
+}
+.ecosystem-logos.hardware .logo {
+  width: 99px;
+  height: 43px;
+}
+.ecosystem-logos.hardware .logo[alt="WMI"] {
+  padding: 7px;
+  border-radius: 5px;
+  background: #142b45;
+}
+.ecosystem-logos.centers {
+  gap: 14px 18px;
+}
+.ecosystem-logos.centers .logo {
+  width: 87px;
+  height: 37px;
+}
+.compiler-collection {
+  font-size: 25px;
+}
+.compiler-collection > .logo {
+  width: 110px;
+  height: 60px;
+}
+.compiler-tools {
+  justify-content: center;
+  gap: 40px;
+}
+.compiler-tools > .logo {
   width: 100px;
-  height: 49px;
+  height: 57px;
+}
+.compiler-tools span .logo {
+  width: 145px;
+  height: 66px;
+}
+.initiatives > .logo {
+  width: 285px;
+  height: 62px;
+  margin-bottom: 14px;
+}
+.initiatives .ecosystem-logos {
+  gap: 38px;
+}
+.initiatives .ecosystem-logos .logo {
+  width: 145px;
+  height: 68px;
+}
+.initiatives .ecosystem-logos span .logo {
+  width: 76px;
 }
 .compiler-ecosystem section > p {
-  margin: 15px 0 0;
-  padding-top: 22px;
+  margin: 12px 0 0;
+  padding-top: 18px;
   border-top: 2px solid #cbdced;
-  font-size: 23px;
+  font-size: 22px;
   line-height: 1.4;
   text-align: center;
   color: var(--muted);
 }
 .compiler-ecosystem section > p b {
   color: var(--blue);
-}
-.ecosystem-scope {
-  margin-top: 24px;
-  text-align: center;
-  font-size: 18px;
-  color: var(--muted);
 }
 .grover-growth {
   display: grid;
@@ -1350,11 +1549,11 @@ svg {
 }
 .structured-qir {
   display: grid;
-  grid-template-rows: 370px 225px;
+  grid-template-rows: 390px 230px;
   gap: 15px;
 }
 .structured-qir > .full-code {
-  height: 370px;
+  height: 390px;
 }
 .structured-qir > .full-code .complete-code pre {
   line-height: 1.14;
@@ -1363,7 +1562,7 @@ svg {
   min-height: 0;
 }
 .control-lens .code-frame {
-  height: 225px;
+  height: 230px;
   border-radius: 8px;
   background: white;
   border: 1px solid #93c0dc;
@@ -1375,7 +1574,7 @@ svg {
   overflow-wrap: anywhere;
 }
 .control-lens pre {
-  font-size: 16px;
+  font-size: 21px;
   line-height: 1.22;
 }
 .control-lens .code-title {
@@ -1385,7 +1584,7 @@ svg {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: -20px;
   display: flex;
   align-items: center;
   gap: 22px;
@@ -1399,8 +1598,8 @@ svg {
   font-size: 16px;
 }
 .exchange-footer .logo {
-  width: 73px;
-  height: 44px;
+  width: 86px;
+  height: 54px;
 }
 .exchange-footer > div {
   max-width: 93px;
@@ -1414,14 +1613,14 @@ svg {
   gap: 17px;
 }
 .paper-partners .logo {
-  width: 75px;
-  height: 45px;
+  width: 90px;
+  height: 58px;
 }
 .paper-partners .logo[alt="OXFORD"] {
-  width: 100px;
+  width: 115px;
 }
 .paper-partners .logo[alt="UBC"] {
-  width: 35px;
+  width: 45px;
 }
 .structure-footer .qr-block {
   gap: 12px;
@@ -1435,28 +1634,6 @@ svg {
 }
 .structure-footer .qr-block .caption {
   font-size: 14px;
-}
-
-.omitted-native {
-  color: var(--muted);
-  font-style: italic;
-  margin: 3px 0;
-}
-.target-change .compiler-device {
-  position: relative;
-}
-.target-change .compiler-device::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 1px solid #b9cfe3;
-  border-radius: 16px;
-  background: #edf4fa;
-  transform: translate(calc(16px * var(--shuffle)), calc(-8px * var(--shuffle)))
-    rotate(calc(4deg * var(--shuffle)));
-}
-.target-change .spec-card {
-  position: relative;
 }
 
 /* Fixed reference geometry across adjacent builds. */
@@ -1479,4 +1656,60 @@ svg {
 .chapter-art.runtime-art .logo {
   width: 85px;
   height: 64px;
+}
+
+.chapter-brand {
+  width: 235px;
+  height: 98px;
+  object-fit: contain;
+  object-position: left center;
+}
+.repo-stars {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.repo-stars svg {
+  width: 20px;
+  height: 20px;
+}
+
+.adaptive-sequence .sequence-svg {
+  height: 218px;
+}
+.worker-progress {
+  margin-top: 8px;
+}
+.worker-progress h4 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  color: var(--blue);
+}
+.worker-row {
+  display: grid;
+  grid-template-columns: 65px 1fr 120px;
+  align-items: center;
+  gap: 12px;
+  height: 27px;
+  font-size: 17px;
+}
+.worker-row b {
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.worker-track {
+  height: 11px;
+  border-radius: 7px;
+  background: #e3edf6;
+  overflow: hidden;
+}
+.worker-track i {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+  border-radius: inherit;
 }

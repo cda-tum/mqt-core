@@ -28,7 +28,6 @@ EQUATIONS = {
     "eq-grover-iterations": (
         "Grover search space and automatic iteration count",
         [
-            r"$N=2^n$",
             r"$k=\left\lfloor\frac{\pi}{4\arcsin(2^{-n/2})}\right\rfloor\approx\left\lfloor\frac{\pi}{4}\sqrt{2^n}\right\rfloor$",
         ],
         (

@@ -11,8 +11,9 @@
 This presentation-only client uses ctypes so every displayed QDMI call is a real
 native call. It never imports the compiler or opens another provider. Timings
 measure the call boundary in this client, not internal device state transitions.
-QIR tracing executes each shot separately in an isolated, single-program worker;
-it disables terminal batch sampling and includes instrumentation overhead.
+QIR tracing observes completed batches of up to 64 shots in each native sampling
+worker. These are batch completion observations, not individual execution times;
+parallel sampling is retained and instrumentation overhead is included.
 """
 
 from __future__ import annotations
@@ -88,13 +89,69 @@ def validate_execution(execution: dict[str, Any]) -> None:
         shots = execution["shot_events"]
         completion_times = [shot["time_ms"] for shot in shots]
         if (
-            [shot["outcome"] for shot in shots] != execution["shots"]
-            or [shot["shot_index"] for shot in shots] != list(range(execution["num_shots"]))
+            sorted(shot["shot_index"] for shot in shots) != list(range(execution["num_shots"]))
+            or any(shot["outcome"] != execution["shots"][shot["shot_index"]] for shot in shots)
             or completion_times != sorted(completion_times)
             or any(not execution["submitted_ms"] <= time <= execution["completed_ms"] for time in completion_times)
         ):
             msg = "Shot completion evidence disagrees with results or measured execution times"
             raise ValueError(msg)
+
+    if "worker_events" in execution:
+        totals, completed = {}, {}
+        previous_time = execution["submitted_ms"]
+        for event in execution["worker_events"]:
+            worker = event["worker_index"]
+            if (
+                not previous_time <= event["time_ms"] <= execution["completed_ms"]
+                or not 0 <= worker < execution["requested_workers"]
+                or event["total"] != totals.setdefault(worker, event["total"])
+                or not completed.get(worker, 0) < event["completed"] <= event["total"]
+            ):
+                msg = "Worker completion evidence disagrees with its progress or execution window"
+                raise ValueError(msg)
+            completed[worker] = event["completed"]
+            previous_time = event["time_ms"]
+        shot_counts = dict(Counter(shot["worker_index"] for shot in execution.get("shot_events", [])))
+        if completed != totals or shot_counts != totals or sum(totals.values()) != execution["num_shots"]:
+            msg = "Worker completion totals disagree with recorded shots"
+            raise ValueError(msg)
+
+
+def read_trace(path: Path, start_ns: int) -> dict[str, list[dict[str, Any]]]:
+    """Read chronological runtime and batch observations from the native worker.
+
+    Returns:
+        Runtime events, worker progress, and shots with their original result indices.
+
+    Raises:
+        ValueError: If a trace row is malformed or its timestamp goes backwards.
+    """
+    events: dict[str, list[dict[str, Any]]] = {"runtime_events": [], "worker_events": [], "shot_events": []}
+    previous_ns = start_ns
+    for line in path.read_text(encoding="utf-8").splitlines():
+        record = line.split("\t")
+        timestamp = int(record[0])
+        if timestamp < previous_ns:
+            msg = "Native trace rows are not chronological"
+            raise ValueError(msg)
+        previous_ns = timestamp
+        event = {"time_ms": (timestamp - start_ns) / 1e6}
+        match record[1:]:
+            case ["runtime", operation]:
+                events["runtime_events"].append(event | {"actor": "DDSIM worker", "operation": operation})
+            case ["worker", worker, completed, total]:
+                events["worker_events"].append(
+                    event | {"worker_index": int(worker), "completed": int(completed), "total": int(total)}
+                )
+            case ["shot", index, worker, outcome]:
+                events["shot_events"].append(
+                    event | {"shot_index": int(index), "worker_index": int(worker), "outcome": outcome}
+                )
+            case _:
+                msg = f"Malformed native trace row: {line}"
+                raise ValueError(msg)
+    return events
 
 
 class DDSIMCapture:
@@ -151,7 +208,9 @@ class DDSIMCapture:
         self.call(function, *arguments, size.value, buffer, None, detail=f"{name}: {size.value} bytes")
         return buffer.raw
 
-    def execute(self, payload: str, format_id: int, format_name: str, shots: int, seed: int) -> dict[str, Any]:
+    def execute(
+        self, payload: str, format_id: int, format_name: str, shots: int, seed: int, workers: int = 4
+    ) -> dict[str, Any]:
         """Execute one exact text payload and verify independent output views.
 
         Returns:
@@ -165,8 +224,8 @@ class DDSIMCapture:
         self.start = monotonic_ns()
         script_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
         wire_payload = payload.encode("utf-8") + b"\0"
-        if b"\0" in wire_payload[:-1] or shots <= 0 or seed <= 0:
-            msg = "Need a text payload without NUL, positive shots, and a positive seed"
+        if b"\0" in wire_payload[:-1] or shots <= 0 or seed <= 0 or workers <= 0:
+            msg = "Need a text payload without NUL and positive shots, seed, and workers"
             raise ValueError(msg)
         session, job = HANDLE(), HANDLE()
         self.call("device_initialize")
@@ -181,7 +240,7 @@ class DDSIMCapture:
             parameters = (
                 (2, "SHOTSNUM", SIZE(shots)),
                 (999999995, "CUSTOM1: reproducible simulator seed", INT(seed)),
-                (999999997, "CUSTOM3: serial worker for shot timing", SIZE(1)),
+                (999999997, "CUSTOM3: sampling workers", SIZE(workers)),
             )
             for parameter, name, value in parameters:
                 self.call("device_job_set_parameter", job, parameter, ct.sizeof(value), ct.byref(value), detail=name)
@@ -219,6 +278,7 @@ class DDSIMCapture:
                 "wire_payload_sha256": hashlib.sha256(returned_program).hexdigest(),
                 "payload_identity_verified": True,
                 "num_shots": shots,
+                "requested_workers": workers,
                 "seed": seed,
                 "shots": ordered_shots,
                 "counts": counts,
@@ -228,7 +288,9 @@ class DDSIMCapture:
                 "terminal_status": "DONE",
                 "backend": "MQT DDSIM",
                 "trace_kind": "native-device-api",
-                "trace_clock": "Linux CLOCK_MONOTONIC: Python monotonic_ns calls and C++ steady_clock shot completions",
+                "trace_clock": (
+                    "Linux CLOCK_MONOTONIC: Python monotonic_ns calls and C++ steady_clock batch observations"
+                ),
                 "capture_script_sha256": script_sha256,
                 "events": self.events,
             }
@@ -240,19 +302,11 @@ class DDSIMCapture:
             self.call("device_finalize")
         trace_path = os.environ.get("MQT_MQSF_SHOT_TRACE")
         if trace_path and format_id == 4:
-            records = [line.split("\t") for line in Path(trace_path).read_text(encoding="utf-8").splitlines()]
-            result["shot_events"] = [
-                {"time_ms": (int(timestamp) - self.start) / 1e6, "shot_index": index, "outcome": outcome}
-                for index, (timestamp, _, outcome) in enumerate(record for record in records if record[1] == "shot")
-            ]
-            result["runtime_events"] = [
-                {"time_ms": (int(timestamp) - self.start) / 1e6, "actor": "DDSIM worker", "operation": operation}
-                for timestamp, kind, operation in records
-                if kind == "runtime"
-            ]
+            result.update(read_trace(Path(trace_path), self.start))
             result["shot_timing"] = (
-                "Actual serial completions with per-shot circuit execution; "
-                "terminal batch sampling disabled and demo logging overhead included"
+                "Actual native worker completion observations for batches of up to 64 shots; "
+                "shots in a batch share its completion timestamp, not individual execution timestamps; "
+                "parallel sampling retained and instrumentation overhead included"
             )
         else:
             result["shot_timing"] = "No per-shot timing capture; histogram becomes available when results are retrieved"
@@ -280,7 +334,8 @@ def main() -> None:
     parser.add_argument("--input", type=Path, default=HERE / "captures/programs.json")
     parser.add_argument("--output", type=Path, default=HERE / "captures/demo.json.gz")
     parser.add_argument("--application", type=Path)
-    parser.add_argument("--shots", type=int, default=2048)
+    parser.add_argument("--shots", type=int, default=8192)
+    parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
@@ -299,7 +354,7 @@ def main() -> None:
     if args.self_test:
         client = DDSIMCapture(args.library)
         source = 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; bit[2] c; h q[0]; cx q[0], q[1]; c = measure q;'
-        result = client.execute(source, 1, "QASM3", 32, 7)
+        result = client.execute(source, 1, "QASM3", 32, 7, args.workers)
         if set(result["counts"]) != {"00", "11"}:
             msg = "Bell pair self-test failed"
             raise ValueError(msg)
@@ -312,11 +367,12 @@ def main() -> None:
         "trace_kind": "native-device-api",
         "description": "Actual QDMI 1.4 DDSIM device-interface calls; compiled payload submitted unchanged",
         "simulation": "Ideal gates, without calibration-derived noise",
-        "replay": "Replay uses recorded call and shot timestamps; any time scaling is explicit",
+        "replay": "Replay uses recorded call and batch completion timestamps; any time scaling is explicit",
         "instrumentation": (
-            "MQT_MQSF_SHOT_TRACE: isolated single-program worker, serial JitSession.sample(1), continuous RNG, "
-            "steady-clock timestamp per completed QIR shot; each shot executes the circuit, "
-            "disabling terminal batch sampling"
+            "MQT_MQSF_SHOT_TRACE: isolated single-program process with native parallel sampling workers; "
+            "steady-clock observations after each completed batch of up to 64 shots; "
+            "global result indices and QDMI bit order retained, with shared batch timestamps rather than "
+            "individual shot execution timestamps; instrumentation overhead included"
         ),
         "worker_source_sha256": hashlib.sha256(
             (HERE.parents[1] / "src/qdmi/devices/dd/WorkerMain.cpp").read_bytes()
@@ -343,6 +399,7 @@ def main() -> None:
                     "format_id": format_id,
                     "format_name": format_name,
                     "shots": args.shots,
+                    "workers": args.workers,
                     "seed": args.seed,
                 }
                 label = f"{scenario['id']}/{variant['id']}/{exported['id']}"

@@ -14,8 +14,11 @@
     "sha256": "69d4c24f9ac2704c3c50fb091cd24e6d7a4ec82f440e63ae11bce0414fbd8389"
   },
   "mqss": {
-    "url": "https://raw.githubusercontent.com/munich-quantum-toolkit/.github/main/docs/_static/logo-mqss-light.svg",
-    "sha256": "e02ef53487b8d58a36b6e8edd5629f6172b52781e80a7629e5aa85d7c2a31dcb"
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/mqss_logo.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "9d23ae7050cf33859a82e44000650c1c3526358ae27ae8bc6514e1c2320fb5cd",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
   },
   "tum-cda": {
     "url": "https://raw.githubusercontent.com/munich-quantum-toolkit/.github/main/docs/_static/logo-tum-cda-light.svg",
@@ -208,12 +211,11 @@
     "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the project or organization."
   },
   "tum": {
-    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/5b50bb661031632342d93672dcdda0d0bc69f2f5/docs/_static/logos/tum.svg",
-    "retrieved_at": "2026-10-10T20:14:36.110909+00:00",
-    "source_sha256": "a983693f0201cd71b31c3bf48eeaa17a53cdd488327564222c2c789fc88e765e",
-    "sha256": "297df04c1a36c7d033436e61984a226a398b5fea4cee52160fd3fb3641914851",
-    "adaptation": "Original drawing and colors; trailing whitespace normalized and final newline ensured. Embedded source and attribution comment.",
-    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the project or organization."
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Logo_of_the_Technical_University_of_Munich.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "9939cd861bbeaa86936db73cd62d39456639fcf5d9972dc0b60b73861dfdc632",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
   },
   "ibm": {
     "url": "https://www.ibm.com/quantum/qiskit",
@@ -367,13 +369,11 @@
     "rights": "Copyright and trademark rights remain with the original owners; included to identify the organization or reproduce MQSC principles."
   },
   "tum-mark": {
-    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/5b50bb661031632342d93672dcdda0d0bc69f2f5/docs/_static/logos/tum.svg",
-    "retrieved_at": "2026-10-10T20:14:36.110909+00:00",
-    "source_sha256": "a983693f0201cd71b31c3bf48eeaa17a53cdd488327564222c2c789fc88e765e",
-    "sha256": "98d4520957bc4155e2180cb93cbd8cc2b40b4b2492c2d161818e01b32d8552de",
-    "adaptation": "Extracted the official TUM lettermark path unchanged, with explicit fill and tightly bounded viewport; removed unrelated wordmark paths and CSS.",
-    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the project or organization.",
-    "source_asset": "tum.svg"
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Logo_of_the_Technical_University_of_Munich.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "9939cd861bbeaa86936db73cd62d39456639fcf5d9972dc0b60b73861dfdc632",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
   },
   "lrz-mark": {
     "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/5b50bb661031632342d93672dcdda0d0bc69f2f5/docs/_static/logos/lrz.svg",
@@ -387,11 +387,10 @@
   "eq-grover-iterations": {
     "generator": "render_equations.py; Matplotlib 3.11.2; STIX mathtext; SVG path glyphs; tight text bounds with 0.04-inch padding",
     "equations": [
-      "$N=2^n$",
       "$k=\\left\\lfloor\\frac{\\pi}{4\\arcsin(2^{-n/2})}\\right\\rfloor\\approx\\left\\lfloor\\frac{\\pi}{4}\\sqrt{2^n}\\right\\rfloor$"
     ],
     "scope": "The MQT Core benchmark uses n search qubits with a phase oracle and no ancilla. The exact automatic iteration count follows src/bench/Grover.cpp; the right expression is asymptotic.",
-    "sha256": "4a01f448aabb8955dd2d050b032062e2cb5f9de3f865579f45beb0e6c4fac0c3"
+    "sha256": "a355c8031a5f8644822dd9091438666f231cc250be93d25d56dc4c44128d4e6b"
   },
   "fullstaqd": {
     "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/fullstaqd.png",
@@ -400,5 +399,76 @@
     "sha256": "f099b34504aaab28a8d91d0300c9d290ce3105d7d358d0531effaf4e2d414aa5",
     "adaptation": "Vector contours at the original 1801x619 aspect ratio, 16-color median-cut palette, alpha threshold 127; generated with Pillow and Matplotlib. No embedded bitmap.",
     "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the consortium."
+  },
+  "aqt": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/aqt.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "41b1ca72b497d07371d3f74c6450ac127542080880b28206c0c6b2c0bd298216",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "planqc": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/planqc.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "38d8ece87bba2b3e1b296dee1b3750740c039737d24385f9cfe23d7df2e93f8c",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "wmi": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/wmi.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "c46b4f7f2d515b4805b464e0c6e6646662e22deb9da19b8d2b5ae74c466e59e8",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "peak-quantum": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/peak-quantum.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "83253271e9b6b4215a8c7e3b4b252bb4f520c5e436c618a85d50baa5b19a67c2",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "psnc": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/psnc.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "aef5138a333b6c26b0281a59abc504678e6171e8927c83df7841f7ccd5211d6e",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "vtt": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/vtt.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "88ccfa326486486243229ffedf07a852c337ce8521f8cace7eabeb2c7177234e",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "ornl": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/ornl.svg",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "sha256": "01d667d6df9740551ec1b41b6dc4955dfaeb49b1e71e40a0d0a4ccaa74731f98",
+    "adaptation": "Original SVG preserved unchanged.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "openqse": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/openqse.png",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "source_sha256": "731dad26566f76c21bd987650489e2c2d9e62abf7b905e2701da00cfc7bab8c8",
+    "sha256": "035ce45de774acc5eb600610dd61e3abec5496dc7c428a69d55e1f5fbe36651a",
+    "adaptation": "Programmatic vector contours from the original 323x302 raster; 12-color median-cut palette, alpha threshold 127, contour level 0.5; no embedded bitmap. Original aspect ratio, geometry and colors retained to raster precision. No SVG logo was available in the primary website or logo archive.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the initiative.",
+    "license": "MIT; original website license retained in openqse-LICENSE.txt"
+  },
+  "eqs3": {
+    "url": "https://www.hpcqc.org/fileadmin/HPCQC/Logos/EQS3_MainLogo.png",
+    "retrieved_at": "2026-10-13T14:38:53.535378+00:00",
+    "source_sha256": "d44a6680bb7c376a2ae675a63918421a1745547b287b26148de04f5ab8c12823",
+    "sha256": "919f3c175c9c4c53f7917c6d8c40a06f735e24be3ce540eb34e7310f51b910bf",
+    "adaptation": "Programmatic vector contours from the original 797x168 raster; 12-color median-cut palette, alpha threshold 127, contour level 0.5; no embedded bitmap. Original aspect ratio, geometry and colors retained to raster precision. No SVG logo was available in the primary website or logo archive.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the initiative."
+  },
+  "qr-afqmc-paper": {
+    "generator": "qrcode SvgPathImage; error correction M; border 4",
+    "url": "https://arxiv.org/abs/2506.22408",
+    "sha256": "417a01bc9798b82998d990af1fbd2271315f1a9631e8396808559b020bb96b86"
   }
 }

@@ -3,6 +3,39 @@
 Status: October 13 revision implemented and locally validated. Publication
 through draft PR #2685 includes a final hosted-package comparison.
 
+## October 13 Follow-up
+
+Implement the next detailed feedback in four coordinated areas. Keep existing
+static packaging and clicker navigation; use actual recordings throughout.
+
+- [x] Opening and branding: specified TUM vector, curved connections, horizontal
+      badges, lower references with repository statistics, ecosystem credits.
+- [x] Compiler: device-independent optimization first, larger circuits with
+      compact metrics, folded long circuits, direct retargeting morphs.
+- [x] QC-AFQMC: consistent notation, paper reference, traced preprocessing, and
+      smooth recorded walker/energy evolution for both trials.
+- [x] Structured programs and runtime: portable optimized QIR without hardware
+      synthesis, readable full control flow, genuine looped QPE and 8,192 shots
+      with four native workers. Preserve result identity in parallel telemetry.
+- [x] Integrate the evidence and shared typography; verify native telemetry and
+      scientific results, every affected browser state/transition, offline
+      package, and prepare the existing signed draft PR update.
+
+The native tracing boundary must retain the production sampling strategy and
+seeded results. Worker completion order may differ from QDMI result order;
+record explicit shot indices rather than assuming serial completion.
+
+Follow-up validation: 78 presentation tests plus five subtests, 34 focused
+native QIR/QDMI tests, whole-file C++ lint, and repository hooks pass. Fresh QPE
+records 8,192 shots on four workers with seven preserved power loops. The
+refreshed 296.665-second AFQMC workflow checks all 4,194,304 shots and both
+trial ensembles. Both browsers pass 56 builds, 24 finite replays, 144 animation
+layouts, 709 circuit windows, 39 feedback dependencies, and 17 print pages. A
+new regression checks that the energy-curve frontier never moves backwards.
+Independent review found and resolved that interpolation defect and a missing
+repository statistic. The physical laptop/projector/clicker rehearsal remains
+outside local validation.
+
 ## Goal and scope
 
 Implement the detailed slide feedback while preserving actual compiler and

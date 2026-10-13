@@ -93,26 +93,25 @@ Begin only with measured Grover program sizes. At 22 qubits the structured
 output is about 1.25 KB; the fully unrolled output is about 2.32 MB. The graph
 uses bytes and a logarithmic axis, with no extrapolated points.
 
-Read the compact syndrome source. Reset, measurement feedback, and the counted
-loop survive optimization, mapping, synthesis, and QIR generation. Select the
-actual reset, branch, and loop lines in turn. Top-level scratch bits reflect
-current frontend/export limitations.
-
-Rotate to the literature RUS V₃ example. Success has probability 5/8; failure
-requires the correction shown in the source. Its runtime-dependent repetition is
-why structure matters. Credit the “Why Are We Unrolling?” collaborators and
-introduce jeff as the exchange format for structured quantum programs.
+Read the compact syndrome source. Reset, measurement feedback, and counted loops
+survive QC → QCO → optimization → QC → QIR. This portable example does not
+undergo device mapping or native-gate synthesis. Its full QIR entry point is
+shown, then reset, measurement/branch, and loop excerpts are highlighted.
+Scratch bit `s` is local to the loop. Credit the “Why Are We Unrolling?”
+collaborators and jeff as an exchange format for structured quantum programs.
+The literature RUS V₃ example is retained in the downloadable evidence.
 
 ## 8 · Execute adaptive QIR
 
-Return to the overall architecture and zoom into runtime. DDSIM runs QIR 2.1
-Adaptive Profile using a JIT, including the program's classical computation.
+DDSIM runs QIR 2.1 Adaptive Profile using a JIT, including the program's
+classical computation. Iterative QPE uses four logical qubits, eight output
+bits, phase 1/3, and 8,192 shots. Controlled-U powers remain counted loops.
 
-Follow iterative QPE: four logical qubits, eight output bits, phase 1/3, 2,048
-shots. The histogram and sequence share recorded timestamps, including JIT
-startup and individual shot completions. This intentionally serial instrumented
-capture is slowed for inspection; do not claim it demonstrates optimized shot
-branching or simulator throughput.
+Four native workers execute in parallel. Their progress and the histogram share
+actual 64-shot batch-completion observations with the QDMI/JIT trace. Each
+arrival retains its index in the returned result. The replay is slowed for
+inspection and includes instrumentation overhead; it is not a throughput
+benchmark. QCO measurement-branch sharing is a separate path from adaptive QIR.
 
 ## 9 · Conclusion
 

@@ -21,6 +21,14 @@ TITLE = "System Software for Quantum Computing: From the Metal to the User"
 DEFAULT_HTML = Path(__file__).resolve().parents[2] / "build/mqsf2026/index.html"
 LAYOUT_CHECK = """() => {
     const slide = document.getElementById('slide'), bounds = slide.getBoundingClientRect(), issues = [];
+    const overflowFor = (element, rect) => {
+        const scale = bounds.width / 1760;
+        const top = bounds.top - (element.closest('h1, h2') ? 18 * scale : 0);
+        const footerMargin = element.closest('.opening-references') ? 23 :
+            element.closest('.structure-footer') ? 20 : 0;
+        const bottom = bounds.bottom + footerMargin * scale;
+        return Math.max(bounds.left - rect.left, rect.right - bounds.right, top - rect.top, rect.bottom - bottom);
+    };
     const visible = node => {
         if (node.closest('[hidden], [aria-hidden="true"], .reveal.off')) return false;
         for (let parent = node; parent && parent !== document.documentElement; parent = parent.parentElement) {
@@ -36,8 +44,7 @@ LAYOUT_CHECK = """() => {
         const name = node.tagName.toLowerCase() + (node.getAttribute('class') ? '.' +
             node.getAttribute('class').trim().replaceAll(' ', '.') : '');
         const label = (node.textContent || node.getAttribute('alt') || '').trim().slice(0, 70);
-        const overflow = Math.max(bounds.left - rect.left, rect.right - bounds.right,
-            bounds.top - rect.top, rect.bottom - bounds.bottom);
+        const overflow = overflowFor(node, rect);
         if (overflow > 3) issues.push(`${name}: outside slide content by ${Math.round(overflow)}px: ${label}`);
     }
     for (const pre of slide.querySelectorAll('pre')) {
@@ -79,9 +86,8 @@ LAYOUT_CHECK = """() => {
     }
     for (const text of slide.querySelectorAll('svg text'))
         if (visible(text)) addText(text, text.textContent, text.getBoundingClientRect());
-    for (const {text, rect} of textRects) {
-        const overflow = Math.max(bounds.left - rect.left, rect.right - bounds.right,
-            bounds.top - rect.top, rect.bottom - bounds.bottom);
+    for (const {element, text, rect} of textRects) {
+        const overflow = overflowFor(element, rect);
         if (overflow > 3) issues.push(`text: outside slide by ${Math.round(overflow)}px: ${text}`);
     }
     for (let i = 0; i < textRects.length; i++) {
@@ -113,6 +119,11 @@ EVIDENCE_CHECK = """() => {
         actual = {count:Number(histogram.dataset.shots), bins:[...histogram.querySelectorAll('[data-count]')]
             .map(bar => Number(bar.dataset.count))};
         expected = {count:shots.length, bins:counts};
+        const workers = [...new Set(capture.worker_events.map(e => e.worker_index))].sort((a,b) => a-b);
+        expected.workers = workers.map(id => ({id, completed:capture.worker_events
+            .findLast(e => e.worker_index === id && e.time_ms <= elapsed)?.completed || 0}));
+        actual.workers = [...document.querySelectorAll('[data-worker]')]
+            .map(e => ({id:Number(e.dataset.worker), completed:Number(e.dataset.completed)}));
     } else if (id === 'afqmc-execution') {
         capture = MQSF_DATA.application.execution;
         const grid = document.querySelector('.batch-grid');
@@ -137,10 +148,23 @@ EVIDENCE_CHECK = """() => {
             const panel = document.querySelector('.app-panel:nth-child(3)');
             expected.energyPoints = propagation.curves.map(c => c.step_completed_ms.filter(t => t <= wallTime).length);
             actual.energyPoints = [...panel.querySelectorAll('[data-points]')].map(e => Number(e.dataset.points));
-            const frames = propagation.curves[0].frames;
-            expected.weights = frames[0].walkers.map((_, i) => (
-                frames.findLast(f => f.walkers[i].completed_ms <= wallTime)?.walkers[i].weight ?? 1));
-            actual.weights = [...panel.querySelectorAll('[data-weight]')].map(e => Number(e.dataset.weight));
+            expected.weights = propagation.curves.flatMap(curve => {
+                const times = curve.frames.map(frame => Math.max(...frame.walkers.map(w => w.completed_ms)));
+                const next = times.findIndex(time => time > wallTime);
+                const position = wallTime <= times[0] ? 0 : next < 0 ? times.length - 1 :
+                    next - 1 + (wallTime - times[next - 1]) / (times[next] - times[next - 1]);
+                const low = Math.floor(position), high = Math.min(low + 1, times.length - 1);
+                return curve.frames[low].walkers.map((walker, i) => walker.weight +
+                    (curve.frames[high].walkers[i].weight - walker.weight) * (position - low));
+            });
+            const walkers = [...panel.querySelectorAll('[data-weight]')];
+            actual.weights = walkers.map(e => Number(e.dataset.weight));
+            expected.identities = propagation.curves.flatMap((curve, trial) =>
+                curve.frames[0].walkers.map(w => `${trial}:${w.id}`));
+            actual.identities = walkers.map(e => `${e.dataset.trial}:${e.dataset.walkerId}`);
+            expected.visibleRings = expected.identities.length;
+            actual.visibleRings = walkers.filter(e =>
+                Number(e.querySelector('circle').getAttribute('r')) === 14).length;
         }
     } else return null;
     const state = MQSF_DECK.getState(), progress = document.querySelector('#slide').dataset.progress;
@@ -158,6 +182,10 @@ CIRCUIT_CHECK = """() => {
     const feedback = document.createElement('div');
     feedback.innerHTML = render(source, {limit:20});
     if (!feedback.querySelector('[data-morph*="-classical-"]')) failures.push('Missing measured-bit feedback wire');
+    feedback.innerHTML = render(source, {full:true, fold:2});
+    if (feedback.querySelector('.circuit').dataset.foldRows !== '1' ||
+        !feedback.querySelector('[data-morph*="-classical-"]'))
+        failures.push('Folding must preserve structured scopes and feedback');
     const rus = MQSF_DATA.scenarios.find(s => s.id === 'rus').variants.find(v => v.id === 'structured');
     const rusCircuit = rus.stages.find(s => s.id === 'source').circuit;
     const correction = flatten(rusCircuit).find(o => o.name === 'z' &&
@@ -222,6 +250,19 @@ CIRCUIT_CHECK = """() => {
             for (const [column, active] of layers) {
                 checkWindow(c, {active, camera:column + 0.37, limit:18}, `${target.id}/${stage.id}/layer${column}`);
             }
+            if (stage.id === 'target-native-synthesis') {
+                const holder = document.createElement('div'), scheduled = schedule(c);
+                holder.innerHTML = render(c, {full:true, fold:20});
+                const gates = [...holder.querySelectorAll('[data-operation]')];
+                if (gates.length !== scheduled.length || gates.some((gate,i) =>
+                    gate.dataset.operation !== scheduled[i].name ||
+                    Number(gate.dataset.column) !== scheduled[i].column ||
+                    Number(gate.dataset.circuitRow) !== Math.floor(scheduled[i].column / 20)))
+                    failures.push(`${target.id}: folding changes the program or its dependency order`);
+                const rows = Number(holder.querySelector('.circuit').dataset.foldRows);
+                if (holder.querySelectorAll('[data-morph*="-wire-"]').length !== rows * c.qubits.length)
+                    failures.push(`${target.id}: folded circuit loses a wire`);
+            }
         }
     }
     return {failures:failures.slice(0,20), dependencies, windows};
@@ -281,6 +322,27 @@ REAL_MOTION_CHECK = """async () => {
             failures.push('The compiler chapter did not finish fully visible');
     }
     const targetIndex = MQSF_DECK.slides.findIndex(s => s.id === 'routing');
+    for (const [source, target] of [[4,5],[5,6]]) {
+        const selector = '.stage-place-and-route .circuit';
+        const rectangle = () => {
+            const r = document.querySelector(selector).getBoundingClientRect();
+            return [r.x,r.y,r.width,r.height];
+        };
+        MQSF_DECK.go(targetIndex, target); MQSF_DECK.finishMotion();
+        const destination = rectangle();
+        MQSF_DECK.go(targetIndex, source); MQSF_DECK.finishMotion();
+        const origin = rectangle();
+        MQSF_DECK.next();
+        if (rectangle().some((v,i) => Math.abs(v-origin[i]) > .01))
+            failures.push(`Compiler card ${source} -> ${target} jumps at shrink start`);
+        await waitFrames(350);
+        const dimension = origin[2] !== destination[2] ? 2 : 3, midway = rectangle()[dimension];
+        if (!(midway > destination[dimension] && midway < origin[dimension]))
+            failures.push(`Compiler card ${source} -> ${target} does not shrink continuously`);
+        MQSF_DECK.finishMotion();
+        if (rectangle().some((v,i) => Math.abs(v-destination[i]) > .01))
+            failures.push(`Compiler card ${target} does not settle at its target size`);
+    }
     const positions = () => new Map([...document.querySelectorAll('[data-morph^="device-node-"]')]
         .map(node => {
             // consolidate() rewrites Firefox's attribute and changes the geometry under test.
@@ -297,7 +359,9 @@ REAL_MOTION_CHECK = """async () => {
         if (!key) { failures.push('No shared target node to test'); continue; }
         const from = origin.get(key), to = destination.get(key);
         const distance = point => Math.hypot(...point.map((v, i) => v - from[i]));
-        MQSF_DECK.go(targetIndex, target);
+        MQSF_DECK.next();
+        if (MQSF_DECK.getState().animating || document.querySelector('#slide').dataset.progress !== '')
+            failures.push(`Target ${target} uses a staged replay instead of one morph`);
         if (distance(positions().get(key)) > .001)
             failures.push(`Target ${target} flashed its final topology before morphing`);
         await waitFrames(350);
@@ -370,6 +434,28 @@ REAL_MOTION_CHECK = """async () => {
 }"""
 
 
+def afqmc_curve_frontier(page: Any) -> None:  # ruff: ignore[any-type] - Optional Playwright import.
+    """Interpolating the visible curve must never draw backwards along imaginary time."""
+    before = page.evaluate("MQSF_DECK.getState()")
+    index = page.evaluate("MQSF_DECK.slides.findIndex(s => s.id === 'hybrid-algorithm')")
+    playback = page.evaluate("MQSF_DECK.slides.find(s => s.id === 'hybrid-algorithm').playbacks[2]")
+    page.evaluate("i => MQSF_DECK.go(i, 2, true)", index)
+    page.clock.run_for(playback["transition"])
+    previous = [0.0, 0.0]
+    for _ in range(101):
+        curves = page.locator(".energy-chart polyline[data-points]").evaluate_all("""elements => elements.map(e =>
+            Array.from({length:e.points.numberOfItems}, (_,i) => e.points.getItem(i).x))""")
+        assert len(curves) == 2
+        for curve, frontier in zip(curves, previous, strict=True):
+            assert curve
+            assert curve == sorted(curve), f"AFQMC curve backtracks: {curve}"
+            assert curve[-1] >= frontier, "AFQMC curve frontier moved backwards"
+        previous = [curve[-1] for curve in curves]
+        page.clock.fast_forward(round(playback["duration"] / 100))
+    page.evaluate("MQSF_DECK.finishAnimation(); MQSF_DECK.finishMotion()")
+    page.evaluate("s => { MQSF_DECK.go(s.slide, s.step); MQSF_DECK.finishMotion(); }", before)
+
+
 def compiler_semantics(page: Any) -> None:  # ruff: ignore[any-type] - Optional Playwright import.
     """Check exact compiler excerpts, physical wire identity, and placement reveal."""
     failures = page.evaluate(r"""() => {
@@ -387,10 +473,20 @@ def compiler_semantics(page: Any) -> None:  # ruff: ignore[any-type] - Optional 
         const circuit = {qubits:[{id:0, site:17, label:'$17'}, {id:1, site:18, label:'$18'}],
             operations:[{id:'cx', name:'cx', qubits:[1,0]}]};
         holder.innerHTML = MQSF_CIRCUIT.render(circuit, {full:true, layout:[18,17]});
-        if (holder.querySelector('svg').viewBox.baseVal.width !== 345)
+        if (holder.querySelector('svg').viewBox.baseVal.width !== 225)
             failures.push('Short circuit retains trailing idle whitespace');
         const labels = [...holder.querySelectorAll('[data-morph*="-wire-"] text')].map(e => e.textContent);
         if (labels.join('|') !== 'q1 ↦ 17|q0 ↦ 18') failures.push('Physical wire labels invert placement incorrectly');
+        holder.innerHTML = render('routing', 1);
+        if (!holder.querySelector('.stage-optimized') || holder.querySelector('.spec-card'))
+            failures.push('Device-independent optimization must precede device selection');
+        holder.innerHTML = render('routing', 2);
+        if (!holder.querySelector('.spec-step').textContent.includes('3 · Device Specification') ||
+            !holder.querySelector('.stage-optimized h3').textContent.includes('2 · Optimization'))
+            failures.push('Compiler stage numbering differs between tiles and cards');
+        const tiles = [...holder.querySelectorAll('.compile-tile b')].map(e => e.textContent);
+        if (tiles[1] !== 'Optimization' || tiles[2] !== 'Device Specification')
+            failures.push('Compiler tile order differs from its reveal order');
         const initial = render('routing', 3), replayStart = render('routing', 4, true);
         holder.innerHTML = initial;
         const initialWires = [...holder.querySelectorAll('.stage-place-and-route [data-morph*="-wire-"]')]
@@ -416,19 +512,33 @@ def compiler_semantics(page: Any) -> None:  # ruff: ignore[any-type] - Optional 
                 if (card.dataset.target !== source.id || !card.querySelector('.program-metrics'))
                     failures.push('Target switch changes an invariant compiler stage');
             }
+            for (const metrics of holder.querySelectorAll('.program-metrics')) {
+                const labels = [...metrics.querySelectorAll('span')].map(e => e.textContent);
+                if (labels.join('|') !== '1Q|2Q|D')
+                    failures.push('Compiler metrics must retain the three compact rows');
+            }
             for (const id of ['place-and-route','target-native-synthesis']) {
                 const card = holder.querySelector('.stage-' + id);
                 if (card.dataset.target !== target.id) failures.push('Target switch retains a stale stage');
-                const actual = [...card.querySelectorAll('[data-morph*="-wire-"] text')].map(e => e.textContent);
-                const expected = [...new Set(stages(target).find(s => s.id === id).circuit.qubits.map(q => q.site))]
+                const rows = Number(card.querySelector('.circuit').dataset.foldRows);
+                const actual = [...card.querySelectorAll('[data-morph*="-wire-"]')]
+                    .map(e => e.querySelector('text').textContent);
+                const wires = [...new Set(stages(target).find(s => s.id === id).circuit.qubits.map(q => q.site))]
                     .sort((a,b) => a-b).map(site => `q${target.compilation.layout.initial.indexOf(site)} ↦ ${site}`);
+                const expected = Array.from({length:rows}, () => wires).flat();
                 if (actual.join('|') !== expected.join('|'))
                     failures.push('Native stage loses initial placement labels');
+                if (id === 'target-native-synthesis') {
+                    const count = MQSF_CIRCUIT.flatten(stages(target).find(s => s.id === id).circuit).length;
+                    if (card.querySelectorAll('[data-operation]').length !== count || rows < 2)
+                        failures.push('Folded native circuit drops captured operations');
+                }
             }
             const qir = stages(target).find(s => s.id === 'qir-adaptive').code.split('\n');
             const actual = [...holder.querySelectorAll('.compiler-qir .code-text')].map(e => e.textContent);
-            if (actual.length !== 22 || actual.some((line,i) => line !== qir[i]))
-                failures.push('Executable fragment differs from the first 22 recorded QIR lines');
+            const first = qir.findIndex(line => line.includes('define'));
+            if (actual.length !== 13 || actual.some((line,i) => line !== qir[first+i]))
+                failures.push('Executable fragment differs from its recorded QIR entry-point lines');
         }
         const parity = MQSF_DATA.scenarios.find(s => s.id === 'parity').variants.find(v => v.id === 'structured');
         const qir = parity.exports.find(s => s.id === 'qir-adaptive').code.split('\n');
@@ -437,23 +547,16 @@ def compiler_semantics(page: Any) -> None:  # ruff: ignore[any-type] - Optional 
         const included = new Set();
         for (const line of holder.querySelectorAll('.structured-qir .full-code .code-line')) {
             if (line.classList.contains('omitted-native')) {
-                const first = Number(line.dataset.omittedStart), last = Number(line.dataset.omittedEnd);
-                for (let n = first; n <= last; n++) {
-                    included.add(n);
-                    if (!/^\s*call void @__quantum__qis__(prx|cz)__/.test(qir[n-1]))
-                        failures.push('Native overview elides a non-gate instruction');
-                }
-                if (!line.textContent.includes(`${last-first+1} Native Gate Call`))
-                    failures.push('Native omission count differs from original source');
+                failures.push('Portable QIR overview must not omit gate calls');
             } else {
                 const number = Number(line.querySelector('.line-no').textContent);
                 included.add(number);
                 if (line.querySelector('.code-text').textContent !== qir[number-1])
-                    failures.push('Native overview changes a captured source line');
+                    failures.push('Portable QIR overview changes a captured source line');
             }
         }
         if (last < 0 || qir.slice(0,last+1).some((line,i) => line.trim() && !included.has(i+1)) ||
-            [...included].some(n => n > last+1)) failures.push('Native overview loses entry-point structure');
+            [...included].some(n => n > last+1)) failures.push('Portable QIR overview loses entry-point structure');
         MQSF_DECK.go(before.slide, before.step);
         MQSF_DECK.finishMotion();
         return failures;
@@ -475,6 +578,8 @@ STABILITY_CHECK = """async () => {
     MQSF_DECK.go(ids['hybrid-algorithm'],0); MQSF_DECK.finishMotion();
     const reference = document.querySelector('[data-morph="application-reference"]');
     const qr = reference.querySelector('[data-morph="qr-afqmc"] img');
+    const paper = document.querySelector('[data-morph="application-paper-reference"]');
+    const paperQr = paper.querySelector('img');
     for (const step of [1,2]) {
         MQSF_DECK.go(ids['hybrid-algorithm'],step);
         for (const delay of [0,450]) {
@@ -484,6 +589,9 @@ STABILITY_CHECK = """async () => {
             require(document.querySelector('[data-morph="qr-afqmc"] img') === qr,
                 `AFQMC build ${step}: replaced unchanged QR image`);
             require(opacity(qr) > .999, `AFQMC build ${step}: reference faded`);
+            require(document.querySelector('[data-morph="application-paper-reference"]') === paper &&
+                paper.querySelector('img') === paperQr && opacity(paperQr) > .999,
+                `AFQMC build ${step}: paper reference changed or faded`);
         }
         MQSF_DECK.finishMotion();
         samples.push(`reference-${step}`);
@@ -619,6 +727,7 @@ def check(
                 "Every architecture phase must retain its shared, unique morph keys"
             )
         compiler_semantics(page)
+        afqmc_curve_frontier(page)
         probe = page.evaluate(CIRCUIT_CHECK)
         assert not probe["failures"], probe["failures"]
         assert probe["dependencies"]

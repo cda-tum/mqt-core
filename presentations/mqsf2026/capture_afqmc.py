@@ -699,6 +699,22 @@ def main() -> None:
     apply_pauli_layer = matchgate.apply_pauli_layer
 
     started = perf_counter_ns()
+    preprocessing = []
+    preprocessing_started = started
+    main_source = inspect.getsource(main).splitlines()
+
+    def preparation_phase(identifier: str, label: str, prefixes: tuple[str, ...]) -> None:
+        nonlocal preprocessing_started
+        completed = perf_counter_ns()
+        preprocessing.append({
+            "id": identifier,
+            "label": label,
+            "time_ms": (preprocessing_started - started) / 1e6,
+            "duration_ms": (completed - preprocessing_started) / 1e6,
+            "code": "\n".join(line.strip() for line in main_source if line.strip().startswith(prefixes)),
+        })
+        preprocessing_started = completed
+
     lifecycle = [
         {
             "time_ms": 0.0,
@@ -709,6 +725,7 @@ def main() -> None:
     ]
     np.random.seed(args.seed)  # ruff: ignore[numpy-legacy-random] - upstream helpers consume the legacy global RNG
     rotations = [shadow.random_signed_permutation(8) for _ in range(max(32, args.snapshots))]
+    preparation_phase("bases", "Generate random measurement bases", ("rotations = [",))
     compiled = [matchgate.compile_gaussian_givens(rotation) for rotation in rotations]
     schedule = compiled[0][0]
     if any(entry[0] != schedule for entry in compiled):
@@ -716,6 +733,9 @@ def main() -> None:
         raise ValueError(msg)
     angles = -np.stack([entry[1] for entry in compiled])
     paulis = np.stack([entry[2] for entry in compiled])
+    preparation_phase(
+        "givens", "Compile Gaussian rotations", ("compiled = [", "angles = -np.stack", "paulis = np.stack")
+    )
     gammas = [
         np.asarray(qml.matrix(qml.prod(*([qml.Z(q) for q in range(p)] + [operator(p)])), wire_order=range(4)))
         for p in range(4)
@@ -741,6 +761,11 @@ def main() -> None:
         raise ValueError(msg)
     rotations = rotations[: args.snapshots]
     angles, paulis = angles[: args.snapshots], paulis[: args.snapshots]
+    preparation_phase(
+        "validation",
+        "Verify every basis circuit by exact matrices",
+        ("for index, rotation in enumerate(rotations):", "unitary = np.asarray", "if max(errors) >"),
+    )
 
     device_id = os.environ.get("SLURM_JOB_LICENSES", "mqt.ddsim.default").removesuffix(":1")
     if device_id != "mqt.ddsim.default":
@@ -779,6 +804,12 @@ def main() -> None:
     original_convert = converter.convert
 
     def prepare(tape: Any) -> Any:  # ruff: ignore[any-type] - retain the adapter's private converted-program type
+        if not preparation_events:
+            preparation_phase(
+                "pennylane",
+                "Construct and preprocess the PennyLane broadcast",
+                ("device = qml.device", "samples_batch, counts_batch = shadow_circuit"),
+            )
         begin = perf_counter_ns()
         program = original_convert(tape)
         preparation_events.append({
@@ -1041,7 +1072,7 @@ def main() -> None:
     )
     data = {
         "schema_version": 1,
-        "title": "Quantum-assisted auxiliary-field Quantum Monte Carlo",
+        "title": "Quantum-Assisted Auxiliary-Field Quantum Monte Carlo (QC-AFQMC)",
         "label": "Actual PennyLane → MQT Core → QDMI → DDSIM batch",
         "scope": ("H2/STO-3G quantum trial shadows and classical phaseless AFQMC, with exact small-system references"),
         "workload": {
@@ -1063,6 +1094,7 @@ def main() -> None:
             "started_ns": started,
             "events": sorted(batch_events, key=op.itemgetter("time_ms")),
             "lifecycle": lifecycle,
+            "preprocessing": preprocessing,
             "preparation": preparation_events,
             "compilation": sorted(compilation_events, key=op.itemgetter("program_index")),
             "program_completions": program_completions,

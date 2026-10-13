@@ -22,7 +22,7 @@
 }
 .opening-references {
   position: absolute;
-  bottom: 0;
+  bottom: -23px;
   left: 0;
   right: 0;
   display: grid;
@@ -73,6 +73,21 @@
   gap: 7px;
   font-size: 16px;
   text-decoration: none;
+}
+.opening-repo-line {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.opening-repo-stat,
+.opening-downloads {
+  color: var(--muted);
+  font-size: 15px;
+  white-space: nowrap;
+}
+.opening-repo-stat > span {
+  color: #e6af20;
+  font-size: 20px;
 }
 .opening-github {
   width: 17px;
@@ -207,6 +222,7 @@
 }
 .opening-closing-products span {
   font-size: 25px;
+  font-weight: 700;
 }
 .opening-closing-bottom {
   display: flex;
@@ -216,16 +232,19 @@
 }
 .opening-community-logos {
   display: flex;
-  gap: 33px;
+  gap: 27px;
   align-items: center;
 }
 .opening-community-logos img {
-  width: 125px;
-  height: 55px;
+  width: 134px;
+  height: 67px;
   object-fit: contain;
 }
-.opening-community-logos img[alt="lrz-mark"] {
-  width: 55px;
+.opening-community-logos img[alt="eqs3"] {
+  width: 236px;
+}
+.opening-community-logos img[alt="openqse"] {
+  width: 73px;
 }
 .opening-contact {
   display: flex;

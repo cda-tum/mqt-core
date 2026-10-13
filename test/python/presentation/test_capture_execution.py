@@ -105,6 +105,76 @@ def test_shot_timing_matches_results_and_measured_execution_window() -> None:
             validate(execution | {"shot_events": shots})
 
 
+def test_parallel_shots_keep_completion_order_and_returned_result_indices() -> None:
+    """Concurrent workers may complete later result indices before earlier ones."""
+    validate = runpy.run_path(str(SCRIPT))["validate_execution"]
+    execution = {
+        "shots": ["00", "10", "11", "01"],
+        "counts": {"00": 1, "10": 1, "11": 1, "01": 1},
+        "num_shots": 4,
+        "requested_workers": 2,
+        "terminal_status": "DONE",
+        "payload_identity_verified": True,
+        "events": [{"time_ms": 1.0}],
+        "submitted_ms": 2.0,
+        "completed_ms": 5.0,
+        "shot_events": [
+            {"time_ms": 3.0, "shot_index": 2, "worker_index": 1, "outcome": "11"},
+            {"time_ms": 3.0, "shot_index": 3, "worker_index": 1, "outcome": "01"},
+            {"time_ms": 4.0, "shot_index": 0, "worker_index": 0, "outcome": "00"},
+            {"time_ms": 4.0, "shot_index": 1, "worker_index": 0, "outcome": "10"},
+        ],
+        "worker_events": [
+            {"time_ms": 3.0, "worker_index": 1, "completed": 2, "total": 2},
+            {"time_ms": 4.0, "worker_index": 0, "completed": 2, "total": 2},
+        ],
+    }
+    validate(execution)
+    for invalid in ({"time_ms": 2.5}, {"outcome": "00"}, {"shot_index": 0}, {"worker_index": 1}):
+        shots = [*execution["shot_events"][:-1], execution["shot_events"][-1] | invalid]
+        with pytest.raises(ValueError, match=r"Shot completion|Worker completion"):
+            validate(execution | {"shot_events": shots})
+    for invalid in ({"time_ms": 2.5}, {"time_ms": 6.0}, {"completed": 1}, {"total": 3}):
+        workers = [execution["worker_events"][0], execution["worker_events"][1] | invalid]
+        with pytest.raises(ValueError, match="Worker completion"):
+            validate(execution | {"worker_events": workers})
+    with pytest.raises(ValueError, match="Shot completion"):
+        validate(execution | {"shot_events": execution["shot_events"][:-1]})
+
+
+def test_trace_rows_keep_native_worker_and_result_indices(tmp_path: Path) -> None:
+    """Read the native variable-width trace without inventing serial shot indices."""
+    read_trace = runpy.run_path(str(SCRIPT))["read_trace"]
+    trace = tmp_path / "shots.tsv"
+    trace.write_text(
+        "1000000\truntime\tAdaptive sampling begins: 2 workers\n"
+        "2000000\tworker\t1\t1\t1\n"
+        "2000000\tshot\t1\t1\t10\n"
+        "3000000\tworker\t0\t1\t1\n"
+        "3000000\tshot\t0\t0\t01\n"
+        "4000000\truntime\tSampling complete\n"
+    )
+    result = read_trace(trace, 1000000)
+    assert result["shot_events"] == [
+        {"time_ms": 1.0, "shot_index": 1, "worker_index": 1, "outcome": "10"},
+        {"time_ms": 2.0, "shot_index": 0, "worker_index": 0, "outcome": "01"},
+    ]
+    assert result["worker_events"] == [
+        {"time_ms": 1.0, "worker_index": 1, "completed": 1, "total": 1},
+        {"time_ms": 2.0, "worker_index": 0, "completed": 1, "total": 1},
+    ]
+    assert [event["operation"] for event in result["runtime_events"]] == [
+        "Adaptive sampling begins: 2 workers",
+        "Sampling complete",
+    ]
+    trace.write_text("2000000\truntime\tready\n1000000\tworker\t0\t1\t1\n")
+    with pytest.raises(ValueError, match="chronological"):
+        read_trace(trace, 1000000)
+    trace.write_text("2000000\tshot\t01\n")
+    with pytest.raises(ValueError, match="trace row"):
+        read_trace(trace, 1000000)
+
+
 class ExecutionCaptureTest(unittest.TestCase):
     """Keep shot order, returned counts, and native evidence consistent."""
 

@@ -3,7 +3,7 @@
 ## System Software for Quantum Computing: From the Metal to the User
 
 A seventeen-slide keynote for a 1920 × 1080 projector and a forward/backward
-clicker. The story follows the shared software stack through an H₂ AFQMC
+clicker. The story follows the shared software stack through an H₂ QC-AFQMC
 workflow, device-aware compilation, structured programs, and adaptive execution.
 
 ## Build and present
@@ -89,13 +89,14 @@ remains the scientific horizontal axis of the energy plot. The final overview
 reports the complete recorded Slurm workflow duration, including scheduler and
 worker startup.
 
-Complete compiler listings remain in the downloadable evidence. The target
-summary shows the first 22 QIR lines with a continuation marker. The structured
-view ends at the entry-point return and replaces consecutive PRX/CZ calls with
-counted omission markers; all control-flow lines retain their original line
-numbers. Detailed excerpts show reset, conditionals, and loops. The AFQMC Python
-view omits docstrings and blank lines, and removes the common indentation of
-definitions extracted from the capture function.
+Complete compiler listings remain in the downloadable evidence. Target summaries
+show an entry-point excerpt with a continuation marker. The structured view
+shows the complete entry point, including every gate and control-flow line, with
+original line numbers. Detailed excerpts show reset, measurement feedback, and
+loops. These compact examples use QC → QCO → optimization → QC → QIR, without
+placement, routing, or hardware-gate synthesis. The AFQMC Python view omits
+docstrings and blank lines, and removes common indentation from extracted
+definitions.
 
 Grover program sizes are actual emitted UTF-8 OpenQASM bytes for 2–22 qubits,
 with preserved and fully unrolled forms. Weyl coordinates are decompositions of
@@ -105,7 +106,7 @@ synthesized using two CZ gates. The canonicalization example includes source,
 before/after IR, and a matrix-equivalence check.
 
 The compact syndrome example keeps reset, counted loops, and feedback through
-native adaptive QIR. The evidence bundle also retains the literature RUS
+portable adaptive QIR. The evidence bundle also retains the literature RUS
 example, which implements V₃ with its required failure correction;
 imported-circuit Kraus matrices verify its semantics. Scalar qubit and
 scratch-bit source names are retained as optional MLIR name locations; stripping
@@ -117,11 +118,14 @@ separate so broadcasting retains the intended qubit roles. The RUS construction
 follows
 [Paetznick and Svore (2014)](https://www.rintonpress.com/xxqic14/qic-14-1516/1277-1301.pdf).
 
-Four-qubit iterative QPE estimates phase 1/3 into eight output bits. The DDSIM
-capture records native device calls, JIT initialization, and 2,048 ordered shot
-completions on one monotonic clock. It intentionally samples serially for
-visible shot timing. It is neither a throughput benchmark nor a demonstration of
-the optimized shot-branching path.
+Four-qubit iterative QPE estimates phase 1/3 into eight output bits.
+Controlled-U powers remain counted loops through compilation. Four native DDSIM
+workers execute 8,192 shots. Device calls, JIT initialization, and actual
+64-shot batch completions share one monotonic clock. Shot indices connect
+concurrent arrivals to the ordered QDMI result; worker bars and the histogram
+use those observations. Instrumentation overhead is included. This is not a
+throughput benchmark. The QCO branch-sharing sampler is a separate execution
+path from adaptive QIR.
 
 ## Capture and validate
 

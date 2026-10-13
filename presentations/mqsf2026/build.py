@@ -265,9 +265,9 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
     application = data.get("application", {})
     propagation = application.get("propagation", {})
     curves = []
-    for index, curve in enumerate(propagation.get("curves", [])):
+    for curve in propagation.get("curves", []):
         shown = {key: curve[key] for key in ("label", "energy", "stderr", "step_completed_ms") if key in curve}
-        if index == 0 and "frames" in curve:
+        if "frames" in curve:
             shown["frames"] = [
                 {
                     "tau": frame["tau"],
@@ -304,7 +304,7 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
                 if key in application
             },
             "shadow_preview": [
-                {"program_index": snapshot["native_program_index"], "outcome": snapshot["shots"][0]}
+                {"program_index": snapshot["native_program_index"], "shots": snapshot["shots"][:3]}
                 for snapshot in application.get("snapshots", [])[:4]
             ],
             "propagation": {

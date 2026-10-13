@@ -50,8 +50,13 @@
     `<img class="${cls}" src="${assets[name]}" alt="${esc(name === "tum-cda" ? "Chair for Design Automation, TUM" : name.toUpperCase())}" />`;
   const heading = (title, sub = "") =>
     `<h2 data-morph="heading">${title}</h2>${sub ? `<p class="subtitle">${sub}</p>` : ""}`;
-  const qr = (name, url, caption) =>
-    `<div class="qr-block" data-morph="qr-${name}"><img src="${assets[`qr-${name}`]}" alt="QR code: ${esc(url)}"/><div><div class="url">${url.startsWith("github.com/") ? logo("github", "github-mark") + esc(url.slice(11)) : esc(url)}</div><div class="caption">${esc(caption)}</div></div></div>`;
+  const qr = (name, url, caption) => {
+    const stats = references.repo_stats?.[`https://${url}`];
+    const stars = stats
+      ? `<span class="repo-stars"><svg viewBox="0 0 24 24" aria-label="GitHub stars"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9-6.2-3.3-6.2 3.3L7 14.2 2 9.3l6.9-1Z" fill="#e7ae18"/></svg>${stats.stars}${stats.downloads ? ` · ${esc(stats.downloads)}` : ""}</span>`
+      : "";
+    return `<div class="qr-block" data-morph="qr-${name}"><img src="${assets[`qr-${name}`]}" alt="QR code: ${esc(url)}"/><div><div class="url">${url.startsWith("github.com/") ? logo("github", "github-mark") + esc(url.slice(11)) : esc(url)}</div><div class="caption">${esc(caption)}</div>${stars}</div></div>`;
+  };
   const fmt = (n, digits = 2) =>
     Number(n).toLocaleString("en-US", { maximumFractionDigits: digits });
   function code(
@@ -161,60 +166,61 @@
   ];
   const targetStage = (target, id) =>
     stagesFor(target).find((a) => a.id === id);
-  function walkerScene(progress = 1, elapsed = null) {
-    const p = app.propagation,
-      frames = p?.curves?.[0]?.frames || [];
+  function recordedPosition(times, elapsed) {
+    if (!times.length || elapsed <= times[0]) return 0;
+    const next = times.findIndex((time) => time > elapsed);
+    if (next < 0) return times.length - 1;
+    return (
+      next - 1 + (elapsed - times[next - 1]) / (times[next] - times[next - 1])
+    );
+  }
+  function walkerScene(progress = 1, elapsed = null, trial = 0) {
+    const frames = app.propagation?.curves?.[trial]?.frames || [];
     if (!frames.length) return "";
-    const index = Math.max(
-        0,
-        Math.min(frames.length - 1, progress * (frames.length - 1)),
-      ),
+    const index =
+        elapsed === null
+          ? Math.max(
+              0,
+              Math.min(frames.length - 1, progress * (frames.length - 1)),
+            )
+          : recordedPosition(
+              frames.map((frame) =>
+                Math.max(...frame.walkers.map((w) => w.completed_ms)),
+              ),
+              elapsed,
+            ),
       low = Math.floor(index),
       high = Math.min(low + 1, frames.length - 1),
-      t = index - low;
-    const f = frames[low],
+      fraction = index - low,
+      current = frames[low],
       next = frames[high],
-      tau = f.tau + (next.tau - f.tau) * t;
-    const observed =
-      elapsed === null
-        ? null
-        : frames[0].walkers.map(
-            (walker, i) =>
-              frames.findLast(
-                (frame) => frame.walkers[i].completed_ms <= elapsed,
-              )?.walkers[i] || { id: walker.id, weight: 1 },
-          );
-    const weights = observed
-        ? observed.map((walker) => walker.weight)
-        : f.walkers.map(
-            (w, i) => w.weight + (next.walkers[i].weight - w.weight) * t,
-          ),
-      max = Math.max(...weights);
-    const columns = 32,
-      dx = 34,
-      dy = 34;
-    let body = "";
-    f.walkers.forEach((w, i) => {
-      const xx = 48 + (i % columns) * dx,
-        yy = 30 + Math.floor(i / columns) * dy,
-        r = 14 * Math.sqrt(weights[i] / max);
-      body += `<g data-morph="walker-${w.id}" data-weight="${weights[i]}"><circle cx="${xx}" cy="${yy}" r="${r}" fill="#2f70b8" opacity="${observed && observed[i].completed_ms === undefined ? 0.12 : 0.25 + (0.75 * weights[i]) / max}"/></g>`;
-    });
+      tau = current.tau + (next.tau - current.tau) * fraction,
+      weights = current.walkers.map(
+        (walker, i) =>
+          walker.weight + (next.walkers[i].weight - walker.weight) * fraction,
+      ),
+      max = Math.max(...weights),
+      color = trial ? "#778899" : "#2f70b8";
+    // Rings retain every walker identity, even when its measured weight approaches zero.
+    let body = current.walkers
+      .map((walker, i) => {
+        const x = 48 + (i % 32) * 34,
+          y = 30 + Math.floor(i / 32) * 34,
+          radius = 14 * Math.sqrt(weights[i] / max);
+        return `<g data-morph="walker-${trial}-${walker.id}" data-trial="${trial}" data-walker-id="${walker.id}" data-weight="${weights[i]}"><circle cx="${x}" cy="${y}" r="14" fill="none" stroke="#cbd9e6" stroke-width="1.5"/><circle cx="${x}" cy="${y}" r="${radius}" fill="${color}"/></g>`;
+      })
+      .join("");
     body += text(
       580,
       195,
-      observed
-        ? `Recorded Walker States · dot area ∝ weight`
-        : `τ = ${fmt(tau, 2)} Ha⁻¹ · dot area ∝ walker weight`,
-      34,
-      "#2f70b8",
+      `τ = ${fmt(tau, 2)} Ha⁻¹ · filled area ∝ weight`,
+      30,
+      color,
     );
     return svg(
       body,
       "0 0 1160 220",
-      elapsed === null
-        ? "Measured AFQMC walker weights over imaginary time"
-        : "Latest measured AFQMC walker weights at the recorded wall time",
+      `${trial ? "Hartree–Fock" : "Quantum-assisted"} trial: interpolated recorded walker states`,
     );
   }
 
@@ -377,7 +383,13 @@
     tokens.forEach(({ x, y, i }) => {
       body += `<g data-morph="logical-qubit-${i}" transform="translate(${x} ${y})"><circle r="${r + 5}" fill="${colors[i]}" stroke="white" stroke-width="3"/>${text(0, 7, `q${i}`, 17, "white")}</g>`;
     });
-    return `<div class="target-map" data-morph="target-map">${svg(body, "0 0 820 630", `${target?.label || "Emerald"} captured coupling graph`)}</div>`;
+    const xs = [...points.values()].map((p) => p.x),
+      ys = [...points.values()].map((p) => p.y),
+      left = Math.min(...xs) - r - 10,
+      top = Math.min(...ys) - r - 10,
+      right = Math.max(...xs) + r + 10,
+      bottom = full ? 632 : Math.max(...ys) + r + 10;
+    return `<div class="target-map" data-morph="target-map"><svg xmlns="http://www.w3.org/2000/svg" data-morph="target-map-svg" viewBox="${left} ${top} ${right - left} ${bottom - top}" role="img" aria-label="${esc(target?.label || "Emerald")} captured coupling graph">${body}</svg></div>`;
   }
   function programMetrics(target, id) {
     const m = target?.compilation?.metrics?.[id] || {},
@@ -392,11 +404,10 @@
           (o) =>
             o.qubits?.length === 1 && !["measure", "reset"].includes(o.name),
         ).length,
-        "one-qubit",
+        "1Q",
       ],
-      [two, "two-qubit"],
-      [m.depth ?? 0, "depth"],
-      [m.active_qubits ?? c?.qubits?.length ?? 0, "active qubits"],
+      [two, "2Q"],
+      [m.depth ?? 0, "D"],
     ]
       .map(
         ([v, l]) =>
@@ -428,17 +439,7 @@
       .slice(0, end < 0 ? original.length : end + 1)
       .forEach((raw, index) => {
         if (!raw.trim() && (entryOnly || index === original.length - 1)) return;
-        // Keep reset, measurement, and control flow explicit in the native overview.
-        if (
-          entryOnly &&
-          /^\s*call void @__quantum__qis__(prx|cz)__/.test(raw)
-        ) {
-          const previous = lines.at(-1);
-          if (previous?.omitted) {
-            previous.omitted++;
-            previous.last = index;
-          } else lines.push({ index, last: index, omitted: 1, raw: "" });
-        } else lines.push({ raw, index });
+        lines.push({ raw, index });
       });
     const rows = Math.ceil(lines.length / columns);
     const longest = Math.max(...lines.map((l) => l.raw.length), 1);
@@ -462,10 +463,9 @@
       (_, c) =>
         `<pre class="highlight">${lines
           .slice(c * rows, (c + 1) * rows)
-          .map(({ raw, index, last, omitted }) =>
-            omitted
-              ? `<span class="code-line omitted-native" data-omitted-start="${index + 1}" data-omitted-end="${last + 1}"><span class="line-no">${index + 1}</span><span class="code-text">⋮ ${omitted} Native Gate Call${omitted === 1 ? "" : "s"} Omitted</span></span>`
-              : `<span class="code-line ${hot && effect(raw) === hot ? "hot" : ""}" data-effect="${effect(raw)}"><span class="line-no">${index + 1}</span><span class="code-text">${a.lines_html?.[index] ?? esc(raw)}</span></span>`,
+          .map(
+            ({ raw, index }) =>
+              `<span class="code-line ${hot && effect(raw) === hot ? "hot" : ""}" data-effect="${effect(raw)}"><span class="line-no">${index + 1}</span><span class="code-text">${a.lines_html?.[index] ?? esc(raw)}</span></span>`,
           )
           .join("")}</pre>`,
     ).join("");
@@ -542,7 +542,7 @@
             2,
             2,
             "Execute Adaptive Shots",
-            first((e) => e.operation === "Serial adaptive sampling begins"),
+            first((e) => e.operation.startsWith("Adaptive sampling begins")),
           ],
           [
             1,
@@ -558,15 +558,16 @@
     let body = names
       .map(
         (n, i) =>
-          text(xs[i], 30, n, 24) + line(xs[i], 53, xs[i], 430, "#cbdced", 2),
+          text(xs[i], 30, n, adapter ? 24 : 27) +
+          line(xs[i], 53, xs[i], adapter ? 430 : 275, "#cbdced", 2),
       )
       .join("");
     links.forEach(([a, b, label, e], i) => {
       const on = !!e && elapsed >= e.time_ms,
-        y = 105 + i * 72;
-      body += `<g data-morph="sequence-${i}" opacity="${on ? 1 : 0.12}">${a === b ? `<path d="M${xs[a]} ${y - 10}h34v26h-34" fill="none" stroke="#2f70b8" stroke-width="3"/>` : line(xs[a], y, xs[b], y)}${a !== b ? `<path d="M${xs[b] + (b > a ? -7 : 7)} ${y - 5}L${xs[b]} ${y}L${xs[b] + (b > a ? -7 : 7)} ${y + 5}" fill="none" stroke="#2f70b8" stroke-width="2"/>` : ""}${text(a === b ? xs[a] - 20 : (xs[a] + xs[b]) / 2, y - 17, label, 18, "#142b45", a === b ? "end" : "middle")}</g>`;
+        y = adapter ? 105 + i * 72 : 90 + i * 50;
+      body += `<g data-morph="sequence-${i}" opacity="${on ? 1 : 0.12}">${a === b ? `<path d="M${xs[a]} ${y - 10}h34v26h-34" fill="none" stroke="#2f70b8" stroke-width="3"/>` : line(xs[a], y, xs[b], y)}${a !== b ? `<path d="M${xs[b] + (b > a ? -7 : 7)} ${y - 5}L${xs[b]} ${y}L${xs[b] + (b > a ? -7 : 7)} ${y + 5}" fill="none" stroke="#2f70b8" stroke-width="2"/>` : ""}${text(a === b ? xs[a] - 20 : (xs[a] + xs[b]) / 2, y - 17, label, adapter ? 18 : 22, "#142b45", a === b ? "end" : "middle")}</g>`;
     });
-    return `<div class="sequence-svg">${svg(body, "0 0 640 450", "Timestamped QDMI workflow")}</div>`;
+    return `<div class="sequence-svg">${svg(body, adapter ? "0 0 640 450" : "0 0 640 290", "Timestamped QDMI workflow")}</div>`;
   }
   function energyChart(progress = 1, compare = true, elapsed = null) {
     const p = app.propagation;
@@ -619,27 +620,43 @@
       text(405, 378, "Imaginary Time τ (Ha⁻¹)", 25);
     curves.forEach((c, j) => {
       if (j && !compare) return;
-      const count =
+      const position =
         elapsed === null
           ? Math.max(
-              1,
-              Math.min(p.tau.length, Math.ceil(progress * p.tau.length)),
+              0,
+              Math.min(p.tau.length - 1, progress * (p.tau.length - 1)),
             )
+          : recordedPosition(c.step_completed_ms || [], elapsed);
+      const count =
+        elapsed === null
+          ? Math.floor(position) + 1
           : (c.step_completed_ms || []).filter((time) => time <= elapsed)
               .length;
-      const coords = (sign = 0) =>
-        c.energy
+      const coords = (sign = 0) => {
+        const points = c.energy
           .slice(0, count)
           .map(
             (e, i) =>
               `${x(p.tau[i])},${y((e - ref + sign * c.stderr[i]) * 1000)}`,
           );
+        if (count > 0 && count < p.tau.length) {
+          const low = Math.floor(position),
+            high = Math.min(low + 1, p.tau.length - 1),
+            fraction = position - low,
+            energy =
+              c.energy[low] + (c.energy[high] - c.energy[low]) * fraction,
+            error = c.stderr[low] + (c.stderr[high] - c.stderr[low]) * fraction,
+            tau = p.tau[low] + (p.tau[high] - p.tau[low]) * fraction;
+          points.push(`${x(tau)},${y((energy - ref + sign * error) * 1000)}`);
+        }
+        return points;
+      };
       if (!j)
         body += `<polygon points="${[...coords(1), ...coords(-1).reverse()].join(" ")}" fill="#2f70b8" opacity=".12"/>`;
       body += `<polyline data-morph="energy-${j}" data-points="${count}" points="${coords().join(" ")}" stroke="${j ? "#8998a8" : "#2f70b8"}" stroke-width="${j ? 3 : 4}" fill="none" ${j ? 'stroke-dasharray="8 5"' : ""}/>`;
     });
     body +=
-      text(280, 423, "Quantum-shadow trial", 24, "#2f70b8") +
+      text(280, 423, "Quantum-Assisted Trial", 24, "#2f70b8") +
       (compare ? text(615, 423, "Hartree–Fock trial", 24, "#778899") : "");
     return `<div class="energy-chart">${svg(body, "0 0 820 440", "Measured energy convergence, both full time ranges retained")}</div>`;
   }
@@ -694,17 +711,34 @@
       .join("");
     return `<div class="batch-grid ${preparing ? "preparation-grid" : ""}" data-morph="${preparing ? "preparation" : "execution"}-grid" data-prepared="${prepared.size}" data-programs="${retrieved.size}" data-completed="${done.size}" data-compiled="${compiled.size}" data-elapsed-ms="${elapsed}">${svg(body, `0 0 ${cols * (cell + gap)} ${rows * (cell + gap)}`, preparing ? "One cell per prepared OpenQASM program" : "One cell per program: compiled, completed, retrieved")}<div class="batch-counts">${preparing ? `<span>${fmt(prepared.size, 0)} / ${fmt(n, 0)} Programs Prepared</span>` : `<span>${fmt(compiled.size, 0)} Compiled</span><span>${fmt(done.size, 0)} Completed</span><span>${fmt(retrieved.size, 0)} Retrieved</span>`}</div></div>`;
   }
+  function compactShadowBatch(progress = 1) {
+    const p = Math.max(0, Math.min(1, progress));
+    let body = [2, 1, 0]
+      .map(
+        (i) =>
+          `<rect x="${43 + i * 13}" y="${38 - i * 10}" width="400" height="174" rx="12" fill="white" stroke="#a9bfd4" stroke-width="2"/>`,
+      )
+      .join("");
+    body += [0, 1, 2, 3]
+      .map((i) => line(67, 69 + i * 35, 422, 69 + i * 35, "#a0b9d1", 2))
+      .join("");
+    body += `<rect x="76" y="54" width="51" height="137" rx="8" fill="#f1f5f9" stroke="#a0b9d1" stroke-width="2"/><rect x="141" y="54" width="93" height="137" rx="8" fill="#eaf2fa" stroke="#2f70b8" stroke-width="2"/><rect x="249" y="54" width="111" height="137" rx="8" fill="#fff4e5" stroke="#d6882f" stroke-width="2"/>${text(102, 112, "H", 20)}${text(102, 144, "CX", 20)}<text x="187" y="130" font-family="Inter,Arial,sans-serif" font-size="31" fill="#142b45" text-anchor="middle">U<tspan baseline-shift="sub" font-size="20">trial</tspan></text>${text(304, 133, "U(Qₖ)", 31, "#a96916")}`;
+    body += [0, 1, 2, 3]
+      .map(
+        (i) =>
+          `<rect x="375" y="${57 + i * 35}" width="29" height="25" rx="4" fill="white" stroke="#7fa8cb"/><path d="M381 ${75 + i * 35}a9 9 0 0 1 17 0M389 ${74 + i * 35}l6 -10" fill="none" stroke="#2f70b8" stroke-width="1.5"/>`,
+      )
+      .join("");
+    body += text(265, 254, "One Random Basis Qₖ per Program", 24, "#5b7088");
+    return `<div class="compact-shadow-batch" style="opacity:${p}">${svg(body, "0 0 540 278", "Compact four-wire batch: fixed trial and vacuum reference, random basis U(Q_k), measurement")}</div>`;
+  }
   function preparationSketch(progress = 1) {
     const p = Math.max(0, Math.min(1, progress));
-    let body = `<defs><radialGradient id="molecule-orbital"><stop stop-color="#2f70b8" stop-opacity=".35"/><stop offset="1" stop-color="#2f70b8" stop-opacity="0"/></radialGradient></defs><ellipse cx="110" cy="92" rx="97" ry="63" fill="url(#molecule-orbital)"/><ellipse cx="174" cy="92" rx="97" ry="63" fill="url(#molecule-orbital)"/>${line(106, 92, 178, 92, "#6fa8d8", 8)}<circle cx="106" cy="92" r="21" fill="#2f70b8"/><circle cx="178" cy="92" r="21" fill="#62aaca"/>${text(141, 165, "Molecular Hamiltonian", 26)}`;
-    body += `<g opacity="${Math.min(1, p * 3)}"><path d="M145 190V229" stroke="#86aaca" stroke-width="3"/><rect x="38" y="241" width="211" height="96" rx="15" fill="#eaf2fa" stroke="#a9c6e1"/>${text(143, 284, "|Ψₜ⟩ = U(θ)|HF⟩", 27)}${text(143, 317, "Trial State", 22, "#5b7088")}</g>`;
-    body += `<g opacity="${Math.max(0, Math.min(1, p * 3 - 1))}">${line(265, 288, 313, 288)}<rect x="329" y="241" width="171" height="96" rx="15" fill="#fff4e5" stroke="#dfb579"/>${text(414, 279, "U(Q)", 30, "#a96916")}${text(414, 316, "Random Bases", 22)}</g>`;
-    body += `<g opacity="${Math.max(0, Math.min(1, p * 3 - 2))}">${line(416, 355, 416, 399)}${[2, 1, 0].map((i) => `<rect x="${82 + i * 13}" y="${421 - i * 9}" width="352" height="91" rx="9" fill="white" stroke="#7fa8cb"/>`).join("")}${[0, 1, 2].map((i) => line(111, 441 + i * 24, 411, 441 + i * 24, "#9bb7d1", 2)).join("")}<rect x="147" y="430" width="42" height="61" rx="5" fill="#eaf2fa" stroke="#2f70b8"/><rect x="251" y="430" width="42" height="61" rx="5" fill="#fff4e5" stroke="#a96916"/>${text(168, 470, "Uₜ", 22)}${text(272, 470, "UQ", 22)}${text(265, 553, "Batch of Quantum Programs", 26)}</g>`;
-    return svg(
-      body,
-      "0 0 540 590",
-      "Molecule, trial-state ansatz, random Gaussian rotations, quantum circuit batch",
-    );
+    let body = `<defs><radialGradient id="molecule-orbital"><stop stop-color="#2f70b8" stop-opacity=".35"/><stop offset="1" stop-color="#2f70b8" stop-opacity="0"/></radialGradient></defs><ellipse cx="110" cy="76" rx="97" ry="58" fill="url(#molecule-orbital)"/><ellipse cx="174" cy="76" rx="97" ry="58" fill="url(#molecule-orbital)"/>${line(106, 76, 178, 76, "#6fa8d8", 8)}<circle cx="106" cy="76" r="21" fill="#2f70b8"/><circle cx="178" cy="76" r="21" fill="#62aaca"/>${text(141, 144, "Molecular Hamiltonian", 25)}`;
+    body += `<g opacity="${Math.min(1, p * 3)}"><path d="M145 160V195" stroke="#86aaca" stroke-width="3"/><rect x="25" y="207" width="250" height="90" rx="13" fill="#eaf2fa" stroke="#a9c6e1"/><text x="150" y="244" font-family="Inter,Arial,sans-serif" font-size="25" fill="#142b45" text-anchor="middle">|Ψ<tspan baseline-shift="sub" font-size="17">trial</tspan>⟩ = U<tspan baseline-shift="sub" font-size="17">trial</tspan>|HF⟩</text>${text(150, 279, "Fixed Trial State", 22, "#5b7088")}</g>`;
+    body += `<g opacity="${Math.max(0, Math.min(1, p * 3 - 1))}">${line(286, 250, 316, 250)}<rect x="329" y="207" width="186" height="90" rx="13" fill="#fff4e5" stroke="#dfb579"/>${text(422, 245, "U(Qₖ)", 30, "#a96916")}${text(422, 279, "Random Basis k", 22)}</g>`;
+    body += `<g opacity="${Math.max(0, Math.min(1, p * 3 - 2))}">${line(422, 309, 422, 340)}</g>`;
+    return `<div class="preparation-sketch">${svg(body, "0 0 540 340", "Molecule, fixed trial-state preparation, and indexed random measurement basis")}${compactShadowBatch(Math.max(0, Math.min(1, p * 3 - 2)))}</div>`;
   }
   function sampleStream(progress = 1) {
     const preview = app.shadow_preview || [],
@@ -713,49 +747,81 @@
       .slice(0, shown)
       .map(
         (sample, i) =>
-          `<div data-morph="shadow-sample-${i}" style="opacity:${Math.min(1, progress * preview.length - i)}"><small>Program ${sample.program_index}</small><strong>${esc(sample.outcome)}</strong></div>`,
+          `<div data-morph="shadow-sample-${i}" style="opacity:${Math.min(1, progress * preview.length - i)}"><small>Program ${sample.program_index}</small><strong>${(sample.shots || []).map(esc).join("<br>")}<span>⋮</span></strong></div>`,
       )
       .join(
         "",
       )}<span class="sample-continuation" style="opacity:${progress}" aria-label="More program outputs">…</span></div>`;
   }
-  const appHeading = "Quantum-Assisted Auxiliary-Field Monte Carlo";
+  const appHeading = "Quantum-Assisted Auxiliary-Field Quantum Monte Carlo";
+  const applicationHeading = () =>
+    `<h2 class="application-heading" data-morph="heading">${appHeading}<small>QC-AFQMC</small></h2>`;
   const appReference = () =>
-    `<div class="application-reference" data-morph="application-reference">${logo("aws")}${qr("afqmc", "github.com/amazon-braket/amazon-braket-examples", "Amazon Braket · Public AFQMC Example")}</div>`;
+    `<div class="application-paper-reference" data-morph="application-paper-reference">${qr("afqmc-paper", "arxiv.org/abs/2506.22408", "Quantum-Assisted Auxiliary-Field Quantum Monte Carlo")}</div><div class="application-reference" data-morph="application-reference">${logo("aws")}${qr("afqmc", "github.com/amazon-braket/amazon-braket-examples", "Amazon Braket · Public AFQMC Example")}</div>`;
   function appPanel(i, body) {
     return `<section data-morph="app-pillar-${i}" class="app-panel"><h3>${icon(["workstation", "cryostat", "server"][i])}<span>${["Classical Preparation", "Quantum Shadow Collection", "Classical Monte Carlo"][i]}</span></h3><div class="app-panel-body">${body}</div><div class="app-badges">${i === 0 ? badge("pennylane", "") : i === 1 ? badge("mqt", "Compiler Collection") + badge("qdmi", "") : badge("mqsc", "Orchestrator")}</div></section>`;
   }
   function appBody(i, progress = 1) {
     if (i === 0) return preparationSketch(progress);
     if (i === 1)
-      return `<p class="panel-kicker">${fmt(app.workload?.snapshots, 0)} Circuits × ${fmt(app.workload?.shots_per_snapshot, 0)} Shots</p>${circuit(appStage("source")?.circuit, { full: true, key: "shadow-input", barrier: app.circuit_sections?.trial_primitive_operations })}${sampleStream(progress)}`;
+      return `<p class="panel-kicker">${fmt(app.workload?.snapshots, 0)} Circuits × ${fmt(app.workload?.shots_per_snapshot, 0)} Shots</p>${compactShadowBatch()}${sampleStream(progress)}`;
     return `<p class="panel-kicker">Propagate → Overlap → Reweight → Reduce</p>${walkerScene(progress)}<div class="equation-caption"><img src="${assets["eq-afqmc-mean"]}" alt="Weighted local energy"/><span>Weighted Mean</span></div>${energyChart(progress)}`;
   }
   function applicationScene(step, progress = 1) {
     return `<div class="app-panels intro">${[0, 1, 2].map((i) => `<div class="${i > step ? "future" : ""}">${appPanel(i, appBody(i, i === step ? progress : 1))}</div>`).join("")}</div>${appReference()}`;
   }
-  function preparationCode(elapsed) {
+  function preparationTrace(elapsed) {
+    const rows = app.execution?.preprocessing || [],
+      first = app.execution?.preparation?.[0]?.time_ms || 0,
+      conversion = {
+        id: "payloads",
+        label: "Convert each tape to OpenQASM",
+        code: "program = original_convert(tape)",
+        time_ms: first,
+        duration_ms: phaseTime("compiling") - first,
+      };
+    return `<div class="preprocessing-trace" data-morph="preprocessing-trace">${[
+      ...rows,
+      conversion,
+    ]
+      .map((row) => {
+        const end = row.time_ms + row.duration_ms,
+          active = elapsed >= row.time_ms && elapsed < end,
+          done = elapsed >= end;
+        return `<div data-morph="preprocessing-${row.id}" data-start-ms="${row.time_ms}" data-end-ms="${end}" class="${active ? "active" : done ? "done" : "pending"}"><div><b>${esc(row.label)}</b><time>${fmt(row.time_ms / 1000, 2)}–${fmt(end / 1000, 2)} s</time></div><code title="${esc(row.code)}">${esc(row.code.split("\n")[0])}</code></div>`;
+      })
+      .join("")}</div>`;
+  }
+  function preparationCode(elapsed, trace = false) {
     const definitions = app.source_definitions || {};
     // The build supplies verbatim executable lines with docstrings omitted for display.
     const left =
-      app.presentation_source?.left ||
-      [definitions.hydrogen_trial, definitions.apply_gaussian_givens]
-        .filter(Boolean)
-        .join("\n");
-    const right =
-      app.presentation_source?.right ||
-      [definitions.apply_pauli_layer, app.source, app.batch_source]
-        .filter(Boolean)
-        .join("\n");
-    return `<div class="preparation-code">${[left, right].map((source, i) => `<div>${fullCode({ code: source, lines_html: app.presentation_source?.[i ? "right_lines_html" : "left_lines_html"] }, i ? "Shadow Circuit and Batch" : "Trial State and Gaussian Rotations", { height: i ? 400 : 255, width: 825 })}${i ? "" : batchMatrix(elapsed, true)}</div>`).join("")}</div>`;
+        app.presentation_source?.left ||
+        [definitions.hydrogen_trial, definitions.apply_gaussian_givens]
+          .filter(Boolean)
+          .join("\n"),
+      right =
+        app.presentation_source?.right ||
+        [definitions.apply_pauli_layer, app.source, app.batch_source]
+          .filter(Boolean)
+          .join("\n");
+    return `<div class="preparation-code">${[left, right].map((source, i) => `<div>${trace && !i ? preparationTrace(elapsed) : fullCode({ code: source, lines_html: app.presentation_source?.[i ? "right_lines_html" : "left_lines_html"] }, i ? "Shadow Circuit and Batch" : "Trial State and Gaussian Rotations", { height: i ? 400 : 255, width: 825 })}${i ? "" : batchMatrix(elapsed, true)}</div>`).join("")}</div>`;
   }
   const phaseTime = (name) =>
     app.execution?.lifecycle?.find((e) => e.state === name)?.time_ms || 0;
   function preparationTime(progress) {
-    const first = app.execution?.preparation?.[0]?.time_ms || 0;
-    return progress < 0.2
-      ? (first * progress) / 0.2
-      : first + ((phaseTime("compiling") - first) * (progress - 0.2)) / 0.8;
+    const phases = app.execution?.preprocessing || [],
+      first = app.execution?.preparation?.[0]?.time_ms || 0,
+      ends = phases.length
+        ? [0, ...phases.map((phase) => phase.time_ms + phase.duration_ms)]
+        : [0, first];
+    if (progress >= 0.7)
+      return (
+        first + ((phaseTime("compiling") - first) * (progress - 0.7)) / 0.3
+      );
+    const scaled = (progress / 0.7) * (ends.length - 1),
+      index = Math.min(ends.length - 2, Math.floor(scaled));
+    return ends[index] + (ends[index + 1] - ends[index]) * (scaled - index);
   }
   function quantumTime(progress) {
     const capture = app.execution;
@@ -774,14 +840,26 @@
   function propagationTime(progress) {
     const start = totalTime(app.execution),
       end = app.timeline?.completed_ms || start,
-      frames = app.propagation?.curves?.[0]?.frames || [],
-      first = app.timeline
-        ? app.timeline.propagation_started_ms +
-          Math.min(...(frames[0]?.walkers || []).map((w) => w.completed_ms))
-        : start;
-    return progress < 0.2
-      ? start + ((first - start) * progress) / 0.2
-      : first + ((end - first) * (progress - 0.2)) / 0.8;
+      origin = app.timeline?.propagation_started_ms || start,
+      curves = app.propagation?.curves || [],
+      q = curves[0]?.step_completed_ms || [0],
+      hf = curves[1]?.step_completed_ms || q,
+      observed = [
+        start,
+        origin + q[0],
+        origin + q.at(-1),
+        origin + hf[0],
+        origin + hf.at(-1),
+        end,
+      ],
+      // Actual windows may overlap; monotone clamping never rewinds the application clock.
+      breaks = observed.map((time, i) => Math.max(...observed.slice(0, i + 1))),
+      stops = [0, 0.12, 0.52, 0.6, 0.94, 1],
+      next = stops.findIndex((stop) => stop > progress),
+      segment = next < 0 ? stops.length - 2 : Math.max(0, next - 1),
+      fraction =
+        (progress - stops[segment]) / (stops[segment + 1] - stops[segment]);
+    return breaks[segment] + fraction * (breaks[segment + 1] - breaks[segment]);
   }
   function workflowClock(step, progress = 1) {
     const finish = totalTime(app.execution),
@@ -812,10 +890,13 @@
         ? propagationTime(progress) -
           (app.timeline?.propagation_started_ms || Infinity)
         : Infinity;
-    const classical = `<div class="slurm-allocation">${logo("slurm")}<span>${nodes} Compute Nodes · ${workers.length} Slurm Ranks</span></div>${walkerScene(1, propagationElapsed)}${energyChart(1, true, propagationElapsed)}`;
+    const classical = `<div class="slurm-allocation">${logo("slurm")}<span>${nodes} Compute Nodes · ${workers.length} Slurm Ranks</span></div><div class="walker-comparison">${[0, 1].map((trial) => `<div><b>${trial ? "Hartree–Fock Reference" : "Quantum-Assisted Trial"}</b>${walkerScene(1, propagationElapsed, trial)}</div>`).join("")}<small>Interpolated Recorded States · Rings Retain Every Walker</small></div>${energyChart(1, true, propagationElapsed)}`;
     const bodies = [
       step < 2
-        ? preparationCode(step === 0 ? 0 : preparationTime(progress))
+        ? preparationCode(
+            step === 0 ? 0 : preparationTime(progress),
+            step === 1,
+          )
         : appBody(0),
       step >= 2 ? quantum : appBody(1),
       step >= 3 ? classical : appBody(2),
@@ -824,8 +905,8 @@
   }
   const compilerLabels = [
     "Input Program",
-    "Device Specification",
     "Optimization",
+    "Device Specification",
     "Placement & Routing",
     "Native Synthesis",
     "Executable",
@@ -845,7 +926,7 @@
         "munich-quantum-software/amazon-braket-qdmi-device",
       ][i],
       reference = ["iqm", "ibm", "braket"][i];
-    return `<div class="spec-card" data-morph="device-card" data-target="${esc(target.id)}"><div class="spec-step"><b>2 · Device Specification</b><span>Powered by ${logo("qdmi")}</span></div><div class="spec-title">${logo(brand)}<h3>${esc(target.label.replace(/^IQM\s*/i, ""))}</h3></div>${deviceView(target, activeSites, layout, blend)}<div class="spec-details"><b>${target.metadata.qubits} Qubits</b><span>${["R · CZ", "RZ · SX · X · CZ", "GPI · GPI2 · RZZ"][i]}</span></div><div class="spec-formats">${i === 0 ? logo("qir") + logo("iqm") + "-JSON" : i === 1 ? "QPY" : "OpenQASM 3"}</div><a class="spec-repository" href="https://github.com/${repository}"><img src="${assets[`qr-${reference}`]}" alt="QDMI implementation QR code"/><span>${logo("github")}<span>${repository.replace("/", "/<wbr>")}</span></span></a></div>`;
+    return `<div class="spec-card" data-morph="device-card" data-target="${esc(target.id)}"><div class="spec-step"><b>3 · Device Specification</b><span>Powered by ${logo("qdmi")}</span></div><div class="spec-brand">${logo(brand)}</div>${deviceView(target, activeSites, layout, blend)}<div class="spec-details"><b>${["Emerald", "Nighthawk · ibm_miami", "IonQ Forte-1"][i]}</b><span>${target.metadata.qubits} Qubits</span><span>${["QIR · IQM-JSON", "QPY", "OpenQASM 3"][i]}</span><span>${["R · CZ", "RZ · SX · X · CZ", "GPI · GPI2 · RZZ"][i]}</span></div><a class="spec-repository" href="https://github.com/${repository}"><img src="${assets[`qr-${reference}`]}" alt="QDMI implementation QR code"/><span>${logo("github")}<span>${repository.replace("/", "/<wbr>")} <b class="repo-stars"><span aria-label="stars">★</span> ${[11, 8, 9][i]}</b></span></span></a></div>`;
   }
   function routingFrame(target, progress) {
     const sweep = target.compilation.routing_trace?.find(
@@ -911,88 +992,79 @@
     };
   }
   function stageCard(target, id, title, options = {}) {
-    return `<section class="compiled-stage stage-${id}" data-morph="stage-${id}" data-target="${esc(target.id)}"><h3>${title}</h3>${circuit(options.c || targetStage(target, id)?.circuit, { full: true, key: id, ...options })}${options.metrics === false ? "" : programMetrics(target, id)}</section>`;
+    return `<section class="compiled-stage stage-${id}" data-target="${esc(target.id)}"><div class="stage-shell" data-morph="stage-${id}" aria-hidden="true"></div><h3 data-morph="stage-title-${id}">${title}</h3>${circuit(options.c || targetStage(target, id)?.circuit, { full: true, key: id, ...options })}${options.metrics === false ? "" : programMetrics(target, id)}</section>`;
   }
   function compilerSummary() {
     const stacks = [
       [
         "Frontends",
-        `${logo("pennylane")}${logo("qiskit")}<b>OpenQASM 3</b>`,
+        `<span>${logo("qiskit")}<b>Qiskit</b></span><b>OpenQASM 3</b>${logo("pennylane")}`,
         "Frontend",
+        "frontends",
       ],
       [
-        "QDMI Devices",
-        `${logo("iqm")}${logo("aws")}${logo("ibm")}<span>${logo("mqt")} DDSIM</span>`,
+        "QDMI Ecosystem",
+        `<div class="ecosystem-group"><h4>Quantum Hardware &amp; Cloud</h4><div class="ecosystem-logos hardware">${["iqm", "ibm", "aqt", "planqc", "wmi", "peak-quantum", "aws"].map((name) => logo(name)).join("")}</div></div><div class="ecosystem-group"><h4>Simulators</h4><div class="ecosystem-logos"><span>${logo("mqt")}<b>DDSIM</b></span><b>Eviden Qaptiva</b></div></div><div class="ecosystem-group"><h4>HPC Centers &amp; Integration Projects</h4><div class="ecosystem-logos centers">${["lrz", "psnc", "vtt", "ornl"].map((name) => logo(name)).join("")}<b>CINECA</b><b>CESGA</b></div></div>`,
         "Device",
+        "qdmi",
       ],
       [
         "Compiler Ecosystem",
-        `<span>${logo("mqt")} Compiler Collection</span>${logo("jeff")}<span>${logo("fullstaqd")}<b>QCC</b></span>`,
-        "Compiler Pass",
+        `<span class="compiler-collection">${logo("mqt")}<b>Compiler Collection</b></span><div class="compiler-tools">${logo("jeff")}<span>${logo("fullstaqd")}<b>QCC</b></span></div><div class="ecosystem-group initiatives"><h4>European &amp; Global Initiatives</h4>${logo("eqs3")}<div class="ecosystem-logos">${logo("mqss")}<span>${logo("openqse")}<b>openQSE</b></span></div></div>`,
+        "Compiler (Pass)",
+        "compilers",
       ],
       [
         "Outputs",
-        `${logo("qir")}<b>OpenQASM 3</b>${logo("qiskit")}`,
+        `${logo("qir")}<b>OpenQASM 3</b><span>${logo("qiskit")}<b>Qiskit</b></span>`,
         "Output Format",
+        "outputs",
       ],
     ];
-    return `<div class="compiler-ecosystem">${stacks.map(([title, body, next], i) => `<section data-morph="ecosystem-${i}"><h3>${title}</h3><div>${body}</div><p>Your <b>${next}</b><br>Could Be Next</p></section>`).join("")}</div><p class="ecosystem-scope">PennyLane workflows through QDMI · Qiskit and OpenQASM program interchange · jeff structured-program interchange</p>`;
+    return `<div class="compiler-ecosystem">${stacks.map(([title, body, next, kind], i) => `<section class="ecosystem-${kind}" data-morph="ecosystem-${i}"><h3>${title}</h3><div class="ecosystem-body">${body}</div><p>Your <b>${next}</b><br>Could Be Next</p></section>`).join("")}</div>`;
   }
   function compilationScene(step, progress = 1) {
     if (step === 9)
       return compilerFlow(5, compilerSummary(), { complete: true });
-    const changing = step === 7 || step === 8,
-      targetIndex = step === 8 ? 2 : step === 7 ? 1 : 0,
+    const targetIndex = step === 8 ? 2 : step === 7 ? 1 : 0,
       target = targets[targetIndex],
-      previous = targets[Math.max(0, targetIndex - 1)],
-      stage = changing ? 6 : step,
-      routeTarget = changing && progress < 0.38 ? previous : target,
-      synthesisTarget = changing && progress < 0.62 ? previous : target,
-      exportTarget = changing && progress < 0.82 ? previous : target,
+      stage = Math.min(step, 6),
       route =
         stage >= 3
-          ? routingFrame(
-              routeTarget,
-              stage === 3 ? 0 : stage === 4 ? progress : 1,
-            )
+          ? routingFrame(target, stage === 3 ? 0 : stage === 4 ? progress : 1)
           : null;
     const input = stageCard(targets[0], "source", "1 · Input Program"),
       optimized =
-        stage >= 2
-          ? stageCard(targets[0], "optimized", "3 · Optimization")
+        stage >= 1
+          ? stageCard(targets[0], "optimized", "2 · Optimization")
           : "";
     let routed = "",
       native = "",
       executable = "";
     if (route)
-      routed = stageCard(
-        routeTarget,
-        "place-and-route",
-        "4 · Placement & Routing",
-        {
-          c: route.c,
-          active: stage === 3 ? -1 : route.active,
-          reveal:
-            stage === 3 ? 0 : stage === 4 && progress === 0 ? 0 : route.reveal,
-          layout: routeTarget.compilation.layout.initial,
-          metrics: stage > 4 || (stage === 4 && progress >= 1),
-        },
-      );
+      routed = stageCard(target, "place-and-route", "4 · Placement & Routing", {
+        c: route.c,
+        active: stage === 3 ? -1 : route.active,
+        reveal:
+          stage === 3 ? 0 : stage === 4 && progress === 0 ? 0 : route.reveal,
+        layout: target.compilation.layout.initial,
+        metrics: stage > 4 || (stage === 4 && progress >= 1),
+      });
     if (stage >= 5)
       native = stageCard(
-        synthesisTarget,
+        target,
         "target-native-synthesis",
         "5 · Native Synthesis",
         {
-          layout: synthesisTarget.compilation.layout.initial,
+          layout: target.compilation.layout.initial,
+          fold: stage >= 6 ? [12, 22, 20][targetIndex] : null,
         },
       );
     if (stage >= 6)
-      executable = `<section class="compiler-qir" data-morph="compiler-qir" data-target="${esc(exportTarget.id)}">${code(targetStage(exportTarget, "qir-adaptive"), { count: 22, title: "6 · QIR 2.1 Adaptive Profile", key: "compiler-qir" })}<p class="code-continuation">⋮ Continued in the complete recorded file</p></section>`;
-    const phase = changing ? Math.min(3, Math.floor(progress * 4)) : -1;
+      executable = `<section class="compiler-qir" data-morph="compiler-qir" data-target="${esc(target.id)}">${code(targetStage(target, "qir-adaptive"), { start: focus(targetStage(target, "qir-adaptive"), "define", 0), count: 13, title: "6 · QIR 2.1 Adaptive Profile", key: "compiler-qir" })}<p class="code-continuation">⋮ Continued in the complete recorded file</p></section>`;
     return compilerFlow(
       stage <= 2 ? stage : stage <= 4 ? 3 : stage === 5 ? 4 : 5,
-      `<div class="compiler-workbench phase-${stage} ${stage >= 6 ? "with-qir" : ""} ${changing ? "target-change refresh-" + phase : ""}" style="--shuffle:${changing ? Math.max(0, 1 - progress / 0.3) : 0}"><div class="compiler-invariants">${input}${optimized}</div><div class="compiler-device" data-morph="compiler-device">${stage >= 1 ? deviceCard(target, { layout: changing ? target.compilation.layout.final : route?.layout, activeSites: stage === 4 ? route?.sites : [], blend: stage === 4 ? route?.blend : null }) : ""}</div><div class="compiler-stages">${routed}${native}</div>${executable}</div>`,
+      `<div class="compiler-workbench phase-${stage} ${stage >= 6 ? "with-qir" : ""}"><div class="compiler-invariants">${input}${optimized}</div><div class="compiler-device" data-morph="compiler-device">${stage >= 2 ? deviceCard(target, { layout: route?.layout, activeSites: stage === 4 ? route?.sites : [], blend: stage === 4 ? route?.blend : null }) : ""}</div><div class="compiler-stages">${routed}${native}</div>${executable}</div>`,
     );
   }
   function measuredGrowth(progress = 1) {
@@ -1080,16 +1152,16 @@
           effect === "reset"
             ? "__reset__"
             : effect === "branch"
-              ? "__read_result"
+              ? "__mz__"
               : "phi ",
           effect === "loop" ? 1 : 0,
         )
       : 0;
-    return `<div class="structured-program"><div class="structured-source" data-morph="structured-source">${fullCode(source, "Syndrome Extraction", { height: 310, width: 560, hot: effect })}${circuit(source.circuit, { full: true, key: "syndrome", active, hotRegion: effect === "loop" ? "for_loop" : effect === "branch" ? "if_else" : null })}</div><div class="structured-qir ${step === 0 ? "future" : ""}" data-morph="structured-qir">${fullCode(qir, "QIR 2.1 Adaptive Profile · Control-Flow View", { columns: 2, height: 315, width: 1140, hot: effect, entryOnly: true })}<div class="control-lens ${effect ? "" : "future"}" data-morph="control-lens">${code(qir, { start, count: effect === "loop" ? 7 : 5, title: `Program Excerpt · ${effect === "reset" ? "Reset" : effect === "branch" ? "Conditionals" : "Loops"}`, compact: true, key: "structured-detail" })}</div></div></div>${paperFooter()}`;
+    return `<div class="structured-program"><div class="structured-source" data-morph="structured-source">${fullCode(source, "Syndrome Extraction", { height: 310, width: 560, hot: effect })}${circuit(source.circuit, { full: true, key: "syndrome", active, hotRegion: effect === "loop" ? "for_loop" : effect === "branch" ? "if_else" : null })}</div><div class="structured-qir ${step === 0 ? "future" : ""}" data-morph="structured-qir">${fullCode(qir, "QIR 2.1 Adaptive Profile · Complete Entry Point", { columns: 2, height: 340, width: 1140, hot: effect, entryOnly: true })}<div class="control-lens ${effect ? "" : "future"}" data-morph="control-lens">${code(qir, { start, count: effect === "loop" ? 7 : effect === "branch" ? 7 : 5, title: `Program Excerpt · ${effect === "reset" ? "Reset" : effect === "branch" ? "Conditionals" : "Loops"}`, compact: true, key: "structured-detail" })}</div></div></div>${paperFooter()}`;
   }
   function growthScene(progress = 1) {
     const sketch = `${line(75, 104, 590, 104, "#a9c2d8", 3)}${line(76, 125, 100, 84, "#526d88", 2)}${text(87, 68, "n", 25)}<rect x="120" y="64" width="80" height="81" rx="10" fill="#eaf2fa" stroke="#2f70b8"/><text x="160" y="115" text-anchor="middle" font-family="STIX Two Math,serif" font-size="27">H<tspan baseline-shift="super" font-size="70%">⊗n</tspan></text><rect x="229" y="27" width="323" height="158" rx="18" fill="#eaf2fa" stroke="#2f70b8" stroke-width="3"/><rect x="250" y="63" width="114" height="83" rx="8" fill="white" stroke="#2f70b8"/><rect x="389" y="63" width="140" height="83" rx="8" fill="white" stroke="#2f70b8"/>${text(307, 112, "Oracle", 24)}${text(459, 112, "Diffusion", 24)}<path d="M529 216H250m10 -8l-10 8 10 8" fill="none" stroke="#2f70b8" stroke-width="3"/>${text(390, 255, "Repeat k Times", 27)}`;
-    return `<div class="grover-growth"><div>${svg(sketch, "0 0 630 280", "Grover loop on n qubits, with no ancilla")}<img class="grover-equation" src="${assets["eq-grover-iterations"]}" alt="N = 2 to the n; k equals floor of pi divided by four arcsine of 2 to the minus n over two"/><p class="grover-caption">n Search Qubits · No Ancilla</p></div>${measuredGrowth(progress)}</div>${paperFooter()}`;
+    return `<div class="grover-growth"><div>${svg(sketch, "0 0 630 280", "Grover loop on n qubits, with no ancilla")}<img class="grover-equation" src="${assets["eq-grover-iterations"]}" alt="k equals floor of pi divided by four arcsine of 2 to the minus n over two"/></div>${measuredGrowth(progress)}</div>${paperFooter()}`;
   }
   function executionLog(capture, elapsed) {
     const events = [
@@ -1107,11 +1179,26 @@
     }
     return `<div class="execution-log" data-recorded-calls="${events.length}"><h3>Execution Log</h3>${rows.map((e, i) => `<div data-morph="log-${i}" class="${elapsed < e.time_ms ? "future" : ""}"><time>${fmt(Math.max(0, e.time_ms) / 1000, 3)} s</time><code>${esc(e.operation.replace(/^MQT_DDSIM_QDMI_/u, "").replace(/\(.*$/u, "()"))}</code>${e.times?.length > 1 ? `<b>×${e.times.filter((time) => time <= elapsed).length}</b>` : ""}</div>`).join("")}</div>`;
   }
+  function workerProgress(capture, elapsed) {
+    const events = capture.worker_events || [];
+    const ids = [...new Set(events.map((event) => event.worker_index))].sort(
+      (a, b) => a - b,
+    );
+    return `<div class="worker-progress" data-morph="worker-progress"><h4>${ids.length} Parallel QIR Workers</h4>${ids
+      .map((id) => {
+        const worker = events.filter((event) => event.worker_index === id);
+        const completed =
+          worker.findLast((event) => event.time_ms <= elapsed)?.completed || 0;
+        const total = worker.at(-1).total;
+        return `<div class="worker-row" data-worker="${id}" data-completed="${completed}"><span>Core ${id + 1}</span><div class="worker-track"><i style="width:${(100 * completed) / total}%"></i></div><b>${fmt(completed, 0)} / ${fmt(total, 0)}</b></div>`;
+      })
+      .join("")}</div>`;
+  }
   function adaptiveRuntime(step, progress = 1) {
     const elapsed =
         step === 0 ? qdmiStart(run) : interpolateTime(run, progress),
       source = variant("qpe").stages.find((a) => a.id === "source");
-    return `<div class="qpe-banner"><div><h3>Iterative QPE · φ = 1/3 · 8 Bits · 4 Qubits</h3>${circuit(source.circuit, { key: "qpe", limit: 23 })}</div><div class="runtime-products">${logo("qdmi")}<span>→</span>${logo("mqt")}<b>DDSIM</b><span>→</span>${logo("llvm")}<b>JIT</b></div></div><div class="runtime-columns">${executionLog(run, elapsed)}<div><h3>QDMI → Runtime</h3>${runtimeSequence(run, elapsed)}</div><div><h3>Measurement Outcomes</h3>${histogram(run, elapsed)}</div></div><div class="runtime-clock" data-morph="runtime-clock"><span>${fmt((elapsed - qdmiStart(run)) / 1000, 3)} s Recorded Time</span><span>Adaptive QIR 2.1 · Replay Slowed for Inspection</span><div class="clock-line"><div style="width:${(100 * (elapsed - qdmiStart(run))) / (totalTime(run) - qdmiStart(run))}%"></div></div></div>`;
+    return `<div class="qpe-banner"><div><h3>Iterative QPE · φ = 1/3 · 8 Bits · Counted U-Power Loops</h3>${circuit(source.circuit, { key: "qpe", limit: 23 })}</div><div class="runtime-products">${logo("qdmi")}<span>→</span>${logo("mqt")}<b>DDSIM</b><span>→</span>${logo("llvm")}<b>JIT</b></div></div><div class="runtime-columns">${executionLog(run, elapsed)}<div class="adaptive-sequence"><h3>QDMI → Runtime</h3>${runtimeSequence(run, elapsed)}${workerProgress(run, elapsed)}</div><div><h3>Measurement Outcomes</h3>${histogram(run, elapsed)}</div></div><div class="runtime-clock" data-morph="runtime-clock"><span>${fmt((elapsed - qdmiStart(run)) / 1000, 3)} s Recorded Time</span><span>Adaptive QIR 2.1 · 64-Shot Completion Batches · Slowed Replay</span><div class="clock-line"><div style="width:${(100 * (elapsed - qdmiStart(run))) / (totalTime(run) - qdmiStart(run))}%"></div></div></div>`;
   }
   function featureOverview(step) {
     const groups = [
@@ -1156,19 +1243,9 @@
     return `<div class="feature-grid">${groups.map(([art, title, first, second, third], i) => `<section data-morph="feature-${i}" class="feature-card ${i > step ? "future" : ""}">${["qiskit", "pennylane"].includes(art) ? logo(art) : icon(art)}<div><h3>${title}</h3><p>${first}</p><p>${second}</p>${third ? `<p>${third}</p>` : ""}</div></section>`).join("")}</div><div class="feature-resources" data-morph="feature-resources">${qr("core-repo", "github.com/munich-quantum-toolkit/core", "Open Source · MQT and QDMI Communities")}${qr("core", "mqt.readthedocs.io/projects/core", "Tutorials · API · Guides")}</div>`;
   }
   function separator(title, subtitle, brand) {
-    const art =
-      brand === "compiler"
-        ? svg(
-            opening.compilerBadge(0, 0, 390),
-            "0 0 390 123",
-            "MQT Compiler Collection",
-          )
-        : brand === "runtime"
-          ? `<div class="runtime-products">${logo("qdmi")}<span>→</span>${logo("mqt")}<b>DDSIM</b><span>→</span>${logo("llvm")}<b>JIT</b></div>`
-          : brand === "jeff"
-            ? ""
-            : logo(brand);
-    return `<div class="chapter-separator" data-morph="chapter"><div class="chapter-art ${brand === "runtime" ? "runtime-art" : ""}">${art}</div><p>${subtitle}</p><h1>${title}</h1><div class="chapter-rule"></div></div>`;
+    const brandAbove =
+      brand === "mqt" ? logo("mqt", "chapter-brand") : esc(subtitle);
+    return `<div class="chapter-separator" data-morph="chapter"><p>${brandAbove}</p><h1>${title}</h1><div class="chapter-rule"></div></div>`;
   }
   const slides = [];
   function add(id, section, title, builds, render, notes = "", playbacks = {}) {
@@ -1204,18 +1281,14 @@
     "A Classical–Quantum Workflow",
     0,
     () =>
-      separator(
-        "A Classical–Quantum<br>Workflow",
-        "Quantum-Assisted Auxiliary-Field Monte Carlo",
-        "pennylane",
-      ),
+      `<div class="chapter-separator" data-morph="chapter"><p>${appHeading} · QC-AFQMC</p><h1>A Classical–Quantum<br>Workflow</h1><div class="chapter-rule"></div></div>`,
   );
   add(
     "hybrid-algorithm",
     "02 · A Practical Hybrid Application",
     appHeading,
     2,
-    (s, t) => heading(appHeading) + applicationScene(s, t ?? 1),
+    (s, t) => applicationHeading() + applicationScene(s, t ?? 1),
     "H2/STO-3G is a bounded software demonstration adapted from the public Amazon Braket example. Quantum shadows supply trial overlaps; Slurm workers reuse them. This is not a quantum-advantage claim.",
     {
       0: { duration: 2200, transition: 900 },
@@ -1228,12 +1301,12 @@
     "02 · A Practical Hybrid Application",
     appHeading,
     4,
-    (s, t) => heading(appHeading) + hybridExecution(s, t ?? 1),
+    (s, t) => applicationHeading() + hybridExecution(s, t ?? 1),
     "One QDMI job carries 4096 actual QIR programs. Compilation, native per-program completion and indexed retrieval timestamps are distinct. Four Slurm compute nodes propagate 128 independent walkers per trial. Bands show walker standard errors, not total statistical or systematic uncertainty.",
     {
       1: { duration: 6500, transition: 0 },
       2: { duration: 20000, transition: 850 },
-      3: { duration: 8500, transition: 850 },
+      3: { duration: 12000, transition: 850 },
     },
   );
   add(
@@ -1259,8 +1332,6 @@
     "Same AFQMC payload throughout. Optimization removes inverse gates. Placement assigns physical sites; routing inserts SWAPs only where connectivity requires them. Native synthesis follows. Provider metadata is queried then modeled locally; all verification execution uses DDSIM, no hardware jobs. Fusion highlights identify accepted real before/after events, not every individual lowering.",
     {
       4: { duration: 6500, transition: 800 },
-      7: { duration: 2400, transition: 700 },
-      8: { duration: 2400, transition: 700 },
     },
   );
   add(
@@ -1290,7 +1361,7 @@
     "Structured Programs, All the Way Down",
     4,
     (s) => heading("Structured Programs, All the Way Down") + structureScene(s),
-    "Syndrome extraction keeps reset, feedback and loop structure in native QIR. The main QIR view retains the entry-point control flow with counted omissions of repeated native gate calls; detailed excerpts preserve original line numbers. Complete declarations and module flags remain in the downloadable evidence.",
+    "Syndrome extraction follows OpenQASM → QC → QCO → optimization → QC → QIR, without hardware mapping or native synthesis. The complete entry point retains reset, feedback and loops; excerpts preserve original line numbers. Declarations and module flags remain in the downloadable evidence.",
   );
   add(
     "execution-chapter",
@@ -1312,28 +1383,22 @@
     (s, t) =>
       heading("A Runtime for Structured Quantum Programs") +
       adaptiveRuntime(s, t ?? 1),
-    "Iterative QPE estimates phase 1/3 with 8 output bits and 4 logical qubits. Call, JIT and shot timestamps share one clock. This is instrumented serial adaptive sampling; the plot is accumulated from actual ordered shots.",
+    "Iterative QPE estimates phase 1/3 with 8 output bits and 4 logical qubits. Controlled-U powers remain counted loops. Four native QIR workers execute 8192 shots. Calls, JIT and actual 64-shot batch completions share one clock; histogram arrivals preserve returned shot identities. Instrumentation timings are not a throughput benchmark. The QCO branch-sharing sampler is a separate execution path.",
     { 1: { duration: 9500, transition: 700 } },
   );
   add(
     "features-chapter",
-    "06 · MQT Core",
-    "Built for the Quantum Software Ecosystem",
+    "System Software for Quantum Computing",
+    "Built for the Quantum Ecosystem",
     0,
-    () =>
-      separator(
-        "Built for the Quantum<br>Software Ecosystem",
-        "MQT Core",
-        "mqt",
-      ),
+    () => separator("Built for the Quantum<br>Ecosystem", "MQT Core", "mqt"),
   );
   add(
     "features",
-    "06 · MQT Core",
-    "Built for the Quantum Software Ecosystem",
+    "System Software for Quantum Computing",
+    "Built for the Quantum Ecosystem",
     5,
-    (s) =>
-      heading("Built for the Quantum Software Ecosystem") + featureOverview(s),
+    (s) => heading("Built for the Quantum Ecosystem") + featureOverview(s),
     "Highlight verified capabilities. OpenQASM support is broad but excludes subroutines, extern/calibration and general arrays. Qiskit2.5 integrates through the C API with Python for unsupported API areas. All exports and execution traces come from the captured build.",
   );
   add(

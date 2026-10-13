@@ -80,6 +80,7 @@ window.MQSF_CIRCUIT = (() => {
       reveal = Infinity,
       barrier = null,
       hotRegion = null,
+      fold = null,
     } = {},
   ) {
     if (!c)
@@ -112,20 +113,26 @@ window.MQSF_CIRCUIT = (() => {
       : Math.min(limit, maximum - windowColumn + 1);
     const structured = all.some((o) => o.region.length),
       nested = Math.max(0, ...all.map((o) => o.region.length));
+    // Fold only straight-line circuits; structured regions keep their visible scope.
+    const bandColumns =
+        full && fold && !structured ? Math.min(columns, fold) : columns,
+      bands = Math.ceil(columns / bandColumns),
+      band = (o) => Math.floor((o.column - windowColumn) / bandColumns);
     // Gate bodies never exceed their column; a full circuit expands its SVG rather than overlapping.
     const pitch = full ? 76 : Math.max(76, Math.min(102, 900 / columns));
-    const left = layout ? 250 : 130,
+    const left = structured ? (layout ? 250 : 130) : layout ? 140 : 85,
       first = left + 40;
-    const width = first + (columns - 1) * pitch + 55,
-      top = structured ? 100 + nested * 20 : 55,
-      dy = 72;
-    const height = Math.max(
-      280,
-      top + (c.qubits.length - 1) * dy + (structured ? 120 : 65),
-    );
+    const width = first + (bandColumns - 1) * pitch + 45,
+      top = structured ? 100 + nested * 20 : 35,
+      dy = structured ? 72 : 60;
+    const bandHeight = Math.max(
+        structured ? 280 : 240,
+        top + (c.qubits.length - 1) * dy + (structured ? 120 : 40),
+      ),
+      height = bands * bandHeight;
     const row = new Map(c.qubits.map((q, i) => [q.id, i])),
-      y = (q) => top + row.get(q) * dy;
-    const x = (o) => first + (o.column - windowColumn) * pitch;
+      y = (q, b = 0) => top + row.get(q) * dy + b * bandHeight;
+    const x = (o) => first + ((o.column - windowColumn) % bandColumns) * pitch;
     const txt = (xx, yy, t, size = 26, color = "#142b45", anchor = "middle") =>
       `<text x="${xx}" y="${yy}" font-size="${size}" fill="${color}" text-anchor="${anchor}">${esc(t)}</text>`;
     const ln = (x1, y1, x2, y2, color = "#2f70b8", w = 2) =>
@@ -152,7 +159,7 @@ window.MQSF_CIRCUIT = (() => {
     regions.forEach(({ first: a, last: b, r, depth, qubits }) => {
       const loop = ["for_loop", "while_loop"].includes(r.name);
       if (!loop && r.name !== "if_else") return;
-      const ys = [...qubits].filter((q) => row.has(q)).map(y);
+      const ys = [...qubits].filter((q) => row.has(q)).map((q) => y(q));
       if (!ys.length) return;
       const yy = loop ? top - 66 - depth * 18 : Math.min(...ys) - 30;
       const bottom = loop
@@ -182,25 +189,31 @@ window.MQSF_CIRCUIT = (() => {
       captions.push({ left: labelX, right: labelX + labelWidth, y: labelY });
       body += `<g data-morph="${key}-region-${r.id}" data-control-flow="${r.name}"><rect x="${a - pad}" y="${yy}" width="${b - a + 2 * pad}" height="${bottom - yy}" rx="10" fill="${loop ? "#eaf2fa" : "#e9f5f3"}" fill-opacity="${selected ? ".9" : ".45"}" stroke="${selected ? "#086f83" : loop ? "#87acd0" : "#55a194"}" stroke-width="${selected ? 4 : 2}" ${loop ? "" : 'stroke-dasharray="5 4"'}/>${txt(labelX, labelY, caption, 23, loop ? "#2f70b8" : "#087d92", "start")}${loop ? `<path d="M${b - 8} ${bottom + 11}H${a + 8}m10 -8l-10 8 10 8" fill="none" stroke="#6992bc" stroke-width="2"/>` : ""}</g>`;
     });
-    body += c.qubits
-      .map((q) => {
-        const logical =
-            layout && q.site != null ? layout.indexOf(q.site) : row.get(q.id),
-          physical = q.site ?? layout?.[logical] ?? q.id;
-        const wireLabel =
-          layout && logical >= 0
-            ? `<text x="${left - 20}" y="${y(q.id) + 8}" font-size="24" fill="#526d88" text-anchor="end" font-family="STIX Two Math,serif">q<tspan baseline-shift="sub" font-size="75%">${logical}</tspan><tspan baseline-shift="baseline"> ↦ ${physical}</tspan></text>`
-            : txt(
-                left - 18,
-                y(q.id) + 8,
-                String(q.label).replace(/^\$(.*)\$$/, "$1"),
-                24,
-                "#526d88",
-                "end",
-              );
-        return `<g data-morph="${key}-wire-${q.id}">${ln(left, y(q.id), width - 28, y(q.id), "#b6c9dc", 2)}${wireLabel}</g>`;
-      })
-      .join("");
+    body += Array.from({ length: bands }, (_, b) =>
+      c.qubits
+        .map((q) => {
+          const logical =
+              layout && q.site != null ? layout.indexOf(q.site) : row.get(q.id),
+            physical = q.site ?? layout?.[logical] ?? q.id;
+          const wireLabel =
+            layout && logical >= 0
+              ? `<text x="${left - 20}" y="${y(q.id, b) + 8}" font-size="24" fill="#526d88" text-anchor="end" font-family="STIX Two Math,serif">q<tspan baseline-shift="sub" font-size="75%">${logical}</tspan><tspan baseline-shift="baseline"> ↦ ${physical}</tspan></text>`
+              : txt(
+                  left - 18,
+                  y(q.id, b) + 8,
+                  String(q.label).replace(/^\$(.*)\$$/, "$1"),
+                  24,
+                  "#526d88",
+                  "end",
+                );
+          const right =
+            first +
+            (Math.min(bandColumns, columns - b * bandColumns) - 1) * pitch +
+            25;
+          return `<g data-morph="${key}-wire-${q.id}-${b}">${ln(left, y(q.id, b), right, y(q.id, b), "#b6c9dc", 2)}${wireLabel}${b < bands - 1 ? txt(right + 13, y(q.id, b) + 8, "›", 29, "#526d88") : ""}${b ? txt(left - 4, y(q.id, b) + 8, "›", 29, "#526d88") : ""}</g>`;
+        })
+        .join(""),
+    ).join("");
     if (barrier !== null) {
       const next = all[barrier];
       if (next) {
@@ -212,7 +225,7 @@ window.MQSF_CIRCUIT = (() => {
       feedback = new Set();
     operations.forEach((o) => {
       const xx = x(o),
-        ys = o.qubits.filter((q) => row.has(q)).map(y),
+        ys = o.qubits.filter((q) => row.has(q)).map((q) => y(q, band(o))),
         hot = highlighted.has(o.index);
       if (!ys.length) {
         if (o.name === "store" && o.region.some((r) => r.branch === 1)) {
@@ -307,12 +320,12 @@ window.MQSF_CIRCUIT = (() => {
             body += `<path data-morph="${key}-classical-${o.id}-${bit}" data-condition-bit="${bit}" data-feedback-to="${o.id}" d="M${m.x} ${m.y + 25}V${bend}H${bounds.first - 28}V${Math.min(...ys)}" fill="none" stroke="#087d92" stroke-width="2.5" opacity="${first ? 1 : 0}"/>`;
           });
         });
-      body += `<g data-morph="${key}-op-${o.id}" data-column="${o.column}" data-operation="${esc(o.name)}" transform="translate(${xx} 0)" class="${hot ? "gate-highlight" : ""}" opacity="${o.index < reveal ? 1 : 0}">${gate}<title>${esc(o.name)} ${esc((o.parameters || []).join(", "))}</title></g>`;
+      body += `<g data-morph="${key}-op-${o.id}" data-column="${o.column}" data-circuit-row="${band(o)}" data-operation="${esc(o.name)}" transform="translate(${xx} 0)" class="${hot ? "gate-highlight" : ""}" opacity="${o.index < reveal ? 1 : 0}">${gate}<title>${esc(o.name)} ${esc((o.parameters || []).join(", "))}</title></g>`;
     });
     if (!full && firstColumn + columns <= maximum)
       body += txt(width - 15, top + 8, "…", 30);
     if (label) body += txt(width / 2, height - 5, label, 23, "#5b7088");
-    return `<div class="circuit" data-op-count="${all.length}" data-first-column="${firstColumn}" data-left="${first}" data-right="${width - 28}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMid meet" role="img" aria-label="Captured program circuit">${body}</svg></div>`;
+    return `<div class="circuit" data-morph="circuit-${key}" data-op-count="${all.length}" data-fold-rows="${bands}" data-first-column="${firstColumn}" data-left="${first}" data-right="${width - 28}"><svg xmlns="http://www.w3.org/2000/svg" data-morph="${key}-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMid meet" role="img" aria-label="Captured program circuit${bands > 1 ? `, ${bands} rows read left to right, top to bottom` : ""}">${body}</svg></div>`;
   }
   return { flatten, schedule, render };
 })();

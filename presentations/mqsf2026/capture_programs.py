@@ -8,9 +8,9 @@
 
 """Capture real compiler stages for the offline MQSF presentation.
 
-Run with the checkout's installed native bindings and built mqt-cc. The compiler
-uses the bundled Emerald model plus explicitly recorded presentation capabilities;
-the result is intended for DDSIM, not submission to physical Emerald hardware.
+Run with the checkout's installed native bindings and built mqt-cc. Curated
+examples retain portable gates and control flow for DDSIM. The device walkthrough
+uses the separate target-capture entry point and the hardware pipeline below.
 """
 
 from __future__ import annotations
@@ -42,8 +42,8 @@ h data;
 for int round in [0:1] {
   reset flag;
   cx data, flag;
-  bit syndrome = measure flag;
-  if (syndrome) { x data[1]; }
+  bit s = measure flag;
+  if (s) { x data[1]; }
 }
 bit[2] result = measure data;
 """
@@ -84,9 +84,10 @@ def qpe_source(precision: int = 8) -> str:
         "x q[1]; x q[2]; x q[3];",
     ]
     for bit in range(precision):
-        residue = pow(2, precision - bit - 1, 9)
         lines.extend((f"// Phase bit {bit}: power 2^{precision - bit - 1}", "h q[0];"))
-        lines.extend(f"cp(2*pi*{residue}/9) q[0], q[{target}];" for target in range(1, 4))
+        lines.append(f"for int power in [1:{2 ** (precision - bit - 1)}] {{")
+        lines.extend(f"  cp(2*pi/9) q[0], q[{target}];" for target in range(1, 4))
+        lines.append("}")
         lines.extend(f"if (result[{previous}]) {{ p(-pi/{2 ** (bit - previous)}) q[0]; }}" for previous in range(bit))
         lines.extend(("h q[0];", f"result[{bit}] = measure q[0];", "reset q[0];"))
     return "\n".join(lines) + "\n"
@@ -590,29 +591,48 @@ def capture_variant(
     return variant
 
 
-def capture(compiler: Path, selected: str, timeout: int) -> dict[str, Any]:
+def capture_portable_variant(qc: QCProgram, *, unroll: bool) -> dict[str, Any]:
+    """Capture device-independent optimization and its portable exports.
+
+    Returns:
+        Exact QC, QCO, optimized QC, and export artifacts without target synthesis.
+    """
+    from mqt.core.mlir import QIRProfile  # ruff: ignore[import-outside-top-level]
+
+    stages = [program_stage("qc", "Import into QC", qc)]
+    qco = qc.to_qco(copy=True)
+    stages.append(program_stage("qco", "Value-based QCO", qco))
+    qco.run_pass_pipeline("mqt-qco-default")
+    stages.append(program_stage("optimized", "Device-independent optimization", qco))
+    if unroll:
+        qco.unroll_quantum_loops()
+        qco.cleanup()
+        stages.append(program_stage("unrolled", "Unroll bounded quantum loops", qco))
+    optimized_qc = qco.to_qc(copy=True)
+    stages.append(program_stage("qc-optimized", "Return to QC", optimized_qc))
+    return {
+        "id": "unrolled" if unroll else "structured",
+        "label": "Bounded loops unrolled" if unroll else "Preserve supported structure",
+        "stages": stages,
+        "exports": [
+            stage("qir-adaptive", "QIR Adaptive", "llvm", optimized_qc.to_qir(QIRProfile.ADAPTIVE, copy=True).llvm_ir),
+            stage("openqasm3", "OpenQASM 3", "qasm", optimized_qc.to_openqasm3().source),
+            stage("qiskit", "Qiskit circuit", "text", render_qiskit(optimized_qc.to_qiskit())),
+        ],
+        "layout": {"initial": [], "final": [], "swaps": []},
+    }
+
+
+def capture(compiler: Path, selected: str) -> dict[str, Any]:
     """Generate the selected benchmark cases from this checkout's native compiler.
 
     Returns:
         Presentation fixture data containing only captured compiler outputs.
     """
-    from mqt.core.mlir import CompilerTarget, QCProgram  # ruff: ignore[import-outside-top-level]
+    from mqt.core.mlir import QCProgram  # ruff: ignore[import-outside-top-level]
 
     model = json.loads((ROOT / "json/sc/iqm-emerald.json").read_text(encoding="utf-8"))
-    model["name"] = "IQM Emerald topology — MQSF demonstration"
-    model["operations"].append({"name": "reset", "numQubits": 1, "numParameters": 0})
-    previous_json = os.environ.get("MQT_CORE_QDMI_SC_CONFIG_JSON")
-    previous_file = os.environ.pop("MQT_CORE_QDMI_SC_CONFIG_FILE", None)
-    os.environ["MQT_CORE_QDMI_SC_CONFIG_JSON"] = json.dumps(model)
-    try:
-        target = CompilerTarget.from_device_id("mqt.sc.default")
-    finally:
-        if previous_json is None:
-            os.environ.pop("MQT_CORE_QDMI_SC_CONFIG_JSON", None)
-        else:
-            os.environ["MQT_CORE_QDMI_SC_CONFIG_JSON"] = previous_json
-        if previous_file is not None:
-            os.environ["MQT_CORE_QDMI_SC_CONFIG_FILE"] = previous_file
+    site_names = {site["qubit"]: site["name"] for site in model["qubitProperties"]["overrides"]}
     git = shutil.which("git")
     assert git is not None, "Capturing provenance requires Git"
     revision = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
@@ -625,24 +645,19 @@ def capture(compiler: Path, selected: str, timeout: int) -> dict[str, Any]:
         "provenance": {
             "core_revision": revision,
             "generated_at": datetime.now(UTC).isoformat(),
-            "patches": [
-                "Presentation-only Emerald reset operation; not verified on physical hardware.",
-                "Presentation-only Adaptive QIR control-flow and optional capabilities; executed with DDSIM.",
-            ],
+            "patches": [],
             "model_path": "json/sc/iqm-emerald.json",
             "model_sha256": hashlib.sha256((ROOT / "json/sc/iqm-emerald.json").read_bytes()).hexdigest(),
             "compiler_sha256": hashlib.sha256(compiler.read_bytes()).hexdigest(),
             "capture_script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-            "mapping": {"seed": 7, "trials": 1, "iterations": 0, "lookahead": 8, "search_memory_limit": 4194304},
-            "capabilities": list(CAPABILITIES),
-            "target_configuration": model,
+            "scenario_pipeline": ["OpenQASM", "QC", "QCO", "mqt-qco-default", "QC", "QIR Adaptive"],
         },
         "device": {
             "name": "IQM Emerald",
-            "label": "Emerald topology · R/CZ · presentation reset/control-flow override · DDSIM execution",
-            "native_gates": ["r", "cz", "measure", "reset (demo override)"],
-            "sites": [{"id": site.id, "name": site.name or str(site.id)} for site in target.sites],
-            "edges": [list(edge) for edge in target.couplings],
+            "label": "Emerald reference topology for the device walkthrough",
+            "native_gates": ["r", "cz", "measure"],
+            "sites": [{"id": site, "name": site_names.get(site, str(site))} for site in range(model["numQubits"])],
+            "edges": model["couplings"],
         },
         "scenarios": [],
     }
@@ -682,7 +697,7 @@ def capture(compiler: Path, selected: str, timeout: int) -> dict[str, Any]:
         }
         for unroll in (False, True) if identifier == "parity" else (False,):
             sys.stderr.write(f"Capturing {identifier}: {'unrolled' if unroll else 'structured'}\n")
-            variant = capture_variant(qc, target, model, compiler, unroll=unroll, timeout=timeout)
+            variant = capture_portable_variant(qc, unroll=unroll)
             source_stage = stage("source", "OpenQASM input", "qasm", source)
             source_stage["circuit"] = capture_circuit(qc.to_qiskit())
             variant["stages"].insert(0, source_stage)
@@ -701,9 +716,8 @@ def main() -> int:
     parser.add_argument("--compiler", type=Path, default=ROOT / "build/release-clang-ipo/mlir/tools/mqt-cc/mqt-cc")
     parser.add_argument("--output", type=Path, default=Path(__file__).parent / "captures/programs.json")
     parser.add_argument("--scenario", choices=("all", "parity", "qpe", "rus"), default="all")
-    parser.add_argument("--timeout", type=int, default=600)
     arguments = parser.parse_args()
-    data = capture(arguments.compiler.resolve(), arguments.scenario, arguments.timeout)
+    data = capture(arguments.compiler.resolve(), arguments.scenario)
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return int(

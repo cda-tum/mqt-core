@@ -358,7 +358,10 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
                             {"tau": 0, "step": 0, "walkers": [{"id": 0, "weight": 1, "energy": 2, "completed_ms": 4}]}
                         ],
                     },
-                    {"energy": [2], "frames": [{"tau": 0, "walkers": [{"id": 0, "weight": 1}]}]},
+                    {
+                        "energy": [2],
+                        "frames": [{"tau": 0, "step": 0, "walkers": [{"id": 0, "weight": 2, "completed_ms": 5}]}],
+                    },
                 ]
             },
         })
@@ -393,7 +396,7 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
                 "step_completed_ms": [3],
                 "frames": [{"tau": 0, "step": 0, "walkers": [{"id": 0, "weight": 1, "completed_ms": 4}]}],
             },
-            {"energy": [2]},
+            {"energy": [2], "frames": [{"tau": 0, "step": 0, "walkers": [{"id": 0, "weight": 2, "completed_ms": 5}]}]},
         ]
         first, second = packaged["targets"]
         assert first["compilation"]["stages"][0]["code"] == data["application"]["representative_source"]["code"]

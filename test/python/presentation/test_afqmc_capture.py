@@ -212,6 +212,16 @@ def test_committed_afqmc_batch_trace_points_into_captured_client_source() -> Non
     application = json.loads(gzip.decompress(capture_path.read_bytes()))["application"]
     execution = application["execution"]
     preparation = execution["preparation"]
+    preprocessing = execution["preprocessing"]
+    assert [phase["id"] for phase in preprocessing] == ["bases", "givens", "validation", "pennylane"]
+    assert preprocessing[0]["time_ms"] == 0
+    assert all(phase["duration_ms"] > 0 for phase in preprocessing)
+    for first, second in pairwise(preprocessing):
+        assert first["time_ms"] + first["duration_ms"] == pytest.approx(second["time_ms"], abs=1e-9)
+    assert preprocessing[-1]["time_ms"] + preprocessing[-1]["duration_ms"] <= preparation[0]["time_ms"]
+    assert CAPTURE.__file__ is not None
+    source = {line.strip() for line in Path(CAPTURE.__file__).read_text(encoding="utf-8").splitlines()}
+    assert all(phase["code"] and set(phase["code"].splitlines()) <= source for phase in preprocessing)
     compiling = next(event["time_ms"] for event in execution["lifecycle"] if event["state"] == "compiling")
     assert len(preparation) == len(application["snapshots"])
     for index, (event, snapshot) in enumerate(zip(preparation, application["snapshots"], strict=True)):
