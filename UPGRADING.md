@@ -8,9 +8,9 @@ of changes including minor and patch releases, please refer to the
 
 ### Compilation options and device targets
 
-When compiling or submitting source, move `enable_timing` and
-`enable_statistics` into a `CompilationOptions` object. Direct program
-compilation and pass pipelines use the same options:
+When compiling programs, move `enable_timing` and `enable_statistics` into a
+`CompilationOptions` object. Direct program compilation and pass pipelines use
+the same options:
 
 ```python
 from mqt.core.mlir import CompilationOptions, compile_program
@@ -31,23 +31,16 @@ describes these requirements and the mapping options.
 ### Quantum program contracts
 
 OpenQASM import no longer inserts runtime assertions. Validate runtime inputs
-before execution: classical indices must stay in bounds after negative-index
-wrapping, range steps must be nonzero, and integer arithmetic exponents must be
-nonnegative. Integer quantum-power exponents must be exactly representable as a
-64-bit floating-point value. Static diagnostics remain, but invalid runtime
-values have no guaranteed result or diagnostic. OpenQASM and QIR export reject
-explicit `cf.assert` operations. See the
+against the preconditions in the
 [OpenQASM guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/OpenQASM.html)
-for the supported inputs.
+before execution. Invalid values have no guaranteed result or diagnostic.
+OpenQASM and QIR export reject explicit `cf.assert` operations.
 
-Quantum helpers and structured regions must return quantum values in the order
-of their inputs. Return extracted qubits to their original register slots and
-carry complete registers across region and function boundaries. Use SWAP gates
-to exchange states instead of permuting result handles. Runtime quantum indices
-must stay in bounds. Quantum operands of the same operation must be disjoint.
-The
+Quantum helpers and structured regions must return quantum values in input
+order. Use SWAP gates to exchange states instead of permuting result handles.
+See the
 [quantum resource contract](https://mqt.readthedocs.io/projects/core/en/latest/mlir/index.html#quantum-resource-contract)
-explains the rules for program builders.
+when building programs.
 
 QC gate totals and single-qubit counts now include measurements and resets.
 Update checks that assumed these counts covered only unitary operations.

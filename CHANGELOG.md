@@ -15,8 +15,8 @@ _If you are upgrading: please see [`UPGRADING.md`](UPGRADING.md#410)._
 MQT Core 4.1 adds program inspection and parameter binding, broader device
 compilation, native multi-program execution, and new structured benchmarks.
 Performance work reduces compiler overhead, DD allocations, and result copies.
-It parallelizes eligible adaptive sampling and optimizes release builds and
-wheels.
+The release parallelizes eligible adaptive sampling and optimizes release builds
+and wheels.
 
 ⚠️ **Performance measurements pending:** add the final v4.0.0-to-v4.1.0 figures
 for compilation, native gate count, simulation, memory, wheel size, and build
@@ -26,9 +26,10 @@ time before the release. ⚠️
 
 #### Compiler APIs and representations
 
-- ✨ Add QC/QCO resource inspection, gate and operation histograms, and native
-  partial binding of named floating-point parameters. ([#2260], [#2660])
-  ([**@denialhaag**], [**@simon1hofmann**], [**@burgholzer**])
+- ✨ Add QC/QCO resource inspection with gate and operation histograms.
+  ([#2260]) ([**@denialhaag**], [**@simon1hofmann**], [**@burgholzer**])
+- ✨ Add native partial binding of named floating-point parameters. ([#2660])
+  ([**@simon1hofmann**], [**@burgholzer**])
 
 #### Compilation for devices
 
@@ -83,13 +84,17 @@ time before the release. ⚠️
 
 #### Compiler APIs and representations
 
-- ♻️ Adopt `CompilationOptions`, LLVM results for fallible C++ Program APIs, and
-  shorter custom QCO assembly. ([#2551], [#2733], [#2738])
-  ([**@simon1hofmann**], [**@burgholzer**])
-- ♻️ Include measurements and resets in QC gate counts and require positional
-  quantum results. Stop inserting OpenQASM runtime assertions and require caller
-  validation. ([#2260], [#2546], [#2743]) ([**@denialhaag**], [**@burgholzer**],
-  [**@simon1hofmann**])
+- ♻️ Adopt `CompilationOptions` for program compilation and pass pipelines.
+  ([#2551]) ([**@simon1hofmann**], [**@burgholzer**])
+- ♻️ Use LLVM results for fallible C++ Program APIs and benchmark generation.
+  ([#2733]) ([**@burgholzer**])
+- ♻️ Shorten custom QCO assembly. ([#2738]) ([**@burgholzer**])
+- ♻️ Include measurements and resets in QC gate counts. ([#2260])
+  ([**@denialhaag**], [**@simon1hofmann**], [**@burgholzer**])
+- ♻️ Require quantum results in input order in functions and structured regions.
+  ([#2546], [#2743]) ([**@burgholzer**], [**@simon1hofmann**])
+- ♻️ Stop inserting OpenQASM runtime assertions and require caller validation.
+  ([#2546]) ([**@burgholzer**], [**@simon1hofmann**])
 - ⚡ Reduce conversion and pipeline verification overhead, share compiler
   workers, and compute benchmark phases at runtime. ([#2647], [#2654], [#2687],
   [#2690], [#2695], [#2697], [#2698], [#2740]) ([**@simon1hofmann**],
