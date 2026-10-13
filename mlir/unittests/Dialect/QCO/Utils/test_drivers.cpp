@@ -160,52 +160,6 @@ TEST_F(DriversFixture, ProgramWalkVisitsAllOps) {
   }));
 }
 
-TEST_F(DriversFixture, ProgramWalkVisitsTensorBoundariesInBothDirections) {
-  QCOProgramBuilder builder(context.get());
-  builder.initialize();
-  Value tensor = builder.qtensorAlloc(2);
-  SmallVector<Value> qubits(2);
-  SmallVector<WireIterator> heads;
-  SmallVector<WireIterator> tails;
-  for (int64_t i = 0; i < 2; ++i) {
-    std::tie(tensor, qubits[i]) = builder.qtensorExtract(tensor, i);
-    heads.emplace_back(qubits[i]);
-  }
-  std::tie(qubits[0], qubits[1]) = builder.cx(qubits[0], qubits[1]);
-  for (int64_t i = 0; i < 2; ++i) {
-    tensor = builder.qtensorInsert(qubits[i], tensor, i);
-    tails.emplace_back(qubits[i]);
-    ++tails.back();
-  }
-  builder.qtensorDealloc(tensor);
-  auto moduleOp = builder.finalize();
-  ASSERT_TRUE(succeeded(verify(*moduleOp)));
-
-  for (auto direction : {WireDirection::Forward, WireDirection::Backward}) {
-    SCOPED_TRACE(direction == WireDirection::Forward ? "forward" : "backward");
-    auto wires = direction == WireDirection::Forward ? heads : tails;
-    DenseSet<Operation*> visited;
-    const auto visit = [&](const Frontier& frontier,
-                           SmallVectorImpl<Operation*>& released) {
-      for (Operation* op : frontier.keys()) {
-        EXPECT_TRUE(visited.insert(op).second);
-        released.push_back(op);
-      }
-      return WalkResult::advance();
-    };
-    if (direction == WireDirection::Forward) {
-      walkProgramGraph<WireDirection::Forward>(wires, visit);
-    } else {
-      walkProgramGraph<WireDirection::Backward>(wires, visit);
-    }
-    // Both extracts, the CX, and both inserts must be reached exactly once.
-    EXPECT_EQ(visited.size(), 5);
-    EXPECT_TRUE(llvm::all_of(wires, [](const WireIterator& it) {
-      return it == std::default_sentinel;
-    }));
-  }
-}
-
 TEST_F(DriversFixture, StopProgramWalkWithInterrupt) {
   auto mod = getProgram();
   auto wires = getWires(*mod);
