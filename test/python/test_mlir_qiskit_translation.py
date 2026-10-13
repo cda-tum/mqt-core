@@ -572,6 +572,83 @@ measure q[0] -> c[1];
     ] == [(1, 0), (0, 1)]
 
 
+def test_region_local_measurement_bits_round_trip() -> None:
+    """Keep loop-local syndrome storage usable in circuit and QASM exports."""
+    program = QCProgram.from_openqasm_str("""OPENQASM 3.1;
+include "stdgates.inc";
+qubit[2] data;
+qubit flag;
+x data[0];
+for int round in [0:1] {
+  reset flag;
+  cx data, flag;
+  bit syndrome = measure flag;
+  if (syndrome) { x data[1]; }
+}
+bit[2] result = measure data;
+""")
+    circuit = program.to_qiskit()
+    assert circuit.count_ops()["for_loop"] == 1
+    assert (
+        next(op.operation.blocks[0] for op in circuit.data if op.operation.name == "for_loop").count_ops()["measure"]
+        == 1
+    )
+    restored = QCProgram.from_qiskit(circuit)
+    assert all(key.startswith("11") for key in sample(restored, shots=8, seed=1))
+    emitted = program.to_openqasm3().source
+    assert emitted.index("for ") < emitted.index("bit[1]")
+    assert sample(QCProgram.from_openqasm_str(emitted), shots=8, seed=1) == {"11": 8}
+
+
+@pytest.mark.parametrize("initialization", ["zero", "undefined"])
+def test_local_bit_initialization_on_loop_reentry(initialization: str) -> None:
+    """Reuse circuit storage without carrying local bit values into the next iteration."""
+    program = _single_qubit_program(
+        [
+            "%classical = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>",
+            "%zero = arith.constant 0 : index",
+            "%one = arith.constant 1 : index",
+            "%two = arith.constant 2 : index",
+            "%true = arith.constant true",
+            "scf.for %i = %zero to %two step %one {",
+            f"  %local = cbit.alloc(#cbit.init<{initialization}>) : !cbit.reg<1>",
+            "  %value = cbit.load %local[%zero] : !cbit.reg<1>",
+            "  scf.if %value { qc.x %q : !qc.qubit }",
+            "  cbit.store %true, %local[%zero] : !cbit.reg<1>",
+            "}",
+            "%result = qc.measure %q : !qc.qubit -> i1",
+            "cbit.store %result, %classical[%zero] : !cbit.reg<1>",
+        ],
+        returns_classical=True,
+    )
+    if initialization == "undefined":
+        with pytest.raises(RuntimeError, match="undefined classical bit"):
+            program.to_qiskit()
+        return
+    circuit = program.to_qiskit()
+    assert all(key.startswith("0") for key in sample(QCProgram.from_qiskit(circuit), shots=8, seed=1))
+    assert sample(QCProgram.from_openqasm_str(program.to_openqasm3().source), shots=8, seed=1) == {"0": 8}
+
+
+def test_while_local_bits_import_and_export() -> None:
+    """Declare measurement bits while the SCF while region is still being built."""
+    program = QCProgram.from_openqasm_str("""OPENQASM 3.1;
+include "stdgates.inc";
+qubit q;
+bit done = 0;
+while (!done) {
+  x q;
+  bit local = measure q;
+  if (local) { done = 1; }
+}
+bit result = measure q;
+""")
+    circuit = program.to_qiskit()
+    assert circuit.count_ops()["while_loop"] == 1
+    assert all(key.startswith("11") for key in sample(QCProgram.from_qiskit(circuit), shots=8, seed=1))
+    assert sample(QCProgram.from_openqasm_str(program.to_openqasm3().source), shots=8, seed=1) == {"11": 8}
+
+
 @pytest.mark.parametrize("late_value", ["false", "true"])
 def test_flat_export_preserves_classical_store_order(late_value: str) -> None:
     """Preserve constant CBit stores around quantum work."""
@@ -4788,3 +4865,111 @@ def test_native_compilation_rejects_imported_qiskit_layout() -> None:
     with pytest.raises(RuntimeError, match="discard existing layout metadata"):
         program.compile_for_target(_test_target_environment(target))
     assert program.to_qiskit().layout is not None
+
+
+@pytest.mark.parametrize("ir_round_trip", [False, True])
+def test_scalar_and_local_bit_source_names_are_optional(*, ir_round_trip: bool) -> None:
+    """Export and execute scoped storage with or without cosmetic source names."""
+    program = QCProgram.from_openqasm_str("""OPENQASM 3.1;
+include "stdgates.inc";
+qubit flag;
+bit result;
+for int i in [0:1] {
+  bit syndrome;
+  h flag;
+  syndrome = measure flag;
+  if (syndrome) { x flag; }
+}
+result = measure flag;
+""")
+    if ir_round_trip:
+        program = QCProgram.from_mlir_str(program.ir)
+    restored = program.to_qiskit()
+    assert restored.cregs[-1].name == "result"
+    assert all(key.startswith("0") for key in sample(QCProgram.from_qiskit(restored), shots=8, seed=1))
+    emitted = program.to_openqasm3().source
+    if not ir_round_trip:
+        assert [register.name for register in restored.qregs] == ["flag"]
+        assert "syndrome" in [register.name for register in restored.cregs]
+        assert "qubit flag;" in emitted
+        assert "bit[1] syndrome;" in emitted
+    assert "output bit[1] result;" in emitted
+    assert sample(QCProgram.from_openqasm_str(emitted), shots=8, seed=1) == {"0": 8}
+
+
+@pytest.mark.parametrize("local_name", ["syndrome", "flag"])
+def test_local_source_name_does_not_steal_output_register_name(local_name: str) -> None:
+    """A scoped debug label must yield to an explicitly named output register."""
+    program = QCProgram.from_openqasm_str(
+        """OPENQASM 3.1;
+qubit flag;
+bit syndrome;
+for int i in [0:1] {
+  bit LOCAL = 0;
+}
+syndrome = measure flag;
+""".replace("LOCAL", local_name)
+    )
+    circuit = program.to_qiskit()
+    assert [register.name for register in circuit.cregs] == ["_mqt_c0", "syndrome"]
+
+
+@pytest.mark.parametrize("hint", ["same", "", "q", "result", "theta"])
+def test_scalar_name_hints_yield_to_registers_and_parameters(hint: str) -> None:
+    """Debug names must not reject valid IR or replace declared resource names."""
+    source = QCProgram.from_openqasm_str("""OPENQASM 3.1;
+include "stdgates.inc";
+input float theta;
+qubit a;
+qubit b;
+qubit[1] q;
+bit[3] result;
+rx(theta) a;
+result[0] = measure a;
+result[1] = measure b;
+result[2] = measure q[0];
+""")
+    program = QCProgram.from_mlir_str(source.ir.replace("qc.alloc : !qc.qubit", f'qc.alloc : !qc.qubit loc("{hint}")'))
+    circuit = program.to_qiskit()
+    names = [register.name for register in [*circuit.qregs, *circuit.cregs]]
+    assert circuit.num_qubits == circuit.num_clbits == 3
+    assert len(names) == len(set(names))
+    assert all(names)
+    assert "q" in [register.name for register in circuit.qregs]
+    assert [register.name for register in circuit.cregs] == ["result"]
+    assert "theta" not in names
+    assert [parameter.name for parameter in circuit.parameters] == ["theta"]
+    emitted = program.to_openqasm3().source
+    assert "qubit[1] q;" in emitted
+    assert "output bit[3] result;" in emitted
+    assert QCProgram.from_openqasm_str(emitted).to_qiskit().num_qubits == 3
+
+
+def test_empty_local_bit_name_hint_falls_back_to_generated_name() -> None:
+    """An empty debug location is not a classical register declaration name."""
+    source = QCProgram.from_openqasm_str("""OPENQASM 3.1;
+qubit flag;
+bit result;
+for int i in [0:1] {
+  bit scratch = 0;
+}
+result = measure flag;
+""")
+    ir = "\n".join(
+        line + ' loc("")' if "cbit.alloc" in line and "mqt.register_name" not in line else line
+        for line in source.ir.splitlines()
+    )
+    circuit = QCProgram.from_mlir_str(ir).to_qiskit()
+    assert len(circuit.cregs) == 2
+    assert all(register.name for register in circuit.cregs)
+    assert circuit.cregs[-1].name == "result"
+
+
+def test_empty_named_qubit_register_export_is_rejected() -> None:
+    """Diagnose an empty register before arranging named and anonymous qubits."""
+    program = _single_qubit_program([
+        '%empty = memref.alloc() {mqt.register_name = "empty"} : memref<0x!qc.qubit>',
+        "memref.dealloc %empty : memref<0x!qc.qubit>",
+    ])
+    with pytest.raises(RuntimeError, match="does not support empty quantum registers"):
+        program.to_qiskit()
