@@ -498,7 +498,7 @@ def program_stage(
     """
     artifact = stage(identifier, label, "mlir", program.ir)
     artifact["circuit"] = capture_circuit(
-        program.to_qiskit(target=target), [site.id for site in target.sites] if target else None
+        program.to_qiskit(target=target, copy=True), [site.id for site in target.sites] if target else None
     )
     if identifier in {"qc", "qco"}:
         display = program.copy()
@@ -745,7 +745,7 @@ def capture_portable_variant(qc: QCProgram, *, unroll: bool, source_diagram: boo
     optimized_qc = qco.to_qc(copy=True)
     stages.append(captured_stage("qc-optimized", "Return to QC", optimized_qc))
     try:
-        qiskit = stage("qiskit", "Qiskit circuit", "text", render_qiskit(optimized_qc.to_qiskit()))
+        qiskit = stage("qiskit", "Qiskit circuit", "text", render_qiskit(optimized_qc.to_qiskit(copy=True)))
     except RuntimeError as error:
         if not source_diagram:
             raise
@@ -840,7 +840,7 @@ def capture(compiler: Path, selected: str) -> dict[str, Any]:
             variant = capture_portable_variant(qc, unroll=unroll, source_diagram=identifier == "qpe")
             source_stage = stage("source", "OpenQASM input", "qasm", source)
             source_stage["circuit"] = (
-                capture_openqasm_circuit(source) if identifier == "qpe" else capture_circuit(qc.to_qiskit())
+                capture_openqasm_circuit(source) if identifier == "qpe" else capture_circuit(qc.to_qiskit(copy=True))
             )
             variant["stages"].insert(0, source_stage)
             scenario["variants"].append(variant)

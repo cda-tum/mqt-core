@@ -115,7 +115,7 @@ def test_ionq_derived_target_synthesizes_only_native_pulses(monkeypatch: pytest.
     )
     target = derive(snapshot)
     assert target.couplings == snapshot.couplings
-    assert target.synthesis_basis.single_qubit == CompilerTarget.SingleQubitBasis.R_FIXED
+    assert target.synthesis_basis.single_qubit == CompilerTarget.SingleQubitBasis.GPI
     source = QuantumCircuit(2)
     source.u(0.37, 0.42, -0.31, 0)
     source.cx(0, 1)

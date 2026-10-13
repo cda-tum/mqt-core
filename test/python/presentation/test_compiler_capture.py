@@ -26,7 +26,7 @@ def test_compact_syndrome_source_preserves_data_and_ancilla_roles() -> None:
     """Register slices must prepare only data and broadcast both parity CXs."""
     source = runpy.run_path(str(SCRIPT))["PARITY_SOURCE"]
     program = QCProgram.from_openqasm_str(source)
-    circuit = program.to_qiskit()
+    circuit = program.to_qiskit(copy=True)
     hadamards = [circuit.find_bit(op.qubits[0]).index for op in circuit.data if op.operation.name == "h"]
     assert hadamards == [0, 1]
     loop = next(op.operation.blocks[0] for op in circuit.data if op.operation.name == "for_loop")
@@ -210,7 +210,7 @@ def test_parity_example_retains_loop_feedback_and_even_data_parity() -> None:
     program.cleanup()
     assert "scf.for" in program.ir
     assert "qco.if" in program.ir
-    circuit = helpers["capture_circuit"](program.to_qiskit())
+    circuit = helpers["capture_circuit"](program.to_qiskit(copy=True))
     loop = next(op for op in circuit["operations"] if op["name"] == "for_loop")
     branch = next(op for op in loop["blocks"][0] if op["name"] == "if_else")
     assert branch["condition_bits"] == [0]

@@ -107,7 +107,7 @@ def optimization() -> dict[str, Any]:
 
     program = QCProgram.from_openqasm_str(OPTIMIZATION_SOURCE).to_qco()
     before = program_stage("before", "Before canonicalization", program)
-    original = Operator(program.to_qiskit())
+    original = Operator(program.to_qiskit(copy=True))
     program.merge_single_qubit_rotation_gates()
     program.cleanup()
     after = program_stage("after", "After canonicalization and rotation merging", program)
@@ -140,7 +140,7 @@ def syntax_checks() -> dict[str, Any]:
 
     program = QCProgram.from_openqasm_str(PARITY_SOURCE)
     qir = program.copy().to_qir(QIRProfile.ADAPTIVE).llvm_ir
-    circuit = program.to_qiskit()
+    circuit = program.to_qiskit(copy=True)
     emitted = program.to_openqasm3().source
     QCProgram.from_openqasm_str(emitted).to_qiskit()
     assert circuit.count_ops()["h"] == 2

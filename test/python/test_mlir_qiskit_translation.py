@@ -587,7 +587,7 @@ for int round in [0:1] {
 }
 bit[2] result = measure data;
 """)
-    circuit = program.to_qiskit()
+    circuit = program.to_qiskit(copy=True)
     assert circuit.count_ops()["for_loop"] == 1
     assert (
         next(op.operation.blocks[0] for op in circuit.data if op.operation.name == "for_loop").count_ops()["measure"]
@@ -625,7 +625,7 @@ def test_local_bit_initialization_on_loop_reentry(initialization: str) -> None:
         with pytest.raises(RuntimeError, match="undefined classical bit"):
             program.to_qiskit()
         return
-    circuit = program.to_qiskit()
+    circuit = program.to_qiskit(copy=True)
     assert all(key.startswith("0") for key in sample(QCProgram.from_qiskit(circuit), shots=8, seed=1))
     assert sample(QCProgram.from_openqasm_str(program.to_openqasm3().source), shots=8, seed=1) == {"0": 8}
 
@@ -643,7 +643,7 @@ while (!done) {
 }
 bit result = measure q;
 """)
-    circuit = program.to_qiskit()
+    circuit = program.to_qiskit(copy=True)
     assert circuit.count_ops()["while_loop"] == 1
     assert all(key.startswith("11") for key in sample(QCProgram.from_qiskit(circuit), shots=8, seed=1))
     assert sample(QCProgram.from_openqasm_str(program.to_openqasm3().source), shots=8, seed=1) == {"11": 8}
@@ -4884,7 +4884,7 @@ result = measure flag;
 """)
     if ir_round_trip:
         program = QCProgram.from_mlir_str(program.ir)
-    restored = program.to_qiskit()
+    restored = program.to_qiskit(copy=True)
     assert restored.cregs[-1].name == "result"
     assert all(key.startswith("0") for key in sample(QCProgram.from_qiskit(restored), shots=8, seed=1))
     emitted = program.to_openqasm3().source
@@ -4930,7 +4930,7 @@ result[1] = measure b;
 result[2] = measure q[0];
 """)
     program = QCProgram.from_mlir_str(source.ir.replace("qc.alloc : !qc.qubit", f'qc.alloc : !qc.qubit loc("{hint}")'))
-    circuit = program.to_qiskit()
+    circuit = program.to_qiskit(copy=True)
     names = [register.name for register in [*circuit.qregs, *circuit.cregs]]
     assert circuit.num_qubits == circuit.num_clbits == 3
     assert len(names) == len(set(names))
