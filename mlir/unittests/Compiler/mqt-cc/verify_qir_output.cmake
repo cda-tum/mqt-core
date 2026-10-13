@@ -71,15 +71,15 @@ set(text_payload_specification
 )
 run_command_expect_failure(
   "mqt-cc target without payload specification"
-  "--qdmi-device and --payload-spec must be provided together" "${MQT_CC}" "${INPUT_FILE}"
-  "--qdmi-device=mqt.sc.iqm.garnet")
+  "--qdmi-device or --target and --payload-spec must be provided together" "${MQT_CC}"
+  "${INPUT_FILE}" "--qdmi-device=mqt.sc.iqm.garnet")
 run_command_expect_failure(
   "mqt-cc invalid payload specification"
   "--payload-spec must be a valid #mqt.payload_spec attribute" "${MQT_CC}" "${INPUT_FILE}"
   "--qdmi-device=mqt.sc.iqm.garnet" "--payload-spec=#mqt.payload_spec<>")
 run_command_expect_failure(
   "mqt-cc target with explicit output"
-  "Only --emit=qco-optimized can be combined with --qdmi-device"
+  "Only --emit=qco-optimized can be combined with target compilation"
   "${MQT_CC}"
   "${INPUT_FILE}"
   "--qdmi-device=mqt.sc.iqm.garnet"

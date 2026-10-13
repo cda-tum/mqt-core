@@ -17,6 +17,7 @@
 #include "mqt/Compiler/QDMIAdapter.h"
 #include "mqt/Compiler/Target.h"
 #include "mqt/Compiler/TargetEnvironment.h"
+#include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
 #include "mqt/bench/Generate.h"
@@ -1284,6 +1285,16 @@ Constants use absolute tolerance 1e-15 without angle wrapping.)pb")
           },
           "name"_a, "sites"_a, nb::kw_only(), "connectivity"_a,
           "native_operations"_a, "duration_unit"_a = nb::none())
+      .def(
+          "__str__",
+          [](const mlir::CompilerTarget& target) {
+            auto context = mlir::createCompilerContext();
+            std::string result;
+            llvm::raw_string_ostream stream(result);
+            stream << target.materialize(*context);
+            return result;
+          },
+          "Serialize the target as a typed MLIR attribute.")
       .def_static(
           "from_device",
           [](const qdmi::Device& device) {

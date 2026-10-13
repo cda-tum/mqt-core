@@ -162,6 +162,22 @@ mapped = compile_program(
 print(mapped.ir)
 ```
 
+The CLI also accepts a saved target as a typed MLIR attribute. Serialize a
+Python target with `str(target)`, or pass the attribute directly:
+
+```console
+mqt-cc input.qasm \
+  '--target=#mqt.compilation_target<sites = [<id = 0>, <id = 1>], connectivity = all_to_all, couplings = [], native_operations = unrestricted, operations = []>' \
+  '--payload-spec=#mqt.payload_spec<format = <id = "openqasm", version = "3.1.0", profile = "", encoding = text>, capabilities = [], optional_capabilities_known = false>' \
+  -o compiled.qasm
+```
+
+`--target` requires `--payload-spec` and is mutually exclusive with
+`--qdmi-device`. It uses the same mapping, synthesis, and output selection as
+QDMI target compilation, without loading a device. Add `--emit=qco-optimized` to
+inspect the mapped program. A saved target records capabilities at capture time;
+it does not query current device availability or submit a job.
+
 Use `CompilerTarget.Connectivity.all_to_all()` for an all-to-all target. An
 empty `CompilerTarget.NativeOperations([])` reports that no quantum operation is
 native. It can be used with passes that need only topology, but target
