@@ -8,6 +8,7 @@
  * Licensed under the MIT License
  */
 
+#include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
@@ -33,6 +34,8 @@
 #include "llvm/ADT/StringRef.h"
 
 #include <numbers>
+#include <string>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::qco;
@@ -44,7 +47,8 @@ protected:
   MLIRContext context_;
 
   void SetUp() override {
-    context_.loadDialect<QCODialect, arith::ArithDialect, func::FuncDialect>();
+    context_.loadDialect<QCODialect, mlir::mqt::MQTDialect, arith::ArithDialect,
+                         func::FuncDialect>();
   }
 
   OwningOpRef<ModuleOp> canonicalize(StringRef source) {
@@ -63,6 +67,201 @@ protected:
     return moduleOp;
   }
 };
+
+TEST_F(QCOModifierCanonicalizationTest, AdjacentControlledInverseGatesCancel) {
+  for (const auto& [first, second] : {
+           std::pair{"x", "x"},
+           {"h", "h"},
+           {"y", "y"},
+           {"z", "z"},
+           {"s", "sdg"},
+           {"sdg", "s"},
+           {"t", "tdg"},
+           {"tdg", "t"},
+           {"sx", "sxdg"},
+           {"sxdg", "sx"},
+       }) {
+    SCOPED_TRACE(first);
+    const auto source = std::string(R"mlir(
+      module {
+        func.func @test(%a: !qco.qubit, %b: !qco.qubit, %q: !qco.qubit)
+            -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+          %a1, %b1, %q1 = qco.ctrl(%a, %b) targets(%t = %q) {
+            %v = qco.)mlir") +
+                        first + R"mlir( %t : !qco.qubit
+            qco.yield %v : !qco.qubit
+          } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})
+          %a2, %b2, %q2 = qco.ctrl(%a1, %b1) targets(%t = %q1) {
+            %v = qco.)mlir" +
+                        second + R"mlir( %t : !qco.qubit
+            qco.yield %v : !qco.qubit
+          } : ({!qco.qubit, !qco.qubit}, {!qco.qubit})
+          return %a2, %b2, %q2 : !qco.qubit, !qco.qubit, !qco.qubit
+        }
+      })mlir";
+    auto original = parseSourceString<ModuleOp>(source, &context_);
+    auto result = canonicalize(source);
+    ASSERT_TRUE(original);
+    ASSERT_TRUE(result);
+    auto function = result->lookupSymbol<func::FuncOp>("test");
+    EXPECT_TRUE(function.getBody().getOps<CtrlOp>().empty());
+    ::mqt::test::expectFullUnitaryEqual(*original, *result, 3);
+  }
+}
+
+TEST_F(QCOModifierCanonicalizationTest,
+       AdjacentControlledRotationsPreserveRelativePhase) {
+  for (const auto* gate : {"rx", "ry", "rz", "p"}) {
+    SCOPED_TRACE(gate);
+    const auto source = std::string(R"mlir(
+      module {
+        func.func @test(%c: !qco.qubit, %q: !qco.qubit)
+            -> (!qco.qubit, !qco.qubit) {
+          %angle = arith.constant 3.141592653589793 : f64
+          %c1, %q1 = qco.ctrl(%c) targets(%t = %q) {
+            %v = qco.)mlir") +
+                        gate + R"mlir((%angle) %t : !qco.qubit
+            qco.yield %v : !qco.qubit
+          } : ({!qco.qubit}, {!qco.qubit})
+          %c2, %q2 = qco.ctrl(%c1) targets(%t = %q1) {
+            %v = qco.)mlir" +
+                        gate + R"mlir((%angle) %t : !qco.qubit
+            qco.yield %v : !qco.qubit
+          } : ({!qco.qubit}, {!qco.qubit})
+          return %c2, %q2 : !qco.qubit, !qco.qubit
+        }
+      })mlir";
+    auto original = parseSourceString<ModuleOp>(source, &context_);
+    auto result = canonicalize(source);
+    ASSERT_TRUE(original);
+    ASSERT_TRUE(result);
+    auto function = result->lookupSymbol<func::FuncOp>("test");
+    EXPECT_LE(llvm::range_size(function.getBody().getOps<CtrlOp>()), 1);
+    ::mqt::test::expectFullUnitaryEqual(*original, *result, 2);
+  }
+}
+
+TEST_F(QCOModifierCanonicalizationTest, DistinctControlledAxesRemainSeparate) {
+  auto moduleOp = canonicalize(R"mlir(
+    module {
+      func.func @test(%c: !qco.qubit, %q: !qco.qubit)
+          -> (!qco.qubit, !qco.qubit) {
+        %c1, %q1 = qco.ctrl(%c) targets(%t = %q) {
+          %v = qco.x %t : !qco.qubit
+          qco.yield %v : !qco.qubit
+        } : ({!qco.qubit}, {!qco.qubit})
+        %c2, %q2 = qco.ctrl(%c1) targets(%t = %q1) {
+          %v = qco.z %t : !qco.qubit
+          qco.yield %v : !qco.qubit
+        } : ({!qco.qubit}, {!qco.qubit})
+        return %c2, %q2 : !qco.qubit, !qco.qubit
+      }
+    })mlir");
+  ASSERT_TRUE(moduleOp);
+  auto function = moduleOp->lookupSymbol<func::FuncOp>("test");
+  EXPECT_EQ(llvm::range_size(function.getBody().getOps<CtrlOp>()), 2);
+}
+
+TEST_F(QCOModifierCanonicalizationTest, AdjacentControlledTwoTargetGates) {
+  for (const auto* gate : {
+           "swap",
+           "ecr",
+           "rxx(%angle)",
+           "ryy(%angle)",
+           "rzz(%angle)",
+           "rzx(%angle)",
+       }) {
+    SCOPED_TRACE(gate);
+    const auto source = std::string(R"mlir(
+      module {
+        func.func @test(%c: !qco.qubit, %a: !qco.qubit, %b: !qco.qubit)
+            -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+          %angle = arith.constant 3.141592653589793 : f64
+          %c1, %a1, %b1 = qco.ctrl(%c) targets(%x = %a, %y = %b) {
+            %u, %v = qco.)mlir") +
+                        gate + R"mlir( %x, %y
+                : !qco.qubit, !qco.qubit
+            qco.yield %u, %v : !qco.qubit, !qco.qubit
+          } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
+          %c2, %a2, %b2 = qco.ctrl(%c1) targets(%x = %a1, %y = %b1) {
+            %u, %v = qco.)mlir" +
+                        gate + R"mlir( %x, %y
+                : !qco.qubit, !qco.qubit
+            qco.yield %u, %v : !qco.qubit, !qco.qubit
+          } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
+          return %c2, %a2, %b2 : !qco.qubit, !qco.qubit, !qco.qubit
+        }
+      })mlir";
+    auto original = parseSourceString<ModuleOp>(source, &context_);
+    auto result = canonicalize(source);
+    ASSERT_TRUE(original);
+    ASSERT_TRUE(result);
+    auto function = result->lookupSymbol<func::FuncOp>("test");
+    EXPECT_LE(llvm::range_size(function.getBody().getOps<CtrlOp>()), 1);
+    ::mqt::test::expectFullUnitaryEqual(*original, *result, 3);
+  }
+}
+
+TEST_F(QCOModifierCanonicalizationTest, ControlledRotationsKeepWireOrder) {
+  constexpr StringLiteral source = R"mlir(
+    module {
+      func.func @test(%c: !qco.qubit, %a: !qco.qubit, %b: !qco.qubit)
+          -> (!qco.qubit, !qco.qubit, !qco.qubit) {
+        %angle = arith.constant 0.3 : f64
+        %c1, %a1, %b1 = qco.ctrl(%c) targets(%x = %a, %y = %b) {
+          %u, %v = qco.rzx(%angle) %x, %y : !qco.qubit, !qco.qubit
+          qco.yield %u, %v : !qco.qubit, !qco.qubit
+        } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
+        %c2, %b2, %a2 = qco.ctrl(%c1) targets(%x = %b1, %y = %a1) {
+          %u, %v = qco.rzx(%angle) %x, %y : !qco.qubit, !qco.qubit
+          qco.yield %u, %v : !qco.qubit, !qco.qubit
+        } : ({!qco.qubit}, {!qco.qubit, !qco.qubit})
+        return %c2, %a2, %b2 : !qco.qubit, !qco.qubit, !qco.qubit
+      }
+    })mlir";
+  auto original = parseSourceString<ModuleOp>(source, &context_);
+  auto result = canonicalize(source);
+  ASSERT_TRUE(original);
+  ASSERT_TRUE(result);
+  auto function = result->lookupSymbol<func::FuncOp>("test");
+  EXPECT_EQ(llvm::range_size(function.getBody().getOps<CtrlOp>()), 2);
+  ::mqt::test::expectFullUnitaryEqual(*original, *result, 3);
+}
+
+TEST_F(QCOModifierCanonicalizationTest, ControlledRotationsRespectTarget) {
+  constexpr StringLiteral source = R"mlir(
+    module attributes {
+      mqt.target_env = #mqt.target_env<
+          compilation_target = #mqt.compilation_target<
+              sites = [<id = 0>, <id = 1>], connectivity = all_to_all,
+              couplings = [], native_operations = unrestricted, operations = []>,
+          payload_specification = #mqt.payload_spec<
+              format = <id = "vendor-ir", version = "1.0.0", profile = "",
+                  encoding = binary>,
+              capabilities = [], optional_capabilities_known = false>>
+    } {
+      func.func @test(%c: !qco.qubit, %q: !qco.qubit)
+          -> (!qco.qubit, !qco.qubit) {
+        %angle = arith.constant 0.3 : f64
+        %c1, %q1 = qco.ctrl(%c) targets(%t = %q) {
+          %v = qco.rx(%angle) %t : !qco.qubit
+          qco.yield %v : !qco.qubit
+        } : ({!qco.qubit}, {!qco.qubit})
+        %c2, %q2 = qco.ctrl(%c1) targets(%t = %q1) {
+          %v = qco.rx(%angle) %t : !qco.qubit
+          qco.yield %v : !qco.qubit
+        } : ({!qco.qubit}, {!qco.qubit})
+        return %c2, %q2 : !qco.qubit, !qco.qubit
+      }
+    })mlir";
+  auto original = parseSourceString<ModuleOp>(source, &context_);
+  auto result = canonicalize(source);
+  ASSERT_TRUE(original);
+  ASSERT_TRUE(result);
+  auto function = result->lookupSymbol<func::FuncOp>("test");
+  EXPECT_EQ(llvm::range_size(function.getBody().getOps<CtrlOp>()), 2);
+  ::mqt::test::expectFullUnitaryEqual(*original, *result, 2);
+}
 
 TEST_F(QCOModifierCanonicalizationTest, InverseU2PreservesLargeAngles) {
   constexpr StringLiteral source = R"mlir(

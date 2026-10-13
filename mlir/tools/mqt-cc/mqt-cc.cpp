@@ -122,6 +122,11 @@ static llvm::cl::opt<std::string> payloadSpecification(
     llvm::cl::desc("Selected payload as a typed #mqt.payload_spec attribute"),
     llvm::cl::value_desc("attribute"), llvm::cl::init(""));
 
+static llvm::cl::opt<std::string>
+    explicitTarget("target",
+                   llvm::cl::desc("Explicit #mqt.compilation_target attribute"),
+                   llvm::cl::value_desc("attribute"), llvm::cl::init(""));
+
 static llvm::cl::opt<uint64_t>
     compilationSeedOption("seed",
                           llvm::cl::desc("Override all compiler random seeds"));
@@ -410,12 +415,14 @@ static int runCompiler(int argc, char** argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv,
                                     "MQT Compiler Collection Driver\n");
 
+  const bool hasExplicitTarget = explicitTarget.getNumOccurrences() != 0;
+  const bool hasTarget = !qdmiDevice.empty() || hasExplicitTarget;
   if ((mappingTrials.getNumOccurrences() != 0 ||
        mappingIterations.getNumOccurrences() != 0 ||
        mappingLookahead.getNumOccurrences() != 0 ||
        mappingSearchMemoryLimit.getNumOccurrences() != 0) &&
-      qdmiDevice.empty()) {
-    llvm::errs() << "Mapping controls require --qdmi-device.\n";
+      !hasTarget) {
+    llvm::errs() << "Mapping controls require --qdmi-device or --target.\n";
     return 1;
   }
   if (mappingTrials.getNumOccurrences() != 0 && mappingTrials == 0) {
@@ -443,7 +450,8 @@ static int runCompiler(int argc, char** argv) {
        (runIsolatedPipeline && passPipeline.getNumOccurrences() == 0) ||
        (runReproducer && passPipeline.getNumOccurrences() != 0) ||
        outputFormat.getNumOccurrences() != 0 || !qdmiDevice.empty() ||
-       qdmiListDevices || enableDecomposeMultiControlled)) {
+       hasExplicitTarget || qdmiListDevices ||
+       enableDecomposeMultiControlled)) {
     llvm::errs() << "Use either --run-pipeline with --pass-pipeline or "
                     "--run-reproducer, without --emit, target compilation, "
                     "or --decompose-multi-controlled.\n";
@@ -451,18 +459,21 @@ static int runCompiler(int argc, char** argv) {
   }
 
   if ((!qdmiConfig.empty() && configureQDMIRegistry(qdmiConfig).failed()) ||
-      reportQDMIErrorIf(
-          qdmiListDevices && !qdmiDevice.empty(),
-          "--qdmi-list-devices cannot be combined with --qdmi-device.")
+      reportQDMIErrorIf(!qdmiDevice.empty() && hasExplicitTarget,
+                        "--qdmi-device and --target are mutually exclusive.")
           .failed() ||
       reportQDMIErrorIf(
-          qdmiDevice.empty() != payloadSpecification.empty(),
-          "--qdmi-device and --payload-spec must be provided together.")
+          qdmiListDevices && hasTarget,
+          "--qdmi-list-devices cannot be combined with target compilation.")
+          .failed() ||
+      reportQDMIErrorIf(hasTarget == payloadSpecification.empty(),
+                        "--qdmi-device or --target and --payload-spec must be "
+                        "provided together.")
           .failed() ||
       reportQDMIErrorIf(
-          !qdmiDevice.empty() && outputFormat.getNumOccurrences() != 0 &&
+          hasTarget && outputFormat.getNumOccurrences() != 0 &&
               outputFormat != "qco-optimized",
-          "Only --emit=qco-optimized can be combined with --qdmi-device; "
+          "Only --emit=qco-optimized can be combined with target compilation; "
           "--payload-spec selects the executable output.")
           .failed() ||
       reportQDMIErrorIf(
@@ -501,19 +512,21 @@ static int runCompiler(int argc, char** argv) {
   }
 
   std::optional<CompilerTarget> compilerTarget;
-  if (!qdmiDevice.empty()) {
+  if (hasTarget) {
     if (reportQDMIErrorIf(
             passPipeline.getNumOccurrences() != 0,
-            "--qdmi-device cannot be combined with --pass-pipeline.")
+            "Target compilation cannot be combined with --pass-pipeline.")
             .failed() ||
         reportQDMIErrorIf(
             enableDecomposeMultiControlled,
-            "--qdmi-device cannot be combined with "
+            "Target compilation cannot be combined with "
             "--decompose-multi-controlled; target compilation already "
             "performs the required decomposition.")
             .failed()) {
       return 1;
     }
+  }
+  if (!qdmiDevice.empty()) {
     auto target = compilerTargetFromDeviceId(qdmiDevice.getValue());
     if (!target) {
       llvm::errs() << "Failed to create compiler target from QDMI device '"
@@ -531,6 +544,27 @@ static int runCompiler(int argc, char** argv) {
   ParserConfig parserConfig(context.get(), /*verifyAfterParse=*/!runReproducer);
   if (runReproducer) {
     reproducerOptions.attachResourceParser(parserConfig);
+  }
+
+  if (hasExplicitTarget) {
+    const auto targetText = StringRef(explicitTarget).trim();
+    const auto attribute = targetText.empty()
+                               ? Attribute{}
+                               : parseAttribute(targetText, context.get());
+    const auto targetAttr =
+        dyn_cast_if_present<mqt::CompilationTargetAttr>(attribute);
+    if (!targetAttr) {
+      llvm::errs()
+          << "--target must be a valid #mqt.compilation_target attribute.\n";
+      return 1;
+    }
+    auto target = CompilerTarget::create(targetAttr);
+    if (!target) {
+      llvm::errs() << "Invalid --target: " << llvm::toString(target.takeError())
+                   << '\n';
+      return 1;
+    }
+    compilerTarget.emplace(std::move(*target));
   }
 
   std::optional<PayloadSpecification> selectedPayload;
