@@ -15,7 +15,6 @@
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
 #include "mqt/Dialect/QCO/Utils/Drivers.h"
 #include "mqt/Dialect/QCO/Utils/WireIterator.h"
-#include "mqt/Dialect/QTensor/IR/QTensorDialect.h"
 
 #include "gtest/gtest.h"
 
@@ -30,7 +29,6 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
-#include "mlir/IR/Verifier.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/WalkResult.h"
 
@@ -54,8 +52,8 @@ class DriversFixture : public testing::Test {
 protected:
   void SetUp() override {
     DialectRegistry registry;
-    registry.insert<QCODialect, qtensor::QTensorDialect, scf::SCFDialect,
-                    arith::ArithDialect, func::FuncDialect>();
+    registry.insert<QCODialect, scf::SCFDialect, arith::ArithDialect,
+                    func::FuncDialect>();
 
     context = std::make_unique<MLIRContext>();
     context->appendDialectRegistry(registry);
