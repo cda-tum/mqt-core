@@ -12,6 +12,7 @@
 
 #include "mqt/Dialect/QCO/IR/QCOInterfaces.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
+#include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Utils/WireIterator.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 
@@ -34,6 +35,7 @@
 #include <functional>
 #include <iterator>
 #include <limits>
+#include <llvm/Support/Debug.h>
 #include <numeric>
 #include <utility>
 
@@ -118,55 +120,13 @@ void walkProgramGraph(MutableArrayRef<WireIterator> wires,
             frontier.try_emplace(it.operation(), item.indices_);
           }
         } else {
-          const auto nqubits =
-              TypeSwitch<Operation*, size_t>(it.operation())
-                  .template Case<UnitaryOpInterface>(
-                      [&](UnitaryOpInterface op) { return op.getNumQubits(); })
-                  .template Case<scf::ForOp, scf::WhileOp>([&](auto op) {
-                    const auto nqubits = static_cast<size_t>(
-                        llvm::count_if(op.getInits(), [](Value v) {
-                          return isa<QubitType>(v.getType());
-                        }));
-                    return nqubits;
-                  })
-                  .template Case<qco::IfOp>([&](qco::IfOp op) {
-                    return static_cast<size_t>(
-                        llvm::count_if(op.getQubits(), [](Value v) {
-                          return isa<QubitType>(v.getType());
-                        }));
-                  })
-                  .template Case<qco::IndexSwitchOp>([](qco::IndexSwitchOp op) {
-                    return static_cast<size_t>(
-                        llvm::count_if(op.getTargets(), [](Value v) {
-                          return isa<QubitType>(v.getType());
-                        }));
-                  })
-                  .template Case<AllocOp, StaticOp, SinkOp, qtensor::ExtractOp,
-                                 qtensor::InsertOp, ResetOp, MeasureOp>(
-                      [](auto) { return 1; })
-                  .template Case<YieldOp>([](YieldOp op) {
-                    return static_cast<size_t>(
-                        llvm::count_if(op.getTargets(), [](Value v) {
-                          return isa<QubitType>(v.getType());
-                        }));
-                  })
-                  .template Case<scf::YieldOp>([](scf::YieldOp op) {
-                    return static_cast<size_t>(
-                        llvm::count_if(op.getResults(), [](Value v) {
-                          return isa<QubitType>(v.getType());
-                        }));
-                  })
-                  .template Case<scf::ConditionOp>([](scf::ConditionOp op) {
-                    return static_cast<size_t>(
-                        llvm::count_if(op.getArgs(), [](Value v) {
-                          return isa<QubitType>(v.getType());
-                        }));
-                  })
-                  .Default([&](Operation* op) {
-                    const auto name = op->getName().getStringRef();
-                    reportFatalInternalError("unknown op: " + name);
-                    return std::numeric_limits<size_t>::max();
-                  });
+          const auto nqubits = countIfQubit([&it] {
+            if constexpr (Direction == WireDirection::Forward) {
+              return it.operation()->getResults(); // From Inputs to Outputs.
+            } else {
+              return it.operation()->getOperands(); // From Outputs to Inputs.
+            }
+          }());
 
           // If there are fewer wires than the operation requires inputs,
           // it's impossible to release the operation. Hence, fail.
@@ -179,7 +139,7 @@ void walkProgramGraph(MutableArrayRef<WireIterator> wires,
           // One-qubit gates are immediately ready.
           // Hence, add them to the frontier.
 
-          if (nqubits == 1) {
+          if (nqubits <= 1) {
             frontier.try_emplace(it.operation(), SmallVector{i});
           }
 
