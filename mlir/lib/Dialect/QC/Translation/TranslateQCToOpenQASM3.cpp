@@ -44,6 +44,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
@@ -219,6 +220,7 @@ private:
   DenseMap<Operation*, std::string> gateNames_;
   SymbolTableCollection symbolTables_;
   llvm::StringSet<> usedNames;
+  llvm::StringSet<> declaredRegisterNames;
   llvm::StringSet<> fixedHelpers;
   std::string uHelperName_;
   SmallVector<std::string> gateDefinitions_;
@@ -256,7 +258,8 @@ private:
                                        size_t& counter) {
     while (true) {
       auto candidate = (Twine("_mqt_") + prefix + Twine(counter++)).str();
-      if (usedNames.insert(candidate).second) {
+      if (!declaredRegisterNames.contains(candidate) &&
+          usedNames.insert(candidate).second) {
         return candidate;
       }
     }
@@ -456,7 +459,47 @@ private:
     return success();
   }
 
+  [[nodiscard]] LogicalResult collectClassicalResource(cbit::AllocOp alloc) {
+    const auto type = alloc.getResult().getType();
+    const auto width = type.getWidth();
+    if (width <= 0 ||
+        std::cmp_greater(width, MAX_CLASSICAL_BITS - numClassicalBits)) {
+      return fail(alloc, "total classical register width exceeds the "
+                         "supported limit of " +
+                             Twine(MAX_CLASSICAL_BITS) + " bits");
+    }
+    numClassicalBits += static_cast<size_t>(width);
+    const bool isOutput = returnedRegisters.contains(alloc.getResult());
+    const auto name = alloc->getAttrOfType<StringAttr>(
+        mqt::MQTDialect::RegisterNameAttrHelper::getNameStr());
+    const auto location = dyn_cast<NameLoc>(alloc.getLoc());
+    const auto sourceName =
+        location ? location.getName().getValue() : StringRef{};
+    const auto requested = name ? name.getValue()
+                           : declaredRegisterNames.contains(sourceName)
+                               ? StringRef{}
+                               : sourceName;
+    Resource resource{
+        .kind = ResourceKind::Bit,
+        .name =
+            isOutput ? outputName(requested) : classicalRegisterName(requested),
+        .width = width,
+        .output = isOutput,
+        .initialization = alloc.getInitialization(),
+    };
+    resources.try_emplace(alloc.getResult(), std::move(resource));
+    return success();
+  }
+
   [[nodiscard]] LogicalResult collectProgramShape() {
+    // Debug names must yield to declared registers, regardless of operation
+    // order.
+    function.walk([&](Operation* operation) {
+      if (const auto name = operation->getAttrOfType<StringAttr>(
+              mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
+        declaredRegisterNames.insert(name.getValue());
+      }
+    });
     auto returnOp =
         dyn_cast<func::ReturnOp>(function.getBody().front().getTerminator());
     if (!returnOp) {
@@ -471,7 +514,12 @@ private:
 
     for (Operation& operation : function.getBody().front().getOperations()) {
       if (auto alloc = dyn_cast<qc::AllocOp>(&operation)) {
-        const auto name = uniqueName("q", nextQubit);
+        const auto location = dyn_cast<NameLoc>(alloc.getLoc());
+        const auto sourceName =
+            location ? location.getName().getValue() : StringRef{};
+        const auto name = qubitRegisterName(
+            declaredRegisterNames.contains(sourceName) ? StringRef{}
+                                                       : sourceName);
         Resource resource{
             .kind = ResourceKind::Qubit,
             .name = name,
@@ -484,28 +532,9 @@ private:
         continue;
       }
       if (auto alloc = dyn_cast<cbit::AllocOp>(&operation)) {
-        const auto type = alloc.getResult().getType();
-        const auto width = type.getWidth();
-        if (width <= 0 ||
-            std::cmp_greater(width, MAX_CLASSICAL_BITS - numClassicalBits)) {
-          return fail(alloc, "total classical register width exceeds the "
-                             "supported limit of " +
-                                 Twine(MAX_CLASSICAL_BITS) + " bits");
+        if (failed(collectClassicalResource(alloc))) {
+          return failure();
         }
-        numClassicalBits += static_cast<size_t>(width);
-        const bool isOutput = returnedRegisters.contains(alloc.getResult());
-        const auto name = alloc->getAttrOfType<StringAttr>(
-            mqt::MQTDialect::RegisterNameAttrHelper::getNameStr());
-        const auto requested = name ? name.getValue() : StringRef{};
-        Resource resource{
-            .kind = ResourceKind::Bit,
-            .name = isOutput ? outputName(requested)
-                             : classicalRegisterName(requested),
-            .width = width,
-            .output = isOutput,
-            .initialization = alloc.getInitialization(),
-        };
-        resources.try_emplace(alloc.getResult(), std::move(resource));
         resourceOrder.push_back(alloc.getResult());
         continue;
       }
@@ -534,6 +563,17 @@ private:
       };
       resources.try_emplace(alloc.getResult(), resource);
       resourceOrder.push_back(alloc.getResult());
+    }
+
+    const auto localBits = function.walk([&](cbit::AllocOp alloc) {
+      if (alloc->getBlock() != &function.getBody().front() &&
+          failed(collectClassicalResource(alloc))) {
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    });
+    if (localBits.wasInterrupted()) {
+      return failure();
     }
 
     for (const auto [index, value] : llvm::enumerate(returnOp.getOperands())) {
@@ -725,7 +765,17 @@ private:
         !wideBridge && !operation.getResult(0).use_empty()) {
       return materialize(operation.getResult(0));
     }
-    if (isa<qc::AllocOp, memref::AllocOp, cbit::AllocOp>(&operation) &&
+    if (auto alloc = dyn_cast<cbit::AllocOp>(&operation);
+        alloc && operation.getBlock() != &function.getBody().front()) {
+      const auto& resource = resources.at(alloc.getResult());
+      *output << "bit[" << resource.width << "] " << resource.name;
+      if (resource.initialization == cbit::Initialization::Zero) {
+        *output << " = \"" << std::string(resource.width, '0') << '\"';
+      }
+      *output << ";\n";
+      return success();
+    }
+    if (isa<qc::AllocOp, memref::AllocOp>(&operation) &&
         operation.getBlock() != &function.getBody().front()) {
       return fail(&operation, "resource allocation inside control flow is not "
                               "supported; allocate resources before the loop");

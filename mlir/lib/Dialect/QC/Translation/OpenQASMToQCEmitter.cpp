@@ -1740,6 +1740,8 @@ private:
           return;
         }
         qubitValues[statement.reg] = builder.allocQubit();
+        qubitValues[statement.reg].getDefiningOp()->setLoc(NameLoc::get(
+            builder.getStringAttr(declaration.name), builder.getLoc()));
         return;
       }
       if (!emissionBudget.canConstruct(1)) {
@@ -1755,11 +1757,14 @@ private:
     }
     classicalRegisters[statement.reg] = builder.allocClassicalBitRegister(
         static_cast<int64_t>(declaration.width),
-        isa<func::FuncOp>(builder.getInsertionBlock()->getParentOp())
+        isa_and_nonnull<func::FuncOp>(
+            builder.getInsertionBlock()->getParentOp())
             ? StringRef(declaration.name)
             : StringRef{},
         program.openQASM2 ? cbit::Initialization::Zero
                           : cbit::Initialization::Undefined);
+    classicalRegisters[statement.reg].getDefiningOp()->setLoc(NameLoc::get(
+        builder.getStringAttr(declaration.name), builder.getLoc()));
   }
 
   void assignBit(const frontend::BitReference& target, Value value) {
