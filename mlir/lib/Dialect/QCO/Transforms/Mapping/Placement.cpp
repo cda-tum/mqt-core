@@ -16,7 +16,6 @@
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -24,11 +23,13 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
@@ -79,28 +80,83 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
     wires.erase(value);
     return indices;
   };
-  const auto quantum = [](ValueRange values) {
-    return llvm::make_filter_range(
-        values, [](Value value) { return isLinearQubitType(value.getType()); });
-  };
-  for (Value argument : region.getArguments()) {
-    if (isLinearQubitType(argument.getType()) && failed(addRoot(argument))) {
+  for (Value argument : quantumValues(region.getArguments())) {
+    if (failed(addRoot(argument))) {
       return failure();
     }
   }
   struct Frame {
     Block::iterator next;
     Block::iterator end;
-    ValueRange outputs;
+    Operation* pendingBranch = nullptr;
   };
   SmallVector<Frame> stack;
   stack.push_back({
       .next = region.front().begin(),
       .end = region.front().end(),
-      .outputs = {},
   });
+  // Retain entry identities until all branch joins and backedges are checked.
+  DenseMap<Value, SmallVector<size_t>> regionInputs;
+  llvm::SmallPtrSet<Region*, 8> visited;
+  const auto forward = [&](RegionBranchOpInterface branch,
+                           RegionBranchPoint point) -> LogicalResult {
+    SmallVector<RegionSuccessor> successors;
+    branch.getSuccessorRegions(point, successors);
+    for (auto successor : llvm::reverse(successors)) {
+      auto inputs = branch.getSuccessorInputs(successor);
+      auto operands = branch.getSuccessorOperands(point, successor);
+      for (auto [operand, input] : llvm::zip_equal(operands, inputs)) {
+        if (!isLinearQubitType(input.getType())) {
+          continue;
+        }
+        auto known = wires.find(operand);
+        if (known == wires.end()) {
+          return branch.emitError("cannot identify a forwarded region qubit");
+        }
+        auto indices = known->second;
+        auto& bindings = isa<BlockArgument>(input) ? regionInputs : wires;
+        auto [it, inserted] = bindings.try_emplace(input, indices);
+        if (!inserted && it->second != indices) {
+          return branch.emitError(
+              "connectivity requires consistent qubit and "
+              "tensor-slot identities at region joins and backedges");
+        }
+        if (inserted && isa<BlockArgument>(input)) {
+          wires[input] = std::move(indices);
+        }
+      }
+      if (auto* body = successor.getSuccessor();
+          body && visited.insert(body).second) {
+        if (!llvm::hasSingleElement(*body)) {
+          return branch.emitError("connectivity requires single-block regions");
+        }
+        if (llvm::any_of(quantumValues(body->getArguments()),
+                         [&](Value value) { return !wires.contains(value); })) {
+          return branch.emitError("cannot identify a region input qubit");
+        }
+        stack.push_back({
+            .next = body->front().begin(),
+            .end = body->front().end(),
+        });
+      }
+    }
+    return success();
+  };
   while (!stack.empty()) {
     auto& frame = stack.back();
+    if (auto* branch = std::exchange(frame.pendingBranch, nullptr)) {
+      for (Value output : quantumValues(branch->getResults())) {
+        if (!wires.contains(output)) {
+          return branch->emitError("cannot identify a region output qubit");
+        }
+      }
+      for (Region& body : branch->getRegions()) {
+        for (Value argument : body.getArguments()) {
+          regionInputs.erase(argument);
+        }
+        visited.erase(&body);
+      }
+    }
     if (frame.next == frame.end) {
       stack.pop_back();
       continue;
@@ -109,8 +165,8 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
     if (isa<CallOp>(op)) {
       return op.emitError("inline quantum calls before connectivity analysis");
     }
-    for (Value operand : op.getOperands()) {
-      if (!isLinearQubitType(operand.getType()) || wires.contains(operand)) {
+    for (Value operand : quantumValues(op.getOperands())) {
+      if (wires.contains(operand)) {
         continue;
       }
       if (operand.getParentRegion() == op.getParentRegion() ||
@@ -133,25 +189,13 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
       for (Value input : unitary.getInputQubits()) {
         wires[unitary.getOutputForInput(input)] = consume(input);
       }
-    } else if (isa<IfOp, IndexSwitchOp, scf::ForOp, scf::WhileOp>(op)) {
-      // Linearity verification establishes positional quantum correspondence.
-      for (auto [input, output] : llvm::zip_equal(quantum(op.getOperands()),
-                                                  quantum(op.getResults()))) {
-        wires[output] = consume(input);
+    } else if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
+      frame.pendingBranch = &op;
+      if (failed(forward(branch, RegionBranchPoint::parent()))) {
+        return failure();
       }
-      for (Region& body : llvm::reverse(op.getRegions())) {
-        if (!llvm::hasSingleElement(body)) {
-          return op.emitError("connectivity requires single-block regions");
-        }
-        for (auto [argument, output] : llvm::zip_equal(
-                 quantum(body.getArguments()), quantum(op.getResults()))) {
-          wires[argument] = wires.at(output);
-        }
-        stack.push_back({
-            .next = body.front().begin(),
-            .end = body.front().end(),
-            .outputs = op.getResults(),
-        });
+      for (Value operand : quantumValues(op.getOperands())) {
+        wires.erase(operand);
       }
     } else if (isa<AllocOp, StaticOp, qtensor::AllocOp>(op)) {
       if (failed(addRoot(op.getResult(0)))) {
@@ -197,13 +241,14 @@ FailureOr<RegionConnectivity> buildConnectivityGraph(Region& region) {
     } else if (isa<SinkOp, qtensor::DeallocOp>(op) ||
                op.hasTrait<OpTrait::IsTerminator>()) {
       if (op.hasTrait<OpTrait::IsTerminator>() && stack.size() > 1) {
-        // Tensor-level correspondence alone does not establish slot identity.
-        for (auto [yielded, output] : llvm::zip_equal(quantum(op.getOperands()),
-                                                      quantum(frame.outputs))) {
-          if (wires.at(yielded) != wires.at(output)) {
-            return op.emitError("connectivity requires unchanged tensor-slot "
-                                "identities through region terminators");
-          }
+        auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
+        if (!terminator) {
+          return op.emitError(
+              "connectivity requires a region branch terminator");
+        }
+        if (failed(forward(cast<RegionBranchOpInterface>(op.getParentOp()),
+                           terminator))) {
+          return failure();
         }
       }
       for (Value operand : op.getOperands()) {

@@ -281,6 +281,59 @@ TEST_F(PlacementAnalysisTest, TensorSlotsAcrossControlFlow) {
   EXPECT_EQ(connectivity->qubits[2].slot, 2);
 }
 
+TEST_F(PlacementAnalysisTest, RegionInterfaceTracksProducedAndReorderedQubits) {
+  auto moduleOp = parse(R"mlir(
+    func.func @circuit() {
+      %x, %y = scf.execute_region -> (!qco.qubit, !qco.qubit) {
+        %a = qco.alloc : !qco.qubit
+        %b = qco.alloc : !qco.qubit
+        %u, %v = qco.swap %a, %b : !qco.qubit, !qco.qubit
+        scf.yield %v, %u : !qco.qubit, !qco.qubit
+      }
+      %c = qco.alloc : !qco.qubit
+      %z, %w = qco.swap %x, %c : !qco.qubit, !qco.qubit
+      qco.sink %y : !qco.qubit
+      qco.sink %z : !qco.qubit
+      qco.sink %w : !qco.qubit
+      return
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+  auto func = *moduleOp->getOps<func::FuncOp>().begin();
+  auto connectivity = buildConnectivityGraph(func.getBody());
+  ASSERT_TRUE(succeeded(connectivity));
+  EXPECT_EQ(connectivity->qubits.size(), 3);
+  EXPECT_EQ(getEdges(connectivity->graph), (Edges{{0, 1}, {1, 2}}));
+}
+
+TEST_F(PlacementAnalysisTest, RejectTensorPermutationAtLoopBackedge) {
+  auto moduleOp = parse(R"mlir(
+    func.func @circuit(%q: tensor<2x!qco.qubit>, %n: index)
+        -> tensor<2x!qco.qubit> {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %result = scf.for %i = %zero to %n step %one
+          iter_args(%qs = %q) -> tensor<2x!qco.qubit> {
+        %t1, %a = qtensor.extract %qs[%zero] : tensor<2x!qco.qubit>
+        %t2, %b = qtensor.extract %t1[%one] : tensor<2x!qco.qubit>
+        %t3 = qtensor.insert %a into %t2[%one] : tensor<2x!qco.qubit>
+        %t4 = qtensor.insert %b into %t3[%zero] : tensor<2x!qco.qubit>
+        scf.yield %t4 : tensor<2x!qco.qubit>
+      }
+      return %result : tensor<2x!qco.qubit>
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+  auto func = *moduleOp->getOps<func::FuncOp>().begin();
+  std::string diagnostic;
+  ScopedDiagnosticHandler handler(&context, [&](Diagnostic& message) {
+    diagnostic = message.str();
+    return success();
+  });
+  EXPECT_TRUE(failed(buildConnectivityGraph(func.getBody())));
+  EXPECT_NE(diagnostic.find("backedges"), std::string::npos);
+}
+
 TEST_F(PlacementAnalysisTest, CachesAndInvalidatesConnectivity) {
   auto moduleOp = parse(R"mlir(
     func.func @circuit(%a: !qco.qubit, %b: !qco.qubit)
@@ -342,7 +395,7 @@ TEST_F(PlacementAnalysisTest, RejectTensorPermutationAtRegionBoundary) {
     return success();
   });
   EXPECT_TRUE(failed(buildConnectivityGraph(func.getBody())));
-  EXPECT_NE(diagnostic.find("unchanged tensor-slot identities"),
+  EXPECT_NE(diagnostic.find("tensor-slot identities at region joins"),
             std::string::npos);
   auto branch = *func.getOps<IfOp>().begin();
   EXPECT_TRUE(failed(RegionConnectivityAnalysis(branch).getConnectivity()));

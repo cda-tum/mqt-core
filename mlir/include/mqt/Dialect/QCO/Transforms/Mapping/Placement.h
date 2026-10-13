@@ -48,10 +48,11 @@ struct RegionConnectivity {
 ///
 /// Requires a single-block region that passes verification and verifyLinearity.
 /// Root values remain valid only while their IR exists.
-/// Includes interactions from every branch and loop body of qco.if,
-/// qco.index_switch, scf.for, and scf.while, without unrolling loops.
+/// Follows RegionBranchOpInterface edges, visiting each reachable single-block
+/// region once, without evaluating conditions or unrolling loops.
 /// Supports scalar QCO and statically sized qtensors with constant indices.
-/// Tensor slots must retain their wire identities through region terminators.
+/// Incoming paths at joins and loop backedges must agree on wire identities,
+/// including individual tensor slots.
 /// Barriers add no edges; repeated interactions add one undirected edge.
 /// Diagnoses dynamic tensor accesses, quantum calls, undecomposed gates with
 /// more than two qubits, and unsupported operations carrying qubits or regions.
