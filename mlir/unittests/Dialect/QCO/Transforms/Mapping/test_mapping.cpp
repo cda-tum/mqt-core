@@ -2740,6 +2740,33 @@ TEST_F(MappingPassFixture, EmbedShuffledInteractionPathWithoutSwaps) {
   }
 }
 
+TEST_F(MappingPassFixture, EmbedTensorInteractionPathWithoutSwaps) {
+  const auto target = getSquareGridTarget(2);
+  QCOProgramBuilder builder(context.get());
+  builder.initialize();
+  Value tensor = builder.qtensorAlloc(4);
+  SmallVector<Value> qubits(4);
+  for (int64_t i = 0; i < 4; ++i) {
+    std::tie(tensor, qubits[i]) = builder.qtensorExtract(tensor, i);
+  }
+  for (size_t i = 1; i < qubits.size(); ++i) {
+    std::tie(qubits[i - 1], qubits[i]) = builder.cx(qubits[i - 1], qubits[i]);
+  }
+  for (int64_t i = 0; i < 4; ++i) {
+    tensor = builder.qtensorInsert(qubits[i], tensor, i);
+  }
+  builder.qtensorDealloc(tensor);
+  auto moduleOp = builder.finalize();
+  ASSERT_TRUE(succeeded(runMapping(
+      *moduleOp, target, MappingPassOptions{.ntrials = 1, .seed = 42})));
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  EXPECT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+  EXPECT_TRUE(isExecutable(getEntryPoint(*moduleOp), target));
+  size_t swaps = 0;
+  moduleOp->walk([&](SWAPOp) { ++swaps; });
+  EXPECT_EQ(swaps, 0);
+}
+
 TEST_F(MappingPassFixture, PreserveInteractionPathBasisStates) {
   const auto lineTarget = llvm::cantFail(CompilerTarget::create(
       6, Connectivity::fromCouplings({{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}}),

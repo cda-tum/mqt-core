@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "mqt/Dialect/QCO/QCOUtils.h"
+#include "mqt/Dialect/QCO/IR/QCODialect.h"
 #include "mqt/Dialect/QCO/Utils/WireIterator.h"
 
 #include "mlir/IR/Value.h"
@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -111,13 +112,18 @@ void walkProgramGraph(MutableArrayRef<WireIterator> wires,
             frontier.try_emplace(it.operation(), item.indices_);
           }
         } else {
-          const auto nqubits = countIfQubit([&it] {
+          auto values = [&it] {
             if constexpr (Direction == WireDirection::Forward) {
               return it.operation()->getResults(); // From Inputs to Outputs.
             } else {
               return it.operation()->getOperands(); // From Outputs to Inputs.
             }
-          }());
+          }();
+          // Tensor handles are not wires traversed by WireIterator.
+          const auto nqubits =
+              static_cast<size_t>(llvm::count_if(values, [](Value value) {
+                return isa<QubitType>(value.getType());
+              }));
 
           // If there are fewer wires than the operation requires inputs,
           // it's impossible to release the operation. Hence, fail.
