@@ -9,8 +9,8 @@ of changes including minor and patch releases, please refer to the
 ### Compilation options and device targets
 
 When compiling programs, move `enable_timing` and `enable_statistics` into a
-`CompilationOptions` object. Direct program compilation and pass pipelines use
-the same options:
+`CompilationOptions` object. Direct program compilation, pass pipelines, and
+`submit_program` when compiling source input use the same options:
 
 ```python
 from mqt.core.mlir import CompilationOptions, compile_program
@@ -61,6 +61,10 @@ Use `builtin_driver.registered_device_ids()` for the local catalogue. The
 [configuration guide](https://mqt.readthedocs.io/projects/core/en/latest/qdmi/configuration.html)
 covers manifest registration and driver selection.
 
+Unset `MQT_CORE_QDMI_CONFIG_FILE` and `MQT_CORE_QDMI_CONFIG_JSON` to use
+automatic discovery without an override. Empty strings are no longer ignored:
+they cause configuration errors.
+
 The Slurm device-opening adapters are removed. Pass the device ID to
 `builtin_driver.open_device` and request its matching license in the job script.
 The
@@ -75,10 +79,11 @@ program list with one format and shared parameters instead of using
 `ProgramFormat.BATCH_JOB`. Calibration APIs and `ProgramFormat.CALIBRATION` are
 removed. Use provider-specific APIs for calibration.
 
-DDSIM samples eligible programs in parallel by default. A fixed seed reproduces
-shots for the same effective worker count. Use `custom3=1` for serial adaptive
-sampling. QIR runtime failures now fail the affected QDMI program rather than
-propagating C++ exceptions. Handle them through the job. The
+DDSIM and direct QCO sampling run eligible programs in parallel by default. A
+fixed seed reproduces shots for the same effective worker count. For DDSIM jobs,
+use `custom3=1` for serial adaptive sampling. QIR runtime failures now fail the
+affected QDMI program rather than propagating C++ exceptions. Handle them
+through the job. The
 [DDSIM guide](https://mqt.readthedocs.io/projects/core/en/latest/qdmi/ddsim_device.html)
 describes worker controls and result handling.
 
@@ -107,6 +112,9 @@ through `qdmi::Session` or `qdmi::builtin_driver::openDevice` instead of the
 removed sessionless raw-handle factory. External QDMI drivers and devices must
 use the QDMI 1.4 interfaces. Driver ABI major and minor versions must match
 Core.
+
+Replace `qdmi::unreachable()` with `llvm_unreachable("reason")` and include
+`llvm/Support/ErrorHandling.h` directly.
 
 DD edge methods such as vector and matrix extraction move to free functions. For
 example, replace `edge.getVector()` with `dd::getVector(edge)` and
