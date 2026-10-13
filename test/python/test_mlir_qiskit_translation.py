@@ -4867,8 +4867,9 @@ def test_native_compilation_rejects_imported_qiskit_layout() -> None:
     assert program.to_qiskit().layout is not None
 
 
-def test_scalar_and_local_bit_source_names_survive_export() -> None:
-    """Keep source labels for scalar qubits and scoped measurement storage."""
+@pytest.mark.parametrize("ir_round_trip", [False, True])
+def test_scalar_and_local_bit_source_names_are_optional(*, ir_round_trip: bool) -> None:
+    """Export and execute scoped storage with or without cosmetic source names."""
     program = QCProgram.from_openqasm_str("""OPENQASM 3.1;
 include "stdgates.inc";
 qubit flag;
@@ -4881,12 +4882,18 @@ for int i in [0:1] {
 }
 result = measure flag;
 """)
+    if ir_round_trip:
+        program = QCProgram.from_mlir_str(program.ir)
     restored = program.to_qiskit()
-    assert [register.name for register in restored.qregs] == ["flag"]
-    assert "syndrome" in [register.name for register in restored.cregs]
+    assert restored.cregs[-1].name == "result"
+    assert all(key.startswith("0") for key in sample(QCProgram.from_qiskit(restored), shots=8, seed=1))
     emitted = program.to_openqasm3().source
-    assert "qubit flag;" in emitted
-    assert "bit[1] syndrome;" in emitted
+    if not ir_round_trip:
+        assert [register.name for register in restored.qregs] == ["flag"]
+        assert "syndrome" in [register.name for register in restored.cregs]
+        assert "qubit flag;" in emitted
+        assert "bit[1] syndrome;" in emitted
+    assert "output bit[1] result;" in emitted
     assert sample(QCProgram.from_openqasm_str(emitted), shots=8, seed=1) == {"0": 8}
 
 
