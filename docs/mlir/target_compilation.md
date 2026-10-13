@@ -225,15 +225,19 @@ constructor.
 Target compilation requires a single-qubit synthesis basis available on every
 site. `ZSXX` accepts unrestricted RZ and SX, RX(±π/2), RY(±π/2), or R(±π/2, 0).
 Matching native half turns can shorten the decomposition. Euler synthesis emits
-these gates directly, including global-phase corrections. Other fixed angles
-remain valid native capabilities but do not provide a synthesis basis.
+these gates directly, including global-phase corrections.
+
+The {term}`GPI basis` accepts R(π, φ) and R(π/2, φ) with unrestricted φ on every
+site. It emits at most three pulses for a single-qubit unitary, including
+runtime parameters, and preserves global phase. θ and φ use radians and Core's
+convention R(θ, φ) = exp[-i θ (cos(φ) X + sin(φ) Y) / 2].
 
 Qiskit target import recognizes `gpi(phi)` and `gpi2(phi)` defined as
 `i R(pi, phi)` and `R(pi/2, phi)`, respectively, with **radian** parameters.
 These are fixed-parameter R capabilities inside Core; Qiskit export with the
-target restores their native names and phase. Such targets must advertise
-virtual RZ explicitly. Providers that accept only GPI/GPI2 instructions must
-absorb virtual Z rotations into gate phases before device submission.
+target restores their native names and phase. These gates provide the GPI basis
+when their azimuths are unrestricted on every site. A provider using turns or
+another phase convention needs an explicit adapter.
 
 Unrestricted RXX, RYY, RZX, and RZZ entanglers take precedence over fixed
 alternatives and use up to three native rotations for numeric two-qubit

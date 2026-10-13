@@ -534,6 +534,7 @@ struct MergeSingleQubitRotationGatesPattern final
     case decomposition::SingleQubitBasis::ZXZ:
     case decomposition::SingleQubitBasis::XZX:
     case decomposition::SingleQubitBasis::XYX:
+    case decomposition::SingleQubitBasis::GPI:
       return 3;
     case decomposition::SingleQubitBasis::R:
       return 2;
@@ -670,6 +671,7 @@ struct MergeSingleQubitRotationGatesPattern final
     } else {
       angles.theta = Val(rewriter, loc, chain[middle].getParameter(0));
       if (basis == decomposition::SingleQubitBasis::ZSXX ||
+          basis == decomposition::SingleQubitBasis::GPI ||
           isOuter(chain[middle]) ||
           mqt::valueToConstantDouble(angles.theta.getValue())) {
         angles.theta = normalizeGateAngle(angles.theta);
