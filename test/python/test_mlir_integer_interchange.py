@@ -57,7 +57,7 @@ def _check_paths(program: QCProgram, width: int, expected: int) -> None:
     restored_jeff = JeffProgram.from_bytes(jeff.to_bytes()).to_qco().to_qc()
     assert _observe(restored_jeff, width) == expected
     if supports_qiskit_translation():
-        assert _observe(QCProgram.from_qiskit(program.to_qiskit()), width) == expected
+        assert _observe(QCProgram.from_qiskit(program.to_qiskit(copy=True)), width) == expected
 
 
 @pytest.mark.parametrize("width", [1, 3, 8, 9, 32, 64])

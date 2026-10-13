@@ -54,7 +54,7 @@ cx a, b;
 """
 
 qc = QCProgram.from_openqasm_str(source)
-qc.to_qiskit().draw("mpl")
+qc.to_qiskit(copy=True).draw("mpl")
 ```
 
 The circuit is read from left to right. The controlled-X acts on `b`, controlled

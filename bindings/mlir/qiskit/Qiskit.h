@@ -38,9 +38,9 @@ importTarget(nb::handle target, nb::handle operationNames,
 [[nodiscard]] mlir::CompilerTarget::NativeOperations
 importNativeOperations(nb::handle target, nb::handle operationNames);
 
-/// Return a new Qiskit QuantumCircuit, optionally for a compiler target.
+/// Consume a QC program to build a Qiskit circuit for an optional target.
 [[nodiscard]] nb::object
-exportCircuit(const mlir::QCProgram& program,
+exportCircuit(mlir::QCProgram program,
               const mlir::CompilerTarget* target = nullptr);
 
 } // namespace mqt::bindings::qiskit
