@@ -50,5 +50,12 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mqsf-2026-presentation
-          path: build/mqsf2026/
+          path: build/mqsf2026/mqsf-2026.zip
+          if-no-files-found: error
+
+      - name: Save supporting evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mqsf-2026-evidence
+          path: build/mqsf2026/mqsf-2026-evidence.zip
           if-no-files-found: error

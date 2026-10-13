@@ -369,6 +369,10 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
         (root / "assets/inter-latin.woff2").write_bytes(b"font test bytes")
         (root / "assets/sources.json").write_text('{"logo": "upstream attribution"}', encoding="utf-8")
         (root / "assets/logo-LICENSE.txt").write_text("Upstream license", encoding="utf-8")
+        (root / "offline-readme.txt").write_text("Open index.html", encoding="utf-8")
+        (root / "presenter-notes.md").write_text("# Speaker notes", encoding="utf-8")
+        (root / "README.md").write_text("# Evidence and development", encoding="utf-8")
+        (root / "compiler-fixes.md").write_text("# Compiler inventory", encoding="utf-8")
         source = root / "capture.json"
         data = sample_target_capture()
         data["application"].update({
@@ -440,9 +444,20 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
             assert "provenance" not in target
             assert target["compilation"]["stages"][0]["circuit"] == original["compilation"]["stages"][0]["circuit"]
         with zipfile.ZipFile(result.parent / "mqsf-2026.zip") as archive:
+            assert set(archive.namelist()) == {"index.html", "README.txt", "presenter-notes.md", "NOTICES.txt"}
             assert archive.read("index.html") == result.read_bytes()
+            assert archive.read("README.txt") == (root / "offline-readme.txt").read_bytes()
+            assert archive.read("presenter-notes.md") == (root / "presenter-notes.md").read_bytes()
+            notices = archive.read("NOTICES.txt").decode()
+            assert (ROOT / "LICENSE").read_text() in notices
+            assert "Upstream license" in notices
+            assert "upstream attribution" in notices
+        with zipfile.ZipFile(result.parent / "mqsf-2026-evidence.zip") as archive:
+            assert "index.html" not in archive.namelist()
             for asset in (root / "assets").iterdir():
                 assert archive.read(f"assets/{asset.name}") == asset.read_bytes()
+            for name in ("README.md", "compiler-fixes.md"):
+                assert archive.read(name) == (root / name).read_bytes()
             assert json.loads(gzip.decompress(archive.read("evidence.json.gz"))) == data
             assert gzip.decompress(archive.read("evidence.json.gz")) == source.read_bytes()
 
@@ -469,7 +484,7 @@ def test_large_artifacts_keep_exact_source_in_evidence() -> None:
         assert artifact["code"] == code
         assert len(artifact["lines_html"]) == 201
         assert "full_code_gzip" not in artifact
-        with zipfile.ZipFile(root / "output/mqsf-2026.zip") as archive:
+        with zipfile.ZipFile(root / "output/mqsf-2026-evidence.zip") as archive:
             assert archive.read("evidence.json.gz") == capture.read_bytes()
             assert json.loads(gzip.decompress(archive.read("evidence.json.gz"))) == data
 

@@ -46,10 +46,10 @@ budget. Production sampling is unchanged by that fix.
 ## Capture assumptions and work that is not a compiler fix
 
 - Target models and naming/parameter conversions live in
-  [capture_devices.py](capture_devices.py). The three hardware examples compile
-  against SC QDMI mock targets assembled from provider metadata. DDSIM executes
-  the resulting programs. This is not execution or calibration validation on
-  IQM, IBM, or IonQ hardware.
+  [capture_devices.py](https://github.com/munich-quantum-toolkit/core/blob/codex/mqsf-2026/presentations/mqsf2026/capture_devices.py).
+  The three hardware examples compile against SC QDMI mock targets assembled
+  from provider metadata. DDSIM executes the resulting programs. This is not
+  execution or calibration validation on IQM, IBM, or IonQ hardware.
 - IonQ GPI/GPI2 are represented internally as fixed-angle equatorial rotations;
   the recorder exports the corresponding native gate definitions and accounts
   for their phase convention. Provider metadata calls its entangler `zz`; the

@@ -12,10 +12,19 @@ workflow, device-aware compilation, structured programs, and adaptive execution.
 uv run --no-project presentations/mqsf2026/build.py
 ```
 
-Open `build/mqsf2026/index.html` directly. No server or network is needed.
-`build/mqsf2026/mqsf-2026.zip` includes the HTML, complete `evidence.json.gz`,
-SVG assets with provenance and licenses, and these rehearsal notes. The browser
-loads only the summaries needed for display; the ZIP retains full observations.
+Open `build/mqsf2026/index.html` directly. No server or network is needed. The
+build produces two archives in `build/mqsf2026/`:
+
+- `mqsf-2026.zip`: the standalone HTML, slide-by-slide speaker notes, a short
+  `README.txt` for the presentation laptop, and combined license/asset notices.
+- `mqsf-2026-evidence.zip`: complete `evidence.json.gz`, editable SVG assets,
+  original licenses and provenance, this technical guide, and the compiler
+  change inventory. Development commands below apply to a repository checkout.
+
+The presentation needs only the first archive. Its HTML embeds all runtime
+content and the summaries needed for display. The evidence archive preserves the
+full observations and compiler outputs without duplicating the HTML. Read the
+Docs hosts both ZIPs; its standard offline download is the presentation ZIP.
 
 | Action                      | Keys                                 |
 | --------------------------- | ------------------------------------ |

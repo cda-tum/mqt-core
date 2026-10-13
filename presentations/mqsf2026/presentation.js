@@ -1289,12 +1289,24 @@
     "System Software for Quantum Computing",
     0,
     opening.title,
-    "Lukas Burgholzer, CTO and co-founder of MQSC; Senior Researcher at TUM CDA.",
+    "Introduce MQSC first: CTO and co-founder; also Senior Researcher at TUM CDA. The scope is the full path from quantum devices to users. Next: the ecosystem this software must connect.",
   );
-  for (const [mode, title] of [
-    ["problem", "Connecting the Quantum Ecosystem"],
-    ["stack", "A Shared Software Stack"],
-    ["detail", "Our Approach: From the Metal to the User"],
+  for (const [mode, title, notes] of [
+    [
+      "problem",
+      "Connecting the Quantum Ecosystem",
+      "Follow a researcher from a workstation to multiple quantum providers, then cloud compute and HPC. Add the other users last. The growing web makes bespoke integrations hard to maintain. Next: common interfaces and reusable components.",
+    ],
+    [
+      "stack",
+      "A Shared Software Stack",
+      "Reveal all frontends, then separate programs from runtime requests. Compilation transforms programs; orchestration coordinates resources and execution. The backend interface supplies constraints and carries jobs and results. Next: put MQSC products into these architectural roles.",
+    ],
+    [
+      "detail",
+      "Our Approach: From the Metal to the User",
+      "Build from QDMI and its devices through the MQT Compiler Collection to MQSC Orchestrator. Both upper components live in MQT Core. Credit the projects' origins and wider communities; finish with the principles. Next: follow a practical hybrid application.",
+    ],
   ]) {
     add(
       mode,
@@ -1302,7 +1314,7 @@
       title,
       opening.phases[mode].length - 1,
       (s, t) => opening.render(mode, s, t ?? 1),
-      "A shared modular stack connects users, classical resources and quantum processors. QDMI and MQT are community projects; MQSC drives their use in practice.",
+      notes,
       opening.playbacks[mode],
     );
   }
@@ -1313,6 +1325,7 @@
     0,
     () =>
       `<div class="chapter-separator" data-morph="chapter"><p>${appHeading} · QC-AFQMC</p><h1>A Classical–Quantum<br>Workflow</h1><div class="chapter-rule"></div></div>`,
+    "Introduce QC-AFQMC as a practical hybrid software workflow. Next: show where classical preparation, quantum sampling, and classical propagation run, and what passes between them.",
   );
   add(
     "hybrid-algorithm",
@@ -1320,7 +1333,7 @@
     appHeading,
     2,
     (s, t) => applicationHeading() + applicationScene(s, t ?? 1),
-    "H2/STO-3G is a bounded software demonstration adapted from the public Amazon Braket example. Quantum shadows supply trial overlaps; Slurm workers reuse them. This is not a quantum-advantage claim.",
+    "Follow the three panels: prepare the molecular problem and random bases; collect quantum shadows; reuse those observations in classical walker propagation. Credit the paper and Amazon Braket example. H₂/STO-3G makes the software workflow tractable. Next: its actual code and execution.",
     {
       0: { duration: 2200, transition: 900 },
       1: { duration: 3000, transition: 700 },
@@ -1333,7 +1346,7 @@
     appHeading,
     4,
     (s, t) => applicationHeading() + hybridExecution(s, t ?? 1),
-    "One QDMI job carries 4096 actual QIR programs. Compilation, native per-program completion and indexed retrieval timestamps are distinct. Four Slurm compute nodes propagate 128 independent walkers per trial. Bands show walker standard errors, not total statistical or systematic uncertainty.",
+    "Follow preparation, then one QDMI job with 4,096 programs and 4,194,304 shots, then four Slurm ranks propagating 128 walkers per trial. Let both curves finish. These are real jobs using ideal DDSIM and containerized Slurm nodes; timing is rescaled. Next: compile this payload for device constraints.",
     {
       1: { duration: 6500, transition: 0 },
       2: quantumPlayback,
@@ -1351,6 +1364,7 @@
         "Targeting a Quantum Device",
         "compiler",
       ),
+    "A physical target adds connectivity, native operations, and a program format. Keep one submitted AFQMC payload and follow how the compiler adapts it to those constraints.",
   );
   add(
     "routing",
@@ -1360,7 +1374,7 @@
     (s, t) =>
       heading("From Quantum Program to Executable") +
       compilationScene(s, t ?? 1),
-    "Same AFQMC payload throughout. Optimization removes inverse gates. Placement assigns physical sites; routing inserts SWAPs only where connectivity requires them. Native synthesis follows. Provider metadata is queried then modeled locally; all verification execution uses DDSIM, no hardware jobs. Fusion highlights identify accepted real before/after events, not every individual lowering.",
+    "Keep input and optimization fixed. Follow Emerald placement, routing, synthesis, and QIR; then switch to IBM/QPY and IonQ/OpenQASM. Local QDMI models use provider snapshots. Compiled QIR is checked on DDSIM; QPY is separately round-trip checked. Next: preserve the structure of larger programs.",
     {
       4: { duration: 6500, transition: 800 },
     },
@@ -1376,6 +1390,7 @@
         "Preserving Structure Through Compilation",
         "jeff",
       ) + paperFooter(),
+    "Introduce loops and classical control flow as useful program structure, especially for repeated error-correction cycles and larger algorithms. Credit the paper collaborators. Next: use Grover to show the cost of unrolling.",
   );
   add(
     "grover-growth",
@@ -1383,7 +1398,7 @@
     "Why Are We Unrolling?",
     0,
     (s, t) => heading("Why Are We Unrolling?") + growthScene(t ?? 1),
-    "Measured Grover program sizes: first show unrolled output growth, then structure-preserving output. The circuit sketch explains the loop; it is intentionally illustrative.",
+    "Read the Grover loop, then let the unrolled and structure-preserving curves appear. At 22 qubits: about 2.32 MB versus 1.25 KB of emitted OpenQASM. The graph measures program size, not runtime. Next: loops that contain measurements and decisions.",
     { 0: { duration: 6500, transition: 700 } },
   );
   add(
@@ -1392,7 +1407,7 @@
     "Structured Programs, All the Way Down",
     4,
     (s) => heading("Structured Programs, All the Way Down") + structureScene(s),
-    "Syndrome extraction follows OpenQASM → QC → QCO → optimization → QC → QIR, without hardware mapping or native synthesis. The complete entry point retains reset, feedback and loops; excerpts preserve original line numbers. Declarations and module flags remain in the downloadable evidence.",
+    "Read the syndrome source, reveal its complete QIR entry point, then connect reset, feedback, and loop highlights. The scratch bit stays local to the loop. This portable path does not map or synthesize for a device. Next: execute those control structures and classical calculations.",
   );
   add(
     "execution-chapter",
@@ -1405,6 +1420,7 @@
         "A Runtime for Structured Quantum Programs",
         "runtime",
       ),
+    "DDSIM's QIR runtime executes classical control flow together with quantum operations. Introduce the JIT, then use iterative phase estimation to follow the running program.",
   );
   add(
     "adaptive-execution",
@@ -1414,7 +1430,7 @@
     (s, t) =>
       heading("A Runtime for Structured Quantum Programs") +
       adaptiveRuntime(s, t ?? 1),
-    "Iterative QPE estimates phase 1/3 with 8 output bits and 4 logical qubits. Controlled-U powers remain counted loops. Four native QIR workers execute 8192 shots. Calls, JIT and actual 64-shot batch completions share one clock; histogram arrivals preserve returned shot identities. Instrumentation timings are not a throughput benchmark. The QCO branch-sharing sampler is a separate execution path.",
+    "First read the nested loops: four eigenstate qubits plus one recycled control, eight output bits, phase 1/3. Then start the QDMI/JIT replay and follow four workers accumulating 8,192 shots. Calls and histogram share recorded batch completions. Let the distribution settle. Next: the MQT Core capabilities behind these examples.",
     { 1: { duration: 9500, transition: 700 } },
   );
   add(
@@ -1423,6 +1439,7 @@
     "Built for the Quantum Ecosystem",
     0,
     () => separator("Built for the Quantum<br>Ecosystem", "MQT Core", "mqt"),
+    "Return from the individual examples to the reusable software behind them. Next: collect the capabilities users and developers can work with today.",
   );
   add(
     "features",
@@ -1431,7 +1448,7 @@
     5,
     (s, t) =>
       heading("Built for the Quantum Ecosystem") + featureOverview(s, t ?? 1),
-    "Highlight verified capabilities. OpenQASM support is broad but excludes subroutines, extern/calibration and general arrays. Qiskit2.5 integrates through the C API with Python for unsupported API areas. All exports and execution traces come from the captured build. Invite everyone building or using quantum software to the QOSS survey: about 20 minutes, open through 29 October 2026. Details: https://unitary.foundation/posts/2026_qoss_survey/.",
+    "Build through OpenQASM, QIR, Qiskit, PennyLane, installation, and developer resources. F16.6 ends with the QOSS survey invitation: anyone building or using quantum software; about 20 minutes; open through 29 October. Pause for scanning. Next: the community behind the stack.",
     { 5: { duration: 1600 } },
   );
   add(
@@ -1440,7 +1457,7 @@
     "System Software for Quantum Computing",
     0,
     opening.conclusion,
-    "Built with the MQT and QDMI communities — driven into practice by MQSC.",
+    "Return to the product tower: QDMI, the MQT Compiler Collection, and MQSC Orchestrator. Built with the Community. Driven into practice by MQSC. Credit the people and organizations shown, thank the audience, and leave the closing image visible for discussion.",
   );
 
   function resize() {

@@ -1,135 +1,264 @@
 # MQSF rehearsal notes
 
-Allow about 35 minutes. Each click changes one narrative step. Motion within a
-step ends and holds; clicking during playback advances immediately. Use the
-separate notes file privately: the P shortcut displays notes on the projector.
+Allow about 35 minutes, including animations. A click advances to the next
+build; clicking during playback finishes it and advances immediately. Let
+replays settle when pointing to their results.
 
-## F1 · Introduction
+Use this file privately. **P displays the short notes on the projector.** Right
+and Left move forward and back. Type a slide number and press Enter to jump; G
+opens the overview. F toggles fullscreen and B blacks out the screen. F3.2 means
+slide 3, second build.
 
-Introduce the MQSC CTO/co-founder role and the Senior Researcher role at TUM
-CDA. Keep the title still. The subtitle is “From the Metal to the User.”
+## F1 · System Software for Quantum Computing: From the Metal to the User
 
-## F2–F4 · From diverse paths to a shared stack
+Introduce yourself as CTO and co-founder of MQSC, and Senior Researcher at TUM's
+Chair for Design Automation. The full title names the scope: software connecting
+quantum devices to the people and infrastructure that use them.
 
-Begin with quantum processors, then a researcher and their classical resources.
-Follow workstation → cloud-hosted quantum systems; then cloud compute and HPC.
-On-premise quantum access goes through HPC. Add the other user groups. Software
-must connect this growing ecosystem without a bespoke solution for every path.
+Keep the opening still and give the audience a moment to settle.
 
-Move classical compute to the bottom. Reveal Qiskit, PennyLane, OpenQASM 3, and
-the SDK extension point, with paths from every user group. Then follow programs
-and runtime calls into compilation, orchestration, and the shared backend
-interface. Modularity, efficiency, and extensibility motivate the published MQSS
-architecture.
+**Next:** “Let’s start with the ecosystem this software has to connect.”
 
-Replace the boxes with products, from the device interface upward: QDMI device
-implementations, the MQT Compiler Collection, and MQSC Orchestrator. Both upper
-components use MQT Core. QDMI is an open community standard. MQSC drives much of
-the implementation work; it does not own the standard. Credit TUM CDA as MQT's
-origin, the MQT community, TUM CAPS/LRZ/MQV, and the wider QDMI community.
-Downloads are recorded cumulative downloads, not unique users.
+## F2 · Connecting the Quantum Ecosystem
 
-## F5–F6 · A practical hybrid application
+As machines and deployment options grow, software must support many routes
+between users, classical resources, and quantum processors.
 
-Introduce quantum-assisted auxiliary-field Quantum Monte Carlo as a software
-workflow, without claiming application expertise or quantum advantage. The
-bounded H₂ example keeps the actual circuits readable.
+- **F2.1:** Start with the range of quantum processors.
+- **F2.2–F2.4:** Follow a researcher from a workstation to one cloud-accessible
+  processor, then another provider, then the other modalities.
+- **F2.5–F2.6:** Increase the classical workload: cloud compute, then HPC with
+  on-premise quantum access and connections to cloud services.
+- **F2.7:** Add the other users. Let the full set of paths appear: maintaining
+  bespoke software for every path will not scale.
 
-Classical preparation builds the molecular problem and trial. Quantum sampling
-collects classical shadows once. Classical walkers then reuse those observations
-for overlap estimates. Circle area represents recorded importance weight; the
-weighted reduction produces the energy estimate. Attribute the adapted Amazon
-Braket example.
+**Next:** “We need common interfaces and a stack whose parts can be reused.”
 
-## F7 · Execute the hybrid workflow
+## F3 · A Shared Software Stack
 
-Reveal the actual payload-generation code, then shrink it as the quantum batch
-expands. One QDMI job contains 4,096 programs with 1,024 shots each: 4,194,304
-shots in total. Trace basis generation, exact matrix validation, and PennyLane
-preprocessing before program conversion. Job states and indexed results are
-recorded observations; playback rescales their timing.
+Modularity, efficiency, and extensibility apply across programming models,
+devices, and deployment environments.
 
-Reveal classical propagation: four Slurm ranks on four compute nodes, 128
-walkers and 240 imaginary-time steps for each trial. These are real
-Docker-playground allocations on one host, not a cluster-scaling experiment.
-Wall time and imaginary time are different coordinates.
+- **F3.1:** Let the classical resources move beneath the stack.
+- **F3.2:** Follow the frontend reveal from Qiskit through PennyLane, OpenQASM,
+  and the SDK extension point. Every user can enter through any frontend.
+- **F3.3:** Separate programs from runtime requests. Compilation transforms the
+  program; orchestration coordinates compilation, resources, and execution.
+- **F3.4:** The backend interface supplies device constraints and carries jobs
+  and results. Point to the published MQSS architecture for further detail.
 
-Animate the quantum-shadow trial, then the Hartree–Fock trial. Interpolation
-connects recorded walker states and energy estimates; the walker rings remain
-visible at zero weight. Show the complete observed range. The reference is exact
-FCI within this basis; the band covers only walker uncertainty conditional on
-the shared shadows. No conclusion about quantum advantage follows from these
-curves.
+These are architectural roles. The next view makes the current products
+concrete.
 
-## F8–F9 · Compile for a physical target
+**Next:** “Here is how we are building these parts at MQSC.”
 
-Keep snapshot 0's actual submitted payload. A physical device adds a topology
-and native operations. Emerald supplies 54 qubits and R/CZ constraints. Follow
-hardware-independent simplification, placement and routing, native synthesis,
-and executable generation.
+## F4 · Our Approach: From the Metal to the User
 
-Click through initial placement, forward/backward refinement, and the final
-forward route. Gate highlights and SWAP counters come from recorded operations;
-visual interpolation does not add search states. Completed tiles retain visual
-reminders of the pipeline.
+Build the product story from device access to compilation and orchestration.
 
-Each target change updates the device and recorded compiler stages together.
-Show IBM's public Nighthawk model and IonQ's all-to-all GPI/GPI2/RZZ model. The
-same payload enters each compilation. Metadata is captured in advance, compiled
-through local QDMI models, and checked by executing the resulting QIR on DDSIM.
-The executable panel changes from IQM's QIR to IBM's Qiskit circuit and QPY
-serialization, then IonQ's native OpenQASM 3. Qiskit draws the complete IBM
-circuit with idle wires hidden; QPY retains the physical register and layout. No
-hardware jobs are submitted. End with the extensible interface and abstract
-compiler flow.
+- **F4.1–F4.2:** Start at the backend interface. QDMI connects the IQM, Amazon
+  Braket, DDSIM, and IBM implementations shown here.
+- **F4.3:** The MQT Compiler Collection consumes programs and device
+  constraints.
+- **F4.4:** MQSC Orchestrator connects workflows to execution and scheduling,
+  including Slurm. Both upper components live in MQT Core.
+- **F4.5:** Finish with openness, community, freedom to change components,
+  practical integration, and performance.
 
-## F10–F12 · Why are we unrolling?
+Credit TUM CDA as MQT's origin and the continuing MQT community. QDMI grew from
+TUM CDA, TUM CAPS, and LRZ, with MQV, MQSC, and community contributors
+maintaining and developing it. MQSC drives these projects into practical
+deployments. Downloads are cumulative downloads, not individual users.
 
-Begin only with measured Grover program sizes. At 22 qubits the structured
-output is about 1.25 KB; the fully unrolled output is about 2.32 MB. The graph
-uses bytes and a logarithmic axis, with no extrapolated points.
+**Next:** “Let’s follow an application through this stack.”
 
-Read the compact syndrome source. Reset, measurement feedback, and counted loops
-survive QC → QCO → optimization → QC → QIR. This portable example does not
-undergo device mapping or native-gate synthesis. Its full QIR entry point is
-shown, then reset, measurement/branch, and loop excerpts are highlighted.
-Scratch bit `s` is local to the loop. Credit the “Why Are We Unrolling?”
-collaborators and jeff as an exchange format for structured quantum programs.
-The literature RUS V₃ example is retained in the downloadable evidence.
+## F5 · A Classical–Quantum Workflow
 
-## F13–F14 · Execute adaptive QIR
+Introduce quantum-assisted auxiliary-field Quantum Monte Carlo as a practical
+example of the software demands of a hybrid application.
 
-DDSIM runs QIR 2.1 Adaptive Profile using a JIT, including the program's
-classical computation. Iterative QPE uses a four-qubit U plus a recycled
-control: five qubits in total, eight output bits, phase 1/3, and 8,192 shots.
-U = P(π/6)⊗⁴ acts on |1111⟩. The outer loop resets the control for each bit;
-the nested loop repeats controlled-U 2^(7−k) times. P(θ) applies the feedback
-accumulated so far, and measurement updates θ ← θ/2 − (π/2) result[k] for the
-next round. These loops and runtime calculations remain in the compiled QIR.
+**Next:** “The quantum calculation is one part of a much larger classical
+workflow.”
 
-The diagram comes from the exact submitted OpenQASM syntax, without expanding
-the loops. Qiskit export is unavailable for this program's dynamic bounds and
-classical indexing. The evidence records that limit and retains the real
-QC/QCO/QIR artifacts; it does not replace the program with a Qiskit surrogate.
+## F6 · Quantum-Assisted Auxiliary-Field Quantum Monte Carlo
 
-Four native workers execute in parallel. Their progress and the histogram share
-actual 64-shot batch-completion observations with the QDMI/JIT trace. Each
-arrival retains its index in the returned result. The replay is slowed for
-inspection and includes instrumentation overhead; it is not a throughput
-benchmark. QCO measurement-branch sharing is a separate path from adaptive QIR.
+Explain where each part runs and what passes between them. The demonstration
+adapts the public Amazon Braket example to H₂ in the STO-3G basis.
 
-## F15–F17 · Features and conclusion
+- **F6.1:** Classical preparation defines the molecular problem, trial state,
+  and random measurement bases. Credit the paper and Amazon Braket example.
+- **F6.2:** Quantum sampling collects classical shadows: 4,096 programs with
+  1,024 shots each. These observations supply trial-state overlap estimates.
+- **F6.3:** Classical Monte Carlo reuses the observations while propagating
+  walkers. Circle area shows walker weight; the reduction gives the energy.
 
-Build the feature overview: OpenQASM 3.1, QIR 2.1, Qiskit, PennyLane, packaged
-binaries, and developer resources. Then zoom back out to the shared
-architecture. Common interfaces, compilation, and orchestration connect
-different users, classical infrastructure, and devices.
+Keep the explanation at the workflow level. The small molecule demonstrates
+software integration and does not establish quantum advantage.
 
-F16.6 ends with the Unitary Foundation QOSS survey invitation. Leave its QR
-visible long enough to scan: about 20 minutes to complete, open through 29
-October 2026. Everyone who builds or uses quantum software can contribute.
+**Next:** “Now let’s look at the code and execution behind those boxes.”
 
-“Built with the Community. Driven into practice by MQSC.”
+## F7 · Execute the Hybrid Workflow
 
-Leave the product tower and community credits visible for discussion; mq.sc and
-the social links remain in the shared footer.
+Follow preparation, the quantum batch, and the dependent classical allocation as
+one workflow.
+
+- **F7.1:** Orient the audience in the actual preparation and batch code.
+- **F7.2:** Follow basis generation, validation, PennyLane preprocessing, and
+  conversion to OpenQASM. Each cell tracks one prepared program.
+- **F7.3:** Let the quantum panel expand. One QDMI job contains 4,096 compiled
+  QIR programs and 4,194,304 shots. Distinguish compilation, execution
+  completion, and result retrieval as the counters advance.
+- **F7.4:** Move to four Slurm ranks on four compute nodes, 128 walkers, and 240
+  imaginary-time steps per trial. Let both trial traces finish.
+- **F7.5:** Pause on the complete workflow. The quantum observations are reused
+  throughout classical propagation.
+
+The jobs and Slurm allocations are real; the four nodes are containers on one
+host, and quantum execution uses ideal DDSIM. Playback rescales recorded wall
+time; the energy plot uses imaginary time. Its reference is exact FCI within
+this basis. The band is walker standard error conditional on the shared shadows,
+not total uncertainty.
+
+**Next:** “Moving this program toward a physical device adds constraints.”
+
+## F8 · From Quantum Program to Executable
+
+A device brings a native gate set, connectivity, and an accepted program format.
+The compiler connects the application to those choices.
+
+**Next:** “We’ll keep one actual AFQMC payload and follow its compilation.”
+
+## F9 · Compiling for a Device
+
+Keep the input and hardware-independent optimization fixed while the
+target-dependent stages change.
+
+- **F9.1–F9.2:** Show snapshot 0's submitted payload and its optimized form.
+- **F9.3:** Introduce Emerald: 54 qubits, its coupling map, and R/CZ operations.
+- **F9.4:** Place logical qubits on physical sites. Establish the wire labels.
+- **F9.5:** Follow the captured final routing pass. Connect gate and SWAP
+  highlights to movement on the device map.
+- **F9.6–F9.7:** Synthesize native operations, then produce adaptive QIR. Use
+  gate counts and depth to orient the audience through the changes.
+- **F9.8:** Switch to IBM's Nighthawk model. Show the actual Qiskit drawing and
+  QPY serialization alongside the new topology and native circuit.
+- **F9.9:** Switch to IonQ's all-to-all target and GPI/GPI2/RZZ gate set. The
+  output panel now shows native OpenQASM 3.
+- **F9.10:** Zoom out to the frontend, output, and integration ecosystem.
+
+The local QDMI models use captured provider metadata. DDSIM executes each
+target's compiled QIR unchanged. IBM's QPY export is separately serialized and
+round-trip checked, including its physical layout; no hardware job is submitted.
+Its drawing hides idle wires but retains every operation. Device QR codes lead
+to the corresponding QDMI implementations.
+
+**Next:** “Device constraints are one challenge. Preserving the structure of a
+larger program is another.”
+
+## F10 · Why Are We Unrolling?
+
+Introduce loops and classical control flow as useful program structure,
+especially for repeated error-correction cycles and larger algorithms. Credit
+the paper collaborators.
+
+**Next:** “Grover’s algorithm makes the cost of expanding that structure
+visible.”
+
+## F11 · Grover Program Growth
+
+A repeated algorithm can remain a compact program.
+
+Read the sketch: prepare, then repeat oracle and diffusion. Let the unrolled
+curve appear before the structure-preserving curve. At 22 qubits, structured
+OpenQASM uses 1,249 bytes and unrolled OpenQASM uses 2,319,631 bytes: about 1.25
+KB versus 2.32 MB. The logarithmic graph shows program size, not runtime or
+speedup.
+
+**Next:** “The compiler also needs to preserve loops containing measurements and
+decisions.”
+
+## F12 · Structured Programs, All the Way Down
+
+Read one recognizable syndrome-extraction program through to executable control
+flow.
+
+- **F12.1:** Start with the complete source and circuit. The flag is reset and
+  reused; its measurement controls a correction.
+- **F12.2:** Reveal the complete QIR entry point. Compilation passed through QC
+  and QCO, optimization, and lowering to adaptive QIR.
+- **F12.3–F12.5:** Follow reset, measurement feedback, and the counted loop.
+  Connect each source highlight to its QIR excerpt. Scratch bit s is loop-local.
+
+This portable path does not perform placement, routing, or native-gate
+synthesis. Credit the paper collaborators and jeff's role in exchanging
+structured programs. The evidence also contains a repeat-until-success V₃
+example for discussion.
+
+**Next:** “Those loops and decisions now need to execute with their classical
+calculations.”
+
+## F13 · From Compilation to Execution
+
+DDSIM's QIR runtime executes classical control flow and quantum operations.
+Introduce the JIT as the bridge from QIR to the running program.
+
+**Next:** “Iterative phase estimation makes that interaction visible.”
+
+## F14 · A Runtime for Structured Quantum Programs
+
+The runtime executes nested loops and measurement feedback in the compiled
+program.
+
+- **F14.1:** Read the diagram before starting. Four qubits carry the eigenstate;
+  a fifth is the recycled control. The outer loop estimates eight bits, while
+  the inner loop applies the required controlled-U power.
+- **F14.2:** Follow QDMI into DDSIM and the LLVM JIT, then the four worker
+  counters and accumulating histogram. Let the replay settle.
+
+U = P(π/6)⊗⁴ acts on |1111⟩, giving phase 1/3. Eight bits cannot represent it
+exactly, so the 8,192 shots show a distribution. Round k repeats controlled-U
+2^(7−k) times; measurement updates θ ← θ/2 − (π/2) result[k]. Both loops and the
+floating-point feedback remain in QIR.
+
+The diagram follows the submitted OpenQASM. Its dynamic bounds and classical
+indexing are currently outside the Qiskit export path. Worker counters,
+histogram arrivals, and calls share recorded 64-shot completion batches. The
+slowed replay illustrates execution rather than throughput.
+
+**Next:** “These examples use capabilities available together in MQT Core.”
+
+## F15 · Built for the Quantum Ecosystem
+
+Return from individual examples to the reusable software behind them.
+
+**Next:** “Let me collect the pieces you can use today.”
+
+## F16 · MQT Core Capabilities
+
+Connect the demonstrated features to entry points for users and developers.
+
+- **F16.1–F16.2:** Broad OpenQASM 3.1 support and QIR 2.1 Base/Adaptive Profile
+  compilation and execution. Avoid implying every OpenQASM feature is supported;
+  subroutines and calibrations are examples outside the current scope.
+- **F16.3–F16.4:** Qiskit's native C API integration, then PennyLane's hybrid
+  workflows through QDMI. Relate these to the application.
+- **F16.5:** Installation and tooling: platform wheels, supported Python
+  versions, and portable LLVM distributions.
+- **F16.6:** Developer resources, followed by the QOSS survey invitation. Invite
+  anyone building or using quantum software. Leave the QR visible long enough to
+  scan: about 20 minutes to complete, open through 29 October 2026.
+
+Repository and documentation QR codes are available on the earlier builds.
+
+**Next:** “All of this depends on an active software community.”
+
+## F17 · From the Metal to the User
+
+Bring the application, compiler, and runtime back to the product tower: QDMI,
+the MQT Compiler Collection, and MQSC Orchestrator.
+
+“Built with the Community. Driven into practice by MQSC.” Credit the people and
+organizations represented here, thank the audience, and invite discussion.
+
+Leave the closing image visible. mq.sc and the social links remain in the
+footer.

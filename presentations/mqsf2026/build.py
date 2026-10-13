@@ -336,7 +336,7 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: Path = HERE) -> Path:
-    """Build a standalone HTML file and ZIP from verified capture fixtures.
+    """Build standalone HTML and separate presentation and evidence archives.
 
     Returns:
         Path to the self-contained HTML presentation.
@@ -454,13 +454,28 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
     output.mkdir(parents=True, exist_ok=True)
     result = output / "index.html"
     result.write_text(html, encoding="utf-8")
+    notices = "\n\n".join(
+        f"{path.name}\n{'=' * len(path.name)}\n\n{path.read_text(encoding='utf-8')}"
+        for path in [
+            HERE.parents[1] / "LICENSE",
+            *sorted(source.glob("assets/*-LICENSE.txt")),
+            source / "assets/sources.json",
+        ]
+        if path.is_file()
+    )
     with zipfile.ZipFile(output / "mqsf-2026.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(result, "index.html")
+        archive.writestr("NOTICES.txt", notices)
+        for name, packaged_name in (("offline-readme.txt", "README.txt"), ("presenter-notes.md", "presenter-notes.md")):
+            if source.joinpath(name).exists():
+                archive.write(source / name, packaged_name)
+    with zipfile.ZipFile(output / "mqsf-2026-evidence.zip", "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("NOTICES.txt", notices)
         archive.writestr("evidence.json.gz", raw if capture.suffix == ".gz" else gzip.compress(raw, mtime=0))
         for asset in sorted(source.joinpath("assets").glob("*")):
             if asset.is_file():
                 archive.write(asset, f"assets/{asset.name}")
-        for name in ("presenter-notes.md", "README.md", "compiler-fixes.md"):
+        for name in ("README.md", "compiler-fixes.md"):
             if source.joinpath(name).exists():
                 archive.write(source / name, name)
     return result
