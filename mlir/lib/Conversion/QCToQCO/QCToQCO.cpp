@@ -2126,20 +2126,22 @@ protected:
     }
 
     // Register indices still need normalization for alias validation.
-    if ((!preflightState.registerIds.empty() ||
-         !staticsAlreadyNormalized(moduleOp)) &&
-        failed(normalizeStaticQubits(moduleOp))) {
+    const bool needsNormalization = !preflightState.registerIds.empty() ||
+                                    !staticsAlreadyNormalized(moduleOp);
+    if (needsNormalization && failed(normalizeStaticQubits(moduleOp))) {
       signalPassFailure();
       return;
     }
 
-    LoweringState state;
+    LoweringState normalizedState;
+    auto& state = needsNormalization ? normalizedState : preflightState;
 
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
     QCToQCOTypeConverter typeConverter(context);
 
-    if (failed(collectRegisterAccesses(moduleOp, state))) {
+    if (needsNormalization &&
+        failed(collectRegisterAccesses(moduleOp, state))) {
       signalPassFailure();
       return;
     }
