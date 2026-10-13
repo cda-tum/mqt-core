@@ -18,6 +18,10 @@ Performance work reduces compiler overhead, DD allocations, and result copies.
 The release parallelizes eligible adaptive sampling and optimizes release builds
 and wheels.
 
+⚠️ **Performance measurements pending:** add the final v4.0.0-to-v4.1.0 figures
+for compilation, native gate count, simulation, memory, wheel size, and build
+time before the release. ⚠️
+
 ### Added
 
 #### Compiler APIs and representations
@@ -42,12 +46,22 @@ and wheels.
 - ✨ Import Qiskit device targets and support fixed or bounded native
   parameters. Add structural IBM Heron and Nighthawk device models. ([#2575],
   [#2578], [#2655]) ([**@simon1hofmann**], [**@burgholzer**])
+- ✨ Compile with `mqt-cc --target` from a saved target description without
+  opening a QDMI device. Serialize Python targets with `str(target)` and select
+  the output with `--payload-spec`. ([#2754]) ([**@burgholzer**])
 
 #### Optimization and synthesis
 
 - ✨ Synthesize constant two-qubit blocks and gates with runtime parameters for
   native gate sets, including fixed-angle pulses and bounded entanglers.
   ([#2537], [#2575], [#2578]) ([**@simon1hofmann**], [**@burgholzer**])
+- ✨ Add the GPI single-qubit synthesis basis for targets with GPI/GPI2 pulses
+  at arbitrary azimuths. Use at most three pulses for constant and runtime
+  single-qubit unitaries while preserving global phase. ([#2753])
+  ([**@burgholzer**])
+- ✨ Combine successive controlled gates and simplify adjacent controlled
+  inverse pairs and constant rotations while respecting native-gate constraints.
+  ([#2741], [#2752]) ([**@burgholzer**])
 - ✨ Decompose runtime multi-controlled phase gates without additional qubits.
   ([#2743]) ([**@burgholzer**])
 
@@ -99,7 +113,10 @@ and wheels.
   ([#2733]) ([**@burgholzer**])
 - ♻️ Make compiler output easier to read with register names, compact OpenQASM
   controlled-gate names, and shorter custom QCO assembly. Saved QCO text needs
-  the syntax update described in the upgrade guide. ([#2738])
+  the syntax update described in the upgrade guide. ([#2738], [#2755])
+  ([**@burgholzer**])
+- ♻️ Consume QC and QCO programs during `to_qiskit()` export, including on
+  failure. Pass `copy=True` to preserve the source. ([#2757])
   ([**@burgholzer**])
 - ♻️ Include measurements and resets in QC gate counts. ([#2260])
   ([**@denialhaag**], [**@simon1hofmann**], [**@burgholzer**])
@@ -107,11 +124,12 @@ and wheels.
   ([#2546], [#2743]) ([**@burgholzer**], [**@simon1hofmann**])
 - ♻️ Stop inserting OpenQASM runtime assertions and require caller validation.
   ([#2546]) ([**@burgholzer**], [**@simon1hofmann**])
-- ⚡ Reduce conversion and pipeline verification overhead, skip redundant target
-  liveness analysis for eligible flat programs, and share compiler workers
-  between retained programs. ([#2647], [#2654], [#2687], [#2690], [#2691],
-  [#2695], [#2698], [#2740]) ([**@simon1hofmann**], [**@denialhaag**],
-  [**@burgholzer**])
+- ⚡ Reduce conversion, QCO traversal, and pipeline verification overhead, skip
+  redundant target liveness analysis for eligible flat programs, and share
+  compiler workers between retained programs. ([#2647], [#2654], [#2687],
+  [#2690], [#2691], [#2695], [#2698], [#2740], [#2751], [#2756])
+  ([**@simon1hofmann**], [**@denialhaag**], [**@burgholzer**],
+  [**@MatthiasReumann**])
 
 #### Compilation for devices
 
@@ -122,8 +140,7 @@ and wheels.
   storage. ([#2544], [#2547], [#2549], [#2607], [#2612], [#2686])
   ([**@burgholzer**], [**@MatthiasReumann**], [**@simon1hofmann**])
 - ⚡ Remove terminal SWAPs before placement when final wire permutations can be
-  absorbed, and combine successive controlled gates. ([#2720], [#2741])
-  ([**@burgholzer**])
+  absorbed. ([#2720]) ([**@burgholzer**])
 
 #### Builds and supported configurations
 
@@ -177,6 +194,9 @@ and wheels.
 - 🐛 Preserve structured OpenQASM export and source gate names, and avoid
   generated-helper collisions. ([#2680], [#2742]) ([**@simon1hofmann**],
   [**@burgholzer**])
+- 🐛 Preserve classical bit declarations inside loops and branches during
+  OpenQASM and Qiskit export. Restore zero-initialized local bits on each block
+  entry in Qiskit. ([#2755]) ([**@burgholzer**])
 - 🐛 Preserve classical-register initialization and helper captures through
   structured `jeff` round trips. ([#2567], [#2624]) ([**@denialhaag**],
   [**@simon1hofmann**], [**@burgholzer**])
@@ -1321,6 +1341,13 @@ for previous changelogs._
 
 <!-- PR links -->
 
+[#2757]: https://github.com/munich-quantum-toolkit/core/pull/2757
+[#2756]: https://github.com/munich-quantum-toolkit/core/pull/2756
+[#2755]: https://github.com/munich-quantum-toolkit/core/pull/2755
+[#2754]: https://github.com/munich-quantum-toolkit/core/pull/2754
+[#2753]: https://github.com/munich-quantum-toolkit/core/pull/2753
+[#2752]: https://github.com/munich-quantum-toolkit/core/pull/2752
+[#2751]: https://github.com/munich-quantum-toolkit/core/pull/2751
 [#2744]: https://github.com/munich-quantum-toolkit/core/pull/2744
 [#2743]: https://github.com/munich-quantum-toolkit/core/pull/2743
 [#2742]: https://github.com/munich-quantum-toolkit/core/pull/2742

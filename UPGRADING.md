@@ -28,6 +28,24 @@ circuit. Target compilation rejects attached layout metadata. The
 [target compilation guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/target_compilation.html)
 describes these requirements and the mapping options.
 
+### Qiskit export ownership
+
+`QCProgram.to_qiskit()` and `QCOProgram.to_qiskit()` now consume their source by
+default, including when conversion or export fails. Pass `copy=True` when you
+need to reuse the program or retain it after an error:
+
+```python
+from mqt.core.mlir import QCProgram
+
+program = QCProgram.from_openqasm_str("OPENQASM 3.0; qubit q; h q;")
+circuit = program.to_qiskit(copy=True)
+assert program.is_valid
+```
+
+The
+[Qiskit guide](https://mqt.readthedocs.io/projects/core/en/latest/mlir/qiskit.html)
+describes the supported export subset.
+
 ### Quantum program contracts
 
 OpenQASM import no longer inserts runtime assertions. Validate runtime inputs
