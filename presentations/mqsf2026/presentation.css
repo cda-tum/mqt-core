@@ -976,30 +976,28 @@ svg {
   width: 100%;
   height: 100%;
 }
-.qpe-banner {
+.adaptive-runtime {
   display: grid;
-  grid-template-columns: 1fr 635px;
+  grid-template-columns: minmax(0, 1fr) 680px;
   gap: 40px;
-  height: 330px;
   margin-top: 20px;
-  align-items: center;
 }
-.qpe-banner h3 {
+.qpe-program > h3 {
   font-size: 25px;
 }
-.qpe-banner .circuit {
+.qpe-program .circuit {
   height: 290px;
 }
 .runtime-products {
   display: grid;
-  grid-template-columns: 168px 24px 168px 24px 168px;
+  grid-template-columns: 186px 30px 186px 30px 186px;
   gap: 12px;
-  align-items: center;
+  align-items: start;
   justify-content: center;
 }
 .runtime-products .logo {
-  width: 168px;
-  height: 114px;
+  width: 145px;
+  height: 96px;
 }
 .runtime-products > div {
   display: grid;
@@ -1007,14 +1005,16 @@ svg {
   gap: 8px;
 }
 .runtime-products b {
-  font-size: 26px;
+  font-size: 24px;
+  white-space: nowrap;
 }
 .runtime-products > span {
   font-size: 30px;
+  line-height: 96px;
 }
 .runtime-columns {
   display: grid;
-  grid-template-columns: 1.06fr 1fr 1.1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 28px;
   margin-top: 22px;
   height: 285px;
@@ -1022,15 +1022,19 @@ svg {
 .runtime-columns > div {
   min-width: 0;
 }
-.runtime-columns h3 {
+.runtime-columns h3,
+.runtime-outcomes h3 {
   font-size: 27px;
   margin-bottom: 18px;
 }
 .runtime-columns .sequence-svg {
   height: 245px;
 }
-.runtime-columns .histogram {
-  height: 250px;
+.runtime-outcomes {
+  margin-top: 26px;
+}
+.runtime-outcomes .histogram {
+  height: 287px;
 }
 .execution-log > div {
   display: flex;
@@ -1102,6 +1106,10 @@ svg {
 .feature-resources .qr-block > img {
   width: 70px;
   height: 70px;
+}
+.feature-resources .qr-block[data-morph="qr-core-repo"] > img {
+  width: 90px;
+  height: 90px;
 }
 .feature-resources .qr-block .url {
   font-size: 21px;
@@ -1394,7 +1402,7 @@ svg {
 }
 .compiler-ecosystem {
   display: grid;
-  grid-template-columns: 235px minmax(0, 1fr) 235px;
+  grid-template-columns: 235px minmax(0, 1fr) 300px;
   gap: 20px;
   margin-top: 34px;
 }
@@ -1591,33 +1599,50 @@ svg {
 .exchange-footer {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 16px;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 20px;
 }
 .exchange-footer .logo {
-  width: 86px;
-  height: 54px;
+  width: 110px;
+  height: 74px;
+}
+.exchange-footer .logo[alt="MQT"] {
+  width: 132px;
+}
+.exchange-footer > span {
+  font-size: 26px;
 }
 .exchange-footer > div {
-  max-width: 93px;
-  line-height: 1.3;
+  max-width: 118px;
+  line-height: 1.2;
 }
 .paper-partners {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
+  justify-content: space-evenly;
+  gap: 12px;
 }
 .paper-partners .logo {
-  width: 110px;
+  flex-shrink: 0;
+  width: 100px;
   height: 72px;
 }
+.paper-partners .logo[alt="MQSC"] {
+  width: 136px;
+}
 .paper-partners .logo[alt="OXFORD"] {
-  width: 132px;
+  width: 126px;
+}
+.paper-partners .logo[alt="QUANTINUUM"] {
+  width: 164px;
 }
 .paper-partners .logo[alt="UBC"] {
   width: 54px;
+}
+.paper-partners .logo:is([alt="XANADU"], [alt="UNITARY"]) {
+  width: 146px;
 }
 .structure-footer .qr-block {
   gap: 12px;

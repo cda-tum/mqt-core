@@ -166,24 +166,6 @@
   color: var(--muted);
   font-size: 23px;
 }
-.opening-social {
-  display: flex;
-  align-items: center;
-  gap: 48px;
-  margin-top: 32px;
-}
-.opening-social a {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  font-size: 25px;
-  color: var(--navy);
-  text-decoration: none;
-}
-.opening-social img {
-  height: 29px;
-  width: 29px;
-}
 .opening-conclusion {
   display: grid;
   grid-template-columns: 1fr 690px;
@@ -224,6 +206,10 @@
 .opening-community-logos img[alt="mqv"] {
   width: 150px;
 }
+.opening-community-logos img[alt="fullstaqd"] {
+  width: 204px;
+  height: 104px;
+}
 .opening-community-logos img[alt="eqs3"] {
   width: 295px;
 }
@@ -233,6 +219,12 @@
 .opening-community-logos img[alt="openqse"] {
   width: 118px;
   height: 115px;
+}
+.opening-openqse {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 27px;
 }
 .opening-closing-tower {
   position: relative;
@@ -267,9 +259,9 @@
   width: 100%;
   min-height: 124px;
   padding: 21px 38px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 186px 1fr;
   align-items: center;
-  justify-content: center;
   gap: 34px;
   border: 1.5px solid #a9c6e1;
   border-radius: 20px;
@@ -278,8 +270,9 @@
 }
 .opening-product-layer img {
   width: 186px;
-  height: 77px;
+  height: 92px;
   object-fit: contain;
+  object-position: right center;
 }
 .opening-product-layer strong {
   font-size: 31px;
@@ -294,9 +287,6 @@
 }
 .opening-qdmi-layer {
   border-top: 5px solid #8db4d8;
-}
-.opening-qdmi-layer strong {
-  font-size: 25px;
 }
 .opening-tower-endpoint {
   position: relative;

@@ -50,8 +50,8 @@
     `<img class="${cls}" src="${assets[name]}" alt="${esc(name === "tum-cda" ? "Chair for Design Automation, TUM" : name.toUpperCase())}" />`;
   const heading = (title, sub = "") =>
     `<h2 data-morph="heading">${title}</h2>${sub ? `<p class="subtitle">${sub}</p>` : ""}`;
-  const qr = (name, url, caption) => {
-    const stats = references.repo_stats?.[`https://${url}`];
+  const qr = (name, url, caption, showStats = true) => {
+    const stats = showStats && references.repo_stats?.[`https://${url}`];
     const stars = stats
       ? `<span class="repo-stars"><svg viewBox="0 0 24 24" aria-label="GitHub stars"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9-6.2-3.3-6.2 3.3L7 14.2 2 9.3l6.9-1Z" fill="#e7ae18"/></svg>${stats.stars}${stats.downloads ? ` · ${esc(stats.downloads)}` : ""}</span>`
       : "";
@@ -92,7 +92,7 @@
     );
   const flatten = window.MQSF_CIRCUIT.flatten;
   const circuit = window.MQSF_CIRCUIT.render;
-  function histogram(capture, elapsed = Infinity, box = "0 0 900 400") {
+  function histogram(capture, elapsed = Infinity, box = "0 0 900 380") {
     const bins = new Map();
     const timed = capture.shot_events || [];
     const shots = Number.isFinite(elapsed)
@@ -120,8 +120,8 @@
       .reduce((s, [, n]) => s + n, 0);
     const x0 = 90,
       w = 765,
-      plotH = 200,
-      y0 = 265,
+      plotH = 210,
+      y0 = 250,
       bw = w / values.length;
     let body = line(x0, y0, x0 + w, y0, "#9cb3c9", 2);
     [0, 0.5, 1].forEach((f) => {
@@ -151,10 +151,10 @@
         body += text(x + (bw - 9) / 2, y0 + 35, key, 30, "#5b7088");
     });
     body +=
-      text(450, 342, "8-bit phase estimate · integer / 256", 32, "#5b7088") +
+      text(450, 326, "Phase Estimate · Integer / 256", 29, "#5b7088") +
       text(
         450,
-        388,
+        366,
         `${fmt(shots.length, 0)} / ${fmt(capture.num_shots || 0, 0)} actual shots`,
         34,
         "#2f70b8",
@@ -766,7 +766,7 @@
   const applicationHeading = () =>
     `<h2 class="application-heading" data-morph="heading">${appHeading}<small>QC-AFQMC</small></h2>`;
   const appReference = () =>
-    `<div class="application-paper-reference" data-morph="application-paper-reference">${qr("afqmc-paper", "arxiv.org/abs/2506.22408", "Quantum-Assisted Auxiliary-Field Quantum Monte Carlo")}</div><div class="application-reference" data-morph="application-reference">${logo("aws")}${qr("afqmc", "github.com/amazon-braket/amazon-braket-examples", "Amazon Braket · Public AFQMC Example")}</div>`;
+    `<div class="application-paper-reference" data-morph="application-paper-reference">${qr("afqmc-paper", "arxiv.org/abs/2506.22408", "Quantum-Assisted Auxiliary-Field Quantum Monte Carlo")}</div><div class="application-reference" data-morph="application-reference">${logo("aws")}${qr("afqmc", "github.com/amazon-braket/amazon-braket-examples", "Amazon Braket · Public AFQMC Example", false)}</div>`;
   function appPanel(i, body) {
     return `<section data-morph="app-pillar-${i}" class="app-panel"><h3>${icon(["workstation", "cryostat", "server"][i])}<span>${["Classical Preparation", "Quantum Shadow Collection", "Classical Monte Carlo"][i]}</span></h3><div class="app-panel-body">${body}</div><div class="app-badges">${i === 0 ? badge("pennylane", "") : i === 1 ? badge("mqt", "Compiler Collection") + badge("qdmi", "") : badge("mqsc", "Orchestrator")}</div></section>`;
   }
@@ -832,6 +832,10 @@
       index = Math.min(ends.length - 2, Math.floor(scaled));
     return ends[index] + (ends[index + 1] - ends[index]) * (scaled - index);
   }
+  const quantumPlayback = {
+    duration: 4000 + 13000 / 1.5 + 3000,
+    transition: 850,
+  };
   function quantumTime(progress) {
     const capture = app.execution;
     const breaks = [
@@ -840,8 +844,13 @@
       capture.retrievals?.[0]?.time_ms || phaseTime("extracting-results"),
       totalTime(capture),
     ];
-    const stops = [0, 0.2, 0.85, 1];
-    const segment = progress < 0.2 ? 0 : progress < 0.85 ? 1 : 2;
+    const stops = [
+      0,
+      4000 / quantumPlayback.duration,
+      1 - 3000 / quantumPlayback.duration,
+      1,
+    ];
+    const segment = progress < stops[1] ? 0 : progress < stops[2] ? 1 : 2;
     const fraction =
       (progress - stops[segment]) / (stops[segment + 1] - stops[segment]);
     return breaks[segment] + fraction * (breaks[segment + 1] - breaks[segment]);
@@ -1012,7 +1021,7 @@
         "frontends",
       ],
       [
-        "QDMI &amp; Compiler Ecosystem",
+        "Our Ecosystem",
         `<div class="ecosystem-group"><h4>Quantum Hardware &amp; Cloud</h4><div class="ecosystem-logos hardware">${["iqm", "ibm", "aqt", "planqc", "wmi", "peak-quantum", "aws"].map((name) => logo(name)).join("")}</div></div><div class="ecosystem-group"><h4>Simulators</h4><div class="ecosystem-logos simulators"><span>${logo("mqt")}<b>DDSIM</b></span><span>${logo("eviden")}<b>Qaptiva</b></span></div></div><div class="ecosystem-group"><h4>HPC Centers</h4><div class="ecosystem-logos centers">${["lrz", "psnc", "vtt", "ornl", "cineca", "cesga"].map((name) => logo(name)).join("")}</div></div><div class="ecosystem-group"><h4>Integration Projects</h4><div class="ecosystem-logos initiatives">${["mqss", "fullstaqd", "eqs3"].map((name) => logo(name)).join("")}<span>${logo("openqse")}<b>openQSE</b></span></div></div>`,
         "Integration",
         "integrations",
@@ -1064,7 +1073,7 @@
         },
       );
     if (stage >= 6)
-      executable = `<section class="compiler-qir" data-morph="compiler-qir" data-target="${esc(target.id)}">${code(targetStage(target, "qir-adaptive"), { start: focus(targetStage(target, "qir-adaptive"), "define", 0), count: 13, title: "6 · QIR 2.1 Adaptive Profile", key: "compiler-qir" })}<p class="code-continuation">⋮ Continued in the complete recorded file</p></section>`;
+      executable = `<section class="compiler-qir" data-morph="compiler-qir" data-target="${esc(target.id)}">${code(targetStage(target, "qir-adaptive"), { start: focus(targetStage(target, "qir-adaptive"), "define", 0), count: 13, title: "6 · QIR 2.1 Adaptive Profile", key: "compiler-qir" })}<p class="code-continuation">⋮ Continued in the complete file</p></section>`;
     return compilerFlow(
       stage <= 2 ? stage : stage <= 4 ? 3 : stage === 5 ? 4 : 5,
       `<div class="compiler-workbench phase-${stage} ${stage >= 6 ? "with-qir" : ""}"><div class="compiler-invariants">${input}${optimized}</div><div class="compiler-device" data-morph="compiler-device">${stage >= 2 ? deviceCard(target, { layout: route?.layout, activeSites: stage === 4 ? route?.sites : [], blend: stage === 4 ? route?.blend : null }) : ""}</div><div class="compiler-stages">${routed}${native}</div>${executable}</div>`,
@@ -1205,7 +1214,7 @@
     const elapsed =
         step === 0 ? qdmiStart(run) : interpolateTime(run, progress),
       source = variant("qpe").stages.find((a) => a.id === "source");
-    return `<div class="qpe-banner"><div><h3>Iterative QPE · φ = 1/3 · 8 Bits</h3>${MQSF_CIRCUIT.renderQPE(source.circuit)}</div><div class="runtime-backend"><div class="runtime-products"><div>${logo("qdmi")}<b>Device Interface</b></div><span>→</span><div>${logo("mqt")}<b>DDSIM</b></div><span>→</span><div>${logo("llvm")}<b>JIT Runtime</b></div></div>${workerProgress(run, elapsed)}</div></div><div class="runtime-columns">${executionLog(run, elapsed)}<div class="adaptive-sequence"><h3>QDMI → Runtime</h3>${runtimeSequence(run, elapsed)}</div><div><h3>Measurement Outcomes</h3>${histogram(run, elapsed)}</div></div><div class="runtime-clock" data-morph="runtime-clock"><span>${fmt((elapsed - qdmiStart(run)) / 1000, 3)} s Recorded Time</span><span>Adaptive QIR 2.1 · 64-Shot Completion Batches · Slowed Replay</span><div class="clock-line"><div style="width:${(100 * (elapsed - qdmiStart(run))) / (totalTime(run) - qdmiStart(run))}%"></div></div></div>`;
+    return `<div class="adaptive-runtime"><div class="qpe-program"><h3>Iterative QPE · φ = 1/3 · 8 Bits</h3>${MQSF_CIRCUIT.renderQPE(source.circuit)}<div class="runtime-columns">${executionLog(run, elapsed)}<div class="adaptive-sequence"><h3>QDMI → Runtime</h3>${runtimeSequence(run, elapsed)}</div></div></div><div class="runtime-backend"><div class="runtime-products"><div>${logo("qdmi")}<b>Device Interface</b></div><span>→</span><div>${logo("mqt")}<b>DDSIM</b></div><span>→</span><div>${logo("llvm")}<b>JIT Runtime</b></div></div>${workerProgress(run, elapsed)}<div class="runtime-outcomes"><h3>Measurement Outcomes</h3>${histogram(run, elapsed)}</div></div></div><div class="runtime-clock" data-morph="runtime-clock"><span>${fmt((elapsed - qdmiStart(run)) / 1000, 3)} s Recorded Time</span><span>Adaptive QIR 2.1 · 64-Shot Completion Batches · Slowed Replay</span><div class="clock-line"><div style="width:${(100 * (elapsed - qdmiStart(run))) / (totalTime(run) - qdmiStart(run))}%"></div></div></div>`;
   }
   function featureOverview(step) {
     const groups = [
@@ -1312,7 +1321,7 @@
     "One QDMI job carries 4096 actual QIR programs. Compilation, native per-program completion and indexed retrieval timestamps are distinct. Four Slurm compute nodes propagate 128 independent walkers per trial. Bands show walker standard errors, not total statistical or systematic uncertainty.",
     {
       1: { duration: 6500, transition: 0 },
-      2: { duration: 20000, transition: 850 },
+      2: quantumPlayback,
       3: { duration: 12000, transition: 850 },
     },
   );

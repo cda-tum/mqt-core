@@ -326,7 +326,7 @@ window.MQSF_OPENING = (() => {
     body += group(
       "lane-labels",
       text(610, 130, "Program", 19, "middle", blue) +
-        text(571, 453, "Runtime", 19, "middle", orange),
+        text(610, 325, "Runtime", 19, "middle", orange),
       s(2, 0.6, 0.85),
     );
     body += group(
@@ -629,10 +629,8 @@ window.MQSF_OPENING = (() => {
           : "";
     return `<div class="opening-frame"><h2 data-morph="heading">${title}</h2><div class="opening-scene" data-morph="world">${architecture(mode, phase, progress)}</div>${refs}</div>`;
   }
-  const social = () =>
-    `<div class="opening-social"><a href="https://github.com/burgholzer">${image("github", "", "GitHub")} @burgholzer</a><a href="https://www.linkedin.com/in/lukas-burgholzer-7a1741a7/">${image("linkedin", "", "LinkedIn")} Lukas Burgholzer</a></div>`;
   function title() {
-    return `<div class="opening-title"><p class="talk-date">MQSF 2026 · Munich · 14–15 October</p><h1>System Software<br>for Quantum Computing</h1><p class="opening-slogan">From the Metal to the User</p><div class="opening-speaker"><b>Lukas Burgholzer</b><div class="opening-affiliations"><div>${image("mqsc")}<p>CTO &amp; Co-founder<span>Munich Quantum Software Company</span></p></div><div>${image("tum-cda")}<p>Senior Researcher<span>Chair for Design Automation · TUM</span></p></div></div>${social()}</div></div>`;
+    return `<div class="opening-title"><p class="talk-date">MQSF 2026 · Munich · 14–15 October</p><h1>System Software<br>for Quantum Computing</h1><p class="opening-slogan">From the Metal to the User</p><div class="opening-speaker"><b>Lukas Burgholzer</b><div class="opening-affiliations"><div>${image("mqsc")}<p>CTO &amp; Co-founder<span>Munich Quantum Software Company</span></p></div><div>${image("tum-cda")}<p>Senior Researcher<span>Chair for Design Automation · TUM</span></p></div></div></div></div>`;
   }
   function conclusion() {
     const endpoint = (kind, label) =>
@@ -641,10 +639,13 @@ window.MQSF_OPENING = (() => {
       ["mqsc", "tum-cda", "mqv", "fullstaqd"],
       ["eqs3", "jeff", "openqse"],
     ]
-      .map((row) => `<div>${row.map((n) => image(n)).join("")}</div>`)
+      .map(
+        (row) =>
+          `<div>${row.map((n) => (n === "openqse" ? `<span class="opening-openqse">${image(n)}<b>OpenQSE</b></span>` : image(n))).join("")}</div>`,
+      )
       .join(
         "",
-      )}</div></div><div class="opening-closing-tower" role="img" aria-label="From the metal through QDMI, MQT Compiler Collection and MQSC Orchestrator to the user">${endpoint("user", "To the User")}<div class="opening-product-layer opening-orchestrator-layer">${image("mqsc")}<strong>Orchestrator</strong></div><div class="opening-product-layer opening-compiler-layer">${image("mqt")}<strong>Compiler<br>Collection</strong></div><div class="opening-product-layer opening-qdmi-layer">${image("qdmi")}<strong>Quantum Device<br>Management Interface</strong></div>${endpoint("chip", "From the Metal")}</div></div>`;
+      )}</div></div><div class="opening-closing-tower" role="img" aria-label="From the metal through QDMI, MQT Compiler Collection and MQSC Orchestrator to the user">${endpoint("user", "To the User")}<div class="opening-product-layer opening-orchestrator-layer">${image("mqsc")}<strong>Orchestrator</strong></div><div class="opening-product-layer opening-compiler-layer">${image("mqt")}<strong>Compiler<br>Collection</strong></div><div class="opening-product-layer opening-qdmi-layer">${image("qdmi")}<strong>Powered<br>Solutions</strong></div>${endpoint("chip", "From the Metal")}</div></div>`;
   }
   window.MQSF_VIZ.architecturePhases = phases;
   return {
