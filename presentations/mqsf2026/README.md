@@ -80,7 +80,12 @@ are not live vendor-device calls. Compiled payloads execute unchanged on ideal
 DDSIM. No hardware jobs are submitted. Layout positions are schematic. Routing
 steps, SWAPs, search parents, costs, and layouts come from compiler telemetry;
 intermediate visual motion between recorded endpoints is interpolation. Logical
-qubits move on the device map; the routed circuit uses physical wire labels.
+qubits move on the device map; the routed circuit uses physical wire labels. The
+executable panel follows the target's interchange format: IQM uses QIR, IBM
+shows Qiskit's own vector drawing and QPY serialization, and IonQ shows native
+OpenQASM 3. The IBM QPY artifact is exported from the retained native IR; its
+separate provenance records the export tools and checked round trip. Execution
+checks use QIR; QPY validation covers serialization and layout preservation.
 Actual native completion and indexed retrieval timestamps drive separate matrix
 colors. The replay rescales preparation, compilation, execution and retrieval
 for readability. The program clock continues through preparation, execution, and

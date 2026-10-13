@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import base64
 import gzip
 import hashlib
 import importlib.util
@@ -280,6 +281,38 @@ def test_rejects_incorrect_artifact_hash() -> None:
     data = sample_capture()
     data["scenarios"][0]["variants"][0]["exports"][0]["sha256"] = "b" * 64
     with pytest.raises(ValueError, match="Artifact hash"):
+        BUILDER.validate_capture(data)
+
+
+@pytest.mark.parametrize("changed", ["native_ir_sha256", "qpy_base64", "svg"])
+def test_qpy_drawing_and_serialization_are_bound_to_native_ir(changed: str) -> None:
+    """Reject stale drawings or binary payloads while projecting each target's own format."""
+    data = sample_target_capture()
+    ibm, ionq = data["targets"]
+    ibm["id"], ionq["id"] = "ibm.ibm_miami", "aws.ionq.forte-1"
+    artifact = {
+        "id": "qpy",
+        "code": "qpy.dump(circuit, file)",
+        "sha256": hashlib.sha256(b"qpy.dump(circuit, file)").hexdigest(),
+        "qpy_base64": base64.b64encode(b"qpy-test").decode(),
+        "qpy_sha256": hashlib.sha256(b"qpy-test").hexdigest(),
+        "svg": "<svg/>",
+        "svg_sha256": hashlib.sha256(b"<svg/>").hexdigest(),
+        "provenance": {"native_ir_sha256": ibm["compilation"]["stages"][-1]["sha256"]},
+    }
+    ibm["compilation"]["exports"].append(artifact)
+    ionq["compilation"]["exports"].append({"id": "openqasm3", "code": "native IonQ"})
+    BUILDER.validate_capture(data)
+    projected = BUILDER.browser_data(data)["targets"]
+    assert projected[0]["compilation"]["exports"] == [artifact]
+    assert projected[1]["compilation"]["exports"] == [{"id": "openqasm3", "code": "native IonQ"}]
+    if changed == "native_ir_sha256":
+        artifact["provenance"][changed] = "0" * 64
+    elif changed == "qpy_base64":
+        artifact[changed] = base64.b64encode(b"changed").decode()
+    else:
+        artifact["svg"] = "<svg>changed</svg>"
+    with pytest.raises(ValueError, match="QPY export or drawing"):
         BUILDER.validate_capture(data)
 
 

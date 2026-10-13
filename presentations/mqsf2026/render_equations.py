@@ -130,6 +130,7 @@ def main() -> None:
         "qr-qdmi-repo": "https://github.com/Munich-Quantum-Software-Stack/QDMI",
         "qr-qdmi": "https://munich-quantum-software-stack.github.io/QDMI/",
         "qr-linkedin": "https://www.linkedin.com/in/lukas-burgholzer-7a1741a7/",
+        "qr-qoss-survey": "https://www.surveymonkey.com/r/QOSSSurvey26",
     }.items():
         target = ASSETS / f"{name}.svg"
         segno.make(url, error="m", micro=False).save(

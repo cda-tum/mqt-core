@@ -1068,11 +1068,18 @@
           fold: stage >= 6 ? [12, 22, 20][targetIndex] : null,
         },
       );
-    if (stage >= 6)
-      executable = `<section class="compiler-qir" data-morph="compiler-qir" data-target="${esc(target.id)}">${code(targetStage(target, "qir-adaptive"), { start: focus(targetStage(target, "qir-adaptive"), "define", 0), count: 13, title: "6 · QIR 2.1 Adaptive Profile", key: "compiler-qir" })}<p class="code-continuation">⋮ Continued in the complete file</p></section>`;
+    if (stage >= 6) {
+      const format = ["qir-adaptive", "qpy", "openqasm3"][targetIndex];
+      const artifact = targetStage(target, format);
+      const output =
+        format === "qpy"
+          ? `<h3>6 · Qiskit Circuit → program.qpy</h3><img class="qiskit-output" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(artifact.svg)}" alt="Qiskit drawing of the compiled IBM program"/>${code(artifact, { count: 5, key: "compiler-output" })}`
+          : `${code(artifact, { start: format === "qir-adaptive" ? focus(artifact, "define", 0) : 0, count: format === "qir-adaptive" ? 13 : 16, title: format === "qir-adaptive" ? "6 · QIR 2.1 Adaptive Profile" : "6 · OpenQASM 3", key: "compiler-output" })}<p class="code-continuation">⋮ Continued in the complete file</p>`;
+      executable = `<section class="compiler-output output-${format}" data-morph="compiler-output" data-target="${esc(target.id)}" data-format="${format}">${output}</section>`;
+    }
     return compilerFlow(
       stage <= 2 ? stage : stage <= 4 ? 3 : stage === 5 ? 4 : 5,
-      `<div class="compiler-workbench phase-${stage} ${stage >= 6 ? "with-qir" : ""}"><div class="compiler-invariants">${input}${optimized}</div><div class="compiler-device" data-morph="compiler-device">${stage >= 2 ? deviceCard(target, { layout: route?.layout, activeSites: stage === 4 ? route?.sites : [], blend: stage === 4 ? route?.blend : null }) : ""}</div><div class="compiler-stages">${routed}${native}</div>${executable}</div>`,
+      `<div class="compiler-workbench phase-${stage} ${stage >= 6 ? "with-output" : ""}"><div class="compiler-invariants">${input}${optimized}</div><div class="compiler-device" data-morph="compiler-device">${stage >= 2 ? deviceCard(target, { layout: route?.layout, activeSites: stage === 4 ? route?.sites : [], blend: stage === 4 ? route?.blend : null }) : ""}</div><div class="compiler-stages">${routed}${native}</div>${executable}</div>`,
     );
   }
   function measuredGrowth(progress = 1) {
@@ -1220,7 +1227,7 @@
       source = variant("qpe").stages.find((a) => a.id === "source");
     return `<div class="adaptive-runtime"><div class="qpe-program"><h3>Iterative QPE · φ = 1/3 · 8 Bits</h3>${MQSF_CIRCUIT.renderQPE(source.circuit)}<div class="runtime-columns">${executionLog(run, elapsed)}<div class="adaptive-sequence"><h3>QDMI → Runtime</h3>${runtimeSequence(run, elapsed)}</div></div></div><div class="runtime-backend"><div class="runtime-products"><div>${logo("qdmi")}<b>Device Interface</b></div><span>→</span><div>${logo("mqt")}<b>DDSIM</b></div><span>→</span><div>${logo("llvm")}<b>JIT Runtime</b></div></div>${workerProgress(run, elapsed)}<div class="runtime-outcomes"><h3>Measurement Outcomes</h3>${histogram(run, elapsed)}</div></div></div><div class="runtime-clock" data-morph="runtime-clock"><span>${fmt((elapsed - qdmiStart(run)) / 1000, 3)} s Recorded Time</span><span>Adaptive QIR 2.1 · 64-Shot Completion Batches · Slowed Replay</span><div class="clock-line"><div style="width:${(100 * (elapsed - qdmiStart(run))) / (totalTime(run) - qdmiStart(run))}%"></div></div></div>`;
   }
-  function featureOverview(step) {
+  function featureOverview(step, progress = 1) {
     const groups = [
       [
         "circuit",
@@ -1260,7 +1267,11 @@
         "Contribution Guidelines · Agent Instructions",
       ],
     ];
-    return `<div class="feature-grid">${groups.map(([art, title, first, second, third], i) => `<section data-morph="feature-${i}" class="feature-card ${i > step ? "future" : ""}">${["qiskit", "pennylane"].includes(art) ? logo(art) : icon(art)}<div><h3>${title}</h3><p>${first}</p><p>${second}</p>${third ? `<p>${third}</p>` : ""}</div></section>`).join("")}</div><div class="feature-resources" data-morph="feature-resources">${qr("core-repo", "github.com/munich-quantum-toolkit/core", "Open Source · MQT and QDMI Communities")}${qr("core", "mqt.readthedocs.io/projects/core", "Tutorials · API · Guides")}</div>`;
+    const survey =
+      step === 5 ? Math.max(0, Math.min(1, (progress - 0.5) * 2)) : 0;
+    const references =
+      step === 5 ? 1 - Math.max(0, Math.min(1, (progress - 0.3) * 5)) : 1;
+    return `<div class="feature-grid">${groups.map(([art, title, first, second, third], i) => `<section data-morph="feature-${i}" class="feature-card ${i > step ? "future" : ""}"${i === 5 && step === 5 ? ` style="opacity:${Math.min(1, progress / 0.35)}"` : ""}>${["qiskit", "pennylane"].includes(art) ? logo(art) : icon(art)}<div><h3>${title}</h3><p>${first}</p><p>${second}</p>${third ? `<p>${third}</p>` : ""}</div></section>`).join("")}</div><div class="feature-resources" data-morph="feature-resources" style="opacity:${references}" aria-hidden="${references === 0}">${qr("core-repo", "github.com/munich-quantum-toolkit/core", "Open Source · MQT and QDMI Communities")}${qr("core", "mqt.readthedocs.io/projects/core", "Tutorials · API · Guides")}</div><aside class="feature-survey" data-morph="feature-survey" style="opacity:${survey};transform:translateY(${12 * (1 - survey)}px)" aria-hidden="${survey === 0}"${survey === 0 ? " inert" : ""}><div class="feature-survey-brand">${logo("unitary")}<span>Quantum Open Source Software</span></div><div><p>Build or Use Quantum Software?</p><h3>Take the QOSS Survey</h3><p class="feature-survey-details">~20 minutes · Open through 29 October 2026</p><a href="https://www.surveymonkey.com/r/QOSSSurvey26">surveymonkey.com/r/QOSSSurvey26</a></div><a class="feature-survey-qr" href="https://www.surveymonkey.com/r/QOSSSurvey26"><img src="${assets["qr-qoss-survey"]}" alt="QR code: 2026 QOSS Survey"/></a></aside>`;
   }
   function separator(title, subtitle, brand) {
     const brandAbove =
@@ -1418,8 +1429,10 @@
     "System Software for Quantum Computing",
     "Built for the Quantum Ecosystem",
     5,
-    (s) => heading("Built for the Quantum Ecosystem") + featureOverview(s),
-    "Highlight verified capabilities. OpenQASM support is broad but excludes subroutines, extern/calibration and general arrays. Qiskit2.5 integrates through the C API with Python for unsupported API areas. All exports and execution traces come from the captured build.",
+    (s, t) =>
+      heading("Built for the Quantum Ecosystem") + featureOverview(s, t ?? 1),
+    "Highlight verified capabilities. OpenQASM support is broad but excludes subroutines, extern/calibration and general arrays. Qiskit2.5 integrates through the C API with Python for unsupported API areas. All exports and execution traces come from the captured build. Invite everyone building or using quantum software to the QOSS survey: about 20 minutes, open through 29 October 2026. Details: https://unitary.foundation/posts/2026_qoss_survey/.",
+    { 5: { duration: 1600 } },
   );
   add(
     "ecosystem",

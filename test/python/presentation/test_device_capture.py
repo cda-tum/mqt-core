@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import io
 import json
 import runpy
 from math import pi
@@ -18,7 +21,7 @@ from typing import Any
 
 import numpy as np
 import pytest
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, qpy
 from qiskit.circuit import Gate
 from qiskit.quantum_info import Operator
 
@@ -126,3 +129,33 @@ def test_ionq_derived_target_synthesizes_only_native_pulses(monkeypatch: pytest.
     assert set(native.count_ops()) == {"gpi", "gpi2", "rzz"}
     assert all(0 <= float(op.operation.params[0]) <= pi / 2 for op in native.data if op.operation.name == "rzz")
     assert Operator(native).equiv(Operator(source))
+
+
+def test_qpy_capture_retains_physical_layout_phase_and_full_vector_drawing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Serialize mapped programs without dropping idle device sites or global phase."""
+    monkeypatch.syspath_prepend(str(SCRIPT.parent))
+    export = runpy.run_path(str(SCRIPT))["qpy_export"]
+    target = CompilerTarget(
+        4,
+        connectivity=CompilerTarget.Connectivity([(0, 1), (1, 2), (2, 3)]),
+        native_operations=CompilerTarget.NativeOperations.unrestricted(),
+    )
+    source = QuantumCircuit(2, 2, global_phase=0.37)
+    source.h(0)
+    source.cx(0, 1)
+    source.measure([0, 1], [0, 1])
+    program = QCProgram.from_qiskit(source).to_qco()
+    program.compile_for_target(TargetEnvironment(target, PayloadSpecification(PayloadFormat("openqasm", "3.0"))))
+    artifact = export(program.ir, target)
+    restored = qpy.load(io.BytesIO(base64.b64decode(artifact["qpy_base64"])))[0]
+    expected = program.to_qiskit(target=target, copy=True)
+    assert restored == expected
+    assert restored.global_phase == pytest.approx(0.37)
+    assert restored.layout == expected.layout
+    assert restored.num_qubits == 4
+    assert len(artifact["provenance"]["active_sites"]) == 2
+    assert artifact["provenance"]["native_ir_sha256"] == hashlib.sha256(program.ir.encode()).hexdigest()
+    assert artifact["svg"].startswith("<svg ")
+    assert "<path" in artifact["svg"]
+    assert "<text" not in artifact["svg"]
+    assert "<image" not in artifact["svg"]

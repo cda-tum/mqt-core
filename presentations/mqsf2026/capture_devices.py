@@ -16,13 +16,16 @@ uses DDSIM only. This script has no hardware submission path.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
+import io
 import json
 import os
 import statistics
 import subprocess
 import sys
 from datetime import UTC, datetime
+from importlib.metadata import version
 from math import pi, remainder
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -364,6 +367,68 @@ def circuit_metrics(circuit: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def qpy_export(native_ir: str, target: CompilerTarget) -> dict[str, Any]:
+    """Serialize and draw the exact native program without compilation or execution.
+
+    Returns:
+        QPY bytes, the full Qiskit SVG, and their source and round-trip provenance.
+    """
+    import matplotlib as mpl  # ruff: ignore[import-outside-top-level]
+    import matplotlib.pyplot as plt  # ruff: ignore[import-outside-top-level]
+    from qiskit import qpy  # ruff: ignore[import-outside-top-level]
+
+    from mqt.core.mlir import QCOProgram  # ruff: ignore[import-outside-top-level]
+
+    program = QCOProgram.from_mlir_str(native_ir)
+    with TemporaryDirectory() as directory:
+        output = Path(directory) / "program.qpy"
+        circuit = program.to_qiskit(target=target)
+        with output.open("wb") as file:
+            qpy.dump(circuit, file)
+        payload = output.read_bytes()
+    restored = qpy.load(io.BytesIO(payload))[0]
+    assert restored == circuit, "QPY changed circuit operations, parameters, or global phase"
+    assert restored.layout == circuit.layout, "QPY changed the physical layout"
+    drawing = io.StringIO()
+    with mpl.rc_context({"svg.fonttype": "path", "svg.hashsalt": "mqsf-qiskit"}):
+        figure = restored.draw(
+            output="mpl", idle_wires=False, fold=28, style={"name": "bw", "fontsize": 16, "subfontsize": 12}
+        )
+        figure.savefig(drawing, format="svg", bbox_inches="tight", metadata={"Date": None})
+        plt.close(figure)
+    svg = drawing.getvalue()
+    svg = svg[svg.index("<svg ") :]
+    artifact = stage(
+        "qpy",
+        "Qiskit circuit · QPY",
+        "python",
+        "from qiskit import qpy\n\ncircuit = program.to_qiskit(target=target)\n"
+        'with output.open("wb") as file:\n    qpy.dump(circuit, file)\n',
+    )
+    artifact.update({
+        "qpy_base64": base64.b64encode(payload).decode(),
+        "qpy_sha256": digest(payload),
+        "svg": svg,
+        "svg_sha256": digest(svg),
+        "provenance": {
+            "native_ir_sha256": digest(native_ir),
+            "capture_script_sha256": digest(Path(__file__).read_bytes()),
+            "qiskit_version": version("qiskit"),
+            "matplotlib_version": version("matplotlib"),
+            "qpy_version": qpy.QPY_VERSION,
+            "output_filename": "program.qpy",
+            "sites": [site.id for site in target.sites],
+            "active_sites": sorted({
+                target.sites[circuit.find_bit(q).index].id for op in circuit.data for q in op.qubits
+            }),
+            "round_trip_circuit_equal": True,
+            "round_trip_layout_equal": True,
+            "drawing": "Qiskit mpl drawer; all operations and active wires; SVG text converted to vector paths",
+        },
+    })
+    return artifact
+
+
 def compile_device(target: dict[str, Any], source: str, compiler: Path, library: Path, shots: int) -> None:
     """Capture real compiler stages, then execute the unchanged QIR on DDSIM."""
     from mqt.core.mlir import CompilerTarget, QCOProgram, QCProgram  # ruff: ignore[import-outside-top-level]
@@ -411,6 +476,9 @@ def compile_device(target: dict[str, Any], source: str, compiler: Path, library:
         trace=True,
         target_attribute=target_attribute,
     )
+    if target["id"] == "ibm.ibm_miami":
+        native_stage = next(item for item in result["stages"] if item["id"] == "target-native-synthesis")
+        result["exports"].append(qpy_export(native_stage["code"], compiler_target))
     if target_attribute:
         native_stage = next(item for item in result["stages"] if item["id"] == "target-native-synthesis")
         native_stage["representation_note"] = (

@@ -198,6 +198,17 @@ def validate_capture(data: dict[str, Any]) -> None:
                     if artifact["sha256"] != digest:
                         msg = "Artifact hash differs from its original source"
                         raise ValueError(msg)
+            qpy = next((artifact for artifact in variant.get("exports", []) if artifact["id"] == "qpy"), None)
+            if qpy is not None:
+                native = next(stage for stage in variant["stages"] if stage["id"] == "target-native-synthesis")
+                if (
+                    qpy["provenance"]["native_ir_sha256"] != hashlib.sha256(native["code"].encode()).hexdigest()
+                    or qpy["qpy_sha256"]
+                    != hashlib.sha256(base64.b64decode(qpy["qpy_base64"], validate=True)).hexdigest()
+                    or qpy["svg_sha256"] != hashlib.sha256(qpy["svg"].encode()).hexdigest()
+                ):
+                    msg = "QPY export or drawing differs from its captured source"
+                    raise ValueError(msg)
             hashes = {
                 artifact["id"]: hashlib.sha256(artifact["code"].encode()).hexdigest()
                 for artifact in variant.get("exports", [])
@@ -259,7 +270,12 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
                     if key in compilation
                 },
                 "stages": stages,
-                "exports": [artifact for artifact in compilation["exports"] if artifact["id"] == "qir-adaptive"],
+                "exports": [
+                    artifact
+                    for artifact in compilation["exports"]
+                    if artifact["id"]
+                    == {"ibm.ibm_miami": "qpy", "aws.ionq.forte-1": "openqasm3"}.get(target["id"], "qir-adaptive")
+                ],
             },
         })
     application = data.get("application", {})

@@ -555,11 +555,19 @@ def compiler_semantics(page: Any) -> None:  # ruff: ignore[any-type] - Optional 
                         failures.push('Folded native circuit drops captured operations');
                 }
             }
-            const qir = stages(target).find(s => s.id === 'qir-adaptive').code.split('\n');
-            const actual = [...holder.querySelectorAll('.compiler-qir .code-text')].map(e => e.textContent);
-            const first = qir.findIndex(line => line.includes('define'));
-            if (actual.length !== 13 || actual.some((line,i) => line !== qir[first+i]))
-                failures.push('Executable fragment differs from its recorded QIR entry-point lines');
+            const format = ['qir-adaptive','qpy','openqasm3'][index];
+            const artifact = stages(target).find(s => s.id === format);
+            const lines = artifact.code.split('\n');
+            const output = holder.querySelector('.compiler-output');
+            const actual = [...output.querySelectorAll('.code-text')].map(e => e.textContent);
+            const first = index === 0 ? lines.findIndex(line => line.includes('define')) : 0;
+            const count = [13,5,16][index];
+            const expected = lines.slice(first,first+count);
+            if (output.dataset.format !== format || actual.join('\n') !== expected.join('\n'))
+                failures.push('Executable format or excerpt differs from its captured target export');
+            if (format === 'qpy' && output.querySelector('.qiskit-output')?.getAttribute('src') !==
+                'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(artifact.svg))
+                failures.push('IBM executable does not use its captured Qiskit drawing');
         }
         const parity = MQSF_DATA.scenarios.find(s => s.id === 'parity').variants.find(v => v.id === 'structured');
         const qir = parity.exports.find(s => s.id === 'qir-adaptive').code.split('\n');
@@ -760,6 +768,39 @@ def check(
                 "Every architecture phase must retain its shared, unique morph keys"
             )
         compiler_semantics(page)
+        page.evaluate("MQSF_DECK.go(MQSF_DECK.slides.findIndex(s => s.id === 'features'), 4)")
+        assert page.locator(".feature-survey").evaluate("panel => panel.inert")
+        page.evaluate("MQSF_DECK.next(); MQSF_DECK.finishMotion()")
+
+        def survey_frame() -> dict[str, Any]:
+            return page.evaluate("""() => {
+                const panel = document.querySelector('.feature-survey');
+                return {
+                    panel:Number(panel.style.opacity),
+                    lastCard:Number(document.querySelector('[data-morph="feature-5"]').style.opacity),
+                    refs:Number(document.querySelector('.feature-resources').style.opacity),
+                    inert:panel.inert,
+                };
+            }""")
+
+        assert survey_frame() == {"panel": 0, "lastCard": 0, "refs": 1, "inert": True}
+        page.clock.run_for(700)
+        frame = survey_frame()
+        assert frame["lastCard"] == 1
+        assert frame["panel"] == 0
+        assert frame["inert"]
+        page.clock.run_for(500)
+        frame = survey_frame()
+        assert frame["lastCard"] == 1
+        assert 0 < frame["panel"] < 1
+        assert frame["refs"] == 0
+        assert not frame["inert"]
+        page.evaluate("MQSF_DECK.finishAnimation()")
+        assert survey_frame() == {"panel": 1, "lastCard": 1, "refs": 0, "inert": False}
+        assert (
+            page.locator(".feature-survey a").evaluate_all("links => links.map(a => a.href)")
+            == ["https://www.surveymonkey.com/r/QOSSSurvey26"] * 2
+        )
         afqmc_curve_frontier(page)
         probe = page.evaluate(CIRCUIT_CHECK)
         assert not probe["failures"], probe["failures"]

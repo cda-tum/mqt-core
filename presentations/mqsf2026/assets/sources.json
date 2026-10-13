@@ -493,5 +493,10 @@
     "sha256": "69e15d0f1e2bf422b9c8648582adfe55c9d98bafd67b2b5bb2eaf5e3e2e72810",
     "adaptation": "Original official SVG preserved unchanged.",
     "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the organization."
+  },
+  "qr-qoss-survey": {
+    "encoded_url": "https://www.surveymonkey.com/r/QOSSSurvey26",
+    "generator": "render_equations.py; Segno 1.6.6; micro=False, error=m, border=4, navy on white",
+    "sha256": "e515a13b9e683f2b1a70237d262ac9fb71e625de75190d7e55680ca4a2a27e95"
   }
 }

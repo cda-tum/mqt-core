@@ -76,9 +76,12 @@ reminders of the pipeline.
 Each target change updates the device and recorded compiler stages together.
 Show IBM's public Nighthawk model and IonQ's all-to-all GPI/GPI2/RZZ model. The
 same payload enters each compilation. Metadata is captured in advance, compiled
-through local QDMI models, and checked by executing the resulting payload on
-DDSIM. No hardware jobs are submitted. End with the extensible interface and
-abstract compiler flow.
+through local QDMI models, and checked by executing the resulting QIR on DDSIM.
+The executable panel changes from IQM's QIR to IBM's Qiskit circuit and QPY
+serialization, then IonQ's native OpenQASM 3. Qiskit draws the complete IBM
+circuit with idle wires hidden; QPY retains the physical register and layout. No
+hardware jobs are submitted. End with the extensible interface and abstract
+compiler flow.
 
 ## F10–F12 · Why are we unrolling?
 
@@ -121,6 +124,10 @@ Build the feature overview: OpenQASM 3.1, QIR 2.1, Qiskit, PennyLane, packaged
 binaries, and developer resources. Then zoom back out to the shared
 architecture. Common interfaces, compilation, and orchestration connect
 different users, classical infrastructure, and devices.
+
+F16.6 ends with the Unitary Foundation QOSS survey invitation. Leave its QR
+visible long enough to scan: about 20 minutes to complete, open through 29
+October 2026. Everyone who builds or uses quantum software can contribute.
 
 “Built with the Community. Driven into practice by MQSC.”
 
