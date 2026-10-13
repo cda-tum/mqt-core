@@ -12,8 +12,8 @@ releases may include breaking changes.
 
 ### Fixed
 
-- 🐛 Include the Slurm example files required by the wheel tests, fixing release
-  builds. ([#2758]) ([**@burgholzer**])
+- 🐛 Fix release wheel tests by including the Slurm example files and preserving
+  programs reused after Qiskit export. ([#2758]) ([**@burgholzer**])
 
 ## [4.1.0] - 2026-10-13
 
