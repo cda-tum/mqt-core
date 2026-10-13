@@ -674,58 +674,93 @@ TEST(PresentationTelemetry, RecordsEachNativeProgramCompletion) {
 }
 
 TEST(PresentationTelemetry, ShotTracePreservesSeededAdaptiveResults) {
-  const mqt::test::TemporaryDirectory directory;
-  const auto path = directory.path() / "shots.tsv";
-  const mqt::test::ScopedEnvironmentVariable disabled("MQT_MQSF_SHOT_TRACE",
-                                                      std::nullopt);
-  const auto program = qdmi_test::getQIRProgram("AdaptiveRecordOutputs.ll");
-  const auto run = [&] {
-    const qdmi_test::SessionGuard session;
-    const qdmi_test::JobGuard job(session.session);
-    EXPECT_EQ(qdmi_test::setProgram(
-                  job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, program),
-              QDMI_SUCCESS);
-    EXPECT_EQ(qdmi_test::setShots(job.job, 8), QDMI_SUCCESS);
-    EXPECT_EQ(qdmi_test::setSeed(job.job, 42), QDMI_SUCCESS);
-    const size_t workers = 1;
-    EXPECT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
-                  job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM3, sizeof(workers),
-                  &workers),
-              QDMI_SUCCESS);
-    EXPECT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
-    return getShots(job.job);
-  };
-  const auto expected = run();
-  ASSERT_EQ(expected.size(), 8U);
-  const mqt::test::ScopedEnvironmentVariable enabled("MQT_MQSF_SHOT_TRACE",
-                                                     path.string());
-  EXPECT_EQ(run(), expected);
-  std::ifstream input(path);
-  ASSERT_TRUE(input);
-  std::vector<std::pair<std::string, std::string>> events;
-  int64_t previousTime = 0;
-  for (std::string line; std::getline(input, line);) {
-    std::istringstream row(line);
-    int64_t time = 0;
-    std::string kind;
-    std::string value;
-    ASSERT_TRUE(row >> time >> kind);
-    ASSERT_TRUE(std::getline(row >> std::ws, value));
-    EXPECT_GT(time, 0);
-    EXPECT_GE(time, previousTime);
-    previousTime = time;
-    events.emplace_back(kind, value);
+  for (const size_t workers : {size_t{1}, size_t{4}}) {
+    SCOPED_TRACE(workers);
+    const mqt::test::TemporaryDirectory directory;
+    const auto path = directory.path() / "shots.tsv";
+    const mqt::test::ScopedEnvironmentVariable disabled("MQT_MQSF_SHOT_TRACE",
+                                                        std::nullopt);
+    const auto program = qdmi_test::getQIRProgram("AdaptiveRecordOutputs.ll");
+    constexpr size_t shots = 258;
+    const auto run = [&] {
+      const qdmi_test::SessionGuard session;
+      const qdmi_test::JobGuard job(session.session);
+      EXPECT_EQ(qdmi_test::setProgram(
+                    job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, program),
+                QDMI_SUCCESS);
+      EXPECT_EQ(qdmi_test::setShots(job.job, shots), QDMI_SUCCESS);
+      EXPECT_EQ(qdmi_test::setSeed(job.job, 42), QDMI_SUCCESS);
+      EXPECT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
+                    job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM3, sizeof(workers),
+                    &workers),
+                QDMI_SUCCESS);
+      EXPECT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
+      return getShots(job.job);
+    };
+    const auto expected = run();
+    ASSERT_EQ(expected.size(), shots);
+    const mqt::test::ScopedEnvironmentVariable enabled("MQT_MQSF_SHOT_TRACE",
+                                                       path.string());
+    EXPECT_EQ(run(), expected);
+    std::ifstream input(path);
+    ASSERT_TRUE(input);
+    std::vector<bool> seen(shots);
+    std::vector<size_t> completed(workers);
+    std::vector<std::string> runtimeEvents;
+    int64_t previousTime = 0;
+    for (std::string line; std::getline(input, line);) {
+      std::istringstream row(line);
+      int64_t time = 0;
+      std::string kind;
+      ASSERT_TRUE(row >> time >> kind);
+      EXPECT_GT(time, 0);
+      EXPECT_GE(time, previousTime);
+      previousTime = time;
+      if (kind == "runtime") {
+        std::string value;
+        ASSERT_TRUE(std::getline(row >> std::ws, value));
+        runtimeEvents.push_back(value);
+      } else if (kind == "worker") {
+        size_t worker = 0;
+        size_t count = 0;
+        size_t total = 0;
+        ASSERT_TRUE(row >> worker >> count >> total);
+        ASSERT_LT(worker, workers);
+        EXPECT_GT(count, completed[worker]);
+        EXPECT_LE(count, total);
+        EXPECT_EQ(total,
+                  (shots / workers) + (worker < shots % workers ? 1 : 0));
+        completed[worker] = count;
+      } else {
+        ASSERT_EQ(kind, "shot");
+        size_t index = 0;
+        size_t worker = 0;
+        std::string outcome;
+        ASSERT_TRUE(row >> index >> worker >> outcome);
+        ASSERT_LT(index, shots);
+        ASSERT_LT(worker, workers);
+        const auto offset =
+            ((shots / workers) * worker) + std::min(worker, shots % workers);
+        EXPECT_GE(index, offset);
+        EXPECT_LT(index, offset + completed[worker]);
+        EXPECT_FALSE(seen[index]);
+        seen[index] = true;
+        EXPECT_EQ(outcome, expected[index]);
+      }
+    }
+    EXPECT_TRUE(
+        std::ranges::all_of(seen, [](const bool value) { return value; }));
+    for (size_t worker = 0; worker < workers; ++worker) {
+      EXPECT_EQ(completed[worker],
+                (shots / workers) + (worker < shots % workers ? 1 : 0));
+    }
+    EXPECT_EQ(
+        runtimeEvents,
+        (std::vector<std::string>{
+            "JIT compilation begins", "JIT runtime ready",
+            "Adaptive sampling begins: " + std::to_string(workers) + " workers",
+            "Sampling complete"}));
   }
-  std::vector<std::pair<std::string, std::string>> expectedEvents{
-      {"runtime", "JIT compilation begins"},
-      {"runtime", "JIT runtime ready"},
-      {"runtime", "Serial adaptive sampling begins"},
-  };
-  for (const auto& shot : expected) {
-    expectedEvents.emplace_back("shot", shot);
-  }
-  expectedEvents.emplace_back("runtime", "Sampling complete");
-  EXPECT_EQ(events, expectedEvents);
 }
 
 TEST(PresentationTelemetry, RejectsUnwritablePathsWithoutBreakingLaterJobs) {
