@@ -11,10 +11,9 @@
 #pragma once
 
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
-#include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Utils/WireIterator.h"
 
-#include "mlir/IR/Value.h"
+#include "mlir/IR/Types.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/WalkResult.h"
@@ -54,6 +53,10 @@ struct PendingItem {
 } // namespace impl
 
 /// Walk the graph-like circuit IR of QCO dialect programs.
+///
+/// Requires verified linear QCO IR. Supported operations preserve scalar
+/// qubit arity, introduce one scalar qubit, or consume qubits at wire
+/// boundaries. Tensor handles do not participate in the traversal.
 ///
 /// Depending on the template parameter, the function walks the IR in
 /// topological order in forward or backward direction, respectively. Towards
@@ -113,7 +116,9 @@ void walkProgramGraph(MutableArrayRef<WireIterator> wires,
             frontier.try_emplace(it.operation(), item.indices_);
           }
         } else {
-          const auto nqubits = countIfQubit(it.operation()->getOperands());
+          const auto nqubits = static_cast<size_t>(
+              llvm::count_if(it.operation()->getOperandTypes(),
+                             [](Type type) { return isa<QubitType>(type); }));
 
           // If there are fewer wires than the operation requires inputs,
           // it's impossible to release the operation. Hence, fail.

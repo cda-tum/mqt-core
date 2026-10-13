@@ -171,8 +171,10 @@ TEST_F(DriversFixture, ProgramWalkWaitsForAllYieldInputs) {
     builder.scfFor(0, 2, 1, {q0, q1}, [&](Value, ValueRange args) {
       wires.emplace_back(args[0]);
       wires.emplace_back(args[1]);
-      return SmallVector<Value>{args[0], stagger ? builder.h(builder.h(args[1]))
-                                                 : args[1]};
+      return SmallVector<Value>{
+          args[0],
+          stagger ? builder.h(builder.h(args[1])) : args[1],
+      };
     });
     auto moduleOp = builder.finalize();
     ASSERT_TRUE(succeeded(verify(*moduleOp)));

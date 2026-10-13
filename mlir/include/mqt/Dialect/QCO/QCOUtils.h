@@ -386,7 +386,4 @@ inline LogicalResult tryEliminateDeadGateValue(Value qubit,
   return mlir::success(success);
 }
 
-/// Count the number of linear qubit types in a value range.
-[[nodiscard]] size_t countIfQubit(ValueRange values);
-
 } // namespace mlir::qco
