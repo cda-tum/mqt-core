@@ -2028,7 +2028,6 @@ for previous changelogs._
 
 <!-- Contributor -->
 
-[**@akshaysoftware**]: https://github.com/akshaysoftware
 [**@burgholzer**]: https://github.com/burgholzer
 [**@ystade**]: https://github.com/ystade
 [**@DRovara**]: https://github.com/DRovara
@@ -2051,6 +2050,7 @@ for previous changelogs._
 [**@keefehuang**]: https://github.com/keefehuang
 [**@J4MMlE**]: https://github.com/J4MMlE
 [**@rturrado**]: https://github.com/rturrado
+[**@akshaysoftware**]: https://github.com/akshaysoftware
 
 <!-- General links -->
 
