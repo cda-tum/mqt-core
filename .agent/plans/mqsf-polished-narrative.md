@@ -1,6 +1,7 @@
 # MQSF presentation refinement
 
-Status: implemented. Final publication checks are recorded on draft PR #2685.
+Status: October 13 revision implemented and locally validated. Publication
+through draft PR #2685 includes a final hosted-package comparison.
 
 ## Goal and scope
 
@@ -13,8 +14,7 @@ chapter separators and a staged, illustrated feature overview before the close.
 ## Decisions
 
 - Every narrative change waits for a click. Sequential path reveals belong to
-  one bounded animation. Only the explicitly illustrative compiler caricatures
-  may loop, with cancellation and reduced-motion support.
+  one bounded animation, with cancellation and reduced-motion support.
 - Reuse stable SVG identities across related scenes. Circuit diagrams
   distinguish controls, target gates, multi-qubit rotations, measurements,
   classical feedback, and scoped control flow. Full programs take precedence
@@ -38,9 +38,9 @@ chapter separators and a staged, illustrated feature overview before the close.
 - [x] Title, three opening slides, device cards, principles, and matching close.
 - [x] Scientific AFQMC illustration, complete source, synchronized three-column
       replay, 1,024-shot QIR batch, and four-node Slurm evidence.
-- [x] Persistent circuit/device compiler layout, routing and blockwise
-      synthesis, complete IR views, and scoped scientific caricatures.
-- [x] Compact syndrome/RUS sources, region-local bits, full adaptive QIR,
+- [x] Persistent circuit/device compiler layout, routing and native synthesis,
+      readable QIR views, and downloadable complete evidence.
+- [x] Complete syndrome source, region-local bits, adaptive QIR control flow,
       synchronized source/circuit/IR highlights, and Grover growth animation.
 - [x] Three-column adaptive execution log/sequence/histogram and illustrated
       feature overview with verified support claims.
@@ -51,9 +51,9 @@ chapter separators and a staged, illustrated feature overview before the close.
 
 ## Validation
 
-The existing CI fails only its QIR CLI output test on Linux, macOS, Windows, and
-coverage builds. Updating its two stale diagnostic strings reproduces and fixes
-that failure locally. Keep the actual validation cases intact.
+The October 12 changes fixed stale QIR CLI diagnostic expectations while
+preserving the validation cases. The October 13 changes add source-name
+preservation coverage and refresh the presentation evidence.
 
 Use release-clang-ipo for native changes, focused semantic tests and scientific
 checks, full presentation tests, repository and whole-file C++ lint, and Chrome
@@ -62,7 +62,7 @@ print layout, and every 1920x1080 reveal. Compare hosted ZIP members to local
 bytes and check the final commit's required CI. Physical projector/clicker
 rehearsal remains necessary.
 
-## Results
+## October 12 Results
 
 - Seventeen slides, 73 presenter states, 34 bounded replays, and two explicitly
   illustrative loops. Scientific and corporate specialists reviewed the result.
@@ -82,3 +82,40 @@ rehearsal remains necessary.
   scientific playback, console and network. Both browser engines check runtime
   evidence, control dependencies, circuit windows and print output. Physical
   projector and clicker rehearsal remains outside these automated checks.
+
+## October 13 Refinement
+
+- Horizontal frontend/compiler/orchestrator/backend architecture; combined timed
+  reveals, blue/orange paths, all four provider cards retained in the product
+  view.
+- Stable reference nodes and clocks, fixed footer center, no nested duplicate
+  transforms, consistent official TUM and Slurm vector scaling.
+- Continuous recorded AFQMC wall clock, per-program preparation completion,
+  timestamped energy/walker frames from a fresh four-node run.
+- Persistent compiler stage cards, placement-only lead-in, one-click IBM/IonQ
+  retargeting, QIR continuation and exact native-call omission markers.
+- Remove the two compiler-internals slides and RUS builds; add AFQMC and MQT
+  Core chapter separators; restore paper partners and proper Grover math.
+- Preserve best-effort scalar/local-bit source labels at import/export while
+  prioritizing explicit register names and retaining diagnostic locations.
+- Validate all 56 states, fractional playback, stable-element regression cases,
+  code/evidence fidelity, both browsers, and the final hosted offline ZIP.
+
+### October 13 Validation
+
+- Signed native name-preservation patch: 453 Qiskit tests, 522 OpenQASM CTest
+  cases, optimized build/install, and whole-file C++ lint pass.
+- Both browser engines pass all 56 states, 26 finite replays, 156 sampled
+  animation layouts, 709 circuit windows, 39 feedback dependencies, and 17
+  printed pages. Shared-reference and clock checks fail with the old motion
+  engine and pass with the fix.
+- Independent Chrome DevTools review inspected all slides and midpoint builds at
+  1920x1080. Follow-up layout sweeps confirm the opening text, card shuffle, QPE
+  caption, and closing title corrections.
+- Final AFQMC run: 4,096 programs, 4,194,304 shots checked against native
+  histograms, two completed Slurm jobs, four compute nodes, and a continuous
+  293.176-second application timeline. No real hardware jobs were submitted.
+- Three target compilations preserve the measurement instrument to within
+  2.9e-15; each unchanged QIR output also runs for 512 DDSIM shots.
+- Presentation tests pass: 73 tests and five subtests. Stub regeneration
+  produces no tracked changes. Repository lint passes.

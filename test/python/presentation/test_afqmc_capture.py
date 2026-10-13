@@ -146,6 +146,12 @@ def test_committed_afqmc_parallel_records_share_one_observed_clock() -> None:
     capture_path = Path(__file__).resolve().parents[3] / "presentations/mqsf2026/captures/demo.json.gz"
     application = json.loads(gzip.decompress(capture_path.read_bytes()))["application"]
     propagation = application["propagation"]
+    timeline = application["timeline"]
+    assert timeline["propagation_started_ms"] == pytest.approx(
+        (propagation["started_ns"] - application["execution"]["started_ns"]) / 1e6, abs=1e-9
+    )
+    assert application["execution"]["duration_ms"] <= timeline["propagation_started_ms"]
+    assert timeline["propagation_started_ms"] + propagation["duration_ms"] <= timeline["completed_ms"]
     assert len(propagation["workers"]) == propagation["processes"] == 4
     assert len({worker["node"] for worker in propagation["workers"]}) == 4
     tasks = {(task["label"], task["walker_id"]): task for task in propagation["tasks"]}
@@ -165,8 +171,18 @@ def test_committed_afqmc_parallel_records_share_one_observed_clock() -> None:
         )
         assert all(first["finished_ms"] <= second["started_ms"] for first, second in pairwise(assigned))
     for label, curve in zip(("quantum", "classical"), propagation["curves"], strict=True):
+        completed = curve["step_completed_ms"]
+        assert len(completed) == propagation["steps"]
+        assert 0 <= completed[0] <= completed[-1] <= propagation["duration_ms"]
+        assert all(first <= second for first, second in pairwise(completed))
+        assert completed == [
+            max(tasks[label, walker]["step_completed_ms"][step] for walker in range(propagation["walkers"]))
+            for step in range(propagation["steps"])
+        ]
         for frame in curve["frames"]:
             assert frame["tau"] == frame["step"] * propagation["dtau"]
+            # An energy point needs every independent walker at that imaginary-time step.
+            assert completed[frame["step"]] <= max(walker["completed_ms"] for walker in frame["walkers"])
             for walker in frame["walkers"]:
                 task = tasks[label, walker["id"]]
                 assert task["worker_pid"] == walker["worker_pid"]
@@ -195,6 +211,14 @@ def test_committed_afqmc_batch_trace_points_into_captured_client_source() -> Non
     capture_path = Path(__file__).resolve().parents[3] / "presentations/mqsf2026/captures/demo.json.gz"
     application = json.loads(gzip.decompress(capture_path.read_bytes()))["application"]
     execution = application["execution"]
+    preparation = execution["preparation"]
+    compiling = next(event["time_ms"] for event in execution["lifecycle"] if event["state"] == "compiling")
+    assert len(preparation) == len(application["snapshots"])
+    for index, (event, snapshot) in enumerate(zip(preparation, application["snapshots"], strict=True)):
+        assert event["program_index"] == index
+        assert event["payload_sha256"] == snapshot["input_payload_sha256"]
+        assert 0 <= event["time_ms"] <= event["time_ms"] + event["duration_ms"] <= compiling
+    assert all(first["time_ms"] + first["duration_ms"] <= second["time_ms"] for first, second in pairwise(preparation))
     source_lines = execution["client_source"].splitlines()
     events = execution["events"]
     assert len(events) == application["workload"]["snapshots"] + 2

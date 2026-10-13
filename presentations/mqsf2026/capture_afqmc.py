@@ -278,7 +278,7 @@ def propagate_one_walker(label: str, walker_id: int, seed: int, steps: int, dtau
     trial = _WORKER[label]
     walker, weight = np.eye(4, 2, dtype=np.complex128), 1.0
     started = perf_counter_ns()
-    energies, weights, frames = [], [], []
+    energies, weights, frames, step_completed_ns = [], [], [], []
     for step in range(steps):
         if label == "quantum":
             energy, new_walker, new_weight = qmc.cqa_imag_time_propogator(  # spellchecker:disable-line
@@ -293,6 +293,7 @@ def propagate_one_walker(label: str, walker_id: int, seed: int, steps: int, dtau
             raise ValueError(msg)
         energies.append(float(energy.real))
         weights.append(float(weight))
+        step_completed_ns.append(perf_counter_ns())
         if step % max(1, steps // 80) == 0 or step == steps - 1:
             frames.append({
                 "step": step,
@@ -316,6 +317,7 @@ def propagate_one_walker(label: str, walker_id: int, seed: int, steps: int, dtau
         "finished_ns": perf_counter_ns(),
         "energies": energies,
         "weights": weights,
+        "step_completed_ns": step_completed_ns,
         "frames": frames,
     }
 
@@ -525,6 +527,9 @@ def capture_h2_afqmc(
             "energy": statistics[:, 0].tolist(),
             "stderr": statistics[:, 1].tolist(),
             "effective_walkers": statistics[:, 2].tolist(),
+            "step_completed_ms": [
+                (max(result["step_completed_ns"][step] for result in selected) - started) / 1e6 for step in range(steps)
+            ],
             "frames": frames,
             "walker_energies": energies.tolist(),
             "walker_weights": weights.tolist(),
@@ -540,6 +545,7 @@ def capture_h2_afqmc(
             "rank": r["rank"],
             "started_ms": (r["started_ns"] - started) / 1e6,
             "finished_ms": (r["finished_ns"] - started) / 1e6,
+            "step_completed_ms": [(timestamp - started) / 1e6 for timestamp in r["step_completed_ns"]],
         }
         for r in results
     ]
@@ -598,6 +604,7 @@ def capture_h2_afqmc(
             "tau": (dtau * np.arange(steps)).tolist(),
             "curves": curves,
             "duration_ms": propagation_ms,
+            "started_ns": started,
             "processes": processes,
             "worker_pids": sorted({r["pid"] for r in results}),
             "workers": [{"node": node, "pid": pid} for node, pid in sorted({(r["node"], r["pid"]) for r in results})],
@@ -760,7 +767,7 @@ def main() -> None:
     methods = (original_submit, original_result, original_samples)
     client_source = "\n".join(inspect.getsource(method) for method in methods)
     source_lines = client_source.splitlines()
-    batch_events, compilation_events, retrievals = [], [], []
+    batch_events, compilation_events, retrievals, preparation_events = [], [], [], []
     input_payloads = []
     compiler = str(Path(qdmi.__file__).parent / "bin/mqt-cc")
     if not Path(compiler).is_file():
@@ -768,6 +775,19 @@ def main() -> None:
         raise ValueError(msg)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     program_trace = args.output.with_name("program-completions.tsv")
+    converter = device._converter  # ruff: ignore[private-member-access] - observe the actual payload preparation boundary
+    original_convert = converter.convert
+
+    def prepare(tape: Any) -> Any:  # ruff: ignore[any-type] - retain the adapter's private converted-program type
+        begin = perf_counter_ns()
+        program = original_convert(tape)
+        preparation_events.append({
+            "program_index": len(preparation_events),
+            "time_ms": (begin - started) / 1e6,
+            "duration_ms": (perf_counter_ns() - begin) / 1e6,
+            "payload_sha256": hashlib.sha256(program.payload.encode()).hexdigest(),
+        })
+        return program
 
     def lifecycle_event(state: str, actor: str, operation: str) -> None:
         lifecycle.append({
@@ -862,6 +882,7 @@ def main() -> None:
         return value
 
     with (
+        patch.object(converter, "convert", prepare),
         patch.object(job_class, "_submit_programs", submit),
         patch.object(job_class, "result", collect),
         patch.object(job_class, "_samples", samples),
@@ -1039,8 +1060,10 @@ def main() -> None:
         },
         **science,
         "execution": {
+            "started_ns": started,
             "events": sorted(batch_events, key=op.itemgetter("time_ms")),
             "lifecycle": lifecycle,
+            "preparation": preparation_events,
             "compilation": sorted(compilation_events, key=op.itemgetter("program_index")),
             "program_completions": program_completions,
             "retrievals": retrievals,

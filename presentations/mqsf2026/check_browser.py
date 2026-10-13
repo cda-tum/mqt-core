@@ -123,11 +123,29 @@ EVIDENCE_CHECK = """() => {
             count:Number(grid.dataset.programs)};
         expected.cells = [capture.num_programs - expected.compiled, expected.compiled - expected.completed,
             expected.completed - expected.count, expected.count];
+        if (grid.classList.contains('preparation-grid')) {
+            expected.prepared = complete(capture.preparation);
+            actual.prepared = Number(grid.dataset.prepared);
+            expected.cells = [capture.num_programs - expected.prepared, 0, 0, expected.prepared];
+        }
         actual.cells = [...grid.querySelectorAll('svg > path')]
             .map(p => (p.getAttribute('d').match(/M/g) || []).length);
+        if (MQSF_DECK.getState().step >= 3) {
+            const application = MQSF_DATA.application, propagation = application.propagation;
+            const clock = Number(document.querySelector('.workflow-clock').dataset.elapsedMs);
+            const wallTime = clock - application.timeline.propagation_started_ms;
+            const panel = document.querySelector('.app-panel:nth-child(3)');
+            expected.energyPoints = propagation.curves.map(c => c.step_completed_ms.filter(t => t <= wallTime).length);
+            actual.energyPoints = [...panel.querySelectorAll('[data-points]')].map(e => Number(e.dataset.points));
+            const frames = propagation.curves[0].frames;
+            expected.weights = frames[0].walkers.map((_, i) => (
+                frames.findLast(f => f.walkers[i].completed_ms <= wallTime)?.walkers[i].weight ?? 1));
+            actual.weights = [...panel.querySelectorAll('[data-weight]')].map(e => Number(e.dataset.weight));
+        }
     } else return null;
     const state = MQSF_DECK.getState(), progress = document.querySelector('#slide').dataset.progress;
-    const fraction = state.step === (id === 'afqmc-execution' ? 2 : 1) && progress !== '' ? Number(progress) : 1;
+    const active = id === 'afqmc-execution' ? [1, 2, 3].includes(state.step) : state.step === 1;
+    const fraction = active && progress !== '' ? Number(progress) : 1;
     return {actual, expected, fraction};
 }"""
 
@@ -269,7 +287,7 @@ REAL_MOTION_CHECK = """async () => {
             const {e, f} = node.transform.baseVal.getItem(0).matrix;
             return [node.dataset.morph, [e, f]];
         }));
-    for (const [source, target] of [[1,7],[7,9]]) {
+    for (const [source, target] of [[6,7],[7,8]]) {
         MQSF_DECK.go(targetIndex, target); MQSF_DECK.finishMotion();
         const destination = positions();
         MQSF_DECK.go(targetIndex, source); MQSF_DECK.finishMotion();
@@ -352,6 +370,183 @@ REAL_MOTION_CHECK = """async () => {
 }"""
 
 
+def compiler_semantics(page: Any) -> None:  # ruff: ignore[any-type] - Optional Playwright import.
+    """Check exact compiler excerpts, physical wire identity, and placement reveal."""
+    failures = page.evaluate(r"""() => {
+        const failures = [], holder = document.createElement('div');
+        const before = MQSF_DECK.getState();
+        const render = (id, step, initial = false) => {
+            MQSF_DECK.go(MQSF_DECK.slides.findIndex(s => s.id === id), step, initial);
+            MQSF_DECK.finishMotion();
+            const html = document.querySelector('#slide').innerHTML;
+            MQSF_DECK.finishAnimation();
+            return html;
+        };
+        const stages = t => [...t.compilation.stages, ...t.compilation.exports];
+        const source = MQSF_DATA.targets[0];
+        const circuit = {qubits:[{id:0, site:17, label:'$17'}, {id:1, site:18, label:'$18'}],
+            operations:[{id:'cx', name:'cx', qubits:[1,0]}]};
+        holder.innerHTML = MQSF_CIRCUIT.render(circuit, {full:true, layout:[18,17]});
+        if (holder.querySelector('svg').viewBox.baseVal.width !== 345)
+            failures.push('Short circuit retains trailing idle whitespace');
+        const labels = [...holder.querySelectorAll('[data-morph*="-wire-"] text')].map(e => e.textContent);
+        if (labels.join('|') !== 'q1 ↦ 17|q0 ↦ 18') failures.push('Physical wire labels invert placement incorrectly');
+        const initial = render('routing', 3), replayStart = render('routing', 4, true);
+        holder.innerHTML = initial;
+        const initialWires = [...holder.querySelectorAll('.stage-place-and-route [data-morph*="-wire-"]')]
+            .map(e => e.outerHTML).join('');
+        for (const [label, html] of [['placement',initial], ['replay start',replayStart]]) {
+            holder.innerHTML = html;
+            if (holder.querySelector('.stage-place-and-route .program-metrics'))
+                failures.push(label + ' reveals routing metrics before routing completes');
+            if ([...holder.querySelectorAll('.stage-place-and-route [data-operation]')]
+                .some(e => Number(e.getAttribute('opacity')) !== 0)) failures.push(label + ' reveals operations');
+            if ([...holder.querySelectorAll('.stage-place-and-route [data-morph*="-wire-"]')]
+                .map(e => e.outerHTML).join('') !== initialWires)
+                failures.push('Routing replay starts from another layout');
+        }
+        holder.innerHTML = render('routing', 4);
+        if (!holder.querySelector('.stage-place-and-route .program-metrics'))
+            failures.push('Completed routing has no metrics');
+        for (const [index, step] of [[0,6],[1,7],[2,8]]) {
+            const target = MQSF_DATA.targets[index];
+            holder.innerHTML = render('routing', step);
+            for (const id of ['source','optimized']) {
+                const card = holder.querySelector('.stage-' + id);
+                if (card.dataset.target !== source.id || !card.querySelector('.program-metrics'))
+                    failures.push('Target switch changes an invariant compiler stage');
+            }
+            for (const id of ['place-and-route','target-native-synthesis']) {
+                const card = holder.querySelector('.stage-' + id);
+                if (card.dataset.target !== target.id) failures.push('Target switch retains a stale stage');
+                const actual = [...card.querySelectorAll('[data-morph*="-wire-"] text')].map(e => e.textContent);
+                const expected = [...new Set(stages(target).find(s => s.id === id).circuit.qubits.map(q => q.site))]
+                    .sort((a,b) => a-b).map(site => `q${target.compilation.layout.initial.indexOf(site)} ↦ ${site}`);
+                if (actual.join('|') !== expected.join('|'))
+                    failures.push('Native stage loses initial placement labels');
+            }
+            const qir = stages(target).find(s => s.id === 'qir-adaptive').code.split('\n');
+            const actual = [...holder.querySelectorAll('.compiler-qir .code-text')].map(e => e.textContent);
+            if (actual.length !== 22 || actual.some((line,i) => line !== qir[i]))
+                failures.push('Executable fragment differs from the first 22 recorded QIR lines');
+        }
+        const parity = MQSF_DATA.scenarios.find(s => s.id === 'parity').variants.find(v => v.id === 'structured');
+        const qir = parity.exports.find(s => s.id === 'qir-adaptive').code.split('\n');
+        const last = qir.findIndex((line,i) => line === '}' && qir[i-1]?.includes('ret i64 0'));
+        holder.innerHTML = render('structured', 1);
+        const included = new Set();
+        for (const line of holder.querySelectorAll('.structured-qir .full-code .code-line')) {
+            if (line.classList.contains('omitted-native')) {
+                const first = Number(line.dataset.omittedStart), last = Number(line.dataset.omittedEnd);
+                for (let n = first; n <= last; n++) {
+                    included.add(n);
+                    if (!/^\s*call void @__quantum__qis__(prx|cz)__/.test(qir[n-1]))
+                        failures.push('Native overview elides a non-gate instruction');
+                }
+                if (!line.textContent.includes(`${last-first+1} Native Gate Call`))
+                    failures.push('Native omission count differs from original source');
+            } else {
+                const number = Number(line.querySelector('.line-no').textContent);
+                included.add(number);
+                if (line.querySelector('.code-text').textContent !== qir[number-1])
+                    failures.push('Native overview changes a captured source line');
+            }
+        }
+        if (last < 0 || qir.slice(0,last+1).some((line,i) => line.trim() && !included.has(i+1)) ||
+            [...included].some(n => n > last+1)) failures.push('Native overview loses entry-point structure');
+        MQSF_DECK.go(before.slide, before.step);
+        MQSF_DECK.finishMotion();
+        return failures;
+    }""")
+    assert not failures, "\n".join(failures)
+
+
+STABILITY_CHECK = """async () => {
+    const failures = [], samples = [], ids = Object.fromEntries(MQSF_DECK.slides.map((s,i) => [s.id,i]));
+    const wait = ms => new Promise(resolve => setTimeout(resolve,ms));
+    const require = (condition, message) => { if (!condition) failures.push(message); };
+    const opacity = node => {
+        let value = 1;
+        for (; node && node !== document.body; node = node.parentElement)
+            value *= Number(getComputedStyle(node).opacity);
+        return value;
+    };
+    // Adjacent builds retain the exact decoded reference images, including nested keys.
+    MQSF_DECK.go(ids['hybrid-algorithm'],0); MQSF_DECK.finishMotion();
+    const reference = document.querySelector('[data-morph="application-reference"]');
+    const qr = reference.querySelector('[data-morph="qr-afqmc"] img');
+    for (const step of [1,2]) {
+        MQSF_DECK.go(ids['hybrid-algorithm'],step);
+        for (const delay of [0,450]) {
+            if (delay) await wait(delay);
+            require(document.querySelector('[data-morph="application-reference"]') === reference,
+                `AFQMC build ${step}: replaced unchanged reference block`);
+            require(document.querySelector('[data-morph="qr-afqmc"] img') === qr,
+                `AFQMC build ${step}: replaced unchanged QR image`);
+            require(opacity(qr) > .999, `AFQMC build ${step}: reference faded`);
+        }
+        MQSF_DECK.finishMotion();
+        samples.push(`reference-${step}`);
+    }
+    // Updating a recorded time must not fade the surrounding clock or an ancestor.
+    for (const [id,key] of [['afqmc-execution','workflow-clock'],['adaptive-execution','runtime-clock']]) {
+        MQSF_DECK.go(ids[id],0); MQSF_DECK.finishMotion();
+        const selector = `[data-morph="${key}"]`, before = document.querySelector(selector).textContent;
+        MQSF_DECK.go(ids[id],1);
+        const clock = document.querySelector(selector);
+        require(clock.textContent !== before, `${id}: probe did not advance the recorded clock`);
+        require(opacity(clock) > .999, `${id}: clock faded at transition start`);
+        await wait(450);
+        require(opacity(clock) > .999, `${id}: clock faded at transition midpoint`);
+        MQSF_DECK.finishMotion();
+        samples.push(key);
+    }
+    const root = document.createElement('div');
+    root.style.cssText = 'position:fixed;left:40px;top:40px;width:800px;height:140px';
+    document.body.append(root);
+    const nested = (x, child) => `<div data-morph="stability-parent" style="position:absolute;` +
+        `left:${x}px;top:0;width:200px;height:80px"><span data-morph="stability-child" ` +
+        `style="position:absolute;left:${child}px;top:20px;width:40px;height:20px">child</span></div>`;
+    const node = key => root.querySelector(`[data-morph="stability-${key}"]`);
+    MQSF_MOTION.replace(root,nested(0,20),0);
+    const start = node('child').getBoundingClientRect().x;
+    MQSF_MOTION.replace(root,nested(300,20),1000);
+    require(node('parent').getAnimations().length === 1, 'Moving parent has no FLIP animation');
+    require(node('child').getAnimations().length === 0, 'Nested child received a second parent FLIP');
+    require(Math.abs(node('child').getBoundingClientRect().x - start) < 1,
+        'Nested child jumped at transition start');
+    const parentAnimation = node('parent').getAnimations()[0];
+    parentAnimation?.pause();
+    if (parentAnimation) parentAnimation.currentTime = 500;
+    const midpoint = node('child').getBoundingClientRect().x;
+    require(midpoint > start && midpoint < start + 300, 'Nested motion did not interpolate between endpoints');
+    require(Math.abs(node('child').getBoundingClientRect().x - node('parent').getBoundingClientRect().x - 20) < 1,
+        'Nested child moved twice relative to its parent');
+    MQSF_MOTION.finish();
+    // An unchanged outer box must still permit motion within that box.
+    const innerStart = node('child').getBoundingClientRect().x;
+    MQSF_MOTION.replace(root,nested(300,140),1000);
+    require(node('parent').getAnimations().length === 0, 'Stationary parent received a FLIP animation');
+    require(node('child').getAnimations().length === 1, 'Stationary parent suppressed child layout motion');
+    require(Math.abs(node('child').getBoundingClientRect().x - innerStart) < 1,
+        'Child layout change jumped at transition start');
+    MQSF_MOTION.finish(); root.remove();
+    samples.push('nested-motion');
+    const footer = document.querySelector('#deck > .slide-footer > a'), centers = [];
+    for (let slide = 0; slide < MQSF_DECK.slides.length; slide++) {
+        MQSF_DECK.go(slide,0); MQSF_DECK.finishMotion();
+        const rect = footer.getBoundingClientRect();
+        centers.push((rect.left + rect.right) / 2);
+        require(document.querySelector('#deck > .slide-footer > a') === footer, 'Recreated persistent website footer');
+    }
+    require(Math.max(...centers) - Math.min(...centers) < .1, 'Website footer moved with slide/build counts');
+    require(centers.every(x => Math.abs(x - innerWidth / 2) < 1), 'Website footer is not centered on the projector');
+    samples.push('persistent-footer');
+    MQSF_DECK.go(0); MQSF_DECK.finishMotion();
+    return {failures,samples};
+}"""
+
+
 def check(
     html: Path,
     executable: str | None,
@@ -406,7 +601,7 @@ def check(
                     holder.innerHTML = MQSF_VIZ.architecture(mode, phase);
                     keys.push([...holder.querySelectorAll('[data-morph]')].map(n => n.dataset.morph));
                 }
-            return {start:routes(0), first:routes(3), complete:routes(8), keys};
+            return {start:routes(0), first:routes(1), complete:routes(6), keys};
         }""")
         assert not opening["start"], "Future deployment paths must not flash on entry"
         assert opening["first"] == ["world-user-compute-0-0", "world-compute-qpu-0-0"]
@@ -415,14 +610,15 @@ def check(
             *(f"world-compute-qpu-{c}-{q}" for c in range(3) for q in range(5)),
             "hpc-cloud-burst",
         }, "Every deployment route must pass through classical compute"
-        assert len(opening["keys"]) == 26
+        assert len(opening["keys"]) == 17
         expected_keys = set(opening["keys"][0])
-        for phase, keys in enumerate(opening["keys"]):
-            additions = {"principles-reveal", "principles"} if phase == 25 else set()
+        for _phase, keys in enumerate(opening["keys"]):
+            additions = set()
             assert len(keys) == len(set(keys)), "Architecture morph keys must be unique"
             assert set(keys) == expected_keys | additions, (
                 "Every architecture phase must retain its shared, unique morph keys"
             )
+        compiler_semantics(page)
         probe = page.evaluate(CIRCUIT_CHECK)
         assert not probe["failures"], probe["failures"]
         assert probe["dependencies"]
@@ -455,14 +651,14 @@ def check(
             assert page.locator("#mqsc-logo").is_visible()
             inspect_evidence()
             if slides[index]["id"] == "structured":
-                for artifact, container in (("source", ".structured-source"), ("qir-adaptive", ".structured-qir")):
+                for artifact, container in (("source", ".structured-source"),):
                     source = page.evaluate(
                         """([scenario, id]) => {
                         const v = MQSF_DATA.scenarios.find(s => s.id === scenario).variants
                             .find(v => v.id === 'structured');
                         return [...v.stages, ...v.exports].find(a => a.id === id).code;
                     }""",
-                        ["rus" if step >= 5 else "parity", artifact],
+                        ["parity", artifact],
                     )
                     visible = {
                         line.strip() for line in page.locator(f"{container} .full-code .code-text").all_text_contents()
@@ -472,15 +668,14 @@ def check(
                     missing = sorted(required - visible)
                     assert not missing, f"Structured build {step} omits {artifact} lines: {missing}"
                 assert page.locator(".structured-qir").evaluate(
-                    "(node, hidden) => node.classList.contains('future') === hidden", step in {0, 5}
+                    "(node, hidden) => node.classList.contains('future') === hidden", step == 0
                 ), "The source enters before its complete QIR counterpart"
-            if slides[index]["id"] == "routing" and step in {3, 4, 5, 6, 8, 10}:
-                target = 1 if step == 8 else 2 if step == 10 else 0
-                mapping, swaps = page.evaluate(
+            if slides[index]["id"] == "routing" and step in {3, 4, 5, 6, 7, 8}:
+                target = 1 if step == 7 else 2 if step == 8 else 0
+                mapping = page.evaluate(
                     """([target, initial]) => {
                     const c = MQSF_DATA.targets[target].compilation;
-                    return [initial ? c.layout.initial : c.layout.final.slice(0, c.layout.initial.length),
-                        initial ? 0 : c.layout.swaps.length];
+                    return initial ? c.layout.initial : c.layout.final.slice(0, c.layout.initial.length);
                 }""",
                     [target, step == 3],
                 )
@@ -490,9 +685,6 @@ def check(
                     assert marker.get_attribute("transform") == physical.get_attribute("transform"), (
                         f"Target {target}, build {step}: logical qubit {i} must match captured site {site}"
                     )
-                if step in {3, 4, 5}:
-                    heading = page.locator('[data-morph="stage-place-and-route"] h3').inner_text()
-                    assert re.search(rf"\b{swaps} SWAP", heading), "SWAP telemetry must follow the routing stage"
             page.evaluate("Promise.all([...document.querySelectorAll('#deck img')].map(i => i.decode()))")
             assets = page.evaluate("""() => [...document.querySelectorAll('#deck img, #deck svg image')].map(i =>
                 i.currentSrc || i.getAttribute('href') || i.getAttribute('xlink:href'))""")
@@ -531,7 +723,17 @@ def check(
                 for issue in page.evaluate(LAYOUT_CHECK):
                     geometry.setdefault((index, issue), step)
                 last = fraction
-            if "completed" in observations[0]:
+            if "prepared" in observations[0]:
+                assert 0 <= observations[0]["prepared"] < observations[-1]["prepared"], observations
+            elif "energyPoints" in observations[0]:
+                assert all(
+                    first <= last
+                    for first, last in zip(
+                        observations[0]["energyPoints"], observations[-1]["energyPoints"], strict=True
+                    )
+                ), observations
+                assert observations[0]["weights"] != observations[-1]["weights"], observations
+            elif "completed" in observations[0]:
                 assert 0 < observations[0]["compiled"] <= observations[-1]["compiled"], observations
                 assert observations[0]["completed"] < observations[-1]["completed"], observations
                 assert observations[0]["count"] < observations[-1]["count"], observations
@@ -659,6 +861,8 @@ def check(
         assert_state((0, 0))
         real_motion = page.evaluate(REAL_MOTION_CHECK)
         assert not real_motion["failures"], real_motion["failures"]
+        stability = page.evaluate(STABILITY_CHECK)
+        assert not stability["failures"], stability["failures"]
         motion = page.evaluate("""async () => {
             const root = document.createElement('div'); document.body.append(root);
             const html = (x,r) => `<svg><g data-morph="probe" transform="translate(${x} 0)">` +

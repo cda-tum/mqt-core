@@ -116,7 +116,7 @@ window.MQSF_CIRCUIT = (() => {
     const pitch = full ? 76 : Math.max(76, Math.min(102, 900 / columns));
     const left = layout ? 250 : 130,
       first = left + 40;
-    const width = Math.max(1100, first + (columns - 1) * pitch + 55),
+    const width = first + (columns - 1) * pitch + 55,
       top = structured ? 100 + nested * 20 : 55,
       dy = 72;
     const height = Math.max(
@@ -148,6 +148,7 @@ window.MQSF_CIRCUIT = (() => {
       }),
     );
     let body = "";
+    const captions = [];
     regions.forEach(({ first: a, last: b, r, depth, qubits }) => {
       const loop = ["for_loop", "while_loop"].includes(r.name);
       if (!loop && r.name !== "if_else") return;
@@ -165,23 +166,38 @@ window.MQSF_CIRCUIT = (() => {
           ? `${r.iterations ?? "n"} rounds`
           : r.name === "while_loop"
             ? "Repeat Until Success"
-            : `if ${r.condition?.includes("BIT_XOR") ? "¬" : ""}${(r.condition_bits || []).map((bit) => `b${bit}`).join(", ")}`;
-      body += `<g data-morph="${key}-region-${r.id}" data-control-flow="${r.name}"><rect x="${a - pad}" y="${yy}" width="${b - a + 2 * pad}" height="${bottom - yy}" rx="10" fill="${loop ? "#eaf2fa" : "#e9f5f3"}" fill-opacity="${selected ? ".9" : ".45"}" stroke="${selected ? "#086f83" : loop ? "#87acd0" : "#55a194"}" stroke-width="${selected ? 4 : 2}" ${loop ? "" : 'stroke-dasharray="5 4"'}/>${txt(a - pad + 12, loop ? yy - 10 : yy - 9, caption, 23, loop ? "#2f70b8" : "#087d92", "start")}${loop ? `<path d="M${b - 8} ${bottom + 11}H${a + 8}m10 -8l-10 8 10 8" fill="none" stroke="#6992bc" stroke-width="2"/>` : ""}</g>`;
+            : `if ${r.condition?.includes("BIT_XOR") ? "¬" : ""}${(r.condition_bits || []).map((bit) => c.clbits?.find((b) => b.id === bit)?.label || `b${bit}`).join(", ")}`;
+      const labelX = a - pad + 12,
+        labelWidth = caption.length * 14;
+      let labelY = yy - 10;
+      while (
+        captions.some(
+          (previous) =>
+            labelX < previous.right &&
+            labelX + labelWidth > previous.left &&
+            Math.abs(labelY - previous.y) < 28,
+        )
+      )
+        labelY -= 28;
+      captions.push({ left: labelX, right: labelX + labelWidth, y: labelY });
+      body += `<g data-morph="${key}-region-${r.id}" data-control-flow="${r.name}"><rect x="${a - pad}" y="${yy}" width="${b - a + 2 * pad}" height="${bottom - yy}" rx="10" fill="${loop ? "#eaf2fa" : "#e9f5f3"}" fill-opacity="${selected ? ".9" : ".45"}" stroke="${selected ? "#086f83" : loop ? "#87acd0" : "#55a194"}" stroke-width="${selected ? 4 : 2}" ${loop ? "" : 'stroke-dasharray="5 4"'}/>${txt(labelX, labelY, caption, 23, loop ? "#2f70b8" : "#087d92", "start")}${loop ? `<path d="M${b - 8} ${bottom + 11}H${a + 8}m10 -8l-10 8 10 8" fill="none" stroke="#6992bc" stroke-width="2"/>` : ""}</g>`;
     });
     body += c.qubits
       .map((q) => {
-        const logical = row.get(q.id),
-          physical = layout?.[logical] ?? q.site ?? q.id;
-        const wireLabel = layout
-          ? `<text x="${left - 20}" y="${y(q.id) + 8}" font-size="24" fill="#526d88" text-anchor="end" font-family="STIX Two Math,serif">q<tspan baseline-shift="sub" font-size="75%">${logical}</tspan><tspan baseline-shift="baseline"> ↦ ${physical}</tspan></text>`
-          : txt(
-              left - 18,
-              y(q.id) + 8,
-              String(q.label).replace(/^\$(.*)\$$/, "$1"),
-              24,
-              "#526d88",
-              "end",
-            );
+        const logical =
+            layout && q.site != null ? layout.indexOf(q.site) : row.get(q.id),
+          physical = q.site ?? layout?.[logical] ?? q.id;
+        const wireLabel =
+          layout && logical >= 0
+            ? `<text x="${left - 20}" y="${y(q.id) + 8}" font-size="24" fill="#526d88" text-anchor="end" font-family="STIX Two Math,serif">q<tspan baseline-shift="sub" font-size="75%">${logical}</tspan><tspan baseline-shift="baseline"> ↦ ${physical}</tspan></text>`
+            : txt(
+                left - 18,
+                y(q.id) + 8,
+                String(q.label).replace(/^\$(.*)\$$/, "$1"),
+                24,
+                "#526d88",
+                "end",
+              );
         return `<g data-morph="${key}-wire-${q.id}">${ln(left, y(q.id), width - 28, y(q.id), "#b6c9dc", 2)}${wireLabel}</g>`;
       })
       .join("");
@@ -296,7 +312,7 @@ window.MQSF_CIRCUIT = (() => {
     if (!full && firstColumn + columns <= maximum)
       body += txt(width - 15, top + 8, "…", 30);
     if (label) body += txt(width / 2, height - 5, label, 23, "#5b7088");
-    return `<div class="circuit" data-op-count="${all.length}" data-first-column="${firstColumn}" data-left="${first}" data-right="${width - 28}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Captured program circuit">${body}</svg></div>`;
+    return `<div class="circuit" data-op-count="${all.length}" data-first-column="${firstColumn}" data-left="${first}" data-right="${width - 28}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMinYMid meet" role="img" aria-label="Captured program circuit">${body}</svg></div>`;
   }
   return { flatten, schedule, render };
 })();

@@ -129,9 +129,9 @@
     "sha256": "cd1966c2de7374f46be568e785befd315d24030d1ce0fb4e1bd8c50cbf07a66c"
   },
   "qr-braket": {
-    "encoded_url": "https://amazon-braket-qdmi-device.readthedocs.io/en/stable/",
+    "encoded_url": "https://github.com/munich-quantum-software/amazon-braket-qdmi-device",
     "generator": "render_equations.py; Segno 1.6.6; micro=False, error=m, border=4, navy on white",
-    "sha256": "04ee18cfb43b24dfc7c02c06e2120a59a738609d9f6c3e4b47de4bf18390e5f7"
+    "sha256": "8482dd50319fe441ec7bb6cb845580038e92585b92df551902dfbbaa7a0a0522"
   },
   "mqsf": {
     "url": "https://munich-quantum-software.github.io/mqsf/assets/images/brand/mqsf-logo.svg",
@@ -249,15 +249,16 @@
     "attribution": "Slurm logo; original artist unknown; vector traced from official Slurm branding artwork, uploaded and color-corrected by Mwtoews.",
     "rights": "GPL-2.0-or-later as stated by the Wikimedia source; Slurm trademark rights remain with their owner.",
     "license_url": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html",
-    "adaptation": "Original vector drawing and colors retained; line endings and trailing whitespace normalized. Embedded source and attribution comment.",
+    "adaptation": "Added the missing viewBox so the existing vector artwork scales uniformly without clipping; geometry unchanged. Compared against the official SchedMD slurm_logo.png.",
     "retrieved_at": "2026-10-10T20:17:30.908768+00:00",
     "source_sha256": "8bbf4b8c3f76ba365baad7ca4ad8777cbe9be2bac0eb5a5da716c9c6e9292084",
-    "sha256": "d7e14b5158a8f0189099874aaf5481667e3d18f62f1a3037d57591147bb61f0e",
+    "sha256": "a108074da5715d74ae87d8352386ee998edfe4b84895a3fcba333eba146b5e3c",
     "license": "GPL-2.0-or-later",
     "license_file": "slurm-LICENSE.txt",
     "license_sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
     "license_source_sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
-    "license_text_source": "/usr/share/common-licenses/GPL-2 (unmodified GNU GPL version 2 text, whitespace normalized)"
+    "license_text_source": "/usr/share/common-licenses/GPL-2 (unmodified GNU GPL version 2 text, whitespace normalized)",
+    "reference_url": "https://github.com/SchedMD/slurm/blob/master/doc/html/slurm_logo.png"
   },
   "oxford": {
     "url": "https://www.cs.ox.ac.uk/img/Oxford-dept-of-Computer-Science-POS-KEY_RGB-optimised.svg",
@@ -369,8 +370,8 @@
     "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/5b50bb661031632342d93672dcdda0d0bc69f2f5/docs/_static/logos/tum.svg",
     "retrieved_at": "2026-10-10T20:14:36.110909+00:00",
     "source_sha256": "a983693f0201cd71b31c3bf48eeaa17a53cdd488327564222c2c789fc88e765e",
-    "sha256": "16486d49ee12f3fb3717b33141ea754e72c840b3f46e9d6fd1ac5657d214f83c",
-    "adaptation": "Cropped viewport to the existing lettermark; all original path geometry and colors retained.",
+    "sha256": "98d4520957bc4155e2180cb93cbd8cc2b40b4b2492c2d161818e01b32d8552de",
+    "adaptation": "Extracted the official TUM lettermark path unchanged, with explicit fill and tightly bounded viewport; removed unrelated wordmark paths and CSS.",
     "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the project or organization.",
     "source_asset": "tum.svg"
   },
@@ -382,5 +383,22 @@
     "adaptation": "Cropped viewport to the existing lettermark; all original path geometry and colors retained.",
     "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the project or organization.",
     "source_asset": "lrz.svg"
+  },
+  "eq-grover-iterations": {
+    "generator": "render_equations.py; Matplotlib 3.11.2; STIX mathtext; SVG path glyphs; tight text bounds with 0.04-inch padding",
+    "equations": [
+      "$N=2^n$",
+      "$k=\\left\\lfloor\\frac{\\pi}{4\\arcsin(2^{-n/2})}\\right\\rfloor\\approx\\left\\lfloor\\frac{\\pi}{4}\\sqrt{2^n}\\right\\rfloor$"
+    ],
+    "scope": "The MQT Core benchmark uses n search qubits with a phase oracle and no ancilla. The exact automatic iteration count follows src/bench/Grover.cpp; the right expression is asymptotic.",
+    "sha256": "4a01f448aabb8955dd2d050b032062e2cb5f9de3f865579f45beb0e6c4fac0c3"
+  },
+  "fullstaqd": {
+    "url": "https://raw.githubusercontent.com/Munich-Quantum-Software-Stack/QDMI/develop/docs/_static/logos/fullstaqd.png",
+    "retrieved_at": "2026-10-13T10:33:21.892746+00:00",
+    "source_sha256": "45f6ca38d6dfc662e967c1db90856e692e7e03165ef17c3effc3d8e1cf4d80f9",
+    "sha256": "f099b34504aaab28a8d91d0300c9d290ce3105d7d358d0531effaf4e2d414aa5",
+    "adaptation": "Vector contours at the original 1801x619 aspect ratio, 16-color median-cut palette, alpha threshold 127; generated with Pillow and Matplotlib. No embedded bitmap.",
+    "rights": "Copyright and trademark rights remain with the respective owner; included only to identify the consortium."
   }
 }

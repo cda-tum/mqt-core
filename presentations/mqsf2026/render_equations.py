@@ -25,6 +25,17 @@ import segno
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 EQUATIONS = {
+    "eq-grover-iterations": (
+        "Grover search space and automatic iteration count",
+        [
+            r"$N=2^n$",
+            r"$k=\left\lfloor\frac{\pi}{4\arcsin(2^{-n/2})}\right\rfloor\approx\left\lfloor\frac{\pi}{4}\sqrt{2^n}\right\rfloor$",
+        ],
+        (
+            "The MQT Core benchmark uses n search qubits with a phase oracle and no ancilla. "
+            "The exact automatic iteration count follows src/bench/Grover.cpp; the right expression is asymptotic."
+        ),
+    ),
     "eq-afqmc-projection": (
         "Imaginary-time propagation of the trial state",
         [r"$|\Psi(\tau)\rangle = e^{-\tau(\hat{H}-E_T)}\,|\Psi_T\rangle$"],
@@ -116,7 +127,7 @@ def main() -> None:
         }
     for name, url in {
         "qr-core-repo": "https://github.com/munich-quantum-toolkit/core",
-        "qr-braket": "https://amazon-braket-qdmi-device.readthedocs.io/en/stable/",
+        "qr-braket": "https://github.com/munich-quantum-software/amazon-braket-qdmi-device",
         "qr-qdmi-repo": "https://github.com/Munich-Quantum-Software-Stack/QDMI",
         "qr-qdmi": "https://munich-quantum-software-stack.github.io/QDMI/",
         "qr-linkedin": "https://www.linkedin.com/in/lukas-burgholzer-7a1741a7/",

@@ -17,14 +17,23 @@ import json
 import textwrap
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from capture_execution import validate_execution
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
+from pygments.lexer import inherit
 from pygments.lexers import get_lexer_by_name
+from pygments.lexers.asm import LlvmLexer
+from pygments.token import Number
 
 HERE = Path(__file__).resolve().parent
+
+
+class QIRLexer(LlvmLexer):
+    """Recognize LLVM 23's hexadecimal floating constants until Pygments does."""
+
+    tokens: ClassVar = {"root": [(r"f0x[0-9A-Fa-f]+", Number.Float), inherit]}
 
 
 def encode_data(data: dict[str, Any]) -> str:
@@ -257,10 +266,14 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
     propagation = application.get("propagation", {})
     curves = []
     for index, curve in enumerate(propagation.get("curves", [])):
-        shown = {key: curve[key] for key in ("label", "energy", "stderr") if key in curve}
+        shown = {key: curve[key] for key in ("label", "energy", "stderr", "step_completed_ms") if key in curve}
         if index == 0 and "frames" in curve:
             shown["frames"] = [
-                {"tau": frame["tau"], "walkers": [{"id": w["id"], "weight": w["weight"]} for w in frame["walkers"]]}
+                {
+                    "tau": frame["tau"],
+                    "step": frame["step"],
+                    "walkers": [{key: w[key] for key in ("id", "weight", "completed_ms")} for w in frame["walkers"]],
+                }
                 for frame in curve["frames"]
             ]
         curves.append(shown)
@@ -286,12 +299,13 @@ def browser_data(data: dict[str, Any]) -> dict[str, Any]:
                     "chemistry",
                     "execution",
                     "slurm",
+                    "timeline",
                 )
                 if key in application
             },
             "shadow_preview": [
                 {"program_index": snapshot["native_program_index"], "outcome": snapshot["shots"][0]}
-                for snapshot in application.get("snapshots", [])[:3]
+                for snapshot in application.get("snapshots", [])[:4]
             ],
             "propagation": {
                 **{
@@ -333,7 +347,11 @@ def build(output: Path, capture: Path = HERE / "captures/demo.json.gz", source: 
                 lines = code.splitlines(keepends=True)
                 artifact["line_count"] = len(lines)
                 language = artifact.get("language", "text")
-                lexer = get_lexer_by_name("openqasm3" if language == "qasm" else language)
+                lexer = (
+                    QIRLexer()
+                    if language == "llvm"
+                    else get_lexer_by_name("openqasm3" if language == "qasm" else language)
+                )
                 if artifact.get("display_code"):
                     artifact["display_lines_html"] = [
                         highlight(line, lexer, line_formatter).rstrip("\n")

@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pygments.token import Error, Number
 
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location("mqsf_build", ROOT / "presentations/mqsf2026/build.py")
@@ -352,7 +353,10 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
                         "energy": [1],
                         "walker_energies": [[1]],
                         "walker_weights": [[1]],
-                        "frames": [{"tau": 0, "walkers": [{"id": 0, "weight": 1, "energy": 2}]}],
+                        "step_completed_ms": [3],
+                        "frames": [
+                            {"tau": 0, "step": 0, "walkers": [{"id": 0, "weight": 1, "energy": 2, "completed_ms": 4}]}
+                        ],
                     },
                     {"energy": [2], "frames": [{"tau": 0, "walkers": [{"id": 0, "weight": 1}]}]},
                 ]
@@ -384,7 +388,11 @@ def test_bundle_is_self_contained_and_keeps_exact_source() -> None:
         assert "shadow" not in packaged["application"]
         assert packaged["application"]["workload"]["snapshots"] == 1
         assert packaged["application"]["propagation"]["curves"] == [
-            {"energy": [1], "frames": [{"tau": 0, "walkers": [{"id": 0, "weight": 1}]}]},
+            {
+                "energy": [1],
+                "step_completed_ms": [3],
+                "frames": [{"tau": 0, "step": 0, "walkers": [{"id": 0, "weight": 1, "completed_ms": 4}]}],
+            },
             {"energy": [2]},
         ]
         first, second = packaged["targets"]
@@ -428,3 +436,12 @@ def test_large_artifacts_keep_exact_source_in_evidence() -> None:
         with zipfile.ZipFile(root / "output/mqsf-2026.zip") as archive:
             assert archive.read("evidence.json.gz") == capture.read_bytes()
             assert json.loads(gzip.decompress(archive.read("evidence.json.gz"))) == data
+
+
+def test_qir_hex_float_highlighting_keeps_actual_llvm_spelling() -> None:
+    """LLVM 23 hex floats are numbers, not lexer errors or rewritten code."""
+    code = "call void @gate(double f0xBFF921FB54442D18)\n"
+    tokens = list(BUILDER.QIRLexer().get_tokens(code))
+    assert "".join(value for _, value in tokens) == code
+    assert not any(kind is Error for kind, _ in tokens)
+    assert (Number.Float, "f0xBFF921FB54442D18") in tokens

@@ -50,8 +50,21 @@ window.MQSF_MOTION = (() => {
     );
     cancel(false);
     root.innerHTML = html;
+    // Keep unchanged images and reference blocks alive across builds.
+    for (const node of root.querySelectorAll("[data-morph]")) {
+      const previous = old.get(node.dataset.morph)?.node;
+      if (node.isConnected && previous?.isEqualNode(node))
+        node.replaceWith(previous);
+    }
+    const targetRects = new Map(
+      [...root.querySelectorAll("[data-morph]")].map((node) => [
+        node,
+        node.getBoundingClientRect(),
+      ]),
+    );
     const tweens = [],
-      animations = [];
+      animations = [],
+      moving = new Set();
     const svgAttributes = [
       "x",
       "y",
@@ -108,7 +121,11 @@ window.MQSF_MOTION = (() => {
             );
         }
       } else if (previous) {
-        const current = node.getBoundingClientRect(),
+        // A parent FLIP already carries its descendants; nesting doubles motion.
+        let parent = node.parentElement;
+        while (parent && !moving.has(parent)) parent = parent.parentElement;
+        if (parent) continue;
+        const current = targetRects.get(node),
           scale =
             Number(
               getComputedStyle(document.documentElement).getPropertyValue(
@@ -117,7 +134,15 @@ window.MQSF_MOTION = (() => {
             ) || 1;
         const dx = (previous.rect.x - current.x) / scale,
           dy = (previous.rect.y - current.y) / scale;
-        if (current.width && current.height)
+        if (
+          current.width &&
+          current.height &&
+          (Math.abs(dx) > 0.1 ||
+            Math.abs(dy) > 0.1 ||
+            Math.abs(previous.rect.width - current.width) > 0.1 ||
+            Math.abs(previous.rect.height - current.height) > 0.1)
+        ) {
+          moving.add(node);
           animations.push(
             node.animate(
               [
@@ -130,13 +155,7 @@ window.MQSF_MOTION = (() => {
               { duration, easing: "cubic-bezier(.22,.75,.18,1)" },
             ),
           );
-        if (node.textContent !== previous.node.textContent)
-          animations.push(
-            node.animate([{ opacity: 0.15 }, { opacity: 1 }], {
-              duration: 550,
-              easing: "ease-out",
-            }),
-          );
+        }
       }
     }
     // Fade new chapter/content roots; preserve geometry shared with the previous slide.

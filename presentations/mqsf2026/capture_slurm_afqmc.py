@@ -23,7 +23,7 @@ import shutil
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
-from time import monotonic, sleep
+from time import monotonic, perf_counter_ns, sleep
 
 ROOT = Path(__file__).resolve().parents[2]
 FIELDS = (
@@ -185,6 +185,11 @@ def main() -> None:
         raise TimeoutError(msg)
     path = runtime / "jobs/afqmc.json"
     data = json.loads(path.read_text())
+    data["timeline"] = {
+        "propagation_started_ms": (data["propagation"]["started_ns"] - data["execution"]["started_ns"]) / 1e6,
+        "completed_ms": (perf_counter_ns() - data["execution"]["started_ns"]) / 1e6,
+        "clock": "Shared Docker-host perf_counter_ns; elapsed from application preparation, including Slurm handoff",
+    }
     data["slurm"] = {
         "version": command("scontrol", "--version"),
         "jobs": records,

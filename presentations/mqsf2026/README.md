@@ -30,10 +30,9 @@ loads only the summaries needed for display; the ZIP retains full observations.
 Every narrative change waits for a click. A click may start a finite replay,
 which holds its final frame. Another forward click finishes any current replay
 and advances immediately. Back, direct jumps, printing, and reduced-motion mode
-show completed replays. The two explicitly illustrative compiler caricatures
-loop until the next click; reduced motion shows a settled frame. A fragment such
-as `#8.5` opens a particular slide and build. References never require a
-separate reveal. Printing creates one page per slide.
+show completed replays. Reduced motion shows a settled frame. A fragment such as
+`#9.4` opens a particular slide and build. References never require a separate
+reveal. Printing creates one page per slide.
 
 ## Scientific evidence
 
@@ -81,16 +80,19 @@ intermediate visual motion between recorded endpoints is interpolation. Logical
 qubits move on the device map; the routed circuit uses physical wire labels.
 Actual native completion and indexed retrieval timestamps drive separate matrix
 colors. The replay rescales preparation, compilation, execution and retrieval
-for readability; the quantum replay clock reports the recorded application time.
-The walker replay instead displays imaginary time, without implying a wall-clock
-relationship. The final overview reports the complete recorded Slurm workflow
-duration, including scheduler and worker startup.
+for readability. The program clock continues through preparation, execution, and
+propagation using timestamps from the same recorded workflow. Imaginary time
+remains the scientific horizontal axis of the energy plot. The final overview
+reports the complete recorded Slurm workflow duration, including scheduler and
+worker startup.
 
-Full compiler listings remain in the browser and evidence. Compact QC/QCO views
-are produced by recorded cleanup passes. Complete QIR sheets use a small font;
-control-flow highlights add readable excerpts while retaining the full listing.
-The AFQMC Python view omits docstrings and blank lines, and removes the common
-indentation of definitions extracted from the capture function.
+Complete compiler listings remain in the downloadable evidence. The target
+summary shows the first 22 QIR lines with a continuation marker. The structured
+view ends at the entry-point return and replaces consecutive PRX/CZ calls with
+counted omission markers; all control-flow lines retain their original line
+numbers. Detailed excerpts show reset, conditionals, and loops. The AFQMC Python
+view omits docstrings and blank lines, and removes the common indentation of
+definitions extracted from the capture function.
 
 Grover program sizes are actual emitted UTF-8 OpenQASM bytes for 2–22 qubits,
 with preserved and fully unrolled forms. Weyl coordinates are decompositions of
@@ -100,12 +102,16 @@ synthesized using two CZ gates. The canonicalization example includes source,
 before/after IR, and a matrix-equivalence check.
 
 The compact syndrome example keeps reset, counted loops, and feedback through
-native adaptive QIR. The literature RUS example implements V₃ with its required
-failure correction; imported-circuit Kraus matrices verify its semantics.
-Scratch bits are declared inside the loops and branches. OpenQASM keeps their
-scope; the Qiskit export reuses storage and initializes zero-initialized locals
-on each region entry. Data and ancilla declarations are separate so broadcasting
-retains the intended qubit roles. The RUS construction follows
+native adaptive QIR. The evidence bundle also retains the literature RUS
+example, which implements V₃ with its required failure correction;
+imported-circuit Kraus matrices verify its semantics. Scalar qubit and
+scratch-bit source names are retained as optional MLIR name locations; stripping
+debug locations can remove these labels. Explicit register names take priority
+over inferred labels. Scratch bits are declared inside the loops and branches.
+OpenQASM keeps their scope; the Qiskit export reuses storage and initializes
+zero-initialized locals on each region entry. Data and ancilla declarations are
+separate so broadcasting retains the intended qubit roles. The RUS construction
+follows
 [Paetznick and Svore (2014)](https://www.rintonpress.com/xxqic14/qic-14-1516/1277-1301.pdf).
 
 Four-qubit iterative QPE estimates phase 1/3 into eight output bits. The DDSIM

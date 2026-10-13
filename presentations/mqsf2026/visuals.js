@@ -127,7 +127,7 @@
           <path d="M50 72L74 36M22 61L29 64M34 39L38 46M59 35L57 43M79 57L72 61" stroke="${blue}" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="72" r="5" fill="${blue}"/>`;
         break;
       case "circuit":
-        body = `<path d="M6 29H94M6 51H94M6 73H94M63 29V74" fill="none" stroke="${navy}" stroke-width="2"/><rect x="22" y="17" width="23" height="23" rx="3" fill="${pale}" stroke="${blue}" stroke-width="2"/><path d="M28 22V35M39 22V35M28 28H39" stroke="${blue}" stroke-width="2"/><circle cx="63" cy="29" r="4" fill="${blue}"/><circle cx="63" cy="51" r="9" fill="white" stroke="${blue}" stroke-width="2"/><path d="M57 51H69M63 45V57" stroke="${blue}" stroke-width="2"/>`;
+        body = `<path d="M6 29H94M6 51H94M6 73H94M63 29V51" fill="none" stroke="${navy}" stroke-width="2"/><rect x="22" y="17" width="23" height="23" rx="3" fill="${pale}" stroke="${blue}" stroke-width="2"/><path d="M28 22V35M39 22V35M28 28H39" stroke="${blue}" stroke-width="2"/><circle cx="63" cy="29" r="4" fill="${blue}"/><circle cx="63" cy="51" r="9" fill="white" stroke="${blue}" stroke-width="2"/><path d="M57 51H69M63 45V57" stroke="${blue}" stroke-width="2"/>`;
         break;
       case "molecule":
       case "orbitals":
@@ -140,7 +140,9 @@
   }
 
   function qdmiBadge(x = 0, y = 0, width = 190, label = "Powered by") {
-    return `<g transform="translate(${x} ${y}) scale(${width / 190})" role="img" aria-label="${label} QDMI"><rect width="190" height="39" rx="19.5" fill="white" stroke="#8DB4D8" stroke-width="1.5"/>${text(13, 25, label, 15, "start", `fill="${blue}"`)}${logo("qdmi", 100, 7, 78, 26)}</g>`;
+    const integrated = label === "Integrated with";
+    const logicalWidth = integrated ? 222 : 190;
+    return `<g transform="translate(${x} ${y}) scale(${width / logicalWidth})" role="img" aria-label="${label} QDMI"><rect width="${logicalWidth}" height="39" rx="19.5" fill="white" stroke="#8DB4D8" stroke-width="1.5"/>${text(13, 25, label, 15, "start", `fill="${blue}"`)}${logo("qdmi", integrated ? 132 : 100, 7, 78, 26)}</g>`;
   }
 
   window.MQSF_VIZ = {
