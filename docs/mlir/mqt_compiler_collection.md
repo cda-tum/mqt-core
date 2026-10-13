@@ -243,23 +243,24 @@ qiskit_bell.cx(0, 1)
 qiskit_bell.measure(range(2), range(2))
 
 direct = QCProgram.from_qiskit(qiskit_bell)
-restored = direct.to_qiskit()
+restored = direct.to_qiskit(copy=True)
 compiled_qiskit = compile_program(qiskit_bell)
 
-assert direct.is_valid  # Export does not consume the QC program.
+assert direct.is_valid  # copy=True preserves the QC program.
 assert restored.count_ops() == qiskit_bell.count_ops()
 assert compiled_qiskit.is_valid
 ```
 
-QCO programs also provide {py:meth}`~mqt.core.mlir.QCOProgram.to_qiskit`. It
-converts a copy through QC and leaves the original program unchanged, even if
-export fails. Both exporters accept `target=target` to map static target site
-IDs to dense physical-qubit indices in target site order.
+QCO programs also provide {py:meth}`~mqt.core.mlir.QCOProgram.to_qiskit`, which
+converts through QC. Both exporters consume their source by default, including
+when conversion or export fails. Pass `copy=True` to preserve the source. Both
+accept `target=target` to map static target site IDs to dense physical-qubit
+indices in target site order.
 
 ```{code-cell} ipython3
 qco = direct.to_qco(copy=True)
 restored = qco.to_qiskit()
-assert qco.is_valid
+assert not qco.is_valid
 ```
 
 See {doc}`qiskit` for supported circuit features and translation limitations.

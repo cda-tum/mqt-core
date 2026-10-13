@@ -2918,10 +2918,9 @@ collectGateDefinition(mlir::func::FuncOp function) {
   };
 }
 
-nb::object exportCircuit(const mlir::QCProgram& program,
+nb::object exportCircuit(mlir::QCProgram program,
                          const mlir::CompilerTarget* const target) {
-  mlir::OwningOpRef<mlir::ModuleOp> expanded = program.module().clone();
-  auto moduleOp = *expanded;
+  auto moduleOp = program.module();
   auto function = mlir::mqt::getEntryPoint(moduleOp);
   if (!function) {
     throw std::runtime_error(

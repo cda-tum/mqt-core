@@ -54,7 +54,8 @@ as a Qiskit circuit. Successful export does not verify that a device can run it.
 
 The compiler imports circuit operations without changing the source circuit.
 Export creates a new circuit and preserves parameter identities across nested
-control flow.
+control flow. Both `QCProgram.to_qiskit()` and `QCOProgram.to_qiskit()` consume
+the source, including when export fails. Pass `copy=True` to preserve it.
 
 | Circuit feature                                                         | Import               | Export                             |
 | ----------------------------------------------------------------------- | -------------------- | ---------------------------------- |
@@ -92,12 +93,12 @@ Public program inputs still require explicit names. OpenQASM custom gates can
 therefore use `QCProgram.from_openqasm_str(source).to_qiskit()` directly within
 the supported subset below.
 
-Export folds scalar expressions on a copy of the QC program. Constant
-arithmetic, casts, and idempotent expressions can therefore disappear;
-expression-tree shape is not preserved. Quantum-resource and classical-snapshot
-canonicalization patterns are not applied, because they can change circuit width
-or introduce scratch bits. Call `cleanup()` explicitly when those broader
-transformations are wanted.
+Export folds scalar expressions in the consumed QC program. Constant arithmetic,
+casts, and idempotent expressions can therefore disappear; expression-tree shape
+is not preserved. Quantum-resource and classical-snapshot canonicalization
+patterns are not applied, because they can change circuit width or introduce
+scratch bits. Call `cleanup()` explicitly when those broader transformations are
+wanted.
 
 Imported free parameters and vectors retain their identities through QC/QCO
 conversion, optimization, and MLIR serialization, so exported circuits can be

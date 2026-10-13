@@ -870,7 +870,7 @@ def test_long_symbolic_rz_run_exports_and_binds(length: int, method: str) -> Non
     )
     program = QCProgram.from_qiskit(source).to_qco()
     getattr(program, method)(_test_target_environment(target))
-    result = program.to_qiskit(target=target)
+    result = program.to_qiskit(target=target, copy=True)
     assert result.count_ops() == {"rz": 1}
     assert result.parameters == source.parameters
     reimported = QCProgram.from_qiskit(result).to_qiskit()
@@ -1158,7 +1158,7 @@ def test_symbolic_su2_compiles_and_binds_after_export(num_qubits: int, basis: st
         ]),
     )
     getattr(program, method)(_test_target_environment(target))
-    result = program.to_qiskit(target=target)
+    result = program.to_qiskit(target=target, copy=True)
     assert set(result.count_ops()) <= ({"u", "cz"} if basis == "u" else {"sx", "x", "rz", "cz"})
     assert result.parameters == source.parameters
     values = dict(zip(source.parameters, np.linspace(-3 * np.pi, 3 * np.pi, source.num_parameters), strict=True))
@@ -1245,7 +1245,7 @@ def test_target_fusion_preserves_native_gates_and_symbolic_exports(shape: str, m
     )
     program = QCProgram.from_qiskit(source).to_qco()
     getattr(program, method)(_test_target_environment(target))
-    result = program.to_qiskit(target=target)
+    result = program.to_qiskit(target=target, copy=True)
     assert result.parameters == source.parameters
     if shape in {"native_xyx", "long_zsxx", "native_u"}:
         assert result.count_ops() == source.count_ops()
@@ -1270,7 +1270,7 @@ def test_symbolic_fusion_normalizes_gate_operands_after_scalar_expressions() -> 
     program = QCProgram.from_qiskit(source).to_qco()
     program.cleanup()
     program.fuse_single_qubit_unitary_runs(basis="zsxx")
-    result = program.to_qiskit()
+    result = program.to_qiskit(copy=True)
     assert result.parameters == source.parameters
     assert program.to_jeff(copy=True).is_valid
     values = {angle: 17 * np.pi}
@@ -1325,7 +1325,7 @@ def test_target_compilation_exports_canonical_physical_qiskit_circuit() -> None:
     assert 0 < mapped.ir.count("qco.static") < target.num_sites
 
     source_ir = mapped.ir
-    restored = mapped.to_qiskit(target=target)
+    restored = mapped.to_qiskit(target=target, copy=True)
 
     assert mapped.is_valid
     assert mapped.ir == source_ir
@@ -1396,15 +1396,18 @@ def test_target_synthesis_resynthesizes_two_qubit_blocks() -> None:
 
 
 @requires_qiskit_translation
-def test_qco_qiskit_export_preserves_program() -> None:
-    """Reuse QC export without consuming QCO, including when export fails."""
+@pytest.mark.parametrize("qco", [False, True])
+def test_qiskit_export_copy_preserves_program(*, qco: bool) -> None:
+    """Preserve QC and QCO with copy=True, then consume them by default."""
     source = QuantumCircuit(2)
     source.h(0)
     source.cx(0, 1)
-    program = QCProgram.from_qiskit(source).to_qco()
+    program = QCProgram.from_qiskit(source)
+    if qco:
+        program = program.to_qco()
     source_ir = program.ir
 
-    assert np.allclose(Operator(program.to_qiskit()).data, Operator(source).data)
+    assert np.allclose(Operator(program.to_qiskit(copy=True)).data, Operator(source).data)
     assert program.ir == source_ir
 
     target = CompilerTarget(
@@ -1413,12 +1416,32 @@ def test_qco_qiskit_export_preserves_program() -> None:
         native_operations=CompilerTarget.NativeOperations.unrestricted(),
     )
     with pytest.raises(RuntimeError, match="requires statically mapped qubits"):
-        program.to_qiskit(target=target)
+        program.to_qiskit(target=target, copy=True)
     assert program.ir == source_ir
 
-    program.to_qc()
+    assert np.allclose(Operator(program.to_qiskit()).data, Operator(source).data)
+    assert not program.is_valid
     with pytest.raises(RuntimeError, match="already been consumed"):
         program.to_qiskit()
+
+
+@requires_qiskit_translation
+@pytest.mark.parametrize("qco", [False, True])
+def test_qiskit_export_failure_consumes_program(*, qco: bool) -> None:
+    """A failed consuming export leaves the source invalid."""
+    source = QuantumCircuit(2)
+    source.h(0)
+    program = QCProgram.from_qiskit(source)
+    if qco:
+        program = program.to_qco()
+    target = CompilerTarget(
+        2,
+        connectivity=CompilerTarget.Connectivity.all_to_all(),
+        native_operations=CompilerTarget.NativeOperations.unrestricted(),
+    )
+    with pytest.raises(RuntimeError, match="requires statically mapped qubits"):
+        program.to_qiskit(target=target)
+    assert not program.is_valid
 
 
 @pytest.mark.parametrize("kind", ["qc", "qco", "jeff"])
