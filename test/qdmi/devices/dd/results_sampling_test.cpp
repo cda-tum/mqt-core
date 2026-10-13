@@ -707,6 +707,7 @@ TEST(PresentationTelemetry, ShotTracePreservesSeededAdaptiveResults) {
     std::vector<bool> seen(shots);
     std::vector<size_t> completed(workers);
     std::vector<std::string> runtimeEvents;
+    size_t activeWorkers = 0;
     int64_t previousTime = 0;
     for (std::string line; std::getline(input, line);) {
       std::istringstream row(line);
@@ -719,17 +720,25 @@ TEST(PresentationTelemetry, ShotTracePreservesSeededAdaptiveResults) {
       if (kind == "runtime") {
         std::string value;
         ASSERT_TRUE(std::getline(row >> std::ws, value));
+        constexpr std::string_view prefix = "Adaptive sampling begins: ";
+        if (value.starts_with(prefix)) {
+          // The executor caps requested workers to its CPU and budget limits.
+          std::istringstream count(value.substr(prefix.size()));
+          ASSERT_TRUE(count >> activeWorkers);
+          ASSERT_GT(activeWorkers, 0);
+          ASSERT_LE(activeWorkers, workers);
+        }
         runtimeEvents.push_back(value);
       } else if (kind == "worker") {
         size_t worker = 0;
         size_t count = 0;
         size_t total = 0;
         ASSERT_TRUE(row >> worker >> count >> total);
-        ASSERT_LT(worker, workers);
+        ASSERT_LT(worker, activeWorkers);
         EXPECT_GT(count, completed[worker]);
         EXPECT_LE(count, total);
-        EXPECT_EQ(total,
-                  (shots / workers) + (worker < shots % workers ? 1 : 0));
+        EXPECT_EQ(total, (shots / activeWorkers) +
+                             (worker < shots % activeWorkers ? 1 : 0));
         completed[worker] = count;
       } else {
         ASSERT_EQ(kind, "shot");
@@ -738,9 +747,9 @@ TEST(PresentationTelemetry, ShotTracePreservesSeededAdaptiveResults) {
         std::string outcome;
         ASSERT_TRUE(row >> index >> worker >> outcome);
         ASSERT_LT(index, shots);
-        ASSERT_LT(worker, workers);
-        const auto offset =
-            ((shots / workers) * worker) + std::min(worker, shots % workers);
+        ASSERT_LT(worker, activeWorkers);
+        const auto offset = ((shots / activeWorkers) * worker) +
+                            std::min(worker, shots % activeWorkers);
         EXPECT_GE(index, offset);
         EXPECT_LT(index, offset + completed[worker]);
         EXPECT_FALSE(seen[index]);
@@ -750,16 +759,17 @@ TEST(PresentationTelemetry, ShotTracePreservesSeededAdaptiveResults) {
     }
     EXPECT_TRUE(
         std::ranges::all_of(seen, [](const bool value) { return value; }));
-    for (size_t worker = 0; worker < workers; ++worker) {
+    ASSERT_GT(activeWorkers, 0);
+    for (size_t worker = 0; worker < activeWorkers; ++worker) {
       EXPECT_EQ(completed[worker],
-                (shots / workers) + (worker < shots % workers ? 1 : 0));
+                (shots / activeWorkers) +
+                    (worker < shots % activeWorkers ? 1 : 0));
     }
-    EXPECT_EQ(
-        runtimeEvents,
-        (std::vector<std::string>{
-            "JIT compilation begins", "JIT runtime ready",
-            "Adaptive sampling begins: " + std::to_string(workers) + " workers",
-            "Sampling complete"}));
+    EXPECT_EQ(runtimeEvents, (std::vector<std::string>{
+                                 "JIT compilation begins", "JIT runtime ready",
+                                 "Adaptive sampling begins: " +
+                                     std::to_string(activeWorkers) + " workers",
+                                 "Sampling complete"}));
   }
 }
 
