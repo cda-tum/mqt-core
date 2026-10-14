@@ -206,6 +206,7 @@ qdmi_api_tagfile_url = f"{_qdmi_api_base}qdmi.tag"
 
 html_theme = "furo"
 html_static_path = ["_static"]
+html_extra_path = ["_build/benchmark-site"]
 html_js_files = ["cpp-api-navigation.js"]
 html_css_files = [
     "custom.css",

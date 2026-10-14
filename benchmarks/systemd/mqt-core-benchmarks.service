@@ -1,0 +1,20 @@
+# Copyright (c) 2023 - 2026 Chair for Design Automation, TUM
+# Copyright (c) 2025 - 2026 Munich Quantum Software Company GmbH
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
+[Unit]
+Description=MQT Core compiler benchmark history
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/mqt-core-benchmarks
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=%h/.config/mqt-core-benchmarks/worker.env
+# A resumed calendar timer must not start measurements on a weekday.
+ExecCondition=/usr/bin/env TZ=Europe/Berlin /bin/sh -c 'test "$$(date +%%u)" -ge 6'
+ExecStart=%h/.local/bin/uv run --no-sync python -m benchmarks.runner batch --settings %h/.config/mqt-core-benchmarks/worker.json --publish
+TimeoutStartSec=36h

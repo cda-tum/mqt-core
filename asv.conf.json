@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "project": "mqt-core",
+  "project_url": "https://github.com/munich-quantum-toolkit/core",
+  "repo": ".",
+  "branches": ["HEAD"],
+  "show_commit_url": "https://github.com/munich-quantum-toolkit/core/commit/",
+  "environment_type": "uv",
+  "pythons": ["3.13"],
+  "matrix": { "qiskit": ["2.5.2"] },
+  "build_command": [
+    "python -m pip wheel --no-deps --wheel-dir={build_cache_dir} --config-settings=cmake.define.BUILD_MQT_CORE_MLIR=ON --config-settings=cmake.build-type=Release {build_dir}"
+  ],
+  "benchmark_dir": "benchmarks",
+  "env_dir": "build/asv/env",
+  "results_dir": ".asv/results",
+  "html_dir": ".asv/html/asv",
+  "launch_method": "spawn",
+  "install_timeout": 1800
+}

@@ -63,6 +63,7 @@ Configure structured programs and evaluate results against their references.
 - **First example:**
   [Configure a benchmark](benchmarks.md#configure-a-typed-instance)
 - **Guide:** {doc}`Structured benchmarks <benchmarks>`
+- **Performance:** {doc}`Compiler benchmark dashboard <compiler_benchmarks>`
 - **API:** {py:mod}`mqt.core.bench`
 :::
 
@@ -114,6 +115,7 @@ compilation/index
 qdmi/index
 dd_package
 benchmarks
+compiler_benchmarks
 references
 CHANGELOG
 UPGRADING

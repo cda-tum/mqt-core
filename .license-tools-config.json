@@ -15,7 +15,10 @@
     ".td": "SLASH_STYLE",
     ".yaml": "POUND_STYLE",
     ".toml": "POUND_STYLE",
-    ".proto": "SLASH_STYLE"
+    ".proto": "SLASH_STYLE",
+    ".service": "POUND_STYLE",
+    ".timer": "POUND_STYLE",
+    ".env": "POUND_STYLE"
   },
   "exclude": [
     "^\\.[^/]+",

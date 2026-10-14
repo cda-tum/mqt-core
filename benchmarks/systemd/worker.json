@@ -1,0 +1,6 @@
+{
+  "machine": "dgx-spark",
+  "cpu": 0,
+  "reference": "8d9bcfb031fa0fe2769a852cdf8d66017d24abe8",
+  "start": "8d9bcfb031fa0fe2769a852cdf8d66017d24abe8"
+}

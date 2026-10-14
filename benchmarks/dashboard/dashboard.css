@@ -1,0 +1,407 @@
+.mqt-dashboard {
+  --mqt-background: var(--color-background-primary, #fff);
+  --mqt-secondary: var(--color-background-secondary, #f7f7f7);
+  --mqt-border: var(--color-background-border, #e1e4e8);
+  --mqt-text: var(--color-foreground-primary, #303030);
+  --mqt-muted: var(--color-foreground-secondary, #5a5a5a);
+  --mqt-link: var(--color-brand-primary, #2962ff);
+  --mqt-blue: #226dc5;
+  --mqt-orange: #aa5316;
+  --mqt-better: #08735e;
+  --mqt-worse: #a04c15;
+  container: mqt-dashboard / inline-size;
+  color: var(--mqt-text);
+  font: inherit;
+  font-size: 1rem;
+  min-width: 0;
+}
+.mqt-dashboard *,
+.mqt-standalone * {
+  box-sizing: border-box;
+}
+.mqt-dashboard a {
+  color: var(--mqt-link);
+  text-underline-offset: 3px;
+}
+.mqt-dashboard :focus-visible {
+  outline: 3px solid var(--mqt-link);
+  outline-offset: 3px;
+}
+.mqt-dashboard h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.mqt-dashboard h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.mqt-dashboard h3 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+.mqt-dashboard p {
+  line-height: 1.55;
+}
+.mqt-dashboard .heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.8rem 0 1.5rem;
+}
+.mqt-dashboard .heading p:last-child {
+  margin: 0.5rem 0 0;
+}
+.mqt-dashboard[data-embedded] .heading {
+  display: none;
+}
+.mqt-dashboard .eyebrow {
+  font-size: 0.8rem;
+  color: var(--mqt-muted);
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.08em;
+}
+.mqt-dashboard .subtle,
+.mqt-dashboard .footnote {
+  color: var(--mqt-muted);
+  font-size: 0.875rem;
+}
+.mqt-dashboard .badge {
+  background: var(--mqt-secondary);
+  border: 1px solid var(--mqt-border);
+  padding: 0.4rem 0.7rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.mqt-dashboard .dashboard-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+}
+.mqt-dashboard .filters {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr 1.3fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--mqt-border);
+  background: var(--mqt-secondary);
+  margin: 0;
+}
+.mqt-dashboard label {
+  font-size: 0.875rem;
+  color: var(--mqt-muted);
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.mqt-dashboard select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.6rem;
+  padding: 0.4rem 1.6rem 0.4rem 0.6rem;
+  font: inherit;
+  color: var(--mqt-text);
+  background: var(--mqt-background);
+  border: 1px solid var(--mqt-border);
+  border-radius: 3px;
+}
+.mqt-dashboard .run-info {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1.5rem;
+  font-size: 0.8rem;
+  color: var(--mqt-muted);
+  align-items: baseline;
+}
+.mqt-dashboard .run-info p {
+  margin: 0.4rem 0;
+}
+.mqt-dashboard .run-info a {
+  white-space: nowrap;
+}
+.mqt-dashboard .section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+.mqt-dashboard .legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  color: var(--mqt-muted);
+  font-size: 0.8rem;
+}
+.mqt-dashboard .legend span::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  border-top: 3px solid;
+  margin: 0 7px 3px 0;
+}
+.mqt-dashboard .legend .all-to-all::before {
+  color: var(--mqt-blue);
+}
+.mqt-dashboard .legend .line::before {
+  color: var(--mqt-orange);
+}
+.mqt-dashboard .legend .baseline-key::before {
+  border-top: 2px dashed var(--mqt-muted);
+}
+.mqt-dashboard .charts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+.mqt-dashboard .chart {
+  border: 1px solid var(--mqt-border);
+  border-radius: 3px;
+  background: var(--mqt-background);
+  padding: 1.1rem;
+  min-width: 0;
+}
+.mqt-dashboard .chart h3 {
+  margin-bottom: 0.4rem;
+}
+.mqt-dashboard .chart .chart-unit {
+  color: var(--mqt-muted);
+  font-size: 0.8rem;
+  margin: 0;
+}
+.mqt-dashboard .chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0.4rem 0 0.5rem;
+  overflow: visible;
+}
+.mqt-dashboard svg text {
+  fill: var(--mqt-muted);
+  font-family: inherit;
+  font-size: 16px;
+}
+.mqt-dashboard .chart-value {
+  font-size: 0.875rem;
+  color: var(--mqt-muted);
+  min-height: 1.5rem;
+  margin: 0.5rem 0;
+}
+.mqt-dashboard .chart > a {
+  font-size: 0.8rem;
+}
+.mqt-dashboard .measurements {
+  margin-top: 2rem;
+}
+.mqt-dashboard #history > .footnote {
+  margin-bottom: 1rem;
+}
+.mqt-dashboard .table-scroll {
+  overflow-x: auto;
+  background: var(--mqt-background);
+  border: 1px solid var(--mqt-border);
+}
+.mqt-dashboard table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+.mqt-dashboard th,
+.mqt-dashboard td {
+  text-align: right;
+  padding: 0.8rem 0.9rem;
+  border: 0;
+  border-bottom: 1px solid var(--mqt-border);
+}
+.mqt-dashboard th {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mqt-muted);
+  background: var(--mqt-secondary);
+}
+.mqt-dashboard th:first-child,
+.mqt-dashboard td:first-child,
+.mqt-dashboard th:nth-child(2),
+.mqt-dashboard td:nth-child(2) {
+  text-align: left;
+}
+.mqt-dashboard tbody tr:last-child td {
+  border-bottom: 0;
+}
+.mqt-dashboard tbody tr:hover {
+  background: var(--mqt-secondary);
+}
+.mqt-dashboard .better {
+  color: var(--mqt-better);
+}
+.mqt-dashboard .worse {
+  color: var(--mqt-worse);
+}
+.mqt-dashboard .missing {
+  color: var(--mqt-muted);
+}
+.mqt-dashboard .footnote {
+  margin: 0.8rem 0 0;
+  font-size: 0.8rem;
+}
+.mqt-dashboard .methodology {
+  margin-top: 1.8rem;
+  border-top: 1px solid var(--mqt-border);
+  padding: 1.2rem 0;
+}
+.mqt-dashboard summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.mqt-dashboard .method-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 1.3rem;
+}
+.mqt-dashboard .method-grid p {
+  font-size: 0.875rem;
+  color: var(--mqt-muted);
+}
+.mqt-dashboard .notice {
+  border-left: 3px solid var(--mqt-orange);
+  background: var(--mqt-secondary);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+.mqt-dashboard #status {
+  color: var(--mqt-muted);
+}
+.mqt-dashboard .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.mqt-dashboard [hidden] {
+  display: none !important;
+}
+body[data-theme="dark"] .mqt-dashboard {
+  --mqt-blue: #72b4ff;
+  --mqt-orange: #efa66e;
+  --mqt-better: #5dceb0;
+  --mqt-worse: #efa66e;
+}
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"]) .mqt-dashboard {
+    --mqt-blue: #72b4ff;
+    --mqt-orange: #efa66e;
+    --mqt-better: #5dceb0;
+    --mqt-worse: #efa66e;
+  }
+  body.mqt-standalone {
+    background: #131416;
+    color: #d7d7d7;
+  }
+  body.mqt-standalone .mqt-dashboard {
+    --mqt-background: #131416;
+    --mqt-secondary: #1a1c1e;
+    --mqt-border: #383b40;
+    --mqt-text: #d7d7d7;
+    --mqt-muted: #a8adb4;
+    --mqt-link: #72b4ff;
+  }
+}
+@container mqt-dashboard (max-width: 1050px) {
+  .mqt-dashboard .filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container mqt-dashboard (max-width: 760px) {
+  .mqt-dashboard .charts,
+  .mqt-dashboard .method-grid {
+    grid-template-columns: 1fr;
+  }
+  .mqt-dashboard .chart svg {
+    max-height: 19rem;
+  }
+}
+@container mqt-dashboard (max-width: 600px) {
+  .mqt-dashboard .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+  .mqt-dashboard .filters label:first-child {
+    grid-column: 1 / -1;
+  }
+  .mqt-dashboard .badge {
+    display: none;
+  }
+  .mqt-dashboard h1 {
+    font-size: 1.8rem;
+  }
+}
+body.mqt-standalone {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.mqt-standalone header,
+.mqt-standalone footer,
+.mqt-standalone main {
+  width: min(1440px, calc(100% - 48px));
+  margin: auto;
+}
+.mqt-standalone header {
+  padding: 1.2rem 0;
+  border-bottom: 1px solid #bbb6;
+}
+.mqt-standalone .brand {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  gap: 0.8rem;
+  align-items: baseline;
+}
+.mqt-standalone .brand strong {
+  font-size: 1.6rem;
+}
+.mqt-standalone .brand span {
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+}
+.mqt-standalone footer {
+  border-top: 1px solid #bbb6;
+  padding: 1.2rem 0;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.8rem;
+}
+.mqt-standalone footer a {
+  color: inherit;
+}
+.mqt-standalone .skip {
+  position: absolute;
+  left: 1rem;
+  top: -80px;
+  background: white;
+  padding: 0.5rem;
+}
+.mqt-standalone .skip:focus {
+  top: 1rem;
+}
+.content:has(.mqt-dashboard[data-embedded]) {
+  width: 100%;
+  max-width: 90rem;
+}

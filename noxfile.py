@@ -129,6 +129,21 @@ def cpp_lint(session: nox.Session) -> None:
             session.error(f"cpp-linter reported {results['checks-failed']} finding(s)")
 
 
+@nox.session(name="compiler-benchmarks", python="3.13", reuse_venv=True)
+def compiler_benchmarks(session: nox.Session) -> None:
+    """Measure Git revisions in isolated asv environments and build the dashboard."""
+    session.install("--group", "benchmark")
+    session.run("asv", "run", *session.posargs or ["HEAD^!"], "--record-samples", "--show-stderr")
+    session.run("python", "-m", "benchmarks.dashboard", "build")
+
+
+@nox.session(name="benchmark-dashboard", python="3.13", reuse_venv=True)
+def benchmark_dashboard(session: nox.Session) -> None:
+    """Build the overview from saved results or serve it on localhost."""
+    session.install("--group", "benchmark")
+    session.run("python", "-m", "benchmarks.dashboard", *session.posargs or ["serve"])
+
+
 def _run_tests(
     session: nox.Session,
     *,
@@ -326,6 +341,18 @@ def docs(session: nox.Session) -> None:
         env=env,
     )
     session.run(
+        "python",
+        "-m",
+        "benchmarks.dashboard",
+        "build",
+        "--results",
+        "benchmarks/results",
+        "--output",
+        "docs/_build/benchmark-site/compiler-benchmarks",
+        "--embed",
+        "docs/_build/compiler-benchmark-fragment.html",
+    )
+    session.run(
         "uv",
         "run",
         "--no-dev",  # do not auto-install dev dependencies
@@ -346,7 +373,13 @@ def docs(session: nox.Session) -> None:
     )
 
     if args.builder == "html" and not serve:
-        session.run("python", "scripts/check_docs_links.py", "docs/_build/html")
+        session.run(
+            "python",
+            "scripts/check_docs_links.py",
+            "docs/_build/html",
+            "--fragment-router",
+            "compiler-benchmarks/asv/index.html",
+        )
 
 
 @nox.session(reuse_venv=True, venv_backend="uv")

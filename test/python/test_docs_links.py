@@ -38,3 +38,16 @@ def test_generated_navigation(tmp_path: Path) -> None:
 def test_missing_build(tmp_path: Path) -> None:
     """An empty output directory must not count as a validated site."""
     assert check_links(tmp_path) == [f"No HTML pages found in {tmp_path}"]
+
+
+def test_fragment_router_keeps_file_and_anchor_checks(tmp_path: Path) -> None:
+    """Asv fragment routes are exempt, but missing files and normal anchors fail."""
+    (tmp_path / "index.html").write_text(
+        '<a href="asv.html#/summarylist">asv</a><a href="guide.html#missing">guide</a>'
+    )
+    (tmp_path / "guide.html").write_text('<a href="absent.html#/route">missing page</a>')
+    (tmp_path / "asv.html").write_text('<a href="#/summarylist">list</a>')
+    errors = check_links(tmp_path, fragment_routers=("asv.html",))
+    assert len(errors) == 2
+    assert any("guide.html#missing" in error for error in errors)
+    assert any("absent.html#/route" in error for error in errors)

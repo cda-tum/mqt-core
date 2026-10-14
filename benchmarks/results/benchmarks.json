@@ -1,0 +1,51 @@
+{
+  "compiler.CircuitQuality.track_depth": {
+    "code": "class CircuitQuality:\n    def track_depth(self, _circuit: str, _qubits: int, _topology: str) -> int:\n        \"\"\"Return native gate depth without terminal measurements.\"\"\"\n        return self.depth\n\n    def setup(self, circuit: str, qubits: int, topology: str) -> None:\n        \"\"\"Compile and analyze the same output outside timing benchmarks.\"\"\"\n        target = make_target(qubits, topology)\n        compiled = compile_to_native(make_benchmark(circuit, qubits).generate(), target)\n        self.two_qubit_count = compiled.num_two_qubit_gates()\n        self.depth = native_depth(compiled.to_qiskit(target=target.target))",
+    "name": "compiler.CircuitQuality.track_depth",
+    "param_names": ["circuit", "qubits", "topology"],
+    "params": [
+      ["'ghz'", "'qft'", "'bv'"],
+      ["4", "8", "16"],
+      ["'all_to_all'", "'line'"]
+    ],
+    "timeout": 120,
+    "type": "track",
+    "unit": "count",
+    "version": "14a4030fbcda1a5af99b501d4d871a1772287d84ae22d5e406d63e6c3ceff7da"
+  },
+  "compiler.CircuitQuality.track_two_qubit_count": {
+    "code": "class CircuitQuality:\n    def track_two_qubit_count(self, _circuit: str, _qubits: int, _topology: str) -> int:\n        \"\"\"Return the number of native two-qubit gates.\"\"\"\n        return self.two_qubit_count\n\n    def setup(self, circuit: str, qubits: int, topology: str) -> None:\n        \"\"\"Compile and analyze the same output outside timing benchmarks.\"\"\"\n        target = make_target(qubits, topology)\n        compiled = compile_to_native(make_benchmark(circuit, qubits).generate(), target)\n        self.two_qubit_count = compiled.num_two_qubit_gates()\n        self.depth = native_depth(compiled.to_qiskit(target=target.target))",
+    "name": "compiler.CircuitQuality.track_two_qubit_count",
+    "param_names": ["circuit", "qubits", "topology"],
+    "params": [
+      ["'ghz'", "'qft'", "'bv'"],
+      ["4", "8", "16"],
+      ["'all_to_all'", "'line'"]
+    ],
+    "timeout": 120,
+    "type": "track",
+    "unit": "count",
+    "version": "14a4030fbcda1a5af99b501d4d871a1772287d84ae22d5e406d63e6c3ceff7da"
+  },
+  "compiler.Compilation.time_compile": {
+    "code": "class Compilation:\n    def time_compile(self, _circuit: str, _qubits: int, _topology: str) -> None:\n        \"\"\"Compile a fresh copy through the canonical target pipeline.\"\"\"\n        compile_to_native(self.program, self.target)\n\n    def setup(self, circuit: str, qubits: int, topology: str) -> None:\n        \"\"\"Generate a Core program and target outside the timed region.\"\"\"\n        self.program = make_benchmark(circuit, qubits).generate()\n        self.target = make_target(qubits, topology)",
+    "min_run_count": 2,
+    "name": "compiler.Compilation.time_compile",
+    "number": 1,
+    "param_names": ["circuit", "qubits", "topology"],
+    "params": [
+      ["'ghz'", "'qft'", "'bv'"],
+      ["4", "8", "16"],
+      ["'all_to_all'", "'line'"]
+    ],
+    "repeat": 3,
+    "rounds": 2,
+    "sample_time": 0.01,
+    "timeout": 120,
+    "type": "time",
+    "unit": "seconds",
+    "version": "14a4030fbcda1a5af99b501d4d871a1772287d84ae22d5e406d63e6c3ceff7da",
+    "warmup_time": 0
+  },
+  "version": 2
+}

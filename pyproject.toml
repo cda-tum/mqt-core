@@ -130,6 +130,7 @@ test = [
   "qirrunner~=0.9.6",
 ]
 docs = [
+  "asv==0.6.6",
   "furo>=2025.12.19",
   "mlir-pygments>=1",
   "myst-nb>=1.4",
@@ -146,6 +147,10 @@ docs = [
   "sphinxcontrib-bibtex>=2.7",
   "sphinxext-opengraph>=0.13",
 ]
+benchmark = [
+  "asv==0.6.6",
+  "qiskit==2.5.2",
+]
 build = [
   "cmake>=4.4.1",
   "nanobind~=3.1.0",
@@ -157,6 +162,7 @@ cpp-lint = [
   "nanobind~=3.1.0",
 ]
 test-base = [
+  "asv==0.6.6",
   "numpy>=2.1; python_version>='3.13'",
   "numpy>=2.3.2; python_version>='3.14'",
   "numpy>=2.5.2; python_version>='3.15'",
@@ -443,7 +449,7 @@ filterwarnings = [
 log_level = "INFO"
 minversion = "9.0"
 strict = true
-testpaths = [ "test/python" ]
+testpaths = [ "test/python", "test/compiler_benchmarks" ]
 
 
 [tool.coverage]

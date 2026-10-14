@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="MQT Core compiler benchmarks: compilation time, native two-qubit gates, and circuit depth across revisions."
+    />
+    <title>Compiler benchmarks · MQT Core</title>
+    <link rel="stylesheet" href="dashboard.css" />
+    <script src="dashboard.js" defer></script>
+  </head>
+  <body class="mqt-standalone">
+    <a class="skip" href="#results">Skip to results</a>
+    <header>
+      <a class="brand" href="./" aria-label="MQT Core benchmark overview"
+        ><strong>MQT</strong><span>CORE</span></a
+      >
+    </header>
+    <main class="mqt-dashboard">
+      <!-- dashboard:start -->
+      <div class="heading">
+        <div>
+          <p class="eyebrow">COMPILER PERFORMANCE</p>
+          <h1>Compiler benchmarks</h1>
+          <p class="subtle">
+            Core circuits. Native compilation. Comparable measurements.
+          </p>
+        </div>
+        <span class="badge">U / CX basis</span>
+      </div>
+      <nav class="dashboard-nav" aria-label="Dashboard navigation">
+        <a href="asv/#/summarylist">asv explorer ↗</a>
+        <a href="measurements.json" download>Download data ↓</a>
+      </nav>
+      <p id="status" role="status">Loading measurements…</p>
+      <div id="dashboard" hidden>
+        <form id="filters" class="filters" aria-label="Benchmark filters">
+          <label>Machine / series<select id="environment"></select></label>
+          <label>Revision<select id="revision"></select></label>
+          <label>Compare with<select id="baseline"></select></label>
+          <label
+            >Circuit<select id="circuit">
+              <option value="qft">Quantum Fourier transform</option>
+              <option value="ghz">GHZ</option>
+              <option value="bv">Bernstein–Vazirani</option>
+            </select></label
+          >
+          <label
+            >Connectivity<select id="topology">
+              <option value="all">Both topologies</option>
+              <option value="all_to_all">All-to-all</option>
+              <option value="line">Line</option>
+            </select></label
+          >
+        </form>
+        <div class="run-info">
+          <p id="run-info"></p>
+          <a id="commit-link" target="_blank" rel="noopener">View commit ↗</a>
+        </div>
+        <p id="notice" class="notice" role="status" hidden></p>
+        <section id="results" aria-label="Compilation metrics">
+          <div class="section-heading">
+            <h2 id="selection-title">Circuit metrics</h2>
+            <div class="legend">
+              <span class="all-to-all">All-to-all</span
+              ><span class="line">Line</span
+              ><span class="baseline-key">Dashed: baseline</span>
+            </div>
+          </div>
+          <div id="charts" class="charts"></div>
+        </section>
+        <section class="measurements" aria-labelledby="measurements-title">
+          <div class="section-heading">
+            <h2 id="measurements-title">Measurements</h2>
+            <span class="subtle">Δ relative to baseline · lower is better</span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">
+                Native compilation metrics and changes for the selected circuit
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Qubits</th>
+                  <th scope="col">Connectivity</th>
+                  <th scope="col">Time</th>
+                  <th scope="col">Δ</th>
+                  <th scope="col">2Q gates</th>
+                  <th scope="col">Δ</th>
+                  <th scope="col">Depth</th>
+                  <th scope="col">Δ</th>
+                </tr>
+              </thead>
+              <tbody id="measurements"></tbody>
+            </table>
+          </div>
+          <p class="footnote">
+            Time values are medians. Changes are descriptive; timing noise alone
+            is not evidence of a regression.
+          </p>
+        </section>
+        <section
+          id="history"
+          class="measurements"
+          aria-labelledby="history-title"
+          hidden
+        >
+          <div class="section-heading">
+            <h2 id="history-title">Main history</h2>
+            <label>Qubits<select id="history-qubits"></select></label>
+          </div>
+          <p id="history-status" class="subtle"></p>
+          <p class="footnote">
+            One point per main commit, starting with the fixed reference. The
+            circuit and connectivity filters apply here too. Configuration
+            changes create a separate series.
+          </p>
+          <div id="history-charts" class="charts"></div>
+          <details class="methodology">
+            <summary>History measurements</summary>
+            <div class="table-scroll">
+              <table>
+                <caption class="sr-only">
+                  Measurements for each main commit at the selected qubit count
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Commit</th>
+                    <th scope="col">Connectivity</th>
+                    <th scope="col">Time</th>
+                    <th scope="col">2Q gates</th>
+                    <th scope="col">Depth</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="history-measurements"></tbody>
+              </table>
+            </div>
+          </details>
+          <details class="methodology">
+            <summary>Fixed reference — machine drift</summary>
+            <p class="subtle">
+              The same reference is measured at batch start and alongside each
+              candidate. Changes here can indicate machine drift or measurement
+              noise. Δ time is relative to the first observation; compiler
+              timings are not automatically corrected.
+            </p>
+            <div class="table-scroll">
+              <table>
+                <caption class="sr-only">
+                  Repeated reference measurements in measurement-time order
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Measured</th>
+                    <th scope="col">Connectivity</th>
+                    <th scope="col">Time</th>
+                    <th scope="col">2Q gates</th>
+                    <th scope="col">Depth</th>
+                    <th scope="col">Δ time</th>
+                  </tr>
+                </thead>
+                <tbody id="reference-measurements"></tbody>
+              </table>
+            </div>
+          </details>
+          <details id="batch-failures" class="methodology" hidden>
+            <summary>Failed or interrupted attempts</summary>
+            <ul id="batch-attempts"></ul>
+          </details>
+        </section>
+        <details class="methodology">
+          <summary>What is measured?</summary>
+          <div class="method-grid">
+            <div>
+              <h3>Compilation time</h3>
+              <p>
+                Copy the generated Core program, convert QC → QCO, compile for
+                the target, convert to native QC, and dispose of the result.
+                Circuit generation and quality analysis are outside the timer.
+              </p>
+            </div>
+            <div>
+              <h3>Circuit quality</h3>
+              <p>
+                Two-qubit gates are counted after mapping and synthesis. Depth
+                counts U/CX gate layers; terminal measurements add no depth and
+                barriers synchronize wires.
+              </p>
+            </div>
+            <div>
+              <h3>Comparison conditions</h3>
+              <p>
+                GHZ, QFT, and static Bernstein–Vazirani come from
+                mqt.core.bench. Compare the same environment and benchmark
+                suite. Generator changes can change inputs; mapping trials
+                depend on available CPUs.
+              </p>
+            </div>
+          </div>
+          <p id="provenance" class="subtle"></p>
+        </details>
+      </div>
+      <noscript
+        ><p>
+          Enable JavaScript to filter and compare measurements, or
+          <a href="measurements.json">download the measurement data</a>.
+        </p></noscript
+      >
+      <!-- dashboard:end -->
+    </main>
+    <footer>
+      <span>Munich Quantum Toolkit · Core</span
+      ><span
+        >Measured with
+        <a href="https://asv.readthedocs.io/en/stable/"
+          >airspeed velocity</a
+        ></span
+      >
+    </footer>
+  </body>
+</html>

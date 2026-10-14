@@ -25,6 +25,11 @@ build:
       - asdf plugin add uv
       - asdf install uv latest
       - asdf global uv latest
+      # Only latest follows new measurements; releases keep their saved snapshot.
+      - |
+        if [ "$READTHEDOCS_VERSION" = "latest" ]; then
+          python -m benchmarks.runner fetch --results benchmarks/results
+        fi
       # Install MLIR
       - |
         mkdir -p /tmp/setup-mlir

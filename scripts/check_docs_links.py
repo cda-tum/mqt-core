@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
@@ -38,9 +39,10 @@ class Page(HTMLParser):
                 self.links.append(href)
 
 
-def check_links(root: Path) -> list[str]:
+def check_links(root: Path, *, fragment_routers: tuple[str, ...] = ()) -> list[str]:
     """Return diagnostics for missing local files or HTML anchors."""
     root = root.resolve()
+    routed_pages = {(root / page).resolve() for page in fragment_routers}
     pages = {}
     for path in sorted(root.rglob("*.html")):
         page = Page()
@@ -59,13 +61,24 @@ def check_links(root: Path) -> list[str]:
                 target /= "index.html"
             if not target.is_file():
                 errors.append(f"{path.relative_to(root)}: missing file: {href}")
-            elif url.fragment and target in pages and unquote(url.fragment) not in pages[target].anchors:
+            elif (
+                url.fragment
+                and target in pages
+                and target not in routed_pages
+                and unquote(url.fragment) not in pages[target].anchors
+            ):
                 errors.append(f"{path.relative_to(root)}: missing anchor: {href}")
     return errors
 
 
 if __name__ == "__main__":
-    diagnostics = check_links(Path(sys.argv[1]))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("root", type=Path)
+    parser.add_argument(
+        "--fragment-router", action="append", default=[], help="HTML page whose fragments are app routes"
+    )
+    args = parser.parse_args()
+    diagnostics = check_links(args.root, fragment_routers=tuple(args.fragment_router))
     for diagnostic in diagnostics:
         sys.stderr.write(f"{diagnostic}\n")
     sys.exit(bool(diagnostics))
