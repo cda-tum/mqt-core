@@ -670,8 +670,6 @@ private:
 
   struct LayoutTrial {
     Layout<QubitIndex> layout;
-    /// The routing policy to test.
-    RoutingPolicy policy{RoutingPolicy::Serial};
     /// Synthesis available: (native-count, depth). Otherwise, (max(), swaps).
     Score score;
   };
@@ -1136,8 +1134,8 @@ protected:
     }
 
     Environment env{.target = target, .seed = compilationSeed(moduleOp, seed)};
-    const auto [layout, policyTag, expectedScore] =
-        generateLayout(computation->wires, func, env);
+    const auto [layout, expectedScore] =
+        generateLayout<SerialPolicy>(computation->wires, func, env);
 
     IRRewriter rewriter(&getContext());
     Arena arena(target.numSites(), searchMemoryLimit);
@@ -1150,18 +1148,8 @@ protected:
 
     Statistics stats;
     RoutingState state(std::move(*wires), layout, env);
-    switch (policyTag) {
-    case RoutingPolicy::Serial:
-      stats = route<WireDirection::Forward, SerialPolicy, RoutingMode::Hot>(
-          func.getFunctionBody(), state, arena, env, &rewriter);
-      break;
-    case RoutingPolicy::Wave:
-      stats = route<WireDirection::Forward, WavePolicy, RoutingMode::Hot>(
-          func.getFunctionBody(), state, arena, env, &rewriter);
-      break;
-    default:
-      llvm_unreachable("unknown routing policy");
-    }
+    stats = route<WireDirection::Forward, SerialPolicy, RoutingMode::Hot>(
+        func.getFunctionBody().front(), state, arena, env, &rewriter);
 
     assert(((state.costs ? state.costs->score() : std::nullopt)
                 .value_or(std::pair{std::numeric_limits<size_t>::max(),
@@ -1564,37 +1552,11 @@ private:
     return std::pair{Layout<QubitIndex>::fromMapping(mapping), false};
   }
 
-  template <class Policy>
-  void refineLayout(LayoutTrial& trial, ArrayRef<WireIterator> wires,
-                    Region& region, Environment& env) {
-    Arena arena(env.target.numSites(), searchMemoryLimit);
-
-    {
-      auto state = RoutingState::fromLayout(wires, trial.layout, env);
-      for (size_t i = 0; i < niterations; ++i) {
-        route<WireDirection::Forward, Policy>(region, state, arena, env);
-        route<WireDirection::Backward, Policy>(region, state, arena, env);
-      }
-
-      trial.layout = std::move(state.layout);
-    }
-
-    auto state = RoutingState::fromLayout(wires, trial.layout, env);
-    const auto stats =
-        route<WireDirection::Forward, Policy>(region, state, arena, env);
-
-    if (state.costs && state.costs->score()) {
-      trial.score = *state.costs->score();
-    } else {
-      trial.score =
-          std::make_pair(std::numeric_limits<size_t>::max(), stats.nswaps);
-    }
-  }
-
   /// Refine greedy, identity, and random starts with forward/backward routing.
   ///
   /// Score each candidate with a forward traversal, preserving its start
   /// layout.
+  template <class Policy>
   LayoutTrial generateLayout(const Wires& wires, func::FuncOp func,
                              Environment& env) {
     const auto greedy = generateGreedyLayout(wires, env);
@@ -1605,43 +1567,50 @@ private:
 
     env.prepareNativeCosts(func);
 
-    const size_t nlayouts = (ntrials + 1) / 2;
-    SmallVector<Layout<QubitIndex>, 0> layouts;
-    layouts.reserve(nlayouts);
-
-    if (greedy) {
-      layouts.emplace_back(greedy->first);
-    }
-
-    if (layouts.size() < nlayouts) {
-      layouts.emplace_back(Layout<QubitIndex>::identity(env.target.numSites()));
-
-      auto rng = makeMt19937(env.seed);
-      while (layouts.size() < nlayouts) {
-        layouts.emplace_back(Layout<QubitIndex>::random(
-            env.target.numSites(), env.target.numSites(), rng()));
-      }
-    }
-
     SmallVector<LayoutTrial, 0> trials;
     trials.reserve(ntrials);
-    for (auto& layout : layouts) {
-      trials.emplace_back(layout, RoutingPolicy::Serial);
-      if (trials.size() < ntrials) {
-        trials.emplace_back(layout, RoutingPolicy::Wave);
+
+    if (greedy) {
+      trials.emplace_back(greedy->first);
+    }
+
+    if (trials.size() < ntrials) {
+      trials.emplace_back(Layout<QubitIndex>::identity(env.target.numSites()));
+
+      auto rng = makeMt19937(env.seed);
+      while (trials.size() < ntrials) {
+        trials.emplace_back(Layout<QubitIndex>::random(
+            env.target.numSites(), env.target.numSites(), rng()));
       }
     }
 
     assert(ntrials == trials.size());
 
+    Region& body = func.getFunctionBody();
     parallelForEach(&getContext(), trials, [&, this](LayoutTrial& trial) {
-      switch (trial.policy) {
-      case RoutingPolicy::Serial:
-        refineLayout<SerialPolicy>(trial, wires, func.getFunctionBody(), env);
-        break;
-      case RoutingPolicy::Wave:
-        refineLayout<WavePolicy>(trial, wires, func.getFunctionBody(), env);
-        break;
+      Arena arena(env.target.numSites(), searchMemoryLimit);
+
+      {
+        auto state = RoutingState::fromLayout(wires, trial.layout, env);
+        for (size_t i = 0; i < niterations; ++i) {
+          route<WireDirection::Forward, Policy>(body.front(), state, arena,
+                                                env);
+          route<WireDirection::Backward, Policy>(body.front(), state, arena,
+                                                 env);
+        }
+
+        trial.layout = std::move(state.layout);
+      }
+
+      auto state = RoutingState::fromLayout(wires, trial.layout, env);
+      const auto stats = route<WireDirection::Forward, Policy>(
+          body.front(), state, arena, env);
+
+      if (state.costs && state.costs->score()) {
+        trial.score = *state.costs->score();
+      } else {
+        trial.score =
+            std::make_pair(std::numeric_limits<size_t>::max(), stats.nswaps);
       }
     });
 
@@ -2334,8 +2303,8 @@ private:
         }
       }
 
-      totalStats.merge(
-          route<Direction, Policy, Mode>(region, child, arena, env, rewriter));
+      totalStats.merge(route<Direction, Policy, Mode>(region.front(), child,
+                                                      arena, env, rewriter));
     }
 
     Layout<QubitIndex> exit =
@@ -2418,10 +2387,10 @@ private:
   template <WireDirection Direction, class Policy,
             RoutingMode Mode = RoutingMode::Cold>
     requires(Mode != RoutingMode::Hot || Direction == WireDirection::Forward)
-  Statistics route(Region& region, RoutingState& state, Arena& arena,
+  Statistics route(Block& block, RoutingState& state, Arena& arena,
                    const Environment& env, IRRewriter* rewriter = nullptr) {
     Statistics stats;
-    Boundary<Direction> boundary(region.front());
+    Boundary<Direction> boundary(block);
 
     if (state.costs) {
       state.costs->reset(Direction);
