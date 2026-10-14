@@ -277,10 +277,10 @@ using PatternGroup = CompilerTarget::TopologyPatterns::Group;
 std::optional<SmallVector<size_t, 4>>
 matchTopologyPattern(const Graph& graph, const PatternGroup& pattern) {
   const auto arity = pattern.arity();
-  auto nodes = graph.getNodes();
-  if (nodes.size() < arity) {
+  if (graph.getNumNodes() < arity) {
     return std::nullopt;
   }
+  const auto nodes = graph.getNodes();
   SmallVector<size_t, 4> match;
   // All templates have a connected prefix, so extend along its frontier.
   const auto search = [&](auto&& self) -> bool {

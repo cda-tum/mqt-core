@@ -48,6 +48,9 @@ public:
   /// Return the nodes.
   [[nodiscard]] SmallVector<size_t> getNodes() const;
 
+  /// Return the number of nodes, including isolated nodes.
+  [[nodiscard]] size_t getNumNodes() const { return adj_.size(); }
+
   /// Return the degree of a node.
   [[nodiscard]] size_t getDegree(const size_t id) const {
     return adj_.at(id).size();

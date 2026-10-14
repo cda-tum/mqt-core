@@ -462,7 +462,9 @@ TEST_F(PlacementAnalysisTest, RejectUnsupportedConnectivity) {
 }
 
 TEST(ConnectivityGraph, DirectedEdgeLookup) {
+  EXPECT_EQ(Graph({}).getNumNodes(), 0);
   Graph graph({0, 1});
+  EXPECT_EQ(graph.getNumNodes(), 2);
   graph.addEdge(0, 1);
   EXPECT_TRUE(graph.hasEdge(0, 1));
   EXPECT_FALSE(graph.hasEdge(1, 0));
@@ -470,6 +472,11 @@ TEST(ConnectivityGraph, DirectedEdgeLookup) {
   EXPECT_FALSE(graph.hasEdge(2, 0));
   graph.removeEdge(0, 1);
   EXPECT_FALSE(graph.hasEdge(0, 1));
+  EXPECT_EQ(graph.getNumNodes(), 2);
+  graph.addEdge(1, 2);
+  EXPECT_EQ(graph.getNumNodes(), 3);
+  graph.clearEdges();
+  EXPECT_EQ(graph.getNumNodes(), 3);
 }
 
 TEST_F(TopologyPatternMatching, ExhaustiveFiveVertexGraphs) {
