@@ -1098,14 +1098,6 @@ private:
     return b->isBeforeInBlock(a);
   }
 
-  /// Return values carried by a supported region terminator.
-  static ValueRange yieldedValues(Block& block) {
-    return TypeSwitch<Operation*, ValueRange>(block.getTerminator())
-        .Case([](scf::YieldOp op) { return op.getResults(); })
-        .Case([](scf::ConditionOp op) { return op.getArgs(); })
-        .Case([](YieldOp op) { return op.getTargets(); });
-  }
-
   /// Return the qubit values in `values`, preserving their relative order.
   static SmallVector<Value> getQubitValues(ValueRange values) {
     return llvm::filter_to_vector(

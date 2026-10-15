@@ -128,8 +128,8 @@ TEST_F(QCOWireCanonicalizationTest,
       func.func @main() attributes {mqt.entry_point} {
         %a = qco.alloc : !qco.qubit
         %b = qco.alloc : !qco.qubit
-        %x = qco.x %a : !qco.qubit -> !qco.qubit
-        %sa, %sb = qco.swap %x, %b : !qco.qubit, !qco.qubit -> !qco.qubit, !qco.qubit
+        %x = qco.x %a : !qco.qubit
+        %sa, %sb = qco.swap %x, %b : !qco.qubit, !qco.qubit
         %qa, %ba = qco.measure %sa : !qco.qubit
         %qb, %bb = qco.measure %sb : !qco.qubit
         qco.sink %qa : !qco.qubit

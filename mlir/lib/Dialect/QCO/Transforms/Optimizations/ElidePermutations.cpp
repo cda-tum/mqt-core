@@ -87,8 +87,10 @@ static bool hasPositionalResults(func::CallOp call, ArrayRef<Value> inputs,
 
 namespace {
 
-/// Track logical states separately from the resources carrying them. Tensor
-/// frontiers stay in physical slot order, just like the router's scalar wires.
+/// Track logical states separately from the resources carrying them.
+///
+/// Tensor frontiers stay in physical slot order, just like the router's scalar
+/// wires.
 class PermutationTracker {
   struct Wire {
     Value value;
@@ -169,7 +171,7 @@ class PermutationTracker {
     wire.tensor = owner;
     wire.index = index;
     if (tensor.sources && !key.second && key.first >= 0 &&
-        static_cast<size_t>(key.first) < tensor.sources.size()) {
+        key.first < tensor.sources.size()) {
       wire.source = tensor.sources[key.first];
     }
     tensor.slots[key] = id;
