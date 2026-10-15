@@ -794,42 +794,6 @@ private:
     QubitIndexPair objective_;
   };
 
-  /// Interpret the horizon as a wave of ripples starting from a vertex gate.
-  struct WavePolicy {
-    explicit WavePolicy(Horizon horizon, const Layout<QubitIndex>& layout,
-                        const CompilerTarget& target)
-        : horizon_(std::move(horizon)) {}
-
-    [[nodiscard]] float heuristic(const Layout<QubitIndex>& layout,
-                                  const CompilerTarget& target,
-                                  const Parameters& params) const {
-      float weight{1.};
-      float costs{
-          static_cast<float>(distance(objective(), layout, target) - 1),
-      };
-
-      for (size_t i = 0; i < horizon_.nlayers(); ++i) {
-        weight *= params.lambda;
-        const auto layer =
-            i == 0 ? horizon_.get(0).drop_front() : horizon_.get(i);
-        for (const auto& gate : layer) {
-          const auto nswaps = distance(gate, layout, target) - 1;
-          costs += weight * static_cast<float>(nswaps);
-        }
-      }
-
-      return costs;
-    }
-
-    /// Return the to be routed gate, i.e., the objective.
-    [[nodiscard]] QubitIndexPair objective() const {
-      return horizon_.get(0).front();
-    }
-
-  private:
-    Horizon horizon_;
-  };
-
   /// Describes a node in the A* search graph.
   struct Node {
     Layout<QubitIndex> layout;
