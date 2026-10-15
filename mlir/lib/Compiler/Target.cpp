@@ -1361,7 +1361,8 @@ CompilerTarget::topologyPatterns() const {
   std::call_once(storage_->topologyPatternsOnce, [&] {
     using Edge = TopologyPatterns::Group::Edge;
     static constexpr std::array<Edge, 4> CYCLE{
-        {{0, 1}, {1, 2}, {2, 3}, {3, 0}}};
+        {{0, 1}, {1, 2}, {2, 3}, {3, 0}},
+    };
     static constexpr std::array<Edge, 1> PAIR{{{0, 1}}};
     static constexpr std::array<Edge, 3> STAR{{{0, 1}, {0, 2}, {0, 3}}};
     TopologyPatterns::Group cycles(TopologyPatterns::Type::FourCycle, 4, CYCLE);
