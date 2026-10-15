@@ -386,6 +386,8 @@ class CompilerTarget:
 
         R = 2
 
+        GPI = 7
+
         XZX = 3
 
         XYX = 4
@@ -811,9 +813,10 @@ class QCProgram(Program):
     def to_openqasm3(self) -> OpenQASMProgram:
         """Clean up and emit this QC program as OpenQASM 3 without QCO optimization."""
 
-    def to_qiskit(self, *, target: CompilerTarget | None = None) -> qiskit.circuit.QuantumCircuit:
-        """Translate this QC program to a Qiskit {py:class}`~qiskit.circuit.QuantumCircuit` without consuming it.
+    def to_qiskit(self, *, target: CompilerTarget | None = None, copy: bool = False) -> qiskit.circuit.QuantumCircuit:
+        """Convert this program to a Qiskit circuit.
 
+        The source is consumed, including when export fails. Set ``copy=True`` to preserve it.
         The exporter restores attached layout metadata when it is compatible with the
         selected target.
 
@@ -822,6 +825,7 @@ class QCProgram(Program):
                 qubits must be static sites of the target. Select applicable standard
                 gate names without checking device execution support. None applies no
                 target site mapping.
+            copy: Preserve the source program by exporting a copy.
         """
 
     def to_qco(self, *, copy: bool = False) -> QCOProgram:
@@ -964,9 +968,10 @@ class QCOProgram(Program):
         Failures raise RuntimeError with the emitted MLIR diagnostics.
         """
 
-    def to_qiskit(self, *, target: CompilerTarget | None = None) -> qiskit.circuit.QuantumCircuit:
-        """Export a Qiskit circuit without consuming or modifying this program.
+    def to_qiskit(self, *, target: CompilerTarget | None = None, copy: bool = False) -> qiskit.circuit.QuantumCircuit:
+        """Convert this program through QC to a Qiskit circuit.
 
+        The source is consumed, including when conversion or export fails. Set ``copy=True`` to preserve it.
         The exporter restores attached layout metadata when it is compatible with the
         selected target.
 
@@ -975,6 +980,7 @@ class QCOProgram(Program):
                 qubits must be static sites of the target. Select applicable standard
                 gate names without checking device execution support. None applies no
                 target site mapping.
+            copy: Preserve the source program by exporting a copy.
         """
 
     def to_qc(self, *, copy: bool = False) -> QCProgram:

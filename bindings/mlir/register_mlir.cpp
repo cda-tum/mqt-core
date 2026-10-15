@@ -17,6 +17,7 @@
 #include "mqt/Compiler/QDMIAdapter.h"
 #include "mqt/Compiler/Target.h"
 #include "mqt/Compiler/TargetEnvironment.h"
+#include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
 #include "mqt/bench/Generate.h"
@@ -1119,6 +1120,7 @@ Constants use absolute tolerance 1e-15 without angle wrapping.)pb")
       .value("U", mlir::CompilerTarget::SingleQubitBasis::U)
       .value("ZSXX", mlir::CompilerTarget::SingleQubitBasis::ZSXX)
       .value("R", mlir::CompilerTarget::SingleQubitBasis::R)
+      .value("GPI", mlir::CompilerTarget::SingleQubitBasis::GPI)
       .value("XZX", mlir::CompilerTarget::SingleQubitBasis::XZX)
       .value("XYX", mlir::CompilerTarget::SingleQubitBasis::XYX)
       .value("ZYZ", mlir::CompilerTarget::SingleQubitBasis::ZYZ)
@@ -1284,6 +1286,16 @@ Constants use absolute tolerance 1e-15 without angle wrapping.)pb")
           },
           "name"_a, "sites"_a, nb::kw_only(), "connectivity"_a,
           "native_operations"_a, "duration_unit"_a = nb::none())
+      .def(
+          "__str__",
+          [](const mlir::CompilerTarget& target) {
+            auto context = mlir::createCompilerContext();
+            std::string result;
+            llvm::raw_string_ostream stream(result);
+            stream << target.materialize(*context);
+            return result;
+          },
+          "Serialize the target as a typed MLIR attribute.")
       .def_static(
           "from_device",
           [](const qdmi::Device& device) {
@@ -1612,16 +1624,17 @@ Args:
           "optimization.")
       .def(
           "to_qiskit",
-          [](const mlir::QCProgram& program,
-             const mlir::CompilerTarget* const target) {
-            requireValid(program);
-            return bindings::qiskit::exportCircuit(program, target);
+          [](mlir::QCProgram& program, const mlir::CompilerTarget* target,
+             const bool copy) {
+            return bindings::qiskit::exportCircuit(
+                copiedOrConsumed(program, copy), target);
           },
-          nb::kw_only(), "target"_a = nb::none(),
+          nb::kw_only(), "target"_a = nb::none(), "copy"_a = false,
           nb::sig("def to_qiskit(self, *, target: CompilerTarget | None = "
-                  "None) -> qiskit.circuit.QuantumCircuit"),
-          R"pb(Translate this QC program to a Qiskit {py:class}`~qiskit.circuit.QuantumCircuit` without consuming it.
+                  "None, copy: bool = False) -> qiskit.circuit.QuantumCircuit"),
+          R"pb(Convert this program to a Qiskit circuit.
 
+The source is consumed, including when export fails. Set ``copy=True`` to preserve it.
 The exporter restores attached layout metadata when it is compatible with the
 selected target.
 
@@ -1629,7 +1642,8 @@ Args:
     target: Map static site IDs to qubit indices in target site order. All
         qubits must be static sites of the target. Select applicable standard
         gate names without checking device execution support. None applies no
-        target site mapping.)pb")
+        target site mapping.
+    copy: Preserve the source program by exporting a copy.)pb")
       .def(
           "to_qco",
           [](mlir::QCProgram& value, const bool copy) {
@@ -1754,17 +1768,18 @@ their device site IDs and must fit the target topology. Do not rely on the progr
 Failures raise RuntimeError with the emitted MLIR diagnostics.)pb")
       .def(
           "to_qiskit",
-          [](const mlir::QCOProgram& program,
-             const mlir::CompilerTarget* target) {
-            requireValid(program);
-            auto qc = takeResult(program.copy().intoQC());
-            return bindings::qiskit::exportCircuit(qc, target);
+          [](mlir::QCOProgram& program, const mlir::CompilerTarget* target,
+             const bool copy) {
+            auto source = copiedOrConsumed(program, copy);
+            auto qc = takeResult(std::move(source).intoQC());
+            return bindings::qiskit::exportCircuit(std::move(qc), target);
           },
-          nb::kw_only(), "target"_a = nb::none(),
+          nb::kw_only(), "target"_a = nb::none(), "copy"_a = false,
           nb::sig("def to_qiskit(self, *, target: CompilerTarget | None = "
-                  "None) -> qiskit.circuit.QuantumCircuit"),
-          R"pb(Export a Qiskit circuit without consuming or modifying this program.
+                  "None, copy: bool = False) -> qiskit.circuit.QuantumCircuit"),
+          R"pb(Convert this program through QC to a Qiskit circuit.
 
+The source is consumed, including when conversion or export fails. Set ``copy=True`` to preserve it.
 The exporter restores attached layout metadata when it is compatible with the
 selected target.
 
@@ -1772,7 +1787,8 @@ Args:
     target: Map static site IDs to qubit indices in target site order. All
         qubits must be static sites of the target. Select applicable standard
         gate names without checking device execution support. None applies no
-        target site mapping.)pb")
+        target site mapping.
+    copy: Preserve the source program by exporting a copy.)pb")
       .def(
           "to_qc",
           [](mlir::QCOProgram& value, const bool copy) {

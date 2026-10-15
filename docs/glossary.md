@@ -255,6 +255,12 @@ compiler target
   a compiler pipeline may use for one destination. It is a snapshot used for
   compilation, not a live device connection.
 
+GPI basis
+  **Preferred term:** GPI basis. **Accepted aliases:** none. A single-qubit
+  synthesis basis of equatorial rotations R(π, φ) and R(π/2, φ) with
+  unrestricted azimuth φ. See {doc}`mlir/target_compilation` for supported
+  native gate names and phase conventions.
+
 operation capability
   **Preferred term:** operation capability. **Accepted aliases:** none. A
   compiler target's description of a supported operation, including its name,

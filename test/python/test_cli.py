@@ -20,6 +20,7 @@ from unittest.mock import patch
 import pytest
 
 from mqt.core import __version__ as mqt_core_version
+from mqt.core.mlir import CompilerTarget, QCProgram
 
 if TYPE_CHECKING:
     from pytest_console_scripts import ScriptRunner
@@ -121,6 +122,31 @@ def test_compiler_cli(script_runner: ScriptRunner, tmp_path: Path) -> None:
     ret = script_runner.run(["mqt-cc", str(source), "--emit=qco"])
     assert ret.success
     assert "qco.h" in ret.stdout
+
+
+@pytest.mark.script_launch_mode("subprocess")
+def test_compiler_cli_serialized_target(script_runner: ScriptRunner, tmp_path: Path) -> None:
+    """Compile with a Python target serialized into a CLI argument."""
+    target = CompilerTarget(
+        'saved "target"',
+        2,
+        connectivity=CompilerTarget.Connectivity.all_to_all(),
+        native_operations=CompilerTarget.NativeOperations.unrestricted(),
+    )
+    source = tmp_path / "bell.qasm"
+    source.write_text('OPENQASM 3.1; include "stdgates.inc"; qubit[2] q; h q[0]; cx q[0], q[1];')
+    ret = script_runner.run([
+        "mqt-cc",
+        str(source),
+        f"--target={target}",
+        (
+            '--payload-spec=#mqt.payload_spec<format = <id = "openqasm", version = "3.1.0", '
+            'profile = "", encoding = text>, capabilities = [], optional_capabilities_known = false>'
+        ),
+    ])
+    assert ret.success
+    assert ret.stdout.startswith("OPENQASM 3.1;")
+    assert QCProgram.from_openqasm_str(ret.stdout).is_valid
 
 
 @pytest.mark.script_launch_mode("subprocess")

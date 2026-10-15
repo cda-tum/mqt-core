@@ -40,6 +40,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
@@ -847,6 +848,18 @@ collectUnitaryInstruction(mlir::Operation& operation,
 
 static void collectResources(mlir::func::FuncOp function, ExportState& state,
                              const mlir::CompilerTarget* const target) {
+  llvm::StringSet<> usedNames;
+  for (const auto& parameter : state.parameterNames) {
+    usedNames.insert(parameter.getKey());
+  }
+  // Debug names must yield to declared registers, regardless of operation
+  // order.
+  function.walk([&](mlir::Operation* operation) {
+    if (const auto name = operation->getAttrOfType<mlir::StringAttr>(
+            mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
+      usedNames.insert(name.getValue());
+    }
+  });
   llvm::DenseSet<uint32_t> staticIndices;
   for (auto& operation : function.getBody().front()) {
     if (auto staticQubit = llvm::dyn_cast<mlir::qc::StaticOp>(operation)) {
@@ -880,6 +893,13 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
             "target-aware Qiskit export requires statically mapped qubits");
       }
       state.qubits[alloc.getResult()] = state.numQubits;
+      if (const auto location = llvm::dyn_cast<mlir::NameLoc>(alloc.getLoc())) {
+        const auto name = location.getName().getValue();
+        if (!name.empty() && usedNames.insert(name).second) {
+          state.quantumRegisters.push_back(
+              {.name = name.str(), .bits = {state.numQubits}});
+        }
+      }
       state.numQubits = checkedAdd(state.numQubits, 1U, "qubit");
       continue;
     }
@@ -903,6 +923,10 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
       state.quantumSizes[alloc.getResult()] = size;
       if (const auto name = operation.getAttrOfType<mlir::StringAttr>(
               mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
+        if (size == 0U) {
+          throw std::runtime_error(
+              "Qiskit does not support empty quantum registers");
+        }
         Register reg{.name = name.str()};
         reg.bits.resize(size);
         std::iota(reg.bits.begin(), reg.bits.end(), state.numQubits);
@@ -953,32 +977,52 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
     }
   }
   llvm::DenseSet<mlir::Value> returnedRegisters;
-  llvm::StringSet<> usedNames;
-  for (const auto& reg : state.quantumRegisters) {
-    usedNames.insert(reg.name);
-  }
-  for (const auto& parameter : state.parameterNames) {
-    usedNames.insert(parameter.getKey());
+  if (!state.quantumRegisters.empty()) {
+    std::vector<Register> registers;
+    uint32_t next = state.quantumRegisters.front().bits.front();
+    size_t generated = 0;
+    const auto fillGap = [&](const uint32_t end) {
+      if (next == end) {
+        return;
+      }
+      std::string name;
+      do {
+        name = "_mqt_q" + std::to_string(generated++);
+      } while (!usedNames.insert(name).second);
+      Register reg{.name = std::move(name)};
+      reg.bits.resize(end - next);
+      std::iota(reg.bits.begin(), reg.bits.end(), next);
+      registers.push_back(std::move(reg));
+      next = end;
+    };
+    for (auto& reg : state.quantumRegisters) {
+      fillGap(reg.bits.front());
+      next = reg.bits.back() + 1U;
+      registers.push_back(std::move(reg));
+    }
+    fillGap(state.numQubits);
+    state.quantumRegisters = std::move(registers);
   }
   llvm::SmallVector<mlir::Value> registers;
-  for (auto alloc : function.getBody().front().getOps<mlir::cbit::AllocOp>()) {
+  function.walk([&](mlir::cbit::AllocOp alloc) {
     if (!alloc.getResult().use_empty() &&
         !llvm::is_contained(returnedValues, alloc.getResult())) {
       registers.push_back(alloc.getResult());
     }
-  }
+  });
   llvm::append_range(registers, returnedValues);
   // Qiskit exposes all register storage. Put observable outputs last in count
   // order.
+  auto reservedNames = usedNames;
   for (auto result : registers) {
     if (auto alloc = result.getDefiningOp<mlir::cbit::AllocOp>()) {
-      if (const auto name = alloc->getAttrOfType<mlir::StringAttr>(
-              mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
-        usedNames.insert(name.getValue());
+      if (const auto location = llvm::dyn_cast<mlir::NameLoc>(alloc.getLoc())) {
+        usedNames.insert(location.getName().getValue());
       }
     }
   }
   size_t generatedRegister = 0U;
+  llvm::StringSet<> assignedRegisterNames;
   for (auto result : registers) {
     const auto type =
         llvm::dyn_cast<mlir::cbit::RegisterType>(result.getType());
@@ -991,7 +1035,8 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
           "QC to Qiskit export does not support duplicate result registers");
     }
     auto alloc = result.getDefiningOp<mlir::cbit::AllocOp>();
-    if (!alloc || alloc->getBlock() != &function.getBody().front()) {
+    if (!alloc || (llvm::is_contained(returnedValues, result) &&
+                   alloc->getBlock() != &function.getBody().front())) {
       throw std::runtime_error(
           "QC to Qiskit export requires direct result-register allocations");
     }
@@ -1001,10 +1046,19 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
         .size = size,
         .initialization = alloc.getInitialization(),
     };
-    const auto sourceName = alloc->getAttrOfType<mlir::StringAttr>(
+    auto sourceName = alloc->getAttrOfType<mlir::StringAttr>(
         mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr());
+    if (!sourceName) {
+      if (const auto location = llvm::dyn_cast<mlir::NameLoc>(alloc.getLoc())) {
+        if (!location.getName().getValue().empty() &&
+            !reservedNames.contains(location.getName().getValue())) {
+          sourceName = location.getName();
+        }
+      }
+    }
     std::string name;
-    if (sourceName) {
+    if (sourceName &&
+        assignedRegisterNames.insert(sourceName.getValue()).second) {
       name = sourceName.str();
     } else {
       do {
@@ -2518,8 +2572,28 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
           isParameterExpressionOperation(operation)) {
         continue;
       }
-      if (llvm::isa<mlir::cbit::AllocOp, mlir::memref::AllocOp,
-                    mlir::qc::AllocOp, mlir::qc::DeallocOp, mlir::qc::StaticOp,
+      if (auto alloc = llvm::dyn_cast<mlir::cbit::AllocOp>(operation)) {
+        state.unconditionalWrites.erase(alloc.getResult());
+        if (!topLevel && !alloc.getResult().use_empty() &&
+            alloc.getInitialization() == mlir::cbit::Initialization::Zero) {
+          const auto& info = state.classicalRegisterInfo.at(alloc.getResult());
+          // Circuit storage is global; restore each block entry's fresh value.
+          for (uint32_t index = 0; index < info.size; ++index) {
+            circuit.instructions.push_back({
+                .kind = ExportedInstruction::Kind::Store,
+                .target =
+                    {
+                        .kind = ClassicalTargetKind::ClassicalBit,
+                        .bit = info.base + index,
+                    },
+                .value = std::make_unique<Expression>(),
+            });
+          }
+        }
+        continue;
+      }
+      if (llvm::isa<mlir::memref::AllocOp, mlir::qc::AllocOp,
+                    mlir::qc::DeallocOp, mlir::qc::StaticOp,
                     mlir::func::ReturnOp>(operation)) {
         if (!topLevel) {
           throw std::runtime_error(
@@ -2918,10 +2992,9 @@ collectGateDefinition(mlir::func::FuncOp function) {
   };
 }
 
-nb::object exportCircuit(const mlir::QCProgram& program,
+nb::object exportCircuit(mlir::QCProgram program,
                          const mlir::CompilerTarget* const target) {
-  mlir::OwningOpRef<mlir::ModuleOp> expanded = program.module().clone();
-  auto moduleOp = *expanded;
+  auto moduleOp = program.module();
   auto function = mlir::mqt::getEntryPoint(moduleOp);
   if (!function) {
     throw std::runtime_error(
@@ -2965,7 +3038,8 @@ nb::object exportCircuit(const mlir::QCProgram& program,
   indexWrites(function.getBody().front(), state.writes);
   auto circuit = collectBlock(function.getBody().front(), state, 0U);
   for (const auto& [reg, info] : state.classicalRegisterInfo) {
-    if (info.initialization == mlir::cbit::Initialization::Zero) {
+    if (info.initialization == mlir::cbit::Initialization::Zero ||
+        reg.getDefiningOp()->getBlock() != &function.getBody().front()) {
       continue;
     }
     const auto written = state.unconditionalWrites.find(reg);

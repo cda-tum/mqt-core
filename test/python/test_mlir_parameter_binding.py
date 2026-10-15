@@ -36,7 +36,7 @@ def test_partial_binding_preserves_identity_and_expression(*, qco: bool) -> None
     original = program.copy()
     program.bind_parameters({"a": 0.7})
     assert program.parameters == ["b"]
-    assert set(program.to_qiskit().parameters) == {b}
+    assert set(program.to_qiskit(copy=True).parameters) == {b}
     program.bind_parameters({"b": -0.25})
     assert program.parameters == []
     np.testing.assert_allclose(
@@ -61,7 +61,7 @@ def test_scalar_parameters_round_trip_through_openqasm() -> None:
 
     restored = QCProgram.from_openqasm_str(source)
     assert set(restored.parameters) == {"theta", "phi"}
-    assert {parameter.name for parameter in restored.to_qiskit().parameters} == {"theta", "phi"}
+    assert {parameter.name for parameter in restored.to_qiskit(copy=True).parameters} == {"theta", "phi"}
     restored.bind_parameters({"theta": 0.7})
     assert restored.parameters == ["phi"]
     restored.bind_parameters({"phi": -0.25})

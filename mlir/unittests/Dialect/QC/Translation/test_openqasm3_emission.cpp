@@ -2349,6 +2349,34 @@ TEST(OpenQASM3EmissionTest, ReusesQubitRegisterNames) {
       << *emitted;
 }
 
+TEST(OpenQASM3EmissionTest, PreservesScopedClassicalStorage) {
+  constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
+include "stdgates.inc";
+qubit flag;
+bit result;
+for int i in [0:1] {
+  bit result = 0;
+  if (result) { x flag; }
+  result = 1;
+}
+result = measure flag;
+)qasm";
+  MLIRContext context;
+  auto moduleOp = qc::translateOpenQASMToQC(source, &context);
+  ASSERT_TRUE(moduleOp);
+  auto emitted = qc::translateQCToOpenQASM3(*moduleOp);
+  ASSERT_TRUE(succeeded(emitted));
+  EXPECT_NE(emitted->find("qubit flag;"), std::string::npos);
+  EXPECT_NE(emitted->find("output bit[1] result;"), std::string::npos);
+  EXPECT_LT(emitted->find("for "), emitted->find("bit[1] _mqt_c"));
+  auto repeated = qc::translateQCToOpenQASM3(*moduleOp);
+  ASSERT_TRUE(succeeded(repeated));
+  EXPECT_EQ(*emitted, *repeated);
+  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+  ASSERT_TRUE(restored) << *emitted;
+  expectOneSample(*restored, "0");
+}
+
 TEST(OpenQASM3EmissionTest, DefinesECRWithOneEntanglingGate) {
   DialectRegistry registry = emissionDialects();
   MLIRContext context(registry);

@@ -49,14 +49,14 @@ def check_paths(program: QCProgram, expected: int) -> None:
     source = program.to_openqasm3().source
     assert source == program.to_openqasm3().source
     assert observe(QCProgram.from_openqasm_str(source)) == expected
-    qiskit = program.to_qiskit()
+    qiskit = program.to_qiskit(copy=True)
     # Each export owns fresh native variables; their serialized structure is stable.
-    assert qasm3.dumps(qiskit) == qasm3.dumps(program.to_qiskit())
+    assert qasm3.dumps(qiskit) == qasm3.dumps(program.to_qiskit(copy=True))
     assert observe(QCProgram.from_qiskit(qiskit)) == expected
     jeff = program.to_qco(copy=True).to_jeff()
     restored = JeffProgram.from_bytes(jeff.to_bytes()).to_qco().to_qc()
     assert observe(restored) == expected
-    assert observe(QCProgram.from_qiskit(restored.to_qiskit())) == expected
+    assert observe(QCProgram.from_qiskit(restored.to_qiskit(copy=True))) == expected
     assert observe(QCProgram.from_openqasm_str(restored.to_openqasm3().source)) == expected
     assert program.ir == original
 
@@ -75,7 +75,7 @@ def test_do_while_round_trip(iterations: int) -> None:
     program = QCProgram.from_qiskit(circuit)
     assert program.ir.count("scf.while") == 1
     assert "scf.if" not in program.ir
-    restored = program.to_qiskit()
+    restored = program.to_qiskit(copy=True)
     assert restored.num_clbits == circuit.num_clbits
     assert restored.num_qubits == circuit.num_qubits
     assert restored.num_vars > 0
@@ -105,7 +105,7 @@ while (counter < 2) {
 }
 result = false;
 """)
-    restored = QCProgram.from_qiskit(program.to_qiskit())
+    restored = QCProgram.from_qiskit(program.to_qiskit(copy=True))
     assert amplitude(program) == pytest.approx(1j)
     assert amplitude(restored) == pytest.approx(1j)
 
@@ -146,7 +146,7 @@ module {{
 """)
     if stale:
         with pytest.raises(RuntimeError, match="stale classical snapshot"):
-            program.to_qiskit()
+            program.to_qiskit(copy=True)
         assert observe(QCProgram.from_openqasm_str(program.to_openqasm3().source)) == 1 << 64
     else:
         check_paths(program, (1 << 64) | 1)
@@ -385,7 +385,7 @@ module {
         source = source.replace("%snapshot = cbit.load %out[%zero] : !cbit.reg<3>", "")
         source = source.replace("scf.condition(%snapshot)", "scf.condition(%measured)")
     program = QCProgram.from_mlir_str(source)
-    assert program.to_qiskit().num_clbits == 3
+    assert program.to_qiskit(copy=True).num_clbits == 3
     check_paths(program, 2)
 
 
@@ -453,7 +453,7 @@ module {
     assert "unsupported-loop.mlir" in str(qasm_error.value)
     assert "i128" in str(qasm_error.value)
     with pytest.raises(RuntimeError, match="Qiskit") as qiskit_error:
-        program.to_qiskit()
+        program.to_qiskit(copy=True)
     assert "scf.while" in str(qiskit_error.value)
     assert "unsupported-loop.mlir" in str(qiskit_error.value)
     assert program.ir == original

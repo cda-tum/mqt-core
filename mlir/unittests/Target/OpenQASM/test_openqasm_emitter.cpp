@@ -132,6 +132,12 @@ for int i in [0:1] {
     if (!isa<func::FuncOp>(allocation->getParentOp())) {
       ++localRegisters;
       EXPECT_FALSE(allocation->hasAttr("mqt.register_name"));
+      const auto name = dyn_cast<NameLoc>(allocation.getLoc());
+      ASSERT_TRUE(name);
+      EXPECT_EQ(name.getName().getValue(), "local");
+      const auto sourceLocation = dyn_cast<FileLineColLoc>(name.getChildLoc());
+      ASSERT_TRUE(sourceLocation);
+      EXPECT_EQ(sourceLocation.getLine(), 5);
     }
   });
   EXPECT_EQ(localRegisters, 1);

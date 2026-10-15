@@ -366,6 +366,7 @@ public:
     XYX,  ///< `RX(φ) * RY(θ) * RX(λ)`.
     ZYZ,  ///< `RZ(φ) * RY(θ) * RZ(λ)`.
     ZXZ,  ///< `RZ(φ) * RX(θ) * RZ(λ)`.
+    GPI,  ///< R(π, φ) and R(π/2, φ) with unrestricted φ.
   };
 
   /// Native RX, RY, or R(theta, 0) quarter turns for the ZSXX Euler recipe.

@@ -1080,7 +1080,8 @@ TEST_F(MergeSingleQubitRotationGatesTest,
 
 TEST_F(MergeSingleQubitRotationGatesTest,
        fusesSymbolicEulerChainsDirectlyInCompatibleBases) {
-  for (const auto* basisName : {"u", "zyz", "zxz", "zsxx", "xzx", "xyx", "r"}) {
+  for (const auto* basisName :
+       {"u", "zyz", "zxz", "zsxx", "xzx", "xyx", "r", "gpi"}) {
     SCOPED_TRACE(basisName);
     const auto basis = *decomposition::parseSingleQubitBasis(basisName);
     FuseSingleQubitUnitaryRunsOptions options;
@@ -1158,6 +1159,8 @@ TEST_F(MergeSingleQubitRotationGatesTest,
                  std::array{-3 * PI, 0.37, 4 * PI},
                  std::array{37 * PI, 0.37, -29 * PI},
                  std::array{1.0e5, 0.37, 1.0e5},
+                 std::array{0.3, 1.0e16, 0.7},
+                 std::array{1.0e16, 0.37, 0.7},
              }) {
           SCOPED_TRACE(testing::PrintToString(angles));
           OwningOpRef<ModuleOp> before = original->clone();
