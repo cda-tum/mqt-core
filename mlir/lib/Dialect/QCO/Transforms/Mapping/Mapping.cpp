@@ -559,8 +559,6 @@ protected:
 };
 } // namespace
 
-namespace {
-
 /// Return the shortest-path distance between a gate's program qubits after
 /// applying the given layout.
 ///
@@ -571,6 +569,8 @@ namespace {
   const auto [hw0, hw1] = layout.getHardwareIndices(gate.first, gate.second);
   return target.distanceBetween(hw0, hw1);
 }
+
+namespace {
 
 struct MappingPass : impl::MappingPassBase<MappingPass> {
 private:
@@ -805,7 +805,8 @@ private:
                                   const Parameters& params) const {
       float weight{1.};
       float costs{
-          static_cast<float>(distance(objective(), layout, target) - 1)};
+          static_cast<float>(distance(objective(), layout, target) - 1),
+      };
 
       for (size_t i = 0; i < horizon_.nlayers(); ++i) {
         weight *= params.lambda;
@@ -1597,8 +1598,10 @@ private:
                              Environment& env) {
     const auto greedy = generateGreedyLayout(wires, env);
     if (greedy && greedy->second) {
-      return {.layout = greedy->first,
-              .score = std::make_pair(std::numeric_limits<size_t>::max(), 0)};
+      return {
+          .layout = greedy->first,
+          .score = std::make_pair(std::numeric_limits<size_t>::max(), 0),
+      };
     }
 
     env.prepareNativeCosts(func);
@@ -2224,7 +2227,8 @@ private:
         .op = TypeSwitch<Operation*, Operation*>(composite.op)
                   .Case<scf::ForOp, scf::WhileOp, IfOp, IndexSwitchOp>(
                       [&](auto op) { return extend(op, addons, rewriter); }),
-        .indices = to_vector(llvm::seq(parent.wires.size()))};
+        .indices = to_vector(llvm::seq(parent.wires.size())),
+    };
 
     for (auto [site, result] : enumerate(resultNumbers)) {
       parent.wires[site] = WireIterator(composite.op->getResult(result));
