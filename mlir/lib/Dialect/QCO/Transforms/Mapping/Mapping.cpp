@@ -737,13 +737,24 @@ private:
     [[nodiscard]] float heuristic(const Layout<QubitIndex>& layout,
                                   const CompilerTarget& target,
                                   const Parameters& params) const {
-      float costs{0};
-      float weight{1.};
+      // A dependency layer shares one urgency. Reciprocal delay keeps later
+      // layers relevant: default lambda = 1/2 gives weights 1, 1/2, 1/3, ... .
+      float costs = 0;
+      float weight = 1;
+      const bool reciprocal = params.lambda >= 0.F && params.lambda <= 1.F;
       for (size_t i = 0; i < horizon_.nlayers(); ++i) {
         for (const auto& gate : horizon_.get(i)) {
-          const auto nswaps = distance(gate, layout, target) - 1;
-          costs += weight * static_cast<float>(nswaps);
-          weight *= params.lambda; // Each gate increases the weight.
+          costs +=
+              weight * static_cast<float>(distance(gate, layout, target) - 1);
+          if (!reciprocal) {
+            // Preserve serial weighting outside the decay interval.
+            weight *= params.lambda;
+          }
+        }
+        if (reciprocal) {
+          weight =
+              params.lambda / (params.lambda + (1.F - params.lambda) *
+                                                   static_cast<float>(i + 1));
         }
       }
       return costs;
@@ -751,7 +762,31 @@ private:
 
     /// Return the to be routed gate, i.e., the objective.
     [[nodiscard]] QubitIndexPair objective() const {
-      return horizon_.get(0).front();
+      const auto front = horizon_.get(0);
+      auto selected = front.front();
+      if (front.size() == 1) {
+        return selected;
+      }
+      // Require more reuse to bypass more ready interactions in traversal
+      // order.
+      float mostDemand = 0;
+      for (auto [position, gate] : enumerate(front)) {
+        size_t demand = 0;
+        for (size_t i = 1; i < horizon_.nlayers(); ++i) {
+          for (const auto& next : horizon_.get(i)) {
+            demand += static_cast<size_t>(
+                next.first == gate.first || next.first == gate.second ||
+                next.second == gate.first || next.second == gate.second);
+          }
+        }
+        const auto score =
+            static_cast<float>(demand) / static_cast<float>(position + 1);
+        if (score > mostDemand) {
+          selected = gate;
+          mostDemand = score;
+        }
+      }
+      return selected;
     }
 
   private:
