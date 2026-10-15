@@ -723,9 +723,34 @@ private:
 
   /// Interpret the horizon as a serial sequence of gates.
   struct SerialPolicy {
-    explicit SerialPolicy(Horizon horizon, const Layout<QubitIndex>& layout,
+    explicit SerialPolicy(const Horizon& horizon,
+                          const Layout<QubitIndex>& layout,
                           const CompilerTarget& target)
-        : horizon_(std::move(horizon)) {}
+        : horizon_(&horizon), objective_(horizon.get(0).front()) {
+      const auto front = horizon_->get(0);
+      if (front.size() == 1) {
+        return;
+      }
+      // Require more reuse to bypass more ready interactions in traversal
+      // order. The immutable horizon fixes this choice for the entire search.
+      float mostDemand = 0;
+      for (auto [position, gate] : enumerate(front)) {
+        size_t demand = 0;
+        for (size_t i = 1; i < horizon_->nlayers(); ++i) {
+          for (const auto& next : horizon_->get(i)) {
+            demand += static_cast<size_t>(
+                next.first == gate.first || next.first == gate.second ||
+                next.second == gate.first || next.second == gate.second);
+          }
+        }
+        const auto score =
+            static_cast<float>(demand) / static_cast<float>(position + 1);
+        if (score > mostDemand) {
+          objective_ = gate;
+          mostDemand = score;
+        }
+      }
+    }
 
     /// Estimates routing cost by summing distance-based SWAP counts over the
     /// lookahead horizon with exponential decay.
@@ -742,8 +767,8 @@ private:
       float costs = 0;
       float weight = 1;
       const bool reciprocal = params.lambda >= 0.F && params.lambda <= 1.F;
-      for (size_t i = 0; i < horizon_.nlayers(); ++i) {
-        for (const auto& gate : horizon_.get(i)) {
+      for (size_t i = 0; i < horizon_->nlayers(); ++i) {
+        for (const auto& gate : horizon_->get(i)) {
           costs +=
               weight * static_cast<float>(distance(gate, layout, target) - 1);
           if (!reciprocal) {
@@ -761,36 +786,12 @@ private:
     }
 
     /// Return the to be routed gate, i.e., the objective.
-    [[nodiscard]] QubitIndexPair objective() const {
-      const auto front = horizon_.get(0);
-      auto selected = front.front();
-      if (front.size() == 1) {
-        return selected;
-      }
-      // Require more reuse to bypass more ready interactions in traversal
-      // order.
-      float mostDemand = 0;
-      for (auto [position, gate] : enumerate(front)) {
-        size_t demand = 0;
-        for (size_t i = 1; i < horizon_.nlayers(); ++i) {
-          for (const auto& next : horizon_.get(i)) {
-            demand += static_cast<size_t>(
-                next.first == gate.first || next.first == gate.second ||
-                next.second == gate.first || next.second == gate.second);
-          }
-        }
-        const auto score =
-            static_cast<float>(demand) / static_cast<float>(position + 1);
-        if (score > mostDemand) {
-          selected = gate;
-          mostDemand = score;
-        }
-      }
-      return selected;
-    }
+    [[nodiscard]] QubitIndexPair objective() const { return objective_; }
 
   private:
-    Horizon horizon_;
+    // The routing iteration owns the horizon and outlives this policy.
+    const Horizon* horizon_;
+    QubitIndexPair objective_;
   };
 
   /// Interpret the horizon as a wave of ripples starting from a vertex gate.
