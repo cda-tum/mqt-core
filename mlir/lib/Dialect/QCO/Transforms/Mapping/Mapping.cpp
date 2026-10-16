@@ -71,7 +71,6 @@
 #include <deque>
 #include <iterator>
 #include <limits>
-#include <llvm/Support/ErrorHandling.h>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -726,61 +725,28 @@ private:
     explicit SerialPolicy(const Horizon& horizon,
                           const Layout<QubitIndex>& layout,
                           const CompilerTarget& target)
-        : horizon_(&horizon), objective_(horizon.get(0).front()) {
-      const auto front = horizon_->get(0);
-      if (front.size() == 1) {
-        return;
-      }
-      // Require more reuse to bypass more ready interactions in traversal
-      // order. The immutable horizon fixes this choice for the entire search.
-      float mostDemand = 0;
-      for (auto [position, gate] : enumerate(front)) {
-        size_t demand = 0;
-        for (size_t i = 1; i < horizon_->nlayers(); ++i) {
-          for (const auto& next : horizon_->get(i)) {
-            demand += static_cast<size_t>(
-                next.first == gate.first || next.first == gate.second ||
-                next.second == gate.first || next.second == gate.second);
-          }
-        }
-        const auto score =
-            static_cast<float>(demand) / static_cast<float>(position + 1);
-        if (score > mostDemand) {
-          objective_ = gate;
-          mostDemand = score;
-        }
-      }
-    }
+        : horizon_(&horizon), objective_(findObjective()) {}
 
     /// Estimates routing cost by summing distance-based SWAP counts over the
-    /// lookahead horizon with exponential decay.
+    /// lookahead horizon with monotonical decay per layer.
     ///
     /// Computes the minimal number of SWAPs required to route each gate in
     /// each layer. For each gate, this is determined by the shortest distance
-    /// between its hardware qubits. Intuitively, this is the number of SWAPs
-    /// that a naive router would insert (with a constant layout).
+    /// between its hardware qubits minus one.
     [[nodiscard]] float heuristic(const Layout<QubitIndex>& layout,
                                   const CompilerTarget& target,
                                   const Parameters& params) const {
-      // A dependency layer shares one urgency. Reciprocal delay keeps later
-      // layers relevant: default lambda = 1/2 gives weights 1, 1/2, 1/3, ... .
       float costs = 0;
       float weight = 1;
-      const bool reciprocal = params.lambda >= 0.F && params.lambda <= 1.F;
       for (size_t i = 0; i < horizon_->nlayers(); ++i) {
-        for (const auto& gate : horizon_->get(i)) {
-          costs +=
-              weight * static_cast<float>(distance(gate, layout, target) - 1);
-          if (!reciprocal) {
-            // Preserve serial weighting outside the decay interval.
-            weight *= params.lambda;
-          }
-        }
-        if (reciprocal) {
-          weight =
-              params.lambda / (params.lambda + (1.F - params.lambda) *
-                                                   static_cast<float>(i + 1));
-        }
+        costs += weight *
+                 sum_of(map_range(horizon_->get(i),
+                                  [&](const auto& gate) {
+                                    return distance(gate, layout, target) - 1;
+                                  }),
+                        0.F);
+        weight =
+            params.lambda / (1 + static_cast<float>(i) * (1 - params.lambda));
       }
       return costs;
     }
@@ -789,6 +755,38 @@ private:
     [[nodiscard]] QubitIndexPair objective() const { return objective_; }
 
   private:
+    /// Return the gate in the front layer with the most demand, i.e., the most
+    /// future endpoint reuses.
+    [[nodiscard]] QubitIndexPair findObjective() const {
+      auto front = horizon_->get(0);
+      if (front.size() == 1) {
+        return front.front();
+      }
+
+      size_t mostDemand = 0;
+      QubitIndexPair obj = front.front();
+
+      for (const auto curr : front) {
+
+        // Count the endpoint reuses of the current gate per lookahead layer.
+
+        size_t demand = 0;
+        for (size_t i = 1; i < horizon_->nlayers(); ++i) {
+          demand += count_if(horizon_->get(i), [&curr](const auto& next) {
+            return next.first == curr.first || next.first == curr.second ||
+                   next.second == curr.first || next.second == curr.second;
+          });
+        }
+
+        if (demand > mostDemand) {
+          obj = curr;
+          mostDemand = demand;
+        }
+      }
+
+      return obj;
+    }
+
     // The routing iteration owns the horizon and outlives this policy.
     const Horizon* horizon_;
     QubitIndexPair objective_;
@@ -1082,9 +1080,10 @@ public:
 protected:
   void runOnOperation() override {
     auto moduleOp = getOperation();
-    if (!std::isfinite(alpha.getValue()) || alpha <= 0 || ntrials == 0) {
+    if (!std::isfinite(alpha.getValue()) || alpha <= 0 || ntrials == 0 ||
+        lambda < 0.F || lambda > 1.F) {
       moduleOp.emitError("mapping requires finite alpha > 0, niterations >= 0, "
-                         "and ntrials > 0");
+                         "ntrials > 0, and 0 <= lambda <= 1");
       signalPassFailure();
       return;
     }
