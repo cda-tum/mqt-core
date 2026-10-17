@@ -1080,26 +1080,10 @@ public:
   [[nodiscard]] Instruction instruction(const size_t index) const override {
     const auto kind = instructionKind(index);
     if (kind == OperationKind::Delay) {
-      return {
-          .kind = kind,
-          .name = "delay",
-          .qubits = {},
-          .clbits = {},
-          .parameters = {},
-          .modifiers = {},
-          .standardGate = {},
-      };
+      return {.kind = kind, .name = "delay"};
     }
     if (kind == OperationKind::ControlFlow) {
-      return {
-          .kind = kind,
-          .name = "control_flow",
-          .qubits = {},
-          .clbits = {},
-          .parameters = {},
-          .modifiers = {},
-          .standardGate = {},
-      };
+      return {.kind = kind, .name = "control_flow"};
     }
     if (kind == OperationKind::Unknown) {
       const auto operation = pythonOperation(index);
@@ -1162,7 +1146,11 @@ public:
       result.clbits.resize(native.num_clbits);
       std::copy_n(native.clbits, native.num_clbits, result.clbits.begin());
     }
-    if (result.kind == OperationKind::Gate) {
+    if (native.num_params != 0U) {
+      if (result.kind != OperationKind::Gate) {
+        throw std::runtime_error(
+            "Qiskit non-gate instruction has unexpected scalar parameters");
+      }
 #if QISKIT_VERSION_MAJOR > 2 || QISKIT_VERSION_MINOR >= 6
       std::vector<size_t> symbolic;
       result.parameters.resize(native.num_params);
@@ -1180,6 +1168,7 @@ public:
           symbolic.push_back(parameter);
         }
       }
+      // Keep native numeric values: Python's cached parameters can be stale.
       // Finish reading the borrowed view before invoking Python fallbacks.
       if (!symbolic.empty()) {
         const auto parameters =
@@ -1211,9 +1200,6 @@ public:
             "Qiskit Python and native parameter counts do not match");
       }
 #endif
-    } else if (native.num_params != 0U) {
-      throw std::runtime_error(
-          "Qiskit non-gate instruction has unexpected scalar parameters");
     }
     result.standardGate = standardGateMapping(result.name);
     return result;

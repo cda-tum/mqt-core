@@ -112,6 +112,13 @@ def test_write_vendor_tree_reuses_only_exact_generated_content(
     (target / "API_SURFACE.json").write_text("{}\n")
     assert adopt.write_vendor_tree("2.6.0", wheel, equivalent_artifact) == target
 
+    headers[f"{prefix}qiskit/version.h"] = '#define QISKIT_VERSION "2.5.0"\n'
+    with zipfile.ZipFile(wheel, "w") as archive:
+        for name, contents in headers.items():
+            archive.writestr(name, contents)
+    with pytest.raises(RuntimeError, match="do not embed the requested Qiskit version"):
+        adopt.write_vendor_tree("2.6.0", wheel, artifact)
+
 
 def test_function_declarations_ignore_preprocessor_directives() -> None:
     """Keep API declarations free of include guards and macro branches."""
@@ -145,39 +152,6 @@ static int qk_import(
     )
 
     assert declarations["qk_import"] == "static int qk_import(void);"
-
-
-def test_write_vendor_tree_rejects_mismatched_embedded_version(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reject headers that do not embed the requested Qiskit release."""
-    root = tmp_path / "repository"
-    vendor_root = root / "vendor" / "qiskit-c-api"
-    vendor_root.mkdir(parents=True)
-    implementation = root / "Qiskit2_5.cpp"
-    implementation.write_text("QkThing qk_thing\n")
-    monkeypatch.setattr(adopt, "VENDOR_ROOT", vendor_root)
-    monkeypatch.setattr(adopt, "TRANSLATION_IMPLEMENTATION", implementation)
-
-    wheel = tmp_path / "qiskit.whl"
-    headers = {
-        "qiskit/include/qiskit.h": "",
-        "qiskit/include/qiskit/version.h": '#define QISKIT_VERSION "2.5.0"\n',
-        "qiskit/include/qiskit/funcs.h": "QkThing qk_thing(void);\n",
-        "qiskit/include/qiskit/funcs_py.h": "",
-        "qiskit/include/qiskit/funcs_py_generated.h": "",
-        "qiskit/include/qiskit/types.h": "typedef int QkThing;\n",
-        "qiskit-2.5.0.dist-info/licenses/LICENSE.txt": "Apache-2.0\n",
-    }
-    with zipfile.ZipFile(wheel, "w") as archive:
-        for name, contents in headers.items():
-            archive.writestr(name, contents)
-    artifact = {
-        "filename": wheel.name,
-        "digests": {"sha256": "wheel-hash"},
-        "url": "https://example.invalid/qiskit.whl",
-    }
-
-    with pytest.raises(RuntimeError, match="do not embed the requested Qiskit version"):
-        adopt.write_vendor_tree("2.6.0", wheel, artifact)
 
 
 def test_download_wheel_rejects_http_before_network_access(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
