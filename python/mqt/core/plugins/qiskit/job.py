@@ -25,7 +25,7 @@ __lazy_modules__ = {
     "qiskit.result.models",
 }
 
-import datetime
+import datetime as dt
 from collections import Counter
 from copy import deepcopy
 from numbers import Integral
@@ -223,7 +223,7 @@ class QDMIJob(JobV1):
                 backend_version=self._backend.backend_version,
                 job_id=self.job_id(),
                 success=True,
-                date=datetime.datetime.now(datetime.UTC).isoformat(),
+                date=dt.datetime.now(dt.UTC).isoformat(),
                 results=[entry.result for entry in self.entries],
             )
         except BaseException as exc:
