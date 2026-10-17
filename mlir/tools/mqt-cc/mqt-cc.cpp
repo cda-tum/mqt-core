@@ -543,16 +543,14 @@ static int runCompiler(int argc, char** argv) {
                                ? Attribute{}
                                : parseAttribute(targetText, context.get());
     const auto targetAttr =
-        dyn_cast_if_present<mqt::CompilationTargetAttr>(attribute);
+        dyn_cast_if_present<mlir::mqt::CompilationTargetAttr>(attribute);
     if (!targetAttr) {
       llvm::errs()
           << "--target must be a valid #mqt.compilation_target attribute.\n";
       return 1;
     }
     auto target = CompilerTarget::create(targetAttr);
-    if (!target) {
-      llvm::errs() << "Invalid --target: " << llvm::toString(target.takeError())
-                   << '\n';
+    if (failed(target)) {
       return 1;
     }
     compilerTarget.emplace(std::move(*target));

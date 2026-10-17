@@ -1,8 +1,8 @@
 # Exception-free API audit
 
-Baseline: PR #2545 rebased from `de76629b0` onto main `1133ad276`. LLVM/MLIR
-23.1.0, C++20. Integration fixes and the four independent audit findings are
-addressed. Hosted checks, packaging, and performance acceptance remain open.
+Baseline: PR #2545 on main `9ca32dd3e`, LLVM/MLIR 23.1.0, C++20. The boundary
+decisions and four independent audit fixes are retained. Local integration
+checks pass; hosted checks, packaging, and performance acceptance remain open.
 
 ## Findings addressed
 
@@ -11,12 +11,11 @@ addressed. Hosted checks, packaging, and performance acceptance remain open.
   Preserve ordered, thresholded traversal and direct probability writes. DDSIM
   checks representable result sizes before traversal, so it needs no additional
   failure branch. Existing width and traversal tests cover both outcomes.
-- **Upstream integration:** adapt new structured-program, mapping, OpenQASM, and
-  JIT tests to the result factories. Preserve main's QCO `Boundary` builders,
-  shared compiler thread pool, optional shot collection, PMR DD storage, lazy
-  result caches, and LLVM O1 sampling pipeline. Keep the native Slurm wrappers
-  deleted. All 19 replayed commit messages are preserved and the signatures
-  verify.
+- **Upstream integration:** preserve explicit target compilation, consuming
+  Qiskit exports with `copy=True` support, GPI synthesis, scoped classical
+  storage, and main's compiler and DD optimizations. Adapt fallible callers to
+  native results. Qualify MLIR's `mqt` namespace where native diagnostic headers
+  also introduce the global namespace.
 - **Diagnostic forwarding:** retain the context forwarder alongside main's
   shared pool. MLIR's parallel helpers buffer and replay diagnostics on the
   initiating thread. Extend the existing forwarding test to check ordered worker

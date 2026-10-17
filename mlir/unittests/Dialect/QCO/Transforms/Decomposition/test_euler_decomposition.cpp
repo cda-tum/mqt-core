@@ -563,7 +563,7 @@ TEST(EulerAnglesCoverageTest, Mod2PiPreservesNonFinitePhase) {
     return isa<ROp>(op);
   case GPI:
     if (auto gate = dyn_cast<ROp>(op)) {
-      const auto angle = mqt::valueToConstantDouble(gate.getTheta());
+      const auto angle = mlir::mqt::valueToConstantDouble(gate.getTheta());
       return angle &&
              (*angle == std::numbers::pi || *angle == std::numbers::pi / 2.);
     }

@@ -1,8 +1,9 @@
 # Exception-free Core APIs
 
-Status: rebased and audited on main `1133ad276`. Hosted checks, release
-packaging, and whole-PR performance acceptance remain open. See the
-[audit](../audits/exception-free-rebase.md) for decisions and integration fixes.
+Status: rebased on main `9ca32dd3e`; local integration checks pass. Hosted
+checks, release packaging, and whole-PR performance acceptance remain open. See
+the [audit](../audits/exception-free-rebase.md) for decisions and integration
+fixes.
 
 ## Work remaining
 
@@ -75,33 +76,18 @@ contracts.
 Linux aarch64, GCC 13.3, LLVM/MLIR 23.1.0:
 
 - The static release build passes with IPO and Python bindings disabled.
-- `ctest --preset release -j 8` passes 4,062 runnable tests, with the existing
-  unsupported `ScQDMIJobSpecificationTest.QueryJobId` skip. All 226 DD tests
-  also pass after the final direct-include fix.
-- The rebuilt package passes all 1,976 Python tests; all 428 QDMI Python tests
-  pass again after the final stream-read fix.
-- Repository lint and whole-file C++ lint pass for all six implementation/test
-  files changed by the audit fixes. An expanded header scan reports naming,
-  conversion, and const warnings on unchanged lines, outside these fixes.
-- Before the audit fixes, `uvx nox -s stubs` passed without generated API
-  changes, and whole-file C++ lint checked 177 selected files.
-- Before the audit fixes, Doxygen, Sphinx, executable documentation, and
-  internal links passed. Removed stale generated Slurm API pages before
-  rebuilding. Browser inspection of the native-error and QIR-failure guides
-  found readable content and working assets; the preview server had only the
-  default favicon 404.
+- `ctest --preset release -j 8` passes 4,069 runnable tests, with the existing
+  unsupported `ScQDMIJobSpecificationTest.QueryJobId` skip.
+- The rebuilt shared package passes all 1,997 Python tests.
+- Stub generation passes without generated API changes.
+- Repository lint passes. Whole-file C++ lint passes for all 21 C++ files
+  changed by the rebase, using clang-tidy 23.1.4.
 
-The independent audit fixes also pass a fresh shared source build of the DD
-Python module. Invalid construction and matrix capacity preserve their Python
-exception categories and full diagnostic text, with no stderr output. CMake
-rejects bindings with static Core support. The SC throwing-stream test and
-Python category tests reproduced the defects before the fixes. QDMI custom
-queries retain their existing success, unsupported-property, and error tests.
-
-The previous head `de76629b0` passed hosted native and Python checks on Linux,
-macOS, and Windows. Those results predate this rebase. Installed-consumer,
-coverage-build, symbol-export, and release-package checks were not repeated.
-Final-head hosted and Windows/macOS packaging validation remain open.
+The previous audit also checked shared diagnostic capture, rejected static
+Python bindings, reproduced throwing-stream errors, and verified Python
+exception categories. Documentation, installed-consumer, coverage-build, and
+symbol-export checks were not repeated for this rebase. Final-head hosted checks
+and Windows/macOS packaging remain open.
 
 Performance acceptance requires matched upstream and revised builds using the
 external harness. Report successful workloads separately, including cold and
