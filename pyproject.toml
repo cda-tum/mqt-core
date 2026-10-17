@@ -271,13 +271,18 @@ archs = "auto64"
 build-frontend = "uv"
 config-settings = { "cmake.define.ENABLE_IPO" = "ON" }
 environment = { DEPLOY = "ON" }
-test-command = "pytest test/python"
+test-command = [ "python scripts/check_wheel_runtime.py", "pytest test/python" ]
+# Exercise the compiler with a registered Qiskit C API minor.
+test-requires = [ "cmake>=3.28", "qiskit>=2.5,<2.6" ]
 test-groups = [ "test" ]
 test-sources = [
   "bindings/mlir/Target/Qiskit/SupportedVersions.inc",
+  "docs/cpp_api.md",
   "examples/slurm",
   "json",
+  "pyproject.toml",
   "scripts/check_docs_links.py",
+  "scripts/check_wheel_runtime.py",
   "scripts/qiskit_c_api_adopt.py",
   "test/circuits",
   "test/python",
@@ -311,9 +316,13 @@ inherit.environment = "append"
 
 [[tool.cibuildwheel.overrides]]
 select = [ "cp*-win_arm64", "cp3??t-*" ]
-test-command = 'python -c "import mqt.core.dd, mqt.core.mlir, mqt.core.qdmi"'
+test-command = [
+  'python -c "import mqt.core.dd, mqt.core.mlir, mqt.core.qdmi"',
+  "python scripts/check_wheel_runtime.py",
+]
+test-requires = [ "cmake>=3.28" ]
 test-groups = []
-test-sources = []
+test-sources = [ "docs/cpp_api.md", "scripts/check_wheel_runtime.py" ]
 
 
 [tool.ruff]
