@@ -35,9 +35,11 @@ adopt = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(adopt)
 
 
-def test_vendored_snapshot_matches_provenance() -> None:
+@pytest.mark.parametrize(
+    "snapshot", sorted((SCRIPT.parents[1] / "vendor" / "qiskit-c-api").glob("[0-9]*")), ids=lambda path: path.name
+)
+def test_vendored_snapshot_matches_provenance(snapshot: Path) -> None:
     """Keep mutation-disabled vendored headers byte-identical to provenance."""
-    snapshot = SCRIPT.parents[1] / "vendor" / "qiskit-c-api" / "2.5.0"
     provenance = json.loads((snapshot / "PROVENANCE.json").read_text())
 
     actual_files = {"LICENSE"} | {
@@ -48,7 +50,10 @@ def test_vendored_snapshot_matches_provenance() -> None:
         assert hashlib.sha256((snapshot / relative).read_bytes()).hexdigest() == expected
 
 
-def test_write_vendor_tree_reuses_only_exact_generated_content(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("prefix", ["qiskit/include/", "qiskit/capi/include/"])
+def test_write_vendor_tree_reuses_only_exact_generated_content(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, prefix: str
+) -> None:
     """Reuse matching recorded content and reject changes to those files."""
     root = tmp_path / "repository"
     vendor_root = root / "vendor" / "qiskit-c-api"
@@ -60,12 +65,12 @@ def test_write_vendor_tree_reuses_only_exact_generated_content(tmp_path: Path, m
 
     wheel = tmp_path / "qiskit.whl"
     headers = {
-        "qiskit/include/qiskit.h": "",
-        "qiskit/include/qiskit/version.h": '#define QISKIT_VERSION "2.6.0"\n',
-        "qiskit/include/qiskit/funcs.h": "QkThing qk_thing(void);\n",
-        "qiskit/include/qiskit/funcs_py.h": "",
-        "qiskit/include/qiskit/funcs_py_generated.h": ("#define qk_thing (*(QkThing(*)())(_Qk_API_Test[1]))\n"),
-        "qiskit/include/qiskit/types.h": "typedef int QkThing;\n",
+        f"{prefix}qiskit.h": "",
+        f"{prefix}qiskit/version.h": '#define QISKIT_VERSION "2.6.0"\n',
+        f"{prefix}qiskit/funcs.h": "QkThing qk_thing(void);\n",
+        f"{prefix}qiskit/funcs_py.h": "",
+        f"{prefix}qiskit/funcs_py_generated.h": ("#define qk_thing (*(QkThing(*)())(_Qk_API_Test[1]))\n"),
+        f"{prefix}qiskit/types.h": "typedef int QkThing;\n",
         "qiskit-2.6.0.dist-info/licenses/LICENSE.txt": "Apache-2.0\n",
     }
     with zipfile.ZipFile(wheel, "w") as archive:
@@ -79,8 +84,8 @@ def test_write_vendor_tree_reuses_only_exact_generated_content(tmp_path: Path, m
 
     previous = vendor_root / "2.5.0"
     for name, contents in headers.items():
-        if name.startswith("qiskit/include/"):
-            destination = previous / name.removeprefix("qiskit/")
+        if name.startswith(prefix):
+            destination = previous / "include" / name.removeprefix(prefix)
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(contents)
     (previous / "API_SURFACE.json").write_text('{"functions": {"stale": {}}}')

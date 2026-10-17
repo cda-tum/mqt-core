@@ -61,7 +61,7 @@ if TYPE_CHECKING:
 
     from qiskit.circuit.annotated_operation import Modifier
 
-if not supports_qiskit_translation():
+if not supports_qiskit_translation(qiskit.__version__):
     pytest.skip(f"No registered Qiskit adapter for {qiskit.__version__}", allow_module_level=True)
 
 
@@ -3649,8 +3649,7 @@ def test_condition_only_switch_expression_imports() -> None:
     default = QuantumCircuit(1)
     default.h(0)
     circuit = QuantumCircuit(1, 2)
-    # Qiskit's overload omits expression targets although its runtime accepts them.
-    circuit.switch(  # ty: ignore[no-matching-overload]
+    circuit.switch(
         expr.bit_xor(circuit.cregs[0], 1),
         [(0, zero), (CASE_DEFAULT, default)],
         [circuit.qubits[0]],
@@ -4563,9 +4562,23 @@ def test_target_aware_qiskit_export_rejects_dynamic_qubits(allocation: str) -> N
 
 def test_unknown_version_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reject unsupported Qiskit versions."""
-    monkeypatch.setattr(qiskit, "__version__", "2.6.0")
-    with pytest.raises(RuntimeError, match=r"installed version '2\.6\.0'.*>=2\.5\.0,<2\.6\.0"):
+    monkeypatch.setattr(qiskit, "__version__", "9.0.0")
+    with pytest.raises(RuntimeError, match=r"installed version '9\.0\.0'.*>=2\.5\.0,<2\.6\.0"):
         QCProgram.from_qiskit(QuantumCircuit(1))
+
+
+def test_mismatched_native_minor_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reject another minor's capsule before reading it, then reuse the right one."""
+    other = "2.6.0" if qiskit.__version__.startswith("2.5.") else "2.5.0"
+    circuit = QuantumCircuit(1)
+    circuit.rx(0.25, 0)
+    with monkeypatch.context() as patched:
+        patched.setattr(qiskit, "__version__", other)
+        with pytest.raises(RuntimeError, match="C API capsule version does not match"):
+            QCProgram.from_qiskit(circuit)
+
+    restored = QCProgram.from_qiskit(circuit).to_qiskit()
+    assert np.allclose(Operator(restored).data, Operator(circuit).data)
 
 
 def test_mlir_binding_import_does_not_import_qiskit() -> None:
@@ -4638,6 +4651,25 @@ def test_shallow_list_loop_with_jump_exports(values: list[int]) -> None:
     assert sample(restored, shots=1, seed=1) == {"0": 1}
 
 
+@pytest.mark.parametrize("symbol_position", range(3))
+def test_mixed_native_and_symbolic_gate_parameters(symbol_position: int) -> None:
+    """Preserve parameter order and identity across native and Python access."""
+    theta = Parameter("theta")
+    parameters: list[float | Parameter] = [0.125, 0.25, 0.5]
+    parameters[symbol_position] = theta
+    circuit = QuantumCircuit(1, global_phase=theta / 2)
+    circuit.u(parameters[0], parameters[1], parameters[2], 0)
+
+    restored = QCProgram.from_qiskit(circuit).to_qiskit()
+
+    assert restored.parameters == circuit.parameters
+    assert restored.data[0].operation.params == parameters
+    assert np.allclose(
+        Operator(restored.assign_parameters({theta: 0.75})).data,
+        Operator(circuit.assign_parameters({theta: 0.75})).data,
+    )
+
+
 def test_numeric_import_decodes_parameters_at_most_twice(monkeypatch: pytest.MonkeyPatch) -> None:
     """Expansion counting must not repeat primitive parameter decoding."""
     circuit = QuantumCircuit(1)
@@ -4653,7 +4685,7 @@ def test_numeric_import_decodes_parameters_at_most_twice(monkeypatch: pytest.Mon
 
     monkeypatch.setattr(Instruction, "params", property(parameters, original.fset))
     assert QCProgram.from_qiskit(circuit).is_valid
-    assert reads <= 2 * len(circuit)
+    assert reads <= (0 if tuple(map(int, qiskit.__version__.split(".")[:2])) >= (2, 6) else 2 * len(circuit))
 
 
 @pytest.mark.parametrize("selected", [0, 69, 100])
