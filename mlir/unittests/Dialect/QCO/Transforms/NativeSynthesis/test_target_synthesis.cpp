@@ -2596,6 +2596,9 @@ TEST_F(TargetSynthesisTest, ParameterizedEntanglersUseCartanAngles) {
       const auto& native =
           analysis.decompose(matrix, *target.synthesisBasis()->entangler);
       ASSERT_TRUE(native);
+      EXPECT_EQ(mlir::qco::decomposition::countUnitary2QWeyl(
+                    matrix, *target.synthesisBasis()->entangler),
+                native->numBasisUses);
       EXPECT_TRUE(
           mlir::qco::decomposition::unitaryMatrix(*native, primitive)
               .isApprox(matrix, mlir::qco::decomposition::WEYL_TOLERANCE));

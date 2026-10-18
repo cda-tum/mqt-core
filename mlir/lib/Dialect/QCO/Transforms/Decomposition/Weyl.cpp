@@ -23,6 +23,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -853,6 +854,34 @@ twoGates(const TwoQubitWeylDecomposition& target, uint64_t seed) {
   align(result, *circuit, target);
   return result;
 }
+
+namespace {
+
+struct SqrtISwapPrefix {
+  Matrix4x4 gate;
+  std::optional<TwoQubitWeylDecomposition> decomposition;
+};
+
+} // namespace
+
+static const SqrtISwapPrefix& sqrtISwapPrefix(bool lowA, bool negativeC) {
+  // These four matrices diagonalize on the fixed first attempt, without a seed.
+  static const auto PREFIXES = [] {
+    std::array<SqrtISwapPrefix, 4> result;
+    for (size_t i = 0; i < result.size(); ++i) {
+      auto& prefix = result[i];
+      prefix.gate = TwoQubitWeylDecomposition::getCanonicalMatrix(
+          i / 2 != 0 ? -EIGHTH_PI : 0., i / 2 != 0 ? 0. : EIGHTH_PI,
+          i % 2 != 0 ? -EIGHTH_PI : EIGHTH_PI);
+      prefix.decomposition =
+          TwoQubitWeylDecomposition::create(prefix.gate, std::nullopt);
+    }
+    return result;
+  }();
+  return PREFIXES[2 * static_cast<size_t>(lowA) +
+                  static_cast<size_t>(negativeC)];
+}
+
 static std::optional<TwoQubitNativeDecomposition>
 decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
   const auto targetDecomposition =
@@ -880,18 +909,13 @@ decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
   }
 
   // Lemma 2 in the supplement puts this residual in the two-gate region.
-  const auto gate = TwoQubitWeylDecomposition::getCanonicalMatrix(
-      kak.a() <= EIGHTH_PI ? -EIGHTH_PI : 0.,
-      kak.a() <= EIGHTH_PI ? 0. : EIGHTH_PI,
-      kak.c() < 0. ? -EIGHTH_PI : EIGHTH_PI);
+  const auto& prefix = sqrtISwapPrefix(kak.a() <= EIGHTH_PI, kak.c() < 0.);
   const auto residual = TwoQubitWeylDecomposition::create(
-      kak.getCanonicalMatrix() * gate.adjoint(), std::nullopt, seed);
-  const auto prefix =
-      TwoQubitWeylDecomposition::create(gate, std::nullopt, seed);
-  if (!residual || !prefix) {
+      kak.getCanonicalMatrix() * prefix.gate.adjoint(), std::nullopt, seed);
+  if (!residual || !prefix.decomposition) {
     return std::nullopt;
   }
-  auto before = oneGate(*prefix);
+  auto before = oneGate(*prefix.decomposition);
   const auto after = twoGates(*residual, seed);
   if (!after) {
     return std::nullopt;
@@ -907,6 +931,20 @@ decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
   return before;
 }
 
+static auto pauliRotations(const TwoQubitWeylDecomposition& kak) {
+  SmallVector<std::pair<double, PauliAxis>, 3> rotations;
+  for (const auto& rotation : {
+           std::pair{kak.a(), PauliAxis::X},
+           std::pair{kak.b(), PauliAxis::Y},
+           std::pair{kak.c(), PauliAxis::Z},
+       }) {
+    if (std::abs(rotation.first) > WEYL_TOLERANCE) {
+      rotations.push_back(rotation);
+    }
+  }
+  return rotations;
+}
+
 /// Realize the three commuting Cartan rotations using one native axis pair.
 static std::optional<TwoQubitNativeDecomposition>
 decomposePauliRotations(const Matrix4x4& target,
@@ -918,17 +956,14 @@ decomposePauliRotations(const Matrix4x4& target,
   }
   const auto identity = Matrix2x2::identity();
   const auto axes = pauliAxes(entangler.gate);
+  const auto rotations = pauliRotations(*kak);
   TwoQubitNativeDecomposition result{
-      .singleQubitFactors = {identity, identity},
+      .numBasisUses = static_cast<uint8_t>(rotations.size()),
   };
-  for (const auto& [coordinate, axis] : {
-           std::pair{kak->a(), PauliAxis::X},
-           std::pair{kak->b(), PauliAxis::Y},
-           std::pair{kak->c(), PauliAxis::Z},
-       }) {
-    if (std::abs(coordinate) <= WEYL_TOLERANCE) {
-      continue;
-    }
+  result.singleQubitFactors.reserve(
+      singleQubitFactorCount(result.numBasisUses));
+  result.singleQubitFactors.append({identity, identity});
+  for (const auto& [coordinate, axis] : rotations) {
     auto left = pauliFrame(axis, axes[0]);
     double angle = -2. * coordinate;
     if (entangler.angles == CompilerTarget::AngleSupport::ZeroToHalfPi &&
@@ -947,7 +982,6 @@ decomposePauliRotations(const Matrix4x4& target,
     factors.push_back(right);
     factors.push_back(left);
     result.entanglerParameters.push_back(angle);
-    ++result.numBasisUses;
   }
   attachLocalFactors(result, *kak);
   return result;
@@ -964,6 +998,26 @@ decomposeUnitary2QWeyl(const Matrix4x4& target,
   }
   return cachedNativeBasisDecomposer(entangler.gate)
       .decomposeTarget(target, std::nullopt, seed);
+}
+
+std::optional<uint8_t> countUnitary2QWeyl(const Matrix4x4& target,
+                                          CompilerTarget::Entangler entangler,
+                                          uint64_t seed) {
+  if (!entangler.parameterized() &&
+      entangler.gate == CompilerTarget::GateKind::SQRTISWAP) {
+    // The residual and sandwich decompositions can fail after target analysis.
+    const auto native = decomposeSqrtISwap(target, seed);
+    return native ? std::optional{native->numBasisUses} : std::nullopt;
+  }
+  const auto kak =
+      TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY, seed);
+  if (!kak) {
+    return std::nullopt;
+  }
+  if (entangler.parameterized()) {
+    return static_cast<uint8_t>(pauliRotations(*kak).size());
+  }
+  return cachedNativeBasisDecomposer(entangler.gate).numBasisGates(*kak);
 }
 
 SynthesizedUnitary2Q

@@ -73,6 +73,7 @@
 
 namespace mlir::qco {
 
+using decomposition::countUnitary2QWeyl;
 using decomposition::decomposeUnitary2QWeyl;
 using decomposition::emitUnitary2QWeyl;
 
@@ -605,12 +606,11 @@ std::unique_ptr<const NativeCostTable> NativeCostTable::precompute(
     if (result->index_.contains(hash)) {
       return;
     }
-    const auto native = decomposeUnitary2QWeyl(matrix, entangler, seed);
     result->index_.try_emplace(hash, result->entries_.size());
     result->entries_.push_back({
         .matrix = matrix,
         .entangler = entangler,
-        .count = native ? std::optional(native->numBasisUses) : std::nullopt,
+        .count = countUnitary2QWeyl(matrix, entangler, seed),
     });
   };
   const auto swap = SWAPOp::getUnitaryMatrix();
@@ -712,11 +712,10 @@ NativeCostAnalysis::count(const Matrix4x4& matrix,
       return entry.count;
     }
   }
-  const auto native = decomposeUnitary2QWeyl(matrix, entangler, seed_);
   lastCount_ = {
       .matrix = matrix,
       .entangler = entangler,
-      .count = native ? std::optional(native->numBasisUses) : std::nullopt,
+      .count = countUnitary2QWeyl(matrix, entangler, seed_),
   };
   if (counts_.empty()) {
     counts_.reserve(CACHE_SIZE);
