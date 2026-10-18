@@ -145,6 +145,15 @@ variances. Use `capture=False` for parameter-shift gradients: current PennyLane
 capture does not implement the required QNode differentiation. Ordinary QNodes
 are never implicitly compiled with Catalyst.
 
+Native `BasisState` prepares an initial computational-basis state, including
+runtime bit arrays and reordered wire subsets. It must precede every other
+operation; repeated preparation and resets are unsupported. Native
+`QubitUnitary` accepts runtime matrices acting on at most two wires, including
+any controls, and supports adjoints and negative controls. Both operations work
+with `capture=True`. Ordinary PennyLane execution retains upstream matrix
+decomposition, including for larger matrices. General `StatePrep` still relies
+on upstream decomposition and is not supported directly by the native device.
+
 Capture's automatic preprocessing currently omits basis changes and observable
 splitting. Apply Catalyst's compiler passes explicitly for other observables:
 

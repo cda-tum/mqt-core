@@ -19,6 +19,7 @@
 #include "nanobind/stl/string.h"
 #include "nanobind/stl/variant.h"
 
+#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -105,6 +106,40 @@ extern mlir::QCProgram importPennyLaneCircuit(const nb::object& tape,
       }
       operation = operation.attr("base");
     }
+    const auto name = nb::cast<std::string>(operation.attr("name"));
+    auto operands = indices(operation.attr("wires"));
+    if (name == "BasisState") {
+      if (inverse || !controls.empty()) {
+        throw nb::value_error("BasisState cannot be controlled or inverted");
+      }
+      std::vector<int8_t> bits;
+      for (const auto bit :
+           nb::borrow<nb::iterable>(operation.attr("parameters")[0])) {
+        const auto value = PyFloat_AsDouble(bit.ptr());
+        if (PyErr_Occurred() != nullptr) {
+          throw nb::python_error();
+        }
+        if (value != 0 && value != 1) {
+          throw nb::value_error("BasisState entries must be zero or one");
+        }
+        bits.push_back(static_cast<int8_t>(value));
+      }
+      DataView<int8_t, 1> view(bits);
+      recorder.SetBasisState(view, operands);
+      continue;
+    }
+    if (name == "QubitUnitary") {
+      const auto matrix =
+          nb::cast<nb::ndarray<const std::complex<double>, nb::ndim<2>,
+                               nb::c_contig, nb::device::cpu>>(
+              operation.attr("parameters")[0]);
+      if (matrix.shape(0) != matrix.shape(1)) {
+        throw nb::value_error("QubitUnitary matrix must be square");
+      }
+      recorder.MatrixOperation({matrix.data(), matrix.data() + matrix.size()},
+                               operands, inverse, controls, controlValues);
+      continue;
+    }
     std::vector<double> parameters;
     for (const auto parameter :
          nb::borrow<nb::iterable>(operation.attr("parameters"))) {
@@ -114,9 +149,8 @@ extern mlir::QCProgram importPennyLaneCircuit(const nb::object& tape,
       }
       parameters.push_back(value);
     }
-    recorder.NamedOperation(nb::cast<std::string>(operation.attr("name")),
-                            parameters, indices(operation.attr("wires")),
-                            inverse, controls, controlValues);
+    recorder.NamedOperation(name, parameters, operands, inverse, controls,
+                            controlValues);
   }
   const nb::gil_scoped_release release;
   return recorder.takeProgram();

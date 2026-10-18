@@ -51,10 +51,21 @@ or conditional gates: ordinary device preprocessing defers them first.
   `CompiledProgram`, and the QDMI compiler adapter. The gate table maps source
   names and conventions. Negative controls use X conjugation; PennyLane global
   phase has the opposite sign from Core's convention.
+- Native `SetBasisState` accepts one initial preparation with runtime bits and
+  arbitrary wire subsets. It emits X gates and rejects later preparation or
+  resets. Keep `initial_state_prep=false`: that upstream flag also promises
+  general `SetState`, which is unsupported.
+- Native `MatrixOperation` uses Core's dense-unitary verification and synthesis
+  for at most two total wires, including controls. Adjoints and negative
+  controls share the named-gate implementation. Advertise `QubitUnitary` only in
+  the qjit capability section so ordinary PennyLane retains decomposition of
+  larger matrices. The public tape importer also accepts native matrices.
+  General controlled matrices exceeding two wires cannot yet be synthesized;
+  reject them before recording. Native Hamiltonian support remains out of scope.
 - Finalize at the first terminal measurement and cache one full logical readout
   per circuit and shot count. Release resets circuit state because Catalyst
-  pools devices inside a compiled invocation. Gates after preparation and stale
-  qubit/observable IDs are errors.
+  pools devices inside a compiled invocation. Gates after terminal measurement
+  and stale qubit/observable IDs are errors.
 - Native Identity/Z products reduce to parity. Upstream transforms diagonalize
   other observables and split bases. Native expectation/probability primitives
   preserve non-capture compiled parameter-shift; lowering everything to samples
@@ -80,7 +91,9 @@ or conditional gates: ordinary device preprocessing defers them first.
   compiler's result-based error APIs internally. Do not let exceptions escape
   the QDMI C interface. Build the binding outside unity builds to avoid LLVM
   feature-detection macros changing KJ's exception/RTTI configuration in the
-  existing Jeff importer.
+  existing Jeff importer. Honor the existing `LLVM_REQUIRES_RTTI` target
+  requirement when applying shared compiler flags; disabling RTTI breaks
+  exception matching across the Catalyst boundary on macOS.
 
 ## Upstream contracts and supported capture
 
@@ -167,11 +180,11 @@ weekly upstream workflow and `catalyst-dev` session exercise development
 Catalyst and PennyLane with Python 3.12.
 
 Tests under `test/python/plugins/qdmi_pennylane/` cover ordinary native
-execution, compiled correlated readout, wire order, pooled reuse, both capture
-modes, observable lowering, error recovery, and non-capture
-expectation/probability gradients. Native tests cover result validation, context
-lifetime, and generic compiler batching. Existing compiler tests own
-synthesis/routing coverage.
+execution, compiled correlated readout, runtime basis preparation and matrices,
+wire order, pooled reuse, both capture modes, observable lowering, error
+recovery, and non-capture expectation/probability gradients. Native tests cover
+result validation, context lifetime, and generic compiler batching. Existing
+compiler tests own synthesis/routing coverage.
 
 ```sh
 ctest --preset release -R 'CatalystQDMI|CompilerQDMIAdapter'
@@ -188,31 +201,32 @@ released probes used Catalyst 0.15.0 with PennyLane 0.45.1.
 
 Current local validation on Linux aarch64:
 
-- The stable stack passes 1,803 selected Python consumer tests, including the 51
-  original integration cases; both added ABI-boundary cases also pass. The
-  development stack covers the same 51 tests in separate runs: 28
-  DDSIM/public-importer, 17 device, and 6 compiled tests.
-- The three native Catalyst and 19 compiler adapter tests pass. Whole-file C++
-  analysis of all eight changed implementation/test files reports no findings,
-  and stub regeneration passes.
-- Regular `tests-3.12` and `minimums-3.12` nox sessions each pass all 53
-  integration cases. An installed wheel on standard CPython 3.15 with no
-  Catalyst passes 45 cases and skips the compiled module; dependency checks also
-  pass. Final coverage validation remains pending; an earlier patch-coverage
-  failure is under investigation. Final hosted CI is not established by these
-  local results.
+- Stable and development stacks each pass 55 integration cases, including
+  runtime basis preparation and matrices. An installed wheel on standard CPython
+  3.15 without Catalyst passes 47 cases and skips the compiled module. The
+  latest wheel also passes 1,885 Python consumer tests.
+- The full release suite after rebuilding with the corrected RTTI flags passes
+  4,041 tests, with the existing `QueryJobId` case skipped. This includes four
+  native Catalyst tests and 19 compiler adapter tests. Whole-file C++ analysis
+  checks all eight changed implementation/test files with no findings, and stub
+  regeneration passes on the latest source.
+- Hosted native platform and Codecov checks pass on `f62147c82`. Its macOS
+  Python exception-handling failure was traced to disabled RTTI. Those results
+  do not establish hosted success for the subsequent native features and RTTI
+  fix; final hosted validation remains pending.
 
 Installed-wheel probes pass with both Catalyst/Core import orders on stable and
 development stacks. They execute the exported factory, check the capability
 file, and confirm that no separate adapter library is loaded. The wheel includes
 the vendored license and contains no adapter DSO.
 
-The revised full executable documentation build and internal link checks pass.
-Chrome DevTools inspection verified desktop/mobile layout, the importer output,
-all new API anchors, and QAOA figures. Content assets loaded successfully; the
-local preview's only failed request was its missing favicon. The exact capture
-recipe above also passes on both rebuilt installed stable/development stacks. No
-real hardware or performance speedup is claimed.
+The full executable documentation build and internal link checks pass after the
+native feature additions and RTTI fix. Chrome DevTools inspection verified
+desktop/mobile layout, the importer output, all new API anchors, QAOA figures,
+and the new preparation/matrix scope paragraph. Content assets loaded
+successfully; the local preview's only failed request was its missing favicon.
+The exact capture recipe above also passes on both rebuilt installed
+stable/development stacks. No real hardware or performance speedup is claimed.
 
 [custom-devices]: https://docs.pennylane.ai/projects/catalyst/en/latest/dev/custom_devices.html
 [capture]: https://github.com/PennyLaneAI/catalyst/blob/dd4f8d5f290efae3a828b7c5a5a8d5fe8a854b95/frontend/catalyst/from_plxpr/device_utils.py

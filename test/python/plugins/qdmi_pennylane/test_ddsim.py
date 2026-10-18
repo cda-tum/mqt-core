@@ -37,7 +37,9 @@ GRAPH_EDGES = ((0, 1), (0, 2), (1, 2), (2, 3))
 @pytest.mark.parametrize(("wires", "expected"), [(None, "01"), (["idle", "spare", "active"], "100")])
 def test_public_tape_import_returns_all_declared_wires(wires: list[str] | None, expected: str) -> None:
     """Public import preserves default or explicit wire order and reads every wire."""
-    tape = qp.tape.QuantumScript([qp.X("active"), qp.Identity("idle")], [qp.sample(wires=["active"])])
+    tape = qp.tape.QuantumScript(
+        [qp.BasisState([1], "active"), qp.QubitUnitary(np.eye(2), "idle")], [qp.sample(wires=["active"])]
+    )
     program = QCProgram.from_pennylane(tape, wires=wires)
     job = submit_program(program, target="mqt.ddsim.default", num_shots=3)
     assert job.wait()

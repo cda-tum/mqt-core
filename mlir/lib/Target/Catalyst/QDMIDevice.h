@@ -20,8 +20,10 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <array>
@@ -89,6 +91,13 @@ public:
       const std::vector<QubitIdType>& controls = {},
       const std::vector<bool>& controlValues = {},
       const std::vector<std::string>& optionalParameters = {}) override;
+  void MatrixOperation(const std::vector<std::complex<double>>& matrix,
+                       const std::vector<QubitIdType>& wires,
+                       bool inverse = false,
+                       const std::vector<QubitIdType>& controls = {},
+                       const std::vector<bool>& controlValues = {}) override;
+  void SetBasisState(DataView<int8_t, 1>& state,
+                     std::vector<QubitIdType>& wires) override;
   Result Measure(QubitIdType wire, std::optional<int32_t> postselect) override;
   ObsIdType Observable(ObsId id,
                        const std::vector<std::complex<double>>& matrix,
@@ -116,6 +125,9 @@ private:
   wireIndices(llvm::ArrayRef<QubitIdType> wires) const;
   [[nodiscard]] const ObservableWires& getObservable(ObsIdType id) const;
   ObsIdType addObservable(ObservableWires value);
+  void emitOperation(llvm::ArrayRef<size_t> indices, size_t numControls,
+                     const std::vector<bool>& controlValues, bool inverse,
+                     llvm::function_ref<void(mlir::ValueRange)> primitive);
   const Readout& read();
 
   std::shared_ptr<Context> context_;
@@ -125,6 +137,7 @@ private:
   llvm::SmallVector<mlir::Value> qubits_;
   std::vector<QubitIdType> ids_;
   QubitIdType nextQubit_ = 0;
+  bool initialState_ = true;
   llvm::SmallVector<ObservableWires> observables_;
   ObsIdType firstObservable_ = 0;
   ObsIdType nextObservable_ = 0;

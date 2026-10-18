@@ -28,15 +28,18 @@ if not supports_catalyst():
 catalyst = import_module("catalyst")
 qp = pytest.importorskip("pennylane")
 
+pytestmark = [
+    pytest.mark.filterwarnings(
+        r"ignore:The following device-preprocessing transforms.*'qp\.qjit\(capture=True\)':UserWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:Excluded the .* decomposition rule.*multiple registers yet:Warning:"
+        "catalyst.decomposition.decomposition_rules"
+    ),
+]
+
 
 @pytest.mark.parametrize("capture", [False, True])
-@pytest.mark.filterwarnings(
-    r"ignore:The following device-preprocessing transforms.*'qp\.qjit\(capture=True\)':UserWarning"
-)
-@pytest.mark.filterwarnings(
-    "ignore:Excluded the .* decomposition rule.*multiple registers yet:Warning:"
-    "catalyst.decomposition.decomposition_rules"
-)
 def test_correlated_readout_and_wire_order(*, capture: bool) -> None:
     """Terminal measurements share a readout, including reordered subsets."""
     device = qp.device("mqt.ddsim.default", wires=3)
@@ -66,13 +69,6 @@ def test_correlated_readout_and_wire_order(*, capture: bool) -> None:
 
 
 @pytest.mark.parametrize("capture", [False, True])
-@pytest.mark.filterwarnings(
-    r"ignore:The following device-preprocessing transforms.*'qp\.qjit\(capture=True\)':UserWarning"
-)
-@pytest.mark.filterwarnings(
-    "ignore:Excluded the .* decomposition rule.*multiple registers yet:Warning:"
-    "catalyst.decomposition.decomposition_rules"
-)
 def test_repeated_calls_and_observable_lowering(*, capture: bool) -> None:
     """Runtime pooling resets circuits and upstream lowers non-Z observables."""
     device = qp.device("mqt.ddsim.default", wires=2)
@@ -113,3 +109,21 @@ def test_compiled_parameter_shift(*, probabilities: bool) -> None:
 
     derivative = catalyst.qjit(catalyst.jacobian(circuit), capture=False)
     np.testing.assert_allclose(derivative(np.pi / 2), [-0.5, 0.5] if probabilities else -1, atol=1e-12)
+
+
+@pytest.mark.parametrize("capture", [False, True])
+def test_runtime_basis_state_and_unitary(*, capture: bool) -> None:
+    """Native preparation and matrix gates preserve runtime data and wire order."""
+    device = qp.device("mqt.ddsim.default", wires=3)
+
+    @qp.qnode(device, shots=4)
+    def circuit(bits: np.ndarray, matrix: np.ndarray) -> SampleMP:
+        qp.BasisState(bits, wires=[2, 0])
+        qp.QubitUnitary(matrix, wires=[2, 0])
+        qp.QubitUnitary(np.array([[0, 1j], [1j, 0]]), wires=1)
+        return qp.sample(wires=[0, 1, 2])
+
+    compiled = catalyst.qjit(circuit, capture=capture)
+    matrix = np.eye(4, dtype=complex)[[0, 2, 3, 1]]
+    np.testing.assert_array_equal(compiled(np.array([0, 1]), matrix), [[1, 1, 1]] * 4)
+    np.testing.assert_array_equal(compiled(np.array([1, 0]), np.eye(4, dtype=complex)), [[0, 1, 1]] * 4)

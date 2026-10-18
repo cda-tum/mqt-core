@@ -21,9 +21,11 @@
 #include "llvm/Support/Error.h"
 
 #include <array>
+#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <random>
@@ -235,6 +237,57 @@ TEST(CatalystQDMI, TerminalReadoutsShareCorrelatedSamples) {
   EXPECT_THROW(runtime.NamedOperation("PauliX", {}, {wires[0]}),
                std::runtime_error);
   runtime.ReleaseQubits(wires);
+}
+
+TEST(CatalystQDMI, BasisPreparationAndDenseGatesValidateBeforeRecording) {
+  QDMIDevice runtime(
+      Context::create(qdmi::builtin_driver::openDevice("mqt.ddsim.default")));
+  const auto wires = runtime.AllocateQubits(4);
+  runtime.SetDeviceShots(8);
+  std::vector<int8_t> bits{1, 0, 2};
+  DataView<int8_t, 1> state(bits);
+  std::vector<QubitIdType> prepared{wires[2], wires[0], wires[3]};
+  EXPECT_THROW(runtime.SetBasisState(state, prepared), std::runtime_error);
+  bits[2] = 1;
+  auto invalidWires = prepared;
+  invalidWires[2] = invalidWires[0];
+  EXPECT_THROW(runtime.SetBasisState(state, invalidWires), std::runtime_error);
+  invalidWires.pop_back();
+  EXPECT_THROW(runtime.SetBasisState(state, invalidWires), std::runtime_error);
+
+  const std::vector<std::complex<double>> cycle{
+      0, 0, 0, {0, 1}, 1, 0, 0, 0, 0, {0, -1}, 0, 0, 0, 0, 1, 0,
+  };
+  EXPECT_THROW(runtime.MatrixOperation(cycle, wires), std::runtime_error);
+  EXPECT_THROW(runtime.MatrixOperation(cycle, {wires[0]}), std::runtime_error);
+  EXPECT_THROW(runtime.MatrixOperation(cycle, {wires[0], wires[0]}),
+               std::runtime_error);
+  EXPECT_THROW(runtime.MatrixOperation(cycle, {wires[0], wires[1]}, false,
+                                       {wires[2]}, {true}),
+               std::runtime_error);
+  auto invalidMatrix = cycle;
+  invalidMatrix[0] = 1;
+  EXPECT_THROW(runtime.MatrixOperation(invalidMatrix, {wires[0], wires[1]}),
+               std::runtime_error);
+  invalidMatrix[0] = std::numeric_limits<double>::infinity();
+  EXPECT_THROW(runtime.MatrixOperation(invalidMatrix, {wires[0], wires[1]}),
+               std::runtime_error);
+  runtime.SetBasisState(state, prepared);
+  EXPECT_THROW(runtime.SetBasisState(state, prepared), std::runtime_error);
+  runtime.MatrixOperation(cycle, {wires[3], wires[1]}, true);
+  runtime.MatrixOperation({0, 1, 1, 0}, {wires[2]}, false, {wires[0]}, {false});
+  std::vector<double> probabilities(16);
+  DataView<double, 1> probabilityView(probabilities);
+  runtime.Probs(probabilityView);
+  std::vector<double> expected(16);
+  expected[4] = 1;
+  EXPECT_EQ(probabilities, expected);
+  EXPECT_THROW(runtime.MatrixOperation(cycle, {wires[0], wires[1]}),
+               std::runtime_error);
+  runtime.ReleaseQubits(wires);
+  auto replacement = runtime.AllocateQubits(3);
+  EXPECT_NO_THROW(runtime.SetBasisState(state, replacement));
+  runtime.ReleaseQubits(replacement);
 }
 
 TEST(CatalystQDMI, FactoryRetainsContextAndRejectsInvalidLifetimes) {

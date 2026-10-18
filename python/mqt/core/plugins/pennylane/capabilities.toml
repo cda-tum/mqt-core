@@ -41,6 +41,10 @@ CRX = { properties = ["invertible", "controllable"] }
 CRY = { properties = ["invertible", "controllable"] }
 CRZ = { properties = ["invertible", "controllable"] }
 
+[qjit.operators.gates]
+# Eager execution retains PennyLane's decomposition of larger matrices.
+QubitUnitary = { properties = ["invertible", "controllable"] }
+
 [operators.observables]
 Identity = {}
 PauliZ = {}

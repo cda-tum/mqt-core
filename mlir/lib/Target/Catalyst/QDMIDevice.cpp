@@ -12,11 +12,14 @@
 
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Compiler/QDMIAdapter.h"
+#include "mqt/Dialect/MQT/Utils/DenseUnitary.h"
 #include "mqt/Dialect/QC/Builder/QCProgramBuilder.h"
 #include "mqt/Dialect/QC/Translation/StandardGate.h"
 #include "qdmi/common/Common.hpp"
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
@@ -346,6 +349,7 @@ std::vector<QubitIdType> QDMIDevice::AllocateQubits(size_t count) {
   ids_.resize(count);
   std::iota(ids_.begin(), ids_.end(), nextQubit_);
   nextQubit_ += static_cast<QubitIdType>(count);
+  initialState_ = true;
   return ids_;
 }
 
@@ -408,28 +412,38 @@ void QDMIDevice::NamedOperation(
   operands.insert(operands.end(), wires.begin(), wires.end());
   const auto indices = wireIndices(operands);
   if (gate->gate == Gate::Id) {
+    initialState_ = false;
     return;
   }
   auto& builder = *builder_;
-  llvm::SmallVector<mlir::Value> controlQubits;
-  llvm::SmallVector<mlir::Value> targets;
   llvm::SmallVector<mlir::Value> angles;
-  for (size_t i = 0; i < indices.size(); ++i) {
-    (i < controls.size() + gate->controls ? controlQubits : targets)
-        .push_back(qubits_[indices[i]]);
-  }
-  if (gate->gate == Gate::GPhase) {
-    targets.clear();
-  }
   for (const double angle : parameters) {
     angles.push_back(
         builder.floatConstant(gate->gate == Gate::GPhase ? -angle : angle));
   }
-  const auto primitive = [&](mlir::ValueRange values) {
-    require(mlir::succeeded(mlir::qc::emitStandardGate(
-                builder, builder.getLoc(), gate->gate, angles, values)),
-            "Cannot emit QDMI gate " + name + '.');
-  };
+  auto operationIndices = llvm::ArrayRef(indices);
+  if (gate->gate == Gate::GPhase) {
+    operationIndices = operationIndices.take_front(controls.size());
+  }
+  emitOperation(
+      operationIndices, controls.size() + gate->controls, controlValues,
+      inverse, [&](mlir::ValueRange values) {
+        require(mlir::succeeded(mlir::qc::emitStandardGate(
+                    builder, builder.getLoc(), gate->gate, angles, values)),
+                "Cannot emit QDMI gate " + name + '.');
+      });
+}
+
+void QDMIDevice::emitOperation(
+    llvm::ArrayRef<size_t> indices, size_t numControls,
+    const std::vector<bool>& controlValues, bool inverse,
+    llvm::function_ref<void(mlir::ValueRange)> primitive) {
+  auto& builder = *builder_;
+  llvm::SmallVector<mlir::Value> controlQubits;
+  llvm::SmallVector<mlir::Value> targets;
+  for (size_t i = 0; i < indices.size(); ++i) {
+    (i < numControls ? controlQubits : targets).push_back(qubits_[indices[i]]);
+  }
   const auto emit = [&](mlir::ValueRange values) {
     if (inverse) {
       builder.inv(values, primitive);
@@ -437,7 +451,7 @@ void QDMIDevice::NamedOperation(
       primitive(values);
     }
   };
-  for (size_t i = 0; i < controls.size(); ++i) {
+  for (size_t i = 0; i < controlValues.size(); ++i) {
     if (!controlValues[i]) {
       builder.x(controlQubits[i]);
     }
@@ -447,11 +461,74 @@ void QDMIDevice::NamedOperation(
   } else {
     builder.ctrl(controlQubits, targets, emit);
   }
-  for (size_t i = 0; i < controls.size(); ++i) {
+  for (size_t i = 0; i < controlValues.size(); ++i) {
     if (!controlValues[i]) {
       builder.x(controlQubits[i]);
     }
   }
+  initialState_ = false;
+}
+
+void QDMIDevice::MatrixOperation(
+    const std::vector<std::complex<double>>& matrix,
+    const std::vector<QubitIdType>& wires, bool inverse,
+    const std::vector<QubitIdType>& controls,
+    const std::vector<bool>& controlValues) {
+  require(builder_ != nullptr,
+          "QDMI gates require an active register before terminal measurement.");
+  require(
+      !wires.empty() && wires.size() <= 2 &&
+          controls.size() <= 2 - wires.size(),
+      "QDMI dense unitaries support at most two wires, including controls.");
+  require(controls.size() == controlValues.size(),
+          "Control wires and values have different lengths.");
+  const auto size = dimension(wires.size());
+  require(matrix.size() == size * size,
+          "QDMI unitary matrix dimensions do not match its wires.");
+  auto operands = controls;
+  operands.insert(operands.end(), wires.begin(), wires.end());
+  const auto indices = wireIndices(operands);
+  llvm::SmallVector<mlir::Value> targets;
+  for (const auto index : llvm::ArrayRef(indices).drop_front(controls.size())) {
+    targets.push_back(qubits_[index]);
+  }
+  auto type = mlir::RankedTensorType::get(
+      {static_cast<int64_t>(size), static_cast<int64_t>(size)},
+      mlir::ComplexType::get(builder_->getF64Type()));
+  auto values = mlir::DenseElementsAttr::get(
+      type, llvm::ArrayRef<std::complex<double>>(matrix));
+  std::string diagnostics;
+  mlir::ScopedDiagnosticHandler handler(
+      compiler_.get(), [&](mlir::Diagnostic& diagnostic) {
+        llvm::raw_string_ostream stream(diagnostics);
+        diagnostic.print(stream);
+        return mlir::success();
+      });
+  const auto valid = mlir::succeeded(mlir::mqt::verifyDenseUnitaryMatrix(
+      recording_->getOperation(), values, targets));
+  require(valid, "Invalid QDMI unitary matrix: " + diagnostics);
+  emitOperation(
+      indices, controls.size(), controlValues, inverse,
+      [&](mlir::ValueRange qubits) { builder_->unitary(qubits, values); });
+}
+
+void QDMIDevice::SetBasisState(DataView<int8_t, 1>& state,
+                               std::vector<QubitIdType>& wires) {
+  require(builder_ != nullptr && initialState_,
+          "QDMI basis state preparation must precede all other operations.");
+  require(state.size() == wires.size() && !wires.empty(),
+          "QDMI basis state length must match its wires.");
+  const auto indices = wireIndices(wires);
+  for (const auto bit : state) {
+    require(bit == 0 || bit == 1,
+            "QDMI basis state entries must be zero or one.");
+  }
+  for (size_t i = 0; i < indices.size(); ++i) {
+    if (state(i) == 1) {
+      builder_->x(qubits_[indices[i]]);
+    }
+  }
+  initialState_ = false;
 }
 
 Result QDMIDevice::Measure(QubitIdType, std::optional<int32_t>) {
