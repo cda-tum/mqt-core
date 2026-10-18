@@ -35,9 +35,11 @@ adopt = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(adopt)
 
 
-def test_vendored_snapshot_matches_provenance() -> None:
+@pytest.mark.parametrize(
+    "snapshot", sorted((SCRIPT.parents[1] / "vendor" / "qiskit-c-api").glob("[0-9]*")), ids=lambda path: path.name
+)
+def test_vendored_snapshot_matches_provenance(snapshot: Path) -> None:
     """Keep mutation-disabled vendored headers byte-identical to provenance."""
-    snapshot = SCRIPT.parents[1] / "vendor" / "qiskit-c-api" / "2.5.0"
     provenance = json.loads((snapshot / "PROVENANCE.json").read_text())
 
     actual_files = {"LICENSE"} | {
@@ -48,24 +50,27 @@ def test_vendored_snapshot_matches_provenance() -> None:
         assert hashlib.sha256((snapshot / relative).read_bytes()).hexdigest() == expected
 
 
-def test_write_vendor_tree_reuses_only_exact_generated_content(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("prefix", ["qiskit/include/", "qiskit/capi/include/"])
+def test_write_vendor_tree_reuses_only_exact_generated_content(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, prefix: str
+) -> None:
     """Reuse matching recorded content and reject changes to those files."""
     root = tmp_path / "repository"
     vendor_root = root / "vendor" / "qiskit-c-api"
     vendor_root.mkdir(parents=True)
-    implementation = root / "Qiskit2_5.cpp"
+    implementation = root / "QiskitAdapter.h"
     implementation.write_text("QkThing qk_thing\n")
     monkeypatch.setattr(adopt, "VENDOR_ROOT", vendor_root)
     monkeypatch.setattr(adopt, "TRANSLATION_IMPLEMENTATION", implementation)
 
     wheel = tmp_path / "qiskit.whl"
     headers = {
-        "qiskit/include/qiskit.h": "",
-        "qiskit/include/qiskit/version.h": '#define QISKIT_VERSION "2.6.0"\n',
-        "qiskit/include/qiskit/funcs.h": "QkThing qk_thing(void);\n",
-        "qiskit/include/qiskit/funcs_py.h": "",
-        "qiskit/include/qiskit/funcs_py_generated.h": ("#define qk_thing (*(QkThing(*)())(_Qk_API_Test[1]))\n"),
-        "qiskit/include/qiskit/types.h": "typedef int QkThing;\n",
+        f"{prefix}qiskit.h": "",
+        f"{prefix}qiskit/version.h": '#define QISKIT_VERSION "2.6.0"\n',
+        f"{prefix}qiskit/funcs.h": "QkThing qk_thing(void);\n",
+        f"{prefix}qiskit/funcs_py.h": "",
+        f"{prefix}qiskit/funcs_py_generated.h": ("#define qk_thing (*(QkThing(*)())(_Qk_API_Test[1]))\n"),
+        f"{prefix}qiskit/types.h": "typedef int QkThing;\n",
         "qiskit-2.6.0.dist-info/licenses/LICENSE.txt": "Apache-2.0\n",
     }
     with zipfile.ZipFile(wheel, "w") as archive:
@@ -77,16 +82,7 @@ def test_write_vendor_tree_reuses_only_exact_generated_content(tmp_path: Path, m
         "url": "https://example.invalid/qiskit.whl",
     }
 
-    previous = vendor_root / "2.5.0"
-    for name, contents in headers.items():
-        if name.startswith("qiskit/include/"):
-            destination = previous / name.removeprefix("qiskit/")
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_text(contents)
-    (previous / "API_SURFACE.json").write_text('{"functions": {"stale": {}}}')
-
     target = adopt.write_vendor_tree("2.6.0", wheel, artifact)
-    assert "`stale`" not in (target / "API_DIFF.md").read_text()
     expected = adopt.directory_contents(target)
     equivalent_artifact = {
         "filename": "qiskit-2.6.0-cp314-manylinux.whl",
@@ -106,6 +102,13 @@ def test_write_vendor_tree_reuses_only_exact_generated_content(tmp_path: Path, m
     (target / "LICENSE").write_bytes(b"Apache-2.0\n")
     (target / "API_SURFACE.json").write_text("{}\n")
     assert adopt.write_vendor_tree("2.6.0", wheel, equivalent_artifact) == target
+
+    headers[f"{prefix}qiskit/version.h"] = '#define QISKIT_VERSION "2.5.0"\n'
+    with zipfile.ZipFile(wheel, "w") as archive:
+        for name, contents in headers.items():
+            archive.writestr(name, contents)
+    with pytest.raises(RuntimeError, match="do not embed the requested Qiskit version"):
+        adopt.write_vendor_tree("2.6.0", wheel, artifact)
 
 
 def test_function_declarations_ignore_preprocessor_directives() -> None:
@@ -140,39 +143,6 @@ static int qk_import(
     )
 
     assert declarations["qk_import"] == "static int qk_import(void);"
-
-
-def test_write_vendor_tree_rejects_mismatched_embedded_version(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reject headers that do not embed the requested Qiskit release."""
-    root = tmp_path / "repository"
-    vendor_root = root / "vendor" / "qiskit-c-api"
-    vendor_root.mkdir(parents=True)
-    implementation = root / "Qiskit2_5.cpp"
-    implementation.write_text("QkThing qk_thing\n")
-    monkeypatch.setattr(adopt, "VENDOR_ROOT", vendor_root)
-    monkeypatch.setattr(adopt, "TRANSLATION_IMPLEMENTATION", implementation)
-
-    wheel = tmp_path / "qiskit.whl"
-    headers = {
-        "qiskit/include/qiskit.h": "",
-        "qiskit/include/qiskit/version.h": '#define QISKIT_VERSION "2.5.0"\n',
-        "qiskit/include/qiskit/funcs.h": "QkThing qk_thing(void);\n",
-        "qiskit/include/qiskit/funcs_py.h": "",
-        "qiskit/include/qiskit/funcs_py_generated.h": "",
-        "qiskit/include/qiskit/types.h": "typedef int QkThing;\n",
-        "qiskit-2.5.0.dist-info/licenses/LICENSE.txt": "Apache-2.0\n",
-    }
-    with zipfile.ZipFile(wheel, "w") as archive:
-        for name, contents in headers.items():
-            archive.writestr(name, contents)
-    artifact = {
-        "filename": wheel.name,
-        "digests": {"sha256": "wheel-hash"},
-        "url": "https://example.invalid/qiskit.whl",
-    }
-
-    with pytest.raises(RuntimeError, match="do not embed the requested Qiskit version"):
-        adopt.write_vendor_tree("2.6.0", wheel, artifact)
 
 
 def test_download_wheel_rejects_http_before_network_access(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -210,10 +180,10 @@ def test_translation_registration_is_idempotent_and_detects_conflicts(
 ) -> None:
     """Resume before or after registration without duplicating generated state."""
     root = tmp_path / "repository"
-    translation_dir = root / "bindings" / "mlir" / "qiskit"
+    translation_dir = root / "bindings" / "mlir" / "Target" / "Qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
-    template.write_text("@QISKIT_FACTORY@ @QISKIT_MAJOR@ @QISKIT_MINOR@ @QISKIT_EXACT_API@ @QISKIT_LABEL@\n")
+    template.write_text("@QISKIT_FACTORY@\n")
     registry = translation_dir / "SupportedVersions.inc"
     registry.write_text("// translations\n")
     monkeypatch.setattr(adopt, "ROOT", root)
@@ -235,15 +205,15 @@ def test_translation_registration_is_idempotent_and_detects_conflicts(
 
 def test_translation_registration_preserves_patch_minimum(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep later patch adoptions from widening support to earlier releases."""
-    translation_dir = tmp_path / "bindings" / "mlir" / "qiskit"
+    translation_dir = tmp_path / "bindings" / "mlir" / "Target" / "Qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
-    template.write_text("@QISKIT_FACTORY@ @QISKIT_MAJOR@ @QISKIT_MINOR@\n")
+    template.write_text("@QISKIT_FACTORY@\n")
     monkeypatch.setattr(adopt, "TRANSLATION_TEMPLATE", template)
 
     _, _, registration = adopt.translation_artifacts(Version("2.6.2"))
 
-    assert registration == 'MQT_QISKIT_VERSION(2, 6, 2_6, 2, 2.6.2, ">=2.6.2,<2.7.0")'
+    assert registration == 'MQT_QISKIT_VERSION(6, 2, 2.6.2, ">=2.6.2,<2.7.0")'
 
 
 def test_build_preserves_unrelated_cmake_arguments(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -280,10 +250,10 @@ def test_build_preserves_unrelated_cmake_arguments(tmp_path: Path, monkeypatch: 
 def test_restartable_worktree_rejects_unrelated_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Permit exact interrupted-run artifacts but retain clean-worktree isolation."""
     root = tmp_path / "repository"
-    translation_dir = root / "bindings" / "mlir" / "qiskit"
+    translation_dir = root / "bindings" / "mlir" / "Target" / "Qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
-    template.write_text("@QISKIT_FACTORY@ @QISKIT_MAJOR@ @QISKIT_MINOR@\n")
+    template.write_text("@QISKIT_FACTORY@\n")
     registry = translation_dir / "SupportedVersions.inc"
     registry.write_text("// translations\n")
     vendor_root = root / "vendor" / "qiskit-c-api"
@@ -351,7 +321,7 @@ def test_registered_minor_test_selection(monkeypatch: pytest.MonkeyPatch) -> Non
         path: Path, encoding: str | None = None, errors: str | None = None, newline: str | None = None
     ) -> str:
         if path.name == "SupportedVersions.inc":
-            return 'MQT_QISKIT_VERSION(2, 6, 2_6, 0, 2.6.0, ">=2.6.0,<2.7.0")\n'
+            return 'MQT_QISKIT_VERSION(6, 0, 2.6.0, ">=2.6.0,<2.7.0")\n'
         return original_read(path, encoding=encoding, errors=errors, newline=newline)
 
     monkeypatch.setattr(Path, "read_text", read_text)

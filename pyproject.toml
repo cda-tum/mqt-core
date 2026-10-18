@@ -274,7 +274,7 @@ environment = { DEPLOY = "ON" }
 test-command = "pytest test/python"
 test-groups = [ "test" ]
 test-sources = [
-  "bindings/mlir/qiskit/SupportedVersions.inc",
+  "bindings/mlir/Target/Qiskit/SupportedVersions.inc",
   "examples/slurm",
   "json",
   "scripts/check_docs_links.py",
@@ -282,7 +282,7 @@ test-sources = [
   "test/circuits",
   "test/python",
   "test/slurm/run_integration.py",
-  "vendor/qiskit-c-api/2.5.0",
+  "vendor/qiskit-c-api",
 ]
 
 [tool.cibuildwheel.windows]

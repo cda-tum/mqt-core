@@ -2071,7 +2071,7 @@ void translateCircuit(mlir::qc::QCProgramBuilder& builder,
       const auto dimension = static_cast<int64_t>(uint64_t{1} << arity.targets);
       const auto type = mlir::RankedTensorType::get(
           {dimension, dimension}, mlir::ComplexType::get(builder.getF64Type()));
-      const auto values = circuit.unitary(index);
+      const auto values = circuit.unitary(index, instruction);
       const auto matrix = mlir::DenseElementsAttr::get(
           type, llvm::ArrayRef<std::complex<double>>(values));
       emitModifiedOperation(builder, instruction, operands, arity,
