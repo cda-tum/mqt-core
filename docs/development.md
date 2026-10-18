@@ -311,9 +311,10 @@ LLVM/MLIR follows the {ref}`source-build SDK setup <setting-up-mlir>`. The
 Doxygen configuration is validated with Ubuntu 24.04's version 1.9.8 and version
 1.17. Use `uvx nox --non-interactive -s docs` to build generated references and
 execute the MyST notebooks. This command fails on Sphinx and Doxygen diagnostics
-and checks local links in the generated HTML, including the native C++
-reference. Use `uvx nox --non-interactive -s docs -- -b linkcheck` to check
-external links separately.
+and checks local links, scripts, and stylesheets in the generated HTML,
+including the native C++ reference. Use
+`uvx nox --non-interactive -s docs -- -b linkcheck` to check external links
+separately.
 
 Notebook execution is forced on each build. The docs session isolates the QDMI
 registry from system, user, project, and inline environment definitions while

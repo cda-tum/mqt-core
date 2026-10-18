@@ -21,10 +21,15 @@ def test_generated_navigation(tmp_path: Path) -> None:
         '<a href="nested/page.html#legacy">legacy</a>'
         '<a href="https://example.org/missing">external</a>'
         '<a href="missing.html">missing file</a>'
-        '<a href="nested/page.html#absent">missing anchor</a>',
+        '<a href="nested/page.html#absent">missing anchor</a>'
+        '<script src="missing.js"></script>'
+        '<link rel="stylesheet" href="missing.css">'
+        '<script src="https://example.org/external.js"></script>'
+        '<link rel="stylesheet" href="style.css">',
         encoding="utf-8",
     )
     (tmp_path / "nested").mkdir()
+    (tmp_path / "style.css").touch()
     (tmp_path / "nested" / "page.html").write_text(
         '<h1 id="hello world">Hello</h1><a name="legacy"></a><a href="../index.html">home</a>',
         encoding="utf-8",
@@ -32,6 +37,8 @@ def test_generated_navigation(tmp_path: Path) -> None:
     assert check_links(tmp_path) == [
         "index.html: missing file: missing.html",
         "index.html: missing anchor: nested/page.html#absent",
+        "index.html: missing file: missing.js",
+        "index.html: missing file: missing.css",
     ]
 
 

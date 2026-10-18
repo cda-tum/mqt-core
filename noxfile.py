@@ -306,7 +306,7 @@ def docs(session: nox.Session) -> None:
     parser.add_argument("-b", dest="builder", default="html", help="Build target (default: html)")
     args, posargs = parser.parse_known_args(session.posargs)
 
-    # MyST loads this generated file so the README owns the executable example.
+    # MyST executes the README's sole Python block as the getting-started example.
     _, example = Path("README.md").read_text(encoding="utf-8").split("```python\n")
     example_file = Path("docs/_build/readme_example.py")
     example_file.parent.mkdir(parents=True, exist_ok=True)
@@ -353,9 +353,11 @@ def docs(session: nox.Session) -> None:
         "sphinx-autobuild" if serve else "sphinx-build",
         "-n",  # nitpicky mode
         "-T",  # full tracebacks
-        "-E",  # Doxygen inventories are regenerated for every docs build
+        "-E",  # refresh references to the regenerated Doxygen inventory
         "-W",  # fail the session if documentation diagnostics are emitted
         f"-b={args.builder}",
+        "-d",
+        f"docs/_build/doctrees/{args.builder}",  # keep build caches out of published artifacts
         "docs",
         f"docs/_build/{args.builder}",
         *posargs,
