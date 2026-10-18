@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <optional>
+#include <utility>
 
 namespace mlir::mqt {
 
@@ -51,46 +52,71 @@ std::optional<double> valueToDouble(Value value) {
 std::optional<Attribute>
 valueToConstantAttr(Value value,
                     DenseMap<Value, std::optional<Attribute>>& cache) {
-  if (const auto it = cache.find(value); it != cache.end()) {
-    return it->second;
-  }
-
-  Attribute attr;
-  if (matchPattern(value, m_Constant(&attr))) {
-    return cache[value] = attr;
-  }
-
-  Operation* operation = value.getDefiningOp();
-  if (operation == nullptr || operation->getNumRegions() != 0 ||
-      !isPure(operation)) {
-    return cache[value] = std::nullopt;
-  }
-
-  SmallVector<Attribute> operands;
-  operands.reserve(operation->getNumOperands());
-  for (Value operand : operation->getOperands()) {
-    const auto folded = valueToConstantAttr(operand, cache);
-    if (!folded) {
-      return cache[value] = std::nullopt;
+  SmallVector<std::pair<Value, unsigned>> worklist{{value, 0}};
+  while (!worklist.empty()) {
+    auto [current, nextOperand] = worklist.back();
+    Operation* operation = current.getDefiningOp();
+    if (nextOperand == 0) {
+      auto [entry, inserted] = cache.try_emplace(current, std::nullopt);
+      if (!inserted) {
+        worklist.pop_back();
+        continue;
+      }
+      Attribute attr;
+      if (matchPattern(current, m_Constant(&attr))) {
+        entry->second = attr;
+        worklist.pop_back();
+        continue;
+      }
+      if (operation == nullptr || operation->getNumRegions() != 0 ||
+          !isPure(operation)) {
+        worklist.pop_back();
+        continue;
+      }
+      // Zero marks an unvisited value; operands use one-based indices.
+      worklist.back().second = nextOperand = 1;
     }
-    operands.push_back(*folded);
-  }
+    if (nextOperand <= operation->getNumOperands()) {
+      Value operand = operation->getOperand(nextOperand - 1);
+      const auto found = cache.find(operand);
+      if (found == cache.end()) {
+        worklist.emplace_back(operand, 0);
+      } else if (!found->second) {
+        // One dynamic operand is enough to rule out a constant expression.
+        worklist.pop_back();
+      } else {
+        ++worklist.back().second;
+      }
+      continue;
+    }
 
-  SmallVector<OpFoldResult, 1> results;
-  if (failed(operation->fold(operands, results)) || results.size() != 1) {
-    return cache[value] = std::nullopt;
+    SmallVector<Attribute> operands;
+    for (Value operand : operation->getOperands()) {
+      operands.push_back(*cache.lookup(operand));
+    }
+    SmallVector<OpFoldResult, 1> results;
+    if (succeeded(operation->fold(operands, results)) && results.size() == 1) {
+      if (auto attr = dyn_cast_if_present<Attribute>(results.front())) {
+        cache[current] = attr;
+      } else if (auto replacement =
+                     dyn_cast_if_present<Value>(results.front())) {
+        // Identity folds can return an existing value outside the operands.
+        if (!cache.contains(replacement)) {
+          worklist.emplace_back(replacement, 0);
+          continue;
+        }
+        cache[current] = cache.lookup(replacement);
+      }
+    }
+    worklist.pop_back();
   }
-  std::optional<Attribute> folded;
-  if (auto resultAttr = dyn_cast_if_present<Attribute>(results.front())) {
-    folded = resultAttr;
-  } else if (auto resultValue = dyn_cast_if_present<Value>(results.front())) {
-    /* Identity-style folds can return an existing SSA value. */
-    folded = valueToConstantAttr(resultValue, cache);
-  }
-  return cache[value] = folded;
+  return cache.lookup(value);
 }
 
 std::optional<Attribute> valueToConstantAttr(Value value) {
+  if (isa<BlockArgument>(value)) {
+    return std::nullopt;
+  }
   Attribute literal;
   if (matchPattern(value, m_Constant(&literal))) {
     return literal;

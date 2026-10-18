@@ -19,6 +19,7 @@ add_mlir_library(
   MLIRCBitDialect
   MLIRFuncInlinerExtension
   MLIRIR
+  MLIRMathDialect
   MLIRLLVMIRTransforms
   MLIRMQTUtils
   MLIRPass
