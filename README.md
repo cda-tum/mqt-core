@@ -56,7 +56,7 @@ Then choose a starting point:
 | **Use decision diagrams**            | Represent states and operations in C++ or Python: [DD quickstart](https://mqt.readthedocs.io/projects/core/en/stable/dd_package.html#quickstart).                                                                                                                             |
 | **Generate and evaluate benchmarks** | [Configure quantum programs](https://mqt.readthedocs.io/projects/core/en/stable/benchmarks.html#configure-a-typed-instance) and compare results with references.                                                                                                              |
 | **Exchange quantum programs**        | [Qiskit to QIR](https://mqt.readthedocs.io/projects/core/en/stable/qir/index.html#from-a-qiskit-circuit-to-qir), [OpenQASM](https://mqt.readthedocs.io/projects/core/en/stable/mlir/OpenQASM.html), and [jeff](https://mqt.readthedocs.io/projects/core/en/stable/jeff.html). |
-| **Embed or extend MQT Core**         | [Use the C++ libraries](https://mqt.readthedocs.io/projects/core/en/stable/cpp_api.html#use-the-dd-library) or [extend the MLIR compiler](https://mqt.readthedocs.io/projects/core/en/stable/development.html#mlir).                                                          |
+| **Embed or extend MQT Core**         | [Use the C++ libraries](https://mqt.readthedocs.io/projects/core/en/stable/cpp_api.html#use-the-c-development-libraries) or [extend the MLIR compiler](https://mqt.readthedocs.io/projects/core/en/stable/development.html#mlir).                                             |
 
 ## Getting Started
 
