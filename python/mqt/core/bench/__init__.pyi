@@ -9,6 +9,7 @@
 """Typed benchmark instances and references."""
 
 from mqt.core.bench import bv as bv
+from mqt.core.bench import fan_out as fan_out
 from mqt.core.bench import ghz as ghz
 from mqt.core.bench import grover as grover
 from mqt.core.bench import grover_weak_measurement as grover_weak_measurement

@@ -1,0 +1,138 @@
+/*
+ * Copyright (c) 2023 - 2026 Chair for Design Automation, TUM
+ * Copyright (c) 2025 - 2026 Munich Quantum Software Company GmbH
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
+#include "bench/Evaluation.hpp"
+#include "bench/FanOut.hpp"
+#include "bench/JSON.hpp"
+
+#include "JSONTestUtils.hpp"
+
+#include "gtest/gtest.h"
+
+#include <limits>
+#include <stdexcept>
+#include <string>
+
+namespace mqt::bench {
+
+using test::expectInvalidJSON;
+
+TEST(FanOut, StoresTheControlCountAndOutput) {
+  const FanOut benchmark{{.controls = 7}};
+  EXPECT_EQ(benchmark.options().controls, 7);
+  EXPECT_EQ(benchmark.output(), (Output{"result", 8}));
+}
+
+TEST(FanOut, ValidatesTheConfiguredInstance) {
+  EXPECT_THROW(static_cast<void>(FanOut{{.controls = 0}}),
+               std::invalid_argument);
+  EXPECT_NO_THROW(static_cast<void>(FanOut{{.controls = 1}}));
+  EXPECT_NO_THROW(
+      static_cast<void>(FanOut{{.controls = FanOutOptions::MAX_CONTROLS}}));
+  EXPECT_THROW(
+      static_cast<void>(FanOut{{.controls = FanOutOptions::MAX_CONTROLS + 1}}),
+      std::invalid_argument);
+}
+
+TEST(FanOut, GivesTheHammingWeightRotationDistribution) {
+  const FanOut benchmark{{.controls = 4}};
+  EXPECT_DOUBLE_EQ(benchmark.probability("00000"), 1. / 16.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("00001"), 0.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("00010"), 1. / 32.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("00011"), 1. / 32.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("00110"), 0.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("00111"), 1. / 16.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("01110"), 1. / 32.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("01111"), 1. / 32.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("11110"), 1. / 16.);
+  EXPECT_DOUBLE_EQ(benchmark.probability("11111"), 0.);
+  EXPECT_THROW(static_cast<void>(benchmark.probability("0000")),
+               std::invalid_argument);
+  EXPECT_THROW(static_cast<void>(benchmark.probability("0000x")),
+               std::invalid_argument);
+}
+
+TEST(FanOut, EvaluatesTheReferenceWithoutASuccessOutcome) {
+  const FanOut benchmark{{.controls = 2}};
+  const auto evaluation = benchmark.evaluate({
+      {"000", 2},
+      {"010", 1},
+      {"011", 1},
+      {"100", 1},
+      {"101", 1},
+      {"111", 2},
+  });
+  EXPECT_DOUBLE_EQ(evaluation.totalVariationDistance, 0.);
+  EXPECT_DOUBLE_EQ(evaluation.squaredHellingerFidelity, 1.);
+  EXPECT_FALSE(evaluation.successProbability);
+}
+
+TEST(FanOut, KeepsTheSmallestNonzeroProbabilityRepresentable) {
+  const FanOut benchmark{{.controls = FanOutOptions::MAX_CONTROLS}};
+  auto outcome = std::string(benchmark.output().width, '0');
+  EXPECT_EQ(benchmark.probability(outcome),
+            2. * std::numeric_limits<double>::denorm_min());
+  outcome.front() = '1';
+  EXPECT_EQ(benchmark.probability(outcome),
+            std::numeric_limits<double>::denorm_min());
+  outcome.back() = '1';
+  EXPECT_EQ(benchmark.probability(outcome),
+            std::numeric_limits<double>::denorm_min());
+}
+
+TEST(FanOut, RoundTripsJSON) {
+  const auto parsed = fanOutFromInstanceSpecificationJSON(
+      R"({"schema_version":1,"benchmark":"fan-out","parameters":{"controls":7}})");
+  EXPECT_EQ(parsed.options().controls, 7);
+  EXPECT_EQ(
+      toInstanceSpecificationJSON(parsed),
+      R"({"benchmark":"fan-out","parameters":{"controls":7},"schema_version":1})");
+
+  const auto manifest = toManifestJSON(parsed);
+  EXPECT_EQ(toManifestJSON(fanOutFromManifestJSON(manifest)), manifest);
+  EXPECT_EQ(benchmarkIdFromManifestJSON(manifest), "fan-out");
+  EXPECT_NE(manifest.find(R"("model":"fan_out")"), std::string::npos);
+  EXPECT_EQ(caseId(parsed), caseId(FanOut{{.controls = 7}}));
+  EXPECT_NE(caseId(parsed), caseId(FanOut{{.controls = 6}}));
+}
+
+TEST(FanOut, DescribesJSONSchema) {
+  const auto schema = describeBenchmarkJSON("fan-out");
+  EXPECT_NE(schema.find(R"("maximum":1073)"), std::string::npos);
+  EXPECT_NE(schema.find(R"("minimum":1)"), std::string::npos);
+  EXPECT_NE(schema.find(R"("required":["controls"])"), std::string::npos);
+}
+
+TEST(FanOut, RejectsInvalidJSONParameters) {
+  expectInvalidJSON(
+      [] {
+        static_cast<void>(fanOutFromInstanceSpecificationJSON(
+            R"({"schema_version":1,"benchmark":"fan-out","parameters":{"controls":0}})"));
+      },
+      "between 1 and 1073");
+  expectInvalidJSON(
+      [] {
+        static_cast<void>(fanOutFromInstanceSpecificationJSON(
+            R"({"schema_version":1,"benchmark":"fan-out","parameters":{"controls":7,"angle":1}})"));
+      },
+      "unknown key 'angle'");
+}
+
+TEST(FanOut, EvaluatesCountsFromJSON) {
+  const auto evaluation =
+      evaluateJSON(toManifestJSON(FanOut{{.controls = 1}}),
+                   R"({"schema_version":1,"counts":{"00":2,"10":1,"11":1}})");
+  EXPECT_NE(evaluation.find(R"("squared_hellinger_fidelity":1.0)"),
+            std::string::npos);
+  EXPECT_NE(evaluation.find(R"("success_probability":null)"),
+            std::string::npos);
+}
+
+} // namespace mqt::bench

@@ -19,6 +19,7 @@ class QCProgramBuilder;
 
 namespace mqt::bench {
 class BV;
+class FanOut;
 class GHZ;
 class Grover;
 class MagicStateDistillation;
@@ -40,6 +41,10 @@ using namespace mlir;
 
 /// Emit one configured Bernstein--Vazirani benchmark.
 SmallVector<Value> bv(qc::QCProgramBuilder& builder, const BV& benchmark);
+
+/// Emit one configured quantum fan-out benchmark.
+SmallVector<Value> fanOut(qc::QCProgramBuilder& builder,
+                          const FanOut& benchmark);
 
 /// Emit one configured GHZ benchmark.
 SmallVector<Value> ghz(qc::QCProgramBuilder& builder, const GHZ& benchmark);

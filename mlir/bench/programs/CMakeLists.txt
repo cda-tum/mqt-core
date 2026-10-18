@@ -9,6 +9,7 @@
 add_library(
   MQTBenchmarkPrograms STATIC
   BV.cpp
+  FanOut.cpp
   GHZ.cpp
   Grover.cpp
   GroverUtils.cpp
