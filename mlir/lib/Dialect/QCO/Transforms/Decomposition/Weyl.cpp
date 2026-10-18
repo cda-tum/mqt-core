@@ -882,17 +882,18 @@ static const SqrtISwapPrefix& sqrtISwapPrefix(bool lowA, bool negativeC) {
                   static_cast<size_t>(negativeC)];
 }
 
-static uint8_t numSqrtISwapGates(const TwoQubitWeylDecomposition& kak) {
-  if (kak.a() <= WEYL_TOLERANCE) {
+static uint8_t numSqrtISwapGates(std::array<double, 3> coordinates) {
+  const auto [a, b, c] = coordinates;
+  if (a <= WEYL_TOLERANCE) {
     return 0;
   }
-  if (std::abs(kak.a() - EIGHTH_PI) <= WEYL_TOLERANCE &&
-      std::abs(kak.b() - EIGHTH_PI) <= WEYL_TOLERANCE &&
-      std::abs(kak.c()) <= WEYL_TOLERANCE) {
+  if (std::abs(a - EIGHTH_PI) <= WEYL_TOLERANCE &&
+      std::abs(b - EIGHTH_PI) <= WEYL_TOLERANCE &&
+      std::abs(c) <= WEYL_TOLERANCE) {
     return 1;
   }
   // The two-gate region is a >= b + |c|; all other classes need three gates.
-  return kak.a() - kak.b() - std::abs(kak.c()) >= -WEYL_TOLERANCE ? 2 : 3;
+  return a - b - std::abs(c) >= -WEYL_TOLERANCE ? 2 : 3;
 }
 
 static std::optional<TwoQubitNativeDecomposition>
@@ -903,7 +904,7 @@ decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
     return std::nullopt;
   }
   const auto& kak = *targetDecomposition;
-  const auto count = numSqrtISwapGates(kak);
+  const auto count = numSqrtISwapGates(kak.coordinates());
   if (count == 0) {
     TwoQubitNativeDecomposition result{
         .numBasisUses = 0,
@@ -943,12 +944,12 @@ decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
   return before;
 }
 
-static auto pauliRotations(const TwoQubitWeylDecomposition& kak) {
+static auto pauliRotations(std::array<double, 3> coordinates) {
   SmallVector<std::pair<double, PauliAxis>, 3> rotations;
   for (const auto& rotation : {
-           std::pair{kak.a(), PauliAxis::X},
-           std::pair{kak.b(), PauliAxis::Y},
-           std::pair{kak.c(), PauliAxis::Z},
+           std::pair{coordinates[0], PauliAxis::X},
+           std::pair{coordinates[1], PauliAxis::Y},
+           std::pair{coordinates[2], PauliAxis::Z},
        }) {
     if (std::abs(rotation.first) > WEYL_TOLERANCE) {
       rotations.push_back(rotation);
@@ -968,7 +969,7 @@ decomposePauliRotations(const Matrix4x4& target,
   }
   const auto identity = Matrix2x2::identity();
   const auto axes = pauliAxes(entangler.gate);
-  const auto rotations = pauliRotations(*kak);
+  const auto rotations = pauliRotations(kak->coordinates());
   TwoQubitNativeDecomposition result{
       .numBasisUses = static_cast<uint8_t>(rotations.size()),
   };
@@ -1020,13 +1021,18 @@ std::optional<uint8_t> countUnitary2QWeyl(const Matrix4x4& target,
   if (!kak) {
     return std::nullopt;
   }
+  return countUnitary2QWeyl(kak->coordinates(), entangler);
+}
+
+uint8_t countUnitary2QWeyl(std::array<double, 3> coordinates,
+                           CompilerTarget::Entangler entangler) {
   if (entangler.parameterized()) {
-    return static_cast<uint8_t>(pauliRotations(*kak).size());
+    return static_cast<uint8_t>(pauliRotations(coordinates).size());
   }
   if (entangler.gate == CompilerTarget::GateKind::SQRTISWAP) {
-    return numSqrtISwapGates(*kak);
+    return numSqrtISwapGates(coordinates);
   }
-  return cachedNativeBasisDecomposer(entangler.gate).numBasisGates(*kak);
+  return cachedNativeBasisDecomposer(entangler.gate).numBasisGates(coordinates);
 }
 
 SynthesizedUnitary2Q

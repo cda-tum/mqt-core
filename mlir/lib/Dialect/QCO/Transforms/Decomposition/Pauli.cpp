@@ -17,6 +17,7 @@
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
 #include "mqt/Dialect/QCO/Transforms/Decomposition/Euler.h"
 #include "mqt/Dialect/QCO/Transforms/Decomposition/Weyl.h"
+#include "mqt/Dialect/QCO/Transforms/NativeSynthesis/NativeCost.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
@@ -282,6 +283,124 @@ emitCliffordSandwich(RewriterBase& rewriter, Location loc, Value wire0,
   emitGPhaseIfNeeded(rewriter, loc,
                      phase + first.globalPhase + second.globalPhase);
   return {second.qubit0, second.qubit1};
+}
+
+/// Emit two commuting generators with two square-root iSWAPs.
+///
+/// The SO(4) construction uses atan ratios to keep the chamber boundaries
+/// finite: doi:10.1103/PhysRevLett.130.070601, supplemental Sec. I B 3.
+static SmallVector<Value, 2>
+emitSqrtISwapPair(RewriterBase& rewriter, Location loc, Value wire0,
+                  Value wire1, const std::array<Matrix2x2, 2>& frames,
+                  std::array<Value, 2> angles,
+                  const CompilerTarget::SynthesisBasis& basis) {
+  using Expression = mqt::FloatExpression;
+  const auto scalar = [&](double value) {
+    return Expression::constant(rewriter, loc, value);
+  };
+  const auto one = scalar(1.);
+  const auto half = scalar(0.5);
+  const auto pi = scalar(std::numbers::pi);
+  const std::array normalized{
+      Expression(rewriter, loc,
+                 normalizeRotationParameter(rewriter, loc, angles[0])),
+      Expression(rewriter, loc,
+                 normalizeRotationParameter(rewriter, loc, angles[1])),
+  };
+  const std::array reduced{normalized[0].tan().atan(),
+                           normalized[1].tan().atan()};
+  const std::array turns{normalized[0] - reduced[0],
+                         normalized[1] - reduced[1]};
+  const auto a = reduced[0].abs();
+  const auto b = reduced[1].abs();
+  const auto sum = a + b;
+  const auto difference = (a - b).abs();
+  const auto x = (sum + difference) * scalar(0.25);
+  const auto y = (sum - difference) * scalar(0.25);
+  const auto signedQuarterTurn = [&](Expression angle) {
+    const auto halfAngle = angle * half;
+    return halfAngle - (halfAngle - pi * half).tan().atan();
+  };
+  // The principal branch gives +/-pi/2, and +pi/2 at zero. These frames
+  // are unconstrained when their angle vanishes or the generators coincide.
+  const auto flipX = pi * half + signedQuarterTurn(reduced[1]);
+  const auto flipY = pi * half + signedQuarterTurn(reduced[0]);
+  const auto permutation = (pi * half - signedQuarterTurn(a - b)) * half;
+  // Abs absorbs endpoint roundoff after sorting into 0 <= y <= x <= pi/4.
+  const auto cos2x = (x + x).cos().abs();
+  const auto cos2y = (y + y).cos().abs();
+  const auto rootX = cos2x.pow(half);
+  const auto rootY = cos2y.pow(half);
+  // At the identity both axes vanish, so the unconstrained X frame is zero.
+  const auto identity = (signedQuarterTurn(x) + signedQuarterTurn(-x)) / pi;
+  const auto sinSum = (x + y).sin();
+  const auto split =
+      sinSum * ((x - y).sin() / (sinSum + identity)).abs().pow(half);
+  const auto sinY = y.sin();
+  const auto cosX = x.cos();
+  // Scale before squaring to preserve the small CNOT-boundary cosine.
+  const auto ratio = sinY / rootX;
+  const auto norm = rootX * (one + scalar(2.) * ratio * ratio).pow(half);
+  const auto beta =
+      scalar(-4.) * (scalar(std::numbers::sqrt2) * split / (one + norm)).atan();
+  const auto gamma =
+      scalar(2.) * (rootX * rootY / (norm + scalar(2.) * cosX * sinY)).atan();
+  const auto xi = (sinY * rootX / (cosX * rootY)).atan();
+  const auto phi =
+      scalar(-2.) *
+      (y.cos() * rootX /
+       (((x + y).cos() * (x - y).cos()).abs().pow(half) + x.sin() * rootY))
+          .atan();
+  const auto psi = scalar(2.) * (split / (sinSum + identity)).atan();
+  double globalPhase = 0.;
+  const auto factor = [&](Value& wire, const Matrix2x2& matrix) {
+    const auto result =
+        synthesizeUnitary1QEuler(rewriter, loc, wire, matrix, 0, true, basis);
+    wire = result->qubit;
+    globalPhase += result->globalPhase;
+  };
+  const auto rotate = [&](Value& wire, PauliAxis axis, Expression angle) {
+    wire = synthesizePauliRotation1Q(rewriter, loc, wire, axis,
+                                     angle.getValue(), basis);
+  };
+  const auto entangle = [&] {
+    auto native = XXPlusYYOp::create(
+        rewriter, loc, wire0, wire1,
+        mqt::constantFromScalar(rewriter, loc, -std::numbers::pi / 2.),
+        mqt::constantFromScalar(rewriter, loc, 0.));
+    wire0 = native.getResult(0);
+    wire1 = native.getResult(1);
+  };
+  factor(wire0, frames[0].adjoint());
+  factor(wire1, frames[1].adjoint());
+  rotate(wire0, PauliAxis::X, -flipX);
+  rotate(wire0, PauliAxis::Y, -flipY);
+  rotate(wire0, PauliAxis::Z, -permutation);
+  rotate(wire1, PauliAxis::Z, -permutation);
+  rotate(wire0, PauliAxis::Z, xi);
+  rotate(wire1, PauliAxis::Z, phi);
+  rotate(wire1, PauliAxis::X, psi);
+  entangle();
+  rotate(wire1, PauliAxis::Z, gamma);
+  rotate(wire1, PauliAxis::X, beta);
+  rotate(wire1, PauliAxis::Z, gamma);
+  entangle();
+  rotate(wire1, PauliAxis::X, psi);
+  rotate(wire1, PauliAxis::Z, phi);
+  rotate(wire0, PauliAxis::Z, xi);
+  rotate(wire0, PauliAxis::Z, permutation);
+  rotate(wire1, PauliAxis::Z, permutation);
+  rotate(wire0, PauliAxis::Y, flipY);
+  rotate(wire0, PauliAxis::X, flipX);
+  for (Value* wire : {&wire0, &wire1}) {
+    rotate(*wire, PauliAxis::X, turns[0]);
+    rotate(*wire, PauliAxis::Y, turns[1]);
+  }
+  factor(wire0, frames[0]);
+  factor(wire1, frames[1]);
+  emitGPhaseIfNeeded(rewriter, loc, ((turns[0] + turns[1]) * half).getValue());
+  emitGPhaseIfNeeded(rewriter, loc, globalPhase);
+  return {wire0, wire1};
 }
 
 static SmallVector<Value, 2>
@@ -620,9 +739,10 @@ static Matrix2x2 pauliPairFrame(PauliAxis first, PauliAxis second,
 
 LogicalResult
 fusePauliRotationRun(PatternRewriter& rewriter, Operation* head,
-                     const CompilerTarget::SynthesisBasis& basis, bool reverse,
+                     CompilerTarget::SynthesisBasis basis,
                      const CompilerTarget& target,
-                     std::optional<ArrayRef<CompilerTarget::SiteId>> sites) {
+                     std::optional<ArrayRef<CompilerTarget::SiteId>> sites,
+                     NativeCostAnalysis& analysis) {
   auto first = dyn_cast<UnitaryOpInterface>(head);
   if (!first || !first.isTwoQubit() || !basis.entangler) {
     return failure();
@@ -653,11 +773,10 @@ fusePauliRotationRun(PatternRewriter& rewriter, Operation* head,
     if (reversed && sites) {
       std::swap(operationSites[0], operationSites[1]);
     }
-    const auto cost =
-        (sites ? target.supports(current, operationSites)
-               : target.supports(current))
-            ? std::optional<size_t>{1}
-            : pauliRotationEntanglerCount(*sequence, *basis.entangler);
+    const auto cost = analysis.operationCost(
+        current, target,
+        sites ? std::optional<ArrayRef<CompilerTarget::SiteId>>{operationSites}
+              : std::nullopt);
     if (!cost) {
       break;
     }
@@ -698,16 +817,28 @@ fusePauliRotationRun(PatternRewriter& rewriter, Operation* head,
     return failure();
   }
   SmallVector<const PauliGroup*, 3> entangling;
-  size_t combinedCost = 0;
   for (auto& group : groups) {
     simplifyRotationAngles(group.angle);
     if (group.entangling() && !group.angle.empty()) {
       entangling.push_back(&group);
-      combinedCost +=
-          basis.entangler->parameterized() &&
-                  (basis.entangler->angles ==
+    }
+  }
+  size_t bestCost = separateCost;
+  bool reverse = false;
+  bool shared = false;
+  for (const auto entangler : target.synthesisEntanglers()) {
+    const auto orientation =
+        NativeCostAnalysis::entanglerOrientation(target, entangler, sites);
+    if (!orientation) {
+      continue;
+    }
+    size_t cost = 0;
+    for (const auto* group : entangling) {
+      cost +=
+          entangler.parameterized() &&
+                  (entangler.angles ==
                        CompilerTarget::AngleSupport::Unrestricted ||
-                   llvm::all_of(group.angle,
+                   llvm::all_of(group->angle,
                                 [](const auto& term) {
                                   return mqt::valueToConstantDouble(term.value)
                                       .has_value();
@@ -715,20 +846,54 @@ fusePauliRotationRun(PatternRewriter& rewriter, Operation* head,
               ? 1
               : 2;
     }
+    const bool candidateShared =
+        entangling.size() >= 2 && cost > entangling.size();
+    if (candidateShared) {
+      // shortcut: three runtime generators use four square-root iSWAPs;
+      // add symbolic KAK when a three-gate circuit is needed.
+      cost = entangler.gate == CompilerTarget::GateKind::SQRTISWAP
+                 ? 2 * (entangling.size() - 1)
+                 : entangling.size();
+    }
+    if (cost < bestCost) {
+      bestCost = cost;
+      basis.entangler = entangler;
+      reverse = *orientation;
+      shared = candidateShared;
+    }
   }
-  const bool shared =
-      entangling.size() >= 2 && combinedCost > entangling.size() &&
-      basis.entangler->gate != CompilerTarget::GateKind::SQRTISWAP;
-  if ((shared ? entangling.size() : combinedCost) >= separateCost) {
+  if (bestCost == separateCost) {
     return failure();
   }
+  const bool sqrtPair =
+      shared && basis.entangler->gate == CompilerTarget::GateKind::SQRTISWAP;
   for (auto* operation : operations) {
     hoistPauliAngle(rewriter, operation);
   }
   rewriter.setInsertionPoint(operations.back());
   auto loc = head->getLoc();
   auto outputs = llvm::to_vector<2>(first.getInputQubits());
-  if (shared && entangling.size() == 3) {
+  if (sqrtPair) {
+    const size_t index0 = reverse ? 1 : 0;
+    const size_t index1 = reverse ? 0 : 1;
+    const auto result = emitSqrtISwapPair(
+        rewriter, loc, outputs[index0], outputs[index1],
+        {
+            pauliPairFrame(entangling[0]->axes[index0],
+                           entangling[1]->axes[index0], PauliAxis::X,
+                           PauliAxis::Y),
+            pauliPairFrame(entangling[0]->axes[index1],
+                           entangling[1]->axes[index1], PauliAxis::X,
+                           PauliAxis::Y),
+        },
+        {
+            emitRotationAngleSum(rewriter, loc, entangling[0]->angle),
+            emitRotationAngleSum(rewriter, loc, entangling[1]->angle),
+        },
+        basis);
+    outputs[index0] = result[0];
+    outputs[index1] = result[1];
+  } else if (shared && entangling.size() == 3) {
     const size_t index0 = reverse ? 1 : 0;
     const size_t index1 = reverse ? 0 : 1;
     const std::array frames{
@@ -780,7 +945,10 @@ fusePauliRotationRun(PatternRewriter& rewriter, Operation* head,
     outputs[index1] = result[1];
   }
   for (const auto& group : groups) {
-    if (!group.angle.empty() && !(shared && group.entangling())) {
+    const bool fused =
+        shared && group.entangling() &&
+        (!sqrtPair || &group == entangling[0] || &group == entangling[1]);
+    if (!group.angle.empty() && !fused) {
       outputs = emitPauliSequence(
           rewriter, loc, outputs,
           {

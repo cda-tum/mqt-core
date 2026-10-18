@@ -32,6 +32,10 @@ class RewriterBase;
 class PatternRewriter;
 } // namespace mlir
 
+namespace mlir::qco {
+class NativeCostAnalysis;
+} // namespace mlir::qco
+
 namespace mlir::qco::decomposition {
 
 using mqt::PauliAxis;
@@ -111,8 +115,9 @@ emitPauliRotations(RewriterBase& rewriter, Operation* operation,
 /// A successful rewrite erases the complete matched run.
 LogicalResult
 fusePauliRotationRun(PatternRewriter& rewriter, Operation* head,
-                     const CompilerTarget::SynthesisBasis& basis, bool reverse,
+                     CompilerTarget::SynthesisBasis basis,
                      const CompilerTarget& target,
-                     std::optional<ArrayRef<CompilerTarget::SiteId>> sites);
+                     std::optional<ArrayRef<CompilerTarget::SiteId>> sites,
+                     NativeCostAnalysis& analysis);
 
 } // namespace mlir::qco::decomposition

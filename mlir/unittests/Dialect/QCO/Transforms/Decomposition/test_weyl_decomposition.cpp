@@ -721,12 +721,33 @@ TEST(WeylSynthesisTest, CountsMatchNativeDecomposition) {
       const auto target = TwoQubitWeylDecomposition::getCanonicalMatrix(
           coordinates >= 1 ? .6 : 0., coordinates >= 2 ? .4 : 0.,
           coordinates >= 3 ? .3 : 0.);
+      const auto kak =
+          TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY);
+      ASSERT_TRUE(kak);
       const auto native = decomposeUnitary2QWeyl(target, {.gate = entangler});
       ASSERT_TRUE(native);
       EXPECT_EQ(countUnitary2QWeyl(target, {.gate = entangler}),
                 native->numBasisUses);
+      EXPECT_EQ(countUnitary2QWeyl(kak->coordinates(), {.gate = entangler}),
+                native->numBasisUses);
       if (coordinates == 0) {
         EXPECT_EQ(native->numBasisUses, 0U);
+      }
+      if (entangler == CompilerTarget::GateKind::RZZ) {
+        for (const auto angles : {
+                 CompilerTarget::AngleSupport::Unrestricted,
+                 CompilerTarget::AngleSupport::ZeroToHalfPi,
+             }) {
+          const CompilerTarget::Entangler basis{
+              .gate = entangler,
+              .angles = angles,
+          };
+          const auto rotations = decomposeUnitary2QWeyl(target, basis);
+          ASSERT_TRUE(rotations);
+          EXPECT_EQ(rotations->numBasisUses, coordinates);
+          EXPECT_EQ(countUnitary2QWeyl(kak->coordinates(), basis),
+                    rotations->numBasisUses);
+        }
       }
     }
   }

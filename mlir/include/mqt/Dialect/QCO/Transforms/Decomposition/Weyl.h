@@ -123,6 +123,9 @@ public:
   [[nodiscard]] double a() const { return a_; }
   [[nodiscard]] double b() const { return b_; }
   [[nodiscard]] double c() const { return c_; }
+  [[nodiscard]] std::array<double, 3> coordinates() const {
+    return {a_, b_, c_};
+  }
   [[nodiscard]] double globalPhase() const { return globalPhase_; }
 
   /// Single-qubit factor on qubit 0 after the canonical gate.
@@ -231,8 +234,13 @@ public:
 
   /// Selects the supported count that maximizes fidelity, as in @ref
   /// twoQubitDecompose.
+  ///
+  /// Coordinates must come from a successful Weyl decomposition.
+  [[nodiscard]] uint8_t numBasisGates(std::array<double, 3> coordinates) const;
   [[nodiscard]] uint8_t
-  numBasisGates(const TwoQubitWeylDecomposition& target) const;
+  numBasisGates(const TwoQubitWeylDecomposition& target) const {
+    return numBasisGates(target.coordinates());
+  }
 
   /// Decomposes @p targetUnitary using this cached basis decomposer.
   ///
@@ -328,7 +336,7 @@ private:
   void decomp3Supercontrolled(SmallVectorImpl<Matrix2x2>& out,
                               const TwoQubitWeylDecomposition& target) const;
   [[nodiscard]] std::array<std::complex<double>, 4>
-  traces(const TwoQubitWeylDecomposition& target) const;
+  traces(std::array<double, 3> coordinates) const;
 
   TwoQubitBasisDecomposer() = default;
 
@@ -385,6 +393,13 @@ decomposeUnitary2QWeyl(const Matrix4x4& target,
 [[nodiscard]] std::optional<uint8_t>
 countUnitary2QWeyl(const Matrix4x4& target, CompilerTarget::Entangler entangler,
                    uint64_t seed = 2023);
+
+/// Counts entanglers from validated, specialized Weyl coordinates.
+///
+/// Requires coordinates from @ref TwoQubitWeylDecomposition::create with
+/// @ref WEYL_DEFAULT_FIDELITY and a supported native entangler.
+[[nodiscard]] uint8_t countUnitary2QWeyl(std::array<double, 3> coordinates,
+                                         CompilerTarget::Entangler entangler);
 
 /// Emits a prepared two-qubit decomposition in the selected target basis.
 ///

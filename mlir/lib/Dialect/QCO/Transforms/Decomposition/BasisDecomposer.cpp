@@ -185,8 +185,8 @@ TwoQubitBasisDecomposer::decomposeTarget(
 }
 
 uint8_t TwoQubitBasisDecomposer::numBasisGates(
-    const TwoQubitWeylDecomposition& target) const {
-  const auto traceValues = traces(target);
+    std::array<double, 3> coordinates) const {
+  const auto traceValues = traces(coordinates);
   const uint8_t maxBasisUses = isSuperControlled ? 3 : 1;
   uint8_t bestNbasis = 0;
   auto bestValue = std::numeric_limits<double>::lowest();
@@ -340,18 +340,17 @@ SmallVector<Value, 2> TwoQubitBasisDecomposer::emitCartan(
 }
 
 std::array<std::complex<double>, 4>
-TwoQubitBasisDecomposer::traces(const TwoQubitWeylDecomposition& target) const {
-  const auto da = target.a() - basisWeyl.a();
-  const auto db = target.b() - basisWeyl.b();
-  const auto dc = target.c() - basisWeyl.c();
+TwoQubitBasisDecomposer::traces(std::array<double, 3> coordinates) const {
+  const auto [a, b, c] = coordinates;
+  const auto da = a - basisWeyl.a();
+  const auto db = b - basisWeyl.b();
+  const auto dc = c - basisWeyl.c();
   return {
-      4. * std::complex<double>{std::cos(target.a()) * std::cos(target.b()) *
-                                    std::cos(target.c()),
-                                std::sin(target.a()) * std::sin(target.b()) *
-                                    std::sin(target.c())},
+      4. * std::complex<double>{std::cos(a) * std::cos(b) * std::cos(c),
+                                std::sin(a) * std::sin(b) * std::sin(c)},
       4. * std::complex<double>{std::cos(da) * std::cos(db) * std::cos(dc),
                                 std::sin(da) * std::sin(db) * std::sin(dc)},
-      std::complex<double>{4. * std::cos(target.c()), 0.},
+      std::complex<double>{4. * std::cos(c), 0.},
       std::complex<double>{4., 0.},
   };
 }

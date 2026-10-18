@@ -1012,6 +1012,8 @@ def test_runtime_pauli_rotations_compile_and_export(gate: str, native_entangler:
         ("cartan", "iswap", 2),
         ("cartan", "bounded_rzz", 2),
         ("cartan", "rzz", 2),
+        ("cartan", "sqrt_iswap", 2),
+        ("reversed_axes", "sqrt_iswap", 2),
         ("reversed_axes", "cz", 2),
         ("noncommuting", "cz", 4),
         ("barrier", "cz", 4),
@@ -1021,7 +1023,7 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     shape: str, entangler: str, expected_entanglers: int
 ) -> None:
     """Compose commuting generators while retaining boundaries and ordered axes."""
-    a, b, c = qiskit.circuit.ParameterVector("angle", 3)
+    a, b, c = (qiskit.circuit.Parameter(name) for name in ["a", "b", "c"])
     source = QuantumCircuit(2, global_phase=0.19)
     if shape.startswith("diagonal"):
         source.cp(a, 0, 1)
@@ -1050,7 +1052,7 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
             CompilerTarget.OperationCapability(
                 native,
                 2,
-                0 if native in {"cz", "ecr", "iswap"} else 1,
+                0 if native in {"cz", "ecr", "iswap", "sqrt_iswap"} else 1,
                 parameter_bounds=[(0, np.pi / 2)] if entangler == "bounded_rzz" else [],
             ),
             CompilerTarget.OperationCapability("gphase", 0, 1),
@@ -1058,13 +1060,24 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     )
     program = QCProgram.from_qiskit(source).to_qco()
     program.synthesize_for_target(_test_target_environment(target))
+    assert program.to_jeff(copy=True).is_valid
+    assert QCProgram.from_openqasm_str(program.to_qc(copy=True).to_openqasm3().source).is_valid
     result = program.to_qiskit(target=target)
-    assert result.count_ops().get(native, 0) == expected_entanglers
+    emitted = "xx_plus_yy" if native == "sqrt_iswap" else native
+    assert result.count_ops().get(emitted, 0) == expected_entanglers
     if shape == "cartan" and entangler == "rzz":
         assert sum(result.count_ops().get(gate, 0) for gate in ["rx", "rz"]) <= 12
     if entangler == "bounded_rzz":
         assert all(0 <= item.operation.params[0] <= np.pi / 2 for item in result.data if item.operation.name == native)
-    for values in [(0.37, -1.2, 0.7), (np.pi, 0.0, 4 * np.pi), (1e300, -1e300, 1e20)]:
+    for values in [
+        (0.0, 0.0, 0.0),
+        (0.0, np.pi / 2, 0.0),
+        (0.0, 1e-15, 0.0),
+        (np.pi / 2, np.pi / 2, 0.0),
+        (0.37, -1.2, 0.7),
+        (np.pi, 0.0, 4 * np.pi),
+        (1e300, -1e300, 1e20),
+    ]:
         bindings = dict(zip([a, b, c], values, strict=True))
         assert np.allclose(
             Operator.from_circuit(result.assign_parameters(bindings, strict=False)).data,

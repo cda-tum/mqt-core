@@ -797,6 +797,29 @@ struct ConvertCBitWriteOpToJeff final
   }
 };
 
+struct ConvertNegFOp final : OpConversionPattern<arith::NegFOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::NegFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter& rewriter) const override {
+    const auto type = op.getType();
+    Value minusOne;
+    if (type.isF32()) {
+      minusOne = jeff::FloatConst32Op::create(rewriter, op.getLoc(),
+                                              rewriter.getF32FloatAttr(-1.0));
+    } else if (type.isF64()) {
+      minusOne = jeff::FloatConst64Op::create(rewriter, op.getLoc(),
+                                              rewriter.getF64FloatAttr(-1.0));
+    } else {
+      return rewriter.notifyMatchFailure(op, "expected scalar f32 or f64");
+    }
+    // Multiplication flips both signed zeros; subtraction from +0 does not.
+    rewriter.replaceOpWithNewOp<jeff::FloatBinaryOp>(
+        op, adaptor.getOperand(), minusOne, jeff::FloatBinaryOperation::_mul);
+    return success();
+  }
+};
+
 /// Preserve promoted integer widths and cover gaps in native conversions.
 struct ConvertIntegerExpression final : ConversionPattern {
   ConvertIntegerExpression(TypeConverter& converter, MLIRContext* context)
@@ -2174,7 +2197,8 @@ protected:
 
     // Register operation conversion patterns
     jeff::populateNativeToJeffConversionPatterns(patterns);
-    patterns.add<ConvertIntegerExpression>(typeConverter, context);
+    patterns.add<ConvertIntegerExpression, ConvertNegFOp>(typeConverter,
+                                                          context);
     patterns.add<ConvertCBitAllocOpToJeff, ConvertCBitStoreOpToJeff,
                  ConvertCBitLoadOpToJeff, ConvertCBitReadOpToJeff,
                  ConvertCBitWriteOpToJeff, ConvertQTensorAllocOp,

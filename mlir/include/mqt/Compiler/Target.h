@@ -491,13 +491,14 @@ public:
   /// Return whether a recognized gate is supported by the target.
   ///
   /// Pauli rotations query the fixed synthesis primitive at angle pi/2.
+  /// Square-root iSWAP also accepts XXPlusYY(-pi/2, 0).
   [[nodiscard]] bool supports(GateKind gate) const;
 
   /// Return whether a recognized gate is supported on ordered target sites.
   [[nodiscard]] bool supports(GateKind gate,
                               llvm::ArrayRef<SiteId> sites) const;
 
-  /// Check the fixed or unrestricted entangler capability on ordered sites.
+  /// Check the entangler's synthesis domain on ordered sites.
   [[nodiscard]] bool supports(Entangler entangler,
                               llvm::ArrayRef<SiteId> sites) const;
 
@@ -509,6 +510,13 @@ public:
   /// The cached basis remains valid while this target or a copy exists.
   [[nodiscard]] const std::optional<SynthesisBasis>&
   synthesisBasis() const noexcept;
+
+  /// Return globally usable entanglers in deterministic preference order.
+  ///
+  /// Each gate appears once, with its widest supported synthesis domain.
+  /// The first entry is the default entangler in synthesisBasis(). The list is
+  /// empty if no single-qubit synthesis basis is usable across the target.
+  [[nodiscard]] llvm::ArrayRef<Entangler> synthesisEntanglers() const noexcept;
 
   /// Materialize the source target facts as a typed MLIR attribute.
   [[nodiscard]] mqt::CompilationTargetAttr
