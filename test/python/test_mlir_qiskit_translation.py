@@ -4130,7 +4130,7 @@ def test_manual_arith_and_math_parameter_expression_exports_to_qiskit() -> None:
 
 
 def _wide_parameter_expression_program(term_count: int) -> QCProgram:
-    """Build a program whose gate angle sums ``term_count`` distinct math.sin terms.
+    """Build a balanced ``sin(left) + cos(right)`` tree with ``term_count`` leaves.
 
     Returns:
         A QC program with a wide scalar parameter-expression graph.
@@ -4140,11 +4140,8 @@ def _wide_parameter_expression_program(term_count: int) -> QCProgram:
         '  func.func @main(%theta: f64 {mqt.input_name = "theta"}) attributes {mqt.entry_point} {',
         "    %q = qc.alloc : !qc.qubit",
     ]
-    values = []
-    for index in range(term_count):
-        value = f"%term{index}"
-        lines.append(f"    {value} = math.sin %theta : f64")
-        values.append(value)
+    # Keep addition chains short: Qiskit binding recurses through each chain.
+    values = ["%theta"] * term_count
     sum_index = 0
     while len(values) > 1:
         next_values = []
@@ -4154,7 +4151,11 @@ def _wide_parameter_expression_program(term_count: int) -> QCProgram:
                 continue
             value = f"%sum{sum_index}"
             sum_index += 1
-            lines.append(f"    {value} = arith.addf {values[index]}, {values[index + 1]} : f64")
+            lines.extend([
+                f"    {value}_left = math.sin {values[index]} : f64",
+                f"    {value}_right = math.cos {values[index + 1]} : f64",
+                f"    {value} = arith.addf {value}_left, {value}_right : f64",
+            ])
             next_values.append(value)
         values = next_values
     lines.extend([
@@ -4169,19 +4170,23 @@ def _wide_parameter_expression_program(term_count: int) -> QCProgram:
 
 @pytest.mark.parametrize(
     ("term_count", "supported"),
-    [(6000, True), (10924, False), (16385, False)],
+    [(8192, True), (8193, False), (10924, False)],
     ids=["within-budget", "expanded-tree", "unique-ssa-graph"],
 )
 def test_export_parameter_expression_budget_preserves_source(term_count: int, *, supported: bool) -> None:
     """Bound normalized trees and compiler SSA traversal before Qiskit construction."""
+    # The tree has 4 * term_count - 3 expanded nodes and 3 * term_count - 3 operations.
     program = _wide_parameter_expression_program(term_count)
     source_ir = program.ir
 
     if supported:
         result = program.to_qiskit(copy=True)
         theta = next(iter(result.parameters))
+        angle = 1e-5
+        for _ in range(term_count.bit_length() - 1):
+            angle = np.sin(angle) + np.cos(angle)
         expected = QuantumCircuit(1)
-        expected.rz(term_count * np.sin(1e-5), 0)
+        expected.rz(angle, 0)
         assert np.allclose(Operator(result.assign_parameters({theta: 1e-5})).data, Operator(expected).data)
     else:
         with pytest.raises(RuntimeError, match="exceeds the supported 32768-node size"):

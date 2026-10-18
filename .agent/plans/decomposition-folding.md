@@ -4,17 +4,12 @@ Status: complete.
 
 ## Scope and decisions
 
-Fix deep-expression stack exhaustion, custom-basis gate-count selection, and
-repeated work in constant folding and gate synthesis. Preserve numerical,
-global-phase, wire, and failure contracts.
+Fix custom-basis gate-count selection and repeated work in gate synthesis.
+Preserve numerical, global-phase, wire, and failure contracts.
 
-- `mlir::mqt::valueToConstantAttr` evaluates a pure SSA expression DAG with an
-  explicit stack. Complete frames immediately; a failed operand fails every
-  pending ancestor. Retain successful siblings and identity folds. Bare block
-  arguments and literals bypass cache allocation. The explicit cache is now
-  `DenseMap<Value, Attribute>`: absent entries are unevaluated, null attributes
-  record failure, and nonnull attributes record success. Discard it when the IR
-  changes. One-argument overloads and optional return types are unchanged.
+- Use the shared constant folder and its nullable `Attribute` cache. Discard
+  caller-owned caches when the IR changes. Constant folding itself is outside
+  this change.
 - Custom two-qubit bases support zero or one use unless super-controlled. Rank
   only supported counts and use all three basis coordinates for one-use
   fidelity. Skip super-controlled templates when they cannot be used.
@@ -38,10 +33,11 @@ global-phase, wire, and failure contracts.
 
 ## Validation
 
-All 987 tests passed across the MQT utility and transform, decomposition,
-optimization, target-synthesis, and compiler binaries. Build these targets with
-the release preset and run their binaries under `build/release/mlir/unittests/`:
-`mqt-core-mlir-unittests-mqt-utils`, `mqt-core-mlir-unittests-mqt-transforms`,
+The original audit passed all 987 tests across the MQT utility and transform,
+decomposition, optimization, target-synthesis, and compiler binaries. Build
+these targets with the release preset and run their binaries under
+`build/release/mlir/unittests/`: `mqt-core-mlir-unittests-mqt-utils`,
+`mqt-core-mlir-unittests-mqt-transforms`,
 `mqt-core-mlir-unittest-decomposition`, `mqt-core-mlir-unittest-optimizations`,
 `mqt-core-mlir-unittest-target-synthesis`, and
 `mqt-core-mlir-unittests-compiler`.
@@ -55,7 +51,9 @@ including 51,834 target-decomposition failures. Eight fresh CLI processes
 produced identical output. Independent review found no actionable defects.
 `uvx nox -s lint` and whole-file `uvx nox -s cpp-lint` passed.
 
-On ARM64 with Clang 23.1.4, LLVM/MLIR 23.1.0, and release ThinLTO:
+The original audit used ARM64 with Clang 23.1.4, LLVM/MLIR 23.1.0, and release
+ThinLTO. These measurements predate the rebase and include constant-folding
+changes now supplied by upstream:
 
 - A bare runtime argument makes no folding-cache allocation. A 100,001-entry
   cache retains 4,227,072 bytes instead of 6,324,224 bytes. Short dynamic-query

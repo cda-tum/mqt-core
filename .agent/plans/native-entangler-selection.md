@@ -1,6 +1,6 @@
 # Native entangler selection and symbolic square-root iSWAP
 
-Status: complete. Base: `470094596af808df39cd25563377534bd44c2129`; PR #2775.
+Status: complete. Base: `3f1ccfd69b12f101587be35c9f5eb05c42adf211`; PR #2775.
 
 ## Scope and decisions
 
@@ -48,7 +48,7 @@ ordered placements, deterministic ties, and existing native operations.
 
 ## Validation
 
-All 1,582 tests in the C++ suites below pass. The 848 tests in
+All 1,568 tests in the C++ suites below pass. The 848 tests in
 `test/python/test_mlir.py`, `test/python/test_mlir_qiskit_target.py`, and
 `test/python/test_mlir_qiskit_translation.py` pass on Qiskit 2.6.0. The 39
 runtime and expression-budget cases also pass on Qiskit 2.5.1. Repository lint

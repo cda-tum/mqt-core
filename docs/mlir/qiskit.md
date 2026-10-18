@@ -120,7 +120,8 @@ elements. Parameter-expression trees support at most 64 levels and 32,768 nodes.
 Import balances addition and subtraction chains before applying the depth limit.
 Fusing runtime rotations can expand these expressions. For repeated numerical
 runs, bind parameters in Core before export to avoid Qiskit's symbolic binding
-cost.
+cost and stack limits on long addition chains. The limits above bound conversion
+work; they do not bound Qiskit's internal expression depth.
 
 Import and export support real addition, subtraction, multiplication, division,
 power, negation, trigonometric and inverse trigonometric functions, exponential,
