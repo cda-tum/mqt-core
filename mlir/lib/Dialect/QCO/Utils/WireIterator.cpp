@@ -13,6 +13,7 @@
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
 #include "mqt/Dialect/QCO/IR/QCOInterfaces.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
+#include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -98,12 +99,9 @@ void WireIterator::forward() {
         qubit_ = op.getTiedLoopResult(qubit_.use_begin().getOperand());
       })
       .Case([&](scf::WhileOp op) {
-        // Because the scf::WhileOp doesn't implement "getLoopResults", we
-        // have to fallback to the following instead of using
-        // "getTiedLoopResult".
-
-        OpOperand* operand = qubit_.use_begin().getOperand();
-        qubit_ = op->getResult(operand->getOperandNumber());
+        qubit_ = getCorrespondingQuantumValue(
+            op.getInits(), op.getResults(),
+            qubit_.use_begin()->getOperandNumber());
       })
       .Case([&](IfOp op) { qubit_ = op.getTiedResult(&(*qubit_.use_begin())); })
       .Case([&](IndexSwitchOp op) {
@@ -153,16 +151,9 @@ void WireIterator::backward() {
           llvm::reportFatalInternalError("expected result lookup");
         })
         .Case([&](scf::WhileOp op) {
-          // Because the scf::WhileOp doesn't implement "getLoopResults", we
-          // have to fallback to the following instead of using
-          // "getTiedLoopInit".
-
-          if (auto result = dyn_cast<OpResult>(qubit_)) {
-            qubit_ = op.getInits()[result.getResultNumber()];
-            return;
-          }
-
-          llvm::reportFatalInternalError("expected result lookup");
+          qubit_ = getCorrespondingQuantumValue(
+              op.getResults(), op.getInits(),
+              cast<OpResult>(qubit_).getResultNumber());
         })
         .Case([&](IfOp op) {
           if (auto result = dyn_cast<OpResult>(qubit_)) {

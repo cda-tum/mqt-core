@@ -19,7 +19,6 @@
 #include "mqt/Dialect/QCO/Transforms/NativeSynthesis/SingleQubitFusion.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Utils/Matrix.h"
-#include "mqt/Dialect/QCO/Utils/WireIterator.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -44,7 +43,6 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
 #include <numbers>
 #include <optional>
 #include <type_traits>
@@ -505,14 +503,13 @@ struct MergeSingleQubitRotationGatesPattern final
   static SmallVector<UnitaryOpInterface>
   collectChain(UnitaryOpInterface start) {
     SmallVector chain{start};
-    for (auto curr = std::next(WireIterator(start.getOutputQubit(0)));
-         curr != std::default_sentinel; ++curr) {
-      if (!isMergeable(curr.operation())) {
-        break;
+    while (true) {
+      auto* next = *chain.back().getOutputQubit(0).user_begin();
+      if (!isMergeable(next)) {
+        return chain;
       }
-      chain.emplace_back(cast<UnitaryOpInterface>(*curr.operation()));
+      chain.emplace_back(cast<UnitaryOpInterface>(next));
     }
-    return chain;
   }
 
   static bool hasDynamicParameter(ArrayRef<UnitaryOpInterface> chain) {

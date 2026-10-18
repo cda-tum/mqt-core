@@ -156,15 +156,16 @@ FailureOr<SmallVector<Value>> QCProgramBuilder::LoopBuilder::finish() {
 QCProgramBuilder::QCProgramBuilder(MLIRContext* context)
     : ImplicitLocOpBuilder(
           FileLineColLoc::get(context, "<qc-program-builder>", 1, 1), context),
-      ctx(context), moduleOp_(ModuleOp::create(*this)) {
-  ctx->loadDialect<cbit::CBitDialect, mqt::MQTDialect, QCDialect>();
+      moduleOp_(ModuleOp::create(*this)) {
+  getContext()->loadDialect<cbit::CBitDialect, mqt::MQTDialect, QCDialect>();
 }
 
 void QCProgramBuilder::initialize() { initialize({getI64Type()}); }
 
 void QCProgramBuilder::initialize(TypeRange returnTypes) {
+  checkFinalized();
   // Set insertion point to the module body
-  setInsertionPointToStart(cast<ModuleOp>(moduleOp_).getBody());
+  setInsertionPointToStart(moduleOp_->getBody());
 
   // Create main function as entry point
   auto funcType = getFunctionType({}, returnTypes);
@@ -178,7 +179,8 @@ void QCProgramBuilder::initialize(TypeRange returnTypes) {
 }
 
 void QCProgramBuilder::retype(TypeRange returnTypes) {
-  auto mainFunc = mqt::getEntryPoint(cast<ModuleOp>(moduleOp_));
+  checkFinalized();
+  auto mainFunc = mqt::getEntryPoint(*moduleOp_);
   if (!mainFunc) {
     llvm::reportFatalUsageError("Main function not found for retyping");
   }
@@ -191,7 +193,7 @@ func::FuncOp QCProgramBuilder::createFunction(
     const StringRef name, const TypeRange argumentTypes,
     const function_ref<SmallVector<Value>(ValueRange)> body) {
   checkFinalized();
-  auto moduleOp = cast<ModuleOp>(moduleOp_);
+  auto moduleOp = *moduleOp_;
   auto mainFunc = mqt::getEntryPoint(moduleOp);
   if (!mainFunc) {
     llvm::reportFatalUsageError(
@@ -259,7 +261,7 @@ func::FuncOp QCProgramBuilder::createUnitaryFunction(
 SmallVector<Value> QCProgramBuilder::call(func::FuncOp callee,
                                           ValueRange operands) {
   checkFinalized();
-  if (callee->getParentOp() != moduleOp_ ||
+  if (callee->getParentOp() != moduleOp_->getOperation() ||
       callee.getArgumentTypes() != operands.getTypes()) {
     llvm::reportFatalUsageError(
         "Call operands must match a function in the current module");
@@ -360,10 +362,11 @@ Value QCProgramBuilder::allocQubitRegisterStorage(const int64_t size,
   if (size <= 0) {
     llvm::reportFatalUsageError("Size must be positive");
   }
-  auto memrefType = MemRefType::get({size}, QubitType::get(ctx));
+  auto memrefType = MemRefType::get({size}, QubitType::get(getContext()));
   auto alloc = memref::AllocOp::create(*this, memrefType);
   if (!name.empty()) {
-    ctx->getLoadedDialect<mqt::MQTDialect>()
+    getContext()
+        ->getLoadedDialect<mqt::MQTDialect>()
         ->getRegisterNameAttrHelper()
         .setAttr(alloc, getStringAttr(name));
   }
@@ -386,10 +389,11 @@ Value QCProgramBuilder::allocClassicalBitRegister(
     llvm::reportFatalUsageError("Size must be positive");
   }
 
-  const auto type = cbit::RegisterType::get(ctx, size);
+  const auto type = cbit::RegisterType::get(getContext(), size);
   auto alloc = cbit::AllocOp::create(*this, type, initialization);
   if (!name.empty()) {
-    ctx->getLoadedDialect<mqt::MQTDialect>()
+    getContext()
+        ->getLoadedDialect<mqt::MQTDialect>()
         ->getRegisterNameAttrHelper()
         .setAttr(alloc, getStringAttr(name));
   }
@@ -944,7 +948,7 @@ QCProgramBuilder& QCProgramBuilder::dealloc(Value qubit) {
 //===----------------------------------------------------------------------===//
 
 void QCProgramBuilder::checkFinalized() const {
-  if (ctx == nullptr) {
+  if (!moduleOp_) {
     llvm::reportFatalUsageError("QCProgramBuilder instance has been finalized");
   }
 }
@@ -952,7 +956,7 @@ void QCProgramBuilder::checkFinalized() const {
 void QCProgramBuilder::ensureAllocationMode(
     const AllocationMode requestedMode) {
   if (requestedMode == AllocationMode::Dynamic) {
-    auto entryPoint = mqt::getEntryPoint(cast<ModuleOp>(moduleOp_));
+    auto entryPoint = mqt::getEntryPoint(*moduleOp_);
     if (!entryPoint || entryPoint.getBody().empty() ||
         getInsertionBlock() != &entryPoint.getBody().front()) {
       llvm::reportFatalUsageError(
@@ -994,7 +998,7 @@ OwningOpRef<ModuleOp> QCProgramBuilder::finalize(ValueRange returnValues) {
   // Ensure that the entry-point function exists and the insertion point is
   // valid.
   auto* insertionBlock = getInsertionBlock();
-  auto mainFunc = mqt::getEntryPoint(cast<ModuleOp>(moduleOp_));
+  auto mainFunc = mqt::getEntryPoint(*moduleOp_);
   if (mainFunc == nullptr) {
     llvm::reportFatalUsageError("Could not find entry-point function");
   }
@@ -1002,6 +1006,11 @@ OwningOpRef<ModuleOp> QCProgramBuilder::finalize(ValueRange returnValues) {
       insertionBlock != &mainFunc.getBody().front()) {
     llvm::reportFatalUsageError(
         "Insertion point is not in entry block of main function");
+  }
+
+  for (Value result : returnValues) {
+    allocatedQubits.remove(result);
+    allocatedQregs.remove(result);
   }
 
   for (auto qubit : allocatedQubits) {
@@ -1017,11 +1026,8 @@ OwningOpRef<ModuleOp> QCProgramBuilder::finalize(ValueRange returnValues) {
   // Add return statement with the given return values to the main function
   func::ReturnOp::create(*this, returnValues);
 
-  // Invalidate context to prevent use-after-finalize
-  ctx = nullptr;
-
   // Transfer ownership to the caller
-  return cast<ModuleOp>(moduleOp_);
+  return moduleOp_.release();
 }
 
 OwningOpRef<ModuleOp> QCProgramBuilder::build(

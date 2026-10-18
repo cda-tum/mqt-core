@@ -464,6 +464,9 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
       []<typename T>(T&& value) -> FailureOr<QCOProgram> {
         using ProgramType = std::remove_cvref_t<T>;
         if constexpr (std::is_same_v<ProgramType, QCOProgram>) {
+          if (failed(qco::verifyLinearity(value.module()))) {
+            return failure();
+          }
           return std::forward<T>(value);
         } else if constexpr (std::is_same_v<ProgramType, OpenQASMProgram>) {
           auto qc = QCProgram::fromOpenQASMString(value.source());
@@ -476,7 +479,7 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
         }
       },
       std::move(program));
-  if (failed(qco) || failed(qco::verifyLinearity(qco->module()))) {
+  if (failed(qco)) {
     return failure();
   }
   if (output == ProgramFormat::QCO) {

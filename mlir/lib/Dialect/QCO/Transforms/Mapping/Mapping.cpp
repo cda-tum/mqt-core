@@ -1823,15 +1823,15 @@ private:
                                       DenseMap<Operation*, bool>& cache) {
     SmallVector<MeasureOp> measurements;
     bool needsRouting = false;
-    WireIterator it(measurement.getQubitOut());
-    for (; it != std::default_sentinel; ++it) {
-      Operation* op = it.operation();
+    Operation* op = measurement;
+    while (true) {
       if (const auto cached = cache.find(op); cached != cache.end()) {
         needsRouting = cached->second;
         break;
       }
       if (auto next = dyn_cast<MeasureOp>(op)) {
         measurements.push_back(next);
+        op = *next.getQubitOut().user_begin();
         continue;
       }
       // Validated tensor insertion tails become sinks during placement.

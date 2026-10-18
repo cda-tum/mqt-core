@@ -1,7 +1,9 @@
 # Source-ordered QC → QCO on boundary verification
 
-Status: implementation complete; current-main rebase validated. Historical
-end-to-end performance is mixed. Human review remains a merge gate.
+This plan records PR #2716 before combination with the QC/QCO audit. See the
+[combined prototype](../audits/qc-qco-combined-2716-20261018.md) for current
+source, validation, and performance. Historical end-to-end performance below is
+mixed. Human review remains a merge gate.
 
 ## Scope and decisions
 

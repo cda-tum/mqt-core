@@ -16,7 +16,6 @@
 #include "mqt/Dialect/QCO/Transforms/NativeSynthesis/SingleQubitFusion.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Utils/Matrix.h"
-#include "mqt/Dialect/QCO/Utils/WireIterator.h"
 #include "mqt/Dialect/QTensor/IR/QTensorDialect.h" // IWYU pragma: keep (Passes.h.inc)
 
 #include "mlir/Dialect/Arith/IR/Arith.h" // IWYU pragma: keep (Passes.h.inc)
@@ -81,11 +80,10 @@ scanFusableRun(UnitaryOpInterface head, const Matrix2x2& headMatrix,
                const decomposition::SingleQubitBasis basis,
                const CompilerTarget* target) {
   FusableRunScan scan;
-  for (auto* op : WireRange(head.getOutputQubit(0))) {
-    auto member = dyn_cast_or_null<UnitaryOpInterface>(op);
-    if (!member) {
-      break;
-    }
+  for (auto member = head; member;
+       member = dyn_cast<UnitaryOpInterface>(
+           *member.getOutputQubit(0).user_begin())) {
+    auto* op = member.getOperation();
     const auto matrix = member.getOperation() == head.getOperation()
                             ? std::optional{headMatrix}
                             : getRunMemberMatrix(member);
@@ -111,14 +109,13 @@ scanFusableRun(UnitaryOpInterface head, const Matrix2x2& headMatrix,
 static void eraseFusableRun(PatternRewriter& rewriter, UnitaryOpInterface head,
                             UnitaryOpInterface tail) {
   // Tail-first: each erased op is dead once its successor is gone.
-  auto it = WireIterator(tail.getOutputQubit(0));
-  auto* target = head.getOperation();
-  while (*it != target) {
-    auto* current = *it;
-    --it;
-    rewriter.eraseOp(current);
+  while (tail != head) {
+    auto previous =
+        cast<UnitaryOpInterface>(tail.getInputQubit(0).getDefiningOp());
+    rewriter.eraseOp(tail);
+    tail = previous;
   }
-  rewriter.eraseOp(target);
+  rewriter.eraseOp(head);
 }
 
 namespace {
@@ -283,11 +280,12 @@ LogicalResult SingleQubitRunFusion::apply(Operation* operation) {
       return;
     }
     bool predecessorHasMatrix = false;
-    for (auto* current : WireRange(start.getOutputQubit(0))) {
-      auto op = dyn_cast<UnitaryOpInterface>(current);
+    for (auto op = start; op; op = dyn_cast<UnitaryOpInterface>(
+                                  *op.getOutputQubit(0).user_begin())) {
       if (!isRunMemberCandidate(op)) {
         break;
       }
+      auto* current = op.getOperation();
       members.push_back(current);
       hasRuntimeParameters =
           hasRuntimeParameters ||
