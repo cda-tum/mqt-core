@@ -291,7 +291,7 @@ repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg 
 
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux_*"
-config-settings = { "cmake.define.CMAKE_LINKER_TYPE" = "LLD", "cmake.define.MQT_CORE_MLIR_ASSERTIONS" = "OFF" }
+config-settings = { "cmake.define.CMAKE_LINKER_TYPE" = "LLD" }
 environment = { CC = "clang", CXX = "clang++", PATH = "/opt/clang/bin:$PATH:/root/.local/bin" }
 before-all = """
 manylinux-install-clang -v 22.1.8.1

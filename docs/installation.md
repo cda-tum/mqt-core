@@ -450,11 +450,18 @@ The first configure downloads the SDK into `_deps/llvm-<version>-<assertions>`
 inside the build directory. Subsequent configures reuse that installation. These
 CMake settings control the fallback:
 
-| Setting                      | Default  | Effect                                               |
-| ---------------------------- | -------- | ---------------------------------------------------- |
-| `MQT_CORE_AUTO_INSTALL_MLIR` | `ON`     | Download an SDK when none is available.              |
-| `MQT_CORE_MLIR_VERSION`      | `23.1.2` | Select a version from the pinned installer manifest. |
-| `MQT_CORE_MLIR_ASSERTIONS`   | `ON`     | Select an SDK with LLVM assertions enabled.          |
+| Setting                      | Default         | Effect                                               |
+| ---------------------------- | --------------- | ---------------------------------------------------- |
+| `MQT_CORE_AUTO_INSTALL_MLIR` | `ON`            | Download an SDK when none is available.              |
+| `MQT_CORE_MLIR_VERSION`      | `23.1.2`        | Select a version from the pinned installer manifest. |
+| `MQT_CORE_MLIR_ASSERTIONS`   | Build-dependent | Select an SDK with LLVM assertions enabled.          |
+
+All automatic downloads use Release SDKs. Assertions default to `ON` for
+single-config `Debug` and `RelWithDebInfo` builds, and `OFF` otherwise,
+including multi-config generators. Explicit settings take precedence. CMake
+caches this choice; after changing the build type in an existing build
+directory, use `-UMQT_CORE_MLIR_ASSERTIONS` to recompute the default or set it
+explicitly.
 
 Version overrides must use `X.Y.Z` syntax, belong to the LLVM 23.1 series, and
 exist in the pinned manifest; commit hashes are not accepted. These options do

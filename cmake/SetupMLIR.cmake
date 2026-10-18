@@ -16,7 +16,14 @@ option(MQT_CORE_AUTO_INSTALL_MLIR "Download LLVM/MLIR when no compatible SDK is 
 set(MQT_CORE_MLIR_VERSION
     "23.1.2"
     CACHE STRING "LLVM/MLIR version to download")
-option(MQT_CORE_MLIR_ASSERTIONS "Use assertions in the downloaded LLVM/MLIR SDK" ON)
+get_property(_mqt_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+string(TOUPPER "${CMAKE_BUILD_TYPE}" _mqt_build_type)
+set(_mqt_mlir_assertions_default OFF)
+if(NOT _mqt_multi_config AND _mqt_build_type MATCHES "^(DEBUG|RELWITHDEBINFO)$")
+  set(_mqt_mlir_assertions_default ON)
+endif()
+option(MQT_CORE_MLIR_ASSERTIONS "Use assertions in the downloaded LLVM/MLIR SDK"
+       ${_mqt_mlir_assertions_default})
 
 # Attempt to load MLIR_DIR from a local .env file for developer convenience.
 if(NOT DEFINED MLIR_DIR AND EXISTS "${PROJECT_SOURCE_DIR}/.env")
