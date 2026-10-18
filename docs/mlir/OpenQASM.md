@@ -366,18 +366,20 @@ target-specific diagnostic. Export preserves the source module and buffers
 output until it succeeds.
 
 The exporter writes an OpenQASM 3.1 version declaration and includes
-`stdgates.inc`. Gates in MQT Core's compatibility catalog, such as `r`, `rzz`,
-and `ecr`, receive definitions under their catalog names. Strict consumers use
-those definitions. MQT Core's default compatibility mode recognizes a definition
-with the catalog name and signature and imports calls directly as the
-corresponding native QC operation; the definition body is deliberately ignored.
-A same-name definition with a mismatched signature is rejected. Strict mode
-always analyzes the custom definition normally.
+`stdgates.inc`. Controlled gates use `ctrl` modifiers. Gates in MQT Core's
+compatibility catalog, such as `r`, `rzz`, and `ecr`, receive definitions under
+their catalog names. Strict consumers use those definitions. MQT Core's default
+compatibility mode recognizes a definition with the catalog name and signature
+and imports calls directly as the corresponding native QC operation; the
+definition body is deliberately ignored. A same-name definition with a
+mismatched signature is rejected. Strict mode always analyzes the custom
+definition normally.
 
 The `_mqt_` prefix is reserved for generated composite-modifier gates,
 temporaries, and collision-safe identifiers. Existing classical-register
 allocation names are reused when valid and distinct from catalog gates; scalar
-output names are generated deterministically.
+output names are generated deterministically. Cosmetic names stored in MLIR
+locations do not determine exported names.
 
 Output types follow a deliberately small canonical mapping:
 

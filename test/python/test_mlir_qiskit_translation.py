@@ -4832,8 +4832,8 @@ def test_native_compilation_rejects_imported_qiskit_layout() -> None:
 
 
 @pytest.mark.parametrize("ir_round_trip", [False, True])
-def test_scalar_and_local_bit_source_names_are_optional(*, ir_round_trip: bool) -> None:
-    """Export and execute scoped storage with or without cosmetic source names."""
+def test_scalar_and_local_bit_resources_survive_ir_round_trip(*, ir_round_trip: bool) -> None:
+    """Preserve resources, scoped initialization, and output names across formats."""
     program = QCProgram.from_openqasm_str("""OPENQASM 3.1;
 include "stdgates.inc";
 qubit flag;
@@ -4849,84 +4849,13 @@ result = measure flag;
     if ir_round_trip:
         program = QCProgram.from_mlir_str(program.ir)
     restored = program.to_qiskit(copy=True)
+    assert restored.num_qubits == 1
+    assert restored.num_clbits == 2
     assert restored.cregs[-1].name == "result"
     assert all(key.startswith("0") for key in sample(QCProgram.from_qiskit(restored), shots=8, seed=1))
     emitted = program.to_openqasm3().source
-    if not ir_round_trip:
-        assert [register.name for register in restored.qregs] == ["flag"]
-        assert "syndrome" in [register.name for register in restored.cregs]
-        assert "qubit flag;" in emitted
-        assert "bit[1] syndrome;" in emitted
     assert "output bit[1] result;" in emitted
     assert sample(QCProgram.from_openqasm_str(emitted), shots=8, seed=1) == {"0": 8}
-
-
-@pytest.mark.parametrize("local_name", ["syndrome", "flag"])
-def test_local_source_name_does_not_steal_output_register_name(local_name: str) -> None:
-    """A scoped debug label must yield to an explicitly named output register."""
-    program = QCProgram.from_openqasm_str(
-        """OPENQASM 3.1;
-qubit flag;
-bit syndrome;
-for int i in [0:1] {
-  bit LOCAL = 0;
-}
-syndrome = measure flag;
-""".replace("LOCAL", local_name)
-    )
-    circuit = program.to_qiskit()
-    assert [register.name for register in circuit.cregs] == ["_mqt_c0", "syndrome"]
-
-
-@pytest.mark.parametrize("hint", ["same", "", "q", "result", "theta"])
-def test_scalar_name_hints_yield_to_registers_and_parameters(hint: str) -> None:
-    """Debug names must not reject valid IR or replace declared resource names."""
-    source = QCProgram.from_openqasm_str("""OPENQASM 3.1;
-include "stdgates.inc";
-input float theta;
-qubit a;
-qubit b;
-qubit[1] q;
-bit[3] result;
-rx(theta) a;
-result[0] = measure a;
-result[1] = measure b;
-result[2] = measure q[0];
-""")
-    program = QCProgram.from_mlir_str(source.ir.replace("qc.alloc : !qc.qubit", f'qc.alloc : !qc.qubit loc("{hint}")'))
-    circuit = program.to_qiskit(copy=True)
-    names = [register.name for register in [*circuit.qregs, *circuit.cregs]]
-    assert circuit.num_qubits == circuit.num_clbits == 3
-    assert len(names) == len(set(names))
-    assert all(names)
-    assert "q" in [register.name for register in circuit.qregs]
-    assert [register.name for register in circuit.cregs] == ["result"]
-    assert "theta" not in names
-    assert [parameter.name for parameter in circuit.parameters] == ["theta"]
-    emitted = program.to_openqasm3().source
-    assert "qubit[1] q;" in emitted
-    assert "output bit[3] result;" in emitted
-    assert QCProgram.from_openqasm_str(emitted).to_qiskit().num_qubits == 3
-
-
-def test_empty_local_bit_name_hint_falls_back_to_generated_name() -> None:
-    """An empty debug location is not a classical register declaration name."""
-    source = QCProgram.from_openqasm_str("""OPENQASM 3.1;
-qubit flag;
-bit result;
-for int i in [0:1] {
-  bit scratch = 0;
-}
-result = measure flag;
-""")
-    ir = "\n".join(
-        line + ' loc("")' if "cbit.alloc" in line and "mqt.register_name" not in line else line
-        for line in source.ir.splitlines()
-    )
-    circuit = QCProgram.from_mlir_str(ir).to_qiskit()
-    assert len(circuit.cregs) == 2
-    assert all(register.name for register in circuit.cregs)
-    assert circuit.cregs[-1].name == "result"
 
 
 @pytest.mark.parametrize(

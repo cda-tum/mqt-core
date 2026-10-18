@@ -22,6 +22,7 @@
 
 #include "gtest/gtest.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -41,6 +42,7 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -2619,6 +2621,7 @@ TEST(OpenQASMTargetTest, StoresDynamicBitsWithoutLoopCarriedState) {
 OPENQASM 3.1;
 qubit q;
 uint index = 0;
+h q;
 bit selector = measure q;
 if (selector) {
   index = 1;
@@ -2626,7 +2629,8 @@ if (selector) {
 bit[2] state;
 state[0] = false;
 state[1] = false;
-bool choose = true;
+h q;
+bit choose = measure q;
 if (choose) {
   state[index] = measure q;
 } else {
@@ -2640,8 +2644,12 @@ if (state[0]) { x q; }
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
 
+  scf::IfOp indexSelection;
   scf::IfOp stateUpdate;
   moduleOp->walk([&](scf::IfOp conditional) {
+    if (conditional.getNumResults() == 1) {
+      indexSelection = conditional;
+    }
     size_t thenStores = 0;
     size_t elseStores = 0;
     conditional.getThenRegion().walk([&](cbit::StoreOp) { ++thenStores; });
@@ -2650,17 +2658,18 @@ if (state[0]) { x q; }
       stateUpdate = conditional;
     }
   });
+  ASSERT_TRUE(indexSelection);
   ASSERT_TRUE(stateUpdate);
   EXPECT_EQ(stateUpdate.getNumResults(), 0);
   EXPECT_EQ(
       stateUpdate.getThenRegion().front().getTerminator()->getNumOperands(), 0);
   EXPECT_EQ(
       stateUpdate.getElseRegion().front().getTerminator()->getNumOperands(), 0);
-  size_t dynamicStores = 0;
   stateUpdate->walk([&](cbit::StoreOp store) {
-    dynamicStores += !evaluateConstantInteger(store.getIndex()).has_value();
+    llvm::SetVector<Operation*> dependencies;
+    ASSERT_TRUE(succeeded(getBackwardSlice(store.getIndex(), &dependencies)));
+    EXPECT_TRUE(dependencies.contains(indexSelection.getOperation()));
   });
-  EXPECT_EQ(dynamicStores, 2);
 }
 
 TEST(OpenQASMTargetTest, HandlesTheMaximumUnsignedSingletonRange) {

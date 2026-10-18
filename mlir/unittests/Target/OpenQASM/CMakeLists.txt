@@ -11,7 +11,8 @@ add_executable(${target_name} test_openqasm_emitter.cpp test_openqasm_parser.cpp
                               test_openqasm_semantics.cpp)
 target_link_libraries(
   ${target_name}
-  PRIVATE MLIROpenQASMFrontend
+  PRIVATE MLIRAnalysis
+          MLIROpenQASMFrontend
           MLIRQCOpenQASMTranslation
           MLIRQASMPrograms
           MLIRCBitDialect
