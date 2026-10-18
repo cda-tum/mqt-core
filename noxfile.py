@@ -133,7 +133,6 @@ def _run_tests(
     session: nox.Session,
     *,
     install_args: Sequence[str] = (),
-    extra_groups: Sequence[str] = (),
     extra_commands: Sequence[Sequence[str]] = (),
     pytest_run_args: Sequence[str] = (),
 ) -> None:
@@ -148,7 +147,10 @@ def _run_tests(
         "uv",
         "sync",
         "--inexact",
-        *(arg for group in ("build", "test", *extra_groups) for arg in ("--only-group", group)),
+        "--only-group",
+        "build",
+        "--only-group",
+        "test",
         *install_args,
         env=env,
     )
@@ -183,16 +185,6 @@ def tests(session: nox.Session) -> None:
     _run_tests(session, pytest_run_args=["-m", "not slurm"])
 
 
-@nox.session(python="3.12", reuse_venv=True)
-def catalyst(session: nox.Session) -> None:
-    """Test the PennyLane integration with released Catalyst."""
-    _run_tests(
-        session,
-        extra_groups=["test-catalyst"],
-        pytest_run_args=["test/python/plugins/qdmi_pennylane"],
-    )
-
-
 @nox.session(name="catalyst-dev", python="3.12", reuse_venv=True)
 def catalyst_dev(session: nox.Session) -> None:
     """Test current Catalyst and PennyLane development wheels.
@@ -202,7 +194,6 @@ def catalyst_dev(session: nox.Session) -> None:
     """
     _run_tests(
         session,
-        extra_groups=["test-catalyst"],
         extra_commands=[
             [
                 "uv",

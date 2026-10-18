@@ -77,13 +77,17 @@ if(NOT TARGET ${TARGET_NAME})
     LINK_LIBS
     MQT::CoreBenchGenerate
     MQTCompilerQDMIAdapter
-    mqt-core-catalyst-qdmi
+    MQTCompilerCatalystAdapter
     MQTCompilerPipeline
     MLIRAnalysis
     MLIRMQTDialect
     MLIRMQTUtils
     MLIRQCTranslationSupport
     MLIRQCODDFunctionalityPython)
+
+  if(APPLE)
+    target_link_options(${TARGET_NAME} PRIVATE "LINKER:-exported_symbol,_MQTQDMIFactory")
+  endif()
 
   if(MQT_QISKIT_CAPI_CANDIDATE_VERSION)
     target_compile_definitions(

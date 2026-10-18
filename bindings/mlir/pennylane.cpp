@@ -8,20 +8,16 @@
  * Licensed under the MIT License
  */
 
-#include "pennylane.h"
-
 #include "qdmi/QDMI.hpp"
 
 #include "QDMIDevice.h"
 
+#include "nanobind/nanobind.h"
 #include "nanobind/ndarray.h"
 #include "nanobind/stl/optional.h"
-#include "nanobind/stl/pair.h"
 #include "nanobind/stl/shared_ptr.h"
 #include "nanobind/stl/string.h"
-#include "nanobind/stl/unique_ptr.h"
 #include "nanobind/stl/variant.h"
-#include "nanobind/stl/vector.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -62,7 +58,71 @@ ownJobParameter(const std::optional<PythonJobParameter>& parameter) {
       *parameter);
 }
 
-void registerPennyLane(nb::module_& m) {
+/// Import preprocessed gates and expose all wires as terminal classical
+/// outputs.
+extern mlir::QCProgram importPennyLaneCircuit(const nb::object& tape,
+                                              const nb::object& wires) {
+  const auto labels = wires.is_none() ? tape.attr("wires") : wires;
+  nb::dict wireMap;
+  size_t width = 0;
+  for (const auto wire : nb::borrow<nb::iterable>(labels)) {
+    if (wireMap.contains(wire)) {
+      throw nb::value_error("PennyLane wire labels must be unique");
+    }
+    wireMap[wire] = nb::int_(width++);
+  }
+  const auto indices = [&wireMap](const nb::object& operands) {
+    std::vector<QubitIdType> result;
+    for (const auto wire : nb::borrow<nb::iterable>(operands)) {
+      result.push_back(nb::cast<QubitIdType>(wireMap[wire]));
+    }
+    return result;
+  };
+  const auto modifiers = nb::module_::import_("pennylane.ops.op_math");
+  const auto adjoint = modifiers.attr("Adjoint");
+  const auto controlled = modifiers.attr("Controlled");
+  catalyst::QDMIDevice recorder(width);
+  for (const auto handle : nb::borrow<nb::iterable>(tape.attr("operations"))) {
+    auto operation = nb::borrow<nb::object>(handle);
+    bool inverse = false;
+    std::vector<QubitIdType> controls;
+    std::vector<bool> controlValues;
+    while (nb::isinstance(operation, adjoint) ||
+           nb::isinstance(operation, controlled)) {
+      if (nb::isinstance(operation, adjoint)) {
+        inverse = !inverse;
+      } else {
+        const auto outer = indices(operation.attr("control_wires"));
+        controls.insert(controls.end(), outer.begin(), outer.end());
+        for (const auto value :
+             nb::borrow<nb::iterable>(operation.attr("control_values"))) {
+          const auto truth = PyObject_IsTrue(value.ptr());
+          if (truth < 0) {
+            throw nb::python_error();
+          }
+          controlValues.push_back(truth != 0);
+        }
+      }
+      operation = operation.attr("base");
+    }
+    std::vector<double> parameters;
+    for (const auto parameter :
+         nb::borrow<nb::iterable>(operation.attr("parameters"))) {
+      const auto value = PyFloat_AsDouble(parameter.ptr());
+      if (PyErr_Occurred() != nullptr) {
+        throw nb::python_error();
+      }
+      parameters.push_back(value);
+    }
+    recorder.NamedOperation(nb::cast<std::string>(operation.attr("name")),
+                            parameters, indices(operation.attr("wires")),
+                            inverse, controls, controlValues);
+  }
+  const nb::gil_scoped_release release;
+  return recorder.takeProgram();
+}
+
+extern void registerPennyLane(nb::module_& m) {
   nb::class_<catalyst::Context>(m, "_PennyLaneQDMIContext")
       .def(nb::new_([](qdmi::Device device,
                        const std::optional<PythonJobParameter>& custom1,
@@ -82,61 +142,30 @@ void registerPennyLane(nb::module_& m) {
            "device"_a, nb::kw_only(), "custom1"_a = nb::none(),
            "custom2"_a = nb::none(), "custom3"_a = nb::none(),
            "custom4"_a = nb::none(), "custom5"_a = nb::none())
-      .def_prop_ro("id", &catalyst::Context::id)
-      .def(
-          "recorder",
-          [](std::shared_ptr<catalyst::Context> context, size_t wires) {
-            auto recorder =
-                std::make_unique<catalyst::QDMIDevice>(std::move(context));
-            recorder->AllocateQubits(wires);
-            return recorder;
-          },
-          "num_wires"_a, nb::call_guard<nb::gil_scoped_release>())
-      .def("try_submit_programs", &catalyst::Context::trySubmitBatch,
-           "programs"_a, "shots"_a, nb::call_guard<nb::gil_scoped_release>());
+      .def_prop_ro("id", &catalyst::Context::id);
 
-  nb::class_<catalyst::QDMIDevice>(m, "_PennyLaneRecorder")
-      .def(
-          "named_operation",
-          [](catalyst::QDMIDevice& device, const std::string& name,
-             const std::vector<double>& parameters,
-             const std::vector<QubitIdType>& wires, bool inverse,
-             const std::vector<QubitIdType>& controls,
-             const std::vector<bool>& controlValues) {
-            device.NamedOperation(name, parameters, wires, inverse, controls,
-                                  controlValues);
-          },
-          "name"_a, "parameters"_a, "wires"_a, "inverse"_a = false,
-          "controls"_a = std::vector<QubitIdType>{},
-          "control_values"_a = std::vector<bool>{},
-          nb::call_guard<nb::gil_scoped_release>())
-      .def("prepare", &catalyst::QDMIDevice::prepare,
-           nb::call_guard<nb::gil_scoped_release>());
-
-  nb::class_<catalyst::PreparedProgram>(m, "_PennyLaneProgram")
-      .def_prop_ro("program_format", &catalyst::PreparedProgram::programFormat)
-      .def("submit", &catalyst::PreparedProgram::submit, "shots"_a,
-           nb::call_guard<nb::gil_scoped_release>())
-      .def(
-          "decode_samples",
-          [](const catalyst::PreparedProgram& program, const qdmi::Job& job,
-             size_t shots, size_t programIndex) {
-            std::unique_ptr<std::vector<int8_t>> data;
-            {
-              const nb::gil_scoped_release release;
-              data = std::make_unique<std::vector<int8_t>>(
-                  program.samples(job, shots, programIndex));
-            }
-            const nb::capsule owner(data.get(), [](void* pointer) noexcept {
-              delete static_cast<std::vector<int8_t>*>(pointer);
-            });
-            auto* const samples = data.release();
-            return Samples(samples->data(), {shots, program.qubits()}, owner);
-          },
-          "job"_a, "shots"_a, "program_index"_a = 0);
-
-  m.def("_pennylane_c_interface", [] {
-    return std::pair{std::string("MQTQDMI"), catalyst::libraryPath()};
-  });
+  m.def(
+      "_pennylane_samples",
+      [](const qdmi::Job& job, size_t numWires, size_t shots,
+         size_t programIndex) {
+        std::unique_ptr<std::vector<int8_t>> data;
+        {
+          const nb::gil_scoped_release release;
+          data = std::make_unique<std::vector<int8_t>>(
+              catalyst::decodeSamples(job, numWires, shots, programIndex));
+        }
+        const nb::capsule owner(data.get(), [](void* pointer) noexcept {
+          delete static_cast<std::vector<int8_t>*>(pointer);
+        });
+        auto* const samples = data.release();
+        return Samples(samples->data(), {shots, numWires}, owner);
+      },
+      "job"_a, "num_wires"_a, "shots"_a, "program_index"_a = 0);
 }
 } // namespace mqt
+
+// Catalyst loads its device factory from the existing Python extension.
+extern "C" NB_EXPORT Catalyst::Runtime::QuantumDevice*
+MQTQDMIFactory(const char* kwargs) { // NOLINT(readability-identifier-naming)
+  return mqt::catalyst::createDevice(kwargs);
+}

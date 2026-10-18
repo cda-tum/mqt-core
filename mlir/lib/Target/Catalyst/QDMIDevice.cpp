@@ -15,7 +15,6 @@
 #include "mqt/Dialect/QC/Builder/QCProgramBuilder.h"
 #include "mqt/Dialect/QC/Translation/StandardGate.h"
 #include "qdmi/common/Common.hpp"
-#include "qdmi/common/DeviceConfiguration.hpp"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
@@ -23,18 +22,21 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Value.h"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 #include <array>
-#include <charconv>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <numeric>
@@ -42,8 +44,6 @@
 #include <span>
 #include <stdexcept>
 #include <string>
-#include <string_view>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -54,25 +54,23 @@ namespace {
 struct Registry {
   std::mutex mutex;
   uint64_t next = 1;
-  std::map<uint64_t, std::weak_ptr<Context>> contexts;
+  llvm::DenseMap<uint64_t, std::weak_ptr<Context>> contexts;
 };
 
-struct Readout {
-  std::vector<std::pair<std::string, size_t>> outcomes;
-};
+using Readout = llvm::SmallVector<std::pair<std::string, size_t>>;
 
 using Gate = mlir::qc::StandardGate;
 struct NamedGate {
-  std::string_view name;
+  llvm::StringLiteral name;
   Gate gate;
   size_t controls = 0;
 };
 
 } // namespace
 
-static void require(bool valid, const std::string& message) {
+static void require(bool valid, const llvm::Twine& message) {
   if (!valid) {
-    throw std::runtime_error(message);
+    throw std::runtime_error(message.str());
   }
 }
 
@@ -134,16 +132,16 @@ static Readout readout(const qdmi::Job& job, size_t width, size_t shots,
   std::string shotsError;
   try {
     for (auto& bits : job.getShots(programIndex)) {
-      result.outcomes.emplace_back(std::move(bits), 1);
+      result.emplace_back(std::move(bits), 1);
     }
   } catch (const std::exception& error) {
     shotsError = error.what();
   }
-  if (result.outcomes.empty()) {
+  if (result.empty()) {
     try {
       for (const auto& [bits, count] : job.getCounts(programIndex)) {
         if (count != 0) {
-          result.outcomes.emplace_back(bits, count);
+          result.emplace_back(bits, count);
         }
       }
     } catch (const std::exception& error) {
@@ -152,7 +150,7 @@ static Readout readout(const qdmi::Job& job, size_t width, size_t shots,
     }
   }
   size_t total = 0;
-  for (auto& [bits, count] : result.outcomes) {
+  for (auto& [bits, count] : result) {
     std::erase(bits, ' ');
     require(bits.size() == width &&
                 bits.find_first_not_of("01") == std::string::npos,
@@ -170,7 +168,7 @@ static Readout readout(const qdmi::Job& job, size_t width, size_t shots,
 }
 
 static size_t basisIndex(const std::string& bits,
-                         const std::vector<size_t>& wires) {
+                         llvm::ArrayRef<size_t> wires) {
   size_t index = 0;
   for (const auto wire : wires) {
     index = (index << 1U) | static_cast<size_t>(bits[wire] - '0');
@@ -214,68 +212,26 @@ constexpr std::array GATES{
 
 static uint64_t parseContext(const char* kwargs) {
   require(kwargs != nullptr, "Missing QDMI context arguments.");
-  std::string_view text(kwargs);
-  const auto whitespace = [&] {
-    const auto first = text.find_first_not_of(" \t\r\n");
-    text.remove_prefix(first == std::string_view::npos ? text.size() : first);
-  };
-  const auto consume = [&](char expected) {
-    whitespace();
-    require(!text.empty() && text.front() == expected,
-            "Invalid QDMI context arguments.");
-    text.remove_prefix(1);
-  };
-  consume('{');
-  whitespace();
-  require(!text.empty() && (text.front() == '\'' || text.front() == '"'),
-          "Invalid QDMI context key.");
-  const char quote = text.front();
-  text.remove_prefix(1);
-  require(text.starts_with("context"), "Expected the QDMI context key.");
-  text.remove_prefix(7);
-  require(!text.empty() && text.front() == quote, "Invalid QDMI context key.");
-  text.remove_prefix(1);
-  consume(':');
-  whitespace();
+  auto text = llvm::StringRef(kwargs).ltrim();
+  require(text.consume_front("{"), "Invalid QDMI context arguments.");
+  text = text.ltrim();
+  require(text.consume_front("'context'") || text.consume_front("\"context\""),
+          "Expected the QDMI context key.");
+  text = text.ltrim();
+  require(text.consume_front(":"), "Invalid QDMI context arguments.");
+  text = text.ltrim();
   uint64_t id = 0;
-  const auto parsed =
-      std::from_chars(text.data(), text.data() + text.size(), id);
-  require(parsed.ec == std::errc{} && id != 0, "Invalid QDMI context ID.");
-  text.remove_prefix(static_cast<size_t>(parsed.ptr - text.data()));
-  consume('}');
-  whitespace();
-  require(text.empty(), "Unexpected QDMI context arguments.");
+  require(!text.consumeInteger(10, id) && id != 0, "Invalid QDMI context ID.");
+  text = text.ltrim();
+  require(text.consume_front("}") && text.trim().empty(),
+          "Unexpected QDMI context arguments.");
   return id;
 }
 
-struct Context::Impl {
-  qdmi::Device device;
-  JobParameters parameters;
-  mlir::TargetEnvironment environment;
-  size_t qubits;
-  uint64_t id = 0;
-  mutable std::mutex mutex;
-
-  Impl(qdmi::Device input, JobParameters values)
-      : device(std::move(input)), parameters(std::move(values)),
-        environment(unwrap(mlir::targetEnvironmentFromDevice(device))),
-        qubits(device.getQubitsNum()) {}
-};
-
-struct PreparedProgram::Impl {
-  std::shared_ptr<Context> context;
-  mlir::CompiledProgram program;
-  size_t qubits;
-};
-
-std::string libraryPath() {
-  static const char ANCHOR = 0;
-  return qdmi::detail::pathToString(qdmi::detail::moduleDirectory(&ANCHOR) /
-                                    MQT_CATALYST_LIBRARY_FILENAME);
-}
-
 Context::Context(qdmi::Device device, JobParameters parameters)
-    : impl_(std::make_unique<Impl>(std::move(device), std::move(parameters))) {}
+    : device_(std::move(device)), parameters_(std::move(parameters)),
+      environment_(unwrap(mlir::targetEnvironmentFromDevice(device_))),
+      qubits_(device_.getQubitsNum()) {}
 
 std::shared_ptr<Context> Context::create(qdmi::Device device,
                                          JobParameters parameters) {
@@ -283,9 +239,9 @@ std::shared_ptr<Context> Context::create(qdmi::Device device,
       new Context(std::move(device), std::move(parameters)));
   auto& entries = registry();
   const std::scoped_lock lock(entries.mutex);
-  require(entries.next != 0, "QDMI context ID space exhausted.");
-  context->impl_->id = entries.next++;
-  entries.contexts.emplace(context->id(), context);
+  require(entries.next < UINT64_MAX - 1, "QDMI context ID space exhausted.");
+  context->id_ = entries.next++;
+  entries.contexts.try_emplace(context->id(), context);
   return context;
 }
 
@@ -295,75 +251,15 @@ Context::~Context() {
   entries.contexts.erase(id());
 }
 
-uint64_t Context::id() const noexcept { return impl_->id; }
-size_t Context::qubits() const noexcept { return impl_->qubits; }
+uint64_t Context::id() const noexcept { return id_; }
+size_t Context::qubits() const noexcept { return qubits_; }
 
-PreparedProgram::PreparedProgram(std::unique_ptr<Impl> impl)
-    : impl_(std::move(impl)) {}
-PreparedProgram::~PreparedProgram() = default;
-size_t PreparedProgram::qubits() const noexcept { return impl_->qubits; }
-QDMI_Program_Format PreparedProgram::programFormat() const noexcept {
-  return impl_->program.programFormat();
-}
-const std::string& PreparedProgram::payload() const noexcept {
-  return impl_->program.payload();
-}
-
-qdmi::Job PreparedProgram::submit(size_t shots) const {
-  validateShots(shots);
-  auto& context = *impl_->context->impl_;
-  const std::scoped_lock lock(context.mutex);
-  const auto p = borrowParameters(context.parameters);
-  return unwrap(mlir::submitProgram(context.device, impl_->program,
-                                    static_cast<int64_t>(shots), p[0], p[1],
-                                    p[2], p[3], p[4]));
-}
-
-std::optional<qdmi::Job> Context::trySubmitBatch(
-    const std::vector<std::shared_ptr<PreparedProgram>>& programs,
-    size_t shots) const {
-  validateShots(shots);
-  require(!programs.empty() && programs.front() != nullptr,
-          "Cannot submit an empty program batch.");
-  const auto format = programs.front()->programFormat();
-  const std::scoped_lock lock(impl_->mutex);
-  const auto destination =
-      unwrap(mlir::targetEnvironmentFromDevice(impl_->device, format));
-  for (const auto& program : programs) {
-    require(program && program->impl_->context.get() == this &&
-                program->programFormat() == format,
-            "A program batch must share its QDMI context and format.");
-    if (auto error = mlir::validateTargetCompatibility(
-            program->impl_->program.environment(), destination)) {
-      throw std::runtime_error(llvm::toString(std::move(error)));
-    }
-  }
-  const auto p = borrowParameters(impl_->parameters);
-  if (qdmi::isBinaryProgramFormat(format)) {
-    std::vector<std::span<const std::byte>> payloads;
-    payloads.reserve(programs.size());
-    for (const auto& program : programs) {
-      payloads.push_back(std::as_bytes(std::span(program->payload())));
-    }
-    return impl_->device.trySubmitJob(payloads, format, shots, p[0], p[1], p[2],
-                                      p[3], p[4]);
-  }
-  std::vector<std::string> payloads;
-  payloads.reserve(programs.size());
-  for (const auto& program : programs) {
-    payloads.push_back(program->payload());
-  }
-  return impl_->device.trySubmitJob(payloads, format, shots, p[0], p[1], p[2],
-                                    p[3], p[4]);
-}
-
-std::vector<int8_t> PreparedProgram::samples(const qdmi::Job& job, size_t shots,
-                                             size_t programIndex) const {
-  const std::scoped_lock lock(impl_->context->impl_->mutex);
-  const auto result = readout(job, qubits(), shots, programIndex);
+std::vector<int8_t> decodeSamples(const qdmi::Job& job, size_t width,
+                                  size_t shots, size_t programIndex) {
+  const auto result = readout(job, width, shots, programIndex);
   std::vector<int8_t> values;
-  values.reserve(product(shots, qubits()));
-  for (const auto& [bits, count] : result.outcomes) {
+  values.reserve(product(shots, width));
+  for (const auto& [bits, count] : result) {
     for (size_t i = 0; i < count; ++i) {
       for (const char bit : bits) {
         values.push_back(static_cast<int8_t>(bit - '0'));
@@ -373,121 +269,110 @@ std::vector<int8_t> PreparedProgram::samples(const qdmi::Job& job, size_t shots,
   return values;
 }
 
-struct QDMIDevice::Impl {
-  using Observable = std::vector<size_t>;
-  std::shared_ptr<Context> context;
-  std::shared_ptr<mlir::MLIRContext> compiler;
-  mlir::OwningOpRef<mlir::ModuleOp> recording;
-  std::unique_ptr<mlir::qc::QCProgramBuilder> builder;
-  llvm::SmallVector<mlir::Value> qubits;
-  std::vector<QubitIdType> ids;
-  QubitIdType nextQubit = 0;
-  std::vector<Observable> observables;
-  ObsIdType firstObservable = 0;
-  ObsIdType nextObservable = 0;
-  size_t shots = 0;
-  std::shared_ptr<PreparedProgram> prepared;
-  std::optional<Readout> result;
-
-  explicit Impl(std::shared_ptr<Context> input) : context(std::move(input)) {
-    require(context != nullptr, "Missing QDMI context.");
+llvm::SmallVector<size_t>
+QDMIDevice::wireIndices(llvm::ArrayRef<QubitIdType> wires) const {
+  require(!ids_.empty(), "No active QDMI qubit register.");
+  llvm::SmallVector<size_t> result;
+  result.reserve(wires.size());
+  for (const auto wire : wires) {
+    require(wire >= ids_.front() &&
+                static_cast<uint64_t>(wire - ids_.front()) < ids_.size(),
+            "Invalid or released QDMI qubit ID.");
+    const auto index = static_cast<size_t>(wire - ids_.front());
+    require(std::ranges::find(result, index) == result.end(),
+            "Duplicate QDMI qubit operand.");
+    result.push_back(index);
   }
+  return result;
+}
 
-  [[nodiscard]] std::vector<size_t>
-  indices(const std::vector<QubitIdType>& wires) const {
-    require(!ids.empty(), "No active QDMI qubit register.");
-    std::vector<size_t> result;
-    result.reserve(wires.size());
-    for (const auto wire : wires) {
-      require(wire >= ids.front() &&
-                  static_cast<uint64_t>(wire - ids.front()) < ids.size(),
-              "Invalid or released QDMI qubit ID.");
-      const auto index = static_cast<size_t>(wire - ids.front());
-      require(std::ranges::find(result, index) == result.end(),
-              "Duplicate QDMI qubit operand.");
-      result.push_back(index);
+const QDMIDevice::ObservableWires&
+QDMIDevice::getObservable(ObsIdType id) const {
+  require(id >= firstObservable_ &&
+              static_cast<uint64_t>(id - firstObservable_) <
+                  observables_.size(),
+          "Invalid or released QDMI observable ID.");
+  return observables_[static_cast<size_t>(id - firstObservable_)];
+}
+
+ObsIdType QDMIDevice::addObservable(ObservableWires value) {
+  require(nextObservable_ != INTPTR_MAX, "QDMI observable ID space exhausted.");
+  observables_.push_back(std::move(value));
+  return nextObservable_++;
+}
+
+const QDMIDevice::Readout& QDMIDevice::read() {
+  validateShots(shots_);
+  require(context_ != nullptr, "No QDMI execution context is configured.");
+  if (!result_) {
+    if (!compiled_) {
+      compiled_ = unwrap(mlir::CompiledProgram::compile(
+          takeProgram(), context_->environment_));
     }
-    return result;
+    const auto parameters = borrowParameters(context_->parameters_);
+    auto job = unwrap(mlir::submitProgram(
+        context_->device_, *compiled_, static_cast<int64_t>(shots_),
+        parameters[0], parameters[1], parameters[2], parameters[3],
+        parameters[4]));
+    require(job.wait() && job.check() == QDMI_JOB_STATUS_DONE,
+            "QDMI job did not complete successfully.");
+    result_ = readout(job, ids_.size(), shots_, 0);
   }
+  return *result_;
+}
 
-  [[nodiscard]] const Observable& observable(ObsIdType id) const {
-    require(id >= firstObservable &&
-                static_cast<uint64_t>(id - firstObservable) <
-                    observables.size(),
-            "Invalid or released QDMI observable ID.");
-    return observables[static_cast<size_t>(id - firstObservable)];
-  }
-
-  ObsIdType addObservable(Observable value) {
-    require(nextObservable != INTPTR_MAX,
-            "QDMI observable ID space exhausted.");
-    observables.push_back(std::move(value));
-    return nextObservable++;
-  }
-
-  const Readout& read(QDMIDevice& owner) {
-    validateShots(shots);
-    if (!result) {
-      auto program = owner.prepare();
-      auto job = program->submit(shots);
-      const std::scoped_lock lock(context->impl_->mutex);
-      require(job.wait() && job.check() == QDMI_JOB_STATUS_DONE,
-              "QDMI job did not complete successfully.");
-      result = readout(job, ids.size(), shots, 0);
-    }
-    return *result;
-  }
-};
+QDMIDevice::QDMIDevice(size_t numWires) { AllocateQubits(numWires); }
 
 QDMIDevice::QDMIDevice(std::shared_ptr<Context> context)
-    : impl_(std::make_unique<Impl>(std::move(context))) {}
+    : context_(std::move(context)) {
+  require(context_ != nullptr, "Missing QDMI context.");
+}
 QDMIDevice::~QDMIDevice() = default;
 
 std::vector<QubitIdType> QDMIDevice::AllocateQubits(size_t count) {
-  require(impl_->ids.empty(), "Dynamic QDMI qubit allocation is unsupported.");
-  require(count > 0 && count <= impl_->context->qubits() &&
+  require(ids_.empty(), "Dynamic QDMI qubit allocation is unsupported.");
+  require(count > 0 && (!context_ || count <= context_->qubits()) &&
               count <= static_cast<size_t>(INTPTR_MAX) -
-                           static_cast<size_t>(impl_->nextQubit),
+                           static_cast<size_t>(nextQubit_),
           "QDMI qubit allocation exceeds the device capacity.");
-  impl_->compiler = mlir::createCompilerContext();
-  impl_->builder =
-      std::make_unique<mlir::qc::QCProgramBuilder>(impl_->compiler.get());
-  impl_->builder->initialize();
-  impl_->recording = impl_->builder->getInsertionBlock()
-                         ->getParentOp()
-                         ->getParentOfType<mlir::ModuleOp>();
-  auto reg = impl_->builder->allocQubitRegister(static_cast<int64_t>(count));
-  impl_->qubits = std::move(reg.qubits);
-  impl_->ids.resize(count);
-  std::iota(impl_->ids.begin(), impl_->ids.end(), impl_->nextQubit);
-  impl_->nextQubit += static_cast<QubitIdType>(count);
-  return impl_->ids;
+  compiler_ = mlir::createCompilerContext();
+  builder_ = std::make_unique<mlir::qc::QCProgramBuilder>(compiler_.get());
+  builder_->initialize();
+  recording_ = builder_->getInsertionBlock()
+                   ->getParentOp()
+                   ->getParentOfType<mlir::ModuleOp>();
+  auto reg = builder_->allocQubitRegister(static_cast<int64_t>(count));
+  qubits_ = std::move(reg.qubits);
+  ids_.resize(count);
+  std::iota(ids_.begin(), ids_.end(), nextQubit_);
+  nextQubit_ += static_cast<QubitIdType>(count);
+  return ids_;
 }
 
 void QDMIDevice::ReleaseQubits(const std::vector<QubitIdType>& wires) {
-  const auto indices = impl_->indices(wires);
-  require(indices.size() == impl_->ids.size(),
+  const auto indices = wireIndices(wires);
+  require(indices.size() == ids_.size(),
           "Partial QDMI qubit release is unsupported.");
-  impl_->builder.reset();
-  impl_->recording = nullptr;
-  impl_->qubits.clear();
-  impl_->ids.clear();
-  impl_->prepared.reset();
-  impl_->result.reset();
-  impl_->observables.clear();
-  impl_->firstObservable = impl_->nextObservable;
-  impl_->compiler.reset();
+  builder_.reset();
+  recording_ = nullptr;
+  qubits_.clear();
+  ids_.clear();
+  compiled_.reset();
+  result_.reset();
+  observables_.clear();
+  firstObservable_ = nextObservable_;
+  compiler_.reset();
 }
 
-size_t QDMIDevice::GetNumQubits() const { return impl_->ids.size(); }
+size_t QDMIDevice::GetNumQubits() const { return ids_.size(); }
 void QDMIDevice::SetDeviceShots(size_t shots) {
   validateShots(shots);
-  if (impl_->shots != shots) {
-    impl_->result.reset();
+  if (shots_ != shots) {
+    result_.reset();
   }
-  impl_->shots = shots;
+  shots_ = shots;
 }
-size_t QDMIDevice::GetDeviceShots() const { return impl_->shots; }
+size_t QDMIDevice::GetDeviceShots() const { return shots_; }
 void QDMIDevice::SetDevicePRNG(std::mt19937* generator) {
   require(generator == nullptr, "Catalyst PRNG seeding is unsupported; use the "
                                 "QDMI provider's job parameters.");
@@ -499,14 +384,18 @@ void QDMIDevice::NamedOperation(
     const std::vector<QubitIdType>& controls,
     const std::vector<bool>& controlValues,
     const std::vector<std::string>& optionalParameters) {
-  require(impl_->builder != nullptr,
+  require(builder_ != nullptr,
           "QDMI gates require an active register before terminal measurement.");
   require(optionalParameters.empty(),
           "Optional Catalyst gate parameters are unsupported.");
   require(controls.size() == controlValues.size(),
           "Control wires and values have different lengths.");
-  const auto* const gate = std::ranges::find(GATES, name, &NamedGate::name);
-  require(gate != GATES.end(), "Unsupported QDMI gate: " + name);
+  const auto gates = llvm::ArrayRef(GATES);
+  const auto* const gate =
+      llvm::find_if(gates, [&](const NamedGate& candidate) {
+        return candidate.name == name;
+      });
+  require(gate != gates.end(), "Unsupported QDMI gate: " + name);
   const auto& descriptor = mlir::qc::getStandardGateDescriptor(gate->gate);
   require(parameters.size() == descriptor.parameterCount &&
               (gate->gate == Gate::GPhase || gate->gate == Gate::Id ||
@@ -517,17 +406,17 @@ void QDMIDevice::NamedOperation(
           "Non-finite parameter for " + name + '.');
   auto operands = controls;
   operands.insert(operands.end(), wires.begin(), wires.end());
-  const auto indices = impl_->indices(operands);
+  const auto indices = wireIndices(operands);
   if (gate->gate == Gate::Id) {
     return;
   }
-  auto& builder = *impl_->builder;
+  auto& builder = *builder_;
   llvm::SmallVector<mlir::Value> controlQubits;
   llvm::SmallVector<mlir::Value> targets;
   llvm::SmallVector<mlir::Value> angles;
   for (size_t i = 0; i < indices.size(); ++i) {
     (i < controls.size() + gate->controls ? controlQubits : targets)
-        .push_back(impl_->qubits[indices[i]]);
+        .push_back(qubits_[indices[i]]);
   }
   if (gate->gate == Gate::GPhase) {
     targets.clear();
@@ -570,51 +459,37 @@ Result QDMIDevice::Measure(QubitIdType, std::optional<int32_t>) {
       "Interactive mid-circuit QDMI measurement is unsupported.");
 }
 
-std::shared_ptr<PreparedProgram> QDMIDevice::prepare() {
-  if (impl_->prepared) {
-    return impl_->prepared;
-  }
-  require(impl_->builder != nullptr,
-          "No QDMI circuit is available for preparation.");
+mlir::QCProgram QDMIDevice::takeProgram() {
+  require(builder_ != nullptr, "No QDMI circuit is available for preparation.");
   std::string diagnostics;
   mlir::ScopedDiagnosticHandler handler(
-      impl_->compiler.get(), [&](mlir::Diagnostic& diagnostic) {
+      compiler_.get(), [&](mlir::Diagnostic& diagnostic) {
         llvm::raw_string_ostream stream(diagnostics);
         diagnostic.print(stream);
         stream << '\n';
         return mlir::success();
       });
-  auto& builder = *impl_->builder;
+  auto& builder = *builder_;
   auto bits = builder.allocClassicalBitRegister(
-      static_cast<int64_t>(impl_->qubits.size()), "c");
-  for (size_t i = 0; i < impl_->qubits.size(); ++i) {
-    builder.measure(impl_->qubits[i], bits, static_cast<int64_t>(i));
+      static_cast<int64_t>(qubits_.size()), "c");
+  for (size_t i = 0; i < qubits_.size(); ++i) {
+    builder.measure(qubits_[i], bits, static_cast<int64_t>(i));
   }
   builder.retype(bits.getType());
-  static_cast<void>(impl_->recording.release());
+  static_cast<void>(recording_.release());
   auto moduleOp = builder.finalize({bits});
-  impl_->builder.reset();
-  auto program =
-      mlir::QCProgram::fromModule(impl_->compiler, std::move(moduleOp));
+  builder_.reset();
+  auto program = mlir::QCProgram::fromModule(compiler_, std::move(moduleOp));
   require(mlir::succeeded(program),
           "Invalid recorded QDMI circuit: " + diagnostics);
-  auto compiled = mlir::CompiledProgram::compile(
-      std::move(*program), impl_->context->impl_->environment);
-  if (!compiled) {
-    throw std::runtime_error(llvm::toString(compiled.takeError()) + '\n' +
-                             diagnostics);
-  }
-  impl_->prepared = std::shared_ptr<PreparedProgram>(
-      new PreparedProgram(std::make_unique<PreparedProgram::Impl>(
-          impl_->context, std::move(*compiled), GetNumQubits())));
-  return impl_->prepared;
+  return std::move(*program);
 }
 
 ObsIdType
 QDMIDevice::Observable(ObsId id,
                        const std::vector<std::complex<double>>& matrix,
                        const std::vector<QubitIdType>& wires) {
-  auto indices = impl_->indices(wires);
+  auto indices = wireIndices(wires);
   require(matrix.empty() && (id == ObsId::Identity || id == ObsId::PauliZ),
           "QDMI supports only Identity and PauliZ native observables.");
   require(id == ObsId::Identity || wires.size() == 1,
@@ -622,32 +497,32 @@ QDMIDevice::Observable(ObsId id,
   if (id == ObsId::Identity) {
     indices.clear();
   }
-  return impl_->addObservable(std::move(indices));
+  return addObservable(std::move(indices));
 }
 
 ObsIdType
 QDMIDevice::TensorObservable(const std::vector<ObsIdType>& observables) {
   require(!observables.empty(), "An observable product cannot be empty.");
-  Impl::Observable product;
+  ObservableWires product;
   for (const auto id : observables) {
-    const auto& value = impl_->observable(id);
+    const auto& value = getObservable(id);
     product.insert(product.end(), value.begin(), value.end());
   }
-  return impl_->addObservable(std::move(product));
+  return addObservable(std::move(product));
 }
 
 void QDMIDevice::Sample(DataView<double, 2>& samples) {
-  PartialSample(samples, impl_->ids);
+  PartialSample(samples, ids_);
 }
 
 void QDMIDevice::PartialSample(DataView<double, 2>& samples,
                                const std::vector<QubitIdType>& wires) {
-  const auto indices = impl_->indices(wires);
-  require(samples.size() == product(impl_->shots, indices.size()),
+  const auto indices = wireIndices(wires);
+  require(samples.size() == product(shots_, indices.size()),
           "Unexpected Catalyst sample buffer size.");
-  const auto& result = impl_->read(*this);
+  const auto& result = read();
   auto output = samples.begin();
-  for (const auto& [bits, count] : result.outcomes) {
+  for (const auto& [bits, count] : result) {
     for (size_t shot = 0; shot < count; ++shot) {
       for (const auto wire : indices) {
         *output++ = static_cast<double>(bits[wire] - '0');
@@ -658,53 +533,53 @@ void QDMIDevice::PartialSample(DataView<double, 2>& samples,
 
 void QDMIDevice::Counts(DataView<double, 1>& eigenvalues,
                         DataView<int64_t, 1>& counts) {
-  PartialCounts(eigenvalues, counts, impl_->ids);
+  PartialCounts(eigenvalues, counts, ids_);
 }
 
 void QDMIDevice::PartialCounts(DataView<double, 1>& eigenvalues,
                                DataView<int64_t, 1>& counts,
                                const std::vector<QubitIdType>& wires) {
-  const auto indices = impl_->indices(wires);
+  const auto indices = wireIndices(wires);
   require(indices.size() <= std::numeric_limits<double>::digits,
           "Catalyst count keys cannot exactly represent more than 53 qubits; "
           "use samples.");
   const auto size = dimension(indices.size());
   require(eigenvalues.size() == size && counts.size() == size,
           "Unexpected Catalyst counts buffer size.");
-  const auto& result = impl_->read(*this);
+  const auto& result = read();
   for (size_t i = 0; i < size; ++i) {
     eigenvalues(i) = static_cast<double>(i);
     counts(i) = 0;
   }
-  for (const auto& [bits, count] : result.outcomes) {
+  for (const auto& [bits, count] : result) {
     counts(basisIndex(bits, indices)) += static_cast<int64_t>(count);
   }
 }
 
 void QDMIDevice::Probs(DataView<double, 1>& probabilities) {
-  PartialProbs(probabilities, impl_->ids);
+  PartialProbs(probabilities, ids_);
 }
 
 void QDMIDevice::PartialProbs(DataView<double, 1>& probabilities,
                               const std::vector<QubitIdType>& wires) {
-  const auto indices = impl_->indices(wires);
+  const auto indices = wireIndices(wires);
   require(probabilities.size() == dimension(indices.size()),
           "Unexpected Catalyst probability buffer size.");
-  const auto& result = impl_->read(*this);
+  const auto& result = read();
   for (auto& probability : probabilities) {
     probability = 0.0;
   }
-  for (const auto& [bits, count] : result.outcomes) {
+  for (const auto& [bits, count] : result) {
     probabilities(basisIndex(bits, indices)) +=
-        static_cast<double>(count) / static_cast<double>(impl_->shots);
+        static_cast<double>(count) / static_cast<double>(shots_);
   }
 }
 
 double QDMIDevice::Expval(ObsIdType observable) {
-  const auto& parity = impl_->observable(observable);
-  const auto& result = impl_->read(*this);
+  const auto& parity = getObservable(observable);
+  const auto& result = read();
   size_t negative = 0;
-  for (const auto& [bits, count] : result.outcomes) {
+  for (const auto& [bits, count] : result) {
     bool odd = false;
     for (const auto wire : parity) {
       odd = odd != (bits[wire] == '1');
@@ -713,8 +588,8 @@ double QDMIDevice::Expval(ObsIdType observable) {
       negative += count;
     }
   }
-  return 1.0 - 2.0 * static_cast<double>(negative) /
-                   static_cast<double>(impl_->shots);
+  return 1.0 -
+         2.0 * static_cast<double>(negative) / static_cast<double>(shots_);
 }
 
 double QDMIDevice::Var(ObsIdType observable) {
@@ -722,21 +597,19 @@ double QDMIDevice::Var(ObsIdType observable) {
   return std::max(0.0, 1.0 - mean * mean);
 }
 
-} // namespace mqt::catalyst
-
-extern "C" Catalyst::Runtime::QuantumDevice*
-MQTQDMIFactory(const char* kwargs) {
-  const auto id = mqt::catalyst::parseContext(kwargs);
-  auto& registry = mqt::catalyst::registry();
-  std::shared_ptr<mqt::catalyst::Context> context;
+Catalyst::Runtime::QuantumDevice* createDevice(const char* kwargs) {
+  const auto id = parseContext(kwargs);
+  auto& entries = registry();
+  std::shared_ptr<Context> context;
   {
-    const std::scoped_lock lock(registry.mutex);
-    if (const auto entry = registry.contexts.find(id);
-        entry != registry.contexts.end()) {
+    const std::scoped_lock lock(entries.mutex);
+    if (const auto entry = entries.contexts.find(id);
+        entry != entries.contexts.end()) {
       context = entry->second.lock();
     }
   }
-  mqt::catalyst::require(context != nullptr,
-                         "Unknown or expired QDMI context ID.");
-  return new mqt::catalyst::QDMIDevice(std::move(context));
+  require(context != nullptr, "Unknown or expired QDMI context ID.");
+  return new QDMIDevice(std::move(context));
 }
+
+} // namespace mqt::catalyst

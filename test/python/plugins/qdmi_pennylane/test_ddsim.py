@@ -8,26 +8,17 @@
 
 """End-to-end PennyLane tests with the DDSIM QDMI device."""
 
-# ruff: file-ignore[missing-return-type-private-function]
-
 from __future__ import annotations
 
 import gc
 from typing import TYPE_CHECKING
 
+import networkx as nx
 import numpy as np
+import pennylane as qp
 import pytest
 
-if TYPE_CHECKING:
-    from mqt.core.qdmi import Job
-
-try:
-    import pennylane as qp
-except ImportError:
-    pytest.skip("Install the PennyLane extra to run these tests.", allow_module_level=True)
-
-import networkx as nx
-
+from mqt.core.mlir import QCProgram, submit_program
 from mqt.core.plugins.pennylane import (
     DDSIMDevice,
     PennyLaneJob,
@@ -35,7 +26,22 @@ from mqt.core.plugins.pennylane import (
     PennyLaneValidationError,
 )
 
+if TYPE_CHECKING:
+    from pennylane.measurements import CountsMP, ExpectationMP, ProbabilityMP, SampleMP
+
+    from mqt.core.qdmi import Job
+
 GRAPH_EDGES = ((0, 1), (0, 2), (1, 2), (2, 3))
+
+
+@pytest.mark.parametrize(("wires", "expected"), [(None, "01"), (["idle", "spare", "active"], "100")])
+def test_public_tape_import_returns_all_declared_wires(wires: list[str] | None, expected: str) -> None:
+    """Public import preserves default or explicit wire order and reads every wire."""
+    tape = qp.tape.QuantumScript([qp.X("active"), qp.Identity("idle")], [qp.sample(wires=["active"])])
+    program = QCProgram.from_pennylane(tape, wires=wires)
+    job = submit_program(program, target="mqt.ddsim.default", num_shots=3)
+    assert job.wait()
+    assert job.get_shots() == [expected] * 3
 
 
 def test_stable_entry_point_and_wire_order() -> None:
@@ -43,7 +49,7 @@ def test_stable_entry_point_and_wire_order() -> None:
     device = qp.device("mqt.ddsim.default", wires=["first", "second"])
 
     @qp.qnode(device, shots=20)
-    def circuit():
+    def circuit() -> CountsMP:
         qp.PauliX("first")
         return qp.counts(wires=["first", "second"])
 
@@ -57,7 +63,7 @@ def test_bell_results_and_shot_vector() -> None:
     device = qp.device("mqt.ddsim.default", wires=2)
 
     @qp.qnode(device, shots=[(1000, 2), 2000])
-    def circuit():
+    def circuit() -> ProbabilityMP:
         qp.Hadamard(0)
         qp.CNOT(wires=[0, 1])
         return qp.probs(wires=[0, 1])
@@ -76,7 +82,7 @@ def test_parameter_shift_gradient() -> None:
     device = qp.device("mqt.ddsim.default", wires=1)
 
     @qp.qnode(device, shots=10_000, diff_method="parameter-shift")
-    def circuit(angle: float):
+    def circuit(angle: float) -> ExpectationMP:
         qp.RY(angle, 0)
         return qp.expval(qp.PauliZ(0))
 
@@ -158,12 +164,12 @@ def test_qaoa_application() -> None:
         qp.ApproxTimeEvolution(mixer_hamiltonian, parameters[1], 1)
 
     @qp.qnode(device, shots=200, diff_method="parameter-shift")
-    def cost(parameters: np.ndarray):
+    def cost(parameters: np.ndarray) -> ExpectationMP:
         ansatz(parameters)
         return qp.expval(cost_hamiltonian)
 
     @qp.qnode(device, shots=200)
-    def sample(parameters: np.ndarray):
+    def sample(parameters: np.ndarray) -> SampleMP:
         ansatz(parameters)
         return qp.sample(wires=range(4))
 
@@ -192,7 +198,7 @@ def test_deferred_measurements_reuse_spare_device_wires(wires: list[str] | list[
     control, _, target = wires
 
     @qp.qnode(device, shots=5)
-    def circuit():
+    def circuit() -> CountsMP:
         qp.X(control)
         measured = qp.measure(control, reset=True)
         qp.cond(measured, qp.X)(target)
@@ -206,7 +212,7 @@ def test_device_requires_qnode_shots() -> None:
     device = qp.device("mqt.ddsim.default", wires=1)
 
     @qp.qnode(device)
-    def circuit():
+    def circuit() -> ExpectationMP:
         return qp.expval(qp.Z(0))
 
     with pytest.raises(PennyLaneValidationError, match="finite number of shots"):
@@ -237,7 +243,7 @@ def test_postprocessor_recovers_forward_measurements(
     device = DDSIMDevice(wires=1, max_retries=3)
 
     @qp.qnode(device, shots=shots, diff_method=None)
-    def circuit(angles: np.ndarray):
+    def circuit(angles: np.ndarray) -> tuple[ExpectationMP, ProbabilityMP]:
         qp.RY(angles, 0)
         return qp.expval(qp.Z(0)), qp.probs(wires=[0])
 
@@ -247,7 +253,7 @@ def test_postprocessor_recovers_forward_measurements(
     original = PennyLaneJob._samples  # ruff:ignore[private-member-access] Inject a failure after native submission.
     reads = []
 
-    def read(batch: PennyLaneJob, index: int, job: Job, program_index: int):
+    def read(batch: PennyLaneJob, index: int, job: Job, program_index: int) -> np.ndarray:
         reads.append((job, program_index))
         if len(reads) == 2:
             raise KeyboardInterrupt

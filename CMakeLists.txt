@@ -169,14 +169,8 @@ if(BUILD_MQT_CORE_DOCUMENTATION)
 endif()
 
 if(BUILD_MQT_CORE_BINDINGS)
-  set(MQT_CORE_WHEEL_TARGETS
-      mqt-core-bench-bindings
-      mqt-core-dd-bindings
-      mqt-core-qdmi-bindings
-      mqt-cc
-      mqt-core-bench
-      mqt-core-mlir-bindings
-      mqt-core-catalyst-qdmi)
+  set(MQT_CORE_WHEEL_TARGETS mqt-core-bench-bindings mqt-core-dd-bindings mqt-core-qdmi-bindings
+                             mqt-cc mqt-core-bench mqt-core-mlir-bindings)
   if(BUILD_MQT_CORE_QDMI_DDSIM_DEVICE)
     list(APPEND MQT_CORE_WHEEL_TARGETS mqt-core-qdmi-ddsim-device)
   endif()

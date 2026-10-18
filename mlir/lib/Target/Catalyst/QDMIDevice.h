@@ -10,10 +10,19 @@
 
 #pragma once
 
+#include "mqt/Compiler/Programs.h"
+#include "mqt/Compiler/QDMIAdapter.h"
+#include "mqt/Compiler/TargetEnvironment.h"
 #include "qdmi/QDMI.hpp"
 
 #include "QuantumDevice.hpp"
-#include "mqt-catalyst-export.h"
+
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/Value.h"
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include <array>
 #include <complex>
@@ -23,8 +32,13 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
+
+namespace mlir::qc {
+class QCProgramBuilder;
+} // namespace mlir::qc
 
 namespace mqt::catalyst {
 
@@ -32,58 +46,36 @@ using JobParameter =
     std::variant<std::string, bool, int, double, std::vector<std::byte>>;
 using JobParameters = std::array<std::optional<JobParameter>, 5>;
 
-/// Locate this adapter's installed shared library.
-[[nodiscard]] MQT_CATALYST_EXPORT std::string libraryPath();
-
-class PreparedProgram;
-
 /// Own one provider session and its retained submission configuration.
-class MQT_CATALYST_EXPORT Context {
+class Context {
 public:
   static std::shared_ptr<Context> create(qdmi::Device device,
                                          JobParameters parameters = {});
+  Context(const Context&) = delete;
+  Context& operator=(const Context&) = delete;
   ~Context();
   [[nodiscard]] uint64_t id() const noexcept;
   [[nodiscard]] size_t qubits() const noexcept;
-  [[nodiscard]] std::optional<qdmi::Job>
-  trySubmitBatch(const std::vector<std::shared_ptr<PreparedProgram>>& programs,
-                 size_t shots) const;
 
 private:
-  struct Impl;
   explicit Context(qdmi::Device device, JobParameters parameters);
-  std::unique_ptr<Impl> impl_;
-  friend class PreparedProgram;
-  friend class QDMIDevice;
-};
-
-/// An immutable compiled circuit retaining its provider and job parameters.
-class MQT_CATALYST_EXPORT PreparedProgram {
-public:
-  ~PreparedProgram();
-  [[nodiscard]] size_t qubits() const noexcept;
-  [[nodiscard]] QDMI_Program_Format programFormat() const noexcept;
-  [[nodiscard]] const std::string& payload() const noexcept;
-  [[nodiscard]] qdmi::Job submit(size_t shots) const;
-  /// Decode all logical wires into a row-major shot-by-wire array.
-  [[nodiscard]] std::vector<int8_t> samples(const qdmi::Job& job, size_t shots,
-                                            size_t programIndex = 0) const;
-
-private:
-  struct Impl;
-  explicit PreparedProgram(std::unique_ptr<Impl> impl);
-  std::unique_ptr<Impl> impl_;
-  friend class Context;
+  qdmi::Device device_;
+  JobParameters parameters_;
+  mlir::TargetEnvironment environment_;
+  size_t qubits_;
+  uint64_t id_ = 0;
   friend class QDMIDevice;
 };
 
 /// Record one terminal-measurement circuit through Catalyst's device API.
-class MQT_CATALYST_EXPORT QDMIDevice final
-    : public Catalyst::Runtime::QuantumDevice {
+class QDMIDevice final : public Catalyst::Runtime::QuantumDevice {
 public:
+  /// Construct a provider-independent recorder for a PennyLane tape.
+  explicit QDMIDevice(size_t numWires);
   explicit QDMIDevice(std::shared_ptr<Context> context);
   ~QDMIDevice() override;
-  [[nodiscard]] std::shared_ptr<PreparedProgram> prepare();
+  /// Consume the recording and expose every wire as a classical output.
+  [[nodiscard]] mlir::QCProgram takeProgram();
 
   std::vector<QubitIdType> AllocateQubits(size_t count) override;
   void ReleaseQubits(const std::vector<QubitIdType>& wires) override;
@@ -118,13 +110,36 @@ public:
   double Var(ObsIdType observable) override;
 
 private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
+  using Readout = llvm::SmallVector<std::pair<std::string, size_t>>;
+  using ObservableWires = llvm::SmallVector<size_t>;
+  [[nodiscard]] llvm::SmallVector<size_t>
+  wireIndices(llvm::ArrayRef<QubitIdType> wires) const;
+  [[nodiscard]] const ObservableWires& getObservable(ObsIdType id) const;
+  ObsIdType addObservable(ObservableWires value);
+  const Readout& read();
+
+  std::shared_ptr<Context> context_;
+  std::shared_ptr<mlir::MLIRContext> compiler_;
+  mlir::OwningOpRef<mlir::ModuleOp> recording_;
+  std::unique_ptr<mlir::qc::QCProgramBuilder> builder_;
+  llvm::SmallVector<mlir::Value> qubits_;
+  std::vector<QubitIdType> ids_;
+  QubitIdType nextQubit_ = 0;
+  llvm::SmallVector<ObservableWires> observables_;
+  ObsIdType firstObservable_ = 0;
+  ObsIdType nextObservable_ = 0;
+  size_t shots_ = 0;
+  std::optional<mlir::CompiledProgram> compiled_;
+  std::optional<Readout> result_;
 };
 
-} // namespace mqt::catalyst
+/// Decode all logical wires into a row-major shot-by-wire array.
+[[nodiscard]] std::vector<int8_t> decodeSamples(const qdmi::Job& job,
+                                                size_t width, size_t shots,
+                                                size_t programIndex = 0);
 
-extern "C" MQT_CATALYST_EXPORT Catalyst::Runtime::QuantumDevice*
-// Catalyst resolves the factory by its required ABI name.
-// NOLINTNEXTLINE(readability-identifier-naming)
-MQTQDMIFactory(const char* kwargs);
+/// Resolve a retained configuration for Catalyst's device factory.
+[[nodiscard]] Catalyst::Runtime::QuantumDevice*
+createDevice(const char* kwargs);
+
+} // namespace mqt::catalyst

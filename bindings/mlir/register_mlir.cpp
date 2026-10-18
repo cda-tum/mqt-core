@@ -24,7 +24,6 @@
 #include "qdmi/QDMI.hpp"
 
 #include "Target/Qiskit/Qiskit.h"
-#include "pennylane.h"
 
 #include "capnp/common.h"
 #include "capnp/message.h"
@@ -78,6 +77,10 @@ namespace mqt {
 
 namespace nb = nanobind;
 using namespace nb::literals;
+
+void registerPennyLane(nb::module_& m);
+mlir::QCProgram importPennyLaneCircuit(const nb::object& tape,
+                                       const nb::object& wires);
 
 #ifdef __APPLE__
 /// Translate standard exceptions that nanobind's split-mode backend can miss
@@ -1737,6 +1740,18 @@ Accepts versionless input and versions 2.0, 3.0, and 3.1.)pb")
 Args:
     circuit: Circuit to import. A complete transpiler layout is retained as
         metadata.)pb")
+      .def_static(
+          "from_pennylane", &importPennyLaneCircuit, "tape"_a, nb::kw_only(),
+          "wires"_a = nb::none(),
+          nb::sig("def from_pennylane(tape: pennylane.tape.QuantumScript, *, "
+                  "wires: collections.abc.Sequence[collections.abc.Hashable] | "
+                  "None = None) -> QCProgram"),
+          R"pb(Import a preprocessed PennyLane tape into QC MLIR.
+
+The tape must contain supported native gates after decomposition, measurement
+basis rotations, and mid-circuit measurement deferral. All wires are measured
+and returned in the supplied order (the tape's wire order by default).
+PennyLane's terminal measurements are evaluated from these samples by the device.)pb")
       .def("copy", &copyProgram<mlir::QCProgram>,
            "Return an independent copy of this program.")
       .def("cleanup", &FallibleMemberAdapter<&mlir::QCProgram::cleanup>::call,
@@ -2328,6 +2343,36 @@ Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, IQM JSON, then B
 :func:`submit_program` and its ``program_format`` argument. An explicit output
 need not be a device's execution format. Jeff output does not retain hardware
 placement.)pb");
+
+  m.def(
+      "try_submit_programs",
+      [](const std::vector<const mlir::CompiledProgram*>& programs,
+         const nb::object& target, int64_t numShots,
+         const std::optional<PythonCustomJobParameter>& custom1,
+         const std::optional<PythonCustomJobParameter>& custom2,
+         const std::optional<PythonCustomJobParameter>& custom3,
+         const std::optional<PythonCustomJobParameter>& custom4,
+         const std::optional<PythonCustomJobParameter>& custom5) {
+        const auto device = resolveDevice(target);
+        const auto params = std::array{
+            toCustomJobParameter(custom1), toCustomJobParameter(custom2),
+            toCustomJobParameter(custom3), toCustomJobParameter(custom4),
+            toCustomJobParameter(custom5),
+        };
+        const nb::gil_scoped_release release;
+        return takeResult(mlir::trySubmitPrograms(
+            device, programs, numShots, params[0], params[1], params[2],
+            params[3], params[4]));
+      },
+      "programs"_a, nb::kw_only(), "target"_a, "num_shots"_a = 1024,
+      "custom1"_a = nb::none(), "custom2"_a = nb::none(),
+      "custom3"_a = nb::none(), "custom4"_a = nb::none(),
+      "custom5"_a = nb::none(),
+      R"pb(Submit compatible compiled programs together when supported.
+
+Returns ``None`` if the provider declines a multi-program job before submission.
+Programs must share a payload format. ``target`` accepts a device ID or an open
+device. Other validation or submission failures raise an exception.)pb");
 
   m.def("submit_program", &submitProgram, "program"_a, nb::kw_only(),
         "target"_a, "num_shots"_a = 1024, "program_format"_a = nb::none(),

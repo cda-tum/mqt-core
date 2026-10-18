@@ -1,152 +1,221 @@
 # PennyLane QDMI through Catalyst's native device interface
 
-Status: implemented and locally validated on
-`refactor/pennylane-catalyst-device`.
+Status: implementation and local validation pass. Hosted validation remains in
+progress.
 
 ## Outcome and scope
 
-A private shared library, `mqt-core-catalyst-qdmi`, implements Catalyst's
-`QuantumDevice` contract and owns recording, MQT target compilation, QDMI
-submission, and finite-shot readout. The small Python `Device` retains
-registration, configuration, upstream preprocessing, eager replay, result
-shapes, and the existing batch/recovery API. Ordinary QNodes require neither
-Catalyst nor `qjit`. The Python OpenQASM serializer is removed.
+Ordinary PennyLane QNodes and compiled Catalyst QNodes share gate translation,
+MQT target compilation, QDMI submission, and finite-shot readout. The Python
+`Device` retains registration, configuration, upstream preprocessing, result
+shapes, and the shared batch/recovery API. Ordinary QNodes require neither
+Catalyst nor implicit `qjit` compilation.
 
 ```text
-ordinary QNode -> PennyLane transforms -> native recorder
-qjit QNode -> Catalyst runtime -> MQTQDMIFactory -> native recorder
-native recorder -> QCProgram -> MQT target compiler -> QDMI -> readout
+ordinary QNode -> PennyLane transforms -> QCProgram.from_pennylane
+              -> compile_program -> submit_program / try_submit_programs
+qjit QNode -> Catalyst runtime -> MLIR extension's MQTQDMIFactory
+           -> native gate recording -> QCProgram -> compiler/QDMI adapter
+both paths -> logical-wire readout -> requested PennyLane results
 ```
 
-The compiler synthesizes and routes against provider metadata. QIR and OpenQASM
-3 targets are supported; OpenQASM 2-only targets are excluded. Existing compiler
-target/submission contracts own format selection and physical legality.
+`QCProgram.from_pennylane(tape, *, wires=None)` imports a preprocessed terminal
+tape without a provider session. It appends computational-basis readout for all
+mapped wires; the caller prepares measurement bases and interprets the results.
+The returned public `QCProgram` supports existing transformations and exports.
+The device uses the existing `CompiledProgram`, `compile_program`, and
+`submit_program` APIs, plus the generic `try_submit_programs` helper. There is
+no private Python recorder or prepared-program type.
 
-Ordinary finite-shot measurements, Hamiltonians, parameter-shift gradients,
-custom wires, broadcasting, shot vectors, and recovery remain supported.
-Compiled execution uses `qjit(capture=False)`, fixed contiguous integer wires,
-terminal measurements, and finite shots. Analytic execution, native gradients,
-interactive mid-circuit feedback, dynamic allocation, and saved executables that
-can be loaded in another process are outside this change. Ordinary deferred
-measurements remain available.
+The implementation lives in `mlir/lib/Target/Catalyst/`,
+`bindings/mlir/pennylane.cpp`, and `python/mqt/core/plugins/pennylane/`. The
+compiler synthesizes and routes against provider metadata. QIR and OpenQASM 3
+targets are supported; existing compiler contracts own format selection and
+physical legality. OpenQASM 2-only targets are unsupported.
+
+Ordinary finite-shot observables, parameter-shift gradients, custom wires,
+broadcasting, shot vectors, deferred measurements, and recovery remain
+available. The importer itself does not accept symbolic mid-circuit measurements
+or conditional gates: ordinary device preprocessing defers them first.
 
 ## Durable decisions
 
+- Link the static `MQTCompilerCatalystAdapter` into the existing MLIR extension,
+  which exports `MQTQDMIFactory`. No separate device DSO or Catalyst runtime
+  library is needed. Vendor the four required headers and license under
+  `vendor/catalyst/0.15.0/`, with provenance and hashes. This follows the
+  existing extension ownership and removes runtime library discovery. Check
+  Catalyst >=0.15,<0.16.0a0 before returning the factory: the runtime has no ABI
+  handshake, and 0.14 differs in virtual signatures and table layout.
 - Reuse `QCProgramBuilder`, `StandardGate`/`emitStandardGate`, `QCProgram`,
-  `CompiledProgram`, and the QDMI compiler adapter. The gate table only maps
-  source names and conventions. Negative controls use X conjugation; PennyLane
-  global phase has the opposite sign from Core's convention.
-- Finalize/compile at the first terminal measurement and cache one full logical
-  readout per circuit and shot count. Release resets circuit state because
-  Catalyst pools devices inside a compiled invocation. Reject gates after
-  preparation and stale qubit/observable IDs.
+  `CompiledProgram`, and the QDMI compiler adapter. The gate table maps source
+  names and conventions. Negative controls use X conjugation; PennyLane global
+  phase has the opposite sign from Core's convention.
+- Finalize at the first terminal measurement and cache one full logical readout
+  per circuit and shot count. Release resets circuit state because Catalyst
+  pools devices inside a compiled invocation. Gates after preparation and stale
+  qubit/observable IDs are errors.
 - Native Identity/Z products reduce to parity. Upstream transforms diagonalize
   other observables and split bases. Native expectation/probability primitives
-  preserve compiled parameter-shift; lowering everything to samples would not.
-- Emit classical bit i for logical wire i. Reverse QDMI's descending classical
-  bit strings once; select requested wires afterward. Physical placement must
-  not reorder output. Counts-only results provide a sample multiset without
-  temporal shot order. Dense counts/probabilities remain exponential; native
-  checks cannot protect allocations already made upstream. Prefer samples for
-  wide circuits.
-- Contexts own their provider handle and custom parameters, including copied
-  bytes. Compiled kwargs contain only an opaque numeric `context` ID. A weak
-  synchronized registry resolves it; live native devices/programs retain strong
-  ownership. Registry locks never span provider calls. Adapter locking makes no
-  promise about unrelated calls through an injected provider handle.
-- Preserve `PennyLaneJob` and the shared QDMI `Batch` scheduler. Immutable
-  native programs replace Python payloads; grouping, shot-copy boundaries,
-  recovery, tracking, and retries remain eager frontend responsibilities.
-  Compiled calls are synchronous. Generic Catalyst seeding is unsupported;
-  provider-specific job parameters, including DDSIM's seed, remain available.
-- This private ABI boundary retains exceptions/RTTI for nanobind. No LLVM/MLIR
-  objects cross it. Hide static dependencies, and link no Catalyst runtime or
-  compiler library. Install the pinned headers' Apache license with the adapter.
-- Compile the binding bridge outside unity builds: LLVM feature-detection macros
-  would otherwise change KJ's exception/RTTI detection in the existing Jeff
-  import translation unit. Keep this isolation local to the new bridge.
+  preserve non-capture compiled parameter-shift; lowering everything to samples
+  would break Catalyst's differentiation checks.
+- Emit classical bit i for logical wire i. Decode QDMI's descending classical
+  bit strings once, then select requested wires. Physical placement must not
+  reorder output. Counts-only results provide a sample multiset without temporal
+  shot order. Dense compiled counts/probabilities remain exponential; native
+  checks cannot protect allocations already made upstream.
+- A private context owns its QDMI device/session and custom parameters,
+  including copied binary values. Compiled kwargs contain only an opaque numeric
+  context ID. A synchronized weak registry resolves it; live Python/native
+  devices retain strong ownership. Registry locks never span provider calls.
+  Concurrent callbacks require the provider to support concurrent calls on the
+  shared session, as documented for direct QDMI usage; recorder state belongs to
+  each separately leased Catalyst device.
+- Preserve `PennyLaneJob` and the shared QDMI `Batch` scheduler. Compile all
+  tapes before submission. `try_submit_programs` validates compatible compiled
+  programs and returns `None` if the provider declines native batching before
+  submission. Grouping, shot-copy boundaries, recovery, tracking, and retries
+  remain eager frontend responsibilities.
+- Keep exceptions and RTTI at the Catalyst/nanobind boundary while using the
+  compiler's result-based error APIs internally. Do not let exceptions escape
+  the QDMI C interface. Build the binding outside unity builds to avoid LLVM
+  feature-detection macros changing KJ's exception/RTTI configuration in the
+  existing Jeff importer.
 
-## Versions and evidence
+## Upstream contracts and supported capture
 
-Research inspected Core `9ca32dd3e4df86fc313eca1c326adbf6ec27b7f9`, PennyLane
-`9792b3ea46a7b41ab709357b6efc63110e2ccdac` (`0.46.0-dev129`), and Catalyst
-`dd4f8d5f290efae3a828b7c5a5a8d5fe8a854b95` (`0.16.0-dev121`), alongside
-PennyLane 0.45.1 and Catalyst 0.15.0, current on 2026-10-17.
+Research inspected PennyLane `9792b3ea46a7b41ab709357b6efc63110e2ccdac`
+(`0.46.0-dev129`) and Catalyst `dd4f8d5f290efae3a828b7c5a5a8d5fe8a854b95`
+(`0.16.0-dev121`), alongside PennyLane 0.45.1 and Catalyst 0.15.0. These
+remained the current upstream heads on 2026-10-18. The vendored headers are from
+Catalyst v0.15.0 commit `3126674625638fee8413d5828b24d2b074a0aeb4`. Inspected
+development virtual signatures match; header compatibility alone is not runtime
+validation.
 
 The [custom-device guide][custom-devices] distinguishes ordinary Python
 execution from native compiled execution. `get_c_interface()` alone does not
-redirect ordinary QNodes; do not implicitly add `qjit` or implement the
-discontinued experimental `eval_jaxpr` path. The inspected
-[capture pipeline][capture] omits some splitting/diagonalization needed here;
-revisit the explicit non-capture limitation when upstream implements those
-transforms.
+redirect ordinary QNodes. The discontinued experimental `eval_jaxpr` device path
+is not a replacement.
 
-Headers are pinned to Catalyst v0.15.0 commit
-`3126674625638fee8413d5828b24d2b074a0aeb4`. Inspected development virtual
-signatures match, including `NamedOperation`'s seventh optional string-vector
-argument. Header compatibility alone is not runtime validation.
+Both capture modes support native gates, computational-basis
+samples/counts/probabilities, and Identity/Z/product expectations and variances.
+The current [capture pipeline][capture] replaces some Python preprocessing with
+empty passes. For other observables, apply existing upstream compiler passes:
 
-PennyLane remains `>=0.45.1` without an upper pin. Install Catalyst separately.
-The `test-catalyst` dependency group has its own Python `>=3.11,<3.15` range for
-current JAX wheel constraints; Core and the universal lock remain `>=3.11`.
-Ordinary tests on newer Python do not acquire Catalyst. Stable Catalyst runs in
-Linux CI; development Catalyst/PennyLane run in weekly upstream checks.
+```python
+@qp.qjit(capture=True)
+@catalyst.passes.diagonalize_measurements
+@qp.transform(pass_name="split-non-commuting")
+@qp.qnode(device, shots=1000)
+def circuit(angle):
+    qp.Hadamard(0)
+    qp.S(0)
+    qp.RY(angle, 1)
+    return qp.expval(0.5 * qp.Y(0) + qp.Z(1))
+```
 
-## Validation
+Local stable/development experiments execute Y/product/Hamiltonian and
+noncommuting expectations using this recipe. Splitting currently accepts
+expectation measurements only; diagonalization alone supports variance.
+`qp.transforms.decompose` with the native `gate_set` separately handles `Rot` in
+both stacks. Composing gate decomposition with measurement passes fails in the
+inspected development graph-decomposition pass, although the same circuit works
+in stable Catalyst. Use non-capture compilation for that combination; remove
+this qualification when the upstream passes compose successfully. Upstream
+skipped-pass warnings can remain even with explicit compiler passes.
 
-Two native regressions cover provider-result validation/owned binary parameters
-and registry/lifetime handling. Existing compiler tests own synthesis/routing
-coverage. Real DDSIM cases replace serializer-specific tests with gate
-semantics. Compiled tests cover correlated terminal results, wire ordering,
-pooled reuse, observable lowering, error recovery, and expectation/probability
-gradients.
+Captured parameter-shift differentiation fails in PennyLane's
+[`_qnode_jvp`][capture-jvp], including on `lightning.qubit`; use `capture=False`
+for compiled gradients. Native gradients, analytic execution, and variance
+gradients are unsupported. Catalyst requires fixed contiguous integer wires, and
+its current shot-vector support is samples-only without capture and absent with
+capture. Compiled counts and probabilities allocate dense result buffers; use
+samples for wide registers.
+
+Core can compile and execute complete programs with mid-circuit measurements and
+classical feedback, as verified with an OpenQASM 3 measurement/conditional
+program on DDSIM. Catalyst instead
+[loads each measurement result][measure-lowering] immediately before executing
+its next branch. A terminal-recording device cannot return an unresolved
+symbolic bit through that callback. Catalyst also
+[rejects deferred MCM][deferred-rejection]. Supporting compiled feedback as one
+QDMI job requires an importer for complete Catalyst IR before this lowering;
+claiming another capability or buffering the callback cannot supply it. A full
+PennyLane symbolic-MCM importer is likewise a separate compiler extension.
+
+`QuantumDevice` has no multi-program submission callback. Independent compiled
+QNodes reach separate synchronous terminal-measurement calls. Catalyst's
+`async_qnodes=True` can run them concurrently but cannot combine them into one
+QDMI job. Eager tapes use the generic native batch submission API.
+
+Compiled code depends on a live in-process context and cannot restore a saved
+executable in another process. Keep the Python device alive while using compiled
+functions. Compiled calls do not use Python batch recovery, retries, or tracker
+updates. Generic Catalyst seeds are unsupported; provider-specific job
+parameters, including DDSIM's seed, remain available.
+
+## Dependencies and validation
+
+Core retains Python `>=3.11`. PennyLane is optional and bounded to
+`>=0.45.1,<0.46.0a0`; the bound admits development builds when explicitly
+requested while excluding the next release series. Catalyst is installed
+separately by users. Its `>=0.15,<0.16.0a0` test dependency uses Python/platform
+markers for available wheels: Python below 3.15, Linux x86_64/aarch64, and macOS
+arm64. Normal `tests` and `minimums` sessions include it on those platforms;
+other platforms skip compiled tests through the shared availability helper. The
+weekly upstream workflow and `catalyst-dev` session exercise development
+Catalyst and PennyLane with Python 3.12.
+
+Tests under `test/python/plugins/qdmi_pennylane/` cover ordinary native
+execution, compiled correlated readout, wire order, pooled reuse, both capture
+modes, observable lowering, error recovery, and non-capture
+expectation/probability gradients. Native tests cover result validation, context
+lifetime, and generic compiler batching. Existing compiler tests own
+synthesis/routing coverage.
 
 ```sh
-cmake --preset release -DBUILD_MQT_CORE_BINDINGS=ON -DBUILD_MQT_CORE_SHARED_LIBS=ON
-cmake --build --preset release --target mqt-core-mlir-unittests-catalyst
-ctest --preset release -R CatalystQDMI
-uvx nox -s catalyst
+ctest --preset release -R 'CatalystQDMI|CompilerQDMIAdapter'
+uvx nox -s tests-3.12 -- test/python/plugins/qdmi_pennylane
+uvx nox -s minimums-3.12 -- test/python/plugins/qdmi_pennylane
 uvx nox -s catalyst-dev
-uvx nox -s stubs
-uvx nox -s cpp-lint -- HEAD
-uvx nox -s lint
 ```
 
 Where TestPyPI lacks native wheels, `CATALYST_WHEEL` can select an official
 artifact. The inspected ARM64 artifact from upstream run `38949132648`
 (`f545c9e9`, dev120) differs from inspected Catalyst HEAD only by its version
-bump. Validate it with PennyLane dev129 and test the released stack separately.
-Verify both import orders and installed capabilities/library/license contents.
+bump. Development runtime probes used that artifact with PennyLane dev129;
+released probes used Catalyst 0.15.0 with PennyLane 0.45.1.
 
-Local evidence on Linux aarch64:
+Current local validation on Linux aarch64:
 
-- Both native regressions pass, including real DDSIM output before injected
-  malformed-provider cases. Whole-file C++ analysis reports no findings.
-- Installed-wheel PennyLane suite: 55 passed without Catalyst (compiled module
-  skipped), 59 passed with Catalyst 0.15.0/PennyLane 0.45.1, and 59 passed with
-  Catalyst 0.16.0-dev120/PennyLane 0.46.0-dev129. Both Core/Catalyst import
-  orders execute ordinary and compiled QNodes successfully in both stacks.
-- The new `catalyst` and `catalyst-dev` nox sessions also pass end to end, each
-  running all 59 integration tests. Development uses the official ARM64
-  artifact.
-- Existing QDMI, batch, and relevant MLIR Python consumer suites: 917 passed.
-- Stub generation, repository lint, lock consistency, and the complete
-  executable documentation build with local link checks pass. Chrome DevTools
-  inspection covered desktop/mobile layouts, QAOA plots, console, and network
-  requests.
-- The wheel contains the native adapter, capability configuration, and Catalyst
-  license. Metadata retains Python `>=3.11`, PennyLane `>=0.45.1`, and no
-  mandatory Catalyst dependency. The shared library exports no LLVM/MLIR symbols
-  and links no Catalyst runtime. Group resolution also succeeds on Python 3.11
-  and 3.15.
-- Net test/fixture code drops by 329 lines, including the two native tests and
-  compiled regressions. Removed serializer tests are replaced by semantic device
-  checks; existing compiler tests retain target synthesis/routing coverage.
+- The stable stack passes 1,803 selected Python consumer tests, including the 51
+  original integration cases; both added ABI-boundary cases also pass. The
+  development stack covers the same 51 tests in separate runs: 28
+  DDSIM/public-importer, 17 device, and 6 compiled tests.
+- The three native Catalyst and 19 compiler adapter tests pass. Whole-file C++
+  analysis of all eight changed implementation/test files reports no findings,
+  and stub regeneration passes.
+- Regular `tests-3.12` and `minimums-3.12` nox sessions each pass all 53
+  integration cases. An installed wheel on standard CPython 3.15 with no
+  Catalyst passes 45 cases and skips the compiled module; dependency checks also
+  pass. Final coverage validation remains pending; an earlier patch-coverage
+  failure is under investigation. Final hosted CI is not established by these
+  local results.
 
-Final specialist review found no remaining design blocker. Portability review
-added Windows DLL staging for native test discovery. Other operating systems,
-real hardware, hosted CI, and external documentation link checking were not run.
-No performance speedup is claimed.
+Installed-wheel probes pass with both Catalyst/Core import orders on stable and
+development stacks. They execute the exported factory, check the capability
+file, and confirm that no separate adapter library is loaded. The wheel includes
+the vendored license and contains no adapter DSO.
+
+The revised full executable documentation build and internal link checks pass.
+Chrome DevTools inspection verified desktop/mobile layout, the importer output,
+all new API anchors, and QAOA figures. Content assets loaded successfully; the
+local preview's only failed request was its missing favicon. The exact capture
+recipe above also passes on both rebuilt installed stable/development stacks. No
+real hardware or performance speedup is claimed.
 
 [custom-devices]: https://docs.pennylane.ai/projects/catalyst/en/latest/dev/custom_devices.html
 [capture]: https://github.com/PennyLaneAI/catalyst/blob/dd4f8d5f290efae3a828b7c5a5a8d5fe8a854b95/frontend/catalyst/from_plxpr/device_utils.py
+[capture-jvp]: https://github.com/PennyLaneAI/pennylane/blob/9792b3ea46a7b41ab709357b6efc63110e2ccdac/pennylane/workflow/_capture_qnode.py#L285-L296
+[measure-lowering]: https://github.com/PennyLaneAI/catalyst/blob/dd4f8d5f290efae3a828b7c5a5a8d5fe8a854b95/mlir/lib/Quantum/Transforms/ConversionPatterns.cpp#L903-L935
+[deferred-rejection]: https://github.com/PennyLaneAI/catalyst/blob/dd4f8d5f290efae3a828b7c5a5a8d5fe8a854b95/frontend/catalyst/qfunc.py#L85-L91

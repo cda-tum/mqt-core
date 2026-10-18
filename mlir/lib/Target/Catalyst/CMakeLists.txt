@@ -6,32 +6,26 @@
 #
 # Licensed under the MIT License
 
-set(TARGET_NAME mqt-core-catalyst-qdmi)
-add_mqt_core_library(${TARGET_NAME} FORCE_SHARED HIDDEN_VISIBILITY ALIAS_NAME CatalystQDMI)
-target_sources(${TARGET_NAME} PRIVATE QDMIDevice.cpp)
-target_include_directories(${TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-                                                 "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>")
-target_include_directories(${TARGET_NAME} SYSTEM
-                           PUBLIC "$<BUILD_INTERFACE:${catalyst_SOURCE_DIR}/runtime/include>")
+add_library(MQTCompilerCatalystAdapter STATIC QDMIDevice.cpp)
+set_target_properties(MQTCompilerCatalystAdapter PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_include_directories(MQTCompilerCatalystAdapter
+                           PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
+target_include_directories(
+  MQTCompilerCatalystAdapter SYSTEM
+  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/catalyst/0.15.0/include>")
 target_link_libraries(
-  ${TARGET_NAME}
-  PRIVATE MQTCompilerQDMIAdapter MLIRQCProgramBuilder MLIRQCTranslationSupport
-  PUBLIC MQT::CoreQDMI)
-include(GenerateExportHeader)
-generate_export_header(${TARGET_NAME} EXPORT_FILE_NAME mqt-catalyst-export.h EXPORT_MACRO_NAME
-                       MQT_CATALYST_EXPORT)
-target_compile_definitions(
-  ${TARGET_NAME} PRIVATE "MQT_CATALYST_LIBRARY_FILENAME=\"$<TARGET_FILE_NAME:${TARGET_NAME}>\"")
-if(UNIX AND NOT APPLE)
-  target_link_options(${TARGET_NAME} PRIVATE "LINKER:--exclude-libs,ALL")
-endif()
+  MQTCompilerCatalystAdapter
+  PUBLIC MQTCompilerQDMIAdapter MQT::CoreQDMI
+  PRIVATE MLIRQCProgramBuilder MLIRQCTranslationSupport)
+set(LLVM_REQUIRES_EH ON)
+set(LLVM_REQUIRES_RTTI ON)
+mqt_mlir_target_use_project_options(MQTCompilerCatalystAdapter)
+unset(LLVM_REQUIRES_EH)
+unset(LLVM_REQUIRES_RTTI)
+
 if(MQT_CORE_INSTALL)
   install(
-    FILES "${catalyst_SOURCE_DIR}/LICENSE"
+    FILES "${PROJECT_SOURCE_DIR}/vendor/catalyst/0.15.0/LICENSE"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/mqt-core/catalyst"
     COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime)
-  install(
-    TARGETS ${TARGET_NAME}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime)
 endif()

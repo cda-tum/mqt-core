@@ -10,12 +10,13 @@
 
 from __future__ import annotations
 
-__lazy_modules__ = {"mqt.core.plugins.pennylane.exceptions", "mqt.core.plugins.qdmi_batch"}
+__lazy_modules__ = {"mqt.core.mlir", "mqt.core.plugins.pennylane.exceptions", "mqt.core.plugins.qdmi_batch"}
 
 from contextlib import contextmanager
 from time import monotonic
 from typing import TYPE_CHECKING, cast
 
+from mqt.core.mlir import _pennylane_samples, submit_program, try_submit_programs
 from mqt.core.plugins.pennylane.exceptions import PennyLaneExecutionError
 from mqt.core.plugins.qdmi_batch import Batch, BatchEntry
 
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from pennylane.tape import QuantumScript
     from pennylane.typing import Result, ResultBatch
 
-    from mqt.core.mlir import _PennyLaneProgram
+    from mqt.core.mlir import CompiledProgram
     from mqt.core.plugins.pennylane.device import QDMIDevice
     from mqt.core.qdmi import Job
 
@@ -47,7 +48,7 @@ class PennyLaneJob:
     def __init__(
         self,
         device: QDMIDevice,
-        prepared: Sequence[tuple[_PennyLaneProgram, tuple[int, ...]]],
+        prepared: Sequence[tuple[CompiledProgram, tuple[int, ...]]],
         tapes: Sequence[QuantumScript],
         *,
         single: bool,
@@ -77,12 +78,20 @@ class PennyLaneJob:
 
     def _submit(self, index: int) -> Job:
         program, shots = self._prepared[index]
-        return program.submit(shots)
+        return submit_program(
+            program,
+            target=self._device.qdmi_device,
+            num_shots=shots,
+            **self._device._job_parameters,  # ruff:ignore[private-member-access] Retained device submission configuration.
+        )
 
     def _submit_programs(self, indices: Sequence[int]) -> Job | None:
         _, shots = self._prepared[indices[0]]
-        return self._device._context.try_submit_programs(  # ruff:ignore[private-member-access] Share native submission with Catalyst.
-            [self._prepared[index][0] for index in indices], shots
+        return try_submit_programs(
+            [self._prepared[index][0] for index in indices],
+            target=self._device.qdmi_device,
+            num_shots=shots,
+            **self._device._job_parameters,  # ruff:ignore[private-member-access] Retained device submission configuration.
         )
 
     def _samples(self, index: int, job: Job, program_index: int) -> np.ndarray:
@@ -91,8 +100,8 @@ class PennyLaneJob:
         Returns:
             A shot-by-wire sample array.
         """
-        program, shots = self._prepared[index]
-        return program.decode_samples(job, shots, program_index)
+        _, shots = self._prepared[index]
+        return _pennylane_samples(job, len(self._device.wires), shots, program_index)
 
     def _record_submission(self, indices: Sequence[int]) -> None:
         self._device._submitted_jobs += 1  # ruff:ignore[private-member-access] Update the device's read-only total.

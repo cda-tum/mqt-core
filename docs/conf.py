@@ -183,7 +183,6 @@ nitpick_ignore_regex = [
     ("py:class", r"pennylane\.tape\.QuantumScriptOrBatch"),
     ("py:class", r"pennylane\.transforms\.core\.CompilePipeline"),
     ("py:class", r"pennylane\.typing\.(Result|ResultBatch)"),
-    ("py:class", r"mqt\.core\.mlir\._PennyLaneProgram"),
     ("py:class", r"qiskit\.primitives\.containers\.(Estimator|Sampler)PubLike"),
     # PennyLane inherits these unqualified references without exporting their targets.
     ("py:class", r"DeviceCapabilities"),

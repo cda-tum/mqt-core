@@ -8,29 +8,41 @@
 
 """Exercise the actual Catalyst factory and runtime with local QDMI jobs."""
 
-# ruff: file-ignore[missing-return-type-private-function]
-
 from __future__ import annotations
 
 from importlib import import_module
-from importlib.util import find_spec
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 
-if find_spec("catalyst") is None:
+from .support import supports_catalyst
+
+if TYPE_CHECKING:
+    from pennylane.measurements import CountsMP, ExpectationMP, ProbabilityMP, SampleMP, VarianceMP
+    from pennylane.typing import Result
+
+if not supports_catalyst():
     pytest.skip("Install Catalyst to run compiled device tests.", allow_module_level=True)
 
 catalyst = import_module("catalyst")
 qp = pytest.importorskip("pennylane")
 
 
-def test_correlated_readout_and_wire_order() -> None:
+@pytest.mark.parametrize("capture", [False, True])
+@pytest.mark.filterwarnings(
+    r"ignore:The following device-preprocessing transforms.*'qp\.qjit\(capture=True\)':UserWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:Excluded the .* decomposition rule.*multiple registers yet:Warning:"
+    "catalyst.decomposition.decomposition_rules"
+)
+def test_correlated_readout_and_wire_order(*, capture: bool) -> None:
     """Terminal measurements share a readout, including reordered subsets."""
     device = qp.device("mqt.ddsim.default", wires=3)
 
     @qp.qnode(device, shots=100)
-    def circuit():
+    def circuit() -> tuple[SampleMP, CountsMP, ProbabilityMP, ExpectationMP, VarianceMP]:
         qp.Hadamard(0)
         qp.CNOT(wires=[0, 2])
         qp.X(1)
@@ -42,7 +54,7 @@ def test_correlated_readout_and_wire_order() -> None:
             qp.var(qp.Z(0)),
         )
 
-    samples, (keys, counts), probabilities, parity, variance = catalyst.qjit(circuit, capture=False)()
+    samples, (keys, counts), probabilities, parity, variance = catalyst.qjit(circuit, capture=capture)()
     np.testing.assert_array_equal(samples[:, 0], 1)
     np.testing.assert_array_equal(samples[:, 1], samples[:, 2])
     ones = np.count_nonzero(samples[:, 2])
@@ -53,19 +65,33 @@ def test_correlated_readout_and_wire_order() -> None:
     assert variance == pytest.approx(1 - (1 - 2 * ones / 100) ** 2)
 
 
-def test_repeated_calls_and_observable_lowering() -> None:
+@pytest.mark.parametrize("capture", [False, True])
+@pytest.mark.filterwarnings(
+    r"ignore:The following device-preprocessing transforms.*'qp\.qjit\(capture=True\)':UserWarning"
+)
+@pytest.mark.filterwarnings(
+    "ignore:Excluded the .* decomposition rule.*multiple registers yet:Warning:"
+    "catalyst.decomposition.decomposition_rules"
+)
+def test_repeated_calls_and_observable_lowering(*, capture: bool) -> None:
     """Runtime pooling resets circuits and upstream lowers non-Z observables."""
     device = qp.device("mqt.ddsim.default", wires=2)
 
     @qp.qnode(device, shots=10)
-    def circuit(angle: float):
+    def circuit(angle: float) -> ExpectationMP:
         qp.Hadamard(0)
         qp.S(0)
         qp.RY(angle, 1)
         return qp.expval(0.5 * qp.Y(0) + qp.Z(1))
 
-    @catalyst.qjit(capture=False)
-    def compiled(angle: float):
+    if capture:
+        circuit = qp.transform(
+            pass_name="split-non-commuting"  # ruff:ignore[hardcoded-password-func-arg] Compiler pass identifier.
+        )(circuit)
+        circuit = catalyst.passes.diagonalize_measurements(circuit)
+
+    @catalyst.qjit(capture=capture)
+    def compiled(angle: float) -> tuple[Result, Result, Result]:
         return circuit(angle), circuit(np.pi), circuit(angle)
 
     np.testing.assert_allclose(compiled(0.0), [1.5, -0.5, 1.5])
@@ -81,7 +107,7 @@ def test_compiled_parameter_shift(*, probabilities: bool) -> None:
     device = qp.device("mqt.ddsim.default", wires=1)
 
     @qp.qnode(device, shots=10, diff_method="parameter-shift")
-    def circuit(angle: float):
+    def circuit(angle: float) -> ProbabilityMP | ExpectationMP:
         qp.RY(angle, 0)
         return qp.probs(wires=[0]) if probabilities else qp.expval(qp.Z(0))
 

@@ -11,29 +11,33 @@
 from __future__ import annotations
 
 __lazy_modules__ = {
+    "importlib.metadata",
+    "mqt.core",
     "mqt.core.mlir",
     "mqt.core.plugins.pennylane.exceptions",
     "mqt.core.plugins.pennylane.job",
     "mqt.core.qdmi.builtin_driver",
     "numbers",
     "operator",
-    "pennylane.ops.op_math",
+    "packaging.specifiers",
     "pennylane.transforms",
     "pennylane.transforms.core",
 }
 
 import operator
+from importlib.metadata import version
 from numbers import Integral
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pennylane as qp
+from packaging.specifiers import SpecifierSet
 from pennylane.devices import Device, ExecutionConfig
-from pennylane.ops.op_math import Adjoint, Controlled
 from pennylane.transforms import defer_measurements
 from pennylane.transforms.core import CompilePipeline
 
-from mqt.core.mlir import _pennylane_c_interface, _PennyLaneQDMIContext
+from mqt.core import mlir
+from mqt.core.mlir import QCProgram, _PennyLaneQDMIContext, compile_program
 from mqt.core.plugins.pennylane.exceptions import PennyLaneConfigurationError as ConfigurationError
 from mqt.core.plugins.pennylane.exceptions import PennyLaneTranslationError as TranslationError
 from mqt.core.plugins.pennylane.exceptions import PennyLaneValidationError as ValidationError
@@ -44,12 +48,11 @@ if TYPE_CHECKING:
     from collections.abc import Hashable, Mapping, Sequence
 
     from pennylane.measurements import Shots
-    from pennylane.operation import Operator
     from pennylane.tape import QuantumScript, QuantumScriptOrBatch
     from pennylane.typing import Result, ResultBatch
     from pennylane.wires import Wires
 
-    from mqt.core.mlir import _PennyLaneProgram
+    from mqt.core.mlir import CompiledProgram
     from mqt.core.qdmi import Device as QDMIDeviceHandle
     from mqt.core.typing import QDMIJobParameters, QDMISessionParameters
 
@@ -125,34 +128,6 @@ def _defer_on_device_wires(tape: QuantumScript, wires: Wires) -> tuple[tuple[Qua
     return (restored,), postprocess
 
 
-def _operation_args(
-    operation: Operator, wire_map: Mapping[Hashable, int]
-) -> tuple[str, list[float], list[int], bool, list[int], list[bool]]:
-    """Translate PennyLane modifiers and wire labels to native gate arguments.
-
-    Returns:
-        The named-operation arguments in Catalyst's wire convention.
-    """
-    inverse = False
-    controls = []
-    control_values = []
-    while isinstance(operation, (Adjoint, Controlled)):
-        if isinstance(operation, Adjoint):
-            inverse = not inverse
-        else:
-            controls.extend(wire_map[wire] for wire in operation.control_wires)
-            control_values.extend(bool(value) for value in operation.control_values)
-        operation = operation.base
-    return (
-        operation.name,
-        [float(cast("float", parameter)) for parameter in operation.parameters],
-        [wire_map[wire] for wire in operation.wires],
-        inverse,
-        controls,
-        control_values,
-    )
-
-
 class QDMIDevice(Device):
     """Execute PennyLane programs on a gate-based QDMI device.
 
@@ -171,8 +146,17 @@ class QDMIDevice(Device):
 
     @staticmethod
     def get_c_interface() -> tuple[str, str]:
-        """Return the native Catalyst factory name and installed library path."""
-        return _pennylane_c_interface()
+        """Return the factory name and library path for a compatible Catalyst ABI.
+
+        Raises:
+            PennyLaneConfigurationError: If Catalyst uses an unsupported device ABI.
+        """
+        installed = version("pennylane-catalyst")
+        supported = SpecifierSet(">=0.15,<0.16.0a0")
+        if not supported.contains(installed, prereleases=True):
+            msg = f"Catalyst {installed} has an unsupported device ABI; requires {supported}."
+            raise ConfigurationError(msg)
+        return "MQTQDMI", mlir.__file__
 
     def __init__(
         self,
@@ -234,6 +218,7 @@ class QDMIDevice(Device):
             self._context = _PennyLaneQDMIContext(self._qdmi_device, **job_parameters)
         except (RuntimeError, ValueError) as exc:
             raise ConfigurationError(str(exc)) from exc
+        self._job_parameters = job_parameters
         self.device_kwargs = {"context": self._context.id}
         self._submitted_jobs = 0
         self._execution_time = 0.0
@@ -270,7 +255,7 @@ class QDMIDevice(Device):
         pipeline += super().preprocess_transforms(execution_config)
         return pipeline
 
-    def _prepare(self, tape: QuantumScript) -> _PennyLaneProgram:
+    def _prepare(self, tape: QuantumScript) -> CompiledProgram:
         """Replay a preprocessed tape into the native target compiler.
 
         Returns:
@@ -279,12 +264,9 @@ class QDMIDevice(Device):
         Raises:
             PennyLaneTranslationError: If an operation or target cannot be compiled.
         """
-        wire_map = dict(zip(self.wires, range(len(self.wires)), strict=True))
         try:
-            recorder = self._context.recorder(len(self.wires))
-            for operation in tape.operations:
-                recorder.named_operation(*_operation_args(operation, wire_map))
-            return recorder.prepare()
+            program = QCProgram.from_pennylane(tape, wires=self.wires)
+            return compile_program(program, target=self._qdmi_device, inplace=True)
         except (KeyError, RuntimeError, TypeError, ValueError) as exc:
             raise TranslationError(str(exc)) from exc
 
