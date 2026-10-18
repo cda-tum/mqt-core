@@ -28,7 +28,12 @@ except ImportError:
 
 import networkx as nx
 
-from mqt.core.plugins.pennylane import DDSIMDevice, PennyLaneJob, PennyLaneValidationError
+from mqt.core.plugins.pennylane import (
+    DDSIMDevice,
+    PennyLaneJob,
+    PennyLaneTranslationError,
+    PennyLaneValidationError,
+)
 
 GRAPH_EDGES = ((0, 1), (0, 2), (1, 2), (2, 3))
 
@@ -91,6 +96,11 @@ def test_parameter_shift_gradient() -> None:
         [qp.SX(0), qp.adjoint(qp.SX)(1), qp.CNOT(wires=[1, 0])],
         [qp.IsingXX(0.37, wires=[0, 1])],
         [qp.IsingYY(0.37, wires=[0, 1])],
+        [qp.Hadamard(0), qp.ctrl(qp.GlobalPhase(0.73), control=0), qp.Hadamard(0)],
+        [
+            qp.Hadamard(0),
+            qp.ctrl(qp.adjoint(qp.RY(0.73, 1)), control=0, control_values=[False]),
+        ],
         [
             qp.Hadamard(0),
             qp.Hadamard(1),
@@ -113,17 +123,39 @@ def test_gate_semantics_against_pennylane_reference(operations: list[qp.operatio
     np.testing.assert_allclose(actual, expected, atol=0.025)
 
 
+@pytest.mark.parametrize("angle", [np.nan, np.inf, -np.inf])
+def test_invalid_native_program_prevents_batch_submission(angle: float) -> None:
+    """Validate every compiled tape before accepting any job in the batch."""
+    device = DDSIMDevice(wires=1)
+    tapes = tuple(qp.tape.QuantumScript([qp.RY(value, 0)], [qp.sample(wires=[0])], shots=2) for value in (0.2, angle))
+    with pytest.raises(PennyLaneTranslationError, match="finite"):
+        device.execute(tapes)
+    assert device.submitted_jobs == 0
+    assert device.last_job is None
+
+
+@pytest.mark.parametrize("order", [None, [0, 1], [1, 0], [1]])
+def test_sample_wire_order(order: list[int] | None) -> None:
+    """Select requested wires from the compiler's logical classical readout."""
+    device = DDSIMDevice(wires=2)
+    tape = qp.tape.QuantumScript([qp.X(0)], [qp.sample(wires=order)], shots=3)
+    np.testing.assert_array_equal(
+        device.execute(tape), np.array([[1, 0]] * 3, dtype=np.int8)[:, range(2) if order is None else order]
+    )
+
+
 def test_qaoa_application() -> None:
     """Optimize one finite-shot MaxCut QAOA step through the real QDMI device."""
     graph = nx.Graph(GRAPH_EDGES)
-    cost_hamiltonian, mixer_hamiltonian = qp.qaoa.maxcut(graph)
+    cost_hamiltonian = qp.sum(*(0.5 * (qp.Z(u) @ qp.Z(v) - qp.I(u)) for u, v in graph.edges))
+    mixer_hamiltonian = qp.sum(*(qp.X(wire) for wire in graph.nodes))
     device = qp.device("mqt.ddsim.default", wires=4)
 
     def ansatz(parameters: np.ndarray) -> None:
         for wire in graph.nodes:
             qp.Hadamard(wire)
-        qp.qaoa.cost_layer(parameters[0], cost_hamiltonian)
-        qp.qaoa.mixer_layer(parameters[1], mixer_hamiltonian)
+        qp.ApproxTimeEvolution(cost_hamiltonian, parameters[0], 1)
+        qp.ApproxTimeEvolution(mixer_hamiltonian, parameters[1], 1)
 
     @qp.qnode(device, shots=200, diff_method="parameter-shift")
     def cost(parameters: np.ndarray):

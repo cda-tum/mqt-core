@@ -24,6 +24,7 @@
 #include "qdmi/QDMI.hpp"
 
 #include "Target/Qiskit/Qiskit.h"
+#include "pennylane.h"
 
 #include "capnp/common.h"
 #include "capnp/message.h"
@@ -889,6 +890,7 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
 
   nb::module_::import_("typing");
   nb::module_::import_("mqt.core.qdmi");
+  registerPennyLane(m);
 
   m.def("_generate_benchmark", &generateBenchmark,
         "instance_specification_json"_a,

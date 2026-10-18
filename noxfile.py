@@ -133,7 +133,8 @@ def _run_tests(
     session: nox.Session,
     *,
     install_args: Sequence[str] = (),
-    extra_command: Sequence[str] = (),
+    extra_groups: Sequence[str] = (),
+    extra_commands: Sequence[Sequence[str]] = (),
     pytest_run_args: Sequence[str] = (),
 ) -> None:
     env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
@@ -147,10 +148,7 @@ def _run_tests(
         "uv",
         "sync",
         "--inexact",
-        "--only-group",
-        "build",
-        "--only-group",
-        "test",
+        *(arg for group in ("build", "test", *extra_groups) for arg in ("--only-group", group)),
         *install_args,
         env=env,
     )
@@ -164,8 +162,8 @@ def _run_tests(
         *install_args,
         env=env,
     )
-    if extra_command:
-        session.run(*extra_command, env=env)
+    for command in extra_commands:
+        session.run(*command, env=env)
     session.run(
         "uv",
         "run",
@@ -183,6 +181,52 @@ def _run_tests(
 def tests(session: nox.Session) -> None:
     """Run the test suite."""
     _run_tests(session, pytest_run_args=["-m", "not slurm"])
+
+
+@nox.session(python="3.12", reuse_venv=True)
+def catalyst(session: nox.Session) -> None:
+    """Test the PennyLane integration with released Catalyst."""
+    _run_tests(
+        session,
+        extra_groups=["test-catalyst"],
+        pytest_run_args=["test/python/plugins/qdmi_pennylane"],
+    )
+
+
+@nox.session(name="catalyst-dev", python="3.12", reuse_venv=True)
+def catalyst_dev(session: nox.Session) -> None:
+    """Test current Catalyst and PennyLane development wheels.
+
+    Set CATALYST_WHEEL to an official wheel artifact on platforms without
+    TestPyPI nightly wheels, such as Linux aarch64.
+    """
+    _run_tests(
+        session,
+        extra_groups=["test-catalyst"],
+        extra_commands=[
+            [
+                "uv",
+                "pip",
+                "install",
+                "--upgrade",
+                "--index=https://test.pypi.org/simple",
+                # TestPyPI also contains stale releases of dependencies such as xdsl.
+                "--index-strategy=unsafe-best-match",
+                os.environ.get("CATALYST_WHEEL", "pennylane-catalyst>=0.16.0.dev0"),
+            ],
+            [
+                "uv",
+                "pip",
+                "install",
+                "--upgrade",
+                "--no-deps",  # Catalyst pins a PennyLane nightly that can lag main.
+                "--prerelease=allow",
+                "--index=https://test.pypi.org/simple",
+                "pennylane",
+            ],
+        ],
+        pytest_run_args=["test/python/plugins/qdmi_pennylane"],
+    )
 
 
 @nox.session(python=PYTHON_ALL_VERSIONS, reuse_venv=True, venv_backend="uv", default=True)

@@ -85,4 +85,12 @@ FetchContent_Declare(
   FIND_PACKAGE_ARGS ${QDMI_MINIMUM_VERSION})
 list(APPEND FETCH_PACKAGES qdmi)
 
+# Catalyst's device ABI is header-only; do not configure its compiler or runtime.
+FetchContent_Declare(
+  catalyst
+  GIT_REPOSITORY https://github.com/PennyLaneAI/catalyst.git
+  GIT_TAG 3126674625638fee8413d5828b24d2b074a0aeb4 # v0.15.0
+  GIT_SUBMODULES "" SOURCE_SUBDIR runtime/include SYSTEM EXCLUDE_FROM_ALL)
+list(APPEND FETCH_PACKAGES catalyst)
+
 FetchContent_MakeAvailable(${FETCH_PACKAGES})

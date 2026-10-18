@@ -11,6 +11,9 @@ set(TARGET_NAME "${MQT_CORE_TARGET_NAME}-mlir-bindings")
 if(NOT TARGET ${TARGET_NAME})
   file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS *.cpp)
 
+  # LLVM feature macros from this bridge must not change Cap'n Proto's exception detection.
+  set_source_files_properties(pennylane.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
   # Qiskit's extension C API tables are translation-unit local. Each supported minor therefore gets
   # one source file with a private header snapshot.
   file(STRINGS Target/Qiskit/SupportedVersions.inc qiskit_version_registrations
@@ -74,6 +77,7 @@ if(NOT TARGET ${TARGET_NAME})
     LINK_LIBS
     MQT::CoreBenchGenerate
     MQTCompilerQDMIAdapter
+    mqt-core-catalyst-qdmi
     MQTCompilerPipeline
     MLIRAnalysis
     MLIRMQTDialect

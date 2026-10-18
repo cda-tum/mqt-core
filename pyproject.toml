@@ -96,7 +96,7 @@ email = "marcel@mq.sc"
 
 [project.optional-dependencies]
 pennylane = [
-  "pennylane>=0.45.1,<0.46",
+  "pennylane>=0.45.1",
 ]
 qiskit = [
   "qiskit[qasm3-import]>=2.1,<3",
@@ -135,7 +135,7 @@ docs = [
   "myst-nb>=1.4",
   "ninja>=1.13",
   "openqasm-pygments>=0.2",
-  "pennylane>=0.45.1,<0.46",
+  "pennylane>=0.45.1",
   "pygraphviz>=2",
   "qiskit[visualization]>=2.1,<3",
   "sphinx>=9",
@@ -160,7 +160,7 @@ test-base = [
   "numpy>=2.1; python_version>='3.13'",
   "numpy>=2.3.2; python_version>='3.14'",
   "numpy>=2.5.2; python_version>='3.15'",
-  "pennylane>=0.45.1,<0.46",
+  "pennylane>=0.45.1",
   "pygraphviz>=2.0.2",
   "pytest>=9.0.1",
   "pytest-console-scripts>=1.4.1",
@@ -168,6 +168,9 @@ test-base = [
   "pytest-sugar>=1.1.1",
   "pytest-xdist>=3.8",
   "qiskit[qasm3-import]>=2.1,<3",
+]
+test-catalyst = [
+  "pennylane-catalyst>=0.15",
 ]
 
 
@@ -259,6 +262,10 @@ cache-keys = [
   { env = "CI" },
   { env = "DEPLOY" },
 ]
+
+# Catalyst pins JAX wheels that currently support CPython 3.11 through 3.14.
+[tool.uv.dependency-groups]
+test-catalyst = { requires-python = ">=3.11,<3.15" }
 
 [tool.uv.sources]
 mqt-core = { workspace = true }
