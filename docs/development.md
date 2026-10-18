@@ -304,6 +304,16 @@ version and release date before publishing. Version tags drive package metadata;
 do not edit generated version files to stage a release. Release preparation does
 not itself publish a release.
 
+## Python test selection
+
+`pytest` runs package tests by default. Repository-script tests use the
+`linkcheck`, `slurm`, and `qiskit_c_api` markers registered in `pyproject.toml`.
+In a source checkout, use `pytest -m linkcheck` to select one suite or
+`pytest -m ""` to run all suites. The command-line marker expression replaces
+the default selection, including when selecting a test file explicitly.
+`nox -s tests` includes the link-checker and Qiskit C API tests; the Slurm
+workflow runs its own script tests with `-m slurm`.
+
 ## Documentation validation
 
 Install Python 3.14 and Doxygen before building the complete documentation.

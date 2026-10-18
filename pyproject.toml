@@ -271,18 +271,14 @@ archs = "auto64"
 build-frontend = "uv"
 config-settings = { "cmake.define.ENABLE_IPO" = "ON" }
 environment = { DEPLOY = "ON" }
-test-command = "pytest test/python"
+test-command = "pytest test/python --maxprocesses=2 --dist=worksteal"
 test-groups = [ "test" ]
 test-sources = [
   "bindings/mlir/Target/Qiskit/SupportedVersions.inc",
-  "examples/slurm",
   "json",
-  "scripts/check_docs_links.py",
-  "scripts/qiskit_c_api_adopt.py",
+  "pyproject.toml",
   "test/circuits",
   "test/python",
-  "test/slurm/run_integration.py",
-  "vendor/qiskit-c-api",
 ]
 
 [tool.cibuildwheel.windows]
@@ -314,6 +310,14 @@ select = [ "cp*-win_arm64", "cp3??t-*" ]
 test-command = 'python -c "import mqt.core.dd, mqt.core.mlir, mqt.core.qdmi"'
 test-groups = []
 test-sources = []
+
+[[tool.cibuildwheel.overrides]]
+# Native executables are shared by all interpreters using the same ABI3 wheel.
+select = [ "cp311-*", "cp3??t-*" ]
+test-command = "python scripts/check_wheel_runtime.py"
+test-sources = [ "docs/cpp_api.md", "scripts/check_wheel_runtime.py" ]
+inherit.test-command = "prepend"
+inherit.test-sources = "append"
 
 
 [tool.ruff]
@@ -430,7 +434,9 @@ error-on-warning = true
 [tool.pytest]
 addopts = [
   "-ra",
-  "--numprocesses=auto", # Automatically use all available CPU cores for parallel testing
+  "--numprocesses=auto",                      # Automatically use all available CPU cores for parallel testing
+  "-m",
+  "not (linkcheck or slurm or qiskit_c_api)",
 ]
 filterwarnings = [
   "error",
@@ -438,6 +444,11 @@ filterwarnings = [
   "ignore:'return' in a 'finally' block:SyntaxWarning",
 ]
 log_level = "INFO"
+markers = [
+  "linkcheck: documentation link-checker tests (requires a source checkout)",
+  "slurm: Slurm integration-script tests (requires a source checkout)",
+  "qiskit_c_api: Qiskit C API adoption-script tests (requires a source checkout)",
+]
 minversion = "9.0"
 strict = true
 testpaths = [ "test/python" ]
