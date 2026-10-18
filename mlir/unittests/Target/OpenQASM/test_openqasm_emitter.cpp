@@ -14,8 +14,8 @@
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/QC/IR/QCDialect.h"
 #include "mqt/Dialect/QC/IR/QCOps.h"
-#include "mqt/Dialect/QC/Translation/TranslateOpenQASMToQC.h"
 #include "mqt/Target/OpenQASM/Frontend.h"
+#include "mqt/Target/OpenQASM/TranslateOpenQASMToQC.h"
 
 #include "OpenQASMTestUtils.h"
 #include "qasm_programs.h"

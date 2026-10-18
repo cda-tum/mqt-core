@@ -18,11 +18,11 @@
 #include "mqt/Conversion/QCToQIR/QIRBase/QCToQIRBase.h"
 #include "mqt/Dialect/MQT/Transforms/GlobalPhaseNormalization.h"
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
-#include "mqt/Dialect/QC/Translation/TranslateQCToOpenQASM3.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 #include "mqt/Support/Passes.h"
+#include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
 
 #include "capnp/common.h"
 #include "jeff/Translation/Deserialize.hpp"

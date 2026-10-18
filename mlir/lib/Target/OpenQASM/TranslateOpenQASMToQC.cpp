@@ -8,7 +8,7 @@
  * Licensed under the MIT License
  */
 
-#include "mqt/Dialect/QC/Translation/TranslateOpenQASMToQC.h"
+#include "mqt/Target/OpenQASM/TranslateOpenQASMToQC.h"
 
 #include "mqt/Target/OpenQASM/Frontend.h"
 

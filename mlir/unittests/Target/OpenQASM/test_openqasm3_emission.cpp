@@ -17,12 +17,12 @@
 #include "mqt/Dialect/QC/Builder/QCProgramBuilder.h"
 #include "mqt/Dialect/QC/IR/QCDialect.h"
 #include "mqt/Dialect/QC/IR/QCOps.h"
-#include "mqt/Dialect/QC/Translation/TranslateOpenQASMToQC.h"
-#include "mqt/Dialect/QC/Translation/TranslateQCToOpenQASM3.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
 #include "mqt/Support/Passes.h"
 #include "mqt/Target/OpenQASM/Frontend.h"
+#include "mqt/Target/OpenQASM/TranslateOpenQASMToQC.h"
+#include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
 
 #include "gtest/gtest.h"
 
