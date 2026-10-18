@@ -279,13 +279,14 @@ TEST(OpenQASM3EmissionTest, EmitsStrictPortableBellProgram) {
   EXPECT_EQ(streamedSource, *source);
   EXPECT_TRUE(source->starts_with("OPENQASM 3.1;\n"));
   EXPECT_NE(source->find("include \"stdgates.inc\";"), std::string::npos);
+  EXPECT_NE(source->find("cx q[0], q[1];"), std::string::npos);
   EXPECT_NE(source->find("output bit[2] c;"), std::string::npos);
   EXPECT_TRUE(openqasm::frontend::analyzeOpenQASM(
       *source, openqasm::frontend::GatePolicy::Strict));
   EXPECT_TRUE(qc::translateOpenQASMToQC(*source, &context));
 }
 
-TEST(OpenQASM3EmissionTest, PreservesControlledGateMatrices) {
+TEST(OpenQASM3EmissionTest, PreservesStandardControlledGates) {
   constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
 include "stdgates.inc";
 qubit[3] q;
@@ -306,6 +307,22 @@ ctrl(2) @ z q[0], q[1], q[2];
   ASSERT_TRUE(original);
   auto emitted = qc::translateQCToOpenQASM3(*original);
   ASSERT_TRUE(succeeded(emitted));
+  for (const auto* gate : {
+           "cx q[0]",
+           "cy q[0]",
+           "cz q[0]",
+           "ch q[0]",
+           "cp(",
+           "crx(",
+           "cry(",
+           "crz(",
+           "cswap q[0], q[1], q[2]",
+           "ccx q[0], q[1], q[2]",
+       }) {
+    EXPECT_NE(emitted->find(gate), std::string::npos) << gate << "\n"
+                                                      << *emitted;
+  }
+  EXPECT_NE(emitted->find("ctrl(2) @ z"), std::string::npos);
   auto restored = qc::translateOpenQASMToQC(*emitted, &context);
   ASSERT_TRUE(restored) << *emitted;
   PassManager manager(&context);
@@ -2366,6 +2383,7 @@ result = measure flag;
   ASSERT_TRUE(moduleOp);
   auto emitted = qc::translateQCToOpenQASM3(*moduleOp);
   ASSERT_TRUE(succeeded(emitted));
+  EXPECT_NE(emitted->find("qubit flag;"), std::string::npos);
   EXPECT_NE(emitted->find("output bit[1] result;"), std::string::npos);
   EXPECT_LT(emitted->find("for "), emitted->find("bit[1] _mqt_c"));
   auto repeated = qc::translateQCToOpenQASM3(*moduleOp);

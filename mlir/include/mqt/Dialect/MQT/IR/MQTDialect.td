@@ -67,11 +67,11 @@ def MQTDialect : Dialect {
     Input and register names share one function-wide namespace.
 
     Cosmetic names for scalar qubits and scoped classical storage use MLIR
-    `NameLoc` locations. Exporters generate names when needed for resources
-    without explicit naming attributes. Locations may be discarded, including
-    by plain IR printing, without changing execution, parameter binding, or result labels.
-    Keep names and identities required by those contracts in the attributes
-    above.
+    `NameLoc` locations. Exporters may reuse these hints when they do not
+    conflict with declared names; otherwise they generate names. Locations
+    may be discarded, including by plain IR printing, without changing
+    execution, parameter binding, or result labels. Keep names and identities
+    required by those contracts in the explicit attributes above.
 
     `mqt.entry_point` marks the single public, defined `func.func` program entry
     in a module. Dynamic quantum allocations (`qc.alloc`, `qco.alloc`,

@@ -366,20 +366,24 @@ target-specific diagnostic. Export preserves the source module and buffers
 output until it succeeds.
 
 The exporter writes an OpenQASM 3.1 version declaration and includes
-`stdgates.inc`. Controlled gates use `ctrl` modifiers. Gates in MQT Core's
-compatibility catalog, such as `r`, `rzz`, and `ecr`, receive definitions under
-their catalog names. Strict consumers use those definitions. MQT Core's default
-compatibility mode recognizes a definition with the catalog name and signature
-and imports calls directly as the corresponding native QC operation; the
-definition body is deliberately ignored. A same-name definition with a
-mismatched signature is rejected. Strict mode always analyzes the custom
+`stdgates.inc`. Controlled gates use compact standard-library names such as
+`cx`, `cz`, and `ccx` when available, and `ctrl` modifiers otherwise. Gates in
+MQT Core's compatibility catalog, such as `r`, `rzz`, and `ecr`, receive
+definitions under their catalog names. Strict consumers use those definitions.
+MQT Core's default compatibility mode recognizes a definition with the catalog
+name and signature and imports calls directly as the corresponding native QC
+operation; the definition body is deliberately ignored. A same-name definition
+with a mismatched signature is rejected. Strict mode always analyzes the custom
 definition normally.
 
 The `_mqt_` prefix is reserved for generated composite-modifier gates,
 temporaries, and collision-safe identifiers. Existing classical-register
 allocation names are reused when valid and distinct from catalog gates; scalar
-output names are generated deterministically. Cosmetic names stored in MLIR
-locations do not determine exported names.
+output names are generated deterministically. Scalar qubits and scoped classical
+storage reuse valid, nonconflicting source-name hints from MLIR `NameLoc`
+locations. Explicit parameter and register names take precedence over these
+hints. If locations are discarded, exporters generate names for those resources;
+parameter binding and output labels remain unchanged.
 
 Output types follow a deliberately small canonical mapping:
 

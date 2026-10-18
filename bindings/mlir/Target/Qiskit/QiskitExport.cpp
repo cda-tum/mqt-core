@@ -852,7 +852,8 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
   for (const auto& parameter : state.parameterNames) {
     usedNames.insert(parameter.getKey());
   }
-  // Generated names must not steal a later declaration's name.
+  // Debug names must yield to declared registers, regardless of operation
+  // order.
   for (auto& operation : function.getBody().front()) {
     if (const auto name = operation.getAttrOfType<mlir::StringAttr>(
             mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
@@ -892,6 +893,13 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
             "target-aware Qiskit export requires statically mapped qubits");
       }
       state.qubits[alloc.getResult()] = state.numQubits;
+      if (const auto location = llvm::dyn_cast<mlir::NameLoc>(alloc.getLoc())) {
+        const auto name = location.getName().getValue();
+        if (!name.empty() && usedNames.insert(name).second) {
+          state.quantumRegisters.push_back(
+              {.name = name.str(), .bits = {state.numQubits}});
+        }
+      }
       state.numQubits = checkedAdd(state.numQubits, 1U, "qubit");
       continue;
     }
@@ -1005,7 +1013,16 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
   llvm::append_range(registers, returnedValues);
   // Qiskit exposes all register storage. Put observable outputs last in count
   // order.
+  auto reservedNames = usedNames;
+  for (auto result : registers) {
+    if (auto alloc = result.getDefiningOp<mlir::cbit::AllocOp>()) {
+      if (const auto location = llvm::dyn_cast<mlir::NameLoc>(alloc.getLoc())) {
+        usedNames.insert(location.getName().getValue());
+      }
+    }
+  }
   size_t generatedRegister = 0U;
+  llvm::StringSet<> assignedRegisterNames;
   for (auto result : registers) {
     const auto type =
         llvm::dyn_cast<mlir::cbit::RegisterType>(result.getType());
@@ -1031,8 +1048,17 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
     };
     auto sourceName = alloc->getAttrOfType<mlir::StringAttr>(
         mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr());
+    if (!sourceName) {
+      if (const auto location = llvm::dyn_cast<mlir::NameLoc>(alloc.getLoc())) {
+        if (!location.getName().getValue().empty() &&
+            !reservedNames.contains(location.getName().getValue())) {
+          sourceName = location.getName();
+        }
+      }
+    }
     std::string name;
-    if (sourceName) {
+    if (sourceName &&
+        assignedRegisterNames.insert(sourceName.getValue()).second) {
       name = sourceName.str();
     } else {
       do {

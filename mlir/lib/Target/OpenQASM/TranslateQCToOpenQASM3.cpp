@@ -218,6 +218,7 @@ private:
   DenseMap<Operation*, std::string> gateNames_;
   SymbolTableCollection symbolTables_;
   llvm::StringSet<> usedNames;
+  llvm::StringSet<> declaredRegisterNames;
   llvm::StringSet<> fixedHelpers;
   std::string uHelperName_;
   SmallVector<std::string> gateDefinitions_;
@@ -255,7 +256,8 @@ private:
                                        size_t& counter) {
     while (true) {
       auto candidate = (Twine("_mqt_") + prefix + Twine(counter++)).str();
-      if (usedNames.insert(candidate).second) {
+      if (!declaredRegisterNames.contains(candidate) &&
+          usedNames.insert(candidate).second) {
         return candidate;
       }
     }
@@ -468,7 +470,13 @@ private:
     const bool isOutput = returnedRegisters.contains(alloc.getResult());
     const auto name = alloc->getAttrOfType<StringAttr>(
         mqt::MQTDialect::RegisterNameAttrHelper::getNameStr());
-    const auto requested = name ? name.getValue() : StringRef{};
+    const auto location = dyn_cast<NameLoc>(alloc.getLoc());
+    const auto sourceName =
+        location ? location.getName().getValue() : StringRef{};
+    const auto requested = name ? name.getValue()
+                           : declaredRegisterNames.contains(sourceName)
+                               ? StringRef{}
+                               : sourceName;
     Resource resource{
         .kind = ResourceKind::Bit,
         .name =
@@ -482,6 +490,14 @@ private:
   }
 
   [[nodiscard]] LogicalResult collectProgramShape() {
+    // Debug names must yield to declared registers, regardless of operation
+    // order.
+    function.walk([&](Operation* operation) {
+      if (const auto name = operation->getAttrOfType<StringAttr>(
+              mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
+        declaredRegisterNames.insert(name.getValue());
+      }
+    });
     auto returnOp =
         dyn_cast<func::ReturnOp>(function.getBody().front().getTerminator());
     if (!returnOp) {
@@ -496,7 +512,12 @@ private:
 
     for (Operation& operation : function.getBody().front().getOperations()) {
       if (auto alloc = dyn_cast<qc::AllocOp>(&operation)) {
-        const auto name = uniqueName("q", nextQubit);
+        const auto location = dyn_cast<NameLoc>(alloc.getLoc());
+        const auto sourceName =
+            location ? location.getName().getValue() : StringRef{};
+        const auto name = qubitRegisterName(
+            declaredRegisterNames.contains(sourceName) ? StringRef{}
+                                                       : sourceName);
         Resource resource{
             .kind = ResourceKind::Qubit,
             .name = name,
@@ -2021,6 +2042,23 @@ private:
         controls.push_back(std::move(*qubit));
       }
       call.qubits.insert(call.qubits.begin(), controls.begin(), controls.end());
+      if ((controls.size() == 1 || controls.size() == 2) &&
+          call.modifiers.empty()) {
+        const auto alias =
+            (Twine(controls.size() == 1 ? "c" : "cc") + call.symbol).str();
+        const auto* gate = openqasm::frontend::lookupGate(alias);
+        if (gate && gate->controlCount == controls.size() &&
+            gate->targetCount + controls.size() == call.qubits.size() &&
+            !gate->inverse && !gate->variadicControls &&
+            (gate->availability ==
+                 openqasm::frontend::GateAvailability::StandardLibrary ||
+             gate->availability == openqasm::frontend::GateAvailability::
+                                       StandardLibraryAndQELib1) &&
+            openqasm::frontend::canonicalGateName(gate->gate) == call.symbol) {
+          call.symbol = alias;
+          return call;
+        }
+      }
       call.modifiers =
           (Twine("ctrl") +
            (controls.size() == 1 ? Twine{}

@@ -51,14 +51,15 @@ contracts. This change is based on upstream main
 - Extend existing semantic and consumer regressions. Consolidate duplicate
   fixtures and unused test machinery, preserving numerical limits, diagnostics,
   snapshot behavior, phase-sensitive checks, and operation-budget boundaries.
-- Generate names for resources without explicit naming attributes. Ignore
-  cosmetic debug locations during export and retain explicit-name reservation in
-  Qiskit. OpenQASM's reserved `_mqt_` prefix separates generated names from
-  accepted declaration names. Use generic `ctrl` modifiers instead of searching
-  the gate catalog for aliases.
-- Replace controlled-gate spelling assertions with full matrix comparison.
-  Remove debug-name collision tests and the unused arithmetic interpreter in the
-  test helper. Check dynamic store indices through MLIR's dependency analysis.
+- Preserve compact standard-library controlled-gate names through the shared
+  gate catalog. Use generic modifiers when there is no applicable alias.
+- Reuse valid, nonconflicting `NameLoc` hints for scalar qubits and scoped
+  classical storage in OpenQASM and Qiskit export. Explicit parameter and
+  register names take precedence; missing locations permit generated names
+  without changing binding, output labels, or execution.
+- Retain gate-spelling and name-collision assertions alongside full matrix
+  comparison. Remove the unused arithmetic interpreter in the test helper and
+  check dynamic store indices through MLIR's dependency analysis.
 
 ## Retained checks and rejected complexity
 
@@ -98,21 +99,23 @@ hoc harnesses and raw results remain outside the repository.
 
 All 593 native tests pass. Repository lint, full-file clang-tidy for all 14
 changed C++ files, and stub regeneration pass; generated stubs are unchanged.
-All 1,973 Python tests pass with Python 3.14.7 and Qiskit 2.6.0. The original 34
+All 1,981 Python tests pass with Python 3.14.7 and Qiskit 2.6.0. The original 34
 contract probes, whole/reversed/strided slices, wide-literal parser and round
 trips, and eight measured switch paths pass. Switch probes include Qiskit and
 target-lowered serialized jeff with captured 9-bit register writes.
 
-The focused Qiskit 2.5.2 compatibility suite also passes all 697 tests.
+The focused Qiskit 2.5.2 compatibility suite also passes all 705 tests.
 
 Eleven exported controlled gates match independent Qiskit reference matrices,
-including phase. Scoped storage retains its resource counts, output names, and
-results across native, OpenQASM, and Qiskit paths. A deliberate constant-index
-substitution fails the new dependency assertion for both store branches.
+including phase. Scalar qubits and scoped storage retain their source-name hints
+in OpenQASM and Qiskit export. Resource counts, output names, and results also
+survive round trips through plain MLIR without locations. A deliberate
+constant-index substitution fails the new dependency assertion for both store
+branches.
 
 Qiskit's optional OpenQASM source importer rejects the existing `if (true)`
 wrapper around output-free programs with either named or generic controlled
 gates. Native Qiskit export and the modifier syntax probes pass.
 
-Test consolidation removes ten functions and 263 net test lines. No sanitizer,
+Test consolidation removes seven functions and 171 net test lines. No sanitizer,
 additional-platform, or reserved-core run is claimed; hosted CI is separate.
