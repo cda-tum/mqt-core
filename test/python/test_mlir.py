@@ -1086,7 +1086,11 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     program = QCProgram.from_qiskit(source).to_qco()
     program.synthesize_for_target(_test_target_environment(target))
     assert program.to_jeff(copy=True).is_valid
-    assert QCProgram.from_openqasm_str(program.to_qc(copy=True).to_openqasm3().source).is_valid
+    if native == "sqrt_iswap" and expected_entanglers:
+        with pytest.raises(RuntimeError, match="target operation cannot be emitted as native OpenQASM"):
+            program.to_qc(copy=True).to_openqasm3()
+    else:
+        assert QCProgram.from_openqasm_str(program.to_qc(copy=True).to_openqasm3().source).is_valid
     result = program.to_qiskit(target=target)
     emitted = "xx_plus_yy" if native == "sqrt_iswap" else native
     assert result.count_ops().get(emitted, 0) == expected_entanglers

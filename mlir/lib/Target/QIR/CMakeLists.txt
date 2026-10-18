@@ -6,8 +6,16 @@
 #
 # Licensed under the MIT License
 
-add_mlir_library(MLIRQIRTranslation Export.cpp LINK_LIBS LLVMBitWriter MLIRQIRUtils
-                 MLIRTargetLLVMIRExport)
+add_mlir_library(
+  MLIRQIRTranslation
+  Export.cpp
+  LINK_LIBS
+  LLVMBitWriter
+  MLIRIR
+  MLIRLLVMDialect
+  MLIRMQTDialect
+  MLIRQIRUtils
+  MLIRTargetLLVMIRExport)
 
 mqt_mlir_target_use_project_options(MLIRQIRTranslation)
 

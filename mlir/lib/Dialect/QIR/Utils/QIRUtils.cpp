@@ -64,9 +64,10 @@ void normalizeQIRModuleFlags(llvm::Module& moduleOp) {
   }
 }
 
-void emitQISCall(OpBuilder& builder, Operation* anchor, const Location loc,
-                 ValueRange parameters, ValueRange controls, ValueRange targets,
-                 const StringRef fnName) {
+LLVM::CallOp emitQISCall(OpBuilder& builder, Operation* anchor,
+                         const Location loc, ValueRange parameters,
+                         ValueRange controls, ValueRange targets,
+                         const StringRef fnName) {
   const auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
   const auto voidType = LLVM::LLVMVoidType::get(builder.getContext());
   const auto isGenericControlled =
@@ -83,8 +84,7 @@ void emitQISCall(OpBuilder& builder, Operation* anchor, const Location loc,
         voidType, llvm::to_vector(ValueRange(operands).getTypes()));
     auto declaration =
         getOrCreateFunctionDeclaration(builder, anchor, fnName, signature);
-    LLVM::CallOp::create(builder, loc, declaration, operands);
-    return;
+    return LLVM::CallOp::create(builder, loc, declaration, operands);
   }
   assert(!controls.empty() &&
          "generic controlled specialization requires controls");
@@ -177,8 +177,8 @@ void emitQISCall(OpBuilder& builder, Operation* anchor, const Location loc,
       LLVM::LLVMFunctionType::get(voidType, {ptrType, ptrType});
   auto controlled =
       getOrCreateFunctionDeclaration(builder, anchor, fnName, controlledType);
-  LLVM::CallOp::create(builder, loc, controlled,
-                       ValueRange{controlArray, gateArgs});
+  auto call = LLVM::CallOp::create(builder, loc, controlled,
+                                   ValueRange{controlArray, gateArgs});
 
   const auto releaseType =
       LLVM::LLVMFunctionType::get(voidType, {ptrType, i32Type});
@@ -195,6 +195,7 @@ void emitQISCall(OpBuilder& builder, Operation* anchor, const Location loc,
       builder, anchor, QIR_ARRAY_RELEASE, releaseType);
   LLVM::CallOp::create(builder, loc, arrayRelease,
                        ValueRange{controlArray, decrement});
+  return call;
 }
 
 LLVM::LLVMFuncOp getMainFunction(Operation* op) {

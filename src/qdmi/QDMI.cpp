@@ -98,7 +98,7 @@ getSparseResult(const detail::DriverAPI& api, QDMI_Job job, size_t programIndex,
     result[""] = values.front();
     return result;
   }
-  std::istringstream keysStream(keys);
+  std::istringstream keysStream(std::move(keys));
   std::string key;
   size_t idx = 0;
   while (std::getline(keysStream, key, ',')) {
@@ -898,6 +898,10 @@ Device::submitJobImpl(const QDMI_Program_Format format,
 }
 
 Job Device::retrieveJobById(const std::string_view jobId) const {
+  if (jobId.empty() || jobId.find('\0') != std::string_view::npos) {
+    throw std::invalid_argument(
+        "QDMI job ID must not be empty or contain null bytes");
+  }
   const std::string id{jobId};
   QDMI_Job job = nullptr;
   qdmi::throwIfError(

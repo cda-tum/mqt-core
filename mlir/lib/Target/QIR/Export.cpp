@@ -10,12 +10,19 @@
 
 #include "mqt/Target/QIR/Export.h"
 
+#include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -30,8 +37,73 @@
 
 namespace mlir::qir {
 
+static LogicalResult materializeNativeQISNames(ModuleOp moduleOp) {
+  SymbolTable symbols(moduleOp);
+  const auto result = moduleOp.walk([&](LLVM::CallOp call) {
+    auto name = call->getAttrOfType<StringAttr>(qir::QIR_NATIVE_NAME_ATTR);
+    if (!name) {
+      if (call.getCallee() &&
+          call.getCallee()->starts_with("__quantum__qis__")) {
+        call.emitError("target QIR contains an unchecked quantum instruction");
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    }
+    if (!call.getCallee()) {
+      call.emitError("native QIR requires direct quantum instruction calls");
+      return WalkResult::interrupt();
+    }
+    auto source = symbols.lookup<LLVM::LLVMFuncOp>(*call.getCallee());
+    auto destination = symbols.lookup<LLVM::LLVMFuncOp>(name.getValue());
+    if (destination &&
+        destination.getFunctionType() != source.getFunctionType()) {
+      call.emitError("native QIR operations require conflicting signatures");
+      return WalkResult::interrupt();
+    }
+    if (!destination) {
+      destination = cast<LLVM::LLVMFuncOp>(source->clone());
+      destination.setName(name.getValue());
+      symbols.insert(destination);
+    }
+    call.setCalleeAttr(FlatSymbolRefAttr::get(name));
+    call->removeAttr(qir::QIR_NATIVE_NAME_ATTR);
+    return WalkResult::advance();
+  });
+  if (result.wasInterrupted()) {
+    return failure();
+  }
+  const auto uses = SymbolTable::getSymbolUses(&moduleOp.getBodyRegion());
+  if (!uses) {
+    return success();
+  }
+  DenseSet<StringAttr> referencedSymbols;
+  for (const auto& use : *uses) {
+    referencedSymbols.insert(use.getSymbolRef().getRootReference());
+  }
+  for (auto function :
+       llvm::make_early_inc_range(moduleOp.getOps<LLVM::LLVMFuncOp>())) {
+    if (function.isExternal() &&
+        function.getName().starts_with("__quantum__qis__") &&
+        !referencedSymbols.contains(function.getSymNameAttr())) {
+      function.erase();
+    }
+  }
+  return success();
+}
+
 [[nodiscard]] static std::unique_ptr<llvm::Module>
 translateToLLVM(ModuleOp mod, llvm::LLVMContext& context) {
+  OwningOpRef<ModuleOp> nativeModule;
+  auto environment =
+      mod->getAttrOfType<mqt::TargetEnvAttr>(mqt::TargetEnvAttr::name);
+  if (environment && environment.getCompilationTarget().getNativeOperations() ==
+                         mqt::NativeOperationsKind::Explicit) {
+    nativeModule = cast<ModuleOp>(mod->clone());
+    if (failed(materializeNativeQISNames(*nativeModule))) {
+      return nullptr;
+    }
+    mod = *nativeModule;
+  }
   auto llvmModule = translateModuleToLLVMIR(mod, context);
   if (!llvmModule) {
     mod.emitError("failed to translate QIR MLIR to LLVM IR");

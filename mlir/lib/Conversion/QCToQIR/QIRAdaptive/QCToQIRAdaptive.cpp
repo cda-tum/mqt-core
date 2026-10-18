@@ -616,8 +616,12 @@ struct ConvertQCResetOp final : StatefulOpConversionPattern<ResetOp> {
         getOrCreateFunctionDeclaration(rewriter, op, QIR_RESET, fnSignature);
 
     // Replace operation with CallOp
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, fnDecl,
-                                              adaptor.getOperands());
+    auto call = LLVM::CallOp::create(rewriter, op.getLoc(), fnDecl,
+                                     adaptor.getOperands());
+    if (failed(getState().nameNativeCall(call, "reset", adaptor.getQubit()))) {
+      return failure();
+    }
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -676,8 +680,11 @@ struct ConvertQCMeasureOp final : StatefulOpConversionPattern<MeasureOp> {
     auto fnDec =
         getOrCreateFunctionDeclaration(rewriter, op, QIR_MEASURE, fnSig);
 
-    LLVM::CallOp::create(rewriter, op.getLoc(), fnDec,
-                         ValueRange{adaptor.getQubit(), result});
+    auto call = LLVM::CallOp::create(rewriter, op.getLoc(), fnDec,
+                                     ValueRange{adaptor.getQubit(), result});
+    if (failed(state.nameNativeCall(call, "measure", adaptor.getQubit()))) {
+      return failure();
+    }
 
     // Create read-result call if the result is used
     if (op.getResult().use_empty()) {

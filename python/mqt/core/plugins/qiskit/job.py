@@ -118,7 +118,7 @@ class QDMIJob(JobV1):
         ]
         self._shots = shots
         self._memory = memory
-        self._job_parameters = job_parameters or {}
+        self._job_parameters = job_parameters.copy() if job_parameters is not None else {}
         self._result: Result | None = None
         formats = backend.device.supported_program_formats()
         self._programs: tuple[tuple[str | bytes, ProgramFormat], ...] = tuple(

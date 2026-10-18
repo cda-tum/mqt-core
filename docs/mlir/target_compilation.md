@@ -564,13 +564,26 @@ available for hardware snapshots and staged compilation with a
 
 ### Payload support
 
+Targeted payloads use the device's advertised operation names and ordered
+placements. OpenQASM emits native calls without portable gate definitions;
+untargeted export retains its portable helpers. Native measurement and reset
+must use the OpenQASM keywords `measure` and `reset`. QIR preserves the native
+name in each QIS call and uses the controlled specialization for variadic
+operations. A selected format that cannot represent a native operation is
+rejected.
+
+The `sqrt_iswap` synthesis shorthand requires a matching `xx_plus_yy` capability
+for native payload export.
+
 The adapter assumes all compiler-supported capabilities for the selected format
 (OpenQASM 3.1 or QIR 2.1). Use `TargetEnvironment` and `PayloadSpecification`
 for staged compilation with explicit restrictions.
 
 QIR submission requires a parameterless entry point returning an `i64` status;
 the compiler adds status 0 to programs with no return value. Keep classical
-temporaries local, or select OpenQASM 3 for global scalar outputs.
+temporaries local, or select OpenQASM 3 for global scalar outputs. Imported
+scalar outputs remain distinct from explicitly authored status returns across QC
+and QCO conversions, including 64-bit integers.
 
 The adapter accepts circuit-model devices whose two-qubit operations cover every
 topology edge in at least one operand orientation and preserves the exact

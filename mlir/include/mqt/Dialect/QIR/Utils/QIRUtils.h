@@ -36,11 +36,15 @@ class OpBuilder;
 class Operation;
 namespace LLVM {
 class AddressOfOp;
+class CallOp;
 class LLVMFuncOp;
 } // namespace LLVM
 } // namespace mlir
 
 namespace mlir::qir {
+
+/// Records the selected native QIS name until executable serialization.
+inline constexpr auto QIR_NATIVE_NAME_ATTR = "qir.native_name";
 
 /// Marks stores of qubit pointers into compiler-emitted control arrays/tuples.
 inline constexpr auto QIR_QUBIT_STORE_ATTR = "qir.qubit_store";
@@ -135,9 +139,9 @@ inline StringRef selectQISFunctionName(const StringRef body,
 /// the first argument is an array of controls and the second is either the
 /// single target or a tuple containing parameters followed by targets.
 /// Qubit stores carry a role attribute for resource counting after lowering.
-void emitQISCall(OpBuilder& builder, Operation* anchor, Location loc,
-                 ValueRange parameters, ValueRange controls, ValueRange targets,
-                 StringRef fnName);
+LLVM::CallOp emitQISCall(OpBuilder& builder, Operation* anchor, Location loc,
+                         ValueRange parameters, ValueRange controls,
+                         ValueRange targets, StringRef fnName);
 
 /// Find the main LLVM function
 ///

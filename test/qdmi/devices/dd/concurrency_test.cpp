@@ -40,7 +40,9 @@
 #include <utility>
 #include <vector>
 
-TEST(Concurrency, ConcurrentProbabilityAndStatevectorReads) {
+using ColdVectorReads = testing::TestWithParam<QDMI_Job_Result>;
+
+TEST_P(ColdVectorReads, ConcurrentProbabilityAndStatevectorReads) {
   const qdmi_test::SessionGuard s{};
   const qdmi_test::JobGuard j{s.session};
   ASSERT_EQ(qdmi_test::setProgram(j.job, QDMI_PROGRAM_FORMAT_QASM3,
@@ -51,8 +53,13 @@ TEST(Concurrency, ConcurrentProbabilityAndStatevectorReads) {
 
   std::barrier start{4};
   const auto worker = [&](const QDMI_Job_Result result) {
-    const bool probabilities = result == QDMI_JOB_RESULT_PROBABILITIES_DENSE;
-    std::vector<double> buffer(probabilities ? 4 : 8, -1.);
+    const bool probabilities =
+        result == QDMI_JOB_RESULT_PROBABILITIES_DENSE ||
+        result == QDMI_JOB_RESULT_PROBABILITIES_SPARSE_VALUES;
+    const bool sparse = result == QDMI_JOB_RESULT_STATEVECTOR_SPARSE_VALUES ||
+                        result == QDMI_JOB_RESULT_PROBABILITIES_SPARSE_VALUES;
+    const size_t stride = probabilities ? 1 : 2;
+    std::vector<double> buffer((sparse ? 2 : 4) * stride, -1.);
     start.arrive_and_wait();
     ASSERT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
                   j.job, 0, result, buffer.size() * sizeof(double),
@@ -61,16 +68,23 @@ TEST(Concurrency, ConcurrentProbabilityAndStatevectorReads) {
     const auto nonzero = probabilities ? 0.5 : 1.0 / std::numbers::sqrt2;
     for (size_t i = 0; i < buffer.size(); ++i) {
       const auto expected =
-          i == 0 || i == (probabilities ? 3U : 6U) ? nonzero : 0.0;
+          i == 0 || i == (sparse ? 1U : 3U) * stride ? nonzero : 0.0;
       EXPECT_NEAR(buffer[i], expected, 1e-12);
     }
   };
 
-  const std::jthread t1(worker, QDMI_JOB_RESULT_STATEVECTOR_DENSE);
-  const std::jthread t2(worker, QDMI_JOB_RESULT_STATEVECTOR_DENSE);
+  const std::jthread t1(worker, GetParam());
+  const std::jthread t2(worker, GetParam());
   const std::jthread t3(worker, QDMI_JOB_RESULT_PROBABILITIES_DENSE);
   const std::jthread t4(worker, QDMI_JOB_RESULT_PROBABILITIES_DENSE);
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    Concurrency, ColdVectorReads,
+    testing::Values(QDMI_JOB_RESULT_STATEVECTOR_DENSE,
+                    QDMI_JOB_RESULT_PROBABILITIES_DENSE,
+                    QDMI_JOB_RESULT_STATEVECTOR_SPARSE_VALUES,
+                    QDMI_JOB_RESULT_PROBABILITIES_SPARSE_VALUES));
 
 TEST(Concurrency, ConcurrentHistogramReads) {
   const qdmi_test::SessionGuard s{};

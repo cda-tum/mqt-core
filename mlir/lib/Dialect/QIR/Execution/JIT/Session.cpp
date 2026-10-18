@@ -15,6 +15,7 @@
 #include "mqt/Dialect/QIR/Execution/Runtime/Runtime.h"
 #include "mqt/Dialect/QIR/QIRDefinitions.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -584,6 +585,49 @@ readStaticCapacity(const llvm::Module& llvmModule,
   return static_cast<size_t>(capacity);
 }
 
+static void normalizeNativeQISNames(llvm::Module& module) {
+  for (auto& function : llvm::make_early_inc_range(module)) {
+    auto name = function.getName();
+    if (!function.isDeclaration() || !name.consume_front("__quantum__qis__")) {
+      continue;
+    }
+    auto [gate, specialization] = name.split("__");
+    llvm::StringRef canonical;
+    if (gate == "r") {
+      canonical = "prx";
+    } else if (gate == "u") {
+      canonical = "u3";
+    } else if (gate == "measure") {
+      canonical = "mz";
+    } else if (gate == "sdg" || gate == "tdg" || gate == "sxdg" ||
+               gate == "csdg") {
+      canonical = gate.drop_back(2);
+      if (specialization == "body") {
+        specialization = "adj";
+      } else if (specialization == "ctl") {
+        specialization = "ctladj";
+      } else {
+        continue;
+      }
+    } else {
+      continue;
+    }
+    const auto replacement =
+        (llvm::Twine("__quantum__qis__") + canonical + "__" + specialization)
+            .str();
+    if (auto* existing = module.getFunction(replacement)) {
+      if (existing->getFunctionType() != function.getFunctionType()) {
+        throw std::invalid_argument(
+            "Conflicting native QIR function signatures");
+      }
+      function.replaceAllUsesWith(existing);
+      function.eraseFromParent();
+    } else {
+      function.setName(replacement);
+    }
+  }
+}
+
 void JitSession::initialize(
     llvm::Expected<llvm::orc::ThreadSafeModule> llvmModule,
     const Execution execution) {
@@ -595,6 +639,7 @@ void JitSession::initialize(
   std::string entryPointName;
   std::vector<std::pair<std::string, void*>> runtimeSymbols;
   loadedModule.withModuleDo([&](llvm::Module& module) {
+    normalizeNativeQISNames(module);
     std::string verification;
     llvm::raw_string_ostream diagnostics(verification);
     if (llvm::verifyModule(module, &diagnostics)) {

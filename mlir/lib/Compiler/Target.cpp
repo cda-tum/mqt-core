@@ -1418,6 +1418,27 @@ bool CompilerTarget::supportsOperation(
       });
 }
 
+const CompilerTarget::OperationCapability* CompilerTarget::findOperation(
+    StringRef name, size_t arity, ArrayRef<std::optional<double>> parameters,
+    std::optional<ArrayRef<SiteId>> sites, bool variadicOnly) const {
+  const OperationCapability* selected = nullptr;
+  if (!storage_->supportsOperation(
+          name, arity, parameters.size(), sites, variadicOnly, nullptr,
+          [&](const OperationCapability& operation) {
+            if ((!sites && !operation.siteTuples().empty()) ||
+                !matchesParameters(operation, [&](size_t index) {
+                  return parameters[index];
+                })) {
+              return false;
+            }
+            selected = &operation;
+            return true;
+          })) {
+    return nullptr;
+  }
+  return selected;
+}
+
 bool CompilerTarget::supports(::mlir::Operation* operation) const {
   return supportsImpl(operation, std::nullopt);
 }

@@ -471,6 +471,10 @@ public:
   writeBitcode(const std::filesystem::path& path) const;
 
 private:
+  friend class CompiledProgram;
+
+  [[nodiscard]] FailureOr<std::string> bitcode() const;
+
   QIRProfile profile_;
 };
 

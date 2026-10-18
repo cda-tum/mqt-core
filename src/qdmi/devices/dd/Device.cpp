@@ -60,6 +60,17 @@
 #include <vector>
 
 namespace {
+template <class Callable>
+auto guardDeviceCall(Callable&& callable) noexcept -> int {
+  try {
+    return std::forward<Callable>(callable)();
+  } catch (const std::bad_alloc&) {
+    return QDMI_ERROR_OUTOFMEM;
+  } catch (...) {
+    return QDMI_ERROR_FATAL;
+  }
+}
+
 /// Result reconstruction never performs DD arithmetic.
 ///
 /// Keep unused matrix storage and compute caches minimal while retaining normal
@@ -237,12 +248,9 @@ struct ProgramResult {
   /// The retained state, valid while dd_ owns its nodes.
   ::dd::VectorDD stateVecDD_{};
 
-  /// Sparse amplitudes in ascending basis-index order (only available if no
-  /// mid-circuit measurements are used).
-  std::vector<std::pair<size_t, std::complex<::dd::fp>>> stateVecSparse_;
-
-  /// Materialize sparse amplitudes once for independent key/value queries.
-  std::once_flag stateVecSparseOnce_;
+  /// Number of amplitudes visited by the sparse result traversal.
+  size_t sparseAmplitudeCount_ = 0;
+  std::once_flag sparseAmplitudeCountOnce_;
 
   /// Translate counts to QDMI histogram
   auto getHistogram(QDMI_Job_Result result, size_t size, void* data,
@@ -338,6 +346,7 @@ auto Device::sessionAlloc(MQT_DDSIM_QDMI_Device_Session* session)
   if (session == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
+  *session = nullptr;
   auto uniqueSession = std::make_unique<MQT_DDSIM_QDMI_Device_Session_impl_d>();
   const std::scoped_lock<std::mutex> lock(sessionsMutex_);
   const auto& it =
@@ -432,6 +441,7 @@ auto MQT_DDSIM_QDMI_Device_Session_impl_d::createDeviceJob(
   if (job == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
+  *job = nullptr;
   if (status_ == Status::ALLOCATED) {
     return QDMI_ERROR_BADSTATE;
   }
@@ -1034,80 +1044,72 @@ auto qdmi::dd::ProgramResult::getSparseResults(const QDMI_Job_Result result,
   if (numQubits > std::numeric_limits<size_t>::digits) {
     return QDMI_ERROR_NOTSUPPORTED;
   }
-  std::call_once(stateVecSparseOnce_, [this] {
-    decltype(stateVecSparse_) amplitudes;
-    ::dd::traverseVector(
-        stateVecDD_, [&amplitudes](const size_t index,
-                                   const std::complex<::dd::fp>& amplitude) {
-          amplitudes.emplace_back(index, amplitude);
-        });
-    stateVecSparse_ = std::move(amplitudes);
+  std::call_once(sparseAmplitudeCountOnce_, [this] {
+    size_t count = 0;
+    ::dd::traverseVector(stateVecDD_,
+                         [&count](const size_t, const std::complex<::dd::fp>&) {
+                           if (count == std::numeric_limits<size_t>::max()) {
+                             throw std::bad_alloc{};
+                           }
+                           ++count;
+                         });
+    sparseAmplitudeCount_ = count;
   });
-  switch (result) {
-  case QDMI_JOB_RESULT_STATEVECTOR_SPARSE_KEYS:
-  case QDMI_JOB_RESULT_PROBABILITIES_SPARSE_KEYS: {
-    const size_t reqSize = stateVecSparse_.size() * (numQubits + 1);
-    if (data != nullptr) {
-      if (size < reqSize) {
-        return QDMI_ERROR_INVALIDARGUMENT;
-      }
+  if (sparseAmplitudeCount_ == 0) {
+    return reportEmptyResult(sizeRet);
+  }
+  const bool keys = result == QDMI_JOB_RESULT_STATEVECTOR_SPARSE_KEYS ||
+                    result == QDMI_JOB_RESULT_PROBABILITIES_SPARSE_KEYS;
+  const bool complex = result == QDMI_JOB_RESULT_STATEVECTOR_SPARSE_VALUES;
+  const size_t elementSize =
+      keys ? numQubits + 1 : (complex ? 2U : 1U) * sizeof(double);
+  if (sparseAmplitudeCount_ >
+      std::numeric_limits<size_t>::max() / elementSize) {
+    return QDMI_ERROR_OUTOFMEM;
+  }
+  const size_t reqSize = sparseAmplitudeCount_ * elementSize;
+  if (data != nullptr) {
+    if (size < reqSize) {
+      return QDMI_ERROR_INVALIDARGUMENT;
+    }
+    if (keys) {
       auto* dataPtr = static_cast<char*>(data);
-      for (const auto& i : stateVecSparse_ | std::views::keys) {
-        for (size_t j = 0; j < numQubits; ++j) {
-          // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-          *dataPtr++ =
-              ((i & (1ULL << (numQubits - j - 1ULL))) != 0U) ? '1' : '0';
-        }
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        *dataPtr++ = ',';
-      }
+      ::dd::traverseVector(
+          stateVecDD_, [&dataPtr, numQubits](const size_t index,
+                                             const std::complex<::dd::fp>&) {
+            for (size_t j = numQubits; j > 0; --j) {
+              // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+              *dataPtr++ = ((index >> (j - 1)) & 1U) != 0U ? '1' : '0';
+            }
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            *dataPtr++ = ',';
+          });
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
       *(dataPtr - 1) = '\0'; // Replace last comma with null terminator
-    }
-    if (sizeRet != nullptr) {
-      *sizeRet = reqSize;
-    }
-    return QDMI_SUCCESS;
-  }
-
-  case QDMI_JOB_RESULT_STATEVECTOR_SPARSE_VALUES: {
-    const size_t reqSize = stateVecSparse_.size() * 2 * sizeof(double);
-    if (data != nullptr) {
-      if (size < reqSize) {
-        return QDMI_ERROR_INVALIDARGUMENT;
-      }
+    } else if (complex) {
       // NOLINTNEXTLINE(misc-const-correctness): fills a mutable output buffer.
       auto* dataPtr = static_cast<double*>(data);
-      for (const auto& c : stateVecSparse_ | std::views::values) {
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        *dataPtr++ = c.real();
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        *dataPtr++ = c.imag();
-      }
-    }
-    if (sizeRet != nullptr) {
-      *sizeRet = reqSize;
-    }
-    return QDMI_SUCCESS;
-  }
-  default: {
-    // case QDMI_JOB_RESULT_PROBABILITIES_SPARSE_VALUES:
-    const size_t reqSize = stateVecSparse_.size() * sizeof(double);
-    if (data != nullptr) {
-      if (size < reqSize) {
-        return QDMI_ERROR_INVALIDARGUMENT;
-      }
+      ::dd::traverseVector(
+          stateVecDD_,
+          [&dataPtr](const size_t, const std::complex<::dd::fp>& amplitude) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            *dataPtr++ = amplitude.real();
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            *dataPtr++ = amplitude.imag();
+          });
+    } else {
       // NOLINTNEXTLINE(misc-const-correctness): fills a mutable output buffer.
       auto* dataPtr = static_cast<double*>(data);
-      for (const auto& c : stateVecSparse_ | std::views::values) {
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        *dataPtr++ = std::norm(c);
-      }
-    }
-    if (sizeRet != nullptr) {
-      *sizeRet = reqSize;
+      ::dd::traverseVector(
+          stateVecDD_,
+          [&dataPtr](const size_t, const std::complex<::dd::fp>& amplitude) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            *dataPtr++ = std::norm(amplitude);
+          });
     }
   }
+  if (sizeRet != nullptr) {
+    *sizeRet = reqSize;
   }
   return QDMI_SUCCESS;
 }
@@ -1178,10 +1180,11 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::getResults(size_t programIndex,
 // QDMI uses a different naming convention for its C interface functions
 // NOLINTBEGIN(readability-identifier-naming)
 int MQT_DDSIM_QDMI_device_initialize() {
-  // ensure the singleton is initialized
-  std::ignore = qdmi::dd::Device::get();
-  qdmi::dd::executor().workers.initialize();
-  return QDMI_SUCCESS;
+  return guardDeviceCall([] {
+    std::ignore = qdmi::dd::Device::get();
+    qdmi::dd::executor().workers.initialize();
+    return QDMI_SUCCESS;
+  });
 }
 
 int MQT_DDSIM_QDMI_device_finalize() {
@@ -1193,7 +1196,8 @@ int MQT_DDSIM_QDMI_device_finalize() {
 
 int MQT_DDSIM_QDMI_device_session_alloc(
     MQT_DDSIM_QDMI_Device_Session* session) {
-  return qdmi::dd::Device::get().sessionAlloc(session);
+  return guardDeviceCall(
+      [&] { return qdmi::dd::Device::get().sessionAlloc(session); });
 }
 
 int MQT_DDSIM_QDMI_device_session_init(MQT_DDSIM_QDMI_Device_Session session) {
@@ -1221,7 +1225,7 @@ int MQT_DDSIM_QDMI_device_session_create_device_job(
   if (session == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
-  return session->createDeviceJob(job);
+  return guardDeviceCall([&] { return session->createDeviceJob(job); });
 }
 
 int MQT_DDSIM_QDMI_device_session_retrieve_device_job_by_id(
@@ -1250,11 +1254,8 @@ int MQT_DDSIM_QDMI_device_job_set_programs(MQT_DDSIM_QDMI_Device_Job job,
   if (job == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
-  try {
-    return job->setPrograms(format, count, sizes, programs);
-  } catch (const std::bad_alloc&) {
-    return QDMI_ERROR_OUTOFMEM;
-  }
+  return guardDeviceCall(
+      [&] { return job->setPrograms(format, count, sizes, programs); });
 }
 
 int MQT_DDSIM_QDMI_device_job_get_program(MQT_DDSIM_QDMI_Device_Job job,
@@ -1278,21 +1279,22 @@ int MQT_DDSIM_QDMI_device_job_query_property(
   if (job == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
-  return job->queryProperty(prop, size, value, size_ret);
+  return guardDeviceCall(
+      [&] { return job->queryProperty(prop, size, value, size_ret); });
 }
 
 int MQT_DDSIM_QDMI_device_job_submit(MQT_DDSIM_QDMI_Device_Job job) {
   if (job == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
-  return job->submit();
+  return guardDeviceCall([&] { return job->submit(); });
 }
 
 int MQT_DDSIM_QDMI_device_job_cancel(MQT_DDSIM_QDMI_Device_Job job) {
   if (job == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
-  return job->cancel();
+  return guardDeviceCall([&] { return job->cancel(); });
 }
 
 int MQT_DDSIM_QDMI_device_job_check(MQT_DDSIM_QDMI_Device_Job job,
@@ -1319,11 +1321,9 @@ int MQT_DDSIM_QDMI_device_job_get_results(MQT_DDSIM_QDMI_Device_Job job,
   if (job == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
-  try {
+  return guardDeviceCall([&] {
     return job->getResults(programIndex, result, size, data, size_ret);
-  } catch (const std::bad_alloc&) {
-    return QDMI_ERROR_OUTOFMEM;
-  }
+  });
 }
 
 int MQT_DDSIM_QDMI_device_session_query_device_property(

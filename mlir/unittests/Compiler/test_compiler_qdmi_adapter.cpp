@@ -20,6 +20,8 @@
 #include "qdmi/client.h"
 #include "qdmi/device.h"
 
+#include "mlir/Parser/Parser.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -35,6 +37,7 @@
 #include <numeric>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -364,7 +367,8 @@ TEST(CompilerQDMIAdapterTest,
   const auto makeTarget = [](bool calibrated,
                              const std::vector<CompilerTarget::SiteId>& ids,
                              std::vector<CompilerTarget::SiteId> operands,
-                             double timeScale = 1.) {
+                             double timeScale = 1.,
+                             const char* operationName = "cx") {
     std::vector<CompilerTarget::Site> sites;
     sites.reserve(ids.size());
     for (const auto id : ids) {
@@ -375,7 +379,7 @@ TEST(CompilerQDMIAdapterTest,
         std::move(operands), calibrated ? 50 : 10, calibrated ? 0.99 : 0.9));
     const auto operation =
         llvm::cantFail(CompilerTarget::OperationCapability::create(
-            "cx", 2, 0, {tuple}, calibrated ? 50 : 10,
+            operationName, 2, 0, {tuple}, calibrated ? 50 : 10,
             calibrated ? 0.99 : 0.9));
     return llvm::cantFail(CompilerTarget::create(
         calibrated ? "updated device" : "original device", std::move(sites),
@@ -395,6 +399,7 @@ TEST(CompilerQDMIAdapterTest,
            makeTarget(false, {5, 2}, {2, 5}),
            makeTarget(false, {2, 5}, {5, 2}),
            makeTarget(false, {2, 5}, {2, 5}, 2.),
+           makeTarget(false, {2, 5}, {2, 5}, 1., "cnot"),
        }) {
     const mlir::TargetEnvironment changed(target, payload);
     const auto error =
@@ -657,4 +662,161 @@ TEST(CompilerQDMIAdapterTest, SubmissionQueriesOnlyTheRequiredMetadata) {
   EXPECT_GT(calibrationQueries, 0);
   ASSERT_TRUE(sourceJob.wait());
   EXPECT_EQ(sourceJob.getCounts().at("0"), 4);
+}
+
+TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
+  for (const auto& [single, entangler] : {
+           std::pair{"u3", "cnot"},
+           std::pair{"r", "cz"},
+           std::pair{"U", "cnot"},
+       }) {
+    const auto target = llvm::cantFail(CompilerTarget::create(
+        2, CompilerTarget::Connectivity::allToAll(),
+        CompilerTarget::NativeOperations::fromOperations({
+            llvm::cantFail(CompilerTarget::OperationCapability::create(
+                single, 1, std::string_view(single) == "r" ? 2 : 3)),
+            llvm::cantFail(
+                CompilerTarget::OperationCapability::create(entangler, 2, 0)),
+            llvm::cantFail(
+                CompilerTarget::OperationCapability::create("measure", 1, 0)),
+        })));
+    for (const auto format : {
+             QDMI_PROGRAM_FORMAT_QASM3,
+             QDMI_PROGRAM_FORMAT_QIRBASESTRING,
+             QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING,
+         }) {
+      const mlir::TargetEnvironment environment(
+          target,
+          llvm::cantFail(mlir::payloadSpecificationForProgramFormat(format)));
+      auto compiled = mlir::CompiledProgram::compile(
+          mlir::OpenQASMProgram("OPENQASM 3; include \"stdgates.inc\"; "
+                                "qubit[2] q; h q[0]; cx q[0], q[1]; "
+                                "bit[2] c = measure q;"),
+          environment);
+      if (format == QDMI_PROGRAM_FORMAT_QASM3 &&
+          std::string_view(single) == "U") {
+        ASSERT_FALSE(static_cast<bool>(compiled));
+        llvm::consumeError(compiled.takeError());
+        continue;
+      }
+      ASSERT_TRUE(static_cast<bool>(compiled))
+          << llvm::toString(compiled.takeError());
+      const auto& payload = compiled->payload();
+      if (format == QDMI_PROGRAM_FORMAT_QASM3) {
+        EXPECT_NE(payload.find(std::string(single) + "("), std::string::npos);
+        EXPECT_NE(payload.find(std::string(entangler) + " $"),
+                  std::string::npos);
+        EXPECT_EQ(payload.find("gate "), std::string::npos);
+        EXPECT_EQ(payload.find("include "), std::string::npos);
+        EXPECT_EQ(payload.find("gphase"), std::string::npos);
+      } else {
+        EXPECT_NE(
+            payload.find(std::string("__quantum__qis__") + single + "__body"),
+            std::string::npos);
+        EXPECT_NE(payload.find(std::string("__quantum__qis__") + entangler +
+                               "__body"),
+                  std::string::npos);
+        EXPECT_NE(payload.find("__quantum__qis__measure__body"),
+                  std::string::npos);
+        EXPECT_EQ(payload.find("__quantum__qis__mz__body"), std::string::npos);
+      }
+    }
+  }
+}
+
+TEST(CompilerQDMIAdapterTest, PreservesExplicitStatusAndRejectsSourceScalars) {
+  const auto device = qdmi::Session::openDevice("mqt.ddsim.default");
+  auto status = mlir::QCProgram::fromMLIRString(R"mlir(module {
+    func.func @main() -> i64 attributes {mqt.entry_point} {
+      %status = arith.constant 7 : i64
+      return %status : i64
+    }
+  })mlir");
+  ASSERT_TRUE(mlir::succeeded(status));
+  auto compiled = mlir::compileProgram(std::move(*status), device,
+                                       QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING);
+  ASSERT_TRUE(static_cast<bool>(compiled))
+      << llvm::toString(compiled.takeError());
+  EXPECT_NE(compiled->payload().find("ret i64 7"), std::string::npos);
+  for (const auto width : {32, 64}) {
+    const auto source = "OPENQASM 3; int[" + std::to_string(width) + "] k = 1;";
+    auto qc = mlir::QCProgram::fromOpenQASMString(source);
+    ASSERT_TRUE(mlir::succeeded(qc));
+    auto qco = std::move(*qc).intoQCO();
+    ASSERT_TRUE(mlir::succeeded(qco));
+    auto rejected = mlir::compileProgram(qco->copy(), device);
+    ASSERT_FALSE(static_cast<bool>(rejected));
+    llvm::consumeError(rejected.takeError());
+    auto portable = std::move(*qco).intoQC();
+    ASSERT_TRUE(mlir::succeeded(portable));
+    auto qir = std::move(*portable).intoQIR(mlir::QIRProfile::Adaptive);
+    ASSERT_EQ(mlir::succeeded(qir), width == 64);
+    if (mlir::succeeded(qir)) {
+      EXPECT_TRUE(mlir::succeeded(qir->llvmIR()));
+    }
+  }
+}
+
+TEST(CompilerQDMIAdapterTest, SelectsNativeAliasesByOrderedPlacement) {
+  auto program = mlir::QCProgram::fromMLIRString(R"mlir(module {
+    func.func @main() attributes {mqt.entry_point} {
+      %q0 = qc.static 0 : !qc.qubit
+      %q1 = qc.static 1 : !qc.qubit
+      %q2 = qc.static 2 : !qc.qubit
+      qc.ctrl(%q0) targets(%t = %q1) { qc.x %t : !qc.qubit qc.yield }
+        : {!qc.qubit}, {!qc.qubit}
+      qc.ctrl(%q1) targets(%t = %q2) { qc.x %t : !qc.qubit qc.yield }
+        : {!qc.qubit}, {!qc.qubit}
+      return
+    }
+  })mlir");
+  ASSERT_TRUE(mlir::succeeded(program));
+  const auto target = llvm::cantFail(CompilerTarget::create(
+      3, CompilerTarget::Connectivity::allToAll(),
+      CompilerTarget::NativeOperations::fromOperations({
+          llvm::cantFail(CompilerTarget::OperationCapability::create(
+              "cx", 2, 0,
+              {llvm::cantFail(CompilerTarget::SiteTuple::create({0, 1}))})),
+          llvm::cantFail(CompilerTarget::OperationCapability::create(
+              "cnot", 2, 0,
+              {llvm::cantFail(CompilerTarget::SiteTuple::create({1, 2}))})),
+      })));
+  mlir::attachTargetEnvironment(
+      program->module(),
+      mlir::TargetEnvironment(
+          target, llvm::cantFail(mlir::payloadSpecificationForProgramFormat(
+                      QDMI_PROGRAM_FORMAT_QIRBASESTRING))));
+  auto qasm = program->toOpenQASM3();
+  ASSERT_TRUE(mlir::succeeded(qasm));
+  EXPECT_NE(qasm->source().find("cx $0, $1;"), std::string::npos);
+  EXPECT_NE(qasm->source().find("cnot $1, $2;"), std::string::npos);
+  auto qir = std::move(*program).intoQIR(mlir::QIRProfile::Base);
+  ASSERT_TRUE(mlir::succeeded(qir));
+  auto references =
+      mlir::parseSourceString<mlir::ModuleOp>(R"mlir(module {
+    llvm.func @__quantum__qis__retained__body()
+    llvm.mlir.global external constant @qis_address() : !llvm.ptr {
+      %address = llvm.mlir.addressof @__quantum__qis__retained__body : !llvm.ptr
+      llvm.return %address : !llvm.ptr
+    }
+  })mlir",
+                                              qir->module().getContext());
+  ASSERT_TRUE(references);
+  auto& operations = qir->module().getBody()->getOperations();
+  operations.splice(operations.end(), references->getBody()->getOperations());
+  for (int repeat = 0; repeat < 2; ++repeat) {
+    ASSERT_TRUE(mlir::succeeded(qir->cleanup()));
+    auto text = qir->llvmIR();
+    ASSERT_TRUE(mlir::succeeded(text));
+    EXPECT_NE(text->find("call void @__quantum__qis__cx__body"),
+              std::string::npos);
+    EXPECT_NE(text->find("call void @__quantum__qis__cnot__body"),
+              std::string::npos);
+    EXPECT_NE(text->find("@qis_address = constant ptr "
+                         "@__quantum__qis__retained__body"),
+              std::string::npos);
+    EXPECT_NE(text->find("declare void @__quantum__qis__retained__body()"),
+              std::string::npos);
+    EXPECT_NE(text->find("\"required_num_qubits\"=\"3\""), std::string::npos);
+  }
 }

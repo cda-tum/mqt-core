@@ -10,9 +10,11 @@
 
 #include "mqt/Conversion/QCToQIR/QIRCommon/QIRCommon.h"
 
+#include "mqt/Compiler/TargetEnvironment.h"
 #include "mqt/Dialect/CBit/IR/CBitDialect.h"
 #include "mqt/Dialect/CBit/IR/CBitOps.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
+#include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
 #include "mqt/Dialect/QC/IR/QCDialect.h"
 #include "mqt/Dialect/QC/IR/QCOps.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
@@ -134,6 +136,48 @@ QCToQIRTypeConverter::QCToQIRTypeConverter(MLIRContext* ctx)
   });
 };
 
+const CompilerTarget::OperationCapability*
+LoweringState::nativeOperation(StringRef name, ValueRange qubits,
+                               ValueRange parameters, bool variadicOnly) const {
+  SmallVector<CompilerTarget::SiteId> sites;
+  for (auto qubit : qubits) {
+    auto pointer = qubit.getDefiningOp<LLVM::IntToPtrOp>();
+    auto index = pointer ? getConstantIntValue(pointer.getArg()) : std::nullopt;
+    if (!index) {
+      sites.clear();
+      break;
+    }
+    sites.push_back(*index);
+  }
+  SmallVector<std::optional<double>> values;
+  for (auto parameter : parameters) {
+    values.push_back(mqt::valueToDouble(parameter));
+  }
+  return nativeTarget->findOperation(
+      name, qubits.size(), values,
+      sites.size() == qubits.size()
+          ? std::optional<ArrayRef<CompilerTarget::SiteId>>(sites)
+          : std::nullopt,
+      variadicOnly);
+}
+
+LogicalResult LoweringState::nameNativeCall(LLVM::CallOp call, StringRef name,
+                                            ValueRange qubits) const {
+  if (!nativeTarget) {
+    return success();
+  }
+  const auto* capability = nativeOperation(name, qubits, {});
+  if (capability == nullptr) {
+    return call.emitError("target does not support emitted QIR operation");
+  }
+  call->setAttr(
+      qir::QIR_NATIVE_NAME_ATTR,
+      StringAttr::get(
+          call.getContext(),
+          (Twine("__quantum__qis__") + capability->name() + "__body").str()));
+  return success();
+}
+
 /// Helper to convert a QC operation to a LLVM CallOp
 ///
 /// @tparam QCOpType The operation type of the QC operation
@@ -147,18 +191,48 @@ QCToQIRTypeConverter::QCToQIRTypeConverter(MLIRContext* ctx)
 /// @param numParams The number of parameters
 /// @return LogicalResult Success or failure of the conversion
 template <typename QCOpType, typename QCOpAdaptorType>
-static LogicalResult
-convertUnitaryToCallOp(QCOpType& op, QCOpAdaptorType& adaptor,
-                       ConversionPatternRewriter& rewriter, ValueRange controls,
-                       StringRef fnName, const size_t numTargets,
-                       const size_t numParams) {
+static LogicalResult convertUnitaryToCallOp(
+    QCOpType& op, QCOpAdaptorType& adaptor, ConversionPatternRewriter& rewriter,
+    ValueRange controls, StringRef fnName, const size_t numTargets,
+    const size_t numParams, LoweringState& state, StringRef genericName = {}) {
   auto convertedOperands = adaptor.getOperands();
   auto targets = convertedOperands.take_front(numTargets);
   auto parameters = convertedOperands.drop_front(numTargets);
   assert(parameters.size() == numParams && "unexpected gate parameter count");
 
-  qir::emitQISCall(rewriter, op, op.getLoc(), parameters, controls, targets,
-                   fnName);
+  std::string nativeName;
+  if (state.nativeTarget) {
+    auto unitary = cast<UnitaryOpInterface>(op.getOperation());
+    SmallVector<Value> qubits(controls);
+    llvm::append_range(qubits, targets);
+    const auto symbol = unitary.getBaseSymbol();
+    const CompilerTarget::OperationCapability* capability = nullptr;
+    if (!controls.empty() && controls.size() <= 2) {
+      capability = state.nativeOperation(
+          (Twine(controls.size() == 1 ? "c" : "cc") + symbol).str(), qubits,
+          parameters);
+    }
+    const bool genericControls = !controls.empty() && capability == nullptr;
+    if (capability == nullptr) {
+      capability =
+          state.nativeOperation(symbol, qubits, parameters, genericControls);
+    }
+    if (capability == nullptr) {
+      return op.emitError("target does not support emitted QIR operation");
+    }
+    if (genericControls) {
+      fnName = genericName;
+    }
+    nativeName = (Twine("__quantum__qis__") + capability->name() +
+                  (genericControls ? "__ctl" : "__body"))
+                     .str();
+  }
+  auto call = qir::emitQISCall(rewriter, op, op.getLoc(), parameters, controls,
+                               targets, fnName);
+  if (!nativeName.empty()) {
+    call->setAttr(qir::QIR_NATIVE_NAME_ATTR,
+                  rewriter.getStringAttr(nativeName));
+  }
   rewriter.eraseOp(op);
   return success();
 }
@@ -186,8 +260,9 @@ struct ConvertQCUnitaryOpQIR : StatefulOpConversionPattern<OpType> {
                               ? ValueRange(it->second)
                               : ValueRange{};
     const auto fnName = GetFnName(controls.size());
-    auto result = convertUnitaryToCallOp(op, adaptor, rewriter, controls,
-                                         fnName, NumTargets, NumParams);
+    auto result =
+        convertUnitaryToCallOp(op, adaptor, rewriter, controls, fnName,
+                               NumTargets, NumParams, state, GetFnName(3));
     if (it != state.controlledGates.end()) {
       state.controlledGates.erase(it);
     }
@@ -262,7 +337,7 @@ struct ConvertQCGPhaseOp final : StatefulOpConversionPattern<GPhaseOp> {
       return op.emitError("Controlled GPhaseOps cannot be converted to QIR");
     }
     return convertUnitaryToCallOp(op, adaptor, rewriter, ValueRange{},
-                                  QIR_GPHASE, 0, 1);
+                                  QIR_GPHASE, 0, 1, state);
   }
 };
 
@@ -476,8 +551,15 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
                                       bool allowComputedOutputs,
                                       bool deferMeasurementStores) {
   auto funcOp = mqt::getEntryPoint(cast<ModuleOp>(moduleOp));
+  const TargetEnvironmentAnalysis environment(moduleOp);
+  if (environment &&
+      environment.environment().target().nativeOperationsKind() ==
+          CompilerTarget::NativeOperations::Kind::Explicit) {
+    state.nativeTarget = environment.environment().target();
+  }
   bool hasInvalidMemory = false;
   moduleOp->walk([&](Operation* operation) {
+    operation->removeAttr(qir::QIR_NATIVE_NAME_ATTR);
     if (isa<cbit::AllocOp, MeasureOp>(operation) &&
         operation->getParentOfType<func::FuncOp>() != funcOp) {
       operation->emitError("QIR conversion requires measurements and CBit "
@@ -500,6 +582,17 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   });
   if (hasInvalidMemory) {
     return failure();
+  }
+  for (unsigned index = 0; index < funcOp.getNumResults(); ++index) {
+    if (environment &&
+        funcOp.getResultAttr(
+            index, mqt::MQTDialect::OutputNameAttrHelper::getNameStr())) {
+      return funcOp.emitError(
+          "target QIR does not support scalar program outputs; "
+          "keep classical temporaries local or select OpenQASM 3");
+    }
+    funcOp.removeResultAttr(
+        index, mqt::MQTDialect::OutputNameAttrHelper::getNameStr());
   }
   SmallVector<func::ReturnOp> returns;
   funcOp.walk([&](func::ReturnOp op) { returns.push_back(op); });

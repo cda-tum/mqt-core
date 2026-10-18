@@ -393,33 +393,32 @@ def test_adaptive_payload_supports_optional_computations() -> None:
     assert job.get_counts() == {"0": 16}
 
 
-def test_loop_is_supported_by_default_payload() -> None:
-    """The preferred Adaptive payload permits the compiler to retain loops."""
-    source = 'OPENQASM 3.0; include "stdgates.inc"; qubit q; bit c; for int i in [0:2] { x q; } c = measure q;'
+@pytest.mark.parametrize(
+    ("body", "counts"),
+    [
+        ("for int i in [0:2] { x q; } c = measure q;", {"1": 8}),
+        ("x q; c = measure q; while (c) { x q; c = measure q; }", {"0": 8}),
+    ],
+)
+def test_default_payload_supports_loops(body: str, counts: dict[str, int]) -> None:
+    """The preferred Adaptive payload retains counted and measurement-controlled loops."""
+    source = 'OPENQASM 3.0; include "stdgates.inc"; qubit q; bit c; ' + body
     job = submit_program(source, target="mqt.ddsim.default", num_shots=8)
     job.wait()
-    assert job.get_counts() == {"1": 8}
+    assert job.get_counts() == counts
 
 
-def test_default_payload_supports_measurement_controlled_loop() -> None:
-    """Conditional loops use the explicitly advertised Adaptive capability."""
-    source = (
-        'OPENQASM 3.0; include "stdgates.inc"; qubit q; bit c; x q; c = measure q; while (c) { x q; c = measure q; }'
-    )
-    job = submit_program(source, target="mqt.ddsim.default", num_shots=8)
-    job.wait()
-    assert job.get_counts() == {"0": 8}
-
-
-def test_qir_artifact_rejects_unsupported_entry_result(capfd: pytest.CaptureFixture[str]) -> None:
+@pytest.mark.parametrize("width", [32, 64])
+@pytest.mark.parametrize("staged", [False, True])
+def test_qir_artifact_rejects_unsupported_entry_result(
+    width: int, capfd: pytest.CaptureFixture[str], *, staged: bool
+) -> None:
     """Keep scalar program outputs distinct from the QDMI QIR status return."""
-    source = "OPENQASM 3.0; qubit q; bit c = measure q; int[32] k = int[32](c);"
-    with pytest.raises(ValueError, match="Compilation failed for selected payload qir adaptive"):
-        compile_program(source, target="mqt.ddsim.default")
-    assert (
-        "QIR entry return supports only direct measurements, CBit allocations, and one i64 exit code"
-        in capfd.readouterr().err
-    )
+    source = f"OPENQASM 3.0; qubit q; bit c = measure q; int[{width}] k = int[{width}](c);"
+    program = QCProgram.from_openqasm_str(source).to_qco() if staged else source
+    with pytest.raises(ValueError, match="Compilation failed"):
+        compile_program(program, target="mqt.ddsim.default")
+    assert "scalar program outputs" in capfd.readouterr().err
 
 
 @pytest.mark.parametrize("num_shots", [0, 8])

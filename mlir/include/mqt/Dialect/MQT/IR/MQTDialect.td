@@ -56,6 +56,8 @@ def MQTDialect : Dialect {
     every bit pattern is valid. Transformations carry it with the input and
     remove it when removing the input. It does not identify an SSA value or
     change execution semantics.
+    `mqt.output_name` identifies a source-level scalar function result.
+    Such a result is program output, not an execution status.
     `mqt.source_name` records a source-level function name when the IR symbol
     must be uniquified, preserving the original gate name on Qiskit export.
     `mqt.parameter_group` optionally preserves the source-level vector
@@ -100,7 +102,7 @@ def MQTDialect : Dialect {
 
   let discardableAttrs = (ins "::mlir::StringAttr":$input_name,
       "::mlir::IntegerAttr":$input_id, "::mlir::DictionaryAttr":$layout,
-      "::mlir::StringAttr":$source_name,
+      "::mlir::StringAttr":$source_name, "::mlir::StringAttr":$output_name,
       "::mlir::DenseI64ArrayAttr":$source_qubit_indices,
       "::mlir::DictionaryAttr":$parameter_group,
       "::mlir::StringAttr":$register_name, "::mlir::UnitAttr":$entry_point,

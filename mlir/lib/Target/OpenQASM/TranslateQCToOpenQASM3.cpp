@@ -10,6 +10,7 @@
 
 #include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
 
+#include "mqt/Compiler/Target.h"
 #include "mqt/Compiler/TargetEnvironment.h"
 #include "mqt/Dialect/CBit/IR/CBitAttributes.h"
 #include "mqt/Dialect/CBit/IR/CBitDialect.h"
@@ -17,6 +18,7 @@
 #include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
+#include "mqt/Dialect/MQT/Utils/Modifiers.h"
 #include "mqt/Dialect/QC/IR/QCDialect.h"
 #include "mqt/Dialect/QC/IR/QCInterfaces.h"
 #include "mqt/Dialect/QC/IR/QCOps.h"
@@ -193,8 +195,11 @@ public:
     }
     bodyOutput.flush();
 
-    sourceStream << "OPENQASM 3.1;\n"
-                    "include \"stdgates.inc\";\n\n";
+    sourceStream << "OPENQASM 3.1;\n";
+    if (!nativeTarget_) {
+      sourceStream << "include \"stdgates.inc\";\n";
+    }
+    sourceStream << '\n';
     emitFixedHelpers(sourceStream);
     for (const auto& definition : gateDefinitions_) {
       sourceStream << definition << "\n";
@@ -223,6 +228,7 @@ private:
   std::string uHelperName_;
   SmallVector<std::string> gateDefinitions_;
   std::optional<DataFlowSolver> ranges;
+  std::optional<CompilerTarget> nativeTarget_;
   Operation* expressionConsumer = nullptr;
   size_t nextQubit = 0;
   size_t nextBit = 0;
@@ -368,6 +374,13 @@ private:
       const TargetEnvironmentAnalysis environment(moduleOp);
       if (!environment) {
         return fail(moduleOp, environment.error());
+      }
+      if (environment.environment().target().nativeOperationsKind() ==
+          CompilerTarget::NativeOperations::Kind::Explicit) {
+        nativeTarget_ = environment.environment().target();
+        for (const auto& operation : nativeTarget_->operations()) {
+          usedNames.insert(operation.name());
+        }
       }
       supportsDispatch = environment.environment()
                              .payloadSpecification()
@@ -824,6 +837,9 @@ private:
       return emitMeasurement(measurement);
     }
     if (auto reset = dyn_cast<qc::ResetOp>(&operation)) {
+      if (failed(checkNativeNonUnitary(reset, "reset", reset.getQubit()))) {
+        return failure();
+      }
       auto qubit = emitQubit(reset.getQubit());
       if (failed(qubit)) {
         return failure();
@@ -1569,6 +1585,10 @@ private:
   }
 
   [[nodiscard]] LogicalResult emitMeasurement(qc::MeasureOp measurement) {
+    if (failed(checkNativeNonUnitary(measurement, "measure",
+                                     measurement.getQubit()))) {
+      return failure();
+    }
     auto qubit = emitQubit(measurement.getQubit());
     if (failed(qubit)) {
       return failure();
@@ -1946,7 +1966,101 @@ private:
     return call;
   }
 
+  [[nodiscard]] LogicalResult
+  checkNativeNonUnitary(Operation* operation, StringRef name, Value qubit) {
+    if (!nativeTarget_) {
+      return success();
+    }
+    auto physical = qubit.getDefiningOp<StaticOp>();
+    if (physical) {
+      const std::array sites{
+          static_cast<CompilerTarget::SiteId>(physical.getIndex()),
+      };
+      const auto* capability = nativeTarget_->findOperation(name, 1, {}, sites);
+      if (capability != nullptr && capability->name() == name) {
+        return success();
+      }
+    }
+    return fail(operation,
+                "target operation cannot be emitted as native OpenQASM");
+  }
+
+  [[nodiscard]] FailureOr<GateCall> emitNativeGate(UnitaryOpInterface unitary) {
+    if (isa<InvOp, PowOp, qc::CallOp>(unitary.getOperation())) {
+      return fail(unitary,
+                  "target modifier cannot be emitted as native OpenQASM");
+    }
+    auto body = unitary;
+    size_t controlCount = 0;
+    SmallVector<Value> qubits;
+    if (auto controlled = dyn_cast<CtrlOp>(unitary.getOperation())) {
+      body = mqt::getSoleBodyUnitary<UnitaryOpInterface>(*controlled.getBody());
+      if (!body) {
+        return fail(unitary,
+                    "native controlled gates require one body operation");
+      }
+      controlCount = controlled.getNumControls();
+      llvm::append_range(qubits, controlled.getControls());
+      llvm::append_range(qubits, controlled.getTargets());
+    } else {
+      llvm::append_range(qubits, unitary.getTargets());
+    }
+    SmallVector<CompilerTarget::SiteId> sites;
+    for (auto qubit : qubits) {
+      auto physical = qubit.getDefiningOp<StaticOp>();
+      if (!physical) {
+        return fail(unitary, "native OpenQASM gates require physical qubits");
+      }
+      sites.push_back(static_cast<CompilerTarget::SiteId>(physical.getIndex()));
+    }
+    SmallVector<std::optional<double>> parameters;
+    for (auto parameter : body.getParameters()) {
+      parameters.push_back(mqt::valueToDouble(parameter));
+    }
+    const auto symbol = body.getBaseSymbol();
+    const CompilerTarget::OperationCapability* capability = nullptr;
+    if (controlCount != 0 && controlCount <= 2) {
+      capability = nativeTarget_->findOperation(
+          (Twine(controlCount == 1 ? "c" : "cc") + symbol).str(), qubits.size(),
+          parameters, sites);
+    }
+    const bool genericControls = controlCount != 0 && capability == nullptr;
+    if (capability == nullptr) {
+      capability = nativeTarget_->findOperation(
+          symbol, qubits.size(), parameters, sites, genericControls);
+    }
+    if (capability == nullptr || capability->name() == "U" ||
+        (!openqasm::frontend::isValidIdentifier(capability->name()) &&
+         !(symbol == "gphase" && capability->name() == "gphase"))) {
+      return fail(unitary,
+                  "target operation cannot be emitted as native OpenQASM");
+    }
+    GateCall call;
+    call.symbol = capability->name().str();
+    if (genericControls) {
+      call.modifiers = (Twine("ctrl(") + Twine(controlCount) + ") @ ").str();
+    }
+    for (auto parameter : body.getParameters()) {
+      auto expression = emitExpression(parameter);
+      if (failed(expression)) {
+        return failure();
+      }
+      call.parameters.push_back(std::move(*expression));
+    }
+    for (auto qubit : qubits) {
+      auto expression = emitQubit(qubit);
+      if (failed(expression)) {
+        return failure();
+      }
+      call.qubits.push_back(std::move(*expression));
+    }
+    return call;
+  }
+
   [[nodiscard]] FailureOr<GateCall> emitGateCall(UnitaryOpInterface unitary) {
+    if (nativeTarget_) {
+      return emitNativeGate(unitary);
+    }
     if (isa<qc::CallOp>(unitary.getOperation())) {
       return emitFunctionCall(unitary.getOperation(), unitary->getOperands());
     }

@@ -577,7 +577,7 @@ static llvm::Error incompatible(const llvm::Twine& detail) {
 
 static bool sameOperation(const CompilerTarget::OperationCapability& lhs,
                           const CompilerTarget::OperationCapability& rhs) {
-  if (lhs.canonicalName() != rhs.canonicalName() ||
+  if (lhs.name() != rhs.name() || lhs.canonicalName() != rhs.canonicalName() ||
       lhs.arity() != rhs.arity() ||
       lhs.numParameters() != rhs.numParameters() ||
       lhs.fixedParameters() != rhs.fixedParameters() ||
@@ -874,12 +874,8 @@ CompiledProgram::compile(CompilerInput&& program,
     return error;
   }
   if (qdmi::isBinaryProgramFormat(*format)) {
-    if (auto bytes = qir.toBitcode(); succeeded(bytes)) {
-      return CompiledProgram(
-          environment,
-          std::string(reinterpret_cast<const char*>(bytes->data()),
-                      bytes->size()),
-          *format);
+    if (auto bytes = qir.bitcode(); succeeded(bytes)) {
+      return CompiledProgram(environment, std::move(*bytes), *format);
     }
   } else if (auto text = qir.llvmIR(); succeeded(text)) {
     return CompiledProgram(environment, std::move(*text), *format);

@@ -603,8 +603,19 @@ LogicalResult MQTDialect::verifyRegionArgAttribute(
 }
 
 LogicalResult MQTDialect::verifyRegionResultAttribute(
-    Operation* operation, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
+    Operation* operation, unsigned /*regionIndex*/, unsigned resultIndex,
     const NamedAttribute attribute) {
+  if (attribute.getName() == OutputNameAttrHelper::getNameStr()) {
+    auto function = dyn_cast<func::FuncOp>(operation);
+    auto name = dyn_cast<StringAttr>(attribute.getValue());
+    if (function && name && !name.getValue().empty() &&
+        isa<IntegerType, IndexType, FloatType>(
+            function.getResultTypes()[resultIndex])) {
+      return success();
+    }
+    return operation->emitError(
+        "mqt.output_name requires a nonempty name on a scalar function result");
+  }
   return operation->emitError()
          << "attribute '" << attribute.getName().getValue()
          << "' is not valid on a region result";

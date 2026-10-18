@@ -481,6 +481,16 @@ public:
                     std::optional<llvm::ArrayRef<SiteId>> sites,
                     llvm::ArrayRef<std::optional<double>> parameters) const;
 
+  /// Select the first advertised spelling that accepts an executable operation.
+  ///
+  /// Unknown sites require unrestricted placement. Returns null for unsupported
+  /// operations and unrestricted native-operation sets.
+  [[nodiscard]] const OperationCapability*
+  findOperation(llvm::StringRef name, size_t arity,
+                llvm::ArrayRef<std::optional<double>> parameters,
+                std::optional<llvm::ArrayRef<SiteId>> sites,
+                bool variadicOnly = false) const;
+
   /// Return whether a QCO operation is supported.
   [[nodiscard]] bool supports(::mlir::Operation* operation) const;
 

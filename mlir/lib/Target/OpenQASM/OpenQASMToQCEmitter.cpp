@@ -206,8 +206,15 @@ public:
     }
     builder.retype(ValueRange(results).getTypes());
     auto moduleOp = builder.finalize(results);
-    if (emissionBudget.isExhausted()) {
+    if (!moduleOp || emissionBudget.isExhausted()) {
       return nullptr;
+    }
+    for (const auto [index, output] : llvm::enumerate(program.outputs)) {
+      if (output.kind == frontend::OutputKind::Scalar) {
+        entry.setResultAttr(
+            index, mqt::MQTDialect::OutputNameAttrHelper::getNameStr(),
+            builder.getStringAttr(program.scalars[output.symbol].name));
+      }
     }
     return moduleOp;
   }
