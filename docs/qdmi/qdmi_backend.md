@@ -477,11 +477,13 @@ MQT Core provides the serializers for OpenQASM 2, OpenQASM 3, and QPY. Every
 other format belongs to the package that owns the device, which registers its
 serializer through the same registry.
 
-The QPY serializer sends one Qiskit circuit, including serializable metadata, as
-QPY version 13. This version supports Qiskit 2.x receivers; QDMI has no QPY
-version negotiation. The receiver must support the circuit's instructions.
-Register a custom serializer when a device requires a newer QPY version. For
-compiler program import and export, use {py:mod}`mqt.core.qpy`.
+The QPY serializer sends one Qiskit circuit, including serializable metadata.
+Qiskit 2.5 and 2.6 write QPY version 17 with their native writer. Older
+installations use their latest supported version up to 17. The receiver must
+support the selected version and the circuit's instructions; QDMI does not
+negotiate QPY versions. Register a custom serializer for a device that needs a
+different version. For compiler program import and export, use
+{py:mod}`mqt.core.qpy`.
 
 A format fixes the kind of payload it carries, so there are two signatures. A
 text format takes a serializer that returns `str`:

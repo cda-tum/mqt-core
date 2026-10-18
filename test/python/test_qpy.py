@@ -38,7 +38,7 @@ requires_translation = pytest.mark.skipif(
 
 @requires_translation
 @pytest.mark.parametrize("dialect", ["qc", "qco"])
-@pytest.mark.parametrize("version", [13, None])
+@pytest.mark.parametrize("version", [17, None])
 def test_qpy_paths_preserve_parameters_phase_and_sources(tmp_path: Path, dialect: str, version: int | None) -> None:
     """Qiskit can read exported programs and bind the original parameter identities."""
     angles = ParameterVector("angles", 2)

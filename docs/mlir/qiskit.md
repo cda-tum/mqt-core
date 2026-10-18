@@ -30,11 +30,12 @@ source IR. Both functions accept paths and binary streams. The
 circuit features survive the conversion; use Qiskit's own QPY API to archive
 arbitrary Qiskit metadata and annotations.
 
-Exports use the installed Qiskit's default QPY version. Pass `version=` for an
-older receiver or `target=` to map compiler site IDs through a compiler target.
-Qiskit 2.6 uses its native QPY writer for the default format. Export buffers the
-serialized archive before opening the destination, preserving existing files if
-translation or serialization fails. An I/O failure can leave partial output.
+Exports use the installed Qiskit's default QPY version. Pass `version=17` to
+exchange files between Qiskit 2.5 and 2.6, or `target=` to map compiler site IDs
+through a compiler target. Both Qiskit versions use their native QPY writer for
+version 17 and later. Export buffers the serialized archive before opening the
+destination, preserving existing files if translation or serialization fails. An
+I/O failure can leave partial output.
 
 Load only trusted files. Qiskit and compiler errors propagate to the caller.
 
