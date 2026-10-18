@@ -33,25 +33,25 @@ ordered placements, deterministic ties, and existing native operations.
 
 - All 1,383 tests pass across the affected C++ utility, transformation,
   decomposition, synthesis, compiler, OpenQASM, and jeff round-trip suites.
-- All 377 MLIR Python and Qiskit-target tests pass on Qiskit 2.6.0. The 27 runtime
-  synthesis and composition cases also pass on Qiskit 2.5.1. The staged package
-  uses the build's QDMI driver through `MQT_CORE_QDMI_DRIVER`.
+- All 377 MLIR Python and Qiskit-target tests pass on Qiskit 2.6.0. The 27
+  runtime synthesis and composition cases also pass on Qiskit 2.5.1. The staged
+  package uses the build's QDMI driver through `MQT_CORE_QDMI_DRIVER`.
 - The symbolic pair formula passes 24,461 numerical samples and 1,121
   export-then-bind samples on both Qiskit versions, including zero, tiny,
   boundary, and large angles. Worst matrix errors are below `1e-15`.
 - Repository lint and whole-file C++ lint pass. Builds use Clang 23 with
   `CCACHE_DISABLE=1` because the local compiler cache produced invalid output.
-- Independent numerical and design reviews found no remaining actionable
-  issues. The final review removed a redundant copy of cached fusion factors.
+- Independent numerical and design reviews found no remaining actionable issues.
+  The final review removed a redundant copy of cached fusion factors.
 
 ## Measurements
 
 An external probe checked 20,000 deterministic locally dressed canonical
 matrices with one and nine candidate families. Counts and tie selection matched
 independent per-family analysis. Five alternating rounds pinned to CPU 0 gave
-median CPU times of 115.68 ms for nine-family selection and 796.57 ms for repeated
-per-family analysis. One-family selection took 97.75 ms versus 93.26 ms. The
-coordinate cache made two allocations totaling 18,944 bytes, independent of
-family count; warm queries allocated nothing. These are affinity-only routine
+median CPU times of 115.68 ms for nine-family selection and 796.57 ms for
+repeated per-family analysis. One-family selection took 97.75 ms versus 93.26
+ms. The coordinate cache made two allocations totaling 18,944 bytes, independent
+of family count; warm queries allocated nothing. These are affinity-only routine
 measurements, not whole-compiler speedups. The shared and local numerical
 payloads remain bounded at about 288 KiB and 18 KiB.
