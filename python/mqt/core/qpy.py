@@ -6,25 +6,20 @@
 #
 # Licensed under the MIT License
 
-"""Read and write QPY files through the optional Qiskit compiler bridge.
-
-Only the circuit features supported by that bridge are preserved. This is not
-a lossless archive of arbitrary Qiskit objects or metadata.
-"""
+"""Read and write the compiler bridge's supported circuit subset as QPY."""
 
 from __future__ import annotations
 
-__lazy_modules__ = {"io", "pathlib", "struct"}
+__lazy_modules__ = {"contextlib", "io", "pathlib"}
 
-import struct
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 from io import BytesIO
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Iterable
     from typing import BinaryIO
 
     from mqt.core.mlir import CompilerTarget, QCOProgram, QCProgram
@@ -32,62 +27,27 @@ if TYPE_CHECKING:
 __all__ = ["dump", "load"]
 
 
-@contextmanager
-def _qpy_native_panics() -> Generator[None, None, None]:
-    """Make Qiskit's native panics catchable without swallowing unrelated failures.
-
-    Raises:
-        ValueError: If Qiskit raises a PyO3 panic exception.
-    """
-    try:
-        yield
-    except BaseException as error:
-        # PyO3 has no importable panic class; use it directly if Qiskit exposes one.
-        if type(error).__module__ != "pyo3_runtime" or type(error).__name__ != "PanicException":
-            raise
-        msg = f"Invalid or unsupported QPY input: {error}"
-        raise ValueError(msg) from error
-
-
 def load(file: str | PathLike[str] | BinaryIO) -> list[QCProgram]:
     """Load every circuit in a QPY file as a QC program, in file order.
 
-    Requires Qiskit in the compiler bridge's supported version range. Unsupported
-    circuits fail the call without returning a partial list. Dependency, I/O,
-    and ordinary circuit translation errors propagate unchanged.
+    Requires Qiskit in the compiler bridge's supported version range. Load only
+    trusted files. Qiskit, compiler, and I/O errors propagate to the caller.
 
     Args:
-        file: Path or open binary stream. Caller-owned streams remain open and
-            are read from their current position.
+        file: Path or open binary stream. Caller-owned streams are buffered
+            from their current position and remain open.
 
     Returns:
         One program per circuit, including an empty list for an empty archive.
-
-    Raises:
-        ImportError: If Qiskit or a required QPY decoder dependency is missing.
-        ValueError: If the QPY data is malformed, its version is unsupported,
-            or Qiskit's native code panics during decoding or conversion.
-            The original exception is retained as the cause.
     """
     from qiskit import qpy  # ruff: ignore[import-outside-top-level] Optional dependency.
-    from qiskit.exceptions import QiskitError  # ruff: ignore[import-outside-top-level] Optional dependency.
 
     from mqt.core.mlir import QCProgram  # ruff: ignore[import-outside-top-level] Load native bindings only on use.
 
-    with (
-        Path(file).open("rb") if isinstance(file, (str, PathLike)) else nullcontext(file) as stream,
-        BytesIO(stream.read()) as buffer,
-        _qpy_native_panics(),
-    ):
-        try:
-            circuits = qpy.load(buffer)
-        except ImportError:
-            raise
-        except (QiskitError, struct.error, EOFError, ValueError, TypeError, LookupError, AttributeError) as error:
-            msg = f"Invalid or unsupported QPY input: {error}"
-            raise ValueError(msg) from error
-    with _qpy_native_panics():
-        return [QCProgram.from_qiskit(circuit) for circuit in circuits]
+    # Qiskit seeks to zero, so isolate the remaining data of caller-owned streams.
+    with Path(file).open("rb") if isinstance(file, (str, PathLike)) else BytesIO(file.read()) as stream:
+        circuits = qpy.load(stream)
+    return [QCProgram.from_qiskit(circuit) for circuit in circuits]
 
 
 def dump(

@@ -477,14 +477,11 @@ MQT Core provides the serializers for OpenQASM 2, OpenQASM 3, and QPY. Every
 other format belongs to the package that owns the device, which registers its
 serializer through the same registry.
 
-The QPY serializer writes one Qiskit circuit directly as binary data, without
-compiler translation. It uses QPY version 13 for compatibility with older Qiskit
-2.x readers because QDMI does not negotiate QPY versions. The receiver must
-still support the circuit's instructions. Features that require a newer QPY
-version cause serialization to fail; a device package can register a custom
-serializer to select a newer version supported by its receiver. This submission
-path preserves Qiskit metadata and is distinct from {py:mod}`mqt.core.qpy`,
-which translates compiler programs.
+The QPY serializer sends one Qiskit circuit, including serializable metadata, as
+QPY version 13. This version supports Qiskit 2.x receivers; QDMI has no QPY
+version negotiation. The receiver must support the circuit's instructions.
+Register a custom serializer when a device requires a newer QPY version. For
+compiler program import and export, use {py:mod}`mqt.core.qpy`.
 
 A format fixes the kind of payload it carries, so there are two signatures. A
 text format takes a serializer that returns `str`:
@@ -527,9 +524,9 @@ register_program_serializer(ProgramFormat.IQM_JSON, qiskit_to_iqm_json)
 ```
 
 Pass `replace=True` to take over a format that already has a serializer,
-including OpenQASM 2 and OpenQASM 3. QPY uses a built-in fallback: a package's
-QPY entry point or first explicit registration takes precedence without
-`replace=True`. Removing QPY from the registry disables the fallback too.
+including OpenQASM 2 and OpenQASM 3. For QPY, package entry points and explicit
+registrations take precedence over the built-in fallback. Unregistering QPY
+disables the fallback too.
 
 A device usually accepts several formats. The backend walks them in the order of
 {py:data}`~mqt.core.plugins.qiskit.serializers.PROGRAM_FORMAT_PREFERENCE` and

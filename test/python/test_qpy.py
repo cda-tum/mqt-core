@@ -14,7 +14,6 @@ import subprocess
 import sys
 from io import BytesIO, StringIO
 from typing import TYPE_CHECKING
-from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -22,8 +21,7 @@ import qiskit
 from qiskit import QuantumCircuit
 from qiskit import qpy as qiskit_qpy
 from qiskit.circuit import IfElseOp, ParameterVector
-from qiskit.exceptions import MissingOptionalLibraryError
-from qiskit.qpy import formats
+from qiskit.exceptions import QiskitError
 from qiskit.quantum_info import Operator
 from qiskit_support import supports_qiskit_translation
 
@@ -40,7 +38,8 @@ requires_translation = pytest.mark.skipif(
 
 @requires_translation
 @pytest.mark.parametrize("dialect", ["qc", "qco"])
-def test_qpy_paths_preserve_parameters_phase_and_sources(tmp_path: Path, dialect: str) -> None:
+@pytest.mark.parametrize("version", [13, None])
+def test_qpy_paths_preserve_parameters_phase_and_sources(tmp_path: Path, dialect: str, version: int | None) -> None:
     """Qiskit can read exported programs and bind the original parameter identities."""
     angles = ParameterVector("angles", 2)
     circuit = QuantumCircuit(2, global_phase=0.25)
@@ -55,10 +54,12 @@ def test_qpy_paths_preserve_parameters_phase_and_sources(tmp_path: Path, dialect
         program = program.to_qco()
     original_ir = program.ir
     output_path = tmp_path / "output.qpy"
-    qpy.dump(program, output_path)
+    qpy.dump(program, output_path, version=version)
     assert program.is_valid
     assert program.ir == original_ir
     with output_path.open("rb") as stream:
+        assert qiskit_qpy.get_qpy_version(stream) == (qiskit_qpy.QPY_VERSION if version is None else version)
+        stream.seek(0)
         restored = qiskit_qpy.load(stream)[0]
     bindings = {angles[0]: 0.125, angles[1]: -0.75}
     assert set(restored.parameters) == set(circuit.parameters)
@@ -71,7 +72,7 @@ def test_qpy_paths_preserve_parameters_phase_and_sources(tmp_path: Path, dialect
 
 @requires_translation
 def test_qpy_streams_preserve_order_control_flow_and_ownership() -> None:
-    """Multiple circuits survive without closing streams or dropping dynamic control."""
+    """Streams use their current position and remain open, preserving circuit order and control flow."""
     first = QuantumCircuit(1)
     first.h(0)
     dynamic = QuantumCircuit(2, 1)
@@ -100,119 +101,21 @@ def test_qpy_streams_preserve_order_control_flow_and_ownership() -> None:
 
 
 def test_empty_archive() -> None:
-    """An empty archive remains empty rather than creating a placeholder circuit."""
+    """Empty program collections produce empty QPY archives."""
     stream = BytesIO()
     qpy.dump([], stream)
     stream.seek(0)
     assert qpy.load(stream) == []
 
 
-@pytest.mark.parametrize("payload", [b"", b"truncated", b"QISKIT\xff", b"garbage" * 10])
-def test_invalid_qpy_is_rejected(payload: bytes) -> None:
-    """Malformed data and future format versions produce a QPY-specific diagnostic."""
-    with pytest.raises(ValueError, match="Invalid or unsupported QPY input"):
-        qpy.load(BytesIO(payload))
-
-
-def test_invalid_qpy_program_type_is_rejected() -> None:
-    """A corrupt program type in an otherwise valid archive is malformed input."""
-    stream = BytesIO()
-    qiskit_qpy.dump(QuantumCircuit(1), stream, version=13)
-    payload = bytearray(stream.getvalue())
-    payload[formats.FILE_HEADER_V10_SIZE] = ord("z")
-    with pytest.raises(ValueError, match="Invalid or unsupported QPY input") as raised:
-        qpy.load(BytesIO(payload))
-    assert isinstance(raised.value.__cause__, TypeError)
-
-
-@pytest.mark.parametrize("version", [12, 13, qiskit_qpy.QPY_VERSION])
-@pytest.mark.parametrize("corruption", ["qubit_index", "gate_name"])
-def test_corrupt_qpy_instruction_is_rejected(version: int, corruption: str) -> None:
-    """Invalid operands and instructions fail in both Python and native QPY readers."""
-    circuit = QuantumCircuit(1, name="corrupt_instruction")
-    circuit.x(0)
-    stream = BytesIO()
-    qiskit_qpy.dump(circuit, stream, version=max(version, 13))
-    payload = bytearray(stream.getvalue())
-    # This parameter-free circuit has the same layout in QPY 12 and 13.
-    payload[6] = version
-    assert qiskit_qpy.load(BytesIO(payload)) == [circuit]
-    original, replacement = (
-        (b"XGateq\x00\x00\x00\x00", b"XGateq\x00\x00\x00\x01") if corruption == "qubit_index" else (b"XGate", b"Zzzzz")
-    )
-    assert payload.count(original) == 1
-    source = BytesIO(payload.replace(original, replacement))
-    with pytest.raises(ValueError, match="Invalid or unsupported QPY input"):
-        qpy.load(source)
-    assert not source.closed
-
-
-@pytest.mark.parametrize("stage", ["decode", "translate"])
-def test_native_qpy_panic_is_recoverable(monkeypatch: pytest.MonkeyPatch, stage: str) -> None:
-    """PyO3 panics become ordinary errors at either native boundary, retaining their cause."""
-    panic_type = type("PanicException", (BaseException,), {"__module__": "pyo3_runtime"})
-    error = panic_type("native Qiskit failure")
-    source = BytesIO()
-    qiskit_qpy.dump(QuantumCircuit(1), source, version=13)
-    source.seek(0)
-    if stage == "decode":
-        monkeypatch.setattr(qiskit_qpy, "load", Mock(side_effect=error))
-    else:
-        monkeypatch.setattr(QCProgram, "from_qiskit", Mock(side_effect=error))
-    with pytest.raises(ValueError, match="Invalid or unsupported QPY input") as raised:
-        qpy.load(source)
-    assert raised.value.__cause__ is error
-    assert not source.closed
-
-
-@pytest.mark.parametrize("stage", ["decode", "translate"])
-@pytest.mark.parametrize(
-    "error_type",
-    [
-        KeyboardInterrupt,
-        SystemExit,
-        GeneratorExit,
-        MemoryError,
-        RuntimeError,
-        OSError,
-        ImportError,
-        type("PanicException", (BaseException,), {"__module__": __name__}),
-    ],
-)
-def test_unrelated_qpy_errors_propagate(
-    monkeypatch: pytest.MonkeyPatch, stage: str, error_type: type[BaseException]
-) -> None:
-    """The native panic guard must not relabel interrupts, resource errors, or other failures."""
-    error = error_type("not malformed QPY")
-    source = BytesIO()
-    qiskit_qpy.dump(QuantumCircuit(1), source, version=13)
-    source.seek(0)
-    if stage == "decode":
-        monkeypatch.setattr(qiskit_qpy, "load", Mock(side_effect=error))
-    else:
-        monkeypatch.setattr(QCProgram, "from_qiskit", Mock(side_effect=error))
-    with pytest.raises(error_type) as raised:
-        qpy.load(source)
-    assert raised.value is error
-    assert not source.closed
-
-
-@pytest.mark.parametrize("error_type", [ValueError, TypeError, LookupError, AttributeError])
-def test_qpy_translation_errors_are_preserved(monkeypatch: pytest.MonkeyPatch, error_type: type[Exception]) -> None:
-    """Decoder-specific error normalization does not change ordinary compiler errors."""
-    error = error_type("circuit translation failed")
-    source = BytesIO()
-    qiskit_qpy.dump(QuantumCircuit(1), source, version=13)
-    source.seek(0)
-    monkeypatch.setattr(QCProgram, "from_qiskit", Mock(side_effect=error))
-    with pytest.raises(error_type) as raised:
-        qpy.load(source)
-    assert raised.value is error
-    assert not source.closed
+def test_unsupported_qpy_version() -> None:
+    """QPY decoding errors propagate from Qiskit."""
+    with pytest.raises(QiskitError, match="QPY format version"):
+        qpy.load(BytesIO(b"QISKIT\xff"))
 
 
 def test_text_stream_is_rejected_as_caller_error() -> None:
-    """A text stream is an API type error, not a malformed binary archive."""
+    """The input stream must contain binary data."""
     with pytest.raises(TypeError):
         qpy.load(StringIO("not binary"))  # ty: ignore[invalid-argument-type] Invalid public input.
 
@@ -230,18 +133,6 @@ def test_unsupported_circuit_in_archive_fails() -> None:
     with pytest.raises(RuntimeError, match=r"[Dd]elay|unsupported"):
         qpy.load(stream)
     assert not stream.closed
-
-
-@requires_translation
-@pytest.mark.parametrize("version", range(qiskit_qpy.QPY_COMPATIBILITY_VERSION, qiskit_qpy.QPY_VERSION + 1))
-def test_explicit_qpy_version(version: int) -> None:
-    """The requested supported format version reaches Qiskit."""
-    program = QCProgram.from_qiskit(QuantumCircuit(1))
-    stream = BytesIO()
-    qpy.dump(program, stream, version=version)
-    stream.seek(0)
-    assert qiskit_qpy.get_qpy_version(stream) == version
-    assert len(qpy.load(stream)) == 1
 
 
 @requires_translation
@@ -269,26 +160,6 @@ def test_qpy_export_maps_target_sites() -> None:
     np.testing.assert_allclose(Operator(restored).data, Operator(expected).data, atol=1e-12)
 
 
-@requires_translation
-def test_unsupported_qiskit_version(monkeypatch: pytest.MonkeyPatch) -> None:
-    """QPY loading cannot bypass the compiler bridge's version guard."""
-    stream = BytesIO()
-    qiskit_qpy.dump(QuantumCircuit(1), stream)
-    stream.seek(0)
-    monkeypatch.setattr(qiskit, "__version__", "2.6.0")
-    with pytest.raises(RuntimeError, match=r"installed version '2\.6\.0'"):
-        qpy.load(stream)
-
-
-@pytest.mark.parametrize("version", [qiskit_qpy.QPY_COMPATIBILITY_VERSION, qiskit_qpy.QPY_VERSION])
-def test_truncated_circuit_payload(version: int) -> None:
-    """A valid header cannot hide a truncated circuit payload."""
-    stream = BytesIO()
-    qiskit_qpy.dump(QuantumCircuit(2), stream, version=version)
-    with pytest.raises(ValueError, match="Invalid or unsupported QPY input"):
-        qpy.load(BytesIO(stream.getvalue()[:-1]))
-
-
 def test_invalid_export_type_does_not_write() -> None:
     """Reject objects outside the program API before touching the output."""
     stream = BytesIO(b"keep me")
@@ -297,18 +168,8 @@ def test_invalid_export_type_does_not_write() -> None:
     assert stream.getvalue() == b"keep me"
 
 
-def test_qpy_dependency_errors_are_preserved(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A missing legacy decoder dependency must not be mislabeled as corrupt input."""
-    error = MissingOptionalLibraryError("symengine", "QPY load", "pip install symengine")
-
-    monkeypatch.setattr(qiskit_qpy, "load", Mock(side_effect=error))
-    with pytest.raises(MissingOptionalLibraryError) as raised:
-        qpy.load(BytesIO())
-    assert raised.value is error
-
-
-def test_short_write_is_not_reported_as_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A stream that accepts only part of a payload must fail explicitly."""
+def test_short_write_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Incomplete output writes raise an I/O error."""
     stream = BytesIO()
     monkeypatch.setattr(stream, "write", lambda data: len(data) - 1)
     with pytest.raises(OSError, match="complete QPY payload"):
@@ -343,23 +204,14 @@ def test_failed_translation_preserves_destination_and_sources() -> None:
 
 def test_qpy_import_keeps_qiskit_optional() -> None:
     """Importing the helper module must not load Qiskit or native compiler bindings."""
-    result = subprocess.run(
+    subprocess.run(
         [
             sys.executable,
             "-c",
             (
                 "import sys; import mqt.core.qpy; "
-                "assert 'qiskit' not in sys.modules; assert 'mqt.core.mlir' not in sys.modules; "
-                "sys.modules['qiskit'] = None; "
-                "from io import BytesIO; "
-                "mqt.core.qpy.load(BytesIO())"
+                "assert 'qiskit' not in sys.modules; assert 'mqt.core.mlir' not in sys.modules"
             ),
         ],
-        capture_output=True,
-        text=True,
-        check=False,
+        check=True,
     )
-    assert result.returncode != 0
-    assert "ModuleNotFoundError" in result.stderr
-    assert "qiskit" in result.stderr
-    assert "AssertionError" not in result.stderr

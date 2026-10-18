@@ -165,7 +165,7 @@ def test_serializer_is_discovered_from_entry_point(fmt: ProgramFormat) -> None:
 
 
 def test_qpy_registration_replaces_fallback() -> None:
-    """Existing QPY registration calls work even after the default is looked up."""
+    """Explicit QPY registration takes precedence over the fallback after lookup."""
     registry = _registry()
     assert registry.get(ProgramFormat.QPY) is not None
     registry.register(ProgramFormat.QPY, _serializer)

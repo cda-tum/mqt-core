@@ -32,7 +32,7 @@ IQM_JSON = "iqm.qdmi.serializers:qiskit_to_iqm_json"
 
 :func:`register_program_serializer` does the same at run time. A registration
 takes precedence over an entry point for the same format. The built-in QPY
-serializer is a fallback; existing QPY registrations and entry points take
+serializer is a fallback; QPY registrations and entry points take
 precedence over it.
 
 A device usually accepts several formats. :data:`PROGRAM_FORMAT_PREFERENCE`
