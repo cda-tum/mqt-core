@@ -165,6 +165,15 @@ repos:
         priority: 6
       - id: ruff-format
         types_or: [python, pyi, jupyter, markdown]
+        priority: 8
+
+  ## Keep deferred Python imports in sync with their uses
+  - repo: https://github.com/henryiii/flake8-lazy
+    rev: v0.10.1
+    hooks:
+      - id: flake8-lazy
+        files: ^python/
+        args: [--apply=set, --line-length=120]
         priority: 7
 
   ## Check Python types with ty
@@ -173,4 +182,4 @@ repos:
     hooks:
       - id: ty
         args: [--no-install-project]
-        priority: 8
+        priority: 9
