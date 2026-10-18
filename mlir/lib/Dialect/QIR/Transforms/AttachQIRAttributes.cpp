@@ -12,23 +12,37 @@
 #include "mqt/Dialect/QIR/Transforms/Passes.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 
+#include "mlir/Analysis/CFGLoopInfo.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionGraphTraits.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/CFG.h"
 
 #include <algorithm>
 #include <cassert>
@@ -59,12 +73,33 @@ struct Metadata {
   bool useArrays{false};
   /// Whether the module uses backward branching (0 = none, 1 = iteration based,
   /// 2 = condition based, 3 = both)
-  int backwardsBranching{0};
+  unsigned backwardsBranching{0};
   llvm::SmallSet<std::string, 4> integerTypes;
   llvm::SmallSet<std::string, 4> floatingTypes;
   bool usesIRFunctions{false};
   bool usesMultipleTargetBranching{false};
   bool usesMultipleReturnPoints{false};
+};
+
+/// Index only calls to defined helpers; external QIS calls need no caller list.
+struct HelperCalls {
+  SymbolTableCollection symbols;
+  DenseMap<Operation*, SmallVector<LLVM::CallOp>> callers;
+
+  explicit HelperCalls(ModuleOp moduleOp) {
+    moduleOp.walk([&](LLVM::CallOp call) {
+      if (auto function = lookup(call); function && !function.isExternal()) {
+        callers[function].push_back(call);
+      }
+    });
+  }
+
+  LLVM::LLVMFuncOp lookup(LLVM::CallOp call) {
+    return call.getCallee()
+               ? symbols.lookupSymbolIn<LLVM::LLVMFuncOp>(
+                     call->getParentOfType<ModuleOp>(), call.getCalleeAttr())
+               : LLVM::LLVMFuncOp{};
+  }
 };
 
 /// Attaches the required attributes to the function marked as
@@ -83,9 +118,10 @@ protected:
       return;
     }
 
-    Metadata metadata = useAdaptive ? getAdaptive(main) : Metadata{};
+    HelperCalls helpers(getOperation());
+    Metadata metadata = useAdaptive ? getAdaptive(helpers) : Metadata{};
     if (!metadata.useDynamicQubit) {
-      const auto numQubits = getNumQubits(main);
+      const auto numQubits = getNumQubits(getOperation(), helpers);
       if (failed(numQubits)) {
         signalPassFailure();
         return;
@@ -93,7 +129,7 @@ protected:
       metadata.numQubits = *numQubits;
     }
     if (!metadata.useDynamicResult) {
-      const auto numResults = getNumResults(main);
+      const auto numResults = getNumResults(getOperation(), helpers);
       if (failed(numResults)) {
         signalPassFailure();
         return;
@@ -183,9 +219,9 @@ private:
     });
 
     if (useAdaptive) {
-      flags.emplace_back(createI32Flag(LLVM::ModFlagBehavior::Error,
-                                       "backwards_branching",
-                                       metadata.backwardsBranching));
+      flags.emplace_back(
+          createI32Flag(LLVM::ModFlagBehavior::Error, "backwards_branching",
+                        static_cast<int32_t>(metadata.backwardsBranching)));
       flags.emplace_back(createBoolFlag(LLVM::ModFlagBehavior::Error, "arrays",
                                         metadata.useArrays));
       if (metadata.usesIRFunctions) {
@@ -300,125 +336,183 @@ private:
                  : FailureOr<uint64_t>(capacity);
   }
 
-  /// Count scalar QIS operands and qubit stores emitted for packed arguments.
-  static FailureOr<uint64_t> getNumQubits(LLVM::LLVMFuncOp& main) {
-    FailureOr<uint64_t> capacity = uint64_t{0};
-    main.walk([&](Operation* operation) {
-      if (failed(capacity)) {
-        return;
-      }
-      if (auto store = dyn_cast<LLVM::StoreOp>(operation);
-          store && store->hasAttr(QIR_QUBIT_STORE_ATTR)) {
-        capacity = includeStaticResource(store.getValue(), *capacity);
-        return;
-      }
-      auto call = dyn_cast<LLVM::CallOp>(operation);
-      if (!call || !call.getCallee()) {
-        return;
-      }
-      for (auto [index, operand] : llvm::enumerate(call.getArgOperands())) {
-        if (succeeded(capacity) && isQubitOperand(*call.getCallee(), index)) {
-          capacity = includeStaticResource(operand, *capacity);
+  /// Visit incoming values and report whether any were found.
+  static bool visitIncoming(BlockArgument argument, const HelperCalls& helpers,
+                            function_ref<void(Value)> visit) {
+    auto* block = argument.getOwner();
+    const auto index = argument.getArgNumber();
+    bool found = false;
+    const auto record = [&](Value value) {
+      found = true;
+      visit(value);
+    };
+    if (block->isEntryBlock()) {
+      if (auto calls = helpers.callers.find(block->getParentOp());
+          calls != helpers.callers.end()) {
+        for (auto call : calls->second) {
+          if (call.getArgOperands().size() > index) {
+            record(call.getArgOperands()[index]);
+          }
         }
       }
-    });
+      return found;
+    }
+    for (auto& edge : block->getUses()) {
+      if (auto branch = dyn_cast<BranchOpInterface>(edge.getOwner())) {
+        auto operands = branch.getSuccessorOperands(edge.getOperandNumber());
+        if (index < operands.size() && !operands.isOperandProduced(index)) {
+          record(operands[index]);
+        }
+      }
+    }
+    return found;
+  }
+
+  /// Count static resource operands, including arguments of retained helpers.
+  static FailureOr<uint64_t> getResourceCapacity(SetVector<Value> values,
+                                                 HelperCalls& helpers) {
+    uint64_t capacity = 0;
+    DenseSet<Operation*> visitedCallees;
+    const auto enqueue = [&](Value value) { values.insert(value); };
+    size_t nextValue = 0;
+    while (nextValue < values.size()) {
+      auto value = values[nextValue++];
+      if (auto argument = dyn_cast<BlockArgument>(value)) {
+        visitIncoming(argument, helpers, enqueue);
+      } else if (auto select = value.getDefiningOp<LLVM::SelectOp>()) {
+        enqueue(select.getTrueValue());
+        enqueue(select.getFalseValue());
+      } else if (auto call = value.getDefiningOp<LLVM::CallOp>()) {
+        if (auto function = helpers.lookup(call);
+            function && visitedCallees.insert(function).second) {
+          function.walk([&](LLVM::ReturnOp result) {
+            llvm::for_each(result.getOperands(), enqueue);
+          });
+        }
+      } else {
+        auto next = includeStaticResource(value, capacity);
+        if (failed(next)) {
+          return failure();
+        }
+        capacity = *next;
+      }
+    }
     return capacity;
   }
 
-  /// Return the capacity required to address every static result ID.
-  static FailureOr<uint64_t> getNumResults(LLVM::LLVMFuncOp& main) {
-    FailureOr<uint64_t> numResults = uint64_t{0};
-    main->walk([&](LLVM::CallOp callOp) {
-      if (failed(numResults) || !callOp.getCallee()) {
-        return;
+  /// Count scalar QIS operands and qubit stores emitted for packed arguments.
+  static FailureOr<uint64_t> getNumQubits(ModuleOp moduleOp,
+                                          HelperCalls& helpers) {
+    SetVector<Value> qubits;
+    moduleOp.walk([&](Operation* operation) {
+      if (auto store = dyn_cast<LLVM::StoreOp>(operation);
+          store && store->hasAttr(QIR_QUBIT_STORE_ATTR)) {
+        qubits.insert(store.getValue());
       }
-
-      const auto callee = *callOp.getCallee();
-      if (callee != QIR_RECORD_OUTPUT && callee != QIR_MEASURE &&
-          callee != QIR_READ_RESULT) {
-        return;
-      }
-      const auto index = callee == QIR_MEASURE ? 1U : 0U;
-      if (callOp.getNumOperands() <= index) {
-        return;
-      }
-
-      numResults =
-          includeStaticResource(callOp.getArgOperands()[index], *numResults);
-    });
-
-    return numResults;
-  }
-
-  /// Determine whether a loop (as a set of blocks) is an iterative loop (true)
-  /// or a conditionally terminated loop (false).
-  static bool classifyLoop(const SmallPtrSet<Block*, 8>& loop) {
-    for (Block* block : loop) {
-      auto branch = dyn_cast<LLVM::CondBrOp>(block->getTerminator());
-      if (!branch || (loop.contains(branch.getTrueDest()) &&
-                      loop.contains(branch.getFalseDest()))) {
-        continue;
-      }
-      auto call = branch.getCondition().getDefiningOp<LLVM::CallOp>();
-      if (call && call.getCallee() == QIR_READ_RESULT) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /// Return pair of booleans, indicating whether the entry point uses
-  /// iterations = [0] or conditionally terminated loops = [1].
-  static std::pair<bool, bool>
-  usesBackwardsBranching(LLVM::LLVMFuncOp& main, const DominanceInfo& domInfo) {
-    bool useIteration{false};
-    bool useCondTerm{false};
-
-    SmallVector<Block*> worklist;
-
-    for (Block& block : main.getBlocks()) {
-      for (Block* successor : block.getSuccessors()) {
-        if (domInfo.dominates(successor, &block)) { // Back edge.
-          Block* header = successor;
-          Block* tail = &block;
-
-          SmallPtrSet<Block*, 8> loop{header};
-          if (header != tail) {
-            loop.insert(tail);
-            worklist.push_back(tail);
+      if (auto call = dyn_cast<LLVM::CallOp>(operation);
+          call && call.getCallee()) {
+        for (auto [index, operand] : llvm::enumerate(call.getArgOperands())) {
+          if (isQubitOperand(*call.getCallee(), index)) {
+            qubits.insert(operand);
           }
-
-          while (!worklist.empty()) {
-            Block* curr = worklist.pop_back_val();
-            for (Block* pred : curr->getPredecessors()) {
-              if (loop.insert(pred).second) {
-                worklist.push_back(pred);
-              }
-            }
-          }
-
-          if (classifyLoop(loop)) {
-            useIteration |= true;
-          } else {
-            useCondTerm |= true;
-          }
-
-          loop.clear();
         }
       }
-    }
-
-    return std::make_pair(useIteration, useCondTerm);
+    });
+    return getResourceCapacity(std::move(qubits), helpers);
   }
 
-  /// Return triple of booleans, indicating whether the entry point uses
-  /// dynamic qubits = [0], dynamic results = [1], or dynamic arrays = [2].
-  static std::tuple<bool, bool, bool> usesDynamic(LLVM::LLVMFuncOp& main) {
+  /// Return the capacity required to address every static result ID.
+  static FailureOr<uint64_t> getNumResults(ModuleOp moduleOp,
+                                           HelperCalls& helpers) {
+    SetVector<Value> results;
+    moduleOp.walk([&](LLVM::CallOp call) {
+      const auto callee = call.getCallee();
+      if ((callee == QIR_RECORD_OUTPUT || callee == QIR_READ_RESULT) &&
+          !call.getArgOperands().empty()) {
+        results.insert(call.getArgOperands()[0]);
+      } else if (callee == QIR_MEASURE && call.getArgOperands().size() > 1) {
+        results.insert(call.getArgOperands()[1]);
+      }
+    });
+    return getResourceCapacity(std::move(results), helpers);
+  }
+
+  /// Classify exit dependencies as iterations, feedback, or either (1, 2, 3).
+  static unsigned classifyLoop(const CFGLoop& loop,
+                               const HelperCalls& helpers) {
+    SetVector<Value> values;
+    bool unknown = false;
+    for (Block* block : loop.blocks()) {
+      auto* terminator = block->getTerminator();
+      if (!loop.isLoopLatch(block) &&
+          llvm::all_of(terminator->getSuccessors(), [&](Block* successor) {
+            return loop.contains(successor);
+          })) {
+        continue;
+      }
+      if (auto branch = dyn_cast<LLVM::CondBrOp>(terminator)) {
+        values.insert(branch.getCondition());
+      } else if (auto branch = dyn_cast<LLVM::SwitchOp>(terminator)) {
+        values.insert(branch.getValue());
+      } else if (!isa<LLVM::BrOp>(terminator)) {
+        unknown = true;
+      }
+    }
+    // shortcut: unknown exits need both flags until dependence is proved.
+    unknown |= values.empty();
+    const auto enqueue = [&](Value value) { values.insert(value); };
+    size_t nextValue = 0;
+    while (nextValue < values.size()) {
+      auto value = values[nextValue++];
+      if (auto argument = dyn_cast<BlockArgument>(value)) {
+        unknown |= !visitIncoming(argument, helpers, enqueue);
+        continue;
+      }
+      auto* operation = value.getDefiningOp();
+      if (auto call = dyn_cast<LLVM::CallOp>(operation);
+          call && call.getCallee() == QIR_READ_RESULT) {
+        return 2;
+      }
+      if (!isMemoryEffectFree(operation) || isa<LLVM::CallOp>(operation)) {
+        unknown = true;
+        continue;
+      }
+      llvm::for_each(operation->getOperands(), enqueue);
+    }
+    return unknown ? 3 : 1;
+  }
+
+  /// Collect loop capability bits for one function.
+  static unsigned usesBackwardsBranching(LLVM::LLVMFuncOp function,
+                                         const DominanceInfo& domInfo,
+                                         const HelperCalls& helpers) {
+    if (function.getBody().hasOneBlock()) {
+      return 0;
+    }
+    CFGLoopInfo loops(domInfo.getDomTree(&function.getBody()));
+    llvm::ReversePostOrderTraversal<Block*> traversal(
+        &function.getBody().front());
+    if (llvm::containsIrreducibleCFG<Block*>(traversal, loops)) {
+      return 3;
+    }
+    unsigned capabilities = 0;
+    for (auto* loop : loops.getLoopsInPreorder()) {
+      capabilities |= classifyLoop(*loop, helpers);
+    }
+    return capabilities;
+  }
+
+  /// Return dynamic qubit, dynamic result, and array capabilities.
+  static std::tuple<bool, bool, bool> usesDynamic(ModuleOp moduleOp) {
     bool useDynamicQubit{false};
     bool useDynamicResult{false};
     bool useArrays{false};
 
-    main->walk([&](LLVM::CallOp callOp) {
+    moduleOp.walk([&](LLVM::AllocaOp allocation) {
+      // Opaque pointers cannot distinguish resource arrays from other buffers.
+      useArrays |= isa<LLVM::LLVMPointerType>(allocation.getElemType());
+    });
+    moduleOp.walk([&](LLVM::CallOp callOp) {
       if (!callOp.getCallee()) {
         return;
       }
@@ -489,24 +583,17 @@ private:
   }
 
   /// Return the dynamic resource and control flow metadata for QIR adaptive.
-  Metadata getAdaptive(LLVM::LLVMFuncOp& main) {
-    const auto& domInfo = getAnalysis<DominanceInfo>();
-    const auto [useIteration, useCondTerm] =
-        usesBackwardsBranching(main, domInfo);
-    const auto [useDynamicQubit, useDynamicResult, useArrays] =
-        usesDynamic(main);
-
+  Metadata getAdaptive(const HelperCalls& helpers) {
     Metadata md;
-    md.useDynamicQubit = useDynamicQubit;
-    md.useDynamicResult = useDynamicResult;
-    md.useArrays = useArrays;
-
-    if (useIteration) {
-      md.backwardsBranching = useCondTerm ? 3 : 1;
-    } else if (useCondTerm) {
-      md.backwardsBranching = 2;
-    }
-
+    const auto& domInfo = getAnalysis<DominanceInfo>();
+    getOperation().walk([&](LLVM::LLVMFuncOp function) {
+      if (!function.isExternal()) {
+        md.backwardsBranching |=
+            usesBackwardsBranching(function, domInfo, helpers);
+      }
+    });
+    std::tie(md.useDynamicQubit, md.useDynamicResult, md.useArrays) =
+        usesDynamic(getOperation());
     return md;
   }
 };

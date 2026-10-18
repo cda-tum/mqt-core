@@ -72,26 +72,19 @@ static LogicalResult prepareCBitRegisterAccesses(Operation* moduleOp,
           if (!isa<cbit::RegisterType>(argument.getType())) {
             continue;
           }
-          for (auto* predecessor : block.getPredecessors()) {
-            auto branch =
-                dyn_cast<BranchOpInterface>(predecessor->getTerminator());
+          for (auto& edge : block.getUses()) {
+            auto branch = dyn_cast<BranchOpInterface>(edge.getOwner());
             if (!branch) {
               continue;
             }
-            for (unsigned successorIndex = 0;
-                 successorIndex < branch->getNumSuccessors();
-                 ++successorIndex) {
-              if (branch->getSuccessor(successorIndex) != &block) {
-                continue;
-              }
-              auto operands = branch.getSuccessorOperands(successorIndex);
-              if (argument.getArgNumber() >= operands.size() ||
-                  operands.isOperandProduced(argument.getArgNumber())) {
-                continue;
-              }
-              if (auto incoming = operands[argument.getArgNumber()]) {
-                forwardedRegisters[incoming].push_back(argument);
-              }
+            auto operands =
+                branch.getSuccessorOperands(edge.getOperandNumber());
+            if (argument.getArgNumber() >= operands.size() ||
+                operands.isOperandProduced(argument.getArgNumber())) {
+              continue;
+            }
+            if (auto incoming = operands[argument.getArgNumber()]) {
+              forwardedRegisters[incoming].push_back(argument);
             }
           }
         }
@@ -241,8 +234,8 @@ struct ConvertCBitAllocOp final : StatefulOpConversionPattern<cbit::AllocOp> {
     auto& state = getState();
     const auto it = state.cregIndices.find(op.getOperation());
     if (it == state.cregIndices.end()) {
-      rewriter.eraseOp(op);
-      return success();
+      return op.emitError(
+          "QIR conversion requires CBit allocations in the entry function");
     }
     auto& reg = state.cregs[it->second];
 
@@ -658,10 +651,24 @@ struct ConvertQCMeasureOp final : StatefulOpConversionPattern<MeasureOp> {
     auto ptrType = LLVM::LLVMPointerType::get(ctx);
     auto voidType = LLVM::LLVMVoidType::get(ctx);
 
+    auto returnedResult = state.measuredResults.find(op);
     auto result =
         resolveRegisterMeasurement(state, op.getOperation(), rewriter);
     if (!result) {
-      result = getResultPtr(state, op.getOperation(), rewriter, true);
+      if (returnedResult != state.measuredResults.end()) {
+        result = getResultPtr(state, op.getOperation(), rewriter, true);
+      } else {
+        // Non-output results are read into SSA values before the next measure.
+        if (!state.scratchResult) {
+          state.scratchResult =
+              getResultPtr(state, op.getOperation(), rewriter, true);
+        }
+        result = state.scratchResult;
+      }
+    }
+
+    if (returnedResult != state.measuredResults.end()) {
+      returnedResult->second.value = result;
     }
 
     // Create measure call
@@ -779,8 +786,8 @@ struct QCToQIRAdaptive final : impl::QCToQIRAdaptiveBase<QCToQIRAdaptive> {
       auto sig = LLVM::LLVMFunctionType::get(voidType, {ptrType});
       auto dec = getOrCreateFunctionDeclaration(builder, main,
                                                 QIR_RESULT_RELEASE, sig);
-      for (auto& [_, result] : state->scalarResults) {
-        LLVM::CallOp::create(builder, main->getLoc(), dec, result.pointer);
+      for (auto result : state->scalarResults) {
+        LLVM::CallOp::create(builder, main->getLoc(), dec, result);
       }
     }
 

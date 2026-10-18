@@ -27,6 +27,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Metadata.h"
@@ -304,17 +305,19 @@ static LLVM::AddressOfOp createResultLabel(OpBuilder& builder, Operation* op,
 
   auto symbolName = builder.getStringAttr((symbolPrefix + "_" + label).str());
 
-  if (!symbols.lookup<LLVM::GlobalOp>(symbolName)) {
+  auto global = symbols.lookup<LLVM::GlobalOp>(symbolName);
+  auto initializer = builder.getStringAttr(label.str() + '\0');
+  if (!global || !global.getConstant() || global.getAddrSpace() != 0 ||
+      global.getValueAttr() != initializer) {
     const auto llvmArrayType = LLVM::LLVMArrayType::get(
         builder.getIntegerType(8), static_cast<unsigned>(label.size() + 1));
-    const auto stringInitializer = builder.getStringAttr(label.str() + '\0');
 
     // Create the declaration at the start of the module
     builder.setInsertionPointToStart(moduleOp.getBody());
 
     auto globalOp = LLVM::GlobalOp::create(
         builder, op->getLoc(), llvmArrayType, /*isConstant=*/true,
-        LLVM::Linkage::Internal, symbolName, stringInitializer);
+        LLVM::Linkage::Internal, symbolName, initializer);
     globalOp->setAttr("addr_space", builder.getI32IntegerAttr(0));
     globalOp->setAttr("dso_local", builder.getUnitAttr());
     symbolName = symbols.insert(globalOp);
@@ -360,9 +363,8 @@ Value createPointerFromIndex(OpBuilder& builder, const Location loc,
 }
 
 void emitOutputRecording(OpBuilder& builder, Operation* anchor,
-                         ArrayRef<ClassicalRegister> classicalRegisters,
-                         const DenseMap<int64_t, StaticResult>& staticResults) {
-  if (classicalRegisters.empty() && staticResults.empty()) {
+                         ArrayRef<OutputRecord> outputs) {
+  if (outputs.empty()) {
     return;
   }
 
@@ -381,7 +383,29 @@ void emitOutputRecording(OpBuilder& builder, Operation* anchor,
     llvm::reportFatalInternalError("Main function not found");
   }
   SymbolTable symbols(main->getParentOfType<ModuleOp>());
-  const auto createLabel = [&](StringRef label) {
+  llvm::StringSet<> labels;
+  main.walk([&](LLVM::CallOp call) {
+    if (!call.getCallee() || !call.getCallee()->ends_with("_record_output") ||
+        call.getArgOperands().empty()) {
+      return;
+    }
+    auto address =
+        call.getArgOperands().back().getDefiningOp<LLVM::AddressOfOp>();
+    auto global = address
+                      ? symbols.lookup<LLVM::GlobalOp>(address.getGlobalName())
+                      : LLVM::GlobalOp{};
+    if (auto value = global
+                         ? dyn_cast_or_null<StringAttr>(global.getValueAttr())
+                         : StringAttr{}) {
+      labels.insert(value.getValue().drop_back());
+    }
+  });
+  size_t suffix = 0;
+  const auto createLabel = [&](StringRef base) {
+    auto label = base.str();
+    while (!labels.insert(label).second) {
+      label = base.str() + "_" + std::to_string(++suffix);
+    }
     return createResultLabel(builder, anchor, label, "qir.result_label",
                              symbols, main)
         .getResult();
@@ -389,14 +413,15 @@ void emitOutputRecording(OpBuilder& builder, Operation* anchor,
 
   LLVM::LLVMFuncOp baseArrayDec;
   LLVM::LLVMFuncOp adaptiveArrayDec;
-  // Classical registers
-  for (const auto& reg : classicalRegisters) {
-    if (!reg.record) {
+  LLVM::LLVMFuncOp booleanDec;
+  for (const auto& output : outputs) {
+    auto label = createLabel(output.label);
+    if (const auto* result = std::get_if<Value>(&output.value)) {
+      LLVM::CallOp::create(builder, loc, resultDec, ValueRange{*result, label});
       continue;
     }
-
+    const auto& reg = *std::get<const ClassicalRegister*>(output.value);
     auto size = resolveIntVariant(builder, loc, reg.size);
-    auto label = createLabel(reg.label);
 
     // Adaptive Profile: emit `__quantum__rt__result_array_record_output`
     if (reg.array && !reg.booleanStorage) {
@@ -420,10 +445,12 @@ void emitOutputRecording(OpBuilder& builder, Operation* anchor,
     }
     LLVM::CallOp::create(builder, loc, baseArrayDec, ValueRange{size, label});
     if (reg.booleanStorage) {
-      auto signature =
-          LLVM::LLVMFunctionType::get(voidType, {builder.getI1Type(), ptrType});
-      auto record = getOrCreateFunctionDeclaration(
-          builder, anchor, QIR_BOOL_RECORD_OUTPUT, signature);
+      if (!booleanDec) {
+        auto signature = LLVM::LLVMFunctionType::get(
+            voidType, {builder.getI1Type(), ptrType});
+        booleanDec = getOrCreateFunctionDeclaration(
+            builder, anchor, QIR_BOOL_RECORD_OUTPUT, signature);
+      }
       for (int64_t index = 0; index < std::get<int64_t>(reg.size); ++index) {
         auto position = LLVM::ConstantOp::create(
             builder, loc, builder.getI64IntegerAttr(index));
@@ -432,25 +459,16 @@ void emitOutputRecording(OpBuilder& builder, Operation* anchor,
                                 reg.array, ValueRange{position});
         auto bit =
             LLVM::LoadOp::create(builder, loc, builder.getI1Type(), address);
-        auto bitLabel = createLabel(reg.label + "_" + std::to_string(index));
-        LLVM::CallOp::create(builder, loc, record, ValueRange{bit, bitLabel});
+        auto bitLabel = createLabel(output.label + "_" + std::to_string(index));
+        LLVM::CallOp::create(builder, loc, booleanDec,
+                             ValueRange{bit, bitLabel});
       }
       continue;
     }
     for (auto [index, ptr] : llvm::enumerate(reg.results)) {
-      auto bitLabel = createLabel(reg.label + "_" + std::to_string(index));
+      auto bitLabel = createLabel(output.label + "_" + std::to_string(index));
       LLVM::CallOp::create(builder, loc, resultDec, ValueRange{ptr, bitLabel});
     }
-  }
-
-  // Static results
-  for (const auto& [index, result] : staticResults) {
-    if (!result.record) {
-      continue;
-    }
-    auto label = createLabel("__unnamed__" + std::to_string(index));
-    LLVM::CallOp::create(builder, loc, resultDec,
-                         ValueRange{result.pointer, label});
   }
 }
 

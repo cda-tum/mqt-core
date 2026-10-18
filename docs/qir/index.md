@@ -256,6 +256,14 @@ program parameters before lowering to either supported profile. Runtime and QIS
 declarations are checked before JIT compilation; a mismatched or unsupported
 declaration is reported with its actual and accepted LLVM function types.
 
+QC-to-QIR conversion records direct measurement and CBit-register returns in
+source order, including repetitions. Other returned expressions must be lowered
+first; one `i64` return value supplies the exit code. Measurements and CBit
+allocations must be in the entry function. A scalar measurement returned
+alongside its register requires constant store indices that exclude overwriting
+its slot. The C++ QIR builder requires dynamic qubits to be allocated before
+control flow.
+
 MQT Core implements the QIR 2.1 Base and Adaptive Profile runtime APIs. The JIT
 accepts one exact LLVM type for each runtime declaration, so unsupported or
 outdated overloads fail before execution.

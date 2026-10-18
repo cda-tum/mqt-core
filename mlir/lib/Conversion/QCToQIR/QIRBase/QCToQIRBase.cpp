@@ -88,14 +88,20 @@ static LogicalResult moveTerminalMeasurements(Block& body,
                                               Block& measurements) {
   DenseSet<Value> measuredQubits;
   SmallVector<LLVM::CallOp> measurementCalls;
-  for (auto call : body.getOps<LLVM::CallOp>()) {
-    if (!call.getCallee() ||
-        !call.getCallee()->starts_with("__quantum__qis__")) {
+  for (auto& operation : body) {
+    if (auto store = dyn_cast<LLVM::StoreOp>(operation);
+        store && store->hasAttr(QIR_QUBIT_STORE_ATTR) &&
+        measuredQubits.contains(store.getValue())) {
+      return store.emitError(
+          "QIR Base Profile forbids using a qubit after measurement");
+    }
+    auto call = dyn_cast<LLVM::CallOp>(operation);
+    if (!call) {
       continue;
     }
     const bool isMeasurement = call.getCallee() == QIR_MEASURE;
     // Measurement's second pointer identifies a result, not a qubit.
-    auto operands = call.getOperands();
+    auto operands = call.getArgOperands();
     if (isMeasurement) {
       operands = operands.take_front(1);
     }
@@ -131,8 +137,8 @@ struct ConvertCBitAllocOp final : StatefulOpConversionPattern<cbit::AllocOp> {
     auto& state = getState();
     const auto it = state.cregIndices.find(op.getOperation());
     if (it == state.cregIndices.end()) {
-      rewriter.eraseOp(op);
-      return success();
+      return op.emitError(
+          "QIR conversion requires CBit allocations in the entry function");
     }
     auto& reg = state.cregs[it->second];
     const auto* size = std::get_if<int64_t>(&reg.size);
@@ -151,8 +157,7 @@ struct ConvertCBitAllocOp final : StatefulOpConversionPattern<cbit::AllocOp> {
       auto result = createPointerFromIndex(rewriter, op.getLoc(), index);
       reg.results.push_back(result);
       // The results are recorded as part of the register
-      state.scalarResults.try_emplace(
-          index, qir::StaticResult{.pointer = result, .record = false});
+      state.scalarResults.push_back(result);
     }
 
     rewriter.eraseOp(op);
@@ -360,6 +365,11 @@ struct ConvertQCMeasureOp final : StatefulOpConversionPattern<MeasureOp> {
       result = getResultPtr(state, op.getOperation(), rewriter, false);
     }
 
+    if (auto it = state.measuredResults.find(op);
+        it != state.measuredResults.end()) {
+      it->second.value = result;
+    }
+
     // Preserve instruction order until terminal measurements are verified.
     rewriter.setInsertionPoint(op);
     auto fnSig = LLVM::LLVMFunctionType::get(voidType, {ptrType, ptrType});
@@ -536,15 +546,16 @@ protected:
         return;
       }
 
-      auto& body = *std::next(main.getBody().begin());
-      if (failed(moveTerminalMeasurements(body, *state.measurementsBlock))) {
-        signalPassFailure();
-        return;
-      }
       addOutputRecording(main, ctx, state);
     }
 
     if (failed(finalizeQIRConversion(moduleOp, target, typeConverter))) {
+      signalPassFailure();
+      return;
+    }
+    // Reconcile argument casts before comparing canonical qubit pointers.
+    auto& body = *std::next(main.getBody().begin());
+    if (failed(moveTerminalMeasurements(body, *state.measurementsBlock))) {
       signalPassFailure();
     }
   }
