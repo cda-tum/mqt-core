@@ -11,6 +11,7 @@
 #include "mqt/Compiler/Target.h"
 #include "mqt/Compiler/TargetEnvironment.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
+#include "mqt/Dialect/MQT/Transforms/GlobalPhaseNormalization.h"
 #include "mqt/Dialect/MQT/Utils/Parameters.h"
 #include "mqt/Dialect/QCO/Builder/QCOProgramBuilder.h"
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
@@ -2956,7 +2957,8 @@ TEST_F(TargetSynthesisTest, NativeRuntimeControlledPhaseStaysUntouched) {
       *moduleOp, target, mlir::qco::createVerifyTargetConformance())));
 }
 
-TEST_F(TargetSynthesisTest, UnsupportedRuntimeControlledBodyStaysUntouched) {
+TEST_F(TargetSynthesisTest,
+       UnsupportedRuntimeControlledBodyPreservesNormalizedIR) {
   auto moduleOp = mlir::parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @main(%theta: f64) -> (!qco.qubit, !qco.qubit) {
@@ -2975,12 +2977,14 @@ TEST_F(TargetSynthesisTest, UnsupportedRuntimeControlledBodyStaysUntouched) {
   ASSERT_TRUE(moduleOp);
   const auto target = makeUCxTarget();
   attachTestEnvironment(*moduleOp, target);
-  const auto before = printModule(*moduleOp);
+  // Phase preparation may move eager scalar producers before synthesis fails.
+  auto normalized = OwningOpRef<ModuleOp>(moduleOp->clone());
+  ASSERT_TRUE(mlir::succeeded(mlir::mqt::normalizeGlobalPhases(*normalized)));
   const auto diagnostics =
       expectFailure(*moduleOp, mlir::qco::createTargetNativeSynthesis());
   EXPECT_NE(diagnostics.find("unitary matrix is not available"),
             std::string::npos);
-  EXPECT_EQ(printModule(*moduleOp), before);
+  EXPECT_EQ(printModule(*moduleOp), printModule(*normalized));
   EXPECT_TRUE(mlir::succeeded(mlir::verify(*moduleOp)));
   EXPECT_TRUE(mlir::succeeded(mlir::qco::verifyLinearity(*moduleOp)));
 }
