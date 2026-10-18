@@ -61,8 +61,7 @@ intermediate representation
 
 QPY
   **Preferred term:** QPY. **Accepted aliases:** none. Qiskit's versioned binary
-  format for storing one or more quantum circuits. Core's Python QPY helpers
-  translate the circuit subset supported by its Qiskit compiler bridge.
+  format for storing one or more quantum circuits.
 
 jeff
   **Preferred term:** jeff. **Accepted aliases:** none. A structured, extensible

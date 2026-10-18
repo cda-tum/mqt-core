@@ -12,32 +12,32 @@ the narrower range above; the adapter checks it before inspecting a circuit.
 
 ## QPY files
 
-Use {py:mod}`mqt.core.qpy` to exchange compiler programs as {term}`QPY`
-archives. It requires `mqt-core[qiskit]` and a Qiskit version in the compiler
-translation range above.
+Use {py:mod}`qiskit.qpy` with the compiler's Qiskit conversion methods to
+exchange {term}`QPY` files:
 
 ```python
-from mqt.core import qpy
+from qiskit import qpy
+from mqt.core.mlir import QCProgram
 
-programs = qpy.load("circuits.qpy")
-qpy.dump(programs, "output.qpy")
+with open("input.qpy", "rb") as stream:
+    (circuit,) = qpy.load(stream)
+
+program = QCProgram.from_qiskit(circuit)
+circuit = program.to_qiskit(copy=True)
+
+with open("output.qpy", "wb") as stream:
+    qpy.dump(circuit, stream, version=17)
 ```
 
-{py:func}`~mqt.core.qpy.load` returns a list of `QCProgram` objects in archive
-order. {py:func}`~mqt.core.qpy.dump` accepts QC/QCO programs and preserves their
-source IR. Both functions accept paths and binary streams. The
+The tuple unpacking requires exactly one circuit. QC and QCO programs both
+provide `to_qiskit()`; pass `copy=True` to preserve the source or `target=` to
+map compiler site IDs through a target. The
 [circuit translation contract](#circuit-translation-contract) defines which
-circuit features survive the conversion; use Qiskit's own QPY API to archive
-arbitrary Qiskit metadata and annotations.
+circuit features survive conversion.
 
-Exports use the installed Qiskit's default QPY version. Pass `version=17` to
-exchange files between Qiskit 2.5 and 2.6, or `target=` to map compiler site IDs
-through a compiler target. Both Qiskit versions use their native QPY writer for
-version 17 and later. Export buffers the serialized archive before opening the
-destination, preserving existing files if translation or serialization fails. An
-I/O failure can leave partial output.
-
-Load only trusted files. Qiskit and compiler errors propagate to the caller.
+QPY version 17 works with Qiskit 2.5 and 2.6 and enables their native writer.
+Load only trusted files. To preserve an existing destination on serialization
+failure, serialize to `io.BytesIO` before opening the destination.
 
 ## Compiler targets
 
