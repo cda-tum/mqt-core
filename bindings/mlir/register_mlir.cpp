@@ -23,6 +23,7 @@
 #include "mqt/bench/Generate.h"
 #include "qdmi/QDMI.hpp"
 
+#include "Target/PennyLane/PennyLane.h"
 #include "Target/Qiskit/Qiskit.h"
 
 #include "capnp/common.h"
@@ -77,10 +78,6 @@ namespace mqt {
 
 namespace nb = nanobind;
 using namespace nb::literals;
-
-void registerPennyLane(nb::module_& m);
-mlir::QCProgram importPennyLaneCircuit(const nb::object& tape,
-                                       const nb::object& wires);
 
 #ifdef __APPLE__
 /// Translate standard exceptions that nanobind's split-mode backend can miss
@@ -893,7 +890,7 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
 
   nb::module_::import_("typing");
   nb::module_::import_("mqt.core.qdmi");
-  registerPennyLane(m);
+  bindings::pennylane::registerBindings(m);
 
   m.def("_generate_benchmark", &generateBenchmark,
         "instance_specification_json"_a,
@@ -1741,8 +1738,8 @@ Args:
     circuit: Circuit to import. A complete transpiler layout is retained as
         metadata.)pb")
       .def_static(
-          "from_pennylane", &importPennyLaneCircuit, "tape"_a, nb::kw_only(),
-          "wires"_a = nb::none(),
+          "from_pennylane", &bindings::pennylane::importCircuit, "tape"_a,
+          nb::kw_only(), "wires"_a = nb::none(),
           nb::sig("def from_pennylane(tape: pennylane.tape.QuantumScript, *, "
                   "wires: collections.abc.Sequence[collections.abc.Hashable] | "
                   "None = None) -> QCProgram"),

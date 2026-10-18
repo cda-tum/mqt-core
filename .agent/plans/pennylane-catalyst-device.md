@@ -28,7 +28,7 @@ The device uses the existing `CompiledProgram`, `compile_program`, and
 no private Python recorder or prepared-program type.
 
 The implementation lives in `mlir/lib/Target/Catalyst/`,
-`bindings/mlir/pennylane.cpp`, and `python/mqt/core/plugins/pennylane/`. The
+`bindings/mlir/Target/PennyLane/`, and `python/mqt/core/plugins/pennylane/`. The
 compiler synthesizes and routes against provider metadata. QIR and OpenQASM 3
 targets are supported; existing compiler contracts own format selection and
 physical legality. OpenQASM 2-only targets are unsupported.
@@ -40,6 +40,10 @@ or conditional gates: ordinary device preprocessing defers them first.
 
 ## Durable decisions
 
+- Group the Python bridge under `bindings/mlir/Target/PennyLane` and
+  `mqt::bindings::pennylane`, matching Qiskit's target layout. Its declaration
+  header exposes only compiler and nanobind types; Catalyst headers stay in the
+  isolated implementation. The native runtime belongs to `Target/Catalyst`.
 - Link the static `MQTCompilerCatalystAdapter` into the existing MLIR extension,
   which exports `MQTQDMIFactory`. No separate device DSO or Catalyst runtime
   library is needed. Vendor the four required headers and license under
@@ -204,16 +208,18 @@ Current local validation on Linux aarch64:
 - Stable and development stacks each pass 55 integration cases, including
   runtime basis preparation and matrices. An installed wheel on standard CPython
   3.15 without Catalyst passes 47 cases and skips the compiled module. The
-  latest wheel also passes 1,885 Python consumer tests.
+  latest wheel also passes 1,888 Python consumer tests with Qiskit 2.6.0. The
+  Qiskit 2.5.2 compatibility and development Catalyst suites pass 757 cases
+  together. Both nox session command contracts and the merged lockfile validate.
 - The full release suite after rebuilding with the corrected RTTI flags passes
   4,041 tests, with the existing `QueryJobId` case skipped. This includes four
   native Catalyst tests and 19 compiler adapter tests. Whole-file C++ analysis
   checks all eight changed implementation/test files with no findings, and stub
   regeneration passes on the latest source.
-- Hosted native platform and Codecov checks pass on `f62147c82`. Its macOS
-  Python exception-handling failure was traced to disabled RTTI. Those results
-  do not establish hosted success for the subsequent native features and RTTI
-  fix; final hosted validation remains pending.
+- Hosted regular Python tests, including macOS, and Codecov checks pass on
+  `1e1bb1bc3`, confirming the RTTI correction for the earlier exception-handling
+  failure. Those results do not establish hosted success for the subsequent
+  rebase and binding relocation; final hosted validation remains pending.
 
 Installed-wheel probes pass with both Catalyst/Core import orders on stable and
 development stacks. They execute the exported factory, check the capability

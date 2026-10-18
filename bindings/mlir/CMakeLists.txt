@@ -12,7 +12,8 @@ if(NOT TARGET ${TARGET_NAME})
   file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS *.cpp)
 
   # LLVM feature macros from this bridge must not change Cap'n Proto's exception detection.
-  set_source_files_properties(pennylane.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+  set_source_files_properties(Target/PennyLane/PennyLane.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION
+                                                                        ON)
 
   # Qiskit's extension C API tables are translation-unit local. Each supported minor therefore gets
   # one source file with a private header snapshot.

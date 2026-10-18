@@ -239,7 +239,7 @@ def qiskit_compat(session: nox.Session, qiskit_minor: str) -> None:
     """Test compiler integration against older supported Qiskit minors."""
     _run_tests(
         session,
-        extra_command=["uv", "pip", "install", "--upgrade-package", "qiskit", f"qiskit~={qiskit_minor}.0"],
+        extra_commands=[["uv", "pip", "install", "--upgrade-package", "qiskit", f"qiskit~={qiskit_minor}.0"]],
         pytest_run_args=[
             "test/python/test_mlir_qiskit_translation.py",
             "test/python/test_mlir_qiskit_target.py",

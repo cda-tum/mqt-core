@@ -8,6 +8,8 @@
  * Licensed under the MIT License
  */
 
+#include "PennyLane.h"
+
 #include "qdmi/QDMI.hpp"
 
 #include "QDMIDevice.h"
@@ -31,7 +33,7 @@
 #include <variant>
 #include <vector>
 
-namespace mqt {
+namespace mqt::bindings::pennylane {
 namespace nb = nanobind;
 using namespace nb::literals;
 
@@ -59,10 +61,7 @@ ownJobParameter(const std::optional<PythonJobParameter>& parameter) {
       *parameter);
 }
 
-/// Import preprocessed gates and expose all wires as terminal classical
-/// outputs.
-extern mlir::QCProgram importPennyLaneCircuit(const nb::object& tape,
-                                              const nb::object& wires) {
+mlir::QCProgram importCircuit(const nb::object& tape, const nb::object& wires) {
   const auto labels = wires.is_none() ? tape.attr("wires") : wires;
   nb::dict wireMap;
   size_t width = 0;
@@ -156,7 +155,7 @@ extern mlir::QCProgram importPennyLaneCircuit(const nb::object& tape,
   return recorder.takeProgram();
 }
 
-extern void registerPennyLane(nb::module_& m) {
+void registerBindings(nb::module_& m) {
   nb::class_<catalyst::Context>(m, "_PennyLaneQDMIContext")
       .def(nb::new_([](qdmi::Device device,
                        const std::optional<PythonJobParameter>& custom1,
@@ -196,7 +195,7 @@ extern void registerPennyLane(nb::module_& m) {
       },
       "job"_a, "num_wires"_a, "shots"_a, "program_index"_a = 0);
 }
-} // namespace mqt
+} // namespace mqt::bindings::pennylane
 
 // Catalyst loads its device factory from the existing Python extension.
 extern "C" NB_EXPORT Catalyst::Runtime::QuantumDevice*
