@@ -18,7 +18,6 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -154,7 +153,8 @@ LLVM::LLVMFuncOp getMainFunction(Operation* op);
 /// found, creates a new function declaration at the end of the module.
 ///
 /// For QIR functions that are irreversible (measurement and reset), the
-/// "irreversible" attribute is added automatically.
+/// "irreversible" attribute is added automatically. Measurement result
+/// parameters are writeonly; read_result parameters are readonly.
 ///
 /// @param builder The builder to use for creating operations
 /// @param op The operation requesting the function (for context)
@@ -216,17 +216,18 @@ struct StaticResult {
   bool record = false;
 };
 
-/// Emit the output-recording calls.
+/// One output occurrence, independent of resource ownership.
 ///
-/// @param builder The builder to use
-/// @param anchor An operation used to locate the enclosing module
-/// @param classicalRegisters The classical registers to record. If `record` is
-/// not set, the register is skipped.
-/// @param staticResults The static results to record. If `record` is not set,
-/// the result is skipped.
+/// Register descriptors must outlive emission. Scalar values are Result
+/// pointers.
+struct OutputRecord {
+  std::string label;
+  std::variant<const ClassicalRegister*, Value> value;
+};
+
+/// Emit outputs in order, preserving repetitions and assigning unique labels.
 void emitOutputRecording(OpBuilder& builder, Operation* anchor,
-                         ArrayRef<ClassicalRegister> classicalRegisters,
-                         const DenseMap<int64_t, StaticResult>& staticResults);
+                         ArrayRef<OutputRecord> outputs);
 
 /// Helper to resolve a variant of either `int64_t` type or `Value` type
 /// to a `Value`

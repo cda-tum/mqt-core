@@ -411,11 +411,15 @@ def test_default_payload_supports_measurement_controlled_loop() -> None:
     assert job.get_counts() == {"0": 8}
 
 
-def test_qir_artifact_rejects_unsupported_entry_result() -> None:
+def test_qir_artifact_rejects_unsupported_entry_result(capfd: pytest.CaptureFixture[str]) -> None:
     """Keep scalar program outputs distinct from the QDMI QIR status return."""
     source = "OPENQASM 3.0; qubit q; bit c = measure q; int[32] k = int[32](c);"
-    with pytest.raises(ValueError, match=r"i64 \(\) entry point"):
+    with pytest.raises(ValueError, match="Compilation failed for selected payload qir adaptive"):
         compile_program(source, target="mqt.ddsim.default")
+    assert (
+        "QIR entry return supports only direct measurements, CBit allocations, and one i64 exit code"
+        in capfd.readouterr().err
+    )
 
 
 @pytest.mark.parametrize("num_shots", [0, 8])
