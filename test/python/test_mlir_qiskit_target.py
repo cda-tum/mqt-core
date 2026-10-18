@@ -15,7 +15,6 @@ from typing import cast
 
 import numpy as np
 import pytest
-import qiskit
 from qiskit import QuantumCircuit
 from qiskit.circuit import Gate, Measure, Parameter, Reset
 from qiskit.circuit.controlflow import IfElseOp
@@ -56,7 +55,7 @@ from mqt.core.mlir import (
     TargetEnvironment,
 )
 
-if not supports_qiskit_translation(qiskit.__version__):
+if not supports_qiskit_translation():
     pytest.skip("Qiskit version has no compiler translation adapter", allow_module_level=True)
 
 

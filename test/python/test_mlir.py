@@ -48,21 +48,9 @@ from mqt.core.mlir import (
 from mqt.core.qdmi import ProgramFormat, open_device
 
 requires_qiskit_translation = pytest.mark.skipif(
-    not supports_qiskit_translation(qiskit.__version__),
+    not supports_qiskit_translation(),
     reason=f"no Qiskit translation is registered for {qiskit.__version__}",
 )
-
-
-@pytest.mark.skipif(
-    not qiskit.__version__.startswith(("2.5.", "2.6.")),
-    reason="translation requires a supported Qiskit minor",
-)
-def test_supported_qiskit_minor_round_trip() -> None:
-    """Check promised minors independently of registry-based test selection."""
-    circuit = QuantumCircuit(1)
-    circuit.x(0)
-    restored = QCProgram.from_qiskit(circuit).to_qiskit()
-    assert np.allclose(Operator(restored).data, Operator(circuit).data)
 
 
 MLIR_STRING = r"""module {

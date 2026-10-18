@@ -8,11 +8,13 @@
  * Licensed under the MIT License
  */
 
-#define MQT_QISKIT_VERSION_FACTORY @QISKIT_FACTORY@
-#define MQT_QISKIT_VERSION_EXPECTED_MAJOR @QISKIT_MAJOR@U
-#define MQT_QISKIT_VERSION_EXPECTED_MINOR @QISKIT_MINOR@U
-#define MQT_QISKIT_VERSION_EXACT_API @QISKIT_EXACT_API@
-#define MQT_QISKIT_VERSION_LABEL "@QISKIT_LABEL@"
-// Compile the shared implementation against this minor's private C API table.
-// NOLINTNEXTLINE(bugprone-suspicious-include)
-#include "Qiskit2_5.cpp"
+#include "QiskitAdapter.h"
+#include "QiskitTranslation.h"
+
+#include <memory>
+
+namespace mqt::bindings::qiskit {
+std::unique_ptr<VersionedTranslation> @QISKIT_FACTORY@() {
+  return createTranslation(@QISKIT_MAJOR@U, @QISKIT_MINOR@U, @QISKIT_EXACT_API@);
+}
+} // namespace mqt::bindings::qiskit

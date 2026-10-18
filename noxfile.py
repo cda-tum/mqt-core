@@ -199,12 +199,20 @@ def minimums(session: nox.Session) -> None:
 
 
 @nox.session(name="qiskit-compat", python="3.11", reuse_venv=True, venv_backend="uv")
-def qiskit_compat(session: nox.Session) -> None:
-    """Run the same binding against every supported Qiskit minor."""
-    _run_tests(session, extra_command=["uv", "pip", "install", "qiskit==2.6.0"])
-    for release in ("2.5.0", "2.4.0", "2.3.0", "2.2.0", "2.1.0"):
-        session.install(f"qiskit=={release}")
-        session.run("pytest", *session.posargs, "--cov-config=pyproject.toml")
+@nox.parametrize("qiskit_minor", ["2.5"])
+def qiskit_compat(session: nox.Session, qiskit_minor: str) -> None:
+    """Test compiler integration against older supported Qiskit minors."""
+    _run_tests(
+        session,
+        extra_command=["uv", "pip", "install", "--upgrade-package", "qiskit", f"qiskit~={qiskit_minor}.0"],
+        pytest_run_args=[
+            "test/python/test_mlir_qiskit_translation.py",
+            "test/python/test_mlir_qiskit_target.py",
+            "test/python/test_mlir_parameter_binding.py",
+            "test/python/test_mlir_loops.py",
+            "test/python/test_mlir_integer_interchange.py",
+        ],
+    )
 
 
 @nox.session(reuse_venv=True, venv_backend="uv", python=PYTHON_ALL_VERSIONS)

@@ -58,7 +58,7 @@ def test_write_vendor_tree_reuses_only_exact_generated_content(
     root = tmp_path / "repository"
     vendor_root = root / "vendor" / "qiskit-c-api"
     vendor_root.mkdir(parents=True)
-    implementation = root / "Qiskit2_5.cpp"
+    implementation = root / "QiskitAdapter.h"
     implementation.write_text("QkThing qk_thing\n")
     monkeypatch.setattr(adopt, "VENDOR_ROOT", vendor_root)
     monkeypatch.setattr(adopt, "TRANSLATION_IMPLEMENTATION", implementation)
@@ -82,16 +82,7 @@ def test_write_vendor_tree_reuses_only_exact_generated_content(
         "url": "https://example.invalid/qiskit.whl",
     }
 
-    previous = vendor_root / "2.5.0"
-    for name, contents in headers.items():
-        if name.startswith(prefix):
-            destination = previous / "include" / name.removeprefix(prefix)
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_text(contents)
-    (previous / "API_SURFACE.json").write_text('{"functions": {"stale": {}}}')
-
     target = adopt.write_vendor_tree("2.6.0", wheel, artifact)
-    assert "`stale`" not in (target / "API_DIFF.md").read_text()
     expected = adopt.directory_contents(target)
     equivalent_artifact = {
         "filename": "qiskit-2.6.0-cp314-manylinux.whl",
@@ -192,7 +183,7 @@ def test_translation_registration_is_idempotent_and_detects_conflicts(
     translation_dir = root / "bindings" / "mlir" / "qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
-    template.write_text("@QISKIT_FACTORY@ @QISKIT_MAJOR@ @QISKIT_MINOR@ @QISKIT_EXACT_API@ @QISKIT_LABEL@\n")
+    template.write_text("@QISKIT_FACTORY@ @QISKIT_MAJOR@ @QISKIT_MINOR@ @QISKIT_EXACT_API@\n")
     registry = translation_dir / "SupportedVersions.inc"
     registry.write_text("// translations\n")
     monkeypatch.setattr(adopt, "ROOT", root)

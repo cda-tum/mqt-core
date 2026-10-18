@@ -551,7 +551,7 @@ c = measure q;
 def test_device_executes_controlled_qir_with_exact_phase(ddsim_device: Device) -> None:
     """Keep DDSIM-native controlled gates and their global phase."""
     qiskit = pytest.importorskip("qiskit")
-    if not supports_qiskit_translation(qiskit.__version__):
+    if not supports_qiskit_translation():
         pytest.skip(f"no Qiskit translation is registered for {qiskit.__version__}")
     circuit_library = pytest.importorskip("qiskit.circuit.library")
     quantum_info = pytest.importorskip("qiskit.quantum_info")

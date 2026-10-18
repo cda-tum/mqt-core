@@ -14,11 +14,12 @@ import os
 import re
 from pathlib import Path
 
+import qiskit
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 
-def supports_qiskit_translation(version: str) -> bool:
+def supports_qiskit_translation(version: str = qiskit.__version__) -> bool:
     """Return whether the installed release has a registered test adapter."""
     if version == os.environ.get("MQT_QISKIT_TEST_CANDIDATE_VERSION"):
         return True

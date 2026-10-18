@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import pytest
-import qiskit
 from qiskit_support import supports_qiskit_translation
 
 from mqt.core.mlir import JeffProgram, QCProgram
@@ -57,7 +56,7 @@ def _check_paths(program: QCProgram, width: int, expected: int) -> None:
     jeff = program.to_qco(copy=True).to_jeff()
     restored_jeff = JeffProgram.from_bytes(jeff.to_bytes()).to_qco().to_qc()
     assert _observe(restored_jeff, width) == expected
-    if supports_qiskit_translation(qiskit.__version__):
+    if supports_qiskit_translation():
         assert _observe(QCProgram.from_qiskit(program.to_qiskit(copy=True)), width) == expected
 
 

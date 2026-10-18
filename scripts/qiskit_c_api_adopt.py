@@ -49,7 +49,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VENDOR_ROOT = ROOT / "vendor" / "qiskit-c-api"
 REGISTRY = ROOT / "bindings" / "mlir" / "qiskit" / "SupportedVersions.inc"
 TRANSLATION_TEMPLATE = ROOT / "bindings" / "mlir" / "qiskit" / "QiskitMinor.cpp.in"
-TRANSLATION_IMPLEMENTATION = ROOT / "bindings" / "mlir" / "qiskit" / "Qiskit2_5.cpp"
+TRANSLATION_IMPLEMENTATION = ROOT / "bindings" / "mlir" / "qiskit" / "QiskitAdapter.h"
 LOGGER = logging.getLogger(__name__)
 BUILD_TIMEOUT = 3600
 GIT_TIMEOUT = 30
@@ -263,38 +263,6 @@ def api_surface(include: Path) -> dict[str, Any]:
     return {"functions": functions, "types": {name: types[name] for name in sorted(used_type_names)}}
 
 
-def surface_diff(previous: dict[str, Any], current: dict[str, Any]) -> str:
-    """Render symbol-level additions, removals, and changes for review.
-
-    Returns:
-        A Markdown review report for the two API surfaces.
-    """
-    lines = ["# Qiskit C API surface comparison", ""]
-    changed = False
-    for section in ("functions", "types"):
-        before = previous.get(section, {})
-        after = current.get(section, {})
-        added = sorted(after.keys() - before.keys())
-        removed = sorted(before.keys() - after.keys())
-        modified = sorted(name for name in before.keys() & after.keys() if before[name] != after[name])
-        lines.extend([f"## {section.replace('_', ' ').title()}", ""])
-        if not (added or removed or modified):
-            lines.extend(["No changes.", ""])
-            continue
-        changed = True
-        for label, names in (("Added", added), ("Removed", removed), ("Changed", modified)):
-            if names:
-                lines.extend([f"- {label}: " + ", ".join(f"`{name}`" for name in names)])
-        lines.append("")
-    if changed:
-        lines.extend([
-            "Any changed or removed surface used by the translation requires human review,",
-            "even when the compilation and focused tests below succeed.",
-            "",
-        ])
-    return "\n".join(lines)
-
-
 def directory_contents(root: Path) -> dict[Path, bytes]:
     """Read a directory as relative paths and exact file contents.
 
@@ -381,20 +349,6 @@ def populate_vendor_tree(target: Path, version: str, wheel: Path, artifact: Json
 
     surface = api_surface(target / "include")
     atomic_write_text(target / "API_SURFACE.json", json.dumps(surface, indent=2, sort_keys=True) + "\n")
-    previous_dirs: list[Path] = []
-    for path in VENDOR_ROOT.iterdir():
-        if not path.is_dir() or path.name == version:
-            continue
-        try:
-            Version(path.name)
-        except ValueError:
-            continue
-        previous_dirs.append(path)
-    previous_dirs.sort(key=lambda path: Version(path.name))
-    if previous_dirs:
-        previous = api_surface(previous_dirs[-1] / "include")
-        atomic_write_text(target / "API_DIFF.md", surface_diff(previous, surface))
-
     provenance = {
         "component": "Qiskit C API headers",
         "embedded_version": embedded_version,
@@ -495,8 +449,7 @@ def translation_artifacts(version: Version) -> tuple[Path, str, str]:
         .replace("@QISKIT_FACTORY@", f"createQiskit{suffix}")
         .replace("@QISKIT_MAJOR@", str(major))
         .replace("@QISKIT_MINOR@", str(minor))
-        .replace("@QISKIT_EXACT_API@", "0")
-        .replace("@QISKIT_LABEL@", f"{major}.{minor}")
+        .replace("@QISKIT_EXACT_API@", "false")
     )
     return TRANSLATION_TEMPLATE.with_name(f"Qiskit{suffix}.cpp"), source, registration
 

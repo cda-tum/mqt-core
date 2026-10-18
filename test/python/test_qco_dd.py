@@ -32,7 +32,7 @@ from mqt.core.mlir import (
 )
 
 requires_qiskit_translation = pytest.mark.skipif(
-    not supports_qiskit_translation(qiskit.__version__),
+    not supports_qiskit_translation(),
     reason=f"no Qiskit translation is registered for {qiskit.__version__}",
 )
 

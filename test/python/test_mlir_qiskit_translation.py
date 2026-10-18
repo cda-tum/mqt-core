@@ -61,7 +61,7 @@ if TYPE_CHECKING:
 
     from qiskit.circuit.annotated_operation import Modifier
 
-if not supports_qiskit_translation(qiskit.__version__):
+if not supports_qiskit_translation():
     pytest.skip(f"No registered Qiskit adapter for {qiskit.__version__}", allow_module_level=True)
 
 
