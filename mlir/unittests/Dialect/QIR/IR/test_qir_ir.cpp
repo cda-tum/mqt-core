@@ -417,19 +417,24 @@ TEST_F(QIRTest, BuilderReturnsCompleteClassicalRegister) {
   EXPECT_FALSE(returnedRegister.array);
 }
 
-TEST_F(QIRTest, ReusedIrreversibleDeclarationsPreservePassthroughIdempotently) {
+TEST_F(QIRTest, ReusedDeclarationsPreserveAttributesIdempotently) {
   OpBuilder builder(context.get());
   const auto location = builder.getUnknownLoc();
   auto moduleOp = ModuleOp::create(location);
   builder.setInsertionPointToStart(moduleOp.getBody());
   const auto ptrType = LLVM::LLVMPointerType::get(context.get());
-  const auto voidType = LLVM::LLVMVoidType::get(context.get());
+  const Type voidType = LLVM::LLVMVoidType::get(context.get());
   const auto nounwind = builder.getStringAttr("nounwind");
   const auto targetCPU = builder.getStrArrayAttr({"target-cpu", "generic"});
 
-  for (const StringRef name : {StringRef(QIR_MEASURE), StringRef(QIR_RESET)}) {
+  for (const StringRef name : {StringRef(QIR_MEASURE), StringRef(QIR_RESET),
+                               StringRef(QIR_READ_RESULT)}) {
+    SCOPED_TRACE(name.str());
     const SmallVector<Type> parameters(name == QIR_MEASURE ? 2 : 1, ptrType);
-    const auto functionType = LLVM::LLVMFunctionType::get(voidType, parameters);
+    const auto returnType =
+        name == QIR_READ_RESULT ? builder.getI1Type() : voidType;
+    const auto functionType =
+        LLVM::LLVMFunctionType::get(returnType, parameters);
     auto declaration =
         LLVM::LLVMFuncOp::create(builder, location, name, functionType);
     declaration->setAttr("passthrough",
@@ -445,11 +450,18 @@ TEST_F(QIRTest, ReusedIrreversibleDeclarationsPreservePassthroughIdempotently) {
     const auto passthrough =
         declaration->getAttrOfType<ArrayAttr>("passthrough");
     ASSERT_TRUE(passthrough);
-    ASSERT_EQ(passthrough.size(), 3U);
+    ASSERT_EQ(passthrough.size(), name == QIR_READ_RESULT ? 2U : 3U);
     EXPECT_EQ(passthrough[0], nounwind);
     EXPECT_EQ(passthrough[1], targetCPU);
     EXPECT_EQ(llvm::count(passthrough, builder.getStringAttr("irreversible")),
-              1);
+              name == QIR_READ_RESULT ? 0 : 1);
+    if (name == QIR_MEASURE) {
+      EXPECT_TRUE(
+          declaration.getArgAttr(1, LLVM::LLVMDialect::getWriteOnlyAttrName()));
+    } else if (name == QIR_READ_RESULT) {
+      EXPECT_TRUE(
+          declaration.getArgAttr(0, LLVM::LLVMDialect::getReadonlyAttrName()));
+    }
   }
 }
 

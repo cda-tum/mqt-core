@@ -276,6 +276,13 @@ LLVM::LLVMFuncOp getOrCreateFunctionDeclaration(OpBuilder& builder,
   }
 
   auto function = cast<LLVM::LLVMFuncOp>(fnDecl);
+  if (fnName == QIR_MEASURE) {
+    function.setArgAttr(1, LLVM::LLVMDialect::getWriteOnlyAttrName(),
+                        builder.getUnitAttr());
+  } else if (fnName == QIR_READ_RESULT) {
+    function.setArgAttr(0, LLVM::LLVMDialect::getReadonlyAttrName(),
+                        builder.getUnitAttr());
+  }
   if (fnName != QIR_MEASURE && fnName != QIR_RESET) {
     return function;
   }

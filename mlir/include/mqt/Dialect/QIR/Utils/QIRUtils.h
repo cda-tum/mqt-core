@@ -153,7 +153,8 @@ LLVM::LLVMFuncOp getMainFunction(Operation* op);
 /// found, creates a new function declaration at the end of the module.
 ///
 /// For QIR functions that are irreversible (measurement and reset), the
-/// "irreversible" attribute is added automatically.
+/// "irreversible" attribute is added automatically. Measurement result
+/// parameters are writeonly; read_result parameters are readonly.
 ///
 /// @param builder The builder to use for creating operations
 /// @param op The operation requesting the function (for context)
