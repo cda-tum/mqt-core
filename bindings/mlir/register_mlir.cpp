@@ -23,7 +23,7 @@
 #include "mqt/bench/Generate.h"
 #include "qdmi/QDMI.hpp"
 
-#include "qiskit/Qiskit.h"
+#include "Target/Qiskit/Qiskit.h"
 
 #include "capnp/common.h"
 #include "capnp/message.h"

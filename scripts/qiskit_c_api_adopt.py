@@ -47,9 +47,9 @@ from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR_ROOT = ROOT / "vendor" / "qiskit-c-api"
-REGISTRY = ROOT / "bindings" / "mlir" / "qiskit" / "SupportedVersions.inc"
-TRANSLATION_TEMPLATE = ROOT / "bindings" / "mlir" / "qiskit" / "QiskitMinor.cpp.in"
-TRANSLATION_IMPLEMENTATION = ROOT / "bindings" / "mlir" / "qiskit" / "QiskitAdapter.h"
+REGISTRY = ROOT / "bindings" / "mlir" / "Target" / "Qiskit" / "SupportedVersions.inc"
+TRANSLATION_TEMPLATE = ROOT / "bindings" / "mlir" / "Target" / "Qiskit" / "QiskitMinor.cpp.in"
+TRANSLATION_IMPLEMENTATION = ROOT / "bindings" / "mlir" / "Target" / "Qiskit" / "QiskitAdapter.h"
 LOGGER = logging.getLogger(__name__)
 BUILD_TIMEOUT = 3600
 GIT_TIMEOUT = 30

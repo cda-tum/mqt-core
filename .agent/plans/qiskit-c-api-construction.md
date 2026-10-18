@@ -6,12 +6,18 @@ Status: complete.
 
 Use the shared Qiskit 2.5/2.6 C API for loose-bit circuit construction, register
 creation, and empty control-flow blocks in
-`bindings/mlir/qiskit/QiskitAdapter.h`. Transfer native ownership to Python
-before constructing the wrapper, retaining generated circuit names. Each writer
-owns its unpublished circuit; block copies retain bit and register identities,
-drop variables, and receive their own phase during emission. Validate register
-names before entering native constructors that abort on invalid UTF-8. General
-package and QDMI support remains at Qiskit 2.1 or newer.
+`bindings/mlir/Target/Qiskit/QiskitAdapter.h`. Transfer native ownership to
+Python before constructing the wrapper, retaining generated circuit names. Each
+writer owns its unpublished circuit; block copies retain bit and register
+identities, drop variables, and receive their own phase during emission.
+Validate register names before entering native constructors that abort on
+invalid UTF-8. General package and QDMI support remains at Qiskit 2.1 or newer.
+
+Qiskit translation lives under `bindings/mlir/Target/Qiskit`, matching the
+external-format organization introduced in #2769. Both minor adapters and their
+shared implementation move together. CMake, candidate generation, adoption
+tooling, and wheel-test staging use the same location. The move does not change
+the Python API or introduce IQM output functionality.
 
 Read public conditions through Python: both supported native versions retain
 insertion-time conditions after a public `operation.condition` edit. Build the

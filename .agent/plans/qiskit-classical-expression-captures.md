@@ -133,14 +133,14 @@ and lint. Export-side writer construction was outside this slice.
 
 ## Code and ownership
 
-`bindings/mlir/qiskit/QiskitTranslation.h` contains version-neutral normalized
-data passed between the Qiskit version adapter and the MLIR importer.
-`bindings/mlir/qiskit/Qiskit2_5.cpp` reads Qiskit 2.5 through its native C API
-and selected public Python objects. `NativeControlFlowReader` supplies one
+`bindings/mlir/Target/Qiskit/QiskitTranslation.h` contains version-neutral
+normalized data passed between the Qiskit version adapter and the MLIR importer.
+`bindings/mlir/Target/Qiskit/Qiskit2_5.cpp` reads Qiskit 2.5 through its native
+C API and selected public Python objects. `NativeControlFlowReader` supplies one
 normalized `ClassicalTarget` for an if, while, or switch operation.
-`bindings/mlir/qiskit/QiskitImport.cpp` lowers that target to MLIR. It already
-stores classical state in `!cbit.reg<N>` values and provides `loadClassicalBit`
-and `packRegister` helpers.
+`bindings/mlir/Target/Qiskit/QiskitImport.cpp` lowers that target to MLIR. It
+already stores classical state in `!cbit.reg<N>` values and provides
+`loadClassicalBit` and `packRegister` helpers.
 
 A block capture is a Clbit used by a control-flow block that comes from its
 enclosing circuit. Qiskit exposes Python objects in `CircuitInstruction.clbits`
@@ -184,15 +184,16 @@ construction changes.
 
 ## Interfaces
 
-At completion, `ExpressionKind` in `bindings/mlir/qiskit/QiskitTranslation.h`
-has `ClassicalBit` and `ClassicalRegister` cases. `Expression` has
-`uint32_t bit` and `Register reg` payloads. `NativeControlFlowReader` in
-`Qiskit2_5.cpp` owns the full Python instruction, its operation, its containing
-circuit. Its Python-authoritative condition and expression normalization
-resolves all classical leaves and legacy Clbit or register conditions to
-root-circuit indices through the containing-circuit and parent-map path.
-`QiskitImport.cpp` passes the classical-bit state and root map directly into the
-expression emitter, which calls `loadClassicalBit` and `packRegister`.
+At completion, `ExpressionKind` in
+`bindings/mlir/Target/Qiskit/QiskitTranslation.h` has `ClassicalBit` and
+`ClassicalRegister` cases. `Expression` has `uint32_t bit` and `Register reg`
+payloads. `NativeControlFlowReader` in `Qiskit2_5.cpp` owns the full Python
+instruction, its operation, its containing circuit. Its Python-authoritative
+condition and expression normalization resolves all classical leaves and legacy
+Clbit or register conditions to root-circuit indices through the
+containing-circuit and parent-map path. `QiskitImport.cpp` passes the
+classical-bit state and root map directly into the expression emitter, which
+calls `loadClassicalBit` and `packRegister`.
 
 This work depends only on Qiskit 2.5's existing native extension table,
 nanobind's public Python object access, MLIR's arithmetic and structured-control

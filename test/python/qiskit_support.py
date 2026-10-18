@@ -24,7 +24,7 @@ def supports_qiskit_translation(version: str = qiskit.__version__) -> bool:
     if version == os.environ.get("MQT_QISKIT_TEST_CANDIDATE_VERSION"):
         return True
     installed = Version(version)
-    registry = Path(__file__).resolve().parents[2] / "bindings/mlir/qiskit/SupportedVersions.inc"
+    registry = Path(__file__).resolve().parents[2] / "bindings/mlir/Target/Qiskit/SupportedVersions.inc"
     ranges = re.findall(r'^MQT_QISKIT_VERSION\([^\n]+"([^"\n]+)"\)', registry.read_text(), re.MULTILINE)
     return (
         not installed.is_prerelease

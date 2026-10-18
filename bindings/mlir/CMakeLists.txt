@@ -13,7 +13,7 @@ if(NOT TARGET ${TARGET_NAME})
 
   # Qiskit's extension C API tables are translation-unit local. Each supported minor therefore gets
   # one source file with a private header snapshot.
-  file(STRINGS qiskit/SupportedVersions.inc qiskit_version_registrations
+  file(STRINGS Target/Qiskit/SupportedVersions.inc qiskit_version_registrations
        REGEX "^MQT_QISKIT_VERSION\\(")
   foreach(registration IN LISTS qiskit_version_registrations)
     string(
@@ -25,7 +25,7 @@ if(NOT TARGET ${TARGET_NAME})
     endif()
     set(version_minor "${CMAKE_MATCH_1}")
     set(version_release "${CMAKE_MATCH_3}")
-    set(translation_source "${CMAKE_CURRENT_SOURCE_DIR}/qiskit/Qiskit2_${version_minor}.cpp")
+    set(translation_source "${CMAKE_CURRENT_SOURCE_DIR}/Target/Qiskit/Qiskit2_${version_minor}.cpp")
     if(NOT EXISTS "${translation_source}")
       message(
         FATAL_ERROR "Missing Qiskit ${version_release} translation source: ${translation_source}")
@@ -54,13 +54,13 @@ if(NOT TARGET ${TARGET_NAME})
     endif()
     set(QISKIT_FACTORY createCandidateTranslation)
     set(candidate_source "${CMAKE_CURRENT_BINARY_DIR}/QiskitCandidate.cpp")
-    configure_file(qiskit/QiskitMinor.cpp.in ${candidate_source} @ONLY)
+    configure_file(Target/Qiskit/QiskitMinor.cpp.in ${candidate_source} @ONLY)
     list(APPEND SOURCES ${candidate_source})
     set_source_files_properties(
       ${candidate_source}
       PROPERTIES COMPILE_DEFINITIONS QISKIT_PYTHON_EXTENSION
                  INCLUDE_DIRECTORIES
-                 "${MQT_QISKIT_CAPI_CANDIDATE_INCLUDE};${CMAKE_CURRENT_SOURCE_DIR}/qiskit")
+                 "${MQT_QISKIT_CAPI_CANDIDATE_INCLUDE};${CMAKE_CURRENT_SOURCE_DIR}/Target/Qiskit")
   endif()
 
   add_mqt_python_binding(

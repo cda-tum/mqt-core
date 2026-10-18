@@ -274,7 +274,7 @@ environment = { DEPLOY = "ON" }
 test-command = "pytest test/python"
 test-groups = [ "test" ]
 test-sources = [
-  "bindings/mlir/qiskit/SupportedVersions.inc",
+  "bindings/mlir/Target/Qiskit/SupportedVersions.inc",
   "examples/slurm",
   "json",
   "scripts/check_docs_links.py",

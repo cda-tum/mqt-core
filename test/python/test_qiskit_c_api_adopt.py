@@ -180,7 +180,7 @@ def test_translation_registration_is_idempotent_and_detects_conflicts(
 ) -> None:
     """Resume before or after registration without duplicating generated state."""
     root = tmp_path / "repository"
-    translation_dir = root / "bindings" / "mlir" / "qiskit"
+    translation_dir = root / "bindings" / "mlir" / "Target" / "Qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
     template.write_text("@QISKIT_FACTORY@\n")
@@ -205,7 +205,7 @@ def test_translation_registration_is_idempotent_and_detects_conflicts(
 
 def test_translation_registration_preserves_patch_minimum(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep later patch adoptions from widening support to earlier releases."""
-    translation_dir = tmp_path / "bindings" / "mlir" / "qiskit"
+    translation_dir = tmp_path / "bindings" / "mlir" / "Target" / "Qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
     template.write_text("@QISKIT_FACTORY@\n")
@@ -250,7 +250,7 @@ def test_build_preserves_unrelated_cmake_arguments(tmp_path: Path, monkeypatch: 
 def test_restartable_worktree_rejects_unrelated_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Permit exact interrupted-run artifacts but retain clean-worktree isolation."""
     root = tmp_path / "repository"
-    translation_dir = root / "bindings" / "mlir" / "qiskit"
+    translation_dir = root / "bindings" / "mlir" / "Target" / "Qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
     template.write_text("@QISKIT_FACTORY@\n")
