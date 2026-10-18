@@ -360,7 +360,7 @@ public:
   [[nodiscard]] virtual Instruction instruction(size_t index) const = 0;
   [[nodiscard]] virtual ClassicalAssignment store(size_t index) const = 0;
   [[nodiscard]] virtual std::vector<std::complex<double>>
-  unitary(size_t index) const = 0;
+  unitary(size_t index, const Instruction& instruction) const = 0;
   [[nodiscard]] virtual std::unique_ptr<ControlFlowReader>
   controlFlow(size_t index) const = 0;
   [[nodiscard]] virtual std::unique_ptr<CircuitReader>
@@ -455,16 +455,10 @@ public:
                      std::unique_ptr<CircuitWriter> definition) = 0;
 };
 
-#define MQT_QISKIT_DECLARE_VERSION_IMPL(suffix)                                \
-  [[nodiscard]] std::unique_ptr<VersionedTranslation> createQiskit##suffix();
-#define MQT_QISKIT_DECLARE_VERSION(major, minor, suffix, minimumPatch,         \
-                                   minimum, range)                             \
-  MQT_QISKIT_DECLARE_VERSION_IMPL(suffix)
-#define MQT_QISKIT_VERSION MQT_QISKIT_DECLARE_VERSION
+#define MQT_QISKIT_VERSION(minor, minimumPatch, minimum, range)                \
+  [[nodiscard]] std::unique_ptr<VersionedTranslation> createQiskit2_##minor();
 #include "SupportedVersions.inc"
 #undef MQT_QISKIT_VERSION
-#undef MQT_QISKIT_DECLARE_VERSION
-#undef MQT_QISKIT_DECLARE_VERSION_IMPL
 
 #ifdef MQT_QISKIT_CAPI_CANDIDATE_VERSION
 [[nodiscard]] std::unique_ptr<VersionedTranslation>

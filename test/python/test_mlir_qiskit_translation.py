@@ -4488,8 +4488,8 @@ def test_target_aware_qiskit_export_rejects_dynamic_qubits(allocation: str) -> N
 
 def test_unknown_version_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reject unsupported Qiskit versions."""
-    monkeypatch.setattr(qiskit, "__version__", "9.0.0")
-    with pytest.raises(RuntimeError, match=r"installed version '9\.0\.0'.*>=2\.5\.0,<2\.6\.0"):
+    monkeypatch.setattr(qiskit, "__version__", "3.0.0")
+    with pytest.raises(RuntimeError, match=r"installed version '3\.0\.0'.*>=2\.5\.0,<2\.6\.0"):
         QCProgram.from_qiskit(QuantumCircuit(1))
 
 

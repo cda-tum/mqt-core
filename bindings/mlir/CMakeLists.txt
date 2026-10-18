@@ -17,17 +17,15 @@ if(NOT TARGET ${TARGET_NAME})
        REGEX "^MQT_QISKIT_VERSION\\(")
   foreach(registration IN LISTS qiskit_version_registrations)
     string(
-      REGEX
-        MATCH
-        "^MQT_QISKIT_VERSION\\(([0-9]+), *([0-9]+), *([0-9_]+), *([0-9]+), *([0-9]+\\.[0-9]+\\.[0-9]+), *\"[^\"]+\"\\)$"
-        registration_match
-        "${registration}")
+      REGEX MATCH
+            "^MQT_QISKIT_VERSION\\(([0-9]+), *([0-9]+), *(2\\.[0-9]+\\.[0-9]+), *\"[^\"]+\"\\)$"
+            registration_match "${registration}")
     if(NOT registration_match)
       message(FATAL_ERROR "Invalid Qiskit version registration: ${registration}")
     endif()
-    set(version_suffix "${CMAKE_MATCH_3}")
-    set(version_release "${CMAKE_MATCH_5}")
-    set(translation_source "${CMAKE_CURRENT_SOURCE_DIR}/qiskit/Qiskit${version_suffix}.cpp")
+    set(version_minor "${CMAKE_MATCH_1}")
+    set(version_release "${CMAKE_MATCH_3}")
+    set(translation_source "${CMAKE_CURRENT_SOURCE_DIR}/qiskit/Qiskit2_${version_minor}.cpp")
     if(NOT EXISTS "${translation_source}")
       message(
         FATAL_ERROR "Missing Qiskit ${version_release} translation source: ${translation_source}")
@@ -51,13 +49,10 @@ if(NOT TARGET ${TARGET_NAME})
     if(NOT IS_DIRECTORY "${MQT_QISKIT_CAPI_CANDIDATE_INCLUDE}")
       message(FATAL_ERROR "MQT_QISKIT_CAPI_CANDIDATE_INCLUDE must be a directory")
     endif()
-    if(NOT MQT_QISKIT_CAPI_CANDIDATE_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.[0-9]+[^;\"]*$")
-      message(FATAL_ERROR "MQT_QISKIT_CAPI_CANDIDATE_VERSION must be one exact version")
+    if(NOT MQT_QISKIT_CAPI_CANDIDATE_VERSION MATCHES "^2\\.[0-9]+\\.[0-9]+[^;\"]*$")
+      message(FATAL_ERROR "MQT_QISKIT_CAPI_CANDIDATE_VERSION must be one exact Qiskit 2 version")
     endif()
-    set(QISKIT_MAJOR "${CMAKE_MATCH_1}")
-    set(QISKIT_MINOR "${CMAKE_MATCH_2}")
     set(QISKIT_FACTORY createCandidateTranslation)
-    set(QISKIT_EXACT_API true)
     set(candidate_source "${CMAKE_CURRENT_BINARY_DIR}/QiskitCandidate.cpp")
     configure_file(qiskit/QiskitMinor.cpp.in ${candidate_source} @ONLY)
     list(APPEND SOURCES ${candidate_source})

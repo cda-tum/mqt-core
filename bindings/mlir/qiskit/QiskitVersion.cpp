@@ -63,39 +63,31 @@ static void requireSeparator(const std::string_view text, size_t& offset) {
 
 [[nodiscard]] static std::string supportedVersionRanges() {
   std::string ranges;
-#define MQT_QISKIT_VERSION(major, minor, suffix, minimumPatch, minimum, range) \
+#define MQT_QISKIT_VERSION(minor, minimumPatch, minimum, range)                \
   ranges += ranges.empty() ? (range) : ", " range;
 #include "SupportedVersions.inc"
 #undef MQT_QISKIT_VERSION
   return ranges;
 }
 
-[[nodiscard]] static constexpr bool matchesVersion(
-    const InstalledVersion& version, const unsigned int expectedMajor,
-    const unsigned int expectedMinor, const unsigned int minimumPatch) {
-  return version.major == expectedMajor && version.minor == expectedMinor &&
-         version.patch >= minimumPatch;
-}
-
 using TranslationFactory = std::unique_ptr<VersionedTranslation> (*)();
 
 [[nodiscard]] static TranslationFactory
 translationFactory(const InstalledVersion& version) {
+  if (version.major != 2U) {
+    return nullptr;
+  }
 #ifdef MQT_QISKIT_CAPI_CANDIDATE_VERSION
   if (version.text == MQT_QISKIT_CAPI_CANDIDATE_VERSION) {
     return createCandidateTranslation;
   }
 #endif
-#define MQT_QISKIT_FACTORY_IMPL(suffix) createQiskit##suffix
-#define MQT_QISKIT_VERSION(expectedMajor, expectedMinor, suffix, minimumPatch, \
-                           minimum, range)                                     \
-  if (matchesVersion(version, expectedMajor##U, expectedMinor##U,              \
-                     minimumPatch##U)) {                                       \
-    return MQT_QISKIT_FACTORY_IMPL(suffix);                                    \
+#define MQT_QISKIT_VERSION(expectedMinor, minimumPatch, minimum, range)        \
+  if (version.minor == expectedMinor##U && version.patch >= minimumPatch##U) { \
+    return createQiskit2_##expectedMinor;                                      \
   }
 #include "SupportedVersions.inc"
 #undef MQT_QISKIT_VERSION
-#undef MQT_QISKIT_FACTORY_IMPL
   return nullptr;
 }
 

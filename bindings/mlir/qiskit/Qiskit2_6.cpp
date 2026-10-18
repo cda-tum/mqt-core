@@ -15,6 +15,6 @@
 
 namespace mqt::bindings::qiskit {
 std::unique_ptr<VersionedTranslation> createQiskit2_6() {
-  return createTranslation(2U, 6U, false);
+  return createTranslation();
 }
 } // namespace mqt::bindings::qiskit

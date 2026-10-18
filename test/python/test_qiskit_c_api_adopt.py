@@ -183,7 +183,7 @@ def test_translation_registration_is_idempotent_and_detects_conflicts(
     translation_dir = root / "bindings" / "mlir" / "qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
-    template.write_text("@QISKIT_FACTORY@ @QISKIT_MAJOR@ @QISKIT_MINOR@ @QISKIT_EXACT_API@\n")
+    template.write_text("@QISKIT_FACTORY@\n")
     registry = translation_dir / "SupportedVersions.inc"
     registry.write_text("// translations\n")
     monkeypatch.setattr(adopt, "ROOT", root)
@@ -208,12 +208,12 @@ def test_translation_registration_preserves_patch_minimum(tmp_path: Path, monkey
     translation_dir = tmp_path / "bindings" / "mlir" / "qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
-    template.write_text("@QISKIT_FACTORY@ @QISKIT_MAJOR@ @QISKIT_MINOR@\n")
+    template.write_text("@QISKIT_FACTORY@\n")
     monkeypatch.setattr(adopt, "TRANSLATION_TEMPLATE", template)
 
     _, _, registration = adopt.translation_artifacts(Version("2.6.2"))
 
-    assert registration == 'MQT_QISKIT_VERSION(2, 6, 2_6, 2, 2.6.2, ">=2.6.2,<2.7.0")'
+    assert registration == 'MQT_QISKIT_VERSION(6, 2, 2.6.2, ">=2.6.2,<2.7.0")'
 
 
 def test_build_preserves_unrelated_cmake_arguments(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -253,7 +253,7 @@ def test_restartable_worktree_rejects_unrelated_changes(tmp_path: Path, monkeypa
     translation_dir = root / "bindings" / "mlir" / "qiskit"
     translation_dir.mkdir(parents=True)
     template = translation_dir / "QiskitMinor.cpp.in"
-    template.write_text("@QISKIT_FACTORY@ @QISKIT_MAJOR@ @QISKIT_MINOR@\n")
+    template.write_text("@QISKIT_FACTORY@\n")
     registry = translation_dir / "SupportedVersions.inc"
     registry.write_text("// translations\n")
     vendor_root = root / "vendor" / "qiskit-c-api"
@@ -321,7 +321,7 @@ def test_registered_minor_test_selection(monkeypatch: pytest.MonkeyPatch) -> Non
         path: Path, encoding: str | None = None, errors: str | None = None, newline: str | None = None
     ) -> str:
         if path.name == "SupportedVersions.inc":
-            return 'MQT_QISKIT_VERSION(2, 6, 2_6, 0, 2.6.0, ">=2.6.0,<2.7.0")\n'
+            return 'MQT_QISKIT_VERSION(6, 0, 2.6.0, ">=2.6.0,<2.7.0")\n'
         return original_read(path, encoding=encoding, errors=errors, newline=newline)
 
     monkeypatch.setattr(Path, "read_text", read_text)

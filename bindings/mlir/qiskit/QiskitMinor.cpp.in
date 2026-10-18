@@ -15,6 +15,6 @@
 
 namespace mqt::bindings::qiskit {
 std::unique_ptr<VersionedTranslation> @QISKIT_FACTORY@() {
-  return createTranslation(@QISKIT_MAJOR@U, @QISKIT_MINOR@U, @QISKIT_EXACT_API@);
+  return createTranslation();
 }
 } // namespace mqt::bindings::qiskit
