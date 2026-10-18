@@ -223,9 +223,12 @@ TEST(OpenQASMExecutionTest, ExecutesInclusiveRangeBoundaries) {
   }
 }
 
-TEST_F(JitSessionTest, LoadModuleFromMemory) {
-  const auto program = getProgram("BellPairStatic.ll");
-  qir::JitSession session(program, "BellPairStatic.ll");
+TEST_F(JitSessionTest, LoadModuleFromUnterminatedMemory) {
+  auto program = getProgram("BellPairStatic.ll");
+  const auto size = program.size();
+  program += "outside the input buffer";
+  qir::JitSession session(llvm::StringRef(program.data(), size),
+                          "BellPairStatic.ll");
   session.runtime().setOstream(sink);
   ASSERT_EQ(session.run(), 0);
   EXPECT_FALSE(session.runtime().getMeasurements().empty());

@@ -157,11 +157,10 @@ std::string encode(const WorkerRequest& request) {
 
 bool decode(llvm::StringRef bytes, WorkerRequest& request) {
   SPSInputBuffer buffer(bytes.data(), bytes.size());
-  llvm::StringRef program;
   uint8_t capture = 0;
   uint8_t automatic = 0;
   if (!SPSArgList<int32_t, SPSString, uint64_t>::deserialize(
-          buffer, request.format, program, request.shots) ||
+          buffer, request.format, request.program, request.shots) ||
       !readOptional<uint64_t>(buffer, request.seed) ||
       !SPSArgList<uint8_t, uint64_t, uint8_t>::deserialize(
           buffer, capture, request.workerSlots, automatic) ||
@@ -171,7 +170,6 @@ bool decode(llvm::StringRef bytes, WorkerRequest& request) {
   }
   request.captureOutput = capture != 0;
   request.automaticWorkers = automatic != 0;
-  request.program = program.str();
   return true;
 }
 
@@ -217,6 +215,7 @@ bool decode(llvm::StringRef bytes, WorkerResponse& response) {
       count > bytes.size() / sizeof(uint64_t)) {
     return false;
   }
+  response.shots.reserve(count);
   for (uint64_t i = 0; i < count; ++i) {
     llvm::StringRef shot;
     if (!SPSArgList<SPSString>::deserialize(buffer, shot) ||

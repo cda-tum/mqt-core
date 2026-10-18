@@ -95,6 +95,12 @@ order. Their keys and values share that order. Sparse exports require at most 64
 qubits on a 64-bit platform; wider states return `QDMI_ERROR_NOTSUPPORTED`
 because their basis indices do not fit the sparse representation.
 
+Dense results are written into the caller's buffer without retaining another
+dense copy. Reuse that buffer when reading the same state repeatedly. Sparse
+amplitudes are cached because keys and values are queried separately. Allocation
+failures during result retrieval return `QDMI_ERROR_OUTOFMEM` and can be
+retried.
+
 ## Multi-program execution
 
 DDSIM executes programs concurrently in reusable worker processes. A shared LLVM
@@ -109,10 +115,11 @@ after workers become available again. DDSIM requires an LLVM build with
 threading enabled.
 
 One failing or cancelled program does not discard completed siblings. Cancelling
-a job stops its active workers and removes its queued work. If a worker crashes,
-its assigned program fails. DDSIM starts a new worker for future submissions; it
-does not automatically retry the failed program. The worker executable is
-installed beside the device library and must move with it.
+a job stops its active workers and prevents its queued programs from running.
+Freeing a cancelled job releases its payloads without waiting for other jobs. If
+a worker crashes, its assigned program fails. DDSIM starts a new worker for
+future submissions; it does not automatically retry the failed program. The
+worker executable is installed beside the device library and must move with it.
 
 A common explicit seed is applied independently to each program, matching
 separate submissions. QIR output capture is indexed by program, like shots,
@@ -134,7 +141,8 @@ clients use `job.getCustomResult<std::string>(qdmi::CustomProperty::Custom1)`.
 Without capture, that result is unsupported (`None` in Python).
 
 Capture retains the QIR header, per-shot metadata, typed output records, and
-exit codes in memory. It executes the program once per shot, so capture jobs
+exit codes in memory. Double records preserve the original floating-point value
+when parsed back. Capture executes the program once per shot, so capture jobs
 provide counts and shots but no uncollapsed statevector. Default sampling keeps
 its optimized path. See the
 [executable QIR example](../qir/index.md#retrieve-the-qir-output-stream-through-qdmi).

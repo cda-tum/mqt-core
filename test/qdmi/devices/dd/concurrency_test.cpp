@@ -40,9 +40,7 @@
 #include <utility>
 #include <vector>
 
-using ColdDenseReads = testing::TestWithParam<QDMI_Job_Result>;
-
-TEST_P(ColdDenseReads, ConcurrentProbabilityAndStatevectorReads) {
+TEST(Concurrency, ConcurrentProbabilityAndStatevectorReads) {
   const qdmi_test::SessionGuard s{};
   const qdmi_test::JobGuard j{s.session};
   ASSERT_EQ(qdmi_test::setProgram(j.job, QDMI_PROGRAM_FORMAT_QASM3,
@@ -54,7 +52,7 @@ TEST_P(ColdDenseReads, ConcurrentProbabilityAndStatevectorReads) {
   std::barrier start{4};
   const auto worker = [&](const QDMI_Job_Result result) {
     const bool probabilities = result == QDMI_JOB_RESULT_PROBABILITIES_DENSE;
-    std::vector<double> buffer(probabilities ? 4 : 8);
+    std::vector<double> buffer(probabilities ? 4 : 8, -1.);
     start.arrive_and_wait();
     ASSERT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
                   j.job, 0, result, buffer.size() * sizeof(double),
@@ -68,15 +66,11 @@ TEST_P(ColdDenseReads, ConcurrentProbabilityAndStatevectorReads) {
     }
   };
 
-  const std::jthread t1(worker, GetParam());
-  const std::jthread t2(worker, GetParam());
+  const std::jthread t1(worker, QDMI_JOB_RESULT_STATEVECTOR_DENSE);
+  const std::jthread t2(worker, QDMI_JOB_RESULT_STATEVECTOR_DENSE);
   const std::jthread t3(worker, QDMI_JOB_RESULT_PROBABILITIES_DENSE);
   const std::jthread t4(worker, QDMI_JOB_RESULT_PROBABILITIES_DENSE);
 }
-
-INSTANTIATE_TEST_SUITE_P(Concurrency, ColdDenseReads,
-                         testing::Values(QDMI_JOB_RESULT_STATEVECTOR_DENSE,
-                                         QDMI_JOB_RESULT_PROBABILITIES_DENSE));
 
 TEST(Concurrency, ConcurrentHistogramReads) {
   const qdmi_test::SessionGuard s{};
@@ -87,34 +81,17 @@ TEST(Concurrency, ConcurrentHistogramReads) {
   ASSERT_EQ(qdmi_test::setShots(j.job, 1024), QDMI_SUCCESS);
   ASSERT_EQ(qdmi_test::submitAndWait(j.job, 0), QDMI_SUCCESS);
 
-  const size_t keysSize =
-      qdmi_test::querySize(j.job, QDMI_JOB_RESULT_HIST_KEYS);
-  const size_t valsSize =
-      qdmi_test::querySize(j.job, QDMI_JOB_RESULT_HIST_VALUES);
-
-  auto const keysWorker = [&] {
-    std::string buf(keysSize > 0 ? keysSize - 1 : 0, '\0');
-    EXPECT_EQ(
-        MQT_DDSIM_QDMI_device_job_get_results(
-            j.job, 0, QDMI_JOB_RESULT_HIST_KEYS, keysSize, buf.data(), nullptr),
-        QDMI_SUCCESS);
+  std::barrier start{4};
+  const auto worker = [&] {
+    start.arrive_and_wait();
+    const auto [keys, values] = qdmi_test::getHistogram(j.job);
+    EXPECT_EQ(keys, (std::vector<std::string>{"00", "11"}));
+    EXPECT_EQ(std::accumulate(values.begin(), values.end(), size_t{0}), 1024);
   };
-  auto const valsWorker = [&] {
-    std::vector<size_t> v(valsSize / sizeof(size_t));
-    EXPECT_EQ(
-        MQT_DDSIM_QDMI_device_job_get_results(
-            j.job, 0, QDMI_JOB_RESULT_HIST_VALUES, valsSize, v.data(), nullptr),
-        QDMI_SUCCESS);
-  };
-
-  std::thread t1(keysWorker);
-  std::thread t2(keysWorker);
-  std::thread t3(valsWorker);
-  std::thread t4(valsWorker);
-  t1.join();
-  t2.join();
-  t3.join();
-  t4.join();
+  const std::jthread t1(worker);
+  const std::jthread t2(worker);
+  const std::jthread t3(worker);
+  const std::jthread t4(worker);
 }
 
 TEST(Concurrency, ConcurrentCheckDuringRun) {

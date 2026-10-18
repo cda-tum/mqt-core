@@ -28,7 +28,8 @@ using WorkerStream =
 
 struct WorkerRequest {
   int32_t format = 0;
-  std::string program;
+  /// Borrows the job's payload or the decoded frame until execution returns.
+  llvm::StringRef program;
   uint64_t shots = 0;
   std::optional<uint64_t> seed;
   bool captureOutput = false;

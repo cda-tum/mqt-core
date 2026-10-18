@@ -36,6 +36,7 @@
 #include <exception>
 #include <future>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <random>
@@ -143,7 +144,7 @@ struct Execution {
         return false;
       }
     } else {
-      std::mt19937_64 rng(seed_.value_or(std::random_device{}()));
+      std::mt19937_64 rng(seed_ ? *seed_ : qir::Runtime::generateRandomSeed());
       std::vector<uint64_t> workerSeeds(workers);
       for (size_t i = 1; i < workers; ++i) {
         workerSeeds[i] = rng();
@@ -192,12 +193,14 @@ struct Execution {
         }));
       }
       int64_t firstError = 0;
+      shots_.reserve(numShots_);
       for (size_t i = 0; i < workers; ++i) {
         const auto code = tasks[i].get();
         if (firstError == 0 && code != 0) {
           firstError = code;
         }
-        shots_.insert(shots_.end(), parts[i].begin(), parts[i].end());
+        shots_.insert(shots_.end(), std::make_move_iterator(parts[i].begin()),
+                      std::make_move_iterator(parts[i].end()));
       }
       if (firstError != 0) {
         std::cerr << "QIR program returned exit code " << firstError << '\n';

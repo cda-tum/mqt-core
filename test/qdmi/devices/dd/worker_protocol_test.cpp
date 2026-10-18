@@ -72,15 +72,16 @@ TEST(WorkerProtocol, SocketRoundTripAndDisconnect) {
 TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
   const WorkerRequest request{
       .format = 7,
-      .program = std::string("QIR\0bytes", 9),
+      .program = llvm::StringRef("QIR\0bytes", 9),
       .shots = 19,
       .seed = 42,
       .captureOutput = true,
       .workerSlots = 3,
       .automaticWorkers = false,
   };
+  const auto frame = encode(request);
   WorkerRequest decoded;
-  ASSERT_TRUE(decode(encode(request), decoded));
+  ASSERT_TRUE(decode(frame, decoded));
   EXPECT_EQ(decoded.format, request.format);
   EXPECT_EQ(decoded.program, request.program);
   EXPECT_EQ(decoded.shots, request.shots);
