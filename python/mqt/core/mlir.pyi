@@ -64,6 +64,9 @@ class OutputFormat(enum.Enum):
     OPENQASM3 = 4
     """OpenQASM 3 after the optimized QCO round trip."""
 
+    IQM_JSON = 8
+    """An IQM circuit for an explicit physical target."""
+
     JEFF = 5
     """Serializable ``jeff`` MLIR."""
 
@@ -1201,6 +1204,16 @@ class JeffProgram(Program):
 
         Set ``copy=True`` to preserve it.
         """
+
+class IQMJSONProgram:
+    """An immutable output-only IQM circuit object."""
+
+    @property
+    def source(self) -> str:
+        """The emitted IQM JSON source."""
+
+    def write(self, path: str | os.PathLike) -> None:
+        """Write the IQM JSON source to a file."""
 
 class OpenQASMProgram:
     """An immutable compiler program containing OpenQASM 3 source."""

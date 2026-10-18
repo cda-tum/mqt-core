@@ -325,6 +325,7 @@ TEST(CompilerQDMIAdapterTest,
   formats = {
       QDMI_PROGRAM_FORMAT_QIRBASESTRING,
       QDMI_PROGRAM_FORMAT_QIRBASEMODULE,
+      QDMI_PROGRAM_FORMAT_IQMJSON,
       QDMI_PROGRAM_FORMAT_QASM3,
       QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING,
       QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE,
@@ -463,6 +464,87 @@ TEST(CompilerQDMIAdapterTest, CompatibilityPreservesFixedParameters) {
   }
   EXPECT_FALSE(llvm::errorToBool(mlir::validateTargetCompatibility(
       makeEnvironment({}), makeEnvironment({std::nullopt}))));
+}
+
+TEST(CompilerQDMIAdapterTest,
+     IQMSubmissionRejectsRenamedSitesBeforeJobCreation) {
+  const auto device = qdmi::Session::openDevice("mqt.sc.iqm.garnet");
+  auto* api =
+      &const_cast<qdmi::DeviceAPI&>(static_cast<QDMI_Device>(device)->api());
+  static thread_local decltype(QDMI_device_session_query_device_property)*
+      queryDevice;
+  static thread_local decltype(QDMI_device_session_query_site_property)*
+      querySite;
+  static thread_local bool renamed = false;
+  static thread_local size_t creations = 0;
+  queryDevice = api->device_session_query_device_property;
+  querySite = api->device_session_query_site_property;
+  const auto createJob = api->device_session_create_device_job;
+  const auto restore = llvm::make_scope_exit([&] {
+    api->device_session_query_device_property = queryDevice;
+    api->device_session_query_site_property = querySite;
+    api->device_session_create_device_job = createJob;
+  });
+  renamed = false;
+  creations = 0;
+  api->device_session_query_device_property =
+      [](QDMI_Device_Session session, QDMI_Device_Property property,
+         size_t size, void* value, size_t* sizeRet) -> int {
+    if (property != QDMI_DEVICE_PROPERTY_SUPPORTEDPROGRAMFORMATS) {
+      return queryDevice(session, property, size, value, sizeRet);
+    }
+    constexpr auto format = QDMI_PROGRAM_FORMAT_IQMJSON;
+    if (sizeRet) {
+      *sizeRet = sizeof(format);
+    }
+    if (value) {
+      if (size < sizeof(format)) {
+        return QDMI_ERROR_INVALIDARGUMENT;
+      }
+      std::memcpy(value, &format, sizeof(format));
+    }
+    return QDMI_SUCCESS;
+  };
+  api->device_session_query_site_property =
+      [](QDMI_Device_Session session, QDMI_Site site,
+         QDMI_Site_Property property, size_t size, void* value,
+         size_t* sizeRet) {
+        const auto result =
+            querySite(session, site, property, size, value, sizeRet);
+        if (result == QDMI_SUCCESS && renamed && value && size > 1 &&
+            property == QDMI_SITE_PROPERTY_NAME) {
+          static_cast<char*>(value)[0] = 'X';
+        }
+        return result;
+      };
+  api->device_session_create_device_job = [](QDMI_Device_Session,
+                                             QDMI_Device_Job*) -> int {
+    ++creations;
+    return QDMI_ERROR_NOTSUPPORTED;
+  };
+  auto compiled = mlir::compileProgram(
+      mlir::OpenQASMProgram("OPENQASM 3.0; include \"stdgates.inc\"; "
+                            "qubit[2] q; bit[2] c; h q[0]; cx q[0],q[1]; "
+                            "c[1] = measure q[0]; c[0] = measure q[1];"),
+      device);
+  ASSERT_TRUE(static_cast<bool>(compiled))
+      << llvm::toString(compiled.takeError());
+  EXPECT_EQ(compiled->programFormat(), QDMI_PROGRAM_FORMAT_IQMJSON);
+  const auto json = nlohmann::json::parse(compiled->payload());
+  EXPECT_EQ(json["instructions"].back()["name"], "measure");
+  EXPECT_EQ(json["instructions"].back()["args"]["key"], "m");
+  EXPECT_EQ(json["instructions"].back()["locus"].size(), 2);
+  EXPECT_EQ(creations, 0);
+  EXPECT_TRUE(
+      llvm::errorToBool(mlir::submitProgram(device, *compiled).takeError()));
+  EXPECT_EQ(creations, 1);
+  renamed = true;
+  auto rejected = mlir::submitProgram(device, *compiled);
+  ASSERT_FALSE(static_cast<bool>(rejected));
+  EXPECT_NE(
+      llvm::toString(rejected.takeError()).find("site name mapping differs"),
+      std::string::npos);
+  EXPECT_EQ(creations, 1);
 }
 
 TEST(CompilerQDMIAdapterTest,

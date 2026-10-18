@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from functools import partial
@@ -29,6 +30,7 @@ from qiskit_support import supports_qiskit_translation
 from mqt.core.mlir import (
     CompilationOptions,
     CompilerTarget,
+    IQMJSONProgram,
     JeffProgram,
     MappingOptions,
     OpenQASMProgram,
@@ -404,6 +406,32 @@ def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
     compiled = compile_program(direct, output=OutputFormat.QIR_ADAPTIVE)
     assert isinstance(compiled, QIRProgram)
     assert compiled.operation_counts()["llvm.func"] >= 1
+
+
+@pytest.mark.parametrize("frontend", ["openqasm", "qiskit"])
+def test_iqm_json_program(frontend: str, tmp_path: Path) -> None:
+    """Compile both frontends to IQM JSON and expose the text program API."""
+    circuit = QuantumCircuit(2, 2)
+    circuit.r(0.5, -0.25, 0)
+    circuit.cz(0, 1)
+    circuit.measure([0, 1], [1, 0])
+    if frontend == "qiskit":
+        if not supports_qiskit_translation():
+            pytest.skip("Qiskit version has no compiler translation adapter")
+        source = circuit
+    else:
+        source = qasm3.dumps(circuit)
+    target = CompilerTarget.from_device_id("mqt.sc.iqm.garnet")
+    direct = compile_program(source, target=target, output=OutputFormat.IQM_JSON)
+    assert isinstance(direct, IQMJSONProgram)
+    assert str(direct) == direct.source
+    path = tmp_path / "circuit.json"
+    direct.write(path)
+    assert json.loads(path.read_text()) == json.loads(direct.source)
+
+    compiled = compile_program(source, target=target, program_format=ProgramFormat.IQM_JSON)
+    assert compiled.program_format == ProgramFormat.IQM_JSON
+    assert json.loads(compiled.payload)["instructions"][-1]["name"] == "measure"
 
 
 @pytest.mark.parametrize(

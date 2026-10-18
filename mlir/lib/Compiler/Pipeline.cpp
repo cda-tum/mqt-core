@@ -22,6 +22,7 @@
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Support/Passes.h"
+#include "mqt/Target/IQM/Export.h"
 #include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
 #include "mqt/Target/QIR/Capabilities.h"
 #include "mqt/Target/QIR/Export.h"
@@ -40,6 +41,8 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
@@ -407,6 +410,14 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
                        const TargetEnvironment* environment,
                        std::string_view qcoPipeline,
                        const CompilationOptions& options) {
+  if (output == ProgramFormat::IQMJSON &&
+      (environment == nullptr ||
+       environment->target().nativeOperationsKind() ==
+           CompilerTarget::NativeOperations::Kind::Unrestricted)) {
+    llvm::errs() << "IQM JSON requires a physical target with explicit native "
+                    "IQM operations.\n";
+    return failure();
+  }
   if ((output == ProgramFormat::QCImport || output == ProgramFormat::QCO) &&
       qcoPipeline != "mqt-qco-default") {
     llvm::errs() << "a custom QCO pass pipeline cannot be used with an output "
@@ -532,6 +543,19 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
   auto qir = std::move(*qc).intoQIR(profile);
   if (failed(qir)) {
     return failure();
+  }
+  if (output == ProgramFormat::IQMJSON) {
+    llvm::LLVMContext context;
+    auto llvmModule = qir::translateQIRToLLVM(qir->module(), context);
+    if (!llvmModule) {
+      return failure();
+    }
+    auto source = qir::exportIQMJSON(*llvmModule, environment->target());
+    if (!source) {
+      qir->module().emitError() << llvm::toString(source.takeError());
+      return failure();
+    }
+    return CompilerProgram(IQMJSONProgram(std::move(*source)));
   }
   return CompilerProgram(std::move(*qir));
 }

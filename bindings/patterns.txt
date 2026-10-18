@@ -189,7 +189,7 @@ mqt\.core\.mlir\.__prefix__$:
     \from typing import TypeAlias, TypeVar
     _CompilerInput: TypeAlias = str | os.PathLike[str] | qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram
     _CompilerTarget: TypeAlias = CompilerTarget | qiskit.providers.BackendV2 | qiskit.transpiler.Target | mqt.core.qdmi.Device | str
-    _CompilerOutput: TypeAlias = qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram | QIRProgram
+    _CompilerOutput: TypeAlias = qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram | QIRProgram | IQMJSONProgram
     _ProgramT = TypeVar("_ProgramT", qiskit.circuit.QuantumCircuit, QCProgram, QCOProgram, JeffProgram, OpenQASMProgram)
 
 mqt\.core\.mlir\.compile_program$:
@@ -244,6 +244,16 @@ mqt\.core\.mlir\.compile_program$:
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> OpenQASMProgram: ...
+    @overload
+    def compile_program(
+        program: _CompilerInput,
+        *,
+        target: _CompilerTarget,
+        output: Literal[OutputFormat.IQM_JSON],
+        inplace: bool = False,
+        qco_pipeline: str = "mqt-qco-default",
+        options: CompilationOptions = ...,
+    ) -> IQMJSONProgram: ...
     @overload
     def compile_program(
         program: _CompilerInput,

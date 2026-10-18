@@ -116,6 +116,7 @@ add_mlir_library(
   PUBLIC
   MLIRPass
   MLIRTransforms
+  MLIRIQMTarget
   MLIRTransformUtils
   MLIRMQTTransforms
   MLIRQCOToQC

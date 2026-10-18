@@ -9,6 +9,7 @@
  */
 
 #include "gtest/gtest.h"
+#include "nlohmann/json.hpp"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -17,6 +18,7 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 #include <string>
@@ -256,4 +258,50 @@ TEST(CompilerCLI, PreservesLayoutAtImportCheckpoint) {
   auto output = llvm::MemoryBuffer::getFile(outputPath);
   ASSERT_TRUE(output);
   EXPECT_TRUE((*output)->getBuffer().contains("mqt.layout"));
+}
+
+TEST(CompilerCLI, EmitsTargetedIQMJSONAndPreservesOutputOnFailure) {
+  llvm::SmallString<128> outputPath;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("mqt-cc-iqm-target", "json",
+                                                  outputPath));
+  const llvm::FileRemover cleanup(outputPath);
+  const llvm::StringRef target =
+      "--target=#mqt.compilation_target<sites = "
+      "[<id = 5, name = \"physical-b\">, <id = 17, name = \"physical-a\">], "
+      "connectivity = all_to_all, couplings = [], native_operations = "
+      "explicit, operations = [<name = \"r\", arity = "
+      "#mqt.operation_arity<kind = fixed, value = 1>, num_parameters = 2, "
+      "site_tuples = []>, "
+      "<name = \"cz\", arity = #mqt.operation_arity<kind = fixed, value = 2>, "
+      "num_parameters = 0, site_tuples = []>, "
+      "<name = \"measure\", arity = #mqt.operation_arity<kind = fixed, value = "
+      "1>, num_parameters = 0, site_tuples = []>]>";
+  const llvm::StringRef payload =
+      "--payload-spec=#mqt.payload_spec<format = <id = \"iqm-json\", "
+      "version = \"\", profile = \"\", encoding = text>, capabilities = "
+      "[], optional_capabilities_known = true>";
+  llvm::SmallVector<llvm::StringRef> args{
+      MQT_CORE_MQT_CC, MQT_CORE_MQT_CC_INPUT, target, payload, "-o", outputPath,
+  };
+  ASSERT_EQ(
+      llvm::sys::ExecuteAndWait(MQT_CORE_MQT_CC, args, std::nullopt, {}, 10),
+      0);
+  auto output = llvm::MemoryBuffer::getFile(outputPath);
+  ASSERT_TRUE(output);
+  const auto circuit = nlohmann::json::parse((*output)->getBuffer().str());
+  const auto& instructions = circuit.at("instructions");
+  EXPECT_EQ(instructions.back().at("name"), "measure");
+  EXPECT_EQ(instructions.back().at("locus").size(), 2U);
+  for (const auto& site : instructions.back().at("locus")) {
+    EXPECT_TRUE(site == "physical-a" || site == "physical-b") << site;
+  }
+  args[2] = "--target=#mqt.compilation_target<sites = [<id = 5>, <id = 17>], "
+            "connectivity = all_to_all, couplings = [], native_operations = "
+            "unrestricted, operations = []>";
+  EXPECT_EQ(
+      llvm::sys::ExecuteAndWait(MQT_CORE_MQT_CC, args, std::nullopt, {}, 10),
+      1);
+  auto preserved = llvm::MemoryBuffer::getFile(outputPath);
+  ASSERT_TRUE(preserved);
+  EXPECT_EQ((*preserved)->getBuffer(), (*output)->getBuffer());
 }

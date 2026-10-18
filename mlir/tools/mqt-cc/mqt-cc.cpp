@@ -23,6 +23,7 @@
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Support/Passes.h"
+#include "mqt/Target/IQM/Export.h"
 #include "mqt/Target/OpenQASM/TranslateOpenQASMToQC.h"
 #include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
 #include "mqt/Target/QIR/Export.h"
@@ -44,6 +45,8 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -158,6 +161,7 @@ enum class OutputFormat : std::uint8_t {
   QCO,
   QCOOptimized,
   OpenQASM3,
+  IQMJSON,
   QIRBase,
   QIRAdaptive,
   Jeff,
@@ -590,6 +594,9 @@ static int runCompiler(int argc, char** argv) {
       case ProgramFormat::OpenQASM3:
         parsedOutputFormat = OutputFormat::OpenQASM3;
         break;
+      case ProgramFormat::IQMJSON:
+        parsedOutputFormat = OutputFormat::IQMJSON;
+        break;
       case ProgramFormat::QIRBase:
         parsedOutputFormat = OutputFormat::QIRBase;
         break;
@@ -602,6 +609,13 @@ static int runCompiler(int argc, char** argv) {
     }
     targetEnvironment.emplace(std::move(*compilerTarget),
                               std::move(*selectedPayload));
+  }
+
+  if (*parsedOutputFormat == OutputFormat::IQMJSON &&
+      targetEnvironment->target().nativeOperationsKind() ==
+          CompilerTarget::NativeOperations::Kind::Unrestricted) {
+    llvm::errs() << "IQM JSON requires explicit native IQM operations.\n";
+    return 1;
   }
 
   ParsedProgram program;
@@ -757,6 +771,7 @@ static int runCompiler(int argc, char** argv) {
 
   if ((*parsedOutputFormat == OutputFormat::QC ||
        *parsedOutputFormat == OutputFormat::OpenQASM3 ||
+       *parsedOutputFormat == OutputFormat::IQMJSON ||
        *parsedOutputFormat == OutputFormat::QIRBase ||
        *parsedOutputFormat == OutputFormat::QIRAdaptive) &&
       failed(runPasses([](OpPassManager& pm) {
@@ -768,7 +783,8 @@ static int runCompiler(int argc, char** argv) {
   }
 
   if ((*parsedOutputFormat == OutputFormat::QIRBase ||
-       *parsedOutputFormat == OutputFormat::QIRAdaptive) &&
+       *parsedOutputFormat == OutputFormat::QIRAdaptive ||
+       *parsedOutputFormat == OutputFormat::IQMJSON) &&
       failed(runPasses([&](OpPassManager& pm) {
         const bool adaptive = *parsedOutputFormat == OutputFormat::QIRAdaptive;
         const auto payload =
@@ -788,6 +804,26 @@ static int runCompiler(int argc, char** argv) {
     if (failed(writeJeffOutput(*program.mod, outputFilename))) {
       return 1;
     }
+  } else if (*parsedOutputFormat == OutputFormat::IQMJSON) {
+    llvm::LLVMContext llvmContext;
+    auto llvmModule = qir::translateQIRToLLVM(*program.mod, llvmContext);
+    if (!llvmModule) {
+      return 1;
+    }
+    auto source = qir::exportIQMJSON(*llvmModule, targetEnvironment->target());
+    if (!source) {
+      llvm::errs() << llvm::toString(source.takeError()) << '\n';
+      return 1;
+    }
+    std::string errorMessage;
+    auto output = openOutputFile(outputFilename, &errorMessage);
+    if (!output) {
+      llvm::errs() << "Failed to open output file '" << outputFilename
+                   << "': " << errorMessage << "\n";
+      return 1;
+    }
+    output->os() << *source;
+    output->keep();
   } else if (*parsedOutputFormat == OutputFormat::OpenQASM3) {
     std::string errorMessage;
     auto output = openOutputFile(outputFilename, &errorMessage);

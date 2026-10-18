@@ -436,7 +436,8 @@ snapshotOperations(
 
 [[nodiscard]] static llvm::Expected<CompilerTarget>
 snapshotCompilerTarget(const qdmi::Device& device,
-                       bool includeCalibration = true) {
+                       bool includeCalibration = true,
+                       bool requireSiteNames = false) {
   auto deviceName = device.getName();
   const auto hasHomogeneousAllToAllMetadata =
       hasAllToAllHomogeneousMetadata(device);
@@ -463,7 +464,8 @@ snapshotCompilerTarget(const qdmi::Device& device,
       return siteId.takeError();
     }
     auto targetSite = CompilerTarget::Site::create(
-        *siteId, includeCalibration ? site.getName() : std::nullopt,
+        *siteId,
+        includeCalibration || requireSiteNames ? site.getName() : std::nullopt,
         includeCalibration ? site.getT1() : std::nullopt,
         includeCalibration ? site.getT2() : std::nullopt);
     if (!targetSite) {
@@ -564,6 +566,7 @@ constexpr std::array PROGRAM_FORMAT_PREFERENCE{
     QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE,
     QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING,
     QDMI_PROGRAM_FORMAT_QASM3,
+    QDMI_PROGRAM_FORMAT_IQMJSON,
     QDMI_PROGRAM_FORMAT_QIRBASEMODULE,
     QDMI_PROGRAM_FORMAT_QIRBASESTRING,
 };
@@ -621,6 +624,8 @@ qdmiFormatForPayload(const PayloadSpecification& payload) {
   switch (*output) {
   case ProgramFormat::OpenQASM3:
     return QDMI_PROGRAM_FORMAT_QASM3;
+  case ProgramFormat::IQMJSON:
+    return QDMI_PROGRAM_FORMAT_IQMJSON;
   case ProgramFormat::QIRBase:
     return binary ? QDMI_PROGRAM_FORMAT_QIRBASEMODULE
                   : QDMI_PROGRAM_FORMAT_QIRBASESTRING;
@@ -638,6 +643,9 @@ payloadSpecificationForProgramFormat(QDMI_Program_Format format) {
                             ? PayloadEncoding::Binary
                             : PayloadEncoding::Text;
   switch (format) {
+  case QDMI_PROGRAM_FORMAT_IQMJSON:
+    return PayloadSpecification::forProgramFormat(ProgramFormat::IQMJSON,
+                                                  encoding);
   case QDMI_PROGRAM_FORMAT_QASM3:
     return PayloadSpecification::forProgramFormat(ProgramFormat::OpenQASM3,
                                                   encoding);
@@ -686,7 +694,8 @@ snapshotTargetEnvironment(const qdmi::Device& device,
     if (!payload) {
       return payload.takeError();
     }
-    auto target = snapshotCompilerTarget(device, includeCalibration);
+    auto target = snapshotCompilerTarget(
+        device, includeCalibration, *format == QDMI_PROGRAM_FORMAT_IQMJSON);
     if (!target) {
       return target.takeError();
     }
@@ -709,6 +718,12 @@ llvm::Error validateTargetCompatibility(const TargetEnvironment& compiled,
   const auto& rhs = destination.target();
   if (lhs.siteIds() != rhs.siteIds()) {
     return incompatible("ordered site mapping differs");
+  }
+  if (compiled.payloadSpecification().format().id == "iqm-json" &&
+      !std::ranges::equal(
+          lhs.sites(), rhs.sites(),
+          [](const auto& a, const auto& b) { return a.name() == b.name(); })) {
+    return incompatible("site name mapping differs");
   }
   if (lhs.connectivityKind() != rhs.connectivityKind() ||
       lhs.couplings() != rhs.couplings()) {
@@ -762,6 +777,9 @@ CompiledProgram::compile(CompilerInput&& program,
   }
   if (const auto* qasm = std::get_if<OpenQASMProgram>(&*result)) {
     return CompiledProgram(environment, std::string(qasm->source()), *format);
+  }
+  if (const auto* json = std::get_if<IQMJSONProgram>(&*result)) {
+    return CompiledProgram(environment, json->source(), *format);
   }
   const auto& qir = std::get<QIRProgram>(*result);
   auto entryPoint = qir::getMainFunction(qir.module());
