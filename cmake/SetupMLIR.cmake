@@ -125,9 +125,15 @@ function(mqt_llvm_target_disable_rtti target_name)
   if(NOT TARGET ${target_name})
     message(FATAL_ERROR "Cannot configure RTTI for missing target ${target_name}.")
   endif()
-  if(NOT LLVM_ENABLE_RTTI)
+  # Exception boundaries need public type identity across shared libraries on Darwin.
+  if(NOT (LLVM_ENABLE_RTTI OR LLVM_REQUIRES_RTTI))
     target_compile_options(${target_name}
                            PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${LLVM_CXXFLAGS_RTTI_DISABLE}>)
+    if(MSVC)
+      get_target_property(compile_options ${target_name} COMPILE_OPTIONS)
+      list(TRANSFORM compile_options REPLACE "/GR(>|$)" "/GR-\\1")
+      set_property(TARGET ${target_name} PROPERTY COMPILE_OPTIONS ${compile_options})
+    endif()
   endif()
 endfunction()
 
