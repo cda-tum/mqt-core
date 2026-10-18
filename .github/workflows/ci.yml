@@ -22,11 +22,9 @@ jobs:
       additional-python-files: "mlir/**"
       additional-cd-files: |
         .github/workflows/ci.yml
-        CHANGELOG.md
         **/CMakeLists.txt
         cmake/**
         pyproject.toml
-        docs/cpp_api.md
         scripts/check_wheel_runtime.py
     permissions:
       contents: read

@@ -182,7 +182,7 @@ def _run_tests(
 @nox.session(python=PYTHON_ALL_VERSIONS, reuse_venv=True, default=True)
 def tests(session: nox.Session) -> None:
     """Run the test suite."""
-    _run_tests(session)
+    _run_tests(session, pytest_run_args=["--run-link-checks", "--run-qiskit-c-api"])
 
 
 @nox.session(python=PYTHON_ALL_VERSIONS, reuse_venv=True, venv_backend="uv", default=True)
@@ -288,6 +288,7 @@ def qiskit(session: nox.Session) -> None:
             "run",
             "--no-sync",
             "pytest",
+            "--run-qiskit-c-api",
             *session.posargs,
             "--cov-config=pyproject.toml",
             env=env,

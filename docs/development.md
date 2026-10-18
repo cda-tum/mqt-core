@@ -304,6 +304,14 @@ version and release date before publishing. Version tags drive package metadata;
 do not edit generated version files to stage a release. Release preparation does
 not itself publish a release.
 
+## Python test selection
+
+`pytest` collects package tests by default. In a source checkout, add
+`--run-link-checks`, `--run-slurm`, or `--run-qiskit-c-api` to include tests for
+the corresponding repository scripts. Selecting a test file explicitly also runs
+it. `nox -s tests` enables the link-checker and Qiskit C API tests; the Slurm
+workflow runs its own script tests with `--run-slurm`.
+
 ## Documentation validation
 
 Install Python 3.14 and Doxygen before building the complete documentation.
