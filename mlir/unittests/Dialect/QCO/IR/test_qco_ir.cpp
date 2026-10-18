@@ -730,20 +730,22 @@ TEST_F(QCOTest, BuilderRejectsQuantumCapturesAndEscapes) {
 TEST_F(QCOTest, BuilderRejectsChangedTensorSlots) {
   for (unsigned scenario = 0; scenario < 3; ++scenario) {
     SCOPED_TRACE(scenario);
-    EXPECT_DEATH(([&] {
-                   QCOProgramBuilder builder(context.get());
-                   builder.initialize();
-                   auto [tensor, qubit] =
-                       builder.qtensorExtract(builder.qtensorAlloc(2), 0);
-                   if (scenario == 1) {
-                     tensor = builder.qtensorAlloc(2);
-                   } else if (scenario == 2) {
-                     qubit = builder.allocQubit();
-                   }
-                   builder.qtensorInsert(qubit, tensor, scenario == 0 ? 1 : 0);
-                 }()),
-                 "Inserted qubit must (return to its original slot|belong to "
-                 "the destination register)");
+    EXPECT_DEATH(
+        ([&] {
+          QCOProgramBuilder builder(context.get());
+          builder.initialize();
+          auto [tensor, qubit] =
+              builder.qtensorExtract(builder.qtensorAlloc(2), 0);
+          if (scenario == 1) {
+            tensor = builder.qtensorAlloc(2);
+          } else if (scenario == 2) {
+            qubit = builder.allocQubit();
+          }
+          builder.qtensorInsert(qubit, tensor, scenario == 0 ? 1 : 0);
+        }()),
+        scenario == 0
+            ? "Inserted qubit must return to its original slot"
+            : "Inserted qubit must belong to the destination register");
   }
 }
 
