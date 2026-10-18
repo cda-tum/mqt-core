@@ -28,10 +28,10 @@
 namespace mlir::mqt {
 
 std::optional<double> attributeToDouble(Attribute attr) {
-  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
+  if (auto floatAttr = dyn_cast_if_present<FloatAttr>(attr)) {
     return floatAttr.getValueAsDouble();
   }
-  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+  if (auto intAttr = dyn_cast_if_present<IntegerAttr>(attr)) {
     const bool isSigned = !intAttr.getType().isUnsignedInteger();
     APFloat value(APFloat::IEEEdouble(), APInt::getZero(64));
     value.convertFromAPInt(intAttr.getValue(), isSigned,
@@ -49,9 +49,7 @@ std::optional<double> valueToDouble(Value value) {
   return attributeToDouble(attr);
 }
 
-std::optional<Attribute>
-valueToConstantAttr(Value value,
-                    DenseMap<Value, std::optional<Attribute>>& cache) {
+Attribute valueToConstantAttr(Value value, DenseMap<Value, Attribute>& cache) {
   if (const auto found = cache.find(value); found != cache.end()) {
     return found->second;
   }
@@ -63,7 +61,7 @@ valueToConstantAttr(Value value,
     Operation* operation = current.getDefiningOp();
     if (nextOperand == 0) {
       // A failed dependency leaves every pending ancestor cached as failed.
-      auto entry = cache.try_emplace(current, std::nullopt).first;
+      auto entry = cache.try_emplace(current).first;
       Attribute attr;
       if (matchPattern(current, m_Constant(&attr))) {
         entry->second = attr;
@@ -72,7 +70,7 @@ valueToConstantAttr(Value value,
       }
       if (operation == nullptr || operation->getNumRegions() != 0 ||
           !isPure(operation)) {
-        return std::nullopt;
+        return {};
       }
     }
     if (nextOperand < operation->getNumOperands()) {
@@ -81,18 +79,18 @@ valueToConstantAttr(Value value,
       if (found == cache.end()) {
         stack.emplace_back(operand, 0);
       } else if (!found->second) {
-        return std::nullopt;
+        return {};
       }
       continue;
     }
 
     operands.clear();
     for (Value operand : operation->getOperands()) {
-      operands.push_back(*cache.lookup(operand));
+      operands.push_back(cache.lookup(operand));
     }
     results.clear();
     if (failed(operation->fold(operands, results)) || results.size() != 1) {
-      return std::nullopt;
+      return {};
     }
     if (auto attr = dyn_cast_if_present<Attribute>(results.front())) {
       cache[current] = attr;
@@ -104,34 +102,32 @@ valueToConstantAttr(Value value,
         continue;
       }
       if (!found->second) {
-        return std::nullopt;
+        return {};
       }
       cache[current] = found->second;
     } else {
-      return std::nullopt;
+      return {};
     }
     stack.pop_back();
   }
   return cache.lookup(value);
 }
 
-std::optional<Attribute> valueToConstantAttr(Value value) {
+Attribute valueToConstantAttr(Value value) {
   if (isa<BlockArgument>(value)) {
-    return std::nullopt;
+    return {};
   }
   Attribute literal;
   if (matchPattern(value, m_Constant(&literal))) {
     return literal;
   }
-  DenseMap<Value, std::optional<Attribute>> cache;
+  // Start small for unary and binary expressions.
+  DenseMap<Value, Attribute> cache(4);
   return valueToConstantAttr(value, cache);
 }
 
 std::optional<double> valueToConstantDouble(Value value) {
-  if (const auto attr = valueToConstantAttr(value)) {
-    return attributeToDouble(*attr);
-  }
-  return std::nullopt;
+  return attributeToDouble(valueToConstantAttr(value));
 }
 
 } // namespace mlir::mqt

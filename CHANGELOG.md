@@ -8,6 +8,15 @@ The format is based on a mixture of [Keep a Changelog] and [Common Changelog].
 This project adheres to [Semantic Versioning], with the exception that minor
 releases may include breaking changes.
 
+## Unreleased
+
+### Changed
+
+- ⚡ Use nullable attributes for C++ constant-folding results and cache entries
+  to reduce storage and remove redundant optional state. Explicit cache callers
+  must use `DenseMap<Value, Attribute>`; rebuild compiled consumers. ([#2776])
+  ([**@burgholzer**])
+
 ## [4.1.1] - 2026-10-13
 
 ### Fixed
@@ -1345,6 +1354,7 @@ for previous changelogs._
 
 <!-- PR links -->
 
+[#2776]: https://github.com/munich-quantum-toolkit/core/pull/2776
 [#2758]: https://github.com/munich-quantum-toolkit/core/pull/2758
 [#2757]: https://github.com/munich-quantum-toolkit/core/pull/2757
 [#2756]: https://github.com/munich-quantum-toolkit/core/pull/2756

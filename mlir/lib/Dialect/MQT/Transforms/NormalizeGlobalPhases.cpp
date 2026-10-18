@@ -180,10 +180,7 @@ private:
     if (const auto constant = valueToDouble(angle)) {
       return constant;
     }
-    if (const auto attribute = valueToConstantAttr(angle, constants_)) {
-      return attributeToDouble(*attribute);
-    }
-    return std::nullopt;
+    return attributeToDouble(valueToConstantAttr(angle, constants_));
   }
 
   [[nodiscard]] std::optional<PhaseContribution>
@@ -381,7 +378,7 @@ private:
 
   RewriterBase& rewriter;
   // Scalar values retain their meaning; each isolated scope owns its cache.
-  DenseMap<Value, std::optional<Attribute>> constants_;
+  DenseMap<Value, Attribute> constants_;
 };
 
 struct NormalizeGlobalPhases final

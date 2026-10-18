@@ -2,7 +2,7 @@
 
 Status: all confirmed findings applied and locally validated. Original baseline:
 `9ca32dd3e4df86fc313eca1c326adbf6ec27b7f9`. Implementation base:
-`056bef24722dd0a1f0813f3f7b4197c10f8eb950`.
+`8ed992b640ccb9bc0936f3929e840330b9dabb65`.
 
 ## Scope and contract
 
@@ -96,7 +96,7 @@ no phases. Existing wire-reordering, modifier-shell, and retained/dropped-phase
 tests cover this path. Keep all preparation stages when synthesis can emit
 phases between them.
 
-## Rejected candidates
+## Constant-folding storage and traversal
 
 PR [#2775](https://github.com/munich-quantum-toolkit/core/pull/2775)
 independently uses an explicit stack for complete constant evaluation. Adopt its
@@ -107,14 +107,35 @@ avoid looking up completed children again. Existing deep/shared and
 dynamic-operand tests also check caller cache reuse. No new test case or helper
 is needed.
 
-A folding-depth cap would reject valid composite-gate exports. Changing or
-removing the public cache-taking overload would break a header API shipped in
-Core 4.0 and 4.1; an adapter solely to reduce cache storage adds needless code.
-MLIR's `OperationFolder` replaces operations and uses; it does not replace this
+Both folding overloads return nullable attributes, and their cache stores the
+same handle. Missing entries are unevaluated; null entries record failure. This
+removes the optional wrapper from stored and returned results. Numeric results
+retain their optional state. The normalizer and OpenQASM exporter use the new
+handle directly; the upgrade guide records the source and ABI migration. One-off
+queries start with a small cache; literal and block-argument queries allocate
+none. Storage and CPU-time measurements justify the choice, including the small
+growth cost for intermediate expressions.
+
+Pauli gate counting reuses its evaluated angle. Bounded entangler emission
+evaluates the angle once after skipping local terms; fixed and unrestricted
+domains do not evaluate it. The known constant also determines whether bounded
+angle reduction is needed, so no separate check or assertion is required.
+Materialize scaled arithmetic only in branches that use it. Bounded constant
+rotations need no temporary scale literal or multiplication before the folded
+angle is emitted.
+
+## Rejected candidates
+
+A folding-depth cap would reject valid composite-gate exports. MLIR's
+`OperationFolder` replaces operations and uses; it does not replace this
 attribute query. Building a complete backward slice would visit operands that
-the first dynamic input makes unnecessary. Remainder-based phase wrapping needs
-new Qiskit expression support. Keep the existing exporter-supported expression
-instead.
+the first dynamic input makes unnecessary. Avoiding the final operand lookup
+would require wider frames or more evaluation state. A cache adapter would
+retain the redundant optional representation without preserving binary
+compatibility. Neither is needed.
+
+Remainder-based phase wrapping needs new Qiskit expression support. Keep the
+existing exporter-supported expression instead.
 
 ## Validation and limits
 

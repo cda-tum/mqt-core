@@ -1,7 +1,7 @@
 # Finite parameters and global phases
 
-Status: complete. Base: upstream main
-`056bef24722dd0a1f0813f3f7b4197c10f8eb950`.
+Status: complete; all findings applied and locally validated. Base: upstream
+main `8ed992b640ccb9bc0936f3929e840330b9dabb65`.
 
 ## Outcome and scope
 
@@ -40,8 +40,17 @@ the two MQT suites have 69 cases instead of 83.
   pass permits input changes on failure; unsupported lowering must preserve the
   normalized IR. Search modifier ancestors once and omit final phase preparation
   when native-only lowering cannot introduce phases.
-- Retain the shipped cache-taking constant-folding API. A storage-only change
-  does not justify breaking callers or adding an adapter.
+- Use nullable attributes for cache entries and folding results. A missing entry
+  is unevaluated, a null entry records failure, and a nonnull entry records a
+  constant. Numeric results retain `std::optional<double>`. Document the source
+  and ABI migration in the upgrade guide; compiled consumers must rebuild.
+- Start one-off expression caches with capacity for four entries. Literals and
+  block arguments bypass allocation. This reduces storage and CPU time for short
+  queries, with a small growth cost for intermediate expressions.
+- Reuse folded angles when counting Pauli entanglers and emitting bounded
+  entanglers. Skip evaluation for local terms and fixed or unrestricted domains
+  during emission. A known constant also selects bounded angle reduction;
+  materialize scaled arithmetic only when the emitted rotation needs it.
 - Keep the explicit evaluation stack: plain recursion exhausts the stack on
   valid deep input, and a depth cap rejects constant-dependent exports. Combine
   PR #2775's scratch-buffer reuse and cache fast path with pending failure
@@ -50,11 +59,12 @@ the two MQT suites have 69 cases instead of 83.
 ## Validation
 
 The final `cmake --build --preset release-clang-ipo` build and
-`ctest --preset release-clang-ipo --parallel 8` run passed 4020 tests, with one
+`ctest --preset release-clang-ipo --parallel 8` run passed 4015 tests, with one
 existing skip (`ScQDMIJobSpecificationTest.QueryJobId`). This is the complete
 configured native suite, including native synthesis. The configuration uses
 Clang 23.1.4, LLVM/MLIR 23.1.0, ThinLTO, and mold on Linux aarch64. This run
-includes the combined folding design and its cache-reuse assertions.
+includes nullable folding results, compact caches, and deferred Pauli angle
+materialization.
 
 The Python command
 
@@ -72,7 +82,7 @@ probes. All four original deep-expression and large-power reproducers passed.
 
 `uvx nox -s lint`, `uvx nox -s cpp-lint`, and `git diff --check` passed. C++
 lint checked every changed implementation/test file in full. No binding
-declarations changed. Implementation and tests are 225 lines smaller. Existing
+declarations changed. Implementation and tests are 229 lines smaller. Existing
 numerical and consumer oracles remain covered.
 
 One-off correctness probes and matched timing experiments live in the ignored
@@ -86,15 +96,24 @@ fell from 280.2 ms to 25.8 ms. The phase-only control and observed allocation
 requests were unchanged within sample spread. Allocation-request counts are not
 peak or resident memory measurements.
 
-Seven matched samples compare the combined folder against `dc29e3716` using the
-same existing direct probe. A 64,000-operation constant chain changed from 49.46
-ms median (47.77–81.74 ms) to 46.85 ms (45.09–52.80 ms); a dynamic chain changed
-from 15.72 ms (15.53–16.34 ms) to 14.54 ms (14.27–14.98 ms). Bare arguments and
-short early exits were unchanged. A dynamic-first query with an unused deep
-branch changed from 6.72 to 6.80 microseconds, within overlapping sample ranges.
-Observed allocation traffic was unchanged. Raw samples, source patches, binary
-hashes, and all controls remain in the local benchmark folder. These routine
-measurements do not establish an application-wide speedup.
+Nullable attributes reduce returned handle size from 16 to 8 bytes. A map of
+100001 entries uses 4,227,072 bytes instead of 6,324,224 bytes, a 33% reduction.
+The small initial capacity uses 132 bytes instead of 1032 bytes for two or four
+entries. These are raw cache-storage measurements, excluding referenced IR,
+attributes, and allocator overhead; they do not measure peak RSS.
+
+Seven matched CPU-time samples compare the compact folder against `7ef355046`.
+The same process evaluates shared, verified IR with three implementations and
+rotates their order. A 64,000-operation constant chain changed from 40.57 ms
+median (40.42–41.12 ms) to 37.19 ms (36.97–37.89 ms); a dynamic chain changed
+from 13.56 ms (13.46–13.63 ms) to 11.74 ms (11.61–12.22 ms). Against nullable
+attributes with default cache capacity, the small initial capacity reduced
+short-query CPU time by 1.3–5.0%, with a 0.4% growth cost at depth 16 and no
+material deep-chain regression. All 126 samples returned the expected result.
+The local `compact-cache/` benchmark folder retains all medians, ranges,
+controls, raw samples, exact sources, and plots. Earlier wall-time results were
+noisy. CPU affinity does not isolate shared hardware; neither experiment
+establishes an application-wide speedup.
 
 ## Limits
 

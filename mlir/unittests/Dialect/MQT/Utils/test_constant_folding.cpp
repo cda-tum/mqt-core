@@ -96,6 +96,7 @@ TEST_F(ConstantFoldingTest, valueToDoubleLiteralConversions) {
 }
 
 TEST_F(ConstantFoldingTest, valueToDoubleWrongType) {
+  EXPECT_FALSE(mlir::mqt::attributeToDouble({}));
   auto op = arith::ConstantOp::create(*builder, builder->getStringAttr("test"));
   EXPECT_FALSE(mlir::mqt::valueToDouble(op.getResult()).has_value());
 }
@@ -163,7 +164,7 @@ TEST_F(ConstantFoldingTest, valueToConstantDoubleSIToFP) {
   EXPECT_DOUBLE_EQ(*stdValue, static_cast<double>(expectedValue));
 }
 
-TEST_F(ConstantFoldingTest, valueToConstantDoubleDynamicOperand) {
+TEST_F(ConstantFoldingTest, valueToConstantAttrDynamicOperand) {
   auto func =
       func::FuncOp::create(*builder, "dyn",
                            FunctionType::get(&context, {builder->getF64Type()},
@@ -178,7 +179,7 @@ TEST_F(ConstantFoldingTest, valueToConstantDoubleDynamicOperand) {
     Value left = dynamicFirst ? dynamic : lhs.getResult();
     Value right = dynamicFirst ? lhs.getResult() : dynamic;
     auto op = arith::SubFOp::create(*builder, left, right);
-    llvm::DenseMap<Value, std::optional<Attribute>> cache;
+    llvm::DenseMap<Value, Attribute> cache;
     EXPECT_FALSE(mlir::mqt::valueToConstantAttr(op.getResult(), cache));
     EXPECT_TRUE(cache.contains(op.getResult()));
     EXPECT_TRUE(cache.contains(dynamic));
@@ -194,7 +195,7 @@ TEST_F(ConstantFoldingTest, valueToConstantAttrFoldFailure) {
   auto rhs =
       arith::ConstantOp::create(*builder, builder->getI32IntegerAttr(32));
   auto op = arith::ShLIOp::create(*builder, lhs, rhs);
-  EXPECT_FALSE(mlir::mqt::valueToConstantAttr(op.getResult()).has_value());
+  EXPECT_FALSE(mlir::mqt::valueToConstantAttr(op.getResult()));
 }
 
 TEST_F(ConstantFoldingTest, valueToConstantAttrMultiResultFold) {
@@ -203,7 +204,7 @@ TEST_F(ConstantFoldingTest, valueToConstantAttrMultiResultFold) {
   auto lhs = arith::ConstantOp::create(*builder, builder->getI32IntegerAttr(1));
   auto rhs = arith::ConstantOp::create(*builder, builder->getI32IntegerAttr(2));
   auto op = arith::AddUIExtendedOp::create(*builder, lhs, rhs);
-  EXPECT_FALSE(mlir::mqt::valueToConstantAttr(op.getSum()).has_value());
+  EXPECT_FALSE(mlir::mqt::valueToConstantAttr(op.getSum()));
 }
 
 TEST_F(ConstantFoldingTest, valueToConstantAttrIdentityFold) {
@@ -214,9 +215,9 @@ TEST_F(ConstantFoldingTest, valueToConstantAttrIdentityFold) {
                                      builder->getF64FloatAttr(expectedValue));
   auto y = arith::ConstantOp::create(*builder, builder->getF64FloatAttr(9.0));
   auto op = arith::SelectOp::create(*builder, cond, x, y);
-  const auto attr = mlir::mqt::valueToConstantAttr(op.getResult());
-  ASSERT_TRUE(attr.has_value());
-  EXPECT_DOUBLE_EQ(*mlir::mqt::attributeToDouble(*attr), expectedValue);
+  auto attr = mlir::mqt::valueToConstantAttr(op.getResult());
+  ASSERT_TRUE(attr);
+  EXPECT_DOUBLE_EQ(*mlir::mqt::attributeToDouble(attr), expectedValue);
 }
 
 TEST_F(ConstantFoldingTest, VerifyFiniteParametersChecksDirectConstants) {
@@ -239,7 +240,7 @@ TEST_F(ConstantFoldingTest, VerifyFiniteParametersChecksDirectConstants) {
                         "index 1 must be finite");
 }
 
-TEST_F(ConstantFoldingTest, valueToConstantDoubleDeepSharedExpressions) {
+TEST_F(ConstantFoldingTest, valueToConstantAttrDeepSharedExpressions) {
   auto func =
       func::FuncOp::create(*builder, "dyn",
                            FunctionType::get(&context, {builder->getF64Type()},
@@ -259,15 +260,15 @@ TEST_F(ConstantFoldingTest, valueToConstantDoubleDeepSharedExpressions) {
     for (int i = 0; i < 64000; ++i) {
       value = arith::AddFOp::create(*builder, value, one);
     }
-    llvm::DenseMap<Value, std::optional<Attribute>> cache;
-    const auto folded = mlir::mqt::valueToConstantAttr(value, cache);
+    llvm::DenseMap<Value, Attribute> cache;
+    auto folded = mlir::mqt::valueToConstantAttr(value, cache);
     EXPECT_TRUE(cache.contains(value));
     EXPECT_EQ(mlir::mqt::valueToConstantAttr(value, cache), folded);
     if (dynamic) {
       EXPECT_FALSE(folded);
     } else {
       ASSERT_TRUE(folded);
-      EXPECT_EQ(mlir::mqt::attributeToDouble(*folded),
+      EXPECT_EQ(mlir::mqt::attributeToDouble(folded),
                 std::ldexp(1.0, 40) + 64000.0);
     }
   }

@@ -4,6 +4,23 @@ This document describes breaking changes and how to upgrade. For a complete list
 of changes including minor and patch releases, please refer to the
 [changelog](CHANGELOG.md).
 
+## Unreleased
+
+### C++ constant-folding helpers
+
+Both `mlir::mqt::valueToConstantAttr` overloads now return `mlir::Attribute`
+instead of `std::optional<mlir::Attribute>`. A null attribute means folding
+failed. Test the handle directly instead of calling `.has_value()`, and pass the
+handle directly instead of dereferencing it.
+
+For the cache-taking overload, replace
+`DenseMap<Value, std::optional<Attribute>>` with `DenseMap<Value, Attribute>`. A
+missing entry is unevaluated, a null entry records failure, and a nonnull entry
+records a constant. Discard the cache when the evaluated IR changes.
+
+Rebuild compiled consumers: the return-type change also changes the C++ ABI. The
+numeric helpers still return `std::optional<double>`. Python APIs are unchanged.
+
 ## [4.1.0]
 
 ### Compilation options and device targets

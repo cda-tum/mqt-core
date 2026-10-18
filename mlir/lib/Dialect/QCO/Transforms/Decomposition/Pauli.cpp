@@ -304,11 +304,11 @@ emitPauliSequence(RewriterBase& rewriter, Location loc, ValueRange inputs,
     globalPhase += synthesized->globalPhase;
   };
   for (const auto& term : sequence.rotations) {
-    auto angle = scaledAngle(term.angleScale);
     if (term.axes[0] == PauliAxis::I || term.axes[1] == PauliAxis::I) {
       const size_t wire = term.axes[0] == PauliAxis::I ? 1 : 0;
-      wires[wire] = synthesizePauliRotation1Q(rewriter, loc, wires[wire],
-                                              term.axes[wire], angle, basis);
+      wires[wire] =
+          synthesizePauliRotation1Q(rewriter, loc, wires[wire], term.axes[wire],
+                                    scaledAngle(term.angleScale), basis);
       continue;
     }
     assert(basis.entangler && "two-qubit synthesis requires an entangler");
@@ -316,20 +316,19 @@ emitPauliSequence(RewriterBase& rewriter, Location loc, ValueRange inputs,
     Value& wire1 = wires[reverse ? 0 : 1];
     const auto axis0 = term.axes[reverse ? 1 : 0];
     const auto axis1 = term.axes[reverse ? 0 : 1];
-    const bool direct = basis.entangler->parameterized() &&
-                        (basis.entangler->angles ==
-                             CompilerTarget::AngleSupport::Unrestricted ||
-                         mqt::valueToConstantDouble(sequence.angle));
-    if (direct) {
+    const auto constant =
+        basis.entangler->angles == CompilerTarget::AngleSupport::ZeroToHalfPi
+            ? mqt::valueToConstantDouble(sequence.angle)
+            : std::nullopt;
+    if (basis.entangler->angles == CompilerTarget::AngleSupport::Unrestricted ||
+        constant) {
       const auto nativeAxes = pauliAxes(basis.entangler->gate);
       auto frame0 = pauliFrame(axis0, nativeAxes[0]);
       auto frame1 = pauliFrame(axis1, nativeAxes[1]);
       auto before0 = frame0.adjoint();
       auto before1 = frame1.adjoint();
-      if (basis.entangler->angles ==
-          CompilerTarget::AngleSupport::ZeroToHalfPi) {
-        const auto constant = mqt::valueToConstantDouble(sequence.angle);
-        assert(constant && "bounded synthesis requires a known angle");
+      Value angle;
+      if (constant) {
         const auto folded = foldPauliAngle(*constant * term.angleScale);
         angle = mqt::constantFromScalar(rewriter, loc, folded.angle);
         globalPhase += folded.phase;
@@ -343,6 +342,8 @@ emitPauliSequence(RewriterBase& rewriter, Location loc, ValueRange inputs,
           before0 = flip * before0;
           frame0 = frame0 * flip;
         }
+      } else {
+        angle = scaledAngle(term.angleScale);
       }
       emitFactor(wire0, before0);
       emitFactor(wire1, before1);
@@ -354,6 +355,7 @@ emitPauliSequence(RewriterBase& rewriter, Location loc, ValueRange inputs,
       emitFactor(wire1, frame1);
       continue;
     }
+    auto angle = scaledAngle(term.angleScale);
     if (basis.entangler->gate == CompilerTarget::GateKind::SQRTISWAP) {
       // S^dagger (I X) S = (I X - Y Z)/sqrt(2). Symmetric RX
       // corrections cancel the local X component, leaving R_YZ(theta).
@@ -555,7 +557,8 @@ emitPauliRotations(RewriterBase& rewriter, Operation* operation,
 std::optional<size_t>
 pauliRotationEntanglerCount(const PauliRotationSequence& sequence,
                             CompilerTarget::Entangler entangler) {
-  if (const auto angle = mqt::valueToConstantDouble(sequence.angle)) {
+  const auto angle = mqt::valueToConstantDouble(sequence.angle);
+  if (angle) {
     for (const auto& term : sequence.rotations) {
       if (term.axes[0] != PauliAxis::I && term.axes[1] != PauliAxis::I) {
         const double value = *angle * term.angleScale;
@@ -571,7 +574,7 @@ pauliRotationEntanglerCount(const PauliRotationSequence& sequence,
   }
   if (entangler.parameterized() &&
       (entangler.angles == CompilerTarget::AngleSupport::Unrestricted ||
-       mqt::valueToConstantDouble(sequence.angle))) {
+       angle)) {
     return 1;
   }
   return 2;

@@ -2102,13 +2102,13 @@ private:
         }
       }
       if (auto power = dyn_cast<PowOp>(operation)) {
-        const auto exponent = mqt::valueToConstantAttr(power.getExponent());
+        auto exponent = mqt::valueToConstantAttr(power.getExponent());
         if (!exponent) {
           std::ignore = fail(power, "powers nested in composite gates require "
                                     "constant exponents");
           return WalkResult::interrupt();
         }
-        exponents.emplace_back(power.getExponent(), *exponent);
+        exponents.emplace_back(power.getExponent(), exponent);
       } else if (auto unitary = dyn_cast<UnitaryOpInterface>(operation)) {
         // Gate parameters are angles; evaluate their scalar dependencies before
         // crossing the generated gate boundary.
