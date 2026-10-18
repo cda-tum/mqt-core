@@ -234,7 +234,7 @@ stream.
 Use the translation API for a `ModuleOp`:
 
 ```cpp
-#include "mqt/Dialect/QC/Translation/TranslateQCToOpenQASM3.h"
+#include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
 
 auto source = mlir::qc::translateQCToOpenQASM3(moduleOp);
 if (mlir::failed(source)) {

@@ -13,7 +13,7 @@
 #include "mqt/Dialect/CBit/IR/CBitAttributes.h"
 #include "mqt/Dialect/CBit/IR/CBitDialect.h"
 #include "mqt/Dialect/CBit/IR/CBitOps.h"
-#include "mqt/Dialect/QC/Translation/TranslateOpenQASMToQC.h"
+#include "mqt/Target/OpenQASM/TranslateOpenQASMToQC.h"
 
 #include "gtest/gtest.h"
 
