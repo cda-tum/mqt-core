@@ -854,12 +854,12 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
   }
   // Debug names must yield to declared registers, regardless of operation
   // order.
-  function.walk([&](mlir::Operation* operation) {
-    if (const auto name = operation->getAttrOfType<mlir::StringAttr>(
+  for (auto& operation : function.getBody().front()) {
+    if (const auto name = operation.getAttrOfType<mlir::StringAttr>(
             mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
       usedNames.insert(name.getValue());
     }
-  });
+  }
   llvm::DenseSet<uint32_t> staticIndices;
   for (auto& operation : function.getBody().front()) {
     if (auto staticQubit = llvm::dyn_cast<mlir::qc::StaticOp>(operation)) {
@@ -3011,7 +3011,10 @@ nb::object exportCircuit(mlir::QCProgram program,
   }
   mlir::RewritePatternSet patterns(moduleOp.getContext());
   mlir::mqt::populateIntegerExpansionPatterns(patterns);
-  // Fold scalar expressions without applying resource or snapshot rewrites.
+  mlir::scf::IfOp::getCanonicalizationPatterns(patterns, moduleOp.getContext());
+  mlir::scf::WhileOp::getCanonicalizationPatterns(patterns,
+                                                  moduleOp.getContext());
+  // Fold scalar control flow without applying resource or snapshot rewrites.
   if (mlir::failed(
           mlir::applyPatternsGreedily(moduleOp, std::move(patterns)))) {
     throw std::runtime_error("failed to normalize arithmetic for Qiskit");

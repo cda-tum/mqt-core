@@ -167,7 +167,7 @@ public:
                 .wasInterrupted();
   }
 
-  [[nodiscard]] FailureOr<std::string> emit() {
+  [[nodiscard]] LogicalResult emit(llvm::raw_ostream& sourceStream) {
     if (failed(preflight()) || failed(collectProgramShape())) {
       return failure();
     }
@@ -193,8 +193,6 @@ public:
     }
     bodyOutput.flush();
 
-    std::string source;
-    llvm::raw_string_ostream sourceStream(source);
     sourceStream << "OPENQASM 3.1;\n"
                     "include \"stdgates.inc\";\n\n";
     emitFixedHelpers(sourceStream);
@@ -202,7 +200,7 @@ public:
       sourceStream << definition << "\n";
     }
     sourceStream << body;
-    return source;
+    return success();
   }
 
 private:
@@ -1355,7 +1353,9 @@ private:
       if (type.empty()) {
         return failExpression(value, "unsupported scalar conversion");
       }
-      return (Twine(type) + "(" + *operand + ")").str();
+      const auto expression = (Twine(type) + "(" + *operand + ")").str();
+      return value.getType().isInteger(1) ? "bool(" + expression + ")"
+                                          : expression;
     }
     if (name == "math.ctpop") {
       auto operand = integer(operation->getOperand(0));
@@ -1395,7 +1395,10 @@ private:
                                            : std::string("true");
       }
       llvm::SmallString<32> text;
-      integer.getValue().toString(text, 10, !bitVectorContext);
+      const bool hexadecimal =
+          bitVectorContext && integer.getValue().getActiveBits() > 64;
+      integer.getValue().toString(text, hexadecimal ? 16 : 10,
+                                  !bitVectorContext, hexadecimal);
       return text.str().str();
     }
     if (auto floating = dyn_cast<FloatAttr>(attribute)) {
@@ -1503,9 +1506,6 @@ private:
                                               const Type resultType) {
     if (resultType.isF64()) {
       return "float";
-    }
-    if (resultType.isInteger(1)) {
-      return "bool";
     }
     if (resultType.isIndex()) {
       return "int";
@@ -2369,19 +2369,19 @@ private:
 
 LogicalResult translateQCToOpenQASM3(ModuleOp moduleOp,
                                      llvm::raw_ostream& output) {
-  auto source = translateQCToOpenQASM3(moduleOp);
-  if (failed(source)) {
-    return failure();
-  }
-  output << *source;
-  return success();
-}
-
-FailureOr<std::string> translateQCToOpenQASM3(ModuleOp moduleOp) {
   if (failed(verify(moduleOp))) {
     return failure();
   }
-  return OpenQASMEmitter(moduleOp).emit();
+  return OpenQASMEmitter(moduleOp).emit(output);
+}
+
+FailureOr<std::string> translateQCToOpenQASM3(ModuleOp moduleOp) {
+  std::string source;
+  llvm::raw_string_ostream stream(source);
+  if (failed(translateQCToOpenQASM3(moduleOp, stream))) {
+    return failure();
+  }
+  return source;
 }
 
 } // namespace mlir::qc

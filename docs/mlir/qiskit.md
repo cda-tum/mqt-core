@@ -200,10 +200,11 @@ input Clbits therefore round trip semantically, but not as loose output bits.
 Conditions and switch targets may read a zero-initialized CBit register. An
 undefined CBit may be read only after a definite write to that bit, and every
 bit of an undefined returned register must be definitely initialized. Branches
-intersect their initialization facts. A while loop's before region executes at
-least once; its after region may execute zero times. The exporter preserves
-scalar values across later writes and control-flow boundaries. Reads wider than
-64 bits remain subject to the snapshot checks.
+intersect their initialization facts after statically resolved control flow is
+simplified. A while loop's before region executes at least once; its after
+region may execute zero times. The exporter preserves scalar values across later
+writes and control-flow boundaries. Reads wider than 64 bits remain subject to
+the snapshot checks.
 
 Each exported measurement must write to one static public CBit in the same
 block. Destinations may be reused; later measurements overwrite earlier values

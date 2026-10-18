@@ -136,7 +136,9 @@ FailureOr<SmallVector<Value>> QCProgramBuilder::LoopBuilder::finish() {
   arith::SelectOp::getCanonicalizationPatterns(patterns, builder_.getContext());
   arith::TruncIOp::getCanonicalizationPatterns(patterns, builder_.getContext());
   SmallVector<Operation*> operations;
-  regionOp_.getRegion().walk([&](Operation* op) { operations.push_back(op); });
+  // The greedy worklist is LIFO: simplify children before their parents.
+  regionOp_.getRegion().walk<WalkOrder::PreOrder>(
+      [&](Operation* op) { operations.push_back(op); });
   if (failed(applyOpPatternsGreedily(operations, std::move(patterns)))) {
     return regionOp_.emitError("cannot canonicalize loop control flow");
   }

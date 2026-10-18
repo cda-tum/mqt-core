@@ -175,7 +175,7 @@ struct GateCall {
 };
 
 using SyntaxStatementId = uint32_t;
-using SyntaxIncludeContextId = size_t;
+using SyntaxIncludeContextId = uint32_t;
 
 struct SyntaxExpression {
   Expr::Kind kind = Expr::Kind::Int;
@@ -321,7 +321,8 @@ struct SyntaxProgram {
   std::vector<SyntaxExpression> expressions;
   std::vector<SyntaxStatement> statements;
   std::vector<SyntaxStatementId> body;
-  /// Expansion-site include context for each statement in `body`.
+  /// Expansion-site include context for each statement in `body`, or empty
+  /// when the program has no custom includes.
   std::vector<std::optional<SyntaxIncludeContextId>> bodyIncludeContexts;
 };
 

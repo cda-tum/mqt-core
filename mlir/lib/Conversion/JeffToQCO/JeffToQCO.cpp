@@ -290,6 +290,26 @@ static Value forwardedRegister(Value value, Block& block, ValueRange inputs,
       argument && argument.getOwner() == &block) {
     return inputs[argument.getArgNumber()];
   }
+  if (auto selection = value.getDefiningOp<jeff::SwitchOp>()) {
+    if (!selection.getSelection().getType().isInteger(1) ||
+        selection.getBranches().size() != 2) {
+      return {};
+    }
+    // Boolean cases are exhaustive. Resolve their common input before
+    // following it into the enclosing region.
+    Value input;
+    const auto resultIndex = cast<OpResult>(value).getResultNumber();
+    for (auto& region : selection.getBranches()) {
+      auto reference = forwardedRegister(
+          region.front().getTerminator()->getOperand(resultIndex),
+          region.front(), selection.getInValues(), rewriter);
+      if (!reference || (input && input != reference)) {
+        return {};
+      }
+      input = reference;
+    }
+    return forwardedRegister(input, block, inputs, rewriter);
+  }
   auto mapped = rewriter.getRemappedValue(value);
   return mapped && isa<cbit::RegisterType>(mapped.getType()) ? mapped : Value{};
 }
