@@ -43,7 +43,7 @@ the two MQT suites have 69 cases instead of 83.
 - Use nullable attributes for cache entries and folding results. A missing entry
   is unevaluated, a null entry records failure, and a nonnull entry records a
   constant. Numeric results retain `std::optional<double>`. Document the source
-  and ABI migration in the upgrade guide; compiled consumers must rebuild.
+  and ABI migration in the PR description; compiled consumers must rebuild.
 - Start one-off expression caches with capacity for four entries. Literals and
   block arguments bypass allocation. This reduces storage and CPU time for short
   queries, with a small growth cost for intermediate expressions.

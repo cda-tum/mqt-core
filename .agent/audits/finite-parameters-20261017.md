@@ -111,10 +111,10 @@ Both folding overloads return nullable attributes, and their cache stores the
 same handle. Missing entries are unevaluated; null entries record failure. This
 removes the optional wrapper from stored and returned results. Numeric results
 retain their optional state. The normalizer and OpenQASM exporter use the new
-handle directly; the upgrade guide records the source and ABI migration. One-off
-queries start with a small cache; literal and block-argument queries allocate
-none. Storage and CPU-time measurements justify the choice, including the small
-growth cost for intermediate expressions.
+handle directly; the PR description records the source and ABI migration.
+One-off queries start with a small cache; literal and block-argument queries
+allocate none. Storage and CPU-time measurements justify the choice, including
+the small growth cost for intermediate expressions.
 
 Pauli gate counting reuses its evaluated angle. Bounded entangler emission
 evaluates the angle once after skipping local terms; fixed and unrestricted
