@@ -97,11 +97,11 @@ explains the measured phase, continued fractions, and verified factor recovery.
 
 ## Development
 
-Source builds require a C++20 compiler and CMake 3.28 or newer. Building the
-compiler collection also requires
-[LLVM/MLIR 23.1 or newer](https://mqt.readthedocs.io/projects/core/en/stable/installation.html#setting-up-mlir).
-Prebuilt Python wheels include the compiler and simulator. Graphviz is optional
-for exporting DD visualizations.
+Source builds require a C++20 compiler and CMake 3.28 or newer. CMake reuses an
+installed
+[LLVM/MLIR 23.1 SDK](https://mqt.readthedocs.io/projects/core/en/stable/installation.html#setting-up-mlir)
+or downloads one into the build directory. Prebuilt Python wheels include the
+compiler and simulator. Graphviz is optional for exporting DD visualizations.
 
 See the
 [contribution guide](https://mqt.readthedocs.io/projects/core/en/stable/contributing.html)

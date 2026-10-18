@@ -292,13 +292,10 @@ repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg 
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux_*"
 config-settings = { "cmake.define.CMAKE_LINKER_TYPE" = "LLD" }
-environment = { CC = "clang", CXX = "clang++", PATH = "/opt/clang/bin:$PATH:/root/.local/bin", MLIR_DIR = "/opt/llvm-23.1.2/lib/cmake/mlir" }
+environment = { CC = "clang", CXX = "clang++", PATH = "/opt/clang/bin:$PATH:/root/.local/bin" }
 before-all = """
 manylinux-install-clang -v 22.1.8.1
 uv tool install "sccache>=0.10.0"
-mkdir -p /tmp/setup-mlir
-curl -fLsS https://github.com/munich-quantum-software/setup-mlir/archive/8d3eae73d0f0196fd30c787d91ebd2018cb6c709.tar.gz | tar -xz -C /tmp/setup-mlir --strip-components=1
-bash /tmp/setup-mlir/installation/setup-mlir.sh -v 23.1.2 -p /opt/llvm-23.1.2 -a OFF
 """
 before-test = "uvx sccache --show-stats"
 # QIR-Runner's Linux wheels require a newer glibc than the manylinux_2_28
