@@ -1,6 +1,6 @@
 # Native entangler selection and symbolic square-root iSWAP
 
-Status: complete. Base: `8ed992b640ccb9bc0936f3929e840330b9dabb65`; PR #2775.
+Status: complete. Base: `470094596af808df39cd25563377534bd44c2129`; PR #2775.
 
 ## Scope and decisions
 
@@ -13,9 +13,9 @@ ordered placements, deterministic ties, and existing native operations.
   usable on every coupling. Keep its existing single-qubit basis and default
   entangler API. Use the widest supported angle domain for each gate.
 - `NativeCostAnalysis` owns selection for routing, individual synthesis, and
-  constant-run fusion. Choose the cheapest supported homogeneous recipe; keep
-  the established preference order on ties. This does not search circuits that
-  mix entangler families or optimize hardware duration or error.
+  constant or symbolic fusion. Choose the cheapest supported homogeneous recipe
+  and keep the established preference order on ties. This does not search
+  circuits that mix entangler families or optimize hardware duration or error.
 - Cache validated Weyl coordinates by matrix and seed, independent of the
   entangler. Keep failure entries and operand orientations distinct. Full
   synthesis still validates construction of native factors.
@@ -33,6 +33,10 @@ ordered placements, deterministic ties, and existing native operations.
 - Classify symbolic angles once across entangler candidates. Represent
   `XXPlusYY(theta, 0)` and `XXMinusYY(theta, 0)` as two commuting scaled Pauli
   terms and share their pair emission with fused runs.
+- Share the counts-based selector with grouped fusion. Keep coordinate counting
+  behind validated Weyl decomposition; do not add matrix-count or forwarding
+  wrappers without production callers. Preserve numerical failure coverage in
+  the native-cost analysis tests.
 - Bound Qiskit parameter expressions at 32,768 expanded nodes and 64 levels.
   Measure ordinary short fusion runs; do not introduce a symbolic algebra
   subsystem or a gate-specific export threshold. Qiskit binding still grows
@@ -64,11 +68,35 @@ correctness issue. Hosted CI is separate from local validation.
 
 ## Performance evidence and limits
 
+Against upstream `8ed992b64`, full `compileForTarget` measurements on 224-gate,
+eight-qubit circuits kept single-family CPU time within about 1%. Mixed-family
+selection reduced Haar-circuit entanglers from 672 to 497 and local gates from
+1,352 to 1,002, with CPU time falling from 37.89 to 36.49 ms. A repeated-matrix
+workload fell from 30.02 to 27.82 ms. Routed square-root iSWAP compilation fell
+from 13.74 to 12.47 ms with unchanged gate counts. Peak RSS changed by less than
+0.3 MiB. All 32 full-output matrix checks passed, with maximum entry error below
+`1.9e-13`.
+
+Comparing both operand orientations has a cost when it cannot reduce gates. Ten
+alternating rounds on directed two-CZ blocks measured 32.19 to 33.28 ms (3.45%
+median paired overhead), with identical output counts. The undirected control
+changed by 0.11%. Keep orientation validation and the final emitted-count
+benefit check; neither warrants a separate fast path.
+
+These local measurements use ARM64, Clang 23, release ThinLTO, and CPU affinity,
+not reserved cores. The pipeline benchmark excludes parsing, source copying,
+target creation, and export. Exact upstream sources rebuilt the affected
+libraries against the same unchanged dependencies and generated headers. The
+measured branch was `e27841d79`, before removing unused APIs and sharing the
+counts selector with symbolic fusion.
+
 Five alternating rounds pinned to one CPU checked 12,000 reconstructed native
 circuits. Reusing cold Weyl results reduced full-selection CPU time by 22–46%.
 Count-first fusion rejection reduced it by 50–74% and avoided factor
 allocations; only the initial 18,944-byte coordinate cache remains. Warm
-full-selection cost stayed within 3%, and warm paths allocated nothing.
+full-selection cost stayed within 3%, and warm paths allocated nothing. These
+routine comparisons use the implementation before cold-result reuse as their
+baseline, not upstream main.
 
 For 1,000 symbolic selections over nine families, classifying once reduced CPU
 time from 14.08 to 2.06 ms at expression depth 8 and from 97.84 to 11.36 ms at

@@ -292,11 +292,14 @@ TEST(WeylDecompositionStandalone, SeededNumericalRetriesReconstructUnitary) {
         TwoQubitWeylDecomposition::create(unitary, std::nullopt, seed);
     ASSERT_TRUE(repeated);
     EXPECT_EQ(result->k1l().data, repeated->k1l().data);
+    const auto canonical =
+        TwoQubitWeylDecomposition::create(unitary, WEYL_DEFAULT_FIDELITY, seed);
+    ASSERT_TRUE(canonical);
     for (auto gate :
          {CompilerTarget::GateKind::CZ, CompilerTarget::GateKind::SQRTISWAP}) {
       const auto native = decomposeUnitary2QWeyl(unitary, {.gate = gate}, seed);
       ASSERT_TRUE(native);
-      EXPECT_EQ(countUnitary2QWeyl(unitary, {.gate = gate}, seed),
+      EXPECT_EQ(countUnitary2QWeyl(canonical->coordinates(), {.gate = gate}),
                 native->numBasisUses);
       const auto entangler =
           gate == CompilerTarget::GateKind::CZ
@@ -340,7 +343,6 @@ TEST(WeylDecompositionStandalone, NearUnitaryNonconvergenceReturnsFailure) {
            },
        }) {
     EXPECT_FALSE(decomposeUnitary2QWeyl(target, entangler));
-    EXPECT_FALSE(countUnitary2QWeyl(target, entangler));
   }
 }
 
@@ -364,7 +366,6 @@ TEST(WeylDecompositionStandalone,
            },
        }) {
     EXPECT_FALSE(decomposeUnitary2QWeyl(target, entangler));
-    EXPECT_FALSE(countUnitary2QWeyl(target, entangler));
   }
 }
 
@@ -726,8 +727,6 @@ TEST(WeylSynthesisTest, CountsMatchNativeDecomposition) {
       ASSERT_TRUE(kak);
       const auto native = decomposeUnitary2QWeyl(target, {.gate = entangler});
       ASSERT_TRUE(native);
-      EXPECT_EQ(countUnitary2QWeyl(target, {.gate = entangler}),
-                native->numBasisUses);
       EXPECT_EQ(countUnitary2QWeyl(kak->coordinates(), {.gate = entangler}),
                 native->numBasisUses);
       if (coordinates == 0) {
@@ -799,15 +798,18 @@ TEST(SqrtISwap, ChamberGridWithLocalFactorsAndPhase) {
             static_cast<uint64_t>(a));
         SCOPED_TRACE(::testing::Message() << a << "," << b << "," << c);
         ASSERT_TRUE(result.has_value());
+        const auto canonical = TwoQubitWeylDecomposition::create(
+            target, WEYL_DEFAULT_FIDELITY, static_cast<uint64_t>(a));
+        ASSERT_TRUE(canonical);
         const int expected = a == 0                                         ? 0
                              : (a == steps / 2 && b == steps / 2 && c == 0) ? 1
                              : a >= b + std::abs(c)                         ? 2
                                                                             : 3;
         EXPECT_EQ(result->numBasisUses, expected);
-        EXPECT_EQ(countUnitary2QWeyl(
-                      target, {.gate = CompilerTarget::GateKind::SQRTISWAP},
-                      static_cast<uint64_t>(a)),
-                  expected);
+        EXPECT_EQ(
+            countUnitary2QWeyl(canonical->coordinates(),
+                               {.gate = CompilerTarget::GateKind::SQRTISWAP}),
+            expected);
         EXPECT_TRUE(reconstructSqrtISwap(*result).isApprox(target, 1e-8));
       }
     }
@@ -836,9 +838,13 @@ TEST(SqrtISwap, NearChamberBoundaries) {
                    << coordinates[0] << "," << coordinates[1] << ","
                    << coordinates[2] << " eps=" << epsilon);
       ASSERT_TRUE(result.has_value());
-      EXPECT_EQ(countUnitary2QWeyl(
-                    target, {.gate = CompilerTarget::GateKind::SQRTISWAP}),
-                result->numBasisUses);
+      const auto canonical =
+          TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY);
+      ASSERT_TRUE(canonical);
+      EXPECT_EQ(
+          countUnitary2QWeyl(canonical->coordinates(),
+                             {.gate = CompilerTarget::GateKind::SQRTISWAP}),
+          result->numBasisUses);
       const auto overlap =
           (target.adjoint() * reconstructSqrtISwap(*result)).trace();
       EXPECT_GE(traceToFidelity(overlap), WEYL_DEFAULT_FIDELITY - 2e-15);
@@ -880,10 +886,13 @@ TEST(SqrtISwap, RandomInteractionsAndLocalFactors) {
         target, {.gate = CompilerTarget::GateKind::SQRTISWAP});
     SCOPED_TRACE(i);
     ASSERT_TRUE(result.has_value());
+    const auto canonical =
+        TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY);
+    ASSERT_TRUE(canonical);
     EXPECT_EQ(result->numBasisUses,
               coordinates[0] >= coordinates[1] + std::abs(coordinates[2]) ? 2
                                                                           : 3);
-    EXPECT_EQ(countUnitary2QWeyl(target,
+    EXPECT_EQ(countUnitary2QWeyl(canonical->coordinates(),
                                  {.gate = CompilerTarget::GateKind::SQRTISWAP}),
               result->numBasisUses);
     EXPECT_TRUE(reconstructSqrtISwap(*result).isApprox(target, 1e-9));

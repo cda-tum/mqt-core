@@ -1010,17 +1010,6 @@ decomposeUnitary2QWeyl(const TwoQubitWeylDecomposition& target,
       .twoQubitDecompose(target, std::nullopt);
 }
 
-std::optional<uint8_t> countUnitary2QWeyl(const Matrix4x4& target,
-                                          CompilerTarget::Entangler entangler,
-                                          uint64_t seed) {
-  const auto kak =
-      TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY, seed);
-  if (!kak) {
-    return std::nullopt;
-  }
-  return countUnitary2QWeyl(kak->coordinates(), entangler);
-}
-
 uint8_t countUnitary2QWeyl(std::array<double, 3> coordinates,
                            CompilerTarget::Entangler entangler) {
   if (entangler.parameterized()) {

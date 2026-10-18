@@ -789,12 +789,8 @@ NativeCostAnalysis::select(const Matrix4x4& matrix,
 }
 
 std::optional<NativeCostAnalysis::Selection>
-NativeCostAnalysis::select(const decomposition::PauliRotationSequence& sequence,
+NativeCostAnalysis::select(decomposition::PauliRotationCounts rotations,
                            const CompilerTarget& target, Sites sites) {
-  const auto counts = decomposition::countPauliRotations(sequence);
-  if (!counts) {
-    return std::nullopt;
-  }
   std::optional<Selection> best;
   for (const auto entangler : target.synthesisEntanglers()) {
     const auto reverse = entanglerOrientation(target, entangler, sites);
@@ -802,7 +798,7 @@ NativeCostAnalysis::select(const decomposition::PauliRotationSequence& sequence,
       continue;
     }
     const auto count =
-        decomposition::pauliRotationEntanglerCount(*counts, entangler);
+        decomposition::pauliRotationEntanglerCount(rotations, entangler);
     if (!best || count < best->count) {
       best = Selection{
           .entangler = entangler,
@@ -860,7 +856,9 @@ NativeCostAnalysis::operationCost(UnitaryOpInterface operation,
     return std::nullopt;
   }
   if (const auto sequence = decomposition::getPauliRotations(operation)) {
-    if (const auto choice = select(*sequence, target, sites)) {
+    const auto counts = decomposition::countPauliRotations(*sequence);
+    if (const auto choice =
+            counts ? select(*counts, target, sites) : std::nullopt) {
       return choice->count;
     }
   }
@@ -1199,7 +1197,9 @@ static LogicalResult synthesizeTargetOperation(
     return unsupported("the target has no usable two-qubit entangler");
   }
   if (const auto sequence = decomposition::getPauliRotations(operation)) {
-    if (const auto choice = analysis.select(*sequence, target, sites)) {
+    const auto counts = decomposition::countPauliRotations(*sequence);
+    if (const auto choice =
+            counts ? analysis.select(*counts, target, sites) : std::nullopt) {
       basis->entangler = choice->entangler;
       rewriter.replaceOp(operation, decomposition::emitPauliRotations(
                                         rewriter, operation, *sequence, *basis,

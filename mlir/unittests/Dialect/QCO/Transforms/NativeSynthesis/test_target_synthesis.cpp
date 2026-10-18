@@ -1130,9 +1130,14 @@ TEST_F(TargetSynthesisTest, NativeCachesPreserveDecompositionsAfterEviction) {
       matrix(3, 3) = std::polar(1.0, static_cast<double>((i / 2) % 73) * 0.031);
       if (i % 31 == 0) {
         matrix(0, 3) = 4e-11;
+      } else if (i % 31 == 1) {
+        matrix(0, 0) += 4e-11;
       }
       const auto expectedCount =
           decomposeUnitary2QWeyl(matrix, {.gate = Target::GateKind::CX}, seed);
+      if (i < 2) {
+        EXPECT_FALSE(expectedCount);
+      }
       EXPECT_EQ(analysis.matrixCost(matrix, target, sites),
                 expectedCount
                     ? std::optional<size_t>(expectedCount->numBasisUses)
@@ -2769,9 +2774,7 @@ TEST_F(TargetSynthesisTest, ParameterizedEntanglersUseCartanAngles) {
       const auto& native =
           analysis.decompose(matrix, *target.synthesisBasis()->entangler);
       ASSERT_TRUE(native);
-      EXPECT_EQ(mlir::qco::decomposition::countUnitary2QWeyl(
-                    matrix, *target.synthesisBasis()->entangler),
-                native->numBasisUses);
+      EXPECT_EQ(native->numBasisUses, count);
       EXPECT_TRUE(
           mlir::qco::decomposition::unitaryMatrix(*native, primitive)
               .isApprox(matrix, mlir::qco::decomposition::WEYL_TOLERANCE));

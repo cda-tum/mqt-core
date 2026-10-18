@@ -926,31 +926,18 @@ fusePauliRotationRun(PatternRewriter& rewriter, Operation* head,
             });
           })),
   };
-  size_t bestCost = separateCost;
-  bool reverse = false;
-  bool shared = false;
-  for (const auto entangler : target.synthesisEntanglers()) {
-    const auto orientation =
-        NativeCostAnalysis::entanglerOrientation(target, entangler, sites);
-    if (!orientation) {
-      continue;
-    }
-    const size_t cost = pauliRotationEntanglerCount(counts, entangler);
-    const bool candidateShared =
-        counts.entangling >= 2 &&
-        (!entangler.parameterized() ||
-         (entangler.angles != CompilerTarget::AngleSupport::Unrestricted &&
-          counts.constant < counts.entangling));
-    if (cost < bestCost) {
-      bestCost = cost;
-      basis.entangler = entangler;
-      reverse = *orientation;
-      shared = candidateShared;
-    }
-  }
-  if (bestCost == separateCost) {
+  const auto choice = analysis.select(counts, target, sites);
+  if (!choice || choice->count >= separateCost) {
     return failure();
   }
+  const auto entangler = choice->entangler;
+  basis.entangler = entangler;
+  const bool reverse = choice->reverse;
+  const bool shared =
+      counts.entangling >= 2 &&
+      (!entangler.parameterized() ||
+       (entangler.angles != CompilerTarget::AngleSupport::Unrestricted &&
+        counts.constant < counts.entangling));
   const bool sqrtPair =
       shared && basis.entangler->gate == CompilerTarget::GateKind::SQRTISWAP;
   for (auto* operation : operations) {

@@ -237,10 +237,6 @@ public:
   ///
   /// Coordinates must come from a successful Weyl decomposition.
   [[nodiscard]] uint8_t numBasisGates(std::array<double, 3> coordinates) const;
-  [[nodiscard]] uint8_t
-  numBasisGates(const TwoQubitWeylDecomposition& target) const {
-    return numBasisGates(target.coordinates());
-  }
 
   /// Decomposes @p targetUnitary using this cached basis decomposer.
   ///
@@ -394,15 +390,6 @@ decomposeUnitary2QWeyl(const Matrix4x4& target,
 decomposeUnitary2QWeyl(const TwoQubitWeylDecomposition& target,
                        CompilerTarget::Entangler entangler,
                        uint64_t seed = 2023);
-
-/// Returns the entangler count selected from the target's Weyl decomposition
-/// without constructing a native circuit, or `std::nullopt` if that
-/// decomposition fails.
-///
-/// Requires the same supported entangler as @ref decomposeUnitary2QWeyl.
-[[nodiscard]] std::optional<uint8_t>
-countUnitary2QWeyl(const Matrix4x4& target, CompilerTarget::Entangler entangler,
-                   uint64_t seed = 2023);
 
 /// Counts entanglers from validated, specialized Weyl coordinates.
 ///

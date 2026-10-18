@@ -207,7 +207,8 @@ TwoQubitBasisDecomposer::twoQubitDecompose(
     const TwoQubitWeylDecomposition& targetDecomposition,
     std::optional<std::uint8_t> numBasisGateUses) const {
   const auto bestNbasis =
-      numBasisGateUses ? *numBasisGateUses : numBasisGates(targetDecomposition);
+      numBasisGateUses ? *numBasisGateUses
+                       : numBasisGates(targetDecomposition.coordinates());
   if (bestNbasis > (isSuperControlled ? 3 : 1)) {
     return std::nullopt;
   }

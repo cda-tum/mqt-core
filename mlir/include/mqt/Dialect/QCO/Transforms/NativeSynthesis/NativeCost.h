@@ -32,7 +32,7 @@ namespace mlir::qco {
 
 class UnitaryOpInterface;
 namespace decomposition {
-struct PauliRotationSequence;
+struct PauliRotationCounts;
 } // namespace decomposition
 
 /// Immutable Weyl coordinates prepared once before routing trials.
@@ -111,7 +111,7 @@ public:
   [[nodiscard]] std::optional<Selection>
   select(const Matrix4x4& matrix, const CompilerTarget& target, Sites sites);
   [[nodiscard]] static std::optional<Selection>
-  select(const decomposition::PauliRotationSequence& sequence,
+  select(decomposition::PauliRotationCounts rotations,
          const CompilerTarget& target, Sites sites);
 
   /// Construct the cheapest supported recipe, trying the next on failure.
