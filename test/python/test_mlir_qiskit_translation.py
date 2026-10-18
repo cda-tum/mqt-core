@@ -4928,11 +4928,15 @@ result = measure flag;
     assert circuit.cregs[-1].name == "result"
 
 
-def test_empty_named_qubit_register_export_is_rejected() -> None:
-    """Diagnose an empty register before arranging named and anonymous qubits."""
+@pytest.mark.parametrize(
+    ("size", "name", "error"),
+    [(0, "empty", "does not support empty quantum registers"), (1, r"\FF", "register names must be UTF-8")],
+)
+def test_invalid_named_qubit_register_export_is_rejected(size: int, name: str, error: str) -> None:
+    """Reject invalid registers before entering native Qiskit constructors."""
     program = _single_qubit_program([
-        '%empty = memref.alloc() {mqt.register_name = "empty"} : memref<0x!qc.qubit>',
-        "memref.dealloc %empty : memref<0x!qc.qubit>",
+        f'%reg = memref.alloc() {{mqt.register_name = "{name}"}} : memref<{size}x!qc.qubit>',
+        f"memref.dealloc %reg : memref<{size}x!qc.qubit>",
     ])
-    with pytest.raises(RuntimeError, match="does not support empty quantum registers"):
+    with pytest.raises(RuntimeError, match=error):
         program.to_qiskit()

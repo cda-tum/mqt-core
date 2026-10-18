@@ -252,9 +252,13 @@ accepts versions in the registered {code}`>=2.5.0,<2.7.0` range and verifies the
 native API version before reading a circuit.
 
 Qiskit 2.6 uses borrowed C API instruction views and reads numeric gate
-parameters and global phases natively. Symbolic expressions retain the Python
-fallback because the C API does not expose their expression trees or parameter
-identities. Custom Python gates and classical expressions also retain their
-Python fallbacks. The new native custom-operation API defines operations; it
-does not inspect existing Python gate definitions. Delay instructions remain
-unsupported because the compiler does not represent their timing semantics.
+parameters and global phases natively. Both adapters construct circuits,
+registers, and empty control-flow blocks through the C API. Tuple conditions
+become C++ equality trees directly; their public Python values remain
+authoritative because native conditions can be stale after a condition edit.
+Symbolic expressions retain the Python fallback because the C API does not
+expose their expression trees or parameter identities. Custom Python gates and
+classical expressions also retain their Python fallbacks. The new native
+custom-operation API defines operations; it does not inspect existing Python
+gate definitions. Delay instructions remain unsupported because the compiler
+does not represent their timing semantics.

@@ -11,6 +11,7 @@
 #include "QiskitTranslation.h"
 
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/JSON.h"
 
 #include <cstdint>
 #include <stdexcept>
@@ -43,6 +44,11 @@ uint32_t validateRegisterLayout(const std::vector<Register>& registers,
                                 const std::string_view kind) {
   llvm::StringSet<> names;
   for (const auto& reg : registers) {
+    if (reg.name.find('\0') != std::string::npos ||
+        !llvm::json::isUTF8(reg.name)) {
+      throw std::runtime_error(
+          "Qiskit register names must be UTF-8 without null characters");
+    }
     if (reg.name.empty() || !names.insert(reg.name).second) {
       throw std::runtime_error("Qiskit requires unique, non-empty " +
                                std::string(kind) + " register names");

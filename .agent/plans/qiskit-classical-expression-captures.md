@@ -26,10 +26,9 @@ Qiskit control-flow operations during export.
   `scf.index_switch`, while the parent scalar-symbol commit adds the independent
   parameter work.
 
-- Qiskit 2.5 native switch-target accessors are not safe for an
-  expression-valued target. The public Python `SwitchCaseOp.target` expression
-  tree must be used for that case. Evidence: the earlier implementation records
-  that the native C accessors abort when the target is an expression.
+- Qiskit 2.5 and 2.6 expose native switch-expression accessors, but their
+  expression API lacks variable identities and arbitrary-width integer access.
+  The public Python `SwitchCaseOp.target` supplies the complete expression.
 
 - `CircuitInstruction.clbits` contains the bits passed to the control-flow
   blocks, not every bit read by the condition or switch target. An explicit body

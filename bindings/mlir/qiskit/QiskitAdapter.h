@@ -1340,6 +1340,19 @@ private:
 
 using ClassicalBitResolver = llvm::function_ref<uint32_t(nb::handle)>;
 
+[[nodiscard]] static Register
+pythonRegister(const nb::handle reg, const ClassicalBitResolver& resolveBit) {
+  Register result{
+      .name = pythonStringAttribute(reg, "name",
+                                    "Qiskit classical register has no name"),
+  };
+  result.bits.reserve(nb::len(reg));
+  for (const nb::handle bit : nb::iter(reg)) {
+    result.bits.push_back(resolveBit(bit));
+  }
+  return result;
+}
+
 static void setPythonExpressionType(Expression& result,
                                     const nb::handle pythonExpression) {
   const auto type = pythonAttribute(pythonExpression, "type",
@@ -1441,12 +1454,7 @@ static void normalizePythonVariable(Expression& result,
           "Qiskit classical-register variable has an invalid type");
     }
     result.kind = ExpressionKind::ClassicalRegister;
-    result.reg.name = pythonStringAttribute(
-        variable, "name", "Qiskit classical register has no name");
-    result.reg.bits.reserve(nb::len(variable));
-    for (const nb::handle bit : nb::iter(variable)) {
-      result.reg.bits.push_back(resolveBit(bit));
-    }
+    result.reg = pythonRegister(variable, resolveBit);
     return;
   }
   if (!nb::isinstance(variable, nb::module_::import_("uuid").attr("UUID"))) {
@@ -1580,12 +1588,7 @@ normalizePythonTarget(const nb::handle target,
           "Qiskit classical targets require between 1 and 64 bits");
     }
     result.kind = ClassicalTargetKind::ClassicalRegister;
-    result.reg.name = pythonStringAttribute(
-        target, "name", "Qiskit classical target register has no name");
-    result.reg.bits.reserve(size);
-    for (const nb::handle bit : nb::iter(target)) {
-      result.reg.bits.push_back(resolveBit(bit));
-    }
+    result.reg = pythonRegister(target, resolveBit);
     result.width = static_cast<uint32_t>(size);
     return result;
   }
@@ -1694,44 +1697,59 @@ public:
   }
 
   [[nodiscard]] ClassicalTarget condition() const override {
+    // Native conditions can be stale after a public Python condition edit.
     const auto condition = pythonAttribute(
         operation_, "condition", "Qiskit control flow has no condition");
-    const auto expressionModule =
-        nb::module_::import_("qiskit.circuit.classical.expr");
-    if (nb::isinstance(condition, expressionModule.attr("Expr"))) {
+    if (!nb::isinstance<nb::tuple>(condition)) {
       return normalizePythonTarget(condition);
     }
-
-    if (!nb::isinstance<nb::tuple>(condition) || nb::len(condition) != 2U) {
+    if (nb::len(condition) != 2U) {
       throw std::runtime_error("Qiskit control-flow condition has an invalid "
                                "shape");
     }
-    const auto expected = pythonUnsignedValue(
+    auto expected = pythonUnsignedValue(
         condition[1], std::numeric_limits<uint32_t>::max(),
         "Qiskit control-flow condition has an invalid value");
-    auto result =
-        normalizePythonTarget(expressionModule.attr("lift")(condition[0]));
-    const auto& target = *result.expression;
-    if (target.kind == ExpressionKind::ClassicalBit) {
+    const auto operand = nb::borrow<nb::object>(condition[0]);
+    ClassicalTarget result{
+        .kind = ClassicalTargetKind::Expression,
+        .expression = std::make_unique<Expression>(),
+    };
+    auto target = std::make_unique<Expression>();
+    auto value = std::make_unique<Expression>();
+    const auto circuitModule = nb::module_::import_("qiskit.circuit");
+    if (nb::isinstance(operand, circuitModule.attr("Clbit"))) {
       if (expected.getActiveBits() > 1U) {
         throw std::runtime_error(
             "Qiskit classical-bit condition must compare against zero or one");
       }
-      return normalizePythonTarget(expressionModule.attr("equal")(
-          condition[0], nb::bool_(!expected.isZero())));
-    }
-    if (target.kind == ExpressionKind::ClassicalRegister) {
-      if (expected.getActiveBits() > target.reg.bits.size()) {
-        return normalizePythonTarget(
-            expressionModule.attr("lift")(nb::bool_(false)));
+      target->kind = ExpressionKind::ClassicalBit;
+      target->bit = rootClbitIndex(operand);
+      value->boolValue = !expected.isZero();
+    } else if (nb::isinstance(operand,
+                              circuitModule.attr("ClassicalRegister"))) {
+      const auto width = nb::len(operand);
+      if (width == 0U || width > std::numeric_limits<uint32_t>::max()) {
+        throw std::runtime_error(
+            "Qiskit classical register has an invalid width");
       }
-      return normalizePythonTarget(expressionModule.attr("equal")(
-          condition[0],
-          pythonInteger(expected,
-                        "Qiskit control-flow condition has an invalid value")));
+      target->kind = ExpressionKind::ClassicalRegister;
+      target->reg = pythonRegister(
+          operand, [&](const nb::handle bit) { return rootClbitIndex(bit); });
+      if (expected.getActiveBits() > width) {
+        return result;
+      }
+      target->type = value->type = ClassicalType::Uint;
+      target->width = value->width = static_cast<uint32_t>(width);
+      value->uintValue = std::move(expected);
+    } else {
+      throw std::runtime_error("Qiskit control flow has an unknown condition "
+                               "target");
     }
-    throw std::runtime_error("Qiskit control flow has an unknown condition "
-                             "target");
+    result.expression->kind = ExpressionKind::Binary;
+    result.expression->left = std::move(target);
+    result.expression->right = std::move(value);
+    return result;
   }
 
   [[nodiscard]] Loop loop() const override {
@@ -1776,7 +1794,7 @@ public:
   }
 
   [[nodiscard]] ClassicalTarget switchTarget() const override {
-    // Qiskit 2.5's native switch-target accessors abort for expressions.
+    // The C API does not expose expression-variable identities or wide values.
     return normalizePythonTarget(
         pythonAttribute(operation_, "target", "Qiskit switch has no target"));
   }
@@ -2238,52 +2256,48 @@ public:
                       std::shared_ptr<OutputParameters> parameters,
                       std::shared_ptr<NativeGateRegistry> gates,
                       const mlir::CompilerTarget* target)
-      : NativeCircuitWriter(
-            nb::module_::import_("qiskit.circuit").attr("QuantumCircuit")(),
-            std::move(parameters), std::move(gates), {}, target) {
-    const auto circuitModule = nb::module_::import_("qiskit.circuit");
-    nb::list bits;
-    for (uint32_t i = 0; i < looseQubits; ++i) {
-      bits.append(circuitModule.attr("Qubit")());
-    }
-    for (uint32_t i = 0; i < looseClbits; ++i) {
-      bits.append(circuitModule.attr("Clbit")());
-    }
-    pythonCircuit_.attr("add_bits")(bits);
-  }
+      : NativeCircuitWriter(qk_circuit_new(looseQubits, looseClbits),
+                            std::move(parameters), std::move(gates), {},
+                            target) {}
 
-  NativeCircuitWriter(nb::object circuit,
+  NativeCircuitWriter(QkCircuit* circuit,
                       std::shared_ptr<OutputParameters> parameters,
                       std::shared_ptr<NativeGateRegistry> gates,
                       PythonVariables variables,
                       const mlir::CompilerTarget* target)
-      : pythonCircuit_(std::move(circuit)), data_(pythonCircuit_.attr("_data")),
-        circuit_(qk_circuit_borrow_from_python(data_.ptr())),
+      : data_(nb::steal<nb::object>(qk_circuit_to_python(circuit))),
         variables_(std::move(variables)), parameters_(std::move(parameters)),
         gates_(std::move(gates)), target_(target) {
+    if (!data_.is_valid()) {
+      throwPythonError("Qiskit failed to construct output CircuitData");
+    }
+    // Keep Python's generated circuit names; to_python_full uses "unnamed".
+    pythonCircuit_ =
+        nb::module_::import_("qiskit.circuit").attr("QuantumCircuit")();
+    pythonCircuit_.attr("_data") = data_;
+    circuit_ = qk_circuit_borrow_from_python(data_.ptr());
     if (circuit_ == nullptr) {
       throwPythonError("Qiskit rejected output CircuitData");
     }
   }
 
   [[nodiscard]] std::unique_ptr<CircuitWriter> createBlock() const override {
-    auto block =
-        pythonCircuit_.attr("copy_empty_like")(nb::arg("vars_mode") = "drop");
-    return std::make_unique<NativeCircuitWriter>(std::move(block), parameters_,
-                                                 gates_, variables_, target_);
+    return std::make_unique<NativeCircuitWriter>(
+        qk_circuit_copy_empty_like(circuit_, QkVarsMode_Drop,
+                                   QkBlocksMode_Drop),
+        parameters_, gates_, variables_, target_);
   }
 
   void addQuantumRegister(std::string_view name, uint32_t size) override {
-    pythonCircuit_.attr("add_register")(
-        nb::module_::import_("qiskit.circuit")
-            .attr("QuantumRegister")(size, nb::str(name.data(), name.size())));
+    auto* reg = qk_quantum_register_new(size, std::string(name).c_str());
+    qk_circuit_add_quantum_register(circuit_, reg);
+    qk_quantum_register_free(reg);
   }
 
   void addClassicalRegister(std::string_view name, uint32_t size) override {
-    pythonCircuit_.attr("add_register")(
-        nb::module_::import_("qiskit.circuit")
-            .attr("ClassicalRegister")(size,
-                                       nb::str(name.data(), name.size())));
+    auto* reg = qk_classical_register_new(size, std::string(name).c_str());
+    qk_circuit_add_classical_register(circuit_, reg);
+    qk_classical_register_free(reg);
   }
 
   void setGlobalPhase(const Parameter& phase) override {
