@@ -958,13 +958,24 @@ def test_symbolic_euler_preserves_large_constant_middle_angle(*, fuse: bool) -> 
         (gate, {"rxx": "ryy", "ryy": "rzx", "rzx": "rzz", "rzz": "rxx"}.get(gate, "cz"))
         for gate in ["rx", "ry", "rz", "rxx", "ryy", "rzx", "rzz", "cp", "crx", "cry", "crz"]
     ]
-    + [("rzz", "sqrt_iswap"), ("crx", "sqrt_iswap")],
+    + [
+        ("rzz", "sqrt_iswap"),
+        ("crx", "sqrt_iswap"),
+        ("xx_plus_yy", "cz"),
+        ("xx_minus_yy", "rzz"),
+        ("xx_plus_yy", "sqrt_iswap"),
+        ("xx_minus_yy", "sqrt_iswap"),
+    ],
 )
 def test_runtime_pauli_rotations_compile_and_export(gate: str, native_entangler: str) -> None:
     """Keep structural rotation synthesis bindable across target lowering and export."""
     theta = qiskit.circuit.Parameter("theta")
     source = QuantumCircuit(2, global_phase=0.19)
-    getattr(source, gate)(theta, *([0] if gate in {"rx", "ry", "rz"} else [0, 1]))
+    if gate in {"xx_plus_yy", "xx_minus_yy"}:
+        exchange = library.XXPlusYYGate if gate == "xx_plus_yy" else library.XXMinusYYGate
+        source.append(exchange(theta, 0.0), [0, 1])
+    else:
+        getattr(source, gate)(theta, *([0] if gate in {"rx", "ry", "rz"} else [0, 1]))
     target = CompilerTarget(
         2,
         connectivity=CompilerTarget.Connectivity([(0, 1)]),
@@ -991,7 +1002,13 @@ def test_runtime_pauli_rotations_compile_and_export(gate: str, native_entangler:
     emitted_entangler = "xx_plus_yy" if native_entangler == "sqrt_iswap" else native_entangler
     assert set(result.count_ops()) <= {"rx", "rz", emitted_entangler}
     assert result.parameters == source.parameters
-    expected_count = 0 if gate in {"rx", "ry", "rz"} else 2 if native_entangler in {"cz", "sqrt_iswap"} else 1
+    expected_count = (
+        0
+        if gate in {"rx", "ry", "rz"}
+        else 2
+        if native_entangler in {"cz", "sqrt_iswap"} or gate in {"xx_plus_yy", "xx_minus_yy"}
+        else 1
+    )
     assert result.count_ops().get(emitted_entangler, 0) == expected_count
     for value in [-1.2, 0.0, -np.pi / 2, np.pi / 2, np.pi, 2 * np.pi, 7.1]:
         actual = Operator.from_circuit(result.assign_parameters({theta: value})).data
@@ -1015,6 +1032,10 @@ def test_runtime_pauli_rotations_compile_and_export(gate: str, native_entangler:
         ("cartan", "sqrt_iswap", 2),
         ("reversed_axes", "sqrt_iswap", 2),
         ("reversed_axes", "cz", 2),
+        ("exchange", "cz", 2),
+        ("exchange", "bounded_rzz", 2),
+        ("exchange", "sqrt_iswap", 2),
+        ("exchange_inverse", "sqrt_iswap", 0),
         ("noncommuting", "cz", 4),
         ("barrier", "cz", 4),
     ],
@@ -1032,6 +1053,10 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     elif shape == "reversed_axes":
         source.rzx(a, 0, 1)
         source.rzx(b, 1, 0)
+    elif shape.startswith("exchange"):
+        source.append(library.XXPlusYYGate(a, 0.0), [0, 1])
+        exchange = library.XXPlusYYGate(-a, 0.0) if shape == "exchange_inverse" else library.XXMinusYYGate(b, 0.0)
+        source.append(exchange, [1, 0])
     elif shape == "barrier":
         source.rzz(a, 0, 1)
         source.barrier()

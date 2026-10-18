@@ -17,6 +17,7 @@
 
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <array>
@@ -88,9 +89,12 @@ public:
   entanglerOrientation(const CompilerTarget& target,
                        CompilerTarget::Entangler entangler, Sites sites);
 
+  /// Construct a recipe only if its count passes the optional benefit test.
+  ///
   /// The returned reference is invalidated by the next decomposition query.
   const std::optional<decomposition::TwoQubitNativeDecomposition>&
-  decompose(const Matrix4x4& matrix, CompilerTarget::Entangler entangler);
+  decompose(const Matrix4x4& matrix, CompilerTarget::Entangler entangler,
+            function_ref<bool(size_t)> improves = {});
 
   struct Selection {
     CompilerTarget::Entangler entangler;
@@ -111,10 +115,14 @@ public:
          const CompilerTarget& target, Sites sites);
 
   /// Construct the cheapest supported recipe, trying the next on failure.
+  ///
+  /// The optional benefit test runs before factor construction. Rejection
+  /// stops selection, so accepting a count must also accept smaller counts.
   /// The returned native pointer is invalidated by the next decomposition
   /// query.
   [[nodiscard]] std::optional<SelectedDecomposition>
-  decompose(const Matrix4x4& matrix, const CompilerTarget& target, Sites sites);
+  decompose(const Matrix4x4& matrix, const CompilerTarget& target, Sites sites,
+            function_ref<bool(size_t)> improves = {});
 
   /// Native two-qubit count.
   ///
@@ -132,10 +140,18 @@ public:
                  const CompilerTarget& target, Sites sites);
 
 private:
-  std::optional<std::array<double, 3>> coordinates(const Matrix4x4& matrix);
-  SmallVector<Selection, 9> candidates(const Matrix4x4& matrix,
-                                       const CompilerTarget& target,
-                                       Sites sites);
+  std::optional<std::array<double, 3>> coordinates(
+      const Matrix4x4& matrix,
+      std::optional<decomposition::TwoQubitWeylDecomposition>* computed =
+          nullptr);
+  SmallVector<Selection, 9> candidates(
+      const Matrix4x4& matrix, const CompilerTarget& target, Sites sites,
+      MutableArrayRef<std::optional<decomposition::TwoQubitWeylDecomposition>>
+          computed = {});
+  const std::optional<decomposition::TwoQubitNativeDecomposition>&
+  cachedDecompose(const Matrix4x4& matrix, CompilerTarget::Entangler entangler,
+                  std::optional<decomposition::TwoQubitWeylDecomposition>& weyl,
+                  function_ref<bool(size_t)> improves = {});
 
   struct DecompositionEntry {
     Matrix4x4 matrix;

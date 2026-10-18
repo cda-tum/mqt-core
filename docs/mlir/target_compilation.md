@@ -250,10 +250,12 @@ Square-root iSWAP uses two gates for two commuting runtime Pauli rotations and
 four for three independent rotations. Binding all parameters first permits
 numerical synthesis with at most three gates. The fixed capability
 `XXPlusYY(-pi/2, 0)` also enables square-root iSWAP synthesis. Single-controlled
-Pauli rotations and phase gates use the same decomposition. Bounded Pauli
-entanglers that include `[0, pi/2]` use the same numeric synthesis with local
-Pauli corrections. Unknown runtime angles use two native `pi/2` rotations. Bind
-parameters before compilation to use fractional entanglers directly. Qiskit
+Pauli rotations and phase gates use the same decomposition. Runtime
+`XXPlusYY(theta, 0)` and `XXMinusYY(theta, 0)` share the two-rotation circuit;
+other relative phases require a native gate or constant parameters. Bounded
+Pauli entanglers that include `[0, pi/2]` use the same numeric synthesis with
+local Pauli corrections. Unknown runtime angles use two native `pi/2` rotations.
+Bind parameters before compilation to use fractional entanglers directly. Qiskit
 import conservatively recognizes this interval through its public bound
 predicates.
 

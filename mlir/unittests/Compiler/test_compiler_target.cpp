@@ -1220,8 +1220,10 @@ TEST(CompilerTargetTest, RecognizesSquareRootISwapParametersAndPlacements) {
       const auto exchange = valid(OperationCapability::create(
           "xx_plus_yy", 2, 2,
           global ? std::vector<SiteTuple>{}
-                 : std::vector{valid(SiteTuple::create({1, 0})),
-                               valid(SiteTuple::create({2, 1}))},
+                 : std::vector{
+                       valid(SiteTuple::create({1, 0})),
+                       valid(SiteTuple::create({2, 1})),
+                   },
           std::nullopt, std::nullopt, {theta, beta}));
       const auto target = valid(Target::create(
           3, Connectivity::fromCouplings({{0, 1}, {1, 2}}),
@@ -1257,10 +1259,14 @@ TEST(CompilerTargetTest, CollectsEntanglersInSynthesisPreferenceOrder) {
                                         {valid(SiteTuple::create({0, 1}))})),
   };
   const std::array expected{
-      Target::Entangler{.gate = GateKind::RZZ,
-                        .angles = Target::AngleSupport::Unrestricted},
-      Target::Entangler{.gate = GateKind::RYY,
-                        .angles = Target::AngleSupport::ZeroToHalfPi},
+      Target::Entangler{
+          .gate = GateKind::RZZ,
+          .angles = Target::AngleSupport::Unrestricted,
+      },
+      Target::Entangler{
+          .gate = GateKind::RYY,
+          .angles = Target::AngleSupport::ZeroToHalfPi,
+      },
       Target::Entangler{.gate = GateKind::RXX},
       Target::Entangler{.gate = GateKind::CZ},
       Target::Entangler{.gate = GateKind::SQRTISWAP},

@@ -511,11 +511,11 @@ static LogicalResult prepareGlobalPhases(ModuleOp moduleOp,
 
 static bool isOperandSwapInvariant(UnitaryOpInterface unitary) {
   Operation* operation = unitary.getOperation();
-  if (isa<SWAPOp, iSWAPOp, RXXOp, RYYOp, RZZOp>(operation)) {
+  if (isa<SWAPOp, iSWAPOp, RXXOp, RYYOp, RZZOp, XXMinusYYOp>(operation)) {
     return true;
   }
-  if (auto exchange = dyn_cast<XXPlusYYOp>(operation)) {
-    return matchPattern(exchange.getBeta(), m_AnyZeroFloat());
+  if (isa<XXPlusYYOp>(operation)) {
+    return mqt::valueToConstantDouble(unitary.getParameter(1)) == 0.;
   }
   return static_cast<bool>(singleControlledGate<ZOp>(operation));
 }
@@ -643,11 +643,27 @@ NativeCostTable::precompute(Operation* root, uint64_t seed) {
 
 const std::optional<decomposition::TwoQubitNativeDecomposition>&
 NativeCostAnalysis::decompose(const Matrix4x4& matrix,
-                              CompilerTarget::Entangler entangler) {
+                              CompilerTarget::Entangler entangler,
+                              function_ref<bool(size_t)> improves) {
+  std::optional<decomposition::TwoQubitWeylDecomposition> weyl;
+  return cachedDecompose(matrix, entangler, weyl, improves);
+}
+
+const std::optional<decomposition::TwoQubitNativeDecomposition>&
+NativeCostAnalysis::cachedDecompose(
+    const Matrix4x4& matrix, CompilerTarget::Entangler entangler,
+    std::optional<decomposition::TwoQubitWeylDecomposition>& weyl,
+    function_ref<bool(size_t)> improves) {
+  static const std::optional<decomposition::TwoQubitNativeDecomposition>
+      UNAVAILABLE;
+  const auto accepted = [&](const auto& native) -> const auto& {
+    return native && improves && !improves(native->numBasisUses) ? UNAVAILABLE
+                                                                 : native;
+  };
   if (!decompositions_.empty()) {
     const auto& entry = decompositions_[lastDecomposition_];
     if (entry.entangler == entangler && sameMatrix(entry.matrix, matrix)) {
-      return entry.native;
+      return accepted(entry.native);
     }
   }
   const auto hash = matrixHash(matrix) ^ static_cast<uint64_t>(entangler.gate) ^
@@ -657,8 +673,18 @@ NativeCostAnalysis::decompose(const Matrix4x4& matrix,
     if (decompositionHashes_[i] == hash && entry.entangler == entangler &&
         sameMatrix(entry.matrix, matrix)) {
       lastDecomposition_ = i;
-      return entry.native;
+      return accepted(entry.native);
     }
+  }
+  if (improves) {
+    const auto canonical = coordinates(matrix, &weyl);
+    if (!canonical || !improves(countUnitary2QWeyl(*canonical, entangler))) {
+      return UNAVAILABLE;
+    }
+  }
+  if (!weyl) {
+    weyl = decomposition::TwoQubitWeylDecomposition::create(
+        matrix, decomposition::WEYL_DEFAULT_FIDELITY, seed_);
   }
   if (decompositions_.empty()) {
     decompositions_.reserve(CACHE_SIZE);
@@ -667,7 +693,8 @@ NativeCostAnalysis::decompose(const Matrix4x4& matrix,
   DecompositionEntry entry{
       .matrix = matrix,
       .entangler = entangler,
-      .native = decomposeUnitary2QWeyl(matrix, entangler, seed_),
+      .native =
+          weyl ? decomposeUnitary2QWeyl(*weyl, entangler, seed_) : std::nullopt,
   };
   if (decompositions_.size() < CACHE_SIZE) {
     lastDecomposition_ = decompositions_.size();
@@ -682,8 +709,9 @@ NativeCostAnalysis::decompose(const Matrix4x4& matrix,
   return decompositions_[lastDecomposition_].native;
 }
 
-std::optional<std::array<double, 3>>
-NativeCostAnalysis::coordinates(const Matrix4x4& matrix) {
+std::optional<std::array<double, 3>> NativeCostAnalysis::coordinates(
+    const Matrix4x4& matrix,
+    std::optional<decomposition::TwoQubitWeylDecomposition>* computed) {
   if (lastCoordinates_ && sameMatrix(lastCoordinates_->matrix, matrix)) {
     return lastCoordinates_->coordinates;
   }
@@ -701,10 +729,15 @@ NativeCostAnalysis::coordinates(const Matrix4x4& matrix) {
       return entry.coordinates;
     }
   }
+  const auto weyl = decomposition::TwoQubitWeylDecomposition::create(
+      matrix, decomposition::WEYL_DEFAULT_FIDELITY, seed_);
   lastCoordinates_ = {
       .matrix = matrix,
-      .coordinates = weylCoordinates(matrix, seed_),
+      .coordinates = weyl ? std::optional{weyl->coordinates()} : std::nullopt,
   };
+  if (computed != nullptr) {
+    *computed = weyl;
+  }
   if (coordinates_.empty()) {
     coordinates_.reserve(CACHE_SIZE);
     coordinateHashes_.reserve(CACHE_SIZE);
@@ -720,17 +753,19 @@ NativeCostAnalysis::coordinates(const Matrix4x4& matrix) {
   return lastCoordinates_->coordinates;
 }
 
-SmallVector<NativeCostAnalysis::Selection, 9>
-NativeCostAnalysis::candidates(const Matrix4x4& matrix,
-                               const CompilerTarget& target, Sites sites) {
+SmallVector<NativeCostAnalysis::Selection, 9> NativeCostAnalysis::candidates(
+    const Matrix4x4& matrix, const CompilerTarget& target, Sites sites,
+    MutableArrayRef<std::optional<decomposition::TwoQubitWeylDecomposition>>
+        computed) {
   SmallVector<Selection, 9> result;
   for (const auto entangler : target.synthesisEntanglers()) {
     const auto reverse = entanglerOrientation(target, entangler, sites);
     if (!reverse) {
       continue;
     }
-    const auto canonical =
-        coordinates(*reverse ? matrix.reorderForQubits(1, 0) : matrix);
+    const auto canonical = coordinates(
+        *reverse ? matrix.reorderForQubits(1, 0) : matrix,
+        computed.empty() ? nullptr : &computed[static_cast<size_t>(*reverse)]);
     if (canonical) {
       result.push_back({
           .entangler = entangler,
@@ -756,6 +791,10 @@ NativeCostAnalysis::select(const Matrix4x4& matrix,
 std::optional<NativeCostAnalysis::Selection>
 NativeCostAnalysis::select(const decomposition::PauliRotationSequence& sequence,
                            const CompilerTarget& target, Sites sites) {
+  const auto counts = decomposition::countPauliRotations(sequence);
+  if (!counts) {
+    return std::nullopt;
+  }
   std::optional<Selection> best;
   for (const auto entangler : target.synthesisEntanglers()) {
     const auto reverse = entanglerOrientation(target, entangler, sites);
@@ -763,12 +802,12 @@ NativeCostAnalysis::select(const decomposition::PauliRotationSequence& sequence,
       continue;
     }
     const auto count =
-        decomposition::pauliRotationEntanglerCount(sequence, entangler);
-    if (count && (!best || *count < best->count)) {
+        decomposition::pauliRotationEntanglerCount(*counts, entangler);
+    if (!best || count < best->count) {
       best = Selection{
           .entangler = entangler,
           .reverse = *reverse,
-          .count = *count,
+          .count = count,
       };
     }
   }
@@ -777,16 +816,21 @@ NativeCostAnalysis::select(const decomposition::PauliRotationSequence& sequence,
 
 std::optional<NativeCostAnalysis::SelectedDecomposition>
 NativeCostAnalysis::decompose(const Matrix4x4& matrix,
-                              const CompilerTarget& target, Sites sites) {
-  auto choices = candidates(matrix, target, sites);
+                              const CompilerTarget& target, Sites sites,
+                              function_ref<bool(size_t)> improves) {
+  std::array<std::optional<decomposition::TwoQubitWeylDecomposition>, 2> weyl;
+  auto choices = candidates(matrix, target, sites, weyl);
   while (!choices.empty()) {
     auto* const best =
         llvm::min_element(choices, [](const auto& a, const auto& b) {
           return a.count < b.count;
         });
-    const auto& native =
-        decompose(best->reverse ? matrix.reorderForQubits(1, 0) : matrix,
-                  best->entangler);
+    if (improves && !improves(best->count)) {
+      return std::nullopt;
+    }
+    const auto& native = cachedDecompose(
+        best->reverse ? matrix.reorderForQubits(1, 0) : matrix, best->entangler,
+        weyl[static_cast<size_t>(best->reverse)]);
     if (native) {
       return SelectedDecomposition{.selection = *best, .native = &*native};
     }
@@ -1235,6 +1279,20 @@ static bool fuseTwoQubitGateRun(IRRewriter& rewriter, UnitaryOpInterface head,
   if (run.ops.size() < 2) {
     return false;
   }
+  std::optional<size_t> acceptedCost;
+  const auto improves = [&](size_t count) {
+    if (acceptedCost == count) {
+      return true;
+    }
+    if ((shrinkOnly && count >= run.numTwoQ) ||
+        (target != nullptr
+             ? !reducesNativeCost(run, count, *target, sites, analysis)
+             : count >= run.numTwoQ)) {
+      return false;
+    }
+    acceptedCost = count;
+    return true;
+  };
   bool reverseEntangler = false;
   const decomposition::TwoQubitNativeDecomposition* native = nullptr;
   if (target != nullptr) {
@@ -1243,7 +1301,8 @@ static bool fuseTwoQubitGateRun(IRRewriter& rewriter, UnitaryOpInterface head,
     const auto selected = analysis.decompose(
         run.composed, *target,
         sites != nullptr ? std::optional<ArrayRef<SiteId>>(placement)
-                         : std::nullopt);
+                         : std::nullopt,
+        improves);
     if (!selected) {
       return false;
     }
@@ -1251,14 +1310,11 @@ static bool fuseTwoQubitGateRun(IRRewriter& rewriter, UnitaryOpInterface head,
     reverseEntangler = selected->selection.reverse;
     native = selected->native;
   } else {
-    const auto& cached = analysis.decompose(run.composed, *basis.entangler);
+    const auto& cached =
+        analysis.decompose(run.composed, *basis.entangler, improves);
     native = cached ? &*cached : nullptr;
   }
-  if (native == nullptr ||
-      (shrinkOnly && native->numBasisUses >= run.numTwoQ) ||
-      (target != nullptr ? !reducesNativeCost(run, native->numBasisUses,
-                                              *target, sites, analysis)
-                         : native->numBasisUses >= run.numTwoQ)) {
+  if (native == nullptr || !improves(native->numBasisUses)) {
     return false;
   }
 

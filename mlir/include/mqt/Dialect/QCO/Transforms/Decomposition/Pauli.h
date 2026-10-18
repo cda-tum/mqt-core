@@ -80,8 +80,8 @@ struct PauliRotation {
 
 /// Commuting rotations sharing one angle, with an explicit global phase.
 ///
-/// Represents the existing Pauli rotations, P, and their one-control forms.
-/// Recognized two-qubit operations contain exactly one entangling rotation.
+/// Represents Pauli rotations, P, their one-control forms, and XXPlusYY or
+/// XXMinusYY with zero relative phase. At most two rotations are entangling.
 struct PauliRotationSequence {
   Value angle;
   SmallVector<PauliRotation, 3> rotations;
@@ -92,12 +92,22 @@ struct PauliRotationSequence {
 [[nodiscard]] std::optional<PauliRotationSequence>
 getPauliRotations(Operation* operation);
 
-/// Cost of direct Pauli synthesis.
+/// Counts used to compare native entanglers without inspecting angles again.
+struct PauliRotationCounts {
+  size_t entangling = 0;
+  size_t constant = 0;
+};
+
+/// Classify the sequence once before comparing native entanglers.
 ///
 /// Constants within the Weyl fidelity bound of a Clifford angle use the matrix
 /// planner to shorten their entangling part.
-[[nodiscard]] std::optional<size_t>
-pauliRotationEntanglerCount(const PauliRotationSequence& sequence,
+[[nodiscard]] std::optional<PauliRotationCounts>
+countPauliRotations(const PauliRotationSequence& sequence);
+
+/// Native cost of up to three distinct commuting entangling rotations.
+[[nodiscard]] size_t
+pauliRotationEntanglerCount(PauliRotationCounts rotations,
                             CompilerTarget::Entangler entangler);
 
 /// Emits a recognized sequence directly in the target's synthesis basis.

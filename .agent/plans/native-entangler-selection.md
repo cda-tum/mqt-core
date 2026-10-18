@@ -1,7 +1,6 @@
 # Native entangler selection and symbolic square-root iSWAP
 
-Status: implemented, reviewed, and validated locally. Hosted CI and human review
-remain pending in PR #2775. Base: `056bef24722dd0a1f0813f3f7b4197c10f8eb950`.
+Status: complete. Base: `8ed992b640ccb9bc0936f3929e840330b9dabb65`; PR #2775.
 
 ## Scope and decisions
 
@@ -28,30 +27,59 @@ ordered placements, deterministic ties, and existing native operations.
   expressions for small angles. The formulas use the arithmetic and
   trigonometric operations supported by symbolic exporters. OpenQASM exports
   floating-point absolute value through its existing scalar expression path.
+- Keep a cold Weyl result only through selection and construction. Reject fusion
+  that cannot reduce the native count before constructing factors; preserve warm
+  caches and numerical fallback.
+- Classify symbolic angles once across entangler candidates. Represent
+  `XXPlusYY(theta, 0)` and `XXMinusYY(theta, 0)` as two commuting scaled Pauli
+  terms and share their pair emission with fused runs.
+- Bound Qiskit parameter expressions at 32,768 expanded nodes and 64 levels.
+  Measure ordinary short fusion runs; do not introduce a symbolic algebra
+  subsystem or a gate-specific export threshold. Qiskit binding still grows
+  costly with fused expressions; bind numerical values in Core before export.
+- Keep the scaled norms and angle normalization. Rewriting the norms using
+  `cos(2*x) + cos(2*y)` produces incorrect zero-bound expressions in Qiskit
+  2.5.1 and 2.6.0. Removing inner normalization or using deferred substitution
+  increases expression construction time on these versions.
 
 ## Validation
 
-- All 1,383 tests pass across the affected C++ utility, transformation,
-  decomposition, synthesis, compiler, OpenQASM, and jeff round-trip suites.
-- All 377 MLIR Python and Qiskit-target tests pass on Qiskit 2.6.0. The 27
-  runtime synthesis and composition cases also pass on Qiskit 2.5.1. The staged
-  package uses the build's QDMI driver through `MQT_CORE_QDMI_DRIVER`.
-- The symbolic pair formula passes 24,461 numerical samples and 1,121
-  export-then-bind samples on both Qiskit versions, including zero, tiny,
-  boundary, and large angles. Worst matrix errors are below `1e-15`.
-- Repository lint and whole-file C++ lint pass. Builds use Clang 23 with
-  `CCACHE_DISABLE=1` because the local compiler cache produced invalid output.
-- Independent numerical and design reviews found no remaining actionable issues.
-  The final review removed a redundant copy of cached fusion factors.
+All 1,582 tests in the C++ suites below pass. The 848 tests in
+`test/python/test_mlir.py`, `test/python/test_mlir_qiskit_target.py`, and
+`test/python/test_mlir_qiskit_translation.py` pass on Qiskit 2.6.0. The 39
+runtime and expression-budget cases also pass on Qiskit 2.5.1. Repository lint
+and whole-file C++ lint pass; stub regeneration changes no API.
 
-## Measurements
+Existing regressions cover phase-sensitive matrices, count/emission agreement,
+cache eviction and ownership, rejected fusion, ordered sites, exchange signs,
+cancellation, nonzero relative-phase limits, and expression-budget failures.
+Build and run the corresponding MQT utility/transform, decomposition,
+optimization, native synthesis, compiler, OpenQASM, and jeff unit-test targets.
+Run the root guide's lint, C++ lint, and stub-generation sessions.
 
-An external probe checked 20,000 deterministic locally dressed canonical
-matrices with one and nine candidate families. Counts and tie selection matched
-independent per-family analysis. Five alternating rounds pinned to CPU 0 gave
-median CPU times of 115.68 ms for nine-family selection and 796.57 ms for
-repeated per-family analysis. One-family selection took 97.75 ms versus 93.26
-ms. The coordinate cache made two allocations totaling 18,944 bytes, independent
-of family count; warm queries allocated nothing. These are affinity-only routine
-measurements, not whole-compiler speedups. The shared and local numerical
-payloads remain bounded at about 288 KiB and 18 KiB.
+The pair formula passes 24,461 numerical samples and 1,121 export-then-bind
+samples, including zero, tiny, boundary, and large angles. Matrix errors stay
+below `1e-15`. Independent numerical and design reviews found no remaining
+correctness issue. Hosted CI is separate from local validation.
+
+## Performance evidence and limits
+
+Five alternating rounds pinned to one CPU checked 12,000 reconstructed native
+circuits. Reusing cold Weyl results reduced full-selection CPU time by 22–46%.
+Count-first fusion rejection reduced it by 50–74% and avoided factor
+allocations; only the initial 18,944-byte coordinate cache remains. Warm
+full-selection cost stayed within 3%, and warm paths allocated nothing.
+
+For 1,000 symbolic selections over nine families, classifying once reduced CPU
+time from 14.08 to 2.06 ms at expression depth 8 and from 97.84 to 11.36 ms at
+depth 64. Allocations fell ninefold. Single-family costs stayed unchanged.
+Selected families and counts matched in both implementations.
+
+On Qiskit 2.6.0, exporting two, four, and eight independent rotations per axis
+fell from 17.7/33.8/85.2 ms to 13.6/28.3/57.4 ms. Bound matrices agreed below
+`1e-14`. The enlarged budget also exports the 32-per-axis probe, whose parameter
+binding was not benchmarked. These are local routine CPU measurements, not
+whole-compiler speedups. They do not remove Qiskit's symbolic binding cost.
+Copying the compiled Core program, binding values, and exporting took
+1.3/1.5/1.6 ms for two/four/eight rotations per axis and 3.1 ms for 32. The
+exported matrices agreed below `1e-14`. This uses the existing binding API.

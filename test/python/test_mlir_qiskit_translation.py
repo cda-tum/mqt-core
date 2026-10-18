@@ -2074,7 +2074,7 @@ def test_oversized_parameter_expression_fails_closed_without_mutation() -> None:
     """Bound a wide parameter expression before changing the source circuit."""
     theta = Parameter("theta")
     level: list[ParameterExpression] = [theta]
-    level.extend(theta + float(index) for index in range(1, 8193))
+    level.extend(theta + float(index) for index in range(1, 16385))
     while len(level) > 1:
         level = [
             level[index] + level[index + 1] if index + 1 < len(level) else level[index]
@@ -2084,7 +2084,7 @@ def test_oversized_parameter_expression_fails_closed_without_mutation() -> None:
     circuit.rz(level[0], 0)
     source_data = list(circuit.data)
 
-    with pytest.raises(RuntimeError, match="exceeds the supported 16384-node size"):
+    with pytest.raises(RuntimeError, match="exceeds the supported 32768-node size"):
         QCProgram.from_qiskit(circuit)
 
     assert list(circuit.data) == source_data
@@ -4168,17 +4168,24 @@ def _wide_parameter_expression_program(term_count: int) -> QCProgram:
 
 
 @pytest.mark.parametrize(
-    "term_count",
-    [5462, 8193],
-    ids=["expanded-tree", "unique-ssa-graph"],
+    ("term_count", "supported"),
+    [(6000, True), (10924, False), (16385, False)],
+    ids=["within-budget", "expanded-tree", "unique-ssa-graph"],
 )
-def test_oversized_export_parameter_expression_fails_without_mutation(term_count: int) -> None:
+def test_export_parameter_expression_budget_preserves_source(term_count: int, *, supported: bool) -> None:
     """Bound normalized trees and compiler SSA traversal before Qiskit construction."""
     program = _wide_parameter_expression_program(term_count)
     source_ir = program.ir
 
-    with pytest.raises(RuntimeError, match="exceeds the supported 16384-node size"):
-        program.to_qiskit(copy=True)
+    if supported:
+        result = program.to_qiskit(copy=True)
+        theta = next(iter(result.parameters))
+        expected = QuantumCircuit(1)
+        expected.rz(term_count * np.sin(1e-5), 0)
+        assert np.allclose(Operator(result.assign_parameters({theta: 1e-5})).data, Operator(expected).data)
+    else:
+        with pytest.raises(RuntimeError, match="exceeds the supported 32768-node size"):
+            program.to_qiskit(copy=True)
 
     assert program.ir == source_ir
 

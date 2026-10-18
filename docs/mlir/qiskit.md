@@ -116,8 +116,12 @@ across a round trip; similarly named standalone parameters remain standalone.
 Elements used in different structured-control blocks are restored into one
 shared vector for the complete circuit tree. Free parameter vectors and their
 combined declared size in one translated circuit are each limited to 65,536
-elements. Parameter-expression trees support at most 64 levels and 16,384 nodes.
+elements. Parameter-expression trees support at most 64 levels and 32,768 nodes.
 Import balances addition and subtraction chains before applying the depth limit.
+Fusing runtime rotations can expand these expressions. For repeated numerical
+runs, bind parameters in Core before export to avoid Qiskit's symbolic binding
+cost.
+
 Import and export support real addition, subtraction, multiplication, division,
 power, negation, trigonometric and inverse trigonometric functions, exponential,
 logarithm, absolute value, and real conjugation. Export also folds signed and

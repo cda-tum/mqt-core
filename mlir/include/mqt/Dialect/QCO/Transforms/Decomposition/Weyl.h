@@ -385,6 +385,16 @@ decomposeUnitary2QWeyl(const Matrix4x4& target,
                        CompilerTarget::Entangler entangler,
                        uint64_t seed = 2023);
 
+/// Constructs native factors from a validated Weyl decomposition.
+///
+/// Requires a result of @ref TwoQubitWeylDecomposition::create with
+/// @ref WEYL_DEFAULT_FIDELITY and a supported native entangler. The seed
+/// applies to numerical subproblems in native factor construction.
+[[nodiscard]] std::optional<TwoQubitNativeDecomposition>
+decomposeUnitary2QWeyl(const TwoQubitWeylDecomposition& target,
+                       CompilerTarget::Entangler entangler,
+                       uint64_t seed = 2023);
+
 /// Returns the entangler count selected from the target's Weyl decomposition
 /// without constructing a native circuit, or `std::nullopt` if that
 /// decomposition fails.

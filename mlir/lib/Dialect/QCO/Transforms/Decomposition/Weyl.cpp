@@ -897,13 +897,7 @@ static uint8_t numSqrtISwapGates(std::array<double, 3> coordinates) {
 }
 
 static std::optional<TwoQubitNativeDecomposition>
-decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
-  const auto targetDecomposition =
-      TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY, seed);
-  if (!targetDecomposition) {
-    return std::nullopt;
-  }
-  const auto& kak = *targetDecomposition;
+decomposeSqrtISwap(const TwoQubitWeylDecomposition& kak, uint64_t seed) {
   const auto count = numSqrtISwapGates(kak.coordinates());
   if (count == 0) {
     TwoQubitNativeDecomposition result{
@@ -960,16 +954,11 @@ static auto pauliRotations(std::array<double, 3> coordinates) {
 
 /// Realize the three commuting Cartan rotations using one native axis pair.
 static std::optional<TwoQubitNativeDecomposition>
-decomposePauliRotations(const Matrix4x4& target,
-                        CompilerTarget::Entangler entangler, uint64_t seed) {
-  const auto kak =
-      TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY, seed);
-  if (!kak) {
-    return std::nullopt;
-  }
+decomposePauliRotations(const TwoQubitWeylDecomposition& kak,
+                        CompilerTarget::Entangler entangler) {
   const auto identity = Matrix2x2::identity();
   const auto axes = pauliAxes(entangler.gate);
-  const auto rotations = pauliRotations(kak->coordinates());
+  const auto rotations = pauliRotations(kak.coordinates());
   TwoQubitNativeDecomposition result{
       .numBasisUses = static_cast<uint8_t>(rotations.size()),
   };
@@ -996,21 +985,29 @@ decomposePauliRotations(const Matrix4x4& target,
     factors.push_back(left);
     result.entanglerParameters.push_back(angle);
   }
-  attachLocalFactors(result, *kak);
+  attachLocalFactors(result, kak);
   return result;
 }
 
 std::optional<TwoQubitNativeDecomposition>
 decomposeUnitary2QWeyl(const Matrix4x4& target,
                        CompilerTarget::Entangler entangler, uint64_t seed) {
+  const auto kak =
+      TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY, seed);
+  return kak ? decomposeUnitary2QWeyl(*kak, entangler, seed) : std::nullopt;
+}
+
+std::optional<TwoQubitNativeDecomposition>
+decomposeUnitary2QWeyl(const TwoQubitWeylDecomposition& target,
+                       CompilerTarget::Entangler entangler, uint64_t seed) {
   if (entangler.parameterized()) {
-    return decomposePauliRotations(target, entangler, seed);
+    return decomposePauliRotations(target, entangler);
   }
   if (entangler.gate == CompilerTarget::GateKind::SQRTISWAP) {
     return decomposeSqrtISwap(target, seed);
   }
   return cachedNativeBasisDecomposer(entangler.gate)
-      .decomposeTarget(target, std::nullopt, seed);
+      .twoQubitDecompose(target, std::nullopt);
 }
 
 std::optional<uint8_t> countUnitary2QWeyl(const Matrix4x4& target,
