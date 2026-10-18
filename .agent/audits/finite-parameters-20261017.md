@@ -33,11 +33,12 @@ ordinary integer, and huge exponents; full-unitary inverse/control tests remain.
 Shared prefixes caused quadratic work; a valid 64000-operation chain exhausted
 the stack during verification and normalization.
 
-Applied: inspect direct constants in the verifier. Use a cached worklist for
-actual constant evaluation, memoizing both successes and failures. Stop at the
-first unknown operand and avoid cache allocation for a bare block argument.
-Existing shared-DAG tests cover deep finite/dynamic roots and both operand
-orders. Complete evaluation remains available to composite-gate exporters.
+Applied: inspect direct constants in the verifier. Use a cached depth-first
+stack for actual constant evaluation, memoizing both successes and failures.
+Stop at the first unknown operand and avoid cache allocation for a bare block
+argument. Existing shared-DAG tests cover deep finite/dynamic roots and both
+operand orders. Complete evaluation remains available to composite-gate
+exporters.
 
 ### P2: merged symbolic phases exceeded the supported range
 
@@ -97,11 +98,23 @@ phases between them.
 
 ## Rejected candidates
 
+PR [#2775](https://github.com/munich-quantum-toolkit/core/pull/2775)
+independently uses an explicit stack for complete constant evaluation. Adopt its
+reused scratch buffers, cached-root fast path, and explicit cache-lifetime
+contract. Pending entries already record failure, so no separate
+failure-propagation walk is needed. Advance operand cursors before descent to
+avoid looking up completed children again. Existing deep/shared and
+dynamic-operand tests also check caller cache reuse. No new test case or helper
+is needed.
+
 A folding-depth cap would reject valid composite-gate exports. Changing or
 removing the public cache-taking overload would break a header API shipped in
 Core 4.0 and 4.1; an adapter solely to reduce cache storage adds needless code.
-Remainder-based phase wrapping needs new Qiskit expression support. Keep the
-existing exporter-supported expression instead.
+MLIR's `OperationFolder` replaces operations and uses; it does not replace this
+attribute query. Building a complete backward slice would visit operands that
+the first dynamic input makes unnecessary. Remainder-based phase wrapping needs
+new Qiskit expression support. Keep the existing exporter-supported expression
+instead.
 
 ## Validation and limits
 

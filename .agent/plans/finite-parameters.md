@@ -23,8 +23,10 @@ the two MQT suites have 69 cases instead of 83.
 - Keep balanced symbolic sums and bound newly merged phases with
   `2 * atan(tan(angle / 2))`. Existing Qiskit, OpenQASM, and DD consumers
   support these operations. Single phases and negations need no wrapping.
-- Evaluate constant expressions with a cached worklist. Stop at the first
-  unknown operand; retain complete evaluation for constant-dependent exporters.
+- Evaluate constant expressions with a cached depth-first stack. Advance the
+  operand cursor before descent and seed pending results as failed, so the first
+  unknown operand can end evaluation immediately. Reuse operand and result
+  buffers. Retain complete evaluation for constant-dependent exporters.
 - Cache scalar results within each isolated scope. Nested classical regions
   share the cache because normalization preserves scalar meanings.
 - Hoist eager scalar producers once, in source order, before the outermost
@@ -40,6 +42,10 @@ the two MQT suites have 69 cases instead of 83.
   when native-only lowering cannot introduce phases.
 - Retain the shipped cache-taking constant-folding API. A storage-only change
   does not justify breaking callers or adding an adapter.
+- Keep the explicit evaluation stack: plain recursion exhausts the stack on
+  valid deep input, and a depth cap rejects constant-dependent exports. Combine
+  PR #2775's scratch-buffer reuse and cache fast path with pending failure
+  entries, which remove the need for its separate failure-propagation loop.
 
 ## Validation
 
@@ -47,7 +53,8 @@ The final `cmake --build --preset release-clang-ipo` build and
 `ctest --preset release-clang-ipo --parallel 8` run passed 4020 tests, with one
 existing skip (`ScQDMIJobSpecificationTest.QueryJobId`). This is the complete
 configured native suite, including native synthesis. The configuration uses
-Clang 23.1.4, LLVM/MLIR 23.1.0, ThinLTO, and mold on Linux aarch64.
+Clang 23.1.4, LLVM/MLIR 23.1.0, ThinLTO, and mold on Linux aarch64. This run
+includes the combined folding design and its cache-reuse assertions.
 
 The Python command
 
@@ -65,7 +72,7 @@ probes. All four original deep-expression and large-power reproducers passed.
 
 `uvx nox -s lint`, `uvx nox -s cpp-lint`, and `git diff --check` passed. C++
 lint checked every changed implementation/test file in full. No binding
-declarations changed. Implementation and tests are 242 lines smaller. Existing
+declarations changed. Implementation and tests are 225 lines smaller. Existing
 numerical and consumer oracles remain covered.
 
 One-off correctness probes and matched timing experiments live in the ignored
@@ -78,6 +85,16 @@ median 14.82 ms to 2.17 ms; a shared expression across 128 classical regions
 fell from 280.2 ms to 25.8 ms. The phase-only control and observed allocation
 requests were unchanged within sample spread. Allocation-request counts are not
 peak or resident memory measurements.
+
+Seven matched samples compare the combined folder against `dc29e3716` using the
+same existing direct probe. A 64,000-operation constant chain changed from 49.46
+ms median (47.77–81.74 ms) to 46.85 ms (45.09–52.80 ms); a dynamic chain changed
+from 15.72 ms (15.53–16.34 ms) to 14.54 ms (14.27–14.98 ms). Bare arguments and
+short early exits were unchanged. A dynamic-first query with an unused deep
+branch changed from 6.72 to 6.80 microseconds, within overlapping sample ranges.
+Observed allocation traffic was unchanged. Raw samples, source patches, binary
+hashes, and all controls remain in the local benchmark folder. These routine
+measurements do not establish an application-wide speedup.
 
 ## Limits
 

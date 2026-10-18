@@ -27,9 +27,11 @@ namespace mlir::mqt {
 
 /// Constant-fold a pure SSA expression DAG to an attribute.
 ///
+/// Nonconstant operations must be region-free and fold to exactly one result.
 /// The cache memoizes successful and failed evaluations so shared operands are
-/// resolved once. Evaluation stops at the first non-constant operand and uses
-/// a worklist rather than the call stack.
+/// resolved once. Discard it when the evaluated IR changes. Evaluation uses an
+/// explicit stack to support deep expressions and stops at the first
+/// non-constant operand.
 ///
 /// @param value SSA value to evaluate.
 /// @param cache Evaluation results indexed by SSA value.

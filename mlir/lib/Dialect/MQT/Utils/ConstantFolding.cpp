@@ -52,63 +52,65 @@ std::optional<double> valueToDouble(Value value) {
 std::optional<Attribute>
 valueToConstantAttr(Value value,
                     DenseMap<Value, std::optional<Attribute>>& cache) {
-  SmallVector<std::pair<Value, unsigned>> worklist{{value, 0}};
-  while (!worklist.empty()) {
-    auto [current, nextOperand] = worklist.back();
+  if (const auto found = cache.find(value); found != cache.end()) {
+    return found->second;
+  }
+  SmallVector<std::pair<Value, unsigned>> stack{{value, 0}};
+  SmallVector<Attribute> operands;
+  SmallVector<OpFoldResult, 1> results;
+  while (!stack.empty()) {
+    auto [current, nextOperand] = stack.back();
     Operation* operation = current.getDefiningOp();
     if (nextOperand == 0) {
-      auto [entry, inserted] = cache.try_emplace(current, std::nullopt);
-      if (!inserted) {
-        worklist.pop_back();
-        continue;
-      }
+      // A failed dependency leaves every pending ancestor cached as failed.
+      auto entry = cache.try_emplace(current, std::nullopt).first;
       Attribute attr;
       if (matchPattern(current, m_Constant(&attr))) {
         entry->second = attr;
-        worklist.pop_back();
+        stack.pop_back();
         continue;
       }
       if (operation == nullptr || operation->getNumRegions() != 0 ||
           !isPure(operation)) {
-        worklist.pop_back();
-        continue;
+        return std::nullopt;
       }
-      // Zero marks an unvisited value; operands use one-based indices.
-      worklist.back().second = nextOperand = 1;
     }
-    if (nextOperand <= operation->getNumOperands()) {
-      Value operand = operation->getOperand(nextOperand - 1);
+    if (nextOperand < operation->getNumOperands()) {
+      Value operand = operation->getOperand(stack.back().second++);
       const auto found = cache.find(operand);
       if (found == cache.end()) {
-        worklist.emplace_back(operand, 0);
+        stack.emplace_back(operand, 0);
       } else if (!found->second) {
-        // One dynamic operand is enough to rule out a constant expression.
-        worklist.pop_back();
-      } else {
-        ++worklist.back().second;
+        return std::nullopt;
       }
       continue;
     }
 
-    SmallVector<Attribute> operands;
+    operands.clear();
     for (Value operand : operation->getOperands()) {
       operands.push_back(*cache.lookup(operand));
     }
-    SmallVector<OpFoldResult, 1> results;
-    if (succeeded(operation->fold(operands, results)) && results.size() == 1) {
-      if (auto attr = dyn_cast_if_present<Attribute>(results.front())) {
-        cache[current] = attr;
-      } else if (auto replacement =
-                     dyn_cast_if_present<Value>(results.front())) {
-        // Identity folds can return an existing value outside the operands.
-        if (!cache.contains(replacement)) {
-          worklist.emplace_back(replacement, 0);
-          continue;
-        }
-        cache[current] = cache.lookup(replacement);
-      }
+    results.clear();
+    if (failed(operation->fold(operands, results)) || results.size() != 1) {
+      return std::nullopt;
     }
-    worklist.pop_back();
+    if (auto attr = dyn_cast_if_present<Attribute>(results.front())) {
+      cache[current] = attr;
+    } else if (auto replacement = dyn_cast_if_present<Value>(results.front())) {
+      // Identity folds can return an existing value outside the operands.
+      const auto found = cache.find(replacement);
+      if (found == cache.end()) {
+        stack.emplace_back(replacement, 0);
+        continue;
+      }
+      if (!found->second) {
+        return std::nullopt;
+      }
+      cache[current] = found->second;
+    } else {
+      return std::nullopt;
+    }
+    stack.pop_back();
   }
   return cache.lookup(value);
 }

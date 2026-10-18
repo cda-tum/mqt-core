@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -29,6 +30,8 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+
+#include "llvm/ADT/DenseMap.h"
 
 #include <cmath>
 #include <cstdint>
@@ -175,7 +178,13 @@ TEST_F(ConstantFoldingTest, valueToConstantDoubleDynamicOperand) {
     Value left = dynamicFirst ? dynamic : lhs.getResult();
     Value right = dynamicFirst ? lhs.getResult() : dynamic;
     auto op = arith::SubFOp::create(*builder, left, right);
-    EXPECT_FALSE(mlir::mqt::valueToConstantDouble(op.getResult()));
+    llvm::DenseMap<Value, std::optional<Attribute>> cache;
+    EXPECT_FALSE(mlir::mqt::valueToConstantAttr(op.getResult(), cache));
+    EXPECT_TRUE(cache.contains(op.getResult()));
+    EXPECT_TRUE(cache.contains(dynamic));
+    EXPECT_EQ(cache.contains(lhs), !dynamicFirst);
+    EXPECT_FALSE(mlir::mqt::valueToConstantAttr(op.getResult(), cache));
+    EXPECT_EQ(mlir::mqt::valueToConstantAttr(lhs, cache), lhs.getValue());
   }
 }
 
@@ -250,12 +259,16 @@ TEST_F(ConstantFoldingTest, valueToConstantDoubleDeepSharedExpressions) {
     for (int i = 0; i < 64000; ++i) {
       value = arith::AddFOp::create(*builder, value, one);
     }
-    const auto folded = mlir::mqt::valueToConstantDouble(value);
+    llvm::DenseMap<Value, std::optional<Attribute>> cache;
+    const auto folded = mlir::mqt::valueToConstantAttr(value, cache);
+    EXPECT_TRUE(cache.contains(value));
+    EXPECT_EQ(mlir::mqt::valueToConstantAttr(value, cache), folded);
     if (dynamic) {
       EXPECT_FALSE(folded);
     } else {
       ASSERT_TRUE(folded);
-      EXPECT_DOUBLE_EQ(*folded, std::ldexp(1.0, 40) + 64000.0);
+      EXPECT_EQ(mlir::mqt::attributeToDouble(*folded),
+                std::ldexp(1.0, 40) + 64000.0);
     }
   }
 }
