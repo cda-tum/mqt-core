@@ -19,20 +19,36 @@ import sys
 import zipfile
 from io import BytesIO
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from packaging.version import Version
 from qiskit_support import supports_qiskit_translation
 
+if TYPE_CHECKING:
+    from types import ModuleType
+
+pytestmark = pytest.mark.qiskit_c_api
+
 if sys.version_info < (3, 14):
     pytest.skip("the Qiskit C API adoption script requires Python 3.14", allow_module_level=True)
 
 SCRIPT = Path(__file__).parents[2] / "scripts" / "qiskit_c_api_adopt.py"
-SPEC = importlib.util.spec_from_file_location("qiskit_c_api_adopt", SCRIPT)
-assert SPEC is not None
-assert SPEC.loader is not None
-adopt = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(adopt)
+
+
+@pytest.fixture(scope="module")
+def adopt() -> ModuleType:
+    """Load the Qiskit C API adoption script.
+
+    Returns:
+        The adoption module from the source checkout.
+    """
+    spec = importlib.util.spec_from_file_location("qiskit_c_api_adopt", SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 @pytest.mark.parametrize(
@@ -52,7 +68,7 @@ def test_vendored_snapshot_matches_provenance(snapshot: Path) -> None:
 
 @pytest.mark.parametrize("prefix", ["qiskit/include/", "qiskit/capi/include/"])
 def test_write_vendor_tree_reuses_only_exact_generated_content(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, prefix: str
+    adopt: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, prefix: str
 ) -> None:
     """Reuse matching recorded content and reject changes to those files."""
     root = tmp_path / "repository"
@@ -111,7 +127,7 @@ def test_write_vendor_tree_reuses_only_exact_generated_content(
         adopt.write_vendor_tree("2.6.0", wheel, artifact)
 
 
-def test_function_declarations_ignore_preprocessor_directives() -> None:
+def test_function_declarations_ignore_preprocessor_directives(adopt: ModuleType) -> None:
     """Keep API declarations free of include guards and macro branches."""
     declarations = adopt.function_declarations(
         """#ifndef QISKIT_FUNCS_H
@@ -128,7 +144,7 @@ QkThing qk_thing(void);
     assert declarations == {"qk_thing": "QkThing qk_thing(void);"}
 
 
-def test_function_declarations_record_definitions_as_signatures() -> None:
+def test_function_declarations_record_definitions_as_signatures(adopt: ModuleType) -> None:
     """Stop at the opening brace of a header-defined function."""
     declarations = adopt.function_declarations(
         """extern "C" {
@@ -145,7 +161,9 @@ static int qk_import(
     assert declarations["qk_import"] == "static int qk_import(void);"
 
 
-def test_download_wheel_rejects_http_before_network_access(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_download_wheel_rejects_http_before_network_access(
+    adopt: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Reject transport without TLS before opening a connection."""
     monkeypatch.setattr(adopt.urllib.request, "urlopen", lambda *_args, **_kwargs: pytest.fail("network used"))
     artifact = {
@@ -158,7 +176,7 @@ def test_download_wheel_rejects_http_before_network_access(tmp_path: Path, monke
 
 
 def test_download_wheel_rejects_hash_mismatch_and_removes_staging(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    adopt: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Do not publish or retain a wheel that fails provenance verification."""
     monkeypatch.setattr(adopt.urllib.request, "urlopen", lambda *_args, **_kwargs: BytesIO(b"wheel"))
@@ -176,7 +194,7 @@ def test_download_wheel_rejects_hash_mismatch_and_removes_staging(
 
 
 def test_translation_registration_is_idempotent_and_detects_conflicts(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    adopt: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Resume before or after registration without duplicating generated state."""
     root = tmp_path / "repository"
@@ -203,7 +221,9 @@ def test_translation_registration_is_idempotent_and_detects_conflicts(
         adopt.register_translation(version)
 
 
-def test_translation_registration_preserves_patch_minimum(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_translation_registration_preserves_patch_minimum(
+    adopt: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Keep later patch adoptions from widening support to earlier releases."""
     translation_dir = tmp_path / "bindings" / "mlir" / "Target" / "Qiskit"
     translation_dir.mkdir(parents=True)
@@ -216,7 +236,9 @@ def test_translation_registration_preserves_patch_minimum(tmp_path: Path, monkey
     assert registration == 'MQT_QISKIT_VERSION(6, 2, 2.6.2, ">=2.6.2,<2.7.0")'
 
 
-def test_build_preserves_unrelated_cmake_arguments(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_build_preserves_unrelated_cmake_arguments(
+    adopt: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Change only candidate-specific CMake arguments during validation."""
     environments: list[dict[str, str]] = []
 
@@ -247,7 +269,9 @@ def test_build_preserves_unrelated_cmake_arguments(tmp_path: Path, monkeypatch: 
     assert environments[-1]["SKBUILD_CMAKE_ARGS"] == "-DMLIR_DIR=/toolchain"
 
 
-def test_restartable_worktree_rejects_unrelated_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_restartable_worktree_rejects_unrelated_changes(
+    adopt: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Permit exact interrupted-run artifacts but retain clean-worktree isolation."""
     root = tmp_path / "repository"
     translation_dir = root / "bindings" / "mlir" / "Target" / "Qiskit"
@@ -288,7 +312,9 @@ def test_restartable_worktree_rejects_unrelated_changes(tmp_path: Path, monkeypa
 
 
 @pytest.mark.parametrize("default_encoding", ["utf-8", "cp1252"])
-def test_raw_capsule_access_is_reviewed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, default_encoding: str) -> None:
+def test_raw_capsule_access_is_reviewed(
+    adopt: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, default_encoding: str
+) -> None:
     """Resolve raw table accesses and fail closed if a new header moves them."""
     original_read = Path.read_text
 

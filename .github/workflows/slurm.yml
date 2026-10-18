@@ -20,7 +20,6 @@ on:
       - "test/qdmi/**"
       - "test/python/qdmi/**"
       - "test/python/test_slurm_*.py"
-      - "test/python/conftest.py"
       - "uv.lock"
   pull_request:
     paths:
@@ -39,7 +38,6 @@ on:
       - "test/qdmi/**"
       - "test/python/qdmi/**"
       - "test/python/test_slurm_*.py"
-      - "test/python/conftest.py"
       - "uv.lock"
   workflow_dispatch:
 
@@ -73,7 +71,7 @@ jobs:
       - name: Check the Slurm test runner
         run: >-
           uv run --no-project --with 'pytest>=9.0.1' --python 3.15
-          pytest -o addopts= -q --run-slurm test/python/test_slurm_integration.py
+          pytest -o addopts= -q -m slurm test/python/test_slurm_integration.py
 
       - name: Test Slurm admission and QDMI execution
         timeout-minutes: 40

@@ -434,7 +434,9 @@ error-on-warning = true
 [tool.pytest]
 addopts = [
   "-ra",
-  "--numprocesses=auto", # Automatically use all available CPU cores for parallel testing
+  "--numprocesses=auto",                      # Automatically use all available CPU cores for parallel testing
+  "-m",
+  "not (linkcheck or slurm or qiskit_c_api)",
 ]
 filterwarnings = [
   "error",
@@ -442,6 +444,11 @@ filterwarnings = [
   "ignore:'return' in a 'finally' block:SyntaxWarning",
 ]
 log_level = "INFO"
+markers = [
+  "linkcheck: documentation link-checker tests (requires a source checkout)",
+  "slurm: Slurm integration-script tests (requires a source checkout)",
+  "qiskit_c_api: Qiskit C API adoption-script tests (requires a source checkout)",
+]
 minversion = "9.0"
 strict = true
 testpaths = [ "test/python" ]

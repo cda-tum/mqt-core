@@ -306,11 +306,13 @@ not itself publish a release.
 
 ## Python test selection
 
-`pytest` collects package tests by default. In a source checkout, add
-`--run-link-checks`, `--run-slurm`, or `--run-qiskit-c-api` to include tests for
-the corresponding repository scripts. Selecting a test file explicitly also runs
-it. `nox -s tests` enables the link-checker and Qiskit C API tests; the Slurm
-workflow runs its own script tests with `--run-slurm`.
+`pytest` runs package tests by default. Repository-script tests use the
+`linkcheck`, `slurm`, and `qiskit_c_api` markers registered in `pyproject.toml`.
+In a source checkout, use `pytest -m linkcheck` to select one suite or
+`pytest -m ""` to run all suites. The command-line marker expression replaces
+the default selection, including when selecting a test file explicitly.
+`nox -s tests` includes the link-checker and Qiskit C API tests; the Slurm
+workflow runs its own script tests with `-m slurm`.
 
 ## Documentation validation
 
