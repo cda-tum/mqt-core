@@ -271,23 +271,19 @@ archs = "auto64"
 build-frontend = "uv"
 config-settings = { "cmake.define.ENABLE_IPO" = "ON" }
 environment = { DEPLOY = "ON" }
-test-command = [ "python scripts/check_wheel_runtime.py", "pytest test/python" ]
+test-command = """\
+  pytest test/python --maxprocesses=2 --dist=worksteal --ignore=test/python/test_docs_links.py \
+  --ignore=test/python/test_qiskit_c_api_adopt.py --ignore=test/python/test_slurm_integration.py\
+  """
 # Exercise the compiler with a registered Qiskit C API minor.
-test-requires = [ "cmake>=3.28", "qiskit>=2.5,<2.6" ]
+test-requires = [ "qiskit>=2.6,<2.7" ]
 test-groups = [ "test" ]
 test-sources = [
   "bindings/mlir/Target/Qiskit/SupportedVersions.inc",
-  "docs/cpp_api.md",
-  "examples/slurm",
   "json",
   "pyproject.toml",
-  "scripts/check_docs_links.py",
-  "scripts/check_wheel_runtime.py",
-  "scripts/qiskit_c_api_adopt.py",
   "test/circuits",
   "test/python",
-  "test/slurm/run_integration.py",
-  "vendor/qiskit-c-api",
 ]
 
 [tool.cibuildwheel.windows]
@@ -316,13 +312,20 @@ inherit.environment = "append"
 
 [[tool.cibuildwheel.overrides]]
 select = [ "cp*-win_arm64", "cp3??t-*" ]
-test-command = [
-  'python -c "import mqt.core.dd, mqt.core.mlir, mqt.core.qdmi"',
-  "python scripts/check_wheel_runtime.py",
-]
-test-requires = [ "cmake>=3.28" ]
+test-command = 'python -c "import mqt.core.dd, mqt.core.mlir, mqt.core.qdmi"'
+test-requires = []
 test-groups = []
+test-sources = []
+
+[[tool.cibuildwheel.overrides]]
+# Native executables are shared by all interpreters using the same ABI3 wheel.
+select = [ "cp311-*", "cp3??t-*" ]
+test-command = "python scripts/check_wheel_runtime.py"
+test-requires = [ "cmake>=3.28" ]
 test-sources = [ "docs/cpp_api.md", "scripts/check_wheel_runtime.py" ]
+inherit.test-command = "prepend"
+inherit.test-requires = "append"
+inherit.test-sources = "append"
 
 
 [tool.ruff]

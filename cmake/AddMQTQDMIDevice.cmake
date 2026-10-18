@@ -216,7 +216,8 @@ function(mqt_copy_qdmi_runtime target)
     add_custom_target(
       ${staging_target}
       COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${target}>"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${files} "$<TARGET_FILE_DIR:${target}>"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<REMOVE_DUPLICATES:${files}>"
+              "$<TARGET_FILE_DIR:${target}>"
       COMMAND_EXPAND_LISTS VERBATIM)
     if(NOT imported)
       add_dependencies(${staging_target} ${library_target})

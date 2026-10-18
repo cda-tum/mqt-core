@@ -33,6 +33,8 @@ def main() -> None:
         subprocess.run(
             [
                 "cmake",
+                # The LLVM-discovery guard is unused when the runtime needs no LLVM lookup.
+                "--no-warn-unused-cli",
                 "-S",
                 directory,
                 "-B",

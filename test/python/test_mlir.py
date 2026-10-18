@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 import qiskit
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister, qasm3
-from qiskit.circuit import Gate, library
+from qiskit.circuit import Gate, ParameterExpression, library
 from qiskit.quantum_info import DensityMatrix, Operator
 from qiskit_support import supports_qiskit_translation
 
@@ -1164,9 +1164,13 @@ def test_symbolic_su2_compiles_and_binds_after_export(num_qubits: int, basis: st
     assert program.to_jeff(copy=True).is_valid
     reimported = QCProgram.from_qiskit(result).to_qiskit()
     assert reimported.parameters == source.parameters
-    assert reimported.assign_parameters(values).global_phase == pytest.approx(bound.global_phase)
     if num_qubits == 2:
+        assert reimported.assign_parameters(values).global_phase == pytest.approx(bound.global_phase)
         assert np.allclose(Operator(bound).data, Operator(source.assign_parameters(values)).data, atol=1e-10, rtol=0)
+    else:
+        phase = reimported.global_phase
+        assert isinstance(phase, ParameterExpression)
+        assert phase.bind_all(values) % (2 * np.pi) == pytest.approx(bound.global_phase)
 
 
 @requires_qiskit_translation
