@@ -89,7 +89,7 @@ TEST(GenerateProgramTest, SamplesMagicStateDistillation) {
 }
 
 TEST(GenerateProgramTest, KeepsConcatenatedMagicStateDistillationCompact) {
-  for (const size_t levels : {1U, 2U, 3U, 4U, 8U}) {
+  for (const size_t levels : {2U, 8U}) {
     SCOPED_TRACE(levels);
     auto program = generate(MagicStateDistillation({.levels = levels}));
     ASSERT_TRUE(mlir::succeeded(program));

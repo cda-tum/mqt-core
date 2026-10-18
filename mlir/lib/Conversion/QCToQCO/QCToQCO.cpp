@@ -35,7 +35,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
-#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
@@ -95,8 +94,6 @@ enum class AllocationMode : std::uint8_t {
 /// Track the latest QCO SSA value for each QC qubit reference and register,
 /// with separate mappings for each region.
 struct LoweringState {
-  /// Function symbols remain in place while their signatures are converted.
-  SymbolTableCollection symbolTables;
   /// Original quantum arguments, retained while signatures are rewritten.
   DenseMap<Operation*, SmallVector<Value>> functionQubitArguments;
   struct StructuredValues {
@@ -1025,12 +1022,6 @@ struct ConvertFuncCallOp final : StatefulOpConversionPattern<func::CallOp> {
   LogicalResult
   matchAndRewrite(func::CallOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    auto callee = getState().symbolTables.lookupNearestSymbolFrom<func::FuncOp>(
-        op, op.getCalleeAttr());
-    if (!callee) {
-      return rewriter.notifyMatchFailure(op, "callee is not defined");
-    }
-
     auto& state = getState();
     SmallVector<Value> qcQubits;
     for (auto operand : op.getOperands()) {

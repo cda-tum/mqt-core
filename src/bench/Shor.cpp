@@ -59,18 +59,18 @@ recoverFactors(const ShorOptions& options, uint64_t numerator,
   uint64_t beforePrevious = 1;
   while (denominator != 0) {
     const auto coefficient = numerator / denominator;
-    if (previous != 0 &&
-        coefficient > (options.number - 1 - beforePrevious) / previous) {
+    // Phase fractions have at most 62 bits, so convergents fit in uint64_t.
+    const auto candidate = (coefficient * previous) + beforePrevious;
+    if (candidate >= options.number) {
       break;
     }
-    const auto candidate = (coefficient * previous) + beforePrevious;
-    if (candidate % 2 == 0 &&
-        powerModulo(options.base, candidate, options.number) == 1) {
+    if (candidate % 2 == 0) {
       const auto halfPower =
           powerModulo(options.base, candidate / 2, options.number);
-      for (const auto residue : {halfPower - 1, halfPower + 1}) {
-        if (const auto factors =
-                factorPair(options.number, std::gcd(residue, options.number))) {
+      if ((halfPower * halfPower) % options.number == 1) {
+        // For odd N, a trivial gcd(x-1, N) also makes gcd(x+1, N) trivial.
+        if (const auto factors = factorPair(
+                options.number, std::gcd(halfPower - 1, options.number))) {
           return factors;
         }
       }
@@ -94,18 +94,6 @@ recoverFactors(const ShorOptions& options, uint64_t numerator,
   return true;
 }
 
-[[nodiscard]] uint64_t boundedPower(uint64_t base, unsigned exponent,
-                                    uint64_t limit) {
-  uint64_t result = 1;
-  for (unsigned i = 0; i < exponent; ++i) {
-    if (result > limit / base) {
-      return limit + 1;
-    }
-    result *= base;
-  }
-  return result;
-}
-
 [[nodiscard]] std::optional<FactorPair> perfectPowerFactors(uint64_t number) {
   const auto bits = static_cast<unsigned>(std::bit_width(number));
   for (unsigned exponent = 2; exponent < bits; ++exponent) {
@@ -113,7 +101,11 @@ recoverFactors(const ShorOptions& options, uint64_t numerator,
     uint64_t upper = uint64_t{1} << ((bits + exponent - 1) / exponent);
     while (lower <= upper) {
       const auto base = std::midpoint(lower, upper);
-      const auto power = boundedPower(base, exponent, number);
+      // The 31-bit input bound keeps base^exponent <= 2^60.
+      uint64_t power = 1;
+      for (unsigned i = 0; i < exponent; ++i) {
+        power *= base;
+      }
       if (power == number) {
         return factorPair(number, base);
       }
