@@ -56,6 +56,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <iosfwd>
 #include <memory>
 #include <ostream>
@@ -892,7 +893,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedEntryOutputs) {
       "multiple exit codes",
       "overwritten measurement",
   };
-  for (unsigned shape = 0; shape < 4; ++shape) {
+  for (uint32_t shape = 0; shape < 4; ++shape) {
     SCOPED_TRACE(names[shape]);
     qc::QCProgramBuilder builder(&context);
     builder.initialize();

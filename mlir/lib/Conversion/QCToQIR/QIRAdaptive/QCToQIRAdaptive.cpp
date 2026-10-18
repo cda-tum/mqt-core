@@ -55,9 +55,9 @@ using namespace qir;
 
 namespace {
 
-constexpr unsigned LOCAL_CBIT_REGISTER = 1U;
-constexpr unsigned RETURNED_CBIT_REGISTER = 2U;
-constexpr unsigned MIXED_CBIT_REGISTER =
+constexpr uint32_t LOCAL_CBIT_REGISTER = 1U;
+constexpr uint32_t RETURNED_CBIT_REGISTER = 2U;
+constexpr uint32_t MIXED_CBIT_REGISTER =
     LOCAL_CBIT_REGISTER | RETURNED_CBIT_REGISTER;
 
 } // namespace
@@ -100,7 +100,7 @@ static LogicalResult prepareCBitRegisterAccesses(Operation* moduleOp,
     }
   });
 
-  DenseMap<Value, unsigned> representations;
+  DenseMap<Value, uint32_t> representations;
   SmallVector<Value> worklist;
   moduleOp->walk([&](cbit::AllocOp allocOp) {
     const auto it = state.cregIndices.find(allocOp.getOperation());

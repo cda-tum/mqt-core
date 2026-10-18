@@ -427,8 +427,11 @@ TEST_F(QIRTest, ReusedDeclarationsPreserveAttributesIdempotently) {
   const auto nounwind = builder.getStringAttr("nounwind");
   const auto targetCPU = builder.getStrArrayAttr({"target-cpu", "generic"});
 
-  for (const StringRef name : {StringRef(QIR_MEASURE), StringRef(QIR_RESET),
-                               StringRef(QIR_READ_RESULT)}) {
+  for (const StringRef name : {
+           StringRef(QIR_MEASURE),
+           StringRef(QIR_RESET),
+           StringRef(QIR_READ_RESULT),
+       }) {
     SCOPED_TRACE(name.str());
     const SmallVector<Type> parameters(name == QIR_MEASURE ? 2 : 1, ptrType);
     const auto returnType =

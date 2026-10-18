@@ -51,6 +51,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <iosfwd>
 #include <memory>
 #include <ostream>
@@ -179,14 +180,14 @@ TEST_F(QCToQIRBaseNativeTest, RejectsMeasurementFeedbackDuringConversion) {
 }
 
 TEST_F(QCToQIRBaseNativeTest, CtrlBodyCardinalityIgnoresClassicalOps) {
-  for (unsigned numUnitaries : {0U, 1U, 2U}) {
+  for (uint32_t numUnitaries : {0U, 1U, 2U}) {
     SCOPED_TRACE(numUnitaries);
     qc::QCProgramBuilder builder(&context);
     builder.initialize();
     auto control = builder.allocQubit();
     auto target = builder.allocQubit();
     builder.ctrl(control, target, [&](Value argument) {
-      for (unsigned i = 0; i <= numUnitaries; ++i) {
+      for (uint32_t i = 0; i <= numUnitaries; ++i) {
         arith::ConstantIntOp::create(builder, builder.getUnknownLoc(), i, 64);
         if (i < numUnitaries) {
           builder.x(argument);
@@ -540,7 +541,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedEntryOutputs) {
       "multiple exit codes",
       "overwritten measurement",
   };
-  for (unsigned shape = 0; shape < 4; ++shape) {
+  for (uint32_t shape = 0; shape < 4; ++shape) {
     SCOPED_TRACE(names[shape]);
     qc::QCProgramBuilder builder(&context);
     builder.initialize();

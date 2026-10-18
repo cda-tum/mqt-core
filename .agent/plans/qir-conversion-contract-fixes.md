@@ -1,6 +1,6 @@
 # QIR conversion contracts and resource lifetime
 
-Status: complete.
+Status: complete; local validation passes, hosted CI is reported separately.
 
 ## Outcome and scope
 
@@ -44,6 +44,9 @@ and `docs/qir/index.md` state the supported boundaries.
 - Visit CFG edges directly, index defined-helper callers once, cache symbol
   lookup, and deduplicate resource values when queued. Visit helper returns once
   per resource role. Do not index external QIS callsites.
+- Collect Adaptive capabilities in one function-body traversal and both static
+  resource roles in one module traversal. Retain helper/CFG tracing and loop
+  dependence analysis because supported inputs require their precision.
 - Reuse MLIR `CFGLoopInfo` for natural loops and LLVM irreducibility detection.
   Unknown dependencies and irreducible cycles require both backward-branch
   capabilities. This is not a finite-trip-count proof or external-pointer alias
@@ -52,6 +55,8 @@ and `docs/qir/index.md` state the supported boundaries.
   declarations, and remove stale allocator/string storage, duplicate
   loaded-qubit tracking, unused Base ownership entries, and the builder's MemRef
   dependency.
+- Create output declarations lazily through one emitter. Preserve output-label
+  uniqueness across batches and leave Adaptive cleanup ordering unchanged.
 - Consolidate test setup and diagnostic capture; use existing tables for new
   forwarding and loop cases. Preserve parameterized gate cases and direct
   assertions about output identity, ordering, ownership, and rejected inputs.
@@ -75,10 +80,20 @@ while retaining all measurements and reads. LeakSanitizer reports no leaks for
 Generated MLIR references, repository lint, and whole-file C++ lint pass. C++
 lint checks all nine changed implementation/test files.
 
+After simplifying metadata collection and output emission, all 728 native, three
+CLI, and 56 Python QDMI compilation tests pass again. All 61 export probes
+retain their outcomes; the 18 successful LLVM exports verify and have identical
+metadata and no LLVM function differences from the preceding commit. Repository
+formatting runs before whole-file C++ lint, which reports zero findings.
+Existing helper, CFG, and 100,000-gate scaling probes show no material timing
+regression; these simplifications do not establish a general speedup or memory
+improvement.
+
 Targeted three-run median wall times compare the contract-fix baseline with the
-final executable, using CPU affinity on a shared DGX Spark. Parsing and
-verification are included; these are diagnostic scaling checks, not a general
-compiler speedup claim. Ad hoc harnesses and data stay outside the repository.
+earlier performance-fix executable, using CPU affinity on a shared DGX Spark.
+Parsing and verification are included; these are diagnostic scaling checks, not
+a general compiler speedup claim. Ad hoc harnesses and data stay outside the
+repository.
 
 | Workload                             | Metadata/conversion passes |  Before |   After |
 | ------------------------------------ | -------------------------: | ------: | ------: |
