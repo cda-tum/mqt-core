@@ -18,10 +18,10 @@ global-phase, wire, and failure contracts.
 - Custom two-qubit bases support zero or one use unless super-controlled. Rank
   only supported counts and use all three basis coordinates for one-use
   fidelity. Skip super-controlled templates when they cannot be used.
-- Count-only native queries share Weyl validation and count selection with full
-  synthesis. Fixed and parameterized Pauli bases avoid local-factor
-  construction. Square-root iSWAP retains full synthesis because its residual
-  and sandwich decompositions can fail after target validation.
+- Count-only native queries share target Weyl validation and count selection
+  with full synthesis, without constructing native factors. Square-root iSWAP
+  uses the same chamber classifier for both paths. Counts guide routing; full
+  synthesis retains its numerical checks when constructing the circuit.
 - Reserve the exact Pauli factor count before inserting the first pair. Reuse
   four fixed square-root iSWAP prefix decompositions; their first
   diagonalization attempt does not use the caller's seed. Target, residual, and
@@ -49,8 +49,10 @@ the release preset and run their binaries under `build/release/mlir/unittests/`:
 The 100,000-operation CLI expression succeeds with an 8 MiB stack. All 60,000
 numerical decompositions passed phase-aware reconstruction; worst infidelity was
 8.57e-13. Count-only results match full synthesis on 2,003 inputs across three
-entanglers, including numerical failure. Eight fresh CLI processes produced
-identical output. Independent review found no actionable defects.
+entanglers, including numerical failure. The square-root iSWAP count query
+matches full synthesis on one million boundary, random, and perturbed inputs,
+including 51,834 target-decomposition failures. Eight fresh CLI processes
+produced identical output. Independent review found no actionable defects.
 `uvx nox -s lint` and whole-file `uvx nox -s cpp-lint` passed.
 
 On ARM64 with Clang 23.1.4, LLVM/MLIR 23.1.0, and release ThinLTO:
@@ -60,6 +62,9 @@ On ARM64 with Clang 23.1.4, LLVM/MLIR 23.1.0, and release ThinLTO:
   CPU time fell from 1.36 to 0.69 microseconds in the standalone probe.
 - Generic Pauli factors use one 512-byte allocation instead of three requests
   totaling 1,600 bytes. CX and RZZ count-only queries allocate no factors.
+- Square-root iSWAP count queries take 0.0802 CPU seconds versus 0.1798 for full
+  synthesis over 40,060 queries (five-round medians), with zero allocations
+  instead of 64,120 requests totaling 25,388,800 bytes.
 - Five-round numerical probes measured about 21% less CPU for a three-gate
   square-root iSWAP decomposition and about 110 nanoseconds saved per custom RZZ
   basis creation.

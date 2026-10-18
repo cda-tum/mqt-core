@@ -783,6 +783,10 @@ TEST(SqrtISwap, ChamberGridWithLocalFactorsAndPhase) {
                              : a >= b + std::abs(c)                         ? 2
                                                                             : 3;
         EXPECT_EQ(result->numBasisUses, expected);
+        EXPECT_EQ(countUnitary2QWeyl(
+                      target, {.gate = CompilerTarget::GateKind::SQRTISWAP},
+                      static_cast<uint64_t>(a)),
+                  expected);
         EXPECT_TRUE(reconstructSqrtISwap(*result).isApprox(target, 1e-8));
       }
     }
@@ -811,6 +815,9 @@ TEST(SqrtISwap, NearChamberBoundaries) {
                    << coordinates[0] << "," << coordinates[1] << ","
                    << coordinates[2] << " eps=" << epsilon);
       ASSERT_TRUE(result.has_value());
+      EXPECT_EQ(countUnitary2QWeyl(
+                    target, {.gate = CompilerTarget::GateKind::SQRTISWAP}),
+                result->numBasisUses);
       const auto overlap =
           (target.adjoint() * reconstructSqrtISwap(*result)).trace();
       EXPECT_GE(traceToFidelity(overlap), WEYL_DEFAULT_FIDELITY - 2e-15);
@@ -855,6 +862,9 @@ TEST(SqrtISwap, RandomInteractionsAndLocalFactors) {
     EXPECT_EQ(result->numBasisUses,
               coordinates[0] >= coordinates[1] + std::abs(coordinates[2]) ? 2
                                                                           : 3);
+    EXPECT_EQ(countUnitary2QWeyl(target,
+                                 {.gate = CompilerTarget::GateKind::SQRTISWAP}),
+              result->numBasisUses);
     EXPECT_TRUE(reconstructSqrtISwap(*result).isApprox(target, 1e-9));
   }
 }

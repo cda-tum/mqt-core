@@ -377,12 +377,11 @@ decomposeUnitary2QWeyl(const Matrix4x4& target,
                        CompilerTarget::Entangler entangler,
                        uint64_t seed = 2023);
 
-/// Returns the entangler count from @ref decomposeUnitary2QWeyl without
-/// building local factors when the count alone determines numerical success.
+/// Returns the entangler count selected from the target's Weyl decomposition
+/// without constructing a native circuit, or `std::nullopt` if that
+/// decomposition fails.
 ///
 /// Requires the same supported entangler as @ref decomposeUnitary2QWeyl.
-/// SQRTISWAP retains full synthesis because its residual decomposition can
-/// fail.
 [[nodiscard]] std::optional<uint8_t>
 countUnitary2QWeyl(const Matrix4x4& target, CompilerTarget::Entangler entangler,
                    uint64_t seed = 2023);

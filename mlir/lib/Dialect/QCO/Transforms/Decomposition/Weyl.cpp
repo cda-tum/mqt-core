@@ -882,6 +882,19 @@ static const SqrtISwapPrefix& sqrtISwapPrefix(bool lowA, bool negativeC) {
                   static_cast<size_t>(negativeC)];
 }
 
+static uint8_t numSqrtISwapGates(const TwoQubitWeylDecomposition& kak) {
+  if (kak.a() <= WEYL_TOLERANCE) {
+    return 0;
+  }
+  if (std::abs(kak.a() - EIGHTH_PI) <= WEYL_TOLERANCE &&
+      std::abs(kak.b() - EIGHTH_PI) <= WEYL_TOLERANCE &&
+      std::abs(kak.c()) <= WEYL_TOLERANCE) {
+    return 1;
+  }
+  // The two-gate region is a >= b + |c|; all other classes need three gates.
+  return kak.a() - kak.b() - std::abs(kak.c()) >= -WEYL_TOLERANCE ? 2 : 3;
+}
+
 static std::optional<TwoQubitNativeDecomposition>
 decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
   const auto targetDecomposition =
@@ -890,7 +903,8 @@ decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
     return std::nullopt;
   }
   const auto& kak = *targetDecomposition;
-  if (kak.a() <= WEYL_TOLERANCE) {
+  const auto count = numSqrtISwapGates(kak);
+  if (count == 0) {
     TwoQubitNativeDecomposition result{
         .numBasisUses = 0,
         .singleQubitFactors = {Matrix2x2::identity(), Matrix2x2::identity()},
@@ -899,12 +913,10 @@ decomposeSqrtISwap(const Matrix4x4& target, uint64_t seed) {
     attachLocalFactors(result, kak);
     return result;
   }
-  if (std::abs(kak.a() - EIGHTH_PI) <= WEYL_TOLERANCE &&
-      std::abs(kak.b() - EIGHTH_PI) <= WEYL_TOLERANCE &&
-      std::abs(kak.c()) <= WEYL_TOLERANCE) {
+  if (count == 1) {
     return oneGate(kak);
   }
-  if (kak.a() - kak.b() - std::abs(kak.c()) >= -WEYL_TOLERANCE) {
+  if (count == 2) {
     return twoGates(kak, seed);
   }
 
@@ -1003,12 +1015,6 @@ decomposeUnitary2QWeyl(const Matrix4x4& target,
 std::optional<uint8_t> countUnitary2QWeyl(const Matrix4x4& target,
                                           CompilerTarget::Entangler entangler,
                                           uint64_t seed) {
-  if (!entangler.parameterized() &&
-      entangler.gate == CompilerTarget::GateKind::SQRTISWAP) {
-    // The residual and sandwich decompositions can fail after target analysis.
-    const auto native = decomposeSqrtISwap(target, seed);
-    return native ? std::optional{native->numBasisUses} : std::nullopt;
-  }
   const auto kak =
       TwoQubitWeylDecomposition::create(target, WEYL_DEFAULT_FIDELITY, seed);
   if (!kak) {
@@ -1016,6 +1022,9 @@ std::optional<uint8_t> countUnitary2QWeyl(const Matrix4x4& target,
   }
   if (entangler.parameterized()) {
     return static_cast<uint8_t>(pauliRotations(*kak).size());
+  }
+  if (entangler.gate == CompilerTarget::GateKind::SQRTISWAP) {
+    return numSqrtISwapGates(*kak);
   }
   return cachedNativeBasisDecomposer(entangler.gate).numBasisGates(*kak);
 }
