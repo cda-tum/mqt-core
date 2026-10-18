@@ -100,8 +100,7 @@ struct FusableTwoQubitRun {
 /// Such unitaries are handled through their shell op, so the top-level walk
 /// skips them.
 static bool isExcludedFromTopLevelUnitaryWalk(Operation* op) {
-  return op->getParentOfType<CtrlOp>() || op->getParentOfType<InvOp>() ||
-         op->getParentOfType<PowOp>();
+  return op->getParentOfType<CtrlOp, InvOp, PowOp>() != nullptr;
 }
 
 /// Whether `op` is a unitary shell the pass may rewrite at top level.
@@ -1516,9 +1515,9 @@ protected:
         return;
       }
       listener.foldPending();
-    }
-    if (failed(prepareGlobalPhases(moduleOp, target))) {
-      signalPassFailure();
+      if (failed(prepareGlobalPhases(moduleOp, target))) {
+        signalPassFailure();
+      }
     }
   }
 };

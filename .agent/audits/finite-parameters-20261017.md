@@ -2,7 +2,7 @@
 
 Status: all confirmed findings applied and locally validated. Original baseline:
 `9ca32dd3e4df86fc313eca1c326adbf6ec27b7f9`. Implementation base:
-`3bf8849e5d5b671fe03b168aa38e3357a4bded0c`.
+`056bef24722dd0a1f0813f3f7b4197c10f8eb950`.
 
 ## Scope and contract
 
@@ -77,6 +77,23 @@ remove inverses emptied by phase extraction, allowing enclosing empty controls
 to disappear too. Existing QC/QCO control-removal tests cover this cleanup and
 QCO result-wire identity. Modifier unrolling excludes terminators by iteration
 instead of checking their trait on every operation.
+
+### P3: a synthesis test constrained phase-preparation layout
+
+`TargetNativeSynthesis` permits input changes on failure, and its phase
+preparation can move eager scalar producers. The unsupported runtime-controlled
+R regression compared against the original layout, conflating preparation with
+failed lowering. Applied: normalize a clone for the expected result while
+running synthesis on the original input. Retain exact IR comparison, the failure
+diagnostic, verification, and qubit linearity. No rollback or
+conditional-hoisting machinery is needed.
+
+The connected synthesis audit also replaces three modifier-ancestor walks with
+MLIR's variadic query. Final phase preparation runs only when a synthesis basis
+exists; successful native-only lowering preserves or reorders gates and creates
+no phases. Existing wire-reordering, modifier-shell, and retained/dropped-phase
+tests cover this path. Keep all preparation stages when synthesis can emit
+phases between them.
 
 ## Rejected candidates
 

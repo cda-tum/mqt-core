@@ -1,7 +1,7 @@
 # Finite parameters and global phases
 
 Status: complete. Base: upstream main
-`3bf8849e5d5b671fe03b168aa38e3357a4bded0c`.
+`056bef24722dd0a1f0813f3f7b4197c10f8eb950`.
 
 ## Outcome and scope
 
@@ -34,15 +34,20 @@ the two MQT suites have 69 cases instead of 83.
 - Merge known phases before emitting arithmetic, move phase-expression buffers,
   skip recursive dispatch for regionless operations, and remove inverse/control
   wrappers emptied by extraction. Reuse existing modifier inlining helpers.
+- Keep synthesis failure checks relative to independent phase preparation. The
+  pass permits input changes on failure; unsupported lowering must preserve the
+  normalized IR. Search modifier ancestors once and omit final phase preparation
+  when native-only lowering cannot introduce phases.
 - Retain the shipped cache-taking constant-folding API. A storage-only change
   does not justify breaking callers or adding an adapter.
 
 ## Validation
 
-The final implementation passed 2914 C++ tests in 15 affected binaries using
-`release-clang-ipo`, Clang 23.1.4, LLVM/MLIR 23.1.0, ThinLTO, and mold on Linux
-aarch64. These cover MQT utilities/transforms, CBit/QC/QCO/QTensor IR, compiler
-APIs and CLI, QC/QCO conversions, decomposition/optimization, and OpenQASM.
+The final `cmake --build --preset release-clang-ipo` build and
+`ctest --preset release-clang-ipo --parallel 8` run passed 4020 tests, with one
+existing skip (`ScQDMIJobSpecificationTest.QueryJobId`). This is the complete
+configured native suite, including native synthesis. The configuration uses
+Clang 23.1.4, LLVM/MLIR 23.1.0, ThinLTO, and mold on Linux aarch64.
 
 The Python command
 
@@ -53,26 +58,26 @@ uvx nox -s tests-3.14 -- test/python/test_mlir.py \
   test/python/test_mlir_qiskit_target.py -n 4
 ```
 
-passed all 840 cases with Python 3.14.7 and Qiskit 2.6.0. The 243
+passed all 840 cases at `e814d4fad` with Python 3.14.7 and Qiskit 2.6.0. The 243
 phase/symbolic/parameter cases also passed with Qiskit 2.5.2. Both versions
 passed six QC/QCO full-unitary binding, Qiskit export, and OpenQASM round-trip
 probes. All four original deep-expression and large-power reproducers passed.
 
 `uvx nox -s lint`, `uvx nox -s cpp-lint`, and `git diff --check` passed. C++
 lint checked every changed implementation/test file in full. No binding
-declarations changed. Implementation and tests are 246 lines smaller: 79
-production lines and 167 test lines. Existing numerical and consumer oracles
-remain covered.
+declarations changed. Implementation and tests are 242 lines smaller. Existing
+numerical and consumer oracles remain covered.
 
 One-off correctness probes and matched timing experiments live in the ignored
 `.agent/benchmarks/finite-parameters/` folder. Each comparison retains its exact
 source patch, binary hashes, raw samples, reproduction commands, and plots. CPU
 affinity does not reserve host resources; timings are diagnostic and do not
-establish application-wide speedups. Against the preceding implementation, 8192
-scalar producers at depth 64 fell from a median 14.82 ms to 2.17 ms; a shared
-expression across 128 classical regions fell from 280.2 ms to 25.8 ms. The
-phase-only control and observed allocation requests were unchanged within sample
-spread. Allocation-request counts are not peak or resident memory measurements.
+establish application-wide speedups. Measurements at `e814d4fad` against the
+preceding implementation show 8192 scalar producers at depth 64 fell from a
+median 14.82 ms to 2.17 ms; a shared expression across 128 classical regions
+fell from 280.2 ms to 25.8 ms. The phase-only control and observed allocation
+requests were unchanged within sample spread. Allocation-request counts are not
+peak or resident memory measurements.
 
 ## Limits
 
