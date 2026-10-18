@@ -467,8 +467,10 @@ pass CMake settings as `-Ccmake.define.<setting>=<value>` to `uv pip install` or
 Automatic installation supports native Linux x86_64 and AArch64 with glibc,
 macOS AArch64, and Windows x86_64 and ARM64. Linux and macOS require Bash,
 `curl`, and `tar`; Windows requires PowerShell 7.4 or newer (`pwsh`) and `tar`.
-Cross-compilation, Intel macOS, universal2, and musl builds require a compatible
-SDK supplied by the user. A compiler compatible with the SDK is still required.
+The installer selects the host architecture. Cross-compilation (including
+same-OS architecture changes), Intel macOS, universal2, and musl builds require
+a compatible SDK supplied by the user with automatic installation disabled. A
+compiler compatible with the SDK is still required.
 
 To disable LLVM/MLIR downloads, including for offline builds, set
 `-DMQT_CORE_AUTO_INSTALL_MLIR=OFF`. A completed SDK installation in the build

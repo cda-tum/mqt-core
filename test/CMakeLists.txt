@@ -11,12 +11,5 @@ add_subdirectory(bench)
 add_subdirectory(dd)
 add_subdirectory(qdmi)
 
-add_test(
-  NAME mqt-core-mlir-setup
-  COMMAND
-    ${CMAKE_COMMAND} "-DMQT_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    "-DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/mlir-setup" -P
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/SetupMLIR.cmake")
-
 # copy test circuits to build directory
 file(COPY ${PROJECT_SOURCE_DIR}/test/circuits DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
