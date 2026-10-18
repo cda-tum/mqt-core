@@ -755,11 +755,6 @@ struct ConvertCBitWriteOpToJeff final
   LogicalResult
   matchAndRewrite(cbit::WriteOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    const auto width = op.getValue().getType().getWidth();
-    if (width > 64) {
-      return op.emitError(
-          "jeff supports general integer expressions only up to 64 bits");
-    }
     auto& state = getState().cbitState;
     auto reg = state.resolveRegisterUse(op, op->getOperand(1));
     auto array = state.getCurrentValue(reg, op);
@@ -767,6 +762,13 @@ struct ConvertCBitWriteOpToJeff final
       return rewriter.notifyMatchFailure(op, "unknown classical register");
     }
     array = rewriter.getRemappedValue(array);
+    // Captured scalar operands may already have their promoted jeff width.
+    const auto width = static_cast<uint64_t>(
+        cast<RankedTensorType>(array.getType()).getDimSize(0));
+    if (width > 64) {
+      return op.emitError(
+          "jeff supports general integer expressions only up to 64 bits");
+    }
     auto value = adaptor.getValue();
     auto type = cast<IntegerType>(value.getType());
     auto zero =

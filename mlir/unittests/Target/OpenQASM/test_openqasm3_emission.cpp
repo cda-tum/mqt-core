@@ -660,29 +660,6 @@ r = measure q;
       << *emitted;
 }
 
-TEST(OpenQASM3EmissionTest, RenamesOutputsThatCollideWithStandardGates) {
-  constexpr llvm::StringLiteral source = R"mlir(module {
-    func.func @main() -> !cbit.reg<1> {
-      %bits = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "x"}
-          : !cbit.reg<1>
-      return %bits : !cbit.reg<1>
-    }
-  })mlir";
-  DialectRegistry registry = emissionDialects();
-  MLIRContext context(registry);
-  auto moduleOp = parseSourceString<ModuleOp>(source, &context);
-  ASSERT_TRUE(moduleOp);
-
-  auto emitted = qc::translateQCToOpenQASM3(*moduleOp);
-
-  ASSERT_TRUE(succeeded(emitted));
-  EXPECT_NE(emitted->find("output bit[1] _mqt_out0;"), std::string::npos);
-  EXPECT_TRUE(openqasm::frontend::analyzeOpenQASM(
-      *emitted, openqasm::frontend::GatePolicy::Strict))
-      << *emitted;
-  EXPECT_TRUE(qc::translateOpenQASMToQC(*emitted, &context)) << *emitted;
-}
-
 TEST(OpenQASM3EmissionTest, EmitsStatementOnlyStructuredControl) {
   constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
 include "stdgates.inc";
@@ -1000,21 +977,24 @@ result = rotl(result, 2);
 TEST(OpenQASM3EmissionTest, RoundTripsWideBitVectorBuiltins) {
   constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
 output bit[65] c;
-c = 1;
+c = 18446744073709551617;
 int distance = int(bool(c));
 c = rotl(c, distance);
 c = rotr(c, 2);
-output uint count;
-count = popcount(c);
+output bit[64] count;
+count = bit[64](uint[64](popcount(c)));
 )qasm";
   MLIRContext context;
   auto moduleOp = qc::translateOpenQASMToQC(source, &context);
   ASSERT_TRUE(moduleOp);
   auto emitted = qc::translateQCToOpenQASM3(*moduleOp);
   ASSERT_TRUE(succeeded(emitted));
+  EXPECT_NE(emitted->find("0x10000000000000001"), std::string::npos);
   auto restored = qc::translateOpenQASMToQC(*emitted, &context);
   ASSERT_TRUE(restored) << *emitted;
   EXPECT_TRUE(succeeded(verify(*restored)));
+  expectOneSample(*restored,
+                  std::string(62, '0') + "1011" + std::string(63, '0'));
 }
 
 TEST(OpenQASM3EmissionTest, RejectsWideScalarIntegerExpressions) {
@@ -1744,7 +1724,7 @@ TEST(OpenQASM3EmissionTest, RejectsInvalidGateFunctions) {
 TEST(OpenQASM3EmissionTest, EmitsSignedBooleanAndFloatingExpressions) {
   constexpr llvm::StringLiteral source = R"mlir(
 module {
-  func.func @main() -> (i64, i1, f64, f64, i1)
+  func.func @main() -> (i64, i1, f64, f64, i1, i1, i1)
       attributes {mqt.entry_point} {
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -1758,8 +1738,12 @@ module {
     %converted = arith.fptosi %sine : f64 to i64
     %zero = arith.constant 0 : i64
     %nonzero = arith.cmpi ne, %converted, %zero : i64
-    return %signed, %comparison, %sine, %remainder, %nonzero
-        : i64, i1, f64, f64, i1
+    %half = arith.addf %angle, %angle : f64
+    %negativeHalf = arith.negf %half : f64
+    %unsignedBit = arith.fptoui %half : f64 to i1
+    %signedBit = arith.fptosi %negativeHalf : f64 to i1
+    return %signed, %comparison, %sine, %remainder, %nonzero,
+           %unsignedBit, %signedBit : i64, i1, f64, f64, i1, i1, i1
   }
 }
 )mlir";
@@ -1774,6 +1758,18 @@ module {
   EXPECT_NE(emitted->find("sin("), std::string::npos);
   EXPECT_NE(emitted->find("mod(0.25,"), std::string::npos);
   EXPECT_NE(emitted->find("int[64]("), std::string::npos) << *emitted;
+  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+  ASSERT_TRUE(restored) << *emitted;
+  PassManager manager(&context);
+  manager.addPass(createCanonicalizerPass());
+  ASSERT_TRUE(succeeded(manager.run(*restored)));
+  auto entry = restored->lookupSymbol<func::FuncOp>("main");
+  auto returned = cast<func::ReturnOp>(entry.getBody().front().getTerminator());
+  for (auto bit : returned.getOperands().take_back(2)) {
+    APInt result;
+    ASSERT_TRUE(matchPattern(bit, m_ConstantInt(&result)));
+    EXPECT_TRUE(result.isZero());
+  }
 }
 
 TEST(OpenQASM3EmissionTest, EmitsFloatingRemainderAsStrictOpenQASMMod) {
@@ -2455,79 +2451,49 @@ TEST(OpenQASM3EmissionTest, LeavesDestinationEmptyOnFailure) {
   EXPECT_TRUE(output.empty());
 }
 
-TEST(OpenQASM3EmissionTest, MaterializesDeepScalarExpressions) {
-  DialectRegistry registry = emissionDialects();
-  MLIRContext context(registry);
-  context.loadAllAvailableDialects();
-  OpBuilder builder(&context);
-  const auto location = builder.getUnknownLoc();
-  auto moduleOp = ModuleOp::create(location);
-  auto function =
-      func::FuncOp::create(builder, location, "main",
-                           builder.getFunctionType({}, {builder.getI64Type()}));
-  moduleOp.push_back(function);
-  Block* body = function.addEntryBlock();
-  builder.setInsertionPointToStart(body);
-  Value one = arith::ConstantOp::create(builder, location,
-                                        builder.getI64IntegerAttr(1));
-  Value value = one;
-  for (size_t i = 0; i < 256; ++i) {
-    value = arith::AddIOp::create(builder, location, value, one);
-  }
-  func::ReturnOp::create(builder, location, value);
-  ASSERT_TRUE(succeeded(verify(moduleOp)));
-
-  auto emitted = qc::translateQCToOpenQASM3(moduleOp);
-  ASSERT_TRUE(succeeded(emitted));
-  EXPECT_LT(emitted->size(), 100000);
-  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
-  ASSERT_TRUE(restored) << *emitted;
-  PassManager manager(&context);
-  manager.addPass(createCanonicalizerPass());
-  ASSERT_TRUE(succeeded(manager.run(*restored)));
-  auto entry = restored->lookupSymbol<func::FuncOp>("main");
-  auto returned = cast<func::ReturnOp>(entry.getBody().front().getTerminator());
-  APInt result;
-  ASSERT_TRUE(matchPattern(returned.getOperand(0), m_ConstantInt(&result)));
-  EXPECT_EQ(result.getSExtValue(), 257);
-  moduleOp.erase();
-}
-
-TEST(OpenQASM3EmissionTest, MaterializesSharedScalarExpressions) {
-  DialectRegistry registry = emissionDialects();
-  MLIRContext context(registry);
-  context.loadAllAvailableDialects();
-  OpBuilder builder(&context);
-  const auto location = builder.getUnknownLoc();
-  auto moduleOp = ModuleOp::create(location);
-  auto function =
-      func::FuncOp::create(builder, location, "main",
-                           builder.getFunctionType({}, {builder.getI64Type()}));
-  moduleOp.push_back(function);
-  Block* body = function.addEntryBlock();
-  builder.setInsertionPointToStart(body);
-  Value value = arith::ConstantOp::create(builder, location,
+TEST(OpenQASM3EmissionTest, MaterializesDeepAndSharedScalarExpressions) {
+  for (const auto& [shared, depth, sizeLimit, expected] : {
+           std::tuple{false, 256U, 100000U, 257},
+           std::tuple{true, 16U, 10000U, 65536},
+       }) {
+    SCOPED_TRACE(shared ? "shared" : "deep");
+    MLIRContext context(emissionDialects());
+    context.loadAllAvailableDialects();
+    OpBuilder builder(&context);
+    const auto location = builder.getUnknownLoc();
+    auto moduleOp = ModuleOp::create(location);
+    auto function = func::FuncOp::create(
+        builder, location, "main",
+        builder.getFunctionType({}, {builder.getI64Type()}));
+    moduleOp.push_back(function);
+    Block* body = function.addEntryBlock();
+    builder.setInsertionPointToStart(body);
+    Value one = arith::ConstantOp::create(builder, location,
                                           builder.getI64IntegerAttr(1));
-  for (size_t i = 0; i < 16; ++i) {
-    value = arith::AddIOp::create(builder, location, value, value);
-  }
-  func::ReturnOp::create(builder, location, value);
-  ASSERT_TRUE(succeeded(verify(moduleOp)));
+    Value value = one;
+    for (size_t i = 0; i < depth; ++i) {
+      value =
+          arith::AddIOp::create(builder, location, value, shared ? value : one);
+    }
+    func::ReturnOp::create(builder, location, value);
+    ASSERT_TRUE(succeeded(verify(moduleOp)));
 
-  auto emitted = qc::translateQCToOpenQASM3(moduleOp);
-  ASSERT_TRUE(succeeded(emitted));
-  EXPECT_LT(emitted->size(), 10000);
-  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
-  ASSERT_TRUE(restored) << *emitted;
-  PassManager manager(&context);
-  manager.addPass(createCanonicalizerPass());
-  ASSERT_TRUE(succeeded(manager.run(*restored)));
-  auto entry = restored->lookupSymbol<func::FuncOp>("main");
-  auto returned = cast<func::ReturnOp>(entry.getBody().front().getTerminator());
-  APInt result;
-  ASSERT_TRUE(matchPattern(returned.getOperand(0), m_ConstantInt(&result)));
-  EXPECT_EQ(result.getSExtValue(), 65536);
-  moduleOp.erase();
+    auto emitted = qc::translateQCToOpenQASM3(moduleOp);
+    ASSERT_TRUE(succeeded(emitted));
+    EXPECT_LT(emitted->size(), sizeLimit);
+    auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+    ASSERT_TRUE(restored) << *emitted;
+    PassManager manager(&context);
+    manager.addPass(createCanonicalizerPass());
+    ASSERT_TRUE(succeeded(manager.run(*restored)));
+    auto entry = restored->lookupSymbol<func::FuncOp>("main");
+    auto returned =
+        cast<func::ReturnOp>(entry.getBody().front().getTerminator());
+    APInt result;
+    ASSERT_TRUE(matchPattern(returned.getOperand(0), m_ConstantInt(&result)));
+    EXPECT_EQ(result.getSExtValue(), expected);
+    moduleOp.erase();
+  }
 }
 
 TEST(OpenQASM3EmissionTest, RejectsExcessiveClassicalRegisterWidth) {
@@ -3046,8 +3012,17 @@ TEST(OpenQASM3EmissionTest, RejectsRepeatedRegisterResults) {
 }
 
 TEST(OpenQASM3EmissionTest, UsesFrontendIdentifierRulesForOutputNames) {
-  for (const auto* name :
-       {"void", "im", "pragma", "pi", "tau", "euler", "sin", "valid_name"}) {
+  for (const auto* name : {
+           "void",
+           "im",
+           "pragma",
+           "pi",
+           "tau",
+           "euler",
+           "sin",
+           "x",
+           "valid_name",
+       }) {
     SCOPED_TRACE(name);
     auto registry = emissionDialects();
     MLIRContext context(registry);
@@ -3061,9 +3036,16 @@ TEST(OpenQASM3EmissionTest, UsesFrontendIdentifierRulesForOutputNames) {
     ASSERT_TRUE(moduleOp);
     auto emitted = qc::translateQCToOpenQASM3(*moduleOp);
     ASSERT_TRUE(succeeded(emitted));
+    const auto* expected =
+        StringRef(name) == "valid_name" || StringRef(name) == "sin"
+            ? name
+            : "_mqt_out0";
+    EXPECT_NE(emitted->find(std::string("output bit[1] ") + expected + ";"),
+              std::string::npos);
     EXPECT_TRUE(openqasm::frontend::analyzeOpenQASM(
         *emitted, openqasm::frontend::GatePolicy::Strict))
         << *emitted;
+    EXPECT_TRUE(qc::translateOpenQASMToQC(*emitted, &context)) << *emitted;
   }
 }
 

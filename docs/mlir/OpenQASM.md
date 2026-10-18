@@ -122,7 +122,8 @@ has no guaranteed diagnostic or result.
 Runtime integer arithmetic, including powers, uses machine-width promotion and
 wraps modulo that width. Explicit integer casts truncate or extend to their
 declared width. Compile-time invalid arithmetic is diagnosed. Runtime division
-by zero remains undefined.
+by zero remains undefined. Range endpoints and steps use the same integer
+promotion before iteration.
 
 OpenQASM 3 supports all six comparisons between fixed-width bit-register
 expressions. Direct register comparisons use unsigned meaning. An exact-width
@@ -443,10 +444,10 @@ The exporter stores used scalar expressions and bit-register reads in local
 variables at their definition. These variables preserve snapshots across later
 writes and nested regions and prevent repeated expansion of shared expressions.
 Wide bit-vector expressions use local bit registers. Zero-initialized registers
-use one exact-width bit-string initializer. Shift interpretation is determined
-by the MLIR operation, not by the history of its operands. Arithmetic right
-shifts are encoded with unsigned bitwise operations and explicit sign-bit
-biasing.
+use one exact-width bit-string initializer. Constants with more than 64 active
+bits use hexadecimal literals. Shift interpretation is determined by the MLIR
+operation, not by the history of its operands. Arithmetic right shifts are
+encoded with unsigned bitwise operations and explicit sign-bit biasing.
 
 Inline expressions, including those in gate functions, have a nesting limit of
 256 and an expansion budget of 4,096 values per expression. The total width of

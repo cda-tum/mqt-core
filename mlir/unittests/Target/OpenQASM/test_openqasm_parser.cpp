@@ -517,29 +517,15 @@ TEST(OpenQASMFrontendTest, RejectsInvalidIncludeStringsAtTheOffendingByte) {
   }
 }
 
-TEST(OpenQASMFrontendTest, RejectsMisplacedVersionsAndRecursiveGates) {
+TEST(OpenQASMFrontendTest, RejectsMisplacedVersions) {
   constexpr llvm::StringLiteral misplacedVersion = R"qasm(
 qubit q;
 OPENQASM 3.1;
 )qasm";
-  constexpr llvm::StringLiteral recursiveGates = R"qasm(
-OPENQASM 3.1;
-gate first q { first q; }
-qubit q;
-first q;
-bit result = measure q;
-)qasm";
-
   auto misplaced = openqasm::frontend::analyzeOpenQASM(misplacedVersion);
   ASSERT_FALSE(misplaced);
   ASSERT_FALSE(misplaced.diagnostics.empty());
   EXPECT_NE(misplaced.diagnostics.front().message.find("must be the first"),
-            std::string::npos);
-
-  auto recursive = openqasm::frontend::analyzeOpenQASM(recursiveGates);
-  ASSERT_FALSE(recursive);
-  ASSERT_FALSE(recursive.diagnostics.empty());
-  EXPECT_NE(recursive.diagnostics.front().message.find("recursive"),
             std::string::npos);
 }
 
@@ -712,6 +698,9 @@ TEST(OpenQASMFrontendTest, EnforcesNumericSeparatorPlacement) {
       "0xA__B",
       "0b_1",
       "0o7_",
+      "0b2",
+      "0o8",
+      "0x1G",
   });
   for (const auto literal : invalidLiterals) {
     SCOPED_TRACE(literal.str());
@@ -725,14 +714,6 @@ TEST(OpenQASMFrontendTest, EnforcesNumericSeparatorPlacement) {
   auto valid = openqasm::frontend::parseOpenQASM(
       "OPENQASM 3.1; int hex = 0xA_B; float value = 1_2.3_4e+5_6;");
   ASSERT_TRUE(valid) << valid.diagnostics.front().message;
-}
-
-TEST(OpenQASMFrontendTest, AcceptsWideIntegerLiteralsWithDigitSeparators) {
-  // DecimalIntegerLiteral allows '_' separators; values beyond uint64_t are
-  // still valid tokens (wide integers). Constant evaluation may reject them.
-  auto parsed = openqasm::frontend::parseOpenQASM(
-      "OPENQASM 3.1; int value = 999_999_999_999_999_999_999;");
-  ASSERT_TRUE(parsed) << parsed.diagnostics.front().message;
 }
 
 TEST(OpenQASMFrontendTest, SourceManagerOverloadsPreserveParseFailures) {

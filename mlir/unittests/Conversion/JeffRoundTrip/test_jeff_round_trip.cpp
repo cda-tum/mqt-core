@@ -778,16 +778,28 @@ TEST(JeffRoundTripRegressionTest,
       %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<3>
       %initial = arith.constant 5 : i3
       cbit.write %initial, %reg : i3, !cbit.reg<3>
-      scf.if %choose {
-        %old = cbit.read %reg : !cbit.reg<3> -> i3
-        %one = arith.constant 1 : i3
-        %next = arith.xori %old, %one : i3
-        cbit.write %next, %reg : i3, !cbit.reg<3>
-      } else {
-        %old = cbit.read %reg : !cbit.reg<3> -> i3
-        %three = arith.constant 3 : i3
-        %next = arith.xori %old, %three : i3
-        cbit.write %next, %reg : i3, !cbit.reg<3>
+      %true = arith.constant true
+      %false = arith.constant false
+      %done = scf.while (%again = %true) : (i1) -> i1 {
+        scf.if %again {
+          scf.if %choose {
+            cbit.write %initial, %reg : i3, !cbit.reg<3>
+            %old = cbit.read %reg : !cbit.reg<3> -> i3
+            %one = arith.constant 1 : i3
+            %next = arith.xori %old, %one : i3
+            cbit.write %next, %reg : i3, !cbit.reg<3>
+          } else {
+            cbit.write %initial, %reg : i3, !cbit.reg<3>
+            %old = cbit.read %reg : !cbit.reg<3> -> i3
+            %three = arith.constant 3 : i3
+            %next = arith.xori %old, %three : i3
+            cbit.write %next, %reg : i3, !cbit.reg<3>
+          }
+        }
+        scf.condition(%again) %false : i1
+      } do {
+      ^bb0(%next: i1):
+        scf.yield %next : i1
       }
       return %reg : !cbit.reg<3>
     }

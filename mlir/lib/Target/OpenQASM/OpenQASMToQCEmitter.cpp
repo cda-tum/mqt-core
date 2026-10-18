@@ -1145,16 +1145,8 @@ private:
       if (!parameter) {
         return;
       }
-      if (isa<IntegerType>(parameter.getType())) {
-        if (program.expressions.at(expression).type ==
-            frontend::ScalarType::Uint) {
-          parameter = arith::UIToFPOp::create(
-              opBuilder, loc, opBuilder.getF64Type(), parameter);
-        } else {
-          parameter = arith::SIToFPOp::create(
-              opBuilder, loc, opBuilder.getF64Type(), parameter);
-        }
-      }
+      assert(parameter.getType().isF64() &&
+             "semantic analysis must normalize gate parameters");
       parameters.push_back(parameter);
     }
     const auto qubitIndices = emitQubitIndices(application.qubits);
@@ -1206,20 +1198,10 @@ private:
       }
       int64_t count = 1;
       if (modifier.operand) {
-        auto countValue =
-            emitExpression(opBuilder, *modifier.operand, gateParameters);
-        if (!countValue) {
-          return;
-        }
-        auto constant = countValue.getDefiningOp<arith::ConstantIntOp>();
-        if (!constant || constant.value() <= 0) {
-          emissionFailed = true;
-          emitError(loc) << "OpenQASM QC emission error: gate control count "
-                            "must be a positive constant integer";
-          return;
-        }
-        count = constant.value();
+        count = std::get<int64_t>(
+            program.expressions.at(*modifier.operand).constant);
       }
+      assert(count > 0 && "semantic analysis must normalize control counts");
       controlCounts[position] = count;
     }
 
@@ -1523,14 +1505,6 @@ private:
     llvm_unreachable("unknown condition kind");
   }
 
-  static void recordMutation(const StateSlot slot,
-                             llvm::DenseSet<StateSlot>& mutationKeys,
-                             SmallVectorImpl<StateSlot>& mutations) {
-    if (mutationKeys.insert(slot).second) {
-      mutations.push_back(slot);
-    }
-  }
-
   void collectMutations(const frontend::StatementId id,
                         llvm::DenseSet<StateSlot>& mutationKeys,
                         SmallVectorImpl<StateSlot>& mutations) const {
@@ -1542,7 +1516,10 @@ private:
                                        frontend::ScalarDeclarationStatement> ||
                         std::is_same_v<T,
                                        frontend::ScalarAssignmentStatement>) {
-            recordMutation(data.scalar, mutationKeys, mutations);
+            if (scalarValues.at(data.scalar) &&
+                mutationKeys.insert(data.scalar).second) {
+              mutations.push_back(data.scalar);
+            }
           } else if constexpr (std::is_same_v<T, frontend::IfStatement>) {
             for (const auto nested : data.thenStatements) {
               collectMutations(nested, mutationKeys, mutations);
@@ -1577,15 +1554,7 @@ private:
       collectMutations(statement, mutationKeys, mutations);
     }
     llvm::sort(mutations);
-    SmallVector<StateSlot> slots;
-    slots.reserve(mutations.size());
-    for (const auto slot : mutations) {
-      auto value = scalarValues.at(slot);
-      if (value) {
-        slots.push_back(slot);
-      }
-    }
-    return slots;
+    return mutations;
   }
 
   [[nodiscard]] SmallVector<Value>
@@ -1867,14 +1836,11 @@ private:
   void emitCFGIf(Value condition, ArrayRef<StateSlot> slots,
                  function_ref<void()> thenBody, function_ref<void()> elseBody) {
     const auto scalarCheckpoint = scalarUpdates_.size();
-    auto values = stateValues(slots);
     auto* entry = builder.getInsertionBlock();
     auto* region = entry->getParent();
     auto* thenBlock = builder.createBlock(region);
     auto* elseBlock = builder.createBlock(region);
-    auto* join = builder.createBlock(
-        region, {}, ValueRange(values).getTypes(),
-        SmallVector<Location>(values.size(), builder.getLoc()));
+    Block* join = nullptr;
     builder.setInsertionPointToEnd(entry);
     cf::CondBranchOp::create(builder, condition, thenBlock, elseBlock);
     const auto emitBranch = [&](Block* block, function_ref<void()> body) {
@@ -1883,22 +1849,25 @@ private:
       builder.setInsertionPointToEnd(block);
       body();
       if (flowReachable) {
-        cf::BranchOp::create(builder, join, stateValues(slots));
+        auto values = stateValues(slots);
+        if (join == nullptr) {
+          OpBuilder::InsertionGuard guard(builder);
+          join = builder.createBlock(
+              region, {}, ValueRange(values).getTypes(),
+              SmallVector<Location>(values.size(), builder.getLoc()));
+        }
+        cf::BranchOp::create(builder, join, values);
       }
-      return flowReachable;
     };
-    const bool thenReachable = emitBranch(thenBlock, thenBody);
-    const bool elseReachable = emitBranch(elseBlock, elseBody);
-    flowReachable = thenReachable || elseReachable;
+    emitBranch(thenBlock, thenBody);
+    emitBranch(elseBlock, elseBody);
     restoreScalars(scalarCheckpoint);
+    flowReachable = join != nullptr;
+    if (join == nullptr) {
+      return;
+    }
     assignState(slots, join->getArguments());
     builder.setInsertionPointToEnd(join);
-    if (!flowReachable) {
-      // Unreachable joins still need a terminator before CFG normalization.
-      auto state = breakPrefix;
-      llvm::append_range(state, stateValues(breakSlots));
-      activeLoop->branch(false, state);
-    }
   }
 
   void emitIf(const frontend::IfStatement& conditional,
@@ -2331,15 +2300,11 @@ private:
   void emitSwitch(const frontend::SwitchStatement& switchStatement,
                   ValueRange gateParameters, ValueRange gateQubits) {
     SmallVector<frontend::StatementId> nestedStatements;
-    SmallVector<int64_t> labels;
     for (const auto& switchCase : switchStatement.cases) {
       llvm::append_range(nestedStatements, switchCase.body);
-      llvm::append_range(labels, switchCase.labels);
     }
     llvm::append_range(nestedStatements, switchStatement.defaultStatements);
     const auto slots = mutatedState(nestedStatements);
-    const auto initialValues = stateValues(slots);
-    const auto scalarCheckpoint = scalarUpdates_.size();
 
     auto control = emitExpression(builder, switchStatement.control, {});
     if (!control) {
@@ -2348,47 +2313,107 @@ private:
     const auto type = program.expressions.at(switchStatement.control).type;
     control = emitScalarCast(builder, builder.getLoc(), control, type, type);
     if (activeLoop != nullptr && hasLoopJump(nestedStatements)) {
-      const auto emitCases = [&](auto&& self, size_t index) -> void {
+      // Cache each left-half match at its split to keep dispatch balanced.
+      SmallVector<Value> leftMatches(switchStatement.cases.size());
+      const auto matchCases = [&](auto&& self, size_t begin,
+                                  size_t end) -> Value {
         if (emissionFailed || emissionBudget.isExhausted()) {
-          return;
+          return {};
         }
-        if (index == switchStatement.cases.size()) {
-          for (auto statement : switchStatement.defaultStatements) {
-            emitStatement(statement, gateParameters, gateQubits);
-            if (emissionFailed || emissionBudget.isExhausted()) {
-              return;
-            }
+        if (end - begin > 1) {
+          const auto middle = begin + (end - begin) / 2;
+          auto left = self(self, begin, middle);
+          auto right = self(self, middle, end);
+          if (!left || !right) {
+            return {};
           }
-          return;
+          leftMatches[middle] = left;
+          return arith::OrIOp::create(builder, left, right);
         }
-        const auto& branch = switchStatement.cases[index];
         Value match = builder.boolConstant(false);
-        for (const auto label : branch.labels) {
+        for (const auto label : switchStatement.cases[begin].labels) {
           if (emissionBudget.isExhausted()) {
-            return;
+            return {};
           }
           auto equal = arith::CmpIOp::create(
               builder, arith::CmpIPredicate::eq, control,
               arith::ConstantIntOp::create(builder, control.getType(), label));
           match = arith::OrIOp::create(builder, match, equal);
         }
-        emitCFGIf(
-            match, slots,
-            [&] {
-              for (auto statement : branch.body) {
-                emitStatement(statement, gateParameters, gateQubits);
-                if (emissionFailed || emissionBudget.isExhausted()) {
-                  return;
-                }
-              }
-            },
-            [&] { self(self, index + 1); });
+        return match;
       };
-      emitCases(emitCases, 0);
+      const auto emitCases = [&](auto&& self, size_t begin,
+                                 size_t end) -> void {
+        if (emissionFailed || emissionBudget.isExhausted()) {
+          return;
+        }
+        if (end - begin > 1) {
+          const auto middle = begin + (end - begin) / 2;
+          emitCFGIf(
+              leftMatches[middle], slots, [&] { self(self, begin, middle); },
+              [&] { self(self, middle, end); });
+          return;
+        }
+        const auto& statements = begin == end
+                                     ? switchStatement.defaultStatements
+                                     : switchStatement.cases[begin].body;
+        for (auto statement : statements) {
+          emitStatement(statement, gateParameters, gateQubits);
+          if (emissionFailed || emissionBudget.isExhausted()) {
+            return;
+          }
+        }
+      };
+      const auto count = switchStatement.cases.size();
+      if (count == 0) {
+        emitCases(emitCases, 0, 0);
+      } else if (auto match = matchCases(matchCases, 0, count)) {
+        emitCFGIf(
+            match, slots, [&] { emitCases(emitCases, 0, count); },
+            [&] { emitCases(emitCases, 0, 0); });
+      }
       return;
     }
-    auto selector =
-        arith::IndexCastOp::create(builder, builder.getIndexType(), control);
+    SmallVector<int64_t> labels;
+    for (const auto& switchCase : switchStatement.cases) {
+      llvm::append_range(labels, switchCase.labels);
+    }
+    Value selector =
+        arith::IndexCastUIOp::create(builder, builder.getIndexType(), control);
+    if (labels.size() != switchStatement.cases.size()) {
+      // Dispatch labels to a shared body instead of duplicating its operations.
+      auto dispatch = scf::IndexSwitchOp::create(
+          builder, builder.getI64Type(), selector, labels, labels.size());
+      {
+        OpBuilder::InsertionGuard guard(builder);
+        size_t region = 0;
+        for (auto [index, switchCase] :
+             llvm::enumerate(switchStatement.cases)) {
+          builder.setInsertionPoint(dispatch);
+          auto caseIndex = builder.intConstant(static_cast<int64_t>(index));
+          for ([[maybe_unused]] auto label : switchCase.labels) {
+            if (emissionBudget.isExhausted()) {
+              return;
+            }
+            builder.setInsertionPointToEnd(
+                &dispatch.getCaseRegions()[region++].emplaceBlock());
+            scf::YieldOp::create(builder, caseIndex);
+          }
+        }
+        builder.setInsertionPointToEnd(
+            &dispatch.getDefaultRegion().emplaceBlock());
+        scf::YieldOp::create(builder, builder.intConstant(static_cast<int64_t>(
+                                          switchStatement.cases.size())));
+      }
+      selector = arith::IndexCastUIOp::create(builder, builder.getIndexType(),
+                                              dispatch.getResult(0));
+      labels.clear();
+      for (size_t index = 0; index < switchStatement.cases.size(); ++index) {
+        labels.push_back(static_cast<int64_t>(index));
+      }
+    }
+    const auto initialValues = stateValues(slots);
+    const auto scalarCheckpoint = scalarUpdates_.size();
     auto switchOp = scf::IndexSwitchOp::create(
         builder, ValueRange(initialValues).getTypes(), selector, labels,
         labels.size());
@@ -2406,13 +2431,10 @@ private:
           }
           scf::YieldOp::create(builder, stateValues(slots));
         };
-    size_t region = 0;
-    for (const auto& switchCase : switchStatement.cases) {
-      for ([[maybe_unused]] const auto label : switchCase.labels) {
-        emitBranch(switchOp.getCaseRegions()[region++], switchCase.body);
-        if (emissionFailed || emissionBudget.isExhausted()) {
-          return;
-        }
+    for (auto [index, switchCase] : llvm::enumerate(switchStatement.cases)) {
+      emitBranch(switchOp.getCaseRegions()[index], switchCase.body);
+      if (emissionFailed || emissionBudget.isExhausted()) {
+        return;
       }
     }
     emitBranch(switchOp.getDefaultRegion(), switchStatement.defaultStatements);

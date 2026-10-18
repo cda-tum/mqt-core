@@ -415,6 +415,12 @@ result = bit[8](value);
         circuit.x(0)
     circuit.measure(0, 0)
     check_paths(QCProgram.from_qiskit(circuit), 1)
+    for body in (
+        "result = 17; break;",
+        "switch (i) { case 0 { result = 17; break; } default { result = 23; break; } }",
+    ):
+        program = QCProgram.from_openqasm_str(f"OPENQASM 3.1; output bit[8] result; for int i in [0:0] {{ {body} }}")
+        check_paths(program, 17)
     with pytest.raises((ValueError, RuntimeError)):
         QCProgram.from_openqasm_str("""
 OPENQASM 3.1;

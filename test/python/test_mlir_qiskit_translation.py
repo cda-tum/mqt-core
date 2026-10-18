@@ -803,8 +803,17 @@ def test_wide_qiskit_register_comparison_round_trip(comparison: str, swapped: st
 
 @pytest.mark.parametrize(
     ("width", "expected"),
-    [(65, 0), (65, 1 << 64), (65, 1 << 65), (2, False), (2, True), (65, False), (65, True)],
-    ids=["zero", "highest-bit", "out-of-range", "narrow-false", "narrow-true", "wide-false", "wide-true"],
+    [(65, 0), (65, 1 << 64), (65, 1 << 65), (2, 4), (2, False), (2, True), (65, False), (65, True)],
+    ids=[
+        "zero",
+        "highest-bit",
+        "out-of-range",
+        "narrow-out-of-range",
+        "narrow-false",
+        "narrow-true",
+        "wide-false",
+        "wide-true",
+    ],
 )
 def test_wide_qiskit_tuple_condition_round_trip(width: int, expected: int) -> None:
     """Import integer and Boolean register equalities, folding impossible values."""
@@ -812,13 +821,17 @@ def test_wide_qiskit_tuple_condition_round_trip(width: int, expected: int) -> No
     with circuit.if_test((circuit.cregs[0], expected)):
         circuit.x(0)
 
-    restored = QCProgram.from_qiskit(circuit).to_qiskit()
-    condition = restored.data[0].operation.condition
+    program = QCProgram.from_qiskit(circuit)
+    if expected >= 1 << width:
+        assert "arith.constant false" in program.ir
+        assert "arith.cmpi" not in program.ir
+    restored = program.to_qiskit()
     if expected < 1 << width:
-        assert expr.structurally_equivalent(condition, expr.equal(restored.cregs[0], int(expected)))
+        assert expr.structurally_equivalent(
+            restored.data[0].operation.condition, expr.equal(restored.cregs[0], int(expected))
+        )
     else:
-        assert isinstance(condition, expr.Value)
-        assert not condition.value
+        assert not restored.data
 
 
 def test_nested_wide_qiskit_tuple_condition_round_trip() -> None:
@@ -1004,21 +1017,6 @@ def test_qiskit_reversed_register_conditions_import_canonically(comparison: str,
     histogram = sample(circuit, shots=1, seed=1)
     expected = "001" if predicate in {"ne", "ult", "ule"} else "000"
     assert histogram == {expected: 1}
-
-
-def test_qiskit_oversized_tuple_condition_is_false() -> None:
-    """Fold an impossible Qiskit register equality instead of widening it."""
-    circuit = QuantumCircuit(1, 2)
-    with circuit.if_test((circuit.cregs[0], 4)):
-        circuit.x(0)
-
-    program = QCProgram.from_qiskit(circuit)
-
-    assert "arith.constant false" in program.ir
-    assert "arith.cmpi" not in program.ir
-    condition = program.to_qiskit().data[0].operation.condition
-    assert isinstance(condition, expr.Value)
-    assert condition.value == 0
 
 
 def test_qiskit_store_round_trip_preserves_register_semantics() -> None:
@@ -2658,9 +2656,16 @@ def test_general_boolean_select_round_trip() -> None:
 
 def test_export_control_flow_depth_is_bounded() -> None:
     """Reject structured control flow deeper than 64 levels during export."""
-    operations = ["%condition = arith.constant true"]
-    operations.extend(f"{'  ' * depth}scf.if %condition {{" for depth in range(65))
-    operations.append(f"{'  ' * 65}qc.x %q : !qc.qubit")
+    operations = [
+        "%classical = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>",
+        "%zero = arith.constant 0 : index",
+    ]
+    for depth in range(65):
+        operations.extend([
+            f"%condition{depth} = cbit.load %classical[%zero] : !cbit.reg<1>",
+            f"scf.if %condition{depth} {{",
+            "qc.x %q : !qc.qubit",
+        ])
     operations.extend(f"{'  ' * depth}}}" for depth in reversed(range(65)))
     program = _single_qubit_program(operations)
 
@@ -3260,18 +3265,25 @@ def test_undefined_cbit_load_before_measurement_is_rejected() -> None:
         program.to_qiskit()
 
 
-def test_conditional_measurement_does_not_initialize_returned_cbit() -> None:
-    """Do not count a branch-local measurement as a definite output write."""
+@pytest.mark.parametrize("constant", [False, True])
+def test_conditional_measurement_requires_definite_initialization(*, constant: bool) -> None:
+    """Only a statically taken branch establishes definite output writes."""
     program = _undefined_cbit_program([
-        "%condition = arith.constant true",
+        "%selector = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>",
+        "%condition = arith.constant true" if constant else "%condition = cbit.load %selector[%zero] : !cbit.reg<1>",
         "scf.if %condition {",
         "  %measured = qc.measure %q : !qc.qubit -> i1",
         "  cbit.store %measured, %classical[%zero] : !cbit.reg<1>",
         "}",
     ])
 
-    with pytest.raises(RuntimeError, match="cannot return undefined classical bits"):
-        program.to_qiskit()
+    if constant:
+        restored = program.to_qiskit()
+        assert restored.count_ops() == {"measure": 1}
+        assert restored.data[0].clbits == (next(reg for reg in restored.cregs if reg.name == "c")[0],)
+    else:
+        with pytest.raises(RuntimeError, match="cannot return undefined classical bits"):
+            program.to_qiskit()
 
 
 @pytest.mark.parametrize(
@@ -3359,38 +3371,27 @@ def test_bool_uint_and_float_expressions(condition: expr.Expr, operation: str) -
     assert sample(restored, shots=1, seed=1) == {expected: 1}
 
 
-def test_index_expression_export_preserves_low_bit() -> None:
-    """Folding preserves the low bit rather than using a truthiness cast."""
-    condition = expr.index(expr.lift(2, types.Uint(3)), expr.lift(0, types.Uint(3)))
-    circuit = QuantumCircuit(1)
-    with circuit.if_test(condition):
-        circuit.x(0)
-
-    program = QCProgram.from_qiskit(circuit)
+@pytest.mark.parametrize("via_qiskit", [False, True])
+@pytest.mark.parametrize("value", [2, 3])
+def test_integer_low_bit_folding(value: int, *, via_qiskit: bool) -> None:
+    """Indexing and truncation preserve the low bit rather than truthiness."""
+    if via_qiskit:
+        condition = expr.index(expr.lift(value, types.Uint(3)), expr.lift(0, types.Uint(3)))
+        circuit = QuantumCircuit(1)
+        with circuit.if_test(condition):
+            circuit.x(0)
+        program = QCProgram.from_qiskit(circuit)
+    else:
+        program = _single_qubit_program([
+            f"%value = arith.constant {value} : i3",
+            "%condition = arith.trunci %value : i3 to i1",
+            "scf.if %condition {",
+            "  qc.x %q : !qc.qubit",
+            "}",
+        ])
     assert "arith.trunci" in program.ir
-
     restored = program.to_qiskit()
-    restored_condition = restored.data[0].operation.condition
-    assert isinstance(restored_condition, expr.Value)
-    assert restored_condition.type == types.Bool()
-    assert not restored_condition.value
-
-
-def test_integer_truncation_folds_to_low_bit() -> None:
-    """Preserve the low-bit semantics of a generic integer truncation."""
-    program = _single_qubit_program([
-        "%two = arith.constant 2 : i3",
-        "%condition = arith.trunci %two : i3 to i1",
-        "scf.if %condition {",
-        "  qc.x %q : !qc.qubit",
-        "}",
-    ])
-
-    restored = program.to_qiskit()
-    restored_condition = restored.data[0].operation.condition
-    assert isinstance(restored_condition, expr.Value)
-    assert restored_condition.type == types.Bool()
-    assert not restored_condition.value
+    assert restored.count_ops() == ({"x": 1} if value & 1 else {})
 
 
 def _cbit_load_indices(ir: str) -> list[int]:

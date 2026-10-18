@@ -82,8 +82,8 @@ struct FixedAngle {
 
 struct Constant {
   ScalarType type = ScalarType::Int;
-  std::variant<bool, int64_t, uint64_t, double, FixedAngle> value = int64_t{0};
   unsigned integerWidth = 0;
+  std::variant<bool, int64_t, uint64_t, double, FixedAngle> value = int64_t{0};
 };
 
 struct GateSignature {
@@ -312,7 +312,7 @@ static bool coerceUnsignedConstant(Constant& constant, unsigned width) {
   if (!llvm::isUIntN(width, bits)) {
     return false;
   }
-  constant = {.type = ScalarType::Uint, .value = bits, .integerWidth = width};
+  constant = {.type = ScalarType::Uint, .integerWidth = width, .value = bits};
   return true;
 }
 
@@ -349,6 +349,24 @@ static void promoteIntegerConstant(Constant& value) {
     value.type = ScalarType::Int;
     value.value = static_cast<int64_t>(std::get<uint64_t>(value.value));
   }
+}
+
+// The lexer has already checked digits and separators; scalar widths remain
+// restricted to 64 bits, but bit-register literals may be wider.
+[[nodiscard]] static llvm::APInt parseWideInteger(StringRef spelling) {
+  llvm::SmallString<64> digits;
+  for (const char digit : spelling) {
+    if (digit != '_') {
+      digits.push_back(digit);
+    }
+  }
+  StringRef normalized(digits);
+  const uint8_t radix = normalized.consume_front_insensitive("0x")   ? 16
+                        : normalized.consume_front_insensitive("0o") ? 8
+                        : normalized.consume_front_insensitive("0b") ? 2
+                                                                     : 10;
+  // The constructor avoids the costly full-width multiply in getAsInteger.
+  return {static_cast<unsigned>(normalized.size() * 4), normalized, radix};
 }
 
 [[nodiscard]] static int compareNumericConstants(Constant lhs, Constant rhs) {
@@ -631,6 +649,9 @@ private:
 
   [[nodiscard]] bool
   domainIsEmptyWithInequality(const AffineForm& inequality) const {
+    if (isAffineConstant(inequality)) {
+      return inequality.constant < 0 || affineDomain.isIntegerEmpty();
+    }
     presburger::IntegerPolyhedron candidate(affineDomain);
     candidate.addInequality(affineConstraint(inequality));
     return candidate.isIntegerEmpty();
@@ -638,6 +659,9 @@ private:
 
   [[nodiscard]] bool
   domainIsEmptyWithEquality(const AffineForm& equality) const {
+    if (isAffineConstant(equality)) {
+      return equality.constant != 0 || affineDomain.isIntegerEmpty();
+    }
     presburger::IntegerPolyhedron candidate(affineDomain);
     candidate.addEquality(affineConstraint(equality));
     return candidate.isIntegerEmpty();
@@ -1129,6 +1153,25 @@ private:
     });
   }
 
+  [[nodiscard]] FailureOr<ExpressionId>
+  promoteIntegerExpression(ExpressionId expression, SMLoc location) {
+    const auto& value = program.expressions[expression];
+    if (isInteger(value.type) && value.integerWidth > 0 &&
+        value.integerWidth < 64) {
+      if (value.kind == ExpressionKind::Constant) {
+        return addConstant({
+            .type = ScalarType::Int,
+            .value =
+                value.type == ScalarType::Uint
+                    ? static_cast<int64_t>(std::get<uint64_t>(value.constant))
+                    : std::get<int64_t>(value.constant),
+        });
+      }
+      return castExpression(expression, ScalarType::Int, location);
+    }
+    return expression;
+  }
+
   [[nodiscard]] FailureOr<Constant>
   promoteConstInitializer(const Constant& initializer,
                           const ScalarType destination,
@@ -1447,18 +1490,19 @@ private:
         if (expression.kind == Expr::Kind::IntCast) {
           return Constant{
               .type = ScalarType::Int,
-              .value = narrowed.getSExtValue(),
               .integerWidth = resultWidth,
+              .value = narrowed.getSExtValue(),
           };
         }
         return Constant{
             .type = ScalarType::Uint,
-            .value = narrowed.getZExtValue(),
             .integerWidth = resultWidth,
+            .value = narrowed.getZExtValue(),
         };
       }
       case Expr::Kind::Neg: {
         MQT_OQ3_TRY_ASSIGN(operand, evaluateConstant(*expression.lhs));
+        promoteIntegerConstant(operand);
         if (operand.type == ScalarType::Bool) {
           return fail(expression.location,
                       "numeric negation requires a numeric operand");
@@ -1997,8 +2041,8 @@ private:
     }
     return Constant{
         .type = ScalarType::Uint,
-        .value = result.getZExtValue(),
         .integerWidth = lhs.integerWidth,
+        .value = result.getZExtValue(),
     };
   }
 
@@ -2415,12 +2459,16 @@ private:
       auto width = program.registers[reg].width;
       std::vector<frontend::BitReference> selection;
       if (expression.slice) {
-        MQT_OQ3_TRY_ASSIGN(bits, resolveBits({
-                                     .location = expression.location,
-                                     .identifier = expression.identifier,
-                                     .slice = expression.slice,
-                                 }));
+        MQT_OQ3_TRY_ASSIGN(bits, resolveBits(
+                                     {
+                                         .location = expression.location,
+                                         .identifier = expression.identifier,
+                                         .slice = expression.slice,
+                                     },
+                                     /*collapseWholeRegisterSlice=*/true));
         selection = std::move(bits);
+      }
+      if (!selection.empty()) {
         width = selection.size();
         for (const auto& bit : selection) {
           if (failed(ensureBitInitialized(bit, expression.location))) {
@@ -2434,9 +2482,6 @@ private:
       if (expectedWidth && *expectedWidth != width) {
         return fail(expression.location,
                     "bit-vector operand widths must match");
-      }
-      if (isWholeRegisterSelection(selection, reg)) {
-        selection.clear();
       }
       return addBitVectorExpression({
           .kind = BitVectorExpressionKind::Register,
@@ -2456,20 +2501,12 @@ private:
       llvm::APInt value(static_cast<unsigned>(*expectedWidth), 0);
       if (expression.kind == Expr::Kind::Int &&
           !expression.wideInteger.empty()) {
-        llvm::SmallString<64> digits;
-        for (const char digit : expression.wideInteger) {
-          if (digit != '_') {
-            digits.push_back(digit);
-          }
-        }
-        const auto workingWidth = static_cast<unsigned>(
-            std::max<uint64_t>(*expectedWidth, digits.size() * 4));
-        llvm::APInt parsed(workingWidth, digits, /*radix=*/10);
+        const auto parsed = parseWideInteger(expression.wideInteger);
         if (parsed.getActiveBits() > *expectedWidth) {
           return fail(expression.location,
                       "bit-vector constant does not fit the operand width");
         }
-        value = parsed.trunc(static_cast<unsigned>(*expectedWidth));
+        value = parsed.zextOrTrunc(static_cast<unsigned>(*expectedWidth));
       } else {
         MQT_OQ3_TRY_ASSIGN(constant, evaluateConstant(syntaxId));
         std::optional<uint64_t> integer;
@@ -2902,21 +2939,15 @@ private:
           .integerWidth = width,
       });
     }
-    // Integer arithmetic applies machine-width promotion before computation.
-    if (isInteger(lhsType) && program.expressions[lhs].integerWidth < 64 &&
-        program.expressions[lhs].integerWidth != 0) {
-      MQT_OQ3_TRY_ASSIGN(
-          promoted, castExpression(lhs, ScalarType::Int, expression.location));
-      lhs = promoted;
-      lhsType = ScalarType::Int;
-    }
-    if (rhs && isInteger(*rhsType) &&
-        program.expressions[*rhs].integerWidth < 64 &&
-        program.expressions[*rhs].integerWidth != 0) {
-      MQT_OQ3_TRY_ASSIGN(
-          promoted, castExpression(*rhs, ScalarType::Int, expression.location));
-      *rhs = promoted;
-      rhsType = ScalarType::Int;
+    MQT_OQ3_TRY_ASSIGN(promotedLhs,
+                       promoteIntegerExpression(lhs, expression.location));
+    lhs = promotedLhs;
+    lhsType = program.expressions[lhs].type;
+    if (rhs) {
+      MQT_OQ3_TRY_ASSIGN(promotedRhs,
+                         promoteIntegerExpression(*rhs, expression.location));
+      *rhs = promotedRhs;
+      rhsType = program.expressions[*rhs].type;
     }
     const bool inverseTrig = kind == ExpressionKind::ArcCos ||
                              kind == ExpressionKind::ArcSin ||
@@ -3098,10 +3129,12 @@ private:
   }
 
   [[nodiscard]] LogicalResult analyzeTopLevelBody() {
-    assert(syntax.body.size() == syntax.bodyIncludeContexts.size());
-    for (const auto [id, includeContext] :
-         llvm::zip_equal(syntax.body, syntax.bodyIncludeContexts)) {
-      currentIncludeContext = includeContext;
+    assert(syntax.bodyIncludeContexts.empty() ||
+           syntax.body.size() == syntax.bodyIncludeContexts.size());
+    for (const auto [index, id] : llvm::enumerate(syntax.body)) {
+      if (!syntax.bodyIncludeContexts.empty()) {
+        currentIncludeContext = syntax.bodyIncludeContexts[index];
+      }
       if (failed(analyzeStatement(syntax.statements[id], program.body,
                                   /*global=*/true))) {
         currentIncludeContext.reset();
@@ -3149,9 +3182,11 @@ private:
   /// Expand a bounded affine selection with a known length.
   ///
   /// Bounds and distinctness remain frontend proof obligations, including
-  /// nonconstant indices.
+  /// nonconstant indices. Bit-vector operations may request an empty selection
+  /// for a whole-register slice instead of expanding its indices.
   [[nodiscard]] FailureOr<std::vector<ExpressionId>>
-  resolveSliceIndices(const Slice& slice, uint64_t width, SMLoc location) {
+  resolveSliceIndices(const Slice& slice, uint64_t width, SMLoc location,
+                      bool collapseWholeRegisterSlice = false) {
     bool positive = true;
     uint64_t stride = 1;
     if (slice.step) {
@@ -3231,6 +3266,11 @@ private:
     const auto distance =
         static_cast<uint64_t>(static_cast<int64_t>(difference.constant));
     std::vector<ExpressionId> indices;
+    if (collapseWholeRegisterSlice && positive && stride == 1 &&
+        distance == width - 1 && isAffineConstant(*startForm) &&
+        startForm->constant == 0) {
+      return indices;
+    }
     indices.reserve(distance / stride + 1);
     for (uint64_t offset = 0; offset <= distance;) {
       const auto signedOffset = positive ? static_cast<int64_t>(offset)
@@ -3610,9 +3650,13 @@ private:
       auto width = program.registers[targetReg].width;
       std::vector<frontend::BitReference> selection;
       if (assignment.target.slice) {
-        MQT_OQ3_TRY_ASSIGN(targets, resolveBits(assignment.target));
+        MQT_OQ3_TRY_ASSIGN(targets,
+                           resolveBits(assignment.target,
+                                       /*collapseWholeRegisterSlice=*/true));
         selection = std::move(targets);
-        width = selection.size();
+        if (!selection.empty()) {
+          width = selection.size();
+        }
       }
       MQT_OQ3_TRY_ASSIGN(bitVector,
                          analyzeBitVectorExpression(assignment.value, width));
@@ -3621,9 +3665,6 @@ private:
       } else {
         for (const auto& target : selection) {
           markBitInitialized(target);
-        }
-        if (isWholeRegisterSelection(selection, targetReg)) {
-          selection.clear();
         }
       }
       MQT_OQ3_TRY_ASSIGN(
@@ -4090,10 +4131,13 @@ private:
         .stop = stop,
         .body = {},
     };
-    for (const auto expression : {result.start, result.step, result.stop}) {
-      if (!isInteger(program.expressions[expression].type)) {
+    for (auto* expression : {&result.start, &result.step, &result.stop}) {
+      if (!isInteger(program.expressions[*expression].type)) {
         return fail(location, "for-loop ranges require integer expressions");
       }
+      MQT_OQ3_TRY_ASSIGN(promoted,
+                         promoteIntegerExpression(*expression, location));
+      *expression = promoted;
     }
     const auto startForm = buildAffineForm(result.start);
     const auto stepForm = buildAffineForm(result.step);
@@ -4206,35 +4250,11 @@ private:
       MQT_OQ3_TRY_ASSIGN(startConstant, evaluateConstant(loop.start));
       MQT_OQ3_TRY_ASSIGN(stepConstant, evaluateConstant(loop.step));
       MQT_OQ3_TRY_ASSIGN(stopConstant, evaluateConstant(loop.stop));
-      const bool unsignedEndpoints = startConstant.type == ScalarType::Uint ||
-                                     stopConstant.type == ScalarType::Uint;
-      const auto compareRangeValues = [&](const Constant& lhs,
-                                          const Constant& rhs) {
-        if (!unsignedEndpoints) {
-          const auto left = std::get<int64_t>(lhs.value);
-          const auto right = std::get<int64_t>(rhs.value);
-          if (left < right) {
-            return -1;
-          }
-          return left > right ? 1 : 0;
-        }
-        const auto asUnsigned = [](const Constant& value) {
-          if (value.type == ScalarType::Uint) {
-            return std::get<uint64_t>(value.value);
-          }
-          return static_cast<uint64_t>(std::get<int64_t>(value.value));
-        };
-        const auto left = asUnsigned(lhs);
-        const auto right = asUnsigned(rhs);
-        if (left < right) {
-          return -1;
-        }
-        return left > right ? 1 : 0;
-      };
+      promoteIntegerConstant(stepConstant);
       const bool positiveStep = stepConstant.type == ScalarType::Uint ||
                                 std::get<int64_t>(stepConstant.value) > 0;
       const auto endpointOrder =
-          compareRangeValues(startConstant, stopConstant);
+          compareNumericConstants(startConstant, stopConstant);
       const bool nonempty =
           positiveStep ? endpointOrder <= 0 : endpointOrder >= 0;
       rangeMayExecute = nonempty;
@@ -4244,7 +4264,6 @@ private:
         }
         for (size_t scalar = 0; scalar < beforeInitialized.size(); ++scalar) {
           initializedScalars[scalar] = afterBodyInitialized[scalar];
-          scalarGenerations[scalar] = afterBodyGenerations[scalar];
         }
       }
     }
@@ -4253,9 +4272,8 @@ private:
         if (afterBodyGenerations[scalar] != beforeGenerations[scalar]) {
           affineScalarValues[scalar].reset();
         }
+        scalarGenerations[scalar] = afterBodyGenerations[scalar];
       }
-    }
-    if (rangeMayExecute) {
       for (const auto& state : exits) {
         intersectInitialization(state, beforeBitsInitialized.size(),
                                 beforeInitialized.size());
@@ -4339,12 +4357,12 @@ private:
     const auto beforeInitialized = initializedScalars;
     const auto beforeGenerations = scalarGenerations;
     const auto beforeAffineScalarValues = affineScalarValues;
-    auto mergedScalarGenerations = beforeGenerations;
-    std::vector<std::vector<std::shared_ptr<BitInitialization>>>
-        branchBitsInitialized;
-    std::vector<std::vector<bool>> branchScalarsInitialized;
-    std::vector<std::vector<std::optional<ExpressionId>>>
-        branchAffineScalarValues;
+    InitializationState merged{
+        .bits = beforeBitsInitialized,
+        .scalars = beforeInitialized,
+        .scalarGenerations = beforeGenerations,
+    };
+    auto mergedAffineScalarValues = beforeAffineScalarValues;
     const auto analyzeBranch =
         [&](const ArrayRef<SyntaxStatementId> syntaxStatements,
             std::vector<StatementId>& statements) -> LogicalResult {
@@ -4362,13 +4380,28 @@ private:
       if (!reachable) {
         return success();
       }
+      if (anyFallthrough) {
+        intersectInitialization(merged, beforeBitsInitialized.size(),
+                                beforeInitialized.size());
+        for (size_t scalar = 0; scalar < beforeInitialized.size(); ++scalar) {
+          if (merged.scalarGenerations[scalar] == beforeGenerations[scalar] &&
+              scalarGenerations[scalar] == beforeGenerations[scalar]) {
+            continue;
+          }
+          const auto previous = mergedAffineScalarValues[scalar];
+          const auto current = affineScalarValues[scalar];
+          if (!previous || !current || !sameAffineValue(*previous, *current)) {
+            affineScalarValues[scalar].reset();
+          }
+        }
+      }
       anyFallthrough = true;
-      branchBitsInitialized.push_back(initializedBits);
-      branchScalarsInitialized.push_back(initializedScalars);
-      branchAffineScalarValues.push_back(affineScalarValues);
+      merged.bits = initializedBits;
+      merged.scalars = initializedScalars;
+      mergedAffineScalarValues = affineScalarValues;
       for (size_t index = 0; index < beforeGenerations.size(); ++index) {
-        mergedScalarGenerations[index] =
-            std::max(mergedScalarGenerations[index], scalarGenerations[index]);
+        merged.scalarGenerations[index] =
+            std::max(merged.scalarGenerations[index], scalarGenerations[index]);
       }
       return success();
     };
@@ -4412,36 +4445,14 @@ private:
       return failure();
     }
 
-    restoreStatePrefix(beforeBitsInitialized, beforeInitialized,
-                       mergedScalarGenerations);
-    restoreAffineScalarValuesPrefix(beforeAffineScalarValues);
-    for (size_t reg = 0; reg < beforeBitsInitialized.size(); ++reg) {
-      if (branchBitsInitialized.empty()) {
+    restoreStatePrefix(merged.bits, merged.scalars, merged.scalarGenerations);
+    restoreAffineScalarValuesPrefix(mergedAffineScalarValues);
+    if (!anyFallthrough) {
+      // An absent fallthrough path must not constrain loop-exit initialization.
+      for (size_t reg = 0; reg < beforeBitsInitialized.size(); ++reg) {
         mutableBitInitialization(reg).set();
-        continue;
       }
-      initializedBits[reg] = branchBitsInitialized.front()[reg];
-      for (const auto& branch : ArrayRef(branchBitsInitialized).drop_front()) {
-        if (initializedBits[reg] != branch[reg]) {
-          mutableBitInitialization(reg) &= *branch[reg];
-        }
-      }
-    }
-    for (size_t scalar = 0; scalar < beforeInitialized.size(); ++scalar) {
-      initializedScalars[scalar] =
-          llvm::all_of(branchScalarsInitialized,
-                       [&](const auto& branch) { return branch[scalar]; });
-      const auto first = branchAffineScalarValues.empty()
-                             ? beforeAffineScalarValues[scalar]
-                             : branchAffineScalarValues.front()[scalar];
-      if (first &&
-          llvm::all_of(branchAffineScalarValues, [&](const auto& branch) {
-            return branch[scalar] && sameAffineValue(*first, *branch[scalar]);
-          })) {
-        affineScalarValues[scalar] = first;
-      } else {
-        affineScalarValues[scalar].reset();
-      }
+      llvm::fill(initializedScalars, true);
     }
     reachable = anyFallthrough;
     return addStatement(location, std::move(result));
@@ -4586,7 +4597,6 @@ private:
       const auto* lhsSymbol = lhsSyntax.kind == Expr::Kind::Identifier
                                   ? lookup(lhsSyntax.identifier)
                                   : nullptr;
-      const auto* registerSyntax = &lhsSyntax;
       const auto* constantSyntax = &rhsSyntax;
       auto constantSyntaxId = *condition.rhs;
       auto registerComparison = typed.comparison;
@@ -4603,7 +4613,6 @@ private:
         if (rhsSymbol != nullptr && rhsSymbol->kind == SymbolKind::Register &&
             program.registers[rhsSymbol->id].kind == RegisterKind::Bit &&
             isConstantExpression(*condition.lhs)) {
-          registerSyntax = &rhsSyntax;
           constantSyntax = &lhsSyntax;
           constantSyntaxId = *condition.lhs;
           registerComparison = swapComparison(registerComparison);
@@ -4612,29 +4621,17 @@ private:
         }
       }
       if (directRegisterComparison) {
-        MQT_OQ3_TRY_ASSIGN(
-            bits, resolveBits({.location = registerSyntax->location,
-                               .identifier = registerSyntax->identifier,
-                               .index = std::nullopt}));
-        if (!program.openQASM2) {
-          for (const auto& bit : bits) {
-            if (failed(ensureBitInitialized(bit, condition.location))) {
-              return failure();
-            }
-          }
+        const auto regId = static_cast<RegisterId>(registerSymbol->id);
+        const auto width = program.registers[regId].width;
+        if (!program.openQASM2 &&
+            !initializedBits[registerStateSlots_[regId]]->all()) {
+          return fail(condition.location,
+                      "classical condition bit has not been initialized");
         }
         llvm::APInt expectedBits;
         if (constantSyntax->kind == Expr::Kind::Int &&
             !constantSyntax->wideInteger.empty()) {
-          llvm::SmallString<64> digits;
-          for (const char value : constantSyntax->wideInteger) {
-            if (value != '_') {
-              digits.push_back(value);
-            }
-          }
-          const auto width = static_cast<unsigned>(
-              std::max<size_t>(bits.size(), digits.size() * 4));
-          expectedBits = llvm::APInt(width, digits, /*radix=*/10);
+          expectedBits = parseWideInteger(constantSyntax->wideInteger);
         } else {
           MQT_OQ3_TRY_ASSIGN(expected, evaluateConstant(constantSyntaxId));
           if (!isInteger(expected.type) ||
@@ -4650,7 +4647,7 @@ private:
                   : static_cast<uint64_t>(std::get<int64_t>(expected.value));
           expectedBits = llvm::APInt(/*numBits=*/64, expectedValue);
         }
-        if (expectedBits.getActiveBits() > bits.size()) {
+        if (expectedBits.getActiveBits() > width) {
           const bool result = registerComparison == ComparisonKind::NotEqual ||
                               registerComparison == ComparisonKind::Less ||
                               registerComparison == ComparisonKind::LessEqual;
@@ -4662,19 +4659,15 @@ private:
               .measurement = {},
           });
         }
-        if (expectedBits.getBitWidth() < bits.size()) {
-          expectedBits = expectedBits.zext(static_cast<unsigned>(bits.size()));
-        } else if (expectedBits.getBitWidth() > bits.size()) {
-          expectedBits = expectedBits.trunc(static_cast<unsigned>(bits.size()));
-        }
+        expectedBits = expectedBits.zextOrTrunc(static_cast<unsigned>(width));
         const auto reg = addBitVectorExpression({
             .kind = BitVectorExpressionKind::Register,
-            .width = bits.size(),
-            .reg = registerSymbol->id,
+            .width = width,
+            .reg = regId,
         });
         const auto expected = addBitVectorExpression({
             .kind = BitVectorExpressionKind::Constant,
-            .width = bits.size(),
+            .width = width,
             .constant = std::move(expectedBits),
         });
         return addCondition({
@@ -5158,7 +5151,8 @@ private:
   }
 
   [[nodiscard]] FailureOr<std::vector<frontend::BitReference>>
-  resolveBits(const BitReference& reference) {
+  resolveBits(const BitReference& reference,
+              bool collapseWholeRegisterSlice = false) {
     const auto* symbol = lookup(reference.identifier);
     if (symbol == nullptr || symbol->kind != SymbolKind::Register ||
         program.registers[symbol->id].kind == RegisterKind::Qubit) {
@@ -5183,8 +5177,10 @@ private:
       return result;
     };
     if (reference.slice) {
-      MQT_OQ3_TRY_ASSIGN(indices, resolveSliceIndices(*reference.slice, width,
-                                                      reference.location));
+      MQT_OQ3_TRY_ASSIGN(indices,
+                         resolveSliceIndices(*reference.slice, width,
+                                             reference.location,
+                                             collapseWholeRegisterSlice));
       std::vector<frontend::BitReference> result;
       for (const auto index : indices) {
         result.push_back(makeReference(index));
@@ -5224,16 +5220,6 @@ private:
     return std::vector<frontend::BitReference>{
         {.reg = reg, .dynamicIndex = dynamic},
     };
-  }
-
-  [[nodiscard]] bool
-  isWholeRegisterSelection(ArrayRef<frontend::BitReference> selection,
-                           RegisterId reg) const {
-    return selection.size() == program.registers[reg].width &&
-           llvm::all_of(llvm::enumerate(selection), [](const auto& entry) {
-             const auto& bit = entry.value();
-             return !bit.dynamicIndex && bit.index == entry.index();
-           });
   }
 
   [[nodiscard]] LogicalResult

@@ -141,7 +141,7 @@ TEST(OpenQASMFrontendTest, KnownMeasurementSlicesInitializeSelectedBits) {
   ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
 }
 
-TEST(OpenQASMFrontendTest, ContinuePreservesDefiniteInitialization) {
+TEST(OpenQASMFrontendTest, LoopExitsPreserveDefiniteInitialization) {
   for (const auto* source : {
            "OPENQASM 3.0; continue;",
            "OPENQASM 3.0; int x; for int i in [0:1] { "
@@ -152,10 +152,16 @@ TEST(OpenQASMFrontendTest, ContinuePreservesDefiniteInitialization) {
     auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
     EXPECT_FALSE(analyzed);
   }
-  auto analyzed = openqasm::frontend::analyzeOpenQASM(
-      "OPENQASM 3.0; int x; for int i in [0:1] "
-      "{ x = 1; continue; } int y = x;");
-  ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
+  for (const auto* source : {
+           "OPENQASM 3.0; int x; for int i in [0:1] "
+           "{ x = 1; continue; } int y = x;",
+           "OPENQASM 3.1; output bit c; output int x; for int i in [0:0] { "
+           "switch (i) { case 0 { c = true; x = 1; break; } "
+           "default { c = false; x = 2; break; } } }",
+       }) {
+    auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
+    ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
+  }
 }
 
 TEST(OpenQASMFrontendTest, SemanticAnalysisIsIndependentOfMLIR) {
@@ -244,6 +250,7 @@ for int i in [0:3] {
 }
 int stride = 2;
 for int i in [0:stride:6] { x q[i]; }
+for int i in [1:0] { x q[i - i + 8]; }
 )qasm";
 
   auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
@@ -330,6 +337,18 @@ TEST(OpenQASMFrontendTest, DoesNotInheritFactsFromExpiredLocalDeclarations) {
 TEST(OpenQASMFrontendTest, RejectsUnprovedQuantumIndices) {
   constexpr auto rejections =
       std::to_array<std::pair<llvm::StringRef, llvm::StringRef>>({
+          {
+              "OPENQASM 3.1; qubit[2] q; int n = 0; int a = 0; "
+              "for int outer in [0:0] { for int inner in [0:n] { a = 1; } } "
+              "x q[a];",
+              "cannot prove that qubit index is in bounds",
+          },
+          {
+              "OPENQASM 3.1; qubit[2] q; int n = 0; int a = 0; "
+              "while (true) { for int inner in [0:n] { a = 1; } break; } "
+              "x q[a];",
+              "cannot prove that qubit index is in bounds",
+          },
           {
               "OPENQASM 3.1; qubit[4] q; for int i in [0:3] { for int j in "
               "[0:3] { cx q[i], q[j]; } }",
@@ -1337,46 +1356,21 @@ TEST(OpenQASMFrontendTest, AppliesC99SignedUnsignedConstantPromotion) {
   constexpr llvm::StringLiteral source = R"qasm(
 OPENQASM 3.1;
 const uint maximum = 18446744073709551615;
-const uint wrapped_add = maximum + 1;
 const uint one = 1;
-const uint wrapped_negation = -one;
-const bool mixed_order = -1 < maximum;
-qubit q;
-rx(wrapped_add) q;
-if (mixed_order) { x q; }
+output bool result;
+result = maximum + 1 == 0 && -one == maximum &&
+         !(-1 < maximum) && -uint[8](1) < 0 &&
+         float(-uint[8](1)) == -1.0;
 )qasm";
-
   auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
   ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
-
-  bool sawWrappedParameter = false;
-  bool sawFalseCondition = false;
-  for (const auto statement : analyzed.program->body) {
-    const auto& data = analyzed.program->statements[statement].data;
-    if (const auto* application =
-            std::get_if<openqasm::frontend::GateApplication>(&data);
-        application != nullptr && application->callee == "rx") {
-      ASSERT_EQ(application->parameters.size(), 1);
-      const auto& parameter =
-          analyzed.program->expressions[application->parameters.front()];
-      ASSERT_EQ(parameter.kind, openqasm::frontend::ExpressionKind::Cast);
-      ASSERT_EQ(parameter.type, openqasm::frontend::ScalarType::Angle);
-      const auto& operand = analyzed.program->expressions[parameter.lhs];
-      sawWrappedParameter =
-          operand.type == openqasm::frontend::ScalarType::Uint &&
-          std::get<uint64_t>(operand.constant) == 0;
-    }
-    if (const auto* conditional =
-            std::get_if<openqasm::frontend::IfStatement>(&data)) {
-      const auto& condition =
-          analyzed.program->conditions[conditional->condition];
-      sawFalseCondition =
-          condition.kind == openqasm::frontend::ConditionKind::Literal &&
-          !condition.literal;
-    }
-  }
-  EXPECT_TRUE(sawWrappedParameter);
-  EXPECT_TRUE(sawFalseCondition);
+  const auto& assignment =
+      std::get<openqasm::frontend::ScalarAssignmentStatement>(
+          analyzed.program->statements[analyzed.program->body.back()].data);
+  ASSERT_TRUE(assignment.condition);
+  const auto& result = analyzed.program->conditions[*assignment.condition];
+  ASSERT_EQ(result.kind, openqasm::frontend::ConditionKind::Literal);
+  EXPECT_TRUE(result.literal);
 }
 
 TEST(OpenQASMFrontendTest, FoldsUnsignedAndMixedNumericConstantOperators) {
@@ -2028,24 +2022,35 @@ if(c==1) x q[1];
   ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
 }
 
-TEST(OpenQASMFrontendTest, AcceptsWideIntegerLiteralInOpenQASM2If) {
-  // 2^70 + 9 fits in an 80-bit register but exceeds uint64_t.
-  constexpr llvm::StringLiteral source = R"qasm(
-OPENQASM 2.0;
-include "qelib1.inc";
-qreg q[1];
-creg c[80];
-measure q[0] -> c[0];
-if(c==1180591620717411303433) x q[0];
-)qasm";
-  auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
-  ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
-  EXPECT_TRUE(
-      llvm::any_of(analyzed.program->bitVectorExpressions, [](const auto& c) {
-        return c.kind ==
-                   openqasm::frontend::BitVectorExpressionKind::Constant &&
-               c.width == 80 && c.constant[70];
-      }));
+TEST(OpenQASMFrontendTest, AcceptsWideIntegerLiterals) {
+  constexpr const char* binary = "0b1000000_00000000_00000000_00000000_"
+                                 "00000000_00000000_00000000_00000000_00001001";
+  for (const auto* literal : {
+           "1180591620717411303433",
+           "1_180_591_620_717_411_303_433",
+           "01180591620717411303433",
+           "0X40_0000000000000009",
+           "0x40_0000000000000009",
+           "0o200000000000000000000011",
+           binary,
+       }) {
+    for (const auto& source : {
+             std::string("OPENQASM 2.0; qreg q[1]; creg c[80]; if(c == ") +
+                 literal + ") U(0,0,0) q[0];",
+             std::string("OPENQASM 3.1; bit[80] c = ") + literal + ";",
+         }) {
+      SCOPED_TRACE(source);
+      auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
+      ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
+      EXPECT_TRUE(llvm::any_of(
+          analyzed.program->bitVectorExpressions, [](const auto& value) {
+            return value.kind ==
+                       openqasm::frontend::BitVectorExpressionKind::Constant &&
+                   value.width == 80 &&
+                   value.constant == ((llvm::APInt(80, 1) << 70) + 9);
+          }));
+    }
+  }
 }
 
 TEST(OpenQASMFrontendTest, PromotesNarrowUnsignedBitRegisterCastToInt) {
@@ -2151,27 +2156,6 @@ TEST(OpenQASMFrontendTest, RejectsInvalidSizedBitRegisterCasts) {
               std::string::npos)
         << analyzed.diagnostics.front().message;
   }
-}
-
-TEST(OpenQASMFrontendTest,
-     AcceptsWideIntegerLiteralWithDigitSeparatorsInOpenQASM2If) {
-  // Same value as above, spelled with grammar-legal digit separators.
-  constexpr llvm::StringLiteral source = R"qasm(
-OPENQASM 2.0;
-include "qelib1.inc";
-qreg q[1];
-creg c[80];
-measure q[0] -> c[0];
-if(c==1_180_591_620_717_411_303_433) x q[0];
-)qasm";
-  auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
-  ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
-  EXPECT_TRUE(
-      llvm::any_of(analyzed.program->bitVectorExpressions, [](const auto& c) {
-        return c.kind ==
-                   openqasm::frontend::BitVectorExpressionKind::Constant &&
-               c.width == 80 && c.constant[70];
-      }));
 }
 
 TEST(OpenQASMFrontendTest,
