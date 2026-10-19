@@ -502,6 +502,8 @@ private:
   std::vector<size_t> registerStateSlots_;
   std::vector<size_t> scalarStateSlots_;
   std::vector<size_t> arrayStateSlots_;
+  // A completed initializer establishes initialization on every later path.
+  llvm::BitVector arraysWithInitializers_;
   llvm::DenseMap<ScalarId, unsigned> activeInductions;
   llvm::DenseSet<ScalarId> loopVariantScalars;
   presburger::IntegerPolyhedron affineDomain{
@@ -979,6 +981,12 @@ private:
           std::make_shared<BitInitialization>(*initializedBits[reg]);
     }
     return *initializedBits[reg];
+  }
+
+  void markElementInitialized(size_t slot, size_t index) {
+    if (!(*initializedBits[slot])[index]) {
+      mutableBitInitialization(slot).set(index);
+    }
   }
 
   [[nodiscard]] FailureOr<std::optional<bool>>
@@ -3709,6 +3717,7 @@ private:
         .location = getSourceLocation(location),
     });
     arrayStateSlots_.push_back(initializedBits.size());
+    arraysWithInitializers_.push_back(false);
     initializedBits.push_back(
         std::make_shared<BitInitialization>(length, false));
     if (failed(declare(location, declaration.identifier,
@@ -3722,11 +3731,13 @@ private:
     }
     ArrayDeclarationStatement typed{.array = id, .initializer = {}};
     if (declaration.initializer) {
+      typed.initializer.reserve(declaration.initializer->size());
       for (const auto value : *declaration.initializer) {
         MQT_OQ3_TRY_ASSIGN(converted, analyzeArrayValue(id, value));
         typed.initializer.push_back(converted);
       }
       mutableBitInitialization(arrayStateSlots_[id]).set();
+      arraysWithInitializers_.set(id);
     }
     MQT_OQ3_TRY_ASSIGN(statement, addStatement(location, std::move(typed)));
     destination.push_back(statement);
@@ -3769,7 +3780,7 @@ private:
       if (!initialized[std::get<int64_t>(typedIndex.constant)]) {
         return fail(expression.location, "array element is uninitialized");
       }
-    } else if (!initialized.all()) {
+    } else if (!arraysWithInitializers_[array] && !initialized.all()) {
       return fail(expression.location,
                   "dynamic array index may read an uninitialized element");
     }
@@ -3786,9 +3797,7 @@ private:
 
   void markBitInitialized(const frontend::BitReference& target) {
     if (!target.dynamicIndex) {
-      mutableBitInitialization(registerStateSlots_[target.reg])[target.index] =
-          true;
-      return;
+      markElementInitialized(registerStateSlots_[target.reg], target.index);
     }
   }
 
@@ -3803,9 +3812,8 @@ private:
       MQT_OQ3_TRY_ASSIGN(value, analyzeArrayValue(array, assignment.value));
       const auto& typedIndex = program.expressions[index];
       if (typedIndex.kind == ExpressionKind::Constant) {
-        mutableBitInitialization(
-            arrayStateSlots_[array])[std::get<int64_t>(typedIndex.constant)] =
-            true;
+        markElementInitialized(arrayStateSlots_[array],
+                               std::get<int64_t>(typedIndex.constant));
       }
       MQT_OQ3_TRY_ASSIGN(
           statement,

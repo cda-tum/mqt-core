@@ -1343,7 +1343,8 @@ TEST_F(CompilerPipelineTest, EmptyArrayAccessIsRejectedByDD) {
 TEST_F(CompilerPipelineTest, PromotedClassicalArraysExportAcrossBackends) {
   auto qc = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.0;
     array[float, 2] angles = {0.0, pi};
-    angles[0] = angles[1];
+    int i = -1;
+    angles[0] = angles[i];
     U(angles[0], 0, 0) $0;
     output bit result;
     result = measure $0;
@@ -1380,6 +1381,34 @@ TEST_F(CompilerPipelineTest, PromotedClassicalArraysExportAcrossBackends) {
   for (const auto* forbidden :
        {"alloca", "load ", "store ", "fmul ", "@malloc", "@free", "@abort"}) {
     EXPECT_EQ(llvmIR->find(forbidden), std::string::npos);
+  }
+}
+
+TEST_F(CompilerPipelineTest, ClassicalArrayPromotionBoundary) {
+  for (const auto size : {16, 17}) {
+    SCOPED_TRACE(size);
+    auto source =
+        "OPENQASM 3.0; array[float, " + std::to_string(size) + "] angles = {";
+    for (int i = 1; i < size; ++i) {
+      source += "0, ";
+    }
+    source += "pi}; U(angles[-1], 0, 0) $0; output bit result; "
+              "result = measure $0;";
+    auto qc = QCProgram::fromOpenQASMString(source);
+    ASSERT_TRUE(succeeded(qc));
+    ASSERT_TRUE(succeeded(qc->cleanup()));
+    auto qco = std::move(qc->copy()).intoQCO();
+    ASSERT_TRUE(succeeded(qco));
+    const auto counts =
+        qco::sample(mlir::mqt::getEntryPoint(qco->module()), 1, 42);
+    ASSERT_TRUE(succeeded(counts));
+    EXPECT_EQ(*counts, (std::map<std::string, size_t>{{"1", 1}}));
+    EXPECT_EQ(succeeded(qc->toOpenQASM3()), size <= 16);
+    EXPECT_EQ(succeeded(std::move(qc->copy()).intoQIR(QIRProfile::Base)),
+              size <= 16);
+    auto adaptive = std::move(*qc).intoQIR(QIRProfile::Adaptive);
+    ASSERT_TRUE(succeeded(adaptive));
+    EXPECT_TRUE(succeeded(adaptive->llvmIR()));
   }
 }
 

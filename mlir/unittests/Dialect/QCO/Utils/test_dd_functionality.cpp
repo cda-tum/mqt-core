@@ -1455,6 +1455,55 @@ TEST_F(QCODDFunctionalityTest, BranchesCopyClassicalRegisterStorage) {
   EXPECT_NEAR(static_cast<double>(hist->at("1")), 512., 90.);
 }
 
+TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @alias(%memory: memref<32xi1>) -> memref<32xi1> {
+        return %memory : memref<32xi1>
+      }
+      func.func @set(%memory: memref<32xi1>, %value: i1) {
+        %zero = arith.constant 0 : index
+        memref.store %value, %memory[%zero] : memref<32xi1>
+        return
+      }
+      func.func @main() -> i64 {
+        %zero = arith.constant 0 : index
+        %false = arith.constant false
+        %true = arith.constant true
+        %memory = memref.alloca() : memref<32xi1>
+        memref.store %false, %memory[%zero] : memref<32xi1>
+        %alias = func.call @alias(%memory) : (memref<32xi1>) -> memref<32xi1>
+        %q0 = qco.static 0 : !qco.qubit
+        %h = qco.h %q0 : !qco.qubit
+        %measured, %bit = qco.measure %h : !qco.qubit
+        qco.sink %measured : !qco.qubit
+        %expected = arith.xori %bit, %true : i1
+        scf.if %expected {
+          func.call @set(%alias, %true) : (memref<32xi1>, i1) -> ()
+        }
+        %actual = memref.load %memory[%zero] : memref<32xi1>
+        %matches = arith.cmpi eq, %actual, %expected : i1
+        %q1 = qco.static 1 : !qco.qubit
+        %out = qco.if %matches args(%q = %q1) -> (!qco.qubit) {
+          %x = qco.x %q : !qco.qubit
+          qco.yield %x : !qco.qubit
+        } else args(%q = %q1) {
+          qco.yield %q : !qco.qubit
+        }
+        qco.sink %out : !qco.qubit
+        %exit = arith.constant 0 : i64
+        return %exit : i64
+      }
+    }
+  )mlir",
+                                         context.get());
+  ASSERT_TRUE(mod);
+  const auto hist = sample(mainFunc(*mod), 1024, 23);
+  ASSERT_TRUE(succeeded(hist));
+  ASSERT_EQ(hist->size(), 2U);
+  EXPECT_EQ(hist->at("10") + hist->at("11"), 1024U);
+}
+
 TEST_F(QCODDFunctionalityTest, BranchesThroughCountedMeasurementsAndResets) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {

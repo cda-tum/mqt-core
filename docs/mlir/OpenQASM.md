@@ -211,9 +211,13 @@ print(counts)
 Arrays lower to typed MLIR `memref.alloca` stack storage. The aggregate element
 limit bounds the array payload to 800,000 bytes per entry-point invocation.
 Compiler cleanup uses upstream SROA and mem2reg to remove eligible storage.
-Arrays whose storage and computations disappear can also export to Base QIR,
-jeff, OpenQASM, and Qiskit. Call `program.cleanup()` before `to_qiskit()` to
-promote array storage; Qiskit export itself only folds scalar expressions.
+LLVM/MLIR 23.1 can destructure arrays of at most 16 elements; promotion also
+requires constant indices and uses that these passes support. Do not rely on
+cleanup removing larger arrays; DD simulation and Adaptive QIR support them with
+storage intact. Arrays whose storage and computations disappear can also export
+to Base QIR, jeff, OpenQASM, and Qiskit. Call `program.cleanup()` before
+`to_qiskit()` to promote array storage; Qiskit export itself only folds scalar
+expressions.
 
 Remaining arrays work through QC/QCO and Adaptive QIR conversion. Adaptive QIR
 uses native LLVM stack storage, with no host C allocation or assertion runtime.

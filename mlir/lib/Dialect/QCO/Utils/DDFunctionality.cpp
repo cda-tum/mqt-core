@@ -220,7 +220,13 @@ struct ClassicalEnv {
     std::optional<dd::Qubit> deferredWire;
   };
   using RegisterState = std::vector<RegisterBit>;
-  using MemRefState = SmallVector<Attribute>;
+  struct MemRefState {
+    // Aliases share this handle; branches share its buffer until a write.
+    std::shared_ptr<SmallVector<Attribute>> values;
+
+    explicit MemRefState(size_t size)
+        : values(std::make_shared<SmallVector<Attribute>>(size)) {}
+  };
 
   DenseMap<Value, Attribute> values;
   DenseMap<Value, dd::Qubit> deferredMeasurements;
@@ -252,9 +258,16 @@ struct ClassicalEnv {
     return copy;
   }
 
+  [[nodiscard]] Attribute lookup(Value value) const {
+    if (auto constant = value.getDefiningOp<arith::ConstantOp>()) {
+      return constant.getValue();
+    }
+    return values.lookup(value);
+  }
+
   LogicalResult bindFrom(Value source, Value dest, Operation* op) {
-    const auto it = values.find(source);
-    if (it == values.end()) {
+    auto value = lookup(source);
+    if (!value) {
       if (deferredMeasurements.contains(source) &&
           deferredMeasurementUse != nullptr) {
         *deferredMeasurementUse = op;
@@ -263,8 +276,6 @@ struct ClassicalEnv {
       return op->emitError()
              << "classical SSA value is not mapped for QCO DD simulation";
     }
-    // Inserting the destination can grow the map and invalidate the iterator.
-    auto value = it->second;
     values[dest] = value;
     return success();
   }
@@ -330,8 +341,8 @@ struct SamplingPlan {
 
 static FailureOr<Attribute>
 lookupAttribute(Value value, const ClassicalEnv& classical, Operation* op) {
-  const auto it = classical.values.find(value);
-  if (it == classical.values.end()) {
+  auto attribute = classical.lookup(value);
+  if (!attribute) {
     if (classical.deferredMeasurements.contains(value) &&
         classical.deferredMeasurementUse != nullptr) {
       *classical.deferredMeasurementUse = op;
@@ -340,16 +351,14 @@ lookupAttribute(Value value, const ClassicalEnv& classical, Operation* op) {
     return op->emitError()
            << "classical SSA value is not mapped for QCO DD simulation";
   }
-  return it->second;
+  return attribute;
 }
 
 static FailureOr<double>
 resolveDouble(Value value, const ClassicalEnv& classical, Operation* op) {
-  if (const auto it = classical.values.find(value);
-      it != classical.values.end()) {
-    if (const auto floating = dyn_cast<FloatAttr>(it->second)) {
-      return floating.getValue().convertToDouble();
-    }
+  if (const auto floating =
+          dyn_cast_if_present<FloatAttr>(classical.lookup(value))) {
+    return floating.getValue().convertToDouble();
   }
   if (const auto constant = mqt::valueToDouble(value)) {
     return *constant;
@@ -562,8 +571,7 @@ static LogicalResult validateReturn(func::ReturnOp returnOp,
   return isa<IndexType, IntegerType>(type) || type.isF64();
 }
 
-static LogicalResult recordConstant(arith::ConstantOp constant,
-                                    ClassicalEnv& classical) {
+static LogicalResult validateConstant(arith::ConstantOp constant) {
   auto tensorType = dyn_cast<RankedTensorType>(constant.getType());
   const bool isScalarTable =
       tensorType && tensorType.getRank() == 1 &&
@@ -574,7 +582,6 @@ static LogicalResult recordConstant(arith::ConstantOp constant,
            << "QCO DD simulation only supports scalar integer, index, and f64 "
               "constants or dense rank-one integer or f64 tensor constants";
   }
-  classical.values[constant.getResult()] = constant.getValue();
   return success();
 }
 
@@ -788,7 +795,8 @@ static LogicalResult writeRegister(cbit::WriteOp write,
 
 static FailureOr<Attribute*> lookupMemRefSlot(Value memref, ValueRange indices,
                                               ClassicalEnv& classical,
-                                              Operation* op) {
+                                              Operation* op,
+                                              bool forWrite = false) {
   const auto type = dyn_cast<MemRefType>(memref.getType());
   if (!type || type.getRank() > 1 ||
       indices.size() != static_cast<size_t>(type.getRank()) ||
@@ -807,11 +815,15 @@ static FailureOr<Attribute*> lookupMemRefSlot(Value memref, ValueRange indices,
     return op->emitError()
            << "classical memref is not mapped for QCO DD simulation";
   }
-  if (*index < 0 || static_cast<size_t>(*index) >= it->second->size()) {
+  auto& values = it->second->values;
+  if (*index < 0 || static_cast<size_t>(*index) >= values->size()) {
     return op->emitError()
            << "classical memref index out of range for QCO DD simulation";
   }
-  return &(*it->second)[static_cast<size_t>(*index)];
+  if (forWrite && !values.unique()) {
+    values = std::make_shared<SmallVector<Attribute>>(*values);
+  }
+  return &(*values)[static_cast<size_t>(*index)];
 }
 
 template <typename AllocOp>
@@ -848,7 +860,8 @@ static LogicalResult applyMemRefAlloc(AllocOp alloc, ClassicalEnv& classical) {
 static LogicalResult applyMemRefStore(memref::StoreOp store,
                                       ClassicalEnv& classical) {
   auto slot =
-      lookupMemRefSlot(store.getMemref(), store.getIndices(), classical, store);
+      lookupMemRefSlot(store.getMemref(), store.getIndices(), classical, store,
+                       /*forWrite=*/true);
   if (failed(slot)) {
     return failure();
   }
@@ -1359,12 +1372,12 @@ static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
         values.emplace_back(deferred->second);
         continue;
       }
-      const auto value = walk.classical->values.find(src);
-      if (value == walk.classical->values.end()) {
+      auto value = walk.classical->lookup(src);
+      if (!value) {
         return op->emitError()
                << "classical SSA value is not mapped for QCO DD simulation";
       }
-      values.emplace_back(value->second);
+      values.emplace_back(value);
     }
   }
 
@@ -1501,9 +1514,8 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
   return TypeSwitch<Operation*, LogicalResult>(&op)
       .template Case<StaticOp, SinkOp, qtensor::DeallocOp>(
           [](auto) { return success(); })
-      .Case([&](arith::ConstantOp constant) {
-        return recordConstant(constant, *walk.classical);
-      })
+      .Case(
+          [](arith::ConstantOp constant) { return validateConstant(constant); })
       .Case([&](tensor::ExtractOp extract) -> LogicalResult {
         auto value =
             lookupAttribute(extract.getTensor(), *walk.classical, extract);

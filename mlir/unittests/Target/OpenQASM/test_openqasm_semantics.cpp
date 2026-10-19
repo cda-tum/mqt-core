@@ -158,6 +158,17 @@ TEST(OpenQASMFrontendTest, AcceptsClassicalArrays) {
            "array[angle[8], 1] a = {pi}; qubit q; "
            "U(float(a[0])/2, sin(a[0]), 0) q;",
            "array[int, 2] a; a[0] = 1; int result = a[0];",
+           "input float selector; int i = int(selector); "
+           "array[int, 2] a = {1, 2}; "
+           "if (selector > 0) { a[0] = 3; } else { a[1] = 4; } "
+           "int result = a[i];",
+           "input float selector; int i = int(selector); "
+           "array[int, 2] a; a[0] = 1; "
+           "if (selector > 0) { a[0] = 2; a[1] = 3; } "
+           "else { a[1] = 4; } int result = a[i];",
+           "array[int, 2] a = {1, 2}; int i = 0; "
+           "for int j in [0:1] { a[0] = j; int value = a[i]; } "
+           "int result = a[i];",
            "array[int, 1] a; bool c = true; "
            "if (c) { a[0] = 1; } else { a[0] = 2; } int result = a[0];",
            "array[int, 1] a; for int i in [0:1] { a[0] = 1; } "
@@ -204,6 +215,7 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           {"array[angle, 1] a = {pi}; int b = int(a[0]);", "cast angle"},
           {"array[angle, 1] a = {pi}; bool b = a[0] == pi;", "cast angle"},
           {"array[int, 1] a = {a[0]};", "uninitialized"},
+          {"int i = 0; array[int, 1] a = {a[i]};", "uninitialized"},
           {"array[int, 1] a; int b = a[0];", "uninitialized"},
           {
               "array[int, 2] a; a[0] = 1; int i = 0; int b = a[i];",
@@ -216,6 +228,20 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           {
               "array[int, 1] a; bool c = true; if (c) { a[0] = 1; } "
               "int b = a[0];",
+              "uninitialized",
+          },
+          {
+              "input float selector; int i = int(selector); "
+              "array[int, 2] a; a[0] = 1; "
+              "if (selector > 0) { a[1] = 2; int value = a[i]; } "
+              "int result = a[i];",
+              "uninitialized",
+          },
+          {
+              "input float selector; int i = int(selector); "
+              "array[int, 2] a; "
+              "if (selector > 0) { a[0] = 1; } else { a[1] = 2; } "
+              "int result = a[i];",
               "uninitialized",
           },
           {
