@@ -64,7 +64,7 @@ from mqt.core.qdmi import ProgramFormat, is_binary_program_format
 from mqt.core.qdmi.builtin_driver import open_device
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, MutableSet, Sequence
+    from collections.abc import Callable, Iterable, Mapping, MutableSet, Sequence
     from typing import Unpack
 
     from qiskit.circuit import Instruction, Parameter
@@ -425,6 +425,22 @@ class QDMIBackend(BackendV2):
             Default options with shots=1024, memory=False, and max_retries=0.
         """
         return Options(shots=1024, memory=False, max_retries=0)
+
+    def _result_decoder(  # ruff:ignore[no-self-use] Backend extension point.
+        self, _circuit: QuantumCircuit, _program_format: ProgramFormat
+    ) -> Callable[[str], str] | None:
+        """Prepare a decoder for device outcomes of one serialized circuit.
+
+        Subclasses may capture an immutable output mapping here. The decoder
+        must validate each native bitstring and return a hexadecimal Qiskit
+        memory value in source classical-bit order. It serves both counts and
+        ordered shots and must not retain mutable circuit or backend state.
+
+        Returns:
+            A decoder, or ``None`` to validate source-width binary outcomes
+            already in classical-bit order.
+        """
+        return None
 
     def _job_parameters(self, options: Mapping[str, object]) -> QDMIJobParameters:  # ruff:ignore[no-self-use]
         """Validate and encode backend-specific execution options before submission.

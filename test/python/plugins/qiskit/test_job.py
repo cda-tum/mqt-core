@@ -473,17 +473,28 @@ def test_native_program_group_preserves_circuit_results(
     shared.get_program_status.return_value = Job.Status.DONE
     shared.check.return_value = Job.Status.DONE
     shared.wait.return_value = True
-    shared.get_shots.side_effect = lambda program_index: [f"{program_index:02b}"] * 4
-    shared.get_counts.side_effect = lambda program_index: {f"{program_index:02b}": 4}
+    samples = ["00", "01", "10", "11"]
+    shared.get_shots.side_effect = lambda program_index: samples if program_index else ["00"] * 4
+    shared.get_counts.side_effect = lambda program_index: Counter(samples) if program_index else {"00": 4}
     native = MagicMock(return_value=shared)
     monkeypatch.setattr(backend.device, "try_submit_job", native)
     monkeypatch.setattr(backend, "_job_parameters", lambda _options: {"custom1": "native-options"})
     circuits = [QuantumCircuit(2, 2, name=f"native-{index}") for index in range(3)]
+    for circuit in circuits[1:]:
+        circuit.add_register(ClassicalRegister(1, "idle"))
+    decoders = (None, lambda bits: hex(int(bits[0]) + 4 * int(bits[1])), lambda bits: hex(6 * int(bits[1])))
+    decoder_factory = MagicMock(side_effect=lambda circuit, _fmt: decoders[int(circuit.name[-1])])
+    monkeypatch.setattr(backend, "_result_decoder", decoder_factory)
     job = backend.run(circuits, shots=4, memory=memory)
     result = job.result()
-    assert result.get_counts() == [{"00": 4}, {"01": 4}, {"10": 4}]
+    assert result.get_counts() == [
+        {"00": 4},
+        {"0 00": 1, "1 00": 1, "0 01": 1, "1 01": 1},
+        {"0 00": 2, "1 10": 2},
+    ]
     if memory:
-        assert result.get_memory(2) == ["10"] * 4
+        assert result.get_memory(2) == ["0 00", "1 10", "0 00", "1 10"]
+    assert decoder_factory.call_count == 3
     assert not singles
     native.assert_called_once()
     programs, program_format, shots = native.call_args.args

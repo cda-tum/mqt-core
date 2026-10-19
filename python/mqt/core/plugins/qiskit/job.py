@@ -17,6 +17,7 @@ __lazy_modules__ = {
     "collections",
     "copy",
     "datetime",
+    "functools",
     "mqt.core.plugins.qdmi_batch",
     "mqt.core.plugins.qiskit.exceptions",
     "mqt.core.qdmi",
@@ -28,6 +29,7 @@ __lazy_modules__ = {
 import datetime as dt
 from collections import Counter
 from copy import deepcopy
+from functools import partial
 from numbers import Integral
 from typing import TYPE_CHECKING, Any, cast
 
@@ -40,7 +42,7 @@ from mqt.core.plugins.qiskit.exceptions import JobExecutionError, JobSubmissionE
 from mqt.core.qdmi import Job as QDMIJobHandle
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from qiskit.circuit import QuantumCircuit
 
@@ -125,11 +127,16 @@ class QDMIJob(JobV1):
             backend._serialize_circuit(circuit, formats)  # ruff:ignore[private-member-access] Use the backend's serializer selection.
             for circuit in circuits
         )
+        self._result_decoders = tuple(
+            backend._result_decoder(circuit, fmt)  # ruff:ignore[private-member-access] Snapshot the backend's output mapping.
+            or partial(_encode_bits, width=circuit.num_clbits)
+            for circuit, (_, fmt) in zip(circuits, self._programs, strict=True)
+        )
         self._batch: Batch[ExperimentResult] = Batch(
             [BatchEntry(i) for i in range(len(circuits))],
             submit=self._submit_entry,
             decode=lambda index, handle, program_index: self._collect_result(
-                handle, self._headers[index], program_index
+                handle, self._headers[index], self._result_decoders[index], program_index
             ),
             submit_programs=self._submit_programs,
             group_by=[program_format for _, program_format in self._programs],
@@ -234,7 +241,9 @@ class QDMIJob(JobV1):
             raise JobExecutionError(msg, job=self) from exc
         return self._result
 
-    def _collect_result(self, job: QDMIJobHandle, header: dict[str, Any], program_index: int = 0) -> ExperimentResult:
+    def _collect_result(
+        self, job: QDMIJobHandle, header: dict[str, Any], decode: Callable[[str], str], program_index: int = 0
+    ) -> ExperimentResult:
         """Collect and validate one circuit's result.
 
         Returns:
@@ -253,7 +262,7 @@ class QDMIJob(JobV1):
             if len(shots) != self._shots:
                 msg = f"Invalid QDMI SHOTS result: expected {self._shots} shots, got {len(shots)}."
                 raise JobError(msg)
-            memory = [_encode_bits(bits, width) for bits in shots]
+            memory = [decode(bits) for bits in shots]
             data = {"memory": memory, "counts": dict(Counter(memory))}
         elif not width:
             data = {"counts": {}}
@@ -265,7 +274,10 @@ class QDMIJob(JobV1):
             if sum(counts.values()) != self._shots:
                 msg = f"Invalid QDMI histogram: expected {self._shots} total shots."
                 raise JobError(msg)
-            data = {"counts": {_encode_bits(bits, width): count for bits, count in counts.items()}}
+            mapped_counts: Counter[str] = Counter()
+            for bits, count in counts.items():
+                mapped_counts[decode(bits)] += count
+            data = {"counts": dict(mapped_counts)}
         return ExperimentResult.from_dict({
             "success": True,
             "shots": self._shots,
