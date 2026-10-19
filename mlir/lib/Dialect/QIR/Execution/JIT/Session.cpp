@@ -620,6 +620,8 @@ static void normalizeNativeQISNames(llvm::Module& module) {
         throw std::invalid_argument(
             "Conflicting native QIR function signatures");
       }
+      validateNativeABI(function.getCallingConv(), function.getAttributes(),
+                        "QIR runtime declaration '" + function.getName() + "'");
       function.replaceAllUsesWith(existing);
       function.eraseFromParent();
     } else {

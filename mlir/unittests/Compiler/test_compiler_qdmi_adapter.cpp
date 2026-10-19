@@ -722,6 +722,29 @@ TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
       }
     }
   }
+  for (const auto* unusable : {"U", "MEASURE"}) {
+    const auto target = llvm::cantFail(CompilerTarget::create(
+        1, CompilerTarget::Connectivity::allToAll(),
+        CompilerTarget::NativeOperations::fromOperations({
+            llvm::cantFail(CompilerTarget::OperationCapability::create(
+                unusable, 1, std::string_view(unusable) == "U" ? 3 : 0)),
+            llvm::cantFail(
+                CompilerTarget::OperationCapability::create("u3", 1, 3)),
+            llvm::cantFail(
+                CompilerTarget::OperationCapability::create("measure", 1, 0)),
+        })));
+    const mlir::TargetEnvironment environment(
+        target, llvm::cantFail(mlir::payloadSpecificationForProgramFormat(
+                    QDMI_PROGRAM_FORMAT_QASM3)));
+    auto compiled = mlir::CompiledProgram::compile(
+        mlir::OpenQASMProgram("OPENQASM 3; include \"stdgates.inc\"; "
+                              "qubit q; h q; bit c = measure q;"),
+        environment);
+    ASSERT_TRUE(static_cast<bool>(compiled))
+        << llvm::toString(compiled.takeError());
+    EXPECT_NE(compiled->payload().find("u3("), std::string::npos);
+    EXPECT_NE(compiled->payload().find("measure $0"), std::string::npos);
+  }
 }
 
 TEST(CompilerQDMIAdapterTest, PreservesExplicitStatusAndRejectsSourceScalars) {

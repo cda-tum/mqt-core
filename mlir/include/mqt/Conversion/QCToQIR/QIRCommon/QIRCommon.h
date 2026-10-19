@@ -48,9 +48,9 @@ struct LoweringState {
   std::optional<CompilerTarget> nativeTarget;
 
   /// Select the advertised name using converted physical qubits and parameters.
-  [[nodiscard]] const CompilerTarget::OperationCapability*
+  [[nodiscard]] CompilerTarget::OperationMatch
   nativeOperation(StringRef name, ValueRange qubits, ValueRange parameters,
-                  bool variadicOnly = false) const;
+                  size_t numControls = 0) const;
 
   /// Retain a native QIS name until profile cleanup has finished.
   [[nodiscard]] LogicalResult nameNativeCall(LLVM::CallOp call, StringRef name,

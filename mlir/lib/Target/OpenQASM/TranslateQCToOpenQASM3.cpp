@@ -1976,8 +1976,10 @@ private:
       const std::array sites{
           static_cast<CompilerTarget::SiteId>(physical.getIndex()),
       };
-      const auto* capability = nativeTarget_->findOperation(name, 1, {}, sites);
-      if (capability != nullptr && capability->name() == name) {
+      const auto match = nativeTarget_->findOperation(
+          name, 1, {}, sites, 0,
+          [name](const auto& capability) { return capability.name() == name; });
+      if (match.capability != nullptr) {
         return success();
       }
     }
@@ -2018,20 +2020,14 @@ private:
       parameters.push_back(mqt::valueToDouble(parameter));
     }
     const auto symbol = body.getBaseSymbol();
-    const CompilerTarget::OperationCapability* capability = nullptr;
-    if (controlCount != 0 && controlCount <= 2) {
-      capability = nativeTarget_->findOperation(
-          (Twine(controlCount == 1 ? "c" : "cc") + symbol).str(), qubits.size(),
-          parameters, sites);
-    }
-    const bool genericControls = controlCount != 0 && capability == nullptr;
+    const auto [capability, genericControls] = nativeTarget_->findOperation(
+        symbol, qubits.size(), parameters, sites, controlCount,
+        [symbol](const auto& operation) {
+          return operation.name() != "U" &&
+                 (openqasm::frontend::isValidIdentifier(operation.name()) ||
+                  (symbol == "gphase" && operation.name() == "gphase"));
+        });
     if (capability == nullptr) {
-      capability = nativeTarget_->findOperation(
-          symbol, qubits.size(), parameters, sites, genericControls);
-    }
-    if (capability == nullptr || capability->name() == "U" ||
-        (!openqasm::frontend::isValidIdentifier(capability->name()) &&
-         !(symbol == "gphase" && capability->name() == "gphase"))) {
       return fail(unitary,
                   "target operation cannot be emitted as native OpenQASM");
     }

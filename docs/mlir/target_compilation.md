@@ -569,8 +569,9 @@ placements. OpenQASM emits native calls without portable gate definitions;
 untargeted export retains its portable helpers. Native measurement and reset
 must use the OpenQASM keywords `measure` and `reset`. QIR preserves the native
 name in each QIS call and uses the controlled specialization for variadic
-operations. A selected format that cannot represent a native operation is
-rejected.
+operations. OpenQASM skips unrepresentable aliases, including built-in `U`,
+whose phase convention differs. Compilation fails if no compatible advertised
+alias can represent an operation in the selected format.
 
 The `sqrt_iswap` synthesis shorthand requires a matching `xx_plus_yy` capability
 for native payload export.

@@ -136,9 +136,10 @@ QCToQIRTypeConverter::QCToQIRTypeConverter(MLIRContext* ctx)
   });
 };
 
-const CompilerTarget::OperationCapability*
+CompilerTarget::OperationMatch
 LoweringState::nativeOperation(StringRef name, ValueRange qubits,
-                               ValueRange parameters, bool variadicOnly) const {
+                               ValueRange parameters,
+                               size_t numControls) const {
   SmallVector<CompilerTarget::SiteId> sites;
   for (auto qubit : qubits) {
     auto pointer = qubit.getDefiningOp<LLVM::IntToPtrOp>();
@@ -158,7 +159,7 @@ LoweringState::nativeOperation(StringRef name, ValueRange qubits,
       sites.size() == qubits.size()
           ? std::optional<ArrayRef<CompilerTarget::SiteId>>(sites)
           : std::nullopt,
-      variadicOnly);
+      numControls);
 }
 
 LogicalResult LoweringState::nameNativeCall(LLVM::CallOp call, StringRef name,
@@ -166,7 +167,7 @@ LogicalResult LoweringState::nameNativeCall(LLVM::CallOp call, StringRef name,
   if (!nativeTarget) {
     return success();
   }
-  const auto* capability = nativeOperation(name, qubits, {});
+  const auto* capability = nativeOperation(name, qubits, {}).capability;
   if (capability == nullptr) {
     return call.emitError("target does not support emitted QIR operation");
   }
@@ -206,17 +207,8 @@ static LogicalResult convertUnitaryToCallOp(
     SmallVector<Value> qubits(controls);
     llvm::append_range(qubits, targets);
     const auto symbol = unitary.getBaseSymbol();
-    const CompilerTarget::OperationCapability* capability = nullptr;
-    if (!controls.empty() && controls.size() <= 2) {
-      capability = state.nativeOperation(
-          (Twine(controls.size() == 1 ? "c" : "cc") + symbol).str(), qubits,
-          parameters);
-    }
-    const bool genericControls = !controls.empty() && capability == nullptr;
-    if (capability == nullptr) {
-      capability =
-          state.nativeOperation(symbol, qubits, parameters, genericControls);
-    }
+    const auto [capability, genericControls] =
+        state.nativeOperation(symbol, qubits, parameters, controls.size());
     if (capability == nullptr) {
       return op.emitError("target does not support emitted QIR operation");
     }

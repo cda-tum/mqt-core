@@ -1418,25 +1418,36 @@ bool CompilerTarget::supportsOperation(
       });
 }
 
-const CompilerTarget::OperationCapability* CompilerTarget::findOperation(
+CompilerTarget::OperationMatch CompilerTarget::findOperation(
     StringRef name, size_t arity, ArrayRef<std::optional<double>> parameters,
-    std::optional<ArrayRef<SiteId>> sites, bool variadicOnly) const {
-  const OperationCapability* selected = nullptr;
-  if (!storage_->supportsOperation(
-          name, arity, parameters.size(), sites, variadicOnly, nullptr,
-          [&](const OperationCapability& operation) {
-            if ((!sites && !operation.siteTuples().empty()) ||
-                !matchesParameters(operation, [&](size_t index) {
-                  return parameters[index];
-                })) {
-              return false;
-            }
-            selected = &operation;
-            return true;
-          })) {
-    return nullptr;
+    std::optional<ArrayRef<SiteId>> sites, size_t numControls,
+    function_ref<bool(const OperationCapability&)> filter) const {
+  const auto select = [&](StringRef spelling, bool variadicOnly) {
+    const OperationCapability* selected = nullptr;
+    const bool supported = storage_->supportsOperation(
+        spelling, arity, parameters.size(), sites, variadicOnly, nullptr,
+        [&](const OperationCapability& operation) {
+          if ((!sites && !operation.siteTuples().empty()) ||
+              !matchesParameters(
+                  operation, [&](size_t index) { return parameters[index]; }) ||
+              (filter && !filter(operation))) {
+            return false;
+          }
+          selected = &operation;
+          return true;
+        });
+    return supported ? selected : nullptr;
+  };
+  if (numControls != 0 && numControls <= 2) {
+    if (const auto* operation = select(
+            (Twine(numControls == 1 ? "c" : "cc") + name).str(), false)) {
+      return {.capability = operation, .genericControls = false};
+    }
   }
-  return selected;
+  return {
+      .capability = select(name, numControls != 0),
+      .genericControls = numControls != 0,
+  };
 }
 
 bool CompilerTarget::supports(::mlir::Operation* operation) const {

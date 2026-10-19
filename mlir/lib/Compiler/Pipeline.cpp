@@ -360,21 +360,13 @@ FailureOr<std::string> QIRProgram::llvmIR() const {
 }
 
 FailureOr<std::vector<std::byte>> QIRProgram::toBitcode() const {
-  auto storage = bitcode();
-  if (failed(storage)) {
-    return failure();
-  }
-  const auto bytes = std::as_bytes(std::span(*storage));
-  return std::vector(bytes.begin(), bytes.end());
-}
-
-FailureOr<std::string> QIRProgram::bitcode() const {
-  std::string result;
-  llvm::raw_string_ostream stream(result);
+  std::string storage;
+  llvm::raw_string_ostream stream(storage);
   if (failed(qir::translateQIRToBitcode(mod(), stream))) {
     return failure();
   }
-  return result;
+  const auto bytes = std::as_bytes(std::span(storage));
+  return std::vector(bytes.begin(), bytes.end());
 }
 
 LogicalResult

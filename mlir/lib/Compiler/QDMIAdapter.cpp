@@ -12,6 +12,7 @@
 
 #include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
+#include "mqt/Target/QIR/Export.h"
 #include "qdmi/QDMI.hpp"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 #include <array>
@@ -874,8 +876,10 @@ CompiledProgram::compile(CompilerInput&& program,
     return error;
   }
   if (qdmi::isBinaryProgramFormat(*format)) {
-    if (auto bytes = qir.bitcode(); succeeded(bytes)) {
-      return CompiledProgram(environment, std::move(*bytes), *format);
+    std::string bytes;
+    llvm::raw_string_ostream stream(bytes);
+    if (succeeded(qir::translateQIRToBitcode(qir.module(), stream))) {
+      return CompiledProgram(environment, std::move(bytes), *format);
     }
   } else if (auto text = qir.llvmIR(); succeeded(text)) {
     return CompiledProgram(environment, std::move(*text), *format);
