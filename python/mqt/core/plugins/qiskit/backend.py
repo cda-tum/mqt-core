@@ -427,7 +427,7 @@ class QDMIBackend(BackendV2):
         return Options(shots=1024, memory=False, max_retries=0)
 
     def _result_decoder(  # ruff:ignore[no-self-use] Backend extension point.
-        self, _circuit: QuantumCircuit, _program_format: ProgramFormat
+        self, _circuit: QuantumCircuit, _program_format: ProgramFormat, /
     ) -> Callable[[str], str] | None:
         """Prepare a decoder for device outcomes of one serialized circuit.
 
