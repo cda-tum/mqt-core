@@ -7,3 +7,4 @@
 # Licensed under the MIT License
 
 add_subdirectory(OpenQASM)
+add_subdirectory(QIR)
