@@ -103,7 +103,7 @@ struct ExportedInstruction {
   StandardGateMapping gate;
   std::string customGate;
   std::vector<uint32_t> qubits;
-  std::vector<uint32_t> clbits;
+  uint32_t clbit = 0;
   std::vector<Parameter> parameters;
   std::vector<std::complex<double>> matrix;
   std::vector<GateModifier> modifiers;
@@ -164,7 +164,9 @@ exportParameterImpl(mlir::Value value, ExportedParameters& parameters,
   }
   if (const auto number = mlir::mqt::valueToDouble(value)) {
     auto result = Parameter::number(*number);
-    parameters.try_emplace(value, result);
+    if (!value.hasOneUse()) {
+      parameters.try_emplace(value, result);
+    }
     return result;
   }
   if (!value.getType().isF64()) {
@@ -341,6 +343,7 @@ checkedTargetSiteId(const uint64_t index) {
 namespace {
 struct ExportState {
   struct ClassicalRegisterInfo {
+    size_t registerIndex;
     uint32_t base;
     uint32_t size;
     mlir::cbit::Initialization initialization;
@@ -969,7 +972,7 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
         "QC to Qiskit export requires an entry-function return");
   }
   mlir::ValueRange returnedValues = returnOp.getOperands();
-  if (returnOp.getNumOperands() == 1U) {
+  if (returnOp.getNumOperands() == 1U && function.getResultAttrs(0).empty()) {
     auto result = returnOp.getOperand(0);
     const auto sentinel = mlir::getConstantIntValue(result);
     if (result.getType().isInteger(64) && sentinel && *sentinel == 0) {
@@ -977,6 +980,12 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
     }
   }
   llvm::DenseSet<mlir::Value> returnedRegisters;
+  for (auto result : returnedValues) {
+    if (!returnedRegisters.insert(result).second) {
+      throw std::runtime_error(
+          "QC to Qiskit export does not support duplicate result registers");
+    }
+  }
   if (!state.quantumRegisters.empty()) {
     std::vector<Register> registers;
     uint32_t next = state.quantumRegisters.front().bits.front();
@@ -1006,7 +1015,7 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
   llvm::SmallVector<mlir::Value> registers;
   function.walk([&](mlir::cbit::AllocOp alloc) {
     if (!alloc.getResult().use_empty() &&
-        !llvm::is_contained(returnedValues, alloc.getResult())) {
+        !returnedRegisters.contains(alloc.getResult())) {
       registers.push_back(alloc.getResult());
     }
   });
@@ -1030,18 +1039,15 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
       throw std::runtime_error(
           "QC to Qiskit export supports only CBit function return values");
     }
-    if (!returnedRegisters.insert(result).second) {
-      throw std::runtime_error(
-          "QC to Qiskit export does not support duplicate result registers");
-    }
     auto alloc = result.getDefiningOp<mlir::cbit::AllocOp>();
-    if (!alloc || (llvm::is_contained(returnedValues, result) &&
+    if (!alloc || (returnedRegisters.contains(result) &&
                    alloc->getBlock() != &function.getBody().front())) {
       throw std::runtime_error(
           "QC to Qiskit export requires direct result-register allocations");
     }
     const auto size = checkedIndex(type.getWidth(), "classical-register size");
     state.classicalRegisterInfo[result] = {
+        .registerIndex = state.classicalRegisters.size(),
         .base = state.numClbits,
         .size = size,
         .initialization = alloc.getInitialization(),
@@ -1138,7 +1144,7 @@ static void setExpressionType(Expression& expression, const mlir::Type type) {
   return checkedAdd(info->second.base, checked, "classical-bit");
 }
 
-[[nodiscard]] static Register
+[[nodiscard]] static const Register&
 classicalRegisterLayout(mlir::Value value, const ExportState& state,
                         const bool allowWide = false) {
   const auto info = state.classicalRegisterInfo.find(value);
@@ -1147,21 +1153,12 @@ classicalRegisterLayout(mlir::Value value, const ExportState& state,
     throw std::runtime_error(
         "Qiskit classical registers require between 1 and 64 bits");
   }
-  Register result;
-  result.bits.resize(info->second.size);
-  std::iota(result.bits.begin(), result.bits.end(), info->second.base);
-  for (const auto& candidate : state.classicalRegisters) {
-    if (candidate.bits == result.bits) {
-      result.name = candidate.name;
-      break;
-    }
-  }
-  return result;
+  return state.classicalRegisters[info->second.registerIndex];
 }
 
-[[nodiscard]] static Register classicalRegister(mlir::Value value,
-                                                const ExportState& state,
-                                                const bool allowWide = false) {
+[[nodiscard]] static const Register&
+classicalRegister(mlir::Value value, const ExportState& state,
+                  const bool allowWide = false) {
   const auto info = state.classicalRegisterInfo.find(value);
   if (info != state.classicalRegisterInfo.end() &&
       info->second.initialization != mlir::cbit::Initialization::Zero) {
@@ -2023,14 +2020,6 @@ exportSwitchTarget(mlir::Value value, ExportState& state,
         "Qiskit switch targets require a constant index or an unsigned "
         "integer-to-index cast");
   }
-  if (auto load = value.getDefiningOp<mlir::cbit::LoadOp>();
-      load && value.getType().isInteger(1)) {
-    state.expressionOperations.insert(load);
-    return {
-        .kind = ClassicalTargetKind::ClassicalBit,
-        .bit = classicalBitIndex(load, state),
-    };
-  }
   ClassicalTarget target{.kind = ClassicalTargetKind::Expression};
   target.expression = exportExpression(value, state, evaluationBlock);
   if (target.expression->type == ClassicalType::Float) {
@@ -2703,7 +2692,7 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
         circuit.instructions.push_back({
             .kind = ExportedInstruction::Kind::Measure,
             .qubits = mapQubits(measure.getQubit(), state.qubits),
-            .clbits = {destinationBit},
+            .clbit = destinationBit,
         });
         state.measurementResultBits.try_emplace(measure.getResult(),
                                                 destinationBit);
@@ -2860,7 +2849,7 @@ static void emitCircuit(ExportedCircuit& circuit, CircuitWriter& writer) {
                            instruction.parameters, instruction.modifiers);
       break;
     case ExportedInstruction::Kind::Measure:
-      writer.addMeasure(instruction.qubits.at(0), instruction.clbits.at(0));
+      writer.addMeasure(instruction.qubits.at(0), instruction.clbit);
       break;
     case ExportedInstruction::Kind::Reset:
       writer.addReset(instruction.qubits.at(0));
