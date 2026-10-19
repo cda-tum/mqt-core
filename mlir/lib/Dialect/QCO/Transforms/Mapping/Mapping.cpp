@@ -728,7 +728,7 @@ private:
         : horizon_(&horizon), objective_(findObjective()) {}
 
     /// Estimates routing cost by summing distance-based SWAP counts over the
-    /// lookahead horizon with reciprocal decay per layer.
+    /// lookahead horizon with linear decay per layer.
     ///
     /// Computes the minimal number of SWAPs required to route each gate in
     /// each layer. For each gate, this is determined by the shortest distance
@@ -740,21 +740,15 @@ private:
       // ties. Default lambda = 1/2 gives layer weights 1, 1/2, 1/3, ... .
       float costs = 0;
       float weight = 1;
-      const bool reciprocal = params.lambda >= 0.F && params.lambda <= 1.F;
       for (size_t i = 0; i < horizon_->nlayers(); ++i) {
-        for (const auto& gate : horizon_->get(i)) {
-          costs +=
-              weight * static_cast<float>(distance(gate, layout, target) - 1);
-          if (!reciprocal) {
-            // Preserve serial weighting outside the decay interval.
-            weight *= params.lambda;
-          }
-        }
-        if (reciprocal) {
-          weight =
-              params.lambda / (params.lambda + (1.F - params.lambda) *
-                                                   static_cast<float>(i + 1));
-        }
+        costs += weight *
+                 sum_of(map_range(horizon_->get(i),
+                                  [&](const auto& gate) {
+                                    return distance(gate, layout, target) - 1;
+                                  }),
+                        0.F);
+        weight =
+            params.lambda / (1 + static_cast<float>(i) * (1 - params.lambda));
       }
       return costs;
     }
