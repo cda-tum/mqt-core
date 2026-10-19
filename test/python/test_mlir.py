@@ -225,6 +225,22 @@ def test_compile_program_qasm_file(tmp_path: Path) -> None:
 
 
 @requires_qiskit_translation
+def test_promoted_array_preserves_value_through_qiskit() -> None:
+    """Export a copied array entry through the public Qiskit adapter."""
+    program = QCProgram.from_openqasm_str("""OPENQASM 3.0;
+array[float, 2] angles = {0.0, pi};
+angles[0] = angles[-1];
+qubit q;
+U(angles[0], 0, 0) q;
+output bit result;
+result = measure q;
+""")
+    program.cleanup()
+    restored = QCProgram.from_qiskit(program.to_qiskit())
+    assert restored.to_qco().sample(shots=1, seed=42) == {"1": 1}
+
+
+@requires_qiskit_translation
 def test_compile_program_qiskit_quantum_circuit() -> None:
     """Compile a ``QuantumCircuit``."""
     qc = QuantumCircuit(2, 2)

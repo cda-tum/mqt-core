@@ -516,12 +516,6 @@ private:
       }
       size_t returnCount = 0;
       function.walk([&](Operation* operation) {
-        if (auto allocation = dyn_cast<LLVM::AllocaOp>(operation)) {
-          // Opaque pointers cannot distinguish resource arrays from other
-          // buffers.
-          metadata.useArrays |=
-              isa<LLVM::LLVMPointerType>(allocation.getElemType());
-        }
         if (auto call = dyn_cast<LLVM::CallOp>(operation)) {
           const auto name = call.getCallee();
           metadata.useDynamicQubit |=
@@ -554,9 +548,8 @@ private:
                        use.getOperandNumber() + 1 == call.getNumOperands();
               });
           metadata.useArrays |= !label;
-          /// ponytail: require loop support for dynamic indices; add
-          /// measurement dependency analysis if targets without loops need
-          /// these programs.
+          // shortcut: dynamic indices require loop support until targets need
+          // measurement dependency analysis to accept programs without loops.
           if (dynamic && metadata.backwardsBranching == 0) {
             metadata.backwardsBranching = 2;
           }

@@ -1,3 +1,9 @@
+---
+file_format: mystnb
+kernelspec:
+  name: python3
+---
+
 # OpenQASM input and output
 
 MQT Core accepts OpenQASM as a compiler input and can export structured programs
@@ -183,21 +189,31 @@ for arithmetic on an entry's value in radians. This angle-to-float cast is an
 intentional extension to OpenQASM. Runtime fixed-width angle arithmetic and
 mixed-type comparisons are diagnosed. For example:
 
-```openqasm3
+```{code-cell} ipython3
+from mqt.core.mlir import QCProgram
+
+source = """
 OPENQASM 3.0;
 include "stdgates.inc";
-array[angle[32], 3] angles = {0.0, pi / 2, pi};
+array[angle[32], 3] angles = {0.0, pi / 2, pi / 2};
 qubit q;
 for int i in [0:2] {
   ry(angles[i]) q;
 }
+output bit result;
+result = measure q;
+"""
+counts = QCProgram.from_openqasm_str(source).to_qco().sample(shots=4, seed=42)
+assert counts == {"1": 4}
+print(counts)
 ```
 
 Arrays lower to typed MLIR `memref.alloca` stack storage. The aggregate element
 limit bounds the array payload to 800,000 bytes per entry-point invocation.
 Compiler cleanup uses upstream SROA and mem2reg to remove eligible storage.
 Arrays whose storage and computations disappear can also export to Base QIR,
-jeff, and OpenQASM.
+jeff, OpenQASM, and Qiskit. Call `program.cleanup()` before `to_qiskit()` to
+promote array storage; Qiskit export itself only folds scalar expressions.
 
 Remaining arrays work through QC/QCO and Adaptive QIR conversion. Adaptive QIR
 uses native LLVM stack storage, with no host C allocation or assertion runtime.

@@ -919,7 +919,8 @@ protected:
     {
       RewritePatternSet patterns(ctx);
       target.addIllegalDialect<cbit::CBitDialect, QCDialect>();
-      // Classical storage is lowered by the upstream MemRef-to-LLVM patterns.
+      // Defer classical memory and index types to final MemRef-to-LLVM
+      // lowering.
       target.addDynamicallyLegalDialect<memref::MemRefDialect>(
           [&](Operation* op) {
             return llvm::all_of(

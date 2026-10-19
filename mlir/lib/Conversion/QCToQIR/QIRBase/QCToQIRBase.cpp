@@ -39,9 +39,11 @@
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -579,7 +581,8 @@ protected:
     {
       RewritePatternSet patterns(ctx);
       target.addIllegalDialect<cbit::CBitDialect, QCDialect, scf::SCFDialect>();
-      // Classical storage is lowered by the upstream MemRef-to-LLVM patterns.
+      // Defer classical memory and index types to final MemRef-to-LLVM
+      // lowering.
       target.addDynamicallyLegalDialect<memref::MemRefDialect>(
           [&](Operation* op) {
             return llvm::all_of(
@@ -600,14 +603,20 @@ protected:
       addOutputRecording(main, ctx, state);
     }
 
-    if (failed(finalizeQIRConversion(moduleOp, target, typeConverter)) ||
-        failed(verifyBaseInstructions(main))) {
+    if (failed(finalizeQIRConversion(moduleOp, target, typeConverter))) {
       signalPassFailure();
       return;
     }
     // Reconcile argument casts before comparing canonical qubit pointers.
     auto& body = *std::next(main.getBody().begin());
     if (failed(moveTerminalMeasurements(body, *state.measurementsBlock))) {
+      signalPassFailure();
+      return;
+    }
+    // Discard folded descriptor operations before enforcing Base's subset.
+    PassManager cleanup(ctx);
+    cleanup.addPass(createCanonicalizerPass());
+    if (failed(cleanup.run(moduleOp)) || failed(verifyBaseInstructions(main))) {
       signalPassFailure();
     }
   }

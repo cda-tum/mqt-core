@@ -152,16 +152,6 @@ result = measure q;
   });
 }
 
-TEST(OpenQASMTargetTest, ConstantArrayIndicesNeedNoRuntimeBoundsChecks) {
-  MLIRContext context;
-  auto moduleOp = qc::translateOpenQASMToQC(
-      "OPENQASM 3.0; array[int, 2] a = {1, 2}; a[-1] = a[0];", &context);
-  ASSERT_TRUE(moduleOp);
-  EXPECT_TRUE(succeeded(verify(*moduleOp)));
-  moduleOp->walk(
-      [&](cf::AssertOp) { ADD_FAILURE() << "index is statically safe"; });
-}
-
 TEST(OpenQASMTargetTest, ImportsNonNullTerminatedSourceView) {
   std::string storage = "OPENQASM 3.1; qubit q; U(0, 0, 0) q;invalid suffix";
   const auto source = StringRef(storage).take_front(storage.find("invalid"));

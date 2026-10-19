@@ -427,11 +427,10 @@ TEST_F(QCToQIRBaseNativeTest, RegisterLoadsPreserveQubitIdentity) {
 TEST_F(QCToQIRBaseNativeTest, AllowsGateAfterMeasurementOnIndependentQubit) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
-  auto qubits = builder.allocQubitRegister(5);
+  auto qubits = builder.allocQubitRegister(4);
   auto result = builder.measure(qubits[0]);
   builder.x(qubits[1]);
-  builder.mcrx(0.25, {qubits[1], qubits[2], qubits[3]}, qubits[4]);
-
+  builder.mcrx(0.25, {qubits[1], qubits[2]}, qubits[3]);
   auto moduleOp = builder.finalize(result);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -440,14 +439,14 @@ TEST_F(QCToQIRBaseNativeTest, AllowsGateAfterMeasurementOnIndependentQubit) {
 
   SmallVector<LLVM::CallOp> quantumCalls;
   moduleOp->walk([&](LLVM::CallOp call) {
-    if (call.getCallee() == qir::QIR_X || call.getCallee() == qir::QIR_RX_CTL ||
+    if (call.getCallee() == qir::QIR_X || call.getCallee() == qir::QIR_CCRX ||
         call.getCallee() == qir::QIR_MEASURE) {
       quantumCalls.push_back(call);
     }
   });
   ASSERT_EQ(quantumCalls.size(), 3);
   EXPECT_EQ(quantumCalls[0].getCallee(), qir::QIR_X);
-  EXPECT_EQ(quantumCalls[1].getCallee(), qir::QIR_RX_CTL);
+  EXPECT_EQ(quantumCalls[1].getCallee(), qir::QIR_CCRX);
   EXPECT_EQ(quantumCalls[2].getCallee(), qir::QIR_MEASURE);
   EXPECT_NE(quantumCalls[0].getOperand(0), quantumCalls[2].getOperand(0));
 }
@@ -460,10 +459,7 @@ TEST_F(QCToQIRBaseNativeTest, ControlledBarrierDoesNotControlFollowingGate) {
       });
 }
 
-TEST(QCToQIRBaseNativeTest, RejectsResidualClassicalComputations) {
-  MLIRContext context;
-  context.loadDialect<qc::QCDialect, arith::ArithDialect, func::FuncDialect,
-                      LLVM::LLVMDialect, math::MathDialect>();
+TEST_F(QCToQIRBaseNativeTest, RejectsResidualClassicalComputations) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto value = builder.intConstant(7);
@@ -493,10 +489,7 @@ TEST_F(QCToQIRBaseNativeTest, SelectsControlledSpecializationsByArity) {
   EXPECT_TRUE(module->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_CCRX));
 }
 
-TEST(QCToQIRBaseNativeTest, RejectsLegacyRuntimeArrayPacking) {
-  MLIRContext context;
-  context.loadDialect<qc::QCDialect, arith::ArithDialect, func::FuncDialect,
-                      LLVM::LLVMDialect>();
+TEST_F(QCToQIRBaseNativeTest, RejectsLegacyRuntimeArrayPacking) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto control0 = builder.allocQubit();
@@ -696,7 +689,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsClassicalMemrefOutput) {
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 
-  expectConversionFailure(*module, "does not support memref outputs");
+  expectConversionFailure(*module, "QIR entry return supports only");
 }
 
 TEST_F(QCToQIRBaseNativeTest, RejectsDynamicClassicalRegisterIndex) {

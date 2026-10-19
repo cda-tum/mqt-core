@@ -37,8 +37,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -1231,7 +1231,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsClassicalMemrefOutput) {
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 
-  expectConversionFailure(*module, "does not support memref outputs",
+  expectConversionFailure(*module, "QIR entry return supports only",
                           runQCToQIRAdaptiveConversion);
 }
 

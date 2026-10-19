@@ -55,7 +55,6 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -140,7 +139,6 @@ LogicalResult finalizeQIRConversion(ModuleOp moduleOp, ConversionTarget& target,
   }
   PassManager manager(ctx);
   manager.addPass(createReconcileUnrealizedCastsPass());
-  manager.addPass(createCanonicalizerPass());
   return manager.run(moduleOp);
 }
 
@@ -635,11 +633,6 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   }
   size_t registerCount = 0;
   for (auto operand : returnOp.getOperands()) {
-    if (auto memref = dyn_cast<MemRefType>(operand.getType());
-        memref && !isa<QubitType>(memref.getElementType())) {
-      return returnOp.emitError("QIR conversion does not support memref "
-                                "outputs; return scalar values instead");
-    }
     auto* definition = operand.getDefiningOp();
     if (isa_and_nonnull<MeasureOp>(definition)) {
       state.measuredResults.try_emplace(

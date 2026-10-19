@@ -52,10 +52,9 @@ def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive", "mlir::ModuleOp"> {
     - Statically shaped classical stack memrefs lower to native LLVM arrays, loads, and stores.
       Classical heap allocation is rejected. These operations require the
       Adaptive array capability and the stored element types.
-    - Bounds checks return exit code 1 on failure without recording outputs.
-      They do not call a host C runtime. The metadata pass records the required
-      multiple-return capability and conservatively requires loop support for
-      residual dynamic array indices.
+    - Classical array indices must be in bounds. No runtime checks are inserted.
+      The metadata pass conservatively requires loop support for residual
+      dynamic array indices.
   }];
 
   let dependentDialects = ["mlir::LLVM::LLVMDialect",

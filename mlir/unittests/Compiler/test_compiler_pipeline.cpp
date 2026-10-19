@@ -1353,10 +1353,26 @@ TEST_F(CompilerPipelineTest, PromotedClassicalArraysExportAcrossBackends) {
   qc->module().walk([](Operation* op) {
     EXPECT_NE(op->getName().getDialectNamespace(), "memref");
   });
-  EXPECT_TRUE(mlir::succeeded(qc->toOpenQASM3()));
+  auto openqasm = qc->toOpenQASM3();
+  ASSERT_TRUE(mlir::succeeded(openqasm));
+  auto reparsed = QCProgram::fromOpenQASMString(openqasm->source());
+  ASSERT_TRUE(mlir::succeeded(reparsed));
+  auto roundtrip = std::move(*reparsed).intoQCO();
+  ASSERT_TRUE(mlir::succeeded(roundtrip));
+  const auto openqasmCounts =
+      qco::sample(mlir::mqt::getEntryPoint(roundtrip->module()), 1, 42);
+  ASSERT_TRUE(succeeded(openqasmCounts));
+  EXPECT_EQ(*openqasmCounts, (std::map<std::string, size_t>{{"1", 1}}));
   auto qco = std::move(qc->copy()).intoQCO();
   ASSERT_TRUE(mlir::succeeded(qco));
-  EXPECT_TRUE(mlir::succeeded(std::move(*qco).intoJeff()));
+  auto jeff = std::move(*qco).intoJeff();
+  ASSERT_TRUE(mlir::succeeded(jeff));
+  auto restored = std::move(*jeff).intoQCO();
+  ASSERT_TRUE(mlir::succeeded(restored));
+  const auto jeffCounts =
+      qco::sample(mlir::mqt::getEntryPoint(restored->module()), 1, 42);
+  ASSERT_TRUE(succeeded(jeffCounts));
+  EXPECT_EQ(*jeffCounts, (std::map<std::string, size_t>{{"1", 1}}));
   auto qir = std::move(*qc).intoQIR(QIRProfile::Base);
   ASSERT_TRUE(mlir::succeeded(qir));
   const auto llvmIR = qir->llvmIR();
