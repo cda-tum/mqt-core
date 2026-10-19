@@ -728,7 +728,7 @@ private:
         : horizon_(&horizon), objective_(findObjective()) {}
 
     /// Estimates routing cost by summing distance-based SWAP counts over the
-    /// lookahead horizon with linear decay per layer.
+    /// lookahead horizon with reciprocal decay per layer.
     ///
     /// Computes the minimal number of SWAPs required to route each gate in
     /// each layer. For each gate, this is determined by the shortest distance
@@ -736,8 +736,6 @@ private:
     [[nodiscard]] float heuristic(const Layout<QubitIndex>& layout,
                                   const CompilerTarget& target,
                                   const Parameters& params) const {
-      // Preserve per-gate addition: regrouping float sums can change queue
-      // ties. Default lambda = 1/2 gives layer weights 1, 1/2, 1/3, ... .
       float costs = 0;
       float weight = 1;
       for (size_t i = 0; i < horizon_->nlayers(); ++i) {
