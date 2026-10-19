@@ -577,14 +577,14 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   }
   for (unsigned index = 0; index < funcOp.getNumResults(); ++index) {
     if (environment &&
-        funcOp.getResultAttr(
-            index, mqt::MQTDialect::OutputNameAttrHelper::getNameStr())) {
+        funcOp.getResultAttr(index,
+                             mqt::MQTDialect::OutputAttrHelper::getNameStr())) {
       return funcOp.emitError(
           "target QIR does not support scalar program outputs; "
           "keep classical temporaries local or select OpenQASM 3");
     }
-    funcOp.removeResultAttr(
-        index, mqt::MQTDialect::OutputNameAttrHelper::getNameStr());
+    funcOp.removeResultAttr(index,
+                            mqt::MQTDialect::OutputAttrHelper::getNameStr());
   }
   SmallVector<func::ReturnOp> returns;
   funcOp.walk([&](func::ReturnOp op) { returns.push_back(op); });

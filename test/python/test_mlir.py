@@ -1067,7 +1067,7 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
             source.rxx(-a if shape == "inverse" else b, 0, 1)
         else:
             getattr(source, "ryy" if shape == "cartan" else "rzx")(b, 0, 1)
-    native = "rzz" if entangler == "bounded_rzz" else entangler
+    native = {"bounded_rzz": "rzz", "sqrt_iswap": "xx_plus_yy"}.get(entangler, entangler)
     target = CompilerTarget(
         2,
         connectivity=CompilerTarget.Connectivity.all_to_all(),
@@ -1077,7 +1077,8 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
             CompilerTarget.OperationCapability(
                 native,
                 2,
-                0 if native in {"cz", "ecr", "iswap", "sqrt_iswap"} else 1,
+                0 if native in {"cz", "ecr", "iswap"} else 2 if native == "xx_plus_yy" else 1,
+                fixed_parameters=[-np.pi / 2, 0.0] if native == "xx_plus_yy" else [],
                 parameter_bounds=[(0, np.pi / 2)] if entangler == "bounded_rzz" else [],
             ),
             CompilerTarget.OperationCapability("gphase", 0, 1),
@@ -1086,14 +1087,9 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     program = QCProgram.from_qiskit(source).to_qco()
     program.synthesize_for_target(_test_target_environment(target))
     assert program.to_jeff(copy=True).is_valid
-    if native == "sqrt_iswap" and expected_entanglers:
-        with pytest.raises(RuntimeError, match="target operation cannot be emitted as native OpenQASM"):
-            program.to_qc(copy=True).to_openqasm3()
-    else:
-        assert QCProgram.from_openqasm_str(program.to_qc(copy=True).to_openqasm3().source).is_valid
+    assert QCProgram.from_openqasm_str(program.to_qc(copy=True).to_openqasm3().source).is_valid
     result = program.to_qiskit(target=target)
-    emitted = "xx_plus_yy" if native == "sqrt_iswap" else native
-    assert result.count_ops().get(emitted, 0) == expected_entanglers
+    assert result.count_ops().get(native, 0) == expected_entanglers
     if shape == "cartan" and entangler == "rzz":
         assert sum(result.count_ops().get(gate, 0) for gate in ["rx", "rz"]) <= 12
     if entangler == "bounded_rzz":

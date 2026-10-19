@@ -36,6 +36,7 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LogicalResult.h"
@@ -360,13 +361,14 @@ FailureOr<std::string> QIRProgram::llvmIR() const {
 }
 
 FailureOr<std::vector<std::byte>> QIRProgram::toBitcode() const {
-  std::string storage;
-  llvm::raw_string_ostream stream(storage);
+  SmallVector<char> storage;
+  llvm::raw_svector_ostream stream(storage);
   if (failed(qir::translateQIRToBitcode(mod(), stream))) {
     return failure();
   }
-  const auto bytes = std::as_bytes(std::span(storage));
-  return std::vector(bytes.begin(), bytes.end());
+  std::vector<std::byte> result(storage.size());
+  std::memcpy(result.data(), storage.data(), storage.size());
+  return result;
 }
 
 LogicalResult
@@ -379,7 +381,7 @@ QIRProgram::writeBitcode(const std::filesystem::path& path) const {
 //===----------------------------------------------------------------------===//
 
 [[nodiscard]] static FailureOr<CompilerProgram>
-runDefaultPipelineImpl(CompilerInput program, ProgramFormat output,
+runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
                        const TargetEnvironment* environment,
                        std::string_view qcoPipeline,
                        const CompilationOptions& options) {
@@ -406,23 +408,26 @@ runDefaultPipelineImpl(CompilerInput program, ProgramFormat output,
   }
 
   auto qco = std::visit(
-      []<typename T>(T& value) -> FailureOr<QCOProgram> {
-        if constexpr (std::is_same_v<T, QCOProgram>) {
+      // Every consuming branch below explicitly forwards the value.
+      // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
+      []<typename T>(T&& value) -> FailureOr<QCOProgram> {
+        using ProgramType = std::remove_cvref_t<T>;
+        if constexpr (std::is_same_v<ProgramType, QCOProgram>) {
           if (failed(qco::verifyLinearity(value.module()))) {
             return failure();
           }
-          return std::move(value);
-        } else if constexpr (std::is_same_v<T, OpenQASMProgram>) {
+          return std::forward<T>(value);
+        } else if constexpr (std::is_same_v<ProgramType, OpenQASMProgram>) {
           auto qc = QCProgram::fromOpenQASMString(value.source());
           if (failed(qc)) {
             return failure();
           }
           return std::move(*qc).intoQCO();
         } else {
-          return std::move(value).intoQCO();
+          return std::forward<T>(value).intoQCO();
         }
       },
-      program);
+      std::move(program));
   if (failed(qco)) {
     return failure();
   }

@@ -1012,7 +1012,7 @@ TEST_P(OpenQASMTranslationTest, ProgramEquivalence) {
     if (auto function = dyn_cast<func::FuncOp>(op)) {
       for (unsigned index = 0; index < function.getNumResults(); ++index) {
         function.removeResultAttr(
-            index, mlir::mqt::MQTDialect::OutputNameAttrHelper::getNameStr());
+            index, mlir::mqt::MQTDialect::OutputAttrHelper::getNameStr());
       }
     }
   });

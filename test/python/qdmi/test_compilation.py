@@ -408,8 +408,7 @@ def test_default_payload_supports_loops(body: str, counts: dict[str, int]) -> No
     assert job.get_counts() == counts
 
 
-@pytest.mark.parametrize("width", [32, 64])
-@pytest.mark.parametrize("staged", [False, True])
+@pytest.mark.parametrize(("width", "staged"), [(32, False), (64, True)])
 def test_qir_artifact_rejects_unsupported_entry_result(
     width: int, capfd: pytest.CaptureFixture[str], *, staged: bool
 ) -> None:

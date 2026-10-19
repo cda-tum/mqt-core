@@ -36,7 +36,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
@@ -625,7 +624,7 @@ result = measure q;
       << *emitted;
 }
 
-TEST(OpenQASM3EmissionTest, UsesCanonicalOutputTypesWithScalarOutputNames) {
+TEST(OpenQASM3EmissionTest, UsesCanonicalOutputTypes) {
   constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
 include "stdgates.inc";
 output bit measured;
@@ -647,15 +646,6 @@ real = 3.0;
   ASSERT_TRUE(moduleOp);
   auto function = *moduleOp->getOps<func::FuncOp>().begin();
   ASSERT_EQ(function.getNumResults(), 6U);
-  const auto outputName =
-      mlir::mqt::MQTDialect::OutputNameAttrHelper::getNameStr();
-  EXPECT_FALSE(function.getResultAttr(0, outputName));
-  EXPECT_FALSE(function.getResultAttr(1, outputName));
-  constexpr std::array names{"flag", "signed_value", "unsigned_value", "real"};
-  for (unsigned index = 0; index < names.size(); ++index) {
-    EXPECT_EQ(function.getResultAttr(index + 2, outputName),
-              StringAttr::get(&context, names[index]));
-  }
 
   auto emitted = qc::translateQCToOpenQASM3(*moduleOp);
 

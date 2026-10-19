@@ -211,9 +211,9 @@ public:
     }
     for (const auto [index, output] : llvm::enumerate(program.outputs)) {
       if (output.kind == frontend::OutputKind::Scalar) {
-        entry.setResultAttr(
-            index, mqt::MQTDialect::OutputNameAttrHelper::getNameStr(),
-            builder.getStringAttr(program.scalars[output.symbol].name));
+        entry.setResultAttr(index,
+                            mqt::MQTDialect::OutputAttrHelper::getNameStr(),
+                            builder.getUnitAttr());
       }
     }
     return moduleOp;
