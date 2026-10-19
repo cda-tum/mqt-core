@@ -660,7 +660,7 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
       // Adaptive conversion checks forwarded registers after lowering SCF.
       return;
     }
-    if (!allocOp || !state.cregIndices.contains(allocOp.getOperation())) {
+    if (!allocOp) {
       storeOp.emitError(
           "QIR conversion requires direct CBit register allocations");
       hasInvalidMemory = true;
@@ -725,14 +725,10 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   if (!sharedRegisters.empty()) {
     DenseMap<std::pair<size_t, int64_t>, Operation*> storedMeasurements;
     DenseSet<size_t> dynamicStores;
-    funcOp.walk([&](cbit::StoreOp store) {
-      auto allocation = store.getReg().getDefiningOp<cbit::AllocOp>();
-      if (!allocation) {
-        return;
-      }
-      const auto reg = state.cregIndices.at(allocation);
+    for (auto store : consumedStores) {
+      const auto reg = state.cregIndices.at(store.getReg().getDefiningOp());
       if (!sharedRegisters.contains(reg)) {
-        return;
+        continue;
       }
       if (const auto index = getConstantIntValue(store.getIndex())) {
         auto* value = store.getValue().getDefiningOp();
@@ -744,7 +740,7 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
       } else {
         dynamicStores.insert(reg);
       }
-    });
+    }
     for (auto* measurement : llvm::make_first_range(state.measuredResults)) {
       auto it = state.cregMeasurements.find(measurement);
       if (it == state.cregMeasurements.end()) {
