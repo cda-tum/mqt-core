@@ -36,12 +36,12 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/WalkResult.h"
 #include "mlir/Transforms/CSE.h"
-#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 
@@ -124,17 +124,8 @@ struct LoweringState {
   /// Local physical tensors released at function return, in allocation order.
   DenseMap<Region*, SmallVector<RegisterId>> localReferenceRegisters;
 
-  /// Map from an operation to its used QC qubits inside its regions
-  DenseMap<Operation*, SetVector<Value>> regionQubitMap;
-
-  /// Map from an operation to the registers used inside its regions.
-  DenseMap<Operation*, SetVector<RegisterId>> regionRegisterMap;
-
-  /// Original QC value order for already-converted structured operations.
+  /// Original QC capture order for source and converted structured operations.
   DenseMap<Operation*, StructuredValues> structuredValues;
-
-  /// Qubit keys yielded by converted modifier regions, in yield order.
-  DenseMap<Region*, SmallVector<Value>> modifierRegionQubits;
 
   /// The qubit allocation mode used in the module
   AllocationMode allocationMode = AllocationMode::Unset;
@@ -159,22 +150,13 @@ template <typename OpType>
 class LoweringPattern : public OpRewritePattern<OpType> {
 
 public:
-  LoweringPattern(TypeConverter& typeConverter, MLIRContext* context,
-                  LoweringState* state)
-      : OpRewritePattern<OpType>(context), state_(state),
-        typeConverter_(&typeConverter) {}
+  LoweringPattern(MLIRContext* context, LoweringState* state)
+      : OpRewritePattern<OpType>(context), state_(state) {}
 
   [[nodiscard]] LoweringState& getState() const { return *state_; }
-  [[nodiscard]] TypeConverter* getQCToQCOTypeConverter() const {
-    return typeConverter_;
-  }
 
 private:
   LoweringState* state_;
-  /// Quantum operands use region-local state, not automatic materializations.
-  ///
-  /// The converter is needed only for signatures and explicit result types.
-  TypeConverter* typeConverter_;
 };
 } // namespace
 
@@ -380,17 +362,9 @@ static void commitQubits(LoweringState& state, Operation* anchor,
 /// Resolves all structured QC state to QCO and QTensor values.
 [[nodiscard]] static SmallVector<Value> resolveAllValues(LoweringState& state,
                                                          Operation* anchor) {
-  ArrayRef<RegisterId> registers;
-  ArrayRef<Value> qcQubits;
   auto* owner = structuredValueOwner(anchor);
-  if (const auto it = state.structuredValues.find(owner);
-      it != state.structuredValues.end()) {
-    registers = it->second.registers;
-    qcQubits = it->second.qubits;
-  } else {
-    registers = state.regionRegisterMap[owner].getArrayRef();
-    qcQubits = state.regionQubitMap[owner].getArrayRef();
-  }
+  const auto& [qcQubits, registers] =
+      state.structuredValues.find(owner)->second;
 
   SmallVector<Value> qcoTargets;
   qcoTargets.reserve(registers.size() + qcQubits.size());
@@ -798,10 +772,8 @@ static void collectStructuredCaptures(Operation* root, LoweringState& state) {
     SetVector<Value> captures;
     getUsedValuesDefinedAbove(operation->getRegions(), captures);
 
-    auto& qubits = state.regionQubitMap[operation];
-    auto& registers = state.regionRegisterMap[operation];
-    qubits.clear();
-    registers.clear();
+    SmallVector<Value> qubits;
+    SetVector<RegisterId> registers;
     for (auto value : captures) {
       if (const auto access = state.registerAccesses.find(value);
           access != state.registerAccesses.end()) {
@@ -809,12 +781,18 @@ static void collectStructuredCaptures(Operation* root, LoweringState& state) {
         continue;
       }
       if (isa<qc::QubitType>(value.getType())) {
-        qubits.insert(value);
+        qubits.push_back(value);
         continue;
       }
       if (isQubitMemrefType(value.getType())) {
         registers.insert(lookupRegisterId(state, value));
       }
+    }
+    if (!qubits.empty() || !registers.empty()) {
+      state.structuredValues[operation] = {
+          .qubits = std::move(qubits),
+          .registers = registers.takeVector(),
+      };
     }
   });
 }
@@ -834,10 +812,26 @@ static void moveModifierRegion(Region& source, Region& destination,
 static void initializeModifierRegionState(Operation* op, LoweringState& state) {
   auto& region = op->getRegion(0);
   auto args = region.front().getArguments();
-  // No old->new alias is needed: old and new values are identical.
-  state.modifierRegionQubits[&region] =
-      SmallVector<Value>(args.begin(), args.end());
   seedRegionMappings(state, region, args, {}, args, {});
+}
+
+/// Returns whether the type changes when lowering QC references to QCO values.
+[[nodiscard]] static bool isQCType(Type type) {
+  auto memref = dyn_cast<MemRefType>(type);
+  return isa<qc::QubitType>(type) ||
+         (memref && isa<qc::QubitType>(memref.getElementType()));
+}
+
+[[nodiscard]] static Type convertQCType(Type type) {
+  if (isa<qc::QubitType>(type)) {
+    return qco::QubitType::get(type.getContext());
+  }
+  if (auto memref = dyn_cast<MemRefType>(type);
+      memref && isa<qc::QubitType>(memref.getElementType())) {
+    return RankedTensorType::get(memref.getShape(),
+                                 qco::QubitType::get(type.getContext()));
+  }
+  return type;
 }
 
 namespace {
@@ -909,50 +903,18 @@ struct ConvertFuncReturnOp final : LoweringPattern<func::ReturnOp> {
   }
 };
 
-/// Type converter for QC-to-QCO conversion
-///
-/// Handles type conversion between the QC and QCO dialects.
-/// The primary conversion is from !qc.qubit to !qco.qubit, which
-/// represents the semantic shift from reference types to value types.
-///
-/// Other types (integers, booleans, etc.) pass through unchanged via
-/// the identity conversion.
-class QCToQCOTypeConverter final : public TypeConverter {
-public:
-  explicit QCToQCOTypeConverter(MLIRContext* ctx) {
-    // Identity conversion for all types by default
-    addConversion([](Type type) { return type; });
-
-    // Convert QC qubit references to QCO qubit values
-    addConversion([ctx](qc::QubitType /*type*/) -> Type {
-      return qco::QubitType::get(ctx);
-    });
-    addConversion([ctx](MemRefType type) -> Type {
-      if (isa<qc::QubitType>(type.getElementType())) {
-        return RankedTensorType::get(type.getShape(), qco::QubitType::get(ctx));
-      }
-      return type;
-    });
-  }
-};
-
 struct ConvertFuncOp final : LoweringPattern<func::FuncOp> {
   using LoweringPattern::LoweringPattern;
 
   LogicalResult matchAndRewrite(func::FuncOp op,
                                 PatternRewriter& rewriter) const override {
-    if (getQCToQCOTypeConverter()->isSignatureLegal(op.getFunctionType())) {
+    if (llvm::none_of(op.getArgumentTypes(), isQCType) &&
+        llvm::none_of(op.getResultTypes(), isQCType)) {
       return failure();
     }
 
-    SmallVector<Type> inputs;
-    SmallVector<Type> results;
-    if (failed(getQCToQCOTypeConverter()->convertTypes(op.getArgumentTypes(),
-                                                       inputs)) ||
-        failed(getQCToQCOTypeConverter()->convertTypes(op.getResultTypes(),
-                                                       results))) {
-      return failure();
-    }
+    auto inputs = llvm::map_to_vector(op.getArgumentTypes(), convertQCType);
+    auto results = llvm::map_to_vector(op.getResultTypes(), convertQCType);
 
     SmallVector<unsigned> qubitArguments;
     SmallVector<DictionaryAttr> resultAttrs;
@@ -1016,11 +978,7 @@ struct ConvertFuncCallOp final : LoweringPattern<func::CallOp> {
         qcQubits.emplace_back(operand);
       }
     }
-    SmallVector<Type> resultTypes;
-    if (failed(getQCToQCOTypeConverter()->convertTypes(op.getResultTypes(),
-                                                       resultTypes))) {
-      return failure();
-    }
+    auto resultTypes = llvm::map_to_vector(op.getResultTypes(), convertQCType);
     auto materialized = materializeQubits(state, op, qcQubits, rewriter);
     SmallVector<Value> operands(op.getOperands());
     SmallVector<unsigned> quantumArguments;
@@ -1533,19 +1491,18 @@ struct ConvertQCYieldOp final : LoweringPattern<qc::YieldOp> {
 
   LogicalResult matchAndRewrite(qc::YieldOp op,
                                 PatternRewriter& rewriter) const override {
+    if (!isa<qco::CtrlOp, qco::InvOp, qco::PowOp>(op->getParentOp())) {
+      return rewriter.notifyMatchFailure(op,
+                                         "expected a converted QC modifier");
+    }
     auto& state = getState();
     auto* operation = op.getOperation();
     auto* region = op->getParentRegion();
-    const auto frame = state.modifierRegionQubits.find(region);
-    if (frame == state.modifierRegionQubits.end()) {
-      return rewriter.notifyMatchFailure(op, "missing modifier region state");
-    }
-
-    auto targets = resolveMappedQubits(state, operation, frame->second);
+    auto targets =
+        resolveMappedQubits(state, operation, region->front().getArguments());
     rewriter.replaceOpWithNewOp<qco::YieldOp>(op, targets);
     state.qubitMap.erase(region);
     state.tensorMap.erase(region);
-    state.modifierRegionQubits.erase(frame);
     return success();
   }
 };
@@ -1556,14 +1513,14 @@ struct ConvertQCYieldOp final : LoweringPattern<qc::YieldOp> {
 /// @par Example:
 /// ```mlir
 /// scf.for %iv = %lb to %ub step %step {
-///   %q0 = qc.load %memref[%iv] : !memref<3x!qc.qubit>
+///   %q0 = memref.load %memref[%iv] : memref<3x!qc.qubit>
 ///   qc.h %q0 : !qc.qubit
 /// }
 /// ```
 /// is converted to
 /// ```mlir
 /// %targets_out = scf.for %iv = %lb to %ub step %step iter_args(%arg0 =
-/// %qtensor) -> (tensor<3x!qco.qubit) {
+/// %qtensor) -> (tensor<3x!qco.qubit>) {
 ///   %t0, %q0 = qtensor.extract %arg0[%iv] : tensor<3x!qco.qubit>
 ///   %q1 = qco.h %q0 : !qco.qubit
 ///   %t1 = qtensor.insert %q1 into %t0[%iv] : tensor<3x!qco.qubit>
@@ -1577,10 +1534,9 @@ struct ConvertSCFForOp final : LoweringPattern<scf::ForOp> {
                                 PatternRewriter& rewriter) const override {
     auto& state = getState();
     auto* operation = op.getOperation();
-    auto& registerMap = state.regionRegisterMap[op];
-    auto& qubitMap = state.regionQubitMap[op];
-    const auto numRegisters = registerMap.size();
-    const auto numQubits = qubitMap.size();
+    auto& [qubits, registers] = state.structuredValues.find(op)->second;
+    const auto numRegisters = registers.size();
+    const auto numQubits = qubits.size();
 
     auto qcoTargets = resolveAllValues(state, operation);
     const auto numOriginalResults = op.getNumResults();
@@ -1592,11 +1548,11 @@ struct ConvertSCFForOp final : LoweringPattern<scf::ForOp> {
                            op.getUpperBound(), op.getStep(), initArgs);
     newForOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
-    assignMappedTensors(state, op.getOperation(), registerMap,
+    assignMappedTensors(state, op.getOperation(), registers,
                         newForOp.getResults()
                             .drop_front(numOriginalResults)
                             .take_front(numRegisters));
-    assignMappedQubits(state, op.getOperation(), qubitMap,
+    assignMappedQubits(state, op.getOperation(), qubits,
                        newForOp->getResults().take_back(numQubits));
 
     // Move the contents from the old block into the new block
@@ -1609,17 +1565,15 @@ struct ConvertSCFForOp final : LoweringPattern<scf::ForOp> {
       rewriter.replaceAllUsesWith(oldArgument, newArgument);
     }
 
-    auto& [qubits, registers] = state.structuredValues[newForOp];
-    qubits = qubitMap.takeVector();
-    registers = registerMap.takeVector();
-    state.regionQubitMap.erase(op);
-    state.regionRegisterMap.erase(op);
     seedRegionMappings(state, newForOp.getRegion(), qubits, registers,
                        dstBlock.getArguments().take_back(numQubits),
                        dstBlock.getArguments()
                            .drop_front(1 + numOriginalResults)
                            .take_front(numRegisters));
 
+    auto values = std::move(state.structuredValues.find(op)->second);
+    state.structuredValues.erase(op);
+    state.structuredValues.try_emplace(newForOp, std::move(values));
     rewriter.replaceOp(op,
                        newForOp.getResults().take_front(numOriginalResults));
 
@@ -1643,7 +1597,7 @@ struct ConvertSCFForOp final : LoweringPattern<scf::ForOp> {
 /// is converted to
 /// ```mlir
 /// %targets_out = scf.while (%arg0 = %q0) : (!qco.qubit) -> !qco.qubit {
-///   %q1 = qco.measure %arg0 : !qco.qubit
+///   %q1, %cond = qco.measure %arg0 : !qco.qubit
 ///   scf.condition(%cond) %q1 : !qco.qubit
 /// } do {
 /// ^bb0(%arg0: !qco.qubit):
@@ -1658,10 +1612,9 @@ struct ConvertSCFWhileOp final : LoweringPattern<scf::WhileOp> {
                                 PatternRewriter& rewriter) const override {
     auto& state = getState();
     auto* operation = op.getOperation();
-    auto& registerMap = state.regionRegisterMap[op];
-    auto& qubitMap = state.regionQubitMap[op];
-    const auto numRegisters = registerMap.size();
-    const auto numQubits = qubitMap.size();
+    auto& [qubits, registers] = state.structuredValues.find(op)->second;
+    const auto numRegisters = registers.size();
+    const auto numQubits = qubits.size();
 
     auto qcoTargets = resolveAllValues(state, operation);
     const auto numOriginalInits = op.getInits().size();
@@ -1676,11 +1629,11 @@ struct ConvertSCFWhileOp final : LoweringPattern<scf::WhileOp> {
 
     auto newWhileOp =
         scf::WhileOp::create(rewriter, op.getLoc(), resultTypes, initArgs);
-    assignMappedTensors(state, op.getOperation(), registerMap,
+    assignMappedTensors(state, op.getOperation(), registers,
                         newWhileOp.getResults()
                             .drop_front(numOriginalResults)
                             .take_front(numRegisters));
-    assignMappedQubits(state, op.getOperation(), qubitMap,
+    assignMappedQubits(state, op.getOperation(), qubits,
                        newWhileOp->getResults().take_back(numQubits));
 
     auto& newBeforeRegion = newWhileOp.getBefore();
@@ -1714,11 +1667,6 @@ struct ConvertSCFWhileOp final : LoweringPattern<scf::WhileOp> {
       rewriter.replaceAllUsesWith(oldArgument, newArgument);
     }
 
-    auto& [qubits, registers] = state.structuredValues[newWhileOp];
-    qubits = qubitMap.takeVector();
-    registers = registerMap.takeVector();
-    state.regionQubitMap.erase(op);
-    state.regionRegisterMap.erase(op);
     seedRegionMappings(state, newWhileOp.getBefore(), qubits, registers,
                        newBeforeBlock->getArguments().take_back(numQubits),
                        newBeforeBlock->getArguments()
@@ -1730,6 +1678,9 @@ struct ConvertSCFWhileOp final : LoweringPattern<scf::WhileOp> {
                            .drop_front(numOriginalResults)
                            .take_front(numRegisters));
 
+    auto values = std::move(state.structuredValues.find(op)->second);
+    state.structuredValues.erase(op);
+    state.structuredValues.try_emplace(newWhileOp, std::move(values));
     rewriter.replaceOp(op,
                        newWhileOp.getResults().take_front(numOriginalResults));
     return success();
@@ -1760,19 +1711,18 @@ struct ConvertSCFIfOp final : LoweringPattern<scf::IfOp> {
                                 PatternRewriter& rewriter) const override {
     auto& state = getState();
     auto* operation = op.getOperation();
-    auto& registerMap = state.regionRegisterMap[op];
-    auto& qubitMap = state.regionQubitMap[op];
-    const auto numRegisters = registerMap.size();
-    const auto numQubits = qubitMap.size();
+    auto& [qubits, registers] = state.structuredValues.find(op)->second;
+    const auto numRegisters = registers.size();
+    const auto numQubits = qubits.size();
 
     auto qcoTargets = resolveAllValues(state, operation);
 
     auto newIfOp = IfOp::create(rewriter, op.getLoc(), op.getResultTypes(),
                                 ValueRange(qcoTargets).getTypes(),
                                 op.getCondition(), qcoTargets);
-    assignMappedTensors(state, op.getOperation(), registerMap,
+    assignMappedTensors(state, op.getOperation(), registers,
                         newIfOp.getLinearResults().take_front(numRegisters));
-    assignMappedQubits(state, op.getOperation(), qubitMap,
+    assignMappedQubits(state, op.getOperation(), qubits,
                        newIfOp.getLinearResults().take_back(numQubits));
 
     auto& thenRegion = newIfOp.getThenRegion();
@@ -1791,12 +1741,6 @@ struct ConvertSCFIfOp final : LoweringPattern<scf::IfOp> {
     thenBlock->getOperations().splice(
         thenBlock->end(), op.getThenRegion().front().getOperations());
 
-    auto& [qubits, registers] = state.structuredValues[newIfOp];
-    qubits = qubitMap.takeVector();
-    registers = registerMap.takeVector();
-    state.regionQubitMap.erase(op);
-    state.regionRegisterMap.erase(op);
-
     if (!op.getElseRegion().empty()) {
       elseBlock->getOperations().splice(
           elseBlock->end(), op.getElseRegion().front().getOperations());
@@ -1814,6 +1758,9 @@ struct ConvertSCFIfOp final : LoweringPattern<scf::IfOp> {
                        thenBlock->getArguments().take_back(numQubits),
                        thenBlock->getArguments().take_front(numRegisters));
 
+    auto values = std::move(state.structuredValues.find(op)->second);
+    state.structuredValues.erase(op);
+    state.structuredValues.try_emplace(newIfOp, std::move(values));
     rewriter.replaceOp(op, newIfOp.getClassicalResults());
     return success();
   }
@@ -1850,10 +1797,9 @@ struct ConvertSCFIndexSwitchOp final : LoweringPattern<scf::IndexSwitchOp> {
                                 PatternRewriter& rewriter) const override {
     auto& state = getState();
     auto* operation = op.getOperation();
-    auto& registerMap = state.regionRegisterMap[op];
-    auto& qubitMap = state.regionQubitMap[op];
-    const auto numRegisters = registerMap.size();
-    const auto numQubits = qubitMap.size();
+    auto& [qubits, registers] = state.structuredValues.find(op)->second;
+    const auto numRegisters = registers.size();
+    const auto numQubits = qubits.size();
 
     const auto targets = resolveAllValues(state, operation);
     const auto linearResultTypes = ValueRange(targets).getTypes();
@@ -1863,16 +1809,10 @@ struct ConvertSCFIndexSwitchOp final : LoweringPattern<scf::IndexSwitchOp> {
         rewriter, op.getLoc(), op.getResultTypes(), linearResultTypes,
         op.getArg(), op.getCases(), targets, op.getNumCases());
 
-    assignMappedTensors(state, op.getOperation(), registerMap,
+    assignMappedTensors(state, op.getOperation(), registers,
                         newOp.getLinearResults().take_front(numRegisters));
-    assignMappedQubits(state, op.getOperation(), qubitMap,
+    assignMappedQubits(state, op.getOperation(), qubits,
                        newOp.getLinearResults().take_back(numQubits));
-
-    auto& [qubits, registers] = state.structuredValues[newOp];
-    qubits = qubitMap.takeVector();
-    registers = registerMap.takeVector();
-    state.regionQubitMap.erase(op);
-    state.regionRegisterMap.erase(op);
 
     const auto newCaseRegions = newOp.getCaseRegions();
     const auto oldCaseRegions = op.getCaseRegions();
@@ -1894,6 +1834,9 @@ struct ConvertSCFIndexSwitchOp final : LoweringPattern<scf::IndexSwitchOp> {
     }
     buildRegion(op.getDefaultRegion(), newOp.getDefaultRegion());
 
+    auto values = std::move(state.structuredValues.find(op)->second);
+    state.structuredValues.erase(op);
+    state.structuredValues.try_emplace(newOp, std::move(values));
     rewriter.replaceOp(op, newOp.getClassicalResults());
     return success();
   }
@@ -1991,7 +1934,6 @@ static LogicalResult lowerToQCO(ModuleOp moduleOp) {
   auto* ctx = moduleOp.getContext();
   auto* qcDialect = ctx->getLoadedDialect<qc::QCDialect>();
   auto* memrefDialect = ctx->getLoadedDialect<memref::MemRefDialect>();
-  QCToQCOTypeConverter converter(ctx);
   RewritePatternSet patterns(ctx);
   patterns.add<
       ConvertQCDeallocOp, ConvertQCMeasureOp, ConvertQCResetOp,
@@ -2000,14 +1942,13 @@ static LogicalResult lowerToQCO(ModuleOp moduleOp) {
       ConvertSCFIfOp, ConvertSCFIndexSwitchOp, ConvertSCFYieldOp,
       ConvertSCFConditionOp, ConvertFuncReturnOp, ConvertMemRefAllocOp,
       ConvertMemRefAllocaOp, ConvertMemRefStoreOp, ConvertMemRefDeallocOp,
-      ConvertFuncOp, ConvertFuncCallOp, ConvertQCCallOp>(converter, ctx,
-                                                         &state);
-  patterns.add<ConvertQCGateToQCO<qc::GPhaseOp, qco::GPhaseOp, 0, 1>>(
-      converter, ctx, &state);
+      ConvertFuncOp, ConvertFuncCallOp, ConvertQCCallOp>(ctx, &state);
+  patterns.add<ConvertQCGateToQCO<qc::GPhaseOp, qco::GPhaseOp, 0, 1>>(ctx,
+                                                                      &state);
 #define MQT_GATE(KEY, NAME, GETTER, TARGETS, PARAMS, SUFFIX, CTL_SUFFIX)       \
   patterns.add<                                                                \
       ConvertQCGateToQCO<qc::KEY##Op, qco::KEY##Op, (TARGETS), (PARAMS)>>(     \
-      converter, ctx, &state);
+      ctx, &state);
 #include "mqt/Conversion/GateTable.def"
   FrozenRewritePatternSet frozen(std::move(patterns));
   PatternApplicator applicator(frozen);
@@ -2045,14 +1986,16 @@ static LogicalResult lowerToQCO(ModuleOp moduleOp) {
     }
     bool required = operation->getDialect() == qcDialect;
     if (auto function = dyn_cast<func::FuncOp>(operation)) {
-      required = !converter.isSignatureLegal(function.getFunctionType());
+      required = llvm::any_of(function.getArgumentTypes(), isQCType) ||
+                 llvm::any_of(function.getResultTypes(), isQCType);
       if (required && !function.isExternal()) {
         sourceArgumentBlocks.emplace_back(&function.getBody().front(),
                                           function.getNumArguments());
       }
     }
     if (isa<func::CallOp>(operation)) {
-      required = !converter.isLegal(operation);
+      required = llvm::any_of(operation->getOperandTypes(), isQCType) ||
+                 llvm::any_of(operation->getResultTypes(), isQCType);
       if (required) {
         sources.push_back(operation);
       }
@@ -2060,7 +2003,7 @@ static LogicalResult lowerToQCO(ModuleOp moduleOp) {
     if (isa<func::ReturnOp>(operation)) {
       auto* region = operation->getParentRegion();
       auto it = state.qubitMap.find(region);
-      required = !converter.isLegal(operation) ||
+      required = llvm::any_of(operation->getOperandTypes(), isQCType) ||
                  state.functionQubitArguments.contains(
                      operation->getParentOfType<func::FuncOp>()) ||
                  state.localReferenceRegisters.contains(region) ||
@@ -2085,8 +2028,7 @@ static LogicalResult lowerToQCO(ModuleOp moduleOp) {
     }
     if (isa<scf::ForOp, scf::WhileOp, scf::IfOp, scf::IndexSwitchOp>(
             operation)) {
-      required = !state.regionQubitMap[operation].empty() ||
-                 !state.regionRegisterMap[operation].empty();
+      required = state.structuredValues.contains(operation);
     }
     if (isa<scf::YieldOp, scf::ConditionOp>(operation)) {
       required = state.structuredValues.contains(operation->getParentOp());

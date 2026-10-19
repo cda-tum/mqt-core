@@ -16,6 +16,7 @@
 #include "mqt/Dialect/QCO/Transforms/NativeSynthesis/SingleQubitFusion.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Utils/Matrix.h"
+#include "mqt/Dialect/QCO/Utils/WireIterator.h"
 #include "mqt/Dialect/QTensor/IR/QTensorDialect.h" // IWYU pragma: keep (Passes.h.inc)
 
 #include "mlir/Dialect/Arith/IR/Arith.h" // IWYU pragma: keep (Passes.h.inc)
@@ -80,13 +81,13 @@ scanFusableRun(UnitaryOpInterface head, const Matrix2x2& headMatrix,
                const decomposition::SingleQubitBasis basis,
                const CompilerTarget* target) {
   FusableRunScan scan;
-  for (auto member = head; member;
-       member = dyn_cast<UnitaryOpInterface>(
-           *member.getOutputQubit(0).user_begin())) {
-    auto* op = member.getOperation();
-    const auto matrix = member.getOperation() == head.getOperation()
-                            ? std::optional{headMatrix}
-                            : getRunMemberMatrix(member);
+  for (auto* op : WireRange(head.getOutputQubit(0))) {
+    auto member = dyn_cast<UnitaryOpInterface>(op);
+    if (!member) {
+      break;
+    }
+    const auto matrix = op == head.getOperation() ? std::optional{headMatrix}
+                                                  : getRunMemberMatrix(member);
     if (!matrix) {
       break;
     }

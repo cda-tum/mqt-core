@@ -19,6 +19,7 @@
 #include "mqt/Dialect/QCO/Transforms/NativeSynthesis/SingleQubitFusion.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Utils/Matrix.h"
+#include "mqt/Dialect/QCO/Utils/WireIterator.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -502,14 +503,14 @@ struct MergeSingleQubitRotationGatesPattern final
   /// @return The chain of operations in circuit order (first applied to last)
   static SmallVector<UnitaryOpInterface>
   collectChain(UnitaryOpInterface start) {
-    SmallVector chain{start};
-    while (true) {
-      auto* next = *chain.back().getOutputQubit(0).user_begin();
-      if (!isMergeable(next)) {
-        return chain;
+    SmallVector<UnitaryOpInterface> chain;
+    for (auto* op : WireRange(start.getOutputQubit(0))) {
+      if (!isMergeable(op)) {
+        break;
       }
-      chain.emplace_back(cast<UnitaryOpInterface>(next));
+      chain.emplace_back(cast<UnitaryOpInterface>(op));
     }
+    return chain;
   }
 
   static bool hasDynamicParameter(ArrayRef<UnitaryOpInterface> chain) {

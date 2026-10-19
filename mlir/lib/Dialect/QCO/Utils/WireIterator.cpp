@@ -16,7 +16,6 @@
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
@@ -32,13 +31,6 @@
 #include <iterator>
 
 namespace mlir::qco {
-
-bool WireIterator::isTail(Operation* op) {
-  // `qtensor.from_elements` takes qubits into a tensor just like
-  // `qtensor.insert` does, so a wire reaching either of them ends there.
-  return isa<SinkOp, YieldOp, qtensor::InsertOp, qtensor::FromElementsOp,
-             scf::ConditionOp, scf::YieldOp, func::ReturnOp>(op);
-}
 
 bool WireIterator::isHead(Operation* op) {
   return isa<AllocOp, StaticOp, qtensor::ExtractOp>(op);
@@ -80,33 +72,27 @@ void WireIterator::forward() {
 
   // Find the user-operation of the qubit SSA value.
   assert(qubit_.hasOneUse() && "expected linear semantics");
-  op_ = *qubit_.user_begin();
-
-  if (isTail(op_)) {
-    pos_ = Position::Tail;
-    return;
-  }
+  auto& use = *qubit_.use_begin();
+  op_ = use.getOwner();
 
   // Find the output from the input qubit SSA value.
   pos_ = Position::Between;
 
   TypeSwitch<Operation*>(op_)
-      .Case(
-          [&](UnitaryOpInterface op) { qubit_ = op.getOutputForInput(qubit_); })
+      .Case([&](UnitaryOpInterface op) {
+        const auto index =
+            use.getOperandNumber() - op.getInputQubits().getBeginOperandIndex();
+        qubit_ = op.getOutputQubit(index);
+      })
       .Case([&](MeasureOp op) { qubit_ = op.getQubitOut(); })
       .Case([&](ResetOp op) { qubit_ = op.getQubitOut(); })
-      .Case([&](scf::ForOp op) {
-        qubit_ = op.getTiedLoopResult(qubit_.use_begin().getOperand());
-      })
+      .Case([&](scf::ForOp op) { qubit_ = op.getTiedLoopResult(&use); })
       .Case([&](scf::WhileOp op) {
-        qubit_ = getCorrespondingQuantumValue(
-            op.getInits(), op.getResults(),
-            qubit_.use_begin()->getOperandNumber());
+        qubit_ = getCorrespondingQuantumValue(op.getInits(), op.getResults(),
+                                              use.getOperandNumber());
       })
-      .Case([&](IfOp op) { qubit_ = op.getTiedResult(&(*qubit_.use_begin())); })
-      .Case([&](IndexSwitchOp op) {
-        qubit_ = op.getTiedResult(&(*qubit_.use_begin()));
-      })
+      .Case([&](IfOp op) { qubit_ = op.getTiedResult(&use); })
+      .Case([&](IndexSwitchOp op) { qubit_ = op.getTiedResult(&use); })
       .Default([&](Operation*) { pos_ = Position::Tail; });
 }
 

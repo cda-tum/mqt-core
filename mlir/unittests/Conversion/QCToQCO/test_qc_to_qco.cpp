@@ -316,6 +316,17 @@ module {
   EXPECT_TRUE(destination.getBody().empty());
 }
 
+TEST_F(QCToQCORegressionTest, RejectsYieldOutsideModifier) {
+  auto moduleOp = parseSourceString<ModuleOp>(
+      "module { func.func @main(%x: i64) { qc.yield } }", &context);
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+
+  ScopedDiagnosticHandler handler(
+      &context, [](Diagnostic& /*diagnostic*/) { return success(); });
+  EXPECT_TRUE(failed(runQCToQCOConversion(*moduleOp)));
+}
+
 TEST_F(QCToQCORegressionTest, PreservesForResultsWithQuantumState) {
   constexpr llvm::StringLiteral source = R"mlir(
 module {
