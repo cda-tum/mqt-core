@@ -956,9 +956,9 @@ private:
                cbit::ReadOp, arith::SelectOp, arith::ExtSIOp, arith::ExtUIOp,
                arith::TruncIOp, arith::ShRSIOp>(&operation) ||
            !binaryOperator(name).empty() || name == "arith.negf" ||
-           name == "arith.remf" || name == "llvm.intr.fshl" ||
-           name == "llvm.intr.fshr" || isScalarCast(name) ||
-           !mathFunction(name).empty();
+           name == "math.absf" || name == "arith.remf" ||
+           name == "llvm.intr.fshl" || name == "llvm.intr.fshr" ||
+           isScalarCast(name) || !mathFunction(name).empty();
   }
 
   [[nodiscard]] FailureOr<std::string> emitQubit(Value value) {
@@ -1337,6 +1337,20 @@ private:
         return failure();
       }
       return (Twine("(-") + *operand + ")").str();
+    }
+    if (name == "math.absf") {
+      auto operand = emitExpression(operation->getOperand(0));
+      if (failed(operand)) {
+        return failure();
+      }
+      auto compared = emitExpression(operation->getOperand(0));
+      if (failed(compared)) {
+        return failure();
+      }
+      // OpenQASM has no abs function; avoid squaring finite extremes.
+      return (Twine("(0.0 + ") + *operand + " * (1.0 - 2.0 * float(" +
+              *compared + " < 0.0)))")
+          .str();
     }
     if (isScalarCast(name)) {
       auto input = operation->getOperand(0);

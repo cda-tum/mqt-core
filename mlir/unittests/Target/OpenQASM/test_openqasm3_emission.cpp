@@ -46,6 +46,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -1745,7 +1746,7 @@ TEST(OpenQASM3EmissionTest, RejectsInvalidGateFunctions) {
 TEST(OpenQASM3EmissionTest, EmitsSignedBooleanAndFloatingExpressions) {
   constexpr llvm::StringLiteral source = R"mlir(
 module {
-  func.func @main() -> (i64, i1, f64, f64, i1, i1, i1)
+  func.func @main() -> (i64, i1, f64, f64, i1, f64, i1, i1)
       attributes {mqt.entry_point} {
     %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
@@ -1754,6 +1755,7 @@ module {
     %comparison = arith.cmpi sge, %sum, %two : i64
     %angle = arith.constant 0.25 : f64
     %negated = arith.negf %angle : f64
+    %magnitude = math.absf %negated : f64
     %sine = math.sin %negated : f64
     %remainder = arith.remf %angle, %sine : f64
     %converted = arith.fptosi %sine : f64 to i64
@@ -1763,8 +1765,8 @@ module {
     %negativeHalf = arith.negf %half : f64
     %unsignedBit = arith.fptoui %half : f64 to i1
     %signedBit = arith.fptosi %negativeHalf : f64 to i1
-    return %signed, %comparison, %sine, %remainder, %nonzero,
-           %unsignedBit, %signedBit : i64, i1, f64, f64, i1, i1, i1
+    return %signed, %comparison, %sine, %remainder, %nonzero, %magnitude,
+           %unsignedBit, %signedBit : i64, i1, f64, f64, i1, f64, i1, i1
   }
 }
 )mlir";
@@ -1791,6 +1793,10 @@ module {
     ASSERT_TRUE(matchPattern(bit, m_ConstantInt(&result)));
     EXPECT_TRUE(result.isZero());
   }
+  APFloat magnitude(0.);
+  ASSERT_TRUE(
+      matchPattern(returned.getOperand(5), m_ConstantFloat(&magnitude)));
+  EXPECT_EQ(magnitude.convertToDouble(), 0.25);
 }
 
 TEST(OpenQASM3EmissionTest, EmitsFloatingRemainderAsStrictOpenQASMMod) {
@@ -2464,7 +2470,7 @@ TEST(OpenQASM3EmissionTest, LeavesDestinationEmptyOnFailure) {
   const auto location = builder.getUnknownLoc();
   auto value = arith::ConstantOp::create(builder, location,
                                          builder.getF64FloatAttr(-1.));
-  math::AbsFOp::create(builder, location, value);
+  math::ErfOp::create(builder, location, value);
 
   std::string output;
   llvm::raw_string_ostream stream(output);

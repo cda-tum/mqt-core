@@ -869,17 +869,19 @@ TEST(JeffRoundTripRegressionTest, CapturesHelperArgumentsInLoop) {
       %c2 = arith.constant 2 : index
       %out = scf.for %i = %c0 to %c2 step %c1 iter_args(%current = %q) -> !qco.qubit {
         %angle = tensor.extract %angles[%i] : tensor<2xf64>
-        %next = qco.p(%angle) %current : !qco.qubit
+        %negative = arith.negf %angle : f64
+        %next = qco.p(%negative) %current : !qco.qubit
         scf.yield %next : !qco.qubit
       }
       return %out : !qco.qubit
     }
     func.func @main() -> !cbit.reg<1> attributes {mqt.entry_point} {
-      %angles = arith.constant dense<[0.0, 3.141592653589793]> : tensor<2xf64>
+      %angles = arith.constant dense<[0.0, -1.5707963267948966]> : tensor<2xf64>
       %q = qco.alloc : !qco.qubit
       %h = qco.h %q : !qco.qubit
       %rotated = func.call @rotate(%angles, %h) : (tensor<2xf64>, !qco.qubit) -> !qco.qubit
-      %final = qco.h %rotated : !qco.qubit
+      %shifted = qco.s %rotated : !qco.qubit
+      %final = qco.h %shifted : !qco.qubit
       %out, %bit = qco.measure %final : !qco.qubit
       %result = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
       %c0 = arith.constant 0 : index

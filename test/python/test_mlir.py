@@ -958,13 +958,24 @@ def test_symbolic_euler_preserves_large_constant_middle_angle(*, fuse: bool) -> 
         (gate, {"rxx": "ryy", "ryy": "rzx", "rzx": "rzz", "rzz": "rxx"}.get(gate, "cz"))
         for gate in ["rx", "ry", "rz", "rxx", "ryy", "rzx", "rzz", "cp", "crx", "cry", "crz"]
     ]
-    + [("rzz", "sqrt_iswap"), ("crx", "sqrt_iswap")],
+    + [
+        ("rzz", "sqrt_iswap"),
+        ("crx", "sqrt_iswap"),
+        ("xx_plus_yy", "cz"),
+        ("xx_minus_yy", "rzz"),
+        ("xx_plus_yy", "sqrt_iswap"),
+        ("xx_minus_yy", "sqrt_iswap"),
+    ],
 )
 def test_runtime_pauli_rotations_compile_and_export(gate: str, native_entangler: str) -> None:
     """Keep structural rotation synthesis bindable across target lowering and export."""
     theta = qiskit.circuit.Parameter("theta")
     source = QuantumCircuit(2, global_phase=0.19)
-    getattr(source, gate)(theta, *([0] if gate in {"rx", "ry", "rz"} else [0, 1]))
+    if gate in {"xx_plus_yy", "xx_minus_yy"}:
+        exchange = library.XXPlusYYGate if gate == "xx_plus_yy" else library.XXMinusYYGate
+        source.append(exchange(theta, 0.0), [0, 1])
+    else:
+        getattr(source, gate)(theta, *([0] if gate in {"rx", "ry", "rz"} else [0, 1]))
     target = CompilerTarget(
         2,
         connectivity=CompilerTarget.Connectivity([(0, 1)]),
@@ -991,7 +1002,13 @@ def test_runtime_pauli_rotations_compile_and_export(gate: str, native_entangler:
     emitted_entangler = "xx_plus_yy" if native_entangler == "sqrt_iswap" else native_entangler
     assert set(result.count_ops()) <= {"rx", "rz", emitted_entangler}
     assert result.parameters == source.parameters
-    expected_count = 0 if gate in {"rx", "ry", "rz"} else 2 if native_entangler in {"cz", "sqrt_iswap"} else 1
+    expected_count = (
+        0
+        if gate in {"rx", "ry", "rz"}
+        else 2
+        if native_entangler in {"cz", "sqrt_iswap"} or gate in {"xx_plus_yy", "xx_minus_yy"}
+        else 1
+    )
     assert result.count_ops().get(emitted_entangler, 0) == expected_count
     for value in [-1.2, 0.0, -np.pi / 2, np.pi / 2, np.pi, 2 * np.pi, 7.1]:
         actual = Operator.from_circuit(result.assign_parameters({theta: value})).data
@@ -1012,7 +1029,13 @@ def test_runtime_pauli_rotations_compile_and_export(gate: str, native_entangler:
         ("cartan", "iswap", 2),
         ("cartan", "bounded_rzz", 2),
         ("cartan", "rzz", 2),
+        ("cartan", "sqrt_iswap", 2),
+        ("reversed_axes", "sqrt_iswap", 2),
         ("reversed_axes", "cz", 2),
+        ("exchange", "cz", 2),
+        ("exchange", "bounded_rzz", 2),
+        ("exchange", "sqrt_iswap", 2),
+        ("exchange_inverse", "sqrt_iswap", 0),
         ("noncommuting", "cz", 4),
         ("barrier", "cz", 4),
     ],
@@ -1021,7 +1044,7 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     shape: str, entangler: str, expected_entanglers: int
 ) -> None:
     """Compose commuting generators while retaining boundaries and ordered axes."""
-    a, b, c = qiskit.circuit.ParameterVector("angle", 3)
+    a, b, c = (qiskit.circuit.Parameter(name) for name in ["a", "b", "c"])
     source = QuantumCircuit(2, global_phase=0.19)
     if shape.startswith("diagonal"):
         source.cp(a, 0, 1)
@@ -1030,6 +1053,10 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     elif shape == "reversed_axes":
         source.rzx(a, 0, 1)
         source.rzx(b, 1, 0)
+    elif shape.startswith("exchange"):
+        source.append(library.XXPlusYYGate(a, 0.0), [0, 1])
+        exchange = library.XXPlusYYGate(-a, 0.0) if shape == "exchange_inverse" else library.XXMinusYYGate(b, 0.0)
+        source.append(exchange, [1, 0])
     elif shape == "barrier":
         source.rzz(a, 0, 1)
         source.barrier()
@@ -1050,7 +1077,7 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
             CompilerTarget.OperationCapability(
                 native,
                 2,
-                0 if native in {"cz", "ecr", "iswap"} else 1,
+                0 if native in {"cz", "ecr", "iswap", "sqrt_iswap"} else 1,
                 parameter_bounds=[(0, np.pi / 2)] if entangler == "bounded_rzz" else [],
             ),
             CompilerTarget.OperationCapability("gphase", 0, 1),
@@ -1058,13 +1085,24 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     )
     program = QCProgram.from_qiskit(source).to_qco()
     program.synthesize_for_target(_test_target_environment(target))
+    assert program.to_jeff(copy=True).is_valid
+    assert QCProgram.from_openqasm_str(program.to_qc(copy=True).to_openqasm3().source).is_valid
     result = program.to_qiskit(target=target)
-    assert result.count_ops().get(native, 0) == expected_entanglers
+    emitted = "xx_plus_yy" if native == "sqrt_iswap" else native
+    assert result.count_ops().get(emitted, 0) == expected_entanglers
     if shape == "cartan" and entangler == "rzz":
         assert sum(result.count_ops().get(gate, 0) for gate in ["rx", "rz"]) <= 12
     if entangler == "bounded_rzz":
         assert all(0 <= item.operation.params[0] <= np.pi / 2 for item in result.data if item.operation.name == native)
-    for values in [(0.37, -1.2, 0.7), (np.pi, 0.0, 4 * np.pi), (1e300, -1e300, 1e20)]:
+    for values in [
+        (0.0, 0.0, 0.0),
+        (0.0, np.pi / 2, 0.0),
+        (0.0, 1e-15, 0.0),
+        (np.pi / 2, np.pi / 2, 0.0),
+        (0.37, -1.2, 0.7),
+        (np.pi, 0.0, 4 * np.pi),
+        (1e300, -1e300, 1e20),
+    ]:
         bindings = dict(zip([a, b, c], values, strict=True))
         assert np.allclose(
             Operator.from_circuit(result.assign_parameters(bindings, strict=False)).data,

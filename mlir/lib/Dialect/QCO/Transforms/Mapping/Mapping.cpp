@@ -578,7 +578,7 @@ private:
               CompilerTarget::NativeOperations::Kind::Explicit) {
         return;
       }
-      nativeCosts = NativeCostTable::precompute(root, *basis->entangler, seed);
+      nativeCosts = NativeCostTable::precompute(root, seed);
 
       // Uniform SWAP costs keep the distance heuristic in native-gate units.
       NativeCostAnalysis analysis(seed, nativeCosts.get());

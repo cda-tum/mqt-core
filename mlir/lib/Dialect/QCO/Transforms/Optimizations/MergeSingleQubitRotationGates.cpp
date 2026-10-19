@@ -33,6 +33,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -218,9 +219,9 @@ static Val gateParam(UnitaryOpInterface op, unsigned i, RewriterBase& rewriter,
 ///
 /// Only runtime gates need symbolic formulas; return their phase with the
 /// quaternion so each parameter is read once.
-static std::pair<Quat, Val> quaternionFromGate(UnitaryOpInterface op,
-                                               const ScalarConsts& c,
-                                               RewriterBase& rewriter) {
+static std::pair<Quat, Val>
+quaternionFromGate(UnitaryOpInterface op, const ScalarConsts& c,
+                   RewriterBase& rewriter, DenseMap<Value, Value>& parameters) {
   const Location loc = op->getLoc();
   const auto constant = [&](double value) {
     return Val::constant(rewriter, loc, value);
@@ -237,7 +238,11 @@ static std::pair<Quat, Val> quaternionFromGate(UnitaryOpInterface op,
             constant(phase)};
   }
   const auto param = [&](unsigned i) {
-    return gateParam(op, i, rewriter, loc);
+    auto& normalized = parameters[op.getParameter(i)];
+    if (!normalized) {
+      normalized = gateParam(op, i, rewriter, loc).getValue();
+    }
+    return Val(rewriter, loc, normalized);
   };
   if (const auto axis = getRotationAxis(op.getOperation())) {
     const auto angle = param(0);
@@ -754,12 +759,15 @@ struct MergeSingleQubitRotationGatesPattern final
     const Location loc = chain.front()->getLoc();
     const auto consts = makeConsts(rewriter, loc);
 
+    DenseMap<Value, Value> parameters;
     std::optional<Quat> qAccum;
     Val phaseAccum = consts.zero;
     for (UnitaryOpInterface chainOp : chain) {
-      const auto [qi, phase] = quaternionFromGate(chainOp, consts, rewriter);
+      const auto [qi, phase] =
+          quaternionFromGate(chainOp, consts, rewriter, parameters);
       qAccum = qAccum ? hamiltonProduct(qi, *qAccum) : qi;
-      phaseAccum = normalizeGateAngle(phaseAccum + phase);
+      phaseAccum =
+          decomposition::normalizeRotationParameter(phaseAccum + phase);
     }
 
     for (auto chainOp : llvm::drop_begin(chain)) {
