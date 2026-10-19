@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from io import BytesIO
 from itertools import permutations
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -21,7 +22,7 @@ from uuid import UUID
 import numpy as np
 import pytest
 import qiskit
-from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister, transpile
+from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister, qpy, transpile
 from qiskit.circuit import (
     AnnotatedOperation,
     Clbit,
@@ -3719,6 +3720,36 @@ def test_excessively_nested_control_flow_is_rejected() -> None:
 
     with pytest.raises(RuntimeError, match="control flow exceeds the nesting limit of 64"):
         QCProgram.from_qiskit(body)
+
+
+@pytest.mark.parametrize("dialect", ["qc", "qco"])
+def test_qpy_round_trip(dialect: str) -> None:
+    """Exchange one circuit through QPY while preserving parameter identities and phase."""
+    angles = ParameterVector("angles", 2)
+    circuit = QuantumCircuit(2, global_phase=0.25)
+    circuit.h(0)
+    circuit.cx(0, 1)
+    circuit.rz(angles[0] + 2 * angles[1], 1)
+    source = BytesIO()
+    qpy.dump(circuit, source, version=17)
+    source.seek(0)
+    (loaded,) = qpy.load(source)
+    program = QCProgram.from_qiskit(loaded)
+    if dialect == "qco":
+        program = program.to_qco()
+    original_ir = program.ir
+
+    output = BytesIO()
+    qpy.dump(program.to_qiskit(copy=True), output, version=17)
+    assert program.ir == original_ir
+    output.seek(0)
+    (restored,) = qpy.load(output)
+    bindings = {angles[0]: 0.125, angles[1]: -0.75}
+    np.testing.assert_allclose(
+        Operator(restored.assign_parameters(bindings)).data,
+        Operator(circuit.assign_parameters(bindings)).data,
+        atol=1e-12,
+    )
 
 
 def test_direct_symbolic_parameters_round_trip_with_shared_identity() -> None:

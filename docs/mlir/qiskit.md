@@ -10,6 +10,35 @@ MQT Core exposes two distinct Qiskit interfaces:
 Install `mqt-core[qiskit]`. Direct compiler translation requires a version in
 the narrower range above; the adapter checks it before inspecting a circuit.
 
+## QPY files
+
+Use {py:mod}`qiskit.qpy` with the compiler's Qiskit conversion methods to
+exchange {term}`QPY` files:
+
+```python
+from qiskit import qpy
+from mqt.core.mlir import QCProgram
+
+with open("input.qpy", "rb") as stream:
+    (circuit,) = qpy.load(stream)
+
+program = QCProgram.from_qiskit(circuit)
+circuit = program.to_qiskit(copy=True)
+
+with open("output.qpy", "wb") as stream:
+    qpy.dump(circuit, stream, version=17)
+```
+
+The tuple unpacking requires exactly one circuit. QC and QCO programs both
+provide `to_qiskit()`; pass `copy=True` to preserve the source or `target=` to
+map compiler site IDs through a target. The
+[circuit translation contract](#circuit-translation-contract) defines which
+circuit features survive conversion.
+
+QPY version 17 works with Qiskit 2.5 and 2.6 and enables their native writer.
+Load only trusted files. To preserve an existing destination on serialization
+failure, serialize to `io.BytesIO` before opening the destination.
+
 ## Compiler targets
 
 Use {py:meth}`~mqt.core.mlir.CompilerTarget.from_qiskit` to create a compiler
