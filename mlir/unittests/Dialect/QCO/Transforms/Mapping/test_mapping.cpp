@@ -4003,6 +4003,61 @@ TEST_F(MappingPassFixture, RespectRegionBoundariesBeforeFrontierDiscovery) {
   }
 }
 
+TEST_F(MappingPassFixture, PreferNearerInteractionWhenDemandTies) {
+  const auto target = llvm::cantFail(CompilerTarget::create(
+      5, Connectivity::fromCouplings({{0, 1}, {1, 2}, {2, 3}, {3, 4}}),
+      NativeOperations::unrestricted()));
+  QCOProgramBuilder builder(context.get());
+  builder.initialize({cbit::RegisterType::get(context.get(), 5)});
+  auto bits = builder.allocClassicalBitRegister(5);
+  SmallVector<Value> qubits;
+  for (size_t i = 0; i < 5; ++i) {
+    qubits.push_back(builder.allocQubit());
+  }
+  qubits[0] = builder.x(qubits[0]);
+  std::tie(qubits[0], qubits[3]) = builder.cx(qubits[0], qubits[3]);
+  std::tie(qubits[2], qubits[4]) = builder.cz(qubits[2], qubits[4]);
+  // The region disables greedy placement and ends the horizon after the two
+  // independent interactions, so both have zero future endpoint demand.
+  qubits[1] =
+      builder.qcoIf(true, qubits[1], [&](Value q) { return builder.x(q); });
+  for (auto [i, q] : llvm::enumerate(qubits)) {
+    auto measured = builder.measure(q, bits, static_cast<int64_t>(i));
+    builder.sink(measured.first);
+  }
+  auto moduleOp = builder.finalize(bits);
+  const auto expected = qco::sample(getEntryPoint(*moduleOp), 1, 42);
+  ASSERT_TRUE(succeeded(expected));
+  ASSERT_TRUE(succeeded(
+      runMapping(*moduleOp, target,
+                 MappingPassOptions{
+                     .niterations = 0, .ntrials = 1, .searchMemoryLimit = 0})));
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  ASSERT_TRUE(succeeded(verifyLinearity(*moduleOp)));
+  EXPECT_TRUE(isExecutable(getEntryPoint(*moduleOp), target));
+
+  CtrlOp farther;
+  moduleOp->walk([&](XOp op) {
+    if (auto controlled = op->getParentOfType<CtrlOp>()) {
+      farther = controlled;
+    }
+  });
+  ASSERT_TRUE(farther);
+  auto inputs =
+      cast<UnitaryOpInterface>(farther.getOperation()).getInputQubits();
+  // Wire traversal encounters (0,3) before (2,4). Routing the nearer pair
+  // first moves logical qubit 3, so both CX inputs have passed through SWAPs.
+  // Routing the farther pair first leaves its target directly static.
+  EXPECT_EQ(
+      llvm::count_if(
+          inputs,
+          [](Value q) { return isa_and_nonnull<StaticOp>(q.getDefiningOp()); }),
+      0);
+  const auto actual = qco::sample(getEntryPoint(*moduleOp), 1, 42);
+  ASSERT_TRUE(succeeded(actual));
+  EXPECT_EQ(*actual, *expected);
+}
+
 TEST_F(MappingPassFixture, NativeGuidancePreservesAlternatingPairs) {
   using Capability = CompilerTarget::OperationCapability;
   using SiteTuple = CompilerTarget::SiteTuple;
@@ -4050,7 +4105,8 @@ TEST_F(MappingPassFixture, NativeGuidancePreservesAlternatingPairs) {
         });
     const auto expected = qco::sample(getEntryPoint(*input), 1, 42);
     ASSERT_TRUE(succeeded(expected));
-    for (size_t budget : {size_t{0}, size_t{1024} * 1024}) {
+    for (size_t budget :
+         {size_t{0}, size_t{1024}, size_t{4096}, size_t{1024} * 1024}) {
       std::string serial;
       for (bool parallel : {false, true}) {
         SCOPED_TRACE(testing::Message()

@@ -185,7 +185,7 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     operations pass through, and every two-qubit operation is routed to
     adjacent target vertices. Higher-arity unitaries must be decomposed before
     mapping. Target-defined site identifiers are retained in the resulting
-    `qco.static` operations.
+    `qco.static` operations. Gate and heuristic parameters must be finite.
 
     The entry function and supported structured-control-flow regions must each
     contain one block. Calls that carry qubits must be inlined before mapping.
@@ -217,13 +217,12 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     `1 + nlookahead` interactions, grouped by dependency layer. Traversal order
     depends on physical wire positions; it is not a global program-order rank.
 
-    The serial Raw-Demand policy fixes one objective from the front layer. For each candidate,
-    count later horizon interactions that reuse either endpoint, counting an
-    interaction only once. The largest demand wins; ties retain the earlier
-    candidate in traversal order. There is no front-position penalty or distance
-    factor in this objective score. Endpoint reuse is a heuristic preference,
-    not an estimate of time or native gate cost. If all demands are zero, the
-    first candidate wins.
+    One interaction from the front layer is the search objective. For each
+    candidate, count later horizon interactions that reuse either endpoint,
+    counting an interaction only once. The largest demand wins, followed by
+    the shortest distance in the search's initial layout, then traversal order.
+    Endpoint reuse is a heuristic preference, not an estimate of time or native
+    gate cost.
     The objective is fixed during the search. Expansion considers target edges
     touching either objective endpoint, and the search ends when that pair
     becomes adjacent; it need not make the entire front layer executable.
@@ -265,6 +264,8 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     Each search limits retained nodes using `search-memory-limit`, an estimated
     byte budget for the nodes and their qubit layouts (256 MiB by default).
     At least the root node is retained; zero disables node expansion.
+    Rejected duplicate states release their node slot immediately. Accepted
+    states remain available for parent chains and layout lookup.
     The pass stops allocating nodes at the limit, checks the remaining queue,
     and, if no solution is queued, uses a shortest path from the search's initial
     layout to make the fixed objective pair adjacent. This always makes progress on a connected
