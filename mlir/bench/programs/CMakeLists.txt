@@ -17,6 +17,7 @@ add_library(
   ModularArithmetic.cpp
   ModularMultiplier.cpp
   Multiplexer.cpp
+  QAOA.cpp
   QFT.cpp
   QFTAdder.cpp
   QFTUtils.cpp

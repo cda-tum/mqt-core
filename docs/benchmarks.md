@@ -438,6 +438,41 @@ Native tests therefore also compare complete coherent states and require clean
 work-qubit recovery. A single correct basis result does not certify a unitary on
 every input.
 
+### QAOA
+
+The `qaoa` family implements the
+{term}`quantum approximate optimization algorithm <QAOA>` for MaxCut on an
+unweighted cycle, as in
+[Farhi, Goldstone, and Gutmann, Section IV](https://arxiv.org/html/1411.4028#S4).
+Starting from $|+\rangle^{\otimes n}$, each layer applies the cost unitary
+$e^{-i\gamma_\ell C}$ then the mixer $e^{-i\beta_\ell B}$, with
+
+```{math}
+C=\sum_{j=0}^{n-1}\frac{1-Z_jZ_{(j+1)\bmod n}}{2},\qquad B=\sum_j X_j.
+```
+
+Set `qubits` to at least three. The finite angle sequences `gammas` and `betas`
+must have the same positive length, with entries in $[0,2\pi]$ and $[0,\pi]$,
+respectively. The defaults select one layer with $\gamma=\pi/4$ and
+$\beta=\pi/8$. Angles are supplied, not optimized.
+
+The verification reference reports the shot-weighted mean cut and its ratio to
+the cycle's maximum cut, $n-(n\bmod 2)$. These scores measure solution quality,
+not agreement with an ideal distribution. Qubit counts must fit signed 64-bit
+circuit dimensions; practical limits depend on compilation and execution
+resources.
+
+```{code-cell} ipython3
+from mqt.core.bench import qaoa
+
+benchmark = qaoa.QAOA(qaoa.Options(qubits=4))
+assert benchmark.cut_size("0101") == 4
+evaluation = benchmark.evaluate({"0101": 3, "0000": 1})
+assert evaluation.mean_cut == 3
+assert evaluation.approximation_ratio == 0.75
+assert benchmark.generate().is_valid
+```
+
 ### QFT addition
 
 The `qft-adder` family adds two equal-width operands. `REGISTER` stores the

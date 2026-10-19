@@ -18,6 +18,7 @@
 #include "bench/MagicStateDistillation.hpp"
 #include "bench/ModularMultiplier.hpp"
 #include "bench/Multiplexer.hpp"
+#include "bench/QAOA.hpp"
 #include "bench/QFT.hpp"
 #include "bench/QFTAdder.hpp"
 #include "bench/QPE.hpp"
@@ -41,6 +42,7 @@
 #include <cstdint>
 #include <initializer_list>
 #include <limits>
+#include <numbers>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
@@ -469,6 +471,37 @@ parseMultiplexerParameters(const Json& parameters,
   });
 }
 
+[[nodiscard]] QAOA parseQAOAParameters(const Json& parameters,
+                                       const std::string_view source) {
+  rejectUnknownKeys(parameters, {"qubits", "gammas", "betas"}, source,
+                    "$/parameters");
+  QAOAOptions options{
+      .qubits =
+          sizeValue(required(parameters, "qubits", source, "$/parameters"),
+                    source, "$/parameters/qubits"),
+  };
+  const auto readAngles = [&](const char* name, std::vector<double>& angles) {
+    const auto found = parameters.find(name);
+    if (found == parameters.end()) {
+      return;
+    }
+    const auto pointer = std::string("$/parameters/") + name;
+    if (!found->is_array()) {
+      fail(source, pointer, "must be an array");
+    }
+    angles.clear();
+    angles.reserve(found->size());
+    for (size_t index = 0; index < found->size(); ++index) {
+      angles.push_back(numberValue((*found)[index], source,
+                                   pointer + "/" + std::to_string(index)));
+    }
+  };
+  readAngles("gammas", options.gammas);
+  readAngles("betas", options.betas);
+  return constructBenchmark(source,
+                            [&options] { return QAOA(std::move(options)); });
+}
+
 [[nodiscard]] QFT parseQFTParameters(const Json& parameters,
                                      const std::string_view source) {
   rejectUnknownKeys(parameters, {"qubits", "period_exponent", "method"}, source,
@@ -695,6 +728,15 @@ parseTeleportationParameters(const Json& parameters,
   return {{"qubits", benchmark.options().qubits}};
 }
 
+[[nodiscard]] Json parametersJSON(const QAOA& benchmark) {
+  const auto& options = benchmark.options();
+  return {
+      {"betas", options.betas},
+      {"gammas", options.gammas},
+      {"qubits", options.qubits},
+  };
+}
+
 [[nodiscard]] Json parametersJSON(const QFT& benchmark) {
   const auto& options = benchmark.options();
   return {
@@ -761,6 +803,16 @@ parseTeleportationParameters(const Json& parameters,
     reference["success_outcome"] = std::string(*successOutcome);
   }
   return reference;
+}
+
+[[nodiscard]] Json referenceJSON(const QAOA& benchmark) {
+  return {
+      {"kind", "verification"},
+      {"model", "qaoa_max_cut_cycle"},
+      {"outcome_order", "big_endian"},
+      {"output", benchmark.output().name},
+      {"version", 1},
+  };
 }
 
 [[nodiscard]] Json referenceJSON(const Shor& benchmark) {
@@ -1172,6 +1224,39 @@ template <class Benchmark>
                   {
                       {"maximum", MultiplexerOptions::MAX_QUBITS},
                       {"minimum", 2},
+                      {"type", "integer"},
+                  },
+              },
+          },
+      },
+      {"required", {"qubits"}},
+      {"type", "object"},
+  });
+}
+
+[[nodiscard]] Json qaoaInstanceSpecificationSchema() {
+  const QAOAOptions defaults{.qubits = 3};
+  const auto angles = [](const std::vector<double>& values,
+                         const double maximum) {
+    return Json{
+        {"default", values},
+        {"items", {{"maximum", maximum}, {"minimum", 0}, {"type", "number"}}},
+        {"minItems", 1},
+        {"type", "array"},
+    };
+  };
+  return baseInstanceSpecificationSchema<QAOA>({
+      {"additionalProperties", false},
+      {
+          "properties",
+          {
+              {"betas", angles(defaults.betas, std::numbers::pi)},
+              {"gammas", angles(defaults.gammas, 2. * std::numbers::pi)},
+              {
+                  "qubits",
+                  {
+                      {"maximum", std::numeric_limits<int64_t>::max()},
+                      {"minimum", 3},
                       {"type", "integer"},
                   },
               },
@@ -1647,6 +1732,36 @@ std::string evaluationToJSON(const std::string_view caseIdValue,
               },
               {"success_probability", std::move(success)},
               {"total_variation_distance", evaluation.totalVariationDistance},
+          },
+      },
+      {"schema_version", SCHEMA_VERSION},
+      {"shots", shots},
+  }
+      .dump();
+}
+
+std::string evaluationToJSON(const std::string_view caseIdValue,
+                             const size_t shots,
+                             const QAOAEvaluation& evaluation) {
+  if (!validCaseId(caseIdValue) || shots == 0) {
+    throw std::invalid_argument(
+        "evaluation requires a SHA-256 case ID and at least one shot");
+  }
+  if (!std::isfinite(evaluation.meanCut) || evaluation.meanCut < 0. ||
+      !std::isfinite(evaluation.approximationRatio) ||
+      evaluation.approximationRatio < 0. ||
+      evaluation.approximationRatio > 1.) {
+    throw std::invalid_argument(
+        "QAOA evaluation requires a finite non-negative "
+        "mean cut and an approximation ratio in [0, 1]");
+  }
+  return Json{
+      {"case_id", std::string(caseIdValue)},
+      {
+          "metrics",
+          {
+              {"approximation_ratio", evaluation.approximationRatio},
+              {"mean_cut", evaluation.meanCut},
           },
       },
       {"schema_version", SCHEMA_VERSION},
