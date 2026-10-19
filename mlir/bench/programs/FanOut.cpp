@@ -19,7 +19,6 @@
 #include "mlir/Support/LLVM.h"
 
 #include <cstdint>
-#include <numbers>
 
 namespace mqt::bench {
 
@@ -34,8 +33,6 @@ SmallVector<Value> fanOut(qc::QCProgramBuilder& builder,
       builder.allocClassicalBitRegister(size + 1, benchmark.output().name);
   auto target = builder.loadQubit(workspace, builder.indexConstant(0));
 
-  builder.scfFor(0, size, 1,
-                 [&](Value iv) { builder.h(builder.loadQubit(controls, iv)); });
   builder.h(target);
 
   const auto fanOutTarget = [&] {
@@ -44,10 +41,11 @@ SmallVector<Value> fanOut(qc::QCProgramBuilder& builder,
     });
   };
   fanOutTarget();
-  // Figure 5 defines Rz as diag(1, exp(i angle)), not the usual Rz gate.
+  // Figure 5's fixed phase is S, not the usual Rz(pi/2) gate.
   builder.scfFor(0, size, 1, [&](Value iv) {
-    builder.cp(std::numbers::pi / 2., builder.loadQubit(controls, iv),
-               builder.loadQubit(workspace, iv));
+    auto control = builder.loadQubit(controls, iv);
+    builder.h(control);
+    builder.cs(control, builder.loadQubit(workspace, iv));
   });
   fanOutTarget();
 

@@ -14,6 +14,7 @@
 
 #include "JSONTestUtils.hpp"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <limits>
@@ -123,6 +124,17 @@ TEST(FanOut, RejectsInvalidJSONParameters) {
             R"({"schema_version":1,"benchmark":"fan-out","parameters":{"controls":7,"angle":1}})"));
       },
       "unknown key 'angle'");
+}
+
+TEST(FanOut, ReportsTheParameterLocationOnce) {
+  EXPECT_THAT(
+      [] {
+        static_cast<void>(fanOutFromInstanceSpecificationJSON(
+            R"({"schema_version":1,"benchmark":"fan-out","parameters":{}})",
+            "case.json"));
+      },
+      testing::ThrowsMessage<std::invalid_argument>(
+          testing::StartsWith("case.json:$/parameters/controls ")));
 }
 
 TEST(FanOut, EvaluatesCountsFromJSON) {

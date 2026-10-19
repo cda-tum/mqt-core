@@ -335,13 +335,12 @@ void requireBenchmark(const Json& root, const std::string_view expected,
 [[nodiscard]] FanOut parseFanOutParameters(const Json& parameters,
                                            const std::string_view source) {
   rejectUnknownKeys(parameters, {"controls"}, source, "$/parameters");
-  return constructBenchmark(source, [&] {
-    return FanOut({
-        .controls =
-            sizeValue(required(parameters, "controls", source, "$/parameters"),
-                      source, "$/parameters/controls"),
-    });
-  });
+  const FanOutOptions options{
+      .controls =
+          sizeValue(required(parameters, "controls", source, "$/parameters"),
+                    source, "$/parameters/controls"),
+  };
+  return constructBenchmark(source, [&options] { return FanOut(options); });
 }
 
 [[nodiscard]] GHZ parseGHZParameters(const Json& parameters,

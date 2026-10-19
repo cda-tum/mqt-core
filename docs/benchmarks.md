@@ -298,6 +298,11 @@ not enumerate input bitstrings. Fan-out is decomposed into CNOT gates, so the
 paper's constant-depth bound for an unbounded fan-out primitive does not apply
 to the generated circuit.
 
+With $S$ shots, empirical TVD is at least $\max(0,1-S/2^n)$, even for ideal
+execution. Large widths are useful for generation and compilation workloads;
+keep $n$ small for sampled-distribution comparisons. For example, 30 controls
+and 16,384 shots give TVD of at least 0.9999847.
+
 ```{code-cell} ipython3
 from mqt.core.bench import fan_out
 
