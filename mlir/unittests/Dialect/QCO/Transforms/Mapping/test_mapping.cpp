@@ -3543,7 +3543,7 @@ TEST_F(MappingPassFixture, ReusePassAcrossTargetsAndSeeds) {
                   std::tie(qubits[control], qubits[i]) =
                       builder.cx(qubits[control], qubits[i]);
                 }
-                return builder.intConstant(0);
+                return SmallVector<Value>{};
               });
           (*input)->setAttr(COMPILATION_SEED_ATTR,
                             Builder(context.get()).getI64IntegerAttr(seed));

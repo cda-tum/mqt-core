@@ -83,6 +83,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -4622,7 +4623,7 @@ TEST_F(CompilerPipelineTest, TargetSynthesisResynthesizesTwoQubitBlocks) {
         auto [q0, q1] =
             builder.rzz(0.3, builder.staticQubit(0), builder.staticQubit(1));
         std::tie(q0, q1) = builder.rxx(0.4, q0, q1);
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   ASSERT_TRUE(verify(*moduleOp).succeeded());
   auto reference = OwningOpRef<ModuleOp>(moduleOp->clone());
@@ -4749,7 +4750,7 @@ TEST_F(CompilerPipelineTest, TargetCompilationFusesOnlyWithUsableNativeBasis) {
             std::tie(q0, q1) =
                 testCase.useDcx ? builder.dcx(q0, q1) : builder.cx(q0, q1);
           }
-          return builder.intConstant(0);
+          return SmallVector<Value>{};
         });
     ASSERT_TRUE(verify(*moduleOp).succeeded());
     ASSERT_TRUE(qco::verifyLinearity(*moduleOp).succeeded());
@@ -4810,7 +4811,7 @@ TEST_F(CompilerPipelineTest,
             std::tie(qubits[0], qubits[i]) = builder.cx(qubits[0], qubits[i]);
           }
         }
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   auto reference = OwningOpRef<ModuleOp>(moduleOp->clone());
   auto program = QCOProgram::fromModule(ownedContext, std::move(moduleOp));
@@ -5260,7 +5261,7 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesDynamicRunForSupportedTargets) {
           context.get(), [angle](QCOProgramBuilder& b) {
             auto qubit = b.rz(angle, b.h(b.staticQubit(0)));
             b.sink(qubit);
-            return b.intConstant(0);
+            return SmallVector<Value>{};
           });
       expectFullUnitaryEqual(*reference, *bound, 1);
     }
@@ -5340,7 +5341,7 @@ TEST_F(CompilerPipelineTest,
           q0 = builder.rz(.32 * k, q0);
           q1 = builder.rz(.23 * k, q1);
         }
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   ASSERT_TRUE(moduleOp);
   std::string source;

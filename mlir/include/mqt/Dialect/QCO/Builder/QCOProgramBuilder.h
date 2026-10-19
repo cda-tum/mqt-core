@@ -92,8 +92,7 @@ public:
   // Initialization
   //===--------------------------------------------------------------------===//
 
-  /// Initialize the builder and prepare for program construction, with
-  /// a default return type of i64.
+  /// Initialize the builder with an entry function that returns no values.
   ///
   /// Creates a main function with an `mqt.entry_point` attribute. Must be
   /// called before adding operations.
@@ -1774,8 +1773,8 @@ public:
   /// Finalize the program and return the constructed module
   ///
   /// Automatically deallocates all remaining valid qubits and tensors of
-  /// qubits, adds a return statement with exit code 0 (indicating successful
-  /// execution), and transfers ownership of the module to the caller. The
+  /// qubits, adds a return statement without values, and transfers ownership
+  /// of the module to the caller. The
   /// builder should not be used after calling this method.
   ///
   /// @return OwningOpRef containing the constructed quantum program module
@@ -1793,8 +1792,8 @@ public:
   /// used after calling this method.
   ///
   /// The return values must have the types indicated by the function signature
-  /// of the main function, which returns an `i64` by default and can be
-  /// modified by passing different arguments to the `initialize()` method.
+  /// of the main function, set by `initialize(returnTypes)` or `retype()`.
+  /// These values are program outputs; QIR conversion generates its own status.
   ///
   /// @return OwningOpRef containing the constructed quantum program module
   OwningOpRef<ModuleOp> finalize(ValueRange returnValues);

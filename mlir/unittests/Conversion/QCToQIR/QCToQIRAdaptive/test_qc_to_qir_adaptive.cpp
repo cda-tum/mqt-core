@@ -738,7 +738,8 @@ TEST_F(QCToQIRAdaptiveNativeTest,
     SCOPED_TRACE(forwarding);
     const std::string source = R"mlir(
     module {
-      func.func @main() -> (i64, !cbit.reg<1>)
+      func.func private @consume(i1)
+      func.func @main() -> !cbit.reg<1>
           attributes {mqt.entry_point} {
         %true = arith.constant true
         %c0 = arith.constant 0 : index
@@ -754,8 +755,8 @@ TEST_F(QCToQIRAdaptiveNativeTest,
         cbit.write %true, %selected : i1, !cbit.reg<1>
         %combined = arith.xori %bit, %whole : i1
         %result = arith.xori %combined, %matches : i1
-        %exit = arith.extui %result : i1 to i64
-        return %exit, %returned : i64, !cbit.reg<1>
+        func.call @consume(%result) : (i1) -> ()
+        return %returned : !cbit.reg<1>
       }
     }
   )mlir";
@@ -781,7 +782,8 @@ TEST_F(QCToQIRAdaptiveNativeTest,
 TEST_F(QCToQIRAdaptiveNativeTest, LowersReturnedRegisterMerge) {
   auto module = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @main() -> (i64, !cbit.reg<1>, !cbit.reg<1>)
+      func.func private @consume(i1)
+      func.func @main() -> (!cbit.reg<1>, !cbit.reg<1>)
           attributes {mqt.entry_point} {
         %true = arith.constant true
         %c0 = arith.constant 0 : index
@@ -799,8 +801,8 @@ TEST_F(QCToQIRAdaptiveNativeTest, LowersReturnedRegisterMerge) {
         %matches = arith.cmpi eq, %matches_read, %matches_rhs : i1
         %combined = arith.xori %bit, %whole : i1
         %result = arith.xori %combined, %matches : i1
-        %exit = arith.extui %result : i1 to i64
-        return %exit, %first, %second : i64, !cbit.reg<1>, !cbit.reg<1>
+        func.call @consume(%result) : (i1) -> ()
+        return %first, %second : !cbit.reg<1>, !cbit.reg<1>
       }
     }
   )mlir",
@@ -870,11 +872,10 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsHelperLocalClassicalResources) {
                                R"mlir(
         return %bit : i1
       }
-      func.func @main() -> i64 attributes {mqt.entry_point} {
+      func.func @main() attributes {mqt.entry_point} {
         %q = qc.static 0 : !qc.qubit
         %bit = func.call @helper(%q) : (!qc.qubit) -> i1
-        %exit = arith.extui %bit : i1 to i64
-        return %exit : i64
+        return
       }
     })mlir";
     auto module = parseSourceString<ModuleOp>(source, &context);
@@ -888,12 +889,10 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsHelperLocalClassicalResources) {
 
 TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedEntryOutputs) {
   const std::array names{
-      "selected register",
-      "computed boolean",
-      "multiple exit codes",
-      "overwritten measurement",
+      "selected register", "computed boolean",        "zero scalar",
+      "nonzero scalar",    "overwritten measurement",
   };
-  for (uint32_t shape = 0; shape < 4; ++shape) {
+  for (uint32_t shape = 0; shape < names.size(); ++shape) {
     SCOPED_TRACE(names[shape]);
     qc::QCProgramBuilder builder(&context);
     builder.initialize();
@@ -905,8 +904,8 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedEntryOutputs) {
           builder, builder.boolConstant(true), first, second));
     } else if (shape == 1) {
       outputs.push_back(builder.boolConstant(true));
-    } else if (shape == 2) {
-      outputs = {builder.intConstant(0), builder.intConstant(1)};
+    } else if (shape == 2 || shape == 3) {
+      outputs.push_back(builder.intConstant(shape == 2 ? 0 : 7));
     } else {
       auto first = builder.allocQubit();
       auto second = builder.allocQubit();
@@ -920,10 +919,10 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedEntryOutputs) {
     ASSERT_TRUE(module);
     ASSERT_TRUE(succeeded(verify(*module)));
     const StringRef expected =
-        shape == 3 ? "returned scalar measurement cannot share overwritten "
+        shape == 4 ? "returned scalar measurement cannot share overwritten "
                      "register storage"
-                   : "QIR entry return supports only direct measurements, CBit "
-                     "allocations, and one i64 exit code";
+                   : "QIR entry return supports only direct measurements and "
+                     "CBit allocations";
     expectConversionFailure(*module, expected);
     EXPECT_TRUE(succeeded(verify(*module)));
   }
@@ -942,7 +941,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
   }
   bits.push_back(builder.measure(builder.allocQubit()));
   SmallVector<Value> outputs{
-      registers[2], registers[1], bits[3], bits[0],      builder.intConstant(7),
+      registers[2], registers[1], bits[3], bits[0],
       registers[0], bits[1],      bits[3], registers[1],
   };
   builder.retype(TypeRange(outputs));
@@ -1007,7 +1006,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
     ASSERT_EQ(op.getNumOperands(), 1U);
     auto code = op.getOperand(0).getDefiningOp<LLVM::ConstantOp>();
     ASSERT_TRUE(code);
-    EXPECT_EQ(cast<IntegerAttr>(code.getValue()).getInt(), 7);
+    EXPECT_EQ(cast<IntegerAttr>(code.getValue()).getInt(), 0);
   });
   SmallVector<Value> allocatedScalars;
   SmallVector<Value> releasedScalars;
@@ -1112,7 +1111,8 @@ TEST_F(QCToQIRAdaptiveNativeTest,
 TEST_F(QCToQIRAdaptiveNativeTest, InitializesLocalRegisterInsideLoop) {
   auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @main() -> i64 attributes {mqt.entry_point} {
+      func.func private @consume(i1)
+      func.func @main() attributes {mqt.entry_point} {
         %c0 = arith.constant 0 : index
         %c1 = arith.constant 1 : index
         %c2 = arith.constant 2 : index
@@ -1125,8 +1125,8 @@ TEST_F(QCToQIRAdaptiveNativeTest, InitializesLocalRegisterInsideLoop) {
           cbit.store %true, %r[%c0] : !cbit.reg<1>
           scf.yield %v : i1
         }
-        %exit = arith.extui %answer : i1 to i64
-        return %exit : i64
+        func.call @consume(%answer) : (i1) -> ()
+        return
       }
     }
   )mlir",

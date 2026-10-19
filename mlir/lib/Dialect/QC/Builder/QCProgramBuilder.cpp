@@ -160,7 +160,7 @@ QCProgramBuilder::QCProgramBuilder(MLIRContext* context)
   getContext()->loadDialect<cbit::CBitDialect, mqt::MQTDialect, QCDialect>();
 }
 
-void QCProgramBuilder::initialize() { initialize({getI64Type()}); }
+void QCProgramBuilder::initialize() { initialize({}); }
 
 void QCProgramBuilder::initialize(TypeRange returnTypes) {
   checkFinalized();
@@ -985,12 +985,7 @@ void QCProgramBuilder::ensureAllocationMode(
   llvm::reportFatalUsageError(message.c_str());
 }
 
-OwningOpRef<ModuleOp> QCProgramBuilder::finalize() {
-  checkFinalized();
-
-  auto exitCode = intConstant(0);
-  return finalize({exitCode});
-}
+OwningOpRef<ModuleOp> QCProgramBuilder::finalize() { return finalize({}); }
 
 OwningOpRef<ModuleOp> QCProgramBuilder::finalize(ValueRange returnValues) {
   checkFinalized();

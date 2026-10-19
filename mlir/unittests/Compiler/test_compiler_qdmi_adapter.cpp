@@ -747,21 +747,26 @@ TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
   }
 }
 
-TEST(CompilerQDMIAdapterTest, PreservesExplicitStatusAndRejectsSourceScalars) {
+TEST(CompilerQDMIAdapterTest, RejectsScalarProgramOutputs) {
   const auto device = qdmi::Session::openDevice("mqt.ddsim.default");
-  auto status = mlir::QCProgram::fromMLIRString(R"mlir(module {
-    func.func @main() -> i64 attributes {mqt.entry_point} {
-      %status = arith.constant 7 : i64
-      return %status : i64
+  for (const auto value : {0, 7}) {
+    SCOPED_TRACE(value);
+    auto scalar = mlir::QCProgram::fromMLIRString(
+        "module { func.func @main() -> i64 attributes {mqt.entry_point} { "
+        "%value = arith.constant " +
+        std::to_string(value) + " : i64 return %value : i64 } }");
+    ASSERT_TRUE(mlir::succeeded(scalar));
+    auto compiled = mlir::compileProgram(scalar->copy(), device,
+                                         QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING);
+    ASSERT_FALSE(static_cast<bool>(compiled));
+    llvm::consumeError(compiled.takeError());
+    for (const auto profile :
+         {mlir::QIRProfile::Base, mlir::QIRProfile::Adaptive}) {
+      EXPECT_TRUE(mlir::failed(std::move(scalar->copy()).intoQIR(profile)));
     }
-  })mlir");
-  ASSERT_TRUE(mlir::succeeded(status));
-  auto compiled = mlir::compileProgram(std::move(*status), device,
-                                       QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING);
-  ASSERT_TRUE(static_cast<bool>(compiled))
-      << llvm::toString(compiled.takeError());
-  EXPECT_NE(compiled->payload().find("ret i64 7"), std::string::npos);
+  }
   for (const auto width : {32, 64}) {
+    SCOPED_TRACE(width);
     const auto source = "OPENQASM 3; int[" + std::to_string(width) + "] k = 1;";
     auto qc = mlir::QCProgram::fromOpenQASMString(source);
     ASSERT_TRUE(mlir::succeeded(qc));
@@ -773,10 +778,7 @@ TEST(CompilerQDMIAdapterTest, PreservesExplicitStatusAndRejectsSourceScalars) {
     auto portable = std::move(*qco).intoQC();
     ASSERT_TRUE(mlir::succeeded(portable));
     auto qir = std::move(*portable).intoQIR(mlir::QIRProfile::Adaptive);
-    ASSERT_EQ(mlir::succeeded(qir), width == 64);
-    if (mlir::succeeded(qir)) {
-      EXPECT_TRUE(mlir::succeeded(qir->llvmIR()));
-    }
+    EXPECT_TRUE(mlir::failed(qir));
   }
 }
 

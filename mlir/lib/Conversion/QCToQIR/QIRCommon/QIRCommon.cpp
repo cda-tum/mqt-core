@@ -575,17 +575,6 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   if (hasInvalidMemory) {
     return failure();
   }
-  for (unsigned index = 0; index < funcOp.getNumResults(); ++index) {
-    if (environment &&
-        funcOp.getResultAttr(index,
-                             mqt::MQTDialect::OutputAttrHelper::getNameStr())) {
-      return funcOp.emitError(
-          "target QIR does not support scalar program outputs; "
-          "keep classical temporaries local or select OpenQASM 3");
-    }
-    funcOp.removeResultAttr(index,
-                            mqt::MQTDialect::OutputAttrHelper::getNameStr());
-  }
   SmallVector<func::ReturnOp> returns;
   funcOp.walk([&](func::ReturnOp op) { returns.push_back(op); });
   if (returns.size() != 1) {
@@ -593,8 +582,6 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
         "QIR output requires a single return in the entry function");
   }
   auto returnOp = returns.front();
-  SmallVector<Value> keptOperands;
-  SmallVector<Type> keptReturnTypes;
   SmallVector<cbit::StoreOp> consumedStores;
   DominanceInfo dominance(funcOp);
   IRRewriter rewriter(moduleOp->getContext());
@@ -651,13 +638,10 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
         reg.record = true;
       }
       state.returnedOutputs.push_back(definition);
-    } else if (operand.getType().isInteger(64) && keptOperands.empty()) {
-      keptOperands.push_back(operand);
-      keptReturnTypes.push_back(operand.getType());
     } else {
       return returnOp.emitError(
-          "QIR entry return supports only direct measurements, CBit "
-          "allocations, and one i64 exit code");
+          "QIR entry return supports only direct measurements and CBit "
+          "allocations; other scalar program outputs are not supported");
     }
   }
 
@@ -784,16 +768,12 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
     }
   }
 
-  if (keptOperands.empty()) {
-    OpBuilder builder(returnOp);
-    auto zero = arith::ConstantIntOp::create(builder, returnOp.getLoc(), 0, 64);
-    keptOperands.push_back(zero);
-    keptReturnTypes.push_back(zero.getType());
-  }
-  returnOp.getOperandsMutable().assign(keptOperands);
+  OpBuilder builder(returnOp);
+  auto zero = arith::ConstantIntOp::create(builder, returnOp.getLoc(), 0, 64);
+  returnOp.getOperandsMutable().assign(zero);
   funcOp.setFunctionType(FunctionType::get(funcOp.getContext(),
                                            funcOp.getFunctionType().getInputs(),
-                                           keptReturnTypes));
+                                           {zero.getType()}));
   for (auto storeOp : consumedStores) {
     if (deferMeasurementStores) {
       auto measureOp = storeOp.getValue().getDefiningOp<MeasureOp>();

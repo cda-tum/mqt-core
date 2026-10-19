@@ -56,8 +56,6 @@ def MQTDialect : Dialect {
     every bit pattern is valid. Transformations carry it with the input and
     remove it when removing the input. It does not identify an SSA value or
     change execution semantics.
-    `mqt.output` marks a source-level scalar function result.
-    Such a result is program output, not an execution status.
     `mqt.source_name` records a source-level function name when the IR symbol
     must be uniquified, preserving the original gate name on Qiskit export.
     `mqt.parameter_group` optionally preserves the source-level vector
@@ -76,7 +74,10 @@ def MQTDialect : Dialect {
     required by those contracts in the explicit attributes above.
 
     `mqt.entry_point` marks the single public, defined `func.func` program entry
-    in a module. Dynamic quantum allocations (`qc.alloc`, `qco.alloc`,
+    in a module. QC/QCO entry results are program data; an entry with no outputs
+    returns no values. QIR conversion records supported bit outputs and generates
+    an `i64` zero execution status. It rejects other scalar program outputs.
+    Dynamic quantum allocations (`qc.alloc`, `qco.alloc`,
     qubit `memref.alloc`, and `qtensor.alloc`) must appear directly in its
     entry block. Other functions receive quantum resources as arguments;
     they cannot allocate them. Classical allocations and static qubit references
@@ -102,7 +103,7 @@ def MQTDialect : Dialect {
 
   let discardableAttrs = (ins "::mlir::StringAttr":$input_name,
       "::mlir::IntegerAttr":$input_id, "::mlir::DictionaryAttr":$layout,
-      "::mlir::StringAttr":$source_name, "::mlir::UnitAttr":$output,
+      "::mlir::StringAttr":$source_name,
       "::mlir::DenseI64ArrayAttr":$source_qubit_indices,
       "::mlir::DictionaryAttr":$parameter_group,
       "::mlir::StringAttr":$register_name, "::mlir::UnitAttr":$entry_point,

@@ -117,7 +117,7 @@ def _assert_bell_program(program: QCProgram, *, measured: bool = False) -> None:
     assert ir.count("qc.x ") == 1
 
     if not measured:
-        assert "func.func @main() -> i64" in ir
+        assert "func.func @main() attributes" in ir
         assert "qc.measure" not in ir
         return
 
@@ -416,14 +416,18 @@ def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
 )
 @requires_qiskit_translation
 def test_openqasm_helper_gate_matrix(gate: Gate) -> None:
-    """Preserve complete helper-gate matrices, including global phase."""
+    """Preserve global phase and output-free compilation through OpenQASM."""
     circuit = QuantumCircuit(gate.num_qubits)
     circuit.append(gate, range(gate.num_qubits))
 
     source = QCProgram.from_qiskit(circuit).to_openqasm3().source
-    round_tripped = QCProgram.from_openqasm_str(source).to_qiskit()
+    assert "output " not in source
+    program = QCProgram.from_openqasm_str(source)
+    round_tripped = program.to_qiskit(copy=True)
 
+    assert round_tripped.num_clbits == 0
     assert np.allclose(Operator(round_tripped).data, Operator(circuit).data)
+    assert program.to_qir(QIRProfile.BASE).is_valid
 
 
 def test_compile_program_convert_to_qir() -> None:
@@ -608,8 +612,10 @@ def test_empty_compiled_program_round_trips_through_mlir() -> None:
     )
     program.compile_for_target(_test_target_environment(target))
     assert "qco." not in program.ir
+    assert "func.func @main() attributes" in program.ir
 
     qc = QCOProgram.from_mlir_str(program.ir).to_qc()
+    assert "func.func @main() attributes" in qc.ir
     restored = QCProgram.from_mlir_str(qc.ir).to_qiskit()
 
     assert restored.num_qubits == 0

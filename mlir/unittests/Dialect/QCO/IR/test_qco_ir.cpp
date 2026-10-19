@@ -268,6 +268,11 @@ TEST_F(QCOTest, PrintsReadableQubitAndClassicalNames) {
   std::ignore = bit;
   auto moduleOp = builder.finalize();
   ASSERT_TRUE(moduleOp);
+  auto mainFunc = mlir::mqt::getEntryPoint(*moduleOp);
+  EXPECT_EQ(mainFunc.getNumResults(), 0U);
+  EXPECT_EQ(
+      cast<func::ReturnOp>(mainFunc.getBody().front().back()).getNumOperands(),
+      0U);
 
   std::string text;
   llvm::raw_string_ostream stream(text);
@@ -478,7 +483,7 @@ TEST_F(QCOTest, BuilderIfReturnsClassicalValues) {
 
 TEST_F(QCOTest, BuilderIfReturnsOnlyClassicalValues) {
   QCOProgramBuilder builder(context.get());
-  builder.initialize();
+  builder.initialize({builder.getI64Type()});
   auto reg = builder.allocClassicalBitRegister(1);
   auto results = builder.qcoIf(
       reg, 0, ValueRange{},
@@ -527,7 +532,7 @@ TEST_F(QCOTest, BuilderLoopsCarryClassicalValues) {
   for (unsigned kind : {1, 2}) {
     SCOPED_TRACE(kind);
     QCOProgramBuilder builder(context.get());
-    builder.initialize();
+    builder.initialize({builder.getI64Type()});
     const auto body = [&](ValueRange args) {
       Value next =
           arith::AddIOp::create(builder, args[0], builder.intConstant(1));
@@ -552,7 +557,7 @@ TEST_F(QCOTest, BuilderWhileCarriesVqeStateThroughNestedFor) {
   for (bool extractQubit : {false, true}) {
     SCOPED_TRACE(extractQubit);
     QCOProgramBuilder builder(context.get());
-    builder.initialize();
+    builder.initialize({builder.getI64Type()});
     SmallVector<Value> inputs{
         builder.boolConstant(true),
         builder.floatConstant(1.0),

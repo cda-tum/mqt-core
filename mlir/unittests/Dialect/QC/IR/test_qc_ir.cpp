@@ -438,6 +438,11 @@ TEST_F(QCTest, BuilderCanAllocateQubitRegisterStorageWithoutEagerLoads) {
   auto moduleOp = builder.finalize();
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  auto mainFunc = mlir::mqt::getEntryPoint(*moduleOp);
+  EXPECT_EQ(mainFunc.getNumResults(), 0U);
+  EXPECT_EQ(
+      cast<func::ReturnOp>(mainFunc.getBody().front().back()).getNumOperands(),
+      0U);
 
   size_t allocations = 0;
   size_t qubitLoads = 0;

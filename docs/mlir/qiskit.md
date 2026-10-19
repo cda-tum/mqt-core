@@ -221,14 +221,15 @@ selection, and shifts share these typed rules. Import guards runtime shifts so
 overshifts produce zero; export preserves the guards. Rotations and population
 count are expanded through the same bounded integer lowering used by jeff.
 Unsupported operations, invalid widths, non-finite constants, unsupported index
-uses, and dynamic for-loop bounds fail during validation. For programs without
-classical outputs, export accepts a void entry function or a lone unannotated
-constant-zero `i64` status return. Whole-register reads map to Qiskit
-`ClassicalRegister` expressions, and writes map to atomic Qiskit `Store`
-operations. Indexed stores assume that their runtime index is in bounds.
-Internal CBit storage becomes additional Qiskit registers, ordered before
-returned registers; Qiskit exposes all circuit storage. OpenQASM remains the
-source interchange path for arbitrary register widths.
+uses, and dynamic for-loop bounds fail during validation. Programs without
+classical outputs use a void entry function on import and export. Scalar entry
+results are program data and cannot be exported to Qiskit, including a
+constant-zero `i64`. Whole-register reads map to Qiskit `ClassicalRegister`
+expressions, and writes map to atomic Qiskit `Store` operations. Indexed stores
+assume that their runtime index is in bounds. Internal CBit storage becomes
+additional Qiskit registers, ordered before returned registers; Qiskit exposes
+all circuit storage. OpenQASM remains the source interchange path for arbitrary
+register widths.
 
 Every public CBit output is exported as a Qiskit `ClassicalRegister`; an unnamed
 allocation receives a collision-free `_mqt_cN` name. This preserves the CBit

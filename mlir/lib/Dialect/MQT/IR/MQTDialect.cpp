@@ -603,18 +603,8 @@ LogicalResult MQTDialect::verifyRegionArgAttribute(
 }
 
 LogicalResult MQTDialect::verifyRegionResultAttribute(
-    Operation* operation, unsigned /*regionIndex*/, unsigned resultIndex,
+    Operation* operation, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
     const NamedAttribute attribute) {
-  if (attribute.getName() == OutputAttrHelper::getNameStr()) {
-    auto function = dyn_cast<func::FuncOp>(operation);
-    if (function && isa<UnitAttr>(attribute.getValue()) &&
-        isa<IntegerType, IndexType, FloatType>(
-            function.getResultTypes()[resultIndex])) {
-      return success();
-    }
-    return operation->emitError(
-        "mqt.output requires a unit attribute on a scalar function result");
-  }
   return operation->emitError()
          << "attribute '" << attribute.getName().getValue()
          << "' is not valid on a region result";

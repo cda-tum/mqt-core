@@ -48,6 +48,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include <array>
 #include <cstddef>
@@ -251,9 +252,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsMultiBlockEntryFunctionWithoutMutation) {
   ASSERT_TRUE(entryPoint);
   auto* extraBlock = &entryPoint.getBody().emplaceBlock();
   builder.setInsertionPointToEnd(extraBlock);
-  auto status =
-      arith::ConstantIntOp::create(builder, builder.getUnknownLoc(), 0, 64);
-  func::ReturnOp::create(builder, builder.getUnknownLoc(), status.getResult());
+  func::ReturnOp::create(builder, builder.getUnknownLoc());
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
 
   expectConversionFailure(
@@ -518,11 +517,10 @@ TEST_F(QCToQIRBaseNativeTest, RejectsHelperLocalClassicalResources) {
                                R"mlir(
         return %bit : i1
       }
-      func.func @main() -> i64 attributes {mqt.entry_point} {
+      func.func @main() attributes {mqt.entry_point} {
         %q = qc.static 0 : !qc.qubit
         %bit = func.call @helper(%q) : (!qc.qubit) -> i1
-        %exit = arith.extui %bit : i1 to i64
-        return %exit : i64
+        return
       }
     })mlir";
     auto module = parseSourceString<ModuleOp>(source, &context);
@@ -536,12 +534,10 @@ TEST_F(QCToQIRBaseNativeTest, RejectsHelperLocalClassicalResources) {
 
 TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedEntryOutputs) {
   const std::array names{
-      "selected register",
-      "computed boolean",
-      "multiple exit codes",
-      "overwritten measurement",
+      "selected register", "computed boolean",        "zero scalar",
+      "nonzero scalar",    "overwritten measurement",
   };
-  for (uint32_t shape = 0; shape < 4; ++shape) {
+  for (uint32_t shape = 0; shape < names.size(); ++shape) {
     SCOPED_TRACE(names[shape]);
     qc::QCProgramBuilder builder(&context);
     builder.initialize();
@@ -553,8 +549,8 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedEntryOutputs) {
           builder, builder.boolConstant(true), first, second));
     } else if (shape == 1) {
       outputs.push_back(builder.boolConstant(true));
-    } else if (shape == 2) {
-      outputs = {builder.intConstant(0), builder.intConstant(1)};
+    } else if (shape == 2 || shape == 3) {
+      outputs.push_back(builder.intConstant(shape == 2 ? 0 : 7));
     } else {
       auto first = builder.allocQubit();
       auto second = builder.allocQubit();
@@ -568,10 +564,10 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedEntryOutputs) {
     ASSERT_TRUE(module);
     ASSERT_TRUE(succeeded(verify(*module)));
     const StringRef expected =
-        shape == 3 ? "returned scalar measurement cannot share overwritten "
+        shape == 4 ? "returned scalar measurement cannot share overwritten "
                      "register storage"
-                   : "QIR entry return supports only direct measurements, CBit "
-                     "allocations, and one i64 exit code";
+                   : "QIR entry return supports only direct measurements and "
+                     "CBit allocations";
     expectConversionFailure(*module, expected);
     EXPECT_TRUE(succeeded(verify(*module)));
   }
@@ -590,7 +586,7 @@ TEST_F(QCToQIRBaseNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
   }
   bits.push_back(builder.measure(builder.allocQubit()));
   SmallVector<Value> outputs{
-      registers[2], registers[1], bits[3], bits[0],      builder.intConstant(7),
+      registers[2], registers[1], bits[3], bits[0],
       registers[0], bits[1],      bits[3], registers[1],
   };
   builder.retype(TypeRange(outputs));
@@ -641,7 +637,7 @@ TEST_F(QCToQIRBaseNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
     ASSERT_EQ(op.getNumOperands(), 1U);
     auto code = op.getOperand(0).getDefiningOp<LLVM::ConstantOp>();
     ASSERT_TRUE(code);
-    EXPECT_EQ(cast<IntegerAttr>(code.getValue()).getInt(), 7);
+    EXPECT_EQ(cast<IntegerAttr>(code.getValue()).getInt(), 0);
   });
 }
 

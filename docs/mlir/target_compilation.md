@@ -580,11 +580,14 @@ The adapter assumes all compiler-supported capabilities for the selected format
 (OpenQASM 3.1 or QIR 2.1). Use `TargetEnvironment` and `PayloadSpecification`
 for staged compilation with explicit restrictions.
 
-QIR submission requires a parameterless entry point returning an `i64` status;
-the compiler adds status 0 to programs with no return value. Keep classical
-temporaries local, or select OpenQASM 3 for global scalar outputs. Imported
-scalar outputs remain distinct from explicitly authored status returns across QC
-and QCO conversions, including 64-bit integers.
+QIR submission requires a parameterless entry point. QC-to-QIR conversion
+records direct measurements and CBit-register results, then emits runtime status
+0 for successful execution. All explicit QC and QCO returns are program data;
+scalar entry results, including a constant-zero `i64`, are unsupported with or
+without a target. Keep classical temporaries local, or select OpenQASM 3 for
+scalar outputs. In OpenQASM 3, declare `output bit` registers explicitly when
+global scalar variables are only temporaries. See the
+{doc}`QIR execution contracts <../qir/index>`.
 
 The adapter accepts circuit-model devices whose two-qubit operations cover every
 topology edge in at least one operand orientation and preserves the exact

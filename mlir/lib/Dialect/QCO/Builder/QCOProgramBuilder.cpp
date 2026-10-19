@@ -70,7 +70,7 @@ QCOProgramBuilder::QCOProgramBuilder(MLIRContext* context)
                     qtensor::QTensorDialect>();
 }
 
-void QCOProgramBuilder::initialize() { initialize({getI64Type()}); }
+void QCOProgramBuilder::initialize() { initialize({}); }
 
 void QCOProgramBuilder::initialize(TypeRange returnTypes) {
   checkFinalized();
@@ -1672,12 +1672,7 @@ void QCOProgramBuilder::disposeLinearValues() {
   validTensors.clear();
 }
 
-OwningOpRef<ModuleOp> QCOProgramBuilder::finalize() {
-  checkFinalized();
-
-  auto exitCode = intConstant(0);
-  return finalize({exitCode});
-}
+OwningOpRef<ModuleOp> QCOProgramBuilder::finalize() { return finalize({}); }
 
 OwningOpRef<ModuleOp> QCOProgramBuilder::finalize(ValueRange returnValues) {
   checkFinalized();

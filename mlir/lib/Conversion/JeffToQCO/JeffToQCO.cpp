@@ -1138,81 +1138,6 @@ struct ConvertJeffYieldOpToQCO final : OpConversionPattern<jeff::YieldOp> {
   }
 };
 
-/// Converts the jeff-style main function to a QCO-style main function
-///
-/// @par Example:
-/// ```mlir
-/// func.func @main() -> () {
-///   return
-/// }
-/// ```
-/// is converted to
-/// ```mlir
-/// func.func @main() -> i64 attributes {mqt.entry_point} {
-///   %0 = arith.constant 0 : i64
-///   return %0
-/// }
-/// ```
-struct ConvertJeffMainToQCO final : OpConversionPattern<func::FuncOp> {
-  ConvertJeffMainToQCO(TypeConverter& typeConverter, MLIRContext* context,
-                       func::FuncOp entryPoint)
-      : OpConversionPattern(typeConverter, context, PatternBenefit(2)),
-        entryPoint_(entryPoint) {}
-
-  LogicalResult
-  matchAndRewrite(func::FuncOp op, OpAdaptor /*adaptor*/,
-                  ConversionPatternRewriter& rewriter) const override {
-    if (op != entryPoint_) {
-      return failure();
-    }
-
-    if (op.getBlocks().size() != 1) {
-      return failure();
-    }
-    auto* block = &op.getBlocks().front();
-
-    auto returnOp = dyn_cast<func::ReturnOp>(block->getTerminator());
-    if (!returnOp) {
-      return failure();
-    }
-
-    SmallVector<Type> inputTypes;
-    SmallVector<Type> resultTypes;
-    if (failed(getTypeConverter()->convertTypes(op.getArgumentTypes(),
-                                                inputTypes)) ||
-        failed(getTypeConverter()->convertTypes(op.getResultTypes(),
-                                                resultTypes))) {
-      return failure();
-    }
-
-    // A result-less jeff entry point uses the compiler's legacy status result.
-    const bool needsStatusResult = resultTypes.empty();
-    if (needsStatusResult) {
-      resultTypes.push_back(rewriter.getI64Type());
-    }
-    rewriter.modifyOpInPlace(op, [&] {
-      mqt::setEntryPoint(op);
-      op.setType(rewriter.getFunctionType(inputTypes, resultTypes));
-      for (const auto& [argument, type] :
-           llvm::zip_equal(block->getArguments(), inputTypes)) {
-        argument.setType(type);
-      }
-    });
-
-    if (needsStatusResult) {
-      rewriter.setInsertionPointToStart(block);
-      auto zero = arith::ConstantIntOp::create(rewriter, op.getLoc(), 0, 64);
-      rewriter.setInsertionPoint(returnOp);
-      rewriter.replaceOpWithNewOp<func::ReturnOp>(returnOp, zero.getResult());
-    }
-
-    return success();
-  }
-
-private:
-  func::FuncOp entryPoint_;
-};
-
 /// Type converter for jeff-to-QCO conversion
 ///
 /// Converts `!jeff.qubit` to `!qco.qubit` and `!jeff.qureg` to
@@ -1250,6 +1175,14 @@ protected:
     auto moduleOp = getOperation();
     auto entryPoint = getEntryPoint(moduleOp);
     if (failed(entryPoint)) {
+      signalPassFailure();
+      return;
+    }
+
+    if (!llvm::hasSingleElement(entryPoint->getBody()) ||
+        !isa<func::ReturnOp>(entryPoint->getBody().front().getTerminator())) {
+      entryPoint->emitError("jeff-to-QCO conversion requires a single-block "
+                            "entry function ending in func.return");
       signalPassFailure();
       return;
     }
@@ -1320,6 +1253,7 @@ protected:
     for (auto function : moduleOp.getOps<func::FuncOp>()) {
       if (function == *entryPoint) {
         function.setPublic();
+        mqt::setEntryPoint(function);
         continue;
       }
       if (llvm::any_of(function.getArgumentTypes(), [&](Type type) {
@@ -1342,8 +1276,7 @@ protected:
                          tensor::TensorDialect, scf::SCFDialect>();
 
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      return (op != *entryPoint || mqt::isEntryPoint(op)) &&
-             typeConverter.isSignatureLegal(op.getFunctionType()) &&
+      return typeConverter.isSignatureLegal(op.getFunctionType()) &&
              typeConverter.isLegal(&op.getBody());
     });
     target.addDynamicallyLegalOp<func::CallOp, func::ReturnOp>(
@@ -1355,7 +1288,6 @@ protected:
         patterns, typeConverter);
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
     populateCallOpTypeConversionPattern(patterns, typeConverter);
-    patterns.add<ConvertJeffMainToQCO>(typeConverter, context, *entryPoint);
     patterns
         .add<ConvertJeffIntArrayConst1OpToCBit, ConvertJeffIntArrayZeroOpToCBit,
              ConvertJeffIntArrayGetIndexOpToCBit>(typeConverter, context,

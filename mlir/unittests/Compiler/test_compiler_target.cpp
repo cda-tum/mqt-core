@@ -1042,7 +1042,7 @@ TEST(CompilerTargetTest, ChecksFixedValuesInsideNativeControls) {
                                               builder.staticQubit(1));
           builder.sink(control);
           builder.sink(qubit);
-          return builder.intConstant(0);
+          return llvm::SmallVector<mlir::Value>{};
         });
     program->walk([&](mlir::qco::CtrlOp controlled) {
       EXPECT_EQ(target.supports(controlled), angle == 0.25);
@@ -1382,7 +1382,7 @@ TEST(CompilerTargetTest, SupportsRealQCOOperationsAndStructuralOps) {
         q0 = builder.reset(measured);
         static_cast<void>(q0);
         static_cast<void>(q1);
-        return builder.intConstant(0);
+        return llvm::SmallVector<mlir::Value>{};
       });
   ASSERT_TRUE(moduleOp);
 
@@ -1481,7 +1481,7 @@ TEST(CompilerTargetTest, SupportsArbitrarilyControlledBaseOperations) {
             builder.mcrccx({builder.staticQubit(10), builder.staticQubit(11)},
                            builder.staticQubit(12), builder.staticQubit(13),
                            builder.staticQubit(14)));
-        return builder.intConstant(0);
+        return llvm::SmallVector<mlir::Value>{};
       });
   ASSERT_TRUE(supportedModule);
 
@@ -1530,7 +1530,7 @@ TEST(CompilerTargetTest, SupportsArbitrarilyControlledBaseOperations) {
                                targets[1],
                            };
                          }));
-        return builder.intConstant(0);
+        return llvm::SmallVector<mlir::Value>{};
       });
   ASSERT_TRUE(rejectedModule);
 

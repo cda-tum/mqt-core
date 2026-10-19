@@ -128,7 +128,7 @@ public:
                      func::FuncDialect, LLVM::LLVMDialect, math::MathDialect,
                      memref::MemRefDialect, scf::SCFDialect, ub::UBDialect>();
     builder.setListener(&emissionBudget);
-    builder.initialize(TypeRange{});
+    builder.initialize();
     for (const auto& gate : program.gates) {
       customGateIndex.try_emplace(gate.name, &gate);
       structuredGateCapabilities.try_emplace(
@@ -208,13 +208,6 @@ public:
     auto moduleOp = builder.finalize(results);
     if (!moduleOp || emissionBudget.isExhausted()) {
       return nullptr;
-    }
-    for (const auto [index, output] : llvm::enumerate(program.outputs)) {
-      if (output.kind == frontend::OutputKind::Scalar) {
-        entry.setResultAttr(index,
-                            mqt::MQTDialect::OutputAttrHelper::getNameStr(),
-                            builder.getUnitAttr());
-      }
     }
     return moduleOp;
   }

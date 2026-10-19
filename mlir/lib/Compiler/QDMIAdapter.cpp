@@ -16,7 +16,7 @@
 #include "qdmi/QDMI.hpp"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -849,20 +849,6 @@ CompiledProgram::compile(CompilerInput&& program,
   }
   const auto& qir = std::get<QIRProgram>(*result);
   auto entryPoint = qir::getMainFunction(qir.module());
-  if (entryPoint && !entryPoint.isVarArg() &&
-      entryPoint.getNumArguments() == 0 &&
-      isa<LLVM::LLVMVoidType>(entryPoint.getFunctionType().getReturnType())) {
-    // A program without a return value completes with success status.
-    OpBuilder builder(qir.module().getContext());
-    entryPoint.setFunctionType(
-        LLVM::LLVMFunctionType::get(builder.getI64Type(), {}));
-    entryPoint.walk([&](LLVM::ReturnOp returnOp) {
-      builder.setInsertionPoint(returnOp);
-      auto zero = LLVM::ConstantOp::create(builder, returnOp.getLoc(),
-                                           builder.getI64IntegerAttr(0));
-      returnOp->setOperands(zero.getResult());
-    });
-  }
   if (!entryPoint || entryPoint.isVarArg() ||
       entryPoint.getNumArguments() != 0 ||
       !entryPoint.getFunctionType().getReturnType().isInteger(64)) {

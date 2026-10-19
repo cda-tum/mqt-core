@@ -43,6 +43,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstddef>
@@ -232,7 +233,7 @@ TEST_F(QTensorTest, AllocOpStaticTypeWithDynamicSizeOperandFailsVerification) {
 TEST_F(QTensorTest, DeallocOpAllocDeallocPairIsRemoved) {
   auto canonicalized = buildAndCanonicalize([](QCOProgramBuilder& b) {
     b.qtensorAlloc(3);
-    return b.intConstant(0);
+    return SmallVector<Value>{};
   });
   ASSERT_TRUE(canonicalized);
   EXPECT_TRUE(verify(*canonicalized).succeeded());

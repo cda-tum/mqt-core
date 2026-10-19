@@ -43,6 +43,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include <algorithm>
 #include <array>
@@ -1005,16 +1006,9 @@ TEST_P(OpenQASMTranslationTest, ProgramEquivalence) {
   printer.record(reference.get(), "Canonicalized Reference QC IR" + name);
   EXPECT_TRUE(verify(*reference).succeeded());
 
-  // Shared gate fixtures have no source names. Dedicated register-name and
-  // scalar-output tests check this metadata.
+  // Shared gate fixtures have no source names; dedicated tests check them.
   translated->walk([](Operation* op) {
     op->removeAttr(mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr());
-    if (auto function = dyn_cast<func::FuncOp>(op)) {
-      for (unsigned index = 0; index < function.getNumResults(); ++index) {
-        function.removeResultAttr(
-            index, mlir::mqt::MQTDialect::OutputAttrHelper::getNameStr());
-      }
-    }
   });
 
   ASSERT_TRUE(succeeded(convertQCToQCO(translated.get())));
