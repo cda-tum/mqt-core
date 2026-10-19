@@ -715,16 +715,8 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
   auto& executor = qdmi::dd::executor();
   const size_t perProgramLimit =
       std::max(size_t{1}, executor.limit / execution->programs.size());
-  const bool qir = format_ == QDMI_PROGRAM_FORMAT_QIRBASESTRING ||
-                   format_ == QDMI_PROGRAM_FORMAT_QIRBASEMODULE ||
-                   format_ == QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING ||
-                   format_ == QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE;
-  const size_t automatic = numShots_ == 0
-                               ? 1
-                               : std::clamp(numShots_ / (qir ? 32 : 256),
-                                            size_t{1}, qir ? size_t{32} : 8);
   const size_t desired = std::min({
-      maxWorkers_ == 0 ? automatic : maxWorkers_,
+      maxWorkers_ == 0 ? perProgramLimit : maxWorkers_,
       perProgramLimit,
       std::max(size_t{1}, numShots_),
   });
@@ -740,10 +732,11 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
           .shots = numShots_,
           .seed = seed_,
           .captureOutput = captureQIROutput_,
+          .maxWorkers = desired,
           .automaticWorkers = maxWorkers_ == 0,
       };
       executor.threads.async([pending = std::weak_ptr(execution), index,
-                              request, desired, &executor]() mutable {
+                              request, &executor]() mutable {
         executor.slots.acquire();
         size_t grant = 1;
         const llvm::scope_exit releaseSlots(
@@ -763,10 +756,6 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
           program.status = QDMI_JOB_STATUS_RUNNING;
           execution->status = QDMI_JOB_STATUS_RUNNING;
         }
-        while (grant < desired && executor.slots.try_acquire()) {
-          ++grant;
-        }
-        request.workerSlots = grant;
         auto& device = qdmi::dd::Device::get();
         device.increaseRunningJobs();
         bool reusable = false;
@@ -811,7 +800,15 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
             program.worker = worker;
           }
           qdmi::dd::WorkerResponse response;
-          reusable = worker && worker->execute(request, response);
+          reusable =
+              worker && worker->execute(request, response, [&](size_t desired) {
+                while (grant < desired && executor.slots.try_acquire()) {
+                  ++grant;
+                }
+                return grant;
+              });
+          executor.slots.release(static_cast<ptrdiff_t>(grant - 1));
+          grant = 1;
           if (reusable && response.succeeded &&
               response.shots.size() == request.shots) {
             result = std::make_unique<qdmi::dd::ProgramResult>();

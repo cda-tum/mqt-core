@@ -2305,7 +2305,7 @@ static FailureOr<std::map<std::string, size_t>>
 sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
                std::mt19937_64& rng, const PreparedState& prepared,
                const SamplingPlan& plan, std::vector<std::string>& ordered,
-               const DDExecutionOptions& options) {
+               const DDExecutionOptions& options, bool collectCounts) {
   struct ForFrame {
     scf::ForOp op;
     Block::iterator continuation;
@@ -2540,59 +2540,47 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
     return failure();
   }
   std::map<std::string, size_t> counts;
-  for (const auto& shot : ordered) {
-    ++counts[shot];
+  if (collectCounts) {
+    for (const auto& shot : ordered) {
+      ++counts[shot];
+    }
   }
   return counts;
 }
 
 static FailureOr<std::map<std::string, size_t>>
-sampleImpl(func::FuncOp func, const dd::VectorDD& in, dd::Package& dd,
-           size_t shots, std::mt19937_64& rng, const PreparedState& prepared,
+sampleImpl(func::FuncOp func, dd::Package& dd, size_t shots,
+           std::mt19937_64& rng, const PreparedState& prepared,
            std::vector<std::string>* shotResults,
-           std::optional<dd::VectorDD>* retainedState,
-           const DDExecutionOptions& options, bool forceDynamic = false,
-           bool* adaptiveFallback = nullptr) {
+           std::optional<dd::VectorDD>* retainedState, const SamplingPlan& plan,
+           const DDExecutionOptions& options, bool collectCounts,
+           bool forceDynamic = false, bool* adaptiveFallback = nullptr) {
+  const auto in = dd::makeZeroState(prepared.qubits.numQubits, dd);
   const auto inputGuard = llvm::scope_exit([&] { dd.decRef(in); });
   GateCache gateCache(dd);
-  auto plan = getSamplingPlan(func);
-  if (failed(plan)) {
-    return failure();
-  }
-
-  const size_t inputQubits =
-      in.isTerminal() ? 0U : static_cast<size_t>(in.p->v) + 1U;
-  if (inputQubits < prepared.qubits.numQubits) {
-    return func.emitError()
-           << "input state has " << inputQubits << " qubits but function uses "
-           << prepared.qubits.numQubits;
-  }
-
   std::map<std::string, size_t> counts;
-  if (shots == 0) {
-    return counts;
-  }
-
   const auto record = [&](const ClassicalEnv& classical,
                           std::string basis) -> LogicalResult {
-    auto outcome = encodeOutcome(plan->outputs, classical, std::move(basis));
+    auto outcome = encodeOutcome(plan.outputs, classical, std::move(basis));
     if (failed(outcome)) {
       return failure();
     }
-    ++counts[*outcome];
+    if (collectCounts) {
+      ++counts[*outcome];
+    }
     if (shotResults != nullptr) {
       shotResults->push_back(std::move(*outcome));
     }
     return success();
   };
 
-  if (!plan->dynamic && !forceDynamic) {
+  if (!plan.dynamic && !forceDynamic) {
     ClassicalEnv classical;
     DenseSet<dd::Qubit> measuredWires;
     Operation* deferredMeasurementUse = nullptr;
     dd.incRef(in);
     auto state = simulateImpl(func, in, dd, prepared, nullptr, options,
-                              &plan->deferredMeasurements, &classical,
+                              &plan.deferredMeasurements, &classical,
                               &measuredWires, &deferredMeasurementUse);
     if (succeeded(state)) {
       const auto guard = llvm::scope_exit([&] { dd.decRef(*state); });
@@ -2625,9 +2613,8 @@ sampleImpl(func::FuncOp func, const dd::VectorDD& in, dd::Package& dd,
       return failure();
     }
     const auto guard = llvm::scope_exit([&] { dd.decRef(*state); });
-    std::string basis = plan->outputs.empty()
-                            ? dd.measureAll(*state, false, rng)
-                            : std::string{};
+    std::string basis = plan.outputs.empty() ? dd.measureAll(*state, false, rng)
+                                             : std::string{};
     if (failed(record(classical, std::move(basis)))) {
       return failure();
     }
@@ -2635,11 +2622,13 @@ sampleImpl(func::FuncOp func, const dd::VectorDD& in, dd::Package& dd,
   return counts;
 }
 
-FailureOr<std::map<std::string, size_t>>
-sample(func::FuncOp func, size_t shots, uint64_t seed,
-       const DDArgumentBindings& argumentBindings,
-       std::vector<std::string>* shotResults, DDSamplingState* retainedState,
-       const DDExecutionOptions& options, size_t workers) {
+static FailureOr<std::map<std::string, size_t>>
+sampleProgram(func::FuncOp func, size_t shots, uint64_t seed,
+              const DDArgumentBindings& argumentBindings,
+              std::vector<std::string>* shotResults,
+              DDSamplingState* retainedState, const DDExecutionOptions& options,
+              size_t workers, bool collectCounts,
+              function_ref<size_t(size_t)> requestWorkers) {
   if (retainedState != nullptr) {
     *retainedState = {};
   }
@@ -2656,7 +2645,36 @@ sample(func::FuncOp func, size_t shots, uint64_t seed,
   if (failed(prepared)) {
     return failure();
   }
-  std::optional<dd::VectorDD> state;
+  auto plan = getSamplingPlan(func);
+  if (failed(plan)) {
+    return failure();
+  }
+  if (shots == 0) {
+    return std::map<std::string, size_t>{};
+  }
+  if (!plan->dynamic) {
+    bool adaptive = false;
+    std::optional<dd::VectorDD> state;
+    auto result =
+        sampleImpl(func, *dd, shots, rng, *prepared, shotResults,
+                   retainedState != nullptr ? &state : nullptr, *plan, options,
+                   collectCounts, /*forceDynamic=*/false, &adaptive);
+    if (failed(result) || !adaptive) {
+      if (succeeded(result) && state && retainedState != nullptr) {
+        retainedState->state = *state;
+        retainedState->dd = std::move(dd);
+      }
+      return result;
+    }
+  }
+  if (canBranchStructured(func)) {
+    // shortcut: Shared structured-branch evaluation corrupts concurrent
+    // shot groups; isolate its IR before enabling multiple workers.
+    std::vector<std::string> ordered;
+    return sampleBranches(func, *dd, shots, rng, *prepared, *plan,
+                          shotResults != nullptr ? *shotResults : ordered,
+                          options, collectCounts);
+  }
   if (workers == 0) {
     // Keep small jobs serial and bound repeated prefix work per package.
     workers = std::clamp(shots / 256, size_t{1}, size_t{8});
@@ -2665,125 +2683,106 @@ sample(func::FuncOp func, size_t shots, uint64_t seed,
   if (!func.getContext()->isMultithreadingEnabled()) {
     workers = 1;
   }
-  if (shots != 0) {
-    auto plan = getSamplingPlan(func);
-    if (failed(plan)) {
+  if (workers > 1) {
+    releaseSamplingWorkers(std::exchange(grant, 0));
+    grant = reserveSamplingWorkers(workers, shots);
+    workers = requestWorkers && grant > 1 ? requestWorkers(grant) : grant;
+    if (workers == 0 || workers > grant) {
+      return func.emitError()
+             << "sampling worker grant must be between 1 and " << grant;
+    }
+    releaseSamplingWorkers(grant - workers);
+    grant = workers;
+  }
+  if (workers == 1) {
+    return sampleImpl(func, *dd, shots, rng, *prepared, shotResults, nullptr,
+                      *plan, options, collectCounts, /*forceDynamic=*/true);
+  }
+  struct Worker {
+    std::unique_ptr<dd::Package> dd;
+    PreparedState prepared;
+    std::vector<std::string> shots;
+  };
+  std::vector<Worker> work;
+  work.reserve(workers);
+  work.push_back({
+      .dd = std::move(dd),
+      .prepared = std::move(*prepared),
+      .shots = {},
+  });
+  for (size_t i = 1; i < workers; ++i) {
+    auto package = std::make_unique<dd::Package>(0);
+    auto next = prepare(func, *package, argumentBindings);
+    if (failed(next)) {
       return failure();
     }
-    bool adaptive = plan->dynamic;
-    if (!adaptive) {
-      auto result =
-          sampleImpl(func, dd::makeZeroState(prepared->qubits.numQubits, *dd),
-                     *dd, shots, rng, *prepared, shotResults,
-                     retainedState != nullptr ? &state : nullptr, options,
-                     /*forceDynamic=*/false, &adaptive);
-      if (failed(result) || !adaptive) {
-        if (succeeded(result) && state && retainedState != nullptr) {
-          retainedState->state = *state;
-          retainedState->dd = std::move(dd);
-        }
-        return result;
+    work.push_back({
+        .dd = std::move(package),
+        .prepared = std::move(*next),
+        .shots = {},
+    });
+  }
+  std::vector<std::future<FailureOr<std::map<std::string, size_t>>>> tasks;
+  tasks.reserve(workers);
+  std::vector<uint64_t> workerSeeds(workers);
+  for (auto& workerSeed : workerSeeds) {
+    workerSeed = rng();
+  }
+  for (size_t i = 0; i < workers; ++i) {
+    tasks.push_back(std::async(std::launch::async, [&, i] {
+      auto& worker = work[i];
+      std::mt19937_64 workerRng(workerSeeds[i]);
+      const size_t count = (shots / workers) + (i < shots % workers);
+      if (shotResults != nullptr) {
+        worker.shots.reserve(count);
       }
+      return sampleImpl(func, *worker.dd, count, workerRng, worker.prepared,
+                        shotResults != nullptr ? &worker.shots : nullptr,
+                        nullptr, *plan, options, collectCounts,
+                        /*forceDynamic=*/true);
+    }));
+  }
+  std::map<std::string, size_t> counts;
+  bool allSucceeded = true;
+  for (size_t i = 0; i < workers; ++i) {
+    auto part = tasks[i].get();
+    if (failed(part)) {
+      allSucceeded = false;
+      continue;
     }
-    if (adaptive) {
-      const bool branch = canBranchStructured(func);
-      if (branch) {
-        // shortcut: Shared structured-branch evaluation corrupts concurrent
-        // shot groups; isolate its IR before enabling multiple workers.
-        workers = 1;
-      }
-      if (workers > 1) {
-        releaseSamplingWorkers(std::exchange(grant, 0));
-        grant = reserveSamplingWorkers(workers, shots);
-        workers = grant;
-      }
-      if (workers == 1) {
-        if (branch) {
-          std::vector<std::string> ordered;
-          auto counts = sampleBranches(func, *dd, shots, rng, *prepared, *plan,
-                                       ordered, options);
-          if (succeeded(counts) && shotResults != nullptr) {
-            *shotResults = std::move(ordered);
-          }
-          return counts;
-        }
-        return sampleImpl(func,
-                          dd::makeZeroState(prepared->qubits.numQubits, *dd),
-                          *dd, shots, rng, *prepared, shotResults, nullptr,
-                          options, /*forceDynamic=*/true);
-      }
-      struct Worker {
-        std::unique_ptr<dd::Package> dd;
-        PreparedState prepared;
-        std::vector<std::string> shots;
-      };
-      std::vector<Worker> work;
-      work.reserve(workers);
-      work.push_back({
-          .dd = std::move(dd),
-          .prepared = std::move(*prepared),
-          .shots = {},
-      });
-      for (size_t i = 1; i < workers; ++i) {
-        auto package = std::make_unique<dd::Package>(0);
-        auto next = prepare(func, *package, argumentBindings);
-        if (failed(next)) {
-          return failure();
-        }
-        work.push_back({
-            .dd = std::move(package),
-            .prepared = std::move(*next),
-            .shots = {},
-        });
-      }
-      std::vector<std::future<FailureOr<std::map<std::string, size_t>>>> tasks;
-      tasks.reserve(workers);
-      std::vector<uint64_t> workerSeeds(workers);
-      for (auto& workerSeed : workerSeeds) {
-        workerSeed = rng();
-      }
-      for (size_t i = 0; i < workers; ++i) {
-        tasks.push_back(std::async(std::launch::async, [&, i] {
-          auto& worker = work[i];
-          std::mt19937_64 workerRng(workerSeeds[i]);
-          const size_t count = (shots / workers) + (i < shots % workers);
-          return sampleImpl(
-              func,
-              dd::makeZeroState(worker.prepared.qubits.numQubits, *worker.dd),
-              *worker.dd, count, workerRng, worker.prepared,
-              shotResults != nullptr ? &worker.shots : nullptr, nullptr,
-              options, /*forceDynamic=*/true);
-        }));
-      }
-      std::map<std::string, size_t> counts;
-      bool allSucceeded = true;
-      for (size_t i = 0; i < workers; ++i) {
-        auto part = tasks[i].get();
-        if (failed(part)) {
-          allSucceeded = false;
-          continue;
-        }
-        for (const auto& [outcome, count] : *part) {
-          counts[outcome] += count;
-        }
-        if (shotResults != nullptr) {
-          shotResults->insert(shotResults->end(), work[i].shots.begin(),
-                              work[i].shots.end());
-        }
-      }
-      return allSucceeded ? FailureOr<std::map<std::string, size_t>>(counts)
-                          : FailureOr<std::map<std::string, size_t>>(failure());
+    for (const auto& [outcome, count] : *part) {
+      counts[outcome] += count;
+    }
+    if (shotResults != nullptr) {
+      shotResults->insert(shotResults->end(),
+                          std::make_move_iterator(work[i].shots.begin()),
+                          std::make_move_iterator(work[i].shots.end()));
     }
   }
-  auto counts =
-      sampleImpl(func, dd::makeZeroState(prepared->qubits.numQubits, *dd), *dd,
-                 shots, rng, *prepared, shotResults,
-                 retainedState != nullptr ? &state : nullptr, options);
-  if (succeeded(counts) && state && retainedState != nullptr) {
-    retainedState->state = *state;
-    retainedState->dd = std::move(dd);
+  if (!allSucceeded) {
+    return failure();
   }
   return counts;
+}
+
+FailureOr<std::map<std::string, size_t>>
+sample(func::FuncOp func, size_t shots, uint64_t seed,
+       const DDArgumentBindings& argumentBindings,
+       std::vector<std::string>* shotResults, DDSamplingState* retainedState,
+       const DDExecutionOptions& options, size_t workers) {
+  return sampleProgram(func, shots, seed, argumentBindings, shotResults,
+                       retainedState, options, workers, true, nullptr);
+}
+
+LogicalResult sampleShots(func::FuncOp func, size_t shots, uint64_t seed,
+                          std::vector<std::string>& shotResults,
+                          const DDArgumentBindings& argumentBindings,
+                          DDSamplingState* retainedState,
+                          const DDExecutionOptions& options, size_t workers,
+                          function_ref<size_t(size_t)> requestWorkers) {
+  return success(succeeded(sampleProgram(func, shots, seed, argumentBindings,
+                                         &shotResults, retainedState, options,
+                                         workers, false, requestWorkers)));
 }
 
 } // namespace mlir::qco

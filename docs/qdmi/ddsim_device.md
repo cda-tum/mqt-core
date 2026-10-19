@@ -105,14 +105,13 @@ retried.
 
 DDSIM executes programs concurrently in reusable worker processes. A shared LLVM
 thread pool and CPU-slot budget bound active simulation workers using physical
-cores and process affinity. The parent grants each worker process its shot
-worker allowance with each program request, including when a process is reused.
-An earlier single-program job can occupy all slots until it finishes. Terminal
-programs can temporarily reserve more slots than they use because the parent
-grants slots before the child classifies its program. Each program creates its
-own compiler, JIT, runtime, and DD state; results retain independent DD packages
-after workers become available again. DDSIM requires an LLVM build with
-threading enabled.
+cores and process affinity. Each program starts with one slot. After
+preparation, a worker requests extra slots only for parallel adaptive sampling;
+terminal and structured-branch sampling keep one slot. Extra slots return to the
+budget when the worker responds. An earlier adaptive program can occupy all
+slots until it finishes. Each program creates its own compiler, JIT, runtime,
+and DD state; results retain independent DD packages after workers become
+available again. DDSIM requires an LLVM build with threading enabled.
 
 One failing or cancelled program does not discard completed siblings. Cancelling
 a job stops its active workers and prevents its queued programs from running.

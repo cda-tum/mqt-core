@@ -18,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -148,4 +149,19 @@ sample(func::FuncOp func, size_t shots, uint64_t seed = 0,
        std::vector<std::string>* shotResults = nullptr,
        DDSamplingState* retainedState = nullptr,
        const DDExecutionOptions& options = {}, size_t workers = 0);
+
+/// Sample ordered outcomes without constructing a histogram.
+///
+/// Uses the same program, seed, output, and worker contracts as `sample`.
+/// With `requestWorkers`, the caller must already hold one external worker
+/// slot. The callback runs at most once, only for parallel adaptive sampling,
+/// and returns the total grant (including that slot), between one and the
+/// request. The caller releases the external grant after sampling returns.
+LogicalResult
+sampleShots(func::FuncOp func, size_t shots, uint64_t seed,
+            std::vector<std::string>& shotResults,
+            const DDArgumentBindings& argumentBindings = DDArgumentBindings(),
+            DDSamplingState* retainedState = nullptr,
+            const DDExecutionOptions& options = {}, size_t workers = 0,
+            function_ref<size_t(size_t)> requestWorkers = nullptr);
 } // namespace mlir::qco

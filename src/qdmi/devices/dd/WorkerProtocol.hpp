@@ -33,8 +33,15 @@ struct WorkerRequest {
   uint64_t shots = 0;
   std::optional<uint64_t> seed;
   bool captureOutput = false;
-  uint64_t workerSlots = 1;
+  uint64_t maxWorkers = 1;
   bool automaticWorkers = true;
+};
+/// One optional request/grant exchange before parallel sampling.
+///
+/// The worker asks for at most WorkerRequest::maxWorkers. The supervisor grants
+/// between one and that number, keeping one slot until the response arrives.
+struct WorkerSlots {
+  uint64_t count = 1;
 };
 struct WorkerResponse {
   bool succeeded = false;
@@ -52,6 +59,8 @@ bool writeFrame(llvm::raw_socket_stream& stream, llvm::StringRef bytes);
 bool readFrame(llvm::raw_socket_stream& stream, std::string& bytes);
 std::string encode(const WorkerRequest& request);
 std::string encode(const WorkerResponse& response);
+std::string encode(WorkerSlots slots);
 bool decode(llvm::StringRef bytes, WorkerRequest& request);
 bool decode(llvm::StringRef bytes, WorkerResponse& response);
+bool decode(llvm::StringRef bytes, WorkerSlots& slots);
 } // namespace qdmi::dd
