@@ -800,6 +800,8 @@ module {
     %value = arith.constant 42 : i64
     %result = func.call @reset(%true, %q, %value)
         : (i1, !qc.qubit, i64) -> i1
+    %next = func.call @reset(%result, %q, %value)
+        : (i1, !qc.qubit, i64) -> i1
     memref.dealloc %reg : memref<1x!qc.qubit>
     return
   }
@@ -812,13 +814,14 @@ module {
   ASSERT_TRUE(succeeded(runQCToQCOConversion(*moduleOp)));
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
   EXPECT_TRUE(succeeded(qco::verifyLinearity(*moduleOp)));
-  auto call = *mlir::mqt::getEntryPoint(*moduleOp)
-                   .getBody()
-                   .getOps<func::CallOp>()
-                   .begin();
+  auto calls = llvm::to_vector(
+      mlir::mqt::getEntryPoint(*moduleOp).getOps<func::CallOp>());
+  ASSERT_EQ(calls.size(), 2U);
+  auto call = calls.front();
   ASSERT_EQ(call.getNumOperands(), 3U);
   EXPECT_TRUE(isa<qco::QubitType>(call.getOperand(1).getType()));
   ASSERT_EQ(call.getNumResults(), 2U);
+  EXPECT_EQ(calls.back().getOperand(0), call.getResult(0));
   EXPECT_TRUE(isa<qco::QubitType>(call.getResult(1).getType()));
   EXPECT_TRUE(call.getOperand(1).getDefiningOp<qtensor::ExtractOp>());
   ASSERT_TRUE(call.getResult(1).hasOneUse());
@@ -1617,33 +1620,40 @@ module {
   EXPECT_TRUE(sawExpectedDiagnostic);
 }
 
-TEST_F(QCToQCORegressionTest, RejectsRegisterAliasingExposedByIndexFolding) {
-  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
-    module {
-      func.func @main() attributes {mqt.entry_point} {
-        %reg = memref.alloc() : memref<2x!qc.qubit>
-        %zero = arith.constant 0 : index
-        %one = arith.constant 1 : index
-        %index = arith.addi %zero, %one : index
-        %q0 = memref.load %reg[%index] : memref<2x!qc.qubit>
-        %q1 = memref.load %reg[%one] : memref<2x!qc.qubit>
-        qc.swap %q0, %q1 : !qc.qubit, !qc.qubit
-        memref.dealloc %reg : memref<2x!qc.qubit>
-        return
-      }
-    })mlir",
-                                              &context);
-  ASSERT_TRUE(moduleOp);
-  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+TEST_F(QCToQCORegressionTest, RejectsRegisterAliasingExposedByNormalization) {
+  for (const auto* indices : {
+           "%lhs = arith.addi %one, %one : index\n"
+           "%rhs = arith.constant 2 : index",
+           "%lhs = arith.addi %i, %one : index\n"
+           "%rhs = arith.addi %i, %one : index",
+       }) {
+    SCOPED_TRACE(indices);
+    const auto source = std::string(R"mlir(
+      module {
+        func.func @main(%i: index) attributes {mqt.entry_point} {
+          %reg = memref.alloc() : memref<4x!qc.qubit>
+          %one = arith.constant 1 : index
+    )mlir") + indices + R"mlir(
+          %q0 = memref.load %reg[%lhs] : memref<4x!qc.qubit>
+          %q1 = memref.load %reg[%rhs] : memref<4x!qc.qubit>
+          qc.swap %q0, %q1 : !qc.qubit, !qc.qubit
+          memref.dealloc %reg : memref<4x!qc.qubit>
+          return
+        }
+      })mlir";
+    auto moduleOp = parseSourceString<ModuleOp>(source, &context);
+    ASSERT_TRUE(moduleOp);
+    ASSERT_TRUE(succeeded(verify(*moduleOp)));
 
-  bool sawExpectedDiagnostic = false;
-  ScopedDiagnosticHandler handler(&context, [&](Diagnostic& diagnostic) {
-    sawExpectedDiagnostic |=
-        StringRef(diagnostic.str()).contains("distinct qubit operands");
-    return success();
-  });
-  EXPECT_TRUE(failed(runQCToQCOConversion(*moduleOp)));
-  EXPECT_TRUE(sawExpectedDiagnostic);
+    bool sawExpectedDiagnostic = false;
+    ScopedDiagnosticHandler handler(&context, [&](Diagnostic& diagnostic) {
+      sawExpectedDiagnostic |=
+          StringRef(diagnostic.str()).contains("distinct qubit operands");
+      return success();
+    });
+    EXPECT_TRUE(failed(runQCToQCOConversion(*moduleOp)));
+    EXPECT_TRUE(sawExpectedDiagnostic);
+  }
 }
 
 TEST_P(QCToQCOTest, ProgramConversion) {

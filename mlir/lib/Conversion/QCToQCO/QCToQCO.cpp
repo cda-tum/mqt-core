@@ -392,18 +392,25 @@ static void commitQubits(LoweringState& state, Operation* anchor,
 }
 
 /// Hoist static qubit references and let CSE coalesce them.
-[[nodiscard]] static LogicalResult normalizeStaticQubits(ModuleOp moduleOp) {
+[[nodiscard]] static LogicalResult normalizeStaticQubits(ModuleOp moduleOp,
+                                                         bool& changed) {
   RewritePatternSet patterns(moduleOp.getContext());
   qc::StaticOp::getCanonicalizationPatterns(patterns, moduleOp.getContext());
   // Normalization needs folding and static-qubit hoisting, not CFG cleanup.
   GreedyRewriteConfig config;
   config.setRegionSimplificationLevel(GreedySimplifyRegionLevel::Disabled);
-  if (failed(applyPatternsGreedily(moduleOp, std::move(patterns), config))) {
+  // Full CSE must report constant replacements before reusing register
+  // analysis.
+  config.enableConstantCSE(false);
+  if (failed(applyPatternsGreedily(moduleOp, std::move(patterns), config,
+                                   &changed))) {
     return failure();
   }
   IRRewriter rewriter(moduleOp.getContext());
   DominanceInfo dominance(moduleOp);
-  eliminateCommonSubExpressions(rewriter, dominance, moduleOp);
+  bool cseChanged = false;
+  eliminateCommonSubExpressions(rewriter, dominance, moduleOp, &cseChanged);
+  changed |= cseChanged;
   return success();
 }
 
@@ -676,18 +683,12 @@ collectRegisterAccesses(Operation* root, LoweringState& state) {
   }
 
   const auto distinctResult = root->walk([&](Operation* operation) {
-    SmallVector<Value> operationQubits;
-    if (auto unitary = dyn_cast<qc::UnitaryOpInterface>(operation)) {
-      llvm::append_range(operationQubits, unitary.getQubits());
-    } else if (auto call = dyn_cast<func::CallOp>(operation)) {
-      for (auto operand : call.getOperands()) {
-        if (isa<qc::QubitType>(operand.getType())) {
-          operationQubits.emplace_back(operand);
-        }
-      }
-    }
+    ValueRange operands;
     DenseSet<RegisterId> borrowedRegisters;
-    if (auto call = dyn_cast<func::CallOp>(operation)) {
+    if (auto unitary = dyn_cast<qc::UnitaryOpInterface>(operation)) {
+      operands = unitary.getQubits();
+    } else if (auto call = dyn_cast<func::CallOp>(operation)) {
+      operands = call.getOperands();
       for (auto operand : call.getOperands()) {
         if (isQubitMemrefType(operand.getType()) &&
             !borrowedRegisters.insert(lookupRegisterId(state, operand))
@@ -698,9 +699,16 @@ collectRegisterAccesses(Operation* root, LoweringState& state) {
       }
     }
 
+    if (operands.size() < 2 && borrowedRegisters.empty()) {
+      return WalkResult::advance();
+    }
+
     llvm::SmallDenseSet<Value, 4> qubits;
     DenseMap<RegisterId, SeenRegisterIndices> registerIndices;
-    for (auto qubit : operationQubits) {
+    for (auto qubit : operands) {
+      if (!isa<qc::QubitType>(qubit.getType())) {
+        continue;
+      }
       if (!qubits.insert(qubit).second) {
         operation->emitOpError("requires distinct qubit operands");
         return WalkResult::interrupt();
@@ -1030,6 +1038,9 @@ struct ConvertFuncCallOp final : LoweringPattern<func::CallOp> {
       if (!isa<qc::QubitType>(source.getType())) {
         rewriter.replaceAllUsesWith(source, result);
       }
+    }
+    if (llvm::none_of(op.getResultTypes(), isQCType)) {
+      rewriter.eraseOp(op);
     }
     return success();
   }
@@ -1924,10 +1935,15 @@ static LogicalResult lowerToQCO(ModuleOp moduleOp) {
   const bool needsNormalization =
       !state.registerIds.empty() || !staticsAlreadyNormalized(moduleOp);
   if (needsNormalization) {
-    state = LoweringState();
-    if (failed(normalizeStaticQubits(moduleOp)) ||
-        failed(collectRegisterAccesses(moduleOp, state))) {
+    bool changed = false;
+    if (failed(normalizeStaticQubits(moduleOp, changed))) {
       return failure();
+    }
+    if (changed) {
+      state = LoweringState();
+      if (failed(collectRegisterAccesses(moduleOp, state))) {
+        return failure();
+      }
     }
   }
   collectStructuredCaptures(moduleOp, state);
@@ -1994,9 +2010,11 @@ static LogicalResult lowerToQCO(ModuleOp moduleOp) {
       }
     }
     if (isa<func::CallOp>(operation)) {
-      required = llvm::any_of(operation->getOperandTypes(), isQCType) ||
-                 llvm::any_of(operation->getResultTypes(), isQCType);
-      if (required) {
+      const bool hasQCResults =
+          llvm::any_of(operation->getResultTypes(), isQCType);
+      required =
+          hasQCResults || llvm::any_of(operation->getOperandTypes(), isQCType);
+      if (hasQCResults) {
         sources.push_back(operation);
       }
     }

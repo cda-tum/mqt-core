@@ -307,9 +307,7 @@ LogicalResult mlir::qco::collectWireOrigins(Operation* root,
       origins[insert.getResult()] = origin(insert.getDest());
     } else if (auto call = dyn_cast<func::CallOp>(op)) {
       auto arguments = getQuantumArgumentIndices(call.getOperandTypes());
-      if (call.getNumResults() >= arguments.size() &&
-          SymbolTable::lookupNearestSymbolFrom<func::FuncOp>(
-              call, call.getCalleeAttr())) {
+      if (call.getNumResults() >= arguments.size()) {
         for (auto [argument, result] : llvm::zip_equal(
                  arguments, call.getResults().take_back(arguments.size()))) {
           auto input = call.getOperand(argument);
