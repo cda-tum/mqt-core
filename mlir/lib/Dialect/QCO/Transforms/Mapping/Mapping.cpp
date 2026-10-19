@@ -720,7 +720,7 @@ private:
     SmallVector<size_t, 8> offsets_ = {0};
   };
 
-  /// Interpret the horizon as a serial sequence of gates.
+  /// Route one ready interaction, preferring future endpoint reuse.
   struct SerialPolicy {
     explicit SerialPolicy(const Horizon& horizon,
                           const Layout<QubitIndex>& layout,
@@ -755,7 +755,7 @@ private:
     [[nodiscard]] QubitIndexPair objective() const { return objective_; }
 
   private:
-    /// Select future endpoint reuse per deferred front-layer interaction.
+    /// Select the ready interaction with the most future endpoint reuse.
     [[nodiscard]] QubitIndexPair findObjective() const {
       auto front = horizon_->get(0);
       if (front.size() == 1) {
@@ -763,8 +763,7 @@ private:
       }
       float mostDemand = 0;
       QubitIndexPair obj = front.front();
-      // Require proportionally more reuse to bypass earlier ready interactions.
-      for (auto [position, curr] : enumerate(front)) {
+      for (const auto& curr : front) {
         size_t demand = 0;
         for (size_t i = 1; i < horizon_->nlayers(); ++i) {
           demand += count_if(horizon_->get(i), [&curr](const auto& next) {
@@ -772,8 +771,7 @@ private:
                    next.second == curr.first || next.second == curr.second;
           });
         }
-        const auto score =
-            static_cast<float>(demand) / static_cast<float>(position + 1);
+        const auto score = static_cast<float>(demand);
         if (score > mostDemand) {
           obj = curr;
           mostDemand = score;
@@ -827,8 +825,7 @@ private:
       parent = nextParent;
     }
 
-    /// Return true, if the current SWAP sequence makes all gates in the front
-    /// executable.
+    /// Return true if the fixed objective pair is adjacent in this layout.
     [[nodiscard]] bool isGoal(const QubitIndexPair& front,
                               const CompilerTarget& target) const {
       const auto [hw0, hw1] =

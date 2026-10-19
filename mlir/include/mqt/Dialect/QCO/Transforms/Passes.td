@@ -217,13 +217,16 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     `1 + nlookahead` interactions, grouped by dependency layer. Traversal order
     depends on physical wire positions; it is not a global program-order rank.
 
-    Each search fixes one objective from the front layer. For each candidate,
+    The serial Raw-Demand policy fixes one objective from the front layer. For each candidate,
     count later horizon interactions that reuse either endpoint, counting an
-    interaction only once. Divide this demand by the candidate's one-based
-    front position. The largest score wins; ties retain the earlier candidate.
-    This requires more reuse to bypass earlier ready interactions. The objective
-    is fixed during the search, which ends when that pair becomes adjacent;
-    it need not make the entire front layer executable.
+    interaction only once. The largest demand wins; ties retain the earlier
+    candidate in traversal order. There is no front-position penalty or distance
+    factor in this objective score. Endpoint reuse is a heuristic preference,
+    not an estimate of time or native gate cost. If all demands are zero, the
+    first candidate wins.
+    The objective is fixed during the search. Expansion considers target edges
+    touching either objective endpoint, and the search ends when that pair
+    becomes adjacent; it need not make the entire front layer executable.
 
     The search priority is `f(n) = g(n) + h(n)`, where:
 
@@ -236,8 +239,12 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
       `weight(i) = lambda / (lambda + (1 - lambda) * i)`.
 
     Default `lambda = 0.5` gives layer weights `1, 1/2, 1/3, ...`, including
-    empty layers. Preserve per-interaction Float accumulation in horizon order:
-    regrouping additions can change queue ties and routing decisions. Without
+    empty layers. `lambda = 0` ignores later layers; `lambda = 1` weights all
+    layers equally. The implementation sums distances within each layer before
+    multiplying by its weight. Floating-point ties can affect routing decisions.
+    This sum is not an admissible lower bound for reaching the fixed objective:
+    a SWAP can help several interactions, and other horizon interactions can
+    still contribute cost when the objective is already adjacent. Without
     native-cost guidance, `swap_cost = 1` and accumulated cost is SWAP depth.
 
     When a native-cost estimate is available and standalone SWAP cost is uniform
@@ -259,8 +266,8 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     byte budget for the nodes and their qubit layouts (256 MiB by default).
     At least the root node is retained; zero disables node expansion.
     The pass stops allocating nodes at the limit, checks the remaining queue,
-    and, if no solution is queued, completes the route with SWAPs that reduce
-    the fixed objective pair's distance. This always makes progress on a connected
+    and, if no solution is queued, uses a shortest path from the search's initial
+    layout to make the fixed objective pair adjacent. This always makes progress on a connected
     target. Changing the budget can change the selected initial layout and
     final gate count or depth; more memory does not guarantee fewer gates.
     Queue, visited-map, allocator, and linear fallback workspace overhead are
@@ -292,8 +299,11 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     CPU affinity into account, with a minimum of one. Disabling multithreading
     runs the same trials sequentially; it does not reduce the trial count.
     If compiled with multi-threading on, these trials will be executed in parallel.
-    Set both `ntrials` and `seed` explicitly for reproducible results across
-    machines with different CPU counts.
+    Set both `ntrials` and `seed` explicitly to control trial-count and random-seed
+    variation across machines. Compiler-wide seed settings can also affect other
+    passes; an explicit compiler seed is not equivalent to leaving pass defaults
+    unset. A fixed seed does not guarantee identical routing across compiler
+    versions or floating-point implementations.
 
     For programs with two-qubit interactions, the pass also constructs an
     interaction-weighted greedy layout. Statically counted scalar-qubit
@@ -339,7 +349,7 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
                  Option<"alpha", "alpha", "float", "1.0F",
                         "The alpha cost factor. Must be finite and > 0.">,
                  Option<"lambda", "lambda", "float", "0.5F",
-                        "The lambda factor in the cost function.">,
+                        "The lookahead layer-weight factor, in [0, 1].">,
                  Option<"niterations", "niterations", "std::size_t", "1",
                         "The number of forwards and backwards traversal to "
                         "improve the initial layout. Must be >= 0.">,
