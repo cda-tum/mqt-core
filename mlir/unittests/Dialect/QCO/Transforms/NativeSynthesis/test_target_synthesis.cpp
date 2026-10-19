@@ -3509,7 +3509,7 @@ TEST_F(TargetSynthesisTest,
        TargetNativeSynthesisHandlesClassicalScopeGlobalPhases) {
   auto original = mlir::parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @main(%condition: i1, %theta: f64, %bound: index) -> !qco.qubit attributes {mqt.entry_point} {
+      func.func @main(%condition: i1, %theta: f64, %bound: index) attributes {mqt.entry_point} {
         %c0 = arith.constant 0 : index
         %c1 = arith.constant 1 : index
         %q = qco.static 0 : !qco.qubit
@@ -3542,7 +3542,8 @@ TEST_F(TargetSynthesisTest,
         default args(%a = %b) {
           qco.yield %a : !qco.qubit
         }
-        return %s : !qco.qubit
+        qco.sink %s : !qco.qubit
+        return
       }
     }
   )mlir",
@@ -3578,7 +3579,7 @@ TEST_F(TargetSynthesisTest,
        TargetNativeSynthesisPreservesUnextractedModifierPhase) {
   auto moduleOp = mlir::parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @main(%exponent: f64) -> !qco.qubit attributes {mqt.entry_point} {
+      func.func @main(%exponent: f64) attributes {mqt.entry_point} {
         %theta = arith.constant 0.371 : f64
         %q = qco.static 0 : !qco.qubit
         %p = qco.pow(%exponent) (%a = %q) {
@@ -3586,7 +3587,8 @@ TEST_F(TargetSynthesisTest,
           qco.gphase(%theta)
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
-        return %p : !qco.qubit
+        qco.sink %p : !qco.qubit
+        return
       }
     }
   )mlir",

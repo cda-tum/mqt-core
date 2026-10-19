@@ -1126,8 +1126,7 @@ TEST_F(QCToQCORegressionTest, RoundTripsUnitaryCallInNestedRegions) {
 TEST_F(QCToQCORegressionTest, ConvertsQubitFunctionArgumentsToTrailingResults) {
   constexpr llvm::StringLiteral source = R"mlir(
 module {
-  func.func @main(%q: !qc.qubit)
-      attributes {mqt.entry_point} {
+  func.func private @flip(%q: !qc.qubit) {
     qc.x %q : !qc.qubit
     return
   }
@@ -1139,7 +1138,7 @@ module {
   ASSERT_TRUE(succeeded(runQCToQCOConversion(*moduleOp)));
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
 
-  auto function = *moduleOp->getOps<func::FuncOp>().begin();
+  auto function = moduleOp->lookupSymbol<func::FuncOp>("flip");
   ASSERT_EQ(function.getNumArguments(), 1U);
   EXPECT_TRUE(isa<qco::QubitType>(function.getArgument(0).getType()));
   ASSERT_EQ(function.getNumResults(), 1U);
@@ -1162,7 +1161,7 @@ module {
     %flag = arith.constant true
     return %flag : i1
   }
-  func.func @main(%q: !qc.qubit) -> i1 attributes {mqt.entry_point} {
+  func.func private @caller(%q: !qc.qubit) -> i1 {
     qc.call @flip(%q) {
         arg_attrs = [{tag = "unitary-input"}], tag = "unitary-call"
       }
@@ -1221,7 +1220,7 @@ module {
               "unitary-call");
   });
   EXPECT_EQ(qcCalls, 1U);
-  auto genericCall = *mlir::mqt::getEntryPoint(*moduleOp)
+  auto genericCall = *moduleOp->lookupSymbol<func::FuncOp>("caller")
                           .getBody()
                           .getOps<func::CallOp>()
                           .begin();

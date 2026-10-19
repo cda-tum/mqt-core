@@ -104,23 +104,10 @@ public:
 
   /// Initialize the builder with an entry function that returns no values.
   ///
-  /// Creates a main function with an `mqt.entry_point` attribute. Must be
-  /// called before adding operations.
+  /// Creates a main function with an `mqt.entry_point` attribute. Finalization
+  /// derives its result types from the returned program data. Must be called
+  /// before adding operations.
   void initialize();
-
-  /// Initialize the builder and prepare for program construction with specified
-  /// return types.
-  ///
-  /// @param returnTypes The return types for the main function
-  ///
-  /// Creates a main function with an `mqt.entry_point` attribute. Must be
-  /// called before adding operations.
-  void initialize(TypeRange returnTypes);
-
-  /// Modify the return types of the main function after initialization.
-  ///
-  /// @param returnTypes The new return types for the main function
-  void retype(TypeRange returnTypes);
 
   //===--------------------------------------------------------------------===//
   // Functions
@@ -1315,32 +1302,17 @@ public:
   // Finalization
   //===--------------------------------------------------------------------===//
 
-  /// Finalize the program and return the constructed module
+  /// Finalize the program and transfer the constructed module to the caller.
   ///
-  /// Automatically deallocates all remaining allocated qubits, adds a return
-  /// statement without values, and transfers ownership of the module to the
-  /// caller. The builder should not be used after calling this method.
+  /// Deallocates owned qubits and registers and adds the entry return.
+  /// The return values determine the entry function result types; an empty
+  /// range produces a void entry. Quantum values cannot be returned by an
+  /// entry function. QIR conversion generates its own execution status.
+  /// The builder must not be used after finalization.
   ///
-  /// @return OwningOpRef containing the constructed quantum program module
-  OwningOpRef<ModuleOp> finalize();
-
-  /// Finalize the program with the given return values and return the
-  /// constructed module
-  ///
-  /// @param returnValues Values representing the return values of the main
-  /// function.
-  ///
-  /// Deallocates owned qubits and registers except those returned directly,
-  /// adds a return statement with the given return values, and
-  /// transfers ownership of the module to the caller. The builder should not be
-  /// used after calling this method.
-  ///
-  /// The return values must have the types indicated by the function signature
-  /// of the main function, set by `initialize(returnTypes)` or `retype()`.
-  /// These values are program outputs; QIR conversion generates its own status.
-  ///
-  /// @return OwningOpRef containing the constructed quantum program module
-  OwningOpRef<ModuleOp> finalize(ValueRange returnValues);
+  /// @param returnValues Classical program outputs, if any.
+  /// @return The constructed quantum program module.
+  OwningOpRef<ModuleOp> finalize(ValueRange returnValues = {});
 
   /// Convenience method for building quantum programs.
   ///

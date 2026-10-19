@@ -236,7 +236,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsReorderedOverlappingOutputStores) {
   auto one = builder.measure(q1);
   builder.storeClassicalBit(one, reg, 0);
   builder.storeClassicalBit(zero, reg, 0);
-  builder.retype(reg.getType());
+
   auto module = builder.finalize(reg);
   ASSERT_TRUE(module);
   expectConversionFailure(*module, "cannot fuse this measurement/store pair");
@@ -270,7 +270,7 @@ static void expectMeasurementOrderRejected(
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto result = buildProgram(builder);
-  builder.retype(result.getType());
+
   auto moduleOp = builder.finalize(result);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -405,7 +405,7 @@ TEST_F(QCToQIRBaseNativeTest, RegisterLoadsPreserveQubitIdentity) {
   builder.x(qubits[0]);
   auto result = builder.measure(
       builder.loadQubit(qubits.value, builder.indexConstant(0)));
-  builder.retype(result.getType());
+
   auto moduleOp = builder.finalize(result);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -431,7 +431,7 @@ TEST_F(QCToQIRBaseNativeTest, AllowsGateAfterMeasurementOnIndependentQubit) {
   auto result = builder.measure(qubits[0]);
   builder.x(qubits[1]);
   builder.mcrx(0.25, {qubits[1], qubits[2], qubits[3]}, qubits[4]);
-  builder.retype(result.getType());
+
   auto moduleOp = builder.finalize(result);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -559,7 +559,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedEntryOutputs) {
       builder.measure(second, reg, 0);
       outputs = {bit, reg};
     }
-    builder.retype(TypeRange(outputs));
+
     auto module = builder.finalize(outputs);
     ASSERT_TRUE(module);
     ASSERT_TRUE(succeeded(verify(*module)));
@@ -589,7 +589,7 @@ TEST_F(QCToQIRBaseNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
       registers[2], registers[1], bits[3], bits[0],
       registers[0], bits[1],      bits[3], registers[1],
   };
-  builder.retype(TypeRange(outputs));
+
   auto module = builder.finalize(outputs);
   ASSERT_TRUE(module);
   ASSERT_TRUE(succeeded(verify(*module)));
@@ -646,7 +646,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsNonMeasurementClassicalStore) {
   builder.initialize();
   auto c = builder.allocClassicalBitRegister(1);
   builder.storeClassicalBit(builder.boolConstant(true), c, 0);
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 
@@ -658,7 +658,7 @@ TEST_F(QCToQIRBaseNativeTest, AcceptsZeroInitializedClassicalRegister) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto c = builder.allocClassicalBitRegister(1);
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 
@@ -673,7 +673,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsNonMeasurementStoreAfterMeasurement) {
   auto c = builder.allocClassicalBitRegister(1);
   builder.measure(q, c, 0);
   builder.storeClassicalBit(builder.boolConstant(false), c, 0);
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 
@@ -686,7 +686,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedIntegerMemref) {
   builder.initialize();
   const auto type = MemRefType::get({1}, builder.getI8Type());
   auto memref = memref::AllocOp::create(builder, type).getResult();
-  builder.retype(type);
+
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 
@@ -702,7 +702,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsDynamicClassicalRegisterIndex) {
   auto index = arith::IndexCastOp::create(builder, builder.getIndexType(),
                                           unknown.getResult());
   builder.measure(q, c, index.getResult());
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 

@@ -74,8 +74,8 @@ def MQTDialect : Dialect {
     required by those contracts in the explicit attributes above.
 
     `mqt.entry_point` marks the single public, defined `func.func` program entry
-    in a module. QC/QCO entry results are program data; an entry with no outputs
-    returns no values. QIR conversion records supported bit outputs and generates
+    in a module. QC/QCO entries cannot return quantum values. Their classical
+    results are program data; an entry with no outputs returns no values. QIR conversion records supported bit outputs and generates
     an `i64` zero execution status. It rejects other scalar program outputs.
     Dynamic quantum allocations (`qc.alloc`, `qco.alloc`,
     qubit `memref.alloc`, and `qtensor.alloc`) must appear directly in its

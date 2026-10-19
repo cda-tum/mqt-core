@@ -559,7 +559,7 @@ bit[2] result = measure data;
     restored = QCProgram.from_qiskit(circuit)
     assert all(key.startswith("11") for key in sample(restored, shots=8, seed=1))
     emitted = program.to_openqasm3().source
-    assert emitted.index("for ") < emitted.index("bit[1]")
+    assert emitted.index("for ") < emitted.index("\n  bit ")
     assert sample(QCProgram.from_openqasm_str(emitted), shots=8, seed=1) == {"11": 8}
 
 
@@ -4770,7 +4770,7 @@ result = measure flag;
         assert [register.name for register in restored.qregs] == ["flag"]
         assert "syndrome" in [register.name for register in restored.cregs]
         assert "qubit flag;" in emitted
-        assert "bit[1] syndrome;" in emitted
+    assert emitted.index("for ") < emitted.index("\n  bit ")
     assert "output bit[1] result;" in emitted
     assert sample(QCProgram.from_openqasm_str(emitted), shots=8, seed=1) == {"0": 8}
 

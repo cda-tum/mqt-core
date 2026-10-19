@@ -523,7 +523,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, ReleasesResultArraysInAllocationOrder) {
   for (size_t i = 0; i < 12; ++i) {
     registers.push_back(builder.allocClassicalBitRegister(1));
   }
-  builder.retype(TypeRange(registers));
+
   auto moduleOp = builder.finalize(registers);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -851,7 +851,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsMultipleRegisterDestinations) {
   auto c = builder.allocClassicalBitRegister(2);
   auto result = builder.measure(q, c, 0);
   builder.storeClassicalBit(result, c, 1);
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
   ASSERT_TRUE(succeeded(verify(*module)));
@@ -914,7 +914,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedEntryOutputs) {
       builder.measure(second, reg, 0);
       outputs = {bit, reg};
     }
-    builder.retype(TypeRange(outputs));
+
     auto module = builder.finalize(outputs);
     ASSERT_TRUE(module);
     ASSERT_TRUE(succeeded(verify(*module)));
@@ -944,7 +944,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
       registers[2], registers[1], bits[3], bits[0],
       registers[0], bits[1],      bits[3], registers[1],
   };
-  builder.retype(TypeRange(outputs));
+
   auto module = builder.finalize(outputs);
   ASSERT_TRUE(module);
   ASSERT_TRUE(succeeded(verify(*module)));
@@ -1050,7 +1050,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RecordsComputedClassicalWrites) {
     } else {
       builder.storeClassicalBit(builder.boolConstant(true), reg, 0);
     }
-    builder.retype(reg.getType());
+
     auto moduleOp = builder.finalize(reg);
     ASSERT_TRUE(moduleOp);
     ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -1068,7 +1068,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, AcceptsZeroInitializedClassicalRegister) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto c = builder.allocClassicalBitRegister(1);
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 
@@ -1175,7 +1175,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RecordsComputedStoreAfterMeasurement) {
   auto output = builder.measure(q);
   auto combined = arith::XOrIOp::create(builder, first, second);
   builder.storeClassicalBit(combined, c, 0);
-  builder.retype(TypeRange{c.getType(), output.getType()});
+
   auto module = builder.finalize(ValueRange{c, output});
   ASSERT_TRUE(module);
 
@@ -1224,7 +1224,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedIntegerMemref) {
   builder.initialize();
   const auto type = MemRefType::get({1}, builder.getI8Type());
   auto memref = memref::AllocOp::create(builder, type).getResult();
-  builder.retype(type);
+
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 

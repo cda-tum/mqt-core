@@ -150,6 +150,25 @@ static std::optional<Value> findKnownLoadValue(LoadOp load) {
 }
 
 namespace {
+struct EraseWriteOnlyRegister final : OpRewritePattern<AllocOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AllocOp alloc,
+                                PatternRewriter& rewriter) const override {
+    if (!llvm::all_of(alloc.getResult().getUsers(), [](Operation* user) {
+          return isa<StoreOp, WriteOp>(user);
+        })) {
+      return failure();
+    }
+    for (auto* user :
+         llvm::make_early_inc_range(alloc.getResult().getUsers())) {
+      rewriter.eraseOp(user);
+    }
+    rewriter.eraseOp(alloc);
+    return success();
+  }
+};
+
 struct ForwardKnownLoad final : OpRewritePattern<LoadOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -247,6 +266,11 @@ LogicalResult WriteOp::verify() {
 void mlir::cbit::populateCBitDecompositionPatterns(
     RewritePatternSet& patterns) {
   patterns.add<DecomposeRead, DecomposeWrite>(patterns.getContext());
+}
+
+void AllocOp::getCanonicalizationPatterns(RewritePatternSet& results,
+                                          MLIRContext* context) {
+  results.add<EraseWriteOnlyRegister>(context);
 }
 
 void LoadOp::getCanonicalizationPatterns(RewritePatternSet& results,

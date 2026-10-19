@@ -517,8 +517,10 @@ static DenseSet<Operation*> findStoreFusionCandidates(Block* block) {
       }
       continue;
     }
-    // These unscoped quantum effects cannot access CBit storage.
-    if (isa<qc::AllocOp, qc::DeallocOp, qc::GPhaseOp>(operation)) {
+    // Fresh allocations and quantum effects cannot access existing CBit
+    // storage.
+    if (isa<cbit::AllocOp, qc::AllocOp, qc::DeallocOp, qc::GPhaseOp>(
+            operation)) {
       continue;
     }
     const auto effects = getEffectsRecursively(&operation);
@@ -598,12 +600,8 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   });
 
   funcOp.walk([&](cbit::AllocOp allocOp) {
-    const auto [it, inserted] = state.cregIndices.try_emplace(
-        allocOp.getOperation(), state.cregs.size());
-    if (inserted) {
-      state.cregs.emplace_back();
-    }
-    auto& reg = state.cregs[it->second];
+    state.cregIndices[allocOp.getOperation()] = state.cregs.size();
+    auto& reg = state.cregs.emplace_back();
     reg.record = false;
     if (const auto name = allocOp->getAttrOfType<StringAttr>(
             mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
@@ -775,8 +773,13 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
                                            funcOp.getFunctionType().getInputs(),
                                            {zero.getType()}));
   for (auto storeOp : consumedStores) {
+    auto measureOp = storeOp.getValue().getDefiningOp<MeasureOp>();
+    auto allocOp = storeOp.getReg().getDefiningOp<cbit::AllocOp>();
+    if (allocOp->getBlock() == measureOp->getBlock() &&
+        measureOp->isBeforeInBlock(allocOp)) {
+      rewriter.moveOpBefore(allocOp, measureOp);
+    }
     if (deferMeasurementStores) {
-      auto measureOp = storeOp.getValue().getDefiningOp<MeasureOp>();
       state.deferredMeasurementStores[storeOp] = measureOp;
     } else {
       storeOp.erase();

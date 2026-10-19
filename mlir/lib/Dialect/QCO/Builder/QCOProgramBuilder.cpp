@@ -70,15 +70,13 @@ QCOProgramBuilder::QCOProgramBuilder(MLIRContext* context)
                     qtensor::QTensorDialect>();
 }
 
-void QCOProgramBuilder::initialize() { initialize({}); }
-
-void QCOProgramBuilder::initialize(TypeRange returnTypes) {
+void QCOProgramBuilder::initialize() {
   checkFinalized();
   // Set insertion point to the module body
   setInsertionPointToStart(moduleOp_->getBody());
 
   // Create main function as entry point
-  auto funcType = getFunctionType({}, returnTypes);
+  auto funcType = getFunctionType({}, {});
   auto mainFunc = func::FuncOp::create(*this, "main", funcType);
 
   mqt::setEntryPoint(mainFunc);
@@ -86,17 +84,6 @@ void QCOProgramBuilder::initialize(TypeRange returnTypes) {
   // Create entry block and set insertion point
   auto& entryBlock = mainFunc.getBody().emplaceBlock();
   setInsertionPointToStart(&entryBlock);
-}
-
-void QCOProgramBuilder::retype(TypeRange returnTypes) {
-  checkFinalized();
-  auto mainFunc = mqt::getEntryPoint(*moduleOp_);
-  if (!mainFunc) {
-    llvm::reportFatalUsageError("Main function not found for retyping");
-  }
-  auto funcType =
-      getFunctionType(mainFunc.getFunctionType().getInputs(), returnTypes);
-  mainFunc.setType(funcType);
 }
 
 static bool isQubitTensor(Type type) {
@@ -1672,8 +1659,6 @@ void QCOProgramBuilder::disposeLinearValues() {
   validTensors.clear();
 }
 
-OwningOpRef<ModuleOp> QCOProgramBuilder::finalize() { return finalize({}); }
-
 OwningOpRef<ModuleOp> QCOProgramBuilder::finalize(ValueRange returnValues) {
   checkFinalized();
 
@@ -1690,17 +1675,11 @@ OwningOpRef<ModuleOp> QCOProgramBuilder::finalize(ValueRange returnValues) {
         "Insertion point is not in entry block of main function");
   }
 
-  // Returning a linear value is its final consumption. Remove such values from
-  // the live sets before automatically disposing of everything left over.
-  for (auto returnValue : returnValues) {
-    const auto type = returnValue.getType();
-    if (isa<QubitType>(type)) {
-      validateQubitValue(returnValue);
-      validQubits.erase(returnValue);
-    } else if (isLinearQubitType(type)) {
-      validateTensorValue(returnValue);
-      validTensors.erase(returnValue);
-    }
+  mainFunc.setType(
+      getFunctionType(mainFunc.getArgumentTypes(), returnValues.getTypes()));
+  if (failed(mqt::verifyEntryPointResults(mainFunc))) {
+    llvm::reportFatalUsageError(
+        "Entry-point function cannot return quantum values");
   }
 
   disposeLinearValues();
@@ -1717,7 +1696,6 @@ OwningOpRef<ModuleOp> QCOProgramBuilder::build(
   QCOProgramBuilder builder(context);
   builder.initialize();
   auto result = buildFunc(builder);
-  builder.retype(ValueRange(result).getTypes());
   return builder.finalize(result);
 }
 
@@ -1727,7 +1705,6 @@ OwningOpRef<ModuleOp> QCOProgramBuilder::build(
   QCOProgramBuilder builder(context);
   builder.initialize();
   auto result = buildFunc(builder);
-  builder.retype(result.getType());
   return builder.finalize(result);
 }
 

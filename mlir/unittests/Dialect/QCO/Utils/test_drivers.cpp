@@ -65,7 +65,7 @@ protected:
   /// Construct the test program.
   [[maybe_unused]] [[nodiscard]] OwningOpRef<ModuleOp> getProgram() const {
     QCOProgramBuilder builder(context.get());
-    builder.initialize(SmallVector<Type>(4, builder.getI1Type()));
+    builder.initialize();
 
     SmallVector<Value> qubits(4);
     SmallVector<Value> bits(4);
@@ -291,7 +291,7 @@ TEST_F(DriversFixture, ProgramWalkVisitsLayersCorrectly) {
 
 TEST_F(DriversFixture, ProgramWalkRetainsUnreleasedReadyOperations) {
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(3, builder.getI1Type()));
+  builder.initialize();
 
   SmallVector<WireIterator> wires;
   SmallVector<Value> qubits(3);

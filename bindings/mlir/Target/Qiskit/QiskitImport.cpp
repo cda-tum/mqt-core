@@ -2988,7 +2988,6 @@ mlir::QCProgram importCircuit(const nb::handle circuit) {
                    qubits, classicalBits, {}, globalParameters, gateState, 0U,
                    0U, variables);
 
-  builder.retype(mlir::ValueRange(classicalStorage).getTypes());
   auto moduleOp = builder.finalize(classicalStorage);
   if (layout) {
     (*moduleOp)->setAttr("mqt.layout", layout->toAttr(context.get()));

@@ -276,32 +276,6 @@ TEST_F(QIRTest, AdaptiveBuilderUsesAnArrayForWideClassicalRegisters) {
   EXPECT_TRUE(succeeded(verify(*moduleOp)));
 }
 
-TEST_F(QIRTest, OutputRecordingDisambiguatesLabelsAcrossBatches) {
-  ClassicalRegister reg;
-  auto moduleOp = QIRProgramBuilder::build(
-      context.get(),
-      [&](QIRProgramBuilder& builder) {
-        reg = builder.allocClassicalBitRegister(2);
-        return builder.intConstant(0);
-      },
-      QIRProgramBuilder::Profile::Base);
-  ASSERT_TRUE(moduleOp);
-  auto main = getMainFunction(*moduleOp);
-  ASSERT_TRUE(main);
-  OpBuilder builder(main.getBody().back().getTerminator());
-  auto existing = createResultLabel(builder, main, "c0_0");
-  emitOutputRecording(builder, main, {{.label = reg.label, .value = &reg}});
-  EXPECT_EQ(existing.getGlobalName(), "qir.result_label_c0_0");
-  SmallVector<StringRef> labels;
-  for (auto global : moduleOp->getOps<LLVM::GlobalOp>()) {
-    labels.push_back(global.getSymName());
-  }
-  llvm::sort(labels);
-  EXPECT_EQ(labels.size(), 6);
-  EXPECT_EQ(llvm::unique(labels), labels.end());
-  EXPECT_TRUE(succeeded(verify(*moduleOp)));
-}
-
 TEST_F(QIRTest, ResultLabelsAvoidConflictingSymbols) {
   auto moduleOp =
       QIRProgramBuilder::build(context.get(), [](QIRProgramBuilder& builder) {

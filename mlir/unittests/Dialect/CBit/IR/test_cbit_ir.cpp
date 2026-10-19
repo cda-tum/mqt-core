@@ -32,6 +32,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <memory>
@@ -268,6 +269,39 @@ TEST_F(CBitIRTest, ReportsMemoryEffects) {
   EXPECT_EQ(effects.front().getValue(), write.getReg());
 }
 
+TEST_F(CBitIRTest, RemovesWriteOnlyRegistersAndPreservesEffectfulProducers) {
+  auto moduleOp = parse(R"mlir(
+    module {
+      func.func @main() -> !cbit.reg<1> {
+        %c0 = arith.constant 0 : index
+        %true = arith.constant true
+        %temporary = cbit.alloc(#cbit.init<undefined>) : !cbit.reg<1>
+        %bit = func.call @produce() : () -> i1
+        cbit.store %bit, %temporary[%c0] : !cbit.reg<1>
+        cbit.write %bit, %temporary : i1, !cbit.reg<1>
+        %result = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+        cbit.store %true, %result[%c0] : !cbit.reg<1>
+        return %result : !cbit.reg<1>
+      }
+      func.func private @produce() -> i1
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+
+  PassManager canonicalizer(context.get());
+  canonicalizer.addPass(createCanonicalizerPass());
+  ASSERT_TRUE(succeeded(canonicalizer.run(*moduleOp)));
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+
+  auto funcOp = *moduleOp->getOps<func::FuncOp>().begin();
+  EXPECT_TRUE(llvm::hasSingleElement(funcOp.getOps<cbit::AllocOp>()));
+  EXPECT_TRUE(llvm::hasSingleElement(funcOp.getOps<cbit::StoreOp>()));
+  EXPECT_TRUE(funcOp.getOps<cbit::WriteOp>().empty());
+  ASSERT_TRUE(llvm::hasSingleElement(funcOp.getOps<func::CallOp>()));
+  auto producer = *funcOp.getOps<func::CallOp>().begin();
+  EXPECT_TRUE(producer.getResult(0).use_empty());
+}
+
 TEST_F(CBitIRTest, ForwardsStraightLineStoresAndZeroInitialization) {
   auto moduleOp = parse(R"mlir(
     module {
@@ -290,6 +324,8 @@ TEST_F(CBitIRTest, ForwardsStraightLineStoresAndZeroInitialization) {
   ASSERT_TRUE(succeeded(canonicalizer.run(*moduleOp)));
 
   auto funcOp = *moduleOp->getOps<func::FuncOp>().begin();
+  EXPECT_TRUE(funcOp.getOps<cbit::AllocOp>().empty());
+  EXPECT_TRUE(funcOp.getOps<cbit::StoreOp>().empty());
   auto returnOp = *funcOp.getOps<func::ReturnOp>().begin();
   std::string canonicalized;
   llvm::raw_string_ostream canonicalizedStream(canonicalized);

@@ -159,7 +159,7 @@ TEST_F(QCTest, PrintsReadableQubitAndMeasurementNames) {
   QCProgramBuilder builder(context.get());
   builder.initialize();
   auto bit = builder.measure(builder.allocQubit());
-  builder.retype({bit.getType()});
+
   auto moduleOp = builder.finalize({bit});
   ASSERT_TRUE(moduleOp);
 
@@ -346,7 +346,7 @@ TEST_F(QCTest, BuilderSupportsIndependentClassicalRegisterInitialization) {
   auto zero = builder.allocClassicalBitRegister(3);
   auto undefined = builder.allocClassicalBitRegister(
       2, "undefined", cbit::Initialization::Undefined);
-  builder.retype({zero.getType(), undefined.getType()});
+
   auto moduleOp = builder.finalize({zero, undefined});
   ASSERT_TRUE(moduleOp);
   EXPECT_TRUE(succeeded(verify(*moduleOp)));
@@ -367,7 +367,7 @@ TEST_F(QCTest, BuilderSupportsIndependentClassicalRegisterInitialization) {
       "undefined");
 }
 
-TEST_F(QCTest, BuilderDisposesOnlyUnreturnedResourcesInAllocationOrder) {
+TEST_F(QCTest, BuilderDisposesResourcesInAllocationOrder) {
   QCProgramBuilder builder(context.get());
   builder.initialize();
 
@@ -378,17 +378,12 @@ TEST_F(QCTest, BuilderDisposesOnlyUnreturnedResourcesInAllocationOrder) {
     allocatedRegisters.push_back(builder.allocQubitRegisterStorage(1));
   }
 
-  SmallVector<Value> returned{
-      allocatedQubits.pop_back_val(),
-      allocatedRegisters.pop_back_val(),
-  };
-  builder.retype(ValueRange(returned).getTypes());
-  auto moduleOp = builder.finalize(returned);
+  auto moduleOp = builder.finalize();
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
   auto mainFunc = mlir::mqt::getEntryPoint(*moduleOp);
   auto terminator = cast<func::ReturnOp>(mainFunc.getBody().front().back());
-  EXPECT_TRUE(llvm::equal(terminator.getOperands(), returned));
+  EXPECT_EQ(terminator.getNumOperands(), 0U);
 
   SmallVector<Value> deallocatedQubits;
   SmallVector<Value> deallocatedRegisters;
@@ -476,7 +471,7 @@ TEST_F(QCTest, BuilderCreatesGenericAndUnitaryFunctions) {
   auto qubit = builder.allocQubit();
   EXPECT_TRUE(builder.call(unitary, qubit).empty());
   builder.inv(qubit, [&](Value argument) { builder.call(unitary, argument); });
-  builder.retype(ValueRange(genericResults).getTypes());
+
   auto moduleOp = builder.finalize(genericResults);
 
   ASSERT_TRUE(moduleOp);

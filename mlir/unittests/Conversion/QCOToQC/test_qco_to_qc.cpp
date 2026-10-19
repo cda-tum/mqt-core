@@ -299,8 +299,7 @@ module {
     %out = qco.x %q : !qco.qubit
     return %out : !qco.qubit
   }
-  func.func @main(%q: !qco.qubit) -> !qco.qubit
-      attributes {mqt.entry_point} {
+  func.func @caller(%q: !qco.qubit) -> !qco.qubit {
     %out = qco.call @flip(%q) : (!qco.qubit) -> !qco.qubit
     return %out : !qco.qubit
   }
@@ -335,8 +334,7 @@ module {
     %flag = arith.constant true
     return %flag, %out : i1, !qco.qubit
   }
-  func.func @main(%q: !qco.qubit) -> (i1, !qco.qubit)
-      attributes {mqt.entry_point} {
+  func.func @caller(%q: !qco.qubit) -> (i1, !qco.qubit) {
     %flag, %out = func.call @reset(%q)
         : (!qco.qubit) -> (i1, !qco.qubit)
     return %flag, %out : i1, !qco.qubit
@@ -354,7 +352,7 @@ module {
     ASSERT_EQ(function.getNumResults(), 1U);
     EXPECT_TRUE(function.getResultTypes().front().isInteger(1));
   }
-  auto main = mlir::mqt::getEntryPoint(*moduleOp);
+  auto main = moduleOp->lookupSymbol<func::FuncOp>("caller");
   ASSERT_TRUE(main);
   auto call = *main.getBody().getOps<func::CallOp>().begin();
   ASSERT_EQ(call.getNumResults(), 1U);
@@ -376,8 +374,7 @@ module {
     %flag = arith.constant true
     return %flag, %out : i1, !qco.qubit
   }
-  func.func @main(%q: !qco.qubit) -> (i1, !qco.qubit)
-      attributes {mqt.entry_point} {
+  func.func @caller(%q: !qco.qubit) -> (i1, !qco.qubit) {
     %flag, %out = func.call @reset(%q) {
         res_attrs = [{}, {tag = "wire"}]
       } : (!qco.qubit) -> (i1, !qco.qubit)
@@ -392,8 +389,7 @@ module {
     %out = qco.x %q : !qco.qubit
     return %out : !qco.qubit
   }
-  func.func @main(%q: !qco.qubit) -> !qco.qubit
-      attributes {mqt.entry_point} {
+  func.func @caller(%q: !qco.qubit) -> !qco.qubit {
     %out = qco.call @flip(%q) {res_attrs = [{tag = "wire"}]}
         : (!qco.qubit) -> !qco.qubit
     return %out : !qco.qubit

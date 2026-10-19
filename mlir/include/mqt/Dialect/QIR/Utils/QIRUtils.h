@@ -230,6 +230,8 @@ struct OutputRecord {
 };
 
 /// Emit outputs in order, preserving repetitions and assigning unique labels.
+///
+/// Call once with all outputs when finalizing the entry function.
 void emitOutputRecording(OpBuilder& builder, Operation* anchor,
                          ArrayRef<OutputRecord> outputs);
 

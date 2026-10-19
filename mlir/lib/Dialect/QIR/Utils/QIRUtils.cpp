@@ -358,22 +358,6 @@ void emitOutputRecording(OpBuilder& builder, Operation* anchor,
   }
   SymbolTable symbols(main->getParentOfType<ModuleOp>());
   llvm::StringSet<> labels;
-  main.walk([&](LLVM::CallOp call) {
-    if (!call.getCallee() || !call.getCallee()->ends_with("_record_output") ||
-        call.getArgOperands().empty()) {
-      return;
-    }
-    auto address =
-        call.getArgOperands().back().getDefiningOp<LLVM::AddressOfOp>();
-    auto global = address
-                      ? symbols.lookup<LLVM::GlobalOp>(address.getGlobalName())
-                      : LLVM::GlobalOp{};
-    if (auto value = global
-                         ? dyn_cast_or_null<StringAttr>(global.getValueAttr())
-                         : StringAttr{}) {
-      labels.insert(value.getValue().drop_back());
-    }
-  });
   size_t suffix = 0;
   const auto createLabel = [&](StringRef base) {
     auto label = base.str();

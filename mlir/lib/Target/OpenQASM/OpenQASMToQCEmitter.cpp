@@ -204,7 +204,7 @@ public:
       }
       results.push_back(reg);
     }
-    builder.retype(ValueRange(results).getTypes());
+
     auto moduleOp = builder.finalize(results);
     if (!moduleOp || emissionBudget.isExhausted()) {
       return nullptr;

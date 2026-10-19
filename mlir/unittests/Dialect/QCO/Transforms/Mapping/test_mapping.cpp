@@ -545,7 +545,7 @@ TEST_F(MappingPassFixture, MapTopologyOnlyWithEmptyOperationSet) {
                              NativeOperations::fromOperations({})));
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(size, builder.getI1Type()));
+  builder.initialize();
 
   SmallVector<Value> qubits(size);
   SmallVector<Value> bits(size);
@@ -732,7 +732,7 @@ TEST_F(MappingPassFixture,
     for (size_t budget : {size_t{0}, size_t{1024} * 1024}) {
       for (bool measureAll : {false, true}) {
         QCOProgramBuilder builder(context.get());
-        builder.initialize({cbit::RegisterType::get(context.get(), 3)});
+        builder.initialize();
         auto bits = builder.allocClassicalBitRegister(3);
         Value tensor = builder.qtensorAlloc(3);
         SmallVector<Value> qubits(3);
@@ -895,7 +895,7 @@ TEST_F(MappingPassFixture,
       CompilerTarget::create(3, Connectivity::fromCouplings({{0, 1}, {1, 2}}),
                              NativeOperations::unrestricted()));
   QCOProgramBuilder builder(context.get());
-  builder.initialize({cbit::RegisterType::get(context.get(), 1)});
+  builder.initialize();
   auto reg = builder.allocClassicalBitRegister(1);
   Value index = arith::ConstantIndexOp::create(builder, 0);
   auto q0 = builder.allocQubit();
@@ -936,7 +936,7 @@ TEST_F(MappingPassFixture, RouteControlFromConsecutiveMeasurementResults) {
     for (const size_t controlIndex : {size_t{0}, numMeasurements - 1}) {
       SCOPED_TRACE(controlIndex);
       QCOProgramBuilder builder(context.get());
-      builder.initialize({cbit::RegisterType::get(context.get(), 1)});
+      builder.initialize();
       auto reg = builder.allocClassicalBitRegister(1);
       Value index = arith::ConstantIndexOp::create(builder, 0);
       auto q0 = builder.allocQubit();
@@ -1022,11 +1022,7 @@ TEST_F(MappingPassFixture, KeepOutputOnlyRegisterMeasurementsTerminal) {
   for (const bool returnRead : {false, true}) {
     SCOPED_TRACE(returnRead);
     QCOProgramBuilder builder(context.get());
-    Type resultType = builder.getI1Type();
-    if (!returnRead) {
-      resultType = cbit::RegisterType::get(context.get(), 1);
-    }
-    builder.initialize({resultType});
+    builder.initialize();
     auto reg = builder.allocClassicalBitRegister(1);
     Value index = arith::ConstantIndexOp::create(builder, 0);
     auto q0 = builder.allocQubit();
@@ -1076,7 +1072,7 @@ TEST_F(MappingPassFixture, PreserveNoncontiguousTargetSiteIds) {
       NativeOperations::fromOperations({})));
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(size, builder.getI1Type()));
+  builder.initialize();
 
   SmallVector<Value> qubits(size);
   SmallVector<Value> bits(size);
@@ -1120,7 +1116,7 @@ TEST_F(MappingPassFixture, PlaceNoncontiguousTargetCompactly) {
                              NativeOperations::unrestricted()));
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize({builder.getI1Type()});
+  builder.initialize();
   const auto inputQubit = builder.h(builder.allocQubit());
   const auto [qubit, bit] = builder.measure(inputQubit);
   builder.sink(qubit);
@@ -1153,7 +1149,7 @@ TEST_F(MappingPassFixture, PlaceTensorOnFirstTargetSites) {
       NativeOperations::unrestricted()));
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize({builder.getI1Type(), builder.getI1Type()});
+  builder.initialize();
   Value tensor = builder.qtensorAlloc(2);
   Value first;
   Value second;
@@ -1275,7 +1271,7 @@ TEST_F(MappingPassFixture, KeepWorkspaceSparseOnLargeTarget) {
       NativeOperations::unrestricted()));
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(2, builder.getI1Type()));
+  builder.initialize();
 
   SmallVector<Value> bits(2);
   const auto inputQ0 = builder.allocQubit();
@@ -1424,7 +1420,7 @@ TEST_P(MappingPassTest, MapScalarAllocation) {
   const auto& target = GetParam();
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize({builder.getI1Type()});
+  builder.initialize();
   Value q0;
   Value c0;
   q0 = builder.allocQubit();
@@ -1528,7 +1524,7 @@ TEST_P(MappingPassTest, MapProgramAfterQubitReuse) {
   const auto& target = GetParam();
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize({builder.getI1Type(), builder.getI1Type()});
+  builder.initialize();
   Value q0 = builder.allocQubit();
   q0 = builder.h(q0);
   Value bit0;
@@ -1607,7 +1603,7 @@ TEST_P(MappingPassTest, FailNoExtractAfterInsert) {
   const auto& target = GetParam();
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize({builder.getI1Type()});
+  builder.initialize();
 
   Value tensor0 = builder.qtensorAlloc(1);
 
@@ -1637,7 +1633,7 @@ TEST_P(MappingPassTest, FailTooManyQubitsForArch) {
   SmallVector<Value> qubits(size);
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(size, builder.getI1Type()));
+  builder.initialize();
 
   Value tensor = builder.qtensorAlloc(size);
 
@@ -1666,7 +1662,7 @@ TEST_P(MappingPassTest, MapFlatGHZ) {
   SmallVector<Value> bits(size);
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(3, builder.getI1Type()));
+  builder.initialize();
 
   auto tensor = builder.qtensorAlloc(3);
   for (int64_t i = 0; i < size; ++i) {
@@ -1708,7 +1704,7 @@ TEST_P(MappingPassTest, MapLoopBasedGHZByUnrolling) {
   pm.addPass(createMappingPass(MappingPassOptions{}));
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(size, builder.getI1Type()));
+  builder.initialize();
 
   Value tensor = builder.qtensorAlloc(size);
 
@@ -1745,7 +1741,7 @@ TEST_P(MappingPassTest, MapGroverLike) {
   SmallVector<Value> bits(size);
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(size, builder.getI1Type()));
+  builder.initialize();
 
   Value tensor = builder.qtensorAlloc(4);
   Value flagTensor = builder.qtensorAlloc(1);
@@ -1808,7 +1804,7 @@ TEST_P(MappingPassTest, MapParallelLoops) {
   SmallVector<Value> bits(size);
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(size, builder.getI1Type()));
+  builder.initialize();
 
   Value tensor = builder.qtensorAlloc(size);
   for (int64_t i = 0; i < size; ++i) {
@@ -2295,7 +2291,7 @@ TEST_P(MappingPassTest, MapSABRECircuit) {
   SmallVector<Value> bits(size);
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(6, builder.getI1Type()));
+  builder.initialize();
 
   Value tensorUp = builder.qtensorAlloc(4);
   Value tensorDown = builder.qtensorAlloc(2);
@@ -2367,7 +2363,7 @@ TEST_P(MappingPassTest, MapBranchingGHZ) {
   SmallVector<Value> bits(size);
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(size, builder.getI1Type()));
+  builder.initialize();
 
   Value tensor = builder.qtensorAlloc(size);
   for (int64_t i = 0; i < size; ++i) {
@@ -2576,7 +2572,7 @@ TEST_P(MappingPassTest, MapPaddedCXCZGrid) {
   SmallVector<Value> bits(size);
 
   QCOProgramBuilder builder(context.get());
-  builder.initialize(SmallVector<Type>(size, builder.getI1Type()));
+  builder.initialize();
 
   for (size_t i = 0; i < size; ++i) {
     qubits[i] = builder.allocQubit();
@@ -2638,7 +2634,7 @@ TEST_F(MappingPassFixture, KeepExecutableIdentityAcrossTrialOptions) {
   for (const size_t numQubits : {size_t{0}, size_t{1}, size_t{3}}) {
     SCOPED_TRACE(numQubits);
     QCOProgramBuilder builder(context.get());
-    builder.initialize(SmallVector<Type>(numQubits, builder.getI1Type()));
+    builder.initialize();
     SmallVector<Value> qubits;
     SmallVector<Value> bits(numQubits);
     for (size_t i = 0; i < numQubits; ++i) {
@@ -2948,7 +2944,7 @@ TEST_F(MappingPassFixture, PlaceCountedLoopInteractionsWithoutRouting) {
   for (const bool nested : {false, true}) {
     SCOPED_TRACE(nested);
     QCOProgramBuilder builder(context.get());
-    builder.initialize({cbit::RegisterType::get(context.get(), 3)});
+    builder.initialize();
     auto bits = builder.allocClassicalBitRegister(3);
     SmallVector<Value> qubits;
     for (size_t i = 0; i < 3; ++i) {
@@ -3724,7 +3720,7 @@ TEST_F(MappingPassFixture, PreserveRegionsWithIdleWiresAcrossCostAvailability) {
                                             << ", parallel=" << parallel);
             context->enableMultithreading(parallel);
             QCOProgramBuilder builder(context.get());
-            builder.initialize({cbit::RegisterType::get(context.get(), 3)});
+            builder.initialize();
             auto bits = builder.allocClassicalBitRegister(3);
             SmallVector<Value> qubits;
             for (size_t i = 0; i < 3; ++i) {
@@ -3810,7 +3806,7 @@ TEST_F(MappingPassFixture, PreserveCoherenceAcrossRoutedRegionResults) {
       NativeOperations::unrestricted()));
   for (size_t shape = 0; shape < 3; ++shape) {
     QCOProgramBuilder builder(context.get());
-    builder.initialize({cbit::RegisterType::get(context.get(), 5)});
+    builder.initialize();
     auto bits = builder.allocClassicalBitRegister(5);
     SmallVector<Value> qubits;
     for (size_t i = 0; i < 4; ++i) {
@@ -3920,7 +3916,7 @@ TEST_F(MappingPassFixture, RespectRegionBoundariesBeforeFrontierDiscovery) {
       "cz");
   for (bool hiddenRegion : {true, false}) {
     QCOProgramBuilder builder(context.get());
-    builder.initialize({cbit::RegisterType::get(context.get(), 5)});
+    builder.initialize();
     auto bits = builder.allocClassicalBitRegister(5);
     SmallVector<Value> qubits;
     for (size_t i = 0; i < 5; ++i) {
