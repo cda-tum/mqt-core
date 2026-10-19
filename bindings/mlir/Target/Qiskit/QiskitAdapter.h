@@ -30,6 +30,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -947,10 +948,13 @@ public:
   [[nodiscard]] std::vector<ClassicalVariable> variables() const override;
 
   [[nodiscard]] Register quantumRegister(const size_t index) const override {
+    if (!quantumRegisters_.is_valid()) {
+      quantumRegisters_ = pythonCircuit_.attr("qregs");
+    }
     const auto* reg = qk_circuit_get_quantum_register(circuit_, index);
     Register result{
-        .name = pythonStringAttribute(pythonCircuit_.attr("qregs")[index],
-                                      "name", "Qiskit register has no name"),
+        .name = pythonStringAttribute(quantumRegisters_[index], "name",
+                                      "Qiskit register has no name"),
         .bits = {},
     };
     result.bits.resize(qk_quantum_register_num_bits(reg));
@@ -961,10 +965,13 @@ public:
   }
 
   [[nodiscard]] Register classicalRegister(const size_t index) const override {
+    if (!classicalRegisters_.is_valid()) {
+      classicalRegisters_ = pythonCircuit_.attr("cregs");
+    }
     const auto* reg = qk_circuit_get_classical_register(circuit_, index);
     Register result{
-        .name = pythonStringAttribute(pythonCircuit_.attr("cregs")[index],
-                                      "name", "Qiskit register has no name"),
+        .name = pythonStringAttribute(classicalRegisters_[index], "name",
+                                      "Qiskit register has no name"),
         .bits = {},
     };
     result.bits.resize(qk_classical_register_num_bits(reg));
@@ -1281,6 +1288,10 @@ public:
 
   [[nodiscard]] uintptr_t
   definitionIdentity(const size_t index) const override {
+    if (const auto found = definitionIdentities_.find(index);
+        found != definitionIdentities_.end()) {
+      return found->second;
+    }
     const auto operation = terminalPythonGate(pythonOperation(index));
     const auto definition = pythonAttribute(
         operation, "definition",
@@ -1292,7 +1303,9 @@ public:
         operation, "name", "Qiskit instruction has no valid name");
     const auto parameters = pythonAttribute(
         operation, "params", "Qiskit instruction has no parameter list");
-    return definitions_->identify(definition, name, parameters);
+    const auto identity = definitions_->identify(definition, name, parameters);
+    definitionIdentities_.emplace(index, identity);
+    return identity;
   }
 
 private:
@@ -1332,9 +1345,13 @@ private:
 
   nb::object pythonCircuit_;
   nb::object data_;
+  // Qiskit rebuilds these lists on access; retain each import's snapshot.
+  mutable nb::object quantumRegisters_;
+  mutable nb::object classicalRegisters_;
   const QkCircuit* circuit_ = nullptr;
   const QkControlFlowInstruction* parent_ = nullptr;
   std::shared_ptr<DefinitionRegistry> definitions_;
+  mutable std::unordered_map<size_t, uintptr_t> definitionIdentities_;
 };
 } // namespace
 
@@ -1985,11 +2002,18 @@ public:
       : circuit_(nb::borrow<nb::object>(circuit)), variables_(variables),
         clbits_(pythonAttribute(circuit, "clbits",
                                 "Qiskit circuit has no classical bits")),
-        cregs_(pythonAttribute(circuit, "cregs",
-                               "Qiskit circuit has no classical registers")),
         expressionModule_(
             nb::module_::import_("qiskit.circuit.classical.expr")),
-        typesModule_(nb::module_::import_("qiskit.circuit.classical.types")) {}
+        typesModule_(nb::module_::import_("qiskit.circuit.classical.types")) {
+    const auto registers = pythonAttribute(
+        circuit, "cregs", "Qiskit circuit has no classical registers");
+    for (const nb::handle reg : nb::iter(registers)) {
+      cregs_.try_emplace(
+          pythonStringAttribute(reg, "name",
+                                "Qiskit classical register has no name"),
+          nb::borrow<nb::object>(reg));
+    }
+  }
 
   [[nodiscard]] nb::object expression(const Expression& value) const {
     return expression(value, 0U);
@@ -2083,13 +2107,8 @@ private:
 
   [[nodiscard]] nb::object
   registeredClassicalRegister(const Register& reg) const {
-    for (const nb::handle candidateHandle : nb::iter(cregs_)) {
-      auto candidate = nb::borrow<nb::object>(candidateHandle);
-      if (pythonStringAttribute(candidate, "name",
-                                "Qiskit classical register has no name") ==
-          reg.name) {
-        return candidate;
-      }
+    if (const auto found = cregs_.find(reg.name); found != cregs_.end()) {
+      return found->second;
     }
     throw std::runtime_error(
         "Qiskit classical expression references a missing register");
@@ -2236,7 +2255,7 @@ private:
   nb::object circuit_;
   const PythonVariables& variables_;
   nb::object clbits_;
-  nb::object cregs_;
+  llvm::StringMap<nb::object> cregs_;
   nb::object expressionModule_;
   nb::object typesModule_;
 };
@@ -2444,8 +2463,7 @@ public:
     if (std::ranges::all_of(parameters, [](const Parameter& parameter) {
           return parameter.getNumber() != nullptr;
         })) {
-      std::vector<double> numbers;
-      numbers.reserve(parameters.size());
+      llvm::SmallVector<double, 4> numbers;
       for (const auto& parameter : parameters) {
         const auto value = parameter.getNumber()->value;
         if (!std::isfinite(value)) {
@@ -2554,7 +2572,7 @@ public:
     if (!value) {
       throw std::runtime_error("Qiskit Store has no rvalue");
     }
-    const PythonClassicalBuilder classical(pythonCircuit_, variables_);
+    const auto& classical = classicalBuilder();
     pythonCircuit_.attr("store")(classical.lvalue(target),
                                  classical.expression(*value));
   }
@@ -2588,7 +2606,7 @@ public:
   }
 
   void declareVariable(ClassicalVariable variable) override {
-    const PythonClassicalBuilder classical(pythonCircuit_, variables_);
+    const auto& classical = classicalBuilder();
     auto local =
         nb::module_::import_("qiskit.circuit.classical.expr")
             .attr("Var")
@@ -2643,7 +2661,7 @@ public:
       }
       pythonBlocks.push_back(std::move(body));
     }
-    const PythonClassicalBuilder classical(pythonCircuit_, variables_);
+    const auto& classical = classicalBuilder();
     auto operation = constructControlFlowOperation(
         kind, target, loop, switchCases, pythonBlocks, classical,
         nb::module_::import_("qiskit.circuit"), numQubits, numClbits);
@@ -2656,12 +2674,21 @@ public:
   }
 
 private:
-  [[nodiscard]] nb::list
-  pythonQubits(const std::vector<uint32_t>& qubits) const {
+  [[nodiscard]] PythonClassicalBuilder& classicalBuilder() {
+    // Register resources are fixed before classical operations are emitted.
+    if (!classical_) {
+      classical_.emplace(pythonCircuit_, variables_);
+    }
+    return *classical_;
+  }
+
+  [[nodiscard]] nb::list pythonQubits(const std::vector<uint32_t>& qubits) {
     nb::list result;
-    const auto bits = pythonCircuit_.attr("qubits");
+    if (!qubits_.is_valid()) {
+      qubits_ = pythonCircuit_.attr("qubits");
+    }
     for (auto qubit : qubits) {
-      result.append(bits[qubit]);
+      result.append(qubits_[qubit]);
     }
     return result;
   }
@@ -2942,12 +2969,14 @@ private:
   }
 
   nb::object pythonCircuit_;
+  nb::object qubits_;
   // Writer operations mutate this owned CircuitData; they must not replace it.
   nb::object data_;
   QkCircuit* circuit_;
   nb::object standardGates_;
   nb::object standardInstruction_;
   PythonVariables variables_;
+  std::optional<PythonClassicalBuilder> classical_;
   std::unordered_map<std::shared_ptr<const Parameter>, nb::object> expressions_;
   std::shared_ptr<OutputParameters> parameters_;
   std::shared_ptr<NativeGateRegistry> gates_;

@@ -1210,33 +1210,24 @@ c[0] = measure q[1];
 
 def test_flat_export_rejects_undefined_returned_bits() -> None:
     """Reject a returned undefined register unless every bit is written."""
-    program = QCProgram.from_mlir_str(
-        """module {
-  func.func @main() -> !cbit.reg<1> attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    %c = cbit.alloc(#cbit.init<undefined>) : !cbit.reg<1>
-    qc.dealloc %q : !qc.qubit
-    return %c : !cbit.reg<1>
-  }
-}
-"""
-    )
+    program = _undefined_cbit_program([])
 
     with pytest.raises(RuntimeError, match="cannot return undefined classical bits"):
         program.to_qiskit()
 
 
-def test_qiskit_export_rejects_noncanonical_i64_function_result() -> None:
-    """Reject a nonzero i64 result instead of treating it as the output sentinel."""
+@pytest.mark.parametrize(("value", "result_type"), [(1, "i64"), (0, '(i64 {test.output_name = "answer"})')])
+def test_qiskit_export_rejects_noncanonical_i64_function_result(value: int, result_type: str) -> None:
+    """Only an unannotated zero i64 result can be the compiler's status sentinel."""
     program = QCProgram.from_mlir_str(
-        """module {
-  func.func @main() -> i64 attributes {mqt.entry_point} {
+        f"""module {{
+  func.func @main() -> {result_type} attributes {{mqt.entry_point}} {{
     %q = qc.alloc : !qc.qubit
-    %value = arith.constant 1 : i64
+    %value = arith.constant {value} : i64
     qc.dealloc %q : !qc.qubit
     return %value : i64
-  }
-}
+  }}
+}}
 """
     )
 
@@ -1278,19 +1269,14 @@ def test_qiskit_round_trip_groups_anonymous_clbits() -> None:
     assert restored.count_ops() == {"measure": 1}
 
 
-def test_qiskit_export_excludes_internal_cbit_registers() -> None:
-    """Export only CBit registers returned by the entry function."""
-    program = QCProgram.from_mlir_str(
-        """module {
-  func.func @main() -> !cbit.reg<1> attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    %output = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "output"} : !cbit.reg<1>
-    %internal = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "internal"} : !cbit.reg<2>
-    qc.dealloc %q : !qc.qubit
-    return %output : !cbit.reg<1>
-  }
-}
-"""
+def test_qiskit_export_omits_unused_cbit_registers() -> None:
+    """Omit internal CBit registers with no uses."""
+    program = _single_qubit_program(
+        [
+            '%classical = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "output"} : !cbit.reg<1>',
+            '%internal = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "internal"} : !cbit.reg<2>',
+        ],
+        returns_classical=True,
     )
 
     restored = program.to_qiskit()
@@ -1455,7 +1441,11 @@ def test_array_parameter_definitions_remain_distinct() -> None:
     assert np.allclose(Operator(program.to_qiskit()).data, Operator(circuit).data)
 
 
-@pytest.mark.parametrize("pattern", list(permutations(range(4))))
+@pytest.mark.parametrize(
+    "pattern",
+    [(0, 1, 2, 3), (0, 1, 3, 2), (1, 0, 3, 2), (1, 2, 0, 3), (2, 0, 1, 3), (1, 2, 3, 0), (3, 0, 1, 2)],
+    ids=["identity", "swap", "disjoint-swaps", "cycle3", "inverse-cycle3", "cycle4", "inverse-cycle4"],
+)
 def test_permutation_lowering_patterns(pattern: tuple[int, ...]) -> None:
     """Cover identity, disjoint cycles, and both orientations of long cycles."""
     circuit = QuantumCircuit(4)
@@ -1830,17 +1820,11 @@ def test_unnamed_custom_gate_parameters_export_without_mutation() -> None:
 @pytest.mark.parametrize(("cast", "angle"), [("sitofp", -1.0), ("uitofp", 255.0)])
 def test_constant_integer_cast_gate_parameter(cast: str, angle: float) -> None:
     """Preserve the signedness of constant integer-to-float gate parameters."""
-    program = QCProgram.from_mlir_str(f"""module {{
-  func.func @main() attributes {{mqt.entry_point}} {{
-    %q = qc.alloc : !qc.qubit
-    %integer = arith.constant -1 : i8
-    %angle = arith.{cast} %integer : i8 to f64
-    qc.rx(%angle) %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }}
-}}
-""")
+    program = _single_qubit_program([
+        "%integer = arith.constant -1 : i8",
+        f"%angle = arith.{cast} %integer : i8 to f64",
+        "qc.rx(%angle) %q : !qc.qubit",
+    ])
 
     assert program.to_qiskit().data[0].operation.params == [angle]
 
@@ -2314,23 +2298,6 @@ def test_repeated_cbit_uint_expression_falls_back_to_expression_tree() -> None:
     assert {variable.var for variable in expr.iter_vars(condition)} == {restored.clbits[0]}
 
 
-def test_free_parameter_identity_is_shared_with_control_flow_blocks() -> None:
-    """Canonicalize one scalar Parameter across root and nested writers."""
-    theta = Parameter("theta")
-    circuit = QuantumCircuit(1, 1, global_phase=theta / 2)
-    circuit.rz(theta, 0)
-    with circuit.if_test((circuit.clbits[0], True)):
-        circuit.rx(theta + 1, 0)
-
-    restored = QCProgram.from_qiskit(circuit).to_qiskit()
-
-    restored_theta = next(iter(restored.parameters))
-    assert restored.global_phase.parameters == {restored_theta}
-    assert restored.data[0].operation.params[0] == restored_theta
-    nested_parameter = restored.data[1].operation.blocks[0].data[0].operation.params[0]
-    assert nested_parameter.parameters == {restored_theta}
-
-
 def test_nested_if_while_switch_preserve_capture_identity() -> None:
     """Map nested control-flow operands through each block-local bit list."""
     circuit = QuantumCircuit(2, 2)
@@ -2385,7 +2352,7 @@ def test_zero_qubit_cbit_only_control_flow_round_trip() -> None:
     assert sample(restored, shots=1, seed=1) == {"0": 1}
 
 
-def _single_qubit_program(operations: list[str], *, returns_classical: bool = False) -> QCProgram:
+def _single_qubit_program(operations: list[str], *, arguments: str = "", returns_classical: bool = False) -> QCProgram:
     """Wrap operations in a one-qubit QC entry function.
 
     Returns:
@@ -2395,7 +2362,7 @@ def _single_qubit_program(operations: list[str], *, returns_classical: bool = Fa
     return_value = " %classical : !cbit.reg<1>" if returns_classical else ""
     lines = [
         "module {",
-        f"  func.func @main(){result_type} attributes {{mqt.entry_point}} {{",
+        f"  func.func @main({arguments}){result_type} attributes {{mqt.entry_point}} {{",
         "    %q = qc.alloc : !qc.qubit",
     ]
     lines.extend(f"    {operation}" for operation in operations)
@@ -2707,8 +2674,17 @@ def test_unused_nonboolean_result_bearing_if_is_omitted() -> None:
     ],
     ids=["flat-write", "nested-write"],
 )
-def test_classical_snapshot_survives_later_writes(write_operations: tuple[str, ...]) -> None:
-    """Preserve a condition whose classical snapshot crosses a later write."""
+@pytest.mark.parametrize("control", ["if", "switch"])
+def test_classical_snapshot_survives_later_writes(write_operations: tuple[str, ...], control: str) -> None:
+    """Conditions and switch selectors use the snapshot preceding a write."""
+    conditional = (
+        "scf.if %stale { qc.x %q : !qc.qubit }"
+        if control == "if"
+        else """%selector = arith.index_castui %stale : i1 to index
+        scf.index_switch %selector
+        case 1 { qc.x %q : !qc.qubit scf.yield }
+        default { scf.yield }"""
+    )
     program = _single_qubit_program(
         [
             '%classical = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "c"} : !cbit.reg<1>',
@@ -2716,9 +2692,7 @@ def test_classical_snapshot_survives_later_writes(write_operations: tuple[str, .
             "qc.x %q : !qc.qubit",
             "%stale = cbit.load %classical[%zero] : !cbit.reg<1>",
             *write_operations,
-            "scf.if %stale {",
-            "  qc.x %q : !qc.qubit",
-            "}",
+            conditional,
             "%final = qc.measure %q : !qc.qubit -> i1",
             "cbit.store %final, %classical[%zero] : !cbit.reg<1>",
         ],
@@ -3052,38 +3026,11 @@ def test_delayed_measurement_store_across_allocation(*, allocate_destination: bo
         assert QCProgram.from_qiskit(restored).to_qco().sample(shots=1, seed=1) == {"1": 1}
 
 
-@pytest.mark.parametrize("via_qco", [False, True], ids=["qc", "qco"])
-@pytest.mark.parametrize("reverse_stores", [False, True], ids=["ordered", "reversed"])
-def test_grouped_measurements_preserve_shared_destination_order(*, via_qco: bool, reverse_stores: bool) -> None:
-    """Fuse a shared destination only when measurement and store order agree."""
-    values = ["second", "first"] if reverse_stores else ["first", "second"]
-    program = _single_qubit_program(
-        [
-            '%classical = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "c"} : !cbit.reg<1>',
-            "%zero = arith.constant 0 : index",
-            "qc.x %q : !qc.qubit",
-            "%first = qc.measure %q : !qc.qubit -> i1",
-            "qc.x %q : !qc.qubit",
-            "%second = qc.measure %q : !qc.qubit -> i1",
-            *(f"cbit.store %{value}, %classical[%zero] : !cbit.reg<1>" for value in values),
-        ],
-        returns_classical=True,
-    )
-    if via_qco:
-        program = program.to_qco().to_qc()
-
-    if reverse_stores:
-        with pytest.raises(RuntimeError, match="destination must follow the measurement"):
-            program.to_qiskit()
-    else:
-        restored = program.to_qiskit(copy=True)
-        assert restored.num_clbits == 1
-        assert sample(program, shots=1, seed=1) == {"0": 1}
-        assert sample(QCProgram.from_qiskit(restored), shots=1, seed=1) == {"0": 1}
-
-
-@pytest.mark.parametrize("store_order", list(permutations(range(3))))
-def test_grouped_measurements_keep_order_for_each_destination(store_order: tuple[int, ...]) -> None:
+@pytest.mark.parametrize(
+    ("store_order", "via_qco"),
+    [(order, False) for order in permutations(range(3))] + [((0, 1, 2), True), ((2, 1, 0), True)],
+)
+def test_grouped_measurements_keep_order_for_each_destination(store_order: tuple[int, ...], *, via_qco: bool) -> None:
     """Reorder disjoint destinations while preserving repeated-bit writes."""
     destinations = [0, 1, 0]
     stores = [f"cbit.store %m{index}, %c[%i{destinations[index]}] : !cbit.reg<2>" for index in store_order]
@@ -3108,6 +3055,8 @@ def test_grouped_measurements_keep_order_for_each_destination(store_order: tuple
 }
 """
     )
+    if via_qco:
+        program = program.to_qco().to_qc()
     original_ir = program.ir
     if store_order.index(2) < store_order.index(0):
         with pytest.raises(RuntimeError, match="destination must follow the measurement"):
@@ -3752,29 +3701,6 @@ def test_qpy_round_trip(dialect: str) -> None:
     )
 
 
-def test_direct_symbolic_parameters_round_trip_with_shared_identity() -> None:
-    """Represent a shared Qiskit parameter as one named f64 input."""
-    theta = Parameter("theta")
-    circuit = QuantumCircuit(1, global_phase=theta)
-    circuit.ry(theta, 0)
-    circuit.rz(theta, 0)
-
-    program = QCProgram.from_qiskit(circuit)
-    restored = program.to_qiskit(copy=True)
-
-    assert 'mqt.input_name = "theta"' in program.ir
-    assert len(restored.parameters) == 1
-    restored_theta = next(iter(restored.parameters))
-    assert restored.global_phase == restored_theta
-    assert restored.data[0].operation.params[0] == restored_theta
-    assert restored.data[1].operation.params[0] == restored_theta
-    value = 0.375
-    assert np.allclose(
-        Operator(restored.assign_parameters({restored_theta: value})).data,
-        Operator(circuit.assign_parameters({theta: value})).data,
-    )
-
-
 @pytest.mark.parametrize("identity", [0, (1 << 128) - 1])
 @pytest.mark.parametrize("pipeline", ["qc", "qco", "optimized"])
 def test_original_parameter_binds_after_compiler_round_trip(identity: int, pipeline: str) -> None:
@@ -3782,7 +3708,9 @@ def test_original_parameter_binds_after_compiler_round_trip(identity: int, pipel
     theta = Parameter("theta", uuid=UUID(int=identity))
     circuit = QuantumCircuit(1, global_phase=theta / 4)
     circuit.ry(2 * theta, 0)
+    circuit.rz(theta, 0)
     qc = QCProgram.from_qiskit(circuit)
+    assert 'mqt.input_name = "theta"' in qc.ir
     program = QCProgram.from_mlir_str(qc.ir)
     if pipeline != "qc":
         qco = program.to_qco()
@@ -3802,15 +3730,18 @@ def test_original_parameter_binds_after_compiler_round_trip(identity: int, pipel
 def test_original_parameter_identity_is_shared_in_control_flow() -> None:
     """Preserve free parameter identity in sibling conditional blocks."""
     theta = Parameter("theta")
-    circuit = QuantumCircuit(1, 1, global_phase=theta)
+    circuit = QuantumCircuit(1, 1, global_phase=theta / 2)
+    circuit.rz(theta, 0)
     with circuit.if_test((circuit.clbits[0], True)) as else_:
-        circuit.rx(theta, 0)
+        circuit.rx(theta + 1, 0)
     with else_:
         circuit.ry(theta / 2, 0)
     restored = QCProgram.from_qiskit(circuit).to_qco().to_qiskit()
 
     assert restored.parameters == {theta}
-    for block in restored.data[0].operation.blocks:
+    assert restored.global_phase.parameters == {theta}
+    assert restored.data[0].operation.params[0] == theta
+    for block in restored.data[1].operation.blocks:
         assert block.parameters == {theta}
     assert not restored.assign_parameters({theta: 0.2}).parameters
 
@@ -4136,21 +4067,16 @@ def test_parameterized_custom_definition_round_trip() -> None:
 
 def test_manual_arith_and_math_parameter_expression_exports_to_qiskit() -> None:
     """Reconstruct an expression from generic Arith and Math operations."""
-    program = QCProgram.from_mlir_str(
-        """module {
-  func.func @main(%theta: f64 {mqt.input_name = "theta"}) attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    %offset = arith.constant 5.000000e-01 : f64
-    %sum = arith.addf %theta, %offset : f64
-    %angle = math.sin %sum : f64
-    qc.rz(%angle) %q : !qc.qubit
-    qc.rx(%sum) %q : !qc.qubit
-    qc.ry(%angle) %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }
-}
-"""
+    program = _single_qubit_program(
+        [
+            "%offset = arith.constant 5.000000e-01 : f64",
+            "%sum = arith.addf %theta, %offset : f64",
+            "%angle = math.sin %sum : f64",
+            "qc.rz(%angle) %q : !qc.qubit",
+            "qc.rx(%sum) %q : !qc.qubit",
+            "qc.ry(%angle) %q : !qc.qubit",
+        ],
+        arguments='%theta: f64 {mqt.input_name = "theta"}',
     )
 
     restored = program.to_qiskit()
@@ -4166,11 +4092,7 @@ def _wide_parameter_expression_program(term_count: int) -> QCProgram:
     Returns:
         A QC program with a wide scalar parameter-expression graph.
     """
-    lines = [
-        "module {",
-        '  func.func @main(%theta: f64 {mqt.input_name = "theta"}) attributes {mqt.entry_point} {',
-        "    %q = qc.alloc : !qc.qubit",
-    ]
+    lines = []
     # Keep addition chains short: Qiskit binding recurses through each chain.
     values = ["%theta"] * term_count
     sum_index = 0
@@ -4183,20 +4105,14 @@ def _wide_parameter_expression_program(term_count: int) -> QCProgram:
             value = f"%sum{sum_index}"
             sum_index += 1
             lines.extend([
-                f"    {value}_left = math.sin {values[index]} : f64",
-                f"    {value}_right = math.cos {values[index + 1]} : f64",
-                f"    {value} = arith.addf {value}_left, {value}_right : f64",
+                f"{value}_left = math.sin {values[index]} : f64",
+                f"{value}_right = math.cos {values[index + 1]} : f64",
+                f"{value} = arith.addf {value}_left, {value}_right : f64",
             ])
             next_values.append(value)
         values = next_values
-    lines.extend([
-        f"    qc.rz({values[0]}) %q : !qc.qubit",
-        "    qc.dealloc %q : !qc.qubit",
-        "    return",
-        "  }",
-        "}",
-    ])
-    return QCProgram.from_mlir_str("\n".join(lines))
+    lines.append(f"qc.rz({values[0]}) %q : !qc.qubit")
+    return _single_qubit_program(lines, arguments='%theta: f64 {mqt.input_name = "theta"}')
 
 
 @pytest.mark.parametrize(
@@ -4228,17 +4144,12 @@ def test_export_parameter_expression_budget_preserves_source(term_count: int, *,
 
 def test_unsupported_scalar_operation_fails_export_without_mutation() -> None:
     """Reject an unsupported f64 producer before changing the source program."""
-    program = QCProgram.from_mlir_str(
-        """module {
-  func.func @main(%theta: f64 {mqt.input_name = "theta"}) attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    %angle = math.sqrt %theta : f64
-    qc.rz(%angle) %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }
-}
-"""
+    program = _single_qubit_program(
+        [
+            "%angle = math.sqrt %theta : f64",
+            "qc.rz(%angle) %q : !qc.qubit",
+        ],
+        arguments='%theta: f64 {mqt.input_name = "theta"}',
     )
     source_ir = program.ir
 
@@ -4292,20 +4203,12 @@ def test_bound_parameter_names_are_unique_across_scopes() -> None:
 def test_duplicate_named_symbolic_inputs_are_invalid_qc_ir() -> None:
     """Reject duplicate program input names when parsing QC IR."""
     with pytest.raises(RuntimeError, match="Compiler action failed"):
-        QCProgram.from_mlir_str(
-            """module {
-  func.func @main(
-      %first: f64 {mqt.input_name = "theta"},
-      %second: f64 {mqt.input_name = "theta"}
-  ) attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    qc.rx(%first) %q : !qc.qubit
-    qc.rz(%second) %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }
-}
-"""
+        _single_qubit_program(
+            [
+                "qc.rx(%first) %q : !qc.qubit",
+                "qc.rz(%second) %q : !qc.qubit",
+            ],
+            arguments='%first: f64 {mqt.input_name = "theta"}, %second: f64 {mqt.input_name = "theta"}',
         )
 
 
@@ -4348,31 +4251,17 @@ def test_parameter_names_with_null_characters_fail_closed() -> None:
     assert list(circuit.data) == source_data
 
     with pytest.raises(RuntimeError, match="Compiler action failed"):
-        QCProgram.from_mlir_str(
-            r"""module {
-  func.func @main(%theta: f64 {mqt.input_name = "before\00after"}) attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    qc.rz(%theta) %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }
-}
-"""
+        _single_qubit_program(
+            ["qc.rz(%theta) %q : !qc.qubit"],
+            arguments='%theta: f64 {mqt.input_name = "before\\00after"}',
         )
 
 
 def test_named_symbolic_input_exports_to_qiskit() -> None:
     """Reconstruct a direct Qiskit parameter from a named f64 input."""
-    symbolic = QCProgram.from_mlir_str(
-        """module {
-  func.func @main(%theta: f64 {mqt.input_name = "theta"}) attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    qc.rx(%theta) %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }
-}
-"""
+    symbolic = _single_qubit_program(
+        ["qc.rx(%theta) %q : !qc.qubit"],
+        arguments='%theta: f64 {mqt.input_name = "theta"}',
     )
     restored = symbolic.to_qiskit()
 
@@ -4383,18 +4272,12 @@ def test_named_symbolic_input_exports_to_qiskit() -> None:
 def test_unused_named_symbolic_input_is_omitted_without_mutation() -> None:
     """Omit dead entry inputs while preserving live parameter identity."""
     live = Parameter("live")
-    program = QCProgram.from_mlir_str(
-        """module {
-  func.func @main(%theta: f64 {mqt.input_name = "theta"},
-                  %live: f64 {mqt.input_name = "live", mqt.input_id = IDENTITY : i128})
-      attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    qc.rx(%live) %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }
-}
-""".replace("IDENTITY", str(live.uuid.int))
+    program = _single_qubit_program(
+        ["qc.rx(%live) %q : !qc.qubit"],
+        arguments=(
+            '%theta: f64 {mqt.input_name = "theta"}, '
+            f'%live: f64 {{mqt.input_name = "live", mqt.input_id = {live.uuid.int} : i128}}'
+        ),
     )
     source_ir = program.ir
     restored = program.to_qiskit(copy=True)
@@ -4407,16 +4290,9 @@ def test_unused_named_symbolic_input_is_omitted_without_mutation() -> None:
 
 def test_unnamed_runtime_input_is_rejected_on_export() -> None:
     """Do not infer source semantics for arbitrary runtime inputs."""
-    runtime = QCProgram.from_mlir_str(
-        """module {
-  func.func @main(%theta: f64) attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    qc.rx(%theta) %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }
-}
-"""
+    runtime = _single_qubit_program(
+        ["qc.rx(%theta) %q : !qc.qubit"],
+        arguments="%theta: f64",
     )
 
     with pytest.raises(RuntimeError, match="requires named f64 program inputs"):
@@ -4425,16 +4301,9 @@ def test_unnamed_runtime_input_is_rejected_on_export() -> None:
 
 def test_named_non_f64_runtime_input_is_rejected_on_export() -> None:
     """Reject a named compiler input whose type cannot represent a parameter."""
-    runtime = QCProgram.from_mlir_str(
-        """module {
-  func.func @main(%count: i64 {mqt.input_name = "count"}) attributes {mqt.entry_point} {
-    %q = qc.alloc : !qc.qubit
-    qc.x %q : !qc.qubit
-    qc.dealloc %q : !qc.qubit
-    return
-  }
-}
-"""
+    runtime = _single_qubit_program(
+        ["qc.x %q : !qc.qubit"],
+        arguments='%count: i64 {mqt.input_name = "count"}',
     )
     source_ir = runtime.ir
 

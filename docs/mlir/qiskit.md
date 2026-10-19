@@ -67,8 +67,11 @@ positive qubit count and a connected routing graph. Global phase is always
 allowed as circuit metadata.
 
 By default, unrepresentable gates are omitted with a warning. This includes
-custom gates, restricted angle bounds, renamed measurement or reset, open
-controls, and controlled gates other than CX and CZ. Delay, barrier, classical
+custom gates, unsupported angle bounds, renamed measurement or reset, open
+controls, and controlled gates other than CX, CY, and CZ. Bounded RXX, RYY, RZX,
+and RZZ gates are retained with the conservative interval `[0, pi/2]` when the
+target accepts that entire interval; see
+{doc}`target compilation <target_compilation>`. Delay, barrier, classical
 control flow, and operations with no applicable qubits are omitted without a
 warning. Pass `operation_names` to retain a subset; every selected name must be
 representable. Calibration, timing, and scheduling data are not copied.
@@ -202,29 +205,30 @@ constant index or a supported Boolean/Uint expression converted with
 the target width.
 
 Nested blocks may capture existing qubits, classical bits, and local variables
-but may not allocate or release circuit resources. Control flow and classical
-expressions may nest up to 64 levels, and classical expression trees may contain
-at most 16,384 nodes. Integer values use exact widths from 1 through 64. The
-only wider form is a direct unsigned comparison between one complete
-`ClassicalRegister` and one same-width literal; computed, packed, and signed
-wide values remain rejected. Both expression conditions and tuple conditions
-such as `if_test((register, value))` support this form. Tuple equalities with a
-value outside the register range become false. Standard `arith.cmpi` handles
-every comparison: signed ordering is encoded by XOR-biasing both operands' sign
-bits, including computed operands. Casts preserve truncation and sign/zero
-extension. Bitwise operations, modular arithmetic, integer selection, and shifts
-share these typed rules. Import guards runtime shifts so overshifts produce
-zero; export preserves the guards. Rotations and population count are expanded
-through the same bounded integer lowering used by jeff. Unsupported operations,
-invalid widths, non-finite constants, unsupported index uses, and dynamic
-for-loop bounds fail during validation. Programs without classical outputs have
-a void entry function. Qiskit export also accepts a lone constant-zero `i64`
-return. Whole-register reads map to Qiskit `ClassicalRegister` expressions, and
-writes map to atomic Qiskit `Store` operations. Indexed stores assume that their
-runtime index is in bounds. Internal entry-block CBit storage becomes additional
-Qiskit registers, ordered before returned registers; Qiskit exposes all circuit
-storage. OpenQASM remains the source interchange path for arbitrary register
-widths.
+but may not allocate or release qubits. Scoped CBit allocations become circuit
+registers; zero-initialized storage is reset on each block entry. Control flow
+and classical expressions may nest up to 64 levels, and classical expression
+trees may contain at most 16,384 nodes. Integer values use exact widths from 1
+through 64. The only wider form is a direct unsigned comparison between one
+complete `ClassicalRegister` and one same-width literal; computed, packed, and
+signed wide values remain rejected. Both expression conditions and tuple
+conditions such as `if_test((register, value))` support this form. Tuple
+equalities with a value outside the register range become false. Standard
+`arith.cmpi` handles every comparison: signed ordering is encoded by XOR-biasing
+both operands' sign bits, including computed operands. Casts preserve truncation
+and sign/zero extension. Bitwise operations, modular arithmetic, integer
+selection, and shifts share these typed rules. Import guards runtime shifts so
+overshifts produce zero; export preserves the guards. Rotations and population
+count are expanded through the same bounded integer lowering used by jeff.
+Unsupported operations, invalid widths, non-finite constants, unsupported index
+uses, and dynamic for-loop bounds fail during validation. For programs without
+classical outputs, export accepts a void entry function or a lone unannotated
+constant-zero `i64` status return. Whole-register reads map to Qiskit
+`ClassicalRegister` expressions, and writes map to atomic Qiskit `Store`
+operations. Indexed stores assume that their runtime index is in bounds.
+Internal CBit storage becomes additional Qiskit registers, ordered before
+returned registers; Qiskit exposes all circuit storage. OpenQASM remains the
+source interchange path for arbitrary register widths.
 
 Every public CBit output is exported as a Qiskit `ClassicalRegister`; an unnamed
 allocation receives a collision-free `_mqt_cN` name. This preserves the CBit
@@ -240,16 +244,16 @@ region may execute zero times. The exporter preserves scalar values across later
 writes and control-flow boundaries. Reads wider than 64 bits remain subject to
 the snapshot checks.
 
-Each exported measurement must write to one static public CBit in the same
-block. Destinations may be reused; later measurements overwrite earlier values
-in program order. Constants, unitary quantum operations (including barriers),
-and resets may separate a measurement from its destination store. The exporter
-keeps the measurement at its original position and writes the destination there.
-Other intervening operations, including classical accesses and control flow, are
-rejected because this earlier write may change the program's meaning. The
-measurement result may feed supported classical expressions after that store.
-Live measurement results are saved in local variables before later writes.
-Deferred measurement expressions require an unchanged destination CBit.
+Each exported measurement must write to one static CBit in the same block.
+Destinations may be reused; later measurements overwrite earlier values in
+program order. Constants, unitary quantum operations (including barriers), and
+resets may separate a measurement from its destination store. The exporter keeps
+the measurement at its original position and writes the destination there.
+Intervening classical accesses and control flow are allowed when their known
+effects do not conflict with that earlier write. Conflicting accesses or unknown
+effects are rejected. Measurement results may feed supported classical
+expressions. Live measurement results are saved in local variables before later
+writes. Deferred measurement expressions require an unchanged destination CBit.
 
 Dense numeric unitaries remain explicit matrix operations during import and
 export. Target compilation synthesizes supported one- and two-qubit matrices to
@@ -280,7 +284,7 @@ placement.
 Names passed between Qiskit and the compiler must not contain NUL characters.
 Loop lists with jumps and switch cases with variables are supported within the
 64-level nesting and definition-expansion limits. Unsupported programs fail
-without changing the source object or exposing a partial result.
+without exposing a partial result.
 
 The binding imports Qiskit only when circuit translation is requested. It
 accepts versions in the registered {code}`>=2.5.0,<2.7.0` range and verifies the

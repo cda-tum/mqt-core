@@ -2918,7 +2918,8 @@ mlir::QCProgram importCircuit(const nb::handle circuit) {
   builder.initialize(resultTypes);
   auto function = llvm::cast<mlir::func::FuncOp>(
       builder.getInsertionBlock()->getParentOp());
-  GlobalParameters globalParameters;
+  llvm::SmallVector<mlir::DictionaryAttr> parameterAttributes;
+  parameterAttributes.reserve(freeParameters.size());
   for (const auto& parameter : freeParameters) {
     const auto* symbol = parameter.getSymbol();
     llvm::SmallVector<mlir::NamedAttribute> argumentAttributes{
@@ -2937,14 +2938,22 @@ mlir::QCProgram importCircuit(const nb::handle circuit) {
           mlir::mqt::MQTDialect::ParameterGroupAttrHelper::getNameStr(),
           parameterGroupAttribute(builder, *symbol->group)));
     }
-    const auto index = function.getNumArguments();
-    mlir::Type parameterType = builder.getF64Type();
-    if (failed(function.insertArgument(
-            index, parameterType, builder.getDictionaryAttr(argumentAttributes),
-            builder.getLoc()))) {
-      throw std::runtime_error(
-          "failed to create a compiler input for a Qiskit parameter");
-    }
+    parameterAttributes.push_back(
+        builder.getDictionaryAttr(argumentAttributes));
+  }
+  if (failed(function.insertArguments(
+          llvm::SmallVector<unsigned>(freeParameters.size(), 0U),
+          llvm::SmallVector<mlir::Type>(freeParameters.size(),
+                                        builder.getF64Type()),
+          parameterAttributes,
+          llvm::SmallVector<mlir::Location>(freeParameters.size(),
+                                            builder.getLoc())))) {
+    throw std::runtime_error(
+        "failed to create compiler inputs for Qiskit parameters");
+  }
+  GlobalParameters globalParameters;
+  for (auto [index, parameter] : llvm::enumerate(freeParameters)) {
+    const auto* symbol = parameter.getSymbol();
     globalParameters[symbol->name] = function.getArgument(index);
   }
 
