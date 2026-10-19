@@ -367,7 +367,7 @@ TEST_F(QCTest, BuilderSupportsIndependentClassicalRegisterInitialization) {
       "undefined");
 }
 
-TEST_F(QCTest, BuilderDeallocatesDynamicResourcesDeterministically) {
+TEST_F(QCTest, BuilderDisposesOnlyUnreturnedResourcesInAllocationOrder) {
   QCProgramBuilder builder(context.get());
   builder.initialize();
 
@@ -378,8 +378,17 @@ TEST_F(QCTest, BuilderDeallocatesDynamicResourcesDeterministically) {
     allocatedRegisters.push_back(builder.allocQubitRegisterStorage(1));
   }
 
-  auto moduleOp = builder.finalize();
+  SmallVector<Value> returned{
+      allocatedQubits.pop_back_val(),
+      allocatedRegisters.pop_back_val(),
+  };
+  builder.retype(ValueRange(returned).getTypes());
+  auto moduleOp = builder.finalize(returned);
   ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  auto mainFunc = mlir::mqt::getEntryPoint(*moduleOp);
+  auto terminator = cast<func::ReturnOp>(mainFunc.getBody().front().back());
+  EXPECT_TRUE(llvm::equal(terminator.getOperands(), returned));
 
   SmallVector<Value> deallocatedQubits;
   SmallVector<Value> deallocatedRegisters;

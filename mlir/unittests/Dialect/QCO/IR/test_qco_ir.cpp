@@ -693,6 +693,62 @@ TEST_F(QCOTest, BuilderRejectsIncompleteRegisterBoundaries) {
   }
 }
 
+TEST_F(QCOTest, BuilderRejectsQuantumCapturesAndEscapes) {
+  for (unsigned scenario = 0; scenario < 4; ++scenario) {
+    SCOPED_TRACE(scenario);
+    EXPECT_DEATH(
+        ([&] {
+          QCOProgramBuilder builder(context.get());
+          builder.initialize();
+          auto qubit = builder.allocQubit();
+          auto tensor = builder.qtensorAlloc(1);
+          if (scenario < 2) {
+            builder.qcoIf(true, ValueRange{}, [&](ValueRange) {
+              if (scenario == 0) {
+                builder.h(qubit);
+              } else {
+                builder.qtensorExtract(tensor, 0);
+              }
+              return SmallVector<Value>{};
+            });
+          } else if (scenario == 2) {
+            builder.qcoIf(true, tensor, [&](Value argument) {
+              return builder.qtensorExtract(argument, 0).first;
+            });
+            builder.finalize();
+          } else {
+            builder.inv(qubit, [&](Value argument) {
+              builder.qtensorExtract(tensor, 0);
+              return argument;
+            });
+          }
+        }()),
+        "Quantum values must be passed explicitly through region arguments");
+  }
+}
+
+TEST_F(QCOTest, BuilderRejectsChangedTensorSlots) {
+  for (unsigned scenario = 0; scenario < 3; ++scenario) {
+    SCOPED_TRACE(scenario);
+    EXPECT_DEATH(
+        ([&] {
+          QCOProgramBuilder builder(context.get());
+          builder.initialize();
+          auto [tensor, qubit] =
+              builder.qtensorExtract(builder.qtensorAlloc(2), 0);
+          if (scenario == 1) {
+            tensor = builder.qtensorAlloc(2);
+          } else if (scenario == 2) {
+            qubit = builder.allocQubit();
+          }
+          builder.qtensorInsert(qubit, tensor, scenario == 0 ? 1 : 0);
+        }()),
+        scenario == 0
+            ? "Inserted qubit must return to its original slot"
+            : "Inserted qubit must belong to the destination register");
+  }
+}
+
 TEST_F(QCOTest, BuilderRejectsChangedTensorRegisterAssociations) {
   EXPECT_DEATH(([&] {
                  QCOProgramBuilder builder(context.get());

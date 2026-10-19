@@ -45,7 +45,6 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
 #include <numbers>
 #include <optional>
 #include <type_traits>
@@ -509,13 +508,12 @@ struct MergeSingleQubitRotationGatesPattern final
   /// @return The chain of operations in circuit order (first applied to last)
   static SmallVector<UnitaryOpInterface>
   collectChain(UnitaryOpInterface start) {
-    SmallVector chain{start};
-    for (auto curr = std::next(WireIterator(start.getOutputQubit(0)));
-         curr != std::default_sentinel; ++curr) {
-      if (!isMergeable(curr.operation())) {
+    SmallVector<UnitaryOpInterface> chain;
+    for (auto* op : WireRange(start.getOutputQubit(0))) {
+      if (!isMergeable(op)) {
         break;
       }
-      chain.emplace_back(cast<UnitaryOpInterface>(*curr.operation()));
+      chain.emplace_back(cast<UnitaryOpInterface>(op));
     }
     return chain;
   }

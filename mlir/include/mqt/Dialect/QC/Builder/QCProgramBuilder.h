@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
@@ -32,8 +33,6 @@ namespace mlir {
 
 // Forward declarations
 class MLIRContext;
-class ModuleOp;
-class Operation;
 class ValueRange;
 
 namespace qc {
@@ -43,7 +42,9 @@ namespace qc {
 /// The QCProgramBuilder provides a type-safe interface for constructing
 /// quantum circuits using reference semantics. Operations modify qubits in
 /// place without producing new SSA values, providing a natural mapping to
-/// hardware execution models.
+/// hardware execution models. The builder destroys unfinished IR on
+/// destruction; `finalize()` transfers ownership to its caller. Builders are
+/// move-only. The borrowed MLIR context must outlive the builder and its IR.
 ///
 /// @par Qubit addressing:
 /// A program must use either static qubits (`staticQubit`) or dynamic
@@ -1331,8 +1332,8 @@ public:
   /// @param returnValues Values representing the return values of the main
   /// function.
   ///
-  /// Automatically deallocates all remaining valid qubits and tensors of
-  /// qubits, adds a return statement with the given return values, and
+  /// Deallocates owned qubits and registers except those returned directly,
+  /// adds a return statement with the given return values, and
   /// transfers ownership of the module to the caller. The builder should not be
   /// used after calling this method.
   ///
@@ -1369,8 +1370,7 @@ public:
 private:
   enum class AllocationMode : uint8_t { Unset, Static, Dynamic };
 
-  MLIRContext* ctx{};
-  Operation* moduleOp_;
+  OwningOpRef<ModuleOp> moduleOp_;
 
   /// Track allocated qubits for automatic deallocation
   SetVector<Value> allocatedQubits;
