@@ -724,11 +724,12 @@ private:
   struct SerialPolicy {
     explicit SerialPolicy(const Horizon& horizon,
                           const Layout<QubitIndex>& layout,
-                          const CompilerTarget& target)
-        : horizon_(&horizon), objective_(findObjective()) {}
+                          const CompilerTarget& target,
+                          const Parameters& params)
+        : horizon_(&horizon), index_(findIndex(layout, target, params)) {}
 
     /// Estimates routing cost by summing distance-based SWAP counts over the
-    /// lookahead horizon with reciprocal decay per layer.
+    /// lookahead horizon with geometric decay per layer.
     ///
     /// Computes the minimal number of SWAPs required to route each gate in
     /// each layer. For each gate, this is determined by the shortest distance
@@ -736,55 +737,73 @@ private:
     [[nodiscard]] float heuristic(const Layout<QubitIndex>& layout,
                                   const CompilerTarget& target,
                                   const Parameters& params) const {
-      float costs = 0;
-      float weight = 1;
-      for (size_t i = 0; i < horizon_->nlayers(); ++i) {
-        costs += weight *
-                 sum_of(map_range(horizon_->get(i),
-                                  [&](const auto& gate) {
-                                    return distance(gate, layout, target) - 1;
-                                  }),
-                        0.F);
-        weight =
-            params.lambda / (1 + static_cast<float>(i) * (1 - params.lambda));
-      }
-      return costs;
+      return heuristic(index_, layout, target, params);
     }
 
     /// Return the to be routed gate, i.e., the objective.
-    [[nodiscard]] QubitIndexPair objective() const { return objective_; }
+    [[nodiscard]] QubitIndexPair objective() const {
+      return horizon_->get(0)[index_];
+    }
 
   private:
-    /// Select future endpoint reuse per deferred front-layer interaction.
-    [[nodiscard]] QubitIndexPair findObjective() const {
+    [[nodiscard]] float heuristic(size_t index,
+                                  const Layout<QubitIndex>& layout,
+                                  const CompilerTarget& target,
+                                  const Parameters& params) const {
+      constexpr float alternativeLambda = 1.25;
+      constexpr float invAlternativeLambda = 1.0F / alternativeLambda;
+
+      const auto front = horizon_->get(0);
+      assert(index < front.size() && "front index out of bounds");
+
+      float costs = 0.0F;
+      float weight = invAlternativeLambda;
+
+      // Process front layer in a single pass
+      for (size_t i = 0; i < front.size(); ++i) {
+        const auto dist =
+            static_cast<float>(distance(front[i], layout, target) - 1);
+        costs += (i == index ? 1.0F : weight) * dist;
+      }
+
+      // Process remaining layers with exponentially decaying weight
+      for (size_t i = 1; i < horizon_->nlayers(); ++i) {
+        costs +=
+            weight * sum_of(map_range(horizon_->get(i),
+                                      [&](const auto& gate) {
+                                        return static_cast<float>(
+                                            distance(gate, layout, target) - 1);
+                                      }),
+                            0.F);
+        weight *= invAlternativeLambda;
+      }
+
+      return costs;
+    }
+
+    [[nodiscard]] size_t findIndex(const Layout<QubitIndex>& layout,
+                                   const CompilerTarget& target,
+                                   const Parameters& params) const {
       auto front = horizon_->get(0);
       if (front.size() == 1) {
-        return front.front();
+        return 0;
       }
-      float mostDemand = 0;
-      QubitIndexPair obj = front.front();
-      // Require proportionally more reuse to bypass earlier ready interactions.
-      for (auto [position, curr] : enumerate(front)) {
-        size_t demand = 0;
-        for (size_t i = 1; i < horizon_->nlayers(); ++i) {
-          demand += count_if(horizon_->get(i), [&curr](const auto& next) {
-            return next.first == curr.first || next.first == curr.second ||
-                   next.second == curr.first || next.second == curr.second;
-          });
-        }
-        const auto score =
-            static_cast<float>(demand) / static_cast<float>(position + 1);
-        if (score > mostDemand) {
-          obj = curr;
-          mostDemand = score;
+
+      size_t bestIndex = 0;
+      float lowest = std::numeric_limits<float>::max();
+      for (size_t i = 0; i < front.size(); ++i) {
+        if (const auto h = heuristic(i, layout, target, params); h < lowest) {
+          bestIndex = i;
+          lowest = h;
         }
       }
-      return obj;
+
+      return bestIndex;
     }
 
     // The routing iteration owns the horizon and outlives this policy.
     const Horizon* horizon_;
-    QubitIndexPair objective_;
+    size_t index_;
   };
 
   /// Describes a node in the A* search graph.
@@ -1622,9 +1641,10 @@ private:
   /// distance-reducing SWAPs.
   template <class Policy>
   [[nodiscard]] SmallVector<QubitIndexPair>
-  search(const Policy& policy, RoutingState& state, Arena& arena,
+  search(const Horizon& horizon, RoutingState& state, Arena& arena,
          const Environment& env) const {
     const Parameters params{.alpha = alpha, .lambda = lambda};
+    const Policy policy(horizon, state.layout, env.target, params);
 
     arena.reset();
     Node* root = arena.allocate();
@@ -2413,8 +2433,7 @@ private:
           break;
         }
 
-        const Policy policy(horizon, state.layout, env.target);
-        const auto swaps = search(policy, state, arena, env);
+        const auto swaps = search<Policy>(horizon, state, arena, env);
         insertSWAPs<Mode>(swaps, state, stats, rewriter);
       }
     }
