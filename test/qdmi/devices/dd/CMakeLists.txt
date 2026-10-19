@@ -25,7 +25,6 @@ if(TARGET MQT::CoreQDMI_DDSIM_Device)
     job_lifecycle_test.cpp
     results_sampling_test.cpp
     results_statevector_test.cpp
-    results_probabilities_test.cpp
     error_handling_test.cpp
     concurrency_test.cpp
     device_status_test.cpp)

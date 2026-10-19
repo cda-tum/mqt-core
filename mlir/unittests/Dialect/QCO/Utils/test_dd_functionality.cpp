@@ -1317,6 +1317,15 @@ TEST_F(QCODDFunctionalityTest, SamplePreservesDeclaredStaticWidth) {
     outcome.front() = outcome.back() = '1';
     EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{outcome, 8}}));
     EXPECT_EQ(orderedShots, std::vector<std::string>(8, outcome));
+    DDSamplingState retained;
+    ASSERT_TRUE(succeeded(sampleShots(
+        mainFunc(*mod), 8, 1, orderedShots, DDArgumentBindings{}, &retained, {},
+        4, [&](size_t) {
+          ADD_FAILURE() << "Terminal and structured-branch sampling are serial";
+          return size_t{1};
+        })));
+    EXPECT_EQ(orderedShots, std::vector<std::string>(8, outcome));
+    EXPECT_EQ(retained.dd != nullptr, !dynamic);
   }
 }
 
@@ -1386,12 +1395,16 @@ TEST_F(QCODDFunctionalityTest, AdaptiveWorkersAndTopLevelBranches) {
     std::vector<std::string> second;
     const auto a = sample(mainFunc(*mod), 512, 19, DDArgumentBindings{}, &first,
                           nullptr, {}, workers);
-    const auto b = sample(mainFunc(*mod), 512, 19, DDArgumentBindings{},
-                          &second, nullptr, {}, workers);
+    const auto b = sampleShots(mainFunc(*mod), 512, 19, second,
+                               DDArgumentBindings{}, nullptr, {}, workers);
     ASSERT_TRUE(succeeded(a));
     ASSERT_TRUE(succeeded(b));
     EXPECT_EQ(first, second);
-    EXPECT_EQ(*a, *b);
+    std::map<std::string, size_t> counts;
+    for (const auto& shot : second) {
+      ++counts[shot];
+    }
+    EXPECT_EQ(*a, counts);
     EXPECT_EQ(first.size(), 512U);
     EXPECT_NEAR(static_cast<double>(a->at("1")), 128., 50.);
   }
@@ -3001,7 +3014,20 @@ TEST_F(QCODDFunctionalityTest,
       ++counts[shot];
     }
     EXPECT_EQ(counts, *histogram);
+    std::vector<std::string> ordered;
+    ASSERT_TRUE(succeeded(sampleShots(
+        mainFunc(*mod), 128, 9, ordered, DDArgumentBindings{}, nullptr, {},
+        workers, [](size_t desired) { return desired; })));
+    EXPECT_EQ(ordered, shots);
   }
+  std::vector<std::string> serial;
+  std::vector<std::string> capped;
+  ASSERT_TRUE(succeeded(sampleShots(mainFunc(*mod), 128, 9, serial,
+                                    DDArgumentBindings{}, nullptr, {}, 1)));
+  ASSERT_TRUE(succeeded(sampleShots(mainFunc(*mod), 128, 9, capped,
+                                    DDArgumentBindings{}, nullptr, {}, 4,
+                                    [](size_t) { return size_t{1}; })));
+  EXPECT_EQ(capped, serial);
 }
 
 TEST_F(QCODDFunctionalityTest, SampleDefersNestedTerminalMeasurement) {

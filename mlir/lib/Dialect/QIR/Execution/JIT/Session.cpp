@@ -427,9 +427,7 @@ JitSession::loadModuleFromMemory(const llvm::StringRef irBytes,
                                  const llvm::StringRef bufferName) {
   llvm::orc::ThreadSafeContext context{std::make_unique<llvm::LLVMContext>()};
   llvm::SMDiagnostic err;
-  auto buffer = llvm::MemoryBuffer::getMemBuffer(
-      irBytes, bufferName,
-      /*RequiresNullTerminator=*/false); // bitcode isn't null-terminated
+  auto buffer = llvm::MemoryBuffer::getMemBufferCopy(irBytes, bufferName);
   auto m = context.withContextDo([&](llvm::LLVMContext* ctx) {
     return parseIR(buffer->getMemBufferRef(), err, *ctx);
   });

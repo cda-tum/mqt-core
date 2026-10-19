@@ -36,11 +36,13 @@
 #include <exception>
 #include <future>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <random>
 #include <span>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -63,16 +65,28 @@ namespace {
 }
 
 struct Execution {
+  llvm::raw_socket_stream* stream_;
   std::string_view program_;
   size_t numShots_;
   std::optional<uint64_t> seed_;
   bool captureQIROutput_;
-  size_t workerSlots_;
+  size_t maxWorkers_;
   bool automaticWorkers_;
   std::optional<std::string> qirOutput_;
   std::vector<std::string> shots_;
   std::unique_ptr<dd::Package> dd_;
   dd::VectorDD stateVecDD_{};
+  [[nodiscard]] size_t requestWorkers(size_t desired) const {
+    std::string bytes;
+    qdmi::dd::WorkerSlots slots;
+    if (!qdmi::dd::writeFrame(
+            *stream_, qdmi::dd::encode(qdmi::dd::WorkerSlots{desired})) ||
+        !qdmi::dd::readFrame(*stream_, bytes) ||
+        !qdmi::dd::decode(bytes, slots) || slots.count > desired) {
+      throw std::runtime_error("DDSIM worker slot exchange failed");
+    }
+    return slots.count;
+  }
   bool qasmProgram() {
     auto qcoProgram = parseQASMToQCO(program_);
     if (llvm::failed(qcoProgram)) {
@@ -86,10 +100,15 @@ struct Execution {
     }
     if (numShots_ != 0) {
       mlir::qco::DDSamplingState retainedState;
-      if (llvm::failed(
-              mlir::qco::sample(entryPoint, numShots_, seed_.value_or(0),
-                                mlir::qco::DDArgumentBindings{}, &shots_,
-                                &retainedState, {}, workerSlots_))) {
+      const size_t workers =
+          automaticWorkers_
+              ? std::min(maxWorkers_,
+                         std::clamp(numShots_ / 256, size_t{1}, size_t{8}))
+              : maxWorkers_;
+      if (llvm::failed(mlir::qco::sampleShots(
+              entryPoint, numShots_, seed_.value_or(0), shots_,
+              mlir::qco::DDArgumentBindings{}, &retainedState, {}, workers,
+              [&](size_t desired) { return requestWorkers(desired); }))) {
         return false;
       }
       dd_ = std::move(retainedState.dd);
@@ -132,7 +151,10 @@ struct Execution {
     size_t workers = 1;
     if (sampling && !jitSession.canSampleTerminal()) {
       workers =
-          automaticWorkers_ ? std::min(workerSlots_, automatic) : workerSlots_;
+          automaticWorkers_ ? std::min(maxWorkers_, automatic) : maxWorkers_;
+      if (workers > 1) {
+        workers = requestWorkers(workers);
+      }
     }
     if (workers == 1) {
       const auto rc =
@@ -143,7 +165,7 @@ struct Execution {
         return false;
       }
     } else {
-      std::mt19937_64 rng(seed_.value_or(std::random_device{}()));
+      std::mt19937_64 rng(seed_ ? *seed_ : qir::Runtime::generateRandomSeed());
       std::vector<uint64_t> workerSeeds(workers);
       for (size_t i = 1; i < workers; ++i) {
         workerSeeds[i] = rng();
@@ -192,12 +214,14 @@ struct Execution {
         }));
       }
       int64_t firstError = 0;
+      shots_.reserve(numShots_);
       for (size_t i = 0; i < workers; ++i) {
         const auto code = tasks[i].get();
         if (firstError == 0 && code != 0) {
           firstError = code;
         }
-        shots_.insert(shots_.end(), parts[i].begin(), parts[i].end());
+        shots_.insert(shots_.end(), std::make_move_iterator(parts[i].begin()),
+                      std::make_move_iterator(parts[i].end()));
       }
       if (firstError != 0) {
         std::cerr << "QIR program returned exit code " << firstError << '\n';
@@ -222,14 +246,16 @@ struct Execution {
   }
 };
 
-qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request) {
+qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request,
+                                 llvm::raw_socket_stream& stream) {
   qdmi::dd::WorkerResponse response;
   Execution execution{
+      .stream_ = &stream,
       .program_ = request.program,
       .numShots_ = static_cast<size_t>(request.shots),
       .seed_ = request.seed,
       .captureQIROutput_ = request.captureOutput,
-      .workerSlots_ = static_cast<size_t>(request.workerSlots),
+      .maxWorkers_ = static_cast<size_t>(request.maxWorkers),
       .automaticWorkers_ = request.automaticWorkers,
   };
   const bool qasm = request.format == QDMI_PROGRAM_FORMAT_QASM2 ||
@@ -271,9 +297,9 @@ int main(int argc, char** argv) {
   const qdmi::dd::WorkerStream ownedStream(connection->release());
   auto& stream = *ownedStream;
   stream.SetUnbuffered();
-  std::string bytes;
-  while (qdmi::dd::readFrame(stream, bytes)) {
-    if (bytes.empty()) {
+  while (true) {
+    std::string bytes;
+    if (!qdmi::dd::readFrame(stream, bytes) || bytes.empty()) {
       break;
     }
     qdmi::dd::WorkerRequest request;
@@ -281,7 +307,7 @@ int main(int argc, char** argv) {
       return 1;
     }
     // execute destroys the program's JIT, runtime, and DDs before reuse.
-    auto const response = execute(request);
+    auto const response = execute(request, stream);
     if (!qdmi::dd::writeFrame(stream, qdmi::dd::encode(response))) {
       return 1;
     }

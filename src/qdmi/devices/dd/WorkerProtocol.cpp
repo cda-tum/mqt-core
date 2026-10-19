@@ -31,7 +31,9 @@ namespace qdmi::dd {
 namespace {
 using namespace llvm::orc::shared;
 constexpr uint32_t MAGIC = 0x4d515444;
-constexpr uint32_t VERSION = 2;
+constexpr uint32_t VERSION = 3;
+// Distinct from the response success byte (0 or 1).
+constexpr uint8_t SLOTS = 2;
 using Header = SPSArgList<uint32_t, uint32_t, uint64_t>;
 using Request = SPSArgList<int32_t, SPSString, uint64_t, SPSOptional<uint64_t>,
                            uint8_t, uint64_t, uint8_t>;
@@ -144,35 +146,49 @@ std::string encode(const WorkerRequest& request) {
   std::string bytes(
       Request::size(request.format, request.program, request.shots,
                     request.seed, static_cast<uint8_t>(request.captureOutput),
-                    request.workerSlots,
+                    request.maxWorkers,
                     static_cast<uint8_t>(request.automaticWorkers)),
       '\0');
   SPSOutputBuffer buffer(bytes.data(), bytes.size());
   Request::serialize(buffer, request.format, request.program, request.shots,
                      request.seed, static_cast<uint8_t>(request.captureOutput),
-                     request.workerSlots,
+                     request.maxWorkers,
                      static_cast<uint8_t>(request.automaticWorkers));
   return bytes;
 }
 
 bool decode(llvm::StringRef bytes, WorkerRequest& request) {
   SPSInputBuffer buffer(bytes.data(), bytes.size());
-  llvm::StringRef program;
   uint8_t capture = 0;
   uint8_t automatic = 0;
   if (!SPSArgList<int32_t, SPSString, uint64_t>::deserialize(
-          buffer, request.format, program, request.shots) ||
+          buffer, request.format, request.program, request.shots) ||
       !readOptional<uint64_t>(buffer, request.seed) ||
       !SPSArgList<uint8_t, uint64_t, uint8_t>::deserialize(
-          buffer, capture, request.workerSlots, automatic) ||
-      capture > 1 || automatic > 1 || request.workerSlots == 0 ||
+          buffer, capture, request.maxWorkers, automatic) ||
+      capture > 1 || automatic > 1 || request.maxWorkers == 0 ||
       buffer.data() != bytes.end()) {
     return false;
   }
   request.captureOutput = capture != 0;
   request.automaticWorkers = automatic != 0;
-  request.program = program.str();
   return true;
+}
+
+std::string encode(WorkerSlots slots) {
+  using Slots = SPSArgList<uint8_t, uint64_t>;
+  std::string bytes(Slots::size(SLOTS, slots.count), '\0');
+  SPSOutputBuffer buffer(bytes.data(), bytes.size());
+  Slots::serialize(buffer, SLOTS, slots.count);
+  return bytes;
+}
+
+bool decode(llvm::StringRef bytes, WorkerSlots& slots) {
+  SPSInputBuffer buffer(bytes.data(), bytes.size());
+  uint8_t kind = 0;
+  return SPSArgList<uint8_t, uint64_t>::deserialize(buffer, kind,
+                                                    slots.count) &&
+         kind == SLOTS && slots.count != 0 && buffer.data() == bytes.end();
 }
 
 std::string encode(const WorkerResponse& response) {
@@ -217,6 +233,7 @@ bool decode(llvm::StringRef bytes, WorkerResponse& response) {
       count > bytes.size() / sizeof(uint64_t)) {
     return false;
   }
+  response.shots.reserve(count);
   for (uint64_t i = 0; i < count; ++i) {
     llvm::StringRef shot;
     if (!SPSArgList<SPSString>::deserialize(buffer, shot) ||

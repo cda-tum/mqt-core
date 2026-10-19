@@ -188,77 +188,37 @@ TEST_F(QIRRuntimeTest, RejectsDynamicQubitBeyondDDRange) {
 
 } // namespace
 
-// HEADER/START/METADATA/END frame the per-shot OUTPUT block.
-// The default Labeled schema emits `labeled` in HEADER and METADATA.
 TEST_F(QIRRuntimeTest, OutputFraming) {
   auto& runtime = Runtime::getInstance();
-  runtime.outputProgramHeader();
-  runtime.outputShotStart();
-  runtime.outputShotEnd();
-  std::ostringstream expected;
-  expected << "HEADER\tschema_id\tlabeled\n"
-           << "HEADER\tschema_version\t2.1\n"
-           << "START\n"
-           << "METADATA\toutput_labeling_schema\tlabeled\n"
-           << "END\t0\n";
-  EXPECT_EQ(sink.str(), expected.str());
-}
-
-// In Labeled mode:
-// - the HEADER announces `labeled`,
-// - the per-shot METADATA line matches the output schema, and
-// - OUTPUT records carry the label column.
-TEST_F(QIRRuntimeTest, OutputFramingLabeled) {
-  auto& runtime = Runtime::getInstance();
-  runtime.outputProgramHeader();
-  runtime.outputShotStart();
-  runtime.outputBool(true, "bool_label");
-  runtime.outputInt(42, "int_label");
-  runtime.outputFloat(3.14, "double_label");
-  runtime.outputTuple(2, "tuple_label");
-  runtime.outputArray(3, "array_label");
-  runtime.outputShotEnd();
-  std::ostringstream expected;
-  expected << "HEADER\tschema_id\tlabeled\n"
-           << "HEADER\tschema_version\t2.1\n"
-           << "START\n"
-           << "METADATA\toutput_labeling_schema\tlabeled\n"
-           << "OUTPUT\tBOOL\ttrue\tbool_label\n"
-           << "OUTPUT\tINT\t42\tint_label\n"
-           << "OUTPUT\tDOUBLE\t3.14\tdouble_label\n"
-           << "OUTPUT\tTUPLE\t2\ttuple_label\n"
-           << "OUTPUT\tARRAY\t3\tarray_label\n"
-           << "END\t0\n";
-  EXPECT_EQ(sink.str(), expected.str());
-}
-
-// In Ordered mode:
-// - the HEADER announces `ordered`,
-// - the per-shot METADATA line matches the output schema, and
-// - OUTPUT records drop the label column.
-TEST_F(QIRRuntimeTest, OutputFramingOrdered) {
-  auto& runtime = Runtime::getInstance();
-  runtime.setOutputSchema(Runtime::OutputSchema::Ordered);
-  runtime.outputProgramHeader();
-  runtime.outputShotStart();
-  runtime.outputBool(true, "bool_label");
-  runtime.outputInt(42, "int_label");
-  runtime.outputFloat(3.14, "double_label");
-  runtime.outputTuple(2, "tuple_label");
-  runtime.outputArray(3, "array_label");
-  runtime.outputShotEnd();
-  std::ostringstream expected;
-  expected << "HEADER\tschema_id\tordered\n"
-           << "HEADER\tschema_version\t2.1\n"
-           << "START\n"
-           << "METADATA\toutput_labeling_schema\tordered\n"
-           << "OUTPUT\tBOOL\ttrue\n"
-           << "OUTPUT\tINT\t42\n"
-           << "OUTPUT\tDOUBLE\t3.14\n"
-           << "OUTPUT\tTUPLE\t2\n"
-           << "OUTPUT\tARRAY\t3\n"
-           << "END\t0\n";
-  EXPECT_EQ(sink.str(), expected.str());
+  for (const bool ordered : {false, true}) {
+    SCOPED_TRACE(ordered);
+    sink.str("");
+    if (ordered) {
+      runtime.setOutputSchema(Runtime::OutputSchema::Ordered);
+    }
+    runtime.outputProgramHeader();
+    runtime.outputShotStart();
+    runtime.outputBool(true, "bool_label");
+    runtime.outputInt(42, "int_label");
+    runtime.outputFloat(1.0000001, "double_label");
+    runtime.outputTuple(2, "tuple_label");
+    runtime.outputArray(3, "array_label");
+    runtime.outputShotEnd();
+    const auto* schema = ordered ? "ordered" : "labeled";
+    std::ostringstream expected;
+    expected << "HEADER\tschema_id\t" << schema << "\n"
+             << "HEADER\tschema_version\t2.1\n"
+             << "START\n"
+             << "METADATA\toutput_labeling_schema\t" << schema << "\n"
+             << "OUTPUT\tBOOL\ttrue" << (ordered ? "" : "\tbool_label") << "\n"
+             << "OUTPUT\tINT\t42" << (ordered ? "" : "\tint_label") << "\n"
+             << "OUTPUT\tDOUBLE\t1.0000001" << (ordered ? "" : "\tdouble_label")
+             << "\n"
+             << "OUTPUT\tTUPLE\t2" << (ordered ? "" : "\ttuple_label") << "\n"
+             << "OUTPUT\tARRAY\t3" << (ordered ? "" : "\tarray_label") << "\n"
+             << "END\t0\n";
+    EXPECT_EQ(sink.str(), expected.str());
+  }
 }
 
 TEST_F(QIRRuntimeTest, XGate) {
@@ -933,9 +893,12 @@ TEST_F(QIRRuntimeTest, AdaptiveRecordOutputs) {
            << "OUTPUT\tBOOL\t" << b0 << "\tm0\n"
            << "OUTPUT\tBOOL\t" << b1 << "\tm1\n"
            << "OUTPUT\tBOOL\t" << b2 << "\tm2\n"
-           << "OUTPUT\tINT\t" << weight << "\thamming_weight\n"
-           << "OUTPUT\tDOUBLE\t" << mean << "\tmean\n";
+           << "OUTPUT\tINT\t" << weight << "\thamming_weight\n";
   EXPECT_THAT(sink.str(), ::testing::HasSubstr(expected.str()));
+  const std::string prefix = "OUTPUT\tDOUBLE\t";
+  const auto position = sink.str().find(prefix);
+  ASSERT_NE(position, std::string::npos);
+  EXPECT_EQ(std::stod(sink.str().substr(position + prefix.size())), mean);
 
   __quantum__rt__result_release(r0);
   __quantum__rt__result_release(r1);
