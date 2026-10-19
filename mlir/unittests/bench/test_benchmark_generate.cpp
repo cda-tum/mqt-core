@@ -9,6 +9,7 @@
  */
 
 #include "bench/BV.hpp"
+#include "bench/FanOut.hpp"
 #include "bench/GHZ.hpp"
 #include "bench/Grover.hpp"
 #include "bench/JSON.hpp"
@@ -88,6 +89,7 @@ static void expectQCAndJeff(const Benchmark& benchmark) {
 TEST(GenerateProgramTest, GeneratesEveryBenchmarkMethodAsQCAndJeff) {
   expectQCAndJeff(BV{{.hiddenBitstring = "101"}});
   expectQCAndJeff(BV{{.hiddenBitstring = "101", .method = BVMethod::Dynamic}});
+  expectQCAndJeff(FanOut{{.controls = 3}});
   expectQCAndJeff(ModularMultiplier{{
       .multiplier = "011",
       .modulus = "101",

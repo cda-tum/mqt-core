@@ -420,6 +420,14 @@ continued fraction
   called convergents, give rational approximations used to recover candidate
   exponents from measured phases in Shor's algorithm.
 
+quantum fan-out
+fan-out
+  **Preferred term:** quantum fan-out. **Accepted alias:** fan-out when the
+  quantum context is clear. CNOT gates with one shared control and distinct
+  targets. On zero targets, this copies a computational-basis bit; on a
+  superposition, it creates correlations rather than independent copies of an
+  unknown quantum state.
+
 semiclassical quantum Fourier transform
 semiclassical QFT
   **Preferred term:** semiclassical quantum Fourier transform. **Accepted
