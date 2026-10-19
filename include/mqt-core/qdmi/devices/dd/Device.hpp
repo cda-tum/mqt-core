@@ -26,7 +26,6 @@
 #include <random>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 namespace qdmi::dd {
 struct Execution;
@@ -38,9 +37,6 @@ class Device final : public Singleton<Device> {
 
   /// The number of qubits supported by the simulator.
   size_t qubitsNum_ = 0;
-
-  /// The status of the device.
-  std::atomic<QDMI_Device_Status> status_{QDMI_DEVICE_STATUS_IDLE};
 
   /// The list of device sessions.
   std::unordered_map<MQT_DDSIM_QDMI_Device_Session,
@@ -84,13 +80,10 @@ public:
   /// Generates a unique ID.
   auto generateUniqueID() -> int;
 
-  /// Sets the device status.
-  auto setStatus(QDMI_Device_Status status) -> void;
-
-  /// Bumps the number of running jobs and updates the status
+  /// Bumps the number of running programs.
   auto increaseRunningJobs() -> void;
 
-  /// Decreases the number of running jobs and updates the status
+  /// Decreases the number of running programs.
   auto decreaseRunningJobs() -> void;
 };
 } // namespace qdmi::dd
@@ -168,7 +161,6 @@ private:
   int id_ = 0;
 
   QDMI_Program_Format format_ = QDMI_PROGRAM_FORMAT_MAX;
-  std::vector<std::string> programs_;
   size_t numShots_ = 1024;
   std::optional<int> seed_;
   bool captureQIROutput_ = false;

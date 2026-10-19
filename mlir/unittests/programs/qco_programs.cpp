@@ -4530,27 +4530,10 @@ Value qtensorInsert(QCOProgramBuilder& b) {
   return measureAndReturn(b, {});
 }
 
-Value qtensorExtractInsertIndexMismatch(QCOProgramBuilder& b) {
-  auto qtensor = b.qtensorAlloc(3);
-  auto [extractOutTensor, q0] = b.qtensorExtract(qtensor, 0);
-  (void)b.qtensorInsert(q0, extractOutTensor, 1);
-  return measureAndReturn(b, {});
-}
-
 Value qtensorExtractInsertSameIndex(QCOProgramBuilder& b) {
   auto qtensor = b.qtensorAlloc(3);
   auto [extractOutTensor, q0] = b.qtensorExtract(qtensor, 0);
   (void)b.qtensorInsert(q0, extractOutTensor, 0);
-  return measureAndReturn(b, {});
-}
-
-Value qtensorInsertExtractIndexMismatch(QCOProgramBuilder& b) {
-  auto qtensor = b.qtensorAlloc(3);
-  auto [extractOutTensor, q0] = b.qtensorExtract(qtensor, 0);
-  auto q1 = b.h(q0);
-  auto insertOutTensor = b.qtensorInsert(q1, extractOutTensor, 0);
-  auto [extractOutTensor1, q2] = b.qtensorExtract(insertOutTensor, 1);
-  (void)b.qtensorInsert(q2, extractOutTensor1, 0);
   return measureAndReturn(b, {});
 }
 

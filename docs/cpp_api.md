@@ -16,21 +16,54 @@ The Python wheel supplies the QDMI driver, device bundles, and the `mqt-cc` and
 `mqt-core-bench` executables. Its CMake package exposes the QDMI C interfaces;
 C++ DD, QDMI client, and benchmark libraries require a source installation.
 
-This application allocates a session through the builtin driver's C interface.
-Save it as `main.cpp`:
+This application runs one deterministic shot through DDSIM's worker using the
+builtin driver's C interface. Its bundle contains only the DDSIM device. Save it
+as `main.cpp`:
 
 ```cpp
 #include <qdmi/client.h>
 
+#include <cstddef>
 #include <iostream>
+#include <stdexcept>
+#include <string>
+
+void check(int status) {
+  if (status != QDMI_SUCCESS) {
+    throw std::runtime_error("QDMI error: " + std::to_string(status));
+  }
+}
 
 int main() {
   QDMI_Session session = nullptr;
-  if (QDMI_session_alloc(&session) != QDMI_SUCCESS) {
+  check(QDMI_session_alloc(&session));
+  check(QDMI_session_init(session));
+  QDMI_Device device = nullptr;
+  check(QDMI_session_query_session_property(
+      session, QDMI_SESSION_PROPERTY_DEVICES, sizeof(device), &device, nullptr));
+
+  QDMI_Job job = nullptr;
+  check(QDMI_device_create_job(device, &job));
+  const char circuit[] = "OPENQASM 3.0; include \"stdgates.inc\"; "
+                         "bit[1] c; x $0; c[0] = measure $0;";
+  const void* program = circuit;
+  const size_t length = sizeof(circuit);
+  const size_t shots = 1;
+  check(QDMI_job_set_programs(job, QDMI_PROGRAM_FORMAT_QASM3, 1, &length, &program));
+  check(QDMI_job_set_parameter(job, QDMI_JOB_PARAMETER_SHOTSNUM, sizeof(shots),
+                               &shots));
+  check(QDMI_job_submit(job));
+  check(QDMI_job_wait(job, 30000));
+
+  char result[2] = {};
+  check(QDMI_job_get_results(job, 0, QDMI_JOB_RESULT_SHOTS, sizeof(result),
+                             result, nullptr));
+  QDMI_job_free(job);
+  QDMI_session_free(session);
+  if (std::string(result) != "1") {
     return 1;
   }
-  QDMI_session_free(session);
-  std::cout << "QDMI driver available\n";
+  std::cout << "DDSIM result: " << result << '\n';
 }
 ```
 
@@ -39,22 +72,33 @@ Save the following as `CMakeLists.txt`:
 ```cmake
 cmake_minimum_required(VERSION 3.28)
 project(qdmi-example LANGUAGES CXX)
+if(APPLE)
+  set(CMAKE_BUILD_RPATH "@loader_path")
+elseif(UNIX)
+  set(CMAKE_BUILD_RPATH "$ORIGIN")
+endif()
 find_package(mqt-core CONFIG REQUIRED COMPONENTS Runtime)
 add_executable(qdmi-example main.cpp)
 target_link_libraries(qdmi-example PRIVATE MQT::CoreQDMIDriver)
 mqt_copy_qdmi_runtime(qdmi-example MQT::CoreQDMI_DDSIM_Device)
+
+enable_testing()
+add_test(NAME qdmi-runtime COMMAND qdmi-example)
+add_test(NAME compiler COMMAND MQT::mqt-cc --version)
+add_test(NAME benchmark COMMAND MQT::mqt-core-bench list)
+set_tests_properties(qdmi-runtime compiler benchmark PROPERTIES TIMEOUT 60)
 ```
 
 With the wheel installed in the active environment, run:
 
 ```console
-cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$(mqt-core-cli --cmake_dir)"
-cmake --build build
-./build/qdmi-example
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(mqt-core-cli --cmake_dir)"
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
 ```
 
-On Windows, run `build\qdmi-example.exe`. The application prints
-`QDMI driver available`. No LLVM/MLIR installation is required.
+The application prints `DDSIM result: 1`. CTest also runs both imported tools.
+No LLVM/MLIR installation is required.
 
 CMake also provides `MQT::mqt-cc` and `MQT::mqt-core-bench` imported executable
 targets. Use them in custom commands, or run `mqt-cc` and `mqt-core-bench` from
@@ -62,31 +106,10 @@ the environment's command line.
 
 ```{code-cell} ipython3
 :tags: [remove-cell]
-from pathlib import Path
-from tempfile import TemporaryDirectory
-import os
 import subprocess
+import sys
 
-source = Path("cpp_api.md").read_text(encoding="utf-8")
-cpp = source.split("```cpp\n")[1].split("\n```", 1)[0]
-cmake = source.split("```cmake\n")[1].split("\n```", 1)[0]
-prefix = subprocess.run(
-    ["mqt-core-cli", "--cmake_dir"], check=True, capture_output=True, text=True
-).stdout.strip()
-with TemporaryDirectory() as directory:
-    root = Path(directory)
-    (root / "main.cpp").write_text(cpp, encoding="utf-8")
-    (root / "CMakeLists.txt").write_text(cmake, encoding="utf-8")
-    subprocess.run(
-        ["cmake", "-S", directory, "-B", str(root / "build"), "-G", "Ninja",
-         f"-DCMAKE_PREFIX_PATH={prefix}"], check=True, stderr=subprocess.STDOUT
-    )
-    subprocess.run(
-        ["cmake", "--build", str(root / "build")], check=True, stderr=subprocess.STDOUT
-    )
-    executable = root / "build" / ("qdmi-example.exe" if os.name == "nt" else "qdmi-example")
-    result = subprocess.run([str(executable)], check=True, capture_output=True, text=True)
-    assert result.stdout.strip() == "QDMI driver available"
+subprocess.run([sys.executable, "../scripts/check_wheel_runtime.py"], check=True)
 ```
 
 ## Use the C++ development libraries

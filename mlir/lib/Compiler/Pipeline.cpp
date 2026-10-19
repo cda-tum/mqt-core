@@ -18,11 +18,11 @@
 #include "mqt/Conversion/QCToQIR/QIRBase/QCToQIRBase.h"
 #include "mqt/Dialect/MQT/Transforms/GlobalPhaseNormalization.h"
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
-#include "mqt/Dialect/QC/Translation/TranslateQCToOpenQASM3.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
-#include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 #include "mqt/Support/Passes.h"
+#include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
+#include "mqt/Target/QIR/Export.h"
 
 #include "capnp/common.h"
 #include "jeff/Translation/Deserialize.hpp"
@@ -33,18 +33,12 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -52,11 +46,9 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
-#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -359,43 +351,21 @@ LogicalResult QIRProgram::cleanup() {
 
 QIRProfile QIRProgram::profile() const noexcept { return profile_; }
 
-[[nodiscard]] static std::unique_ptr<llvm::Module>
-translateToLLVM(ModuleOp mod, llvm::LLVMContext& context) {
-  auto llvmModule = translateModuleToLLVMIR(mod, context);
-  if (!llvmModule) {
-    mod.emitError("failed to translate QIR MLIR to LLVM IR");
-    return nullptr;
-  }
-  qir::normalizeQIRModuleFlags(*llvmModule);
-  if (llvm::verifyModule(*llvmModule, &llvm::errs())) {
-    mod.emitError("exported QIR failed LLVM IR verification");
-    return nullptr;
-  }
-  return llvmModule;
-}
-
 FailureOr<std::string> QIRProgram::llvmIR() const {
-  llvm::LLVMContext context;
-  auto llvmModule = translateToLLVM(mod(), context);
-  if (!llvmModule) {
-    return failure();
-  }
   std::string result;
   llvm::raw_string_ostream stream(result);
-  llvmModule->print(stream, nullptr);
+  if (failed(qir::translateQIRToLLVMIR(mod(), stream))) {
+    return failure();
+  }
   return result;
 }
 
 FailureOr<std::vector<std::byte>> QIRProgram::toBitcode() const {
-  llvm::LLVMContext context;
-  auto llvmModule = translateToLLVM(mod(), context);
-  if (!llvmModule) {
-    return failure();
-  }
-
   SmallVector<char> storage;
   llvm::raw_svector_ostream stream(storage);
-  llvm::WriteBitcodeToFile(*llvmModule, stream);
+  if (failed(qir::translateQIRToBitcode(mod(), stream))) {
+    return failure();
+  }
   std::vector<std::byte> result(storage.size());
   std::memcpy(result.data(), storage.data(), storage.size());
   return result;
@@ -403,28 +373,7 @@ FailureOr<std::vector<std::byte>> QIRProgram::toBitcode() const {
 
 LogicalResult
 QIRProgram::writeBitcode(const std::filesystem::path& path) const {
-  llvm::LLVMContext context;
-  auto llvmModule = translateToLLVM(mod(), context);
-  if (!llvmModule) {
-    return failure();
-  }
-
-  std::error_code error;
-  llvm::raw_fd_ostream stream(path.string(), error, llvm::sys::fs::OF_None);
-  if (error) {
-    mod().emitError() << "failed to open bitcode output file '" << path.string()
-                      << "': " << error.message();
-    return failure();
-  }
-  llvm::WriteBitcodeToFile(*llvmModule, stream);
-  stream.flush();
-  if (stream.has_error()) {
-    stream.clear_error();
-    mod().emitError() << "failed to write bitcode file '" << path.string()
-                      << "'";
-    return failure();
-  }
-  return success();
+  return qir::writeQIRBitcode(mod(), path.string());
 }
 
 //===----------------------------------------------------------------------===//
@@ -464,6 +413,9 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
       []<typename T>(T&& value) -> FailureOr<QCOProgram> {
         using ProgramType = std::remove_cvref_t<T>;
         if constexpr (std::is_same_v<ProgramType, QCOProgram>) {
+          if (failed(qco::verifyLinearity(value.module()))) {
+            return failure();
+          }
           return std::forward<T>(value);
         } else if constexpr (std::is_same_v<ProgramType, OpenQASMProgram>) {
           auto qc = QCProgram::fromOpenQASMString(value.source());
@@ -476,7 +428,7 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
         }
       },
       std::move(program));
-  if (failed(qco) || failed(qco::verifyLinearity(qco->module()))) {
+  if (failed(qco)) {
     return failure();
   }
   if (output == ProgramFormat::QCO) {

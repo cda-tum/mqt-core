@@ -304,13 +304,24 @@ version and release date before publishing. Version tags drive package metadata;
 do not edit generated version files to stage a release. Release preparation does
 not itself publish a release.
 
+## Python test selection
+
+`pytest` runs package tests by default. Repository-script tests use the
+`linkcheck`, `slurm`, and `qiskit_c_api` markers registered in `pyproject.toml`.
+In a source checkout, use `pytest -m linkcheck` to select one suite or
+`pytest -m ""` to run all suites. The command-line marker expression replaces
+the default selection, including when selecting a test file explicitly.
+`nox -s tests` includes the link-checker and Qiskit C API tests; the Slurm
+workflow runs its own script tests with `-m slurm`.
+
 ## Documentation validation
 
-Install Python 3.14, LLVM/MLIR 23.1, and Doxygen before building the complete
-documentation. The Doxygen configuration is validated with Ubuntu 24.04's
-version 1.9.8 and version 1.17. Use `uvx nox --non-interactive -s docs` to build
-generated references and execute the MyST notebooks. This command fails on
-Sphinx and Doxygen diagnostics and checks local links in the generated HTML,
+Install Python 3.14 and Doxygen before building the complete documentation.
+LLVM/MLIR follows the {ref}`source-build SDK setup <setting-up-mlir>`. The
+Doxygen configuration is validated with Ubuntu 24.04's version 1.9.8 and version
+1.17. Use `uvx nox --non-interactive -s docs` to build generated references and
+execute the MyST notebooks. This command fails on Sphinx and Doxygen diagnostics
+and checks local links, scripts, and stylesheets in the generated HTML,
 including the native C++ reference. Use
 `uvx nox --non-interactive -s docs -- -b linkcheck` to check external links
 separately.

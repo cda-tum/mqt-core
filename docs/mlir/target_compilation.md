@@ -239,17 +239,25 @@ target restores their native names and phase. These gates provide the GPI basis
 when their azimuths are unrestricted on every site. A provider using turns or
 another phase convention needs an explicit adapter.
 
-Unrestricted RXX, RYY, RZX, and RZZ entanglers take precedence over fixed
-alternatives and use up to three native rotations for numeric two-qubit
-synthesis. Runtime two-qubit Pauli rotations need one arbitrary-angle native
-entangler or two fixed native entanglers, including square-root iSWAP. Fixed
-Clifford entanglers use Pauli conjugation; commuting symbolic rotations can
-share their entanglers. Single-controlled Pauli rotations and phase gates use
-the same decomposition. Bounded Pauli entanglers that include `[0, pi/2]` use
-the same numeric synthesis with local Pauli corrections. Unknown runtime angles
-use two native `pi/2` rotations. Bind parameters before compilation to use
-fractional entanglers directly. Qiskit import conservatively recognizes this
-interval through its public bound predicates.
+Synthesis compares supported entangler families and chooses the recipe with the
+fewest two-qubit gates. Ties retain the target's preference order, which places
+unrestricted RXX, RYY, RZX, and RZZ before fixed alternatives. These rotations
+use up to three native gates for numeric two-qubit synthesis. Runtime two-qubit
+Pauli rotations need one arbitrary-angle native entangler or two fixed native
+entanglers, including square-root iSWAP. Fixed Clifford entanglers use Pauli
+conjugation; commuting symbolic rotations can share their entanglers.
+Square-root iSWAP uses two gates for two commuting runtime Pauli rotations and
+four for three independent rotations. Binding all parameters first permits
+numerical synthesis with at most three gates. The fixed capability
+`XXPlusYY(-pi/2, 0)` also enables square-root iSWAP synthesis. Single-controlled
+Pauli rotations and phase gates use the same decomposition. Runtime
+`XXPlusYY(theta, 0)` and `XXMinusYY(theta, 0)` share the two-rotation circuit;
+other relative phases require a native gate or constant parameters. Bounded
+Pauli entanglers that include `[0, pi/2]` use the same numeric synthesis with
+local Pauli corrections. Unknown runtime angles use two native `pi/2` rotations.
+Bind parameters before compilation to use fractional entanglers directly. Qiskit
+import conservatively recognizes this interval through its public bound
+predicates.
 
 Resynthesis of constant two-qubit gates uses an average gate fidelity floor of
 `1 - 1e-12` per decomposition, including direct Pauli lowering. It may remove
@@ -298,23 +306,24 @@ Container overhead, target distance caches, and IR storage are additional; this
 setting does not cap total process memory. Changing the budget can change
 layouts and gate counts; more memory does not guarantee fewer gates.
 
-When routing is needed, mapping prepares a read-only table of at most 1024
-numerical native counts from original gates and constant two-qubit runs, in both
+When routing is needed, mapping prepares a read-only table of at most 1024 sets
+of Weyl coordinates from original gates and constant two-qubit runs, in both
 operand orders and with adjacent SWAPs. Preparation stops when the table is
 full. Already-adjacent greedy layouts skip preparation and cost tracking. Trials
 share this table. Each live region's cost tracker retains up to 64 additional
-counts for routing-dependent matrices. The numerical payload is about 264 KiB
-for the shared table and 17 KiB per local cache, plus indexing, allocator, and
-per-site tracking overhead. Backward refinement also retains one pending
-single-qubit matrix per site to preserve circuit order. Each traversal resets
-accounting while retaining numerical caches. These allocations are separate from
-the search budget. Native synthesis caches up to 64 full decompositions per
-analysis (about 55 KiB including single-qubit factors). Caches are local to one
-pass invocation or traversal and retain no IR handles. Exact matrix and
-entangler matches preserve numerical decisions for the same compilation seed;
-failed decompositions remain unavailable. Target support and operand direction
-are checked before lookup. Cache misses use normal synthesis analysis, so
-precomputation need not predict every routed run.
+coordinate sets for routing-dependent matrices. The coordinates serve all
+candidate entangler families. The numerical payload is about 288 KiB for the
+shared table and 18 KiB per local cache, plus indexing, allocator, and per-site
+tracking overhead. Backward refinement also retains one pending single-qubit
+matrix per site to preserve circuit order. Each traversal resets accounting
+while retaining numerical caches. These allocations are separate from the search
+budget. Native synthesis caches up to 64 full decompositions per analysis (about
+55 KiB including single-qubit factors). Caches are local to one pass invocation
+or traversal and retain no IR handles. Exact matrix and entangler matches
+preserve numerical decisions for the same compilation seed; failed numerical
+analyses remain unavailable. Target support and operand direction are checked
+before lookup. Cache misses use normal synthesis analysis, so precomputation
+need not predict every routed run.
 
 Native synthesis collects constant runs on the same two qubits, including
 interleaved single-qubit gates, and resynthesizes them in the target's selected
@@ -332,8 +341,11 @@ checked without physical sites; the later synthesis pass checks assigned sites.
 Native support includes physical sites and operand direction. Barriers,
 non-unitary operations, and unavailable matrices stop a run. If block
 decomposition fails numerically, synthesis falls back to individual lowering.
-The selected basis uses one entangler family; it does not optimize arbitrary
-mixtures of all target operations or use calibration costs.
+Each operation or run uses its cheapest supported entangler family. If circuit
+construction fails, synthesis tries the next candidate. Routing counts are
+estimates and do not include such numerical fallbacks. Selection does not
+optimize mixtures of entangler families within one recipe or use calibration
+costs.
 
 Target synthesis preserves a native `gphase`. If the target does not support
 `gphase`, target synthesis preserves relative phase effects and removes only the

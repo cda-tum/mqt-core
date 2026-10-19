@@ -353,12 +353,18 @@ void addOutputRecording(LLVM::LLVMFuncOp& main, MLIRContext* ctx,
                         LoweringState& state) {
   OpBuilder builder(ctx);
   builder.setInsertionPoint(&main.getBlocks().back().back());
-  SmallVector<qir::ClassicalRegister> returnedRegisters;
-  returnedRegisters.reserve(state.returnedCregs.size());
-  for (const auto registerIndex : state.returnedCregs) {
-    returnedRegisters.push_back(std::move(state.cregs[registerIndex]));
+  SmallVector<qir::OutputRecord> outputs;
+  outputs.reserve(state.returnedOutputs.size());
+  for (auto* operation : state.returnedOutputs) {
+    if (const auto it = state.cregIndices.find(operation);
+        it != state.cregIndices.end()) {
+      const auto& reg = state.cregs[it->second];
+      outputs.push_back({.label = reg.label, .value = &reg});
+    } else {
+      outputs.push_back(state.measuredResults.at(operation));
+    }
   }
-  emitOutputRecording(builder, main, returnedRegisters, state.scalarResults);
+  emitOutputRecording(builder, main, outputs);
 }
 
 void populateQCToQIRPatterns(RewritePatternSet& patterns,
@@ -380,7 +386,10 @@ Value getResultPtr(LoweringState& state, Operation* op,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(state.entryBlock->getTerminator());
   const auto index = static_cast<int64_t>(state.scalarResults.size());
-  const auto record = state.returnedScalarResults.contains(op);
+  if (auto it = state.measuredResults.find(op);
+      it != state.measuredResults.end()) {
+    it->second.label = "__unnamed__" + std::to_string(index);
+  }
   Value result;
   if (dynamic) {
     auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
@@ -394,8 +403,7 @@ Value getResultPtr(LoweringState& state, Operation* op,
   } else {
     result = createPointerFromIndex(rewriter, op->getLoc(), index);
   }
-  state.scalarResults.try_emplace(
-      index, qir::StaticResult{.pointer = result, .record = record});
+  state.scalarResults.push_back(result);
   return result;
 }
 
@@ -467,8 +475,15 @@ static DenseSet<Operation*> findStoreFusionCandidates(Block* block) {
 LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
                                       bool allowComputedOutputs,
                                       bool deferMeasurementStores) {
+  auto funcOp = mqt::getEntryPoint(cast<ModuleOp>(moduleOp));
   bool hasInvalidMemory = false;
   moduleOp->walk([&](Operation* operation) {
+    if (isa<cbit::AllocOp, MeasureOp>(operation) &&
+        operation->getParentOfType<func::FuncOp>() != funcOp) {
+      operation->emitError("QIR conversion requires measurements and CBit "
+                           "allocations in the entry function");
+      hasInvalidMemory = true;
+    }
     if (!isa<func::CallOp, func::CallIndirectOp>(operation)) {
       return;
     }
@@ -486,7 +501,6 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   if (hasInvalidMemory) {
     return failure();
   }
-  auto funcOp = mqt::getEntryPoint(cast<ModuleOp>(moduleOp));
   SmallVector<func::ReturnOp> returns;
   funcOp.walk([&](func::ReturnOp op) { returns.push_back(op); });
   if (returns.size() != 1) {
@@ -527,27 +541,38 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
     reg.size = size;
   });
 
-  const auto markRegisterForRecording = [&](const size_t registerIndex) {
-    auto& reg = state.cregs[registerIndex];
-    if (reg.record) {
-      return;
-    }
-    if (reg.label.empty()) {
-      reg.label = "c" + std::to_string(state.returnedCregs.size());
-    }
-    reg.record = true;
-    state.returnedCregs.push_back(registerIndex);
-  };
-
+  if (hasInvalidMemory) {
+    return failure();
+  }
+  size_t registerCount = 0;
   for (auto operand : returnOp.getOperands()) {
-    if (auto measureOp = operand.getDefiningOp<MeasureOp>()) {
-      state.returnedScalarResults.insert(measureOp.getOperation());
-    } else if (auto allocOp = operand.getDefiningOp<cbit::AllocOp>();
-               allocOp && state.cregIndices.contains(allocOp.getOperation())) {
-      markRegisterForRecording(state.cregIndices.at(allocOp.getOperation()));
-    } else {
+    auto* definition = operand.getDefiningOp();
+    if (isa_and_nonnull<MeasureOp>(definition)) {
+      state.measuredResults.try_emplace(
+          definition, qir::OutputRecord{
+                          .label = "__unnamed__" +
+                                   std::to_string(state.returnedOutputs.size()),
+                          .value = Value{},
+                      });
+      state.returnedOutputs.push_back(definition);
+    } else if (const auto it = state.cregIndices.find(definition);
+               it != state.cregIndices.end()) {
+      auto& reg = state.cregs[it->second];
+      if (!reg.record) {
+        if (reg.label.empty()) {
+          reg.label = "c" + std::to_string(registerCount);
+        }
+        ++registerCount;
+        reg.record = true;
+      }
+      state.returnedOutputs.push_back(definition);
+    } else if (operand.getType().isInteger(64) && keptOperands.empty()) {
       keptOperands.push_back(operand);
       keptReturnTypes.push_back(operand.getType());
+    } else {
+      return returnOp.emitError(
+          "QIR entry return supports only direct measurements, CBit "
+          "allocations, and one i64 exit code");
     }
   }
 
@@ -623,7 +648,58 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
     return failure();
   }
 
-  if (keptOperands.empty() && !returnOp.getOperands().empty()) {
+  DenseSet<size_t> sharedRegisters;
+  for (auto* measurement : llvm::make_first_range(state.measuredResults)) {
+    if (auto it = state.cregMeasurements.find(measurement);
+        it != state.cregMeasurements.end()) {
+      sharedRegisters.insert(it->second.first);
+    }
+  }
+  if (!sharedRegisters.empty()) {
+    DenseMap<std::pair<size_t, int64_t>, Operation*> storedMeasurements;
+    DenseSet<size_t> dynamicStores;
+    funcOp.walk([&](cbit::StoreOp store) {
+      auto allocation = store.getReg().getDefiningOp<cbit::AllocOp>();
+      if (!allocation) {
+        return;
+      }
+      const auto reg = state.cregIndices.at(allocation);
+      if (!sharedRegisters.contains(reg)) {
+        return;
+      }
+      if (const auto index = getConstantIntValue(store.getIndex())) {
+        auto* value = store.getValue().getDefiningOp();
+        const auto [it, inserted] =
+            storedMeasurements.try_emplace({reg, *index}, value);
+        if (!inserted && it->second != value) {
+          it->second = nullptr;
+        }
+      } else {
+        dynamicStores.insert(reg);
+      }
+    });
+    for (auto* measurement : llvm::make_first_range(state.measuredResults)) {
+      auto it = state.cregMeasurements.find(measurement);
+      if (it == state.cregMeasurements.end()) {
+        continue;
+      }
+      const auto& destination = it->second;
+      const auto index = getConstantIntValue(destination.second);
+      if (!index || dynamicStores.contains(destination.first) ||
+          storedMeasurements.lookup({destination.first, *index}) !=
+              measurement) {
+        measurement->emitError(
+            "returned scalar measurement cannot share overwritten register "
+            "storage; require distinct constant store indices");
+        hasInvalidMemory = true;
+      }
+    }
+    if (hasInvalidMemory) {
+      return failure();
+    }
+  }
+
+  if (keptOperands.empty()) {
     OpBuilder builder(returnOp);
     auto zero = arith::ConstantIntOp::create(builder, returnOp.getLoc(), 0, 64);
     keptOperands.push_back(zero);

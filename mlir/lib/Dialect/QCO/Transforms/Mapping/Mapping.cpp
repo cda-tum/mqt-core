@@ -592,7 +592,7 @@ private:
               CompilerTarget::NativeOperations::Kind::Explicit) {
         return;
       }
-      nativeCosts = NativeCostTable::precompute(root, *basis->entangler, seed);
+      nativeCosts = NativeCostTable::precompute(root, seed);
 
       // Uniform SWAP costs keep the distance heuristic in native-gate units.
       NativeCostAnalysis analysis(seed, nativeCosts.get());
@@ -1931,9 +1931,7 @@ private:
                                       DenseMap<Operation*, bool>& cache) {
     SmallVector<MeasureOp> measurements;
     bool needsRouting = false;
-    WireIterator it(measurement.getQubitOut());
-    for (; it != std::default_sentinel; ++it) {
-      Operation* op = it.operation();
+    for (auto* op : WireRange(measurement.getQubitOut())) {
       if (const auto cached = cache.find(op); cached != cache.end()) {
         needsRouting = cached->second;
         break;

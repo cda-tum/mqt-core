@@ -1544,16 +1544,8 @@ Value qtensorExtract(QCOProgramBuilder& b);
 /// Inserts a qubit into a tensor.
 Value qtensorInsert(QCOProgramBuilder& b);
 
-/// Extracts a qubit from a tensor and inserts it immediately at a different
-/// index.
-Value qtensorExtractInsertIndexMismatch(QCOProgramBuilder& b);
-
 /// Extracts a qubit from a tensor and inserts it immediately at the same index.
 Value qtensorExtractInsertSameIndex(QCOProgramBuilder& b);
-
-/// Inserts a qubit into a tensor and extracts it immediately at a different
-/// index.
-Value qtensorInsertExtractIndexMismatch(QCOProgramBuilder& b);
 
 /// Inserts a qubit into a tensor and extracts it immediately at the same index.
 Value qtensorInsertExtractSameIndex(QCOProgramBuilder& b);

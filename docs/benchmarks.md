@@ -275,6 +275,44 @@ Before evaluation, normalize backend results to the manifest's big-endian
 
 ## Benchmark families
 
+### Fan-out
+
+The `fan-out` family implements the Hamming-weight rotation in Figure 5 of
+[Høyer and Špalek](https://arxiv.org/html/quant-ph/0208043), with a fixed phase
+of $\pi/2$. It prepares uniform control qubits and a target in $|+\rangle$.
+{term}`Quantum fan-out <quantum fan-out>` distributes the controlled phase gates
+over the target and clean ancillas. Uncomputing the fan-out restores all
+ancillas to zero. A final Hadamard on the target makes the phase observable.
+
+Set `controls` to $n\in[1, 1073]$. The circuit uses $2n$ qubits and returns the
+control string $x$ followed by the target bit. For Hamming weight $w=|x|$,
+
+```{math}
+P(x,0)=2^{-n}\cos^2(\pi w/4),\qquad
+P(x,1)=2^{-n}\sin^2(\pi w/4).
+```
+
+The width limit keeps every nonzero reference probability representable as a
+double. The circuit uses linear space and gate count; its structured loops do
+not enumerate input bitstrings. Fan-out is decomposed into CNOT gates, so the
+paper's constant-depth bound for an unbounded fan-out primitive does not apply
+to the generated circuit.
+
+With $S$ shots, empirical TVD is at least $\max(0,1-S/2^n)$, even for ideal
+execution. Large widths are useful for generation and compilation workloads;
+keep $n$ small for sampled-distribution comparisons. For example, 30 controls
+and 16,384 shots give TVD of at least 0.9999847.
+
+```{code-cell} ipython3
+from mqt.core.bench import fan_out
+
+benchmark = fan_out.FanOut(fan_out.Options(controls=3))
+assert benchmark.output.width == 4
+assert benchmark.probability("0000") == 0.125
+assert benchmark.probability("0011") == 0.0625
+assert benchmark.generate().is_valid
+```
+
 ### Grover search with weak measurement
 
 The `grover-weak-measurement` family implements the weakly measured Grover

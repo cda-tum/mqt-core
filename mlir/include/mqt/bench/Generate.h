@@ -19,6 +19,7 @@
 
 namespace mqt::bench {
 class BV;
+class FanOut;
 class GHZ;
 class Grover;
 class MagicStateDistillation;
@@ -43,6 +44,10 @@ struct GeneratedBenchmark {
 
 /// Generate a configured Bernstein--Vazirani benchmark.
 [[nodiscard]] llvm::FailureOr<mlir::QCProgram> generate(const BV& benchmark);
+
+/// Generate a configured quantum fan-out benchmark.
+[[nodiscard]] llvm::FailureOr<mlir::QCProgram>
+generate(const FanOut& benchmark);
 
 /// Generate the QC program for a configured GHZ benchmark.
 [[nodiscard]] llvm::FailureOr<mlir::QCProgram> generate(const GHZ& benchmark);

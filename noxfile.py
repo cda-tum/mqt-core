@@ -182,7 +182,7 @@ def _run_tests(
 @nox.session(python=PYTHON_ALL_VERSIONS, reuse_venv=True, default=True)
 def tests(session: nox.Session) -> None:
     """Run the test suite."""
-    _run_tests(session)
+    _run_tests(session, pytest_run_args=["-m", "not slurm"])
 
 
 @nox.session(python=PYTHON_ALL_VERSIONS, reuse_venv=True, venv_backend="uv", default=True)
@@ -196,6 +196,23 @@ def minimums(session: nox.Session) -> None:
         )
         env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
         session.run("uv", "tree", "--frozen", env=env)
+
+
+@nox.session(name="qiskit-compat", python="3.11", reuse_venv=True, venv_backend="uv")
+@nox.parametrize("qiskit_minor", ["2.5"])
+def qiskit_compat(session: nox.Session, qiskit_minor: str) -> None:
+    """Test compiler integration against older supported Qiskit minors."""
+    _run_tests(
+        session,
+        extra_command=["uv", "pip", "install", "--upgrade-package", "qiskit", f"qiskit~={qiskit_minor}.0"],
+        pytest_run_args=[
+            "test/python/test_mlir_qiskit_translation.py",
+            "test/python/test_mlir_qiskit_target.py",
+            "test/python/test_mlir_parameter_binding.py",
+            "test/python/test_mlir_loops.py",
+            "test/python/test_mlir_integer_interchange.py",
+        ],
+    )
 
 
 @nox.session(reuse_venv=True, venv_backend="uv", python=PYTHON_ALL_VERSIONS)
@@ -271,6 +288,8 @@ def qiskit(session: nox.Session) -> None:
             "run",
             "--no-sync",
             "pytest",
+            "-m",
+            "not (linkcheck or slurm)",
             *session.posargs,
             "--cov-config=pyproject.toml",
             env=env,
@@ -289,7 +308,7 @@ def docs(session: nox.Session) -> None:
     parser.add_argument("-b", dest="builder", default="html", help="Build target (default: html)")
     args, posargs = parser.parse_known_args(session.posargs)
 
-    # MyST loads this generated file so the README owns the executable example.
+    # MyST executes the README's sole Python block as the getting-started example.
     _, example = Path("README.md").read_text(encoding="utf-8").split("```python\n")
     example_file = Path("docs/_build/readme_example.py")
     example_file.parent.mkdir(parents=True, exist_ok=True)
@@ -336,9 +355,11 @@ def docs(session: nox.Session) -> None:
         "sphinx-autobuild" if serve else "sphinx-build",
         "-n",  # nitpicky mode
         "-T",  # full tracebacks
-        "-E",  # Doxygen inventories are regenerated for every docs build
+        "-E",  # refresh references to the regenerated Doxygen inventory
         "-W",  # fail the session if documentation diagnostics are emitted
         f"-b={args.builder}",
+        "-d",
+        f"docs/_build/doctrees/{args.builder}",  # keep build caches out of published artifacts
         "docs",
         f"docs/_build/{args.builder}",
         *posargs,

@@ -12,7 +12,6 @@ add_mlir_library(
   LINK_LIBS
   PUBLIC
   MLIRLLVMDialect
-  MLIRMemRefDialect
   MLIRMQTUtils
   MLIRQIRUtils
   MLIRIR

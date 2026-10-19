@@ -778,16 +778,28 @@ TEST(JeffRoundTripRegressionTest,
       %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<3>
       %initial = arith.constant 5 : i3
       cbit.write %initial, %reg : i3, !cbit.reg<3>
-      scf.if %choose {
-        %old = cbit.read %reg : !cbit.reg<3> -> i3
-        %one = arith.constant 1 : i3
-        %next = arith.xori %old, %one : i3
-        cbit.write %next, %reg : i3, !cbit.reg<3>
-      } else {
-        %old = cbit.read %reg : !cbit.reg<3> -> i3
-        %three = arith.constant 3 : i3
-        %next = arith.xori %old, %three : i3
-        cbit.write %next, %reg : i3, !cbit.reg<3>
+      %true = arith.constant true
+      %false = arith.constant false
+      %done = scf.while (%again = %true) : (i1) -> i1 {
+        scf.if %again {
+          scf.if %choose {
+            cbit.write %initial, %reg : i3, !cbit.reg<3>
+            %old = cbit.read %reg : !cbit.reg<3> -> i3
+            %one = arith.constant 1 : i3
+            %next = arith.xori %old, %one : i3
+            cbit.write %next, %reg : i3, !cbit.reg<3>
+          } else {
+            cbit.write %initial, %reg : i3, !cbit.reg<3>
+            %old = cbit.read %reg : !cbit.reg<3> -> i3
+            %three = arith.constant 3 : i3
+            %next = arith.xori %old, %three : i3
+            cbit.write %next, %reg : i3, !cbit.reg<3>
+          }
+        }
+        scf.condition(%again) %false : i1
+      } do {
+      ^bb0(%next: i1):
+        scf.yield %next : i1
       }
       return %reg : !cbit.reg<3>
     }
@@ -857,17 +869,19 @@ TEST(JeffRoundTripRegressionTest, CapturesHelperArgumentsInLoop) {
       %c2 = arith.constant 2 : index
       %out = scf.for %i = %c0 to %c2 step %c1 iter_args(%current = %q) -> !qco.qubit {
         %angle = tensor.extract %angles[%i] : tensor<2xf64>
-        %next = qco.p(%angle) %current : !qco.qubit
+        %negative = arith.negf %angle : f64
+        %next = qco.p(%negative) %current : !qco.qubit
         scf.yield %next : !qco.qubit
       }
       return %out : !qco.qubit
     }
     func.func @main() -> !cbit.reg<1> attributes {mqt.entry_point} {
-      %angles = arith.constant dense<[0.0, 3.141592653589793]> : tensor<2xf64>
+      %angles = arith.constant dense<[0.0, -1.5707963267948966]> : tensor<2xf64>
       %q = qco.alloc : !qco.qubit
       %h = qco.h %q : !qco.qubit
       %rotated = func.call @rotate(%angles, %h) : (tensor<2xf64>, !qco.qubit) -> !qco.qubit
-      %final = qco.h %rotated : !qco.qubit
+      %shifted = qco.s %rotated : !qco.qubit
+      %final = qco.h %shifted : !qco.qubit
       %out, %bit = qco.measure %final : !qco.qubit
       %result = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
       %c0 = arith.constant 0 : index

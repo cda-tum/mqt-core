@@ -185,16 +185,16 @@ failed to resolve the host for its external QDMI tag file.
 
 ## Code and ownership
 
-`bindings/mlir/qiskit/QiskitTranslation.h` defines the normalized objects shared
-by the generic translation and one Qiskit-version adapter.
-`bindings/mlir/qiskit/Qiskit2_5.cpp` is the only file that reads Python
+`bindings/mlir/Target/Qiskit/QiskitTranslation.h` defines the normalized objects
+shared by the generic translation and one Qiskit-version adapter.
+`bindings/mlir/Target/Qiskit/Qiskit2_5.cpp` is the only file that reads Python
 parameter objects, `_qpy_replay`, or calls Qiskit's `qk_param_*` C functions.
 
-`bindings/mlir/qiskit/QiskitImport.cpp` validates a complete source circuit,
-creates a QC program, inserts one named `f64` entry argument per free symbol,
-and lowers normalized expressions to SSA values.
-`bindings/mlir/qiskit/QiskitExport.cpp` performs the reverse preflight: it
-recognizes a supported `f64` SSA expression graph, builds normalized
+`bindings/mlir/Target/Qiskit/QiskitImport.cpp` validates a complete source
+circuit, creates a QC program, inserts one named `f64` entry argument per free
+symbol, and lowers normalized expressions to SSA values.
+`bindings/mlir/Target/Qiskit/QiskitExport.cpp` performs the reverse preflight:
+it recognizes a supported `f64` SSA expression graph, builds normalized
 expressions, and only then asks a version-specific writer to allocate a Qiskit
 circuit.
 

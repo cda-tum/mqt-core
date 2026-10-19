@@ -355,22 +355,35 @@ TEST_F(WireIteratorFixture, UnitaryCallContinuesWire) {
   QCOProgramBuilder builder(context.get());
   builder.initialize();
   auto flip = builder.createUnitaryFunction(
-      "flip", TypeRange{QubitType::get(context.get())},
+      "flip",
+      TypeRange{
+          builder.getF64Type(),
+          QubitType::get(context.get()),
+          QubitType::get(context.get()),
+      },
       [&](ValueRange arguments) {
-        return SmallVector<Value>{builder.x(arguments[0])};
+        return SmallVector<Value>{
+            builder.rx(arguments[0], arguments[1]),
+            builder.x(arguments[2]),
+        };
       });
-  Value input = builder.allocQubit();
-  Value output = builder.call(flip, input).front();
-  builder.sink(output);
+  SmallVector<Value> inputs{builder.allocQubit(), builder.allocQubit()};
+  auto outputs =
+      builder.call(flip, {builder.floatConstant(0.5), inputs[0], inputs[1]});
+  for (auto output : outputs) {
+    builder.sink(output);
+  }
   auto moduleOp = builder.finalize();
   ASSERT_TRUE(moduleOp);
 
-  WireIterator iterator(input);
-  ++iterator;
-  EXPECT_TRUE(isa<CallOp>(iterator.operation()));
-  EXPECT_EQ(iterator.qubit(), output);
-  --iterator;
-  EXPECT_EQ(iterator.qubit(), input);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    WireIterator iterator(inputs[i]);
+    ++iterator;
+    EXPECT_TRUE(isa<CallOp>(iterator.operation()));
+    EXPECT_EQ(iterator.qubit(), outputs[i]);
+    --iterator;
+    EXPECT_EQ(iterator.qubit(), inputs[i]);
+  }
 }
 
 TEST_F(WireIteratorFixture, GenericCallIsWireBoundary) {

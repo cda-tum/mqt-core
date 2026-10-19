@@ -11,7 +11,8 @@ add_executable(${target_name} test_openqasm_emitter.cpp test_openqasm_parser.cpp
                               test_openqasm_semantics.cpp)
 target_link_libraries(
   ${target_name}
-  PRIVATE MLIROpenQASMFrontend
+  PRIVATE MLIRAnalysis
+          MLIROpenQASMFrontend
           MLIRQCOpenQASMTranslation
           MLIRQASMPrograms
           MLIRCBitDialect
@@ -19,4 +20,26 @@ target_link_libraries(
           MLIRSupportMQT
           GTest::gtest_main)
 mqt_mlir_configure_unittest_target(${target_name})
+gtest_discover_tests(${target_name} PROPERTIES LABELS mqt-mlir-unittests DISCOVERY_TIMEOUT 60)
+
+set(target_name mqt-core-mlir-unittest-openqasm-translation)
+add_executable(${target_name} test_openqasm3_emission.cpp test_openqasm_translation.cpp)
+
+target_link_libraries(
+  ${target_name}
+  PRIVATE GTest::gtest_main
+          MLIRParser
+          MLIRFuncInlinerExtension
+          MLIRLLVMIRTransforms
+          MLIRSupportMQT
+          MLIRQCOToQC
+          MLIRQCToQCO
+          MLIRQCODDFunctionality
+          MLIRQCProgramBuilder
+          MLIRQCOpenQASMTranslation
+          MLIRQCPrograms
+          MLIRQASMPrograms)
+
+mqt_mlir_configure_unittest_target(${target_name} REQUIRES_EH)
+
 gtest_discover_tests(${target_name} PROPERTIES LABELS mqt-mlir-unittests DISCOVERY_TIMEOUT 60)

@@ -24,6 +24,7 @@
 #endif
 
 MQT_BENCHMARK_FAMILY(BV, bv, "bv", 1)
+MQT_BENCHMARK_FAMILY(FanOut, fanOut, "fan-out", 1)
 MQT_BENCHMARK_FAMILY(GHZ, ghz, "ghz", 1)
 MQT_BENCHMARK_FAMILY(Grover, grover, "grover", 1)
 MQT_BENCHMARK_FAMILY(WeakMeasurementGrover, weakMeasurementGrover,

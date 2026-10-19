@@ -18,7 +18,7 @@ from collections import Counter
 from typing import TYPE_CHECKING, cast
 
 import pytest
-from packaging import version
+from qiskit_support import supports_qiskit_translation
 
 from mqt.core.mlir import (
     CompiledProgram,
@@ -67,27 +67,23 @@ def device(request: pytest.FixtureRequest) -> Device:
     return cast("Device", request.param)
 
 
-@pytest.fixture(params=_get_devices())
-def device_and_site(request: pytest.FixtureRequest) -> tuple[Device, Device.Site]:
+@pytest.fixture
+def device_and_site(device: Device) -> tuple[Device, Device.Site]:
     """Fixture to provide a device for testing.
 
     Returns:
        A tuple containing a quantum device instance and one of its sites.
     """
-    dev = request.param
-    site = dev.sites()[0]
-    return dev, site
+    return device, device.sites()[0]
 
 
-@pytest.fixture(params=_get_devices())
-def device_and_operation(request: pytest.FixtureRequest) -> tuple[Device, Device.Operation]:
+@pytest.fixture
+def device_and_operation(device: Device) -> tuple[Device, Device.Operation]:
     """Fixture to provide a device for testing.
 
     Returns:
        A tuple containing a quantum device instance and one of its operations.
     """
-    device = request.param
-
     # If the device has no operations, skip tests that use this fixture.
     ops = device.operations()
     if not ops:
@@ -465,14 +461,15 @@ def test_operation_mean_shuttling_speed(device_and_operation: tuple[Device, Devi
         assert mss > 0
 
 
-def test_site_and_operation_custom_properties_unsupported(
-    device_and_site: tuple[Device, Device.Site],
-    device_and_operation: tuple[Device, Device.Operation],
-) -> None:
-    """Test custom queries on site and operation objects."""
+def test_site_custom_properties_unsupported(device_and_site: tuple[Device, Device.Site]) -> None:
+    """Test custom queries on site objects."""
     _device, site = device_and_site
     site_value: bytes | None = site.query_custom_property(CustomProperty.CUSTOM1, bytes)
     assert site_value is None
+
+
+def test_operation_custom_properties_unsupported(device_and_operation: tuple[Device, Device.Operation]) -> None:
+    """Test custom queries on operation objects."""
     _device, operation = device_and_operation
     operation_value: bytes | None = operation.query_custom_property(CustomProperty.CUSTOM1, bytes)
     assert operation_value is None
@@ -551,10 +548,7 @@ c = measure q;
 def test_device_executes_controlled_qir_with_exact_phase(ddsim_device: Device) -> None:
     """Keep DDSIM-native controlled gates and their global phase."""
     qiskit = pytest.importorskip("qiskit")
-    if not (
-        version.parse("2.5") <= version.parse(qiskit.__version__) < version.parse("2.6")
-        or qiskit.__version__ == os.environ.get("MQT_QISKIT_TEST_CANDIDATE_VERSION")
-    ):
+    if not supports_qiskit_translation():
         pytest.skip(f"no Qiskit translation is registered for {qiskit.__version__}")
     circuit_library = pytest.importorskip("qiskit.circuit.library")
     quantum_info = pytest.importorskip("qiskit.quantum_info")

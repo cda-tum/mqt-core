@@ -122,7 +122,8 @@ has no guaranteed diagnostic or result.
 Runtime integer arithmetic, including powers, uses machine-width promotion and
 wraps modulo that width. Explicit integer casts truncate or extend to their
 declared width. Compile-time invalid arithmetic is diagnosed. Runtime division
-by zero remains undefined.
+by zero remains undefined. Range endpoints and steps use the same integer
+promotion before iteration.
 
 OpenQASM 3 supports all six comparisons between fixed-width bit-register
 expressions. Direct register comparisons use unsigned meaning. An exact-width
@@ -234,7 +235,7 @@ stream.
 Use the translation API for a `ModuleOp`:
 
 ```cpp
-#include "mqt/Dialect/QC/Translation/TranslateQCToOpenQASM3.h"
+#include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
 
 auto source = mlir::qc::translateQCToOpenQASM3(moduleOp);
 if (mlir::failed(source)) {
@@ -365,18 +366,24 @@ target-specific diagnostic. Export preserves the source module and buffers
 output until it succeeds.
 
 The exporter writes an OpenQASM 3.1 version declaration and includes
-`stdgates.inc`. Gates in MQT Core's compatibility catalog, such as `r`, `rzz`,
-and `ecr`, receive definitions under their catalog names. Strict consumers use
-those definitions. MQT Core's default compatibility mode recognizes a definition
-with the catalog name and signature and imports calls directly as the
-corresponding native QC operation; the definition body is deliberately ignored.
-A same-name definition with a mismatched signature is rejected. Strict mode
-always analyzes the custom definition normally.
+`stdgates.inc`. Controlled gates use compact standard-library names such as
+`cx`, `cz`, and `ccx` when available, and `ctrl` modifiers otherwise. Gates in
+MQT Core's compatibility catalog, such as `r`, `rzz`, and `ecr`, receive
+definitions under their catalog names. Strict consumers use those definitions.
+MQT Core's default compatibility mode recognizes a definition with the catalog
+name and signature and imports calls directly as the corresponding native QC
+operation; the definition body is deliberately ignored. A same-name definition
+with a mismatched signature is rejected. Strict mode always analyzes the custom
+definition normally.
 
 The `_mqt_` prefix is reserved for generated composite-modifier gates,
 temporaries, and collision-safe identifiers. Existing classical-register
 allocation names are reused when valid and distinct from catalog gates; scalar
-output names are generated deterministically.
+output names are generated deterministically. Scalar qubits and scoped classical
+storage reuse valid, nonconflicting source-name hints from MLIR `NameLoc`
+locations. Explicit parameter and register names take precedence over these
+hints. If locations are discarded, exporters generate names for those resources;
+parameter binding and output labels remain unchanged.
 
 Output types follow a deliberately small canonical mapping:
 
@@ -443,10 +450,10 @@ The exporter stores used scalar expressions and bit-register reads in local
 variables at their definition. These variables preserve snapshots across later
 writes and nested regions and prevent repeated expansion of shared expressions.
 Wide bit-vector expressions use local bit registers. Zero-initialized registers
-use one exact-width bit-string initializer. Shift interpretation is determined
-by the MLIR operation, not by the history of its operands. Arithmetic right
-shifts are encoded with unsigned bitwise operations and explicit sign-bit
-biasing.
+use one exact-width bit-string initializer. Constants with more than 64 active
+bits use hexadecimal literals. Shift interpretation is determined by the MLIR
+operation, not by the history of its operands. Arithmetic right shifts are
+encoded with unsigned bitwise operations and explicit sign-bit biasing.
 
 Inline expressions, including those in gate functions, have a nesting limit of
 256 and an expansion budget of 4,096 values per expression. The total width of
