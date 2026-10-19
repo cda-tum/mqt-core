@@ -19,7 +19,7 @@ class Options:
     def __init__(self, *, controls: int) -> None: ...
     @property
     def controls(self) -> int:
-        """The number of control qubits, from 1 through 1073."""
+        """The number of control qubits, :math:`n\\in[1, 1073]`."""
 
 class FanOut:
     """A validated quantum fan-out benchmark.

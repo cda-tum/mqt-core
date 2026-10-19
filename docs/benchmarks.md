@@ -284,7 +284,7 @@ of $\pi/2$. It prepares uniform control qubits and a target in $|+\rangle$.
 over the target and clean ancillas. Uncomputing the fan-out restores all
 ancillas to zero. A final Hadamard on the target makes the phase observable.
 
-Set `controls` to $n$ (1–1073). The circuit uses $2n$ qubits and returns the
+Set `controls` to $n\in[1, 1073]$. The circuit uses $2n$ qubits and returns the
 control string $x$ followed by the target bit. For Hamming weight $w=|x|$,
 
 ```{math}

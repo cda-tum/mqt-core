@@ -29,7 +29,7 @@ void registerFanOut(const nb::module_& m) {
       m, "Options", "Parameters for a quantum fan-out benchmark.")
       .def(nb::init<size_t>(), nb::kw_only(), "controls"_a)
       .def_ro("controls", &bench::FanOutOptions::controls,
-              "The number of control qubits, from 1 through 1073.");
+              R"pb(The number of control qubits, :math:`n\in[1, 1073]`.)pb");
 
   auto fanOut =
       nb::class_<bench::FanOut>(m, "FanOut",
