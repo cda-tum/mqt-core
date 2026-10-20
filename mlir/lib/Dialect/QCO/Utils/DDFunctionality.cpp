@@ -820,7 +820,7 @@ static FailureOr<Attribute*> lookupMemRefSlot(Value memref, ValueRange indices,
     return op->emitError()
            << "classical memref index out of range for QCO DD simulation";
   }
-  if (forWrite && !values.unique()) {
+  if (forWrite && values.use_count() != 1) {
     values = std::make_shared<SmallVector<Attribute>>(*values);
   }
   return &(*values)[static_cast<size_t>(*index)];
