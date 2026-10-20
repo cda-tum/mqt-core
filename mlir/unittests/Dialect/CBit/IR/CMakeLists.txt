@@ -16,6 +16,7 @@ target_link_libraries(
           MLIRFuncDialect
           MLIRMQTDialect
           MLIRParser
+          MLIRSCFDialect
           MLIRSupport
           MLIRTransforms)
 mqt_mlir_configure_unittest_target(${cbit_ir_target})

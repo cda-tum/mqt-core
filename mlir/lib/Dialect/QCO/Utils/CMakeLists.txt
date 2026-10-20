@@ -100,6 +100,7 @@ function(mqt_add_dd_adapter suffix dd_target)
     MLIRMemRefDialect
     MLIRMQTUtils
     MLIRTensorDialect
+    MLIRUBDialect
     MLIRQTensorDialect)
 
   mqt_mlir_target_use_project_options(MLIRQCODDFunctionality${suffix})

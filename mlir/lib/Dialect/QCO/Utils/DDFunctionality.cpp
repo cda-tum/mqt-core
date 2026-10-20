@@ -34,6 +34,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -53,7 +54,9 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Threading.h"
 
 #include <algorithm>
@@ -68,6 +71,7 @@
 #include <functional>
 #include <future>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -220,7 +224,35 @@ struct ClassicalEnv {
     std::optional<dd::Qubit> deferredWire;
   };
   using RegisterState = std::vector<RegisterBit>;
-  using MemRefState = SmallVector<Attribute>;
+  struct MemRefStorage {
+    std::shared_ptr<SmallVector<Attribute>> values;
+
+    SmallVector<Attribute>& writable() {
+      if (values.use_count() != 1) {
+        values = std::make_shared<SmallVector<Attribute>>(*values);
+      }
+      return *values;
+    }
+  };
+  struct MemRefState {
+    SmallVector<int64_t> shape;
+    SmallVector<int64_t> strides;
+    // Views share storage; branches share its buffer until a write.
+    std::shared_ptr<MemRefStorage> storage;
+    int64_t offset = 0;
+    size_t size = 0;
+
+    [[nodiscard]] bool isContiguous() const {
+      int64_t stride = 1;
+      for (size_t dimension = shape.size(); dimension-- > 0;) {
+        if (shape[dimension] > 1 && strides[dimension] != stride) {
+          return false;
+        }
+        stride *= shape[dimension];
+      }
+      return true;
+    }
+  };
 
   DenseMap<Value, Attribute> values;
   DenseMap<Value, dd::Qubit> deferredMeasurements;
@@ -241,20 +273,40 @@ struct ClassicalEnv {
       }
       storage = target;
     }
-    DenseMap<const MemRefState*, std::shared_ptr<MemRefState>> memrefsCopy;
-    for (auto& [value, storage] : copy.memrefs) {
-      auto& target = memrefsCopy[storage.get()];
+    DenseMap<const MemRefStorage*, std::shared_ptr<MemRefStorage>> memrefsCopy;
+    for (auto& [value, view] : copy.memrefs) {
+      auto& target = memrefsCopy[view->storage.get()];
       if (!target) {
-        target = std::make_shared<MemRefState>(*storage);
+        target = std::make_shared<MemRefStorage>(*view->storage);
       }
-      storage = target;
+      view = std::make_shared<MemRefState>(*view);
+      view->storage = target;
     }
     return copy;
   }
 
+  [[nodiscard]] Attribute lookup(Value value) const {
+    if (auto constant = value.getDefiningOp<arith::ConstantOp>()) {
+      return constant.getValue();
+    }
+    return values.lookup(value);
+  }
+
+  [[nodiscard]] RegisterBit lookupBit(Value value) const {
+    assert(value.getType().isInteger(1));
+    if (const auto wire = deferredMeasurements.find(value);
+        wire != deferredMeasurements.end()) {
+      return {.deferredWire = wire->second};
+    }
+    if (const auto bit = dyn_cast_if_present<IntegerAttr>(lookup(value))) {
+      return {.value = !bit.getValue().isZero()};
+    }
+    return {};
+  }
+
   LogicalResult bindFrom(Value source, Value dest, Operation* op) {
-    const auto it = values.find(source);
-    if (it == values.end()) {
+    auto value = lookup(source);
+    if (!value) {
       if (deferredMeasurements.contains(source) &&
           deferredMeasurementUse != nullptr) {
         *deferredMeasurementUse = op;
@@ -263,8 +315,6 @@ struct ClassicalEnv {
       return op->emitError()
              << "classical SSA value is not mapped for QCO DD simulation";
     }
-    // Inserting the destination can grow the map and invalidate the iterator.
-    auto value = it->second;
     values[dest] = value;
     return success();
   }
@@ -330,8 +380,8 @@ struct SamplingPlan {
 
 static FailureOr<Attribute>
 lookupAttribute(Value value, const ClassicalEnv& classical, Operation* op) {
-  const auto it = classical.values.find(value);
-  if (it == classical.values.end()) {
+  auto attribute = classical.lookup(value);
+  if (!attribute) {
     if (classical.deferredMeasurements.contains(value) &&
         classical.deferredMeasurementUse != nullptr) {
       *classical.deferredMeasurementUse = op;
@@ -340,16 +390,14 @@ lookupAttribute(Value value, const ClassicalEnv& classical, Operation* op) {
     return op->emitError()
            << "classical SSA value is not mapped for QCO DD simulation";
   }
-  return it->second;
+  return attribute;
 }
 
 static FailureOr<double>
 resolveDouble(Value value, const ClassicalEnv& classical, Operation* op) {
-  if (const auto it = classical.values.find(value);
-      it != classical.values.end()) {
-    if (const auto floating = dyn_cast<FloatAttr>(it->second)) {
-      return floating.getValue().convertToDouble();
-    }
+  if (const auto floating =
+          dyn_cast_if_present<FloatAttr>(classical.lookup(value))) {
+    return floating.getValue().convertToDouble();
   }
   if (const auto constant = mqt::valueToDouble(value)) {
     return *constant;
@@ -562,8 +610,7 @@ static LogicalResult validateReturn(func::ReturnOp returnOp,
   return isa<IndexType, IntegerType>(type) || type.isF64();
 }
 
-static LogicalResult recordConstant(arith::ConstantOp constant,
-                                    ClassicalEnv& classical) {
+static LogicalResult validateConstant(arith::ConstantOp constant) {
   auto tensorType = dyn_cast<RankedTensorType>(constant.getType());
   const bool isScalarTable =
       tensorType && tensorType.getRank() == 1 &&
@@ -574,7 +621,6 @@ static LogicalResult recordConstant(arith::ConstantOp constant,
            << "QCO DD simulation only supports scalar integer, index, and f64 "
               "constants or dense rank-one integer or f64 tensor constants";
   }
-  classical.values[constant.getResult()] = constant.getValue();
   return success();
 }
 
@@ -706,20 +752,12 @@ static LogicalResult storeRegister(cbit::StoreOp store,
   if (failed(index)) {
     return failure();
   }
-  auto& cell = (*regIt->second)[*index];
-  if (const auto deferred =
-          classical.deferredMeasurements.find(store.getValue());
-      deferred != classical.deferredMeasurements.end()) {
-    cell.value.reset();
-    cell.deferredWire = deferred->second;
-    return success();
+  const auto bit = classical.lookupBit(store.getValue());
+  if (!bit.value && !bit.deferredWire) {
+    return store.emitError()
+           << "classical SSA value is not mapped for QCO DD simulation";
   }
-  auto value = lookupBool(store.getValue(), classical, store);
-  if (failed(value)) {
-    return failure();
-  }
-  cell.value.emplace(*value);
-  cell.deferredWire.reset();
+  (*regIt->second)[*index] = bit;
   return success();
 }
 
@@ -788,64 +826,94 @@ static LogicalResult writeRegister(cbit::WriteOp write,
 
 static FailureOr<Attribute*> lookupMemRefSlot(Value memref, ValueRange indices,
                                               ClassicalEnv& classical,
-                                              Operation* op) {
+                                              Operation* op,
+                                              bool forWrite = false) {
   const auto type = dyn_cast<MemRefType>(memref.getType());
-  if (!type || type.getRank() != 1 || indices.size() != 1 ||
+  if (!type || indices.size() != static_cast<size_t>(type.getRank()) ||
       !isSupportedClassicalType(type.getElementType())) {
-    return op->emitError()
-           << "QCO DD simulation only supports one-dimensional memrefs of "
-              "integer, index, or f64 values";
-  }
-  auto index = lookupIndex(indices[0], classical, op);
-  if (failed(index)) {
-    return failure();
+    return op->emitError() << "QCO DD simulation only supports memrefs of "
+                              "integer, index, or f64 values";
   }
   const auto it = classical.memrefs.find(memref);
   if (it == classical.memrefs.end()) {
     return op->emitError()
            << "classical memref is not mapped for QCO DD simulation";
   }
-  if (*index < 0 || static_cast<size_t>(*index) >= it->second->size()) {
-    return op->emitError()
-           << "classical memref index out of range for QCO DD simulation";
+  int64_t offset = it->second->offset;
+  for (const auto [dimension, value] : llvm::enumerate(indices)) {
+    auto index = lookupIndex(value, classical, op);
+    if (failed(index)) {
+      return failure();
+    }
+    const auto extent = it->second->shape[dimension];
+    if (*index < 0 || *index >= extent) {
+      return op->emitError()
+             << "classical memref index out of range for QCO DD simulation";
+    }
+    offset += *index * it->second->strides[dimension];
   }
-  return &(*it->second)[static_cast<size_t>(*index)];
+  auto& storage = *it->second->storage;
+  auto& values = forWrite ? storage.writable() : *storage.values;
+  return &values[static_cast<size_t>(offset)];
 }
 
-static LogicalResult applyMemRefAlloc(memref::AllocOp alloc,
-                                      ClassicalEnv& classical) {
+template <typename AllocOp>
+static LogicalResult applyMemRefAlloc(AllocOp alloc, ClassicalEnv& classical) {
   const auto type = alloc.getType();
-  if (!type || type.getRank() != 1 ||
+  if (!type || !type.getLayout().isIdentity() ||
       !isSupportedClassicalType(type.getElementType())) {
     return alloc.emitError()
-           << "QCO DD simulation only supports one-dimensional memrefs of "
+           << "QCO DD simulation only supports identity-layout memrefs of "
               "integer, index, or f64 values";
   }
   if (!alloc.getSymbolOperands().empty()) {
     return alloc.emitError()
            << "QCO DD simulation does not support symbolic memref operands";
   }
-  int64_t size = type.getDimSize(0);
-  if (type.isDynamicDim(0)) {
-    auto dynamicSize =
-        lookupIndex(alloc.getDynamicSizes()[0], classical, alloc);
-    if (failed(dynamicSize)) {
-      return failure();
+  auto storage = std::make_shared<ClassicalEnv::MemRefState>();
+  size_t dynamicDimension = 0;
+  for (auto extent : type.getShape()) {
+    if (ShapedType::isDynamic(extent)) {
+      auto dynamicSize = lookupIndex(
+          alloc.getDynamicSizes()[dynamicDimension++], classical, alloc);
+      if (failed(dynamicSize)) {
+        return failure();
+      }
+      extent = *dynamicSize;
     }
-    size = *dynamicSize;
+    if (extent < 0) {
+      return alloc.emitError() << "classical memref size must be non-negative";
+    }
+    storage->shape.push_back(extent);
   }
-  if (size < 0) {
-    return alloc.emitError() << "classical memref size must be non-negative";
+  int64_t size = llvm::is_contained(storage->shape, 0) ? 0 : 1;
+  for (const auto extent : storage->shape) {
+    if (extent != 0 && size > std::numeric_limits<int64_t>::max() / extent) {
+      return alloc.emitError()
+             << "classical memref element count overflows i64";
+    }
+    size *= extent;
   }
-  classical.memrefs[alloc.getResult()] =
-      std::make_shared<ClassicalEnv::MemRefState>(static_cast<size_t>(size));
+  storage->size = static_cast<size_t>(size);
+  storage->storage = std::make_shared<ClassicalEnv::MemRefStorage>();
+  storage->storage->values =
+      std::make_shared<SmallVector<Attribute>>(storage->size);
+  storage->strides.resize(storage->shape.size());
+  int64_t stride = 1;
+  for (size_t dimension = storage->shape.size(); dimension-- > 0;) {
+    storage->strides[dimension] = stride;
+    // Zero-element allocations have no addressable strides.
+    stride = size == 0 ? 0 : stride * storage->shape[dimension];
+  }
+  classical.memrefs[alloc.getResult()] = std::move(storage);
   return success();
 }
 
 static LogicalResult applyMemRefStore(memref::StoreOp store,
                                       ClassicalEnv& classical) {
   auto slot =
-      lookupMemRefSlot(store.getMemref(), store.getIndices(), classical, store);
+      lookupMemRefSlot(store.getMemref(), store.getIndices(), classical, store,
+                       /*forWrite=*/true);
   if (failed(slot)) {
     return failure();
   }
@@ -869,6 +937,119 @@ static LogicalResult applyMemRefLoad(memref::LoadOp load,
            << "read from an uninitialized classical memref element";
   }
   classical.values[load.getResult()] = **slot;
+  return success();
+}
+
+static LogicalResult applyMemRefSubview(memref::SubViewOp subview,
+                                        ClassicalEnv& classical) {
+  const auto source = classical.memrefs.find(subview.getSource());
+  if (source == classical.memrefs.end()) {
+    return subview.emitError()
+           << "classical memref is not mapped for QCO DD simulation";
+  }
+  if (subview.getType().getRank() == 0) {
+    return subview.emitError()
+           << "QCO DD simulation requires nonzero-rank memref subviews";
+  }
+  const auto dropped = subview.getDroppedDims();
+  const auto offsets = subview.getMixedOffsets();
+  const auto sizes = subview.getMixedSizes();
+  const auto strides = subview.getMixedStrides();
+  const auto resolve = [&](OpFoldResult value) -> FailureOr<int64_t> {
+    if (const auto attribute = dyn_cast<Attribute>(value)) {
+      return cast<IntegerAttr>(attribute).getInt();
+    }
+    return lookupIndex(cast<Value>(value), classical, subview);
+  };
+  auto view = std::make_shared<ClassicalEnv::MemRefState>();
+  view->storage = source->second->storage;
+  view->size = 1;
+  view->offset = source->second->offset;
+  for (const auto [dimension, extent] :
+       llvm::enumerate(source->second->shape)) {
+    auto start = resolve(offsets[dimension]);
+    auto size = resolve(sizes[dimension]);
+    auto stride = resolve(strides[dimension]);
+    if (failed(start) || failed(size) || failed(stride)) {
+      return failure();
+    }
+    int64_t span = 0;
+    int64_t last = 0;
+    if (*size < 0 || *stride == 0 || *start < 0 ||
+        (*size == 0 ? *start > extent : *start >= extent) ||
+        (*size > 0 && (llvm::MulOverflow(*size - 1, *stride, span) != 0 ||
+                       llvm::AddOverflow(*start, span, last) != 0 || last < 0 ||
+                       last >= extent))) {
+      return subview.emitError() << "classical memref subview is out of bounds";
+    }
+    const auto sourceStride = source->second->strides[dimension];
+    int64_t offset = 0;
+    int64_t viewStride = 1;
+    if (llvm::MulOverflow(*start, sourceStride, offset) != 0 ||
+        llvm::AddOverflow(view->offset, offset, view->offset) != 0 ||
+        (*size > 1 &&
+         llvm::MulOverflow(*stride, sourceStride, viewStride) != 0)) {
+      return subview.emitError()
+             << "classical memref subview offset overflows i64";
+    }
+    if (!dropped.test(dimension)) {
+      view->shape.push_back(*size);
+      view->strides.push_back(viewStride);
+      view->size *= static_cast<size_t>(*size);
+    }
+  }
+  classical.memrefs[subview.getResult()] = std::move(view);
+  return success();
+}
+
+static LogicalResult applyMemRefCopy(memref::CopyOp copy,
+                                     ClassicalEnv& classical) {
+  const auto source = classical.memrefs.find(copy.getSource());
+  const auto target = classical.memrefs.find(copy.getTarget());
+  if (source == classical.memrefs.end() || target == classical.memrefs.end()) {
+    return copy.emitError()
+           << "classical memref is not mapped for QCO DD simulation";
+  }
+  if (source->second->shape != target->second->shape) {
+    return copy.emitError() << "classical memref copy requires matching shapes";
+  }
+  const auto& from = *source->second;
+  const auto& to = *target->second;
+  if (from.size == 0) {
+    return success();
+  }
+  if (from.storage == to.storage && from.offset == to.offset &&
+      from.strides == to.strides) {
+    return success();
+  }
+  const bool contiguous = from.isContiguous() && to.isContiguous();
+  if (contiguous && from.offset == 0 && to.offset == 0 &&
+      from.size == from.storage->values->size() &&
+      to.size == to.storage->values->size()) {
+    to.storage->values = from.storage->values;
+    return success();
+  }
+  auto& values = to.storage->writable();
+  // Distinct views must not overlap; OpenQASM handles overlap with scratch.
+  if (contiguous) {
+    std::copy_n(from.storage->values->begin() + from.offset, from.size,
+                values.begin() + to.offset);
+    return success();
+  }
+  for (size_t index = 0; index < from.size; ++index) {
+    auto remaining = index;
+    auto sourceOffset = from.offset;
+    auto targetOffset = to.offset;
+    for (size_t dimension = from.shape.size(); dimension-- > 0;) {
+      const auto extent = static_cast<size_t>(from.shape[dimension]);
+      const auto coordinate = static_cast<int64_t>(remaining % extent);
+      sourceOffset += coordinate * from.strides[dimension];
+      targetOffset += coordinate * to.strides[dimension];
+      remaining /= extent;
+    }
+    values[static_cast<size_t>(targetOffset)] =
+        (*from.storage->values)[static_cast<size_t>(sourceOffset)];
+  }
   return success();
 }
 
@@ -1078,7 +1259,11 @@ static LogicalResult applyFloatOp(Operation& op, ClassicalEnv& classical) {
   return success();
 }
 
-static LogicalResult applyClassicalOp(Operation& op, ClassicalEnv& classical) {
+static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
+                                    WalkState& walk, Operation* op);
+
+static LogicalResult applyClassicalOp(Operation& op, WalkState& walk) {
+  auto& classical = *walk.classical;
   const auto isUnsupportedFloat = [](Type type) {
     return isa<FloatType>(type) && !type.isF64();
   };
@@ -1222,7 +1407,7 @@ static LogicalResult applyClassicalOp(Operation& op, ClassicalEnv& classical) {
         }
         Value selected =
             *condition ? select.getTrueValue() : select.getFalseValue();
-        return classical.bindFrom(selected, select.getResult(), select);
+        return bindValuePairs(selected, select.getResult(), walk, select);
       })
       .Case<arith::ExtUIOp, arith::IndexCastUIOp, arith::TruncIOp>(
           [&](auto cast) {
@@ -1315,9 +1500,6 @@ static FailureOr<LoopRange> resolveLoop(scf::ForOp forOp,
 }
 
 static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
-                                    WalkState& walk, Operation* op);
-
-static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
                                     WalkState& walk, Operation* op) {
   SmallVector<RuntimeValue> values;
   values.reserve(sources.size());
@@ -1356,12 +1538,12 @@ static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
         values.emplace_back(deferred->second);
         continue;
       }
-      const auto value = walk.classical->values.find(src);
-      if (value == walk.classical->values.end()) {
+      auto value = walk.classical->lookup(src);
+      if (!value) {
         return op->emitError()
                << "classical SSA value is not mapped for QCO DD simulation";
       }
-      values.emplace_back(value->second);
+      values.emplace_back(value);
     }
   }
 
@@ -1498,9 +1680,8 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
   return TypeSwitch<Operation*, LogicalResult>(&op)
       .template Case<StaticOp, SinkOp, qtensor::DeallocOp>(
           [](auto) { return success(); })
-      .Case([&](arith::ConstantOp constant) {
-        return recordConstant(constant, *walk.classical);
-      })
+      .Case(
+          [](arith::ConstantOp constant) { return validateConstant(constant); })
       .Case([&](tensor::ExtractOp extract) -> LogicalResult {
         auto value =
             lookupAttribute(extract.getTensor(), *walk.classical, extract);
@@ -1624,14 +1805,33 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
         walk.tensors->bind(insert.getResult(), input);
         return success();
       })
-      .Case([&](memref::AllocOp alloc) {
-        return applyMemRefAlloc(alloc, *walk.classical);
-      })
+      .template Case<memref::AllocOp, memref::AllocaOp>(
+          [&](auto alloc) { return applyMemRefAlloc(alloc, *walk.classical); })
       .Case([&](memref::StoreOp store) {
         return applyMemRefStore(store, *walk.classical);
       })
       .Case([&](memref::LoadOp load) {
         return applyMemRefLoad(load, *walk.classical);
+      })
+      .Case([&](memref::CopyOp copy) {
+        return applyMemRefCopy(copy, *walk.classical);
+      })
+      .Case([&](memref::SubViewOp subview) {
+        return applyMemRefSubview(subview, *walk.classical);
+      })
+      .Case([&](memref::DimOp dim) -> LogicalResult {
+        const auto storage = walk.classical->memrefs.find(dim.getSource());
+        auto index = lookupIndex(dim.getIndex(), *walk.classical, dim);
+        if (storage == walk.classical->memrefs.end() || failed(index) ||
+            *index < 0 ||
+            std::cmp_greater_equal(*index, storage->second->shape.size())) {
+          return dim.emitError() << "classical memref dimension is unavailable "
+                                    "or out of bounds";
+        }
+        bindInteger(dim.getResult(),
+                    llvm::APInt(64, storage->second->shape[*index]),
+                    *walk.classical);
+        return success();
       })
       .Case([&](cbit::AllocOp alloc) {
         allocateRegister(alloc, *walk.classical);
@@ -1897,11 +2097,14 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
         return applyUnitaryMatrix(unitary, walk, state);
       })
       .Default([&](Operation* unsupported) -> LogicalResult {
+        if (isa<ub::PoisonOp>(unsupported) && unsupported->use_empty()) {
+          return success();
+        }
         const StringRef dialect = unsupported->getName().getDialectNamespace();
         if (dialect == arith::ArithDialect::getDialectNamespace() ||
             dialect == math::MathDialect::getDialectNamespace() ||
             isa<LLVM::FshlOp, LLVM::FshrOp>(unsupported)) {
-          return applyClassicalOp(*unsupported, *walk.classical);
+          return applyClassicalOp(*unsupported, walk);
         }
         return unsupported->emitError()
                << "unsupported op for QCO DD construction: "
@@ -2197,18 +2400,16 @@ getSamplingPlan(func::FuncOp func, bool statevectorAnalysis = false) {
            << "single-block QCO DD execution requires func.return";
   }
 
-  bool hasOther = false;
   for (Value value : returnOp.getOperands()) {
-    if (isa<cbit::RegisterType>(value.getType())) {
+    if (isa<cbit::RegisterType>(value.getType()) ||
+        value.getType().isInteger(1)) {
       plan.outputs.push_back(value);
-    } else {
-      hasOther = true;
+    } else if (!statevectorAnalysis && !isa<QubitType>(value.getType()) &&
+               !isQTensorType(value.getType())) {
+      return returnOp.emitError()
+             << "QCO DD sampling supports only CBit registers and Boolean "
+                "classical outputs";
     }
-  }
-  if (!statevectorAnalysis && !plan.outputs.empty() && hasOther) {
-    return returnOp.emitError()
-           << "QCO DD sampling does not support mixed CBit and non-CBit "
-              "results";
   }
 
   analyzeSampling(func, plan);
@@ -2230,7 +2431,8 @@ simulateStatevector(func::FuncOp func, dd::Package& dd,
   if (plan->dynamic) {
     return func.emitError()
            << "statevector extraction supports only terminal measurements "
-              "that assemble returned CBit registers";
+              "whose results are unused, returned directly, or stored in "
+              "returned CBit registers";
   }
   DenseSet<dd::Qubit> measuredWires;
   Operation* deferredMeasurementUse = nullptr;
@@ -2254,19 +2456,32 @@ static FailureOr<std::string> encodeOutcome(ArrayRef<Value> outputs,
   }
   std::string outcome;
   for (Value value : llvm::reverse(outputs)) {
-    const auto reg = classical.registers.find(value);
-    if (reg == classical.registers.end()) {
-      return emitError(value.getLoc())
-             << "returned CBit register is not mapped for QCO DD simulation";
+    const bool isScalar = value.getType().isInteger(1);
+    ClassicalEnv::RegisterBit scalar;
+    ArrayRef<ClassicalEnv::RegisterBit> bits;
+    if (isScalar) {
+      scalar = classical.lookupBit(value);
+      bits = scalar;
+    } else {
+      const auto reg = classical.registers.find(value);
+      if (reg == classical.registers.end()) {
+        return emitError(value.getLoc())
+               << "returned CBit register is not mapped for QCO DD simulation";
+      }
+      bits = *reg->second;
     }
-    for (size_t i = reg->second->size(); i > 0; --i) {
+    for (size_t i = bits.size(); i > 0; --i) {
       const size_t index = i - 1;
-      const auto& cell = (*reg->second)[index];
+      const auto& cell = bits[index];
       if (cell.value) {
         outcome.push_back(*cell.value ? '1' : '0');
       } else if (cell.deferredWire && *cell.deferredWire < basis.size()) {
         outcome.push_back(basis[basis.size() - 1 - *cell.deferredWire]);
       } else {
+        if (isScalar) {
+          return emitError(value.getLoc()) << "returned Boolean value is not "
+                                              "mapped for QCO DD simulation";
+        }
         return emitError(value.getLoc())
                << "returned CBit register element " << index << " is undefined";
       }
@@ -2305,7 +2520,7 @@ static FailureOr<std::map<std::string, size_t>>
 sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
                std::mt19937_64& rng, const PreparedState& prepared,
                const SamplingPlan& plan, std::vector<std::string>& ordered,
-               const DDExecutionOptions& options) {
+               const DDExecutionOptions& options, bool collectCounts) {
   struct ForFrame {
     scf::ForOp op;
     Block::iterator continuation;
@@ -2540,59 +2755,47 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
     return failure();
   }
   std::map<std::string, size_t> counts;
-  for (const auto& shot : ordered) {
-    ++counts[shot];
+  if (collectCounts) {
+    for (const auto& shot : ordered) {
+      ++counts[shot];
+    }
   }
   return counts;
 }
 
 static FailureOr<std::map<std::string, size_t>>
-sampleImpl(func::FuncOp func, const dd::VectorDD& in, dd::Package& dd,
-           size_t shots, std::mt19937_64& rng, const PreparedState& prepared,
+sampleImpl(func::FuncOp func, dd::Package& dd, size_t shots,
+           std::mt19937_64& rng, const PreparedState& prepared,
            std::vector<std::string>* shotResults,
-           std::optional<dd::VectorDD>* retainedState,
-           const DDExecutionOptions& options, bool forceDynamic = false,
-           bool* adaptiveFallback = nullptr) {
+           std::optional<dd::VectorDD>* retainedState, const SamplingPlan& plan,
+           const DDExecutionOptions& options, bool collectCounts,
+           bool forceDynamic = false, bool* adaptiveFallback = nullptr) {
+  const auto in = dd::makeZeroState(prepared.qubits.numQubits, dd);
   const auto inputGuard = llvm::scope_exit([&] { dd.decRef(in); });
   GateCache gateCache(dd);
-  auto plan = getSamplingPlan(func);
-  if (failed(plan)) {
-    return failure();
-  }
-
-  const size_t inputQubits =
-      in.isTerminal() ? 0U : static_cast<size_t>(in.p->v) + 1U;
-  if (inputQubits < prepared.qubits.numQubits) {
-    return func.emitError()
-           << "input state has " << inputQubits << " qubits but function uses "
-           << prepared.qubits.numQubits;
-  }
-
   std::map<std::string, size_t> counts;
-  if (shots == 0) {
-    return counts;
-  }
-
   const auto record = [&](const ClassicalEnv& classical,
                           std::string basis) -> LogicalResult {
-    auto outcome = encodeOutcome(plan->outputs, classical, std::move(basis));
+    auto outcome = encodeOutcome(plan.outputs, classical, std::move(basis));
     if (failed(outcome)) {
       return failure();
     }
-    ++counts[*outcome];
+    if (collectCounts) {
+      ++counts[*outcome];
+    }
     if (shotResults != nullptr) {
       shotResults->push_back(std::move(*outcome));
     }
     return success();
   };
 
-  if (!plan->dynamic && !forceDynamic) {
+  if (!plan.dynamic && !forceDynamic) {
     ClassicalEnv classical;
     DenseSet<dd::Qubit> measuredWires;
     Operation* deferredMeasurementUse = nullptr;
     dd.incRef(in);
     auto state = simulateImpl(func, in, dd, prepared, nullptr, options,
-                              &plan->deferredMeasurements, &classical,
+                              &plan.deferredMeasurements, &classical,
                               &measuredWires, &deferredMeasurementUse);
     if (succeeded(state)) {
       const auto guard = llvm::scope_exit([&] { dd.decRef(*state); });
@@ -2625,9 +2828,8 @@ sampleImpl(func::FuncOp func, const dd::VectorDD& in, dd::Package& dd,
       return failure();
     }
     const auto guard = llvm::scope_exit([&] { dd.decRef(*state); });
-    std::string basis = plan->outputs.empty()
-                            ? dd.measureAll(*state, false, rng)
-                            : std::string{};
+    std::string basis = plan.outputs.empty() ? dd.measureAll(*state, false, rng)
+                                             : std::string{};
     if (failed(record(classical, std::move(basis)))) {
       return failure();
     }
@@ -2635,11 +2837,13 @@ sampleImpl(func::FuncOp func, const dd::VectorDD& in, dd::Package& dd,
   return counts;
 }
 
-FailureOr<std::map<std::string, size_t>>
-sample(func::FuncOp func, size_t shots, uint64_t seed,
-       const DDArgumentBindings& argumentBindings,
-       std::vector<std::string>* shotResults, DDSamplingState* retainedState,
-       const DDExecutionOptions& options, size_t workers) {
+static FailureOr<std::map<std::string, size_t>>
+sampleProgram(func::FuncOp func, size_t shots, uint64_t seed,
+              const DDArgumentBindings& argumentBindings,
+              std::vector<std::string>* shotResults,
+              DDSamplingState* retainedState, const DDExecutionOptions& options,
+              size_t workers, bool collectCounts,
+              function_ref<size_t(size_t)> requestWorkers) {
   if (retainedState != nullptr) {
     *retainedState = {};
   }
@@ -2656,7 +2860,36 @@ sample(func::FuncOp func, size_t shots, uint64_t seed,
   if (failed(prepared)) {
     return failure();
   }
-  std::optional<dd::VectorDD> state;
+  auto plan = getSamplingPlan(func);
+  if (failed(plan)) {
+    return failure();
+  }
+  if (shots == 0) {
+    return std::map<std::string, size_t>{};
+  }
+  if (!plan->dynamic) {
+    bool adaptive = false;
+    std::optional<dd::VectorDD> state;
+    auto result =
+        sampleImpl(func, *dd, shots, rng, *prepared, shotResults,
+                   retainedState != nullptr ? &state : nullptr, *plan, options,
+                   collectCounts, /*forceDynamic=*/false, &adaptive);
+    if (failed(result) || !adaptive) {
+      if (succeeded(result) && state && retainedState != nullptr) {
+        retainedState->state = *state;
+        retainedState->dd = std::move(dd);
+      }
+      return result;
+    }
+  }
+  if (canBranchStructured(func)) {
+    // shortcut: Shared structured-branch evaluation corrupts concurrent
+    // shot groups; isolate its IR before enabling multiple workers.
+    std::vector<std::string> ordered;
+    return sampleBranches(func, *dd, shots, rng, *prepared, *plan,
+                          shotResults != nullptr ? *shotResults : ordered,
+                          options, collectCounts);
+  }
   if (workers == 0) {
     // Keep small jobs serial and bound repeated prefix work per package.
     workers = std::clamp(shots / 256, size_t{1}, size_t{8});
@@ -2665,125 +2898,106 @@ sample(func::FuncOp func, size_t shots, uint64_t seed,
   if (!func.getContext()->isMultithreadingEnabled()) {
     workers = 1;
   }
-  if (shots != 0) {
-    auto plan = getSamplingPlan(func);
-    if (failed(plan)) {
+  if (workers > 1) {
+    releaseSamplingWorkers(std::exchange(grant, 0));
+    grant = reserveSamplingWorkers(workers, shots);
+    workers = requestWorkers && grant > 1 ? requestWorkers(grant) : grant;
+    if (workers == 0 || workers > grant) {
+      return func.emitError()
+             << "sampling worker grant must be between 1 and " << grant;
+    }
+    releaseSamplingWorkers(grant - workers);
+    grant = workers;
+  }
+  if (workers == 1) {
+    return sampleImpl(func, *dd, shots, rng, *prepared, shotResults, nullptr,
+                      *plan, options, collectCounts, /*forceDynamic=*/true);
+  }
+  struct Worker {
+    std::unique_ptr<dd::Package> dd;
+    PreparedState prepared;
+    std::vector<std::string> shots;
+  };
+  std::vector<Worker> work;
+  work.reserve(workers);
+  work.push_back({
+      .dd = std::move(dd),
+      .prepared = std::move(*prepared),
+      .shots = {},
+  });
+  for (size_t i = 1; i < workers; ++i) {
+    auto package = std::make_unique<dd::Package>(0);
+    auto next = prepare(func, *package, argumentBindings);
+    if (failed(next)) {
       return failure();
     }
-    bool adaptive = plan->dynamic;
-    if (!adaptive) {
-      auto result =
-          sampleImpl(func, dd::makeZeroState(prepared->qubits.numQubits, *dd),
-                     *dd, shots, rng, *prepared, shotResults,
-                     retainedState != nullptr ? &state : nullptr, options,
-                     /*forceDynamic=*/false, &adaptive);
-      if (failed(result) || !adaptive) {
-        if (succeeded(result) && state && retainedState != nullptr) {
-          retainedState->state = *state;
-          retainedState->dd = std::move(dd);
-        }
-        return result;
+    work.push_back({
+        .dd = std::move(package),
+        .prepared = std::move(*next),
+        .shots = {},
+    });
+  }
+  std::vector<std::future<FailureOr<std::map<std::string, size_t>>>> tasks;
+  tasks.reserve(workers);
+  std::vector<uint64_t> workerSeeds(workers);
+  for (auto& workerSeed : workerSeeds) {
+    workerSeed = rng();
+  }
+  for (size_t i = 0; i < workers; ++i) {
+    tasks.push_back(std::async(std::launch::async, [&, i] {
+      auto& worker = work[i];
+      std::mt19937_64 workerRng(workerSeeds[i]);
+      const size_t count = (shots / workers) + (i < shots % workers);
+      if (shotResults != nullptr) {
+        worker.shots.reserve(count);
       }
+      return sampleImpl(func, *worker.dd, count, workerRng, worker.prepared,
+                        shotResults != nullptr ? &worker.shots : nullptr,
+                        nullptr, *plan, options, collectCounts,
+                        /*forceDynamic=*/true);
+    }));
+  }
+  std::map<std::string, size_t> counts;
+  bool allSucceeded = true;
+  for (size_t i = 0; i < workers; ++i) {
+    auto part = tasks[i].get();
+    if (failed(part)) {
+      allSucceeded = false;
+      continue;
     }
-    if (adaptive) {
-      const bool branch = canBranchStructured(func);
-      if (branch) {
-        // shortcut: Shared structured-branch evaluation corrupts concurrent
-        // shot groups; isolate its IR before enabling multiple workers.
-        workers = 1;
-      }
-      if (workers > 1) {
-        releaseSamplingWorkers(std::exchange(grant, 0));
-        grant = reserveSamplingWorkers(workers, shots);
-        workers = grant;
-      }
-      if (workers == 1) {
-        if (branch) {
-          std::vector<std::string> ordered;
-          auto counts = sampleBranches(func, *dd, shots, rng, *prepared, *plan,
-                                       ordered, options);
-          if (succeeded(counts) && shotResults != nullptr) {
-            *shotResults = std::move(ordered);
-          }
-          return counts;
-        }
-        return sampleImpl(func,
-                          dd::makeZeroState(prepared->qubits.numQubits, *dd),
-                          *dd, shots, rng, *prepared, shotResults, nullptr,
-                          options, /*forceDynamic=*/true);
-      }
-      struct Worker {
-        std::unique_ptr<dd::Package> dd;
-        PreparedState prepared;
-        std::vector<std::string> shots;
-      };
-      std::vector<Worker> work;
-      work.reserve(workers);
-      work.push_back({
-          .dd = std::move(dd),
-          .prepared = std::move(*prepared),
-          .shots = {},
-      });
-      for (size_t i = 1; i < workers; ++i) {
-        auto package = std::make_unique<dd::Package>(0);
-        auto next = prepare(func, *package, argumentBindings);
-        if (failed(next)) {
-          return failure();
-        }
-        work.push_back({
-            .dd = std::move(package),
-            .prepared = std::move(*next),
-            .shots = {},
-        });
-      }
-      std::vector<std::future<FailureOr<std::map<std::string, size_t>>>> tasks;
-      tasks.reserve(workers);
-      std::vector<uint64_t> workerSeeds(workers);
-      for (auto& workerSeed : workerSeeds) {
-        workerSeed = rng();
-      }
-      for (size_t i = 0; i < workers; ++i) {
-        tasks.push_back(std::async(std::launch::async, [&, i] {
-          auto& worker = work[i];
-          std::mt19937_64 workerRng(workerSeeds[i]);
-          const size_t count = (shots / workers) + (i < shots % workers);
-          return sampleImpl(
-              func,
-              dd::makeZeroState(worker.prepared.qubits.numQubits, *worker.dd),
-              *worker.dd, count, workerRng, worker.prepared,
-              shotResults != nullptr ? &worker.shots : nullptr, nullptr,
-              options, /*forceDynamic=*/true);
-        }));
-      }
-      std::map<std::string, size_t> counts;
-      bool allSucceeded = true;
-      for (size_t i = 0; i < workers; ++i) {
-        auto part = tasks[i].get();
-        if (failed(part)) {
-          allSucceeded = false;
-          continue;
-        }
-        for (const auto& [outcome, count] : *part) {
-          counts[outcome] += count;
-        }
-        if (shotResults != nullptr) {
-          shotResults->insert(shotResults->end(), work[i].shots.begin(),
-                              work[i].shots.end());
-        }
-      }
-      return allSucceeded ? FailureOr<std::map<std::string, size_t>>(counts)
-                          : FailureOr<std::map<std::string, size_t>>(failure());
+    for (const auto& [outcome, count] : *part) {
+      counts[outcome] += count;
+    }
+    if (shotResults != nullptr) {
+      shotResults->insert(shotResults->end(),
+                          std::make_move_iterator(work[i].shots.begin()),
+                          std::make_move_iterator(work[i].shots.end()));
     }
   }
-  auto counts =
-      sampleImpl(func, dd::makeZeroState(prepared->qubits.numQubits, *dd), *dd,
-                 shots, rng, *prepared, shotResults,
-                 retainedState != nullptr ? &state : nullptr, options);
-  if (succeeded(counts) && state && retainedState != nullptr) {
-    retainedState->state = *state;
-    retainedState->dd = std::move(dd);
+  if (!allSucceeded) {
+    return failure();
   }
   return counts;
+}
+
+FailureOr<std::map<std::string, size_t>>
+sample(func::FuncOp func, size_t shots, uint64_t seed,
+       const DDArgumentBindings& argumentBindings,
+       std::vector<std::string>* shotResults, DDSamplingState* retainedState,
+       const DDExecutionOptions& options, size_t workers) {
+  return sampleProgram(func, shots, seed, argumentBindings, shotResults,
+                       retainedState, options, workers, true, nullptr);
+}
+
+LogicalResult sampleShots(func::FuncOp func, size_t shots, uint64_t seed,
+                          std::vector<std::string>& shotResults,
+                          const DDArgumentBindings& argumentBindings,
+                          DDSamplingState* retainedState,
+                          const DDExecutionOptions& options, size_t workers,
+                          function_ref<size_t(size_t)> requestWorkers) {
+  return success(succeeded(sampleProgram(func, shots, seed, argumentBindings,
+                                         &shotResults, retainedState, options,
+                                         workers, false, requestWorkers)));
 }
 
 } // namespace mlir::qco

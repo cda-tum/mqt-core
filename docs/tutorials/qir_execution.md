@@ -65,8 +65,9 @@ Look for three parts of the output:
 - The entry-point attributes and module flags declare the profile, QIR version,
   and resource requirements.
 
-The `i64` returned by the entry point is its exit code. Measurement results
-leave through output-recording calls, not through that return value.
+The `i64` returned by the QIR entry point is its exit code. The compiler emits 0
+for successful execution and sends measurement results through output-recording
+calls. QC and QCO entry results describe program data before this conversion.
 
 ```{code-cell} ipython3
 bitcode = base.to_bitcode()
@@ -193,8 +194,8 @@ unsupported control flow:
 
 ```{code-cell} ipython3
 try:
-    compile_program(loop_source, target=device, program_format=ProgramFormat.QIR_BASE_MODULE)
-except ValueError as error:
+    compile_program(loop_source, target=device, output=OutputFormat.QIR_BASE)
+except RuntimeError as error:
     print(error)
 else:
     raise AssertionError("A conditional loop requires an Adaptive payload")

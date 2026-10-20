@@ -12,11 +12,13 @@
 
 #include "bench/BV.hpp"
 #include "bench/Evaluation.hpp"
+#include "bench/FanOut.hpp"
 #include "bench/GHZ.hpp"
 #include "bench/Grover.hpp"
 #include "bench/MagicStateDistillation.hpp"
 #include "bench/ModularMultiplier.hpp"
 #include "bench/Multiplexer.hpp"
+#include "bench/QAOA.hpp"
 #include "bench/QFT.hpp"
 #include "bench/QFTAdder.hpp"
 #include "bench/QPE.hpp"
@@ -36,9 +38,10 @@ namespace mqt::bench {
 
 /// One validated benchmark instance from the JSON registry.
 using BenchmarkInstance =
-    std::variant<BV, GHZ, Grover, WeakMeasurementGrover, MagicStateDistillation,
-                 ModularMultiplier, Multiplexer, QFT, QFTAdder, QPE,
-                 RepeatUntilSuccess, Shor, Teleportation, WState>;
+    std::variant<BV, FanOut, GHZ, Grover, WeakMeasurementGrover,
+                 MagicStateDistillation, ModularMultiplier, Multiplexer, QAOA,
+                 QFT, QFTAdder, QPE, RepeatUntilSuccess, Shor, Teleportation,
+                 WState>;
 
 /// Owns a validated benchmark and its canonical manifest metadata.
 struct ParsedBenchmark {
@@ -103,6 +106,11 @@ evaluateJSON(std::string_view manifest, std::string_view counts,
 [[nodiscard]] MQT_CORE_BENCH_EXPORT std::string
 evaluationToJSON(std::string_view caseId, size_t shots,
                  const Evaluation& evaluation);
+
+/// Serialize QAOA cut scores without distribution-fit metrics.
+[[nodiscard]] MQT_CORE_BENCH_EXPORT std::string
+evaluationToJSON(std::string_view caseId, size_t shots,
+                 const QAOAEvaluation& evaluation);
 
 /// Serialize classical factor verification without distribution-fit metrics.
 [[nodiscard]] MQT_CORE_BENCH_EXPORT std::string

@@ -57,6 +57,21 @@
 using namespace mlir;
 using namespace qco;
 
+/// Build an ordinary function whose quantum results remain observable.
+template <typename Build>
+static OwningOpRef<ModuleOp> buildQuantumFunction(MLIRContext* context,
+                                                  Build build) {
+  QCOProgramBuilder builder(context);
+  builder.initialize();
+  auto function = builder.createFunction(
+      "test", {}, [&](ValueRange) { return build(builder); });
+  function.setPublic();
+  auto moduleOp = builder.finalize();
+  moduleOp->lookupSymbol<func::FuncOp>("main").erase();
+  function.setName("main");
+  return moduleOp;
+}
+
 [[nodiscard]] static DynamicMatrix controlledMatrix(const Matrix2x2& body) {
   DynamicMatrix result = DynamicMatrix::identity(4);
   result.setBottomRightCorner(body);
@@ -829,7 +844,7 @@ TEST_F(QCOMatrixTest, IntegralPowUFoldsPreserveFullMatrixUnderControl) {
                0.1, 0.2, 0.3,
                static_cast<double>(mlir::mqt::MAX_SAFE_U_POWER_EXPONENT)},
        }) {
-    auto moduleOp = QCOProgramBuilder::build(context.get(), [&](auto& b) {
+    auto moduleOp = buildQuantumFunction(context.get(), [&](auto& b) {
       auto controlIn = b.staticQubit(0);
       auto targetIn = b.staticQubit(1);
       auto [control, target] =
@@ -864,7 +879,7 @@ TEST_F(QCOMatrixTest, RejectedPowURemainsUnchanged) {
     SCOPED_TRACE(testing::Message()
                  << "theta=" << theta << ", phi=" << phi
                  << ", lambda=" << lambda << ", exponent=" << exponent);
-    auto moduleOp = QCOProgramBuilder::build(context.get(), [&](auto& b) {
+    auto moduleOp = buildQuantumFunction(context.get(), [&](auto& b) {
       auto controlIn = b.staticQubit(0);
       auto targetIn = b.staticQubit(1);
       auto [control, target] =
@@ -900,7 +915,7 @@ TEST_F(QCOMatrixTest, SensitiveIntegralPowUPreservesFullMatrix) {
     SCOPED_TRACE(testing::Message()
                  << "theta=" << theta << ", phi=" << phi
                  << ", lambda=" << lambda << ", exponent=" << exponent);
-    auto moduleOp = QCOProgramBuilder::build(context.get(), [&](auto& b) {
+    auto moduleOp = buildQuantumFunction(context.get(), [&](auto& b) {
       auto controlIn = b.staticQubit(0);
       auto targetIn = b.staticQubit(1);
       auto [control, target] =
@@ -924,7 +939,7 @@ TEST_F(QCOMatrixTest, SensitiveIntegralPowUPreservesFullMatrix) {
 }
 
 TEST_F(QCOMatrixTest, FractionalPowURemainsUnchanged) {
-  auto moduleOp = QCOProgramBuilder::build(context.get(), [](auto& b) {
+  auto moduleOp = buildQuantumFunction(context.get(), [](auto& b) {
     auto q = b.staticQubit(0);
     q = b.pow(0.5, q, [&](Value arg) { return b.u(0.1, 0.2, 0.3, arg); });
     return SmallVector<Value>{q};
@@ -1109,7 +1124,7 @@ TEST_F(QCOMatrixTest, DcxInverseReversesTargets) {
 TEST_F(QCOMatrixTest, DcxCancellationPreservesOrderedOutputs) {
   for (const bool reversed : {false, true}) {
     SCOPED_TRACE(reversed);
-    auto program = QCOProgramBuilder::build(context.get(), [&](auto& builder) {
+    auto program = buildQuantumFunction(context.get(), [&](auto& builder) {
       auto in0 = builder.staticQubit(0);
       auto in1 = builder.staticQubit(1);
       auto [q0, q1] = builder.dcx(in0, in1);
@@ -1132,7 +1147,7 @@ TEST_F(QCOMatrixTest, DcxCancellationPreservesOrderedOutputs) {
 }
 
 TEST_F(QCOMatrixTest, ControlledSwapRemainsConditional) {
-  auto program = QCOProgramBuilder::build(context.get(), [&](auto& builder) {
+  auto program = buildQuantumFunction(context.get(), [&](auto& builder) {
     auto control = builder.staticQubit(0);
     auto q0 = builder.staticQubit(1);
     auto q1 = builder.staticQubit(2);

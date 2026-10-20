@@ -95,24 +95,32 @@ order. Their keys and values share that order. Sparse exports require at most 64
 qubits on a 64-bit platform; wider states return `QDMI_ERROR_NOTSUPPORTED`
 because their basis indices do not fit the sparse representation.
 
+Dense results are written into the caller's buffer without retaining another
+dense copy. Reuse that buffer when reading the same state repeatedly. Sparse
+size queries count paths through the decision diagram and cache only the count;
+each key or value read traverses the diagram again. Counts are reused for equal
+child nodes, but other shared paths can be revisited, so sizing can still grow
+with the number of represented amplitudes. Allocation failures during result
+retrieval return `QDMI_ERROR_OUTOFMEM` and can be retried.
+
 ## Multi-program execution
 
 DDSIM executes programs concurrently in reusable worker processes. A shared LLVM
 thread pool and CPU-slot budget bound active simulation workers using physical
-cores and process affinity. The parent grants each worker process its shot
-worker allowance with each program request, including when a process is reused.
-An earlier single-program job can occupy all slots until it finishes. Terminal
-programs can temporarily reserve more slots than they use because the parent
-grants slots before the child classifies its program. Each program creates its
-own compiler, JIT, runtime, and DD state; results retain independent DD packages
-after workers become available again. DDSIM requires an LLVM build with
-threading enabled.
+cores and process affinity. Each program starts with one slot. After
+preparation, a worker requests extra slots only for parallel adaptive sampling;
+terminal and structured-branch sampling keep one slot. Extra slots return to the
+budget when the worker responds. An earlier adaptive program can occupy all
+slots until it finishes. Each program creates its own compiler, JIT, runtime,
+and DD state; results retain independent DD packages after workers become
+available again. DDSIM requires an LLVM build with threading enabled.
 
 One failing or cancelled program does not discard completed siblings. Cancelling
-a job stops its active workers and removes its queued work. If a worker crashes,
-its assigned program fails. DDSIM starts a new worker for future submissions; it
-does not automatically retry the failed program. The worker executable is
-installed beside the device library and must move with it.
+a job stops its active workers and prevents its queued programs from running.
+Freeing a cancelled job releases its payloads without waiting for other jobs. If
+a worker crashes, its assigned program fails. DDSIM starts a new worker for
+future submissions; it does not automatically retry the failed program. The
+worker executable is installed beside the device library and must move with it.
 
 A common explicit seed is applied independently to each program, matching
 separate submissions. QIR output capture is indexed by program, like shots,
@@ -134,7 +142,8 @@ clients use `job.getCustomResult<std::string>(qdmi::CustomProperty::Custom1)`.
 Without capture, that result is unsupported (`None` in Python).
 
 Capture retains the QIR header, per-shot metadata, typed output records, and
-exit codes in memory. It executes the program once per shot, so capture jobs
+exit codes in memory. Double records preserve the original floating-point value
+when parsed back. Capture executes the program once per shot, so capture jobs
 provide counts and shots but no uncollapsed statevector. Default sampling keeps
 its optimized path. See the
 [executable QIR example](../qir/index.md#retrieve-the-qir-output-stream-through-qdmi).
@@ -147,7 +156,7 @@ not require a separate job or zero shots. Circuits with mid-circuit measurements
 or resets do not support state extraction.
 
 ```{code-cell} ipython3
-from mqt.core.mlir import compile_program, submit_program
+from mqt.core.mlir import submit_program
 from mqt.core.qdmi import ProgramFormat
 from mqt.core.qdmi import open_device
 
@@ -161,9 +170,30 @@ result = measure q;
 """
 
 device = open_device("mqt.ddsim.default")
-program = compile_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
-job = submit_program(program, target=device)
+job = submit_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
 job.wait()
 print(job.get_counts())
 print(job.get_dense_statevector())
 ```
+
+### Large statevectors
+
+`get_dense_statevector()` returns a Python list with one complex object per
+amplitude. For a compact NumPy representation, retrieve the result bytes and
+create a view:
+
+```{code-cell} ipython3
+import numpy as np
+
+# QDMI_JOB_RESULT_STATEVECTOR_DENSE has value 3.
+state = np.frombuffer(job.get_results(3), dtype=np.complex128)
+print(state)
+```
+
+The view keeps the bytes alive and uses 16 bytes per amplitude, without creating
+Python complex objects. It is read-only; use `state.copy()` when writable
+storage is needed.
+
+DDSIM retains the decision diagram, but does not cache extracted dense or sparse
+vectors. Repeated result reads traverse the diagram again. Keep and reuse a
+retrieved result when it is needed more than once.

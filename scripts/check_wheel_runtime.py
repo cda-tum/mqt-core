@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+# Copyright (c) 2023 - 2026 Chair for Design Automation, TUM
+# Copyright (c) 2025 - 2026 Munich Quantum Software Company GmbH
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
+"""Build and run the documented CMake consumer against the installed wheel."""
+
+# Commands use fixed arguments and the active Python/CMake toolchain.
+# ruff: file-ignore[subprocess-without-shell-equals-true, start-process-with-partial-path]
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+
+def main() -> None:
+    """Check the driver, DDSIM bundle, and imported tools without an LLVM SDK."""
+    source = (Path(__file__).resolve().parents[1] / "docs/cpp_api.md").read_text(encoding="utf-8")
+    prefix = subprocess.check_output([sys.executable, "-m", "mqt.core", "--cmake_dir"], text=True).strip()
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        for language, filename in (("cpp", "main.cpp"), ("cmake", "CMakeLists.txt")):
+            code = source.split(f"```{language}\n", 1)[1].split("\n```", 1)[0]
+            (root / filename).write_text(code, encoding="utf-8")
+        subprocess.run(
+            [
+                "cmake",
+                # The LLVM-discovery guard is unused when the runtime needs no LLVM lookup.
+                "--no-warn-unused-cli",
+                "-S",
+                directory,
+                "-B",
+                str(root / "build"),
+                f"-DCMAKE_PREFIX_PATH={prefix}",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_DISABLE_FIND_PACKAGE_LLVM=ON",
+                "-DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF",
+            ],
+            check=True,
+        )
+        subprocess.run(["cmake", "--build", str(root / "build"), "--config", "Release"], check=True)
+        # Use bundled devices without reading the host's QDMI configuration.
+        config = root / "qdmi.json"
+        config.write_text('{"schema-version": 1, "qdmi": {"devices": []}}', encoding="utf-8")
+        subprocess.run(
+            ["ctest", "--test-dir", str(root / "build"), "-C", "Release", "--output-on-failure", "--no-tests=error"],
+            check=True,
+            env={
+                **os.environ,
+                "MQT_CORE_QDMI_CONFIG_FILE": str(config),
+                "MQT_CORE_QDMI_CONFIG_JSON": config.read_text(encoding="utf-8"),
+            },
+        )
+
+
+if __name__ == "__main__":
+    main()

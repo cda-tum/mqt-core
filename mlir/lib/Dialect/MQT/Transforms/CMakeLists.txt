@@ -9,6 +9,7 @@
 add_mlir_library(
   MLIRMQTTransforms
   NormalizeGlobalPhases.cpp
+  PromoteClassicalMemory.cpp
   SimplifyClassicalControl.cpp
   UnrollModifiers.cpp
   ADDITIONAL_HEADER_DIRS
@@ -19,12 +20,15 @@ add_mlir_library(
   MLIRCBitDialect
   MLIRFuncInlinerExtension
   MLIRIR
+  MLIRMathDialect
+  MLIRMemorySlotInterfaces
   MLIRLLVMIRTransforms
   MLIRMQTUtils
   MLIRPass
   MLIRQCDialect
   MLIRQCODialect
   MLIRSideEffectInterfaces
+  MLIRTransforms
   MLIRTransformUtils
   DEPENDS
   MLIRMQTTransformsIncGen)

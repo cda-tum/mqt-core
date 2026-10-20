@@ -217,6 +217,9 @@ private:
   /// QDMI_Job_impl_d objects.
   std::unordered_map<QDMI_Job, std::unique_ptr<QDMI_Job_impl_d>> jobs_;
 
+  /// Takes ownership of a successfully created or retrieved provider job.
+  auto adoptJob(int status, QDMI_Device_Job deviceJob, QDMI_Job* job) -> int;
+
 public:
   /// Constructs a top-level QDMI device from an exclusively owned library.
   ///

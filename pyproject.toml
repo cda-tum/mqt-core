@@ -238,7 +238,7 @@ wheel.py-api = "cp315t"
 
 
 [tool.uv]
-required-version = ">=0.5.20"
+required-version = ">=0.13.4"
 cache-keys = [
   { file = "pyproject.toml" },
   { git = { commit = true, tags = true } },
@@ -271,18 +271,14 @@ archs = "auto64"
 build-frontend = "uv"
 config-settings = { "cmake.define.ENABLE_IPO" = "ON" }
 environment = { DEPLOY = "ON" }
-test-command = "pytest test/python"
+test-command = "pytest test/python --maxprocesses=2 --dist=worksteal"
 test-groups = [ "test" ]
 test-sources = [
-  "bindings/mlir/qiskit/SupportedVersions.inc",
-  "examples/slurm",
+  "bindings/mlir/Target/Qiskit/SupportedVersions.inc",
   "json",
-  "scripts/check_docs_links.py",
-  "scripts/qiskit_c_api_adopt.py",
+  "pyproject.toml",
   "test/circuits",
   "test/python",
-  "test/slurm/run_integration.py",
-  "vendor/qiskit-c-api/2.5.0",
 ]
 
 [tool.cibuildwheel.windows]
@@ -292,13 +288,10 @@ repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg 
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux_*"
 config-settings = { "cmake.define.CMAKE_LINKER_TYPE" = "LLD" }
-environment = { CC = "clang", CXX = "clang++", PATH = "/opt/clang/bin:$PATH:/root/.local/bin", MLIR_DIR = "/opt/llvm-23.1.2/lib/cmake/mlir" }
+environment = { CC = "clang", CXX = "clang++", PATH = "/opt/clang/bin:$PATH:/root/.local/bin" }
 before-all = """
 manylinux-install-clang -v 22.1.8.1
 uv tool install "sccache>=0.10.0"
-mkdir -p /tmp/setup-mlir
-curl -fLsS https://github.com/munich-quantum-software/setup-mlir/archive/8d3eae73d0f0196fd30c787d91ebd2018cb6c709.tar.gz | tar -xz -C /tmp/setup-mlir --strip-components=1
-bash /tmp/setup-mlir/installation/setup-mlir.sh -v 23.1.2 -p /opt/llvm-23.1.2 -a OFF
 """
 before-test = "uvx sccache --show-stats"
 # QIR-Runner's Linux wheels require a newer glibc than the manylinux_2_28
@@ -317,6 +310,14 @@ select = [ "cp*-win_arm64", "cp3??t-*" ]
 test-command = 'python -c "import mqt.core.dd, mqt.core.mlir, mqt.core.qdmi"'
 test-groups = []
 test-sources = []
+
+[[tool.cibuildwheel.overrides]]
+# Native executables are shared by all interpreters using the same ABI3 wheel.
+select = [ "cp311-*", "cp3??t-*" ]
+test-command = "python scripts/check_wheel_runtime.py"
+test-sources = [ "docs/cpp_api.md", "scripts/check_wheel_runtime.py" ]
+inherit.test-command = "prepend"
+inherit.test-sources = "append"
 
 
 [tool.ruff]
@@ -433,7 +434,9 @@ error-on-warning = true
 [tool.pytest]
 addopts = [
   "-ra",
-  "--numprocesses=auto", # Automatically use all available CPU cores for parallel testing
+  "--numprocesses=auto",                      # Automatically use all available CPU cores for parallel testing
+  "-m",
+  "not (linkcheck or slurm or qiskit_c_api)",
 ]
 filterwarnings = [
   "error",
@@ -441,6 +444,11 @@ filterwarnings = [
   "ignore:'return' in a 'finally' block:SyntaxWarning",
 ]
 log_level = "INFO"
+markers = [
+  "linkcheck: documentation link-checker tests (requires a source checkout)",
+  "slurm: Slurm integration-script tests (requires a source checkout)",
+  "qiskit_c_api: Qiskit C API adoption-script tests (requires a source checkout)",
+]
 minversion = "9.0"
 strict = true
 testpaths = [ "test/python" ]

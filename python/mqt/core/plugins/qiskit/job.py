@@ -25,7 +25,7 @@ __lazy_modules__ = {
     "qiskit.result.models",
 }
 
-import datetime
+import datetime as dt
 from collections import Counter
 from copy import deepcopy
 from numbers import Integral
@@ -118,7 +118,7 @@ class QDMIJob(JobV1):
         ]
         self._shots = shots
         self._memory = memory
-        self._job_parameters = job_parameters or {}
+        self._job_parameters = job_parameters.copy() if job_parameters is not None else {}
         self._result: Result | None = None
         formats = backend.device.supported_program_formats()
         self._programs: tuple[tuple[str | bytes, ProgramFormat], ...] = tuple(
@@ -223,7 +223,7 @@ class QDMIJob(JobV1):
                 backend_version=self._backend.backend_version,
                 job_id=self.job_id(),
                 success=True,
-                date=datetime.datetime.now(datetime.UTC).isoformat(),
+                date=dt.datetime.now(dt.UTC).isoformat(),
                 results=[entry.result for entry in self.entries],
             )
         except BaseException as exc:

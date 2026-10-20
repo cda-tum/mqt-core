@@ -37,9 +37,9 @@
 #include <optional>
 #include <random>
 #include <span>
-#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -51,25 +51,6 @@
 #else
 #include <dlfcn.h>
 #endif
-
-namespace testing {
-namespace {
-auto stringConcat5(const std::string& a, const std::string& b,
-                   const std::string& c, const std::string& d,
-                   const std::string& e) -> std::string {
-  std::stringstream ss;
-  ss << a << b << c << d << e;
-  return ss.str();
-}
-// NOLINTBEGIN(readability-identifier-naming,cppcoreguidelines-avoid-const-or-ref-data-members)
-MATCHER_P2(IsBetween, a, b,
-           stringConcat5(negation ? "isn't" : "is", " between ",
-                         PrintToString(a), " and ", PrintToString(b))) {
-  return a <= arg && arg <= b;
-}
-// NOLINTEND(readability-identifier-naming,cppcoreguidelines-avoid-const-or-ref-data-members)
-} // namespace
-} // namespace testing
 
 namespace {
 
@@ -726,34 +707,21 @@ TEST_P(DriverTest, QueryOperationProperty) {
             QDMI_ERROR_INVALIDARGUMENT);
 }
 
-TEST_P(DriverTest, QueryDeviceVersion) {
-  size_t size = 0;
-  ASSERT_EQ(QDMI_device_query_device_property(
-                device, QDMI_DEVICE_PROPERTY_VERSION, 0, nullptr, &size),
-            QDMI_SUCCESS)
-      << "Devices must provide a version.";
-  std::string value(size - 1, '\0');
-  ASSERT_EQ(QDMI_device_query_device_property(device,
-                                              QDMI_DEVICE_PROPERTY_VERSION,
-                                              size, value.data(), nullptr),
-            QDMI_SUCCESS)
-      << "Devices must provide a version.";
-  EXPECT_FALSE(value.empty()) << "Devices must provide a version.";
-}
-
-TEST_P(DriverTest, QueryDeviceLibraryVersion) {
-  size_t size = 0;
-  ASSERT_EQ(QDMI_device_query_device_property(
-                device, QDMI_DEVICE_PROPERTY_LIBRARYVERSION, 0, nullptr, &size),
-            QDMI_SUCCESS)
-      << "Devices must provide a library version.";
-  std::string value(size - 1, '\0');
-  ASSERT_EQ(QDMI_device_query_device_property(
-                device, QDMI_DEVICE_PROPERTY_LIBRARYVERSION, size, value.data(),
-                nullptr),
-            QDMI_SUCCESS)
-      << "Devices must provide a library version.";
-  ASSERT_FALSE(value.empty()) << "Devices must provide a library version.";
+TEST_P(DriverTest, QueryDeviceVersions) {
+  for (const auto prop :
+       {QDMI_DEVICE_PROPERTY_VERSION, QDMI_DEVICE_PROPERTY_LIBRARYVERSION}) {
+    SCOPED_TRACE(prop);
+    size_t size = 0;
+    ASSERT_EQ(
+        QDMI_device_query_device_property(device, prop, 0, nullptr, &size),
+        QDMI_SUCCESS);
+    ASSERT_GT(size, 1U);
+    std::string value(size - 1, '\0');
+    ASSERT_EQ(QDMI_device_query_device_property(device, prop, size,
+                                                value.data(), nullptr),
+              QDMI_SUCCESS);
+    EXPECT_FALSE(value.empty());
+  }
 }
 
 TEST_P(DriverTest, QueryNumQubits) {
@@ -873,7 +841,7 @@ TEST_P(DriverTest, QueryOperations) {
     ASSERT_THAT(result, testing::AnyOf(QDMI_SUCCESS, QDMI_ERROR_NOTSUPPORTED))
         << "Failed to query fidelity for operation " << name << ".";
     if (result == QDMI_SUCCESS) {
-      EXPECT_THAT(fidelity, testing::IsBetween(0, 1))
+      EXPECT_THAT(fidelity, testing::AllOf(testing::Ge(0.0), testing::Le(1.0)))
           << "Fidelity must be between 0 and 1 for operation " << name << ".";
     }
 
@@ -1641,6 +1609,12 @@ TEST(DeviceRegistrationTest, ConcurrentlyFreesDistinctJobs) {
 TEST(DeviceRegistrationTest, RetrievesExistingJobs) {
   registerSessionTestDevice();
   const auto device = qdmi::Session::openDevice("test.session-overrides");
+
+  using namespace std::string_view_literals;
+  for (const auto id : {""sv, "session-job\0different-job"sv}) {
+    EXPECT_THROW(std::ignore = device.retrieveJobById(id),
+                 std::invalid_argument);
+  }
 
   QDMI_Job job = nullptr;
   ASSERT_EQ(QDMI_session_retrieve_job_by_id(device, "session-job", &job),

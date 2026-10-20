@@ -10,12 +10,14 @@ if(NOT TARGET ${MQT_CORE_TARGET_NAME}-bench-bindings)
   set(BENCH_SOURCES
       register_bench.cpp
       register_bv.cpp
+      register_fan_out.cpp
       register_ghz.cpp
       register_grover.cpp
       register_grover_weak_measurement.cpp
       register_magic_state_distillation.cpp
       register_modular_multiplier.cpp
       register_multiplexer.cpp
+      register_qaoa.cpp
       register_qft.cpp
       register_qft_adder.cpp
       register_qpe.cpp

@@ -30,7 +30,9 @@ with the {doc}`QIR tutorial <../tutorials/qir_execution>`.
 ## Compile a Base Profile program
 
 Use the Base Profile for a circuit whose measurements do not control subsequent
-quantum operations. This Bell circuit produces the outcomes `00` and `11`.
+quantum operations and whose QIR calls use constant arguments without runtime
+storage. Native gates that pack controls into runtime arrays require the
+Adaptive Profile. This Bell circuit produces the outcomes `00` and `11`.
 
 ```{code-cell} ipython3
 from mqt.core.mlir import OutputFormat, QIRProfile, compile_program
@@ -209,12 +211,14 @@ print(qiskit_job.get_counts())
 ## Retrieve the QIR output stream through QDMI
 
 Counts summarize recorded measurement results and Boolean values. Adaptive
-compilation records returned CBit registers containing computed values as
-Booleans, preserving bit order and overwritten values. Registers containing only
-measurement results retain result-array recording. QIR's textual output stream
-also preserves output labels, array and tuple records, other recorded scalar
-values, and shot framing. Enable capture with DDSIM's boolean `custom2`
-parameter, then request its string result from `CustomProperty.CUSTOM1`:
+compilation records computed `i1` results and CBit registers containing computed
+values as Booleans, preserving output order and snapshots. Measurement-only
+registers use result-array recording when their stores can fuse safely and
+preserve returned measurement snapshots. Other stores use Boolean storage,
+including runtime-indexed accesses. QIR's textual output stream also preserves
+output labels, array and tuple records, other recorded scalar values, and shot
+framing. Enable capture with DDSIM's boolean `custom2` parameter, then request
+its string result from `CustomProperty.CUSTOM1`:
 
 ```{code-cell} ipython3
 from mqt.core.qdmi import CustomProperty
@@ -256,18 +260,54 @@ program parameters before lowering to either supported profile. Runtime and QIS
 declarations are checked before JIT compilation; a mismatched or unsupported
 declaration is reported with its actual and accepted LLVM function types.
 
+QC-to-QIR conversion records direct measurement and CBit-register returns in
+source order, including repetitions, and emits exit code 0 for successful
+execution. Adaptive Profile also records computed Boolean (`i1`) results
+directly, without output-register storage. Other entry results are unsupported,
+including a constant-zero `i64`: explicit QC and QCO returns are program data,
+never exit codes. Programs without results use a void QC or QCO entry function.
+This contract applies with and without a target. Keep other classical
+temporaries local, or use OpenQASM or jeff interchange for wider scalar program
+outputs.
+
+Base Profile requires every recorded bit to come from a measurement. Static
+Result storage has no specified initial value; use Adaptive Profile for outputs
+that retain their classical zero initialization.
+
+Measurements and CBit allocations must be in the entry function. A returned
+scalar measurement can share Result storage with a register only when constant
+store indices exclude overwriting its slot. The C++ QIR builder requires dynamic
+qubits to be allocated before control flow.
+
+Authored QIR can return explicit exit codes and use scalar output-recording
+APIs. These runtime features do not extend the supported QC-to-QIR entry
+results.
+
 MQT Core implements the QIR 2.1 Base and Adaptive Profile runtime APIs. The JIT
 accepts one exact LLVM type for each runtime declaration, so unsupported or
 outdated overloads fail before execution.
 
+Classical array copies require ranked memrefs. Fixed contiguous copies use
+[LLVM array loads and stores](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/Memory_Management.md#supported-llvm-array-operations);
+other layouts use loops and require the corresponding backwards-branching
+capability. Math operations such as `sqrt` lower to LLVM intrinsics. DDSIM
+executes these intrinsics, but they are outside the
+[floating-point instructions required by QIR 2.1](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/profiles/Adaptive_Profile.md#classical-instructions).
+Check the backend's extensions when using these operations.
+
 MQT Core provides dedicated QIS functions for variants with one or two control
 qubits, using the `c<gate>` and `cc<gate>` names. Operations with three or more
-controls use generic `__ctl` and `__ctladj` specializations. The control qubits
-are passed in an Array; parameterized and multi-target gates pass their original
-arguments in a Tuple, following the QIR-Runner calling convention. MQT accepts
-these functions as implementation-specific extensions to the QIR 2.1 Base and
-Adaptive profiles, so the entry point keeps its `base_profile` or
-`adaptive_profile` attribute.
+controls use generic `__ctl` and `__ctladj` specializations. A target that
+advertises only a variadic gate uses the generic form even with one or two
+controls. The control qubits are passed in an Array; parameterized and
+multi-target gates pass their original arguments in a Tuple, following the
+QIR-Runner calling convention. MQT accepts these functions as runtime extensions
+in authored QIR with either profile attribute. Compiler-generated Base QIR
+follows the
+[Base Profile instruction restrictions](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/profiles/Base_Profile.md#user-content-entry-point-definition),
+which exclude the allocation and stores used by generic controlled calls. Use
+Adaptive QIR to retain these native calls, or compile for a target with
+dedicated controlled instructions or a gate set that requires decomposition.
 
 MQT's two-angle phased-X rotation gate uses the `prx` QIS stem. The incompatible
 QIR-Runner Pauli-axis operation named `r` is not part of MQT's QIS.

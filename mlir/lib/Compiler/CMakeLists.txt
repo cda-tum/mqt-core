@@ -95,7 +95,8 @@ add_mlir_library(
   MLIRQTensorDialect
   MLIRSCFDialect
   MLIRSupport
-  MLIRTensorDialect)
+  MLIRTensorDialect
+  MLIRTransforms)
 
 mqt_mlir_target_use_project_options(MQTCompilerPrograms)
 
@@ -113,7 +114,6 @@ add_mlir_library(
   ${MQT_MLIR_SOURCE_INCLUDE_DIR}/mqt/Compiler
   LINK_LIBS
   PUBLIC
-  LLVMBitWriter
   MLIRPass
   MLIRTransforms
   MLIRTransformUtils
@@ -122,12 +122,11 @@ add_mlir_library(
   MLIRQCOToJeff
   MLIRQCToQIRBase
   MLIRQCToQIRAdaptive
-  MLIRQIRUtils
+  MLIRQIRTranslation
   MLIRQCOTransforms
   MLIRQCOpenQASMTranslation
   MLIRJeffTranslation
   MLIRJeffToQCO
-  MLIRTargetLLVMIRExport
   MQTCompilerPrograms
   MQTCompilerTarget
   MQT::MLIRSupport)

@@ -10,11 +10,13 @@ add_executable(
   mqt-core-mlir-unittests-benchmark
   test_benchmark_generate.cpp
   test_benchmark_generate_bv.cpp
+  test_benchmark_generate_fan_out.cpp
   test_benchmark_generate_ghz.cpp
   test_benchmark_generate_grover.cpp
   test_benchmark_generate_magic_state_distillation.cpp
   test_benchmark_generate_modular_multiplier.cpp
   test_benchmark_generate_multiplexer.cpp
+  test_benchmark_generate_qaoa.cpp
   test_benchmark_generate_qft.cpp
   test_benchmark_generate_qft_adder.cpp
   test_benchmark_generate_qpe.cpp

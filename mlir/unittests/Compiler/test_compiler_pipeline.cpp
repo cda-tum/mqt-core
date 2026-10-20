@@ -30,6 +30,7 @@
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
 #include "mqt/Dialect/QIR/Builder/QIRProgramBuilder.h"
+#include "mqt/Dialect/QIR/Execution/JIT/Session.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 #include "mqt/Dialect/QTensor/IR/QTensorDialect.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
@@ -75,6 +76,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/Passes.h"
@@ -83,6 +85,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -102,6 +105,7 @@
 #include <initializer_list>
 #include <iosfwd>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <numbers>
 #include <optional>
@@ -403,6 +407,12 @@ TEST_P(CompilerPipelineTest, EndToEndPipeline) {
       testCase.qcoPipeline);
   ASSERT_TRUE(mlir::succeeded(compiled));
 
+  if (auto* qc = std::get_if<QCProgram>(&*compiled)) {
+    ASSERT_TRUE(succeeded(verify(qc->module())));
+    // Compare canonical QC on both sides; compilation retains layout metadata.
+    ASSERT_TRUE(succeeded(qc->cleanup()));
+  }
+
   OwningOpRef<ModuleOp> expected;
   if (testCase.convertToQIR) {
     ASSERT_TRUE(testCase.qirReferenceBuilder);
@@ -679,9 +689,7 @@ h q;
   auto roundTrip = std::move(*roundTripResult);
   EXPECT_TRUE(roundTrip.isValid());
   EXPECT_TRUE(mlir::succeeded(roundTrip.cleanup()));
-  auto reparsed = parseRecordedModule(roundTrip.str());
-  ASSERT_TRUE(reparsed);
-  EXPECT_TRUE(mlir::verify(*reparsed).succeeded());
+  EXPECT_TRUE(mlir::verify(roundTrip.module()).succeeded());
 }
 
 TEST_F(CompilerPipelineTest, ReusesOpenQASMHardwareQubits) {
@@ -1096,6 +1104,159 @@ result = measure q;
   EXPECT_TRUE(succeeded(qir->llvmIR()));
 }
 
+TEST_F(CompilerPipelineTest, BaseUnrollsBoundArrayLoops) {
+  auto qc = QCProgram::fromMLIRString(R"mlir(module {
+    func.func @main(%angles: tensor<2xf64> {mqt.input_name = "angles"})
+        -> i1 attributes {mqt.entry_point} {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %two = arith.constant 2 : index
+      %counts = memref.alloca() : memref<2xindex>
+      memref.store %one, %counts[%zero] : memref<2xindex>
+      memref.store %two, %counts[%one] : memref<2xindex>
+      %q = qc.alloc : !qc.qubit
+      scf.for %layer = %zero to %two step %one {
+        %angle = tensor.extract %angles[%layer] : tensor<2xf64>
+        %end = memref.load %counts[%layer] : memref<2xindex>
+        scf.for %iteration = %zero to %end step %one {
+          qc.ry(%angle) %q : !qc.qubit
+        }
+      }
+      %result = qc.measure %q : !qc.qubit -> i1
+      qc.dealloc %q : !qc.qubit
+      return %result : i1
+    }
+  })mlir");
+  ASSERT_TRUE(succeeded(qc));
+  ASSERT_TRUE(succeeded(
+      qc->bindParameters({{"angles", std::vector<double>{0.25, -0.5}}})));
+  for (bool replay : {false, true}) {
+    auto input = qc->copy();
+    attachTargetEnvironment(
+        input.module(),
+        TargetEnvironment(makeUnrestrictedTarget(),
+                          llvm::cantFail(PayloadSpecification::forProgramFormat(
+                              ProgramFormat::QIRAdaptive))));
+    if (replay) {
+      const auto payload = llvm::cantFail(
+          PayloadSpecification::forProgramFormat(ProgramFormat::QIRBase));
+      PassManager pm(input.module().getContext(), ModuleOp::getOperationName());
+      populateQIRPreparationPipeline(
+          pm, payload.materialize(*input.module().getContext()));
+      std::string pipeline;
+      llvm::raw_string_ostream stream(pipeline);
+      pm.printAsTextualPipeline(stream);
+      registerMQTCompilerPasses();
+      auto parsed = parsePassPipeline(pipeline);
+      ASSERT_TRUE(succeeded(parsed));
+      static_cast<OpPassManager&>(pm) = std::move(*parsed);
+      ASSERT_TRUE(succeeded(runWithCompilationOptions(pm, input.module(), {})));
+      EXPECT_EQ(input.inspect().controlFlowCounts.count("scf.for"), 0U);
+    }
+    auto qir = std::move(input).intoQIR(QIRProfile::Base);
+    ASSERT_TRUE(succeeded(qir));
+    std::vector<double> angles;
+    qir->module().walk([&](LLVM::CallOp call) {
+      if (call.getCallee() != "__quantum__qis__ry__body") {
+        return;
+      }
+      auto constant = call.getOperand(0).getDefiningOp<LLVM::ConstantOp>();
+      ASSERT_TRUE(constant);
+      angles.push_back(cast<FloatAttr>(constant.getValue()).getValueAsDouble());
+    });
+    EXPECT_EQ(angles, (std::vector<double>{0.25, -0.5, -0.5}));
+    EXPECT_TRUE(succeeded(qir->llvmIR()));
+  }
+}
+
+TEST_F(CompilerPipelineTest, BasePromotesUnrolledClassicalArrays) {
+  auto qc = QCProgram::fromOpenQASMString(
+      "OPENQASM 3.1; array[float[64], 2] angles = {0.25, -0.5}; qubit q; "
+      "for int i in [0:1] { ry(angles[i]) q; } "
+      "output bit result; result = measure q;");
+  ASSERT_TRUE(succeeded(qc));
+  auto qir = std::move(*qc).intoQIR(QIRProfile::Base);
+  ASSERT_TRUE(succeeded(qir));
+  EXPECT_TRUE(succeeded(qir->llvmIR()));
+}
+
+TEST_F(CompilerPipelineTest, BaseRejectsDynamicAndExcessiveLoopExpansion) {
+  for (const bool dynamic : {false, true}) {
+    const std::string bound =
+        dynamic ? "%control = qc.alloc : !qc.qubit\n"
+                  "%m = qc.measure %control : !qc.qubit -> i1\n"
+                  "qc.dealloc %control : !qc.qubit\n"
+                  "%measured = arith.index_castui %m : i1 to index\n"
+                  "%end = arith.addi %measured, %three : index"
+                : "%end = arith.constant 1000000002 : index";
+    auto qc = QCProgram::fromMLIRString(
+        "module { func.func @main() attributes {mqt.entry_point} {\n"
+        "%zero = arith.constant 0 : index\n"
+        "%one = arith.constant 1 : index\n"
+        "%three = arith.constant 3 : index\n"
+        "%q = qc.alloc : !qc.qubit\n" +
+        bound +
+        "\n"
+        "scf.for %i = %zero to %end step %one {\n"
+        "  scf.for %j = %zero to %three step %one {\n"
+        "    qc.x %q : !qc.qubit\n"
+        "  }\n"
+        "}\n"
+        "qc.dealloc %q : !qc.qubit\n"
+        "return }}");
+    ASSERT_TRUE(succeeded(qc));
+    EXPECT_TRUE(failed(std::move(*qc).intoQIR(QIRProfile::Base)));
+  }
+}
+
+TEST_F(CompilerPipelineTest, PayloadControlRequiresValidSpecification) {
+  auto qc = QCProgram::fromMLIRString("module {}");
+  ASSERT_TRUE(succeeded(qc));
+  for (const auto* pass :
+       {"unroll-loops-for-payload", "legalize-control-flow"}) {
+    for (const auto* option : {"", "{payload-spec=unit}"}) {
+      EXPECT_TRUE(
+          failed(runPassPipeline(qc->module(), std::string(pass) + option)));
+    }
+  }
+}
+
+TEST_F(CompilerPipelineTest, DropsTemporaryStorageBeforeQIROutputFusion) {
+  constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.0;
+qubit q;
+x q;
+bit temporary = measure q;
+output bit result;
+result = temporary;
+)qasm";
+  auto qc = QCProgram::fromOpenQASMString(source.str());
+  ASSERT_TRUE(succeeded(qc));
+  auto optimized = runDefaultPipeline(CompilerInput{qc->copy()},
+                                      ProgramFormat::QCOOptimized);
+  ASSERT_TRUE(succeeded(optimized));
+  auto& program = std::get<QCOProgram>(*optimized);
+  const auto outcomes =
+      qco::sample(mlir::mqt::getEntryPoint(program.module()), 1, 42);
+  ASSERT_TRUE(succeeded(outcomes));
+  ASSERT_EQ(outcomes->size(), 1);
+  EXPECT_EQ(outcomes->begin()->first, "1");
+
+  for (const auto format :
+       {ProgramFormat::QIRBase, ProgramFormat::QIRAdaptive}) {
+    auto compiled = runDefaultPipeline(CompilerInput{qc->copy()}, format);
+    ASSERT_TRUE(succeeded(compiled));
+    auto ir = std::get<QIRProgram>(*compiled).llvmIR();
+    ASSERT_TRUE(succeeded(ir));
+    EXPECT_NE(ir->find("call void @__quantum__qis__mz__body"),
+              std::string::npos);
+    EXPECT_NE(
+        ir->find(format == ProgramFormat::QIRBase
+                     ? "call void @__quantum__rt__result_record_output"
+                     : "call void @__quantum__rt__result_array_record_output"),
+        std::string::npos);
+  }
+}
+
 TEST_F(CompilerPipelineTest,
        BaseProfileLowersCompleteTensorLifetimeAfterCleanup) {
   auto program = QCOProgram::fromMLIRString(R"mlir(module {
@@ -1120,6 +1281,487 @@ TEST_F(CompilerPipelineTest,
   ASSERT_TRUE(mlir::succeeded(llvmIR));
   EXPECT_TRUE(StringRef(*llvmIR).contains("__quantum__qis__mz__body"));
   EXPECT_FALSE(StringRef(*llvmIR).contains("qubit_release"));
+}
+
+TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
+  constexpr auto programs = std::to_array<llvm::StringLiteral>({
+      R"qasm(OPENQASM 3.0;
+        array[int, 2, 2, 1] values = {{{1}, {2}}, {{3}, {4}}};
+        array[int, 1] row = values[1, 0];
+        values[0, 1] = row;
+        row[0] = 5;
+        qubit q;
+        if (values[0, 1, 0] == 3 && values[1, 0, 0] == 3 && row[0] == 5) {
+          x q;
+        }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        qubit probe;
+        U(pi / 2, 0, 0) probe;
+        bit choice = measure probe;
+        array[int, 3] a = {1, 2, 3};
+        int last = int(choice) + 1;
+        int expected = 3 + 3 * int(choice);
+        int sum = 0;
+        for int x in a[:last] { sum += x; last = 0; }
+        int step = 1 - 2 * int(choice);
+        int first = 0;
+        for int x in a[:step:] { first = x; break; }
+        qubit q;
+        if (sum == expected && first == 1 + 2 * int(choice)) {
+          U(pi, 0, 0) q;
+        }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};
+        int sum = 0;
+        int row = 1;
+        int start = 2;
+        int step = -1;
+        for int x in a[row, start:step:] {
+          sum = sum * 10 + x;
+          row = 0; start = 0; step = 1;
+          if (x == 6) { x = 0; continue; }
+        }
+        array[int, 0] empty;
+        for int x in empty { x = 2; sum = 0; }
+        for int x in empty[:step:] { sum = 0; break; }
+        qubit q;
+        if (sum == 654 && a[1, 2] == 6) { U(pi, 0, 0) q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 4] a = {1, 2, 3, 4};
+        int sum = 0;
+        for int x in a {
+          if (x == 2) { a[2] = 5; continue; }
+          int value = x;
+          for int x in a[:1] {
+            if (x == 2) { break; }
+            sum += value;
+          }
+          if (x == 5) { break; }
+        }
+        qubit q;
+        if (sum == 6) { U(pi, 0, 0) q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int[8], 2] signed = {127, -1};
+        array[uint[8], 2] unsigned = {128, 255};
+        array[bool, 2] flags = {true, false};
+        array[float, 2] reals = {0.25, 0.75};
+        array[angle[8], 2] angles = {0.0, pi};
+        int sum = 0;
+        for int[8] x in signed { sum += int(x); x = 0; }
+        for uint x in unsigned { sum += int(x); }
+        for int[8] x in unsigned { sum += int(x); }
+        int count = 0;
+        for bool flag in flags { if (flag) { count += 1; } flag = false; }
+        float total = 0;
+        for float[64] x in reals { total += x; }
+        qubit q;
+        if (sum == 380 && count == 1 && total == 1.0) {
+          for angle[8] theta in angles { U(theta, 0, 0) q; theta = 0.0; }
+        }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2] angles = {0.0, pi};
+        array[int, 0] empty;
+        array[float, 0] initializedEmpty = {};
+        array[int, 2, 0] emptyRows = {{}, {}};
+        array[int, 0] emptyRow = emptyRows[0];
+        emptyRows[1] = emptyRow;
+        emptyRows[1, :] = emptyRow[::];
+        empty[:] = emptyRow;
+        array[int, 0, 2] noRows = {};
+        array[int, 400, 400, 0] emptyTable;
+        array[int, 400, 400, 0] emptyCopy = emptyTable[:, :, :];
+        int stride = -2;
+        empty = emptyRow[:stride:];
+        empty = emptyRow[:stride:] ++ empty;
+        array[int, 0, 2] concatenated = noRows ++ noRows;
+        array[int, 1] one = {1};
+        array[int, 1] padded = empty ++ one ++ empty;
+        if (padded[0] != 1) { angles[1] = 0.0; }
+        if (sizeof(empty) != 0 || sizeof(emptyRows, 1) != 0 ||
+            sizeof(emptyRows[0, :]) != 0 || sizeof(empty[:stride:]) != 0) {
+          angles[1] = 0.0;
+        }
+        qubit q;
+        output bit result;
+        bool zero = bool(angles[0]);
+        if (zero) { U(pi, 0, 0) q; }
+        if (bool(angles[1])) { U(float(angles[1]), sin(angles[0]), 0) q; }
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 2] first = {0, 1};
+        array[int, 3] second = {2, 3, 4};
+        array[int, 5] a = first ++ second;
+        array[int, 4] b = first ++ (first[1:1] ++ first[0:0]);
+        bool initial = a[0] == 0 && a[1] == 1 && a[2] == 2 &&
+                       a[3] == 3 && a[4] == 4 &&
+                       b[0] == 0 && b[1] == 1 && b[2] == 1 && b[3] == 0;
+        a = a[3:] ++ a[:2];
+        a[0:2:4] = a[0:0] ++ a[1:1] ++ a[2:2];
+        qubit q;
+        if (initial && a[0] == 3 && a[1] == 4 && a[2] == 4 &&
+            a[3] == 1 && a[4] == 0) { U(pi, 0, 0) q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int[8], 6] a = {1, 2, 3, 4, 5, 6};
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int k = int(measured) + 1;
+        a = a[k:] ++ a[:k-1];
+        array[int[8], 6] b = a[k:-1:0] ++ a[k+1:];
+        bool reversed = b[0] == 5 && b[1] == 4 && b[2] == 3 &&
+                        b[3] == 6 && b[4] == 1 && b[5] == 2;
+        b[:k] = a[:k-1] ++ a[k:k];
+        reset q;
+        if (reversed && b[0] == 3 && b[1] == 4 && b[2] == 5) { U(pi, 0, 0) q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 3, 2] a = {{1, 2}, {3, 4}, {5, 6}};
+        a = a[2:2, :] ++ a[:1, :];
+        array[int, 6] b = a[0] ++ a[1] ++ a[2];
+        bool rows = b[0] == 5 && b[1] == 6 && b[2] == 1 &&
+                    b[3] == 2 && b[4] == 3 && b[5] == 4;
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int one = int(measured);
+        a[:one, :] = a[one:one, 0:one] ++ a[0:0, :];
+        reset q;
+        if (rows && a[0, 0] == 1 && a[0, 1] == 2 && a[1, 0] == 5 &&
+            a[1, 1] == 6 && a[2, 0] == 3 && a[2, 1] == 4) { U(pi, 0, 0) q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 5] a = {0, 1, 2, 3, 4};
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int start = int(measured);
+        int stop = start + 2;
+        a[start:] = a[:stop];
+        bool right = a[1] == 0 && a[2] == 1 && a[4] == 3;
+        a[:stop] = a[start:];
+        a[:-start:] = a;
+        int first = -5;
+        int last = -1;
+        array[int, 3] b = a[first:start+1:last];
+        reset q;
+        if (right && b[0] == 3 && b[1] == 2 && b[2] == 0) { U(pi, 0, 0) q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int one = int(measured);
+        array[int, 2] column = a[0:one, one];
+        a[:one, 0] = column;
+        a[0:one, one:2] = a[one:-one:0, 0:one];
+        reset q;
+        if (column[0] == 2 && column[1] == 5 &&
+            a[0, 1] == 5 && a[0, 2] == 5 && a[1, 1] == 2 && a[1, 2] == 2) {
+          U(pi, 0, 0) q;
+        }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[angle, 2] a = {0.0, pi};
+        int low = -9223372036854775807-1;
+        uint high = 9223372036854775807;
+        array[angle, 1] b = a[1:low:0];
+        array[angle, 1] c = a[0:high:1];
+        qubit q;
+        U(b[0], c[0], 0) q;
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[angle, 3] angles = {0.0, pi, 0.0};
+        array[int, 2, 3] uninitialized;
+        const uint columns = sizeof(uninitialized[0]);
+        qubit q;
+        for int i in [0:sizeof(angles)-1] { U(angles[i], 0, 0) q; }
+        if (columns != 3 || sizeof(uninitialized[:, 0]) != 2 ||
+            sizeof(angles[0:2:2]) != 2) { reset q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 2, 5] a;
+        gate by_size(t) q {
+          U(pi * float(sizeof(a[1, 0:int(t):int(t)])) / 2, 0, 0) q;
+        }
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int[8] one = int[8](measured);
+        int start = -5;
+        int stop = -1;
+        uint[8] step = 2;
+        uint n = sizeof(a[one, start:step:stop]);
+        int low = -9223372036854775807-1;
+        uint high = 9223372036854775807;
+        uint sum = 0;
+        for int i in [1:3] { sum += sizeof(a[one, :i]); }
+        reset q;
+        if (n == 3 && sum == 9 && sizeof(a[:one]) == 2 &&
+            sizeof(a[:one, :-one:], 1) == 5 &&
+            sizeof(a[one, :sizeof(a[one, :one])-1]) == 2 &&
+            sizeof(a[one, 4:low:0]) == 1 &&
+            sizeof(a[one, 0:high:4]) == 1) {
+          by_size(float(sizeof(a[one, :one])) / 2) q;
+        }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int[8], 5] a = {0, 1, 2, 3, 4};
+        a[1:] = a[:3];
+        bool right = a[0] == 0 && a[1] == 0 && a[2] == 1 &&
+                     a[3] == 2 && a[4] == 3;
+        a[:3] = a[1:];
+        bool left = a[0] == 0 && a[1] == 1 && a[2] == 2 &&
+                    a[3] == 3 && a[4] == 3;
+        a[:-1:] = a;
+        array[int[8], 3] b = a[0:2:4];
+        a[0] = 99;
+        qubit q;
+        output bit result;
+        if (right && left && b[0] == 3 && b[1] == 2 && b[2] == 0 &&
+            a[1] == 3 && a[2] == 2 && a[3] == 1 && a[4] == 0) {
+          U(pi, 0, 0) q;
+        }
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int column = int(measured);
+        array[int, 2] b = a[:, column];
+        a[:, 0] = b;
+        a[0:1, 1:2] = a[1:-1:0, 0:1];
+        reset q;
+        output bit result;
+        if (b[0] == 2 && b[1] == 5 && a[0, 0] == 2 && a[1, 0] == 5 &&
+            a[0, 1] == 5 && a[0, 2] == 5 && a[1, 1] == 2 && a[1, 2] == 2) {
+          U(pi, 0, 0) q;
+        }
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2] source = {-pi, 0.0};
+        array[angle[8], 2] angles = source[:-1:];
+        source[0] = 0.0;
+        array[float, 1] scale = {2.0};
+        array[float[64], 1] copiedScale = scale;
+        array[uint[8], 1] index = {255};
+        array[uint[8], 1] copiedIndex;
+        copiedIndex = index;
+        copiedIndex[0] += 2;
+        qubit q;
+        output bit result;
+        U(float(angles[copiedIndex[0]]) * copiedScale[0] / 2, 0, 0) q;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2, 3] angles = {{0.0, 0.0, pi}, {0.0, 0.0, 0.0}};
+        qubit q;
+        output bit result;
+        for int row in [-2:-1] {
+          for int column in [-3:-1] { U(angles[row, column], 0, 0) q; }
+        }
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int[8], 2, 1, 2] values = {{{11, 12}}, {{13, 127}}};
+        array[int[8], 2, 1, 2] saved = values;
+        array[bool, 2, 1] flags = {{true}, {false}};
+        array[bool, 2, 1] savedFlags;
+        savedFlags = flags;
+        int row = -1;
+        uint middle = 0;
+        int column = -1;
+        for int i in [0:1] {
+          values[row, middle, column] += 1;
+          if (i == 0) { saved = values; }
+        }
+        saved = saved;
+        array[int[8], 1, 2] plane = saved[row];
+        array[int[8], 2] copiedRow = plane[middle];
+        values[0, 0] = copiedRow;
+        plane[0, 0] = 0;
+        flags[1, 0] = saved[-1, 0, 1] == -128 && values[-1, 0, 1] == -127 &&
+                      saved[0, 0, 1] == 12 && saved[0, 0, 0] == 11 &&
+                      saved[1, 0, 0] == 13 && values[0, 0, 0] == 13 &&
+                      values[0, 0, 1] == -128;
+        qubit q;
+        output bit result;
+        if (flags[row, middle] && flags[0, 0] && !savedFlags[1, 0]) {
+          U(pi, 0, 0) q;
+        }
+        result = measure q;
+      )qasm",
+      // The angle table is read through runtime (including negative) indices.
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2] angles = {0.0, -pi/2};
+        int last = -1;
+        angles[last] = -pi;
+        qubit q;
+        output bit result;
+        for int i in [-2:-1] { U(angles[i], 0, 0) q; }
+        result = measure q;
+      )qasm",
+      // Memory updates must remain visible across loop iterations and joins.
+      R"qasm(OPENQASM 3.0;
+        const int n = 2;
+        array[int[8], n,] values = {127, 0,};
+        array[uint[8], 1] unsignedValues = {255};
+        array[bool, 1] active = {true};
+        array[float[64], 1] angles = {0.0};
+        output bit result;
+        qubit q;
+        int i = -2;
+        values[i] += 1;
+        uint slot = 0;
+        unsignedValues[slot] += 1;
+        while (active[slot]) {
+          if (values[i] == -128 && unsignedValues[slot] == 0) {
+            angles[slot] = pi / 2;
+            angles[slot] *= 2;
+          }
+          active[slot] = !active[slot];
+        }
+        U(angles[slot], 0, 0) q;
+        result = measure q;
+      )qasm",
+      // Measurement-derived indices remain dynamic through compilation.
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2, 2] angles = {{0.0, 0.0}, {0.0, 0.0}};
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int index = int(measured);
+        angles[index, 0] = pi;
+        array[angle[8], 2] copied = angles[-index];
+        angles[0] = copied;
+        angles[index] = angles[index];
+        angles[index, 0] = 0.0;
+        reset q;
+        if (bool(copied[0])) { U(angles[0, 0], 0, 0) q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+  });
+  for (auto source : programs) {
+    SCOPED_TRACE(source.str());
+    auto qc = QCProgram::fromOpenQASMString(source.str());
+    ASSERT_TRUE(mlir::succeeded(qc));
+    auto exported = qc->toOpenQASM3();
+    ASSERT_TRUE(succeeded(exported));
+    auto reimported = QCProgram::fromOpenQASMString(exported->source());
+    ASSERT_TRUE(succeeded(reimported));
+    auto roundTripped = std::move(*reimported).intoQCO();
+    ASSERT_TRUE(succeeded(roundTripped));
+    const auto exportedOutcomes =
+        qco::sample(mlir::mqt::getEntryPoint(roundTripped->module()), 4, 42);
+    ASSERT_TRUE(succeeded(exportedOutcomes));
+    EXPECT_EQ(*exportedOutcomes, (std::map<std::string, size_t>{{"1", 4}}));
+    auto program = std::move(*qc).intoQCO();
+    ASSERT_TRUE(mlir::succeeded(program));
+    const auto beforeCleanup =
+        qco::sample(mlir::mqt::getEntryPoint(program->module()), 4, 42);
+    ASSERT_TRUE(succeeded(beforeCleanup));
+    EXPECT_EQ(*beforeCleanup, (std::map<std::string, size_t>{{"1", 4}}));
+    ASSERT_TRUE(mlir::succeeded(program->cleanup()));
+    const auto outcomes =
+        qco::sample(mlir::mqt::getEntryPoint(program->module()), 4, 42);
+    ASSERT_TRUE(succeeded(outcomes));
+    EXPECT_EQ(*outcomes, (std::map<std::string, size_t>{{"1", 4}}));
+    auto restored = std::move(*program).intoQC();
+    ASSERT_TRUE(mlir::succeeded(restored));
+    auto qir = std::move(*restored).intoQIR(QIRProfile::Adaptive);
+    ASSERT_TRUE(mlir::succeeded(qir));
+    const auto llvmIR = qir->llvmIR();
+    ASSERT_TRUE(mlir::succeeded(llvmIR));
+    ::qir::JitSession session(*llvmIR, "classical-arrays",
+                              ::qir::Execution::Sampling, 42);
+    std::vector<std::string> samples;
+    ASSERT_EQ(session.sample(4, samples), 0);
+    EXPECT_EQ(samples, (std::vector<std::string>(4, "1")));
+  }
+}
+
+TEST_F(CompilerPipelineTest, BaseRejectsResidualClassicalArrayStorage) {
+  auto qc = QCProgram::fromMLIRString(R"mlir(module {
+    memref.global "private" @angles : memref<1xf64> = dense<1.0>
+    func.func @main() attributes {mqt.entry_point} {
+      %angles = memref.get_global @angles : memref<1xf64>
+      %zero = arith.constant 0 : index
+      %theta = memref.load %angles[%zero] : memref<1xf64>
+      %q = qc.static 0 : !qc.qubit
+      qc.rx(%theta) %q : !qc.qubit
+      return
+    }
+  })mlir");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  EXPECT_TRUE(mlir::failed(std::move(*qc).intoQIR(QIRProfile::Base)));
+}
+
+TEST_F(CompilerPipelineTest, ArrayRangesCheckMemrefBoundsAndShapesInDD) {
+  const auto cases =
+      std::to_array<std::pair<llvm::StringLiteral, llvm::StringLiteral>>({
+          {"int i = 4; b = a[0:i];", "subview is out of bounds"},
+          {"int i = -5; b = a[i:1];", "subview is out of bounds"},
+          {"int i = 2; b = a[:i];", "matching shapes"},
+          {"int i = 1; a[:i] = a;", "matching shapes"},
+          {"int i = 1; b = a[:i] ++ a[0:0];", "matching shapes"},
+          {"int i = 0; a = a[:i] ++ a[0:0];", "matching shapes"},
+      });
+  for (const auto& [body, message] : cases) {
+    SCOPED_TRACE(body.str());
+    auto qc = QCProgram::fromOpenQASMString(
+        "OPENQASM 3.0; output bit result; result = 0; "
+        "array[int, 4] a = {0, 1, 2, 3}; array[int, 2] b; " +
+        body.str());
+    ASSERT_TRUE(mlir::succeeded(qc));
+    auto qco = std::move(*qc).intoQCO();
+    ASSERT_TRUE(mlir::succeeded(qco));
+    std::string diagnostic;
+    ScopedDiagnosticHandler handler(qco->module().getContext(),
+                                    [&](Diagnostic& error) {
+                                      diagnostic += error.str();
+                                      return success();
+                                    });
+    EXPECT_TRUE(
+        failed(qco::sample(mlir::mqt::getEntryPoint(qco->module()), 1, 42)));
+    EXPECT_TRUE(StringRef(diagnostic).contains(message)) << diagnostic;
+  }
 }
 
 TEST_F(CompilerPipelineTest, EmitsQIR21ProfileModuleFlags) {
@@ -1647,6 +2289,29 @@ TEST_F(CompilerPipelineTest, TypedOpenQASMExportDropsUnusedGates) {
   EXPECT_EQ(exported->source().find("gate unused"), std::string::npos);
 }
 
+TEST_F(CompilerPipelineTest, OpenQASMExportPreservesConditionalArrayAngles) {
+  auto program = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.0;
+    array[angle[8], 2] angles = {0.0, pi/2};
+    qubit q;
+    for angle[8] theta in angles {
+      if (theta == angle[8](0.0)) { theta = pi/2; }
+      ry(theta) q;
+    }
+    output bit result;
+    result = measure q;
+  )qasm");
+  ASSERT_TRUE(succeeded(program));
+  auto exported = program->toOpenQASM3();
+  ASSERT_TRUE(succeeded(exported));
+  auto restored = QCProgram::fromOpenQASMString(exported->source());
+  ASSERT_TRUE(succeeded(restored));
+  auto qco = std::move(*restored).intoQCO();
+  ASSERT_TRUE(succeeded(qco));
+  auto counts = qco::sample(mlir::mqt::getEntryPoint(qco->module()), 1, 42);
+  ASSERT_TRUE(succeeded(counts));
+  EXPECT_EQ(*counts, (std::map<std::string, size_t>{{"1", 1}}));
+}
+
 TEST_F(CompilerPipelineTest, PipelineOpenQASMMatchesPreparedQCExport) {
   constexpr auto source = R"(OPENQASM 3.1;
 include "stdgates.inc";
@@ -1995,6 +2660,10 @@ TEST_F(CompilerPipelineTest, QIRCountsPackedStaticQubits) {
     for (const auto format :
          {ProgramFormat::QIRBase, ProgramFormat::QIRAdaptive}) {
       auto output = runDefaultPipeline(CompilerInput{qc->copy()}, format);
+      if (format == ProgramFormat::QIRBase) {
+        EXPECT_TRUE(mlir::failed(output));
+        continue;
+      }
       ASSERT_TRUE(mlir::succeeded(output));
       auto& qir = std::get<QIRProgram>(*output);
       ASSERT_TRUE(succeeded(verify(qir.module())));
@@ -2104,9 +2773,7 @@ x q;
 
   auto roundTrip = std::move(*fromFile).intoQCO();
   ASSERT_TRUE(mlir::succeeded(roundTrip));
-  auto reparsed = parseRecordedModule(roundTrip->str());
-  ASSERT_TRUE(reparsed);
-  EXPECT_TRUE(mlir::verify(*reparsed).succeeded());
+  EXPECT_TRUE(mlir::verify(roundTrip->module()).succeeded());
   const std::vector<std::byte> invalid(1);
   EXPECT_TRUE(mlir::failed(JeffProgram::fromBytes(invalid)));
   EXPECT_TRUE(mlir::failed(
@@ -2772,21 +3439,19 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesForTarget) {
       qco->module(), TargetEnvironment(makeSparseUCZTarget(false), payload));
   ASSERT_TRUE(mlir::succeeded(qco->compileForTarget(targetEnvironment)));
 
-  auto compiled = parseRecordedModule(qco->str());
-  ASSERT_TRUE(compiled) << qco->str();
-  EXPECT_TRUE(verify(*compiled).succeeded());
-  const auto environment =
-      compiled.get()->getAttrOfType<mlir::mqt::TargetEnvAttr>(
-          mlir::mqt::TargetEnvAttr::name);
+  auto compiled = qco->module();
+  EXPECT_TRUE(verify(compiled).succeeded());
+  const auto environment = compiled->getAttrOfType<mlir::mqt::TargetEnvAttr>(
+      mlir::mqt::TargetEnvAttr::name);
   ASSERT_TRUE(environment);
   EXPECT_EQ(environment.getPayloadSpecification(),
-            payload.materialize(*context));
+            payload.materialize(*compiled.getContext()));
 
   size_t numStatic = 0;
   size_t numDynamic = 0;
   size_t numSwaps = 0;
   size_t numHigherArity = 0;
-  compiled->walk([&](Operation* operation) {
+  compiled.walk([&](Operation* operation) {
     if (auto staticOp = dyn_cast<qco::StaticOp>(operation)) {
       ++numStatic;
       EXPECT_TRUE(llvm::is_contained(
@@ -3355,8 +4020,8 @@ TEST_F(CompilerPipelineTest, OverCapacityInputsCompileWithoutLayout) {
   const auto target = llvm::cantFail(
       CompilerTarget::create(1, CompilerTarget::Connectivity::allToAll(),
                              CompilerTarget::NativeOperations::unrestricted()));
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   ASSERT_TRUE(mlir::succeeded(
       program->compileForTarget(TargetEnvironment(target, payload))));
   EXPECT_FALSE(program->module()->hasAttr("mqt.layout"));
@@ -3480,15 +4145,14 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
       CompilerTarget::NativeOperations::unrestricted()));
   auto qasmProgram = program->copy();
   const auto qasmPayload = llvm::cantFail(
-      payloadSpecificationForProgramFormat(QDMI_PROGRAM_FORMAT_QASM3));
+      PayloadSpecification::forProgramFormat(ProgramFormat::OpenQASM3));
   ASSERT_TRUE(mlir::succeeded(
       qasmProgram.compileForTarget(TargetEnvironment(target, qasmPayload))));
   const auto outcomes =
       qco::sample(mlir::mqt::getEntryPoint(qasmProgram.module()), 1, 42);
   ASSERT_TRUE(succeeded(outcomes));
   ASSERT_EQ(outcomes->size(), 1);
-  // Without a CBit output register, sampling reports the physical wire state.
-  EXPECT_EQ(outcomes->begin()->first, "10000000");
+  EXPECT_EQ(outcomes->begin()->first, "1");
   auto qasmQC = std::move(qasmProgram).intoQC();
   ASSERT_TRUE(mlir::succeeded(qasmQC));
   auto qasm = qasmQC->toOpenQASM3();
@@ -3496,8 +4160,8 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
   EXPECT_TRUE(StringRef(qasm->source()).contains("$7"));
   EXPECT_FALSE(StringRef(qasm->source()).contains("$42"));
   EXPECT_FALSE(StringRef(qasm->source()).contains("for int"));
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   ASSERT_TRUE(mlir::succeeded(
       program->compileForTarget(TargetEnvironment(target, payload))));
   EXPECT_TRUE(succeeded(verify(program->module())));
@@ -3540,8 +4204,8 @@ TEST_F(CompilerPipelineTest, IndexedPlacementRetainsTargetAndPayloadChecks) {
             capacity, CompilerTarget::Connectivity::allToAll(),
             Native::fromOperations(operations)));
       };
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   for (const auto& [target, expected] : {
            std::pair{targetWith(1, {u, measure}), "target site count"},
            std::pair{targetWith(2, {u, localMeasure}),
@@ -3564,14 +4228,14 @@ TEST_F(CompilerPipelineTest, IndexedPlacementRetainsTargetAndPayloadChecks) {
   }
   const auto target = targetWith(2, {u, measure});
   for (const auto format :
-       {QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE, QDMI_PROGRAM_FORMAT_QASM3}) {
+       {ProgramFormat::QIRAdaptive, ProgramFormat::OpenQASM3}) {
     auto result = runDefaultPipeline(
         CompilerInput{OpenQASMProgram(source)},
         TargetEnvironment(
             target,
-            llvm::cantFail(payloadSpecificationForProgramFormat(format))));
+            llvm::cantFail(PayloadSpecification::forProgramFormat(format))));
     ASSERT_TRUE(mlir::succeeded(result));
-    if (format == QDMI_PROGRAM_FORMAT_QASM3) {
+    if (format == ProgramFormat::OpenQASM3) {
       EXPECT_TRUE(mlir::succeeded(QCProgram::fromOpenQASMString(
           std::get<OpenQASMProgram>(*result).source())));
     } else {
@@ -3720,11 +4384,12 @@ TEST_F(CompilerPipelineTest, PayloadControlChecksUnrolledStepWidth) {
     llvm::raw_string_ostream stream(source);
     stream << "module {\n"
            << "  func.func private @observe(i8)\n"
-           << "  func.func @main(%q: !qco.qubit) -> !qco.qubit "
+           << "  func.func @main() "
               "attributes {mqt.entry_point} {\n"
            << "    %lower = arith.constant " << test.lower << " : i8\n"
            << "    %upper = arith.constant " << test.upper << " : i8\n"
            << "    %step = arith.constant " << test.step << " : i8\n"
+           << "    %q = qco.alloc : !qco.qubit\n"
            << "    %result = scf.for "
            << (test.unsignedComparison ? "unsigned " : "")
            << "%i = %lower to %upper step %step "
@@ -3732,7 +4397,7 @@ TEST_F(CompilerPipelineTest, PayloadControlChecksUnrolledStepWidth) {
            << "      func.call @observe(%i) : (i8) -> ()\n"
            << "      %next = qco.x %state : !qco.qubit\n"
            << "      scf.yield %next : !qco.qubit\n"
-           << "    }\n    return %result : !qco.qubit\n  }\n}\n";
+           << "    }\n    qco.sink %result : !qco.qubit\n    return\n  }\n}\n";
     SCOPED_TRACE(source);
     auto program = QCOProgram::fromMLIRString(source);
     ASSERT_TRUE(mlir::succeeded(program));
@@ -3776,7 +4441,8 @@ TEST_F(CompilerPipelineTest, PayloadControlChecksUnrolledStepWidth) {
 
 TEST_F(CompilerPipelineTest, PayloadControlUnrollsBeyondTheOldBudget) {
   auto program = QCOProgram::fromMLIRString(R"mlir(module {
-    func.func @main(%q: !qco.qubit) -> !qco.qubit attributes {mqt.entry_point} {
+    func.func @main() attributes {mqt.entry_point} {
+      %q = qco.alloc : !qco.qubit
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
       %limit = arith.constant 70000 : index
@@ -3785,7 +4451,8 @@ TEST_F(CompilerPipelineTest, PayloadControlUnrollsBeyondTheOldBudget) {
         %next = qco.x %state : !qco.qubit
         scf.yield %next : !qco.qubit
       }
-      return %out : !qco.qubit
+      qco.sink %out : !qco.qubit
+      return
     }
   })mlir");
   ASSERT_TRUE(mlir::succeeded(program));
@@ -3814,8 +4481,9 @@ TEST_F(CompilerPipelineTest, PayloadControlBoundsTotalLoopCloning) {
     std::string source;
     llvm::raw_string_ostream stream(source);
     stream << "module {\n"
-           << "  func.func @main(%q: !qco.qubit) -> !qco.qubit "
+           << "  func.func @main() "
               "attributes {mqt.entry_point} {\n"
+           << "    %q = qco.alloc : !qco.qubit\n"
            << "    %c0 = arith.constant 0 : index\n"
            << "    %c1 = arith.constant 1 : index\n"
            << "    %limit = arith.constant " << trips << " : index\n";
@@ -3827,7 +4495,7 @@ TEST_F(CompilerPipelineTest, PayloadControlBoundsTotalLoopCloning) {
              << " : !qco.qubit\n"
              << "      scf.yield %next" << index << " : !qco.qubit\n    }\n";
     }
-    stream << "    return %out1 : !qco.qubit\n  }\n}\n";
+    stream << "    qco.sink %out1 : !qco.qubit\n    return\n  }\n}\n";
     auto program = QCOProgram::fromMLIRString(source);
     ASSERT_TRUE(mlir::succeeded(program));
     attachTargetEnvironment(
@@ -3859,7 +4527,8 @@ TEST_F(CompilerPipelineTest, PayloadControlBoundsTotalLoopCloning) {
 
 TEST_F(CompilerPipelineTest, PayloadControlRejectsUnrepresentableTripCount) {
   auto program = QCOProgram::fromMLIRString(R"mlir(module {
-    func.func @main(%q: !qco.qubit) -> !qco.qubit attributes {mqt.entry_point} {
+    func.func @main() attributes {mqt.entry_point} {
+      %q = qco.alloc : !qco.qubit
       %zero = arith.constant 0 : i128
       %one = arith.constant 1 : i128
       %limit = arith.constant 18446744073709551616 : i128
@@ -3868,7 +4537,8 @@ TEST_F(CompilerPipelineTest, PayloadControlRejectsUnrepresentableTripCount) {
         %next = qco.x %state : !qco.qubit
         scf.yield %next : !qco.qubit
       }
-      return %out : !qco.qubit
+      qco.sink %out : !qco.qubit
+      return
     }
   })mlir");
   ASSERT_TRUE(mlir::succeeded(program));
@@ -3992,9 +4662,9 @@ makePayloadSwitchSource(size_t cases, bool quantum,
   if (!lastCaseBody.empty()) {
     source += "func.func private @effect()\n";
   }
-  source += "func.func @main(%selector: index, %condition: i1";
-  source += quantum ? ", %q: !qco.qubit) -> (i64, !qco.qubit)\n" : ") -> i64\n";
-  source += "attributes {mqt.entry_point} {\n";
+  source += "func.func @select(%selector: index, %condition: i1";
+  source +=
+      quantum ? ", %q: !qco.qubit) -> (i64, !qco.qubit) {\n" : ") -> i64 {\n";
   source +=
       quantum
           ? "%result, %out = qco.index_switch %selector -> (i64, !qco.qubit)\n"
@@ -4137,7 +4807,7 @@ TEST_F(CompilerPipelineTest, PayloadControlPreservesSwitchSelectionAndState) {
       ASSERT_TRUE(
           mlir::succeeded(program->runPassPipeline("legalize-control-flow")));
       EXPECT_FALSE(StringRef(program->str()).contains("index_switch"));
-      auto function = program->module().lookupSymbol<func::FuncOp>("main");
+      auto function = program->module().lookupSymbol<func::FuncOp>("select");
       OpBuilder builder(function.getContext());
       builder.setInsertionPointToStart(&function.getBody().front());
       auto value =
@@ -4209,8 +4879,7 @@ TEST_F(CompilerPipelineTest,
   )mlir";
   constexpr llvm::StringLiteral switchResult = R"mlir(
     module {
-      func.func @main(%selector: index)
-          -> tensor<1x!qco.qubit> attributes {mqt.entry_point} {
+      func.func @main(%selector: index) attributes {mqt.entry_point} {
         %c1 = arith.constant 1 : index
         %left = qtensor.alloc(%c1) : tensor<1x!qco.qubit>
         %right = qtensor.alloc(%c1) : tensor<1x!qco.qubit>
@@ -4221,7 +4890,8 @@ TEST_F(CompilerPipelineTest,
         default {
           scf.yield %right : tensor<1x!qco.qubit>
         }
-        return %result : tensor<1x!qco.qubit>
+        qtensor.dealloc %result : tensor<1x!qco.qubit>
+        return
       }
     }
   )mlir";
@@ -4758,7 +5428,7 @@ TEST_F(CompilerPipelineTest, TargetSynthesisResynthesizesTwoQubitBlocks) {
         auto [q0, q1] =
             builder.rzz(0.3, builder.staticQubit(0), builder.staticQubit(1));
         std::tie(q0, q1) = builder.rxx(0.4, q0, q1);
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   ASSERT_TRUE(verify(*moduleOp).succeeded());
   auto reference = OwningOpRef<ModuleOp>(moduleOp->clone());
@@ -4885,7 +5555,7 @@ TEST_F(CompilerPipelineTest, TargetCompilationFusesOnlyWithUsableNativeBasis) {
             std::tie(q0, q1) =
                 testCase.useDcx ? builder.dcx(q0, q1) : builder.cx(q0, q1);
           }
-          return builder.intConstant(0);
+          return SmallVector<Value>{};
         });
     ASSERT_TRUE(verify(*moduleOp).succeeded());
     ASSERT_TRUE(qco::verifyLinearity(*moduleOp).succeeded());
@@ -4946,7 +5616,7 @@ TEST_F(CompilerPipelineTest,
             std::tie(qubits[0], qubits[i]) = builder.cx(qubits[0], qubits[i]);
           }
         }
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   auto reference = OwningOpRef<ModuleOp>(moduleOp->clone());
   auto program = QCOProgram::fromModule(ownedContext, std::move(moduleOp));
@@ -5200,11 +5870,12 @@ TEST_F(CompilerPipelineTest,
 }
 
 TEST_F(CompilerPipelineTest, TargetCompilationReusesUnchangedMeasurementRead) {
+  // A partially written register keeps both conditions dependent on a read.
   constexpr llvm::StringLiteral source = R"qasm(
 OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[3];
-creg c0[1];
+creg c0[2];
 creg c1[1];
 h q[0];
 measure q[0] -> c0[0];
@@ -5263,14 +5934,13 @@ gphase(0.5);
   ASSERT_TRUE(mlir::succeeded(qco->compileForTarget(
       TargetEnvironment(target, makePayloadSpecification()))));
 
-  auto compiled = parseRecordedModule(qco->str());
-  ASSERT_TRUE(compiled);
-  EXPECT_TRUE(verify(*compiled).succeeded());
+  auto compiled = qco->module();
+  EXPECT_TRUE(verify(compiled).succeeded());
 
   llvm::StringMap<size_t> controlledOperations;
   size_t rccxOperations = 0;
   size_t globalPhases = 0;
-  compiled->walk([&](Operation* operation) {
+  compiled.walk([&](Operation* operation) {
     if (auto controlled = dyn_cast<CtrlOp>(operation)) {
       ASSERT_EQ(controlled.getNumBodyUnitaries(), 1U);
       ++controlledOperations[controlled.getBodyUnitary(0).getBaseSymbol()];
@@ -5313,14 +5983,13 @@ cx q[1], q[0];
 
   ASSERT_TRUE(mlir::succeeded(qco->compileForTarget(
       TargetEnvironment(target, makePayloadSpecification()))));
-  auto compiled = parseRecordedModule(qco->str());
-  ASSERT_TRUE(compiled);
-  EXPECT_TRUE(verify(*compiled).succeeded());
+  auto compiled = qco->module();
+  EXPECT_TRUE(verify(compiled).succeeded());
 
   llvm::DenseMap<Value, SiteId> sites;
   size_t numTwoQubitOperations = 0;
   for (Operation& operation :
-       ::mlir::mqt::getEntryPoint(compiled.get()).getFunctionBody().getOps()) {
+       ::mlir::mqt::getEntryPoint(compiled).getFunctionBody().getOps()) {
     if (auto staticOp = dyn_cast<qco::StaticOp>(operation)) {
       sites.try_emplace(staticOp.getQubit(), staticOp.getIndex());
       continue;
@@ -5413,12 +6082,11 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesDynamicRunForSupportedTargets) {
     ASSERT_TRUE(mlir::succeeded(program->compileForTarget(
         TargetEnvironment(target, makePayloadSpecification()))));
 
-    auto compiled = parseRecordedModule(program->str());
-    ASSERT_TRUE(compiled);
-    EXPECT_TRUE(verify(*compiled).succeeded());
+    auto compiled = program->module();
+    EXPECT_TRUE(verify(compiled).succeeded());
 
     size_t gateCount = 0;
-    compiled->walk([&](UnitaryOpInterface unitary) {
+    compiled.walk([&](UnitaryOpInterface unitary) {
       EXPECT_TRUE(target.supports(unitary.getOperation()));
       gateCount += unitary.isSingleQubit();
     });
@@ -5428,13 +6096,13 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesDynamicRunForSupportedTargets) {
                   ? 1U
                   : 3U);
 
-    auto main = compiled->lookupSymbol<func::FuncOp>("main");
+    auto main = compiled.lookupSymbol<func::FuncOp>("main");
     ASSERT_TRUE(main);
     ASSERT_EQ(main.getNumArguments(), 1U);
     EXPECT_FALSE(main.getArgument(0).use_empty());
     for (const double angle : {0.0, 0.37, -2.0 * std::numbers::pi, 1.0e5}) {
       SCOPED_TRACE(angle);
-      auto bound = OwningOpRef<ModuleOp>(compiled->clone());
+      auto bound = OwningOpRef<ModuleOp>(compiled.clone());
       auto function = bound->lookupSymbol<func::FuncOp>("main");
       OpBuilder builder(function);
       builder.setInsertionPointToStart(&function.getBody().front());
@@ -5447,7 +6115,7 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesDynamicRunForSupportedTargets) {
           context.get(), [angle](QCOProgramBuilder& b) {
             auto qubit = b.rz(angle, b.h(b.staticQubit(0)));
             b.sink(qubit);
-            return b.intConstant(0);
+            return SmallVector<Value>{};
           });
       expectFullUnitaryEqual(*reference, *bound, 1);
     }
@@ -5496,17 +6164,16 @@ TEST_F(CompilerPipelineTest, QCOProgramMergesDynamicRunInNativeCtrlBody) {
     ASSERT_TRUE(mlir::succeeded(program->compileForTarget(
         TargetEnvironment(target, makePayloadSpecification()))));
 
-    auto compiled = parseRecordedModule(program->str());
-    ASSERT_TRUE(compiled);
-    EXPECT_TRUE(verify(*compiled).succeeded());
+    auto compiled = program->module();
+    EXPECT_TRUE(verify(compiled).succeeded());
 
     CtrlOp ctrl;
-    compiled->walk([&](CtrlOp op) { ctrl = op; });
+    compiled.walk([&](CtrlOp op) { ctrl = op; });
     ASSERT_TRUE(ctrl);
     ASSERT_EQ(ctrl.getNumBodyUnitaries(), 1U);
     EXPECT_TRUE(isa<UOp>(ctrl.getBodyUnitary(0).getOperation()));
 
-    auto main = compiled->lookupSymbol<func::FuncOp>("main");
+    auto main = compiled.lookupSymbol<func::FuncOp>("main");
     ASSERT_TRUE(main);
     ASSERT_EQ(main.getNumArguments(), 1U);
     EXPECT_FALSE(main.getArgument(0).use_empty());
@@ -5527,7 +6194,7 @@ TEST_F(CompilerPipelineTest,
           q0 = builder.rz(.32 * k, q0);
           q1 = builder.rz(.23 * k, q1);
         }
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   ASSERT_TRUE(moduleOp);
   std::string source;
@@ -5578,14 +6245,13 @@ c = measure q;
   ASSERT_TRUE(mlir::succeeded(qco->compileForTarget(
       TargetEnvironment(target, makePayloadSpecification()))));
 
-  auto compiled = parseRecordedModule(qco->str());
-  ASSERT_TRUE(compiled) << qco->str();
-  EXPECT_TRUE(verify(*compiled).succeeded());
+  auto compiled = qco->module();
+  EXPECT_TRUE(verify(compiled).succeeded());
 
   llvm::SmallVector<int64_t> staticSites;
   size_t numDynamic = 0;
   size_t numSwaps = 0;
-  compiled->walk([&](Operation* operation) {
+  compiled.walk([&](Operation* operation) {
     if (auto staticOp = dyn_cast<qco::StaticOp>(operation)) {
       staticSites.emplace_back(staticOp.getIndex());
     }
@@ -5616,9 +6282,8 @@ h q[1];
   ASSERT_TRUE(mlir::succeeded(program));
   ASSERT_TRUE(mlir::succeeded(program->compileForTarget(
       TargetEnvironment(target, makePayloadSpecification()))));
-  auto moduleOp = parseRecordedModule(program->str());
-  ASSERT_TRUE(moduleOp);
-  EXPECT_TRUE(verify(*moduleOp).succeeded());
+  auto moduleOp = program->module();
+  EXPECT_TRUE(verify(moduleOp).succeeded());
 
   size_t unitaryOperations = 0;
   size_t resets = 0;
@@ -5646,8 +6311,7 @@ TEST_F(CompilerPipelineTest, DefaultPipelineDerivesTargetOutput) {
   ASSERT_TRUE(std::holds_alternative<QIRProgram>(*result));
   const auto& qir = std::get<QIRProgram>(*result);
   EXPECT_EQ(qir.profile(), QIRProfile::Base);
-  auto qirModule = parseRecordedModule(qir.str());
-  ASSERT_TRUE(qirModule);
+  auto qirModule = qir.module();
   std::vector<int64_t> qirSiteIds;
   qirModule->walk([&](LLVM::IntToPtrOp intToPtr) {
     auto constant = intToPtr.getArg().getDefiningOp<LLVM::ConstantOp>();

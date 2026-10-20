@@ -9,12 +9,14 @@
  */
 
 #include "bench/BV.hpp"
+#include "bench/FanOut.hpp"
 #include "bench/GHZ.hpp"
 #include "bench/Grover.hpp"
 #include "bench/JSON.hpp"
 #include "bench/MagicStateDistillation.hpp"
 #include "bench/ModularMultiplier.hpp"
 #include "bench/Multiplexer.hpp"
+#include "bench/QAOA.hpp"
 #include "bench/QFT.hpp"
 #include "bench/QFTAdder.hpp"
 #include "bench/QPE.hpp"
@@ -88,6 +90,7 @@ static void expectQCAndJeff(const Benchmark& benchmark) {
 TEST(GenerateProgramTest, GeneratesEveryBenchmarkMethodAsQCAndJeff) {
   expectQCAndJeff(BV{{.hiddenBitstring = "101"}});
   expectQCAndJeff(BV{{.hiddenBitstring = "101", .method = BVMethod::Dynamic}});
+  expectQCAndJeff(FanOut{{.controls = 3}});
   expectQCAndJeff(ModularMultiplier{{
       .multiplier = "011",
       .modulus = "101",
@@ -98,6 +101,7 @@ TEST(GenerateProgramTest, GeneratesEveryBenchmarkMethodAsQCAndJeff) {
   expectQCAndJeff(Grover{{.markedBitstring = "101"}});
   expectQCAndJeff(MagicStateDistillation{{.levels = 1}});
   expectQCAndJeff(Multiplexer{{.qubits = 3}});
+  expectQCAndJeff(QAOA{{.qubits = 3}});
   expectQCAndJeff(QFT{{.qubits = 3, .periodExponent = 1}});
   expectQCAndJeff(QFT{
       {.qubits = 3, .periodExponent = 1, .method = QFTMethod::Semiclassical}});

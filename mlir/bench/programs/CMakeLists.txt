@@ -9,6 +9,7 @@
 add_library(
   MQTBenchmarkPrograms STATIC
   BV.cpp
+  FanOut.cpp
   GHZ.cpp
   Grover.cpp
   GroverUtils.cpp
@@ -16,6 +17,7 @@ add_library(
   ModularArithmetic.cpp
   ModularMultiplier.cpp
   Multiplexer.cpp
+  QAOA.cpp
   QFT.cpp
   QFTAdder.cpp
   QFTUtils.cpp

@@ -291,6 +291,6 @@ string(FIND "${error}" "Before Inliner" inliner)
 string(FIND "${error}" "Before HadamardLifting" custom_pass)
 if(inliner LESS 0
    OR NOT inliner LESS custom_pass
-   OR NOT output MATCHES "define void @main")
+   OR NOT output MATCHES "define i64 @main")
   message(FATAL_ERROR "Custom pipeline discarded required inlining: ${error}")
 endif()

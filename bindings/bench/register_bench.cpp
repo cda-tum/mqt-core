@@ -20,12 +20,14 @@ namespace nb = nanobind;
 
 // forward declarations
 void registerBV(const nb::module_& m);
+void registerFanOut(const nb::module_& m);
 void registerGHZ(const nb::module_& m);
 void registerGrover(const nb::module_& m);
 void registerWeakMeasurementGrover(const nb::module_& m);
 void registerMagicStateDistillation(const nb::module_& m);
 void registerModularMultiplier(const nb::module_& m);
 void registerMultiplexer(const nb::module_& m);
+void registerQAOA(const nb::module_& m);
 void registerQFT(const nb::module_& m);
 void registerQFTAdder(const nb::module_& m);
 void registerQPE(const nb::module_& m);
@@ -60,6 +62,10 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
       "bv", "Bernstein--Vazirani benchmark instances and options.");
   registerBV(bv);
 
+  const nb::module_ fanOut = m.def_submodule(
+      "fan_out", "Quantum fan-out benchmark instances and options.");
+  registerFanOut(fanOut);
+
   const nb::module_ ghz =
       m.def_submodule("ghz", "GHZ benchmark instances and options.");
   registerGHZ(ghz);
@@ -86,6 +92,10 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
   const nb::module_ multiplexer = m.def_submodule(
       "multiplexer", "Quantum multiplexer benchmark instances and options.");
   registerMultiplexer(multiplexer);
+
+  const nb::module_ qaoa =
+      m.def_submodule("qaoa", "QAOA benchmark instances and options.");
+  registerQAOA(qaoa);
 
   const nb::module_ qft =
       m.def_submodule("qft", "QFT benchmark instances and options.");

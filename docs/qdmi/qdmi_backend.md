@@ -458,23 +458,45 @@ When you run a circuit, the backend:
 3. Submits the program to the QDMI device via `device.submit_job()`
 4. Returns a {py:class}`~mqt.core.plugins.qiskit.job.QDMIJob`
 
-The built-in OpenQASM serializers validate circuit width and ordered operation
-placements against native QDMI metadata after preprocessing. They reject an
-invalid circuit before any job in its batch is submitted. This check uses the
-native device sites because a backend extension may hide sites from its public
-Target or use preprocessing to address them. It does not route circuits.
+The built-in OpenQASM and QPY serializers validate circuit width and ordered
+operation placements against native QDMI metadata after preprocessing. They
+reject an invalid circuit before any job in its batch is submitted. This check
+uses the native device sites because a backend extension may hide sites from its
+public Target or use preprocessing to address them. It does not route circuits.
+
+Equivalent device aliases contribute all their placements to the Target. For
+overlapping placements, the first advertised alias supplies the calibration. An
+alias with global support supplies the global calibration instead of local
+placements. Three-parameter `cu3` and four-parameter `cu` remain distinct gates.
+Backend extensions must use distinct Target names for unequal instructions,
+including gates with different fixed parameters; conflicting aliases are
+rejected.
+
+OpenQASM 3 serialization preserves floating-point gate parameters without
+rounding them to nearby constants. Qiskit's OpenQASM 2 exporter can round values
+near zero or multiples of pi and offers no option to disable this behavior. Use
+OpenQASM 3 when these differences matter.
 
 Control-flow instructions require explicit support in the backend's Target;
 their bodies are checked recursively using the enclosing circuit's qubits.
-Advertising OpenQASM 3 alone does not enable control flow. Custom serializers
-retain responsibility for validating the native programs they produce.
+Advertising OpenQASM 3 or QPY alone does not enable control flow. Custom
+serializers retain responsibility for validating the native programs they
+produce.
 
 ### Program Serializers
 
 A _program serializer_ turns one circuit into one program in one program format.
-MQT Core provides the serializers for OpenQASM 2 and OpenQASM 3. Every other
-format belongs to the package that owns the device, which registers its
+MQT Core provides the serializers for OpenQASM 2, OpenQASM 3, and QPY. Every
+other format belongs to the package that owns the device, which registers its
 serializer through the same registry.
+
+The QPY serializer sends one Qiskit circuit, including serializable metadata.
+Qiskit 2.5 and 2.6 write QPY version 17 with their native writer. Older
+installations use their latest supported version up to 17. The receiver must
+support the selected version and the circuit's instructions; QDMI does not
+negotiate QPY versions. Register a custom serializer for a device that needs a
+different version. For compiler program import and export, see
+[QPY files](../mlir/qiskit.md#qpy-files).
 
 A format fixes the kind of payload it carries, so there are two signatures. A
 text format takes a serializer that returns `str`:
@@ -517,7 +539,9 @@ register_program_serializer(ProgramFormat.IQM_JSON, qiskit_to_iqm_json)
 ```
 
 Pass `replace=True` to take over a format that already has a serializer,
-including OpenQASM 2 and OpenQASM 3.
+including OpenQASM 2 and OpenQASM 3. For QPY, package entry points and explicit
+registrations take precedence over the built-in fallback. Unregistering QPY
+disables the fallback too.
 
 A device usually accepts several formats. The backend walks them in the order of
 {py:data}`~mqt.core.plugins.qiskit.serializers.PROGRAM_FORMAT_PREFERENCE` and

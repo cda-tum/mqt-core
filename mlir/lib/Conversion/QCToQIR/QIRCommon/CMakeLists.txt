@@ -15,6 +15,7 @@ add_mlir_library(
   ${QIR_COMMON_SOURCES}
   LINK_LIBS
   PUBLIC
+  MQTCompilerTarget
   MLIRIR
   MLIRPass
   MLIRTransforms
@@ -26,9 +27,17 @@ add_mlir_library(
   MLIRReconcileUnrealizedCasts
   MLIRArithToLLVM
   MLIRArithTransforms
+  MLIRAffineDialect
+  MLIRAffineToStandard
   MLIRBufferizationTransforms
   MLIRMemRefToLLVM
   MLIRMemRefDialect
+  MLIRMemRefTransforms
+  MLIRMemRefUtils
+  MLIRLinalgDialect
+  MLIRLinalgTransforms
+  MLIRSCFDialect
+  MLIRSCFToControlFlow
   MLIRTensorTransforms
   MLIRMQTDialect
   MLIRFuncDialect

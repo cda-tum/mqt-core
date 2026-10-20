@@ -18,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -53,13 +54,15 @@ struct DDSamplingState {
 /// Build a matrix DD for a unitary QCO function.
 ///
 /// The function must have one block. The interpreter supports concrete QCO and
-/// SCF structured control, non-recursive calls, common
-/// scalar math, one-dimensional memrefs, dense rank-one integer or f64 tensors
-/// and element extraction, and QTensor bookkeeping. `qco.static` values, or
-/// qubit arguments when no static values exist, set the wire map. Entry-block
-/// `qco.alloc` and statically sized `qtensor.alloc` operations add subsequent
-/// wires in instruction order. Measurements, resets, symbolic control, and
-/// other runtime allocation are not supported.
+/// SCF structured control, non-recursive calls, common scalar math,
+/// identity-layout heap or stack memrefs of integer, index, or f64 values and
+/// their strided subviews, dense rank-one integer or f64 tensors and element
+/// extraction, and QTensor bookkeeping. Copies between distinct memref views
+/// require non-overlapping element locations. `qco.static` values set the wire
+/// map; without them, qubit arguments set it. Entry-block `qco.alloc` and
+/// statically sized `qtensor.alloc` operations add subsequent wires in
+/// instruction order. Measurements, resets, symbolic control, and other runtime
+/// allocation are not supported.
 ///
 /// Runtime-bound parameters are supported for standard gates, ordinary and
 /// gate-function calls, a sole standard gate inside `qco.ctrl`, and `qco.pow`
@@ -107,8 +110,9 @@ simulate(func::FuncOp func, const dd::VectorDD& in, dd::Package& dd,
 /// Simulate a zero-state QCO function without collapsing terminal
 /// measurements.
 ///
-/// The function must have one block. Measurement results can be unused or can
-/// set returned CBit registers. No later operation can use a measured wire.
+/// The function must have one block. Measurement results can be unused,
+/// returned directly, or stored in returned CBit registers. No later operation
+/// can use a measured wire.
 /// Called functions cannot measure or reset qubits.
 ///
 /// @param argumentBindings Scalar values and dynamic QTensor argument sizes.
@@ -119,11 +123,12 @@ FailureOr<dd::VectorDD> simulateStatevector(
 
 /// Sample a single-block QCO function from the zero state.
 ///
-/// Returned CBit registers use conventional count-string order: the last
-/// returned register comes first, and each register is MSB-first. Without CBit
-/// results, the function samples all DD wires. Terminal measurements use one
-/// simulation for all shots. Adaptive programs share shot prefixes when their
-/// measurements and resets are in the top-level stream or counted loops.
+/// Returned CBit registers and Boolean values use conventional count-string
+/// order: the last result comes first, and each register is MSB-first. Other
+/// classical output types are rejected. Without classical results, the function
+/// samples all DD wires. Terminal measurements use
+/// one simulation for all shots. Adaptive programs share shot prefixes when
+/// their measurements and resets are in the top-level stream or counted loops.
 /// Other adaptive programs run once per shot across independent workers.
 ///
 /// The containing module must pass MLIR verification and
@@ -148,4 +153,19 @@ sample(func::FuncOp func, size_t shots, uint64_t seed = 0,
        std::vector<std::string>* shotResults = nullptr,
        DDSamplingState* retainedState = nullptr,
        const DDExecutionOptions& options = {}, size_t workers = 0);
+
+/// Sample ordered outcomes without constructing a histogram.
+///
+/// Uses the same program, seed, output, and worker contracts as `sample`.
+/// With `requestWorkers`, the caller must already hold one external worker
+/// slot. The callback runs at most once, only for parallel adaptive sampling,
+/// and returns the total grant (including that slot), between one and the
+/// request. The caller releases the external grant after sampling returns.
+LogicalResult
+sampleShots(func::FuncOp func, size_t shots, uint64_t seed,
+            std::vector<std::string>& shotResults,
+            const DDArgumentBindings& argumentBindings = DDArgumentBindings(),
+            DDSamplingState* retainedState = nullptr,
+            const DDExecutionOptions& options = {}, size_t workers = 0,
+            function_ref<size_t(size_t)> requestWorkers = nullptr);
 } // namespace mlir::qco

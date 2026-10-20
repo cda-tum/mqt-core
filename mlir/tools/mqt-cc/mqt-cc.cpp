@@ -21,11 +21,11 @@
 #include "mqt/Conversion/QCToQIR/QIRBase/QCToQIRBase.h"
 #include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
-#include "mqt/Dialect/QC/Translation/TranslateOpenQASMToQC.h"
-#include "mqt/Dialect/QC/Translation/TranslateQCToOpenQASM3.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
-#include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 #include "mqt/Support/Passes.h"
+#include "mqt/Target/OpenQASM/TranslateOpenQASMToQC.h"
+#include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
+#include "mqt/Target/QIR/Export.h"
 
 #include "jeff/Translation/Deserialize.hpp"
 #include "jeff/Translation/Serialize.hpp"
@@ -41,13 +41,9 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/Twine.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -59,10 +55,8 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 
 using namespace mlir;
@@ -354,11 +348,21 @@ static LogicalResult writeJeffOutput(ModuleOp mod, const StringRef filename) {
   return success();
 }
 
-/// Write a module to an output file.
-template <typename ModuleType>
+/// Write MLIR or encoded QIR to an output file.
 static LogicalResult
-writeOutput(ModuleType mod, StringRef filename,
-            const std::optional<PayloadEncoding> qirEncoding = std::nullopt) {
+writeOutput(ModuleOp mod, StringRef filename,
+            std::optional<PayloadEncoding> qirEncoding = std::nullopt) {
+  std::string qirOutput;
+  if (qirEncoding) {
+    llvm::raw_string_ostream stream(qirOutput);
+    const auto result = *qirEncoding == PayloadEncoding::Text
+                            ? qir::translateQIRToLLVMIR(mod, stream)
+                            : qir::translateQIRToBitcode(mod, stream);
+    if (failed(result)) {
+      return failure();
+    }
+  }
+
   std::string errorMessage;
   const auto output = openOutputFile(filename, &errorMessage);
   if (!output) {
@@ -366,24 +370,12 @@ writeOutput(ModuleType mod, StringRef filename,
     return failure();
   }
 
-  if constexpr (std::is_same_v<ModuleType, ModuleOp>) {
-    if (filename == "-") {
-      mod.print(output->os());
-    } else if (failed(writeBytecodeToFile(mod, output->os()))) {
-      return failure();
-    }
-  } else if constexpr (std::is_same_v<ModuleType, llvm::Module*>) {
-    const auto writeText =
-        qirEncoding
-            ? *qirEncoding == PayloadEncoding::Text
-            : filename == "-" || llvm::sys::path::extension(filename) == ".ll";
-    if (writeText) {
-      mod->print(output->os(), nullptr);
-    } else {
-      llvm::WriteBitcodeToFile(*mod, output->os());
-    }
-  } else {
-    llvm_unreachable("Unsupported module type");
+  if (qirEncoding) {
+    output->os() << qirOutput;
+  } else if (filename == "-") {
+    mod.print(output->os());
+  } else if (failed(writeBytecodeToFile(mod, output->os()))) {
+    return failure();
   }
 
   output->os().flush();
@@ -677,7 +669,7 @@ static int runCompiler(int argc, char** argv) {
     if (!runReproducer && failed(qco::verifyLinearity(*program.mod))) {
       return 1;
     }
-    return failed(writeOutput<ModuleOp>(*program.mod, outputFilename)) ? 1 : 0;
+    return failed(writeOutput(*program.mod, outputFilename)) ? 1 : 0;
   }
 
   if (*parsedOutputFormat == OutputFormat::QCImport &&
@@ -720,8 +712,7 @@ static int runCompiler(int argc, char** argv) {
       *parsedOutputFormat != OutputFormat::QCImport &&
       *parsedOutputFormat != OutputFormat::QCO;
   if (targetEnvironment) {
-    if (failed(qco::verifyLinearity(*program.mod)) ||
-        failed(runPasses(
+    if (failed(runPasses(
             [&](OpPassManager& pm) {
               populateTargetCompilationPipeline(pm, *targetEnvironment,
                                                 options.mapping);
@@ -776,21 +767,17 @@ static int runCompiler(int argc, char** argv) {
     return 1;
   }
 
-  if (*parsedOutputFormat == OutputFormat::QIRBase &&
-      failed(runPasses([](OpPassManager& pm) {
-        populateQIRPreparationPipeline(pm);
-        pm.addPass(createQCToQIRBase());
-        populateQIRCleanupPipeline(pm, false);
-        return success();
-      }))) {
-    return 1;
-  }
-
-  if (*parsedOutputFormat == OutputFormat::QIRAdaptive &&
-      failed(runPasses([](OpPassManager& pm) {
-        populateQIRPreparationPipeline(pm);
-        pm.addPass(createQCToQIRAdaptive());
-        populateQIRCleanupPipeline(pm, true);
+  if ((*parsedOutputFormat == OutputFormat::QIRBase ||
+       *parsedOutputFormat == OutputFormat::QIRAdaptive) &&
+      failed(runPasses([&](OpPassManager& pm) {
+        const bool adaptive = *parsedOutputFormat == OutputFormat::QIRAdaptive;
+        const auto payload =
+            llvm::cantFail(PayloadSpecification::forProgramFormat(
+                adaptive ? ProgramFormat::QIRAdaptive
+                         : ProgramFormat::QIRBase));
+        populateQIRPreparationPipeline(pm, payload.materialize(*context));
+        pm.addPass(adaptive ? createQCToQIRAdaptive() : createQCToQIRBase());
+        populateQIRCleanupPipeline(pm, adaptive);
         return success();
       }))) {
     return 1;
@@ -815,25 +802,17 @@ static int runCompiler(int argc, char** argv) {
     output->keep();
   } else if (*parsedOutputFormat == OutputFormat::QIRBase ||
              *parsedOutputFormat == OutputFormat::QIRAdaptive) {
-    llvm::LLVMContext llvmContext;
-    std::unique_ptr<llvm::Module> llvmMod =
-        translateModuleToLLVMIR(*program.mod, llvmContext);
-    if (!llvmMod) {
-      llvm::errs() << "Failed to translate MLIR module to LLVM IR\n";
-      return 1;
-    }
-    qir::normalizeQIRModuleFlags(*llvmMod);
     const auto qirEncoding =
         targetEnvironment
-            ? std::optional(
-                  targetEnvironment->payloadSpecification().format().encoding)
-            : std::nullopt;
-    if (writeOutput<llvm::Module*>(llvmMod.get(), outputFilename, qirEncoding)
-            .failed()) {
+            ? targetEnvironment->payloadSpecification().format().encoding
+        : outputFilename == "-" ||
+                llvm::sys::path::extension(outputFilename) == ".ll"
+            ? PayloadEncoding::Text
+            : PayloadEncoding::Binary;
+    if (failed(writeOutput(*program.mod, outputFilename, qirEncoding))) {
       return 1;
     }
-  } else if (writeOutput<ModuleOp>(program.mod.get(), outputFilename)
-                 .failed()) {
+  } else if (writeOutput(program.mod.get(), outputFilename).failed()) {
     return 1;
   }
 

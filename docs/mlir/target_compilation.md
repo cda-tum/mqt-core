@@ -9,8 +9,8 @@ mystnb:
 # Compile for a QDMI device
 
 `compile_program` maps a program to a device's topology and native operations.
-The resulting {py:class}`~mqt.core.mlir.CompiledProgram` can be submitted with
-`submit_program` in the MLIR submodule.
+For a QDMI device, it returns a {py:class}`~mqt.core.mlir.CompiledProgram` by
+default. Submit it with `submit_program` in the MLIR submodule.
 
 For a hands-on comparison of connectivity, native gates, and logical outputs,
 see the
@@ -113,15 +113,27 @@ and fallback behavior.
 
 ### Choose a format
 
-The compiler selects the first supported format in this order: Adaptive QIR
-(binary, then text), OpenQASM 3.1, then Base QIR (binary, then text). To select
-a format explicitly:
+For a submission payload, the compiler selects the first supported format in
+this order: Adaptive QIR (binary, then text), OpenQASM 3.1, then Base QIR
+(binary, then text). To select an exact execution format, compile and submit in
+one call:
 
 ```{code-cell} ipython3
 from mqt.core.qdmi import ProgramFormat
 
-compiled = compile_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
+job = submit_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3, num_shots=64)
+assert job.wait()
 ```
+
+`compile_program` uses `output` to select a typed representation, such as
+`OutputFormat.QC`, `OutputFormat.QCO_OPTIMIZED`, or `OutputFormat.QISKIT`. The
+device still supplies the compilation constraints. The raw `QC_IMPORT` and `QCO`
+checkpoints stop before target compilation and cannot be combined with a target.
+
+Typed outputs support inspection and interchange. In particular, jeff output
+does not retain hardware placement. The default `CompiledProgram` retains the
+automatically selected native payload for repeated QDMI submissions; exact
+wire-format selection belongs to `submit_program`.
 
 ### Define a target
 
@@ -129,9 +141,9 @@ Use `CompilerTarget` to describe a device for compilation without opening a
 connection. Bundled SC devices such as `mqt.sc.iqm.garnet` provide ready-made
 hardware models; they do not execute programs.
 
-An explicit target requires `output` for a typed compiler program, or
-`program_format` for a `CompiledProgram` ready for submission. To define a
-target with three sites and nearest-neighbor connectivity:
+With an explicit `CompilerTarget`, the default result preserves the input's
+program family. Select `output` for another representation. To define a target
+with three sites and nearest-neighbor connectivity:
 
 ```{code-cell} ipython3
 from mqt.core.mlir import CompilerTarget, OutputFormat
@@ -239,17 +251,25 @@ target restores their native names and phase. These gates provide the GPI basis
 when their azimuths are unrestricted on every site. A provider using turns or
 another phase convention needs an explicit adapter.
 
-Unrestricted RXX, RYY, RZX, and RZZ entanglers take precedence over fixed
-alternatives and use up to three native rotations for numeric two-qubit
-synthesis. Runtime two-qubit Pauli rotations need one arbitrary-angle native
-entangler or two fixed native entanglers, including square-root iSWAP. Fixed
-Clifford entanglers use Pauli conjugation; commuting symbolic rotations can
-share their entanglers. Single-controlled Pauli rotations and phase gates use
-the same decomposition. Bounded Pauli entanglers that include `[0, pi/2]` use
-the same numeric synthesis with local Pauli corrections. Unknown runtime angles
-use two native `pi/2` rotations. Bind parameters before compilation to use
-fractional entanglers directly. Qiskit import conservatively recognizes this
-interval through its public bound predicates.
+Synthesis compares supported entangler families and chooses the recipe with the
+fewest two-qubit gates. Ties retain the target's preference order, which places
+unrestricted RXX, RYY, RZX, and RZZ before fixed alternatives. These rotations
+use up to three native gates for numeric two-qubit synthesis. Runtime two-qubit
+Pauli rotations need one arbitrary-angle native entangler or two fixed native
+entanglers, including square-root iSWAP. Fixed Clifford entanglers use Pauli
+conjugation; commuting symbolic rotations can share their entanglers.
+Square-root iSWAP uses two gates for two commuting runtime Pauli rotations and
+four for three independent rotations. Binding all parameters first permits
+numerical synthesis with at most three gates. The fixed capability
+`XXPlusYY(-pi/2, 0)` also enables square-root iSWAP synthesis. Single-controlled
+Pauli rotations and phase gates use the same decomposition. Runtime
+`XXPlusYY(theta, 0)` and `XXMinusYY(theta, 0)` share the two-rotation circuit;
+other relative phases require a native gate or constant parameters. Bounded
+Pauli entanglers that include `[0, pi/2]` use the same numeric synthesis with
+local Pauli corrections. Unknown runtime angles use two native `pi/2` rotations.
+Bind parameters before compilation to use fractional entanglers directly. Qiskit
+import conservatively recognizes this interval through its public bound
+predicates.
 
 Resynthesis of constant two-qubit gates uses an average gate fidelity floor of
 `1 - 1e-12` per decomposition, including direct Pauli lowering. It may remove
@@ -298,23 +318,24 @@ Container overhead, target distance caches, and IR storage are additional; this
 setting does not cap total process memory. Changing the budget can change
 layouts and gate counts; more memory does not guarantee fewer gates.
 
-When routing is needed, mapping prepares a read-only table of at most 1024
-numerical native counts from original gates and constant two-qubit runs, in both
+When routing is needed, mapping prepares a read-only table of at most 1024 sets
+of Weyl coordinates from original gates and constant two-qubit runs, in both
 operand orders and with adjacent SWAPs. Preparation stops when the table is
 full. Already-adjacent greedy layouts skip preparation and cost tracking. Trials
 share this table. Each live region's cost tracker retains up to 64 additional
-counts for routing-dependent matrices. The numerical payload is about 264 KiB
-for the shared table and 17 KiB per local cache, plus indexing, allocator, and
-per-site tracking overhead. Backward refinement also retains one pending
-single-qubit matrix per site to preserve circuit order. Each traversal resets
-accounting while retaining numerical caches. These allocations are separate from
-the search budget. Native synthesis caches up to 64 full decompositions per
-analysis (about 55 KiB including single-qubit factors). Caches are local to one
-pass invocation or traversal and retain no IR handles. Exact matrix and
-entangler matches preserve numerical decisions for the same compilation seed;
-failed decompositions remain unavailable. Target support and operand direction
-are checked before lookup. Cache misses use normal synthesis analysis, so
-precomputation need not predict every routed run.
+coordinate sets for routing-dependent matrices. The coordinates serve all
+candidate entangler families. The numerical payload is about 288 KiB for the
+shared table and 18 KiB per local cache, plus indexing, allocator, and per-site
+tracking overhead. Backward refinement also retains one pending single-qubit
+matrix per site to preserve circuit order. Each traversal resets accounting
+while retaining numerical caches. These allocations are separate from the search
+budget. Native synthesis caches up to 64 full decompositions per analysis (about
+55 KiB including single-qubit factors). Caches are local to one pass invocation
+or traversal and retain no IR handles. Exact matrix and entangler matches
+preserve numerical decisions for the same compilation seed; failed numerical
+analyses remain unavailable. Target support and operand direction are checked
+before lookup. Cache misses use normal synthesis analysis, so precomputation
+need not predict every routed run.
 
 Native synthesis collects constant runs on the same two qubits, including
 interleaved single-qubit gates, and resynthesizes them in the target's selected
@@ -332,8 +353,11 @@ checked without physical sites; the later synthesis pass checks assigned sites.
 Native support includes physical sites and operand direction. Barriers,
 non-unitary operations, and unavailable matrices stop a run. If block
 decomposition fails numerically, synthesis falls back to individual lowering.
-The selected basis uses one entangler family; it does not optimize arbitrary
-mixtures of all target operations or use calibration costs.
+Each operation or run uses its cheapest supported entangler family. If circuit
+construction fails, synthesis tries the next candidate. Routing counts are
+estimates and do not include such numerical fallbacks. Selection does not
+optimize mixtures of entangler families within one recipe or use calibration
+costs.
 
 Target synthesis preserves a native `gphase`. If the target does not support
 `gphase`, target synthesis preserves relative phase effects and removes only the
@@ -420,14 +444,16 @@ flow with `legalize-control-flow`:
 A finite `scf.for` that exceeds the selected counted-iteration contract is fully
 unrolled when this clones at most one billion body operations by default. The
 `unroll-loops-for-payload` pass exposes this limit as `max-operations`. The same
-bound applies to loops unrolled for qubit placement. Cleanup runs again because
-unrolling can make nested bounds and conditions constant. An unsupported index
-switch is lowered to a linear chain of nested forward branches when that form
-fits the selected contract. Before expansion, the compiler checks the selected
-forward-branching nesting limit and a compiler safety limit of 256 total
-control-flow levels, including enclosing control flow. This compiler limit is
-not a QDMI requirement and does not apply to switches retained under multiway
-branching.
+bound applies to loops unrolled for qubit placement. Between expansion rounds,
+local classical memory is promoted and expressions fold to expose constant array
+accesses, nested bounds, and conditions. Standalone Base QIR export uses this
+same unroller with an explicit `payload-spec`, without requiring hardware
+metadata. An unsupported index switch is lowered to a linear chain of nested
+forward branches when that form fits the selected contract. Before expansion,
+the compiler checks the selected forward-branching nesting limit and a compiler
+safety limit of 256 total control-flow levels, including enclosing control flow.
+This compiler limit is not a QDMI requirement and does not apply to switches
+retained under multiway branching.
 
 Generic SCF branches cannot capture or return QCO qubits or quantum tensors; use
 the corresponding QCO branch operation for linear quantum state. SCF loops must
@@ -477,9 +503,20 @@ its signed arithmetic. The scaled step must also fit the loop induction-variable
 type. A zero, unknown, or misapplied constraint makes that capability group
 unusable. A capability absent from the selected specification is unsupported.
 
-This stage checks structural control flow only. Later lowering stages remain
-responsible for scalar types and operations, measurement provenance, function
-features, allocation, and final payload-profile conformance.
+This stage checks structural control flow. Final QIR output also checks its
+emitted feature requirements: dynamic qubit and result management, arrays, IR
+functions, multiple return points, integer and floating-point computations,
+multiway branching, and counted or conditional loops. The check applies to both
+typed QIR and submission payloads. QIR loop bounds are not re-proved after
+lowering; a loop capability required by emitted QIR must be unconstrained.
+
+An explicit output combines the output format's capabilities with the target's
+contract. Matching language versions and profiles retain only capabilities
+supported by both, regardless of text or binary encoding. Different formats
+share structural control-flow restrictions; QIR-specific features are not
+inferred from their absence in a Qiskit contract. Later lowering stages remain
+responsible for scalar types and operations, measurement provenance, allocation,
+and payload-profile conformance.
 
 ## Command line from a source build
 
@@ -552,13 +589,36 @@ available for hardware snapshots and staged compilation with a
 
 ### Payload support
 
-The adapter assumes all compiler-supported capabilities for the selected format
-(OpenQASM 3.1 or QIR 2.1). Use `TargetEnvironment` and `PayloadSpecification`
-for staged compilation with explicit restrictions.
+Targeted payloads use the device's advertised operation names and ordered
+placements. OpenQASM emits native calls without portable gate definitions;
+untargeted export retains its portable helpers. Native measurement and reset
+must use the OpenQASM keywords `measure` and `reset`. QIR preserves the native
+name in each QIS call and uses the controlled specialization for variadic
+operations. OpenQASM skips `U`, `u2`, `u3`, and `cu3`, whose standardized phase
+conventions differ from QC. The compatibility spelling `u` preserves QC's exact
+U-gate matrix. A QC U2 gate can use an advertised `u` with its first parameter
+fixed to `pi / 2`, including under control. Compilation fails if no compatible
+advertised operation can represent a gate in the selected format. QIR can use
+these native names directly.
 
-QIR submission requires a parameterless entry point returning an `i64` status;
-the compiler adds status 0 to programs with no return value. Keep classical
-temporaries local, or select OpenQASM 3 for global scalar outputs.
+The `sqrt_iswap` synthesis shorthand requires a matching `xx_plus_yy` capability
+for native payload export.
+
+QDMI's supported-format list does not provide per-format capability
+restrictions. The adapter therefore uses the compiler-supported baseline for the
+selected format (OpenQASM 3.1 or QIR 2.1), with optional capability metadata
+marked as unknown. Use `TargetEnvironment` and `PayloadSpecification` for staged
+compilation with explicit restrictions.
+
+QIR submission requires a parameterless entry point. QC-to-QIR conversion
+records direct measurements and CBit-register results, then emits runtime status
+0 for successful execution. Adaptive Profile also records computed Boolean
+(`i1`) results. All explicit QC and QCO returns are program data; other scalar
+entry results, including a constant-zero `i64`, are unsupported with or without
+a target. Keep other classical temporaries local, or select OpenQASM 3 for wider
+scalar outputs. In OpenQASM 3, declare `output bit` registers explicitly when
+global scalar variables are only temporaries. See the
+{doc}`QIR execution contracts <../qir/index>`.
 
 The adapter accepts circuit-model devices whose two-qubit operations cover every
 topology edge in at least one operand orientation and preserves the exact

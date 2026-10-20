@@ -14,6 +14,7 @@
 
 #include "WorkerProtocol.hpp"
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
@@ -25,6 +26,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <chrono>
+#include <cstddef>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -155,14 +157,28 @@ bool Worker::start() {
             << '\n';
   return false;
 }
-bool Worker::execute(const WorkerRequest& request, WorkerResponse& response) {
+bool Worker::execute(const WorkerRequest& request, WorkerResponse& response,
+                     llvm::function_ref<size_t(size_t)> reserveWorkers) {
   if (!stream_ && !start()) {
     return false;
   }
   std::string bytes;
-  if (writeFrame(*stream_, encode(request)) && readFrame(*stream_, bytes) &&
-      decode(bytes, response)) {
-    return true;
+  if (writeFrame(*stream_, encode(request)) && readFrame(*stream_, bytes)) {
+    WorkerSlots slots;
+    if (decode(bytes, slots)) {
+      if (slots.count > request.maxWorkers) {
+        return false;
+      }
+      const auto grant = reserveWorkers(slots.count);
+      if (grant == 0 || grant > slots.count ||
+          !writeFrame(*stream_, encode(WorkerSlots{grant})) ||
+          !readFrame(*stream_, bytes)) {
+        return false;
+      }
+    }
+    if (decode(bytes, response)) {
+      return true;
+    }
   }
 
   std::cerr << "DDSIM worker exited or returned an incomplete response."

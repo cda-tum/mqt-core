@@ -68,12 +68,6 @@ TEST(GHZ, GivesTheXBasisDistribution) {
   EXPECT_DOUBLE_EQ(ghz.probability("000"), 0.25);
   EXPECT_DOUBLE_EQ(ghz.probability("011"), 0.25);
   EXPECT_DOUBLE_EQ(ghz.probability("111"), 0.);
-
-  const GHZ largest{
-      {.qubits = GHZOptions::MAX_X_BASIS_QUBITS, .basis = GHZBasis::X}};
-  EXPECT_GT(
-      largest.probability(std::string(GHZOptions::MAX_X_BASIS_QUBITS, '0')),
-      0.);
 }
 
 TEST(GHZ, EvaluatesCountsAgainstTheWholeIdealDistribution) {
@@ -86,6 +80,18 @@ TEST(GHZ, EvaluatesCountsAgainstTheWholeIdealDistribution) {
   const auto incomplete = ghz.evaluate({{"00", 100}});
   EXPECT_DOUBLE_EQ(incomplete.totalVariationDistance, 0.5);
   EXPECT_DOUBLE_EQ(incomplete.squaredHellingerFidelity, 0.5);
+}
+
+TEST(GHZ, PreservesRepresentableFidelityForSubnormalProbabilities) {
+  const GHZ benchmark{
+      {.qubits = GHZOptions::MAX_X_BASIS_QUBITS, .basis = GHZBasis::X}};
+  const auto allZero = std::string(GHZOptions::MAX_X_BASIS_QUBITS, '0');
+  auto twoOnes = allZero;
+  twoOnes[0] = '1';
+  twoOnes[1] = '1';
+  const auto evaluation = benchmark.evaluate({{allZero, 1}, {twoOnes, 1}});
+  EXPECT_EQ(evaluation.squaredHellingerFidelity,
+            2. * std::numeric_limits<double>::denorm_min());
 }
 
 TEST(GHZ, ValidatesOutcomesAndShotCounts) {

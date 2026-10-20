@@ -182,6 +182,11 @@ The following limits affect interchange:
   array updates inside switch or while regions.
 - Quantum allocations and deallocations inside conditional regions, and mutable
   classical-register arguments in helpers, are unsupported.
+- Native `scf.index_switch` and `qco.index_switch` require lowering before
+  export. Target compilation lowers them to forward branches when the selected
+  payload supports forward branching but not native multiway branching.
+  `to_jeff` and target-independent `compile_program` with `OutputFormat.JEFF` do
+  not perform this target legalization.
 - Export converts physical static qubits to allocations, so static site IDs do
   not survive the round trip. Exchange logical programs before device mapping.
 - Only selected custom operations and Pauli-product rotations are supported.
