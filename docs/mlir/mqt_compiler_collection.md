@@ -130,6 +130,21 @@ include helper functions and exclude nested modules. These resource counts
 describe declared capacity rather than peak live width or the original layout
 width.
 
+C++ module passes can reuse these collectors through
+`getAnalysis<mlir::QuantumProgramAnalysis>().info()`, declared in
+`mqt/Compiler/Programs.h`. MLIR caches the result until a pass invalidates the
+analysis. Read-only passes can call `markAllAnalysesPreserved()`. A
+transformation that changes quantum resources or operation counts must not
+preserve this analysis. Direct changes outside a pass require invalidating the
+analysis manager before querying it again. Calling `inspect()` on a program
+always computes a fresh snapshot.
+
+Gate dependencies already follow the QCO SSA use-def chains. For transitive
+dependencies, reuse MLIR's `getForwardSlice` or `getBackwardSlice` from
+`mlir/Analysis/SliceAnalysis.h`. The qubit-reuse transformation uses forward
+slices to keep dependency inspection separate from rewriting. These dependencies
+describe the IR and do not assign hardware sites or execution times.
+
 ## Bind program parameters
 
 QC and QCO programs expose named f64 entry-point inputs through `parameters`.
