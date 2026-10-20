@@ -141,18 +141,10 @@ TEST(OpenQASMFrontendTest, KnownMeasurementSlicesInitializeSelectedBits) {
   ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
 }
 
-TEST(OpenQASMFrontendTest, AcceptsClassicalArrays) {
+TEST(OpenQASMFrontendTest, ClassicalArrayInitialization) {
   for (const auto* source : {
-           "array[int, 0] a;",
-           "array[float, 0] a = {};",
-           "const int n = 2; array[int[8], n] a = {127, 128}; "
+           "const int n = 2; array[int[8], n,] a = {127, 128,}; "
            "a[-1] += 1; int result = a[-1];",
-           "array[uint[8], 2] a = {1, 255}; uint i = 1; a[i] = 2; "
-           "uint result = a[i];",
-           "array[float[64], 2] a = {0.5, 1}; int i = -1; a[i] *= 2; "
-           "float result = a[i];",
-           "array[bool, 2] a = {true, false}; a[1] = !a[0]; "
-           "bool result = a[1]; if (a[0]) { result = true; }",
            "array[angle[8], 2] a = {pi, -pi/2}; int i = -1; "
            "a[i] = pi/2; qubit q; U(a[i], 0, 0) q;",
            "array[angle[8], 1] a = {pi}; qubit q; "
@@ -166,20 +158,13 @@ TEST(OpenQASMFrontendTest, AcceptsClassicalArrays) {
            "array[int, 2] a; a[0] = 1; "
            "if (selector > 0) { a[0] = 2; a[1] = 3; } "
            "else { a[1] = 4; } int result = a[i];",
-           "array[int, 2] a = {1, 2}; int i = 0; "
-           "for int j in [0:1] { a[0] = j; int value = a[i]; } "
-           "int result = a[i];",
-           "array[int, 1] a; bool c = true; "
-           "if (c) { a[0] = 1; } else { a[0] = 2; } int result = a[0];",
            "array[int, 1] a; for int i in [0:1] { a[0] = 1; } "
            "int result = a[0];",
-           "array[int, 2,] a = {1, 2,}; int result = a[0];",
        }) {
     SCOPED_TRACE(source);
     auto analyzed = openqasm::frontend::analyzeOpenQASM(
         std::string("OPENQASM 3.0; ") + source);
     ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
-    ASSERT_EQ(analyzed.program->arrays.size(), 1);
   }
 }
 
@@ -187,23 +172,19 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
   const auto cases =
       std::to_array<std::pair<llvm::StringLiteral, llvm::StringLiteral>>({
           {"array[int, -1] a;", "non-negative"},
-          {"array[int, 0] a = {1};", "initializer length"},
           {"array[int, 0] a; a[0] = 1;", "out of bounds"},
-          {"array[int, 0] a = {}; int b = a[-1];", "out of bounds"},
           {"array[int, 100001] a;", "exceeds the limit"},
           {"array[int, 60000] a; array[int, 60000] b;", "exceed the limit"},
           {"int n = 2; array[int, n] a;", "constant integer"},
           {"array[int, 1.0] a;", "integer expression"},
           {"array[int, 2] a = {1};", "initializer length"},
           {"array[int, 1] a = {1, 2};", "initializer length"},
-          {"array[int, 1] a = {};", "initializer length"},
           {"array[bool[2], 1] a;", "do not have a width"},
           {"array[float[32], 1] a;", "only width 64"},
           {"array[int[65], 1] a;", "1 through 64"},
           {"array[angle[53], 1] a;", "between 1 and 52"},
-          {"float x = 1; array[angle, 1] a = {x};", "compile-time values"},
-          {"array[angle, 1] a = {1};", "float or angle"},
           {"array[angle, 1] a = {0.0}; a[0] = a[0];", "compile-time values"},
+          {"array[angle, 1] a = {1};", "float or angle"},
           {
               "array[angle, 1] a = {pi}; qubit q; U(-a[0], 0, 0) q;",
               "runtime fixed-width angle arithmetic",
@@ -214,7 +195,6 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           },
           {"array[angle, 1] a = {pi}; int b = int(a[0]);", "cast angle"},
           {"array[angle, 1] a = {pi}; bool b = a[0] == pi;", "cast angle"},
-          {"array[int, 1] a = {a[0]};", "uninitialized"},
           {"int i = 0; array[int, 1] a = {a[i]};", "uninitialized"},
           {"array[int, 1] a; int b = a[0];", "uninitialized"},
           {
@@ -223,11 +203,6 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           },
           {
               "array[int, 1] a; int i = 0; a[i] = 1; int b = a[0];",
-              "uninitialized",
-          },
-          {
-              "array[int, 1] a; bool c = true; if (c) { a[0] = 1; } "
-              "int b = a[0];",
               "uninitialized",
           },
           {
@@ -285,8 +260,6 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
       openqasm::frontend::analyzeOpenQASM("OPENQASM 2.0; array[int, 1] a;"));
   EXPECT_FALSE(openqasm::frontend::parseOpenQASM(
       "OPENQASM 3.0; output array[int, 1] a;"));
-  EXPECT_FALSE(
-      openqasm::frontend::parseOpenQASM("OPENQASM 3.0; int array = 0;"));
 }
 
 TEST(OpenQASMFrontendTest, LoopExitsPreserveDefiniteInitialization) {

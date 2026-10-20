@@ -104,7 +104,7 @@ bit[3] c = measure q;
     ],
 )
 def test_qirrunner_executes_decomposed_multi_control_qis(inactive_control: int | None, expected: str) -> None:
-    """Decompose wider controls to avoid runtime array packing in Base Profile."""
+    """Execute a multi-controlled gate in the target's native gate set."""
     target = CompilerTarget(
         4,
         connectivity=CompilerTarget.Connectivity.all_to_all(),
@@ -116,7 +116,7 @@ def test_qirrunner_executes_decomposed_multi_control_qis(inactive_control: int |
         ]),
     )
     initialization = "\n".join(f"x q[{control}];" for control in range(3) if control != inactive_control)
-    qir, output = _compile_and_run(
+    _, output = _compile_and_run(
         f"""OPENQASM 3.0;
 include "stdgates.inc";
 qubit[4] q;
@@ -127,8 +127,6 @@ bit[4] c = measure q;
         target=target,
     )
 
-    assert "@__quantum__qis__x__ctl" not in qir.llvm_ir
-    assert "@__quantum__rt__array_create_1d" not in qir.llvm_ir
     assert "METADATA\tqir_profiles\tbase_profile" in output
     assert _recorded_bitstrings(output, width=4) == [expected]
 

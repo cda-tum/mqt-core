@@ -57,8 +57,7 @@ struct DDSamplingState {
 /// SCF structured control, non-recursive calls, common scalar math,
 /// scalar or one-dimensional heap or stack memrefs, dense rank-one integer or
 /// f64 tensors and element extraction, and QTensor bookkeeping. `qco.static`
-/// values, or
-/// qubit arguments when no static values exist, set the wire map. Entry-block
+/// values set the wire map; without them, qubit arguments set it. Entry-block
 /// `qco.alloc` and statically sized `qtensor.alloc` operations add subsequent
 /// wires in instruction order. Measurements, resets, symbolic control, and
 /// other runtime allocation are not supported.

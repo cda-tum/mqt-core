@@ -33,7 +33,6 @@ def QCToQIRBase : Pass<"qc-to-qir-base", "mlir::ModuleOp"> {
       A returned scalar measurement can share register storage only when
       constant indices prove that other stores cannot overwrite it.
     - The input entry function must consist of a single block.
-      Multi-block input functions are currently not supported.
     - The program must have straight-line control flow (i.e., Base Profile QIR).
     - A measured qubit must not be used by another quantum instruction,
       including another measurement. Gates on independent qubits may follow

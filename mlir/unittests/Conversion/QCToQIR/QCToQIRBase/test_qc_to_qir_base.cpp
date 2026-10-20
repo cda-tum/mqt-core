@@ -489,7 +489,7 @@ TEST_F(QCToQIRBaseNativeTest, SelectsControlledSpecializationsByArity) {
   EXPECT_TRUE(module->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_CCRX));
 }
 
-TEST_F(QCToQIRBaseNativeTest, RejectsLegacyRuntimeArrayPacking) {
+TEST_F(QCToQIRBaseNativeTest, RejectsRuntimeControlArrays) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto control0 = builder.allocQubit();
