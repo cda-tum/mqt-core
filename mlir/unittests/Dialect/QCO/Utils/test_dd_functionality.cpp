@@ -1466,7 +1466,7 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
         memref.store %value, %memory[%zero] : memref<32xi1>
         return
       }
-      func.func @main() -> i64 {
+      func.func @main() {
         %zero = arith.constant 0 : index
         %false = arith.constant false
         %true = arith.constant true
@@ -1491,8 +1491,7 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
           qco.yield %q : !qco.qubit
         }
         qco.sink %out : !qco.qubit
-        %exit = arith.constant 0 : i64
-        return %exit : i64
+        return
       }
     }
   )mlir",

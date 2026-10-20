@@ -205,6 +205,7 @@ public:
       }
       results.push_back(reg);
     }
+
     auto moduleOp = builder.finalize(results);
     if (!moduleOp || emissionBudget.isExhausted()) {
       return nullptr;

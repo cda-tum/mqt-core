@@ -112,7 +112,7 @@ def test_qirrunner_executes_decomposed_multi_control_qis(inactive_control: int |
             CompilerTarget.OperationCapability("ry", 1, 1),
             CompilerTarget.OperationCapability("rz", 1, 1),
             CompilerTarget.OperationCapability("cx", 2, 0),
-            CompilerTarget.OperationCapability("measure", 1, 0),
+            CompilerTarget.OperationCapability("mz", 1, 0, canonical_name="measure"),
         ]),
     )
     initialization = "\n".join(f"x q[{control}];" for control in range(3) if control != inactive_control)
