@@ -116,16 +116,21 @@ TEST(GenerateProgramTest, SamplesQAOACutQuality) {
 }
 
 TEST(GenerateProgramTest, SerializesWideQAOAWithCompactLoops) {
-  const QAOAOptions options{
-      .qubits = 1'024,
-      .gammas = {0.31, 1.17},
-      .betas = {0.23, 0.49},
-  };
-  auto program = generate(QAOA{options});
-  ASSERT_TRUE(mlir::succeeded(program));
-  // Generation must not expand a gate list with one operation per vertex.
-  EXPECT_LT(test::countOperations(program->module()), 150U);
-  test::expectJeffRoundTrip(std::move(*program));
+  for (const size_t layers : {2U, 128U}) {
+    SCOPED_TRACE(layers);
+    QAOAOptions options{
+        .qubits = 1'024,
+        .gammas = std::vector<double>(layers, 0.31),
+        .betas = std::vector<double>(layers, 0.23),
+    };
+    options.gammas.back() = 1.17;
+    options.betas.back() = 0.49;
+    auto program = generate(QAOA{options});
+    ASSERT_TRUE(mlir::succeeded(program));
+    // Generation must not expand a gate list per vertex or layer.
+    EXPECT_LT(test::countOperations(program->module()), 150U);
+    test::expectJeffRoundTrip(std::move(*program));
+  }
 }
 
 } // namespace mqt::bench

@@ -15,10 +15,15 @@
 #include "Programs.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
 
-#include <cstddef>
+#include "llvm/ADT/ArrayRef.h"
+
 #include <cstdint>
 
 namespace mqt::bench {
@@ -34,12 +39,22 @@ SmallVector<Value> qaoa(qc::QCProgramBuilder& builder, const QAOA& benchmark) {
   auto zero = builder.indexConstant(0);
   auto one = builder.indexConstant(1);
   auto last = builder.indexConstant(size - 1);
+  auto two = builder.floatConstant(2.);
+  const auto layers = static_cast<int64_t>(options.gammas.size());
+  const auto anglesType = RankedTensorType::get({layers}, builder.getF64Type());
+  auto gammas = arith::ConstantOp::create(
+      builder, DenseElementsAttr::get(anglesType, ArrayRef(options.gammas)));
+  auto betas = arith::ConstantOp::create(
+      builder, DenseElementsAttr::get(anglesType, ArrayRef(options.betas)));
 
   builder.scfFor(0, size, 1,
                  [&](Value iv) { builder.h(builder.loadQubit(qubits, iv)); });
-  for (size_t layer = 0; layer < options.gammas.size(); ++layer) {
+  builder.scfFor(0, layers, 1, [&](Value layer) {
+    auto gamma = tensor::ExtractOp::create(builder, gammas, ValueRange{layer});
+    auto beta = tensor::ExtractOp::create(builder, betas, ValueRange{layer});
     // For C_jk = (1 - Z_j Z_k)/2, RZZ(-gamma) differs only by a global phase.
-    const auto costAngle = -options.gammas[layer];
+    auto costAngle = arith::NegFOp::create(builder, gamma);
+    auto mixerAngle = arith::MulFOp::create(builder, two, beta);
     builder.scfFor(0, size - 1, 1, [&](Value iv) {
       auto next = arith::AddIOp::create(builder, iv, one);
       builder.rzz(costAngle, builder.loadQubit(qubits, iv),
@@ -48,13 +63,10 @@ SmallVector<Value> qaoa(qc::QCProgramBuilder& builder, const QAOA& benchmark) {
     builder.rzz(costAngle, builder.loadQubit(qubits, last),
                 builder.loadQubit(qubits, zero));
     builder.scfFor(0, size, 1, [&](Value iv) {
-      auto qubit = builder.loadQubit(qubits, iv);
-      builder.rx(2. * options.betas[layer], qubit);
-      if (layer + 1 == options.gammas.size()) {
-        builder.measure(qubit, result, iv);
-      }
+      builder.rx(mixerAngle, builder.loadQubit(qubits, iv));
     });
-  }
+  });
+  builder.measureQubitRegister(qubits, result, size);
   return {result};
 }
 

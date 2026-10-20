@@ -41,17 +41,18 @@ calculation is a way to obtain an expectation, not a full outcome distribution.
   validation. Avoid integer bitstring conversion and integer multiplication of
   shot counts by cut sizes.
 - Do not add a statevector simulator or an artificial small qubit/depth limit to
-  the native reference. Structured register loops must keep generator size
-  independent of the number of vertices. No constant hardware-depth claim is
-  made for the emitted decomposition.
+  the native reference. Structured register and layer loops keep the operation
+  count independent of the number of vertices and layers. The two constant angle
+  tensors still require data proportional to the number of layers. No constant
+  hardware-depth claim is made for the emitted decomposition.
 - Keep the dry class summary and detailed mathematical explanation in their
   existing documentation layers. Reuse registration and JSON machinery; keep
   family-specific checks in the family tests. Regenerate Python stubs.
 
 The family-specific evaluation uses the JSON serializer pattern established by
-`ShorEvaluation`. The final mixer loop also measures the output; no separate
-measurement loop or new generator helper is needed. No released API or generated
-jeff file changes are included.
+`ShorEvaluation`. Layer-indexed tensor extraction follows Shor's table-lookup
+pattern. Measure after the layer loop to avoid a conditional in every mixer
+iteration. No new helper, released API change, or generated jeff file is needed.
 
 ## Validation
 
@@ -69,12 +70,12 @@ jeff file changes are included.
   diagnostic locations. A large-count regression covers rounding on platforms
   where `long double` has double precision. Mean scores are bounded by the exact
   cycle optimum before computing the approximation ratio.
-- A 1,024-qubit, two-layer instance round-trips through jeff. Its
-  operation-count bound guards compact generation, without attempting a full
-  statevector.
+- A 1,024-qubit instance with two or 128 layers passes the jeff round-trip. Its
+  operation-count bound guards compact generation in both dimensions, without
+  attempting a full statevector.
 - All benchmark suites pass: 163 native tests, 51 MLIR tests, 82 Python tests,
-  and the CLI CTest. Python stubs were regenerated. Repository lint, explicit
-  lint of new files, and whole-file C++ lint pass. The executable documentation
-  build and local-link checks pass; the new API formulas are parsed as math.
+  and the CLI CTest. Python stubs were regenerated. Repository lint and
+  whole-file C++ lint pass. The executable documentation build and local-link
+  checks pass; the new API formulas are parsed as math.
 - Hosted CI and execution of large instances were not run. Large generated
   programs remain subject to compiler and executor resource limits.
