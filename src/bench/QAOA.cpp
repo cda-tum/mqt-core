@@ -43,7 +43,7 @@ QAOA::QAOA(QAOAOptions options)
   for (auto& gamma : options_.gammas) {
     if (!std::isfinite(gamma) || gamma < 0. || gamma > 2. * std::numbers::pi) {
       throw std::invalid_argument(
-          "QAOA gamma angles must be finite and in [0, 2*pi]");
+          "QAOA gamma angles must be finite and in [0, 2π]");
     }
     if (gamma == 0.) {
       gamma = 0.;
@@ -52,7 +52,7 @@ QAOA::QAOA(QAOAOptions options)
   for (auto& beta : options_.betas) {
     if (!std::isfinite(beta) || beta < 0. || beta > std::numbers::pi) {
       throw std::invalid_argument(
-          "QAOA beta angles must be finite and in [0, pi]");
+          "QAOA beta angles must be finite and in [0, π]");
     }
     if (beta == 0.) {
       beta = 0.;

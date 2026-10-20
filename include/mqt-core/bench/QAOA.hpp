@@ -20,14 +20,14 @@
 
 namespace mqt::bench {
 
-/// Parameters for QAOA MaxCut on a cycle graph.
+/// Parameters for a QAOA benchmark for MaxCut on a cycle graph.
+///
+/// Both angle vectors must have the same nonzero length, which is the depth.
 struct QAOAOptions {
   /// Number of vertices and qubits, at least three and within signed 64-bit
   /// circuit dimensions.
   size_t qubits;
   /// Cost angles in radians, each finite and in \f$[0, 2\pi]\f$.
-  ///
-  /// Both angle vectors must have the same nonzero length, which is the depth.
   std::vector<double> gammas = {std::numbers::pi / 4.};
   /// Mixer angles in radians, each finite and in \f$[0, \pi]\f$.
   std::vector<double> betas = {std::numbers::pi / 8.};
@@ -41,7 +41,7 @@ struct QAOAEvaluation {
   double approximationRatio = 0.;
 };
 
-/// A validated QAOA MaxCut benchmark.
+/// A validated QAOA benchmark for MaxCut.
 class MQT_CORE_BENCH_EXPORT QAOA final {
 public:
   explicit QAOA(QAOAOptions options);

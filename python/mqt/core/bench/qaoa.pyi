@@ -14,7 +14,7 @@ import mqt.core.bench
 import mqt.core.mlir
 
 class Options:
-    """Parameters for a QAOA MaxCut benchmark.
+    """Parameters for a QAOA benchmark for MaxCut.
 
     The angle sequences must have the same nonzero length. Each pair specifies
     one layer, in execution order. The defaults are one layer with
@@ -46,13 +46,13 @@ class Evaluation:
         """The mean cut divided by the cycle's maximum cut size."""
 
 class QAOA:
-    """A validated QAOA MaxCut benchmark.
+    """A validated QAOA benchmark for MaxCut.
 
     The circuit starts in :math:`|+\\rangle^{\\otimes n}` on an unweighted cycle.
     Each layer applies :math:`e^{-i\\gamma_\\ell C}` followed by
     :math:`e^{-i\\beta_\\ell B}`, where
     :math:`C=\\sum_{j=0}^{n-1}(1-Z_jZ_{(j+1)\\bmod n})/2` and
-    :math:`B=\\sum_j X_j`.
+    :math:`B=\\sum_{j=0}^{n-1} X_j`.
 
     Angles are inputs; the benchmark does not run an optimizer. Evaluation measures
     cut quality, not agreement with an ideal output distribution.

@@ -28,8 +28,9 @@ using namespace nb::literals;
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 void registerQAOA(const nb::module_& m) {
-  nb::class_<bench::QAOAOptions>(m, "Options",
-                                 R"pb(Parameters for a QAOA MaxCut benchmark.
+  nb::class_<bench::QAOAOptions>(
+      m, "Options",
+      R"pb(Parameters for a QAOA benchmark for MaxCut.
 
 The angle sequences must have the same nonzero length. Each pair specifies
 one layer, in execution order. The defaults are one layer with
@@ -54,14 +55,15 @@ one layer, in execution order. The defaults are one layer with
       .def_ro("approximation_ratio", &bench::QAOAEvaluation::approximationRatio,
               "The mean cut divided by the cycle's maximum cut size.");
 
-  auto qaoa = nb::class_<bench::QAOA>(m, "QAOA",
-                                      R"pb(A validated QAOA MaxCut benchmark.
+  auto qaoa =
+      nb::class_<bench::QAOA>(m, "QAOA",
+                              R"pb(A validated QAOA benchmark for MaxCut.
 
 The circuit starts in :math:`|+\rangle^{\otimes n}` on an unweighted cycle.
 Each layer applies :math:`e^{-i\gamma_\ell C}` followed by
 :math:`e^{-i\beta_\ell B}`, where
 :math:`C=\sum_{j=0}^{n-1}(1-Z_jZ_{(j+1)\bmod n})/2` and
-:math:`B=\sum_j X_j`.
+:math:`B=\sum_{j=0}^{n-1} X_j`.
 
 Angles are inputs; the benchmark does not run an optimizer. Evaluation measures
 cut quality, not agreement with an ideal output distribution.)pb");

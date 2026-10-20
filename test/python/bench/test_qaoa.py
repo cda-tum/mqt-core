@@ -6,7 +6,7 @@
 #
 # Licensed under the MIT License
 
-"""Python bindings for the QAOA MaxCut benchmark."""
+"""Python bindings for the QAOA benchmark for MaxCut."""
 
 from __future__ import annotations
 

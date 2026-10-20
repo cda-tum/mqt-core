@@ -448,7 +448,7 @@ Starting from $|+\rangle^{\otimes n}$, each layer applies the cost unitary
 $e^{-i\gamma_\ell C}$ then the mixer $e^{-i\beta_\ell B}$, with
 
 ```{math}
-C=\sum_{j=0}^{n-1}\frac{1-Z_jZ_{(j+1)\bmod n}}{2},\qquad B=\sum_j X_j.
+C=\sum_{j=0}^{n-1}\frac{1-Z_jZ_{(j+1)\bmod n}}{2},\qquad B=\sum_{j=0}^{n-1} X_j.
 ```
 
 Set `qubits` to at least three. The finite angle sequences `gammas` and `betas`
@@ -462,15 +462,17 @@ not agreement with an ideal distribution. Qubit counts must fit signed 64-bit
 circuit dimensions; practical limits depend on compilation and execution
 resources.
 
+Generate and sample a four-vertex cycle, then score its sampled cuts:
+
 ```{code-cell} ipython3
 from mqt.core.bench import qaoa
+from mqt.core.mlir import sample
 
 benchmark = qaoa.QAOA(qaoa.Options(qubits=4))
-assert benchmark.cut_size("0101") == 4
-evaluation = benchmark.evaluate({"0101": 3, "0000": 1})
-assert evaluation.mean_cut == 3
-assert evaluation.approximation_ratio == 0.75
-assert benchmark.generate().is_valid
+counts = sample(benchmark.generate(), shots=1024, seed=17)
+evaluation = benchmark.evaluate(counts)
+print(f"Mean cut: {evaluation.mean_cut:.3f} of 4 edges")
+print(f"Approximation ratio: {evaluation.approximation_ratio:.3f}")
 ```
 
 ### QFT addition
