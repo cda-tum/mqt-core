@@ -666,6 +666,7 @@ TEST(CompilerQDMIAdapterTest, SubmissionQueriesOnlyTheRequiredMetadata) {
 
 TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
   for (const auto& [single, entangler] : {
+           std::pair{"u", "cnot"},
            std::pair{"u3", "cnot"},
            std::pair{"r", "cz"},
            std::pair{"U", "cnot"},
@@ -694,7 +695,8 @@ TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
                                 "bit[2] c = measure q;"),
           environment);
       if (format == QDMI_PROGRAM_FORMAT_QASM3 &&
-          std::string_view(single) == "U") {
+          (std::string_view(single) == "U" ||
+           std::string_view(single) == "u3")) {
         ASSERT_FALSE(static_cast<bool>(compiled));
         llvm::consumeError(compiled.takeError());
         continue;
@@ -722,14 +724,14 @@ TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
       }
     }
   }
-  for (const auto* unusable : {"U", "MEASURE"}) {
+  for (const auto* unusable : {"U", "u3", "MEASURE"}) {
     const auto target = llvm::cantFail(CompilerTarget::create(
         1, CompilerTarget::Connectivity::allToAll(),
         CompilerTarget::NativeOperations::fromOperations({
             llvm::cantFail(CompilerTarget::OperationCapability::create(
-                unusable, 1, std::string_view(unusable) == "U" ? 3 : 0)),
+                unusable, 1, std::string_view(unusable) == "MEASURE" ? 0 : 3)),
             llvm::cantFail(
-                CompilerTarget::OperationCapability::create("u3", 1, 3)),
+                CompilerTarget::OperationCapability::create("u", 1, 3)),
             llvm::cantFail(
                 CompilerTarget::OperationCapability::create("measure", 1, 0)),
         })));
@@ -742,8 +744,66 @@ TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
         environment);
     ASSERT_TRUE(static_cast<bool>(compiled))
         << llvm::toString(compiled.takeError());
-    EXPECT_NE(compiled->payload().find("u3("), std::string::npos);
+    EXPECT_NE(compiled->payload().find("u("), std::string::npos);
     EXPECT_NE(compiled->payload().find("measure $0"), std::string::npos);
+  }
+  for (const auto* name : {"u2", "cu3"}) {
+    const bool controlled = std::string_view(name) == "cu3";
+    const std::string gate =
+        controlled ? "qc.ctrl(%q0) targets(%t = %q1) { "
+                     "qc.u(%theta, %phi, %lambda) %t : !qc.qubit qc.yield } "
+                     ": {!qc.qubit}, {!qc.qubit}"
+                   : "qc.u2(%phi, %lambda) %q0 : !qc.qubit";
+    auto program = mlir::QCProgram::fromMLIRString(
+        "module { func.func @main() attributes {mqt.entry_point} { "
+        "%q0 = qc.static 0 : !qc.qubit "
+        "%q1 = qc.static 1 : !qc.qubit "
+        "%theta = arith.constant 0.37 : f64 "
+        "%phi = arith.constant -0.42 : f64 "
+        "%lambda = arith.constant 0.19 : f64 " +
+        gate + " return } }");
+    ASSERT_TRUE(mlir::succeeded(program));
+    const auto target = llvm::cantFail(CompilerTarget::create(
+        2, CompilerTarget::Connectivity::allToAll(),
+        CompilerTarget::NativeOperations::fromOperations({
+            llvm::cantFail(CompilerTarget::OperationCapability::create(
+                name, controlled ? 2 : 1, controlled ? 3 : 2, {}, std::nullopt,
+                std::nullopt, {}, controlled ? "cu" : "u2")),
+        })));
+    mlir::attachTargetEnvironment(
+        program->module(),
+        mlir::TargetEnvironment(
+            target, llvm::cantFail(mlir::payloadSpecificationForProgramFormat(
+                        QDMI_PROGRAM_FORMAT_QIRBASESTRING))));
+    EXPECT_TRUE(mlir::failed(program->toOpenQASM3()));
+    auto qir = std::move(*program).intoQIR(mlir::QIRProfile::Base);
+    ASSERT_TRUE(mlir::succeeded(qir));
+    auto text = qir->llvmIR();
+    ASSERT_TRUE(mlir::succeeded(text));
+    EXPECT_NE(text->find(std::string("__quantum__qis__") + name + "__body"),
+              std::string::npos);
+  }
+  for (const auto theta : {0.0, std::numbers::pi / 2}) {
+    auto program = mlir::QCProgram::fromMLIRString(
+        "module { func.func @main() attributes {mqt.entry_point} { "
+        "%q = qc.static 0 : !qc.qubit "
+        "%phi = arith.constant -0.42 : f64 "
+        "%lambda = arith.constant 0.19 : f64 "
+        "qc.u2(%phi, %lambda) %q : !qc.qubit return } }");
+    ASSERT_TRUE(mlir::succeeded(program));
+    const auto target = llvm::cantFail(CompilerTarget::create(
+        1, CompilerTarget::Connectivity::allToAll(),
+        CompilerTarget::NativeOperations::fromOperations({
+            llvm::cantFail(CompilerTarget::OperationCapability::create(
+                "u", 1, 3, {}, std::nullopt, std::nullopt,
+                {theta, std::nullopt, std::nullopt})),
+        })));
+    mlir::attachTargetEnvironment(
+        program->module(),
+        mlir::TargetEnvironment(
+            target, llvm::cantFail(mlir::payloadSpecificationForProgramFormat(
+                        QDMI_PROGRAM_FORMAT_QASM3))));
+    EXPECT_EQ(mlir::succeeded(program->toOpenQASM3()), theta != 0.0);
   }
 }
 

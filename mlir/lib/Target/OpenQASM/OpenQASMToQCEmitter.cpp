@@ -1035,7 +1035,8 @@ private:
       const auto emitBody = [&](ValueRange bodyQubits) {
         if (catalog->gate == qc::StandardGate::BuiltinU ||
             catalog->gate == qc::StandardGate::U2 ||
-            catalog->gate == qc::StandardGate::U3) {
+            (catalog->gate == qc::StandardGate::U3 &&
+             application.callee != "u")) {
           Value phase;
           if (catalog->gate == qc::StandardGate::BuiltinU &&
               !program.openQASM2) {

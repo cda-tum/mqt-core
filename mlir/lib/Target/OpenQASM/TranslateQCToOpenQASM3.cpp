@@ -79,6 +79,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <numbers>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -2020,13 +2021,24 @@ private:
       parameters.push_back(mqt::valueToDouble(parameter));
     }
     const auto symbol = body.getBaseSymbol();
-    const auto [capability, genericControls] = nativeTarget_->findOperation(
-        symbol, qubits.size(), parameters, sites, controlCount,
-        [symbol](const auto& operation) {
-          return operation.name() != "U" &&
-                 (openqasm::frontend::isValidIdentifier(operation.name()) ||
-                  (symbol == "gphase" && operation.name() == "gphase"));
-        });
+    const auto compatibleSpelling = [symbol](const auto& operation) {
+      // Standard U-family spellings differ from QC by a phase.
+      return operation.name() != "U" && operation.name() != "u2" &&
+             operation.name() != "u3" && operation.name() != "cu3" &&
+             (openqasm::frontend::isValidIdentifier(operation.name()) ||
+              (symbol == "gphase" && operation.name() == "gphase"));
+    };
+    auto selected =
+        nativeTarget_->findOperation(symbol, qubits.size(), parameters, sites,
+                                     controlCount, compatibleSpelling);
+    const bool promoteU2 = selected.capability == nullptr && symbol == "u2";
+    if (promoteU2) {
+      parameters.insert(parameters.begin(), std::numbers::pi / 2);
+      selected =
+          nativeTarget_->findOperation("u", qubits.size(), parameters, sites,
+                                       controlCount, compatibleSpelling);
+    }
+    const auto [capability, genericControls] = selected;
     if (capability == nullptr) {
       return fail(unitary,
                   "target operation cannot be emitted as native OpenQASM");
@@ -2035,6 +2047,9 @@ private:
     call.symbol = capability->name().str();
     if (genericControls) {
       call.modifiers = (Twine("ctrl(") + Twine(controlCount) + ") @ ").str();
+    }
+    if (promoteU2) {
+      call.parameters.emplace_back("pi / 2");
     }
     for (auto parameter : body.getParameters()) {
       auto expression = emitExpression(parameter);

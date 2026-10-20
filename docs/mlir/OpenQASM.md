@@ -376,6 +376,10 @@ operation; the definition body is deliberately ignored. A same-name definition
 with a mismatched signature is rejected. Strict mode always analyzes the custom
 definition normally.
 
+The compatibility spelling `u(theta, phi, lambda)` has the exact QC and Qiskit
+U-gate matrix. The standardized `U`, `u2`, `u3`, and `cu3` spellings retain
+their OpenQASM phase conventions; use `u3` for the legacy OpenQASM 2 U matrix.
+
 The `_mqt_` prefix is reserved for generated composite-modifier gates,
 temporaries, and collision-safe identifiers. Existing classical-register
 allocation names are reused when valid and distinct from catalog gates; scalar

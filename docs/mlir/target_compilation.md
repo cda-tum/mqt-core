@@ -569,9 +569,12 @@ placements. OpenQASM emits native calls without portable gate definitions;
 untargeted export retains its portable helpers. Native measurement and reset
 must use the OpenQASM keywords `measure` and `reset`. QIR preserves the native
 name in each QIS call and uses the controlled specialization for variadic
-operations. OpenQASM skips unrepresentable aliases, including built-in `U`,
-whose phase convention differs. Compilation fails if no compatible advertised
-alias can represent an operation in the selected format.
+operations. OpenQASM skips `U`, `u2`, `u3`, and `cu3`, whose standardized phase
+conventions differ from QC. The compatibility spelling `u` preserves QC's exact
+U-gate matrix. A QC U2 gate can use an advertised `u` with its first parameter
+fixed to `pi / 2`, including under control. Compilation fails if no compatible
+advertised operation can represent a gate in the selected format. QIR can use
+these native names directly.
 
 The `sqrt_iswap` synthesis shorthand requires a matching `xx_plus_yy` capability
 for native payload export.

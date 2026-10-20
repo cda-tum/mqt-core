@@ -16,6 +16,7 @@
 #include "dd/DDDefinitions.hpp"
 #include "dd/DDpackageConfig.hpp"
 #include "dd/Edge.hpp"
+#include "dd/Node.hpp"
 #include "dd/Package.hpp"
 #include "mqt_ddsim_qdmi/device.h"
 #include "qdmi/common/Common.hpp"
@@ -1045,15 +1046,27 @@ auto qdmi::dd::ProgramResult::getSparseResults(const QDMI_Job_Result result,
     return QDMI_ERROR_NOTSUPPORTED;
   }
   std::call_once(sparseAmplitudeCountOnce_, [this] {
-    size_t count = 0;
-    ::dd::traverseVector(stateVecDD_,
-                         [&count](const size_t, const std::complex<::dd::fp>&) {
-                           if (count == std::numeric_limits<size_t>::max()) {
-                             throw std::bad_alloc{};
-                           }
-                           ++count;
-                         });
-    sparseAmplitudeCount_ = count;
+    // shortcut: other shared paths repeat; memoize only with a memory bound.
+    const auto count = [](const auto& self, const ::dd::vNode* node) -> size_t {
+      if (::dd::vNode::isTerminal(node)) {
+        return 1;
+      }
+      const auto& low = node->e[0];
+      const auto& high = node->e[1];
+      if (low.w.exactlyZero()) {
+        return high.w.exactlyZero() ? 0 : self(self, high.p);
+      }
+      const auto left = self(self, low.p);
+      if (high.w.exactlyZero()) {
+        return left;
+      }
+      const auto right = low.p == high.p ? left : self(self, high.p);
+      if (right > std::numeric_limits<size_t>::max() - left) {
+        throw std::bad_alloc{};
+      }
+      return left + right;
+    };
+    sparseAmplitudeCount_ = count(count, stateVecDD_.p);
   });
   if (sparseAmplitudeCount_ == 0) {
     return reportEmptyResult(sizeRet);
