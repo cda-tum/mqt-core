@@ -755,11 +755,6 @@ struct ConvertCBitWriteOpToJeff final
   LogicalResult
   matchAndRewrite(cbit::WriteOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    const auto width = op.getValue().getType().getWidth();
-    if (width > 64) {
-      return op.emitError(
-          "jeff supports general integer expressions only up to 64 bits");
-    }
     auto& state = getState().cbitState;
     auto reg = state.resolveRegisterUse(op, op->getOperand(1));
     auto array = state.getCurrentValue(reg, op);
@@ -767,6 +762,13 @@ struct ConvertCBitWriteOpToJeff final
       return rewriter.notifyMatchFailure(op, "unknown classical register");
     }
     array = rewriter.getRemappedValue(array);
+    // Captured scalar operands may already have their promoted jeff width.
+    const auto width = static_cast<uint64_t>(
+        cast<RankedTensorType>(array.getType()).getDimSize(0));
+    if (width > 64) {
+      return op.emitError(
+          "jeff supports general integer expressions only up to 64 bits");
+    }
     auto value = adaptor.getValue();
     auto type = cast<IntegerType>(value.getType());
     auto zero =
@@ -791,6 +793,29 @@ struct ConvertCBitWriteOpToJeff final
     state.setCurrentValue(reg, array, op);
     state.addAlias(array, reg);
     rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct ConvertNegFOp final : OpConversionPattern<arith::NegFOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::NegFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter& rewriter) const override {
+    const auto type = op.getType();
+    Value minusOne;
+    if (type.isF32()) {
+      minusOne = jeff::FloatConst32Op::create(rewriter, op.getLoc(),
+                                              rewriter.getF32FloatAttr(-1.0));
+    } else if (type.isF64()) {
+      minusOne = jeff::FloatConst64Op::create(rewriter, op.getLoc(),
+                                              rewriter.getF64FloatAttr(-1.0));
+    } else {
+      return rewriter.notifyMatchFailure(op, "expected scalar f32 or f64");
+    }
+    // Multiplication flips both signed zeros; subtraction from +0 does not.
+    rewriter.replaceOpWithNewOp<jeff::FloatBinaryOp>(
+        op, adaptor.getOperand(), minusOne, jeff::FloatBinaryOperation::_mul);
     return success();
   }
 };
@@ -2172,7 +2197,8 @@ protected:
 
     // Register operation conversion patterns
     jeff::populateNativeToJeffConversionPatterns(patterns);
-    patterns.add<ConvertIntegerExpression>(typeConverter, context);
+    patterns.add<ConvertIntegerExpression, ConvertNegFOp>(typeConverter,
+                                                          context);
     patterns.add<ConvertCBitAllocOpToJeff, ConvertCBitStoreOpToJeff,
                  ConvertCBitLoadOpToJeff, ConvertCBitReadOpToJeff,
                  ConvertCBitWriteOpToJeff, ConvertQTensorAllocOp,

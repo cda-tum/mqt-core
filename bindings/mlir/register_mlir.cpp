@@ -23,7 +23,7 @@
 #include "mqt/bench/Generate.h"
 #include "qdmi/QDMI.hpp"
 
-#include "qiskit/Qiskit.h"
+#include "Target/Qiskit/Qiskit.h"
 
 #include "capnp/common.h"
 #include "capnp/message.h"
@@ -1664,6 +1664,8 @@ Set ``copy=True`` to preserve it.)pb")
           "profile"_a, nb::kw_only(), "copy"_a = false,
           R"pb(Lower this program to QIR for the requested profile.
 
+Entry results must be direct measurements or CBit registers. Other scalar
+outputs are unsupported. The generated QIR returns a zero execution status.
 Set ``copy=True`` to preserve it.)pb");
 
   auto qcoProgram = nb::class_<mlir::QCOProgram, mlir::Program>(

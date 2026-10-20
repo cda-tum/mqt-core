@@ -12,10 +12,11 @@
 
 #include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
+#include "mqt/Target/QIR/Export.h"
 #include "qdmi/QDMI.hpp"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 #include <array>
@@ -577,7 +579,7 @@ static llvm::Error incompatible(const llvm::Twine& detail) {
 
 static bool sameOperation(const CompilerTarget::OperationCapability& lhs,
                           const CompilerTarget::OperationCapability& rhs) {
-  if (lhs.canonicalName() != rhs.canonicalName() ||
+  if (lhs.name() != rhs.name() || lhs.canonicalName() != rhs.canonicalName() ||
       lhs.arity() != rhs.arity() ||
       lhs.numParameters() != rhs.numParameters() ||
       lhs.fixedParameters() != rhs.fixedParameters() ||
@@ -847,20 +849,6 @@ CompiledProgram::compile(CompilerInput&& program,
   }
   const auto& qir = std::get<QIRProgram>(*result);
   auto entryPoint = qir::getMainFunction(qir.module());
-  if (entryPoint && !entryPoint.isVarArg() &&
-      entryPoint.getNumArguments() == 0 &&
-      isa<LLVM::LLVMVoidType>(entryPoint.getFunctionType().getReturnType())) {
-    // A program without a return value completes with success status.
-    OpBuilder builder(qir.module().getContext());
-    entryPoint.setFunctionType(
-        LLVM::LLVMFunctionType::get(builder.getI64Type(), {}));
-    entryPoint.walk([&](LLVM::ReturnOp returnOp) {
-      builder.setInsertionPoint(returnOp);
-      auto zero = LLVM::ConstantOp::create(builder, returnOp.getLoc(),
-                                           builder.getI64IntegerAttr(0));
-      returnOp->setOperands(zero.getResult());
-    });
-  }
   if (!entryPoint || entryPoint.isVarArg() ||
       entryPoint.getNumArguments() != 0 ||
       !entryPoint.getFunctionType().getReturnType().isInteger(64)) {
@@ -874,12 +862,10 @@ CompiledProgram::compile(CompilerInput&& program,
     return error;
   }
   if (qdmi::isBinaryProgramFormat(*format)) {
-    if (auto bytes = qir.toBitcode(); succeeded(bytes)) {
-      return CompiledProgram(
-          environment,
-          std::string(reinterpret_cast<const char*>(bytes->data()),
-                      bytes->size()),
-          *format);
+    std::string bytes;
+    llvm::raw_string_ostream stream(bytes);
+    if (succeeded(qir::translateQIRToBitcode(qir.module(), stream))) {
+      return CompiledProgram(environment, std::move(bytes), *format);
     }
   } else if (auto text = qir.llvmIR(); succeeded(text)) {
     return CompiledProgram(environment, std::move(*text), *format);

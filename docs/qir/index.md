@@ -256,6 +256,23 @@ program parameters before lowering to either supported profile. Runtime and QIS
 declarations are checked before JIT compilation; a mismatched or unsupported
 declaration is reported with its actual and accepted LLVM function types.
 
+QC-to-QIR conversion records direct measurement and CBit-register returns in
+source order, including repetitions, and emits exit code 0 for successful
+execution. Other entry results are unsupported, including a constant-zero `i64`:
+explicit QC and QCO returns are program data, never exit codes. Programs without
+results use a void QC or QCO entry function. This contract applies with and
+without a target. Keep classical temporaries local, or use OpenQASM or jeff
+interchange for scalar program outputs.
+
+Measurements and CBit allocations must be in the entry function. A scalar
+measurement returned alongside its register requires constant store indices that
+exclude overwriting its slot. The C++ QIR builder requires dynamic qubits to be
+allocated before control flow.
+
+Authored QIR can return explicit exit codes and use scalar output-recording
+APIs. These runtime features do not extend the supported QC-to-QIR entry
+results.
+
 MQT Core implements the QIR 2.1 Base and Adaptive Profile runtime APIs. The JIT
 accepts one exact LLVM type for each runtime declaration, so unsupported or
 outdated overloads fail before execution.

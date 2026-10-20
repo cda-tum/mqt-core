@@ -66,6 +66,10 @@ intermediate representation
   IR. A program representation used between a source language and final output
   so compiler analyses and transformations can operate on explicit structure.
 
+QPY
+  **Preferred term:** QPY. **Accepted aliases:** none. Qiskit's versioned binary
+  format for storing one or more quantum circuits.
+
 jeff
   **Preferred term:** jeff. **Accepted aliases:** none. A structured, extensible
   [interchange format for quantum programs](https://github.com/unitaryfoundation/jeff).
@@ -422,6 +426,14 @@ continued fraction
   representation of a number by integer parts and reciprocals. Truncations,
   called convergents, give rational approximations used to recover candidate
   exponents from measured phases in Shor's algorithm.
+
+quantum fan-out
+fan-out
+  **Preferred term:** quantum fan-out. **Accepted alias:** fan-out when the
+  quantum context is clear. CNOT gates with one shared control and distinct
+  targets. On zero targets, this copies a computational-basis bit; on a
+  superposition, it creates correlations rather than independent copies of an
+  unknown quantum state.
 
 semiclassical quantum Fourier transform
 semiclassical QFT

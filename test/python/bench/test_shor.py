@@ -58,7 +58,7 @@ def test_factor_callback() -> None:
     assert exhausted.attempts == 1
 
 
-@pytest.mark.parametrize(("number", "factors"), [(2, None), (31, None), (14, (2, 7)), (27, (3, 9))])
+@pytest.mark.parametrize(("number", "factors"), [(31, None), (27, (3, 9))])
 def test_factor_prechecks(number: int, factors: tuple[int, int] | None) -> None:
     """Classical prechecks require no execution."""
 

@@ -72,21 +72,22 @@ TEST(WorkerProtocol, SocketRoundTripAndDisconnect) {
 TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
   const WorkerRequest request{
       .format = 7,
-      .program = std::string("QIR\0bytes", 9),
+      .program = llvm::StringRef("QIR\0bytes", 9),
       .shots = 19,
       .seed = 42,
       .captureOutput = true,
-      .workerSlots = 3,
+      .maxWorkers = 3,
       .automaticWorkers = false,
   };
+  const auto frame = encode(request);
   WorkerRequest decoded;
-  ASSERT_TRUE(decode(encode(request), decoded));
+  ASSERT_TRUE(decode(frame, decoded));
   EXPECT_EQ(decoded.format, request.format);
   EXPECT_EQ(decoded.program, request.program);
   EXPECT_EQ(decoded.shots, request.shots);
   EXPECT_EQ(decoded.seed, request.seed);
   EXPECT_EQ(decoded.captureOutput, request.captureOutput);
-  EXPECT_EQ(decoded.workerSlots, request.workerSlots);
+  EXPECT_EQ(decoded.maxWorkers, request.maxWorkers);
   EXPECT_EQ(decoded.automaticWorkers, request.automaticWorkers);
 
   WorkerResponse response;
@@ -102,6 +103,12 @@ TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
   EXPECT_EQ(result.output, response.output);
   EXPECT_EQ(result.qubits, response.qubits);
   EXPECT_EQ(result.state, response.state);
+
+  WorkerSlots slots;
+  ASSERT_TRUE(decode(encode(WorkerSlots{3}), slots));
+  EXPECT_EQ(slots.count, 3U);
+  EXPECT_FALSE(decode(encode(WorkerSlots{3}), result));
+  EXPECT_FALSE(decode(encode(response), slots));
 }
 
 TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
@@ -133,6 +140,13 @@ TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
   }
   WorkerRequest parsed;
   EXPECT_FALSE(decode(request + "x", parsed));
+  WorkerSlots slots;
+  const auto grant = encode(WorkerSlots{3});
+  for (size_t size = 0; size < grant.size(); ++size) {
+    EXPECT_FALSE(decode(llvm::StringRef(grant.data(), size), slots));
+  }
+  EXPECT_FALSE(decode(grant + "x", slots));
+  EXPECT_FALSE(decode(encode(WorkerSlots{0}), slots));
   auto invalidWorkers = request;
   invalidWorkers.back() = 2;
   EXPECT_FALSE(decode(invalidWorkers, parsed));

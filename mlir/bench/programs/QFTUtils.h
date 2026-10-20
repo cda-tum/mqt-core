@@ -51,12 +51,8 @@ mlir::Value advancePhaseCorrection(mlir::qc::QCProgramBuilder& builder,
                                    mlir::Value measuredBit, mlir::Value half,
                                    mlir::Value firstAngle);
 
-/// Apply the exact no-swap QFT.
-void forwardQFT(mlir::qc::QCProgramBuilder& builder, mlir::Value qubitRegister,
-                int64_t qubits);
-
-/// Apply the exact inverse of `forwardQFT`.
-void inverseQFT(mlir::qc::QCProgramBuilder& builder, mlir::Value qubitRegister,
-                int64_t qubits);
+/// Apply the exact no-swap QFT or its inverse.
+void qft(mlir::qc::QCProgramBuilder& builder, mlir::Value qubitRegister,
+         int64_t qubits, bool inverse = false);
 
 } // namespace mqt::bench::detail

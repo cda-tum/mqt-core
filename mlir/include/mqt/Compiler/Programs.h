@@ -234,6 +234,10 @@ public:
   [[nodiscard]] FailureOr<QCOProgram> intoQCO() &&;
 
   /// Consume this program and lower it to QIR.
+  ///
+  /// Entry results must be direct measurements or CBit registers. Other scalar
+  /// outputs are unsupported. The generated QIR returns a zero execution
+  /// status.
   [[nodiscard]] FailureOr<QIRProgram> intoQIR(QIRProfile profile) &&;
 
   /// Return the static gate count of the entry-point IR.

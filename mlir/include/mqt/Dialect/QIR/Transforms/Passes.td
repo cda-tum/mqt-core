@@ -18,11 +18,15 @@ def QIRSetAttributesAndMetadata
                 "adds the required module flags, compliant with QIR 2.1";
   let description = [{
     Static resource counts specify the capacity through the highest qubit ID
-    used by a quantum instruction and the highest recorded result ID. Rejects
+    used by a quantum instruction and the highest used result ID. Rejects
     IDs whose required capacity cannot fit in an unsigned 64-bit integer.
     Qubit capacity includes static IDs in compiler-marked qubit stores,
     including packed arguments and registers accessed with runtime indices.
     Arbitrary external pointer aliases are not inferred.
+    Direct helper arguments and CFG forwarding contribute to resource counts.
+    Capabilities cover all emitted function definitions. Loop exits with unknown
+    measurement dependence require both backward-branch capabilities. Native
+    pointer buffers conservatively require arrays, including static resources.
   }];
   let options = [Option<"useAdaptive", "use-adaptive", "bool",
                         /*default= */ "true", "Specifies the profile.">];

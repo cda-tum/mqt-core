@@ -614,27 +614,12 @@ TEST_F(ScQDMISpecificationTest, JobQueryProperty) {
 }
 
 TEST_F(ScQDMIJobSpecificationTest, JobQueryProperty) {
-  EXPECT_THAT(MQT_SC_QDMI_device_job_query_property(
-                  job, QDMI_DEVICE_JOB_PROPERTY_ID, 0, nullptr, nullptr),
-              testing::AnyOf(QDMI_SUCCESS, QDMI_ERROR_NOTSUPPORTED));
+  EXPECT_EQ(MQT_SC_QDMI_device_job_query_property(
+                job, QDMI_DEVICE_JOB_PROPERTY_ID, 0, nullptr, nullptr),
+            QDMI_ERROR_NOTSUPPORTED);
   EXPECT_EQ(MQT_SC_QDMI_device_job_query_property(
                 job, QDMI_DEVICE_JOB_PROPERTY_MAX, 0, nullptr, nullptr),
             QDMI_ERROR_INVALIDARGUMENT);
-}
-
-TEST_F(ScQDMIJobSpecificationTest, QueryJobId) {
-  size_t size = 0;
-  const auto status = MQT_SC_QDMI_device_job_query_property(
-      job, QDMI_DEVICE_JOB_PROPERTY_ID, 0, nullptr, &size);
-  ASSERT_THAT(status, testing::AnyOf(QDMI_SUCCESS, QDMI_ERROR_NOTSUPPORTED));
-  if (status == QDMI_ERROR_NOTSUPPORTED) {
-    GTEST_SKIP() << "Job ID property is not supported by the device";
-  }
-  ASSERT_GT(size, 0);
-  std::string id(size - 1, '\0');
-  EXPECT_THAT(MQT_SC_QDMI_device_job_query_property(
-                  job, QDMI_DEVICE_JOB_PROPERTY_ID, size, id.data(), nullptr),
-              testing::AnyOf(QDMI_SUCCESS, QDMI_ERROR_NOTSUPPORTED));
 }
 
 TEST_F(ScQDMISpecificationTest, JobSubmit) {

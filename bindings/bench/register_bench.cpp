@@ -20,6 +20,7 @@ namespace nb = nanobind;
 
 // forward declarations
 void registerBV(const nb::module_& m);
+void registerFanOut(const nb::module_& m);
 void registerGHZ(const nb::module_& m);
 void registerGrover(const nb::module_& m);
 void registerWeakMeasurementGrover(const nb::module_& m);
@@ -59,6 +60,10 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
   const nb::module_ bv = m.def_submodule(
       "bv", "Bernstein--Vazirani benchmark instances and options.");
   registerBV(bv);
+
+  const nb::module_ fanOut = m.def_submodule(
+      "fan_out", "Quantum fan-out benchmark instances and options.");
+  registerFanOut(fanOut);
 
   const nb::module_ ghz =
       m.def_submodule("ghz", "GHZ benchmark instances and options.");

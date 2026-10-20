@@ -29,6 +29,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 
 #include <cassert>
@@ -155,7 +156,7 @@ TEST_F(QuantumLoopUnrollTest, UnrollFullWithOuterDependentBounds) {
               });
         })[0];
     b.qtensorDealloc(tensor);
-    return b.intConstant(0);
+    return SmallVector<Value>{};
   });
   ASSERT_TRUE(m);
 

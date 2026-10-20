@@ -26,7 +26,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
+#include <format>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -50,13 +50,8 @@ thread_local Runtime* ActiveRuntime = nullptr;
 } // namespace
 
 auto Runtime::generateRandomSeed() -> uint64_t {
-  std::array<std::random_device::result_type, std::mt19937_64::state_size>
-      randomData{};
   std::random_device rd;
-  std::ranges::generate(randomData, std::ref(rd));
-  std::seed_seq seeds(randomData.begin(), randomData.end());
-  std::mt19937_64 rng(seeds);
-  return rng();
+  return std::uniform_int_distribution<uint64_t>{}(rd);
 }
 Runtime& Runtime::getInstance() {
   if (ActiveRuntime != nullptr) {
@@ -465,14 +460,7 @@ auto Runtime::outputFloat(double value, const char* label) const -> void {
   if (!hasOutput()) {
     return;
   }
-  // Use std::ostringstream rather than std::to_string.
-  // std::to_string formats with six digits after the decimal point and
-  // can print 0.000000 for very small numbers.
-  // std::ostringstream uses six significant digits by default and
-  // outputs very small numbers with scientific notation.
-  std::ostringstream oss;
-  oss << value;
-  outputType("DOUBLE", oss.str(), label);
+  outputType("DOUBLE", std::format("{}", value), label);
 }
 
 auto Runtime::outputTuple(int64_t elementCount, const char* label) const

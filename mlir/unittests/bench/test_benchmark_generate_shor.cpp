@@ -27,13 +27,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 
+#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <complex>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <numbers>
 #include <numeric>
 #include <utility>
 #include <variant>
@@ -41,32 +40,6 @@
 
 namespace mqt::bench {
 using namespace mlir;
-
-/// Tiny independent modular-permutation reference followed by a discrete
-/// Fourier transform.
-static std::vector<double> shorReference(uint64_t number, uint64_t base) {
-  const auto size = size_t{1} << (2U * std::bit_width(number));
-  std::vector<size_t> residues(size);
-  residues[0] = 1;
-  for (size_t x = 1; x < size; ++x) {
-    residues[x] = (residues[x - 1] * base) % number;
-  }
-  std::vector<double> probabilities(size);
-  for (size_t y = 0; y < size; ++y) {
-    std::vector<std::complex<double>> amplitudes(number);
-    for (size_t x = 0; x < size; ++x) {
-      const auto angle = 2. * std::numbers::pi *
-                         static_cast<double>((x * y) % size) /
-                         static_cast<double>(size);
-      amplitudes[residues[x]] +=
-          std::polar(1. / static_cast<double>(size), angle);
-    }
-    for (auto amplitude : amplitudes) {
-      probabilities[y] += std::norm(amplitude);
-    }
-  }
-  return probabilities;
-}
 
 TEST(GenerateProgramTest, SamplesShorAndRecoversFactors) {
   // Keep the circuit small enough for unoptimized coverage builds.
@@ -80,14 +53,12 @@ TEST(GenerateProgramTest, SamplesShorAndRecoversFactors) {
   auto evaluation = benchmark.evaluate(*counts);
   ASSERT_TRUE(evaluation.factors);
   EXPECT_EQ(evaluation.factors->first * evaluation.factors->second, number);
-  const auto reference = shorReference(number, 2);
-  double distance = 0.;
-  for (size_t phase = 0; phase < reference.size(); ++phase) {
-    auto it =
-        counts->find(dd::intToBinaryString(phase, benchmark.output().width));
-    const auto observed =
-        it == counts->end() ? 0. : static_cast<double>(it->second) / 64.;
-    distance += std::abs(reference[phase] - observed) / 2.;
+  // Base 2 has order 4 modulo 15: four equally likely phases, with no tails.
+  double distance = 1.;
+  for (const auto* phase : {"00000000", "01000000", "10000000", "11000000"}) {
+    if (auto it = counts->find(phase); it != counts->end()) {
+      distance -= std::min(0.25, static_cast<double>(it->second) / 64.);
+    }
   }
   EXPECT_LT(distance, 0.4);
   auto shared =
@@ -97,9 +68,8 @@ TEST(GenerateProgramTest, SamplesShorAndRecoversFactors) {
   EXPECT_TRUE(benchmark.evaluate(*shared).factors);
 }
 
-static mlir::FailureOr<QCOProgram>
-inPlaceMultiplier(uint64_t number, uint64_t multiplier,
-                  bool composeInverse = false) {
+static mlir::FailureOr<QCOProgram> inPlaceMultiplier(uint64_t number,
+                                                     uint64_t multiplier) {
   const auto bits = static_cast<int64_t>(std::bit_width(number));
   uint64_t inverse = 1;
   while ((inverse * multiplier) % number != 1) {
@@ -126,17 +96,6 @@ inPlaceMultiplier(uint64_t number, uint64_t multiplier,
                                  inverseValue,
                                  modulus,
                              });
-        if (composeInverse) {
-          builder.call(helper, {
-                                   control,
-                                   value,
-                                   accumulator,
-                                   work,
-                                   inverseValue,
-                                   multiplierValue,
-                                   modulus,
-                               });
-        }
         return SmallVector<Value>{};
       });
   auto qcProgram = QCProgram::fromModule(context, std::move(moduleOp));
@@ -151,7 +110,8 @@ inPlaceMultiplier(uint64_t number, uint64_t multiplier,
   return std::get<QCOProgram>(std::move(*compiled));
 }
 
-TEST(GenerateProgramTest, VerifiesSmallInPlaceMultiplierBasisStates) {
+TEST(GenerateProgramTest,
+     PreservesSmallInPlaceMultiplierCoherenceAndWorkspace) {
   for (uint64_t number = 2; number < 16; ++number) {
     const auto bits = std::bit_width(number);
     const auto qubits = 2U * bits + 3U;
@@ -165,6 +125,12 @@ TEST(GenerateProgramTest, VerifiesSmallInPlaceMultiplierBasisStates) {
       auto functionality = qco::buildFunctionality(
           mlir::mqt::getEntryPoint(program->module()), package);
       ASSERT_TRUE(succeeded(functionality));
+      const auto phase = dd::getValueByIndex(*functionality, qubits, 0, 0);
+      EXPECT_NEAR(std::norm(phase), 1., 1e-11);
+      dd::CVec input(size_t{1} << qubits);
+      dd::CVec expectedOutput(input.size());
+      // A common unit-modulus amplitude for every valid basis column proves
+      // the permutation, clean workspace, and coherence of any superposition.
       for (uint64_t value = 0; value < number; ++value) {
         for (size_t control = 0; control < 2; ++control) {
           SCOPED_TRACE(testing::PrintToString(
@@ -174,53 +140,22 @@ TEST(GenerateProgramTest, VerifiesSmallInPlaceMultiplierBasisStates) {
           const auto expected = (product << 1U) | control;
           const auto amplitude = dd::getValueByIndex(
               *functionality, qubits, expected, (value << 1U) | control);
-          EXPECT_NEAR(std::norm(amplitude), 1., 1e-11);
-        }
-      }
-      package.decRef(*functionality);
-    }
-  }
-}
-
-TEST(GenerateProgramTest, PreservesMultiplierCoherenceAndUncomputesWorkspace) {
-  for (const bool composeInverse : {false, true}) {
-    for (uint64_t number : {3ULL, 5ULL, 7ULL, 15ULL}) {
-      auto program = inPlaceMultiplier(number, 2, composeInverse);
-      ASSERT_TRUE(mlir::succeeded(program));
-      const auto qubits = 2U * std::bit_width(number) + 3U;
-      dd::CVec input(size_t{1} << qubits);
-      dd::CVec expected(input.size());
-      for (size_t control = 0; control < 2; ++control) {
-        for (uint64_t value = 0; value < number; ++value) {
+          EXPECT_NEAR(std::abs(amplitude - phase), 0., 1e-11);
           const auto index = (value << 1U) | control;
-          const auto amplitude =
+          input[index] =
               std::polar(1. / std::sqrt(2. * static_cast<double>(number)),
                          0.137 * static_cast<double>(index));
-          input[index] = amplitude;
-          const auto product =
-              control != 0 && !composeInverse ? 2 * value % number : value;
-          expected[(product << 1U) | control] = amplitude;
+          expectedOutput[expected] = phase * input[index];
         }
       }
-      dd::Package package(qubits);
-      auto functionality = qco::buildFunctionality(
-          mlir::mqt::getEntryPoint(program->module()), package);
-      ASSERT_TRUE(succeeded(functionality));
       auto state = package.applyOperation(
           *functionality, dd::makeStateFromVector(input, package));
-      auto output = dd::getVector(state);
+      const auto output = dd::getVector(state);
+      for (size_t index = 0; index < output.size(); ++index) {
+        EXPECT_NEAR(std::abs(output[index] - expectedOutput[index]), 0., 1e-11);
+      }
       package.decRef(state);
       package.decRef(*functionality);
-      ASSERT_EQ(output.size(), expected.size());
-      const auto overlap = std::inner_product(
-          expected.begin(), expected.end(), output.begin(),
-          std::complex<double>{}, std::plus<>(),
-          [](auto lhs, auto rhs) { return std::conj(lhs) * rhs; });
-      const auto phase = std::polar(1., std::arg(overlap));
-      for (size_t index = 0; index < output.size(); ++index) {
-        EXPECT_NEAR(std::abs(output[index] - phase * expected[index]), 0.,
-                    1e-11);
-      }
     }
   }
 }

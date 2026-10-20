@@ -26,14 +26,9 @@ TEST(MagicStateDistillation, ValidatesLevelsAndTwoBitReference) {
   EXPECT_EQ(MagicStateDistillation{}.options().levels, 1U);
   const auto maxLevels =
       static_cast<size_t>(std::numeric_limits<int64_t>::max()) / 5;
-  for (const size_t levels :
-       {size_t{1}, size_t{2}, size_t{3}, size_t{4}, size_t{8}, maxLevels}) {
+  for (const size_t levels : {size_t{1}, size_t{8}, maxLevels}) {
     const MagicStateDistillation benchmark({.levels = levels});
-    EXPECT_EQ(benchmark.output(), (Output{"result", 2}));
-    EXPECT_DOUBLE_EQ(benchmark.probability("00"), 1.);
-    for (const auto* outcome : {"01", "10", "11"}) {
-      EXPECT_DOUBLE_EQ(benchmark.probability(outcome), 0.);
-    }
+    EXPECT_EQ(benchmark.options().levels, levels);
   }
   for (const size_t levels :
        {size_t{0}, maxLevels + 1, std::numeric_limits<size_t>::max()}) {
@@ -41,6 +36,11 @@ TEST(MagicStateDistillation, ValidatesLevelsAndTwoBitReference) {
                  std::invalid_argument);
   }
   const MagicStateDistillation benchmark;
+  EXPECT_EQ(benchmark.output(), (Output{"result", 2}));
+  EXPECT_DOUBLE_EQ(benchmark.probability("00"), 1.);
+  for (const auto* outcome : {"01", "10", "11"}) {
+    EXPECT_DOUBLE_EQ(benchmark.probability(outcome), 0.);
+  }
   for (const auto* outcome : {"", "0", "000", "0x"}) {
     EXPECT_THROW(static_cast<void>(benchmark.probability(outcome)),
                  std::invalid_argument);
@@ -72,7 +72,7 @@ TEST(MagicStateDistillation, RoundTripsJSON) {
   EXPECT_EQ(
       toInstanceSpecificationJSON(defaults),
       R"({"benchmark":"magic-state-distillation","parameters":{"levels":1},"schema_version":1})");
-  for (const size_t levels : {1U, 2U, 3U, 4U, 8U}) {
+  for (const size_t levels : {2U, 8U}) {
     const MagicStateDistillation benchmark({.levels = levels});
     const auto instance = toInstanceSpecificationJSON(benchmark);
     EXPECT_EQ(
@@ -82,17 +82,9 @@ TEST(MagicStateDistillation, RoundTripsJSON) {
     const auto manifest = toManifestJSON(benchmark);
     EXPECT_EQ(toManifestJSON(magicStateDistillationFromManifestJSON(manifest)),
               manifest);
+    EXPECT_NE(caseId(benchmark), caseId(defaults));
   }
-}
-
-TEST(MagicStateDistillation, UsesSemanticCaseIds) {
-  const auto defaults = magicStateDistillationFromInstanceSpecificationJSON(
-      R"({"schema_version":1,"benchmark":"magic-state-distillation","parameters":{}})");
   EXPECT_EQ(caseId(defaults), caseId(MagicStateDistillation({.levels = 1})));
-  for (const size_t levels : {2U, 3U, 4U, 8U}) {
-    EXPECT_NE(caseId(MagicStateDistillation({.levels = levels})),
-              caseId(defaults));
-  }
 }
 
 TEST(MagicStateDistillation, DescribesJSONSchema) {

@@ -33,10 +33,12 @@
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -881,6 +883,7 @@ TEST(CompilerTargetTest, DistinguishesOperationSupport) {
   EXPECT_EQ(closed.supports(GateKind::CX), false);
   EXPECT_TRUE(closed.supportedGates().empty());
   EXPECT_FALSE(closed.synthesisBasis());
+  EXPECT_TRUE(closed.synthesisEntanglers().empty());
 
   EXPECT_TRUE(variadic.supportsOperation("gphase", 0, 1));
   EXPECT_FALSE(variadic.supportsOperation("gphase", 1, 1));
@@ -1197,7 +1200,7 @@ TEST(CompilerTargetTest, ChecksFixedValuesInsideNativeControls) {
                                               builder.staticQubit(1));
           builder.sink(control);
           builder.sink(qubit);
-          return builder.intConstant(0);
+          return llvm::SmallVector<mlir::Value>{};
         });
     program->walk([&](mlir::qco::CtrlOp controlled) {
       EXPECT_EQ(target.supports(controlled), angle == 0.25);
@@ -1357,23 +1360,87 @@ TEST(CompilerTargetTest, ClassifiesEveryEntangler) {
     EXPECT_EQ(target.supports(gate), true);
     ASSERT_TRUE(target.synthesisBasis());
     EXPECT_EQ(target.synthesisBasis()->entangler->gate, gate);
+    ASSERT_EQ(target.synthesisEntanglers().size(), 1);
+    EXPECT_EQ(target.synthesisEntanglers().front(),
+              *target.synthesisBasis()->entangler);
   }
 }
 
-TEST(CompilerTargetTest, PrefersParameterizedEntanglerOverFixedAlternative) {
-  const auto target =
-      valid(Target::create(2, Connectivity::allToAll(),
-                           NativeOperations::fromOperations({
-                               valid(OperationCapability::create("u", 1, 3)),
-                               valid(OperationCapability::create(
-                                   "rxx", 2, 1, {}, std::nullopt, std::nullopt,
-                                   {std::numbers::pi / 2.})),
-                               valid(OperationCapability::create("rzz", 2, 1)),
-                           })));
-  ASSERT_TRUE(target.synthesisBasis());
-  ASSERT_TRUE(target.synthesisBasis()->entangler);
-  EXPECT_EQ(target.synthesisBasis()->entangler->gate, GateKind::RZZ);
-  EXPECT_TRUE(target.synthesisBasis()->entangler->parameterized());
+TEST(CompilerTargetTest, RecognizesSquareRootISwapParametersAndPlacements) {
+  for (const bool global : {false, true}) {
+    for (const auto& [theta, beta] : {
+             std::pair{-std::numbers::pi / 2., 0.},
+             std::pair{std::numbers::pi / 2., 0.},
+             std::pair{-std::numbers::pi / 2., 0.1},
+         }) {
+      SCOPED_TRACE(::testing::Message() << "global=" << global << ", theta="
+                                        << theta << ", beta=" << beta);
+      const auto exchange = valid(OperationCapability::create(
+          "xx_plus_yy", 2, 2,
+          global ? std::vector<SiteTuple>{}
+                 : std::vector{
+                       valid(SiteTuple::create({1, 0})),
+                       valid(SiteTuple::create({2, 1})),
+                   },
+          std::nullopt, std::nullopt, {theta, beta}));
+      const auto target = valid(Target::create(
+          3, Connectivity::fromCouplings({{0, 1}, {1, 2}}),
+          NativeOperations::fromOperations(
+              {valid(OperationCapability::create("u", 1, 3)), exchange})));
+      const bool supported = theta == -std::numbers::pi / 2. && beta == 0.;
+      EXPECT_EQ(target.supports(GateKind::SQRTISWAP), supported);
+      EXPECT_EQ(target.supports(GateKind::SQRTISWAP, {1, 0}), supported);
+      EXPECT_EQ(target.supports(GateKind::SQRTISWAP, {0, 1}),
+                supported && global);
+      EXPECT_EQ(target.supports(GateKind::SQRTISWAP, {2, 1}), supported);
+      EXPECT_EQ(target.supports(GateKind::SQRTISWAP, {0, 2}),
+                supported && global);
+      ASSERT_TRUE(target.synthesisBasis());
+      EXPECT_EQ(target.synthesisBasis()->entangler.has_value(), supported);
+      EXPECT_EQ(target.synthesisEntanglers().size(), supported ? 1 : 0);
+    }
+  }
+}
+
+TEST(CompilerTargetTest, CollectsEntanglersInSynthesisPreferenceOrder) {
+  std::vector operations{
+      valid(OperationCapability::create("u", 1, 3)),
+      valid(OperationCapability::create("rxx", 2, 1, {}, std::nullopt,
+                                        std::nullopt, {std::numbers::pi / 2.})),
+      valid(OperationCapability::create(
+          "ryy", 2, 1, {}, std::nullopt, std::nullopt, {}, std::nullopt,
+          {OperationCapability::ParameterBounds{0., std::numbers::pi / 2.}})),
+      valid(OperationCapability::create("rzz", 2, 1)),
+      valid(OperationCapability::create("cz", 2, 0)),
+      valid(OperationCapability::create("sqrt_iswap", 2, 0)),
+      valid(OperationCapability::create("ecr", 2, 0,
+                                        {valid(SiteTuple::create({0, 1}))})),
+  };
+  const std::array expected{
+      Target::Entangler{
+          .gate = GateKind::RZZ,
+          .angles = Target::AngleSupport::Unrestricted,
+      },
+      Target::Entangler{
+          .gate = GateKind::RYY,
+          .angles = Target::AngleSupport::ZeroToHalfPi,
+      },
+      Target::Entangler{.gate = GateKind::RXX},
+      Target::Entangler{.gate = GateKind::CZ},
+      Target::Entangler{.gate = GateKind::SQRTISWAP},
+  };
+  for (const bool reverse : {false, true}) {
+    if (reverse) {
+      std::ranges::reverse(operations);
+    }
+    const auto target =
+        valid(Target::create(3, Connectivity::fromCouplings({{0, 1}, {1, 2}}),
+                             NativeOperations::fromOperations(operations)));
+    EXPECT_EQ(target.synthesisEntanglers(),
+              llvm::ArrayRef<Target::Entangler>{expected});
+    ASSERT_TRUE(target.synthesisBasis());
+    EXPECT_EQ(target.synthesisBasis()->entangler, expected.front());
+  }
 }
 
 TEST(CompilerTargetTest, EntanglerCapabilitiesRespectAnglesAndOperandOrder) {
@@ -1473,7 +1540,7 @@ TEST(CompilerTargetTest, SupportsRealQCOOperationsAndStructuralOps) {
         q0 = builder.reset(measured);
         static_cast<void>(q0);
         static_cast<void>(q1);
-        return builder.intConstant(0);
+        return llvm::SmallVector<mlir::Value>{};
       });
   ASSERT_TRUE(moduleOp);
 
@@ -1572,7 +1639,7 @@ TEST(CompilerTargetTest, SupportsArbitrarilyControlledBaseOperations) {
             builder.mcrccx({builder.staticQubit(10), builder.staticQubit(11)},
                            builder.staticQubit(12), builder.staticQubit(13),
                            builder.staticQubit(14)));
-        return builder.intConstant(0);
+        return llvm::SmallVector<mlir::Value>{};
       });
   ASSERT_TRUE(supportedModule);
 
@@ -1621,7 +1688,7 @@ TEST(CompilerTargetTest, SupportsArbitrarilyControlledBaseOperations) {
                                targets[1],
                            };
                          }));
-        return builder.intConstant(0);
+        return llvm::SmallVector<mlir::Value>{};
       });
   ASSERT_TRUE(rejectedModule);
 

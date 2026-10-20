@@ -71,6 +71,7 @@ def AllocOp : CBitOp<"alloc", [DeclareOpInterfaceMethods<
   let assemblyFormat = [{
     `(` qualified($initialization) `)` attr-dict `:` qualified(type($result))
   }];
+  let hasCanonicalizer = 1;
 }
 
 def LoadOp : CBitOp<"load", [DeclareOpInterfaceMethods<

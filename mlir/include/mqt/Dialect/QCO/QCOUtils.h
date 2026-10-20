@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <cstddef>
 #include <optional>
@@ -65,6 +66,24 @@ inline bool checkDeadGate(Operation* op) {
 [[nodiscard]] inline auto quantumValues(ValueRange values) {
   return llvm::make_filter_range(
       values, [](Value value) { return isLinearQubitType(value.getType()); });
+}
+
+/// Return the corresponding quantum value, ignoring classical positions.
+///
+/// Requires positional quantum signatures validated by @ref verifyLinearity.
+/// Runs in linear time in the input and output signature widths.
+[[nodiscard]] inline Value getCorrespondingQuantumValue(ValueRange inputs,
+                                                        ValueRange outputs,
+                                                        unsigned inputIndex) {
+  auto ordinal = llvm::count_if(inputs.take_front(inputIndex), [](Value value) {
+    return isLinearQubitType(value.getType());
+  });
+  for (auto output : outputs) {
+    if (isLinearQubitType(output.getType()) && ordinal-- == 0) {
+      return output;
+    }
+  }
+  llvm_unreachable("expected corresponding quantum value");
 }
 
 /// Verify linear uses, static roots, and positional quantum state flow.

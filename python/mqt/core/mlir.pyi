@@ -837,6 +837,8 @@ class QCProgram(Program):
     def to_qir(self, profile: QIRProfile, *, copy: bool = False) -> QIRProgram:
         """Lower this program to QIR for the requested profile.
 
+        Entry results must be direct measurements or CBit registers. Other scalar
+        outputs are unsupported. The generated QIR returns a zero execution status.
         Set ``copy=True`` to preserve it.
         """
 

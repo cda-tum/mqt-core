@@ -12,6 +12,7 @@
 
 #include "bench/BV.hpp"
 #include "bench/Evaluation.hpp"
+#include "bench/FanOut.hpp"
 #include "bench/GHZ.hpp"
 #include "bench/Grover.hpp"
 #include "bench/MagicStateDistillation.hpp"
@@ -331,6 +332,17 @@ void requireBenchmark(const Json& root, const std::string_view expected,
                             [&options] { return BV(std::move(options)); });
 }
 
+[[nodiscard]] FanOut parseFanOutParameters(const Json& parameters,
+                                           const std::string_view source) {
+  rejectUnknownKeys(parameters, {"controls"}, source, "$/parameters");
+  const FanOutOptions options{
+      .controls =
+          sizeValue(required(parameters, "controls", source, "$/parameters"),
+                    source, "$/parameters/controls"),
+  };
+  return constructBenchmark(source, [&options] { return FanOut(options); });
+}
+
 [[nodiscard]] GHZ parseGHZParameters(const Json& parameters,
                                      const std::string_view source) {
   rejectUnknownKeys(parameters, {"qubits", "topology", "basis"}, source,
@@ -636,6 +648,10 @@ parseTeleportationParameters(const Json& parameters,
   };
 }
 
+[[nodiscard]] Json parametersJSON(const FanOut& benchmark) {
+  return {{"controls", benchmark.options().controls}};
+}
+
 [[nodiscard]] Json parametersJSON(const GHZ& benchmark) {
   const auto& options = benchmark.options();
   return {
@@ -760,6 +776,10 @@ parseTeleportationParameters(const Json& parameters,
 [[nodiscard]] Json referenceJSON(const BV& benchmark) {
   return analyticReferenceJSON(benchmark.output(), "bernstein_vazirani",
                                benchmark.options().hiddenBitstring);
+}
+
+[[nodiscard]] Json referenceJSON(const FanOut& benchmark) {
+  return analyticReferenceJSON(benchmark.output(), "fan_out");
 }
 
 [[nodiscard]] Json referenceJSON(const GHZ& benchmark) {
@@ -936,6 +956,27 @@ template <class Benchmark>
           },
       },
       {"required", {"hidden_bitstring"}},
+      {"type", "object"},
+  });
+}
+
+[[nodiscard]] Json fanOutInstanceSpecificationSchema() {
+  return baseInstanceSpecificationSchema<FanOut>({
+      {"additionalProperties", false},
+      {
+          "properties",
+          {
+              {
+                  "controls",
+                  {
+                      {"maximum", FanOutOptions::MAX_CONTROLS},
+                      {"minimum", 1},
+                      {"type", "integer"},
+                  },
+              },
+          },
+      },
+      {"required", {"controls"}},
       {"type", "object"},
   });
 }

@@ -223,9 +223,12 @@ TEST(OpenQASMExecutionTest, ExecutesInclusiveRangeBoundaries) {
   }
 }
 
-TEST_F(JitSessionTest, LoadModuleFromMemory) {
-  const auto program = getProgram("BellPairStatic.ll");
-  qir::JitSession session(program, "BellPairStatic.ll");
+TEST_F(JitSessionTest, LoadModuleFromUnterminatedMemory) {
+  auto program = getProgram("BellPairStatic.ll");
+  const auto size = program.size();
+  program += "outside the input buffer";
+  qir::JitSession session(llvm::StringRef(program.data(), size),
+                          "BellPairStatic.ll");
   session.runtime().setOstream(sink);
   ASSERT_EQ(session.run(), 0);
   EXPECT_FALSE(session.runtime().getMeasurements().empty());
@@ -563,50 +566,57 @@ attributes #0 = { "entry_point" }
 }
 
 TEST(JitSessionErrors, RejectsNonCRuntimeCallingConventions) {
-  for (const auto& [declaration, call] :
-       std::array<std::pair<std::string_view, std::string_view>, 3>{
-           {
-               {"preserve_allcc ", "preserve_allcc "},
-               {"preserve_allcc ", ""},
-               {"", "preserve_allcc "},
-           },
-       }) {
-    const auto ir = std::string("declare ") + std::string(declaration) +
-                    "void @__quantum__qis__h__body(ptr)\n"
-                    "define i64 @main() #0 { call " +
-                    std::string(call) +
-                    "void @__quantum__qis__h__body(ptr null)\nret i64 0 }\n"
-                    "attributes #0 = { \"entry_point\" }";
-    SCOPED_TRACE(ir);
-    EXPECT_THAT([&] { qir::JitSession(ir, "runtime-convention"); },
-                testing::ThrowsMessage<std::runtime_error>(
-                    testing::HasSubstr("C calling convention")));
+  for (const auto* symbol : {"h__body", "sdg__body"}) {
+    for (const auto& [declaration, call] :
+         std::array<std::pair<std::string_view, std::string_view>, 3>{
+             {
+                 {"preserve_allcc ", "preserve_allcc "},
+                 {"preserve_allcc ", ""},
+                 {"", "preserve_allcc "},
+             },
+         }) {
+      const auto ir =
+          std::string("declare void @__quantum__qis__s__adj(ptr)\ndeclare ") +
+          std::string(declaration) + "void @__quantum__qis__" + symbol +
+          "(ptr)\n"
+          "define i64 @main() #0 { call " +
+          std::string(call) + "void @__quantum__qis__" + symbol +
+          "(ptr null)\nret i64 0 }\n"
+          "attributes #0 = { \"entry_point\" }";
+      SCOPED_TRACE(ir);
+      EXPECT_THAT([&] { qir::JitSession(ir, "runtime-convention"); },
+                  testing::ThrowsMessage<std::runtime_error>(
+                      testing::HasSubstr("C calling convention")));
+    }
   }
 }
 
 TEST(JitSessionErrors, RejectsRuntimeABIAttributes) {
-  for (const auto* attribute : {
-           "byval(i8)",
-           "byref(i8)",
-           "sret(i8)",
-           "inreg",
-           "nest",
-           "swiftself",
-           "swiftasync",
-       }) {
-    for (const bool onDeclaration : {false, true}) {
-      const auto ir =
-          std::string("declare void @__quantum__qis__h__body(ptr ") +
-          (onDeclaration ? attribute : "") +
-          ")\ndefine i64 @main() #0 { %q = alloca i8\n"
-          "call void @__quantum__qis__h__body(ptr " +
-          (onDeclaration ? "" : attribute) +
-          " %q)\nret i64 0 }\n"
-          "attributes #0 = { \"entry_point\" }";
-      SCOPED_TRACE(ir);
-      EXPECT_THAT([&] { qir::JitSession(ir, "runtime-attribute"); },
-                  testing::ThrowsMessage<std::runtime_error>(
-                      testing::HasSubstr("unsupported ABI attribute")));
+  for (const auto* symbol : {"h__body", "sdg__body"}) {
+    for (const auto* attribute : {
+             "byval(i8)",
+             "byref(i8)",
+             "sret(i8)",
+             "inreg",
+             "nest",
+             "swiftself",
+             "swiftasync",
+         }) {
+      for (const bool onDeclaration : {false, true}) {
+        const auto ir =
+            std::string("declare void @__quantum__qis__s__adj(ptr)\ndeclare "
+                        "void @__quantum__qis__") +
+            symbol + "(ptr " + (onDeclaration ? attribute : "") +
+            ")\ndefine i64 @main() #0 { %q = alloca i8\n"
+            "call void @__quantum__qis__" +
+            symbol + "(ptr " + (onDeclaration ? "" : attribute) +
+            " %q)\nret i64 0 }\n"
+            "attributes #0 = { \"entry_point\" }";
+        SCOPED_TRACE(ir);
+        EXPECT_THAT([&] { qir::JitSession(ir, "runtime-attribute"); },
+                    testing::ThrowsMessage<std::runtime_error>(
+                        testing::HasSubstr("unsupported ABI attribute")));
+      }
     }
   }
 }

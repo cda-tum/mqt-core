@@ -157,8 +157,7 @@ TEST(QCOClassicalControlPhaseIdentityTest,
 // Test: Tests replacing a classically controlled gate where there is
 // only one control.
 TEST_F(QCOReplaceClassicalControlsTest, replaceClassicalControlsOnlyControl) {
-  programBuilder.initialize(
-      {programBuilder.getI1Type(), programBuilder.getI1Type()});
+  programBuilder.initialize();
   auto q0 = programBuilder.allocQubit();
   auto q1 = programBuilder.allocQubit();
   q0 = programBuilder.h(q0);
@@ -174,8 +173,7 @@ TEST_F(QCOReplaceClassicalControlsTest, replaceClassicalControlsOnlyControl) {
   programBuilder.sink(q1);
   program = programBuilder.finalize({c0, c1});
 
-  referenceBuilder.initialize(
-      {referenceBuilder.getI1Type(), referenceBuilder.getI1Type()});
+  referenceBuilder.initialize();
   auto r0 = referenceBuilder.allocQubit();
   auto r1 = referenceBuilder.allocQubit();
   r0 = referenceBuilder.h(r0);
@@ -204,11 +202,7 @@ TEST_F(QCOReplaceClassicalControlsTest, replaceClassicalControlsOnlyControl) {
 // two controls can be replaced.
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceClassicalControlsOneOfTwoControls) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto q0 = programBuilder.allocQubit();
   auto q1 = programBuilder.allocQubit();
   auto q2 = programBuilder.allocQubit();
@@ -234,11 +228,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   programBuilder.sink(q2);
   program = programBuilder.finalize({c0, c1, c2});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto r0 = referenceBuilder.allocQubit();
   auto r1 = referenceBuilder.allocQubit();
   auto r2 = referenceBuilder.allocQubit();
@@ -277,11 +267,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 // two controls can be replaced.
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceClassicalControlsTwoOfTwoControls) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto q0 = programBuilder.allocQubit();
   auto q1 = programBuilder.allocQubit();
   auto q2 = programBuilder.allocQubit();
@@ -307,11 +293,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   programBuilder.sink(q2);
   program = programBuilder.finalize({c0, c1, c2});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto r0 = referenceBuilder.allocQubit();
   auto r1 = referenceBuilder.allocQubit();
   auto r2 = referenceBuilder.allocQubit();
@@ -348,12 +330,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 // three controls can be replaced.
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceClassicalControlsTwoOfThreeControls) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto q0 = programBuilder.allocQubit();
   auto q1 = programBuilder.allocQubit();
   auto q2 = programBuilder.allocQubit();
@@ -384,12 +361,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   programBuilder.sink(q3);
   program = programBuilder.finalize({c0, c1, c2, c3});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto r0 = referenceBuilder.allocQubit();
   auto r1 = referenceBuilder.allocQubit();
   auto r2 = referenceBuilder.allocQubit();
@@ -436,11 +408,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 // Test: A measured target of a non-phase gate must not be mistaken for a
 // replaceable classical control.
 TEST_F(QCOReplaceClassicalControlsTest, doNotReplaceMeasuredNonPhaseTarget) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto target = programBuilder.h(programBuilder.allocQubit());
   auto control = programBuilder.h(programBuilder.allocQubit());
 
@@ -457,11 +425,7 @@ TEST_F(QCOReplaceClassicalControlsTest, doNotReplaceMeasuredNonPhaseTarget) {
   program = programBuilder.finalize(
       {initialTargetOutcome, controlOutcome, targetOutcome});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto referenceTarget = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceControl = referenceBuilder.h(referenceBuilder.allocQubit());
 
@@ -496,11 +460,7 @@ TEST_F(QCOReplaceClassicalControlsTest, doNotReplaceMeasuredNonPhaseTarget) {
 // without attempting a single-target phase-gate swap.
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceMeasuredControlOfMultiTargetGate) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   auto target0 = programBuilder.h(programBuilder.allocQubit());
   auto target1 = programBuilder.h(programBuilder.allocQubit());
@@ -520,11 +480,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   program =
       programBuilder.finalize({controlOutcome, target0Outcome, target1Outcome});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto referenceControl = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget0 = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget1 = referenceBuilder.h(referenceBuilder.allocQubit());
@@ -564,8 +520,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 // Test: Tests replacing a classically controlled gate where a phase
 // target gate needs to be swapped with to achieve a replaceable control.
 TEST_F(QCOReplaceClassicalControlsTest, replaceClassicalControlsSwapPhase) {
-  programBuilder.initialize(
-      {programBuilder.getI1Type(), programBuilder.getI1Type()});
+  programBuilder.initialize();
   auto q0 = programBuilder.allocQubit();
   auto q1 = programBuilder.allocQubit();
   q0 = programBuilder.h(q0);
@@ -581,8 +536,7 @@ TEST_F(QCOReplaceClassicalControlsTest, replaceClassicalControlsSwapPhase) {
   programBuilder.sink(q1);
   program = programBuilder.finalize({c0, c1});
 
-  referenceBuilder.initialize(
-      {referenceBuilder.getI1Type(), referenceBuilder.getI1Type()});
+  referenceBuilder.initialize();
   auto r0 = referenceBuilder.allocQubit();
   auto r1 = referenceBuilder.allocQubit();
   r0 = referenceBuilder.h(r0);
@@ -610,8 +564,7 @@ TEST_F(QCOReplaceClassicalControlsTest, replaceClassicalControlsSwapPhase) {
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceMeasuredRZTargetWithSelectedPhase) {
   constexpr double theta = 0.789;
-  programBuilder.initialize(
-      {programBuilder.getI1Type(), programBuilder.getI1Type()});
+  programBuilder.initialize();
   auto target = programBuilder.h(programBuilder.allocQubit());
   auto control = programBuilder.h(programBuilder.allocQubit());
 
@@ -624,8 +577,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   programBuilder.sink(target);
   program = programBuilder.finalize({initialTargetOutcome, controlOutcome});
 
-  referenceBuilder.initialize(
-      {referenceBuilder.getI1Type(), referenceBuilder.getI1Type()});
+  referenceBuilder.initialize();
   auto referenceTarget = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceControl = referenceBuilder.h(referenceBuilder.allocQubit());
 
@@ -651,11 +603,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceMeasuredRZTargetWithMultiControlPhase) {
   constexpr double theta = 0.789;
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto q = programBuilder.allocQubitRegister(3);
   for (auto& qubit : q.qubits) {
     qubit = programBuilder.h(qubit);
@@ -671,11 +619,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   program = programBuilder.finalize(
       {targetOutcome, control0Outcome, control1Outcome});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto r = referenceBuilder.allocQubitRegister(3);
   for (auto& qubit : r.qubits) {
     qubit = referenceBuilder.h(qubit);
@@ -705,12 +649,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 
 TEST_F(QCOReplaceClassicalControlsTest,
        removesRZWhenControlAndTargetAreMeasured) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   auto target = programBuilder.h(programBuilder.allocQubit());
   Value controlOutcome;
@@ -731,12 +670,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
       outputTargetOutcome,
   });
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto referenceControl = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget = referenceBuilder.h(referenceBuilder.allocQubit());
   Value referenceControlOutcome;
@@ -771,11 +705,7 @@ TEST_P(QCOReplaceClassicalControlsRZZTest,
   const size_t measuredTargetIndex = GetParam();
   const size_t otherTargetIndex = 1U - measuredTargetIndex;
 
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   std::array targets{
       programBuilder.h(programBuilder.allocQubit()),
@@ -799,11 +729,7 @@ TEST_P(QCOReplaceClassicalControlsRZZTest,
   program = programBuilder.finalize(
       {measuredTargetOutcome, controlOutcome, otherTargetOutcome});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto referenceControl = referenceBuilder.h(referenceBuilder.allocQubit());
   std::array referenceTargets{
       referenceBuilder.h(referenceBuilder.allocQubit()),
@@ -840,11 +766,7 @@ TEST_P(QCOReplaceClassicalControlsRZZTest,
 
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceMeasuredRZZTargetPreservesReversedYields) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   auto target0 = programBuilder.h(programBuilder.allocQubit());
   auto target1 = programBuilder.h(programBuilder.allocQubit());
@@ -878,7 +800,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 
 TEST_F(QCOReplaceClassicalControlsTest,
        doesNotReplaceMeasuredRZZTargetWithAdditionalTarget) {
-  programBuilder.initialize({programBuilder.getI1Type()});
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   auto target0 = programBuilder.h(programBuilder.allocQubit());
   auto target1 = programBuilder.h(programBuilder.allocQubit());
@@ -908,11 +830,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 TEST_F(QCOReplaceClassicalControlsTest,
        replacesMeasuredRZZTargetWhenAllControlsAreMeasured) {
   constexpr double theta = 0.789;
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   auto target0 = programBuilder.h(programBuilder.allocQubit());
   auto target1 = programBuilder.h(programBuilder.allocQubit());
@@ -931,11 +849,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   program = programBuilder.finalize(
       {controlOutcome, targetOutcome, otherTargetOutcome});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto referenceControl = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget0 = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget1 = referenceBuilder.h(referenceBuilder.allocQubit());
@@ -969,11 +883,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 
 TEST_F(QCOReplaceClassicalControlsTest, replacesRZZWhenBothTargetsAreMeasured) {
   constexpr double theta = 0.789;
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   auto target0 = programBuilder.h(programBuilder.allocQubit());
   auto target1 = programBuilder.h(programBuilder.allocQubit());
@@ -990,11 +900,7 @@ TEST_F(QCOReplaceClassicalControlsTest, replacesRZZWhenBothTargetsAreMeasured) {
   programBuilder.sink(outputTargets.second);
   program = programBuilder.finalize({outcome0, outcome1, controlOutcome});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto referenceControl = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget0 = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget1 = referenceBuilder.h(referenceBuilder.allocQubit());
@@ -1025,14 +931,7 @@ TEST_F(QCOReplaceClassicalControlsTest, replacesRZZWhenBothTargetsAreMeasured) {
 }
 
 TEST_F(QCOReplaceClassicalControlsTest, removesRZZWhenAllQubitsAreMeasured) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   auto target0 = programBuilder.h(programBuilder.allocQubit());
   auto target1 = programBuilder.h(programBuilder.allocQubit());
@@ -1065,14 +964,7 @@ TEST_F(QCOReplaceClassicalControlsTest, removesRZZWhenAllQubitsAreMeasured) {
       outputTarget1Outcome,
   });
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto referenceControl = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget0 = referenceBuilder.h(referenceBuilder.allocQubit());
   auto referenceTarget1 = referenceBuilder.h(referenceBuilder.allocQubit());
@@ -1113,7 +1005,7 @@ TEST_F(QCOReplaceClassicalControlsTest, removesRZZWhenAllQubitsAreMeasured) {
 
 TEST_F(QCOReplaceClassicalControlsTest,
        replacesMeasuredRZZControlWithoutMeasuredTargets) {
-  programBuilder.initialize({programBuilder.getI1Type()});
+  programBuilder.initialize();
   auto control = programBuilder.h(programBuilder.allocQubit());
   auto target0 = programBuilder.h(programBuilder.allocQubit());
   auto target1 = programBuilder.h(programBuilder.allocQubit());
@@ -1148,11 +1040,7 @@ INSTANTIATE_TEST_SUITE_P(MeasuredTargetPositions,
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceMeasuredRZZTargetWithMultipleControls) {
   constexpr double theta = 0.789;
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto q = programBuilder.allocQubitRegister(4);
   for (auto& qubit : q.qubits) {
     qubit = programBuilder.h(qubit);
@@ -1172,11 +1060,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   program = programBuilder.finalize(
       {measuredTargetOutcome, controlOutcome, otherTargetOutcome});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto r = referenceBuilder.allocQubitRegister(4);
   for (auto& qubit : r.qubits) {
     qubit = referenceBuilder.h(qubit);
@@ -1212,12 +1096,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceMeasuredRZZTargetAndMeasuredControl) {
   constexpr double theta = 0.789;
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto q = programBuilder.allocQubitRegister(4);
   for (auto& qubit : q.qubits) {
     qubit = programBuilder.h(qubit);
@@ -1245,12 +1124,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
       otherTargetOutcome,
   });
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto r = referenceBuilder.allocQubitRegister(4);
   for (auto& qubit : r.qubits) {
     qubit = referenceBuilder.h(qubit);
@@ -1296,11 +1170,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 // classical control if it's not necessary.
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceClassicalControlsDontSwapPhaseIfNotNecessary) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto q0 = programBuilder.allocQubit();
   auto q1 = programBuilder.allocQubit();
   q0 = programBuilder.h(q0);
@@ -1318,11 +1188,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   programBuilder.sink(q1);
   program = programBuilder.finalize({c0, c1, c2});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto r0 = referenceBuilder.allocQubit();
   auto r1 = referenceBuilder.allocQubit();
   r0 = referenceBuilder.h(r0);
@@ -1354,8 +1220,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 // control qubits of a phase gate is swapped with the target qubit.
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceClassicalControlsSwapOneOfTwoPhase) {
-  programBuilder.initialize(
-      {programBuilder.getI1Type(), programBuilder.getI1Type()});
+  programBuilder.initialize();
   auto q0 = programBuilder.allocQubit();
   auto q1 = programBuilder.allocQubit();
   auto q2 = programBuilder.allocQubit();
@@ -1377,8 +1242,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   programBuilder.sink(q12[1]);
   program = programBuilder.finalize({c0, c1});
 
-  referenceBuilder.initialize(
-      {referenceBuilder.getI1Type(), referenceBuilder.getI1Type()});
+  referenceBuilder.initialize();
   auto r0 = referenceBuilder.allocQubit();
   auto r1 = referenceBuilder.allocQubit();
   auto r2 = referenceBuilder.allocQubit();
@@ -1416,11 +1280,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
 // operation.
 TEST_F(QCOReplaceClassicalControlsTest,
        replaceClassicalControlsSwapOnlyPossiblePhase) {
-  programBuilder.initialize({
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-      programBuilder.getI1Type(),
-  });
+  programBuilder.initialize();
   auto q0 = programBuilder.allocQubit();
   auto q1 = programBuilder.allocQubit();
   auto q2 = programBuilder.allocQubit();
@@ -1444,11 +1304,7 @@ TEST_F(QCOReplaceClassicalControlsTest,
   programBuilder.sink(q2);
   program = programBuilder.finalize({c0, c1, c2});
 
-  referenceBuilder.initialize({
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-      referenceBuilder.getI1Type(),
-  });
+  referenceBuilder.initialize();
   auto r0 = referenceBuilder.allocQubit();
   auto r1 = referenceBuilder.allocQubit();
   auto r2 = referenceBuilder.allocQubit();

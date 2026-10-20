@@ -129,7 +129,7 @@ TEST_F(QCModifierCanonicalizationTest, InverseU2PreservesDynamicAngles) {
 TEST_F(QCModifierCanonicalizationTest, InverseU2PreservesFullUnitary) {
   auto moduleOp = canonicalize(R"mlir(
     module {
-      func.func @test(%q: !qc.qubit) attributes {mqt.entry_point} {
+      func.func @test(%q: !qc.qubit) {
         %phi = arith.constant 2.5745926535897929 : f64
         %lambda = arith.constant -3.3755926535897931 : f64
         qc.inv(%a = %q) {
@@ -165,8 +165,7 @@ TEST_F(QCModifierCanonicalizationTest,
        InverseControlledU2PreservesFullUnitary) {
   auto moduleOp = canonicalize(R"mlir(
     module {
-      func.func @test(%q0: !qc.qubit, %q1: !qc.qubit, %q2: !qc.qubit)
-          attributes {mqt.entry_point} {
+      func.func @test(%q0: !qc.qubit, %q1: !qc.qubit, %q2: !qc.qubit) {
         %phi = arith.constant 2.5745926535897929 : f64
         %lambda = arith.constant -3.3755926535897931 : f64
         qc.inv(%a = %q0, %b = %q1, %c = %q2) {
