@@ -180,7 +180,8 @@ private:
     const auto name = function->getName();
     const auto arity = call.arg_size();
     if (name == QIR_INITIALIZE && arity == 1 &&
-        llvm::isa<llvm::ConstantPointerNull>(call.getArgOperand(0))) {
+        llvm::isa<llvm::ConstantPointerNull>(call.getArgOperand(0)) &&
+        instructions_.empty() && measuredQubits_.empty()) {
       return llvm::Error::success();
     }
     if (name == QIR_ARRAY_RECORD_OUTPUT && arity == 2) {

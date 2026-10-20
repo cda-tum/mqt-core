@@ -550,12 +550,21 @@ pass `program_format=ProgramFormat.IQM_JSON` to `compile_program` or
 `submit_program` as shown above.
 
 Compilation lowers the placed circuit to Base Profile QIR, then converts its PRX
-and CZ calls to IQM JSON. PRX angles use radians. QIR output records determine
-measurement order. Each output bit must select one measurement, and each
-measured qubit may be read only once. Parameters and qubit addresses must be
-constant. Reset, feedback, MOVE, and classical result computation are
-unsupported. QDMI-on-IQM owns authentication, calibration, and execution
-options.
+and CZ calls to IQM JSON. PRX angle and phase use radians. Physical QIR qubit
+handles map to target site IDs, not positions in the target's site list.
+
+The converter flattens QIR result records in call order. For supported Qiskit
+and OpenQASM register readout, the compiler emits these records in source
+classical-slot order. Complete terminal readout gives each output slot exactly
+one measurement of a distinct qubit. IQM measurement columns therefore already
+follow the source slots; QDMI-on-IQM reverses them into QDMI bit strings, and
+Qiskit formats the original registers without a decoding hook. This does not
+require measuring unused physical target qubits.
+
+Parameters and qubit addresses must be constant. Missing or overwritten output
+slots, repeated qubit measurements, reset, feedback, MOVE, and classical result
+computation are unsupported. QDMI-on-IQM transports the circuit, authentication,
+calibration selection, and execution options. IQM owns pulse compilation.
 
 ## Command line from a source build
 

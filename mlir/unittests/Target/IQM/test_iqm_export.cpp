@@ -137,6 +137,8 @@ TEST_F(IQMExportTest, RejectsUnsupportedCallsParametersAndControlFlow) {
            "call void @__quantum__qis__prx__body(double 0.5, double 0.0, ptr "
            "inttoptr (i64 1 to ptr))\n",
            "call void @__quantum__qis__cz__body(ptr null, ptr null)\n",
+           "call void @__quantum__qis__prx__body(double 1.0, double 0.0, ptr "
+           "null)\ncall void @__quantum__rt__initialize(ptr null)\n",
            "br i1 true, label %next, label %next\nnext:\n",
        }) {
     SCOPED_TRACE(prefix);

@@ -120,36 +120,6 @@ TEST(IQMJSONPipelineTest, UnrollsLoopsAndSynthesizesIQMBasis) {
   EXPECT_EQ(instructions.back().at("locus").size(), 2U);
 }
 
-TEST(IQMJSONPipelineTest, PreservesReadoutPermutationWithSparseNamedSites) {
-  auto output = runDefaultPipeline(CompilerInput(OpenQASMProgram(R"qasm(
-    OPENQASM 3.0;
-    qubit[2] q;
-    bit[2] result;
-    x q[0];
-    result[0] = measure q[1];
-    result[1] = measure q[0];
-  )qasm")),
-                                   makeIQMEnvironment());
-  ASSERT_TRUE(succeeded(output));
-  const auto instructions =
-      nlohmann::json::parse(std::get<IQMJSONProgram>(*output).source())
-          .at("instructions");
-  ASSERT_GT(instructions.size(), 1U);
-  const auto& readout = instructions.back().at("locus");
-  ASSERT_EQ(readout.size(), 2U);
-  EXPECT_NE(readout[0], readout[1]);
-  for (const auto& instruction : instructions) {
-    for (const auto& site : instruction.at("locus")) {
-      EXPECT_TRUE(site == "readout-a" || site == "readout-b" || site == "spare")
-          << site;
-    }
-    if (instruction.at("name") == "prx") {
-      EXPECT_EQ(instruction.at("locus")[0], readout[1]);
-    }
-  }
-  EXPECT_EQ(instructions.front().at("name"), "prx");
-}
-
 TEST(IQMJSONPipelineTest, RejectsReconstructedOutputsAndNonterminalGates) {
   for (const auto* source : {
            "qubit q; bit[2] result = 0; result[0] = measure q;",

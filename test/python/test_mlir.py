@@ -410,10 +410,14 @@ def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("frontend", ["openqasm", "qiskit"])
 def test_iqm_json_program(frontend: str, tmp_path: Path) -> None:
-    """Compile both frontends to IQM JSON and expose the text program API."""
+    """Preserve the PRX/CZ unitary and permuted readout across both frontends."""
     circuit = QuantumCircuit(2, 2)
-    circuit.r(0.5, -0.25, 0)
+    circuit.r(0.731, -0.419, 0)
+    circuit.r(-1.173, 0.627, 1)
     circuit.cz(0, 1)
+    circuit.r(1.097, 0.283, 0)
+    circuit.r(-0.461, -0.937, 1)
+    expected = Operator(circuit)
     circuit.measure([0, 1], [1, 0])
     if frontend == "qiskit":
         if not supports_qiskit_translation():
@@ -431,7 +435,29 @@ def test_iqm_json_program(frontend: str, tmp_path: Path) -> None:
 
     compiled = compile_program(source, target=target, program_format=ProgramFormat.IQM_JSON)
     assert compiled.program_format == ProgramFormat.IQM_JSON
-    assert json.loads(compiled.payload)["instructions"][-1]["name"] == "measure"
+    for payload in (direct.source, compiled.payload):
+        instructions = json.loads(payload)["instructions"]
+        assert instructions[-1]["name"] == "measure"
+        # c[0] holds q[1], so reverse the readout locus to recover logical order.
+        qubits = instructions[-1]["locus"][::-1]
+        assert len(set(qubits)) == 2
+        assert set(qubits) <= {site.name for site in target.sites}
+        unitary = np.eye(4, dtype=complex)
+        for instruction in instructions[:-1]:
+            if instruction["name"] == "prx":
+                angle, phase = instruction["args"]["angle"], instruction["args"]["phase"]
+                rotation = np.array([
+                    [np.cos(angle / 2), -1j * np.exp(-1j * phase) * np.sin(angle / 2)],
+                    [-1j * np.exp(1j * phase) * np.sin(angle / 2), np.cos(angle / 2)],
+                ])
+                index = qubits.index(instruction["locus"][0])
+                gate = np.kron(np.eye(2), rotation) if index == 0 else np.kron(rotation, np.eye(2))
+            else:
+                assert instruction["name"] == "cz"
+                assert set(instruction["locus"]) == set(qubits)
+                gate = np.diag([1, 1, 1, -1])
+            unitary = gate @ unitary
+        assert Operator(unitary).equiv(expected)
 
 
 @pytest.mark.parametrize(
