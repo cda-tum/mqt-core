@@ -551,6 +551,60 @@ same textual syntax; individual pass flags are not supported. The CLI and
 library share QCO pass and upstream transform registration. The driver also
 registers its conversion passes so they can be selected for debugging.
 
+(compiler-profiling)=
+
+#### Compiler profiling
+
+Record MLIR pass and rewrite actions with the
+[native action profiler](https://mlir.llvm.org/docs/ActionTracing/):
+
+```sh
+"$mqt_cc" input.qasm --profile-actions-to=compile.json > compiled.mlir
+```
+
+Open `compile.json` in [Perfetto](https://ui.perfetto.dev) to inspect the
+timeline. Use a separate trace file so it does not mix with compiler output.
+Tracing is disabled by default and adds recording overhead. The file is closed
+on normal success or pass failure; a crash or forced termination can leave it
+incomplete. The trace covers actions on the compiler context, including
+conversion passes, but does not time every parsing or serialization operation.
+
+For Python, enable pass progress and MLIR's timing and statistics reports
+through {py:class}`~mqt.core.mlir.CompilationOptions`:
+
+```python
+from mqt.core.mlir import CompilationOptions, compile_program
+
+options = CompilationOptions(
+    enable_pass_logging=True,
+    enable_timing=True,
+    enable_statistics=True,
+)
+compiled = compile_program("input.qasm", options=options)
+```
+
+Pass progress writes the pass name and `started`, `completed`, or `failed` to
+native stderr. Timing and statistics also use stderr; shell redirection can save
+them. All three controls are disabled by default and cover only pipelines that
+receive the compilation options, not every conversion or cleanup stage. Record
+order is nondeterministic during parallel execution. Timing follows
+[MLIR's pass timing semantics](https://mlir.llvm.org/docs/PassManagement/#pass-timing);
+overlapping pass durations must not be summed as total compilation time.
+
+Measure whole-process resource use with the operating system:
+
+```sh
+/usr/bin/time -v "$mqt_cc" input.qasm > compiled.mlir # Linux
+/usr/bin/time -l "$mqt_cc" input.qasm > compiled.mlir # macOS
+```
+
+The same commands can wrap a Python script. Peak memory then includes the
+interpreter and other work in that process; it is not memory allocated by an
+individual pass. On Slurm, use
+`sacct -j JOB_ID --format=JobID,State,Elapsed,TotalCPU,MaxRSS` and inspect the
+job-step rows. `MaxRSS` is the largest task memory value within a step, subject
+to the site's [accounting configuration](https://slurm.schedmd.com/sacct.html).
+
 #### Diagnostics and reproducers
 
 Use `--mlir-print-stacktrace-on-diagnostic` to attach a trace when the LLVM

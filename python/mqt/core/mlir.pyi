@@ -673,6 +673,7 @@ class CompilationOptions:
         enable_timing: bool = False,
         enable_statistics: bool = False,
         mapping: MappingOptions = ...,
+        enable_pass_logging: bool = False,
     ) -> None: ...
     @property
     def seed(self) -> int | None: ...
@@ -690,6 +691,12 @@ class CompilationOptions:
     def mapping(self) -> MappingOptions: ...
     @mapping.setter
     def mapping(self, arg: MappingOptions, /) -> None: ...
+    @property
+    def enable_pass_logging(self) -> bool:
+        """Write pass names and execution status to stderr."""
+
+    @enable_pass_logging.setter
+    def enable_pass_logging(self, arg: bool, /) -> None: ...
 
 class QuantumProgramInfo:
     """Quantum resources and static IR statistics.

@@ -32,6 +32,7 @@
 
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
+#include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
@@ -402,6 +403,7 @@ static int runCompiler(int argc, char** argv) {
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
+  tracing::DebugConfig::registerCLOptions();
 
   // Parse command-line options; exit on error and print to stderr
   llvm::cl::ParseCommandLineOptions(argc, argv,
@@ -532,6 +534,21 @@ static int runCompiler(int argc, char** argv) {
   llvm::SourceMgr sourceMgr;
   auto context = createCompilerContext();
   SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, context.get());
+  std::optional<tracing::InstallDebugHandler> debugHandler;
+  bool debugSetupFailed = false;
+  {
+    ScopedDiagnosticHandler setupDiagnosticHandler(
+        context.get(), [&](Diagnostic& diagnostic) {
+          if (diagnostic.getSeverity() == DiagnosticSeverity::Error) {
+            debugSetupFailed = true;
+          }
+          return failure();
+        });
+    debugHandler.emplace(*context, tracing::DebugConfig::createFromCLOptions());
+  }
+  if (debugSetupFailed) {
+    return 1;
+  }
   PassReproducerOptions reproducerOptions;
   ParserConfig parserConfig(context.get(), /*verifyAfterParse=*/!runReproducer);
   if (runReproducer) {

@@ -41,6 +41,8 @@ struct CompilationOptions {
   bool enableTiming = false;
   bool enableStatistics = false;
   MappingOptions mapping;
+  /// Write pass names and execution status to stderr.
+  bool enablePassLogging = false;
 };
 
 } // namespace mlir

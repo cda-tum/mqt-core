@@ -16,6 +16,7 @@ target_link_libraries(
   mqt-cc
   PRIVATE MQTCompilerQDMIAdapter
           MQTCompilerPipeline
+          MLIRDebug
           MLIRParser
           MLIRSupport
           MLIRQCOpenQASMTranslation

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from gc import collect
 from pathlib import Path
@@ -2144,12 +2145,63 @@ def test_compilation_seed_reaches_nested_modules() -> None:
     assert actual.ir != source.ir
 
 
-def test_compilation_timing_and_statistics(capfd: pytest.CaptureFixture[str]) -> None:
+@pytest.mark.parametrize("enable_pass_logging", [False, True])
+def test_compilation_timing_and_statistics(capfd: pytest.CaptureFixture[str], *, enable_pass_logging: bool) -> None:
     """Shared options reach MLIR timing and statistics instrumentation."""
-    compile_program(QASM_STRING, options=CompilationOptions(enable_timing=True, enable_statistics=True))
+    compile_program(
+        QASM_STRING,
+        options=CompilationOptions(enable_timing=True, enable_statistics=True, enable_pass_logging=enable_pass_logging),
+    )
     output = capfd.readouterr().err
     assert "Execution time report" in output
     assert "Pass statistics report" in output
+
+
+def test_compilation_pass_logging(capfd: pytest.CaptureFixture[str]) -> None:
+    """Optional pass logging preserves compiler output."""
+    assert not CompilationOptions().enable_pass_logging
+    expected = compile_program(QASM_STRING)
+    assert "[mqt-core] pass" not in capfd.readouterr().err
+
+    actual = compile_program(QASM_STRING, options=CompilationOptions(enable_pass_logging=True))
+    assert actual.ir == expected.ir
+    output = capfd.readouterr().err
+    assert "[mqt-core] pass CanonicalizerPass started\n" in output
+    assert "[mqt-core] pass CanonicalizerPass completed\n" in output
+    assert " failed\n" not in output
+
+
+def test_pass_logging_failure_is_local(capfd: pytest.CaptureFixture[str]) -> None:
+    """A failed pass is logged without affecting a later shared-context run."""
+    program = QCOProgram.from_mlir_str("module {}")
+    other = program.copy()
+    with pytest.raises(RuntimeError, match="Compiler action failed"):
+        program.run_pass_pipeline(
+            "set-qir-attributes-and-metadata", options=CompilationOptions(enable_pass_logging=True)
+        )
+    output = capfd.readouterr().err
+    assert "requires exactly one entry point" in output
+    assert "[mqt-core] pass QIRSetAttributesAndMetadata started\n" in output
+    assert "[mqt-core] pass QIRSetAttributesAndMetadata failed\n" in output
+    assert "[mqt-core] pass QIRSetAttributesAndMetadata completed\n" not in output
+
+    other.run_pass_pipeline("canonicalize")
+    assert "[mqt-core] pass" not in capfd.readouterr().err
+
+
+def test_concurrent_pass_logging(capfd: pytest.CaptureFixture[str]) -> None:
+    """Concurrent compilations keep complete pass log records."""
+    options = CompilationOptions(enable_pass_logging=True)
+    expected = compile_program(QASM_STRING, options=options)
+    records = capfd.readouterr().err.splitlines()
+    assert records
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(compile_program, QASM_STRING, options=options) for _ in range(4)]
+        for future in futures:
+            result = future.result()
+            assert isinstance(result, QCProgram)
+            assert result.ir == expected.ir
+    assert sorted(capfd.readouterr().err.splitlines()) == sorted(records * 4)
 
 
 @requires_qiskit_translation
