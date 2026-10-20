@@ -268,6 +268,11 @@ TEST_F(QCOTest, PrintsReadableQubitAndClassicalNames) {
   std::ignore = bit;
   auto moduleOp = builder.finalize();
   ASSERT_TRUE(moduleOp);
+  auto mainFunc = mlir::mqt::getEntryPoint(*moduleOp);
+  EXPECT_EQ(mainFunc.getNumResults(), 0U);
+  EXPECT_EQ(
+      cast<func::ReturnOp>(mainFunc.getBody().front().back()).getNumOperands(),
+      0U);
 
   std::string text;
   llvm::raw_string_ostream stream(text);
@@ -451,7 +456,7 @@ buildTensorControlFlow(QCOProgramBuilder& builder, ValueRange args,
 
 TEST_F(QCOTest, BuilderIfReturnsClassicalValues) {
   QCOProgramBuilder builder(context.get());
-  builder.initialize({builder.getI1Type(), builder.getI64Type()});
+  builder.initialize();
   auto tensor = builder.qtensorAlloc(1);
   auto [remainder, qubit] = builder.qtensorExtract(builder.qtensorAlloc(1), 0);
   const auto branch = [&](ValueRange args) {
@@ -763,46 +768,40 @@ TEST_F(QCOTest, BuilderRejectsChangedTensorRegisterAssociations) {
                "must preserve quantum inputs positionally");
 }
 
-TEST_F(QCOTest, CleanupPreservesReturnedStaticQubit) {
-  auto moduleOp = QCOProgramBuilder::build(
-      context.get(), [&](auto& builder) { return builder.staticQubit(0); });
-  ASSERT_TRUE(moduleOp);
-
-  auto mainFunc = *moduleOp->getOps<func::FuncOp>().begin();
-  auto returnOp = cast<func::ReturnOp>(mainFunc.getBody().front().back());
-  ASSERT_EQ(returnOp.getNumOperands(), 1U);
-  auto returnedQubit = returnOp.getOperand(0);
-  EXPECT_TRUE(returnedQubit.getDefiningOp<StaticOp>());
-  EXPECT_TRUE(returnedQubit.hasOneUse());
-  EXPECT_EQ(*returnedQubit.user_begin(), returnOp.getOperation());
-  EXPECT_TRUE(mainFunc.getBody().getOps<SinkOp>().empty());
-
-  ASSERT_TRUE(runQCOCleanupPipeline(*moduleOp).succeeded());
-  EXPECT_TRUE(verify(*moduleOp).succeeded());
-
-  returnOp = cast<func::ReturnOp>(mainFunc.getBody().front().back());
-  EXPECT_TRUE(returnOp.getOperand(0).getDefiningOp<StaticOp>());
+TEST_F(QCOTest, BuilderRejectsQuantumEntryResults) {
+  for (bool tensor : {false, true}) {
+    SCOPED_TRACE(tensor);
+    EXPECT_DEATH(
+        {
+          QCOProgramBuilder builder(context.get());
+          builder.initialize();
+          Value result;
+          if (tensor) {
+            result = builder.qtensorAlloc(2);
+          } else {
+            result = builder.staticQubit(0);
+          }
+          auto moduleOp = builder.finalize(result);
+        },
+        "cannot return quantum values");
+  }
 }
 
-TEST_F(QCOTest, CleanupPreservesReturnedQubitTensor) {
-  auto moduleOp = QCOProgramBuilder::build(
-      context.get(), [&](auto& builder) { return builder.qtensorAlloc(2); });
-  ASSERT_TRUE(moduleOp);
-
-  auto mainFunc = *moduleOp->getOps<func::FuncOp>().begin();
-  auto returnOp = cast<func::ReturnOp>(mainFunc.getBody().front().back());
-  ASSERT_EQ(returnOp.getNumOperands(), 1U);
-  auto returnedTensor = returnOp.getOperand(0);
-  EXPECT_TRUE(returnedTensor.getDefiningOp<qtensor::AllocOp>());
-  EXPECT_TRUE(returnedTensor.hasOneUse());
-  EXPECT_EQ(*returnedTensor.user_begin(), returnOp.getOperation());
-  EXPECT_TRUE(mainFunc.getBody().getOps<qtensor::DeallocOp>().empty());
-
-  ASSERT_TRUE(runQCOCleanupPipeline(*moduleOp).succeeded());
-  EXPECT_TRUE(verify(*moduleOp).succeeded());
-
-  returnOp = cast<func::ReturnOp>(mainFunc.getBody().front().back());
-  EXPECT_TRUE(returnOp.getOperand(0).getDefiningOp<qtensor::AllocOp>());
+TEST_F(QCOTest, CleanupPreservesQuantumHelperResults) {
+  for (const auto* type : {"!qco.qubit", "tensor<2x!qco.qubit>"}) {
+    SCOPED_TRACE(type);
+    const auto source =
+        "module { func.func @helper(%value: " + std::string(type) + ") -> " +
+        type + " { return %value : " + type + " } }";
+    auto moduleOp = parseSourceString<ModuleOp>(source, context.get());
+    ASSERT_TRUE(moduleOp);
+    ASSERT_TRUE(succeeded(runQCOCleanupPipeline(*moduleOp)));
+    EXPECT_TRUE(succeeded(verify(*moduleOp)));
+    auto helper = moduleOp->lookupSymbol<func::FuncOp>("helper");
+    auto returned = cast<func::ReturnOp>(helper.getBody().front().back());
+    ASSERT_EQ(returned.getNumOperands(), 1U);
+    EXPECT_EQ(returned.getOperand(0), helper.getArgument(0));
+  }
 }
 
 TEST_F(QCOTest, BuilderRejectsUntrackedTensorInitArg) {
@@ -866,7 +865,7 @@ TEST_F(QCOTest, BuilderSupportsIndependentClassicalRegisterInitialization) {
   auto zero = builder.allocClassicalBitRegister(3);
   auto undefined = builder.allocClassicalBitRegister(
       2, "undefined", cbit::Initialization::Undefined);
-  builder.retype({zero.getType(), undefined.getType()});
+
   auto moduleOp = builder.finalize({zero, undefined});
   ASSERT_TRUE(moduleOp);
   EXPECT_TRUE(succeeded(verify(*moduleOp)));
@@ -1019,10 +1018,11 @@ TEST_F(QCOTest, UnitaryVerifierRejectsInvalidFunctionAndCallContracts) {
         func.func private @plain(%q: !qco.qubit) -> !qco.qubit {
           return %q : !qco.qubit
         }
-        func.func @main(%q: !qco.qubit) -> !qco.qubit
+        func.func @main(%q: !qco.qubit)
             attributes {mqt.entry_point} {
           %out = qco.call @plain(%q) : (!qco.qubit) -> !qco.qubit
-          return %out : !qco.qubit
+          qco.sink %out : !qco.qubit
+          return
         }
       })mlir",
       R"mlir(module {
@@ -1032,10 +1032,12 @@ TEST_F(QCOTest, UnitaryVerifierRejectsInvalidFunctionAndCallContracts) {
           return %out : !qco.qubit
         }
         func.func @main(%left: !qco.qubit, %right: !qco.qubit)
-            -> (!qco.qubit, !qco.qubit) attributes {mqt.entry_point} {
+            attributes {mqt.entry_point} {
           %a, %b = qco.call @flip(%left, %right)
               : (!qco.qubit, !qco.qubit) -> (!qco.qubit, !qco.qubit)
-          return %a, %b : !qco.qubit, !qco.qubit
+          qco.sink %a : !qco.qubit
+          qco.sink %b : !qco.qubit
+          return
         }
       })mlir",
   };
@@ -1050,10 +1052,11 @@ TEST_F(QCOTest, UnitaryVerifierRejectsInvalidFunctionAndCallContracts) {
   auto resultModule = parseSourceString<ModuleOp>(R"mlir(module {
     func.func private @bad(%q: !qco.qubit)
         -> (!qco.qubit, !qco.qubit) attributes {mqt.unitary}
-    func.func @main(%q: !qco.qubit) -> !qco.qubit
+    func.func @main(%q: !qco.qubit)
         attributes {mqt.entry_point} {
       %out = qco.call @bad(%q) : (!qco.qubit) -> !qco.qubit
-      return %out : !qco.qubit
+      qco.sink %out : !qco.qubit
+      return
     }
   })mlir",
                                                   config);
@@ -1616,8 +1619,7 @@ TEST_F(QCOTest, UnitaryCallEffectsConservativelyHandleInvalidCallees) {
 
 TEST_F(QCOTest, DirectIfBuilder) {
   QCOProgramBuilder builder(context.get());
-  auto cbitType = cbit::RegisterType::get(context.get(), 1);
-  builder.initialize({cbitType, cbitType});
+  builder.initialize();
   auto zero = arith::ConstantIndexOp::create(builder, 0);
   auto one = arith::ConstantIndexOp::create(builder, 1);
   auto r0 = qtensor::AllocOp::create(builder, one);
@@ -2893,16 +2895,21 @@ TEST_F(QCOTest, CtrlPowSxExpands) {
 }
 
 TEST_F(QCOTest, CtrlGPhasePassesTargetsThrough) {
-  auto program = QCOProgramBuilder::build(context.get(), [&](auto& builder) {
-    auto controlIn = builder.staticQubit(0);
-    auto targetIn = builder.staticQubit(1);
-    auto [control, target] =
-        builder.ctrl(controlIn, targetIn, [&](Value targetArg) {
-          builder.gphase(0.123);
-          return targetArg;
-        });
-    return SmallVector<Value>{control, target};
-  });
+  auto program = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @test() -> (!qco.qubit, !qco.qubit) {
+        %angle = arith.constant 0.123 : f64
+        %control = qco.static 0 : !qco.qubit
+        %target = qco.static 1 : !qco.qubit
+        %out_control, %out_target = qco.ctrl(%control) targets(%arg = %target) {
+          qco.gphase(%angle)
+          qco.yield %arg : !qco.qubit
+        } : ({!qco.qubit}, {!qco.qubit})
+        return %out_control, %out_target : !qco.qubit, !qco.qubit
+      }
+    }
+  )mlir",
+                                             context.get());
   ASSERT_TRUE(program);
 
   ASSERT_TRUE(runQCOCleanupPipeline(*program).succeeded());

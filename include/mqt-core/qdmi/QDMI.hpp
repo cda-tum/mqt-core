@@ -838,6 +838,7 @@ public:
   /// Opening a job does not submit, clone, or modify the remote job.
   /// The returned handle can be used to query its state and retrieve results.
   /// @param jobId The nonempty opaque ID returned by @ref Job::getId.
+  /// @throws std::invalid_argument If the ID is empty or contains a null byte.
   /// @throws std::runtime_error If the driver or device cannot retrieve the
   /// job.
   /// @see QDMI_session_retrieve_job_by_id

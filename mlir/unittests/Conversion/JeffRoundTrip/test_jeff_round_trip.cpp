@@ -513,7 +513,7 @@ TEST(JeffRoundTripRegressionTest, RejectsInvalidJeffModuleMetadata) {
       "'jeff.entrypoint' function index is out of bounds");
 }
 
-TEST(JeffRoundTripRegressionTest, RestoresStatusResultAtEndOfEntryPoint) {
+TEST(JeffRoundTripRegressionTest, PreservesVoidEntryPoint) {
   DialectRegistry registry;
   registry.insert<mlir::mqt::MQTDialect, arith::ArithDialect, cbit::CBitDialect,
                   func::FuncDialect, mlir::jeff::JeffDialect, qco::QCODialect,
@@ -539,11 +539,9 @@ TEST(JeffRoundTripRegressionTest, RestoresStatusResultAtEndOfEntryPoint) {
 
   ASSERT_TRUE(succeeded(convertJeffToQCO(program)));
   EXPECT_TRUE(succeeded(verify(program)));
-  EXPECT_EQ(main.getFunctionType(),
-            builder.getFunctionType({}, {builder.getI64Type()}));
+  EXPECT_EQ(main.getFunctionType(), builder.getFunctionType({}, {}));
   auto returnOp = cast<func::ReturnOp>(block->getTerminator());
-  ASSERT_EQ(returnOp.getNumOperands(), 1);
-  EXPECT_TRUE(returnOp.getOperand(0).getType().isInteger(64));
+  EXPECT_EQ(returnOp.getNumOperands(), 0);
 }
 
 TEST(JeffRoundTripRegressionTest, RestoresEntryPointWithObservableResults) {

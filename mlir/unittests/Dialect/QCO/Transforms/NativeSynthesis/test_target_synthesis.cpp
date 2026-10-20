@@ -58,6 +58,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
@@ -256,7 +257,8 @@ protected:
   }
 
   [[nodiscard]] OwningOpRef<ModuleOp>
-  build(const mlir::function_ref<Value(QCOProgramBuilder&)>& builder) const {
+  build(const mlir::function_ref<llvm::SmallVector<Value>(QCOProgramBuilder&)>&
+            builder) const {
     return QCOProgramBuilder::build(context.get(), builder);
   }
 
@@ -309,8 +311,7 @@ TEST(TargetSynthesisPassContract, FactoriesAreIndependentlyConstructible) {
 
 TEST_F(TargetSynthesisTest, TargetPassesRequireTypedEnvironment) {
   const auto buildClassical = [&] {
-    return build(
-        [](QCOProgramBuilder& builder) { return builder.intConstant(0); });
+    return build([](QCOProgramBuilder&) { return llvm::SmallVector<Value>{}; });
   };
 
   auto synthesisModule = buildClassical();
@@ -357,7 +358,7 @@ TEST_F(TargetSynthesisTest, GPIPulsesPreserveFullUnitary) {
       auto [control, targetQubit] = builder.cx(q0, q1);
       builder.sink(control);
       builder.sink(builder.ry(theta, targetQubit));
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     };
     auto expected = build(circuit);
     auto actual = build(circuit);
@@ -420,7 +421,7 @@ TEST_F(TargetSynthesisTest, ZSXXSynthesisPreservesFullUnitary) {
           auto halfTurnModule = build([](QCOProgramBuilder& builder) {
             builder.sink(
                 builder.u(std::numbers::pi, .42, -.31, builder.staticQubit(0)));
-            return builder.intConstant(0);
+            return llvm::SmallVector<Value>{};
           });
           ASSERT_TRUE(mlir::succeeded(
               runTargetPass(*halfTurnModule, target,
@@ -439,7 +440,7 @@ TEST_F(TargetSynthesisTest, ZSXXSynthesisPreservesFullUnitary) {
             auto [control, targetQubit] = builder.cx(q0, q1);
             builder.sink(control);
             builder.sink(builder.ry(theta, targetQubit));
-            return builder.intConstant(0);
+            return llvm::SmallVector<Value>{};
           };
           for (const std::optional<unsigned> parameterIndex : {
                    std::optional<unsigned>{},
@@ -503,7 +504,7 @@ TEST_F(TargetSynthesisTest, FixedRXGatesReuseNativeXShortcut) {
     const auto circuit = [](QCOProgramBuilder& builder) {
       builder.sink(
           builder.u(std::numbers::pi, .37, -.29, builder.staticQubit(0)));
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     };
     auto expected = build(circuit);
     auto actual = build(circuit);
@@ -541,7 +542,7 @@ TEST_F(TargetSynthesisTest, NegativeRXGateFusionShortensNativeRuns) {
         qubit = builder.rz(std::numbers::pi, qubit);
       }
       builder.sink(qubit);
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     };
     auto expected = build(circuit);
     auto actual = build(circuit);
@@ -568,7 +569,7 @@ TEST_F(TargetSynthesisTest, FixedRXGateLoweringPreservesNativeSXdg) {
       })));
   const auto circuit = [](QCOProgramBuilder& builder) {
     builder.sink(builder.sxdg(builder.staticQubit(0)));
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(circuit);
   auto actual = build(circuit);
@@ -604,7 +605,7 @@ TEST_F(TargetSynthesisTest, FixedRXGateFusionPreservesNativeAngles) {
           qubit = builder.rz(-std::numbers::pi, qubit);
         }
         builder.sink(qubit);
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       };
       auto expected = build(circuit);
       auto actual = build(circuit);
@@ -660,7 +661,7 @@ TEST_F(TargetSynthesisTest, FixedParametersRejectNonNativeValues) {
     auto program = build([&](QCOProgramBuilder& builder) {
       auto qubit = builder.rz(angle, builder.staticQubit(0));
       builder.sink(qubit);
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     });
     if (angle == 0.25) {
       EXPECT_TRUE(mlir::succeeded(runTargetPass(
@@ -684,7 +685,7 @@ TEST_F(TargetSynthesisTest, TwoQubitGateFusionRequiresStrictImprovement) {
     const auto q1Input = builder.staticQubit(1);
     auto [q0, q1] = builder.cx(q0Input, q1Input);
     std::tie(q0, q1) = builder.cx(q0, q1);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(adjacentCx);
   auto optimized = build(adjacentCx);
@@ -701,7 +702,7 @@ TEST_F(TargetSynthesisTest, TwoQubitGateFusionRequiresStrictImprovement) {
     q0 = builder.z(q0);
     std::tie(q1, q0) = builder.cx(q1, q0);
     std::tie(q0, q1) = builder.cx(q0, q1);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto before = printModule(*nonImproving);
   auto& block = mainFunction(*nonImproving).getBody().front();
@@ -727,7 +728,7 @@ TEST_F(TargetSynthesisTest,
     q1 = builder.x(q1);
     q0 = builder.z(q0);
     std::tie(q0, q1) = builder.cx(q0, q1);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(interleaved);
   auto optimized = build(interleaved);
@@ -752,7 +753,7 @@ TEST_F(TargetSynthesisTest, NativeSynthesisFusesSwapWithCx) {
         if (!swapFirst) {
           std::tie(q0, q1) = builder.swap(q0, q1);
         }
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       };
       auto expected = build(circuit);
       auto optimized = build(circuit);
@@ -801,7 +802,7 @@ TEST_F(TargetSynthesisTest, ReadOnlyNativeCostMatchesSynthesis) {
         auto [a, b] =
             builder.cx(builder.staticQubit(0), builder.staticQubit(1));
         std::tie(a, b) = builder.swap(a, b);
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       });
       const auto before = printModule(*moduleOp);
       const auto shared =
@@ -897,7 +898,7 @@ TEST_F(TargetSynthesisTest, NativeCostSelectsCheapestAvailableEntangler) {
               denseMatrix(builder, 4, matrix.data));
           builder.sink(outputs[0]);
           builder.sink(outputs[1]);
-          return builder.intConstant(0);
+          return llvm::SmallVector<Value>{};
         };
         auto expected = build(circuit);
         auto actual = build(circuit);
@@ -965,7 +966,7 @@ TEST_F(TargetSynthesisTest, NativeCostPreservesSingletonNativeGates) {
       if (followedByOneQubitGate) {
         a = builder.h(a);
       }
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     });
     mlir::qco::NativeCostTracker tracker(target, 2023);
     const std::array<size_t, 2> vertices{0, 1};
@@ -1022,7 +1023,7 @@ TEST_F(TargetSynthesisTest, NativeCostPreservesCircuitOrderInBothDirections) {
         q0 = values[reverseOperands ? 1 : 0];
         q1 = values[reverseOperands ? 0 : 1];
       }
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     });
     auto gates =
         llvm::to_vector(mainFunction(*moduleOp).getOps<UnitaryOpInterface>());
@@ -1079,7 +1080,7 @@ TEST_F(TargetSynthesisTest,
       if (!before) {
         a = builder.ry(0.37, a);
       }
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     });
     mlir::qco::NativeCostTracker tracker(target, 2023);
     tracker.reset(mlir::qco::WireDirection::Backward);
@@ -1117,7 +1118,7 @@ TEST_F(TargetSynthesisTest, NativeCachesPreserveDecompositionsAfterEviction) {
     auto moduleOp = build([](QCOProgramBuilder& builder) {
       auto [a, b] = builder.cx(builder.staticQubit(0), builder.staticQubit(1));
       std::tie(a, b) = builder.swap(a, b);
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     });
     const auto shared = NativeCostTable::precompute(*moduleOp, seed);
     moduleOp = {};
@@ -1375,7 +1376,7 @@ TEST_F(TargetSynthesisTest, ColdCostKeepsRunsAcrossCancelingPairs) {
     std::tie(b, c) = builder.cx(b, c);
     std::tie(b, c) = builder.cx(b, c);
     std::tie(a, b) = builder.cx(a, b);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto before = printModule(*moduleOp);
   llvm::SmallVector<
@@ -1456,7 +1457,7 @@ TEST_F(TargetSynthesisTest, ColdCostIncludesPositiveSwapAdjustment) {
       std::tie(a, b) = builder.rxx(std::numbers::pi / 2, a, b);
     }
     std::tie(a, b) = builder.swap(a, b);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto before = printModule(*moduleOp);
   mlir::qco::NativeCostTracker costs(target, 2023);
@@ -1506,7 +1507,7 @@ TEST_F(TargetSynthesisTest, ColdCostBarrierJoinsQubitDependencies) {
         builder.staticQubit(2),
         builder.staticQubit(3),
     }));
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   mlir::qco::NativeCostTracker costs(target, 2023);
   costs.appendSwap(0, 1);
@@ -1543,7 +1544,7 @@ TEST_F(TargetSynthesisTest, NativeSynthesisUsesBlockCostInTargetBasis) {
           std::tie(a, b) = builder.rzz(0.3, a, b);
           std::tie(a, b) = builder.rxx(0.4, a, b);
         }
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       };
       auto expected = build(circuit);
       auto synthesized = build(circuit);
@@ -1578,7 +1579,7 @@ TEST_F(TargetSynthesisTest, PrePlacementFusionRequiresSmallerNativeCircuit) {
       auto [a, b] =
           builder.swap(builder.staticQubit(0), builder.staticQubit(1));
       std::tie(a, b) = nativeSwap ? builder.rzz(0.3, a, b) : builder.cx(a, b);
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     });
     const auto before = printModule(*moduleOp);
     ASSERT_TRUE(mlir::succeeded(
@@ -1607,7 +1608,7 @@ TEST_F(TargetSynthesisTest, TwoQubitGateFusionPreservesUnevenWireRuns) {
     q1 = builder.ry(0.4, q1);
     q1 = builder.rz(0.5, q1);
     std::tie(q0, q1) = builder.cx(q0, q1);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(uneven);
   auto optimized = build(uneven);
@@ -1642,7 +1643,7 @@ TEST_F(TargetSynthesisTest,
         // Failed block synthesis must fall back to the individual diagnostic.
         static_cast<void>(builder.cx(outputs[0], outputs[1]));
       }
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     });
     ASSERT_TRUE(mlir::succeeded(mlir::verify(*moduleOp)));
     ASSERT_TRUE(mlir::succeeded(mlir::qco::verifyLinearity(*moduleOp)));
@@ -1698,7 +1699,7 @@ TEST_F(TargetSynthesisTest, TwoQubitGateFusionExposesEarlierRunContinuations) {
         }
         std::tie(q0, q2) = builder.cx(q0, q2);
         std::tie(q0, q1) = builder.cx(q0, q1);
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       };
       auto expected = build(adjacentRuns);
       auto optimized = build(adjacentRuns);
@@ -1725,7 +1726,7 @@ TEST_F(TargetSynthesisTest, TwoQubitGateFusionEmitsSymmetricEntangler) {
     auto [q0, q1] = builder.cx(q0Input, q1Input);
     std::tie(q1, q0) = builder.cx(q1, q0);
     std::tie(q1, q0) = builder.cx(q1, q0);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(reducible);
   auto optimized = build(reducible);
@@ -1743,7 +1744,7 @@ TEST_F(TargetSynthesisTest, TwoQubitGateFusionLeavesIndividualOpsAlone) {
     const auto q0Input = builder.staticQubit(0);
     const auto q1Input = builder.staticQubit(1);
     [[maybe_unused]] auto [q0, q1] = builder.swap(q0Input, q1Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto before = printModule(*module);
   ASSERT_TRUE(
@@ -1800,7 +1801,7 @@ TEST_F(TargetSynthesisTest, SqrtISwapSynthesisIsMinimalAndConforms) {
         std::tie(q0, q1) =
             builder.xx_plus_yy(-std::numbers::pi / 2., 0., q0, q1);
       }
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     };
     auto expected = build(circuit);
     auto synthesized = build(circuit);
@@ -1856,7 +1857,7 @@ TEST_F(TargetSynthesisTest,
     for (auto qubit : qubits) {
       builder.sink(qubit);
     }
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
 
   for (const bool useRxx : {false, true}) {
@@ -1902,7 +1903,7 @@ TEST_F(TargetSynthesisTest, NativeSynthesisSharesRepeatedParameterConstants) {
       auto qubit = builder.staticQubit(wire);
       builder.sink(builder.h(qubit));
     }
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(hadamards);
   auto synthesized = build(hadamards);
@@ -1964,7 +1965,7 @@ TEST_F(TargetSynthesisTest, SqrtISwapCapabilityRequiresFixedParameters) {
     auto [q0, q1] = builder.xx_plus_yy(.2, 0., builder.staticQubit(0),
                                        builder.staticQubit(1));
     std::tie(q0, q1) = builder.xx_plus_yy(-std::numbers::pi / 2., .1, q0, q1);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   program->walk([&](mlir::qco::XXPlusYYOp op) {
     EXPECT_FALSE(target.supports(op.getOperation()));
@@ -1982,7 +1983,7 @@ TEST_F(TargetSynthesisTest, SqrtISwapCapabilityHonorsPlacement) {
     [[maybe_unused]] auto [q0, q1] =
         builder.xx_plus_yy(-std::numbers::pi / 2., 0., builder.staticQubit(0),
                            builder.staticQubit(1));
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   ASSERT_TRUE(program);
   program->walk([&](mlir::qco::XXPlusYYOp op) {
@@ -2003,7 +2004,7 @@ TEST_F(TargetSynthesisTest, SqrtISwapReversesPlacementWithoutSynthesisBasis) {
     [[maybe_unused]] auto qubits =
         builder.xx_plus_yy(-std::numbers::pi / 2., 0., builder.staticQubit(1),
                            builder.staticQubit(0));
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(circuit);
   auto synthesized = build(circuit);
@@ -2022,7 +2023,7 @@ TEST_F(TargetSynthesisTest, TargetNativeSynthesisRemovesOrdinarySwap) {
     const auto q0Input = builder.staticQubit(0);
     const auto q1Input = builder.staticQubit(1);
     [[maybe_unused]] auto [q0, q1] = builder.swap(q0Input, q1Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(swap);
   auto synthesized = build(swap);
@@ -2044,7 +2045,7 @@ TEST_F(TargetSynthesisTest,
     auto q0 = builder.staticQubit(0);
     auto q1 = builder.staticQubit(1);
     std::tie(q1, q0) = builder.cx(q1, q0);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto target = makeOneWayUCxTarget();
   attachTestEnvironment(*module, target);
@@ -2065,7 +2066,7 @@ TEST_F(TargetSynthesisTest,
     q0 = builder.h(q0);
     std::tie(q0, q1) = builder.cx(q0, q1);
     q1 = builder.h(q1);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(circuit);
   auto synthesized = build(circuit);
@@ -2087,7 +2088,7 @@ TEST_F(TargetSynthesisTest, MappingLeavesDirectionRepairToSynthesis) {
     const auto q1Input = builder.allocQubit();
     auto [q0, q1] = builder.cx(q0Input, q1Input);
     std::tie(q1, q0) = builder.cx(q1, q0);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto target =
       makeOneWayUCxTarget(Connectivity::fromCouplings({{0, 1}}));
@@ -2143,7 +2144,7 @@ TEST_F(TargetSynthesisTest, ConformanceRejectsUnsupportedEntanglerDirection) {
     const auto q0Input = builder.staticQubit(0);
     const auto q1Input = builder.staticQubit(1);
     [[maybe_unused]] const auto [q0, q1] = builder.cx(q0Input, q1Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto target = makeOneWayUCxTarget();
   const auto diagnostics = expectTargetFailure(
@@ -2166,7 +2167,7 @@ TEST_F(TargetSynthesisTest,
     for (Value output : outputs) {
       builder.sink(output);
     }
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto target = makeOneWayUCxTarget();
 
@@ -2244,7 +2245,7 @@ TEST_F(TargetSynthesisTest,
     auto h = builder.h(outputs[0]);
     builder.sink(h);
     builder.sink(outputs[1]);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   // Exercise synthesis diagnostics for non-positional input outside the
   // program builder's contract.
@@ -2380,7 +2381,7 @@ TEST_F(TargetSynthesisTest, AcceptsMatchingBranchSitePermutations) {
     };
     auto outputs = builder.qcoIf(true, ValueRange{q0, q1}, forward, forward);
     std::tie(q0, q1) = builder.cx(outputs[0], outputs[1]);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   // Site analysis also accepts matching permutations in externally built IR.
   auto branch = *mainFunction(*moduleOp).getOps<mlir::qco::IfOp>().begin();
@@ -2400,7 +2401,7 @@ TEST_F(TargetSynthesisTest,
   auto module = build([](QCOProgramBuilder& builder) {
     auto qubit = builder.staticQubit(1);
     qubit = builder.h(qubit);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto target =
       valid(Target::create(2, Connectivity::allToAll(),
@@ -2422,7 +2423,7 @@ TEST_F(TargetSynthesisTest,
     const auto q1Input = builder.staticQubit(0);
     const auto q2Input = builder.staticQubit(2);
     [[maybe_unused]] const auto [q1, q2] = builder.swap(q1Input, q2Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto target = valid(
       Target::create(3, Connectivity::fromCouplings({{0, 1}, {1, 2}}),
@@ -2450,7 +2451,7 @@ TEST_F(TargetSynthesisTest,
   const auto hadamard = [](QCOProgramBuilder& builder) {
     auto qubit = builder.staticQubit(0);
     qubit = builder.h(qubit);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(hadamard);
   auto synthesized = build(hadamard);
@@ -2485,7 +2486,7 @@ TEST_F(TargetSynthesisTest, TargetNativeSingleQubitFusionRequiresImprovement) {
         qubit = builder.h(qubit);
         qubit = builder.rz(0.5, qubit);
       }
-      return builder.intConstant(0);
+      return llvm::SmallVector<Value>{};
     };
     auto expected = build(circuit);
     auto synthesized = build(circuit);
@@ -2511,7 +2512,7 @@ TEST_F(TargetSynthesisTest, SingleQubitFusionTouchesOnlySelectedWire) {
       qubit = builder.h(qubit);
       qubit = builder.t(qubit);
     }
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(mlir::succeeded(mlir::verify(*moduleOp)));
@@ -2766,7 +2767,7 @@ TEST_F(TargetSynthesisTest, ParameterizedEntanglersUseCartanAngles) {
             denseMatrix(builder, 4, matrix.data));
         builder.sink(values[0]);
         builder.sink(values[1]);
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       });
       const auto shared =
           mlir::qco::NativeCostTable::precompute(*original, 2023);
@@ -3185,7 +3186,7 @@ TEST_F(TargetSynthesisTest, SingleQubitSynthesisNeedsNoEntangler) {
     auto qubit = builder.staticQubit(0);
     qubit = builder.ry(0.123, qubit);
     builder.gphase(0.25);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(rotation);
   auto synthesized = build(rotation);
@@ -3304,7 +3305,7 @@ TEST_F(TargetSynthesisTest, TwoQubitSynthesisRequiresEntangler) {
     auto input0 = builder.staticQubit(0);
     auto input1 = builder.staticQubit(1);
     [[maybe_unused]] auto [q0, q1] = builder.cx(input0, input1);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto target = valid(
       Target::create(2, Connectivity::allToAll(),
@@ -3365,13 +3366,13 @@ TEST_F(TargetSynthesisTest, DenseUnitaryHasAsymmetricTwoQubitDDSemantics) {
     auto q0 = builder.staticQubit(0);
     auto q1 = builder.staticQubit(1);
     builder.unitary(ValueRange{q0, q1}, denseMatrix(builder, 4, CX_MATRIX));
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   const auto cxReference = [](QCOProgramBuilder& builder) {
     const auto q0Input = builder.staticQubit(0);
     const auto q1Input = builder.staticQubit(1);
     [[maybe_unused]] auto [q0, q1] = builder.cx(q0Input, q1Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(cxReference);
   auto actual = build(denseCx);
@@ -3385,12 +3386,12 @@ TEST_F(TargetSynthesisTest,
   const auto denseX = [](QCOProgramBuilder& builder) {
     const auto qubit = builder.staticQubit(0);
     builder.unitary(ValueRange{qubit}, denseMatrix(builder, 2, X_MATRIX));
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   const auto xReference = [](QCOProgramBuilder& builder) {
     auto qubit = builder.staticQubit(0);
     qubit = builder.x(qubit);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expectedX = build(xReference);
   auto synthesizedX = build(denseX);
@@ -3407,13 +3408,13 @@ TEST_F(TargetSynthesisTest,
     auto q0 = builder.staticQubit(0);
     auto q1 = builder.staticQubit(1);
     builder.unitary(ValueRange{q0, q1}, denseMatrix(builder, 4, CX_MATRIX));
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   const auto cxReference = [](QCOProgramBuilder& builder) {
     const auto q0Input = builder.staticQubit(0);
     const auto q1Input = builder.staticQubit(1);
     [[maybe_unused]] auto [q0, q1] = builder.cx(q0Input, q1Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expectedCx = build(cxReference);
   auto synthesizedCx = build(denseCx);
@@ -3431,7 +3432,7 @@ TEST_F(TargetSynthesisTest, TargetNativeSynthesisPreservesNativeSwap) {
     const auto q0Input = builder.staticQubit(0);
     const auto q1Input = builder.staticQubit(1);
     [[maybe_unused]] auto [q0, q1] = builder.swap(q0Input, q1Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto swapTarget = valid(
       Target::create(2, Connectivity::allToAll(),
@@ -3454,7 +3455,7 @@ TEST_F(TargetSynthesisTest, TargetNativeSynthesisPreservesNativeGlobalPhase) {
     auto qubit = builder.staticQubit(0);
     qubit = builder.x(qubit);
     builder.gphase(0.25);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(phasedX);
   auto synthesized = build(phasedX);
@@ -3508,7 +3509,7 @@ TEST_F(TargetSynthesisTest,
        TargetNativeSynthesisHandlesClassicalScopeGlobalPhases) {
   auto original = mlir::parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @main(%condition: i1, %theta: f64, %bound: index) -> !qco.qubit attributes {mqt.entry_point} {
+      func.func @main(%condition: i1, %theta: f64, %bound: index) attributes {mqt.entry_point} {
         %c0 = arith.constant 0 : index
         %c1 = arith.constant 1 : index
         %q = qco.static 0 : !qco.qubit
@@ -3541,7 +3542,8 @@ TEST_F(TargetSynthesisTest,
         default args(%a = %b) {
           qco.yield %a : !qco.qubit
         }
-        return %s : !qco.qubit
+        qco.sink %s : !qco.qubit
+        return
       }
     }
   )mlir",
@@ -3577,7 +3579,7 @@ TEST_F(TargetSynthesisTest,
        TargetNativeSynthesisPreservesUnextractedModifierPhase) {
   auto moduleOp = mlir::parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @main(%exponent: f64) -> !qco.qubit attributes {mqt.entry_point} {
+      func.func @main(%exponent: f64) attributes {mqt.entry_point} {
         %theta = arith.constant 0.371 : f64
         %q = qco.static 0 : !qco.qubit
         %p = qco.pow(%exponent) (%a = %q) {
@@ -3585,7 +3587,8 @@ TEST_F(TargetSynthesisTest,
           qco.gphase(%theta)
           qco.yield %x : !qco.qubit
         } : {!qco.qubit} -> {!qco.qubit}
-        return %p : !qco.qubit
+        qco.sink %p : !qco.qubit
+        return
       }
     }
   )mlir",
@@ -3612,7 +3615,7 @@ TEST_F(TargetSynthesisTest,
   const auto controlledPhase = [](QCOProgramBuilder& builder) {
     auto control = builder.staticQubit(0);
     static_cast<void>(builder.cgphase(0.25, control));
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(controlledPhase);
   auto optimized = build(controlledPhase);
@@ -3635,7 +3638,7 @@ TEST_F(TargetSynthesisTest,
     auto control = builder.staticQubit(0);
     control = builder.cgphase(0.25, control);
     static_cast<void>(control);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(controlledPhase);
   auto synthesized = build(controlledPhase);
@@ -3659,7 +3662,7 @@ TEST_F(TargetSynthesisTest, TargetNativeSynthesisUsesHomogeneousCapability) {
     const auto q0Input = builder.staticQubit(0);
     const auto q1Input = builder.staticQubit(1);
     [[maybe_unused]] auto [q0, q1] = builder.swap(q0Input, q1Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(swap);
   auto synthesized = build(swap);
@@ -3692,7 +3695,7 @@ TEST_F(TargetSynthesisTest, UnrestrictedTargetOptimizesNativeBlocks) {
     std::tie(q0, q1) = builder.cx(q0, q1);
     q0 = builder.h(q0);
     builder.gphase(0.25);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   };
   auto expected = build(circuit);
   auto synthesized = build(circuit);
@@ -3715,7 +3718,7 @@ TEST_F(TargetSynthesisTest, NativePowShellHidesItsImplementationBody) {
     auto qubit = builder.staticQubit(0);
     qubit = builder.pow(2.0, qubit,
                         [&](Value argument) { return builder.h(argument); });
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto powOnly = valid(
       Target::create(1, Connectivity::allToAll(),
@@ -3776,7 +3779,7 @@ TEST_F(TargetSynthesisTest, MissingBasisIsDiagnosedOnlyWhenLoweringIsNeeded) {
   auto supported = build([](QCOProgramBuilder& builder) {
     auto qubit = builder.staticQubit(0);
     qubit = builder.h(qubit);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   attachTestEnvironment(*supported, hOnly);
   const auto before = printModule(*supported);
@@ -3789,7 +3792,7 @@ TEST_F(TargetSynthesisTest, MissingBasisIsDiagnosedOnlyWhenLoweringIsNeeded) {
   auto unsupported = build([](QCOProgramBuilder& builder) {
     auto qubit = builder.staticQubit(0);
     qubit = builder.x(qubit);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto diagnostics = expectTargetFailure(
       *unsupported, hOnly, mlir::qco::createTargetNativeSynthesis());
@@ -3937,7 +3940,7 @@ TEST_F(TargetSynthesisTest,
     auto q10 = builder.staticQubit(10);
     auto q20 = builder.staticQubit(20);
     std::tie(q20, q10) = builder.cx(q20, q10);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   ASSERT_TRUE(mlir::succeeded(runTargetPass(
       *reversed, target, mlir::qco::createTargetNativeSynthesis())));
@@ -3948,7 +3951,7 @@ TEST_F(TargetSynthesisTest,
     const auto q30Input = builder.staticQubit(30);
     const auto q20Input = builder.staticQubit(20);
     [[maybe_unused]] auto [q30, q20] = builder.cx(q30Input, q20Input);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto diagnostics = expectTargetFailure(
       *unknownSite, target, mlir::qco::createVerifyTargetConformance());
@@ -3975,12 +3978,12 @@ TEST_F(TargetSynthesisTest, ConformanceRejectsDynamicAllocations) {
   expectDynamicAllocationFailure(build([](QCOProgramBuilder& builder) {
     auto qubit = builder.allocQubit();
     qubit = builder.x(qubit);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   }));
   expectDynamicAllocationFailure(build([](QCOProgramBuilder& builder) {
     auto qubits = builder.allocQubitRegister(1);
     qubits[0] = builder.x(qubits[0]);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   }));
 }
 
@@ -4027,7 +4030,7 @@ TEST_F(TargetSynthesisTest, ConformanceChecksTypeArityAndParameters) {
       build([](QCOProgramBuilder& builder) {
         auto qubit = builder.staticQubit(10);
         qubit = builder.h(qubit);
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       }),
       "'qco.h'", "arity 1 and 0 parameter(s)");
 
@@ -4040,7 +4043,7 @@ TEST_F(TargetSynthesisTest, ConformanceChecksTypeArityAndParameters) {
       build([](QCOProgramBuilder& builder) {
         auto qubit = builder.staticQubit(10);
         qubit = builder.x(qubit);
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       }),
       "'qco.x'", "arity 1 and 0 parameter(s)");
 
@@ -4052,7 +4055,7 @@ TEST_F(TargetSynthesisTest, ConformanceChecksTypeArityAndParameters) {
       build([](QCOProgramBuilder& builder) {
         auto qubit = builder.staticQubit(10);
         qubit = builder.rz(0.25, qubit);
-        return builder.intConstant(0);
+        return llvm::SmallVector<Value>{};
       }),
       "'qco.rz'", "arity 1 and 1 parameter(s)");
 }
@@ -4063,7 +4066,7 @@ TEST_F(TargetSynthesisTest, ConformanceChecksNonUnitaryCapabilities) {
     auto [measured, result] = builder.measure(qubit);
     static_cast<void>(result);
     measured = builder.reset(measured);
-    return builder.intConstant(0);
+    return llvm::SmallVector<Value>{};
   });
   const auto xOnly = valid(
       Target::create(1, Connectivity::allToAll(),

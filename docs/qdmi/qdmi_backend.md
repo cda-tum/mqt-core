@@ -464,6 +464,19 @@ reject an invalid circuit before any job in its batch is submitted. This check
 uses the native device sites because a backend extension may hide sites from its
 public Target or use preprocessing to address them. It does not route circuits.
 
+Equivalent device aliases contribute all their placements to the Target. For
+overlapping placements, the first advertised alias supplies the calibration. An
+alias with global support supplies the global calibration instead of local
+placements. Three-parameter `cu3` and four-parameter `cu` remain distinct gates.
+Backend extensions must use distinct Target names for unequal instructions,
+including gates with different fixed parameters; conflicting aliases are
+rejected.
+
+OpenQASM 3 serialization preserves floating-point gate parameters without
+rounding them to nearby constants. Qiskit's OpenQASM 2 exporter can round values
+near zero or multiples of pi and offers no option to disable this behavior. Use
+OpenQASM 3 when these differences matter.
+
 Control-flow instructions require explicit support in the backend's Target;
 their bodies are checked recursively using the enclosing circuit's qubits.
 Advertising OpenQASM 3 or QPY alone does not enable control flow. Custom

@@ -97,9 +97,11 @@ because their basis indices do not fit the sparse representation.
 
 Dense results are written into the caller's buffer without retaining another
 dense copy. Reuse that buffer when reading the same state repeatedly. Sparse
-amplitudes are cached because keys and values are queried separately. Allocation
-failures during result retrieval return `QDMI_ERROR_OUTOFMEM` and can be
-retried.
+size queries count paths through the decision diagram and cache only the count;
+each key or value read traverses the diagram again. Counts are reused for equal
+child nodes, but other shared paths can be revisited, so sizing can still grow
+with the number of represented amplitudes. Allocation failures during result
+retrieval return `QDMI_ERROR_OUTOFMEM` and can be retried.
 
 ## Multi-program execution
 
@@ -174,3 +176,25 @@ job.wait()
 print(job.get_counts())
 print(job.get_dense_statevector())
 ```
+
+### Large statevectors
+
+`get_dense_statevector()` returns a Python list with one complex object per
+amplitude. For a compact NumPy representation, retrieve the result bytes and
+create a view:
+
+```{code-cell} ipython3
+import numpy as np
+
+# QDMI_JOB_RESULT_STATEVECTOR_DENSE has value 3.
+state = np.frombuffer(job.get_results(3), dtype=np.complex128)
+print(state)
+```
+
+The view keeps the bytes alive and uses 16 bytes per amplitude, without creating
+Python complex objects. It is read-only; use `state.copy()` when writable
+storage is needed.
+
+DDSIM retains the decision diagram, but does not cache extracted dense or sparse
+vectors. Repeated result reads traverse the diagram again. Keep and reuse a
+retrieved result when it is needed more than once.

@@ -48,6 +48,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include <array>
 #include <cstddef>
@@ -235,7 +236,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsReorderedOverlappingOutputStores) {
   auto one = builder.measure(q1);
   builder.storeClassicalBit(one, reg, 0);
   builder.storeClassicalBit(zero, reg, 0);
-  builder.retype(reg.getType());
+
   auto module = builder.finalize(reg);
   ASSERT_TRUE(module);
   expectConversionFailure(*module, "cannot fuse this measurement/store pair");
@@ -251,9 +252,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsMultiBlockEntryFunctionWithoutMutation) {
   ASSERT_TRUE(entryPoint);
   auto* extraBlock = &entryPoint.getBody().emplaceBlock();
   builder.setInsertionPointToEnd(extraBlock);
-  auto status =
-      arith::ConstantIntOp::create(builder, builder.getUnknownLoc(), 0, 64);
-  func::ReturnOp::create(builder, builder.getUnknownLoc(), status.getResult());
+  func::ReturnOp::create(builder, builder.getUnknownLoc());
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
 
   expectConversionFailure(
@@ -271,7 +270,7 @@ static void expectMeasurementOrderRejected(
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto result = buildProgram(builder);
-  builder.retype(result.getType());
+
   auto moduleOp = builder.finalize(result);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -406,7 +405,7 @@ TEST_F(QCToQIRBaseNativeTest, RegisterLoadsPreserveQubitIdentity) {
   builder.x(qubits[0]);
   auto result = builder.measure(
       builder.loadQubit(qubits.value, builder.indexConstant(0)));
-  builder.retype(result.getType());
+
   auto moduleOp = builder.finalize(result);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -432,7 +431,7 @@ TEST_F(QCToQIRBaseNativeTest, AllowsGateAfterMeasurementOnIndependentQubit) {
   auto result = builder.measure(qubits[0]);
   builder.x(qubits[1]);
   builder.mcrx(0.25, {qubits[1], qubits[2], qubits[3]}, qubits[4]);
-  builder.retype(result.getType());
+
   auto moduleOp = builder.finalize(result);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -518,11 +517,10 @@ TEST_F(QCToQIRBaseNativeTest, RejectsHelperLocalClassicalResources) {
                                R"mlir(
         return %bit : i1
       }
-      func.func @main() -> i64 attributes {mqt.entry_point} {
+      func.func @main() attributes {mqt.entry_point} {
         %q = qc.static 0 : !qc.qubit
         %bit = func.call @helper(%q) : (!qc.qubit) -> i1
-        %exit = arith.extui %bit : i1 to i64
-        return %exit : i64
+        return
       }
     })mlir";
     auto module = parseSourceString<ModuleOp>(source, &context);
@@ -536,12 +534,10 @@ TEST_F(QCToQIRBaseNativeTest, RejectsHelperLocalClassicalResources) {
 
 TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedEntryOutputs) {
   const std::array names{
-      "selected register",
-      "computed boolean",
-      "multiple exit codes",
-      "overwritten measurement",
+      "selected register", "computed boolean",        "zero scalar",
+      "nonzero scalar",    "overwritten measurement",
   };
-  for (uint32_t shape = 0; shape < 4; ++shape) {
+  for (uint32_t shape = 0; shape < names.size(); ++shape) {
     SCOPED_TRACE(names[shape]);
     qc::QCProgramBuilder builder(&context);
     builder.initialize();
@@ -553,8 +549,8 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedEntryOutputs) {
           builder, builder.boolConstant(true), first, second));
     } else if (shape == 1) {
       outputs.push_back(builder.boolConstant(true));
-    } else if (shape == 2) {
-      outputs = {builder.intConstant(0), builder.intConstant(1)};
+    } else if (shape == 2 || shape == 3) {
+      outputs.push_back(builder.intConstant(shape == 2 ? 0 : 7));
     } else {
       auto first = builder.allocQubit();
       auto second = builder.allocQubit();
@@ -563,15 +559,15 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedEntryOutputs) {
       builder.measure(second, reg, 0);
       outputs = {bit, reg};
     }
-    builder.retype(TypeRange(outputs));
+
     auto module = builder.finalize(outputs);
     ASSERT_TRUE(module);
     ASSERT_TRUE(succeeded(verify(*module)));
     const StringRef expected =
-        shape == 3 ? "returned scalar measurement cannot share overwritten "
+        shape == 4 ? "returned scalar measurement cannot share overwritten "
                      "register storage"
-                   : "QIR entry return supports only direct measurements, CBit "
-                     "allocations, and one i64 exit code";
+                   : "QIR entry return supports only direct measurements and "
+                     "CBit allocations";
     expectConversionFailure(*module, expected);
     EXPECT_TRUE(succeeded(verify(*module)));
   }
@@ -590,10 +586,10 @@ TEST_F(QCToQIRBaseNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
   }
   bits.push_back(builder.measure(builder.allocQubit()));
   SmallVector<Value> outputs{
-      registers[2], registers[1], bits[3], bits[0],      builder.intConstant(7),
+      registers[2], registers[1], bits[3], bits[0],
       registers[0], bits[1],      bits[3], registers[1],
   };
-  builder.retype(TypeRange(outputs));
+
   auto module = builder.finalize(outputs);
   ASSERT_TRUE(module);
   ASSERT_TRUE(succeeded(verify(*module)));
@@ -641,7 +637,7 @@ TEST_F(QCToQIRBaseNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
     ASSERT_EQ(op.getNumOperands(), 1U);
     auto code = op.getOperand(0).getDefiningOp<LLVM::ConstantOp>();
     ASSERT_TRUE(code);
-    EXPECT_EQ(cast<IntegerAttr>(code.getValue()).getInt(), 7);
+    EXPECT_EQ(cast<IntegerAttr>(code.getValue()).getInt(), 0);
   });
 }
 
@@ -650,7 +646,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsNonMeasurementClassicalStore) {
   builder.initialize();
   auto c = builder.allocClassicalBitRegister(1);
   builder.storeClassicalBit(builder.boolConstant(true), c, 0);
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 
@@ -662,7 +658,7 @@ TEST_F(QCToQIRBaseNativeTest, AcceptsZeroInitializedClassicalRegister) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto c = builder.allocClassicalBitRegister(1);
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 
@@ -677,7 +673,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsNonMeasurementStoreAfterMeasurement) {
   auto c = builder.allocClassicalBitRegister(1);
   builder.measure(q, c, 0);
   builder.storeClassicalBit(builder.boolConstant(false), c, 0);
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 
@@ -690,7 +686,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedIntegerMemref) {
   builder.initialize();
   const auto type = MemRefType::get({1}, builder.getI8Type());
   auto memref = memref::AllocOp::create(builder, type).getResult();
-  builder.retype(type);
+
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 
@@ -706,7 +702,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsDynamicClassicalRegisterIndex) {
   auto index = arith::IndexCastOp::create(builder, builder.getIndexType(),
                                           unknown.getResult());
   builder.measure(q, c, index.getResult());
-  builder.retype(c.getType());
+
   auto module = builder.finalize(c);
   ASSERT_TRUE(module);
 

@@ -17,6 +17,7 @@ from fractions import Fraction
 from typing import TYPE_CHECKING, cast
 
 import pytest
+from qiskit_support import supports_qiskit_translation
 
 from mqt.core.bench import qpe, repeat_until_success, shor
 from mqt.core.mlir import CompiledProgram, CompilerTarget, OutputFormat, QCProgram, compile_program, submit_program
@@ -27,6 +28,35 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 BELL = 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; bit[2] c; h q[0]; cx q[0],q[1]; c = measure q;'
+
+
+@pytest.mark.parametrize(
+    "program_format", [ProgramFormat.QASM3, ProgramFormat.QIR_BASE_MODULE, ProgramFormat.QIR_ADAPTIVE_MODULE]
+)
+@pytest.mark.parametrize("controlled", [False, True])
+@pytest.mark.parametrize("two_parameter", [False, True])
+def test_sdk_u_preserves_exact_phase(program_format: ProgramFormat, *, controlled: bool, two_parameter: bool) -> None:
+    """Native payloads preserve U and U2's exact phase, including under control."""
+    qiskit = pytest.importorskip("qiskit")
+    if not supports_qiskit_translation():
+        pytest.skip(f"no Qiskit translation is registered for {qiskit.__version__}")
+    circuit_library = pytest.importorskip("qiskit.circuit.library")
+    quantum_info = pytest.importorskip("qiskit.quantum_info")
+    circuit = qiskit.QuantumCircuit(2 if controlled else 1)
+    circuit.global_phase = 0.23
+    gate = circuit_library.U2Gate(-0.42, 0.19) if two_parameter else circuit_library.UGate(0.37, -0.42, 0.19)
+    if controlled:
+        circuit.h(0)
+        circuit.append(gate.control(annotated=False), [0, 1])
+        circuit.h(0)
+    else:
+        circuit.append(gate, [0])
+    expected = quantum_info.Statevector.from_instruction(circuit).data.tolist()
+    circuit.measure_all()
+    compiled = compile_program(circuit, target="mqt.ddsim.default", program_format=program_format)
+    job = submit_program(compiled, target="mqt.ddsim.default", num_shots=0)
+    assert job.wait()
+    assert job.get_dense_statevector() == pytest.approx(expected, rel=0, abs=1e-12)
 
 
 @pytest.mark.parametrize("program_format", [ProgramFormat.QASM3, ProgramFormat.QIR_ADAPTIVE_MODULE])
@@ -393,33 +423,31 @@ def test_adaptive_payload_supports_optional_computations() -> None:
     assert job.get_counts() == {"0": 16}
 
 
-def test_loop_is_supported_by_default_payload() -> None:
-    """The preferred Adaptive payload permits the compiler to retain loops."""
-    source = 'OPENQASM 3.0; include "stdgates.inc"; qubit q; bit c; for int i in [0:2] { x q; } c = measure q;'
+@pytest.mark.parametrize(
+    ("body", "counts"),
+    [
+        ("for int i in [0:2] { x q; } c = measure q;", {"1": 8}),
+        ("x q; c = measure q; while (c) { x q; c = measure q; }", {"0": 8}),
+    ],
+)
+def test_default_payload_supports_loops(body: str, counts: dict[str, int]) -> None:
+    """The preferred Adaptive payload retains counted and measurement-controlled loops."""
+    source = 'OPENQASM 3.0; include "stdgates.inc"; qubit q; bit c; ' + body
     job = submit_program(source, target="mqt.ddsim.default", num_shots=8)
     job.wait()
-    assert job.get_counts() == {"1": 8}
+    assert job.get_counts() == counts
 
 
-def test_default_payload_supports_measurement_controlled_loop() -> None:
-    """Conditional loops use the explicitly advertised Adaptive capability."""
-    source = (
-        'OPENQASM 3.0; include "stdgates.inc"; qubit q; bit c; x q; c = measure q; while (c) { x q; c = measure q; }'
-    )
-    job = submit_program(source, target="mqt.ddsim.default", num_shots=8)
-    job.wait()
-    assert job.get_counts() == {"0": 8}
-
-
-def test_qir_artifact_rejects_unsupported_entry_result(capfd: pytest.CaptureFixture[str]) -> None:
+@pytest.mark.parametrize(("width", "staged"), [(32, False), (64, True)])
+def test_qir_artifact_rejects_unsupported_entry_result(
+    width: int, capfd: pytest.CaptureFixture[str], *, staged: bool
+) -> None:
     """Keep scalar program outputs distinct from the QDMI QIR status return."""
-    source = "OPENQASM 3.0; qubit q; bit c = measure q; int[32] k = int[32](c);"
-    with pytest.raises(ValueError, match="Compilation failed for selected payload qir adaptive"):
-        compile_program(source, target="mqt.ddsim.default")
-    assert (
-        "QIR entry return supports only direct measurements, CBit allocations, and one i64 exit code"
-        in capfd.readouterr().err
-    )
+    source = f"OPENQASM 3.0; qubit q; bit c = measure q; int[{width}] k = int[{width}](c);"
+    program = QCProgram.from_openqasm_str(source).to_qco() if staged else source
+    with pytest.raises(ValueError, match="Compilation failed"):
+        compile_program(program, target="mqt.ddsim.default")
+    assert "scalar program outputs" in capfd.readouterr().err
 
 
 @pytest.mark.parametrize("num_shots", [0, 8])

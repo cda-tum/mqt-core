@@ -36,6 +36,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -367,28 +368,36 @@ QDMI_Device_impl_d::QDMI_Device_impl_d(
   }
 }
 
-auto QDMI_Device_impl_d::createJob(QDMI_Job* job) -> int {
-  if (job == nullptr) {
-    return QDMI_ERROR_INVALIDARGUMENT;
-  }
-  *job = nullptr;
-  QDMI_Device_Job deviceJob = nullptr;
-  auto const result =
-      api_->device_session_create_device_job(deviceSession_, &deviceJob);
-  if (result != QDMI_SUCCESS && result != QDMI_WARN_GENERAL) {
-    return result;
+auto QDMI_Device_impl_d::adoptJob(const int status, QDMI_Device_Job deviceJob,
+                                  QDMI_Job* job) -> int {
+  if (status != QDMI_SUCCESS && status != QDMI_WARN_GENERAL) {
+    return status;
   }
   if (deviceJob == nullptr) {
     return QDMI_ERROR_FATAL;
   }
-  auto uniqueJob = std::make_unique<QDMI_Job_impl_d>(deviceJob, this);
+  std::unique_ptr<QDMI_Device_Job_impl_d, decltype(api_->device_job_free)>
+      providerJob(deviceJob, api_->device_job_free);
+  auto uniqueJob = std::make_unique<QDMI_Job_impl_d>(providerJob.get(), this);
+  std::ignore = providerJob.release();
   auto* const jobHandle = uniqueJob.get();
   {
     const std::scoped_lock lock(jobsMutex_);
     jobs_.emplace(jobHandle, std::move(uniqueJob));
   }
   *job = jobHandle;
-  return result;
+  return status;
+}
+
+auto QDMI_Device_impl_d::createJob(QDMI_Job* job) -> int {
+  if (job == nullptr) {
+    return QDMI_ERROR_INVALIDARGUMENT;
+  }
+  *job = nullptr;
+  QDMI_Device_Job deviceJob = nullptr;
+  const auto status =
+      api_->device_session_create_device_job(deviceSession_, &deviceJob);
+  return adoptJob(status, deviceJob, job);
 }
 
 auto QDMI_Device_impl_d::retrieveJobById(const char* const jobId,
@@ -401,22 +410,9 @@ auto QDMI_Device_impl_d::retrieveJobById(const char* const jobId,
   }
   *job = nullptr;
   QDMI_Device_Job deviceJob = nullptr;
-  const auto result = api_->device_session_retrieve_device_job_by_id(
+  const auto status = api_->device_session_retrieve_device_job_by_id(
       deviceSession_, jobId, &deviceJob);
-  if (result != QDMI_SUCCESS && result != QDMI_WARN_GENERAL) {
-    return result;
-  }
-  if (deviceJob == nullptr) {
-    return QDMI_ERROR_FATAL;
-  }
-  auto uniqueJob = std::make_unique<QDMI_Job_impl_d>(deviceJob, this);
-  auto* const jobHandle = uniqueJob.get();
-  {
-    const std::scoped_lock lock(jobsMutex_);
-    jobs_.emplace(jobHandle, std::move(uniqueJob));
-  }
-  *job = jobHandle;
-  return result;
+  return adoptJob(status, deviceJob, job);
 }
 
 auto QDMI_Device_impl_d::freeJob(QDMI_Job job) -> void {
@@ -1072,19 +1068,27 @@ int QDMI_session_query_session_property(QDMI_Session session,
   return session->querySessionProperty(prop, size, value, sizeRet);
 }
 
-int QDMI_device_create_job(QDMI_Device dev, QDMI_Job* job) {
+int QDMI_device_create_job(QDMI_Device dev, QDMI_Job* job) try {
   if (dev == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
   return dev->createJob(job);
+} catch (const std::bad_alloc&) {
+  return QDMI_ERROR_OUTOFMEM;
+} catch (...) {
+  return QDMI_ERROR_FATAL;
 }
 
 int QDMI_session_retrieve_job_by_id(QDMI_Device device, const char* jobId,
-                                    QDMI_Job* job) {
+                                    QDMI_Job* job) try {
   if (device == nullptr) {
     return QDMI_ERROR_INVALIDARGUMENT;
   }
   return device->retrieveJobById(jobId, job);
+} catch (const std::bad_alloc&) {
+  return QDMI_ERROR_OUTOFMEM;
+} catch (...) {
+  return QDMI_ERROR_FATAL;
 }
 
 void QDMI_job_free(QDMI_Job job) {

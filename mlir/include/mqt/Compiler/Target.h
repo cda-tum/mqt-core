@@ -481,6 +481,25 @@ public:
                     std::optional<llvm::ArrayRef<SiteId>> sites,
                     llvm::ArrayRef<std::optional<double>> parameters) const;
 
+  /// Native capability and the control packing required by its calling form.
+  struct OperationMatch {
+    const OperationCapability* capability = nullptr;
+    bool genericControls = false;
+  };
+
+  /// Select an executable spelling accepted by the optional format filter.
+  ///
+  /// Prefer named controlled operations, then variadic base operations. Unknown
+  /// sites require unrestricted placement. The capability is null for
+  /// unsupported operations and unrestricted native-operation sets.
+  [[nodiscard]] OperationMatch
+  findOperation(llvm::StringRef name, size_t arity,
+                llvm::ArrayRef<std::optional<double>> parameters,
+                std::optional<llvm::ArrayRef<SiteId>> sites,
+                size_t numControls = 0,
+                llvm::function_ref<bool(const OperationCapability&)> filter =
+                    nullptr) const;
+
   /// Return whether a QCO operation is supported.
   [[nodiscard]] bool supports(::mlir::Operation* operation) const;
 

@@ -712,8 +712,7 @@ static int runCompiler(int argc, char** argv) {
       *parsedOutputFormat != OutputFormat::QCImport &&
       *parsedOutputFormat != OutputFormat::QCO;
   if (targetEnvironment) {
-    if (failed(qco::verifyLinearity(*program.mod)) ||
-        failed(runPasses(
+    if (failed(runPasses(
             [&](OpPassManager& pm) {
               populateTargetCompilationPipeline(pm, *targetEnvironment,
                                                 options.mapping);

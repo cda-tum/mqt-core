@@ -128,7 +128,7 @@ public:
                      func::FuncDialect, LLVM::LLVMDialect, math::MathDialect,
                      memref::MemRefDialect, scf::SCFDialect, ub::UBDialect>();
     builder.setListener(&emissionBudget);
-    builder.initialize(TypeRange{});
+    builder.initialize();
     for (const auto& gate : program.gates) {
       customGateIndex.try_emplace(gate.name, &gate);
       structuredGateCapabilities.try_emplace(
@@ -204,9 +204,9 @@ public:
       }
       results.push_back(reg);
     }
-    builder.retype(ValueRange(results).getTypes());
+
     auto moduleOp = builder.finalize(results);
-    if (emissionBudget.isExhausted()) {
+    if (!moduleOp || emissionBudget.isExhausted()) {
       return nullptr;
     }
     return moduleOp;
@@ -1035,7 +1035,8 @@ private:
       const auto emitBody = [&](ValueRange bodyQubits) {
         if (catalog->gate == qc::StandardGate::BuiltinU ||
             catalog->gate == qc::StandardGate::U2 ||
-            catalog->gate == qc::StandardGate::U3) {
+            (catalog->gate == qc::StandardGate::U3 &&
+             application.callee != "u")) {
           Value phase;
           if (catalog->gate == qc::StandardGate::BuiltinU &&
               !program.openQASM2) {

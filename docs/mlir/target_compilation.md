@@ -564,13 +564,33 @@ available for hardware snapshots and staged compilation with a
 
 ### Payload support
 
+Targeted payloads use the device's advertised operation names and ordered
+placements. OpenQASM emits native calls without portable gate definitions;
+untargeted export retains its portable helpers. Native measurement and reset
+must use the OpenQASM keywords `measure` and `reset`. QIR preserves the native
+name in each QIS call and uses the controlled specialization for variadic
+operations. OpenQASM skips `U`, `u2`, `u3`, and `cu3`, whose standardized phase
+conventions differ from QC. The compatibility spelling `u` preserves QC's exact
+U-gate matrix. A QC U2 gate can use an advertised `u` with its first parameter
+fixed to `pi / 2`, including under control. Compilation fails if no compatible
+advertised operation can represent a gate in the selected format. QIR can use
+these native names directly.
+
+The `sqrt_iswap` synthesis shorthand requires a matching `xx_plus_yy` capability
+for native payload export.
+
 The adapter assumes all compiler-supported capabilities for the selected format
 (OpenQASM 3.1 or QIR 2.1). Use `TargetEnvironment` and `PayloadSpecification`
 for staged compilation with explicit restrictions.
 
-QIR submission requires a parameterless entry point returning an `i64` status;
-the compiler adds status 0 to programs with no return value. Keep classical
-temporaries local, or select OpenQASM 3 for global scalar outputs.
+QIR submission requires a parameterless entry point. QC-to-QIR conversion
+records direct measurements and CBit-register results, then emits runtime status
+0 for successful execution. All explicit QC and QCO returns are program data;
+scalar entry results, including a constant-zero `i64`, are unsupported with or
+without a target. Keep classical temporaries local, or select OpenQASM 3 for
+scalar outputs. In OpenQASM 3, declare `output bit` registers explicitly when
+global scalar variables are only temporaries. See the
+{doc}`QIR execution contracts <../qir/index>`.
 
 The adapter accepts circuit-model devices whose two-qubit operations cover every
 topology edge in at least one operand orientation and preserves the exact

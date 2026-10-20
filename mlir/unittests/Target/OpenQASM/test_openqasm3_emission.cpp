@@ -624,7 +624,7 @@ result = measure q;
       << *emitted;
 }
 
-TEST(OpenQASM3EmissionTest, UsesCanonicalOutputTypesWithoutResultMetadata) {
+TEST(OpenQASM3EmissionTest, UsesCanonicalOutputTypes) {
   constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.1;
 include "stdgates.inc";
 output bit measured;
@@ -646,7 +646,6 @@ real = 3.0;
   ASSERT_TRUE(moduleOp);
   auto function = *moduleOp->getOps<func::FuncOp>().begin();
   ASSERT_EQ(function.getNumResults(), 6U);
-  EXPECT_FALSE(function.getAllResultAttrs());
 
   auto emitted = qc::translateQCToOpenQASM3(*moduleOp);
 

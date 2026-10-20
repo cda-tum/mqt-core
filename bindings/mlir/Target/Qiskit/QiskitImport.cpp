@@ -2902,20 +2902,7 @@ mlir::QCProgram importCircuit(const nb::handle circuit) {
   auto context = mlir::createCompilerContext();
   const auto layout = view->layout();
   mlir::qc::QCProgramBuilder builder(context.get());
-  llvm::SmallVector<mlir::Type> resultTypes;
-  if (view->numClbits() == 0U) {
-    resultTypes.push_back(builder.getI64Type());
-  } else {
-    if (looseClbits != 0U) {
-      resultTypes.push_back(mlir::cbit::RegisterType::get(
-          context.get(), static_cast<int64_t>(looseClbits)));
-    }
-    for (const auto& reg : classicalRegisters) {
-      resultTypes.push_back(mlir::cbit::RegisterType::get(
-          context.get(), static_cast<int64_t>(reg.bits.size())));
-    }
-  }
-  builder.initialize(resultTypes);
+  builder.initialize();
   auto function = llvm::cast<mlir::func::FuncOp>(
       builder.getInsertionBlock()->getParentOp());
   llvm::SmallVector<mlir::DictionaryAttr> parameterAttributes;
@@ -3001,8 +2988,7 @@ mlir::QCProgram importCircuit(const nb::handle circuit) {
                    qubits, classicalBits, {}, globalParameters, gateState, 0U,
                    0U, variables);
 
-  auto moduleOp = classicalStorage.empty() ? builder.finalize()
-                                           : builder.finalize(classicalStorage);
+  auto moduleOp = builder.finalize(classicalStorage);
   if (layout) {
     (*moduleOp)->setAttr("mqt.layout", layout->toAttr(context.get()));
   }

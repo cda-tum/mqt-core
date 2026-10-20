@@ -289,15 +289,16 @@ TEST_F(WireIteratorFixture, TraversalRespectsStructuredSemantics) {
 }
 
 TEST_F(WireIteratorFixture, TraversalTerminatesAtFunctionReturn) {
-  Value source;
-  Value output;
-  auto moduleOp =
-      qco::QCOProgramBuilder::build(context.get(), [&](auto& builder) -> Value {
-        source = builder.allocQubit();
-        output = builder.h(source);
-        return output;
-      });
+  auto moduleOp = parseModule(R"mlir(module {
+    func.func @helper(%qubit: !qco.qubit) -> !qco.qubit {
+      %source = qco.x %qubit : !qco.qubit
+      %output = qco.h %source : !qco.qubit
+      return %output : !qco.qubit
+    }
+  })mlir");
   ASSERT_TRUE(moduleOp);
+  auto source = findOp<XOp>(*moduleOp).getResult();
+  auto output = findOp<HOp>(*moduleOp).getResult();
 
   qco::WireIterator it(source);
   ASSERT_EQ(it.operation(), source.getDefiningOp());

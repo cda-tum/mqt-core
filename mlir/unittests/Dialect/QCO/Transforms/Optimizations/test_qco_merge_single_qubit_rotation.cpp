@@ -52,10 +52,25 @@
 #include <numbers>
 #include <optional>
 
-namespace {
-
 using namespace mlir;
 using namespace mlir::qco;
+
+/// Build an ordinary function whose quantum results remain observable.
+template <typename Build>
+static OwningOpRef<ModuleOp> buildQuantumFunction(MLIRContext* context,
+                                                  Build build) {
+  QCOProgramBuilder builder(context);
+  builder.initialize();
+  auto function = builder.createFunction(
+      "test", {}, [&](ValueRange) { return build(builder); });
+  function.setPublic();
+  auto moduleOp = builder.finalize();
+  moduleOp->lookupSymbol<func::FuncOp>("main").erase();
+  function.setName("main");
+  return moduleOp;
+}
+
+namespace {
 
 /// A constant for the value of π.
 constexpr double PI = std::numbers::pi;
@@ -574,7 +589,7 @@ TEST_F(MergeSingleQubitRotationGatesTest, largePhasesPreserveControlledMatrix) {
                      << "gate=" << static_cast<unsigned>(gate)
                      << " phi=" << angles[0] << " lambda=" << angles[1]
                      << " dynamic=" << dynamic);
-        module = QCOProgramBuilder::build(&context, [&](auto& b) {
+        module = buildQuantumFunction(&context, [&](auto& b) {
           auto [control, target] =
               b.ctrl(b.staticQubit(0), b.staticQubit(1), [&](Value qubit) {
                 if (gate == GateType::P) {
@@ -689,7 +704,7 @@ TEST_F(MergeSingleQubitRotationGatesTest,
        mergesSymbolicEulerChainsWithBoundedAngles) {
   for (const bool useX : {false, true}) {
     SCOPED_TRACE(useX);
-    module = QCOProgramBuilder::build(&context, [&](auto& b) {
+    module = buildQuantumFunction(&context, [&](auto& b) {
       auto [control, target] =
           b.ctrl(b.staticQubit(0), b.staticQubit(1), [&](Value qubit) {
             qubit = b.rz(0.1, qubit);
@@ -763,7 +778,7 @@ TEST_F(MergeSingleQubitRotationGatesTest,
           continue;
         }
         SCOPED_TRACE(outerMask);
-        module = QCOProgramBuilder::build(&context, [&](auto& b) {
+        module = buildQuantumFunction(&context, [&](auto& b) {
           auto [control, target] =
               b.ctrl(b.staticQubit(0), b.staticQubit(1), [&](Value qubit) {
                 if ((outerMask & 1U) != 0) {
@@ -852,7 +867,7 @@ TEST_F(MergeSingleQubitRotationGatesTest, composesHadamardZChainsDirectly) {
       SCOPED_TRACE(phaseGate);
       for (const unsigned hadamards : {1U, 2U, 3U}) {
         SCOPED_TRACE(hadamards);
-        module = QCOProgramBuilder::build(&context, [&](auto& b) {
+        module = buildQuantumFunction(&context, [&](auto& b) {
           auto [control, target] =
               b.ctrl(b.staticQubit(0), b.staticQubit(1), [&](Value qubit) {
                 if ((hadamards & 1U) != 0) {

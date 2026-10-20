@@ -106,15 +106,12 @@ FailureOr<QIRProgram> QCProgram::intoQIR(QIRProfile profile) && {
             } else {
               pm.addPass(createQCToQIRBase());
             }
+            populateQIRCleanupPipeline(pm, profile == QIRProfile::Adaptive);
           },
           "failed to convert QC to QIR"))) {
     return failure();
   }
-  auto result = QIRProgram(std::move(*this).releaseStorage(), profile);
-  if (failed(result.cleanup())) {
-    return failure();
-  }
-  return result;
+  return QIRProgram(std::move(*this).releaseStorage(), profile);
 }
 
 //===----------------------------------------------------------------------===//
@@ -224,7 +221,8 @@ QCOProgram::synthesizeForTarget(const TargetEnvironment& environment,
 }
 
 FailureOr<QCProgram> QCOProgram::intoQC() && {
-  if (failed(runQCOTransformPasses(
+  if (failed(qco::verifyLinearity(mod())) ||
+      failed(runWithPassManager(
           mod(), [](OpPassManager& pm) { pm.addPass(createQCOToQC()); },
           "failed to convert QCO to QC", {}, true))) {
     return failure();
@@ -233,7 +231,8 @@ FailureOr<QCProgram> QCOProgram::intoQC() && {
 }
 
 FailureOr<JeffProgram> QCOProgram::intoJeff() && {
-  if (failed(runQCOTransformPasses(
+  if (failed(qco::verifyLinearity(mod())) ||
+      failed(runWithPassManager(
           mod(),
           [](OpPassManager& pm) {
             pm.addPass(mqt::createUnrollModifiers());
@@ -435,9 +434,10 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
     return CompilerProgram(std::move(*qco));
   }
 
-  if (environment == nullptr &&
-      (output == ProgramFormat::QIRBase ||
-       output == ProgramFormat::QIRAdaptive) &&
+  const bool prepareForQIR =
+      output == ProgramFormat::QIRBase || output == ProgramFormat::QIRAdaptive;
+  const bool defaultPipeline = qcoPipeline == "mqt-qco-default";
+  if (environment == nullptr && !defaultPipeline && prepareForQIR &&
       failed(runQCOTransformPasses(
           qco->module(),
           [](OpPassManager& pm) { pm.addPass(createInlinerPass()); },
@@ -449,7 +449,23 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
     if (failed(qco->compileForTarget(*environment, options))) {
       return failure();
     }
+  } else if (defaultPipeline) {
+    if (failed(runQCOTransformPasses(
+            qco->module(),
+            [prepareForQIR](OpPassManager& pm) {
+              if (prepareForQIR) {
+                pm.addPass(createInlinerPass());
+              }
+              populateQCOCleanupPipeline(pm);
+              populateDefaultQCOOptimizationPipeline(pm);
+              populateQCOCleanupPipeline(pm);
+            },
+            "failed to optimize the QCO program", options))) {
+      return failure();
+    }
   } else {
+    // Arbitrary passes require verification and layout invalidation between
+    // stages, even if a later cleanup could repair their output.
     if (failed(qco->cleanup()) ||
         failed(qco->runPassPipeline(qcoPipeline, options)) ||
         failed(qco->cleanup())) {

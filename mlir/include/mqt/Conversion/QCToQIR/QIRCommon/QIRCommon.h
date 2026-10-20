@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -26,6 +27,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <string>
 #include <utility>
 
 namespace mlir {
@@ -42,6 +45,17 @@ enum class AllocationMode : std::uint8_t {
 
 /// State object for tracking lowering information during QIR conversion
 struct LoweringState {
+  std::optional<CompilerTarget> nativeTarget;
+
+  /// Select the advertised name using converted physical qubits and parameters.
+  [[nodiscard]] CompilerTarget::OperationMatch
+  nativeOperation(StringRef name, ValueRange qubits, ValueRange parameters,
+                  size_t numControls = 0) const;
+
+  /// Retain a native QIS name until profile cleanup has finished.
+  [[nodiscard]] LogicalResult nameNativeCall(LLVM::CallOp call, StringRef name,
+                                             ValueRange qubits) const;
+
   /// Result-array pointers to be deallocated at the end of the program
   llvm::SmallSetVector<Value, 4> resultArrays;
 

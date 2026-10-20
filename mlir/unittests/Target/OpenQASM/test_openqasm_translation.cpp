@@ -43,6 +43,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include <algorithm>
 #include <array>
@@ -146,30 +147,6 @@ static SmallVector<Value> legacyMultipleControlledU2(qc::QCProgramBuilder& b) {
   auto q = b.allocQubitRegister(3);
   b.ctrl(ValueRange{q[0], q[1]}, q[2],
          [&](Value target) { legacyU2(b, target); });
-  return {measureToRegister(b, {q[0], q[1], q[2]})};
-}
-
-static void legacyU(qc::QCProgramBuilder& b, Value target) {
-  b.gphase(-0.5 * (0.2 + 0.3));
-  b.u(0.1, 0.2, 0.3, target);
-}
-
-static Value legacyU(qc::QCProgramBuilder& b) {
-  auto q = b.allocQubitRegister(1);
-  legacyU(b, q[0]);
-  return measureToRegister(b, {q[0]});
-}
-
-static SmallVector<Value> legacySingleControlledU(qc::QCProgramBuilder& b) {
-  auto q = b.allocQubitRegister(2);
-  b.ctrl(q[0], q[1], [&](Value target) { legacyU(b, target); });
-  return {measureToRegister(b, {q[0], q[1]})};
-}
-
-static SmallVector<Value> legacyMultipleControlledU(qc::QCProgramBuilder& b) {
-  auto q = b.allocQubitRegister(3);
-  b.ctrl(ValueRange{q[0], q[1]}, q[2],
-         [&](Value target) { legacyU(b, target); });
   return {measureToRegister(b, {q[0], q[1], q[2]})};
 }
 
@@ -502,6 +479,7 @@ TEST(OpenQASMTranslationMatrixTest, PreservesOpenQASMGatePhaseConventions) {
   constexpr double gamma = -0.41;
   const auto qasm3U = openQASM3UMatrix(theta, phi, lambda);
   const auto qasm2U = openQASM2UMatrix(theta, phi, lambda);
+  const auto nativeU = conventionalUMatrix(theta, phi, lambda);
 
   struct OneQubitCase {
     llvm::StringRef source;
@@ -528,7 +506,7 @@ TEST(OpenQASMTranslationMatrixTest, PreservesOpenQASMGatePhaseConventions) {
       },
       {
           .source = "OPENQASM 3.1; qubit q; u(0.37, -0.29, 0.83) q;",
-          .expected = qasm2U,
+          .expected = nativeU,
       },
       {
           .source = "OPENQASM 3.1; qubit q; inv @ U(0.37, -0.29, 0.83) q;",
@@ -553,6 +531,16 @@ TEST(OpenQASMTranslationMatrixTest, PreservesOpenQASMGatePhaseConventions) {
     Matrix4 expected;
   };
   const auto twoQubitCases = std::to_array<TwoQubitCase>({
+      {
+          .source = "OPENQASM 3.1; qubit[2] q; "
+                    "ctrl @ u(0.37, -0.29, 0.83) q[0], q[1];",
+          .expected = controlledMatrix(nativeU),
+      },
+      {
+          .source = "OPENQASM 3.1; qubit[2] q; "
+                    "negctrl @ u(0.37, -0.29, 0.83) q[0], q[1];",
+          .expected = controlledMatrix(nativeU, true),
+      },
       {
           .source = "OPENQASM 3.1; qubit[2] q; "
                     "ctrl @ U(0.37, -0.29, 0.83) q[0], q[1];",
@@ -1005,9 +993,7 @@ TEST_P(OpenQASMTranslationTest, ProgramEquivalence) {
   printer.record(reference.get(), "Canonicalized Reference QC IR" + name);
   EXPECT_TRUE(verify(*reference).succeeded());
 
-  // These shared gate fixtures have no source register names. The dedicated
-  // RetainsClassicalRegisterName/RetainsQubitRegisterName tests check
-  // metadata.
+  // Shared gate fixtures have no source names; dedicated tests check them.
   translated->walk([](Operation* op) {
     op->removeAttr(mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr());
   });
@@ -1405,13 +1391,13 @@ INSTANTIATE_TEST_SUITE_P(
         OpenQASMTranslationTestCase{
             "MultipleControlledU2", qasm::multipleControlledU2,
             MQT_NAMED_BUILDER(legacyMultipleControlledU2)},
-        OpenQASMTranslationTestCase{"U", qasm::u, MQT_NAMED_BUILDER(legacyU)},
+        OpenQASMTranslationTestCase{"U", qasm::u, MQT_NAMED_BUILDER(qc::u)},
         OpenQASMTranslationTestCase{"SingleControlledU",
                                     qasm::singleControlledU,
-                                    MQT_NAMED_BUILDER(legacySingleControlledU)},
-        OpenQASMTranslationTestCase{
-            "MultipleControlledU", qasm::multipleControlledU,
-            MQT_NAMED_BUILDER(legacyMultipleControlledU)},
+                                    MQT_NAMED_BUILDER(qc::singleControlledU)},
+        OpenQASMTranslationTestCase{"MultipleControlledU",
+                                    qasm::multipleControlledU,
+                                    MQT_NAMED_BUILDER(qc::multipleControlledU)},
         OpenQASMTranslationTestCase{"SWAP", qasm::swap,
                                     MQT_NAMED_BUILDER(qc::swap)},
         OpenQASMTranslationTestCase{

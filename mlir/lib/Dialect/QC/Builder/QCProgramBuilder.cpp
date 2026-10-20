@@ -160,15 +160,13 @@ QCProgramBuilder::QCProgramBuilder(MLIRContext* context)
   getContext()->loadDialect<cbit::CBitDialect, mqt::MQTDialect, QCDialect>();
 }
 
-void QCProgramBuilder::initialize() { initialize({getI64Type()}); }
-
-void QCProgramBuilder::initialize(TypeRange returnTypes) {
+void QCProgramBuilder::initialize() {
   checkFinalized();
   // Set insertion point to the module body
   setInsertionPointToStart(moduleOp_->getBody());
 
   // Create main function as entry point
-  auto funcType = getFunctionType({}, returnTypes);
+  auto funcType = getFunctionType({}, {});
   auto mainFunc = func::FuncOp::create(*this, "main", funcType);
 
   mqt::setEntryPoint(mainFunc);
@@ -176,17 +174,6 @@ void QCProgramBuilder::initialize(TypeRange returnTypes) {
   // Create entry block and set insertion point
   auto& entryBlock = mainFunc.getBody().emplaceBlock();
   setInsertionPointToStart(&entryBlock);
-}
-
-void QCProgramBuilder::retype(TypeRange returnTypes) {
-  checkFinalized();
-  auto mainFunc = mqt::getEntryPoint(*moduleOp_);
-  if (!mainFunc) {
-    llvm::reportFatalUsageError("Main function not found for retyping");
-  }
-  auto funcType =
-      getFunctionType(mainFunc.getFunctionType().getInputs(), returnTypes);
-  mainFunc.setType(funcType);
 }
 
 func::FuncOp QCProgramBuilder::createFunction(
@@ -985,13 +972,6 @@ void QCProgramBuilder::ensureAllocationMode(
   llvm::reportFatalUsageError(message.c_str());
 }
 
-OwningOpRef<ModuleOp> QCProgramBuilder::finalize() {
-  checkFinalized();
-
-  auto exitCode = intConstant(0);
-  return finalize({exitCode});
-}
-
 OwningOpRef<ModuleOp> QCProgramBuilder::finalize(ValueRange returnValues) {
   checkFinalized();
 
@@ -1008,9 +988,11 @@ OwningOpRef<ModuleOp> QCProgramBuilder::finalize(ValueRange returnValues) {
         "Insertion point is not in entry block of main function");
   }
 
-  for (Value result : returnValues) {
-    allocatedQubits.remove(result);
-    allocatedQregs.remove(result);
+  mainFunc.setType(
+      getFunctionType(mainFunc.getArgumentTypes(), returnValues.getTypes()));
+  if (failed(mqt::verifyEntryPointResults(mainFunc))) {
+    llvm::reportFatalUsageError(
+        "Entry-point function cannot return quantum values");
   }
 
   for (auto qubit : allocatedQubits) {
@@ -1036,7 +1018,6 @@ OwningOpRef<ModuleOp> QCProgramBuilder::build(
   QCProgramBuilder builder(context);
   builder.initialize();
   auto result = buildFunc(builder);
-  builder.retype(ValueRange(result).getTypes());
   return builder.finalize(result);
 }
 
@@ -1046,7 +1027,6 @@ OwningOpRef<ModuleOp> QCProgramBuilder::build(
   QCProgramBuilder builder(context);
   builder.initialize();
   auto result = buildFunc(builder);
-  builder.retype(result.getType());
   return builder.finalize(result);
 }
 

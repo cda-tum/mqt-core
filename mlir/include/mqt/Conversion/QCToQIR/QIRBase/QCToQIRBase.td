@@ -28,8 +28,8 @@ def QCToQIRBase : Pass<"qc-to-qir-base", "mlir::ModuleOp"> {
     - Input is a valid module in the QC dialect.
     - The entry function must be marked with `mqt.entry_point`.
     - Measurements and CBit allocations must be in the entry function.
-      Returns may contain direct measurements, direct CBit allocations, and at
-      most one `i64` exit code. Other output expressions must be lowered first.
+      Returns may contain only direct measurements and direct CBit allocations.
+      Other scalar program outputs are not supported.
       A returned scalar measurement can share register storage only when
       constant indices prove that other stores cannot overwrite it.
     - The input entry function must consist of a single block.
@@ -45,6 +45,7 @@ def QCToQIRBase : Pass<"qc-to-qir-base", "mlir::ModuleOp"> {
     Behavior:
 
     - Outputs retain return order and repetitions. Every record has a unique label.
+    - The entry function returns an `i64` zero execution status after output recording.
     - Constant classical tensors and element reads are lowered to constant LLVM arrays and loads.
       Other classical tensor operations must be lowered before this pass.
     - Each QC quantum operation is replaced in place by its QIR call. After

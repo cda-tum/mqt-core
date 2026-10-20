@@ -559,7 +559,7 @@ bit[2] result = measure data;
     restored = QCProgram.from_qiskit(circuit)
     assert all(key.startswith("11") for key in sample(restored, shots=8, seed=1))
     emitted = program.to_openqasm3().source
-    assert emitted.index("for ") < emitted.index("bit[1]")
+    assert emitted.index("for ") < emitted.index("\n  bit ")
     assert sample(QCProgram.from_openqasm_str(emitted), shots=8, seed=1) == {"11": 8}
 
 
@@ -1216,9 +1216,9 @@ def test_flat_export_rejects_undefined_returned_bits() -> None:
         program.to_qiskit()
 
 
-@pytest.mark.parametrize(("value", "result_type"), [(1, "i64"), (0, '(i64 {test.output_name = "answer"})')])
-def test_qiskit_export_rejects_noncanonical_i64_function_result(value: int, result_type: str) -> None:
-    """Only an unannotated zero i64 result can be the compiler's status sentinel."""
+@pytest.mark.parametrize(("value", "result_type"), [(0, "i64"), (7, "i64"), (0, '(i64 {test.output_name = "answer"})')])
+def test_qiskit_export_rejects_scalar_function_result(value: int, result_type: str) -> None:
+    """Every scalar return is program data, including an unannotated zero."""
     program = QCProgram.from_mlir_str(
         f"""module {{
   func.func @main() -> {result_type} attributes {{mqt.entry_point}} {{
@@ -1235,8 +1235,8 @@ def test_qiskit_export_rejects_noncanonical_i64_function_result(value: int, resu
         program.to_qiskit()
 
 
-def test_qiskit_export_rejects_mixed_sentinel_and_cbit_results() -> None:
-    """Reject the zero sentinel when it is mixed with a public CBit result."""
+def test_qiskit_export_rejects_mixed_scalar_and_cbit_results() -> None:
+    """Reject scalar program data mixed with a public CBit result."""
     program = QCProgram.from_mlir_str(
         """module {
   func.func @main() -> (i64, !cbit.reg<1>) attributes {mqt.entry_point} {
@@ -4770,7 +4770,7 @@ result = measure flag;
         assert [register.name for register in restored.qregs] == ["flag"]
         assert "syndrome" in [register.name for register in restored.cregs]
         assert "qubit flag;" in emitted
-        assert "bit[1] syndrome;" in emitted
+    assert emitted.index("for ") < emitted.index("\n  bit ")
     assert "output bit[1] result;" in emitted
     assert sample(QCProgram.from_openqasm_str(emitted), shots=8, seed=1) == {"0": 8}
 

@@ -10,9 +10,11 @@
 
 #include "mqt/Conversion/QCToQIR/QIRCommon/QIRCommon.h"
 
+#include "mqt/Compiler/TargetEnvironment.h"
 #include "mqt/Dialect/CBit/IR/CBitDialect.h"
 #include "mqt/Dialect/CBit/IR/CBitOps.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
+#include "mqt/Dialect/MQT/Utils/ConstantFolding.h"
 #include "mqt/Dialect/QC/IR/QCDialect.h"
 #include "mqt/Dialect/QC/IR/QCOps.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
@@ -134,6 +136,49 @@ QCToQIRTypeConverter::QCToQIRTypeConverter(MLIRContext* ctx)
   });
 };
 
+CompilerTarget::OperationMatch
+LoweringState::nativeOperation(StringRef name, ValueRange qubits,
+                               ValueRange parameters,
+                               size_t numControls) const {
+  SmallVector<CompilerTarget::SiteId> sites;
+  for (auto qubit : qubits) {
+    auto pointer = qubit.getDefiningOp<LLVM::IntToPtrOp>();
+    auto index = pointer ? getConstantIntValue(pointer.getArg()) : std::nullopt;
+    if (!index) {
+      sites.clear();
+      break;
+    }
+    sites.push_back(*index);
+  }
+  SmallVector<std::optional<double>> values;
+  for (auto parameter : parameters) {
+    values.push_back(mqt::valueToDouble(parameter));
+  }
+  return nativeTarget->findOperation(
+      name, qubits.size(), values,
+      sites.size() == qubits.size()
+          ? std::optional<ArrayRef<CompilerTarget::SiteId>>(sites)
+          : std::nullopt,
+      numControls);
+}
+
+LogicalResult LoweringState::nameNativeCall(LLVM::CallOp call, StringRef name,
+                                            ValueRange qubits) const {
+  if (!nativeTarget) {
+    return success();
+  }
+  const auto* capability = nativeOperation(name, qubits, {}).capability;
+  if (capability == nullptr) {
+    return call.emitError("target does not support emitted QIR operation");
+  }
+  call->setAttr(
+      qir::QIR_NATIVE_NAME_ATTR,
+      StringAttr::get(
+          call.getContext(),
+          (Twine("__quantum__qis__") + capability->name() + "__body").str()));
+  return success();
+}
+
 /// Helper to convert a QC operation to a LLVM CallOp
 ///
 /// @tparam QCOpType The operation type of the QC operation
@@ -147,18 +192,39 @@ QCToQIRTypeConverter::QCToQIRTypeConverter(MLIRContext* ctx)
 /// @param numParams The number of parameters
 /// @return LogicalResult Success or failure of the conversion
 template <typename QCOpType, typename QCOpAdaptorType>
-static LogicalResult
-convertUnitaryToCallOp(QCOpType& op, QCOpAdaptorType& adaptor,
-                       ConversionPatternRewriter& rewriter, ValueRange controls,
-                       StringRef fnName, const size_t numTargets,
-                       const size_t numParams) {
+static LogicalResult convertUnitaryToCallOp(
+    QCOpType& op, QCOpAdaptorType& adaptor, ConversionPatternRewriter& rewriter,
+    ValueRange controls, StringRef fnName, const size_t numTargets,
+    const size_t numParams, LoweringState& state, StringRef genericName = {}) {
   auto convertedOperands = adaptor.getOperands();
   auto targets = convertedOperands.take_front(numTargets);
   auto parameters = convertedOperands.drop_front(numTargets);
   assert(parameters.size() == numParams && "unexpected gate parameter count");
 
-  qir::emitQISCall(rewriter, op, op.getLoc(), parameters, controls, targets,
-                   fnName);
+  std::string nativeName;
+  if (state.nativeTarget) {
+    auto unitary = cast<UnitaryOpInterface>(op.getOperation());
+    SmallVector<Value> qubits(controls);
+    llvm::append_range(qubits, targets);
+    const auto symbol = unitary.getBaseSymbol();
+    const auto [capability, genericControls] =
+        state.nativeOperation(symbol, qubits, parameters, controls.size());
+    if (capability == nullptr) {
+      return op.emitError("target does not support emitted QIR operation");
+    }
+    if (genericControls) {
+      fnName = genericName;
+    }
+    nativeName = (Twine("__quantum__qis__") + capability->name() +
+                  (genericControls ? "__ctl" : "__body"))
+                     .str();
+  }
+  auto call = qir::emitQISCall(rewriter, op, op.getLoc(), parameters, controls,
+                               targets, fnName);
+  if (!nativeName.empty()) {
+    call->setAttr(qir::QIR_NATIVE_NAME_ATTR,
+                  rewriter.getStringAttr(nativeName));
+  }
   rewriter.eraseOp(op);
   return success();
 }
@@ -186,8 +252,9 @@ struct ConvertQCUnitaryOpQIR : StatefulOpConversionPattern<OpType> {
                               ? ValueRange(it->second)
                               : ValueRange{};
     const auto fnName = GetFnName(controls.size());
-    auto result = convertUnitaryToCallOp(op, adaptor, rewriter, controls,
-                                         fnName, NumTargets, NumParams);
+    auto result =
+        convertUnitaryToCallOp(op, adaptor, rewriter, controls, fnName,
+                               NumTargets, NumParams, state, GetFnName(3));
     if (it != state.controlledGates.end()) {
       state.controlledGates.erase(it);
     }
@@ -262,7 +329,7 @@ struct ConvertQCGPhaseOp final : StatefulOpConversionPattern<GPhaseOp> {
       return op.emitError("Controlled GPhaseOps cannot be converted to QIR");
     }
     return convertUnitaryToCallOp(op, adaptor, rewriter, ValueRange{},
-                                  QIR_GPHASE, 0, 1);
+                                  QIR_GPHASE, 0, 1, state);
   }
 };
 
@@ -450,8 +517,10 @@ static DenseSet<Operation*> findStoreFusionCandidates(Block* block) {
       }
       continue;
     }
-    // These unscoped quantum effects cannot access CBit storage.
-    if (isa<qc::AllocOp, qc::DeallocOp, qc::GPhaseOp>(operation)) {
+    // Fresh allocations and quantum effects cannot access existing CBit
+    // storage.
+    if (isa<cbit::AllocOp, qc::AllocOp, qc::DeallocOp, qc::GPhaseOp>(
+            operation)) {
       continue;
     }
     const auto effects = getEffectsRecursively(&operation);
@@ -476,8 +545,15 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
                                       bool allowComputedOutputs,
                                       bool deferMeasurementStores) {
   auto funcOp = mqt::getEntryPoint(cast<ModuleOp>(moduleOp));
+  const TargetEnvironmentAnalysis environment(moduleOp);
+  if (environment &&
+      environment.environment().target().nativeOperationsKind() ==
+          CompilerTarget::NativeOperations::Kind::Explicit) {
+    state.nativeTarget = environment.environment().target();
+  }
   bool hasInvalidMemory = false;
   moduleOp->walk([&](Operation* operation) {
+    operation->removeAttr(qir::QIR_NATIVE_NAME_ATTR);
     if (isa<cbit::AllocOp, MeasureOp>(operation) &&
         operation->getParentOfType<func::FuncOp>() != funcOp) {
       operation->emitError("QIR conversion requires measurements and CBit "
@@ -508,8 +584,6 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
         "QIR output requires a single return in the entry function");
   }
   auto returnOp = returns.front();
-  SmallVector<Value> keptOperands;
-  SmallVector<Type> keptReturnTypes;
   SmallVector<cbit::StoreOp> consumedStores;
   DominanceInfo dominance(funcOp);
   IRRewriter rewriter(moduleOp->getContext());
@@ -526,12 +600,8 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   });
 
   funcOp.walk([&](cbit::AllocOp allocOp) {
-    const auto [it, inserted] = state.cregIndices.try_emplace(
-        allocOp.getOperation(), state.cregs.size());
-    if (inserted) {
-      state.cregs.emplace_back();
-    }
-    auto& reg = state.cregs[it->second];
+    state.cregIndices[allocOp.getOperation()] = state.cregs.size();
+    auto& reg = state.cregs.emplace_back();
     reg.record = false;
     if (const auto name = allocOp->getAttrOfType<StringAttr>(
             mqt::MQTDialect::RegisterNameAttrHelper::getNameStr())) {
@@ -566,13 +636,10 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
         reg.record = true;
       }
       state.returnedOutputs.push_back(definition);
-    } else if (operand.getType().isInteger(64) && keptOperands.empty()) {
-      keptOperands.push_back(operand);
-      keptReturnTypes.push_back(operand.getType());
     } else {
       return returnOp.emitError(
-          "QIR entry return supports only direct measurements, CBit "
-          "allocations, and one i64 exit code");
+          "QIR entry return supports only direct measurements and CBit "
+          "allocations; other scalar program outputs are not supported");
     }
   }
 
@@ -593,7 +660,7 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
       // Adaptive conversion checks forwarded registers after lowering SCF.
       return;
     }
-    if (!allocOp || !state.cregIndices.contains(allocOp.getOperation())) {
+    if (!allocOp) {
       storeOp.emitError(
           "QIR conversion requires direct CBit register allocations");
       hasInvalidMemory = true;
@@ -658,14 +725,10 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   if (!sharedRegisters.empty()) {
     DenseMap<std::pair<size_t, int64_t>, Operation*> storedMeasurements;
     DenseSet<size_t> dynamicStores;
-    funcOp.walk([&](cbit::StoreOp store) {
-      auto allocation = store.getReg().getDefiningOp<cbit::AllocOp>();
-      if (!allocation) {
-        return;
-      }
-      const auto reg = state.cregIndices.at(allocation);
+    for (auto store : consumedStores) {
+      const auto reg = state.cregIndices.at(store.getReg().getDefiningOp());
       if (!sharedRegisters.contains(reg)) {
-        return;
+        continue;
       }
       if (const auto index = getConstantIntValue(store.getIndex())) {
         auto* value = store.getValue().getDefiningOp();
@@ -677,7 +740,7 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
       } else {
         dynamicStores.insert(reg);
       }
-    });
+    }
     for (auto* measurement : llvm::make_first_range(state.measuredResults)) {
       auto it = state.cregMeasurements.find(measurement);
       if (it == state.cregMeasurements.end()) {
@@ -699,19 +762,20 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
     }
   }
 
-  if (keptOperands.empty()) {
-    OpBuilder builder(returnOp);
-    auto zero = arith::ConstantIntOp::create(builder, returnOp.getLoc(), 0, 64);
-    keptOperands.push_back(zero);
-    keptReturnTypes.push_back(zero.getType());
-  }
-  returnOp.getOperandsMutable().assign(keptOperands);
+  OpBuilder builder(returnOp);
+  auto zero = arith::ConstantIntOp::create(builder, returnOp.getLoc(), 0, 64);
+  returnOp.getOperandsMutable().assign(zero);
   funcOp.setFunctionType(FunctionType::get(funcOp.getContext(),
                                            funcOp.getFunctionType().getInputs(),
-                                           keptReturnTypes));
+                                           {zero.getType()}));
   for (auto storeOp : consumedStores) {
+    auto measureOp = storeOp.getValue().getDefiningOp<MeasureOp>();
+    auto allocOp = storeOp.getReg().getDefiningOp<cbit::AllocOp>();
+    if (allocOp->getBlock() == measureOp->getBlock() &&
+        measureOp->isBeforeInBlock(allocOp)) {
+      rewriter.moveOpBefore(allocOp, measureOp);
+    }
     if (deferMeasurementStores) {
-      auto measureOp = storeOp.getValue().getDefiningOp<MeasureOp>();
       state.deferredMeasurementStores[storeOp] = measureOp;
     } else {
       storeOp.erase();

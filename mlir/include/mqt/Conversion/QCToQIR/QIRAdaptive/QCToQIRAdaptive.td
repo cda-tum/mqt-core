@@ -22,8 +22,8 @@ def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive", "mlir::ModuleOp"> {
     - Input is a valid module in the QC dialect.
     - The entry function must be marked with `mqt.entry_point` and have a single return.
     - Measurements and CBit allocations must be in the entry function.
-      Returns may contain direct measurements, direct CBit allocations, and at
-      most one `i64` exit code. Other output expressions must be lowered first.
+      Returns may contain only direct measurements and direct CBit allocations.
+      Other scalar program outputs are not supported.
       A returned scalar measurement can share fused register storage only when
       constant indices prove that other stores cannot overwrite it.
     - Measurement-only returned CBit registers require stores in the same block
@@ -34,6 +34,7 @@ def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive", "mlir::ModuleOp"> {
     Behavior:
 
     - Outputs retain return order and repetitions. Every record has a unique label.
+    - The entry function returns an `i64` zero execution status after output recording.
     - Each QC quantum operation is replaced by a call to the corresponding QIR function in the LLVM dialect.
     - Operations from the scf dialect are lowered into the cf dialect before they are lowered to the LLVM dialect.
     - The pass extends the existing block structure of the entry function with an entry block and an epilogue block:
@@ -43,7 +44,7 @@ def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive", "mlir::ModuleOp"> {
     - Quantum releases retain their original control-flow positions.
     - Local qubit-reference buffers support loads, stores, and shape casts without
       allocating qubits.
-    - Scalar and register results are dynamically allocated and released after output recording.
+    - Measurement results are dynamically allocated and released after output recording.
     - Measurement results may be used as classical values to drive conditional branches.
     - Non-quantum dialects are lowered via MLIR's built-in conversions.
     - Constant classical tensors and element reads are lowered to constant LLVM arrays and loads, including reads with runtime indices.

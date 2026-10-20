@@ -386,7 +386,7 @@ TEST_F(GlobalPhaseNormalizationTest,
                          builder.gphase(0.731);
                        });
         });
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   ASSERT_TRUE(moduleOp);
   expectNormalizedQCUnitary(moduleOp, 3);
@@ -399,7 +399,7 @@ TEST_F(GlobalPhaseNormalizationTest, RemovesQCControlEmptiedByPhaseExtraction) {
             builder.staticQubit(0), builder.staticQubit(1), [&](Value target) {
               builder.inv(target, [&](Value) { builder.gphase(0.25); });
             });
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   ASSERT_TRUE(moduleOp);
   auto cloned = cast<ModuleOp>((*moduleOp)->clone());
@@ -436,7 +436,7 @@ TEST_F(GlobalPhaseNormalizationTest,
           builder.y(target);
           builder.gphase(-0.417);
         });
-        return builder.intConstant(0);
+        return SmallVector<Value>{};
       });
   ASSERT_TRUE(moduleOp);
   expectNormalizedQCUnitary(moduleOp, 2);

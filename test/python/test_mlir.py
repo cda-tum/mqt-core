@@ -117,7 +117,7 @@ def _assert_bell_program(program: QCProgram, *, measured: bool = False) -> None:
     assert ir.count("qc.x ") == 1
 
     if not measured:
-        assert "func.func @main() -> i64" in ir
+        assert "func.func @main() attributes" in ir
         assert "qc.measure" not in ir
         return
 
@@ -416,14 +416,18 @@ def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
 )
 @requires_qiskit_translation
 def test_openqasm_helper_gate_matrix(gate: Gate) -> None:
-    """Preserve complete helper-gate matrices, including global phase."""
+    """Preserve global phase and output-free compilation through OpenQASM."""
     circuit = QuantumCircuit(gate.num_qubits)
     circuit.append(gate, range(gate.num_qubits))
 
     source = QCProgram.from_qiskit(circuit).to_openqasm3().source
-    round_tripped = QCProgram.from_openqasm_str(source).to_qiskit()
+    assert "output " not in source
+    program = QCProgram.from_openqasm_str(source)
+    round_tripped = program.to_qiskit(copy=True)
 
+    assert round_tripped.num_clbits == 0
     assert np.allclose(Operator(round_tripped).data, Operator(circuit).data)
+    assert program.to_qir(QIRProfile.BASE).is_valid
 
 
 def test_compile_program_convert_to_qir() -> None:
@@ -608,8 +612,10 @@ def test_empty_compiled_program_round_trips_through_mlir() -> None:
     )
     program.compile_for_target(_test_target_environment(target))
     assert "qco." not in program.ir
+    assert "func.func @main() attributes" in program.ir
 
     qc = QCOProgram.from_mlir_str(program.ir).to_qc()
+    assert "func.func @main() attributes" in qc.ir
     restored = QCProgram.from_mlir_str(qc.ir).to_qiskit()
 
     assert restored.num_qubits == 0
@@ -1067,7 +1073,7 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
             source.rxx(-a if shape == "inverse" else b, 0, 1)
         else:
             getattr(source, "ryy" if shape == "cartan" else "rzx")(b, 0, 1)
-    native = "rzz" if entangler == "bounded_rzz" else entangler
+    native = {"bounded_rzz": "rzz", "sqrt_iswap": "xx_plus_yy"}.get(entangler, entangler)
     target = CompilerTarget(
         2,
         connectivity=CompilerTarget.Connectivity.all_to_all(),
@@ -1077,7 +1083,8 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
             CompilerTarget.OperationCapability(
                 native,
                 2,
-                0 if native in {"cz", "ecr", "iswap", "sqrt_iswap"} else 1,
+                0 if native in {"cz", "ecr", "iswap"} else 2 if native == "xx_plus_yy" else 1,
+                fixed_parameters=[-np.pi / 2, 0.0] if native == "xx_plus_yy" else [],
                 parameter_bounds=[(0, np.pi / 2)] if entangler == "bounded_rzz" else [],
             ),
             CompilerTarget.OperationCapability("gphase", 0, 1),
@@ -1088,8 +1095,7 @@ def test_symbolic_pauli_composition_preserves_phase_and_native_cost(
     assert program.to_jeff(copy=True).is_valid
     assert QCProgram.from_openqasm_str(program.to_qc(copy=True).to_openqasm3().source).is_valid
     result = program.to_qiskit(target=target)
-    emitted = "xx_plus_yy" if native == "sqrt_iswap" else native
-    assert result.count_ops().get(emitted, 0) == expected_entanglers
+    assert result.count_ops().get(native, 0) == expected_entanglers
     if shape == "cartan" and entangler == "rzz":
         assert sum(result.count_ops().get(gate, 0) for gate in ["rx", "rz"]) <= 12
     if entangler == "bounded_rzz":

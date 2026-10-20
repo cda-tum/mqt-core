@@ -44,6 +44,7 @@
 #include <numbers>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -448,36 +449,46 @@ attributes #1 = { "irreversible" }
   }
 }
 
-TEST(ResultsStatevector, DenseSizesDoNotMaterializeUnaddressableVectors) {
+TEST(ResultsStatevector, SizesDoNotMaterializeUnaddressableVectors) {
   constexpr size_t bits = std::numeric_limits<size_t>::digits;
   const qdmi_test::SessionGuard session{};
   const std::array cases{
-      std::array<size_t, 3>{
+      std::array<size_t, 4>{
+          bits - 6,
+          size_t{1} << (bits - 2),
+          size_t{1} << (bits - 3),
+          (bits - 5) * (size_t{1} << (bits - 6)),
+      },
+      std::array<size_t, 4>{
           bits - 5,
           size_t{1} << (bits - 1),
           size_t{1} << (bits - 2),
+          0,
       },
-      std::array<size_t, 3>{bits - 4, 0, size_t{1} << (bits - 1)},
-      std::array<size_t, 3>{bits - 3, 0, 0},
-      std::array<size_t, 3>{bits, 0, 0},
+      std::array<size_t, 4>{bits - 4, 0, size_t{1} << (bits - 1), 0},
+      std::array<size_t, 4>{bits - 3, 0, 0, 0},
+      std::array<size_t, 4>{bits, 0, 0, 0},
   };
-  for (const auto& [qubits, stateSize, probabilitySize] : cases) {
+  for (const auto& [qubits, stateSize, probabilitySize, keySize] : cases) {
     SCOPED_TRACE(qubits);
     const qdmi_test::JobGuard job{session.session};
     const auto program =
-        "OPENQASM 3.0; qubit[" + std::to_string(qubits) + "] q; x q[0];";
+        "OPENQASM 3.0; qubit[" + std::to_string(qubits) + "] q; h q;";
     ASSERT_EQ(
         qdmi_test::setProgram(job.job, QDMI_PROGRAM_FORMAT_QASM3, program),
         QDMI_SUCCESS);
     ASSERT_EQ(qdmi_test::setShots(job.job, 0), QDMI_SUCCESS);
     ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
-    for (const auto result : {
-             QDMI_JOB_RESULT_STATEVECTOR_DENSE,
-             QDMI_JOB_RESULT_PROBABILITIES_DENSE,
+    for (const auto& [result, expectedSize] : {
+             std::pair{QDMI_JOB_RESULT_STATEVECTOR_DENSE, stateSize},
+             std::pair{QDMI_JOB_RESULT_PROBABILITIES_DENSE, probabilitySize},
+             std::pair{QDMI_JOB_RESULT_STATEVECTOR_SPARSE_KEYS, keySize},
+             std::pair{QDMI_JOB_RESULT_STATEVECTOR_SPARSE_VALUES, stateSize},
+             std::pair{QDMI_JOB_RESULT_PROBABILITIES_SPARSE_KEYS, keySize},
+             std::pair{QDMI_JOB_RESULT_PROBABILITIES_SPARSE_VALUES,
+                       probabilitySize},
          }) {
-      const auto expectedSize = result == QDMI_JOB_RESULT_STATEVECTOR_DENSE
-                                    ? stateSize
-                                    : probabilitySize;
+      SCOPED_TRACE(result);
       size_t size = 123;
       const auto status = MQT_DDSIM_QDMI_device_job_get_results(
           job.job, 0, result, 0, nullptr, &size);

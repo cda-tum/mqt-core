@@ -375,8 +375,11 @@ struct ConvertQCMeasureOp final : StatefulOpConversionPattern<MeasureOp> {
     auto fnSig = LLVM::LLVMFunctionType::get(voidType, {ptrType, ptrType});
     auto fnDec =
         getOrCreateFunctionDeclaration(rewriter, op, QIR_MEASURE, fnSig);
-    LLVM::CallOp::create(rewriter, op.getLoc(), fnDec,
-                         ValueRange{adaptor.getQubit(), result});
+    auto call = LLVM::CallOp::create(rewriter, op.getLoc(), fnDec,
+                                     ValueRange{adaptor.getQubit(), result});
+    if (failed(state.nameNativeCall(call, "measure", adaptor.getQubit()))) {
+      return failure();
+    }
 
     rewriter.eraseOp(op);
 

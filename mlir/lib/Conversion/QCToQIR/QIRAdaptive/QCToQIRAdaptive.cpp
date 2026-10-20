@@ -41,6 +41,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -64,6 +66,16 @@ constexpr uint32_t MIXED_CBIT_REGISTER =
 
 static LogicalResult prepareCBitRegisterAccesses(Operation* moduleOp,
                                                  LoweringState& state) {
+  // Output recording and fused stores need no register-access analysis.
+  if (llvm::none_of(state.cregIndices, [&](const auto& entry) {
+        const auto& reg = state.cregs[entry.second];
+        return reg.record && !reg.booleanStorage &&
+               llvm::any_of(entry.first->getUsers(), [&](Operation* user) {
+                 return !state.deferredMeasurementStores.contains(user);
+               });
+      })) {
+    return success();
+  }
   DenseMap<Value, SmallVector<Value>> forwardedRegisters;
   moduleOp->walk([&](Operation* operation) {
     for (auto& region : operation->getRegions()) {
@@ -102,17 +114,14 @@ static LogicalResult prepareCBitRegisterAccesses(Operation* moduleOp,
 
   DenseMap<Value, uint32_t> representations;
   SmallVector<Value> worklist;
-  moduleOp->walk([&](cbit::AllocOp allocOp) {
-    const auto it = state.cregIndices.find(allocOp.getOperation());
-    if (it == state.cregIndices.end()) {
-      return;
-    }
-    const auto& reg = state.cregs[it->second];
-    representations[allocOp.getResult()] = reg.record && !reg.booleanStorage
-                                               ? RETURNED_CBIT_REGISTER
-                                               : LOCAL_CBIT_REGISTER;
-    worklist.push_back(allocOp.getResult());
-  });
+  for (const auto& [allocation, index] : state.cregIndices) {
+    auto value = allocation->getResult(0);
+    const auto& reg = state.cregs[index];
+    representations[value] = reg.record && !reg.booleanStorage
+                                 ? RETURNED_CBIT_REGISTER
+                                 : LOCAL_CBIT_REGISTER;
+    worklist.push_back(value);
+  }
 
   while (!worklist.empty()) {
     auto source = worklist.pop_back_val();
@@ -616,8 +625,12 @@ struct ConvertQCResetOp final : StatefulOpConversionPattern<ResetOp> {
         getOrCreateFunctionDeclaration(rewriter, op, QIR_RESET, fnSignature);
 
     // Replace operation with CallOp
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, fnDecl,
-                                              adaptor.getOperands());
+    auto call = LLVM::CallOp::create(rewriter, op.getLoc(), fnDecl,
+                                     adaptor.getOperands());
+    if (failed(getState().nameNativeCall(call, "reset", adaptor.getQubit()))) {
+      return failure();
+    }
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -676,8 +689,11 @@ struct ConvertQCMeasureOp final : StatefulOpConversionPattern<MeasureOp> {
     auto fnDec =
         getOrCreateFunctionDeclaration(rewriter, op, QIR_MEASURE, fnSig);
 
-    LLVM::CallOp::create(rewriter, op.getLoc(), fnDec,
-                         ValueRange{adaptor.getQubit(), result});
+    auto call = LLVM::CallOp::create(rewriter, op.getLoc(), fnDec,
+                                     ValueRange{adaptor.getQubit(), result});
+    if (failed(state.nameNativeCall(call, "measure", adaptor.getQubit()))) {
+      return failure();
+    }
 
     // Create read-result call if the result is used
     if (op.getResult().use_empty()) {

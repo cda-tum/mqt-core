@@ -972,13 +972,6 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
         "QC to Qiskit export requires an entry-function return");
   }
   mlir::ValueRange returnedValues = returnOp.getOperands();
-  if (returnOp.getNumOperands() == 1U && function.getResultAttrs(0).empty()) {
-    auto result = returnOp.getOperand(0);
-    const auto sentinel = mlir::getConstantIntValue(result);
-    if (result.getType().isInteger(64) && sentinel && *sentinel == 0) {
-      returnedValues = {};
-    }
-  }
   llvm::DenseSet<mlir::Value> returnedRegisters;
   for (auto result : returnedValues) {
     if (!returnedRegisters.insert(result).second) {
