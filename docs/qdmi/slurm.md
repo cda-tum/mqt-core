@@ -299,6 +299,80 @@ Images and build caches remain. For independent clusters, choose a Compose
 `--project-name`, set `MQT_CORE_SLURM_RUNTIME` to an absolute directory, and
 pass that directory to `prepare.sh`.
 
+## Monitor the runtime
+
+The optional monitoring overlay adds Prometheus and a read-only Grafana
+dashboard. It shows pending and running jobs by partition, node states, CPU
+allocations, scheduler health, and persistent job outcomes. It uses Slurm's
+native [OpenMetrics endpoints](https://slurm.schedmd.com/metrics.html); no
+exporter or MQT Core instrumentation is required.
+
+After preparing the cluster, add this line once to `build/slurm/slurm.conf` (or
+your `MQT_CORE_SLURM_RUNTIME` directory):
+
+```ini
+MetricsType=metrics/openmetrics
+```
+
+If the controller is already running, restart it during an idle period to load
+the metrics plugin. Then build and start the monitoring overlay:
+
+```bash
+docker compose -f examples/slurm/compose.yml restart controller
+docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitoring.yml up --build -d --wait
+```
+
+For a new cluster, omit the restart. Open
+[MQT Runtime](http://localhost:3000/d/mqt-runtime). Set
+`MQT_CORE_SLURM_GRAFANA_PORT` before starting Compose to change the host port.
+Use both Compose files for subsequent cluster commands, including shutdown.
+
+Both monitoring services start independently of Slurm and restart after failure
+unless explicitly stopped. The health panel includes Prometheus's own scrape;
+its stored metrics also expose the collector's memory use and series count.
+Dashboard definitions and data sources live under `monitoring/grafana`. Grafana
+polls dashboard files every 30 seconds, including files replaced by an editor;
+restart the relevant service after changing provisioning or Prometheus
+configuration.
+
+Job history comes from the existing Slurm accounting database through
+[`slurmrestd`](https://slurm.schedmd.com/rest.html) and Grafana's
+[Infinity data source](https://grafana.com/docs/plugins/yesoreyeram-infinity-datasource/latest/).
+The table uses the dashboard's time range and shows state, exit code, start/end
+times, full elapsed time, allocated CPUs, and device licenses. Job IDs stay in
+accounting rather than becoming Prometheus labels.
+
+The login container runs nginx as `mqt-dev`, connecting to a socket-activated
+`slurmrestd` process with the same identity using Slurm's local authentication.
+The proxy permits only GET requests to the versioned accounting jobs and ping
+routes; the jobs route requires a time range, fixes the user to `mqt-dev`, and
+omits job steps. Identical job queries are cached for 60 seconds, bounded to 16
+MiB in `/run`. This server-side restriction is necessary because the Slurm REST
+API also permits writes. No REST port is published on the host.
+
+The dashboard refreshes every minute. Prometheus retains samples for up to seven
+days, with a 512 MiB retained-block limit, in the `prometheus-data` volume. The
+write-ahead log and current block require additional space. Normal shutdown
+keeps this history; `down --volumes` removes it together with cluster
+accounting. Docker's `local` log driver rotates both monitoring services' logs.
+
+Grafana permits anonymous viewing on the host's loopback interface. Prometheus
+and Slurm metrics have no published host ports. This is a local development
+interface: every viewer sees the Playground user's accounting. A shared
+deployment needs site authentication, per-user accounting access, and network
+policy; Grafana's Viewer role alone does not restrict a data source's API. Slurm
+25.11 metrics have no built-in authentication and are disabled when
+`PrivateData` is set; do not remove a site's privacy settings to enable this
+example.
+
+These metrics describe Slurm's current state. CPU allocation is not measured CPU
+utilization, and QAN allocation is not QPU execution time. Short jobs can finish
+between scrapes; use the accounting table or `sacct` for persistent job
+outcomes. Device probe results, license reservations, QDMI job phases, logs,
+compiler profiles, and benchmarks are outside this dashboard. Continue to use
+the availability monitor's journal and `scontrol show licenses` for device
+admission.
+
 ## Deploy on an existing cluster
 
 Provide one versioned, administrator-owned environment on login and quantum
@@ -347,7 +421,9 @@ and [cgroup configuration](https://slurm.schedmd.com/cgroup.conf.html).
 
 `test/slurm/run_integration.py` exercises login submission, partition placement,
 license contention, unavailable-device admission and recovery, environment
-export, and accounting with DDSIM and SC.
+export, and accounting with DDSIM and SC. Pass `--monitoring` to also check the
+native metrics, Prometheus scrapes, the read-only accounting route, and
+completed jobs in the provisioned Grafana dashboard.
 
 The IQM and Braket repositories install their device packages into the same
 cluster and execute authenticated Emerald Resonance mock and SV1 workloads. They

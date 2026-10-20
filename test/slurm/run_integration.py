@@ -25,6 +25,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -320,7 +321,109 @@ def print_diagnostics() -> None:
     compose("logs", "--no-color", check=False, timeout=5)
 
 
-def test_core() -> None:
+def monitoring_response(url: str, *, data: dict[str, Any] | None = None) -> str:
+    """Read a monitoring endpoint from the cluster network."""
+    return job(
+        "uv",
+        "run",
+        "--no-project",
+        "--active",
+        "python",
+        "-c",
+        "import json, sys; from urllib.request import Request, urlopen; "
+        "data = json.loads(sys.argv[2]); "
+        "request = Request(sys.argv[1], data=json.dumps(data).encode() if data is not None else None, "
+        "headers={'Content-Type': 'application/json'}); "
+        "print(urlopen(request, timeout=15).read().decode())",
+        url,
+        json.dumps(data),
+    ).stdout
+
+
+def test_monitoring() -> None:
+    """Check native Slurm scrapes and the provisioned runtime dashboard."""
+    endpoints = {
+        "prometheus": "/metrics",
+        "slurm_jobs": "/metrics/jobs",
+        "slurm_nodes": "/metrics/nodes",
+        "slurm_partitions": "/metrics/partitions",
+        "slurm_scheduler": "/metrics/scheduler",
+    }
+
+    def targets_ready() -> bool:
+        targets = json.loads(monitoring_response("http://prometheus:9090/api/v1/targets"))
+        healthy = {
+            target["labels"]["job"]: urlsplit(target["scrapeUrl"]).path
+            for target in targets["data"]["activeTargets"]
+            if target["health"] == "up"
+        }
+        return endpoints.items() <= healthy.items()
+
+    wait_for("Prometheus and the four native Slurm metrics endpoints to be scraped", targets_ready)
+    dashboard = json.loads(monitoring_response("http://grafana:3000/api/dashboards/uid/mqt-runtime"))
+    assert dashboard["dashboard"]["uid"] == "mqt-runtime"
+    assert dashboard["meta"]["canEdit"] is False
+    for uid in ("prometheus", "slurm-accounting"):
+        datasource = json.loads(monitoring_response(f"http://grafana:3000/api/datasources/uid/{uid}/health"))
+        assert datasource["status"] == "OK", datasource
+    job(
+        "uv",
+        "run",
+        "--no-project",
+        "--active",
+        "python",
+        "-c",
+        """
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+
+for method, path, status in (
+    ("POST", "/slurmdb/v0.0.44/jobs/", 405),
+    ("GET", "/slurm/v0.0.44/jobs/", 404),
+    ("GET", "/slurmdb/v0.0.44/jobs/", 400),
+    ("GET", "/slurmdb/v0.0.44/jobs/?start_time=1;users=root&end_time=2", 400),
+):
+    try:
+        urlopen(Request("http://login:8080" + path, method=method), timeout=5)
+    except HTTPError as error:
+        assert error.code == status, (method, path, error.code)
+    else:
+        raise AssertionError((method, path, "unexpected success"))
+""",
+    )
+
+
+def test_accounting(job_id: str) -> None:
+    """Require the dashboard to render a completed job from persistent accounting."""
+    dashboard = json.loads(monitoring_response("http://grafana:3000/api/dashboards/uid/mqt-runtime"))["dashboard"]
+    panel = next(panel for panel in dashboard["panels"] if panel["id"] == 9)
+    target = {**panel["targets"][0], "datasource": panel["datasource"]}
+
+    def job_visible() -> bool:
+        now = int(time.time() * 1000)
+        response = json.loads(
+            monitoring_response(
+                "http://grafana:3000/api/ds/query",
+                data={"from": str(now - 3_600_000), "to": str(now), "queries": [target]},
+            )
+        )["results"]["A"]
+        assert not response.get("error"), response
+        for frame in response["frames"]:
+            names = [field["name"] for field in frame["schema"]["fields"]]
+            for values in zip(*frame["data"]["values"], strict=True):
+                row = dict(zip(names, values, strict=True))
+                if str(row["Job ID"]) == job_id and row["State"] == "COMPLETED":
+                    assert row["Exit code"] == "0:0", row
+                    assert row["Partition"] == "quantum", row
+                    assert row["CPUs"] == 1, row
+                    assert row["Licenses"] == "mqt.ddsim.default=1", row
+                    return True
+        return False
+
+    wait_for("the completed DDSIM job to appear in Grafana accounting", job_visible)
+
+
+def test_core(*, monitoring: bool) -> None:
     """Verify admission and execution with the bundled DDSIM and SC devices."""
     assert_license("mqt.ddsim.default", total=2, used=0, free=2)
     assert_license("mqt.sc.default", total=1, used=0, free=1)
@@ -341,6 +444,10 @@ def test_core() -> None:
         lambda: job_matches(third, "PENDING", reason="Licenses"),
     )
     assert_license("mqt.ddsim.default", total=2, used=2, free=0)
+    if monitoring:
+        metrics = monitoring_response("http://controller:6817/metrics/partitions").splitlines()
+        assert 'slurm_partition_jobs_running{partition="quantum"} 2' in metrics
+        assert 'slurm_partition_jobs_pending{partition="quantum"} 1' in metrics
 
     sc_job = submit("sc_job.py", "mqt.sc.default:1")
     wait_for_result("sc", sc_job, "the SC job to execute on a free CPU")
@@ -394,6 +501,8 @@ def test_core() -> None:
     ).stdout.strip()
     assert accounting.startswith("mqt-dev|research|quantum|"), accounting
     assert "license/mqt.ddsim.default=1" in accounting, accounting
+    if monitoring:
+        test_accounting(third)
     assert_license("mqt.ddsim.default", total=2, used=0, free=2)
     assert license_record("mqt.ddsim.default")["Reserved"] == "0"
 
@@ -410,6 +519,9 @@ def parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--package", action="append", default=[], help="additional uv requirement (repeatable)")
     parser.add_argument("--nodes", type=int, default=2)
     parser.add_argument("--compose-file", type=Path)
+    parser.add_argument(
+        "--monitoring", action="store_true", help="check the optional Prometheus and Grafana deployment"
+    )
     parser.add_argument("--device-license")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     options = parser.parse_args(arguments)
@@ -498,6 +610,9 @@ def main(arguments: Sequence[str] = ()) -> None:
         "MQT_CORE_SLURM_PACKAGES": "\n".join(options.package) or os.environ.get("MQT_CORE_SLURM_PACKAGES", ""),
     })
     COMPOSE_FILES[:] = ("--file", str(options.compose_file.resolve())) if options.compose_file else ()
+    if options.monitoring:
+        COMPOSE_FILES.extend(("--file", str(CLUSTER / "compose.monitoring.yml")))
+        COMPOSE_ENV["MQT_CORE_SLURM_GRAFANA_PORT"] = "0"
 
     started_at = time.monotonic()
 
@@ -510,6 +625,9 @@ def main(arguments: Sequence[str] = ()) -> None:
             raise RuntimeError(msg)
 
         clean_runtime()
+        if options.monitoring:
+            with (RUNTIME / "slurm.conf").open("a", encoding="utf-8") as configuration:
+                configuration.write("\nMetricsType=metrics/openmetrics\n")
         if options.device_license:
             configuration = (RUNTIME / "slurm.conf").read_text(encoding="utf-8")
             configuration = re.sub(
@@ -570,11 +688,13 @@ def main(arguments: Sequence[str] = ()) -> None:
                 f"{license_name} to become available",
                 lambda license_name=license_name: license_record(license_name)["Reserved"] == "0",
             )
+        if options.monitoring:
+            test_monitoring()
         test_partitions()
         if options.command:
             test_provider(options)
         else:
-            test_core()
+            test_core(monitoring=options.monitoring)
             test_job_environment()
 
         success = True
