@@ -17,8 +17,6 @@
 
 #include "QuantumDevice.hpp"
 
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
 
@@ -132,7 +130,6 @@ private:
 
   std::shared_ptr<Context> context_;
   std::shared_ptr<mlir::MLIRContext> compiler_;
-  mlir::OwningOpRef<mlir::ModuleOp> recording_;
   std::unique_ptr<mlir::qc::QCProgramBuilder> builder_;
   llvm::SmallVector<mlir::Value> qubits_;
   std::vector<QubitIdType> ids_;

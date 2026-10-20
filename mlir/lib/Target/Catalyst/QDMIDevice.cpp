@@ -17,12 +17,11 @@
 #include "mqt/Dialect/QC/Translation/StandardGate.h"
 #include "qdmi/common/Common.hpp"
 
+#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Value.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -341,9 +340,6 @@ std::vector<QubitIdType> QDMIDevice::AllocateQubits(size_t count) {
   compiler_ = mlir::createCompilerContext();
   builder_ = std::make_unique<mlir::qc::QCProgramBuilder>(compiler_.get());
   builder_->initialize();
-  recording_ = builder_->getInsertionBlock()
-                   ->getParentOp()
-                   ->getParentOfType<mlir::ModuleOp>();
   auto reg = builder_->allocQubitRegister(static_cast<int64_t>(count));
   qubits_ = std::move(reg.qubits);
   ids_.resize(count);
@@ -358,7 +354,6 @@ void QDMIDevice::ReleaseQubits(const std::vector<QubitIdType>& wires) {
   require(indices.size() == ids_.size(),
           "Partial QDMI qubit release is unsupported.");
   builder_.reset();
-  recording_ = nullptr;
   qubits_.clear();
   ids_.clear();
   compiled_.reset();
@@ -505,7 +500,7 @@ void QDMIDevice::MatrixOperation(
         return mlir::success();
       });
   const auto valid = mlir::succeeded(mlir::mqt::verifyDenseUnitaryMatrix(
-      recording_->getOperation(), values, targets));
+      builder_->getInsertionBlock()->getParentOp(), values, targets));
   require(valid, "Invalid QDMI unitary matrix: " + diagnostics);
   emitOperation(
       indices, controls.size(), controlValues, inverse,
@@ -552,8 +547,6 @@ mlir::QCProgram QDMIDevice::takeProgram() {
   for (size_t i = 0; i < qubits_.size(); ++i) {
     builder.measure(qubits_[i], bits, static_cast<int64_t>(i));
   }
-  builder.retype(bits.getType());
-  static_cast<void>(recording_.release());
   auto moduleOp = builder.finalize({bits});
   builder_.reset();
   auto program = mlir::QCProgram::fromModule(compiler_, std::move(moduleOp));

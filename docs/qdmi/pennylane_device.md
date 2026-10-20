@@ -115,8 +115,11 @@ The factory checks the installed Catalyst version before loading its C++ device
 interface. Supported versions are 0.15.x and 0.16 development builds; other
 versions require a matching adapter update.
 
-Catalyst supports Linux x86_64/aarch64 and macOS arm64. Ordinary PennyLane
-execution remains available on other MQT Core platforms. See the
+Catalyst supports Linux x86_64/aarch64 and macOS arm64. Use Catalyst 0.15 on
+macOS: current 0.16 development builds
+[rewrite the extension's `.so` suffix to `.dylib`](https://github.com/PennyLaneAI/catalyst/blob/631b95e4aa879229f8a8d554efc01f7f285b77da/runtime/lib/capi/ExecutionContext.hpp#L78-L118)
+and cannot load this device. Development builds are tested on Linux. Ordinary
+PennyLane execution remains available on other MQT Core platforms. See the
 [Catalyst installation guide](https://docs.pennylane.ai/projects/catalyst/en/stable/dev/installation.html)
 for platform requirements.
 
@@ -178,11 +181,14 @@ value = captured_expectation(0.4)
 The splitting pass currently supports expectation measurements only; use
 diagonalization alone for a variance. For gate decomposition under capture,
 apply `qp.transforms.decompose` with
-`gate_set=set(compiled_device.capabilities.operations)`. Current development
-Catalyst can fail when composing this decomposition with measurement passes. Use
-`capture=False` when the required pass combination is unsupported. Catalyst may
-warn that its automatic preprocessing substitutes empty passes even when
-explicit compiler passes perform the needed transforms.
+`gate_set=set(compiled_device.capabilities.operations)`. Explicit decomposition
+is required for ECR, SX, U1, U2, and U3, whose callbacks Catalyst's runtime does
+not provide. Ordinary execution and non-capture compilation decompose these
+gates automatically. Current development Catalyst can fail when composing this
+decomposition with measurement passes. Use `capture=False` when the required
+pass combination is unsupported. Catalyst may warn that its automatic
+preprocessing substitutes empty passes even when explicit compiler passes
+perform the needed transforms.
 
 Compiled execution requires contiguous integer wire labels starting at zero and
 finite shots. Native device gradients, analytic execution, and variance

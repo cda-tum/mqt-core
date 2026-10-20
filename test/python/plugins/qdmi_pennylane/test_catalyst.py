@@ -69,6 +69,27 @@ def test_correlated_readout_and_wire_order(*, capture: bool) -> None:
 
 
 @pytest.mark.parametrize("capture", [False, True])
+def test_decomposes_gates_without_catalyst_runtime_symbols(*, capture: bool) -> None:
+    """The advertised gate set lowers gates absent from Catalyst's runtime."""
+    device = qp.device("mqt.ddsim.default", wires=3)
+
+    def circuit() -> ProbabilityMP:
+        qp.SX(0)
+        qp.U1(0.7, 0)
+        qp.U2(0.4, 0.2, 1)
+        qp.U3(0.8, 0.1, -0.4, 2)
+        qp.ECR(wires=[2, 0])
+        return qp.probs(wires=[2, 0, 1])
+
+    expected = qp.QNode(circuit, qp.device("default.qubit", wires=3))()
+    node = qp.QNode(circuit, device, shots=20_000)
+    if capture:
+        node = qp.transforms.decompose(node, gate_set=set(device.capabilities.operations))
+    actual = catalyst.qjit(node, capture=capture)()
+    np.testing.assert_allclose(actual, expected, atol=0.025)
+
+
+@pytest.mark.parametrize("capture", [False, True])
 def test_repeated_calls_and_observable_lowering(*, capture: bool) -> None:
     """Runtime pooling resets circuits and upstream lowers non-Z observables."""
     device = qp.device("mqt.ddsim.default", wires=2)
