@@ -299,16 +299,21 @@ Images and build caches remain. For independent clusters, choose a Compose
 `--project-name`, set `MQT_CORE_SLURM_RUNTIME` to an absolute directory, and
 pass that directory to `prepare.sh`.
 
+(slurm-runtime-monitoring)=
+
 ## Monitor the runtime
 
 The optional monitoring overlay adds Prometheus and a read-only Grafana
 dashboard. It shows pending and running jobs by partition, node states, CPU
 allocations, scheduler health, and persistent job outcomes. It uses Slurm's
-native [OpenMetrics endpoints](https://slurm.schedmd.com/metrics.html); no
-exporter or MQT Core instrumentation is required.
+native [OpenMetrics endpoints](https://slurm.schedmd.com/metrics.html) and the
+existing Slurm accounting database.
 
-After preparing the cluster, add this line once to `build/slurm/slurm.conf` (or
-your `MQT_CORE_SLURM_RUNTIME` directory):
+### Start monitoring
+
+From the host, after [preparing the cluster](#start-the-cluster-and-log-in), add
+this line once to `build/slurm/slurm.conf` (or the configuration in your
+`MQT_CORE_SLURM_RUNTIME` directory):
 
 ```ini
 MetricsType=metrics/openmetrics
@@ -327,20 +332,91 @@ For a new cluster, omit the restart. Open
 `MQT_CORE_SLURM_GRAFANA_PORT` before starting Compose to change the host port.
 Use both Compose files for subsequent cluster commands, including shutdown.
 
-Both monitoring services start independently of Slurm and restart after failure
-unless explicitly stopped. The health panel includes Prometheus's own scrape;
-its stored metrics also expose the collector's memory use and series count.
-Dashboard definitions and data sources live under `monitoring/grafana`. Grafana
-polls dashboard files every 30 seconds, including files replaced by an editor;
-restart the relevant service after changing provisioning or Prometheus
-configuration.
+### Read the dashboard
 
-Job history comes from the existing Slurm accounting database through
+Select a time range that includes the jobs you want to inspect. Allow one scrape
+interval after startup for metrics to appear. The dashboard refreshes every
+minute, and Prometheus collects samples every 60 seconds. A faster dashboard
+refresh does not collect additional samples.
+
+| Panel                             | What it shows                                                            |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| **Metrics endpoint health**       | Whether the last scrape of Prometheus or a Slurm endpoint succeeded.     |
+| **Running and pending jobs**      | Jobs in each partition at the time of a scrape.                          |
+| **Registered nodes and states**   | Registered node counts and state flags, which can overlap.               |
+| **CPU allocation**                | Allocated and configured CPUs across nodes and partitions.               |
+| **Last scheduler cycle duration** | The duration of the latest main or backfill scheduling cycle.            |
+| **Job accounting**                | Job state, exit code, elapsed time, allocated CPUs, and device licenses. |
+
+```{figure} ../_static/slurm-runtime-metrics.png
+:alt: Grafana shows a failed scrape for slurm_partitions while the other four endpoints are up, above time series for running jobs, pending jobs, node states, and CPU allocations.
+:width: 100%
+
+Example metrics view with a failed partition scrape. **Down** describes the
+scrape, not a job outcome or a quantum device's availability. Earlier samples
+remain visible in the graphs.
+```
+
+Use **Job accounting** to find a submitted job by its Slurm job ID. The table
+uses the selected time range and includes short jobs that finish between
+scrapes. For example, a completed ten-second Braket job can show `COMPLETED`,
+exit code `0:0`, one CPU, and `amazon.braket.sv1=1` even when the running-job
+graph has no corresponding sample. Elapsed time covers the whole Slurm job. Exit
+codes use `status:signal`; inspect the job's output file for error details.
+
+To compare a row with Slurm, replace `JOBID` with its job ID and run this in the
+login shell:
+
+```bash
+sacct -X --jobs=JOBID --format=JobID,State,ExitCode,Elapsed,AllocTRES%80
+```
+
+CPU allocation is not measured CPU utilization, and QAN allocation is not QPU
+execution time. Device probe results, license reservations, QDMI job phases,
+logs, compiler profiles, and benchmarks are outside this dashboard. Use
+`scontrol show licenses` and the
+[availability monitor](#admit-jobs-while-devices-are-operational) for device
+admission.
+
+### Operate monitoring
+
+Both monitoring services start independently of Slurm and restart after failure
+unless explicitly stopped. If a panel remains unavailable after a scrape
+interval, inspect service status and logs from the host:
+
+```bash
+docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitoring.yml ps
+docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitoring.yml logs --tail=50 prometheus grafana
+```
+
+For an accounting error, inspect `mqt-slurm-rest@*` and `nginx` in the login
+container's journal:
+
+```bash
+docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitoring.yml exec login journalctl --no-pager -n 50 -u 'mqt-slurm-rest@*' -u nginx
+```
+
+Prometheus retains samples for up to seven days, with a 512 MiB retained-block
+limit, in the `prometheus-data` volume. The write-ahead log and current block
+require additional space. Stop the monitored cluster with:
+
+```bash
+docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitoring.yml down
+```
+
+Normal shutdown keeps metrics and accounting history. Adding `--volumes` removes
+both. Docker's `local` log driver rotates the monitoring services' logs.
+
+:::{dropdown} Data sources and configuration
+Dashboard definitions and data sources live under
+`examples/slurm/monitoring/grafana`. Grafana polls dashboard files every 30
+seconds, including files replaced by an editor. Restart the relevant service
+after changing provisioning or `examples/slurm/monitoring/prometheus.yml`.
+
+Job history comes from SlurmDBD through
 [`slurmrestd`](https://slurm.schedmd.com/rest.html) and Grafana's
 [Infinity data source](https://grafana.com/docs/plugins/yesoreyeram-infinity-datasource/latest/).
-The table uses the dashboard's time range and shows state, exit code, start/end
-times, full elapsed time, allocated CPUs, and device licenses. Job IDs stay in
-accounting rather than becoming Prometheus labels.
+Job IDs stay in accounting rather than becoming Prometheus labels.
 
 The login container runs nginx as `mqt-dev`, connecting to a socket-activated
 `slurmrestd` process with the same identity using Slurm's local authentication.
@@ -349,12 +425,9 @@ routes; the jobs route requires a time range, fixes the user to `mqt-dev`, and
 omits job steps. Identical job queries are cached for 60 seconds, bounded to 16
 MiB in `/run`. This server-side restriction is necessary because the Slurm REST
 API also permits writes. No REST port is published on the host.
+:::
 
-The dashboard refreshes every minute. Prometheus retains samples for up to seven
-days, with a 512 MiB retained-block limit, in the `prometheus-data` volume. The
-write-ahead log and current block require additional space. Normal shutdown
-keeps this history; `down --volumes` removes it together with cluster
-accounting. Docker's `local` log driver rotates both monitoring services' logs.
+### Shared deployments
 
 Grafana permits anonymous viewing on the host's loopback interface. Prometheus
 and Slurm metrics have no published host ports. This is a local development
@@ -364,14 +437,6 @@ policy; Grafana's Viewer role alone does not restrict a data source's API. Slurm
 25.11 metrics have no built-in authentication and are disabled when
 `PrivateData` is set; do not remove a site's privacy settings to enable this
 example.
-
-These metrics describe Slurm's current state. CPU allocation is not measured CPU
-utilization, and QAN allocation is not QPU execution time. Short jobs can finish
-between scrapes; use the accounting table or `sacct` for persistent job
-outcomes. Device probe results, license reservations, QDMI job phases, logs,
-compiler profiles, and benchmarks are outside this dashboard. Continue to use
-the availability monitor's journal and `scontrol show licenses` for device
-admission.
 
 ## Deploy on an existing cluster
 
