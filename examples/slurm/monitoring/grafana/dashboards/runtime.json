@@ -16,7 +16,7 @@
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
       "options": {
         "mode": "markdown",
-        "content": "Live Slurm jobs, nodes and CPU allocations, with persistent job history below. Allocation is **not actual CPU or QPU usage**. Missing samples remain unavailable."
+        "content": "Live Slurm jobs, nodes, CPU allocations and device license reservations, with persistent job history below. Allocation is **not actual CPU or QPU usage**. Missing samples remain unavailable."
       }
     },
     {
@@ -235,11 +235,73 @@
       }
     },
     {
+      "id": 10,
+      "title": "Device licenses",
+      "description": "Latest local Slurm license state, cached for up to 60 seconds and independent of the dashboard time range. The QDMI monitor reserves capacity while probing, after failure, or when stopped. Free includes reserved capacity; an unreserved license does not prove current device health.",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 6 },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "slurm-accounting"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/slurm/v0.0.44/licenses/",
+          "url_options": { "method": "GET" },
+          "root_selector": "$count(errors) > 0 ? $error(\"Slurm license request failed: \" & $string(errors)) : [licenses[Remote = false].{\"device\": LicenseName, \"reservation\": Reserved >= Total ? \"Fully reserved\" : Reserved > 0 ? \"Partly reserved\" : \"Unreserved\", \"total\": Total, \"allocated\": Used, \"free\": Free, \"reserved\": Reserved}]",
+          "columns": [
+            {
+              "selector": "device",
+              "text": "Device license",
+              "type": "string"
+            },
+            {
+              "selector": "reservation",
+              "text": "Reservation",
+              "type": "string"
+            },
+            { "selector": "total", "text": "Total", "type": "number" },
+            { "selector": "allocated", "text": "Allocated", "type": "number" },
+            { "selector": "free", "text": "Free", "type": "number" },
+            { "selector": "reserved", "text": "Reserved", "type": "number" }
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "Device license": 0,
+              "Reservation": 1,
+              "Total": 2,
+              "Allocated": 3,
+              "Free": 4,
+              "Reserved": 5
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "noValue": "—", "decimals": 0 },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Device license", "desc": false }]
+      }
+    },
+    {
       "id": 9,
       "title": "Job accounting",
       "description": "Playground jobs selected by the dashboard time range, including short jobs between scrapes. Elapsed time covers the whole job. Exit code is status:signal; blank values are not yet available.",
       "type": "table",
-      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 9 },
+      "gridPos": { "x": 0, "y": 34, "w": 24, "h": 9 },
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
         "uid": "slurm-accounting"

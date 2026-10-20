@@ -379,6 +379,7 @@ from urllib.request import Request, urlopen
 
 for method, path, status in (
     ("POST", "/slurmdb/v0.0.44/jobs/", 405),
+    ("POST", "/slurm/v0.0.44/licenses/", 405),
     ("GET", "/slurm/v0.0.44/jobs/", 404),
     ("GET", "/slurmdb/v0.0.44/jobs/", 400),
     ("GET", "/slurmdb/v0.0.44/jobs/?start_time=1;users=root&end_time=2", 400),
@@ -423,6 +424,39 @@ def test_accounting(job_id: str) -> None:
     wait_for("the completed DDSIM job to appear in Grafana accounting", job_visible)
 
 
+def assert_device_licenses(*, allocated: int, reserved: int) -> None:
+    """Require Grafana to show the DDSIM allocation and admission reservation."""
+    dashboard = json.loads(monitoring_response("http://grafana:3000/api/dashboards/uid/mqt-runtime"))["dashboard"]
+    panel = next(panel for panel in dashboard["panels"] if panel["id"] == 10)
+    target = {**panel["targets"][0], "datasource": panel["datasource"]}
+    expected = {
+        "Device license": "mqt.ddsim.default",
+        "Reservation": "Fully reserved" if reserved == 2 else "Unreserved",
+        "Total": 2,
+        "Allocated": allocated,
+        "Free": 2 - allocated,
+        "Reserved": reserved,
+    }
+
+    def licenses_visible() -> bool:
+        now = int(time.time() * 1000)
+        response = json.loads(
+            monitoring_response(
+                "http://grafana:3000/api/ds/query",
+                data={"from": str(now - 3_600_000), "to": str(now), "queries": [target]},
+            )
+        )["results"]["A"]
+        assert not response.get("error"), response
+        for frame in response["frames"]:
+            names = [field["name"] for field in frame["schema"]["fields"]]
+            for values in zip(*frame["data"]["values"], strict=True):
+                if dict(zip(names, values, strict=True)) == expected:
+                    return True
+        return False
+
+    wait_for(f"DDSIM licenses in Grafana: {expected}", licenses_visible)
+
+
 def test_core(*, monitoring: bool) -> None:
     """Verify admission and execution with the bundled DDSIM and SC devices."""
     assert_license("mqt.ddsim.default", total=2, used=0, free=2)
@@ -448,6 +482,7 @@ def test_core(*, monitoring: bool) -> None:
         metrics = monitoring_response("http://controller:6817/metrics/partitions").splitlines()
         assert 'slurm_partition_jobs_running{partition="quantum"} 2' in metrics
         assert 'slurm_partition_jobs_pending{partition="quantum"} 1' in metrics
+        assert_device_licenses(allocated=2, reserved=0)
 
     sc_job = submit("sc_job.py", "mqt.sc.default:1")
     wait_for_result("sc", sc_job, "the SC job to execute on a free CPU")
@@ -470,6 +505,8 @@ def test_core(*, monitoring: bool) -> None:
     monitor = ("python3", "/workspace/examples/slurm/update_availability.py", "--license", "mqt.ddsim.default:2")
     assert controller("env", "MQT_CORE_QDMI_CONFIG_FILE=/jobs/availability.json", *monitor, check=False).returncode == 1
     assert license_record("mqt.ddsim.default")["Reserved"] == "2"
+    if monitoring:
+        assert_device_licenses(allocated=2, reserved=2)
     assert job_matches(first, "RUNNING")
     assert job_matches(second, "RUNNING")
     for job_id in (first, second):
@@ -503,6 +540,7 @@ def test_core(*, monitoring: bool) -> None:
     assert "license/mqt.ddsim.default=1" in accounting, accounting
     if monitoring:
         test_accounting(third)
+        assert_device_licenses(allocated=0, reserved=0)
     assert_license("mqt.ddsim.default", total=2, used=0, free=2)
     assert license_record("mqt.ddsim.default")["Reserved"] == "0"
 

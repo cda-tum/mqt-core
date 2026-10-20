@@ -13,7 +13,7 @@ After=munge.service
 [Service]
 User=mqt-dev
 Group=mqt-dev
-ExecStart=/usr/sbin/slurmrestd -a rest_auth/local -s slurmdbd -d v0.0.44
+ExecStart=/usr/sbin/slurmrestd -a rest_auth/local -s slurmctld,slurmdbd -d v0.0.44
 StandardInput=socket
 StandardOutput=inherit
 StandardError=journal

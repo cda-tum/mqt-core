@@ -27,6 +27,7 @@ datasources:
       allowedHosts:
         - http://login:8080/slurmdb/v0.0.44/jobs/
         - http://login:8080/slurmdb/v0.0.44/ping/
+        - http://login:8080/slurm/v0.0.44/licenses/
       timeoutInSeconds: 10
       customHealthCheckEnabled: true
       customHealthCheckUrl: http://login:8080/slurmdb/v0.0.44/ping/

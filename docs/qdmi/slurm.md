@@ -305,9 +305,16 @@ pass that directory to `prepare.sh`.
 
 The optional monitoring overlay adds Prometheus and a read-only Grafana
 dashboard. It shows pending and running jobs by partition, node states, CPU
-allocations, scheduler health, and persistent job outcomes. It uses Slurm's
-native [OpenMetrics endpoints](https://slurm.schedmd.com/metrics.html) and the
-existing Slurm accounting database.
+allocations, device license reservations, scheduler health, and persistent job
+outcomes. It uses Slurm's native
+[OpenMetrics endpoints](https://slurm.schedmd.com/metrics.html) and the existing
+Slurm accounting database.
+
+The playground is a reference deployment for HPC administrators who run MQT Core
+with QDMI devices under Slurm. Installing MQT Core alone does not start these
+monitoring services. On an existing cluster, connect them to the site's
+monitoring stack as described in
+[site configuration](#deploy-on-an-existing-cluster).
 
 ### Start monitoring
 
@@ -346,6 +353,7 @@ refresh does not collect additional samples.
 | **Registered nodes and states**   | Registered node counts and state flags, which can overlap.               |
 | **CPU allocation**                | Allocated and configured CPUs across nodes and partitions.               |
 | **Last scheduler cycle duration** | The duration of the latest main or backfill scheduling cycle.            |
+| **Device licenses**               | Current local license capacity, allocations, and reservations.           |
 | **Job accounting**                | Job state, exit code, elapsed time, allocated CPUs, and device licenses. |
 
 ```{figure} ../_static/slurm-runtime-metrics.png
@@ -356,6 +364,17 @@ Example metrics view with a failed partition scrape. **Down** describes the
 scrape, not a job outcome or a quantum device's availability. Earlier samples
 remain visible in the graphs.
 ```
+
+Use **Device licenses** to inspect device admission. This table shows the latest
+Slurm state, cached for up to 60 seconds, independently of the selected time
+range. **Free** includes reserved licenses. The availability monitor reserves
+all units while probing, after a failed probe, or when stopped;
+**Fully reserved** therefore blocks new ordinary jobs while existing jobs
+continue. **Unreserved** means that Slurm reports no reservation, not that the
+device is currently healthy or that a user's credentials are valid. Compare with
+`scontrol show licenses` and inspect the
+[availability monitor](#admit-jobs-while-devices-are-operational) for probe
+failures.
 
 Use **Job accounting** to find a submitted job by its Slurm job ID. The table
 uses the selected time range and includes short jobs that finish between
@@ -372,11 +391,8 @@ sacct -X --jobs=JOBID --format=JobID,State,ExitCode,Elapsed,AllocTRES%80
 ```
 
 CPU allocation is not measured CPU utilization, and QAN allocation is not QPU
-execution time. Device probe results, license reservations, QDMI job phases,
-logs, compiler profiles, and benchmarks are outside this dashboard. Use
-`scontrol show licenses` and the
-[availability monitor](#admit-jobs-while-devices-are-operational) for device
-admission.
+execution time. Device probe results, QDMI job phases, logs, compiler profiles,
+and benchmarks are outside this dashboard.
 
 ### Operate monitoring
 
@@ -389,8 +405,8 @@ docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitorin
 docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitoring.yml logs --tail=50 prometheus grafana
 ```
 
-For an accounting error, inspect `mqt-slurm-rest@*` and `nginx` in the login
-container's journal:
+For an accounting or license error, inspect `mqt-slurm-rest@*` and `nginx` in
+the login container's journal:
 
 ```bash
 docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitoring.yml exec login journalctl --no-pager -n 50 -u 'mqt-slurm-rest@*' -u nginx
@@ -416,15 +432,17 @@ after changing provisioning or `examples/slurm/monitoring/prometheus.yml`.
 Job history comes from SlurmDBD through
 [`slurmrestd`](https://slurm.schedmd.com/rest.html) and Grafana's
 [Infinity data source](https://grafana.com/docs/plugins/yesoreyeram-infinity-datasource/latest/).
-Job IDs stay in accounting rather than becoming Prometheus labels.
+Current license counts come from `slurmctld` through the same data source. Job
+IDs stay in accounting rather than becoming Prometheus labels.
 
 The login container runs nginx as `mqt-dev`, connecting to a socket-activated
 `slurmrestd` process with the same identity using Slurm's local authentication.
-The proxy permits only GET requests to the versioned accounting jobs and ping
-routes; the jobs route requires a time range, fixes the user to `mqt-dev`, and
-omits job steps. Identical job queries are cached for 60 seconds, bounded to 16
-MiB in `/run`. This server-side restriction is necessary because the Slurm REST
-API also permits writes. No REST port is published on the host.
+The proxy permits only GET requests to the versioned accounting jobs, ping, and
+controller licenses routes. The jobs route requires a time range, fixes the user
+to `mqt-dev`, and omits job steps. Job and license queries are cached for 60
+seconds, bounded to 16 MiB in `/run`. This server-side restriction is necessary
+because the Slurm REST API also permits writes. No REST port is published on the
+host.
 :::
 
 ### Shared deployments
@@ -432,11 +450,11 @@ API also permits writes. No REST port is published on the host.
 Grafana permits anonymous viewing on the host's loopback interface. Prometheus
 and Slurm metrics have no published host ports. This is a local development
 interface: every viewer sees the Playground user's accounting. A shared
-deployment needs site authentication, per-user accounting access, and network
-policy; Grafana's Viewer role alone does not restrict a data source's API. Slurm
-25.11 metrics have no built-in authentication and are disabled when
-`PrivateData` is set; do not remove a site's privacy settings to enable this
-example.
+deployment needs site authentication, accounting access controls, and network
+policy; Grafana's Viewer role alone does not restrict a data source's API. Keep
+the site's Slurm authentication and `PrivateData` policy. Check metrics access
+support for the installed Slurm version: the Playground's Slurm 25.11 endpoints
+have no built-in authentication and are disabled when `PrivateData` is set.
 
 ## Deploy on an existing cluster
 
@@ -454,6 +472,30 @@ monitor host needs the device libraries and site credentials. Run monitors
 outside Slurm daemons and initialize reservations before opening queues.
 SlurmDBD provides persistent accounting but is not required for static local
 licenses.
+
+Reuse the site's Prometheus and Grafana for
+{ref}`runtime monitoring <slurm-runtime-monitoring>`:
+
+1. Enable `MetricsType=metrics/openmetrics` in the site's `slurm.conf` and load
+   the plugin during controller maintenance, subject to the site's privacy
+   policy. Add the Slurm scrape jobs from
+   `examples/slurm/monitoring/prometheus.yml` to Prometheus, replacing
+   `controller:6817` with the site's controller address. Keep the job names or
+   update the dashboard's matching selectors. Choose scrape intervals and
+   retention under site policy.
+2. Import `examples/slurm/monitoring/grafana/dashboards/runtime.json` into
+   Grafana. Install the Infinity data source plugin and configure both data
+   sources using the example provisioning files. Match their UIDs to the
+   dashboard references.
+3. Connect Infinity to a site-approved, read-only Slurm REST gateway with
+   identities and access controls appropriate for its viewers. Replace the
+   Playground's fixed `mqt-dev` identity and internal addresses. Match REST
+   paths and metric names to the installed Slurm version.
+
+The example dashboard assumes one cluster. Restrict its queries to that cluster
+when Prometheus stores metrics from several clusters, and filter the local
+license table to QDMI device IDs if the site also uses other licenses. Apply the
+[shared-deployment requirements](#shared-deployments).
 
 :::{dropdown} CPU and memory isolation with cgroup v2
 For allocation-based CPU and memory limits, configure:
