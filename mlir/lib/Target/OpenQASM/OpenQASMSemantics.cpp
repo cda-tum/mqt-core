@@ -3884,6 +3884,24 @@ private:
     return selection;
   }
 
+  [[nodiscard]] FailureOr<ArrayCopySource>
+  analyzeArraySource(const SyntaxExpression& expression, SMLoc location,
+                     StringRef diagnostic) {
+    const auto* symbol = (expression.kind == Expr::Kind::Identifier ||
+                          expression.kind == Expr::Kind::Index ||
+                          expression.kind == Expr::Kind::Slice)
+                             ? lookup(expression.identifier)
+                             : nullptr;
+    if (symbol == nullptr || symbol->kind != SymbolKind::Array) {
+      return fail(location, diagnostic);
+    }
+    MQT_OQ3_TRY_ASSIGN(indices,
+                       analyzeArraySelection(symbol->id, expression.lhs,
+                                             expression.additionalIndices,
+                                             expression.location));
+    return ArrayCopySource{.array = symbol->id, .indices = std::move(indices)};
+  }
+
   [[nodiscard]] static SmallVector<int64_t>
   selectedShape(ArrayRef<ArraySelection> selection) {
     SmallVector<int64_t> result;
@@ -3901,22 +3919,12 @@ private:
       return found->second;
     }
     const auto& expression = syntax.expressions[id];
-    const auto& operand = syntax.expressions[*expression.lhs];
-    const auto* symbol =
-        (operand.kind == Expr::Kind::Identifier ||
-         operand.kind == Expr::Kind::Index || operand.kind == Expr::Kind::Slice)
-            ? lookup(operand.identifier)
-            : nullptr;
-    if (symbol == nullptr || symbol->kind != SymbolKind::Array) {
-      return fail(expression.location,
-                  "sizeof requires an array or subarray argument");
-    }
-    MQT_OQ3_TRY_ASSIGN(selection,
-                       analyzeArraySelection(symbol->id, operand.lhs,
-                                             operand.additionalIndices,
-                                             operand.location));
+    MQT_OQ3_TRY_ASSIGN(
+        source, analyzeArraySource(
+                    syntax.expressions[*expression.lhs], expression.location,
+                    "sizeof requires an array or subarray argument"));
     SmallVector<size_t> dimensions;
-    for (const auto [dimension, index] : llvm::enumerate(selection)) {
+    for (const auto [dimension, index] : llvm::enumerate(source.indices)) {
       if (!index.isScalar()) {
         dimensions.push_back(dimension);
       }
@@ -3943,13 +3951,13 @@ private:
       return fail(expression.location, "sizeof dimension is out of bounds");
     }
     const auto sourceDimension = dimensions[dimension];
-    const auto& index = selection[sourceDimension];
+    const auto& index = source.indices[sourceDimension];
     ExpressionId size = 0;
     if (index.runtime) {
       const auto query = static_cast<uint32_t>(program.arraySizeQueries.size());
       program.arraySizeQueries.push_back({
           .range = *index.runtime,
-          .extent = program.arrays[symbol->id].shape[sourceDimension],
+          .extent = program.arrays[source.array].shape[sourceDimension],
       });
       size = addExpression({
           .kind = ExpressionKind::ArraySize,
@@ -4026,21 +4034,12 @@ private:
         pending.push_back(*expression.lhs);
         continue;
       }
-      const auto* source = (expression.kind == Expr::Kind::Identifier ||
-                            expression.kind == Expr::Kind::Index ||
-                            expression.kind == Expr::Kind::Slice)
-                               ? lookup(expression.identifier)
-                               : nullptr;
-      if (source == nullptr || source->kind != SymbolKind::Array) {
-        return fail(location,
-                    "array copy requires an array or subarray source");
-      }
-      MQT_OQ3_TRY_ASSIGN(indices,
-                         analyzeArraySelection(source->id, expression.lhs,
-                                               expression.additionalIndices,
-                                               expression.location));
-      const auto shape = selectedShape(indices);
-      const auto& from = program.arrays[source->id];
+      MQT_OQ3_TRY_ASSIGN(
+          source, analyzeArraySource(
+                      expression, location,
+                      "array copy requires an array or subarray source"));
+      const auto shape = selectedShape(source.indices);
+      const auto& from = program.arrays[source.array];
       if (shape.empty() || shape.size() != targetShape.size() ||
           from.type != to.type ||
           (from.elementWidth == 0 ? 64 : from.elementWidth) !=
@@ -4057,14 +4056,15 @@ private:
       if (std::cmp_greater(extent, REGISTER_WIDTH_LIMIT)) {
         return mismatch();
       }
-      const auto& initialized = *initializedBits[arrayStateSlots_[source->id]];
+      const auto& initialized =
+          *initializedBits[arrayStateSlots_[source.array]];
       if (!initialized.all()) {
-        const auto mask = arraySelectionMask(source->id, indices);
+        const auto mask = arraySelectionMask(source.array, source.indices);
         if (!mask || mask->test(initialized)) {
           return fail(location, "array copy source has uninitialized elements");
         }
       }
-      sources.push_back({.array = source->id, .indices = std::move(indices)});
+      sources.push_back(std::move(source));
     }
     if (extent >= 0 && targetShape.front() >= 0 &&
         extent != targetShape.front()) {
