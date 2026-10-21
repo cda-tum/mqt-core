@@ -20,11 +20,14 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 
+#include <array>
+#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <stdexcept>
@@ -147,6 +150,59 @@ TEST(CatalystQDMI, ValidatesProviderResultsAndRetainsBinaryParameters) {
   EXPECT_THROW(decodeSamples(job, 3, 6), std::runtime_error);
   returnedKeys = "10x,001";
   EXPECT_THROW(decodeSamples(job, 3, 5), std::runtime_error);
+}
+
+TEST(CatalystQDMI, MatrixGatesShareCorrelatedTerminalReadouts) {
+  constexpr size_t shots = 512;
+  JobParameters parameters;
+  parameters[0] = 42;
+  QDMIDevice runtime(Context::create(
+      qdmi::builtin_driver::openDevice("mqt.ddsim.default"), parameters));
+  const auto wires = runtime.AllocateQubits(3);
+  runtime.SetDeviceShots(shots);
+  // H, S-dagger, and RX(pi/6) give P(q0 = 1) = 3/4.
+  runtime.NamedOperation("Hadamard", {}, {wires[0]});
+  runtime.MatrixOperation({1, 0, 0, {0, 1}}, {wires[0]}, true);
+  runtime.NamedOperation("RX", {std::numbers::pi / 6}, {wires[0]});
+  runtime.MatrixOperation({0, {0, 1}, {0, 1}, 0}, {wires[2]}, false, {wires[0]},
+                          {false});
+  runtime.NamedOperation("PauliX", {}, {wires[1]});
+  const auto z0 = runtime.Observable(ObsId::PauliZ, {}, {wires[0]});
+  const auto z2 = runtime.Observable(ObsId::PauliZ, {}, {wires[2]});
+  const auto parity = runtime.TensorObservable({z0, z2});
+  const auto identity = runtime.Observable(ObsId::Identity, {}, {});
+
+  const std::array<size_t, 2> sizes{shots, 3};
+  const std::array<size_t, 2> strides{3, 1};
+  std::vector<double> samples(shots * 3);
+  DataView<double, 2> sampleView(samples.data(), 0, sizes.data(),
+                                 strides.data());
+  runtime.Sample(sampleView);
+  std::vector<int64_t> expectedCounts(8);
+  for (size_t shot = 0; shot < shots; ++shot) {
+    const auto q0 = sampleView(shot, 0);
+    const auto q2 = sampleView(shot, 2);
+    EXPECT_EQ(sampleView(shot, 1), 1);
+    EXPECT_EQ(q0 + q2, 1);
+    ++expectedCounts[static_cast<size_t>(4 * q0 + 2 + q2)];
+  }
+  std::vector<double> eigenvalues(8);
+  std::vector<int64_t> counts(8);
+  DataView<double, 1> eigenvalueView(eigenvalues);
+  DataView<int64_t, 1> countView(counts);
+  runtime.Counts(eigenvalueView, countView);
+  EXPECT_EQ(eigenvalues, (std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7}));
+  EXPECT_EQ(counts, expectedCounts);
+  const auto p = static_cast<double>(expectedCounts[6]) / shots;
+  EXPECT_NEAR(p, 0.75, 0.125);
+  std::vector<double> probabilities(4);
+  DataView<double, 1> probabilityView(probabilities);
+  runtime.PartialProbs(probabilityView, {wires[2], wires[0]});
+  EXPECT_EQ(probabilities, (std::vector<double>{0, p, 1 - p, 0}));
+  EXPECT_EQ(runtime.Expval(z0), 1 - 2 * p);
+  EXPECT_EQ(runtime.Var(z0), 1 - (1 - 2 * p) * (1 - 2 * p));
+  EXPECT_EQ(runtime.Expval(parity), -1);
+  EXPECT_EQ(runtime.Expval(identity), 1);
 }
 
 TEST(CatalystQDMI, InvalidBasisStateLeavesRecordingUsable) {

@@ -187,7 +187,7 @@ def tests(session: nox.Session) -> None:
 
 @nox.session(name="catalyst-dev", python="3.12", reuse_venv=True)
 def catalyst_dev(session: nox.Session) -> None:
-    """Test current Catalyst and PennyLane development wheels.
+    """Test current Catalyst with its required PennyLane development wheel.
 
     Set CATALYST_WHEEL to an official wheel artifact on platforms without
     TestPyPI nightly wheels, such as Linux aarch64.
@@ -204,16 +204,6 @@ def catalyst_dev(session: nox.Session) -> None:
                 # TestPyPI also contains stale releases of dependencies such as xdsl.
                 "--index-strategy=unsafe-best-match",
                 os.environ.get("CATALYST_WHEEL", "pennylane-catalyst>=0.16.0.dev0"),
-            ],
-            [
-                "uv",
-                "pip",
-                "install",
-                "--upgrade",
-                "--no-deps",  # Catalyst pins a PennyLane nightly that can lag main.
-                "--prerelease=allow",
-                "--index=https://test.pypi.org/simple",
-                "pennylane",
             ],
         ],
         pytest_run_args=["test/python/plugins/qdmi_pennylane"],
