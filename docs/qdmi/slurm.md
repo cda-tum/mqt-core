@@ -389,10 +389,6 @@ the sum of their memory use. Both come from Slurm accounting; missing memory
 samples remain blank. Resource accounting depends on the site's
 `JobAcctGatherType` and collection interval.
 
-With glibc 2.43 or newer, Slurm needs the
-[accounting fix from 25.11.7](https://github.com/SchedMD/slurm/blob/slurm-25-11-7-1/CHANGELOG/slurm-25.11.md)
-or a distribution backport to collect memory samples.
-
 To compare a row with Slurm, replace `JOBID` with its job ID and run this in the
 login shell:
 
@@ -423,6 +419,19 @@ the login container's journal:
 ```bash
 docker compose -f examples/slurm/compose.yml -f examples/slurm/compose.monitoring.yml exec login journalctl --no-pager -n 50 -u 'mqt-slurm-rest@*' -u nginx
 ```
+
+:::{dropdown} Troubleshooting: missing memory samples
+The Playground uses
+[Ubuntu 26.04's Slurm package](https://packages.ubuntu.com/resolute/slurm-wlm),
+currently 25.11.2, to keep installation under distribution package management.
+Requiring 25.11.7 would need another package source or a separate Slurm build.
+
+The tested image combines Slurm 25.11.2 with glibc 2.43 and cannot collect
+memory samples because of an
+[accounting bug fixed in 25.11.7](https://github.com/SchedMD/slurm/blob/slurm-25-11-7-1/CHANGELOG/slurm-25.11.md).
+**Max task RSS** remains blank until a package containing that fix or a
+distribution backport is installed and new samples are collected.
+:::
 
 Prometheus retains samples for up to seven days, with a 512 MiB retained-block
 limit, in the `prometheus-data` volume. The write-ahead log and current block
