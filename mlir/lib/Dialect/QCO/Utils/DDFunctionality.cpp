@@ -1495,6 +1495,45 @@ static FailureOr<LoopRange> resolveLoop(scf::ForOp forOp,
   return LoopRange{.induction = lowerWide, .step = stepWide, .trips = trips};
 }
 
+/// Execute a full-array fill as bounded memory work, not user control flow.
+static std::optional<LogicalResult> applyArrayFill(scf::ForOp loop,
+                                                   ClassicalEnv& classical) {
+  auto& body = *loop.getBody();
+  if (loop.getNumResults() != 0 || body.getOperations().size() != 2) {
+    return std::nullopt;
+  }
+  auto store = dyn_cast<memref::StoreOp>(body.front());
+  if (!store || store.getIndices().size() != 1 ||
+      store.getIndices().front() != loop.getInductionVar() ||
+      !loop.isDefinedOutsideOfLoop(store.getValue()) ||
+      !loop.isDefinedOutsideOfLoop(store.getMemRef())) {
+    return std::nullopt;
+  }
+  const auto storage = classical.memrefs.find(store.getMemRef());
+  auto lower = lookupInteger(loop.getLowerBound(), classical, loop);
+  auto upper = lookupInteger(loop.getUpperBound(), classical, loop);
+  auto step = lookupInteger(loop.getStep(), classical, loop);
+  if (failed(lower) || failed(upper) || failed(step)) {
+    return failure();
+  }
+  if (storage == classical.memrefs.end() || !lower->isZero() || *step != 1 ||
+      *upper != storage->second->size) {
+    return std::nullopt;
+  }
+  auto value = lookupAttribute(store.getValue(), classical, store);
+  if (failed(value)) {
+    return failure();
+  }
+  const auto& target = *storage->second;
+  auto& values = target.storage->writable();
+  for (size_t index = 0; index < target.size; ++index) {
+    const auto offset =
+        target.offset + static_cast<int64_t>(index) * target.strides.front();
+    values[static_cast<size_t>(offset)] = *value;
+  }
+  return success();
+}
+
 static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
                                     WalkState& walk, Operation* op);
 
@@ -1959,6 +1998,9 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
                               switchOp);
       })
       .Case([&](scf::ForOp forOp) -> LogicalResult {
+        if (auto fill = applyArrayFill(forOp, *walk.classical)) {
+          return *fill;
+        }
         auto range = resolveLoop(forOp, *walk.classical);
         if (failed(range)) {
           return failure();

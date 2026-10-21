@@ -3691,6 +3691,83 @@ TEST_F(QCODDFunctionalityTest,
   }
 }
 
+TEST_F(QCODDFunctionalityTest, ArrayFillsIsolateMeasurementBranches) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main() -> !cbit.reg<1> {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %size = arith.constant 32 : index
+      %false = arith.constant false
+      %true = arith.constant true
+      %memory = memref.alloca() : memref<32x2xi1>
+      %view = memref.subview %memory[0, 1][32, 1][1, 1]
+        : memref<32x2xi1> to memref<32xi1, strided<[2], offset: 1>>
+      memref.store %false, %view[%zero] : memref<32xi1, strided<[2], offset: 1>>
+      %q = qco.static 0 : !qco.qubit
+      %h = qco.h %q : !qco.qubit
+      %out, %bit = qco.measure %h : !qco.qubit
+      qco.sink %out : !qco.qubit
+      %expected = arith.xori %bit, %true : i1
+      scf.if %expected {
+        scf.for %i = %zero to %size step %one {
+          memref.store %true, %view[%i] : memref<32xi1, strided<[2], offset: 1>>
+        }
+      }
+      %actual = memref.load %memory[%zero, %one] : memref<32x2xi1>
+      %same = arith.cmpi eq, %actual, %expected : i1
+      %bits = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+      cbit.store %same, %bits[%zero] : !cbit.reg<1>
+      return %bits : !cbit.reg<1>
+    }
+  })mlir",
+                                              context.get());
+  ASSERT_TRUE(moduleOp);
+  const auto histogram = sample(mainFunc(*moduleOp), 1024, 23);
+  ASSERT_TRUE(succeeded(histogram));
+  ASSERT_EQ(histogram->size(), 1U);
+  EXPECT_EQ(histogram->at("1"), 1024U);
+}
+
+TEST_F(QCODDFunctionalityTest, ArrayFillsKeepBoundsChecksAndWhileBudget) {
+  for (const auto* setup : {
+           "%size = arith.constant 3 : index "
+           "%stop = arith.constant 4 : index",
+           "%size = arith.constant 10001 : index "
+           "%stop = arith.constant 10001 : index",
+       }) {
+    SCOPED_TRACE(setup);
+    // The first case must still reject the out-of-bounds fill. The second fill
+    // fits, but must not exempt the subsequent while loop from its budget.
+    auto moduleOp =
+        parseSourceString<ModuleOp>(std::string(
+                                        R"mlir(module { func.func @main() {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %true = arith.constant true
+    )mlir") + setup + R"mlir(
+      %a = memref.alloca(%size) : memref<?xi1>
+      scf.for %i = %zero to %stop step %one {
+        memref.store %true, %a[%i] : memref<?xi1>
+      }
+      scf.while : () -> () {
+        scf.condition(%true)
+      } do {
+        scf.yield
+      }
+      return
+    } })mlir",
+                                    context.get());
+    ASSERT_TRUE(moduleOp);
+    dd::Package package(0);
+    const DDExecutionOptions options{.maxWhileIterations = 10};
+    EXPECT_TRUE(
+        failed(simulate(mainFunc(*moduleOp), dd::makeZeroState(0, package),
+                        package, rng, DDArgumentBindings(), options)));
+    EXPECT_TRUE(failed(sample(mainFunc(*moduleOp), 1, 1, DDArgumentBindings(),
+                              nullptr, nullptr, options)));
+  }
+}
+
 TEST_F(QCODDFunctionalityTest, StridedCopiesPreserveAliasesWithoutLoopBudget) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(module {
     func.func @main() {
