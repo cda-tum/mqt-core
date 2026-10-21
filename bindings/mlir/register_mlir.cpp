@@ -256,22 +256,43 @@ static void registerParameterBinding(nb::class_<T, mlir::Program>& binding) {
             requireValid(program);
             return program.parameters();
           },
-          "Named f64 entry-point inputs in function argument order.")
+          "Named f64 scalar and fixed-length array inputs in function argument "
+          "order.")
       .def(
           "bind_parameters",
-          [](T& program, const std::map<std::string, double>& values) {
+          [](T& program, const std::map<std::string, nb::object>& values) {
             requireValid(program);
+            std::map<std::string, mlir::ParameterValue> bindings;
+            for (const auto& [name, value] : values) {
+              // NumPy < 2.4 can coerce one-element rows to floats.
+              if (nb::cast<int>(nb::getattr(value, "ndim", nb::int_(0))) > 1) {
+                throw nb::value_error(
+                    "array parameter values must be one-dimensional");
+              }
+              mlir::ParameterValue parameter;
+              if (!nb::try_cast(value, parameter)) {
+                throw nb::type_error(
+                    "parameter values must be floats or one-dimensional "
+                    "sequences of floats");
+              }
+              bindings.emplace(name, std::move(parameter));
+            }
             withDiagnostics(program.module().getContext(),
                             "cannot bind parameters",
-                            [&] { return program.bindParameters(values); });
+                            [&] { return program.bindParameters(bindings); });
           },
           "values"_a,
-          R"pb(Bind named f64 parameters in place without folding expressions.
+          R"pb(Bind named scalar and array parameters in place.
 
-Partial binding preserves unbound parameters and their source identities.
-Unknown names, non-finite values, and references to the entry point raise
-ValueError without changing the program. Call ``copy()`` first to preserve
-the input, and ``cleanup()`` afterwards if constant folding is needed.)pb");
+Inputs must be f64 scalars or fixed-length, one-dimensional f64 arrays.
+Supply arrays as sequences or NumPy arrays with the expected length.
+Partial binding preserves unbound inputs and their source identities.
+Unknown names, mismatched scalar or array values, incorrect lengths,
+non-finite values, and references to the entry point raise ValueError
+without changing the program.
+
+Binding does not fold expressions. Call ``copy()`` first to preserve the
+input, and ``cleanup()`` afterwards if constant folding is needed.)pb");
 }
 
 template <class T>

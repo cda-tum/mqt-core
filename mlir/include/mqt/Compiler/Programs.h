@@ -22,6 +22,7 @@
 
 #include "llvm/Support/LogicalResult.h"
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -43,6 +44,9 @@ class JeffProgram;
 class OpenQASMProgram;
 class QIRProgram;
 class TargetEnvironment;
+
+/// A value for a scalar or statically sized one-dimensional f64 input.
+using ParameterValue = std::variant<std::vector<double>, double>;
 
 /// Quantum resources and static IR statistics.
 struct QuantumProgramInfo {
@@ -228,15 +232,25 @@ public:
   /// Returns resource information and gate, control-flow, and operation counts.
   [[nodiscard]] QuantumProgramInfo inspect() const;
 
-  /// Return named f64 entry-point inputs in function argument order.
+  /// Return names of scalar and static rank-one f64 inputs in argument order.
   [[nodiscard]] std::vector<std::string> parameters() const;
 
-  /// Bind named f64 inputs in place, preserving unbound inputs and metadata.
+  /// Bind named f64 scalars and arrays in place, preserving unbound inputs.
   ///
-  /// Reject unknown names, non-finite values, or references to the entry point
-  /// without changing the program. Does not run cleanup or fold expressions.
+  /// Arrays must match the length of a static rank-one f64 tensor input.
+  /// Reject unknown names, mismatched types or lengths, non-finite values, or
+  /// references to the entry point without changing the program. Preserve
+  /// unbound input metadata. Does not run cleanup or fold expressions.
   [[nodiscard]] LogicalResult
-  bindParameters(const std::map<std::string, double>& values);
+  bindParameters(const std::map<std::string, ParameterValue>& values);
+
+  /// Bind a scalar-only map under the same contract.
+  template <std::same_as<double> T = double>
+  [[nodiscard]] LogicalResult
+  bindParameters(const std::map<std::string, T>& values) {
+    return bindParameters(
+        std::map<std::string, ParameterValue>(values.begin(), values.end()));
+  }
 
   /// Run the standard QC cleanup passes in place.
   [[nodiscard]] LogicalResult cleanup();
@@ -323,12 +337,20 @@ public:
   /// Uses the rules of QCProgram::inspect().
   [[nodiscard]] QuantumProgramInfo inspect() const;
 
-  /// Return named f64 entry-point inputs in function argument order.
+  /// Return names of scalar and static rank-one f64 inputs in argument order.
   [[nodiscard]] std::vector<std::string> parameters() const;
 
-  /// Bind named f64 inputs in place under the same contract as QCProgram.
+  /// Bind named f64 scalars and arrays under the same contract as QCProgram.
   [[nodiscard]] LogicalResult
-  bindParameters(const std::map<std::string, double>& values);
+  bindParameters(const std::map<std::string, ParameterValue>& values);
+
+  /// Bind a scalar-only map under the same contract as QCProgram.
+  template <std::same_as<double> T = double>
+  [[nodiscard]] LogicalResult
+  bindParameters(const std::map<std::string, T>& values) {
+    return bindParameters(
+        std::map<std::string, ParameterValue>(values.begin(), values.end()));
+  }
 
   /// Run the standard QCO cleanup passes in place.
   [[nodiscard]] LogicalResult cleanup();
