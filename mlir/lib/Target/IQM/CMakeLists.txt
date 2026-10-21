@@ -6,7 +6,7 @@
 #
 # Licensed under the MIT License
 
-add_mlir_library(MLIRIQMTarget Export.cpp LINK_LIBS MQTCompilerTarget LLVMCore)
+add_mlir_library(MLIRIQMTarget Export.cpp LINK_LIBS MQTCompilerTarget LLVMCore LLVMAnalysis)
 
 target_link_libraries(MLIRIQMTarget PRIVATE nlohmann_json::nlohmann_json)
 mqt_mlir_target_use_project_options(MLIRIQMTarget)

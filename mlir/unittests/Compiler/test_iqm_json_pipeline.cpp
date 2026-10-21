@@ -85,9 +85,9 @@ TEST(IQMJSONPipelineTest, CompilesInputFormatsForAnExplicitTarget) {
     const auto instructions =
         nlohmann::json::parse(exported.source()).at("instructions");
     EXPECT_EQ(instructions.front().at("name"), "prx");
-    EXPECT_EQ(instructions.back().at("locus").size(), 2U);
+    EXPECT_EQ(instructions.back().at("locus").size(), 1U);
     EXPECT_EQ(instructions.front().at("locus")[0],
-              instructions.back().at("locus")[1]);
+              instructions.back().at("locus")[0]);
   }
 }
 
@@ -117,7 +117,7 @@ TEST(IQMJSONPipelineTest, UnrollsLoopsAndSynthesizesIQMBasis) {
   EXPECT_GT(rotations, 0U);
   EXPECT_GT(entanglers, 0U);
   EXPECT_EQ(instructions.back().at("name"), "measure");
-  EXPECT_EQ(instructions.back().at("locus").size(), 2U);
+  EXPECT_EQ(instructions.back().at("locus").size(), 1U);
 }
 
 TEST(IQMJSONPipelineTest, RejectsReconstructedOutputsAndNonterminalGates) {
@@ -163,23 +163,26 @@ TEST(IQMJSONPipelineTest, DelaysIndependentReadoutUntilRoutedGatesFinish) {
     OPENQASM 3.0;
     include "stdgates.inc";
     qubit[3] q;
-    bit[2] zeta;
-    bit alpha;
+    bit[2] a;
+    bit a_0;
     x q[0];
     cx q[0], q[2];
-    zeta[1] = measure q[0];
-    alpha = measure q[1];
-    zeta[0] = measure q[2];
+    a[1] = measure q[0];
+    a_0 = measure q[1];
+    a[0] = measure q[2];
   )qasm")),
                                    environment);
   ASSERT_TRUE(succeeded(output));
   const auto instructions =
       nlohmann::json::parse(std::get<IQMJSONProgram>(*output).source())
           .at("instructions");
-  ASSERT_GT(instructions.size(), 1U);
-  EXPECT_EQ(instructions.back().at("name"), "measure");
-  EXPECT_EQ(instructions.back().at("locus").size(), 3U);
-  for (size_t index = 0; index + 1 < instructions.size(); ++index) {
+  ASSERT_GT(instructions.size(), 3U);
+  EXPECT_EQ(instructions[instructions.size() - 3].at("args").at("key"),
+            "a_2_0_0");
+  EXPECT_EQ(instructions[instructions.size() - 2].at("args").at("key"),
+            "a_2_0_1");
+  EXPECT_EQ(instructions.back().at("args").at("key"), "a_0_1_1_0");
+  for (size_t index = 0; index + 3 < instructions.size(); ++index) {
     EXPECT_NE(instructions[index].at("name"), "measure");
   }
 }

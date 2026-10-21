@@ -532,8 +532,8 @@ TEST(CompilerQDMIAdapterTest,
   EXPECT_EQ(compiled->programFormat(), QDMI_PROGRAM_FORMAT_IQMJSON);
   const auto json = nlohmann::json::parse(compiled->payload());
   EXPECT_EQ(json["instructions"].back()["name"], "measure");
-  EXPECT_EQ(json["instructions"].back()["args"]["key"], "m");
-  EXPECT_EQ(json["instructions"].back()["locus"].size(), 2);
+  EXPECT_EQ(json["instructions"].back()["args"]["key"], "c_2_0_1");
+  EXPECT_EQ(json["instructions"].back()["locus"].size(), 1);
   EXPECT_EQ(creations, 0);
   EXPECT_TRUE(
       llvm::errorToBool(mlir::submitProgram(device, *compiled).takeError()));

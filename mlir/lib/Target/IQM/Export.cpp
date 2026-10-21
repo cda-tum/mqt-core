@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -145,15 +146,10 @@ public:
       block = next;
     }
     if (visited.size() != entry->size() || pendingArrayElements_ != 0 ||
-        readout_.empty() || !measurements_.empty()) {
+        measuredQubits_.empty() || !measurements_.empty()) {
       return fail("every measurement must be recorded exactly once in a "
                   "complete output sequence");
     }
-    instructions_.push_back({
-        {"name", "measure"},
-        {"locus", std::move(readout_)},
-        {"args", {{"key", "m"}}},
-    });
     return nlohmann::json{
         {"name", entry->getName().str()},
         {"instructions", std::move(instructions_)},
@@ -168,8 +164,27 @@ private:
   DenseSet<uint64_t> measuredQubits_;
   DenseMap<uint64_t, uint64_t> measurements_;
   uint64_t pendingArrayElements_ = 0;
+  uint64_t registerSize_ = 0;
+  uint64_t registerCount_ = 0;
+  std::string registerName_;
   nlohmann::json instructions_ = nlohmann::json::array();
-  nlohmann::json readout_ = nlohmann::json::array();
+
+  llvm::Error beginRegister(const llvm::Value* label, const uint64_t size) {
+    if (llvm::isa<llvm::ConstantPointerNull>(label)) {
+      registerName_ = "c" + std::to_string(registerCount_);
+    } else {
+      StringRef name;
+      if (!llvm::getConstantStringInfo(label, name, false) ||
+          !name.contains('\0') || !llvm::json::isUTF8(name.split('\0').first)) {
+        return fail(
+            "output labels must be constant null-terminated UTF-8 strings");
+      }
+      registerName_ = name.split('\0').first.str();
+    }
+    registerSize_ = pendingArrayElements_ = size;
+    ++registerCount_;
+    return llvm::Error::success();
+  }
 
   llvm::Error emitCall(const llvm::CallInst& call) {
     const auto* function = call.getCalledFunction();
@@ -191,19 +206,29 @@ private:
           count->isNegative() || count->getValue().getActiveBits() > 64) {
         return fail("output arrays must contain a constant number of results");
       }
-      pendingArrayElements_ = count->getZExtValue();
-      return llvm::Error::success();
+      return beginRegister(call.getArgOperand(1), count->getZExtValue());
     }
     if (name == QIR_RECORD_OUTPUT && arity == 2) {
       const auto result = staticIndex(call.getArgOperand(0));
       if (!result || !measurements_.contains(*result)) {
         return fail("output must record a unique measured result handle");
       }
-      readout_.push_back(siteNames_.at(measurements_.at(*result)).str());
-      measurements_.erase(*result);
-      if (pendingArrayElements_ != 0) {
-        --pendingArrayElements_;
+      if (pendingArrayElements_ == 0) {
+        if (auto error = beginRegister(call.getArgOperand(1), 1)) {
+          return error;
+        }
       }
+      const auto key = (Twine(registerName_) + "_" + Twine(registerSize_) +
+                        "_" + Twine(registerCount_ - 1) + "_" +
+                        Twine(registerSize_ - pendingArrayElements_))
+                           .str();
+      instructions_.push_back({
+          {"name", "measure"},
+          {"locus", {siteNames_.at(measurements_.at(*result)).str()}},
+          {"args", {{"key", key}}},
+      });
+      measurements_.erase(*result);
+      --pendingArrayElements_;
       return llvm::Error::success();
     }
     if (name == QIR_MEASURE && arity == 2) {
@@ -212,7 +237,7 @@ private:
       if (!qubit || !result || !siteNames_.contains(*qubit) ||
           !measuredQubits_.insert(*qubit).second ||
           !measurements_.try_emplace(*result, *qubit).second ||
-          !readout_.empty()) {
+          registerCount_ != 0) {
         return fail("measurements require unique target qubits and result "
                     "handles before output recording");
       }

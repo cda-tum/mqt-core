@@ -291,7 +291,7 @@ TEST(CompilerCLI, EmitsTargetedIQMJSONAndPreservesOutputOnFailure) {
   const auto circuit = nlohmann::json::parse((*output)->getBuffer().str());
   const auto& instructions = circuit.at("instructions");
   EXPECT_EQ(instructions.back().at("name"), "measure");
-  EXPECT_EQ(instructions.back().at("locus").size(), 2U);
+  EXPECT_EQ(instructions.back().at("locus").size(), 1U);
   for (const auto& site : instructions.back().at("locus")) {
     EXPECT_TRUE(site == "physical-a" || site == "physical-b") << site;
   }

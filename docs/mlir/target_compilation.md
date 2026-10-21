@@ -553,13 +553,24 @@ Compilation lowers the placed circuit to Base Profile QIR, then converts its PRX
 and CZ calls to IQM JSON. PRX angle and phase use radians. Physical QIR qubit
 handles map to target site IDs, not positions in the target's site list.
 
-The converter flattens QIR result records in call order. For supported Qiskit
-and OpenQASM register readout, the compiler emits these records in source
-classical-slot order. Complete terminal readout gives each output slot exactly
-one measurement of a distinct qubit. IQM measurement columns therefore already
-follow the source slots; QDMI-on-IQM reverses them into QDMI bit strings, and
-Qiskit formats the original registers without a decoding hook. This does not
-require measuring unused physical target qubits.
+The converter emits one IQM measurement per QIR result record, in record order.
+Array labels, sizes, and positions provide IQM Qiskit SDK measurement keys:
+`registerName_registerSize_registerIndex_bitIndex`. Original register names,
+including underscores, are preserved. Scalar outputs form one-bit registers;
+unlabeled QIR outputs receive names `c0`, `c1`, and so on.
+
+For supported Qiskit and OpenQASM register readout, the compiler emits these
+records in source classical-slot order. The keys match the SDK even when its
+source instruction order differs. Complete terminal readout gives each output
+slot exactly one measurement of a distinct qubit. IQM measurement columns
+therefore already follow the source slots; QDMI-on-IQM reverses them into QDMI
+bit strings, and Qiskit formats the original registers without a decoding hook.
+This does not require measuring unused physical target qubits.
+
+Qiskit initializes untouched classical bits to zero. The IQM JSON result path
+does not reconstruct those slots, so compilation requires complete readout even
+for Qiskit inputs. Use `QuantumCircuit(2)` with `measure_all()` to let Qiskit
+allocate the measured register without an extra untouched register.
 
 Parameters and qubit addresses must be constant. Missing or overwritten output
 slots, repeated qubit measurements, reset, feedback, MOVE, and classical result

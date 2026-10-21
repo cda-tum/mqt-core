@@ -55,6 +55,8 @@ protected:
 
   std::unique_ptr<llvm::Module> parse(StringRef body) {
     const auto source = R"qir(
+      @register = internal constant [9 x i8] c"read_out\00"
+      @unterminated = internal constant [3 x i8] c"bad"
       declare void @__quantum__rt__initialize(ptr)
       declare void @__quantum__qis__prx__body(double, double, ptr)
       declare void @__quantum__qis__cz__body(ptr, ptr)
@@ -99,7 +101,7 @@ TEST_F(IQMExportTest, PreservesNativeParametersAndRecordedOutputOrder) {
     call void @__quantum__qis__mz__body(ptr null, ptr inttoptr (i64 8 to ptr))
     br label %output
   output:
-    call void @__quantum__rt__array_record_output(i64 2, ptr null)
+    call void @__quantum__rt__array_record_output(i64 2, ptr @register)
     call void @__quantum__rt__result_record_output(ptr inttoptr (i64 3 to ptr), ptr null)
     call void @__quantum__rt__result_record_output(ptr null, ptr null)
     call void @__quantum__rt__result_record_output(ptr inttoptr (i64 8 to ptr), ptr null)
@@ -117,7 +119,9 @@ TEST_F(IQMExportTest, PreservesNativeParametersAndRecordedOutputOrder) {
   EXPECT_EQ(circuit.at("instructions"), nlohmann::json::parse(R"json([
     {"name":"prx","locus":["QBseven"],"args":{"angle":1.25,"phase":-0.75}},
     {"name":"cz","locus":["QBseven","QBfortyTwo"],"args":{}},
-    {"name":"measure","locus":["QBfortyTwo","QBseven","QBzero"],"args":{"key":"m"}}
+    {"name":"measure","locus":["QBfortyTwo"],"args":{"key":"read_out_2_0_0"}},
+    {"name":"measure","locus":["QBseven"],"args":{"key":"read_out_2_0_1"}},
+    {"name":"measure","locus":["QBzero"],"args":{"key":"c1_1_1_0"}}
   ])json"));
   auto repeated = qir::exportIQMJSON(*module, target());
   ASSERT_TRUE(static_cast<bool>(repeated))
@@ -187,6 +191,22 @@ TEST_F(IQMExportTest, RequiresTerminalReadoutRecordedExactlyOnce) {
        }) {
     SCOPED_TRACE(body);
     auto module = parse(body);
+    ASSERT_TRUE(module);
+    auto exported = qir::exportIQMJSON(*module, target());
+    ASSERT_FALSE(static_cast<bool>(exported));
+    llvm::consumeError(exported.takeError());
+  }
+}
+
+TEST_F(IQMExportTest, RequiresConstantNullTerminatedOutputLabels) {
+  for (const auto* label : {"@unterminated", "inttoptr (i64 7 to ptr)"}) {
+    auto module = parse(
+        std::string(
+            "call void @__quantum__qis__mz__body(ptr null, ptr null)\n") +
+        "call void @__quantum__rt__array_record_output(i64 1, ptr " + label +
+        ")\ncall void @__quantum__rt__result_record_output(ptr null, ptr "
+        "null)\n"
+        "ret i64 0");
     ASSERT_TRUE(module);
     auto exported = qir::exportIQMJSON(*module, target());
     ASSERT_FALSE(static_cast<bool>(exported));

@@ -27,7 +27,8 @@ namespace qir {
 ///
 /// Supports constant PRX and CZ gates followed by terminal measurements.
 /// Each measurement must be recorded exactly once, in the desired output
-/// order. Target sites supply the physical names; the module is not modified.
+/// order. Output array labels and positions define IQM Qiskit measurement keys.
+/// Target sites supply the physical names; the module is not modified.
 [[nodiscard]] llvm::Expected<std::string>
 exportIQMJSON(const llvm::Module& module, const CompilerTarget& target);
 

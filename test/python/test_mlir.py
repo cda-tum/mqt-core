@@ -411,7 +411,7 @@ def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
 @pytest.mark.parametrize("frontend", ["openqasm", "qiskit"])
 def test_iqm_json_program(frontend: str, tmp_path: Path) -> None:
     """Preserve the PRX/CZ unitary and permuted readout across both frontends."""
-    circuit = QuantumCircuit(2, 2)
+    circuit = QuantumCircuit(QuantumRegister(2, "q"), ClassicalRegister(1, "a"), ClassicalRegister(1, "a_0"))
     circuit.r(0.731, -0.419, 0)
     circuit.r(-1.173, 0.627, 1)
     circuit.cz(0, 1)
@@ -437,13 +437,15 @@ def test_iqm_json_program(frontend: str, tmp_path: Path) -> None:
     assert compiled.program_format == ProgramFormat.IQM_JSON
     for payload in (direct.source, compiled.payload):
         instructions = json.loads(payload)["instructions"]
-        assert instructions[-1]["name"] == "measure"
-        # c[0] holds q[1], so reverse the readout locus to recover logical order.
-        qubits = instructions[-1]["locus"][::-1]
+        measurements = instructions[-2:]
+        assert [instruction["name"] for instruction in measurements] == ["measure", "measure"]
+        assert [instruction["args"]["key"] for instruction in measurements] == ["a_1_0_0", "a_0_1_1_0"]
+        # a[0] holds q[1], so reverse the readout locus to recover logical order.
+        qubits = [instruction["locus"][0] for instruction in reversed(measurements)]
         assert len(set(qubits)) == 2
         assert set(qubits) <= {site.name for site in target.sites}
         unitary = np.eye(4, dtype=complex)
-        for instruction in instructions[:-1]:
+        for instruction in instructions[:-2]:
             if instruction["name"] == "prx":
                 angle, phase = instruction["args"]["angle"], instruction["args"]["phase"]
                 rotation = np.array([
