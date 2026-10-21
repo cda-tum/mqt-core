@@ -562,8 +562,30 @@ Record MLIR pass and rewrite actions with the
 "$mqt_cc" input.qasm --profile-actions-to=compile.json > compiled.mlir
 ```
 
+To record the same trace from Python, invoke the driver built above from the
+repository root. The in-process `compile_program()` API does not export traces.
+
+```python
+import subprocess
+
+mqt_cc = "build/release/mlir/tools/mqt-cc/mqt-cc"
+subprocess.run(
+    [mqt_cc, "input.qasm", "--profile-actions-to=compile.json", "-o", "compiled.mlirbc"],
+    check=True,
+)
+```
+
 Open `compile.json` in [Perfetto](https://ui.perfetto.dev) to inspect the
 timeline. Use a separate trace file so it does not mix with compiler output.
+Select a slice to see its duration and the pass or rewrite name in `args.desc`.
+
+```{figure} _static/mlir/compiler-perfetto.png
+:alt: Perfetto displays nested MLIR pass and rewrite actions, with the selected rewrite's duration, description, and an action-duration histogram.
+:width: 100%
+
+MLIR action trace from a 24-qubit compilation, viewed in Perfetto.
+```
+
 Tracing is disabled by default and adds recording overhead. The file is closed
 on normal success or pass failure; a crash or forced termination can leave it
 incomplete. The trace covers actions on the compiler context, including
