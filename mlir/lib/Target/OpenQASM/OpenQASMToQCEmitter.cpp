@@ -1882,7 +1882,8 @@ private:
     return scratch;
   }
 
-  bool isEmptyArraySource(const frontend::ArrayCopySource& source) const {
+  [[nodiscard]] bool
+  isEmptyArraySource(const frontend::ArrayCopySource& source) const {
     return llvm::is_contained(program.arrays.at(source.array).shape, 0);
   }
 
