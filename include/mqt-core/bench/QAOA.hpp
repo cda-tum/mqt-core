@@ -14,6 +14,7 @@
 #include "bench/mqt_core_bench_export.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <string_view>
 
@@ -21,8 +22,9 @@ namespace mqt::bench {
 
 /// Parameters for a QAOA benchmark for MaxCut on a cycle graph.
 struct QAOAOptions {
-  /// Largest depth whose two scalar inputs per layer fit MLIR argument indices.
-  static constexpr size_t MAX_DEPTH = std::numeric_limits<unsigned>::max() / 2;
+  /// Largest depth representable by the signed 64-bit angle-array dimension.
+  static constexpr size_t MAX_DEPTH =
+      static_cast<size_t>(std::numeric_limits<int64_t>::max());
 
   /// Number of vertices and qubits, at least three and within signed 64-bit
   /// circuit dimensions.

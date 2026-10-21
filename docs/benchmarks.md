@@ -452,21 +452,22 @@ C=\sum_{j=0}^{n-1}\frac{1-Z_jZ_{(j+1)\bmod n}}{2},\qquad B=\sum_{j=0}^{n-1} X_j.
 ```
 
 Set `qubits` to at least three and `depth` to the number of layers, which
-defaults to one. The generated program takes $2p$ scalar inputs for depth $p$:
-`gamma_0` through `gamma_{p-1}`, followed by `beta_0` through `beta_{p-1}`. Each
-input is an angle in radians. The benchmark does not run an optimizer.
+defaults to one. For depth $d$, the generated program takes two arrays of $d$
+angles in radians: `gammas` and `betas`. The benchmark does not run an
+optimizer.
 
 The verification reference reports the shot-weighted mean cut and its ratio to
 the cycle's maximum cut, $n-(n\bmod 2)$. These scores measure solution quality,
-not agreement with an ideal distribution. Qubit counts must fit signed 64-bit
-circuit dimensions; practical limits depend on compilation and execution
-resources.
+not agreement with an ideal distribution. Qubit counts and depths must fit
+signed 64-bit circuit dimensions; practical limits depend on compilation and
+execution resources.
 
 Generate a reusable four-vertex template, bind angles to a copy, and score its
-sampled cuts. Bind all angles and run `cleanup()` before sampling or QIR export:
+sampled cuts. Bind both arrays and run `cleanup()` before sampling, OpenQASM
+export, or QIR export:
 
 ```{code-cell} ipython3
-from math import pi
+import numpy as np
 
 from mqt.core.bench import qaoa
 from mqt.core.mlir import sample
@@ -474,7 +475,7 @@ from mqt.core.mlir import sample
 benchmark = qaoa.QAOA(qaoa.Options(qubits=4))
 template = benchmark.generate()
 program = template.copy()
-program.bind_parameters({"gamma_0": pi / 4, "beta_0": pi / 8})
+program.bind_parameters({"gammas": [np.pi / 4], "betas": [np.pi / 8]})
 program.cleanup()
 counts = sample(program, shots=1024, seed=17)
 evaluation = benchmark.evaluate(counts)

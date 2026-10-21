@@ -22,15 +22,16 @@
 #include "gtest/gtest.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Types.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 
 #include <cmath>
 #include <complex>
 #include <cstddef>
-#include <map>
+#include <cstdint>
 #include <numbers>
 #include <string>
 #include <utility>
@@ -101,12 +102,10 @@ TEST(GenerateProgramTest, QAOAMatchesCostAndMixerEvolution) {
       auto program = test::generateQCO(
           QAOA{{.qubits = qubits, .depth = angles.gammas.size()}});
       ASSERT_TRUE(mlir::succeeded(program));
-      std::map<std::string, double> values;
-      for (size_t layer = 0; layer < angles.gammas.size(); ++layer) {
-        values.emplace("gamma_" + std::to_string(layer), angles.gammas[layer]);
-        values.emplace("beta_" + std::to_string(layer), angles.betas[layer]);
-      }
-      ASSERT_TRUE(mlir::succeeded(program->bindParameters(values)));
+      ASSERT_TRUE(mlir::succeeded(program->bindParameters({
+          {"gammas", angles.gammas},
+          {"betas", angles.betas},
+      })));
       ASSERT_TRUE(mlir::succeeded(program->cleanup()));
       dd::Package package(0);
       auto state = mlir::qco::simulateStatevector(
@@ -128,8 +127,8 @@ TEST(GenerateProgramTest, SamplesQAOACutQuality) {
     auto program = test::generateQCO(benchmark);
     ASSERT_TRUE(mlir::succeeded(program));
     ASSERT_TRUE(mlir::succeeded(program->bindParameters({
-        {"gamma_0", std::numbers::pi / 4.},
-        {"beta_0", std::numbers::pi / 8.},
+        {"gammas", std::vector<double>{std::numbers::pi / 4.}},
+        {"betas", std::vector<double>{std::numbers::pi / 8.}},
     })));
     ASSERT_TRUE(mlir::succeeded(program->cleanup()));
     auto counts = mlir::qco::sample(mlir::mqt::getEntryPoint(program->module()),
@@ -149,9 +148,8 @@ TEST(GenerateProgramTest, SamplesQAOACutQuality) {
 TEST(GenerateProgramTest, PreservesQAOAInputsThroughJeff) {
   auto program = test::generateQCO(QAOA{{.qubits = 3, .depth = 2}});
   ASSERT_TRUE(mlir::succeeded(program));
-  EXPECT_EQ(
-      program->parameters(),
-      (std::vector<std::string>{"gamma_0", "gamma_1", "beta_0", "beta_1"}));
+  EXPECT_EQ(program->parameters(),
+            (std::vector<std::string>{"gammas", "betas"}));
   auto jeff = std::move(*program).intoJeff();
   ASSERT_TRUE(mlir::succeeded(jeff));
   auto restored = mlir::JeffProgram::fromBytes(jeff->toBytes());
@@ -159,14 +157,17 @@ TEST(GenerateProgramTest, PreservesQAOAInputsThroughJeff) {
   auto qco = std::move(*restored).intoQCO();
   ASSERT_TRUE(mlir::succeeded(qco));
   auto entry = mlir::mqt::getEntryPoint(qco->module());
-  EXPECT_EQ(entry.getNumArguments(), 4);
+  EXPECT_EQ(entry.getNumArguments(), 2);
   for (const auto type : entry.getArgumentTypes()) {
-    EXPECT_TRUE(type.isF64());
+    const auto tensor = llvm::dyn_cast<mlir::RankedTensorType>(type);
+    ASSERT_TRUE(tensor);
+    EXPECT_EQ(tensor.getShape(), (llvm::ArrayRef<int64_t>{2}));
+    EXPECT_TRUE(tensor.getElementType().isF64());
   }
 }
 
 TEST(GenerateProgramTest, SerializesWideQAOAWithCompactLoops) {
-  for (const size_t layers : {2U, 128U}) {
+  for (const size_t layers : {2U, 1'000'000'000U}) {
     SCOPED_TRACE(layers);
     const QAOAOptions options{
         .qubits = 1'024,
@@ -174,7 +175,7 @@ TEST(GenerateProgramTest, SerializesWideQAOAWithCompactLoops) {
     };
     auto program = generate(QAOA{options});
     ASSERT_TRUE(mlir::succeeded(program));
-    EXPECT_EQ(program->parameters().size(), 2 * layers);
+    EXPECT_EQ(program->parameters().size(), 2);
     // Generation must not expand a gate list per vertex or layer.
     EXPECT_LT(test::countOperations(program->module()), 150U);
     test::expectJeffRoundTrip(std::move(*program));

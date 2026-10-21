@@ -1,13 +1,13 @@
 # QAOA benchmark
 
-Status: complete. The benchmark generates a reusable symbolic circuit with
-native binding, execution, and serialization coverage.
+Status: complete. The benchmark generates a reusable symbolic circuit with array
+binding, execution, and serialization coverage.
 
 ## Goal and scope
 
 Add the fixed-repetition QAOA family from the jeff benchmark table. The instance
-is unweighted MaxCut on an `n`-vertex cycle, with `n >= 3` and depth `p >= 1`.
-The generated function takes `2*p` scalar cost and mixer angles. Each run
+is unweighted MaxCut on an `n`-vertex cycle, with `n >= 3` and depth `d >= 1`.
+The generated function takes two arrays of `d` cost and mixer angles. Each run
 measures all `n` qubits. Angle optimization and arbitrary input graphs are
 outside this addition.
 
@@ -17,7 +17,7 @@ outside this addition.
 (2)–(6), define a uniform initial state followed by cost and mixer layers:
 
 ```text
-|ψ⟩ = U_B(β_p) U_C(γ_p) … U_B(β_1) U_C(γ_1) |+⟩^n
+|ψ⟩ = U_B(β_d) U_C(γ_d) … U_B(β_1) U_C(γ_1) |+⟩^n
 U_C(γ) = exp(-i γ C), U_B(β) = exp(-i β Σ_j X_j)
 ```
 
@@ -32,13 +32,14 @@ calculation is a way to obtain an expectation, not a full outcome distribution.
 - Use the existing `RZZ(-gamma)` operation for each cycle edge; it differs from
   `exp(-i gamma C_jk)` only by a global phase. Each mixer is `Rx(2 beta)`. Apply
   the closing edge `(n - 1, 0)` once.
-- Configure `qubits` and `depth` (default one). The scalar `f64` inputs are
-  `gamma_0` through `gamma_{p-1}`, then `beta_0` through `beta_{p-1}`. Reuse
-  native parameter binding and its finite-value checks. Widths fit signed 64-bit
-  dimensions, and twice the depth fits the IR's argument count.
-- Pack scalar inputs into tensors for indexed access in the layer loop. The
-  benchmark manifest identifies the circuit template, not an angle assignment.
-  Bind a copy and run cleanup before sampling. QIR also requires bound inputs.
+- Configure `qubits` and `depth` (default one). The inputs are `gammas` and
+  `betas`, each a static one-dimensional `f64` tensor of length `depth`. Reuse
+  shared array parameter binding and its length and finite-value checks. Both
+  widths and depths fit signed 64-bit dimensions.
+- Index the angle arrays in the layer loop. The benchmark manifest identifies
+  the circuit template, not an angle assignment. Bind a copy and run cleanup
+  before sampling, OpenQASM export, or QIR export. Binding creates dense
+  constants.
 - Follow the Shor verification pattern: compute the mean sampled cut and its
   ratio to the exact cycle optimum. These scores measure objective quality; they
   do not verify the quantum distribution. Reuse shared count and outcome
@@ -46,9 +47,9 @@ calculation is a way to obtain an expectation, not a full outcome distribution.
   shot counts by cut sizes.
 - Do not add a statevector simulator or an artificial small qubit/depth limit to
   the native reference. Structured register and layer loops keep the operation
-  count independent of the number of vertices and layers. The function inputs
-  and tensor operands require storage proportional to the depth. No constant
-  hardware-depth claim is made for the emitted decomposition.
+  count and the two function arguments independent of the number of vertices and
+  layers. Concrete angle data requires storage proportional to the depth. No
+  constant hardware-depth claim is made for the emitted decomposition.
 - Keep the dry class summary and detailed mathematical explanation in their
   existing documentation layers. Reuse registration and JSON machinery; keep
   family-specific checks in the family tests. Regenerate Python stubs.
@@ -74,15 +75,18 @@ iteration. No new helper, released API change, or generated jeff file is needed.
   diagnostic locations. A large-count regression covers rounding on platforms
   where `long double` has double precision. Mean scores are bounded by the exact
   cycle optimum before computing the approximation ratio.
-- A 1,024-qubit instance with two or 128 layers passes the jeff round-trip. Its
-  operation-count bound guards compact generation in both dimensions, without
-  attempting a full statevector.
+- A 1,024-qubit instance with two or one billion layers passes the jeff
+  round-trip. Its operation-count bound guards compact generation in both
+  dimensions, without attempting a full statevector.
 - All benchmark suites pass: 161 native tests, 52 MLIR tests, 83 Python tests,
-  and the CLI CTest. The tests bind angles before checking coherent states and
-  samples, and retain unbound scalar inputs through binary jeff. Python stubs
-  were regenerated. Whole-file C++ lint, the executable documentation build, and
-  local documentation links pass.
+  and the CLI CTest. The 31 shared Python binding tests also pass. The tests
+  bind arrays before checking coherent states and samples, and retain unbound
+  array inputs through binary jeff. Python stubs were regenerated. Whole-file
+  C++ lint, executable documentation, and local documentation links pass.
 - Binary jeff preserves argument positions and types, but not input names. Name
   preservation is outside this change; named binding works before export.
+- Bound two-layer QAOA exports to OpenQASM 3 and Adaptive QIR. Direct Base QIR
+  export rejects the remaining structured loops; array binding does not change
+  that profile restriction.
 - Hosted CI and execution of large instances were not run. Large generated
   programs remain subject to compiler and executor resource limits.

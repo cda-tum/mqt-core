@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import json
-import math
 
+import numpy as np
 import pytest
 
 from mqt.core.bench import qaoa
@@ -41,14 +41,14 @@ def test_qaoa_reference_and_json() -> None:
 
 
 def test_qaoa_generation() -> None:
-    """Expose each layer's symbolic angles through the generation boundary."""
+    """Expose two symbolic angle arrays through the generation boundary."""
     benchmark = qaoa.QAOA(qaoa.Options(qubits=5, depth=2))
     assert json.loads(benchmark.instance_specification_json)["parameters"] == {
         "qubits": 5,
         "depth": 2,
     }
     program = benchmark.generate()
-    assert program.parameters == ["gamma_0", "gamma_1", "beta_0", "beta_1"]
+    assert program.parameters == ["gammas", "betas"]
     assert_generates(program)
 
 
@@ -57,17 +57,17 @@ def test_qaoa_binding_and_sampling() -> None:
     benchmark = qaoa.QAOA(qaoa.Options(qubits=4, depth=2))
     template = benchmark.generate()
     program = template.copy()
-    program.bind_parameters({"gamma_0": math.pi / 4, "gamma_1": 0.0})
-    assert program.parameters == ["beta_0", "beta_1"]
-    program.bind_parameters({"beta_0": math.pi / 8, "beta_1": 0.0})
+    program.bind_parameters({"gammas": [np.pi / 4, 0.0]})
+    assert program.parameters == ["betas"]
+    program.bind_parameters({"betas": [np.pi / 8, 0.0]})
     assert not program.parameters
     program.cleanup()
     counts = sample(program, shots=4096, seed=17)
     assert benchmark.evaluate(counts).mean_cut == pytest.approx(3.0, abs=0.1)
 
-    assert template.parameters == ["gamma_0", "gamma_1", "beta_0", "beta_1"]
+    assert template.parameters == ["gammas", "betas"]
     uniform = template.copy()
-    uniform.bind_parameters(dict.fromkeys(template.parameters, 0.0))
+    uniform.bind_parameters({"gammas": np.zeros(2), "betas": np.zeros(2)})
     uniform.cleanup()
     counts = sample(uniform, shots=4096, seed=17)
     assert benchmark.evaluate(counts).mean_cut == pytest.approx(2.0, abs=0.1)

@@ -23,7 +23,7 @@ class Options:
 
     @property
     def depth(self) -> int:
-        """The number of cost-mixer layers, from 1 through 2,147,483,647."""
+        """The number of cost-mixer layers, positive and representable as a signed 64-bit integer."""
 
 class Evaluation:
     """The sampled cut quality on a cycle graph."""
@@ -45,11 +45,11 @@ class QAOA:
     :math:`C=\\sum_{j=0}^{n-1}(1-Z_jZ_{(j+1)\\bmod n})/2` and
     :math:`B=\\sum_{j=0}^{n-1} X_j`.
 
-    The generated program takes :math:`2p` scalar angle inputs for :math:`p`
-    layers: ``gamma_0`` through ``gamma_{p-1}``, followed by ``beta_0`` through
-    ``beta_{p-1}``. Bind angles in radians with
+    For :math:`d` layers, the generated program takes two arrays of :math:`d`
+    angles: ``gammas`` and ``betas``. Bind angles in radians with
     :meth:`mqt.core.mlir.QCProgram.bind_parameters`, then call
-    :meth:`mqt.core.mlir.QCProgram.cleanup` before sampling or QIR export.
+    :meth:`mqt.core.mlir.QCProgram.cleanup` before sampling, OpenQASM export,
+    or QIR export.
     Copy the program first to reuse it for other angles.
 
     The benchmark does not run an optimizer. Evaluation measures cut quality,
