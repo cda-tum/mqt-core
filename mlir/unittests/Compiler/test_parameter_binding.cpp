@@ -13,11 +13,15 @@
 
 #include "gtest/gtest.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Verifier.h"
 
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 
 #include <limits>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -95,6 +99,147 @@ rz(alpha + beta) q;
   ASSERT_TRUE(mlir::succeeded(qco->bindParameters({{"alpha", -0.5}})));
   EXPECT_TRUE(qco->parameters().empty());
   EXPECT_TRUE(mlir::succeeded(mlir::verify(qco->module())));
+}
+
+TEST(ParameterBinding, MixedArrayBindingPreservesRemainingInputs) {
+  auto qc = mlir::QCProgram::fromMLIRString(R"(
+    module {
+      func.func @main(%a: tensor<2xf64> {mqt.input_name = "a"},
+                      %theta: f64 {mqt.input_name = "theta", mqt.input_id = 7 : i128},
+                      %b: tensor<1xf64> {mqt.input_name = "b", mqt.input_id = 9 : i128})
+          attributes {mqt.entry_point} {
+        %zero = arith.constant 0 : index
+        %one = arith.constant 1 : index
+        %a0 = tensor.extract %a[%zero] : tensor<2xf64>
+        %a1 = tensor.extract %a[%one] : tensor<2xf64>
+        %b0 = tensor.extract %b[%zero] : tensor<1xf64>
+        %sum = arith.addf %a0, %a1 : f64
+        %offset = arith.addf %sum, %theta : f64
+        %angle = arith.addf %offset, %b0 : f64
+        %q = qc.alloc : !qc.qubit
+        qc.ry(%angle) %q : !qc.qubit
+        qc.dealloc %q : !qc.qubit
+        return
+      }
+    }
+  )");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  EXPECT_EQ(qc->parameters(), (std::vector<std::string>{"a", "theta", "b"}));
+  ASSERT_TRUE(mlir::succeeded(
+      qc->bindParameters({{"a", std::vector<double>{0.25, -0.5}}})));
+  EXPECT_EQ(qc->parameters(), (std::vector<std::string>{"theta", "b"}));
+  auto entry = mlir::mqt::getEntryPoint(qc->module());
+  EXPECT_EQ(
+      entry.getArgAttrOfType<mlir::IntegerAttr>(0, "mqt.input_id").getInt(), 7);
+  EXPECT_EQ(
+      entry.getArgAttrOfType<mlir::IntegerAttr>(1, "mqt.input_id").getInt(), 9);
+  auto constant =
+      llvm::dyn_cast<mlir::arith::ConstantOp>(entry.front().front());
+  ASSERT_TRUE(constant);
+  const auto values =
+      llvm::dyn_cast<mlir::DenseFPElementsAttr>(constant.getValue());
+  ASSERT_TRUE(values);
+  const auto elements = values.getValues<double>();
+  EXPECT_EQ((std::vector<double>{elements.begin(), elements.end()}),
+            (std::vector<double>{0.25, -0.5}));
+  EXPECT_TRUE(mlir::succeeded(mlir::verify(qc->module())));
+
+  auto qco = std::move(*qc).intoQCO();
+  ASSERT_TRUE(mlir::succeeded(qco));
+  const std::map<std::string, double> scalarValues{{"theta", 0.625}};
+  ASSERT_TRUE(mlir::succeeded(qco->bindParameters(scalarValues)));
+  EXPECT_EQ(qco->parameters(), (std::vector<std::string>{"b"}));
+  ASSERT_TRUE(
+      mlir::succeeded(qco->bindParameters({{"b", std::vector<double>{-0.5}}})));
+  EXPECT_TRUE(qco->parameters().empty());
+  EXPECT_TRUE(mlir::succeeded(mlir::verify(qco->module())));
+  ASSERT_TRUE(mlir::succeeded(qco->cleanup()));
+  qc = std::move(*qco).intoQC();
+  ASSERT_TRUE(mlir::succeeded(qc));
+  EXPECT_TRUE(mlir::succeeded(qc->toOpenQASM3()));
+  for (const auto profile :
+       {mlir::QIRProfile::Base, mlir::QIRProfile::Adaptive}) {
+    auto bound = qc->copy();
+    EXPECT_TRUE(mlir::succeeded(std::move(bound).intoQIR(profile)));
+  }
+}
+
+TEST(ParameterBinding, EmptyArrayMatchesZeroLengthInput) {
+  auto qc = mlir::QCProgram::fromMLIRString(R"(
+    module {
+      func.func @main(%empty: tensor<0xf64> {mqt.input_name = "empty"})
+          attributes {mqt.entry_point} {
+        return
+      }
+    }
+  )");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  ASSERT_TRUE(
+      mlir::succeeded(qc->bindParameters({{"empty", std::vector<double>{}}})));
+  EXPECT_TRUE(qc->parameters().empty());
+  EXPECT_TRUE(mlir::succeeded(mlir::verify(qc->module())));
+}
+
+TEST(ParameterBinding, OnlyNamedScalarsAndStaticRankOneF64InputsAreBindable) {
+  auto qc = mlir::QCProgram::fromMLIRString(R"(
+    module {
+      func.func @main(%scalar: f64 {mqt.input_name = "scalar"},
+                      %array: tensor<2xf64> {mqt.input_name = "array"},
+                      %dynamic: tensor<?xf64> {mqt.input_name = "dynamic"},
+                      %matrix: tensor<2x2xf64> {mqt.input_name = "matrix"},
+                      %rank_zero: tensor<f64> {mqt.input_name = "rank_zero"},
+                      %f32: tensor<2xf32> {mqt.input_name = "f32"},
+                      %vector: vector<2xf64> {mqt.input_name = "vector"},
+                      %unnamed: tensor<2xf64>)
+          attributes {mqt.entry_point} {
+        return
+      }
+    }
+  )");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  EXPECT_EQ(qc->parameters(), (std::vector<std::string>{"scalar", "array"}));
+  const auto before = qc->str();
+  for (const auto* name : {"dynamic", "matrix", "rank_zero", "f32", "vector"}) {
+    EXPECT_TRUE(mlir::failed(
+        qc->bindParameters({{name, std::vector<double>{0.0, 0.0}}})));
+    EXPECT_EQ(qc->str(), before);
+  }
+  const std::map<std::string, double> values{{"scalar", 0.5}};
+  ASSERT_TRUE(mlir::succeeded(qc->bindParameters(values)));
+  EXPECT_EQ(qc->parameters(), (std::vector<std::string>{"array"}));
+}
+
+TEST(ParameterBinding, InvalidArrayBindingDoesNotChangeProgram) {
+  auto qc = mlir::QCProgram::fromMLIRString(R"(
+    module {
+      func.func @main(%a: f64 {mqt.input_name = "a"},
+                      %b: tensor<2xf64> {mqt.input_name = "b"})
+          attributes {mqt.entry_point} {
+        return
+      }
+    }
+  )");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  const auto before = qc->str();
+  for (const auto& invalid : std::vector<mlir::ParameterValue>{
+           1.0,
+           std::vector<double>{},
+           std::vector<double>{0.5},
+           std::vector<double>{0.5, 0.5, 0.5},
+           std::vector<double>{0.5, std::numeric_limits<double>::quiet_NaN()},
+           std::vector<double>{std::numeric_limits<double>::infinity(), 0.5},
+       }) {
+    EXPECT_TRUE(mlir::failed(qc->bindParameters({{"a", 0.5}, {"b", invalid}})));
+    EXPECT_EQ(qc->str(), before);
+  }
+  EXPECT_TRUE(
+      mlir::failed(qc->bindParameters({{"a", std::vector<double>{0.5}}})));
+  EXPECT_EQ(qc->str(), before);
+  EXPECT_TRUE(mlir::failed(qc->bindParameters(
+      {{"b", std::vector<double>{0.5, 0.5}}, {"unknown", 0.0}})));
+  EXPECT_EQ(qc->str(), before);
+  EXPECT_TRUE(mlir::succeeded(qc->bindParameters({})));
+  EXPECT_EQ(qc->str(), before);
 }
 
 TEST(ParameterBinding, InvalidBindingDoesNotChangeProgram) {

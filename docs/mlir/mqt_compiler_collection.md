@@ -143,8 +143,9 @@ For gate dependencies, MLIR provides `getForwardSlice` and `getBackwardSlice` in
 
 ## Bind program parameters
 
-QC and QCO programs expose named f64 entry-point inputs through `parameters`.
-Use `bind_parameters` to bind all or some inputs in place:
+QC and QCO programs expose named f64 scalar and fixed-length, one-dimensional
+array inputs through `parameters`. Use `bind_parameters` to bind all or some
+inputs in place:
 
 ```{code-cell} ipython3
 from qiskit import QuantumCircuit
@@ -163,9 +164,14 @@ assert parameterized.parameters == ["theta"]
 OpenQASM 3 `input float` and `input float[64]` declarations use the same named
 input API. Both frontends can retain symbolic `f64` parameters through QC and
 QCO transformations. Partial binding preserves unbound inputs and their source
-identities. Unknown names, non-finite values, and references to the entry point
-fail without changing the program. Binding does not fold expressions; call
-`cleanup()` when needed.
+identities. For an array input, pass a sequence or NumPy array, for example
+`program.bind_parameters({"angles": [0.1, 0.2]})`. Each array must have the
+expected length and contain only finite values.
+
+Unknown names, mismatched scalar or array values, incorrect lengths, non-finite
+values, and references to the entry point fail without changing the program.
+Binding does not fold expressions; call `cleanup()` when needed. Bind array
+inputs before OpenQASM export; QIR requires all parameters to be bound.
 
 ## Select an output format
 
