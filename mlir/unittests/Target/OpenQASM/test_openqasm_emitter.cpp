@@ -24,6 +24,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -113,20 +114,38 @@ barrier q[first:step:0], r[1:2];
 }
 
 TEST(OpenQASMTargetTest, RangeCopiesReuseScratchOutsideLoops) {
-  MLIRContext context;
-  auto moduleOp = qc::translateOpenQASMToQC(
-      "OPENQASM 3.0; array[int, 4] a = {1, 2, 3, 4}; "
-      "a[1:] = a[:2]; for int i in [0:2] { a[:2] = a[1:]; }",
-      &context, {.maxOperations = 64});
-  ASSERT_TRUE(moduleOp);
-  EXPECT_TRUE(succeeded(verify(*moduleOp)));
-  size_t allocations = 0;
-  moduleOp->walk([&](memref::AllocaOp alloc) {
-    ++allocations;
-    EXPECT_FALSE(alloc->getParentOfType<scf::ForOp>());
-    EXPECT_EQ(alloc.getType().getShape(), ArrayRef<int64_t>{4});
-  });
-  EXPECT_EQ(allocations, 2); // Original array and reused scratch.
+  for (const bool runtime : {false, true}) {
+    MLIRContext context;
+    auto moduleOp = qc::translateOpenQASMToQC(
+        runtime ? "OPENQASM 3.0; array[int, 4] a = {1, 2, 3, 4}; "
+                  "int start = 1; int stop = 2; a[start:] = a[:stop];"
+                : "OPENQASM 3.0; array[int, 4] a = {1, 2, 3, 4}; "
+                  "a[1:] = a[:2]; for int i in [0:2] { a[:2] = a[1:]; }",
+        &context, {.maxOperations = runtime ? 256U : 64U});
+    ASSERT_TRUE(moduleOp);
+    EXPECT_TRUE(succeeded(verify(*moduleOp)));
+    size_t allocations = 0;
+    moduleOp->walk([&](memref::AllocaOp alloc) {
+      ++allocations;
+      EXPECT_FALSE(alloc->getParentOfType<scf::ForOp>());
+      EXPECT_EQ(alloc.getType().getShape(), ArrayRef<int64_t>{4});
+    });
+    EXPECT_EQ(allocations, 2); // Original array and reused scratch.
+    if (runtime) {
+      size_t views = 0;
+      moduleOp->walk([&](memref::SubViewOp view) {
+        ++views;
+        EXPECT_TRUE(view.getType().isDynamicDim(0));
+      });
+      EXPECT_EQ(views, 3);
+      moduleOp->walk([](cf::AssertOp) {
+        ADD_FAILURE() << "runtime range validity is a precondition";
+      });
+      moduleOp->walk([](scf::ForOp) {
+        ADD_FAILURE() << "runtime copy must not become a frontend loop";
+      });
+    }
+  }
 }
 
 TEST(OpenQASMTargetTest, ImportsNonNullTerminatedSourceView) {

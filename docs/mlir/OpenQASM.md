@@ -93,17 +93,24 @@ unsupported. To pass or return array values, select individual entries as gate
 parameters or scalar outputs; gate definitions cannot capture mutable arrays.
 
 Use inclusive ranges to select entries in any dimension: `a[1:3]`, `a[0:2:4]`,
-or `a[:, 1]`. Bounds and steps must be compile-time integers. Negative bounds
-count from the end; omitted endpoints use the dimension's ends in the step's
+or `a[:, 1]`. Bounds and steps may be runtime integers. Negative bounds count
+from the end; omitted endpoints use the dimension's ends in the step's
 direction, so `a[:-1:]` reverses it. Ranges retain dimensions; scalar indices
-remove them. Empty ranges, zero steps, and out-of-bounds endpoints are rejected,
-except a full selection of a zero-length dimension. Overlapping assignments copy
-the original source values.
+remove them. Constant empty ranges, zero steps, and out-of-bounds endpoints are
+rejected, except a full selection of a zero-length dimension. Overlapping
+assignments copy the original source values.
+
+Runtime ranges require in-bounds endpoints, nonzero steps that fit signed i64, a
+nonempty selection in the step's direction, and matching copy shapes. These are
+runtime preconditions; no assertions are emitted. Runtime-selected sources must
+be fully initialized, and runtime-selected destinations establish no new
+definite-initialization facts.
 
 `sizeof(a)` returns the first dimension's length as a compile-time `uint`;
 `sizeof(a, d)` selects a zero-based, compile-time integer dimension. Subarrays
 and fixed ranges are supported, including zero-length dimensions. The query does
-not read array elements, so the array need not be initialized.
+not read array elements, so the array need not be initialized. The queried
+extent must be known at compile time.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:

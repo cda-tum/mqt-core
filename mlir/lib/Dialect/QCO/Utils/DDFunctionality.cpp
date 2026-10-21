@@ -1813,6 +1813,20 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
       .Case([&](memref::SubViewOp subview) {
         return applyMemRefSubview(subview, *walk.classical);
       })
+      .Case([&](memref::DimOp dim) -> LogicalResult {
+        const auto storage = walk.classical->memrefs.find(dim.getSource());
+        auto index = lookupIndex(dim.getIndex(), *walk.classical, dim);
+        if (storage == walk.classical->memrefs.end() || failed(index) ||
+            *index < 0 ||
+            std::cmp_greater_equal(*index, storage->second->shape.size())) {
+          return dim.emitError() << "classical memref dimension is unavailable "
+                                    "or out of bounds";
+        }
+        bindInteger(dim.getResult(),
+                    llvm::APInt(64, storage->second->shape[*index]),
+                    *walk.classical);
+        return success();
+      })
       .Case([&](cbit::AllocOp alloc) {
         allocateRegister(alloc, *walk.classical);
         return success();
