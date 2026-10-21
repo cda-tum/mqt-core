@@ -264,10 +264,8 @@ static void registerParameterBinding(nb::class_<T, mlir::Program>& binding) {
             requireValid(program);
             std::map<std::string, mlir::ParameterValue> bindings;
             for (const auto& [name, value] : values) {
-              // The Python 3.10 limited API has no PyObject_CheckBuffer.
-              if (PyType_GetSlot(Py_TYPE(value.ptr()), Py_bf_getbuffer) !=
-                      nullptr &&
-                  nb::cast<int>(nb::memoryview(value).attr("ndim")) > 1) {
+              // Older NumPy versions can coerce one-element rows to floats.
+              if (nb::cast<int>(nb::getattr(value, "ndim", nb::int_(0))) > 1) {
                 throw nb::value_error(
                     "array parameter values must be one-dimensional");
               }

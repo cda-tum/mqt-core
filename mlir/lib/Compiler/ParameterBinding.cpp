@@ -18,9 +18,11 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
@@ -30,6 +32,7 @@
 #include <cstddef>
 #include <map>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -72,18 +75,23 @@ static LogicalResult bind(ModuleOp moduleOp,
     entry.emitError("cannot bind parameters of a referenced entry point");
     return failure();
   }
-  llvm::StringMap<unsigned> indices;
+  llvm::StringMap<BlockArgument> arguments;
   for (unsigned index = 0; index < entry.getNumArguments(); ++index) {
     if (auto name = parameterName(entry, index)) {
-      indices.try_emplace(name.getValue(), index);
+      arguments.try_emplace(name.getValue(), entry.getArgument(index));
     }
   }
+  OpBuilder builder(moduleOp.getContext());
+  SmallVector<std::pair<BlockArgument, TypedAttr>> replacements;
+  replacements.reserve(values.size());
   for (const auto& [name, value] : values) {
-    if (!indices.contains(name)) {
+    const auto argument = arguments.find(name);
+    if (argument == arguments.end()) {
       entry.emitError() << "unknown parameter '" << name << "'";
       return failure();
     }
-    const auto type = entry.getArgument(indices.lookup(name)).getType();
+    const auto type = argument->second.getType();
+    TypedAttr attribute;
     if (type.isF64()) {
       const auto* const scalar = std::get_if<double>(&value);
       if (scalar == nullptr) {
@@ -94,6 +102,7 @@ static LogicalResult bind(ModuleOp moduleOp,
         entry.emitError() << "parameter '" << name << "' must be finite";
         return failure();
       }
+      attribute = builder.getF64FloatAttr(*scalar);
     } else {
       const auto* const array = std::get_if<std::vector<double>>(&value);
       if (array == nullptr) {
@@ -112,24 +121,18 @@ static LogicalResult bind(ModuleOp moduleOp,
                           << "' must contain finite values";
         return failure();
       }
+      attribute =
+          DenseFPElementsAttr::get(cast<RankedTensorType>(type), *array);
     }
+    replacements.emplace_back(argument->second, attribute);
   }
-  OpBuilder builder(&entry.getBody().front(), entry.getBody().front().begin());
+  builder.setInsertionPointToStart(&entry.getBody().front());
   llvm::BitVector erased(entry.getNumArguments());
-  for (const auto& [name, value] : values) {
-    const auto index = indices.lookup(name);
-    TypedAttr attribute;
-    if (const auto* const scalar = std::get_if<double>(&value)) {
-      attribute = builder.getF64FloatAttr(*scalar);
-    } else {
-      attribute = DenseFPElementsAttr::get(
-          cast<RankedTensorType>(entry.getArgument(index).getType()),
-          std::get<std::vector<double>>(value));
-    }
+  for (auto [argument, attribute] : replacements) {
     auto constant =
         arith::ConstantOp::create(builder, entry.getLoc(), attribute);
-    entry.getArgument(index).replaceAllUsesWith(constant);
-    erased.set(index);
+    argument.replaceAllUsesWith(constant);
+    erased.set(argument.getArgNumber());
   }
   return entry.eraseArguments(erased);
 }
