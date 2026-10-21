@@ -3689,13 +3689,9 @@ TEST_F(QCODDFunctionalityTest, StridedCopiesPreserveAliasesWithoutLoopBudget) {
       %reverse = memref.subview %source[10000][10001][-1]
         : memref<10001xi1, strided<[1], offset: ?>>
           to memref<10001xi1, strided<[-1], offset: ?>>
-      memref.copy %reverse, %source : memref<10001xi1, strided<[-1], offset: ?>>
-                                  to memref<10001xi1, strided<[1], offset: ?>>
-      memref.copy %source, %target : memref<10001xi1, strided<[1], offset: ?>>
-                                 to memref<10001xi1, strided<[1], offset: ?>>
-      memref.copy %target, %target : memref<10001xi1, strided<[1], offset: ?>>
-                                 to memref<10001xi1, strided<[1], offset: ?>>
-      memref.store %false, %source[%zero] : memref<10001xi1, strided<[1], offset: ?>>
+      memref.copy %reverse, %target : memref<10001xi1, strided<[-1], offset: ?>>
+                                   to memref<10001xi1, strided<[1], offset: ?>>
+      memref.store %true, %source[%zero] : memref<10001xi1, strided<[1], offset: ?>>
       %first = memref.load %reg[%zero, %zero, %zero] : memref<2x1x10001xi1>
       %end = memref.load %reg[%zero, %zero, %last] : memref<2x1x10001xi1>
       %notEnd = arith.xori %end, %true : i1

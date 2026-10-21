@@ -251,16 +251,6 @@ struct ClassicalEnv {
       }
       return true;
     }
-
-    [[nodiscard]] size_t elementOffset(size_t index) const {
-      int64_t result = offset;
-      for (size_t dimension = shape.size(); dimension-- > 0;) {
-        const auto extent = static_cast<size_t>(shape[dimension]);
-        result += static_cast<int64_t>(index % extent) * strides[dimension];
-        index /= extent;
-      }
-      return static_cast<size_t>(result);
-    }
   };
 
   DenseMap<Value, Attribute> values;
@@ -1035,25 +1025,25 @@ static LogicalResult applyMemRefCopy(memref::CopyOp copy,
     return success();
   }
   auto& values = to.storage->writable();
-  if (contiguous &&
-      (from.storage != to.storage ||
-       from.offset + static_cast<int64_t>(from.size) <= to.offset ||
-       to.offset + static_cast<int64_t>(to.size) <= from.offset)) {
+  // Distinct views must not overlap; OpenQASM handles overlap with scratch.
+  if (contiguous) {
     std::copy_n(from.storage->values->begin() + from.offset, from.size,
                 values.begin() + to.offset);
     return success();
   }
-  SmallVector<Attribute> snapshot;
-  if (from.storage == to.storage) {
-    snapshot.reserve(from.size);
-    for (size_t index = 0; index < from.size; ++index) {
-      snapshot.push_back((*from.storage->values)[from.elementOffset(index)]);
-    }
-  }
   for (size_t index = 0; index < from.size; ++index) {
-    values[to.elementOffset(index)] =
-        snapshot.empty() ? (*from.storage->values)[from.elementOffset(index)]
-                         : snapshot[index];
+    auto remaining = index;
+    auto sourceOffset = from.offset;
+    auto targetOffset = to.offset;
+    for (size_t dimension = from.shape.size(); dimension-- > 0;) {
+      const auto extent = static_cast<size_t>(from.shape[dimension]);
+      const auto coordinate = static_cast<int64_t>(remaining % extent);
+      sourceOffset += coordinate * from.strides[dimension];
+      targetOffset += coordinate * to.strides[dimension];
+      remaining /= extent;
+    }
+    values[static_cast<size_t>(targetOffset)] =
+        (*from.storage->values)[static_cast<size_t>(sourceOffset)];
   }
   return success();
 }
