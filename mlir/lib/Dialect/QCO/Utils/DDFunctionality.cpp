@@ -950,8 +950,7 @@ static LogicalResult applyMemRefSubview(memref::SubViewOp subview,
     if (failed(start) || failed(size) || failed(stride)) {
       return failure();
     }
-    if (dropped.test(dimension) != (dimension < prefix) || *stride != 1 ||
-        *size != (dimension < prefix ? 1 : extent) ||
+    if (*stride != 1 || *size != (dimension < prefix ? 1 : extent) ||
         (dimension >= prefix && *start != 0)) {
       return subview.emitError() << "QCO DD simulation only supports "
                                     "prefix-indexed memref subviews";
@@ -960,10 +959,16 @@ static LogicalResult applyMemRefSubview(memref::SubViewOp subview,
       return subview.emitError() << "classical memref subview is out of bounds";
     }
     offset = offset * static_cast<size_t>(extent) + static_cast<size_t>(*start);
-    if (dimension >= prefix) {
-      view->shape.push_back(extent);
-      view->size *= static_cast<size_t>(extent);
+    if (!dropped.test(dimension)) {
+      view->shape.push_back(*size);
+      view->size *= static_cast<size_t>(*size);
     }
+  }
+  // Unit dimensions can have more than one equivalent rank reduction.
+  if (ArrayRef(view->shape) !=
+      ArrayRef(source->second->shape).drop_front(prefix)) {
+    return subview.emitError() << "QCO DD simulation requires subview shapes "
+                                  "to match the unindexed suffix";
   }
   view->offset = source->second->offset + offset;
   classical.memrefs[subview.getResult()] = std::move(view);

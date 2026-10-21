@@ -1162,6 +1162,18 @@ TEST_F(CompilerPipelineTest, BaseProfileLowersCompleteTensorLifetime) {
 TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
   constexpr auto programs = std::to_array<llvm::StringLiteral>({
       R"qasm(OPENQASM 3.0;
+        array[int, 2, 2, 1] values = {{{1}, {2}}, {{3}, {4}}};
+        array[int, 1] row = values[1, 0];
+        values[0, 1] = row;
+        row[0] = 5;
+        qubit q;
+        if (values[0, 1, 0] == 3 && values[1, 0, 0] == 3 && row[0] == 5) {
+          x q;
+        }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
         array[angle[8], 2] angles = {0.0, pi};
         array[int, 0] empty;
         array[float, 0] initializedEmpty = {};
