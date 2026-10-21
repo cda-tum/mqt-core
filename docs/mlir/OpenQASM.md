@@ -371,11 +371,17 @@ Targets must support arrays and their element types; dynamic indices also
 require loop support. See the
 [QIR conversion contracts](Conversions.md#qir-conversions).
 
-OpenQASM, Qiskit, jeff, and Base QIR export require array storage to be
-eliminated. Compiler cleanup promotes eligible arrays to scalar values and folds
-constants. With LLVM/MLIR 23.1, promotion requires at most 16 elements, constant
-indices, and supported uses. Call `program.cleanup()` before `to_qiskit()`;
-Qiskit export itself only folds scalar expressions.
+OpenQASM export retains fixed-size stack arrays, element accesses, and strided
+copies, including overlapping assignments and concatenation. It snapshots loaded
+values before later writes and normalizes views on a copy of the IR. Arrays obey
+the frontend shape and element limits; integer bit patterns are preserved, and
+angles are emitted as floating-point radians.
+
+Qiskit, jeff, and Base QIR export require array storage to be eliminated.
+Compiler cleanup promotes eligible arrays to scalar values and folds constants.
+With LLVM/MLIR 23.1, promotion requires at most 16 elements, constant indices,
+and supported uses. Call `program.cleanup()` before `to_qiskit()`; Qiskit export
+itself only folds scalar expressions.
 
 Export retains private gate-shaped helper functions. Other defined helpers,
 including functions with integer or register arguments or classical results, are
