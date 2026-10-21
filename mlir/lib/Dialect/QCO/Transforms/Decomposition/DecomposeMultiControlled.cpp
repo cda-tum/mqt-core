@@ -83,10 +83,6 @@ public:
     setWire(q, POp::create(*builder_, loc_, wire(q), theta).getOutputQubit(0));
   }
 
-  void ry(size_t q, const mqt::FloatParameter& theta) {
-    setWire(q, RYOp::create(*builder_, loc_, wire(q), theta).getOutputQubit(0));
-  }
-
   void rz(size_t q, const mqt::FloatParameter& theta) {
     setWire(q, RZOp::create(*builder_, loc_, wire(q), theta).getOutputQubit(0));
   }
@@ -267,7 +263,6 @@ enum class PlanOpKind : uint8_t {
   H,
   X,
   P,
-  RY,
   RZ,
   CX,
   CP,
@@ -298,18 +293,21 @@ struct ControlledGateSpec {
   mqt::FloatParameter theta = 0.0;
 };
 
+/// A helper is a live wire, not spare target-device capacity. Tensor slots
+/// must be provably occupied; extracting a hole would duplicate a qubit.
+struct BorrowedHelper {
+  Value value;
+  std::optional<int64_t> slot;
+  bool clean;
+};
+
+} // namespace
+
 static bool isPiPhase(const mqt::FloatParameter& angle) {
   const auto theta = mqt::parameterToConstantDouble(angle);
   return theta && std::abs(std::abs(*theta) - K_PI) <=
                       mqt::PARAMETER_COMPARISON_TOLERANCE;
 }
-
-struct BorrowedControlPartition {
-  size_t k1; // ceil(k / 2)
-  size_t k2; // floor(k / 2)
-};
-
-} // namespace
 
 [[nodiscard]] static size_t estimateBorrowedHelperMcxOps(size_t numControls) {
   if (numControls <= 3) {
@@ -362,9 +360,6 @@ static void lowerPlan(GateEmitter& emitter, const CircuitPlan& plan) {
       break;
     case PlanOpKind::P:
       emitter.p(op.wires[0], op.angle);
-      break;
-    case PlanOpKind::RY:
-      emitter.ry(op.wires[0], op.angle);
       break;
     case PlanOpKind::RZ:
       emitter.rz(op.wires[0], op.angle);
@@ -684,13 +679,6 @@ static CircuitPlan planHp24Core(size_t numControls) {
 // Rewrite entry points (called by patterns)
 //===----------------------------------------------------------------------===//
 
-static SmallVector<Value> threeControlledWires(ValueRange controls,
-                                               Value target) {
-  SmallVector<Value> wires(controls.begin(), controls.end());
-  wires.push_back(target);
-  return wires;
-}
-
 static SmallVector<Value> synthesizeRCCX(OpBuilder& builder, Location loc,
                                          Value control0, Value control1,
                                          Value target) {
@@ -725,7 +713,8 @@ static SmallVector<Value> synthesizeTwoControlled(OpBuilder& builder,
 static SmallVector<Value>
 synthesizeThreeControlled(OpBuilder& builder, Location loc, ValueRange controls,
                           Value target, ControlledTarget gate) {
-  SmallVector<Value> wires = threeControlledWires(controls, target);
+  SmallVector<Value> wires(controls);
+  wires.push_back(target);
   GateEmitter emitter(builder, loc, wires);
   if (gate == ControlledTarget::X) {
     emitter.emitThreeControlledXSequence();
@@ -771,14 +760,9 @@ static constexpr size_t K_MCX_SP22_MAX_CONTROLS = 32;
 // Balanced-control rotations and phase correction
 //===----------------------------------------------------------------------===//
 
-/// Balanced control split: top `ceil(k/2)`, bottom `floor(k/2)`.
-static BorrowedControlPartition partitionControls(size_t numControls) {
-  return {.k1 = (numControls + 1) / 2, .k2 = numControls / 2};
-}
-
 static CircuitPlan planMultiControlledRz(OpBuilder& builder, Location loc,
                                          const mqt::FloatParameter& theta,
-                                         size_t numControls);
+                                         size_t k);
 
 /// Conjugate the entire RZ plan, including its phase-cancelling helpers.
 static CircuitPlan changeRotationBasis(CircuitPlan rzPlan, size_t target,
@@ -792,13 +776,9 @@ static CircuitPlan changeRotationBasis(CircuitPlan rzPlan, size_t target,
   if (isY) {
     plan.append({.kind = PlanOpKind::P, .wires = {target}, .angle = -K_PI / 2});
   }
-  if (isX || isY) {
-    plan.append({.kind = PlanOpKind::H, .wires = {target}});
-  }
+  plan.append({.kind = PlanOpKind::H, .wires = {target}});
   appendPlanOps(plan, std::move(rzPlan));
-  if (isX || isY) {
-    plan.append({.kind = PlanOpKind::H, .wires = {target}});
-  }
+  plan.append({.kind = PlanOpKind::H, .wires = {target}});
   if (isY) {
     plan.append({.kind = PlanOpKind::P, .wires = {target}, .angle = K_PI / 2});
   }
@@ -1048,8 +1028,10 @@ static CircuitPlan planMultiControlledRz(OpBuilder& builder, Location loc,
     borrowed.push_back(k);
     CircuitPlan compute;
     for (size_t i = count - 2; i-- > 0;) {
-      compute.append({.kind = PlanOpKind::RCCX,
-                      .wires = {begin + i + 2, borrowed[i + 1], borrowed[i]}});
+      compute.append({
+          .kind = PlanOpKind::RCCX,
+          .wires = {begin + i + 2, borrowed[i + 1], borrowed[i]},
+      });
     }
     appendPlanOps(plan, compute);
     // C²(iZ), or its inverse, costs four CX. Its scalar i phase is
@@ -1071,7 +1053,8 @@ static CircuitPlan planMultiControlledRz(OpBuilder& builder, Location loc,
   };
   const auto quarter = mqt::scaleParameter(builder, loc, theta, 0.25);
   const auto negativeQuarter = mqt::scaleParameter(builder, loc, quarter, -1.0);
-  const auto [first, second] = partitionControls(k);
+  const size_t first = (k + 1) / 2;
+  const size_t second = k / 2;
   CircuitPlan plan;
   for (size_t repeat = 0; repeat < 2; ++repeat) {
     appendPlanOps(plan, halfToggle(0, first, repeat != 0));
@@ -1091,10 +1074,9 @@ static CircuitPlan planMultiControlledRz(OpBuilder& builder, Location loc,
 /// U† RZ(-θ/2) U RZ(θ/2) is controlled RZ(θ), and the two C
 /// factors next to RZ cancel. Basis changes give RX and RY without assuming
 /// that the target-dependent relative phases commute with those rotations.
-static CircuitPlan
-planWithDirtyRotationHelpers(OpBuilder& builder, Location loc,
-                             const mqt::FloatParameter& theta, size_t k,
-                             UnitaryOpInterface inner) {
+static CircuitPlan planWithDirtyRzHelpers(OpBuilder& builder, Location loc,
+                                          const mqt::FloatParameter& theta,
+                                          size_t k) {
   const CircuitPlan carry = planBorrowedMcxCarry(k);
   const PlanOp toggle{.kind = PlanOpKind::RCCX, .wires = {k - 1, 2 * k - 2, k}};
   const auto half = mqt::scaleParameter(builder, loc, theta, 0.5);
@@ -1103,13 +1085,15 @@ planWithDirtyRotationHelpers(OpBuilder& builder, Location loc,
   plan.append(toggle);
   appendPlanOps(plan, carry);
   plan.append(toggle);
-  plan.append({.kind = PlanOpKind::RZ,
-               .wires = {k},
-               .angle = mqt::scaleParameter(builder, loc, half, -1.0)});
+  plan.append({
+      .kind = PlanOpKind::RZ,
+      .wires = {k},
+      .angle = mqt::scaleParameter(builder, loc, half, -1.0),
+  });
   plan.append(toggle);
   appendPlanOps(plan, carry);
   plan.append(toggle);
-  return changeRotationBasis(std::move(plan), k, inner);
+  return plan;
 }
 
 /// Preserve the conditional scalar phase in MCP = MCRZ · MCP(θ/2).
@@ -1119,8 +1103,7 @@ planWithDirtyRotationHelpers(OpBuilder& builder, Location loc,
 /// candidate with the fallback before emitting any parameter arithmetic.
 static CircuitPlan planWithDirtyPhaseHelpers(OpBuilder& builder, Location loc,
                                              const mqt::FloatParameter& theta,
-                                             size_t k,
-                                             UnitaryOpInterface inner) {
+                                             size_t k) {
   const auto scaledAngle = [&](size_t width) {
     return mqt::scaleParameter(builder, loc, theta,
                                std::ldexp(1.0, -static_cast<int>(k - width)));
@@ -1135,21 +1118,12 @@ static CircuitPlan planWithDirtyPhaseHelpers(OpBuilder& builder, Location loc,
     for (size_t i = 0; i < width - 2; ++i) {
       map.push_back(k + 1 + i);
     }
-    appendRemapped(plan,
-                   planWithDirtyRotationHelpers(
-                       builder, loc, scaledAngle(width), width, inner),
-                   map);
+    appendRemapped(
+        plan, planWithDirtyRzHelpers(builder, loc, scaledAngle(width), width),
+        map);
   }
   return plan;
 }
-
-/// A helper is a live wire, not spare target-device capacity. Tensor slots
-/// must be provably occupied; extracting a hole would duplicate a qubit.
-struct BorrowedHelper {
-  Value value;
-  std::optional<int64_t> slot;
-  bool clean;
-};
 
 /// Keep unused slots removable when their declared capacity exceeds the target.
 static bool allocationsFitTarget(Operation* root, size_t capacity) {
@@ -1194,7 +1168,7 @@ static std::optional<bool> helperState(Value value, std::optional<int64_t> slot,
       }
       return false;
     }
-    if (!definition) {
+    if (definition == nullptr) {
       return std::nullopt;
     }
     if (auto extract = dyn_cast<qtensor::ExtractOp>(definition)) {
@@ -1252,15 +1226,18 @@ findHelpers(CtrlOp op, size_t limit, const DenseSet<Value>& restoredZeros) {
       return;
     }
     if (!tensorType) {
-      remember(
-          {value, std::nullopt,
-           helperState(value, std::nullopt, restoredZeros).value_or(false)});
+      remember({
+          .value = value,
+          .slot = std::nullopt,
+          .clean =
+              helperState(value, std::nullopt, restoredZeros).value_or(false),
+      });
       return;
     }
     for (int64_t slot = 0;
          slot < tensorType.getDimSize(0) && helpers.size() < limit; ++slot) {
       if (auto clean = helperState(value, slot, restoredZeros)) {
-        remember({value, slot, *clean});
+        remember({.value = value, .slot = slot, .clean = *clean});
       }
     }
   };
@@ -1339,7 +1316,6 @@ static size_t entanglingCost(const CircuitPlan& plan) {
     case PlanOpKind::H:
     case PlanOpKind::X:
     case PlanOpKind::P:
-    case PlanOpKind::RY:
     case PlanOpKind::RZ:
       break;
     }
@@ -1386,12 +1362,19 @@ static LogicalResult synthesizeWithHelpers(CtrlOp op, UnitaryOpInterface inner,
   };
   const auto dirtyPlan = [&](const mqt::FloatParameter& angle) {
     if (generalPhase) {
-      return planWithDirtyPhaseHelpers(rewriter, op.getLoc(), angle, k, inner);
+      return planWithDirtyPhaseHelpers(rewriter, op.getLoc(), angle, k);
     }
-    return planWithDirtyRotationHelpers(rewriter, op.getLoc(), angle, k, inner);
+    return changeRotationBasis(
+        planWithDirtyRzHelpers(rewriter, op.getLoc(), angle, k), k, inner);
   };
   auto best = parameterized ? parameterizedPlan(0.0, k)
                             : planOneHelperMcx(k, helpers.front().clean);
+  const auto fallbackCost =
+      parameterized
+          ? entanglingCost(best)
+          : (k == 3
+                 ? 14
+                 : entanglingCost(mczCoreForWidth(rewriter, op.getLoc(), k)));
   size_t used = parameterized ? 0 : 1;
   bool dirtyParameterized = false;
   if (parameterized && cleanCount != 0) {
@@ -1416,12 +1399,6 @@ static LogicalResult synthesizeWithHelpers(CtrlOp op, UnitaryOpInterface inner,
       used = helpers.size();
     }
   }
-  const auto fallbackCost =
-      parameterized
-          ? entanglingCost(parameterizedPlan(0.0, k))
-          : (k == 3
-                 ? 14
-                 : entanglingCost(mczCoreForWidth(rewriter, op.getLoc(), k)));
   if (entanglingCost(best) >= fallbackCost) {
     return failure();
   }
@@ -1448,12 +1425,15 @@ static LogicalResult synthesizeWithHelpers(CtrlOp op, UnitaryOpInterface inner,
   SmallVector<BorrowedValue> borrowed;
   SmallVector<size_t> owners;
   for (const auto& helper : helpers) {
-    auto owner = llvm::find_if(borrowed, [&](const BorrowedValue& item) {
+    auto* owner = llvm::find_if(borrowed, [&](const BorrowedValue& item) {
       return item.original == helper.value;
     });
     if (owner == borrowed.end()) {
-      borrowed.push_back(
-          {helper.value, helper.value, &*helper.value.getUses().begin()});
+      borrowed.push_back({
+          .original = helper.value,
+          .current = helper.value,
+          .continuation = &*helper.value.getUses().begin(),
+      });
       owner = std::prev(borrowed.end());
     }
     owners.push_back(std::distance(borrowed.begin(), owner));
