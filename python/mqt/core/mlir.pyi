@@ -11,7 +11,7 @@
 import enum
 import os
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Annotated, Literal, SupportsFloat, Unpack, overload
+from typing import Annotated, Any, Literal, SupportsFloat, Unpack, overload
 
 import numpy as np
 import qiskit.circuit
@@ -892,7 +892,15 @@ class QCProgram(Program):
     def parameters(self) -> list[str]:
         """Named f64 scalar and fixed-length array inputs in function argument order."""
 
-    def bind_parameters(self, values: Mapping[str, SupportsFloat | Sequence[SupportsFloat] | np.ndarray]) -> None:
+    def bind_parameters(
+        self,
+        values: Mapping[
+            str,
+            SupportsFloat
+            | Sequence[SupportsFloat]
+            | np.ndarray[tuple[int], np.dtype[np.floating[Any] | np.integer[Any]]],
+        ],
+    ) -> None:
         """Bind named scalar and array parameters in place.
 
         Inputs must be f64 scalars or fixed-length, one-dimensional f64 arrays.
@@ -1052,7 +1060,15 @@ class QCOProgram(Program):
     def parameters(self) -> list[str]:
         """Named f64 scalar and fixed-length array inputs in function argument order."""
 
-    def bind_parameters(self, values: Mapping[str, SupportsFloat | Sequence[SupportsFloat] | np.ndarray]) -> None:
+    def bind_parameters(
+        self,
+        values: Mapping[
+            str,
+            SupportsFloat
+            | Sequence[SupportsFloat]
+            | np.ndarray[tuple[int], np.dtype[np.floating[Any] | np.integer[Any]]],
+        ],
+    ) -> None:
         """Bind named scalar and array parameters in place.
 
         Inputs must be f64 scalars or fixed-length, one-dimensional f64 arrays.

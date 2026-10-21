@@ -264,7 +264,7 @@ static void registerParameterBinding(nb::class_<T, mlir::Program>& binding) {
             requireValid(program);
             std::map<std::string, mlir::ParameterValue> bindings;
             for (const auto& [name, value] : values) {
-              // Older NumPy versions can coerce one-element rows to floats.
+              // NumPy < 2.4 can coerce one-element rows to floats.
               if (nb::cast<int>(nb::getattr(value, "ndim", nb::int_(0))) > 1) {
                 throw nb::value_error(
                     "array parameter values must be one-dimensional");
@@ -282,11 +282,6 @@ static void registerParameterBinding(nb::class_<T, mlir::Program>& binding) {
                             [&] { return program.bindParameters(bindings); });
           },
           "values"_a,
-          nb::sig("def bind_parameters(self, values: "
-                  "collections.abc.Mapping[str, typing.SupportsFloat | "
-                  "collections.abc.Sequence[typing.SupportsFloat] | "
-                  "numpy.ndarray]) "
-                  "-> None"),
           R"pb(Bind named scalar and array parameters in place.
 
 Inputs must be f64 scalars or fixed-length, one-dimensional f64 arrays.

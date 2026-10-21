@@ -1,3 +1,18 @@
+mqt\.core\.mlir\.(?:QC|QCO)Program\.bind_parameters$:
+    \from collections.abc import Mapping, Sequence
+    \from typing import Any, SupportsFloat
+    \import numpy
+    def bind_parameters(
+        self,
+        values: Mapping[
+            str,
+            SupportsFloat
+            | Sequence[SupportsFloat]
+            | numpy.ndarray[tuple[int], numpy.dtype[numpy.floating[Any] | numpy.integer[Any]]],
+        ],
+    ) -> None:
+        \doc
+
 mqt\.core\.mlir\.JeffProgram\.from_segments$:
     \from collections.abc import Sequence
     @staticmethod
