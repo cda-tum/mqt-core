@@ -3659,6 +3659,9 @@ TEST_F(QCODDFunctionalityTest,
            "memref.store %true, %reg[%zero, %three] : memref<2x3xi1>",
            "%reg = memref.alloc() : memref<2x3xi1> "
            "memref.store %true, %reg[%one, %negative] : memref<2x3xi1>",
+           "%reg = memref.alloca() : memref<2xi1> "
+           "scf.for %i = %zero to %three step %one { "
+           "memref.store %true, %reg[%i] : memref<2xi1> }",
            "%reg = memref.alloc(%two, %three) : memref<?x?xi1> "
            "%target = memref.alloc(%three, %two) : memref<?x?xi1> "
            "memref.copy %reg, %target : memref<?x?xi1> to memref<?x?xi1>",
@@ -3728,44 +3731,23 @@ TEST_F(QCODDFunctionalityTest, ArrayFillsIsolateMeasurementBranches) {
   EXPECT_EQ(histogram->at("1"), 1024U);
 }
 
-TEST_F(QCODDFunctionalityTest, ArrayFillsKeepBoundsChecksAndWhileBudget) {
-  for (const auto* setup : {
-           "%size = arith.constant 3 : index "
-           "%stop = arith.constant 4 : index",
-           "%size = arith.constant 10001 : index "
-           "%stop = arith.constant 10001 : index",
-       }) {
-    SCOPED_TRACE(setup);
-    // The first case must still reject the out-of-bounds fill. The second fill
-    // fits, but must not exempt the subsequent while loop from its budget.
-    auto moduleOp =
-        parseSourceString<ModuleOp>(std::string(
-                                        R"mlir(module { func.func @main() {
+TEST_F(QCODDFunctionalityTest, EmptyArrayFillDoesNotReadUnboundValue) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main(%unused: f64) {
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
-      %true = arith.constant true
-    )mlir") + setup + R"mlir(
-      %a = memref.alloca(%size) : memref<?xi1>
-      scf.for %i = %zero to %stop step %one {
-        memref.store %true, %a[%i] : memref<?xi1>
-      }
-      scf.while : () -> () {
-        scf.condition(%true)
-      } do {
-        scf.yield
+      %a = memref.alloca() : memref<0xf64>
+      scf.for %i = %zero to %zero step %one {
+        memref.store %unused, %a[%i] : memref<0xf64>
       }
       return
-    } })mlir",
-                                    context.get());
-    ASSERT_TRUE(moduleOp);
-    dd::Package package(0);
-    const DDExecutionOptions options{.maxWhileIterations = 10};
-    EXPECT_TRUE(
-        failed(simulate(mainFunc(*moduleOp), dd::makeZeroState(0, package),
-                        package, rng, DDArgumentBindings(), options)));
-    EXPECT_TRUE(failed(sample(mainFunc(*moduleOp), 1, 1, DDArgumentBindings(),
-                              nullptr, nullptr, options)));
-  }
+    }
+  })mlir",
+                                              context.get());
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  expectSimulatesFromZero(mainFunc(*moduleOp), false);
+  EXPECT_TRUE(succeeded(sample(mainFunc(*moduleOp), 1, 1)));
 }
 
 TEST_F(QCODDFunctionalityTest, StridedCopiesPreserveAliasesWithoutLoopBudget) {

@@ -57,6 +57,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <array>
@@ -1289,82 +1290,60 @@ TEST(JeffRoundTripRegressionTest, RejectsLiveOldArrayAcrossSwitchRegions) {
 TEST(JeffRoundTripRegressionTest, AcceptsArrayLengthAfterSwitchUpdate) {
   MLIRContext context;
   context.loadDialect<cbit::CBitDialect, arith::ArithDialect, func::FuncDialect,
-                      qco::QCODialect, mlir::jeff::JeffDialect>();
-  auto program = parseSourceString<ModuleOp>(R"mlir(
-    module attributes {jeff.entrypoint = 0 : ui16, jeff.strings = ["main"]} {
-      func.func @main(%select: i1) -> (tensor<1xi1>, i32) {
-        %size = jeff.int_const32(1) : i32
-        %index = jeff.int_const32(0) : i32
-        %bit = jeff.int_const1(true) : i1
-        %old = jeff.int_array_zero(%size) : tensor<1xi1>
-        %result = jeff.switch (%select, %old, %index, %bit)
-            : (i1, tensor<1xi1>, i32, i1) -> (tensor<1xi1>)
-        case 0 args(%array, %idx, %value) {
-          jeff.yield %array : tensor<1xi1>
-        }
-        case 1 args(%array, %idx, %value) {
-          %new = jeff.int_array_set_index(%idx) %array %value
-              : i32, tensor<1xi1>, i1 -> tensor<1xi1>
-          jeff.yield %new : tensor<1xi1>
-        }
-        default args(%array, %idx, %value) {
-          jeff.yield %array : tensor<1xi1>
-        }
-        %length = jeff.int_array_length %old : tensor<1xi1> -> i32
-        return %result, %length : tensor<1xi1>, i32
-      }
-    })mlir",
-                                             &context);
-  ASSERT_TRUE(program);
-  ASSERT_TRUE(succeeded(verify(*program)));
-  ASSERT_TRUE(succeeded(convertJeffToQCO(*program)));
-  EXPECT_TRUE(succeeded(verify(*program)));
-  size_t allocations = 0;
-  size_t snapshots = 0;
-  program->walk([&](Operation* op) {
-    allocations += isa<cbit::AllocOp>(op);
-    snapshots += isa<cbit::ReadOp, cbit::WriteOp>(op);
-  });
-  EXPECT_EQ(allocations, 1);
-  EXPECT_EQ(snapshots, 0);
-}
-
-TEST(JeffRoundTripRegressionTest, AcceptsFloatArrayLengthAfterSwitchUpdate) {
-  MLIRContext context;
-  context.loadDialect<arith::ArithDialect, func::FuncDialect,
                       memref::MemRefDialect, qco::QCODialect,
                       mlir::jeff::JeffDialect>();
-  auto program = parseSourceString<ModuleOp>(R"mlir(
-    module attributes {jeff.entrypoint = 0 : ui16, jeff.strings = ["main"]} {
-      func.func @main(%select: i1) -> i32 {
+  for (const bool floating : {false, true}) {
+    SCOPED_TRACE(floating);
+    const auto* type = floating ? "f64" : "i1";
+    // A float tensor result would preserve value semantics instead of memrefs.
+    const auto* results = floating ? "i32" : "tensor<1xi1>, i32";
+    auto program = parseSourceString<ModuleOp>(
+        llvm::formatv(R"mlir(
+    module attributes {{jeff.entrypoint = 0 : ui16, jeff.strings = ["main"]} {{
+      func.func @main(%select: i1) -> ({2}) {{
+        %size = jeff.int_const32(1) : i32
         %index = jeff.int_const32(0) : i32
-        %value = jeff.float_const64(1.0) : f64
-        %old = jeff.float_array_const64([0.0]) : tensor<1xf64>
+        %value = {3} : {0}
+        %old = {4} : tensor<1x{0}>
         %result = jeff.switch (%select, %old, %index, %value)
-            : (i1, tensor<1xf64>, i32, f64) -> (tensor<1xf64>)
-        case 0 args(%array, %idx, %element) {
-          jeff.yield %array : tensor<1xf64>
+            : (i1, tensor<1x{0}>, i32, {0}) -> (tensor<1x{0}>)
+        case 0 args(%array, %idx, %element) {{
+          jeff.yield %array : tensor<1x{0}>
         }
-        case 1 args(%array, %idx, %element) {
-          %new = jeff.float_array_set_index(%idx) %array %element
-              : i32, tensor<1xf64>, f64 -> tensor<1xf64>
-          jeff.yield %new : tensor<1xf64>
+        case 1 args(%array, %idx, %element) {{
+          %new = jeff.{1}_array_set_index(%idx) %array %element
+              : i32, tensor<1x{0}>, {0} -> tensor<1x{0}>
+          jeff.yield %new : tensor<1x{0}>
         }
-        default args(%array, %idx, %element) {
-          jeff.yield %array : tensor<1xf64>
+        default args(%array, %idx, %element) {{
+          jeff.yield %array : tensor<1x{0}>
         }
-        %length = jeff.float_array_length %old : tensor<1xf64> -> i32
-        return %length : i32
+        %length = jeff.{1}_array_length %old : tensor<1x{0}> -> i32
+        return {5}%length : {2}
       }
     })mlir",
-                                             &context);
-  ASSERT_TRUE(program);
-  ASSERT_TRUE(succeeded(verify(*program)));
-  ASSERT_TRUE(succeeded(convertJeffToQCO(*program)));
-  EXPECT_TRUE(succeeded(verify(*program)));
-  auto main = program->lookupSymbol<func::FuncOp>("main");
-  EXPECT_EQ(llvm::range_size(main.getOps<memref::AllocaOp>()), 1);
-  EXPECT_TRUE(main.getOps<memref::CopyOp>().empty());
+                      type, floating ? "float" : "int", results,
+                      floating ? "jeff.float_const64(1.0)"
+                               : "jeff.int_const1(true)",
+                      floating ? "jeff.float_array_const64([0.0])"
+                               : "jeff.int_array_zero(%size)",
+                      floating ? "" : "%result, ")
+            .str(),
+        &context);
+    ASSERT_TRUE(program);
+    ASSERT_TRUE(succeeded(verify(*program)));
+    ASSERT_TRUE(succeeded(convertJeffToQCO(*program)));
+    EXPECT_TRUE(succeeded(verify(*program)));
+    size_t allocations = 0;
+    size_t snapshots = 0;
+    program->walk([&](Operation* op) {
+      allocations +=
+          floating ? isa<memref::AllocaOp>(op) : isa<cbit::AllocOp>(op);
+      snapshots += isa<cbit::ReadOp, cbit::WriteOp, memref::CopyOp>(op);
+    });
+    EXPECT_EQ(allocations, 1);
+    EXPECT_EQ(snapshots, 0);
+  }
 }
 
 TEST(JeffRoundTripRegressionTest, PreservesClassicalIfResults) {
