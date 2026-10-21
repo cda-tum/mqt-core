@@ -1471,7 +1471,9 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
         %false = arith.constant false
         %true = arith.constant true
         %memory = memref.alloca() : memref<32xi1>
-        memref.store %false, %memory[%zero] : memref<32xi1>
+        %source = memref.alloca() : memref<32xi1>
+        memref.store %false, %source[%zero] : memref<32xi1>
+        memref.copy %source, %memory : memref<32xi1> to memref<32xi1>
         %alias = func.call @alias(%memory) : (memref<32xi1>) -> memref<32xi1>
         %q0 = qco.static 0 : !qco.qubit
         %h = qco.h %q0 : !qco.qubit
@@ -1482,7 +1484,10 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
           func.call @set(%alias, %true) : (memref<32xi1>, i1) -> ()
         }
         %actual = memref.load %memory[%zero] : memref<32xi1>
-        %matches = arith.cmpi eq, %actual, %expected : i1
+        %same = arith.cmpi eq, %actual, %expected : i1
+        %original = memref.load %source[%zero] : memref<32xi1>
+        %unchanged = arith.cmpi eq, %original, %false : i1
+        %matches = arith.andi %same, %unchanged : i1
         %q1 = qco.static 1 : !qco.qubit
         %out = qco.if %matches args(%q = %q1) -> (!qco.qubit) {
           %x = qco.x %q : !qco.qubit
@@ -3526,16 +3531,21 @@ TEST_F(QCODDFunctionalityTest, QTensorFlowsThroughLoopAndCall) {
 TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefCallsShareStorage) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @set(%reg: memref<?x3xi16>, %value: i16) {
+      func.func @set(%reg: memref<?x3xi16>, %target: memref<?x3xi16>, %value: i16) {
         %row = arith.constant 1 : index
         %column = arith.constant 2 : index
         memref.store %value, %reg[%row, %column] : memref<?x3xi16>
+        memref.copy %reg, %target : memref<?x3xi16> to memref<?x3xi16>
+        memref.copy %target, %target : memref<?x3xi16> to memref<?x3xi16>
+        %zero = arith.constant 0 : i16
+        memref.store %zero, %reg[%row, %column] : memref<?x3xi16>
         return
       }
       func.func @main() {
         %row = arith.constant 1 : index
         %column = arith.constant 2 : index
         %reg = memref.alloc(%column) : memref<?x3xi16>
+        %target = memref.alloc(%column) : memref<?x3xi16>
         %three = arith.constant 3 : i16
         %four = arith.constant 4 : i16
         %seven = arith.addi %three, %four : i16
@@ -3552,8 +3562,9 @@ TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefCallsShareStorage) {
         %narrow = arith.trunci %wide : i32 to i16
         %as_float = arith.sitofp %narrow : i16 to f64
         %back = arith.fptosi %as_float : f64 to i16
-        func.call @set(%reg, %quotient) : (memref<?x3xi16>, i16) -> ()
-        %stored = memref.load %reg[%row, %column] : memref<?x3xi16>
+        func.call @set(%reg, %target, %quotient)
+            : (memref<?x3xi16>, memref<?x3xi16>, i16) -> ()
+        %stored = memref.load %target[%row, %column] : memref<?x3xi16>
         %expected = arith.constant 7 : i16
         %integer_ok = arith.cmpi eq, %stored, %expected : i16
         %casts_ok = arith.cmpi eq, %back, %remainder : i16
@@ -3585,6 +3596,7 @@ TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefCallsShareStorage) {
           qco.yield %qin : !qco.qubit
         }
         memref.dealloc %reg : memref<?x3xi16>
+        memref.dealloc %target : memref<?x3xi16>
         qco.sink %q1 : !qco.qubit
         return
       }
@@ -3603,6 +3615,7 @@ TEST_F(QCODDFunctionalityTest,
       %huge = arith.constant 4294967296 : index
       %heap = memref.alloc(%huge, %huge, %zero) : memref<?x?x?xi1>
       %stack = memref.alloca() : memref<4294967296x4294967296x0xi1>
+      memref.copy %heap, %stack : memref<?x?x?xi1> to memref<4294967296x4294967296x0xi1>
       memref.dealloc %heap : memref<?x?x?xi1>
       return
     }
@@ -3622,6 +3635,9 @@ TEST_F(QCODDFunctionalityTest,
            "memref.store %true, %reg[%zero, %three] : memref<2x3xi1>",
            "%reg = memref.alloc() : memref<2x3xi1> "
            "memref.store %true, %reg[%one, %negative] : memref<2x3xi1>",
+           "%reg = memref.alloc(%two, %three) : memref<?x?xi1> "
+           "%target = memref.alloc(%three, %two) : memref<?x?xi1> "
+           "memref.copy %reg, %target : memref<?x?xi1> to memref<?x?xi1>",
        }) {
     SCOPED_TRACE(body);
     expectMlirSimulationFails(0, std::string(R"mlir(module { func.func @main() {

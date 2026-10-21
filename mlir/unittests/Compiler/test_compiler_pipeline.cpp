@@ -1167,11 +1167,28 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         array[float, 0] initializedEmpty = {};
         array[int, 2, 0] emptyRows = {{}, {}};
         array[int, 0, 2] noRows = {};
+        array[int, 400, 400, 0] emptyTable;
+        array[int, 400, 400, 0] emptyCopy = emptyTable;
         qubit q;
         output bit result;
         bool zero = bool(angles[0]);
         if (zero) { U(pi, 0, 0) q; }
         if (bool(angles[1])) { U(float(angles[1]), sin(angles[0]), 0) q; }
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2] source = {0.0, -pi};
+        array[angle[8], 2] angles = source;
+        source[1] = 0.0;
+        array[float, 1] scale = {2.0};
+        array[float[64], 1] copiedScale = scale;
+        array[uint[8], 1] index = {255};
+        array[uint[8], 1] copiedIndex;
+        copiedIndex = index;
+        copiedIndex[0] += 2;
+        qubit q;
+        output bit result;
+        U(float(angles[copiedIndex[0]]) * copiedScale[0] / 2, 0, 0) q;
         result = measure q;
       )qasm",
       R"qasm(OPENQASM 3.0;
@@ -1185,16 +1202,26 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
       )qasm",
       R"qasm(OPENQASM 3.0;
         array[int[8], 2, 1, 2] values = {{{11, 12}}, {{13, 127}}};
+        array[int[8], 2, 1, 2] saved = values;
         array[bool, 2, 1] flags = {{true}, {false}};
+        array[bool, 2, 1] savedFlags;
+        savedFlags = flags;
         int row = -1;
         uint middle = 0;
         int column = -1;
-        values[row, middle, column] += 1;
-        flags[1, 0] = values[-1, 0, 1] == -128 && values[0, 0, 1] == 12 &&
-                      values[0, 0, 0] == 11 && values[1, 0, 0] == 13;
+        for int i in [0:1] {
+          values[row, middle, column] += 1;
+          if (i == 0) { saved = values; }
+        }
+        saved = saved;
+        flags[1, 0] = saved[-1, 0, 1] == -128 && values[-1, 0, 1] == -127 &&
+                      saved[0, 0, 1] == 12 && saved[0, 0, 0] == 11 &&
+                      saved[1, 0, 0] == 13;
         qubit q;
         output bit result;
-        if (flags[row, middle] && flags[0, 0]) { U(pi, 0, 0) q; }
+        if (flags[row, middle] && flags[0, 0] && !savedFlags[1, 0]) {
+          U(pi, 0, 0) q;
+        }
         result = measure q;
       )qasm",
       // The angle table is read through runtime (including negative) indices.
@@ -1238,8 +1265,10 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         bit measured = measure q;
         int index = int(measured);
         angles[index] = pi;
+        array[float, 2] copied = angles;
+        angles[index] = 0.0;
         reset q;
-        U(angles[index], 0, 0) q;
+        U(copied[index], 0, 0) q;
         output bit result;
         result = measure q;
       )qasm",
