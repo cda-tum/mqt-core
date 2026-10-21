@@ -130,6 +130,17 @@ include helper functions and exclude nested modules. These resource counts
 describe declared capacity rather than peak live width or the original layout
 width.
 
+### C++ API
+
+In C++ module passes, use `getAnalysis<mlir::QuantumProgramAnalysis>().info()`
+from `mqt/Compiler/Programs.h` to share inspection results. MLIR manages the
+cache between passes. Read-only passes can preserve this cache; passes that
+change the reported information must not preserve it. Direct IR edits require
+explicit invalidation. Calling `inspect()` always computes fresh results.
+
+For gate dependencies, MLIR provides `getForwardSlice` and `getBackwardSlice` in
+`mlir/Analysis/SliceAnalysis.h`.
+
 ## Bind program parameters
 
 QC and QCO programs expose named f64 entry-point inputs through `parameters`.

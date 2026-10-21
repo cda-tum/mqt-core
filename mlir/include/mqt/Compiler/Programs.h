@@ -68,6 +68,23 @@ struct QuantumProgramInfo {
   std::map<std::string, size_t> operationCounts;
 };
 
+/// Cached resource and gate inspection for QC and QCO module passes.
+///
+/// Uses the same static counting rules as QCProgram::inspect() and
+/// QCOProgram::inspect(). Request it with getAnalysis<QuantumProgramAnalysis>()
+/// from a module pass. MLIR invalidates the snapshot after passes that do not
+/// preserve this analysis. Direct IR changes require explicit invalidation.
+class QuantumProgramAnalysis {
+public:
+  explicit QuantumProgramAnalysis(ModuleOp moduleOp);
+
+  /// Return the resource and operation counts without changing the IR.
+  [[nodiscard]] const QuantumProgramInfo& info() const { return info_; }
+
+private:
+  QuantumProgramInfo info_;
+};
+
 /// The QIR profile represented by a QIR program.
 enum class QIRProfile : uint8_t {
   /// The QIR Base Profile.
