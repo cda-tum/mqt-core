@@ -4859,34 +4859,24 @@ private:
       if (!activeGate_.empty()) {
         return fail(location, "gate definitions cannot capture arrays");
       }
-      const auto& expression = syntax.expressions[*loop.iterable];
-      const auto* source = (expression.kind == Expr::Kind::Identifier ||
-                            expression.kind == Expr::Kind::Index ||
-                            expression.kind == Expr::Kind::Slice)
-                               ? lookup(expression.identifier)
-                               : nullptr;
-      if (source == nullptr || source->kind != SymbolKind::Array) {
-        return fail(
-            location,
-            "for-loop iterable must be a one-dimensional array or slice");
-      }
-      MQT_OQ3_TRY_ASSIGN(indices,
-                         analyzeArraySelection(source->id, expression.lhs,
-                                               expression.additionalIndices,
-                                               expression.location));
+      MQT_OQ3_TRY_ASSIGN(
+          source,
+          analyzeArraySource(
+              syntax.expressions[*loop.iterable], location,
+              "for-loop iterable must be a one-dimensional array or slice"));
       const auto rank = llvm::count_if(
-          indices, [](const auto& index) { return !index.isScalar(); });
+          source.indices, [](const auto& index) { return !index.isScalar(); });
       if (rank != 1) {
         return fail(
             location,
             "for-loop iterable must be a one-dimensional array or slice");
       }
-      for (const auto& index : indices) {
+      for (const auto& index : source.indices) {
         if (!index.isScalar() && index.size >= 0) {
           nonemptyArray = index.size != 0;
         }
       }
-      const auto& declaration = program.arrays[source->id];
+      const auto& declaration = program.arrays[source.array];
       if (!canImplicitlyConvert(declaration.type, type) ||
           (type == ScalarType::Angle &&
            (declaration.type != ScalarType::Angle ||
@@ -4895,15 +4885,15 @@ private:
             location,
             "array elements cannot be converted to the loop variable type");
       }
-      const auto& initialized = *initializedBits[arrayStateSlots_[source->id]];
+      const auto& initialized =
+          *initializedBits[arrayStateSlots_[source.array]];
       if (!initialized.all()) {
-        const auto mask = arraySelectionMask(source->id, indices);
+        const auto mask = arraySelectionMask(source.array, source.indices);
         if (!mask || mask->test(initialized)) {
           return fail(location, "for-loop iterable has uninitialized elements");
         }
       }
-      result.iterable =
-          ArrayCopySource{.array = source->id, .indices = std::move(indices)};
+      result.iterable = std::move(source);
     } else {
       if (!isInteger(type) || loop.width) {
         return fail(location,
