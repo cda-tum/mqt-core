@@ -562,17 +562,12 @@ Record MLIR pass and rewrite actions with the
 "$mqt_cc" input.qasm --profile-actions-to=compile.json > compiled.mlir
 ```
 
-To record the same trace from Python, invoke the driver built above from the
-repository root. The in-process `compile_program()` API does not export traces.
+Record the same trace from an in-process compilation:
 
 ```python
-import subprocess
+from mqt.core.mlir import CompilationOptions, compile_program
 
-mqt_cc = "build/release/mlir/tools/mqt-cc/mqt-cc"
-subprocess.run(
-    [mqt_cc, "input.qasm", "--profile-actions-to=compile.json", "-o", "compiled.mlirbc"],
-    check=True,
-)
+compiled = compile_program("input.qasm", options=CompilationOptions(profile_actions_to="compile.json"))
 ```
 
 Open `compile.json` in [Perfetto](https://ui.perfetto.dev) to inspect the
@@ -590,6 +585,22 @@ Tracing is disabled by default and adds recording overhead. The file is closed
 on normal success or pass failure; a crash or forced termination can leave it
 incomplete. The trace covers actions on the compiler context, including
 conversion passes, but does not time every parsing or serialization operation.
+`profile_actions_to` applies to the coordinated compilation pipeline, including
+target compilation and source submission; individual typed transformation
+methods do not use it. Each call overwrites its trace file. Use separate files
+for concurrent compilations. While tracing, do not run other compilations on the
+same context, including copies of a typed program.
+
+Perfetto's SQL query view can aggregate pass invocations and durations:
+
+```sql
+SELECT EXTRACT_ARG(arg_set_id, 'args.desc') AS pass,
+       COUNT(*) AS invocations,
+       SUM(dur) / 1e6 AS duration_ms
+FROM slice
+WHERE name = 'pass-execution'
+GROUP BY pass;
+```
 
 For Python, enable pass progress and MLIR's timing and statistics reports
 through {py:class}`~mqt.core.mlir.CompilationOptions`:

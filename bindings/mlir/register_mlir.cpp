@@ -493,6 +493,8 @@ programFromInput(const nb::object& program, const bool inplace) {
 [[nodiscard]] static mlir::CompilerProgram
 compileProgram(const nb::object& program, const mlir::ProgramFormat output,
                const bool inplace, const std::string& qcoPipeline,
+               // Snapshot mutable Python options before releasing the GIL.
+               // NOLINTNEXTLINE(performance-unnecessary-value-param)
                mlir::CompilationOptions options = {}) {
   auto input = programFromInput(program, inplace);
   const nb::gil_scoped_release release;
@@ -590,6 +592,8 @@ submitProgram(const nb::object& program, const nb::object& target,
               const std::optional<PythonCustomJobParameter>& custom3,
               const std::optional<PythonCustomJobParameter>& custom4,
               const std::optional<PythonCustomJobParameter>& custom5,
+              // Snapshot mutable Python options before releasing the GIL.
+              // NOLINTNEXTLINE(performance-unnecessary-value-param)
               std::optional<mlir::CompilationOptions> options) {
   if (numShots < 0) {
     throw nb::value_error("num_shots must be nonnegative");
@@ -1513,17 +1517,20 @@ Zero disables node expansion. Container overhead, caches, and IR are extra.)pb")
 
 An explicit seed overrides all compiler randomness; None preserves pass defaults and custom pipeline seeds.)pb")
       .def(nb::init<std::optional<uint64_t>, bool, bool, mlir::MappingOptions,
-                    bool>(),
+                    bool, std::string>(),
            nb::kw_only(), "seed"_a = nb::none(), "enable_timing"_a = false,
            "enable_statistics"_a = false, "mapping"_a = mlir::MappingOptions{},
-           "enable_pass_logging"_a = false)
+           "enable_pass_logging"_a = false, "profile_actions_to"_a = "")
       .def_rw("seed", &mlir::CompilationOptions::seed)
       .def_rw("enable_timing", &mlir::CompilationOptions::enableTiming)
       .def_rw("enable_statistics", &mlir::CompilationOptions::enableStatistics)
       .def_rw("mapping", &mlir::CompilationOptions::mapping)
       .def_rw("enable_pass_logging",
               &mlir::CompilationOptions::enablePassLogging,
-              "Write pass names and execution status to stderr.");
+              "Write pass names and execution status to stderr.")
+      .def_rw("profile_actions_to", &mlir::CompilationOptions::profileActionsTo,
+              "Write native MLIR action traces during compile_program; empty "
+              "disables.");
 
   nb::class_<mlir::QuantumProgramInfo>(
       m, "QuantumProgramInfo", R"pb(Quantum resources and static IR statistics.
@@ -1697,7 +1704,7 @@ operations.)pb");
       .def(
           "run_pass_pipeline",
           [](mlir::QCOProgram& program, const std::string& pipeline,
-             mlir::CompilationOptions options) {
+             const mlir::CompilationOptions& options) {
             requireValid(program);
             requireSuccess(program.runPassPipeline(pipeline, options));
           },

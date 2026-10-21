@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -2202,6 +2203,61 @@ def test_concurrent_pass_logging(capfd: pytest.CaptureFixture[str]) -> None:
             assert isinstance(result, QCProgram)
             assert result.ir == expected.ir
     assert sorted(capfd.readouterr().err.splitlines()) == sorted(records * 4)
+
+
+@pytest.mark.parametrize("source_kind", ["qasm", "openqasm", "jeff"])
+def test_compilation_action_profile(tmp_path: Path, source_kind: str) -> None:
+    """In-process traces cover input conversion through QIR cleanup."""
+    assert not CompilationOptions().profile_actions_to
+    source = QASM_STRING
+    if source_kind == "openqasm":
+        source = QCProgram.from_openqasm_str(QASM_STRING).to_openqasm3()
+    elif source_kind == "jeff":
+        source = compile_program(QASM_STRING, output=OutputFormat.JEFF)
+    expected = compile_program(source, output=OutputFormat.QIR_ADAPTIVE)
+    profile = tmp_path / "compile.json"
+    actual = compile_program(
+        source,
+        output=OutputFormat.QIR_ADAPTIVE,
+        options=CompilationOptions(profile_actions_to=str(profile)),
+    )
+    assert actual.ir == expected.ir
+    events = json.loads(profile.read_text())
+    assert events[0]["ph"] == "B"
+    assert events[-1]["ph"] == "E"
+    passes = [event["args"]["desc"] for event in events if event["name"] == "pass-execution" and event["ph"] == "B"]
+    conversion = "JeffToQCO" if source_kind == "jeff" else "QCToQCO"
+    assert any(conversion in description for description in passes)
+    assert any("ReconcileUnrealizedCasts" in description for description in passes)
+
+
+def test_compilation_action_profile_failure(tmp_path: Path, capfd: pytest.CaptureFixture[str]) -> None:
+    """A failed compilation closes the trace and restores its shared context."""
+    program = QCOProgram.from_mlir_str("module {}")
+    profile = tmp_path / "failure.json"
+    with pytest.raises(RuntimeError, match="Compiler action failed"):
+        compile_program(program, qco_pipeline="set-qir-attributes-and-metadata")
+    expected_error = capfd.readouterr().err
+    with pytest.raises(RuntimeError, match="Compiler action failed"):
+        compile_program(
+            program,
+            qco_pipeline="set-qir-attributes-and-metadata",
+            options=CompilationOptions(profile_actions_to=str(profile)),
+        )
+    assert capfd.readouterr().err == expected_error
+    recorded = profile.read_text()
+    events = json.loads(recorded)
+    assert events[-1]["ph"] == "E"
+    assert any("QIRSetAttributesAndMetadata" in event.get("args", {}).get("desc", "") for event in events)
+    compile_program(program)
+    assert profile.read_text() == recorded
+
+
+def test_compilation_action_profile_open_failure(tmp_path: Path, capfd: pytest.CaptureFixture[str]) -> None:
+    """An unusable trace destination fails compilation with a diagnostic."""
+    with pytest.raises(RuntimeError, match="Compiler action failed"):
+        compile_program(QASM_STRING, options=CompilationOptions(profile_actions_to=str(tmp_path)))
+    assert "failed to open action profile" in capfd.readouterr().err
 
 
 @requires_qiskit_translation

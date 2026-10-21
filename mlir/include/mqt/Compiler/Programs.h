@@ -127,6 +127,11 @@ public:
   /// module. Consuming or destroying the program invalidates the operation.
   [[nodiscard]] ModuleOp module() const;
 
+  /// Share ownership of the dialect context.
+  [[nodiscard]] std::shared_ptr<MLIRContext> context() const {
+    return storage_.context;
+  }
+
 protected:
   struct Storage {
     std::shared_ptr<MLIRContext> context;
