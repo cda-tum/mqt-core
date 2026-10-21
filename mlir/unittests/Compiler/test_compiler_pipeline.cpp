@@ -1162,10 +1162,24 @@ TEST_F(CompilerPipelineTest, BaseProfileLowersCompleteTensorLifetime) {
 TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
   constexpr auto programs = std::to_array<llvm::StringLiteral>({
       R"qasm(OPENQASM 3.0;
+        array[int, 2, 2, 1] values = {{{1}, {2}}, {{3}, {4}}};
+        array[int, 1] row = values[1, 0];
+        values[0, 1] = row;
+        row[0] = 5;
+        qubit q;
+        if (values[0, 1, 0] == 3 && values[1, 0, 0] == 3 && row[0] == 5) {
+          x q;
+        }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
         array[angle[8], 2] angles = {0.0, pi};
         array[int, 0] empty;
         array[float, 0] initializedEmpty = {};
         array[int, 2, 0] emptyRows = {{}, {}};
+        array[int, 0] emptyRow = emptyRows[0];
+        emptyRows[1] = emptyRow;
         array[int, 0, 2] noRows = {};
         array[int, 400, 400, 0] emptyTable;
         array[int, 400, 400, 0] emptyCopy = emptyTable;
@@ -1214,9 +1228,14 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
           if (i == 0) { saved = values; }
         }
         saved = saved;
+        array[int[8], 1, 2] plane = saved[row];
+        array[int[8], 2] copiedRow = plane[middle];
+        values[0, 0] = copiedRow;
+        plane[0, 0] = 0;
         flags[1, 0] = saved[-1, 0, 1] == -128 && values[-1, 0, 1] == -127 &&
                       saved[0, 0, 1] == 12 && saved[0, 0, 0] == 11 &&
-                      saved[1, 0, 0] == 13;
+                      saved[1, 0, 0] == 13 && values[0, 0, 0] == 13 &&
+                      values[0, 0, 1] == -128;
         qubit q;
         output bit result;
         if (flags[row, middle] && flags[0, 0] && !savedFlags[1, 0]) {
@@ -1259,16 +1278,18 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
       )qasm",
       // Measurement-derived indices remain dynamic through compilation.
       R"qasm(OPENQASM 3.0;
-        array[float, 2] angles = {0.0, 0.0};
+        array[angle[8], 2, 2] angles = {{0.0, 0.0}, {0.0, 0.0}};
         qubit q;
         U(pi, 0, 0) q;
         bit measured = measure q;
         int index = int(measured);
-        angles[index] = pi;
-        array[float, 2] copied = angles;
-        angles[index] = 0.0;
+        angles[index, 0] = pi;
+        array[angle[8], 2] copied = angles[-index];
+        angles[0] = copied;
+        angles[index] = angles[index];
+        angles[index, 0] = 0.0;
         reset q;
-        U(copied[index], 0, 0) q;
+        if (bool(copied[0])) { U(angles[0, 0], 0, 0) q; }
         output bit result;
         result = measure q;
       )qasm",
