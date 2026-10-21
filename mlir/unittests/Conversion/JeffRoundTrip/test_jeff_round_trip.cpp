@@ -497,11 +497,16 @@ TEST(JeffRoundTripRegressionTest, RejectsUnsupportedArrayPreconditions) {
                       memref::MemRefDialect>();
   for (const auto& [body, expected] :
        std::to_array<std::pair<const char*, const char*>>({
-           {"cf.assert %condition, \"unsupported runtime precondition\"",
-            "runtime safety assertions"},
-           {"%a = memref.alloca() : memref<1xf64> "
-            "memref.copy %unranked, %unranked : memref<*xf64> to memref<*xf64>",
-            "array copies require ranked storage"},
+           {
+               "cf.assert %condition, \"unsupported runtime precondition\"",
+               "runtime safety assertions",
+           },
+           {
+               "%a = memref.alloca() : memref<1xf64> "
+               "memref.copy %unranked, %unranked : memref<*xf64> to "
+               "memref<*xf64>",
+               "array copies require ranked storage",
+           },
        })) {
     SCOPED_TRACE(body);
     auto checked = parseSourceString<ModuleOp>(
