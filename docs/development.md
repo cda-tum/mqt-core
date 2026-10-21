@@ -622,10 +622,7 @@ Measure whole-process resource use with the operating system:
 
 The same commands can wrap a Python script. Peak memory then includes the
 interpreter and other work in that process; it is not memory allocated by an
-individual pass. On Slurm, use
-`sacct -j JOB_ID --format=JobID,State,Elapsed,TotalCPU,MaxRSS` and inspect the
-job-step rows. `MaxRSS` is the largest task memory value within a step, subject
-to the site's [accounting configuration](https://slurm.schedmd.com/sacct.html).
+individual pass.
 
 #### Diagnostics and reproducers
 
