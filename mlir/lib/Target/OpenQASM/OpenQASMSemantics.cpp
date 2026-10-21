@@ -1784,6 +1784,7 @@ private:
       case Expr::Kind::Index:
       case Expr::Kind::Slice:
       case Expr::Kind::Range:
+      case Expr::Kind::Concat:
         return fail(expression.location,
                     "expression is not a compile-time constant");
       case Expr::Kind::PopCount:
@@ -2001,6 +2002,7 @@ private:
       case Expr::Kind::Index:
       case Expr::Kind::Slice:
       case Expr::Kind::Range:
+      case Expr::Kind::Concat:
         return fail(expression.location,
                     "expression is not a compile-time constant");
       case Expr::Kind::PopCount:
@@ -2348,6 +2350,7 @@ private:
       case Expr::Kind::Index:
       case Expr::Kind::Slice:
       case Expr::Kind::Range:
+      case Expr::Kind::Concat:
       case Expr::Kind::PopCount:
       case Expr::Kind::BitString:
       case Expr::Kind::BitCast:
@@ -2902,6 +2905,7 @@ private:
     case Expr::Kind::And:
     case Expr::Kind::Or:
     case Expr::Kind::Index:
+    case Expr::Kind::Concat:
       return fail(expression.location,
                   "expected a scalar arithmetic expression");
     case Expr::Kind::Slice:
@@ -3932,41 +3936,65 @@ private:
   analyzeArrayCopy(ArrayId target, std::vector<ArraySelection> targetIndices,
                    SyntaxExpressionId value, SMLoc location,
                    std::vector<StatementId>& destination) {
-    const auto& expression = syntax.expressions[value];
-    const auto* source = (expression.kind == Expr::Kind::Identifier ||
-                          expression.kind == Expr::Kind::Index ||
-                          expression.kind == Expr::Kind::Slice)
-                             ? lookup(expression.identifier)
-                             : nullptr;
-    if (source == nullptr || source->kind != SymbolKind::Array) {
-      return fail(location, "array copy requires an array or subarray source");
-    }
-    MQT_OQ3_TRY_ASSIGN(sourceIndices,
-                       analyzeArraySelection(source->id, expression.lhs,
-                                             expression.additionalIndices,
-                                             expression.location));
-    const auto& from = program.arrays[source->id];
-    const auto& to = program.arrays[target];
-    const auto shape = selectedShape(sourceIndices);
     const auto targetShape = selectedShape(targetIndices);
-    if (shape.empty() || shape.size() != targetShape.size() ||
-        !llvm::all_of(llvm::zip(shape, targetShape),
-                      [](const auto& extents) {
-                        const auto [source, target] = extents;
-                        return source < 0 || target < 0 || source == target;
-                      }) ||
-        from.type != to.type ||
-        (from.elementWidth == 0 ? 64 : from.elementWidth) !=
-            (to.elementWidth == 0 ? 64 : to.elementWidth)) {
+    const auto mismatch = [&] {
       return fail(location,
                   "array copy requires matching shapes and element types");
-    }
-    const auto& initialized = *initializedBits[arrayStateSlots_[source->id]];
-    if (!initialized.all()) {
-      const auto sourceMask = arraySelectionMask(source->id, sourceIndices);
-      if (!sourceMask || sourceMask->test(initialized)) {
-        return fail(location, "array copy source has uninitialized elements");
+    };
+    const auto& to = program.arrays[target];
+    std::vector<ArrayCopySource> sources;
+    SmallVector<SyntaxExpressionId> pending{value};
+    int64_t extent = 0;
+    while (!pending.empty()) {
+      const auto& expression = syntax.expressions[pending.pop_back_val()];
+      if (expression.kind == Expr::Kind::Concat) {
+        pending.push_back(*expression.rhs);
+        pending.push_back(*expression.lhs);
+        continue;
       }
+      const auto* source = (expression.kind == Expr::Kind::Identifier ||
+                            expression.kind == Expr::Kind::Index ||
+                            expression.kind == Expr::Kind::Slice)
+                               ? lookup(expression.identifier)
+                               : nullptr;
+      if (source == nullptr || source->kind != SymbolKind::Array) {
+        return fail(location,
+                    "array copy requires an array or subarray source");
+      }
+      MQT_OQ3_TRY_ASSIGN(indices,
+                         analyzeArraySelection(source->id, expression.lhs,
+                                               expression.additionalIndices,
+                                               expression.location));
+      const auto shape = selectedShape(indices);
+      const auto& from = program.arrays[source->id];
+      if (shape.empty() || shape.size() != targetShape.size() ||
+          from.type != to.type ||
+          (from.elementWidth == 0 ? 64 : from.elementWidth) !=
+              (to.elementWidth == 0 ? 64 : to.elementWidth)) {
+        return mismatch();
+      }
+      for (size_t dimension = 1; dimension < shape.size(); ++dimension) {
+        if (shape[dimension] >= 0 && targetShape[dimension] >= 0 &&
+            shape[dimension] != targetShape[dimension]) {
+          return mismatch();
+        }
+      }
+      extent = extent < 0 || shape.front() < 0 ? -1 : extent + shape.front();
+      if (std::cmp_greater(extent, REGISTER_WIDTH_LIMIT)) {
+        return mismatch();
+      }
+      const auto& initialized = *initializedBits[arrayStateSlots_[source->id]];
+      if (!initialized.all()) {
+        const auto mask = arraySelectionMask(source->id, indices);
+        if (!mask || mask->test(initialized)) {
+          return fail(location, "array copy source has uninitialized elements");
+        }
+      }
+      sources.push_back({.array = source->id, .indices = std::move(indices)});
+    }
+    if (extent >= 0 && targetShape.front() >= 0 &&
+        extent != targetShape.front()) {
+      return mismatch();
     }
     if (!initializedBits[arrayStateSlots_[target]]->all()) {
       if (const auto mask = arraySelectionMask(target, targetIndices)) {
@@ -3976,9 +4004,8 @@ private:
     MQT_OQ3_TRY_ASSIGN(
         statement,
         addStatement(location, ArrayCopyStatement{
-                                   .source = source->id,
+                                   .sources = std::move(sources),
                                    .target = target,
-                                   .sourceIndices = std::move(sourceIndices),
                                    .targetIndices = std::move(targetIndices),
                                }));
     destination.push_back(statement);

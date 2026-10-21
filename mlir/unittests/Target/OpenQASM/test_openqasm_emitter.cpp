@@ -24,6 +24,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -127,6 +128,31 @@ TEST(OpenQASMTargetTest, RangeCopiesReuseScratchOutsideLoops) {
     EXPECT_EQ(alloc.getType().getShape(), ArrayRef<int64_t>{4});
   });
   EXPECT_EQ(allocations, 2); // Original array and reused scratch.
+}
+
+TEST(OpenQASMTargetTest,
+     ConcatenationCopiesEachOperandWithoutIntermediateArrays) {
+  std::string source =
+      "OPENQASM 3.0; array[int, 1] a = {1}; array[int, 128] b = a";
+  for (size_t i = 1; i < 128; ++i) {
+    source += " ++ a";
+  }
+  source += ';';
+  MLIRContext context;
+  auto moduleOp = qc::translateOpenQASMToQC(source, &context);
+  ASSERT_TRUE(moduleOp);
+  EXPECT_TRUE(succeeded(verify(*moduleOp)));
+  size_t arrays = 0;
+  moduleOp->walk([&](memref::AllocaOp) { ++arrays; });
+  EXPECT_EQ(arrays, 2);
+  size_t copies = 0;
+  moduleOp->walk([&](memref::CopyOp) { ++copies; });
+  EXPECT_EQ(copies, 128);
+  moduleOp->walk([&](scf::ForOp) {
+    ADD_FAILURE() << "copy must not become a frontend loop";
+  });
+  moduleOp->walk(
+      [&](cf::AssertOp) { ADD_FAILURE() << "shapes are statically known"; });
 }
 
 TEST(OpenQASMTargetTest, ImportsNonNullTerminatedSourceView) {
@@ -2870,6 +2896,7 @@ TEST(OpenQASMTargetTest, PreservesImportedWhileBehavior) {
 
 TEST(OpenQASMTargetTest, StopsEmissionAtEveryOperationBudgetBoundary) {
   constexpr std::array sources{
+      R"qasm(OPENQASM 3.1; array[int, 4] a = {0, 1, 2, 3}; int n = 1; a = a[n:] ++ a[:n-1];)qasm",
       R"qasm(OPENQASM 3.1; output int result; int x = 2; result = (x + x) ** 3;)qasm",
       R"qasm(OPENQASM 3.1; output bool result; int x = 2; result = !(x == 1) && (x < 3 || x > 4);)qasm",
       R"qasm(OPENQASM 3.1; bit[4] c = "0000"; int i = 1; c[i] = true; output bool result; result = c[i];)qasm",
