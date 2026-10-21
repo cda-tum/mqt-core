@@ -1297,8 +1297,8 @@ def test_qiskit_export_preserves_repeated_measurement_destinations() -> None:
     assert [restored.find_bit(item.clbits[0]).index for item in restored.data] == [0, 0]
 
 
-def test_qiskit_export_rejects_measurement_with_multiple_destinations() -> None:
-    """Reject one measurement result stored in more than one public bit."""
+def test_qiskit_export_copies_measurement_to_multiple_destinations() -> None:
+    """Copy a measurement result without measuring the qubit again."""
     program = QCProgram.from_mlir_str(
         """module {
   func.func @main() -> !cbit.reg<2> attributes {mqt.entry_point} {
@@ -1316,8 +1316,66 @@ def test_qiskit_export_rejects_measurement_with_multiple_destinations() -> None:
 """
     )
 
-    with pytest.raises(RuntimeError, match="more than one classical destination"):
-        program.to_qiskit()
+    restored = program.to_qiskit()
+    assert restored.num_clbits == 2
+    assert restored.count_ops()["measure"] == 1
+    assert sample(QCProgram.from_qiskit(restored), shots=8, seed=1) == {"00": 8}
+
+
+@pytest.mark.parametrize("cleanup", [False, True])
+def test_register_snapshot_copy_survives_cleanup(*, cleanup: bool) -> None:
+    """Forwarded measurement snapshots survive overwriting their destination."""
+    program = QCProgram.from_mlir_str("""module {
+  func.func @main() -> (!cbit.reg<1>, !cbit.reg<1>) attributes {mqt.entry_point} {
+    %c0 = arith.constant 0 : index
+    %false = arith.constant false
+    %q = qc.alloc : !qc.qubit
+    %first = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+    %second = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+    qc.x %q : !qc.qubit
+    %bit = qc.measure %q : !qc.qubit -> i1
+    cbit.store %bit, %first[%c0] : !cbit.reg<1>
+    %snapshot = cbit.read %first : !cbit.reg<1> -> i1
+    cbit.write %false, %first : i1, !cbit.reg<1>
+    cbit.store %snapshot, %second[%c0] : !cbit.reg<1>
+    qc.dealloc %q : !qc.qubit
+    return %first, %second : !cbit.reg<1>, !cbit.reg<1>
+  }
+}""")
+    if cleanup:
+        program.cleanup()
+    restored = program.to_qiskit()
+    assert restored.num_clbits == 2
+    assert restored.count_ops()["measure"] == 1
+    assert sample(QCProgram.from_qiskit(restored), shots=8, seed=1) == {"10": 8}
+
+
+def test_measurement_condition_survives_removed_temporary_register() -> None:
+    """Allocate a measurement destination after cleanup removes local storage."""
+    program = QCProgram.from_mlir_str("""module {
+  func.func @main() -> !cbit.reg<1> attributes {mqt.entry_point} {
+    %c0 = arith.constant 0 : index
+    %q = qc.alloc : !qc.qubit
+    %temporary = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+    %out = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+    qc.x %q : !qc.qubit
+    %bit = qc.measure %q : !qc.qubit -> i1
+    cbit.store %bit, %temporary[%c0] : !cbit.reg<1>
+    %snapshot = cbit.read %temporary : !cbit.reg<1> -> i1
+    scf.if %snapshot {
+      qc.x %q : !qc.qubit
+    }
+    %result = qc.measure %q : !qc.qubit -> i1
+    cbit.store %result, %out[%c0] : !cbit.reg<1>
+    qc.dealloc %q : !qc.qubit
+    return %out : !cbit.reg<1>
+  }
+}""")
+    before = program.to_qiskit(copy=True)
+    program.cleanup()
+    restored = program.to_qiskit()
+    assert restored.num_clbits == before.num_clbits == 2
+    assert sample(QCProgram.from_qiskit(restored), shots=8, seed=1) == {"01": 8}
 
 
 @pytest.mark.parametrize("dynamic", [False, True])

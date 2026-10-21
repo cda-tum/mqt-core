@@ -1021,6 +1021,59 @@ TEST_F(QCODDFunctionalityTest, SimulateCBitConditionAndMeasurementUpdate) {
   dd->decRef(one);
 }
 
+TEST_F(QCODDFunctionalityTest, CanonicalizationPreservesClassicalSnapshots) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @main() -> !cbit.reg<2> {
+        %c0 = arith.constant 0 : index
+        %c1 = arith.constant 1 : index
+        %false = arith.constant false
+        %out = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
+        %temporary = cbit.alloc(#cbit.init<undefined>) : !cbit.reg<1>
+        %q0 = qco.static 0 : !qco.qubit
+        %q1 = qco.static 1 : !qco.qubit
+        %flipped = qco.x %q0 : !qco.qubit
+        %measured, %bit = qco.measure %flipped : !qco.qubit
+        cbit.store %bit, %temporary[%c0] : !cbit.reg<1>
+        %prepared = qco.h %q1 : !qco.qubit
+        %snapshot = cbit.read %temporary : !cbit.reg<1> -> i1
+        cbit.write %false, %temporary : i1, !cbit.reg<1>
+        %reset = qco.h %prepared : !qco.qubit
+        %current = cbit.load %temporary[%c0] : !cbit.reg<1>
+        %controlled = qco.if %snapshot args(%q = %reset) -> (!qco.qubit) {
+          %one = qco.x %q : !qco.qubit
+          qco.yield %one : !qco.qubit
+        } else args(%q = %reset) {
+          qco.yield %q : !qco.qubit
+        }
+        %final, %result = qco.measure %controlled : !qco.qubit
+        cbit.store %result, %out[%c0] : !cbit.reg<2>
+        cbit.store %current, %out[%c1] : !cbit.reg<2>
+        qco.sink %measured : !qco.qubit
+        qco.sink %final : !qco.qubit
+        return %out : !cbit.reg<2>
+      }
+    }
+  )mlir",
+                                         context.get());
+  ASSERT_TRUE(mod);
+  ASSERT_TRUE(succeeded(verify(*mod)));
+  const std::map<std::string, size_t> expected{{"01", 8}};
+  auto before = sample(mainFunc(*mod), 8, 0);
+  ASSERT_TRUE(succeeded(before));
+  EXPECT_EQ(*before, expected);
+
+  PassManager manager(context.get());
+  manager.addPass(createCanonicalizerPass());
+  ASSERT_TRUE(succeeded(manager.run(*mod)));
+  ASSERT_TRUE(succeeded(verify(*mod)));
+  EXPECT_TRUE(mainFunc(*mod).getOps<cbit::ReadOp>().empty());
+  EXPECT_TRUE(mainFunc(*mod).getOps<cbit::LoadOp>().empty());
+  auto after = sample(mainFunc(*mod), 8, 0);
+  ASSERT_TRUE(succeeded(after));
+  EXPECT_EQ(*after, expected);
+}
+
 TEST_F(QCODDFunctionalityTest, SimulateCBitRegisterComparisons) {
   constexpr std::array comparisons{
       std::pair{arith::CmpIPredicate::eq, false},

@@ -39,7 +39,9 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
@@ -2118,6 +2120,55 @@ static void validateControlFlowDepth(const size_t controlFlowDepth) {
   }
 }
 
+/// Restore storage for measurements whose results were forwarded into SSA uses.
+static void materializeMeasurementDestinations(mlir::func::FuncOp function) {
+  mlir::DominanceInfo dominance(function);
+  function.walk([&](mlir::qc::MeasureOp measure) {
+    llvm::SmallVector<mlir::cbit::StoreOp> stores;
+    mlir::cbit::StoreOp first;
+    for (auto* user : measure.getResult().getUsers()) {
+      if (auto store = llvm::dyn_cast<mlir::cbit::StoreOp>(user)) {
+        stores.push_back(store);
+        if (store->getBlock() == measure->getBlock() &&
+            (!first || store->isBeforeInBlock(first))) {
+          first = store;
+        }
+      }
+    }
+    if (stores.empty()) {
+      mlir::OpBuilder builder(function.getContext());
+      builder.setInsertionPointToStart(&function.front());
+      auto reg = mlir::cbit::AllocOp::create(
+          builder, measure.getLoc(),
+          mlir::cbit::RegisterType::get(function.getContext(), 1),
+          mlir::cbit::Initialization::Zero);
+      auto index =
+          mlir::arith::ConstantIndexOp::create(builder, measure.getLoc(), 0);
+      builder.setInsertionPointAfter(measure);
+      mlir::cbit::StoreOp::create(builder, measure.getLoc(),
+                                  measure.getResult(), reg, index);
+    } else if (stores.size() > 1) {
+      if (!first || llvm::any_of(stores, [&](mlir::cbit::StoreOp store) {
+            return store != first && !dominance.properlyDominates(first, store);
+          })) {
+        throw std::runtime_error(
+            "QC measurement has more than one classical destination without "
+            "a dominating store");
+      }
+      mlir::OpBuilder builder(first);
+      builder.setInsertionPointAfter(first);
+      auto snapshot = mlir::cbit::LoadOp::create(
+          builder, measure.getLoc(), builder.getI1Type(), first.getReg(),
+          first.getIndex());
+      for (auto store : stores) {
+        if (store != first) {
+          store.getValueMutable().assign(snapshot);
+        }
+      }
+    }
+  });
+}
+
 /// Put measurement stores at their emitted positions before snapshot analysis.
 static void prepareMeasurementStores(mlir::func::FuncOp function) {
   const auto destinations =
@@ -3018,6 +3069,7 @@ nb::object exportCircuit(mlir::QCProgram program,
     state.numQubits = checkedIndex(static_cast<uint64_t>(target->numSites()),
                                    "target qubit count");
   }
+  materializeMeasurementDestinations(function);
   collectResources(function, state, target);
   prepareMeasurementStores(function);
   indexWrites(function.getBody().front(), state.writes);

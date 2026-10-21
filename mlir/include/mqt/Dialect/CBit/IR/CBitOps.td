@@ -103,7 +103,8 @@ def ReadOp : CBitOp<"read", [DeclareOpInterfaceMethods<
   let description = [{
     Reads the complete register as an exact-width integer bit pattern. Register
     element zero is the least-significant result bit, and the result width must
-    equal the static register width.
+    equal the static register width. The result is a snapshot: later writes do
+    not change its value.
 
     Example:
     ```mlir
@@ -116,6 +117,7 @@ def ReadOp : CBitOp<"read", [DeclareOpInterfaceMethods<
   let assemblyFormat = [{
     $reg attr-dict `:` qualified(type($reg)) `->` qualified(type($result))
   }];
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
