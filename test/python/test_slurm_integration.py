@@ -11,11 +11,13 @@
 from __future__ import annotations
 
 import importlib.util
+import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
+from unittest.mock import Mock
 
 import pytest
 
@@ -60,6 +62,111 @@ def monitor(runner: ModuleType) -> ModuleType:
         The monitor module from the source checkout.
     """
     return load_script(runner.CLUSTER / "update_availability.py")
+
+
+@pytest.fixture(scope="module")
+def cancellation(runner: ModuleType) -> ModuleType:
+    """Load the opt-in workload helper.
+
+    Returns:
+        The cancellation module from the source checkout.
+    """
+    return load_script(runner.CLUSTER / "cancellation.py")
+
+
+def terminate_workload() -> None:
+    """Notify the installed handler without risking termination of pytest."""
+    handler = signal.getsignal(signal.SIGTERM)
+    assert callable(handler)
+    handler(signal.SIGTERM, None)
+
+
+def test_completed_job_restores_handler(cancellation: ModuleType) -> None:
+    """Bound waits and preserve normal completion without cancelling the job."""
+    previous = signal.getsignal(signal.SIGTERM)
+    job = Mock()
+    job.wait.side_effect = [False, True]
+    assert cancellation.run_job(lambda: job) is job
+    assert [call.args for call in job.wait.call_args_list] == [(1,), (1,)]
+    job.cancel.assert_not_called()
+    assert signal.getsignal(signal.SIGTERM) == previous
+
+
+@pytest.mark.parametrize("phase", ["submit", "wait", "complete"])
+def test_termination_cancels_job(cancellation: ModuleType, phase: str) -> None:
+    """Retain the handle on submission and honour termination even at completion."""
+    previous = signal.getsignal(signal.SIGTERM)
+    job = Mock()
+
+    def submit() -> Mock:
+        if phase == "submit":
+            terminate_workload()
+        return job
+
+    def wait(_timeout: int) -> bool:
+        terminate_workload()
+        return phase == "complete"
+
+    job.wait.side_effect = wait
+    with pytest.raises(SystemExit) as error:
+        cancellation.run_job(submit)
+    assert error.value.code == 143
+    job.cancel.assert_called_once_with()
+    if phase == "submit":
+        job.wait.assert_not_called()
+    assert signal.getsignal(signal.SIGTERM) == previous
+
+
+@pytest.mark.parametrize("phase", ["submit", "wait", "terminated_wait", "cancel"])
+def test_job_failure_restores_handler(cancellation: ModuleType, phase: str) -> None:
+    """Preserve provider failures and restore the application's signal handler."""
+    previous = signal.getsignal(signal.SIGTERM)
+    job = Mock()
+    failure = RuntimeError("provider failure")
+
+    def submit() -> Mock:
+        if phase == "submit":
+            raise failure
+        if phase == "cancel":
+            terminate_workload()
+        return job
+
+    def wait(_timeout: int) -> None:
+        if phase == "terminated_wait":
+            terminate_workload()
+        raise failure
+
+    job.wait.side_effect = wait
+    if phase == "cancel":
+        job.cancel.side_effect = failure
+    with pytest.raises(RuntimeError) as error:
+        cancellation.run_job(submit)
+    assert error.value is failure
+    if phase in {"terminated_wait", "cancel"}:
+        job.cancel.assert_called_once_with()
+    assert signal.getsignal(signal.SIGTERM) == previous
+
+
+def test_sigterm_exits_after_cancellation(runner: ModuleType) -> None:
+    """A real termination signal cancels the provider job and exits nonzero."""
+    program = f"""
+import os, signal, sys
+sys.path.insert(0, {str(runner.CLUSTER)!r})
+from cancellation import run_job
+
+class Job:
+    def wait(self, timeout):
+        os.kill(os.getpid(), signal.SIGTERM)
+        return False
+
+    def cancel(self):
+        print("cancelled", flush=True)
+
+run_job(Job)
+"""
+    result = runner.run((sys.executable, "-c", program), check=False, timeout=5)
+    assert result.returncode == 143
+    assert result.stdout.strip() == "cancelled"
 
 
 def test_probe_timeout_keeps_admission_closed(monitor: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:

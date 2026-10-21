@@ -128,6 +128,29 @@ Pass the same `device` to a {doc}`Qiskit <qdmi_backend>` or
 {doc}`PennyLane <pennylane_device>` adapter. C++ applications use
 {cpp-api:func}`qdmi::builtin_driver::openDevice`.
 
+### Cancel a quantum job with Slurm
+
+To forward `scancel JOBID` termination to QDMI, copy
+[`cancellation.py`](https://github.com/munich-quantum-toolkit/core/blob/main/examples/slurm/cancellation.py)
+beside `workload.py`. Replace its submission and waiting block with:
+
+```python
+from cancellation import run_job
+
+job = run_job(lambda: device.submit_job(program, ProgramFormat.QASM2, 1024))
+print(job.get_counts())
+```
+
+Call this helper on the main thread. It waits until completion or `SIGTERM`,
+polling once per second. On termination it calls `job.cancel()` and exits with
+status 143; provider errors propagate. The previous signal handler is restored
+on exit. Launch the workload through `srun` as above so Slurm signals the job
+step.
+
+Cancellation is best effort: submission and cancellation can block, and cleanup
+must finish before Slurm sends `SIGKILL`. The helper cannot handle `SIGKILL`,
+node failure, or a submission that fails without returning a job handle.
+
 (multiple-device-implementations)=
 
 ## Connect quantum devices
