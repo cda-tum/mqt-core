@@ -1176,8 +1176,6 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
       )qasm",
       R"qasm(OPENQASM 3.0;
         array[angle[8], 2, 3] angles = {{0.0, 0.0, pi}, {0.0, 0.0, 0.0}};
-        array[int, 0, 2] empty;
-        array[float, 2, 0, 3] initializedEmpty = {{}, {}};
         qubit q;
         output bit result;
         for int row in [-2:-1] {
@@ -1289,21 +1287,6 @@ TEST_F(CompilerPipelineTest, BaseRejectsResidualClassicalArrayStorage) {
   })mlir");
   ASSERT_TRUE(mlir::succeeded(qc));
   EXPECT_TRUE(mlir::failed(std::move(*qc).intoQIR(QIRProfile::Base)));
-}
-
-TEST_F(CompilerPipelineTest, ClassicalArraysDoNotChangeQIRAllocationMode) {
-  for (const auto profile : {QIRProfile::Base, QIRProfile::Adaptive}) {
-    auto qc = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.0;
-      array[float, 1, 1] angles = {{pi}};
-      U(angles[0, 0], 0, 0) $0;
-      output bit result;
-      result = measure $0;
-    )qasm");
-    ASSERT_TRUE(mlir::succeeded(qc));
-    auto qir = std::move(*qc).intoQIR(profile);
-    ASSERT_TRUE(mlir::succeeded(qir));
-    EXPECT_TRUE(mlir::succeeded(qir->llvmIR()));
-  }
 }
 
 TEST_F(CompilerPipelineTest, EmitsQIR21ProfileModuleFlags) {

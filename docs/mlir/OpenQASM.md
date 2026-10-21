@@ -80,11 +80,11 @@ Declare a classical array with `array[int[8], 3] values = {1, 2, 3};`. Arrays
 have one through seven nonnegative compile-time dimensions. Nested initializer
 lists must match each dimension; for example,
 `array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};`. Zero-length dimensions are
-valid. The combined number of register and array elements is limited to 100,000.
-Subarray access, slices, whole-array copies, and whole-array inputs or outputs
-are unsupported. To pass or return array values, select individual entries as
-gate parameters or scalar outputs; gate definitions cannot capture mutable
-arrays.
+valid. Each dimension and the combined number of register and array elements are
+limited to 100,000. Subarray access, slices, whole-array copies, and whole-array
+inputs or outputs are unsupported. To pass or return array values, select
+individual entries as gate parameters or scalar outputs; gate definitions cannot
+capture mutable arrays.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:

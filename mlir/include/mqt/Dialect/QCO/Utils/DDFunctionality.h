@@ -58,8 +58,8 @@ struct DDSamplingState {
 /// identity-layout heap or stack memrefs of integer, index, or f64 values,
 /// dense rank-one integer or f64 tensors and element extraction, and QTensor
 /// bookkeeping. `qco.static` values set the wire map; without them, qubit
-/// arguments set it. Entry-block
-/// `qco.alloc` and statically sized `qtensor.alloc` operations add subsequent
+/// arguments set it. Entry-block `qco.alloc` and statically sized
+/// `qtensor.alloc` operations add subsequent
 /// wires in instruction order. Measurements, resets, symbolic control, and
 /// other runtime allocation are not supported.
 ///

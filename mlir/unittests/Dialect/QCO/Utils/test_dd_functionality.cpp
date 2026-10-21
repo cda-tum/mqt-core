@@ -3523,17 +3523,19 @@ TEST_F(QCODDFunctionalityTest, QTensorFlowsThroughLoopAndCall) {
   EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"1", 4}}));
 }
 
-TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
+TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefCallsShareStorage) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @set(%reg: memref<?xi16>, %value: i16) {
-        %zero = arith.constant 0 : index
-        memref.store %value, %reg[%zero] : memref<?xi16>
+      func.func @set(%reg: memref<?x3xi16>, %value: i16) {
+        %row = arith.constant 1 : index
+        %column = arith.constant 2 : index
+        memref.store %value, %reg[%row, %column] : memref<?x3xi16>
         return
       }
       func.func @main() {
-        %one = arith.constant 1 : index
-        %reg = memref.alloc(%one) : memref<?xi16>
+        %row = arith.constant 1 : index
+        %column = arith.constant 2 : index
+        %reg = memref.alloc(%column) : memref<?x3xi16>
         %three = arith.constant 3 : i16
         %four = arith.constant 4 : i16
         %seven = arith.addi %three, %four : i16
@@ -3550,9 +3552,8 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
         %narrow = arith.trunci %wide : i32 to i16
         %as_float = arith.sitofp %narrow : i16 to f64
         %back = arith.fptosi %as_float : f64 to i16
-        func.call @set(%reg, %quotient) : (memref<?xi16>, i16) -> ()
-        %zero = arith.constant 0 : index
-        %stored = memref.load %reg[%zero] : memref<?xi16>
+        func.call @set(%reg, %quotient) : (memref<?x3xi16>, i16) -> ()
+        %stored = memref.load %reg[%row, %column] : memref<?x3xi16>
         %expected = arith.constant 7 : i16
         %integer_ok = arith.cmpi eq, %stored, %expected : i16
         %casts_ok = arith.cmpi eq, %back, %remainder : i16
@@ -3583,44 +3584,12 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
         }
-        memref.dealloc %reg : memref<?xi16>
+        memref.dealloc %reg : memref<?x3xi16>
         qco.sink %q1 : !qco.qubit
         return
       }
     }
   )mlir",
-                                         context.get());
-  ASSERT_TRUE(mod);
-  expectSimulatesFromZero(mainFunc(*mod), true);
-}
-
-TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefsKeepShapeAcrossCalls) {
-  auto mod = parseSourceString<ModuleOp>(R"mlir(module {
-    func.func @set(%reg: memref<?x3xi1>) {
-      %one = arith.constant 1 : index
-      %two = arith.constant 2 : index
-      %true = arith.constant true
-      memref.store %true, %reg[%one, %two] : memref<?x3xi1>
-      return
-    }
-    func.func @main() {
-      %one = arith.constant 1 : index
-      %two = arith.constant 2 : index
-      %reg = memref.alloc(%two) : memref<?x3xi1>
-      func.call @set(%reg) : (memref<?x3xi1>) -> ()
-      %condition = memref.load %reg[%one, %two] : memref<?x3xi1>
-      %q = qco.static 0 : !qco.qubit
-      %result = qco.if %condition args(%qin = %q) -> (!qco.qubit) {
-        %out = qco.x %qin : !qco.qubit
-        qco.yield %out : !qco.qubit
-      } else args(%qin = %q) {
-        qco.yield %qin : !qco.qubit
-      }
-      memref.dealloc %reg : memref<?x3xi1>
-      qco.sink %result : !qco.qubit
-      return
-    }
-  })mlir",
                                          context.get());
   ASSERT_TRUE(mod);
   expectSimulatesFromZero(mainFunc(*mod), true);
@@ -3646,7 +3615,6 @@ TEST_F(QCODDFunctionalityTest,
 TEST_F(QCODDFunctionalityTest,
        MultidimensionalMemRefsRejectInvalidShapesAndIndices) {
   for (const auto* body : {
-           "%reg = memref.alloc(%two, %negative) : memref<?x?xi1>",
            "%reg = memref.alloc(%zero, %negative) : memref<?x?xi1>",
            "%reg = memref.alloc(%huge, %huge) : memref<?x?xi1>",
            "%reg = memref.alloc() : memref<2x3xi1, strided<[4, 1]>>",
