@@ -354,7 +354,7 @@ refresh does not collect additional samples.
 | **CPU allocation**                | Allocated and configured CPUs across nodes and partitions.               |
 | **Last scheduler cycle duration** | The duration of the latest main or backfill scheduling cycle.            |
 | **Device licenses**               | Current local license capacity, allocations, and reservations.           |
-| **Job accounting**                | Job state, exit code, elapsed time, allocated CPUs, and device licenses. |
+| **Job accounting**                | Job state, exit code, elapsed/CPU time, task memory, CPUs, and licenses. |
 
 ```{figure} ../_static/slurm-runtime-metrics.png
 :alt: Grafana shows a failed scrape for slurm_partitions while the other four endpoints are up, above time series for running jobs, pending jobs, node states, and CPU allocations.
@@ -383,11 +383,23 @@ exit code `0:0`, one CPU, and `amazon.braket.sv1=1` even when the running-job
 graph has no corresponding sample. Elapsed time covers the whole Slurm job. Exit
 codes use `status:signal`; inspect the job's output file for error details.
 
+**CPU time** is the recorded user plus system CPU time. **Max task RSS** is the
+largest recorded resident-memory value among tasks across the job's steps, not
+the sum of their memory use. Both come from Slurm accounting; missing memory
+samples remain blank. Resource accounting depends on the site's
+`JobAcctGatherType` and collection interval.
+
+With glibc 2.43 or newer, Slurm needs the
+[accounting fix from 25.11.7](https://github.com/SchedMD/slurm/blob/slurm-25-11-7-1/CHANGELOG/slurm-25.11.md)
+or a distribution backport to collect memory samples.
+
 To compare a row with Slurm, replace `JOBID` with its job ID and run this in the
 login shell:
 
 ```bash
 sacct -X --jobs=JOBID --format=JobID,State,ExitCode,Elapsed,AllocTRES%80
+sacct --jobs=JOBID --format=JobID,TotalCPU,MaxRSS
+sacct --jobs=JOBID --json
 ```
 
 CPU allocation is not measured CPU utilization, and QAN allocation is not QPU
@@ -439,10 +451,10 @@ The login container runs nginx as `mqt-dev`, connecting to a socket-activated
 `slurmrestd` process with the same identity using Slurm's local authentication.
 The proxy permits only GET requests to the versioned accounting jobs, ping, and
 controller licenses routes. The jobs route requires a time range, fixes the user
-to `mqt-dev`, and omits job steps. Job and license queries are cached for 60
-seconds, bounded to 16 MiB in `/run`. This server-side restriction is necessary
-because the Slurm REST API also permits writes. No REST port is published on the
-host.
+to `mqt-dev`, and includes job steps for resource accounting. Job and license
+queries are cached for 60 seconds, bounded to 16 MiB in `/run`. This server-side
+restriction is necessary because the Slurm REST API also permits writes. No REST
+port is published on the host.
 :::
 
 ### Shared deployments

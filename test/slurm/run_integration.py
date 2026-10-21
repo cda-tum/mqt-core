@@ -396,6 +396,17 @@ for method, path, status in (
 
 def test_accounting(job_id: str) -> None:
     """Require the dashboard to render a completed job from persistent accounting."""
+    accounting = json.loads(job("sacct", "--json", "--jobs", job_id).stdout)["jobs"][0]
+    cpu_time = accounting["time"]["total"]
+    max_rss = max(
+        (
+            resource["count"]
+            for step in accounting["steps"]
+            for resource in step["tres"]["requested"]["max"]
+            if resource["type"] == "mem" and resource["count"] >= 0
+        ),
+        default=None,
+    )
     dashboard = json.loads(monitoring_response("http://grafana:3000/api/dashboards/uid/mqt-runtime"))["dashboard"]
     panel = next(panel for panel in dashboard["panels"] if panel["id"] == 9)
     target = {**panel["targets"][0], "datasource": panel["datasource"]}
@@ -418,6 +429,9 @@ def test_accounting(job_id: str) -> None:
                     assert row["Partition"] == "quantum", row
                     assert row["CPUs"] == 1, row
                     assert row["Licenses"] == "mqt.ddsim.default=1", row
+                    assert row["CPU time"] == cpu_time["seconds"] + cpu_time["microseconds"] / 1_000_000, row
+                    assert row["CPU time"] > 0, row
+                    assert row["Max task RSS"] == max_rss, row
                     return True
         return False
 
