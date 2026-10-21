@@ -658,6 +658,22 @@ private:
     Score score;
   };
 
+  /// Borrow the target's cached distances without repeating cache
+  /// initialization.
+  class DistanceMatrix {
+  public:
+    explicit DistanceMatrix(const CompilerTarget& target)
+        : distances_(target.distanceMatrix()), size_(target.numSites()) {}
+
+    [[nodiscard]] size_t operator()(size_t source, size_t target) const {
+      return distances_[source * size_ + target];
+    }
+
+  private:
+    ArrayRef<size_t> distances_;
+    size_t size_;
+  };
+
   /// Routing interactions stored contiguously by dependency layer.
   struct Horizon {
     /// Start a new and empty layer.
@@ -689,8 +705,9 @@ private:
 
     /// Select the ready interaction with the most future endpoint reuse,
     /// preferring shorter routing distance when demand is equal.
-    [[nodiscard]] QubitIndexPair objective(const Layout<QubitIndex>& layout,
-                                           ArrayRef<size_t> distances) const {
+    [[nodiscard]] QubitIndexPair
+    objective(const Layout<QubitIndex>& layout,
+              const DistanceMatrix& distances) const {
       auto front = get(0);
       if (front.size() == 1) {
         return front.front();
@@ -710,7 +727,7 @@ private:
           continue;
         }
         const auto [a, b] = layout.getHardwareIndices(curr.first, curr.second);
-        const auto distance = distances[a * layout.nHardwareQubits() + b];
+        const auto distance = distances(a, b);
         if (demand > mostDemand || distance < shortestDistance) {
           obj = curr;
           mostDemand = demand;
@@ -727,7 +744,7 @@ private:
     /// each layer. For each gate, this is determined by the shortest distance
     /// between its hardware qubits minus one.
     [[nodiscard]] float heuristic(const Layout<QubitIndex>& layout,
-                                  ArrayRef<size_t> distances,
+                                  const DistanceMatrix& distances,
                                   const Parameters& params) const {
       float costs = 0;
       float weight = 1;
@@ -735,8 +752,7 @@ private:
         float layerCost = 0;
         for (const auto& [first, second] : get(i)) {
           const auto [a, b] = layout.getHardwareIndices(first, second);
-          layerCost += static_cast<float>(
-              distances[a * layout.nHardwareQubits() + b] - 1);
+          layerCost += static_cast<float>(distances(a, b) - 1);
         }
         costs += weight * layerCost;
         weight =
@@ -774,7 +790,8 @@ private:
 
     /// Initialize a child from its parent and score its remaining horizon.
     void initializeChild(Node* nextParent, const SwapCandidate& candidate,
-                         const Horizon& horizon, ArrayRef<size_t> distances,
+                         const Horizon& horizon,
+                         const DistanceMatrix& distances,
                          const Parameters& params) {
       layout = nextParent->layout;
       layout.swap(candidate.indices.first, candidate.indices.second);
@@ -794,10 +811,10 @@ private:
 
     /// Return true if the fixed objective pair is adjacent in this layout.
     [[nodiscard]] bool isGoal(const QubitIndexPair& front,
-                              ArrayRef<size_t> distances) const {
+                              const DistanceMatrix& distances) const {
       const auto [hw0, hw1] =
           layout.getHardwareIndices(front.first, front.second);
-      return distances[hw0 * layout.nHardwareQubits() + hw1] == 1;
+      return distances(hw0, hw1) == 1;
     }
 
     /// Return true, if the current node is the root node.
@@ -1459,12 +1476,12 @@ private:
       }
     }
 
-    auto distances = env.target.distanceMatrix();
+    const DistanceMatrix distances(env.target);
     SmallVector<size_t> centrality(nhardware, 0);
     SmallVector<size_t> hardwareDegree(nhardware, 0);
     for (size_t hw = 0; hw < nhardware; ++hw) {
       for (size_t other = 0; other < nhardware; ++other) {
-        centrality[hw] += distances[hw * nhardware + other];
+        centrality[hw] += distances(hw, other);
       }
       env.target.forEachNeighbour(hw, [&](size_t) { ++hardwareDegree[hw]; });
     }
@@ -1493,7 +1510,7 @@ private:
         size_t cost = 0;
         for (const auto& [partner, weight] : neighbours[prog]) {
           if (mapping[partner] != nhardware) {
-            cost += weight * distances[hw * nhardware + mapping[partner]];
+            cost += weight * distances(hw, mapping[partner]);
           }
         }
         if (best == nhardware ||
@@ -1592,7 +1609,7 @@ private:
   search(const Horizon& horizon, RoutingState& state, Arena& arena,
          const Environment& env) const {
     const Parameters params{.alpha = alpha, .lambda = lambda};
-    auto distances = env.target.distanceMatrix();
+    const DistanceMatrix distances(env.target);
     const auto objective = horizon.objective(state.layout, distances);
 
     arena.reset();
