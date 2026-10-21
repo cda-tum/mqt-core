@@ -3718,18 +3718,21 @@ private:
     if (!global) {
       return fail(location, "arrays must be declared at global scope");
     }
-    uint64_t length = 1;
     std::vector<int64_t> shape;
     for (const auto dimension : declaration.dimensions) {
       MQT_OQ3_TRY_ASSIGN(extent,
                          constantWidth(dimension, location, "array dimension",
                                        /*allowEmpty=*/true));
+      shape.push_back(static_cast<int64_t>(extent));
+    }
+    uint64_t length = llvm::is_contained(shape, 0) ? 0 : 1;
+    for (const auto dimension : shape) {
+      const auto extent = static_cast<uint64_t>(dimension);
       if (extent != 0 && length > REGISTER_WIDTH_LIMIT / extent) {
         return fail(location, "array element count exceeds the limit of " +
                                   Twine(REGISTER_WIDTH_LIMIT));
       }
       length *= extent;
-      shape.push_back(static_cast<int64_t>(extent));
     }
     if (length > TOTAL_REGISTER_ELEMENT_LIMIT - totalRegisterElements) {
       return fail(location,

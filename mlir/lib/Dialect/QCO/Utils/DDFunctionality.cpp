@@ -843,7 +843,6 @@ static LogicalResult applyMemRefAlloc(AllocOp alloc, ClassicalEnv& classical) {
            << "QCO DD simulation does not support symbolic memref operands";
   }
   auto storage = std::make_shared<ClassicalEnv::MemRefState>();
-  int64_t size = 1;
   size_t dynamicDimension = 0;
   for (auto extent : type.getShape()) {
     if (ShapedType::isDynamic(extent)) {
@@ -857,12 +856,15 @@ static LogicalResult applyMemRefAlloc(AllocOp alloc, ClassicalEnv& classical) {
     if (extent < 0) {
       return alloc.emitError() << "classical memref size must be non-negative";
     }
+    storage->shape.push_back(extent);
+  }
+  int64_t size = llvm::is_contained(storage->shape, 0) ? 0 : 1;
+  for (const auto extent : storage->shape) {
     if (extent != 0 && size > std::numeric_limits<int64_t>::max() / extent) {
       return alloc.emitError()
              << "classical memref element count overflows i64";
     }
     size *= extent;
-    storage->shape.push_back(extent);
   }
   storage->values =
       std::make_shared<SmallVector<Attribute>>(static_cast<size_t>(size));

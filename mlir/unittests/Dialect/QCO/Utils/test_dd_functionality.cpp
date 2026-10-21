@@ -3627,9 +3627,27 @@ TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefsKeepShapeAcrossCalls) {
 }
 
 TEST_F(QCODDFunctionalityTest,
+       EmptyMultidimensionalMemRefsDoNotOverflowElementCount) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main() {
+      %zero = arith.constant 0 : index
+      %huge = arith.constant 4294967296 : index
+      %heap = memref.alloc(%huge, %huge, %zero) : memref<?x?x?xi1>
+      %stack = memref.alloca() : memref<4294967296x4294967296x0xi1>
+      memref.dealloc %heap : memref<?x?x?xi1>
+      return
+    }
+  })mlir",
+                                              context.get());
+  ASSERT_TRUE(moduleOp);
+  EXPECT_TRUE(succeeded(sample(mainFunc(*moduleOp), 1, 1)));
+}
+
+TEST_F(QCODDFunctionalityTest,
        MultidimensionalMemRefsRejectInvalidShapesAndIndices) {
   for (const auto* body : {
            "%reg = memref.alloc(%two, %negative) : memref<?x?xi1>",
+           "%reg = memref.alloc(%zero, %negative) : memref<?x?xi1>",
            "%reg = memref.alloc(%huge, %huge) : memref<?x?xi1>",
            "%reg = memref.alloc() : memref<2x3xi1, strided<[4, 1]>>",
            "%reg = memref.alloc() : memref<2x3xi1> "

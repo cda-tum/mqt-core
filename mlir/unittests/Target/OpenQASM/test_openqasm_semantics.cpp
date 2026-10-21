@@ -158,6 +158,9 @@ TEST(OpenQASMFrontendTest, ClassicalArrayInitialization) {
            "array[uint[8], 2, 3] a = {{0, 1, 2}, {3, 4, 5}}; "
            "uint i = 1; a[i, -1] += 1; uint result = a[-1, 2];",
            "array[int, 2, 3] a; a[1, 2] = 4; int result = a[-1, -1];",
+           "array[int, 0, 400, 400] a;",
+           "array[int, 400, 0, 400] a;",
+           "array[int, 400, 400, 0] a;",
            "array[int, 1, 1, 1, 1, 1, 1, 1,] a = {{{{{{{7,},},},},},},}; "
            "int result = a[0, 0, 0, 0, 0, 0, -1,];",
        }) {
@@ -240,6 +243,7 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           },
           {"array[int, 1] a; array[int, 1] a;", "already declared"},
           {"array[int, 2, -1] a;", "non-negative"},
+          {"array[int, 0, -1] a;", "non-negative"},
           {"array[int, 100000, 100000] a;", "element count exceeds"},
           {"array[int, 1, 1, 1, 1, 1, 1, 1, 1] a;", "at most 7"},
           {"array[int, 2, 2] a = {{1, 2}, {3}};", "initializer length"},
