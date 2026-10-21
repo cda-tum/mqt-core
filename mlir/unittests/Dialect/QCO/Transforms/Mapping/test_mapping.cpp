@@ -59,7 +59,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LogicalResult.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -3415,11 +3414,10 @@ TEST_F(MappingPassFixture, LookaheadAllocationFollowsCircuitSize) {
   }
 }
 
-TEST_F(MappingPassFixture, DefaultTrialsMatchAvailableCPUs) {
-  const auto expectedTrials =
-      llvm::hardware_concurrency().compute_thread_count();
-  ASSERT_GT(expectedTrials, 0U);
+TEST_F(MappingPassFixture, DefaultSearchBudgetIsIndependentOfThreading) {
+  constexpr size_t expectedTrials = 23;
   EXPECT_EQ(MappingPassOptions{}.ntrials, expectedTrials);
+  EXPECT_EQ(MappingPassOptions{}.niterations, 2U);
 
   const auto target = getSquareGridTarget(3);
   QCOProgramBuilder builder(context.get());
@@ -3444,7 +3442,7 @@ TEST_F(MappingPassFixture, DefaultTrialsMatchAvailableCPUs) {
     ASSERT_TRUE(succeeded(verify(*automatic)));
     for (const auto& options : {
              MappingPassOptions{},
-             MappingPassOptions{.ntrials = expectedTrials},
+             MappingPassOptions{.niterations = 2, .ntrials = expectedTrials},
          }) {
       OwningOpRef<ModuleOp> explicitOptions = input->clone();
       PassManager pm(context.get());

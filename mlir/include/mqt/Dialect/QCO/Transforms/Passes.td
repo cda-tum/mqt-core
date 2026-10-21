@@ -296,12 +296,12 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     a greedy layout when available, then identity if a slot remains, and random
     layouts for the remaining slots. Every trial uses `niterations` refinement
     rounds before scoring; zero scores the initial layouts directly.
-    It defaults to the number of available logical CPUs reported by LLVM, taking
-    CPU affinity into account, with a minimum of one. Disabling multithreading
+    The defaults are 23 trials and two refinement rounds, independent of CPU
+    count. Disabling multithreading
     runs the same trials sequentially; it does not reduce the trial count.
     If compiled with multi-threading on, these trials will be executed in parallel.
-    Set both `ntrials` and `seed` explicitly to control trial-count and random-seed
-    variation across machines. Compiler-wide seed settings can also affect other
+    Set both `ntrials` and `seed` explicitly to fix the search budget and seed.
+    Compiler-wide seed settings can also affect other
     passes; an explicit compiler seed is not equivalent to leaving pass defaults
     unset. A fixed seed does not guarantee identical routing across compiler
     versions or floating-point implementations.
@@ -351,14 +351,13 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
                         "The alpha cost factor. Must be finite and > 0.">,
                  Option<"lambda", "lambda", "float", "0.5F",
                         "The lookahead layer-weight factor, in [0, 1].">,
-                 Option<"niterations", "niterations", "std::size_t", "1",
+                 Option<"niterations", "niterations", "std::size_t", "2",
                         "The number of forwards and backwards traversal to "
                         "improve the initial layout. Must be >= 0.">,
-                 Option<"ntrials", "ntrials", "std::size_t",
-                        "llvm::hardware_concurrency().compute_thread_count()",
+                 Option<"ntrials", "ntrials", "std::size_t", "23",
                         "The total number of greedy/identity/random trials of "
                         "the forwards and backwards mechanism. Defaults to "
-                        "the available logical CPU count. Must be > 0.">,
+                        "23. Must be > 0.">,
                  Option<"seed", "seed", "std::size_t", "42",
                         "A seed used for randomization.">,
                  Option<"searchMemoryLimit", "search-memory-limit", "size_t",

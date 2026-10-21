@@ -126,8 +126,7 @@ static llvm::cl::opt<uint64_t>
                           llvm::cl::desc("Override all compiler random seeds"));
 static llvm::cl::opt<size_t> mappingTrials(
     "mapping-trials",
-    llvm::cl::desc(
-        "Positive native mapping trial count (default: logical CPUs)"));
+    llvm::cl::desc("Positive native mapping trial count (default: 23)"));
 static llvm::cl::opt<size_t> mappingIterations(
     "mapping-iterations",
     llvm::cl::desc(
