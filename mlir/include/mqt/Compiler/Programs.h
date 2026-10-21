@@ -245,7 +245,7 @@ public:
   bindParameters(const std::map<std::string, ParameterValue>& values);
 
   /// Bind a scalar-only map under the same contract.
-  template <std::same_as<double> T>
+  template <std::same_as<double> T = double>
   [[nodiscard]] LogicalResult
   bindParameters(const std::map<std::string, T>& values) {
     return bindParameters(
@@ -345,7 +345,7 @@ public:
   bindParameters(const std::map<std::string, ParameterValue>& values);
 
   /// Bind a scalar-only map under the same contract as QCProgram.
-  template <std::same_as<double> T>
+  template <std::same_as<double> T = double>
   [[nodiscard]] LogicalResult
   bindParameters(const std::map<std::string, T>& values) {
     return bindParameters(

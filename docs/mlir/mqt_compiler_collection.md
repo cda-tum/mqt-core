@@ -168,10 +168,9 @@ identities. For an array input, pass a sequence or NumPy array, for example
 `program.bind_parameters({"angles": [0.1, 0.2]})`. Each array must have the
 expected length and contain only finite values.
 
-Unknown names, mismatched scalar or array values, incorrect lengths, non-finite
-values, and references to the entry point fail without changing the program.
-Binding does not fold expressions; call `cleanup()` when needed. Bind array
-inputs before OpenQASM export; QIR requires all parameters to be bound.
+Invalid bindings leave the program unchanged. Binding does not fold expressions;
+call `cleanup()` when needed. Bind array inputs before OpenQASM export; QIR
+requires all parameters to be bound.
 
 ## Select an output format
 

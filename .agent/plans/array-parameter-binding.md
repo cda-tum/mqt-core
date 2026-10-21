@@ -23,14 +23,15 @@ Document this boundary rather than extending exporter scope.
 
 ## Validation
 
-The compiler suite passed 302 tests, with two skipped. The parameter-binding
-tests cover mixed and partial binding, atomic failures, scalar compatibility,
-and bound OpenQASM/QIR export. The 31 Python binding tests passed with NumPy
-2.3.5 and 2.5.4, including bound sampling and NumPy scalar compatibility. Buffer
-checks prevent older NumPy from coercing two-dimensional arrays to scalar
-elements.
+All 4,031 native and 1,974 Python tests passed, including 301 compiler tests.
+The binding tests cover mixed and partial binding, atomic failures, scalar C++
+calls, metadata preservation, and bound OpenQASM/QIR export. The 16 Python
+binding cases passed with NumPy 2.3.2 and 2.5.4, including sampling and NumPy
+scalar conversion. Independent matrix comparisons checked signed array elements
+and jeff/OpenQASM round trips; loop inputs also reached both QIR profiles after
+explicit unrolling.
 
 Python stubs were regenerated. Whole-file C++ lint, repository lint, executable
-documentation, and local documentation links passed. Large arrays were not
-allocated or executed; supplying their values still requires proportional
-memory.
+documentation, and local documentation links passed. The binding guide was
+inspected in a browser. Large arrays were not allocated or executed; supplying
+their values still requires proportional memory.

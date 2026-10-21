@@ -264,15 +264,12 @@ static void registerParameterBinding(nb::class_<T, mlir::Program>& binding) {
             requireValid(program);
             std::map<std::string, mlir::ParameterValue> bindings;
             for (const auto& [name, value] : values) {
-              if (nb::ndarray_check(value)) {
-                nb::ndarray<nb::numpy, nb::ro> array;
-                if (!nb::try_cast(value, array)) {
-                  throw nb::type_error("unsupported array parameter values");
-                }
-                if (array.ndim() > 1) {
-                  throw nb::value_error(
-                      "array parameter values must be one-dimensional");
-                }
+              // The Python 3.10 limited API has no PyObject_CheckBuffer.
+              if (PyType_GetSlot(Py_TYPE(value.ptr()), Py_bf_getbuffer) !=
+                      nullptr &&
+                  nb::cast<int>(nb::memoryview(value).attr("ndim")) > 1) {
+                throw nb::value_error(
+                    "array parameter values must be one-dimensional");
               }
               mlir::ParameterValue parameter;
               if (!nb::try_cast(value, parameter)) {
@@ -288,8 +285,9 @@ static void registerParameterBinding(nb::class_<T, mlir::Program>& binding) {
           },
           "values"_a,
           nb::sig("def bind_parameters(self, values: "
-                  "collections.abc.Mapping[str, float | "
-                  "collections.abc.Sequence[float] | numpy.ndarray]) "
+                  "collections.abc.Mapping[str, typing.SupportsFloat | "
+                  "collections.abc.Sequence[typing.SupportsFloat] | "
+                  "numpy.ndarray]) "
                   "-> None"),
           R"pb(Bind named scalar and array parameters in place.
 
