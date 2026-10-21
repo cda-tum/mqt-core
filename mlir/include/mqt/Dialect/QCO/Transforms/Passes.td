@@ -610,16 +610,14 @@ def DecomposeMultiControlled
 
     HP24 uses one dirty helper for an odd number of controls and two for an
     even number. These helpers are borrowed from the gate's qubits and restored;
-    no additional qubits are allocated. Relative-phase carries reduce the
-    incrementer's cost. Its exact adjoint cancels all added phases around the
-    diagonal ladder, including phases on borrowed wires. Through 32 controls,
-    the planner compares its CX-equivalent cost with MCP(π) and keeps the
-    cheaper plan; beyond that width, the linear HP24 plan is cheaper.
+    no additional qubits are allocated. The exact adjoint cancels the
+    incrementer's relative phases. Through 32 controls, the planner compares
+    its CX-equivalent cost with MCP(π); above that, HP24 is cheaper.
 
     Rotation synthesis uses a linear number of gates and no additional
     qubits. Each relative-phase half borrows controls from the opposite half;
-    forward and inverse halves cancel all residual phases. The decomposition preserves phase, including
-    the conditional phase of a rotation by `2π`.
+    forward and inverse halves cancel all residual phases, preserving the
+    conditional phase of a rotation by `2π`.
 
     Phase synthesis needs no additional qubits and uses a quadratic number of
     gates. Runtime angles require only power-of-two scaling.
@@ -633,29 +631,18 @@ def DecomposeMultiControlled
     `min-qubits` keeps them; the greedy rewriter lowers further when the
     threshold allows.
 
-    By default, the pass may borrow available existing same-block live scalar
-    qubits or provably occupied tensor slots
-    for input controlled X/Y/Z/P/RX/RY/RZ/SWAP operations. Y/Z use target basis changes
-    around MCX; SWAP uses CX–MCX–CX. All original controls and targets, including
-    both SWAP targets, are excluded from helper selection. General MCP and
-    MCRX/MCRY/MCRZ use clean helpers to combine controls, apply the smaller
-    controlled gate, and uncompute. A phase-canceling candidate uses k−2 dirty
-    helpers for k controls. The ancilla-free plan already uses opposite controls
-    internally, so one external dirty helper offers no improvement. MCP
-    retains the conditional scalar phase through smaller phase gates on the
-    controls. Non-improving candidates retain the clean path or fallback.
-    Constant phases of ±π use MCZ, including dirty-helper plans.
-    Allocations and resets prove clean zero helpers;
-    arbitrary dirty helpers are restored coherently. No fresh qubits are
-    allocated. Unknown occupancy and unavailable lifetimes are excluded.
-    Target-aware decomposition skips borrowing when declared allocations cannot
-    be proved to fit the target, leaving unused slots removable by cleanup.
-    The pass selects a helper plan only if its pre-routing CX-equivalent
-    estimate beats the existing lowering; otherwise it falls back unchanged.
-    Generated half-MCXs cannot recursively acquire additional helpers.
-    `ancilla-budget` caps external borrowing per original gate; zero disables it,
-    but still permits original controls as internal workspace. The default
-    maximum uint64 value imposes no cap beyond the available helpers.
+    Existing same-block live qubits and provably occupied tensor slots may be
+    borrowed, excluding the original gate operands. Allocations and resets prove
+    clean zeros; dirty states and their entanglement are restored exactly. No
+    fresh qubits are allocated. Unknown occupancy and unavailable lifetimes are
+    excluded. Target-aware borrowing also requires declared allocations to fit
+    the target, so unused slots remain removable.
+    Helper plans must improve the pre-routing CX-equivalent estimate. General
+    phases and rotations use clean compression or a complete k−2 dirty ladder
+    for k controls; otherwise they keep the ancilla-free plan.
+    `ancilla-budget` caps external borrowing per original gate, including its
+    generated sub-gates. Zero disables it but permits original controls as
+    internal workspace. The default maximum uint64 value uses available helpers.
   }];
   let options =
       [Option<
@@ -666,11 +653,8 @@ def DecomposeMultiControlled
            "means wider than two-qubit).">,
        Option<"ancillaBudget", "ancilla-budget", "uint64_t",
               "std::numeric_limits<uint64_t>::max()",
-              "Maximum existing live helpers per controlled Pauli, phase, "
-              "rotation, or SWAP gate; "
-              "zero "
-              "keeps ancilla-free lowering. Default uses available helpers; "
-              "never allocates qubits.">];
+              "Maximum borrowed helpers per original gate; zero disables "
+              "borrowing. Default uses available helpers, never new qubits.">];
 }
 
 #endif // MLIR_DIALECT_QCO_TRANSFORMS_PASSES_TD

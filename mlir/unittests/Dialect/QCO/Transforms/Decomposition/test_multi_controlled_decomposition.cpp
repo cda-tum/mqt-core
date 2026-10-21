@@ -40,6 +40,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 
 #include <algorithm>
@@ -77,6 +78,15 @@ static constexpr std::array<size_t, 12> K_COHERENT_PAULI_CONTROL_COUNTS = {
     10, 11, 21, 22, 23, 32, 33, 34, 47, 48, 63, 64,
 };
 static constexpr std::array<size_t, 2> K_COHERENT_MCP_CONTROL_COUNTS = {7, 12};
+static constexpr std::array K_ANCILLA_ANGLES = {
+    0.0,
+    0.73,
+    -1.21,
+    std::numbers::pi,
+    -std::numbers::pi,
+    2 * std::numbers::pi,
+    -2 * std::numbers::pi,
+};
 /// Additional fully-lowered/CX checks across the SP22/HP24 crossover.
 ///
 /// Selected widths also receive coherent DD coverage above.
@@ -137,6 +147,13 @@ enum class AncillaFamily : uint8_t {
   RZ,
 };
 } // namespace
+
+static const char* ancillaFamilyName(AncillaFamily family) {
+  constexpr std::array names = {
+      "X", "Y", "Z", "Swap", "Phase", "PhasePi", "RX", "RY", "RZ",
+  };
+  return names[static_cast<size_t>(family)];
+}
 
 [[nodiscard]] static dd::Controls makeControls(size_t numControls) {
   dd::Controls controls;
@@ -770,23 +787,13 @@ INSTANTIATE_TEST_SUITE_P(Ancilla, AncillaFamilyTest,
                                          AncillaFamily::RX, AncillaFamily::RY,
                                          AncillaFamily::RZ),
                          [](const testing::TestParamInfo<AncillaFamily>& info) {
-                           return info.param == AncillaFamily::X       ? "X"
-                                  : info.param == AncillaFamily::Y     ? "Y"
-                                  : info.param == AncillaFamily::Z     ? "Z"
-                                  : info.param == AncillaFamily::Phase ? "Phase"
-                                  : info.param == AncillaFamily::PhasePi
-                                      ? "PhasePi"
-                                  : info.param == AncillaFamily::RX ? "RX"
-                                  : info.param == AncillaFamily::RY ? "RY"
-                                  : info.param == AncillaFamily::RZ ? "RZ"
-                                                                    : "Swap";
+                           return ancillaFamilyName(info.param);
                          });
 
 TEST_P(AncillaAngleTest, RuntimeAnglesAndMixedHelpers) {
   const auto family = GetParam();
   const auto axis = ancillaRotationAxis(family);
-  // The dirty helper appears first; selection must still prefer clean helpers
-  // when cheaper. Test all data/dirty-helper inputs, including superpositions.
+  // Prefer cheaper clean helpers even when a dirty helper appears first.
   for (uint64_t budget : {0U, 1U, 2U, 99U}) {
     Value parameter;
     auto moduleOp =
@@ -816,14 +823,7 @@ TEST_P(AncillaAngleTest, RuntimeAnglesAndMixedHelpers) {
                                               : budget == 0 ? 60U
                                               : budget == 1 ? 38U
                                                             : 28U);
-    for (double theta : {
-             0.0,
-             0.73,
-             -1.21,
-             std::numbers::pi,
-             -std::numbers::pi,
-             2 * std::numbers::pi,
-         }) {
+    for (double theta : ArrayRef(K_ANCILLA_ANGLES).drop_back()) {
       SCOPED_TRACE(testing::Message()
                    << "budget=" << budget << " theta=" << theta);
       dd::Package package(9);
@@ -876,15 +876,7 @@ TEST_P(AncillaAngleTest, DirtyRuntimeAnglesAndRestoration) {
   ASSERT_TRUE(succeeded(runDecomposeMultiControlled(*moduleOp, options)));
   expectFullyLowered(*moduleOp);
   EXPECT_EQ(countEffectiveCxOps(*moduleOp), axis ? 28U : 60U);
-  for (double theta : {
-           0.0,
-           0.73,
-           -1.21,
-           std::numbers::pi,
-           -std::numbers::pi,
-           2 * std::numbers::pi,
-           -2 * std::numbers::pi,
-       }) {
+  for (double theta : K_ANCILLA_ANGLES) {
     SCOPED_TRACE(theta);
     dd::Package package(9);
     const DDArgumentBindings bindings{
@@ -899,7 +891,6 @@ TEST_P(AncillaAngleTest, DirtyRuntimeAnglesAndRestoration) {
         package, 5, axis ? rotationMatrix(*axis, -theta) : phaseMatrix(-theta),
         2);
     package.incRef(expected);
-    // Every helper state, not just |0>, and no global-phase allowance.
     EXPECT_EQ(*actual, expected);
     package.decRef(expected);
     package.decRef(*actual);
@@ -910,15 +901,7 @@ TEST_P(AncillaAngleTest, DirtyConstantAnglesAndMixedSelection) {
   const auto family = GetParam();
   const auto axis = ancillaRotationAxis(family);
   for (const bool mixed : {false, true}) {
-    for (double theta : {
-             0.73,
-             -1.21,
-             0.0,
-             std::numbers::pi,
-             -std::numbers::pi,
-             2 * std::numbers::pi,
-             -2 * std::numbers::pi,
-         }) {
+    for (double theta : K_ANCILLA_ANGLES) {
       SCOPED_TRACE(testing::Message()
                    << "mixed=" << mixed << " theta=" << theta);
       constexpr size_t k = 6;
@@ -941,8 +924,6 @@ TEST_P(AncillaAngleTest, DirtyConstantAnglesAndMixedSelection) {
           });
       ASSERT_TRUE(succeeded(runDecomposeMultiControlled(*moduleOp)));
       if (theta == 0.73) {
-        // Clean compression wins when available; otherwise the new fallback
-        // is cheaper than borrowing this dirty ladder.
         EXPECT_EQ(countEffectiveCxOps(*moduleOp), axis    ? (mixed ? 34U : 40U)
                                                   : mixed ? 66U
                                                           : 100U);
@@ -1063,8 +1044,6 @@ TEST_P(AncillaAngleTest, OneHelperWithBorrowedResidualControls) {
   auto expected = makeControlledGateDD(
       package, k, axis ? rotationMatrix(*axis, 0.73) : phaseMatrix(0.73), k);
   package.incRef(expected);
-  // Every data column with the sole external helper initially zero, including
-  // arbitrary states of controls borrowed internally by the residual plan.
   expectOperatorColumnsNear(*actual, expected, k + 2, k + 1);
   package.decRef(expected);
   package.decRef(*actual);
@@ -1102,15 +1081,7 @@ TEST_P(AncillaAngleTest, AncillaFreeRuntimePhasesAndReorderedWires) {
     function.walk([](AllocOp) { ADD_FAILURE() << "unexpected helper qubit"; });
     EXPECT_EQ(countEffectiveCxOps(*moduleOp),
               axis ? expectedMcrCxBudget(k) : expectedMcpCx(k));
-    for (double theta : {
-             0.0,
-             0.73,
-             -1.21,
-             std::numbers::pi,
-             -std::numbers::pi,
-             2 * std::numbers::pi,
-             -2 * std::numbers::pi,
-         }) {
+    for (double theta : K_ANCILLA_ANGLES) {
       SCOPED_TRACE(theta);
       dd::Package package(k + 1);
       auto actual = buildFunctionality(
@@ -1126,8 +1097,6 @@ TEST_P(AncillaAngleTest, AncillaFreeRuntimePhasesAndReorderedWires) {
           package, k,
           axis ? rotationMatrix(*axis, -theta) : phaseMatrix(-theta), 0);
       package.incRef(expected);
-      // Compare every entry without phase alignment, including inactive
-      // control sectors. This catches lost scalar or borrowed-control phases.
       expectOperatorColumnsNear(*actual, expected, k + 1, k + 1);
       package.decRef(expected);
       package.decRef(*actual);
@@ -1165,8 +1134,6 @@ TEST_P(AncillaAngleTest, OneDirtyHelperFullOperator) {
       auto actual = buildFunctionality(
           *moduleOp->getOps<func::FuncOp>().begin(), package);
       ASSERT_TRUE(succeeded(actual));
-      // Equality on every input includes arbitrary helper/data entanglement,
-      // not just a zero helper or restoration of its computational-basis bit.
       EXPECT_EQ(*actual, ancillaFamilyReference(package, family, k));
       package.decRef(*actual);
     }
@@ -1275,10 +1242,7 @@ INSTANTIATE_TEST_SUITE_P(Ancilla, AncillaAngleTest,
                                          AncillaFamily::RX, AncillaFamily::RY,
                                          AncillaFamily::RZ),
                          [](const testing::TestParamInfo<AncillaFamily>& info) {
-                           return info.param == AncillaFamily::RX   ? "RX"
-                                  : info.param == AncillaFamily::RY ? "RY"
-                                  : info.param == AncillaFamily::RZ ? "RZ"
-                                                                    : "Phase";
+                           return ancillaFamilyName(info.param);
                          });
 
 TEST_F(MultiControlledDecompositionTest,

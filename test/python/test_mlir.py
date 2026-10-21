@@ -565,21 +565,8 @@ def test_mcx_ancilla_budget_options() -> None:
         options.ancilla_budget = -1
 
 
-@requires_qiskit_translation
-@pytest.mark.parametrize(
-    "method", ["compile_for_target", "synthesize_for_target", "decompose_multi_controlled", "run_pass_pipeline"]
-)
-@pytest.mark.parametrize("dirty", [False, True])
-@pytest.mark.parametrize("measured", [False, True])
-@pytest.mark.parametrize("family", ["x", "y", "z", "swap", "p", "p_pi", "rx", "ry", "rz"])
-def test_mc_ancilla_budget_target_round_trip(method: str, family: str, *, dirty: bool, measured: bool) -> None:
-    """Use a real idle tensor slot, restore its state, and retain measurements."""
-    source = QuantumCircuit(7)
-    source.h(range(5))
-    source.ry(0.43, 5)
-    if dirty:
-        source.cx(0, 6)  # Helper entangled with a control, not a clean zero.
-    gate = {
+def _ancilla_test_gate(family: str) -> Gate:
+    return {
         "x": library.XGate(),
         "y": library.YGate(),
         "z": library.ZGate(),
@@ -590,6 +577,24 @@ def test_mc_ancilla_budget_target_round_trip(method: str, family: str, *, dirty:
         "ry": library.RYGate(0.73),
         "rz": library.RZGate(0.73),
     }[family]
+
+
+@requires_qiskit_translation
+@pytest.mark.parametrize(
+    ("method", "family"),
+    [("compile_for_target", family) for family in ("x", "y", "z", "swap", "p", "p_pi", "rx", "ry", "rz")]
+    + [(method, "x") for method in ("synthesize_for_target", "decompose_multi_controlled", "run_pass_pipeline")],
+)
+@pytest.mark.parametrize("dirty", [False, True])
+@pytest.mark.parametrize("measured", [False, True])
+def test_mc_ancilla_budget_target_round_trip(method: str, family: str, *, dirty: bool, measured: bool) -> None:
+    """Cover each gate family and each API's budget/default handling."""
+    source = QuantumCircuit(7)
+    source.h(range(5))
+    source.ry(0.43, 5)
+    if dirty:
+        source.cx(0, 6)  # Helper entangled with a control, not a clean zero.
+    gate = _ancilla_test_gate(family)
     source.append(gate.control(6 - gate.num_qubits, annotated=False), range(6))
     source.rz(0.29, 3)
     expected = Operator(source).data[:, :64]
@@ -628,9 +633,7 @@ def test_mc_ancilla_budget_target_round_trip(method: str, family: str, *, dirty:
         assert result.num_qubits == 7
         assert result.count_ops().get("measure", 0) == (7 if measured else 0)
         result.remove_final_measurements()
-        # Test every data input with helper initially zero, including the
-        # entangled state created before the embedded controlled gate. Global phase is
-        # irrelevant to this exported top-level circuit, not to its helper.
+        # Top-level global phase may change; relative helper/data phases may not.
         actual = Operator(result).data[:, :64]
         phase = np.vdot(expected.ravel(), actual.ravel()) / 64
         np.testing.assert_allclose(actual, phase * expected, atol=1e-10)
@@ -644,89 +647,13 @@ def test_mc_ancilla_budget_target_round_trip(method: str, family: str, *, dirty:
 
 
 @requires_qiskit_translation
-@pytest.mark.parametrize(
-    "method", ["compile_for_target", "synthesize_for_target", "decompose_multi_controlled", "run_pass_pipeline"]
-)
-@pytest.mark.parametrize("family", ["p", "rx", "ry", "rz"])
-def test_mc_ancilla_budget_dirty_helpers_round_trip(method: str, family: str) -> None:
-    """Restore several entangled helpers around embedded, measured gates."""
-    source = QuantumCircuit(9)
-    source.h(range(6))
-    source.ry(0.31, 6)
-    source.h(7)
-    source.ry(0.43, 2)
-    source.cx(0, 6)
-    source.rz(0.17, 7)
-    source.cx(7, 8)
-    gate = {
-        "p": library.PhaseGate(0.73),
-        "rx": library.RXGate(0.73),
-        "ry": library.RYGate(0.73),
-        "rz": library.RZGate(0.73),
-    }[family]
-    source.append(gate.control(5, annotated=False), [5, 4, 3, 1, 0, 2])
-    source.h(3)
-    # A second gate must not mistake restored dirty helpers for clean zeros.
-    source.append(gate.inverse().control(5, annotated=False), [5, 4, 3, 1, 0, 2])
-    expected = Operator(source).data
-    source.measure_all()
-    target = CompilerTarget(
-        9,
-        connectivity=CompilerTarget.Connectivity.all_to_all(),
-        native_operations=CompilerTarget.NativeOperations([
-            CompilerTarget.OperationCapability("u", 1, 3),
-            CompilerTarget.OperationCapability("cz", 2, 0),
-            CompilerTarget.OperationCapability("measure", 1, 0),
-        ]),
-    )
-    counts = []
-    for budget in (0, 1, 2, 3, None):
-        program = QCProgram.from_qiskit(source).to_qco()
-        if method in {"decompose_multi_controlled", "run_pass_pipeline"}:
-            if method == "decompose_multi_controlled":
-                program.decompose_multi_controlled(ancilla_budget=budget)
-            else:
-                option = "" if budget is None else f"{{ancilla-budget={budget}}}"
-                program.run_pass_pipeline(f"decompose-multi-controlled{option}")
-            program.synthesize_for_target(
-                _test_target_environment(target), options=CompilationOptions(seed=7, ancilla_budget=0)
-            )
-        else:
-            getattr(program, method)(
-                _test_target_environment(target), options=CompilationOptions(seed=7, ancilla_budget=budget)
-            )
-        result = program.to_qiskit(target=target)
-        assert result.num_qubits == 9
-        assert result.count_ops().get("measure", 0) == 9
-        result.remove_final_measurements()
-        actual = Operator(result).data
-        phase = np.vdot(expected.ravel(), actual.ravel()) / 512
-        np.testing.assert_allclose(actual, phase * expected, atol=1e-10)
-        assert abs(abs(phase) - 1) < 1e-10
-        counts.append(result.count_ops()["cz"])
-    assert counts == [counts[0]] * 5  # The ancilla-free plan wins at five controls.
-
-
-@requires_qiskit_translation
 @pytest.mark.parametrize("method", ["compile_for_target", "synthesize_for_target"])
 @pytest.mark.parametrize("capacity", [6, 7])
-@pytest.mark.parametrize("family", ["x", "y", "z", "swap", "p", "p_pi", "rx", "ry", "rz"])
-def test_mc_ancilla_budget_preserves_target_capacity(method: str, capacity: int, family: str) -> None:
+def test_mc_ancilla_budget_preserves_target_capacity(method: str, capacity: int) -> None:
     """Unused declared slots must remain removable on a smaller target."""
     source = QuantumCircuit(8)
     source.h(range(5))
-    gate = {
-        "x": library.XGate(),
-        "y": library.YGate(),
-        "z": library.ZGate(),
-        "swap": library.SwapGate(),
-        "p": library.PhaseGate(0.73),
-        "p_pi": library.PhaseGate(np.pi),
-        "rx": library.RXGate(0.73),
-        "ry": library.RYGate(0.73),
-        "rz": library.RZGate(0.73),
-    }[family]
-    source.append(gate.control(6 - gate.num_qubits, annotated=False), range(6))
+    source.append(library.XGate().control(5, annotated=False), range(6))
     target = CompilerTarget(
         capacity,
         connectivity=CompilerTarget.Connectivity.all_to_all(),
@@ -752,17 +679,7 @@ def test_mc_ancilla_budget_default_falls_back_without_helpers(family: str) -> No
     """Default borrowing cannot use controls or the target as external helpers."""
     source = QuantumCircuit(6)
     source.h(range(5))
-    gate = {
-        "x": library.XGate(),
-        "y": library.YGate(),
-        "z": library.ZGate(),
-        "swap": library.SwapGate(),
-        "p": library.PhaseGate(0.73),
-        "p_pi": library.PhaseGate(np.pi),
-        "rx": library.RXGate(0.73),
-        "ry": library.RYGate(0.73),
-        "rz": library.RZGate(0.73),
-    }[family]
+    gate = _ancilla_test_gate(family)
     controlled = gate.control(6 - gate.num_qubits, annotated=False)
     wires = [5, 4, 3, 1, 0, 2]
     source.ry(0.31, 2)
@@ -781,8 +698,7 @@ def test_mc_ancilla_budget_default_falls_back_without_helpers(family: str) -> No
     assert outputs[1].num_qubits == 6
     assert outputs[1].count_ops()["measure"] == 6
     outputs[1].remove_final_measurements()
-    # Standalone decomposition must preserve the exact phase, not only the
-    # state from |0>. The larger native tests also cover runtime ±2π angles.
+    # Standalone decomposition preserves exact phase, not only the |0> output.
     np.testing.assert_allclose(Operator(outputs[1]).data, expected, atol=1e-10, rtol=0)
 
 
@@ -794,7 +710,7 @@ def test_mc_ancilla_budget_wide_measured_roundtrip(family: str, central_controls
     """Check wide no-helper exports; native compact-DD tests check phases."""
     width = central_controls + 1
     source = QuantumCircuit(width)
-    gate = {"x": library.XGate(), "y": library.YGate(), "z": library.ZGate(), "swap": library.SwapGate()}[family]
+    gate = _ancilla_test_gate(family)
     source.h(0)
     source.ry(0.31, width - 1)
     source.append(gate.control(width - gate.num_qubits, annotated=False), range(width - 1, -1, -1))

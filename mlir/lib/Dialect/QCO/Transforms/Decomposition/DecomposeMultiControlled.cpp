@@ -35,7 +35,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
 #include <cassert>
@@ -60,7 +59,7 @@ namespace {
 // the publications cited at the respective algorithms.
 
 enum class Hp24DirtyMode : uint8_t { OneDirty, TwoDirty };
-enum class ControlledTarget : uint8_t { X, Z, Phase };
+enum class ControlledTarget : uint8_t { X, Z };
 
 constexpr double K_PI = std::numbers::pi;
 constexpr double K_PI8 = K_PI / 8.0;
@@ -286,11 +285,6 @@ struct CircuitPlan {
   SmallVector<PlanOp> ops;
 
   void append(PlanOp op) { ops.push_back(std::move(op)); }
-};
-
-struct ControlledGateSpec {
-  ControlledTarget gate;
-  mqt::FloatParameter theta = 0.0;
 };
 
 /// A helper is a live wire, not spare target-device capacity. Tensor slots
@@ -687,64 +681,32 @@ static SmallVector<Value> synthesizeRCCX(OpBuilder& builder, Location loc,
   return wires;
 }
 
-static SmallVector<Value> synthesizeTwoControlled(OpBuilder& builder,
-                                                  Location loc, Value control0,
-                                                  Value control1, Value target,
-                                                  ControlledTarget gate) {
-  SmallVector<Value> wires = {control0, control1, target};
-  GateEmitter emitter(builder, loc, wires);
-  switch (gate) {
-  case ControlledTarget::X:
-    emitter.emitTwoControlledXSequence(0, 1, 2);
-    break;
-  case ControlledTarget::Z:
-    emitter.h(2);
-    emitter.emitTwoControlledXSequence(0, 1, 2);
-    emitter.h(2);
-    break;
-  case ControlledTarget::Phase:
-    // Non-±π phase stays on synthesizeMultiControlledPhase /
-    // planMcpTwoControlled.
-    llvm_unreachable("use synthesizeMultiControlledPhase for C²P");
-  }
-  return wires;
-}
-
-static SmallVector<Value>
-synthesizeThreeControlled(OpBuilder& builder, Location loc, ValueRange controls,
-                          Value target, ControlledTarget gate) {
-  SmallVector<Value> wires(controls);
-  wires.push_back(target);
-  GateEmitter emitter(builder, loc, wires);
-  if (gate == ControlledTarget::X) {
-    emitter.emitThreeControlledXSequence();
-  } else {
-    emitter.h(3);
-    emitter.emitThreeControlledXSequence();
-    emitter.h(3);
-  }
-  return wires;
-}
-
 static CircuitPlan mczCoreForWidth(OpBuilder& builder, Location loc,
                                    size_t numControls);
 static size_t entanglingCost(const CircuitPlan& plan);
 
 static SmallVector<Value>
-synthesizeMultiControlled(OpBuilder& builder, Location loc, ValueRange controls,
+synthesizeControlledPauli(OpBuilder& builder, Location loc, ValueRange controls,
                           Value target, ControlledTarget gate) {
-  SmallVector<Value> wires(controls.begin(), controls.end());
+  SmallVector<Value> wires(controls);
   wires.push_back(target);
-
-  const size_t targetIdx = controls.size();
+  const size_t k = controls.size();
   GateEmitter emitter(builder, loc, wires);
-  const CircuitPlan plan = mczCoreForWidth(builder, loc, controls.size());
-  if (gate == ControlledTarget::X) {
-    emitter.h(targetIdx);
-    lowerPlan(emitter, plan);
-    emitter.h(targetIdx);
+  // Small cores implement X; larger cores implement Z.
+  const bool conjugate =
+      k < 4 ? gate == ControlledTarget::Z : gate == ControlledTarget::X;
+  if (conjugate) {
+    emitter.h(k);
+  }
+  if (k == 2) {
+    emitter.emitTwoControlledXSequence(0, 1, 2);
+  } else if (k == 3) {
+    emitter.emitThreeControlledXSequence();
   } else {
-    lowerPlan(emitter, plan);
+    lowerPlan(emitter, mczCoreForWidth(builder, loc, k));
+  }
+  if (conjugate) {
+    emitter.h(k);
   }
   return wires;
 }
@@ -792,20 +754,6 @@ static CircuitPlan planMultiControlledRotation(OpBuilder& builder, Location loc,
   return changeRotationBasis(
       planMultiControlledRz(builder, loc, theta, numControls), numControls,
       rotation);
-}
-
-static SmallVector<Value>
-synthesizeMultiControlledRotation(OpBuilder& builder, Location loc,
-                                  ValueRange controls, Value target,
-                                  UnitaryOpInterface rotation) {
-  SmallVector<Value> wires(controls);
-  wires.push_back(target);
-  GateEmitter emitter(builder, loc, wires);
-  lowerPlan(emitter,
-            planMultiControlledRotation(
-                builder, loc, mqt::foldParameter(rotation.getParameters()[0]),
-                controls.size(), rotation));
-  return wires;
 }
 
 /// Optimized ancilla-free `C^2(P(θ))`.
@@ -1492,44 +1440,6 @@ static LogicalResult synthesizeWithHelpers(CtrlOp op, UnitaryOpInterface inner,
   return success();
 }
 
-static SmallVector<Value>
-synthesizeMultiControlledPhase(OpBuilder& builder, Location loc,
-                               ValueRange controls, Value target,
-                               const mqt::FloatParameter& theta) {
-  SmallVector<Value> wires(controls.begin(), controls.end());
-  wires.push_back(target);
-  GateEmitter emitter(builder, loc, wires);
-  const auto numControls = controls.size();
-  lowerPlan(emitter, planMcpForWidth(builder, loc, theta, numControls));
-  return wires;
-}
-
-//===----------------------------------------------------------------------===//
-// CtrlOp body matchers
-//===----------------------------------------------------------------------===//
-
-/// Match a supported controlled-target body: Pauli-X, Pauli-Z, or phase.
-static std::optional<ControlledGateSpec>
-matchControlledTarget(UnitaryOpInterface inner) {
-  if (isa<XOp>(inner.getOperation())) {
-    return ControlledGateSpec{
-        .gate = ControlledTarget::X,
-    };
-  }
-  if (isa<ZOp>(inner.getOperation())) {
-    return ControlledGateSpec{
-        .gate = ControlledTarget::Z,
-    };
-  }
-  if (auto pOp = dyn_cast<POp>(inner.getOperation())) {
-    return ControlledGateSpec{
-        .gate = ControlledTarget::Phase,
-        .theta = mqt::foldParameter(pOp.getTheta()),
-    };
-  }
-  return std::nullopt;
-}
-
 /// Rewrite controlled-SWAP (Fredkin) as CX–MCX–CX.
 ///
 /// Identity: MCSWAP(C, a, b) = CX(a, b) · MCX(C ∪ {b}, a) · CX(a, b).
@@ -1648,55 +1558,37 @@ struct DecomposeControlledGatePattern final : OpRewritePattern<CtrlOp> {
       rewriter.replaceOp(op, results);
       return success();
     }
-    if (isa<RXOp, RYOp, RZOp>(inner.getOperation())) {
-      // Verified support operations cannot depend on the body's qubits.
-      // Hoist them so region-local symbolic angles survive the replacement.
+    const bool rotation = isa<RXOp, RYOp, RZOp>(inner.getOperation());
+    const bool phase = isa<POp>(inner.getOperation());
+    const auto theta = rotation || phase
+                           ? mqt::foldParameter(inner.getParameters()[0])
+                           : mqt::FloatParameter{0.0};
+    if (rotation || (phase && !isPiPhase(theta))) {
+      // Preserve region-local symbolic angles before replacing their owner.
       mqt::hoistSupportingOpsBefore(*op.getBody(), inner.getOperation(), op,
                                     rewriter);
       rewriter.setInsertionPoint(op);
-      rewriter.replaceOp(op, synthesizeMultiControlledRotation(
-                                 rewriter, op.getLoc(), op.getControlsIn(),
-                                 op.getInputTarget(0), inner));
+      SmallVector<Value> wires(op.getControlsIn());
+      wires.push_back(op.getInputTarget(0));
+      GateEmitter emitter(rewriter, op.getLoc(), wires);
+      lowerPlan(emitter,
+                rotation ? planMultiControlledRotation(
+                               rewriter, op.getLoc(), theta, numControls, inner)
+                         : planMcpForWidth(rewriter, op.getLoc(), theta,
+                                           numControls));
+      rewriter.replaceOp(op, wires);
       return success();
     }
-    const auto spec = matchControlledTarget(inner);
-    if (!spec) {
+    if (!phase && !isa<XOp, ZOp>(inner.getOperation())) {
       return failure();
     }
-
-    ControlledTarget gate = spec->gate;
-    // A compile-time phase of ±π is exactly Z; route it through the
-    // multi-controlled-Z path, including its exact scalar-phase correction.
-    if (gate == ControlledTarget::Phase && isPiPhase(spec->theta)) {
-      gate = ControlledTarget::Z;
-    }
-
+    // P(±π) is Z, including the conditional scalar phase.
+    const auto gate = isa<XOp>(inner.getOperation()) ? ControlledTarget::X
+                                                     : ControlledTarget::Z;
     rewriter.setInsertionPoint(op);
-    if (gate == ControlledTarget::Phase) {
-      mqt::hoistSupportingOpsBefore(*op.getBody(), inner.getOperation(), op,
-                                    rewriter);
-      rewriter.replaceOp(op, synthesizeMultiControlledPhase(
-                                 rewriter, op.getLoc(), op.getControlsIn(),
-                                 op.getInputTarget(0), spec->theta));
-      return success();
-    }
-    if (numControls < 3) {
-      // Exactly two controls (k < 2 is rejected by min-qubits >= 3).
-      rewriter.replaceOp(op, synthesizeTwoControlled(
-                                 rewriter, op.getLoc(), op.getControlsIn()[0],
-                                 op.getControlsIn()[1], op.getInputTarget(0),
-                                 gate));
-      return success();
-    }
-    if (numControls == 3) {
-      rewriter.replaceOp(op, synthesizeThreeControlled(
-                                 rewriter, op.getLoc(), op.getControlsIn(),
-                                 op.getInputTarget(0), gate));
-    } else {
-      rewriter.replaceOp(op, synthesizeMultiControlled(
-                                 rewriter, op.getLoc(), op.getControlsIn(),
-                                 op.getInputTarget(0), gate));
-    }
+    rewriter.replaceOp(
+        op, synthesizeControlledPauli(rewriter, op.getLoc(), op.getControlsIn(),
+                                      op.getInputTarget(0), gate));
     return success();
   }
 

@@ -101,56 +101,27 @@ gate. All-to-all placement ignores valid mapping controls. Repeatable mapping
 requires the same build, input, target, seed, and mapping controls, including an
 explicit trial count. Layouts may change between releases.
 
-Controlled X/Y/Z/P/RX/RY/RZ/SWAP decomposition automatically uses available live
-helpers by default. `CompilationOptions(ancilla_budget=None)` selects this
-policy explicitly. Set `ancilla_budget=1` to cap borrowing at one helper per
-original gate, or `ancilla_budget=0` to disable borrowing and retain
-ancilla-free lowering. Larger budgets can enable helper chains. The equivalent
-CLI option is `--ancilla-budget`; omission selects automatic borrowing. The
-standalone `QCOProgram.decompose_multi_controlled` method accepts
-`ancilla_budget` too. In a custom textual pipeline, set the pass option, for
-example `decompose-multi-controlled{ancilla-budget=0}`; the compilation option
-controls the built-in target pipelines, not custom pass settings.
+Controlled X/Y/Z/P/RX/RY/RZ/SWAP decomposition uses available live ancillas by
+default. `CompilationOptions(ancilla_budget=None)` selects this policy;
+`ancilla_budget=1` caps borrowing at one helper per original gate, and zero
+disables external borrowing. The standalone `decompose_multi_controlled` method
+accepts the same option. The CLI uses `--ancilla-budget`. Custom textual
+pipelines instead set `decompose-multi-controlled{ancilla-budget=0}`.
 
-Borrowing never allocates extra qubits or treats unused device capacity as an
-initialized workspace. It considers same-block live scalar wires and provably
-occupied, constant-index tensor slots, excluding every control and target of the
-original gate, including both SWAP targets. Y/Z use target basis changes around
-MCX; SWAP uses CX–MCX–CX. Generated sub-gates cannot borrow extra helpers beyond
-the original gate's budget. MCP and MCRX/MCRY/MCRZ with constant or runtime
-angles can use clean helpers to combine controls, apply the smaller controlled
-gate, and uncompute. The ancilla-free rotation plan borrows only opposite
-controls internally, restoring their phases and entanglement. Its relative
-phases cancel between forward and inverse half-gates. MCP also includes the
-conditional scalar-phase correction on its controls. It uses this construction
-through eight controls and the cheaper SP22 construction above that width. At
-five controls, the ancilla-free plans use 28 CX for rotations and 60
-CX-equivalents for general MCP before routing. X/Y/Z with four through eight
-controls share the exact MCP(π) core through target basis changes; it retains
-the scalar-phase correction because RZ(π) alone is not Z. The central MCX in
-SWAP uses the same core. At five controls, X/Y/Z use 60 CX instead of 82
-CX-equivalents; SWAP with four controls uses 62 instead of 84. The cheaper
-two/three-control Pauli cores remain unchanged. From 23 controls, the Pauli
-fallback uses relative-phase HP24 incrementers around a diagonal phase ladder.
-The exact adjoint of the incrementer cancels all added phases; the planner
-retains the smaller-width fallback wherever its CX-equivalent estimate is
-cheaper. SWAP uses this candidate from 22 controls. This estimate does not
-guarantee fewer native gates after later optimization. A zero budget allows this
-internal workspace; it prohibits external helpers, not use of the original
-controls. Clean compression and a complete dirty ladder of `controls - 2`
-helpers are selected only when cheaper. One dirty helper does not improve on the
-ancilla-free parameterized plans. Constant phases of ±π use MCZ, including its
-dirty-helper plans. Rotations keep their conditional phase, including at ±2π.
-Allocation and reset prove a helper is zero; other live states are dirty. Both
-kinds are restored coherently. Measurement alone does not prove zero. Ambiguous
-tensor occupancy, cross-region captures, and unavailable lifetimes are not
-borrowed. Target-aware decomposition also falls back when the declared
-allocations cannot be proved to fit the target, so unused slots remain
-removable. This conservative check can forgo helpers that would fit after
-shrinking the input. A zero budget, insufficient safe helpers, or a
-non-improving pre-routing CX-equivalent estimate retains the ancilla-free
-decomposition. Final native gate counts and routing costs can differ from that
-estimate.
+Borrowing uses same-block scalar wires or provably occupied constant-index
+tensor slots, never fresh qubits or spare device capacity. Allocation and reset
+prove a clean zero; measurement alone does not. Clean and dirty helpers are
+restored with their phases and entanglement intact. Gate operands, ambiguous
+occupancy, and unavailable lifetimes are excluded. Target-aware decomposition
+also requires declared allocations to fit the target, leaving unused slots
+removable even when that conservative check forgoes possible helpers.
+
+Insufficient helpers or a non-improving pre-routing CX-equivalent estimate
+retain ancilla-free lowering. Zero budget still permits the original controls as
+internal workspace. General phases and rotations can use clean helpers or a
+complete dirty ladder of `controls - 2` helpers; a single dirty helper does not
+improve their fallback. Final native gate counts and routing costs can differ
+from the estimate.
 
 For explicit native gate sets with a usable entangler basis, routing ranks its
 candidates by estimated native two-qubit gate count, using qubit-dependency
