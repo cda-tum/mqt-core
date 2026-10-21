@@ -93,7 +93,7 @@ def LoadOp : CBitOp<"load", [DeclareOpInterfaceMethods<
   let assemblyFormat = [{
     $reg `[` $index `]` attr-dict `:` qualified(type($reg))
   }];
-  let hasCanonicalizer = 1;
+  let hasCanonicalizeMethod = 1;
   let hasVerifier = 1;
 }
 
@@ -117,7 +117,7 @@ def ReadOp : CBitOp<"read", [DeclareOpInterfaceMethods<
   let assemblyFormat = [{
     $reg attr-dict `:` qualified(type($reg)) `->` qualified(type($result))
   }];
-  let hasCanonicalizer = 1;
+  let hasCanonicalizeMethod = 1;
   let hasVerifier = 1;
 }
 

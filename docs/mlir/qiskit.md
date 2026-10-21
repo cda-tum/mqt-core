@@ -245,16 +245,13 @@ region may execute zero times. The exporter preserves scalar values across later
 writes and control-flow boundaries. Reads wider than 64 bits remain subject to
 the snapshot checks.
 
-Each exported measurement must write to one static CBit in the same block.
-Destinations may be reused; later measurements overwrite earlier values in
-program order. Constants, unitary quantum operations (including barriers), and
-resets may separate a measurement from its destination store. The exporter keeps
-the measurement at its original position and writes the destination there.
-Intervening classical accesses and control flow are allowed when their known
-effects do not conflict with that earlier write. Conflicting accesses or unknown
-effects are rejected. Measurement results may feed supported classical
-expressions. Live measurement results are saved in local variables before later
-writes. Deferred measurement expressions require an unchanged destination CBit.
+Measurements keep their program order and write to static Qiskit Clbits. The
+exporter reuses a CBit destination when its store can move next to the
+measurement without crossing conflicting classical accesses. Otherwise, it
+allocates a one-bit scratch register, exposed as additional circuit storage.
+Other uses of the result read a snapshot, including classical expressions,
+copies to dynamic indices, and stores in branches. Later measurements may reuse
+a destination; saved snapshots retain the earlier result.
 
 Dense numeric unitaries remain explicit matrix operations during import and
 export. Target compilation synthesizes supported one- and two-qubit matrices to

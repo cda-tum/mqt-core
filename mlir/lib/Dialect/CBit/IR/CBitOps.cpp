@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h" // IWYU pragma: keep
 #include "mlir/IR/PatternMatch.h"
@@ -31,7 +32,6 @@
 
 #include <cstdint>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -130,10 +130,9 @@ static LogicalResult verifyIndex(Operation* operation, Value registerValue,
   return success();
 }
 
-/// Return nullopt for unknown contents, a null Value for zero initialization,
-/// or a non-null Value for a known snapshot. A null index denotes a whole read.
-static std::optional<Value> findKnownValue(Operation* read, Value reg,
-                                           Value index) {
+/// Find a known snapshot or zero initialization; a null index denotes a whole
+/// read.
+static OpFoldResult findKnownValue(Operation* read, Value reg, Value index) {
   const bool singleBit = cast<RegisterType>(reg.getType()).getWidth() == 1;
   const auto matchesIndex = [&](Value candidate) {
     return index ? isEqualConstantIntOrValue(index, candidate)
@@ -171,24 +170,41 @@ static std::optional<Value> findKnownValue(Operation* read, Value reg,
           continue;
         }
       }
-      return std::nullopt;
+      // Distinct register arguments may refer to the same storage.
+      return {};
     }
     if (auto write = dyn_cast<WriteOp>(previous)) {
       return write.getReg() == reg && readsWholeRegister
-                 ? std::optional<Value>(write.getValue())
-                 : std::nullopt;
+                 ? OpFoldResult(write.getValue())
+                 : OpFoldResult{};
     }
     if (auto alloc = dyn_cast<AllocOp>(previous);
         alloc && alloc.getResult() == reg) {
       return alloc.getInitialization() == Initialization::Zero
-                 ? std::optional<Value>(Value{})
-                 : std::nullopt;
+                 ? OpFoldResult(
+                       IntegerAttr::get(read->getResult(0).getType(), 0))
+                 : OpFoldResult{};
     }
     if (previous->getNumRegions() != 0 || !isMemoryEffectFree(previous)) {
-      return std::nullopt;
+      return {};
     }
   }
-  return std::nullopt;
+  return {};
+}
+
+static LogicalResult forwardKnownValue(Operation* read, Value reg, Value index,
+                                       PatternRewriter& rewriter) {
+  auto known = findKnownValue(read, reg, index);
+  if (!known) {
+    return failure();
+  }
+  if (auto value = dyn_cast<Value>(known)) {
+    rewriter.replaceOp(read, value);
+  } else {
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        read, cast<IntegerAttr>(cast<Attribute>(known)));
+  }
+  return success();
 }
 
 namespace {
@@ -207,30 +223,6 @@ struct EraseWriteOnlyRegister final : OpRewritePattern<AllocOp> {
       rewriter.eraseOp(user);
     }
     rewriter.eraseOp(alloc);
-    return success();
-  }
-};
-
-template <typename Read>
-struct ForwardKnownValue final : OpRewritePattern<Read> {
-  using OpRewritePattern<Read>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(Read read,
-                                PatternRewriter& rewriter) const override {
-    Value index;
-    if constexpr (std::is_same_v<Read, LoadOp>) {
-      index = read.getIndex();
-    }
-    const auto known = findKnownValue(read, read.getReg(), index);
-    if (!known) {
-      return failure();
-    }
-    if (*known) {
-      rewriter.replaceOp(read, *known);
-      return success();
-    }
-    rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(
-        read, 0, read.getResult().getType().getWidth());
     return success();
   }
 };
@@ -321,14 +313,12 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet& results,
   results.add<EraseWriteOnlyRegister>(context);
 }
 
-void LoadOp::getCanonicalizationPatterns(RewritePatternSet& results,
-                                         MLIRContext* context) {
-  results.add<ForwardKnownValue<LoadOp>>(context);
+LogicalResult LoadOp::canonicalize(LoadOp load, PatternRewriter& rewriter) {
+  return forwardKnownValue(load, load.getReg(), load.getIndex(), rewriter);
 }
 
-void ReadOp::getCanonicalizationPatterns(RewritePatternSet& results,
-                                         MLIRContext* context) {
-  results.add<ForwardKnownValue<ReadOp>>(context);
+LogicalResult ReadOp::canonicalize(ReadOp read, PatternRewriter& rewriter) {
+  return forwardKnownValue(read, read.getReg(), {}, rewriter);
 }
 
 LogicalResult StoreOp::verify() {
