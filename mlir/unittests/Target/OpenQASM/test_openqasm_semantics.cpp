@@ -172,6 +172,7 @@ TEST(OpenQASMFrontendTest, CopiesWholeArraysWithMatchingTypes) {
            "array[angle, 1] a = {pi}; array[angle[52], 1] b = a; b = a;",
            "array[uint[8], 1] a = {255}; array[uint[8], 1] b; b = a;",
            "array[bool, 1] a = {true}; array[bool, 1] b; b = a;",
+           "array[int, 400, 400, 0] a; array[int, 400, 400, 0] b = a; b = a;",
            "array[int, 1] a; a[0] = 1; array[int, 1] b = a;",
            "array[int, 2, 1] a = {{1}, {2}}; array[int, 2, 1] b; "
            "bool c = true; if (c) { b = a; } else { b = a; } int x = b[1, 0];",

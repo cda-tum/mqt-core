@@ -3610,6 +3610,7 @@ TEST_F(QCODDFunctionalityTest,
       %huge = arith.constant 4294967296 : index
       %heap = memref.alloc(%huge, %huge, %zero) : memref<?x?x?xi1>
       %stack = memref.alloca() : memref<4294967296x4294967296x0xi1>
+      memref.copy %heap, %stack : memref<?x?x?xi1> to memref<4294967296x4294967296x0xi1>
       memref.dealloc %heap : memref<?x?x?xi1>
       return
     }

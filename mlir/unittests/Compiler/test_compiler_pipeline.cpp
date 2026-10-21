@@ -1167,6 +1167,8 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         array[float, 0] initializedEmpty = {};
         array[int, 2, 0] emptyRows = {{}, {}};
         array[int, 0, 2] noRows = {};
+        array[int, 400, 400, 0] emptyTable;
+        array[int, 400, 400, 0] emptyCopy = emptyTable;
         qubit q;
         output bit result;
         bool zero = bool(angles[0]);
