@@ -15,48 +15,25 @@
 #include "EvaluationUtils.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <numbers>
 #include <stdexcept>
 #include <string_view>
-#include <utility>
 
 namespace mqt::bench {
 
-QAOA::QAOA(QAOAOptions options)
-    : options_(std::move(options)),
-      output_{.name = "result", .width = options_.qubits} {
+QAOA::QAOA(const QAOAOptions options)
+    : options_(options), output_{.name = "result", .width = options_.qubits} {
   if (options_.qubits < 3 ||
       options_.qubits >
           static_cast<size_t>(std::numeric_limits<int64_t>::max())) {
     throw std::invalid_argument(
         "QAOA qubits must be at least 3 and fit circuit dimensions");
   }
-  if (options_.gammas.empty() ||
-      options_.gammas.size() != options_.betas.size()) {
+  if (options_.depth == 0 || options_.depth > QAOAOptions::MAX_DEPTH) {
     throw std::invalid_argument(
-        "QAOA gamma and beta vectors must have the same nonzero length");
-  }
-  for (auto& gamma : options_.gammas) {
-    if (!std::isfinite(gamma) || gamma < 0. || gamma > 2. * std::numbers::pi) {
-      throw std::invalid_argument(
-          "QAOA gamma angles must be finite and in [0, 2π]");
-    }
-    if (gamma == 0.) {
-      gamma = 0.;
-    }
-  }
-  for (auto& beta : options_.betas) {
-    if (!std::isfinite(beta) || beta < 0. || beta > std::numbers::pi) {
-      throw std::invalid_argument(
-          "QAOA beta angles must be finite and in [0, π]");
-    }
-    if (beta == 0.) {
-      beta = 0.;
-    }
+        "QAOA depth must be positive and fit circuit input dimensions");
   }
 }
 

@@ -12,6 +12,7 @@
 #include "dd/DDDefinitions.hpp"
 #include "dd/Package.hpp"
 #include "dd/StateGeneration.hpp"
+#include "mqt/Compiler/Programs.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
 #include "mqt/bench/Generate.h"
@@ -20,35 +21,42 @@
 
 #include "gtest/gtest.h"
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Types.h"
+
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/LogicalResult.h"
 
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <map>
+#include <numbers>
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace mqt::bench {
 
 // Evaluate the paper's cost eigenvalues, independently of RZZ decomposition.
-static dd::CVec qaoaState(const QAOAOptions& options) {
-  const auto size = size_t{1} << options.qubits;
+static dd::CVec qaoaState(const size_t qubits, llvm::ArrayRef<double> gammas,
+                          llvm::ArrayRef<double> betas) {
+  const auto size = size_t{1} << qubits;
   dd::CVec state(size, 1. / std::sqrt(static_cast<double>(size)));
-  for (size_t layer = 0; layer < options.gammas.size(); ++layer) {
+  for (size_t layer = 0; layer < gammas.size(); ++layer) {
     for (size_t index = 0; index < size; ++index) {
       size_t cut = 0;
-      for (size_t bit = 0; bit < options.qubits; ++bit) {
-        const auto neighbor = (bit + 1) % options.qubits;
+      for (size_t bit = 0; bit < qubits; ++bit) {
+        const auto neighbor = (bit + 1) % qubits;
         if (((index >> bit) & 1U) != ((index >> neighbor) & 1U)) {
           ++cut;
         }
       }
-      state[index] *=
-          std::polar(1., -options.gammas[layer] * static_cast<double>(cut));
+      state[index] *= std::polar(1., -gammas[layer] * static_cast<double>(cut));
     }
-    const auto diagonal = std::cos(options.betas[layer]);
-    const std::complex<double> offDiagonal{0., -std::sin(options.betas[layer])};
-    for (size_t bit = 0; bit < options.qubits; ++bit) {
+    const auto diagonal = std::cos(betas[layer]);
+    const std::complex<double> offDiagonal{0., -std::sin(betas[layer])};
+    for (size_t bit = 0; bit < qubits; ++bit) {
       const auto mask = size_t{1} << bit;
       for (size_t index = 0; index < size; ++index) {
         if ((index & mask) != 0) {
@@ -65,30 +73,48 @@ static dd::CVec qaoaState(const QAOAOptions& options) {
 }
 
 TEST(GenerateProgramTest, QAOAMatchesCostAndMixerEvolution) {
+  struct Angles {
+    std::vector<double> gammas;
+    std::vector<double> betas;
+  };
   for (const size_t qubits : {3U, 4U, 5U, 7U}) {
-    for (const auto& options : {
-             QAOAOptions{.qubits = qubits},
-             QAOAOptions{
-                 .qubits = qubits,
+    for (const auto& angles : {
+             Angles{
+                 .gammas = {std::numbers::pi / 4.},
+                 .betas = {std::numbers::pi / 8.},
+             },
+             Angles{
                  .gammas = {0.31, 1.17},
                  .betas = {0.23, 0.49},
              },
-             QAOAOptions{
-                 .qubits = qubits,
+             Angles{
                  .gammas = {0., 0.73, 1.29},
                  .betas = {0.41, 0., 0.27},
              },
+             Angles{
+                 .gammas = {7.1, -0.37},
+                 .betas = {3.5, -0.23},
+             },
          }) {
       SCOPED_TRACE(qubits);
-      SCOPED_TRACE(options.gammas.size());
-      auto program = test::generateQCO(QAOA{options});
+      SCOPED_TRACE(angles.gammas.size());
+      auto program = test::generateQCO(
+          QAOA{{.qubits = qubits, .depth = angles.gammas.size()}});
       ASSERT_TRUE(mlir::succeeded(program));
+      std::map<std::string, double> values;
+      for (size_t layer = 0; layer < angles.gammas.size(); ++layer) {
+        values.emplace("gamma_" + std::to_string(layer), angles.gammas[layer]);
+        values.emplace("beta_" + std::to_string(layer), angles.betas[layer]);
+      }
+      ASSERT_TRUE(mlir::succeeded(program->bindParameters(values)));
+      ASSERT_TRUE(mlir::succeeded(program->cleanup()));
       dd::Package package(0);
       auto state = mlir::qco::simulateStatevector(
           mlir::mqt::getEntryPoint(program->module()), package);
       ASSERT_TRUE(mlir::succeeded(state));
       ASSERT_EQ(package.qubits(), qubits);
-      auto expected = dd::makeStateFromVector(qaoaState(options), package);
+      auto expected = dd::makeStateFromVector(
+          qaoaState(qubits, angles.gammas, angles.betas), package);
       EXPECT_NEAR(package.fidelity(*state, expected), 1., 1e-10);
       package.decRef(expected);
       package.decRef(*state);
@@ -101,6 +127,11 @@ TEST(GenerateProgramTest, SamplesQAOACutQuality) {
     const QAOA benchmark{{.qubits = qubits}};
     auto program = test::generateQCO(benchmark);
     ASSERT_TRUE(mlir::succeeded(program));
+    ASSERT_TRUE(mlir::succeeded(program->bindParameters({
+        {"gamma_0", std::numbers::pi / 4.},
+        {"beta_0", std::numbers::pi / 8.},
+    })));
+    ASSERT_TRUE(mlir::succeeded(program->cleanup()));
     auto counts = mlir::qco::sample(mlir::mqt::getEntryPoint(program->module()),
                                     16'384, 17);
     ASSERT_TRUE(mlir::succeeded(counts));
@@ -115,18 +146,35 @@ TEST(GenerateProgramTest, SamplesQAOACutQuality) {
   }
 }
 
+TEST(GenerateProgramTest, PreservesQAOAInputsThroughJeff) {
+  auto program = test::generateQCO(QAOA{{.qubits = 3, .depth = 2}});
+  ASSERT_TRUE(mlir::succeeded(program));
+  EXPECT_EQ(
+      program->parameters(),
+      (std::vector<std::string>{"gamma_0", "gamma_1", "beta_0", "beta_1"}));
+  auto jeff = std::move(*program).intoJeff();
+  ASSERT_TRUE(mlir::succeeded(jeff));
+  auto restored = mlir::JeffProgram::fromBytes(jeff->toBytes());
+  ASSERT_TRUE(mlir::succeeded(restored));
+  auto qco = std::move(*restored).intoQCO();
+  ASSERT_TRUE(mlir::succeeded(qco));
+  auto entry = mlir::mqt::getEntryPoint(qco->module());
+  EXPECT_EQ(entry.getNumArguments(), 4);
+  for (const auto type : entry.getArgumentTypes()) {
+    EXPECT_TRUE(type.isF64());
+  }
+}
+
 TEST(GenerateProgramTest, SerializesWideQAOAWithCompactLoops) {
   for (const size_t layers : {2U, 128U}) {
     SCOPED_TRACE(layers);
-    QAOAOptions options{
+    const QAOAOptions options{
         .qubits = 1'024,
-        .gammas = std::vector<double>(layers, 0.31),
-        .betas = std::vector<double>(layers, 0.23),
+        .depth = layers,
     };
-    options.gammas.back() = 1.17;
-    options.betas.back() = 0.49;
     auto program = generate(QAOA{options});
     ASSERT_TRUE(mlir::succeeded(program));
+    EXPECT_EQ(program->parameters().size(), 2 * layers);
     // Generation must not expand a gate list per vertex or layer.
     EXPECT_LT(test::countOperations(program->module()), 150U);
     test::expectJeffRoundTrip(std::move(*program));

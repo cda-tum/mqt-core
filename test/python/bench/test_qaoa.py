@@ -16,16 +16,16 @@ import math
 import pytest
 
 from mqt.core.bench import qaoa
+from mqt.core.mlir import sample
 
 from .utils import assert_generates
 
 
 def test_qaoa_reference_and_json() -> None:
-    """Expose the default angles, cut evaluation, and verification manifest."""
+    """Expose the default depth, cut evaluation, and verification manifest."""
     benchmark = qaoa.QAOA(qaoa.Options(qubits=4))
     assert benchmark.options.qubits == 4
-    assert benchmark.options.gammas == pytest.approx([math.pi / 4])
-    assert benchmark.options.betas == pytest.approx([math.pi / 8])
+    assert benchmark.options.depth == 1
     assert benchmark.output.name == "result"
     assert benchmark.output.width == 4
     assert benchmark.cut_size("0101") == 4
@@ -41,19 +41,41 @@ def test_qaoa_reference_and_json() -> None:
 
 
 def test_qaoa_generation() -> None:
-    """Pass multiple angle pairs through the Python generation boundary."""
-    benchmark = qaoa.QAOA(qaoa.Options(qubits=5, gammas=[0.2, 0.7], betas=[0.3, 0.4]))
+    """Expose each layer's symbolic angles through the generation boundary."""
+    benchmark = qaoa.QAOA(qaoa.Options(qubits=5, depth=2))
     assert json.loads(benchmark.instance_specification_json)["parameters"] == {
         "qubits": 5,
-        "gammas": [0.2, 0.7],
-        "betas": [0.3, 0.4],
+        "depth": 2,
     }
-    assert_generates(benchmark.generate())
+    program = benchmark.generate()
+    assert program.parameters == ["gamma_0", "gamma_1", "beta_0", "beta_1"]
+    assert_generates(program)
+
+
+def test_qaoa_binding_and_sampling() -> None:
+    """Bind copies of one template to distinct angles and score their cuts."""
+    benchmark = qaoa.QAOA(qaoa.Options(qubits=4, depth=2))
+    template = benchmark.generate()
+    program = template.copy()
+    program.bind_parameters({"gamma_0": math.pi / 4, "gamma_1": 0.0})
+    assert program.parameters == ["beta_0", "beta_1"]
+    program.bind_parameters({"beta_0": math.pi / 8, "beta_1": 0.0})
+    assert not program.parameters
+    program.cleanup()
+    counts = sample(program, shots=4096, seed=17)
+    assert benchmark.evaluate(counts).mean_cut == pytest.approx(3.0, abs=0.1)
+
+    assert template.parameters == ["gamma_0", "gamma_1", "beta_0", "beta_1"]
+    uniform = template.copy()
+    uniform.bind_parameters(dict.fromkeys(template.parameters, 0.0))
+    uniform.cleanup()
+    counts = sample(uniform, shots=4096, seed=17)
+    assert benchmark.evaluate(counts).mean_cut == pytest.approx(2.0, abs=0.1)
 
 
 def test_qaoa_errors() -> None:
     """Propagate invalid parameters and outcomes through the binding."""
-    with pytest.raises(ValueError, match=r"same.*length"):
-        qaoa.QAOA(qaoa.Options(qubits=4, gammas=[0.2, 0.7], betas=[0.3]))
+    with pytest.raises(ValueError, match="depth"):
+        qaoa.QAOA(qaoa.Options(qubits=4, depth=0))
     with pytest.raises(ValueError, match="width"):
         qaoa.QAOA(qaoa.Options(qubits=4)).cut_size("010")

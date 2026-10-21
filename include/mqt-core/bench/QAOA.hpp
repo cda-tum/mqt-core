@@ -14,23 +14,21 @@
 #include "bench/mqt_core_bench_export.h"
 
 #include <cstddef>
-#include <numbers>
+#include <limits>
 #include <string_view>
-#include <vector>
 
 namespace mqt::bench {
 
 /// Parameters for a QAOA benchmark for MaxCut on a cycle graph.
-///
-/// Both angle vectors must have the same nonzero length, which is the depth.
 struct QAOAOptions {
+  /// Largest depth whose two scalar inputs per layer fit MLIR argument indices.
+  static constexpr size_t MAX_DEPTH = std::numeric_limits<unsigned>::max() / 2;
+
   /// Number of vertices and qubits, at least three and within signed 64-bit
   /// circuit dimensions.
   size_t qubits;
-  /// Cost angles in radians, each finite and in \f$[0, 2\pi]\f$.
-  std::vector<double> gammas = {std::numbers::pi / 4.};
-  /// Mixer angles in radians, each finite and in \f$[0, \pi]\f$.
-  std::vector<double> betas = {std::numbers::pi / 8.};
+  /// Number of cost and mixer layers, from one through MAX_DEPTH.
+  size_t depth = 1;
 };
 
 /// Classical scores of sampled QAOA cuts.

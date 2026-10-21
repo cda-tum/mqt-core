@@ -20,10 +20,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <numbers>
 #include <stdexcept>
 #include <string>
-#include <vector>
 
 namespace mqt::bench {
 
@@ -32,23 +30,8 @@ using test::expectInvalidJSON;
 TEST(QAOA, UsesDocumentedDefaults) {
   const QAOA benchmark{{.qubits = 5}};
   EXPECT_EQ(benchmark.options().qubits, 5);
-  EXPECT_EQ(benchmark.options().gammas,
-            (std::vector<double>{std::numbers::pi / 4.}));
-  EXPECT_EQ(benchmark.options().betas,
-            (std::vector<double>{std::numbers::pi / 8.}));
+  EXPECT_EQ(benchmark.options().depth, 1);
   EXPECT_EQ(benchmark.output(), (Output{"result", 5}));
-}
-
-TEST(QAOA, StoresAllPrescribedLayers) {
-  const QAOA benchmark{{
-      .qubits = 7,
-      .gammas = {0.25, 1.5, 2. * std::numbers::pi},
-      .betas = {0.125, 0., std::numbers::pi},
-  }};
-  EXPECT_EQ(benchmark.options().gammas,
-            (std::vector<double>{0.25, 1.5, 2. * std::numbers::pi}));
-  EXPECT_EQ(benchmark.options().betas,
-            (std::vector<double>{0.125, 0., std::numbers::pi}));
 }
 
 TEST(QAOA, ValidatesTheConfiguredInstance) {
@@ -60,28 +43,12 @@ TEST(QAOA, ValidatesTheConfiguredInstance) {
     EXPECT_THROW(static_cast<void>(QAOA{{.qubits = maximum + 1}}),
                  std::invalid_argument);
   }
-  EXPECT_THROW(
-      static_cast<void>(QAOA{{.qubits = 3, .gammas = {}, .betas = {}}}),
-      std::invalid_argument);
-  EXPECT_THROW(static_cast<void>(QAOA{{.qubits = 3, .gammas = {0., 1.}}}),
+  EXPECT_THROW(static_cast<void>(QAOA{{.qubits = 3, .depth = 0}}),
                std::invalid_argument);
-  EXPECT_THROW(static_cast<void>(QAOA{{.qubits = 3, .betas = {}}}),
-               std::invalid_argument);
-}
-
-TEST(QAOA, RejectsAnglesOutsideThePaperDomain) {
-  for (const double angle : {
-           -0.1,
-           7.,
-           std::numeric_limits<double>::infinity(),
-           std::numeric_limits<double>::quiet_NaN(),
-       }) {
-    EXPECT_THROW(static_cast<void>(QAOA{{.qubits = 3, .gammas = {angle}}}),
-                 std::invalid_argument);
-    EXPECT_THROW(static_cast<void>(QAOA{{.qubits = 3, .betas = {angle}}}),
-                 std::invalid_argument);
-  }
-  EXPECT_THROW(static_cast<void>(QAOA{{.qubits = 3, .betas = {4.}}}),
+  EXPECT_NO_THROW(
+      static_cast<void>(QAOA{{.qubits = 3, .depth = QAOAOptions::MAX_DEPTH}}));
+  EXPECT_THROW(static_cast<void>(
+                   QAOA{{.qubits = 3, .depth = QAOAOptions::MAX_DEPTH + 1}}),
                std::invalid_argument);
 }
 
@@ -173,13 +140,12 @@ TEST(QAOA, ValidatesEveryCountKey) {
 
 TEST(QAOA, RoundTripsJSON) {
   const auto parsed = qaoaFromInstanceSpecificationJSON(
-      R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":5,"gammas":[0.5,1.5],"betas":[0.25,0.75]}})");
+      R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":5,"depth":2}})");
   EXPECT_EQ(parsed.options().qubits, 5);
-  EXPECT_EQ(parsed.options().gammas, (std::vector<double>{0.5, 1.5}));
-  EXPECT_EQ(parsed.options().betas, (std::vector<double>{0.25, 0.75}));
+  EXPECT_EQ(parsed.options().depth, 2);
   EXPECT_EQ(
       toInstanceSpecificationJSON(parsed),
-      R"({"benchmark":"qaoa","parameters":{"betas":[0.25,0.75],"gammas":[0.5,1.5],"qubits":5},"schema_version":1})");
+      R"({"benchmark":"qaoa","parameters":{"depth":2,"qubits":5},"schema_version":1})");
   const auto manifest = toManifestJSON(parsed);
   EXPECT_EQ(toManifestJSON(qaoaFromManifestJSON(manifest)), manifest);
   EXPECT_EQ(benchmarkIdFromManifestJSON(manifest), "qaoa");
@@ -188,43 +154,37 @@ TEST(QAOA, RoundTripsJSON) {
             std::string::npos);
   EXPECT_NE(caseId(parsed), caseId(QAOA{{.qubits = 5}}));
   auto changed = parsed.options();
-  changed.gammas.back() = 1.;
-  EXPECT_NE(caseId(parsed), caseId(QAOA(changed)));
-  changed = parsed.options();
-  changed.betas.back() = 1.;
-  EXPECT_NE(caseId(parsed), caseId(QAOA(changed)));
-  changed = parsed.options();
   changed.qubits = 7;
   EXPECT_NE(caseId(parsed), caseId(QAOA(changed)));
 }
 
-TEST(QAOA, ResolvesDefaultAnglesAndCanonicalZero) {
+TEST(QAOA, ResolvesDefaultDepth) {
   const auto parsed = qaoaFromInstanceSpecificationJSON(
       R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3}})");
   const QAOA defaults{{.qubits = 3}};
   EXPECT_EQ(toInstanceSpecificationJSON(parsed),
             toInstanceSpecificationJSON(defaults));
   EXPECT_EQ(caseId(parsed), caseId(defaults));
-  const QAOA zero{{.qubits = 3, .gammas = {0.}, .betas = {0.}}};
-  const QAOA negativeZero{{.qubits = 3, .gammas = {-0.}, .betas = {-0.}}};
-  EXPECT_EQ(caseId(zero), caseId(negativeZero));
 }
 
 TEST(QAOA, DescribesJSONSchema) {
   const auto schema = describeBenchmarkJSON("qaoa");
   EXPECT_NE(schema.find(R"("minimum":3)"), std::string::npos);
   EXPECT_NE(schema.find(R"("maximum":9223372036854775807)"), std::string::npos);
-  EXPECT_NE(schema.find(R"("minItems":1)"), std::string::npos);
+  EXPECT_NE(schema.find(R"("depth":{"default":1,"maximum":)" +
+                        std::to_string(QAOAOptions::MAX_DEPTH) +
+                        R"(,"minimum":1,"type":"integer"})"),
+            std::string::npos);
   EXPECT_NE(schema.find(R"("required":["qubits"])"), std::string::npos);
 }
 
 TEST(QAOA, RejectsInvalidJSONParameters) {
   for (const auto* parameters : {
            R"({"qubits":2})",
-           R"({"qubits":3,"gammas":[],"betas":[]})",
-           R"({"qubits":3,"gammas":[1,2],"betas":[1]})",
-           R"({"qubits":3,"gammas":[7]})",
-           R"({"qubits":3,"betas":[4]})",
+           R"({"qubits":3,"depth":0})",
+           R"({"qubits":3,"depth":-1})",
+           R"({"qubits":3,"depth":1.5})",
+           R"({"qubits":3,"depth":true})",
        }) {
     const auto specification =
         std::string(R"({"schema_version":1,"benchmark":"qaoa","parameters":)") +
@@ -236,15 +196,15 @@ TEST(QAOA, RejectsInvalidJSONParameters) {
   expectInvalidJSON(
       [] {
         static_cast<void>(qaoaFromInstanceSpecificationJSON(
-            R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3,"depth":2}})"));
+            R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3,"gammas":[1]}})"));
       },
-      "unknown key 'depth'");
+      "unknown key 'gammas'");
   expectInvalidJSON(
       [] {
         static_cast<void>(qaoaFromInstanceSpecificationJSON(
-            R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3,"gammas":1}})"));
+            R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3,"betas":[1]}})"));
       },
-      "$/parameters/gammas must be an array");
+      "unknown key 'betas'");
 }
 
 TEST(QAOA, ReportsTheParameterLocationOnce) {
@@ -259,11 +219,11 @@ TEST(QAOA, ReportsTheParameterLocationOnce) {
   EXPECT_THAT(
       [] {
         static_cast<void>(qaoaFromInstanceSpecificationJSON(
-            R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3,"betas":[0,"x"]}})",
+            R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3,"depth":"x"}})",
             "case.json"));
       },
       testing::ThrowsMessage<std::invalid_argument>(
-          testing::StartsWith("case.json:$/parameters/betas/1 ")));
+          testing::StartsWith("case.json:$/parameters/depth ")));
 }
 
 TEST(QAOA, EvaluatesCountsFromJSON) {

@@ -1,14 +1,15 @@
 # QAOA benchmark
 
-Status: complete. The cycle instance, native and Python interfaces, JSON
-registry, documentation, and independent circuit tests are implemented.
+Status: complete. The benchmark generates a reusable symbolic circuit with
+native binding, execution, and serialization coverage.
 
 ## Goal and scope
 
 Add the fixed-repetition QAOA family from the jeff benchmark table. The instance
-is unweighted MaxCut on an `n`-vertex cycle, with `n >= 3` and caller-supplied
-cost and mixer angles for each layer. Each run measures all `n` qubits. Angle
-optimization and arbitrary input graphs are outside this addition.
+is unweighted MaxCut on an `n`-vertex cycle, with `n >= 3` and depth `p >= 1`.
+The generated function takes `2*p` scalar cost and mixer angles. Each run
+measures all `n` qubits. Angle optimization and arbitrary input graphs are
+outside this addition.
 
 ## Definition and source
 
@@ -31,10 +32,13 @@ calculation is a way to obtain an expectation, not a full outcome distribution.
 - Use the existing `RZZ(-gamma)` operation for each cycle edge; it differs from
   `exp(-i gamma C_jk)` only by a global phase. Each mixer is `Rx(2 beta)`. Apply
   the closing edge `(n - 1, 0)` once.
-- Match `gammas` and `betas` vector lengths; their common nonzero length is the
-  repetition count. Use the paper's finite angle domains `[0, 2 pi]` and
-  `[0, pi]`. Defaults contain one layer with angles `pi/4` and `pi/8`. Widths
-  start at three and fit signed 64-bit circuit dimensions, as for W state.
+- Configure `qubits` and `depth` (default one). The scalar `f64` inputs are
+  `gamma_0` through `gamma_{p-1}`, then `beta_0` through `beta_{p-1}`. Reuse
+  native parameter binding and its finite-value checks. Widths fit signed 64-bit
+  dimensions, and twice the depth fits the IR's argument count.
+- Pack scalar inputs into tensors for indexed access in the layer loop. The
+  benchmark manifest identifies the circuit template, not an angle assignment.
+  Bind a copy and run cleanup before sampling. QIR also requires bound inputs.
 - Follow the Shor verification pattern: compute the mean sampled cut and its
   ratio to the exact cycle optimum. These scores measure objective quality; they
   do not verify the quantum distribution. Reuse shared count and outcome
@@ -42,8 +46,8 @@ calculation is a way to obtain an expectation, not a full outcome distribution.
   shot counts by cut sizes.
 - Do not add a statevector simulator or an artificial small qubit/depth limit to
   the native reference. Structured register and layer loops keep the operation
-  count independent of the number of vertices and layers. The two constant angle
-  tensors still require data proportional to the number of layers. No constant
+  count independent of the number of vertices and layers. The function inputs
+  and tensor operands require storage proportional to the depth. No constant
   hardware-depth claim is made for the emitted decomposition.
 - Keep the dry class summary and detailed mathematical explanation in their
   existing documentation layers. Reuse registration and JSON machinery; keep
@@ -73,9 +77,12 @@ iteration. No new helper, released API change, or generated jeff file is needed.
 - A 1,024-qubit instance with two or 128 layers passes the jeff round-trip. Its
   operation-count bound guards compact generation in both dimensions, without
   attempting a full statevector.
-- All benchmark suites pass: 163 native tests, 51 MLIR tests, 82 Python tests,
-  and the CLI CTest. Python stubs were regenerated. Repository lint and
-  whole-file C++ lint pass. The executable documentation build and local-link
-  checks pass; the new API formulas are parsed as math.
+- All benchmark suites pass: 161 native tests, 52 MLIR tests, 83 Python tests,
+  and the CLI CTest. The tests bind angles before checking coherent states and
+  samples, and retain unbound scalar inputs through binary jeff. Python stubs
+  were regenerated. Whole-file C++ lint, the executable documentation build, and
+  local documentation links pass.
+- Binary jeff preserves argument positions and types, but not input names. Name
+  preservation is outside this change; named binding works before export.
 - Hosted CI and execution of large instances were not run. Large generated
   programs remain subject to compiler and executor resource limits.

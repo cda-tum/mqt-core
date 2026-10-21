@@ -15,11 +15,8 @@
 #include "nanobind/stl/map.h"         // NOLINT(misc-include-cleaner)
 #include "nanobind/stl/string.h"      // NOLINT(misc-include-cleaner)
 #include "nanobind/stl/string_view.h" // NOLINT(misc-include-cleaner)
-#include "nanobind/stl/vector.h"      // NOLINT(misc-include-cleaner)
 
 #include <cstddef>
-#include <numbers>
-#include <vector>
 
 namespace mqt {
 
@@ -28,25 +25,15 @@ using namespace nb::literals;
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 void registerQAOA(const nb::module_& m) {
-  nb::class_<bench::QAOAOptions>(
-      m, "Options",
-      R"pb(Parameters for a QAOA benchmark for MaxCut.
-
-The angle sequences must have the same nonzero length. Each pair specifies
-one layer, in execution order. The defaults are one layer with
-:math:`\gamma=\pi/4` and :math:`\beta=\pi/8`.)pb")
-      .def(nb::init<size_t, std::vector<double>, std::vector<double>>(),
-           nb::kw_only(), "qubits"_a,
-           "gammas"_a.sig("...") = std::vector<double>{std::numbers::pi / 4.},
-           "betas"_a.sig("...") = std::vector<double>{std::numbers::pi / 8.})
+  nb::class_<bench::QAOAOptions>(m, "Options",
+                                 "Parameters for a QAOA benchmark for MaxCut.")
+      .def(nb::init<size_t, size_t>(), nb::kw_only(), "qubits"_a, "depth"_a = 1)
       .def_ro(
           "qubits", &bench::QAOAOptions::qubits,
           "The cycle's number of vertices, at least three and representable "
           "as a signed 64-bit integer.")
-      .def_ro("gammas", &bench::QAOAOptions::gammas,
-              R"pb(Finite cost angles in :math:`[0, 2\pi]`, one per layer.)pb")
-      .def_ro("betas", &bench::QAOAOptions::betas,
-              R"pb(Finite mixer angles in :math:`[0, \pi]`, one per layer.)pb");
+      .def_ro("depth", &bench::QAOAOptions::depth,
+              "The number of cost-mixer layers, from 1 through 2,147,483,647.");
 
   nb::class_<bench::QAOAEvaluation>(m, "Evaluation",
                                     "The sampled cut quality on a cycle graph.")
@@ -65,8 +52,15 @@ Each layer applies :math:`e^{-i\gamma_\ell C}` followed by
 :math:`C=\sum_{j=0}^{n-1}(1-Z_jZ_{(j+1)\bmod n})/2` and
 :math:`B=\sum_{j=0}^{n-1} X_j`.
 
-Angles are inputs; the benchmark does not run an optimizer. Evaluation measures
-cut quality, not agreement with an ideal output distribution.)pb");
+The generated program takes :math:`2p` scalar angle inputs for :math:`p`
+layers: ``gamma_0`` through ``gamma_{p-1}``, followed by ``beta_0`` through
+``beta_{p-1}``. Bind angles in radians with
+:meth:`mqt.core.mlir.QCProgram.bind_parameters`, then call
+:meth:`mqt.core.mlir.QCProgram.cleanup` before sampling or QIR export.
+Copy the program first to reuse it for other angles.
+
+The benchmark does not run an optimizer. Evaluation measures cut quality,
+not agreement with an ideal output distribution.)pb");
   qaoa.def(nb::init<bench::QAOAOptions>(), "options"_a)
       .def_prop_ro("options", &bench::QAOA::options,
                    nb::rv_policy::reference_internal,

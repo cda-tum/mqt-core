@@ -42,7 +42,6 @@
 #include <cstdint>
 #include <initializer_list>
 #include <limits>
-#include <numbers>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
@@ -473,33 +472,16 @@ parseMultiplexerParameters(const Json& parameters,
 
 [[nodiscard]] QAOA parseQAOAParameters(const Json& parameters,
                                        const std::string_view source) {
-  rejectUnknownKeys(parameters, {"qubits", "gammas", "betas"}, source,
-                    "$/parameters");
+  rejectUnknownKeys(parameters, {"qubits", "depth"}, source, "$/parameters");
   QAOAOptions options{
       .qubits =
           sizeValue(required(parameters, "qubits", source, "$/parameters"),
                     source, "$/parameters/qubits"),
   };
-  const auto readAngles = [&](const char* name, std::vector<double>& angles) {
-    const auto found = parameters.find(name);
-    if (found == parameters.end()) {
-      return;
-    }
-    const auto pointer = std::string("$/parameters/") + name;
-    if (!found->is_array()) {
-      fail(source, pointer, "must be an array");
-    }
-    angles.clear();
-    angles.reserve(found->size());
-    for (size_t index = 0; index < found->size(); ++index) {
-      angles.push_back(numberValue((*found)[index], source,
-                                   pointer + "/" + std::to_string(index)));
-    }
-  };
-  readAngles("gammas", options.gammas);
-  readAngles("betas", options.betas);
-  return constructBenchmark(source,
-                            [&options] { return QAOA(std::move(options)); });
+  if (const auto depth = parameters.find("depth"); depth != parameters.end()) {
+    options.depth = sizeValue(*depth, source, "$/parameters/depth");
+  }
+  return constructBenchmark(source, [&options] { return QAOA(options); });
 }
 
 [[nodiscard]] QFT parseQFTParameters(const Json& parameters,
@@ -731,8 +713,7 @@ parseTeleportationParameters(const Json& parameters,
 [[nodiscard]] Json parametersJSON(const QAOA& benchmark) {
   const auto& options = benchmark.options();
   return {
-      {"betas", options.betas},
-      {"gammas", options.gammas},
+      {"depth", options.depth},
       {"qubits", options.qubits},
   };
 }
@@ -1236,22 +1217,20 @@ template <class Benchmark>
 
 [[nodiscard]] Json qaoaInstanceSpecificationSchema() {
   const QAOAOptions defaults{.qubits = 3};
-  const auto angles = [](const std::vector<double>& values,
-                         const double maximum) {
-    return Json{
-        {"default", values},
-        {"items", {{"maximum", maximum}, {"minimum", 0}, {"type", "number"}}},
-        {"minItems", 1},
-        {"type", "array"},
-    };
-  };
   return baseInstanceSpecificationSchema<QAOA>({
       {"additionalProperties", false},
       {
           "properties",
           {
-              {"betas", angles(defaults.betas, std::numbers::pi)},
-              {"gammas", angles(defaults.gammas, 2. * std::numbers::pi)},
+              {
+                  "depth",
+                  {
+                      {"default", defaults.depth},
+                      {"maximum", QAOAOptions::MAX_DEPTH},
+                      {"minimum", 1},
+                      {"type", "integer"},
+                  },
+              },
               {
                   "qubits",
                   {

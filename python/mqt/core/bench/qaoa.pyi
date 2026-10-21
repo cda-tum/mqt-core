@@ -8,31 +8,22 @@
 
 """QAOA benchmark instances and options."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 
 import mqt.core.bench
 import mqt.core.mlir
 
 class Options:
-    """Parameters for a QAOA benchmark for MaxCut.
+    """Parameters for a QAOA benchmark for MaxCut."""
 
-    The angle sequences must have the same nonzero length. Each pair specifies
-    one layer, in execution order. The defaults are one layer with
-    :math:`\\gamma=\\pi/4` and :math:`\\beta=\\pi/8`.
-    """
-
-    def __init__(self, *, qubits: int, gammas: Sequence[float] = ..., betas: Sequence[float] = ...) -> None: ...
+    def __init__(self, *, qubits: int, depth: int = 1) -> None: ...
     @property
     def qubits(self) -> int:
         """The cycle's number of vertices, at least three and representable as a signed 64-bit integer."""
 
     @property
-    def gammas(self) -> list[float]:
-        """Finite cost angles in :math:`[0, 2\\pi]`, one per layer."""
-
-    @property
-    def betas(self) -> list[float]:
-        """Finite mixer angles in :math:`[0, \\pi]`, one per layer."""
+    def depth(self) -> int:
+        """The number of cost-mixer layers, from 1 through 2,147,483,647."""
 
 class Evaluation:
     """The sampled cut quality on a cycle graph."""
@@ -54,8 +45,15 @@ class QAOA:
     :math:`C=\\sum_{j=0}^{n-1}(1-Z_jZ_{(j+1)\\bmod n})/2` and
     :math:`B=\\sum_{j=0}^{n-1} X_j`.
 
-    Angles are inputs; the benchmark does not run an optimizer. Evaluation measures
-    cut quality, not agreement with an ideal output distribution.
+    The generated program takes :math:`2p` scalar angle inputs for :math:`p`
+    layers: ``gamma_0`` through ``gamma_{p-1}``, followed by ``beta_0`` through
+    ``beta_{p-1}``. Bind angles in radians with
+    :meth:`mqt.core.mlir.QCProgram.bind_parameters`, then call
+    :meth:`mqt.core.mlir.QCProgram.cleanup` before sampling or QIR export.
+    Copy the program first to reuse it for other angles.
+
+    The benchmark does not run an optimizer. Evaluation measures cut quality,
+    not agreement with an ideal output distribution.
     """
 
     def __init__(self, options: Options) -> None: ...
