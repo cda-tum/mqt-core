@@ -30,7 +30,9 @@ with the {doc}`QIR tutorial <../tutorials/qir_execution>`.
 ## Compile a Base Profile program
 
 Use the Base Profile for a circuit whose measurements do not control subsequent
-quantum operations. This Bell circuit produces the outcomes `00` and `11`.
+quantum operations and whose QIR calls use constant arguments without runtime
+storage. Native gates that pack controls into runtime arrays require the
+Adaptive Profile. This Bell circuit produces the outcomes `00` and `11`.
 
 ```{code-cell} ipython3
 from mqt.core.mlir import OutputFormat, QIRProfile, compile_program
@@ -279,12 +281,17 @@ outdated overloads fail before execution.
 
 MQT Core provides dedicated QIS functions for variants with one or two control
 qubits, using the `c<gate>` and `cc<gate>` names. Operations with three or more
-controls use generic `__ctl` and `__ctladj` specializations. The control qubits
-are passed in an Array; parameterized and multi-target gates pass their original
-arguments in a Tuple, following the QIR-Runner calling convention. MQT accepts
-these functions as implementation-specific extensions to the QIR 2.1 Base and
-Adaptive profiles, so the entry point keeps its `base_profile` or
-`adaptive_profile` attribute.
+controls use generic `__ctl` and `__ctladj` specializations. A target that
+advertises only a variadic gate uses the generic form even with one or two
+controls. The control qubits are passed in an Array; parameterized and
+multi-target gates pass their original arguments in a Tuple, following the
+QIR-Runner calling convention. MQT accepts these functions as runtime extensions
+in authored QIR with either profile attribute. Compiler-generated Base QIR
+follows the
+[Base Profile instruction restrictions](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/profiles/Base_Profile.md#classical-instructions),
+which exclude the allocation and stores used by generic controlled calls. Use
+Adaptive QIR to retain these native calls, or compile for a target with
+dedicated controlled instructions or a gate set that requires decomposition.
 
 MQT's two-angle phased-X rotation gate uses the `prx` QIS stem. The incompatible
 QIR-Runner Pauli-axis operation named `r` is not part of MQT's QIS.

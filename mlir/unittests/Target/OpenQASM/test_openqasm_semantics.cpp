@@ -141,6 +141,116 @@ TEST(OpenQASMFrontendTest, KnownMeasurementSlicesInitializeSelectedBits) {
   ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
 }
 
+TEST(OpenQASMFrontendTest, ClassicalArrayInitialization) {
+  for (const auto* source : {
+           "array[int, 2] a; a[0] = 1; int result = a[0];",
+           "input float selector; int i = int(selector); "
+           "array[int, 2] a = {1, 2}; "
+           "if (selector > 0) { a[0] = 3; } else { a[1] = 4; } "
+           "int result = a[i];",
+           "input float selector; int i = int(selector); "
+           "array[int, 2] a; a[0] = 1; "
+           "if (selector > 0) { a[0] = 2; a[1] = 3; } "
+           "else { a[1] = 4; } int result = a[i];",
+           "array[int, 1] a; for int i in [0:1] { a[0] = 1; } "
+           "int result = a[0];",
+       }) {
+    SCOPED_TRACE(source);
+    auto analyzed = openqasm::frontend::analyzeOpenQASM(
+        std::string("OPENQASM 3.0; ") + source);
+    ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
+  }
+}
+
+TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
+  const auto cases =
+      std::to_array<std::pair<llvm::StringLiteral, llvm::StringLiteral>>({
+          {"array[int, -1] a;", "non-negative"},
+          {"array[int, 0] a; a[0] = 1;", "out of bounds"},
+          {"array[int, 100001] a;", "exceeds the limit"},
+          {"array[int, 60000] a; array[int, 60000] b;", "exceed the limit"},
+          {"int n = 2; array[int, n] a;", "constant integer"},
+          {"array[int, 2] a = {1};", "initializer length"},
+          {"array[bool[2], 1] a;", "do not have a width"},
+          {"array[float[32], 1] a;", "only width 64"},
+          {"array[angle, 1] a = {0.0}; a[0] = a[0];", "compile-time values"},
+          {"array[angle, 1] a = {1};", "float or angle"},
+          {
+              "array[angle, 1] a = {pi}; qubit q; U(-a[0], 0, 0) q;",
+              "runtime fixed-width angle arithmetic",
+          },
+          {
+              "array[angle, 1] a = {pi}; qubit q; U(a[0] + a[0], 0, 0) q;",
+              "runtime fixed-width angle arithmetic",
+          },
+          {"array[angle, 1] a = {pi}; int b = int(a[0]);", "cast angle"},
+          {"array[angle, 1] a = {pi}; bool b = a[0] == pi;", "cast angle"},
+          {"int i = 0; array[int, 1] a = {a[i]};", "uninitialized"},
+          {"array[int, 1] a; int b = a[0];", "uninitialized"},
+          {
+              "array[int, 2] a; a[0] = 1; int i = 0; int b = a[i];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1] a; int i = 0; a[i] = 1; int b = a[0];",
+              "uninitialized",
+          },
+          {
+              "input float selector; int i = int(selector); "
+              "array[int, 2] a; a[0] = 1; "
+              "if (selector > 0) { a[1] = 2; int value = a[i]; } "
+              "int result = a[i];",
+              "uninitialized",
+          },
+          {
+              "input float selector; int i = int(selector); "
+              "array[int, 2] a; "
+              "if (selector > 0) { a[0] = 1; } else { a[1] = 2; } "
+              "int result = a[i];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1] a; while (false) { a[0] = 1; } int b = a[0];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1] a; for int i in [0:1] { continue; a[0] = 1; } "
+              "int b = a[0];",
+              "uninitialized",
+          },
+          {"array[int, 1] a = {0}; int b = a[1];", "out of bounds"},
+          {"array[int, 1] a = {0}; a[-2] = 1;", "out of bounds"},
+          {
+              "array[int, 1] a = {0}; float i = 0; int b = a[i];",
+              "integer expression",
+          },
+          {"array[int, 1] a = {0}; if (a[0]) {}", "bool type"},
+          {"array[int, 1] a = {0}; a = 1;", "element index"},
+          {"array[int, 1] a = {0}; int b = a;", "not a scalar"},
+          {"if (true) { array[int, 1] a; }", "global scope"},
+          {
+              "array[float, 1] a = {0}; gate g q { U(a[0], 0, 0) q; }",
+              "cannot capture",
+          },
+          {"array[int, 2, 2] a;", "multidimensional"},
+          {"array[bit, 1] a;", "unsupported array element type"},
+      });
+  for (const auto& [source, diagnostic] : cases) {
+    SCOPED_TRACE(source.str());
+    auto analyzed =
+        openqasm::frontend::analyzeOpenQASM("OPENQASM 3.0; " + source.str());
+    ASSERT_FALSE(analyzed);
+    ASSERT_FALSE(analyzed.diagnostics.empty());
+    EXPECT_NE(analyzed.diagnostics.front().message.find(diagnostic),
+              std::string::npos)
+        << analyzed.diagnostics.front().message;
+  }
+  EXPECT_FALSE(
+      openqasm::frontend::analyzeOpenQASM("OPENQASM 2.0; array[int, 1] a;"));
+  EXPECT_FALSE(openqasm::frontend::parseOpenQASM(
+      "OPENQASM 3.0; output array[int, 1] a;"));
+}
+
 TEST(OpenQASMFrontendTest, LoopExitsPreserveDefiniteInitialization) {
   for (const auto* source : {
            "OPENQASM 3.0; continue;",

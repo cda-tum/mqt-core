@@ -30,6 +30,7 @@
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
 #include "mqt/Dialect/QIR/Builder/QIRProgramBuilder.h"
+#include "mqt/Dialect/QIR/Execution/JIT/Session.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 #include "mqt/Dialect/QTensor/IR/QTensorDialect.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
@@ -103,6 +104,7 @@
 #include <initializer_list>
 #include <iosfwd>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <numbers>
 #include <optional>
@@ -1157,6 +1159,111 @@ TEST_F(CompilerPipelineTest, BaseProfileLowersCompleteTensorLifetime) {
   EXPECT_FALSE(StringRef(*llvmIR).contains("qubit_release"));
 }
 
+TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
+  constexpr auto programs = std::to_array<llvm::StringLiteral>({
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2] angles = {0.0, pi};
+        array[int, 0] empty;
+        array[float, 0] initializedEmpty = {};
+        qubit q;
+        output bit result;
+        bool zero = bool(angles[0]);
+        if (zero) { U(pi, 0, 0) q; }
+        if (bool(angles[1])) { U(float(angles[1]), sin(angles[0]), 0) q; }
+        result = measure q;
+      )qasm",
+      // The angle table is read through runtime (including negative) indices.
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2] angles = {0.0, -pi/2};
+        int last = -1;
+        angles[last] = -pi;
+        qubit q;
+        output bit result;
+        for int i in [-2:-1] { U(angles[i], 0, 0) q; }
+        result = measure q;
+      )qasm",
+      // Memory updates must remain visible across loop iterations and joins.
+      R"qasm(OPENQASM 3.0;
+        const int n = 2;
+        array[int[8], n,] values = {127, 0,};
+        array[uint[8], 1] unsignedValues = {255};
+        array[bool, 1] active = {true};
+        array[float[64], 1] angles = {0.0};
+        output bit result;
+        qubit q;
+        int i = -2;
+        values[i] += 1;
+        uint slot = 0;
+        unsignedValues[slot] += 1;
+        while (active[slot]) {
+          if (values[i] == -128 && unsignedValues[slot] == 0) {
+            angles[slot] = pi / 2;
+            angles[slot] *= 2;
+          }
+          active[slot] = !active[slot];
+        }
+        U(angles[slot], 0, 0) q;
+        result = measure q;
+      )qasm",
+      // Measurement-derived indices remain dynamic through compilation.
+      R"qasm(OPENQASM 3.0;
+        array[float, 2] angles = {0.0, 0.0};
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int index = int(measured);
+        angles[index] = pi;
+        reset q;
+        U(angles[index], 0, 0) q;
+        output bit result;
+        result = measure q;
+      )qasm",
+  });
+  for (auto source : programs) {
+    SCOPED_TRACE(source.str());
+    auto qc = QCProgram::fromOpenQASMString(source.str());
+    ASSERT_TRUE(mlir::succeeded(qc));
+    auto program = std::move(*qc).intoQCO();
+    ASSERT_TRUE(mlir::succeeded(program));
+    const auto beforeCleanup =
+        qco::sample(mlir::mqt::getEntryPoint(program->module()), 4, 42);
+    ASSERT_TRUE(succeeded(beforeCleanup));
+    EXPECT_EQ(*beforeCleanup, (std::map<std::string, size_t>{{"1", 4}}));
+    ASSERT_TRUE(mlir::succeeded(program->cleanup()));
+    const auto outcomes =
+        qco::sample(mlir::mqt::getEntryPoint(program->module()), 4, 42);
+    ASSERT_TRUE(succeeded(outcomes));
+    EXPECT_EQ(*outcomes, (std::map<std::string, size_t>{{"1", 4}}));
+    auto restored = std::move(*program).intoQC();
+    ASSERT_TRUE(mlir::succeeded(restored));
+    auto qir = std::move(*restored).intoQIR(QIRProfile::Adaptive);
+    ASSERT_TRUE(mlir::succeeded(qir));
+    const auto llvmIR = qir->llvmIR();
+    ASSERT_TRUE(mlir::succeeded(llvmIR));
+    ::qir::JitSession session(*llvmIR, "classical-arrays",
+                              ::qir::Execution::Sampling, 42);
+    std::vector<std::string> samples;
+    ASSERT_EQ(session.sample(4, samples), 0);
+    EXPECT_EQ(samples, (std::vector<std::string>(4, "1")));
+  }
+}
+
+TEST_F(CompilerPipelineTest, BaseRejectsResidualClassicalArrayStorage) {
+  auto qc = QCProgram::fromMLIRString(R"mlir(module {
+    memref.global "private" @angles : memref<1xf64> = dense<1.0>
+    func.func @main() attributes {mqt.entry_point} {
+      %angles = memref.get_global @angles : memref<1xf64>
+      %zero = arith.constant 0 : index
+      %theta = memref.load %angles[%zero] : memref<1xf64>
+      %q = qc.static 0 : !qc.qubit
+      qc.rx(%theta) %q : !qc.qubit
+      return
+    }
+  })mlir");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  EXPECT_TRUE(mlir::failed(std::move(*qc).intoQIR(QIRProfile::Base)));
+}
+
 TEST_F(CompilerPipelineTest, EmitsQIR21ProfileModuleFlags) {
   constexpr llvm::StringLiteral source = R"qasm(
 OPENQASM 3.0;
@@ -2030,6 +2137,10 @@ TEST_F(CompilerPipelineTest, QIRCountsPackedStaticQubits) {
     for (const auto format :
          {ProgramFormat::QIRBase, ProgramFormat::QIRAdaptive}) {
       auto output = runDefaultPipeline(CompilerInput{qc->copy()}, format);
+      if (format == ProgramFormat::QIRBase) {
+        EXPECT_TRUE(mlir::failed(output));
+        continue;
+      }
       ASSERT_TRUE(mlir::succeeded(output));
       auto& qir = std::get<QIRProgram>(*output);
       ASSERT_TRUE(succeeded(verify(qir.module())));

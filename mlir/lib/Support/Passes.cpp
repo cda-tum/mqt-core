@@ -18,13 +18,19 @@
 #include "mqt/Dialect/QTensor/Transforms/Passes.h"
 #include "mqt/Support/RandomSeed.h"
 
+#include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -34,6 +40,7 @@
 
 #include <bit>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 using namespace mlir;
@@ -42,6 +49,48 @@ static void addSimplificationPasses(OpPassManager& pm) {
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());
 }
+
+namespace {
+class PromoteClassicalMemoryPass final
+    : public PassWrapper<PromoteClassicalMemoryPass, OperationPass<ModuleOp>> {
+  OpPassManager pipeline_{ModuleOp::getOperationName()};
+
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PromoteClassicalMemoryPass)
+
+  PromoteClassicalMemoryPass() {
+    // Fold index normalization before upstream promotion inspects accesses.
+    pipeline_.addPass(createCanonicalizerPass());
+    pipeline_.addPass(createSROA());
+    pipeline_.addPass(createMem2Reg());
+  }
+
+  [[nodiscard]] StringRef getArgument() const override {
+    return "promote-classical-memory";
+  }
+
+  void getDependentDialects(DialectRegistry& registry) const override {
+    pipeline_.getDependentDialects(registry);
+  }
+
+protected:
+  void runOnOperation() override {
+    const auto allocation = getOperation().walk([](Operation* op) {
+      return isa<PromotableAllocationOpInterface,
+                 DestructurableAllocationOpInterface>(op)
+                 ? WalkResult::interrupt()
+                 : WalkResult::advance();
+    });
+    if (!allocation.wasInterrupted()) {
+      markAllAnalysesPreserved();
+      return;
+    }
+    if (failed(runPipeline(pipeline_, getOperation()))) {
+      signalPassFailure();
+    }
+  }
+};
+} // namespace
 
 LogicalResult
 runWithPassManager(ModuleOp mod,
@@ -63,6 +112,7 @@ runWithPassManager(ModuleOp mod,
 void registerMQTCompilerPasses() {
   static const auto REGISTERED = [] {
     registerTransformsPasses();
+    registerPass([] { return std::make_unique<PromoteClassicalMemoryPass>(); });
     registerConvertCBitToMemRef();
     qco::registerCombineControlledGates();
     qco::registerDecomposeMultiControlled();
@@ -108,6 +158,7 @@ void populateQIRPreparationPipeline(OpPassManager& pm) {
   pm.addPass(createInlinerPass());
   pm.addPass(mqt::createNormalizeGlobalPhases());
   pm.addPass(mqt::createUnrollModifiers());
+  pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
   pm.addPass(createCanonicalizerPass());
 }
 
@@ -148,6 +199,9 @@ LogicalResult runWithCompilationOptions(PassManager& pm, ModuleOp moduleOp,
   if (!preservesLayout) {
     moduleOp->removeAttr("mqt.layout");
   }
+  DialectRegistry registry;
+  memref::registerMemorySlotExternalModels(registry);
+  moduleOp.getContext()->appendDialectRegistry(registry);
   if (options.enableTiming) {
     pm.enableTiming();
   }
@@ -173,6 +227,7 @@ LogicalResult runWithCompilationOptions(PassManager& pm, ModuleOp moduleOp,
 
 void populateQCExportPipeline(OpPassManager& pm) {
   pm.addPass(mlir::mqt::createSimplifyClassicalControl());
+  pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
   pm.addPass(
       createCanonicalizerPass(GreedyRewriteConfig{}.setUseTopDownTraversal()));
   pm.addPass(mlir::mqt::createNormalizeGlobalPhases());
@@ -188,6 +243,7 @@ void populateQCCleanupPipeline(OpPassManager& pm) {
 
 void populateQCOCleanupPipeline(OpPassManager& pm, bool removeDeadValues) {
   pm.addPass(mlir::mqt::createSimplifyClassicalControl());
+  pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
   pm.addPass(createCanonicalizerPass(
       GreedyRewriteConfig{}.setUseTopDownTraversal().setMaxIterations(
           GreedyRewriteConfig::kNoLimit)));

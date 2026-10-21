@@ -224,6 +224,52 @@ def test_compile_program_qasm_file(tmp_path: Path) -> None:
     _assert_bell_program(result, measured=True)
 
 
+@pytest.mark.parametrize("bind_in_qco", [False, True])
+def test_classical_array_input_parameters(*, bind_in_qco: bool) -> None:
+    """Bind array initializers in QC or QCO before execution."""
+    program = QCProgram.from_openqasm_str("""OPENQASM 3.1;
+input float theta;
+array[float, 2] angles = {0.0, theta};
+qubit q;
+for int i in [0:1] { U(angles[i], 0, 0) q; }
+output bit result;
+result = measure q;
+""")
+    bound = program.to_qco() if bind_in_qco else program
+    assert bound.parameters == ["theta"]
+    bound.bind_parameters({"theta": np.pi})
+    native = bound if isinstance(bound, QCOProgram) else bound.to_qco()
+    assert native.parameters == []
+    assert native.sample(shots=4, seed=42) == {"1": 4}
+
+
+@pytest.mark.parametrize(
+    "backend", ["openqasm", "jeff", "qir", pytest.param("qiskit", marks=requires_qiskit_translation)]
+)
+def test_promoted_array_exports(backend: str) -> None:
+    """Preserve a copied array entry across export backends."""
+    program = QCProgram.from_openqasm_str("""OPENQASM 3.0;
+array[float, 2] angles = {0.0, pi};
+int i = -1;
+angles[0] = angles[i];
+qubit q;
+U(angles[0], 0, 0) q;
+output bit result;
+result = measure q;
+""")
+    program.cleanup()
+    if backend == "qir":
+        assert program.to_qir(QIRProfile.BASE).llvm_ir
+        return
+    if backend == "openqasm":
+        restored = QCProgram.from_openqasm_str(program.to_openqasm3().source).to_qco()
+    elif backend == "jeff":
+        restored = program.to_qco().to_jeff().to_qco()
+    else:
+        restored = QCProgram.from_qiskit(program.to_qiskit()).to_qco()
+    assert restored.sample(shots=1, seed=42) == {"1": 1}
+
+
 @requires_qiskit_translation
 def test_compile_program_qiskit_quantum_circuit() -> None:
     """Compile a ``QuantumCircuit``."""

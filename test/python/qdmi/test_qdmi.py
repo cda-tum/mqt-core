@@ -566,7 +566,7 @@ def test_device_executes_controlled_qir_with_exact_phase(ddsim_device: Device) -
     circuit.mcp(0.41, [0, 1], 4)
     expected = quantum_info.Statevector.from_instruction(circuit).data
 
-    program = compile_program(circuit, target=ddsim_device, program_format=ProgramFormat.QIR_BASE_STRING)
+    program = compile_program(circuit, target=ddsim_device, program_format=ProgramFormat.QIR_ADAPTIVE_STRING)
     assert isinstance(program, CompiledProgram)
     job = submit_program(program, target=ddsim_device, num_shots=0)
     job.wait()
