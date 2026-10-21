@@ -17,7 +17,7 @@ permissions: {}
 jobs:
   catalyst-upstream-tests:
     name: Catalyst development
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-python-tests.yml@fd3d75dece69c363989347869529a5e99cdcfffc # v2.5.1
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-python-tests.yml@b69ae7ac0c39d2ab3300dbf87fa608654c9f3b9a # v2.5.4
     with:
       runs-on: ubuntu-26.04
       sessions: '["catalyst-dev"]'

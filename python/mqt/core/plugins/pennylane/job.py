@@ -41,8 +41,8 @@ class PennyLaneJob:
     Obtain this handle through ``device.last_job`` or an execution error's
     ``job`` attribute. Results have the device's preprocessed tape shape; they
     do not reconstruct an interrupted QNode or gradient calculation. Automatic
-    retries use the device's setting captured at creation and its lifetime limit
-    per failed entry. Cancelled or uncertain jobs are never retried.
+    retries use the device's setting at creation, applied over each entry's
+    lifetime. Cancelled or uncertain jobs are never retried automatically.
     """
 
     def __init__(
@@ -95,11 +95,7 @@ class PennyLaneJob:
         )
 
     def _samples(self, index: int, job: Job, program_index: int) -> np.ndarray:
-        """Decode one native readout in the device's logical wire order.
-
-        Returns:
-            A shot-by-wire sample array.
-        """
+        """Return a shot-by-wire sample array in the device's logical wire order."""
         _, shots = self._prepared[index]
         return _pennylane_samples(job, len(self._device.wires), shots, program_index)
 

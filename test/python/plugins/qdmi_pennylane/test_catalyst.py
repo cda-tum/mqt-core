@@ -69,8 +69,8 @@ def test_correlated_readout_and_wire_order(*, capture: bool) -> None:
 
 
 @pytest.mark.parametrize("capture", [False, True])
-def test_decomposes_gates_without_catalyst_runtime_symbols(*, capture: bool) -> None:
-    """The advertised gate set lowers gates absent from Catalyst's runtime."""
+def test_decomposed_gates_match_reference(*, capture: bool) -> None:
+    """Compile decomposed gates with the same action as the reference device."""
     device = qp.device("mqt.ddsim.default", wires=3)
 
     def circuit() -> ProbabilityMP:
@@ -120,7 +120,7 @@ def test_repeated_calls_and_observable_lowering(*, capture: bool) -> None:
 
 @pytest.mark.parametrize("probabilities", [False, True])
 def test_compiled_parameter_shift(*, probabilities: bool) -> None:
-    """Native expectation and probability primitives retain compiled gradients."""
+    """Differentiate finite-shot expectations and probabilities."""
     device = qp.device("mqt.ddsim.default", wires=1)
 
     @qp.qnode(device, shots=10, diff_method="parameter-shift")
@@ -140,11 +140,11 @@ def test_runtime_basis_state_and_unitary(*, capture: bool) -> None:
     @qp.qnode(device, shots=4)
     def circuit(bits: np.ndarray, matrix: np.ndarray) -> SampleMP:
         qp.BasisState(bits, wires=[2, 0])
-        qp.QubitUnitary(matrix, wires=[2, 0])
-        qp.QubitUnitary(np.array([[0, 1j], [1j, 0]]), wires=1)
+        qp.adjoint(qp.QubitUnitary)(matrix, wires=[2, 0])
+        qp.ctrl(qp.QubitUnitary, control=0, control_values=[False])(np.array([[0, 1j], [1j, 0]]), wires=1)
         return qp.sample(wires=[0, 1, 2])
 
     compiled = catalyst.qjit(circuit, capture=capture)
     matrix = np.eye(4, dtype=complex)[[0, 2, 3, 1]]
-    np.testing.assert_array_equal(compiled(np.array([0, 1]), matrix), [[1, 1, 1]] * 4)
-    np.testing.assert_array_equal(compiled(np.array([1, 0]), np.eye(4, dtype=complex)), [[0, 1, 1]] * 4)
+    np.testing.assert_array_equal(compiled(np.array([0, 1]), matrix), [[0, 1, 1]] * 4)
+    np.testing.assert_array_equal(compiled(np.array([1, 1]), np.eye(4, dtype=complex)), [[1, 0, 1]] * 4)

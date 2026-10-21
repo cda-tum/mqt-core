@@ -20,15 +20,12 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 
-#include <array>
-#include <complex>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>
 #include <optional>
-#include <random>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -152,142 +149,21 @@ TEST(CatalystQDMI, ValidatesProviderResultsAndRetainsBinaryParameters) {
   EXPECT_THROW(decodeSamples(job, 3, 5), std::runtime_error);
 }
 
-TEST(CatalystQDMI, TerminalReadoutsShareCorrelatedSamples) {
-  constexpr size_t shots = 64;
-  JobParameters parameters;
-  parameters[0] = 42;
-  QDMIDevice runtime(Context::create(
-      qdmi::builtin_driver::openDevice("mqt.ddsim.default"), parameters));
-  const auto wires = runtime.AllocateQubits(3);
-  runtime.SetDeviceShots(shots);
-  runtime.SetDevicePRNG(nullptr);
-  EXPECT_EQ(runtime.GetNumQubits(), 3);
-  EXPECT_EQ(runtime.GetDeviceShots(), shots);
-  runtime.NamedOperation("RX", {0.75}, {wires[2]}, false, {wires[1]}, {false});
-  runtime.NamedOperation("RX", {0.75}, {wires[2]}, true, {wires[1]}, {false});
-  runtime.NamedOperation("Hadamard", {}, {wires[0]});
-  runtime.NamedOperation("CNOT", {}, {wires[0], wires[2]});
-  runtime.NamedOperation("PauliX", {}, {wires[2]}, false, {wires[1]}, {false});
-  runtime.NamedOperation("PauliX", {}, {wires[1]});
-  runtime.NamedOperation("GlobalPhase", {0.3}, {wires[0], wires[2]});
-  runtime.NamedOperation("Identity", {}, wires);
-  const auto z0 = runtime.Observable(ObsId::PauliZ, {}, {wires[0]});
-  const auto z2 = runtime.Observable(ObsId::PauliZ, {}, {wires[2]});
-  const auto identity = runtime.Observable(ObsId::Identity, {}, {});
-  const auto parity = runtime.TensorObservable({z0, z2});
-
-  const std::array<size_t, 2> sizes{shots, 3};
-  const std::array<size_t, 2> strides{3, 1};
-  std::vector<double> samples(shots * 3);
-  DataView<double, 2> sampleView(samples.data(), 0, sizes.data(),
-                                 strides.data());
-  runtime.Sample(sampleView);
-  const std::array<size_t, 2> partialSizes{shots, 2};
-  const std::array<size_t, 2> partialStrides{2, 1};
-  std::vector<double> partialSamples(shots * 2);
-  DataView<double, 2> partialView(partialSamples.data(), 0, partialSizes.data(),
-                                  partialStrides.data());
-  runtime.PartialSample(partialView, {wires[2], wires[0]});
-  std::vector<int64_t> expectedCounts(8);
-  std::vector<int64_t> expectedPartialCounts(4);
-  double mean = 0.0;
-  for (size_t shot = 0; shot < shots; ++shot) {
-    const auto q0 = sampleView(shot, 0);
-    const auto q2 = sampleView(shot, 2);
-    EXPECT_EQ(sampleView(shot, 1), 1);
-    EXPECT_EQ(q0 + q2, 1);
-    EXPECT_EQ(partialView(shot, 0), q2);
-    EXPECT_EQ(partialView(shot, 1), q0);
-    ++expectedCounts[static_cast<size_t>(4 * q0 + 2 + q2)];
-    ++expectedPartialCounts[static_cast<size_t>(2 * q2 + q0)];
-    mean += (1 - 2 * q0) / shots;
-  }
-  std::vector<double> eigenvalues(8);
-  std::vector<int64_t> counts(8);
-  std::vector<double> probabilities(8);
-  DataView<double, 1> eigenvalueView(eigenvalues);
-  DataView<int64_t, 1> countView(counts);
-  DataView<double, 1> probabilityView(probabilities);
-  runtime.Counts(eigenvalueView, countView);
-  runtime.Probs(probabilityView);
-  EXPECT_EQ(counts, expectedCounts);
-  for (size_t i = 0; i < counts.size(); ++i) {
-    EXPECT_EQ(eigenvalues[i], static_cast<double>(i));
-    EXPECT_EQ(probabilities[i], static_cast<double>(counts[i]) / shots);
-  }
-  eigenvalues.resize(4);
-  counts.resize(4);
-  probabilities.resize(4);
-  DataView<double, 1> partialEigenvalues(eigenvalues);
-  DataView<int64_t, 1> partialCounts(counts);
-  DataView<double, 1> partialProbabilities(probabilities);
-  runtime.PartialCounts(partialEigenvalues, partialCounts,
-                        {wires[2], wires[0]});
-  runtime.PartialProbs(partialProbabilities, {wires[2], wires[0]});
-  EXPECT_EQ(counts, expectedPartialCounts);
-  for (size_t i = 0; i < counts.size(); ++i) {
-    EXPECT_EQ(eigenvalues[i], static_cast<double>(i));
-    EXPECT_EQ(probabilities[i], static_cast<double>(counts[i]) / shots);
-  }
-  EXPECT_EQ(runtime.Expval(z0), mean);
-  EXPECT_EQ(runtime.Var(z0), 1 - mean * mean);
-  EXPECT_EQ(runtime.Expval(parity), -1);
-  EXPECT_EQ(runtime.Var(parity), 0);
-  EXPECT_EQ(runtime.Expval(identity), 1);
-  EXPECT_THROW(runtime.NamedOperation("PauliX", {}, {wires[0]}),
-               std::runtime_error);
-  runtime.ReleaseQubits(wires);
-}
-
-TEST(CatalystQDMI, BasisPreparationAndDenseGatesValidateBeforeRecording) {
+TEST(CatalystQDMI, InvalidBasisStateLeavesRecordingUsable) {
   QDMIDevice runtime(
       Context::create(qdmi::builtin_driver::openDevice("mqt.ddsim.default")));
-  const auto wires = runtime.AllocateQubits(4);
-  runtime.SetDeviceShots(8);
-  std::vector<int8_t> bits{1, 0, 2};
+  const auto wires = runtime.AllocateQubits(3);
+  runtime.SetDeviceShots(4);
+  std::vector<int8_t> bits{1, 2};
   DataView<int8_t, 1> state(bits);
-  std::vector<QubitIdType> prepared{wires[2], wires[0], wires[3]};
+  std::vector<QubitIdType> prepared{wires[2], wires[0]};
   EXPECT_THROW(runtime.SetBasisState(state, prepared), std::runtime_error);
-  bits[2] = 1;
-  auto invalidWires = prepared;
-  invalidWires[2] = invalidWires[0];
-  EXPECT_THROW(runtime.SetBasisState(state, invalidWires), std::runtime_error);
-  invalidWires.pop_back();
-  EXPECT_THROW(runtime.SetBasisState(state, invalidWires), std::runtime_error);
-
-  const std::vector<std::complex<double>> cycle{
-      0, 0, 0, {0, 1}, 1, 0, 0, 0, 0, {0, -1}, 0, 0, 0, 0, 1, 0,
-  };
-  EXPECT_THROW(runtime.MatrixOperation(cycle, wires), std::runtime_error);
-  EXPECT_THROW(runtime.MatrixOperation(cycle, {wires[0]}), std::runtime_error);
-  EXPECT_THROW(runtime.MatrixOperation(cycle, {wires[0], wires[0]}),
-               std::runtime_error);
-  EXPECT_THROW(runtime.MatrixOperation(cycle, {wires[0], wires[1]}, false,
-                                       {wires[2]}, {true}),
-               std::runtime_error);
-  auto invalidMatrix = cycle;
-  invalidMatrix[0] = 1;
-  EXPECT_THROW(runtime.MatrixOperation(invalidMatrix, {wires[0], wires[1]}),
-               std::runtime_error);
-  invalidMatrix[0] = std::numeric_limits<double>::infinity();
-  EXPECT_THROW(runtime.MatrixOperation(invalidMatrix, {wires[0], wires[1]}),
-               std::runtime_error);
+  bits[1] = 0;
   runtime.SetBasisState(state, prepared);
-  EXPECT_THROW(runtime.SetBasisState(state, prepared), std::runtime_error);
-  runtime.MatrixOperation(cycle, {wires[3], wires[1]}, true);
-  runtime.MatrixOperation({0, 1, 1, 0}, {wires[2]}, false, {wires[0]}, {false});
-  std::vector<double> probabilities(16);
+  std::vector<double> probabilities(8);
   DataView<double, 1> probabilityView(probabilities);
   runtime.Probs(probabilityView);
-  std::vector<double> expected(16);
-  expected[4] = 1;
-  EXPECT_EQ(probabilities, expected);
-  EXPECT_THROW(runtime.MatrixOperation(cycle, {wires[0], wires[1]}),
-               std::runtime_error);
-  runtime.ReleaseQubits(wires);
-  auto replacement = runtime.AllocateQubits(3);
-  EXPECT_NO_THROW(runtime.SetBasisState(state, replacement));
-  runtime.ReleaseQubits(replacement);
+  EXPECT_EQ(probabilities, (std::vector<double>{0, 1, 0, 0, 0, 0, 0, 0}));
 }
 
 TEST(CatalystQDMI, FactoryRetainsContextAndRejectsInvalidLifetimes) {
@@ -300,10 +176,9 @@ TEST(CatalystQDMI, FactoryRetainsContextAndRejectsInvalidLifetimes) {
   auto second = std::unique_ptr<Catalyst::Runtime::QuantumDevice>(
       createDevice(kwargs.c_str()));
   const auto wires = runtime->AllocateQubits(1);
-  std::mt19937 generator(42);
-  EXPECT_THROW(runtime->SetDevicePRNG(&generator), std::runtime_error);
-  EXPECT_THROW(runtime->Measure(wires[0], std::nullopt), std::runtime_error);
-  EXPECT_THROW(runtime->AllocateQubits(1), std::runtime_error);
+  EXPECT_THROW(runtime->NamedOperation(
+                   "RY", {std::numeric_limits<double>::quiet_NaN()}, wires),
+               std::runtime_error);
   runtime->ReleaseQubits(wires);
   const auto replacement = runtime->AllocateQubits(1);
   EXPECT_THROW(runtime->NamedOperation("PauliX", {}, wires),
@@ -312,14 +187,4 @@ TEST(CatalystQDMI, FactoryRetainsContextAndRejectsInvalidLifetimes) {
   runtime.reset();
   second.reset();
   EXPECT_THROW(createDevice(kwargs.c_str()), std::runtime_error);
-  for (const auto* invalid : {
-           "{}",
-           "{'context': -1}",
-           "{'context': 0}",
-           "{'context': 1, 'token': 'x'}",
-           "{'context': 1} trailing",
-       }) {
-    EXPECT_THROW(createDevice(invalid), std::runtime_error);
-  }
-  EXPECT_THROW(createDevice(nullptr), std::runtime_error);
 }

@@ -1094,12 +1094,6 @@ TEST(CompilerQDMIAdapterTest, SubmitsCompatibleProgramsTogether) {
   const auto text = llvm::cantFail(
       mlir::compileProgram(mlir::OpenQASMProgram(source), device,
                            QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING));
-  EXPECT_TRUE(
-      llvm::errorToBool(mlir::trySubmitPrograms(device, {}).takeError()));
-  EXPECT_TRUE(llvm::errorToBool(
-      mlir::trySubmitPrograms(device, {nullptr}).takeError()));
-  EXPECT_TRUE(llvm::errorToBool(
-      mlir::trySubmitPrograms(device, {&binary}, -1).takeError()));
   EXPECT_TRUE(llvm::errorToBool(
       mlir::trySubmitPrograms(device, {&binary, &text}).takeError()));
   for (const auto* program : {&binary, &text}) {

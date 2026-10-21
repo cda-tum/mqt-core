@@ -6,7 +6,7 @@
 #
 # Licensed under the MIT License
 
-"""A modern PennyLane device backed by a gate-based QDMI device."""
+"""PennyLane execution on gate-based QDMI devices."""
 
 from __future__ import annotations
 
@@ -146,7 +146,7 @@ class QDMIDevice(Device):
 
     @staticmethod
     def get_c_interface() -> tuple[str, str]:
-        """Return the factory name and library path for a compatible Catalyst ABI.
+        """Return the Catalyst device factory name and library path.
 
         Raises:
             PennyLaneConfigurationError: If Catalyst uses an unsupported device ABI.
@@ -244,11 +244,7 @@ class QDMIDevice(Device):
         return self._execution_time
 
     def preprocess_transforms(self, execution_config: ExecutionConfig | None = None) -> CompilePipeline:
-        """Build the PennyLane preprocessing pipeline for sampled QDMI execution.
-
-        Returns:
-            The transforms applied before device execution.
-        """
+        """Return transforms for finite-shot execution and deferred measurements."""
         pipeline = CompilePipeline()
         pipeline.add_transform(_validate_finite_shots)
         pipeline.add_transform(_defer_on_device_wires, self.wires)
@@ -256,10 +252,10 @@ class QDMIDevice(Device):
         return pipeline
 
     def _prepare(self, tape: QuantumScript) -> CompiledProgram:
-        """Replay a preprocessed tape into the native target compiler.
+        """Compile a preprocessed tape for the selected QDMI target.
 
         Returns:
-            An immutable native program ready for submission.
+            A program ready for submission to this device.
 
         Raises:
             PennyLaneTranslationError: If an operation or target cannot be compiled.
@@ -272,10 +268,7 @@ class QDMIDevice(Device):
 
     @staticmethod
     def _shot_copies(shots: Shots) -> tuple[int, ...]:
-        """Expand a PennyLane shot vector into individual QDMI job sizes.
-
-        Returns:
-            One positive shot count per required QDMI job.
+        """Return one shot count for each shot-vector copy.
 
         Raises:
             PennyLaneValidationError: If execution is analytic.

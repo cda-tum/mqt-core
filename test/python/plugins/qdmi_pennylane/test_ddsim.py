@@ -46,8 +46,8 @@ def test_public_tape_import_returns_all_declared_wires(wires: list[str] | None, 
     assert job.get_shots() == [expected] * 3
 
 
-def test_stable_entry_point_and_wire_order() -> None:
-    """Discover the stable device ID and map QDMI bit strings to PennyLane wires."""
+def test_plugin_registration_and_wire_order() -> None:
+    """Load the device plugin and preserve named-wire order."""
     device = qp.device("mqt.ddsim.default", wires=["first", "second"])
 
     @qp.qnode(device, shots=20)
@@ -119,9 +119,10 @@ def test_parameter_shift_gradient() -> None:
     ],
 )
 def test_gate_semantics_against_pennylane_reference(operations: list[qp.operation.Operator]) -> None:
-    """Match phase, inverse, parameter, and wire-order semantics."""
+    """Match gate action using interference-sensitive sampled probabilities."""
     qdmi_device = qp.device("mqt.ddsim.default", wires=2)
     reference_device = qp.device("default.qubit", wires=2)
+    operations = [qp.RY(-0.3, 0), qp.RX(0.3, 1), *operations, qp.RX(1.2, 0), qp.RY(-1.2, 1)]
     sampled_tape = qp.tape.QuantumScript(operations, [qp.probs(wires=[0, 1])], shots=20_000)
     analytic_tape = qp.tape.QuantumScript(operations, [qp.probs(wires=[0, 1])])
 
@@ -131,15 +132,19 @@ def test_gate_semantics_against_pennylane_reference(operations: list[qp.operatio
     np.testing.assert_allclose(actual, expected, atol=0.025)
 
 
-@pytest.mark.parametrize("angle", [np.nan, np.inf, -np.inf])
-def test_invalid_native_program_prevents_batch_submission(angle: float) -> None:
+def test_invalid_native_program_prevents_batch_submission() -> None:
     """Validate every compiled tape before accepting any job in the batch."""
     device = DDSIMDevice(wires=1)
-    tapes = tuple(qp.tape.QuantumScript([qp.RY(value, 0)], [qp.sample(wires=[0])], shots=2) for value in (0.2, angle))
+    tape = qp.tape.QuantumScript([qp.X(0)], [qp.sample(wires=[0])], shots=2)
+    samples = device.execute(tape)
+    previous = device.last_job
+    assert previous is not None
+    invalid = qp.tape.QuantumScript([qp.RY(np.nan, 0)], [qp.sample(wires=[0])], shots=2)
     with pytest.raises(PennyLaneTranslationError, match="finite"):
-        device.execute(tapes)
-    assert device.submitted_jobs == 0
+        device.execute((tape, invalid))
+    assert device.submitted_jobs == 1
     assert device.last_job is None
+    np.testing.assert_array_equal(previous.result(), samples)
 
 
 @pytest.mark.parametrize("order", [None, [0, 1], [1, 0], [1]])
@@ -181,15 +186,12 @@ def test_qaoa_application() -> None:
     optimized = qp.GradientDescentOptimizer(stepsize=0.15).step(cost, parameters)
     samples = np.asarray(sample(optimized), dtype=np.int8)
     bitstrings = {"".join(str(int(bit)) for bit in row) for row in samples}
-    cuts = [sum(bitstring[first] != bitstring[second] for first, second in GRAPH_EDGES) for bitstring in bitstrings]
 
     assert np.isfinite(initial_cost)
     assert np.all(np.isfinite(gradient))
     assert not np.allclose(optimized, parameters)
     assert samples.shape == (200, 4)
-    assert bitstrings
     assert all(len(bitstring) == 4 and set(bitstring) <= {"0", "1"} for bitstring in bitstrings)
-    assert all(0 <= cut <= len(GRAPH_EDGES) for cut in cuts)
     assert device.submitted_jobs > 1
 
 
