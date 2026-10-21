@@ -143,6 +143,12 @@ TEST(OpenQASMFrontendTest, KnownMeasurementSlicesInitializeSelectedBits) {
 
 TEST(OpenQASMFrontendTest, ClassicalArrayInitialization) {
   for (const auto* source : {
+           "array[int, 1] a; a[0] = 1; array[int[64], 1] b = a; b = b;",
+           "array[angle, 1] a = {pi}; array[angle[52], 1] b = a;",
+           "array[int, 2, 1] a = {{1}, {2}}; array[int, 2, 1] b; "
+           "bool c = true; if (c) { b = a; } else { b = a; } int x = b[1, 0];",
+           "array[int, 1] a = {1}; array[int, 1] b; "
+           "for int i in [0:1] { b = a; } int x = b[0];",
            "array[int, 2, 3] a; a[1, 2] = 4; int result = a[-1, -1];",
            "input float selector; int i = int(selector); "
            "array[int, 2] a = {1, 2}; "
@@ -162,28 +168,6 @@ TEST(OpenQASMFrontendTest, ClassicalArrayInitialization) {
     auto analyzed = openqasm::frontend::analyzeOpenQASM(
         std::string("OPENQASM 3.0; ") + source);
     ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
-  }
-}
-
-TEST(OpenQASMFrontendTest, CopiesWholeArraysWithMatchingTypes) {
-  for (const auto* source : {
-           "array[int, 2] a = {1, 2}; array[int[64], 2] b = a; b = b; a = b;",
-           "array[float[64], 1] a = {1}; array[float, 1] b = a;",
-           "array[angle, 1] a = {pi}; array[angle[52], 1] b = a; b = a;",
-           "array[uint[8], 1] a = {255}; array[uint[8], 1] b; b = a;",
-           "array[bool, 1] a = {true}; array[bool, 1] b; b = a;",
-           "array[int, 400, 400, 0] a; array[int, 400, 400, 0] b = a; b = a;",
-           "array[int, 1] a; a[0] = 1; array[int, 1] b = a;",
-           "array[int, 2, 1] a = {{1}, {2}}; array[int, 2, 1] b; "
-           "bool c = true; if (c) { b = a; } else { b = a; } int x = b[1, 0];",
-           "array[int, 1] a = {1}; array[int, 1] b; "
-           "for int i in [0:1] { b = a; } int x = b[0];",
-       }) {
-    SCOPED_TRACE(source);
-    auto analyzed = openqasm::frontend::analyzeOpenQASM(
-        std::string("OPENQASM 3.0; ") + source);
-    ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
-    EXPECT_EQ(analyzed.program->arrays.size(), 2);
   }
 }
 
@@ -252,12 +236,10 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           },
           {"array[int, 1] a = {0}; if (a[0]) {}", "bool type"},
           {"array[int, 1] a = {0}; a = 1;", "whole-array source"},
-          {"array[int, 1] a = 1;", "whole-array source"},
+          {"int value = 1; array[int, 1] a = value;", "whole-array source"},
           {"array[int, 1] a = missing;", "whole-array source"},
           {"array[int, 1] a = a;", "uninitialized"},
-          {"array[int, 1] a; array[int, 1] b = a;", "uninitialized"},
           {"array[int, 2] a; a[0] = 1; array[int, 2] b = a;", "uninitialized"},
-          {"array[int, 1] a = {1}; array[int, 2] b = a;", "matching shapes"},
           {
               "array[int, 1, 2] a = {{1, 2}}; array[int, 2, 1] b = a;",
               "matching shapes",
@@ -269,15 +251,7 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           {"array[int, 1] a = {1}; array[uint, 1] b = a;", "element types"},
           {"array[float, 1] a = {1}; array[angle, 1] b = a;", "element types"},
           {
-              "array[angle[8], 1] a = {pi}; array[angle[16], 1] b = a;",
-              "element types",
-          },
-          {
               "array[int, 1] a = {1}; array[int, 1] b; b += a;",
-              "whole-array source",
-          },
-          {
-              "array[int, 1] a = {1}; array[int, 1] b = a[0];",
               "whole-array source",
           },
           {

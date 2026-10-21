@@ -1471,7 +1471,9 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
         %false = arith.constant false
         %true = arith.constant true
         %memory = memref.alloca() : memref<32xi1>
-        memref.store %false, %memory[%zero] : memref<32xi1>
+        %source = memref.alloca() : memref<32xi1>
+        memref.store %false, %source[%zero] : memref<32xi1>
+        memref.copy %source, %memory : memref<32xi1> to memref<32xi1>
         %alias = func.call @alias(%memory) : (memref<32xi1>) -> memref<32xi1>
         %q0 = qco.static 0 : !qco.qubit
         %h = qco.h %q0 : !qco.qubit
@@ -1482,7 +1484,10 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
           func.call @set(%alias, %true) : (memref<32xi1>, i1) -> ()
         }
         %actual = memref.load %memory[%zero] : memref<32xi1>
-        %matches = arith.cmpi eq, %actual, %expected : i1
+        %same = arith.cmpi eq, %actual, %expected : i1
+        %original = memref.load %source[%zero] : memref<32xi1>
+        %unchanged = arith.cmpi eq, %original, %false : i1
+        %matches = arith.andi %same, %unchanged : i1
         %q1 = qco.static 1 : !qco.qubit
         %out = qco.if %matches args(%q = %q1) -> (!qco.qubit) {
           %x = qco.x %q : !qco.qubit
