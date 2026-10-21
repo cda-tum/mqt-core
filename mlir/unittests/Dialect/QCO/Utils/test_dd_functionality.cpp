@@ -1458,13 +1458,13 @@ TEST_F(QCODDFunctionalityTest, BranchesCopyClassicalRegisterStorage) {
 TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @alias(%memory: memref<32xi1, strided<[1], offset: ?>>)
-          -> memref<32xi1, strided<[1], offset: ?>> {
-        return %memory : memref<32xi1, strided<[1], offset: ?>>
+      func.func @alias(%memory: memref<32xi1, strided<[2], offset: ?>>)
+          -> memref<32xi1, strided<[2], offset: ?>> {
+        return %memory : memref<32xi1, strided<[2], offset: ?>>
       }
-      func.func @set(%memory: memref<32xi1, strided<[1], offset: ?>>, %value: i1) {
+      func.func @set(%memory: memref<32xi1, strided<[2], offset: ?>>, %value: i1) {
         %zero = arith.constant 0 : index
-        memref.store %value, %memory[%zero] : memref<32xi1, strided<[1], offset: ?>>
+        memref.store %value, %memory[%zero] : memref<32xi1, strided<[2], offset: ?>>
         return
       }
       func.func @main() {
@@ -1472,25 +1472,25 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
         %false = arith.constant false
         %true = arith.constant true
         %one = arith.constant 1 : index
-        %memory = memref.alloca() : memref<2x32xi1>
-        %row = memref.subview %memory[%one, 0][1, 32][1, 1]
-          : memref<2x32xi1> to memref<32xi1, strided<[1], offset: ?>>
+        %memory = memref.alloca() : memref<32x2xi1>
+        %row = memref.subview %memory[0, %one][32, 1][1, 1]
+          : memref<32x2xi1> to memref<32xi1, strided<[2], offset: ?>>
         %source = memref.alloca() : memref<32xi1>
         memref.store %false, %source[%zero] : memref<32xi1>
-        memref.copy %source, %row : memref<32xi1> to memref<32xi1, strided<[1], offset: ?>>
-        %alias = func.call @alias(%row) : (memref<32xi1, strided<[1], offset: ?>>)
-          -> memref<32xi1, strided<[1], offset: ?>>
+        memref.copy %source, %row : memref<32xi1> to memref<32xi1, strided<[2], offset: ?>>
+        %alias = func.call @alias(%row) : (memref<32xi1, strided<[2], offset: ?>>)
+          -> memref<32xi1, strided<[2], offset: ?>>
         %q0 = qco.static 0 : !qco.qubit
         %h = qco.h %q0 : !qco.qubit
         %measured, %bit = qco.measure %h : !qco.qubit
         qco.sink %measured : !qco.qubit
         %expected = arith.xori %bit, %true : i1
         scf.if %expected {
-          func.call @set(%alias, %true) : (memref<32xi1, strided<[1], offset: ?>>, i1) -> ()
+          func.call @set(%alias, %true) : (memref<32xi1, strided<[2], offset: ?>>, i1) -> ()
         } else {
-          memref.copy %source, %alias : memref<32xi1> to memref<32xi1, strided<[1], offset: ?>>
+          memref.copy %source, %alias : memref<32xi1> to memref<32xi1, strided<[2], offset: ?>>
         }
-        %actual = memref.load %memory[%one, %zero] : memref<2x32xi1>
+        %actual = memref.load %memory[%zero, %one] : memref<32x2xi1>
         %same = arith.cmpi eq, %actual, %expected : i1
         %original = memref.load %source[%zero] : memref<32xi1>
         %unchanged = arith.cmpi eq, %original, %false : i1
@@ -3652,8 +3652,8 @@ TEST_F(QCODDFunctionalityTest,
            "%view = memref.subview %reg[0, %negative][1, 3][1, 1] "
            ": memref<2x3xi1> to memref<3xi1, strided<[1], offset: ?>>",
            "%reg = memref.alloc() : memref<2x3xi1> "
-           "%view = memref.subview %reg[0, 0][2, 1][1, 1] "
-           ": memref<2x3xi1> to memref<2xi1, strided<[3]>>",
+           "%view = memref.subview %reg[0, 0][2, 1][%huge, 1] "
+           ": memref<2x3xi1> to memref<2xi1, strided<[?]>>",
        }) {
     SCOPED_TRACE(body);
     expectMlirSimulationFails(0, std::string(R"mlir(module { func.func @main() {
@@ -3668,7 +3668,7 @@ TEST_F(QCODDFunctionalityTest,
   }
 }
 
-TEST_F(QCODDFunctionalityTest, SubarrayCopiesShareStorageWithoutLoopBudget) {
+TEST_F(QCODDFunctionalityTest, StridedCopiesPreserveAliasesWithoutLoopBudget) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(module {
     func.func @main() {
       %zero = arith.constant 0 : index
@@ -3685,12 +3685,17 @@ TEST_F(QCODDFunctionalityTest, SubarrayCopiesShareStorageWithoutLoopBudget) {
       %target = memref.subview %reg[%zero, %zero, 0][1, 1, 10001][1, 1, 1]
         : memref<2x1x10001xi1> to memref<10001xi1, strided<[1], offset: ?>>
       memref.store %true, %source[%last] : memref<10001xi1, strided<[1], offset: ?>>
-      memref.copy %source, %target : memref<10001xi1, strided<[1], offset: ?>>
-                                 to memref<10001xi1, strided<[1], offset: ?>>
-      memref.copy %target, %target : memref<10001xi1, strided<[1], offset: ?>>
-                                 to memref<10001xi1, strided<[1], offset: ?>>
-      memref.store %false, %source[%last] : memref<10001xi1, strided<[1], offset: ?>>
-      %condition = memref.load %reg[%zero, %zero, %last] : memref<2x1x10001xi1>
+      memref.store %false, %source[%zero] : memref<10001xi1, strided<[1], offset: ?>>
+      %reverse = memref.subview %source[10000][10001][-1]
+        : memref<10001xi1, strided<[1], offset: ?>>
+          to memref<10001xi1, strided<[-1], offset: ?>>
+      memref.copy %reverse, %target : memref<10001xi1, strided<[-1], offset: ?>>
+                                   to memref<10001xi1, strided<[1], offset: ?>>
+      memref.store %true, %source[%zero] : memref<10001xi1, strided<[1], offset: ?>>
+      %first = memref.load %reg[%zero, %zero, %zero] : memref<2x1x10001xi1>
+      %end = memref.load %reg[%zero, %zero, %last] : memref<2x1x10001xi1>
+      %notEnd = arith.xori %end, %true : i1
+      %condition = arith.andi %first, %notEnd : i1
       %q = qco.static 0 : !qco.qubit
       %result = qco.if %condition args(%qin = %q) -> (!qco.qubit) {
         %out = qco.x %qin : !qco.qubit

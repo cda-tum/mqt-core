@@ -112,6 +112,23 @@ barrier q[first:step:0], r[1:2];
   EXPECT_EQ(barriers, 1);
 }
 
+TEST(OpenQASMTargetTest, RangeCopiesReuseScratchOutsideLoops) {
+  MLIRContext context;
+  auto moduleOp = qc::translateOpenQASMToQC(
+      "OPENQASM 3.0; array[int, 4] a = {1, 2, 3, 4}; "
+      "a[1:] = a[:2]; for int i in [0:2] { a[:2] = a[1:]; }",
+      &context, {.maxOperations = 64});
+  ASSERT_TRUE(moduleOp);
+  EXPECT_TRUE(succeeded(verify(*moduleOp)));
+  size_t allocations = 0;
+  moduleOp->walk([&](memref::AllocaOp alloc) {
+    ++allocations;
+    EXPECT_FALSE(alloc->getParentOfType<scf::ForOp>());
+    EXPECT_EQ(alloc.getType().getShape(), ArrayRef<int64_t>{4});
+  });
+  EXPECT_EQ(allocations, 2); // Original array and reused scratch.
+}
+
 TEST(OpenQASMTargetTest, ImportsNonNullTerminatedSourceView) {
   std::string storage = "OPENQASM 3.1; qubit q; U(0, 0, 0) q;invalid suffix";
   const auto source = StringRef(storage).take_front(storage.find("invalid"));
