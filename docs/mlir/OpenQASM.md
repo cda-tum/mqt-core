@@ -85,11 +85,13 @@ limited to 100,000.
 
 Whole-array initialization (`array[int, 2, 3] b = a;`) and assignment (`b = a;`)
 copy values into independent storage. Shapes and element types, including their
-widths, must match; the source must be fully initialized. Subarray access,
-slices, whole-array arithmetic, compound assignments, and whole-array inputs or
-outputs are unsupported. To pass or return array values, select individual
-entries as gate parameters or scalar outputs; gate definitions cannot capture
-mutable arrays.
+widths, must match; the source must be fully initialized. Leading scalar indices
+select subarrays: `array[int, 3] row = a[0];`, `a[1] = row;`, and `a[0] = a[1];`
+copy matching remaining dimensions. Runtime indices must be in bounds after
+negative-index wrapping. Slices, whole-array arithmetic, compound assignments,
+and whole-array inputs or outputs are unsupported. To pass or return array
+values, select individual entries as gate parameters or scalar outputs; gate
+definitions cannot capture mutable arrays.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
