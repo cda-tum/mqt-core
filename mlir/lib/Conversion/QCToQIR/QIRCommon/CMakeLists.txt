@@ -33,6 +33,9 @@ add_mlir_library(
   MLIRMemRefToLLVM
   MLIRMemRefDialect
   MLIRMemRefTransforms
+  MLIRMemRefUtils
+  MLIRSCFDialect
+  MLIRSCFToControlFlow
   MLIRTensorTransforms
   MLIRMQTDialect
   MLIRFuncDialect

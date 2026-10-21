@@ -87,11 +87,19 @@ Whole-array initialization (`array[int, 2, 3] b = a;`) and assignment (`b = a;`)
 copy values into independent storage. Leading scalar indices select subarrays:
 `array[int, 3] row = a[0];`, `a[1] = row;`, and `a[0] = a[1];`. Source and
 destination must have matching remaining dimensions and element types, including
-their widths. All selected source elements must be initialized. Slices,
-whole-array arithmetic, compound assignments, and whole-array inputs or outputs
+their widths. All selected source elements must be initialized. Whole-array arithmetic, compound assignments, and whole-array inputs or outputs
 are unsupported. To pass or return array values, select individual entries as
 gate parameters or scalar outputs; gate definitions cannot capture mutable
 arrays.
+
+Copies also accept inclusive ranges in any dimension: `a[1:3]`, `a[0:2:4]`, or
+`a[:, 1]`. Bounds and steps must be compile-time integers. Negative bounds count
+from the end; omitted endpoints use the dimension's ends in the step's
+direction, so `a[:-1:]` reverses it. Ranges retain dimensions; scalar indices
+remove them. Empty ranges, zero steps, and out-of-bounds endpoints are rejected,
+except a full selection of a zero-length dimension. Overlapping assignments copy
+the original source values. They reuse at most one scratch allocation per array,
+independent of loop iterations.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
@@ -327,8 +335,9 @@ bypasses that QCO optimization round trip.
 
 DD simulation and Adaptive QIR support array storage. Adaptive QIR uses native
 stack storage, bounded by the frontend element limit to 800,000 bytes of array
-payload per invocation. Targets must support arrays and their element types;
-dynamic indices also require loop support. See the
+payload per invocation, or 1,600,000 bytes including copy scratch storage.
+Targets must support arrays and their element types; dynamic indices also
+require loop support. See the
 [QIR conversion contracts](Conversions.md#qir-conversions).
 
 OpenQASM, Qiskit, jeff, and Base QIR export require array storage to be

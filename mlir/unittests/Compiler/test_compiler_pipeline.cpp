@@ -1180,9 +1180,11 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         array[int, 2, 0] emptyRows = {{}, {}};
         array[int, 0] emptyRow = emptyRows[0];
         emptyRows[1] = emptyRow;
+        emptyRows[1, :] = emptyRow[::];
+        empty[:] = emptyRow;
         array[int, 0, 2] noRows = {};
         array[int, 400, 400, 0] emptyTable;
-        array[int, 400, 400, 0] emptyCopy = emptyTable;
+        array[int, 400, 400, 0] emptyCopy = emptyTable[:, :, :];
         qubit q;
         output bit result;
         bool zero = bool(angles[0]);
@@ -1191,9 +1193,45 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         result = measure q;
       )qasm",
       R"qasm(OPENQASM 3.0;
-        array[angle[8], 2] source = {0.0, -pi};
-        array[angle[8], 2] angles = source;
-        source[1] = 0.0;
+        array[int[8], 5] a = {0, 1, 2, 3, 4};
+        a[1:] = a[:3];
+        bool right = a[0] == 0 && a[1] == 0 && a[2] == 1 &&
+                     a[3] == 2 && a[4] == 3;
+        a[:3] = a[1:];
+        bool left = a[0] == 0 && a[1] == 1 && a[2] == 2 &&
+                    a[3] == 3 && a[4] == 3;
+        a[:-1:] = a;
+        array[int[8], 3] b = a[0:2:4];
+        a[0] = 99;
+        qubit q;
+        output bit result;
+        if (right && left && b[0] == 3 && b[1] == 2 && b[2] == 0 &&
+            a[1] == 3 && a[2] == 2 && a[3] == 1 && a[4] == 0) {
+          U(pi, 0, 0) q;
+        }
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int column = int(measured);
+        array[int, 2] b = a[:, column];
+        a[:, 0] = b;
+        a[0:1, 1:2] = a[1:-1:0, 0:1];
+        reset q;
+        output bit result;
+        if (b[0] == 2 && b[1] == 5 && a[0, 0] == 2 && a[1, 0] == 5 &&
+            a[0, 1] == 5 && a[0, 2] == 5 && a[1, 1] == 2 && a[1, 2] == 2) {
+          U(pi, 0, 0) q;
+        }
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[angle[8], 2] source = {-pi, 0.0};
+        array[angle[8], 2] angles = source[:-1:];
+        source[0] = 0.0;
         array[float, 1] scale = {2.0};
         array[float[64], 1] copiedScale = scale;
         array[uint[8], 1] index = {255};
