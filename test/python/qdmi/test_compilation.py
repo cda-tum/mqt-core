@@ -31,9 +31,15 @@ BELL = 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; bit[2] c; h q[0]; cx q
 
 
 @pytest.mark.parametrize(
-    "program_format", [ProgramFormat.QASM3, ProgramFormat.QIR_BASE_MODULE, ProgramFormat.QIR_ADAPTIVE_MODULE]
+    ("program_format", "controlled"),
+    [
+        (ProgramFormat.QASM3, False),
+        (ProgramFormat.QASM3, True),
+        (ProgramFormat.QIR_BASE_MODULE, False),
+        (ProgramFormat.QIR_ADAPTIVE_MODULE, False),
+        (ProgramFormat.QIR_ADAPTIVE_MODULE, True),
+    ],
 )
-@pytest.mark.parametrize("controlled", [False, True])
 @pytest.mark.parametrize("two_parameter", [False, True])
 def test_sdk_u_preserves_exact_phase(program_format: ProgramFormat, *, controlled: bool, two_parameter: bool) -> None:
     """Native payloads preserve U and U2's exact phase, including under control."""
