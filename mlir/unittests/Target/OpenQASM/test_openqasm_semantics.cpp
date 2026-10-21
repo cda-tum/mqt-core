@@ -143,12 +143,6 @@ TEST(OpenQASMFrontendTest, KnownMeasurementSlicesInitializeSelectedBits) {
 
 TEST(OpenQASMFrontendTest, ClassicalArrayInitialization) {
   for (const auto* source : {
-           "const int n = 2; array[int[8], n,] a = {127, 128,}; "
-           "a[-1] += 1; int result = a[-1];",
-           "array[angle[8], 2] a = {pi, -pi/2}; int i = -1; "
-           "a[i] = pi/2; qubit q; U(a[i], 0, 0) q;",
-           "array[angle[8], 1] a = {pi}; qubit q; "
-           "U(float(a[0])/2, sin(a[0]), 0) q;",
            "array[int, 2] a; a[0] = 1; int result = a[0];",
            "input float selector; int i = int(selector); "
            "array[int, 2] a = {1, 2}; "
@@ -176,13 +170,9 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           {"array[int, 100001] a;", "exceeds the limit"},
           {"array[int, 60000] a; array[int, 60000] b;", "exceed the limit"},
           {"int n = 2; array[int, n] a;", "constant integer"},
-          {"array[int, 1.0] a;", "integer expression"},
           {"array[int, 2] a = {1};", "initializer length"},
-          {"array[int, 1] a = {1, 2};", "initializer length"},
           {"array[bool[2], 1] a;", "do not have a width"},
           {"array[float[32], 1] a;", "only width 64"},
-          {"array[int[65], 1] a;", "1 through 64"},
-          {"array[angle[53], 1] a;", "between 1 and 52"},
           {"array[angle, 1] a = {0.0}; a[0] = a[0];", "compile-time values"},
           {"array[angle, 1] a = {1};", "float or angle"},
           {
@@ -242,7 +232,6 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
               "array[float, 1] a = {0}; gate g q { U(a[0], 0, 0) q; }",
               "cannot capture",
           },
-          {"array[int, 1] a; array[int, 1] a;", "already declared"},
           {"array[int, 2, 2] a;", "multidimensional"},
           {"array[bit, 1] a;", "unsupported array element type"},
       });

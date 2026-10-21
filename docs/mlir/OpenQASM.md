@@ -1,9 +1,3 @@
----
-file_format: mystnb
-kernelspec:
-  name: python3
----
-
 # OpenQASM input and output
 
 MQT Core accepts OpenQASM as a compiler input and can export structured programs
@@ -73,7 +67,7 @@ QCO, and `jeff` dialects, so each output checkpoint names its dialect.
 | Expressions                | Scalar arithmetic, comparisons, Boolean expressions, and the supported math functions are type checked before translation. Initialized bit registers support `~`, `&`, `\|`, `^`, `<<`, `>>`, `popcount`, `rotl`, and `rotr`.                                      |
 | Structured control         | `if`, `switch`, supported range-based `for`, and `while`. `break` exits the innermost enclosing loop; `continue` advances to its next iteration. Both may appear inside conditional and switch bodies.                                                             |
 | Dynamic indexing           | Classical bit and array indices can be dynamic and must remain in bounds. A nonconstant qubit index must be a proven affine expression as described below.                                                                                                         |
-| Classical arrays           | Global, fixed-size, one-dimensional arrays of `bool`, `int`, `uint`, `float`, and `angle`, as described below.                                                                                                                                                     |
+| Classical arrays           | Global, fixed-size, one-dimensional arrays of `bool`, `int`, `uint`, `float`, and `angle`, with the scalar widths above.                                                                                                                                           |
 | Unsupported language areas | Subroutines, `extern`, calibration and timing constructs, and other array forms are diagnosed.                                                                                                                                                                     |
 
 The importer recognizes custom gates containing unitary gate calls and
@@ -81,6 +75,14 @@ constant-range `for` loops as unitary, including nested loops and their callers.
 This classification is conservative: an unclassified gate may have a unitary
 quantum action. A modifier on a custom gate requires that the gate and its
 callees contain no loops.
+
+Declare a classical array with `array[int[8], 3] values = {1, 2, 3};`. Arrays
+have a nonnegative compile-time length, and initializer lists must match that
+length. Empty arrays are valid. The combined number of register and array
+elements is limited to 100,000. Multidimensional arrays, slices, whole-array
+copies, and whole-array inputs or outputs are unsupported. To pass or return
+array values, select individual entries as gate parameters or scalar outputs;
+gate definitions cannot capture mutable arrays.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
@@ -153,7 +155,7 @@ For the same compatibility reason, a whole-register assignment accepts a
 nonnegative integer constant that fits the register width. Use an exact-width
 bit-string literal for strict OpenQASM source.
 
-Fixed-width angles are a compile-time input feature. An omitted angle width
+Scalar fixed-width angles hold compile-time values. An omitted angle width
 resolves to 52 bits. Both `const angle[N]` and initialized `angle[N]`
 declarations are accepted as write-once values. Initializers and angle casts
 must be compile-time expressions. MQT Core supports float-to-angle conversion,
@@ -161,72 +163,18 @@ angle resizing, unary negation, addition and subtraction, multiplication and
 division by nonnegative integer literals that fit the angle width, comparisons,
 and `sin`, `cos`, and `tan`. Mixed-width angle operands promote to the wider
 width. It uses round-to-nearest, ties-to-even for float conversion and
-narrowing. Runtime angle state, reassignment, bit-level angle operations, and
-angle inputs or outputs are not supported. Angle arrays support runtime indexing
-of compile-time entries as described below.
+narrowing. Scalar angle reassignment, runtime fixed-width angle arithmetic,
+bit-level angle operations, and angle inputs or outputs are unsupported. Angle
+arrays use the same widths and quantization. Their indices can be dynamic, but
+initializers and assigned values must be compile-time float or angle
+expressions. Use `float(angles[i])` for arithmetic or mixed-type comparisons on
+an entry's value in radians; this cast is an MQT Core extension to OpenQASM.
 
-### Classical arrays
+### Indexing and initialization
 
-Use `array[int[8], 3] values = {1, 2, 3};` to declare a mutable, one-dimensional
-array. Arrays must be global with a non-negative, compile-time length. Empty
-arrays are valid. The combined number of array and register elements is limited
-to 100,000. Element types are `bool`, `int`, `uint`, `float`, and `angle`.
-Integer widths range from 1 through 64; `float` and `float[64]` use double
-precision. Initializer lists must match the declared length.
-
-Read or assign individual elements with integer indices. Negative indices count
-from the end (`values[-1]` is the last element). The frontend diagnoses constant
-out-of-range indices. Runtime indices must stay in bounds; no runtime checks are
-inserted. Without an initializer, each element must be assigned before it is
-read. A dynamic read requires every element to be initialized; a dynamic write
-does not establish definite initialization.
-
-Angle arrays use the same widths and compile-time quantization as scalar angle
-declarations. Initializers and assigned values must be compile-time float or
-angle expressions, but the element index can be dynamic. Use `float(angles[i])`
-for arithmetic or mixed-type comparisons on an entry's value in radians. This
-cast is an MQT Core extension to OpenQASM; runtime fixed-width angle arithmetic
-is unsupported. For example:
-
-```{code-cell} ipython3
-from mqt.core.mlir import QCProgram
-
-source = """
-OPENQASM 3.0;
-include "stdgates.inc";
-array[angle[32], 3] angles = {0.0, pi / 2, pi / 2};
-qubit q;
-for int i in [0:2] {
-  ry(angles[i]) q;
-}
-output bit result;
-result = measure q;
-"""
-counts = QCProgram.from_openqasm_str(source).to_qco().sample(shots=4, seed=42)
-assert counts == {"1": 4}
-print(counts)
-```
-
-DD simulation and Adaptive QIR support array storage. Adaptive QIR uses native
-stack storage; the element limit bounds the array payload to 800,000 bytes per
-entry-point invocation. Targets must support arrays and their element types. The
-emitted capability flags conservatively require loop support for dynamic
-indices. See the
-[QIR 2.1 array contract](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/Memory_Management.md#array-support).
-
-Base QIR, jeff, OpenQASM, and Qiskit export require array storage to be
-eliminated. Compiler cleanup promotes eligible arrays to scalar values and folds
-constants. With LLVM/MLIR 23.1, promotion requires at most 16 elements, constant
-indices, and supported uses. Do not assume cleanup will remove larger arrays.
-Call `program.cleanup()` before `to_qiskit()`; Qiskit export itself only folds
-scalar expressions.
-
-Assign selected elements to scalar or bit outputs to return array values. Pass
-selected entries as gate parameters; gate definitions cannot capture mutable
-arrays. Multidimensional arrays, slices, whole-array copies, whole-array inputs
-or outputs, and runtime angle conversion are unsupported.
-
-### Qubit indices and classical registers
+Read or assign array elements with integer indices. Negative indices count from
+the end (`values[-1]` is the last element). The frontend diagnoses constant
+out-of-range indices; runtime indices must stay in bounds.
 
 The frontend accepts a nonconstant qubit index only when it proves that every
 value is in the register and that operands of one gate or explicit barrier are
@@ -243,8 +191,8 @@ can prove their sign. It rejects measurement-derived values, indices whose sign
 is unknown, nonlinear expressions, unsupported integer operators, and ranges
 whose step is not known to be positive when their induction variable reaches a
 qubit index. Mutations in repeating loops and unequal branch values invalidate
-scalar facts. Branch conditions do not add proof facts. Classical bit indexing
-and loops that do not index qubits keep their runtime behavior.
+scalar facts. Branch conditions do not add proof facts. Classical bit and array
+indexing and loops that do not index qubits keep their runtime behavior.
 
 Register operands support inclusive slices `q[first:last]` and
 `q[first:step:last]`, including negative indices and negative steps. Omitted
@@ -267,9 +215,11 @@ source before writing, so overlapping copies are safe. Constant selections use
 scalar bit operations; selecting a whole register in order uses a register read
 or write. Compound assignments to indexed bits or slices are not supported.
 
-Reads through nonconstant classical indices require the whole source register to
-be initialized. Such writes do not prove whole-register initialization,
-including measurement writes. Constant selections track initialization per bit.
+OpenQASM 3 requires each bit or array element to be initialized before it is
+read. A read through a nonconstant index requires the whole source register or
+array to be initialized. Such writes do not prove whole-register or whole-array
+initialization, including measurement writes. Constant selections track
+initialization per element.
 
 For convenience, import also accepts three-part slices with an omitted final
 bound and measurement between a scalar and a one-element register. Export
@@ -278,24 +228,20 @@ expands slices and emits scalar measurements that follow the OpenQASM
 [measurement types](https://openqasm.com/language/insts.html#measurement).
 
 Bit registers use `!cbit.reg<N>` in QC. OpenQASM 2 initializes each register to
-zero. OpenQASM 3 leaves each register undefined until a statement writes it. A
-static read requires its bit to be initialized. A dynamic read requires the
-whole register to be initialized; writing one dynamic index does not prove that
-a later dynamic read accesses an initialized bit. Whole-register reads and
-writes lower to `cbit.read` and `cbit.write`. Standard integer operations
-represent computation, including all comparisons: `cbit.read` produces the
-snapshot, `arith.constant` the comparison constant, and `arith.cmpi` determines
-signedness. CBit operations carry storage memory effects. jeff legalization
-preserves native widths and promotes other widths up to 64 to 8, 16, 32, or 64
-bits, masking results to retain exact-width semantics. Wider
-register-versus-constant comparisons remain supported; wider general integer
-expressions are rejected. Integer-to-floating-point casts (for example, using a
-runtime population count as a rotation angle) remain outside the jeff subset.
-Explicit outputs and implicit global outputs are returned by the entry function;
-internal CBit allocations are not outputs. Other scalar outputs use builtin MLIR
-scalar types. Programs without classical outputs have a void entry function; a
-returned integer zero is ordinary output data. A scalar `qubit` lowers to
-`qc.alloc`, while `qubit[1]` remains a one-element qubit register.
+zero. Whole-register reads and writes lower to `cbit.read` and `cbit.write`.
+Standard integer operations represent computation, including all comparisons:
+`cbit.read` produces the snapshot, `arith.constant` the comparison constant, and
+`arith.cmpi` determines signedness. CBit operations carry storage memory
+effects. jeff legalization preserves native widths and promotes other widths up
+to 64 to 8, 16, 32, or 64 bits, masking results to retain exact-width semantics.
+Wider register-versus-constant comparisons remain supported; wider general
+integer expressions are rejected. Integer-to-floating-point casts (for example,
+using a runtime population count as a rotation angle) remain outside the jeff
+subset. Explicit outputs and implicit global outputs are returned by the entry
+function; internal CBit allocations are not outputs. Other scalar outputs use
+builtin MLIR scalar types. Programs without classical outputs have a void entry
+function; a returned integer zero is ordinary output data. A scalar `qubit`
+lowers to `qc.alloc`, while `qubit[1]` remains a one-element qubit register.
 
 ## Export OpenQASM
 
@@ -367,6 +313,18 @@ bypasses that QCO optimization round trip.
 | Constant tables           | Reads from non-empty constant rank-one `f64` tensors. Constant indices and splats become scalar values; other reads use switches with shared cases for equal values.                                                                                                |
 | Structured control        | `scf.if`, `scf.index_switch`, signed `scf.for` with positive constant steps, and general two-region `scf.while`, including scalar arguments and results. Index switches use native `switch`, `case`, and `default`.                                                 |
 | Results                   | Multiple scalar and bit-register outputs using the canonical type and naming rules below.                                                                                                                                                                           |
+
+DD simulation and Adaptive QIR support array storage. Adaptive QIR uses native
+stack storage, bounded by the frontend element limit to 800,000 bytes of array
+payload per invocation. Targets must support arrays and their element types;
+dynamic indices also require loop support. See the
+[QIR conversion contracts](Conversions.md#qir-conversions).
+
+OpenQASM, Qiskit, jeff, and Base QIR export require array storage to be
+eliminated. Compiler cleanup promotes eligible arrays to scalar values and folds
+constants. With LLVM/MLIR 23.1, promotion requires at most 16 elements, constant
+indices, and supported uses. Call `program.cleanup()` before `to_qiskit()`;
+Qiskit export itself only folds scalar expressions.
 
 Export retains private gate-shaped helper functions. Other defined helpers,
 including functions with integer or register arguments or classical results, are

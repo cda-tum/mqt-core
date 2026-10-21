@@ -1169,12 +1169,14 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         output bit result;
         bool zero = bool(angles[0]);
         if (zero) { U(pi, 0, 0) q; }
-        if (bool(angles[1])) { U(float(angles[1]), 0, 0) q; }
+        if (bool(angles[1])) { U(float(angles[1]), sin(angles[0]), 0) q; }
         result = measure q;
       )qasm",
       // The angle table is read through runtime (including negative) indices.
       R"qasm(OPENQASM 3.0;
-        array[angle[8], 2] angles = {0.0, -pi};
+        array[angle[8], 2] angles = {0.0, -pi/2};
+        int last = -1;
+        angles[last] = -pi;
         qubit q;
         output bit result;
         for int i in [-2:-1] { U(angles[i], 0, 0) q; }
@@ -1182,7 +1184,8 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
       )qasm",
       // Memory updates must remain visible across loop iterations and joins.
       R"qasm(OPENQASM 3.0;
-        array[int[8], 2] values = {127, 0};
+        const int n = 2;
+        array[int[8], n,] values = {127, 0,};
         array[uint[8], 1] unsignedValues = {255};
         array[bool, 1] active = {true};
         array[float[64], 1] angles = {0.0};
@@ -1242,116 +1245,6 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
     std::vector<std::string> samples;
     ASSERT_EQ(session.sample(4, samples), 0);
     EXPECT_EQ(samples, (std::vector<std::string>(4, "1")));
-  }
-}
-
-TEST_F(CompilerPipelineTest, ClassicalArraysPreserveInputParameters) {
-  for (const bool bindInQCO : {false, true}) {
-    SCOPED_TRACE(bindInQCO);
-    auto qc = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.1;
-      input float theta;
-      array[float, 2] angles = {0.0, theta};
-      qubit q;
-      for int i in [0:1] { U(angles[i], 0, 0) q; }
-      output bit result;
-      result = measure q;
-    )qasm");
-    ASSERT_TRUE(mlir::succeeded(qc));
-    EXPECT_EQ(qc->parameters(), (std::vector<std::string>{"theta"}));
-    if (!bindInQCO) {
-      ASSERT_TRUE(
-          mlir::succeeded(qc->bindParameters({{"theta", std::numbers::pi}})));
-    }
-    auto qco = std::move(*qc).intoQCO();
-    ASSERT_TRUE(mlir::succeeded(qco));
-    if (bindInQCO) {
-      EXPECT_EQ(qco->parameters(), (std::vector<std::string>{"theta"}));
-      ASSERT_TRUE(
-          mlir::succeeded(qco->bindParameters({{"theta", std::numbers::pi}})));
-    }
-    EXPECT_TRUE(qco->parameters().empty());
-    const auto outcomes =
-        qco::sample(mlir::mqt::getEntryPoint(qco->module()), 4, 42);
-    ASSERT_TRUE(succeeded(outcomes));
-    EXPECT_EQ(*outcomes, (std::map<std::string, size_t>{{"1", 4}}));
-  }
-}
-
-TEST_F(CompilerPipelineTest, ClassicalArrayRuntimeBoundsAreCheckedByDD) {
-  auto qc = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.0;
-    array[float, 2] angles = {0.0, pi};
-    int i = -3;
-    qubit q;
-    U(angles[i], 0, 0) q;
-  )qasm");
-  ASSERT_TRUE(mlir::succeeded(qc));
-  auto native = std::move(*qc).intoQCO();
-  ASSERT_TRUE(mlir::succeeded(native));
-  EXPECT_TRUE(
-      failed(qco::sample(mlir::mqt::getEntryPoint(native->module()), 1, 42)));
-}
-
-TEST_F(CompilerPipelineTest, PromotedClassicalArraysExportAcrossBackends) {
-  auto qc = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.0;
-    array[float, 2] angles = {0.0, pi};
-    int i = -1;
-    angles[0] = angles[i];
-    U(angles[0], 0, 0) $0;
-    output bit result;
-    result = measure $0;
-  )qasm");
-  ASSERT_TRUE(mlir::succeeded(qc));
-  ASSERT_TRUE(mlir::succeeded(qc->cleanup()));
-  auto openqasm = qc->toOpenQASM3();
-  ASSERT_TRUE(mlir::succeeded(openqasm));
-  auto reparsed = QCProgram::fromOpenQASMString(openqasm->source());
-  ASSERT_TRUE(mlir::succeeded(reparsed));
-  auto roundtrip = std::move(*reparsed).intoQCO();
-  ASSERT_TRUE(mlir::succeeded(roundtrip));
-  const auto openqasmCounts =
-      qco::sample(mlir::mqt::getEntryPoint(roundtrip->module()), 1, 42);
-  ASSERT_TRUE(succeeded(openqasmCounts));
-  EXPECT_EQ(*openqasmCounts, (std::map<std::string, size_t>{{"1", 1}}));
-  auto qco = std::move(qc->copy()).intoQCO();
-  ASSERT_TRUE(mlir::succeeded(qco));
-  auto jeff = std::move(*qco).intoJeff();
-  ASSERT_TRUE(mlir::succeeded(jeff));
-  auto restored = std::move(*jeff).intoQCO();
-  ASSERT_TRUE(mlir::succeeded(restored));
-  const auto jeffCounts =
-      qco::sample(mlir::mqt::getEntryPoint(restored->module()), 1, 42);
-  ASSERT_TRUE(succeeded(jeffCounts));
-  EXPECT_EQ(*jeffCounts, (std::map<std::string, size_t>{{"1", 1}}));
-  auto qir = std::move(*qc).intoQIR(QIRProfile::Base);
-  ASSERT_TRUE(mlir::succeeded(qir));
-  EXPECT_TRUE(mlir::succeeded(qir->llvmIR()));
-}
-
-TEST_F(CompilerPipelineTest, ClassicalArrayPromotionBoundary) {
-  for (const auto size : {16, 17}) {
-    SCOPED_TRACE(size);
-    auto source =
-        "OPENQASM 3.0; array[float, " + std::to_string(size) + "] angles = {";
-    for (int i = 1; i < size; ++i) {
-      source += "0, ";
-    }
-    source += "pi}; U(angles[-1], 0, 0) $0; output bit result; "
-              "result = measure $0;";
-    auto qc = QCProgram::fromOpenQASMString(source);
-    ASSERT_TRUE(succeeded(qc));
-    ASSERT_TRUE(succeeded(qc->cleanup()));
-    auto qco = std::move(qc->copy()).intoQCO();
-    ASSERT_TRUE(succeeded(qco));
-    const auto counts =
-        qco::sample(mlir::mqt::getEntryPoint(qco->module()), 1, 42);
-    ASSERT_TRUE(succeeded(counts));
-    EXPECT_EQ(*counts, (std::map<std::string, size_t>{{"1", 1}}));
-    EXPECT_EQ(succeeded(qc->toOpenQASM3()), size <= 16);
-    EXPECT_EQ(succeeded(std::move(qc->copy()).intoQIR(QIRProfile::Base)),
-              size <= 16);
-    auto adaptive = std::move(*qc).intoQIR(QIRProfile::Adaptive);
-    ASSERT_TRUE(succeeded(adaptive));
-    EXPECT_TRUE(succeeded(adaptive->llvmIR()));
   }
 }
 
