@@ -6,7 +6,7 @@
 #
 # Licensed under the MIT License
 
-FROM ghcr.io/astral-sh/uv:0.13.0 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.4 AS uv
 
 FROM ubuntu:26.04 AS python
 
@@ -15,6 +15,7 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/python \
     PATH=/opt/venv/bin:$PATH
 RUN apt-get update \
     && apt-get install --no-install-recommends -y ca-certificates \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' ca-certificates)" ge 20260816ubuntu0.26.04.1 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=uv /uv /uvx /bin/
 ARG UV_LINK_MODE=copy
