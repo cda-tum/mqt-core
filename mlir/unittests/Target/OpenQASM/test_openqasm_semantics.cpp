@@ -143,7 +143,7 @@ TEST(OpenQASMFrontendTest, KnownMeasurementSlicesInitializeSelectedBits) {
 
 TEST(OpenQASMFrontendTest, ClassicalArrayInitialization) {
   for (const auto* source : {
-           "array[int, 2] a; a[0] = 1; int result = a[0];",
+           "array[int, 2, 3] a; a[1, 2] = 4; int result = a[-1, -1];",
            "input float selector; int i = int(selector); "
            "array[int, 2] a = {1, 2}; "
            "if (selector > 0) { a[0] = 3; } else { a[1] = 4; } "
@@ -154,6 +154,9 @@ TEST(OpenQASMFrontendTest, ClassicalArrayInitialization) {
            "else { a[1] = 4; } int result = a[i];",
            "array[int, 1] a; for int i in [0:1] { a[0] = 1; } "
            "int result = a[0];",
+           "array[int, 400, 400, 0] a;",
+           "array[int, 1, 1, 1, 1, 1, 1, 1,] a = {{{{{{{7,},},},},},},}; "
+           "int result = a[0, 0, 0, 0, 0, 0, -1,];",
        }) {
     SCOPED_TRACE(source);
     auto analyzed = openqasm::frontend::analyzeOpenQASM(
@@ -232,7 +235,30 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
               "array[float, 1] a = {0}; gate g q { U(a[0], 0, 0) q; }",
               "cannot capture",
           },
-          {"array[int, 2, 2] a;", "multidimensional"},
+          {"array[int, 0, -1] a;", "non-negative"},
+          {"array[int, 100000, 100000] a;", "element count exceeds"},
+          {"array[int, 1, 1, 1, 1, 1, 1, 1, 1] a;", "at most 7"},
+          {"array[int, 2, 2] a = {{1, 2}, {3}};", "initializer length"},
+          {"array[int, 2, 2] a = {1, 2};", "initializer length"},
+          {"array[int, 2] a = {{1}, {2}};", "scalar element"},
+          {"array[int, 1] a = {{{{{{{{1}}}}}}}};", "nesting exceeds"},
+          {"array[int, 2, 2] a; a[0] = 1;", "one index per dimension"},
+          {"array[int, 2] a; a[0, 0] = 1;", "one index per dimension"},
+          {"array[int, 2, 2] a; a[0, 2] = 1;", "out of bounds"},
+          {"array[int, 2, 2] a; a[-3, 0] = 1;", "out of bounds"},
+          {"array[int, 2, 2] a; a[0, 0.5] = 1;", "integer expression"},
+          {
+              "array[int, 2, 2] a; a[0, 1] = 1; int b = a[1, 0];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1, 2] a; a[0, 0] = 1; int i = 0; int b = a[0, i];",
+              "uninitialized",
+          },
+          {"array[int, 2, 2] a; a[0, 0, 0, 0, 0, 0, 0, 0] = 1;", "at most 7"},
+          {"bit[2] c = 0; c[0, 1] = true;", "only arrays"},
+          {"bit[2] c = 0; bool b = c[0, 1];", "only arrays"},
+          {"bit[2] c = 0; if (c[0, 1]) {}", "only arrays"},
           {"array[bit, 1] a;", "unsupported array element type"},
       });
   for (const auto& [source, diagnostic] : cases) {

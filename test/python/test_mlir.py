@@ -249,11 +249,11 @@ result = measure q;
 def test_promoted_array_exports(backend: str) -> None:
     """Preserve a copied array entry across export backends."""
     program = QCProgram.from_openqasm_str("""OPENQASM 3.0;
-array[float, 2] angles = {0.0, pi};
+array[float, 2, 2] angles = {{0.0, 0.0}, {0.0, pi}};
 int i = -1;
-angles[0] = angles[i];
+angles[0, 0] = angles[1, i];
 qubit q;
-U(angles[0], 0, 0) q;
+U(angles[0, 0], 0, 0) q;
 output bit result;
 result = measure q;
 """)

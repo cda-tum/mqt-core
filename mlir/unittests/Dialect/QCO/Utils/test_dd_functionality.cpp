@@ -3523,17 +3523,19 @@ TEST_F(QCODDFunctionalityTest, QTensorFlowsThroughLoopAndCall) {
   EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"1", 4}}));
 }
 
-TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
+TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefCallsShareStorage) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @set(%reg: memref<?xi16>, %value: i16) {
-        %zero = arith.constant 0 : index
-        memref.store %value, %reg[%zero] : memref<?xi16>
+      func.func @set(%reg: memref<?x3xi16>, %value: i16) {
+        %row = arith.constant 1 : index
+        %column = arith.constant 2 : index
+        memref.store %value, %reg[%row, %column] : memref<?x3xi16>
         return
       }
       func.func @main() {
-        %one = arith.constant 1 : index
-        %reg = memref.alloc(%one) : memref<?xi16>
+        %row = arith.constant 1 : index
+        %column = arith.constant 2 : index
+        %reg = memref.alloc(%column) : memref<?x3xi16>
         %three = arith.constant 3 : i16
         %four = arith.constant 4 : i16
         %seven = arith.addi %three, %four : i16
@@ -3550,9 +3552,8 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
         %narrow = arith.trunci %wide : i32 to i16
         %as_float = arith.sitofp %narrow : i16 to f64
         %back = arith.fptosi %as_float : f64 to i16
-        func.call @set(%reg, %quotient) : (memref<?xi16>, i16) -> ()
-        %zero = arith.constant 0 : index
-        %stored = memref.load %reg[%zero] : memref<?xi16>
+        func.call @set(%reg, %quotient) : (memref<?x3xi16>, i16) -> ()
+        %stored = memref.load %reg[%row, %column] : memref<?x3xi16>
         %expected = arith.constant 7 : i16
         %integer_ok = arith.cmpi eq, %stored, %expected : i16
         %casts_ok = arith.cmpi eq, %back, %remainder : i16
@@ -3583,7 +3584,7 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
         }
-        memref.dealloc %reg : memref<?xi16>
+        memref.dealloc %reg : memref<?x3xi16>
         qco.sink %q1 : !qco.qubit
         return
       }
@@ -3592,6 +3593,47 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
                                          context.get());
   ASSERT_TRUE(mod);
   expectSimulatesFromZero(mainFunc(*mod), true);
+}
+
+TEST_F(QCODDFunctionalityTest,
+       EmptyMultidimensionalMemRefsDoNotOverflowElementCount) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main() {
+      %zero = arith.constant 0 : index
+      %huge = arith.constant 4294967296 : index
+      %heap = memref.alloc(%huge, %huge, %zero) : memref<?x?x?xi1>
+      %stack = memref.alloca() : memref<4294967296x4294967296x0xi1>
+      memref.dealloc %heap : memref<?x?x?xi1>
+      return
+    }
+  })mlir",
+                                              context.get());
+  ASSERT_TRUE(moduleOp);
+  EXPECT_TRUE(succeeded(sample(mainFunc(*moduleOp), 1, 1)));
+}
+
+TEST_F(QCODDFunctionalityTest,
+       MultidimensionalMemRefsRejectInvalidShapesAndIndices) {
+  for (const auto* body : {
+           "%reg = memref.alloc(%zero, %negative) : memref<?x?xi1>",
+           "%reg = memref.alloc(%huge, %huge) : memref<?x?xi1>",
+           "%reg = memref.alloc() : memref<2x3xi1, strided<[4, 1]>>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "memref.store %true, %reg[%zero, %three] : memref<2x3xi1>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "memref.store %true, %reg[%one, %negative] : memref<2x3xi1>",
+       }) {
+    SCOPED_TRACE(body);
+    expectMlirSimulationFails(0, std::string(R"mlir(module { func.func @main() {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %two = arith.constant 2 : index
+      %three = arith.constant 3 : index
+      %negative = arith.constant -1 : index
+      %huge = arith.constant 4294967296 : index
+      %true = arith.constant true
+    )mlir") + body + " return } }");
+  }
 }
 
 TEST_F(QCODDFunctionalityTest, BindingsDriveObservableClassicalPath) {
