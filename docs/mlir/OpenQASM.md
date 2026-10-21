@@ -113,11 +113,14 @@ remaining dimensions must match. Chained and parenthesized concatenations,
 runtime ranges, and repeated operands are supported. Assignments such as
 `a = a[2:] ++ a[:1];` preserve the original source values.
 
-`sizeof(a)` returns the first dimension's length as a compile-time `uint`;
-`sizeof(a, d)` selects a zero-based, compile-time integer dimension. Subarrays
-and fixed ranges are supported, including zero-length dimensions. The query does
-not read array elements, so the array need not be initialized. The queried
-extent must be known at compile time.
+`sizeof(a)` returns the first dimension's length as a `uint`; `sizeof(a, d)`
+selects a zero-based, compile-time integer dimension. Subarrays and ranges are
+supported, including zero-length dimensions. The query does not read array
+elements, so the array need not be initialized. The queried extent is constant
+when known at compile time. A runtime-sized range, such as `sizeof(a[:i])`,
+returns a runtime value and cannot set a fixed array size or a `const`
+initializer. Its queried range has the same bounds and step preconditions as
+array copies.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
