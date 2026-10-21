@@ -219,6 +219,12 @@ function(mqt_copy_qdmi_runtime target)
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<REMOVE_DUPLICATES:${files}>"
               "$<TARGET_FILE_DIR:${target}>"
       COMMAND_EXPAND_LISTS VERBATIM)
+    # Consumers can share an output directory; copies of one library must not overlap.
+    get_target_property(previous_stage ${library_target} _MQT_QDMI_LAST_STAGE)
+    if(previous_stage)
+      add_dependencies(${staging_target} ${previous_stage})
+    endif()
+    set_property(TARGET ${library_target} PROPERTY _MQT_QDMI_LAST_STAGE ${staging_target})
     if(NOT imported)
       add_dependencies(${staging_target} ${library_target})
     endif()
