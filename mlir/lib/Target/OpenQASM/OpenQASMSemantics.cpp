@@ -3872,14 +3872,16 @@ private:
                   "array copy requires matching shapes and element types");
     }
     const auto& initialized = *initializedBits[arrayStateSlots_[source->id]];
-    const auto sourceMask = arraySelectionMask(source->id, sourceIndices);
-    const bool sourceInitialized =
-        sourceMask ? !sourceMask->test(initialized) : initialized.all();
-    if (!sourceInitialized) {
-      return fail(location, "array copy source has uninitialized elements");
+    if (!initialized.all()) {
+      const auto sourceMask = arraySelectionMask(source->id, sourceIndices);
+      if (!sourceMask || sourceMask->test(initialized)) {
+        return fail(location, "array copy source has uninitialized elements");
+      }
     }
-    if (const auto mask = arraySelectionMask(target, targetIndices)) {
-      mutableBitInitialization(arrayStateSlots_[target]) |= *mask;
+    if (!initializedBits[arrayStateSlots_[target]]->all()) {
+      if (const auto mask = arraySelectionMask(target, targetIndices)) {
+        mutableBitInitialization(arrayStateSlots_[target]) |= *mask;
+      }
     }
     MQT_OQ3_TRY_ASSIGN(
         statement,
