@@ -22,14 +22,14 @@ namespace mqt::bench {
 
 /// Parameters for a QAOA benchmark for MaxCut on a cycle graph.
 struct QAOAOptions {
-  /// Largest depth representable by the signed 64-bit angle-array dimension.
+  /// Maximum supported depth.
   static constexpr size_t MAX_DEPTH =
       static_cast<size_t>(std::numeric_limits<int64_t>::max());
 
   /// Number of vertices and qubits, at least three and within signed 64-bit
   /// circuit dimensions.
   size_t qubits;
-  /// Number of cost and mixer layers, from one through MAX_DEPTH.
+  /// Number of cost-mixer layers.
   size_t depth = 1;
 };
 

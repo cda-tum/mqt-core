@@ -33,8 +33,7 @@ void registerQAOA(const nb::module_& m) {
           "The cycle's number of vertices, at least three and representable "
           "as a signed 64-bit integer.")
       .def_ro("depth", &bench::QAOAOptions::depth,
-              "The number of cost-mixer layers, positive and representable "
-              "as a signed 64-bit integer.");
+              "The number of cost-mixer layers.");
 
   nb::class_<bench::QAOAEvaluation>(m, "Evaluation",
                                     "The sampled cut quality on a cycle graph.")

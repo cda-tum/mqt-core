@@ -23,7 +23,7 @@ class Options:
 
     @property
     def depth(self) -> int:
-        """The number of cost-mixer layers, positive and representable as a signed 64-bit integer."""
+        """The number of cost-mixer layers."""
 
 class Evaluation:
     """The sampled cut quality on a cycle graph."""
