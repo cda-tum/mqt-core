@@ -555,6 +555,10 @@ registers its conversion passes so they can be selected for debugging.
 
 #### Compiler profiling
 
+Use pass timing and statistics below for routine performance analysis. Detailed
+action traces also record rewrite attempts and iterations; enable them when
+investigating compiler internals.
+
 Record MLIR pass and rewrite actions with the
 [native action profiler](https://mlir.llvm.org/docs/ActionTracing/):
 
@@ -581,8 +585,9 @@ Select a slice to see its duration and the pass or rewrite name in `args.desc`.
 MLIR action trace from a 24-qubit compilation, viewed in Perfetto.
 ```
 
-Tracing is disabled by default and adds recording overhead. The file is closed
-on normal success or pass failure; a crash or forced termination can leave it
+By default, MQT installs neither a profiling handler nor pass-logging
+instrumentation. Enabling tracing adds recording overhead. The file is closed on
+normal success or pass failure; a crash or forced termination can leave it
 incomplete. The trace covers actions on the compiler context, including
 conversion passes, but does not time every parsing or serialization operation.
 `profile_actions_to` applies to the coordinated compilation pipeline, including

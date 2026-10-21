@@ -33,6 +33,7 @@
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Debug/CLOptionsSetup.h"
+#include "mlir/Debug/Counter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
@@ -535,8 +536,12 @@ static int runCompiler(int argc, char** argv) {
   auto context = createCompilerContext();
   SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, context.get());
   std::optional<tracing::InstallDebugHandler> debugHandler;
+  const auto debugConfig = tracing::DebugConfig::createFromCLOptions();
   bool debugSetupFailed = false;
-  {
+  if (!debugConfig.getLogActionsTo().empty() ||
+      !debugConfig.getProfileActionsTo().empty() ||
+      debugConfig.isDebuggerActionHookEnabled() ||
+      tracing::DebugCounter::isActivated()) {
     ScopedDiagnosticHandler setupDiagnosticHandler(
         context.get(), [&](Diagnostic& diagnostic) {
           if (diagnostic.getSeverity() == DiagnosticSeverity::Error) {
@@ -544,7 +549,7 @@ static int runCompiler(int argc, char** argv) {
           }
           return failure();
         });
-    debugHandler.emplace(*context, tracing::DebugConfig::createFromCLOptions());
+    debugHandler.emplace(*context, debugConfig);
   }
   if (debugSetupFailed) {
     return 1;

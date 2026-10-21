@@ -393,7 +393,7 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
                        const CompilationOptions& options) {
   std::optional<llvm::raw_fd_ostream> profileStream;
   std::optional<tracing::ActionProfiler> profiler;
-  tracing::ExecutionContext executionContext;
+  std::optional<tracing::ExecutionContext> executionContext;
   std::shared_ptr<MLIRContext> profileContext;
   MLIRContext::HandlerTy previousHandler;
   const llvm::scope_exit restoreHandler([&] {
@@ -411,7 +411,7 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
       return failure();
     }
     profiler.emplace(*profileStream);
-    executionContext.registerObserver(&*profiler);
+    executionContext.emplace().registerObserver(&*profiler);
   }
   const auto profileProgram = [&](const Program& input) {
     if (!profiler) {
@@ -422,7 +422,7 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
     profileContext->registerActionHandler(
         [&](llvm::function_ref<void()> transform,
             const tracing::Action& action) {
-          executionContext(
+          (*executionContext)(
               [&] {
                 if (previousHandler) {
                   previousHandler(transform, action);
