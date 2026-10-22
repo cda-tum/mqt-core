@@ -3552,7 +3552,9 @@ TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefCallsShareStorage) {
         %row = arith.constant 1 : index
         %column = arith.constant 2 : index
         %reg = memref.alloc(%column) : memref<?x3xi16>
-        %target = memref.alloc(%column) : memref<?x3xi16>
+        %zero = arith.constant 0 : index
+        %rows = memref.dim %reg, %zero : memref<?x3xi16>
+        %target = memref.alloc(%rows) : memref<?x3xi16>
         %three = arith.constant 3 : i16
         %four = arith.constant 4 : i16
         %seven = arith.addi %three, %four : i16
@@ -3654,6 +3656,12 @@ TEST_F(QCODDFunctionalityTest,
            "%reg = memref.alloc() : memref<2x3xi1> "
            "%view = memref.subview %reg[0, 0][2, 1][%huge, 1] "
            ": memref<2x3xi1> to memref<2xi1, strided<[?]>>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "%dim = arith.addi %negative, %zero : index "
+           "%size = memref.dim %reg, %dim : memref<2x3xi1>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "%dim = arith.addi %two, %zero : index "
+           "%size = memref.dim %reg, %dim : memref<2x3xi1>",
        }) {
     SCOPED_TRACE(body);
     expectMlirSimulationFails(0, std::string(R"mlir(module { func.func @main() {

@@ -116,8 +116,8 @@ TEST(OpenQASMTargetTest, RangeCopiesReuseScratchOutsideLoops) {
   MLIRContext context;
   auto moduleOp = qc::translateOpenQASMToQC(
       "OPENQASM 3.0; array[int, 4] a = {1, 2, 3, 4}; "
-      "a[1:] = a[:2]; for int i in [0:2] { a[:2] = a[1:]; }",
-      &context, {.maxOperations = 64});
+      "for int i in [0:2] { a[i+1:] = a[:2-i]; } a[1:] = a[:2];",
+      &context, {.maxOperations = 256});
   ASSERT_TRUE(moduleOp);
   EXPECT_TRUE(succeeded(verify(*moduleOp)));
   size_t allocations = 0;
