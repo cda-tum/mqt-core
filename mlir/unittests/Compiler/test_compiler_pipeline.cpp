@@ -1149,26 +1149,39 @@ TEST_F(CompilerPipelineTest, BasePromotesUnrolledClassicalArrays) {
 }
 
 TEST_F(CompilerPipelineTest, BaseRejectsDynamicAndExcessiveLoopExpansion) {
-  for (const std::string bound : {
-           "%end = arith.constant 1000000002 : index",
-           "%control = qc.alloc : !qc.qubit\n"
-           "%m = qc.measure %control : !qc.qubit -> i1\n"
-           "qc.dealloc %control : !qc.qubit\n"
-           "%end = arith.index_castui %m : i1 to index",
-       }) {
+  for (const bool dynamic : {false, true}) {
+    const std::string bound =
+        dynamic ? "%control = qc.alloc : !qc.qubit\n"
+                  "%m = qc.measure %control : !qc.qubit -> i1\n"
+                  "qc.dealloc %control : !qc.qubit\n"
+                  "%measured = arith.index_castui %m : i1 to index\n"
+                  "%end = arith.addi %measured, %three : index"
+                : "%end = arith.constant 1000000002 : index";
     auto qc = QCProgram::fromMLIRString(
         "module { func.func @main() attributes {mqt.entry_point} {\n"
         "%zero = arith.constant 0 : index\n"
         "%one = arith.constant 1 : index\n"
+        "%three = arith.constant 3 : index\n"
         "%q = qc.alloc : !qc.qubit\n" +
         bound +
         "\n"
         "scf.for %i = %zero to %end step %one {\n"
-        "  qc.x %q : !qc.qubit\n"
+        "  scf.for %j = %zero to %three step %one {\n"
+        "    qc.x %q : !qc.qubit\n"
+        "  }\n"
         "}\n"
         "qc.dealloc %q : !qc.qubit\n"
         "return }}");
     ASSERT_TRUE(succeeded(qc));
+    if (dynamic) {
+      ASSERT_TRUE(succeeded(runWithPassManager(
+          qc->module(),
+          [](OpPassManager& pm) { populateQIRPreparationPipeline(pm, false); },
+          "failed to prepare Base QIR")));
+      unsigned remainingLoops = 0;
+      qc->module().walk([&](scf::ForOp) { ++remainingLoops; });
+      EXPECT_EQ(remainingLoops, 2U);
+    }
     EXPECT_TRUE(failed(std::move(*qc).intoQIR(QIRProfile::Base)));
   }
 }

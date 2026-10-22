@@ -96,7 +96,7 @@ add_mlir_library(
   MLIRSCFDialect
   MLIRSupport
   MLIRTensorDialect
-  MLIRTransformUtils)
+  MLIRTransforms)
 
 mqt_mlir_target_use_project_options(MQTCompilerPrograms)
 

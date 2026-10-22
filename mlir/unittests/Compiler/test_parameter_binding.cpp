@@ -11,6 +11,7 @@
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
+#include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
 
 #include "gtest/gtest.h"
 
@@ -205,11 +206,28 @@ TEST(ParameterBinding, InvalidBindingDoesNotChangeProgram) {
   EXPECT_EQ(qc->str(), before);
 }
 
-TEST(ParameterBinding, RejectsNonFiniteFoldedGateParameters) {
+TEST(ParameterBinding, RejectsReachableNonFiniteGateParameters) {
   auto qc = mlir::QCProgram::fromOpenQASMString(
       "OPENQASM 3.1; input float theta; qubit q; ry(1.0 / theta) q;");
   ASSERT_TRUE(mlir::succeeded(qc));
   EXPECT_TRUE(mlir::failed(qc->bindParameters({{"theta", 0.0}})));
+
+  qc = mlir::QCProgram::fromOpenQASMString(
+      "OPENQASM 3.1; input float theta; input float unused; qubit q; "
+      "if (theta != 0) { ry(1.0 / theta) q; } else { x q; } "
+      "output bit result; result = measure q;");
+  ASSERT_TRUE(mlir::succeeded(qc));
+  auto qco = qc->copy().intoQCO();
+  ASSERT_TRUE(mlir::succeeded(qco));
+  ASSERT_TRUE(mlir::succeeded(qc->bindParameters({{"theta", 0.0}})));
+  EXPECT_EQ(qc->parameters(), (std::vector<std::string>{"unused"}));
+  ASSERT_TRUE(mlir::succeeded(qco->bindParameters({{"theta", 0.0}})));
+  EXPECT_EQ(qco->parameters(), (std::vector<std::string>{"unused"}));
+  ASSERT_TRUE(mlir::succeeded(qco->bindParameters({{"unused", 1.0}})));
+  const auto samples =
+      mlir::qco::sample(mlir::mqt::getEntryPoint(qco->module()), 4, 42);
+  ASSERT_TRUE(mlir::succeeded(samples));
+  EXPECT_EQ(samples->at("1"), 4);
 }
 
 TEST(ParameterBinding, QIRRequiresBoundParameters) {

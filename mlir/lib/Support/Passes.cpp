@@ -103,6 +103,10 @@ class UnrollBaseLoopsPass final
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(UnrollBaseLoopsPass)
 
+  [[nodiscard]] StringRef getArgument() const override {
+    return "unroll-base-loops";
+  }
+
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<arith::ArithDialect, scf::SCFDialect>();
   }
@@ -124,9 +128,9 @@ protected:
       getOperation().walk<WalkOrder::PreOrder>([&](scf::ForOp loop) {
         if (mqt::getExactConstantTripCount(loop)) {
           loops.push_back(loop);
-          return WalkResult::skip();
         }
-        return WalkResult::advance();
+        // Base QIR cannot retain an unresolved outer loop.
+        return WalkResult::skip();
       });
       if (loops.empty()) {
         return;
@@ -201,6 +205,7 @@ void registerMQTCompilerPasses() {
   static const auto REGISTERED = [] {
     registerTransformsPasses();
     registerPass([] { return std::make_unique<PromoteClassicalMemoryPass>(); });
+    registerPass([] { return std::make_unique<UnrollBaseLoopsPass>(); });
     registerConvertCBitToMemRef();
     qco::registerCombineControlledGates();
     qco::registerDecomposeMultiControlled();
