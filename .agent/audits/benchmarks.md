@@ -103,9 +103,10 @@ expose reversed bit order. Existing structural checks remain intact.
 Applied in `mlir/bench/programs/QFTUtils.cpp`, `phaseAdditionLoop`.
 
 The loop separately emitted `phase/2 + pi*bit`, already implemented by
-`advancePhaseCorrection`. Calling that helper preserves the same operations,
-types, order, and loop shape without adding an interface. Existing arithmetic
-and phase-sensitive tests cover the consumers.
+`advancePhaseCorrection`. Calling that helper preserves the floating-point
+operations, types, and loop shape without adding an interface. Bit extraction
+now precedes the independent halving operation. Existing arithmetic and
+phase-sensitive tests cover the consumers.
 
 ### 6. Centralize the parameter-object schema constraints
 

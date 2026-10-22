@@ -25,6 +25,7 @@ using namespace mlir;
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define MQT_BENCHMARK_FAMILY(TYPE, STEM, ID, DEFINITION_VERSION)               \
   class TYPE;                                                                  \
+  /** Emit the configured TYPE benchmark. */                                   \
   SmallVector<Value> STEM(qc::QCProgramBuilder& builder, const TYPE& benchmark);
 // NOLINTEND(bugprone-macro-parentheses)
 #include "bench/BenchmarkFamilies.inc"
