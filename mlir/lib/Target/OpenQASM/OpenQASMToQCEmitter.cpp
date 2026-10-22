@@ -1882,11 +1882,80 @@ private:
     return scratch;
   }
 
-  void emitArrayCopy(const frontend::ArrayCopyStatement& statement) {
-    if (llvm::is_contained(program.arrays.at(statement.source).shape, 0)) {
+  [[nodiscard]] bool
+  isEmptyArraySource(const frontend::ArrayCopySource& source) const {
+    return llvm::is_contained(program.arrays.at(source.array).shape, 0);
+  }
+
+  void emitArrayConcatenation(const frontend::ArrayCopyStatement& statement) {
+    SmallVector<Value> sources;
+    for (const auto& source : statement.sources) {
+      if (isEmptyArraySource(source)) {
+        continue;
+      }
+      auto view = emitArrayView(source.array, source.indices);
+      if (!view || emissionBudget.isExhausted()) {
+        return;
+      }
+      sources.push_back(view);
+    }
+    if (sources.empty()) {
       return;
     }
-    auto source = emitArrayView(statement.source, statement.sourceIndices);
+    auto target = emitArrayView(statement.target, statement.targetIndices);
+    if (!target || emissionBudget.isExhausted()) {
+      return;
+    }
+    auto targetType = cast<MemRefType>(target.getType());
+    auto zero = arith::ConstantIndexOp::create(builder, 0);
+    const bool overlaps =
+        llvm::any_of(statement.sources, [&](const auto& source) {
+          return source.array == statement.target;
+        });
+    Value result = target;
+    if (overlaps) {
+      result = emitArraySnapshot(statement.target, target);
+    }
+    Value offset = zero;
+    for (const auto [index, source] : llvm::enumerate(sources)) {
+      if (emissionBudget.isExhausted()) {
+        return;
+      }
+      SmallVector<OpFoldResult> offsets(targetType.getRank(),
+                                        builder.getIndexAttr(0));
+      offsets.front() = getAsOpFoldResult(offset);
+      auto sizes = memref::getMixedSizes(builder, builder.getLoc(), source);
+      if (index + 1 == sources.size()) {
+        // Use the remaining destination extent. The last memref.copy carries
+        // the matching-shape precondition for runtime-sized sources.
+        sizes.front() = getAsOpFoldResult(builder.createOrFold<arith::SubIOp>(
+            builder.createOrFold<memref::DimOp>(result, 0), offset));
+      }
+      SmallVector<OpFoldResult> strides(targetType.getRank(),
+                                        builder.getIndexAttr(1));
+      auto type = memref::SubViewOp::inferResultType(
+          cast<MemRefType>(result.getType()), offsets, sizes, strides);
+      auto view = memref::SubViewOp::create(builder, type, result, offsets,
+                                            sizes, strides);
+      memref::CopyOp::create(builder, source, view);
+      offset = builder.createOrFold<arith::AddIOp>(
+          offset, builder.createOrFold<memref::DimOp>(source, 0));
+    }
+    if (overlaps) {
+      memref::CopyOp::create(builder, result, target);
+    }
+  }
+
+  void emitArrayCopy(const frontend::ArrayCopyStatement& statement) {
+    if (statement.sources.size() > 1) {
+      emitArrayConcatenation(statement);
+      return;
+    }
+    const auto& input = statement.sources.front();
+    if (isEmptyArraySource(input)) {
+      return;
+    }
+    auto source = emitArrayView(input.array, input.indices);
     auto target = emitArrayView(statement.target, statement.targetIndices);
     if (source && target && source != target && !emissionBudget.isExhausted()) {
       const auto isPrefix = [&](frontend::ArrayId array,
@@ -1905,11 +1974,11 @@ private:
         }
         return true;
       };
-      if (statement.source == statement.target &&
-          (!isPrefix(statement.source, statement.sourceIndices) ||
+      if (input.array == statement.target &&
+          (!isPrefix(input.array, input.indices) ||
            !isPrefix(statement.target, statement.targetIndices))) {
         // Capture the RHS before an overlapping assignment changes it.
-        auto snapshot = emitArraySnapshot(statement.source, source);
+        auto snapshot = emitArraySnapshot(input.array, source);
         if (emissionBudget.isExhausted()) {
           return;
         }

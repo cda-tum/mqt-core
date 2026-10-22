@@ -107,6 +107,12 @@ no assertions are emitted. Runtime-selected sources must be fully initialized,
 and runtime-selected destinations establish no new definite-initialization
 facts.
 
+Use `a ++ b` to concatenate arrays or slices in an initializer or assignment.
+Concatenation joins the first retained dimension; element types and all
+remaining dimensions must match. Chained and parenthesized concatenations,
+runtime ranges, and repeated operands are supported. Assignments such as
+`a = a[2:] ++ a[:1];` preserve the original source values.
+
 `sizeof(a)` returns the first dimension's length as a compile-time `uint`;
 `sizeof(a, d)` selects a zero-based, compile-time integer dimension. Subarrays
 and fixed ranges are supported, including zero-length dimensions. The query does

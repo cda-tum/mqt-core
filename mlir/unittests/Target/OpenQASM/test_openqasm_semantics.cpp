@@ -231,6 +231,29 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
               "array[int, 2] a; uint n = sizeof(a); int x = a[0];",
               "uninitialized",
           },
+          {"array[int, 2] a = {1, 2}; a = a ++ a;", "matching shapes"},
+          {
+              "array[int, 1] a = {1}; array[uint, 2] b = a ++ a;",
+              "element types",
+          },
+          {
+              "array[int[8], 1] a = {1}; array[int[16], 2] b = a ++ a;",
+              "element types",
+          },
+          {
+              "array[int, 1, 2] a = {{1, 2}}; array[int, 2, 1] b = a ++ a;",
+              "matching shapes",
+          },
+          {
+              "array[int, 1] a = {1}; array[int, 2] b = a ++ 2;",
+              "array or subarray",
+          },
+          {
+              "array[int, 1] a = {1}; array[int, 2] b = a[0] ++ a;",
+              "matching shapes",
+          },
+          {"array[int, 2] a; a[0] = 1; a = a[0:0] ++ a[1:1];", "uninitialized"},
+          {"int a = 1 ++ 2;", "scalar arithmetic expression"},
           {"array[int, 2] a = {1, 2}; a = a[1:0];", "must not be empty"},
           {"array[int, 2] a = {1, 2}; a = a[0:-1:1];", "must not be empty"},
           {"array[int, 2] a = {1, 2}; a = a[0:0:1];", "must not be zero"},
