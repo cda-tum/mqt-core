@@ -371,11 +371,10 @@ Targets must support arrays and their element types; dynamic indices also
 require loop support. See the
 [QIR conversion contracts](Conversions.md#qir-conversions).
 
-OpenQASM export retains fixed-size stack arrays, element accesses, and strided
-copies, including overlapping assignments and concatenation. It snapshots loaded
-values before later writes and normalizes views on a copy of the IR. Arrays obey
-the frontend shape and element limits; integer bit patterns are preserved, and
-angles are emitted as floating-point radians.
+OpenQASM export supports fixed-size stack arrays, strided and overlapping
+copies, and concatenation without changing the input IR. It preserves loaded
+values across writes, follows the frontend array limits, retains integer bit
+patterns, and emits angles as floating-point radians.
 
 Qiskit, jeff, and Base QIR export require array storage to be eliminated.
 Compiler cleanup promotes eligible arrays to scalar values and folds constants.

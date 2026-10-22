@@ -530,12 +530,14 @@ TEST(OpenQASM3EmissionTest, RejectsArrayStorageOutsideTheSourceLimits) {
            "memref<1x1x1x1x1x1x1x1xi64>",
            "memref<100001xi64>",
            "memref<400x400xi64>",
+           "memref<60000xi64>",
        }) {
     SCOPED_TRACE(type);
     auto program = parseSourceString<ModuleOp>(
-        std::string("module { func.func @main() -> ") + type +
-            " attributes {mqt.entry_point} { %a = memref.alloca() : " + type +
-            " return %a : " + type + " } }",
+        std::string("module { func.func @main() -> (") + type + ", " + type +
+            ") attributes {mqt.entry_point} { %a = memref.alloca() : " + type +
+            " %b = memref.alloca() : " + type + " return %a, %b : " + type +
+            ", " + type + " } }",
         &context);
     ASSERT_TRUE(program);
     std::string diagnostic;
@@ -546,17 +548,6 @@ TEST(OpenQASM3EmissionTest, RejectsArrayStorageOutsideTheSourceLimits) {
     EXPECT_TRUE(failed(qc::translateQCToOpenQASM3(*program)));
     EXPECT_NE(diagnostic.find("array storage"), std::string::npos);
   }
-  auto program = parseSourceString<ModuleOp>(R"mlir(module {
-    func.func @main() -> (memref<60000xi64>, memref<60000xi64>)
-        attributes {mqt.entry_point} {
-      %a = memref.alloca() : memref<60000xi64>
-      %b = memref.alloca() : memref<60000xi64>
-      return %a, %b : memref<60000xi64>, memref<60000xi64>
-    }
-  })mlir",
-                                             &context);
-  ASSERT_TRUE(program);
-  EXPECT_TRUE(failed(qc::translateQCToOpenQASM3(*program)));
 }
 
 TEST(OpenQASM3EmissionTest, KeepsSnapshotAcrossSourceWrites) {
