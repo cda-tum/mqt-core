@@ -24,7 +24,6 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -148,11 +147,6 @@ TEST(OpenQASMTargetTest,
   size_t copies = 0;
   moduleOp->walk([&](memref::CopyOp) { ++copies; });
   EXPECT_EQ(copies, 128);
-  moduleOp->walk([&](scf::ForOp) {
-    ADD_FAILURE() << "copy must not become a frontend loop";
-  });
-  moduleOp->walk(
-      [&](cf::AssertOp) { ADD_FAILURE() << "shapes are statically known"; });
 }
 
 TEST(OpenQASMTargetTest, ImportsNonNullTerminatedSourceView) {

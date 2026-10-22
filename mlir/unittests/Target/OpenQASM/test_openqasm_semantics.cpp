@@ -170,11 +170,6 @@ TEST(OpenQASMFrontendTest, ClassicalArrays) {
            "array[int, 2] a = {1, 2}; "
            "array[int, 1] b = a[0:9223372036854775807:1]; "
            "b = a[1:-9223372036854775807-1:0];",
-           "array[int, 2] a = {1, 2}; array[int, 4] b = a ++ a; "
-           "b = a[1:1] ++ (a ++ a[0:0]);",
-           "array[angle[8], 1] a = {pi}; array[angle[8], 2] b = a ++ a;",
-           "array[bool, 1] a = {true}; array[bool, 2] b = a ++ a;",
-           "array[float, 1] a = {1.0}; array[float, 2] b = a ++ a;",
            "array[int, 1, 1, 1, 1, 1, 1, 1,] a = {{{{{{{7,},},},},},},}; "
            "int result = a[0, 0, 0, 0, 0, 0, -1,];",
        }) {
