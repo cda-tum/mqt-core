@@ -1185,7 +1185,7 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         array[int, 0, 2] noRows = {};
         array[int, 400, 400, 0] emptyTable;
         array[int, 400, 400, 0] emptyCopy = emptyTable[:, :, :];
-        int stride = -1;
+        int stride = -2;
         empty = emptyRow[:stride:];
         empty = emptyRow[:stride:] ++ empty;
         array[int, 0, 2] concatenated = noRows ++ noRows;
@@ -1312,6 +1312,9 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
       )qasm",
       R"qasm(OPENQASM 3.0;
         array[int, 2, 5] a;
+        gate by_size(t) q {
+          U(pi * float(sizeof(a[1, 0:int(t):int(t)])) / 2, 0, 0) q;
+        }
         qubit q;
         U(pi, 0, 0) q;
         bit measured = measure q;
@@ -1330,7 +1333,7 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
             sizeof(a[one, :sizeof(a[one, :one])-1]) == 2 &&
             sizeof(a[one, 4:low:0]) == 1 &&
             sizeof(a[one, 0:high:4]) == 1) {
-          U(pi * float(sizeof(a[one, :one])) / 2, 0, 0) q;
+          by_size(float(sizeof(a[one, :one])) / 2) q;
         }
         output bit result;
         result = measure q;

@@ -90,7 +90,8 @@ destination must have matching remaining dimensions and element types, including
 their widths. All selected source elements must be initialized. Whole-array
 arithmetic, compound assignments, and whole-array inputs or outputs are
 unsupported. To pass or return array values, select individual entries as gate
-parameters or scalar outputs; gate definitions cannot capture mutable arrays.
+parameters or scalar outputs. Gate definitions can query array dimensions but
+cannot access array elements.
 
 Use inclusive ranges to select entries in any dimension: `a[1:3]`, `a[0:2:4]`,
 or `a[:, 1]`. Bounds and steps may be runtime integers. Negative bounds count

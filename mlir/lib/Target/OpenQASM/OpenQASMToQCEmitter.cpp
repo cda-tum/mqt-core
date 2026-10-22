@@ -658,7 +658,8 @@ private:
     case frontend::ExpressionKind::ArraySize: {
       const auto& query =
           program.arraySizeQueries.at(expression.arraySizeQuery);
-      auto range = emitArrayRange(opBuilder, query.range, query.extent);
+      auto range =
+          emitArrayRange(opBuilder, query.range, query.extent, gateParameters);
       if (!range[1] || emissionBudget.isExhausted()) {
         return {};
       }
@@ -858,8 +859,8 @@ private:
   [[nodiscard]] Value
   emitClassicalIndex(OpBuilder& opBuilder,
                      const frontend::ExpressionId expression,
-                     const int64_t width) {
-    auto index = emitExpression(opBuilder, expression, {});
+                     const int64_t width, ValueRange gateParameters) {
+    auto index = emitExpression(opBuilder, expression, gateParameters);
     if (!index) {
       return {};
     }
@@ -885,7 +886,7 @@ private:
       return arith::ConstantIndexOp::create(opBuilder, builder.getLoc(),
                                             std::get<int64_t>(index.constant));
     }
-    auto indexValue = emitClassicalIndex(opBuilder, expression, extent);
+    auto indexValue = emitClassicalIndex(opBuilder, expression, extent, {});
     if (!indexValue) {
       return {};
     }
@@ -1389,7 +1390,7 @@ private:
     }
     auto index = emitClassicalIndex(
         builder, *reference.dynamicIndex,
-        static_cast<int64_t>(program.registers.at(reference.reg).width));
+        static_cast<int64_t>(program.registers.at(reference.reg).width), {});
     return index ? arith::IndexCastOp::create(builder, builder.getIndexType(),
                                               index)
                        .getResult()
@@ -1785,8 +1786,8 @@ private:
   /// Return offset, size, and stride under the runtime range preconditions.
   [[nodiscard]] std::array<Value, 3>
   emitArrayRange(OpBuilder& opBuilder, const frontend::ArrayRange& range,
-                 int64_t extent) {
-    auto step = emitExpression(opBuilder, range.step, {});
+                 int64_t extent, ValueRange gateParameters) {
+    auto step = emitExpression(opBuilder, range.step, gateParameters);
     if (!step) {
       return {};
     }
@@ -1804,7 +1805,8 @@ private:
         opBuilder, loc, arith::CmpIPredicate::sgt, step, zero);
     const auto bound = [&](std::optional<frontend::ExpressionId> expression,
                            Value fallback) -> Value {
-      return expression ? emitClassicalIndex(opBuilder, *expression, extent)
+      return expression ? emitClassicalIndex(opBuilder, *expression, extent,
+                                             gateParameters)
                         : fallback;
     };
     auto start =
@@ -1850,7 +1852,8 @@ private:
     SmallVector<int64_t> resultShape;
     for (const auto [dimension, index] : llvm::enumerate(selection)) {
       if (index.runtime) {
-        auto range = emitArrayRange(builder, *index.runtime, shape[dimension]);
+        auto range =
+            emitArrayRange(builder, *index.runtime, shape[dimension], {});
         if (!range[0]) {
           return {};
         }

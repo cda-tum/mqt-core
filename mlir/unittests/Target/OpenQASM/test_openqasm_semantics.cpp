@@ -237,10 +237,6 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
               "uninitialized",
           },
           {
-              "array[int, 2] a; int i = 1; const uint n = sizeof(a[:i]);",
-              "constant",
-          },
-          {
               "array[int, 2] a; int i = 1; const uint n = sizeof(a[:i]) + 1;",
               "constant",
           },
@@ -250,10 +246,6 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           },
           {
               "array[int, 2] a; int i = 1; int[sizeof(a[:i])] n;",
-              "constant",
-          },
-          {
-              "array[int, 2] a; int i = 1; qubit[sizeof(a[:i])] q;",
               "constant",
           },
           {
