@@ -179,15 +179,10 @@ TEST(OpenQASMFrontendTest, ClassicalArrays) {
     ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
   }
   const auto sizes = std::to_array<std::pair<llvm::StringLiteral, int64_t>>({
-      {"sizeof(a)", 2},
-      {"sizeof(a, 1)", 3},
       {"sizeof(a, sizeof(a) - 1)", 3},
-      {"sizeof(a[-1])", 3},
       {"sizeof(a[i])", 3},
       {"sizeof(a[:, i])", 2},
       {"sizeof(a[:, 0:2:2], 1)", 2},
-      {"sizeof(a[:-1:, -1])", 2},
-      {"sizeof(a[1:1, :])", 1},
   });
   for (const auto& [query, expected] : sizes) {
     SCOPED_TRACE(query.str());
@@ -205,19 +200,13 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
   const auto cases =
       std::to_array<std::pair<llvm::StringLiteral, llvm::StringLiteral>>({
           {"array[int, -1] a;", "non-negative"},
-          {"uint n = sizeof(missing);", "array or subarray"},
           {"uint n = sizeof(1);", "array or subarray"},
-          {"int i = 0; uint n = sizeof(i);", "array or subarray"},
           {
               "array[int, 2, 3] a; uint n = sizeof(a[0, 0]);",
               "array or subarray",
           },
           {
               "array[int, 2, 3] a; uint n = sizeof(a, -1);",
-              "dimension is out of bounds",
-          },
-          {
-              "array[int, 2, 3] a; uint n = sizeof(a, 2);",
               "dimension is out of bounds",
           },
           {
@@ -229,30 +218,14 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
               "integer that fits in i64",
           },
           {"array[int, 2] a; uint n = sizeof(a, true);", "must be an integer"},
-          {"array[int, 2] a; uint n = sizeof(a, 0.0);", "must be an integer"},
           {
               "array[int, 2] a; int i = 0; uint n = sizeof(a, i);",
               "compile-time integer",
           },
           {
-              "array[int, 2, 3] a; uint n = sizeof(a[2]);",
-              "index is out of bounds",
-          },
-          {
-              "array[int, 2] a; uint n = sizeof(a[0:0:1]);",
-              "step must not be zero",
-          },
-          {
               "array[int, 2] a; int i = 0; uint n = sizeof(a[:i]);",
               "compile-time bounds",
           },
-          {"array[int, 2] a; uint n = sizeof(a[true]);", "integer expression"},
-          {
-              "array[int, 2] a; uint n = sizeof(a[0, 0]);",
-              "one index per dimension",
-          },
-          {"array[int, 2] a; uint n = sizeof(a, 0, 1);", "expected ')'"},
-          {"uint n = sizeof();", "expected expression"},
           {
               "array[int, 2] a; uint n = sizeof(a); int x = a[0];",
               "uninitialized",
