@@ -510,6 +510,61 @@ programFromInput(const nb::object& program, const bool inplace) {
                            " is not supported.");
 }
 
+namespace {
+/// Python output choices include objects constructed outside the native
+/// compiler.
+enum class OutputFormat : uint8_t {
+  QCImport = static_cast<uint8_t>(mlir::ProgramFormat::QCImport),
+  QCO = static_cast<uint8_t>(mlir::ProgramFormat::QCO),
+  QCOOptimized = static_cast<uint8_t>(mlir::ProgramFormat::QCOOptimized),
+  QC = static_cast<uint8_t>(mlir::ProgramFormat::QC),
+  OpenQASM3 = static_cast<uint8_t>(mlir::ProgramFormat::OpenQASM3),
+  Jeff = static_cast<uint8_t>(mlir::ProgramFormat::Jeff),
+  QIRBase = static_cast<uint8_t>(mlir::ProgramFormat::QIRBase),
+  QIRAdaptive = static_cast<uint8_t>(mlir::ProgramFormat::QIRAdaptive),
+  Qiskit,
+};
+} // namespace
+
+/// Compile to QCO and export without the layout-invalidating QC cleanup.
+[[nodiscard]] static nb::object
+compileQiskitProgram(const nb::object& program, bool inplace,
+                     const std::string& qcoPipeline,
+                     const mlir::CompilationOptions& options,
+                     const mlir::TargetEnvironment* environment = nullptr) {
+  auto input = programFromInput(program, inplace);
+  std::visit(
+      [](const auto& value) {
+        if constexpr (std::is_base_of_v<mlir::Program,
+                                        std::remove_cvref_t<decltype(value)>>) {
+          if (value.module()->hasAttr("mqt.layout")) {
+            throw std::runtime_error(
+                "Qiskit output requires input without layout metadata; use "
+                "to_qiskit() for a layout-preserving conversion");
+          }
+        }
+      },
+      input);
+  auto qc = [&] {
+    const nb::gil_scoped_release release;
+    auto compiled = takeResult(mlir::runDefaultPipeline(
+        std::move(input),
+        environment == nullptr ? mlir::ProgramFormat::QCOOptimized
+                               : mlir::ProgramFormat::QCO,
+        qcoPipeline, options));
+    auto qco = std::move(std::get<mlir::QCOProgram>(compiled));
+    if (environment != nullptr) {
+      withDiagnostics<nb::exception_type::runtime_error>(
+          qco.module().getContext(), "Target compilation failed",
+          [&] { return qco.compileForTarget(*environment, options); });
+    }
+    return takeResult(std::move(qco).intoQC());
+  }();
+  return bindings::qiskit::exportCircuit(
+      std::move(qc), environment == nullptr ? nullptr : &environment->target(),
+      environment == nullptr ? nullptr : &environment->payloadSpecification());
+}
+
 /// Run the coordinated default pipeline and return a typed program.
 [[nodiscard]] static mlir::CompilerProgram
 compileProgram(const nb::object& program, const mlir::ProgramFormat output,
@@ -519,6 +574,19 @@ compileProgram(const nb::object& program, const mlir::ProgramFormat output,
   const nb::gil_scoped_release release;
   return takeResult(
       mlir::runDefaultPipeline(std::move(input), output, qcoPipeline, options));
+}
+
+/// Dispatch Python-only output construction at the binding boundary.
+[[nodiscard]] static nb::object
+compilePythonProgram(const nb::object& program, OutputFormat output,
+                     bool inplace, const std::string& qcoPipeline,
+                     mlir::CompilationOptions options) {
+  if (output == OutputFormat::Qiskit) {
+    return compileQiskitProgram(program, inplace, qcoPipeline, options);
+  }
+  return nb::cast(compileProgram(program,
+                                 static_cast<mlir::ProgramFormat>(output),
+                                 inplace, qcoPipeline, options));
 }
 
 /// Resolve an open device or registered ID.
@@ -534,14 +602,13 @@ compileProgram(const nb::object& program, const mlir::ProgramFormat output,
   throw nb::type_error("target must be a QDMI Device or registered device ID");
 }
 
-[[nodiscard]] static QDMI_Program_Format
-qdmiFormat(mlir::ProgramFormat output) {
+[[nodiscard]] static QDMI_Program_Format qdmiFormat(OutputFormat output) {
   switch (output) {
-  case mlir::ProgramFormat::OpenQASM3:
+  case OutputFormat::OpenQASM3:
     return QDMI_PROGRAM_FORMAT_QASM3;
-  case mlir::ProgramFormat::QIRBase:
+  case OutputFormat::QIRBase:
     return QDMI_PROGRAM_FORMAT_QIRBASEMODULE;
-  case mlir::ProgramFormat::QIRAdaptive:
+  case OutputFormat::QIRAdaptive:
     return QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE;
   default:
     throw nb::value_error("Explicit targets require an executable output: "
@@ -553,10 +620,23 @@ qdmiFormat(mlir::ProgramFormat output) {
 [[nodiscard]] static nb::object
 compileProgramForTarget(const nb::object& program, const nb::object& target,
                         std::optional<QDMI_Program_Format> programFormat,
-                        std::optional<mlir::ProgramFormat> output, bool inplace,
+                        std::optional<OutputFormat> output, bool inplace,
                         mlir::CompilationOptions options) {
   if (output && programFormat) {
     throw nb::value_error("Specify either output or program_format, not both");
+  }
+  if (output == OutputFormat::Qiskit && !nb::isinstance<qdmi::Device>(target) &&
+      !nb::isinstance<nb::str>(target)) {
+    const bool compilerTarget = nb::isinstance<mlir::CompilerTarget>(target);
+    const auto hardware =
+        compilerTarget
+            ? nb::cast<const mlir::CompilerTarget&>(target)
+            : bindings::qiskit::importTarget(target, nb::none(), std::nullopt);
+    const mlir::TargetEnvironment environment(
+        hardware, bindings::qiskit::payloadSpecification(
+                      compilerTarget ? nb::none() : target));
+    return compileQiskitProgram(program, inplace, "mqt-qco-default", options,
+                                &environment);
   }
   if (nb::isinstance<mlir::CompilerTarget>(target)) {
     if (!output && !programFormat) {
@@ -787,23 +867,21 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
       .value("BASE", mlir::QIRProfile::Base, "The QIR Base Profile.")
       .value("ADAPTIVE", mlir::QIRProfile::Adaptive,
              "The QIR Adaptive Profile.");
-  nb::enum_<mlir::ProgramFormat>(m, "OutputFormat",
-                                 "Default compiler output formats.")
-      .value("QC_IMPORT", mlir::ProgramFormat::QCImport,
+  nb::enum_<OutputFormat>(m, "OutputFormat", "Default compiler output formats.")
+      .value("QC_IMPORT", OutputFormat::QCImport,
              "QC directly after frontend import.")
-      .value("QCO", mlir::ProgramFormat::QCO,
+      .value("QCO", OutputFormat::QCO,
              "QCO immediately after conversion, before optimization.")
-      .value("QCO_OPTIMIZED", mlir::ProgramFormat::QCOOptimized,
+      .value("QCO_OPTIMIZED", OutputFormat::QCOOptimized,
              "QCO after the configured optimization pipeline.")
-      .value("QC", mlir::ProgramFormat::QC,
-             "QC after the optimized QCO round trip.")
-      .value("OPENQASM3", mlir::ProgramFormat::OpenQASM3,
+      .value("QC", OutputFormat::QC, "QC after the optimized QCO round trip.")
+      .value("OPENQASM3", OutputFormat::OpenQASM3,
              "OpenQASM 3 after the optimized QCO round trip.")
-      .value("JEFF", mlir::ProgramFormat::Jeff, "Serializable ``jeff`` MLIR.")
-      .value("QIR_BASE", mlir::ProgramFormat::QIRBase,
-             "QIR for the Base Profile.")
-      .value("QIR_ADAPTIVE", mlir::ProgramFormat::QIRAdaptive,
-             "QIR for the Adaptive Profile.");
+      .value("JEFF", OutputFormat::Jeff, "Serializable ``jeff`` MLIR.")
+      .value("QIR_BASE", OutputFormat::QIRBase, "QIR for the Base Profile.")
+      .value("QIR_ADAPTIVE", OutputFormat::QIRAdaptive,
+             "QIR for the Adaptive Profile.")
+      .value("QISKIT", OutputFormat::Qiskit, "A Qiskit QuantumCircuit.");
 
   nb::enum_<mlir::PayloadEncoding>(m, "PayloadEncoding",
                                    "Payload representation encoding.")
@@ -2104,8 +2182,8 @@ An existing QCO program is used without copying. See
 {py:meth}`QCOProgram.sample` for the shot, seed, histogram, and error
 contracts.)pb");
 
-  m.def("compile_program", &compileProgram, "program"_a, nb::kw_only(),
-        "output"_a = mlir::ProgramFormat::QC, "inplace"_a = false,
+  m.def("compile_program", &compilePythonProgram, "program"_a, nb::kw_only(),
+        "output"_a = OutputFormat::QC, "inplace"_a = false,
         "qco_pipeline"_a = "mqt-qco-default",
         "options"_a = mlir::CompilationOptions{},
         R"pb(
@@ -2126,7 +2204,8 @@ Args:
     options: Shared compilation controls.
 
 Returns:
-    A typed compiler program for the requested output format.
+    A Qiskit QuantumCircuit for ``OutputFormat.QISKIT``, otherwise a typed
+    compiler program for the requested output format.
 )pb");
 
   nb::class_<mlir::CompiledProgram>(
@@ -2160,7 +2239,13 @@ Returns:
   m.def("compile_program", &compileProgramForTarget, "program"_a, nb::kw_only(),
         "target"_a, "program_format"_a = nb::none(), "output"_a = nb::none(),
         "inplace"_a = false, "options"_a = mlir::CompilationOptions{},
-        R"pb(Compile for a device ID, open device, or explicit compiler target.
+        R"pb(Compile for a Qiskit backend, compiler target, or QDMI device.
+
+With ``output=OutputFormat.QISKIT``, ``target`` accepts a Qiskit BackendV2,
+Qiskit Target, or :class:`CompilerTarget` and returns a QuantumCircuit with
+physical qubits and layout metadata when available. Qiskit targets restrict control flow to
+their advertised instructions. An explicit CompilerTarget supplies gate and
+topology constraints but does not describe backend control-flow support.
 
 Device targets select Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
 (binary, text). Use ``program_format`` to select a format explicitly.

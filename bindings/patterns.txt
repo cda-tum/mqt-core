@@ -264,6 +264,15 @@ mqt.core.mlir.compile_program:
     ) -> QIRProgram: ...
     @overload
     def compile_program(
+        program: str | os.PathLike[str] | qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram,
+        *,
+        output: Literal[OutputFormat.QISKIT],
+        inplace: bool = False,
+        qco_pipeline: str = "mqt-qco-default",
+        options: CompilationOptions = ...,
+    ) -> qiskit.circuit.QuantumCircuit: ...
+    @overload
+    def compile_program(
         program: str
         | os.PathLike[str]
         | qiskit.circuit.QuantumCircuit
@@ -276,7 +285,7 @@ mqt.core.mlir.compile_program:
         inplace: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
-    ) -> QCProgram | QCOProgram | OpenQASMProgram | JeffProgram | QIRProgram:
+    ) -> QCProgram | QCOProgram | OpenQASMProgram | JeffProgram | QIRProgram | qiskit.circuit.QuantumCircuit:
         \doc
     @overload
     def compile_program(
@@ -297,6 +306,15 @@ mqt.core.mlir.compile_program:
         inplace: bool = False,
         options: CompilationOptions = ...,
     ) -> CompiledProgram: ...
+    @overload
+    def compile_program(
+        program: str | os.PathLike[str] | qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram,
+        *,
+        target: CompilerTarget | qiskit.providers.BackendV2 | qiskit.transpiler.Target,
+        output: Literal[OutputFormat.QISKIT],
+        inplace: bool = False,
+        options: CompilationOptions = ...,
+    ) -> qiskit.circuit.QuantumCircuit: ...
     @overload
     def compile_program(
         program: str | os.PathLike[str] | qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram,

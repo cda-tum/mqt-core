@@ -248,8 +248,8 @@ diagnostic. See {doc}`OpenQASM` for the complete support table.
 
 Install the optional Qiskit integration with {code}`mqt-core[qiskit]`. The extra
 also supports SDK uses with older Qiskit releases; direct compiler translation
-requires a registered version, currently Qiskit 2.5.x. These circuits can be
-translated between {py:class}`~qiskit.circuit.QuantumCircuit` and
+requires a version listed in {doc}`qiskit`. These circuits can be translated
+between {py:class}`~qiskit.circuit.QuantumCircuit` and
 {py:class}`~mqt.core.mlir.QCProgram`:
 
 ```{code-cell} ipython3
@@ -262,11 +262,11 @@ qiskit_bell.measure(range(2), range(2))
 
 direct = QCProgram.from_qiskit(qiskit_bell)
 restored = direct.to_qiskit(copy=True)
-compiled_qiskit = compile_program(qiskit_bell)
+compiled_qiskit = compile_program(qiskit_bell, output=OutputFormat.QISKIT)
 
 assert direct.is_valid  # copy=True preserves the QC program.
 assert restored.count_ops() == qiskit_bell.count_ops()
-assert compiled_qiskit.is_valid
+assert isinstance(compiled_qiskit, QuantumCircuit)
 ```
 
 QCO programs also provide {py:meth}`~mqt.core.mlir.QCOProgram.to_qiskit`, which

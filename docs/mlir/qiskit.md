@@ -52,14 +52,47 @@ backend = GenericBackendV2(3, basis_gates=["sx", "x", "rz", "cx"])
 target = CompilerTarget.from_qiskit(backend)
 ```
 
-The result is an independent structural snapshot. A backend supplies the default
-target name; pass `name` to override it. Qiskit standard gates, measurement,
-reset, and their ordered qubit placements become native capabilities. Each
-parameter slot can be unrestricted or fixed to one finite value. Multiple
-instructions of the same gate, such as `RXGate(pi / 2)` and `RXGate(pi)`, retain
-their distinct target names and placements. The compiler uses canonical gate
-names; `to_qiskit(target=target)` selects the target name by gate, parameters,
-and ordered sites. This also preserves legacy spellings such as `u1` and `u3`.
+For circuit-in, circuit-out compilation, pass the backend directly:
+
+```python
+from qiskit import QuantumCircuit
+from mqt.core.mlir import OutputFormat, compile_program
+
+circuit = QuantumCircuit(2, 2)
+circuit.h(0)
+circuit.cx(0, 1)
+circuit.measure(range(2), range(2))
+compiled = compile_program(circuit, target=backend, output=OutputFormat.QISKIT)
+assert isinstance(compiled, QuantumCircuit)
+assert compiled.num_qubits == backend.num_qubits
+assert compiled.layout is not None
+```
+
+`target` also accepts a Qiskit `Target` or an existing `CompilerTarget`. Omit it
+for target-independent optimization. Qiskit output accepts the same inputs and
+ownership options as other compiler outputs. Target compilation preserves
+placement and routing metadata through direct circuit export. The input circuit
+is not changed. Without a target, optimization may remove idle qubits.
+
+Compilation to Qiskit rejects inputs with an attached transpiler layout, since
+optimization can invalidate its logical mapping. To convert an imported program
+while preserving its layout, use `program.to_qiskit(copy=True)` directly.
+
+A Qiskit backend or target supplies its supported control-flow instructions. The
+compiler lowers or rejects unsupported control flow. An explicit
+`CompilerTarget` describes gates and topology only; it permits the control-flow
+forms supported by the exporter without checking a backend's execution support.
+The gate, scheduling, and circuit-translation restrictions below still apply.
+
+`CompilerTarget.from_qiskit` returns an independent structural snapshot. A
+backend supplies the default target name; pass `name` to override it. Qiskit
+standard gates, measurement, reset, and their ordered qubit placements become
+native capabilities. Each parameter slot can be unrestricted or fixed to one
+finite value. Multiple instructions of the same gate, such as `RXGate(pi / 2)`
+and `RXGate(pi)`, retain their distinct target names and placements. The
+compiler uses canonical gate names; `to_qiskit(target=target)` selects the
+target name by gate, parameters, and ordered sites. This also preserves legacy
+spellings such as `u1` and `u3`.
 
 Routing connectivity is undirected and comes from the retained two-qubit gates.
 Gate applicability keeps its original qubit order. The target needs a known,

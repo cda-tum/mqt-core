@@ -62,6 +62,9 @@ class OutputFormat(enum.Enum):
     QIR_ADAPTIVE = 7
     """QIR for the Adaptive Profile."""
 
+    QISKIT = 8
+    """A Qiskit QuantumCircuit."""
+
 class PayloadEncoding(enum.Enum):
     """Payload representation encoding."""
 
@@ -1376,11 +1379,26 @@ def compile_program(
     | JeffProgram
     | OpenQASMProgram,
     *,
+    output: Literal[OutputFormat.QISKIT],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> qiskit.circuit.QuantumCircuit: ...
+@overload
+def compile_program(
+    program: str
+    | os.PathLike[str]
+    | qiskit.circuit.QuantumCircuit
+    | QCProgram
+    | QCOProgram
+    | JeffProgram
+    | OpenQASMProgram,
+    *,
     output: OutputFormat,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
-) -> QCProgram | QCOProgram | OpenQASMProgram | JeffProgram | QIRProgram:
+) -> QCProgram | QCOProgram | OpenQASMProgram | JeffProgram | QIRProgram | qiskit.circuit.QuantumCircuit:
     """Run the coordinated default MQT compiler pipeline.
 
     Input source strings, files, Qiskit
@@ -1398,7 +1416,8 @@ def compile_program(
         options: Shared compilation controls.
 
     Returns:
-        A typed compiler program for the requested output format.
+        A Qiskit QuantumCircuit for ``OutputFormat.QISKIT``, otherwise a typed
+        compiler program for the requested output format.
     """
 
 @overload
@@ -1416,7 +1435,13 @@ def compile_program(
     inplace: bool = False,
     options: CompilationOptions = ...,
 ) -> CompiledProgram:
-    """Compile for a device ID, open device, or explicit compiler target.
+    """Compile for a Qiskit backend, compiler target, or QDMI device.
+
+    With ``output=OutputFormat.QISKIT``, ``target`` accepts a Qiskit BackendV2,
+    Qiskit Target, or :class:`CompilerTarget` and returns a QuantumCircuit with
+    physical qubits and layout metadata when available. Qiskit targets restrict control flow to
+    their advertised instructions. An explicit CompilerTarget supplies gate and
+    topology constraints but does not describe backend control-flow support.
 
     Device targets select Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
     (binary, text). Use ``program_format`` to select a format explicitly.
@@ -1442,6 +1467,21 @@ def compile_program(
     inplace: bool = False,
     options: CompilationOptions = ...,
 ) -> CompiledProgram: ...
+@overload
+def compile_program(
+    program: str
+    | os.PathLike[str]
+    | qiskit.circuit.QuantumCircuit
+    | QCProgram
+    | QCOProgram
+    | JeffProgram
+    | OpenQASMProgram,
+    *,
+    target: CompilerTarget | qiskit.providers.BackendV2 | qiskit.transpiler.Target,
+    output: Literal[OutputFormat.QISKIT],
+    inplace: bool = False,
+    options: CompilationOptions = ...,
+) -> qiskit.circuit.QuantumCircuit: ...
 @overload
 def compile_program(
     program: str

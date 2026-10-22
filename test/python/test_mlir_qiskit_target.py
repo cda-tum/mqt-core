@@ -17,7 +17,8 @@ import numpy as np
 import pytest
 from qiskit import QuantumCircuit
 from qiskit.circuit import Gate, Measure, Parameter, Reset
-from qiskit.circuit.controlflow import IfElseOp
+from qiskit.circuit.classical import expr, types
+from qiskit.circuit.controlflow import IfElseOp, WhileLoopOp
 from qiskit.circuit.library import (
     CCXGate,
     CPhaseGate,
@@ -47,16 +48,204 @@ from qiskit.transpiler import Target
 from qiskit_support import supports_qiskit_translation
 
 from mqt.core.mlir import (
+    CompilationOptions,
     CompilerTarget,
+    OutputFormat,
     PayloadFormat,
     PayloadSpecification,
     ProgramCapability,
     QCProgram,
     TargetEnvironment,
+    compile_program,
+    sample,
 )
+from mqt.core.qdmi import ProgramFormat
 
 if not supports_qiskit_translation():
     pytest.skip("Qiskit version has no compiler translation adapter", allow_module_level=True)
+
+
+def test_compile_program_qiskit_output() -> None:
+    """Return a circuit without losing parameter identity or global phase."""
+    theta = Parameter("theta")
+    circuit = QuantumCircuit(2, global_phase=0.3)
+    circuit.h(0)
+    circuit.rx(theta, 1)
+    circuit.cx(0, 1)
+    circuit.z(0)
+    circuit.z(0)
+    original = circuit.copy()
+
+    compiled = compile_program(circuit, output=OutputFormat.QISKIT)
+
+    assert isinstance(compiled, QuantumCircuit)
+    assert circuit == original
+    assert compiled.parameters == circuit.parameters
+    assert "z" not in compiled.count_ops()
+    assert np.allclose(
+        Operator(compiled.assign_parameters({theta: 0.7})).data,
+        Operator(circuit.assign_parameters({theta: 0.7})).data,
+    )
+
+
+@pytest.mark.parametrize("target_kind", ["backend", "qiskit", "compiler"])
+def test_compile_program_qiskit_backend_layout(target_kind: str) -> None:
+    """Keep routing, idle input wires, backend width, and directed gate sites."""
+    backend = GenericBackendV2(
+        5, basis_gates=["sx", "x", "rz", "cx"], coupling_map=[[0, 1], [1, 2], [2, 3], [3, 4]], seed=1
+    )
+    target = {"backend": backend, "qiskit": backend.target, "compiler": CompilerTarget.from_qiskit(backend)}[
+        target_kind
+    ]
+    theta = Parameter("theta")
+    circuit = QuantumCircuit(4, global_phase=0.3)
+    circuit.h(0)
+    circuit.rx(theta, 1)
+    circuit.cx(0, 2)
+    circuit.cx(1, 2)
+    circuit.cx(0, 1)
+    circuit.z(2)
+
+    compiled = compile_program(circuit, target=target, output=OutputFormat.QISKIT, options=CompilationOptions(seed=7))
+
+    assert compiled.num_qubits == 5
+    assert compiled.layout is not None
+    assert len(compiled.layout.final_index_layout()) == 4
+    assert compiled.parameters == circuit.parameters
+    assert all(
+        backend.target.instruction_supported(
+            operation_name=item.operation.name,
+            qargs=tuple(compiled.find_bit(qubit).index for qubit in item.qubits),
+            parameters=item.operation.params,
+        )
+        for item in compiled.data
+    )
+    expected = QuantumCircuit(5)
+    expected.compose(circuit.assign_parameters({theta: 0.7}), range(4), inplace=True)
+    assert np.allclose(Operator.from_circuit(compiled.assign_parameters({theta: 0.7})).data, Operator(expected).data)
+
+
+@pytest.mark.parametrize("inplace", [False, True])
+def test_compile_program_qiskit_typed_input(*, inplace: bool) -> None:
+    """Preserve output-bit order and honor ownership of typed programs."""
+    source = QCProgram.from_openqasm_str(
+        'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; bit[3] c = 0; '
+        "x q[0]; c[1] = measure q[0]; c[0] = measure q[1];"
+    )
+    backend = GenericBackendV2(3, basis_gates=["sx", "x", "rz", "cx"], seed=1)
+
+    compiled = compile_program(source, target=backend, output=OutputFormat.QISKIT, inplace=inplace)
+
+    assert source.is_valid is not inplace
+    assert compiled.num_clbits == 3
+    assert sample(compiled, shots=4, seed=1) == {"010": 4}
+
+
+@pytest.mark.parametrize("control_flow", [False, True])
+@pytest.mark.parametrize("kind", ["if_else", "for_loop", "while_loop"])
+def test_compile_program_qiskit_backend_control_flow(kind: str, *, control_flow: bool) -> None:
+    """Use advertised control flow, unroll counted loops, or reject feedback."""
+    backend = GenericBackendV2(2, basis_gates=["sx", "x", "rz", "cx"], control_flow=control_flow, seed=1)
+    circuit = QuantumCircuit(2, 2)
+    circuit.x(0)
+    circuit.measure(0, 0)
+    if kind == "if_else":
+        with circuit.if_test((circuit.clbits[0], True)):
+            circuit.x(1)
+    elif kind == "for_loop":
+        with circuit.for_loop(range(3)):
+            circuit.x(1)
+    else:
+        with circuit.while_loop((circuit.clbits[0], True)):
+            circuit.x(1)
+            circuit.reset(0)
+            circuit.measure(0, 0)
+    circuit.measure(1, 1)
+    source = QCProgram.from_qiskit(circuit)
+
+    if not control_flow and kind != "for_loop":
+        with pytest.raises(RuntimeError):
+            compile_program(source, target=backend, output=OutputFormat.QISKIT)
+        assert source.is_valid
+        return
+    compiled = compile_program(source, target=backend, output=OutputFormat.QISKIT)
+    assert control_flow or kind not in compiled.count_ops()
+    assert sample(compiled, shots=4, seed=1) == {"10" if kind == "while_loop" else "11": 4}
+
+
+@pytest.mark.parametrize("control_flow", [False, True])
+def test_compile_program_qiskit_static_switch(*, control_flow: bool) -> None:
+    """Keep switches on static qubits only when the backend supports them."""
+    backend = GenericBackendV2(2, basis_gates=["u", "cx"], control_flow=control_flow, seed=1)
+    source = """OPENQASM 3.1;
+include "stdgates.inc";
+output bit[2] c;
+c = 0;
+x $0;
+c[0] = measure $0;
+uint[1] value = uint[1](c[0]);
+switch (value) { case 1 { x $1; } }
+c[1] = measure $1;
+"""
+    if not control_flow:
+        with pytest.raises(RuntimeError, match="legalize"):
+            compile_program(source, target=backend, output=OutputFormat.QISKIT)
+        return
+    compiled = compile_program(source, target=backend, output=OutputFormat.QISKIT)
+    assert compiled.count_ops()["switch_case"] == 1
+    assert sample(compiled, shots=4, seed=1) == {"11": 4}
+
+
+def test_compile_program_qiskit_invalid_options_preserve_input() -> None:
+    """Reject conflicting output and payload selection before moving input."""
+    source = QCProgram.from_qiskit(QuantumCircuit(1))
+    backend = GenericBackendV2(1, basis_gates=["sx", "x", "rz"], seed=1)
+    with pytest.raises(ValueError, match="either output or program_format"):
+        compile_program(  # ty: ignore[no-matching-overload] -- test conflicting options at runtime
+            source, target=backend, output=OutputFormat.QISKIT, program_format=ProgramFormat.QASM3, inplace=True
+        )
+    assert source.is_valid
+
+
+@pytest.mark.parametrize("branching", [False, True])
+def test_compile_program_qiskit_checks_exported_control_flow(*, branching: bool) -> None:
+    """Check branches introduced when exporting a general loop condition."""
+    target = Target(num_qubits=1)
+    target.add_instruction(UGate(Parameter("a"), Parameter("b"), Parameter("c")))
+    target.add_instruction(XGate())
+    target.add_instruction(Measure())
+    target.add_instruction(WhileLoopOp, name="while_loop")
+    if branching:
+        target.add_instruction(IfElseOp, name="if_else")
+    circuit = QuantumCircuit(1, 1)
+    counter = circuit.add_var("counter", expr.lift(0, types.Uint(8)))
+    loop_condition = True
+    with circuit.while_loop(expr.lift(loop_condition)):
+        circuit.x(0)
+        circuit.store(counter, expr.add(counter, expr.lift(1, types.Uint(8))))
+        with circuit.if_test(expr.greater_equal(counter, expr.lift(3, types.Uint(8)))):
+            circuit.break_loop()
+    circuit.measure(0, 0)
+
+    if not branching:
+        with pytest.raises(RuntimeError, match="forward-branching"):
+            compile_program(circuit, target=target, output=OutputFormat.QISKIT)
+        return
+    compiled = compile_program(circuit, target=target, output=OutputFormat.QISKIT)
+    assert sample(compiled, shots=4, seed=1) == {"1": 4}
+
+
+def test_compile_program_qiskit_rejects_attached_layout() -> None:
+    """Do not silently lose the logical mapping when recompiling a circuit."""
+    backend = GenericBackendV2(3, basis_gates=["sx", "x", "rz", "cx"], seed=1)
+    circuit = QuantumCircuit(2)
+    circuit.h(0)
+    circuit.cx(0, 1)
+    compiled = compile_program(circuit, target=backend, output=OutputFormat.QISKIT)
+    assert compiled.layout is not None
+
+    with pytest.raises(RuntimeError, match="layout"):
+        compile_program(compiled, output=OutputFormat.QISKIT)
 
 
 def test_directed_sites_and_snapshot() -> None:
