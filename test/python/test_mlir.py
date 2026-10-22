@@ -43,6 +43,7 @@ from mqt.core.mlir import (
     QIRProgram,
     TargetEnvironment,
     compile_program,
+    sample,
     submit_program,
 )
 from mqt.core.qdmi import ProgramFormat, open_device
@@ -262,12 +263,12 @@ result = measure q;
         assert program.to_qir(QIRProfile.BASE).llvm_ir
         return
     if backend == "openqasm":
-        restored = QCProgram.from_openqasm_str(program.to_openqasm3().source).to_qco()
+        restored = program.to_openqasm3()
     elif backend == "jeff":
         restored = program.to_qco().to_jeff().to_qco()
     else:
-        restored = QCProgram.from_qiskit(program.to_qiskit()).to_qco()
-    assert restored.sample(shots=1, seed=42) == {"1": 1}
+        restored = program.to_qiskit()
+    assert sample(restored, shots=1, seed=42) == {"1": 1}
 
 
 @requires_qiskit_translation

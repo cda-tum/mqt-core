@@ -16,9 +16,11 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h" // IWYU pragma: keep
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -128,25 +130,81 @@ static LogicalResult verifyIndex(Operation* operation, Value registerValue,
   return success();
 }
 
-/// Return nullopt for an unknown load, an engaged null Value for zero
-/// initialization, or a non-null Value for a known stored bit.
-static std::optional<Value> findKnownLoadValue(LoadOp load) {
-  auto previousLoad = dyn_cast_if_present<LoadOp>(load->getPrevNode());
-  if (previousLoad && previousLoad.getReg() == load.getReg() &&
-      previousLoad.getIndex() == load.getIndex()) {
-    return previousLoad.getResult();
+/// Find a known snapshot or zero initialization; a null index denotes a whole
+/// read.
+static OpFoldResult findKnownValue(Operation* read, Value reg, Value index) {
+  const bool singleBit = cast<RegisterType>(reg.getType()).getWidth() == 1;
+  const auto matchesIndex = [&](Value candidate) {
+    return index ? isEqualConstantIntOrValue(index, candidate)
+                 : singleBit && getConstantIntValue(candidate) == 0;
+  };
+  const bool readsWholeRegister =
+      !index || (singleBit && getConstantIntValue(index) == 0);
+
+  // Bound the work per read so long blocks cannot cause quadratic searches.
+  unsigned scanned = 0;
+  for (auto* previous = read->getPrevNode();
+       previous != nullptr && scanned < 16;
+       previous = previous->getPrevNode(), ++scanned) {
+    if (auto load = dyn_cast<LoadOp>(previous)) {
+      if (load.getReg() == reg && matchesIndex(load.getIndex())) {
+        return load.getResult();
+      }
+      continue;
+    }
+    if (auto snapshot = dyn_cast<ReadOp>(previous)) {
+      if (snapshot.getReg() == reg && readsWholeRegister) {
+        return snapshot.getResult();
+      }
+      continue;
+    }
+    if (auto store = dyn_cast<StoreOp>(previous)) {
+      if (store.getReg() == reg) {
+        if (matchesIndex(store.getIndex())) {
+          return store.getValue();
+        }
+        const auto storedIndex = getConstantIntValue(store.getIndex());
+        const auto loadedIndex =
+            index ? getConstantIntValue(index) : std::nullopt;
+        if (storedIndex && loadedIndex && storedIndex != loadedIndex) {
+          continue;
+        }
+      }
+      // Distinct register arguments may refer to the same storage.
+      return {};
+    }
+    if (auto write = dyn_cast<WriteOp>(previous)) {
+      return write.getReg() == reg && readsWholeRegister
+                 ? OpFoldResult(write.getValue())
+                 : OpFoldResult{};
+    }
+    if (auto alloc = dyn_cast<AllocOp>(previous);
+        alloc && alloc.getResult() == reg) {
+      return alloc.getInitialization() == Initialization::Zero
+                 ? OpFoldResult(
+                       IntegerAttr::get(read->getResult(0).getType(), 0))
+                 : OpFoldResult{};
+    }
+    if (previous->getNumRegions() != 0 || !isMemoryEffectFree(previous)) {
+      return {};
+    }
   }
-  if (auto store = dyn_cast_if_present<StoreOp>(load->getPrevNode());
-      store && store.getReg() == load.getReg() &&
-      store.getIndex() == load.getIndex()) {
-    return store.getValue();
+  return {};
+}
+
+static LogicalResult forwardKnownValue(Operation* read, Value reg, Value index,
+                                       PatternRewriter& rewriter) {
+  auto known = findKnownValue(read, reg, index);
+  if (!known) {
+    return failure();
   }
-  if (auto alloc = dyn_cast_if_present<AllocOp>(load->getPrevNode());
-      alloc && alloc.getResult() == load.getReg() &&
-      alloc.getInitialization() == Initialization::Zero) {
-    return Value{};
+  if (auto value = dyn_cast<Value>(known)) {
+    rewriter.replaceOp(read, value);
+  } else {
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        read, cast<IntegerAttr>(cast<Attribute>(known)));
   }
-  return std::nullopt;
+  return success();
 }
 
 namespace {
@@ -165,24 +223,6 @@ struct EraseWriteOnlyRegister final : OpRewritePattern<AllocOp> {
       rewriter.eraseOp(user);
     }
     rewriter.eraseOp(alloc);
-    return success();
-  }
-};
-
-struct ForwardKnownLoad final : OpRewritePattern<LoadOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(LoadOp load,
-                                PatternRewriter& rewriter) const override {
-    const auto known = findKnownLoadValue(load);
-    if (!known) {
-      return failure();
-    }
-    if (*known) {
-      rewriter.replaceOp(load, *known);
-      return success();
-    }
-    rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(load, false, 1);
     return success();
   }
 };
@@ -273,9 +313,12 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet& results,
   results.add<EraseWriteOnlyRegister>(context);
 }
 
-void LoadOp::getCanonicalizationPatterns(RewritePatternSet& results,
-                                         MLIRContext* context) {
-  results.add<ForwardKnownLoad>(context);
+LogicalResult LoadOp::canonicalize(LoadOp load, PatternRewriter& rewriter) {
+  return forwardKnownValue(load, load.getReg(), load.getIndex(), rewriter);
+}
+
+LogicalResult ReadOp::canonicalize(ReadOp read, PatternRewriter& rewriter) {
+  return forwardKnownValue(read, read.getReg(), {}, rewriter);
 }
 
 LogicalResult StoreOp::verify() {

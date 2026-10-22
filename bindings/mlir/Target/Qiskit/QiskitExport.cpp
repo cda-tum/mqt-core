@@ -39,6 +39,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
@@ -355,7 +356,6 @@ struct ExportState {
   llvm::DenseMap<mlir::Value, ClassicalRegisterInfo> classicalRegisterInfo;
   using InitializedBits = llvm::DenseMap<mlir::Value, llvm::DenseSet<uint32_t>>;
   InitializedBits unconditionalWrites;
-  llvm::DenseMap<mlir::Value, uint32_t> measurementResultBits;
   llvm::DenseSet<mlir::Operation*> expressionOperations;
   llvm::DenseMap<mlir::Value, size_t> expressionDepths;
   std::vector<Register> quantumRegisters;
@@ -1237,12 +1237,6 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
 
   auto result = std::make_unique<Expression>();
   setExpressionType(*result, value.getType());
-  if (const auto measured = state.measurementResultBits.find(value);
-      measured != state.measurementResultBits.end()) {
-    result->kind = ExpressionKind::ClassicalBit;
-    result->bit = measured->second;
-    return result;
-  }
   if (auto constant = llvm::dyn_cast<mlir::arith::ConstantOp>(operation)) {
     result->kind = ExpressionKind::Value;
     if (const auto integer =
@@ -1741,25 +1735,6 @@ exportExpression(mlir::Value value, ExportState& state,
   return result;
 }
 
-[[nodiscard]] static mlir::cbit::StoreOp
-measurementDestination(mlir::qc::MeasureOp measure) {
-  mlir::cbit::StoreOp destination;
-  for (auto* user : measure.getResult().getUsers()) {
-    if (auto store = llvm::dyn_cast<mlir::cbit::StoreOp>(user)) {
-      if (destination) {
-        throw std::runtime_error(
-            "QC measurement has more than one classical destination");
-      }
-      destination = store;
-    }
-  }
-  if (!destination) {
-    throw std::runtime_error(
-        "QC measurement is missing a static classical destination");
-  }
-  return destination;
-}
-
 /// Index writes in block order, including effects of nested operations.
 static void indexWrites(mlir::Block& block, ExportState::WriteIndex& index) {
   index.try_emplace(&block);
@@ -1857,14 +1832,6 @@ static void validateClassicalSnapshot(mlir::Value expression,
     }
     if (auto read = llvm::dyn_cast<mlir::cbit::ReadOp>(operation)) {
       reads.emplace_back(read, read.getReg());
-      continue;
-    }
-    if (auto measure = llvm::dyn_cast<mlir::qc::MeasureOp>(operation)) {
-      for (auto* user : measure.getResult().getUsers()) {
-        if (auto store = llvm::dyn_cast<mlir::cbit::StoreOp>(user)) {
-          reads.emplace_back(store, store.getReg());
-        }
-      }
       continue;
     }
     if (auto ifOp = llvm::dyn_cast<mlir::scf::IfOp>(operation)) {
@@ -2118,29 +2085,43 @@ static void validateControlFlowDepth(const size_t controlFlowDepth) {
   }
 }
 
-/// Put measurement stores at their emitted positions before snapshot analysis.
+/// Give each measurement a static destination and share its snapshot across
+/// uses.
 static void prepareMeasurementStores(mlir::func::FuncOp function) {
   const auto destinations =
       mlir::qc::findMeasurementStores(function, /*allowOtherUses=*/true);
   function.walk([&](mlir::qc::MeasureOp measure) {
-    auto destination = measurementDestination(measure);
-    const auto index = mlir::getConstantIntValue(destination.getIndex());
-    if (!index) {
-      throw std::runtime_error(
-          "QC measurement uses a dynamic classical destination");
+    auto destination = destinations.lookup(measure);
+    mlir::OpBuilder builder(measure);
+    if (destination) {
+      if (auto* definition = destination.getIndex().getDefiningOp();
+          definition && definition->getBlock() == measure->getBlock() &&
+          measure->isBeforeInBlock(definition)) {
+        destination.getIndexMutable().assign(
+            mlir::arith::ConstantIndexOp::create(
+                builder, measure.getLoc(),
+                *mlir::getConstantIntValue(destination.getIndex())));
+      }
+      destination->moveAfter(measure);
+    } else {
+      builder.setInsertionPointToStart(&function.front());
+      auto reg = mlir::cbit::AllocOp::create(
+          builder, measure.getLoc(),
+          mlir::cbit::RegisterType::get(function.getContext(), 1),
+          mlir::cbit::Initialization::Zero);
+      auto index =
+          mlir::arith::ConstantIndexOp::create(builder, measure.getLoc(), 0);
+      builder.setInsertionPointAfter(measure);
+      destination = mlir::cbit::StoreOp::create(
+          builder, measure.getLoc(), measure.getResult(), reg, index);
     }
-    if (!destinations.contains(measure)) {
-      throw std::runtime_error("QC measurement destination must follow the "
-                               "measurement in the same block");
+    if (!measure.getResult().hasOneUse()) {
+      builder.setInsertionPointAfter(destination);
+      auto snapshot = mlir::cbit::LoadOp::create(
+          builder, measure.getLoc(), builder.getI1Type(), destination.getReg(),
+          destination.getIndex());
+      measure.getResult().replaceAllUsesExcept(snapshot, destination);
     }
-    if (auto* definition = destination.getIndex().getDefiningOp();
-        definition && definition->getBlock() == measure->getBlock() &&
-        measure->isBeforeInBlock(definition)) {
-      mlir::OpBuilder builder(measure);
-      destination.getIndexMutable().assign(mlir::arith::ConstantIndexOp::create(
-          builder, measure.getLoc(), *index));
-    }
-    destination->moveAfter(measure);
   });
 }
 
@@ -2609,9 +2590,6 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
       }
       if (auto store = llvm::dyn_cast<mlir::cbit::StoreOp>(operation)) {
         if (store.getValue().getDefiningOp<mlir::qc::MeasureOp>()) {
-          if (!store.getValue().hasOneUse()) {
-            materialize(store.getValue(), operation, circuit, state);
-          }
           continue;
         }
         validateClassicalSnapshot(store.getValue(), operation, state);
@@ -2662,7 +2640,8 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
         continue;
       }
       if (auto measure = llvm::dyn_cast<mlir::qc::MeasureOp>(operation)) {
-        auto destination = measurementDestination(measure);
+        auto destination = llvm::cast<mlir::cbit::StoreOp>(
+            *measure.getResult().getUsers().begin());
         const auto info =
             state.classicalRegisterInfo.find(destination.getReg());
         const auto index = mlir::getConstantIntValue(destination.getIndex());
@@ -2687,8 +2666,6 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
             .qubits = mapQubits(measure.getQubit(), state.qubits),
             .clbit = destinationBit,
         });
-        state.measurementResultBits.try_emplace(measure.getResult(),
-                                                destinationBit);
         continue;
       }
       if (auto reset = llvm::dyn_cast<mlir::qc::ResetOp>(operation)) {
@@ -3018,8 +2995,8 @@ nb::object exportCircuit(mlir::QCProgram program,
     state.numQubits = checkedIndex(static_cast<uint64_t>(target->numSites()),
                                    "target qubit count");
   }
-  collectResources(function, state, target);
   prepareMeasurementStores(function);
+  collectResources(function, state, target);
   indexWrites(function.getBody().front(), state.writes);
   auto circuit = collectBlock(function.getBody().front(), state, 0U);
   for (const auto& [reg, info] : state.classicalRegisterInfo) {

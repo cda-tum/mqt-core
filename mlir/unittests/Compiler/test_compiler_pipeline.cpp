@@ -5280,11 +5280,12 @@ TEST_F(CompilerPipelineTest,
 }
 
 TEST_F(CompilerPipelineTest, TargetCompilationReusesUnchangedMeasurementRead) {
+  // A partially written register keeps both conditions dependent on a read.
   constexpr llvm::StringLiteral source = R"qasm(
 OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[3];
-creg c0[1];
+creg c0[2];
 creg c1[1];
 h q[0];
 measure q[0] -> c0[0];
