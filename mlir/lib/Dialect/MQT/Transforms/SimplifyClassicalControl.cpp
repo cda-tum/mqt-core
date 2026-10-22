@@ -62,6 +62,8 @@ public:
 
   void run(Region& region, bool hasConditions = false) {
     for (Block& block : region) {
+      // Only scalar loads consume block-local memory facts.
+      const bool hasLoads = !block.getOps<cbit::LoadOp>().empty();
       DenseMap<Value, RegisterValues> registers;
       for (Operation& operation : llvm::make_early_inc_range(block)) {
         if (hasConditions) {
@@ -78,61 +80,65 @@ public:
             }
           }
         }
-        if (auto alloc = dyn_cast<cbit::AllocOp>(operation)) {
-          if (alloc.getInitialization() == cbit::Initialization::Zero) {
-            registers[alloc.getResult()].zeroInitialized = true;
+        if (hasLoads) {
+          if (auto alloc = dyn_cast<cbit::AllocOp>(operation)) {
+            if (alloc.getInitialization() == cbit::Initialization::Zero) {
+              registers[alloc.getResult()].zeroInitialized = true;
+            }
+            continue;
           }
-          continue;
-        }
-        if (auto store = dyn_cast<cbit::StoreOp>(operation)) {
-          // Other register values may alias this storage.
-          if (registers.size() > 1 ||
-              (!registers.empty() && !registers.contains(store.getReg()))) {
-            auto previous = std::move(registers[store.getReg()]);
-            registers.clear();
-            registers[store.getReg()] = std::move(previous);
+          if (auto store = dyn_cast<cbit::StoreOp>(operation)) {
+            // Other register values may alias this storage.
+            if (registers.size() > 1 ||
+                (!registers.empty() && !registers.contains(store.getReg()))) {
+              auto previous = std::move(registers[store.getReg()]);
+              registers.clear();
+              registers[store.getReg()] = std::move(previous);
+            }
+            auto& values = registers[store.getReg()];
+            values.dynamic.clear();
+            if (const auto index = getConstantIntValue(store.getIndex())) {
+              values.constants[*index] = store.getValue();
+            } else {
+              values.constants.clear();
+              values.zeroInitialized = false;
+              values.dynamic[store.getIndex()] = store.getValue();
+            }
+            continue;
           }
-          auto& values = registers[store.getReg()];
-          values.dynamic.clear();
-          if (const auto index = getConstantIntValue(store.getIndex())) {
-            values.constants[*index] = store.getValue();
-          } else {
-            values.constants.clear();
-            values.zeroInitialized = false;
-            values.dynamic[store.getIndex()] = store.getValue();
+          if (auto load = dyn_cast<cbit::LoadOp>(operation)) {
+            auto& values = registers[load.getReg()];
+            const auto index = getConstantIntValue(load.getIndex());
+            Value known = index ? values.constants.lookup(*index)
+                                : values.dynamic.lookup(load.getIndex());
+            rewriter.setInsertionPoint(load);
+            if (!known && values.zeroInitialized &&
+                (index || values.constants.empty())) {
+              known =
+                  arith::ConstantIntOp::create(rewriter, load.getLoc(), 0, 1);
+            }
+            if (index) {
+              values.constants[*index] = known ? known : load.getResult();
+            } else {
+              values.dynamic[load.getIndex()] =
+                  known ? known : load.getResult();
+            }
+            if (known) {
+              rewriter.replaceOp(load, known);
+            }
+            continue;
           }
-          continue;
-        }
-        if (auto load = dyn_cast<cbit::LoadOp>(operation)) {
-          auto& values = registers[load.getReg()];
-          const auto index = getConstantIntValue(load.getIndex());
-          Value known = index ? values.constants.lookup(*index)
-                              : values.dynamic.lookup(load.getIndex());
-          rewriter.setInsertionPoint(load);
-          if (!known && values.zeroInitialized &&
-              (index || values.constants.empty())) {
-            known = arith::ConstantIntOp::create(rewriter, load.getLoc(), 0, 1);
+          if (isa<cbit::ReadOp>(operation)) {
+            continue;
           }
-          if (index) {
-            values.constants[*index] = known ? known : load.getResult();
-          } else {
-            values.dynamic[load.getIndex()] = known ? known : load.getResult();
-          }
-          if (known) {
-            rewriter.replaceOp(load, known);
-          }
-          continue;
-        }
-        if (isa<cbit::ReadOp>(operation)) {
-          continue;
-        }
-        if (!registers.empty()) {
-          if (!isMemoryEffectFree(&operation)) {
-            registers.clear();
-          } else {
-            for (Value operand : operation.getOperands()) {
-              if (isa<cbit::RegisterType>(operand.getType())) {
-                registers.erase(operand);
+          if (!registers.empty()) {
+            if (!isMemoryEffectFree(&operation)) {
+              registers.clear();
+            } else {
+              for (Value operand : operation.getOperands()) {
+                if (isa<cbit::RegisterType>(operand.getType())) {
+                  registers.erase(operand);
+                }
               }
             }
           }
