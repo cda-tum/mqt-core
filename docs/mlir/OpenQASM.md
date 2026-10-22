@@ -100,11 +100,12 @@ remove them. Constant empty ranges, zero steps, and out-of-bounds endpoints are
 rejected, except a full selection of a zero-length dimension. Overlapping
 assignments copy the original source values.
 
-Runtime ranges require in-bounds endpoints, nonzero steps that fit signed i64, a
-nonempty selection in the step's direction, and matching copy shapes. These are
-runtime preconditions; no assertions are emitted. Runtime-selected sources must
-be fully initialized, and runtime-selected destinations establish no new
-definite-initialization facts.
+Runtime ranges require in-bounds endpoints, nonzero steps that fit signed i64,
+matching copy shapes, and a nonempty selection in the step's direction, except
+for full selections of zero-length dimensions. These are runtime preconditions;
+no assertions are emitted. Runtime-selected sources must be fully initialized,
+and runtime-selected destinations establish no new definite-initialization
+facts.
 
 `sizeof(a)` returns the first dimension's length as a compile-time `uint`;
 `sizeof(a, d)` selects a zero-based, compile-time integer dimension. Subarrays

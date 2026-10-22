@@ -1883,9 +1883,7 @@ private:
   }
 
   void emitArrayCopy(const frontend::ArrayCopyStatement& statement) {
-    if (llvm::is_contained(program.arrays.at(statement.source).shape, 0) ||
-        llvm::any_of(statement.sourceIndices,
-                     [](const auto& index) { return index.size == 0; })) {
+    if (llvm::is_contained(program.arrays.at(statement.source).shape, 0)) {
       return;
     }
     auto source = emitArrayView(statement.source, statement.sourceIndices);
