@@ -100,6 +100,11 @@ remove them. Empty ranges, zero steps, and out-of-bounds endpoints are rejected,
 except a full selection of a zero-length dimension. Overlapping assignments copy
 the original source values.
 
+`sizeof(a)` returns the first dimension's length as a compile-time `uint`;
+`sizeof(a, d)` selects a zero-based, compile-time integer dimension. Subarrays
+and fixed ranges are supported, including zero-length dimensions. The query does
+not read array elements, so the array need not be initialized.
+
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
 
