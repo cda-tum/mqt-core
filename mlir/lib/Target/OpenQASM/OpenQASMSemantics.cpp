@@ -4854,7 +4854,7 @@ private:
     }
     ForStatement result;
     std::optional<AffineForm> startForm, stopForm;
-    std::optional<bool> nonemptyArray;
+    std::optional<bool> nonempty;
     if (loop.iterable) {
       if (!activeGate_.empty()) {
         return fail(location, "gate definitions cannot capture arrays");
@@ -4873,7 +4873,7 @@ private:
       }
       for (const auto& index : source.indices) {
         if (!index.isScalar() && index.size >= 0) {
-          nonemptyArray = index.size != 0;
+          nonempty = index.size != 0;
         }
       }
       const auto& declaration = program.arrays[source.array];
@@ -5022,7 +5022,6 @@ private:
                        beforeGenerations);
     restoreAffineScalarValuesPrefix(beforeAffineScalarValues);
     bool rangeMayExecute = true;
-    std::optional<bool> nonempty = nonemptyArray;
     if (!loop.iterable) {
       MQT_OQ3_TRY_ASSIGN(constantStart, isConstantExpression(loop.start));
       MQT_OQ3_TRY_ASSIGN(constantStep, isConstantExpression(loop.step));

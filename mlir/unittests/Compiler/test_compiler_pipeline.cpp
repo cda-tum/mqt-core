@@ -1324,7 +1324,8 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
           start = 0; step = 1; x = 0;
         }
         array[int, 0] empty;
-        for int x in empty { sum = 0; }
+        for int x in empty { x = 2; sum = 0; }
+        int x = 1;
         for int x in empty { break; }
         for int x in empty[:step:] { sum = 0; }
         for int x in empty[:step:] { sum = 0; break; }
@@ -1338,9 +1339,10 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         int sum = 0;
         for int x in a {
           if (x == 2) { a[2] = 5; continue; }
-          for int y in a[:1] {
-            if (y == 2) { break; }
-            sum += x;
+          int value = x;
+          for int x in a[:1] {
+            if (x == 2) { break; }
+            sum += value;
           }
           if (x == 5) { break; }
         }

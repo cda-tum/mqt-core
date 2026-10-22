@@ -170,13 +170,8 @@ TEST(OpenQASMFrontendTest, ClassicalArrays) {
            "array[int, 2] a = {1, 2}; "
            "array[int, 1] b = a[0:9223372036854775807:1]; "
            "b = a[1:-9223372036854775807-1:0];",
-           "array[int, 2] a; a[1] = 7; int result; "
-           "for int x in a[1:1] { result = x; } int copy = result;",
-           "array[int, 2, 3] a; a[1, 2] = 1; "
-           "for int x in a[1, 2:2] { int y = x; }",
-           "array[int, 0] a; for int x in a { x = 2; } int x = 1;",
-           "array[int, 1] a = {1}; for int x in a { "
-           "for int x in a { continue; } break; }",
+           "array[int, 2, 3] a; a[1, 2] = 7; int result; "
+           "for int x in a[1, 2:2] { result = x; } int copy = result;",
            "array[int, 1, 1, 1, 1, 1, 1, 1,] a = {{{{{{{7,},},},},},},}; "
            "int result = a[0, 0, 0, 0, 0, 0, -1,];",
        }) {

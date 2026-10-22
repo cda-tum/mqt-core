@@ -123,18 +123,14 @@ returns a runtime value and cannot set a fixed array size or a `const`
 initializer. Its queried range has the same bounds and step preconditions as
 array copies.
 
-Iterate a one-dimensional array or slice with `for int x in values { ... }`. The
-local loop variable holds a copy of each element; assigning to it does not
-change the array. Elements are read in selection order, so writes to later
-elements are visible in later iterations. Slice bounds are evaluated once. Empty
-arrays execute no iterations; `break` and `continue` work as in range loops.
-Multidimensional arrays require a rank-one selection, such as
-`for float x in matrix[row, :-1:] { ... }`.
-
-Loop variables support scalar numeric conversions and sized integers. An `angle`
-variable requires an angle array with no wider precision; assignments retain the
-compile-time angle restriction. Iteration requires the selected elements
-initialized, or the whole array for runtime selections.
+Iterate a rank-one array or slice with `for int x in values { ... }`, or
+`for float x in matrix[row, :-1:] { ... }`. The local variable copies each
+element in selection order; writes to later elements remain visible. Bounds are
+evaluated once. Empty arrays skip the body; `break` and `continue` work as in
+range loops. Selected elements must be initialized, or the whole array for
+runtime selections. Loop variables support scalar numeric conversions and sized
+integers. An `angle` variable requires an angle array with no wider precision
+and retains the compile-time assignment restriction.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
