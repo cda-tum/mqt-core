@@ -125,6 +125,7 @@ void registerMQTCompilerPasses() {
     qco::registerMappingPass();
     qco::registerQuantumLoopUnroll();
     qco::registerRemoveDeadGates();
+    qco::registerRemoveRedundantResets();
     qco::registerReplaceClassicalControls();
     qco::registerReuseQubits();
     qco::registerTargetNativeSynthesis();
@@ -134,6 +135,7 @@ void registerMQTCompilerPasses() {
     mqt::registerSimplifyClassicalControl();
     mqt::registerUnrollModifiers();
     qc::registerShrinkQubitRegistersPass();
+    qtensor::registerNormalizeQTensorPass();
     qtensor::registerShrinkQTensorToFitPass();
     qir::registerQIRPasses();
     PassPipelineRegistration<>("mqt-qco-default",
@@ -244,6 +246,8 @@ void populateQCCleanupPipeline(OpPassManager& pm) {
 void populateQCOCleanupPipeline(OpPassManager& pm, bool removeDeadValues) {
   pm.addPass(mlir::mqt::createSimplifyClassicalControl());
   pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
+  pm.addPass(qtensor::createNormalizeQTensorPass());
+  pm.addPass(qco::createRemoveRedundantResets());
   pm.addPass(createCanonicalizerPass(
       GreedyRewriteConfig{}.setUseTopDownTraversal().setMaxIterations(
           GreedyRewriteConfig::kNoLimit)));

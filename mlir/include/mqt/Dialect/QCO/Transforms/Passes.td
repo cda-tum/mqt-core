@@ -635,4 +635,29 @@ def DecomposeMultiControlled
       "means wider than two-qubit).">];
 }
 
+def RemoveRedundantResets : Pass<"remove-redundant-resets", "mlir::ModuleOp"> {
+  let dependentDialects = ["mlir::qco::QCODialect",
+                           "mlir::qtensor::QTensorDialect"];
+  let summary = "Remove resets of qubits known to be zero";
+  let description = [{
+    Tracks zero qubits from scalar allocations, prior resets, and constant-index
+    extracts of untouched elements from a QTensor allocation. Tensor provenance
+    is transferred forward along unique-use tensor values within each block.
+    Reads and writes mark an index as touched; an unknown index invalidates
+    untouched-element knowledge for the rest of that allocation's chain.
+
+    The pass preserves resets after arbitrary quantum operations and does not
+    propagate knowledge through block arguments, control-flow joins, or unknown
+    tensor-producing operations. Nested SSA blocks are analyzed independently;
+    graph regions are skipped.
+    It does not infer that an inserted scalar restores a zero tensor element.
+    Pure index expressions are evaluated with a constant-folding cache.
+    The traversal is linear in the operations, accesses, and evaluated index
+    expressions.
+
+    QCO cleanup runs this pass after QTensor normalization. Direct reset folds
+    on scalar allocations remain available in canonicalization.
+  }];
+}
+
 #endif // MLIR_DIALECT_QCO_TRANSFORMS_PASSES_TD

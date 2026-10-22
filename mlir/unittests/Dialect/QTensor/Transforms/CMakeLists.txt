@@ -7,10 +7,14 @@
 # Licensed under the MIT License
 
 set(target_name mqt-core-mlir-unittest-qtensor-transforms)
-add_executable(${target_name} test_qtensor_transforms.cpp)
+add_executable(${target_name} test_qtensor_normalization.cpp test_qtensor_transforms.cpp)
 target_link_libraries(
   ${target_name}
   PRIVATE GTest::gtest_main
+          MLIRControlFlowDialect
+          MLIRSCFDialect
+          MLIRSupportMQT
+          MLIRQCOUtils
           MLIRMQTDialect
           MLIRParser
           MLIRPass

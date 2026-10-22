@@ -15,6 +15,7 @@ add_executable(
   test_qco_merge_single_qubit_rotation.cpp
   test_qco_pauli_twirling.cpp
   test_qco_remove_dead_gates.cpp
+  test_qco_remove_redundant_resets.cpp
   test_qco_replace_classical_controls.cpp
   test_qco_reuse_qubits.cpp
   test_quantum_loop_unroll.cpp)

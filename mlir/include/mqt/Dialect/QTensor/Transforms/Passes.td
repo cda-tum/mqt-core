@@ -22,4 +22,30 @@ def ShrinkQTensorToFitPass : Pass<"qtensor-shrink-to-fit", "mlir::ModuleOp"> {
   }];
 }
 
+def NormalizeQTensorPass : Pass<"qtensor-normalize", "mlir::ModuleOp"> {
+  let dependentDialects = ["mlir::qtensor::QTensorDialect"];
+  let summary = "Normalize constant-index QTensor access chains";
+  let description = [{
+    Folds local extract/reinsert identities, then reorders constant-index
+    extracts before pending inserts within same-block SSA tensor chains. An
+    extract of a pending inserted element uses that scalar directly. Pending
+    inserts are emitted in their original order.
+    Repeated writes are retained; an extract consumes only the latest pending
+    write to its index, so overwritten qubits remain consumed.
+
+    Unknown indices, unknown tensor users, and block boundaries terminate a
+    chain. Constant-index segments beyond such boundaries are processed
+    independently. Graph regions are skipped. Already batched chains are left
+    unchanged.
+    Retained accesses preserve their attributes and locations. The pass walks
+    each access a bounded number of times and never commutes pairs iteratively.
+
+    Pure index expressions are evaluated with a constant-folding cache; the
+    pass does not rewrite those expressions. QCO cleanup runs reset analysis
+    and canonicalization after this pass. Existing tensor canonicalizers handle
+    accesses exposed later by control-flow simplification. This pass does not
+    cross control-flow boundaries or optimize quantum gates.
+  }];
+}
+
 #endif // MLIR_DIALECT_QTENSOR_TRANSFORMS_PASSES_TD
