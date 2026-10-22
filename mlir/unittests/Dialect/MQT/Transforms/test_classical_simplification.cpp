@@ -191,4 +191,120 @@ TEST_F(ClassicalSimplificationTest, ConditionsRemainScopedToTheirBranches) {
   EXPECT_EQ(returned.getOperand(1), function.getArgument(0));
 }
 
+TEST_F(ClassicalSimplificationTest, ForwardsAcrossEffectFreeRegions) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @test(%reg: !cbit.reg<2>, %seed: i1, %condition: i1) -> (i1, i1) {
+      %c0 = arith.constant 0 : index
+      cbit.store %seed, %reg[%c0] : !cbit.reg<2>
+      %choice = qco.if %condition args() -> i1 {
+        qco.yield %seed : i1
+      } else args() {
+        qco.yield %condition : i1
+      }
+      %value = cbit.load %reg[%c0] : !cbit.reg<2>
+      return %value, %choice : i1, i1
+    }
+  })mlir",
+                                              &context_);
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  ASSERT_TRUE(succeeded(canonicalize(*moduleOp)));
+  EXPECT_TRUE(succeeded(verify(*moduleOp)));
+  auto function = moduleOp->lookupSymbol<func::FuncOp>("test");
+  auto returned = cast<func::ReturnOp>(function.front().getTerminator());
+  EXPECT_EQ(returned.getOperand(0), function.getArgument(1));
+}
+
+TEST_F(ClassicalSimplificationTest,
+       StoresInvalidatePotentiallyAliasedArguments) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @test(%a: !cbit.reg<2>, %b: !cbit.reg<2>, %seed: i1, %other: i1)
+        -> (i1, i1) {
+      %c0 = arith.constant 0 : index
+      cbit.store %seed, %a[%c0] : !cbit.reg<2>
+      %before = cbit.load %a[%c0] : !cbit.reg<2>
+      cbit.store %other, %b[%c0] : !cbit.reg<2>
+      %after = cbit.load %a[%c0] : !cbit.reg<2>
+      return %before, %after : i1, i1
+    }
+  })mlir",
+                                              &context_);
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  ASSERT_TRUE(succeeded(canonicalize(*moduleOp)));
+  EXPECT_TRUE(succeeded(verify(*moduleOp)));
+  auto function = moduleOp->lookupSymbol<func::FuncOp>("test");
+  auto returned = cast<func::ReturnOp>(function.front().getTerminator());
+  EXPECT_EQ(returned.getOperand(0), function.getArgument(2));
+  EXPECT_TRUE(returned.getOperand(1).getDefiningOp<cbit::LoadOp>());
+}
+
+TEST_F(ClassicalSimplificationTest, WholeWritesInvalidateAliasedArguments) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @test(%a: !cbit.reg<2>, %b: !cbit.reg<2>, %seed: i1, %other: i2)
+        -> i1 {
+      %c0 = arith.constant 0 : index
+      cbit.store %seed, %a[%c0] : !cbit.reg<2>
+      cbit.write %other, %b : i2, !cbit.reg<2>
+      %after = cbit.load %a[%c0] : !cbit.reg<2>
+      return %after : i1
+    }
+  })mlir",
+                                              &context_);
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  ASSERT_TRUE(succeeded(canonicalize(*moduleOp)));
+  EXPECT_TRUE(succeeded(verify(*moduleOp)));
+  auto function = moduleOp->lookupSymbol<func::FuncOp>("test");
+  auto returned = cast<func::ReturnOp>(function.front().getTerminator());
+  EXPECT_TRUE(returned.getOperand(0).getDefiningOp<cbit::LoadOp>());
+}
+
+TEST_F(ClassicalSimplificationTest, UnknownEffectsInvalidateStoredValues) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func private @touch()
+    func.func @test(%reg: !cbit.reg<2>, %seed: i1) -> i1 {
+      %c0 = arith.constant 0 : index
+      cbit.store %seed, %reg[%c0] : !cbit.reg<2>
+      func.call @touch() : () -> ()
+      %value = cbit.load %reg[%c0] : !cbit.reg<2>
+      return %value : i1
+    }
+  })mlir",
+                                              &context_);
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  ASSERT_TRUE(succeeded(canonicalize(*moduleOp)));
+  EXPECT_TRUE(succeeded(verify(*moduleOp)));
+  auto function = moduleOp->lookupSymbol<func::FuncOp>("test");
+  auto returned = cast<func::ReturnOp>(function.front().getTerminator());
+  EXPECT_TRUE(returned.getOperand(0).getDefiningOp<cbit::LoadOp>());
+}
+
+TEST_F(ClassicalSimplificationTest, NestedWritesInvalidateStoredValues) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @test(%a: !cbit.reg<2>, %b: !cbit.reg<2>, %seed: i1, %condition: i1)
+        -> i1 {
+      %c0 = arith.constant 0 : index
+      cbit.store %seed, %a[%c0] : !cbit.reg<2>
+      qco.if %condition args() -> () {
+        cbit.store %condition, %b[%c0] : !cbit.reg<2>
+        qco.yield
+      } else args() {
+        qco.yield
+      }
+      %value = cbit.load %a[%c0] : !cbit.reg<2>
+      return %value : i1
+    }
+  })mlir",
+                                              &context_);
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  ASSERT_TRUE(succeeded(canonicalize(*moduleOp)));
+  EXPECT_TRUE(succeeded(verify(*moduleOp)));
+  auto function = moduleOp->lookupSymbol<func::FuncOp>("test");
+  auto returned = cast<func::ReturnOp>(function.front().getTerminator());
+  EXPECT_TRUE(returned.getOperand(0).getDefiningOp<cbit::LoadOp>());
+}
+
 } // namespace

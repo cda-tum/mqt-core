@@ -20,12 +20,14 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 
 #include <cstdint>
+#include <utility>
 
 namespace mlir::mqt {
 
@@ -80,7 +82,10 @@ public:
           continue;
         }
         if (auto store = dyn_cast<cbit::StoreOp>(operation)) {
-          auto& values = registers[store.getReg()];
+          // Other register values may alias this storage.
+          auto previous = std::move(registers[store.getReg()]);
+          registers.clear();
+          auto& values = registers[store.getReg()] = std::move(previous);
           values.dynamic = decltype(values.dynamic){};
           if (const auto index = getConstantIntValue(store.getIndex())) {
             values.constants[*index] = store.getValue();
@@ -114,7 +119,7 @@ public:
         if (isa<cbit::ReadOp>(operation)) {
           continue;
         }
-        if (operation.getNumRegions() != 0) {
+        if (!isMemoryEffectFree(&operation)) {
           registers = decltype(registers){};
         } else {
           for (Value operand : operation.getOperands()) {

@@ -17,8 +17,10 @@ def SimplifyClassicalControl
   let summary = "Forward classical bits and propagate known branch conditions";
   let description = [{
     Visits each block once to forward classical-bit loads from known stores,
-    previous loads, or zero initialization. Ambiguous writes invalidate memory
-    facts; memory facts do not cross region or block boundaries.
+    previous loads, or zero initialization. Stores invalidate facts for other
+    register values because those values may alias. Unknown memory effects
+    invalidate all memory facts. Facts remain block-local and survive across
+    effect-free regions, but do not propagate into their nested blocks.
 
     Within each QCO if branch, replaces uses of its condition with the known
     boolean value. A following canonicalizer folds the exposed expressions and
