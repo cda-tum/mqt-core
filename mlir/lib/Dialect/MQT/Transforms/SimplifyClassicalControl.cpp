@@ -48,7 +48,7 @@ struct Condition {
   Value constant;
 };
 
-/// Each operand and operation is visited once.
+/// Forward stored bits and scoped branch conditions.
 ///
 /// Memory facts stay block-local; branch facts are scoped to the region in
 /// which the condition is known.
@@ -60,37 +60,44 @@ public:
   explicit ClassicalControlSimplifier(MLIRContext* context)
       : rewriter(context) {}
 
-  void run(Region& region) {
+  void run(Region& region, bool hasConditions = false) {
     for (Block& block : region) {
       DenseMap<Value, RegisterValues> registers;
       for (Operation& operation : llvm::make_early_inc_range(block)) {
-        for (OpOperand& operand : operation.getOpOperands()) {
-          if (auto* condition = conditions.lookup(operand.get())) {
-            if (!condition->constant) {
-              rewriter.setInsertionPointToStart(condition->block);
-              condition->constant = arith::ConstantIntOp::create(
-                  rewriter, operation.getLoc(),
-                  static_cast<int64_t>(condition->truth), 1);
+        if (hasConditions) {
+          for (OpOperand& operand : operation.getOpOperands()) {
+            if (auto* condition = conditions.lookup(operand.get())) {
+              if (!condition->constant) {
+                rewriter.setInsertionPointToStart(condition->block);
+                condition->constant = arith::ConstantIntOp::create(
+                    rewriter, operation.getLoc(),
+                    static_cast<int64_t>(condition->truth), 1);
+              }
+              rewriter.modifyOpInPlace(
+                  &operation, [&] { operand.set(condition->constant); });
             }
-            rewriter.modifyOpInPlace(&operation,
-                                     [&] { operand.set(condition->constant); });
           }
         }
         if (auto alloc = dyn_cast<cbit::AllocOp>(operation)) {
-          registers[alloc.getResult()].zeroInitialized =
-              alloc.getInitialization() == cbit::Initialization::Zero;
+          if (alloc.getInitialization() == cbit::Initialization::Zero) {
+            registers[alloc.getResult()].zeroInitialized = true;
+          }
           continue;
         }
         if (auto store = dyn_cast<cbit::StoreOp>(operation)) {
           // Other register values may alias this storage.
-          auto previous = std::move(registers[store.getReg()]);
-          registers.clear();
-          auto& values = registers[store.getReg()] = std::move(previous);
-          values.dynamic = decltype(values.dynamic){};
+          if (registers.size() > 1 ||
+              (!registers.empty() && !registers.contains(store.getReg()))) {
+            auto previous = std::move(registers[store.getReg()]);
+            registers.clear();
+            registers[store.getReg()] = std::move(previous);
+          }
+          auto& values = registers[store.getReg()];
+          values.dynamic.clear();
           if (const auto index = getConstantIntValue(store.getIndex())) {
             values.constants[*index] = store.getValue();
           } else {
-            values.constants = decltype(values.constants){};
+            values.constants.clear();
             values.zeroInitialized = false;
             values.dynamic[store.getIndex()] = store.getValue();
           }
@@ -119,15 +126,18 @@ public:
         if (isa<cbit::ReadOp>(operation)) {
           continue;
         }
-        if (!isMemoryEffectFree(&operation)) {
-          registers = decltype(registers){};
-        } else {
-          for (Value operand : operation.getOperands()) {
-            if (isa<cbit::RegisterType>(operand.getType())) {
-              registers.erase(operand);
+        if (!registers.empty()) {
+          if (!isMemoryEffectFree(&operation)) {
+            registers.clear();
+          } else {
+            for (Value operand : operation.getOperands()) {
+              if (isa<cbit::RegisterType>(operand.getType())) {
+                registers.erase(operand);
+              }
             }
           }
         }
+        auto branch = dyn_cast<qco::IfOp>(operation);
         for (auto [index, nested] : llvm::enumerate(operation.getRegions())) {
           llvm::ScopedHashTableScope<Value, Condition*> scope(conditions);
           Condition condition{
@@ -135,11 +145,10 @@ public:
               .block = nested.empty() ? nullptr : &nested.front(),
               .constant = {},
           };
-          if (auto branch = dyn_cast<qco::IfOp>(operation);
-              branch && !nested.empty()) {
+          if (branch && !nested.empty()) {
             conditions.insert(branch.getCondition(), &condition);
           }
-          run(nested);
+          run(nested, hasConditions || branch);
         }
       }
     }

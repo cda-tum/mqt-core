@@ -21,6 +21,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -28,6 +29,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <optional>
 
 namespace mlir::qtensor {
@@ -63,12 +65,18 @@ getAccessIndex(Operation* operation, DenseMap<Value, Attribute>& cache) {
   return folded ? getConstantIntValue(folded) : std::nullopt;
 }
 
-static bool normalizeChain(ArrayRef<Operation*> chain, IRRewriter& rewriter,
-                           DenseMap<Value, Attribute>& cache) {
+struct NormalizationAccess {
+  Operation* operation;
+  int64_t index;
+  bool erase = false;
+};
+
+static bool normalizeChain(MutableArrayRef<NormalizationAccess> chain,
+                           IRRewriter& rewriter) {
   bool sawInsert = false;
   bool needsReordering = false;
-  for (auto* operation : chain) {
-    if (isa<InsertOp>(operation)) {
+  for (auto& access : chain) {
+    if (isa<InsertOp>(access.operation)) {
       sawInsert = true;
     } else {
       needsReordering |= sawInsert;
@@ -78,56 +86,54 @@ static bool normalizeChain(ArrayRef<Operation*> chain, IRRewriter& rewriter,
     return false;
   }
 
-  auto tensor = getTensorInput(chain.front());
+  auto tensor = getTensorInput(chain.front().operation);
+  auto* block = chain.back().operation->getBlock();
+  auto insertionPoint = std::next(chain.back().operation->getIterator());
+  auto& outputUse = *getTensorOutput(chain.back().operation).use_begin();
   DenseMap<int64_t, SmallVector<size_t, 1>> pending;
-  SmallVector<InsertOp> inserts;
-  const auto flush = [&] {
-    for (auto insert : inserts) {
-      if (!insert) {
-        continue;
-      }
-      auto replacement = cast<InsertOp>(rewriter.clone(*insert));
-      replacement.getDestMutable().assign(tensor);
-      tensor = replacement.getResult();
-    }
-    inserts.clear();
-    pending.clear();
-  };
 
-  for (auto* operation : chain) {
-    rewriter.setInsertionPoint(operation);
-    const auto index = *getAccessIndex(operation, cache);
-    if (auto insert = dyn_cast<InsertOp>(operation)) {
+  for (auto [position, access] : llvm::enumerate(chain)) {
+    if (isa<InsertOp>(access.operation)) {
       // Keep overwritten writes: each insert still consumes its scalar.
-      pending[index].push_back(inserts.size());
-      inserts.push_back(insert);
+      pending[access.index].push_back(position);
       continue;
     }
 
-    auto extract = cast<ExtractOp>(operation);
-    Value qubit;
-    if (auto found = pending.find(index); found != pending.end()) {
+    auto extract = cast<ExtractOp>(access.operation);
+    if (auto found = pending.find(access.index); found != pending.end()) {
       auto& positions = found->second;
-      auto& insert = inserts[positions.pop_back_val()];
-      qubit = insert.getScalar();
-      insert = nullptr;
+      auto& stored = chain[positions.pop_back_val()];
+      auto insert = cast<InsertOp>(stored.operation);
+      rewriter.replaceAllUsesWith(extract.getResult(), insert.getScalar());
+      stored.erase = true;
+      access.erase = true;
       if (positions.empty()) {
         pending.erase(found);
       }
     } else {
-      auto replacement = cast<ExtractOp>(rewriter.clone(*extract));
-      replacement.getTensorMutable().assign(tensor);
-      tensor = replacement.getOutTensor();
-      qubit = replacement.getResult();
+      rewriter.modifyOpInPlace(
+          extract, [&] { extract.getTensorMutable().assign(tensor); });
+      tensor = extract.getOutTensor();
     }
-    rewriter.replaceAllUsesWith(extract.getResult(), qubit);
   }
 
-  rewriter.setInsertionPointAfter(chain.back());
-  flush();
-  rewriter.replaceAllUsesWith(getTensorOutput(chain.back()), tensor);
-  for (auto* operation : llvm::reverse(chain)) {
-    rewriter.eraseOp(operation);
+  for (auto& access : chain) {
+    auto insert = dyn_cast<InsertOp>(access.operation);
+    if (!insert || access.erase) {
+      continue;
+    }
+    rewriter.moveOpBefore(insert, block, insertionPoint);
+    rewriter.modifyOpInPlace(insert,
+                             [&] { insert.getDestMutable().assign(tensor); });
+    tensor = insert.getResult();
+  }
+  rewriter.modifyOpInPlace(outputUse.getOwner(),
+                           [&] { outputUse.set(tensor); });
+  // Dead tensor results only feed other dead accesses; avoid rewiring them.
+  for (auto& access : llvm::reverse(chain)) {
+    if (access.erase) {
+      rewriter.eraseOp(access.operation);
+    }
   }
   return true;
 }
@@ -141,11 +147,12 @@ static bool foldLocalRoundTrips(Block* block, IRRewriter& rewriter,
         insert.getDest() != extract.getOutTensor()) {
       continue;
     }
-    const auto insertIndex = getAccessIndex(insert, cache);
-    const auto extractIndex = getAccessIndex(extract, cache);
-    if (insert.getIndex() != extract.getIndex() &&
-        (!insertIndex || !extractIndex || *insertIndex != *extractIndex)) {
-      continue;
+    if (insert.getIndex() != extract.getIndex()) {
+      const auto insertIndex = getAccessIndex(insert, cache);
+      const auto extractIndex = getAccessIndex(extract, cache);
+      if (!insertIndex || !extractIndex || *insertIndex != *extractIndex) {
+        continue;
+      }
     }
     rewriter.replaceOp(insert, extract.getTensor());
     rewriter.eraseOp(extract);
@@ -173,16 +180,19 @@ static bool normalizeBlock(Block* block, IRRewriter& rewriter) {
     if (visited.contains(access)) {
       continue;
     }
-    SmallVector<Operation*> chain;
+    SmallVector<NormalizationAccess> chain;
     auto* current = access;
-    while (current->getBlock() == block &&
-           getAccessIndex(current, cache).has_value()) {
+    while (current->getBlock() == block) {
+      const auto index = getAccessIndex(current, cache);
+      if (!index) {
+        break;
+      }
       visited.insert(current);
-      chain.push_back(current);
+      chain.push_back({current, *index});
       current = *getTensorOutput(current).getUsers().begin();
     }
     if (!chain.empty()) {
-      changed |= normalizeChain(chain, rewriter, cache);
+      changed |= normalizeChain(chain, rewriter);
     }
   }
   return foldLocalRoundTrips(block, rewriter, cache) || changed;

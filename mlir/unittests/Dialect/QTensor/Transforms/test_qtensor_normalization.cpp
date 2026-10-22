@@ -267,6 +267,34 @@ TEST_F(QTensorNormalizationTest, LeavesBatchedAccessesUnchanged) {
   EXPECT_EQ(print(*moduleOp), snapshot);
 }
 
+TEST_F(QTensorNormalizationTest, PreservesInterleavedTensorChains) {
+  auto moduleOp = parse(R"mlir(
+    %other = qtensor.alloc(%c4) : tensor<4x!qco.qubit>
+    %t1 = qtensor.insert %a into %t[%c0] : tensor<4x!qco.qubit>
+    %s1 = qtensor.insert %b into %other[%c1] : tensor<4x!qco.qubit>
+    %t2, %x = qtensor.extract %t1[%c1] : tensor<4x!qco.qubit>
+    %s2, %y = qtensor.extract %s1[%c0] : tensor<4x!qco.qubit>
+    qtensor.dealloc %s2 : tensor<4x!qco.qubit>
+    return %t2, %x, %y : tensor<4x!qco.qubit>, !qco.qubit, !qco.qubit
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+  auto function = *moduleOp->getOps<func::FuncOp>().begin();
+  auto firstScalar = (*function.getOps<qco::AllocOp>().begin()).getResult();
+  auto secondScalar =
+      (*std::next(function.getOps<qco::AllocOp>().begin())).getResult();
+  ASSERT_NO_FATAL_FAILURE(normalize(*moduleOp));
+  auto returned = cast<func::ReturnOp>(function.front().getTerminator());
+  auto first = returned.getOperand(0).getDefiningOp<qtensor::InsertOp>();
+  auto dealloc = *function.getOps<qtensor::DeallocOp>().begin();
+  auto second = dealloc.getTensor().getDefiningOp<qtensor::InsertOp>();
+  ASSERT_TRUE(first);
+  ASSERT_TRUE(second);
+  EXPECT_EQ(first.getScalar(), firstScalar);
+  EXPECT_EQ(second.getScalar(), secondScalar);
+  EXPECT_TRUE(first.getDest().getDefiningOp<qtensor::ExtractOp>());
+  EXPECT_TRUE(second.getDest().getDefiningOp<qtensor::ExtractOp>());
+}
+
 TEST_F(QTensorNormalizationTest, StopsAtBlockBoundary) {
   auto moduleOp = parse(R"mlir(
     %t1 = qtensor.insert %a into %t[%c0] : tensor<4x!qco.qubit>
