@@ -74,9 +74,12 @@ return types, and docstrings. Constructors, options, probability functions, and
 evaluation methods stay explicit because their contracts differ. The QPE custom
 constructor uses C++20 `std::construct_at`.
 
-`test/python/bench/test_serialization.py` covers both parser paths for every
-family, exact canonical metadata, family types, and source-qualified errors.
-Existing family-specific tests remain. Regenerated stubs have no API diff.
+Existing family-specific tests cover Python serialization. A separate all-family
+matrix was removed because it duplicated those tests and required another family
+list to maintain. BV and Grover test only manifest parsing in Python; QFT and
+QPE test only instance-specification parsing. Python source forwarding and error
+translation have no dedicated test. Native tests cover both parser paths and
+source-qualified errors. Regenerated stubs have no API diff.
 
 ### 4. Use the family registry for internal emitter declarations
 
@@ -143,8 +146,8 @@ byte, including QAOA.
 
 - Release build with LLVM/MLIR 23.1.0 and assertions enabled: 162 native
   benchmark tests, 53 MLIR benchmark tests, and the CLI CTest passed.
-- Python 3.14 benchmark suite: 98 tests passed, including the new 16-family
-  serialization test.
+- Python 3.14 benchmark suite: 82 tests passed after removing the 16-family
+  serialization matrix.
 - Both numerical regressions failed against baseline sources and passed against
   corrected sources. An external assertion probe checked 257,052 QPE and
   multiplexer reference values, normalization, numerical endpoints, and shared
