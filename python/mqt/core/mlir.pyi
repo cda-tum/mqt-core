@@ -1437,18 +1437,18 @@ def compile_program(
 ) -> CompiledProgram:
     """Compile for a Qiskit backend, compiler target, or QDMI device.
 
-    With ``output=OutputFormat.QISKIT``, ``target`` accepts a Qiskit BackendV2,
-    Qiskit Target, or :class:`CompilerTarget` and returns a QuantumCircuit with
-    physical qubits and layout metadata when available. Qiskit targets restrict control flow to
-    their advertised instructions. An explicit CompilerTarget supplies gate and
-    topology constraints but does not describe backend control-flow support.
+    Qiskit backends and Targets require ``output=OutputFormat.QISKIT`` and return
+    a QuantumCircuit. Compilation uses their gates, topology, and advertised
+    standard control flow.
+
+    An explicit :class:`CompilerTarget` supplies gates and topology only. Select
+    ``output`` for a typed program or QuantumCircuit, or ``program_format`` for a
+    :class:`CompiledProgram`.
 
     Device targets select Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
     (binary, text). Use ``program_format`` to select a format explicitly.
     Submit the returned :class:`CompiledProgram` with :func:`submit_program`.
 
-    An explicit :class:`CompilerTarget` requires ``output`` to return a typed
-    program, or ``program_format`` to return a :class:`CompiledProgram`.
     Typed inputs are copied unless ``inplace=True``.
     """
 

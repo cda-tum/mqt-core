@@ -184,6 +184,7 @@ Select an output format to stop the pipeline at a particular representation:
 | Inspect QCO immediately after conversion | `OutputFormat.QCO`                                     | `QCOProgram`      |
 | Inspect QCO after optimization           | `OutputFormat.QCO_OPTIMIZED`                           | `QCOProgram`      |
 | Obtain the optimized circuit             | `OutputFormat.QC` (default)                            | `QCProgram`       |
+| Obtain a Qiskit circuit                  | `OutputFormat.QISKIT`                                  | `QuantumCircuit`  |
 | Emit an optimized OpenQASM program       | `OutputFormat.OPENQASM3`                               | `OpenQASMProgram` |
 | Convert to the jeff dialect              | `OutputFormat.JEFF`                                    | `JeffProgram`     |
 | Generate QIR                             | `OutputFormat.QIR_BASE` or `OutputFormat.QIR_ADAPTIVE` | `QIRProgram`      |
@@ -246,39 +247,38 @@ diagnostic. See {doc}`OpenQASM` for the complete support table.
 
 ## Use Qiskit circuits directly
 
-Install the optional Qiskit integration with {code}`mqt-core[qiskit]`. The extra
-also supports SDK uses with older Qiskit releases; direct compiler translation
-requires a version listed in {doc}`qiskit`. These circuits can be translated
-between {py:class}`~qiskit.circuit.QuantumCircuit` and
-{py:class}`~mqt.core.mlir.QCProgram`:
+Install {code}`mqt-core[qiskit]` with a supported version listed in
+{doc}`qiskit`. To compile a {py:class}`~qiskit.circuit.QuantumCircuit` for a
+backend and return a circuit, select `OutputFormat.QISKIT`:
 
 ```{code-cell} ipython3
 from qiskit import QuantumCircuit
+from qiskit.providers.fake_provider import GenericBackendV2
 
 qiskit_bell = QuantumCircuit(2, 2)
 qiskit_bell.h(0)
 qiskit_bell.cx(0, 1)
 qiskit_bell.measure(range(2), range(2))
 
-direct = QCProgram.from_qiskit(qiskit_bell)
-restored = direct.to_qiskit(copy=True)
-compiled_qiskit = compile_program(qiskit_bell, output=OutputFormat.QISKIT)
-
-assert direct.is_valid  # copy=True preserves the QC program.
-assert restored.count_ops() == qiskit_bell.count_ops()
+backend = GenericBackendV2(3, basis_gates=["sx", "x", "rz", "cx"])
+compiled_qiskit = compile_program(qiskit_bell, target=backend, output=OutputFormat.QISKIT)
 assert isinstance(compiled_qiskit, QuantumCircuit)
+assert compiled_qiskit.num_qubits == backend.num_qubits
+assert compiled_qiskit.layout is not None
 ```
 
-QCO programs also provide {py:meth}`~mqt.core.mlir.QCOProgram.to_qiskit`, which
-converts through QC. Both exporters consume their source by default, including
-when conversion or export fails. Pass `copy=True` to preserve the source. Both
-accept `target=target` to map static target site IDs to dense physical-qubit
-indices in target site order.
+Omit `target` for target-independent optimization. Use
+{py:meth}`~mqt.core.mlir.QCProgram.from_qiskit` to work with the typed compiler
+programs directly. {py:meth}`~mqt.core.mlir.QCProgram.to_qiskit` and
+{py:meth}`~mqt.core.mlir.QCOProgram.to_qiskit` export the current program and
+consume it by default, including when export fails. Pass `copy=True` to preserve
+it, and `target=target` to map compiler site IDs to physical qubits:
 
 ```{code-cell} ipython3
-qco = direct.to_qco(copy=True)
-restored = qco.to_qiskit()
-assert not qco.is_valid
+direct = QCProgram.from_qiskit(qiskit_bell)
+restored = direct.to_qiskit(copy=True)
+assert direct.is_valid
+assert restored.count_ops() == qiskit_bell.count_ops()
 ```
 
 See {doc}`qiskit` for supported circuit features and translation limitations.
