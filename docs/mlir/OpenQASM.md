@@ -384,12 +384,11 @@ values across writes, retains integer bit patterns, and emits angles as
 floating-point radians. Reimport also requires the combined register-and-array
 limit described above.
 
-jeff export flattens fixed-size stack arrays in row-major order and preserves
-updates through branches and loops. Import restores internal reference storage,
-copying only when an old array value remains live. Array lengths must fit signed
-i32; unresolved safety assertions and live old arrays across mutating control
-flow are unsupported. Array-valued function interfaces retain tensor values
-instead of exposing stack storage.
+jeff export flattens fixed-size stack arrays in row-major order and carries
+updates through control flow. Import uses reference storage with copies for live
+old values; array-valued interfaces stay tensor-based. Lengths must fit signed
+i32. Unresolved safety assertions and old array values live across mutating
+control flow are unsupported.
 
 Qiskit and Base QIR export require array storage to be eliminated. Compiler
 cleanup promotes eligible arrays to scalar values and folds constants. With

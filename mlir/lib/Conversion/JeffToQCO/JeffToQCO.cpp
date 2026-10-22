@@ -1402,9 +1402,8 @@ protected:
                  ConvertJeffArrayZero<jeff::FloatArrayZeroOp>,
                  ConvertJeffLogicalShift,
                  ConvertJeffArrayGet<jeff::IntArrayGetIndexOp>,
-                 ConvertJeffArrayGet<jeff::FloatArrayGetIndexOp>>(
-        typeConverter, context, PatternBenefit(2));
-    patterns.add<ConvertJeffArrayConst<jeff::IntArrayConst1Op>,
+                 ConvertJeffArrayGet<jeff::FloatArrayGetIndexOp>,
+                 ConvertJeffArrayConst<jeff::IntArrayConst1Op>,
                  ConvertJeffArrayConst<jeff::IntArrayConst8Op>,
                  ConvertJeffArrayConst<jeff::IntArrayConst16Op>,
                  ConvertJeffArrayConst<jeff::IntArrayConst32Op>,
