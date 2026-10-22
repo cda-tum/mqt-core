@@ -201,6 +201,10 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
   const auto cases =
       std::to_array<std::pair<llvm::StringLiteral, llvm::StringLiteral>>({
           {"array[int, -1] a;", "non-negative"},
+          {
+              "uint n = sizeof(missing) + sizeof(missing);",
+              "array or subarray",
+          },
           {"uint n = sizeof(1);", "array or subarray"},
           {
               "array[int, 2, 3] a; uint n = sizeof(a[0, 0]);",
@@ -224,8 +228,25 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
               "compile-time integer",
           },
           {
-              "array[int, 2] a; int i = 0; uint n = sizeof(a[:i]);",
-              "compile-time extent",
+              "array[int, 2] a; int i = 0; "
+              "uint n = sizeof(a[:i], sizeof(a[:i]));",
+              "compile-time integer",
+          },
+          {
+              "array[int, 2] a; int i; uint n = sizeof(a[:i]);",
+              "uninitialized",
+          },
+          {
+              "array[int, 2] a; int i = 1; const uint n = sizeof(a[:i]) + 1;",
+              "constant",
+          },
+          {
+              "array[int, 2] a; int i = 1; array[int, sizeof(a[:i])] b;",
+              "constant",
+          },
+          {
+              "array[int, 2] a; int i = 1; int[sizeof(a[:i])] n;",
+              "constant",
           },
           {
               "array[int, 2] a; uint n = sizeof(a); int x = a[0];",

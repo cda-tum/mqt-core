@@ -1185,7 +1185,7 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         array[int, 0, 2] noRows = {};
         array[int, 400, 400, 0] emptyTable;
         array[int, 400, 400, 0] emptyCopy = emptyTable[:, :, :];
-        int stride = -1;
+        int stride = -2;
         empty = emptyRow[:stride:];
         empty = emptyRow[:stride:] ++ empty;
         array[int, 0, 2] concatenated = noRows ++ noRows;
@@ -1193,7 +1193,9 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         array[int, 1] padded = empty ++ one ++ empty;
         if (padded[0] != 1) { angles[1] = 0.0; }
         if (sizeof(empty) != 0 || sizeof(emptyRows, 1) != 0 ||
-            sizeof(emptyRows[0, :]) != 0) { angles[1] = 0.0; }
+            sizeof(emptyRows[0, :]) != 0 || sizeof(empty[:stride:]) != 0) {
+          angles[1] = 0.0;
+        }
         qubit q;
         output bit result;
         bool zero = bool(angles[0]);
@@ -1305,6 +1307,34 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
         for int i in [0:sizeof(angles)-1] { U(angles[i], 0, 0) q; }
         if (columns != 3 || sizeof(uninitialized[:, 0]) != 2 ||
             sizeof(angles[0:2:2]) != 2) { reset q; }
+        output bit result;
+        result = measure q;
+      )qasm",
+      R"qasm(OPENQASM 3.0;
+        array[int, 2, 5] a;
+        gate by_size(t) q {
+          U(pi * float(sizeof(a[1, 0:int(t):int(t)])) / 2, 0, 0) q;
+        }
+        qubit q;
+        U(pi, 0, 0) q;
+        bit measured = measure q;
+        int[8] one = int[8](measured);
+        int start = -5;
+        int stop = -1;
+        uint[8] step = 2;
+        uint n = sizeof(a[one, start:step:stop]);
+        int low = -9223372036854775807-1;
+        uint high = 9223372036854775807;
+        uint sum = 0;
+        for int i in [1:3] { sum += sizeof(a[one, :i]); }
+        reset q;
+        if (n == 3 && sum == 9 && sizeof(a[:one]) == 2 &&
+            sizeof(a[:one, :-one:], 1) == 5 &&
+            sizeof(a[one, :sizeof(a[one, :one])-1]) == 2 &&
+            sizeof(a[one, 4:low:0]) == 1 &&
+            sizeof(a[one, 0:high:4]) == 1) {
+          by_size(float(sizeof(a[one, :one])) / 2) q;
+        }
         output bit result;
         result = measure q;
       )qasm",

@@ -90,7 +90,8 @@ destination must have matching remaining dimensions and element types, including
 their widths. All selected source elements must be initialized. Whole-array
 arithmetic, compound assignments, and whole-array inputs or outputs are
 unsupported. To pass or return array values, select individual entries as gate
-parameters or scalar outputs; gate definitions cannot capture mutable arrays.
+parameters or scalar outputs. Gate definitions can query array dimensions but
+cannot access array elements.
 
 Use inclusive ranges to select entries in any dimension: `a[1:3]`, `a[0:2:4]`,
 or `a[:, 1]`. Bounds and steps may be runtime integers. Negative bounds count
@@ -113,11 +114,14 @@ remaining dimensions must match. Chained and parenthesized concatenations,
 runtime ranges, and repeated operands are supported. Assignments such as
 `a = a[2:] ++ a[:1];` preserve the original source values.
 
-`sizeof(a)` returns the first dimension's length as a compile-time `uint`;
-`sizeof(a, d)` selects a zero-based, compile-time integer dimension. Subarrays
-and fixed ranges are supported, including zero-length dimensions. The query does
-not read array elements, so the array need not be initialized. The queried
-extent must be known at compile time.
+`sizeof(a)` returns the first dimension's length as a `uint`; `sizeof(a, d)`
+selects a zero-based, compile-time integer dimension. Subarrays and ranges are
+supported, including zero-length dimensions. The query does not read array
+elements, so the array need not be initialized. The queried extent is constant
+when known at compile time. A runtime-sized range, such as `sizeof(a[:i])`,
+returns a runtime value and cannot set a fixed array size or a `const`
+initializer. Its queried range has the same bounds and step preconditions as
+array copies.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
