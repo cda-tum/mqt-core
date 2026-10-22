@@ -15,7 +15,6 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/python \
     PATH=/opt/venv/bin:$PATH
 RUN apt-get update \
     && apt-get install --no-install-recommends -y ca-certificates \
-    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' ca-certificates)" ge 20260816ubuntu0.26.04.1 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=uv /uv /uvx /bin/
 ARG UV_LINK_MODE=copy
