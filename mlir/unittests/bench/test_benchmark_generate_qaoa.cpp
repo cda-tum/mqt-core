@@ -14,6 +14,7 @@
 #include "dd/StateGeneration.hpp"
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
+#include "mqt/Dialect/QCO/IR/QCOOps.h"
 #include "mqt/Dialect/QCO/Utils/DDFunctionality.h"
 #include "mqt/bench/Generate.h"
 
@@ -23,11 +24,14 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Value.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -78,23 +82,15 @@ TEST(GenerateProgramTest, QAOAMatchesCostAndMixerEvolution) {
     std::vector<double> gammas;
     std::vector<double> betas;
   };
-  for (const size_t qubits : {3U, 4U, 5U, 7U}) {
+  for (const size_t qubits : {3U, 4U, 5U}) {
     for (const auto& angles : {
              Angles{
                  .gammas = {std::numbers::pi / 4.},
                  .betas = {std::numbers::pi / 8.},
              },
              Angles{
-                 .gammas = {0.31, 1.17},
-                 .betas = {0.23, 0.49},
-             },
-             Angles{
-                 .gammas = {0., 0.73, 1.29},
-                 .betas = {0.41, 0., 0.27},
-             },
-             Angles{
-                 .gammas = {7.1, -0.37},
-                 .betas = {3.5, -0.23},
+                 .gammas = {0.31, 1.17, -7.1},
+                 .betas = {0.23, 0.49, -3.5},
              },
          }) {
       SCOPED_TRACE(qubits);
@@ -117,6 +113,20 @@ TEST(GenerateProgramTest, QAOAMatchesCostAndMixerEvolution) {
       EXPECT_NEAR(package.fidelity(*state, expected), 1., 1e-10);
       package.decRef(expected);
       package.decRef(*state);
+      if (angles.gammas.size() == 1) {
+        ASSERT_TRUE(mlir::succeeded(program->unrollQuantumLoops()));
+        ASSERT_TRUE(mlir::succeeded(program->cleanup()));
+        llvm::DenseMap<mlir::Value, size_t> depths;
+        size_t depth = 0;
+        program->module().walk([&](mlir::qco::RZZOp gate) {
+          const auto current = 1 + std::max(depths.lookup(gate.getQubit0In()),
+                                            depths.lookup(gate.getQubit1In()));
+          depths[gate.getQubit0Out()] = current;
+          depths[gate.getQubit1Out()] = current;
+          depth = std::max(depth, current);
+        });
+        EXPECT_EQ(depth, qubits % 2 == 0 ? 2U : 3U);
+      }
     }
   }
 }

@@ -453,8 +453,10 @@ C=\sum_{j=0}^{n-1}\frac{1-Z_jZ_{(j+1)\bmod n}}{2},\qquad B=\sum_{j=0}^{n-1} X_j.
 
 Set `qubits` to at least three and `depth` to the number of layers, which
 defaults to one. For depth $d$, the generated program takes two arrays of $d$
-angles in radians: `gammas` and `betas`. The benchmark does not run an
-optimizer.
+angles in radians: `gammas` and `betas`. The manifest and case ID identify this
+circuit template. Record the bound angles separately to reproduce a run. The
+benchmark does not run an optimizer. Store reusable named templates as QC. Bind
+angles before binary `jeff` serialization, which does not preserve input names.
 
 The verification reference reports the shot-weighted mean cut and its ratio to
 the cycle's maximum cut, $n-(n\bmod 2)$. These scores measure solution quality,

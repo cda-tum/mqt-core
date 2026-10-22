@@ -31,15 +31,18 @@ calculation is a way to obtain an expectation, not a full outcome distribution.
 
 - Use the existing `RZZ(-gamma)` operation for each cycle edge; it differs from
   `exp(-i gamma C_jk)` only by a global phase. Each mixer is `Rx(2 beta)`. Apply
-  the closing edge `(n - 1, 0)` once.
+  even-start edges, then odd-start edges, then the closing edge `(n - 1, 0)`
+  once. This gives cost-layer dependency depth two for even cycles and three for
+  odd cycles without expanding the structured loops.
 - Configure `qubits` and `depth` (default one). The inputs are `gammas` and
   `betas`, each a static one-dimensional `f64` tensor of length `depth`. Reuse
   shared array parameter binding and its length and finite-value checks. Both
   widths and depths fit signed 64-bit dimensions.
 - Index the angle arrays in the layer loop. The benchmark manifest identifies
-  the circuit template, not an angle assignment. Bind a copy and run cleanup
-  before sampling, OpenQASM export, or QIR export. Binding creates dense
-  constants.
+  the circuit template, not an angle assignment. Record bound angles separately
+  to reproduce a run. Bind a copy and run cleanup before sampling, OpenQASM
+  export, or QIR export. Binding creates dense constants. Store reusable named
+  templates as QC and bind angles before binary jeff serialization.
 - Follow the Shor verification pattern: compute the mean sampled cut and its
   ratio to the exact cycle optimum. These scores measure objective quality; they
   do not verify the quantum distribution. Reuse shared count and outcome
@@ -63,9 +66,11 @@ iteration. No new helper, released API change, or generated jeff file is needed.
 
 - Small generated coherent states match an independent mathematical oracle:
   apply `exp(-i gamma * cut(z))` directly to amplitudes, then the single-qubit
-  mixer matrix. Cover triangles, odd/even cycles, and multiple unequal layers.
-  This catches sign, factor-of-two, closing-edge, and layer-order mistakes
-  without inspecting the emitted operation tree.
+  mixer matrix. Cover triangles, odd/even cycles, and one or three unequal
+  layers, including negative angles outside one period. This catches sign,
+  factor-of-two, closing-edge, and layer-order mistakes. The one-layer cases
+  also check cost-gate dependency depth after unrolling. Python sampling covers
+  zero-angle layers and binding copies of a reusable template.
 - As a separate derived check, for one layer and `n >= 4`, the expected cut per
   edge is `1/2 + sin(4 beta) sin(gamma) cos(gamma)/2`. At `gamma = pi/4` and
   `beta = pi/8` this is `3/4`. A direct small-state calculation checked
@@ -78,11 +83,11 @@ iteration. No new helper, released API change, or generated jeff file is needed.
 - A 1,024-qubit instance with two or one billion layers passes the jeff
   round-trip. Its operation-count bound guards compact generation in both
   dimensions, without attempting a full statevector.
-- All benchmark suites pass: 161 native tests, 52 MLIR tests, 83 Python tests,
-  and the CLI CTest. The 31 shared Python binding tests also pass. The tests
-  bind arrays before checking coherent states and samples, and retain unbound
-  array inputs through binary jeff. Python stubs were regenerated. Whole-file
-  C++ lint, executable documentation, and local documentation links pass.
+- The benchmark suites pass after the edge-ordering refactor: 160 native tests
+  and 52 MLIR tests, plus the three QAOA Python tests on Python 3.14. The six
+  coherent-state cases cover one and three layers on three, four, and five
+  qubits. Whole-file clang-tidy passes for the three changed C++ files.
+  Repository lint passes with Python 3.14 for hook environments.
 - Binary jeff preserves argument positions and types, but not input names. Name
   preservation is outside this change; named binding works before export.
 - Bound two-layer QAOA exports to OpenQASM 3 and Adaptive QIR. Direct Base QIR

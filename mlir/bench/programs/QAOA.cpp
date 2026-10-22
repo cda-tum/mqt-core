@@ -67,11 +67,14 @@ SmallVector<Value> qaoa(qc::QCProgramBuilder& builder, const QAOA& benchmark) {
     // For C_jk = (1 - Z_j Z_k)/2, RZZ(-gamma) differs only by a global phase.
     auto costAngle = arith::NegFOp::create(builder, gamma);
     auto mixerAngle = arith::MulFOp::create(builder, two, beta);
-    builder.scfFor(0, size - 1, 1, [&](Value iv) {
-      auto next = arith::AddIOp::create(builder, iv, one);
-      builder.rzz(costAngle, builder.loadQubit(qubits, iv),
-                  builder.loadQubit(qubits, next));
-    });
+    // Group disjoint edges to keep the cost layer's dependency depth bounded.
+    for (const int64_t start : {0, 1}) {
+      builder.scfFor(start, size - 1, 2, [&](Value iv) {
+        auto next = arith::AddIOp::create(builder, iv, one);
+        builder.rzz(costAngle, builder.loadQubit(qubits, iv),
+                    builder.loadQubit(qubits, next));
+      });
+    }
     builder.rzz(costAngle, builder.loadQubit(qubits, last),
                 builder.loadQubit(qubits, zero));
     builder.scfFor(0, size, 1, [&](Value iv) {

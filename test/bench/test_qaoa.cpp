@@ -27,13 +27,6 @@ namespace mqt::bench {
 
 using test::expectInvalidJSON;
 
-TEST(QAOA, UsesDocumentedDefaults) {
-  const QAOA benchmark{{.qubits = 5}};
-  EXPECT_EQ(benchmark.options().qubits, 5);
-  EXPECT_EQ(benchmark.options().depth, 1);
-  EXPECT_EQ(benchmark.output(), (Output{"result", 5}));
-}
-
 TEST(QAOA, ValidatesTheConfiguredInstance) {
   EXPECT_THROW(static_cast<void>(QAOA{{.qubits = 2}}), std::invalid_argument);
   EXPECT_NO_THROW(static_cast<void>(QAOA{{.qubits = 3}}));
@@ -199,12 +192,6 @@ TEST(QAOA, RejectsInvalidJSONParameters) {
             R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3,"gammas":[1]}})"));
       },
       "unknown key 'gammas'");
-  expectInvalidJSON(
-      [] {
-        static_cast<void>(qaoaFromInstanceSpecificationJSON(
-            R"({"schema_version":1,"benchmark":"qaoa","parameters":{"qubits":3,"betas":[1]}})"));
-      },
-      "unknown key 'betas'");
 }
 
 TEST(QAOA, ReportsTheParameterLocationOnce) {

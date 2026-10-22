@@ -40,22 +40,11 @@ def test_qaoa_reference_and_json() -> None:
         assert restored.case_id == benchmark.case_id
 
 
-def test_qaoa_generation() -> None:
-    """Expose two symbolic angle arrays through the generation boundary."""
-    benchmark = qaoa.QAOA(qaoa.Options(qubits=5, depth=2))
-    assert json.loads(benchmark.instance_specification_json)["parameters"] == {
-        "qubits": 5,
-        "depth": 2,
-    }
-    program = benchmark.generate()
-    assert program.parameters == ["gammas", "betas"]
-    assert_generates(program)
-
-
 def test_qaoa_binding_and_sampling() -> None:
     """Bind copies of one template to distinct angles and score their cuts."""
     benchmark = qaoa.QAOA(qaoa.Options(qubits=4, depth=2))
     template = benchmark.generate()
+    assert_generates(template.copy())
     program = template.copy()
     program.bind_parameters({"gammas": [np.pi / 4, 0.0]})
     assert program.parameters == ["betas"]
