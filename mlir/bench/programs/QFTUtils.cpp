@@ -79,11 +79,8 @@ void phaseAdditionLoop(
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(loop.getBody());
   auto target = loop.getInductionVar();
-  auto scaled = arith::MulFOp::create(builder, loop.getRegionIterArg(0), half);
-  auto inputBit =
-      arith::UIToFPOp::create(builder, builder.getF64Type(), bit(target));
-  auto contribution = arith::MulFOp::create(builder, inputBit, pi);
-  auto angle = arith::AddFOp::create(builder, scaled, contribution).getResult();
+  auto angle = advancePhaseCorrection(builder, loop.getRegionIterArg(0),
+                                      bit(target), half, pi);
   body(angle, target);
   scf::YieldOp::create(builder, ValueRange{angle});
 }
