@@ -15,6 +15,7 @@
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QTensor/IR/QTensorDialect.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
+#include "mqt/Support/StaticLoops.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -38,7 +39,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
 #include <array>
@@ -261,17 +261,6 @@ static LogicalResult verifyLoopCarriedState(ModuleOp moduleOp) {
   return result.wasInterrupted() ? failure() : success();
 }
 
-/// Require literal bounds; do not infer constrained iteration from symbolic IR.
-[[nodiscard]] static std::optional<llvm::APInt>
-getExactConstantTripCount(scf::ForOp loop) {
-  if (!getConstantAPIntValue(getAsOpFoldResult(loop.getLowerBound())) ||
-      !getConstantAPIntValue(getAsOpFoldResult(loop.getUpperBound())) ||
-      !getConstantAPIntValue(getAsOpFoldResult(loop.getStep()))) {
-    return std::nullopt;
-  }
-  return loop.getStaticTripCount();
-}
-
 static LogicalResult foldStaticBranches(ModuleOp moduleOp) {
   mqt::simplifyClassicalControl(moduleOp);
   // Fold branches without transforming loops before the capture and unroll
@@ -302,7 +291,7 @@ static LogicalResult foldStaticBranches(ModuleOp moduleOp) {
 [[nodiscard]] static bool isLegal(scf::ForOp operation,
                                   const PayloadControlSupport& support) {
   return support.coversIteration(ControlFeature::CountedIteration, operation,
-                                 getExactConstantTripCount(operation));
+                                 mqt::getExactConstantTripCount(operation));
 }
 
 [[nodiscard]] static bool isLegal(scf::WhileOp operation,
@@ -322,43 +311,6 @@ static LogicalResult foldStaticBranches(ModuleOp moduleOp) {
   const uint64_t cases = operation.getNumCases();
   return !hasLinearBranchState(operation) && cases > 0U &&
          support.coversMultiwayBranching(operation, cases);
-}
-
-[[nodiscard]] static bool canUseFullUnroll(scf::ForOp loop,
-                                           const uint64_t iterations) {
-  const auto constant = [&](Value value) -> std::optional<int64_t> {
-    const auto result = getConstantAPIntValue(getAsOpFoldResult(value));
-    if (!result) {
-      return std::nullopt;
-    }
-    if (loop.getUnsignedCmp()) {
-      if (result->first.getActiveBits() > 63) {
-        return std::nullopt;
-      }
-      return static_cast<int64_t>(result->first.getZExtValue());
-    }
-    return result->first.trySExtValue();
-  };
-
-  const auto lowerBound = constant(loop.getLowerBound());
-  const auto upperBound = constant(loop.getUpperBound());
-  const auto step = constant(loop.getStep());
-  if (!lowerBound || !upperBound || !step || *step <= 0) {
-    return false;
-  }
-
-  int64_t scaledStep = 0;
-  int64_t unrolledUpperBound = 0;
-  if (llvm::MulOverflow(*step, static_cast<int64_t>(iterations), scaledStep) !=
-          0 ||
-      llvm::AddOverflow(*lowerBound, scaledStep, unrolledUpperBound) != 0) {
-    return false;
-  }
-  const auto type = dyn_cast<IntegerType>(loop.getInductionVar().getType());
-  return !type || (loop.getUnsignedCmp()
-                       ? llvm::isUIntN(type.getWidth(),
-                                       static_cast<uint64_t>(scaledStep))
-                       : llvm::isIntN(type.getWidth(), scaledStep));
 }
 
 static void inlineDefaultRegion(Operation* operation, Block& block,
@@ -518,7 +470,7 @@ struct UnrollLoopsForPayload final
     if (tripCount.ugt(1)) {
       // Do not cross branches: an outer induction value may make them dead.
       for (auto nested : loop.getBody()->getOps<scf::ForOp>()) {
-        if (const auto nestedCount = getExactConstantTripCount(nested);
+        if (const auto nestedCount = mqt::getExactConstantTripCount(nested);
             nestedCount && carriesQTensor(nested)) {
           return selectTensorLoop(nested, *nestedCount);
         }
@@ -551,7 +503,7 @@ protected:
       SmallVector<std::pair<scf::ForOp, llvm::APInt>> loops;
       SmallVector<scf::ForOp> repetitions;
       getOperation().walk<WalkOrder::PreOrder>([&](scf::ForOp loop) {
-        const auto tripCount = getExactConstantTripCount(loop);
+        const auto tripCount = mqt::getExactConstantTripCount(loop);
         const bool tensor = carriesQTensor(loop);
         if ((!tensor || indexed) &&
             support->coversIteration(ControlFeature::CountedIteration, loop,
@@ -598,7 +550,7 @@ protected:
           // Promotion preserves child operations and can make their bounds
           // literal. Defer larger loops until static branches have folded.
           for (auto nested : nestedLoops) {
-            const auto nestedTripCount = getExactConstantTripCount(nested);
+            const auto nestedTripCount = mqt::getExactConstantTripCount(nested);
             if (nestedTripCount && *nestedTripCount == 1 &&
                 !support->coversIteration(ControlFeature::CountedIteration,
                                           nested, nestedTripCount)) {
@@ -635,7 +587,7 @@ protected:
           return;
         }
         if (tripCount.getActiveBits() > 64 ||
-            !canUseFullUnroll(loop, tripCount.getZExtValue())) {
+            !mqt::canUseFullUnroll(loop, tripCount.getZExtValue())) {
           loop.emitError(
               "cannot safely apply MLIR full unrolling to these loop bounds");
           signalPassFailure();

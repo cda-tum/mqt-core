@@ -839,6 +839,7 @@ class QCProgram(Program):
 
         Entry results must be direct measurements or CBit registers. Other scalar
         outputs are unsupported. The generated QIR returns a zero execution status.
+        Base conversion unrolls static counted loops; Adaptive conversion retains them.
         Set ``copy=True`` to preserve it.
         """
 
@@ -910,8 +911,8 @@ class QCProgram(Program):
         non-finite values, and references to the entry point raise ValueError
         without changing the program.
 
-        Binding does not fold expressions. Call ``copy()`` first to preserve the
-        input, and ``cleanup()`` afterwards if constant folding is needed.
+        Binding folds expressions using the bound values. Folding failures may
+        leave the program modified. Call ``copy()`` first to preserve the input.
         """
 
 class QCOProgram(Program):
@@ -1078,8 +1079,8 @@ class QCOProgram(Program):
         non-finite values, and references to the entry point raise ValueError
         without changing the program.
 
-        Binding does not fold expressions. Call ``copy()`` first to preserve the
-        input, and ``cleanup()`` afterwards if constant folding is needed.
+        Binding folds expressions using the bound values. Folding failures may
+        leave the program modified. Call ``copy()`` first to preserve the input.
         """
 
     def build_functionality(self, dd_package: mqt.core.dd.DDPackage) -> mqt.core.dd.MatrixDD:

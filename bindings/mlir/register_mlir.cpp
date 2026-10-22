@@ -291,8 +291,8 @@ Unknown names, mismatched scalar or array values, incorrect lengths,
 non-finite values, and references to the entry point raise ValueError
 without changing the program.
 
-Binding does not fold expressions. Call ``copy()`` first to preserve the
-input, and ``cleanup()`` afterwards if constant folding is needed.)pb");
+Binding folds expressions using the bound values. Folding failures may
+leave the program modified. Call ``copy()`` first to preserve the input.)pb");
 }
 
 template <class T>
@@ -1687,6 +1687,7 @@ Set ``copy=True`` to preserve it.)pb")
 
 Entry results must be direct measurements or CBit registers. Other scalar
 outputs are unsupported. The generated QIR returns a zero execution status.
+Base conversion unrolls static counted loops; Adaptive conversion retains them.
 Set ``copy=True`` to preserve it.)pb");
 
   auto qcoProgram = nb::class_<mlir::QCOProgram, mlir::Program>(

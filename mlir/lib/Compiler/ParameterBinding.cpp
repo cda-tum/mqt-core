@@ -17,9 +17,12 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -134,7 +137,14 @@ static LogicalResult bind(ModuleOp moduleOp,
     argument.replaceAllUsesWith(constant);
     erased.set(argument.getArgNumber());
   }
-  return entry.eraseArguments(erased);
+  if (failed(entry.eraseArguments(erased))) {
+    return failure();
+  }
+  if (failed(applyPatternsGreedily(entry,
+                                   RewritePatternSet(moduleOp.getContext())))) {
+    return failure();
+  }
+  return verify(entry);
 }
 std::vector<std::string> QCProgram::parameters() const {
   return parameterNames(mod());

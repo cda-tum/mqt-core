@@ -23,6 +23,8 @@ add_mlir_library(
   MLIRMemRefDialect
   MLIRMemorySlotInterfaces
   MLIRPass
+  MLIRSCFDialect
+  MLIRSCFUtils
   MLIRTransforms
   MLIRControlFlowInterfaces
   MLIRTransformUtils

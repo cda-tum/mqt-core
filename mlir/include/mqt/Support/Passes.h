@@ -48,8 +48,12 @@ void registerMQTCompilerPasses();
 /// Populate the default QCO optimization pipeline.
 void populateDefaultQCOOptimizationPipeline(mlir::OpPassManager& pm);
 
-/// Prepare reusable QC functions and modifiers for QIR conversion.
-void populateQIRPreparationPipeline(mlir::OpPassManager& pm);
+/// Prepare QC functions, modifiers, and classical expressions for QIR.
+///
+/// Base conversion also expands static loops, with a limit of one billion
+/// cloned loop-body operations. Adaptive conversion retains loops.
+void populateQIRPreparationPipeline(mlir::OpPassManager& pm,
+                                    bool useAdaptive = true);
 
 /// Populate the qubit reuse pipeline including its preparation passes.
 void populateQubitReusePipeline(mlir::OpPassManager& pm);

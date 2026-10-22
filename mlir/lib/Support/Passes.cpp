@@ -17,12 +17,17 @@
 #include "mqt/Dialect/QIR/Transforms/Passes.h"
 #include "mqt/Dialect/QTensor/Transforms/Passes.h"
 #include "mqt/Support/RandomSeed.h"
+#include "mqt/Support/StaticLoops.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
@@ -35,9 +40,11 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <bit>
 #include <cstdint>
 #include <memory>
@@ -87,6 +94,87 @@ protected:
     }
     if (failed(runPipeline(pipeline_, getOperation()))) {
       signalPassFailure();
+    }
+  }
+};
+
+class UnrollBaseLoopsPass final
+    : public PassWrapper<UnrollBaseLoopsPass, OperationPass<ModuleOp>> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(UnrollBaseLoopsPass)
+
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<arith::ArithDialect, scf::SCFDialect>();
+  }
+
+protected:
+  void runOnOperation() override {
+    constexpr uint64_t maxClonedOperations = 1'000'000'000;
+    uint64_t clonedOperations = 0;
+    IRRewriter rewriter(&getContext());
+    OpPassManager cleanup(ModuleOp::getOperationName());
+    cleanup.addPass(std::make_unique<PromoteClassicalMemoryPass>());
+    cleanup.addPass(createCanonicalizerPass());
+    while (true) {
+      if (failed(runPipeline(cleanup, getOperation()))) {
+        signalPassFailure();
+        return;
+      }
+      SmallVector<scf::ForOp> loops;
+      getOperation().walk<WalkOrder::PreOrder>([&](scf::ForOp loop) {
+        if (mqt::getExactConstantTripCount(loop)) {
+          loops.push_back(loop);
+          return WalkResult::skip();
+        }
+        return WalkResult::advance();
+      });
+      if (loops.empty()) {
+        return;
+      }
+      for (auto loop : loops) {
+        const auto tripCount = *mqt::getExactConstantTripCount(loop);
+        if (tripCount.ule(1)) {
+          if (failed(loop.promoteIfSingleIteration(rewriter))) {
+            loop.emitError("failed to simplify a static loop for QIR Base");
+            signalPassFailure();
+            return;
+          }
+          continue;
+        }
+        uint64_t bodyOperations = 0;
+        Operation* terminator = loop.getBody()->getTerminator();
+        loop.getRegion().walk([&](Operation* operation) {
+          bodyOperations += operation != terminator;
+        });
+        const bool emptyBody = bodyOperations == 0;
+        bodyOperations = std::max(bodyOperations, uint64_t{1});
+        if ((tripCount - 1)
+                .ugt((maxClonedOperations - clonedOperations) /
+                     bodyOperations)) {
+          loop.emitError() << "QIR Base loop expansion exceeds "
+                           << maxClonedOperations << " cloned operations";
+          signalPassFailure();
+          return;
+        }
+        const uint64_t iterations = tripCount.getZExtValue();
+        if (!mqt::canUseFullUnroll(loop, iterations)) {
+          loop.emitError("cannot safely unroll these bounds for QIR Base");
+          signalPassFailure();
+          return;
+        }
+        clonedOperations += bodyOperations * (iterations - 1);
+        if (emptyBody) {
+          // LLVM skips empty bodies, including permutations of iteration
+          // values.
+          rewriter.setInsertionPointToStart(loop.getBody());
+          arith::ConstantIndexOp::create(rewriter, loop.getLoc(), 0);
+        }
+        if (failed(loopUnrollFull(loop))) {
+          loop.emitError("failed to unroll a static loop for QIR Base");
+          signalPassFailure();
+          return;
+        }
+      }
     }
   }
 };
@@ -154,12 +242,16 @@ void populateDefaultQCOOptimizationPipeline(OpPassManager& pm) {
   pm.addPass(createCanonicalizerPass());
 }
 
-void populateQIRPreparationPipeline(OpPassManager& pm) {
+void populateQIRPreparationPipeline(OpPassManager& pm, bool useAdaptive) {
   pm.addPass(createInlinerPass());
   pm.addPass(mqt::createNormalizeGlobalPhases());
   pm.addPass(mqt::createUnrollModifiers());
-  pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
-  pm.addPass(createCanonicalizerPass());
+  if (useAdaptive) {
+    pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
+    pm.addPass(createCanonicalizerPass());
+  } else {
+    pm.addPass(std::make_unique<UnrollBaseLoopsPass>());
+  }
 }
 
 void populateQubitReusePipeline(OpPassManager& pm) {

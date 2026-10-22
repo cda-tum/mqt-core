@@ -100,7 +100,7 @@ FailureOr<QIRProgram> QCProgram::intoQIR(QIRProfile profile) && {
   if (failed(runWithPassManager(
           mod(),
           [profile](OpPassManager& pm) {
-            populateQIRPreparationPipeline(pm);
+            populateQIRPreparationPipeline(pm, profile == QIRProfile::Adaptive);
             if (profile == QIRProfile::Adaptive) {
               pm.addPass(createQCToQIRAdaptive());
             } else {

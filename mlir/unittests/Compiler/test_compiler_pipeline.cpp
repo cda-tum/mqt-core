@@ -1099,6 +1099,80 @@ result = measure q;
   EXPECT_TRUE(succeeded(qir->llvmIR()));
 }
 
+TEST_F(CompilerPipelineTest, BaseUnrollsBoundArrayLoops) {
+  auto qc = QCProgram::fromMLIRString(R"mlir(module {
+    func.func @main(%angles: tensor<2xf64> {mqt.input_name = "angles"})
+        -> i1 attributes {mqt.entry_point} {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %two = arith.constant 2 : index
+      %q = qc.alloc : !qc.qubit
+      scf.for %layer = %zero to %two step %one {
+        %angle = tensor.extract %angles[%layer] : tensor<2xf64>
+        %end = arith.addi %layer, %one : index
+        scf.for %iteration = %zero to %end step %one {
+          qc.ry(%angle) %q : !qc.qubit
+        }
+      }
+      %result = qc.measure %q : !qc.qubit -> i1
+      qc.dealloc %q : !qc.qubit
+      return %result : i1
+    }
+  })mlir");
+  ASSERT_TRUE(succeeded(qc));
+  ASSERT_TRUE(succeeded(
+      qc->bindParameters({{"angles", std::vector<double>{0.25, -0.5}}})));
+  auto qir = std::move(*qc).intoQIR(QIRProfile::Base);
+  ASSERT_TRUE(succeeded(qir));
+  std::vector<double> angles;
+  qir->module().walk([&](LLVM::CallOp call) {
+    if (call.getCallee() != "__quantum__qis__ry__body") {
+      return;
+    }
+    auto constant = call.getOperand(0).getDefiningOp<LLVM::ConstantOp>();
+    ASSERT_TRUE(constant);
+    angles.push_back(cast<FloatAttr>(constant.getValue()).getValueAsDouble());
+  });
+  EXPECT_EQ(angles, (std::vector<double>{0.25, -0.5, -0.5}));
+  EXPECT_TRUE(succeeded(qir->llvmIR()));
+}
+
+TEST_F(CompilerPipelineTest, BasePromotesUnrolledClassicalArrays) {
+  auto qc = QCProgram::fromOpenQASMString(
+      "OPENQASM 3.1; array[float[64], 2] angles = {0.25, -0.5}; qubit q; "
+      "for int i in [0:1] { ry(angles[i]) q; } "
+      "output bit result; result = measure q;");
+  ASSERT_TRUE(succeeded(qc));
+  auto qir = std::move(*qc).intoQIR(QIRProfile::Base);
+  ASSERT_TRUE(succeeded(qir));
+  EXPECT_TRUE(succeeded(qir->llvmIR()));
+}
+
+TEST_F(CompilerPipelineTest, BaseRejectsDynamicAndExcessiveLoopExpansion) {
+  for (const std::string bound : {
+           "%end = arith.constant 1000000002 : index",
+           "%control = qc.alloc : !qc.qubit\n"
+           "%m = qc.measure %control : !qc.qubit -> i1\n"
+           "qc.dealloc %control : !qc.qubit\n"
+           "%end = arith.index_castui %m : i1 to index",
+       }) {
+    auto qc = QCProgram::fromMLIRString(
+        "module { func.func @main() attributes {mqt.entry_point} {\n"
+        "%zero = arith.constant 0 : index\n"
+        "%one = arith.constant 1 : index\n"
+        "%q = qc.alloc : !qc.qubit\n" +
+        bound +
+        "\n"
+        "scf.for %i = %zero to %end step %one {\n"
+        "  qc.x %q : !qc.qubit\n"
+        "}\n"
+        "qc.dealloc %q : !qc.qubit\n"
+        "return }}");
+    ASSERT_TRUE(succeeded(qc));
+    EXPECT_TRUE(failed(std::move(*qc).intoQIR(QIRProfile::Base)));
+  }
+}
+
 TEST_F(CompilerPipelineTest, DropsTemporaryStorageBeforeQIROutputFusion) {
   constexpr llvm::StringLiteral source = R"qasm(OPENQASM 3.0;
 qubit q;

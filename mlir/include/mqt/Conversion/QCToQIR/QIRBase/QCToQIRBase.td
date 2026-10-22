@@ -47,7 +47,8 @@ def QCToQIRBase : Pass<"qc-to-qir-base", "mlir::ModuleOp"> {
     - The entry function returns an `i64` zero execution status after output recording.
     - Classical storage and computations must be eliminated before conversion.
       The compiler preparation pipeline promotes eligible stack arrays to SSA
-      values and folds constants. Residual memory operations, runtime
+      values, unrolls static counted loops within a budget of one billion cloned
+      body operations, and folds constants. Residual memory operations, runtime
       computations, and nonconstant call arguments are rejected.
     - Each QC quantum operation is replaced in place by its QIR call. After
       validating qubit usage in instruction order, the pass moves terminal
