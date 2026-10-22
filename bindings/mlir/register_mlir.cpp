@@ -619,16 +619,9 @@ payloadForOutput(OutputFormat output) {
 /// Resolve input, target, and output before compiling a typed program.
 [[nodiscard]] static nb::object
 compilePythonProgram(const nb::object& program, const nb::object& target,
-                     std::optional<OutputFormat> output,
-                     std::optional<QDMI_Program_Format> programFormat,
-                     bool inplace, const std::string& qcoPipeline,
+                     std::optional<OutputFormat> output, bool inplace,
+                     const std::string& qcoPipeline,
                      const mlir::CompilationOptions& options) {
-  if (output && programFormat) {
-    throw nb::value_error("Specify either output or program_format, not both");
-  }
-  if (target.is_none() && programFormat) {
-    throw nb::value_error("program_format requires a target");
-  }
   if (!target.is_none() && qcoPipeline != "mqt-qco-default") {
     throw nb::value_error(
         "A custom QCO pipeline cannot be combined with a target");
@@ -646,25 +639,15 @@ compilePythonProgram(const nb::object& program, const nb::object& target,
   if (deviceTarget) {
     const auto device = resolveDevice(target);
     const nb::gil_scoped_release release;
-    environment =
-        takeResult(mlir::targetEnvironmentFromDevice(device, programFormat));
+    environment = takeResult(mlir::targetEnvironmentFromDevice(device));
   } else if (!target.is_none() && !compilerTarget) {
-    if (programFormat) {
-      throw nb::value_error(
-          "program_format requires a QDMI device or CompilerTarget");
-    }
     environment.emplace(
         bindings::qiskit::importTarget(target, nb::none(), std::nullopt),
         bindings::qiskit::payloadSpecification(target));
     output = output.value_or(OutputFormat::Qiskit);
   }
 
-  if (programFormat || (deviceTarget && !output)) {
-    if (compilerTarget) {
-      environment.emplace(nb::cast<const mlir::CompilerTarget&>(target),
-                          takeResult(mlir::payloadSpecificationForProgramFormat(
-                              *programFormat)));
-    }
+  if (deviceTarget && !output) {
     auto input = programFromInput(program, inplace);
     auto compiled = [&] {
       const nb::gil_scoped_release release;
@@ -680,7 +663,7 @@ compilePythonProgram(const nb::object& program, const nb::object& target,
     auto payload = payloadForOutput(selected);
     if (environment) {
       payload =
-          payload.restrictControlFlow(environment->payloadSpecification());
+          payload.restrictCapabilities(environment->payloadSpecification());
       environment =
           mlir::TargetEnvironment(environment->target(), std::move(payload));
     } else {
@@ -2269,8 +2252,7 @@ contracts.)pb");
           "The payload format and capabilities used for compilation.");
 
   m.def("compile_program", &compilePythonProgram, "program"_a, nb::kw_only(),
-        "target"_a = nb::none(), "output"_a = nb::none(),
-        "program_format"_a = nb::none(), "inplace"_a = false,
+        "target"_a = nb::none(), "output"_a = nb::none(), "inplace"_a = false,
         "qco_pipeline"_a = "mqt-qco-default",
         "options"_a = mlir::CompilationOptions{},
         R"pb(Compile a program, optionally for a hardware target.
@@ -2289,15 +2271,15 @@ Args:
     target: A CompilerTarget, Qiskit BackendV2 or Target, QDMI Device, or device ID.
     output: The returned representation. QC_IMPORT and raw QCO are checkpoints
         before target compilation and cannot be combined with a target.
-    program_format: An exact QDMI payload format, mutually exclusive with output.
-        Requires a QDMI target or CompilerTarget and returns CompiledProgram.
     inplace: Whether a typed input program may be consumed; otherwise it is copied.
     qco_pipeline: The QCO optimization pipeline. Custom pipelines require no target.
     options: Shared compilation controls.
 
 Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
-(binary, text). An explicit output need not be a device's execution format.
-Jeff output does not retain hardware placement.)pb");
+(binary, text). Select an exact execution format with
+:func:`submit_program` and its ``program_format`` argument. An explicit output
+need not be a device's execution format. Jeff output does not retain hardware
+placement.)pb");
 
   m.def("submit_program", &submitProgram, "program"_a, nb::kw_only(),
         "target"_a, "num_shots"_a = 1024, "program_format"_a = nb::none(),
@@ -2306,7 +2288,10 @@ Jeff output does not retain hardware placement.)pb");
         "custom5"_a = nb::none(), "options"_a = nb::none(),
         R"pb(Compile source or submit a compiled program to a device.
 
-``target`` accepts a registered device ID or an open device.)pb");
+``target`` accepts a registered device ID or an open device. For source input,
+``program_format`` selects the exact QDMI execution format, including text or
+binary QIR; omitting it selects a supported native format. A compiled program
+retains its payload and must match the destination contract.)pb");
 }
 
 } // namespace mqt

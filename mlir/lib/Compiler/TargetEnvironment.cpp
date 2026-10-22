@@ -254,11 +254,14 @@ bool PayloadSpecification::optionalCapabilitiesKnown() const noexcept {
   return optionalCapabilitiesKnown_;
 }
 
-PayloadSpecification PayloadSpecification::restrictControlFlow(
+PayloadSpecification PayloadSpecification::restrictCapabilities(
     const PayloadSpecification& other) const {
+  const bool sameFormat = format_.id == other.format_.id &&
+                          format_.version == other.format_.version &&
+                          format_.profile == other.format_.profile;
   std::vector<ProgramCapability> capabilities;
   for (const auto& capability : capabilities_) {
-    if (capability.id != ProgramCapability::FORWARD_BRANCHING &&
+    if (!sameFormat && capability.id != ProgramCapability::FORWARD_BRANCHING &&
         capability.id != ProgramCapability::COUNTED_ITERATION &&
         capability.id != ProgramCapability::CONDITIONAL_LOOP &&
         capability.id != ProgramCapability::MULTIWAY_BRANCHING) {

@@ -206,10 +206,10 @@ family and target:
 | Generate QIR                             | `OutputFormat.QIR_BASE` or `OutputFormat.QIR_ADAPTIVE` | `QIRProgram`      |
 
 The raw `QC_IMPORT` and `QCO` checkpoints stop before target compilation and
-cannot be combined with `target`. With a target, `program_format` selects an
-execution payload and returns a `CompiledProgram` for submission; it is mutually
-exclusive with `output`. See {doc}`target_compilation` for payload selection and
-submission.
+cannot be combined with `target`. A QDMI target with no explicit `output`
+returns a `CompiledProgram` in an automatically selected native format. To
+select an exact execution format, use `submit_program(..., program_format=...)`.
+See {doc}`target_compilation` for payload selection and submission.
 
 After rotation merging, the default pipeline groups controlled gates with the
 same ordered controls and targets. Canonicalization cancels named inverses and

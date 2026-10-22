@@ -21,7 +21,6 @@ import pytest
 from qiskit_support import supports_qiskit_translation
 
 from mqt.core.mlir import (
-    CompiledProgram,
     OutputFormat,
     compile_program,
     submit_program,
@@ -531,12 +530,8 @@ h q[0];
 cx q[0], q[1];
 c = measure q;
 """
-    program = compile_program(qasm3_program, target=ddsim_device, program_format=ProgramFormat.QIR_BASE_STRING)
-    assert isinstance(program, CompiledProgram)
-    assert program.program_format == ProgramFormat.QIR_BASE_STRING
-    assert ProgramFormat.QIR_BASE_STRING in ddsim_device.supported_program_formats()
-
-    job = submit_program(program, target=ddsim_device)
+    job = submit_program(qasm3_program, target=ddsim_device, program_format=ProgramFormat.QIR_BASE_STRING)
+    assert job.program_format == ProgramFormat.QIR_BASE_STRING
     job.wait()
 
     assert job.check() == Job.Status.DONE
@@ -566,9 +561,7 @@ def test_device_executes_controlled_qir_with_exact_phase(ddsim_device: Device) -
     circuit.mcp(0.41, [0, 1], 4)
     expected = quantum_info.Statevector.from_instruction(circuit).data
 
-    program = compile_program(circuit, target=ddsim_device, program_format=ProgramFormat.QIR_ADAPTIVE_STRING)
-    assert isinstance(program, CompiledProgram)
-    job = submit_program(program, target=ddsim_device, num_shots=0)
+    job = submit_program(circuit, target=ddsim_device, program_format=ProgramFormat.QIR_ADAPTIVE_STRING, num_shots=0)
     job.wait()
 
     assert job.get_dense_statevector() == pytest.approx(expected)

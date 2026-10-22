@@ -19,7 +19,7 @@ from qiskit.circuit import Parameter
 from qiskit.quantum_info import Operator
 from qiskit_support import supports_qiskit_translation
 
-from mqt.core.mlir import QCProgram
+from mqt.core.mlir import QCProgram, sample
 
 
 @pytest.mark.skipif(not supports_qiskit_translation(), reason=f"No registered Qiskit adapter for {qiskit.__version__}")
@@ -119,8 +119,7 @@ def test_array_binding_preserves_scalar_input(array_program: QCProgram, *, as_ar
     assert program.parameters == ["offset"]
     program.bind_parameters({"offset": np.pi / 2})
     assert program.parameters == []
-    native = program.to_qco() if isinstance(program, QCProgram) else program
-    assert native.sample(shots=4, seed=42) == {"11": 4}
+    assert sample(program, shots=4, seed=42) == {"11": 4}
     assert original.parameters == ["angles", "offset"]
 
 

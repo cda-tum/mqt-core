@@ -19,13 +19,13 @@ from qiskit.circuit import Parameter
 from qiskit.circuit.classical import expr, types
 from qiskit_support import supports_qiskit_translation
 
-from mqt.core.mlir import JeffProgram, OpenQASMProgram, QCProgram, sample, simulate
+from mqt.core.mlir import JeffProgram, OpenQASMProgram, QCOProgram, QCProgram, sample, simulate
 
 if not supports_qiskit_translation():
     pytest.skip(f"No registered Qiskit adapter for {qiskit.__version__}", allow_module_level=True)
 
 
-def observe(program: QCProgram | QuantumCircuit | OpenQASMProgram | str) -> int:
+def observe(program: QCProgram | QCOProgram | QuantumCircuit | OpenQASMProgram | str) -> int:
     """Return the deterministic classical result using the existing interpreter."""
     counts = sample(program, shots=1, seed=1)
     assert len(counts) == 1
@@ -44,10 +44,10 @@ def check_paths(program: QCProgram, expected: int) -> None:
     assert qasm3.dumps(qiskit) == qasm3.dumps(program.to_qiskit(copy=True))
     assert observe(qiskit) == expected
     jeff = program.to_qco(copy=True).to_jeff()
-    restored = JeffProgram.from_bytes(jeff.to_bytes()).to_qco().to_qc()
+    restored = JeffProgram.from_bytes(jeff.to_bytes()).to_qco()
     assert observe(restored) == expected
     assert observe(restored.to_qiskit(copy=True)) == expected
-    assert observe(restored.to_openqasm3()) == expected
+    assert observe(restored.to_qc().to_openqasm3()) == expected
     assert program.ir == original
 
 
@@ -137,7 +137,7 @@ module {{
     if stale:
         with pytest.raises(RuntimeError, match="stale classical snapshot"):
             program.to_qiskit(copy=True)
-        assert observe(QCProgram.from_openqasm_str(program.to_openqasm3().source)) == 1 << 64
+        assert observe(program.to_openqasm3()) == 1 << 64
     else:
         check_paths(program, (1 << 64) | 1)
         assert program.to_qiskit().num_clbits == 65

@@ -207,7 +207,7 @@ TEST(PayloadSpecificationTest, ValidatesAndRoundTripsTypedAttribute) {
                 "a duplicate capability ID/value pair");
 }
 
-TEST(PayloadSpecificationTest, RestrictsControlFlowWithoutChangingFormat) {
+TEST(PayloadSpecificationTest, RestrictsCapabilitiesWithoutChangingFormat) {
   using Capability = mlir::ProgramCapability;
   const auto output = valid(mlir::PayloadSpecification::create(
       {.id = "qir", .version = "2.1", .profile = "adaptive"},
@@ -227,7 +227,7 @@ TEST(PayloadSpecificationTest, RestrictsControlFlowWithoutChangingFormat) {
               .constraints = {{.id = "max-iteration-count", .value = 4}},
           },
           {.id = "conditional-loop"},
-          {.id = "int-computations"},
+          {.id = "qir.int-computations"},
       }));
   const auto target = valid(mlir::PayloadSpecification::create(
       {.id = "vendor.ir", .version = "1"},
@@ -253,9 +253,9 @@ TEST(PayloadSpecificationTest, RestrictsControlFlowWithoutChangingFormat) {
           {.id = "multiway-branching"},
       },
       true));
-  const auto restricted = output.restrictControlFlow(target);
+  const auto restricted = output.restrictCapabilities(target);
   EXPECT_EQ(restricted.format(), output.format());
-  const std::vector<Capability> expected{
+  std::vector<Capability> expected{
       {
           .id = "forward-branching",
           .constraints = {{.id = "max-control-flow-nesting-depth", .value = 2}},
@@ -268,10 +268,26 @@ TEST(PayloadSpecificationTest, RestrictsControlFlowWithoutChangingFormat) {
                   {.id = "max-control-flow-nesting-depth", .value = 3},
               },
       },
-      {.id = "int-computations"},
+      {.id = "qir.int-computations"},
   };
   EXPECT_EQ(restricted.capabilities(), llvm::ArrayRef(expected));
   EXPECT_FALSE(restricted.optionalCapabilitiesKnown());
+
+  auto format = output.format();
+  format.encoding = mlir::PayloadEncoding::Binary;
+  const auto sameFormat = valid(mlir::PayloadSpecification::create(
+      format, {target.capabilities().begin(), target.capabilities().end()},
+      true));
+  const auto allRestricted = output.restrictCapabilities(sameFormat);
+  expected.pop_back();
+  EXPECT_EQ(allRestricted.capabilities(), llvm::ArrayRef(expected));
+
+  format.profile = "base";
+  const auto otherProfile = valid(mlir::PayloadSpecification::create(
+      format, {target.capabilities().begin(), target.capabilities().end()},
+      true));
+  EXPECT_EQ(output.restrictCapabilities(otherProfile).capabilities(),
+            restricted.capabilities());
 }
 
 TEST(PayloadSpecificationTest, NormalizesExactVersionComponents) {

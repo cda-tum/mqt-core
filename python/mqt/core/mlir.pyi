@@ -1330,7 +1330,6 @@ def compile_program(
     *,
     target: _CompilerTarget | None = None,
     output: Literal[OutputFormat.QC],
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1341,7 +1340,6 @@ def compile_program(
     *,
     target: _CompilerTarget | None = None,
     output: Literal[OutputFormat.QCO_OPTIMIZED],
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1352,7 +1350,6 @@ def compile_program(
     *,
     target: None = None,
     output: Literal[OutputFormat.QC_IMPORT],
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1363,7 +1360,6 @@ def compile_program(
     *,
     target: None = None,
     output: Literal[OutputFormat.QCO],
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1374,7 +1370,6 @@ def compile_program(
     *,
     target: _CompilerTarget | None = None,
     output: Literal[OutputFormat.OPENQASM3],
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1385,7 +1380,6 @@ def compile_program(
     *,
     target: _CompilerTarget | None = None,
     output: Literal[OutputFormat.JEFF],
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1396,7 +1390,6 @@ def compile_program(
     *,
     target: _CompilerTarget | None = None,
     output: Literal[OutputFormat.QIR_BASE, OutputFormat.QIR_ADAPTIVE],
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1407,7 +1400,6 @@ def compile_program(
     *,
     target: _CompilerTarget | None = None,
     output: Literal[OutputFormat.QISKIT],
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1418,7 +1410,6 @@ def compile_program(
     *,
     target: CompilerTarget | None = None,
     output: None = None,
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1429,7 +1420,6 @@ def compile_program(
     *,
     target: CompilerTarget | None = None,
     output: None = None,
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1440,7 +1430,6 @@ def compile_program(
     *,
     target: qiskit.providers.BackendV2 | qiskit.transpiler.Target,
     output: None = None,
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1451,18 +1440,6 @@ def compile_program(
     *,
     target: mqt.core.qdmi.Device | str,
     output: None = None,
-    program_format: mqt.core.qdmi.ProgramFormat | None = None,
-    inplace: bool = False,
-    qco_pipeline: str = "mqt-qco-default",
-    options: CompilationOptions = ...,
-) -> CompiledProgram: ...
-@overload
-def compile_program(
-    program: _CompilerInput,
-    *,
-    target: CompilerTarget,
-    output: None = None,
-    program_format: mqt.core.qdmi.ProgramFormat,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1473,7 +1450,6 @@ def compile_program(
     *,
     target: _CompilerTarget | None = None,
     output: OutputFormat,
-    program_format: None = None,
     inplace: bool = False,
     qco_pipeline: str = "mqt-qco-default",
     options: CompilationOptions = ...,
@@ -1494,15 +1470,15 @@ def compile_program(
         target: A CompilerTarget, Qiskit BackendV2 or Target, QDMI Device, or device ID.
         output: The returned representation. QC_IMPORT and raw QCO are checkpoints
             before target compilation and cannot be combined with a target.
-        program_format: An exact QDMI payload format, mutually exclusive with output.
-            Requires a QDMI target or CompilerTarget and returns CompiledProgram.
         inplace: Whether a typed input program may be consumed; otherwise it is copied.
         qco_pipeline: The QCO optimization pipeline. Custom pipelines require no target.
         options: Shared compilation controls.
 
     Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
-    (binary, text). An explicit output need not be a device's execution format.
-    Jeff output does not retain hardware placement.
+    (binary, text). Select an exact execution format with
+    :func:`submit_program` and its ``program_format`` argument. An explicit output
+    need not be a device's execution format. Jeff output does not retain hardware
+    placement.
     """
 
 def submit_program(
@@ -1527,5 +1503,8 @@ def submit_program(
 ) -> mqt.core.qdmi.Job:
     """Compile source or submit a compiled program to a device.
 
-    ``target`` accepts a registered device ID or an open device.
+    ``target`` accepts a registered device ID or an open device. For source input,
+    ``program_format`` selects the exact QDMI execution format, including text or
+    binary QIR; omitting it selects a supported native format. A compiled program
+    retains its payload and must match the destination contract.
     """
