@@ -427,9 +427,10 @@ assert restored.is_valid
 To generate QIR, select a target profile. {py:class}`~mqt.core.mlir.QIRProgram`
 provides the QIR MLIR through {py:attr}`~mqt.core.mlir.Program.ir` and the
 translated LLVM IR through {py:attr}`~mqt.core.mlir.QIRProgram.llvm_ir`. Base
-conversion unrolls static counted loops and folds their classical expressions,
-with a limit of one billion cloned loop-body operations. Use Adaptive QIR for
-runtime-dependent loops or to retain structured iteration.
+conversion unrolls counted loops whose bounds and steps fold to constants and
+folds their classical expressions, with a limit of one billion cloned loop-body
+operations. Use Adaptive QIR for runtime-dependent loops or to retain structured
+iteration.
 
 ```{code-cell} ipython3
 qir = compile_program(bell_qasm, output=OutputFormat.QIR_BASE)

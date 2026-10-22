@@ -19,7 +19,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -569,41 +568,8 @@ protected:
           }
         }
 
-        uint64_t bodyOperations = 0U;
-        Operation* const terminator = loop.getBody()->getTerminator();
-        loop.getRegion().walk([&](Operation* operation) {
-          bodyOperations += operation != terminator;
-        });
-        // LLVM skips terminator-only bodies. Budget a temporary constant so
-        // its unroller can remap iteration arguments and induction values.
-        const bool emptyBody = bodyOperations == 0U;
-        bodyOperations = std::max(bodyOperations, uint64_t{1});
-        const uint64_t remaining = maxOperations - clonedOperations;
-        if ((tripCount - 1).ugt(remaining / bodyOperations)) {
-          loop.emitError() << "full legalization would clone more than "
-                           << maxOperations.getValue()
-                           << " loop-body operations";
-          signalPassFailure();
-          return;
-        }
-        if (tripCount.getActiveBits() > 64 ||
-            !mqt::canUseFullUnroll(loop, tripCount.getZExtValue())) {
-          loop.emitError(
-              "cannot safely apply MLIR full unrolling to these loop bounds");
-          signalPassFailure();
-          return;
-        }
-        const uint64_t iterations = tripCount.getZExtValue();
-        clonedOperations += bodyOperations * (iterations - 1U);
-        if (emptyBody) {
-          OpBuilder::InsertionGuard guard(rewriter);
-          rewriter.setInsertionPointToStart(loop.getBody());
-          // Remove this workaround when LLVM unrolls empty bodies. The
-          // static-branch cleanup below removes the unused constants.
-          arith::ConstantIndexOp::create(rewriter, loop.getLoc(), 0);
-        }
-        if (failed(loopUnrollFull(loop))) {
-          loop.emitError("failed to fully unroll a static counted loop");
+        if (failed(mqt::unrollStaticLoop(loop, tripCount, maxOperations,
+                                         clonedOperations))) {
           signalPassFailure();
           return;
         }

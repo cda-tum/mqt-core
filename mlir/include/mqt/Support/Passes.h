@@ -50,8 +50,9 @@ void populateDefaultQCOOptimizationPipeline(mlir::OpPassManager& pm);
 
 /// Prepare QC functions, modifiers, and classical expressions for QIR.
 ///
-/// Base conversion also expands static loops, with a limit of one billion
-/// cloned loop-body operations. Adaptive conversion retains loops.
+/// Base conversion expands counted loops whose bounds and steps fold to
+/// constants, with a limit of one billion cloned loop-body operations.
+/// Adaptive conversion retains loops.
 void populateQIRPreparationPipeline(mlir::OpPassManager& pm,
                                     bool useAdaptive = true);
 
