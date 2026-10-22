@@ -207,6 +207,73 @@ TEST(PayloadSpecificationTest, ValidatesAndRoundTripsTypedAttribute) {
                 "a duplicate capability ID/value pair");
 }
 
+TEST(PayloadSpecificationTest, RestrictsControlFlowWithoutChangingFormat) {
+  using Capability = mlir::ProgramCapability;
+  const auto output = valid(mlir::PayloadSpecification::create(
+      {.id = "qir", .version = "2.1", .profile = "adaptive"},
+      {
+          {
+              .id = "forward-branching",
+              .constraints =
+                  {
+                      {
+                          .id = "max-control-flow-nesting-depth",
+                          .value = 8,
+                      },
+                  },
+          },
+          {
+              .id = "counted-iteration",
+              .constraints = {{.id = "max-iteration-count", .value = 4}},
+          },
+          {.id = "conditional-loop"},
+          {.id = "int-computations"},
+      }));
+  const auto target = valid(mlir::PayloadSpecification::create(
+      {.id = "vendor.ir", .version = "1"},
+      {
+          {
+              .id = "forward-branching",
+              .constraints =
+                  {
+                      {
+                          .id = "max-control-flow-nesting-depth",
+                          .value = 2,
+                      },
+                  },
+          },
+          {
+              .id = "counted-iteration",
+              .constraints =
+                  {
+                      {.id = "max-iteration-count", .value = 16},
+                      {.id = "max-control-flow-nesting-depth", .value = 3},
+                  },
+          },
+          {.id = "multiway-branching"},
+      },
+      true));
+  const auto restricted = output.restrictControlFlow(target);
+  EXPECT_EQ(restricted.format(), output.format());
+  const std::vector<Capability> expected{
+      {
+          .id = "forward-branching",
+          .constraints = {{.id = "max-control-flow-nesting-depth", .value = 2}},
+      },
+      {
+          .id = "counted-iteration",
+          .constraints =
+              {
+                  {.id = "max-iteration-count", .value = 4},
+                  {.id = "max-control-flow-nesting-depth", .value = 3},
+              },
+      },
+      {.id = "int-computations"},
+  };
+  EXPECT_EQ(restricted.capabilities(), llvm::ArrayRef(expected));
+  EXPECT_FALSE(restricted.optionalCapabilitiesKnown());
+}
+
 TEST(PayloadSpecificationTest, NormalizesExactVersionComponents) {
   for (const auto& [input, expected] : std::array{
            std::pair{"2", "2.0.0"},

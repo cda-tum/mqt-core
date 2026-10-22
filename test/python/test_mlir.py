@@ -16,6 +16,7 @@ from functools import partial
 from gc import collect
 from pathlib import Path
 from threading import Event, Thread
+from typing import assert_type
 
 import numpy as np
 import pytest
@@ -133,15 +134,21 @@ def test_compile_program_jeff_file() -> None:
     path = Path(__file__).parent.parent / "circuits" / "bell.jeff"
 
     result = compile_program(path)
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result)
+    assert isinstance(result, JeffProgram)
+    _assert_bell_program(result.to_qco().to_qc())
 
 
-def test_compile_program_mlir_string() -> None:
-    """Compile an MLIR string."""
-    result = compile_program(MLIR_STRING)
+@pytest.mark.parametrize("form", ["source", "path", "named_module"])
+def test_compile_program_mlir_input(form: str, tmp_path: Path) -> None:
+    """Compile MLIR source and files while preserving Bell-state measurements."""
+    source: str | Path = MLIR_STRING
+    if form != "source":
+        source = tmp_path / ("module.mlir" if form == "named_module" else "program.mlir")
+        source.write_text(MLIR_STRING, encoding="utf-8")
+
+    result = compile_program(source)
     assert isinstance(result, QCProgram)
-    assert result.ir == MLIR_STRING
+    assert set(sample(result, shots=32, seed=1)) == {"00", "11"}
 
 
 def test_compile_program_mlir_string_with_leading_whitespace() -> None:
@@ -170,27 +177,6 @@ def test_openqasm_import_versions(version_header: str, tmp_path: Path) -> None:
         assert compile_program(program, output=OutputFormat.QCO).is_valid
 
 
-def test_compile_program_mlir_file(tmp_path: Path) -> None:
-    """Compile a ``.mlir`` file."""
-    path = tmp_path / "program.mlir"
-    path.write_text(MLIR_STRING, encoding="utf-8")
-
-    result = compile_program(path)
-    assert isinstance(result, QCProgram)
-    assert result.ir == MLIR_STRING
-
-
-def test_compile_program_mlir_file_named_module(tmp_path: Path) -> None:
-    """Compile an MLIR file whose name begins with ``module``."""
-    path = tmp_path / "module.mlir"
-    path.write_text(MLIR_STRING, encoding="utf-8")
-
-    result = compile_program(path)
-
-    assert isinstance(result, QCProgram)
-    assert result.ir == MLIR_STRING
-
-
 def test_compile_program_rejects_unsupported_file(tmp_path: Path) -> None:
     """Reject an existing file with an unsupported extension."""
     path = tmp_path / "program.txt"
@@ -200,29 +186,20 @@ def test_compile_program_rejects_unsupported_file(tmp_path: Path) -> None:
         compile_program(path)
 
 
-def test_compile_program_qasm_string() -> None:
-    """Compile an OpenQASM string."""
-    result = compile_program(QASM_STRING)
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result, measured=True)
+@pytest.mark.parametrize("form", ["source", "single_line", "path", "path_string"])
+def test_compile_program_qasm_input(form: str, tmp_path: Path) -> None:
+    """Keep OpenQASM output for source strings and files."""
+    source: str | Path = QASM_STRING
+    if form == "single_line":
+        source = QASM_STRING.replace("\n", " ")
+    elif form in {"path", "path_string"}:
+        path = tmp_path / "program.qasm"
+        path.write_text(QASM_STRING, encoding="utf-8")
+        source = path if form == "path" else str(path)
 
-
-def test_compile_program_single_line_qasm_string() -> None:
-    """Compile a single-line OpenQASM source string."""
-    result = compile_program(QASM_STRING.replace("\n", " "))
-
-    assert isinstance(result, QCProgram)
-    assert "qc.h" in result.ir
-
-
-def test_compile_program_qasm_file(tmp_path: Path) -> None:
-    """Compile a ``.qasm`` file."""
-    path = tmp_path / "program.qasm"
-    path.write_text(QASM_STRING, encoding="utf-8")
-
-    result = compile_program(path)
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result, measured=True)
+    result = compile_program(source)
+    assert isinstance(result, OpenQASMProgram)
+    _assert_bell_program(QCProgram.from_openqasm_str(result.source), measured=True)
 
 
 @pytest.mark.parametrize("bind_in_qco", [False, True])
@@ -280,8 +257,8 @@ def test_compile_program_qiskit_quantum_circuit() -> None:
     qc.measure(range(2), range(2))
 
     result = compile_program(qc)
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result, measured=True)
+    assert isinstance(result, QuantumCircuit)
+    _assert_bell_program(QCProgram.from_qiskit(result), measured=True)
 
 
 @requires_qiskit_translation
@@ -298,8 +275,8 @@ def test_compile_program_qiskit_quantum_circuit_subclass() -> None:
 
     result = compile_program(qc)
 
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result, measured=True)
+    assert isinstance(result, QuantumCircuit)
+    _assert_bell_program(QCProgram.from_qiskit(result), measured=True)
 
 
 def test_jeff_program_round_trip(tmp_path: Path) -> None:
@@ -310,7 +287,11 @@ def test_jeff_program_round_trip(tmp_path: Path) -> None:
 
     path.write_bytes(result.to_bytes())
     loaded = JeffProgram.from_file(path)
-    restored = compile_program(loaded, output=OutputFormat.QC)
+    optimized = compile_program(loaded)
+    assert_type(optimized, JeffProgram)
+    assert isinstance(optimized, JeffProgram)
+    assert loaded.is_valid
+    restored = compile_program(optimized, output=OutputFormat.QC)
     assert isinstance(restored, QCProgram)
     _assert_bell_program(restored, measured=True)
 
@@ -407,8 +388,12 @@ def test_program_conversions_are_composable() -> None:
 
     qco.cleanup()
     qco.merge_single_qubit_rotation_gates()
-    result = qco.to_qc()
-    assert not qco.is_valid
+    optimized = compile_program(qco)
+    assert_type(optimized, QCOProgram)
+    assert isinstance(optimized, QCOProgram)
+    assert qco.is_valid
+    result = optimized.to_qc()
+    assert not optimized.is_valid
     result.cleanup()
     _assert_bell_program(result, measured=True)
 
@@ -428,7 +413,8 @@ def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
     assert path.read_text(encoding="utf-8") == direct.source
     _assert_bell_program(QCProgram.from_openqasm_file(path), measured=True)
 
-    optimized = compile_program(QASM_STRING, output=OutputFormat.OPENQASM3)
+    optimized = compile_program(direct)
+    assert_type(optimized, OpenQASMProgram)
     assert isinstance(optimized, OpenQASMProgram)
     assert "output bit[2] c;" in optimized.source
     _assert_bell_program(QCProgram.from_openqasm_str(optimized.source), measured=True)
@@ -498,7 +484,7 @@ bit flag = measure q[0];
 if (flag) { x q[1]; }
 bit answer = measure q[1];
 """
-    with pytest.raises(RuntimeError, match="Compiler action failed"):
+    with pytest.raises(RuntimeError, match=r"scf\.if"):
         compile_program(source, output=OutputFormat.QIR_BASE)
 
 
@@ -642,9 +628,9 @@ def test_compilation_entry_points_forward_mapping_options(output_kind: str, capf
         compile_call = partial(
             compile_program, QASM_STRING, target=target, program_format=ProgramFormat.QASM3, options=options
         )
-    with pytest.raises((RuntimeError, ValueError)):
+    with pytest.raises((RuntimeError, ValueError)) as exc_info:
         compile_call()
-    assert "mapping trials must be greater than zero" in capfd.readouterr().err
+    assert "mapping trials must be greater than zero" in str(exc_info.value) + capfd.readouterr().err
 
 
 @requires_qiskit_translation
@@ -701,8 +687,9 @@ def test_compile_program_for_qdmi_target(garnet_target: CompilerTarget) -> None:
     assert "qco.ry" not in mapped.ir
 
 
-def test_compile_program_rejects_unsupported_target_payload_without_consuming_input() -> None:
-    """Reject an unsupported selected payload before consuming typed input."""
+@pytest.mark.parametrize("output", [OutputFormat.QC_IMPORT, OutputFormat.QCO])
+def test_compile_program_rejects_early_target_output_without_consuming_input(output: OutputFormat) -> None:
+    """Reject stages before target compilation without consuming typed input."""
     program = compile_program(QASM_STRING, output=OutputFormat.QCO)
     assert isinstance(program, QCOProgram)
     target = CompilerTarget(
@@ -710,8 +697,8 @@ def test_compile_program_rejects_unsupported_target_payload_without_consuming_in
         connectivity=CompilerTarget.Connectivity.all_to_all(),
         native_operations=CompilerTarget.NativeOperations.unrestricted(),
     )
-    with pytest.raises(ValueError, match="executable output"):
-        compile_program(program, target=target, output=OutputFormat.QCO, inplace=True)  # ty: ignore[no-matching-overload]
+    with pytest.raises(ValueError, match="target"):
+        compile_program(program, target=target, output=output, inplace=True)
 
     assert program.is_valid
 

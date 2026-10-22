@@ -26,8 +26,9 @@ the interfaces and options for applying those concepts.
 
 The Python examples below accept source strings, {code}`.qasm`, {code}`.mlir`,
 and {code}`.jeff` files, Qiskit {py:class}`~qiskit.circuit.QuantumCircuit`
-objects, and typed compiler programs. The requested output format determines
-where compilation stops and which program type is returned.
+objects, and typed compiler programs. Select an output format to choose where
+compilation stops and which program type is returned, or use the
+[default selection rules](#select-an-output-format).
 
 Install {doc}`MQT Core <../installation>` and import the compiler interface:
 
@@ -55,15 +56,14 @@ cx q[0], q[1];
 result = measure q;
 """
 
-compiled = compile_program(bell_qasm)
+compiled = compile_program(bell_qasm, output=OutputFormat.QC)
 print(compiled.ir)
 ```
 
-By default, `compile_program()` runs the standard optimization pipeline and
-returns a {py:class}`~mqt.core.mlir.QCProgram`. Its
-{py:attr}`~mqt.core.mlir.Program.ir` property exposes the textual MLIR
-representation for inspection and debugging. Programs do not need to be written
-in MLIR to use the compiler.
+`OutputFormat.QC` runs the standard optimization pipeline and returns a
+{py:class}`~mqt.core.mlir.QCProgram`. Its {py:attr}`~mqt.core.mlir.Program.ir`
+property exposes the textual MLIR representation for inspection and debugging.
+Programs do not need to be written in MLIR to use the compiler.
 
 For versionless OpenQASM text, use
 `compile_program(QCProgram.from_openqasm_str(source))`. Automatic source-string
@@ -176,18 +176,40 @@ all parameters to be bound.
 
 ## Select an output format
 
-Select an output format to stop the pipeline at a particular representation:
+With no target or an explicit `CompilerTarget`, omitting `output` preserves the
+input's program family:
+
+| Input                                             | Default result         |
+| ------------------------------------------------- | ---------------------- |
+| Qiskit `QuantumCircuit`                           | `QuantumCircuit`       |
+| `QCProgram`, QC MLIR text, or `.mlir` file        | `QCProgram`            |
+| `QCOProgram`                                      | Optimized `QCOProgram` |
+| `JeffProgram` or `.jeff` file                     | `JeffProgram`          |
+| `OpenQASMProgram`, OpenQASM text, or `.qasm` file | `OpenQASMProgram`      |
+
+A Qiskit `BackendV2` or `Target` defaults to a `QuantumCircuit`. A QDMI device
+or registered device ID defaults to a `CompiledProgram` containing a supported
+execution payload.
+
+An explicit `output` selects the representation independently of the input
+family and target:
 
 | Purpose                                  | Output format                                          | Result type       |
 | ---------------------------------------- | ------------------------------------------------------ | ----------------- |
 | Inspect frontend translation             | `OutputFormat.QC_IMPORT`                               | `QCProgram`       |
 | Inspect QCO immediately after conversion | `OutputFormat.QCO`                                     | `QCOProgram`      |
 | Inspect QCO after optimization           | `OutputFormat.QCO_OPTIMIZED`                           | `QCOProgram`      |
-| Obtain the optimized circuit             | `OutputFormat.QC` (default)                            | `QCProgram`       |
+| Obtain the optimized circuit             | `OutputFormat.QC`                                      | `QCProgram`       |
 | Obtain a Qiskit circuit                  | `OutputFormat.QISKIT`                                  | `QuantumCircuit`  |
 | Emit an optimized OpenQASM program       | `OutputFormat.OPENQASM3`                               | `OpenQASMProgram` |
 | Convert to the jeff dialect              | `OutputFormat.JEFF`                                    | `JeffProgram`     |
 | Generate QIR                             | `OutputFormat.QIR_BASE` or `OutputFormat.QIR_ADAPTIVE` | `QIRProgram`      |
+
+The raw `QC_IMPORT` and `QCO` checkpoints stop before target compilation and
+cannot be combined with `target`. With a target, `program_format` selects an
+execution payload and returns a `CompiledProgram` for submission; it is mutually
+exclusive with `output`. See {doc}`target_compilation` for payload selection and
+submission.
 
 After rotation merging, the default pipeline groups controlled gates with the
 same ordered controls and targets. Canonicalization cancels named inverses and
@@ -248,8 +270,8 @@ diagnostic. See {doc}`OpenQASM` for the complete support table.
 ## Use Qiskit circuits directly
 
 Install {code}`mqt-core[qiskit]` with a supported version listed in
-{doc}`qiskit`. To compile a {py:class}`~qiskit.circuit.QuantumCircuit` for a
-backend and return a circuit, select `OutputFormat.QISKIT`:
+{doc}`qiskit`. Compiling a {py:class}`~qiskit.circuit.QuantumCircuit` for a
+Qiskit backend returns a circuit by default:
 
 ```{code-cell} ipython3
 from qiskit import QuantumCircuit
@@ -261,7 +283,7 @@ qiskit_bell.cx(0, 1)
 qiskit_bell.measure(range(2), range(2))
 
 backend = GenericBackendV2(3, basis_gates=["sx", "x", "rz", "cx"])
-compiled_qiskit = compile_program(qiskit_bell, target=backend, output=OutputFormat.QISKIT)
+compiled_qiskit = compile_program(qiskit_bell, target=backend)
 assert isinstance(compiled_qiskit, QuantumCircuit)
 assert compiled_qiskit.num_qubits == backend.num_qubits
 assert compiled_qiskit.layout is not None

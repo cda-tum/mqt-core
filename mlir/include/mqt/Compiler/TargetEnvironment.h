@@ -119,6 +119,13 @@ public:
   /// Return whether optional capability metadata is complete.
   [[nodiscard]] bool optionalCapabilitiesKnown() const noexcept;
 
+  /// Restrict structural control flow to that supported by both payloads.
+  ///
+  /// Keep this format and its non-structural capabilities. The other payload's
+  /// limits apply to the retained structural capabilities.
+  [[nodiscard]] PayloadSpecification
+  restrictControlFlow(const PayloadSpecification& other) const;
+
   /// Whether generated switches may have arbitrary nesting and case counts.
   [[nodiscard]] bool supportsUnrestrictedMultiwayBranching() const noexcept;
 

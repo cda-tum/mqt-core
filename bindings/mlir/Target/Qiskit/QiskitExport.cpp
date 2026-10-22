@@ -2961,9 +2961,10 @@ collectGateDefinition(mlir::func::FuncOp function) {
   };
 }
 
-nb::object exportCircuit(mlir::QCProgram program,
-                         const mlir::CompilerTarget* const target,
-                         const mlir::PayloadSpecification* const payload) {
+[[nodiscard]] static nb::object
+exportCircuitImpl(mlir::QCProgram program,
+                  const mlir::CompilerTarget* const target,
+                  const mlir::PayloadSpecification* const payload) {
   auto moduleOp = program.module();
   auto function = mlir::mqt::getEntryPoint(moduleOp);
   if (!function) {
@@ -3066,6 +3067,17 @@ nb::object exportCircuit(mlir::QCProgram program,
     writer->setLayout(*layout);
   }
   return writer->finish();
+}
+
+nb::object exportCircuit(mlir::QCProgram program,
+                         const mlir::CompilerTarget* target) {
+  return exportCircuitImpl(std::move(program), target, nullptr);
+}
+
+nb::object exportCircuit(mlir::QCProgram program,
+                         const mlir::TargetEnvironment& environment) {
+  return exportCircuitImpl(std::move(program), &environment.target(),
+                           &environment.payloadSpecification());
 }
 
 } // namespace mqt::bindings::qiskit

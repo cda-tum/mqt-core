@@ -407,6 +407,12 @@ TEST_P(CompilerPipelineTest, EndToEndPipeline) {
       testCase.qcoPipeline);
   ASSERT_TRUE(mlir::succeeded(compiled));
 
+  if (auto* qc = std::get_if<QCProgram>(&*compiled)) {
+    ASSERT_TRUE(succeeded(verify(qc->module())));
+    // Compare canonical QC on both sides; compilation retains layout metadata.
+    ASSERT_TRUE(succeeded(qc->cleanup()));
+  }
+
   OwningOpRef<ModuleOp> expected;
   if (testCase.convertToQIR) {
     ASSERT_TRUE(testCase.qirReferenceBuilder);

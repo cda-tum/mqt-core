@@ -9,8 +9,8 @@ mystnb:
 # Compile for a QDMI device
 
 `compile_program` maps a program to a device's topology and native operations.
-The resulting {py:class}`~mqt.core.mlir.CompiledProgram` can be submitted with
-`submit_program` in the MLIR submodule.
+For a QDMI device, it returns a {py:class}`~mqt.core.mlir.CompiledProgram` by
+default. Submit it with `submit_program` in the MLIR submodule.
 
 For a hands-on comparison of connectivity, native gates, and logical outputs,
 see the
@@ -113,9 +113,9 @@ and fallback behavior.
 
 ### Choose a format
 
-The compiler selects the first supported format in this order: Adaptive QIR
-(binary, then text), OpenQASM 3.1, then Base QIR (binary, then text). To select
-a format explicitly:
+For a submission payload, the compiler selects the first supported format in
+this order: Adaptive QIR (binary, then text), OpenQASM 3.1, then Base QIR
+(binary, then text). To select a format explicitly:
 
 ```{code-cell} ipython3
 from mqt.core.qdmi import ProgramFormat
@@ -123,15 +123,27 @@ from mqt.core.qdmi import ProgramFormat
 compiled = compile_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
 ```
 
+`program_format` returns a `CompiledProgram` containing the selected execution
+payload. To obtain a compiler representation instead, pass `output`, such as
+`OutputFormat.QC`, `OutputFormat.QCO_OPTIMIZED`, or `OutputFormat.QISKIT`. The
+device still supplies the compilation constraints. `output` and `program_format`
+are mutually exclusive; the raw `QC_IMPORT` and `QCO` checkpoints cannot be
+combined with a target.
+
+Typed outputs support inspection and interchange. In particular, jeff output
+does not retain hardware placement. Use the default `CompiledProgram` or select
+`program_format` for QDMI submission.
+
 ### Define a target
 
 Use `CompilerTarget` to describe a device for compilation without opening a
 connection. Bundled SC devices such as `mqt.sc.iqm.garnet` provide ready-made
 hardware models; they do not execute programs.
 
-An explicit target requires `output` for a typed compiler program, or
-`program_format` for a `CompiledProgram` ready for submission. To define a
-target with three sites and nearest-neighbor connectivity:
+With an explicit `CompilerTarget`, the default result preserves the input's
+program family. Select `output` for another representation, or `program_format`
+for a `CompiledProgram` ready for submission. To define a target with three
+sites and nearest-neighbor connectivity:
 
 ```{code-cell} ipython3
 from mqt.core.mlir import CompilerTarget, OutputFormat

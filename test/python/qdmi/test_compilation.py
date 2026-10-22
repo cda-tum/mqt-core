@@ -14,13 +14,21 @@ import gc
 import subprocess
 import sys
 from fractions import Fraction
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, assert_type, cast
 
 import pytest
 from qiskit_support import supports_qiskit_translation
 
 from mqt.core.bench import qpe, repeat_until_success, shor
-from mqt.core.mlir import CompiledProgram, CompilerTarget, OutputFormat, QCProgram, compile_program, submit_program
+from mqt.core.mlir import (
+    CompiledProgram,
+    CompilerTarget,
+    OpenQASMProgram,
+    OutputFormat,
+    QCProgram,
+    compile_program,
+    submit_program,
+)
 from mqt.core.qdmi import CustomProperty, Job, ProgramFormat, open_device
 
 if TYPE_CHECKING:
@@ -254,6 +262,7 @@ def test_submission_forms(form: str) -> None:
     device = open_device("mqt.ddsim.default")
     if form == "artifact":
         program = compile_program(BELL, target=device)
+        assert_type(program, CompiledProgram)
         assert isinstance(program, CompiledProgram)
         assert program.program_format == ProgramFormat.QIR_ADAPTIVE_MODULE
         job = submit_program(program, target=device, custom1=7)
@@ -318,12 +327,15 @@ def test_rejects_invalid_submission_options() -> None:
         submit_program(compiled, target=device, program_format=ProgramFormat.QASM3)
 
 
-def test_explicit_target_requires_output_and_matching_contract() -> None:
-    """Hardware snapshots need a chosen output and must match before submission."""
+def test_explicit_target_preserves_input_format_and_matches_submission_contract() -> None:
+    """Hardware snapshots preserve input format and must match before submission."""
     device = open_device("mqt.ddsim.default")
     target = CompilerTarget.from_device(device)
-    with pytest.raises(ValueError, match="requires output"):
-        compile_program(BELL, target=target)  # ty: ignore[invalid-argument-type]
+    output = compile_program(BELL, target=target)
+    assert isinstance(output, OpenQASMProgram)
+    raw = device.submit_job(output.source, ProgramFormat.QASM3, num_shots=0)
+    raw.wait()
+    assert raw.get_dense_statevector() == pytest.approx([2**-0.5, 0, 0, 2**-0.5])
     matching = compile_program(BELL, target=target, program_format=ProgramFormat.QASM3)
     job = submit_program(matching, target=device, num_shots=8)
     job.wait()
@@ -359,7 +371,8 @@ assert job.get_counts() == {"0": 2}
     subprocess.run([sys.executable, "-c", script], check=True)  # ruff: ignore[subprocess-without-shell-equals-true]
 
 
-def test_source_path_is_read_once(tmp_path: Path) -> None:
+@pytest.mark.parametrize("targeted", [False, True])
+def test_source_path_is_read_once(tmp_path: Path, *, targeted: bool) -> None:
     """Source submission imports once; artifact resubmission needs no source."""
     path = tmp_path / "bell.qasm"
     path.write_text(BELL)
@@ -377,7 +390,9 @@ def test_source_path_is_read_once(tmp_path: Path) -> None:
     job = submit_program(source, target=device, num_shots=2)
     job.wait()
     assert source.calls == 1
-    compiled = compile_program(path, target=device)
+    compiled_source = Source()
+    compiled = compile_program(compiled_source, target=device if targeted else None)
+    assert compiled_source.calls == 1
     path.unlink()
     job = submit_program(compiled, target=device, num_shots=2)
     job.wait()

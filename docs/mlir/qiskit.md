@@ -42,11 +42,12 @@ failure, serialize to `io.BytesIO` before opening the destination.
 ## Compiler targets
 
 Pass a Qiskit `BackendV2` or `Target` to
-{py:func}`~mqt.core.mlir.compile_program` with `output=OutputFormat.QISKIT` to
-compile a circuit for its gates, topology, and advertised standard control flow.
-The result uses physical qubits; its layout records placement and routing of
-logical input qubits. Omit `target` for target-independent optimization, which
-may remove idle qubits. See the
+{py:func}`~mqt.core.mlir.compile_program` to compile for its gates, topology,
+and advertised standard control flow. The default result is a `QuantumCircuit`
+with physical qubits; its layout records placement and routing of logical input
+qubits. An explicit `output` selects another compiler representation. Omit
+`target` for target-independent optimization, which preserves the input's
+program family and may remove idle qubits. See the
 [Qiskit example](mqt_compiler_collection.md#use-qiskit-circuits-directly).
 
 For explicit compiler pipelines or repeated compilation,
@@ -282,12 +283,12 @@ program = QCProgram.from_qiskit(transpiled_circuit)
 restored = program.copy().to_qco().to_qc().to_qiskit()
 ```
 
-Target compilation and `compile_program(..., output=OutputFormat.QISKIT)`
-require inputs without an attached layout. Use the conversion methods above to
-preserve an existing layout. The numeric mapping does not retain Qiskit input
-register names or input ancilla labels; incomplete layouts are unsupported. See
-{doc}`MQT dialect <MQT>` for the metadata schema and
-{doc}`target compilation <target_compilation>` for placement.
+Target compilation and compilation to a Qiskit circuit require inputs without an
+attached layout. Use the conversion methods above to preserve an existing
+layout. The numeric mapping does not retain Qiskit input register names or input
+ancilla labels; incomplete layouts are unsupported. See {doc}`MQT dialect <MQT>`
+for the metadata schema and {doc}`target compilation <target_compilation>` for
+placement.
 
 Names passed between Qiskit and the compiler must not contain NUL characters.
 Loop lists with jumps and switch cases with variables are supported within the

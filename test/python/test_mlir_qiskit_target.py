@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from math import pi
-from typing import cast
+from typing import assert_type, cast
 
 import numpy as np
 import pytest
@@ -50,15 +50,21 @@ from qiskit_support import supports_qiskit_translation
 from mqt.core.mlir import (
     CompilationOptions,
     CompilerTarget,
+    JeffProgram,
+    OpenQASMProgram,
     OutputFormat,
     PayloadFormat,
     PayloadSpecification,
     ProgramCapability,
+    QCOProgram,
     QCProgram,
+    QIRProfile,
+    QIRProgram,
     TargetEnvironment,
     compile_program,
     sample,
 )
+from mqt.core.qdmi import ProgramFormat, open_device
 
 if not supports_qiskit_translation():
     pytest.skip("Qiskit version has no compiler translation adapter", allow_module_level=True)
@@ -79,18 +85,18 @@ def test_compile_program_qiskit_output(target_kind: str | None) -> None:
     original = circuit.copy()
 
     if target_kind is None:
-        compiled = compile_program(circuit, output=OutputFormat.QISKIT)
+        compiled = compile_program(circuit)
         assert "z" not in compiled.count_ops()
     else:
         backend = GenericBackendV2(
             5, basis_gates=["sx", "x", "rz", "cx"], coupling_map=[[0, 1], [1, 2], [2, 3], [3, 4]], seed=1
         )
-        target = {"backend": backend, "qiskit": backend.target, "compiler": CompilerTarget.from_qiskit(backend)}[
-            target_kind
-        ]
-        compiled = compile_program(
-            circuit, target=target, output=OutputFormat.QISKIT, options=CompilationOptions(seed=7)
-        )
+        target: GenericBackendV2 | Target | CompilerTarget = {
+            "backend": backend,
+            "qiskit": backend.target,
+            "compiler": CompilerTarget.from_qiskit(backend),
+        }[target_kind]
+        compiled = compile_program(circuit, target=target, options=CompilationOptions(seed=7))
         assert compiled.num_qubits == backend.num_qubits
         assert compiled.layout is not None
         assert len(compiled.layout.final_index_layout()) == circuit.num_qubits
@@ -103,13 +109,64 @@ def test_compile_program_qiskit_output(target_kind: str | None) -> None:
             for item in compiled.data
         )
         with pytest.raises(RuntimeError, match="layout"):
-            compile_program(compiled, output=OutputFormat.QISKIT)
+            compile_program(compiled)
 
+    assert_type(compiled, QuantumCircuit)
     assert circuit == original
     assert compiled.parameters == circuit.parameters
     expected = QuantumCircuit(3 if target_kind is None else 5)
     expected.compose(circuit.assign_parameters({theta: 0.7}), range(circuit.num_qubits), inplace=True)
     assert np.allclose(Operator.from_circuit(compiled.assign_parameters({theta: 0.7})).data, Operator(expected).data)
+
+
+@pytest.mark.parametrize(
+    ("target_kind", "output", "result_type"),
+    [
+        ("backend", OutputFormat.QC, QCProgram),
+        ("qiskit", OutputFormat.QCO_OPTIMIZED, QCOProgram),
+        ("compiler", OutputFormat.JEFF, JeffProgram),
+        ("backend", OutputFormat.OPENQASM3, OpenQASMProgram),
+        ("qiskit", OutputFormat.QIR_BASE, QIRProgram),
+        ("compiler", OutputFormat.QIR_ADAPTIVE, QIRProgram),
+        ("device", OutputFormat.OPENQASM3, OpenQASMProgram),
+        ("device_id", OutputFormat.QISKIT, QuantumCircuit),
+    ],
+)
+def test_compile_program_explicit_output(target_kind: str, output: OutputFormat, result_type: type) -> None:
+    """Execute selected representations independently of the target's native output."""
+    backend = GenericBackendV2(2, basis_gates=["u", "cx"], seed=1)
+    if target_kind == "device":
+        target = open_device("mqt.ddsim.default")
+    elif target_kind == "device_id":
+        target = "mqt.ddsim.default"
+    else:
+        target = {"backend": backend, "qiskit": backend.target, "compiler": CompilerTarget.from_qiskit(backend)}[
+            target_kind
+        ]
+    circuit = QuantumCircuit(2, 2)
+    circuit.x(0)
+    circuit.cx(0, 1)
+    circuit.x(0)
+    circuit.measure([0, 1], [1, 0])
+
+    compiled = compile_program(circuit, target=target, output=output)
+    assert isinstance(compiled, result_type)
+    if isinstance(compiled, QuantumCircuit):
+        assert compiled.num_qubits == open_device("mqt.ddsim.default").qubits_num()
+        assert compiled.layout is not None
+        # The simulator advertises 65,535 sites; execute only occupied wires.
+        compiled = QuantumCircuit.from_instructions(
+            compiled.data, clbits=compiled.clbits, global_phase=compiled.global_phase
+        )
+    if isinstance(compiled, QIRProgram):
+        program_format = (
+            ProgramFormat.QIR_BASE_MODULE if compiled.profile == QIRProfile.BASE else ProgramFormat.QIR_ADAPTIVE_MODULE
+        )
+        job = open_device("mqt.ddsim.default").submit_job(compiled.to_bitcode(), program_format, num_shots=4)
+        job.wait()
+        assert job.get_counts() == {"01": 4}
+    else:
+        assert sample(compiled, shots=4, seed=1) == {"01": 4}
 
 
 @pytest.mark.parametrize(("inplace", "control_flow"), [(False, False), (True, True)])
@@ -120,8 +177,9 @@ def test_compile_program_qiskit_typed_input(*, inplace: bool, control_flow: bool
         "for int i in [0:2] { x q[0]; } c[1] = measure q[0]; c[0] = measure q[1];"
     )
     backend = GenericBackendV2(3, basis_gates=["sx", "x", "rz", "cx"], control_flow=control_flow, seed=1)
-    compiled = compile_program(source, target=backend, output=OutputFormat.QISKIT, inplace=inplace)
+    compiled = compile_program(source, target=backend, inplace=inplace)
 
+    assert_type(compiled, QuantumCircuit)
     assert source.is_valid is not inplace
     assert ("for_loop" in compiled.count_ops()) is control_flow
     assert compiled.num_clbits == 3
@@ -151,9 +209,19 @@ c[1] = measure $1;
     assert sample(compiled, shots=4, seed=1) == {"11": 4}
 
 
-@pytest.mark.parametrize("unsupported", ["while_loop", "if_else", None])
-def test_compile_program_qiskit_control_flow(unsupported: str | None) -> None:
-    """Check backend support for loops and branches introduced during export."""
+@pytest.mark.parametrize(
+    ("unsupported", "output"),
+    [
+        ("while_loop", OutputFormat.QISKIT),
+        ("if_else", OutputFormat.QISKIT),
+        (None, OutputFormat.QISKIT),
+        ("while_loop", OutputFormat.OPENQASM3),
+        (None, OutputFormat.OPENQASM3),
+        (None, OutputFormat.QIR_BASE),
+    ],
+)
+def test_compile_program_qiskit_control_flow(unsupported: str | None, output: OutputFormat) -> None:
+    """Respect backend and output-profile limits, including generated branches."""
     target = Target(num_qubits=1)
     target.add_instruction(UGate(Parameter("a"), Parameter("b"), Parameter("c")))
     target.add_instruction(XGate())
@@ -172,13 +240,15 @@ def test_compile_program_qiskit_control_flow(unsupported: str | None) -> None:
     circuit.measure(0, 0)
     source = QCProgram.from_qiskit(circuit)
 
-    if unsupported:
-        diagnostic = "scf.while" if unsupported == "while_loop" else "forward-branching"
+    if unsupported or output == OutputFormat.QIR_BASE:
+        inplace = output == OutputFormat.QIR_BASE
+        diagnostic = "forward-branching" if unsupported == "if_else" else "scf.while"
         with pytest.raises(RuntimeError, match=diagnostic):
-            compile_program(source, target=target, output=OutputFormat.QISKIT)
-        assert source.is_valid
+            compile_program(source, target=target, output=output, inplace=inplace)
+        assert source.is_valid is not inplace
         return
-    compiled = compile_program(source, target=target, output=OutputFormat.QISKIT)
+    compiled = compile_program(source, target=target, output=output)
+    assert isinstance(compiled, (QuantumCircuit, OpenQASMProgram))
     assert sample(compiled, shots=4, seed=1) == {"1": 4}
 
 

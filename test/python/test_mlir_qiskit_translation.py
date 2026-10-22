@@ -47,6 +47,7 @@ from qiskit_support import supports_qiskit_translation
 
 from mqt.core.mlir import (
     CompilerTarget,
+    OutputFormat,
     PayloadEncoding,
     PayloadFormat,
     PayloadSpecification,
@@ -2161,7 +2162,7 @@ def test_nested_structured_control_and_bound_loop_parameter() -> None:
         with case(case.DEFAULT):
             circuit.z(1)
 
-    program = compile_program(circuit)
+    program = compile_program(circuit, output=OutputFormat.QC)
     source = program.ir
 
     assert "scf.for" in program.ir
@@ -2508,7 +2509,7 @@ def test_generated_loop_parameter_name_avoids_free_symbol_collision() -> None:
     with circuit.for_loop(range(2), None, None, None, None, label=None) as iteration:
         circuit.rx(iteration, 0)
 
-    restored = compile_program(circuit).to_qiskit()
+    restored = compile_program(circuit)
 
     assert restored.data[0].operation.params[0].name == "_mqt_loop_0"
     loop = restored.data[1].operation

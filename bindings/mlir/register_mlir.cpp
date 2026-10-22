@@ -50,6 +50,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <array>
+#include <cassert>
 #include <cctype>
 #include <complex>
 #include <cstddef>
@@ -414,8 +415,28 @@ template <class ProgramType>
           std::isspace(static_cast<unsigned char>(source[6])) != 0);
 }
 
+namespace {
+/// Python output choices include objects constructed outside the native
+/// compiler.
+enum class OutputFormat : uint8_t {
+  QCImport = static_cast<uint8_t>(mlir::ProgramFormat::QCImport),
+  QCO = static_cast<uint8_t>(mlir::ProgramFormat::QCO),
+  QCOOptimized = static_cast<uint8_t>(mlir::ProgramFormat::QCOOptimized),
+  QC = static_cast<uint8_t>(mlir::ProgramFormat::QC),
+  OpenQASM3 = static_cast<uint8_t>(mlir::ProgramFormat::OpenQASM3),
+  Jeff = static_cast<uint8_t>(mlir::ProgramFormat::Jeff),
+  QIRBase = static_cast<uint8_t>(mlir::ProgramFormat::QIRBase),
+  QIRAdaptive = static_cast<uint8_t>(mlir::ProgramFormat::QIRAdaptive),
+  Qiskit,
+};
+struct ImportedProgram {
+  mlir::CompilerInput program;
+  OutputFormat format;
+};
+} // namespace
+
 /// Construct a frontend program from a file path.
-[[nodiscard]] static mlir::CompilerInput
+[[nodiscard]] static ImportedProgram
 programFromPath(const std::filesystem::path& path) {
   if (path.empty()) {
     throw std::runtime_error("Input path must not be empty.");
@@ -438,26 +459,41 @@ programFromPath(const std::filesystem::path& path) {
 
   const auto extension = path.extension().string();
   if (extension == ".jeff") {
-    return takeResult(mlir::JeffProgram::fromFile(path));
+    return {
+        .program = takeResult(mlir::JeffProgram::fromFile(path)),
+        .format = OutputFormat::Jeff,
+    };
   }
   if (extension == ".mlir") {
-    return takeResult(mlir::QCProgram::fromMLIRFile(path));
+    return {
+        .program = takeResult(mlir::QCProgram::fromMLIRFile(path)),
+        .format = OutputFormat::QC,
+    };
   }
   if (extension == ".qasm") {
-    return takeResult(mlir::QCProgram::fromOpenQASMFile(path));
+    return {
+        .program = takeResult(mlir::QCProgram::fromOpenQASMFile(path)),
+        .format = OutputFormat::OpenQASM3,
+    };
   }
   throw std::runtime_error("Input file '" + path.string() +
                            "' has unsupported extension '" + extension + "'.");
 }
 
 /// Construct a frontend program from a string containing source or path.
-[[nodiscard]] static mlir::CompilerInput
+[[nodiscard]] static ImportedProgram
 programFromString(const std::string& input) {
   if (isSourceString(input)) {
     if (input.find("OPENQASM") != std::string::npos) {
-      return takeResult(mlir::QCProgram::fromOpenQASMString(input));
+      return {
+          .program = takeResult(mlir::QCProgram::fromOpenQASMString(input)),
+          .format = OutputFormat::OpenQASM3,
+      };
     }
-    return takeResult(mlir::QCProgram::fromMLIRString(input));
+    return {
+        .program = takeResult(mlir::QCProgram::fromMLIRString(input)),
+        .format = OutputFormat::QC,
+    };
   }
   return programFromPath(std::filesystem::path(input));
 }
@@ -467,8 +503,8 @@ programFromString(const std::string& input) {
 /// Program objects are copied by default so the high-level entry point
 /// behaves like a conventional compiler function. Set @p inplace to transfer
 /// ownership from a program object instead.
-[[nodiscard]] static mlir::CompilerInput
-programFromInput(const nb::object& program, const bool inplace) {
+[[nodiscard]] static ImportedProgram programFromInput(const nb::object& program,
+                                                      const bool inplace) {
   if (nb::isinstance<nb::str>(program)) {
     const auto input = nb::cast<std::string>(program);
     const nb::gil_scoped_release release;
@@ -481,18 +517,33 @@ programFromInput(const nb::object& program, const bool inplace) {
   }
   if (nb::isinstance<mlir::QCProgram>(program)) {
     auto& value = nb::cast<mlir::QCProgram&>(program);
-    return {copiedOrConsumed(value, !inplace)};
+    return {
+        .program = copiedOrConsumed(value, !inplace),
+        .format = OutputFormat::QC,
+    };
   }
   if (nb::isinstance<mlir::QCOProgram>(program)) {
     auto& value = nb::cast<mlir::QCOProgram&>(program);
-    return {copiedOrConsumed(value, !inplace)};
+    return {
+        .program = copiedOrConsumed(value, !inplace),
+        .format = OutputFormat::QCOOptimized,
+    };
   }
   if (nb::isinstance<mlir::JeffProgram>(program)) {
     auto& value = nb::cast<mlir::JeffProgram&>(program);
-    return {copiedOrConsumed(value, !inplace)};
+    return {
+        .program = copiedOrConsumed(value, !inplace),
+        .format = OutputFormat::Jeff,
+    };
   }
   if (nb::isinstance<mlir::OpenQASMProgram>(program)) {
-    return {nb::cast<const mlir::OpenQASMProgram&>(program)};
+    const auto& value = nb::cast<const mlir::OpenQASMProgram&>(program);
+    const nb::gil_scoped_release release;
+    return {
+        .program =
+            takeResult(mlir::QCProgram::fromOpenQASMString(value.source())),
+        .format = OutputFormat::OpenQASM3,
+    };
   }
 
   const auto programType =
@@ -503,66 +554,14 @@ programFromInput(const nb::object& program, const bool inplace) {
     const auto qiskitCircuit =
         nb::module_::import_("qiskit.circuit").attr("QuantumCircuit");
     if (nb::isinstance(program, qiskitCircuit)) {
-      return bindings::qiskit::importCircuit(program);
+      return {
+          .program = bindings::qiskit::importCircuit(program),
+          .format = OutputFormat::Qiskit,
+      };
     }
   }
   throw std::runtime_error("Program type " + programType +
                            " is not supported.");
-}
-
-namespace {
-/// Python output choices include objects constructed outside the native
-/// compiler.
-enum class OutputFormat : uint8_t {
-  QCImport = static_cast<uint8_t>(mlir::ProgramFormat::QCImport),
-  QCO = static_cast<uint8_t>(mlir::ProgramFormat::QCO),
-  QCOOptimized = static_cast<uint8_t>(mlir::ProgramFormat::QCOOptimized),
-  QC = static_cast<uint8_t>(mlir::ProgramFormat::QC),
-  OpenQASM3 = static_cast<uint8_t>(mlir::ProgramFormat::OpenQASM3),
-  Jeff = static_cast<uint8_t>(mlir::ProgramFormat::Jeff),
-  QIRBase = static_cast<uint8_t>(mlir::ProgramFormat::QIRBase),
-  QIRAdaptive = static_cast<uint8_t>(mlir::ProgramFormat::QIRAdaptive),
-  Qiskit,
-};
-} // namespace
-
-/// Compile and export a circuit with its placement and routing metadata.
-[[nodiscard]] static nb::object
-compileQiskitProgram(const nb::object& program, bool inplace,
-                     const std::string& qcoPipeline,
-                     const mlir::CompilationOptions& options,
-                     const mlir::TargetEnvironment* environment = nullptr) {
-  auto input = programFromInput(program, inplace);
-  std::visit(
-      [](const auto& value) {
-        if constexpr (std::is_base_of_v<mlir::Program,
-                                        std::remove_cvref_t<decltype(value)>>) {
-          if (value.module()->hasAttr("mqt.layout")) {
-            throw std::runtime_error(
-                "Qiskit output requires input without layout metadata; use "
-                "to_qiskit() for a layout-preserving conversion");
-          }
-        }
-      },
-      input);
-  auto qc = [&] {
-    const nb::gil_scoped_release release;
-    auto compiled = takeResult(mlir::runDefaultPipeline(
-        std::move(input),
-        environment == nullptr ? mlir::ProgramFormat::QCOOptimized
-                               : mlir::ProgramFormat::QCO,
-        qcoPipeline, options));
-    auto qco = std::move(std::get<mlir::QCOProgram>(compiled));
-    if (environment != nullptr) {
-      withDiagnostics<nb::exception_type::runtime_error>(
-          qco.module().getContext(), "Target compilation failed",
-          [&] { return qco.compileForTarget(*environment, options); });
-    }
-    return takeResult(std::move(qco).intoQC());
-  }();
-  return bindings::qiskit::exportCircuit(
-      std::move(qc), environment == nullptr ? nullptr : &environment->target(),
-      environment == nullptr ? nullptr : &environment->payloadSpecification());
 }
 
 /// Run the coordinated default pipeline and return a typed program.
@@ -570,23 +569,10 @@ compileQiskitProgram(const nb::object& program, bool inplace,
 compileProgram(const nb::object& program, const mlir::ProgramFormat output,
                const bool inplace, const std::string& qcoPipeline,
                mlir::CompilationOptions options = {}) {
-  auto input = programFromInput(program, inplace);
+  auto input = programFromInput(program, inplace).program;
   const nb::gil_scoped_release release;
   return takeResult(
       mlir::runDefaultPipeline(std::move(input), output, qcoPipeline, options));
-}
-
-/// Dispatch Python-only output construction at the binding boundary.
-[[nodiscard]] static nb::object
-compilePythonProgram(const nb::object& program, OutputFormat output,
-                     bool inplace, const std::string& qcoPipeline,
-                     mlir::CompilationOptions options) {
-  if (output == OutputFormat::Qiskit) {
-    return compileQiskitProgram(program, inplace, qcoPipeline, options);
-  }
-  return nb::cast(compileProgram(program,
-                                 static_cast<mlir::ProgramFormat>(output),
-                                 inplace, qcoPipeline, options));
 }
 
 /// Resolve an open device or registered ID.
@@ -602,82 +588,154 @@ compilePythonProgram(const nb::object& program, OutputFormat output,
   throw nb::type_error("target must be a QDMI Device or registered device ID");
 }
 
-[[nodiscard]] static QDMI_Program_Format qdmiFormat(OutputFormat output) {
+/// Lowering constraints for the requested Python representation.
+[[nodiscard]] static mlir::PayloadSpecification
+payloadForOutput(OutputFormat output) {
   switch (output) {
   case OutputFormat::OpenQASM3:
-    return QDMI_PROGRAM_FORMAT_QASM3;
+    return takeResult(
+        mlir::payloadSpecificationForProgramFormat(QDMI_PROGRAM_FORMAT_QASM3));
   case OutputFormat::QIRBase:
-    return QDMI_PROGRAM_FORMAT_QIRBASEMODULE;
+    return takeResult(mlir::payloadSpecificationForProgramFormat(
+        QDMI_PROGRAM_FORMAT_QIRBASEMODULE));
   case OutputFormat::QIRAdaptive:
-    return QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE;
+    return takeResult(mlir::payloadSpecificationForProgramFormat(
+        QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  case OutputFormat::Qiskit:
+    return bindings::qiskit::payloadSpecification();
   default:
-    throw nb::value_error("Explicit targets require an executable output: "
-                          "OPENQASM3, QIR_BASE, or QIR_ADAPTIVE");
+    // Intermediate representations have no execution transport constraints.
+    return takeResult(mlir::PayloadSpecification::create(
+        {.id = "mqt", .version = "1.0", .profile = ""},
+        {
+            {.id = mlir::ProgramCapability::FORWARD_BRANCHING.str()},
+            {.id = mlir::ProgramCapability::COUNTED_ITERATION.str()},
+            {.id = mlir::ProgramCapability::CONDITIONAL_LOOP.str()},
+            {.id = mlir::ProgramCapability::MULTIWAY_BRANCHING.str()},
+        }));
   }
 }
 
-/// Select the payload before consuming a typed input or running target passes.
+/// Resolve input, target, and output before compiling a typed program.
 [[nodiscard]] static nb::object
-compileProgramForTarget(const nb::object& program, const nb::object& target,
-                        std::optional<QDMI_Program_Format> programFormat,
-                        std::optional<OutputFormat> output, bool inplace,
-                        mlir::CompilationOptions options) {
+compilePythonProgram(const nb::object& program, const nb::object& target,
+                     std::optional<OutputFormat> output,
+                     std::optional<QDMI_Program_Format> programFormat,
+                     bool inplace, const std::string& qcoPipeline,
+                     const mlir::CompilationOptions& options) {
   if (output && programFormat) {
     throw nb::value_error("Specify either output or program_format, not both");
   }
-  if (output == OutputFormat::Qiskit) {
-    const bool compilerTarget = nb::isinstance<mlir::CompilerTarget>(target);
-    const auto environment =
-        compilerTarget ? mlir::TargetEnvironment(
-                             nb::cast<const mlir::CompilerTarget&>(target),
-                             bindings::qiskit::payloadSpecification())
-                       : mlir::TargetEnvironment(
-                             bindings::qiskit::importTarget(target, nb::none(),
-                                                            std::nullopt),
-                             bindings::qiskit::payloadSpecification(target));
-    return compileQiskitProgram(program, inplace, "mqt-qco-default", options,
-                                &environment);
+  if (target.is_none() && programFormat) {
+    throw nb::value_error("program_format requires a target");
   }
-  if (nb::isinstance<mlir::CompilerTarget>(target)) {
-    if (!output && !programFormat) {
+  if (!target.is_none() && qcoPipeline != "mqt-qco-default") {
+    throw nb::value_error(
+        "A custom QCO pipeline cannot be combined with a target");
+  }
+  if (!target.is_none() &&
+      (output == OutputFormat::QCImport || output == OutputFormat::QCO)) {
+    throw nb::value_error(
+        "QC_IMPORT and raw QCO output stop before target compilation");
+  }
+
+  std::optional<mlir::TargetEnvironment> environment;
+  const bool compilerTarget = nb::isinstance<mlir::CompilerTarget>(target);
+  const bool deviceTarget =
+      nb::isinstance<qdmi::Device>(target) || nb::isinstance<nb::str>(target);
+  if (deviceTarget) {
+    const auto device = resolveDevice(target);
+    const nb::gil_scoped_release release;
+    environment =
+        takeResult(mlir::targetEnvironmentFromDevice(device, programFormat));
+  } else if (!target.is_none() && !compilerTarget) {
+    if (programFormat) {
       throw nb::value_error(
-          "An explicit CompilerTarget requires output or program_format");
+          "program_format requires a QDMI device or CompilerTarget");
     }
-    auto payload = takeResult(mlir::payloadSpecificationForProgramFormat(
-        programFormat ? *programFormat : qdmiFormat(*output)));
-    const mlir::TargetEnvironment environment(
-        nb::cast<const mlir::CompilerTarget&>(target), std::move(payload));
+    environment.emplace(
+        bindings::qiskit::importTarget(target, nb::none(), std::nullopt),
+        bindings::qiskit::payloadSpecification(target));
+    output = output.value_or(OutputFormat::Qiskit);
+  }
+
+  if (programFormat || (deviceTarget && !output)) {
+    if (compilerTarget) {
+      environment.emplace(nb::cast<const mlir::CompilerTarget&>(target),
+                          takeResult(mlir::payloadSpecificationForProgramFormat(
+                              *programFormat)));
+    }
     auto input = programFromInput(program, inplace);
-    if (output) {
-      auto compiled = [&] {
-        const nb::gil_scoped_release release;
-        return takeResult(
-            mlir::runDefaultPipeline(std::move(input), environment, options));
-      }();
-      return nb::cast(std::move(compiled));
-    }
     auto compiled = [&] {
       const nb::gil_scoped_release release;
-      return takeResult(mlir::CompiledProgram::compile(std::move(input),
-                                                       environment, options));
+      return takeResult(mlir::CompiledProgram::compile(std::move(input.program),
+                                                       *environment, options));
     }();
     return nb::cast(std::move(compiled));
   }
-  if (output) {
-    throw nb::value_error("Device targets select their output automatically; "
-                          "use program_format to override it");
-  }
-  const auto device = resolveDevice(target);
-  auto environment = [&] {
-    const nb::gil_scoped_release release;
-    return takeResult(mlir::targetEnvironmentFromDevice(device, programFormat));
-  }();
+
   auto input = programFromInput(program, inplace);
+  const auto selected = output.value_or(input.format);
+  if (!target.is_none()) {
+    auto payload = payloadForOutput(selected);
+    if (environment) {
+      payload =
+          payload.restrictControlFlow(environment->payloadSpecification());
+      environment =
+          mlir::TargetEnvironment(environment->target(), std::move(payload));
+    } else {
+      environment.emplace(nb::cast<const mlir::CompilerTarget&>(target),
+                          std::move(payload));
+    }
+  }
+  if (selected == OutputFormat::Qiskit) {
+    std::visit(
+        [](const auto& value) {
+          if constexpr (std::is_base_of_v<
+                            mlir::Program,
+                            std::remove_cvref_t<decltype(value)>>) {
+            if (value.module()->hasAttr("mqt.layout")) {
+              throw std::runtime_error(
+                  "Qiskit output requires input without layout metadata; use "
+                  "to_qiskit() for a layout-preserving conversion");
+            }
+          }
+        },
+        input.program);
+  }
+  const auto nativeOutput = selected == OutputFormat::Qiskit
+                                ? mlir::ProgramFormat::QC
+                                : static_cast<mlir::ProgramFormat>(selected);
+  const auto context = std::visit(
+      [](const auto& value) -> std::shared_ptr<mlir::MLIRContext> {
+        if constexpr (std::is_base_of_v<mlir::Program,
+                                        std::remove_cvref_t<decltype(value)>>) {
+          return value.context();
+        } else {
+          return nullptr;
+        }
+      },
+      input.program);
+  assert(context && "Python compiler inputs must be imported to MLIR");
   auto compiled = [&] {
     const nb::gil_scoped_release release;
-    return takeResult(
-        mlir::CompiledProgram::compile(std::move(input), environment, options));
+    return withDiagnostics<nb::exception_type::runtime_error>(
+        context.get(), "Compilation failed", [&] {
+          return environment
+                     ? mlir::runDefaultPipeline(std::move(input.program),
+                                                nativeOutput, *environment,
+                                                options)
+                     : mlir::runDefaultPipeline(std::move(input.program),
+                                                nativeOutput, qcoPipeline,
+                                                options);
+        });
   }();
+  if (selected == OutputFormat::Qiskit) {
+    auto qc = std::move(std::get<mlir::QCProgram>(compiled));
+    return environment
+               ? bindings::qiskit::exportCircuit(std::move(qc), *environment)
+               : bindings::qiskit::exportCircuit(std::move(qc));
+  }
   return nb::cast(std::move(compiled));
 }
 
@@ -716,7 +774,7 @@ submitProgram(const nb::object& program, const nb::object& target,
                                           params[1], params[2], params[3],
                                           params[4]));
   }
-  auto input = programFromInput(program, false);
+  auto input = programFromInput(program, false).program;
   const nb::gil_scoped_release release;
   return takeResult(
       mlir::submitProgram(device, std::move(input), numShots, programFormat,
@@ -2182,32 +2240,6 @@ An existing QCO program is used without copying. See
 {py:meth}`QCOProgram.sample` for the shot, seed, histogram, and error
 contracts.)pb");
 
-  m.def("compile_program", &compilePythonProgram, "program"_a, nb::kw_only(),
-        "output"_a = OutputFormat::QC, "inplace"_a = false,
-        "qco_pipeline"_a = "mqt-qco-default",
-        "options"_a = mlir::CompilationOptions{},
-        R"pb(
-Run the coordinated default MQT compiler pipeline.
-
-Input source strings, files, Qiskit
-{py:class}`~qiskit.circuit.QuantumCircuit` objects, and typed compiler programs
-can be combined with any supported output format. Typed program inputs are
-copied by default; set ``inplace=True`` to consume them. Use the typed programs
-directly to construct a custom pipeline stage by stage.
-
-Args:
-    program: Source text, a file path, a Qiskit circuit, or a typed compiler program.
-    output: The requested output stage of the compiler pipeline.
-    inplace: Whether a typed input program may be consumed.
-    qco_pipeline: The QCO optimization pipeline to run. A custom pipeline
-        cannot be combined with target compilation.
-    options: Shared compilation controls.
-
-Returns:
-    A Qiskit QuantumCircuit for ``OutputFormat.QISKIT``, otherwise a typed
-    compiler program for the requested output format.
-)pb");
-
   nb::class_<mlir::CompiledProgram>(
       m, "CompiledProgram", "A compiled program ready for QDMI submission.")
       .def_prop_ro("program_format", &mlir::CompiledProgram::programFormat,
@@ -2236,24 +2268,36 @@ Returns:
           },
           "The payload format and capabilities used for compilation.");
 
-  m.def("compile_program", &compileProgramForTarget, "program"_a, nb::kw_only(),
-        "target"_a, "program_format"_a = nb::none(), "output"_a = nb::none(),
-        "inplace"_a = false, "options"_a = mlir::CompilationOptions{},
-        R"pb(Compile for a Qiskit backend, compiler target, or QDMI device.
+  m.def("compile_program", &compilePythonProgram, "program"_a, nb::kw_only(),
+        "target"_a = nb::none(), "output"_a = nb::none(),
+        "program_format"_a = nb::none(), "inplace"_a = false,
+        "qco_pipeline"_a = "mqt-qco-default",
+        "options"_a = mlir::CompilationOptions{},
+        R"pb(Compile a program, optionally for a hardware target.
 
-Qiskit backends and Targets require ``output=OutputFormat.QISKIT`` and return
-a QuantumCircuit. Compilation uses their gates, topology, and advertised
-standard control flow.
+An explicit ``output`` selects the returned representation independently of
+``target``. Without it, compilation preserves the input format family, unless
+a Qiskit target selects QuantumCircuit or a QDMI device selects a
+:class:`CompiledProgram` ready for :func:`submit_program`.
 
-An explicit :class:`CompilerTarget` supplies gates and topology only. Select
-``output`` for a typed program or QuantumCircuit, or ``program_format`` for a
-:class:`CompiledProgram`.
+Source strings and paths return typed programs: OpenQASM returns
+:class:`OpenQASMProgram`, QC MLIR returns :class:`QCProgram`, and jeff files
+return :class:`JeffProgram`. QCO inputs return optimized QCO.
 
-Device targets select Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
-(binary, text). Use ``program_format`` to select a format explicitly.
-Submit the returned :class:`CompiledProgram` with :func:`submit_program`.
+Args:
+    program: Source text, a file path, a Qiskit circuit, or a typed compiler program.
+    target: A CompilerTarget, Qiskit BackendV2 or Target, QDMI Device, or device ID.
+    output: The returned representation. QC_IMPORT and raw QCO are checkpoints
+        before target compilation and cannot be combined with a target.
+    program_format: An exact QDMI payload format, mutually exclusive with output.
+        Requires a QDMI target or CompilerTarget and returns CompiledProgram.
+    inplace: Whether a typed input program may be consumed; otherwise it is copied.
+    qco_pipeline: The QCO optimization pipeline. Custom pipelines require no target.
+    options: Shared compilation controls.
 
-Typed inputs are copied unless ``inplace=True``.)pb");
+Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
+(binary, text). An explicit output need not be a device's execution format.
+Jeff output does not retain hardware placement.)pb");
 
   m.def("submit_program", &submitProgram, "program"_a, nb::kw_only(),
         "target"_a, "num_shots"_a = 1024, "program_format"_a = nb::none(),

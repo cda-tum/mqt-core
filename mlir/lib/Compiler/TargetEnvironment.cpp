@@ -30,6 +30,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -251,6 +252,42 @@ PayloadSpecification::capabilities() const noexcept {
 
 bool PayloadSpecification::optionalCapabilitiesKnown() const noexcept {
   return optionalCapabilitiesKnown_;
+}
+
+PayloadSpecification PayloadSpecification::restrictControlFlow(
+    const PayloadSpecification& other) const {
+  std::vector<ProgramCapability> capabilities;
+  for (const auto& capability : capabilities_) {
+    if (capability.id != ProgramCapability::FORWARD_BRANCHING &&
+        capability.id != ProgramCapability::COUNTED_ITERATION &&
+        capability.id != ProgramCapability::CONDITIONAL_LOOP &&
+        capability.id != ProgramCapability::MULTIWAY_BRANCHING) {
+      capabilities.push_back(capability);
+      continue;
+    }
+    const auto* const found =
+        llvm::find_if(other.capabilities(), [&](const auto& entry) {
+          return entry.id == capability.id && entry.value == capability.value;
+        });
+    if (found == other.capabilities().end()) {
+      continue;
+    }
+    auto restricted = capability;
+    for (const auto& constraint : found->constraints) {
+      const auto existing =
+          llvm::find_if(restricted.constraints, [&](const auto& entry) {
+            return entry.id == constraint.id;
+          });
+      if (existing == restricted.constraints.end()) {
+        restricted.constraints.push_back(constraint);
+      } else {
+        existing->value = std::min(existing->value, constraint.value);
+      }
+    }
+    capabilities.push_back(std::move(restricted));
+  }
+  return {format_, std::move(capabilities),
+          optionalCapabilitiesKnown_ && other.optionalCapabilitiesKnown_};
 }
 
 bool PayloadSpecification::supportsUnrestrictedMultiwayBranching()

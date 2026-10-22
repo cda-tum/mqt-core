@@ -44,12 +44,13 @@ importNativeOperations(nb::handle target, nb::handle operationNames);
 payloadSpecification(nb::handle target = nb::none());
 
 /// Consume a QC program to build a Qiskit circuit for an optional target.
-///
-/// When supplied, the payload also constrains control flow introduced by
-/// export.
 [[nodiscard]] nb::object
 exportCircuit(mlir::QCProgram program,
-              const mlir::CompilerTarget* target = nullptr,
-              const mlir::PayloadSpecification* payload = nullptr);
+              const mlir::CompilerTarget* target = nullptr);
+
+/// Export a compiled circuit, including layout and payload control-flow limits.
+[[nodiscard]] nb::object
+exportCircuit(mlir::QCProgram program,
+              const mlir::TargetEnvironment& environment);
 
 } // namespace mqt::bindings::qiskit
