@@ -88,6 +88,18 @@ TEST(GHZ, EvaluatesCountsAgainstTheWholeIdealDistribution) {
   EXPECT_DOUBLE_EQ(incomplete.squaredHellingerFidelity, 0.5);
 }
 
+TEST(GHZ, PreservesRepresentableFidelityForSubnormalProbabilities) {
+  const GHZ benchmark{
+      {.qubits = GHZOptions::MAX_X_BASIS_QUBITS, .basis = GHZBasis::X}};
+  const auto allZero = std::string(GHZOptions::MAX_X_BASIS_QUBITS, '0');
+  auto twoOnes = allZero;
+  twoOnes[0] = '1';
+  twoOnes[1] = '1';
+  const auto evaluation = benchmark.evaluate({{allZero, 1}, {twoOnes, 1}});
+  EXPECT_EQ(evaluation.squaredHellingerFidelity,
+            2. * std::numeric_limits<double>::denorm_min());
+}
+
 TEST(GHZ, ValidatesOutcomesAndShotCounts) {
   const GHZ ghz{{.qubits = 2}};
   EXPECT_THROW(static_cast<void>(ghz.probability("0")), std::invalid_argument);

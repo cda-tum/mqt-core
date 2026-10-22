@@ -74,7 +74,7 @@ evaluate(const Counts& counts, const Probability& probability,
         static_cast<long double>(count) / static_cast<long double>(totalShots);
     observedDistance += std::abs(observed - ideal);
     observedIdealMass += ideal;
-    coefficient += std::sqrt(observed * ideal);
+    coefficient += std::sqrt(observed) * std::sqrt(ideal);
   }
 
   const auto missingIdealMass = std::max(0.L, 1.L - observedIdealMass);
