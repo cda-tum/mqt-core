@@ -29,6 +29,7 @@ add_mlir_dialect_library(
   PUBLIC
   MLIRCBitDialect
   MLIRFuncDialect
+  MLIRMemRefDialect
   MLIRMQTUtils
   MLIRQCODialect
   MLIRQTensorUtils
