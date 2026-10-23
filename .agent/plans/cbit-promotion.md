@@ -44,9 +44,8 @@ merges still diagnose. Wider scalar outputs remain outside this change.
 
 ## Validation
 
-The integration base is `9fb299b3d3c442515907bc5a377cf20a44d57923`, including
-
-## 2801 and #2802. Validation used LLVM/MLIR 23.1 and Python 3.14
+The original integration base was `9fb299b3d3c442515907bc5a377cf20a44d57923`,
+including PRs #2801 and #2802. Validation used LLVM/MLIR 23.1 and Python 3.14:
 
 - All 4,043 native tests passed.
 - The nine affected MLIR, Qiskit, and QDMI Python suites passed 1,157 tests with
@@ -60,8 +59,18 @@ The integration base is `9fb299b3d3c442515907bc5a377cf20a44d57923`, including
   `OperationSupport.h` emits analyzer lifetime warnings; no suppressions were
   added. Hosted CI and hardware execution are separate from these local checks.
 
-Run the native suite with `ctest --preset release`. Run the Python suites with
-`uv run --no-sync pytest test/python/test_mlir.py test/python/test_mlir_loops.py test/python/test_mlir_integer_interchange.py test/python/test_mlir_qiskit_translation.py test/python/test_qirrunner.py test/python/test_qco_dd.py test/python/qdmi/test_compilation.py test/python/test_mlir_parameter_binding.py test/python/test_mlir_qiskit_target.py`.
+Run the native suite with `ctest --preset release`. Run the Python suites with:
+
+```sh
+uv run --no-sync pytest \
+  test/python/test_mlir.py test/python/test_mlir_loops.py \
+  test/python/test_mlir_integer_interchange.py \
+  test/python/test_mlir_qiskit_translation.py test/python/test_qirrunner.py \
+  test/python/test_qco_dd.py test/python/qdmi/test_compilation.py \
+  test/python/test_mlir_parameter_binding.py \
+  test/python/test_mlir_qiskit_target.py
+```
+
 The checks cover these contracts:
 
 - CBit and classical-simplification tests cover promotion eligibility, aliases,
@@ -86,3 +95,42 @@ Earlier shared-host measurements motivated the 256-bit cap: one branch writing
 bits, about 10.7 ms versus 1.0 ms. Promotion removed storage in those inputs but
 added compiler work. These measurements preceded this integration and do not
 establish an end-to-end or hardware speedup.
+
+## QIR and exporter follow-up
+
+Rebased on `6fffd4a68f1b24fae713bff5b49560fdd608245f`. The pre-commit failure
+was MD013 on the reproduction command above; a fenced shell command avoids the
+formatter joining it into one long inline span.
+
+The QIR review uses specification tag `2.1`, revision
+`a177eee5885d99e965f5cb919c8d70b0ab7a6a15`. Boolean storage initializes with one
+native LLVM array store instead of `llvm.memset`. Dynamic indices no longer
+imply backward branching; actual CFG cycles still determine that capability.
+Base conversion rejects unmeasured output bits because static Results have no
+specified initial value. Adaptive conversion preserves initialized zeros.
+
+Executable probes check scalar snapshots, mixed outputs, runtime indices, and
+zero-trip and loop-carried values against deterministic expected results.
+Mutating the zero initializer changes `10` to `11`; delaying a Result read
+changes `11` to `10`. These failures distinguish semantic checks from LLVM
+verification. The native conversion tests retain initialization placement,
+metadata, output ordering, and the Base diagnostic regressions.
+
+Remaining export gaps are explicit: Qiskit rejects scalar results and dynamic
+CBit loads; both exporters reject repeated register results; OpenQASM rejects
+general arithmetic wider than 64 bits. Materializing Boolean scalar results in
+fresh output registers permits Qiskit export, with scratch bits still visible.
+Snapshots, zero-trip and nested loops, and 150-bit bitwise operations export
+correctly. General QIR array copies and math still emit intrinsics outside the
+profile instruction lists; DDSIM execution is not proof of portability.
+
+Open PR #2591 covers classical array storage in OpenQASM, not Qiskit. PR #2806
+changes frontend width limits. PR #2626 covers complete QDMI outputs, not native
+Qiskit output materialization; its scalar-output guard must preserve Boolean
+support when integrating with this change. None closes the other gaps above.
+
+The final native run passes all 4,060 tests. The nine Python suites above pass
+1,157 tests after rebasing; the final QIR changes pass all 75 compilation and
+QIRRunner cases. Repository lint and whole-file C++ lint pass. Existing loop
+tests retain real-loop capability checks; the dynamic-index adapter test now
+requires successful compilation without either loop capability.

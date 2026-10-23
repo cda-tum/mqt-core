@@ -956,20 +956,22 @@ TEST_F(QCToQIRAdaptiveNativeTest,
   size_t allocs = 0;
   size_t loads = 0;
   size_t stores = 0;
+  size_t initializations = 0;
   module->walk([&](LLVM::AllocaOp) { ++allocs; });
   module->walk([&](LLVM::LoadOp) { ++loads; });
-  module->walk([&](LLVM::StoreOp) { ++stores; });
+  module->walk([&](LLVM::StoreOp store) {
+    if (auto zero = store.getValue().getDefiningOp<LLVM::ZeroOp>()) {
+      ++initializations;
+      EXPECT_EQ(zero.getType(),
+                LLVM::LLVMArrayType::get(IntegerType::get(&context, 1), 8192));
+    } else {
+      ++stores;
+    }
+  });
   EXPECT_EQ(allocs, 1);
   EXPECT_EQ(loads, 1);
   EXPECT_EQ(stores, 1);
-  size_t zeroFills = 0;
-  module->walk([&](LLVM::MemsetOp fill) {
-    ++zeroFills;
-    auto value = fill.getVal().getDefiningOp<LLVM::ConstantOp>();
-    ASSERT_TRUE(value);
-    EXPECT_TRUE(cast<IntegerAttr>(value.getValue()).getValue().isZero());
-  });
-  EXPECT_EQ(zeroFills, 1);
+  EXPECT_EQ(initializations, 1);
 }
 
 TEST_F(QCToQIRAdaptiveNativeTest, InitializesLocalRegisterInsideLoop) {
@@ -999,9 +1001,13 @@ TEST_F(QCToQIRAdaptiveNativeTest, InitializesLocalRegisterInsideLoop) {
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
   ASSERT_TRUE(succeeded(runQCToQIRAdaptiveConversionSimple(*moduleOp)));
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
-  LLVM::MemsetOp fill;
+  LLVM::StoreOp fill;
   LLVM::LoadOp load;
-  moduleOp->walk([&](LLVM::MemsetOp op) { fill = op; });
+  moduleOp->walk([&](LLVM::StoreOp op) {
+    if (op.getValue().getDefiningOp<LLVM::ZeroOp>()) {
+      fill = op;
+    }
+  });
   moduleOp->walk([&](LLVM::LoadOp op) { load = op; });
   ASSERT_TRUE(fill);
   ASSERT_TRUE(load);

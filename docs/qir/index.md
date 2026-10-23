@@ -270,6 +270,10 @@ This contract applies with and without a target. Keep other classical
 temporaries local, or use OpenQASM or jeff interchange for wider scalar program
 outputs.
 
+Base Profile requires every recorded bit to come from a measurement. Static
+Result storage has no specified initial value; use Adaptive Profile for outputs
+that retain their classical zero initialization.
+
 Measurements and CBit allocations must be in the entry function. A returned
 scalar measurement can share Result storage with a register only when constant
 store indices exclude overwriting its slot. The C++ QIR builder requires dynamic
@@ -282,6 +286,11 @@ results.
 MQT Core implements the QIR 2.1 Base and Adaptive Profile runtime APIs. The JIT
 accepts one exact LLVM type for each runtime declaration, so unsupported or
 outdated overloads fail before execution.
+
+General classical array copies and some math operations lower to LLVM
+intrinsics, such as `llvm.memcpy` and `llvm.sqrt`. DDSIM executes these, but QIR
+2.1 profile capability flags do not establish support for them on another
+backend. Check that backend's extensions when using these operations.
 
 MQT Core provides dedicated QIS functions for variants with one or two control
 qubits, using the `c<gate>` and `cc<gate>` names. Operations with three or more
