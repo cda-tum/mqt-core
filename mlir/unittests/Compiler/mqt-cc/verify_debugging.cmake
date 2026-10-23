@@ -104,25 +104,22 @@ if(NOT gate_count EQUAL 2)
 endif()
 
 foreach(option IN ITEMS pass-pipeline passes)
-  run_compiler(0 "${reduced}" --run-pipeline
-               "--${option}=builtin.module(func.func(canonicalize,cse))")
+  run_compiler(
+    0
+    "${reduced}"
+    --run-pipeline
+    "--${option}=builtin.module(func.func(canonicalize,cse))"
+    --mlir-timing
+    --mlir-timing-display=list
+    --mlir-output-format=json)
   if(output MATCHES "qco.h")
     message(FATAL_ERROR "${option} did not run the registered cleanup passes: ${output}")
   endif()
+  string(JSON timing_type TYPE "${error}")
+  if(NOT timing_type STREQUAL "ARRAY" OR NOT error MATCHES "CanonicalizerPass")
+    message(FATAL_ERROR "Isolated pipeline JSON timing report missing: ${error}")
+  endif()
 endforeach()
-
-run_compiler(
-  0
-  "${reduced}"
-  --run-pipeline
-  "--pass-pipeline=builtin.module(canonicalize)"
-  --mlir-timing
-  --mlir-timing-display=list
-  --mlir-output-format=json)
-string(JSON timing_type TYPE "${error}")
-if(NOT timing_type STREQUAL "ARRAY" OR NOT error MATCHES "CanonicalizerPass")
-  message(FATAL_ERROR "Isolated pipeline JSON timing report missing: ${error}")
-endif()
 
 # Both pipeline routes require registered passes and a module anchor.
 foreach(mode IN ITEMS --run-pipeline --emit=qco-optimized)
@@ -319,12 +316,12 @@ run_compiler(
   --mlir-print-ir-before-all
   --mlir-print-ir-module-scope
   --mlir-disable-threading
+  --mlir-timing
   "--profile-actions-to=${jeff_profile}")
 if(NOT error MATCHES "Before JeffToQCO" OR NOT output MATCHES "qco[.]")
   message(FATAL_ERROR "Initial jeff conversion was not instrumented: ${error}")
 endif()
 check_action_profile("${jeff_profile}" "JeffToQCO")
-run_compiler(0 "${jeff}" --emit=qco --mlir-timing)
 if(NOT error MATCHES "Execution time report" OR NOT error MATCHES "JeffToQCO")
   message(FATAL_ERROR "Initial jeff conversion timing report missing: ${error}")
 endif()

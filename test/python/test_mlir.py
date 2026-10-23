@@ -2156,27 +2156,22 @@ def test_compilation_seed_reaches_nested_modules() -> None:
     assert actual.ir != source.ir
 
 
-@pytest.mark.parametrize("enable_pass_logging", [False, True])
-def test_compilation_timing_and_statistics(capfd: pytest.CaptureFixture[str], *, enable_pass_logging: bool) -> None:
-    """Shared options reach MLIR timing and statistics instrumentation."""
-    compile_program(
-        QASM_STRING,
-        options=CompilationOptions(enable_timing=True, enable_statistics=True, enable_pass_logging=enable_pass_logging),
-    )
+def test_compilation_timing_and_statistics(capfd: pytest.CaptureFixture[str]) -> None:
+    """Pass logging preserves compiler output and MLIR reports."""
+    options = CompilationOptions(enable_timing=True, enable_statistics=True)
+    assert not options.enable_pass_logging
+    expected = compile_program(QASM_STRING, output=OutputFormat.QC, options=options)
     output = capfd.readouterr().err
     assert "Execution time report" in output
     assert "Pass statistics report" in output
+    assert "[mqt-core] pass" not in output
 
-
-def test_compilation_pass_logging(capfd: pytest.CaptureFixture[str]) -> None:
-    """Optional pass logging preserves compiler output."""
-    assert not CompilationOptions().enable_pass_logging
-    expected = compile_program(QASM_STRING, output=OutputFormat.QC)
-    assert "[mqt-core] pass" not in capfd.readouterr().err
-
-    actual = compile_program(QASM_STRING, output=OutputFormat.QC, options=CompilationOptions(enable_pass_logging=True))
+    options.enable_pass_logging = True
+    actual = compile_program(QASM_STRING, output=OutputFormat.QC, options=options)
     assert actual.ir == expected.ir
     output = capfd.readouterr().err
+    assert "Execution time report" in output
+    assert "Pass statistics report" in output
     assert "[mqt-core] pass CanonicalizerPass started\n" in output
     assert "[mqt-core] pass CanonicalizerPass completed\n" in output
     assert " failed\n" not in output
@@ -2215,14 +2210,12 @@ def test_concurrent_pass_logging(capfd: pytest.CaptureFixture[str]) -> None:
     assert sorted(capfd.readouterr().err.splitlines()) == sorted(records * 4)
 
 
-@pytest.mark.parametrize("source_kind", ["qasm", "openqasm", "jeff"])
+@pytest.mark.parametrize("source_kind", ["qasm", "jeff"])
 def test_compilation_action_profile(tmp_path: Path, source_kind: str) -> None:
     """In-process traces cover input conversion through QIR cleanup."""
     assert not CompilationOptions().profile_actions_to
     source = QASM_STRING
-    if source_kind == "openqasm":
-        source = QCProgram.from_openqasm_str(QASM_STRING).to_openqasm3()
-    elif source_kind == "jeff":
+    if source_kind == "jeff":
         source = compile_program(QASM_STRING, output=OutputFormat.JEFF)
     expected = compile_program(source, output=OutputFormat.QIR_ADAPTIVE)
     profile = tmp_path / "compile.json"

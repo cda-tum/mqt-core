@@ -598,17 +598,6 @@ same context, including copies of a typed program. In-process tracing rejects a
 context that already has an MLIR action handler; configure profiling through
 that handler instead.
 
-Perfetto's SQL query view can aggregate pass invocations and durations:
-
-```sql
-SELECT EXTRACT_ARG(arg_set_id, 'args.desc') AS pass,
-       COUNT(*) AS invocations,
-       SUM(dur) / 1e6 AS duration_ms
-FROM slice
-WHERE name = 'pass-execution'
-GROUP BY pass;
-```
-
 For Python, enable pass progress and MLIR's timing and statistics reports
 through {py:class}`~mqt.core.mlir.CompilationOptions`:
 
