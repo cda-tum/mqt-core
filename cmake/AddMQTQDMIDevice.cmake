@@ -170,15 +170,14 @@ function(mqt_copy_qdmi_runtime target)
     if(library_target STREQUAL "${target}" OR NOT library_type MATCHES "^(SHARED|MODULE)_LIBRARY$")
       continue()
     endif()
-    string(MAKE_C_IDENTIFIER "${target}-stage-${library_target}" staging_target)
-    if(TARGET ${staging_target})
-      continue()
-    endif()
+    get_target_property(library_binary_dir ${library_target} BINARY_DIR)
+    string(MD5 staging_id "${library_binary_dir}/${library_target}")
+    string(MAKE_C_IDENTIFIER "${library_target}-stage-runtime-${staging_id}" staging_target)
     get_target_property(imported ${library_target} IMPORTED)
-    set(files "$<TARGET_FILE:${library}>")
+    set(files "$<TARGET_FILE:${library_target}>")
     if(UNIX AND library_type STREQUAL "SHARED_LIBRARY")
       # Source installations may use a versioned SONAME in linked applications.
-      list(APPEND files "$<TARGET_SONAME_FILE:${library}>")
+      list(APPEND files "$<TARGET_SONAME_FILE:${library_target}>")
     endif()
     if(library IN_LIST devices)
       get_target_property(manifest_name ${library_target} QDMI_MANIFEST_NAME)
@@ -193,41 +192,68 @@ function(mqt_copy_qdmi_runtime target)
         endif()
         _mqt_qdmi_json_escape(device_id "${device_id}")
         _mqt_qdmi_json_escape(device_prefix "${device_prefix}")
-        string(MAKE_C_IDENTIFIER "${target}-${library}" manifest_stem)
+        string(MAKE_C_IDENTIFIER "${library_target}" manifest_stem)
         set(manifest_name "${manifest_stem}.qdmi.json")
-        set(manifest "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${manifest_name}")
-        file(
-          GENERATE
-          OUTPUT "${manifest}"
-          CONTENT
-            "{\n  \"schema-version\": 1,\n  \"qdmi\": {\n    \"devices\": [\n      {\n        \"id\": \"${device_id}\",\n        \"library\": \"$<TARGET_FILE_NAME:${library}>\",\n        \"prefix\": \"${device_prefix}\",\n        \"enabled\": true\n      }\n    ]\n  }\n}\n"
-        )
+        get_target_property(manifest ${library_target} _MQT_QDMI_GENERATED_MANIFEST)
+        if(NOT manifest)
+          set(manifest "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${manifest_name}")
+          file(
+            GENERATE
+            OUTPUT "${manifest}"
+            CONTENT
+              "{\n  \"schema-version\": 1,\n  \"qdmi\": {\n    \"devices\": [\n      {\n        \"id\": \"${device_id}\",\n        \"library\": \"$<TARGET_FILE_NAME:${library_target}>\",\n        \"prefix\": \"${device_prefix}\",\n        \"enabled\": true\n      }\n    ]\n  }\n}\n"
+          )
+          set_property(TARGET ${library_target} PROPERTY _MQT_QDMI_GENERATED_MANIFEST "${manifest}")
+        endif()
       else()
-        set(manifest "$<TARGET_FILE_DIR:${library}>/${manifest_name}")
+        set(manifest "$<TARGET_FILE_DIR:${library_target}>/${manifest_name}")
       endif()
       list(APPEND files "${manifest}")
       get_target_property(assets ${library_target} QDMI_RUNTIME_FILES)
       if(assets)
         foreach(asset IN LISTS assets)
-          list(APPEND files "$<TARGET_FILE_DIR:${library}>/${asset}")
+          list(APPEND files "$<TARGET_FILE_DIR:${library_target}>/${asset}")
         endforeach()
       endif()
     endif()
-    add_custom_target(
-      ${staging_target}
-      COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${target}>"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<REMOVE_DUPLICATES:${files}>"
-              "$<TARGET_FILE_DIR:${target}>"
-      COMMAND_EXPAND_LISTS VERBATIM)
-    # Consumers can share an output directory; copies of one library must not overlap.
-    get_target_property(previous_stage ${library_target} _MQT_QDMI_LAST_STAGE)
-    if(previous_stage)
-      add_dependencies(${staging_target} ${previous_stage})
+    if(NOT TARGET ${staging_target})
+      # One owner copies each library to all destinations, including shared output directories.
+      set(script "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${staging_target}.cmake")
+      add_custom_target(
+        ${staging_target}
+        COMMAND ${CMAKE_COMMAND} -P "${script}"
+        VERBATIM)
+      string(
+        CONFIGURE
+          [=[
+set(files [==[$<REMOVE_DUPLICATES:$<TARGET_GENEX_EVAL:@staging_target@,$<TARGET_PROPERTY:@staging_target@,_MQT_QDMI_FILES>>>]==])
+set(destinations [==[$<REMOVE_DUPLICATES:$<TARGET_GENEX_EVAL:@staging_target@,$<TARGET_PROPERTY:@staging_target@,_MQT_QDMI_DESTINATIONS>>>]==])
+foreach(destination IN LISTS destinations)
+  file(MAKE_DIRECTORY "${destination}")
+  foreach(runtime_file IN LISTS files)
+    cmake_path(GET runtime_file FILENAME filename)
+    file(COPY_FILE "${runtime_file}" "${destination}/${filename}" ONLY_IF_DIFFERENT)
+  endforeach()
+endforeach()
+]=]
+          script_content
+        @ONLY)
+      file(
+        GENERATE
+        OUTPUT "${script}"
+        CONTENT "${script_content}")
+      if(NOT imported)
+        add_dependencies(${staging_target} ${library_target})
+      endif()
     endif()
-    set_property(TARGET ${library_target} PROPERTY _MQT_QDMI_LAST_STAGE ${staging_target})
-    if(NOT imported)
-      add_dependencies(${staging_target} ${library_target})
-    endif()
+    set_property(
+      TARGET ${staging_target}
+      APPEND
+      PROPERTY _MQT_QDMI_FILES ${files})
+    set_property(
+      TARGET ${staging_target}
+      APPEND
+      PROPERTY _MQT_QDMI_DESTINATIONS "$<TARGET_FILE_DIR:${target}>")
     add_dependencies(${target} ${staging_target})
   endforeach()
 endfunction()
