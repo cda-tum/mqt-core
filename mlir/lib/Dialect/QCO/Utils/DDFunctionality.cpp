@@ -924,9 +924,12 @@ applyArrayInitializer(bufferization::MaterializeInDestinationOp init,
                                "and whole static local storage";
   }
   auto values = data.getValues<Attribute>();
-  // Replace the branch's backing values; its aliases retain storage identity.
-  target->second->storage->values =
-      std::make_shared<SmallVector<Attribute>>(values.begin(), values.end());
+  // Reuse local storage without overwriting another branch's shared buffer.
+  auto& storage = target->second->storage->values;
+  if (storage.use_count() != 1) {
+    storage = std::make_shared<SmallVector<Attribute>>();
+  }
+  storage->assign(values.begin(), values.end());
   return success();
 }
 

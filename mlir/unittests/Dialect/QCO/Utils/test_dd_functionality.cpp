@@ -27,6 +27,7 @@
 
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -1466,6 +1467,7 @@ TEST_F(QCODDFunctionalityTest, BranchesCopyClassicalRegisterStorage) {
 }
 
 TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
+  context->loadDialect<bufferization::BufferizationDialect>();
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
       func.func @alias(%memory: memref<32xi1, strided<[2], offset: ?>>)
@@ -1487,6 +1489,10 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
         %true = arith.constant true
         %one = arith.constant 1 : index
         %memory = memref.alloca() : memref<32x2xi1>
+        %zeros = arith.constant dense<false> : tensor<32x2xi1>
+        %ones = arith.constant dense<true> : tensor<32x2xi1>
+        bufferization.materialize_in_destination %ones in writable %memory
+          : (tensor<32x2xi1>, memref<32x2xi1>) -> ()
         %row = memref.subview %memory[0, %one][32, 1][1, 1]
           : memref<32x2xi1> to memref<32xi1, strided<[2], offset: ?>>
         %source = memref.alloca() : memref<32xi1>
@@ -1500,15 +1506,20 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
         qco.sink %measured : !qco.qubit
         %expected = arith.xori %bit, %true : i1
         scf.if %expected {
+          bufferization.materialize_in_destination %zeros in writable %memory
+            : (tensor<32x2xi1>, memref<32x2xi1>) -> ()
           func.call @set(%alias, %true) : (memref<32xi1, strided<[2], offset: ?>>, i1) -> ()
         } else {
           memref.copy %source, %alias : memref<32xi1> to memref<32xi1, strided<[2], offset: ?>>
         }
         %actual = memref.load %memory[%zero, %one] : memref<32x2xi1>
         %same = arith.cmpi eq, %actual, %expected : i1
+        %initialized = memref.load %memory[%zero, %zero] : memref<32x2xi1>
+        %isolated = arith.cmpi eq, %initialized, %bit : i1
         %original = memref.load %source[%zero] : memref<32xi1>
         %unchanged = arith.cmpi eq, %original, %false : i1
-        %matches = arith.andi %same, %unchanged : i1
+        %preserved = arith.andi %same, %unchanged : i1
+        %matches = arith.andi %preserved, %isolated : i1
         %q1 = qco.static 1 : !qco.qubit
         %out = qco.if %matches args(%q = %q1) -> (!qco.qubit) {
           %x = qco.x %q : !qco.qubit
@@ -1526,7 +1537,8 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
   const auto hist = sample(mainFunc(*mod), 1024, 23);
   ASSERT_TRUE(succeeded(hist));
   ASSERT_EQ(hist->size(), 2U);
-  EXPECT_EQ(hist->at("10") + hist->at("11"), 1024U);
+  EXPECT_EQ(hist->count("10") + hist->count("11"), 2U);
+  EXPECT_EQ(hist->begin()->second + hist->rbegin()->second, 1024U);
 }
 
 TEST_F(QCODDFunctionalityTest, BranchesThroughCountedMeasurementsAndResets) {
