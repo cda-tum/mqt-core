@@ -253,9 +253,9 @@ Adding a family requires five extension points:
    evaluation under `include/mqt-core/bench/` and `src/bench/`. Add the
    family-specific parameter JSON, reference JSON, parser, and schema body to
    `src/bench/JSON.cpp`.
-3. Implement the structured emitter under `mlir/bench/`, add its source to the
-   program library, and declare the typed `generate(...)` overload. The catalog
-   supplies the emitter declaration, generation wrapper, and JSON dispatch row.
+3. Implement the structured emitter under `mlir/bench/` and add its source to
+   the program library. The catalog supplies the emitter declaration, typed
+   `generate(...)` overload, generation wrapper, and JSON dispatch row.
 4. Add the explicit Python types in a family registration source under
    `bindings/bench/`, use `registerBenchmarkIO` for generation and JSON methods,
    register its direct submodule in `register_bench.cpp`, and add the source to

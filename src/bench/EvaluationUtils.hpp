@@ -74,13 +74,16 @@ evaluate(const Counts& counts, const Probability& probability,
         static_cast<long double>(count) / static_cast<long double>(totalShots);
     observedDistance += std::abs(observed - ideal);
     observedIdealMass += ideal;
-    coefficient += std::sqrt(observed) * std::sqrt(ideal);
+    // Normalize after summation so a positive ideal does not underflow first.
+    coefficient += std::sqrt(static_cast<long double>(count) * ideal);
   }
 
   const auto missingIdealMass = std::max(0.L, 1.L - observedIdealMass);
   const auto totalVariation =
       std::clamp((observedDistance + missingIdealMass) / 2.L, 0.L, 1.L);
-  const auto fidelity = std::clamp(coefficient * coefficient, 0.L, 1.L);
+  const auto fidelity = std::clamp(coefficient * coefficient /
+                                       static_cast<long double>(totalShots),
+                                   0.L, 1.L);
   const auto success =
       successOutcome ? std::optional<double>{static_cast<double>(successShots) /
                                              static_cast<double>(totalShots)}

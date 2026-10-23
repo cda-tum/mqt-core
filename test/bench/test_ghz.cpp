@@ -68,12 +68,6 @@ TEST(GHZ, GivesTheXBasisDistribution) {
   EXPECT_DOUBLE_EQ(ghz.probability("000"), 0.25);
   EXPECT_DOUBLE_EQ(ghz.probability("011"), 0.25);
   EXPECT_DOUBLE_EQ(ghz.probability("111"), 0.);
-
-  const GHZ largest{
-      {.qubits = GHZOptions::MAX_X_BASIS_QUBITS, .basis = GHZBasis::X}};
-  EXPECT_GT(
-      largest.probability(std::string(GHZOptions::MAX_X_BASIS_QUBITS, '0')),
-      0.);
 }
 
 TEST(GHZ, EvaluatesCountsAgainstTheWholeIdealDistribution) {

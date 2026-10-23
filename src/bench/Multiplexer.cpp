@@ -39,12 +39,13 @@ double Multiplexer::probability(const std::string_view outcome) const {
   detail::validateOutcome(outcome, output_.width);
 
   // Compute target-zero amplitudes from 1-x to avoid cancellation.
-  const auto complement = outcome.back() == '0';
-  double state =
-      complement ? std::ldexp(1., 1 - static_cast<int>(options_.qubits)) : 0.;
+  const auto target = outcome.back();
+  double state = target == '0'
+                     ? std::ldexp(1., 1 - static_cast<int>(options_.qubits))
+                     : 0.;
   double weight = 0.5;
   for (const auto bit : outcome.substr(0, outcome.size() - 1)) {
-    state += (bit == '1') != complement ? weight : 0.;
+    state += bit == target ? weight : 0.;
     weight *= 0.5;
   }
   const auto angle = std::numbers::pi * state;

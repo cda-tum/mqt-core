@@ -38,20 +38,16 @@ void registerBenchmarkIO(
           },
           nb::sig("def generate(self) -> mqt.core.mlir.QCProgram"),
           "Generate the benchmark as a QC program.")
-      .def_prop_ro(
-          "instance_specification_json",
-          [](const Benchmark& value) {
-            return bench::toInstanceSpecificationJSON(value);
-          },
-          "The canonical instance specification JSON.")
-      .def_prop_ro(
-          "manifest_json",
-          [](const Benchmark& value) { return bench::toManifestJSON(value); },
-          "The canonical manifest JSON.")
-      .def_prop_ro(
-          "case_id",
-          [](const Benchmark& value) { return bench::caseId(value); },
-          "The stable semantic case ID.")
+      .def_prop_ro("instance_specification_json",
+                   nb::overload_cast<const Benchmark&>(
+                       &bench::toInstanceSpecificationJSON),
+                   "The canonical instance specification JSON.")
+      .def_prop_ro("manifest_json",
+                   nb::overload_cast<const Benchmark&>(&bench::toManifestJSON),
+                   "The canonical manifest JSON.")
+      .def_prop_ro("case_id",
+                   nb::overload_cast<const Benchmark&>(&bench::caseId),
+                   "The stable semantic case ID.")
       .def_static("from_instance_specification_json", fromInstanceSpecification,
                   "json"_a, nb::kw_only(),
                   "source"_a = "<instance-specification>",

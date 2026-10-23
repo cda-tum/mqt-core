@@ -441,33 +441,33 @@ parseModularMultiplierParameters(const Json& parameters,
   if (control.size() != 1U) {
     fail(source, "$/parameters/control", "must be '0', '1', or '+'");
   }
-  return constructBenchmark(source, [&] {
-    return ModularMultiplier({
-        .multiplier = stringValue(
-            required(parameters, "multiplier", source, "$/parameters"), source,
-            "$/parameters/multiplier"),
-        .modulus =
-            stringValue(required(parameters, "modulus", source, "$/parameters"),
-                        source, "$/parameters/modulus"),
-        .multiplicand = stringValue(
-            required(parameters, "multiplicand", source, "$/parameters"),
-            source, "$/parameters/multiplicand"),
-        .control = control.front(),
-    });
-  });
+  ModularMultiplierOptions options{
+      .multiplier = stringValue(
+          required(parameters, "multiplier", source, "$/parameters"), source,
+          "$/parameters/multiplier"),
+      .modulus =
+          stringValue(required(parameters, "modulus", source, "$/parameters"),
+                      source, "$/parameters/modulus"),
+      .multiplicand = stringValue(
+          required(parameters, "multiplicand", source, "$/parameters"), source,
+          "$/parameters/multiplicand"),
+      .control = control.front(),
+  };
+  return constructBenchmark(
+      source, [&options] { return ModularMultiplier(std::move(options)); });
 }
 
 [[nodiscard]] Multiplexer
 parseMultiplexerParameters(const Json& parameters,
                            const std::string_view source) {
   rejectUnknownKeys(parameters, {"qubits"}, source, "$/parameters");
-  return constructBenchmark(source, [&] {
-    return Multiplexer({
-        .qubits =
-            sizeValue(required(parameters, "qubits", source, "$/parameters"),
-                      source, "$/parameters/qubits"),
-    });
-  });
+  const MultiplexerOptions options{
+      .qubits =
+          sizeValue(required(parameters, "qubits", source, "$/parameters"),
+                    source, "$/parameters/qubits"),
+  };
+  return constructBenchmark(source,
+                            [&options] { return Multiplexer(options); });
 }
 
 [[nodiscard]] QAOA parseQAOAParameters(const Json& parameters,
@@ -607,13 +607,12 @@ parseTeleportationParameters(const Json& parameters,
 [[nodiscard]] WState parseWStateParameters(const Json& parameters,
                                            const std::string_view source) {
   rejectUnknownKeys(parameters, {"qubits"}, source, "$/parameters");
-  return constructBenchmark(source, [&] {
-    return WState({
-        .qubits =
-            sizeValue(required(parameters, "qubits", source, "$/parameters"),
-                      source, "$/parameters/qubits"),
-    });
-  });
+  const WStateOptions options{
+      .qubits =
+          sizeValue(required(parameters, "qubits", source, "$/parameters"),
+                    source, "$/parameters/qubits"),
+  };
+  return constructBenchmark(source, [&options] { return WState(options); });
 }
 
 [[nodiscard]] std::string_view topologyName(const GHZTopology topology) {

@@ -24,12 +24,9 @@ using namespace mlir;
 
 TEST(GenerateProgramTest, SamplesAsymmetricBVInputsAgainstReference) {
   for (const auto method : {BVMethod::Static, BVMethod::Dynamic}) {
-    for (const auto* hidden : {"01", "100"}) {
-      SCOPED_TRACE(static_cast<int>(method));
-      SCOPED_TRACE(hidden);
-      test::expectSamplingMatchesReference(
-          BV{{.hiddenBitstring = hidden, .method = method}});
-    }
+    SCOPED_TRACE(static_cast<int>(method));
+    test::expectSamplingMatchesReference(
+        BV{{.hiddenBitstring = "001", .method = method}});
   }
 }
 

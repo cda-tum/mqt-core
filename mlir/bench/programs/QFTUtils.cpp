@@ -86,10 +86,9 @@ void phaseAdditionLoop(
 }
 
 Value advancePhaseCorrection(qc::QCProgramBuilder& builder, Value correction,
-                             Value measuredBit, Value half, Value firstAngle) {
+                             Value inputBit, Value half, Value firstAngle) {
   auto scaled = arith::MulFOp::create(builder, correction, half);
-  auto bit =
-      arith::UIToFPOp::create(builder, builder.getF64Type(), measuredBit);
+  auto bit = arith::UIToFPOp::create(builder, builder.getF64Type(), inputBit);
   auto contribution = arith::MulFOp::create(builder, bit, firstAngle);
   return arith::AddFOp::create(builder, scaled, contribution);
 }
