@@ -11,34 +11,28 @@
 #include "mqt/Support/Passes.h"
 
 #include "mqt/Conversion/CBitToMemRef/CBitToMemRef.h"
+#include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
 #include "mqt/Dialect/QC/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QIR/Transforms/Passes.h"
 #include "mqt/Dialect/QTensor/Transforms/Passes.h"
 #include "mqt/Support/RandomSeed.h"
-#include "mqt/Support/StaticLoops.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/IR/Visitors.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -53,96 +47,6 @@ static void addSimplificationPasses(OpPassManager& pm) {
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());
 }
-
-namespace {
-class PromoteClassicalMemoryPass final
-    : public PassWrapper<PromoteClassicalMemoryPass, OperationPass<ModuleOp>> {
-  OpPassManager pipeline_{ModuleOp::getOperationName()};
-
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PromoteClassicalMemoryPass)
-
-  PromoteClassicalMemoryPass() {
-    // Fold index normalization before upstream promotion inspects accesses.
-    pipeline_.addPass(createCanonicalizerPass());
-    pipeline_.addPass(createSROA());
-    pipeline_.addPass(createMem2Reg());
-  }
-
-  [[nodiscard]] StringRef getArgument() const override {
-    return "promote-classical-memory";
-  }
-
-  void getDependentDialects(DialectRegistry& registry) const override {
-    pipeline_.getDependentDialects(registry);
-  }
-
-protected:
-  void runOnOperation() override {
-    const auto allocation = getOperation().walk([](Operation* op) {
-      return isa<PromotableAllocationOpInterface,
-                 DestructurableAllocationOpInterface>(op)
-                 ? WalkResult::interrupt()
-                 : WalkResult::advance();
-    });
-    if (!allocation.wasInterrupted()) {
-      markAllAnalysesPreserved();
-      return;
-    }
-    if (failed(runPipeline(pipeline_, getOperation()))) {
-      signalPassFailure();
-    }
-  }
-};
-
-class UnrollBaseLoopsPass final
-    : public PassWrapper<UnrollBaseLoopsPass, OperationPass<ModuleOp>> {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(UnrollBaseLoopsPass)
-
-  [[nodiscard]] StringRef getArgument() const override {
-    return "unroll-base-loops";
-  }
-
-  void getDependentDialects(DialectRegistry& registry) const override {
-    registry.insert<arith::ArithDialect, scf::SCFDialect>();
-  }
-
-protected:
-  void runOnOperation() override {
-    constexpr uint64_t maxClonedOperations = 1'000'000'000;
-    uint64_t clonedOperations = 0;
-    OpPassManager cleanup(ModuleOp::getOperationName());
-    cleanup.addPass(std::make_unique<PromoteClassicalMemoryPass>());
-    cleanup.addPass(createCanonicalizerPass());
-    while (true) {
-      if (failed(runPipeline(cleanup, getOperation()))) {
-        signalPassFailure();
-        return;
-      }
-      SmallVector<scf::ForOp> loops;
-      getOperation().walk<WalkOrder::PreOrder>([&](scf::ForOp loop) {
-        if (mqt::getExactConstantTripCount(loop)) {
-          loops.push_back(loop);
-        }
-        // Base QIR cannot retain an unresolved outer loop.
-        return WalkResult::skip();
-      });
-      if (loops.empty()) {
-        return;
-      }
-      for (auto loop : loops) {
-        const auto tripCount = *mqt::getExactConstantTripCount(loop);
-        if (failed(mqt::unrollStaticLoop(loop, tripCount, maxClonedOperations,
-                                         clonedOperations))) {
-          signalPassFailure();
-          return;
-        }
-      }
-    }
-  }
-};
-} // namespace
 
 LogicalResult
 runWithPassManager(ModuleOp mod,
@@ -164,8 +68,6 @@ runWithPassManager(ModuleOp mod,
 void registerMQTCompilerPasses() {
   static const auto REGISTERED = [] {
     registerTransformsPasses();
-    registerPass([] { return std::make_unique<PromoteClassicalMemoryPass>(); });
-    registerPass([] { return std::make_unique<UnrollBaseLoopsPass>(); });
     registerConvertCBitToMemRef();
     qco::registerCombineControlledGates();
     qco::registerDecomposeMultiControlled();
@@ -184,6 +86,7 @@ void registerMQTCompilerPasses() {
     qco::registerUnrollLoopsForPayload();
     qco::registerVerifyTargetConformance();
     mqt::registerNormalizeGlobalPhases();
+    mqt::registerPromoteClassicalMemory();
     mqt::registerSimplifyClassicalControl();
     mqt::registerUnrollModifiers();
     qc::registerShrinkQubitRegistersPass();
@@ -207,16 +110,20 @@ void populateDefaultQCOOptimizationPipeline(OpPassManager& pm) {
   pm.addPass(createCanonicalizerPass());
 }
 
-void populateQIRPreparationPipeline(OpPassManager& pm, bool useAdaptive) {
+void populateQIRPreparationPipeline(OpPassManager& pm,
+                                    mqt::PayloadSpecAttr payload) {
   pm.addPass(createInlinerPass());
   pm.addPass(mqt::createNormalizeGlobalPhases());
   pm.addPass(mqt::createUnrollModifiers());
-  if (useAdaptive) {
-    pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
-    pm.addPass(createCanonicalizerPass());
+  if (payload.getFormat().getProfile() == "base") {
+    qco::UnrollLoopsForPayloadOptions options;
+    llvm::raw_string_ostream stream(options.payloadSpec);
+    stream << payload;
+    pm.addPass(qco::createUnrollLoopsForPayload(options));
   } else {
-    pm.addPass(std::make_unique<UnrollBaseLoopsPass>());
+    pm.addPass(mqt::createPromoteClassicalMemory());
   }
+  pm.addPass(createCanonicalizerPass());
 }
 
 void populateQubitReusePipeline(OpPassManager& pm) {
@@ -284,7 +191,7 @@ LogicalResult runWithCompilationOptions(PassManager& pm, ModuleOp moduleOp,
 
 void populateQCExportPipeline(OpPassManager& pm) {
   pm.addPass(mlir::mqt::createSimplifyClassicalControl());
-  pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
+  pm.addPass(mqt::createPromoteClassicalMemory());
   pm.addPass(
       createCanonicalizerPass(GreedyRewriteConfig{}.setUseTopDownTraversal()));
   pm.addPass(mlir::mqt::createNormalizeGlobalPhases());
@@ -300,7 +207,7 @@ void populateQCCleanupPipeline(OpPassManager& pm) {
 
 void populateQCOCleanupPipeline(OpPassManager& pm, bool removeDeadValues) {
   pm.addPass(mlir::mqt::createSimplifyClassicalControl());
-  pm.addPass(std::make_unique<PromoteClassicalMemoryPass>());
+  pm.addPass(mqt::createPromoteClassicalMemory());
   pm.addPass(createCanonicalizerPass(
       GreedyRewriteConfig{}.setUseTopDownTraversal().setMaxIterations(
           GreedyRewriteConfig::kNoLimit)));

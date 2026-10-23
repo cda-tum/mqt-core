@@ -432,14 +432,16 @@ flow with `legalize-control-flow`:
 A finite `scf.for` that exceeds the selected counted-iteration contract is fully
 unrolled when this clones at most one billion body operations by default. The
 `unroll-loops-for-payload` pass exposes this limit as `max-operations`. The same
-bound applies to loops unrolled for qubit placement. Cleanup runs again because
-unrolling can make nested bounds and conditions constant. An unsupported index
-switch is lowered to a linear chain of nested forward branches when that form
-fits the selected contract. Before expansion, the compiler checks the selected
-forward-branching nesting limit and a compiler safety limit of 256 total
-control-flow levels, including enclosing control flow. This compiler limit is
-not a QDMI requirement and does not apply to switches retained under multiway
-branching.
+bound applies to loops unrolled for qubit placement. Between expansion rounds,
+local classical memory is promoted and expressions fold to expose constant array
+accesses, nested bounds, and conditions. Standalone Base QIR export uses this
+same unroller with an explicit `payload-spec`, without requiring hardware
+metadata. An unsupported index switch is lowered to a linear chain of nested
+forward branches when that form fits the selected contract. Before expansion,
+the compiler checks the selected forward-branching nesting limit and a compiler
+safety limit of 256 total control-flow levels, including enclosing control flow.
+This compiler limit is not a QDMI requirement and does not apply to switches
+retained under multiway branching.
 
 Generic SCF branches cannot capture or return QCO qubits or quantum tensors; use
 the corresponding QCO branch operation for linear quantum state. SCF loops must

@@ -76,6 +76,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/Passes.h"
@@ -1106,10 +1107,13 @@ TEST_F(CompilerPipelineTest, BaseUnrollsBoundArrayLoops) {
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
       %two = arith.constant 2 : index
+      %counts = memref.alloca() : memref<2xindex>
+      memref.store %one, %counts[%zero] : memref<2xindex>
+      memref.store %two, %counts[%one] : memref<2xindex>
       %q = qc.alloc : !qc.qubit
       scf.for %layer = %zero to %two step %one {
         %angle = tensor.extract %angles[%layer] : tensor<2xf64>
-        %end = arith.addi %layer, %one : index
+        %end = memref.load %counts[%layer] : memref<2xindex>
         scf.for %iteration = %zero to %end step %one {
           qc.ry(%angle) %q : !qc.qubit
         }
@@ -1122,19 +1126,44 @@ TEST_F(CompilerPipelineTest, BaseUnrollsBoundArrayLoops) {
   ASSERT_TRUE(succeeded(qc));
   ASSERT_TRUE(succeeded(
       qc->bindParameters({{"angles", std::vector<double>{0.25, -0.5}}})));
-  auto qir = std::move(*qc).intoQIR(QIRProfile::Base);
-  ASSERT_TRUE(succeeded(qir));
-  std::vector<double> angles;
-  qir->module().walk([&](LLVM::CallOp call) {
-    if (call.getCallee() != "__quantum__qis__ry__body") {
-      return;
+  for (bool replay : {false, true}) {
+    auto input = qc->copy();
+    if (replay) {
+      attachTargetEnvironment(
+          input.module(),
+          TargetEnvironment(
+              makeUnrestrictedTarget(),
+              llvm::cantFail(PayloadSpecification::forProgramFormat(
+                  ProgramFormat::QIRAdaptive))));
+      const auto payload = llvm::cantFail(
+          PayloadSpecification::forProgramFormat(ProgramFormat::QIRBase));
+      PassManager pm(input.module().getContext(), ModuleOp::getOperationName());
+      populateQIRPreparationPipeline(
+          pm, payload.materialize(*input.module().getContext()));
+      std::string pipeline;
+      llvm::raw_string_ostream stream(pipeline);
+      pm.printAsTextualPipeline(stream);
+      registerMQTCompilerPasses();
+      auto parsed = parsePassPipeline(pipeline);
+      ASSERT_TRUE(succeeded(parsed));
+      static_cast<OpPassManager&>(pm) = std::move(*parsed);
+      ASSERT_TRUE(succeeded(runWithCompilationOptions(pm, input.module(), {})));
+      EXPECT_EQ(input.inspect().controlFlowCounts.count("scf.for"), 0U);
     }
-    auto constant = call.getOperand(0).getDefiningOp<LLVM::ConstantOp>();
-    ASSERT_TRUE(constant);
-    angles.push_back(cast<FloatAttr>(constant.getValue()).getValueAsDouble());
-  });
-  EXPECT_EQ(angles, (std::vector<double>{0.25, -0.5, -0.5}));
-  EXPECT_TRUE(succeeded(qir->llvmIR()));
+    auto qir = std::move(input).intoQIR(QIRProfile::Base);
+    ASSERT_TRUE(succeeded(qir));
+    std::vector<double> angles;
+    qir->module().walk([&](LLVM::CallOp call) {
+      if (call.getCallee() != "__quantum__qis__ry__body") {
+        return;
+      }
+      auto constant = call.getOperand(0).getDefiningOp<LLVM::ConstantOp>();
+      ASSERT_TRUE(constant);
+      angles.push_back(cast<FloatAttr>(constant.getValue()).getValueAsDouble());
+    });
+    EXPECT_EQ(angles, (std::vector<double>{0.25, -0.5, -0.5}));
+    EXPECT_TRUE(succeeded(qir->llvmIR()));
+  }
 }
 
 TEST_F(CompilerPipelineTest, BasePromotesUnrolledClassicalArrays) {
@@ -1173,16 +1202,19 @@ TEST_F(CompilerPipelineTest, BaseRejectsDynamicAndExcessiveLoopExpansion) {
         "qc.dealloc %q : !qc.qubit\n"
         "return }}");
     ASSERT_TRUE(succeeded(qc));
-    if (dynamic) {
-      ASSERT_TRUE(succeeded(runWithPassManager(
-          qc->module(),
-          [](OpPassManager& pm) { populateQIRPreparationPipeline(pm, false); },
-          "failed to prepare Base QIR")));
-      unsigned remainingLoops = 0;
-      qc->module().walk([&](scf::ForOp) { ++remainingLoops; });
-      EXPECT_EQ(remainingLoops, 2U);
-    }
     EXPECT_TRUE(failed(std::move(*qc).intoQIR(QIRProfile::Base)));
+  }
+}
+
+TEST_F(CompilerPipelineTest, PayloadControlRequiresValidSpecification) {
+  auto qc = QCProgram::fromMLIRString("module {}");
+  ASSERT_TRUE(succeeded(qc));
+  for (const auto* pass :
+       {"unroll-loops-for-payload", "legalize-control-flow"}) {
+    for (const auto* option : {"", "{payload-spec=unit}"}) {
+      EXPECT_TRUE(
+          failed(runPassPipeline(qc->module(), std::string(pass) + option)));
+    }
   }
 }
 

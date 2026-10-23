@@ -21,10 +21,7 @@ add_mlir_library(
   MLIRLLVMDialect
   MLIRMathDialect
   MLIRMemRefDialect
-  MLIRMemorySlotInterfaces
   MLIRPass
-  MLIRSCFDialect
-  MLIRSCFUtils
   MLIRTransforms
   MLIRControlFlowInterfaces
   MLIRTransformUtils

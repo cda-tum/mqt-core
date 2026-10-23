@@ -9,16 +9,19 @@
  */
 
 #include "mqt/Compiler/TargetEnvironment.h"
+#include "mqt/Dialect/MQT/IR/MQTAttributes.h"
+#include "mqt/Dialect/MQT/IR/MQTDialect.h"
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Dialect/QTensor/IR/QTensorDialect.h"
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
-#include "mqt/Support/StaticLoops.h"
 
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -26,6 +29,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/WalkResult.h"
@@ -38,6 +42,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
 #include <array>
@@ -51,6 +57,89 @@ namespace mlir::qco {
 #define GEN_PASS_DEF_LEGALIZECONTROLFLOW
 #define GEN_PASS_DEF_UNROLLLOOPSFORPAYLOAD
 #include "mqt/Dialect/QCO/Transforms/Passes.h.inc"
+
+/// Require literal bounds before expanding a counted loop.
+static std::optional<llvm::APInt> getExactConstantTripCount(scf::ForOp loop) {
+  if (!getConstantAPIntValue(getAsOpFoldResult(loop.getLowerBound())) ||
+      !getConstantAPIntValue(getAsOpFoldResult(loop.getUpperBound())) ||
+      !getConstantAPIntValue(getAsOpFoldResult(loop.getStep()))) {
+    return std::nullopt;
+  }
+  return loop.getStaticTripCount();
+}
+
+/// Check the integer arithmetic used by MLIR's full-loop unroller.
+static bool canUseFullUnroll(scf::ForOp loop, uint64_t iterations) {
+  const auto constant = [&](Value value) -> std::optional<int64_t> {
+    const auto result = getConstantAPIntValue(getAsOpFoldResult(value));
+    if (!result) {
+      return std::nullopt;
+    }
+    if (loop.getUnsignedCmp()) {
+      if (result->first.getActiveBits() > 63) {
+        return std::nullopt;
+      }
+      return static_cast<int64_t>(result->first.getZExtValue());
+    }
+    return result->first.trySExtValue();
+  };
+  const auto lowerBound = constant(loop.getLowerBound());
+  const auto upperBound = constant(loop.getUpperBound());
+  const auto step = constant(loop.getStep());
+  if (!lowerBound || !upperBound || !step || *step <= 0) {
+    return false;
+  }
+  int64_t scaledStep = 0;
+  int64_t unrolledUpperBound = 0;
+  if (llvm::MulOverflow(*step, static_cast<int64_t>(iterations), scaledStep) !=
+          0 ||
+      llvm::AddOverflow(*lowerBound, scaledStep, unrolledUpperBound) != 0) {
+    return false;
+  }
+  auto type = dyn_cast<IntegerType>(loop.getInductionVar().getType());
+  return !type || (loop.getUnsignedCmp()
+                       ? llvm::isUIntN(type.getWidth(),
+                                       static_cast<uint64_t>(scaledStep))
+                       : llvm::isIntN(type.getWidth(), scaledStep));
+}
+
+/// Expand a constant counted loop within a cumulative cloning budget.
+///
+/// Requires literal bounds and an exact trip count greater than one. Diagnose
+/// unsupported arithmetic or excessive expansion before changing the loop.
+static LogicalResult unrollStaticLoop(scf::ForOp loop,
+                                      const llvm::APInt& tripCount,
+                                      uint64_t maxOperations,
+                                      uint64_t& clonedOperations) {
+  IRRewriter rewriter(loop.getContext());
+  uint64_t bodyOperations = 0;
+  Operation* terminator = loop.getBody()->getTerminator();
+  loop.getRegion().walk(
+      [&](Operation* operation) { bodyOperations += operation != terminator; });
+  const bool emptyBody = bodyOperations == 0;
+  bodyOperations = std::max(bodyOperations, uint64_t{1});
+  if ((tripCount - 1)
+          .ugt((maxOperations - clonedOperations) / bodyOperations)) {
+    return loop.emitError() << "full unrolling would clone more than "
+                            << maxOperations << " loop-body operations";
+  }
+  if (tripCount.getActiveBits() > 64 ||
+      !canUseFullUnroll(loop, tripCount.getZExtValue())) {
+    return loop.emitError(
+        "cannot safely apply MLIR full unrolling to these loop bounds");
+  }
+  clonedOperations += bodyOperations * (tripCount.getZExtValue() - 1);
+  if (emptyBody) {
+    // LLVM skips terminator-only bodies; remove this constant when it supports
+    // unrolling them. Caller cleanup removes it after remapping carried values.
+    rewriter.setInsertionPointToStart(loop.getBody());
+    arith::ConstantIndexOp::create(rewriter, loop.getLoc(), 0);
+  }
+  if (failed(loopUnrollFull(loop))) {
+    return loop.emitError("failed to fully unroll a static counted loop");
+  }
+  return success();
+}
 
 namespace {
 
@@ -75,8 +164,20 @@ struct CapabilityGroup {
 class PayloadControlSupport {
 public:
   [[nodiscard]] static std::optional<PayloadControlSupport>
-  read(ModuleOp moduleOp, const TargetEnvironmentAnalysis& analysis) {
-    if (!analysis) {
+  read(ModuleOp moduleOp, const TargetEnvironmentAnalysis& analysis,
+       StringRef specification) {
+    std::optional<PayloadSpecification> explicitPayload;
+    if (!specification.empty()) {
+      auto attribute = dyn_cast_or_null<mqt::PayloadSpecAttr>(
+          parseAttribute(specification, moduleOp.getContext()));
+      auto payload = PayloadSpecification::create(attribute);
+      if (!payload) {
+        moduleOp.emitError()
+            << "invalid payload-spec: " << llvm::toString(payload.takeError());
+        return std::nullopt;
+      }
+      explicitPayload = std::move(*payload);
+    } else if (!analysis) {
       moduleOp.emitError()
           << "payload control-flow legalization requires a valid "
              "mqt.target_env: "
@@ -85,7 +186,11 @@ public:
     }
 
     PayloadControlSupport support;
-    const auto& payload = analysis.environment().payloadSpecification();
+    const auto& payload = explicitPayload
+                              ? *explicitPayload
+                              : analysis.environment().payloadSpecification();
+    support.indexedQubits =
+        !explicitPayload && analysis.environment().supportsIndexedQubits();
     for (const ProgramCapability& capability : payload.capabilities()) {
       const auto feature =
           llvm::StringSwitch<std::optional<ControlFeature>>(capability.id)
@@ -114,6 +219,8 @@ public:
     }
     return support;
   }
+
+  bool indexedQubits = false;
 
   [[nodiscard]] const CapabilityGroup& get(const ControlFeature feature) const {
     return groups[static_cast<size_t>(feature)];
@@ -290,7 +397,7 @@ static LogicalResult foldStaticBranches(ModuleOp moduleOp) {
 [[nodiscard]] static bool isLegal(scf::ForOp operation,
                                   const PayloadControlSupport& support) {
   return support.coversIteration(ControlFeature::CountedIteration, operation,
-                                 mqt::getExactConstantTripCount(operation));
+                                 getExactConstantTripCount(operation));
 }
 
 [[nodiscard]] static bool isLegal(scf::WhileOp operation,
@@ -456,6 +563,11 @@ struct UnrollLoopsForPayload final
     : impl::UnrollLoopsForPayloadBase<UnrollLoopsForPayload> {
   using UnrollLoopsForPayloadBase::UnrollLoopsForPayloadBase;
 
+  void getDependentDialects(DialectRegistry& registry) const override {
+    UnrollLoopsForPayloadBase::getDependentDialects(registry);
+    mqt::createPromoteClassicalMemory()->getDependentDialects(registry);
+  }
+
   static bool carriesQTensor(scf::ForOp loop) {
     return llvm::any_of(loop.getInitArgs(), [](Value value) {
       auto type = dyn_cast<RankedTensorType>(value.getType());
@@ -469,7 +581,7 @@ struct UnrollLoopsForPayload final
     if (tripCount.ugt(1)) {
       // Do not cross branches: an outer induction value may make them dead.
       for (auto nested : loop.getBody()->getOps<scf::ForOp>()) {
-        if (const auto nestedCount = mqt::getExactConstantTripCount(nested);
+        if (const auto nestedCount = getExactConstantTripCount(nested);
             nestedCount && carriesQTensor(nested)) {
           return selectTensorLoop(nested, *nestedCount);
         }
@@ -481,7 +593,7 @@ struct UnrollLoopsForPayload final
 protected:
   void runOnOperation() override {
     const auto support = PayloadControlSupport::read(
-        getOperation(), getAnalysis<TargetEnvironmentAnalysis>());
+        getOperation(), getAnalysis<TargetEnvironmentAnalysis>(), payloadSpec);
     if (!support) {
       signalPassFailure();
       return;
@@ -494,17 +606,21 @@ protected:
     }
 
     uint64_t clonedOperations = 0U;
-    const bool indexed = getAnalysis<TargetEnvironmentAnalysis>()
-                             .environment()
-                             .supportsIndexedQubits();
+    OpPassManager cleanup(ModuleOp::getOperationName());
+    cleanup.addPass(mqt::createPromoteClassicalMemory());
     IRRewriter rewriter(&getContext());
     while (true) {
+      if (failed(runPipeline(cleanup, getOperation())) ||
+          failed(foldStaticBranches(getOperation()))) {
+        signalPassFailure();
+        return;
+      }
       SmallVector<std::pair<scf::ForOp, llvm::APInt>> loops;
       SmallVector<scf::ForOp> repetitions;
       getOperation().walk<WalkOrder::PreOrder>([&](scf::ForOp loop) {
-        const auto tripCount = mqt::getExactConstantTripCount(loop);
+        const auto tripCount = getExactConstantTripCount(loop);
         const bool tensor = carriesQTensor(loop);
-        if ((!tensor || indexed) &&
+        if ((!tensor || support->indexedQubits) &&
             support->coversIteration(ControlFeature::CountedIteration, loop,
                                      tripCount)) {
           return WalkResult::advance();
@@ -512,8 +628,9 @@ protected:
         if (!tripCount) {
           return WalkResult::skip();
         }
-        auto selected = tensor && !indexed ? selectTensorLoop(loop, *tripCount)
-                                           : std::pair{loop, *tripCount};
+        auto selected = tensor && !support->indexedQubits
+                            ? selectTensorLoop(loop, *tripCount)
+                            : std::pair{loop, *tripCount};
         if (selected.first != loop) {
           for (auto parent = selected.first->getParentOfType<scf::ForOp>();;
                parent = parent->getParentOfType<scf::ForOp>()) {
@@ -549,7 +666,7 @@ protected:
           // Promotion preserves child operations and can make their bounds
           // literal. Defer larger loops until static branches have folded.
           for (auto nested : nestedLoops) {
-            const auto nestedTripCount = mqt::getExactConstantTripCount(nested);
+            const auto nestedTripCount = getExactConstantTripCount(nested);
             if (nestedTripCount && *nestedTripCount == 1 &&
                 !support->coversIteration(ControlFeature::CountedIteration,
                                           nested, nestedTripCount)) {
@@ -568,8 +685,8 @@ protected:
           }
         }
 
-        if (failed(mqt::unrollStaticLoop(loop, tripCount, maxOperations,
-                                         clonedOperations))) {
+        if (failed(unrollStaticLoop(loop, tripCount, maxOperations,
+                                    clonedOperations))) {
           signalPassFailure();
           return;
         }
@@ -602,10 +719,6 @@ protected:
           return;
         }
       }
-      if (failed(foldStaticBranches(getOperation()))) {
-        signalPassFailure();
-        return;
-      }
     }
   }
 };
@@ -617,7 +730,7 @@ struct LegalizeControlFlow final
 protected:
   void runOnOperation() override {
     const auto support = PayloadControlSupport::read(
-        getOperation(), getAnalysis<TargetEnvironmentAnalysis>());
+        getOperation(), getAnalysis<TargetEnvironmentAnalysis>(), payloadSpec);
     if (!support || failed(verifyLoopCarriedState(getOperation()))) {
       signalPassFailure();
       return;

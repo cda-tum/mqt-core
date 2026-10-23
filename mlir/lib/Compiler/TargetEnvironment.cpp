@@ -13,6 +13,7 @@
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/MQT/IR/MQTAttributes.h"
+#include "mqt/Target/QIR/Capabilities.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -56,6 +57,56 @@ normalizePayloadVersion(llvm::StringRef version) {
 
 [[nodiscard]] static bool containsNull(const llvm::StringRef value) {
   return value.contains('\0');
+}
+
+llvm::Expected<PayloadSpecification>
+PayloadSpecification::forProgramFormat(ProgramFormat format,
+                                       PayloadEncoding encoding) {
+  switch (format) {
+  case ProgramFormat::OpenQASM3:
+    return PayloadSpecification::create(
+        {
+            .id = "openqasm",
+            .version = "3.1.0",
+            .profile = "",
+            .encoding = encoding,
+        },
+        {
+            {.id = ProgramCapability::FORWARD_BRANCHING.str()},
+            {.id = ProgramCapability::COUNTED_ITERATION.str()},
+            {.id = ProgramCapability::CONDITIONAL_LOOP.str()},
+            {.id = ProgramCapability::MULTIWAY_BRANCHING.str()},
+        });
+  case ProgramFormat::QIRBase:
+    return PayloadSpecification::create({
+        .id = "qir",
+        .version = "2.1.0",
+        .profile = "base",
+        .encoding = encoding,
+    });
+  case ProgramFormat::QIRAdaptive: {
+    std::vector<ProgramCapability> capabilities{
+        {.id = ProgramCapability::FORWARD_BRANCHING.str()},
+        {.id = ProgramCapability::COUNTED_ITERATION.str()},
+        {.id = ProgramCapability::CONDITIONAL_LOOP.str()},
+    };
+    for (const auto& [flag, id] : qir::OPTIONAL_CAPABILITIES) {
+      capabilities.push_back({.id = id});
+    }
+    return PayloadSpecification::create(
+        {
+            .id = "qir",
+            .version = "2.1.0",
+            .profile = "adaptive",
+            .encoding = encoding,
+        },
+        std::move(capabilities));
+  }
+  default:
+    return llvm::createStringError(
+        llvm::errc::invalid_argument,
+        "Compiler output has no executable payload specification");
+  }
 }
 
 llvm::Expected<PayloadSpecification>

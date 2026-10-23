@@ -88,6 +88,13 @@ struct ProgramCapability {
 /// contains all optional device capabilities.
 class PayloadSpecification {
 public:
+  /// Return compiler-supported capabilities for OpenQASM 3 or a QIR profile.
+  ///
+  /// Optional device capabilities remain unknown until supplied by a target.
+  [[nodiscard]] static llvm::Expected<PayloadSpecification>
+  forProgramFormat(ProgramFormat format,
+                   PayloadEncoding encoding = PayloadEncoding::Text);
+
   /// Create and validate a selected payload specification.
   ///
   /// Numeric versions accept one to three components; omitted components are

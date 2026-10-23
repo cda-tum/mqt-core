@@ -16,6 +16,7 @@
 #include "mqt/Conversion/QCOToQC/QCOToQC.h"
 #include "mqt/Conversion/QCToQIR/QIRAdaptive/QCToQIRAdaptive.h"
 #include "mqt/Conversion/QCToQIR/QIRBase/QCToQIRBase.h"
+#include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/Transforms/GlobalPhaseNormalization.h"
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/QCOUtils.h"
@@ -97,10 +98,14 @@ FailureOr<OpenQASMProgram> QCProgram::toOpenQASM3() const {
 }
 
 FailureOr<QIRProgram> QCProgram::intoQIR(QIRProfile profile) && {
+  const auto payload = llvm::cantFail(PayloadSpecification::forProgramFormat(
+      profile == QIRProfile::Adaptive ? ProgramFormat::QIRAdaptive
+                                      : ProgramFormat::QIRBase));
   if (failed(runWithPassManager(
           mod(),
-          [profile](OpPassManager& pm) {
-            populateQIRPreparationPipeline(pm, profile == QIRProfile::Adaptive);
+          [&](OpPassManager& pm) {
+            populateQIRPreparationPipeline(
+                pm, payload.materialize(*mod().getContext()));
             if (profile == QIRProfile::Adaptive) {
               pm.addPass(createQCToQIRAdaptive());
             } else {
