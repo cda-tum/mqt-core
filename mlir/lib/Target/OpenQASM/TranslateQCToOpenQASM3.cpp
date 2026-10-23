@@ -63,6 +63,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LLVM.h"
@@ -77,6 +78,7 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -118,6 +120,11 @@ struct ProgramOutput {
   Value value;
   std::string name;
   std::string kind;
+};
+
+struct ArrayAssignment {
+  Value target;
+  SmallVector<memref::CopyOp> copies;
 };
 
 struct GateCall {
@@ -252,18 +259,18 @@ private:
   size_t numClassicalBits = 0;
   bool supportsDispatch = true;
   int64_t numArrayElements_ = 0;
-  DenseMap<Operation*, SmallVector<Value>> snapshotSources_;
-  DenseSet<Operation*> snapshotWrites_;
-  DenseSet<Value> snapshotStorage_;
+  DenseMap<Operation*, ArrayAssignment> arrayAssignments_;
+  DenseSet<Operation*> elidedArrayOps_;
 
   static constexpr size_t MAX_EXPRESSION_NESTING = 256;
   static constexpr size_t MAX_EXPRESSION_WORK = 4096;
   static constexpr size_t MAX_CLASSICAL_BITS = 1U << 20U;
 
   /// OpenQASM assignments already snapshot their RHS, including concatenations.
-  /// Fold scratch-only copy sequences in the output, without changing the IR's
-  /// non-overlapping memref.copy contract.
-  void collectSnapshotCopies() {
+  /// Recover adjacent copy sequences without changing the IR's non-overlap
+  /// contract. Keep temporary storage when a sequence cannot be proven
+  /// complete.
+  void collectArrayAssignments() {
     const auto slice = [](Value value) {
       if (auto view = value.getDefiningOp<memref::SubViewOp>()) {
         return HyperrectangularSlice(view);
@@ -284,23 +291,117 @@ private:
       }
       return value;
     };
+    const auto collectCopies =
+        [&](Value target,
+            Operation* last) -> FailureOr<SmallVector<memref::CopyOp>> {
+      SmallVector<memref::CopyOp> copies;
+      auto type = cast<MemRefType>(target.getType());
+      if (type.getRank() == 0) {
+        return failure();
+      }
+      auto storage = root(target);
+      auto selection = slice(target);
+      auto readView = target.getDefiningOp<memref::SubViewOp>();
+      // shortcut: recover packed scratch; extend if another producer needs it.
+      if (readView &&
+          (!readView.hasZeroOffset() || !readView.hasUnitStride())) {
+        return failure();
+      }
+      const auto dropped = readView ? readView.getDroppedDims()
+                                    : llvm::SmallBitVector(type.getRank());
+      const auto dimension = dropped.find_first_unset();
+      auto remaining = selection.getMixedSizes()[dimension];
+      using Variable = ValueBoundsConstraintSet::Variable;
+      auto* context = function.getContext();
+      auto delta = AffineMap::get(3, 0,
+                                  getAffineDimExpr(0, context) +
+                                      getAffineDimExpr(1, context) -
+                                      getAffineDimExpr(2, context));
+      const auto endsAt = [&](OpFoldResult offset, OpFoldResult size,
+                              OpFoldResult limit) {
+        // Keep the accumulated offset opaque instead of re-solving its prefix.
+        auto difference = ValueBoundsConstraintSet::computeConstantBound(
+            presburger::BoundType::EQ,
+            Variable(delta,
+                     {Variable(offset), Variable(size), Variable(limit)}),
+            [&](Value value, std::optional<int64_t>,
+                ValueBoundsConstraintSet&) {
+              return value == dyn_cast<Value>(offset);
+            });
+        return succeeded(difference) && *difference == 0;
+      };
+      bool complete = false;
+      for (auto* previous = last; previous != nullptr && !complete;
+           previous = previous->getPrevNode()) {
+        if (isMemoryEffectFree(previous)) {
+          continue;
+        }
+        auto write = dyn_cast<memref::CopyOp>(previous);
+        if (!write || root(write.getTarget()) != storage ||
+            root(write.getSource()) == storage ||
+            elidedArrayOps_.contains(write) ||
+            arrayAssignments_.contains(write) ||
+            elidedArrayOps_.contains(root(write.getSource()).getDefiningOp())) {
+          break;
+        }
+        if (copies.empty() && write.getTarget() == target) {
+          complete = true;
+        } else {
+          auto part = slice(write.getTarget());
+          auto writeView = write.getTarget().getDefiningOp<memref::SubViewOp>();
+          const auto partDropped = writeView
+                                       ? writeView.getDroppedDims()
+                                       : llvm::SmallBitVector(type.getRank());
+          if (partDropped != dropped ||
+              (writeView && !writeView.hasUnitStride()) ||
+              llvm::any_of(
+                  llvm::seq<size_t>(0, selection.getMixedSizes().size()),
+                  [&](size_t index) {
+                    return std::cmp_not_equal(index, dimension) &&
+                           (!isEqualConstantIntOrValue(
+                                part.getMixedSizes()[index],
+                                selection.getMixedSizes()[index]) ||
+                            !isConstantIntValue(part.getMixedOffsets()[index],
+                                                0));
+                  }) ||
+              !endsAt(part.getMixedOffsets()[dimension],
+                      part.getMixedSizes()[dimension], remaining)) {
+            break;
+          }
+          remaining = part.getMixedOffsets()[dimension];
+          complete = isConstantIntValue(remaining, 0);
+        }
+        copies.push_back(write);
+      }
+      if (!complete || copies.empty()) {
+        return failure();
+      }
+      std::ranges::reverse(copies);
+      return copies;
+    };
     DenseSet<Value> neededSources;
     for (auto alloc : function.getBody().front().getOps<memref::AllocaOp>()) {
       if (neededSources.contains(alloc)) {
         continue;
       }
       SmallVector<Value> views{alloc};
-      DenseSet<Operation*> copies;
-      SmallVector<memref::CopyOp> reads;
+      size_t numWrites = 0;
+      SmallVector<std::pair<memref::CopyOp, SmallVector<memref::CopyOp>>> reads;
       bool supported = true;
       for (size_t index = 0; index < views.size() && supported; ++index) {
         for (auto* user : views[index].getUsers()) {
           if (auto view = dyn_cast<memref::SubViewOp>(user)) {
             views.push_back(view);
           } else if (auto copy = dyn_cast<memref::CopyOp>(user)) {
-            copies.insert(copy);
+            if (root(copy.getSource()) == alloc &&
+                root(copy.getTarget()) == alloc) {
+              supported = false;
+              break;
+            }
             if (copy.getSource() == views[index]) {
-              reads.push_back(copy);
+              reads.emplace_back(copy, SmallVector<memref::CopyOp>{});
+            } else {
+              ++numWrites;
             }
           } else {
             supported = false;
@@ -311,101 +412,51 @@ private:
       if (!supported || reads.empty()) {
         continue;
       }
-      DenseMap<Operation*, SmallVector<Value>> sources;
-      DenseSet<Operation*> writes;
-      for (auto read : reads) {
-        auto type = cast<MemRefType>(read.getSource().getType());
-        if (type.getRank() == 0) {
+      size_t plannedWrites = 0;
+      for (auto& [read, copies] : reads) {
+        auto inputs = collectCopies(read.getSource(), read->getPrevNode());
+        if (failed(inputs)) {
           supported = false;
           break;
         }
-        auto selection = slice(read.getSource());
-        auto readView = read.getSource().getDefiningOp<memref::SubViewOp>();
-        const auto dimension =
-            readView ? readView.getDroppedDims().find_first_unset() : 0;
-        auto begin = selection.getMixedOffsets()[dimension];
-        auto stride =
-            getConstantIntValue(selection.getMixedStrides()[dimension]);
-        using Variable = ValueBoundsConstraintSet::Variable;
-        auto* context = function.getContext();
-        const auto end = [&](const HyperrectangularSlice& part) {
-          auto map = AffineMap::get(2, 0,
-                                    getAffineDimExpr(0, context) +
-                                        getAffineDimExpr(1, context) *
-                                            stride.value_or(1));
-          return Variable(map, {
-                                   Variable(part.getMixedOffsets()[dimension]),
-                                   Variable(part.getMixedSizes()[dimension]),
-                               });
-        };
-        auto remaining = end(selection);
-        bool complete = false;
-        for (auto* previous = read->getPrevNode();
-             previous != nullptr && !complete;
-             previous = previous->getPrevNode()) {
-          if (isMemoryEffectFree(previous)) {
-            continue;
-          }
-          auto write = dyn_cast<memref::CopyOp>(previous);
-          if (!write || root(write.getTarget()) != alloc ||
-              root(write.getSource()) == alloc ||
-              snapshotStorage_.contains(root(write.getSource()))) {
-            break;
-          }
-          if (sources[read].empty() && write.getTarget() == read.getSource()) {
-            complete = true;
-          } else {
-            auto part = slice(write.getTarget());
-            auto writeView =
-                write.getTarget().getDefiningOp<memref::SubViewOp>();
-            if (!stride ||
-                cast<MemRefType>(write.getTarget().getType()).getRank() !=
-                    type.getRank() ||
-                (readView && (!writeView || readView.getDroppedDims() !=
-                                                writeView.getDroppedDims())) ||
-                (!readView && writeView && writeView.getDroppedDims().any()) ||
-                !isEqualConstantIntOrValueArray(part.getMixedStrides(),
-                                                selection.getMixedStrides()) ||
-                llvm::any_of(
-                    llvm::seq<size_t>(0, selection.getMixedSizes().size()),
-                    [&](size_t index) {
-                      return std::cmp_not_equal(index, dimension) &&
-                             (!isEqualConstantIntOrValue(
-                                  part.getMixedSizes()[index],
-                                  selection.getMixedSizes()[index]) ||
-                              !isEqualConstantIntOrValue(
-                                  part.getMixedOffsets()[index],
-                                  selection.getMixedOffsets()[index]));
-                    }) ||
-                !ValueBoundsConstraintSet::compare(
-                    end(part), ValueBoundsConstraintSet::EQ, remaining)) {
-              break;
-            }
-            remaining = Variable(part.getMixedOffsets()[dimension]);
-            complete = ValueBoundsConstraintSet::compare(
-                remaining, ValueBoundsConstraintSet::EQ, Variable(begin));
-          }
-          sources[read].push_back(write.getSource());
-          writes.insert(write);
-        }
-        if (!complete || sources[read].empty()) {
-          supported = false;
-          break;
-        }
-        std::reverse(sources[read].begin(), sources[read].end());
+        copies = std::move(*inputs);
+        plannedWrites += copies.size();
       }
-      if (!supported || copies.size() != writes.size() + reads.size()) {
+      // Reads delimit disjoint write runs; every write must belong to one.
+      if (!supported || plannedWrites != numWrites) {
         continue;
       }
-      snapshotStorage_.insert(alloc);
-      snapshotWrites_.insert(writes.begin(), writes.end());
-      for (auto& [read, inputs] : sources) {
-        for (auto input : inputs) {
-          neededSources.insert(root(input));
+      elidedArrayOps_.insert(alloc);
+      for (auto& [read, copies] : reads) {
+        for (auto copy : copies) {
+          neededSources.insert(root(copy.getSource()));
+          elidedArrayOps_.insert(copy);
         }
-        snapshotSources_.try_emplace(read, std::move(inputs));
+        arrayAssignments_.try_emplace(read, ArrayAssignment{
+                                                .target = read.getTarget(),
+                                                .copies = std::move(copies),
+                                            });
       }
     }
+    // A concatenation initializer must remain one assignment on reimport.
+    function.walk([&](memref::CopyOp copy) {
+      if (!copy.getTarget().getDefiningOp<memref::SubViewOp>() ||
+          elidedArrayOps_.contains(copy) || arrayAssignments_.contains(copy)) {
+        return;
+      }
+      auto target = root(copy.getTarget());
+      if (!target.getDefiningOp<memref::AllocaOp>()) {
+        return;
+      }
+      auto copies = collectCopies(target, copy);
+      if (failed(copies) || copies->size() < 2) {
+        return;
+      }
+      elidedArrayOps_.insert(copies->begin(), copies->end() - 1);
+      arrayAssignments_.try_emplace(
+          copy,
+          ArrayAssignment{.target = target, .copies = std::move(*copies)});
+    });
   }
 
   [[nodiscard]] static LogicalResult fail(Operation* operation,
@@ -506,9 +557,15 @@ private:
         }
       }
     }
-    bool hasArrays = false;
-    moduleOp.walk([&](memref::AllocaOp) { hasArrays = true; });
-    if (!needsInlining && !hasArrays) {
+    const bool needsArrayNormalization =
+        moduleOp
+            .walk([](Operation* op) {
+              return isa<ViewLikeOpInterface, memref::DimOp, memref::RankOp>(op)
+                         ? WalkResult::interrupt()
+                         : WalkResult::advance();
+            })
+            .wasInterrupted();
+    if (!needsInlining && !needsArrayNormalization) {
       return success();
     }
     preparedModule_ = moduleOp.clone();
@@ -530,7 +587,7 @@ private:
         return failure();
       }
     }
-    if (hasArrays) {
+    if (needsArrayNormalization) {
       DialectRegistry registry;
       arith::registerValueBoundsOpInterfaceExternalModels(registry);
       context->appendDialectRegistry(registry);
@@ -711,7 +768,7 @@ private:
       }
     }
 
-    collectSnapshotCopies();
+    collectArrayAssignments();
     for (Operation& operation : function.getBody().front().getOperations()) {
       if (auto alloc = dyn_cast<qc::AllocOp>(&operation)) {
         const auto location = dyn_cast<NameLoc>(alloc.getLoc());
@@ -739,7 +796,7 @@ private:
         continue;
       }
       if (auto alloc = dyn_cast<memref::AllocaOp>(&operation)) {
-        if (snapshotStorage_.contains(alloc)) {
+        if (elidedArrayOps_.contains(alloc)) {
           continue;
         }
         auto type = alloc.getType();
@@ -1061,25 +1118,26 @@ private:
       return success();
     }
     if (auto copy = dyn_cast<memref::CopyOp>(&operation)) {
-      if (snapshotWrites_.contains(copy)) {
+      if (elidedArrayOps_.contains(copy)) {
         return success();
       }
       auto type = cast<MemRefType>(copy.getSource().getType());
       if (llvm::is_contained(type.getShape(), int64_t{0})) {
         return success();
       }
-      auto target = emitArraySelection(copy.getTarget());
+      const auto planned = arrayAssignments_.find(copy);
+      auto target = emitArraySelection(planned == arrayAssignments_.end()
+                                           ? copy.getTarget()
+                                           : planned->second.target);
       if (failed(target)) {
         return failure();
       }
       SmallVector<std::string> sources;
-      const auto planned = snapshotSources_.find(copy);
-      auto originalSource = copy.getSource();
-      auto inputs = planned == snapshotSources_.end()
-                        ? ValueRange(originalSource)
-                        : ValueRange(planned->second);
+      auto inputs = planned == arrayAssignments_.end()
+                        ? ArrayRef<memref::CopyOp>(copy)
+                        : ArrayRef<memref::CopyOp>(planned->second.copies);
       for (auto input : inputs) {
-        auto source = emitArraySelection(input);
+        auto source = emitArraySelection(input.getSource());
         if (failed(source)) {
           return failure();
         }

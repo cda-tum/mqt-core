@@ -373,7 +373,8 @@ require loop support. See the
 
 OpenQASM export supports fixed-size stack arrays, strided and overlapping
 copies, and concatenation without changing the input IR. Arrays support one to
-seven dimensions and up to 100,000 elements in total. Export preserves loaded
+seven dimensions and up to 100,000 elements in total, including temporary arrays
+whose copies cannot be folded into one assignment. Export preserves loaded
 values across writes, retains integer bit patterns, and emits angles as
 floating-point radians. Reimport also requires the combined register-and-array
 limit described above.

@@ -1680,6 +1680,16 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
     SCOPED_TRACE(source.str());
     auto qc = QCProgram::fromOpenQASMString(source.str());
     ASSERT_TRUE(mlir::succeeded(qc));
+    auto exported = qc->toOpenQASM3();
+    ASSERT_TRUE(succeeded(exported));
+    auto reimported = QCProgram::fromOpenQASMString(exported->source());
+    ASSERT_TRUE(succeeded(reimported));
+    auto roundTripped = std::move(*reimported).intoQCO();
+    ASSERT_TRUE(succeeded(roundTripped));
+    const auto exportedOutcomes =
+        qco::sample(mlir::mqt::getEntryPoint(roundTripped->module()), 4, 42);
+    ASSERT_TRUE(succeeded(exportedOutcomes));
+    EXPECT_EQ(*exportedOutcomes, (std::map<std::string, size_t>{{"1", 4}}));
     auto program = std::move(*qc).intoQCO();
     ASSERT_TRUE(mlir::succeeded(program));
     const auto beforeCleanup =

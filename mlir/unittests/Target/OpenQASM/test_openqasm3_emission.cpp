@@ -574,7 +574,13 @@ TEST(OpenQASM3EmissionTest, KeepsSnapshotAcrossSourceWrites) {
       memref.copy %saved, %a : memref<2xi1> to memref<2xi1>
       %view = memref.subview %a[0] [1] [1] : memref<2xi1> to memref<1xi1>
       %result = func.call @read(%view) : (memref<1xi1>) -> i1
-      scf.if %result { qc.x %q : !qc.qubit }
+      %tail = memref.subview %a[1] [1] [1] : memref<2xi1> to memref<1xi1, strided<[1], offset: 1>>
+      memref.copy %tail, %view : memref<1xi1, strided<[1], offset: 1>> to memref<1xi1>
+      memref.copy %view, %tail : memref<1xi1> to memref<1xi1, strided<[1], offset: 1>>
+      %last = memref.load %a[%one] : memref<2xi1>
+      %cleared = arith.xori %last, %yes : i1
+      %correct = arith.andi %result, %cleared : i1
+      scf.if %correct { qc.x %q : !qc.qubit }
       %measured = qc.measure %q : !qc.qubit -> i1
       cbit.store %measured, %bits[%zero] : !cbit.reg<1>
       qc.dealloc %q : !qc.qubit
