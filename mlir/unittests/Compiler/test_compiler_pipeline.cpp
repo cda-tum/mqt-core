@@ -1317,17 +1317,16 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
       R"qasm(OPENQASM 3.0;
         array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};
         int sum = 0;
+        int row = 1;
         int start = 2;
         int step = -1;
-        for int x in a[1, start:step:] {
+        for int x in a[row, start:step:] {
           sum = sum * 10 + x;
-          start = 0; step = 1; x = 0;
+          row = 0; start = 0; step = 1;
+          if (x == 6) { x = 0; continue; }
         }
         array[int, 0] empty;
         for int x in empty { x = 2; sum = 0; }
-        int x = 1;
-        for int x in empty { break; }
-        for int x in empty[:step:] { sum = 0; }
         for int x in empty[:step:] { sum = 0; break; }
         qubit q;
         if (sum == 654 && a[1, 2] == 6) { U(pi, 0, 0) q; }

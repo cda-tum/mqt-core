@@ -129,8 +129,8 @@ element in selection order; writes to later elements remain visible. Bounds are
 evaluated once. Empty arrays skip the body; `break` and `continue` work as in
 range loops. Selected elements must be initialized, or the whole array for
 runtime selections. Loop variables support scalar numeric conversions and sized
-integers. An `angle` variable requires an angle array with no wider precision
-and retains the compile-time assignment restriction.
+integers. An `angle` loop variable must have at least the array element width.
+Its assignments must be compile-time values.
 
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:

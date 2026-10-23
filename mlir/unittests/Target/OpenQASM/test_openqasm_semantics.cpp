@@ -370,8 +370,8 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
               "array[angle, 1] a = {pi}; qubit q; U(a[0] + a[0], 0, 0) q;",
               "runtime fixed-width angle arithmetic",
           },
-          {"array[angle, 1] a = {pi}; int b = int(a[0]);", "cast angle"},
-          {"array[angle, 1] a = {pi}; bool b = a[0] == pi;", "cast angle"},
+          {"array[angle, 1] a = {pi}; int b = int(a[0]);", "to float"},
+          {"array[angle, 1] a = {pi}; bool b = a[0] == pi;", "to float"},
           {"int i = 0; array[int, 1] a = {a[i]};", "uninitialized"},
           {"array[int, 1] a; int b = a[0];", "uninitialized"},
           {

@@ -2785,9 +2785,8 @@ private:
       }
       MQT_OQ3_TRY_ASSIGN(operand, analyzeExpression(*expression.rhs));
       if (isRuntimeAngle(operand)) {
-        return fail(
-            expression.location,
-            "cast angle array entries to float before integer conversion");
+        return fail(expression.location,
+                    "cast runtime angles to float before integer conversion");
       }
       return addExpression({
           .kind = ExpressionKind::Cast,
@@ -3064,7 +3063,7 @@ private:
     if (isRuntimeAngle(lhs) || (rhs && isRuntimeAngle(*rhs))) {
       return fail(expression.location,
                   "runtime fixed-width angle arithmetic is not supported; "
-                  "cast array entries to float first");
+                  "cast runtime angles to float first");
     }
     if (!rhs) {
       return addExpression({.kind = kind, .type = lhsType, .lhs = lhs});
@@ -3716,8 +3715,7 @@ private:
     if (type == ScalarType::Angle) {
       MQT_OQ3_TRY_ASSIGN(isConstant, isConstantExpression(value));
       if (!isConstant) {
-        return fail(location,
-                    "angle array entries require compile-time values");
+        return fail(location, "angle values require compile-time values");
       }
       MQT_OQ3_TRY_ASSIGN(constant, evaluateConstant(value));
       MQT_OQ3_TRY_ASSIGN(converted,
@@ -5519,9 +5517,8 @@ private:
       const auto rhsType = program.expressions[typed.comparisonRhs].type;
       if ((isRuntimeAngle(comparisonLhs) && rhsType != ScalarType::Angle) ||
           (isRuntimeAngle(comparisonRhs) && lhsType != ScalarType::Angle)) {
-        return fail(
-            condition.location,
-            "cast angle array entries to float for mixed-type comparisons");
+        return fail(condition.location,
+                    "cast runtime angles to float for mixed-type comparisons");
       }
       const bool boolComparison =
           lhsType == ScalarType::Bool || rhsType == ScalarType::Bool;

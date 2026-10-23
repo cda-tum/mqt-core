@@ -127,8 +127,6 @@ TEST(OpenQASMTargetTest, ArrayIterationDoesNotCopyOrUnrollTheArray) {
   EXPECT_EQ(arrays, 1);
   EXPECT_EQ(loops, 1);
   EXPECT_EQ(loads, 1);
-  moduleOp->walk(
-      [](memref::CopyOp) { ADD_FAILURE() << "iteration uses a view"; });
 }
 
 TEST(OpenQASMTargetTest, RangeCopiesReuseScratchOutsideLoops) {

@@ -34,6 +34,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -2091,6 +2092,9 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
         return applyUnitaryMatrix(unitary, walk, state);
       })
       .Default([&](Operation* unsupported) -> LogicalResult {
+        if (isa<ub::PoisonOp>(unsupported) && unsupported->use_empty()) {
+          return success();
+        }
         const StringRef dialect = unsupported->getName().getDialectNamespace();
         if (dialect == arith::ArithDialect::getDialectNamespace() ||
             dialect == math::MathDialect::getDialectNamespace() ||
