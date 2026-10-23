@@ -1067,10 +1067,11 @@ def test_qiskit_store_preserves_width_one_uint_contexts() -> None:
     assert indexed_store.lvalue.index.type == types.Uint(1)
 
 
-@pytest.mark.parametrize("width", [1, 2, 150])
-def test_qiskit_indexed_access_preserves_snapshots(width: int) -> None:
+@pytest.mark.parametrize(("width", "mutate_index"), [(1, True), (2, True), (150, True), (150, False)])
+def test_qiskit_indexed_access_preserves_snapshots(width: int, *, mutate_index: bool) -> None:
     """Retain the index and loaded bit across writes to their source registers."""
     initial = 1 << (width - 1) if width > 64 else 0
+    index_write = f"cbit.store %true, %index[%zero] : !cbit.reg<{width}>" if mutate_index else ""
     program = QCProgram.from_mlir_str(f"""module {{
   func.func @main() -> (!cbit.reg<4>, !cbit.reg<{width}>, i1, i1) attributes {{mqt.entry_point}} {{
     %q = qc.alloc : !qc.qubit
@@ -1083,7 +1084,7 @@ def test_qiskit_indexed_access_preserves_snapshots(width: int) -> None:
     %old_index = cbit.read %index : !cbit.reg<{width}> -> i{width}
     %zero = arith.constant 0 : index
     %true = arith.constant true
-    cbit.store %true, %index[%zero] : !cbit.reg<{width}>
+    {index_write}
     %target = arith.index_castui %old_index : i{width} to index
     %before = cbit.load %data[%target] : !cbit.reg<4>
     %false = arith.constant false
@@ -1094,10 +1095,12 @@ def test_qiskit_indexed_access_preserves_snapshots(width: int) -> None:
   }}
 }}
 """)
-    expected = {f"01{((initial | 1) << 4) | 14:0{width + 4}b}": 1}
+    expected = {f"01{((initial | mutate_index) << 4) | 14:0{width + 4}b}": 1}
     restored = program.to_qiskit(copy=True)
     assert sample(program, shots=1, seed=1) == expected
     assert sample(restored, shots=1, seed=1) == expected
+    if not mutate_index:
+        assert f"uint[64](uint[{width}](index))" in qiskit.qasm3.dumps(restored)
 
 
 def test_qiskit_custom_gate_named_store_remains_a_gate() -> None:

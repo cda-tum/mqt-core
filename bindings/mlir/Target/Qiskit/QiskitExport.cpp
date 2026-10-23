@@ -1168,6 +1168,31 @@ castBoolToUintOne(std::unique_ptr<Expression> expression) {
 }
 
 [[nodiscard]] static std::unique_ptr<Expression>
+uintCast(std::unique_ptr<Expression> operand, unsigned width,
+         size_t& nodeCount) {
+  if (operand->type == ClassicalType::Uint && operand->width == width) {
+    return operand;
+  }
+  if (operand->kind == ExpressionKind::ClassicalRegister) {
+    // Qiskit's OpenQASM exporter needs a matching-width register cast first.
+    countExpressionNode(nodeCount);
+    auto exact = std::make_unique<Expression>();
+    exact->kind = ExpressionKind::Cast;
+    exact->type = ClassicalType::Uint;
+    exact->width = operand->width;
+    exact->left = std::move(operand);
+    operand = std::move(exact);
+  }
+  countExpressionNode(nodeCount);
+  auto cast = std::make_unique<Expression>();
+  cast->kind = ExpressionKind::Cast;
+  cast->type = ClassicalType::Uint;
+  cast->width = width;
+  cast->left = std::move(operand);
+  return cast;
+}
+
+[[nodiscard]] static std::unique_ptr<Expression>
 exportExpressionImpl(mlir::Value value, ExportState& state,
                      mlir::Block& evaluationBlock, size_t depth,
                      size_t& nodeCount);
@@ -1212,12 +1237,7 @@ exportClassicalBit(mlir::Value reg, mlir::Value index, ExportState& state,
     throw std::runtime_error("Qiskit dynamic classical index must be Uint");
   }
   if (result.right->width > 64U) {
-    auto narrowed = std::make_unique<Expression>();
-    narrowed->kind = ExpressionKind::Cast;
-    narrowed->type = ClassicalType::Uint;
-    narrowed->width = 64U;
-    narrowed->left = std::move(result.right);
-    result.right = std::move(narrowed);
+    result.right = uintCast(std::move(result.right), 64U, nodeCount);
   }
   return result;
 }
@@ -1400,29 +1420,6 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
     literal->uintValue = bits;
     return literal;
   };
-  const auto uintCast = [&](std::unique_ptr<Expression> operand,
-                            unsigned width) {
-    if (operand->type == ClassicalType::Uint && operand->width == width) {
-      return operand;
-    }
-    if (operand->kind == ExpressionKind::ClassicalRegister) {
-      // Qiskit's OpenQASM exporter needs a matching-width register cast first.
-      countExpressionNode(nodeCount);
-      auto exact = std::make_unique<Expression>();
-      exact->kind = ExpressionKind::Cast;
-      exact->type = ClassicalType::Uint;
-      exact->width = operand->width;
-      exact->left = std::move(operand);
-      operand = std::move(exact);
-    }
-    countExpressionNode(nodeCount);
-    auto cast = std::make_unique<Expression>();
-    cast->kind = ExpressionKind::Cast;
-    cast->type = ClassicalType::Uint;
-    cast->width = width;
-    cast->left = std::move(operand);
-    return cast;
-  };
   const auto uintBinary = [&](BinaryOperation kind, unsigned width,
                               std::unique_ptr<Expression> lhs,
                               std::unique_ptr<Expression> rhs) {
@@ -1443,7 +1440,7 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
     auto operand =
         uintCast(exportExpressionImpl(cast.getIn(), state, evaluationBlock,
                                       depth + 1U, nodeCount),
-                 width);
+                 width, nodeCount);
     const auto sign = llvm::APInt::getOneBitSet(width, sourceWidth - 1U);
     state.expressionOperations.insert(operation);
     return uintBinary(BinaryOperation::Subtract, width,
@@ -1459,7 +1456,7 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
     const auto operand = [&](mlir::Value input) {
       return uintCast(exportExpressionImpl(input, state, evaluationBlock,
                                            depth + 1U, nodeCount),
-                      width);
+                      width, nodeCount);
     };
     auto mask = uintBinary(BinaryOperation::Subtract, width,
                            uintLiteral(llvm::APInt::getZero(width)),
@@ -1484,7 +1481,7 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
     state.expressionOperations.insert(operation);
     return uintCast(exportExpressionImpl(cast.getIn(), state, evaluationBlock,
                                          depth + 1U, nodeCount),
-                    result->width);
+                    result->width, nodeCount);
   }
   if (llvm::isa<mlir::arith::UIToFPOp, mlir::arith::FPToUIOp>(operation)) {
     return unary(ExpressionKind::Cast, operation->getOperand(0));
@@ -1494,7 +1491,7 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
       state.expressionOperations.insert(operation);
       return uintCast(exportExpressionImpl(cast.getIn(), state, evaluationBlock,
                                            depth + 1U, nodeCount),
-                      result->width);
+                      result->width, nodeCount);
     }
     result->kind = ExpressionKind::Index;
     if (auto shift = cast.getIn().getDefiningOp<mlir::arith::ShRUIOp>()) {
@@ -1600,7 +1597,7 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
     const auto operand = [&](mlir::Value input) {
       return uintCast(exportExpressionImpl(input, state, evaluationBlock,
                                            depth + 1U, nodeCount),
-                      width);
+                      width, nodeCount);
     };
     const auto sign = llvm::APInt::getSignMask(width);
     auto shifted =
@@ -1625,7 +1622,7 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
     const auto operand = [&](mlir::Value input) {
       return uintCast(exportExpressionImpl(input, state, evaluationBlock,
                                            depth + 1U, nodeCount),
-                      width);
+                      width, nodeCount);
     };
     auto quotient = uintBinary(BinaryOperation::Divide, width,
                                operand(op.getLhs()), operand(op.getRhs()));
