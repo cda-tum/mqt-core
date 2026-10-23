@@ -75,6 +75,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <variant>
 
 namespace mlir {
 using namespace qc;
@@ -478,10 +479,22 @@ void addInitialize(LLVM::LLVMFuncOp& main, MLIRContext* ctx,
 void addOutputRecording(LLVM::LLVMFuncOp& main, MLIRContext* ctx,
                         LoweringState& state) {
   OpBuilder builder(ctx);
-  builder.setInsertionPoint(&main.getBlocks().back().back());
+  auto returnOp = cast<LLVM::ReturnOp>(&main.getBlocks().back().back());
+  builder.setInsertionPoint(returnOp);
+  auto returned = returnOp.getOperand(0);
   SmallVector<qir::OutputRecord> outputs;
   outputs.reserve(state.returnedOutputs.size());
-  for (auto* operation : state.returnedOutputs) {
+  for (const auto& output : state.returnedOutputs) {
+    if (const auto* index = std::get_if<int64_t>(&output)) {
+      auto value = builder.createOrFold<LLVM::ExtractValueOp>(
+          returnOp.getLoc(), returned, ArrayRef<int64_t>{*index});
+      outputs.push_back({
+          .label = "__unnamed__" + std::to_string(outputs.size()),
+          .value = value,
+      });
+      continue;
+    }
+    auto* operation = std::get<Operation*>(output);
     if (const auto it = state.cregIndices.find(operation);
         it != state.cregIndices.end()) {
       const auto& reg = state.cregs[it->second];
@@ -489,6 +502,13 @@ void addOutputRecording(LLVM::LLVMFuncOp& main, MLIRContext* ctx,
     } else {
       outputs.push_back(state.measuredResults.at(operation));
     }
+  }
+  if (isa<LLVM::LLVMStructType>(returned.getType())) {
+    auto status = builder.createOrFold<LLVM::ExtractValueOp>(
+        returnOp.getLoc(), returned, ArrayRef<int64_t>{0});
+    returnOp->setOperands(status);
+    main.setFunctionType(
+        LLVM::LLVMFunctionType::get(status.getType(), main.getArgumentTypes()));
   }
   emitOutputRecording(builder, main, outputs);
 }
@@ -672,6 +692,7 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
     return failure();
   }
   size_t registerCount = 0;
+  SmallVector<Value> scalarOutputs;
   for (auto operand : returnOp.getOperands()) {
     auto* definition = operand.getDefiningOp();
     if (isa_and_nonnull<MeasureOp>(definition)) {
@@ -693,10 +714,15 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
         reg.record = true;
       }
       state.returnedOutputs.push_back(definition);
+    } else if (allowComputedOutputs && operand.getType().isInteger(1)) {
+      scalarOutputs.push_back(operand);
+      state.returnedOutputs.emplace_back(
+          static_cast<int64_t>(scalarOutputs.size()));
     } else {
       return returnOp.emitError(
           "QIR entry return supports only direct measurements and CBit "
-          "allocations; other scalar program outputs are not supported");
+          "allocations, plus Boolean scalars in Adaptive Profile; other "
+          "scalar program outputs are not supported");
     }
   }
 
@@ -709,6 +735,14 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
       }
     });
   }
+
+  const auto useBooleanStorage = [&](size_t registerIndex) {
+    if (!allowComputedOutputs) {
+      return false;
+    }
+    state.cregs[registerIndex].booleanStorage = true;
+    return true;
+  };
 
   DenseMap<Block*, DenseSet<Operation*>> fusionCandidates;
   funcOp.walk([&](cbit::StoreOp storeOp) {
@@ -750,6 +784,9 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
                                                measureOp, dominance));
     }
     if (!canFuse) {
+      if (useBooleanStorage(registerIndex)) {
+        return;
+      }
       storeOp.emitError("QIR output cannot fuse this measurement/store pair: "
                         "require the same block, an index available or safely "
                         "computable before measurement, and no intervening "
@@ -762,6 +799,9 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
     const auto [it, inserted] = state.cregMeasurements.try_emplace(
         measureOp.getOperation(), destination);
     if (!inserted && it->second != destination) {
+      if (useBooleanStorage(registerIndex)) {
+        return;
+      }
       storeOp.emitError("a measurement result cannot be stored in multiple "
                         "classical register locations during QIR conversion");
       hasInvalidMemory = true;
@@ -771,7 +811,6 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
   if (hasInvalidMemory) {
     return failure();
   }
-
   DenseSet<size_t> sharedRegisters;
   for (auto* measurement : llvm::make_first_range(state.measuredResults)) {
     if (auto it = state.cregMeasurements.find(measurement);
@@ -808,6 +847,9 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
       if (!index || dynamicStores.contains(destination.first) ||
           storedMeasurements.lookup({destination.first, *index}) !=
               measurement) {
+        if (useBooleanStorage(destination.first)) {
+          continue;
+        }
         measurement->emitError(
             "returned scalar measurement cannot share overwritten register "
             "storage; require distinct constant store indices");
@@ -819,12 +861,21 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
     }
   }
 
+  llvm::erase_if(consumedStores, [&](cbit::StoreOp store) {
+    return state.cregs[state.cregIndices.at(store.getReg().getDefiningOp())]
+        .booleanStorage;
+  });
+  state.cregMeasurements.remove_if([&](const auto& measurement) {
+    return state.cregs[measurement.second.first].booleanStorage;
+  });
+
   OpBuilder builder(returnOp);
   auto zero = arith::ConstantIntOp::create(builder, returnOp.getLoc(), 0, 64);
-  returnOp.getOperandsMutable().assign(zero);
+  scalarOutputs.insert(scalarOutputs.begin(), zero);
+  returnOp.getOperandsMutable().assign(scalarOutputs);
   funcOp.setFunctionType(FunctionType::get(funcOp.getContext(),
                                            funcOp.getFunctionType().getInputs(),
-                                           {zero.getType()}));
+                                           returnOp.getOperandTypes()));
   for (auto storeOp : consumedStores) {
     auto measureOp = storeOp.getValue().getDefiningOp<MeasureOp>();
     auto allocOp = storeOp.getReg().getDefiningOp<cbit::AllocOp>();

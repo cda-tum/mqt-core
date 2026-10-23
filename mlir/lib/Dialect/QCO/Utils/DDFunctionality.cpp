@@ -2391,18 +2391,16 @@ getSamplingPlan(func::FuncOp func, bool statevectorAnalysis = false) {
            << "single-block QCO DD execution requires func.return";
   }
 
-  bool hasOther = false;
   for (Value value : returnOp.getOperands()) {
-    if (isa<cbit::RegisterType>(value.getType())) {
+    if (isa<cbit::RegisterType>(value.getType()) ||
+        value.getType().isInteger(1)) {
       plan.outputs.push_back(value);
-    } else {
-      hasOther = true;
+    } else if (!statevectorAnalysis && !isa<QubitType>(value.getType()) &&
+               !isQTensorType(value.getType())) {
+      return returnOp.emitError()
+             << "QCO DD sampling supports only CBit registers and Boolean "
+                "classical outputs";
     }
-  }
-  if (!statevectorAnalysis && !plan.outputs.empty() && hasOther) {
-    return returnOp.emitError()
-           << "QCO DD sampling does not support mixed CBit and non-CBit "
-              "results";
   }
 
   analyzeSampling(func, plan);
@@ -2424,7 +2422,8 @@ simulateStatevector(func::FuncOp func, dd::Package& dd,
   if (plan->dynamic) {
     return func.emitError()
            << "statevector extraction supports only terminal measurements "
-              "that assemble returned CBit registers";
+              "whose results are unused, returned directly, or stored in "
+              "returned CBit registers";
   }
   DenseSet<dd::Qubit> measuredWires;
   Operation* deferredMeasurementUse = nullptr;
@@ -2448,6 +2447,20 @@ static FailureOr<std::string> encodeOutcome(ArrayRef<Value> outputs,
   }
   std::string outcome;
   for (Value value : llvm::reverse(outputs)) {
+    if (value.getType().isInteger(1)) {
+      if (const auto bit =
+              dyn_cast_if_present<IntegerAttr>(classical.lookup(value))) {
+        outcome.push_back(bit.getValue().isZero() ? '0' : '1');
+      } else if (const auto wire = classical.deferredMeasurements.find(value);
+                 wire != classical.deferredMeasurements.end() &&
+                 wire->second < basis.size()) {
+        outcome.push_back(basis[basis.size() - 1 - wire->second]);
+      } else {
+        return emitError(value.getLoc())
+               << "returned Boolean value is not mapped for QCO DD simulation";
+      }
+      continue;
+    }
     const auto reg = classical.registers.find(value);
     if (reg == classical.registers.end()) {
       return emitError(value.getLoc())

@@ -18,7 +18,8 @@ add_mlir_dialect_library(
   MLIRArithDialect
   MLIRDialectUtils
   MLIRIR
-  MLIRSideEffectInterfaces)
+  MLIRSideEffectInterfaces
+  MLIRMemorySlotInterfaces)
 
 mqt_mlir_target_use_project_options(MLIRCBitDialect)
 

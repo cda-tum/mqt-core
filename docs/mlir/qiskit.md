@@ -109,10 +109,9 @@ the source, including when export fails. Pass `copy=True` to preserve it.
 | Generic instructions with finite, acyclic definitions                   | Recursively expanded | Expanded operations                |
 | Nested `if`/`else`, `for`, `while`, and `switch`                        | Supported            | Supported                          |
 | Classical-bit and register conditions                                   | Supported            | Supported                          |
-| Constant Boolean, `Uint` up to 64 bits, and `Float` expressions         | Supported            | Supported                          |
+| Constant Boolean, `Uint`, and `Float` expressions                       | Supported            | Supported                          |
 | Clbit and ClassicalRegister expression variables                        | Supported            | Supported                          |
 | Fixed-width bitwise operations, comparisons, and bounded shifts         | Supported            | Supported                          |
-| Direct complete-register comparisons wider than 64 bits                 | Supported            | Supported                          |
 | Clbit, indexed-register, and whole-register `Store` assignments         | Supported            | Supported                          |
 | Initialized local classical variables and enclosing captures            | Supported            | Native `expr.Var` and `Store`      |
 | External runtime input variables                                        | Rejected             | Rejected                           |
@@ -198,31 +197,29 @@ body, advances a for-loop iterator, and then reevaluates the loop condition.
 Both imports use SCF control flow, so export preserves behavior without
 requiring the original jump statement to survive normalization.
 
-Local scalar state covers Boolean values, integers of widths 1–64, and `f64`
-using supported backend operations. It uses native `expr.Var` declarations,
-`Store` assignments, and captures in nested circuits. Compiler variables do not
-increase the classical-bit or register counts. Import accepts initialized local
-variables and captures from enclosing supported circuits. External runtime
-inputs remain unsupported. Runtime classical values cannot be used as symbolic
-gate parameters.
+Local scalar state covers Boolean values, fixed-width integers, and `f64` using
+supported backend operations. It uses native `expr.Var` declarations, `Store`
+assignments, and captures in nested circuits. Compiler variables do not increase
+the classical-bit or register counts. Import accepts initialized local variables
+and captures from enclosing supported circuits. External runtime inputs remain
+unsupported. Runtime classical values cannot be used as symbolic gate
+parameters.
 
 Canonical short-circuit Boolean expressions retain their native expression form.
 A live {code}`scf.for` induction value must reduce to an affine {code}`f64` gate
 parameter. The exporter preserves one Qiskit parameter identity for that value
 throughout its lexical body. An {code}`scf.index_switch` selector must be a
 constant index or a supported Boolean/Uint expression converted with
-{code}`arith.index_castui`. Switch labels must be nonnegative constants that fit
-the target width.
+{code}`arith.index_castui`. Switch selectors have at most 64 bits. Labels must
+be nonnegative constants that fit the target width.
 
 Nested blocks may capture existing qubits, classical bits, and local variables
 but may not allocate or release qubits. Scoped CBit allocations become circuit
 registers; zero-initialized storage is reset on each block entry. Control flow
 and classical expressions may nest up to 64 levels, and classical expression
-trees may contain at most 16,384 nodes. Integer values use exact widths from 1
-through 64. The only wider form is a direct unsigned comparison between one
-complete `ClassicalRegister` and one same-width literal; computed, packed, and
-signed wide values remain rejected. Both expression conditions and tuple
-conditions such as `if_test((register, value))` support this form. Tuple
+trees may contain at most 16,384 nodes. Integer expressions retain their exact
+width, including values wider than 64 bits. Expression conditions and tuple
+conditions such as `if_test((register, value))` support wide registers. Tuple
 equalities with a value outside the register range become false. Standard
 `arith.cmpi` handles every comparison: signed ordering is encoded by XOR-biasing
 both operands' sign bits, including computed operands. Casts preserve truncation
@@ -238,22 +235,17 @@ constant-zero `i64`. Whole-register reads map to Qiskit `ClassicalRegister`
 expressions, and writes map to atomic Qiskit `Store` operations. Indexed stores
 assume that their runtime index is in bounds. Internal CBit storage becomes
 additional Qiskit registers, ordered before returned registers; Qiskit exposes
-all circuit storage. OpenQASM remains the source interchange path for arbitrary
-register widths.
+all circuit storage. Other formats and execution backends may support a narrower
+set of integer widths.
 
 Every public CBit output is exported as a Qiskit `ClassicalRegister`; an unnamed
 allocation receives a collision-free `_mqt_cN` name. This preserves the CBit
 register boundary and gives whole-register writes a valid Qiskit lvalue. Loose
 input Clbits therefore round trip semantically, but not as loose output bits.
 
-Conditions and switch targets may read a zero-initialized CBit register. An
-undefined CBit may be read only after a definite write to that bit, and every
-bit of an undefined returned register must be definitely initialized. Branches
-intersect their initialization facts after statically resolved control flow is
-simplified. A while loop's before region executes at least once; its after
-region may execute zero times. The exporter preserves scalar values across later
-writes and control-flow boundaries. Reads wider than 64 bits remain subject to
-the snapshot checks.
+Qiskit circuit storage starts at zero. Reading an undefined CBit before its
+first write is undefined behavior. The exporter preserves scalar snapshots,
+including wide register reads, across later writes and control-flow boundaries.
 
 Measurements keep their program order and write to static Qiskit Clbits. The
 exporter reuses a CBit destination when its store can move next to the

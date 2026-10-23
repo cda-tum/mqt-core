@@ -2697,22 +2697,27 @@ TEST_F(QCODDFunctionalityTest, SimulateRicherClassicalArithmetic) {
   expectSimulatesFromZero(mainFunc(*mod), true);
 }
 
-TEST_F(QCODDFunctionalityTest, SampleReturnsCBitRegistersInCountStringOrder) {
-  auto mod = buildModule([](QCOProgramBuilder& b) -> SmallVector<Value> {
-    auto wide =
-        b.allocClassicalBitRegister(2, {}, cbit::Initialization::Undefined);
-    auto narrow = b.allocClassicalBitRegister(1);
-    b.storeClassicalBit(b.boolConstant(false), wide, 0);
-    b.storeClassicalBit(b.boolConstant(true), wide, 1);
-    b.storeClassicalBit(b.boolConstant(true), narrow, 0);
-    return {wide, narrow};
-  });
+TEST_F(QCODDFunctionalityTest,
+       SampleReturnsClassicalResultsInCountStringOrder) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main(%q: !qco.qubit) -> (!cbit.reg<2>, i1, !cbit.reg<1>, i1, !qco.qubit) {
+      %false = arith.constant false
+      %true = arith.constant true
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %wide = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
+      %narrow = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+      cbit.store %true, %wide[%one] : !cbit.reg<2>
+      cbit.store %true, %narrow[%zero] : !cbit.reg<1>
+      return %wide, %false, %narrow, %true, %q : !cbit.reg<2>, i1, !cbit.reg<1>, i1, !qco.qubit
+    }
+  })mlir",
+                                         context.get());
   ASSERT_TRUE(mod);
 
   const auto histogram = sample(mainFunc(*mod), 8, 3);
   ASSERT_TRUE(succeeded(histogram));
-  // Count strings place the last returned register first: "1" + "10".
-  EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"110", 8}}));
+  EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"11010", 8}}));
 }
 
 TEST_F(QCODDFunctionalityTest, SampleRejectsUndefinedAndMixedResults) {
@@ -2727,20 +2732,27 @@ TEST_F(QCODDFunctionalityTest, SampleRejectsUndefinedAndMixedResults) {
 
   EXPECT_TRUE(failed(sample(mainFunc(*undefined), 1, 3)));
   EXPECT_TRUE(failed(sample(mainFunc(*mixed), 1, 3)));
+  for (const int64_t value : {0, 7}) {
+    auto scalar = buildModule([&](QCOProgramBuilder& b) {
+      b.sink(b.x(b.staticQubit(0)));
+      return b.intConstant(value);
+    });
+    ASSERT_TRUE(scalar);
+    EXPECT_TRUE(failed(sample(mainFunc(*scalar), 1, 3)));
+  }
 }
 
 TEST_F(QCODDFunctionalityTest,
        SampleDefersReturnedMeasurementDespiteLaterUnrelatedOp) {
   auto mod = buildModule([](QCOProgramBuilder& b) {
-    auto reg =
-        b.allocClassicalBitRegister(1, {}, cbit::Initialization::Undefined);
     auto q0 = b.x(b.staticQubit(0));
     auto q1 = b.staticQubit(1);
-    std::tie(q0, std::ignore) = b.measure(q0, reg, 0);
+    Value bit;
+    std::tie(q0, bit) = b.measure(q0);
     q1 = b.x(q1);
     b.sink(q0);
     b.sink(q1);
-    return reg;
+    return bit;
   });
   ASSERT_TRUE(mod);
 

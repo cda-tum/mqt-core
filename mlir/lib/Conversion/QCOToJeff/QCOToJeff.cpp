@@ -1014,98 +1014,6 @@ struct ConvertIntegerExpression final : ConversionPattern {
   }
 };
 
-} // namespace
-
-static Value
-buildBitComparison(OpBuilder& builder, const Location location,
-                   const arith::CmpIPredicate predicate, const llvm::APInt& rhs,
-                   const llvm::function_ref<Value(int64_t)> loadBit) {
-  const auto encodedPredicate = mqt::unsignedPredicate(predicate);
-  auto encodedRhs = rhs;
-  const bool biasSignBit = encodedPredicate != predicate;
-  if (biasSignBit) {
-    encodedRhs.flipBit(encodedRhs.getBitWidth() - 1U);
-  }
-
-  auto one = arith::ConstantIntOp::create(builder, location, 1, 1);
-  Value equal = one;
-  Value less;
-  if (encodedPredicate != arith::CmpIPredicate::eq &&
-      encodedPredicate != arith::CmpIPredicate::ne) {
-    less = arith::ConstantIntOp::create(builder, location, 0, 1);
-  }
-  for (int64_t index = static_cast<int64_t>(encodedRhs.getBitWidth()) - 1;
-       index >= 0; --index) {
-    auto bit = loadBit(index);
-    if (biasSignBit &&
-        index == static_cast<int64_t>(encodedRhs.getBitWidth()) - 1) {
-      bit = arith::XOrIOp::create(builder, location, bit, one);
-    }
-    Value matches = bit;
-    if (!encodedRhs[static_cast<unsigned>(index)]) {
-      matches = arith::XOrIOp::create(builder, location, bit, one);
-    } else if (less) {
-      auto lower = arith::XOrIOp::create(builder, location, bit, one);
-      auto firstDifference =
-          arith::AndIOp::create(builder, location, equal, lower);
-      less = arith::OrIOp::create(builder, location, less, firstDifference);
-    }
-    equal = arith::AndIOp::create(builder, location, equal, matches);
-  }
-  switch (encodedPredicate) {
-  case arith::CmpIPredicate::eq:
-    return equal;
-  case arith::CmpIPredicate::ne:
-    return arith::XOrIOp::create(builder, location, equal, one);
-  case arith::CmpIPredicate::ult:
-    return less;
-  case arith::CmpIPredicate::ule:
-    return arith::OrIOp::create(builder, location, less, equal);
-  case arith::CmpIPredicate::ugt: {
-    auto lessOrEqual = arith::OrIOp::create(builder, location, less, equal);
-    return arith::XOrIOp::create(builder, location, lessOrEqual, one);
-  }
-  case arith::CmpIPredicate::uge:
-    return arith::XOrIOp::create(builder, location, less, one);
-  default:
-    llvm_unreachable("signed CBit predicate must be encoded as unsigned");
-  }
-}
-
-namespace {
-
-/// Lower explicit register snapshots compared with constants at the read point.
-struct LowerRegisterComparison final : OpRewritePattern<arith::CmpIOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(arith::CmpIOp op,
-                                PatternRewriter& rewriter) const override {
-    auto read = op.getLhs().getDefiningOp<cbit::ReadOp>();
-    llvm::APInt constant;
-    if (!read || read.getType().getWidth() <= 64 ||
-        !matchPattern(op.getRhs(), m_ConstantInt(&constant))) {
-      return failure();
-    }
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPoint(read);
-    auto result = buildBitComparison(
-        rewriter, op.getLoc(), op.getPredicate(), constant,
-        [&](int64_t index) -> Value {
-          auto position =
-              arith::ConstantIndexOp::create(rewriter, read.getLoc(), index);
-          return cbit::LoadOp::create(rewriter, read.getLoc(),
-                                      rewriter.getI1Type(), read.getReg(),
-                                      position)
-              .getResult();
-        });
-    rewriter.replaceOp(op, result);
-    if (read->use_empty()) {
-      rewriter.eraseOp(read);
-    }
-    return success();
-  }
-};
-
 /// Converts qtensor.alloc to jeff.qureg_alloc
 struct ConvertQTensorAllocOp final
     : StatefulOpConversionPattern<qtensor::AllocOp> {
@@ -2117,8 +2025,7 @@ protected:
     }
 
     RewritePatternSet comparisons(context);
-    comparisons.add<LowerRegisterComparison>(context);
-    arith::CmpIOp::getCanonicalizationPatterns(comparisons, context);
+    cbit::populateRegisterComparisonPatterns(comparisons);
     mqt::populateIntegerExpansionPatterns(comparisons);
     if (failed(applyPatternsGreedily(moduleOp, std::move(comparisons)))) {
       signalPassFailure();

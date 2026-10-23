@@ -211,12 +211,14 @@ print(qiskit_job.get_counts())
 ## Retrieve the QIR output stream through QDMI
 
 Counts summarize recorded measurement results and Boolean values. Adaptive
-compilation records returned CBit registers containing computed values as
-Booleans, preserving bit order and overwritten values. Registers containing only
-measurement results retain result-array recording. QIR's textual output stream
-also preserves output labels, array and tuple records, other recorded scalar
-values, and shot framing. Enable capture with DDSIM's boolean `custom2`
-parameter, then request its string result from `CustomProperty.CUSTOM1`:
+compilation records computed `i1` results and CBit registers containing computed
+values as Booleans, preserving output order and snapshots. Measurement-only
+registers use result-array recording when their stores can fuse safely and
+preserve returned measurement snapshots. Other stores use Boolean storage,
+including runtime-indexed accesses. QIR's textual output stream also preserves
+output labels, array and tuple records, other recorded scalar values, and shot
+framing. Enable capture with DDSIM's boolean `custom2` parameter, then request
+its string result from `CustomProperty.CUSTOM1`:
 
 ```{code-cell} ipython3
 from mqt.core.qdmi import CustomProperty
@@ -260,16 +262,18 @@ declaration is reported with its actual and accepted LLVM function types.
 
 QC-to-QIR conversion records direct measurement and CBit-register returns in
 source order, including repetitions, and emits exit code 0 for successful
-execution. Other entry results are unsupported, including a constant-zero `i64`:
-explicit QC and QCO returns are program data, never exit codes. Programs without
-results use a void QC or QCO entry function. This contract applies with and
-without a target. Keep classical temporaries local, or use OpenQASM or jeff
-interchange for scalar program outputs.
+execution. Adaptive Profile also records computed Boolean (`i1`) results
+directly, without output-register storage. Other entry results are unsupported,
+including a constant-zero `i64`: explicit QC and QCO returns are program data,
+never exit codes. Programs without results use a void QC or QCO entry function.
+This contract applies with and without a target. Keep other classical
+temporaries local, or use OpenQASM or jeff interchange for wider scalar program
+outputs.
 
-Measurements and CBit allocations must be in the entry function. A scalar
-measurement returned alongside its register requires constant store indices that
-exclude overwriting its slot. The C++ QIR builder requires dynamic qubits to be
-allocated before control flow.
+Measurements and CBit allocations must be in the entry function. A returned
+scalar measurement can share Result storage with a register only when constant
+store indices exclude overwriting its slot. The C++ QIR builder requires dynamic
+qubits to be allocated before control flow.
 
 Authored QIR can return explicit exit codes and use scalar output-recording
 APIs. These runtime features do not extend the supported QC-to-QIR entry

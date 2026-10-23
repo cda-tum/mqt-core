@@ -358,7 +358,8 @@ TEST_F(QCToQIRAdaptiveNativeTest,
       converted->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_BOOL_RECORD_OUTPUT));
 }
 
-TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsafeOutputIndexDefinitions) {
+TEST_F(QCToQIRAdaptiveNativeTest,
+       KeepsOutputIndexComputationsAfterMeasurements) {
   for (const auto* definition : {
            "%index = arith.index_cast %bit : i1 to index\n",
            "%old = cbit.load %scratch[%zero] : !cbit.reg<2>\n"
@@ -396,124 +397,17 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsafeOutputIndexDefinitions) {
     auto moduleOp = parseSourceString<ModuleOp>(source, &context);
     ASSERT_TRUE(moduleOp);
     ASSERT_TRUE(succeeded(verify(*moduleOp)));
-    bool diagnosed = false;
-    ScopedDiagnosticHandler handler(&context, [&](Diagnostic& diagnostic) {
-      diagnosed |=
-          diagnostic.str().find("cannot fuse this measurement/store pair") !=
-          std::string::npos;
-      return success();
-    });
+    qc::MeasureOp measurement;
+    cbit::StoreOp store;
+    moduleOp->walk([&](qc::MeasureOp op) { measurement = op; });
+    moduleOp->walk([&](cbit::StoreOp op) { store = op; });
+    auto index = store.getIndex();
     LoweringState state;
-    EXPECT_TRUE(failed(prepareClassicalResults(*moduleOp, state, true)));
-    EXPECT_TRUE(diagnosed);
-  }
-}
-
-TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsafeOutputStores) {
-  for (const auto* body : {
-           "%a = qc.measure %q : !qc.qubit -> i1\n"
-           "qc.x %q : !qc.qubit\n"
-           "%b = qc.measure %q : !qc.qubit -> i1\n"
-           "cbit.store %b, %r[%i] : !cbit.reg<1>\n"
-           "cbit.store %a, %r[%i] : !cbit.reg<1>\n",
-           "%a = qc.measure %q : !qc.qubit -> i1\n"
-           "scf.if %condition { cbit.store %a, %r[%i] : !cbit.reg<1> }\n",
-           "%a = qc.measure %q : !qc.qubit -> i1\n"
-           "func.call @observe() : () -> ()\n"
-           "cbit.store %a, %r[%i] : !cbit.reg<1>\n",
-           "%a = qc.measure %q : !qc.qubit -> i1\n"
-           "%old = cbit.load %r[%i] : !cbit.reg<1>\n"
-           "cbit.store %a, %r[%i] : !cbit.reg<1>\n",
-       }) {
-    SCOPED_TRACE(body);
-    auto source = std::string(R"mlir(module {
-      func.func private @observe()
-      func.func @main() -> !cbit.reg<1> attributes {mqt.entry_point} {
-        %q = qc.alloc : !qc.qubit
-        %r = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
-        %i = arith.constant 0 : index
-        %condition = arith.constant false
-    )mlir") + body +
-                  R"mlir(
-        qc.dealloc %q : !qc.qubit
-        return %r : !cbit.reg<1>
-      }
-    })mlir";
-    auto module = parseSourceString<ModuleOp>(source, &context);
-    ASSERT_TRUE(module);
-    expectConversionFailure(*module, "cannot fuse this measurement/store pair");
-    auto main = module->lookupSymbol<func::FuncOp>("main");
-    ASSERT_TRUE(main);
-    EXPECT_TRUE(isa<cbit::RegisterType>(main.getResultTypes().front()));
-    size_t stores = 0;
-    main.walk([&](cbit::StoreOp) { ++stores; });
-    EXPECT_GT(stores, 0);
-    EXPECT_TRUE(succeeded(verify(*module)));
-  }
-}
-
-TEST_F(QCToQIRAdaptiveNativeTest, PreservesClassicalStoreFusionBarriers) {
-  for (const auto& [intervening, accepted] : {
-           std::pair{"", true},
-           {
-               "%extra = qc.alloc : !qc.qubit\n"
-               "qc.dealloc %extra : !qc.qubit\n",
-               true,
-           },
-           {"cbit.store %b, %r[%one] : !cbit.reg<2>\n", true},
-           {"cbit.store %b, %r[%zero] : !cbit.reg<2>\n", false},
-           {"cbit.store %b, %scratch[%one] : !cbit.reg<2>\n", false},
-           {
-               "cbit.store %b, %scratch[%one] : !cbit.reg<2>\n"
-               "cbit.store %b, %r[%one] : !cbit.reg<2>\n",
-               false,
-           },
-           {
-               "cbit.store %b, %r[%one] : !cbit.reg<2>\n"
-               "cbit.store %b, %scratch[%one] : !cbit.reg<2>\n",
-               false,
-           },
-           {"cbit.store %b, %r[%dynamic] : !cbit.reg<2>\n", false},
-           {"scf.if %condition { func.call @observe() : () -> () }\n", false},
-       }) {
-    SCOPED_TRACE(intervening);
-    auto source = std::string(R"mlir(module {
-      func.func private @observe()
-      func.func private @index() -> index
-      func.func @main() -> !cbit.reg<2> attributes {mqt.entry_point} {
-        %q = qc.alloc : !qc.qubit
-        %r = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
-        %scratch = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
-        %zero = arith.constant 0 : index
-        %one = arith.constant 1 : index
-        %condition = arith.constant false
-        %dynamic = func.call @index() : () -> index
-        %b = qc.measure %q : !qc.qubit -> i1
-        qc.x %q : !qc.qubit
-        %a = qc.measure %q : !qc.qubit -> i1
-    )mlir") + intervening +
-                  R"mlir(
-        cbit.store %a, %r[%zero] : !cbit.reg<2>
-        qc.dealloc %q : !qc.qubit
-        return %r : !cbit.reg<2>
-      }
-    })mlir";
-    auto moduleOp = parseSourceString<ModuleOp>(source, &context);
-    ASSERT_TRUE(moduleOp);
-    ASSERT_TRUE(succeeded(verify(*moduleOp)));
-    bool diagnosed = false;
-    ScopedDiagnosticHandler handler(&context, [&](Diagnostic& diagnostic) {
-      diagnosed |=
-          diagnostic.str().find("cannot fuse this measurement/store pair") !=
-          std::string::npos;
-      return success();
-    });
-    EXPECT_EQ(succeeded(runQCToQIRAdaptiveConversionSimple(*moduleOp)),
-              accepted);
-    EXPECT_EQ(diagnosed, !accepted);
-    if (accepted) {
-      EXPECT_TRUE(succeeded(verify(*moduleOp)));
-    }
+    ASSERT_TRUE(succeeded(prepareClassicalResults(*moduleOp, state, true)));
+    EXPECT_TRUE(succeeded(verify(*moduleOp)));
+    EXPECT_TRUE(state.cregMeasurements.empty());
+    EXPECT_EQ(store.getIndex(), index);
+    EXPECT_TRUE(measurement->isBeforeInBlock(index.getDefiningOp()));
   }
 }
 
@@ -847,20 +741,6 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsWriteThroughReturnedRegisterMerge) {
                                    "writes to returned CBit registers");
 }
 
-TEST_F(QCToQIRAdaptiveNativeTest, RejectsMultipleRegisterDestinations) {
-  qc::QCProgramBuilder builder(&context);
-  builder.initialize();
-  auto q = builder.allocQubit();
-  auto c = builder.allocClassicalBitRegister(2);
-  auto result = builder.measure(q, c, 0);
-  builder.storeClassicalBit(result, c, 1);
-
-  auto module = builder.finalize(c);
-  ASSERT_TRUE(module);
-  ASSERT_TRUE(succeeded(verify(*module)));
-  EXPECT_TRUE(failed(runQCToQIRAdaptiveConversion(*module)));
-}
-
 TEST_F(QCToQIRAdaptiveNativeTest, RejectsHelperLocalClassicalResources) {
   for (const auto* body : {
            R"mlir(%zero = arith.constant 0 : index
@@ -892,8 +772,9 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsHelperLocalClassicalResources) {
 
 TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedEntryOutputs) {
   const std::array names{
-      "selected register", "computed boolean",        "zero scalar",
-      "nonzero scalar",    "overwritten measurement",
+      "selected register",
+      "zero scalar",
+      "nonzero scalar",
   };
   for (uint32_t shape = 0; shape < names.size(); ++shape) {
     SCOPED_TRACE(names[shape]);
@@ -905,28 +786,15 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedEntryOutputs) {
       auto second = builder.allocClassicalBitRegister(1);
       outputs.push_back(arith::SelectOp::create(
           builder, builder.boolConstant(true), first, second));
-    } else if (shape == 1) {
-      outputs.push_back(builder.boolConstant(true));
-    } else if (shape == 2 || shape == 3) {
-      outputs.push_back(builder.intConstant(shape == 2 ? 0 : 7));
     } else {
-      auto first = builder.allocQubit();
-      auto second = builder.allocQubit();
-      auto reg = builder.allocClassicalBitRegister(1);
-      auto bit = builder.measure(first, reg, 0);
-      builder.measure(second, reg, 0);
-      outputs = {bit, reg};
+      outputs.push_back(builder.intConstant(shape == 1 ? 0 : 7));
     }
 
     auto module = builder.finalize(outputs);
     ASSERT_TRUE(module);
     ASSERT_TRUE(succeeded(verify(*module)));
-    const StringRef expected =
-        shape == 4 ? "returned scalar measurement cannot share overwritten "
-                     "register storage"
-                   : "QIR entry return supports only direct measurements and "
-                     "CBit allocations";
-    expectConversionFailure(*module, expected);
+    expectConversionFailure(*module, "QIR entry return supports only direct "
+                                     "measurements and CBit allocations");
     EXPECT_TRUE(succeeded(verify(*module)));
   }
 }
@@ -1032,39 +900,32 @@ TEST_F(QCToQIRAdaptiveNativeTest, PreservesOutputOrderMultiplicityAndLabels) {
   EXPECT_EQ(releasedArrays, allocatedArrays);
 }
 
-TEST_F(QCToQIRAdaptiveNativeTest, RecordsComputedClassicalWrites) {
-  for (const auto& [wholeRegister, measured] : {
-           std::pair{false, false},
-           {true, false},
-           {true, true},
-       }) {
-    SCOPED_TRACE(wholeRegister);
-    SCOPED_TRACE(measured);
-    qc::QCProgramBuilder builder(&context);
-    builder.initialize();
-    auto reg = builder.allocClassicalBitRegister(wholeRegister ? 2 : 1);
-    if (measured) {
-      builder.measure(builder.allocQubit(), reg, 0);
-    }
-    if (wholeRegister) {
-      auto value =
-          arith::ConstantIntOp::create(builder, builder.getUnknownLoc(), 3, 2);
-      cbit::WriteOp::create(builder, builder.getUnknownLoc(), value, reg);
-    } else {
-      builder.storeClassicalBit(builder.boolConstant(true), reg, 0);
-    }
+TEST_F(QCToQIRAdaptiveNativeTest, MaterializesBooleanOutputsBeforeRecording) {
+  qc::QCProgramBuilder builder(&context);
+  builder.initialize();
+  auto measured = builder.measure(builder.allocQubit());
+  auto first = builder.allocClassicalBitRegister(1);
+  auto second = builder.allocClassicalBitRegister(1);
+  builder.storeClassicalBit(builder.boolConstant(true), first, 0);
+  builder.storeClassicalBit(builder.boolConstant(false), second, 0);
+  auto moduleOp =
+      builder.finalize({measured, builder.boolConstant(true), first, second});
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(runQCToQIRAdaptiveConversionSimple(*moduleOp)));
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
 
-    auto moduleOp = builder.finalize(reg);
-    ASSERT_TRUE(moduleOp);
-    ASSERT_TRUE(succeeded(verify(*moduleOp)));
-
-    ASSERT_TRUE(succeeded(runQCToQIRAdaptiveConversionSimple(*moduleOp)));
-    EXPECT_TRUE(succeeded(verify(*moduleOp)));
-    EXPECT_TRUE(
-        moduleOp->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_BOOL_RECORD_OUTPUT));
-    EXPECT_FALSE(moduleOp->lookupSymbol<LLVM::LLVMFuncOp>(
-        qir::QIR_RESULT_ARRAY_RECORD_OUTPUT));
-  }
+  bool recording = false;
+  moduleOp->walk([&](Operation* operation) {
+    if (auto call = dyn_cast<LLVM::CallOp>(operation);
+        call && call.getCallee() &&
+        call.getCallee()->ends_with("_record_output")) {
+      recording = true;
+    }
+    if (isa<LLVM::LoadOp>(operation)) {
+      EXPECT_FALSE(recording);
+    }
+  });
+  EXPECT_TRUE(recording);
 }
 
 TEST_F(QCToQIRAdaptiveNativeTest, AcceptsZeroInitializedClassicalRegister) {

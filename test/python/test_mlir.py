@@ -57,7 +57,7 @@ requires_qiskit_translation = pytest.mark.skipif(
 
 
 MLIR_STRING = r"""module {
-  func.func @main() -> memref<2xi1> attributes {mqt.entry_point} {
+  func.func @main() -> !cbit.reg<2> attributes {mqt.entry_point} {
     %c1 = arith.constant 1 : index
     %c0 = arith.constant 0 : index
     %alloc = memref.alloc() : memref<2x!qc.qubit>
@@ -68,13 +68,13 @@ MLIR_STRING = r"""module {
       qc.x %q_3 : !qc.qubit
       qc.yield
     } : {!qc.qubit}, {!qc.qubit}
-    %alloc_1 = memref.alloc() : memref<2xi1>
+    %alloc_1 = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
     %b = qc.measure %q : !qc.qubit -> i1
-    memref.store %b, %alloc_1[%c0] : memref<2xi1>
+    cbit.store %b, %alloc_1[%c0] : !cbit.reg<2>
     %b_2 = qc.measure %q_0 : !qc.qubit -> i1
-    memref.store %b_2, %alloc_1[%c1] : memref<2xi1>
+    cbit.store %b_2, %alloc_1[%c1] : !cbit.reg<2>
     memref.dealloc %alloc : memref<2x!qc.qubit>
-    return %alloc_1 : memref<2xi1>
+    return %alloc_1 : !cbit.reg<2>
   }
 }
 """

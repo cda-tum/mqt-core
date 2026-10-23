@@ -102,7 +102,7 @@ result = false;
 
 @pytest.mark.parametrize("stale", [False, True])
 def test_wide_register_condition_in_do_while(*, stale: bool) -> None:
-    """Preserve wide snapshots across stores in OpenQASM loop conditions."""
+    """Preserve wide snapshots across stores in loop conditions."""
     read = "%bits = cbit.read %out : !cbit.reg<65> -> i65"
     program = QCProgram.from_mlir_str(f"""
 module {{
@@ -134,21 +134,8 @@ module {{
   }}
 }}
 """)
-    if stale:
-        with pytest.raises(RuntimeError, match="stale classical snapshot"):
-            program.to_qiskit(copy=True)
-        assert observe(program.to_openqasm3()) == 1 << 64
-    else:
-        check_paths(program, (1 << 64) | 1)
-        assert program.to_qiskit().num_clbits == 65
-
-
-def test_unused_wide_qiskit_local_is_rejected() -> None:
-    """Wide register comparison support does not permit wide scalar locals."""
-    circuit = QuantumCircuit(1, 1)
-    circuit.add_uninitialized_var(expr.Var.new("wide", types.Uint(65)))
-    with pytest.raises(RuntimeError, match=r"local variables.*64"):
-        QCProgram.from_qiskit(circuit)
+    check_paths(program, (1 << 64) | int(not stale))
+    assert program.to_qiskit().num_clbits == 65
 
 
 def test_unequal_tuples_swaps_and_float_state() -> None:
@@ -448,10 +435,7 @@ module {
         program.to_openqasm3()
     assert "unsupported-loop.mlir" in str(qasm_error.value)
     assert "i128" in str(qasm_error.value)
-    with pytest.raises(RuntimeError, match="Qiskit") as qiskit_error:
-        program.to_qiskit(copy=True)
-    assert "scf.while" in str(qiskit_error.value)
-    assert "unsupported-loop.mlir" in str(qiskit_error.value)
+    assert observe(program.to_qiskit(copy=True)) == 0
     assert program.ir == original
 
 

@@ -22,11 +22,15 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h" // IWYU pragma: keep (template instantiations)
 
@@ -65,6 +69,63 @@ struct QCOInlinerInterface final : DialectInlinerInterface {
                        bool /*wouldBeCloned*/,
                        IRMapping& /*valueMapping*/) const final {
     return true;
+  }
+};
+
+// Both branches execute exactly one region and keep quantum results last.
+template <typename Op>
+struct PromoteBranch final
+    : PromotableRegionOpInterface::ExternalModel<PromoteBranch<Op>, Op> {
+  bool isRegionPromotable(Operation* /*op*/, const MemorySlot& /*slot*/,
+                          Region* /*region*/, bool /*hasValueStores*/) const {
+    return true;
+  }
+
+  void setupPromotion(
+      Operation* op, const MemorySlot& /*slot*/, Value reachingDef,
+      bool /*hasValueStores*/,
+      llvm::SmallMapVector<Region*, Value, 2>& regionsToProcess) const {
+    for (Region& region : op->getRegions()) {
+      regionsToProcess.insert({&region, reachingDef});
+    }
+  }
+
+  Value finalizePromotion(Operation* op, const MemorySlot& slot,
+                          Value reachingDef, bool hasValueStores,
+                          const DenseMap<Block*, Value>& reachingAtBlockEnd,
+                          OpBuilder& builder) const {
+    if (!hasValueStores) {
+      return reachingDef;
+    }
+    auto branch = cast<Op>(op);
+    const auto index = branch.getClassicalResults().size();
+    for (Region& region : op->getRegions()) {
+      auto& block = region.front();
+      auto value = reachingAtBlockEnd.lookup(&block);
+      block.getTerminator()->insertOperands(index, value ? value : reachingDef);
+    }
+
+    SmallVector<Type> resultTypes(op->getResultTypes());
+    resultTypes.insert(resultTypes.begin() + index, slot.elemType);
+    OperationState state(op->getLoc(), op->getName(), op->getOperands(),
+                         resultTypes, op->getAttrs(), op->getSuccessors());
+    state.propertiesAttr = op->getPropertiesAsAttribute();
+    for (unsigned region = 0; region < op->getNumRegions(); ++region) {
+      state.addRegion();
+    }
+    IRRewriter rewriter(builder);
+    rewriter.setInsertionPoint(op);
+    auto* replacement = rewriter.create(state);
+    cast<Op>(replacement).getProperties().resultSegmentSizes[0] += 1;
+    for (auto [oldRegion, newRegion] :
+         llvm::zip_equal(op->getRegions(), replacement->getRegions())) {
+      newRegion.takeBody(oldRegion);
+    }
+    SmallVector<Value> oldResults(replacement->getResults());
+    auto promoted = oldResults[index];
+    oldResults.erase(oldResults.begin() + index);
+    rewriter.replaceOp(op, oldResults);
+    return promoted;
   }
 };
 
@@ -539,6 +600,8 @@ void QCODialect::initialize() {
       >();
 
   addInterfaces<QCOInlinerInterface>();
+  IfOp::attachInterface<PromoteBranch<IfOp>>(*getContext());
+  IndexSwitchOp::attachInterface<PromoteBranch<IndexSwitchOp>>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//

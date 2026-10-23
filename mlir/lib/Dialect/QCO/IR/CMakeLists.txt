@@ -34,6 +34,7 @@ add_mlir_dialect_library(
   MLIRIR
   MLIRArithDialect
   MLIRInferTypeOpInterface
+  MLIRMemorySlotInterfaces
   MLIRSideEffectInterfaces
   MLIRTransformUtils)
 
