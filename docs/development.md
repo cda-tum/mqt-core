@@ -578,13 +578,6 @@ Open `compile.json` in [Perfetto](https://ui.perfetto.dev) to inspect the
 timeline. Use a separate trace file so it does not mix with compiler output.
 Select a slice to see its duration and the pass or rewrite name in `args.desc`.
 
-```{figure} _static/mlir/compiler-perfetto.png
-:alt: Perfetto displays nested MLIR pass and rewrite actions, with the selected rewrite's duration, description, and an action-duration histogram.
-:width: 100%
-
-MLIR action trace from a 24-qubit compilation, viewed in Perfetto.
-```
-
 By default, MQT installs neither a profiling handler nor pass-logging
 instrumentation. Enabling tracing adds recording overhead. The file is closed on
 normal success or pass failure; a crash or forced termination can leave it
