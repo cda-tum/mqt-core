@@ -76,16 +76,17 @@ This classification is conservative: an unclassified gate may have a unitary
 quantum action. A modifier on a custom gate requires that the gate and its
 callees contain no loops.
 
-Quantum widths must be positive signed 64-bit integers; bit widths are limited
-to 16,777,215 (MLIR's integer-width limit). Registers have no shared quota;
-available memory and downstream limits still apply.
+Import accepts quantum register widths from 1 through 2⁶³ − 1 and bit-register
+widths from 1 through 16,777,215 (MLIR's integer-width limit). Available memory,
+later compiler stages, and [export limits](#export-limitations) also constrain
+usable register sizes.
 
 Declare a classical array with `array[int[8], 3] values = {1, 2, 3};`. Arrays
 have one through seven nonnegative compile-time dimensions. Nested initializer
 lists must match each dimension; for example,
 `array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};`. Zero-length dimensions are
 valid. Each dimension and the total classical array element count are limited to
-100,000, independently of registers.
+100,000.
 
 Whole-array initialization (`array[int, 2, 3] b = a;`) and assignment (`b = a;`)
 copy values into independent storage. Leading scalar indices select subarrays:
@@ -550,9 +551,9 @@ Import limits affine proofs to 256 levels and 4,096 distinct expressions per
 proof and QC emission to 1,000,000,000 inserted operations. Textual expansion is
 limited to 100,000,000 statements and 1,000,000 file-include expansions,
 including empty files. Standard-library includes count as statements. Include
-nesting is limited to 64 levels. Expanded register operands and barriers are
-limited to 100,000,000 references, checked before allocation. This does not cap
-register declarations. Exceeding any bound produces a diagnostic and no program.
+nesting is limited to 64 levels. Each expanded register operand or barrier is
+limited to 100,000,000 references, checked before allocation. Exceeding any
+bound produces a diagnostic and no program.
 
 The exporter rejects unsupported operations, including explicit `cf.assert`
 operations and live poison values. It does not silently discard them. Programs

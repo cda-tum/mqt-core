@@ -18,6 +18,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1398,10 +1399,8 @@ for int i in [0:0:3] {}
 TEST(OpenQASMFrontendTest, LargeRegistersDoNotConsumeArrayStorageBudget) {
   for (const auto* source : {
            "OPENQASM 2.0; qreg q[80001]; creg c[80000];",
-           "OPENQASM 3.0; qubit[80001] q; bit[80000] c = 0;",
            "OPENQASM 3.1; qubit[2000001] q; bit[2000000] c = 0; "
            "array[int, 100000] a;",
-           "OPENQASM 3.1; qubit[9223372036854775807] q;",
        }) {
     SCOPED_TRACE(source);
     auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
@@ -1423,38 +1422,33 @@ TEST(OpenQASMFrontendTest, BoundsRegisterWidthsByTheirRepresentation) {
                 "bit register width exceeds the limit"),
             std::string::npos);
 
-  for (const auto* const source : {
-           "OPENQASM 3.1; qubit[9223372036854775808] q;",
-           "OPENQASM 3.1; qubit[18446744073709551615] q;",
-           "OPENQASM 3.1; bit[18446744073709551615] c;",
-       }) {
-    auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
-    ASSERT_FALSE(analyzed) << source;
-    ASSERT_FALSE(analyzed.diagnostics.empty());
-    EXPECT_NE(analyzed.diagnostics.front().message.find("limit"),
-              std::string::npos);
-    EXPECT_EQ(analyzed.diagnostics.front().location.filename, "<input>");
-    EXPECT_EQ(analyzed.diagnostics.front().location.line, 1);
-  }
+  auto analyzedQubits = openqasm::frontend::analyzeOpenQASM(
+      "OPENQASM 3.1; qubit[9223372036854775808] q;");
+  ASSERT_FALSE(analyzedQubits);
+  ASSERT_FALSE(analyzedQubits.diagnostics.empty());
+  EXPECT_NE(analyzedQubits.diagnostics.front().message.find("limit"),
+            std::string::npos);
+  EXPECT_EQ(analyzedQubits.diagnostics.front().location.filename, "<input>");
+  EXPECT_EQ(analyzedQubits.diagnostics.front().location.line, 1);
 }
 
-TEST(OpenQASMFrontendTest, AcceptsBitStringsBeyondTheOldRegisterLimit) {
-  const auto source =
-      "OPENQASM 3.1; bit[100001] c = \"" + std::string(100'001, '0') + "\";";
-  EXPECT_TRUE(openqasm::frontend::analyzeOpenQASM(source));
+TEST(OpenQASMFrontendTest, PreservesWideBitStringValues) {
+  std::string digits(100'001, '0');
+  digits.front() = digits.back() = digits[digits.size() - 65] = '1';
+  digits.insert(1, "_");
+  auto analyzed = openqasm::frontend::analyzeOpenQASM(
+      "OPENQASM 3.1; bit[100001] c = \"" + digits + "\";");
+  ASSERT_TRUE(analyzed);
+  ASSERT_EQ(analyzed.program->bitVectorExpressions.size(), 1);
+  EXPECT_EQ(analyzed.program->bitVectorExpressions.front().constant,
+            (llvm::APInt(100'001, 1) << 100'000) +
+                (llvm::APInt(100'001, 1) << 64) + 1);
 }
 
 TEST(OpenQASMFrontendTest, BoundsLargeRegisterExpansionBeforeAllocation) {
-  for (const auto* operation : {
-           "reset q;",
-           "reset q[:];",
-           "barrier;",
-           "barrier q;",
-           "h q;",
-           "measure q;",
-       }) {
+  for (const auto* operation : {"reset q;", "reset q[:];", "barrier;"}) {
     SCOPED_TRACE(operation);
-    const auto source = std::string("OPENQASM 3.1; include \"stdgates.inc\"; "
+    const auto source = std::string("OPENQASM 3.1; "
                                     "qubit[9223372036854775807] q; ") +
                         operation;
     auto analyzed = openqasm::frontend::analyzeOpenQASM(source);

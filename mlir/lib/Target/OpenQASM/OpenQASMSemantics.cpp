@@ -2468,11 +2468,17 @@ private:
         return fail(expression.location,
                     "bit-string width must match the supported register width");
       }
+      // Setting bits directly avoids a full-width shift for each digit.
+      llvm::APInt value(static_cast<unsigned>(digits.size()), 0);
+      for (const auto [index, digit] : llvm::enumerate(digits)) {
+        if (digit == '1') {
+          value.setBit(static_cast<unsigned>(digits.size() - index - 1));
+        }
+      }
       return addBitVectorExpression({
           .kind = BitVectorExpressionKind::Constant,
           .width = digits.size(),
-          .constant =
-              llvm::APInt(static_cast<unsigned>(digits.size()), digits, 2),
+          .constant = std::move(value),
       });
     }
     if (expression.kind == Expr::Kind::BitCast) {
