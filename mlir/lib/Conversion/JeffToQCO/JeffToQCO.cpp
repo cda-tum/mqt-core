@@ -247,9 +247,12 @@ static Type getClassicalStorageType(Type type, const TypeConverter* converter) {
 ///
 /// Other users may keep old array contents live after the update.
 static bool needsArrayCopy(Value value, Operation* update) {
+  bool seenUpdate = false;
   return llvm::any_of(value.getUsers(), [&](Operation* user) {
-    if (user == update ||
-        isa<jeff::IntArrayLengthOp, jeff::FloatArrayLengthOp>(user)) {
+    if (user == update) {
+      return std::exchange(seenUpdate, true);
+    }
+    if (isa<jeff::IntArrayLengthOp, jeff::FloatArrayLengthOp>(user)) {
       return false;
     }
     auto* ancestor = update->getBlock()->findAncestorOpInBlock(*user);
@@ -308,6 +311,13 @@ static void moveRegion(Region& source, Region& dest,
 static Value forwardedRegister(Value value, Block& block, ValueRange inputs,
                                ConversionPatternRewriter& rewriter) {
   while (auto* update = value.getDefiningOp()) {
+    // For conversion requires stack-array results to retain their input
+    // storage.
+    if (auto loop = dyn_cast<jeff::ForOp>(update);
+        loop && isa<MemRefType>(getClassicalStorageType(value.getType()))) {
+      value = loop.getInValues()[cast<OpResult>(value).getResultNumber()];
+      continue;
+    }
     if (!isa<jeff::IntArraySetIndexOp, jeff::FloatArraySetIndexOp>(update)) {
       break;
     }
@@ -344,6 +354,37 @@ static Value forwardedRegister(Value value, Block& block, ValueRange inputs,
 }
 
 namespace {
+
+/// Converts jeff.int_array_const1 to cbit.alloc + cbit.store
+struct ConvertJeffIntArrayConst1OpToCBit final
+    : OpConversionPattern<jeff::IntArrayConst1Op> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(jeff::IntArrayConst1Op op, OpAdaptor /*adaptor*/,
+                  ConversionPatternRewriter& rewriter) const override {
+    const auto registerType = getCBitType(op.getType());
+    if (!registerType) {
+      return failure();
+    }
+    auto reg = cbit::AllocOp::create(rewriter, op.getLoc(), registerType,
+                                     cbit::Initialization::Zero);
+    Value trueValue;
+    for (const auto [i, bit] : llvm::enumerate(op.getInArray())) {
+      if (!bit) {
+        continue;
+      }
+      if (!trueValue) {
+        trueValue = arith::ConstantIntOp::create(rewriter, op.getLoc(), 1, 1);
+      }
+      auto index = arith::ConstantIndexOp::create(rewriter, op.getLoc(),
+                                                  static_cast<int64_t>(i));
+      cbit::StoreOp::create(rewriter, op.getLoc(), trueValue, reg, index);
+    }
+    rewriter.replaceOp(op, reg);
+    return success();
+  }
+};
 
 /// Materialize literal elements through the same array-creation path.
 template <typename ConstOp>
@@ -1008,8 +1049,9 @@ struct ConvertJeffSwitchOpToQCO final : OpConversionPattern<jeff::SwitchOp> {
               inValues, rewriter);
           if (!reference || (results[index] && results[index] != reference)) {
             return rewriter.notifyMatchFailure(
-                op, "conditional CBit results must refer to the same enclosing "
-                    "register");
+                op,
+                "conditional array results must refer to the same enclosing "
+                "storage");
           }
           results[index] = reference;
         }
@@ -1072,6 +1114,18 @@ struct ConvertJeffForOpToQCO final : OpConversionPattern<jeff::ForOp> {
   LogicalResult
   matchAndRewrite(jeff::ForOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter& rewriter) const override {
+    auto& body = op.getBody().front();
+    // Account for the induction variable when mapping body arguments.
+    SmallVector<Value> inputs(1);
+    llvm::append_range(inputs, adaptor.getInValues());
+    for (auto [index, input] : llvm::enumerate(adaptor.getInValues())) {
+      if (isa<MemRefType>(input.getType()) &&
+          forwardedRegister(body.getTerminator()->getOperand(index), body,
+                            inputs, rewriter) != input) {
+        return rewriter.notifyMatchFailure(
+            op, "for array results must update the same enclosing storage");
+      }
+    }
     auto loc = op.getLoc();
 
     auto start = toIndex(loc, adaptor.getStart(), rewriter);
@@ -1180,7 +1234,7 @@ struct ConvertJeffWhileOpToQCO final : OpConversionPattern<jeff::WhileOp> {
                               before, inValues, rewriter);
         if (!results[index]) {
           return rewriter.notifyMatchFailure(
-              op, "while CBit exit value must refer to an enclosing register");
+              op, "while array exit value must refer to enclosing storage");
         }
       } else if (!capturedOutputs[index]) {
         outTypes.push_back(typeConverter->convertType(type));
@@ -1192,7 +1246,7 @@ struct ConvertJeffWhileOpToQCO final : OpConversionPattern<jeff::WhileOp> {
           forwardedRegister(after.getTerminator()->getOperand(index), after,
                             results, rewriter) != inValues[index]) {
         return rewriter.notifyMatchFailure(
-            op, "while CBit backedge must update the same enclosing register");
+            op, "while array backedge must update the same enclosing storage");
       }
     }
     auto scfWhile =
@@ -1201,7 +1255,8 @@ struct ConvertJeffWhileOpToQCO final : OpConversionPattern<jeff::WhileOp> {
          llvm::zip_equal(conditionIndices, scfWhile.getResults())) {
       results[index - 1] = result;
     }
-    // Each region has its own argument tuple; CBit references remain captures.
+    // Each region has its own argument tuple; storage references remain
+    // captures.
     moveRegion<scf::ConditionOp>(op.getBefore(), scfWhile.getBefore(), rewriter,
                                  typeConverter, inValues, conditionIndices,
                                  capturedInputs);
@@ -1318,16 +1373,19 @@ protected:
                                   &typeConverter) &&
           needsArrayCopy(operation->getOperand(0), operation)) {
         if (operation->getParentOfType<jeff::SwitchOp>() ||
-            operation->getParentOfType<jeff::WhileOp>()) {
+            operation->getParentOfType<jeff::WhileOp>() ||
+            (operation->getParentOfType<jeff::ForOp>() &&
+             isa<MemRefType>(typeConverter.convertType(
+                 operation->getOperand(0).getType())))) {
           operation->emitError(
-              "live old array values inside jeff switch or while "
-              "regions are not supported");
+              "live old array values inside this jeff control-flow "
+              "region are not supported");
           return WalkResult::interrupt();
         }
         sharedArrayUpdates.insert(operation);
       }
-      // Live arrays across mutating regions require region argument alias
-      // tracking.
+      // shortcut: reject live or duplicate arrays across mutating regions until
+      // region arguments track distinct array values.
       if (isa<jeff::SwitchOp, jeff::ForOp, jeff::WhileOp>(operation) &&
           llvm::any_of(operation->getOperands(), [&](Value value) {
             return getClassicalStorageType(value.getType(), &typeConverter) &&
@@ -1398,6 +1456,8 @@ protected:
     patterns.add<ConvertJeffArraySet<jeff::IntArraySetIndexOp>,
                  ConvertJeffArraySet<jeff::FloatArraySetIndexOp>>(
         typeConverter, context, sharedArrayUpdates);
+    patterns.add<ConvertJeffIntArrayConst1OpToCBit>(typeConverter, context,
+                                                    PatternBenefit(3));
     patterns.add<ConvertJeffArrayZero<jeff::IntArrayZeroOp>,
                  ConvertJeffArrayZero<jeff::FloatArrayZeroOp>,
                  ConvertJeffLogicalShift,

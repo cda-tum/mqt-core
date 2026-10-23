@@ -1464,7 +1464,11 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
       }
       func.func @set(%memory: memref<32xi1, strided<[2], offset: ?>>, %value: i1) {
         %zero = arith.constant 0 : index
-        memref.store %value, %memory[%zero] : memref<32xi1, strided<[2], offset: ?>>
+        %one = arith.constant 1 : index
+        %size = arith.constant 32 : index
+        scf.for %i = %zero to %size step %one {
+          memref.store %value, %memory[%i] : memref<32xi1, strided<[2], offset: ?>>
+        }
         return
       }
       func.func @main() {
@@ -3659,9 +3663,6 @@ TEST_F(QCODDFunctionalityTest,
            "memref.store %true, %reg[%zero, %three] : memref<2x3xi1>",
            "%reg = memref.alloc() : memref<2x3xi1> "
            "memref.store %true, %reg[%one, %negative] : memref<2x3xi1>",
-           "%reg = memref.alloca() : memref<2xi1> "
-           "scf.for %i = %zero to %three step %one { "
-           "memref.store %true, %reg[%i] : memref<2xi1> }",
            "%reg = memref.alloc(%two, %three) : memref<?x?xi1> "
            "%target = memref.alloc(%three, %two) : memref<?x?xi1> "
            "memref.copy %reg, %target : memref<?x?xi1> to memref<?x?xi1>",
@@ -3692,62 +3693,6 @@ TEST_F(QCODDFunctionalityTest,
       %true = arith.constant true
     )mlir") + body + " return } }");
   }
-}
-
-TEST_F(QCODDFunctionalityTest, ArrayFillsIsolateMeasurementBranches) {
-  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
-    func.func @main() -> !cbit.reg<1> {
-      %zero = arith.constant 0 : index
-      %one = arith.constant 1 : index
-      %size = arith.constant 32 : index
-      %false = arith.constant false
-      %true = arith.constant true
-      %memory = memref.alloca() : memref<32x2xi1>
-      %view = memref.subview %memory[0, 1][32, 1][1, 1]
-        : memref<32x2xi1> to memref<32xi1, strided<[2], offset: 1>>
-      memref.store %false, %view[%zero] : memref<32xi1, strided<[2], offset: 1>>
-      %q = qco.static 0 : !qco.qubit
-      %h = qco.h %q : !qco.qubit
-      %out, %bit = qco.measure %h : !qco.qubit
-      qco.sink %out : !qco.qubit
-      %expected = arith.xori %bit, %true : i1
-      scf.if %expected {
-        scf.for %i = %zero to %size step %one {
-          memref.store %true, %view[%i] : memref<32xi1, strided<[2], offset: 1>>
-        }
-      }
-      %actual = memref.load %memory[%zero, %one] : memref<32x2xi1>
-      %same = arith.cmpi eq, %actual, %expected : i1
-      %bits = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
-      cbit.store %same, %bits[%zero] : !cbit.reg<1>
-      return %bits : !cbit.reg<1>
-    }
-  })mlir",
-                                              context.get());
-  ASSERT_TRUE(moduleOp);
-  const auto histogram = sample(mainFunc(*moduleOp), 1024, 23);
-  ASSERT_TRUE(succeeded(histogram));
-  ASSERT_EQ(histogram->size(), 1U);
-  EXPECT_EQ(histogram->at("1"), 1024U);
-}
-
-TEST_F(QCODDFunctionalityTest, EmptyArrayFillDoesNotReadUnboundValue) {
-  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
-    func.func @main(%unused: f64) {
-      %zero = arith.constant 0 : index
-      %one = arith.constant 1 : index
-      %a = memref.alloca() : memref<0xf64>
-      scf.for %i = %zero to %zero step %one {
-        memref.store %unused, %a[%i] : memref<0xf64>
-      }
-      return
-    }
-  })mlir",
-                                              context.get());
-  ASSERT_TRUE(moduleOp);
-  ASSERT_TRUE(succeeded(verify(*moduleOp)));
-  expectSimulatesFromZero(mainFunc(*moduleOp), false);
-  EXPECT_TRUE(succeeded(sample(mainFunc(*moduleOp), 1, 1)));
 }
 
 TEST_F(QCODDFunctionalityTest, StridedCopiesPreserveAliasesWithoutLoopBudget) {

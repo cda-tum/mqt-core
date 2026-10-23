@@ -387,8 +387,9 @@ limit described above.
 jeff export flattens fixed-size stack arrays in row-major order and carries
 updates through control flow. Import uses reference storage with copies for live
 old values; array-valued interfaces stay tensor-based. Lengths must fit signed
-i32. Unresolved safety assertions and old array values live across mutating
-control flow are unsupported.
+i32. Unresolved safety assertions are unsupported. Arrays cannot have live old
+values or be passed more than once into mutating control flow. Loop-carried
+stack arrays must keep their incoming storage.
 
 Qiskit and Base QIR export require array storage to be eliminated. Compiler
 cleanup promotes eligible arrays to scalar values and folds constants. With

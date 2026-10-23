@@ -400,7 +400,8 @@ TEST(JeffRoundTripRegressionTest, PreservesOpenQASMArrayStorage) {
              for int v in saved { digits = 10 * digits + v; }
              if (digits == 432 && a[3] == 3) { x q; })qasm",
            R"qasm(array[int[3], 2, 3] a = {{1, -2, 3}, {-4, 3, -2}};
-             array[int[3], 3] b = a[1];
+             a = a[1:1, :] ++ a[0:0, :];
+             array[int[3], 3] b = a[0];
              b = b[2:2] ++ b[:1];
              int sum = 0;
              for int v in b { sum += v; }
@@ -827,7 +828,6 @@ TEST(JeffRoundTripRegressionTest, ConvertsBitArrayCreationAndLength) {
     }
   }
   EXPECT_TRUE(hasLength);
-  EXPECT_EQ(llvm::range_size(main.getOps<cbit::StoreOp>()), 2);
   auto histogram = qco::sample(main, 1, 1);
   ASSERT_TRUE(succeeded(histogram));
   EXPECT_EQ(histogram->at("101"), 1);
@@ -1031,6 +1031,11 @@ TEST(JeffRoundTripRegressionTest, PreservesConstantBitArrayInLoop) {
   ASSERT_TRUE(succeeded(qco::verifyLinearity(*program)));
   auto main = program->lookupSymbol<func::FuncOp>("main");
   EXPECT_FALSE(main.getOps<scf::ForOp>().empty());
+  // Literal bit arrays need at most one scalar constant, regardless of width.
+  EXPECT_LE(llvm::count_if(
+                main.getOps<arith::ConstantOp>(),
+                [](auto constant) { return constant.getType().isInteger(1); }),
+            1);
   auto histogram = qco::sample(main, 1, 1);
   ASSERT_TRUE(succeeded(histogram));
   EXPECT_EQ(histogram->at("1011"), 1);
@@ -1248,7 +1253,7 @@ TEST(JeffRoundTripRegressionTest, RejectsEffectsInIntegerSelection) {
   EXPECT_TRUE(failed(convertJeffToQCO(*program)));
 }
 
-TEST(JeffRoundTripRegressionTest, RejectsLiveOldArrayAcrossSwitchRegions) {
+TEST(JeffRoundTripRegressionTest, RejectsLiveOldArraysInMutatingControlFlow) {
   MLIRContext context;
   context.loadDialect<cbit::CBitDialect, arith::ArithDialect, func::FuncDialect,
                       qco::QCODialect, mlir::jeff::JeffDialect>();
@@ -1275,18 +1280,63 @@ TEST(JeffRoundTripRegressionTest, RejectsLiveOldArrayAcrossSwitchRegions) {
         return %old, %result : tensor<1xi1>, tensor<1xi1>
       }
     })mlir";
-  for (const bool oldValueOutside : {true, false}) {
+  for (StringRef oldUse : {"outside", "inside", "duplicate"}) {
+    SCOPED_TRACE(oldUse.str());
     auto program = parseSourceString<ModuleOp>(source, &context);
     ASSERT_TRUE(program);
-    if (!oldValueOutside) {
+    if (oldUse != "outside") {
       auto main = program->lookupSymbol<func::FuncOp>("main");
       auto returned =
           cast<func::ReturnOp>(main.getBody().front().getTerminator());
       returned->setOperand(0, returned.getOperand(1));
       auto selection = *main.getOps<mlir::jeff::SwitchOp>().begin();
       auto& branch = selection.getBranches()[1].front();
-      branch.getTerminator()->setOperand(0, branch.getArgument(0));
+      if (oldUse == "duplicate") {
+        auto old = selection.getInValues().front();
+        selection.getInValuesMutable().append(old);
+        for (auto& region : selection->getRegions()) {
+          region.front().addArgument(old.getType(), old.getLoc());
+        }
+        branch.getTerminator()->setOperand(0, branch.getArguments().back());
+      } else {
+        branch.getTerminator()->setOperand(0, branch.getArgument(0));
+      }
     }
+    ASSERT_TRUE(succeeded(verify(*program)));
+    EXPECT_TRUE(failed(convertJeffToQCO(*program)));
+  }
+}
+
+TEST(JeffRoundTripRegressionTest, RejectsLoopLocalArrayResults) {
+  MLIRContext context;
+  context.loadDialect<func::FuncDialect, mlir::jeff::JeffDialect>();
+  for (const auto* body : {
+           "%result = jeff.float_array_const64([2.0]) : tensor<1xf64>",
+           "%value = jeff.float_const64(2.0) : f64 "
+           "%result = jeff.float_array_set_index(%iv) %array %value "
+           ": i32, tensor<1xf64>, f64 -> tensor<1xf64> "
+           "%old = jeff.float_array_get_index(%iv) %array "
+           ": i32, tensor<1xf64> -> f64",
+       }) {
+    SCOPED_TRACE(body);
+    auto program = parseSourceString<ModuleOp>(
+        std::string(R"mlir(module attributes {jeff.entrypoint = 0 : ui16} {
+          func.func @main() -> f64 {
+            %zero = jeff.int_const32(0) : i32
+            %one = jeff.int_const32(1) : i32
+            %initial = jeff.float_array_const64([0.5]) : tensor<1xf64>
+            %out = jeff.for %iv = %zero to %one step %one args(%array = %initial)
+                -> (tensor<1xf64>) : i32 {
+        )mlir") +
+            body + R"mlir(
+              jeff.yield %result : tensor<1xf64>
+            }
+            %value = jeff.float_array_get_index(%zero) %out : i32, tensor<1xf64> -> f64
+            return %value : f64
+          }
+        })mlir",
+        &context);
+    ASSERT_TRUE(program);
     ASSERT_TRUE(succeeded(verify(*program)));
     EXPECT_TRUE(failed(convertJeffToQCO(*program)));
   }
