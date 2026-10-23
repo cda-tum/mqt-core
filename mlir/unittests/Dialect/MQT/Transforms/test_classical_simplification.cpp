@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
@@ -39,7 +40,9 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 
+#include <array>
 #include <bitset>
+#include <cstdint>
 #include <map>
 #include <string>
 
@@ -224,6 +227,87 @@ TEST_F(ClassicalSimplificationTest,
     EXPECT_EQ(alloc->getAttr("mqt.register_name"),
               StringAttr::get(alloc.getContext(), "out"));
   });
+  check();
+}
+
+TEST_F(ClassicalSimplificationTest, PromotesWideSnapshotComparisons) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @main(%sign: i1, %low: i1) -> !cbit.reg<20> {
+        %c0 = arith.constant 0 : index
+        %c64 = arith.constant 64 : index
+        %false = arith.constant false
+        %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<65>
+        cbit.store %sign, %reg[%c64] : !cbit.reg<65>
+        cbit.store %low, %reg[%c0] : !cbit.reg<65>
+        %snapshot = cbit.read %reg : !cbit.reg<65> -> i65
+        cbit.store %false, %reg[%c64] : !cbit.reg<65>
+        cbit.store %false, %reg[%c0] : !cbit.reg<65>
+        %out = cbit.alloc(#cbit.init<zero>) : !cbit.reg<20>
+        return %out : !cbit.reg<20>
+      }
+    }
+  )mlir",
+                                              &context_);
+  ASSERT_TRUE(moduleOp);
+  constexpr std::array predicates{
+      arith::CmpIPredicate::eq,  arith::CmpIPredicate::ne,
+      arith::CmpIPredicate::ult, arith::CmpIPredicate::ule,
+      arith::CmpIPredicate::ugt, arith::CmpIPredicate::uge,
+      arith::CmpIPredicate::slt, arith::CmpIPredicate::sle,
+      arith::CmpIPredicate::sgt, arith::CmpIPredicate::sge,
+  };
+  auto function = moduleOp->lookupSymbol<func::FuncOp>("main");
+  auto returned = cast<func::ReturnOp>(function.front().getTerminator());
+  Value snapshot = *function.getOps<cbit::ReadOp>().begin();
+  OpBuilder builder(returned);
+  auto boundary = APInt::getSignMask(65) + 1;
+  auto constant = arith::ConstantOp::create(
+      builder, returned.getLoc(),
+      builder.getIntegerAttr(snapshot.getType(), boundary));
+  for (auto [index, predicate] : llvm::enumerate(predicates)) {
+    for (bool reversed : {false, true}) {
+      auto result = arith::CmpIOp::create(builder, returned.getLoc(), predicate,
+                                          reversed ? constant : snapshot,
+                                          reversed ? snapshot : constant);
+      auto position = arith::ConstantIndexOp::create(
+          builder, returned.getLoc(),
+          static_cast<int64_t>(2 * index + (reversed ? 1 : 0)));
+      cbit::StoreOp::create(builder, returned.getLoc(), result,
+                            returned.getOperand(0), position);
+    }
+  }
+  const auto check = [&] {
+    ASSERT_TRUE(succeeded(verify(*moduleOp)));
+    for (bool sign : {false, true}) {
+      for (bool low : {false, true}) {
+        auto value = sign ? APInt::getSignMask(65) : APInt(65, 0);
+        value += static_cast<unsigned>(low);
+        std::bitset<20> expected;
+        for (auto [index, predicate] : llvm::enumerate(predicates)) {
+          expected[2 * index] =
+              arith::applyCmpPredicate(predicate, value, boundary);
+          expected[2 * index + 1] =
+              arith::applyCmpPredicate(predicate, boundary, value);
+        }
+        const qco::DDArgumentBindings bindings{
+            {function.getArgument(0), builder.getBoolAttr(sign)},
+            {function.getArgument(1), builder.getBoolAttr(low)},
+        };
+        auto counts = qco::sample(function, 1, 1, bindings);
+        ASSERT_TRUE(succeeded(counts));
+        EXPECT_EQ(*counts,
+                  (std::map<std::string, size_t>{{expected.to_string(), 1}}));
+      }
+    }
+  };
+  check();
+  PassManager manager(&context_);
+  manager.addPass(mqt::createPromoteClassicalMemory());
+  ASSERT_TRUE(succeeded(manager.run(*moduleOp)));
+  EXPECT_TRUE(function.getOps<cbit::ReadOp>().empty());
+  moduleOp->walk(
+      [](cbit::AllocOp alloc) { EXPECT_EQ(alloc.getType().getWidth(), 20); });
   check();
 }
 
