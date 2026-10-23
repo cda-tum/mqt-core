@@ -37,6 +37,7 @@
 #include <future>
 #include <iostream>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <optional>
 #include <random>
@@ -74,6 +75,7 @@ struct Execution {
   bool automaticWorkers_;
   std::optional<std::string> qirOutput_;
   std::vector<std::string> shots_;
+  std::map<std::string, size_t> counts_;
   std::unique_ptr<dd::Package> dd_;
   dd::VectorDD stateVecDD_{};
   [[nodiscard]] size_t requestWorkers(size_t desired) const {
@@ -105,12 +107,13 @@ struct Execution {
               ? std::min(maxWorkers_,
                          std::clamp(numShots_ / 256, size_t{1}, size_t{8}))
               : maxWorkers_;
-      if (llvm::failed(mlir::qco::sampleShots(
-              entryPoint, numShots_, seed_.value_or(0), shots_,
-              mlir::qco::DDArgumentBindings{}, &retainedState, {}, workers,
-              [&](size_t desired) { return requestWorkers(desired); }))) {
+      auto counts = mlir::qco::sample(
+          entryPoint, numShots_, seed_.value_or(0), {}, nullptr, &retainedState,
+          {}, workers, [&](size_t desired) { return requestWorkers(desired); });
+      if (llvm::failed(counts)) {
         return false;
       }
+      counts_ = std::move(*counts);
       dd_ = std::move(retainedState.dd);
       stateVecDD_ = retainedState.state;
       return true;
@@ -268,6 +271,7 @@ qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request,
   }
   if (response.succeeded) {
     response.shots = std::move(execution.shots_);
+    response.counts = std::move(execution.counts_);
     response.output = std::move(execution.qirOutput_);
     if (execution.dd_) {
       const auto root = execution.stateVecDD_;

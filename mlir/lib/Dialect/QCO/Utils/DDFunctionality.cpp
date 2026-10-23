@@ -2989,8 +2989,18 @@ sample(func::FuncOp func, size_t shots, uint64_t seed,
        const DDArgumentBindings& argumentBindings,
        std::vector<std::string>* shotResults, DDSamplingState* retainedState,
        const DDExecutionOptions& options, size_t workers) {
+  return sample(func, shots, seed, argumentBindings, shotResults, retainedState,
+                options, workers, nullptr);
+}
+
+FailureOr<std::map<std::string, size_t>>
+sample(func::FuncOp func, size_t shots, uint64_t seed,
+       const DDArgumentBindings& argumentBindings,
+       std::vector<std::string>* shotResults, DDSamplingState* retainedState,
+       const DDExecutionOptions& options, size_t workers,
+       function_ref<size_t(size_t)> requestWorkers) {
   return sampleProgram(func, shots, seed, argumentBindings, shotResults,
-                       retainedState, options, workers, true, nullptr);
+                       retainedState, options, workers, true, requestWorkers);
 }
 
 LogicalResult sampleShots(func::FuncOp func, size_t shots, uint64_t seed,

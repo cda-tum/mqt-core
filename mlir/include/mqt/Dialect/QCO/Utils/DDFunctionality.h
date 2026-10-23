@@ -154,6 +154,18 @@ sample(func::FuncOp func, size_t shots, uint64_t seed = 0,
        DDSamplingState* retainedState = nullptr,
        const DDExecutionOptions& options = {}, size_t workers = 0);
 
+/// Samples outcome counts with an external worker grant.
+///
+/// The caller holds one external worker slot. The callback runs at most once
+/// and returns a total grant from one through the request; the caller releases
+/// that grant after sampling.
+FailureOr<std::map<std::string, size_t>>
+sample(func::FuncOp func, size_t shots, uint64_t seed,
+       const DDArgumentBindings& argumentBindings,
+       std::vector<std::string>* shotResults, DDSamplingState* retainedState,
+       const DDExecutionOptions& options, size_t workers,
+       function_ref<size_t(size_t)> requestWorkers);
+
 /// Sample individual outcomes without constructing a histogram.
 ///
 /// Uses the same program, seed, output, and worker contracts as `sample`.

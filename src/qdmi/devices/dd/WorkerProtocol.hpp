@@ -13,7 +13,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_socket_stream.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -46,6 +48,7 @@ struct WorkerSlots {
 struct WorkerResponse {
   bool succeeded = false;
   std::vector<std::string> shots;
+  std::map<std::string, size_t> counts;
   std::optional<std::string> output;
   uint32_t qubits = 0;
   std::optional<std::string> state;

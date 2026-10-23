@@ -104,6 +104,14 @@ TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
   EXPECT_EQ(result.qubits, response.qubits);
   EXPECT_EQ(result.state, response.state);
 
+  WorkerResponse compressed;
+  compressed.succeeded = true;
+  compressed.counts = {{"0", 2}, {"1", 1}};
+  WorkerResponse decodedCounts;
+  ASSERT_TRUE(decode(encode(compressed), decodedCounts));
+  EXPECT_TRUE(decodedCounts.shots.empty());
+  EXPECT_EQ(decodedCounts.counts, compressed.counts);
+
   WorkerSlots slots;
   ASSERT_TRUE(decode(encode(WorkerSlots{3}), slots));
   EXPECT_EQ(slots.count, 3U);
@@ -126,6 +134,14 @@ TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
   EXPECT_FALSE(decode(invalidFlag, result));
   EXPECT_FALSE(decode(bytes + "x", result));
   response.shots = {"02"};
+  EXPECT_FALSE(decode(encode(response), result));
+  response.shots.clear();
+  response.counts = {{"02", 1}};
+  EXPECT_FALSE(decode(encode(response), result));
+  response.counts = {{"01", 0}};
+  EXPECT_FALSE(decode(encode(response), result));
+  response.shots = {"01"};
+  response.counts = {{"01", 1}};
   EXPECT_FALSE(decode(encode(response), result));
   const auto request = encode(WorkerRequest{
       .format = 7,

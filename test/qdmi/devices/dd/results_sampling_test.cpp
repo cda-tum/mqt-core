@@ -87,6 +87,7 @@ protected:
                 QDMI_SUCCESS);
     }
     EXPECT_EQ(qdmi_test::submitAndWait(j.job, 0), QDMI_SUCCESS);
+    const auto histogram = qdmi_test::getHistogram(j.job);
     auto shots = getShots(j.job);
     EXPECT_EQ(shots.size(), NUM_SHOTS);
     EXPECT_EQ(shots, getShots(j.job));
@@ -94,7 +95,6 @@ protected:
     for (const auto& shot : shots) {
       ++counts[shot];
     }
-    const auto histogram = qdmi_test::getHistogram(j.job);
     const auto& [keys, values] = histogram;
     EXPECT_EQ(keys.size(), counts.size());
     EXPECT_EQ(keys.size(), values.size());
@@ -257,7 +257,6 @@ TEST_F(HistogramTest, SeedReproducesQASMSampling) {
   EXPECT_EQ(runProgram(format, program, 7, &first),
             runProgram(format, program, 7, &second));
   EXPECT_EQ(first, second);
-  EXPECT_FALSE(std::ranges::is_sorted(first));
 }
 
 TEST_F(QIRHistogramTestString, SeedReproducesQIRSampling) {

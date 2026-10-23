@@ -19,6 +19,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <span>
@@ -31,7 +32,7 @@ namespace qdmi::dd {
 namespace {
 using namespace llvm::orc::shared;
 constexpr uint32_t MAGIC = 0x4d515444;
-constexpr uint32_t VERSION = 3;
+constexpr uint32_t VERSION = 4;
 // Distinct from the response success byte (0 or 1).
 constexpr uint8_t SLOTS = 2;
 using Header = SPSArgList<uint32_t, uint32_t, uint64_t>;
@@ -194,9 +195,13 @@ bool decode(llvm::StringRef bytes, WorkerSlots& slots) {
 std::string encode(const WorkerResponse& response) {
   auto size = Response::size(static_cast<uint8_t>(response.succeeded),
                              response.output, response.qubits, response.state) +
-              sizeof(uint64_t);
+              2 * sizeof(uint64_t);
   for (const auto& shot : response.shots) {
     size += SPSArgList<SPSString>::size(shot);
+  }
+  for (const auto& [outcome, count] : response.counts) {
+    size += SPSArgList<SPSString, uint64_t>::size(outcome,
+                                                  static_cast<uint64_t>(count));
   }
   std::string bytes(size, '\0');
   SPSOutputBuffer buffer(bytes.data(), bytes.size());
@@ -206,6 +211,12 @@ std::string encode(const WorkerResponse& response) {
                                   static_cast<uint64_t>(response.shots.size()));
   for (const auto& shot : response.shots) {
     SPSArgList<SPSString>::serialize(buffer, shot);
+  }
+  SPSArgList<uint64_t>::serialize(
+      buffer, static_cast<uint64_t>(response.counts.size()));
+  for (const auto& [outcome, count] : response.counts) {
+    SPSArgList<SPSString, uint64_t>::serialize(buffer, outcome,
+                                               static_cast<uint64_t>(count));
   }
   return bytes;
 }
@@ -241,6 +252,24 @@ bool decode(llvm::StringRef bytes, WorkerResponse& response) {
       return false;
     }
     response.shots.push_back(shot.str());
+  }
+  uint64_t distinct = 0;
+  if (!SPSArgList<uint64_t>::deserialize(buffer, distinct) ||
+      distinct > bytes.size() / (2 * sizeof(uint64_t)) ||
+      (distinct != 0 && !response.shots.empty())) {
+    return false;
+  }
+  for (uint64_t i = 0; i < distinct; ++i) {
+    llvm::StringRef outcome;
+    uint64_t frequency = 0;
+    if (!SPSArgList<SPSString, uint64_t>::deserialize(buffer, outcome,
+                                                      frequency) ||
+        outcome.find_first_not_of("01") != llvm::StringRef::npos ||
+        frequency == 0 || frequency > std::numeric_limits<size_t>::max() ||
+        !response.counts.emplace(outcome.str(), static_cast<size_t>(frequency))
+             .second) {
+      return false;
+    }
   }
   return buffer.data() == bytes.end();
 }
