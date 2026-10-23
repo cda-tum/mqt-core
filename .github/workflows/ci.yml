@@ -55,7 +55,6 @@ jobs:
       llvm-version: 23.1.2
       preset-name: ${{ matrix.preset }}
       run-on-draft: ${{ matrix.run-on-draft }}
-      use-sccache-gha: false
     permissions:
       contents: read
 
@@ -83,7 +82,6 @@ jobs:
       llvm-version: 23.1.2
       preset-name: ${{ matrix.preset }}
       run-on-draft: ${{ matrix.run-on-draft }}
-      use-sccache-gha: false
     permissions:
       contents: read
 
@@ -111,7 +109,6 @@ jobs:
       llvm-version: 23.1.2
       preset-name: ${{ matrix.preset }}
       run-on-draft: ${{ matrix.run-on-draft }}
-      use-sccache-gha: false
     permissions:
       contents: read
 
@@ -123,7 +120,6 @@ jobs:
     with:
       setup-mlir: true
       llvm-version: 23.1.2
-      use-sccache-gha: false
     permissions:
       contents: read
       id-token: write
@@ -165,7 +161,6 @@ jobs:
       sessions: ${{ matrix.runs-on == 'ubuntu-26.04' && '["minimums", "tests", "qiskit-compat"]' || '["minimums", "tests"]' }}
       setup-mlir: true
       llvm-version: 23.1.2
-      use-sccache-gha: false
     permissions:
       contents: read
 
@@ -189,7 +184,6 @@ jobs:
       enable-mypy: false
       setup-mlir: true
       llvm-version: 23.1.2
-      use-sccache-gha: false
     secrets:
       APP_ID: ${{ secrets.APP_ID }}
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}

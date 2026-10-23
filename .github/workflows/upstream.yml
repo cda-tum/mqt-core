@@ -24,7 +24,6 @@ jobs:
       draft-sessions: '["catalyst-dev"]'
       setup-mlir: true
       llvm-version: 23.1.2
-      use-sccache-gha: false
     permissions:
       contents: read
 
