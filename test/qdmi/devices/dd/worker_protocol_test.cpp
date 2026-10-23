@@ -144,6 +144,11 @@ TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
   EXPECT_FALSE(decode(encode(response), result));
   response.counts = {{"01", 0}};
   EXPECT_FALSE(decode(encode(response), result));
+  response.counts = {{"0", 1}, {"1", 1}};
+  auto duplicate = encode(response);
+  duplicate[duplicate.size() - sizeof(uint64_t) - 1] = '0';
+  WorkerResponse duplicateResult;
+  EXPECT_FALSE(decode(duplicate, duplicateResult));
   response.shotCount = 1;
   response.shots = "01,";
   response.counts = {{"01", 1}};

@@ -195,24 +195,30 @@ bool decode(llvm::StringRef bytes, WorkerSlots& slots) {
 }
 
 std::string encode(const WorkerResponse& response) {
-  auto size = Response::size(static_cast<uint8_t>(response.succeeded),
-                             response.output, response.qubits, response.state) +
-              (2 * sizeof(uint64_t)) +
-              SPSArgList<SPSString>::size(response.shots);
+  // SPS writes StringRef in bulk but serializes std::string byte by byte.
+  const auto output = response.output
+                          ? std::optional<llvm::StringRef>(*response.output)
+                          : std::nullopt;
+  const auto state = response.state
+                         ? std::optional<llvm::StringRef>(*response.state)
+                         : std::nullopt;
+  const llvm::StringRef shots(response.shots);
+  auto size = Response::size(static_cast<uint8_t>(response.succeeded), output,
+                             response.qubits, state) +
+              (2 * sizeof(uint64_t)) + SPSArgList<SPSString>::size(shots);
   for (const auto& [outcome, count] : response.counts) {
-    size += SPSArgList<SPSString, uint64_t>::size(outcome,
+    size += SPSArgList<SPSString, uint64_t>::size(llvm::StringRef(outcome),
                                                   static_cast<uint64_t>(count));
   }
   std::string bytes(size, '\0');
   SPSOutputBuffer buffer(bytes.data(), bytes.size());
-  Response::serialize(buffer, static_cast<uint8_t>(response.succeeded),
-                      response.output, response.qubits, response.state);
-  SPSArgList<uint64_t, SPSString>::serialize(buffer, response.shotCount,
-                                             response.shots);
+  Response::serialize(buffer, static_cast<uint8_t>(response.succeeded), output,
+                      response.qubits, state);
+  SPSArgList<uint64_t, SPSString>::serialize(buffer, response.shotCount, shots);
   SPSArgList<uint64_t>::serialize(
       buffer, static_cast<uint64_t>(response.counts.size()));
   for (const auto& [outcome, count] : response.counts) {
-    SPSArgList<SPSString, uint64_t>::serialize(buffer, outcome,
+    SPSArgList<SPSString, uint64_t>::serialize(buffer, llvm::StringRef(outcome),
                                                static_cast<uint64_t>(count));
   }
   return bytes;
@@ -267,9 +273,14 @@ bool decode(llvm::StringRef bytes, WorkerResponse& response) {
     if (!SPSArgList<SPSString, uint64_t>::deserialize(buffer, outcome,
                                                       frequency) ||
         outcome.find_first_not_of("01") != llvm::StringRef::npos ||
-        frequency == 0 || frequency > std::numeric_limits<size_t>::max() ||
-        !response.counts.emplace(outcome.str(), static_cast<size_t>(frequency))
-             .second) {
+        frequency == 0 || frequency > std::numeric_limits<size_t>::max()) {
+      return false;
+    }
+    const auto before = response.counts.size();
+    // Encoded map keys are sorted, making the end hint constant time.
+    response.counts.emplace_hint(response.counts.end(), outcome.str(),
+                                 static_cast<size_t>(frequency));
+    if (response.counts.size() == before) {
       return false;
     }
   }
