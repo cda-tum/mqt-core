@@ -1008,7 +1008,7 @@ ratio = 2.0;
   EXPECT_EQ(resultTypes,
             (std::vector<std::string>{"i64", "!cbit.reg<2>", "f64"}));
   ASSERT_TRUE(mlir::succeeded(restoredQC));
-  auto emitted = restoredQC->toOpenQASM3();
+  auto emitted = std::move(*restoredQC).intoOpenQASM3();
   ASSERT_TRUE(mlir::succeeded(emitted));
   EXPECT_NE(emitted->source().find("output int _mqt_out0;"), std::string::npos);
   EXPECT_NE(emitted->source().find("output bit[2] bits;"), std::string::npos);
@@ -1680,7 +1680,7 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
     SCOPED_TRACE(source.str());
     auto qc = QCProgram::fromOpenQASMString(source.str());
     ASSERT_TRUE(mlir::succeeded(qc));
-    auto exported = qc->toOpenQASM3();
+    auto exported = qc->copy().intoOpenQASM3();
     ASSERT_TRUE(succeeded(exported));
     auto reimported = QCProgram::fromOpenQASMString(exported->source());
     ASSERT_TRUE(succeeded(reimported));
@@ -2225,11 +2225,9 @@ bit[2] c = measure q;
 )";
   auto directQC = QCProgram::fromOpenQASMString(qasm);
   ASSERT_TRUE(mlir::succeeded(directQC));
-  const auto importedIR = directQC->str();
-  auto direct = directQC->toOpenQASM3();
+  auto direct = std::move(*directQC).intoOpenQASM3();
   ASSERT_TRUE(mlir::succeeded(direct));
-  EXPECT_TRUE(directQC->isValid());
-  EXPECT_EQ(directQC->str(), importedIR);
+  EXPECT_FALSE(directQC->isValid());
   EXPECT_TRUE(direct->source().starts_with("OPENQASM 3.1;\n"));
   EXPECT_EQ(direct->str(), direct->source());
   EXPECT_NE(direct->source().find("output bit[2] c;"), std::string::npos);
@@ -2281,7 +2279,7 @@ TEST_F(CompilerPipelineTest, TypedOpenQASMExportDropsUnusedGates) {
   auto program = QCProgram::fromMLIRString(source.str());
   ASSERT_TRUE(mlir::succeeded(program));
 
-  auto exported = program->toOpenQASM3();
+  auto exported = std::move(*program).intoOpenQASM3();
 
   ASSERT_TRUE(mlir::succeeded(exported));
   EXPECT_EQ(exported->source().find("gate unused"), std::string::npos);
@@ -2299,7 +2297,7 @@ TEST_F(CompilerPipelineTest, OpenQASMExportPreservesConditionalArrayAngles) {
     result = measure q;
   )qasm");
   ASSERT_TRUE(succeeded(program));
-  auto exported = program->toOpenQASM3();
+  auto exported = std::move(*program).intoOpenQASM3();
   ASSERT_TRUE(succeeded(exported));
   auto restored = QCProgram::fromOpenQASMString(exported->source());
   ASSERT_TRUE(succeeded(restored));
@@ -2327,7 +2325,7 @@ c[1] = measure q[3];
   auto prepared =
       runDefaultPipeline(CompilerInput(program->copy()), ProgramFormat::QC);
   ASSERT_TRUE(mlir::succeeded(prepared));
-  auto reference = std::get<QCProgram>(*prepared).toOpenQASM3();
+  auto reference = std::get<QCProgram>(std::move(*prepared)).intoOpenQASM3();
   ASSERT_TRUE(mlir::succeeded(reference));
   auto output = runDefaultPipeline(CompilerInput(std::move(*program)),
                                    ProgramFormat::OpenQASM3);
@@ -2349,7 +2347,8 @@ TEST_F(CompilerPipelineTest, TypedOpenQASMExportReportsUnsupportedQC) {
   })mlir";
   auto program = QCProgram::fromMLIRString(source);
   ASSERT_TRUE(mlir::succeeded(program));
-  EXPECT_TRUE(mlir::failed(program->toOpenQASM3()));
+  EXPECT_TRUE(mlir::failed(std::move(*program).intoOpenQASM3()));
+  EXPECT_FALSE(program->isValid());
 }
 
 // Test: typed programs expose idempotent global-phase normalization.
@@ -4019,7 +4018,7 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
   EXPECT_EQ(outcomes->begin()->first, "1");
   auto qasmQC = std::move(qasmProgram).intoQC();
   ASSERT_TRUE(mlir::succeeded(qasmQC));
-  auto qasm = qasmQC->toOpenQASM3();
+  auto qasm = std::move(*qasmQC).intoOpenQASM3();
   ASSERT_TRUE(mlir::succeeded(qasm));
   EXPECT_TRUE(StringRef(qasm->source()).contains("$7"));
   EXPECT_FALSE(StringRef(qasm->source()).contains("$42"));
@@ -5267,7 +5266,7 @@ ctrl @ ry(phi) q[0], q[1];
                               : program.compileForTarget(environment)));
     auto loweredQC = std::move(program).intoQC();
     ASSERT_TRUE(succeeded(loweredQC));
-    auto exported = loweredQC->toOpenQASM3();
+    auto exported = std::move(*loweredQC).intoOpenQASM3();
     ASSERT_TRUE(succeeded(exported));
     auto reparsed = QCProgram::fromOpenQASMString(exported->source());
     ASSERT_TRUE(succeeded(reparsed));

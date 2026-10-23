@@ -36,8 +36,8 @@ def check_paths(program: QCProgram, expected: int) -> None:
     """Check observable behavior, serialized interchange, and source preservation."""
     original = program.ir
     assert observe(program) == expected
-    source = program.to_openqasm3().source
-    assert source == program.to_openqasm3().source
+    source = program.to_openqasm3(copy=True).source
+    assert source == program.to_openqasm3(copy=True).source
     assert observe(source) == expected
     qiskit = program.to_qiskit(copy=True)
     # Each export owns fresh native variables; their serialized structure is stable.
@@ -74,7 +74,7 @@ def test_do_while_round_trip(iterations: int) -> None:
     imported = QCProgram.from_qiskit(restored)
     assert imported.ir.count("scf.while") == 1
     assert "scf.if" not in imported.ir
-    qasm = QCProgram.from_openqasm_str(program.to_openqasm3().source)
+    qasm = QCProgram.from_openqasm_str(program.to_openqasm3(copy=True).source)
     assert qasm.ir.count("scf.while") == 1
     assert "scf.if" not in qasm.ir
     check_paths(program, iterations % 2)
@@ -432,11 +432,14 @@ module {
 """)
     original = program.ir
     with pytest.raises(RuntimeError, match="OpenQASM") as qasm_error:
-        program.to_openqasm3()
+        program.to_openqasm3(copy=True)
     assert "unsupported-loop.mlir" in str(qasm_error.value)
     assert "i128" in str(qasm_error.value)
     assert observe(program.to_qiskit(copy=True)) == 0
     assert program.ir == original
+    with pytest.raises(RuntimeError, match="OpenQASM"):
+        program.to_openqasm3()
+    assert not program.is_valid
 
 
 def test_runtime_gate_parameter_is_distinct_from_local_state() -> None:

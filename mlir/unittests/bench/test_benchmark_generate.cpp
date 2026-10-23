@@ -228,7 +228,7 @@ static void expectOpenQASMRoundTrip(const Benchmark& benchmark, size_t shots) {
       ASSERT_TRUE(mlir::succeeded(compiled));
       qasm = std::get<OpenQASMProgram>(std::move(*compiled));
     } else {
-      qasm = qc->toOpenQASM3();
+      qasm = qc->copy().intoOpenQASM3();
     }
     ASSERT_TRUE(mlir::succeeded(qasm));
     auto restored = QCProgram::fromOpenQASMString(qasm->source());
@@ -323,7 +323,7 @@ TEST(GenerateProgramTest, RoundTripsWStateThroughOpenQASM) {
   const WState benchmark{{.qubits = 3}};
   auto qc = generate(benchmark);
   ASSERT_TRUE(mlir::succeeded(qc));
-  auto qasm = qc->toOpenQASM3();
+  auto qasm = std::move(*qc).intoOpenQASM3();
   ASSERT_TRUE(mlir::succeeded(qasm));
   auto restored = QCProgram::fromOpenQASMString(qasm->source());
   ASSERT_TRUE(mlir::succeeded(restored));

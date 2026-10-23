@@ -949,7 +949,7 @@ TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
         mlir::TargetEnvironment(
             target, llvm::cantFail(mlir::payloadSpecificationForProgramFormat(
                         QDMI_PROGRAM_FORMAT_QIRBASESTRING))));
-    EXPECT_TRUE(mlir::failed(program->toOpenQASM3()));
+    EXPECT_TRUE(mlir::failed(program->copy().intoOpenQASM3()));
     auto qir = std::move(*program).intoQIR(mlir::QIRProfile::Base);
     ASSERT_TRUE(mlir::succeeded(qir));
     auto text = qir->llvmIR();
@@ -977,7 +977,8 @@ TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
         mlir::TargetEnvironment(
             target, llvm::cantFail(mlir::payloadSpecificationForProgramFormat(
                         QDMI_PROGRAM_FORMAT_QASM3))));
-    EXPECT_EQ(mlir::succeeded(program->toOpenQASM3()), theta != 0.0);
+    EXPECT_EQ(mlir::succeeded(std::move(*program).intoOpenQASM3()),
+              theta != 0.0);
   }
 }
 
@@ -1045,7 +1046,7 @@ TEST(CompilerQDMIAdapterTest, SelectsNativeAliasesByOrderedPlacement) {
       mlir::TargetEnvironment(
           target, llvm::cantFail(mlir::payloadSpecificationForProgramFormat(
                       QDMI_PROGRAM_FORMAT_QIRBASESTRING))));
-  auto qasm = program->toOpenQASM3();
+  auto qasm = program->copy().intoOpenQASM3();
   ASSERT_TRUE(mlir::succeeded(qasm));
   EXPECT_NE(qasm->source().find("cx $0, $1;"), std::string::npos);
   EXPECT_NE(qasm->source().find("cnot $1, $2;"), std::string::npos);

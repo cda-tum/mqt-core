@@ -254,7 +254,8 @@ assert reparsed.is_valid
 ```
 
 Use {py:meth}`~mqt.core.mlir.QCProgram.to_openqasm3` to clean up and export the
-current QC program without QCO optimization. The resulting
+current QC program without QCO optimization. It consumes the program even on
+failure; set `copy=True` to preserve it. The resulting
 {py:class}`~mqt.core.mlir.OpenQASMProgram` can be passed directly to
 {py:func}`~mqt.core.mlir.compile_program`:
 

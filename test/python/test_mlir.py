@@ -381,10 +381,13 @@ def test_program_conversions_are_composable() -> None:
 def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
     """Emit OpenQASM directly from QC and through the optimized pipeline."""
     source = QCProgram.from_openqasm_str(QASM_STRING)
+    preserved = source.to_openqasm3(copy=True)
+    assert source.is_valid
     direct = source.to_openqasm3()
 
     assert isinstance(direct, OpenQASMProgram)
-    assert source.is_valid
+    assert not source.is_valid
+    assert direct.source == preserved.source
     assert direct.source.startswith("OPENQASM 3.1;")
     assert str(direct) == direct.source
 

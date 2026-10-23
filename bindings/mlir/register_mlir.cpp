@@ -1746,15 +1746,20 @@ Args:
           "Normalize scoped global phases in place.")
       .def(
           "to_openqasm3",
-          [](const mlir::QCProgram& program) {
-            requireValid(program);
+          [](mlir::QCProgram& program, const bool copy) {
+            auto source = copiedOrConsumed(program, copy);
+            const auto context = source.context();
             return withDiagnostics<nb::exception_type::runtime_error>(
-                program.module().getContext(),
-                "cannot export QC program to OpenQASM 3",
-                [&] { return program.toOpenQASM3(); });
+                context.get(), "cannot export QC program to OpenQASM 3",
+                [&] { return std::move(source).intoOpenQASM3(); });
           },
-          "Clean up and emit this QC program as OpenQASM 3 without QCO "
-          "optimization.")
+          nb::kw_only(), "copy"_a = false,
+          R"pb(Clean up and emit this QC program as OpenQASM 3 without QCO optimization.
+
+The source is consumed, including when export fails. Set ``copy=True`` to preserve it.
+
+Args:
+    copy: Preserve the source program by exporting a copy.)pb")
       .def(
           "to_qiskit",
           [](mlir::QCProgram& program, const mlir::CompilerTarget* target,

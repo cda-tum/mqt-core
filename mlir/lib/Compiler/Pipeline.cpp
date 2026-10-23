@@ -88,13 +88,13 @@ LogicalResult QCProgram::normalizeGlobalPhases() {
   return mqt::normalizeGlobalPhases(mod());
 }
 
-FailureOr<OpenQASMProgram> QCProgram::toOpenQASM3() const {
-  auto cleaned = copy();
-  if (failed(runWithPassManager(cleaned.mod(), populateQCExportPipeline,
+FailureOr<OpenQASMProgram> QCProgram::intoOpenQASM3() && {
+  auto storage = std::move(*this).releaseStorage();
+  if (failed(runWithPassManager(*storage.mod, populateQCExportPipeline,
                                 "failed to prepare QC for OpenQASM export"))) {
     return failure();
   }
-  auto source = qc::translateQCToOpenQASM3(cleaned.mod());
+  auto source = qc::translateQCToOpenQASM3(std::move(storage.mod));
   if (failed(source)) {
     return failure();
   }
@@ -526,15 +526,15 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
     // Export cleanup can change resources and invalidate routing metadata.
     return CompilerProgram(std::move(*qc));
   }
-  if (failed(qc->cleanup())) {
-    return failure();
-  }
   if (output == ProgramFormat::OpenQASM3) {
-    auto source = qc::translateQCToOpenQASM3(qc->module());
+    auto source = std::move(*qc).intoOpenQASM3();
     if (failed(source)) {
       return failure();
     }
-    return CompilerProgram(OpenQASMProgram(std::move(*source)));
+    return CompilerProgram(std::move(*source));
+  }
+  if (failed(qc->cleanup())) {
+    return failure();
   }
 
   const auto profile = output == ProgramFormat::QIRAdaptive

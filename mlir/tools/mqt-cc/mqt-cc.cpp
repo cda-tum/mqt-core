@@ -832,7 +832,8 @@ static int runCompiler(int argc, char** argv) {
                    << "': " << errorMessage << "\n";
       return 1;
     }
-    if (failed(qc::translateQCToOpenQASM3(*program.mod, output->os()))) {
+    if (failed(
+            qc::translateQCToOpenQASM3(std::move(program.mod), output->os()))) {
       return 1;
     }
     output->keep();

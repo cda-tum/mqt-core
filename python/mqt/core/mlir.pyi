@@ -827,8 +827,14 @@ class QCProgram(Program):
     def normalize_global_phases(self) -> None:
         """Normalize scoped global phases in place."""
 
-    def to_openqasm3(self) -> OpenQASMProgram:
-        """Clean up and emit this QC program as OpenQASM 3 without QCO optimization."""
+    def to_openqasm3(self, *, copy: bool = False) -> OpenQASMProgram:
+        """Clean up and emit this QC program as OpenQASM 3 without QCO optimization.
+
+        The source is consumed, including when export fails. Set ``copy=True`` to preserve it.
+
+        Args:
+            copy: Preserve the source program by exporting a copy.
+        """
 
     def to_qiskit(self, *, target: CompilerTarget | None = None, copy: bool = False) -> qiskit.circuit.QuantumCircuit:
         """Convert this program to a Qiskit circuit.

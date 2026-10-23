@@ -57,6 +57,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -640,6 +641,7 @@ void JitSession::initialize(
 
   std::string entryPointName;
   std::vector<std::pair<std::string, void*>> runtimeSymbols;
+  bool hasAggregateLoads = false;
   loadedModule.withModuleDo([&](llvm::Module& module) {
     normalizeNativeQISNames(module);
     std::string verification;
@@ -650,6 +652,8 @@ void JitSession::initialize(
     for (const auto& function : module) {
       for (const auto& block : function) {
         for (const auto& instruction : block) {
+          hasAggregateLoads |= llvm::isa<llvm::LoadInst>(instruction) &&
+                               instruction.getType()->isAggregateType();
           const auto* call = llvm::dyn_cast<llvm::CallBase>(&instruction);
           const auto* callee =
               call == nullptr ? nullptr : call->getCalledFunction();
@@ -808,7 +812,8 @@ void JitSession::initialize(
   }
 
   // Avoid optimizer startup for programs eligible for terminal sampling.
-  if (execution == Execution::Sampling && !samplingOutputs_) {
+  if (!samplingOutputs_ &&
+      (execution == Execution::Sampling || hasAggregateLoads)) {
     loadedModule.withModuleDo([&](llvm::Module& module) {
       module.setDataLayout(jit_->getDataLayout());
       module.setTargetTriple(jit_->getTargetTriple());
@@ -825,8 +830,14 @@ void JitSession::initialize(
       passBuilder.registerLoopAnalyses(loopAnalyses);
       passBuilder.crossRegisterProxies(loopAnalyses, functionAnalyses,
                                        cgsccAnalyses, moduleAnalyses);
-      auto pipeline = passBuilder.buildPerModuleDefaultPipeline(
-          llvm::OptimizationLevel::O1);
+      llvm::ModulePassManager pipeline;
+      // Keep aggregate copies compact through scalar replacement and codegen.
+      pipeline.addPass(
+          llvm::createModuleToFunctionPassAdaptor(llvm::MemCpyOptPass()));
+      if (execution == Execution::Sampling) {
+        pipeline.addPass(passBuilder.buildPerModuleDefaultPipeline(
+            llvm::OptimizationLevel::O1));
+      }
       pipeline.run(module, moduleAnalyses);
     });
   }
