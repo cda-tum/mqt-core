@@ -1259,7 +1259,11 @@ static LogicalResult applyFloatOp(Operation& op, ClassicalEnv& classical) {
   return success();
 }
 
-static LogicalResult applyClassicalOp(Operation& op, ClassicalEnv& classical) {
+static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
+                                    WalkState& walk, Operation* op);
+
+static LogicalResult applyClassicalOp(Operation& op, WalkState& walk) {
+  auto& classical = *walk.classical;
   const auto isUnsupportedFloat = [](Type type) {
     return isa<FloatType>(type) && !type.isF64();
   };
@@ -1403,7 +1407,7 @@ static LogicalResult applyClassicalOp(Operation& op, ClassicalEnv& classical) {
         }
         Value selected =
             *condition ? select.getTrueValue() : select.getFalseValue();
-        return classical.bindFrom(selected, select.getResult(), select);
+        return bindValuePairs(selected, select.getResult(), walk, select);
       })
       .Case<arith::ExtUIOp, arith::IndexCastUIOp, arith::TruncIOp>(
           [&](auto cast) {
@@ -1494,9 +1498,6 @@ static FailureOr<LoopRange> resolveLoop(scf::ForOp forOp,
       (span + stepWide - llvm::APInt(wideWidth, 1)).udiv(stepWide);
   return LoopRange{.induction = lowerWide, .step = stepWide, .trips = trips};
 }
-
-static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
-                                    WalkState& walk, Operation* op);
 
 static LogicalResult bindValuePairs(ValueRange sources, ValueRange dests,
                                     WalkState& walk, Operation* op) {
@@ -2103,7 +2104,7 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
         if (dialect == arith::ArithDialect::getDialectNamespace() ||
             dialect == math::MathDialect::getDialectNamespace() ||
             isa<LLVM::FshlOp, LLVM::FshrOp>(unsupported)) {
-          return applyClassicalOp(*unsupported, *walk.classical);
+          return applyClassicalOp(*unsupported, walk);
         }
         return unsupported->emitError()
                << "unsupported op for QCO DD construction: "
