@@ -101,44 +101,44 @@ void walkProgramGraph(MutableArrayRef<WireIterator> wires,
     for (const auto i : curr) {
       auto& it = wires[i];
 
-      while (it != std::default_sentinel) {
-        if (it.operation() == nullptr) { // isa<BlockArgument>
-          std::ranges::advance(it, Traits::stride());
-          continue;
+      // Advance past block arguments.
+      if (it != std::default_sentinel && it.operation() == nullptr) {
+        std::ranges::advance(it, Traits::stride());
+      }
+
+      if (it == std::default_sentinel) {
+        continue;
+      }
+
+      Operation* op = it.operation();
+      if (const auto mapIt = pending.find(op); mapIt != pending.end()) {
+        PendingItem& item = mapIt->second;
+        item.indices_.emplace_back(i);
+
+        if (item.ready()) {
+          frontier.try_emplace(op, item.indices_);
+        }
+      } else {
+        const auto nqubits = static_cast<size_t>(
+            llvm::count_if(op->getOperandTypes(),
+                           [](Type type) { return isa<QubitType>(type); }));
+
+        // If there are fewer wires than the operation requires inputs,
+        // it's impossible to release the operation. Hence, fail.
+
+        if (nqubits > wires.size()) {
+          llvm::reportFatalInternalError("more input qubits than wires");
+          return;
         }
 
-        if (const auto mapIt = pending.find(it.operation());
-            mapIt != pending.end()) {
-          PendingItem& item = mapIt->second;
-          item.indices_.emplace_back(i);
-
-          if (item.ready()) {
-            frontier.try_emplace(it.operation(), item.indices_);
-          }
-        } else {
-          const auto nqubits = static_cast<size_t>(
-              llvm::count_if(it.operation()->getOperandTypes(),
-                             [](Type type) { return isa<QubitType>(type); }));
-
-          // If there are fewer wires than the operation requires inputs,
-          // it's impossible to release the operation. Hence, fail.
-
-          if (nqubits > wires.size()) {
-            llvm::reportFatalInternalError("more input qubits than wires");
-            return;
-          }
-
-          // Single-qubit operations and sources are immediately ready.
-          if (nqubits <= 1) {
-            frontier.try_emplace(it.operation(), SmallVector{i});
-          }
-
-          PendingItem item(nqubits);
-          item.indices_.emplace_back(i);
-          pending.try_emplace(it.operation(), std::move(item));
+        // Single-qubit operations and sources are immediately ready.
+        if (nqubits <= 1) {
+          frontier.try_emplace(op, SmallVector{i});
         }
 
-        break;
+        PendingItem item(nqubits);
+        item.indices_.emplace_back(i);
+        pending.try_emplace(op, std::move(item));
       }
     }
 
