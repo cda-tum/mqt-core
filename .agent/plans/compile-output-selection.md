@@ -30,13 +30,16 @@ deferring resource-changing export cleanup. Capabilities are restricted by both
 the output representation and the target's known contract. Different formats
 share structural control-flow constraints; matching language versions and
 profiles also share format-specific capabilities, independently of text or
-binary encoding. The shared pipeline validates the final QIR feature
-requirements, including loops introduced during lowering. Qiskit export receives
-the complete environment when compiling, and retains a target-only overload for
-direct conversions. All 11 supported capability IDs and three structural limits
-are covered. Required QIR loop capabilities must be unconstrained because final
-lowering does not retain a proof of their bounds. QDMI 1.4 has no detailed
-per-format capability descriptors; its device snapshots use format baselines.
+binary encoding. The shared pipeline calls the `Target/QIR` capability validator
+for final QIR requirements, including loops introduced during lowering. The
+validator and its flag mapping live together in the existing QIR translation
+library; it accepts capability values without linking the compiler target model.
+Qiskit export receives the complete environment when compiling, and retains a
+target-only overload for direct conversions. All 11 supported capability IDs and
+three structural limits are covered. Required QIR loop capabilities must be
+unconstrained because final lowering does not retain a proof of their bounds.
+QDMI 1.4 has no detailed per-format capability descriptors; its device snapshots
+use format baselines.
 
 `bindings/patterns.txt` uses literal output overloads and a constrained type
 variable for same-family defaults. Existing Python tests in
@@ -46,11 +49,12 @@ capability limits. The native payload test checks the capability intersection
 directly. These cover representative combinations without an input/target/output
 Cartesian product. Tests use direct simulation, export, submission, and module
 inspection; serialization, ownership, phase, and layout checks retain their
-distinct oracles.
+distinct oracles. The QDMI tests form a package so focused runs can import
+shared helpers without changing pytest's configured Python path.
 
 Validation on main revision `422a69c1a3`: 4,040 native tests; 1,471 MLIR, QDMI,
 and magic-state-distillation Python tests with Qiskit 2.6.0; and 722
 compatibility tests with Qiskit 2.5.2. Generated stubs, Python 3.11 return-type
 checks, whole-file C++ lint, and executable documentation with internal links
-passed. Twenty-six compiler tests passed after the final style-only native
-edits.
+passed. The QIR organization follow-up reruns the native and Python suites; 395
+focused QDMI tests also pass without a pytest Python-path setting.

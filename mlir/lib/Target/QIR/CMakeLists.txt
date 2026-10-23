@@ -8,6 +8,7 @@
 
 add_mlir_library(
   MLIRQIRTranslation
+  Capabilities.cpp
   Export.cpp
   LINK_LIBS
   LLVMBitWriter

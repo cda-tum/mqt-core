@@ -16,8 +16,6 @@
 #include "mqt/Target/QIR/Export.h"
 #include "qdmi/QDMI.hpp"
 
-#include "QIRCapabilities.h"
-
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/ArrayRef.h"

@@ -23,9 +23,8 @@
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Support/Passes.h"
 #include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
+#include "mqt/Target/QIR/Capabilities.h"
 #include "mqt/Target/QIR/Export.h"
-
-#include "QIRCapabilities.h"
 
 #include "capnp/common.h"
 #include "jeff/Translation/Deserialize.hpp"
@@ -33,15 +32,11 @@
 #include "kj/array.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -390,62 +385,6 @@ QIRProgram::writeBitcode(const std::filesystem::path& path) const {
 // Pipeline
 //===----------------------------------------------------------------------===//
 
-[[nodiscard]] static LogicalResult
-validateQIRCapabilities(ModuleOp moduleOp,
-                        const PayloadSpecification& payload) {
-  const auto requireCapability =
-      [&](llvm::StringRef id, bool allowConstraints = false) -> LogicalResult {
-    const auto* const capability =
-        llvm::find_if(payload.capabilities(), [&](const auto& entry) {
-          return entry.id == id && entry.value == 0;
-        });
-    if (capability == payload.capabilities().end()) {
-      return moduleOp.emitError()
-             << "Selected QIR payload requires capability '" << id
-             << "' that the target contract does not permit";
-    }
-    if (!allowConstraints && !capability->constraints.empty()) {
-      return moduleOp.emitError() << "QIR lowering cannot verify constraints "
-                                     "on required capability '"
-                                  << id << "'";
-    }
-    return success();
-  };
-  const auto optionalFeatures =
-      llvm::ArrayRef(detail::QIR_OPTIONAL_CAPABILITIES);
-  for (auto flags : moduleOp.getOps<LLVM::ModuleFlagsOp>()) {
-    for (auto attribute : flags.getFlags()) {
-      const auto flag = cast<LLVM::ModuleFlagAttr>(attribute);
-      const auto key = flag.getKey().getValue();
-      if (const auto value = dyn_cast<IntegerAttr>(flag.getValue());
-          value && value.getValue().isZero()) {
-        continue;
-      }
-      if (key == "backwards_branching") {
-        const auto branches =
-            cast<IntegerAttr>(flag.getValue()).getValue().getZExtValue();
-        if (((branches & 1U) != 0U &&
-             failed(requireCapability(ProgramCapability::COUNTED_ITERATION))) ||
-            ((branches & 2U) != 0U &&
-             failed(requireCapability(ProgramCapability::CONDITIONAL_LOOP)))) {
-          return failure();
-        }
-        continue;
-      }
-      const auto* const feature =
-          llvm::find_if(optionalFeatures,
-                        [&](const auto& entry) { return key == entry.first; });
-      if (feature != optionalFeatures.end() &&
-          failed(requireCapability(
-              feature->second,
-              feature->second == ProgramCapability::MULTIWAY_BRANCHING))) {
-        return failure();
-      }
-    }
-  }
-  return success();
-}
-
 [[nodiscard]] static FailureOr<CompilerProgram>
 runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
                        const TargetEnvironment* environment,
@@ -576,8 +515,9 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
   auto qir = std::move(*qc).intoQIR(profile);
   if (failed(qir) ||
       (environment != nullptr &&
-       failed(validateQIRCapabilities(qir->module(),
-                                      environment->payloadSpecification())))) {
+       failed(qir::validateCapabilities(
+           qir->module(),
+           environment->payloadSpecification().capabilities())))) {
     return failure();
   }
   return CompilerProgram(std::move(*qir));
