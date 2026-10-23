@@ -43,6 +43,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/Timing.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/Twine.h"
@@ -333,6 +334,7 @@ static ParsedProgram loadJeffFile(const StringRef filename,
   if (failed(applyPassManagerCLOptions(pm))) {
     return {};
   }
+  applyDefaultTimingPassManagerCLOptions(pm);
   pm.addPass(createJeffToQCO());
   if (pm.run(*mod).failed()) {
     llvm::errs() << "Failed to convert jeff input to QCO.\n";
@@ -404,6 +406,7 @@ static int runCompiler(int argc, char** argv) {
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
+  registerDefaultTimingManagerCLOptions();
   tracing::DebugConfig::registerCLOptions();
 
   // Parse command-line options; exit on error and print to stderr
@@ -662,6 +665,7 @@ static int runCompiler(int argc, char** argv) {
         if (failed(applyPassManagerCLOptions(pm))) {
           return failure();
         }
+        applyDefaultTimingPassManagerCLOptions(pm);
         if (failed(populate(pm))) {
           return failure();
         }
@@ -684,8 +688,11 @@ static int runCompiler(int argc, char** argv) {
                failed(qco::verifyLinearity(*program.mod))) {
       return 1;
     }
-    if (failed(applyPassManagerCLOptions(pm)) ||
-        failed(runWithCompilationOptions(pm, *program.mod, options))) {
+    if (failed(applyPassManagerCLOptions(pm))) {
+      return 1;
+    }
+    applyDefaultTimingPassManagerCLOptions(pm);
+    if (failed(runWithCompilationOptions(pm, *program.mod, options))) {
       return 1;
     }
     if (!runReproducer && failed(qco::verifyLinearity(*program.mod))) {

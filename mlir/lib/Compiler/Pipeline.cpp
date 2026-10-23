@@ -418,13 +418,26 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
   std::optional<tracing::ActionProfiler> profiler;
   std::optional<tracing::ExecutionContext> executionContext;
   std::shared_ptr<MLIRContext> profileContext;
-  MLIRContext::HandlerTy previousHandler;
-  const llvm::scope_exit restoreHandler([&] {
+  const llvm::scope_exit clearHandler([&] {
     if (profileContext) {
-      profileContext->registerActionHandler(std::move(previousHandler));
+      profileContext->registerActionHandler(nullptr);
     }
   });
   if (!options.profileActionsTo.empty()) {
+    const bool hasActionHandler = std::visit(
+        []<typename T>(const T& input) {
+          if constexpr (std::is_same_v<T, OpenQASMProgram>) {
+            return false;
+          } else {
+            return input.context()->hasActionHandler();
+          }
+        },
+        program);
+    if (hasActionHandler) {
+      llvm::errs() << "action profiling requires a context without an existing "
+                      "action handler\n";
+      return failure();
+    }
     std::error_code error;
     profileStream.emplace(options.profileActionsTo, error);
     if (error) {
@@ -441,19 +454,10 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
       return;
     }
     profileContext = input.context();
-    previousHandler = std::move(profileContext->getActionHandler());
     profileContext->registerActionHandler(
         [&](llvm::function_ref<void()> transform,
             const tracing::Action& action) {
-          (*executionContext)(
-              [&] {
-                if (previousHandler) {
-                  previousHandler(transform, action);
-                } else {
-                  transform();
-                }
-              },
-              action);
+          (*executionContext)(transform, action);
         });
   };
   if ((output == ProgramFormat::QCImport || output == ProgramFormat::QCO) &&

@@ -68,9 +68,13 @@ reject_compiler("Unknown output format" "${QASM_INPUT}" --emit=mlir)
 
 set(normal_profile "${OUTPUT_DIR}/normal-profile.json")
 file(REMOVE "${normal_profile}")
-run_compiler(0 "${QASM_INPUT}" "--profile-actions-to=${normal_profile}")
+run_compiler(0 "${QASM_INPUT}" "--profile-actions-to=${normal_profile}" --mlir-timing
+             --mlir-pass-statistics)
 if(NOT output STREQUAL default_output)
   message(FATAL_ERROR "Action profiling changed compiler output: ${output}")
+endif()
+if(NOT error MATCHES "Execution time report" OR NOT error MATCHES "Pass statistics report")
+  message(FATAL_ERROR "MLIR timing or statistics report missing: ${error}")
 endif()
 check_action_profile("${normal_profile}" "QCToQCO")
 foreach(option IN ITEMS profile-actions-to log-actions-to)
@@ -106,6 +110,19 @@ foreach(option IN ITEMS pass-pipeline passes)
     message(FATAL_ERROR "${option} did not run the registered cleanup passes: ${output}")
   endif()
 endforeach()
+
+run_compiler(
+  0
+  "${reduced}"
+  --run-pipeline
+  "--pass-pipeline=builtin.module(canonicalize)"
+  --mlir-timing
+  --mlir-timing-display=list
+  --mlir-output-format=json)
+string(JSON timing_type TYPE "${error}")
+if(NOT timing_type STREQUAL "ARRAY" OR NOT error MATCHES "CanonicalizerPass")
+  message(FATAL_ERROR "Isolated pipeline JSON timing report missing: ${error}")
+endif()
 
 # Both pipeline routes require registered passes and a module anchor.
 foreach(mode IN ITEMS --run-pipeline --emit=qco-optimized)
@@ -307,6 +324,10 @@ if(NOT error MATCHES "Before JeffToQCO" OR NOT output MATCHES "qco[.]")
   message(FATAL_ERROR "Initial jeff conversion was not instrumented: ${error}")
 endif()
 check_action_profile("${jeff_profile}" "JeffToQCO")
+run_compiler(0 "${jeff}" --emit=qco --mlir-timing)
+if(NOT error MATCHES "Execution time report" OR NOT error MATCHES "JeffToQCO")
+  message(FATAL_ERROR "Initial jeff conversion timing report missing: ${error}")
+endif()
 
 # Reusable calls must be inlined before a custom QCO pipeline on the QIR route.
 set(reusable "${OUTPUT_DIR}/reusable.mlir")

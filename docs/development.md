@@ -555,9 +555,16 @@ registers its conversion passes so they can be selected for debugging.
 
 #### Compiler profiling
 
-Use pass timing and statistics below for routine performance analysis. Detailed
-action traces also record rewrite attempts and iterations; enable them when
-investigating compiler internals.
+Use MLIR's pass timing and statistics for routine performance analysis:
+
+```sh
+"$mqt_cc" input.qasm --mlir-timing --mlir-pass-statistics > compiled.mlir
+```
+
+Native timing options such as `--mlir-timing-display=list` and
+`--mlir-output-format=json` control the reports. Each pass manager emits its own
+report. Detailed action traces also record rewrite attempts and iterations;
+enable them when investigating compiler internals.
 
 Record MLIR pass and rewrite actions with the
 [native action profiler](https://mlir.llvm.org/docs/ActionTracing/):
@@ -587,7 +594,9 @@ conversion passes, but does not time every parsing or serialization operation.
 target compilation and source submission; individual typed transformation
 methods do not use it. Each call overwrites its trace file. Use separate files
 for concurrent compilations. While tracing, do not run other compilations on the
-same context, including copies of a typed program.
+same context, including copies of a typed program. In-process tracing rejects a
+context that already has an MLIR action handler; configure profiling through
+that handler instead.
 
 Perfetto's SQL query view can aggregate pass invocations and durations:
 
