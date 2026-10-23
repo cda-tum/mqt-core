@@ -65,11 +65,13 @@ getAccessIndex(Operation* operation, DenseMap<Value, Attribute>& cache) {
   return folded ? getConstantIntValue(folded) : std::nullopt;
 }
 
+namespace {
 struct NormalizationAccess {
   Operation* operation;
   int64_t index;
   bool erase = false;
 };
+} // namespace
 
 static bool normalizeChain(MutableArrayRef<NormalizationAccess> chain,
                            IRRewriter& rewriter) {
@@ -188,7 +190,7 @@ static bool normalizeBlock(Block* block, IRRewriter& rewriter) {
         break;
       }
       visited.insert(current);
-      chain.push_back({current, *index});
+      chain.push_back({.operation = current, .index = *index});
       current = *getTensorOutput(current).getUsers().begin();
     }
     if (!chain.empty()) {
