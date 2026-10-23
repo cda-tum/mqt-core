@@ -234,7 +234,7 @@ namespace qdmi::dd {
 namespace {
 struct ProgramResult {
   std::optional<std::string> qirOutput_;
-  /// Immutable measurement outcomes in sampling order.
+  /// Immutable measurement outcomes in unspecified order.
   std::vector<std::string> shots_;
 
   /// Histogram keys borrow from shots_.
@@ -257,7 +257,7 @@ struct ProgramResult {
   auto getHistogram(QDMI_Job_Result result, size_t size, void* data,
                     size_t* sizeRet) -> QDMI_STATUS;
 
-  /// Copy ordered outcomes to the QDMI comma-separated shot representation.
+  /// Copy outcomes to the QDMI comma-separated shot representation.
   auto getShots(size_t size, void* data, size_t* sizeRet) const -> QDMI_STATUS;
 
   /// Write dense amplitudes or probabilities into the caller's buffer.

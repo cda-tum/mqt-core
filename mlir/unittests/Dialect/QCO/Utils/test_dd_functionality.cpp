@@ -1403,14 +1403,19 @@ TEST_F(QCODDFunctionalityTest, AdaptiveWorkersAndTopLevelBranches) {
     ASSERT_TRUE(succeeded(a));
     ASSERT_TRUE(succeeded(b));
     ASSERT_TRUE(succeeded(countsOnly));
-    EXPECT_EQ(first, second);
     EXPECT_EQ(*a, *countsOnly);
+    std::map<std::string, size_t> firstCounts;
+    for (const auto& shot : first) {
+      ++firstCounts[shot];
+    }
+    EXPECT_EQ(*a, firstCounts);
     std::map<std::string, size_t> counts;
     for (const auto& shot : second) {
       ++counts[shot];
     }
     EXPECT_EQ(*a, counts);
     EXPECT_EQ(first.size(), 512U);
+    EXPECT_EQ(second.size(), 512U);
     EXPECT_NEAR(static_cast<double>(a->at("1")), 128., 50.);
   }
 }
@@ -3108,11 +3113,15 @@ TEST_F(QCODDFunctionalityTest,
       ++counts[shot];
     }
     EXPECT_EQ(counts, *histogram);
-    std::vector<std::string> ordered;
+    std::vector<std::string> samples;
     ASSERT_TRUE(succeeded(sampleShots(
-        mainFunc(*mod), 128, 9, ordered, DDArgumentBindings{}, nullptr, {},
+        mainFunc(*mod), 128, 9, samples, DDArgumentBindings{}, nullptr, {},
         workers, [](size_t desired) { return desired; })));
-    EXPECT_EQ(ordered, shots);
+    std::map<std::string, size_t> sampleCounts;
+    for (const auto& shot : samples) {
+      ++sampleCounts[shot];
+    }
+    EXPECT_EQ(sampleCounts, *histogram);
   }
   std::vector<std::string> serial;
   std::vector<std::string> capped;
@@ -3121,7 +3130,15 @@ TEST_F(QCODDFunctionalityTest,
   ASSERT_TRUE(succeeded(sampleShots(mainFunc(*mod), 128, 9, capped,
                                     DDArgumentBindings{}, nullptr, {}, 4,
                                     [](size_t) { return size_t{1}; })));
-  EXPECT_EQ(capped, serial);
+  std::map<std::string, size_t> serialCounts;
+  std::map<std::string, size_t> cappedCounts;
+  for (const auto& shot : serial) {
+    ++serialCounts[shot];
+  }
+  for (const auto& shot : capped) {
+    ++cappedCounts[shot];
+  }
+  EXPECT_EQ(cappedCounts, serialCounts);
 }
 
 TEST_F(QCODDFunctionalityTest, SampleDefersNestedTerminalMeasurement) {

@@ -268,6 +268,10 @@ TEST(DDPackageTest, ComputeTableConfigurationAndClear) {
   for (const size_t buckets : {1U, 2U, 4U}) {
     BinaryTable binary(buckets);
     UnaryTable unary(buckets);
+    EXPECT_EQ(binary.lookup(1, 2), nullptr);
+    EXPECT_EQ(unary.lookup(1), nullptr);
+    binary.clear();
+    unary.clear();
     for (size_t value = 0; value < 2; ++value) {
       binary.insert(1, 2, value);
       unary.insert(1, value);
@@ -294,6 +298,8 @@ TEST(DDPackageTest, ComputeTableConfigurationAndClear) {
     ASSERT_NE(binary.lookup(1, 2), nullptr);
     EXPECT_EQ(*binary.lookup(1, 2), 9);
   }
+  EXPECT_TRUE(BinaryTable{4}.getTable().empty());
+  EXPECT_TRUE(UnaryTable{4}.getTable().empty());
 }
 
 TEST(DDPackageTest, BellState) {

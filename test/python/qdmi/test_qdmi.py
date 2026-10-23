@@ -702,7 +702,7 @@ def test_job_get_counts_returns_valid_histogram(submitted_job: Job) -> None:
 
 
 def test_job_shots_match_counts(submitted_job: Job) -> None:
-    """Keep the same ordered samples on repeated reads and in the histogram."""
+    """Keep the same sample sequence on repeated reads and in the histogram."""
     submitted_job.wait()
     shots = submitted_job.get_shots()
     assert len(shots) == submitted_job.num_shots

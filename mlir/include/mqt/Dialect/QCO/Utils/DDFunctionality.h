@@ -138,13 +138,13 @@ FailureOr<dd::VectorDD> simulateStatevector(
 /// @param shots Number of samples.
 /// @param seed RNG seed. Zero selects nondeterministic seeding.
 /// @param argumentBindings Scalar values and dynamic QTensor argument sizes.
-/// @param shotResults Optional output, cleared then filled in sampling order.
-/// On failure, it may contain an incomplete sequence.
+/// @param shotResults Optional individual outcomes in unspecified order,
+/// cleared then filled during sampling. On failure, it may contain an
+/// incomplete sequence.
 /// @param retainedState Optional output, cleared before sampling and populated
 /// only after successful terminal sampling. It owns the uncollapsed state.
 /// @param workers Maximum workers for adaptive sampling. Zero selects up to
 /// eight workers from the shot count and host budget; one uses one worker.
-/// Independent shots with one worker retain the serial seed sequence.
 /// Terminal sampling uses one simulation for all shots.
 /// @return Outcome counts, or failure for an unsupported program.
 FailureOr<std::map<std::string, size_t>>
@@ -154,7 +154,7 @@ sample(func::FuncOp func, size_t shots, uint64_t seed = 0,
        DDSamplingState* retainedState = nullptr,
        const DDExecutionOptions& options = {}, size_t workers = 0);
 
-/// Sample ordered outcomes without constructing a histogram.
+/// Sample individual outcomes without constructing a histogram.
 ///
 /// Uses the same program, seed, output, and worker contracts as `sample`.
 /// With `requestWorkers`, the caller must already hold one external worker

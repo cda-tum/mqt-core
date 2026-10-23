@@ -81,7 +81,7 @@ class QDMIJob(JobV1):
         backend: The backend this job runs on.
         circuits: The executed circuits, used to snapshot result headers.
         shots: Requested shots per circuit.
-        memory: Whether to collect genuine ordered shots.
+        memory: Whether to collect individual shots.
         max_retries: Lifetime replacement limit per confirmed failed entry;
             disabled by default. Cancelled or uncertain jobs are never retried.
         job_parameters: Custom submission parameters retained for replacements.
