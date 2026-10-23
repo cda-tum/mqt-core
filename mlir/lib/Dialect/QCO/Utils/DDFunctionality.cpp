@@ -367,6 +367,7 @@ struct LoopRange {
 struct SamplingPlan {
   bool dynamic = false;
   SmallVector<Value> outputs;
+  size_t outputWidth = 0;
   DenseSet<Operation*> deferredMeasurements;
 };
 } // namespace
@@ -2403,6 +2404,10 @@ getSamplingPlan(func::FuncOp func, bool statevectorAnalysis = false) {
     if (isa<cbit::RegisterType>(value.getType()) ||
         value.getType().isInteger(1)) {
       plan.outputs.push_back(value);
+      plan.outputWidth +=
+          value.getType().isInteger(1)
+              ? 1U
+              : cast<cbit::RegisterType>(value.getType()).getWidth();
     } else if (!statevectorAnalysis && !isa<QubitType>(value.getType()) &&
                !isQTensorType(value.getType())) {
       return returnOp.emitError()
@@ -2449,11 +2454,13 @@ simulateStatevector(func::FuncOp func, dd::Package& dd,
 
 static FailureOr<std::string> encodeOutcome(ArrayRef<Value> outputs,
                                             const ClassicalEnv& classical,
-                                            std::string basis) {
+                                            std::string basis,
+                                            size_t outputWidth) {
   if (outputs.empty()) {
     return basis;
   }
   std::string outcome;
+  outcome.reserve(outputWidth);
   for (Value value : llvm::reverse(outputs)) {
     const bool isScalar = value.getType().isInteger(1);
     ClassicalEnv::RegisterBit scalar;
@@ -2740,7 +2747,8 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
       return failure();
     }
     if (!plan.outputs.empty()) {
-      auto outcome = encodeOutcome(plan.outputs, group.classical, {});
+      auto outcome =
+          encodeOutcome(plan.outputs, group.classical, {}, plan.outputWidth);
       if (failed(outcome)) {
         return failure();
       }
@@ -2782,7 +2790,8 @@ sampleImpl(func::FuncOp func, dd::Package& dd, size_t shots,
   std::map<std::string, size_t> counts;
   const auto record = [&](const ClassicalEnv& classical,
                           std::string basis) -> LogicalResult {
-    auto outcome = encodeOutcome(plan.outputs, classical, std::move(basis));
+    auto outcome = encodeOutcome(plan.outputs, classical, std::move(basis),
+                                 plan.outputWidth);
     if (failed(outcome)) {
       return failure();
     }
