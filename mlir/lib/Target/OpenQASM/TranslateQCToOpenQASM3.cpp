@@ -230,7 +230,6 @@ public:
 private:
   DenseMap<Operation*, cbit::StoreOp> measurementStores;
   ModuleOp moduleOp;
-  OwningOpRef<ModuleOp> preparedModule_;
   func::FuncOp function;
   raw_indented_ostream* output = nullptr;
   DenseMap<Value, Resource> resources;
@@ -568,12 +567,10 @@ private:
     if (!needsInlining && !needsArrayNormalization) {
       return success();
     }
-    preparedModule_ = moduleOp.clone();
     auto* context = moduleOp.getContext();
     if (needsInlining) {
       for (auto gate : gateFunctions_) {
-        preparedModule_->lookupSymbol<func::FuncOp>(gate.getName())
-            .setNoInline(true);
+        gate.setNoInline(true);
       }
       DialectRegistry registry;
       func::registerInlinerExtension(registry);
@@ -583,7 +580,7 @@ private:
       // Keep gate definitions and structured loops while expanding other
       // helpers.
       manager.addPass(createInlinerPass({}, [](OpPassManager&) {}));
-      if (failed(manager.run(*preparedModule_))) {
+      if (failed(manager.run(moduleOp))) {
         return failure();
       }
     }
@@ -595,22 +592,15 @@ private:
       RewritePatternSet patterns(context);
       memref::populateComposeSubViewPatterns(patterns, context);
       memref::populateFoldMemRefAliasOpPatterns(patterns);
-      if (failed(
-              applyPatternsGreedily(*preparedModule_, std::move(patterns)))) {
+      if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
         return failure();
       }
       PassManager manager(context);
       manager.addPass(createLowerAffinePass());
-      if (failed(manager.run(*preparedModule_))) {
+      if (failed(manager.run(moduleOp))) {
         return failure();
       }
     }
-    function = preparedModule_->lookupSymbol<func::FuncOp>(function.getName());
-    for (auto& gate : gateFunctions_) {
-      gate = preparedModule_->lookupSymbol<func::FuncOp>(gate.getName());
-    }
-    llvm::erase_if(gateFunctions_, [](func::FuncOp gate) { return !gate; });
-    moduleOp = *preparedModule_;
     return success();
   }
 
@@ -2932,18 +2922,18 @@ private:
 
 } // namespace
 
-LogicalResult translateQCToOpenQASM3(ModuleOp moduleOp,
+LogicalResult translateQCToOpenQASM3(OwningOpRef<ModuleOp> moduleOp,
                                      llvm::raw_ostream& output) {
-  if (failed(verify(moduleOp))) {
+  if (failed(verify(*moduleOp))) {
     return failure();
   }
-  return OpenQASMEmitter(moduleOp).emit(output);
+  return OpenQASMEmitter(*moduleOp).emit(output);
 }
 
-FailureOr<std::string> translateQCToOpenQASM3(ModuleOp moduleOp) {
+FailureOr<std::string> translateQCToOpenQASM3(OwningOpRef<ModuleOp> moduleOp) {
   std::string source;
   llvm::raw_string_ostream stream(source);
-  if (failed(translateQCToOpenQASM3(moduleOp, stream))) {
+  if (failed(translateQCToOpenQASM3(std::move(moduleOp), stream))) {
     return failure();
   }
   return source;

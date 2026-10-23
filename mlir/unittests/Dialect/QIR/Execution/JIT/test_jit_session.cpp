@@ -63,7 +63,7 @@ static void expectOpenQASMSampling(std::string_view source,
   ASSERT_TRUE(mlir::succeeded(restored));
   auto qir = std::move(*restored).intoQIR(mlir::QIRProfile::Adaptive);
   ASSERT_TRUE(mlir::succeeded(qir));
-  const auto ir = qir->llvmIR();
+  const auto ir = std::move(*qir).intoLLVMIR();
   ASSERT_TRUE(mlir::succeeded(ir));
   qir::JitSession session(*ir, "openqasm-slices", qir::Execution::Sampling, 42);
   session.runtime().disableOutput();
@@ -147,7 +147,7 @@ result = measure q;
   ASSERT_TRUE(mlir::succeeded(qc));
   auto qir = std::move(*qc).intoQIR(mlir::QIRProfile::Adaptive);
   ASSERT_TRUE(mlir::succeeded(qir));
-  const auto ir = qir->llvmIR();
+  const auto ir = std::move(*qir).intoLLVMIR();
   ASSERT_TRUE(mlir::succeeded(ir));
   qir::JitSession session(*ir, "feedback-arithmetic", qir::Execution::Sampling,
                           42);

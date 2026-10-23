@@ -169,7 +169,7 @@ TEST(OpenQASMFrontendTest, ClassicalArrays) {
            "array[int, 2] a = {1, 2}; array[int, 2] b = a[::]; "
            "b[::1] = a[0::1];",
            "array[int, 2, 3] a; a[0, 1] = 1; a[1, 1] = 2; "
-           "array[int, 2] b = a[:, 1]; a[0, 0:2:2] = b; int x = a[0, 2];",
+           "array[int, 2] b = a[:-1:, 1]; a[0, 2:-2:0] = b; int x = a[0, 0];",
            "array[int, 2] a = {1, 2}; "
            "array[int, 1] b = a[0:9223372036854775807:1]; "
            "b = a[1:-9223372036854775807-1:0];",
@@ -394,8 +394,8 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           },
           {
               "input float selector; int i = int(selector); "
-              "array[int, 2] a; "
-              "if (selector > 0) { a[0] = 1; } else { a[1] = 2; } "
+              "array[int, 2] a; array[int, 1] b = {1}; "
+              "if (selector > 0) { a[0:0] = b; } else { a[1:1] = b; } "
               "int result = a[i];",
               "uninitialized",
           },

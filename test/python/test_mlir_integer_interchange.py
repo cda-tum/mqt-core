@@ -57,7 +57,7 @@ def _observe(program: QCProgram | QuantumCircuit | OpenQASMProgram | JeffProgram
 
 def _check_paths(program: QCProgram, width: int, expected: int) -> None:
     assert _observe(program, width) == expected
-    restored_qasm = program.to_openqasm3()
+    restored_qasm = program.to_openqasm3(copy=True)
     assert _observe(restored_qasm, width) == expected
     jeff = program.to_qco(copy=True).to_jeff()
     restored_jeff = JeffProgram.from_bytes(jeff.to_bytes())

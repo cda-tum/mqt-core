@@ -407,7 +407,7 @@ def test_rejects_invalid_submission_options() -> None:
     with pytest.raises(ValueError, match="cannot emit"):
         submit_program(source, target=device, program_format=ProgramFormat.QASM2)
     assert source.is_valid
-    compiled = compile_program(source, target=device)
+    compiled = compile_program(source, target=device, copy=True)
     assert source.is_valid
     with pytest.raises(ValueError, match="conflicts"):
         submit_program(compiled, target=device, program_format=ProgramFormat.QASM3)

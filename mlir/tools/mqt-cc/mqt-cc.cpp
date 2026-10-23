@@ -354,14 +354,15 @@ static LogicalResult writeJeffOutput(ModuleOp mod, const StringRef filename) {
 
 /// Write MLIR or encoded QIR to an output file.
 static LogicalResult
-writeOutput(ModuleOp mod, StringRef filename,
+writeOutput(OwningOpRef<ModuleOp> mod, StringRef filename,
             std::optional<PayloadEncoding> qirEncoding = std::nullopt) {
   std::string qirOutput;
   if (qirEncoding) {
     llvm::raw_string_ostream stream(qirOutput);
-    const auto result = *qirEncoding == PayloadEncoding::Text
-                            ? qir::translateQIRToLLVMIR(mod, stream)
-                            : qir::translateQIRToBitcode(mod, stream);
+    const auto result =
+        *qirEncoding == PayloadEncoding::Text
+            ? qir::translateQIRToLLVMIR(std::move(mod), stream)
+            : qir::translateQIRToBitcode(std::move(mod), stream);
     if (failed(result)) {
       return failure();
     }
@@ -377,8 +378,10 @@ writeOutput(ModuleOp mod, StringRef filename,
   if (qirEncoding) {
     output->os() << qirOutput;
   } else if (filename == "-") {
-    mod.print(output->os());
-  } else if (failed(writeBytecodeToFile(mod, output->os()))) {
+    // QIR export consumes mod only when qirEncoding is set.
+    // NOLINTNEXTLINE(bugprone-use-after-move)
+    mod->print(output->os());
+  } else if (failed(writeBytecodeToFile(*mod, output->os()))) {
     return failure();
   }
 
@@ -683,7 +686,7 @@ static int runCompiler(int argc, char** argv) {
     if (!runReproducer && failed(qco::verifyLinearity(*program.mod))) {
       return 1;
     }
-    return failed(writeOutput(*program.mod, outputFilename)) ? 1 : 0;
+    return failed(writeOutput(std::move(program.mod), outputFilename)) ? 1 : 0;
   }
 
   if (*parsedOutputFormat == OutputFormat::QCImport &&
@@ -832,7 +835,8 @@ static int runCompiler(int argc, char** argv) {
                    << "': " << errorMessage << "\n";
       return 1;
     }
-    if (failed(qc::translateQCToOpenQASM3(*program.mod, output->os()))) {
+    if (failed(
+            qc::translateQCToOpenQASM3(std::move(program.mod), output->os()))) {
       return 1;
     }
     output->keep();
@@ -845,10 +849,11 @@ static int runCompiler(int argc, char** argv) {
                 llvm::sys::path::extension(outputFilename) == ".ll"
             ? PayloadEncoding::Text
             : PayloadEncoding::Binary;
-    if (failed(writeOutput(*program.mod, outputFilename, qirEncoding))) {
+    if (failed(
+            writeOutput(std::move(program.mod), outputFilename, qirEncoding))) {
       return 1;
     }
-  } else if (writeOutput(program.mod.get(), outputFilename).failed()) {
+  } else if (writeOutput(std::move(program.mod), outputFilename).failed()) {
     return 1;
   }
 

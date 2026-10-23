@@ -409,6 +409,9 @@ extend-ignore-re = [
   "FoMaC"
 ]
 
+[tool.typos.default.extend-identifiers]
+MemCpyOptPass = "MemCpyOptPass"
+
 [tool.typos.default.extend-words]
 wille = "wille"
 anc = "anc"
