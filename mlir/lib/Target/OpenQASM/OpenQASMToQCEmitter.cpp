@@ -1894,9 +1894,17 @@ private:
                                          cast<MemRefType>(storage.getType()));
     }
     if (auto subview = view.getDefiningOp<memref::SubViewOp>()) {
-      return memref::SubViewOp::create(
-                 builder, subview.getType(), scratch, subview.getMixedOffsets(),
-                 subview.getMixedSizes(), subview.getMixedStrides())
+      // Scratch needs the selection's shape, not its physical layout.
+      SmallVector<OpFoldResult> offsets(subview.getSourceType().getRank(),
+                                        builder.getIndexAttr(0));
+      SmallVector<OpFoldResult> strides(offsets.size(),
+                                        builder.getIndexAttr(1));
+      auto sizes = subview.getMixedSizes();
+      auto type = memref::SubViewOp::inferRankReducedResultType(
+          subview.getType().getShape(), cast<MemRefType>(scratch.getType()),
+          offsets, sizes, strides);
+      return memref::SubViewOp::create(builder, type, scratch, offsets, sizes,
+                                       strides)
           .getResult();
     }
     return scratch;

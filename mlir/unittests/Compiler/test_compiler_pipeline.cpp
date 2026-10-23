@@ -1680,6 +1680,16 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
     SCOPED_TRACE(source.str());
     auto qc = QCProgram::fromOpenQASMString(source.str());
     ASSERT_TRUE(mlir::succeeded(qc));
+    auto exported = qc->toOpenQASM3();
+    ASSERT_TRUE(succeeded(exported));
+    auto reimported = QCProgram::fromOpenQASMString(exported->source());
+    ASSERT_TRUE(succeeded(reimported));
+    auto roundTripped = std::move(*reimported).intoQCO();
+    ASSERT_TRUE(succeeded(roundTripped));
+    const auto exportedOutcomes =
+        qco::sample(mlir::mqt::getEntryPoint(roundTripped->module()), 4, 42);
+    ASSERT_TRUE(succeeded(exportedOutcomes));
+    EXPECT_EQ(*exportedOutcomes, (std::map<std::string, size_t>{{"1", 4}}));
     auto program = std::move(*qc).intoQCO();
     ASSERT_TRUE(mlir::succeeded(program));
     const auto beforeCleanup =
@@ -2275,6 +2285,29 @@ TEST_F(CompilerPipelineTest, TypedOpenQASMExportDropsUnusedGates) {
 
   ASSERT_TRUE(mlir::succeeded(exported));
   EXPECT_EQ(exported->source().find("gate unused"), std::string::npos);
+}
+
+TEST_F(CompilerPipelineTest, OpenQASMExportPreservesConditionalArrayAngles) {
+  auto program = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.0;
+    array[angle[8], 2] angles = {0.0, pi/2};
+    qubit q;
+    for angle[8] theta in angles {
+      if (theta == angle[8](0.0)) { theta = pi/2; }
+      ry(theta) q;
+    }
+    output bit result;
+    result = measure q;
+  )qasm");
+  ASSERT_TRUE(succeeded(program));
+  auto exported = program->toOpenQASM3();
+  ASSERT_TRUE(succeeded(exported));
+  auto restored = QCProgram::fromOpenQASMString(exported->source());
+  ASSERT_TRUE(succeeded(restored));
+  auto qco = std::move(*restored).intoQCO();
+  ASSERT_TRUE(succeeded(qco));
+  auto counts = qco::sample(mlir::mqt::getEntryPoint(qco->module()), 1, 42);
+  ASSERT_TRUE(succeeded(counts));
+  EXPECT_EQ(*counts, (std::map<std::string, size_t>{{"1", 1}}));
 }
 
 TEST_F(CompilerPipelineTest, PipelineOpenQASMMatchesPreparedQCExport) {
