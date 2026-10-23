@@ -174,6 +174,72 @@ mapped = compile_program(
 print(mapped.ir)
 ```
 
+The `place-qubits` pass selects and materializes the initial layout without
+inserting routing SWAPs. It tries identity/path shortcuts and bounded topology
+search before weighted greedy, identity, and random candidates. Refinement and
+native-cost scoring reuse the router without changing IR. Interaction collection
+uses the mapper's existing wire traversal and supports straight-line programs
+and statically counted scalar loops.
+
+Its `patterns` option selects the bounded search:
+
+| Value            | Search                                                                      |
+| ---------------- | --------------------------------------------------------------------------- |
+| `none` (default) | Direct vertex search with `findTopologyLayout`.                             |
+| `small`          | VF2 decomposition and joins over pairs, four-cycles, and stars.             |
+| `extended`       | Also use four-/six-qubit chains, six-/eight-cycles, and full 2×3/2×4 grids. |
+
+For example, `builtin.module(place-qubits{patterns=extended},place-and-route)`
+selects extended patterns before routing. In C++, use
+`PlacementPassOptions::patterns` with `createPlacementPass`. The canonical
+pipeline uses `none`; there is no high-level Python option for this choice.
+
+Both searches preserve undirected interactions and injectivity. Extra target
+edges are allowed. They consider topology, not calibration or native gate
+availability. The C++ helpers return dense target vertices in ascending graph
+vertex-ID order, including isolated vertices. An empty graph has an empty
+layout. The MLIR context's thread pool handles independent search ranges;
+results are deterministic across thread counts, and small direct searches stay
+serial.
+
+Each search checks at most 100,000 candidates. A pattern tuple can bind several
+vertices, so equal budgets are not equal work. Pattern preparation and VF2
+decomposition are outside that limit. A complete embedding skips refinement
+trials. Otherwise, including after budget exhaustion, normal layout refinement
+and routing continue; a failed search does not establish infeasibility.
+
+The C++ `CompilerTarget::topologyPatterns()` API supplies lazily cached
+`FourCycle`, `QubitPair`, and `Star` groups for explicit targets and returns
+`std::nullopt` for all-to-all targets. Groups store packed rows of dense target
+vertices. Pairs have the smaller vertex first; stars have a center followed by
+three sorted neighbors. Four-cycles allow chords, and stars allow edges between
+neighbors. Cache storage is shared by target copies and grows with occurrences.
+
+`topologyPattern(type)` additionally supplies `Chain4`, `Chain6`, `SixCycle`,
+`EightCycle`, `Grid2x3`, and `Grid2x4`. Chains/cycles use consecutive vertices;
+grids use row-major order. These graph templates allow extra edges and need no
+hardware coordinates. Each larger group has its own lazy cache. Preparation
+stops after 2,000,000 probes or 65,536 occurrences, discards incomplete results,
+and returns `nullptr`; a non-null empty group means no occurrence exists. The
+original three groups remain uncapped. Pattern search prepares independent types
+in parallel, falls back to selected smaller groups when needed, and builds
+oriented tuple indexes per call. VF2 decomposition orders available groups by
+descending arity, then edge count, with type as a deterministic tie-breaker.
+
+The subsequent `place-and-route` pass inserts routing SWAPs. It also accepts
+dynamic input for existing callers. Both passes live in `Mapping.cpp` and share
+the routing engine; use matching routing/scoring options in both. Internal
+`mqt.placement_order` metadata preserves logical router indices across
+serialization and is validated and consumed by routing. Source provenance stays
+in `mqt.layout`, whose routing permutation is composed after routing. Existing
+physical provenance must cover the full target and list sites in target order;
+standalone routing rejects incompatible metadata before mutation.
+
+Placement alone does not guarantee adjacent gates. Native synthesis and target
+validation follow routing. The high-level pipeline routes newly placed inputs;
+already static programs retain their assigned sites, including supported native
+higher-arity gates. Explicitly run `place-and-route` to route static input.
+
 The CLI also accepts a saved target as a typed MLIR attribute. Serialize a
 Python target with `str(target)`, or pass the attribute directly:
 
