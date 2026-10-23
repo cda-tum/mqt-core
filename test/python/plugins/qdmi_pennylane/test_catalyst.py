@@ -68,9 +68,9 @@ def test_correlated_readout_and_wire_order(*, capture: bool) -> None:
     assert variance == pytest.approx(1 - (1 - 2 * ones / 100) ** 2)
 
 
-@pytest.mark.parametrize("capture", [False, True])
-def test_decomposed_gates_match_reference(*, capture: bool) -> None:
-    """Compile decomposed gates with the same action as the reference device."""
+@pytest.mark.parametrize("capture", [None, False, True])
+def test_runtime_gate_sets_match_reference(*, capture: bool | None) -> None:
+    """Eager native gates and compiled decompositions have the same action."""
     device = qp.device("mqt.ddsim.default", wires=3)
 
     def circuit() -> ProbabilityMP:
@@ -84,8 +84,9 @@ def test_decomposed_gates_match_reference(*, capture: bool) -> None:
     expected = qp.QNode(circuit, qp.device("default.qubit", wires=3))()
     node = qp.QNode(circuit, device, shots=20_000)
     if capture:
-        node = qp.transforms.decompose(node, gate_set=set(device.capabilities.operations))
-    actual = catalyst.qjit(node, capture=capture)()
+        capabilities = qp.devices.DeviceCapabilities.from_toml_file(device.config_filepath, "qjit")
+        node = qp.transforms.decompose(node, gate_set=set(capabilities.operations))
+    actual = node() if capture is None else qp.qjit(node, capture=capture)()
     np.testing.assert_allclose(actual, expected, atol=0.025)
 
 
@@ -128,7 +129,7 @@ def test_compiled_parameter_shift(*, probabilities: bool) -> None:
         qp.RY(angle, 0)
         return qp.probs(wires=[0]) if probabilities else qp.expval(qp.Z(0))
 
-    derivative = catalyst.qjit(catalyst.jacobian(circuit), capture=False)
+    derivative = qp.qjit(catalyst.jacobian(circuit))
     np.testing.assert_allclose(derivative(np.pi / 2), [-0.5, 0.5] if probabilities else -1, atol=1e-12)
 
 

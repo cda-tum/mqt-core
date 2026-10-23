@@ -21,7 +21,7 @@ namespace mqt::bindings::pennylane {
 [[nodiscard]] mlir::QCProgram importCircuit(const nanobind::object& tape,
                                             const nanobind::object& wires);
 
-/// Register the native device context and sample decoder.
+/// Register the native context and sample decoder in a private submodule.
 void registerBindings(nanobind::module_& m);
 
 } // namespace mqt::bindings::pennylane

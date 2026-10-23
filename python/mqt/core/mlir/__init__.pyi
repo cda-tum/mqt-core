@@ -18,10 +18,10 @@ import pennylane.tape
 import qiskit.circuit
 import qiskit.providers
 import qiskit.transpiler
-from numpy.typing import NDArray
 
 import mqt.core.dd
 import mqt.core.qdmi
+from mqt.core.mlir import _pennylane as _pennylane
 from mqt.core.qdmi import Device
 from mqt.core.typing import QDMISessionParameters
 
@@ -36,23 +36,6 @@ _CompilerOutput: TypeAlias = (
 )
 _ProgramT = TypeVar("_ProgramT", qiskit.circuit.QuantumCircuit, QCProgram, QCOProgram, JeffProgram, OpenQASMProgram)
 
-class _PennyLaneQDMIContext:
-    def __init__(
-        self,
-        device: mqt.core.qdmi.Device,
-        *,
-        custom1: str | bool | float | bytes | None = None,
-        custom2: str | bool | float | bytes | None = None,
-        custom3: str | bool | float | bytes | None = None,
-        custom4: str | bool | float | bytes | None = None,
-        custom5: str | bool | float | bytes | None = None,
-    ) -> None: ...
-    @property
-    def id(self) -> int: ...
-
-def _pennylane_samples(
-    job: mqt.core.qdmi.Job, num_wires: int, shots: int, program_index: int = 0
-) -> Annotated[NDArray[np.int8], {"shape": (None, None), "order": "C", "device": "cpu"}]: ...
 def _generate_benchmark(instance_specification_json: str) -> QCProgram:
     """Generate the QC program described by an instance specification."""
 

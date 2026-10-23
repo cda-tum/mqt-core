@@ -14,6 +14,7 @@ __lazy_modules__ = {
     "importlib.metadata",
     "mqt.core",
     "mqt.core.mlir",
+    "mqt.core.mlir._pennylane",
     "mqt.core.plugins.pennylane.exceptions",
     "mqt.core.plugins.pennylane.job",
     "mqt.core.qdmi.builtin_driver",
@@ -37,7 +38,8 @@ from pennylane.transforms import defer_measurements
 from pennylane.transforms.core import CompilePipeline
 
 from mqt.core import mlir
-from mqt.core.mlir import QCProgram, _PennyLaneQDMIContext, compile_program
+from mqt.core.mlir import QCProgram, compile_program
+from mqt.core.mlir._pennylane import Context
 from mqt.core.plugins.pennylane.exceptions import PennyLaneConfigurationError as ConfigurationError
 from mqt.core.plugins.pennylane.exceptions import PennyLaneTranslationError as TranslationError
 from mqt.core.plugins.pennylane.exceptions import PennyLaneValidationError as ValidationError
@@ -215,7 +217,7 @@ class QDMIDevice(Device):
 
         super().__init__(wires=resolved_wires)
         try:
-            self._context = _PennyLaneQDMIContext(self._qdmi_device, **job_parameters)
+            self._context = Context(self._qdmi_device, **job_parameters)
         except (RuntimeError, ValueError) as exc:
             raise ConfigurationError(str(exc)) from exc
         self._job_parameters = job_parameters

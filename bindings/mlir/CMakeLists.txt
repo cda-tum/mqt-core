@@ -96,11 +96,13 @@ if(NOT TARGET ${TARGET_NAME})
       PRIVATE MQT_QISKIT_CAPI_CANDIDATE_VERSION="${MQT_QISKIT_CAPI_CANDIDATE_VERSION}")
   endif()
 
-  # install the Python stub file in editable mode for better IDE support
+  # Install the Python stub package in editable mode for IDE support.
   if(MQT_CORE_INSTALL AND SKBUILD_STATE STREQUAL "editable")
     install(
-      FILES ${PROJECT_SOURCE_DIR}/python/mqt/core/mlir.pyi
+      DIRECTORY ${PROJECT_SOURCE_DIR}/python/mqt/core/mlir
       DESTINATION .
-      COMPONENT ${MQT_CORE_TARGET_NAME}_Python)
+      COMPONENT ${MQT_CORE_TARGET_NAME}_Python
+      FILES_MATCHING
+      PATTERN "*.pyi")
   endif()
 endif()

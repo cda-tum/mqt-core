@@ -167,8 +167,12 @@ def test_qaoa_application() -> None:
     def ansatz(parameters: np.ndarray) -> None:
         for wire in graph.nodes:
             qp.Hadamard(wire)
-        qp.ApproxTimeEvolution(cost_hamiltonian, parameters[0], 1)
-        qp.ApproxTimeEvolution(mixer_hamiltonian, parameters[1], 1)
+        if hasattr(qp, "qaoa"):
+            qp.qaoa.cost_layer(parameters[0], cost_hamiltonian)
+            qp.qaoa.mixer_layer(parameters[1], mixer_hamiltonian)
+        else:
+            qp.ApproxTimeEvolution(cost_hamiltonian, parameters[0], 1)
+            qp.ApproxTimeEvolution(mixer_hamiltonian, parameters[1], 1)
 
     @qp.qnode(device, shots=200, diff_method="parameter-shift")
     def cost(parameters: np.ndarray) -> ExpectationMP:

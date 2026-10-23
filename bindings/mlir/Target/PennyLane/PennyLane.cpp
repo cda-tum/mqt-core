@@ -156,7 +156,9 @@ mlir::QCProgram importCircuit(const nb::object& tape, const nb::object& wires) {
 }
 
 void registerBindings(nb::module_& m) {
-  nb::class_<catalyst::Context>(m, "_PennyLaneQDMIContext")
+  auto pennylane = m.def_submodule(
+      "_pennylane", "Runtime support for the PennyLane QDMI device.");
+  nb::class_<catalyst::Context>(pennylane, "Context")
       .def(nb::new_([](qdmi::Device device,
                        const std::optional<PythonJobParameter>& custom1,
                        const std::optional<PythonJobParameter>& custom2,
@@ -177,8 +179,8 @@ void registerBindings(nb::module_& m) {
            "custom4"_a = nb::none(), "custom5"_a = nb::none())
       .def_prop_ro("id", &catalyst::Context::id);
 
-  m.def(
-      "_pennylane_samples",
+  pennylane.def(
+      "samples",
       [](const qdmi::Job& job, size_t numWires, size_t shots,
          size_t programIndex) {
         std::unique_ptr<std::vector<int8_t>> data;

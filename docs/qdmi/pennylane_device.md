@@ -14,9 +14,9 @@ circuits for the selected device and reconstructs finite-shot measurement
 results.
 
 The device must provide gate and topology metadata usable by MQT Core's
-compiler, accept QIR or OpenQASM 3, and return computational-basis samples or
-counts. OpenQASM 2-only devices are unsupported. The examples use the local
-[DD-based simulator device](ddsim_device.md) and require no credentials or
+compiler, accept QIR, OpenQASM 3, or IQM JSON, and return computational-basis
+samples or counts. OpenQASM 2-only devices are unsupported. The examples use the
+local [DD-based simulator device](ddsim_device.md) and require no credentials or
 remote resources.
 
 Install MQT Core with the optional PennyLane dependency:
@@ -28,12 +28,14 @@ uv pip install "mqt-core[pennylane]"
 For compilation with `qp.qjit`, also install Catalyst:
 
 ```bash
-uv pip install "pennylane-catalyst>=0.15,<0.16.0a0"
+uv pip install "pennylane-catalyst~=0.15.0"
 ```
 
 The integration supports Catalyst 0.15.x and 0.16 development builds on Linux
-x86_64/aarch64, and Catalyst 0.15.x on macOS arm64. Ordinary QNodes do not
-require Catalyst. See the
+x86_64/aarch64, and Catalyst 0.15.x on macOS arm64. Development builds on macOS
+currently rewrite the Python extension path from `.so` to `.dylib` before
+loading the device; use the released Catalyst version there. Ordinary QNodes do
+not require Catalyst. See the
 [Catalyst installation guide](https://docs.pennylane.ai/projects/catalyst/en/stable/dev/installation.html)
 for platform requirements.
 
@@ -66,11 +68,11 @@ to finite-shot fluctuations in their relative frequencies.
 
 Add `qp.qjit` to compile a QNode with Catalyst:
 
-```python
+```{code-cell} ipython3
 compiled_device = qp.device("mqt.ddsim.default", wires=2)
 
 
-@qp.qjit(capture=False)
+@qp.qjit
 @qp.qnode(compiled_device, shots=1000, diff_method="parameter-shift")
 def compiled_expectation(angle):
     qp.RY(angle, 0)
@@ -81,8 +83,9 @@ def compiled_expectation(angle):
 value = compiled_expectation(0.4)
 ```
 
-Use `capture=False` for parameter-shift gradients. `capture=True` requires
-explicit transforms for some operations and measurements; see
+The default `qp.qjit` mode applies PennyLane preprocessing and supports
+parameter-shift gradients. Catalyst also offers experimental program capture;
+its current preprocessing and differentiation limits are described under
 [Supported gate-level scope](#supported-gate-level-scope).
 
 ## Program conversion
@@ -96,10 +99,12 @@ unsupported target configurations fail before submission; all programs in an
 ordinary QNode batch are prepared before any jobs are submitted.
 
 The compiler selects an advertised format in this order: Adaptive QIR
-binary/text, OpenQASM 3, then Base QIR binary/text. Results follow PennyLane's
-wire order regardless of physical placement. If the provider returns only
-counts, samples are reconstructed without temporal shot order. Terminal
-measurements of a compiled circuit share one provider readout.
+binary/text, OpenQASM 3, IQM JSON, then Base QIR binary/text. IQM targets must
+provide physical site names and supported gate metadata; the compiler emits
+terminal readout keys in logical output order. Results follow PennyLane's wire
+order regardless of physical placement. If the provider returns only counts,
+samples are reconstructed without temporal shot order. Terminal measurements of
+a compiled circuit share one provider readout.
 
 Catalyst compiles the host control flow ahead of time. MQT Core records and
 compiles the quantum program at execution time using the current parameter
@@ -128,220 +133,86 @@ target.
 
 ## End-to-end use case: finite-shot MaxCut QAOA
 
-Consider MaxCut on the fixed graph with $E=\{(0,1),(0,2),(1,2),(2,3)\}$.
+This example uses PennyLane's QAOA layers and Catalyst to optimize MaxCut on a
+four-node graph. The cost Hamiltonian is the negative cut size. Each layer
+evolves under that Hamiltonian and an X mixer.
 
 ```{code-cell} ipython3
-from collections import Counter
-import time
-
-import matplotlib.pyplot as plt
+import catalyst
+import jax.numpy as jnp
 import networkx as nx
 import numpy as np
-```
-
-```{code-cell} ipython3
-:tags: [remove-input]
-
-%config InlineBackend.figure_formats = ['svg']
-
-plt.rcParams.update(
-    {
-        "axes.facecolor": "#f8f9fb",
-        "figure.facecolor": "#f8f9fb",
-        "savefig.facecolor": "#f8f9fb",
-        "text.color": "#202124",
-        "axes.labelcolor": "#202124",
-        "axes.edgecolor": "#5f6368",
-        "xtick.color": "#3c4043",
-        "ytick.color": "#3c4043",
-    }
-)
-```
-
-```{code-cell} ipython3
-:tags: [hide-input]
-:mystnb: {image: {alt: "Four-node MaxCut graph with edges 01, 02, 12, and 23."}}
 
 graph = nx.Graph([(0, 1), (0, 2), (1, 2), (2, 3)])
-positions = {
-    0: (-1.0, 0.75),
-    1: (-1.0, -0.75),
-    2: (0.25, 0.0),
-    3: (1.35, 0.0),
-}
-
-figure, axis = plt.subplots(figsize=(5.5, 3.3))
-nx.draw_networkx(
-    graph,
-    pos=positions,
-    ax=axis,
-    node_color="#4c78a8",
-    edge_color="#5f6368",
-    font_color="white",
-    node_size=850,
-    width=2,
+cost_hamiltonian, mixer_hamiltonian = qp.qaoa.maxcut(graph)
+qaoa_device = qp.device(
+    "mqt.ddsim.default", wires=4, job_parameters={"custom1": 7}
 )
-axis.set_title("Four-node MaxCut instance")
-axis.set_axis_off()
-figure.tight_layout()
-```
-
-The cost Hamiltonian is the negative cut size, and the mixer is the sum of
-Pauli-X operators. The ansatz applies Hadamard gates followed by evolution under
-each Hamiltonian, parameterized by $\gamma$ and $\beta$. Terms within each
-Hamiltonian commute, so one Trotter step suffices.
-
-```{code-cell} ipython3
-cost_hamiltonian = sum(
-    0.5 * (qp.Z(u) @ qp.Z(v) - qp.Identity(u)) for u, v in graph.edges
-)
-mixer_hamiltonian = sum(qp.X(wire) for wire in graph.nodes)
 
 
 def ansatz(parameters):
     for wire in graph.nodes:
         qp.Hadamard(wire)
-    qp.ApproxTimeEvolution(cost_hamiltonian, parameters[0], 1)
-    qp.ApproxTimeEvolution(mixer_hamiltonian, parameters[1], 1)
-
-
-qaoa_device = qp.device("mqt.ddsim.default", wires=4, job_parameters={"custom1": 7})
+    qp.qaoa.cost_layer(parameters[0], cost_hamiltonian)
+    qp.qaoa.mixer_layer(parameters[1], mixer_hamiltonian)
 
 
 @qp.qnode(qaoa_device, shots=1000, diff_method="parameter-shift")
-def cost(parameters):
+def correlations(parameters):
     ansatz(parameters)
-    return qp.expval(cost_hamiltonian)
+    return tuple(
+        qp.expval(qp.Z(first) @ qp.Z(second)) for first, second in graph.edges
+    )
 
 
+def cost(parameters):
+    return (
+        0.5 * jnp.sum(jnp.asarray(correlations(parameters)))
+        - 0.5 * graph.number_of_edges()
+    )
+
+
+@qp.qjit
+def step(parameters):
+    return parameters - 0.15 * catalyst.grad(cost)(parameters)
+
+
+@qp.qjit
 @qp.qnode(qaoa_device, shots=1000)
 def sample(parameters):
     ansatz(parameters)
     return qp.sample(wires=range(4))
-```
 
-The calculation below evaluates the initial parameter-shift gradient and
-performs four gradient-descent updates. Each objective value is an independent
-finite-shot estimate; the resulting sequence is therefore not expected to be
-monotonic.
 
-```{code-cell} ipython3
-parameters = qp.numpy.array([0.5, 0.5], requires_grad=True)
-optimizer = qp.GradientDescentOptimizer(stepsize=0.15)
-jobs_before = qaoa_device.submitted_jobs
-started = time.monotonic()
-
-objective_values = [float(cost(parameters))]
-initial_gradient = np.asarray(qp.grad(cost)(parameters), dtype=float)
-
+compiled_cost = qp.qjit(cost)
+parameters = jnp.array([0.5, 0.5])
+objective_values = [float(compiled_cost(parameters))]
 for _ in range(4):
-    parameters = optimizer.step(cost, parameters)
-    objective_values.append(float(cost(parameters)))
+    parameters = step(parameters)
+    objective_values.append(float(compiled_cost(parameters)))
 
 samples = np.asarray(sample(parameters), dtype=np.int8)
-submitted_jobs = qaoa_device.submitted_jobs - jobs_before
-elapsed = time.monotonic() - started
-
-print(f"Initial gradient: {initial_gradient}")
-print(f"Final parameters: {np.asarray(parameters)}")
-print(f"QDMI jobs submitted: {submitted_jobs}")
-print(f"Elapsed time: {elapsed:.3f} s")
+cut_sizes = sum(
+    samples[:, first] != samples[:, second] for first, second in graph.edges
+)
+best = samples[np.argmax(cut_sizes)]
+print(f"Objective estimates: {np.round(objective_values, 3)}")
+print(f"Final parameters: {parameters}")
+print(f"Best sampled partition: {best}, cut size: {max(cut_sizes)}")
 ```
 
-Parameter-shift evaluates several shifted tapes per gradient. The provider's
-batching support determines how many QDMI jobs they require.
+The QNode measures edge correlations; the classical `cost` function combines
+them into the MaxCut objective. Keeping this sum outside the QNode lets Catalyst
+differentiate the objective with parameter-shift. Parameter-shift gradients
+evaluate shifted circuits through QDMI. Finite-shot objective estimates need not
+decrease at every step. Each compiled QNode uses the device's existing session
+and compiles its quantum circuit for that target.
 
-The sampled bit strings determine candidate bipartitions. The cut value is the
-number of graph edges whose endpoints have different bit values.
-
-```{code-cell} ipython3
-def bitstring(sample_row):
-    return "".join(str(int(bit)) for bit in sample_row)
-
-
-def cut_value(candidate):
-    return sum(
-        candidate[first] != candidate[second] for first, second in graph.edges
-    )
-
-
-sample_counts = Counter(bitstring(row) for row in samples)
-best_bitstring = max(
-    sample_counts,
-    key=lambda candidate: (cut_value(candidate), sample_counts[candidate], candidate),
-)
-best_cut = cut_value(best_bitstring)
-
-print(f"Best sampled partition: {best_bitstring}")
-print(f"Cut edges: {best_cut} of {graph.number_of_edges()}")
-```
-
-The following panels show the noisy objective estimates, the empirical
-bit-string distribution, and the highest-cut partition observed in the final
-sample. Orange edges cross that partition.
-
-```{code-cell} ipython3
-:tags: [hide-input]
-:mystnb: {image: {alt: "QAOA objective estimates, final counts, and best sampled graph partition."}}
-
-figure, axes = plt.subplots(3, 1, figsize=(7, 10))
-
-axes[0].plot(
-    range(len(objective_values)),
-    objective_values,
-    marker="o",
-    color="#4c78a8",
-)
-axes[0].set(
-    xlabel="Optimizer update",
-    ylabel=r"$\langle H_C \rangle$",
-    title="Noisy finite-shot objective estimates",
-    xticks=range(len(objective_values)),
-)
-axes[0].grid(alpha=0.25)
-
-ordered_bitstrings = sorted(sample_counts)
-axes[1].bar(
-    ordered_bitstrings,
-    [sample_counts[candidate] for candidate in ordered_bitstrings],
-    color="#4c78a8",
-)
-axes[1].set(
-    xlabel="Bit string",
-    ylabel="Observed count",
-    title="Final sampled distribution",
-)
-axes[1].tick_params(axis="x", rotation=60)
-
-node_colors = [
-    "#4c78a8" if best_bitstring[node] == "0" else "#e45756"
-    for node in graph.nodes
-]
-edge_colors = [
-    "#f28e2b"
-    if best_bitstring[first] != best_bitstring[second]
-    else "#9aa0a6"
-    for first, second in graph.edges
-]
-edge_widths = [
-    3.2 if best_bitstring[first] != best_bitstring[second] else 1.5
-    for first, second in graph.edges
-]
-nx.draw_networkx(
-    graph,
-    pos=positions,
-    ax=axes[2],
-    node_color=node_colors,
-    edge_color=edge_colors,
-    width=edge_widths,
-    font_color="white",
-    node_size=850,
-)
-axes[2].set_title(f"Best sampled cut: {best_cut} edges")
-axes[2].set_axis_off()
-
-figure.tight_layout()
-```
+The `qaoa` helpers belong to PennyLane 0.45. In PennyLane development builds
+without that module, construct the cost and mixer with operator arithmetic and
+use `qp.ApproxTimeEvolution(hamiltonian, angle, 1)` for each layer. This is the
+same gate decomposition used by the helpers and needs no native Hamiltonian
+support from the device.
 
 ## Direct generic construction
 
@@ -469,11 +340,16 @@ value = captured_expectation(0.4)
 ```
 
 The splitting pass supports expectations only; use diagonalization alone for a
-variance. For gate decomposition under capture, apply `qp.transforms.decompose`
-with `gate_set=set(compiled_device.capabilities.operations)`. ECR, SX, U1, U2,
-and U3 require this explicit transform. Ordinary QNodes and non-capture
-compilation decompose them automatically. Use `capture=False` if Catalyst cannot
-combine the required decomposition and measurement passes.
+variance. For gate decomposition under capture, load Catalyst's capabilities
+with
+`qp.devices.DeviceCapabilities.from_toml_file(device.config_filepath, "qjit")`
+and pass `set(capabilities.operations)` as the `gate_set` of
+`qp.transforms.decompose` on the QNode.
+
+ECR, SX, U1, U2, and U3 use native Core gates in ordinary QNodes. Catalyst
+lowers them through decomposition; program capture currently requires the
+explicit transform. The default `qp.qjit` mode applies decomposition
+automatically.
 
 Catalyst counts return arrays rather than dictionaries. Non-capture shot vectors
 support samples only; capture does not support shot vectors or QNode

@@ -36,6 +36,13 @@ CRX = { properties = ["invertible", "controllable"] }
 CRY = { properties = ["invertible", "controllable"] }
 CRZ = { properties = ["invertible", "controllable"] }
 
+[pennylane.operators.gates]
+SX = { properties = ["invertible", "controllable"] }
+ECR = { properties = ["invertible", "controllable"] }
+U1 = { properties = ["invertible", "controllable"] }
+U2 = { properties = ["invertible", "controllable"] }
+U3 = { properties = ["invertible", "controllable"] }
+
 [qjit.operators.gates]
 # Eager execution retains PennyLane's decomposition of larger matrices.
 QubitUnitary = { properties = ["invertible", "controllable"] }

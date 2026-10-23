@@ -10,13 +10,19 @@
 
 from __future__ import annotations
 
-__lazy_modules__ = {"mqt.core.mlir", "mqt.core.plugins.pennylane.exceptions", "mqt.core.plugins.qdmi_batch"}
+__lazy_modules__ = {
+    "mqt.core.mlir",
+    "mqt.core.mlir._pennylane",
+    "mqt.core.plugins.pennylane.exceptions",
+    "mqt.core.plugins.qdmi_batch",
+}
 
 from contextlib import contextmanager
 from time import monotonic
 from typing import TYPE_CHECKING, cast
 
-from mqt.core.mlir import _pennylane_samples, submit_program, try_submit_programs
+from mqt.core.mlir import submit_program, try_submit_programs
+from mqt.core.mlir._pennylane import samples
 from mqt.core.plugins.pennylane.exceptions import PennyLaneExecutionError
 from mqt.core.plugins.qdmi_batch import Batch, BatchEntry
 
@@ -97,7 +103,7 @@ class PennyLaneJob:
     def _samples(self, index: int, job: Job, program_index: int) -> np.ndarray:
         """Return a shot-by-wire sample array in the device's logical wire order."""
         _, shots = self._prepared[index]
-        return _pennylane_samples(job, len(self._device.wires), shots, program_index)
+        return samples(job, len(self._device.wires), shots, program_index)
 
     def _record_submission(self, indices: Sequence[int]) -> None:
         self._device._submitted_jobs += 1  # ruff:ignore[private-member-access] Update the device's read-only total.
