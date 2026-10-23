@@ -124,7 +124,8 @@ public:
         qubitValues(program.registers.size()),
         classicalRegisters(program.registers.size()),
         scalarValues(program.scalars.size()),
-        arrayValues_(program.arrays.size()) {
+        arrayValues_(program.arrays.size()),
+        subroutineFunctions_(program.subroutines.size()) {
     context
         .loadDialect<qc::QCDialect, arith::ArithDialect, cf::ControlFlowDialect,
                      func::FuncDialect, LLVM::LLVMDialect, math::MathDialect,
@@ -136,8 +137,11 @@ public:
       structuredGateCapabilities.try_emplace(
           &gate, statementsRequireStructuredControlFlow(gate.body));
     }
-    if (customGateIndex.contains("main")) {
-      // A dot cannot occur in a source gate identifier.
+    if (customGateIndex.contains("main") ||
+        llvm::any_of(program.subroutines, [](const auto& function) {
+          return function.name == "main";
+        })) {
+      // A dot cannot occur in a source identifier.
       cast<func::FuncOp>(builder.getInsertionBlock()->getParentOp())
           .setName("mqt.entry");
     }
@@ -169,6 +173,13 @@ public:
     for (const auto& gate : program.gates) {
       emitGateDefinition(gate);
       scalarUpdates_.clear();
+      if (emissionFailed || emissionBudget.isExhausted()) {
+        return nullptr;
+      }
+    }
+    for (const auto [index, subroutine] :
+         llvm::enumerate(program.subroutines)) {
+      emitSubroutineDefinition(index, subroutine);
       if (emissionFailed || emissionBudget.isExhausted()) {
         return nullptr;
       }
@@ -231,6 +242,7 @@ private:
   llvm::StringMap<const openqasm::frontend::GateDefinition*> customGateIndex;
   DenseMap<const openqasm::frontend::GateDefinition*, func::FuncOp>
       customGateFunctions_;
+  SmallVector<func::FuncOp> subroutineFunctions_;
   bool emissionFailed = false;
   QCProgramBuilder::LoopBuilder* activeLoop = nullptr;
   SmallVector<frontend::ScalarId> breakSlots;
@@ -469,6 +481,10 @@ private:
     const auto type =
         opBuilder.getIntegerType(static_cast<unsigned>(expression.width));
     switch (expression.kind) {
+    case frontend::BitVectorExpressionKind::Call: {
+      auto call = emitSubroutineCall(opBuilder, expression.call);
+      return call ? call.getResult(0) : Value{};
+    }
     case frontend::BitVectorExpressionKind::ScalarCast:
       return emitExpression(opBuilder, expression.scalar, {});
     case frontend::BitVectorExpressionKind::Constant:
@@ -614,6 +630,10 @@ private:
                    ? opBuilder.getUnknownLoc()
                    : opBuilder.getInsertionPoint()->getLoc();
     switch (expression.kind) {
+    case frontend::ExpressionKind::Call: {
+      auto call = emitSubroutineCall(opBuilder, expression.call);
+      return call ? call.getResult(0) : Value{};
+    }
     case frontend::ExpressionKind::Constant:
       switch (expression.type) {
       case frontend::ScalarType::Bool:
@@ -1004,6 +1024,92 @@ private:
     auto negativeHalf = arith::ConstantFloatOp::create(
         opBuilder, loc, opBuilder.getF64Type(), APFloat(-0.5));
     return arith::MulFOp::create(opBuilder, loc, sum, negativeHalf);
+  }
+
+  [[nodiscard]] Value
+  emitSubroutineArgument(OpBuilder& opBuilder,
+                         const frontend::SubroutineArgument& argument) {
+    return argument.bitVector
+               ? emitBitVectorExpression(opBuilder, argument.value)
+               : emitExpression(opBuilder, argument.value, {});
+  }
+
+  [[nodiscard]] func::CallOp emitSubroutineCall(OpBuilder& opBuilder,
+                                                frontend::SubroutineCallId id) {
+    const auto& call = program.calls.at(id);
+    SmallVector<Value> operands;
+    for (const auto& argument : call.arguments) {
+      auto value = emitSubroutineArgument(opBuilder, argument);
+      if (!value) {
+        emissionFailed = true;
+        return {};
+      }
+      operands.push_back(value);
+    }
+    auto function = subroutineFunctions_[call.callee];
+    if (!function ||
+        function.getArgumentTypes() != ValueRange(operands).getTypes()) {
+      emitError(getLocation(call.location))
+          << "OpenQASM QC emission error: subroutine call does not match its "
+             "verified declaration";
+      emissionFailed = true;
+      return {};
+    }
+    return func::CallOp::create(opBuilder, getLocation(call.location), function,
+                                operands);
+  }
+
+  void
+  emitSubroutineDefinition(size_t index,
+                           const frontend::SubroutineDefinition& subroutine) {
+    SmallVector<Type> argumentTypes;
+    for (const auto& parameter : subroutine.parameters) {
+      argumentTypes.push_back(
+          parameter.type.bitVector
+              ? builder.getIntegerType(parameter.type.width)
+              : scalarType(parameter.type.scalar, parameter.type.width));
+    }
+    const auto checkpoint = scalarUpdates_.size();
+    builder.setLoc(getLocation(subroutine.location));
+    subroutineFunctions_[index] = builder.createFunction(
+        subroutine.name, argumentTypes, [&](ValueRange arguments) {
+          for (auto [parameter, value] :
+               llvm::zip_equal(subroutine.parameters, arguments)) {
+            if (parameter.type.bitVector) {
+              emitDeclaration({.reg = parameter.symbol});
+              if (emissionBudget.isExhausted()) {
+                return SmallVector<Value>{};
+              }
+              cbit::WriteOp::create(builder, value,
+                                    classicalRegisters.at(parameter.symbol));
+            } else {
+              setScalarValue(parameter.symbol, value);
+            }
+          }
+          for (const auto statement : subroutine.body) {
+            const auto& typed = program.statements.at(statement);
+            if (const auto* result =
+                    std::get_if<frontend::ReturnStatement>(&typed.data)) {
+              if (!result->value) {
+                return SmallVector<Value>{};
+              }
+              builder.setLoc(getLocation(typed.location));
+              emissionBudget.setLocation(builder.getLoc());
+              auto value = emitSubroutineArgument(builder, *result->value);
+              if (!value) {
+                emissionFailed = true;
+                return SmallVector<Value>{};
+              }
+              return SmallVector<Value>{value};
+            }
+            emitStatement(statement, {}, {});
+            if (emissionFailed || emissionBudget.isExhausted()) {
+              return SmallVector<Value>{};
+            }
+          }
+          return SmallVector<Value>{};
+        });
+    restoreScalars(checkpoint);
   }
 
   void emitGateDefinition(const frontend::GateDefinition& gate) {
@@ -1717,6 +1823,9 @@ private:
             flowReachable = false;
           } else if constexpr (std::is_same_v<T, frontend::SwitchStatement>) {
             emitSwitch(data, gateParameters, gateQubits);
+          } else if constexpr (std::is_same_v<
+                                   T, frontend::SubroutineCallStatement>) {
+            std::ignore = emitSubroutineCall(builder, data.call);
           }
         },
         statement.data);

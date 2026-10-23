@@ -37,6 +37,8 @@ enum class TokenKind : uint8_t {
   Bit,
   CReg,
   Gate,
+  Def,
+  Return,
   Opaque,
   Input,
   Output,

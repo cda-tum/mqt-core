@@ -145,6 +145,24 @@ private:
       return parseInputDecl();
     case TokenKind::Gate:
       return parseGateStatement();
+    case TokenKind::Def:
+      return parseSubroutineDefinition();
+    case TokenKind::Return: {
+      const auto location = current().loc;
+      advance();
+      std::optional<SyntaxExpressionId> value;
+      if (current().kind != TokenKind::Semicolon) {
+        auto expression = parseExpression();
+        if (failed(expression)) {
+          return failure();
+        }
+        value = *expression;
+      }
+      if (failed(expect(TokenKind::Semicolon))) {
+        return failure();
+      }
+      return sink.returnStmt(location, value);
+    }
     case TokenKind::Opaque:
       return sink.error(current().loc,
                         "opaque gate declarations are not supported");
@@ -592,7 +610,10 @@ private:
     }
     if (measureSource) {
       const BitReference target{
-          .location = loc, .identifier = id, .index = std::nullopt};
+          .location = loc,
+          .identifier = id,
+          .index = std::nullopt,
+      };
       return sink.measure(loc, &target, *measureSource);
     }
     return success();
@@ -729,7 +750,10 @@ private:
     }
     if (measureSource) {
       const BitReference target{
-          .location = loc, .identifier = id, .index = std::nullopt};
+          .location = loc,
+          .identifier = id,
+          .index = std::nullopt,
+      };
       return sink.measure(loc, &target, *measureSource);
     }
     return success();
@@ -940,11 +964,103 @@ private:
     SmallVector<Modifier> modifiers;
     SmallVector<SyntaxExpressionId> parameters;
     SmallVector<Operand> operands;
+    const bool mayBeSubroutine = current().kind == TokenKind::Identifier &&
+                                 peek().kind == TokenKind::LParen;
     auto call = parseGateCall(modifiers, parameters, operands);
     if (failed(call)) {
       return failure();
     }
+    if (mayBeSubroutine && modifiers.empty() && operands.empty()) {
+      SyntaxExpression expression;
+      expression.kind = Expr::Kind::Call;
+      expression.location = call->loc;
+      expression.identifier = call->identifier;
+      expression.arguments.assign(parameters.begin(), parameters.end());
+      return sink.subroutineCall(call->loc, sink.addExpression(expression));
+    }
     return sink.gateCall(*call);
+  }
+
+  [[nodiscard]] FailureOr<SyntaxSubroutineType> parseSubroutineType() {
+    SyntaxSubroutineType type;
+    switch (current().kind) {
+    case TokenKind::Bit:
+      type.bitVector = true;
+      break;
+    case TokenKind::Bool:
+      type.scalar = ScalarKind::Bool;
+      break;
+    case TokenKind::Int:
+      type.scalar = ScalarKind::Int;
+      break;
+    case TokenKind::Uint:
+      type.scalar = ScalarKind::Uint;
+      break;
+    case TokenKind::Float:
+      type.scalar = ScalarKind::Float;
+      break;
+    case TokenKind::Angle:
+      return sink.error(current().loc,
+                        "runtime angle subroutine types are not supported");
+    default:
+      return sink.error(
+          current().loc,
+          "subroutines support only by-value scalar and bit types");
+    }
+    advance();
+    if (current().kind == TokenKind::LBracket) {
+      advance();
+      auto width = parseExpression();
+      if (failed(width) || failed(expect(TokenKind::RBracket))) {
+        return failure();
+      }
+      type.width = *width;
+    }
+    return type;
+  }
+
+  [[nodiscard]] LogicalResult parseSubroutineDefinition() {
+    const auto location = current().loc;
+    advance();
+    if (current().kind != TokenKind::Identifier) {
+      return expectedIdentifier("expected subroutine name");
+    }
+    SyntaxSubroutineDefinition definition;
+    definition.identifier = current().identifier;
+    advance();
+    if (failed(expect(TokenKind::LParen))) {
+      return failure();
+    }
+    while (current().kind != TokenKind::RParen) {
+      auto type = parseSubroutineType();
+      if (failed(type)) {
+        return failure();
+      }
+      if (current().kind != TokenKind::Identifier) {
+        return expectedIdentifier("expected subroutine parameter name");
+      }
+      definition.parameters.push_back(
+          {.type = *type, .identifier = current().identifier});
+      advance();
+      if (current().kind != TokenKind::RParen &&
+          failed(expect(TokenKind::Comma))) {
+        return failure();
+      }
+    }
+    advance();
+    if (current().kind == TokenKind::Arrow) {
+      advance();
+      auto type = parseSubroutineType();
+      if (failed(type)) {
+        return failure();
+      }
+      definition.result = *type;
+    }
+    if (current().kind != TokenKind::LBrace) {
+      return sink.error(current().loc, "expected subroutine body");
+    }
+    return sink.subroutineDefinition(location, std::move(definition),
+                                     [this] { return parseBlock(); });
   }
 
   [[nodiscard]] FailureOr<GateCall>
@@ -1095,10 +1211,9 @@ private:
     }
     operand.identifier = current().identifier;
     advance();
-    if (current().kind == TokenKind::LBracket) {
-      if (failed(parseSubscript(operand.index, operand.slice))) {
-        return failure();
-      }
+    if (current().kind == TokenKind::LBracket &&
+        failed(parseSubscript(operand.index, operand.slice))) {
+      return failure();
     }
     return operand;
   }
@@ -1111,11 +1226,10 @@ private:
     }
     reference.identifier = current().identifier;
     advance();
-    if (current().kind == TokenKind::LBracket) {
-      if (failed(parseSubscript(reference.index, reference.slice,
-                                &reference.additionalIndices))) {
-        return failure();
-      }
+    if (current().kind == TokenKind::LBracket &&
+        failed(parseSubscript(reference.index, reference.slice,
+                              &reference.additionalIndices))) {
+      return failure();
     }
     return reference;
   }
@@ -1697,8 +1811,23 @@ private:
       if (peek().kind == TokenKind::LParen) {
         const auto kind = getMathFunctionKind(current().identifier);
         if (!kind) {
-          return sink.error(current().loc, Twine("unknown function '") +
-                                               current().identifier + "'");
+          expr.kind = Expr::Kind::Call;
+          expr.identifier = current().identifier;
+          advance();
+          advance();
+          while (current().kind != TokenKind::RParen) {
+            auto argument = parseExpression();
+            if (failed(argument)) {
+              return failure();
+            }
+            expr.arguments.push_back(*argument);
+            if (current().kind != TokenKind::RParen &&
+                failed(expect(TokenKind::Comma))) {
+              return failure();
+            }
+          }
+          advance();
+          return sink.addExpression(expr);
         }
         return parseBuiltinCall(*kind, expr);
       }

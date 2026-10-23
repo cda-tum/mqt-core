@@ -37,6 +37,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
@@ -75,7 +76,7 @@ static void expectOneSample(ModuleOp moduleOp, StringRef expected = "1") {
   PassManager manager(moduleOp.getContext());
   manager.addPass(createQCToQCO());
   ASSERT_TRUE(succeeded(manager.run(moduleOp)));
-  auto entry = moduleOp.lookupSymbol<func::FuncOp>("main");
+  auto entry = mlir::mqt::getEntryPoint(moduleOp);
   ASSERT_TRUE(entry);
   const auto samples = qco::sample(entry, 1, 1);
   ASSERT_TRUE(succeeded(samples));
@@ -92,6 +93,128 @@ h q[0];
 ctrl @ x q[0], q[1];
 bit[2] c = measure q;
 )qasm";
+
+TEST(OpenQASM3EmissionTest, RoundTripsScalarSubroutines) {
+  constexpr std::array sources{
+      R"qasm(
+const int offset = 1;
+def increment(int[8] x) -> int[8] {
+  x += int[8](offset);
+  return x;
+}
+def sum(int n) -> int {
+  int total = 0;
+  for int i in [0:n-1] { total += int(increment(int[8](i))); }
+  return total;
+}
+def negative(float x, bool enabled) -> float {
+  float value = x;
+  if (enabled) { value = -value; }
+  return value;
+}
+def ignore(int x) { x += 1; return; }
+def equal(int x, int y) -> bool { return x == y; }
+ignore(4);
+sum(0);
+output bool correct;
+correct = equal(sum(4), 10) &&
+    increment(int[8](127)) == int[8](-128) && negative(2.5, true) == -2.5;
+)qasm",
+      R"qasm(
+def invert(bit[65] value) -> bit[65] { value = ~value; return value; }
+def set(bit[1] value) -> bit[1] { value[0] = true; return value; }
+bit[65] original = 0;
+bit[65] changed = invert(original);
+bit[1] single = 0;
+bit[1] changedSingle = set(single);
+int changedInteger = set(single);
+output bool correct;
+correct = popcount(original) == 0 && popcount(changed) == 65 &&
+    !bool(single) && bool(changedSingle) && changedInteger == 1;
+)qasm",
+      R"qasm(
+int global = 9;
+def identity(uint[1] value) -> uint[1] { return value; }
+def countdown(int value) -> int {
+  int global = 0;
+  while (value > 0) {
+    value -= 1;
+    if (value == 2) { continue; }
+    global += 1;
+  }
+  return global;
+}
+output bool correct;
+correct = identity(uint[1](1)) == 1 && countdown(4) == 3 && global == 9;
+)qasm",
+      R"qasm(
+def main(bit value) -> bool { return bool(value); }
+def under(int value) -> bool { return value < 3; }
+def flag() -> bit { return true; }
+def truth(bool value) -> bool { return value; }
+def nonzero() -> bool { return 2; }
+def scalarBit(bit value) -> bit { return value; }
+def nonzeroBit() -> bit { return 2; }
+bit[8] bits = 2;
+int count = 0;
+while (under(count)) { count += 1; }
+if (flag()) { count += 1; }
+output bool correct;
+correct = main(true) && count == 4 && truth(2) && nonzero() &&
+    scalarBit(bits) && nonzeroBit();
+)qasm",
+  };
+  for (const auto* source : sources) {
+    SCOPED_TRACE(source);
+    MLIRContext context;
+    auto original = qc::translateOpenQASMToQC(
+        std::string("OPENQASM 3.1; ") + source, &context);
+    ASSERT_TRUE(original);
+    ASSERT_TRUE(succeeded(verify(*original)));
+    size_t calls = 0;
+    original->walk([&](func::CallOp) { ++calls; });
+    EXPECT_GT(calls, 0);
+
+    // Function boundaries and by-value storage must survive both conversions.
+    expectOneSample(*original);
+    PassManager manager(&context);
+    manager.addPass(createQCOToQC());
+    ASSERT_TRUE(succeeded(manager.run(*original)));
+    auto emitted = qc::translateQCToOpenQASM3(std::move(original));
+    ASSERT_TRUE(succeeded(emitted));
+    EXPECT_NE(emitted->find("def "), std::string::npos) << *emitted;
+    auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+    ASSERT_TRUE(restored) << *emitted;
+    ASSERT_TRUE(succeeded(verify(*restored)));
+    size_t restoredCalls = 0;
+    restored->walk([&](func::CallOp) { ++restoredCalls; });
+    EXPECT_EQ(restoredCalls, calls);
+    expectOneSample(*restored);
+  }
+}
+
+TEST(OpenQASM3EmissionTest, RenamesSubroutinesThatCollideWithBuiltins) {
+  constexpr llvm::StringLiteral source = R"mlir(module {
+    func.func private @sin() { return }
+    func.func private @log() { return }
+    func.func private @ordinary() { return }
+    func.func @main() attributes {mqt.entry_point} {
+      func.call @sin() : () -> ()
+      func.call @log() : () -> ()
+      func.call @ordinary() : () -> ()
+      return
+    }
+  })mlir";
+  MLIRContext context(emissionDialects());
+  auto original = parseSourceString<ModuleOp>(source, &context);
+  ASSERT_TRUE(original);
+  auto emitted = qc::translateQCToOpenQASM3(std::move(original));
+  ASSERT_TRUE(succeeded(emitted));
+  auto restored = qc::translateOpenQASMToQC(*emitted, &context);
+  ASSERT_TRUE(restored) << *emitted;
+  EXPECT_TRUE(succeeded(verify(*restored)));
+  EXPECT_TRUE(restored->lookupSymbol<func::FuncOp>("ordinary"));
+}
 
 TEST(OpenQASM3EmissionTest, PreservesIndexCastBitPatterns) {
   constexpr llvm::StringLiteral source = R"mlir(module {
@@ -2714,6 +2837,36 @@ TEST(OpenQASM3EmissionTest, RejectsExcessiveClassicalRegisterWidth) {
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
 
   EXPECT_TRUE(failed(qc::translateQCToOpenQASM3(std::move(moduleOp))));
+}
+
+TEST(OpenQASM3EmissionTest, LimitsWideSubroutineResultSnapshots) {
+  MLIRContext context(emissionDialects());
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func private @wide() -> i524288 {
+      %zero = arith.constant 0 : i524288
+      return %zero : i524288
+    }
+    func.func @main() -> i1 attributes {mqt.entry_point} {
+      %a = func.call @wide() : () -> i524288
+      %b = func.call @wide() : () -> i524288
+      %c = func.call @wide() : () -> i524288
+      %ab = arith.cmpi eq, %a, %b : i524288
+      %ac = arith.cmpi eq, %a, %c : i524288
+      %equal = arith.andi %ab, %ac : i1
+      return %equal : i1
+    }
+  })mlir",
+                                              &context);
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  bool diagnosed = false;
+  ScopedDiagnosticHandler handler(&context, [&](Diagnostic& diagnostic) {
+    diagnosed |= diagnostic.str().find("classical snapshots exceed") !=
+                 std::string::npos;
+    return success();
+  });
+  EXPECT_TRUE(failed(qc::translateQCToOpenQASM3(std::move(moduleOp))));
+  EXPECT_TRUE(diagnosed);
 }
 
 TEST(OpenQASM3EmissionTest, RejectsInvalidModifierBodies) {

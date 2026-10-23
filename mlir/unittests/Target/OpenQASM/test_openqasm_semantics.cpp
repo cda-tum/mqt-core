@@ -39,6 +39,54 @@ using namespace mlir::openqasm::test;
 
 namespace {
 
+TEST(OpenQASMFrontendTest, RejectsInvalidScalarSubroutines) {
+  for (const auto* source : {
+           "def f(int x) -> int {}",
+           "def f() -> int { return; }",
+           "def f() { return 1; }",
+           "def f(int x) -> int { return x; } int y = f();",
+           "def f(int x) -> int { return x; } int y = f(1, 2);",
+           "def f(int x) -> int { return x; } int x; int y = f(x);",
+           "def f() {} int y = f();",
+           "def f() -> int { return f(); }",
+           R"(def f() -> int { return 1; }
+              def g() -> int { int f = 2; return f(); })",
+           "def f() -> int { return g(); } def g() -> int { return 1; }",
+           "int x = 1; def f() -> int { return x; }",
+           "bit[2] x = 0; def f() -> bit[2] { return x; }",
+           "array[int, 1] x = {1}; def f() -> int { return x[0]; }",
+           "def f(int x, int x) {}",
+           "def f() {} def f() {}",
+           "def f() { def g() {} }",
+           "def f() { array[int, 1] x; }",
+           "def f() { qubit q; }",
+           "def f(qubit q) {}",
+           "def f(readonly array[int, 1] x) {}",
+           "def f(angle x) {}",
+           "def f() -> angle { return pi; }",
+           "def f(float[32] x) {}",
+           "def f(bit[0] x) {}",
+           "def f(bit[2] x) {} bit[3] x = 0; f(x);",
+           "def f(bit[1] x) {} f(2);",
+           "def f() -> bit[1] { return 2; }",
+           "def f() -> int { return 1; } if (f()) {}",
+           "def f() -> float { return 1.0; } if (f()) {}",
+           "def f() -> bit[2] { return \"01\"; } if (f()) {}",
+           "def f(bool x) -> int { if (x) { return 1; } return 0; }",
+           "def f() -> int { for int i in [0:1] { return i; } return 0; }",
+           "def f() { return; int x = 1; }",
+           "def f() { for int i in [0:1] { break; return; } }",
+           "def f() { for int i in [0:1] { break; gphase(pi); } }",
+           "return;",
+       }) {
+    SCOPED_TRACE(source);
+    auto analyzed = openqasm::frontend::analyzeOpenQASM(
+        std::string("OPENQASM 3.1; ") + source);
+    EXPECT_FALSE(analyzed);
+    EXPECT_FALSE(analyzed.diagnostics.empty());
+  }
+}
+
 TEST(OpenQASMFrontendTest, ResolvesRegisterSlicesInSelectionOrder) {
   using namespace openqasm::frontend;
   const auto cases =
@@ -1032,12 +1080,12 @@ TEST(OpenQASMFrontendTest, AcceptsLogAndRejectsLnBuiltInSpelling) {
       "OPENQASM 3.1; const float value = log(2.0);");
   ASSERT_TRUE(log) << log.diagnostics.front().message;
 
-  auto nonstandardLn = openqasm::frontend::parseOpenQASM(
-      "OPENQASM 3.1; const float value = ln(2.0);");
+  auto nonstandardLn = openqasm::frontend::analyzeOpenQASM(
+      "OPENQASM 3.1; float value = ln(2.0);");
   ASSERT_FALSE(nonstandardLn);
   ASSERT_FALSE(nonstandardLn.diagnostics.empty());
   EXPECT_NE(
-      nonstandardLn.diagnostics.front().message.find("unknown function 'ln'"),
+      nonstandardLn.diagnostics.front().message.find("unknown subroutine 'ln'"),
       std::string::npos);
 }
 

@@ -39,6 +39,7 @@ using ScalarId = uint32_t;
 using ArrayId = uint32_t;
 using ConditionId = uint32_t;
 using StatementId = uint32_t;
+using SubroutineCallId = uint32_t;
 
 struct SourceLocation {
   std::string filename = "<input>";
@@ -104,6 +105,7 @@ enum class ScalarType : uint8_t {
 
 enum class ExpressionKind : uint8_t {
   Constant,
+  Call,
   GateParameter,
   Variable,
   ArrayLoad,
@@ -153,9 +155,11 @@ struct ScalarExpression {
   /// Zero denotes the default 64-bit machine integer type.
   unsigned integerWidth = 0;
   ConditionId condition = 0;
+  SubroutineCallId call = 0;
 };
 
 enum class BitVectorExpressionKind : uint8_t {
+  Call,
   ScalarCast,
   Constant,
   Register,
@@ -188,6 +192,7 @@ struct BitVectorExpression {
   ExpressionId scalar = 0;
   /// Empty for a whole-register read; otherwise in selection order.
   std::vector<BitReference> selection;
+  SubroutineCallId call = 0;
 };
 
 struct ScalarDeclaration {
@@ -296,6 +301,47 @@ struct GateDefinition {
   size_t qubitCount = 0;
   std::vector<StatementId> body;
   SourceLocation location;
+};
+
+struct SubroutineType {
+  bool bitVector = false;
+  bool scalarBit = false;
+  ScalarType scalar = ScalarType::Int;
+  unsigned width = 0;
+};
+
+struct SubroutineParameter {
+  SubroutineType type;
+  /// ScalarId, or RegisterId for a bit value.
+  uint32_t symbol = 0;
+};
+
+struct SubroutineDefinition {
+  std::string name;
+  std::vector<SubroutineParameter> parameters;
+  std::optional<SubroutineType> result;
+  std::vector<StatementId> body;
+  SourceLocation location;
+};
+
+struct SubroutineArgument {
+  bool bitVector = false;
+  /// ExpressionId, or BitVectorExpressionId for a bit value.
+  uint32_t value = 0;
+};
+
+struct SubroutineCall {
+  uint32_t callee = 0;
+  std::vector<SubroutineArgument> arguments;
+  SourceLocation location;
+};
+
+struct SubroutineCallStatement {
+  SubroutineCallId call = 0;
+};
+
+struct ReturnStatement {
+  std::optional<SubroutineArgument> value;
 };
 
 struct DeclarationStatement {
@@ -421,14 +467,13 @@ struct SwitchStatement {
   std::vector<StatementId> defaultStatements;
 };
 
-using StatementData =
-    std::variant<DeclarationStatement, ScalarDeclarationStatement,
-                 ArrayDeclarationStatement, ArrayAssignmentStatement,
-                 ArrayCopyStatement, ScalarAssignmentStatement,
-                 BitAssignmentStatement, BitVectorAssignmentStatement,
-                 GateApplication, MeasurementStatement, ResetStatement,
-                 BarrierStatement, IfStatement, ForStatement, WhileStatement,
-                 SwitchStatement, BreakStatement, ContinueStatement>;
+using StatementData = std::variant<
+    DeclarationStatement, ScalarDeclarationStatement, ArrayDeclarationStatement,
+    ArrayAssignmentStatement, ArrayCopyStatement, ScalarAssignmentStatement,
+    BitAssignmentStatement, BitVectorAssignmentStatement, GateApplication,
+    MeasurementStatement, ResetStatement, BarrierStatement, IfStatement,
+    ForStatement, WhileStatement, SwitchStatement, BreakStatement,
+    ContinueStatement, SubroutineCallStatement, ReturnStatement>;
 
 struct Statement {
   StatementData data;
@@ -458,6 +503,8 @@ struct TypedProgram {
   std::vector<ArraySizeQuery> arraySizeQueries;
   std::vector<RegisterDeclaration> registers;
   std::vector<GateDefinition> gates;
+  std::vector<SubroutineDefinition> subroutines;
+  std::vector<SubroutineCall> calls;
   std::vector<Statement> statements;
   std::vector<StatementId> body;
   std::vector<ProgramOutput> outputs;

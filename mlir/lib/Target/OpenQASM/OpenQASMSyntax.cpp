@@ -182,6 +182,31 @@ LogicalResult SyntaxBuilder::gateCall(const GateCall& call) {
   return success();
 }
 
+LogicalResult SyntaxBuilder::subroutineCall(SMLoc location,
+                                            SyntaxExpressionId call) {
+  std::ignore = addStatement(location, SyntaxSubroutineCallStatement{call});
+  return success();
+}
+
+LogicalResult
+SyntaxBuilder::returnStmt(SMLoc location,
+                          std::optional<SyntaxExpressionId> value) {
+  std::ignore = addStatement(location, SyntaxReturn{value});
+  return success();
+}
+
+LogicalResult SyntaxBuilder::subroutineDefinition(
+    SMLoc location, SyntaxSubroutineDefinition definition,
+    function_ref<LogicalResult()> continuation) {
+  auto body = parseNestedBody(continuation);
+  if (failed(body)) {
+    return failure();
+  }
+  definition.body = std::move(*body);
+  std::ignore = addStatement(location, std::move(definition));
+  return success();
+}
+
 LogicalResult SyntaxBuilder::gateDefinition(
     SMLoc location, StringRef identifier, ArrayRef<StringRef> parameters,
     ArrayRef<StringRef> qubits, function_ref<LogicalResult()> continuation) {
