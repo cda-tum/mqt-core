@@ -427,6 +427,7 @@ enum class OutputFormat : uint8_t {
   Jeff = static_cast<uint8_t>(mlir::ProgramFormat::Jeff),
   QIRBase = static_cast<uint8_t>(mlir::ProgramFormat::QIRBase),
   QIRAdaptive = static_cast<uint8_t>(mlir::ProgramFormat::QIRAdaptive),
+  IQMJSON = static_cast<uint8_t>(mlir::ProgramFormat::IQMJSON),
   Qiskit,
 };
 struct ImportedProgram {
@@ -582,6 +583,7 @@ programFromString(const std::string& input) {
 payloadForOutput(OutputFormat output) {
   switch (output) {
   case OutputFormat::OpenQASM3:
+  case OutputFormat::IQMJSON:
   case OutputFormat::QIRBase:
   case OutputFormat::QIRAdaptive:
     return takeResult(mlir::PayloadSpecification::forProgramFormat(
@@ -907,6 +909,8 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
       .value("QC", OutputFormat::QC, "QC after the optimized QCO round trip.")
       .value("OPENQASM3", OutputFormat::OpenQASM3,
              "OpenQASM 3 after the optimized QCO round trip.")
+      .value("IQM_JSON", OutputFormat::IQMJSON,
+             "An IQM circuit for an explicit physical target.")
       .value("JEFF", OutputFormat::Jeff, "Serializable ``jeff`` MLIR.")
       .value("QIR_BASE", OutputFormat::QIRBase, "QIR for the Base Profile.")
       .value("QIR_ADAPTIVE", OutputFormat::QIRAdaptive,
@@ -2063,6 +2067,15 @@ segment data is copied or flattened.)pb")
 
 Set ``copy=True`` to preserve it.)pb");
 
+  nb::class_<mlir::IQMJSONProgram>(
+      m, "IQMJSONProgram", "An immutable output-only IQM circuit object.")
+      .def_prop_ro("source", &mlir::IQMJSONProgram::source,
+                   "The emitted IQM JSON source.")
+      .def("write", &FallibleMemberAdapter<&mlir::IQMJSONProgram::write>::call,
+           "path"_a, "Write the IQM JSON source to a file.")
+      .def("__str__", &mlir::IQMJSONProgram::str,
+           "Return the emitted IQM JSON source.");
+
   nb::class_<mlir::OpenQASMProgram>(
       m, "OpenQASMProgram",
       "An immutable compiler program containing OpenQASM 3 source.")
@@ -2267,7 +2280,7 @@ Args:
     qco_pipeline: The QCO optimization pipeline. Custom pipelines require no target.
     options: Shared compilation controls.
 
-Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
+Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, IQM JSON, then Base QIR
 (binary, text). Select an exact execution format with
 :func:`submit_program` and its ``program_format`` argument. An explicit output
 need not be a device's execution format. Jeff output does not retain hardware

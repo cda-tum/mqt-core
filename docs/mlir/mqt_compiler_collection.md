@@ -202,6 +202,7 @@ family and target:
 | Obtain the optimized circuit             | `OutputFormat.QC`                                      | `QCProgram`       |
 | Obtain a Qiskit circuit                  | `OutputFormat.QISKIT`                                  | `QuantumCircuit`  |
 | Emit an optimized OpenQASM program       | `OutputFormat.OPENQASM3`                               | `OpenQASMProgram` |
+| Emit IQM JSON for a target               | `OutputFormat.IQM_JSON`                                | `IQMJSONProgram`  |
 | Convert to the jeff dialect              | `OutputFormat.JEFF`                                    | `JeffProgram`     |
 | Generate QIR                             | `OutputFormat.QIR_BASE` or `OutputFormat.QIR_ADAPTIVE` | `QIRProgram`      |
 

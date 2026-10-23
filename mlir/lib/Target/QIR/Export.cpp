@@ -91,6 +91,21 @@ static LogicalResult materializeNativeQISNames(ModuleOp moduleOp) {
   return success();
 }
 
+std::unique_ptr<llvm::Module> translateQIRToLLVM(ModuleOp mod,
+                                                 llvm::LLVMContext& context) {
+  auto llvmModule = translateModuleToLLVMIR(mod, context);
+  if (!llvmModule) {
+    mod.emitError("failed to translate QIR MLIR to LLVM IR");
+    return nullptr;
+  }
+  qir::normalizeQIRModuleFlags(*llvmModule);
+  if (llvm::verifyModule(*llvmModule, &llvm::errs())) {
+    mod.emitError("exported QIR failed LLVM IR verification");
+    return nullptr;
+  }
+  return llvmModule;
+}
+
 [[nodiscard]] static std::unique_ptr<llvm::Module>
 translateToLLVM(ModuleOp mod, llvm::LLVMContext& context) {
   OwningOpRef<ModuleOp> nativeModule;
@@ -104,17 +119,7 @@ translateToLLVM(ModuleOp mod, llvm::LLVMContext& context) {
     }
     mod = *nativeModule;
   }
-  auto llvmModule = translateModuleToLLVMIR(mod, context);
-  if (!llvmModule) {
-    mod.emitError("failed to translate QIR MLIR to LLVM IR");
-    return nullptr;
-  }
-  qir::normalizeQIRModuleFlags(*llvmModule);
-  if (llvm::verifyModule(*llvmModule, &llvm::errs())) {
-    mod.emitError("exported QIR failed LLVM IR verification");
-    return nullptr;
-  }
-  return llvmModule;
+  return translateQIRToLLVM(mod, context);
 }
 
 LogicalResult translateQIRToLLVMIR(ModuleOp moduleOp,

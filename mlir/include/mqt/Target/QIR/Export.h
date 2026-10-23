@@ -12,7 +12,11 @@
 
 #include "mlir/Support/LLVM.h"
 
+#include <memory>
+
 namespace llvm {
+class LLVMContext;
+class Module;
 class raw_ostream;
 } // namespace llvm
 
@@ -20,6 +24,13 @@ namespace mlir {
 class ModuleOp;
 
 namespace qir {
+
+/// Translate lowered QIR to verified LLVM IR with normalized module flags.
+///
+/// Preserves QIS callee names for converters that consume canonical QIR.
+/// Text and bitcode export instead materialize the target's native QIS names.
+[[nodiscard]] std::unique_ptr<llvm::Module>
+translateQIRToLLVM(ModuleOp moduleOp, llvm::LLVMContext& context);
 
 /// Export lowered QIR to verified LLVM IR with normalized QIR module flags.
 ///

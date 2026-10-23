@@ -167,6 +167,7 @@ def test_compile_program_explicit_output(target_kind: str, output: OutputFormat,
         job.wait()
         assert job.get_counts() == {"01": 4}
     else:
+        assert isinstance(compiled, (QuantumCircuit, QCProgram, QCOProgram, JeffProgram, OpenQASMProgram))
         assert sample(compiled, shots=4, seed=1) == {"01": 4}
 
 

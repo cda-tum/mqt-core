@@ -42,6 +42,7 @@ class QCProgram;
 class QCOProgram;
 class JeffProgram;
 class OpenQASMProgram;
+class IQMJSONProgram;
 class QIRProgram;
 class TargetEnvironment;
 
@@ -115,6 +116,8 @@ enum class ProgramFormat : uint8_t {
   QIRBase,
   /// QIR for the Adaptive Profile.
   QIRAdaptive,
+  /// An IQM circuit with physical PRX/CZ gates and terminal readout.
+  IQMJSON,
 };
 
 /// A move-aware MLIR program with a shared dialect context.
@@ -186,6 +189,24 @@ public:
   [[nodiscard]] const std::string& str() const noexcept;
 
   /// Write the OpenQASM source to a file.
+  [[nodiscard]] LogicalResult write(const std::filesystem::path& path) const;
+
+private:
+  std::string source_;
+};
+
+/// An emitted IQM circuit object, without submission options.
+class IQMJSONProgram final {
+public:
+  explicit IQMJSONProgram(std::string source) : source_(std::move(source)) {}
+
+  /// Return the IQM JSON source.
+  [[nodiscard]] const std::string& source() const noexcept { return source_; }
+
+  /// Return the IQM JSON source.
+  [[nodiscard]] const std::string& str() const noexcept { return source_; }
+
+  /// Write the IQM JSON source to a file.
   [[nodiscard]] LogicalResult write(const std::filesystem::path& path) const;
 
 private:
@@ -534,8 +555,9 @@ using CompilerInput =
     std::variant<QCProgram, QCOProgram, JeffProgram, OpenQASMProgram>;
 
 /// The program variants returned by the default compiler pipeline.
-using CompilerProgram = std::variant<QCProgram, QCOProgram, JeffProgram,
-                                     OpenQASMProgram, QIRProgram>;
+using CompilerProgram =
+    std::variant<QCProgram, QCOProgram, JeffProgram, OpenQASMProgram,
+                 QIRProgram, IQMJSONProgram>;
 
 /// Run the coordinated default compiler pipeline.
 ///
