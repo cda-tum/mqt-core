@@ -238,7 +238,7 @@ class QDMIJob(JobV1):
         """Collect and validate one circuit's result.
 
         Returns:
-            A Qiskit experiment with counts and, if requested, ordered memory.
+            A Qiskit experiment with counts and, if requested, per-shot memory.
 
         Raises:
             JobError: If execution failed or the result violates the circuit's output contract.
