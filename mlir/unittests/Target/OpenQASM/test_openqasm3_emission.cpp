@@ -427,7 +427,9 @@ TEST(OpenQASM3EmissionTest, RoundTripsClassicalArrayStorageAndCopies) {
              x q; bit choice = measure q; reset q;
              int i = int(choice);
              a = a[i:] ++ a[:i-1];
-             if (a[i] == 3 && a[-i] == 1 && sizeof(a[:i]) == 2) { x q; })qasm",
+             a[0:i+1:i+1] = a[1:1] ++ a[0:0];
+             if (a[0] == 3 && a[2] == 2 && a[i] == 3 &&
+                 a[-i] == 1 && sizeof(a[:i]) == 2) { x q; })qasm",
            R"qasm(array[int, 4] a = {1, 2, 3, 4};
              x q; bit choice = measure q; reset q;
              int i = int(choice);
@@ -464,8 +466,6 @@ TEST(OpenQASM3EmissionTest, RoundTripsClassicalArrayStorageAndCopies) {
              array[int, 0] row = empty[1];
              for int v in row { x q; }
              x q;)qasm",
-           R"qasm(array[angle[8], 2] a = {0.0, pi};
-             for angle[8] theta in a { ry(theta) q; })qasm",
            R"qasm(array[int, 60000] a;
              a[0] = 1; a[1] = 2;
              a[1:2] = a[0:1];
@@ -522,7 +522,7 @@ TEST(OpenQASM3EmissionTest, ArrayExportPreservesInputParameters) {
   EXPECT_EQ(entry.getNumArguments(), 1U);
 }
 
-TEST(OpenQASM3EmissionTest, RejectsArrayStorageOutsideTheSourceLimits) {
+TEST(OpenQASM3EmissionTest, RejectsUnsupportedArrayStorage) {
   MLIRContext context(emissionDialects());
   for (const auto* type : {
            "memref<2xf32>",
@@ -553,6 +553,11 @@ TEST(OpenQASM3EmissionTest, RejectsArrayStorageOutsideTheSourceLimits) {
 TEST(OpenQASM3EmissionTest, KeepsSnapshotAcrossSourceWrites) {
   MLIRContext context(emissionDialects());
   auto program = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func private @read(%a: memref<1xi1>) -> i1 {
+      %zero = arith.constant 0 : index
+      %value = memref.load %a[%zero] : memref<1xi1>
+      return %value : i1
+    }
     func.func @main() -> !cbit.reg<1> attributes {mqt.entry_point} {
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
@@ -567,7 +572,8 @@ TEST(OpenQASM3EmissionTest, KeepsSnapshotAcrossSourceWrites) {
       memref.copy %a, %saved : memref<2xi1> to memref<2xi1>
       memref.store %no, %a[%zero] : memref<2xi1>
       memref.copy %saved, %a : memref<2xi1> to memref<2xi1>
-      %result = memref.load %a[%zero] : memref<2xi1>
+      %view = memref.subview %a[0] [1] [1] : memref<2xi1> to memref<1xi1>
+      %result = func.call @read(%view) : (memref<1xi1>) -> i1
       scf.if %result { qc.x %q : !qc.qubit }
       %measured = qc.measure %q : !qc.qubit -> i1
       cbit.store %measured, %bits[%zero] : !cbit.reg<1>

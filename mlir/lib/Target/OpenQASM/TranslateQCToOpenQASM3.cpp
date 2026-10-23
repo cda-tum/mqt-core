@@ -506,23 +506,47 @@ private:
         }
       }
     }
-    if (!needsInlining) {
+    bool hasArrays = false;
+    moduleOp.walk([&](memref::AllocaOp) { hasArrays = true; });
+    if (!needsInlining && !hasArrays) {
       return success();
     }
     preparedModule_ = moduleOp.clone();
-    for (auto gate : gateFunctions_) {
-      preparedModule_->lookupSymbol<func::FuncOp>(gate.getName())
-          .setNoInline(true);
+    auto* context = moduleOp.getContext();
+    if (needsInlining) {
+      for (auto gate : gateFunctions_) {
+        preparedModule_->lookupSymbol<func::FuncOp>(gate.getName())
+            .setNoInline(true);
+      }
+      DialectRegistry registry;
+      func::registerInlinerExtension(registry);
+      LLVM::registerInlinerInterface(registry);
+      context->appendDialectRegistry(registry);
+      PassManager manager(context);
+      // Keep gate definitions and structured loops while expanding other
+      // helpers.
+      manager.addPass(createInlinerPass({}, [](OpPassManager&) {}));
+      if (failed(manager.run(*preparedModule_))) {
+        return failure();
+      }
     }
-    DialectRegistry registry;
-    func::registerInlinerExtension(registry);
-    LLVM::registerInlinerInterface(registry);
-    moduleOp.getContext()->appendDialectRegistry(registry);
-    PassManager manager(moduleOp.getContext());
-    // Keep gate definitions and structured loops while expanding other helpers.
-    manager.addPass(createInlinerPass({}, [](OpPassManager&) {}));
-    if (failed(manager.run(*preparedModule_))) {
-      return failure();
+    if (hasArrays) {
+      DialectRegistry registry;
+      arith::registerValueBoundsOpInterfaceExternalModels(registry);
+      context->appendDialectRegistry(registry);
+      context->getOrLoadDialect<affine::AffineDialect>();
+      RewritePatternSet patterns(context);
+      memref::populateComposeSubViewPatterns(patterns, context);
+      memref::populateFoldMemRefAliasOpPatterns(patterns);
+      if (failed(
+              applyPatternsGreedily(*preparedModule_, std::move(patterns)))) {
+        return failure();
+      }
+      PassManager manager(context);
+      manager.addPass(createLowerAffinePass());
+      if (failed(manager.run(*preparedModule_))) {
+        return failure();
+      }
     }
     function = preparedModule_->lookupSymbol<func::FuncOp>(function.getName());
     for (auto& gate : gateFunctions_) {
@@ -1986,6 +2010,20 @@ private:
   }
 
   [[nodiscard]] LogicalResult materialize(Value value) {
+    if (auto select = value.getDefiningOp<arith::SelectOp>();
+        select && value.getType().isF64()) {
+      auto condition = emitExpression(select.getCondition());
+      auto lhs = emitExpression(select.getTrueValue());
+      auto rhs = emitExpression(select.getFalseValue());
+      if (failed(condition) || failed(lhs) || failed(rhs) ||
+          failed(declareLocals(ValueRange{value}))) {
+        return failure();
+      }
+      const auto& name = valueNames.at(value);
+      *output << "if (" << *condition << ") { " << name << " = " << *lhs
+              << "; } else { " << name << " = " << *rhs << "; }\n";
+      return success();
+    }
     const auto integer = dyn_cast<IntegerType>(value.getType());
     const bool wide = integer && integer.getWidth() > 64;
     if (wide) {
@@ -2840,29 +2878,6 @@ LogicalResult translateQCToOpenQASM3(ModuleOp moduleOp,
                                      llvm::raw_ostream& output) {
   if (failed(verify(moduleOp))) {
     return failure();
-  }
-  bool hasArrays = false;
-  moduleOp.walk([&](memref::AllocaOp) { hasArrays = true; });
-  if (hasArrays) {
-    OwningOpRef<ModuleOp> prepared = moduleOp.clone();
-    auto* context = moduleOp.getContext();
-    DialectRegistry registry;
-    arith::registerValueBoundsOpInterfaceExternalModels(registry);
-    context->appendDialectRegistry(registry);
-    context->getOrLoadDialect<affine::AffineDialect>();
-    RewritePatternSet patterns(context);
-    memref::populateComposeSubViewPatterns(patterns, context);
-    memref::populateFoldMemRefAliasOpPatterns(patterns);
-    if (failed(applyPatternsGreedily(*prepared, std::move(patterns)))) {
-      return failure();
-    }
-    PassManager manager(context);
-    manager.addPass(createLowerAffinePass());
-    manager.addPass(createCanonicalizerPass());
-    if (failed(manager.run(*prepared))) {
-      return failure();
-    }
-    return OpenQASMEmitter(*prepared).emit(output);
   }
   return OpenQASMEmitter(moduleOp).emit(output);
 }

@@ -372,9 +372,11 @@ require loop support. See the
 [QIR conversion contracts](Conversions.md#qir-conversions).
 
 OpenQASM export supports fixed-size stack arrays, strided and overlapping
-copies, and concatenation without changing the input IR. It preserves loaded
-values across writes, follows the frontend array limits, retains integer bit
-patterns, and emits angles as floating-point radians.
+copies, and concatenation without changing the input IR. Arrays support one to
+seven dimensions and up to 100,000 elements in total. Export preserves loaded
+values across writes, retains integer bit patterns, and emits angles as
+floating-point radians. Reimport also requires the combined register-and-array
+limit described above.
 
 Qiskit, jeff, and Base QIR export require array storage to be eliminated.
 Compiler cleanup promotes eligible arrays to scalar values and folds constants.

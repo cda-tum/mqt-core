@@ -2276,6 +2276,29 @@ TEST_F(CompilerPipelineTest, TypedOpenQASMExportDropsUnusedGates) {
   EXPECT_EQ(exported->source().find("gate unused"), std::string::npos);
 }
 
+TEST_F(CompilerPipelineTest, OpenQASMExportPreservesConditionalArrayAngles) {
+  auto program = QCProgram::fromOpenQASMString(R"qasm(OPENQASM 3.0;
+    array[angle[8], 2] angles = {0.0, pi/2};
+    qubit q;
+    for angle[8] theta in angles {
+      if (theta == angle[8](0.0)) { theta = pi/2; }
+      ry(theta) q;
+    }
+    output bit result;
+    result = measure q;
+  )qasm");
+  ASSERT_TRUE(succeeded(program));
+  auto exported = program->toOpenQASM3();
+  ASSERT_TRUE(succeeded(exported));
+  auto restored = QCProgram::fromOpenQASMString(exported->source());
+  ASSERT_TRUE(succeeded(restored));
+  auto qco = std::move(*restored).intoQCO();
+  ASSERT_TRUE(succeeded(qco));
+  auto counts = qco::sample(mlir::mqt::getEntryPoint(qco->module()), 1, 42);
+  ASSERT_TRUE(succeeded(counts));
+  EXPECT_EQ(*counts, (std::map<std::string, size_t>{{"1", 1}}));
+}
+
 TEST_F(CompilerPipelineTest, PipelineOpenQASMMatchesPreparedQCExport) {
   constexpr auto source = R"(OPENQASM 3.1;
 include "stdgates.inc";
