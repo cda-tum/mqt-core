@@ -572,10 +572,12 @@ does not reconstruct those slots, so compilation requires complete readout even
 for Qiskit inputs. Use `QuantumCircuit(2)` with `measure_all()` to let Qiskit
 allocate the measured register without an extra untouched register.
 
-Parameters and qubit addresses must be constant. Missing or overwritten output
-slots, repeated qubit measurements, reset, feedback, MOVE, and classical result
-computation are unsupported. QDMI-on-IQM transports the circuit, authentication,
-calibration selection, and execution options. IQM owns pulse compilation.
+Gate parameters must be finite constants, and qubit and result handles must be
+static. The converter accepts one Base Profile entry point with acyclic,
+unconditional control flow. Missing or overwritten output slots, repeated qubit
+measurements, reset, feedback, MOVE, and classical result computation are
+unsupported. QDMI-on-IQM transports the circuit, authentication, calibration
+selection, and execution options. IQM owns pulse compilation.
 
 ## Command line from a source build
 

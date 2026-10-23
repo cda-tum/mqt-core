@@ -150,11 +150,10 @@ public:
       return fail("every measurement must be recorded exactly once in a "
                   "complete output sequence");
     }
-    return nlohmann::json{
-        {"name", entry->getName().str()},
-        {"instructions", std::move(instructions_)},
-    }
-        .dump();
+    nlohmann::json circuit;
+    circuit["name"] = entry->getName().str();
+    circuit["instructions"] = std::move(instructions_);
+    return circuit.dump();
   }
 
 private:
@@ -222,11 +221,10 @@ private:
                         "_" + Twine(registerCount_ - 1) + "_" +
                         Twine(registerSize_ - pendingArrayElements_))
                            .str();
-      instructions_.push_back({
-          {"name", "measure"},
-          {"locus", {siteNames_.at(measurements_.at(*result)).str()}},
-          {"args", {{"key", key}}},
-      });
+      auto& instruction = instructions_.emplace_back();
+      instruction["name"] = "measure";
+      instruction["locus"] = {siteNames_.at(measurements_.at(*result)).str()};
+      instruction["args"]["key"] = key;
       measurements_.erase(*result);
       --pendingArrayElements_;
       return llvm::Error::success();
@@ -253,11 +251,12 @@ private:
       if (!angle || !phase || !qubit || !siteNames_.contains(*qubit)) {
         return fail("PRX requires finite constant angles and a target qubit");
       }
-      instructions_.push_back({
-          {"name", "prx"},
-          {"locus", {siteNames_.at(*qubit).str()}},
-          {"args", {{"angle", *angle}, {"phase", *phase}}},
-      });
+      auto& instruction = instructions_.emplace_back();
+      instruction["name"] = "prx";
+      instruction["locus"] = {siteNames_.at(*qubit).str()};
+      auto& args = instruction["args"];
+      args["angle"] = *angle;
+      args["phase"] = *phase;
       return llvm::Error::success();
     }
     if (name == QIR_CZ && arity == 2) {
@@ -267,14 +266,13 @@ private:
           !siteNames_.contains(*control) || !siteNames_.contains(*qubit)) {
         return fail("CZ requires two distinct target qubits");
       }
-      instructions_.push_back({
-          {"name", "cz"},
-          {
-              "locus",
-              {siteNames_.at(*control).str(), siteNames_.at(*qubit).str()},
-          },
-          {"args", nlohmann::json::object()},
-      });
+      auto& instruction = instructions_.emplace_back();
+      instruction["name"] = "cz";
+      instruction["locus"] = {
+          siteNames_.at(*control).str(),
+          siteNames_.at(*qubit).str(),
+      };
+      instruction["args"] = nlohmann::json::object();
       return llvm::Error::success();
     }
     return fail(Twine("unsupported call '") + name + "'");
