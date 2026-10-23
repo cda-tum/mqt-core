@@ -1067,7 +1067,7 @@ def test_qiskit_store_preserves_width_one_uint_contexts() -> None:
     assert indexed_store.lvalue.index.type == types.Uint(1)
 
 
-@pytest.mark.parametrize(("width", "mutate_index"), [(1, True), (2, True), (150, True), (150, False)])
+@pytest.mark.parametrize(("width", "mutate_index"), [(1, True), (2, True), (150, True), (65, False), (150, False)])
 def test_qiskit_indexed_access_preserves_snapshots(width: int, *, mutate_index: bool) -> None:
     """Retain the index and loaded bit across writes to their source registers."""
     initial = 1 << (width - 1) if width > 64 else 0
@@ -1100,7 +1100,13 @@ def test_qiskit_indexed_access_preserves_snapshots(width: int, *, mutate_index: 
     restored = program.to_qiskit()
     assert sample(restored, shots=1, seed=1) == expected
     if not mutate_index:
-        assert f"uint[64](uint[{width}](index))" in qiskit.qasm3.dumps(restored)
+        qasm = qiskit.qasm3.dumps(restored)
+        assert f"uint[64](uint[{width}](index))" in qasm
+        # Select circuit outputs without exposing Qiskit's snapshot temporaries.
+        for register in restored.cregs:
+            declaration = f"bit[{register.size}] {register.name};"
+            qasm = qasm.replace(declaration, f"output {declaration}")
+        assert sample(QCProgram.from_openqasm_str(qasm), shots=1, seed=1) == expected
 
 
 def test_qiskit_custom_gate_named_store_remains_a_gate() -> None:

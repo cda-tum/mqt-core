@@ -158,7 +158,10 @@ grouping. QIR Base and Adaptive lowering require inputs to be bound first.
 Sized `uint[N](bits)` and `int[N](bits)` casts accept an initialized `bit[N]`
 register when the constant width is 1 through 64. Bit zero is the least
 significant bit. Signed casts use two's-complement representation, with bit
-`N - 1` as the sign bit.
+`N - 1` as the sign bit. For wider registers, immediately narrow the value to at
+most 64 bits, for example `uint[64](uint[150](bits))`. Narrowing retains the low
+bits; the outer cast determines their signedness. Wide scalar variables and
+arithmetic are unsupported.
 
 `float(value)` and `float[64](value)` accept numeric and Boolean values.
 Bit-string literals contain binary digits, optionally separated by underscores,
