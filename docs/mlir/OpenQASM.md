@@ -76,12 +76,19 @@ This classification is conservative: an unclassified gate may have a unitary
 quantum action. A modifier on a custom gate requires that the gate and its
 callees contain no loops.
 
+Quantum register widths must fit in a positive signed 64-bit integer; there is
+no separate frontend qubit quota. Bit registers support up to 16,777,215 bits,
+the maximum MLIR integer width used for bit-vector expressions and outputs.
+Registers do not share an aggregate element budget. Available memory and
+downstream compilation or execution constraints still apply.
+
 Declare a classical array with `array[int[8], 3] values = {1, 2, 3};`. Arrays
 have one through seven nonnegative compile-time dimensions. Nested initializer
 lists must match each dimension; for example,
 `array[int, 2, 3] a = {{1, 2, 3}, {4, 5, 6}};`. Zero-length dimensions are
-valid. Each dimension and the combined number of register and array elements are
-limited to 100,000.
+valid. Each dimension and the total number of classical array elements are
+limited to 100,000. Quantum and bit registers do not consume this array storage
+budget.
 
 Whole-array initialization (`array[int, 2, 3] b = a;`) and assignment (`b = a;`)
 copy values into independent storage. Leading scalar indices select subarrays:
@@ -546,8 +553,10 @@ Import limits affine proofs to 256 levels and 4,096 distinct expressions per
 proof and QC emission to 1,000,000,000 inserted operations. Textual expansion is
 limited to 100,000,000 statements and 1,000,000 file-include expansions,
 including empty files. Standard-library includes count as statements. Include
-nesting is limited to 64 levels. Exceeding any bound produces a diagnostic and
-no program.
+nesting is limited to 64 levels. Import also limits expanded register operands
+and barriers to 100,000,000 qubit or bit references, checked before allocation.
+These expansion limits do not restrict register declarations or small selections
+from large registers. Exceeding any bound produces a diagnostic and no program.
 
 The exporter rejects unsupported operations, including explicit `cf.assert`
 operations and live poison values. It does not silently discard them. Programs
