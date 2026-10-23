@@ -25,6 +25,7 @@ class Grover;
 class MagicStateDistillation;
 class ModularMultiplier;
 class Multiplexer;
+class QAOA;
 class QFT;
 class QFTAdder;
 class QPE;
@@ -65,6 +66,9 @@ SmallVector<Value> modularMultiplier(qc::QCProgramBuilder& builder,
 /// Emit one configured quantum multiplexer benchmark.
 SmallVector<Value> multiplexer(qc::QCProgramBuilder& builder,
                                const Multiplexer& benchmark);
+
+/// Emit one configured QAOA benchmark.
+SmallVector<Value> qaoa(qc::QCProgramBuilder& builder, const QAOA& benchmark);
 
 /// Emit one configured QFT benchmark.
 SmallVector<Value> qft(qc::QCProgramBuilder& builder, const QFT& benchmark);
