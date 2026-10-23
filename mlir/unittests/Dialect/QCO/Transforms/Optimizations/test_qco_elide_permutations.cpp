@@ -86,6 +86,8 @@ protected:
   static void checkUnitary(ModuleOp program, size_t maximumSwaps,
                            ArrayRef<int64_t> arguments = {},
                            size_t numQubits = 2, bool convertToQC = true) {
+    ASSERT_TRUE(succeeded(verify(program)));
+    ASSERT_TRUE(succeeded(verifyLinearity(program)));
     OwningOpRef<ModuleOp> original(program.clone());
     ASSERT_NO_FATAL_FAILURE(rewrite(program));
     size_t swaps = 0;
@@ -318,6 +320,53 @@ TEST_F(ElidePermutationsTest, SummarizesTensorBranchesBySlot) {
   }
 }
 
+TEST_F(ElidePermutationsTest, ReconcilesIndexSwitchPermutations) {
+  for (const bool common : {false, true}) {
+    for (const int64_t selector : {2, 7, 9}) {
+      SCOPED_TRACE(testing::Message()
+                   << "common=" << common << ", selector=" << selector);
+      auto program = parseSourceString<ModuleOp>(std::string(R"mlir(module {
+        func.func @main(%selector: index) attributes {mqt.entry_point} {
+          %a = qco.alloc : !qco.qubit
+          %b = qco.alloc : !qco.qubit
+          %left, %right = qco.index_switch %selector -> (!qco.qubit, !qco.qubit)
+          case 2 args(%qa = %a, %qb = %b) {
+            %sa, %sb = qco.swap %qa, %qb : !qco.qubit, !qco.qubit
+            %h = qco.h %sa : !qco.qubit
+            qco.yield %h, %sb : !qco.qubit, !qco.qubit
+          }
+          case 7 args(%qa = %a, %qb = %b) {
+            %sa, %sb = qco.swap %qa, %qb : !qco.qubit, !qco.qubit
+            %t = qco.t %sb : !qco.qubit
+            qco.yield %sa, %t : !qco.qubit, !qco.qubit
+          }
+          default args(%qa = %a, %qb = %b) {
+      )mlir") +
+                                                     (common ? R"mlir(
+            %sa, %sb = qco.swap %qa, %qb : !qco.qubit, !qco.qubit
+            %x = qco.x %sa : !qco.qubit
+            qco.yield %x, %sb : !qco.qubit, !qco.qubit
+      )mlir"
+                                                             : R"mlir(
+            %x = qco.x %qa : !qco.qubit
+            qco.yield %x, %qb : !qco.qubit, !qco.qubit
+      )mlir") +
+                                                     R"mlir(
+          }
+          %outA, %outB = qco.swap %left, %right : !qco.qubit, !qco.qubit
+          qco.sink %outA : !qco.qubit
+          qco.sink %outB : !qco.qubit
+          return
+        }
+      })mlir",
+                                                 &context_);
+      ASSERT_TRUE(program);
+      ASSERT_NO_FATAL_FAILURE(
+          checkUnitary(*program, common ? 0 : 3, {selector}));
+    }
+  }
+}
+
 TEST_F(ElidePermutationsTest, PreservesLoopBackedgeOrder) {
   for (const auto& [body, maximumSwaps] : {
            std::pair{R"mlir(
@@ -367,10 +416,9 @@ TEST_F(ElidePermutationsTest, PreservesLoopBackedgeOrder) {
        }) {
     SCOPED_TRACE(body);
     auto program = parseSourceString<ModuleOp>(std::string(R"mlir(module {
-      func.func @main() attributes {mqt.entry_point} {
+      func.func @main(%limit: index) attributes {mqt.entry_point} {
         %zero = arith.constant 0 : index
         %one = arith.constant 1 : index
-        %limit = arith.constant 3 : index
         %a = qco.alloc : !qco.qubit
         %b = qco.alloc : !qco.qubit
     )mlir") + body + R"mlir(
@@ -381,16 +429,19 @@ TEST_F(ElidePermutationsTest, PreservesLoopBackedgeOrder) {
     })mlir",
                                                &context_);
     ASSERT_TRUE(program);
-    ASSERT_NO_FATAL_FAILURE(checkUnitary(*program, maximumSwaps));
+    for (const int64_t limit : {0, 1, 2, 3}) {
+      SCOPED_TRACE(limit);
+      OwningOpRef<ModuleOp> instance(program->clone());
+      ASSERT_NO_FATAL_FAILURE(checkUnitary(*instance, maximumSwaps, {limit}));
+    }
   }
   for (const bool incomingPermutation : {false, true}) {
     SCOPED_TRACE(incomingPermutation);
     auto tensorLoop = parseSourceString<ModuleOp>(R"mlir(module {
-    func.func @main() attributes {mqt.entry_point} {
+    func.func @main(%limit: index) attributes {mqt.entry_point} {
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
       %two = arith.constant 2 : index
-      %limit = arith.constant 3 : index
       %tensor = qtensor.alloc(%two) : tensor<2x!qco.qubit>
       %out = scf.for %i = %zero to %limit step %one
           iter_args(%t = %tensor) -> (tensor<2x!qco.qubit>) {
@@ -420,7 +471,66 @@ TEST_F(ElidePermutationsTest, PreservesLoopBackedgeOrder) {
       dealloc.getTensorMutable().assign(
           swapTensor(dealloc.getTensor(), builder));
     }
-    ASSERT_NO_FATAL_FAILURE(checkUnitary(*tensorLoop, 0));
+    for (const int64_t limit : {0, 1, 2, 3}) {
+      SCOPED_TRACE(limit);
+      OwningOpRef<ModuleOp> instance(tensorLoop->clone());
+      ASSERT_NO_FATAL_FAILURE(checkUnitary(*instance, 0, {limit}));
+    }
+  }
+}
+
+TEST_F(ElidePermutationsTest, PreservesStructuredAndDynamicPacking) {
+  for (const auto& [tail, dynamic] : {
+           std::pair{R"mlir(
+             %outA, %outB = scf.for %i = %zero to %index step %one
+                 iter_args(%qa = %sa, %qb = %sb) -> (!qco.qubit, !qco.qubit) {
+               %x, %y = qco.swap %qa, %qb : !qco.qubit, !qco.qubit
+               scf.yield %x, %y : !qco.qubit, !qco.qubit
+             }
+             %packed0 = qtensor.insert %outA into %rest1[%zero] : tensor<2x!qco.qubit>
+             %packed1 = qtensor.insert %outB into %packed0[%one] : tensor<2x!qco.qubit>
+           )mlir",
+                     false},
+           std::pair{R"mlir(
+             %packed0 = qtensor.insert %sa into %rest1[%index] : tensor<2x!qco.qubit>
+             %packed1 = qtensor.insert %sb into %packed0[%other] : tensor<2x!qco.qubit>
+           )mlir",
+                     true},
+       }) {
+    SCOPED_TRACE(tail);
+    auto program = parseSourceString<ModuleOp>(std::string(R"mlir(module {
+          func.func @main(%index: index) attributes {mqt.entry_point} {
+            %zero = arith.constant 0 : index
+            %one = arith.constant 1 : index
+            %two = arith.constant 2 : index
+            %other = arith.subi %one, %index : index
+            %tensor = qtensor.alloc(%two) : tensor<2x!qco.qubit>
+        )mlir") +
+                                                   (dynamic ? R"mlir(
+            %rest0, %a = qtensor.extract %tensor[%index] : tensor<2x!qco.qubit>
+            %rest1, %b = qtensor.extract %rest0[%other] : tensor<2x!qco.qubit>
+        )mlir"
+                                                            : R"mlir(
+            %rest0, %a = qtensor.extract %tensor[%zero] : tensor<2x!qco.qubit>
+            %rest1, %b = qtensor.extract %rest0[%one] : tensor<2x!qco.qubit>
+        )mlir") +
+                                                   R"mlir(
+            %sa, %sb = qco.swap %a, %b : !qco.qubit, !qco.qubit
+        )mlir" + tail + R"mlir(
+            %rest2, %again = qtensor.extract %packed1[%zero] : tensor<2x!qco.qubit>
+            %h = qco.h %again : !qco.qubit
+            %packed2 = qtensor.insert %h into %rest2[%zero] : tensor<2x!qco.qubit>
+            qtensor.dealloc %packed2 : tensor<2x!qco.qubit>
+            return
+          }
+        })mlir",
+                                               &context_);
+    ASSERT_TRUE(program);
+    for (const int64_t index : {0, 1}) {
+      SCOPED_TRACE(index);
+      OwningOpRef<ModuleOp> instance(program->clone());
+      ASSERT_NO_FATAL_FAILURE(checkUnitary(*instance, 2, {index}));
+    }
   }
 }
 

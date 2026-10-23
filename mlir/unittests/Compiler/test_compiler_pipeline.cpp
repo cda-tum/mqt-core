@@ -3112,51 +3112,6 @@ TEST_F(CompilerPipelineTest, ElidesTensorBackedSwapsBeforeFusionAndRouting) {
   }
 }
 
-TEST_F(CompilerPipelineTest, TerminalSwapElisionLeavesStructuredPackingIntact) {
-  for (const auto* tail : {
-           R"mlir(
-             %a, %b = scf.for %i = %c0 to %index step %c1
-                 iter_args(%a = %s0, %b = %s1) -> (!qco.qubit, !qco.qubit) {
-               %x, %y = qco.swap %a, %b : !qco.qubit, !qco.qubit
-               scf.yield %x, %y : !qco.qubit, !qco.qubit
-             }
-             %packed0 = qtensor.insert %a into %rest1[%c0] : tensor<2x!qco.qubit>
-             %packed1 = qtensor.insert %b into %packed0[%c1] : tensor<2x!qco.qubit>
-           )mlir",
-           R"mlir(
-             %other = arith.subi %c1, %index : index
-             %packed0 = qtensor.insert %s0 into %rest1[%index] : tensor<2x!qco.qubit>
-             %packed1 = qtensor.insert %s1 into %packed0[%other] : tensor<2x!qco.qubit>
-           )mlir",
-       }) {
-    SCOPED_TRACE(tail);
-    auto program = QCOProgram::fromMLIRString(
-        std::string(
-            R"mlir(module attributes {mqt.source_qubit_count = 2 : i64} {
-          func.func @main(%index: index) attributes {mqt.entry_point} {
-            %c0 = arith.constant 0 : index
-            %c1 = arith.constant 1 : index
-            %c2 = arith.constant 2 : index
-            %tensor = qtensor.alloc(%c2) {mqt.source_qubit_indices = array<i64: 0, 1>}
-                : tensor<2x!qco.qubit>
-            %rest0, %q0 = qtensor.extract %tensor[%c0] : tensor<2x!qco.qubit>
-            %rest1, %q1 = qtensor.extract %rest0[%c1] : tensor<2x!qco.qubit>
-            %s0, %s1 = qco.swap %q0, %q1 : !qco.qubit, !qco.qubit
-        )mlir") +
-        tail + R"mlir(
-            qtensor.dealloc %packed1 : tensor<2x!qco.qubit>
-            return
-          }
-        })mlir");
-    ASSERT_TRUE(mlir::succeeded(program));
-    const auto before = program->str();
-    PassManager pm(program->module().getContext());
-    pm.addPass(qco::createElideTerminalSwapsPass());
-    ASSERT_TRUE(succeeded(pm.run(program->module())));
-    EXPECT_EQ(program->str(), before);
-  }
-}
-
 TEST_F(CompilerPipelineTest, TargetLayoutRecoversRoutedUnitary) {
   for (const llvm::StringRef mode :
        {"routed", "placed", "indexed", "synthesis"}) {
