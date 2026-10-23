@@ -92,13 +92,15 @@ TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
 
   WorkerResponse response;
   response.succeeded = true;
-  response.shots = {"10", "01", "10"};
+  response.shotCount = 5;
+  response.shots = "10,01,10,,,";
   response.output = "OUTPUT\tBOOL\ttrue\n";
   response.qubits = 2;
   response.state = std::string("DD\0bytes", 8);
   WorkerResponse result;
   ASSERT_TRUE(decode(encode(response), result));
   EXPECT_TRUE(result.succeeded);
+  EXPECT_EQ(result.shotCount, response.shotCount);
   EXPECT_EQ(result.shots, response.shots);
   EXPECT_EQ(result.output, response.output);
   EXPECT_EQ(result.qubits, response.qubits);
@@ -122,7 +124,8 @@ TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
 TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
   WorkerResponse response;
   response.succeeded = true;
-  response.shots = {"01"};
+  response.shotCount = 1;
+  response.shots = "01,";
   const auto bytes = encode(response);
   for (size_t size = 0; size < bytes.size(); ++size) {
     WorkerResponse result;
@@ -133,15 +136,22 @@ TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
   invalidFlag[0] = 2;
   EXPECT_FALSE(decode(invalidFlag, result));
   EXPECT_FALSE(decode(bytes + "x", result));
-  response.shots = {"02"};
+  response.shots = "02,";
   EXPECT_FALSE(decode(encode(response), result));
   response.shots.clear();
+  response.shotCount = 0;
   response.counts = {{"02", 1}};
   EXPECT_FALSE(decode(encode(response), result));
   response.counts = {{"01", 0}};
   EXPECT_FALSE(decode(encode(response), result));
-  response.shots = {"01"};
+  response.shotCount = 1;
+  response.shots = "01,";
   response.counts = {{"01", 1}};
+  EXPECT_FALSE(decode(encode(response), result));
+  response.counts.clear();
+  response.shots = "01";
+  EXPECT_FALSE(decode(encode(response), result));
+  response.shots = "01,,";
   EXPECT_FALSE(decode(encode(response), result));
   const auto request = encode(WorkerRequest{
       .format = 7,

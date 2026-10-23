@@ -271,7 +271,11 @@ qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request,
     std::cerr << "DDSIM program failed: " << error.what() << '\n';
   }
   if (response.succeeded) {
-    response.shots = std::move(execution.shots_);
+    response.shotCount = execution.shots_.size();
+    for (const auto& shot : execution.shots_) {
+      response.shots += shot;
+      response.shots += ',';
+    }
     response.counts = std::move(execution.counts_);
     response.output = std::move(execution.qirOutput_);
     if (execution.dd_) {

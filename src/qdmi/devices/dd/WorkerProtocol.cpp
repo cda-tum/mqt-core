@@ -130,7 +130,9 @@ bool readFrame(llvm::raw_socket_stream& stream, std::string& bytes) {
   }
   bytes.clear();
   // Allocate only for bytes actually received, not an untrusted length.
-  std::array<char, 65536> chunk{};
+  // read() fills each byte that is appended below.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+  std::array<char, 65536> chunk;
   while (size != 0) {
     const auto count =
         stream.read(chunk.data(), std::min<uint64_t>(size, chunk.size()));
@@ -195,10 +197,8 @@ bool decode(llvm::StringRef bytes, WorkerSlots& slots) {
 std::string encode(const WorkerResponse& response) {
   auto size = Response::size(static_cast<uint8_t>(response.succeeded),
                              response.output, response.qubits, response.state) +
-              (2 * sizeof(uint64_t));
-  for (const auto& shot : response.shots) {
-    size += SPSArgList<SPSString>::size(shot);
-  }
+              (2 * sizeof(uint64_t)) +
+              SPSArgList<SPSString>::size(response.shots);
   for (const auto& [outcome, count] : response.counts) {
     size += SPSArgList<SPSString, uint64_t>::size(outcome,
                                                   static_cast<uint64_t>(count));
@@ -207,11 +207,8 @@ std::string encode(const WorkerResponse& response) {
   SPSOutputBuffer buffer(bytes.data(), bytes.size());
   Response::serialize(buffer, static_cast<uint8_t>(response.succeeded),
                       response.output, response.qubits, response.state);
-  SPSArgList<uint64_t>::serialize(buffer,
-                                  static_cast<uint64_t>(response.shots.size()));
-  for (const auto& shot : response.shots) {
-    SPSArgList<SPSString>::serialize(buffer, shot);
-  }
+  SPSArgList<uint64_t, SPSString>::serialize(buffer, response.shotCount,
+                                             response.shots);
   SPSArgList<uint64_t>::serialize(
       buffer, static_cast<uint64_t>(response.counts.size()));
   for (const auto& [outcome, count] : response.counts) {
@@ -239,24 +236,29 @@ bool decode(llvm::StringRef bytes, WorkerResponse& response) {
   if (state) {
     response.state = state->str();
   }
-  uint64_t count = 0;
-  if (!SPSArgList<uint64_t>::deserialize(buffer, count) ||
-      count > bytes.size() / sizeof(uint64_t)) {
+  llvm::StringRef shots;
+  if (!SPSArgList<uint64_t, SPSString>::deserialize(buffer, response.shotCount,
+                                                    shots) ||
+      response.shotCount > shots.size()) {
     return false;
   }
-  response.shots.reserve(count);
-  for (uint64_t i = 0; i < count; ++i) {
-    llvm::StringRef shot;
-    if (!SPSArgList<SPSString>::deserialize(buffer, shot) ||
-        shot.find_first_not_of("01") != llvm::StringRef::npos) {
+  uint64_t decodedShots = 0;
+  for (const char bit : shots) {
+    if (bit == ',') {
+      ++decodedShots;
+    } else if (bit != '0' && bit != '1') {
       return false;
     }
-    response.shots.push_back(shot.str());
   }
+  if (decodedShots != response.shotCount ||
+      (!shots.empty() && shots.back() != ',')) {
+    return false;
+  }
+  response.shots = shots.str();
   uint64_t distinct = 0;
   if (!SPSArgList<uint64_t>::deserialize(buffer, distinct) ||
       distinct > bytes.size() / (2 * sizeof(uint64_t)) ||
-      (distinct != 0 && !response.shots.empty())) {
+      (distinct != 0 && response.shotCount != 0)) {
     return false;
   }
   for (uint64_t i = 0; i < distinct; ++i) {

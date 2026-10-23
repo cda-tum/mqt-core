@@ -19,7 +19,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 
 namespace qdmi::dd {
 struct CloseWorkerStream {
@@ -47,7 +46,10 @@ struct WorkerSlots {
 };
 struct WorkerResponse {
   bool succeeded = false;
-  std::vector<std::string> shots;
+  uint64_t shotCount = 0;
+  /// One comma-terminated bit string per ordered QIR shot, including empty
+  /// shots.
+  std::string shots;
   std::map<std::string, size_t> counts;
   std::optional<std::string> output;
   uint32_t qubits = 0;

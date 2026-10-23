@@ -234,8 +234,8 @@ namespace qdmi::dd {
 namespace {
 struct ProgramResult {
   std::optional<std::string> qirOutput_;
-  /// Immutable measurement outcomes in unspecified order.
-  std::vector<std::string> shots_;
+  /// Comma-terminated QIR outcomes aligned with output records.
+  std::string shots_;
   /// OpenQASM outcomes stay compact until serialized into a SHOTS buffer.
   std::map<std::string, size_t> qasmCounts_;
 
@@ -823,7 +823,7 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
           executor.slots.release(static_cast<ptrdiff_t>(grant - 1));
           grant = 1;
           uint64_t remaining = request.shots;
-          bool validCounts = response.shots.empty();
+          bool validCounts = response.shotCount == 0;
           for (const auto& entry : response.counts) {
             const auto count = entry.second;
             if (count == 0 || count > remaining) {
@@ -839,7 +839,7 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
               qasm && request.shots != 0
                   ? validCounts
                   : response.counts.empty() &&
-                        response.shots.size() == request.shots;
+                        response.shotCount == request.shots;
           if (reusable && response.succeeded && validSamples) {
             result = std::make_unique<qdmi::dd::ProgramResult>();
             result->shots_ = std::move(response.shots);
@@ -936,13 +936,8 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::wait(size_t timeout) const
 }
 auto qdmi::dd::ProgramResult::getShots(const size_t size, void* data,
                                        size_t* sizeRet) const -> QDMI_STATUS {
-  size_t required = 0;
-  if (qasmCounts_.empty()) {
-    required = std::accumulate(shots_.begin(), shots_.end(), size_t{0},
-                               [](const size_t total, const auto& shot) {
-                                 return total + shot.size() + 1;
-                               });
-  } else {
+  size_t required = shots_.size();
+  if (!qasmCounts_.empty()) {
     for (const auto& [shot, count] : qasmCounts_) {
       const auto width = shot.size() + 1;
       if (count > (std::numeric_limits<size_t>::max() - required) / width) {
@@ -965,9 +960,7 @@ auto qdmi::dd::ProgramResult::getShots(const size_t size, void* data,
       output = output.subspan(shot.size() + 1);
     };
     if (qasmCounts_.empty()) {
-      for (const auto& shot : shots_) {
-        writeShot(shot);
-      }
+      std::ranges::copy(shots_, output.begin());
     } else {
       for (const auto& [shot, count] : qasmCounts_) {
         for (size_t i = 0; i < count; ++i) {
@@ -987,8 +980,11 @@ auto qdmi::dd::ProgramResult::getHistogram(const QDMI_Job_Result result,
   if (qasmCounts_.empty()) {
     std::call_once(countsOnce_, [this] {
       decltype(counts_) counts;
-      for (const auto& shot : shots_) {
-        ++counts[shot];
+      std::string_view remaining(shots_);
+      while (!remaining.empty()) {
+        const auto delimiter = remaining.find(',');
+        ++counts[remaining.substr(0, delimiter)];
+        remaining.remove_prefix(delimiter + 1);
       }
       counts_ = std::move(counts);
     });
