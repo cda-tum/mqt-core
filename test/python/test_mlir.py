@@ -427,39 +427,37 @@ def test_iqm_json_program(frontend: str, tmp_path: Path) -> None:
         source = qasm3.dumps(circuit)
     target = CompilerTarget.from_device_id("mqt.sc.iqm.garnet")
     direct = compile_program(source, target=target, output=OutputFormat.IQM_JSON)
+    assert_type(direct, IQMJSONProgram)
     assert isinstance(direct, IQMJSONProgram)
     assert str(direct) == direct.source
     path = tmp_path / "circuit.json"
     direct.write(path)
     assert json.loads(path.read_text()) == json.loads(direct.source)
 
-    compiled = compile_program(source, target=target, program_format=ProgramFormat.IQM_JSON)
-    assert compiled.program_format == ProgramFormat.IQM_JSON
-    for payload in (direct.source, compiled.payload):
-        instructions = json.loads(payload)["instructions"]
-        measurements = instructions[-2:]
-        assert [instruction["name"] for instruction in measurements] == ["measure", "measure"]
-        assert [instruction["args"]["key"] for instruction in measurements] == ["a_1_0_0", "a_0_1_1_0"]
-        # a[0] holds q[1], so reverse the readout locus to recover logical order.
-        qubits = [instruction["locus"][0] for instruction in reversed(measurements)]
-        assert len(set(qubits)) == 2
-        assert set(qubits) <= {site.name for site in target.sites}
-        unitary = np.eye(4, dtype=complex)
-        for instruction in instructions[:-2]:
-            if instruction["name"] == "prx":
-                angle, phase = instruction["args"]["angle"], instruction["args"]["phase"]
-                rotation = np.array([
-                    [np.cos(angle / 2), -1j * np.exp(-1j * phase) * np.sin(angle / 2)],
-                    [-1j * np.exp(1j * phase) * np.sin(angle / 2), np.cos(angle / 2)],
-                ])
-                index = qubits.index(instruction["locus"][0])
-                gate = np.kron(np.eye(2), rotation) if index == 0 else np.kron(rotation, np.eye(2))
-            else:
-                assert instruction["name"] == "cz"
-                assert set(instruction["locus"]) == set(qubits)
-                gate = np.diag([1, 1, 1, -1])
-            unitary = gate @ unitary
-        assert Operator(unitary).equiv(expected)
+    instructions = json.loads(direct.source)["instructions"]
+    measurements = instructions[-2:]
+    assert [instruction["name"] for instruction in measurements] == ["measure", "measure"]
+    assert [instruction["args"]["key"] for instruction in measurements] == ["a_1_0_0", "a_0_1_1_0"]
+    # a[0] holds q[1], so reverse the readout locus to recover logical order.
+    qubits = [instruction["locus"][0] for instruction in reversed(measurements)]
+    assert len(set(qubits)) == 2
+    assert set(qubits) <= {site.name for site in target.sites}
+    unitary = np.eye(4, dtype=complex)
+    for instruction in instructions[:-2]:
+        if instruction["name"] == "prx":
+            angle, phase = instruction["args"]["angle"], instruction["args"]["phase"]
+            rotation = np.array([
+                [np.cos(angle / 2), -1j * np.exp(-1j * phase) * np.sin(angle / 2)],
+                [-1j * np.exp(1j * phase) * np.sin(angle / 2), np.cos(angle / 2)],
+            ])
+            index = qubits.index(instruction["locus"][0])
+            gate = np.kron(np.eye(2), rotation) if index == 0 else np.kron(rotation, np.eye(2))
+        else:
+            assert instruction["name"] == "cz"
+            assert set(instruction["locus"]) == set(qubits)
+            gate = np.diag([1, 1, 1, -1])
+        unitary = gate @ unitary
+    assert Operator(unitary).equiv(expected)
 
 
 @pytest.mark.parametrize(

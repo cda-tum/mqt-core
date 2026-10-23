@@ -11,6 +11,7 @@
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Compiler/Target.h"
 #include "mqt/Compiler/TargetEnvironment.h"
+#include "mqt/Dialect/QC/Builder/QCProgramBuilder.h"
 
 #include "gtest/gtest.h"
 #include "nlohmann/json.hpp"
@@ -89,6 +90,36 @@ TEST(IQMJSONPipelineTest, CompilesInputFormatsForAnExplicitTarget) {
     EXPECT_EQ(instructions.front().at("locus")[0],
               instructions.back().at("locus")[0]);
   }
+}
+
+TEST(IQMJSONPipelineTest, PreservesReversedStoresToDistinctOutputRegisters) {
+  auto context = createCompilerContext();
+  qc::QCProgramBuilder builder(context.get());
+  builder.initialize();
+  auto q0 = builder.allocQubit();
+  auto q1 = builder.allocQubit();
+  auto r0 = builder.allocClassicalBitRegister(1);
+  auto r1 = builder.allocClassicalBitRegister(1);
+  builder.x(q0);
+  auto a = builder.measure(q0);
+  auto b = builder.measure(q1);
+  builder.storeClassicalBit(b, r1, 0);
+  builder.storeClassicalBit(a, r0, 0);
+  auto program = QCProgram::fromModule(context, builder.finalize({r0, r1}));
+  ASSERT_TRUE(succeeded(program));
+  auto output = runDefaultPipeline(CompilerInput(std::move(*program)),
+                                   makeIQMEnvironment());
+  ASSERT_TRUE(succeeded(output));
+  const auto instructions =
+      nlohmann::json::parse(std::get<IQMJSONProgram>(*output).source())
+          .at("instructions");
+  ASSERT_GE(instructions.size(), 3U);
+  const auto& firstOutput = instructions[instructions.size() - 2];
+  EXPECT_EQ(firstOutput.at("name"), "measure");
+  EXPECT_EQ(instructions.back().at("name"), "measure");
+  EXPECT_EQ(instructions.front().at("name"), "prx");
+  EXPECT_EQ(instructions.front().at("locus"), firstOutput.at("locus"));
+  EXPECT_NE(firstOutput.at("locus"), instructions.back().at("locus"));
 }
 
 TEST(IQMJSONPipelineTest, UnrollsLoopsAndSynthesizesIQMBasis) {

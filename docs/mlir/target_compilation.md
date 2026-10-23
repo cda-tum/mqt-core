@@ -115,9 +115,9 @@ and fallback behavior.
 ### Choose a format
 
 For a submission payload, the compiler selects the first supported format in
-this order: Adaptive QIR (binary, then text), OpenQASM 3.1, IQM JSON, then Base QIR
-(binary, then text). To select an exact execution format, compile and submit in
-one call:
+this order: Adaptive QIR (binary, then text), OpenQASM 3.1, IQM JSON, then Base
+QIR (binary, then text). To select an exact execution format, compile and submit
+in one call:
 
 ```{code-cell} ipython3
 from mqt.core.qdmi import ProgramFormat
@@ -546,8 +546,8 @@ print(json.loads(iqm_circuit.source)["instructions"][-1])
 
 The returned `IQMJSONProgram` contains one circuit object. Use `.source`,
 `str(program)`, or `.write(path)` to read or save it. For a QDMI-on-IQM device,
-pass `program_format=ProgramFormat.IQM_JSON` to `compile_program` or
-`submit_program` as shown above.
+pass `program_format=ProgramFormat.IQM_JSON` to `submit_program` to select the
+execution format explicitly.
 
 Compilation lowers the placed circuit to Base Profile QIR, then converts its PRX
 and CZ calls to IQM JSON. PRX angle and phase use radians. Physical QIR qubit
@@ -673,9 +673,9 @@ for native payload export.
 
 QDMI's supported-format list does not provide per-format capability
 restrictions. The adapter therefore uses the compiler-supported baseline for the
-selected format (OpenQASM 3.1, IQM JSON, or QIR 2.1), with optional capability metadata
-marked as unknown. Use `TargetEnvironment` and `PayloadSpecification` for staged
-compilation with explicit restrictions.
+selected format (OpenQASM 3.1, IQM JSON, or QIR 2.1), with optional capability
+metadata marked as unknown. Use `TargetEnvironment` and `PayloadSpecification`
+for staged compilation with explicit restrictions.
 
 QIR submission requires a parameterless entry point. QC-to-QIR conversion
 records direct measurements and CBit-register results, then emits runtime status

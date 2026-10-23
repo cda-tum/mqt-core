@@ -30,7 +30,7 @@ _CompilerTarget: TypeAlias = (
     CompilerTarget | qiskit.providers.BackendV2 | qiskit.transpiler.Target | mqt.core.qdmi.Device | str
 )
 _CompilerOutput: TypeAlias = (
-    qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram | QIRProgram
+    qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram | QIRProgram | IQMJSONProgram
 )
 _ProgramT = TypeVar("_ProgramT", qiskit.circuit.QuantumCircuit, QCProgram, QCOProgram, JeffProgram, OpenQASMProgram)
 
@@ -76,7 +76,7 @@ class OutputFormat(enum.Enum):
     QIR_ADAPTIVE = 7
     """QIR for the Adaptive Profile."""
 
-    QISKIT = 8
+    QISKIT = 9
     """A Qiskit QuantumCircuit."""
 
 class PayloadEncoding(enum.Enum):
@@ -1394,6 +1394,16 @@ def compile_program(
 def compile_program(
     program: _CompilerInput,
     *,
+    target: _CompilerTarget,
+    output: Literal[OutputFormat.IQM_JSON],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> IQMJSONProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
     target: _CompilerTarget | None = None,
     output: Literal[OutputFormat.JEFF],
     inplace: bool = False,
@@ -1490,7 +1500,7 @@ def compile_program(
         qco_pipeline: The QCO optimization pipeline. Custom pipelines require no target.
         options: Shared compilation controls.
 
-    Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
+    Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, IQM JSON, then Base QIR
     (binary, text). Select an exact execution format with
     :func:`submit_program` and its ``program_format`` argument. An explicit output
     need not be a device's execution format. Jeff output does not retain hardware
