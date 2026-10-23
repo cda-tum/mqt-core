@@ -478,6 +478,12 @@ int64_t JitSession::sample(size_t shots, std::vector<std::string>& results,
                            stateAvailable);
 }
 
+int64_t JitSession::sample(size_t shots,
+                           llvm::function_ref<void(std::string_view)> emit,
+                           bool* stateAvailable, bool emitHeader) {
+  return sampleWithRuntime(*runtime_, shots, emit, emitHeader, stateAvailable);
+}
+
 int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
                                       std::vector<std::string>& results,
                                       bool emitHeader, bool* stateAvailable) {
@@ -492,6 +498,36 @@ int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
   }
   results.clear();
   results.reserve(shots);
+  return sampleWithRuntimeImpl(
+      runtime, shots,
+      [&](std::string&& shot) { results.push_back(std::move(shot)); },
+      [&](std::string_view shot) { results.emplace_back(shot); }, emitHeader,
+      stateAvailable);
+}
+
+int64_t
+JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
+                              llvm::function_ref<void(std::string_view)> emit,
+                              bool emitHeader, bool* stateAvailable) {
+  return sampleWithRuntimeImpl(
+      runtime, shots, [&](const std::string& shot) { emit(shot); },
+      [&](std::string_view shot) { emit(shot); }, emitHeader, stateAvailable);
+}
+
+int64_t JitSession::sampleWithRuntimeImpl(
+    Runtime& runtime, size_t shots,
+    llvm::function_ref<void(std::string&&)> emitOwned,
+    llvm::function_ref<void(std::string_view)> emitBorrowed, bool emitHeader,
+    bool* stateAvailable) {
+  if (&runtime != runtime_.get() && !shareCompiledCode_) {
+    throw std::logic_error("QIR entry point cannot be shared across workers");
+  }
+  if (stateAvailable != nullptr) {
+    *stateAvailable = false;
+  }
+  if (execution_ != Execution::Sampling) {
+    throw std::logic_error("Cannot sample a QIR state-extraction session");
+  }
   if (emitHeader) {
     runtime.outputProgramHeader();
   }
@@ -511,7 +547,8 @@ int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
     if (const auto code = execute(); code != 0) {
       return code;
     }
-    runtime.sampleMeasurements(*samplingOutputs_, shots, results);
+    runtime.sampleMeasurements(*samplingOutputs_, shots, emitOwned,
+                               emitBorrowed);
     if (stateAvailable != nullptr) {
       *stateAvailable = true;
     }
@@ -521,7 +558,7 @@ int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
     if (const auto code = execute(); code != 0) {
       return code;
     }
-    results.push_back(runtime.getMeasurements());
+    emitBorrowed(runtime.getMeasurements());
   }
   return 0;
 }

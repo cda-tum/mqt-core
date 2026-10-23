@@ -36,7 +36,6 @@
 #include <exception>
 #include <future>
 #include <iostream>
-#include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
@@ -50,6 +49,15 @@
 #include <vector>
 
 namespace {
+void appendShot(std::string& packed, std::string_view shot) {
+  const auto offset = packed.size();
+  packed.append(shot);
+  // QDMI spells the highest-index output bit first.
+  std::ranges::reverse(packed.begin() + static_cast<ptrdiff_t>(offset),
+                       packed.end());
+  packed.push_back(',');
+}
+
 [[nodiscard]] auto parseQASMToQCO(const std::string_view source)
     -> llvm::FailureOr<mlir::QCOProgram> {
   auto context = mlir::createCompilerContext();
@@ -74,7 +82,8 @@ struct Execution {
   size_t maxWorkers_;
   bool automaticWorkers_;
   std::optional<std::string> qirOutput_;
-  std::vector<std::string> shots_;
+  std::string shots_;
+  size_t shotCount_ = 0;
   std::map<std::string, size_t> counts_;
   std::unique_ptr<dd::Package> dd_;
   dd::VectorDD stateVecDD_{};
@@ -161,9 +170,16 @@ struct Execution {
       }
     }
     if (workers == 1) {
-      const auto rc =
-          sampling ? jitSession.sample(numShots_, shots_, &stateAvailable)
-                   : jitSession.run();
+      const auto emit = [&](std::string_view shot) {
+        if (shots_.empty() && jitSession.canSampleTerminal() &&
+            numShots_ <= shots_.max_size() / (shot.size() + 1)) {
+          shots_.reserve(numShots_ * (shot.size() + 1));
+        }
+        appendShot(shots_, shot);
+      };
+      const auto rc = sampling
+                          ? jitSession.sample(numShots_, emit, &stateAvailable)
+                          : jitSession.run();
       if (rc != 0) {
         std::cerr << "QIR program returned exit code " << rc << '\n';
         return false;
@@ -174,7 +190,7 @@ struct Execution {
       for (size_t i = 1; i < workers; ++i) {
         workerSeeds[i] = rng();
       }
-      std::vector<std::vector<std::string>> parts(workers);
+      std::vector<std::string> parts(workers);
       std::vector<std::string> records(workers);
       std::vector<std::future<int64_t>> tasks;
       tasks.reserve(workers);
@@ -205,11 +221,14 @@ struct Execution {
           }
           const size_t count = (numShots_ / workers) +
                                static_cast<size_t>(i < numShots_ % workers);
-          const auto code = workerRuntime
-                                ? jitSession.sampleWithRuntime(*worker, count,
-                                                               parts[i], false)
-                                : (i == 0 ? jitSession : *peer)
-                                      .sample(count, parts[i], nullptr, i == 0);
+          const auto emit = [&](std::string_view shot) {
+            appendShot(parts[i], shot);
+          };
+          const auto code =
+              workerRuntime
+                  ? jitSession.sampleWithRuntime(*worker, count, emit, false)
+                  : (i == 0 ? jitSession : *peer)
+                        .sample(count, emit, nullptr, i == 0);
           peer.reset();
           if (i != 0 && captureQIROutput_) {
             records[i] = std::move(localOutput).str();
@@ -218,18 +237,23 @@ struct Execution {
         }));
       }
       int64_t firstError = 0;
-      shots_.reserve(numShots_);
       for (size_t i = 0; i < workers; ++i) {
         const auto code = tasks[i].get();
         if (firstError == 0 && code != 0) {
           firstError = code;
         }
-        shots_.insert(shots_.end(), std::make_move_iterator(parts[i].begin()),
-                      std::make_move_iterator(parts[i].end()));
       }
       if (firstError != 0) {
         std::cerr << "QIR program returned exit code " << firstError << '\n';
         return false;
+      }
+      size_t packedSize = 0;
+      for (const auto& part : parts) {
+        packedSize += part.size();
+      }
+      shots_.reserve(packedSize);
+      for (const auto& part : parts) {
+        shots_ += part;
       }
       if (output) {
         for (size_t i = 1; i < workers; ++i) {
@@ -237,10 +261,7 @@ struct Execution {
         }
       }
     }
-    for (auto& shot : shots_) {
-      // QDMI spells the highest-index output bit first.
-      std::ranges::reverse(shot);
-    }
+    shotCount_ = numShots_;
     if (stateAvailable) {
       auto state = runtime.takeState();
       dd_ = std::move(state.dd);
@@ -271,11 +292,8 @@ qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request,
     std::cerr << "DDSIM program failed: " << error.what() << '\n';
   }
   if (response.succeeded) {
-    response.shotCount = execution.shots_.size();
-    for (const auto& shot : execution.shots_) {
-      response.shots += shot;
-      response.shots += ',';
-    }
+    response.shotCount = execution.shotCount_;
+    response.shots = std::move(execution.shots_);
     response.counts = std::move(execution.counts_);
     response.output = std::move(execution.qirOutput_);
     if (execution.dd_) {

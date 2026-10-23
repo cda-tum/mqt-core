@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
@@ -23,6 +24,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace qir {
@@ -91,6 +93,11 @@ public:
   int64_t sample(size_t shots, std::vector<std::string>& results,
                  bool* stateAvailable = nullptr, bool emitHeader = true);
 
+  /// Execute a batch and emit each shot before the next is generated.
+  /// The view is valid only during the callback.
+  int64_t sample(size_t shots, llvm::function_ref<void(std::string_view)> emit,
+                 bool* stateAvailable = nullptr, bool emitHeader = true);
+
   /// Whether sampling may share the compiled entry point.
   ///
   /// Eligible modules have only constant globals and calls to the QIR runtime
@@ -116,6 +123,13 @@ public:
                             bool emitHeader = true,
                             bool* stateAvailable = nullptr);
 
+  /// Emit each shot with a separate worker runtime.
+  /// The view is valid only during the callback.
+  int64_t sampleWithRuntime(Runtime& runtime, size_t shots,
+                            llvm::function_ref<void(std::string_view)> emit,
+                            bool emitHeader = true,
+                            bool* stateAvailable = nullptr);
+
   /// Whether the current output mode can use one retained terminal state.
   [[nodiscard]] bool canSampleTerminal() const;
 
@@ -132,6 +146,11 @@ private:
   Execution execution_;
 
   int64_t runWithRuntime(Runtime& runtime);
+  int64_t
+  sampleWithRuntimeImpl(Runtime& runtime, size_t shots,
+                        llvm::function_ref<void(std::string&&)> emitOwned,
+                        llvm::function_ref<void(std::string_view)> emitBorrowed,
+                        bool emitHeader, bool* stateAvailable);
 
   /// Initializes the native target, asm printer and asm parser.
   ///
