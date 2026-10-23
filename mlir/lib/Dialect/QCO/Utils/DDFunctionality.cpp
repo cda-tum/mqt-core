@@ -2519,7 +2519,7 @@ static bool canBranchStructured(func::FuncOp func) {
 static FailureOr<std::map<std::string, size_t>>
 sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
                std::mt19937_64& rng, const PreparedState& prepared,
-               const SamplingPlan& plan, std::vector<std::string>& ordered,
+               const SamplingPlan& plan, std::vector<std::string>* ordered,
                const DDExecutionOptions& options, bool collectCounts) {
   struct ForFrame {
     scf::ForOp op;
@@ -2537,7 +2537,10 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
     std::vector<size_t> ids;
     SmallVector<ForFrame, 2> loops;
   };
-  ordered.resize(shots);
+  if (ordered != nullptr) {
+    ordered->resize(shots);
+  }
+  std::map<std::string, size_t> counts;
   Group first{
       .state = dd::makeZeroState(prepared.qubits.numQubits, dd),
       .qubits = prepared.qubits,
@@ -2739,26 +2742,34 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
                               group.qubits, group.tensors))) {
       return failure();
     }
-    for (const auto id : group.ids) {
-      auto outcome = encodeOutcome(plan.outputs, group.classical,
-                                   plan.outputs.empty()
-                                       ? dd.measureAll(group.state, false, rng)
-                                       : std::string{});
+    if (!plan.outputs.empty()) {
+      auto outcome = encodeOutcome(plan.outputs, group.classical, {});
       if (failed(outcome)) {
         return failure();
       }
-      ordered[id] = std::move(*outcome);
+      if (collectCounts) {
+        counts[*outcome] += group.ids.size();
+      }
+      if (ordered != nullptr) {
+        for (const auto id : group.ids) {
+          (*ordered)[id] = *outcome;
+        }
+      }
+      return success();
+    }
+    for (const auto id : group.ids) {
+      auto outcome = dd.measureAll(group.state, false, rng);
+      if (collectCounts) {
+        ++counts[outcome];
+      }
+      if (ordered != nullptr) {
+        (*ordered)[id] = std::move(outcome);
+      }
     }
     return success();
   };
   if (failed(visit(entry.begin(), std::move(first)))) {
     return failure();
-  }
-  std::map<std::string, size_t> counts;
-  if (collectCounts) {
-    for (const auto& shot : ordered) {
-      ++counts[shot];
-    }
   }
   return counts;
 }
@@ -2885,9 +2896,7 @@ sampleProgram(func::FuncOp func, size_t shots, uint64_t seed,
   if (canBranchStructured(func)) {
     // shortcut: Shared structured-branch evaluation corrupts concurrent
     // shot groups; isolate its IR before enabling multiple workers.
-    std::vector<std::string> ordered;
-    return sampleBranches(func, *dd, shots, rng, *prepared, *plan,
-                          shotResults != nullptr ? *shotResults : ordered,
+    return sampleBranches(func, *dd, shots, rng, *prepared, *plan, shotResults,
                           options, collectCounts);
   }
   if (workers == 0) {

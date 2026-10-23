@@ -1397,9 +1397,14 @@ TEST_F(QCODDFunctionalityTest, AdaptiveWorkersAndTopLevelBranches) {
                           nullptr, {}, workers);
     const auto b = sampleShots(mainFunc(*mod), 512, 19, second,
                                DDArgumentBindings{}, nullptr, {}, workers);
+    const auto countsOnly =
+        sample(mainFunc(*mod), 512, 19, DDArgumentBindings{}, nullptr, nullptr,
+               {}, workers);
     ASSERT_TRUE(succeeded(a));
     ASSERT_TRUE(succeeded(b));
+    ASSERT_TRUE(succeeded(countsOnly));
     EXPECT_EQ(first, second);
+    EXPECT_EQ(*a, *countsOnly);
     std::map<std::string, size_t> counts;
     for (const auto& shot : second) {
       ++counts[shot];
@@ -1551,10 +1556,20 @@ TEST_F(QCODDFunctionalityTest, BranchesThroughCountedMeasurementsAndResets) {
                           &first, nullptr, {}, workers);
     const auto b = sample(mainFunc(*mod), 2048, 41, DDArgumentBindings{},
                           &second, nullptr, {}, workers);
+    const auto countsOnly =
+        sample(mainFunc(*mod), 2048, 41, DDArgumentBindings{}, nullptr, nullptr,
+               {}, workers);
     ASSERT_TRUE(succeeded(a));
     ASSERT_TRUE(succeeded(b));
+    ASSERT_TRUE(succeeded(countsOnly));
     EXPECT_EQ(first, second);
     EXPECT_EQ(*a, *b);
+    EXPECT_EQ(*a, *countsOnly);
+    std::map<std::string, size_t> fromShots;
+    for (const auto& shot : first) {
+      ++fromShots[shot];
+    }
+    EXPECT_EQ(*a, fromShots);
     EXPECT_EQ(a->size(), 8U);
     for (const auto& [outcome, count] : *a) {
       EXPECT_EQ(outcome.size(), 3U);
