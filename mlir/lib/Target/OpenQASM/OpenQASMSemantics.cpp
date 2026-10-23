@@ -1309,7 +1309,8 @@ private:
   }
 
   [[nodiscard]] FailureOr<uint64_t>
-  bitVectorCastWidth(std::optional<SyntaxExpressionId> size, SMLoc location) {
+  bitVectorCastWidth(std::optional<SyntaxExpressionId> size, SMLoc location,
+                     const uint64_t maxWidth = 64) {
     if (!size) {
       return 64;
     }
@@ -1325,9 +1326,10 @@ private:
                   "bit-register cast width must be an integer expression");
     }
     const auto width = asSigned(constant);
-    if (!width || *width < 1 || *width > 64) {
+    if (!width || *width < 1 || std::cmp_greater(*width, maxWidth)) {
       return fail(location,
-                  "bit-register cast supports widths from 1 through 64");
+                  "bit-register cast supports widths from 1 through " +
+                      std::to_string(maxWidth));
     }
     return static_cast<uint64_t>(*width);
   }
@@ -2721,7 +2723,8 @@ private:
   }
 
   [[nodiscard]] FailureOr<ExpressionId>
-  analyzeExpression(const SyntaxExpressionId syntaxId) {
+  analyzeExpression(const SyntaxExpressionId syntaxId,
+                    const bool allowWideBitVectorCast = false) {
     const auto& expression = syntax.expressions[syntaxId];
     if (expression.kind == Expr::Kind::Range) {
       return fail(expression.location,
@@ -2779,12 +2782,18 @@ private:
     }
     if (expression.kind == Expr::Kind::IntCast ||
         expression.kind == Expr::Kind::UintCast) {
+      const auto bitVectorOperand = isBitVectorExpression(*expression.rhs);
+      // Wide bit-register views must be narrowed by the enclosing integer cast.
+      const auto maxWidth = allowWideBitVectorCast && bitVectorOperand
+                                ? IntegerType::kMaxWidth
+                                : 64;
       MQT_OQ3_TRY_ASSIGN(
-          width, bitVectorCastWidth(expression.lhs, expression.location));
+          width,
+          bitVectorCastWidth(expression.lhs, expression.location, maxWidth));
       const auto target = expression.kind == Expr::Kind::IntCast
                               ? ScalarType::Int
                               : ScalarType::Uint;
-      if (isBitVectorExpression(*expression.rhs)) {
+      if (bitVectorOperand) {
         MQT_OQ3_TRY_ASSIGN(bitVector,
                            analyzeBitVectorExpression(*expression.rhs));
         if (program.bitVectorExpressions[bitVector].width != width) {
@@ -2799,7 +2808,7 @@ private:
             .integerWidth = static_cast<unsigned>(width),
         });
       }
-      MQT_OQ3_TRY_ASSIGN(operand, analyzeExpression(*expression.rhs));
+      MQT_OQ3_TRY_ASSIGN(operand, analyzeExpression(*expression.rhs, true));
       if (isRuntimeAngle(operand)) {
         return fail(expression.location,
                     "cast runtime angles to float before integer conversion");
