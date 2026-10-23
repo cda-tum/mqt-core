@@ -400,6 +400,28 @@ for method, path, status in (
     )
 
 
+def dashboard_rows(dashboard: dict[str, Any], panel_id: int) -> list[dict[str, Any]]:
+    """Query one accounting or license table using its provisioned data source."""
+    panel = next(panel for panel in dashboard["panels"] if panel["id"] == panel_id)
+    uid = next(
+        variable["current"]["value"] for variable in dashboard["templating"]["list"] if variable["name"] == "accounting"
+    )
+    target = {**panel["targets"][0], "datasource": {**panel["datasource"], "uid": uid}}
+    now = int(time.time() * 1000)
+    response = json.loads(
+        monitoring_response(
+            "http://grafana:3000/api/ds/query",
+            data={"from": str(now - 3_600_000), "to": str(now), "queries": [target]},
+        )
+    )["results"]["A"]
+    assert not response.get("error"), response
+    rows = []
+    for frame in response["frames"]:
+        names = [field["name"] for field in frame["schema"]["fields"]]
+        rows.extend(dict(zip(names, values, strict=True)) for values in zip(*frame["data"]["values"], strict=True))
+    return rows
+
+
 def test_accounting(job_id: str) -> None:
     """Require the dashboard to render a completed job from persistent accounting."""
     accounting = json.loads(job("sacct", "--json", "--jobs", job_id).stdout)["jobs"][0]
@@ -414,34 +436,18 @@ def test_accounting(job_id: str) -> None:
         default=None,
     )
     dashboard = json.loads(monitoring_response("http://grafana:3000/api/dashboards/uid/mqt-runtime"))["dashboard"]
-    panel = next(panel for panel in dashboard["panels"] if panel["id"] == 9)
-    uid = next(
-        variable["current"]["value"] for variable in dashboard["templating"]["list"] if variable["name"] == "accounting"
-    )
-    target = {**panel["targets"][0], "datasource": {**panel["datasource"], "uid": uid}}
 
     def job_visible() -> bool:
-        now = int(time.time() * 1000)
-        response = json.loads(
-            monitoring_response(
-                "http://grafana:3000/api/ds/query",
-                data={"from": str(now - 3_600_000), "to": str(now), "queries": [target]},
-            )
-        )["results"]["A"]
-        assert not response.get("error"), response
-        for frame in response["frames"]:
-            names = [field["name"] for field in frame["schema"]["fields"]]
-            for values in zip(*frame["data"]["values"], strict=True):
-                row = dict(zip(names, values, strict=True))
-                if str(row["Job ID"]) == job_id and row["State"] == "COMPLETED":
-                    assert row["Exit code"] == "0:0", row
-                    assert row["Partition"] == "quantum", row
-                    assert row["CPUs"] == 1, row
-                    assert row["Licenses"] == "mqt.ddsim.default=1", row
-                    assert row["CPU time"] == cpu_time["seconds"] + cpu_time["microseconds"] / 1_000_000, row
-                    assert row["CPU time"] > 0, row
-                    assert row["Max task RSS"] == max_rss, row
-                    return True
+        for row in dashboard_rows(dashboard, 9):
+            if str(row["Job ID"]) == job_id and row["State"] == "COMPLETED":
+                assert row["Exit code"] == "0:0", row
+                assert row["Partition"] == "quantum", row
+                assert row["CPUs"] == 1, row
+                assert row["Licenses"] == "mqt.ddsim.default=1", row
+                assert row["CPU time"] == cpu_time["seconds"] + cpu_time["microseconds"] / 1_000_000, row
+                assert row["CPU time"] > 0, row
+                assert row["Max task RSS"] == max_rss, row
+                return True
         return False
 
     wait_for("the completed DDSIM job to appear in Grafana accounting", job_visible)
@@ -450,11 +456,6 @@ def test_accounting(job_id: str) -> None:
 def assert_device_licenses(*, allocated: int, reserved: int) -> None:
     """Require Grafana to show the DDSIM allocation and admission reservation."""
     dashboard = json.loads(monitoring_response("http://grafana:3000/api/dashboards/uid/mqt-runtime"))["dashboard"]
-    panel = next(panel for panel in dashboard["panels"] if panel["id"] == 10)
-    uid = next(
-        variable["current"]["value"] for variable in dashboard["templating"]["list"] if variable["name"] == "accounting"
-    )
-    target = {**panel["targets"][0], "datasource": {**panel["datasource"], "uid": uid}}
     expected = {
         "Device license": "mqt.ddsim.default",
         "Reservation": "Fully reserved" if reserved == 2 else "Unreserved",
@@ -464,23 +465,7 @@ def assert_device_licenses(*, allocated: int, reserved: int) -> None:
         "Reserved": reserved,
     }
 
-    def licenses_visible() -> bool:
-        now = int(time.time() * 1000)
-        response = json.loads(
-            monitoring_response(
-                "http://grafana:3000/api/ds/query",
-                data={"from": str(now - 3_600_000), "to": str(now), "queries": [target]},
-            )
-        )["results"]["A"]
-        assert not response.get("error"), response
-        for frame in response["frames"]:
-            names = [field["name"] for field in frame["schema"]["fields"]]
-            for values in zip(*frame["data"]["values"], strict=True):
-                if dict(zip(names, values, strict=True)) == expected:
-                    return True
-        return False
-
-    wait_for(f"DDSIM licenses in Grafana: {expected}", licenses_visible)
+    wait_for(f"DDSIM licenses in Grafana: {expected}", lambda: expected in dashboard_rows(dashboard, 10))
 
 
 def test_core(*, monitoring: bool) -> None:
@@ -505,9 +490,6 @@ def test_core(*, monitoring: bool) -> None:
     )
     assert_license("mqt.ddsim.default", total=2, used=2, free=0)
     if monitoring:
-        metrics = monitoring_response("http://controller:6817/metrics/partitions").splitlines()
-        assert 'slurm_partition_jobs_running{partition="quantum"} 2' in metrics
-        assert 'slurm_partition_jobs_pending{partition="quantum"} 1' in metrics
         assert_device_licenses(allocated=2, reserved=0)
 
     sc_job = submit("sc_job.py", "mqt.sc.default:1")

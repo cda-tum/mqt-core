@@ -378,10 +378,8 @@ failures.
 
 Use **Job accounting** to find a submitted job by its Slurm job ID. The table
 uses the selected time range and includes short jobs that finish between
-scrapes. For example, a completed ten-second Braket job can show `COMPLETED`,
-exit code `0:0`, one CPU, and `amazon.braket.sv1=1` even when the running-job
-graph has no corresponding sample. Elapsed time covers the whole Slurm job. Exit
-codes use `status:signal`; inspect the job's output file for error details.
+scrapes. Elapsed time covers the whole Slurm job. Exit codes use
+`status:signal`; inspect the job's output file for error details.
 
 **CPU time** is the recorded user plus system CPU time. **Max task RSS** is the
 largest recorded resident-memory value among tasks across the job's steps, not
