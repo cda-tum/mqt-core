@@ -303,20 +303,20 @@ pass that directory to `prepare.sh`.
 
 ## Monitor the runtime
 
-The optional monitoring overlay adds Prometheus and a read-only Grafana
-dashboard. It shows pending and running jobs by partition, node states, CPU
-allocations, device license reservations, scheduler health, and persistent job
-outcomes. It uses Slurm's native
-[OpenMetrics endpoints](https://slurm.schedmd.com/metrics.html) and the existing
-Slurm accounting database.
+Cluster administrators can monitor MQT Core workloads and QDMI device
+allocations under Slurm with Prometheus and Grafana. The dashboard shows pending
+and running jobs by partition, node states, CPU allocations, device license
+reservations, scheduler health, and persistent job outcomes. It uses Slurm's
+native [OpenMetrics endpoints](https://slurm.schedmd.com/metrics.html) and the
+existing Slurm accounting database.
 
-The playground is a reference deployment for HPC administrators who run MQT Core
-with QDMI devices under Slurm. Installing MQT Core alone does not start these
-monitoring services. On an existing cluster, connect them to the site's
-monitoring stack as described in
-[site configuration](#deploy-on-an-existing-cluster).
+On an existing cluster, reuse the dashboard and scrape configuration with the
+site's monitoring services; follow
+[site configuration](#deploy-on-an-existing-cluster). The playground provides an
+optional Compose overlay as a runnable reference deployment. Installing MQT Core
+alone does not start monitoring services.
 
-### Start monitoring
+### Start monitoring in the playground
 
 From the host, after [preparing the cluster](#start-the-cluster-and-log-in), add
 this line once to `build/slurm/slurm.conf` (or the configuration in your
@@ -397,7 +397,7 @@ CPU allocation is not measured CPU utilization, and QAN allocation is not QPU
 execution time. Device probe results, QDMI job phases, logs, compiler profiles,
 and benchmarks are outside this dashboard.
 
-### Operate monitoring
+### Operate monitoring in the playground
 
 Both monitoring services start independently of Slurm and restart after failure
 unless explicitly stopped. If a panel remains unavailable after a scrape
@@ -463,9 +463,9 @@ port is published on the host.
 
 ### Shared deployments
 
-Grafana permits anonymous viewing on the host's loopback interface. Prometheus
-and Slurm metrics have no published host ports. This is a local development
-interface: every viewer sees the Playground user's accounting. A shared
+The playground's Compose overlay permits anonymous Grafana viewing on the host's
+loopback interface. Prometheus and Slurm metrics have no published host ports,
+and every viewer sees the playground user's accounting. A shared cluster
 deployment needs site authentication, accounting access controls, and network
 policy; Grafana's Viewer role alone does not restrict a data source's API. Keep
 the site's Slurm authentication and `PrivateData` policy. Check metrics access

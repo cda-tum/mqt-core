@@ -1,7 +1,7 @@
 {
   "uid": "mqt-runtime",
   "title": "MQT Runtime",
-  "description": "Slurm scheduling, resource allocation and accounting in the MQT playground.",
+  "description": "Slurm scheduling, resource allocation and accounting for clusters running MQT Core with QDMI devices.",
   "schemaVersion": 41,
   "version": 1,
   "editable": false,
@@ -299,7 +299,7 @@
     {
       "id": 9,
       "title": "Job accounting",
-      "description": "Playground jobs selected by the dashboard time range, including short jobs between scrapes. CPU time is user plus system time. Max task RSS is the largest recorded task memory across job steps, not total job memory. Exit code is status:signal; missing accounting values remain blank.",
+      "description": "Jobs available through the configured accounting data source, selected by the dashboard time range, including short jobs between scrapes. CPU time is user plus system time. Max task RSS is the largest recorded task memory across job steps, not total job memory. Exit code is status:signal; missing accounting values remain blank.",
       "type": "table",
       "gridPos": { "x": 0, "y": 34, "w": 24, "h": 9 },
       "datasource": {
