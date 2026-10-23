@@ -17,6 +17,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -60,8 +61,8 @@ static SourceLocation sourcePosition(const llvm::SourceMgr& sources,
 
 namespace {
 
-constexpr uint64_t REGISTER_WIDTH_LIMIT = 100'000;
-constexpr uint64_t TOTAL_REGISTER_ELEMENT_LIMIT = 100'000;
+// Classical arrays lower to stack storage; registers do not share this budget.
+constexpr uint64_t ARRAY_ELEMENT_LIMIT = 100'000;
 constexpr size_t EXPRESSION_DEPTH_LIMIT = 256;
 constexpr size_t TYPED_STATEMENT_LIMIT = 100'000'000;
 constexpr size_t AFFINE_DISTINCTNESS_COMPARISON_LIMIT = 1'024;
@@ -518,7 +519,7 @@ private:
   llvm::DenseMap<SyntaxExpressionId, ExpressionId> sizeOfExpressions_;
   StringRef activeGate_;
   std::set<uint64_t> hardwareQubits;
-  uint64_t totalRegisterElements = 0;
+  uint64_t totalArrayElements = 0;
   std::optional<SyntaxIncludeContextId> currentIncludeContext;
   mutable std::optional<Diagnostic> failureDiagnostic;
 
@@ -1087,6 +1088,15 @@ private:
     const auto id = static_cast<ExpressionId>(program.expressions.size());
     program.expressions.push_back(std::move(expression));
     return id;
+  }
+
+  [[nodiscard]] LogicalResult checkRegisterExpansion(uint64_t count,
+                                                     SMLoc location) {
+    if (count > TYPED_STATEMENT_LIMIT) {
+      return fail(location, "register operand expansion exceeds the limit of " +
+                                Twine(TYPED_STATEMENT_LIMIT));
+    }
+    return success();
   }
 
   [[nodiscard]] BitVectorExpressionId
@@ -2453,16 +2463,22 @@ private:
           digits.push_back(digit);
         }
       }
-      if (digits.size() > REGISTER_WIDTH_LIMIT ||
+      if (digits.size() > IntegerType::kMaxWidth ||
           (expectedWidth && *expectedWidth != digits.size())) {
         return fail(expression.location,
                     "bit-string width must match the supported register width");
       }
+      // Setting bits directly avoids a full-width shift for each digit.
+      llvm::APInt value(static_cast<unsigned>(digits.size()), 0);
+      for (const auto [index, digit] : llvm::enumerate(digits)) {
+        if (digit == '1') {
+          value.setBit(static_cast<unsigned>(digits.size() - index - 1));
+        }
+      }
       return addBitVectorExpression({
           .kind = BitVectorExpressionKind::Constant,
           .width = digits.size(),
-          .constant =
-              llvm::APInt(static_cast<unsigned>(digits.size()), digits, 2),
+          .constant = std::move(value),
       });
     }
     if (expression.kind == Expr::Kind::BitCast) {
@@ -3169,7 +3185,8 @@ private:
   [[nodiscard]] FailureOr<uint64_t>
   constantWidth(const std::optional<SyntaxExpressionId> size, SMLoc location,
                 StringRef description = "register width",
-                bool allowEmpty = false) {
+                bool allowEmpty = false,
+                uint64_t limit = std::numeric_limits<int64_t>::max()) {
     if (!size) {
       return 1;
     }
@@ -3193,9 +3210,9 @@ private:
                   description + (allowEmpty ? " must be non-negative"
                                             : " must be greater than zero"));
     }
-    if (value > REGISTER_WIDTH_LIMIT) {
-      return fail(location, description + " exceeds the limit of " +
-                                Twine(REGISTER_WIDTH_LIMIT));
+    if (value > limit) {
+      return fail(location,
+                  description + " exceeds the limit of " + Twine(limit));
     }
     return value;
   }
@@ -3368,7 +3385,11 @@ private:
         startForm->constant == 0) {
       return indices;
     }
-    indices.reserve(distance / stride + 1);
+    const auto count = distance / stride + 1;
+    if (failed(checkRegisterExpansion(count, location))) {
+      return failure();
+    }
+    indices.reserve(count);
     for (uint64_t offset = 0; offset <= distance;) {
       const auto signedOffset = positive ? static_cast<int64_t>(offset)
                                          : -static_cast<int64_t>(offset);
@@ -4058,7 +4079,7 @@ private:
         }
       }
       extent = extent < 0 || shape.front() < 0 ? -1 : extent + shape.front();
-      if (std::cmp_greater(extent, REGISTER_WIDTH_LIMIT)) {
+      if (std::cmp_greater(extent, ARRAY_ELEMENT_LIMIT)) {
         return mismatch();
       }
       const auto& initialized =
@@ -4103,26 +4124,25 @@ private:
     }
     std::vector<int64_t> shape;
     for (const auto dimension : declaration.dimensions) {
-      MQT_OQ3_TRY_ASSIGN(extent,
-                         constantWidth(dimension, location, "array dimension",
-                                       /*allowEmpty=*/true));
+      MQT_OQ3_TRY_ASSIGN(
+          extent, constantWidth(dimension, location, "array dimension",
+                                /*allowEmpty=*/true, ARRAY_ELEMENT_LIMIT));
       shape.push_back(static_cast<int64_t>(extent));
     }
     uint64_t length = llvm::is_contained(shape, 0) ? 0 : 1;
     for (const auto dimension : shape) {
       const auto extent = static_cast<uint64_t>(dimension);
-      if (extent != 0 && length > REGISTER_WIDTH_LIMIT / extent) {
+      if (extent != 0 && length > ARRAY_ELEMENT_LIMIT / extent) {
         return fail(location, "array element count exceeds the limit of " +
-                                  Twine(REGISTER_WIDTH_LIMIT));
+                                  Twine(ARRAY_ELEMENT_LIMIT));
       }
       length *= extent;
     }
-    if (length > TOTAL_REGISTER_ELEMENT_LIMIT - totalRegisterElements) {
-      return fail(location,
-                  "total register and array elements exceed the limit of " +
-                      Twine(TOTAL_REGISTER_ELEMENT_LIMIT));
+    if (length > ARRAY_ELEMENT_LIMIT - totalArrayElements) {
+      return fail(location, "total array elements exceed the limit of " +
+                                Twine(ARRAY_ELEMENT_LIMIT));
     }
-    totalRegisterElements += length;
+    totalArrayElements += length;
     const auto type = scalarType(declaration.kind);
     unsigned width = 0;
     if (type == ScalarType::Angle) {
@@ -4417,14 +4437,16 @@ private:
     if (!isQubit && output && !global) {
       return fail(location, "outputs must be declared at global scope");
     }
-    MQT_OQ3_TRY_ASSIGN(width, constantWidth(size, location));
+    // Quantum register shapes use signed i64. Bit-register expressions and
+    // outputs must also fit in an MLIR integer type.
+    MQT_OQ3_TRY_ASSIGN(
+        width,
+        constantWidth(size, location,
+                      isQubit ? "qubit register width" : "bit register width",
+                      /*allowEmpty=*/false,
+                      isQubit ? std::numeric_limits<int64_t>::max()
+                              : IntegerType::kMaxWidth));
     const auto id = static_cast<RegisterId>(program.registers.size());
-    if (width > TOTAL_REGISTER_ELEMENT_LIMIT - totalRegisterElements) {
-      return fail(location,
-                  Twine("total register elements exceed the limit of ") +
-                      Twine(TOTAL_REGISTER_ELEMENT_LIMIT));
-    }
-    totalRegisterElements += width;
     program.registers.push_back({
         .kind = isQubit ? RegisterKind::Qubit : RegisterKind::Bit,
         .name = identifier.str(),
@@ -4623,6 +4645,10 @@ private:
         if (declaration.kind != RegisterKind::Qubit) {
           continue;
         }
+        if (failed(checkRegisterExpansion(qubits.size() + declaration.width,
+                                          location))) {
+          return failure();
+        }
         for (uint64_t index = 0; index < declaration.width; ++index) {
           qubits.push_back({
               .kind = QubitReferenceKind::Register,
@@ -4631,6 +4657,10 @@ private:
               .provenIndex = std::nullopt,
           });
         }
+      }
+      if (failed(checkRegisterExpansion(qubits.size() + hardwareQubits.size(),
+                                        location))) {
+        return failure();
       }
       for (const auto index : hardwareQubits) {
         qubits.push_back({
@@ -4642,6 +4672,10 @@ private:
     }
     for (const auto& operand : barrier.operands) {
       MQT_OQ3_TRY_ASSIGN(selection, resolveQubitOperand(operand));
+      if (failed(checkRegisterExpansion(qubits.size() + selection.size(),
+                                        location))) {
+        return failure();
+      }
       qubits.insert(qubits.end(), selection.begin(), selection.end());
     }
 
@@ -5914,6 +5948,9 @@ private:
       return selection;
     }
     if (!operand.index) {
+      if (failed(checkRegisterExpansion(width, operand.location))) {
+        return failure();
+      }
       std::vector<QubitReference> selection;
       selection.reserve(width);
       for (uint64_t index = 0; index < width; ++index) {
