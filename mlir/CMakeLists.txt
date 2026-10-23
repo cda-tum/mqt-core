@@ -18,15 +18,11 @@ endif()
 function(mqt_mlir_apply_target_options target_name)
   target_link_libraries(${target_name} PRIVATE MQT::ProjectOptions)
   llvm_update_compile_flags(${target_name})
-  mqt_llvm_target_disable_rtti(${target_name})
 
   if(MSVC)
-    # ProjectOptions owns MSVC exception handling; match the SDK's RTTI policy.
+    # ProjectOptions owns MSVC exception handling.
     get_target_property(compile_options ${target_name} COMPILE_OPTIONS)
     list(TRANSFORM compile_options REPLACE "/EHs-c-" "")
-    if(NOT LLVM_ENABLE_RTTI)
-      list(TRANSFORM compile_options REPLACE "/GR(>|$)" "/GR-\\1")
-    endif()
     set_property(TARGET ${target_name} PROPERTY COMPILE_OPTIONS ${compile_options})
     get_target_property(compile_definitions ${target_name} COMPILE_DEFINITIONS)
     if(compile_definitions)

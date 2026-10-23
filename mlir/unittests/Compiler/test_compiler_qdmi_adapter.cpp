@@ -597,6 +597,9 @@ TEST(CompilerQDMIAdapterTest,
       mlir::TargetEnvironment(explicitTarget, payload)));
   EXPECT_TRUE(llvm::errorToBool(
       mlir::submitProgram(device, otherArtifact).takeError()));
+  EXPECT_TRUE(llvm::errorToBool(
+      mlir::trySubmitPrograms(device, {&compiled, &otherArtifact})
+          .takeError()));
   EXPECT_EQ(creations, 2);
 
   const auto restricted = llvm::cantFail(mlir::PayloadSpecification::create(
@@ -1079,5 +1082,30 @@ TEST(CompilerQDMIAdapterTest, SelectsNativeAliasesByOrderedPlacement) {
     EXPECT_NE(text->find("declare void @__quantum__qis__retained__body()"),
               std::string::npos);
     EXPECT_NE(text->find("\"required_num_qubits\"=\"3\""), std::string::npos);
+  }
+}
+
+TEST(CompilerQDMIAdapterTest, SubmitsCompatibleProgramsTogether) {
+  const auto device = qdmi::Session::openDevice("mqt.ddsim.default");
+  constexpr auto source = "OPENQASM 3.0; include \"stdgates.inc\"; "
+                          "qubit[2] q; bit[2] c; x q[0]; c = measure q;";
+  const auto binary = llvm::cantFail(
+      mlir::compileProgram(mlir::OpenQASMProgram(source), device));
+  const auto text = llvm::cantFail(
+      mlir::compileProgram(mlir::OpenQASMProgram(source), device,
+                           QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING));
+  EXPECT_TRUE(llvm::errorToBool(
+      mlir::trySubmitPrograms(device, {&binary, &text}).takeError()));
+  for (const auto* program : {&binary, &text}) {
+    const auto other = llvm::cantFail(mlir::compileProgram(
+        mlir::OpenQASMProgram("OPENQASM 3.0; include \"stdgates.inc\"; "
+                              "qubit[2] q; bit[2] c; x q[1]; c = measure q;"),
+        device, program->programFormat()));
+    auto job =
+        llvm::cantFail(mlir::trySubmitPrograms(device, {program, &other}, 3));
+    ASSERT_TRUE(job);
+    ASSERT_TRUE(job->wait());
+    EXPECT_EQ(job->getShots(0), (std::vector<std::string>{"01", "01", "01"}));
+    EXPECT_EQ(job->getShots(1), (std::vector<std::string>{"10", "10", "10"}));
   }
 }

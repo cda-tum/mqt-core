@@ -10,16 +10,18 @@
 
 import enum
 import os
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from typing import Annotated, Any, Literal, SupportsFloat, TypeAlias, TypeVar, Unpack, overload
 
 import numpy as np
+import pennylane.tape
 import qiskit.circuit
 import qiskit.providers
 import qiskit.transpiler
 
 import mqt.core.dd
 import mqt.core.qdmi
+from mqt.core.mlir import _pennylane as _pennylane
 from mqt.core.qdmi import Device
 from mqt.core.typing import QDMISessionParameters
 
@@ -818,6 +820,16 @@ class QCProgram(Program):
                 metadata.
         """
 
+    @staticmethod
+    def from_pennylane(tape: pennylane.tape.QuantumScript, *, wires: Sequence[Hashable] | None = None) -> QCProgram:
+        """Import a preprocessed PennyLane tape into QC MLIR.
+
+        The tape must contain supported native gates after decomposition, measurement
+        basis rotations, and mid-circuit measurement deferral. All wires are measured
+        and returned in the supplied order (the tape's wire order by default).
+        PennyLane's terminal measurements are evaluated from these samples by the device.
+        """
+
     def copy(self) -> QCProgram:
         """Return an independent copy of this program."""
 
@@ -1532,6 +1544,24 @@ def compile_program(
     :func:`submit_program` and its ``program_format`` argument. An explicit output
     need not be a device's execution format. Jeff output does not retain hardware
     placement.
+    """
+
+def try_submit_programs(
+    programs: Sequence[CompiledProgram],
+    *,
+    target: object,
+    num_shots: int = 1024,
+    custom1: str | bool | float | bytes | None = None,
+    custom2: str | bool | float | bytes | None = None,
+    custom3: str | bool | float | bytes | None = None,
+    custom4: str | bool | float | bytes | None = None,
+    custom5: str | bool | float | bytes | None = None,
+) -> mqt.core.qdmi.Job | None:
+    """Submit compatible compiled programs together when supported.
+
+    Returns ``None`` if the provider declines a multi-program job before submission.
+    Programs must share a payload format. ``target`` accepts a device ID or an open
+    device. Other validation or submission failures raise an exception.
     """
 
 def submit_program(

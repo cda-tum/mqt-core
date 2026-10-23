@@ -11,6 +11,10 @@ set(TARGET_NAME "${MQT_CORE_TARGET_NAME}-mlir-bindings")
 if(NOT TARGET ${TARGET_NAME})
   file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS *.cpp)
 
+  # LLVM feature macros from this bridge must not change Cap'n Proto's exception detection.
+  set_source_files_properties(Target/PennyLane/PennyLane.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION
+                                                                        ON)
+
   # Qiskit's extension C API tables are translation-unit local. Each supported minor therefore gets
   # one source file with a private header snapshot.
   file(STRINGS Target/Qiskit/SupportedVersions.inc qiskit_version_registrations
@@ -74,6 +78,7 @@ if(NOT TARGET ${TARGET_NAME})
     LINK_LIBS
     MQT::CoreBenchGenerate
     MQTCompilerQDMIAdapter
+    MQTCompilerCatalystAdapter
     MQTCompilerPipeline
     MLIRAnalysis
     MLIRMQTDialect
@@ -81,17 +86,23 @@ if(NOT TARGET ${TARGET_NAME})
     MLIRQCTranslationSupport
     MLIRQCODDFunctionalityPython)
 
+  if(APPLE)
+    target_link_options(${TARGET_NAME} PRIVATE "LINKER:-exported_symbol,_MQTQDMIFactory")
+  endif()
+
   if(MQT_QISKIT_CAPI_CANDIDATE_VERSION)
     target_compile_definitions(
       ${TARGET_NAME}
       PRIVATE MQT_QISKIT_CAPI_CANDIDATE_VERSION="${MQT_QISKIT_CAPI_CANDIDATE_VERSION}")
   endif()
 
-  # install the Python stub file in editable mode for better IDE support
+  # Install the Python stub package in editable mode for IDE support.
   if(MQT_CORE_INSTALL AND SKBUILD_STATE STREQUAL "editable")
     install(
-      FILES ${PROJECT_SOURCE_DIR}/python/mqt/core/mlir.pyi
+      DIRECTORY ${PROJECT_SOURCE_DIR}/python/mqt/core/mlir
       DESTINATION .
-      COMPONENT ${MQT_CORE_TARGET_NAME}_Python)
+      COMPONENT ${MQT_CORE_TARGET_NAME}_Python
+      FILES_MATCHING
+      PATTERN "*.pyi")
   endif()
 endif()
