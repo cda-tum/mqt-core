@@ -789,21 +789,17 @@ static int runCompiler(int argc, char** argv) {
     return 1;
   }
 
-  if (*parsedOutputFormat == OutputFormat::QIRBase &&
-      failed(runPasses([](OpPassManager& pm) {
-        populateQIRPreparationPipeline(pm);
-        pm.addPass(createQCToQIRBase());
-        populateQIRCleanupPipeline(pm, false);
-        return success();
-      }))) {
-    return 1;
-  }
-
-  if (*parsedOutputFormat == OutputFormat::QIRAdaptive &&
-      failed(runPasses([](OpPassManager& pm) {
-        populateQIRPreparationPipeline(pm);
-        pm.addPass(createQCToQIRAdaptive());
-        populateQIRCleanupPipeline(pm, true);
+  if ((*parsedOutputFormat == OutputFormat::QIRBase ||
+       *parsedOutputFormat == OutputFormat::QIRAdaptive) &&
+      failed(runPasses([&](OpPassManager& pm) {
+        const bool adaptive = *parsedOutputFormat == OutputFormat::QIRAdaptive;
+        const auto payload =
+            llvm::cantFail(PayloadSpecification::forProgramFormat(
+                adaptive ? ProgramFormat::QIRAdaptive
+                         : ProgramFormat::QIRBase));
+        populateQIRPreparationPipeline(pm, payload.materialize(*context));
+        pm.addPass(adaptive ? createQCToQIRAdaptive() : createQCToQIRBase());
+        populateQIRCleanupPipeline(pm, adaptive);
         return success();
       }))) {
     return 1;

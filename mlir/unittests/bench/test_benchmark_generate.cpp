@@ -16,6 +16,7 @@
 #include "bench/MagicStateDistillation.hpp"
 #include "bench/ModularMultiplier.hpp"
 #include "bench/Multiplexer.hpp"
+#include "bench/QAOA.hpp"
 #include "bench/QFT.hpp"
 #include "bench/QFTAdder.hpp"
 #include "bench/QPE.hpp"
@@ -100,6 +101,7 @@ TEST(GenerateProgramTest, GeneratesEveryBenchmarkMethodAsQCAndJeff) {
   expectQCAndJeff(Grover{{.markedBitstring = "101"}});
   expectQCAndJeff(MagicStateDistillation{{.levels = 1}});
   expectQCAndJeff(Multiplexer{{.qubits = 3}});
+  expectQCAndJeff(QAOA{{.qubits = 3}});
   expectQCAndJeff(QFT{{.qubits = 3, .periodExponent = 1}});
   expectQCAndJeff(QFT{
       {.qubits = 3, .periodExponent = 1, .method = QFTMethod::Semiclassical}});

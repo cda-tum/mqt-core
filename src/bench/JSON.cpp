@@ -18,6 +18,7 @@
 #include "bench/MagicStateDistillation.hpp"
 #include "bench/ModularMultiplier.hpp"
 #include "bench/Multiplexer.hpp"
+#include "bench/QAOA.hpp"
 #include "bench/QFT.hpp"
 #include "bench/QFTAdder.hpp"
 #include "bench/QPE.hpp"
@@ -440,33 +441,47 @@ parseModularMultiplierParameters(const Json& parameters,
   if (control.size() != 1U) {
     fail(source, "$/parameters/control", "must be '0', '1', or '+'");
   }
-  return constructBenchmark(source, [&] {
-    return ModularMultiplier({
-        .multiplier = stringValue(
-            required(parameters, "multiplier", source, "$/parameters"), source,
-            "$/parameters/multiplier"),
-        .modulus =
-            stringValue(required(parameters, "modulus", source, "$/parameters"),
-                        source, "$/parameters/modulus"),
-        .multiplicand = stringValue(
-            required(parameters, "multiplicand", source, "$/parameters"),
-            source, "$/parameters/multiplicand"),
-        .control = control.front(),
-    });
-  });
+  ModularMultiplierOptions options{
+      .multiplier = stringValue(
+          required(parameters, "multiplier", source, "$/parameters"), source,
+          "$/parameters/multiplier"),
+      .modulus =
+          stringValue(required(parameters, "modulus", source, "$/parameters"),
+                      source, "$/parameters/modulus"),
+      .multiplicand = stringValue(
+          required(parameters, "multiplicand", source, "$/parameters"), source,
+          "$/parameters/multiplicand"),
+      .control = control.front(),
+  };
+  return constructBenchmark(
+      source, [&options] { return ModularMultiplier(std::move(options)); });
 }
 
 [[nodiscard]] Multiplexer
 parseMultiplexerParameters(const Json& parameters,
                            const std::string_view source) {
   rejectUnknownKeys(parameters, {"qubits"}, source, "$/parameters");
-  return constructBenchmark(source, [&] {
-    return Multiplexer({
-        .qubits =
-            sizeValue(required(parameters, "qubits", source, "$/parameters"),
-                      source, "$/parameters/qubits"),
-    });
-  });
+  const MultiplexerOptions options{
+      .qubits =
+          sizeValue(required(parameters, "qubits", source, "$/parameters"),
+                    source, "$/parameters/qubits"),
+  };
+  return constructBenchmark(source,
+                            [&options] { return Multiplexer(options); });
+}
+
+[[nodiscard]] QAOA parseQAOAParameters(const Json& parameters,
+                                       const std::string_view source) {
+  rejectUnknownKeys(parameters, {"qubits", "depth"}, source, "$/parameters");
+  QAOAOptions options{
+      .qubits =
+          sizeValue(required(parameters, "qubits", source, "$/parameters"),
+                    source, "$/parameters/qubits"),
+  };
+  if (const auto depth = parameters.find("depth"); depth != parameters.end()) {
+    options.depth = sizeValue(*depth, source, "$/parameters/depth");
+  }
+  return constructBenchmark(source, [&options] { return QAOA(options); });
 }
 
 [[nodiscard]] QFT parseQFTParameters(const Json& parameters,
@@ -592,13 +607,12 @@ parseTeleportationParameters(const Json& parameters,
 [[nodiscard]] WState parseWStateParameters(const Json& parameters,
                                            const std::string_view source) {
   rejectUnknownKeys(parameters, {"qubits"}, source, "$/parameters");
-  return constructBenchmark(source, [&] {
-    return WState({
-        .qubits =
-            sizeValue(required(parameters, "qubits", source, "$/parameters"),
-                      source, "$/parameters/qubits"),
-    });
-  });
+  const WStateOptions options{
+      .qubits =
+          sizeValue(required(parameters, "qubits", source, "$/parameters"),
+                    source, "$/parameters/qubits"),
+  };
+  return constructBenchmark(source, [&options] { return WState(options); });
 }
 
 [[nodiscard]] std::string_view topologyName(const GHZTopology topology) {
@@ -695,6 +709,14 @@ parseTeleportationParameters(const Json& parameters,
   return {{"qubits", benchmark.options().qubits}};
 }
 
+[[nodiscard]] Json parametersJSON(const QAOA& benchmark) {
+  const auto& options = benchmark.options();
+  return {
+      {"depth", options.depth},
+      {"qubits", options.qubits},
+  };
+}
+
 [[nodiscard]] Json parametersJSON(const QFT& benchmark) {
   const auto& options = benchmark.options();
   return {
@@ -761,6 +783,16 @@ parseTeleportationParameters(const Json& parameters,
     reference["success_outcome"] = std::string(*successOutcome);
   }
   return reference;
+}
+
+[[nodiscard]] Json referenceJSON(const QAOA& benchmark) {
+  return {
+      {"kind", "verification"},
+      {"model", "qaoa_max_cut_cycle"},
+      {"outcome_order", "big_endian"},
+      {"output", benchmark.output().name},
+      {"version", 1},
+  };
 }
 
 [[nodiscard]] Json referenceJSON(const Shor& benchmark) {
@@ -916,6 +948,8 @@ template <class Benchmark, class ParseParameters>
 
 template <class Benchmark>
 [[nodiscard]] Json baseInstanceSpecificationSchema(Json parameters) {
+  parameters["additionalProperties"] = false;
+  parameters["type"] = "object";
   using Metadata = BenchmarkMetadata<Benchmark>;
   return {
       {"$schema", "https://json-schema.org/draft/2020-12/schema"},
@@ -936,7 +970,6 @@ template <class Benchmark>
 
 [[nodiscard]] Json bvInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<BV>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -956,13 +989,11 @@ template <class Benchmark>
           },
       },
       {"required", {"hidden_bitstring"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json fanOutInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<FanOut>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -977,13 +1008,11 @@ template <class Benchmark>
           },
       },
       {"required", {"controls"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json ghzInstanceSpecificationSchema() {
   Json parameters{
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1003,7 +1032,6 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits"}},
-      {"type", "object"},
   };
   parameters["allOf"] = Json::array({
       {
@@ -1035,7 +1063,6 @@ template <class Benchmark>
 
 [[nodiscard]] Json groverInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<Grover>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1059,13 +1086,11 @@ template <class Benchmark>
           },
       },
       {"required", {"marked_bitstring"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json weakMeasurementGroverInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<WeakMeasurementGrover>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1089,13 +1114,11 @@ template <class Benchmark>
           },
       },
       {"required", {"marked_bitstring"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json magicStateDistillationInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<MagicStateDistillation>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1110,13 +1133,11 @@ template <class Benchmark>
               },
           },
       },
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json modularMultiplierInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<ModularMultiplier>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1157,13 +1178,11 @@ template <class Benchmark>
           },
       },
       {"required", {"multiplier", "modulus", "multiplicand"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json multiplexerInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<Multiplexer>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1178,13 +1197,40 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits"}},
-      {"type", "object"},
+  });
+}
+
+[[nodiscard]] Json qaoaInstanceSpecificationSchema() {
+  const QAOAOptions defaults{.qubits = 3};
+  return baseInstanceSpecificationSchema<QAOA>({
+      {
+          "properties",
+          {
+              {
+                  "depth",
+                  {
+                      {"default", defaults.depth},
+                      {"maximum", QAOAOptions::MAX_DEPTH},
+                      {"minimum", 1},
+                      {"type", "integer"},
+                  },
+              },
+              {
+                  "qubits",
+                  {
+                      {"maximum", std::numeric_limits<int64_t>::max()},
+                      {"minimum", 3},
+                      {"type", "integer"},
+                  },
+              },
+          },
+      },
+      {"required", {"qubits"}},
   });
 }
 
 [[nodiscard]] Json qftInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<QFT>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1214,13 +1260,11 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits", "period_exponent"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json qftAdderInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<QFTAdder>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1316,13 +1360,11 @@ template <class Benchmark>
           },
       },
       {"required", {"addend", "accumulator"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json qpeInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<QPE>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1379,13 +1421,11 @@ template <class Benchmark>
           },
       },
       {"required", {"precision", "phase"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json repeatUntilSuccessInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<RepeatUntilSuccess>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1400,13 +1440,11 @@ template <class Benchmark>
               },
           },
       },
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json shorInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<Shor>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1431,21 +1469,17 @@ template <class Benchmark>
           },
       },
       {"required", {"number"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json teleportationInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<Teleportation>({
-      {"additionalProperties", false},
       {"properties", Json::object()},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json wStateInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<WState>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1460,7 +1494,6 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits"}},
-      {"type", "object"},
   });
 }
 
@@ -1647,6 +1680,36 @@ std::string evaluationToJSON(const std::string_view caseIdValue,
               },
               {"success_probability", std::move(success)},
               {"total_variation_distance", evaluation.totalVariationDistance},
+          },
+      },
+      {"schema_version", SCHEMA_VERSION},
+      {"shots", shots},
+  }
+      .dump();
+}
+
+std::string evaluationToJSON(const std::string_view caseIdValue,
+                             const size_t shots,
+                             const QAOAEvaluation& evaluation) {
+  if (!validCaseId(caseIdValue) || shots == 0) {
+    throw std::invalid_argument(
+        "evaluation requires a SHA-256 case ID and at least one shot");
+  }
+  if (!std::isfinite(evaluation.meanCut) || evaluation.meanCut < 0. ||
+      !std::isfinite(evaluation.approximationRatio) ||
+      evaluation.approximationRatio < 0. ||
+      evaluation.approximationRatio > 1.) {
+    throw std::invalid_argument(
+        "QAOA evaluation requires a finite non-negative "
+        "mean cut and an approximation ratio in [0, 1]");
+  }
+  return Json{
+      {"case_id", std::string(caseIdValue)},
+      {
+          "metrics",
+          {
+              {"approximation_ratio", evaluation.approximationRatio},
+              {"mean_cut", evaluation.meanCut},
           },
       },
       {"schema_version", SCHEMA_VERSION},

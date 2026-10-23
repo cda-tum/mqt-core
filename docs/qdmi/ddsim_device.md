@@ -156,7 +156,7 @@ not require a separate job or zero shots. Circuits with mid-circuit measurements
 or resets do not support state extraction.
 
 ```{code-cell} ipython3
-from mqt.core.mlir import compile_program, submit_program
+from mqt.core.mlir import submit_program
 from mqt.core.qdmi import ProgramFormat
 from mqt.core.qdmi import open_device
 
@@ -170,8 +170,7 @@ result = measure q;
 """
 
 device = open_device("mqt.ddsim.default")
-program = compile_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
-job = submit_program(program, target=device)
+job = submit_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
 job.wait()
 print(job.get_counts())
 print(job.get_dense_statevector())

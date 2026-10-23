@@ -13,6 +13,7 @@
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/MQT/IR/MQTAttributes.h"
+#include "mqt/Target/QIR/Capabilities.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -56,6 +58,56 @@ normalizePayloadVersion(llvm::StringRef version) {
 
 [[nodiscard]] static bool containsNull(const llvm::StringRef value) {
   return value.contains('\0');
+}
+
+llvm::Expected<PayloadSpecification>
+PayloadSpecification::forProgramFormat(ProgramFormat format,
+                                       PayloadEncoding encoding) {
+  switch (format) {
+  case ProgramFormat::OpenQASM3:
+    return PayloadSpecification::create(
+        {
+            .id = "openqasm",
+            .version = "3.1.0",
+            .profile = "",
+            .encoding = encoding,
+        },
+        {
+            {.id = ProgramCapability::FORWARD_BRANCHING.str()},
+            {.id = ProgramCapability::COUNTED_ITERATION.str()},
+            {.id = ProgramCapability::CONDITIONAL_LOOP.str()},
+            {.id = ProgramCapability::MULTIWAY_BRANCHING.str()},
+        });
+  case ProgramFormat::QIRBase:
+    return PayloadSpecification::create({
+        .id = "qir",
+        .version = "2.1.0",
+        .profile = "base",
+        .encoding = encoding,
+    });
+  case ProgramFormat::QIRAdaptive: {
+    std::vector<ProgramCapability> capabilities{
+        {.id = ProgramCapability::FORWARD_BRANCHING.str()},
+        {.id = ProgramCapability::COUNTED_ITERATION.str()},
+        {.id = ProgramCapability::CONDITIONAL_LOOP.str()},
+    };
+    for (const auto& [flag, id] : qir::OPTIONAL_CAPABILITIES) {
+      capabilities.push_back({.id = id});
+    }
+    return PayloadSpecification::create(
+        {
+            .id = "qir",
+            .version = "2.1.0",
+            .profile = "adaptive",
+            .encoding = encoding,
+        },
+        std::move(capabilities));
+  }
+  default:
+    return llvm::createStringError(
+        llvm::errc::invalid_argument,
+        "Compiler output has no executable payload specification");
+  }
 }
 
 llvm::Expected<PayloadSpecification>
@@ -200,6 +252,45 @@ PayloadSpecification::capabilities() const noexcept {
 
 bool PayloadSpecification::optionalCapabilitiesKnown() const noexcept {
   return optionalCapabilitiesKnown_;
+}
+
+PayloadSpecification PayloadSpecification::restrictCapabilities(
+    const PayloadSpecification& other) const {
+  const bool sameFormat = format_.id == other.format_.id &&
+                          format_.version == other.format_.version &&
+                          format_.profile == other.format_.profile;
+  std::vector<ProgramCapability> capabilities;
+  for (const auto& capability : capabilities_) {
+    if (!sameFormat && capability.id != ProgramCapability::FORWARD_BRANCHING &&
+        capability.id != ProgramCapability::COUNTED_ITERATION &&
+        capability.id != ProgramCapability::CONDITIONAL_LOOP &&
+        capability.id != ProgramCapability::MULTIWAY_BRANCHING) {
+      capabilities.push_back(capability);
+      continue;
+    }
+    const auto* const found =
+        llvm::find_if(other.capabilities(), [&](const auto& entry) {
+          return entry.id == capability.id && entry.value == capability.value;
+        });
+    if (found == other.capabilities().end()) {
+      continue;
+    }
+    auto restricted = capability;
+    for (const auto& constraint : found->constraints) {
+      const auto existing =
+          llvm::find_if(restricted.constraints, [&](const auto& entry) {
+            return entry.id == constraint.id;
+          });
+      if (existing == restricted.constraints.end()) {
+        restricted.constraints.push_back(constraint);
+      } else {
+        existing->value = std::min(existing->value, constraint.value);
+      }
+    }
+    capabilities.push_back(std::move(restricted));
+  }
+  return {format_, std::move(capabilities),
+          optionalCapabilitiesKnown_ && other.optionalCapabilitiesKnown_};
 }
 
 bool PayloadSpecification::supportsUnrestrictedMultiwayBranching()

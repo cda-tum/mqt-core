@@ -37,6 +37,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -585,7 +586,9 @@ TEST_F(QCToQIRAdaptiveNativeTest, LowersPopulationCountThroughMathToLLVM) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   auto value = LLVM::UndefOp::create(builder, builder.getIntegerType(5));
-  (void)math::CtPopOp::create(builder, value);
+  auto count = math::CtPopOp::create(builder, value);
+  auto angle = arith::UIToFPOp::create(builder, builder.getF64Type(), count);
+  builder.rx(angle, builder.allocQubit());
   auto module = builder.finalize();
   ASSERT_TRUE(module);
   ASSERT_TRUE(succeeded(verify(*module)));
@@ -1219,7 +1222,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RecordsComputedStoreAfterMeasurement) {
   EXPECT_EQ(combinations, 1U);
 }
 
-TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedIntegerMemref) {
+TEST_F(QCToQIRAdaptiveNativeTest, RejectsClassicalMemrefOutput) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   const auto type = MemRefType::get({1}, builder.getI8Type());
@@ -1228,7 +1231,7 @@ TEST_F(QCToQIRAdaptiveNativeTest, RejectsUnsupportedIntegerMemref) {
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 
-  expectConversionFailure(*module, "only supports generic memrefs for",
+  expectConversionFailure(*module, "QIR entry return supports only",
                           runQCToQIRAdaptiveConversion);
 }
 

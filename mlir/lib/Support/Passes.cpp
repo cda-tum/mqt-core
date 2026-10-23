@@ -11,6 +11,7 @@
 #include "mqt/Support/Passes.h"
 
 #include "mqt/Conversion/CBitToMemRef/CBitToMemRef.h"
+#include "mqt/Dialect/MQT/IR/MQTAttributes.h"
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
 #include "mqt/Dialect/QC/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
@@ -18,8 +19,11 @@
 #include "mqt/Dialect/QTensor/Transforms/Passes.h"
 #include "mqt/Support/RandomSeed.h"
 
+#include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassInstrumentation.h"
@@ -106,6 +110,7 @@ void registerMQTCompilerPasses() {
     qco::registerUnrollLoopsForPayload();
     qco::registerVerifyTargetConformance();
     mqt::registerNormalizeGlobalPhases();
+    mqt::registerPromoteClassicalMemory();
     mqt::registerSimplifyClassicalControl();
     mqt::registerUnrollModifiers();
     qc::registerShrinkQubitRegistersPass();
@@ -129,10 +134,19 @@ void populateDefaultQCOOptimizationPipeline(OpPassManager& pm) {
   pm.addPass(createCanonicalizerPass());
 }
 
-void populateQIRPreparationPipeline(OpPassManager& pm) {
+void populateQIRPreparationPipeline(OpPassManager& pm,
+                                    mqt::PayloadSpecAttr payload) {
   pm.addPass(createInlinerPass());
   pm.addPass(mqt::createNormalizeGlobalPhases());
   pm.addPass(mqt::createUnrollModifiers());
+  if (payload.getFormat().getProfile() == "base") {
+    qco::UnrollLoopsForPayloadOptions options;
+    llvm::raw_string_ostream stream(options.payloadSpec);
+    stream << payload;
+    pm.addPass(qco::createUnrollLoopsForPayload(options));
+  } else {
+    pm.addPass(mqt::createPromoteClassicalMemory());
+  }
   pm.addPass(createCanonicalizerPass());
 }
 
@@ -173,6 +187,9 @@ LogicalResult runWithCompilationOptions(PassManager& pm, ModuleOp moduleOp,
   if (!preservesLayout) {
     moduleOp->removeAttr("mqt.layout");
   }
+  DialectRegistry registry;
+  memref::registerMemorySlotExternalModels(registry);
+  moduleOp.getContext()->appendDialectRegistry(registry);
   if (options.enablePassLogging) {
     pm.addInstrumentation(std::make_unique<PassLoggingInstrumentation>());
   }
@@ -201,6 +218,7 @@ LogicalResult runWithCompilationOptions(PassManager& pm, ModuleOp moduleOp,
 
 void populateQCExportPipeline(OpPassManager& pm) {
   pm.addPass(mlir::mqt::createSimplifyClassicalControl());
+  pm.addPass(mqt::createPromoteClassicalMemory());
   pm.addPass(
       createCanonicalizerPass(GreedyRewriteConfig{}.setUseTopDownTraversal()));
   pm.addPass(mlir::mqt::createNormalizeGlobalPhases());
@@ -216,6 +234,7 @@ void populateQCCleanupPipeline(OpPassManager& pm) {
 
 void populateQCOCleanupPipeline(OpPassManager& pm, bool removeDeadValues) {
   pm.addPass(mlir::mqt::createSimplifyClassicalControl());
+  pm.addPass(mqt::createPromoteClassicalMemory());
   pm.addPass(createCanonicalizerPass(
       GreedyRewriteConfig{}.setUseTopDownTraversal().setMaxIterations(
           GreedyRewriteConfig::kNoLimit)));

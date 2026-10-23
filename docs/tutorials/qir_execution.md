@@ -194,8 +194,8 @@ unsupported control flow:
 
 ```{code-cell} ipython3
 try:
-    compile_program(loop_source, target=device, program_format=ProgramFormat.QIR_BASE_MODULE)
-except ValueError as error:
+    compile_program(loop_source, target=device, output=OutputFormat.QIR_BASE)
+except RuntimeError as error:
     print(error)
 else:
     raise AssertionError("A conditional loop requires an Adaptive payload")

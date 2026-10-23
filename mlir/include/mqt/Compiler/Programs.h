@@ -22,6 +22,7 @@
 
 #include "llvm/Support/LogicalResult.h"
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -43,6 +44,9 @@ class JeffProgram;
 class OpenQASMProgram;
 class QIRProgram;
 class TargetEnvironment;
+
+/// A value for a scalar or statically sized one-dimensional f64 input.
+using ParameterValue = std::variant<std::vector<double>, double>;
 
 /// Quantum resources and static IR statistics.
 struct QuantumProgramInfo {
@@ -66,6 +70,23 @@ struct QuantumProgramInfo {
   std::map<std::string, size_t> controlFlowCounts;
   /// All operations in the module, as in Program::operationCounts().
   std::map<std::string, size_t> operationCounts;
+};
+
+/// Cached resource and gate inspection for QC and QCO module passes.
+///
+/// Uses the same static counting rules as QCProgram::inspect() and
+/// QCOProgram::inspect(). Request it with getAnalysis<QuantumProgramAnalysis>()
+/// from a module pass. MLIR invalidates the snapshot after passes that do not
+/// preserve this analysis. Direct IR changes require explicit invalidation.
+class QuantumProgramAnalysis {
+public:
+  explicit QuantumProgramAnalysis(ModuleOp moduleOp);
+
+  /// Return the resource and operation counts without changing the IR.
+  [[nodiscard]] const QuantumProgramInfo& info() const { return info_; }
+
+private:
+  QuantumProgramInfo info_;
 };
 
 /// The QIR profile represented by a QIR program.
@@ -127,10 +148,8 @@ public:
   /// module. Consuming or destroying the program invalidates the operation.
   [[nodiscard]] ModuleOp module() const;
 
-  /// Share ownership of the dialect context.
-  [[nodiscard]] std::shared_ptr<MLIRContext> context() const {
-    return storage_.context;
-  }
+  /// Keep the dialect context alive across consuming compiler operations.
+  [[nodiscard]] std::shared_ptr<MLIRContext> context() const noexcept;
 
 protected:
   struct Storage {
@@ -216,15 +235,26 @@ public:
   /// Returns resource information and gate, control-flow, and operation counts.
   [[nodiscard]] QuantumProgramInfo inspect() const;
 
-  /// Return named f64 entry-point inputs in function argument order.
+  /// Return names of scalar and static rank-one f64 inputs in argument order.
   [[nodiscard]] std::vector<std::string> parameters() const;
 
-  /// Bind named f64 inputs in place, preserving unbound inputs and metadata.
+  /// Bind named f64 scalars and arrays in place, preserving unbound inputs.
   ///
-  /// Reject unknown names, non-finite values, or references to the entry point
-  /// without changing the program. Does not run cleanup or fold expressions.
+  /// Arrays must match the length of a static rank-one f64 tensor input.
+  /// Reject unknown names, mismatched types or lengths, non-finite values, or
+  /// references to the entry point without changing the program. Preserve
+  /// unbound input metadata and fold expressions using the bound values.
+  /// Folding failures may leave the program modified.
   [[nodiscard]] LogicalResult
-  bindParameters(const std::map<std::string, double>& values);
+  bindParameters(const std::map<std::string, ParameterValue>& values);
+
+  /// Bind a scalar-only map under the same contract.
+  template <std::same_as<double> T = double>
+  [[nodiscard]] LogicalResult
+  bindParameters(const std::map<std::string, T>& values) {
+    return bindParameters(
+        std::map<std::string, ParameterValue>(values.begin(), values.end()));
+  }
 
   /// Run the standard QC cleanup passes in place.
   [[nodiscard]] LogicalResult cleanup();
@@ -242,7 +272,9 @@ public:
   ///
   /// Entry results must be direct measurements or CBit registers. Other scalar
   /// outputs are unsupported. The generated QIR returns a zero execution
-  /// status.
+  /// status. Base conversion unrolls static counted loops, allowing at most
+  /// one billion cloned body operations, and rejects runtime-dependent loops.
+  /// Adaptive conversion retains loops.
   [[nodiscard]] FailureOr<QIRProgram> intoQIR(QIRProfile profile) &&;
 
   /// Return the static gate count of the entry-point IR.
@@ -311,12 +343,20 @@ public:
   /// Uses the rules of QCProgram::inspect().
   [[nodiscard]] QuantumProgramInfo inspect() const;
 
-  /// Return named f64 entry-point inputs in function argument order.
+  /// Return names of scalar and static rank-one f64 inputs in argument order.
   [[nodiscard]] std::vector<std::string> parameters() const;
 
-  /// Bind named f64 inputs in place under the same contract as QCProgram.
+  /// Bind named f64 scalars and arrays under the same contract as QCProgram.
   [[nodiscard]] LogicalResult
-  bindParameters(const std::map<std::string, double>& values);
+  bindParameters(const std::map<std::string, ParameterValue>& values);
+
+  /// Bind a scalar-only map under the same contract as QCProgram.
+  template <std::same_as<double> T = double>
+  [[nodiscard]] LogicalResult
+  bindParameters(const std::map<std::string, T>& values) {
+    return bindParameters(
+        std::map<std::string, ParameterValue>(values.begin(), values.end()));
+  }
 
   /// Run the standard QCO cleanup passes in place.
   [[nodiscard]] LogicalResult cleanup();
@@ -504,6 +544,15 @@ using CompilerProgram = std::variant<QCProgram, QCOProgram, JeffProgram,
 [[nodiscard]] FailureOr<CompilerProgram>
 runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
                    std::string_view qcoPipeline = "mqt-qco-default",
+                   const CompilationOptions& options = {});
+
+/// Compile for a target and return the requested representation.
+///
+/// QCImport and raw QCO stop before target compilation and are not accepted.
+/// The environment must include the requested output's lowering constraints.
+[[nodiscard]] FailureOr<CompilerProgram>
+runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
+                   const TargetEnvironment& environment,
                    const CompilationOptions& options = {});
 
 /// Run the coordinated default compiler pipeline for a target.

@@ -427,11 +427,10 @@ TEST_F(QCToQIRBaseNativeTest, RegisterLoadsPreserveQubitIdentity) {
 TEST_F(QCToQIRBaseNativeTest, AllowsGateAfterMeasurementOnIndependentQubit) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
-  auto qubits = builder.allocQubitRegister(5);
+  auto qubits = builder.allocQubitRegister(4);
   auto result = builder.measure(qubits[0]);
   builder.x(qubits[1]);
-  builder.mcrx(0.25, {qubits[1], qubits[2], qubits[3]}, qubits[4]);
-
+  builder.mcrx(0.25, {qubits[1], qubits[2]}, qubits[3]);
   auto moduleOp = builder.finalize(result);
   ASSERT_TRUE(moduleOp);
   ASSERT_TRUE(succeeded(verify(*moduleOp)));
@@ -440,14 +439,14 @@ TEST_F(QCToQIRBaseNativeTest, AllowsGateAfterMeasurementOnIndependentQubit) {
 
   SmallVector<LLVM::CallOp> quantumCalls;
   moduleOp->walk([&](LLVM::CallOp call) {
-    if (call.getCallee() == qir::QIR_X || call.getCallee() == qir::QIR_RX_CTL ||
+    if (call.getCallee() == qir::QIR_X || call.getCallee() == qir::QIR_CCRX ||
         call.getCallee() == qir::QIR_MEASURE) {
       quantumCalls.push_back(call);
     }
   });
   ASSERT_EQ(quantumCalls.size(), 3);
   EXPECT_EQ(quantumCalls[0].getCallee(), qir::QIR_X);
-  EXPECT_EQ(quantumCalls[1].getCallee(), qir::QIR_RX_CTL);
+  EXPECT_EQ(quantumCalls[1].getCallee(), qir::QIR_CCRX);
   EXPECT_EQ(quantumCalls[2].getCallee(), qir::QIR_MEASURE);
   EXPECT_NE(quantumCalls[0].getOperand(0), quantumCalls[2].getOperand(0));
 }
@@ -460,25 +459,17 @@ TEST_F(QCToQIRBaseNativeTest, ControlledBarrierDoesNotControlFollowingGate) {
       });
 }
 
-TEST_F(QCToQIRBaseNativeTest, LowersPopulationCountThroughMathToLLVM) {
+TEST_F(QCToQIRBaseNativeTest, RejectsResidualClassicalComputations) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
-  auto value = LLVM::UndefOp::create(builder, builder.getIntegerType(5));
-  (void)math::CtPopOp::create(builder, value);
+  auto value = builder.intConstant(7);
+  auto count = math::CtPopOp::create(builder, value);
+  auto angle = arith::UIToFPOp::create(builder, builder.getF64Type(), count);
+  builder.rx(angle, builder.allocQubit());
   auto module = builder.finalize();
   ASSERT_TRUE(module);
   ASSERT_TRUE(succeeded(verify(*module)));
-  ASSERT_TRUE(succeeded(runQCToQIRBaseConversion(*module)));
-  EXPECT_TRUE(succeeded(verify(*module)));
-
-  bool retainsMathPopulationCount = false;
-  bool hasLLVMPopulationCount = false;
-  module->walk([&](Operation* operation) {
-    retainsMathPopulationCount |= isa<math::CtPopOp>(operation);
-    hasLLVMPopulationCount |= isa<LLVM::CtPopOp>(operation);
-  });
-  EXPECT_FALSE(retainsMathPopulationCount);
-  EXPECT_TRUE(hasLLVMPopulationCount);
+  EXPECT_TRUE(failed(runQCToQIRBaseConversion(*module)));
 }
 
 TEST_F(QCToQIRBaseNativeTest, SelectsControlledSpecializationsByArity) {
@@ -486,11 +477,9 @@ TEST_F(QCToQIRBaseNativeTest, SelectsControlledSpecializationsByArity) {
   builder.initialize();
   auto control0 = builder.allocQubit();
   auto control1 = builder.allocQubit();
-  auto control2 = builder.allocQubit();
   auto target = builder.allocQubit();
   builder.crx(0.25, control0, target);
   builder.mcrx(0.5, {control0, control1}, target);
-  builder.mcrx(0.75, {control0, control1, control2}, target);
   auto module = builder.finalize();
 
   ASSERT_TRUE(module);
@@ -498,9 +487,19 @@ TEST_F(QCToQIRBaseNativeTest, SelectsControlledSpecializationsByArity) {
   ASSERT_TRUE(succeeded(verify(*module)));
   EXPECT_TRUE(module->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_CRX));
   EXPECT_TRUE(module->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_CCRX));
-  EXPECT_TRUE(module->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_RX_CTL));
-  EXPECT_TRUE(module->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_ARRAY_CREATE));
-  EXPECT_TRUE(module->lookupSymbol<LLVM::LLVMFuncOp>(qir::QIR_TUPLE_CREATE));
+}
+
+TEST_F(QCToQIRBaseNativeTest, RejectsRuntimeControlArrays) {
+  qc::QCProgramBuilder builder(&context);
+  builder.initialize();
+  auto control0 = builder.allocQubit();
+  auto control1 = builder.allocQubit();
+  auto control2 = builder.allocQubit();
+  auto target = builder.allocQubit();
+  builder.mcrx(0.75, {control0, control1, control2}, target);
+  auto module = builder.finalize();
+  ASSERT_TRUE(module);
+  EXPECT_TRUE(failed(runQCToQIRBaseConversion(*module)));
 }
 
 TEST_F(QCToQIRBaseNativeTest, RejectsHelperLocalClassicalResources) {
@@ -681,7 +680,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsNonMeasurementStoreAfterMeasurement) {
                                    "stores to returned CBit registers");
 }
 
-TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedIntegerMemref) {
+TEST_F(QCToQIRBaseNativeTest, RejectsClassicalMemrefOutput) {
   qc::QCProgramBuilder builder(&context);
   builder.initialize();
   const auto type = MemRefType::get({1}, builder.getI8Type());
@@ -690,7 +689,7 @@ TEST_F(QCToQIRBaseNativeTest, RejectsUnsupportedIntegerMemref) {
   auto module = builder.finalize(memref);
   ASSERT_TRUE(module);
 
-  expectConversionFailure(*module, "only supports generic memrefs for");
+  expectConversionFailure(*module, "QIR entry return supports only");
 }
 
 TEST_F(QCToQIRBaseNativeTest, RejectsDynamicClassicalRegisterIndex) {

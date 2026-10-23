@@ -19,12 +19,15 @@
 #include "mqt/Dialect/QC/IR/QCOps.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
 
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
@@ -34,8 +37,13 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -86,8 +94,9 @@ LogicalResult LoweringState::ensureAllocationMode(AllocationMode requested,
 }
 
 void registerQIRClassicalTensorDialects(DialectRegistry& registry) {
-  registry.insert<bufferization::BufferizationDialect, memref::MemRefDialect,
-                  tensor::TensorDialect>();
+  registry.insert<affine::AffineDialect, bufferization::BufferizationDialect,
+                  memref::MemRefDialect, scf::SCFDialect, tensor::TensorDialect,
+                  linalg::LinalgDialect>();
   arith::registerBufferizableOpInterfaceExternalModels(registry);
   tensor::registerBufferizableOpInterfaceExternalModels(registry);
 }
@@ -105,12 +114,62 @@ LogicalResult finalizeQIRConversion(ModuleOp moduleOp, ConversionTarget& target,
     return failure();
   }
 
+  if (moduleOp
+          .walk([](Operation* op) {
+            if (isa<memref::AllocOp, memref::DeallocOp, memref::ReallocOp>(
+                    op)) {
+              op->emitError("QIR classical storage requires stack allocation");
+              return WalkResult::interrupt();
+            }
+            if (auto alloca = dyn_cast<memref::AllocaOp>(op);
+                alloca && !alloca.getType().hasStaticShape()) {
+              op->emitError(
+                  "QIR classical stack storage requires a static shape");
+              return WalkResult::interrupt();
+            }
+            return WalkResult::advance();
+          })
+          .wasInterrupted()) {
+    return failure();
+  }
+
+  // Keep contiguous copies for LLVM memcpy; lower strided copies without
+  // introducing the MLIR runner's memrefCopy runtime dependency.
+  if (moduleOp
+          .walk([](memref::CopyOp copy) {
+            auto sourceType = dyn_cast<MemRefType>(copy.getSource().getType());
+            auto targetType = dyn_cast<MemRefType>(copy.getTarget().getType());
+            if (!sourceType || !targetType ||
+                (memref::isStaticShapeAndContiguousRowMajor(sourceType) &&
+                 memref::isStaticShapeAndContiguousRowMajor(targetType))) {
+              return WalkResult::advance();
+            }
+            IRRewriter rewriter(copy.getContext());
+            rewriter.setInsertionPoint(copy);
+            auto structuredCopy = linalg::CopyOp::create(
+                rewriter, copy.getLoc(), copy.getSource(), copy.getTarget());
+            if (failed(linalg::linalgOpToLoops(rewriter, structuredCopy))) {
+              copy.emitError("could not lower strided copy to loops");
+              return WalkResult::interrupt();
+            }
+            rewriter.eraseOp(structuredCopy);
+            rewriter.eraseOp(copy);
+            return WalkResult::advance();
+          })
+          .wasInterrupted()) {
+    return failure();
+  }
+
   RewritePatternSet patterns(ctx);
-  target.addIllegalDialect<arith::ArithDialect, cf::ControlFlowDialect,
-                           math::MathDialect, memref::MemRefDialect,
-                           tensor::TensorDialect,
+  target.addIllegalDialect<affine::AffineDialect, arith::ArithDialect,
+                           cf::ControlFlowDialect, math::MathDialect,
+                           memref::MemRefDialect, scf::SCFDialect,
+                           linalg::LinalgDialect, tensor::TensorDialect,
                            bufferization::BufferizationDialect>();
   LLVMTypeConverter memoryTypeConverter(ctx);
+  populateSCFToControlFlowConversionPatterns(patterns);
+  memref::populateExpandStridedMetadataPatterns(patterns);
+  populateAffineToStdConversionPatterns(patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(memoryTypeConverter, patterns);
   cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
   arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
@@ -590,11 +649,9 @@ LogicalResult prepareClassicalResults(Operation* moduleOp, LoweringState& state,
 
   funcOp.walk([&](memref::AllocOp allocOp) {
     const auto type = allocOp.getType();
-    if (type.getRank() != 1 || !isa<QubitType>(type.getElementType())) {
+    if (isa<QubitType>(type.getElementType()) && type.getRank() != 1) {
       allocOp.emitError(
-          "QIR conversion only supports generic memrefs for "
-          "one-dimensional qc.qubit registers; use CBit for classical "
-          "registers");
+          "QIR conversion only supports one-dimensional qc.qubit registers");
       hasInvalidMemory = true;
     }
   });

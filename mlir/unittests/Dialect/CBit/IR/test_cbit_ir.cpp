@@ -19,6 +19,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -48,7 +49,7 @@ protected:
   void SetUp() override {
     DialectRegistry registry;
     registry.insert<arith::ArithDialect, cbit::CBitDialect, func::FuncDialect,
-                    mqt::MQTDialect>();
+                    mqt::MQTDialect, scf::SCFDialect>();
     context = std::make_unique<MLIRContext>(registry);
     context->loadAllAvailableDialects();
   }
@@ -302,42 +303,33 @@ TEST_F(CBitIRTest, RemovesWriteOnlyRegistersAndPreservesEffectfulProducers) {
   EXPECT_TRUE(producer.getResult(0).use_empty());
 }
 
-TEST_F(CBitIRTest, ForwardsStraightLineStoresAndZeroInitialization) {
+TEST_F(CBitIRTest, ForwardsStoresAndZeroInitialization) {
   auto moduleOp = parse(R"mlir(
     module {
-      func.func @main() -> (i1, i1) {
+      func.func @main(%value: i1, %other: i1) -> (i65, i1, i1, i1) {
         %c0 = arith.constant 0 : index
         %c1 = arith.constant 1 : index
-        %true = arith.constant true
-        %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
-        %zero = cbit.load %reg[%c0] : !cbit.reg<2>
-        cbit.store %true, %reg[%c1] : !cbit.reg<2>
-        %stored = cbit.load %reg[%c1] : !cbit.reg<2>
-        return %zero, %stored : i1, i1
+        %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<65>
+        %zero = cbit.read %reg : !cbit.reg<65> -> i65
+        %bit = cbit.load %reg[%c0] : !cbit.reg<65>
+        cbit.store %value, %reg[%c0] : !cbit.reg<65>
+        cbit.store %other, %reg[%c1] : !cbit.reg<65>
+        %extra = arith.xori %value, %other : i1
+        %stored = cbit.load %reg[%c0] : !cbit.reg<65>
+        return %zero, %bit, %stored, %extra : i65, i1, i1, i1
       }
     }
   )mlir");
   ASSERT_TRUE(moduleOp);
-
   PassManager canonicalizer(context.get());
   canonicalizer.addPass(createCanonicalizerPass());
   ASSERT_TRUE(succeeded(canonicalizer.run(*moduleOp)));
 
   auto funcOp = *moduleOp->getOps<func::FuncOp>().begin();
-  EXPECT_TRUE(funcOp.getOps<cbit::AllocOp>().empty());
-  EXPECT_TRUE(funcOp.getOps<cbit::StoreOp>().empty());
-  auto returnOp = *funcOp.getOps<func::ReturnOp>().begin();
-  std::string canonicalized;
-  llvm::raw_string_ostream canonicalizedStream(canonicalized);
-  moduleOp->print(canonicalizedStream);
-  APInt zero;
-  APInt stored;
-  EXPECT_TRUE(matchPattern(returnOp.getOperand(0), m_ConstantInt(&zero)))
-      << canonicalized;
-  EXPECT_TRUE(matchPattern(returnOp.getOperand(1), m_ConstantInt(&stored)))
-      << canonicalized;
-  EXPECT_TRUE(zero.isZero());
-  EXPECT_TRUE(stored.isOne());
+  auto returned = cast<func::ReturnOp>(funcOp.front().getTerminator());
+  EXPECT_TRUE(matchPattern(returned.getOperand(0), m_Zero()));
+  EXPECT_TRUE(matchPattern(returned.getOperand(1), m_Zero()));
+  EXPECT_EQ(returned.getOperand(2), funcOp.getArgument(0));
 }
 
 TEST_F(CBitIRTest, DoesNotForwardAcrossAnAmbiguousStore) {
@@ -366,5 +358,95 @@ TEST_F(CBitIRTest, DoesNotForwardAcrossAnAmbiguousStore) {
   auto returnOp = *funcOp.getOps<func::ReturnOp>().begin();
   EXPECT_TRUE(returnOp.getOperand(0).getDefiningOp<cbit::LoadOp>());
   EXPECT_TRUE(returnOp.getOperand(1).getDefiningOp<arith::CmpIOp>());
+}
+
+TEST_F(CBitIRTest, ReusesSnapshotsAcrossPureOperations) {
+  auto moduleOp = parse(R"mlir(
+    module {
+      func.func @load(%reg: !cbit.reg<2>, %index: index, %other: i1) -> (i1, i1, i1) {
+        %first = cbit.load %reg[%index] : !cbit.reg<2>
+        %extra = arith.xori %first, %other : i1
+        %second = cbit.load %reg[%index] : !cbit.reg<2>
+        return %first, %second, %extra : i1, i1, i1
+      }
+      func.func @read(%reg: !cbit.reg<65>, %other: i65) -> (i65, i65, i65) {
+        %first = cbit.read %reg : !cbit.reg<65> -> i65
+        %extra = arith.xori %first, %other : i65
+        %second = cbit.read %reg : !cbit.reg<65> -> i65
+        return %first, %second, %extra : i65, i65, i65
+      }
+      func.func @single_bit(%reg: !cbit.reg<1>, %value: i1, %other: i1) -> (i1, i1, i1) {
+        %c0 = arith.constant 0 : index
+        cbit.store %value, %reg[%c0] : !cbit.reg<1>
+        %snapshot = cbit.read %reg : !cbit.reg<1> -> i1
+        cbit.write %other, %reg : i1, !cbit.reg<1>
+        %extra = arith.xori %value, %other : i1
+        %loaded = cbit.load %reg[%c0] : !cbit.reg<1>
+        return %snapshot, %loaded, %extra : i1, i1, i1
+      }
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+  PassManager canonicalizer(context.get());
+  canonicalizer.addPass(createCanonicalizerPass());
+  ASSERT_TRUE(succeeded(canonicalizer.run(*moduleOp)));
+
+  for (auto funcOp : moduleOp->getOps<func::FuncOp>()) {
+    SCOPED_TRACE(funcOp.getSymName().str());
+    auto returned = cast<func::ReturnOp>(funcOp.front().getTerminator());
+    if (funcOp.getSymName() == "single_bit") {
+      EXPECT_EQ(returned.getOperand(0), funcOp.getArgument(1));
+      EXPECT_EQ(returned.getOperand(1), funcOp.getArgument(2));
+    } else {
+      EXPECT_EQ(returned.getOperand(0), returned.getOperand(1));
+    }
+  }
+}
+
+TEST_F(CBitIRTest, PreservesReadsAcrossPotentialWrites) {
+  auto moduleOp = parse(R"mlir(
+    module {
+      func.func private @mutate(!cbit.reg<1>)
+      func.func @call(%reg: !cbit.reg<1>, %value: i1) -> (i1, i1) {
+        %c0 = arith.constant 0 : index
+        cbit.store %value, %reg[%c0] : !cbit.reg<1>
+        func.call @mutate(%reg) : (!cbit.reg<1>) -> ()
+        %bit = cbit.load %reg[%c0] : !cbit.reg<1>
+        %whole = cbit.read %reg : !cbit.reg<1> -> i1
+        return %bit, %whole : i1, i1
+      }
+      func.func @region(%reg: !cbit.reg<1>, %condition: i1, %value: i1) -> (i1, i1) {
+        %c0 = arith.constant 0 : index
+        cbit.store %value, %reg[%c0] : !cbit.reg<1>
+        scf.if %condition {
+          cbit.store %condition, %reg[%c0] : !cbit.reg<1>
+        }
+        %bit = cbit.load %reg[%c0] : !cbit.reg<1>
+        %whole = cbit.read %reg : !cbit.reg<1> -> i1
+        return %bit, %whole : i1, i1
+      }
+      func.func @alias(%reg: !cbit.reg<1>, %other: !cbit.reg<1>, %value: i1, %changed: i1) -> (i1, i1) {
+        %c0 = arith.constant 0 : index
+        cbit.store %value, %reg[%c0] : !cbit.reg<1>
+        cbit.store %changed, %other[%c0] : !cbit.reg<1>
+        %bit = cbit.load %reg[%c0] : !cbit.reg<1>
+        %whole = cbit.read %reg : !cbit.reg<1> -> i1
+        return %bit, %whole : i1, i1
+      }
+    }
+  )mlir");
+  ASSERT_TRUE(moduleOp);
+  PassManager canonicalizer(context.get());
+  canonicalizer.addPass(createCanonicalizerPass());
+  ASSERT_TRUE(succeeded(canonicalizer.run(*moduleOp)));
+
+  for (auto funcOp : moduleOp->getOps<func::FuncOp>()) {
+    if (!funcOp.isDeclaration()) {
+      SCOPED_TRACE(funcOp.getSymName().str());
+      auto returned = cast<func::ReturnOp>(funcOp.front().getTerminator());
+      EXPECT_TRUE(returned.getOperand(0).getDefiningOp<cbit::LoadOp>());
+      EXPECT_EQ(returned.getOperand(0), returned.getOperand(1));
+    }
+  }
 }
 } // namespace

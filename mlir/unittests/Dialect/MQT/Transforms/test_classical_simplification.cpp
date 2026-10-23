@@ -85,18 +85,18 @@ TEST_F(ClassicalSimplificationTest, ForwardsStoredBitAcrossReadOnlySnapshot) {
   EXPECT_TRUE(returned.getOperand(1).getDefiningOp<cbit::ReadOp>());
 }
 
-TEST_F(ClassicalSimplificationTest, DoesNotForwardAcrossWholeRegisterWrite) {
+TEST_F(ClassicalSimplificationTest, WholeRegisterWriteReplacesStoredBits) {
   auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @test(%value: i2) -> (i1, i2) {
+      func.func @test(%value: i65) -> (i1, i65) {
         %c0 = arith.constant 0 : index
         %true = arith.constant true
-        %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
-        cbit.store %true, %reg[%c0] : !cbit.reg<2>
-        cbit.write %value, %reg : i2, !cbit.reg<2>
-        %snapshot = cbit.read %reg : !cbit.reg<2> -> i2
-        %bit = cbit.load %reg[%c0] : !cbit.reg<2>
-        return %bit, %snapshot : i1, i2
+        %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<65>
+        cbit.store %true, %reg[%c0] : !cbit.reg<65>
+        cbit.write %value, %reg : i65, !cbit.reg<65>
+        %snapshot = cbit.read %reg : !cbit.reg<65> -> i65
+        %bit = cbit.load %reg[%c0] : !cbit.reg<65>
+        return %bit, %snapshot : i1, i65
       }
     }
   )mlir",
@@ -110,7 +110,7 @@ TEST_F(ClassicalSimplificationTest, DoesNotForwardAcrossWholeRegisterWrite) {
   auto returned =
       cast<func::ReturnOp>(function.getBody().front().getTerminator());
   EXPECT_TRUE(returned.getOperand(0).getDefiningOp<cbit::LoadOp>());
-  EXPECT_TRUE(returned.getOperand(1).getDefiningOp<cbit::ReadOp>());
+  EXPECT_EQ(returned.getOperand(1), function.getArgument(0));
 }
 
 TEST_F(ClassicalSimplificationTest,

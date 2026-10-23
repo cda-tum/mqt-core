@@ -10,10 +10,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from qiskit_support import supports_qiskit_translation
 
-from mqt.core.mlir import JeffProgram, QCProgram
+from mqt.core.mlir import JeffProgram, QCProgram, sample
+
+if TYPE_CHECKING:
+    from qiskit import QuantumCircuit
+
+    from mqt.core.mlir import OpenQASMProgram
 
 
 def _program(width: int, body: str, result_width: int, initial: int) -> QCProgram:
@@ -39,25 +46,24 @@ module {{
 """)
 
 
-def _observe(program: QCProgram, width: int) -> int:
-    qco = program.to_qco(copy=True)
+def _observe(program: QCProgram | QuantumCircuit | OpenQASMProgram | JeffProgram, width: int) -> int:
     try:
-        counts = qco.sample(shots=1, seed=1)
+        counts = sample(program, shots=1, seed=1)
     except ValueError as error:
-        pytest.fail(f"{error}\n{qco}")
+        pytest.fail(f"{error}\n{program}")
     bits = next(iter(counts)).replace(" ", "")
     return int(bits[:width], 2)
 
 
 def _check_paths(program: QCProgram, width: int, expected: int) -> None:
     assert _observe(program, width) == expected
-    restored_qasm = QCProgram.from_openqasm_str(program.to_openqasm3().source)
+    restored_qasm = program.to_openqasm3()
     assert _observe(restored_qasm, width) == expected
     jeff = program.to_qco(copy=True).to_jeff()
-    restored_jeff = JeffProgram.from_bytes(jeff.to_bytes()).to_qco().to_qc()
+    restored_jeff = JeffProgram.from_bytes(jeff.to_bytes())
     assert _observe(restored_jeff, width) == expected
     if supports_qiskit_translation():
-        assert _observe(QCProgram.from_qiskit(program.to_qiskit(copy=True)), width) == expected
+        assert _observe(program.to_qiskit(copy=True), width) == expected
 
 
 @pytest.mark.parametrize("width", [1, 3, 8, 9, 32, 64])
@@ -195,7 +201,7 @@ module {{
             program.cleanup()
         assert _observe(program, 1) == 1
         jeff = program.to_qco(copy=True).to_jeff()
-        restored = JeffProgram.from_bytes(jeff.to_bytes()).to_qco().to_qc()
+        restored = JeffProgram.from_bytes(jeff.to_bytes())
         assert _observe(restored, 1) == 1
 
 

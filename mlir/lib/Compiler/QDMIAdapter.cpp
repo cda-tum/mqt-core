@@ -15,8 +15,6 @@
 #include "mqt/Target/QIR/Export.h"
 #include "qdmi/QDMI.hpp"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -634,105 +632,23 @@ qdmiFormatForPayload(const PayloadSpecification& payload) {
   }
 }
 
-/// Optional QIR module flags and their payload capability IDs.
-constexpr std::array QIR_OPTIONAL_CAPABILITIES{
-    std::pair{"dynamic_qubit_management", "qir.dynamic-qubit-management"},
-    std::pair{"dynamic_result_management", "qir.dynamic-result-management"},
-    std::pair{"arrays", "qir.arrays"},
-    std::pair{"ir_functions", "qir.ir-functions"},
-    std::pair{"multiple_return_points", "qir.multiple-return-points"},
-    std::pair{"int_computations", "qir.int-computations"},
-    std::pair{"float_computations", "qir.float-computations"},
-    std::pair{"multiple_target_branching", "multiway-branching"},
-};
-
-static llvm::Error
-validateQIRCapabilities(ModuleOp moduleOp,
-                        const PayloadSpecification& payload) {
-  auto optionalFeatures = llvm::ArrayRef(QIR_OPTIONAL_CAPABILITIES);
-  for (auto flags : moduleOp.getOps<LLVM::ModuleFlagsOp>()) {
-    for (auto attribute : flags.getFlags()) {
-      const auto flag = cast<LLVM::ModuleFlagAttr>(attribute);
-      const auto key = flag.getKey().getValue();
-      const auto* const feature =
-          llvm::find_if(optionalFeatures,
-                        [&](const auto& entry) { return key == entry.first; });
-      if (feature == optionalFeatures.end()) {
-        continue;
-      }
-      if (const auto value = dyn_cast<IntegerAttr>(flag.getValue());
-          value && value.getValue().isZero()) {
-        continue;
-      }
-      const auto* const capability =
-          llvm::find_if(payload.capabilities(), [&](const auto& entry) {
-            return entry.id == feature->second;
-          });
-      if (capability != payload.capabilities().end() &&
-          capability->value == 0 &&
-          (capability->id == ProgramCapability::MULTIWAY_BRANCHING ||
-           capability->constraints.empty())) {
-        continue;
-      }
-      return llvm::createStringError(
-          std::make_error_code(std::errc::invalid_argument),
-          llvm::Twine("Selected QIR payload requires capability '") +
-              feature->second +
-              "' that the device contract does not permit; select another "
-              "supported program_format");
-    }
-  }
-  return llvm::Error::success();
-}
-
 llvm::Expected<PayloadSpecification>
 payloadSpecificationForProgramFormat(QDMI_Program_Format format) {
+  const auto encoding = qdmi::isBinaryProgramFormat(format)
+                            ? PayloadEncoding::Binary
+                            : PayloadEncoding::Text;
   switch (format) {
   case QDMI_PROGRAM_FORMAT_QASM3:
-    return PayloadSpecification::create(
-        {
-            .id = "openqasm",
-            .version = "3.1.0",
-            .profile = "",
-            .encoding = PayloadEncoding::Text,
-        },
-        {
-            {.id = ProgramCapability::FORWARD_BRANCHING.str()},
-            {.id = ProgramCapability::COUNTED_ITERATION.str()},
-            {.id = ProgramCapability::CONDITIONAL_LOOP.str()},
-            {.id = ProgramCapability::MULTIWAY_BRANCHING.str()},
-        });
+    return PayloadSpecification::forProgramFormat(ProgramFormat::OpenQASM3,
+                                                  encoding);
   case QDMI_PROGRAM_FORMAT_QIRBASEMODULE:
   case QDMI_PROGRAM_FORMAT_QIRBASESTRING:
-    return PayloadSpecification::create({
-        .id = "qir",
-        .version = "2.1.0",
-        .profile = "base",
-        .encoding = format == QDMI_PROGRAM_FORMAT_QIRBASEMODULE
-                        ? PayloadEncoding::Binary
-                        : PayloadEncoding::Text,
-    });
+    return PayloadSpecification::forProgramFormat(ProgramFormat::QIRBase,
+                                                  encoding);
   case QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE:
-  case QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING: {
-    std::vector<ProgramCapability> capabilities{
-        {.id = ProgramCapability::FORWARD_BRANCHING.str()},
-        {.id = ProgramCapability::COUNTED_ITERATION.str()},
-        {.id = ProgramCapability::CONDITIONAL_LOOP.str()},
-    };
-    for (const auto& [flag, id] : QIR_OPTIONAL_CAPABILITIES) {
-      capabilities.push_back({.id = id});
-    }
-    return PayloadSpecification::create(
-        {
-            .id = "qir",
-            .version = "2.1.0",
-            .profile = "adaptive",
-            .encoding = format == QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE
-                            ? PayloadEncoding::Binary
-                            : PayloadEncoding::Text,
-        },
-        std::move(capabilities));
-  }
+  case QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING:
+    return PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive,
+                                                  encoding);
   default:
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -856,10 +772,6 @@ CompiledProgram::compile(CompilerInput&& program,
         std::make_error_code(std::errc::invalid_argument),
         "Compiled QDMI QIR requires an i64 () entry point; keep classical "
         "temporaries local or select OpenQASM 3");
-  }
-  if (auto error = validateQIRCapabilities(
-          qir.module(), environment.payloadSpecification())) {
-    return error;
   }
   if (qdmi::isBinaryProgramFormat(*format)) {
     std::string bytes;
