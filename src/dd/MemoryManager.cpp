@@ -17,6 +17,7 @@
 #include <cstring>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 
 namespace dd {
 
@@ -56,18 +57,19 @@ void MemoryManager::returnEntry(LLBase& entry) noexcept {
   stats.trackReturnedEntry();
 }
 
-void MemoryManager::reset(const bool resizeToTotal) noexcept {
-  available = nullptr;
-
+void MemoryManager::reset(const bool resizeToTotal) {
   auto numAllocations = stats.numAllocations;
-  chunks.resize(1U);
   if (resizeToTotal && chunks[0].second != stats.numAllocated * entrySize_) {
-    chunks[0] = {std::make_unique_for_overwrite<Storage>(stats.numAllocated *
-                                                         entrySize_),
-                 stats.numAllocated * entrySize_};
+    const auto totalBytes = stats.numAllocated * entrySize_;
+    auto newChunk = std::make_unique_for_overwrite<Storage>(totalBytes);
+    chunks.resize(1U);
+    chunks[0] = {std::move(newChunk), totalBytes};
     ++numAllocations;
+  } else {
+    chunks.resize(1U);
   }
 
+  available = nullptr;
   chunkIt = chunks[0].first.get();
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   chunkEndIt = chunks[0].first.get() + chunks[0].second;

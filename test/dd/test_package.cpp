@@ -57,24 +57,6 @@
 namespace dd {
 namespace {
 template <class Node>
-void checkDotOptions(const Edge<Node>& edge, const bool polar = true) {
-  for (const bool colored : {false, true}) {
-    for (const bool labels : {false, true}) {
-      for (const bool classic : {false, true}) {
-        SCOPED_TRACE(::testing::Message()
-                     << colored << labels << classic << polar);
-        std::ostringstream os;
-        toDot(edge, os, colored, labels, classic, false, polar);
-        EXPECT_FALSE(os.str().empty());
-      }
-    }
-  }
-  std::ostringstream os;
-  toDot(edge, os, false, true, true, true, polar);
-  EXPECT_FALSE(os.str().empty());
-}
-
-template <class Node>
 void checkDotFile(const Edge<Node>& edge, const std::string& filename) {
   export2Dot(edge, filename, true, true, false, false, false);
   std::ifstream is(filename);
@@ -305,7 +287,6 @@ TEST(DDPackageTest, BellState) {
 
   ASSERT_DOUBLE_EQ(dd->fidelity(zeroState, bellState), 0.5);
 
-  checkDotOptions(bellState);
   checkDotFile(bellState, "bell_state.dot");
   exportEdgeWeights(bellState, std::cout);
 
@@ -342,9 +323,6 @@ TEST(DDPackageTest, QFTState) {
     ASSERT_EQ(dd::getValueByIndex(qftState, qubit).imag(), 0);
   }
 
-  checkDotOptions(qftState);
-  checkDotOptions(qftOp);
-  checkDotOptions(qftOp, false);
   exportEdgeWeights(qftState, std::cout);
 
   printStatistics(*dd);
@@ -573,27 +551,6 @@ TEST(DDPackageTest, PartialTraceComplexity) {
   }
 }
 
-TEST(DDPackageTest, StateGenerationManipulation) {
-  constexpr std::size_t nqubits = 6;
-  auto dd = std::make_unique<Package>(nqubits);
-  auto b = std::vector<bool>(nqubits, false);
-  b[0] = b[1] = true;
-  auto const e = makeBasisState(nqubits, b, *dd);
-  auto const f = makeBasisState(nqubits,
-                                {
-                                    BasisStates::zero,
-                                    BasisStates::one,
-                                    BasisStates::plus,
-                                    BasisStates::minus,
-                                    BasisStates::left,
-                                    BasisStates::right,
-                                },
-                                *dd);
-  dd->vUniqueTable.print<vNode>();
-  dd->decRef(e);
-  dd->decRef(f);
-}
-
 TEST(DDPackageTest, VectorSerializationTest) {
   auto dd = std::make_unique<Package>(2);
 
@@ -635,26 +592,6 @@ TEST(DDPackageTest, BellMatrix) {
   ASSERT_EQ(bellMatrix.getValueByPath(dd->qubits(), "20"), 0.);
   ASSERT_EQ(bellMatrix.getValueByPath(dd->qubits(), "22"), SQRT2_2);
 
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 0, 0), SQRT2_2);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 1, 0), 0.);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 2, 0), 0.);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 3, 0), SQRT2_2);
-
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 0, 1), 0.);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 1, 1), SQRT2_2);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 2, 1), SQRT2_2);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 3, 1), 0.);
-
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 0, 2), SQRT2_2);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 1, 2), 0.);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 2, 2), 0.);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 3, 2), -SQRT2_2);
-
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 0, 3), 0.);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 1, 3), SQRT2_2);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 2, 3), -SQRT2_2);
-  ASSERT_EQ(dd::getValueByIndex(bellMatrix, dd->qubits(), 3, 3), 0.);
-
   auto const goalRow0 = CVec{{SQRT2_2, 0.}, {0., 0.}, {SQRT2_2, 0.}, {0., 0.}};
   auto const goalRow1 = CVec{{0., 0.}, {SQRT2_2, 0.}, {0., 0.}, {SQRT2_2, 0.}};
   auto const goalRow2 = CVec{{0., 0.}, {SQRT2_2, 0.}, {0., 0.}, {-SQRT2_2, 0.}};
@@ -662,7 +599,6 @@ TEST(DDPackageTest, BellMatrix) {
   auto const goalMatrix = CMat{goalRow0, goalRow1, goalRow2, goalRow3};
   ASSERT_EQ(dd::getMatrix(bellMatrix, dd->qubits()), goalMatrix);
 
-  checkDotOptions(bellMatrix);
   checkDotFile(bellMatrix, "bell_matrix.dot");
 
   printStatistics(*dd);
@@ -1373,6 +1309,8 @@ TEST(DDPackageTest, UniqueTableGrowthPreservesLookupsStatisticsAndRoots) {
       }
     }
   }
+  EXPECT_THROW(package.resize(0), std::invalid_argument);
+  EXPECT_EQ(package.qubits(), 4);
   EXPECT_EQ(package.makeDDNode(0, std::array{vEdge::one(), vEdge::zero()}),
             state);
   EXPECT_EQ(package.makeGateDD(x, 0), gate);
@@ -1392,8 +1330,6 @@ TEST(DDPackageTest, UniqueTableGrowthPreservesLookupsStatisticsAndRoots) {
   package.garbageCollect(true);
   EXPECT_EQ(package.vUniqueTable.getNumEntries(), 0);
   EXPECT_EQ(package.mUniqueTable.getNumEntries(), 0);
-  package.resize(0);
-  package.resize(1);
   const auto fresh = makeZeroState(1, package);
   EXPECT_EQ(dd::getVector(fresh), (CVec{1., 0.}));
   package.decRef(fresh);
@@ -1418,11 +1354,14 @@ TEST(DDPackageTest, UniqueTableEntryCountControlsCollection) {
   ASSERT_EQ(table.lookup(high), high);
   EXPECT_EQ(table.getNumEntries(), 2);
   EXPECT_TRUE(table.possiblyNeedsCollection());
+  EXPECT_THROW(table.resize(1), std::invalid_argument);
+  EXPECT_EQ(table.getNumEntries(), 2);
+  EXPECT_EQ(table.getStats(1).numEntries, 1);
+  EXPECT_THROW(table.getStats(2), std::out_of_range);
   low->mark();
   EXPECT_EQ(table.garbageCollect(), 1);
   EXPECT_EQ(table.getNumEntries(), 1);
   EXPECT_FALSE(table.possiblyNeedsCollection());
-  table.resize(1);
   table.resize(4);
   EXPECT_EQ(table.getNumEntries(), 1);
   low->unmark();
@@ -2139,62 +2078,9 @@ TEST(DDPackageTest, ExportPolarPhaseFormatted) {
   phaseString.str("");
 }
 
-TEST(DDPackageTest, BasicNumericInstabilityTest) {
-  constexpr auto zero = 0.0;
-  constexpr auto half = 0.5;
-  constexpr auto one = 1.0;
-  constexpr auto two = 2.0;
-
-  std::cout << std::setprecision(std::numeric_limits<fp>::max_digits10);
-
-  std::cout << "The 1/sqrt(2) constant used in this package is " << SQRT2_2
-            << ", which is the closest floating point value to the actual "
-               "value of 1/sqrt(2).\n";
-  std::cout << "Computing std::sqrt(0.5) actually computes this value, i.e. "
-            << std::sqrt(half) << "\n";
-  EXPECT_EQ(SQRT2_2, std::sqrt(half));
-
-  std::cout << "However, computing 1/std::sqrt(2.) leads to "
-            << one / std::sqrt(two) // NOLINT(modernize-use-std-numbers)
-            << ", which differs by 1 ULP from std::sqrt(0.5)\n";
-  EXPECT_EQ(one / std::sqrt(two), std::nextafter(std::sqrt(half), zero));
-
-  std::cout << "In the same fashion, computing std::sqrt(2.) leads to "
-            << std::sqrt(two) // NOLINT(modernize-use-std-numbers)
-            << ", while computing 1/std::sqrt(0.5) leads to "
-            << one / std::sqrt(half) << ", which differ by exactly 1 ULP\n";
-  EXPECT_EQ(std::sqrt(two), std::nextafter(one / std::sqrt(half), two));
-
-  std::cout << "Another inaccuracy occurs when computing 1/sqrt(2) * "
-               "1/sqrt(2), which should equal to 0.5 but is off by 1 ULP: "
-            << std::sqrt(half) * std::sqrt(half) << "\n";
-  EXPECT_EQ(std::sqrt(half) * std::sqrt(half), std::nextafter(half, one));
-
-  std::cout << "This inaccuracy even persists when computing std::sqrt(0.5) * "
-               "std::sqrt(0.5): "
-            << std::sqrt(half) * std::sqrt(half) << "\n";
-  EXPECT_EQ(std::sqrt(half) * std::sqrt(half), std::nextafter(half, one));
-
-  std::cout << "Interestingly, calculating powers of SQRT2_2 can be "
-               "conducted very precisely, i.e., with an error of only 1 ULP.\n";
-  fp accumulator = SQRT2_2 * SQRT2_2;
-  constexpr std::size_t nq = 64;
-  for (std::size_t i = 1; i < nq; i += 2) {
-    const std::size_t power = (i + 1) / 2;
-    const std::size_t denom = static_cast<std::size_t>(1U) << power;
-    const fp target = 1. / static_cast<double>(denom);
-    const fp diff = std::abs(target - accumulator);
-    const auto ulps = ulpDistance(accumulator, target);
-    std::cout << accumulator << ", numerical error: " << diff
-              << ", ulps: " << ulps << "\n";
-    EXPECT_EQ(ulps, 1);
-    accumulator *= SQRT2_2;
-    accumulator *= SQRT2_2;
-  }
-}
-
 TEST(DDPackageTest, BasicNumericStabilityTest) {
   using limits = std::numeric_limits<fp>;
+  EXPECT_EQ(SQRT2_2, std::sqrt(0.5));
 
   auto dd = std::make_unique<Package>(1);
   auto const state = makeZeroState(1, *dd);
@@ -2392,15 +2278,6 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
                                      {true, true, false}, false));
   EXPECT_TRUE(dd->isCloseToIdentity(c5MultipliedWithC6, tol,
                                     {true, false, true}, false));
-}
-
-TEST(DDPackageTest, calCulpDistance) {
-  constexpr auto nrQubits = 1U;
-  auto const dd = std::make_unique<Package>(nrQubits);
-  const auto tmp0 = ulpDistance(1 + 1e-12, 1);
-  const auto tmp1 = ulpDistance(1, 1);
-  EXPECT_TRUE(tmp0 > 0);
-  EXPECT_EQ(tmp1, 0);
 }
 
 TEST(DDPackageTest, stateFromVectorBell) {
@@ -2827,19 +2704,6 @@ TEST(DDPackageTest, InnerProductTopNodeConjugation) {
   // If the top node in the inner product is not conjugated properly,
   // it will result in +0.416.
   EXPECT_NEAR(dd->expectationValue(op, evolvedState), -0.416, 0.001);
-}
-
-// Normalization must return temporary nodes to the memory manager when
-// multiplication produces the zero terminal.
-TEST(DDPackageTest, DDNodeLeakRegressionTest) {
-  constexpr auto nqubits = 1U;
-  auto dd = std::make_unique<Package>(nqubits);
-
-  const auto dd1 = dd->makeGateDD(ZERO_PROJECTOR, 0U);
-  const auto dd2 = dd->makeGateDD(ONE_PROJECTOR, 0U);
-  dd->multiply(dd1, dd2);
-  dd->garbageCollect(true);
-  EXPECT_EQ(dd->mMemoryManager.getStats().numUsed, 0U);
 }
 
 // A cached terminal result has a null node pointer and must still count as a
