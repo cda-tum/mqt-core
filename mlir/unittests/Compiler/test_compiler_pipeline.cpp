@@ -3118,19 +3118,20 @@ TEST_F(CompilerPipelineTest, ElidesTensorBackedSwapsOnAllToAllTarget) {
 
 [[nodiscard]] static std::string makeAdjacentSwapChain(const size_t qubits) {
   std::string gates;
+  llvm::raw_string_ostream stream(gates);
   for (size_t qubit = 0; qubit < qubits; ++qubit) {
     const auto wire = "q[" + std::to_string(qubit) + "]";
-    gates += "h " + wire + "; rz(" +
-             std::to_string(0.017 * static_cast<double>(qubit + 1)) + ") " +
-             wire + ";";
+    stream << "h " << wire << "; rz("
+           << std::to_string(0.017 * static_cast<double>(qubit + 1)) << ") "
+           << wire << ";";
   }
   for (size_t round = 0; round < 8; ++round) {
     for (size_t qubit = 0; qubit + 1 < qubits; ++qubit) {
       const auto first = "q[" + std::to_string(qubit) + "]";
       const auto pair = first + ", q[" + std::to_string(qubit + 1) + "]";
-      gates += "swap " + pair + "; cx " + pair + "; rz(" +
-               std::to_string(0.11 + 0.013 * static_cast<double>(round)) +
-               ") " + first + ";";
+      stream << "swap " << pair << "; cx " << pair << "; rz("
+             << std::to_string(0.11 + 0.013 * static_cast<double>(round))
+             << ") " << first << ";";
     }
   }
   return gates;
