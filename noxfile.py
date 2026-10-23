@@ -133,7 +133,7 @@ def _run_tests(
     session: nox.Session,
     *,
     install_args: Sequence[str] = (),
-    extra_commands: Sequence[Sequence[str]] = (),
+    extra_command: Sequence[str] = (),
     pytest_run_args: Sequence[str] = (),
 ) -> None:
     env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
@@ -164,8 +164,8 @@ def _run_tests(
         *install_args,
         env=env,
     )
-    for command in extra_commands:
-        session.run(*command, env=env)
+    if extra_command:
+        session.run(*extra_command, env=env)
     session.run(
         "uv",
         "run",
@@ -194,17 +194,15 @@ def catalyst_dev(session: nox.Session) -> None:
     """
     _run_tests(
         session,
-        extra_commands=[
-            [
-                "uv",
-                "pip",
-                "install",
-                "--upgrade",
-                "--index=https://test.pypi.org/simple",
-                # TestPyPI also contains stale releases of dependencies such as xdsl.
-                "--index-strategy=unsafe-best-match",
-                os.environ.get("CATALYST_WHEEL", "pennylane-catalyst>=0.16.0.dev0"),
-            ],
+        extra_command=[
+            "uv",
+            "pip",
+            "install",
+            "--upgrade",
+            "--index=https://test.pypi.org/simple",
+            # TestPyPI also contains stale releases of dependencies such as xdsl.
+            "--index-strategy=unsafe-best-match",
+            os.environ.get("CATALYST_WHEEL", "pennylane-catalyst>=0.16.0.dev0"),
         ],
         pytest_run_args=["test/python/plugins/qdmi_pennylane"],
     )
@@ -229,7 +227,7 @@ def qiskit_compat(session: nox.Session, qiskit_minor: str) -> None:
     """Test compiler integration against older supported Qiskit minors."""
     _run_tests(
         session,
-        extra_commands=[["uv", "pip", "install", "--upgrade-package", "qiskit", f"qiskit~={qiskit_minor}.0"]],
+        extra_command=["uv", "pip", "install", "--upgrade-package", "qiskit", f"qiskit~={qiskit_minor}.0"],
         pytest_run_args=[
             "test/python/test_mlir_qiskit_translation.py",
             "test/python/test_mlir_qiskit_target.py",
