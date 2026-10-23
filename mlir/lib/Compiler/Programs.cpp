@@ -232,6 +232,8 @@ static LogicalResult writeTextProgram(StringRef source,
 
 const std::string& OpenQASMProgram::source() const noexcept { return source_; }
 
+std::string OpenQASMProgram::intoSource() && { return std::move(source_); }
+
 const std::string& OpenQASMProgram::str() const noexcept { return source_; }
 
 LogicalResult OpenQASMProgram::write(const std::filesystem::path& path) const {
@@ -328,16 +330,18 @@ FailureOr<QCProgram> QCProgram::fromModule(std::shared_ptr<MLIRContext> context,
 QCProgram QCProgram::copy() const { return QCProgram(cloneStorage()); }
 
 FailureOr<QCOProgram> QCProgram::intoQCO() && {
-  PassManager pm(mod().getContext());
+  auto storage = std::move(*this).releaseStorage();
+  auto moduleOp = *storage.mod;
+  PassManager pm(moduleOp.getContext());
   pm.addPass(createQCToQCO());
-  if (failed(pm.run(mod()))) {
-    mod().emitError("failed to convert QC to QCO");
+  if (failed(pm.run(moduleOp))) {
+    moduleOp.emitError("failed to convert QC to QCO");
     return failure();
   }
-  if (failed(qco::verifyLinearity(mod()))) {
+  if (failed(qco::verifyLinearity(moduleOp))) {
     return failure();
   }
-  return QCOProgram(std::move(*this).releaseStorage());
+  return QCOProgram(std::move(storage));
 }
 
 //===----------------------------------------------------------------------===//

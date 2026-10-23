@@ -12,7 +12,6 @@
 
 #include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
-#include "mqt/Target/QIR/Export.h"
 #include "qdmi/QDMI.hpp"
 
 #include "mlir/Support/LLVM.h"
@@ -758,7 +757,7 @@ CompiledProgram::CompiledProgram(TargetEnvironment environment,
       format_(format) {}
 
 llvm::Expected<CompiledProgram>
-CompiledProgram::compile(CompilerInput&& program,
+CompiledProgram::compile(CompilerInput program,
                          const TargetEnvironment& environment,
                          const CompilationOptions& options) {
   auto format = qdmiFormatForPayload(environment.payloadSpecification());
@@ -775,13 +774,13 @@ CompiledProgram::compile(CompilerInput&& program,
             "; see compiler diagnostics for the unsupported construct or "
             "capability");
   }
-  if (const auto* qasm = std::get_if<OpenQASMProgram>(&*result)) {
-    return CompiledProgram(environment, std::string(qasm->source()), *format);
+  if (auto* qasm = std::get_if<OpenQASMProgram>(&*result)) {
+    return CompiledProgram(environment, std::move(*qasm).intoSource(), *format);
   }
-  if (const auto* json = std::get_if<IQMJSONProgram>(&*result)) {
-    return CompiledProgram(environment, json->source(), *format);
+  if (auto* json = std::get_if<IQMJSONProgram>(&*result)) {
+    return CompiledProgram(environment, std::move(*json).intoSource(), *format);
   }
-  const auto& qir = std::get<QIRProgram>(*result);
+  auto& qir = std::get<QIRProgram>(*result);
   auto entryPoint = qir::getMainFunction(qir.module());
   if (!entryPoint || entryPoint.isVarArg() ||
       entryPoint.getNumArguments() != 0 ||
@@ -794,10 +793,10 @@ CompiledProgram::compile(CompilerInput&& program,
   if (qdmi::isBinaryProgramFormat(*format)) {
     std::string bytes;
     llvm::raw_string_ostream stream(bytes);
-    if (succeeded(qir::translateQIRToBitcode(qir.module(), stream))) {
+    if (succeeded(std::move(qir).intoBitcode(stream))) {
       return CompiledProgram(environment, std::move(bytes), *format);
     }
-  } else if (auto text = qir.llvmIR(); succeeded(text)) {
+  } else if (auto text = std::move(qir).intoLLVMIR(); succeeded(text)) {
     return CompiledProgram(environment, std::move(*text), *format);
   }
   return llvm::createStringError(
@@ -806,7 +805,7 @@ CompiledProgram::compile(CompilerInput&& program,
 }
 
 llvm::Expected<CompiledProgram>
-compileProgram(CompilerInput&& program, const qdmi::Device& device,
+compileProgram(CompilerInput program, const qdmi::Device& device,
                std::optional<QDMI_Program_Format> format,
                const CompilationOptions& options) {
   auto environment = targetEnvironmentFromDevice(device, format);
@@ -868,8 +867,8 @@ submitProgram(const qdmi::Device& device, const CompiledProgram& program,
 }
 
 llvm::Expected<qdmi::Job>
-submitProgram(const qdmi::Device& device, CompilerInput&& input,
-              int64_t numShots, std::optional<QDMI_Program_Format> format,
+submitProgram(const qdmi::Device& device, CompilerInput input, int64_t numShots,
+              std::optional<QDMI_Program_Format> format,
               const std::optional<qdmi::CustomJobParameter>& custom1,
               const std::optional<qdmi::CustomJobParameter>& custom2,
               const std::optional<qdmi::CustomJobParameter>& custom3,

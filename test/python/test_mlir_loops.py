@@ -95,8 +95,8 @@ while (counter < 2) {
 }
 result = false;
 """)
-    restored = program.to_qiskit(copy=True)
     assert simulate(program)[0] == pytest.approx(1j)
+    restored = program.to_qiskit()
     assert simulate(restored)[0] == pytest.approx(1j)
 
 

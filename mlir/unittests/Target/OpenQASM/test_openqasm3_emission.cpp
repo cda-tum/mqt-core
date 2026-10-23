@@ -1565,7 +1565,8 @@ wrapper(0.25) q;
     moduleOp.walk([&](scf::ForOp) { ++loops; });
     EXPECT_EQ(loops, 2);
   };
-  for (auto moduleOp : {*original, *restored}) {
+  for (auto* ownedModule : {&original, &restored}) {
+    auto moduleOp = **ownedModule;
     checkGateStructure(moduleOp);
     EXPECT_FALSE(
         mlir::mqt::getEntryPoint(moduleOp).getOps<qc::CallOp>().empty());
@@ -1594,8 +1595,7 @@ wrapper(0.25) q;
     ASSERT_TRUE(succeeded(back.run(moduleOp)));
     ASSERT_TRUE(succeeded(verify(moduleOp)));
     checkGateStructure(moduleOp);
-    EXPECT_TRUE(succeeded(
-        qc::translateQCToOpenQASM3(OwningOpRef<ModuleOp>(moduleOp.clone()))));
+    EXPECT_TRUE(succeeded(qc::translateQCToOpenQASM3(std::move(*ownedModule))));
   }
 }
 
@@ -3191,12 +3191,13 @@ TEST(OpenQASM3EmissionTest, PreservesZeroAndMixedOutputResults) {
     MLIRContext context;
     auto original = qc::translateOpenQASMToQC(source, &context);
     ASSERT_TRUE(original);
-    auto emitted =
-        qc::translateQCToOpenQASM3(OwningOpRef<ModuleOp>(original->clone()));
+    auto originalType =
+        original->lookupSymbol<func::FuncOp>("main").getFunctionType();
+    auto emitted = qc::translateQCToOpenQASM3(std::move(original));
     ASSERT_TRUE(succeeded(emitted));
     auto restored = qc::translateOpenQASMToQC(*emitted, &context);
     ASSERT_TRUE(restored) << *emitted;
-    EXPECT_EQ(original->lookupSymbol<func::FuncOp>("main").getResultTypes(),
+    EXPECT_EQ(originalType.getResults(),
               restored->lookupSymbol<func::FuncOp>("main").getResultTypes());
   }
 }
@@ -3279,8 +3280,7 @@ TEST(OpenQASM3EmissionTest,
                                 "output bool b; b = f != 2.0;",
                                 &context);
   ASSERT_TRUE(original);
-  auto emitted =
-      qc::translateQCToOpenQASM3(OwningOpRef<ModuleOp>(original->clone()));
+  auto emitted = qc::translateQCToOpenQASM3(std::move(original));
   ASSERT_TRUE(succeeded(emitted));
   auto restored = qc::translateOpenQASMToQC(*emitted, &context);
   ASSERT_TRUE(restored);
@@ -3290,10 +3290,10 @@ TEST(OpenQASM3EmissionTest,
     ++comparisons;
   });
   EXPECT_EQ(comparisons, 1);
-  original->walk([&](arith::CmpFOp comparison) {
+  restored->walk([&](arith::CmpFOp comparison) {
     comparison.setPredicate(arith::CmpFPredicate::ONE);
   });
-  EXPECT_TRUE(failed(qc::translateQCToOpenQASM3(std::move(original))));
+  EXPECT_TRUE(failed(qc::translateQCToOpenQASM3(std::move(restored))));
 }
 
 TEST(OpenQASM3EmissionTest,

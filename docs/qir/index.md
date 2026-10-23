@@ -47,20 +47,22 @@ bit[2] result = measure q;
 
 base = compile_program(bell_qasm, output=OutputFormat.QIR_BASE)
 assert base.profile is QIRProfile.BASE
-print(base.llvm_ir)
+base_llvm = base.to_llvm_ir(copy=True)
+print(base_llvm)
 ```
 
 The returned {py:class}`~mqt.core.mlir.QIRProgram` owns the compiled program.
-Its {py:attr}`~mqt.core.mlir.QIRProgram.llvm_ir` property is an LLVM assembly
-string. The entry-point attributes identify `base_profile`, the output schema,
+Its {py:meth}`~mqt.core.mlir.QIRProgram.to_llvm_ir` method consumes it and
+returns LLVM assembly. Here, `copy=True` keeps the program for bitcode export
+below. The entry-point attributes identify `base_profile`, the output schema,
 and the required static qubit and result capacities. The module flags identify
 QIR 2.1 and whether dynamic resource management is used.
 
 For a custom pipeline, a {py:class}`~mqt.core.mlir.QCProgram` also provides
 `to_qir(QIRProfile.BASE)` and `to_qir(QIRProfile.ADAPTIVE)`. These conversions
 consume that program unless `copy=True` is set. The `compile_program` function
-copies program objects by default and runs the coordinated optimization
-pipeline.
+also consumes typed MLIR programs unless `copy=True` is set, and runs the
+coordinated optimization pipeline.
 
 ## Execute LLVM text or bitcode
 
@@ -78,7 +80,7 @@ from mqt.core.qdmi import ProgramFormat
 from mqt.core.qdmi import open_device
 
 device = open_device("mqt.ddsim.default")
-job = device.submit_job(base.llvm_ir, ProgramFormat.QIR_BASE_STRING, num_shots=256, custom1=7)
+job = device.submit_job(base_llvm, ProgramFormat.QIR_BASE_STRING, num_shots=256, custom1=7)
 assert job.wait()
 counts = job.get_counts()
 assert set(counts) <= {"00", "11"} and sum(counts.values()) == 256
@@ -100,9 +102,10 @@ print(f"Bitcode: {len(bitcode)} bytes")
 print(binary_job.get_counts())
 ```
 
-To save a program, use `base.write_bitcode("bell.bc")` for bitcode or
-`Path("bell.ll").write_text(base.llvm_ir)` for LLVM text after importing `Path`
-from `pathlib`. The command-line equivalents are:
+To save these payloads, use `Path("bell.bc").write_bytes(bitcode)` or
+`Path("bell.ll").write_text(base_llvm)` after importing `Path` from `pathlib`.
+For a program that has not yet been exported, `write_bitcode(path)` consumes it
+and writes bitcode directly. The command-line equivalents are:
 
 ```console
 mqt-cc bell.qasm --emit=qir-base -o bell.ll
@@ -137,11 +140,12 @@ to write LLVM metadata yourself. Inspect the entry-point attributes and flags:
 ```{code-cell} ipython3
 :tags: [hide-input]
 
-for line in adaptive.llvm_ir.splitlines():
+adaptive_llvm = adaptive.to_llvm_ir(copy=True)
+for line in adaptive_llvm.splitlines():
     if line.startswith(("attributes #0", "!")):
         print(line)
-assert '"qir_profiles"="adaptive_profile"' in adaptive.llvm_ir
-assert '"backwards_branching"' in adaptive.llvm_ir
+assert '"qir_profiles"="adaptive_profile"' in adaptive_llvm
+assert '"backwards_branching"' in adaptive_llvm
 ```
 
 For this program, `backwards_branching` records the conditional loop, `arrays`
@@ -159,9 +163,10 @@ supported operations, program format, and control-flow capabilities. DDSIM
 supports this Adaptive program in both encodings:
 
 ```{code-cell} ipython3
+adaptive_bitcode = adaptive.to_bitcode()
 for payload, program_format in (
-    (adaptive.llvm_ir, ProgramFormat.QIR_ADAPTIVE_STRING),
-    (adaptive.to_bitcode(), ProgramFormat.QIR_ADAPTIVE_MODULE),
+    (adaptive_llvm, ProgramFormat.QIR_ADAPTIVE_STRING),
+    (adaptive_bitcode, ProgramFormat.QIR_ADAPTIVE_MODULE),
 ):
     adaptive_job = device.submit_job(payload, program_format, num_shots=32, custom1=7)
     assert adaptive_job.wait()
@@ -224,7 +229,7 @@ its string result from `CustomProperty.CUSTOM1`:
 from mqt.core.qdmi import CustomProperty
 
 recorded_job = device.submit_job(
-    adaptive.to_bitcode(), ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=2, custom1=7, custom2=True
+    adaptive_bitcode, ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=2, custom1=7, custom2=True
 )
 assert recorded_job.wait()
 output = recorded_job.get_custom_result(CustomProperty.CUSTOM1, str)

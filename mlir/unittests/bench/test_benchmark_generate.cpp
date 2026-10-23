@@ -139,9 +139,9 @@ static void expectReference(const Shor& benchmark, const Counts& counts) {
 }
 
 template <class Benchmark>
-static void expectQIRSampling(const Benchmark& benchmark,
-                              QIRProgram& qirProgram, size_t shots) {
-  const auto bitcode = qirProgram.toBitcode();
+static void expectQIRSampling(const Benchmark& benchmark, QIRProgram qirProgram,
+                              size_t shots) {
+  const auto bitcode = std::move(qirProgram).intoBitcode();
   ASSERT_TRUE(mlir::succeeded(bitcode));
   ASSERT_FALSE(bitcode->empty());
   qir::JitSession session(
@@ -181,7 +181,8 @@ static void expectPortableExecution(const Benchmark& benchmark, size_t shots) {
   compiled = runDefaultPipeline(CompilerInput{std::move(*qc)},
                                 ProgramFormat::QIRAdaptive);
   ASSERT_TRUE(mlir::succeeded(compiled));
-  expectQIRSampling(benchmark, std::get<QIRProgram>(*compiled), shots);
+  expectQIRSampling(benchmark, std::get<QIRProgram>(std::move(*compiled)),
+                    shots);
 }
 
 TEST(GenerateProgramTest, ExecutesRuntimePhasesThroughJeffAndAdaptiveQIR) {
@@ -285,7 +286,7 @@ static void expectStaticTargetExecution(const Benchmark& benchmark) {
   ASSERT_TRUE(mlir::succeeded(compiled));
   auto& qirProgram = std::get<QIRProgram>(*compiled);
   EXPECT_EQ(qirProgram.profile(), QIRProfile::Base);
-  expectQIRSampling(benchmark, qirProgram, 2048);
+  expectQIRSampling(benchmark, std::move(qirProgram), 2048);
 
   auto qasmPayload =
       PayloadSpecification::create({.id = "openqasm", .version = "3.1"});

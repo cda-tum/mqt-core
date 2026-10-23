@@ -36,6 +36,10 @@
 #include <variant>
 #include <vector>
 
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
+
 namespace mlir {
 
 class QCProgram;
@@ -125,6 +129,7 @@ enum class ProgramFormat : uint8_t {
 /// Programs own their module and keep the context alive for its full
 /// lifetime. Dialect-changing operations consume an rvalue program, making
 /// ownership transfer explicit and avoiding expensive implicit cloning.
+/// Consuming operations invalidate the source even when they fail.
 class Program {
 public:
   Program(const Program&) = delete;
@@ -185,6 +190,9 @@ public:
   /// Return the OpenQASM source.
   [[nodiscard]] const std::string& source() const noexcept;
 
+  /// Transfer ownership of the OpenQASM source.
+  [[nodiscard]] std::string intoSource() &&;
+
   /// Return the OpenQASM source.
   [[nodiscard]] const std::string& str() const noexcept;
 
@@ -202,6 +210,9 @@ public:
 
   /// Return the IQM JSON source.
   [[nodiscard]] const std::string& source() const noexcept { return source_; }
+
+  /// Transfer ownership of the IQM JSON source.
+  [[nodiscard]] std::string intoSource() && { return std::move(source_); }
 
   /// Return the IQM JSON source.
   [[nodiscard]] const std::string& str() const noexcept { return source_; }
@@ -248,6 +259,9 @@ public:
   [[nodiscard]] static FailureOr<QCProgram>
   fromModule(std::shared_ptr<MLIRContext> context,
              OwningOpRef<ModuleOp> moduleOp);
+  // Reject implicit adoption of a borrowed module.
+  static FailureOr<QCProgram> fromModule(std::shared_ptr<MLIRContext>,
+                                         ModuleOp) = delete;
   /// Create an independent QC program copy.
   [[nodiscard]] QCProgram copy() const;
 
@@ -358,6 +372,9 @@ public:
   [[nodiscard]] static FailureOr<QCOProgram>
   fromModule(std::shared_ptr<MLIRContext> context,
              OwningOpRef<ModuleOp> moduleOp);
+  // Reject implicit adoption of a borrowed module.
+  static FailureOr<QCOProgram> fromModule(std::shared_ptr<MLIRContext>,
+                                          ModuleOp) = delete;
 
   /// Create an independent QCO program copy.
   [[nodiscard]] QCOProgram copy() const;
@@ -533,15 +550,20 @@ public:
   /// Return the selected QIR profile.
   [[nodiscard]] QIRProfile profile() const noexcept;
 
-  /// Translate this QIR MLIR program to LLVM IR text.
-  [[nodiscard]] FailureOr<std::string> llvmIR() const;
+  /// Consume this QIR program and translate it to LLVM IR text.
+  [[nodiscard]] FailureOr<std::string> intoLLVMIR() &&;
 
-  /// Translate this QIR program to LLVM bitcode in memory.
-  [[nodiscard]] FailureOr<std::vector<std::byte>> toBitcode() const;
+  /// Consume this QIR program and translate it to LLVM bitcode in memory.
+  [[nodiscard]] FailureOr<std::vector<std::byte>> intoBitcode() &&;
 
-  /// Translate and write this QIR program as LLVM bitcode.
+  /// Consume this QIR program and write verified bitcode to a stream.
+  ///
+  /// Leave the stream unchanged if translation or verification fails.
+  [[nodiscard]] LogicalResult intoBitcode(llvm::raw_ostream& output) &&;
+
+  /// Consume this QIR program and write it as LLVM bitcode.
   [[nodiscard]] LogicalResult
-  writeBitcode(const std::filesystem::path& path) const;
+  writeBitcode(const std::filesystem::path& path) &&;
 
 private:
   QIRProfile profile_;
@@ -567,7 +589,7 @@ using CompilerProgram =
 /// The supplied program is consumed. Call `copy()` before this function
 /// when the source program must remain available for another pipeline branch.
 [[nodiscard]] FailureOr<CompilerProgram>
-runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
+runDefaultPipeline(CompilerInput program, ProgramFormat output,
                    std::string_view qcoPipeline = "mqt-qco-default",
                    const CompilationOptions& options = {});
 
@@ -576,7 +598,7 @@ runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
 /// QCImport and raw QCO stop before target compilation and are not accepted.
 /// The environment must include the requested output's lowering constraints.
 [[nodiscard]] FailureOr<CompilerProgram>
-runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
+runDefaultPipeline(CompilerInput program, ProgramFormat output,
                    const TargetEnvironment& environment,
                    const CompilationOptions& options = {});
 
@@ -585,8 +607,7 @@ runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
 /// The supplied program is consumed. Call `copy()` before this function
 /// when the source program must remain available for another pipeline branch.
 [[nodiscard]] FailureOr<CompilerProgram>
-runDefaultPipeline(CompilerInput&& program,
-                   const TargetEnvironment& environment,
+runDefaultPipeline(CompilerInput program, const TargetEnvironment& environment,
                    const CompilationOptions& options = {});
 
 } // namespace mlir

@@ -39,7 +39,7 @@ def test_qaoa_reference_and_json() -> None:
 
 
 def test_qaoa_binding_and_sampling() -> None:
-    """Bind copies of one template to distinct angles and score their cuts."""
+    """Bind one template to distinct angles and score their cuts."""
     benchmark = qaoa.QAOA(qaoa.Options(qubits=4, depth=2))
     template = benchmark.generate()
     program = template.copy()
@@ -51,9 +51,8 @@ def test_qaoa_binding_and_sampling() -> None:
     assert benchmark.evaluate(counts).mean_cut == pytest.approx(3.0, abs=0.1)
 
     assert template.parameters == ["gammas", "betas"]
-    uniform = template.copy()
-    uniform.bind_parameters({"gammas": np.zeros(2), "betas": np.zeros(2)})
-    counts = sample(uniform, shots=4096, seed=17)
+    template.bind_parameters({"gammas": np.zeros(2), "betas": np.zeros(2)})
+    counts = sample(template, shots=4096, seed=17)
     assert benchmark.evaluate(counts).mean_cut == pytest.approx(2.0, abs=0.1)
 
 

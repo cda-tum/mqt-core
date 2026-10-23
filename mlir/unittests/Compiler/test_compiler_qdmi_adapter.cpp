@@ -604,8 +604,9 @@ TEST(CompilerQDMIAdapterTest,
   auto input = mlir::QCProgram::fromOpenQASMString(source);
   ASSERT_TRUE(mlir::succeeded(input));
   std::string diagnostics;
+  const auto context = input->context();
   const mlir::ScopedDiagnosticHandler handler(
-      input->context().get(), [&](mlir::Diagnostic& diagnostic) {
+      context.get(), [&](mlir::Diagnostic& diagnostic) {
         llvm::raw_string_ostream stream(diagnostics);
         diagnostic.print(stream);
         return mlir::success();
@@ -623,7 +624,7 @@ TEST(CompilerQDMIAdapterTest,
   EXPECT_NE(diagnostics.find("qir.dynamic-result-management"),
             std::string::npos);
 
-  auto mapped = input->copy().intoQCO();
+  auto mapped = std::move(*input).intoQCO();
   ASSERT_TRUE(mlir::succeeded(mapped));
   ASSERT_TRUE(mlir::succeeded(mapped->compileForTarget(restrictedEnvironment)));
   auto qc = std::move(*mapped).intoQC();
@@ -694,7 +695,7 @@ TEST(CompilerQDMIAdapterTest, DynamicQIRIndexingDoesNotRequireLoops) {
            capability.id == mlir::ProgramCapability::COUNTED_ITERATION;
   });
   EXPECT_TRUE(mlir::succeeded(mlir::runDefaultPipeline(
-      input->copy(), mlir::ProgramFormat::QIRAdaptive,
+      std::move(*input), mlir::ProgramFormat::QIRAdaptive,
       mlir::TargetEnvironment(target,
                               llvm::cantFail(mlir::PayloadSpecification::create(
                                   baseline.format(), capabilities))))));
@@ -748,7 +749,7 @@ TEST(CompilerQDMIAdapterTest, ExecutesStableRegisterHelpers) {
   ASSERT_TRUE(mlir::succeeded(program));
   auto qir = std::move(*program).intoQIR(mlir::QIRProfile::Adaptive);
   ASSERT_TRUE(mlir::succeeded(qir));
-  auto ir = qir->llvmIR();
+  auto ir = std::move(*qir).intoLLVMIR();
   ASSERT_TRUE(mlir::succeeded(ir));
   const auto device = qdmi::Session::openDevice("mqt.ddsim.default");
   auto job = device.submitJob(*ir, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, 8);
@@ -952,7 +953,7 @@ TEST(CompilerQDMIAdapterTest, EmitsOnlyAdvertisedNativeNames) {
     EXPECT_TRUE(mlir::failed(program->copy().intoOpenQASM3()));
     auto qir = std::move(*program).intoQIR(mlir::QIRProfile::Base);
     ASSERT_TRUE(mlir::succeeded(qir));
-    auto text = qir->llvmIR();
+    auto text = std::move(*qir).intoLLVMIR();
     ASSERT_TRUE(mlir::succeeded(text));
     EXPECT_NE(text->find(std::string("__quantum__qis__") + name + "__body"),
               std::string::npos);
@@ -997,7 +998,7 @@ TEST(CompilerQDMIAdapterTest, RejectsScalarProgramOutputs) {
     llvm::consumeError(compiled.takeError());
     for (const auto profile :
          {mlir::QIRProfile::Base, mlir::QIRProfile::Adaptive}) {
-      EXPECT_TRUE(mlir::failed(std::move(scalar->copy()).intoQIR(profile)));
+      EXPECT_TRUE(mlir::failed(scalar->copy().intoQIR(profile)));
     }
   }
   for (const auto width : {32, 64}) {
@@ -1066,7 +1067,7 @@ TEST(CompilerQDMIAdapterTest, SelectsNativeAliasesByOrderedPlacement) {
   operations.splice(operations.end(), references->getBody()->getOperations());
   for (int repeat = 0; repeat < 2; ++repeat) {
     ASSERT_TRUE(mlir::succeeded(qir->cleanup()));
-    auto text = qir->llvmIR();
+    auto text = qir->copy().intoLLVMIR();
     ASSERT_TRUE(mlir::succeeded(text));
     EXPECT_NE(text->find("call void @__quantum__qis__cx__body"),
               std::string::npos);

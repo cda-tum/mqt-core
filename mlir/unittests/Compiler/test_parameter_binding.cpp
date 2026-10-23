@@ -126,12 +126,12 @@ TEST(ParameterBinding, MixedArrayBindingPreservesRemainingInputs) {
             -0.125);
   qc = std::move(*qco).intoQC();
   ASSERT_TRUE(mlir::succeeded(qc));
-  EXPECT_TRUE(mlir::succeeded(qc->copy().intoOpenQASM3()));
   for (const auto profile :
        {mlir::QIRProfile::Base, mlir::QIRProfile::Adaptive}) {
     auto bound = qc->copy();
     EXPECT_TRUE(mlir::succeeded(std::move(bound).intoQIR(profile)));
   }
+  EXPECT_TRUE(mlir::succeeded(std::move(*qc).intoOpenQASM3()));
 }
 
 TEST(ParameterBinding, OnlyNamedScalarsAndStaticRankOneF64InputsAreBindable) {

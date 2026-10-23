@@ -200,7 +200,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: _CompilerTarget | None = None,
         output: Literal[OutputFormat.QC],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> QCProgram: ...
@@ -210,7 +210,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: _CompilerTarget | None = None,
         output: Literal[OutputFormat.QCO_OPTIMIZED],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> QCOProgram: ...
@@ -220,7 +220,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: None = None,
         output: Literal[OutputFormat.QC_IMPORT],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> QCProgram: ...
@@ -230,7 +230,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: None = None,
         output: Literal[OutputFormat.QCO],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> QCOProgram: ...
@@ -240,7 +240,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: _CompilerTarget | None = None,
         output: Literal[OutputFormat.OPENQASM3],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> OpenQASMProgram: ...
@@ -250,7 +250,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: _CompilerTarget,
         output: Literal[OutputFormat.IQM_JSON],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> IQMJSONProgram: ...
@@ -260,7 +260,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: _CompilerTarget | None = None,
         output: Literal[OutputFormat.JEFF],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> JeffProgram: ...
@@ -270,7 +270,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: _CompilerTarget | None = None,
         output: Literal[OutputFormat.QIR_BASE, OutputFormat.QIR_ADAPTIVE],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> QIRProgram: ...
@@ -280,7 +280,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: _CompilerTarget | None = None,
         output: Literal[OutputFormat.QISKIT],
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> qiskit.circuit.QuantumCircuit: ...
@@ -290,7 +290,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: CompilerTarget | None = None,
         output: None = None,
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> _ProgramT: ...
@@ -300,7 +300,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: CompilerTarget | None = None,
         output: None = None,
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> QCProgram | JeffProgram | OpenQASMProgram: ...
@@ -310,7 +310,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: qiskit.providers.BackendV2 | qiskit.transpiler.Target,
         output: None = None,
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> qiskit.circuit.QuantumCircuit: ...
@@ -320,7 +320,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: mqt.core.qdmi.Device | str,
         output: None = None,
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> CompiledProgram: ...
@@ -330,7 +330,7 @@ mqt\.core\.mlir\.compile_program$:
         *,
         target: _CompilerTarget | None = None,
         output: OutputFormat,
-        inplace: bool = False,
+        copy: bool = False,
         qco_pipeline: str = "mqt-qco-default",
         options: CompilationOptions = ...,
     ) -> _CompilerOutput:

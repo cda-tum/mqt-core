@@ -81,7 +81,7 @@ class CompiledProgram {
 public:
   /// Compile and serialize for one selected hardware/payload contract.
   [[nodiscard]] static llvm::Expected<CompiledProgram>
-  compile(CompilerInput&& program, const TargetEnvironment& environment,
+  compile(CompilerInput program, const TargetEnvironment& environment,
           const CompilationOptions& options = {});
 
   [[nodiscard]] const TargetEnvironment& environment() const noexcept {
@@ -103,7 +103,7 @@ private:
 
 /// Compile for a QDMI device.
 [[nodiscard]] llvm::Expected<CompiledProgram>
-compileProgram(CompilerInput&& program, const qdmi::Device& device,
+compileProgram(CompilerInput program, const qdmi::Device& device,
                std::optional<QDMI_Program_Format> format = std::nullopt,
                const CompilationOptions& options = {});
 
@@ -119,8 +119,7 @@ compileProgram(CompilerInput&& program, const qdmi::Device& device,
 
 /// Compile and submit source using one snapshot of the destination.
 [[nodiscard]] llvm::Expected<qdmi::Job> submitProgram(
-    const qdmi::Device& device, CompilerInput&& program,
-    int64_t numShots = 1024,
+    const qdmi::Device& device, CompilerInput program, int64_t numShots = 1024,
     std::optional<QDMI_Program_Format> format = std::nullopt,
     const std::optional<qdmi::CustomJobParameter>& custom1 = std::nullopt,
     const std::optional<qdmi::CustomJobParameter>& custom2 = std::nullopt,
