@@ -582,14 +582,10 @@ programFromString(const std::string& input) {
 payloadForOutput(OutputFormat output) {
   switch (output) {
   case OutputFormat::OpenQASM3:
-    return takeResult(
-        mlir::payloadSpecificationForProgramFormat(QDMI_PROGRAM_FORMAT_QASM3));
   case OutputFormat::QIRBase:
-    return takeResult(mlir::payloadSpecificationForProgramFormat(
-        QDMI_PROGRAM_FORMAT_QIRBASEMODULE));
   case OutputFormat::QIRAdaptive:
-    return takeResult(mlir::payloadSpecificationForProgramFormat(
-        QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+    return takeResult(mlir::PayloadSpecification::forProgramFormat(
+        static_cast<mlir::ProgramFormat>(output)));
   case OutputFormat::Qiskit:
     return bindings::qiskit::payloadSpecification();
   default:

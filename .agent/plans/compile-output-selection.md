@@ -39,8 +39,12 @@ Qiskit export receives the complete environment when compiling, and retains a
 target-only overload for direct conversions. All 11 supported capability IDs and
 three structural limits are covered. Required QIR loop capabilities must be
 unconstrained because final lowering does not retain a proof of their bounds.
-QDMI 1.4 has no detailed per-format capability descriptors; its device snapshots
-use format baselines.
+The compiler owns format baselines in `PayloadSpecification::forProgramFormat`;
+Python output selection and QIR preparation use it directly. QDMI maps wire
+formats and encodings onto those baselines. QIR preparation follows the
+requested output, independently of any attached target contract. QDMI 1.4 has no
+detailed per-format capability descriptors; its device snapshots use format
+baselines.
 
 `bindings/patterns.txt` uses literal output overloads and a constrained type
 variable for same-family defaults. Existing Python tests in
@@ -55,11 +59,11 @@ tests; the QDMI tests need neither a package initializer nor a pytest
 Python-path setting. Simulation APIs retain their direct QCO path and inline the
 fixed conversion for other inputs.
 
-Validation on main revision `422a69c1a3`: 4,040 native tests; 1,471 MLIR, QDMI,
-and magic-state-distillation Python tests with Qiskit 2.6.0; and 543
-compatibility tests with Qiskit 2.5.2. Generated stubs, Python 3.11 return-type
-checks, whole-file C++ lint, and executable documentation with internal links
-passed. All 401 QDMI tests also pass in a standalone run without a package
-initializer or pytest Python-path setting. Native regression assertions cover
-staged QIR conversion, targetless recompilation, and mismatched payload
-contracts.
+Validation on main revision `a7953651a7`: 4,045 native tests with
+`ctest --preset release-clang-ipo`; 1,471 MLIR, QDMI, and
+magic-state-distillation Python tests with Qiskit 2.6.0; and 559 translation,
+target, and parameter-binding tests with Qiskit 2.5.2. Generated stubs,
+whole-file C++ lint, repository lint, and executable documentation with internal
+links passed. The output-selection page was inspected in Chrome. Native
+regressions cover staged QIR conversion, targetless recompilation, mismatched
+payload contracts, and Base loop preparation despite Adaptive target metadata.

@@ -123,12 +123,14 @@ FailureOr<QIRProgram> QCProgram::intoQIR(QIRProfile profile) && {
       mod().emitError(environment.error());
       return failure();
     }
-    const auto& payload = environment.environment().payloadSpecification();
-    const auto& format = payload.format();
-    if (format.id == "qir" && format.version == "2.1.0" &&
-        format.profile ==
-            (profile == QIRProfile::Adaptive ? "adaptive" : "base") &&
-        failed(qir::validateCapabilities(mod(), payload.capabilities()))) {
+    const auto& targetPayload =
+        environment.environment().payloadSpecification();
+    const auto& format = targetPayload.format();
+    if (format.id == payload.format().id &&
+        format.version == payload.format().version &&
+        format.profile == payload.format().profile &&
+        failed(
+            qir::validateCapabilities(mod(), targetPayload.capabilities()))) {
       return failure();
     }
   }

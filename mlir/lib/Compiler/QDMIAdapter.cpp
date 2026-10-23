@@ -12,7 +12,6 @@
 
 #include "mqt/Compiler/Target.h"
 #include "mqt/Dialect/QIR/Utils/QIRUtils.h"
-#include "mqt/Target/QIR/Capabilities.h"
 #include "mqt/Target/QIR/Export.h"
 #include "qdmi/QDMI.hpp"
 

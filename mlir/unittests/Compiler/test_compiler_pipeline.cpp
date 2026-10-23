@@ -1132,13 +1132,12 @@ TEST_F(CompilerPipelineTest, BaseUnrollsBoundArrayLoops) {
       qc->bindParameters({{"angles", std::vector<double>{0.25, -0.5}}})));
   for (bool replay : {false, true}) {
     auto input = qc->copy();
+    attachTargetEnvironment(
+        input.module(),
+        TargetEnvironment(makeUnrestrictedTarget(),
+                          llvm::cantFail(PayloadSpecification::forProgramFormat(
+                              ProgramFormat::QIRAdaptive))));
     if (replay) {
-      attachTargetEnvironment(
-          input.module(),
-          TargetEnvironment(
-              makeUnrestrictedTarget(),
-              llvm::cantFail(PayloadSpecification::forProgramFormat(
-                  ProgramFormat::QIRAdaptive))));
       const auto payload = llvm::cantFail(
           PayloadSpecification::forProgramFormat(ProgramFormat::QIRBase));
       PassManager pm(input.module().getContext(), ModuleOp::getOperationName());
@@ -3775,8 +3774,8 @@ TEST_F(CompilerPipelineTest, OverCapacityInputsCompileWithoutLayout) {
   const auto target = llvm::cantFail(
       CompilerTarget::create(1, CompilerTarget::Connectivity::allToAll(),
                              CompilerTarget::NativeOperations::unrestricted()));
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   ASSERT_TRUE(mlir::succeeded(
       program->compileForTarget(TargetEnvironment(target, payload))));
   EXPECT_FALSE(program->module()->hasAttr("mqt.layout"));
@@ -3900,7 +3899,7 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
       CompilerTarget::NativeOperations::unrestricted()));
   auto qasmProgram = program->copy();
   const auto qasmPayload = llvm::cantFail(
-      payloadSpecificationForProgramFormat(QDMI_PROGRAM_FORMAT_QASM3));
+      PayloadSpecification::forProgramFormat(ProgramFormat::OpenQASM3));
   ASSERT_TRUE(mlir::succeeded(
       qasmProgram.compileForTarget(TargetEnvironment(target, qasmPayload))));
   const auto outcomes =
@@ -3916,8 +3915,8 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
   EXPECT_TRUE(StringRef(qasm->source()).contains("$7"));
   EXPECT_FALSE(StringRef(qasm->source()).contains("$42"));
   EXPECT_FALSE(StringRef(qasm->source()).contains("for int"));
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   ASSERT_TRUE(mlir::succeeded(
       program->compileForTarget(TargetEnvironment(target, payload))));
   EXPECT_TRUE(succeeded(verify(program->module())));
@@ -3960,8 +3959,8 @@ TEST_F(CompilerPipelineTest, IndexedPlacementRetainsTargetAndPayloadChecks) {
             capacity, CompilerTarget::Connectivity::allToAll(),
             Native::fromOperations(operations)));
       };
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   for (const auto& [target, expected] : {
            std::pair{targetWith(1, {u, measure}), "target site count"},
            std::pair{targetWith(2, {u, localMeasure}),
@@ -3984,14 +3983,14 @@ TEST_F(CompilerPipelineTest, IndexedPlacementRetainsTargetAndPayloadChecks) {
   }
   const auto target = targetWith(2, {u, measure});
   for (const auto format :
-       {QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE, QDMI_PROGRAM_FORMAT_QASM3}) {
+       {ProgramFormat::QIRAdaptive, ProgramFormat::OpenQASM3}) {
     auto result = runDefaultPipeline(
         CompilerInput{OpenQASMProgram(source)},
         TargetEnvironment(
             target,
-            llvm::cantFail(payloadSpecificationForProgramFormat(format))));
+            llvm::cantFail(PayloadSpecification::forProgramFormat(format))));
     ASSERT_TRUE(mlir::succeeded(result));
-    if (format == QDMI_PROGRAM_FORMAT_QASM3) {
+    if (format == ProgramFormat::OpenQASM3) {
       EXPECT_TRUE(mlir::succeeded(QCProgram::fromOpenQASMString(
           std::get<OpenQASMProgram>(*result).source())));
     } else {
