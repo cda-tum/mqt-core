@@ -240,7 +240,8 @@ public:
   /// Arrays must match the length of a static rank-one f64 tensor input.
   /// Reject unknown names, mismatched types or lengths, non-finite values, or
   /// references to the entry point without changing the program. Preserve
-  /// unbound input metadata. Does not run cleanup or fold expressions.
+  /// unbound input metadata and fold expressions using the bound values.
+  /// Folding failures may leave the program modified.
   [[nodiscard]] LogicalResult
   bindParameters(const std::map<std::string, ParameterValue>& values);
 
@@ -268,7 +269,9 @@ public:
   ///
   /// Entry results must be direct measurements or CBit registers. Other scalar
   /// outputs are unsupported. The generated QIR returns a zero execution
-  /// status.
+  /// status. Base conversion unrolls static counted loops, allowing at most
+  /// one billion cloned body operations, and rejects runtime-dependent loops.
+  /// Adaptive conversion retains loops.
   [[nodiscard]] FailureOr<QIRProgram> intoQIR(QIRProfile profile) &&;
 
   /// Return the static gate count of the entry-point IR.

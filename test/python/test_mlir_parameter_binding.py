@@ -119,7 +119,6 @@ def test_array_binding_preserves_scalar_input(array_program: QCProgram, *, as_ar
     assert program.parameters == ["offset"]
     program.bind_parameters({"offset": np.pi / 2})
     assert program.parameters == []
-    program.cleanup()
     native = program.to_qco() if isinstance(program, QCProgram) else program
     assert native.sample(shots=4, seed=42) == {"11": 4}
     assert original.parameters == ["angles", "offset"]

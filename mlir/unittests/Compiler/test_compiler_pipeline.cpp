@@ -76,6 +76,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/Passes.h"
@@ -1097,6 +1098,124 @@ result = measure q;
   });
   EXPECT_TRUE(hasRuntimeStorage);
   EXPECT_TRUE(succeeded(qir->llvmIR()));
+}
+
+TEST_F(CompilerPipelineTest, BaseUnrollsBoundArrayLoops) {
+  auto qc = QCProgram::fromMLIRString(R"mlir(module {
+    func.func @main(%angles: tensor<2xf64> {mqt.input_name = "angles"})
+        -> i1 attributes {mqt.entry_point} {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %two = arith.constant 2 : index
+      %counts = memref.alloca() : memref<2xindex>
+      memref.store %one, %counts[%zero] : memref<2xindex>
+      memref.store %two, %counts[%one] : memref<2xindex>
+      %q = qc.alloc : !qc.qubit
+      scf.for %layer = %zero to %two step %one {
+        %angle = tensor.extract %angles[%layer] : tensor<2xf64>
+        %end = memref.load %counts[%layer] : memref<2xindex>
+        scf.for %iteration = %zero to %end step %one {
+          qc.ry(%angle) %q : !qc.qubit
+        }
+      }
+      %result = qc.measure %q : !qc.qubit -> i1
+      qc.dealloc %q : !qc.qubit
+      return %result : i1
+    }
+  })mlir");
+  ASSERT_TRUE(succeeded(qc));
+  ASSERT_TRUE(succeeded(
+      qc->bindParameters({{"angles", std::vector<double>{0.25, -0.5}}})));
+  for (bool replay : {false, true}) {
+    auto input = qc->copy();
+    if (replay) {
+      attachTargetEnvironment(
+          input.module(),
+          TargetEnvironment(
+              makeUnrestrictedTarget(),
+              llvm::cantFail(PayloadSpecification::forProgramFormat(
+                  ProgramFormat::QIRAdaptive))));
+      const auto payload = llvm::cantFail(
+          PayloadSpecification::forProgramFormat(ProgramFormat::QIRBase));
+      PassManager pm(input.module().getContext(), ModuleOp::getOperationName());
+      populateQIRPreparationPipeline(
+          pm, payload.materialize(*input.module().getContext()));
+      std::string pipeline;
+      llvm::raw_string_ostream stream(pipeline);
+      pm.printAsTextualPipeline(stream);
+      registerMQTCompilerPasses();
+      auto parsed = parsePassPipeline(pipeline);
+      ASSERT_TRUE(succeeded(parsed));
+      static_cast<OpPassManager&>(pm) = std::move(*parsed);
+      ASSERT_TRUE(succeeded(runWithCompilationOptions(pm, input.module(), {})));
+      EXPECT_EQ(input.inspect().controlFlowCounts.count("scf.for"), 0U);
+    }
+    auto qir = std::move(input).intoQIR(QIRProfile::Base);
+    ASSERT_TRUE(succeeded(qir));
+    std::vector<double> angles;
+    qir->module().walk([&](LLVM::CallOp call) {
+      if (call.getCallee() != "__quantum__qis__ry__body") {
+        return;
+      }
+      auto constant = call.getOperand(0).getDefiningOp<LLVM::ConstantOp>();
+      ASSERT_TRUE(constant);
+      angles.push_back(cast<FloatAttr>(constant.getValue()).getValueAsDouble());
+    });
+    EXPECT_EQ(angles, (std::vector<double>{0.25, -0.5, -0.5}));
+    EXPECT_TRUE(succeeded(qir->llvmIR()));
+  }
+}
+
+TEST_F(CompilerPipelineTest, BasePromotesUnrolledClassicalArrays) {
+  auto qc = QCProgram::fromOpenQASMString(
+      "OPENQASM 3.1; array[float[64], 2] angles = {0.25, -0.5}; qubit q; "
+      "for int i in [0:1] { ry(angles[i]) q; } "
+      "output bit result; result = measure q;");
+  ASSERT_TRUE(succeeded(qc));
+  auto qir = std::move(*qc).intoQIR(QIRProfile::Base);
+  ASSERT_TRUE(succeeded(qir));
+  EXPECT_TRUE(succeeded(qir->llvmIR()));
+}
+
+TEST_F(CompilerPipelineTest, BaseRejectsDynamicAndExcessiveLoopExpansion) {
+  for (const bool dynamic : {false, true}) {
+    const std::string bound =
+        dynamic ? "%control = qc.alloc : !qc.qubit\n"
+                  "%m = qc.measure %control : !qc.qubit -> i1\n"
+                  "qc.dealloc %control : !qc.qubit\n"
+                  "%measured = arith.index_castui %m : i1 to index\n"
+                  "%end = arith.addi %measured, %three : index"
+                : "%end = arith.constant 1000000002 : index";
+    auto qc = QCProgram::fromMLIRString(
+        "module { func.func @main() attributes {mqt.entry_point} {\n"
+        "%zero = arith.constant 0 : index\n"
+        "%one = arith.constant 1 : index\n"
+        "%three = arith.constant 3 : index\n"
+        "%q = qc.alloc : !qc.qubit\n" +
+        bound +
+        "\n"
+        "scf.for %i = %zero to %end step %one {\n"
+        "  scf.for %j = %zero to %three step %one {\n"
+        "    qc.x %q : !qc.qubit\n"
+        "  }\n"
+        "}\n"
+        "qc.dealloc %q : !qc.qubit\n"
+        "return }}");
+    ASSERT_TRUE(succeeded(qc));
+    EXPECT_TRUE(failed(std::move(*qc).intoQIR(QIRProfile::Base)));
+  }
+}
+
+TEST_F(CompilerPipelineTest, PayloadControlRequiresValidSpecification) {
+  auto qc = QCProgram::fromMLIRString("module {}");
+  ASSERT_TRUE(succeeded(qc));
+  for (const auto* pass :
+       {"unroll-loops-for-payload", "legalize-control-flow"}) {
+    for (const auto* option : {"", "{payload-spec=unit}"}) {
+      EXPECT_TRUE(
+          failed(runPassPipeline(qc->module(), std::string(pass) + option)));
+    }
+  }
 }
 
 TEST_F(CompilerPipelineTest, DropsTemporaryStorageBeforeQIROutputFusion) {

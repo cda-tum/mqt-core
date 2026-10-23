@@ -10,6 +10,7 @@
 
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Dialect/MQT/IR/MQTDialect.h"
+#include "mqt/Dialect/QCO/QCOUtils.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -19,7 +20,9 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -134,7 +137,12 @@ static LogicalResult bind(ModuleOp moduleOp,
     argument.replaceAllUsesWith(constant);
     erased.set(argument.getArgNumber());
   }
-  return entry.eraseArguments(erased);
+  if (failed(entry.eraseArguments(erased))) {
+    return failure();
+  }
+  auto pm = PassManager::on<func::FuncOp>(moduleOp.getContext());
+  pm.addPass(createCanonicalizerPass());
+  return pm.run(entry);
 }
 std::vector<std::string> QCProgram::parameters() const {
   return parameterNames(mod());
@@ -148,6 +156,9 @@ QCProgram::bindParameters(const std::map<std::string, ParameterValue>& values) {
 }
 LogicalResult QCOProgram::bindParameters(
     const std::map<std::string, ParameterValue>& values) {
-  return bind(mod(), values);
+  if (failed(bind(mod(), values))) {
+    return failure();
+  }
+  return qco::verifyLinearity(mod());
 }
 } // namespace mlir
