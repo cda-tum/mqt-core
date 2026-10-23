@@ -86,14 +86,19 @@ protected:
 
   static void checkUnitary(ModuleOp program, size_t maximumSwaps,
                            ArrayRef<int64_t> arguments = {},
-                           size_t numQubits = 2, bool convertToQC = true) {
+                           size_t numQubits = 2, bool convertToQC = true,
+                           const ElidePermutationsOptions& options = {}) {
     ASSERT_TRUE(succeeded(verify(program)));
     ASSERT_TRUE(succeeded(verifyLinearity(program)));
     OwningOpRef<ModuleOp> original(program.clone());
-    ASSERT_NO_FATAL_FAILURE(rewrite(program));
+    ASSERT_NO_FATAL_FAILURE(rewrite(program, options));
     size_t swaps = 0;
     program.walk([&](SWAPOp) { ++swaps; });
     EXPECT_LE(swaps, maximumSwaps);
+    if (options.terminalOnly) {
+      // Without output tracking, the outer SWAP also retains physical order.
+      EXPECT_EQ(swaps, maximumSwaps);
+    }
 
     const auto matrix = [&](ModuleOp source, dd::Package& package) {
       auto function = mlir::mqt::getEntryPoint(source);
@@ -257,8 +262,15 @@ TEST_F(ElidePermutationsTest, PropagatesCommonBranchPermutations) {
       })mlir",
                                                  &context_);
       ASSERT_TRUE(program);
-      ASSERT_NO_FATAL_FAILURE(
-          checkUnitary(*program, common ? 0 : 2, {condition}));
+      for (const bool terminalOnly : {false, true}) {
+        SCOPED_TRACE(terminalOnly);
+        OwningOpRef<ModuleOp> instance(program->clone());
+        ElidePermutationsOptions options;
+        options.terminalOnly = terminalOnly;
+        ASSERT_NO_FATAL_FAILURE(
+            checkUnitary(*instance, common ? (terminalOnly ? 3 : 0) : 2,
+                         {condition}, 2, true, options));
+      }
     }
   }
 }
@@ -307,36 +319,6 @@ TEST_F(ElidePermutationsTest, TerminalModePreservesEarlierRouting) {
     EXPECT_EQ(swaps,
               StringRef(boundary).starts_with("%next = qco.h") ? 0U : 1U);
   }
-}
-
-TEST_F(ElidePermutationsTest, TerminalModePreservesNestedSwaps) {
-  auto program = parseSourceString<ModuleOp>(R"mlir(module {
-    func.func @main(%condition: i1) attributes {mqt.entry_point} {
-      %a = qco.alloc : !qco.qubit
-      %b = qco.alloc : !qco.qubit
-      %left, %right = qco.if %condition args(%ta = %a, %tb = %b)
-          -> (!qco.qubit, !qco.qubit) {
-        %sa, %sb = qco.swap %ta, %tb : !qco.qubit, !qco.qubit
-        qco.yield %sa, %sb : !qco.qubit, !qco.qubit
-      } else args(%ea = %a, %eb = %b) {
-        %sa, %sb = qco.swap %ea, %eb : !qco.qubit, !qco.qubit
-        qco.yield %sa, %sb : !qco.qubit, !qco.qubit
-      }
-      %outA, %outB = qco.swap %left, %right : !qco.qubit, !qco.qubit
-      qco.sink %outA : !qco.qubit
-      qco.sink %outB : !qco.qubit
-      return
-    }
-  })mlir",
-                                             &context_);
-  ASSERT_TRUE(program);
-  ElidePermutationsOptions options;
-  options.terminalOnly = true;
-  ASSERT_NO_FATAL_FAILURE(rewrite(*program, options));
-  size_t swaps = 0;
-  program->walk([&](SWAPOp) { ++swaps; });
-  // Without output tracking, the outer SWAP must also retain physical order.
-  EXPECT_EQ(swaps, 3U);
 }
 
 TEST_F(ElidePermutationsTest, SummarizesTensorBranchesBySlot) {

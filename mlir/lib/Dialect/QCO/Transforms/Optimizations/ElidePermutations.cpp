@@ -32,7 +32,6 @@
 #include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -73,15 +72,27 @@ static Slot slotKey(OpFoldResult index) {
   return {0, cast<Value>(index)};
 }
 
-static DenseSet<Operation*> terminalSwaps(func::FuncOp entry) {
-  DenseSet<Operation*> swaps;
+static bool isTerminalBookkeeping(Operation* op) {
+  auto insert = dyn_cast<qtensor::InsertOp>(op);
+  auto extract = dyn_cast<qtensor::ExtractOp>(op);
+  return (!insert || getConstantIntValue(insert.getIndex())) &&
+         (!extract || getConstantIntValue(extract.getIndex())) &&
+         op->getNumRegions() == 0 &&
+         (isa<MeasureOp, SinkOp, qtensor::InsertOp, qtensor::ExtractOp,
+              qtensor::DeallocOp>(op) ||
+          (!llvm::any_of(op->getOperandTypes(), isLinearQubitType) &&
+           !llvm::any_of(op->getResultTypes(), isLinearQubitType)));
+}
+
+static Operation* firstTerminalSwap(func::FuncOp entry) {
+  Operation* first = nullptr;
   if (!entry || !entry.getBody().hasOneBlock()) {
-    return swaps;
+    return first;
   }
   bool hasLaterGate = false;
   for (auto& op : llvm::reverse(entry.getBody().front().without_terminator())) {
     if (isa<SWAPOp>(op)) {
-      swaps.insert(&op);
+      first = &op;
       hasLaterGate = true;
       continue;
     }
@@ -90,20 +101,12 @@ static DenseSet<Operation*> terminalSwaps(func::FuncOp entry) {
       hasLaterGate = true;
       continue;
     }
-    auto insert = dyn_cast<qtensor::InsertOp>(op);
-    auto extract = dyn_cast<qtensor::ExtractOp>(op);
     if ((hasLaterGate && isa<MeasureOp, SinkOp, qtensor::DeallocOp>(op)) ||
-        (insert && !getConstantIntValue(insert.getIndex())) ||
-        (extract && !getConstantIntValue(extract.getIndex())) ||
-        op.getNumRegions() != 0 ||
-        (!isa<MeasureOp, SinkOp, qtensor::InsertOp, qtensor::ExtractOp,
-              qtensor::DeallocOp>(op) &&
-         (llvm::any_of(op.getOperandTypes(), isLinearQubitType) ||
-          llvm::any_of(op.getResultTypes(), isLinearQubitType)))) {
+        !isTerminalBookkeeping(&op)) {
       break;
     }
   }
-  return swaps;
+  return first;
 }
 
 static bool hasPositionalResults(func::CallOp call, ArrayRef<Value> inputs,
@@ -146,7 +149,7 @@ class PermutationTracker {
   IRRewriter& rewriter_;
   Block& block_;
   const RegionEffects& effects_;
-  const DenseSet<Operation*>* eligibleSwaps_;
+  Operation* firstEligibleSwap_;
   Layout<Resource> layout_;
   SmallVector<Wire> wires_;
   SmallVector<Tensor> tensors_;
@@ -452,7 +455,7 @@ class PermutationTracker {
       if ((effects_.lookup(op) & (HAS_SWAP | NONPOSITIONAL)) == HAS_SWAP) {
         for (auto& region : op->getRegions()) {
           PermutationTracker child(rewriter_, region.front(), effects_,
-                                   eligibleSwaps_);
+                                   firstEligibleSwap_);
           const bool fixed =
               llvm::any_of(quantumValues(op->getOperands()), [&](Value value) {
                 return isa<QubitType>(value.getType())
@@ -540,7 +543,6 @@ class PermutationTracker {
     }
     const auto incoming = tensorEntry(inputs);
     SmallVector<Resource> scalarInputs;
-    SmallVector<size_t> tensorInputs;
     SmallVector<bool> fixed;
     for (auto input : inputs) {
       if (isa<QubitType>(input.getType())) {
@@ -549,7 +551,6 @@ class PermutationTracker {
         fixed.push_back(wires_[physical].fixed);
       } else {
         const auto owner = owners_.lookup(input);
-        tensorInputs.push_back(owner);
         fixed.push_back(tensors_[owner].fixed);
       }
     }
@@ -565,8 +566,8 @@ class PermutationTracker {
       SmallVector<Permutation> summaries;
       for (auto& region : op->getRegions()) {
         auto& block = region.front();
-        auto& child =
-            children.emplace_back(rewriter_, block, effects_, eligibleSwaps_);
+        auto& child = children.emplace_back(rewriter_, block, effects_,
+                                            firstEligibleSwap_);
         for (auto [argument, isFixed] : llvm::zip(child.arguments_, fixed)) {
           if (isa<QubitType>(argument.getType())) {
             child.wires_[child.scalars_.lookup(argument)].fixed = isFixed;
@@ -626,14 +627,13 @@ class PermutationTracker {
       }
     }
     size_t scalar = 0;
-    size_t tensor = 0;
     for (auto [input, output] :
          llvm::zip(inputs, quantumValues(op->getResults()))) {
       if (isa<QubitType>(output.getType())) {
         scalars_[output] = scalars_.lookup(input);
         wires_[scalarInputs[scalar++]].value = output;
       } else {
-        const auto owner = tensorInputs[tensor++];
+        const auto owner = owners_.lookup(input);
         owners_[output] = owner;
         tensors_[owner].value = output;
       }
@@ -671,7 +671,7 @@ class PermutationTracker {
       const auto a = scalars_.lookup(inputs[0]);
       const auto b = scalars_.lookup(inputs[1]);
       if (!wires_[a].fixed && !wires_[b].fixed &&
-          (eligibleSwaps_ == nullptr || eligibleSwaps_->contains(swap))) {
+          firstEligibleSwap_ == nullptr) {
         scalars_[outputs[0]] = a;
         scalars_[outputs[1]] = b;
         exchange(layout_.getHardwareIndex(a), layout_.getHardwareIndex(b));
@@ -734,10 +734,10 @@ class PermutationTracker {
 public:
   PermutationTracker(IRRewriter& rewriter, Block& block,
                      const RegionEffects& effects,
-                     const DenseSet<Operation*>* eligibleSwaps = nullptr,
+                     Operation* firstEligibleSwap = nullptr,
                      bool trackOutput = false)
       : rewriter_(rewriter), block_(block), effects_(effects),
-        eligibleSwaps_(eligibleSwaps),
+        firstEligibleSwap_(firstEligibleSwap),
         arguments_(quantumValues(block.getArguments())) {
     for (auto [index, argument] : llvm::enumerate(arguments_)) {
       if (isa<QubitType>(argument.getType())) {
@@ -748,15 +748,7 @@ public:
     }
     if (trackOutput) {
       for (auto& op : llvm::reverse(block)) {
-        auto insert = dyn_cast<qtensor::InsertOp>(op);
-        auto extract = dyn_cast<qtensor::ExtractOp>(op);
-        if ((insert && !getConstantIntValue(insert.getIndex())) ||
-            (extract && !getConstantIntValue(extract.getIndex())) ||
-            op.getNumRegions() != 0 ||
-            (!isa<MeasureOp, SinkOp, qtensor::InsertOp, qtensor::ExtractOp,
-                  qtensor::DeallocOp>(op) &&
-             (llvm::any_of(op.getOperandTypes(), isLinearQubitType) ||
-              llvm::any_of(op.getResultTypes(), isLinearQubitType)))) {
+        if (!isTerminalBookkeeping(&op)) {
           break;
         }
         terminalStart_ = &op;
@@ -767,6 +759,10 @@ public:
   void run() {
     for (auto& op : llvm::make_early_inc_range(block_.without_terminator())) {
       rewriter_.setInsertionPoint(&op);
+      if (&op == firstEligibleSwap_) {
+        // The suffix has no regions; earlier children cannot reach this SWAP.
+        firstEligibleSwap_ = nullptr;
+      }
       if (&op == terminalStart_) {
         enterTerminal();
       }
@@ -798,8 +794,7 @@ protected:
   void runOnOperation() override {
     auto moduleOp = getOperation();
     auto entry = mqt::getEntryPoint(moduleOp);
-    const auto eligibleSwaps =
-        terminalOnly ? terminalSwaps(entry) : DenseSet<Operation*>{};
+    auto* firstEligibleSwap = terminalOnly ? firstTerminalSwap(entry) : nullptr;
     SmallVector<int64_t> output;
     auto count =
         moduleOp->getAttrOfType<IntegerAttr>(mqt::kSourceQubitCountAttr);
@@ -810,7 +805,7 @@ protected:
       signalPassFailure();
       return;
     }
-    if (terminalOnly && eligibleSwaps.empty()) {
+    if (terminalOnly && firstEligibleSwap == nullptr) {
       return;
     }
     RegionEffects effects;
@@ -895,8 +890,7 @@ protected:
         std::iota(output.begin(), output.end(), int64_t{0});
       }
       PermutationTracker tracker(rewriter, function.getBody().front(), effects,
-                                 terminalOnly ? &eligibleSwaps : nullptr,
-                                 track);
+                                 firstEligibleSwap, track);
       tracker.run();
       tracker.finishFunction(track ? &output : nullptr);
     }
