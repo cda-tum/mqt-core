@@ -108,6 +108,7 @@ struct Symbol {
   uint32_t id = 0;
   std::optional<Constant> constant;
   unsigned integerWidth = 0;
+  unsigned angleWidth = 0;
 };
 
 } // namespace
@@ -2783,10 +2784,9 @@ private:
         });
       }
       MQT_OQ3_TRY_ASSIGN(operand, analyzeExpression(*expression.rhs));
-      if (isAngleArrayElement(operand)) {
-        return fail(
-            expression.location,
-            "cast angle array entries to float before integer conversion");
+      if (isRuntimeAngle(operand)) {
+        return fail(expression.location,
+                    "cast runtime angles to float before integer conversion");
       }
       return addExpression({
           .kind = ExpressionKind::Cast,
@@ -3060,10 +3060,10 @@ private:
       return addExpression(
           {.kind = kind, .type = ScalarType::Float, .lhs = lhs});
     }
-    if (isAngleArrayElement(lhs) || (rhs && isAngleArrayElement(*rhs))) {
+    if (isRuntimeAngle(lhs) || (rhs && isRuntimeAngle(*rhs))) {
       return fail(expression.location,
                   "runtime fixed-width angle arithmetic is not supported; "
-                  "cast array entries to float first");
+                  "cast runtime angles to float first");
     }
     if (!rhs) {
       return addExpression({.kind = kind, .type = lhsType, .lhs = lhs});
@@ -3704,20 +3704,25 @@ private:
   [[nodiscard]] FailureOr<ExpressionId>
   analyzeArrayValue(ArrayId array, SyntaxExpressionId value) {
     const auto& declaration = program.arrays[array];
+    return analyzeElementValue(declaration.type, declaration.elementWidth,
+                               value);
+  }
+
+  [[nodiscard]] FailureOr<ExpressionId>
+  analyzeElementValue(ScalarType type, unsigned width,
+                      SyntaxExpressionId value) {
     const auto location = syntax.expressions[value].location;
-    if (declaration.type == ScalarType::Angle) {
+    if (type == ScalarType::Angle) {
       MQT_OQ3_TRY_ASSIGN(isConstant, isConstantExpression(value));
       if (!isConstant) {
-        return fail(location,
-                    "angle array entries require compile-time values");
+        return fail(location, "angle values require compile-time values");
       }
       MQT_OQ3_TRY_ASSIGN(constant, evaluateConstant(value));
-      MQT_OQ3_TRY_ASSIGN(
-          converted,
-          convertToFixedAngle(constant, declaration.elementWidth, location));
+      MQT_OQ3_TRY_ASSIGN(converted,
+                         convertToFixedAngle(constant, width, location));
       return addConstant(converted);
     }
-    if (declaration.type == ScalarType::Bool) {
+    if (type == ScalarType::Bool) {
       MQT_OQ3_TRY_ASSIGN(condition, analyzeBoolValue(value));
       return addExpression({
           .kind = ExpressionKind::Condition,
@@ -3726,13 +3731,13 @@ private:
       });
     }
     MQT_OQ3_TRY_ASSIGN(expression, analyzeExpression(value));
-    return castExpression(expression, declaration.type, location,
-                          declaration.elementWidth);
+    return castExpression(expression, type, location, width);
   }
 
-  [[nodiscard]] bool isAngleArrayElement(ExpressionId value) const {
+  [[nodiscard]] bool isRuntimeAngle(ExpressionId value) const {
     const auto& expression = program.expressions[value];
-    return expression.kind == ExpressionKind::ArrayLoad &&
+    return (expression.kind == ExpressionKind::ArrayLoad ||
+            expression.kind == ExpressionKind::Variable) &&
            expression.type == ScalarType::Angle;
   }
 
@@ -4322,6 +4327,11 @@ private:
         MQT_OQ3_TRY_ASSIGN(condition, analyzeBoolValue(assignment.value));
         typed.condition = condition;
         affineScalarValues[scalarStateSlots_[symbol->id]].reset();
+      } else if (symbol->type == ScalarType::Angle) {
+        MQT_OQ3_TRY_ASSIGN(value,
+                           analyzeElementValue(symbol->type, symbol->angleWidth,
+                                               assignment.value));
+        typed.value = value;
       } else {
         MQT_OQ3_TRY_ASSIGN(value, analyzeExpression(assignment.value));
         MQT_OQ3_TRY_ASSIGN(
@@ -4824,54 +4834,115 @@ private:
 
   [[nodiscard]] FailureOr<StatementId> analyzeFor(SMLoc location,
                                                   const SyntaxFor& loop) {
-    MQT_OQ3_TRY_ASSIGN(start, analyzeExpression(loop.start));
-    MQT_OQ3_TRY_ASSIGN(step, analyzeExpression(loop.step));
-    MQT_OQ3_TRY_ASSIGN(stop, analyzeExpression(loop.stop));
-    ForStatement result{
-        .start = start,
-        .step = step,
-        .stop = stop,
-        .body = {},
-    };
-    for (auto* expression : {&result.start, &result.step, &result.stop}) {
-      if (!isInteger(program.expressions[*expression].type)) {
-        return fail(location, "for-loop ranges require integer expressions");
+    const auto type = scalarType(loop.type);
+    unsigned integerWidth = 0;
+    unsigned angleBits = 0;
+    if (isInteger(type) && loop.width) {
+      MQT_OQ3_TRY_ASSIGN(width, bitVectorCastWidth(loop.width, location));
+      integerWidth = static_cast<unsigned>(width);
+    } else if (type == ScalarType::Angle) {
+      MQT_OQ3_TRY_ASSIGN(width, angleWidth(loop.width, location));
+      angleBits = width;
+    } else if (type == ScalarType::Float && loop.width) {
+      MQT_OQ3_TRY_ASSIGN(width,
+                         constantWidth(loop.width, location, "float width"));
+      if (width != 64) {
+        return fail(location, "only float[64] is supported");
       }
-      MQT_OQ3_TRY_ASSIGN(promoted,
-                         promoteIntegerExpression(*expression, location));
-      *expression = promoted;
     }
-    const auto startForm = buildAffineForm(result.start);
-    const auto stepForm = buildAffineForm(result.step);
-    const auto stopForm = buildAffineForm(result.stop);
-    if (stepForm && isAffineConstant(*stepForm) && stepForm->constant == 0) {
-      return fail(location, "for-loop range step must not be zero");
-    }
-    const bool unsignedEndpoints =
-        program.expressions[result.start].type == ScalarType::Uint ||
-        program.expressions[result.stop].type == ScalarType::Uint;
-    const bool endpointValuesPreserved =
-        !unsignedEndpoints ||
-        (startForm && stopForm &&
-         provesLowerBound(*startForm, llvm::DynamicAPInt(0)) &&
-         provesLowerBound(*stopForm, llvm::DynamicAPInt(0)));
-    std::optional<llvm::DynamicAPInt> positiveStep;
-    if (stepForm && isAffineConstant(*stepForm) && stepForm->constant > 0) {
-      positiveStep = stepForm->constant;
-    }
-    result.provenPositiveRange =
-        startForm && stopForm && endpointValuesPreserved && positiveStep &&
-        *positiveStep <= signedMaximum() &&
-        provesUpperBound(*stopForm, signedMaximum() - *positiveStep);
-    if (result.provenPositiveRange) {
-      const auto expandedStart = expandAffineScalarValues(result.start);
-      const auto expandedStep = expandAffineScalarValues(result.step);
-      const auto expandedStop = expandAffineScalarValues(result.stop);
-      assert(expandedStart && expandedStep && expandedStop &&
-             "proven affine ranges must have expandable expressions");
-      result.start = *expandedStart;
-      result.step = *expandedStep;
-      result.stop = *expandedStop;
+    ForStatement result;
+    std::optional<AffineForm> startForm, stopForm;
+    std::optional<bool> nonempty;
+    if (loop.iterable) {
+      if (!activeGate_.empty()) {
+        return fail(location, "gate definitions cannot capture arrays");
+      }
+      MQT_OQ3_TRY_ASSIGN(
+          source,
+          analyzeArraySource(
+              syntax.expressions[*loop.iterable], location,
+              "for-loop iterable must be a one-dimensional array or slice"));
+      const auto rank = llvm::count_if(
+          source.indices, [](const auto& index) { return !index.isScalar(); });
+      if (rank != 1) {
+        return fail(
+            location,
+            "for-loop iterable must be a one-dimensional array or slice");
+      }
+      for (const auto& index : source.indices) {
+        if (!index.isScalar() && index.size >= 0) {
+          nonempty = index.size != 0;
+        }
+      }
+      const auto& declaration = program.arrays[source.array];
+      if (!canImplicitlyConvert(declaration.type, type) ||
+          (type == ScalarType::Angle &&
+           (declaration.type != ScalarType::Angle ||
+            declaration.elementWidth > angleBits))) {
+        return fail(
+            location,
+            "array elements cannot be converted to the loop variable type");
+      }
+      const auto& initialized =
+          *initializedBits[arrayStateSlots_[source.array]];
+      if (!initialized.all()) {
+        const auto mask = arraySelectionMask(source.array, source.indices);
+        if (!mask || mask->test(initialized)) {
+          return fail(location, "for-loop iterable has uninitialized elements");
+        }
+      }
+      result.iterable = std::move(source);
+    } else {
+      if (!isInteger(type) || loop.width) {
+        return fail(location,
+                    "for-loop ranges require an unsized int or uint variable");
+      }
+      MQT_OQ3_TRY_ASSIGN(start, analyzeExpression(loop.start));
+      MQT_OQ3_TRY_ASSIGN(step, analyzeExpression(loop.step));
+      MQT_OQ3_TRY_ASSIGN(stop, analyzeExpression(loop.stop));
+      result.start = start;
+      result.step = step;
+      result.stop = stop;
+      for (auto* expression : {&result.start, &result.step, &result.stop}) {
+        if (!isInteger(program.expressions[*expression].type)) {
+          return fail(location, "for-loop ranges require integer expressions");
+        }
+        MQT_OQ3_TRY_ASSIGN(promoted,
+                           promoteIntegerExpression(*expression, location));
+        *expression = promoted;
+      }
+      startForm = buildAffineForm(result.start);
+      const auto stepForm = buildAffineForm(result.step);
+      stopForm = buildAffineForm(result.stop);
+      if (stepForm && isAffineConstant(*stepForm) && stepForm->constant == 0) {
+        return fail(location, "for-loop range step must not be zero");
+      }
+      const bool unsignedEndpoints =
+          program.expressions[result.start].type == ScalarType::Uint ||
+          program.expressions[result.stop].type == ScalarType::Uint;
+      const bool endpointValuesPreserved =
+          !unsignedEndpoints ||
+          (startForm && stopForm &&
+           provesLowerBound(*startForm, llvm::DynamicAPInt(0)) &&
+           provesLowerBound(*stopForm, llvm::DynamicAPInt(0)));
+      std::optional<llvm::DynamicAPInt> positiveStep;
+      if (stepForm && isAffineConstant(*stepForm) && stepForm->constant > 0) {
+        positiveStep = stepForm->constant;
+      }
+      result.provenPositiveRange =
+          startForm && stopForm && endpointValuesPreserved && positiveStep &&
+          *positiveStep <= signedMaximum() &&
+          provesUpperBound(*stopForm, signedMaximum() - *positiveStep);
+      if (result.provenPositiveRange) {
+        const auto expandedStart = expandAffineScalarValues(result.start);
+        const auto expandedStep = expandAffineScalarValues(result.step);
+        const auto expandedStop = expandAffineScalarValues(result.stop);
+        assert(expandedStart && expandedStep && expandedStop &&
+               "proven affine ranges must have expandable expressions");
+        result.start = *expandedStart;
+        result.step = *expandedStep;
+        result.stop = *expandedStop;
+      }
     }
 
     const auto beforeBitsInitialized = initializedBits;
@@ -4880,9 +4951,9 @@ private:
     const auto beforeAffineScalarValues = affineScalarValues;
     enterScope();
     const auto scalar = static_cast<ScalarId>(program.scalars.size());
-    const auto type = loop.isUnsigned ? ScalarType::Uint : ScalarType::Int;
     program.scalars.push_back({
         .type = type,
+        .integerWidth = integerWidth,
         .name = loop.inductionVariable.str(),
         .location = {},
     });
@@ -4898,6 +4969,8 @@ private:
                            .type = type,
                            .id = scalar,
                            .constant = std::nullopt,
+                           .integerWidth = integerWidth,
+                           .angleWidth = angleBits,
                        }))) {
       leaveScope();
       return failure();
@@ -4947,22 +5020,25 @@ private:
                        beforeGenerations);
     restoreAffineScalarValuesPrefix(beforeAffineScalarValues);
     bool rangeMayExecute = true;
-    MQT_OQ3_TRY_ASSIGN(constantStart, isConstantExpression(loop.start));
-    MQT_OQ3_TRY_ASSIGN(constantStep, isConstantExpression(loop.step));
-    MQT_OQ3_TRY_ASSIGN(constantStop, isConstantExpression(loop.stop));
-    if (constantStart && constantStep && constantStop) {
-      MQT_OQ3_TRY_ASSIGN(startConstant, evaluateConstant(loop.start));
-      MQT_OQ3_TRY_ASSIGN(stepConstant, evaluateConstant(loop.step));
-      MQT_OQ3_TRY_ASSIGN(stopConstant, evaluateConstant(loop.stop));
-      promoteIntegerConstant(stepConstant);
-      const bool positiveStep = stepConstant.type == ScalarType::Uint ||
-                                std::get<int64_t>(stepConstant.value) > 0;
-      const auto endpointOrder =
-          compareNumericConstants(startConstant, stopConstant);
-      const bool nonempty =
-          positiveStep ? endpointOrder <= 0 : endpointOrder >= 0;
-      rangeMayExecute = nonempty;
-      if (nonempty) {
+    if (!loop.iterable) {
+      MQT_OQ3_TRY_ASSIGN(constantStart, isConstantExpression(loop.start));
+      MQT_OQ3_TRY_ASSIGN(constantStep, isConstantExpression(loop.step));
+      MQT_OQ3_TRY_ASSIGN(constantStop, isConstantExpression(loop.stop));
+      if (constantStart && constantStep && constantStop) {
+        MQT_OQ3_TRY_ASSIGN(startConstant, evaluateConstant(loop.start));
+        MQT_OQ3_TRY_ASSIGN(stepConstant, evaluateConstant(loop.step));
+        MQT_OQ3_TRY_ASSIGN(stopConstant, evaluateConstant(loop.stop));
+        promoteIntegerConstant(stepConstant);
+        const bool positiveStep = stepConstant.type == ScalarType::Uint ||
+                                  std::get<int64_t>(stepConstant.value) > 0;
+        const auto endpointOrder =
+            compareNumericConstants(startConstant, stopConstant);
+        nonempty = positiveStep ? endpointOrder <= 0 : endpointOrder >= 0;
+      }
+    }
+    if (nonempty) {
+      rangeMayExecute = *nonempty;
+      if (*nonempty) {
         for (size_t reg = 0; reg < beforeBitsInitialized.size(); ++reg) {
           initializedBits[reg] = afterBodyBitsInitialized[reg];
         }
@@ -5439,13 +5515,10 @@ private:
       typed.comparisonRhs = comparisonRhs;
       const auto lhsType = program.expressions[typed.comparisonLhs].type;
       const auto rhsType = program.expressions[typed.comparisonRhs].type;
-      if ((isAngleArrayElement(comparisonLhs) &&
-           rhsType != ScalarType::Angle) ||
-          (isAngleArrayElement(comparisonRhs) &&
-           lhsType != ScalarType::Angle)) {
-        return fail(
-            condition.location,
-            "cast angle array entries to float for mixed-type comparisons");
+      if ((isRuntimeAngle(comparisonLhs) && rhsType != ScalarType::Angle) ||
+          (isRuntimeAngle(comparisonRhs) && lhsType != ScalarType::Angle)) {
+        return fail(condition.location,
+                    "cast runtime angles to float for mixed-type comparisons");
       }
       const bool boolComparison =
           lhsType == ScalarType::Bool || rhsType == ScalarType::Bool;

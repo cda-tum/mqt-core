@@ -123,6 +123,15 @@ returns a runtime value and cannot set a fixed array size or a `const`
 initializer. Its queried range has the same bounds and step preconditions as
 array copies.
 
+Iterate a rank-one array or slice with `for int x in values { ... }`, or
+`for float x in matrix[row, :-1:] { ... }`. The local variable copies each
+element in selection order; writes to later elements remain visible. Bounds are
+evaluated once. Empty arrays skip the body; `break` and `continue` work as in
+range loops. Selected elements must be initialized, or the whole array for
+runtime selections. Loop variables support scalar numeric conversions and sized
+integers. An `angle` loop variable must have at least the array element width.
+Its assignments must be compile-time values.
+
 Inputs share the parameter API with Qiskit programs. They remain symbolic until
 bound, so a program can be inspected and transformed before choosing values:
 

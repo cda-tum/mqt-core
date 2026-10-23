@@ -170,6 +170,8 @@ TEST(OpenQASMFrontendTest, ClassicalArrays) {
            "array[int, 2] a = {1, 2}; "
            "array[int, 1] b = a[0:9223372036854775807:1]; "
            "b = a[1:-9223372036854775807-1:0];",
+           "array[int, 2, 3] a; a[1, 2] = 7; int result; "
+           "for int x in a[1, 2:2] { result = x; } int copy = result;",
            "array[int, 1, 1, 1, 1, 1, 1, 1,] a = {{{{{{{7,},},},},},},}; "
            "int result = a[0, 0, 0, 0, 0, 0, -1,];",
        }) {
@@ -201,6 +203,44 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
   const auto cases =
       std::to_array<std::pair<llvm::StringLiteral, llvm::StringLiteral>>({
           {"array[int, -1] a;", "non-negative"},
+          {"array[int, 1, 1] a = {{1}}; for int x in a {}", "one-dimensional"},
+          {"array[int, 1] a = {1}; for int x in a[0] {}", "one-dimensional"},
+          {"int a = 1; for int x in a {}", "one-dimensional"},
+          {"array[int, 1] a; for int x in a {}", "uninitialized"},
+          {
+              "array[int, 2] a; a[0] = 1; int i = 0; for int x in a[:i] {}",
+              "uninitialized",
+          },
+          {
+              "array[int, 0] a; int result; "
+              "for int x in a { result = 1; } int y = result;",
+              "uninitialized",
+          },
+          {
+              "array[int, 1] a = {1}; int result; "
+              "for int x in a { break; result = 1; } int y = result;",
+              "uninitialized",
+          },
+          {"array[int, 1] a = {1}; for int x in a {} int y = x;", "unknown"},
+          {"array[int, 1] a = {1}; for bool x in a {}", "cannot be converted"},
+          {"array[int, 1] a = {1}; for float[32] x in a {}", "float[64]"},
+          {"array[int, 1] a = {1}; for int[0] x in a {}", "width"},
+          {
+              "array[angle[8], 1] a = {pi}; for angle[4] x in a {}",
+              "cannot be converted",
+          },
+          {
+              "array[float, 1] a = {1.0}; for angle x in a {}",
+              "cannot be converted",
+          },
+          {
+              "array[angle[8], 1] a = {pi}; for angle[8] x in a { x += pi; }",
+              "compile-time",
+          },
+          {
+              "array[int, 1] a = {1}; gate g q { for int x in a {} }",
+              "cannot capture",
+          },
           {
               "uint n = sizeof(missing) + sizeof(missing);",
               "array or subarray",
@@ -330,8 +370,8 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
               "array[angle, 1] a = {pi}; qubit q; U(a[0] + a[0], 0, 0) q;",
               "runtime fixed-width angle arithmetic",
           },
-          {"array[angle, 1] a = {pi}; int b = int(a[0]);", "cast angle"},
-          {"array[angle, 1] a = {pi}; bool b = a[0] == pi;", "cast angle"},
+          {"array[angle, 1] a = {pi}; int b = int(a[0]);", "to float"},
+          {"array[angle, 1] a = {pi}; bool b = a[0] == pi;", "to float"},
           {"int i = 0; array[int, 1] a = {a[i]};", "uninitialized"},
           {"array[int, 1] a; int b = a[0];", "uninitialized"},
           {
