@@ -12,6 +12,8 @@
 #include "bench/JSON.hpp"
 #include "bench/Shor.hpp"
 
+#include "register_benchmark.hpp"
+
 #include "nanobind/nanobind.h"
 #include "nanobind/stl/function.h"    // NOLINT(misc-include-cleaner)
 #include "nanobind/stl/map.h"         // NOLINT(misc-include-cleaner)
@@ -46,9 +48,9 @@ void registerShor(nb::module_& m) {
               "factor pair.")
       .def_ro("factors", &bench::ShorEvaluation::factors,
               "A sorted factor pair, or ``None``.");
-  nb::class_<bench::Shor>(m, "Shor",
-                          "A validated semiclassical Shor benchmark.")
-      .def(nb::init<bench::ShorOptions>(), "options"_a)
+  auto shor = nb::class_<bench::Shor>(
+      m, "Shor", "A validated semiclassical Shor benchmark.");
+  shor.def(nb::init<bench::ShorOptions>(), "options"_a)
       .def_prop_ro("options", &bench::Shor::options,
                    nb::rv_policy::reference_internal,
                    "The resolved benchmark parameters.")
@@ -57,37 +59,9 @@ void registerShor(nb::module_& m) {
           "The big-endian phase register with twice the modulus bit width.")
       .def("evaluate", &bench::Shor::evaluate, "counts"_a,
            "Recover factors using exact continued fractions and verify them by "
-           "division.")
-      .def(
-          "generate",
-          [](const bench::Shor& value) {
-            return nb::module_::import_("mqt.core.mlir")
-                .attr("_generate_benchmark")(
-                    bench::toInstanceSpecificationJSON(value));
-          },
-          nb::sig("def generate(self) -> mqt.core.mlir.QCProgram"),
-          "Generate the benchmark as a QC program.")
-      .def_prop_ro(
-          "instance_specification_json",
-          [](const bench::Shor& value) {
-            return bench::toInstanceSpecificationJSON(value);
-          },
-          "The canonical instance specification JSON.")
-      .def_prop_ro(
-          "manifest_json",
-          [](const bench::Shor& value) { return bench::toManifestJSON(value); },
-          "The canonical manifest JSON.")
-      .def_prop_ro(
-          "case_id",
-          [](const bench::Shor& value) { return bench::caseId(value); },
-          "The stable semantic case ID.")
-      .def_static("from_instance_specification_json",
-                  &bench::shorFromInstanceSpecificationJSON, "json"_a,
-                  nb::kw_only(), "source"_a = "<instance-specification>",
-                  "Parse a strict benchmark instance specification.")
-      .def_static("from_manifest_json", &bench::shorFromManifestJSON, "json"_a,
-                  nb::kw_only(), "source"_a = "<manifest>",
-                  "Parse a strict benchmark manifest.");
+           "division.");
+  registerBenchmarkIO(shor, &bench::shorFromInstanceSpecificationJSON,
+                      &bench::shorFromManifestJSON);
   nb::enum_<bench::FactorStatus>(m, "FactorStatus",
                                  "Outcome of a factoring workflow.")
       .value("SUCCESS", bench::FactorStatus::Success)

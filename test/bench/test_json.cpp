@@ -14,6 +14,7 @@
 
 #include "JSONTestUtils.hpp"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <limits>
@@ -21,12 +22,36 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace mqt::bench {
 
 using test::expectInvalidJSON;
 
 // GHZ is a representative fixture for the shared JSON contracts below.
+
+TEST(BenchmarkJSON, ReportsParameterErrorsAtTheirSource) {
+  for (
+      const auto& [json, pointer] : {
+          std::pair{
+              R"({"schema_version":1,"benchmark":"multiplexer","parameters":{}})",
+              "$/parameters/qubits"},
+          std::pair{
+              R"({"schema_version":1,"benchmark":"w-state","parameters":{}})",
+              "$/parameters/qubits"},
+          std::pair{
+              R"({"schema_version":1,"benchmark":"modular-multiplier","parameters":{}})",
+              "$/parameters/multiplier"},
+      }) {
+    SCOPED_TRACE(json);
+    EXPECT_THAT(
+        [&] {
+          static_cast<void>(parseInstanceSpecificationJSON(json, "case.json"));
+        },
+        testing::ThrowsMessage<std::invalid_argument>(
+            testing::StartsWith("case.json:" + std::string(pointer) + " ")));
+  }
+}
 
 TEST(BenchmarkJSON, RejectsDuplicateKeys) {
   expectInvalidJSON(

@@ -22,6 +22,14 @@ namespace mqt::bench {
 
 using namespace mlir;
 
+TEST(GenerateProgramTest, SamplesAsymmetricBVInputsAgainstReference) {
+  for (const auto method : {BVMethod::Static, BVMethod::Dynamic}) {
+    SCOPED_TRACE(static_cast<int>(method));
+    test::expectSamplingMatchesReference(
+        BV{{.hiddenBitstring = "001", .method = method}});
+  }
+}
+
 TEST(GenerateProgramTest, EmitsStructuredBVWithMethodSpecificResources) {
   const BV staticBenchmark{{.hiddenBitstring = "101"}};
   const BV dynamicBenchmark{

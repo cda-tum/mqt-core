@@ -441,33 +441,33 @@ parseModularMultiplierParameters(const Json& parameters,
   if (control.size() != 1U) {
     fail(source, "$/parameters/control", "must be '0', '1', or '+'");
   }
-  return constructBenchmark(source, [&] {
-    return ModularMultiplier({
-        .multiplier = stringValue(
-            required(parameters, "multiplier", source, "$/parameters"), source,
-            "$/parameters/multiplier"),
-        .modulus =
-            stringValue(required(parameters, "modulus", source, "$/parameters"),
-                        source, "$/parameters/modulus"),
-        .multiplicand = stringValue(
-            required(parameters, "multiplicand", source, "$/parameters"),
-            source, "$/parameters/multiplicand"),
-        .control = control.front(),
-    });
-  });
+  ModularMultiplierOptions options{
+      .multiplier = stringValue(
+          required(parameters, "multiplier", source, "$/parameters"), source,
+          "$/parameters/multiplier"),
+      .modulus =
+          stringValue(required(parameters, "modulus", source, "$/parameters"),
+                      source, "$/parameters/modulus"),
+      .multiplicand = stringValue(
+          required(parameters, "multiplicand", source, "$/parameters"), source,
+          "$/parameters/multiplicand"),
+      .control = control.front(),
+  };
+  return constructBenchmark(
+      source, [&options] { return ModularMultiplier(std::move(options)); });
 }
 
 [[nodiscard]] Multiplexer
 parseMultiplexerParameters(const Json& parameters,
                            const std::string_view source) {
   rejectUnknownKeys(parameters, {"qubits"}, source, "$/parameters");
-  return constructBenchmark(source, [&] {
-    return Multiplexer({
-        .qubits =
-            sizeValue(required(parameters, "qubits", source, "$/parameters"),
-                      source, "$/parameters/qubits"),
-    });
-  });
+  const MultiplexerOptions options{
+      .qubits =
+          sizeValue(required(parameters, "qubits", source, "$/parameters"),
+                    source, "$/parameters/qubits"),
+  };
+  return constructBenchmark(source,
+                            [&options] { return Multiplexer(options); });
 }
 
 [[nodiscard]] QAOA parseQAOAParameters(const Json& parameters,
@@ -607,13 +607,12 @@ parseTeleportationParameters(const Json& parameters,
 [[nodiscard]] WState parseWStateParameters(const Json& parameters,
                                            const std::string_view source) {
   rejectUnknownKeys(parameters, {"qubits"}, source, "$/parameters");
-  return constructBenchmark(source, [&] {
-    return WState({
-        .qubits =
-            sizeValue(required(parameters, "qubits", source, "$/parameters"),
-                      source, "$/parameters/qubits"),
-    });
-  });
+  const WStateOptions options{
+      .qubits =
+          sizeValue(required(parameters, "qubits", source, "$/parameters"),
+                    source, "$/parameters/qubits"),
+  };
+  return constructBenchmark(source, [&options] { return WState(options); });
 }
 
 [[nodiscard]] std::string_view topologyName(const GHZTopology topology) {
@@ -949,6 +948,8 @@ template <class Benchmark, class ParseParameters>
 
 template <class Benchmark>
 [[nodiscard]] Json baseInstanceSpecificationSchema(Json parameters) {
+  parameters["additionalProperties"] = false;
+  parameters["type"] = "object";
   using Metadata = BenchmarkMetadata<Benchmark>;
   return {
       {"$schema", "https://json-schema.org/draft/2020-12/schema"},
@@ -969,7 +970,6 @@ template <class Benchmark>
 
 [[nodiscard]] Json bvInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<BV>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -989,13 +989,11 @@ template <class Benchmark>
           },
       },
       {"required", {"hidden_bitstring"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json fanOutInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<FanOut>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1010,13 +1008,11 @@ template <class Benchmark>
           },
       },
       {"required", {"controls"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json ghzInstanceSpecificationSchema() {
   Json parameters{
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1036,7 +1032,6 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits"}},
-      {"type", "object"},
   };
   parameters["allOf"] = Json::array({
       {
@@ -1068,7 +1063,6 @@ template <class Benchmark>
 
 [[nodiscard]] Json groverInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<Grover>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1092,13 +1086,11 @@ template <class Benchmark>
           },
       },
       {"required", {"marked_bitstring"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json weakMeasurementGroverInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<WeakMeasurementGrover>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1122,13 +1114,11 @@ template <class Benchmark>
           },
       },
       {"required", {"marked_bitstring"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json magicStateDistillationInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<MagicStateDistillation>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1143,13 +1133,11 @@ template <class Benchmark>
               },
           },
       },
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json modularMultiplierInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<ModularMultiplier>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1190,13 +1178,11 @@ template <class Benchmark>
           },
       },
       {"required", {"multiplier", "modulus", "multiplicand"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json multiplexerInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<Multiplexer>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1211,14 +1197,12 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json qaoaInstanceSpecificationSchema() {
   const QAOAOptions defaults{.qubits = 3};
   return baseInstanceSpecificationSchema<QAOA>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1242,13 +1226,11 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json qftInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<QFT>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1278,13 +1260,11 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits", "period_exponent"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json qftAdderInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<QFTAdder>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1380,13 +1360,11 @@ template <class Benchmark>
           },
       },
       {"required", {"addend", "accumulator"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json qpeInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<QPE>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1443,13 +1421,11 @@ template <class Benchmark>
           },
       },
       {"required", {"precision", "phase"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json repeatUntilSuccessInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<RepeatUntilSuccess>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1464,13 +1440,11 @@ template <class Benchmark>
               },
           },
       },
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json shorInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<Shor>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1495,21 +1469,17 @@ template <class Benchmark>
           },
       },
       {"required", {"number"}},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json teleportationInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<Teleportation>({
-      {"additionalProperties", false},
       {"properties", Json::object()},
-      {"type", "object"},
   });
 }
 
 [[nodiscard]] Json wStateInstanceSpecificationSchema() {
   return baseInstanceSpecificationSchema<WState>({
-      {"additionalProperties", false},
       {
           "properties",
           {
@@ -1524,7 +1494,6 @@ template <class Benchmark>
           },
       },
       {"required", {"qubits"}},
-      {"type", "object"},
   });
 }
 

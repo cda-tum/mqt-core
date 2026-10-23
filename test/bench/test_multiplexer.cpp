@@ -16,6 +16,7 @@
 
 #include "gtest/gtest.h"
 
+#include <cmath>
 #include <numbers>
 #include <stdexcept>
 #include <string>
@@ -80,6 +81,17 @@ TEST(Multiplexer, KeepsTheLargestUniformControlWeightRepresentable) {
   EXPECT_GT(
       benchmark.probability(std::string(MultiplexerOptions::MAX_QUBITS, '0')),
       0.);
+}
+
+TEST(Multiplexer, PreservesSmallProbabilitiesNearBothEndpoints) {
+  constexpr auto controls = 64;
+  const Multiplexer benchmark{{.qubits = controls + 1}};
+  const auto amplitude = std::sin(std::ldexp(std::numbers::pi, -controls - 1));
+  const auto expected = std::ldexp(amplitude * amplitude, -controls);
+  const auto nearZero = std::string(controls - 1, '0') + "11";
+  const auto nearOne = std::string(controls, '1') + "0";
+  EXPECT_NEAR(benchmark.probability(nearZero) / expected, 1., 1e-14);
+  EXPECT_NEAR(benchmark.probability(nearOne) / expected, 1., 1e-14);
 }
 
 TEST(Multiplexer, RoundTripsJSON) {
