@@ -151,33 +151,36 @@ TEST(PayloadSpecificationTest, ValidatesAndRoundTripsTypedAttribute) {
                 "Invalid payload specification: Payload format version must "
                 "use major[.minor[.patch]]");
   expectInvalid(
-      mlir::PayloadSpecification::create({.id = "", .version = "2.1.0"}),
+      mlir::PayloadSpecification::create(
+          {.id = "", .version = "2.1.0", .profile = {}}),
       "Invalid payload specification: Payload format requires an ID and "
       "version");
   expectInvalid(
       mlir::PayloadSpecification::create(
-          {.id = std::string("qir\0", 4), .version = "2.1.0"}),
+          {.id = std::string("qir\0", 4), .version = "2.1.0", .profile = {}}),
       "Invalid payload specification: Payload format fields must not contain "
       "null characters");
   expectInvalid(
-      mlir::PayloadSpecification::create({.id = "qir", .version = "2.1.0"},
-                                         {{.id = ""}}),
+      mlir::PayloadSpecification::create(
+          {.id = "qir", .version = "2.1.0", .profile = {}},
+          {{.id = "", .constraints = {}}}),
       "Invalid payload specification: Program capability ID must not be "
       "empty");
   expectInvalid(
-      mlir::PayloadSpecification::create({.id = "qir", .version = "2.1.0"},
-                                         {{.id = std::string("x\0", 2)}}),
+      mlir::PayloadSpecification::create(
+          {.id = "qir", .version = "2.1.0", .profile = {}},
+          {{.id = std::string("x\0", 2), .constraints = {}}}),
       "Invalid payload specification: Program capability ID must not contain "
       "a null character");
   expectInvalid(
       mlir::PayloadSpecification::create(
-          {.id = "qir", .version = "2.1.0"},
+          {.id = "qir", .version = "2.1.0", .profile = {}},
           {{.id = "capability", .constraints = {{.id = ""}}}}),
       "Invalid payload specification: Program constraint ID must not be "
       "empty");
   expectInvalid(
       mlir::PayloadSpecification::create(
-          {.id = "qir", .version = "2.1.0"},
+          {.id = "qir", .version = "2.1.0", .profile = {}},
           {
               {
                   .id = "capability",
@@ -197,14 +200,15 @@ TEST(PayloadSpecificationTest, ValidatesAndRoundTripsTypedAttribute) {
           }),
       "Invalid payload specification: Program capability contains a duplicate "
       "constraint ID");
-  expectInvalid(mlir::PayloadSpecification::create(
-                    {.id = "qir", .version = "2.1.0", .profile = "base"},
-                    {
-                        {.id = "integer-computation", .value = 64},
-                        {.id = "integer-computation", .value = 64},
-                    }),
-                "Invalid payload specification: Payload specification contains "
-                "a duplicate capability ID/value pair");
+  expectInvalid(
+      mlir::PayloadSpecification::create(
+          {.id = "qir", .version = "2.1.0", .profile = "base"},
+          {
+              {.id = "integer-computation", .value = 64, .constraints = {}},
+              {.id = "integer-computation", .value = 64, .constraints = {}},
+          }),
+      "Invalid payload specification: Payload specification contains "
+      "a duplicate capability ID/value pair");
 }
 
 TEST(PayloadSpecificationTest, NormalizesExactVersionComponents) {
@@ -222,8 +226,8 @@ TEST(PayloadSpecificationTest, NormalizesExactVersionComponents) {
   const auto qir = valid(mlir::PayloadSpecification::create(
       {.id = "qir", .version = "2.1", .profile = "base"}));
   EXPECT_EQ(valid(qir.compilerOutput()), mlir::ProgramFormat::QIRBase);
-  const auto qasm = valid(
-      mlir::PayloadSpecification::create({.id = "openqasm", .version = "3.1"}));
+  const auto qasm = valid(mlir::PayloadSpecification::create(
+      {.id = "openqasm", .version = "3.1", .profile = {}}));
   EXPECT_EQ(valid(qasm.compilerOutput()), mlir::ProgramFormat::OpenQASM3);
   const auto exactMajor = valid(mlir::PayloadSpecification::create(
       {.id = "qir", .version = "2", .profile = "base"}));
@@ -253,8 +257,8 @@ TEST(TargetEnvironmentTest, OpenQASMSwitchesDoNotEnableIndexedQubits) {
                                            NativeOperations::unrestricted()));
   using Capability = mlir::ProgramCapability;
   for (const auto& capability : std::vector<Capability>{
-           {.id = "forward-branching"},
-           {.id = "multiway-branching", .value = 1},
+           {.id = "forward-branching", .constraints = {}},
+           {.id = "multiway-branching", .value = 1, .constraints = {}},
            {
                .id = "multiway-branching",
                .constraints =
@@ -271,13 +275,14 @@ TEST(TargetEnvironmentTest, OpenQASMSwitchesDoNotEnableIndexedQubits) {
            },
        }) {
     const auto payload = valid(mlir::PayloadSpecification::create(
-        {.id = "openqasm", .version = "3.1.0"}, {capability}));
+        {.id = "openqasm", .version = "3.1.0", .profile = {}}, {capability}));
     EXPECT_FALSE(payload.supportsUnrestrictedMultiwayBranching());
     EXPECT_FALSE(
         mlir::TargetEnvironment(target, payload).supportsIndexedQubits());
   }
   const auto payload = valid(mlir::PayloadSpecification::create(
-      {.id = "openqasm", .version = "3.1.0"}, {{.id = "multiway-branching"}}));
+      {.id = "openqasm", .version = "3.1.0", .profile = {}},
+      {{.id = "multiway-branching", .constraints = {}}}));
   EXPECT_TRUE(payload.supportsUnrestrictedMultiwayBranching());
   EXPECT_FALSE(
       mlir::TargetEnvironment(target, payload).supportsIndexedQubits());
@@ -286,7 +291,7 @@ TEST(TargetEnvironmentTest, OpenQASMSwitchesDoNotEnableIndexedQubits) {
 TEST(TargetEnvironmentTest, ReusesPreparedTargetStorage) {
   mlir::MLIRContext context;
   context.loadDialect<mlir::mqt::MQTDialect>();
-  mlir::OwningOpRef moduleOp =
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp =
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
   const auto target =
       valid(Target::create(3, Connectivity::fromCouplings({{0, 1}, {1, 2}}),
@@ -321,16 +326,16 @@ TEST(TargetEnvironmentTest, ReusesPreparedTargetStorage) {
 TEST(TargetEnvironmentTest, InvalidatesCachedAnalysisAfterAttributeChange) {
   mlir::MLIRContext context;
   context.loadDialect<mlir::mqt::MQTDialect>();
-  mlir::OwningOpRef module =
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp =
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
   const auto payload = valid(mlir::PayloadSpecification::create(
       {.id = "qir", .version = "2.1.0", .profile = "base"}));
   mlir::attachTargetEnvironment(
-      *module, mlir::TargetEnvironment(
-                   valid(Target::create(1, Connectivity::allToAll(),
-                                        NativeOperations::unrestricted())),
-                   payload));
-  mlir::ModuleAnalysisManager moduleAnalysisManager(module.get(), nullptr);
+      *moduleOp, mlir::TargetEnvironment(
+                     valid(Target::create(1, Connectivity::allToAll(),
+                                          NativeOperations::unrestricted())),
+                     payload));
+  mlir::ModuleAnalysisManager moduleAnalysisManager(moduleOp.get(), nullptr);
   mlir::AnalysisManager analysisManager = moduleAnalysisManager;
 
   const auto& initial =
@@ -339,10 +344,10 @@ TEST(TargetEnvironmentTest, InvalidatesCachedAnalysisAfterAttributeChange) {
   EXPECT_EQ(initial.environment().target().numSites(), 1);
 
   mlir::attachTargetEnvironment(
-      *module, mlir::TargetEnvironment(
-                   valid(Target::create(2, Connectivity::allToAll(),
-                                        NativeOperations::unrestricted())),
-                   payload));
+      *moduleOp, mlir::TargetEnvironment(
+                     valid(Target::create(2, Connectivity::allToAll(),
+                                          NativeOperations::unrestricted())),
+                     payload));
   mlir::AnalysisManager::PreservedAnalyses preserved;
   preserved.preserve<mlir::TargetEnvironmentAnalysis>();
   analysisManager.invalidate(preserved);
@@ -682,6 +687,131 @@ TEST(CompilerTargetTest, TopologyPatternsMatchExhaustiveFiveVertexOracle) {
     }
   }
   EXPECT_EQ(connected, 728);
+}
+
+TEST(CompilerTargetTest,
+     ExtendedTopologyPatternsShareCacheAndCoverLargerGrids) {
+  using Type = Target::TopologyPatterns::Type;
+  const auto target = valid(Target::create(8,
+                                           Connectivity::fromCouplings({
+                                               {0, 1},
+                                               {1, 2},
+                                               {2, 3},
+                                               {4, 5},
+                                               {5, 6},
+                                               {6, 7},
+                                               {0, 4},
+                                               {1, 5},
+                                               {2, 6},
+                                               {3, 7},
+                                           }),
+                                           NativeOperations::unrestricted()));
+  auto first = std::async(std::launch::async, [target] {
+    return target.topologyPattern(Type::Grid2x4);
+  });
+  auto second = std::async(std::launch::async, [target] {
+    return target.topologyPattern(Type::Grid2x4);
+  });
+  const auto* grid = first.get();
+  ASSERT_NE(grid, nullptr);
+  EXPECT_EQ(grid, second.get());
+  ASSERT_EQ(grid->size(), 1);
+  EXPECT_EQ((*grid)[0], (llvm::ArrayRef<size_t>{0, 1, 2, 3, 4, 5, 6, 7}));
+  for (const auto [type, expected] : {
+           std::pair{Type::Grid2x3, 2U},
+           std::pair{Type::SixCycle, 2U},
+           std::pair{Type::EightCycle, 1U},
+       }) {
+    const auto* group = target.topologyPattern(type);
+    ASSERT_NE(group, nullptr);
+    EXPECT_EQ(group->size(), expected);
+    for (size_t row = 0; row < group->size(); ++row) {
+      for (const auto& [a, b] : group->edges()) {
+        EXPECT_TRUE(target.areAdjacent((*group)[row][a], (*group)[row][b]));
+      }
+    }
+  }
+  auto defaults = target.topologyPatterns();
+  ASSERT_TRUE(defaults.has_value());
+  ASSERT_EQ(defaults->size(), 3);
+  EXPECT_EQ(target.topologyPattern(Type::FourCycle), &defaults->front());
+  EXPECT_EQ(target.topologyPattern(Type::QubitPair), &(*defaults)[1]);
+  EXPECT_EQ(target.topologyPattern(Type::Star), &(*defaults)[2]);
+
+  const auto chain = valid(Target::create(
+      6, Connectivity::fromCouplings({{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}}),
+      NativeOperations::unrestricted()));
+  const auto* shortChains = chain.topologyPattern(Type::Chain4);
+  ASSERT_NE(shortChains, nullptr);
+  ASSERT_EQ(shortChains->size(), 3);
+  for (size_t row = 0; row < shortChains->size(); ++row) {
+    EXPECT_EQ((*shortChains)[row],
+              (llvm::ArrayRef<size_t>{row, row + 1, row + 2, row + 3}));
+  }
+  const auto* longChains = chain.topologyPattern(Type::Chain6);
+  ASSERT_NE(longChains, nullptr);
+  EXPECT_EQ(longChains->size(), 1);
+  const auto* absent = chain.topologyPattern(Type::SixCycle);
+  ASSERT_NE(absent, nullptr);
+  EXPECT_EQ(absent->size(), 0);
+}
+
+TEST(CompilerTargetTest, ExtendedTopologyPatternsAllowChordsAndDeduplicate) {
+  using Type = Target::TopologyPatterns::Type;
+  std::vector<Coupling> edges;
+  for (size_t a = 0; a < 6; ++a) {
+    for (size_t b = a + 1; b < 6; ++b) {
+      edges.emplace_back(a, b);
+    }
+  }
+  const auto target = valid(Target::create(
+      6, Connectivity::fromCouplings(edges), NativeOperations::unrestricted()));
+  // Every injective tuple is an embedding in K6. Divide by 2 path reversals,
+  // 12 cycle rotations/reflections, or 4 grid reflections.
+  for (const auto [type, expected] : {
+           std::pair{Type::Chain4, 180U},
+           std::pair{Type::Chain6, 360U},
+           std::pair{Type::SixCycle, 60U},
+           std::pair{Type::Grid2x3, 180U},
+       }) {
+    const auto* group = target.topologyPattern(type);
+    ASSERT_NE(group, nullptr);
+    EXPECT_EQ(group->size(), expected);
+    std::vector<std::vector<size_t>> rows;
+    rows.reserve(group->size());
+    for (size_t row = 0; row < group->size(); ++row) {
+      rows.emplace_back((*group)[row].begin(), (*group)[row].end());
+    }
+    llvm::sort(rows);
+    EXPECT_EQ(std::ranges::unique(rows).begin(), rows.end());
+  }
+  const auto* tooLarge = target.topologyPattern(Type::EightCycle);
+  ASSERT_NE(tooLarge, nullptr);
+  EXPECT_EQ(tooLarge->size(), 0);
+}
+
+TEST(CompilerTargetTest, CappedTopologyPatternsKeepCompleteFallbacks) {
+  using Type = Target::TopologyPatterns::Type;
+  std::vector<Coupling> edges;
+  for (size_t a = 0; a < 20; ++a) {
+    for (size_t b = a + 1; b < 20; ++b) {
+      edges.emplace_back(a, b);
+    }
+  }
+  const auto target =
+      valid(Target::create(20, Connectivity::fromCouplings(edges),
+                           NativeOperations::unrestricted()));
+  EXPECT_EQ(target.topologyPattern(Type::Chain6), nullptr);
+  EXPECT_EQ(target.topologyPattern(Type::Chain6), nullptr);
+  const auto* shortChains = target.topologyPattern(Type::Chain4);
+  ASSERT_NE(shortChains, nullptr);
+  EXPECT_EQ(shortChains->size(), 20U * 19U * 18U * 17U / 2U);
+  const auto* pairs = target.topologyPattern(Type::QubitPair);
+  ASSERT_NE(pairs, nullptr);
+  EXPECT_EQ(pairs->size(), edges.size());
+  const auto complete = valid(Target::create(20, Connectivity::allToAll(),
+                                             NativeOperations::unrestricted()));
+  EXPECT_EQ(complete.topologyPattern(Type::Chain6), nullptr);
 }
 
 TEST(CompilerTargetTest, ShortestPathsUseDeterministicMinimumHopRoutes) {

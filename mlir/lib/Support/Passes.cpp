@@ -11,6 +11,7 @@
 #include "mqt/Support/Passes.h"
 
 #include "mqt/Conversion/CBitToMemRef/CBitToMemRef.h"
+#include "mqt/Dialect/MQT/IR/QubitLayout.h"
 #include "mqt/Dialect/MQT/Transforms/Passes.h"
 #include "mqt/Dialect/QC/Transforms/Passes.h"
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
@@ -73,6 +74,7 @@ void registerMQTCompilerPasses() {
     qco::registerMergeSingleQubitRotationGates();
     qco::registerPauliTwirl2QGates();
     qco::registerMappingPass();
+    qco::registerPlacementPass();
     qco::registerQuantumLoopUnroll();
     qco::registerRemoveDeadGates();
     qco::registerReplaceClassicalControls();
@@ -147,6 +149,7 @@ LogicalResult runWithCompilationOptions(PassManager& pm, ModuleOp moduleOp,
                                         bool preservesLayout) {
   if (!preservesLayout) {
     moduleOp->removeAttr("mqt.layout");
+    moduleOp->removeAttr(mqt::kPlacementOrderAttr);
   }
   if (options.enableTiming) {
     pm.enableTiming();

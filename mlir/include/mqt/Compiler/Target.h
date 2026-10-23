@@ -48,7 +48,17 @@ public:
   /// Topology patterns grouped by type, independent of native gate support.
   class TopologyPatterns {
   public:
-    enum class Type : uint8_t { FourCycle, QubitPair, Star };
+    enum class Type : uint8_t {
+      FourCycle,
+      QubitPair,
+      Star,
+      Chain4,
+      Chain6,
+      SixCycle,
+      EightCycle,
+      Grid2x3,
+      Grid2x4,
+    };
 
     /// Packed rows of dense compiler vertices, without per-occurrence
     /// allocation.
@@ -75,7 +85,7 @@ public:
       Group(Type type, size_t arity, llvm::ArrayRef<Edge> edges);
       Type type_;
       llvm::ArrayRef<Edge> edges_;
-      // Templates have at most four vertices, each with at most three
+      // Templates have at most eight vertices, each with at most three
       // neighbours.
       llvm::SmallVector<llvm::SmallVector<size_t, 3>, 4> neighbours_;
       llvm::SmallVector<size_t, 0> vertices_;
@@ -483,6 +493,24 @@ public:
   /// returned view stays valid while any copy of this target lives.
   [[nodiscard]] std::optional<llvm::ArrayRef<TopologyPatterns::Group>>
   topologyPatterns() const;
+
+  /// Return one complete topology-pattern group, prepared lazily by type.
+  ///
+  /// In addition to topologyPatterns(), this supports four- and six-vertex
+  /// chains, six- and eight-vertex cycles, and full 2×3 and 2×4 grids. Chains
+  /// and cycles use consecutive template vertices; grids use row-major
+  /// vertices. Extra target edges are allowed. Occurrences are unique up to
+  /// template automorphisms and use deterministic order, without assuming
+  /// hardware coordinates.
+  ///
+  /// Each additional type stops preparation after 2,000,000 candidate probes
+  /// or 65,536 occurrences. Exceeding either limit discards the entire group;
+  /// nullptr means unavailable, never a complete empty group. Callers can use
+  /// smaller patterns instead. All-to-all connectivity also returns nullptr.
+  /// Existing types retain their uncapped topologyPatterns() behavior. Cache
+  /// ownership and view lifetime are the same as for topologyPatterns().
+  [[nodiscard]] const TopologyPatterns::Group*
+  topologyPattern(TopologyPatterns::Type type) const;
 
   /// Return whether two valid dense compiler vertices are adjacent.
   [[nodiscard]] bool areAdjacent(size_t source, size_t target) const;

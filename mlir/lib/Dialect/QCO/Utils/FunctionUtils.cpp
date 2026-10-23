@@ -31,6 +31,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 
@@ -153,10 +154,10 @@ bool mlir::qco::hasCompleteTensorLifetime(Value tensor, unsigned depth) {
       if (extracted != 0) {
         return false;
       }
-      const auto index =
+      const auto index = static_cast<size_t>(
           llvm::count_if(user->getOperands().take_front(
                              tensor.use_begin()->getOperandNumber()),
-                         isTensor);
+                         isTensor));
       for (Region& region : user->getRegions()) {
         auto arguments =
             llvm::filter_to_vector(region.getArguments(), isTensor);

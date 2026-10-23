@@ -176,8 +176,18 @@ occurrences, without a separate allocation for each row. For all-to-all targets,
 `topologyPatterns()` returns `std::nullopt`. Otherwise it returns an `ArrayRef`
 of groups. An explicit topology retains a group for each selected type even when
 it has no occurrences. These patterns describe connectivity only, not native
-gate availability or direction. No architecture classification is performed.
-Placement and mapping do not consume this cache yet.
+gate availability or direction. No architecture classification is performed. The
+placement pass uses these groups when pattern-based search is selected.
+
+`CompilerTarget::topologyPattern(type)` also provides optional `Chain4`,
+`Chain6`, `SixCycle`, `EightCycle`, `Grid2x3`, and `Grid2x4` groups. Chains and
+cycles number consecutive vertices; full grid blocks use row-major order. These
+are graph templates, so they allow extra edges and do not require hardware
+coordinates. Each optional group is cached separately. Preparation stops after
+2,000,000 candidate probes or 65,536 occurrences; exceeding either limit
+discards the whole group and returns `nullptr`. Callers can fall back to smaller
+patterns. A non-null empty group instead means that no occurrence exists. The
+original three groups retain their uncapped behavior.
 
 The C++ placement helpers in `Mapping/Placement.h` build a circuit connectivity
 graph from a verified, single-block QCO region and decompose its edges into
@@ -191,11 +201,80 @@ backedges must agree on wire identities, including tensor slots.
 `RegionConnectivityAnalysis` caches the graph for a single-region operation
 through MLIR's analysis manager; passes must explicitly preserve it to retain
 the cache across transformations. VF2 matches are non-induced, so extra edges
-are allowed. Decomposition prefers four-cycles, then stars, then pairs; shared
-vertex IDs identify the overlap between slices. The caller selects the available
-types. Dynamic tensor sizes or indices, unsupported region operations, quantum
-calls, and gates with more than two qubits require lowering first. These helpers
-do not yet join target occurrences or choose a start layout.
+are allowed. Decomposition prefers larger arity, then more edges, then the
+smaller type value. For the original groups this means four-cycles, then stars,
+then pairs. Shared vertex IDs identify the overlap between slices. The caller
+selects available types; the overload accepting group pointers can combine
+individually cached groups and ignores unavailable (`nullptr`) groups. Dynamic
+tensor sizes or indices, unsupported region operations, quantum calls, and gates
+with more than two qubits require lowering first.
+
+`enumerateTopologyLayouts(graph, target, context)` completes the filter-and-join
+step. It returns every injective mapping that preserves the graph's edges,
+including disconnected components and isolated qubits. Row columns follow
+ascending graph vertex IDs; values are dense target vertex indices, not hardware
+site IDs. Extra hardware edges are allowed. An empty graph has one empty layout;
+a graph that cannot fit has no layouts. The CPU implementation fuses edge joins
+and injectivity checks in a vertex-at-a-time search. It starts with constrained
+vertices, intersects their assigned neighbors' adjacency constraints, and
+rejects reused target vertices before extending a partial layout. It keeps one
+partial layout per worker, without materializing pattern occurrences or
+intermediate join tables. Independent starting assignments use the MLIR
+context's thread pool; disabling context threading makes the search serial.
+Small searches also run serially. Result order is independent of thread count.
+All-to-all targets enumerate injective assignments directly, without
+constructing adjacency lists.
+
+All final layouts are retained, so time and output space can grow exponentially,
+particularly for disconnected graphs and all-to-all targets.
+`findTopologyLayout(graph, target, context, maxCandidates)` uses the same search
+with a candidate-assignment budget and retains at most one result per task.
+Fixed starting ranges make its result independent of thread count. A missing
+result can mean budget exhaustion; it does not prove that no layout exists.
+
+The `place-qubits` pass selects and materializes the initial layout. It tries
+identity and path shortcuts before bounded search, then uses weighted greedy,
+identity, and random candidates when needed. Candidate refinement and
+native-cost scoring call the shared router without changing IR. Placement itself
+inserts no routing SWAPs and does not guarantee adjacent interactions.
+
+Its `patterns` option selects the bounded search:
+
+| Value            | Search                                                                      |
+| ---------------- | --------------------------------------------------------------------------- |
+| `none` (default) | Direct vertex search with `findTopologyLayout`.                             |
+| `small`          | VF2 decomposition and joins over pairs, four-cycles, and stars.             |
+| `extended`       | Also use four-/six-qubit chains, six-/eight-cycles, and full 2×3/2×4 grids. |
+
+For example, `builtin.module(place-qubits{patterns=extended},place-and-route)`
+selects the extended patterns before routing. In C++, set
+`PlacementPassOptions::patterns` and pass the options to `createPlacementPass`.
+The canonical target-compilation pipeline uses `none`. The choice is currently a
+pass option, not a high-level Python compilation option.
+
+Both search methods try at most 100,000 candidates. A pattern candidate can bind
+several vertices; its budget is not equal work to the direct search's budget.
+Pattern preparation and VF2 decomposition are outside that limit. Canonical
+groups share the target cache, while oriented tuple indexes are built per call.
+Unavailable larger groups fall back to the selected smaller patterns. A complete
+embedding skips refinement trials. If no layout is found, including after budget
+exhaustion, normal candidate refinement and routing continue. Interaction
+collection supports straight-line programs and statically counted scalar loops.
+The embedding search considers topology, not calibration or native gate cost.
+
+The subsequent `place-and-route` pass routes already placed qubits. For existing
+callers it also accepts dynamic input and performs placement first. Both passes
+are implemented in `Mapping.cpp` and use the same internal routing code. Use
+matching routing/scoring options in both passes. An internal
+`mqt.placement_order` permutation preserves the router's logical index order
+across serialization; routing validates and consumes it. Source provenance stays
+in `mqt.layout`, whose routing permutation is composed after routing. Existing
+physical layout metadata must cover the full target and list `sites` in target
+order; standalone routing rejects incompatible metadata before changing IR.
+Native synthesis and target validation run afterwards. The high-level pipeline
+routes newly placed programs; it keeps already static inputs on their assigned
+sites and synthesizes and validates them there, including supported native
+higher-arity gates. Explicitly run `place-and-route` to route static input.
 
 The CLI also accepts a saved target as a typed MLIR attribute. Serialize a
 Python target with `str(target)`, or pass the attribute directly:
