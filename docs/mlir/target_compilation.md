@@ -93,13 +93,13 @@ Add `--emit=qco-optimized -o mapped.mlir` to write the mapped QCO program with
 layout metadata. The payload specification still defines the target's execution
 capabilities.
 
-Trials must be positive. Omitted trials use the logical CPU count; iterations
-default to one forward/backward refinement round. Zero iterations score each
-initial layout directly. Lookahead is the number of additional two-qubit gates
-considered during routing. It defaults to 20; zero considers only the current
-gate. All-to-all placement ignores valid mapping controls. Repeatable mapping
-requires the same build, input, target, seed, and mapping controls, including an
-explicit trial count. Layouts may change between releases.
+Trials must be positive. Omitted trials use 23 starts; iterations default to two
+forward/backward refinement rounds. Zero iterations score each initial layout
+directly. Lookahead is the number of additional two-qubit gates considered
+during routing. It defaults to 20; zero considers only the current gate.
+All-to-all placement ignores valid mapping controls. Repeatable mapping requires
+the same build, input, target, seed, and mapping controls, including an explicit
+trial count. Layouts may change between releases.
 
 For explicit native gate sets with a usable entangler basis, routing ranks its
 candidates by estimated native two-qubit gate count, using qubit-dependency
@@ -285,9 +285,9 @@ the same one-qubit gate family on every site. Its entangler is optional:
 one-qubit synthesis does not need one. Two-qubit synthesis requires an entangler
 on every routing edge in at least one direction.
 
-Mapping explores one initial-layout trial per available logical CPU by default,
-using LLVM's affinity-aware CPU count with a minimum of one. An explicit
-`ntrials` value overrides this default. Set both `ntrials` and `seed` on the
+Mapping explores 23 initial-layout trials with two forward/backward refinement
+rounds per trial by default, independent of CPU count. An explicit `ntrials`
+value overrides this default. Set both `ntrials` and `seed` on the
 `place-and-route` pass for reproducible results across machines. Disabling
 multithreading runs the same trials sequentially. The trial budget includes a
 greedy layout when available, followed by identity if a slot remains and random

@@ -628,13 +628,13 @@ class MappingOptions:
         self,
         *,
         trials: int | None = None,
-        iterations: int = 1,
+        iterations: int = 2,
         lookahead: int = 20,
         search_memory_limit: int = 268435456,
     ) -> None: ...
     @property
     def trials(self) -> int | None:
-        """Positive trial count; None uses the available logical CPU count."""
+        """Positive trial count; None uses the mapping pass default of 23."""
 
     @trials.setter
     def trials(self, arg: int | None, /) -> None: ...

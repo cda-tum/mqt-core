@@ -199,7 +199,7 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     operations pass through, and every two-qubit operation is routed to
     adjacent target vertices. Higher-arity unitaries must be decomposed before
     mapping. Target-defined site identifiers are retained in the resulting
-    `qco.static` operations.
+    `qco.static` operations. Gate and heuristic parameters must be finite.
 
     The entry function and supported structured-control-flow regions must each
     contain one block. Calls that carry qubits must be inlined before mapping.
@@ -226,24 +226,39 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     layout. For `scf.while`, the before-region exit places the after region
     and loop results; the after region restores the loop-entry layout.
 
-    For routing, the pass first divides the circuit into layers. A layer is a set of independently executable (sequences
-    or blocks of) two-qubit operations. Subsequently, the pass performs an A* search for each layer to find and insert a
-    sequence of `SWAP` operations that makes these two-qubit operations executable. The A* search also considers
-    subsequent layers, which are determined by the `nlookahead` parameter.
+    Routing collects a lookahead horizon of ready two-qubit interactions,
+    skipping consecutive blocks on the same qubit pair. It contains at most
+    `1 + nlookahead` interactions, grouped by dependency layer. Traversal order
+    depends on physical wire positions; it is not a global program-order rank.
 
-    The cost function of the A* search is defined as follows:
+    One interaction from the front layer is the search objective. For each
+    candidate, count later horizon interactions that reuse either endpoint,
+    counting an interaction only once. The largest demand wins, followed by
+    the shortest distance in the search's initial layout, then traversal order.
+    Endpoint reuse is a heuristic preference, not an estimate of time or native
+    gate cost.
+    The objective is fixed during the search. Expansion considers target edges
+    touching either objective endpoint, and the search ends when that pair
+    becomes adjacent; it need not make the entire front layer executable.
 
-    - `f(n) = g(n) + h(n)`
-    - `g(n) = alpha * depth(n)`
-    - `h(n) = sum(pow(lambda, i) * h(gate, p) for [i, gate] in enumerate(window))`
+    The search priority is `f(n) = g(n) + h(n)`, where:
 
-    Where:
+    - `g(n) = alpha * accumulated_cost(n)`.
+    - `h(n) = swap_cost * sum(weight(i) * (dist(p[a], p[b]) - 1))`, summing
+      over each interaction `(a,b)` in horizon layer `i`.
+    - `p` is the logical-to-physical mapping associated with search node `n`.
+    - `dist` is shortest-path distance on the target's coupling graph.
+    - `weight(0) = 1`; for `i >= 1`,
+      `weight(i) = lambda / (lambda + (1 - lambda) * i)`.
 
-    - `p` is the dynamic-to-static mapping associated with search node `n`.
-    - `window` contains at most `1 + nlookahead` two-qubit operations in program order.
-    - `depth(n)` returns the distance from the node `n` to the root node.
-    - `dist(i, j)` returns the distance between the qubits `i` and `j` on the target's coupling graph.
-    - `h(gate, p)` is `dist(p[gate.first], p[gate.second]) - 1`.
+    Default `lambda = 0.5` gives layer weights `1, 1/2, 1/3, ...`, including
+    empty layers. `lambda = 0` ignores later layers; `lambda = 1` weights all
+    layers equally. The implementation sums distances within each layer before
+    multiplying by its weight. Floating-point ties can affect routing decisions.
+    This sum is not an admissible lower bound for reaching the fixed objective:
+    a SWAP can help several interactions, and other horizon interactions can
+    still contribute cost when the objective is already adjacent. Without
+    native-cost guidance, `swap_cost = 1` and accumulated cost is SWAP depth.
 
     When a native-cost estimate is available and standalone SWAP cost is uniform
     across target edges, refinement, scoring, and final routing measure both terms in native
@@ -263,9 +278,11 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     Each search limits retained nodes using `search-memory-limit`, an estimated
     byte budget for the nodes and their qubit layouts (256 MiB by default).
     At least the root node is retained; zero disables node expansion.
+    Rejected duplicate states release their node slot immediately. Accepted
+    states remain available for parent chains and layout lookup.
     The pass stops allocating nodes at the limit, checks the remaining queue,
-    and, if no solution is queued, completes the route with SWAPs that reduce
-    the leading pair's distance. This always makes progress on a connected
+    and, if no solution is queued, uses a shortest path from the search's initial
+    layout to make the fixed objective pair adjacent. This always makes progress on a connected
     target. Changing the budget can change the selected initial layout and
     final gate count or depth; more memory does not guarantee fewer gates.
     Queue, visited-map, allocator, and linear fallback workspace overhead are
@@ -293,12 +310,15 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
     a greedy layout when available, then identity if a slot remains, and random
     layouts for the remaining slots. Every trial uses `niterations` refinement
     rounds before scoring; zero scores the initial layouts directly.
-    It defaults to the number of available logical CPUs reported by LLVM, taking
-    CPU affinity into account, with a minimum of one. Disabling multithreading
+    The defaults are 23 trials and two refinement rounds, independent of CPU
+    count. Disabling multithreading
     runs the same trials sequentially; it does not reduce the trial count.
     If compiled with multi-threading on, these trials will be executed in parallel.
-    Set both `ntrials` and `seed` explicitly for reproducible results across
-    machines with different CPU counts.
+    Set both `ntrials` and `seed` explicitly to fix the search budget and seed.
+    Compiler-wide seed settings can also affect other
+    passes; an explicit compiler seed is not equivalent to leaving pass defaults
+    unset. A fixed seed does not guarantee identical routing across compiler
+    versions or floating-point implementations.
 
     For programs with two-qubit interactions, the pass also constructs an
     interaction-weighted greedy layout. Statically counted scalar-qubit
@@ -344,15 +364,14 @@ def MappingPass : Pass<"place-and-route", "mlir::ModuleOp"> {
                  Option<"alpha", "alpha", "float", "1.0F",
                         "The alpha cost factor. Must be finite and > 0.">,
                  Option<"lambda", "lambda", "float", "0.5F",
-                        "The lambda factor in the cost function.">,
-                 Option<"niterations", "niterations", "std::size_t", "1",
+                        "The lookahead layer-weight factor, in [0, 1].">,
+                 Option<"niterations", "niterations", "std::size_t", "2",
                         "The number of forwards and backwards traversal to "
                         "improve the initial layout. Must be >= 0.">,
-                 Option<"ntrials", "ntrials", "std::size_t",
-                        "llvm::hardware_concurrency().compute_thread_count()",
+                 Option<"ntrials", "ntrials", "std::size_t", "23",
                         "The total number of greedy/identity/random trials of "
                         "the forwards and backwards mechanism. Defaults to "
-                        "the available logical CPU count. Must be > 0.">,
+                        "23. Must be > 0.">,
                  Option<"seed", "seed", "std::size_t", "42",
                         "A seed used for randomization.">,
                  Option<"searchMemoryLimit", "search-memory-limit", "size_t",
