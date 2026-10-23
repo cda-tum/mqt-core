@@ -487,7 +487,10 @@ private:
   /// Collect capabilities from all emitted function definitions.
   void collectAdaptiveFeatures(LLVM::LLVMFuncOp entryPoint,
                                const HelperCalls& helpers, Metadata& metadata) {
-    const auto recordType = [&](const Type type) {
+    const auto recordType = [&](Type type) {
+      while (auto array = dyn_cast<LLVM::LLVMArrayType>(type)) {
+        type = array.getElementType();
+      }
       if (const auto integer = dyn_cast<IntegerType>(type);
           integer && integer.getWidth() > 1) {
         metadata.integerTypes.insert("i" + std::to_string(integer.getWidth()));

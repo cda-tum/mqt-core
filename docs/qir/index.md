@@ -287,10 +287,13 @@ MQT Core implements the QIR 2.1 Base and Adaptive Profile runtime APIs. The JIT
 accepts one exact LLVM type for each runtime declaration, so unsupported or
 outdated overloads fail before execution.
 
-General classical array copies and some math operations lower to LLVM
-intrinsics, such as `llvm.memcpy` and `llvm.sqrt`. DDSIM executes these, but QIR
-2.1 profile capability flags do not establish support for them on another
-backend. Check that backend's extensions when using these operations.
+Classical array copies require ranked memrefs. Fixed contiguous copies use
+[LLVM array loads and stores](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/Memory_Management.md#supported-llvm-array-operations);
+other layouts use loops and require the corresponding backwards-branching
+capability. Math operations such as `sqrt` lower to LLVM intrinsics. DDSIM
+executes these intrinsics, but they are outside the
+[floating-point instructions required by QIR 2.1](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/profiles/Adaptive_Profile.md#classical-instructions).
+Check the backend's extensions when using these operations.
 
 MQT Core provides dedicated QIS functions for variants with one or two control
 qubits, using the `c<gate>` and `cc<gate>` names. Operations with three or more

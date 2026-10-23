@@ -233,18 +233,17 @@ TEST_F(ClassicalSimplificationTest,
 TEST_F(ClassicalSimplificationTest, PromotesWideSnapshotComparisons) {
   auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @main(%sign: i1, %low: i1) -> !cbit.reg<20> {
-        %c0 = arith.constant 0 : index
+      func.func @main(%sign: i1, %word: i64) -> !cbit.reg<40> {
         %c64 = arith.constant 64 : index
-        %false = arith.constant false
+        %zero = arith.constant 0 : i65
+        %extended = arith.extui %word : i64 to i65
         %reg = cbit.alloc(#cbit.init<zero>) : !cbit.reg<65>
+        cbit.write %extended, %reg : i65, !cbit.reg<65>
         cbit.store %sign, %reg[%c64] : !cbit.reg<65>
-        cbit.store %low, %reg[%c0] : !cbit.reg<65>
         %snapshot = cbit.read %reg : !cbit.reg<65> -> i65
-        cbit.store %false, %reg[%c64] : !cbit.reg<65>
-        cbit.store %false, %reg[%c0] : !cbit.reg<65>
-        %out = cbit.alloc(#cbit.init<zero>) : !cbit.reg<20>
-        return %out : !cbit.reg<20>
+        cbit.write %zero, %reg : i65, !cbit.reg<65>
+        %out = cbit.alloc(#cbit.init<zero>) : !cbit.reg<40>
+        return %out : !cbit.reg<40>
       }
     }
   )mlir",
@@ -257,42 +256,60 @@ TEST_F(ClassicalSimplificationTest, PromotesWideSnapshotComparisons) {
       arith::CmpIPredicate::slt, arith::CmpIPredicate::sle,
       arith::CmpIPredicate::sgt, arith::CmpIPredicate::sge,
   };
+  const std::array boundaries{
+      APInt::getSignMask(65) | APInt(65, 0x5555555555555555ULL),
+      APInt(65, 0xAAAAAAAAAAAAAAAAULL),
+  };
   auto function = moduleOp->lookupSymbol<func::FuncOp>("main");
   auto returned = cast<func::ReturnOp>(function.front().getTerminator());
   Value snapshot = *function.getOps<cbit::ReadOp>().begin();
   OpBuilder builder(returned);
-  auto boundary = APInt::getSignMask(65) + 1;
-  auto constant = arith::ConstantOp::create(
-      builder, returned.getLoc(),
-      builder.getIntegerAttr(snapshot.getType(), boundary));
-  for (auto [index, predicate] : llvm::enumerate(predicates)) {
-    for (bool reversed : {false, true}) {
-      auto result = arith::CmpIOp::create(builder, returned.getLoc(), predicate,
-                                          reversed ? constant : snapshot,
-                                          reversed ? snapshot : constant);
-      auto position = arith::ConstantIndexOp::create(
-          builder, returned.getLoc(),
-          static_cast<int64_t>(2 * index + (reversed ? 1 : 0)));
-      cbit::StoreOp::create(builder, returned.getLoc(), result,
-                            returned.getOperand(0), position);
+  for (auto [boundaryIndex, boundary] : llvm::enumerate(boundaries)) {
+    auto constant = arith::ConstantOp::create(
+        builder, returned.getLoc(),
+        builder.getIntegerAttr(snapshot.getType(), boundary));
+    for (auto [index, predicate] : llvm::enumerate(predicates)) {
+      for (bool reversed : {false, true}) {
+        auto result = arith::CmpIOp::create(
+            builder, returned.getLoc(), predicate,
+            reversed ? constant : snapshot, reversed ? snapshot : constant);
+        auto position = arith::ConstantIndexOp::create(
+            builder, returned.getLoc(),
+            static_cast<int64_t>(20 * boundaryIndex + 2 * index +
+                                 (reversed ? 1 : 0)));
+        cbit::StoreOp::create(builder, returned.getLoc(), result,
+                              returned.getOperand(0), position);
+      }
     }
   }
   const auto check = [&] {
     ASSERT_TRUE(succeeded(verify(*moduleOp)));
     for (bool sign : {false, true}) {
-      for (bool low : {false, true}) {
+      for (uint64_t word : {
+               0ULL,
+               0x55555554FFFFFFFFULL,
+               0x5555555700000000ULL,
+               0x5555555555555555ULL,
+               0xAAAAAAAAAAAAAAAAULL,
+               0xFFFFFFFFFFFFFFFFULL,
+           }) {
         auto value = sign ? APInt::getSignMask(65) : APInt(65, 0);
-        value += static_cast<unsigned>(low);
-        std::bitset<20> expected;
-        for (auto [index, predicate] : llvm::enumerate(predicates)) {
-          expected[2 * index] =
-              arith::applyCmpPredicate(predicate, value, boundary);
-          expected[2 * index + 1] =
-              arith::applyCmpPredicate(predicate, boundary, value);
+        value |= APInt(65, word);
+        std::bitset<40> expected;
+        for (auto [boundaryIndex, boundary] : llvm::enumerate(boundaries)) {
+          for (auto [index, predicate] : llvm::enumerate(predicates)) {
+            expected[20 * boundaryIndex + 2 * index] =
+                arith::applyCmpPredicate(predicate, value, boundary);
+            expected[20 * boundaryIndex + 2 * index + 1] =
+                arith::applyCmpPredicate(predicate, boundary, value);
+          }
         }
         const qco::DDArgumentBindings bindings{
             {function.getArgument(0), builder.getBoolAttr(sign)},
-            {function.getArgument(1), builder.getBoolAttr(low)},
+            {
+                function.getArgument(1),
+                builder.getIntegerAttr(builder.getI64Type(), APInt(64, word)),
+            },
         };
         auto counts = qco::sample(function, 1, 1, bindings);
         ASSERT_TRUE(succeeded(counts));
@@ -307,7 +324,7 @@ TEST_F(ClassicalSimplificationTest, PromotesWideSnapshotComparisons) {
   ASSERT_TRUE(succeeded(manager.run(*moduleOp)));
   EXPECT_TRUE(function.getOps<cbit::ReadOp>().empty());
   moduleOp->walk(
-      [](cbit::AllocOp alloc) { EXPECT_EQ(alloc.getType().getWidth(), 20); });
+      [](cbit::AllocOp alloc) { EXPECT_EQ(alloc.getType().getWidth(), 40); });
   check();
 }
 

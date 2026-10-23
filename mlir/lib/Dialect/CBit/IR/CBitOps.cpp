@@ -65,6 +65,9 @@ void ReadOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 
 static void attachMemorySlotInterfaces(MLIRContext* context);
 
+// shortcut: cap per-bit IR growth; raise with compile-time evidence.
+static constexpr int64_t MAX_PROMOTED_REGISTER_WIDTH = 256;
+
 void CBitDialect::initialize() {
   // NOLINTNEXTLINE(clang-analyzer-core.StackAddressEscape)
   addAttributes<
@@ -141,9 +144,8 @@ static LogicalResult verifyIndex(Operation* operation, Value registerValue,
   return success();
 }
 
-/// Find a known snapshot or zero initialization; a null index denotes a whole
-/// read.
-static OpFoldResult findKnownValue(Operation* read, Value reg, Value index) {
+/// Find a known snapshot; a null index denotes a whole-register read.
+static Value findKnownValue(Operation* read, Value reg, Value index) {
   const bool singleBit = cast<RegisterType>(reg.getType()).getWidth() == 1;
   const auto matchesIndex = [&](Value candidate) {
     return index ? isEqualConstantIntOrValue(index, candidate)
@@ -185,16 +187,12 @@ static OpFoldResult findKnownValue(Operation* read, Value reg, Value index) {
       return {};
     }
     if (auto write = dyn_cast<WriteOp>(previous)) {
-      return write.getReg() == reg && readsWholeRegister
-                 ? OpFoldResult(write.getValue())
-                 : OpFoldResult{};
+      return write.getReg() == reg && readsWholeRegister ? write.getValue()
+                                                         : Value{};
     }
     if (auto alloc = dyn_cast<AllocOp>(previous)) {
       if (alloc.getResult() == reg) {
-        return alloc.getInitialization() == Initialization::Zero
-                   ? OpFoldResult(
-                         IntegerAttr::get(read->getResult(0).getType(), 0))
-                   : OpFoldResult{};
+        return {};
       }
       continue;
     }
@@ -211,12 +209,7 @@ static LogicalResult forwardKnownValue(Operation* read, Value reg, Value index,
   if (!known) {
     return failure();
   }
-  if (auto value = dyn_cast<Value>(known)) {
-    rewriter.replaceOp(read, value);
-  } else {
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
-        read, cast<IntegerAttr>(cast<Attribute>(known)));
-  }
+  rewriter.replaceOp(read, known);
   return success();
 }
 
@@ -355,12 +348,11 @@ struct RegisterSlots final
   [[nodiscard]] std::optional<DenseMap<Attribute, Type>>
   getSubelementIndexMap(Type type) const {
     const auto width = cast<RegisterType>(type).getWidth();
-    // shortcut: cap per-bit IR growth at 256 bits; raise with compile-time
-    // evidence.
-    if (width <= 1 || width > 256) {
+    if (width <= 1 || width > MAX_PROMOTED_REGISTER_WIDTH) {
       return std::nullopt;
     }
     DenseMap<Attribute, Type> elements;
+    elements.reserve(static_cast<unsigned>(width));
     Builder builder(type.getContext());
     for (int64_t index = 0; index < width; ++index) {
       elements[builder.getIndexAttr(index)] = builder.getI1Type();
@@ -401,6 +393,7 @@ struct DestructureRegister final
       SmallVectorImpl<DestructurableAllocationOpInterface>& /*newAllocators*/)
       const {
     DenseMap<Attribute, MemorySlot> slots;
+    slots.reserve(usedIndices.size());
     SmallVector<Attribute> indices(usedIndices.begin(), usedIndices.end());
     llvm::sort(indices, [](Attribute left, Attribute right) {
       return cast<IntegerAttr>(left).getInt() <
@@ -614,60 +607,35 @@ static Value buildBitComparison(OpBuilder& builder, Location location,
                                 const arith::CmpIPredicate predicate,
                                 const llvm::APInt& rhs, ArrayRef<Value> bits,
                                 bool reversed) {
-  const auto encodedPredicate = mqt::unsignedPredicate(predicate);
-  auto encodedRhs = rhs;
-  const bool biasSignBit = encodedPredicate != predicate;
-  if (biasSignBit) {
-    encodedRhs.flipBit(encodedRhs.getBitWidth() - 1U);
-  }
-
+  const auto unsignedPredicate = mqt::unsignedPredicate(predicate);
+  const bool equality = unsignedPredicate == arith::CmpIPredicate::eq ||
+                        unsignedPredicate == arith::CmpIPredicate::ne;
+  const bool negate =
+      equality ? unsignedPredicate == arith::CmpIPredicate::ne
+               : (unsignedPredicate == arith::CmpIPredicate::ult ||
+                  unsignedPredicate == arith::CmpIPredicate::ule) != reversed;
+  const bool acceptEqual = arith::applyCmpPredicate(predicate, rhs, rhs);
   auto one = arith::ConstantIntOp::create(builder, location, 1, 1);
-  Value equal = one;
-  Value less;
-  if (encodedPredicate != arith::CmpIPredicate::eq &&
-      encodedPredicate != arith::CmpIPredicate::ne) {
-    less = arith::ConstantIntOp::create(builder, location, 0, 1);
-  }
-  for (int64_t index = static_cast<int64_t>(encodedRhs.getBitWidth()) - 1;
-       index >= 0; --index) {
-    auto bit = bits[index];
-    if (biasSignBit &&
-        index == static_cast<int64_t>(encodedRhs.getBitWidth()) - 1) {
-      bit = arith::XOrIOp::create(builder, location, bit, one);
+  Value result = arith::ConstantIntOp::create(builder, location,
+                                              acceptEqual != negate ? 1 : 0, 1);
+  // Each higher bit overrides the comparison of the lower bits. Build >= or
+  // > with one AND/OR per bit, then complement for < or <=.
+  for (auto [index, input] : llvm::enumerate(bits)) {
+    Value bit = input;
+    bool constantBit = rhs[static_cast<unsigned>(index)];
+    if (unsignedPredicate != predicate && index + 1 == bits.size()) {
+      bit = builder.createOrFold<arith::XOrIOp>(location, bit, one);
+      constantBit = !constantBit;
     }
-    Value matches = bit;
-    if (!encodedRhs[static_cast<unsigned>(index)]) {
-      matches = arith::XOrIOp::create(builder, location, bit, one);
-    } else if (less) {
-      auto lower = arith::XOrIOp::create(builder, location, bit, one);
-      auto firstDifference =
-          arith::AndIOp::create(builder, location, equal, lower);
-      less = arith::OrIOp::create(builder, location, less, firstDifference);
+    if (equality && !constantBit) {
+      bit = builder.createOrFold<arith::XOrIOp>(location, bit, one);
     }
-    equal = arith::AndIOp::create(builder, location, equal, matches);
+    result = equality || constantBit
+                 ? builder.createOrFold<arith::AndIOp>(location, bit, result)
+                 : builder.createOrFold<arith::OrIOp>(location, bit, result);
   }
-  if (less && reversed) {
-    auto lessOrEqual = arith::OrIOp::create(builder, location, less, equal);
-    less = arith::XOrIOp::create(builder, location, lessOrEqual, one);
-  }
-  switch (encodedPredicate) {
-  case arith::CmpIPredicate::eq:
-    return equal;
-  case arith::CmpIPredicate::ne:
-    return arith::XOrIOp::create(builder, location, equal, one);
-  case arith::CmpIPredicate::ult:
-    return less;
-  case arith::CmpIPredicate::ule:
-    return arith::OrIOp::create(builder, location, less, equal);
-  case arith::CmpIPredicate::ugt: {
-    auto lessOrEqual = arith::OrIOp::create(builder, location, less, equal);
-    return arith::XOrIOp::create(builder, location, lessOrEqual, one);
-  }
-  case arith::CmpIPredicate::uge:
-    return arith::XOrIOp::create(builder, location, less, one);
-  default:
-    llvm_unreachable("signed CBit predicate must be encoded as unsigned");
-  }
+  return negate ? builder.createOrFold<arith::XOrIOp>(location, result, one)
+                : result;
 }
 
 namespace {
@@ -694,10 +662,7 @@ struct LowerRegisterComparison final : OpRewritePattern<arith::CmpIOp> {
     }
     if (forPromotion_) {
       auto alloc = read.getReg().getDefiningOp<cbit::AllocOp>();
-      if (!alloc ||
-          cast<DestructurableAllocationOpInterface>(alloc.getOperation())
-              .getDestructurableSlots()
-              .empty() ||
+      if (!alloc || alloc.getType().getWidth() > MAX_PROMOTED_REGISTER_WIDTH ||
           !llvm::all_of(alloc.getResult().getUsers(), [&](Operation* user) {
             if (auto otherRead = dyn_cast<cbit::ReadOp>(user)) {
               return llvm::all_of(otherRead.getResult().getUsers(),

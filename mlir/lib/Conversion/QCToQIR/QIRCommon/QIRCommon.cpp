@@ -22,6 +22,8 @@
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -81,6 +83,47 @@ namespace mlir {
 using namespace qc;
 using namespace qir;
 
+namespace {
+
+class ContiguousCopyOpLowering final
+    : public ConvertOpToLLVMPattern<memref::CopyOp> {
+public:
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp copy, OpAdaptor adaptor,
+                  ConversionPatternRewriter& rewriter) const override {
+    auto sourceType = dyn_cast<MemRefType>(copy.getSource().getType());
+    auto targetType = dyn_cast<MemRefType>(copy.getTarget().getType());
+    if (!sourceType || !targetType ||
+        !memref::isStaticShapeAndContiguousRowMajor(sourceType) ||
+        !memref::isStaticShapeAndContiguousRowMajor(targetType)) {
+      return failure();
+    }
+    auto elementType =
+        getTypeConverter()->convertType(sourceType.getElementType());
+    if (!elementType) {
+      return failure();
+    }
+    auto loc = copy.getLoc();
+    auto source =
+        MemRefDescriptor(adaptor.getSource())
+            .bufferPtr(rewriter, loc, *getTypeConverter(), sourceType);
+    auto target =
+        MemRefDescriptor(adaptor.getTarget())
+            .bufferPtr(rewriter, loc, *getTypeConverter(), targetType);
+    auto arrayType =
+        LLVM::LLVMArrayType::get(elementType, sourceType.getNumElements());
+    auto value = LLVM::LoadOp::create(rewriter, loc, arrayType, source,
+                                      /*alignment=*/1);
+    LLVM::StoreOp::create(rewriter, loc, value, target, /*alignment=*/1);
+    rewriter.eraseOp(copy);
+    return success();
+  }
+};
+
+} // namespace
+
 LogicalResult LoweringState::ensureAllocationMode(AllocationMode requested,
                                                   Operation* op) {
   if (allocationMode == AllocationMode::Unset) {
@@ -134,15 +177,22 @@ LogicalResult finalizeQIRConversion(ModuleOp moduleOp, ConversionTarget& target,
     return failure();
   }
 
-  // Keep contiguous copies for LLVM memcpy; lower strided copies without
-  // introducing the MLIR runner's memrefCopy runtime dependency.
+  // QIR arrays provide loads/stores, not memcpy or the MLIR memrefCopy runtime.
   if (moduleOp
           .walk([](memref::CopyOp copy) {
             auto sourceType = dyn_cast<MemRefType>(copy.getSource().getType());
             auto targetType = dyn_cast<MemRefType>(copy.getTarget().getType());
-            if (!sourceType || !targetType ||
-                (memref::isStaticShapeAndContiguousRowMajor(sourceType) &&
-                 memref::isStaticShapeAndContiguousRowMajor(targetType))) {
+            if (!sourceType || !targetType) {
+              copy.emitError("QIR classical copies require ranked memrefs");
+              return WalkResult::interrupt();
+            }
+            if (sourceType.hasStaticShape() &&
+                sourceType.getNumElements() == 0) {
+              copy.erase();
+              return WalkResult::advance();
+            }
+            if (memref::isStaticShapeAndContiguousRowMajor(sourceType) &&
+                memref::isStaticShapeAndContiguousRowMajor(targetType)) {
               return WalkResult::advance();
             }
             IRRewriter rewriter(copy.getContext());
@@ -171,6 +221,8 @@ LogicalResult finalizeQIRConversion(ModuleOp moduleOp, ConversionTarget& target,
   populateSCFToControlFlowConversionPatterns(patterns);
   memref::populateExpandStridedMetadataPatterns(patterns);
   populateAffineToStdConversionPatterns(patterns);
+  patterns.add<ContiguousCopyOpLowering>(memoryTypeConverter,
+                                         PatternBenefit(2));
   populateFinalizeMemRefToLLVMConversionPatterns(memoryTypeConverter, patterns);
   cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
   arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);

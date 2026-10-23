@@ -2700,16 +2700,19 @@ TEST_F(QCODDFunctionalityTest, SimulateRicherClassicalArithmetic) {
 TEST_F(QCODDFunctionalityTest,
        SampleReturnsClassicalResultsInCountStringOrder) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(module {
-    func.func @main(%q: !qco.qubit) -> (!cbit.reg<2>, i1, !cbit.reg<1>, i1, !qco.qubit) {
+    func.func @main(%q: !qco.qubit) -> (!cbit.reg<2>, i1, !cbit.reg<1>, i1, i1, !qco.qubit) {
       %false = arith.constant false
       %true = arith.constant true
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
       %wide = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
       %narrow = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+      %flipped = qco.x %q : !qco.qubit
+      %measured, %bit = qco.measure %flipped : !qco.qubit
+      cbit.store %bit, %wide[%zero] : !cbit.reg<2>
       cbit.store %true, %wide[%one] : !cbit.reg<2>
       cbit.store %true, %narrow[%zero] : !cbit.reg<1>
-      return %wide, %false, %narrow, %true, %q : !cbit.reg<2>, i1, !cbit.reg<1>, i1, !qco.qubit
+      return %wide, %false, %narrow, %bit, %bit, %measured : !cbit.reg<2>, i1, !cbit.reg<1>, i1, i1, !qco.qubit
     }
   })mlir",
                                          context.get());
@@ -2717,7 +2720,7 @@ TEST_F(QCODDFunctionalityTest,
 
   const auto histogram = sample(mainFunc(*mod), 8, 3);
   ASSERT_TRUE(succeeded(histogram));
-  EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"11010", 8}}));
+  EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"111011", 8}}));
 }
 
 TEST_F(QCODDFunctionalityTest, SampleRejectsUndefinedAndMixedResults) {

@@ -184,6 +184,63 @@ TEST_F(QCToQIRAdaptiveNativeTest, LowersConstantTensorWithRuntimeIndex) {
   });
 }
 
+TEST_F(QCToQIRAdaptiveNativeTest, ContiguousCopiesNeedOnlyArrayOperations) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    memref.global "private" constant @source : memref<2x3xf64>
+      = dense<[[0.0, 0.25, 0.5], [0.75, 1.0, 1.25]]>
+    memref.global "private" constant @scalar : memref<f64> = dense<0.5>
+    func.func @main() attributes {mqt.entry_point} {
+      %source = memref.get_global @source : memref<2x3xf64>
+      %target = memref.alloca() : memref<2x3xf64>
+      memref.copy %source, %target : memref<2x3xf64> to memref<2x3xf64>
+      %row = memref.subview %source[1, 0][1, 3][1, 1]
+        : memref<2x3xf64> to memref<1x3xf64, strided<[3, 1], offset: 3>>
+      %first = memref.subview %target[0, 0][1, 3][1, 1]
+        : memref<2x3xf64> to memref<1x3xf64, strided<[3, 1]>>
+      memref.copy %row, %first
+        : memref<1x3xf64, strided<[3, 1], offset: 3>>
+        to memref<1x3xf64, strided<[3, 1]>>
+      %scalar = memref.get_global @scalar : memref<f64>
+      %scalar_target = memref.alloca() : memref<f64>
+      memref.copy %scalar, %scalar_target : memref<f64> to memref<f64>
+      %empty = memref.alloca() : memref<0x3xf64>
+      memref.copy %empty, %empty : memref<0x3xf64> to memref<0x3xf64>
+      return
+    }
+  })mlir",
+                                              &context);
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(runQCToQIRAdaptiveConversionSimple(*moduleOp)));
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  SmallVector<uint64_t> copiedElements;
+  moduleOp->walk([&](Operation* operation) {
+    EXPECT_FALSE(
+        (isa<LLVM::MemcpyOp, LLVM::MemmoveOp, LLVM::CondBrOp>(operation)));
+    if (auto load = dyn_cast<LLVM::LoadOp>(operation)) {
+      auto array = dyn_cast<LLVM::LLVMArrayType>(load.getType());
+      ASSERT_TRUE(array);
+      EXPECT_TRUE(array.getElementType().isF64());
+      copiedElements.push_back(array.getNumElements());
+    }
+    if (auto function = dyn_cast<LLVM::LLVMFuncOp>(operation)) {
+      EXPECT_NE(function.getName(), "memrefCopy");
+    }
+  });
+  EXPECT_EQ(copiedElements, (SmallVector<uint64_t>{6, 3, 1}));
+  ASSERT_TRUE(succeeded(runQIRCleanupPipeline(*moduleOp, true)));
+  bool requiresDouble = false;
+  moduleOp->walk([&](LLVM::ModuleFlagsOp flags) {
+    for (const auto flag :
+         flags.getFlags().getAsRange<LLVM::ModuleFlagAttr>()) {
+      if (flag.getKey().getValue() == "float_computations") {
+        requiresDouble =
+            flag.getValue() == Builder(&context).getStrArrayAttr({"double"});
+      }
+    }
+  });
+  EXPECT_TRUE(requiresDouble);
+}
+
 TEST_F(QCToQIRAdaptiveNativeTest,
        UsesSharedAllocationVerifierForStandalonePass) {
   auto module = parseSourceString<ModuleOp>(R"mlir(module {

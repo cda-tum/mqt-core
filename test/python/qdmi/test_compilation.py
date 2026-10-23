@@ -88,6 +88,57 @@ def test_computed_classical_outputs(program_format: ProgramFormat) -> None:
             assert output.count(f"OUTPUT\tBOOL\t{value}\tcomputed_{index}\n") == 4
 
 
+@pytest.mark.parametrize(
+    ("element_type", "low", "high", "sentinel", "comparison"),
+    [("i1", "0", "1", "1", "arith.cmpi eq"), ("f64", "0.25", "0.75", "0.5", "arith.cmpf oeq")],
+)
+def test_classical_array_copy_snapshot(element_type: str, low: str, high: str, sentinel: str, comparison: str) -> None:
+    """Copies preserve subview offsets and values across later source writes."""
+    program = QCProgram.from_mlir_str(f"""module {{
+      func.func @main() -> i1 attributes {{mqt.entry_point}} {{
+        %zero = arith.constant 0 : index
+        %one = arith.constant 1 : index
+        %two = arith.constant 2 : index
+        %low = arith.constant {low} : {element_type}
+        %high = arith.constant {high} : {element_type}
+        %sentinel = arith.constant {sentinel} : {element_type}
+        %source = memref.alloca() : memref<3x{element_type}>
+        %target = memref.alloca() : memref<3x{element_type}>
+        memref.store %sentinel, %source[%zero] : memref<3x{element_type}>
+        memref.store %low, %source[%one] : memref<3x{element_type}>
+        memref.store %high, %source[%two] : memref<3x{element_type}>
+        memref.store %sentinel, %target[%zero] : memref<3x{element_type}>
+        %q = qc.alloc : !qc.qubit
+        qc.x %q : !qc.qubit
+        %bit = qc.measure %q : !qc.qubit -> i1
+        %index = arith.index_castui %bit : i1 to index
+        %from = memref.subview %source[%index][2][1]
+          : memref<3x{element_type}> to memref<2x{element_type}, strided<[1], offset: ?>>
+        %to = memref.subview %target[1][2][1]
+          : memref<3x{element_type}> to memref<2x{element_type}, strided<[1], offset: 1>>
+        memref.copy %from, %to
+          : memref<2x{element_type}, strided<[1], offset: ?>>
+          to memref<2x{element_type}, strided<[1], offset: 1>>
+        memref.store %low, %source[%two] : memref<3x{element_type}>
+        %prefix = memref.load %target[%zero] : memref<3x{element_type}>
+        %first = memref.load %target[%one] : memref<3x{element_type}>
+        %second = memref.load %target[%two] : memref<3x{element_type}>
+        %prefix_ok = {comparison}, %prefix, %sentinel : {element_type}
+        %first_ok = {comparison}, %first, %low : {element_type}
+        %second_ok = {comparison}, %second, %high : {element_type}
+        %copied_ok = arith.andi %first_ok, %second_ok : i1
+        %ok = arith.andi %prefix_ok, %copied_ok : i1
+        qc.dealloc %q : !qc.qubit
+        return %ok : i1
+      }}
+    }}""")
+    assert sample(program, shots=1, seed=1) == {"1": 1}
+    qir = program.to_qir(QIRProfile.ADAPTIVE)
+    job = open_device("mqt.ddsim.default").submit_job(qir.to_bitcode(), ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=1)
+    assert job.wait()
+    assert job.get_counts() == {"1": 1}
+
+
 def test_boolean_scalar_outputs() -> None:
     """DD and QIR preserve Boolean snapshots and repeated mixed outputs."""
     program = QCProgram.from_mlir_str("""module {
