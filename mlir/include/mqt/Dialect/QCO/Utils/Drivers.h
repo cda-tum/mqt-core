@@ -26,7 +26,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <functional>
 #include <iterator>
 #include <numeric>
 #include <utility>
@@ -71,8 +70,9 @@ struct PendingItem {
 /// WalkResult
 /// ```
 ///
-/// The frontier preserves deterministic wire traversal order. The operations
-/// inserted into the "released" vector determine which operations are released
+/// The frontier preserves deterministic wire traversal order. The callback
+/// selects frontier operations for "released" without duplicates and leaves the
+/// IR and supplied iterators unchanged. The selected operations are released
 /// in the next iteration. The function returns if the callback does not release
 /// any operations or there are no more ready operations and thus each wire
 /// points at the default sentinel. The function modifies the given wires
@@ -143,7 +143,7 @@ void walkProgramGraph(MutableArrayRef<WireIterator> wires,
     }
 
     released.clear();
-    const auto res = std::invoke(fn, frontier, released);
+    const auto res = fn(frontier, released);
     if (res.wasInterrupted() || res.wasSkipped()) {
       return;
     }
