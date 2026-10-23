@@ -224,6 +224,8 @@ void populateTargetCompilationPipeline(OpPassManager& pm,
   pm.addPass(qco::createDecomposeMultiControlled(target));
   qco::ElidePermutationsOptions permutationOptions;
   permutationOptions.trackOutputPermutation = true;
+  permutationOptions.terminalOnly =
+      target.connectivityKind() == CompilerTarget::Connectivity::Kind::Explicit;
   pm.addPass(qco::createElidePermutations(permutationOptions));
   pm.addPass(qco::createFuseTwoQubitGates(target));
   // U fusion shrinks runs before routing. Other bases can expand symbolic

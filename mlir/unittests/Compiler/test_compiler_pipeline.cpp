@@ -3063,7 +3063,7 @@ c = measure q;
   }
 }
 
-TEST_F(CompilerPipelineTest, ElidesTensorBackedSwapsBeforeFusionAndRouting) {
+TEST_F(CompilerPipelineTest, ElidesTensorBackedSwapsOnAllToAllTarget) {
   for (const auto& [gates, expectedTwoQubitGates, expectedBits] : {
            std::tuple{R"qasm(x q[0];
              swap q[0], q[1]; swap q[1], q[2]; swap q[0], q[1];)qasm",
@@ -3097,8 +3097,12 @@ TEST_F(CompilerPipelineTest, ElidesTensorBackedSwapsBeforeFusionAndRouting) {
     ASSERT_TRUE(succeeded(restored));
     EXPECT_TRUE(succeeded(std::move(*restored).intoQIR(QIRProfile::Base)));
 
-    ASSERT_TRUE(mlir::succeeded(program->compileForTarget(TargetEnvironment(
-        makeSparseUCZTarget(true), makePayloadSpecification()))));
+    const auto target = llvm::cantFail(
+        CompilerTarget::create(3, CompilerTarget::Connectivity::allToAll(),
+                               CompilerTarget::NativeOperations::fromOperations(
+                                   makeSparseUCZTarget(true).operations())));
+    ASSERT_TRUE(mlir::succeeded(program->compileForTarget(
+        TargetEnvironment(target, makePayloadSpecification()))));
     size_t twoQubitGates = 0;
     program->module().walk([&](qco::UnitaryOpInterface unitary) {
       twoQubitGates += unitary.isTwoQubit();
@@ -3112,7 +3116,91 @@ TEST_F(CompilerPipelineTest, ElidesTensorBackedSwapsBeforeFusionAndRouting) {
   }
 }
 
+[[nodiscard]] static std::string makeAdjacentSwapChain(const size_t qubits) {
+  std::string gates;
+  for (size_t qubit = 0; qubit < qubits; ++qubit) {
+    const auto wire = "q[" + std::to_string(qubit) + "]";
+    gates += "h " + wire + "; rz(" +
+             std::to_string(0.017 * static_cast<double>(qubit + 1)) + ") " +
+             wire + ";";
+  }
+  for (size_t round = 0; round < 8; ++round) {
+    for (size_t qubit = 0; qubit + 1 < qubits; ++qubit) {
+      const auto first = "q[" + std::to_string(qubit) + "]";
+      const auto pair = first + ", q[" + std::to_string(qubit + 1) + "]";
+      gates += "swap " + pair + "; cx " + pair + "; rz(" +
+               std::to_string(0.11 + 0.013 * static_cast<double>(round)) +
+               ") " + first + ";";
+    }
+  }
+  return gates;
+}
+
+TEST_F(CompilerPipelineTest, PreservesAdjacentSwapChainsOnLineTargets) {
+  auto qc = QCProgram::fromOpenQASMString(
+      "OPENQASM 3.0; include \"stdgates.inc\"; qubit[8] q;" +
+      makeAdjacentSwapChain(8));
+  ASSERT_TRUE(succeeded(qc));
+  auto input = std::move(*qc).intoQCO();
+  ASSERT_TRUE(succeeded(input));
+  for (const bool line : {false, true}) {
+    SCOPED_TRACE(line);
+    const auto target = llvm::cantFail(CompilerTarget::create(
+        8,
+        line ? CompilerTarget::Connectivity::fromCouplings(
+                   {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 6}, {6, 7}})
+             : CompilerTarget::Connectivity::allToAll(),
+        CompilerTarget::NativeOperations::fromOperations(
+            makeSparseUCZTarget(false).operations())));
+    auto program = input->copy();
+    ASSERT_TRUE(succeeded(program.compileForTarget(
+        TargetEnvironment(target, makePayloadSpecification()),
+        {.seed = 42, .mapping = {.trials = 4, .iterations = 1}})));
+    size_t twoQubitGates = 0;
+    program.module().walk([&](qco::UnitaryOpInterface unitary) {
+      twoQubitGates += unitary.isTwoQubit();
+    });
+    // Each adjacent SWAP+CX needs two CZ gates without routing; elision on
+    // all-to-all needs only the CX. Retargeting the line can add routing gates.
+    EXPECT_LE(twoQubitGates, (line ? 2U : 1U) * 7U * 8U);
+  }
+}
+
+TEST_F(CompilerPipelineTest, ElidesTerminalQftSwapsOnLineAndAllToAllTargets) {
+  constexpr llvm::StringLiteral qft = R"qasm(OPENQASM 3.0;
+include "stdgates.inc";
+qubit[3] q;
+h q[0]; cp(pi/2) q[1], q[0]; cp(pi/4) q[2], q[0];
+h q[1]; cp(pi/2) q[2], q[1]; h q[2];
+)qasm";
+  for (const bool line : {false, true}) {
+    SCOPED_TRACE(line);
+    const auto target =
+        line ? makeSparseUCZTarget(false)
+             : llvm::cantFail(CompilerTarget::create(
+                   3, CompilerTarget::Connectivity::allToAll(),
+                   CompilerTarget::NativeOperations::fromOperations(
+                       makeSparseUCZTarget(false).operations())));
+    std::array<size_t, 2> gateCounts{};
+    for (const bool terminalSwap : {false, true}) {
+      auto qc = QCProgram::fromOpenQASMString(
+          qft.str() + (terminalSwap ? "swap q[0], q[2];" : ""));
+      ASSERT_TRUE(succeeded(qc));
+      auto program = std::move(*qc).intoQCO();
+      ASSERT_TRUE(succeeded(program));
+      ASSERT_TRUE(succeeded(program->compileForTarget(
+          TargetEnvironment(target, makePayloadSpecification()),
+          {.seed = 42, .mapping = {.trials = 4, .iterations = 1}})));
+      program->module().walk([&](qco::UnitaryOpInterface unitary) {
+        gateCounts[terminalSwap] += unitary.isTwoQubit();
+      });
+    }
+    EXPECT_EQ(gateCounts[0], gateCounts[1]);
+  }
+}
+
 TEST_F(CompilerPipelineTest, TargetLayoutRecoversRoutedUnitary) {
+  const auto swapChain = makeAdjacentSwapChain(4);
   for (const llvm::StringRef mode :
        {"routed", "placed", "indexed", "synthesis"}) {
     SCOPED_TRACE(mode.str());
@@ -3125,6 +3213,7 @@ TEST_F(CompilerPipelineTest, TargetLayoutRecoversRoutedUnitary) {
              "cx q[0], q[3]; cx q[2], q[3]; cx q[0], q[2]; "
              "swap q[0], q[2]; ry(0.41) q[0]; "
              "swap q[2], q[3]; h q[2];",
+             swapChain.c_str(),
          }) {
       SCOPED_TRACE(gates);
       const auto source =
@@ -3164,7 +3253,8 @@ TEST_F(CompilerPipelineTest, TargetLayoutRecoversRoutedUnitary) {
           [&] { return program->module().emitError(); });
       ASSERT_TRUE(succeeded(layout));
       EXPECT_EQ(layout->initial.size(), 4);
-      if (llvm::StringRef(gates).contains("swap")) {
+      if (mode != "routed" && llvm::StringRef(gates).contains("swap") &&
+          gates != swapChain) {
         ASSERT_TRUE(layout->routing);
       }
       const auto actualDD = qco::buildFunctionality(

@@ -75,9 +75,10 @@ protected:
         .getResult();
   }
 
-  static void rewrite(ModuleOp program) {
+  static void rewrite(ModuleOp program,
+                      const ElidePermutationsOptions& options = {}) {
     PassManager pm(program.getContext());
-    pm.addPass(createElidePermutations());
+    pm.addPass(createElidePermutations(options));
     ASSERT_TRUE(succeeded(pm.run(program)));
     EXPECT_TRUE(succeeded(verify(program)));
     EXPECT_TRUE(succeeded(verifyLinearity(program)));
@@ -260,6 +261,82 @@ TEST_F(ElidePermutationsTest, PropagatesCommonBranchPermutations) {
           checkUnitary(*program, common ? 0 : 2, {condition}));
     }
   }
+}
+
+TEST_F(ElidePermutationsTest, TerminalModePreservesEarlierRouting) {
+  for (const auto* boundary : {
+           R"mlir(%next = qco.h %sa : !qco.qubit)mlir",
+           R"mlir(%measured, %bit = qco.measure %sa : !qco.qubit
+                  %next = qco.h %measured : !qco.qubit)mlir",
+           R"mlir(%next = qco.reset %sa : !qco.qubit)mlir",
+           R"mlir(%next = qco.if %condition args(%q = %sa) -> (!qco.qubit) {
+                    qco.yield %q : !qco.qubit
+                  } else args(%q = %sa) {
+                    qco.yield %q : !qco.qubit
+                  })mlir",
+       }) {
+    SCOPED_TRACE(boundary);
+    auto program = parseSourceString<ModuleOp>(
+        std::string(
+            R"mlir(module attributes {mqt.source_qubit_count = 3 : i64} {
+          func.func @main(%condition: i1) attributes {mqt.entry_point} {
+            %a = qco.alloc {mqt.source_qubit_indices = array<i64: 0>} : !qco.qubit
+            %b = qco.alloc {mqt.source_qubit_indices = array<i64: 1>} : !qco.qubit
+            %c = qco.alloc {mqt.source_qubit_indices = array<i64: 2>} : !qco.qubit
+            %sa, %sb = qco.swap %a, %b : !qco.qubit, !qco.qubit
+        )mlir") +
+            boundary + R"mlir(
+            %outB, %outC = qco.swap %sb, %c : !qco.qubit, !qco.qubit
+            qco.sink %next : !qco.qubit
+            qco.sink %outB : !qco.qubit
+            qco.sink %outC : !qco.qubit
+            return
+          }
+        })mlir",
+        &context_);
+    ASSERT_TRUE(program);
+    ASSERT_TRUE(succeeded(verifyLinearity(*program)));
+    ElidePermutationsOptions options;
+    options.terminalOnly = true;
+    options.trackOutputPermutation = true;
+    ASSERT_NO_FATAL_FAILURE(rewrite(*program, options));
+    size_t swaps = 0;
+    program->walk([&](SWAPOp) { ++swaps; });
+    // A single-qubit gate may follow a virtual SWAP; the other boundaries
+    // retain the original exchange instead of synthesizing a new permutation.
+    EXPECT_EQ(swaps,
+              StringRef(boundary).starts_with("%next = qco.h") ? 0U : 1U);
+  }
+}
+
+TEST_F(ElidePermutationsTest, TerminalModePreservesNestedSwaps) {
+  auto program = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main(%condition: i1) attributes {mqt.entry_point} {
+      %a = qco.alloc : !qco.qubit
+      %b = qco.alloc : !qco.qubit
+      %left, %right = qco.if %condition args(%ta = %a, %tb = %b)
+          -> (!qco.qubit, !qco.qubit) {
+        %sa, %sb = qco.swap %ta, %tb : !qco.qubit, !qco.qubit
+        qco.yield %sa, %sb : !qco.qubit, !qco.qubit
+      } else args(%ea = %a, %eb = %b) {
+        %sa, %sb = qco.swap %ea, %eb : !qco.qubit, !qco.qubit
+        qco.yield %sa, %sb : !qco.qubit, !qco.qubit
+      }
+      %outA, %outB = qco.swap %left, %right : !qco.qubit, !qco.qubit
+      qco.sink %outA : !qco.qubit
+      qco.sink %outB : !qco.qubit
+      return
+    }
+  })mlir",
+                                             &context_);
+  ASSERT_TRUE(program);
+  ElidePermutationsOptions options;
+  options.terminalOnly = true;
+  ASSERT_NO_FATAL_FAILURE(rewrite(*program, options));
+  size_t swaps = 0;
+  program->walk([&](SWAPOp) { ++swaps; });
+  // Without output tracking, the outer SWAP must also retain physical order.
+  EXPECT_EQ(swaps, 3U);
 }
 
 TEST_F(ElidePermutationsTest, SummarizesTensorBranchesBySlot) {

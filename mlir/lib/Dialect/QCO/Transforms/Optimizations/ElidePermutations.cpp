@@ -32,6 +32,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -70,6 +71,39 @@ static Slot slotKey(OpFoldResult index) {
     return {*constant, {}};
   }
   return {0, cast<Value>(index)};
+}
+
+static DenseSet<Operation*> terminalSwaps(func::FuncOp entry) {
+  DenseSet<Operation*> swaps;
+  if (!entry || !entry.getBody().hasOneBlock()) {
+    return swaps;
+  }
+  bool hasLaterGate = false;
+  for (auto& op : llvm::reverse(entry.getBody().front().without_terminator())) {
+    if (isa<SWAPOp>(op)) {
+      swaps.insert(&op);
+      hasLaterGate = true;
+      continue;
+    }
+    if (auto gate = dyn_cast<UnitaryOpInterface>(op);
+        gate && gate.getNumQubits() == 1 && op.getNumRegions() == 0) {
+      hasLaterGate = true;
+      continue;
+    }
+    auto insert = dyn_cast<qtensor::InsertOp>(op);
+    auto extract = dyn_cast<qtensor::ExtractOp>(op);
+    if ((hasLaterGate && isa<MeasureOp, SinkOp, qtensor::DeallocOp>(op)) ||
+        (insert && !getConstantIntValue(insert.getIndex())) ||
+        (extract && !getConstantIntValue(extract.getIndex())) ||
+        op.getNumRegions() != 0 ||
+        (!isa<MeasureOp, SinkOp, qtensor::InsertOp, qtensor::ExtractOp,
+              qtensor::DeallocOp>(op) &&
+         (llvm::any_of(op.getOperandTypes(), isLinearQubitType) ||
+          llvm::any_of(op.getResultTypes(), isLinearQubitType)))) {
+      break;
+    }
+  }
+  return swaps;
 }
 
 static bool hasPositionalResults(func::CallOp call, ArrayRef<Value> inputs,
@@ -112,6 +146,7 @@ class PermutationTracker {
   IRRewriter& rewriter_;
   Block& block_;
   const RegionEffects& effects_;
+  const DenseSet<Operation*>* eligibleSwaps_;
   Layout<Resource> layout_;
   SmallVector<Wire> wires_;
   SmallVector<Tensor> tensors_;
@@ -416,7 +451,8 @@ class PermutationTracker {
     if (isa<UnitaryOpInterface>(op)) {
       if ((effects_.lookup(op) & (HAS_SWAP | NONPOSITIONAL)) == HAS_SWAP) {
         for (auto& region : op->getRegions()) {
-          PermutationTracker child(rewriter_, region.front(), effects_);
+          PermutationTracker child(rewriter_, region.front(), effects_,
+                                   eligibleSwaps_);
           const bool fixed =
               llvm::any_of(quantumValues(op->getOperands()), [&](Value value) {
                 return isa<QubitType>(value.getType())
@@ -529,7 +565,8 @@ class PermutationTracker {
       SmallVector<Permutation> summaries;
       for (auto& region : op->getRegions()) {
         auto& block = region.front();
-        auto& child = children.emplace_back(rewriter_, block, effects_);
+        auto& child =
+            children.emplace_back(rewriter_, block, effects_, eligibleSwaps_);
         for (auto [argument, isFixed] : llvm::zip(child.arguments_, fixed)) {
           if (isa<QubitType>(argument.getType())) {
             child.wires_[child.scalars_.lookup(argument)].fixed = isFixed;
@@ -633,7 +670,8 @@ class PermutationTracker {
     if (auto swap = dyn_cast<SWAPOp>(op)) {
       const auto a = scalars_.lookup(inputs[0]);
       const auto b = scalars_.lookup(inputs[1]);
-      if (!wires_[a].fixed && !wires_[b].fixed) {
+      if (!wires_[a].fixed && !wires_[b].fixed &&
+          (eligibleSwaps_ == nullptr || eligibleSwaps_->contains(swap))) {
         scalars_[outputs[0]] = a;
         scalars_[outputs[1]] = b;
         exchange(layout_.getHardwareIndex(a), layout_.getHardwareIndex(b));
@@ -695,8 +733,11 @@ class PermutationTracker {
 
 public:
   PermutationTracker(IRRewriter& rewriter, Block& block,
-                     const RegionEffects& effects, bool trackOutput = false)
+                     const RegionEffects& effects,
+                     const DenseSet<Operation*>* eligibleSwaps = nullptr,
+                     bool trackOutput = false)
       : rewriter_(rewriter), block_(block), effects_(effects),
+        eligibleSwaps_(eligibleSwaps),
         arguments_(quantumValues(block.getArguments())) {
     for (auto [index, argument] : llvm::enumerate(arguments_)) {
       if (isa<QubitType>(argument.getType())) {
@@ -757,6 +798,8 @@ protected:
   void runOnOperation() override {
     auto moduleOp = getOperation();
     auto entry = mqt::getEntryPoint(moduleOp);
+    const auto eligibleSwaps =
+        terminalOnly ? terminalSwaps(entry) : DenseSet<Operation*>{};
     SmallVector<int64_t> output;
     auto count =
         moduleOp->getAttrOfType<IntegerAttr>(mqt::kSourceQubitCountAttr);
@@ -765,6 +808,9 @@ protected:
       moduleOp.emitError("output permutation tracking requires freshly "
                          "prepared source qubit labels");
       signalPassFailure();
+      return;
+    }
+    if (terminalOnly && eligibleSwaps.empty()) {
       return;
     }
     RegionEffects effects;
@@ -849,6 +895,7 @@ protected:
         std::iota(output.begin(), output.end(), int64_t{0});
       }
       PermutationTracker tracker(rewriter, function.getBody().front(), effects,
+                                 terminalOnly ? &eligibleSwaps : nullptr,
                                  track);
       tracker.run();
       tracker.finishFunction(track ? &output : nullptr);
