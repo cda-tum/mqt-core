@@ -457,6 +457,9 @@ angles in radians: `gammas` and `betas`. The manifest and case ID identify this
 circuit template. Record the bound angles separately to reproduce a run. The
 benchmark does not run an optimizer. Store reusable named templates as QC. Bind
 angles before binary `jeff` serialization, which does not preserve input names.
+For Qiskit export, first call
+{py:meth}`~mqt.core.mlir.QCOProgram.unroll_quantum_loops` to resolve
+loop-indexed qubits.
 
 The verification reference reports the shot-weighted mean cut and its ratio to
 the cycle's maximum cut, $n-(n\bmod 2)$. These scores measure solution quality,
@@ -465,8 +468,7 @@ signed 64-bit circuit dimensions; practical limits depend on compilation and
 execution resources.
 
 Generate a reusable four-vertex template, bind angles to a copy, and score its
-sampled cuts. Bind both arrays and run `cleanup()` before sampling, OpenQASM
-export, or QIR export:
+sampled cuts:
 
 ```{code-cell} ipython3
 import numpy as np
@@ -478,7 +480,6 @@ benchmark = qaoa.QAOA(qaoa.Options(qubits=4))
 template = benchmark.generate()
 program = template.copy()
 program.bind_parameters({"gammas": [np.pi / 4], "betas": [np.pi / 8]})
-program.cleanup()
 counts = sample(program, shots=1024, seed=17)
 evaluation = benchmark.evaluate(counts)
 print(f"Mean cut: {evaluation.mean_cut:.3f} of 4 edges")

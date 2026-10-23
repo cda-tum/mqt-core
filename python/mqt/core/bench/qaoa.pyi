@@ -47,9 +47,7 @@ class QAOA:
 
     For :math:`d` layers, the generated program takes two arrays of :math:`d`
     angles: ``gammas`` and ``betas``. Bind angles in radians with
-    :meth:`mqt.core.mlir.QCProgram.bind_parameters`, then call
-    :meth:`mqt.core.mlir.QCProgram.cleanup` before sampling, OpenQASM export,
-    or QIR export.
+    :meth:`mqt.core.mlir.QCProgram.bind_parameters` before sampling or export.
     Copy the program first to reuse it for other angles.
 
     The benchmark does not run an optimizer. Evaluation measures cut quality,

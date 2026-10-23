@@ -102,7 +102,6 @@ TEST(GenerateProgramTest, QAOAMatchesCostAndMixerEvolution) {
           {"gammas", angles.gammas},
           {"betas", angles.betas},
       })));
-      ASSERT_TRUE(mlir::succeeded(program->cleanup()));
       dd::Package package(0);
       auto state = mlir::qco::simulateStatevector(
           mlir::mqt::getEntryPoint(program->module()), package);
@@ -140,7 +139,6 @@ TEST(GenerateProgramTest, SamplesQAOACutQuality) {
         {"gammas", std::vector<double>{std::numbers::pi / 4.}},
         {"betas", std::vector<double>{std::numbers::pi / 8.}},
     })));
-    ASSERT_TRUE(mlir::succeeded(program->cleanup()));
     auto counts = mlir::qco::sample(mlir::mqt::getEntryPoint(program->module()),
                                     16'384, 17);
     ASSERT_TRUE(mlir::succeeded(counts));
