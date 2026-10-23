@@ -2748,6 +2748,7 @@ TEST(DDPackageTest, DDStatistics) {
   const auto dd = std::make_unique<Package>(nqubits);
   const auto dummyGate = getDD(TestGate(0U, Fixture::X), *dd);
   EXPECT_NE(dummyGate.p, nullptr);
+  dd->incRef(dummyGate);
   const auto statsString = getStatisticsString(*dd, true);
   const auto stats = nlohmann::json::parse(statsString);
 
@@ -2756,6 +2757,8 @@ TEST(DDPackageTest, DDStatistics) {
   ASSERT_TRUE(stats.contains("matrix"));
   EXPECT_TRUE(stats.contains("real_numbers"));
   EXPECT_TRUE(stats.contains("compute_tables"));
+  EXPECT_EQ(stats["active_memory_mib"],
+            static_cast<double>(sizeof(mNode)) / (1ULL << 20U));
   const auto& matrixStats = stats["matrix"];
   ASSERT_TRUE(matrixStats.contains("unique_table"));
   const auto& uniqueTableStats = matrixStats["unique_table"];

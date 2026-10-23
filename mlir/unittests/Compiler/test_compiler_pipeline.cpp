@@ -5616,7 +5616,42 @@ TEST_F(CompilerPipelineTest, TargetCompilationInlinesBorrowedRegisters) {
   EXPECT_FALSE(program->module().lookupSymbol<func::FuncOp>("flip"));
   EXPECT_TRUE(verify(program->module()).succeeded());
   EXPECT_TRUE(qco::verifyLinearity(program->module()).succeeded());
-  expectFullUnitaryEqual(*reference, program->module(), 2);
+  auto layout = mlir::mqt::QubitLayout::fromAttr(
+      program->module()->getAttr("mqt.layout"),
+      [&] { return program->module().emitError(); });
+  ASSERT_TRUE(succeeded(layout));
+  ASSERT_EQ(layout->inputCount, 2);
+  ASSERT_TRUE(layout->sites);
+  auto package = std::make_unique<dd::Package>(0);
+  const auto expectedDD =
+      qco::buildFunctionality(mlir::mqt::getEntryPoint(*reference), *package);
+  const auto actualDD = qco::buildFunctionality(
+      mlir::mqt::getEntryPoint(program->module()), *package);
+  ASSERT_TRUE(succeeded(expectedDD));
+  ASSERT_TRUE(succeeded(actualDD));
+  const auto expected = dd::getMatrix(*expectedDD, 2);
+  const auto physicalIndex = [&](size_t basis, bool output) {
+    size_t physical = 0;
+    for (size_t qubit = 0; qubit < 2; ++qubit) {
+      const auto initial = layout->initial[qubit];
+      const auto position =
+          output && layout->routing ? (*layout->routing)[initial] : initial;
+      const auto site = (*layout->sites)[position];
+      physical |= ((basis >> qubit) & 1U) << static_cast<size_t>(site);
+    }
+    return physical;
+  };
+  for (size_t row = 0; row < 4; ++row) {
+    for (size_t column = 0; column < 4; ++column) {
+      EXPECT_LE(std::abs(dd::getValueByIndex(*actualDD, package->qubits(),
+                                             physicalIndex(row, true),
+                                             physicalIndex(column, false)) -
+                         expected[row][column]),
+                1e-12);
+    }
+  }
+  package->decRef(*expectedDD);
+  package->decRef(*actualDD);
 }
 
 // Test that target compilation leaves dead-value cleanup at a fixed point.

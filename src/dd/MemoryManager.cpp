@@ -57,17 +57,9 @@ void MemoryManager::returnEntry(LLBase& entry) noexcept {
   stats.trackReturnedEntry();
 }
 
-void MemoryManager::reset(const bool resizeToTotal) {
-  auto numAllocations = stats.numAllocations;
-  if (resizeToTotal && chunks[0].second != stats.numAllocated * entrySize_) {
-    const auto totalBytes = stats.numAllocated * entrySize_;
-    auto newChunk = std::make_unique_for_overwrite<Storage>(totalBytes);
-    chunks.resize(1U);
-    chunks[0] = {std::move(newChunk), totalBytes};
-    ++numAllocations;
-  } else {
-    chunks.resize(1U);
-  }
+void MemoryManager::reset() {
+  const auto numAllocations = stats.numAllocations;
+  chunks.resize(1U);
 
   available = nullptr;
   chunkIt = chunks[0].first.get();
