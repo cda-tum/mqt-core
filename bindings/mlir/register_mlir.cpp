@@ -8,6 +8,7 @@
  * Licensed under the MIT License
  */
 
+#include "bench/JSON.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Edge.hpp"
 #include "dd/Node.hpp"
@@ -1004,11 +1005,18 @@ sample(PythonInputTypes& types, const nb::handle program, size_t shots,
 
 [[nodiscard]] static mlir::QCProgram
 generateBenchmark(const std::string_view instanceSpecificationJSON) {
-  auto generated = bench::generate(instanceSpecificationJSON);
+  auto parsed =
+      bench::parseInstanceSpecificationJSON(instanceSpecificationJSON);
+  if (!parsed) {
+    throw nb::value_error(llvm::toString(parsed.takeError()).c_str());
+  }
+  auto generated = std::visit(
+      [](const auto& benchmark) { return bench::generate(benchmark); },
+      parsed->instance);
   if (mlir::failed(generated)) {
     throw std::runtime_error("failed to generate benchmark");
   }
-  return std::move(generated->program);
+  return std::move(*generated);
 }
 
 NB_MODULE(MQT_CORE_MODULE_NAME, m) {
