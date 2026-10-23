@@ -28,7 +28,6 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -36,7 +35,6 @@
 
 namespace mlir::qco {
 namespace {
-using Layouts = SmallVector<SmallVector<size_t>, 0>;
 using Adjacency = SmallVector<SmallVector<size_t>, 0>;
 
 struct JoinStep {
@@ -97,10 +95,10 @@ static SmallVector<JoinStep> planJoins(const Graph& graph,
   return steps;
 }
 
-static void searchLayouts(ArrayRef<JoinStep> steps, const Adjacency& adjacency,
-                          ArrayRef<size_t> sites, bool allToAll,
-                          Layouts& result, size_t begin, size_t end,
-                          std::optional<size_t> maxCandidates) {
+static std::optional<SmallVector<size_t>>
+searchLayouts(ArrayRef<JoinStep> steps, const Adjacency& adjacency,
+              ArrayRef<size_t> sites, bool allToAll, size_t begin, size_t end,
+              size_t maxCandidates) {
   SmallVector<size_t> layout(steps.size());
   llvm::BitVector used(sites.size());
   SmallVector<JoinFrame> frames(steps.size());
@@ -111,17 +109,15 @@ static void searchLayouts(ArrayRef<JoinStep> steps, const Adjacency& adjacency,
     const auto& step = steps[depth];
     if (frame.next == frame.candidates.size()) {
       if (depth == 0) {
-        return;
+        return std::nullopt;
       }
       used.reset(layout[steps[--depth].vertex]);
       continue;
     }
-    if (maxCandidates) {
-      if (*maxCandidates == 0) {
-        return;
-      }
-      --*maxCandidates;
+    if (maxCandidates == 0) {
+      return std::nullopt;
     }
+    --maxCandidates;
     const auto candidate = frame.candidates[frame.next++];
     if (used[candidate] ||
         (!allToAll && (adjacency[candidate].size() < step.degree ||
@@ -134,11 +130,7 @@ static void searchLayouts(ArrayRef<JoinStep> steps, const Adjacency& adjacency,
     }
     layout[step.vertex] = candidate;
     if (depth + 1 == steps.size()) {
-      result.push_back(layout);
-      if (maxCandidates) {
-        return;
-      }
-      continue;
+      return layout;
     }
     used.set(candidate);
     const auto& next = steps[++depth];
@@ -155,17 +147,16 @@ static void searchLayouts(ArrayRef<JoinStep> steps, const Adjacency& adjacency,
   }
 }
 
-static Layouts searchTopologyLayouts(const Graph& graph,
-                                     const CompilerTarget& target,
-                                     MLIRContext& context,
-                                     std::optional<size_t> maxCandidates) {
+std::optional<SmallVector<size_t>>
+findTopologyLayout(const Graph& graph, const CompilerTarget& target,
+                   MLIRContext& context, size_t maxCandidates) {
   if (graph.getNumNodes() > target.numSites()) {
-    return {};
+    return std::nullopt;
   }
   auto nodes = graph.getNodes();
   llvm::sort(nodes);
   if (nodes.empty()) {
-    return {SmallVector<size_t>{}};
+    return SmallVector<size_t>{};
   }
   const auto steps = planJoins(graph, nodes);
   const bool allToAll =
@@ -182,54 +173,32 @@ static Layouts searchTopologyLayouts(const Graph& graph,
       maximumDegree = std::max(maximumDegree, adjacency[vertex].size());
     }
     if (steps.front().degree > maximumDegree) {
-      return {};
+      return std::nullopt;
     }
   }
   const auto sites = llvm::to_vector(llvm::seq<size_t>(0, target.numSites()));
   // Scheduling dominates small searches; a single vertex has no join work.
   // Fixed ranges keep bounded-search results independent of thread count.
-  const auto tasks =
-      sites.size() >= 64 && steps.size() > 1 &&
-              (maxCandidates || context.isMultithreadingEnabled())
-          ? std::min(sites.size(), maxCandidates
-                                       ? size_t{32}
-                                       : size_t{4} * context.getNumThreads())
-          : size_t{1};
-  SmallVector<Layouts> results(tasks);
+  const auto tasks = sites.size() >= 64 && steps.size() > 1
+                         ? std::min(sites.size(), size_t{32})
+                         : size_t{1};
+  SmallVector<std::optional<SmallVector<size_t>>> results(tasks);
   parallelFor(&context, 0, tasks, [&](size_t task) {
     const auto begin =
         sites.size() / tasks * task + std::min(sites.size() % tasks, task);
     const auto end =
         begin + sites.size() / tasks + (task < sites.size() % tasks ? 1 : 0);
     const auto budget =
-        maxCandidates ? std::optional(*maxCandidates / tasks +
-                                      (task < *maxCandidates % tasks ? 1 : 0))
-                      : std::nullopt;
-    searchLayouts(steps, adjacency, sites, allToAll, results[task], begin, end,
-                  budget);
+        maxCandidates / tasks + (task < maxCandidates % tasks ? 1 : 0);
+    results[task] =
+        searchLayouts(steps, adjacency, sites, allToAll, begin, end, budget);
   });
-  Layouts result;
-  for (auto& partial : results) {
-    result.append(std::make_move_iterator(partial.begin()),
-                  std::make_move_iterator(partial.end()));
+  for (auto& result : results) {
+    if (result) {
+      return std::move(result);
+    }
   }
-  return result;
-}
-
-Layouts enumerateTopologyLayouts(const Graph& graph,
-                                 const CompilerTarget& target,
-                                 MLIRContext& context) {
-  return searchTopologyLayouts(graph, target, context, std::nullopt);
-}
-
-std::optional<SmallVector<size_t>>
-findTopologyLayout(const Graph& graph, const CompilerTarget& target,
-                   MLIRContext& context, size_t maxCandidates) {
-  auto results = searchTopologyLayouts(graph, target, context, maxCandidates);
-  if (results.empty()) {
-    return std::nullopt;
-  }
-  return std::move(results.front());
+  return std::nullopt;
 }
 
 namespace {

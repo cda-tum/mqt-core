@@ -31,7 +31,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 
-#include <cstddef>
 #include <cstdint>
 #include <iterator>
 
@@ -154,10 +153,10 @@ bool mlir::qco::hasCompleteTensorLifetime(Value tensor, unsigned depth) {
       if (extracted != 0) {
         return false;
       }
-      const auto index = static_cast<size_t>(
+      const auto index =
           llvm::count_if(user->getOperands().take_front(
                              tensor.use_begin()->getOperandNumber()),
-                         isTensor));
+                         isTensor);
       for (Region& region : user->getRegions()) {
         auto arguments =
             llvm::filter_to_vector(region.getArguments(), isTensor);
@@ -204,24 +203,34 @@ LogicalResult mlir::qco::collectWireOrigins(Operation* root,
     auto known = origins.lookup(value);
     return known ? known : value;
   };
+  const auto quantum = [](ValueRange values) {
+    SmallVector<Value> result;
+    llvm::copy_if(values, std::back_inserter(result), [](Value value) {
+      return isLinearQubitType(value.getType());
+    });
+    return result;
+  };
   const auto corresponds = [&](ValueRange inputs, ValueRange outputs) {
-    if (countIfQubit(inputs) != countIfQubit(outputs)) {
+    auto quantumInputs = quantum(inputs);
+    auto quantumOutputs = quantum(outputs);
+    if (quantumInputs.size() != quantumOutputs.size()) {
       return false;
     }
-    return llvm::all_of(
-        llvm::zip_equal(quantumValues(inputs), quantumValues(outputs)),
-        [&](auto pair) {
-          auto [input, output] = pair;
-          return input.getType() == output.getType() &&
-                 origin(input) == origin(output);
-        });
+    return llvm::all_of(llvm::zip_equal(quantumInputs, quantumOutputs),
+                        [&](auto pair) {
+                          auto [input, output] = pair;
+                          return input.getType() == output.getType() &&
+                                 origin(input) == origin(output);
+                        });
   };
   const auto tie = [&](ValueRange inputs, ValueRange outputs) {
-    if (countIfQubit(inputs) != countIfQubit(outputs)) {
+    auto quantumInputs = quantum(inputs);
+    auto quantumOutputs = quantum(outputs);
+    if (quantumInputs.size() != quantumOutputs.size()) {
       return;
     }
     for (auto [input, output] :
-         llvm::zip_equal(quantumValues(inputs), quantumValues(outputs))) {
+         llvm::zip_equal(quantumInputs, quantumOutputs)) {
       origins[output] = origin(input);
     }
   };

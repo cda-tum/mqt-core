@@ -11,7 +11,6 @@
 #include "mqt/Dialect/QCO/Builder/QCOProgramBuilder.h"
 #include "mqt/Dialect/QCO/IR/QCODialect.h"
 #include "mqt/Dialect/QCO/IR/QCOOps.h"
-#include "mqt/Dialect/QCO/QCOUtils.h"
 #include "mqt/Dialect/QCO/Utils/WireIterator.h"
 
 #include "gtest/gtest.h"
@@ -19,19 +18,14 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Operation.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/LLVM.h"
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <cstddef>
@@ -43,30 +37,6 @@
 
 using namespace mlir;
 using namespace mlir::qco;
-
-TEST(QuantumValues, FiltersInOrderAndCountsValuesNotTensorSlots) {
-  MLIRContext context;
-  context.loadDialect<QCODialect>();
-  Block block;
-  auto qubit = QubitType::get(&context);
-  auto location = UnknownLoc::get(&context);
-  block.addArguments(
-      {
-          IntegerType::get(&context, 1),
-          qubit,
-          RankedTensorType::get({3}, qubit),
-          IndexType::get(&context),
-          qubit,
-      },
-      SmallVector<Location>(5, location));
-  EXPECT_EQ(llvm::to_vector(quantumValues(block.getArguments())),
-            (SmallVector<Value>{block.getArgument(1), block.getArgument(2),
-                                block.getArgument(4)}));
-  EXPECT_EQ(countIfQubit(block.getArguments()), 3);
-  EXPECT_EQ(countIfQubit(ValueRange{}), 0);
-  EXPECT_TRUE(quantumValues(ValueRange{}).empty());
-  EXPECT_EQ(countIfQubit(block.getArguments().take_front(1)), 0);
-}
 
 namespace {
 class WireIteratorFixture : public testing::Test {
@@ -131,28 +101,26 @@ TEST_F(WireIteratorFixture, TraversalRespectsStraightLineSemantics) {
   const auto fwChain1 = getChain(q10);
 
   ASSERT_EQ(fwChain0.values, (SmallVector<Value>{q00, q01, q02, q03, q03}));
-  ASSERT_EQ(fwChain0.ops,
-            (SmallVector<Operation*>{q00.getDefiningOp(), q01.getDefiningOp(),
-                                     q02.getDefiningOp(), q03.getDefiningOp(),
-                                     *(q03.user_begin())}));
+  ASSERT_EQ(fwChain0.ops, (SmallVector{q00.getDefiningOp(), q01.getDefiningOp(),
+                                       q02.getDefiningOp(), q03.getDefiningOp(),
+                                       *(q03.user_begin())}));
 
   ASSERT_EQ(fwChain1.values, (SmallVector<Value>{q10, q11, q12, q12}));
-  ASSERT_EQ(fwChain1.ops, (SmallVector<Operation*>{
-                              q10.getDefiningOp(), q11.getDefiningOp(),
-                              q12.getDefiningOp(), *(q12.user_begin())}));
+  ASSERT_EQ(fwChain1.ops,
+            (SmallVector{q10.getDefiningOp(), q11.getDefiningOp(),
+                         q12.getDefiningOp(), *(q12.user_begin())}));
 
   const auto bwChain0 = getChain(q03, -1);
   const auto bwChain1 = getChain(q12, -1);
 
   ASSERT_EQ(bwChain0.values, (SmallVector<Value>{q03, q02, q01, q00}));
-  ASSERT_EQ(bwChain0.ops, (SmallVector<Operation*>{
-                              q03.getDefiningOp(), q02.getDefiningOp(),
-                              q01.getDefiningOp(), q00.getDefiningOp()}));
+  ASSERT_EQ(bwChain0.ops,
+            (SmallVector{q03.getDefiningOp(), q02.getDefiningOp(),
+                         q01.getDefiningOp(), q00.getDefiningOp()}));
 
   ASSERT_EQ(bwChain1.values, (SmallVector<Value>{q12, q11, q10}));
-  ASSERT_EQ(bwChain1.ops,
-            (SmallVector<Operation*>{q12.getDefiningOp(), q11.getDefiningOp(),
-                                     q10.getDefiningOp()}));
+  ASSERT_EQ(bwChain1.ops, (SmallVector{q12.getDefiningOp(), q11.getDefiningOp(),
+                                       q10.getDefiningOp()}));
 }
 
 TEST_F(WireIteratorFixture, TraversalVisitsSourcesAndSinks) {
@@ -290,36 +258,34 @@ TEST_F(WireIteratorFixture, TraversalRespectsStructuredSemantics) {
 
   ASSERT_EQ(fwChain0.values,
             (SmallVector<Value>{q00, q01, q02, q03, q04, q05, q05}));
-  ASSERT_EQ(fwChain0.ops,
-            (SmallVector<Operation*>{q00.getDefiningOp(), q01.getDefiningOp(),
-                                     q02.getDefiningOp(), q03.getDefiningOp(),
-                                     q04.getDefiningOp(), q05.getDefiningOp(),
-                                     *(q05.user_begin())}));
+  ASSERT_EQ(fwChain0.ops, (SmallVector{q00.getDefiningOp(), q01.getDefiningOp(),
+                                       q02.getDefiningOp(), q03.getDefiningOp(),
+                                       q04.getDefiningOp(), q05.getDefiningOp(),
+                                       *(q05.user_begin())}));
 
   ASSERT_EQ(fwChain1.values,
             (SmallVector<Value>{q10, q11, q12, q13, q14, q15, q15}));
-  ASSERT_EQ(fwChain1.ops,
-            (SmallVector<Operation*>{q10.getDefiningOp(), q11.getDefiningOp(),
-                                     q12.getDefiningOp(), q13.getDefiningOp(),
-                                     q14.getDefiningOp(), q15.getDefiningOp(),
-                                     *(q15.user_begin())}));
+  ASSERT_EQ(fwChain1.ops, (SmallVector{q10.getDefiningOp(), q11.getDefiningOp(),
+                                       q12.getDefiningOp(), q13.getDefiningOp(),
+                                       q14.getDefiningOp(), q15.getDefiningOp(),
+                                       *(q15.user_begin())}));
 
   const auto bwChain0 = getChain(q05, -1);
   const auto bwChain1 = getChain(q15, -1);
 
   ASSERT_EQ(bwChain0.values,
             (SmallVector<Value>{q05, q04, q03, q02, q01, q00}));
-  ASSERT_EQ(bwChain0.ops, (SmallVector<Operation*>{
-                              q05.getDefiningOp(), q04.getDefiningOp(),
-                              q03.getDefiningOp(), q02.getDefiningOp(),
-                              q01.getDefiningOp(), q00.getDefiningOp()}));
+  ASSERT_EQ(bwChain0.ops,
+            (SmallVector{q05.getDefiningOp(), q04.getDefiningOp(),
+                         q03.getDefiningOp(), q02.getDefiningOp(),
+                         q01.getDefiningOp(), q00.getDefiningOp()}));
 
   ASSERT_EQ(bwChain1.values,
             (SmallVector<Value>{q15, q14, q13, q12, q11, q10}));
-  ASSERT_EQ(bwChain1.ops, (SmallVector<Operation*>{
-                              q15.getDefiningOp(), q14.getDefiningOp(),
-                              q13.getDefiningOp(), q12.getDefiningOp(),
-                              q11.getDefiningOp(), q10.getDefiningOp()}));
+  ASSERT_EQ(bwChain1.ops,
+            (SmallVector{q15.getDefiningOp(), q14.getDefiningOp(),
+                         q13.getDefiningOp(), q12.getDefiningOp(),
+                         q11.getDefiningOp(), q10.getDefiningOp()}));
 }
 
 TEST_F(WireIteratorFixture, TraversalTerminatesAtFunctionReturn) {

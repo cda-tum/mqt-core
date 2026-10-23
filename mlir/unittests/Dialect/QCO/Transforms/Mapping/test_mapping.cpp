@@ -270,6 +270,19 @@ static CompilerTarget getSquareGridTarget(const size_t n) {
                              NativeOperations::unrestricted()));
 }
 
+static CompilerTarget
+getExplicitTarget(ArrayRef<CompilerTarget::SiteId> siteIds,
+                  ArrayRef<CompilerTarget::Coupling> couplings) {
+  std::vector<CompilerTarget::Site> sites;
+  sites.reserve(siteIds.size());
+  for (auto site : siteIds) {
+    sites.push_back(llvm::cantFail(CompilerTarget::Site::create(site)));
+  }
+  return llvm::cantFail(CompilerTarget::create(
+      std::move(sites), Connectivity::fromCouplings(couplings),
+      NativeOperations::unrestricted()));
+}
+
 /// Add a native synthesis basis to the explicit test topology.
 static CompilerTarget withNativeBasis(const CompilerTarget& topology,
                                       const char* entangler) {
@@ -1191,16 +1204,8 @@ TEST_F(MappingPassFixture, PlaceTensorOnFirstTargetSites) {
 }
 
 TEST_F(MappingPassFixture, SeparatePlacementAndRoutingSurviveSerialization) {
-  std::vector sites{
-      llvm::cantFail(CompilerTarget::Site::create(7)),
-      llvm::cantFail(CompilerTarget::Site::create(19)),
-      llvm::cantFail(CompilerTarget::Site::create(42)),
-      llvm::cantFail(CompilerTarget::Site::create(81)),
-  };
-  const auto target = llvm::cantFail(CompilerTarget::create(
-      std::move(sites),
-      Connectivity::fromCouplings({{7, 19}, {19, 42}, {42, 81}}),
-      NativeOperations::unrestricted()));
+  const auto target =
+      getExplicitTarget({7, 19, 42, 81}, {{7, 19}, {19, 42}, {42, 81}});
   for (const bool terminalSwap : {false, true}) {
     QCOProgramBuilder builder(context.get());
     builder.initialize();
@@ -1275,14 +1280,7 @@ TEST_F(MappingPassFixture, SeparatePlacementAndRoutingSurviveSerialization) {
 }
 
 TEST_F(MappingPassFixture, RouteExistingStaticSitesThroughUnusedSite) {
-  std::vector sites{
-      llvm::cantFail(CompilerTarget::Site::create(7)),
-      llvm::cantFail(CompilerTarget::Site::create(19)),
-      llvm::cantFail(CompilerTarget::Site::create(42)),
-  };
-  const auto target = llvm::cantFail(CompilerTarget::create(
-      std::move(sites), Connectivity::fromCouplings({{7, 19}, {19, 42}}),
-      NativeOperations::unrestricted()));
+  const auto target = getExplicitTarget({7, 19, 42}, {{7, 19}, {19, 42}});
   QCOProgramBuilder builder(context.get());
   builder.initialize();
   auto firstInput = builder.x(builder.staticQubit(42));
@@ -1343,14 +1341,7 @@ TEST_F(MappingPassFixture, RejectMalformedPlacementOrderBeforeMutation) {
 }
 
 TEST_F(MappingPassFixture, RejectMismatchedPhysicalLayoutBeforeMutation) {
-  std::vector sites{
-      llvm::cantFail(CompilerTarget::Site::create(7)),
-      llvm::cantFail(CompilerTarget::Site::create(19)),
-      llvm::cantFail(CompilerTarget::Site::create(42)),
-  };
-  const auto target = llvm::cantFail(CompilerTarget::create(
-      std::move(sites), Connectivity::fromCouplings({{7, 19}, {19, 42}}),
-      NativeOperations::unrestricted()));
+  const auto target = getExplicitTarget({7, 19, 42}, {{7, 19}, {19, 42}});
   QCOProgramBuilder builder(context.get());
   builder.initialize();
   builder.sink(builder.staticQubit(7));
@@ -3090,11 +3081,6 @@ TEST_F(MappingPassFixture, EmbedShuffledGridPreservingBasisStates) {
   const std::array<CompilerTarget::SiteId, 8> siteIds{
       7, 19, 42, 81, 93, 104, 128, 157,
   };
-  std::vector<CompilerTarget::Site> sites;
-  sites.reserve(siteIds.size());
-  for (auto site : siteIds) {
-    sites.push_back(llvm::cantFail(CompilerTarget::Site::create(site)));
-  }
   std::vector<CompilerTarget::Coupling> couplings;
   for (size_t column = 0; column < 4; ++column) {
     couplings.emplace_back(siteIds[column], siteIds[column + 4]);
@@ -3103,9 +3089,7 @@ TEST_F(MappingPassFixture, EmbedShuffledGridPreservingBasisStates) {
       couplings.emplace_back(siteIds[column + 4], siteIds[column + 5]);
     }
   }
-  const auto target = llvm::cantFail(CompilerTarget::create(
-      std::move(sites), Connectivity::fromCouplings(couplings),
-      NativeOperations::unrestricted()));
+  const auto target = getExplicitTarget(siteIds, couplings);
   // A shuffled 2x3 grid, one idle logical qubit, and one spare hardware site.
   const SmallVector<std::pair<size_t, size_t>> interactions{
       {5, 0}, {0, 3}, {1, 4}, {4, 2}, {5, 1}, {0, 4}, {3, 2},
