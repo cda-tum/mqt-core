@@ -602,56 +602,30 @@ payloadForOutput(OutputFormat output) {
   }
 }
 
-/// Resolve input, target, and output before compiling a typed program.
-[[nodiscard]] static nb::object
-compilePythonProgram(const nb::object& program, const nb::object& target,
-                     std::optional<OutputFormat> output, bool copy,
-                     const std::string& qcoPipeline,
-                     const mlir::CompilationOptions& options) {
-  if (!target.is_none() && qcoPipeline != "mqt-qco-default") {
-    throw nb::value_error(
-        "A custom QCO pipeline cannot be combined with a target");
-  }
-  if (!target.is_none() &&
-      (output == OutputFormat::QCImport || output == OutputFormat::QCO)) {
-    throw nb::value_error(
-        "QC_IMPORT and raw QCO output stop before target compilation");
-  }
-
-  std::optional<mlir::TargetEnvironment> environment;
-  const bool compilerTarget = nb::isinstance<mlir::CompilerTarget>(target);
-  const bool deviceTarget =
-      nb::isinstance<qdmi::Device>(target) || nb::isinstance<nb::str>(target);
-  if (deviceTarget) {
-    const auto device = resolveDevice(target);
-    const nb::gil_scoped_release release;
-    environment = takeResult(mlir::targetEnvironmentFromDevice(device));
-  } else if (!target.is_none() && !compilerTarget) {
-    environment.emplace(
-        bindings::qiskit::importTarget(target, nb::none(), std::nullopt),
-        bindings::qiskit::payloadSpecification(target));
-    output = output.value_or(OutputFormat::Qiskit);
-  }
-
-  if (deviceTarget && !output) {
-    auto input = programFromInput(program, copy);
+/// Compile one program with an already resolved target and output default.
+[[nodiscard]] static nb::object compileSingleProgram(
+    const nb::object& program, const nb::object& target,
+    const std::optional<mlir::TargetEnvironment>& targetEnvironment,
+    std::optional<OutputFormat> output, bool copy,
+    const std::string& qcoPipeline, const mlir::CompilationOptions& options) {
+  auto input = programFromInput(program, copy);
+  if (targetEnvironment && !output) {
     auto compiled = [&] {
       const nb::gil_scoped_release release;
-      return takeResult(mlir::CompiledProgram::compile(std::move(input.program),
-                                                       *environment, options));
+      return takeResult(mlir::CompiledProgram::compile(
+          std::move(input.program), *targetEnvironment, options));
     }();
     return nb::cast(std::move(compiled));
   }
 
-  auto input = programFromInput(program, copy);
   const auto selected = output.value_or(input.format);
+  std::optional<mlir::TargetEnvironment> environment;
   if (!target.is_none()) {
     auto payload = payloadForOutput(selected);
-    if (environment) {
-      payload =
-          payload.restrictCapabilities(environment->payloadSpecification());
-      environment =
-          mlir::TargetEnvironment(environment->target(), std::move(payload));
+    if (targetEnvironment) {
+      payload = payload.restrictCapabilities(
+          targetEnvironment->payloadSpecification());
+      environment.emplace(targetEnvironment->target(), std::move(payload));
     } else {
       environment.emplace(nb::cast<const mlir::CompilerTarget&>(target),
                           std::move(payload));
@@ -706,6 +680,93 @@ compilePythonProgram(const nb::object& program, const nb::object& target,
                : bindings::qiskit::exportCircuit(std::move(qc));
   }
   return nb::cast(std::move(compiled));
+}
+
+/// Compile a scalar input or a homogeneous sequence using one target snapshot.
+[[nodiscard]] static nb::object
+compilePythonProgram(const nb::object& program, const nb::object& target,
+                     std::optional<OutputFormat> output, bool copy,
+                     const std::string& qcoPipeline,
+                     const mlir::CompilationOptions& options) {
+  if (!target.is_none() && qcoPipeline != "mqt-qco-default") {
+    throw nb::value_error(
+        "A custom QCO pipeline cannot be combined with a target");
+  }
+  if (!target.is_none() &&
+      (output == OutputFormat::QCImport || output == OutputFormat::QCO)) {
+    throw nb::value_error(
+        "QC_IMPORT and raw QCO output stop before target compilation");
+  }
+
+  std::optional<nb::tuple> programs;
+  if (!nb::isinstance<nb::str>(program) &&
+      !nb::hasattr(program, "__fspath__") &&
+      !nb::isinstance<nb::bytes>(program) &&
+      !nb::isinstance<nb::bytearray>(program) &&
+      !nb::isinstance<nb::memoryview>(program) &&
+      nb::isinstance(
+          program, nb::module_::import_("collections.abc").attr("Sequence"))) {
+    nb::list inputTypes(nb::make_tuple(
+        nb::str("").type(), nb::module_::import_("os").attr("PathLike"),
+        nb::type<mlir::QCProgram>(), nb::type<mlir::QCOProgram>(),
+        nb::type<mlir::JeffProgram>(), nb::type<mlir::OpenQASMProgram>()));
+    const auto sysModules =
+        nb::cast<nb::dict>(nb::module_::import_("sys").attr("modules"));
+    if (sysModules.contains("qiskit.circuit")) {
+      inputTypes.append(sysModules["qiskit.circuit"].attr("QuantumCircuit"));
+    }
+    const auto inputType = [&](nb::handle item) -> nb::handle {
+      for (const auto type : inputTypes) {
+        if (nb::isinstance(item, type)) {
+          return type;
+        }
+      }
+      return {};
+    };
+    if (!inputType(program)) {
+      programs.emplace(program);
+      if (programs->empty()) {
+        return nb::list();
+      }
+      const auto type = inputType((*programs)[0]);
+      for (size_t i = 0; i < programs->size(); ++i) {
+        if (!type || !inputType((*programs)[i]).is(type)) {
+          throw nb::type_error(("Program sequences must contain one supported "
+                                "input kind; invalid "
+                                "element at index " +
+                                std::to_string(i))
+                                   .c_str());
+        }
+      }
+    }
+  }
+
+  std::optional<mlir::TargetEnvironment> environment;
+  const bool compilerTarget = nb::isinstance<mlir::CompilerTarget>(target);
+  const bool deviceTarget =
+      nb::isinstance<qdmi::Device>(target) || nb::isinstance<nb::str>(target);
+  if (deviceTarget) {
+    const auto device = resolveDevice(target);
+    const nb::gil_scoped_release release;
+    environment = takeResult(mlir::targetEnvironmentFromDevice(device));
+  } else if (!target.is_none() && !compilerTarget) {
+    environment.emplace(
+        bindings::qiskit::importTarget(target, nb::none(), std::nullopt),
+        bindings::qiskit::payloadSpecification(target));
+    output = output.value_or(OutputFormat::Qiskit);
+  }
+
+  if (!programs) {
+    return compileSingleProgram(program, target, environment, output, copy,
+                                qcoPipeline, options);
+  }
+  nb::list results;
+  for (const auto item : *programs) {
+    results.append(compileSingleProgram(nb::borrow<nb::object>(item), target,
+                                        environment, output, copy, qcoPipeline,
+                                        options));
+  }
+  return results;
 }
 
 /// Compile or submit through the shared C++ QDMI adapter.
@@ -2294,31 +2355,39 @@ contracts.)pb");
           },
           "The payload format and capabilities used for compilation.");
 
-  m.def("compile_program", &compilePythonProgram, "program"_a, nb::kw_only(),
-        "target"_a = nb::none(), "output"_a = nb::none(), "copy"_a = false,
-        "qco_pipeline"_a = "mqt-qco-default",
-        "options"_a = mlir::CompilationOptions{},
-        R"pb(Compile a program, optionally for a hardware target.
+  m.def(
+      "compile_program", &compilePythonProgram, "program"_a, nb::kw_only(),
+      "target"_a = nb::none(), "output"_a = nb::none(), "copy"_a = false,
+      "qco_pipeline"_a = "mqt-qco-default",
+      "options"_a = mlir::CompilationOptions{},
+      R"pb(Compile a program or a homogeneous sequence for an optional hardware target.
 
-An explicit ``output`` selects the returned representation independently of
-``target``. Without it, compilation preserves the input format family, unless
-a Qiskit target selects QuantumCircuit or a QDMI device selects a
-:class:`CompiledProgram` ready for :func:`submit_program`.
+A sequence returns a list in input order, including for empty and singleton
+inputs. Elements must share one supported input kind; subclasses are accepted.
+Strings and paths are single inputs. Generators and binary buffers are unsupported.
 
-Source strings and paths return typed programs: OpenQASM returns
-:class:`OpenQASMProgram`, QC MLIR returns :class:`QCProgram`, and jeff files
-return :class:`JeffProgram`. QCO inputs return optimized QCO. Typed MLIR
-programs are consumed, including if compilation fails; set ``copy=True`` to
-preserve them. Source strings, paths, Qiskit circuits and OpenQASM text programs
-remain reusable.
+An explicit ``output`` selects each result's representation. Without it, a
+Qiskit target selects QuantumCircuit and a QDMI device selects
+:class:`CompiledProgram` for :func:`submit_program`. Otherwise, each input
+retains its format family: OpenQASM source returns :class:`OpenQASMProgram`,
+QC MLIR returns :class:`QCProgram`, jeff files return :class:`JeffProgram`, and
+QCO inputs return optimized QCO.
+
+Typed MLIR inputs are consumed; set ``copy=True`` to preserve them. Source text,
+paths, Qiskit circuits and OpenQASM programs remain reusable. Sequence input
+kinds are checked before compilation. Compilation stops at the first failure
+and returns no results; processed inputs, including the failing input, may be
+consumed, while later inputs remain usable.
 
 Args:
-    program: Source text, a file path, a Qiskit circuit, or a typed compiler program.
+    program: Source text, a file path, a Qiskit circuit, a typed compiler program,
+        or a homogeneous sequence of these inputs.
     target: A CompilerTarget, Qiskit BackendV2 or Target, QDMI Device, or device ID.
     output: The returned representation. QC_IMPORT and raw QCO are checkpoints
         before target compilation and cannot be combined with a target.
-    copy: Preserve a typed input program by compiling an explicit copy.
-    qco_pipeline: The QCO optimization pipeline. Custom pipelines require no target.
+    copy: Preserve typed inputs by compiling copies. Defaults to False.
+    qco_pipeline: The QCO pipeline, defaulting to "mqt-qco-default".
+        Custom pipelines require no target.
     options: Shared compilation controls.
 
 Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, IQM JSON, then Base QIR
