@@ -16,6 +16,7 @@ from functools import partial
 from gc import collect
 from pathlib import Path
 from threading import Event, Thread
+from typing import assert_type
 
 import numpy as np
 import pytest
@@ -43,9 +44,11 @@ from mqt.core.mlir import (
     QIRProgram,
     TargetEnvironment,
     compile_program,
+    sample,
+    simulate,
     submit_program,
 )
-from mqt.core.qdmi import ProgramFormat, open_device
+from mqt.core.qdmi import open_device
 
 requires_qiskit_translation = pytest.mark.skipif(
     not supports_qiskit_translation(),
@@ -107,40 +110,26 @@ def _test_target_environment(target: CompilerTarget) -> TargetEnvironment:
     return TargetEnvironment(target, _test_payload_specification())
 
 
-def _assert_bell_program(program: QCProgram, *, measured: bool = False) -> None:
-    """Check the semantics of a translated Bell-state program."""
-    assert program.is_valid
-    ir = program.ir
-    assert "memref<2x!qc.qubit>" in ir
-    assert ir.count("qc.h ") == 1
-    assert ir.count("qc.ctrl(") == 1
-    assert ir.count("qc.x ") == 1
-
-    if not measured:
-        assert "func.func @main() attributes" in ir
-        assert "qc.measure" not in ir
-        return
-
-    assert "func.func @main() -> !cbit.reg<2>" in ir or "func.func @main() -> (!cbit.reg<2>" in ir
-    assert "cbit.alloc" in ir
-    assert ir.count("cbit.store") == 2
-    assert ir.count("qc.measure") == 2
-
-
 def test_compile_program_jeff_file() -> None:
     """Compile a ``.jeff`` file."""
     path = Path(__file__).parent.parent / "circuits" / "bell.jeff"
 
     result = compile_program(path)
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result)
+    assert isinstance(result, JeffProgram)
+    np.testing.assert_allclose(simulate(result), np.array([1, 0, 0, 1]) / np.sqrt(2), rtol=0, atol=1e-12)
 
 
-def test_compile_program_mlir_string() -> None:
-    """Compile an MLIR string."""
-    result = compile_program(MLIR_STRING)
+@pytest.mark.parametrize("form", ["source", "path", "named_module"])
+def test_compile_program_mlir_input(form: str, tmp_path: Path) -> None:
+    """Compile MLIR source and files while preserving Bell-state measurements."""
+    source: str | Path = MLIR_STRING
+    if form != "source":
+        source = tmp_path / ("module.mlir" if form == "named_module" else "program.mlir")
+        source.write_text(MLIR_STRING, encoding="utf-8")
+
+    result = compile_program(source)
     assert isinstance(result, QCProgram)
-    assert result.ir == MLIR_STRING
+    assert set(sample(result, shots=32, seed=1)) == {"00", "11"}
 
 
 def test_compile_program_mlir_string_with_leading_whitespace() -> None:
@@ -169,27 +158,6 @@ def test_openqasm_import_versions(version_header: str, tmp_path: Path) -> None:
         assert compile_program(program, output=OutputFormat.QCO).is_valid
 
 
-def test_compile_program_mlir_file(tmp_path: Path) -> None:
-    """Compile a ``.mlir`` file."""
-    path = tmp_path / "program.mlir"
-    path.write_text(MLIR_STRING, encoding="utf-8")
-
-    result = compile_program(path)
-    assert isinstance(result, QCProgram)
-    assert result.ir == MLIR_STRING
-
-
-def test_compile_program_mlir_file_named_module(tmp_path: Path) -> None:
-    """Compile an MLIR file whose name begins with ``module``."""
-    path = tmp_path / "module.mlir"
-    path.write_text(MLIR_STRING, encoding="utf-8")
-
-    result = compile_program(path)
-
-    assert isinstance(result, QCProgram)
-    assert result.ir == MLIR_STRING
-
-
 def test_compile_program_rejects_unsupported_file(tmp_path: Path) -> None:
     """Reject an existing file with an unsupported extension."""
     path = tmp_path / "program.txt"
@@ -199,29 +167,65 @@ def test_compile_program_rejects_unsupported_file(tmp_path: Path) -> None:
         compile_program(path)
 
 
-def test_compile_program_qasm_string() -> None:
-    """Compile an OpenQASM string."""
-    result = compile_program(QASM_STRING)
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result, measured=True)
+@pytest.mark.parametrize("form", ["source", "single_line", "path", "path_string"])
+def test_compile_program_qasm_input(form: str, tmp_path: Path) -> None:
+    """Keep OpenQASM output for source strings and files."""
+    source: str | Path = QASM_STRING
+    if form == "single_line":
+        source = QASM_STRING.replace("\n", " ")
+    elif form in {"path", "path_string"}:
+        path = tmp_path / "program.qasm"
+        path.write_text(QASM_STRING, encoding="utf-8")
+        source = path if form == "path" else str(path)
+
+    result = compile_program(source)
+    assert isinstance(result, OpenQASMProgram)
+    assert set(sample(result, shots=32, seed=1)) == {"00", "11"}
 
 
-def test_compile_program_single_line_qasm_string() -> None:
-    """Compile a single-line OpenQASM source string."""
-    result = compile_program(QASM_STRING.replace("\n", " "))
+@pytest.mark.parametrize("bind_in_qco", [False, True])
+def test_classical_array_input_parameters(*, bind_in_qco: bool) -> None:
+    """Bind array initializers in QC or QCO before execution."""
+    program = QCProgram.from_openqasm_str("""OPENQASM 3.1;
+input float theta;
+array[float, 2] angles = {0.0, theta};
+qubit q;
+for int i in [0:1] { U(angles[i], 0, 0) q; }
+output bit result;
+result = measure q;
+""")
+    bound = program.to_qco() if bind_in_qco else program
+    assert bound.parameters == ["theta"]
+    bound.bind_parameters({"theta": np.pi})
+    assert bound.parameters == []
+    assert sample(bound, shots=4, seed=42) == {"1": 4}
 
-    assert isinstance(result, QCProgram)
-    assert "qc.h" in result.ir
 
-
-def test_compile_program_qasm_file(tmp_path: Path) -> None:
-    """Compile a ``.qasm`` file."""
-    path = tmp_path / "program.qasm"
-    path.write_text(QASM_STRING, encoding="utf-8")
-
-    result = compile_program(path)
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result, measured=True)
+@pytest.mark.parametrize(
+    "backend", ["openqasm", "jeff", "qir", pytest.param("qiskit", marks=requires_qiskit_translation)]
+)
+def test_promoted_array_exports(backend: str) -> None:
+    """Preserve a copied array entry across export backends."""
+    program = QCProgram.from_openqasm_str("""OPENQASM 3.0;
+array[float, 2, 2] angles = {{0.0, 0.0}, {0.0, pi}};
+int i = -1;
+angles[0, 0] = angles[1, i];
+qubit q;
+U(angles[0, 0], 0, 0) q;
+output bit result;
+result = measure q;
+""")
+    program.cleanup()
+    if backend == "qir":
+        assert program.to_qir(QIRProfile.BASE).llvm_ir
+        return
+    if backend == "openqasm":
+        restored = program.to_openqasm3()
+    elif backend == "jeff":
+        restored = program.to_qco().to_jeff()
+    else:
+        restored = program.to_qiskit()
+    assert sample(restored, shots=1, seed=42) == {"1": 1}
 
 
 @requires_qiskit_translation
@@ -233,8 +237,8 @@ def test_compile_program_qiskit_quantum_circuit() -> None:
     qc.measure(range(2), range(2))
 
     result = compile_program(qc)
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result, measured=True)
+    assert isinstance(result, QuantumCircuit)
+    assert set(sample(result, shots=32, seed=1)) == {"00", "11"}
 
 
 @requires_qiskit_translation
@@ -251,8 +255,8 @@ def test_compile_program_qiskit_quantum_circuit_subclass() -> None:
 
     result = compile_program(qc)
 
-    assert isinstance(result, QCProgram)
-    _assert_bell_program(result, measured=True)
+    assert isinstance(result, QuantumCircuit)
+    assert set(sample(result, shots=32, seed=1)) == {"00", "11"}
 
 
 def test_jeff_program_round_trip(tmp_path: Path) -> None:
@@ -263,9 +267,11 @@ def test_jeff_program_round_trip(tmp_path: Path) -> None:
 
     path.write_bytes(result.to_bytes())
     loaded = JeffProgram.from_file(path)
-    restored = compile_program(loaded, output=OutputFormat.QC)
-    assert isinstance(restored, QCProgram)
-    _assert_bell_program(restored, measured=True)
+    optimized = compile_program(loaded)
+    assert_type(optimized, JeffProgram)
+    assert isinstance(optimized, JeffProgram)
+    assert loaded.is_valid
+    assert set(sample(optimized, shots=32, seed=1)) == {"00", "11"}
 
 
 @pytest.mark.parametrize("buffer_type", ["view", "bytes", "bytearray", "unaligned"])
@@ -295,7 +301,7 @@ def test_jeff_segment_round_trip(buffer_type: str) -> None:
             buffer[:] = b"\0" * len(buffer)
     del buffers
     collect()
-    _assert_bell_program(restored.to_qco().to_qc(), measured=True)
+    assert set(sample(restored, shots=32, seed=1)) == {"00", "11"}
 
 
 def test_jeff_multiple_segments() -> None:
@@ -304,8 +310,8 @@ def test_jeff_multiple_segments() -> None:
     program = QCProgram.from_openqasm_str(source).to_qco().to_jeff()
     segments = program.to_segment_views()
     assert len(segments) > 1
-    restored = JeffProgram.from_segments(segments).to_qco().to_qc()
-    assert restored.num_gates() == program.to_qco().to_qc().num_gates()
+    restored = JeffProgram.from_segments(segments).to_qco()
+    assert restored.num_gates() == 1200
 
 
 @pytest.mark.parametrize(
@@ -360,10 +366,14 @@ def test_program_conversions_are_composable() -> None:
 
     qco.cleanup()
     qco.merge_single_qubit_rotation_gates()
-    result = qco.to_qc()
-    assert not qco.is_valid
+    optimized = compile_program(qco)
+    assert_type(optimized, QCOProgram)
+    assert isinstance(optimized, QCOProgram)
+    assert qco.is_valid
+    result = optimized.to_qc()
+    assert not optimized.is_valid
     result.cleanup()
-    _assert_bell_program(result, measured=True)
+    assert set(sample(result, shots=32, seed=1)) == {"00", "11"}
 
 
 def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
@@ -379,16 +389,17 @@ def test_openqasm_program_direct_and_pipeline_output(tmp_path: Path) -> None:
     path = tmp_path / "program.qasm"
     direct.write(path)
     assert path.read_text(encoding="utf-8") == direct.source
-    _assert_bell_program(QCProgram.from_openqasm_file(path), measured=True)
+    assert set(sample(path, shots=32, seed=1)) == {"00", "11"}
 
-    optimized = compile_program(QASM_STRING, output=OutputFormat.OPENQASM3)
+    optimized = compile_program(direct)
+    assert_type(optimized, OpenQASMProgram)
     assert isinstance(optimized, OpenQASMProgram)
     assert "output bit[2] c;" in optimized.source
-    _assert_bell_program(QCProgram.from_openqasm_str(optimized.source), measured=True)
+    assert set(sample(optimized, shots=32, seed=1)) == {"00", "11"}
 
     imported = compile_program(direct, output=OutputFormat.QC_IMPORT)
     assert isinstance(imported, QCProgram)
-    _assert_bell_program(imported, measured=True)
+    assert set(sample(imported, shots=32, seed=1)) == {"00", "11"}
 
     compiled = compile_program(direct, output=OutputFormat.QIR_ADAPTIVE)
     assert isinstance(compiled, QIRProgram)
@@ -451,7 +462,7 @@ bit flag = measure q[0];
 if (flag) { x q[1]; }
 bit answer = measure q[1];
 """
-    with pytest.raises(RuntimeError, match="Compiler action failed"):
+    with pytest.raises(RuntimeError, match=r"scf\.if"):
         compile_program(source, output=OutputFormat.QIR_BASE)
 
 
@@ -573,7 +584,7 @@ out = measure q;
     assert payloads[0] == payloads[1]
 
 
-@pytest.mark.parametrize("output_kind", ["typed", "payload", "device", "submit"])
+@pytest.mark.parametrize("output_kind", ["typed", "default", "device", "submit"])
 def test_compilation_entry_points_forward_mapping_options(output_kind: str, capfd: pytest.CaptureFixture[str]) -> None:
     """Keep mapping controls effective through every public target entry point."""
     target = CompilerTarget(
@@ -592,12 +603,10 @@ def test_compilation_entry_points_forward_mapping_options(output_kind: str, capf
             compile_program, QASM_STRING, target=target, output=OutputFormat.QIR_BASE, options=options
         )
     else:
-        compile_call = partial(
-            compile_program, QASM_STRING, target=target, program_format=ProgramFormat.QASM3, options=options
-        )
-    with pytest.raises((RuntimeError, ValueError)):
+        compile_call = partial(compile_program, QASM_STRING, target=target, options=options)
+    with pytest.raises((RuntimeError, ValueError)) as exc_info:
         compile_call()
-    assert "mapping trials must be greater than zero" in capfd.readouterr().err
+    assert "mapping trials must be greater than zero" in str(exc_info.value) + capfd.readouterr().err
 
 
 @requires_qiskit_translation
@@ -654,8 +663,9 @@ def test_compile_program_for_qdmi_target(garnet_target: CompilerTarget) -> None:
     assert "qco.ry" not in mapped.ir
 
 
-def test_compile_program_rejects_unsupported_target_payload_without_consuming_input() -> None:
-    """Reject an unsupported selected payload before consuming typed input."""
+@pytest.mark.parametrize("output", [OutputFormat.QC_IMPORT, OutputFormat.QCO])
+def test_compile_program_rejects_early_target_output_without_consuming_input(output: OutputFormat) -> None:
+    """Reject stages before target compilation without consuming typed input."""
     program = compile_program(QASM_STRING, output=OutputFormat.QCO)
     assert isinstance(program, QCOProgram)
     target = CompilerTarget(
@@ -663,8 +673,8 @@ def test_compile_program_rejects_unsupported_target_payload_without_consuming_in
         connectivity=CompilerTarget.Connectivity.all_to_all(),
         native_operations=CompilerTarget.NativeOperations.unrestricted(),
     )
-    with pytest.raises(ValueError, match="executable output"):
-        compile_program(program, target=target, output=OutputFormat.QCO, inplace=True)  # ty: ignore[no-matching-overload]
+    with pytest.raises(ValueError, match="target"):
+        compile_program(program, target=target, output=output, inplace=True)
 
     assert program.is_valid
 
@@ -727,7 +737,7 @@ def test_target_compiles_single_qubit_gates_without_entangler(num_sites: int) ->
     program.compile_for_target(_test_target_environment(target))
 
     assert program.is_valid
-    result = program.to_qc().to_qiskit(target=target)
+    result = program.to_qiskit(target=target)
     assert set(result.count_ops()) <= {"sx", "x", "rz"}
     assert np.allclose(Operator(result).data, Operator(source).data)
 
@@ -2095,7 +2105,7 @@ def test_native_compilation_releases_gil(tmp_path: Path, mode: str) -> None:
             elif mode == "target_output":
                 compile_program(program, target=target, output=OutputFormat.OPENQASM3)
             elif mode == "target_payload":
-                compile_program(program, target=target, program_format=ProgramFormat.QASM3)
+                compile_program(program, target="mqt.ddsim.default")
             else:
                 # Parsing fails before the compilation release scope can be reached.
                 with pytest.raises(RuntimeError, match="Compiler action failed"):

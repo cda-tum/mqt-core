@@ -12,6 +12,7 @@
 
 // Each minor compiles this implementation with its own C API headers and table.
 #include "mqt/Compiler/Target.h"
+#include "mqt/Compiler/TargetEnvironment.h"
 #include "mqt/Dialect/MQT/IR/QubitLayout.h"
 #include "mqt/Dialect/MQT/Utils/Parameters.h"
 #include "mqt/Dialect/QC/Translation/StandardGate.h"
@@ -3183,6 +3184,36 @@ public:
   importNativeOperations(nb::handle source,
                          nb::handle operationNames) const override {
     return readOperations(source, operationNames, false);
+  }
+
+  [[nodiscard]] mlir::PayloadSpecification
+  payloadSpecification(nb::handle source) const override {
+    using Capability = mlir::ProgramCapability;
+    const auto target = source.is_none() ? nb::none() : targetObject(source);
+    const auto circuit = nb::module_::import_("qiskit.circuit");
+    std::vector<Capability> capabilities;
+    for (const auto& [name, type, kind] : {
+             std::tuple{"if_else", "IfElseOp", ControlFlowKind::IfElse},
+             std::tuple{"for_loop", "ForLoopOp", ControlFlowKind::For},
+             std::tuple{"while_loop", "WhileLoopOp", ControlFlowKind::While},
+             std::tuple{"switch_case", "SwitchCaseOp", ControlFlowKind::Switch},
+         }) {
+      if (target.is_none() ||
+          (nb::cast<bool>(
+               target.attr("operation_names").attr("__contains__")(name)) &&
+           target.attr("operation_from_name")(name).is(circuit.attr(type)))) {
+        capabilities.push_back({.id = controlFlowCapability(kind).str()});
+      }
+    }
+    return takeTargetResult(mlir::PayloadSpecification::create(
+        {
+            .id = "qiskit",
+            .version = std::to_string(QISKIT_VERSION_MAJOR) + "." +
+                       std::to_string(QISKIT_VERSION_MINOR),
+            .profile = "",
+            .encoding = mlir::PayloadEncoding::Binary,
+        },
+        std::move(capabilities), true));
   }
 
   [[nodiscard]] mlir::CompilerTarget

@@ -25,6 +25,7 @@ class Grover;
 class MagicStateDistillation;
 class ModularMultiplier;
 class Multiplexer;
+class QAOA;
 class QFT;
 class QFTAdder;
 class QPE;
@@ -67,6 +68,9 @@ generate(const ModularMultiplier& benchmark);
 /// Generate the QC program for a configured quantum multiplexer benchmark.
 [[nodiscard]] llvm::FailureOr<mlir::QCProgram>
 generate(const Multiplexer& benchmark);
+
+/// Generate a configured QAOA benchmark.
+[[nodiscard]] llvm::FailureOr<mlir::QCProgram> generate(const QAOA& benchmark);
 
 /// Generate a configured quantum Fourier-transform benchmark.
 [[nodiscard]] llvm::FailureOr<mlir::QCProgram> generate(const QFT& benchmark);

@@ -96,14 +96,14 @@ scoring is outside this search.
   nested counted loops, rejected options and malformed metadata. Sampling and
   basis-state checks preserve semantics; default split routing matches the
   legacy combined path in the covered cases.
-- Compiler unit tests: 300 passed; two device-write failure tests require
+- Compiler unit tests: 313 passed; two device-write failure tests require
   `/dev/full` and were skipped on macOS. Existing contracts for preplaced native
   programs remain intact. The one-way-entangler test checks target compilation,
   ordered native support and layout-aware full-unitary equivalence.
 - MQT IR tests: 43 passed, including placement-order serialization, attribute
   ownership and permutation validation. Generic compilation-option tests check
   metadata invalidation and explicit preservation.
-- QCO utility tests: 251 passed. Across these four suites, 747 tests passed and
+- QCO utility tests: 255 passed. Across these four suites, 764 tests passed and
   two platform-dependent tests were skipped.
 - The documented CLI pipeline succeeds with all three pattern presets.
 - Seven synthetic end-to-end cases have identical gate and SWAP counts before

@@ -11,7 +11,7 @@
 import enum
 import os
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Annotated, Literal, Unpack, overload
+from typing import Annotated, Any, Literal, SupportsFloat, TypeAlias, TypeVar, Unpack, overload
 
 import numpy as np
 import qiskit.circuit
@@ -22,6 +22,17 @@ import mqt.core.dd
 import mqt.core.qdmi
 from mqt.core.qdmi import Device
 from mqt.core.typing import QDMISessionParameters
+
+_CompilerInput: TypeAlias = (
+    str | os.PathLike[str] | qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram
+)
+_CompilerTarget: TypeAlias = (
+    CompilerTarget | qiskit.providers.BackendV2 | qiskit.transpiler.Target | mqt.core.qdmi.Device | str
+)
+_CompilerOutput: TypeAlias = (
+    qiskit.circuit.QuantumCircuit | QCProgram | QCOProgram | JeffProgram | OpenQASMProgram | QIRProgram
+)
+_ProgramT = TypeVar("_ProgramT", qiskit.circuit.QuantumCircuit, QCProgram, QCOProgram, JeffProgram, OpenQASMProgram)
 
 def _generate_benchmark(instance_specification_json: str) -> QCProgram:
     """Generate the QC program described by an instance specification."""
@@ -61,6 +72,9 @@ class OutputFormat(enum.Enum):
 
     QIR_ADAPTIVE = 7
     """QIR for the Adaptive Profile."""
+
+    QISKIT = 8
+    """A Qiskit QuantumCircuit."""
 
 class PayloadEncoding(enum.Enum):
     """Payload representation encoding."""
@@ -839,6 +853,7 @@ class QCProgram(Program):
 
         Entry results must be direct measurements or CBit registers. Other scalar
         outputs are unsupported. The generated QIR returns a zero execution status.
+        Base conversion unrolls static counted loops; Adaptive conversion retains them.
         Set ``copy=True`` to preserve it.
         """
 
@@ -890,15 +905,28 @@ class QCProgram(Program):
 
     @property
     def parameters(self) -> list[str]:
-        """Named f64 entry-point inputs in function argument order."""
+        """Named f64 scalar and fixed-length array inputs in function argument order."""
 
-    def bind_parameters(self, values: Mapping[str, float]) -> None:
-        """Bind named f64 parameters in place without folding expressions.
+    def bind_parameters(
+        self,
+        values: Mapping[
+            str,
+            SupportsFloat
+            | Sequence[SupportsFloat]
+            | np.ndarray[tuple[int], np.dtype[np.floating[Any] | np.integer[Any]]],
+        ],
+    ) -> None:
+        """Bind named scalar and array parameters in place.
 
-        Partial binding preserves unbound parameters and their source identities.
-        Unknown names, non-finite values, and references to the entry point raise
-        ValueError without changing the program. Call ``copy()`` first to preserve
-        the input, and ``cleanup()`` afterwards if constant folding is needed.
+        Inputs must be f64 scalars or fixed-length, one-dimensional f64 arrays.
+        Supply arrays as sequences or NumPy arrays with the expected length.
+        Partial binding preserves unbound inputs and their source identities.
+        Unknown names, mismatched scalar or array values, incorrect lengths,
+        non-finite values, and references to the entry point raise ValueError
+        without changing the program.
+
+        Binding folds expressions using the bound values. Folding failures may
+        leave the program modified. Call ``copy()`` first to preserve the input.
         """
 
 class QCOProgram(Program):
@@ -1045,15 +1073,28 @@ class QCOProgram(Program):
 
     @property
     def parameters(self) -> list[str]:
-        """Named f64 entry-point inputs in function argument order."""
+        """Named f64 scalar and fixed-length array inputs in function argument order."""
 
-    def bind_parameters(self, values: Mapping[str, float]) -> None:
-        """Bind named f64 parameters in place without folding expressions.
+    def bind_parameters(
+        self,
+        values: Mapping[
+            str,
+            SupportsFloat
+            | Sequence[SupportsFloat]
+            | np.ndarray[tuple[int], np.dtype[np.floating[Any] | np.integer[Any]]],
+        ],
+    ) -> None:
+        """Bind named scalar and array parameters in place.
 
-        Partial binding preserves unbound parameters and their source identities.
-        Unknown names, non-finite values, and references to the entry point raise
-        ValueError without changing the program. Call ``copy()`` first to preserve
-        the input, and ``cleanup()`` afterwards if constant folding is needed.
+        Inputs must be f64 scalars or fixed-length, one-dimensional f64 arrays.
+        Supply arrays as sequences or NumPy arrays with the expected length.
+        Partial binding preserves unbound inputs and their source identities.
+        Unknown names, mismatched scalar or array values, incorrect lengths,
+        non-finite values, and references to the entry point raise ValueError
+        without changing the program.
+
+        Binding folds expressions using the bound values. Folding failures may
+        leave the program modified. Call ``copy()`` first to preserve the input.
         """
 
     def build_functionality(self, dd_package: mqt.core.dd.DDPackage) -> mqt.core.dd.MatrixDD:
@@ -1264,188 +1305,6 @@ def sample(
     contracts.
     """
 
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    output: Literal[OutputFormat.QC, OutputFormat.QC_IMPORT] = ...,
-    inplace: bool = False,
-    qco_pipeline: str = "mqt-qco-default",
-    options: CompilationOptions = ...,
-) -> QCProgram: ...
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    output: Literal[OutputFormat.QCO, OutputFormat.QCO_OPTIMIZED],
-    inplace: bool = False,
-    qco_pipeline: str = "mqt-qco-default",
-    options: CompilationOptions = ...,
-) -> QCOProgram: ...
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    output: Literal[OutputFormat.OPENQASM3],
-    inplace: bool = False,
-    qco_pipeline: str = "mqt-qco-default",
-    options: CompilationOptions = ...,
-) -> OpenQASMProgram: ...
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    output: Literal[OutputFormat.JEFF],
-    inplace: bool = False,
-    qco_pipeline: str = "mqt-qco-default",
-    options: CompilationOptions = ...,
-) -> JeffProgram: ...
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    output: Literal[OutputFormat.QIR_BASE, OutputFormat.QIR_ADAPTIVE],
-    inplace: bool = False,
-    qco_pipeline: str = "mqt-qco-default",
-    options: CompilationOptions = ...,
-) -> QIRProgram: ...
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    output: OutputFormat,
-    inplace: bool = False,
-    qco_pipeline: str = "mqt-qco-default",
-    options: CompilationOptions = ...,
-) -> QCProgram | QCOProgram | OpenQASMProgram | JeffProgram | QIRProgram:
-    """Run the coordinated default MQT compiler pipeline.
-
-    Input source strings, files, Qiskit
-    {py:class}`~qiskit.circuit.QuantumCircuit` objects, and typed compiler programs
-    can be combined with any supported output format. Typed program inputs are
-    copied by default; set ``inplace=True`` to consume them. Use the typed programs
-    directly to construct a custom pipeline stage by stage.
-
-    Args:
-        program: Source text, a file path, a Qiskit circuit, or a typed compiler program.
-        output: The requested output stage of the compiler pipeline.
-        inplace: Whether a typed input program may be consumed.
-        qco_pipeline: The QCO optimization pipeline to run. A custom pipeline
-            cannot be combined with target compilation.
-        options: Shared compilation controls.
-
-    Returns:
-        A typed compiler program for the requested output format.
-    """
-
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    target: str | mqt.core.qdmi.Device,
-    program_format: mqt.core.qdmi.ProgramFormat | None = None,
-    inplace: bool = False,
-    options: CompilationOptions = ...,
-) -> CompiledProgram:
-    """Compile for a device ID, open device, or explicit compiler target.
-
-    Device targets select Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
-    (binary, text). Use ``program_format`` to select a format explicitly.
-    Submit the returned :class:`CompiledProgram` with :func:`submit_program`.
-
-    An explicit :class:`CompilerTarget` requires ``output`` to return a typed
-    program, or ``program_format`` to return a :class:`CompiledProgram`.
-    Typed inputs are copied unless ``inplace=True``.
-    """
-
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    target: CompilerTarget,
-    program_format: mqt.core.qdmi.ProgramFormat,
-    inplace: bool = False,
-    options: CompilationOptions = ...,
-) -> CompiledProgram: ...
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    target: CompilerTarget,
-    output: Literal[OutputFormat.OPENQASM3],
-    inplace: bool = False,
-    options: CompilationOptions = ...,
-) -> OpenQASMProgram: ...
-@overload
-def compile_program(
-    program: str
-    | os.PathLike[str]
-    | qiskit.circuit.QuantumCircuit
-    | QCProgram
-    | QCOProgram
-    | JeffProgram
-    | OpenQASMProgram,
-    *,
-    target: CompilerTarget,
-    output: Literal[OutputFormat.QIR_BASE, OutputFormat.QIR_ADAPTIVE],
-    inplace: bool = False,
-    options: CompilationOptions = ...,
-) -> QIRProgram: ...
-
 class CompiledProgram:
     """A compiled program ready for QDMI submission."""
 
@@ -1464,6 +1323,163 @@ class CompiledProgram:
     @property
     def payload_specification(self) -> PayloadSpecification:
         """The payload format and capabilities used for compilation."""
+
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: _CompilerTarget | None = None,
+    output: Literal[OutputFormat.QC],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> QCProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: _CompilerTarget | None = None,
+    output: Literal[OutputFormat.QCO_OPTIMIZED],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> QCOProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: None = None,
+    output: Literal[OutputFormat.QC_IMPORT],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> QCProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: None = None,
+    output: Literal[OutputFormat.QCO],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> QCOProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: _CompilerTarget | None = None,
+    output: Literal[OutputFormat.OPENQASM3],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> OpenQASMProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: _CompilerTarget | None = None,
+    output: Literal[OutputFormat.JEFF],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> JeffProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: _CompilerTarget | None = None,
+    output: Literal[OutputFormat.QIR_BASE, OutputFormat.QIR_ADAPTIVE],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> QIRProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: _CompilerTarget | None = None,
+    output: Literal[OutputFormat.QISKIT],
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> qiskit.circuit.QuantumCircuit: ...
+@overload
+def compile_program(
+    program: _ProgramT,
+    *,
+    target: CompilerTarget | None = None,
+    output: None = None,
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> _ProgramT: ...
+@overload
+def compile_program(
+    program: str | os.PathLike[str],
+    *,
+    target: CompilerTarget | None = None,
+    output: None = None,
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> QCProgram | JeffProgram | OpenQASMProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: qiskit.providers.BackendV2 | qiskit.transpiler.Target,
+    output: None = None,
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> qiskit.circuit.QuantumCircuit: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: mqt.core.qdmi.Device | str,
+    output: None = None,
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> CompiledProgram: ...
+@overload
+def compile_program(
+    program: _CompilerInput,
+    *,
+    target: _CompilerTarget | None = None,
+    output: OutputFormat,
+    inplace: bool = False,
+    qco_pipeline: str = "mqt-qco-default",
+    options: CompilationOptions = ...,
+) -> _CompilerOutput:
+    """Compile a program, optionally for a hardware target.
+
+    An explicit ``output`` selects the returned representation independently of
+    ``target``. Without it, compilation preserves the input format family, unless
+    a Qiskit target selects QuantumCircuit or a QDMI device selects a
+    :class:`CompiledProgram` ready for :func:`submit_program`.
+
+    Source strings and paths return typed programs: OpenQASM returns
+    :class:`OpenQASMProgram`, QC MLIR returns :class:`QCProgram`, and jeff files
+    return :class:`JeffProgram`. QCO inputs return optimized QCO.
+
+    Args:
+        program: Source text, a file path, a Qiskit circuit, or a typed compiler program.
+        target: A CompilerTarget, Qiskit BackendV2 or Target, QDMI Device, or device ID.
+        output: The returned representation. QC_IMPORT and raw QCO are checkpoints
+            before target compilation and cannot be combined with a target.
+        inplace: Whether a typed input program may be consumed; otherwise it is copied.
+        qco_pipeline: The QCO optimization pipeline. Custom pipelines require no target.
+        options: Shared compilation controls.
+
+    Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
+    (binary, text). Select an exact execution format with
+    :func:`submit_program` and its ``program_format`` argument. An explicit output
+    need not be a device's execution format. Jeff output does not retain hardware
+    placement.
+    """
 
 def submit_program(
     program: str
@@ -1487,5 +1503,8 @@ def submit_program(
 ) -> mqt.core.qdmi.Job:
     """Compile source or submit a compiled program to a device.
 
-    ``target`` accepts a registered device ID or an open device.
+    ``target`` accepts a registered device ID or an open device. For source input,
+    ``program_format`` selects the exact QDMI execution format, including text or
+    binary QIR; omitting it selects a supported native format. A compiled program
+    retains its payload and must match the destination contract.
     """

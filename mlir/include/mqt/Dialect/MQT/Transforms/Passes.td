@@ -11,6 +11,17 @@
 
 include "mlir/Pass/PassBase.td"
 
+def PromoteClassicalMemory
+    : Pass<"promote-classical-memory", "mlir::ModuleOp"> {
+  let summary = "Promote local classical memory to SSA values";
+  let description = [{
+    Folds access indices, splits local allocations with SROA, and promotes
+    supported loads and stores with Mem2Reg. Modules without promotable or
+    destructurable allocations are left unchanged. Run again after static
+    loop expansion to expose constant-index array accesses.
+  }];
+}
+
 def SimplifyClassicalControl
     : Pass<"simplify-classical-control", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::arith::ArithDialect"];

@@ -9,8 +9,8 @@ mystnb:
 # Compile for a QDMI device
 
 `compile_program` maps a program to a device's topology and native operations.
-The resulting {py:class}`~mqt.core.mlir.CompiledProgram` can be submitted with
-`submit_program` in the MLIR submodule.
+For a QDMI device, it returns a {py:class}`~mqt.core.mlir.CompiledProgram` by
+default. Submit it with `submit_program` in the MLIR submodule.
 
 For a hands-on comparison of connectivity, native gates, and logical outputs,
 see the
@@ -113,15 +113,27 @@ and fallback behavior.
 
 ### Choose a format
 
-The compiler selects the first supported format in this order: Adaptive QIR
-(binary, then text), OpenQASM 3.1, then Base QIR (binary, then text). To select
-a format explicitly:
+For a submission payload, the compiler selects the first supported format in
+this order: Adaptive QIR (binary, then text), OpenQASM 3.1, then Base QIR
+(binary, then text). To select an exact execution format, compile and submit in
+one call:
 
 ```{code-cell} ipython3
 from mqt.core.qdmi import ProgramFormat
 
-compiled = compile_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
+job = submit_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3, num_shots=64)
+assert job.wait()
 ```
+
+`compile_program` uses `output` to select a typed representation, such as
+`OutputFormat.QC`, `OutputFormat.QCO_OPTIMIZED`, or `OutputFormat.QISKIT`. The
+device still supplies the compilation constraints. The raw `QC_IMPORT` and `QCO`
+checkpoints stop before target compilation and cannot be combined with a target.
+
+Typed outputs support inspection and interchange. In particular, jeff output
+does not retain hardware placement. The default `CompiledProgram` retains the
+automatically selected native payload for repeated QDMI submissions; exact
+wire-format selection belongs to `submit_program`.
 
 ### Define a target
 
@@ -129,9 +141,9 @@ Use `CompilerTarget` to describe a device for compilation without opening a
 connection. Bundled SC devices such as `mqt.sc.iqm.garnet` provide ready-made
 hardware models; they do not execute programs.
 
-An explicit target requires `output` for a typed compiler program, or
-`program_format` for a `CompiledProgram` ready for submission. To define a
-target with three sites and nearest-neighbor connectivity:
+With an explicit `CompilerTarget`, the default result preserves the input's
+program family. Select `output` for another representation. To define a target
+with three sites and nearest-neighbor connectivity:
 
 ```{code-cell} ipython3
 from mqt.core.mlir import CompilerTarget, OutputFormat
@@ -546,14 +558,16 @@ flow with `legalize-control-flow`:
 A finite `scf.for` that exceeds the selected counted-iteration contract is fully
 unrolled when this clones at most one billion body operations by default. The
 `unroll-loops-for-payload` pass exposes this limit as `max-operations`. The same
-bound applies to loops unrolled for qubit placement. Cleanup runs again because
-unrolling can make nested bounds and conditions constant. An unsupported index
-switch is lowered to a linear chain of nested forward branches when that form
-fits the selected contract. Before expansion, the compiler checks the selected
-forward-branching nesting limit and a compiler safety limit of 256 total
-control-flow levels, including enclosing control flow. This compiler limit is
-not a QDMI requirement and does not apply to switches retained under multiway
-branching.
+bound applies to loops unrolled for qubit placement. Between expansion rounds,
+local classical memory is promoted and expressions fold to expose constant array
+accesses, nested bounds, and conditions. Standalone Base QIR export uses this
+same unroller with an explicit `payload-spec`, without requiring hardware
+metadata. An unsupported index switch is lowered to a linear chain of nested
+forward branches when that form fits the selected contract. Before expansion,
+the compiler checks the selected forward-branching nesting limit and a compiler
+safety limit of 256 total control-flow levels, including enclosing control flow.
+This compiler limit is not a QDMI requirement and does not apply to switches
+retained under multiway branching.
 
 Generic SCF branches cannot capture or return QCO qubits or quantum tensors; use
 the corresponding QCO branch operation for linear quantum state. SCF loops must
@@ -603,9 +617,20 @@ its signed arithmetic. The scaled step must also fit the loop induction-variable
 type. A zero, unknown, or misapplied constraint makes that capability group
 unusable. A capability absent from the selected specification is unsupported.
 
-This stage checks structural control flow only. Later lowering stages remain
-responsible for scalar types and operations, measurement provenance, function
-features, allocation, and final payload-profile conformance.
+This stage checks structural control flow. Final QIR output also checks its
+emitted feature requirements: dynamic qubit and result management, arrays, IR
+functions, multiple return points, integer and floating-point computations,
+multiway branching, and counted or conditional loops. The check applies to both
+typed QIR and submission payloads. QIR loop bounds are not re-proved after
+lowering; a loop capability required by emitted QIR must be unconstrained.
+
+An explicit output combines the output format's capabilities with the target's
+contract. Matching language versions and profiles retain only capabilities
+supported by both, regardless of text or binary encoding. Different formats
+share structural control-flow restrictions; QIR-specific features are not
+inferred from their absence in a Qiskit contract. Later lowering stages remain
+responsible for scalar types and operations, measurement provenance, allocation,
+and payload-profile conformance.
 
 ## Command line from a source build
 
@@ -693,9 +718,11 @@ these native names directly.
 The `sqrt_iswap` synthesis shorthand requires a matching `xx_plus_yy` capability
 for native payload export.
 
-The adapter assumes all compiler-supported capabilities for the selected format
-(OpenQASM 3.1 or QIR 2.1). Use `TargetEnvironment` and `PayloadSpecification`
-for staged compilation with explicit restrictions.
+QDMI's supported-format list does not provide per-format capability
+restrictions. The adapter therefore uses the compiler-supported baseline for the
+selected format (OpenQASM 3.1 or QIR 2.1), with optional capability metadata
+marked as unknown. Use `TargetEnvironment` and `PayloadSpecification` for staged
+compilation with explicit restrictions.
 
 QIR submission requires a parameterless entry point. QC-to-QIR conversion
 records direct measurements and CBit-register results, then emits runtime status

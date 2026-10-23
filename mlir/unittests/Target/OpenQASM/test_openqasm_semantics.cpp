@@ -113,6 +113,7 @@ TEST(OpenQASMFrontendTest, RejectsInvalidRegisterSlices) {
       {"for int i in [0:1] { cx q[i:i+1], q[i:i+1]; }", "distinct qubits"},
       {"c[2:-1:0] ^= \"001\";", "indexed compound assignments"},
       {"int step = 0; x q[0:step:2];", "step must not be zero"},
+      {"c[:] = c[:, 0];", "only arrays support multiple indices"},
       {"int first = 2; x q[first:0];", "must not be empty"},
       {"int last = 2; bit[2] out = measure q[0:last];", "same width"},
       {"int last = 1; c[0:last] = \"111\";", "width must match"},
@@ -139,6 +140,361 @@ TEST(OpenQASMFrontendTest, KnownMeasurementSlicesInitializeSelectedBits) {
       "OPENQASM 3.1; qubit[3] q; int last = 2; bit[3] c; "
       "c[0:last] = measure q[0:last]; bit[3] copy = c;");
   ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
+}
+
+TEST(OpenQASMFrontendTest, ClassicalArrays) {
+  for (const auto* source : {
+           "array[int, 1] a; a[0] = 1; array[int[64], 1] b = a; b = b;",
+           "array[angle, 1] a = {pi}; array[angle[52], 1] b = a;",
+           "array[int, 2, 1] a; a[1, 0] = 2; array[int, 1] row = a[-1]; "
+           "array[int, 2, 1] b; bool c = true; "
+           "if (c) { b[1] = row; } else { b[1] = a[1]; } int x = b[1, 0];",
+           "array[int, 1] a = {1}; array[int, 1] b; "
+           "for int i in [0:1] { b = a; } int x = b[0];",
+           "array[int, 2, 3] a; a[1, 2] = 4; int result = a[-1, -1];",
+           "input float selector; int i = int(selector); "
+           "array[int, 2] a = {1, 2}; "
+           "if (selector > 0) { a[0] = 3; } else { a[1] = 4; } "
+           "int result = a[i];",
+           "input float selector; int i = int(selector); "
+           "array[int, 2] a; a[0] = 1; "
+           "if (selector > 0) { a[0] = 2; a[1] = 3; } "
+           "else { a[1] = 4; } int result = a[i];",
+           "array[int, 1] a; for int i in [0:1] { a[0] = 1; } "
+           "int result = a[0];",
+           "array[int, 400, 400, 0] a;",
+           "array[int, 2] a = {1, 2}; array[int, 2] b = a[::]; "
+           "b[::1] = a[0::1];",
+           "array[int, 2, 3] a; a[0, 1] = 1; a[1, 1] = 2; "
+           "array[int, 2] b = a[:, 1]; a[0, 0:2:2] = b; int x = a[0, 2];",
+           "array[int, 2] a = {1, 2}; "
+           "array[int, 1] b = a[0:9223372036854775807:1]; "
+           "b = a[1:-9223372036854775807-1:0];",
+           "array[int, 1, 1, 1, 1, 1, 1, 1,] a = {{{{{{{7,},},},},},},}; "
+           "int result = a[0, 0, 0, 0, 0, 0, -1,];",
+       }) {
+    SCOPED_TRACE(source);
+    auto analyzed = openqasm::frontend::analyzeOpenQASM(
+        std::string("OPENQASM 3.0; ") + source);
+    ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
+  }
+  const auto sizes = std::to_array<std::pair<llvm::StringLiteral, int64_t>>({
+      {"sizeof(a, sizeof(a) - 1)", 3},
+      {"sizeof(a[i])", 3},
+      {"sizeof(a[:i], 1)", 3},
+      {"sizeof(a[:, i])", 2},
+      {"sizeof(a[:, 0:2:2], 1)", 2},
+  });
+  for (const auto& [query, expected] : sizes) {
+    SCOPED_TRACE(query.str());
+    auto analyzed = openqasm::frontend::analyzeOpenQASM(
+        "OPENQASM 3.0; array[int, 2, 3] a; int i = 0; const uint n = " +
+        query.str() + "; array[bool, n] result;");
+    ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
+    ASSERT_EQ(analyzed.program->arrays.size(), 2);
+    EXPECT_EQ(analyzed.program->arrays.back().shape,
+              (std::vector<int64_t>{expected}));
+  }
+}
+
+TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
+  const auto cases =
+      std::to_array<std::pair<llvm::StringLiteral, llvm::StringLiteral>>({
+          {"array[int, -1] a;", "non-negative"},
+          {
+              "uint n = sizeof(missing) + sizeof(missing);",
+              "array or subarray",
+          },
+          {"uint n = sizeof(1);", "array or subarray"},
+          {
+              "array[int, 2, 3] a; uint n = sizeof(a[0, 0]);",
+              "array or subarray",
+          },
+          {
+              "array[int, 2, 3] a; uint n = sizeof(a, -1);",
+              "dimension is out of bounds",
+          },
+          {
+              "array[int, 2, 3] a; uint n = sizeof(a[0], 1);",
+              "dimension is out of bounds",
+          },
+          {
+              "array[int, 2] a; uint n = sizeof(a, 18446744073709551615);",
+              "integer that fits in i64",
+          },
+          {"array[int, 2] a; uint n = sizeof(a, true);", "must be an integer"},
+          {
+              "array[int, 2] a; int i = 0; uint n = sizeof(a, i);",
+              "compile-time integer",
+          },
+          {
+              "array[int, 2] a; int i = 0; "
+              "uint n = sizeof(a[:i], sizeof(a[:i]));",
+              "compile-time integer",
+          },
+          {
+              "array[int, 2] a; int i; uint n = sizeof(a[:i]);",
+              "uninitialized",
+          },
+          {
+              "array[int, 2] a; int i = 1; const uint n = sizeof(a[:i]) + 1;",
+              "constant",
+          },
+          {
+              "array[int, 2] a; int i = 1; array[int, sizeof(a[:i])] b;",
+              "constant",
+          },
+          {
+              "array[int, 2] a; int i = 1; int[sizeof(a[:i])] n;",
+              "constant",
+          },
+          {
+              "array[int, 2] a; uint n = sizeof(a); int x = a[0];",
+              "uninitialized",
+          },
+          {"array[int, 2] a = {1, 2}; a = a ++ a;", "matching shapes"},
+          {
+              "array[int, 1] a = {1}; array[uint, 2] b = a ++ a;",
+              "element types",
+          },
+          {
+              "array[int[8], 1] a = {1}; array[int[16], 2] b = a ++ a;",
+              "element types",
+          },
+          {
+              "array[int, 1, 2] a = {{1, 2}}; array[int, 2, 1] b = a ++ a;",
+              "matching shapes",
+          },
+          {
+              "array[int, 1] a = {1}; array[int, 2] b = a ++ 2;",
+              "array or subarray",
+          },
+          {
+              "array[int, 1] a = {1}; array[int, 2] b = a[0] ++ a;",
+              "matching shapes",
+          },
+          {"array[int, 2] a; a[0] = 1; a = a[0:0] ++ a[1:1];", "uninitialized"},
+          {"int a = 1 ++ 2;", "scalar arithmetic expression"},
+          {"array[int, 2] a = {1, 2}; a = a[1:0];", "must not be empty"},
+          {"array[int, 2] a = {1, 2}; a = a[0:-1:1];", "must not be empty"},
+          {"array[int, 2] a = {1, 2}; a = a[0:0:1];", "must not be zero"},
+          {"array[int, 2] a = {1, 2}; a = a[0:2];", "out of bounds"},
+          {"array[int, 2] a = {1, 2}; a = a[-3:1];", "out of bounds"},
+          {"array[int, 2] a = {1, 2}; a = a[0.0:1];", "requires integers"},
+          {
+              "array[int, 2] a = {1, 2}; float n = 1.0; a = a[0:n:1];",
+              "step must be an integer",
+          },
+          {
+              "array[int, 2] a = {1, 2}; int n = 1; a = a[0:0:n];",
+              "step must not be zero",
+          },
+          {
+              "array[int, 2] a; a[0] = 1; int n = 0; "
+              "array[int, 1] b = a[:n];",
+              "uninitialized",
+          },
+          {
+              "array[int, 2] a; array[int, 2] b = {1, 2}; int n = 1; "
+              "a[:n] = b; int x = a[0];",
+              "uninitialized",
+          },
+          {"array[int, 2] a = {1, 2}; int n = a[0:0];", "not a scalar"},
+          {
+              "array[int, 2] a = {1, 2}; a[:] += a;",
+              "indexed compound assignments",
+          },
+          {
+              "array[int, 3] a; a[0] = 1; a[2] = 2; a[0:1] = a[1:2];",
+              "uninitialized",
+          },
+          {
+              "array[int, 3] a; a[0] = 1; a[2] = 2; a[0:2:2] = a[0:2:2]; "
+              "int x = a[1];",
+              "uninitialized",
+          },
+          {"array[int, 0] a; a[0] = 1;", "out of bounds"},
+          {"array[int, 100001] a;", "exceeds the limit"},
+          {"array[int, 60000] a; array[int, 60000] b;", "exceed the limit"},
+          {"int n = 2; array[int, n] a;", "constant integer"},
+          {"array[int, 2] a = {1};", "initializer length"},
+          {"array[bool[2], 1] a;", "do not have a width"},
+          {"array[float[32], 1] a;", "only width 64"},
+          {"array[angle, 1] a = {0.0}; a[0] = a[0];", "compile-time values"},
+          {"array[angle, 1] a = {1};", "float or angle"},
+          {
+              "array[angle, 1] a = {pi}; qubit q; U(-a[0], 0, 0) q;",
+              "runtime fixed-width angle arithmetic",
+          },
+          {
+              "array[angle, 1] a = {pi}; qubit q; U(a[0] + a[0], 0, 0) q;",
+              "runtime fixed-width angle arithmetic",
+          },
+          {"array[angle, 1] a = {pi}; int b = int(a[0]);", "cast angle"},
+          {"array[angle, 1] a = {pi}; bool b = a[0] == pi;", "cast angle"},
+          {"int i = 0; array[int, 1] a = {a[i]};", "uninitialized"},
+          {"array[int, 1] a; int b = a[0];", "uninitialized"},
+          {
+              "array[int, 2] a; a[0] = 1; int i = 0; int b = a[i];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1] a; int i = 0; a[i] = 1; int b = a[0];",
+              "uninitialized",
+          },
+          {
+              "input float selector; int i = int(selector); "
+              "array[int, 2] a; a[0] = 1; "
+              "if (selector > 0) { a[1] = 2; int value = a[i]; } "
+              "int result = a[i];",
+              "uninitialized",
+          },
+          {
+              "input float selector; int i = int(selector); "
+              "array[int, 2] a; "
+              "if (selector > 0) { a[0] = 1; } else { a[1] = 2; } "
+              "int result = a[i];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1] a; while (false) { a[0] = 1; } int b = a[0];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1] a; for int i in [0:1] { continue; a[0] = 1; } "
+              "int b = a[0];",
+              "uninitialized",
+          },
+          {"array[int, 1] a = {0}; int b = a[1];", "out of bounds"},
+          {"array[int, 1] a = {0}; a[-2] = 1;", "out of bounds"},
+          {
+              "array[int, 1] a = {0}; float i = 0; int b = a[i];",
+              "integer expression",
+          },
+          {"array[int, 1] a = {0}; if (a[0]) {}", "bool type"},
+          {"array[int, 1] a = {0}; a = 1;", "array or subarray source"},
+          {
+              "int value = 1; array[int, 1] a = value;",
+              "array or subarray source",
+          },
+          {"array[int, 1] a = missing;", "array or subarray source"},
+          {"array[int, 1] a = a;", "uninitialized"},
+          {"array[int, 1] a = {1}; array[int, 1] b = a[0];", "matching shapes"},
+          {"array[int, 2] a; a[0] = 1; array[int, 2] b = a;", "uninitialized"},
+          {
+              "array[int, 1, 2] a = {{1, 2}}; array[int, 2, 1] b = a;",
+              "matching shapes",
+          },
+          {
+              "array[int[8], 1] a = {1}; array[int[16], 1] b = a;",
+              "element types",
+          },
+          {
+              "array[int, 1, 1] a = {{1}}; array[uint, 1] b = a[0];",
+              "element types",
+          },
+          {"array[float, 1] a = {1}; array[angle, 1] b = a;", "element types"},
+          {
+              "array[int, 1] a = {1}; array[int, 1] b; b += a;",
+              "array or subarray source",
+          },
+          {
+              "array[int, 1] a = {1}; array[int, 1] b; bool c = true; "
+              "if (c) { b = a; } int x = b[0];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1] a = {1}; array[int, 1] b; "
+              "while (false) { b = a; } int x = b[0];",
+              "uninitialized",
+          },
+          {"array[int, 1] a = {0}; int b = a;", "not a scalar"},
+          {"if (true) { array[int, 1] a; }", "global scope"},
+          {
+              "array[float, 1] a = {0}; gate g q { U(a[0], 0, 0) q; }",
+              "cannot capture",
+          },
+          {"array[int, 0, -1] a;", "non-negative"},
+          {"array[int, 100000, 100000] a;", "element count exceeds"},
+          {"array[int, 1, 1, 1, 1, 1, 1, 1, 1] a;", "at most 7"},
+          {"array[int, 2, 2] a = {{1, 2}, {3}};", "initializer length"},
+          {"array[int, 2, 2] a = {1, 2};", "initializer length"},
+          {"array[int, 2] a = {{1}, {2}};", "scalar element"},
+          {"array[int, 1] a = {{{{{{{{1}}}}}}}};", "nesting exceeds"},
+          {"array[int, 2, 2] a; a[0] = 1;", "array or subarray source"},
+          {
+              "array[int, 2, 2] a; a[1, 0] = 1; array[int, 2] b = a[1];",
+              "uninitialized",
+          },
+          {
+              "array[int, 2] a = {1, 2}; array[int, 2, 2] b; "
+              "b[1] = a; int x = b[0, 0];",
+              "uninitialized",
+          },
+          {
+              "array[int, 2] a = {1, 2}; array[int, 2, 2] b; int i = 1; "
+              "b[i] = a; int x = b[1, 0];",
+              "uninitialized",
+          },
+          {
+              "array[int, 2] a = {1, 2}; array[int, 2, 2] b; b[1] = a; "
+              "int i = 1; a = b[i];",
+              "uninitialized",
+          },
+          {
+              "array[int, 2, 2] a = {{1, 2}, {3, 4}}; array[int, 3] b = a[0];",
+              "matching shapes",
+          },
+          {
+              "array[int, 2, 2] a = {{1, 2}, {3, 4}}; array[int, 2] b = a[2];",
+              "out of bounds",
+          },
+          {
+              "array[int, 2, 0] a; array[int, 0] b = a[2, :];",
+              "out of bounds",
+          },
+          {
+              "array[int, 2, 2] a = {{1, 2}, {3, 4}}; "
+              "array[int, 2] b; b = a[-3];",
+              "out of bounds",
+          },
+          {
+              "array[int, 2, 2] a = {{1, 2}, {3, 4}}; array[int, 2] b; "
+              "float i = 0; b = a[i];",
+              "integer expression",
+          },
+          {"array[int, 2] a; a[0, 0] = 1;", "one index per dimension"},
+          {"array[int, 2, 2] a; a[0, 2] = 1;", "out of bounds"},
+          {"array[int, 2, 2] a; a[-3, 0] = 1;", "out of bounds"},
+          {"array[int, 2, 2] a; a[0, 0.5] = 1;", "integer expression"},
+          {
+              "array[int, 2, 2] a; a[0, 1] = 1; int b = a[1, 0];",
+              "uninitialized",
+          },
+          {
+              "array[int, 1, 2] a; a[0, 0] = 1; int i = 0; int b = a[0, i];",
+              "uninitialized",
+          },
+          {"array[int, 2, 2] a; a[0, 0, 0, 0, 0, 0, 0, 0] = 1;", "at most 7"},
+          {"bit[2] c = 0; c[0, 1] = true;", "only arrays"},
+          {"bit[2] c = 0; bool b = c[0, 1];", "only arrays"},
+          {"bit[2] c = 0; if (c[0, 1]) {}", "only arrays"},
+          {"array[bit, 1] a;", "unsupported array element type"},
+      });
+  for (const auto& [source, diagnostic] : cases) {
+    SCOPED_TRACE(source.str());
+    auto analyzed =
+        openqasm::frontend::analyzeOpenQASM("OPENQASM 3.0; " + source.str());
+    ASSERT_FALSE(analyzed);
+    ASSERT_FALSE(analyzed.diagnostics.empty());
+    EXPECT_NE(analyzed.diagnostics.front().message.find(diagnostic),
+              std::string::npos)
+        << analyzed.diagnostics.front().message;
+  }
+  EXPECT_FALSE(
+      openqasm::frontend::analyzeOpenQASM("OPENQASM 2.0; array[int, 1] a;"));
+  EXPECT_FALSE(openqasm::frontend::parseOpenQASM(
+      "OPENQASM 3.0; output array[int, 1] a;"));
 }
 
 TEST(OpenQASMFrontendTest, LoopExitsPreserveDefiniteInitialization) {

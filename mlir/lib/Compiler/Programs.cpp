@@ -181,6 +181,10 @@ ModuleOp Program::mod() const {
 
 ModuleOp Program::module() const { return mod(); }
 
+std::shared_ptr<MLIRContext> Program::context() const noexcept {
+  return storage_.context;
+}
+
 std::string Program::str() const {
   std::string result;
   llvm::raw_string_ostream stream(result);

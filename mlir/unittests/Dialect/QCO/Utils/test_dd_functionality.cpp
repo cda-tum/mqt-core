@@ -1455,6 +1455,66 @@ TEST_F(QCODDFunctionalityTest, BranchesCopyClassicalRegisterStorage) {
   EXPECT_NEAR(static_cast<double>(hist->at("1")), 512., 90.);
 }
 
+TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(
+    module {
+      func.func @alias(%memory: memref<32xi1, strided<[2], offset: ?>>)
+          -> memref<32xi1, strided<[2], offset: ?>> {
+        return %memory : memref<32xi1, strided<[2], offset: ?>>
+      }
+      func.func @set(%memory: memref<32xi1, strided<[2], offset: ?>>, %value: i1) {
+        %zero = arith.constant 0 : index
+        memref.store %value, %memory[%zero] : memref<32xi1, strided<[2], offset: ?>>
+        return
+      }
+      func.func @main() {
+        %zero = arith.constant 0 : index
+        %false = arith.constant false
+        %true = arith.constant true
+        %one = arith.constant 1 : index
+        %memory = memref.alloca() : memref<32x2xi1>
+        %row = memref.subview %memory[0, %one][32, 1][1, 1]
+          : memref<32x2xi1> to memref<32xi1, strided<[2], offset: ?>>
+        %source = memref.alloca() : memref<32xi1>
+        memref.store %false, %source[%zero] : memref<32xi1>
+        memref.copy %source, %row : memref<32xi1> to memref<32xi1, strided<[2], offset: ?>>
+        %alias = func.call @alias(%row) : (memref<32xi1, strided<[2], offset: ?>>)
+          -> memref<32xi1, strided<[2], offset: ?>>
+        %q0 = qco.static 0 : !qco.qubit
+        %h = qco.h %q0 : !qco.qubit
+        %measured, %bit = qco.measure %h : !qco.qubit
+        qco.sink %measured : !qco.qubit
+        %expected = arith.xori %bit, %true : i1
+        scf.if %expected {
+          func.call @set(%alias, %true) : (memref<32xi1, strided<[2], offset: ?>>, i1) -> ()
+        } else {
+          memref.copy %source, %alias : memref<32xi1> to memref<32xi1, strided<[2], offset: ?>>
+        }
+        %actual = memref.load %memory[%zero, %one] : memref<32x2xi1>
+        %same = arith.cmpi eq, %actual, %expected : i1
+        %original = memref.load %source[%zero] : memref<32xi1>
+        %unchanged = arith.cmpi eq, %original, %false : i1
+        %matches = arith.andi %same, %unchanged : i1
+        %q1 = qco.static 1 : !qco.qubit
+        %out = qco.if %matches args(%q = %q1) -> (!qco.qubit) {
+          %x = qco.x %q : !qco.qubit
+          qco.yield %x : !qco.qubit
+        } else args(%q = %q1) {
+          qco.yield %q : !qco.qubit
+        }
+        qco.sink %out : !qco.qubit
+        return
+      }
+    }
+  )mlir",
+                                         context.get());
+  ASSERT_TRUE(mod);
+  const auto hist = sample(mainFunc(*mod), 1024, 23);
+  ASSERT_TRUE(succeeded(hist));
+  ASSERT_EQ(hist->size(), 2U);
+  EXPECT_EQ(hist->at("10") + hist->at("11"), 1024U);
+}
+
 TEST_F(QCODDFunctionalityTest, BranchesThroughCountedMeasurementsAndResets) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
@@ -3475,17 +3535,26 @@ TEST_F(QCODDFunctionalityTest, QTensorFlowsThroughLoopAndCall) {
   EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"1", 4}}));
 }
 
-TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
+TEST_F(QCODDFunctionalityTest, MultidimensionalMemRefCallsShareStorage) {
   auto mod = parseSourceString<ModuleOp>(R"mlir(
     module {
-      func.func @set(%reg: memref<?xi16>, %value: i16) {
-        %zero = arith.constant 0 : index
-        memref.store %value, %reg[%zero] : memref<?xi16>
+      func.func @set(%reg: memref<?x3xi16>, %target: memref<?x3xi16>, %value: i16) {
+        %row = arith.constant 1 : index
+        %column = arith.constant 2 : index
+        memref.store %value, %reg[%row, %column] : memref<?x3xi16>
+        memref.copy %reg, %target : memref<?x3xi16> to memref<?x3xi16>
+        memref.copy %target, %target : memref<?x3xi16> to memref<?x3xi16>
+        %zero = arith.constant 0 : i16
+        memref.store %zero, %reg[%row, %column] : memref<?x3xi16>
         return
       }
       func.func @main() {
-        %one = arith.constant 1 : index
-        %reg = memref.alloc(%one) : memref<?xi16>
+        %row = arith.constant 1 : index
+        %column = arith.constant 2 : index
+        %reg = memref.alloc(%column) : memref<?x3xi16>
+        %zero = arith.constant 0 : index
+        %rows = memref.dim %reg, %zero : memref<?x3xi16>
+        %target = memref.alloc(%rows) : memref<?x3xi16>
         %three = arith.constant 3 : i16
         %four = arith.constant 4 : i16
         %seven = arith.addi %three, %four : i16
@@ -3502,9 +3571,9 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
         %narrow = arith.trunci %wide : i32 to i16
         %as_float = arith.sitofp %narrow : i16 to f64
         %back = arith.fptosi %as_float : f64 to i16
-        func.call @set(%reg, %quotient) : (memref<?xi16>, i16) -> ()
-        %zero = arith.constant 0 : index
-        %stored = memref.load %reg[%zero] : memref<?xi16>
+        func.call @set(%reg, %target, %quotient)
+            : (memref<?x3xi16>, memref<?x3xi16>, i16) -> ()
+        %stored = memref.load %target[%row, %column] : memref<?x3xi16>
         %expected = arith.constant 7 : i16
         %integer_ok = arith.cmpi eq, %stored, %expected : i16
         %casts_ok = arith.cmpi eq, %back, %remainder : i16
@@ -3535,12 +3604,118 @@ TEST_F(QCODDFunctionalityTest, WiderMemRefCallsShareStorage) {
         } else args(%qin = %q) {
           qco.yield %qin : !qco.qubit
         }
-        memref.dealloc %reg : memref<?xi16>
+        memref.dealloc %reg : memref<?x3xi16>
+        memref.dealloc %target : memref<?x3xi16>
         qco.sink %q1 : !qco.qubit
         return
       }
     }
   )mlir",
+                                         context.get());
+  ASSERT_TRUE(mod);
+  expectSimulatesFromZero(mainFunc(*mod), true);
+}
+
+TEST_F(QCODDFunctionalityTest,
+       EmptyMultidimensionalMemRefsDoNotOverflowElementCount) {
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main() {
+      %zero = arith.constant 0 : index
+      %huge = arith.constant 4294967296 : index
+      %heap = memref.alloc(%huge, %huge, %zero) : memref<?x?x?xi1>
+      %stack = memref.alloca() : memref<4294967296x4294967296x0xi1>
+      memref.copy %heap, %stack : memref<?x?x?xi1> to memref<4294967296x4294967296x0xi1>
+      memref.dealloc %heap : memref<?x?x?xi1>
+      return
+    }
+  })mlir",
+                                              context.get());
+  ASSERT_TRUE(moduleOp);
+  EXPECT_TRUE(succeeded(sample(mainFunc(*moduleOp), 1, 1)));
+}
+
+TEST_F(QCODDFunctionalityTest,
+       MultidimensionalMemRefsRejectInvalidShapesAndIndices) {
+  for (const auto* body : {
+           "%reg = memref.alloc(%zero, %negative) : memref<?x?xi1>",
+           "%reg = memref.alloc(%huge, %huge) : memref<?x?xi1>",
+           "%reg = memref.alloc() : memref<2x3xi1, strided<[4, 1]>>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "memref.store %true, %reg[%zero, %three] : memref<2x3xi1>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "memref.store %true, %reg[%one, %negative] : memref<2x3xi1>",
+           "%reg = memref.alloc(%two, %three) : memref<?x?xi1> "
+           "%target = memref.alloc(%three, %two) : memref<?x?xi1> "
+           "memref.copy %reg, %target : memref<?x?xi1> to memref<?x?xi1>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "%view = memref.subview %reg[%three, 0][1, 3][1, 1] "
+           ": memref<2x3xi1> to memref<3xi1, strided<[1], offset: ?>>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "%view = memref.subview %reg[0, %negative][1, 3][1, 1] "
+           ": memref<2x3xi1> to memref<3xi1, strided<[1], offset: ?>>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "%view = memref.subview %reg[0, 0][2, 1][%huge, 1] "
+           ": memref<2x3xi1> to memref<2xi1, strided<[?]>>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "%dim = arith.addi %negative, %zero : index "
+           "%size = memref.dim %reg, %dim : memref<2x3xi1>",
+           "%reg = memref.alloc() : memref<2x3xi1> "
+           "%dim = arith.addi %two, %zero : index "
+           "%size = memref.dim %reg, %dim : memref<2x3xi1>",
+       }) {
+    SCOPED_TRACE(body);
+    expectMlirSimulationFails(0, std::string(R"mlir(module { func.func @main() {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %two = arith.constant 2 : index
+      %three = arith.constant 3 : index
+      %negative = arith.constant -1 : index
+      %huge = arith.constant 4294967296 : index
+      %true = arith.constant true
+    )mlir") + body + " return } }");
+  }
+}
+
+TEST_F(QCODDFunctionalityTest, StridedCopiesPreserveAliasesWithoutLoopBudget) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main() {
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %last = arith.constant 10000 : index
+      %true = arith.constant true
+      %false = arith.constant false
+      %reg = memref.alloc() : memref<2x1x10001xi1>
+      %plane = memref.subview %reg[%one, 0, 0][1, 1, 10001][1, 1, 1]
+        : memref<2x1x10001xi1> to memref<1x10001xi1, strided<[10001, 1], offset: ?>>
+      %source = memref.subview %plane[%zero, 0][1, 10001][1, 1]
+        : memref<1x10001xi1, strided<[10001, 1], offset: ?>>
+          to memref<10001xi1, strided<[1], offset: ?>>
+      %target = memref.subview %reg[%zero, %zero, 0][1, 1, 10001][1, 1, 1]
+        : memref<2x1x10001xi1> to memref<10001xi1, strided<[1], offset: ?>>
+      memref.store %true, %source[%last] : memref<10001xi1, strided<[1], offset: ?>>
+      memref.store %false, %source[%zero] : memref<10001xi1, strided<[1], offset: ?>>
+      %reverse = memref.subview %source[10000][10001][-1]
+        : memref<10001xi1, strided<[1], offset: ?>>
+          to memref<10001xi1, strided<[-1], offset: ?>>
+      memref.copy %reverse, %target : memref<10001xi1, strided<[-1], offset: ?>>
+                                   to memref<10001xi1, strided<[1], offset: ?>>
+      memref.store %true, %source[%zero] : memref<10001xi1, strided<[1], offset: ?>>
+      %first = memref.load %reg[%zero, %zero, %zero] : memref<2x1x10001xi1>
+      %end = memref.load %reg[%zero, %zero, %last] : memref<2x1x10001xi1>
+      %notEnd = arith.xori %end, %true : i1
+      %condition = arith.andi %first, %notEnd : i1
+      %q = qco.static 0 : !qco.qubit
+      %result = qco.if %condition args(%qin = %q) -> (!qco.qubit) {
+        %out = qco.x %qin : !qco.qubit
+        qco.yield %out : !qco.qubit
+      } else args(%qin = %q) {
+        qco.yield %qin : !qco.qubit
+      }
+      memref.dealloc %reg : memref<2x1x10001xi1>
+      qco.sink %result : !qco.qubit
+      return
+    }
+  })mlir",
                                          context.get());
   ASSERT_TRUE(mod);
   expectSimulatesFromZero(mainFunc(*mod), true);
