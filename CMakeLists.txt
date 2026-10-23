@@ -59,10 +59,8 @@ option(BUILD_MQT_CORE_QDMI_SC_DEVICE "Build the MQT Core superconducting QDMI de
        ${PROJECT_IS_TOP_LEVEL})
 option(BUILD_MQT_CORE_DOCUMENTATION "Generate documentation artifacts as part of the CMake build"
        OFF)
-if(
-  BUILD_MQT_CORE_TESTS AND
-  (NOT BUILD_MQT_CORE_QDMI_SC_DEVICE OR NOT
-                                                                  BUILD_MQT_CORE_QDMI_DDSIM_DEVICE))
+if(BUILD_MQT_CORE_TESTS
+   AND (NOT BUILD_MQT_CORE_QDMI_SC_DEVICE OR NOT BUILD_MQT_CORE_QDMI_DDSIM_DEVICE))
   message(FATAL_ERROR "BUILD_MQT_CORE_TESTS requires all bundled QDMI devices")
 endif()
 if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -70,16 +68,9 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     FATAL_ERROR
       "MQT Core cannot build MLIR with GCC on macOS because MLIR uses an incompatible C++ standard library")
 endif()
-if(
-  APPLE
-  AND
-  CMAKE_CXX_COMPILER_ID
-  STREQUAL
-  "AppleClang"
-  AND
-  CMAKE_CXX_COMPILER_VERSION
-  VERSION_LESS
-  "17.0.0")
+if(APPLE
+   AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"
+   AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "17.0.0")
   message(FATAL_ERROR "MQT Core requires AppleClang 17 or newer to build MLIR")
 endif()
 
@@ -136,8 +127,7 @@ add_custom_target(mqt-core-lint-headers)
 
 add_subdirectory(mlir)
 
-# Preserve the top-level `mlir-doc` behavior without modifying a target owned by an embedding
-# project.
+# Configure `mlir-doc` only when this project owns the target.
 if(PROJECT_IS_TOP_LEVEL)
   add_custom_command(
     TARGET mlir-doc

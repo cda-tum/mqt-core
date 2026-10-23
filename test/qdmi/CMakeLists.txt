@@ -36,9 +36,9 @@ if(TARGET MQT::CoreQDMI)
     GENERATE
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/qdmi.conf"
     CONTENT "$<TARGET_FILE:mqt-core-qdmi-session-device> TEST_SESSION test.example\n")
-  add_dependencies(
-    mqt-core-qdmi-client-runtime-test qdmi_example_driver mqt-core-qdmi-incomplete-client
-    mqt-core-qdmi-incompatible-client mqt-core-qdmi-session-device)
+  add_dependencies(mqt-core-qdmi-client-runtime-test qdmi_example_driver
+                   mqt-core-qdmi-incomplete-client mqt-core-qdmi-incompatible-client
+                   mqt-core-qdmi-session-device)
   mqt_copy_qdmi_runtime(mqt-core-qdmi-client-runtime-test)
 
   package_add_test(${TARGET_NAME} MQT::CoreQDMI test_client.cpp)

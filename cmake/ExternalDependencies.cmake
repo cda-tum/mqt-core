@@ -27,11 +27,8 @@ fetchcontent_declare(
   GIT_TAG 89866ea924214f3961adbd31c4c582593dcac221
   EXCLUDE_FROM_ALL)
 block()
-  # Cap'n Proto, which is fetched transitively by jeff-mlir, uses the generic BUILD_TESTING option
-  # and
-  # defines a global `check` target when it is enabled. Do not let an embedding project's test
-  # setting
-  # leak into this third-party dependency.
+  # Cap'n Proto defines a global `check` target when BUILD_TESTING is enabled.
+  # Keep the embedding project's test setting out of this dependency.
   set(BUILD_TESTING OFF)
   # jeff's transitive Cap'n Proto dependency contains source files that cannot share a unity
   # translation unit. Keep the complete dependency subtree out of unity builds.
@@ -60,17 +57,14 @@ if(BUILD_MQT_CORE_TESTS)
   list(APPEND FETCH_PACKAGES googletest)
 endif()
 
-# cmakefmt: off
-set(QDMI_MINIMUM_VERSION 1.4.0
-        CACHE STRING "Minimum QDMI version")
-set(QDMI_VERSION 1.4.0
-        CACHE STRING "QDMI version")
-set(QDMI_REV "6db03d83ad602aaa9fe928b5c3fc5cce84b10061" # v1.4.0
-        CACHE STRING "QDMI identifier (tag, branch or commit hash)")
+set(QDMI_MINIMUM_VERSION 1.4.0 CACHE STRING "Minimum QDMI version")
+set(QDMI_VERSION 1.4.0 CACHE STRING "QDMI version")
+set(QDMI_REV
+    "6db03d83ad602aaa9fe928b5c3fc5cce84b10061" # v1.4.0
+    CACHE STRING "QDMI identifier (tag, branch or commit hash)")
 set(QDMI_REPO_OWNER "Munich-Quantum-Software-Stack"
-        CACHE STRING "QDMI repository owner (change when using a fork)")
+    CACHE STRING "QDMI repository owner (change when using a fork)")
 cmake_dependent_option(INSTALL_QDMI "Install QDMI library" ON "MQT_CORE_INSTALL" OFF)
-# cmakefmt: on
 fetchcontent_declare(
   qdmi
   GIT_REPOSITORY https://github.com/${QDMI_REPO_OWNER}/qdmi.git

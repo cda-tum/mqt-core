@@ -82,9 +82,9 @@ foreach(mode IN ITEMS --run-pipeline --emit=qco-optimized)
                   "--pass-pipeline=func.func(cse)")
   reject_compiler("must be anchored on builtin.module" "${reduced}" "${mode}"
                   "--pass-pipeline=builtin.module(cse")
-  reject_compiler(
-    "without disabling multi-threading" "${reduced}" "${mode}" "--pass-pipeline=builtin.module()"
-    --mlir-print-ir-module-scope --mlir-disable-threading=false)
+  reject_compiler("without disabling multi-threading" "${reduced}" "${mode}"
+                  "--pass-pipeline=builtin.module()" --mlir-print-ir-module-scope
+                  --mlir-disable-threading=false)
   run_compiler(0 "${reduced}" "${mode}" "--pass-pipeline=builtin.module()"
                --mlir-print-ir-module-scope --mlir-disable-threading)
 endforeach()
@@ -108,7 +108,8 @@ string(FIND "${error}" "Before Canonicalizer" before_cleanup)
 string(FIND "${error}" "Before HadamardLifting" custom_pass)
 string(FIND "${error}" "Before Canonicalizer" after_cleanup REVERSE)
 if(before_cleanup LESS 0
-   OR NOT before_cleanup LESS custom_pass OR NOT custom_pass LESS after_cleanup)
+   OR NOT before_cleanup LESS custom_pass
+   OR NOT custom_pass LESS after_cleanup)
   message(FATAL_ERROR "Compiler preparation/cleanup was lost: ${error}")
 endif()
 
@@ -202,7 +203,8 @@ execute_process(
   OUTPUT_VARIABLE output
   ERROR_VARIABLE error)
 if(NOT result EQUAL 1
-   OR NOT error MATCHES "cf[.]br .next" OR NOT error MATCHES "note: see current operation")
+   OR NOT error MATCHES "cf[.]br .next"
+   OR NOT error MATCHES "note: see current operation")
   message(FATAL_ERROR "stdin source diagnostics were lost: ${error}")
 endif()
 

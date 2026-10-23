@@ -65,10 +65,9 @@ set(binary_payload_specification
 set(text_payload_specification
     "#mqt.payload_spec<format = <id = \"qir\", version = \"2.1.0\", profile = \"base\", encoding = text>, capabilities = [], optional_capabilities_known = false>"
 )
-run_command_expect_failure(
-  "mqt-cc target without payload specification"
-  "--qdmi-device or --target and --payload-spec must be provided together" "${MQT_CC}"
-  "${INPUT_FILE}" "--qdmi-device=mqt.sc.iqm.garnet")
+run_command_expect_failure("mqt-cc target without payload specification"
+                           "--qdmi-device or --target and --payload-spec must be provided together"
+                           "${MQT_CC}" "${INPUT_FILE}" "--qdmi-device=mqt.sc.iqm.garnet")
 run_command_expect_failure(
   "mqt-cc invalid payload specification"
   "--payload-spec must be a valid #mqt.payload_spec attribute" "${MQT_CC}" "${INPUT_FILE}"

@@ -145,6 +145,5 @@ include_directories(${MQT_MLIR_BUILD_INCLUDE_DIR})
 separate_arguments(MQT_LLVM_DEFINITIONS NATIVE_COMMAND "${LLVM_DEFINITIONS}")
 add_definitions(${MQT_LLVM_DEFINITIONS})
 
-# set the binary directory for the build tree such that, e.g., docs can be generated in the build
-# tree
+# Generate MLIR artifacts, including documentation, in the build tree.
 set(MLIR_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})

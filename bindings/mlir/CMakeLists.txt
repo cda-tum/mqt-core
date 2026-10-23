@@ -17,10 +17,9 @@ if(NOT TARGET ${TARGET_NAME})
     STRINGS Target/Qiskit/SupportedVersions.inc qiskit_version_registrations
     REGEX "^MQT_QISKIT_VERSION\\(")
   foreach(registration IN LISTS qiskit_version_registrations)
-    string(
-      REGEX MATCH
-      "^MQT_QISKIT_VERSION\\(([0-9]+), *([0-9]+), *(2\\.[0-9]+\\.[0-9]+), *\"[^\"]+\"\\)$"
-      registration_match "${registration}")
+    string(REGEX MATCH
+           "^MQT_QISKIT_VERSION\\(([0-9]+), *([0-9]+), *(2\\.[0-9]+\\.[0-9]+), *\"[^\"]+\"\\)$"
+           registration_match "${registration}")
     if(NOT registration_match)
       message(FATAL_ERROR "Invalid Qiskit version registration: ${registration}")
     endif()

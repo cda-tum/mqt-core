@@ -41,7 +41,8 @@ function(version_from_skbuild)
   set(MQT_CORE_VERSION_PATCH "${CMAKE_MATCH_3}")
 
   if("${MQT_CORE_VERSION_MAJOR}" STREQUAL ""
-     OR "${MQT_CORE_VERSION_MINOR}" STREQUAL "" OR "${MQT_CORE_VERSION_PATCH}" STREQUAL "")
+     OR "${MQT_CORE_VERSION_MINOR}" STREQUAL ""
+     OR "${MQT_CORE_VERSION_PATCH}" STREQUAL "")
     message(
       VERBOSE
         "SKBUILD_PROJECT_VERSION invalid. Cannot determine project version from scikit-build-core.")
@@ -117,7 +118,8 @@ function(version_from_git)
   set(MQT_CORE_VERSION_PATCH "${CMAKE_MATCH_3}")
 
   if(${MQT_CORE_VERSION_MAJOR} STREQUAL ""
-     OR ${MQT_CORE_VERSION_MINOR} STREQUAL "" OR ${MQT_CORE_VERSION_PATCH} STREQUAL "")
+     OR ${MQT_CORE_VERSION_MINOR} STREQUAL ""
+     OR ${MQT_CORE_VERSION_PATCH} STREQUAL "")
     message(
       VERBOSE "Git version information incomplete. Cannot determine project version from Git.")
     return()

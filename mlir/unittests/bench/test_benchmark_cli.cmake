@@ -190,7 +190,8 @@ string(JSON jeff_case_id GET "${jeff_output}" case_id)
 string(JSON jeff_path GET "${jeff_output}" program_path)
 string(JSON jeff_manifest_path GET "${jeff_output}" manifest_path)
 if(NOT jeff_case_id STREQUAL case_id
-   OR NOT EXISTS "${jeff_path}" OR NOT EXISTS "${jeff_manifest_path}")
+   OR NOT EXISTS "${jeff_path}"
+   OR NOT EXISTS "${jeff_manifest_path}")
   message(FATAL_ERROR "jeff generation changed the semantic case or omitted its output")
 endif()
 if(jeff_manifest_path STREQUAL manifest_path)

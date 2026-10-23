@@ -76,16 +76,13 @@ function(enable_project_options target_name)
     # enable some more optimizations in release mode
     target_compile_options(
       ${target_name}
-      INTERFACE
-        $<$<CONFIG:RELEASE>:-fno-math-errno
-                                                    -fno-trapping-math -fno-stack-protector>)
+      INTERFACE "$<$<CONFIG:RELEASE>:-fno-math-errno;-fno-trapping-math;-fno-stack-protector>")
 
     # enable some more options for better debugging
     target_compile_options(
       ${target_name}
       INTERFACE
-        $<$<CONFIG:DEBUG>:-fno-omit-frame-pointer
-                               -fno-optimize-sibling-calls -fno-inline-functions>)
+        "$<$<CONFIG:DEBUG>:-fno-omit-frame-pointer;-fno-optimize-sibling-calls;-fno-inline-functions>")
   endif()
 
   option(BINDINGS "Configure for building Python bindings")
