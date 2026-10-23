@@ -52,6 +52,9 @@ Identity = {}
 PauliZ = {}
 Prod = {}
 
+[pennylane.operators.observables]
+SProd = {}
+
 [measurement_processes]
 SampleMP = { conditions = ["finiteshots"] }
 CountsMP = { conditions = ["finiteshots"] }

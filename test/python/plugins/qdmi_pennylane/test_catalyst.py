@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 from importlib import import_module
+from inspect import signature
+from re import fullmatch
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -28,15 +30,9 @@ if not supports_catalyst():
 catalyst = import_module("catalyst")
 qp = pytest.importorskip("pennylane")
 
-pytestmark = [
-    pytest.mark.filterwarnings(
-        r"ignore:The following device-preprocessing transforms.*'qp\.qjit\(capture=True\)':UserWarning"
-    ),
-    pytest.mark.filterwarnings(
-        "ignore:Excluded the .* decomposition rule.*multiple registers yet:Warning:"
-        "catalyst.decomposition.decomposition_rules"
-    ),
-]
+_DECOMPOSITION_OPTIONS = (
+    {"collect_decomp_rules": False} if "collect_decomp_rules" in signature(catalyst.qjit).parameters else {}
+)
 
 
 @pytest.mark.parametrize("capture", [False, True])
@@ -57,7 +53,9 @@ def test_correlated_readout_and_wire_order(*, capture: bool) -> None:
             qp.var(qp.Z(0)),
         )
 
-    samples, (keys, counts), probabilities, parity, variance = catalyst.qjit(circuit, capture=capture)()
+    samples, (keys, counts), probabilities, parity, variance = qp.qjit(
+        circuit, capture=capture, skip_preprocess=capture, **_DECOMPOSITION_OPTIONS
+    )()
     np.testing.assert_array_equal(samples[:, 0], 1)
     np.testing.assert_array_equal(samples[:, 1], samples[:, 2])
     ones = np.count_nonzero(samples[:, 2])
@@ -69,7 +67,7 @@ def test_correlated_readout_and_wire_order(*, capture: bool) -> None:
 
 
 @pytest.mark.parametrize("capture", [None, False, True])
-def test_runtime_gate_sets_match_reference(*, capture: bool | None) -> None:
+def test_runtime_gate_sets_match_reference(recwarn: pytest.WarningsRecorder, *, capture: bool | None) -> None:
     """Eager native gates and compiled decompositions have the same action."""
     device = qp.device("mqt.ddsim.default", wires=3)
 
@@ -86,8 +84,16 @@ def test_runtime_gate_sets_match_reference(*, capture: bool | None) -> None:
     if capture:
         capabilities = qp.devices.DeviceCapabilities.from_toml_file(device.config_filepath, "qjit")
         node = qp.transforms.decompose(node, gate_set=set(capabilities.operations))
-    actual = node() if capture is None else qp.qjit(node, capture=capture)()
+    actual = node() if capture is None else qp.qjit(node, capture=capture, skip_preprocess=capture)()
     np.testing.assert_allclose(actual, expected, atol=0.025)
+    for warning in recwarn:
+        category = import_module("catalyst.decomposition.rule_lowering_warning").RuleLoweringWarning
+        assert issubclass(warning.category, category)
+        assert fullmatch(
+            r"Excluded the .+ decomposition rule for .+ since "
+            r"--decompose-lowering cannot work with multiple registers yet",
+            str(warning.message),
+        )
 
 
 @pytest.mark.parametrize("capture", [False, True])
@@ -108,7 +114,7 @@ def test_repeated_calls_and_observable_lowering(*, capture: bool) -> None:
         )(circuit)
         circuit = catalyst.passes.diagonalize_measurements(circuit)
 
-    @catalyst.qjit(capture=capture)
+    @qp.qjit(capture=capture, skip_preprocess=capture, **_DECOMPOSITION_OPTIONS)
     def compiled(angle: float) -> tuple[Result, Result, Result]:
         return circuit(angle), circuit(np.pi), circuit(angle)
 
@@ -145,7 +151,7 @@ def test_runtime_basis_state_and_unitary(*, capture: bool) -> None:
         qp.ctrl(qp.QubitUnitary, control=0, control_values=[False])(np.array([[0, 1j], [1j, 0]]), wires=1)
         return qp.sample(wires=[0, 1, 2])
 
-    compiled = catalyst.qjit(circuit, capture=capture)
+    compiled = qp.qjit(circuit, capture=capture, skip_preprocess=capture, **_DECOMPOSITION_OPTIONS)
     matrix = np.eye(4, dtype=complex)[[0, 2, 3, 1]]
     np.testing.assert_array_equal(compiled(np.array([0, 1]), matrix), [[0, 1, 1]] * 4)
     np.testing.assert_array_equal(compiled(np.array([1, 1]), np.eye(4, dtype=complex)), [[1, 0, 1]] * 4)

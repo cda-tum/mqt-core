@@ -27,7 +27,7 @@ from mqt.core.plugins.pennylane import (
 )
 
 if TYPE_CHECKING:
-    from pennylane.measurements import CountsMP, ExpectationMP, ProbabilityMP, SampleMP
+    from pennylane.measurements import CountsMP, ExpectationMP, ProbabilityMP, SampleMP, VarianceMP
 
     from mqt.core.qdmi import Job
 
@@ -167,12 +167,8 @@ def test_qaoa_application() -> None:
     def ansatz(parameters: np.ndarray) -> None:
         for wire in graph.nodes:
             qp.Hadamard(wire)
-        if hasattr(qp, "qaoa"):
-            qp.qaoa.cost_layer(parameters[0], cost_hamiltonian)
-            qp.qaoa.mixer_layer(parameters[1], mixer_hamiltonian)
-        else:
-            qp.ApproxTimeEvolution(cost_hamiltonian, parameters[0], 1)
-            qp.ApproxTimeEvolution(mixer_hamiltonian, parameters[1], 1)
+        qp.ApproxTimeEvolution(cost_hamiltonian, parameters[0], 1)
+        qp.ApproxTimeEvolution(mixer_hamiltonian, parameters[1], 1)
 
     @qp.qnode(device, shots=200, diff_method="parameter-shift")
     def cost(parameters: np.ndarray) -> ExpectationMP:
@@ -251,12 +247,16 @@ def test_postprocessor_recovers_forward_measurements(
     device = DDSIMDevice(wires=1, max_retries=3)
 
     @qp.qnode(device, shots=shots, diff_method=None)
-    def circuit(angles: np.ndarray) -> tuple[ExpectationMP, ProbabilityMP]:
+    def circuit(angles: np.ndarray) -> tuple[ExpectationMP, ProbabilityMP, VarianceMP, SampleMP]:
         qp.RY(angles, 0)
-        return qp.expval(qp.Z(0)), qp.probs(wires=[0])
+        return qp.expval(qp.Z(0)), qp.probs(wires=[0]), qp.var(2 * qp.Z(0)), qp.sample(2 * qp.Z(0))
 
     angles = np.array([0.0, np.pi])
     expected = circuit(angles)
+    for partition in expected if isinstance(shots, list) else (expected,):
+        np.testing.assert_array_equal(partition[2], [0, 0])
+        np.testing.assert_array_equal(partition[3][0], 2)
+        np.testing.assert_array_equal(partition[3][1], -2)
     tapes, postprocess = qp.workflow.construct_batch(circuit, level="device")(angles)
     original = PennyLaneJob._samples  # ruff:ignore[private-member-access] Inject a failure after native submission.
     reads = []

@@ -28,16 +28,22 @@ uv pip install "mqt-core[pennylane]"
 For compilation with `qp.qjit`, also install Catalyst:
 
 ```bash
-uv pip install "pennylane-catalyst~=0.15.0"
+uv pip install "pennylane-catalyst>=0.15,<0.16.0a0"
 ```
 
 The integration supports Catalyst 0.15.x and 0.16 development builds on Linux
 x86_64/aarch64, and Catalyst 0.15.x on macOS arm64. Development builds on macOS
-currently rewrite the Python extension path from `.so` to `.dylib` before
-loading the device; use the released Catalyst version there. Ordinary QNodes do
-not require Catalyst. See the
+currently
+[normalize library suffixes before loading](https://github.com/PennyLaneAI/catalyst/pull/2904),
+replacing the Python extension's `.so` with `.dylib`; use the released Catalyst
+version there. Ordinary QNodes do not require Catalyst. See the
 [Catalyst installation guide](https://docs.pennylane.ai/projects/catalyst/en/stable/dev/installation.html)
 for platform requirements.
+
+The version range admits 0.16 development builds when prereleases are enabled or
+an official development wheel is installed explicitly. Keep the PennyLane
+version required by that Catalyst wheel; development releases pin matching
+PennyLane and Lightning builds.
 
 ## Quickstart
 
@@ -133,7 +139,7 @@ target.
 
 ## End-to-end use case: finite-shot MaxCut QAOA
 
-This example uses PennyLane's QAOA layers and Catalyst to optimize MaxCut on a
+This example uses Hamiltonian evolution and Catalyst to optimize MaxCut on a
 four-node graph. The cost Hamiltonian is the negative cut size. Each layer
 evolves under that Hamiltonian and an X mixer.
 
@@ -144,7 +150,10 @@ import networkx as nx
 import numpy as np
 
 graph = nx.Graph([(0, 1), (0, 2), (1, 2), (2, 3)])
-cost_hamiltonian, mixer_hamiltonian = qp.qaoa.maxcut(graph)
+cost_hamiltonian = qp.sum(
+    *(0.5 * (qp.Z(u) @ qp.Z(v) - qp.I(u)) for u, v in graph.edges)
+)
+mixer_hamiltonian = qp.sum(*(qp.X(wire) for wire in graph.nodes))
 qaoa_device = qp.device(
     "mqt.ddsim.default", wires=4, job_parameters={"custom1": 7}
 )
@@ -153,8 +162,8 @@ qaoa_device = qp.device(
 def ansatz(parameters):
     for wire in graph.nodes:
         qp.Hadamard(wire)
-    qp.qaoa.cost_layer(parameters[0], cost_hamiltonian)
-    qp.qaoa.mixer_layer(parameters[1], mixer_hamiltonian)
+    qp.ApproxTimeEvolution(cost_hamiltonian, parameters[0], 1)
+    qp.ApproxTimeEvolution(mixer_hamiltonian, parameters[1], 1)
 
 
 @qp.qnode(qaoa_device, shots=1000, diff_method="parameter-shift")
@@ -208,11 +217,9 @@ evaluate shifted circuits through QDMI. Finite-shot objective estimates need not
 decrease at every step. Each compiled QNode uses the device's existing session
 and compiles its quantum circuit for that target.
 
-The `qaoa` helpers belong to PennyLane 0.45. In PennyLane development builds
-without that module, construct the cost and mixer with operator arithmetic and
-use `qp.ApproxTimeEvolution(hamiltonian, angle, 1)` for each layer. This is the
-same gate decomposition used by the helpers and needs no native Hamiltonian
-support from the device.
+The terms within each Hamiltonian commute, so one Trotter step implements each
+layer exactly. PennyLane decomposes these evolutions into gates before device
+execution.
 
 ## Direct generic construction
 
@@ -300,8 +307,10 @@ higher-level operations, and MQT Core lowers the circuit to the target's
 operations and topology.
 
 Probabilities, counts, expectations, and variances are finite-shot estimates.
-Pulse programming, arbitrary Hermitian observables, and analytic execution are
-unsupported.
+Ordinary QNodes support scalar products of observables, including sampled values
+and variances. PennyLane splits incompatible observables into separate circuits
+and applies the required measurement-basis changes. Pulse programming, arbitrary
+Hermitian observables, and analytic execution are unsupported.
 
 Ordinary QNodes use PennyLane's deferred-measurement transform for mid-circuit
 measurements. Reset and feedback may require unused device wires; custom labels
@@ -325,7 +334,7 @@ basis changes and observable splitting for other measurements:
 import catalyst
 
 
-@qp.qjit(capture=True)
+@qp.qjit(capture=True, skip_preprocess=True)
 @catalyst.passes.diagonalize_measurements
 @qp.transform(pass_name="split-non-commuting")
 @qp.qnode(compiled_device, shots=1000)
@@ -339,9 +348,10 @@ def captured_expectation(angle):
 value = captured_expectation(0.4)
 ```
 
-The splitting pass supports expectations only; use diagonalization alone for a
-variance. For gate decomposition under capture, load Catalyst's capabilities
-with
+`skip_preprocess=True` selects the explicit transforms above instead of the tape
+preprocessing pipeline. The splitting pass supports expectations only; use
+diagonalization alone for a variance. For gate decomposition under capture, load
+Catalyst's capabilities with
 `qp.devices.DeviceCapabilities.from_toml_file(device.config_filepath, "qjit")`
 and pass `set(capabilities.operations)` as the `gate_set` of
 `qp.transforms.decompose` on the QNode.

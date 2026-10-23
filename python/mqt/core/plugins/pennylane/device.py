@@ -264,7 +264,7 @@ class QDMIDevice(Device):
         """
         try:
             program = QCProgram.from_pennylane(tape, wires=self.wires)
-            return compile_program(program, target=self._qdmi_device, inplace=True)
+            return compile_program(program, target=self._qdmi_device)
         except (KeyError, RuntimeError, TypeError, ValueError) as exc:
             raise TranslationError(str(exc)) from exc
 
