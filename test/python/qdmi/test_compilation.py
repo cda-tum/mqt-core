@@ -17,7 +17,6 @@ from fractions import Fraction
 from typing import TYPE_CHECKING, assert_type, cast
 
 import pytest
-from qiskit_support import supports_qiskit_translation
 
 from mqt.core.bench import qpe, repeat_until_success, shor
 from mqt.core.mlir import (
@@ -36,40 +35,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 BELL = 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; bit[2] c; h q[0]; cx q[0],q[1]; c = measure q;'
-
-
-@pytest.mark.parametrize(
-    ("program_format", "controlled"),
-    [
-        (ProgramFormat.QASM3, False),
-        (ProgramFormat.QASM3, True),
-        (ProgramFormat.QIR_BASE_MODULE, False),
-        (ProgramFormat.QIR_ADAPTIVE_MODULE, False),
-        (ProgramFormat.QIR_ADAPTIVE_MODULE, True),
-    ],
-)
-@pytest.mark.parametrize("two_parameter", [False, True])
-def test_sdk_u_preserves_exact_phase(program_format: ProgramFormat, *, controlled: bool, two_parameter: bool) -> None:
-    """Native payloads preserve U and U2's exact phase, including under control."""
-    qiskit = pytest.importorskip("qiskit")
-    if not supports_qiskit_translation():
-        pytest.skip(f"no Qiskit translation is registered for {qiskit.__version__}")
-    circuit_library = pytest.importorskip("qiskit.circuit.library")
-    quantum_info = pytest.importorskip("qiskit.quantum_info")
-    circuit = qiskit.QuantumCircuit(2 if controlled else 1)
-    circuit.global_phase = 0.23
-    gate = circuit_library.U2Gate(-0.42, 0.19) if two_parameter else circuit_library.UGate(0.37, -0.42, 0.19)
-    if controlled:
-        circuit.h(0)
-        circuit.append(gate.control(annotated=False), [0, 1])
-        circuit.h(0)
-    else:
-        circuit.append(gate, [0])
-    expected = quantum_info.Statevector.from_instruction(circuit).data.tolist()
-    circuit.measure_all()
-    job = submit_program(circuit, target="mqt.ddsim.default", program_format=program_format, num_shots=0)
-    assert job.wait()
-    assert job.get_dense_statevector() == pytest.approx(expected, rel=0, abs=1e-12)
 
 
 @pytest.mark.parametrize("program_format", [ProgramFormat.QASM3, ProgramFormat.QIR_ADAPTIVE_MODULE])

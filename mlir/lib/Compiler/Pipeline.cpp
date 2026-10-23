@@ -117,6 +117,21 @@ FailureOr<QIRProgram> QCProgram::intoQIR(QIRProfile profile) && {
           "failed to convert QC to QIR"))) {
     return failure();
   }
+  if (mod()->hasAttr(mqt::TargetEnvAttr::name)) {
+    const TargetEnvironmentAnalysis environment(mod());
+    if (!environment) {
+      mod().emitError(environment.error());
+      return failure();
+    }
+    const auto& payload = environment.environment().payloadSpecification();
+    const auto& format = payload.format();
+    if (format.id == "qir" && format.version == "2.1.0" &&
+        format.profile ==
+            (profile == QIRProfile::Adaptive ? "adaptive" : "base") &&
+        failed(qir::validateCapabilities(mod(), payload.capabilities()))) {
+      return failure();
+    }
+  }
   return QIRProgram(std::move(*this).releaseStorage(), profile);
 }
 
@@ -513,11 +528,7 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
                            ? QIRProfile::Adaptive
                            : QIRProfile::Base;
   auto qir = std::move(*qc).intoQIR(profile);
-  if (failed(qir) ||
-      (environment != nullptr &&
-       failed(qir::validateCapabilities(
-           qir->module(),
-           environment->payloadSpecification().capabilities())))) {
+  if (failed(qir)) {
     return failure();
   }
   return CompilerProgram(std::move(*qir));

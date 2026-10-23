@@ -564,17 +564,6 @@ programFromString(const std::string& input) {
                            " is not supported.");
 }
 
-/// Run the coordinated default pipeline and return a typed program.
-[[nodiscard]] static mlir::CompilerProgram
-compileProgram(const nb::object& program, const mlir::ProgramFormat output,
-               const bool inplace, const std::string& qcoPipeline,
-               mlir::CompilationOptions options = {}) {
-  auto input = programFromInput(program, inplace).program;
-  const nb::gil_scoped_release release;
-  return takeResult(
-      mlir::runDefaultPipeline(std::move(input), output, qcoPipeline, options));
-}
-
 /// Resolve an open device or registered ID.
 [[nodiscard]] static qdmi::Device resolveDevice(const nb::object& target) {
   if (nb::isinstance<qdmi::Device>(target)) {
@@ -772,8 +761,12 @@ template <class Function>
     return std::forward<Function>(function)(
         nb::cast<const mlir::QCOProgram&>(program));
   }
-  auto compiled = compileProgram(program, mlir::ProgramFormat::QCO, false,
-                                 "mqt-qco-default");
+  auto compiled = [&] {
+    auto input = programFromInput(program, false).program;
+    const nb::gil_scoped_release release;
+    return takeResult(
+        mlir::runDefaultPipeline(std::move(input), mlir::ProgramFormat::QCO));
+  }();
   return std::forward<Function>(function)(std::get<mlir::QCOProgram>(compiled));
 }
 

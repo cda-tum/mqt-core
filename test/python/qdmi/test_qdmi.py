@@ -18,7 +18,6 @@ from collections import Counter
 from typing import TYPE_CHECKING, cast
 
 import pytest
-from qiskit_support import supports_qiskit_translation
 
 from mqt.core.mlir import (
     OutputFormat,
@@ -538,33 +537,6 @@ c = measure q;
     counts = job.get_counts()
     assert set(counts) == {"00", "11"}
     assert sum(counts.values()) == 1024
-
-
-def test_device_executes_controlled_qir_with_exact_phase(ddsim_device: Device) -> None:
-    """Keep DDSIM-native controlled gates and their global phase."""
-    qiskit = pytest.importorskip("qiskit")
-    if not supports_qiskit_translation():
-        pytest.skip(f"no Qiskit translation is registered for {qiskit.__version__}")
-    circuit_library = pytest.importorskip("qiskit.circuit.library")
-    quantum_info = pytest.importorskip("qiskit.quantum_info")
-
-    circuit = qiskit.QuantumCircuit(5)
-    circuit.global_phase = 0.37
-    circuit.x(0)
-    circuit.x(1)
-    circuit.append(circuit_library.HGate().control(2, annotated=False), [0, 1, 2])
-    circuit.append(circuit_library.RXGate(0.23).control(2, annotated=False), [0, 1, 2])
-    circuit.append(circuit_library.RXXGate(0.31).control(annotated=False), [0, 3, 4])
-    circuit.append(circuit_library.SwapGate().control(annotated=False), [0, 3, 4])
-    circuit.append(circuit_library.RCCXGate().control(annotated=False), [0, 1, 2, 3])
-    circuit.mcx([0, 1], 4)
-    circuit.mcp(0.41, [0, 1], 4)
-    expected = quantum_info.Statevector.from_instruction(circuit).data
-
-    job = submit_program(circuit, target=ddsim_device, program_format=ProgramFormat.QIR_ADAPTIVE_STRING, num_shots=0)
-    job.wait()
-
-    assert job.get_dense_statevector() == pytest.approx(expected)
 
 
 def test_device_executes_binary_qir_program(ddsim_device: Device) -> None:

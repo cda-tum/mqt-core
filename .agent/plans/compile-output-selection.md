@@ -30,8 +30,9 @@ deferring resource-changing export cleanup. Capabilities are restricted by both
 the output representation and the target's known contract. Different formats
 share structural control-flow constraints; matching language versions and
 profiles also share format-specific capabilities, independently of text or
-binary encoding. The shared pipeline calls the `Target/QIR` capability validator
-for final QIR requirements, including loops introduced during lowering. The
+binary encoding. QC-to-QIR conversion calls the `Target/QIR` capability
+validator against any attached contract for the emitted QIR version and profile,
+including staged conversion and recompilation without an explicit target. The
 validator and its flag mapping live together in the existing QIR translation
 library; it accepts capability values without linking the compiler target model.
 Qiskit export receives the complete environment when compiling, and retains a
@@ -49,12 +50,16 @@ capability limits. The native payload test checks the capability intersection
 directly. These cover representative combinations without an input/target/output
 Cartesian product. Tests use direct simulation, export, submission, and module
 inspection; serialization, ownership, phase, and layout checks retain their
-distinct oracles. The QDMI tests form a package so focused runs can import
-shared helpers without changing pytest's configured Python path.
+distinct oracles. Qiskit submission tests live with the Qiskit integration
+tests; the QDMI tests need neither a package initializer nor a pytest
+Python-path setting. Simulation APIs retain their direct QCO path and inline the
+fixed conversion for other inputs.
 
 Validation on main revision `422a69c1a3`: 4,040 native tests; 1,471 MLIR, QDMI,
-and magic-state-distillation Python tests with Qiskit 2.6.0; and 722
+and magic-state-distillation Python tests with Qiskit 2.6.0; and 543
 compatibility tests with Qiskit 2.5.2. Generated stubs, Python 3.11 return-type
 checks, whole-file C++ lint, and executable documentation with internal links
-passed. The QIR organization follow-up reruns the native and Python suites; 395
-focused QDMI tests also pass without a pytest Python-path setting.
+passed. All 401 QDMI tests also pass in a standalone run without a package
+initializer or pytest Python-path setting. Native regression assertions cover
+staged QIR conversion, targetless recompilation, and mismatched payload
+contracts.

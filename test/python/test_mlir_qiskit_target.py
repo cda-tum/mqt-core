@@ -16,7 +16,7 @@ from typing import assert_type, cast
 import numpy as np
 import pytest
 from qiskit import QuantumCircuit
-from qiskit.circuit import Gate, Measure, Parameter, Reset
+from qiskit.circuit import Gate, Measure, Parameter, Reset, library
 from qiskit.circuit.classical import expr, types
 from qiskit.circuit.controlflow import IfElseOp, WhileLoopOp
 from qiskit.circuit.library import (
@@ -43,7 +43,7 @@ from qiskit.circuit.library import (
     efficient_su2,
 )
 from qiskit.providers.fake_provider import GenericBackendV2
-from qiskit.quantum_info import Operator
+from qiskit.quantum_info import Operator, Statevector
 from qiskit.transpiler import Target
 from qiskit_support import supports_qiskit_translation
 
@@ -63,6 +63,7 @@ from mqt.core.mlir import (
     TargetEnvironment,
     compile_program,
     sample,
+    submit_program,
 )
 from mqt.core.qdmi import ProgramFormat, open_device
 
@@ -1079,3 +1080,55 @@ def test_z_frame_merging_does_not_add_physical_rotations(*, fractional: bool) ->
         atol=1e-12,
         rtol=0,
     )
+
+
+@pytest.mark.parametrize(
+    ("program_format", "controlled"),
+    [
+        (ProgramFormat.QASM3, False),
+        (ProgramFormat.QASM3, True),
+        (ProgramFormat.QIR_BASE_MODULE, False),
+        (ProgramFormat.QIR_ADAPTIVE_MODULE, False),
+        (ProgramFormat.QIR_ADAPTIVE_MODULE, True),
+    ],
+)
+@pytest.mark.parametrize("two_parameter", [False, True])
+def test_sdk_u_preserves_exact_phase(program_format: ProgramFormat, *, controlled: bool, two_parameter: bool) -> None:
+    """Native payloads preserve U and U2's exact phase, including under control."""
+    circuit = QuantumCircuit(2 if controlled else 1)
+    circuit.global_phase = 0.23
+    gate = library.U2Gate(-0.42, 0.19) if two_parameter else library.UGate(0.37, -0.42, 0.19)
+    if controlled:
+        circuit.h(0)
+        circuit.append(gate.control(annotated=False), [0, 1])
+        circuit.h(0)
+    else:
+        circuit.append(gate, [0])
+    expected = Statevector.from_instruction(circuit).data.tolist()
+    circuit.measure_all()
+    job = submit_program(circuit, target="mqt.ddsim.default", program_format=program_format, num_shots=0)
+    assert job.wait()
+    assert job.get_dense_statevector() == pytest.approx(expected, rel=0, abs=1e-12)
+
+
+def test_device_executes_controlled_qir_with_exact_phase() -> None:
+    """Keep DDSIM-native controlled gates and their global phase."""
+    circuit = QuantumCircuit(5)
+    circuit.global_phase = 0.37
+    circuit.x(0)
+    circuit.x(1)
+    circuit.append(library.HGate().control(2, annotated=False), [0, 1, 2])
+    circuit.append(library.RXGate(0.23).control(2, annotated=False), [0, 1, 2])
+    circuit.append(library.RXXGate(0.31).control(annotated=False), [0, 3, 4])
+    circuit.append(library.SwapGate().control(annotated=False), [0, 3, 4])
+    circuit.append(library.RCCXGate().control(annotated=False), [0, 1, 2, 3])
+    circuit.mcx([0, 1], 4)
+    circuit.mcp(0.41, [0, 1], 4)
+    expected = Statevector.from_instruction(circuit).data
+
+    job = submit_program(
+        circuit, target="mqt.ddsim.default", program_format=ProgramFormat.QIR_ADAPTIVE_STRING, num_shots=0
+    )
+    job.wait()
+
+    assert job.get_dense_statevector() == pytest.approx(expected)

@@ -540,6 +540,38 @@ TEST(CompilerQDMIAdapterTest,
           .takeError()));
   EXPECT_NE(diagnostics.find("qir.dynamic-result-management"),
             std::string::npos);
+
+  auto mapped = input->copy().intoQCO();
+  ASSERT_TRUE(mlir::succeeded(mapped));
+  ASSERT_TRUE(mlir::succeeded(mapped->compileForTarget(restrictedEnvironment)));
+  auto qc = std::move(*mapped).intoQC();
+  ASSERT_TRUE(mlir::succeeded(qc));
+  diagnostics.clear();
+  EXPECT_TRUE(mlir::failed(qc->copy().intoQIR(mlir::QIRProfile::Adaptive)));
+  EXPECT_NE(diagnostics.find("qir.dynamic-result-management"),
+            std::string::npos);
+  diagnostics.clear();
+  EXPECT_TRUE(mlir::failed(
+      mlir::runDefaultPipeline(qc->copy(), mlir::ProgramFormat::QIRAdaptive)));
+  EXPECT_NE(diagnostics.find("qir.dynamic-result-management"),
+            std::string::npos);
+
+  for (const mlir::PayloadFormat& format : {
+           mlir::PayloadFormat{
+               .id = "openqasm", .version = "3.1", .profile = ""},
+           mlir::PayloadFormat{
+               .id = "qir", .version = "2.1", .profile = "base"},
+           mlir::PayloadFormat{
+               .id = "qir", .version = "2.0", .profile = "adaptive"},
+       }) {
+    mlir::attachTargetEnvironment(
+        qc->module(),
+        mlir::TargetEnvironment(
+            restrictedEnvironment.target(),
+            llvm::cantFail(mlir::PayloadSpecification::create(format))));
+    EXPECT_TRUE(
+        mlir::succeeded(qc->copy().intoQIR(mlir::QIRProfile::Adaptive)));
+  }
 }
 
 TEST(CompilerQDMIAdapterTest, ValidatesQIRLoweringCapabilities) {
