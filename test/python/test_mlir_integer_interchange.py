@@ -46,7 +46,7 @@ module {{
 """)
 
 
-def _observe(program: QCProgram | QuantumCircuit | OpenQASMProgram, width: int) -> int:
+def _observe(program: QCProgram | QuantumCircuit | OpenQASMProgram | JeffProgram, width: int) -> int:
     try:
         counts = sample(program, shots=1, seed=1)
     except ValueError as error:
@@ -60,7 +60,7 @@ def _check_paths(program: QCProgram, width: int, expected: int) -> None:
     restored_qasm = program.to_openqasm3()
     assert _observe(restored_qasm, width) == expected
     jeff = program.to_qco(copy=True).to_jeff()
-    restored_jeff = JeffProgram.from_bytes(jeff.to_bytes()).to_qco().to_qc()
+    restored_jeff = JeffProgram.from_bytes(jeff.to_bytes())
     assert _observe(restored_jeff, width) == expected
     if supports_qiskit_translation():
         assert _observe(program.to_qiskit(copy=True), width) == expected
@@ -201,7 +201,7 @@ module {{
             program.cleanup()
         assert _observe(program, 1) == 1
         jeff = program.to_qco(copy=True).to_jeff()
-        restored = JeffProgram.from_bytes(jeff.to_bytes()).to_qco().to_qc()
+        restored = JeffProgram.from_bytes(jeff.to_bytes())
         assert _observe(restored, 1) == 1
 
 

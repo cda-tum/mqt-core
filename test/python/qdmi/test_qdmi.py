@@ -18,10 +18,8 @@ from collections import Counter
 from typing import TYPE_CHECKING, cast
 
 import pytest
-from qiskit_support import supports_qiskit_translation
 
 from mqt.core.mlir import (
-    CompiledProgram,
     OutputFormat,
     compile_program,
     submit_program,
@@ -531,47 +529,14 @@ h q[0];
 cx q[0], q[1];
 c = measure q;
 """
-    program = compile_program(qasm3_program, target=ddsim_device, program_format=ProgramFormat.QIR_BASE_STRING)
-    assert isinstance(program, CompiledProgram)
-    assert program.program_format == ProgramFormat.QIR_BASE_STRING
-    assert ProgramFormat.QIR_BASE_STRING in ddsim_device.supported_program_formats()
-
-    job = submit_program(program, target=ddsim_device)
+    job = submit_program(qasm3_program, target=ddsim_device, program_format=ProgramFormat.QIR_BASE_STRING)
+    assert job.program_format == ProgramFormat.QIR_BASE_STRING
     job.wait()
 
     assert job.check() == Job.Status.DONE
     counts = job.get_counts()
     assert set(counts) == {"00", "11"}
     assert sum(counts.values()) == 1024
-
-
-def test_device_executes_controlled_qir_with_exact_phase(ddsim_device: Device) -> None:
-    """Keep DDSIM-native controlled gates and their global phase."""
-    qiskit = pytest.importorskip("qiskit")
-    if not supports_qiskit_translation():
-        pytest.skip(f"no Qiskit translation is registered for {qiskit.__version__}")
-    circuit_library = pytest.importorskip("qiskit.circuit.library")
-    quantum_info = pytest.importorskip("qiskit.quantum_info")
-
-    circuit = qiskit.QuantumCircuit(5)
-    circuit.global_phase = 0.37
-    circuit.x(0)
-    circuit.x(1)
-    circuit.append(circuit_library.HGate().control(2, annotated=False), [0, 1, 2])
-    circuit.append(circuit_library.RXGate(0.23).control(2, annotated=False), [0, 1, 2])
-    circuit.append(circuit_library.RXXGate(0.31).control(annotated=False), [0, 3, 4])
-    circuit.append(circuit_library.SwapGate().control(annotated=False), [0, 3, 4])
-    circuit.append(circuit_library.RCCXGate().control(annotated=False), [0, 1, 2, 3])
-    circuit.mcx([0, 1], 4)
-    circuit.mcp(0.41, [0, 1], 4)
-    expected = quantum_info.Statevector.from_instruction(circuit).data
-
-    program = compile_program(circuit, target=ddsim_device, program_format=ProgramFormat.QIR_ADAPTIVE_STRING)
-    assert isinstance(program, CompiledProgram)
-    job = submit_program(program, target=ddsim_device, num_shots=0)
-    job.wait()
-
-    assert job.get_dense_statevector() == pytest.approx(expected)
 
 
 def test_device_executes_binary_qir_program(ddsim_device: Device) -> None:

@@ -288,7 +288,7 @@ multi-target gates pass their original arguments in a Tuple, following the
 QIR-Runner calling convention. MQT accepts these functions as runtime extensions
 in authored QIR with either profile attribute. Compiler-generated Base QIR
 follows the
-[Base Profile instruction restrictions](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/profiles/Base_Profile.md#classical-instructions),
+[Base Profile instruction restrictions](https://github.com/qir-alliance/qir-spec/blob/2.1/specification/profiles/Base_Profile.md#user-content-entry-point-definition),
 which exclude the allocation and stores used by generic controlled calls. Use
 Adaptive QIR to retain these native calls, or compile for a target with
 dedicated controlled instructions or a gate set that requires decomposition.

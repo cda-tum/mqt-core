@@ -407,6 +407,12 @@ TEST_P(CompilerPipelineTest, EndToEndPipeline) {
       testCase.qcoPipeline);
   ASSERT_TRUE(mlir::succeeded(compiled));
 
+  if (auto* qc = std::get_if<QCProgram>(&*compiled)) {
+    ASSERT_TRUE(succeeded(verify(qc->module())));
+    // Compare canonical QC on both sides; compilation retains layout metadata.
+    ASSERT_TRUE(succeeded(qc->cleanup()));
+  }
+
   OwningOpRef<ModuleOp> expected;
   if (testCase.convertToQIR) {
     ASSERT_TRUE(testCase.qirReferenceBuilder);
@@ -683,9 +689,7 @@ h q;
   auto roundTrip = std::move(*roundTripResult);
   EXPECT_TRUE(roundTrip.isValid());
   EXPECT_TRUE(mlir::succeeded(roundTrip.cleanup()));
-  auto reparsed = parseRecordedModule(roundTrip.str());
-  ASSERT_TRUE(reparsed);
-  EXPECT_TRUE(mlir::verify(*reparsed).succeeded());
+  EXPECT_TRUE(mlir::verify(roundTrip.module()).succeeded());
 }
 
 TEST_F(CompilerPipelineTest, ReusesOpenQASMHardwareQubits) {
@@ -1128,13 +1132,12 @@ TEST_F(CompilerPipelineTest, BaseUnrollsBoundArrayLoops) {
       qc->bindParameters({{"angles", std::vector<double>{0.25, -0.5}}})));
   for (bool replay : {false, true}) {
     auto input = qc->copy();
+    attachTargetEnvironment(
+        input.module(),
+        TargetEnvironment(makeUnrestrictedTarget(),
+                          llvm::cantFail(PayloadSpecification::forProgramFormat(
+                              ProgramFormat::QIRAdaptive))));
     if (replay) {
-      attachTargetEnvironment(
-          input.module(),
-          TargetEnvironment(
-              makeUnrestrictedTarget(),
-              llvm::cantFail(PayloadSpecification::forProgramFormat(
-                  ProgramFormat::QIRAdaptive))));
       const auto payload = llvm::cantFail(
           PayloadSpecification::forProgramFormat(ProgramFormat::QIRBase));
       PassManager pm(input.module().getContext(), ModuleOp::getOperationName());
@@ -2658,9 +2661,7 @@ x q;
 
   auto roundTrip = std::move(*fromFile).intoQCO();
   ASSERT_TRUE(mlir::succeeded(roundTrip));
-  auto reparsed = parseRecordedModule(roundTrip->str());
-  ASSERT_TRUE(reparsed);
-  EXPECT_TRUE(mlir::verify(*reparsed).succeeded());
+  EXPECT_TRUE(mlir::verify(roundTrip->module()).succeeded());
   const std::vector<std::byte> invalid(1);
   EXPECT_TRUE(mlir::failed(JeffProgram::fromBytes(invalid)));
   EXPECT_TRUE(mlir::failed(
@@ -3192,21 +3193,19 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesForTarget) {
       qco->module(), TargetEnvironment(makeSparseUCZTarget(false), payload));
   ASSERT_TRUE(mlir::succeeded(qco->compileForTarget(targetEnvironment)));
 
-  auto compiled = parseRecordedModule(qco->str());
-  ASSERT_TRUE(compiled) << qco->str();
-  EXPECT_TRUE(verify(*compiled).succeeded());
-  const auto environment =
-      compiled.get()->getAttrOfType<mlir::mqt::TargetEnvAttr>(
-          mlir::mqt::TargetEnvAttr::name);
+  auto compiled = qco->module();
+  EXPECT_TRUE(verify(compiled).succeeded());
+  const auto environment = compiled->getAttrOfType<mlir::mqt::TargetEnvAttr>(
+      mlir::mqt::TargetEnvAttr::name);
   ASSERT_TRUE(environment);
   EXPECT_EQ(environment.getPayloadSpecification(),
-            payload.materialize(*context));
+            payload.materialize(*compiled.getContext()));
 
   size_t numStatic = 0;
   size_t numDynamic = 0;
   size_t numSwaps = 0;
   size_t numHigherArity = 0;
-  compiled->walk([&](Operation* operation) {
+  compiled.walk([&](Operation* operation) {
     if (auto staticOp = dyn_cast<qco::StaticOp>(operation)) {
       ++numStatic;
       EXPECT_TRUE(llvm::is_contained(
@@ -3775,8 +3774,8 @@ TEST_F(CompilerPipelineTest, OverCapacityInputsCompileWithoutLayout) {
   const auto target = llvm::cantFail(
       CompilerTarget::create(1, CompilerTarget::Connectivity::allToAll(),
                              CompilerTarget::NativeOperations::unrestricted()));
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   ASSERT_TRUE(mlir::succeeded(
       program->compileForTarget(TargetEnvironment(target, payload))));
   EXPECT_FALSE(program->module()->hasAttr("mqt.layout"));
@@ -3900,7 +3899,7 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
       CompilerTarget::NativeOperations::unrestricted()));
   auto qasmProgram = program->copy();
   const auto qasmPayload = llvm::cantFail(
-      payloadSpecificationForProgramFormat(QDMI_PROGRAM_FORMAT_QASM3));
+      PayloadSpecification::forProgramFormat(ProgramFormat::OpenQASM3));
   ASSERT_TRUE(mlir::succeeded(
       qasmProgram.compileForTarget(TargetEnvironment(target, qasmPayload))));
   const auto outcomes =
@@ -3916,8 +3915,8 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
   EXPECT_TRUE(StringRef(qasm->source()).contains("$7"));
   EXPECT_FALSE(StringRef(qasm->source()).contains("$42"));
   EXPECT_FALSE(StringRef(qasm->source()).contains("for int"));
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   ASSERT_TRUE(mlir::succeeded(
       program->compileForTarget(TargetEnvironment(target, payload))));
   EXPECT_TRUE(succeeded(verify(program->module())));
@@ -3960,8 +3959,8 @@ TEST_F(CompilerPipelineTest, IndexedPlacementRetainsTargetAndPayloadChecks) {
             capacity, CompilerTarget::Connectivity::allToAll(),
             Native::fromOperations(operations)));
       };
-  const auto payload = llvm::cantFail(payloadSpecificationForProgramFormat(
-      QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE));
+  const auto payload = llvm::cantFail(
+      PayloadSpecification::forProgramFormat(ProgramFormat::QIRAdaptive));
   for (const auto& [target, expected] : {
            std::pair{targetWith(1, {u, measure}), "target site count"},
            std::pair{targetWith(2, {u, localMeasure}),
@@ -3984,14 +3983,14 @@ TEST_F(CompilerPipelineTest, IndexedPlacementRetainsTargetAndPayloadChecks) {
   }
   const auto target = targetWith(2, {u, measure});
   for (const auto format :
-       {QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE, QDMI_PROGRAM_FORMAT_QASM3}) {
+       {ProgramFormat::QIRAdaptive, ProgramFormat::OpenQASM3}) {
     auto result = runDefaultPipeline(
         CompilerInput{OpenQASMProgram(source)},
         TargetEnvironment(
             target,
-            llvm::cantFail(payloadSpecificationForProgramFormat(format))));
+            llvm::cantFail(PayloadSpecification::forProgramFormat(format))));
     ASSERT_TRUE(mlir::succeeded(result));
-    if (format == QDMI_PROGRAM_FORMAT_QASM3) {
+    if (format == ProgramFormat::OpenQASM3) {
       EXPECT_TRUE(mlir::succeeded(QCProgram::fromOpenQASMString(
           std::get<OpenQASMProgram>(*result).source())));
     } else {
@@ -5639,14 +5638,13 @@ gphase(0.5);
   ASSERT_TRUE(mlir::succeeded(qco->compileForTarget(
       TargetEnvironment(target, makePayloadSpecification()))));
 
-  auto compiled = parseRecordedModule(qco->str());
-  ASSERT_TRUE(compiled);
-  EXPECT_TRUE(verify(*compiled).succeeded());
+  auto compiled = qco->module();
+  EXPECT_TRUE(verify(compiled).succeeded());
 
   llvm::StringMap<size_t> controlledOperations;
   size_t rccxOperations = 0;
   size_t globalPhases = 0;
-  compiled->walk([&](Operation* operation) {
+  compiled.walk([&](Operation* operation) {
     if (auto controlled = dyn_cast<CtrlOp>(operation)) {
       ASSERT_EQ(controlled.getNumBodyUnitaries(), 1U);
       ++controlledOperations[controlled.getBodyUnitary(0).getBaseSymbol()];
@@ -5689,14 +5687,13 @@ cx q[1], q[0];
 
   ASSERT_TRUE(mlir::succeeded(qco->compileForTarget(
       TargetEnvironment(target, makePayloadSpecification()))));
-  auto compiled = parseRecordedModule(qco->str());
-  ASSERT_TRUE(compiled);
-  EXPECT_TRUE(verify(*compiled).succeeded());
+  auto compiled = qco->module();
+  EXPECT_TRUE(verify(compiled).succeeded());
 
   llvm::DenseMap<Value, SiteId> sites;
   size_t numTwoQubitOperations = 0;
   for (Operation& operation :
-       ::mlir::mqt::getEntryPoint(compiled.get()).getFunctionBody().getOps()) {
+       ::mlir::mqt::getEntryPoint(compiled).getFunctionBody().getOps()) {
     if (auto staticOp = dyn_cast<qco::StaticOp>(operation)) {
       sites.try_emplace(staticOp.getQubit(), staticOp.getIndex());
       continue;
@@ -5789,12 +5786,11 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesDynamicRunForSupportedTargets) {
     ASSERT_TRUE(mlir::succeeded(program->compileForTarget(
         TargetEnvironment(target, makePayloadSpecification()))));
 
-    auto compiled = parseRecordedModule(program->str());
-    ASSERT_TRUE(compiled);
-    EXPECT_TRUE(verify(*compiled).succeeded());
+    auto compiled = program->module();
+    EXPECT_TRUE(verify(compiled).succeeded());
 
     size_t gateCount = 0;
-    compiled->walk([&](UnitaryOpInterface unitary) {
+    compiled.walk([&](UnitaryOpInterface unitary) {
       EXPECT_TRUE(target.supports(unitary.getOperation()));
       gateCount += unitary.isSingleQubit();
     });
@@ -5804,13 +5800,13 @@ TEST_F(CompilerPipelineTest, QCOProgramCompilesDynamicRunForSupportedTargets) {
                   ? 1U
                   : 3U);
 
-    auto main = compiled->lookupSymbol<func::FuncOp>("main");
+    auto main = compiled.lookupSymbol<func::FuncOp>("main");
     ASSERT_TRUE(main);
     ASSERT_EQ(main.getNumArguments(), 1U);
     EXPECT_FALSE(main.getArgument(0).use_empty());
     for (const double angle : {0.0, 0.37, -2.0 * std::numbers::pi, 1.0e5}) {
       SCOPED_TRACE(angle);
-      auto bound = OwningOpRef<ModuleOp>(compiled->clone());
+      auto bound = OwningOpRef<ModuleOp>(compiled.clone());
       auto function = bound->lookupSymbol<func::FuncOp>("main");
       OpBuilder builder(function);
       builder.setInsertionPointToStart(&function.getBody().front());
@@ -5872,17 +5868,16 @@ TEST_F(CompilerPipelineTest, QCOProgramMergesDynamicRunInNativeCtrlBody) {
     ASSERT_TRUE(mlir::succeeded(program->compileForTarget(
         TargetEnvironment(target, makePayloadSpecification()))));
 
-    auto compiled = parseRecordedModule(program->str());
-    ASSERT_TRUE(compiled);
-    EXPECT_TRUE(verify(*compiled).succeeded());
+    auto compiled = program->module();
+    EXPECT_TRUE(verify(compiled).succeeded());
 
     CtrlOp ctrl;
-    compiled->walk([&](CtrlOp op) { ctrl = op; });
+    compiled.walk([&](CtrlOp op) { ctrl = op; });
     ASSERT_TRUE(ctrl);
     ASSERT_EQ(ctrl.getNumBodyUnitaries(), 1U);
     EXPECT_TRUE(isa<UOp>(ctrl.getBodyUnitary(0).getOperation()));
 
-    auto main = compiled->lookupSymbol<func::FuncOp>("main");
+    auto main = compiled.lookupSymbol<func::FuncOp>("main");
     ASSERT_TRUE(main);
     ASSERT_EQ(main.getNumArguments(), 1U);
     EXPECT_FALSE(main.getArgument(0).use_empty());
@@ -5954,14 +5949,13 @@ c = measure q;
   ASSERT_TRUE(mlir::succeeded(qco->compileForTarget(
       TargetEnvironment(target, makePayloadSpecification()))));
 
-  auto compiled = parseRecordedModule(qco->str());
-  ASSERT_TRUE(compiled) << qco->str();
-  EXPECT_TRUE(verify(*compiled).succeeded());
+  auto compiled = qco->module();
+  EXPECT_TRUE(verify(compiled).succeeded());
 
   llvm::SmallVector<int64_t> staticSites;
   size_t numDynamic = 0;
   size_t numSwaps = 0;
-  compiled->walk([&](Operation* operation) {
+  compiled.walk([&](Operation* operation) {
     if (auto staticOp = dyn_cast<qco::StaticOp>(operation)) {
       staticSites.emplace_back(staticOp.getIndex());
     }
@@ -5992,9 +5986,8 @@ h q[1];
   ASSERT_TRUE(mlir::succeeded(program));
   ASSERT_TRUE(mlir::succeeded(program->compileForTarget(
       TargetEnvironment(target, makePayloadSpecification()))));
-  auto moduleOp = parseRecordedModule(program->str());
-  ASSERT_TRUE(moduleOp);
-  EXPECT_TRUE(verify(*moduleOp).succeeded());
+  auto moduleOp = program->module();
+  EXPECT_TRUE(verify(moduleOp).succeeded());
 
   size_t unitaryOperations = 0;
   size_t resets = 0;
@@ -6022,8 +6015,7 @@ TEST_F(CompilerPipelineTest, DefaultPipelineDerivesTargetOutput) {
   ASSERT_TRUE(std::holds_alternative<QIRProgram>(*result));
   const auto& qir = std::get<QIRProgram>(*result);
   EXPECT_EQ(qir.profile(), QIRProfile::Base);
-  auto qirModule = parseRecordedModule(qir.str());
-  ASSERT_TRUE(qirModule);
+  auto qirModule = qir.module();
   std::vector<int64_t> qirSiteIds;
   qirModule->walk([&](LLVM::IntToPtrOp intToPtr) {
     auto constant = intToPtr.getArg().getDefiningOp<LLVM::ConstantOp>();

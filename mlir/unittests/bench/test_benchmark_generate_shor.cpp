@@ -165,9 +165,7 @@ TEST(GenerateProgramTest, KeepsLargestShorStructuredAndCompilable) {
   auto program = generate(benchmark);
   ASSERT_TRUE(mlir::succeeded(program));
   EXPECT_LT(program->str().size(), 32'768U);
-  auto qcoProgram = std::move(*program).intoQCO();
-  ASSERT_TRUE(mlir::succeeded(qcoProgram));
-  auto qir = runDefaultPipeline(CompilerInput{std::move(*qcoProgram)},
+  auto qir = runDefaultPipeline(CompilerInput{std::move(*program)},
                                 ProgramFormat::QIRAdaptive);
   ASSERT_TRUE(mlir::succeeded(qir));
 }

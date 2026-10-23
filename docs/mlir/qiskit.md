@@ -41,8 +41,18 @@ failure, serialize to `io.BytesIO` before opening the destination.
 
 ## Compiler targets
 
-Use {py:meth}`~mqt.core.mlir.CompilerTarget.from_qiskit` to create a compiler
-target from a Qiskit `Target` or `BackendV2`:
+Pass a Qiskit `BackendV2` or `Target` to
+{py:func}`~mqt.core.mlir.compile_program` to compile for its gates, topology,
+and advertised standard control flow. The default result is a `QuantumCircuit`
+with physical qubits; its layout records placement and routing of logical input
+qubits. An explicit `output` selects another compiler representation. Omit
+`target` for target-independent optimization, which preserves the input's
+program family and may remove idle qubits. See the
+[Qiskit example](mqt_compiler_collection.md#use-qiskit-circuits-directly).
+
+For explicit compiler pipelines or repeated compilation,
+{py:meth}`~mqt.core.mlir.CompilerTarget.from_qiskit` creates an independent
+snapshot of gates and topology:
 
 ```python
 from qiskit.providers.fake_provider import GenericBackendV2
@@ -52,14 +62,14 @@ backend = GenericBackendV2(3, basis_gates=["sx", "x", "rz", "cx"])
 target = CompilerTarget.from_qiskit(backend)
 ```
 
-The result is an independent structural snapshot. A backend supplies the default
-target name; pass `name` to override it. Qiskit standard gates, measurement,
-reset, and their ordered qubit placements become native capabilities. Each
-parameter slot can be unrestricted or fixed to one finite value. Multiple
-instructions of the same gate, such as `RXGate(pi / 2)` and `RXGate(pi)`, retain
-their distinct target names and placements. The compiler uses canonical gate
-names; `to_qiskit(target=target)` selects the target name by gate, parameters,
-and ordered sites. This also preserves legacy spellings such as `u1` and `u3`.
+A backend supplies the default target name; pass `name` to override it. Qiskit
+standard gates, measurement, reset, and their ordered qubit placements become
+native capabilities. Each parameter slot can be unrestricted or fixed to one
+finite value. Multiple instructions of the same gate, such as `RXGate(pi / 2)`
+and `RXGate(pi)`, retain their distinct target names and placements. The
+compiler uses canonical gate names; `to_qiskit(target=target)` selects the
+target name by gate, parameters, and ordered sites. This also preserves legacy
+spellings such as `u1` and `u3`.
 
 Routing connectivity is undirected and comes from the retained two-qubit gates.
 Gate applicability keeps its original qubit order. The target needs a known,
@@ -74,13 +84,13 @@ target accepts that entire interval; see
 {doc}`target compilation <target_compilation>`. Delay, barrier, classical
 control flow, and operations with no applicable qubits are omitted without a
 warning. Pass `operation_names` to retain a subset; every selected name must be
-representable. Calibration, timing, and scheduling data are not copied.
+representable. Calibration, timing, and scheduling data are not copied. A
+`CompilerTarget` also omits backend control-flow support. For Qiskit output,
+this snapshot permits all control-flow forms supported by the exporter.
 
-The snapshot does not guarantee that compilation can synthesize the requested
-circuit. Target-native synthesis requires a common single-qubit basis across
-sites and a common entangler across routing edges. After compilation, call
-`program.to_qiskit(target=target)` to check whether the output can be exported
-as a Qiskit circuit. Successful export does not verify that a device can run it.
+Target-native synthesis requires a common single-qubit basis across sites and a
+common entangler across routing edges. For explicit pipelines, export with
+`program.to_qiskit(target=target)` to map compiler site IDs to physical qubits.
 
 ## Circuit translation contract
 
@@ -273,10 +283,11 @@ program = QCProgram.from_qiskit(transpiled_circuit)
 restored = program.copy().to_qco().to_qc().to_qiskit()
 ```
 
-Target compilation requires a circuit without an attached layout. The numeric
-mapping does not retain Qiskit input register names or input ancilla labels;
-incomplete layouts are unsupported. See {doc}`MQT dialect <MQT>` for the
-metadata schema and {doc}`target compilation <target_compilation>` for
+Target compilation and compilation to a Qiskit circuit require inputs without an
+attached layout. Use the conversion methods above to preserve an existing
+layout. The numeric mapping does not retain Qiskit input register names or input
+ancilla labels; incomplete layouts are unsupported. See {doc}`MQT dialect <MQT>`
+for the metadata schema and {doc}`target compilation <target_compilation>` for
 placement.
 
 Names passed between Qiskit and the compiler must not contain NUL characters.

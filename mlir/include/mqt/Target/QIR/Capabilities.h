@@ -10,10 +10,16 @@
 
 #pragma once
 
+#include "mlir/Support/LLVM.h"
+
 #include <array>
 #include <utility>
 
-namespace mlir::qir {
+namespace mlir {
+class ModuleOp;
+struct ProgramCapability;
+
+namespace qir {
 
 /// Optional QIR module flags and their payload capability IDs.
 inline constexpr std::array OPTIONAL_CAPABILITIES{
@@ -27,4 +33,12 @@ inline constexpr std::array OPTIONAL_CAPABILITIES{
     std::pair{"multiple_target_branching", "multiway-branching"},
 };
 
-} // namespace mlir::qir
+/// Check emitted QIR requirements against the selected payload capabilities.
+///
+/// Required loop capabilities must be unconstrained because lowered QIR does
+/// not retain a proof of their bounds.
+LogicalResult validateCapabilities(ModuleOp moduleOp,
+                                   ArrayRef<ProgramCapability> capabilities);
+
+} // namespace qir
+} // namespace mlir

@@ -11,6 +11,7 @@
 // Keep the public declaration visible so this definition is type-checked.
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Compiler/Target.h"
+#include "mqt/Compiler/TargetEnvironment.h"
 #include "mqt/Dialect/CBit/IR/CBitAttributes.h"
 #include "mqt/Dialect/CBit/IR/CBitDialect.h"
 #include "mqt/Dialect/CBit/IR/CBitOps.h"
@@ -2768,9 +2769,9 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
   return circuit;
 }
 
-static void
-validateConstructibleGates(const ExportedCircuit& circuit,
-                           const VersionedTranslation& translation) {
+static void validateCircuit(const ExportedCircuit& circuit,
+                            const VersionedTranslation& translation,
+                            const mlir::PayloadSpecification* payload) {
   for (const auto& instruction : circuit.instructions) {
     if (instruction.kind == ExportedInstruction::Kind::Gate &&
         !translation.supportsGate(instruction.gate)) {
@@ -2797,8 +2798,17 @@ validateConstructibleGates(const ExportedCircuit& circuit,
     if (instruction.kind != ExportedInstruction::Kind::ControlFlow) {
       continue;
     }
+    const auto capability =
+        controlFlowCapability(instruction.controlFlow->kind);
+    if (payload != nullptr && !capability.empty() &&
+        llvm::none_of(payload->capabilities(), [&](const auto& supported) {
+          return supported.id == capability && supported.value == 0;
+        })) {
+      throw std::runtime_error("Qiskit output requires target capability '" +
+                               capability.str() + "'");
+    }
     for (const auto& block : instruction.controlFlow->blocks) {
-      validateConstructibleGates(block, translation);
+      validateCircuit(block, translation, payload);
     }
   }
 }
@@ -2951,8 +2961,10 @@ collectGateDefinition(mlir::func::FuncOp function) {
   };
 }
 
-nb::object exportCircuit(mlir::QCProgram program,
-                         const mlir::CompilerTarget* const target) {
+[[nodiscard]] static nb::object
+exportCircuitImpl(mlir::QCProgram program,
+                  const mlir::CompilerTarget* const target,
+                  const mlir::PayloadSpecification* const payload) {
   auto moduleOp = program.module();
   auto function = mlir::mqt::getEntryPoint(moduleOp);
   if (!function) {
@@ -3026,9 +3038,9 @@ nb::object exportCircuit(mlir::QCProgram program,
 
   auto translation = selectTranslation();
   for (const auto& definition : gateDefinitions) {
-    validateConstructibleGates(definition.circuit, *translation);
+    validateCircuit(definition.circuit, *translation, payload);
   }
-  validateConstructibleGates(circuit, *translation);
+  validateCircuit(circuit, *translation, payload);
   for (auto& definition : gateDefinitions) {
     auto definitionWriter =
         translation->createCircuit(definition.numQubits, 0U);
@@ -3055,6 +3067,17 @@ nb::object exportCircuit(mlir::QCProgram program,
     writer->setLayout(*layout);
   }
   return writer->finish();
+}
+
+nb::object exportCircuit(mlir::QCProgram program,
+                         const mlir::CompilerTarget* target) {
+  return exportCircuitImpl(std::move(program), target, nullptr);
+}
+
+nb::object exportCircuit(mlir::QCProgram program,
+                         const mlir::TargetEnvironment& environment) {
+  return exportCircuitImpl(std::move(program), &environment.target(),
+                           &environment.payloadSpecification());
 }
 
 } // namespace mqt::bindings::qiskit

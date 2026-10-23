@@ -23,6 +23,7 @@
 #include "mqt/Dialect/QCO/Transforms/Passes.h"
 #include "mqt/Support/Passes.h"
 #include "mqt/Target/OpenQASM/TranslateQCToOpenQASM3.h"
+#include "mqt/Target/QIR/Capabilities.h"
 #include "mqt/Target/QIR/Export.h"
 
 #include "capnp/common.h"
@@ -115,6 +116,23 @@ FailureOr<QIRProgram> QCProgram::intoQIR(QIRProfile profile) && {
           },
           "failed to convert QC to QIR"))) {
     return failure();
+  }
+  if (mod()->hasAttr(mqt::TargetEnvAttr::name)) {
+    const TargetEnvironmentAnalysis environment(mod());
+    if (!environment) {
+      mod().emitError(environment.error());
+      return failure();
+    }
+    const auto& targetPayload =
+        environment.environment().payloadSpecification();
+    const auto& format = targetPayload.format();
+    if (format.id == payload.format().id &&
+        format.version == payload.format().version &&
+        format.profile == payload.format().profile &&
+        failed(
+            qir::validateCapabilities(mod(), targetPayload.capabilities()))) {
+      return failure();
+    }
   }
   return QIRProgram(std::move(*this).releaseStorage(), profile);
 }
@@ -490,11 +508,15 @@ runDefaultPipelineImpl(CompilerInput&& program, ProgramFormat output,
   }
 
   auto qc = std::move(*qco).intoQC();
-  if (failed(qc) || failed(qc->cleanup())) {
+  if (failed(qc)) {
     return failure();
   }
   if (output == ProgramFormat::QC) {
+    // Export cleanup can change resources and invalidate routing metadata.
     return CompilerProgram(std::move(*qc));
+  }
+  if (failed(qc->cleanup())) {
+    return failure();
   }
   if (output == ProgramFormat::OpenQASM3) {
     auto source = qc::translateQCToOpenQASM3(qc->module());
@@ -523,6 +545,19 @@ runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
 }
 
 FailureOr<CompilerProgram>
+runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
+                   const TargetEnvironment& environment,
+                   const CompilationOptions& options) {
+  if (output == ProgramFormat::QCImport || output == ProgramFormat::QCO) {
+    llvm::errs()
+        << "QCImport and raw QCO output stop before target compilation.\n";
+    return failure();
+  }
+  return runDefaultPipelineImpl(std::move(program), output, &environment,
+                                "mqt-qco-default", options);
+}
+
+FailureOr<CompilerProgram>
 runDefaultPipeline(CompilerInput&& program,
                    const TargetEnvironment& environment,
                    const CompilationOptions& options) {
@@ -531,8 +566,7 @@ runDefaultPipeline(CompilerInput&& program,
     llvm::errs() << llvm::toString(output.takeError()) << '\n';
     return failure();
   }
-  return runDefaultPipelineImpl(std::move(program), *output, &environment,
-                                "mqt-qco-default", options);
+  return runDefaultPipeline(std::move(program), *output, environment, options);
 }
 
 } // namespace mlir

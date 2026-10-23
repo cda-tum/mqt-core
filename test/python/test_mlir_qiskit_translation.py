@@ -47,6 +47,7 @@ from qiskit_support import supports_qiskit_translation
 
 from mqt.core.mlir import (
     CompilerTarget,
+    OutputFormat,
     PayloadEncoding,
     PayloadFormat,
     PayloadSpecification,
@@ -262,10 +263,10 @@ def test_two_qubit_dense_unitary_compiles_to_target_basis() -> None:
             CompilerTarget.OperationCapability("cx", 2, 0),
         ]),
     )
-    program = QCProgram.from_qiskit(circuit).to_qco(copy=True)
+    program = QCProgram.from_qiskit(circuit).to_qco()
 
     program.compile_for_target(_test_target_environment(target))
-    restored = program.to_qc(copy=True).to_qiskit(target=target)
+    restored = program.to_qiskit(target=target, copy=True)
 
     assert "qco.unitary" not in program.ir
     assert restored.size() > 0
@@ -280,7 +281,7 @@ def test_symbolic_multi_controlled_rotations_decompose_and_bind() -> None:
     program = QCProgram.from_qiskit(circuit).to_qco()
 
     program.decompose_multi_controlled()
-    restored = program.to_qc().to_qiskit()
+    restored = program.to_qiskit()
 
     assert {parameter.name for parameter in restored.parameters} == {theta.name}
     assert all(item.operation.num_qubits <= 2 for item in restored.data)
@@ -659,10 +660,10 @@ measure q[1] -> c[0];
 measure q[0] -> c[1];
 """
     )
-    mapped = program.to_qco(copy=True)
+    mapped = program.to_qco()
     mapped.compile_for_target(_test_target_environment(target))
 
-    restored = mapped.to_qc(copy=True).to_qiskit(target=target)
+    restored = mapped.to_qiskit(target=target)
 
     assert restored.num_qubits == 5
     assert [(register.name, len(register)) for register in restored.qregs] == [("q", 5)]
@@ -684,10 +685,10 @@ measure q[1] -> c[1];
 if (c == 3) x q[2];
 """
     )
-    optimized = program.to_qco(copy=True)
+    optimized = program.to_qco()
     optimized.cleanup()
 
-    restored = optimized.to_qc(copy=True).to_qiskit()
+    restored = optimized.to_qiskit()
 
     assert restored.count_ops() == {"measure": 2, "if_else": 1}
     assert restored.data[2].operation.blocks[0].count_ops() == {"x": 1}
@@ -2161,7 +2162,7 @@ def test_nested_structured_control_and_bound_loop_parameter() -> None:
         with case(case.DEFAULT):
             circuit.z(1)
 
-    program = compile_program(circuit)
+    program = compile_program(circuit, output=OutputFormat.QC)
     source = program.ir
 
     assert "scf.for" in program.ir
@@ -2508,7 +2509,7 @@ def test_generated_loop_parameter_name_avoids_free_symbol_collision() -> None:
     with circuit.for_loop(range(2), None, None, None, None, label=None) as iteration:
         circuit.rx(iteration, 0)
 
-    restored = compile_program(circuit).to_qiskit()
+    restored = compile_program(circuit)
 
     assert restored.data[0].operation.params[0].name == "_mqt_loop_0"
     loop = restored.data[1].operation
@@ -2811,7 +2812,7 @@ def test_delayed_measurement_store_across_quantum_operations(gate: str, *, via_q
 """
     )
     if via_qco:
-        program = program.to_qco().to_qc()
+        program = program.to_qco()
 
     restored = program.to_qiskit()
 
@@ -2878,7 +2879,7 @@ def test_delayed_measurement_store_preserves_scalar_uses(intervening: str, expec
 """
     )
     if via_qco:
-        program = program.to_qco().to_qc()
+        program = program.to_qco()
     original = str(program)
 
     restored = program.to_qiskit(copy=True)
@@ -2934,7 +2935,7 @@ def test_delayed_measurement_store_across_measurements(case: str, *, via_qco: bo
 """
     )
     if via_qco:
-        program = program.to_qco().to_qc()
+        program = program.to_qco()
 
     restored = program.to_qiskit()
 
@@ -2995,7 +2996,7 @@ def test_delayed_measurement_store_across_independent_control(control: str, *, e
 """
     )
     if via_qco:
-        program = program.to_qco().to_qc()
+        program = program.to_qco()
 
     restored = program.to_qiskit()
 
@@ -3089,7 +3090,7 @@ def test_grouped_measurements_keep_order_for_each_destination(store_order: tuple
 """
     )
     if via_qco:
-        program = program.to_qco().to_qc()
+        program = program.to_qco()
     original_ir = program.ir
     restored = program.to_qiskit(copy=True)
     reversed_writes = store_order.index(2) < store_order.index(0)
@@ -3154,7 +3155,7 @@ def test_delayed_measurement_store_preserves_snapshot(*, consume_before_store: b
 """
     )
     if via_qco:
-        program = program.to_qco().to_qc()
+        program = program.to_qco()
 
     restored = program.to_qiskit(copy=True)
     assert restored.num_clbits == 1
@@ -3875,7 +3876,7 @@ def test_parameter_vector_element_is_valid_loop_parameter() -> None:
     assert program.ir.count("mqt.parameter_group") == 1
     restored_circuits = (
         program.to_qiskit(copy=True),
-        program.to_qco(copy=True).to_qc().to_qiskit(),
+        program.to_qco(copy=True).to_qiskit(),
     )
     for restored in restored_circuits:
         restored_loop = restored.data[0].operation

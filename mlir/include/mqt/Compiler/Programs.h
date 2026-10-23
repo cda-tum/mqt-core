@@ -148,6 +148,9 @@ public:
   /// module. Consuming or destroying the program invalidates the operation.
   [[nodiscard]] ModuleOp module() const;
 
+  /// Keep the dialect context alive across consuming compiler operations.
+  [[nodiscard]] std::shared_ptr<MLIRContext> context() const noexcept;
+
 protected:
   struct Storage {
     std::shared_ptr<MLIRContext> context;
@@ -541,6 +544,15 @@ using CompilerProgram = std::variant<QCProgram, QCOProgram, JeffProgram,
 [[nodiscard]] FailureOr<CompilerProgram>
 runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
                    std::string_view qcoPipeline = "mqt-qco-default",
+                   const CompilationOptions& options = {});
+
+/// Compile for a target and return the requested representation.
+///
+/// QCImport and raw QCO stop before target compilation and are not accepted.
+/// The environment must include the requested output's lowering constraints.
+[[nodiscard]] FailureOr<CompilerProgram>
+runDefaultPipeline(CompilerInput&& program, ProgramFormat output,
+                   const TargetEnvironment& environment,
                    const CompilationOptions& options = {});
 
 /// Run the coordinated default compiler pipeline for a target.
