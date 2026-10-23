@@ -356,14 +356,9 @@ refresh does not collect additional samples.
 | **Device licenses**               | Current local license capacity, allocations, and reservations.           |
 | **Job accounting**                | Job state, exit code, elapsed/CPU time, task memory, CPUs, and licenses. |
 
-```{figure} ../_static/slurm-runtime-metrics.png
-:alt: Grafana shows a failed scrape for slurm_partitions while the other four endpoints are up, above time series for running jobs, pending jobs, node states, and CPU allocations.
-:width: 100%
-
-Example metrics view with a failed partition scrape. **Down** describes the
-scrape, not a job outcome or a quantum device's availability. Earlier samples
-remain visible in the graphs.
-```
+In **Metrics endpoint health**, **Down** describes a failed scrape, not a job
+outcome or a quantum device's availability. Earlier samples remain visible in
+the graphs.
 
 Use **Device licenses** to inspect device admission. This table shows the latest
 Slurm state, cached for up to 60 seconds, independently of the selected time
