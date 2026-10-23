@@ -108,8 +108,9 @@ struct Execution {
                          std::clamp(numShots_ / 256, size_t{1}, size_t{8}))
               : maxWorkers_;
       auto counts = mlir::qco::sample(
-          entryPoint, numShots_, seed_.value_or(0), {}, nullptr, &retainedState,
-          {}, workers, [&](size_t desired) { return requestWorkers(desired); });
+          entryPoint, numShots_, seed_.value_or(0),
+          mlir::qco::DDArgumentBindings{}, nullptr, &retainedState, {}, workers,
+          [&](size_t desired) { return requestWorkers(desired); });
       if (llvm::failed(counts)) {
         return false;
       }

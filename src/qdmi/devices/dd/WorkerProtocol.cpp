@@ -195,7 +195,7 @@ bool decode(llvm::StringRef bytes, WorkerSlots& slots) {
 std::string encode(const WorkerResponse& response) {
   auto size = Response::size(static_cast<uint8_t>(response.succeeded),
                              response.output, response.qubits, response.state) +
-              2 * sizeof(uint64_t);
+              (2 * sizeof(uint64_t));
   for (const auto& shot : response.shots) {
     size += SPSArgList<SPSString>::size(shot);
   }
