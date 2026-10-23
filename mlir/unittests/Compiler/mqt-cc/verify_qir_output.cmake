@@ -49,11 +49,7 @@ function(require_textual_llvm_ir filename)
 endfunction()
 
 function(require_bitcode filename)
-  file(
-    READ "${filename}" bitcode_magic
-    OFFSET 0
-    LIMIT 4
-    HEX)
+  file(READ "${filename}" bitcode_magic OFFSET 0 LIMIT 4 HEX)
   string(TOLOWER "${bitcode_magic}" bitcode_magic)
   if(NOT bitcode_magic STREQUAL "4243c0de")
     message(FATAL_ERROR "${filename} does not start with the LLVM bitcode magic")
@@ -76,7 +72,8 @@ run_command_expect_failure(
 run_command_expect_failure(
   "mqt-cc invalid payload specification"
   "--payload-spec must be a valid #mqt.payload_spec attribute" "${MQT_CC}" "${INPUT_FILE}"
-  "--qdmi-device=mqt.sc.iqm.garnet" "--payload-spec=#mqt.payload_spec<>")
+  "--qdmi-device=mqt.sc.iqm.garnet" "--payload-spec=#mqt.payload_spec<>"
+)
 run_command_expect_failure(
   "mqt-cc target with explicit output"
   "Only --emit=qco-optimized can be combined with target compilation"
@@ -87,8 +84,14 @@ run_command_expect_failure(
   "--emit=qir-base")
 
 execute_process(
-  COMMAND "${MQT_CC}" "${INPUT_FILE}" "--qdmi-device=mqt.sc.iqm.garnet"
-          "--payload-spec=${binary_payload_specification}" --emit=qco-optimized -o -
+  COMMAND
+    "${MQT_CC}"
+    "${INPUT_FILE}"
+    "--qdmi-device=mqt.sc.iqm.garnet"
+    "--payload-spec=${binary_payload_specification}"
+    --emit=qco-optimized
+    -o
+    -
   RESULT_VARIABLE result
   OUTPUT_VARIABLE mapped_qco
   ERROR_VARIABLE error)
