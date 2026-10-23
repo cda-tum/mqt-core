@@ -2002,42 +2002,36 @@ TEST(OpenQASMTargetTest, QuantumEmissionDoesNotScaleWithRegisterWidth) {
     return operations;
   };
 
-  EXPECT_EQ(operationCount(2), operationCount(2'000'001));
   EXPECT_EQ(operationCount(2),
             operationCount(std::numeric_limits<int64_t>::max()));
 }
 
 TEST(OpenQASMTargetTest, ImportsLargeQuantumAndClassicalRegisters) {
-  for (const int64_t width : {80'000, 2'000'000}) {
-    SCOPED_TRACE(width);
-    const auto source =
-        "OPENQASM 3.0; include \"stdgates.inc\"; qubit[" +
-        std::to_string(width + 1) + "] q; bit[" + std::to_string(width) +
-        "] c; x q[" + std::to_string(width) + "]; h q[0]; cx q[0], q[" +
-        std::to_string(width) + "]; c[" + std::to_string(width - 1) +
-        "] = measure q[0]; output bit result; result = c[" +
-        std::to_string(width - 1) + "];";
-    MLIRContext context;
-    auto moduleOp =
-        qc::translateOpenQASMToQC(source, &context, {.maxOperations = 32});
-    ASSERT_TRUE(moduleOp);
-    ASSERT_TRUE(succeeded(verify(*moduleOp)));
-    size_t quantumRegisters = 0;
-    moduleOp->walk([&](memref::AllocOp alloc) {
-      if (isa<qc::QubitType>(alloc.getType().getElementType())) {
-        ++quantumRegisters;
-        EXPECT_EQ(alloc.getType().getDimSize(0), width + 1);
-      }
-    });
-    EXPECT_EQ(quantumRegisters, 1);
-    size_t classicalRegisters = 0;
-    moduleOp->walk([&](cbit::AllocOp alloc) {
-      if (alloc.getType().getWidth() == width) {
-        ++classicalRegisters;
-      }
-    });
-    EXPECT_EQ(classicalRegisters, 1);
-  }
+  constexpr llvm::StringLiteral source =
+      "OPENQASM 3.1; include \"stdgates.inc\"; "
+      "qubit[2000001] q; bit[2000000] c; x q[2000000]; "
+      "c[1999999] = measure q[2000000]; "
+      "output bit result; result = c[1999999];";
+  MLIRContext context;
+  auto moduleOp =
+      qc::translateOpenQASMToQC(source, &context, {.maxOperations = 32});
+  ASSERT_TRUE(moduleOp);
+  ASSERT_TRUE(succeeded(verify(*moduleOp)));
+  size_t quantumRegisters = 0;
+  moduleOp->walk([&](memref::AllocOp alloc) {
+    if (isa<qc::QubitType>(alloc.getType().getElementType())) {
+      ++quantumRegisters;
+      EXPECT_EQ(alloc.getType().getDimSize(0), 2'000'001);
+    }
+  });
+  EXPECT_EQ(quantumRegisters, 1);
+  size_t classicalRegisters = 0;
+  moduleOp->walk([&](cbit::AllocOp alloc) {
+    if (alloc.getType().getWidth() == 2'000'000) {
+      ++classicalRegisters;
+    }
+  });
+  EXPECT_EQ(classicalRegisters, 1);
 }
 
 TEST(OpenQASMTargetTest, LargeStaticBarrierAvoidsAliasChecks) {

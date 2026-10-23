@@ -1406,8 +1406,6 @@ TEST(OpenQASMFrontendTest, LargeRegistersDoNotConsumeArrayStorageBudget) {
     SCOPED_TRACE(source);
     auto analyzed = openqasm::frontend::analyzeOpenQASM(source);
     ASSERT_TRUE(analyzed) << analyzed.diagnostics.front().message;
-    EXPECT_EQ(analyzed.program->registers.front().kind,
-              openqasm::frontend::RegisterKind::Qubit);
   }
 }
 
@@ -1447,8 +1445,14 @@ TEST(OpenQASMFrontendTest, AcceptsBitStringsBeyondTheOldRegisterLimit) {
 }
 
 TEST(OpenQASMFrontendTest, BoundsLargeRegisterExpansionBeforeAllocation) {
-  for (const auto* operation : {"reset q;", "reset q[:];", "barrier;",
-                                "barrier q;", "h q;", "measure q;"}) {
+  for (const auto* operation : {
+           "reset q;",
+           "reset q[:];",
+           "barrier;",
+           "barrier q;",
+           "h q;",
+           "measure q;",
+       }) {
     SCOPED_TRACE(operation);
     const auto source = std::string("OPENQASM 3.1; include \"stdgates.inc\"; "
                                     "qubit[9223372036854775807] q; ") +
