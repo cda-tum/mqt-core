@@ -384,10 +384,17 @@ values across writes, retains integer bit patterns, and emits angles as
 floating-point radians. Reimport also requires the combined register-and-array
 limit described above.
 
-Qiskit, jeff, and Base QIR export require array storage to be eliminated.
-Compiler cleanup promotes eligible arrays to scalar values and folds constants.
-With LLVM/MLIR 23.1, promotion requires at most 16 elements, constant indices,
-and supported uses. Call `program.cleanup()` before `to_qiskit()`; Qiskit export
+jeff export flattens fixed-size stack arrays in row-major order and carries
+updates through control flow. Import uses reference storage with copies for live
+old values; array-valued interfaces stay tensor-based. Lengths must fit signed
+i32. Unresolved safety assertions are unsupported. Arrays cannot have live old
+values or be passed more than once into mutating control flow. Loop-carried
+stack arrays must keep their incoming storage.
+
+Qiskit and Base QIR export require array storage to be eliminated. Compiler
+cleanup promotes eligible arrays to scalar values and folds constants. With
+LLVM/MLIR 23.1, promotion requires at most 16 elements, constant indices, and
+supported uses. Call `program.cleanup()` before `to_qiskit()`; Qiskit export
 itself only folds scalar expressions.
 
 Cleanup also promotes local CBit registers of at most 256 bits to Boolean SSA

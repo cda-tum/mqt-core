@@ -1464,7 +1464,11 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
       }
       func.func @set(%memory: memref<32xi1, strided<[2], offset: ?>>, %value: i1) {
         %zero = arith.constant 0 : index
-        memref.store %value, %memory[%zero] : memref<32xi1, strided<[2], offset: ?>>
+        %one = arith.constant 1 : index
+        %size = arith.constant 32 : index
+        scf.for %i = %zero to %size step %one {
+          memref.store %value, %memory[%i] : memref<32xi1, strided<[2], offset: ?>>
+        }
         return
       }
       func.func @main() {
