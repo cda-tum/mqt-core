@@ -322,7 +322,8 @@ if(NOT error MATCHES "Before JeffToQCO" OR NOT output MATCHES "qco[.]")
   message(FATAL_ERROR "Initial jeff conversion was not instrumented: ${error}")
 endif()
 check_action_profile("${jeff_profile}" "JeffToQCO")
-if(NOT error MATCHES "Execution time report" OR NOT error MATCHES "JeffToQCO")
+if(NOT error MATCHES "Execution time report"
+   OR NOT error MATCHES "\n[ \t]+[0-9.]+[ \t]+[(][ 0-9.]+%[)][ \t]+JeffToQCO\n")
   message(FATAL_ERROR "Initial jeff conversion timing report missing: ${error}")
 endif()
 
