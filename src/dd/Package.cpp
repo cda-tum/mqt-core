@@ -1039,11 +1039,9 @@ ComplexValue Package::trace(const mEdge& a, const std::size_t numQubits) {
   std::iota(eliminatedBelow.begin(), eliminatedBelow.end(), size_t{0});
   return trace(a, eliminatedBelow).w;
 }
-// Keep the public member API stable.
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 bool Package::isCloseToIdentity(const mEdge& m, const fp tol,
                                 const std::vector<bool>& garbage,
-                                const bool checkCloseToOne) const {
+                                const bool checkCloseToOne) {
   std::unordered_set<decltype(m.p)> visited{};
   return isCloseToIdentityRecursive(m, visited, tol, garbage, checkCloseToOne);
 }

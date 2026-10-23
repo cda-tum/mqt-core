@@ -2168,34 +2168,34 @@ TEST(DDPackageTest, MeasurementFidelityValidatesWidthAndPermutation) {
 TEST(DDPackageTest, CloseToIdentity) {
   auto dd = std::make_unique<Package>(3);
   auto const id = Package::makeIdent();
-  EXPECT_TRUE(dd->isCloseToIdentity(id));
+  EXPECT_TRUE(Package::isCloseToIdentity(id));
   mEdge close{};
   close.p = id.p;
   close.w = dd->cn.lookup(1e-11, 0);
   auto const id2 =
       dd->makeDDNode(1, std::array{id, mEdge::zero(), mEdge::zero(), close});
-  EXPECT_TRUE(dd->isCloseToIdentity(id2));
+  EXPECT_TRUE(Package::isCloseToIdentity(id2));
 
   auto const noId =
       dd->makeDDNode(1, std::array{mEdge::zero(), id, mEdge::zero(), close});
-  EXPECT_FALSE(dd->isCloseToIdentity(noId));
+  EXPECT_FALSE(Package::isCloseToIdentity(noId));
 
   mEdge notClose{};
   notClose.p = id.p;
   notClose.w = dd->cn.lookup(1e-9, 0);
   auto const noId2 = dd->makeDDNode(
       1, std::array{notClose, mEdge::zero(), mEdge::zero(), close});
-  EXPECT_FALSE(dd->isCloseToIdentity(noId2));
+  EXPECT_FALSE(Package::isCloseToIdentity(noId2));
 
   auto const noId3 = dd->makeDDNode(
       1, std::array{close, mEdge::zero(), mEdge::zero(), notClose});
-  EXPECT_FALSE(dd->isCloseToIdentity(noId3));
+  EXPECT_FALSE(Package::isCloseToIdentity(noId3));
 
   auto const notClose2 = dd->makeDDNode(
       0, std::array{mEdge::zero(), mEdge::one(), mEdge::one(), mEdge::zero()});
   auto const notClose3 = dd->makeDDNode(
       1, std::array{notClose2, mEdge::zero(), mEdge::zero(), notClose2});
-  EXPECT_FALSE(dd->isCloseToIdentity(notClose3));
+  EXPECT_FALSE(Package::isCloseToIdentity(notClose3));
 }
 
 TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheBeginning) {
@@ -2216,10 +2216,10 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheBeginning) {
 
   auto const c1MultipliedWithC2 = dd->multiply(c1, dd->conjugateTranspose(c2));
 
-  EXPECT_TRUE(dd->isCloseToIdentity(c1MultipliedWithC2, tol,
-                                    {false, true, true}, false));
-  EXPECT_FALSE(dd->isCloseToIdentity(c1MultipliedWithC2, tol,
-                                     {false, false, true}, false));
+  EXPECT_TRUE(Package::isCloseToIdentity(c1MultipliedWithC2, tol,
+                                         {false, true, true}, false));
+  EXPECT_FALSE(Package::isCloseToIdentity(c1MultipliedWithC2, tol,
+                                          {false, false, true}, false));
 }
 
 TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheEnd) {
@@ -2243,12 +2243,12 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageAtTheEnd) {
 
   const auto c3MultipliedWithC4 = dd->multiply(c3, dd->conjugateTranspose(c4));
 
-  EXPECT_FALSE(dd->isCloseToIdentity(c3MultipliedWithC4, tol,
-                                     {false, true, true}, false));
-  EXPECT_FALSE(dd->isCloseToIdentity(c3MultipliedWithC4, tol,
-                                     {true, false, true}, false));
-  EXPECT_TRUE(dd->isCloseToIdentity(c3MultipliedWithC4, tol,
-                                    {true, true, false}, false));
+  EXPECT_FALSE(Package::isCloseToIdentity(c3MultipliedWithC4, tol,
+                                          {false, true, true}, false));
+  EXPECT_FALSE(Package::isCloseToIdentity(c3MultipliedWithC4, tol,
+                                          {true, false, true}, false));
+  EXPECT_TRUE(Package::isCloseToIdentity(c3MultipliedWithC4, tol,
+                                         {true, true, false}, false));
 }
 
 TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
@@ -2272,12 +2272,12 @@ TEST(DDPackageTest, CloseToIdentityWithGarbageInTheMiddle) {
 
   const auto c5MultipliedWithC6 = dd->multiply(c5, dd->conjugateTranspose(c6));
 
-  EXPECT_FALSE(dd->isCloseToIdentity(c5MultipliedWithC6, tol,
-                                     {false, true, true}, false));
-  EXPECT_FALSE(dd->isCloseToIdentity(c5MultipliedWithC6, tol,
-                                     {true, true, false}, false));
-  EXPECT_TRUE(dd->isCloseToIdentity(c5MultipliedWithC6, tol,
-                                    {true, false, true}, false));
+  EXPECT_FALSE(Package::isCloseToIdentity(c5MultipliedWithC6, tol,
+                                          {false, true, true}, false));
+  EXPECT_FALSE(Package::isCloseToIdentity(c5MultipliedWithC6, tol,
+                                          {true, true, false}, false));
+  EXPECT_TRUE(Package::isCloseToIdentity(c5MultipliedWithC6, tol,
+                                         {true, false, true}, false));
 }
 
 TEST(DDPackageTest, stateFromVectorBell) {

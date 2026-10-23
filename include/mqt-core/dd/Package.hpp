@@ -1324,9 +1324,10 @@ public:
   /// be a garbage qubit.
   /// @param checkCloseToOne If false, the function only checks if the matrix is
   /// close to a diagonal matrix.
-  [[nodiscard]] bool isCloseToIdentity(const mEdge& m, fp tol = 1e-10,
-                                       const std::vector<bool>& garbage = {},
-                                       bool checkCloseToOne = true) const;
+  [[nodiscard]] static bool
+  isCloseToIdentity(const mEdge& m, fp tol = 1e-10,
+                    const std::vector<bool>& garbage = {},
+                    bool checkCloseToOne = true);
 
 private:
   /// Computes the normalized (partial) trace using a compute table to

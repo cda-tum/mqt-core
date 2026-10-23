@@ -26,19 +26,21 @@
 #include <string>
 
 namespace dd {
+namespace {
 
-static constexpr auto V_NODE_MEMORY_MIB =
+constexpr auto V_NODE_MEMORY_MIB =
     static_cast<double>(sizeof(vNode)) / static_cast<double>(1ULL << 20U);
-static constexpr auto M_NODE_MEMORY_MIB =
+constexpr auto M_NODE_MEMORY_MIB =
     static_cast<double>(sizeof(mNode)) / static_cast<double>(1ULL << 20U);
-static constexpr auto REAL_NUMBER_MEMORY_MIB =
+constexpr auto REAL_NUMBER_MEMORY_MIB =
     static_cast<double>(sizeof(RealNumber)) / static_cast<double>(1ULL << 20U);
 
-static double estimateMemoryMiB(const Package::ActiveCounts& counts) {
-  return static_cast<double>(counts.vector) * V_NODE_MEMORY_MIB +
-         static_cast<double>(counts.matrix) * M_NODE_MEMORY_MIB +
-         static_cast<double>(counts.reals) * REAL_NUMBER_MEMORY_MIB;
+double estimateMemoryMiB(const Package::ActiveCounts& counts) {
+  return (static_cast<double>(counts.vector) * V_NODE_MEMORY_MIB) +
+         (static_cast<double>(counts.matrix) * M_NODE_MEMORY_MIB) +
+         (static_cast<double>(counts.reals) * REAL_NUMBER_MEMORY_MIB);
 }
+} // namespace
 
 double computeActiveMemoryMiB(Package& package) {
   return estimateMemoryMiB(package.computeActiveCounts());
