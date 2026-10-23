@@ -24,6 +24,8 @@
 #include "dd/UniqueTable.hpp"
 #include "dd/statistics/PackageStatistics.hpp"
 
+#include "../qdmi/TestUtils.hpp"
+
 #include "gtest/gtest.h"
 #include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
@@ -49,6 +51,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
@@ -117,6 +120,41 @@ TEST(DDPackageTest, VectorDotIdsAreUniqueAndIndependentOfAddresses) {
 TEST(DDPackageTest, MatrixDotIdsAreUniqueAndIndependentOfAddresses) {
   checkDotIds<mNode>();
 }
+
+#ifndef _WIN32
+TEST(DDPackageTest, SvgExportUsesLiteralPathsAndReportsDotFailures) {
+  const mqt::test::TemporaryDirectory temp;
+  const mqt::test::ScopedEnvironmentVariable path("PATH", temp.path().string());
+  const auto executable =
+      temp.write("dot", "#!/bin/sh\nprintf 'native dot\\n' > \"$4\"\n");
+  std::filesystem::permissions(executable, std::filesystem::perms::owner_exec,
+                               std::filesystem::perm_options::add);
+  const auto dotDirectory = temp.path() / "folder.with.dot";
+  std::filesystem::create_directory(dotDirectory);
+  const auto dotFile = dotDirectory / "diagram with spaces;literal.dot";
+  auto svgFile = dotFile;
+  svgFile.replace_extension(".svg");
+
+  Package package(1);
+  export2Dot(makeZeroState(1, package), dotFile);
+  std::ifstream svg(svgFile);
+  std::string rendered;
+  std::getline(svg, rendered);
+  EXPECT_EQ(rendered, "native dot");
+  EXPECT_TRUE(std::filesystem::exists(dotFile));
+
+  temp.write("dot", "#!/bin/sh\nexit 7\n");
+  try {
+    renderDotToSvg(dotFile);
+    FAIL() << "Graphviz failure should throw";
+  } catch (const std::runtime_error& error) {
+    EXPECT_STREQ(error.what(), "Graphviz dot exited with code 7");
+  }
+
+  std::filesystem::remove(executable);
+  EXPECT_THROW(renderDotToSvg(dotFile), std::system_error);
+}
+#endif
 
 enum class Fixture : uint8_t { H, X, Z, S, T, Tdg, SWAP };
 

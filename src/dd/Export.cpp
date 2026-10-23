@@ -38,6 +38,9 @@
 #ifdef _WIN32
 #include <process.h>
 #else
+#ifdef __APPLE__
+#include <crt_externs.h>
+#endif
 #include <spawn.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -72,9 +75,14 @@ void renderDotToSvg(const std::filesystem::path& dotFilename) {
       command.data(),    format.data(),     inputName.data(),
       outputFlag.data(), outputName.data(), nullptr,
   };
+#ifdef __APPLE__
+  const auto* const environment = *_NSGetEnviron();
+#else
+  const auto* const environment = environ;
+#endif
   pid_t pid{};
   const auto spawnError =
-      posix_spawnp(&pid, "dot", nullptr, nullptr, args.data(), environ);
+      posix_spawnp(&pid, "dot", nullptr, nullptr, args.data(), environment);
   if (spawnError != 0) {
     throw std::system_error(spawnError, std::generic_category(),
                             "Cannot start Graphviz dot");
