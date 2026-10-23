@@ -2980,8 +2980,7 @@ TEST_F(QCODDFunctionalityTest, RejectsOutOfBoundsFloatTableIndices) {
 }
 
 TEST_F(QCODDFunctionalityTest, RejectsUnsupportedTensorConstants) {
-  for (const auto* type :
-       {"tensor<2xf32>", "tensor<1x2xf64>", "vector<2xf64>"}) {
+  for (const auto* type : {"tensor<2xf32>", "vector<2xf64>"}) {
     const auto code = std::string("module { func.func @main() { "
                                   "%table = arith.constant dense<0.0> : ") +
                       type + " return } }";

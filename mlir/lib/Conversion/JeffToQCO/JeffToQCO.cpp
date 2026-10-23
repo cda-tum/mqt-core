@@ -24,6 +24,7 @@
 #include "jeff/IR/JeffOps.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -386,7 +387,7 @@ struct ConvertJeffIntArrayConst1OpToCBit final
   }
 };
 
-/// Materialize literal elements through the same array-creation path.
+/// Materialize numeric literals in local storage.
 template <typename ConstOp>
 struct ConvertJeffArrayConst final : OpConversionPattern<ConstOp> {
   using OpConversionPattern<ConstOp>::OpConversionPattern;
@@ -395,13 +396,25 @@ struct ConvertJeffArrayConst final : OpConversionPattern<ConstOp> {
   LogicalResult
   matchAndRewrite(ConstOp op, OpAdaptor,
                   ConversionPatternRewriter& rewriter) const override {
-    if (!getClassicalStorageType(op.getType(), this->getTypeConverter()) ||
-        op.getType().getDimSize(0) !=
-            static_cast<int64_t>(op.getInArray().size())) {
+    auto storageType =
+        getClassicalStorageType(op.getType(), this->getTypeConverter());
+    if (!storageType || op.getType().getDimSize(0) !=
+                            static_cast<int64_t>(op.getInArray().size())) {
       return failure();
     }
     auto elements =
         DenseElementsAttr::get(op.getType(), op.getInArrayAttr().asArrayRef());
+    if (auto type = dyn_cast<MemRefType>(storageType);
+        type && elements.getNumElements() > 16) {
+      auto array = memref::AllocaOp::create(rewriter, op.getLoc(), type);
+      auto constant =
+          arith::ConstantOp::create(rewriter, op.getLoc(), elements);
+      bufferization::MaterializeInDestinationOp::create(
+          rewriter, op.getLoc(), Type{}, constant, array,
+          /*restrict=*/false, /*writable=*/true);
+      rewriter.replaceOp(op, array);
+      return success();
+    }
     SmallVector<Value> values;
     for (auto element : elements.template getValues<Attribute>()) {
       values.push_back(arith::ConstantOp::create(rewriter, op.getLoc(),
@@ -1384,8 +1397,8 @@ protected:
         }
         sharedArrayUpdates.insert(operation);
       }
-      // shortcut: reject live or duplicate arrays across mutating regions until
-      // region arguments track distinct array values.
+      // shortcut: computed arrays cannot remain live across mutating regions
+      // until region arguments track distinct array values.
       if (isa<jeff::SwitchOp, jeff::ForOp, jeff::WhileOp>(operation) &&
           llvm::any_of(operation->getOperands(), [&](Value value) {
             return getClassicalStorageType(value.getType(), &typeConverter) &&
@@ -1400,9 +1413,29 @@ protected:
                   update->getOperand(0).getType(), &typeConverter));
         });
         if (updatesArray) {
-          operation->emitError("live old array values across jeff control "
-                               "flow are not supported");
-          return WalkResult::interrupt();
+          OpBuilder builder(operation);
+          for (auto& operand : operation->getOpOperands()) {
+            auto value = operand.get();
+            auto* literal = value.getDefiningOp();
+            if (isa_and_nonnull<
+                    jeff::IntArrayConst8Op, jeff::IntArrayConst16Op,
+                    jeff::IntArrayConst32Op, jeff::IntArrayConst64Op,
+                    jeff::FloatArrayConst32Op, jeff::FloatArrayConst64Op>(
+                    literal) &&
+                needsArrayCopy(value, operation)) {
+              // Shared literals can initialize independent mutable storage.
+              operand.set(builder.clone(*literal)->getResult(0));
+            }
+          }
+          if (llvm::any_of(operation->getOperands(), [&](Value value) {
+                return getClassicalStorageType(value.getType(),
+                                               &typeConverter) &&
+                       needsArrayCopy(value, operation);
+              })) {
+            operation->emitError("live old array values across jeff control "
+                                 "flow are not supported");
+            return WalkResult::interrupt();
+          }
         }
       }
       return WalkResult::advance();
@@ -1437,6 +1470,7 @@ protected:
     target.addIllegalDialect<jeff::JeffDialect>();
     target.addLegalDialect<cbit::CBitDialect, QCODialect,
                            qtensor::QTensorDialect, arith::ArithDialect,
+                           bufferization::BufferizationDialect,
                            math::MathDialect, tensor::TensorDialect,
                            scf::SCFDialect, memref::MemRefDialect>();
 

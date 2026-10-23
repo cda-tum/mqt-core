@@ -28,6 +28,7 @@
 #include "mqt/Dialect/QTensor/IR/QTensorOps.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -612,14 +613,13 @@ static LogicalResult validateReturn(func::ReturnOp returnOp,
 
 static LogicalResult validateConstant(arith::ConstantOp constant) {
   auto tensorType = dyn_cast<RankedTensorType>(constant.getType());
-  const bool isScalarTable =
-      tensorType && tensorType.getRank() == 1 &&
-      isSupportedClassicalType(tensorType.getElementType()) &&
+  const bool isScalarTensor =
+      tensorType && isSupportedClassicalType(tensorType.getElementType()) &&
       isa<DenseElementsAttr>(constant.getValue());
-  if (!isSupportedClassicalType(constant.getType()) && !isScalarTable) {
+  if (!isSupportedClassicalType(constant.getType()) && !isScalarTensor) {
     return constant.emitError()
            << "QCO DD simulation only supports scalar integer, index, and f64 "
-              "constants or dense rank-one integer or f64 tensor constants";
+              "constants or dense integer, index, or f64 tensor constants";
   }
   return success();
 }
@@ -906,6 +906,27 @@ static LogicalResult applyMemRefAlloc(AllocOp alloc, ClassicalEnv& classical) {
     stride = size == 0 ? 0 : stride * storage->shape[dimension];
   }
   classical.memrefs[alloc.getResult()] = std::move(storage);
+  return success();
+}
+
+static LogicalResult
+applyArrayInitializer(bufferization::MaterializeInDestinationOp init,
+                      ClassicalEnv& classical) {
+  auto constant = init.getSource().getDefiningOp<arith::ConstantOp>();
+  auto data = constant ? dyn_cast<DenseElementsAttr>(constant.getValue())
+                       : DenseElementsAttr{};
+  auto alloc = init.getDest().getDefiningOp<memref::AllocaOp>();
+  const auto target = classical.memrefs.find(init.getDest());
+  if (!data || !alloc || !alloc.getType().hasStaticShape() ||
+      data.getType().getShape() != alloc.getType().getShape() ||
+      target == classical.memrefs.end()) {
+    return init.emitError() << "array initialization requires a dense constant "
+                               "and whole static local storage";
+  }
+  auto values = data.getValues<Attribute>();
+  // Replace the branch's backing values; its aliases retain storage identity.
+  target->second->storage->values =
+      std::make_shared<SmallVector<Attribute>>(values.begin(), values.end());
   return success();
 }
 
@@ -1807,6 +1828,9 @@ static LogicalResult applyOp(Operation& op, WalkState& walk, StateDD& state) {
       })
       .template Case<memref::AllocOp, memref::AllocaOp>(
           [&](auto alloc) { return applyMemRefAlloc(alloc, *walk.classical); })
+      .Case([&](bufferization::MaterializeInDestinationOp init) {
+        return applyArrayInitializer(init, *walk.classical);
+      })
       .Case([&](memref::StoreOp store) {
         return applyMemRefStore(store, *walk.classical);
       })
