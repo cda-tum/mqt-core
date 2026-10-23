@@ -195,7 +195,10 @@ static bool normalizeBlock(Block* block, IRRewriter& rewriter) {
       changed |= normalizeChain(chain, rewriter);
     }
   }
-  return foldLocalRoundTrips(block, rewriter, cache) || changed;
+  if (changed) {
+    foldLocalRoundTrips(block, rewriter, cache);
+  }
+  return changed;
 }
 
 namespace {
