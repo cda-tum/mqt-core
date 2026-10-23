@@ -313,11 +313,17 @@ and applies the required measurement-basis changes. Pulse programming, arbitrary
 Hermitian observables, and analytic execution are unsupported.
 
 Ordinary QNodes use PennyLane's deferred-measurement transform for mid-circuit
-measurements. Reset and feedback may require unused device wires; custom labels
-are supported. Programs that need more wires than the device exposes,
-postselection, and `one-shot` or `tree-traversal` execution are unsupported.
-With Catalyst, mid-circuit measurements and `mcm_method="deferred"` are
-unsupported.
+measurements by default; `mcm_method="deferred"` also selects it explicitly.
+Reset and feedback may require unused device wires; custom labels are supported.
+Programs that need more wires than the device exposes, postselection, and
+`one-shot` or `tree-traversal` execution are unsupported. Deferred measurements
+do not require a native method in `supported_mcm_methods`.
+
+Catalyst's measurement callback requires an immediate result for host control
+flow, whereas this backend submits a complete program to QDMI. Core's support
+for measurement and feedback within a compiled program does not provide that
+callback contract. Catalyst mid-circuit measurements and `mcm_method="deferred"`
+are therefore unsupported.
 
 With Catalyst, `BasisState` accepts runtime bit arrays and reordered wire
 subsets. It must precede every other operation; repeated preparation and resets

@@ -69,4 +69,5 @@ dynamic_qubit_management = false
 non_commuting_observables = false
 overlapping_observables = true
 initial_state_prep = false
+# PennyLane supplies deferred MCM; Catalyst requires immediate runtime results.
 supported_mcm_methods = []
