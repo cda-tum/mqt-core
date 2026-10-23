@@ -1100,14 +1100,11 @@ struct ImportedVariables {
           "Qiskit index expressions require a Uint target");
     }
     const auto indexType = llvm::dyn_cast<mlir::IntegerType>(index.getType());
-    if (!indexType || indexType.getWidth() > targetType.getWidth()) {
-      throw std::runtime_error(
-          "Qiskit circuit import does not support an index wider than its "
-          "integer operand");
+    if (!indexType) {
+      throw std::runtime_error("Qiskit index expressions require a Uint index");
     }
-    index = castInteger(builder, index, targetType);
-    auto shifted =
-        mlir::arith::ShRUIOp::create(builder, target, index).getResult();
+    auto shifted = mlir::mqt::buildZeroFillingShift(
+        builder, builder.getLoc(), target, index, /*left=*/false);
     const auto integerResult = llvm::dyn_cast<mlir::IntegerType>(resultType);
     if (!integerResult) {
       throw std::runtime_error(

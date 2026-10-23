@@ -1067,12 +1067,12 @@ def test_qiskit_store_preserves_width_one_uint_contexts() -> None:
     assert indexed_store.lvalue.index.type == types.Uint(1)
 
 
-@pytest.mark.parametrize("width", [2, 150])
-def test_qiskit_store_preserves_dynamic_index_snapshot(width: int) -> None:
-    """Preserve the index snapshot and its truncation to the platform index width."""
+@pytest.mark.parametrize("width", [1, 2, 150])
+def test_qiskit_indexed_access_preserves_snapshots(width: int) -> None:
+    """Retain the index and loaded bit across writes to their source registers."""
     initial = 1 << (width - 1) if width > 64 else 0
     program = QCProgram.from_mlir_str(f"""module {{
-  func.func @main() -> (!cbit.reg<4>, !cbit.reg<{width}>) attributes {{mqt.entry_point}} {{
+  func.func @main() -> (!cbit.reg<4>, !cbit.reg<{width}>, i1, i1) attributes {{mqt.entry_point}} {{
     %q = qc.alloc : !qc.qubit
     %data = cbit.alloc(#cbit.init<zero>) {{mqt.register_name = "data"}} : !cbit.reg<4>
     %index = cbit.alloc(#cbit.init<zero>) {{mqt.register_name = "index"}} : !cbit.reg<{width}>
@@ -1085,19 +1085,19 @@ def test_qiskit_store_preserves_dynamic_index_snapshot(width: int) -> None:
     %true = arith.constant true
     cbit.store %true, %index[%zero] : !cbit.reg<{width}>
     %target = arith.index_castui %old_index : i{width} to index
+    %before = cbit.load %data[%target] : !cbit.reg<4>
     %false = arith.constant false
     cbit.store %false, %data[%target] : !cbit.reg<4>
+    %after = cbit.load %data[%target] : !cbit.reg<4>
     qc.dealloc %q : !qc.qubit
-    return %data, %index : !cbit.reg<4>, !cbit.reg<{width}>
+    return %data, %index, %before, %after : !cbit.reg<4>, !cbit.reg<{width}>, i1, i1
   }}
 }}
 """)
-    expected = {f"{((initial | 1) << 4) | 14:0{width + 4}b}": 1}
+    expected = {f"01{((initial | 1) << 4) | 14:0{width + 4}b}": 1}
     restored = program.to_qiskit(copy=True)
     assert sample(program, shots=1, seed=1) == expected
     assert sample(restored, shots=1, seed=1) == expected
-    # Reimport also narrows indices, so execution alone cannot detect a missing export cast.
-    assert restored.data[-1].operation.lvalue.index.type == types.Uint(min(width, 64))
 
 
 def test_qiskit_custom_gate_named_store_remains_a_gate() -> None:
@@ -1168,9 +1168,45 @@ c[0] = measure q[1];
     assert restored.find_bit(measurement.clbits[0]).index == 0
 
 
+@pytest.mark.parametrize("qco", [False, True])
+def test_qiskit_export_preserves_boolean_output_order_and_snapshots(*, qco: bool) -> None:
+    """Return measurements, retained values, and branch results beside registers."""
+    program = QCProgram.from_mlir_str("""module {
+  func.func @main() -> (i1, !cbit.reg<2>, i1, i1, i1, i1) attributes {mqt.entry_point} {
+    %q = qc.alloc : !qc.qubit
+    %data = cbit.alloc(#cbit.init<zero>) {mqt.register_name = "data"} : !cbit.reg<2>
+    %zero = arith.constant 0 : index
+    %true = arith.constant true
+    qc.x %q : !qc.qubit
+    %first = qc.measure %q : !qc.qubit -> i1 loc("first")
+    cbit.store %first, %data[%zero] : !cbit.reg<2>
+    %snapshot = cbit.load %data[%zero] : !cbit.reg<2> loc("saved")
+    qc.x %q : !qc.qubit
+    %last = qc.measure %q : !qc.qubit -> i1
+    cbit.store %last, %data[%zero] : !cbit.reg<2>
+    %branch = scf.if %first -> i1 {
+      %inverse = arith.xori %snapshot, %true : i1
+      scf.yield %inverse : i1
+    } else {
+      scf.yield %true : i1
+    }
+    qc.dealloc %q : !qc.qubit
+    return %first, %data, %branch, %snapshot, %first, %true : i1, !cbit.reg<2>, i1, i1, i1, i1
+  }
+}
+""")
+    exported_program = program.to_qco() if qco else program
+    restored = exported_program.to_qiskit(copy=True)
+
+    assert sample(exported_program, shots=1, seed=1) == {"1110001": 1}
+    assert sample(restored, shots=1, seed=1) == {"1110001": 1}
+    assert (restored.cregs[1].name, len(restored.cregs[1])) == ("data", 2)
+    assert restored.cregs[3].name == "saved"
+
+
 @pytest.mark.parametrize(("value", "result_type"), [(0, "i64"), (7, "i64"), (0, '(i64 {test.output_name = "answer"})')])
 def test_qiskit_export_rejects_scalar_function_result(value: int, result_type: str) -> None:
-    """Every scalar return is program data, including an unannotated zero."""
+    """Numeric returns cannot be represented as Qiskit output bits."""
     program = QCProgram.from_mlir_str(
         f"""module {{
   func.func @main() -> {result_type} attributes {{mqt.entry_point}} {{
@@ -1183,7 +1219,7 @@ def test_qiskit_export_rejects_scalar_function_result(value: int, result_type: s
 """
     )
 
-    with pytest.raises(RuntimeError, match="supports only CBit function return values"):
+    with pytest.raises(RuntimeError, match="supports only Boolean and CBit function return values"):
         program.to_qiskit()
 
 
@@ -1202,7 +1238,7 @@ def test_qiskit_export_rejects_mixed_scalar_and_cbit_results() -> None:
 """
     )
 
-    with pytest.raises(RuntimeError, match="supports only CBit function return values"):
+    with pytest.raises(RuntimeError, match="supports only Boolean and CBit function return values"):
         program.to_qiskit()
 
 

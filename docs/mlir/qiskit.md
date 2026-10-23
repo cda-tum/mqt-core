@@ -229,14 +229,15 @@ overshifts produce zero; export preserves the guards. Rotations and population
 count are expanded through the same bounded integer lowering used by jeff.
 Unsupported operations, invalid widths, non-finite constants, unsupported index
 uses, and dynamic for-loop bounds fail during validation. Programs without
-classical outputs use a void entry function on import and export. Scalar entry
-results are program data and cannot be exported to Qiskit, including a
-constant-zero `i64`. Store Boolean scalar outputs in CBit output registers
-before export. Each returned register must be distinct. Whole-register reads map
-to Qiskit `ClassicalRegister` expressions, and writes map to atomic Qiskit
-`Store` operations. Indexed stores assume that their runtime index is in bounds.
-Internal CBit storage becomes additional Qiskit registers, ordered before
-returned registers; Qiskit exposes all circuit storage. Other formats and
+classical outputs use a void entry function on import and export. Boolean entry
+results become one-bit output registers in function-result order. Numeric scalar
+results, including a constant-zero `i64`, cannot be represented as Qiskit output
+bits. Each returned CBit register must be distinct. Whole-register reads map to
+Qiskit `ClassicalRegister` expressions, and writes map to atomic Qiskit `Store`
+operations. Indexed reads and writes accept constant indices or unsigned integer
+expressions converted with {code}`arith.index_castui`; runtime indices must be
+in bounds. Internal CBit storage becomes additional Qiskit registers, ordered
+before returned registers; Qiskit exposes all circuit storage. Other formats and
 execution backends may support a narrower set of integer widths.
 
 Every public CBit output is exported as a Qiskit `ClassicalRegister`; an unnamed

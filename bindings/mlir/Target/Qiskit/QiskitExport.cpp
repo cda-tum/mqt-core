@@ -42,6 +42,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
@@ -964,11 +965,7 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
   });
 
   auto returnOp =
-      llvm::dyn_cast<mlir::func::ReturnOp>(function.getBody().front().back());
-  if (!returnOp) {
-    throw std::runtime_error(
-        "QC to Qiskit export requires an entry-function return");
-  }
+      llvm::cast<mlir::func::ReturnOp>(function.front().getTerminator());
   mlir::ValueRange returnedValues = returnOp.getOperands();
   llvm::DenseSet<mlir::Value> returnedRegisters;
   for (auto result : returnedValues) {
@@ -1027,8 +1024,8 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
     const auto type =
         llvm::dyn_cast<mlir::cbit::RegisterType>(result.getType());
     if (!type) {
-      throw std::runtime_error(
-          "QC to Qiskit export supports only CBit function return values");
+      throw std::runtime_error("QC to Qiskit export supports only Boolean and "
+                               "CBit function return values");
     }
     auto alloc = result.getDefiningOp<mlir::cbit::AllocOp>();
     if (!alloc || (returnedRegisters.contains(result) &&
@@ -1101,26 +1098,6 @@ static void setExpressionType(Expression& expression, const mlir::Type type) {
       "Qiskit classical expressions support only Bool, Uint, and Float");
 }
 
-[[nodiscard]] static uint32_t classicalBitIndex(mlir::cbit::LoadOp load,
-                                                const ExportState& state) {
-  if (!load.getResult().getType().isInteger(1)) {
-    throw std::runtime_error(
-        "Qiskit classical expressions require a static classical-bit load");
-  }
-  const auto info = state.classicalRegisterInfo.find(load.getReg());
-  const auto index = mlir::getConstantIntValue(load.getIndex());
-  if (info == state.classicalRegisterInfo.end() || !index) {
-    throw std::runtime_error(
-        "Qiskit classical expressions could not resolve a classical bit");
-  }
-  const auto checked = checkedIndex(*index, "classical-bit");
-  if (checked >= info->second.size) {
-    throw std::runtime_error(
-        "Qiskit classical expression uses an out-of-bounds classical bit");
-  }
-  return checkedAdd(info->second.base, checked, "classical-bit");
-}
-
 [[nodiscard]] static const Register&
 classicalRegister(mlir::Value value, const ExportState& state) {
   const auto info = state.classicalRegisterInfo.find(value);
@@ -1178,6 +1155,74 @@ variableExpression(const ClassicalVariable& variable) {
 }
 
 [[nodiscard]] static std::unique_ptr<Expression>
+castBoolToUintOne(std::unique_ptr<Expression> expression) {
+  if (expression->type != ClassicalType::Bool) {
+    return expression;
+  }
+  auto cast = std::make_unique<Expression>();
+  cast->kind = ExpressionKind::Cast;
+  cast->type = ClassicalType::Uint;
+  cast->width = 1U;
+  cast->left = std::move(expression);
+  return cast;
+}
+
+[[nodiscard]] static std::unique_ptr<Expression>
+exportExpressionImpl(mlir::Value value, ExportState& state,
+                     mlir::Block& evaluationBlock, size_t depth,
+                     size_t& nodeCount);
+
+[[nodiscard]] static Expression
+exportClassicalBit(mlir::Value reg, mlir::Value index, ExportState& state,
+                   mlir::Block& evaluationBlock, const size_t depth,
+                   size_t& nodeCount) {
+  const auto info = state.classicalRegisterInfo.find(reg);
+  if (info == state.classicalRegisterInfo.end()) {
+    throw std::runtime_error("Qiskit classical register could not be resolved");
+  }
+  Expression result;
+  result.type = ClassicalType::Bool;
+  result.width = 1U;
+  if (const auto constant = mlir::getConstantIntValue(index)) {
+    const auto checked = checkedIndex(*constant, "classical-bit");
+    if (checked >= info->second.size) {
+      throw std::runtime_error(
+          "Qiskit classical access uses an out-of-bounds index");
+    }
+    result.kind = ExpressionKind::ClassicalBit;
+    result.bit = checkedAdd(info->second.base, checked, "classical-bit");
+    return result;
+  }
+  auto cast = index.getDefiningOp<mlir::arith::IndexCastUIOp>();
+  if (!cast) {
+    throw std::runtime_error(
+        "Qiskit dynamic classical indices require an unsigned integer-to-index "
+        "cast");
+  }
+  state.expressionOperations.insert(cast);
+  result.kind = ExpressionKind::Index;
+  result.left = std::make_unique<Expression>();
+  result.left->kind = ExpressionKind::ClassicalRegister;
+  result.left->type = ClassicalType::Uint;
+  result.left->width = info->second.size;
+  result.left->reg = classicalRegister(reg, state);
+  result.right = castBoolToUintOne(exportExpressionImpl(
+      cast.getIn(), state, evaluationBlock, depth + 1U, nodeCount));
+  if (result.right->type != ClassicalType::Uint) {
+    throw std::runtime_error("Qiskit dynamic classical index must be Uint");
+  }
+  if (result.right->width > 64U) {
+    auto narrowed = std::make_unique<Expression>();
+    narrowed->kind = ExpressionKind::Cast;
+    narrowed->type = ClassicalType::Uint;
+    narrowed->width = 64U;
+    narrowed->left = std::move(result.right);
+    result.right = std::move(narrowed);
+  }
+  return result;
+}
+
+[[nodiscard]] static std::unique_ptr<Expression>
 exportExpressionImpl(mlir::Value value, ExportState& state,
                      mlir::Block& evaluationBlock, const size_t depth,
                      size_t& nodeCount) {
@@ -1229,9 +1274,9 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
     return result;
   }
   if (auto load = llvm::dyn_cast<mlir::cbit::LoadOp>(operation)) {
-    result->kind = ExpressionKind::ClassicalBit;
-    result->bit = classicalBitIndex(load, state);
     state.expressionOperations.insert(operation);
+    *result = exportClassicalBit(load.getReg(), load.getIndex(), state,
+                                 evaluationBlock, depth, nodeCount);
     return result;
   }
   if (auto read = llvm::dyn_cast<mlir::cbit::ReadOp>(operation)) {
@@ -1749,6 +1794,7 @@ static void validateClassicalSnapshot(mlir::Value expression,
     }
     if (auto load = llvm::dyn_cast<mlir::cbit::LoadOp>(operation)) {
       reads.emplace_back(load, load.getReg());
+      worklist.push_back(load.getIndex());
       continue;
     }
     if (auto read = llvm::dyn_cast<mlir::cbit::ReadOp>(operation)) {
@@ -1803,72 +1849,21 @@ static void validateClassicalSnapshot(mlir::Value expression,
   }
 }
 
-[[nodiscard]] static std::unique_ptr<Expression>
-castBoolToUintOne(std::unique_ptr<Expression> expression) {
-  if (expression->type != ClassicalType::Bool) {
-    return expression;
-  }
-  auto cast = std::make_unique<Expression>();
-  cast->kind = ExpressionKind::Cast;
-  cast->type = ClassicalType::Uint;
-  cast->width = 1U;
-  cast->left = std::move(expression);
-  return cast;
-}
-
 [[nodiscard]] static ClassicalTarget
 exportStoreTarget(mlir::cbit::StoreOp store, ExportState& state,
                   mlir::Block& evaluationBlock) {
-  const auto info = state.classicalRegisterInfo.find(store.getReg());
-  if (info == state.classicalRegisterInfo.end()) {
-    throw std::runtime_error(
-        "Qiskit Store uses an unsupported classical register");
+  size_t nodeCount = 0U;
+  auto target = exportClassicalBit(store.getReg(), store.getIndex(), state,
+                                   evaluationBlock, 0U, nodeCount);
+  if (target.kind == ExpressionKind::ClassicalBit) {
+    return {.kind = ClassicalTargetKind::ClassicalBit, .bit = target.bit};
   }
-  if (const auto index = mlir::getConstantIntValue(store.getIndex())) {
-    const auto checked = checkedIndex(*index, "classical-bit");
-    if (checked >= info->second.size) {
-      throw std::runtime_error(
-          "Qiskit Store uses an out-of-bounds classical destination");
-    }
-    return {
-        .kind = ClassicalTargetKind::ClassicalBit,
-        .bit = checkedAdd(info->second.base, checked, "classical-bit"),
-    };
-  }
-  auto cast = store.getIndex().getDefiningOp<mlir::arith::IndexCastUIOp>();
-  if (!cast) {
-    throw std::runtime_error(
-        "Qiskit dynamic Store indices require an unsigned integer-to-index "
-        "cast");
-  }
-  validateClassicalSnapshot(cast.getIn(), *store.getOperation(), state);
-  state.expressionOperations.insert(cast);
-  auto target = std::make_unique<Expression>();
-  target->kind = ExpressionKind::Index;
-  target->type = ClassicalType::Bool;
-  target->width = 1U;
-  target->left = std::make_unique<Expression>();
-  target->left->kind = ExpressionKind::ClassicalRegister;
-  target->left->type = ClassicalType::Uint;
-  target->left->width = info->second.size;
-  target->left->reg = classicalRegister(store.getReg(), state);
-  target->right =
-      castBoolToUintOne(exportExpression(cast.getIn(), state, evaluationBlock));
-  if (target->right->type != ClassicalType::Uint) {
-    throw std::runtime_error("Qiskit dynamic Store index must be Uint");
-  }
-  if (target->right->width > 64U) {
-    auto narrowed = std::make_unique<Expression>();
-    narrowed->kind = ExpressionKind::Cast;
-    narrowed->type = ClassicalType::Uint;
-    narrowed->width = 64U;
-    narrowed->left = std::move(target->right);
-    target->right = std::move(narrowed);
-  }
+  validateClassicalSnapshot(store.getIndex(), *store.getOperation(), state);
+  validateExpressionDepth(target);
   return {
       .kind = ClassicalTargetKind::Expression,
       .width = 1U,
-      .expression = std::move(target),
+      .expression = std::make_unique<Expression>(std::move(target)),
   };
 }
 
@@ -2015,6 +2010,35 @@ static void validateControlFlowDepth(const size_t controlFlowDepth) {
   if (controlFlowDepth >= MAX_EXPORT_CONTROL_FLOW_DEPTH) {
     throw std::runtime_error("QC control flow exceeds the nesting limit of 64");
   }
+}
+
+static void materializeBooleanResults(mlir::func::FuncOp function) {
+  auto returnOp =
+      llvm::dyn_cast<mlir::func::ReturnOp>(function.front().getTerminator());
+  if (!returnOp) {
+    throw std::runtime_error(
+        "QC to Qiskit export requires an entry-function return");
+  }
+  mlir::OpBuilder builder(function.getContext());
+  for (auto& operand : returnOp->getOpOperands()) {
+    auto value = operand.get();
+    if (!value.getType().isInteger(1)) {
+      continue;
+    }
+    builder.setInsertionPointToStart(&function.front());
+    auto reg = mlir::cbit::AllocOp::create(
+        builder, value.getLoc(),
+        mlir::cbit::RegisterType::get(function.getContext(), 1),
+        mlir::cbit::Initialization::Undefined);
+    auto zero =
+        mlir::arith::ConstantIndexOp::create(builder, value.getLoc(), 0);
+    builder.setInsertionPoint(returnOp);
+    mlir::cbit::StoreOp::create(builder, value.getLoc(), value, reg, zero);
+    operand.set(reg);
+  }
+  function.setFunctionType(mlir::FunctionType::get(function.getContext(),
+                                                   function.getArgumentTypes(),
+                                                   returnOp.getOperandTypes()));
 }
 
 /// Give each measurement a static destination and share its snapshot across
@@ -2466,12 +2490,7 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
         deferredExpressions.push_back(&operation);
         continue;
       }
-      if (auto load = llvm::dyn_cast<mlir::cbit::LoadOp>(operation)) {
-        static_cast<void>(classicalBitIndex(load, state));
-        deferredExpressions.push_back(&operation);
-        continue;
-      }
-      if (llvm::isa<mlir::cbit::ReadOp>(operation)) {
+      if (llvm::isa<mlir::cbit::LoadOp, mlir::cbit::ReadOp>(operation)) {
         deferredExpressions.push_back(&operation);
         continue;
       }
@@ -2890,6 +2909,7 @@ exportCircuitImpl(mlir::QCProgram program,
     state.numQubits = checkedIndex(static_cast<uint64_t>(target->numSites()),
                                    "target qubit count");
   }
+  materializeBooleanResults(function);
   prepareMeasurementStores(function);
   collectResources(function, state, target);
   indexWrites(function.getBody().front(), state.writes);
