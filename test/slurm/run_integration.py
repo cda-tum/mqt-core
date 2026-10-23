@@ -25,7 +25,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -366,6 +366,12 @@ def test_monitoring() -> None:
     for uid in ("prometheus", "slurm-accounting"):
         datasource = json.loads(monitoring_response(f"http://grafana:3000/api/datasources/uid/{uid}/health"))
         assert datasource["status"] == "OK", datasource
+    cpu_panel = next(panel for panel in dashboard["dashboard"]["panels"] if panel["id"] == 6)
+    for instance, expected in (("controller:6817", True), ("other-controller:6817", False)):
+        query = urlencode({"query": cpu_panel["targets"][1]["expr"].replace("$controller", instance)})
+        response = json.loads(monitoring_response(f"http://prometheus:9090/api/v1/query?{query}"))
+        assert response["status"] == "success", response
+        assert bool(response["data"]["result"]) is expected, response
     job(
         "uv",
         "run",
@@ -409,7 +415,10 @@ def test_accounting(job_id: str) -> None:
     )
     dashboard = json.loads(monitoring_response("http://grafana:3000/api/dashboards/uid/mqt-runtime"))["dashboard"]
     panel = next(panel for panel in dashboard["panels"] if panel["id"] == 9)
-    target = {**panel["targets"][0], "datasource": panel["datasource"]}
+    uid = next(
+        variable["current"]["value"] for variable in dashboard["templating"]["list"] if variable["name"] == "accounting"
+    )
+    target = {**panel["targets"][0], "datasource": {**panel["datasource"], "uid": uid}}
 
     def job_visible() -> bool:
         now = int(time.time() * 1000)
@@ -442,7 +451,10 @@ def assert_device_licenses(*, allocated: int, reserved: int) -> None:
     """Require Grafana to show the DDSIM allocation and admission reservation."""
     dashboard = json.loads(monitoring_response("http://grafana:3000/api/dashboards/uid/mqt-runtime"))["dashboard"]
     panel = next(panel for panel in dashboard["panels"] if panel["id"] == 10)
-    target = {**panel["targets"][0], "datasource": panel["datasource"]}
+    uid = next(
+        variable["current"]["value"] for variable in dashboard["templating"]["list"] if variable["name"] == "accounting"
+    )
+    target = {**panel["targets"][0], "datasource": {**panel["datasource"], "uid": uid}}
     expected = {
         "Device license": "mqt.ddsim.default",
         "Reservation": "Fully reserved" if reserved == 2 else "Unreserved",

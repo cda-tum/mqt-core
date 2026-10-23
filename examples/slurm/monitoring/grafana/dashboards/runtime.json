@@ -8,6 +8,46 @@
   "refresh": "1m",
   "timezone": "browser",
   "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "prometheus",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "text": "Prometheus", "value": "prometheus" },
+        "refresh": 1
+      },
+      {
+        "name": "controller",
+        "label": "Slurm controller",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+        "query": {
+          "qryType": 1,
+          "query": "label_values(up{job=\"slurm_nodes\"}, instance)",
+          "label": "instance",
+          "metric": "up",
+          "labelFilters": [
+            { "label": "job", "op": "=", "value": "slurm_nodes" }
+          ],
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "current": { "text": "controller:6817", "value": "controller:6817" },
+        "refresh": 1,
+        "sort": 1
+      },
+      {
+        "name": "accounting",
+        "label": "Slurm REST",
+        "description": "Select the read-only Slurm REST data source for the selected controller's cluster.",
+        "type": "datasource",
+        "query": "yesoreyeram-infinity-datasource",
+        "current": { "text": "Slurm accounting", "value": "slurm-accounting" },
+        "refresh": 1
+      }
+    ]
+  },
   "panels": [
     {
       "id": 1,
@@ -22,14 +62,14 @@
     {
       "id": 2,
       "title": "Metrics endpoint health",
-      "description": "Whether Prometheus can scrape itself and each Slurm endpoint. A Prometheus outage prevents this panel from loading.",
+      "description": "Whether Prometheus can scrape itself and each endpoint on the selected Slurm controller. A Prometheus outage prevents this panel from loading.",
       "type": "stat",
       "gridPos": { "x": 0, "y": 3, "w": 24, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
       "targets": [
         {
           "refId": "A",
-          "expr": "up{job=~\"prometheus|slurm_(jobs|nodes|partitions|scheduler)\"}",
+          "expr": "up{job=~\"slurm_(jobs|nodes|partitions|scheduler)\",instance=\"$controller\"} or up{job=\"prometheus\"}",
           "legendFormat": "{{job}}",
           "instant": true
         }
@@ -61,11 +101,11 @@
       "title": "Running jobs by partition",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 7, "w": 12, "h": 7 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
       "targets": [
         {
           "refId": "A",
-          "expr": "slurm_partition_jobs_running{job=\"slurm_partitions\"}",
+          "expr": "slurm_partition_jobs_running{job=\"slurm_partitions\",instance=\"$controller\"}",
           "legendFormat": "{{partition}}"
         }
       ],
@@ -85,11 +125,11 @@
       "description": "Jobs waiting in each partition, including dependency, resource and policy waits.",
       "type": "timeseries",
       "gridPos": { "x": 12, "y": 7, "w": 12, "h": 7 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
       "targets": [
         {
           "refId": "A",
-          "expr": "slurm_partition_jobs_pending{job=\"slurm_partitions\"}",
+          "expr": "slurm_partition_jobs_pending{job=\"slurm_partitions\",instance=\"$controller\"}",
           "legendFormat": "{{partition}}"
         }
       ],
@@ -109,36 +149,36 @@
       "description": "State flags can overlap; do not add these series together.",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 14, "w": 12, "h": 7 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
       "targets": [
         {
           "refId": "A",
-          "expr": "slurm_nodes{job=\"slurm_nodes\"}",
+          "expr": "slurm_nodes{job=\"slurm_nodes\",instance=\"$controller\"}",
           "legendFormat": "Registered"
         },
         {
           "refId": "B",
-          "expr": "slurm_nodes_idle{job=\"slurm_nodes\"}",
+          "expr": "slurm_nodes_idle{job=\"slurm_nodes\",instance=\"$controller\"}",
           "legendFormat": "Idle"
         },
         {
           "refId": "C",
-          "expr": "slurm_nodes_alloc{job=\"slurm_nodes\"}",
+          "expr": "slurm_nodes_alloc{job=\"slurm_nodes\",instance=\"$controller\"}",
           "legendFormat": "Allocated"
         },
         {
           "refId": "D",
-          "expr": "slurm_nodes_mixed{job=\"slurm_nodes\"}",
+          "expr": "slurm_nodes_mixed{job=\"slurm_nodes\",instance=\"$controller\"}",
           "legendFormat": "Mixed"
         },
         {
           "refId": "E",
-          "expr": "slurm_nodes_down{job=\"slurm_nodes\"}",
+          "expr": "slurm_nodes_down{job=\"slurm_nodes\",instance=\"$controller\"}",
           "legendFormat": "Down"
         },
         {
           "refId": "F",
-          "expr": "slurm_nodes_drain{job=\"slurm_nodes\"}",
+          "expr": "slurm_nodes_drain{job=\"slurm_nodes\",instance=\"$controller\"}",
           "legendFormat": "Drain flag"
         }
       ],
@@ -158,16 +198,16 @@
       "description": "Scheduled CPU allocations and configured CPUs across registered nodes, not CPU utilization.",
       "type": "timeseries",
       "gridPos": { "x": 12, "y": 14, "w": 12, "h": 7 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(slurm_node_cpus_alloc{job=\"slurm_nodes\"})",
+          "expr": "sum(slurm_node_cpus_alloc{job=\"slurm_nodes\",instance=\"$controller\"})",
           "legendFormat": "Allocated CPUs"
         },
         {
           "refId": "B",
-          "expr": "sum(slurm_node_cpus{job=\"slurm_nodes\"})",
+          "expr": "sum(slurm_node_cpus{job=\"slurm_nodes\",instance=\"$controller\"})",
           "legendFormat": "Configured CPUs"
         }
       ],
@@ -187,16 +227,16 @@
       "description": "Scheduled CPU allocations and configured CPUs in each partition. Nodes can belong to more than one partition.",
       "type": "timeseries",
       "gridPos": { "x": 0, "y": 21, "w": 12, "h": 7 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
       "targets": [
         {
           "refId": "A",
-          "expr": "slurm_partition_nodes_cpus_alloc{job=\"slurm_partitions\"}",
+          "expr": "slurm_partition_nodes_cpus_alloc{job=\"slurm_partitions\",instance=\"$controller\"}",
           "legendFormat": "{{partition}} allocated"
         },
         {
           "refId": "B",
-          "expr": "slurm_partition_cpus{job=\"slurm_partitions\"}",
+          "expr": "slurm_partition_cpus{job=\"slurm_partitions\",instance=\"$controller\"}",
           "legendFormat": "{{partition}} configured"
         }
       ],
@@ -216,16 +256,16 @@
       "description": "Duration of the most recent scheduling cycle, converted from microseconds. This is not job execution or queue time.",
       "type": "timeseries",
       "gridPos": { "x": 12, "y": 21, "w": 12, "h": 7 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
       "targets": [
         {
           "refId": "A",
-          "expr": "slurm_schedule_cycle_last{job=\"slurm_scheduler\"} / 1000000",
+          "expr": "slurm_schedule_cycle_last{job=\"slurm_scheduler\",instance=\"$controller\"} / 1000000",
           "legendFormat": "Main scheduler"
         },
         {
           "refId": "B",
-          "expr": "slurm_bf_cycle_last{job=\"slurm_scheduler\"} / 1000000",
+          "expr": "slurm_bf_cycle_last{job=\"slurm_scheduler\",instance=\"$controller\"} / 1000000",
           "legendFormat": "Backfill scheduler"
         }
       ],
@@ -242,7 +282,7 @@
       "gridPos": { "x": 0, "y": 28, "w": 24, "h": 6 },
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
-        "uid": "slurm-accounting"
+        "uid": "${accounting}"
       },
       "targets": [
         {
@@ -304,7 +344,7 @@
       "gridPos": { "x": 0, "y": 34, "w": 24, "h": 9 },
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
-        "uid": "slurm-accounting"
+        "uid": "${accounting}"
       },
       "targets": [
         {

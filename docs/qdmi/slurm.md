@@ -341,6 +341,11 @@ Use both Compose files for subsequent cluster commands, including shutdown.
 
 ### Read the dashboard
 
+Select the **Prometheus** data source and **Slurm controller**, then select the
+**Slurm REST** data source for the same cluster. The playground selects its
+provisioned sources by default. Metrics are scoped to the controller's
+`instance` label; accounting and licenses come from the selected REST source.
+
 Select a time range that includes the jobs you want to inspect. Allow one scrape
 interval after startup for metrics to appear. The dashboard refreshes every
 minute, and Prometheus collects samples every 60 seconds. A faster dashboard
@@ -500,17 +505,20 @@ Reuse the site's Prometheus and Grafana for
    update the dashboard's matching selectors. Choose scrape intervals and
    retention under site policy.
 2. Import `examples/slurm/monitoring/grafana/dashboards/runtime.json` into
-   Grafana. Install the Infinity data source plugin and configure both data
-   sources using the example provisioning files. Match their UIDs to the
-   dashboard references.
+   Grafana. Install the Infinity data source plugin if needed. Use the
+   dashboard's data source selectors to choose existing site data sources; their
+   names and UIDs can stay unchanged. The provisioning files configure only the
+   playground reference deployment.
 3. Connect Infinity to a site-approved, read-only Slurm REST gateway with
    identities and access controls appropriate for its viewers. Replace the
    Playground's fixed `mqt-dev` identity and internal addresses. Match REST
    paths and metric names to the installed Slurm version.
 
-The example dashboard assumes one cluster. Restrict its queries to that cluster
-when Prometheus stores metrics from several clusters, and filter the local
-license table to QDMI device IDs if the site also uses other licenses. Apply the
+Select one controller and its matching Slurm REST source. Use a distinct
+`instance` label for each controller, consistent across its four scrape jobs, so
+metrics from several clusters stay separate. The REST source is selected
+independently and must serve the same cluster. Filter the local license table to
+QDMI device IDs if the site also uses other licenses. Apply the
 [shared-deployment requirements](#shared-deployments).
 
 :::{dropdown} CPU and memory isolation with cgroup v2
