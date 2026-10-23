@@ -414,6 +414,7 @@ struct ArrayAssignmentStatement {
   ArrayId array = 0;
   std::vector<ExpressionId> indices;
   ExpressionId value = 0;
+  std::optional<ExpressionId> compoundLhs;
 };
 
 struct ArrayCopyStatement {

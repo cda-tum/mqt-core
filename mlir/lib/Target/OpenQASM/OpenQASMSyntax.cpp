@@ -110,12 +110,14 @@ SyntaxBuilder::scalarDecl(SMLoc location, const ScalarKind kind,
   return success();
 }
 
-LogicalResult SyntaxBuilder::assignment(SMLoc location,
-                                        const BitReference& target,
-                                        SyntaxExpressionId value) {
+LogicalResult
+SyntaxBuilder::assignment(SMLoc location, const BitReference& target,
+                          SyntaxExpressionId value,
+                          std::optional<SyntaxExpressionId> compoundLhs) {
   std::ignore = addStatement(location, SyntaxAssignment{
                                            .target = target,
                                            .value = value,
+                                           .compoundLhs = compoundLhs,
                                        });
   return success();
 }

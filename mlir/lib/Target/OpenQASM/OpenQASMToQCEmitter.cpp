@@ -236,6 +236,7 @@ private:
   std::vector<Value> classicalRegisters;
   std::vector<Value> scalarValues;
   std::vector<Value> arrayValues_;
+  std::optional<std::pair<frontend::ExpressionId, Value>> assignmentLhs_;
   llvm::DenseMap<frontend::ArrayId, Value> arraySnapshots_;
   llvm::DenseMap<frontend::ScalarId, Value> provenInductionValues;
   DenseMap<const openqasm::frontend::GateDefinition*, bool>
@@ -625,6 +626,9 @@ private:
                        ValueRange gateParameters) {
     if (emissionBudget.isExhausted()) {
       return {};
+    }
+    if (assignmentLhs_ && assignmentLhs_->first == id) {
+      return assignmentLhs_->second;
     }
     const auto& expression = program.expressions.at(id);
     auto loc = opBuilder.getInsertionPoint() == opBuilder.getBlock()->end()
@@ -2228,8 +2232,17 @@ private:
   emitArrayAssignment(const frontend::ArrayAssignmentStatement& statement) {
     auto indices =
         emitArrayIndices(builder, statement.array, statement.indices);
+    if (failed(indices) || emissionBudget.isExhausted()) {
+      return;
+    }
+    llvm::SaveAndRestore lhsScope(assignmentLhs_);
+    if (statement.compoundLhs) {
+      auto previous = memref::LoadOp::create(
+          builder, arrayValues_.at(statement.array), *indices);
+      assignmentLhs_ = std::pair(*statement.compoundLhs, previous.getResult());
+    }
     auto value = emitExpression(builder, statement.value, {});
-    if (failed(indices) || !value || emissionBudget.isExhausted()) {
+    if (!value || emissionBudget.isExhausted()) {
       return;
     }
     memref::StoreOp::create(builder, value, arrayValues_.at(statement.array),

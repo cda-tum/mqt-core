@@ -35,6 +35,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
 
 #include <algorithm>
@@ -521,6 +522,7 @@ private:
   mutable std::vector<std::optional<ScalarType>> constantTypes;
   // Reuse the nodes created while deciding whether sizeof is constant.
   llvm::DenseMap<SyntaxExpressionId, ExpressionId> sizeOfExpressions_;
+  std::optional<std::pair<SyntaxExpressionId, ExpressionId>> assignmentLhs_;
   StringRef activeGate_;
   std::set<uint64_t> hardwareQubits;
   uint64_t totalArrayElements = 0;
@@ -2767,6 +2769,9 @@ private:
 
   [[nodiscard]] FailureOr<ExpressionId>
   analyzeExpression(const SyntaxExpressionId syntaxId) {
+    if (assignmentLhs_ && assignmentLhs_->first == syntaxId) {
+      return assignmentLhs_->second;
+    }
     const auto& expression = syntax.expressions[syntaxId];
     if (expression.kind == Expr::Kind::Range) {
       return fail(expression.location,
@@ -4426,18 +4431,27 @@ private:
         return fail(location,
                     "cannot write through a readonly array reference");
       }
-      MQT_OQ3_TRY_ASSIGN(
-          selection,
-          analyzeArraySelection(array, assignment.target.index,
-                                assignment.target.additionalIndices, location));
-      if (llvm::any_of(selection,
-                       [](const auto& index) { return !index.isScalar(); })) {
-        return analyzeArrayCopy(array, std::move(selection), assignment.value,
-                                location, destination);
-      }
       std::vector<ExpressionId> indices;
-      for (const auto& index : selection) {
-        indices.push_back(index.offset);
+      std::optional<ExpressionId> compoundLhs;
+      llvm::SaveAndRestore lhsScope(assignmentLhs_);
+      if (assignment.compoundLhs && assignment.target.index) {
+        MQT_OQ3_TRY_ASSIGN(lhs, analyzeExpression(*assignment.compoundLhs));
+        compoundLhs = lhs;
+        indices = program.expressions[lhs].indices;
+        assignmentLhs_ = std::pair(*assignment.compoundLhs, lhs);
+      } else {
+        MQT_OQ3_TRY_ASSIGN(selection,
+                           analyzeArraySelection(
+                               array, assignment.target.index,
+                               assignment.target.additionalIndices, location));
+        if (llvm::any_of(selection,
+                         [](const auto& index) { return !index.isScalar(); })) {
+          return analyzeArrayCopy(array, std::move(selection), assignment.value,
+                                  location, destination);
+        }
+        for (const auto& index : selection) {
+          indices.push_back(index.offset);
+        }
       }
       MQT_OQ3_TRY_ASSIGN(value, analyzeArrayValue(array, assignment.value));
       if (const auto offset = constantArrayOffset(array, indices)) {
@@ -4448,6 +4462,7 @@ private:
                                                 .array = array,
                                                 .indices = std::move(indices),
                                                 .value = value,
+                                                .compoundLhs = compoundLhs,
                                             }));
       destination.push_back(statement);
       return success();

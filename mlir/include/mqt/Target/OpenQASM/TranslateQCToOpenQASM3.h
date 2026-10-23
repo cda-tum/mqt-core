@@ -28,9 +28,8 @@ namespace qc {
 ///
 /// Classical subroutines, gate definitions, and supported structured
 /// control flow are preserved. Other helpers are inlined and array views
-/// normalized in the supplied module. Subroutine integers use unsigned bit
-/// patterns; array parameters borrow storage. The module is consumed even on
-/// failure. Translation is buffered:
+/// normalized in the supplied module. The module is consumed even on failure.
+/// Translation is buffered:
 /// the output stream is unchanged if the module cannot be translated.
 LogicalResult translateQCToOpenQASM3(OwningOpRef<ModuleOp> moduleOp,
                                      llvm::raw_ostream& output);

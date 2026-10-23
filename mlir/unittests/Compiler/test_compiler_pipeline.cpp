@@ -1802,8 +1802,7 @@ TEST_F(CompilerPipelineTest, BorrowedArrayViewsPreserveAliasesInQIRAndJeff) {
       return
     }
     func.func @main() -> i1 attributes {mqt.entry_point} {
-      %zero = arith.constant 0 : index
-      %one = arith.constant 1 : index
+      %two = arith.constant 2 : index
       %seven = arith.constant 7 : i8
       %fourteen = arith.constant 14 : i8
       %q = qco.alloc : !qco.qubit
@@ -1819,8 +1818,9 @@ TEST_F(CompilerPipelineTest, BorrowedArrayViewsPreserveAliasesInQIRAndJeff) {
       func.call @update(%borrowed, %borrowed)
         : (memref<?xi8, strided<[?], offset: ?>>,
            memref<?xi8, strided<[?], offset: ?>>) -> ()
-      %first = memref.load %view[%zero] : memref<2xi8, strided<[2], offset: ?>>
-      %second = memref.load %view[%one] : memref<2xi8, strided<[2], offset: ?>>
+      %last = arith.addi %offset, %two : index
+      %first = memref.load %array[%offset] : memref<4xi8>
+      %second = memref.load %array[%last] : memref<4xi8>
       %firstMatches = arith.cmpi eq, %first, %seven : i8
       %secondMatches = arith.cmpi eq, %second, %fourteen : i8
       %ok = arith.andi %firstMatches, %secondMatches : i1

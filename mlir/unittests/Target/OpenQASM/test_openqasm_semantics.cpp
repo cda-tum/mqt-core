@@ -372,6 +372,7 @@ TEST(OpenQASMFrontendTest, RejectsInvalidClassicalArrays) {
           {"array[int, 1] a = {1}; for int x in a[0] {}", "one-dimensional"},
           {"int a = 1; for int x in a {}", "one-dimensional"},
           {"array[int, 1] a; for int x in a {}", "uninitialized"},
+          {"array[int, 1] a; a[0] += 1;", "uninitialized"},
           {
               "array[int, 2] a; a[0] = 1; int i = 0; for int x in a[:i] {}",
               "uninitialized",

@@ -823,6 +823,7 @@ private:
       return failure();
     }
     SyntaxExpressionId assignedValue = *value;
+    std::optional<SyntaxExpressionId> compoundLhs;
     if (compound) {
       const auto kind = llvm::StringSwitch<std::optional<Expr::Kind>>(
                             compoundSpelling.drop_back())
@@ -849,13 +850,14 @@ private:
       previous.identifier = target->identifier;
       previous.lhs = target->index;
       previous.additionalIndices = target->additionalIndices;
-      assignedValue = makeBinary(*kind, sink.addExpression(previous),
-                                 assignedValue, compoundLocation);
+      compoundLhs = sink.addExpression(previous);
+      assignedValue =
+          makeBinary(*kind, *compoundLhs, assignedValue, compoundLocation);
     }
     if (failed(expect(TokenKind::Semicolon))) {
       return failure();
     }
-    return sink.assignment(loc, *target, assignedValue);
+    return sink.assignment(loc, *target, assignedValue, compoundLhs);
   }
 
   //===--- Measure ------------------------------------------------------===//

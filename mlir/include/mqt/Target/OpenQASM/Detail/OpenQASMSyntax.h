@@ -221,6 +221,7 @@ struct SyntaxScalarDeclaration {
 struct SyntaxAssignment {
   BitReference target;
   SyntaxExpressionId value = 0;
+  std::optional<SyntaxExpressionId> compoundLhs;
 };
 
 struct SyntaxArrayInitializer {
@@ -398,9 +399,10 @@ public:
              std::optional<SyntaxExpressionId> size,
              std::optional<SyntaxExpressionId> initializer, bool isConst,
              IOQualifier io);
-  [[nodiscard]] LogicalResult assignment(SMLoc location,
-                                         const BitReference& target,
-                                         SyntaxExpressionId value);
+  [[nodiscard]] LogicalResult
+  assignment(SMLoc location, const BitReference& target,
+             SyntaxExpressionId value,
+             std::optional<SyntaxExpressionId> compoundLhs);
   [[nodiscard]] LogicalResult arrayDecl(SMLoc location,
                                         SyntaxArrayDeclaration declaration);
   [[nodiscard]] LogicalResult
