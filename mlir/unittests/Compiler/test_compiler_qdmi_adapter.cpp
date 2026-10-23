@@ -558,11 +558,20 @@ TEST(CompilerQDMIAdapterTest,
 
   for (const mlir::PayloadFormat& format : {
            mlir::PayloadFormat{
-               .id = "openqasm", .version = "3.1", .profile = ""},
+               .id = "openqasm",
+               .version = "3.1",
+               .profile = "",
+           },
            mlir::PayloadFormat{
-               .id = "qir", .version = "2.1", .profile = "base"},
+               .id = "qir",
+               .version = "2.1",
+               .profile = "base",
+           },
            mlir::PayloadFormat{
-               .id = "qir", .version = "2.0", .profile = "adaptive"},
+               .id = "qir",
+               .version = "2.0",
+               .profile = "adaptive",
+           },
        }) {
     mlir::attachTargetEnvironment(
         qc->module(),
