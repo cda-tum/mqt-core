@@ -633,15 +633,12 @@ TEST(OpenQASMFrontendTest, RejectsReservedWordsAsIdentifiers) {
       "let",
       "end",
       "pragma",
-      "readonly",
-      "mutable",
       "complex",
       "void",
       "stretch",
       "durationof",
       "delay",
       "im",
-      "#dim",
       "#pragma",
   });
   for (const auto keyword : reservedWords) {
@@ -654,7 +651,8 @@ TEST(OpenQASMFrontendTest, RejectsReservedWordsAsIdentifiers) {
               std::string::npos);
   }
 
-  for (const auto* keyword : {"input", "array", "def", "return"}) {
+  for (const auto* keyword :
+       {"input", "array", "def", "return", "readonly", "mutable", "#dim"}) {
     SCOPED_TRACE(keyword);
     auto parsed = openqasm::frontend::parseOpenQASM(
         std::string("OPENQASM 3.1; int ") + keyword + " = 0;");

@@ -983,6 +983,15 @@ private:
 
   [[nodiscard]] FailureOr<SyntaxSubroutineType> parseSubroutineType() {
     SyntaxSubroutineType type;
+    if (current().kind == TokenKind::Readonly ||
+        current().kind == TokenKind::Mutable) {
+      type.readonly = current().kind == TokenKind::Readonly;
+      advance();
+      if (failed(expect(TokenKind::Array)) ||
+          failed(expect(TokenKind::LBracket))) {
+        return failure();
+      }
+    }
     switch (current().kind) {
     case TokenKind::Bit:
       type.bitVector = true;
@@ -1000,12 +1009,16 @@ private:
       type.scalar = ScalarKind::Float;
       break;
     case TokenKind::Angle:
-      return sink.error(current().loc,
-                        "runtime angle subroutine types are not supported");
+      if (!type.readonly) {
+        return sink.error(current().loc,
+                          "runtime angle subroutine types are not supported");
+      }
+      type.scalar = ScalarKind::Angle;
+      break;
     default:
       return sink.error(
           current().loc,
-          "subroutines support only by-value scalar and bit types");
+          "expected a scalar type or readonly/mutable array reference");
     }
     advance();
     if (current().kind == TokenKind::LBracket) {
@@ -1015,6 +1028,44 @@ private:
         return failure();
       }
       type.width = *width;
+    }
+    if (type.readonly) {
+      if (type.bitVector) {
+        return sink.error(current().loc, "unsupported array element type");
+      }
+      if (failed(expect(TokenKind::Comma))) {
+        return failure();
+      }
+      if (current().kind == TokenKind::Dim) {
+        advance();
+        if (failed(expect(TokenKind::Equals))) {
+          return failure();
+        }
+        auto rank = parseExpression();
+        if (failed(rank)) {
+          return failure();
+        }
+        type.rank = *rank;
+      } else {
+        do {
+          if (type.dimensions.size() >= ARRAY_RANK_LIMIT) {
+            return sink.error(current().loc,
+                              "arrays support at most 7 dimensions");
+          }
+          auto dimension = parseExpression();
+          if (failed(dimension)) {
+            return failure();
+          }
+          type.dimensions.push_back(*dimension);
+          if (current().kind != TokenKind::Comma) {
+            break;
+          }
+          advance();
+        } while (current().kind != TokenKind::RBracket);
+      }
+      if (failed(expect(TokenKind::RBracket))) {
+        return failure();
+      }
     }
     return type;
   }
@@ -1053,6 +1104,10 @@ private:
       auto type = parseSubroutineType();
       if (failed(type)) {
         return failure();
+      }
+      if (type->readonly) {
+        return sink.error(current().loc,
+                          "subroutines cannot return array references");
       }
       definition.result = *type;
     }

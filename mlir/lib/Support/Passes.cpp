@@ -216,6 +216,8 @@ void populateQCOCleanupPipeline(OpPassManager& pm, bool removeDeadValues) {
   pm.addPass(qtensor::createShrinkQTensorToFitPass());
   pm.addPass(createSymbolDCEPass());
   if (removeDeadValues) {
+    // Fold calls before liveness poisons unreachable quantum yields.
+    pm.addPass(createSCCPPass());
     pm.addPass(createRemoveDeadValuesPass());
   }
 }

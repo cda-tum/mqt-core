@@ -95,6 +95,8 @@ decodeCodePoint(const char* position, const char* end) {
       .Case("include", TokenKind::Include)
       .Case("const", TokenKind::Const)
       .Case("array", TokenKind::Array)
+      .Case("readonly", TokenKind::Readonly)
+      .Case("mutable", TokenKind::Mutable)
       .Case("qubit", TokenKind::Qubit)
       .Case("qreg", TokenKind::Qreg)
       .Case("bit", TokenKind::Bit)
@@ -135,7 +137,7 @@ decodeCodePoint(const char* position, const char* end) {
       .Cases({"defcalgrammar", "cal", "defcal"}, TokenKind::UnsupportedKeyword)
       .Cases({"extern", "box", "let"}, TokenKind::UnsupportedKeyword)
       .Case("end", TokenKind::UnsupportedKeyword)
-      .Cases({"pragma", "readonly", "mutable"}, TokenKind::UnsupportedKeyword)
+      .Case("pragma", TokenKind::UnsupportedKeyword)
       .Cases({"complex", "void", "stretch"}, TokenKind::UnsupportedKeyword)
       .Cases({"durationof", "delay", "im"}, TokenKind::UnsupportedKeyword)
       .Default(TokenKind::Identifier);
@@ -402,9 +404,13 @@ Token Lexer::next() {
   size_t unsupportedHashKeywordWidth = 0;
   if (c == '#' && remaining >= 4 && StringRef(cur, 4) == "#dim" &&
       (remaining == 4 || !canContinueIdentifier(cur[4]))) {
-    unsupportedHashKeywordWidth = 4;
-  } else if (c == '#' && remaining >= 7 && StringRef(cur, 7) == "#pragma" &&
-             (remaining == 7 || !canContinueIdentifier(cur[7]))) {
+    cur += 4;
+    token.kind = TokenKind::Dim;
+    token.spelling = StringRef(start, 4);
+    return token;
+  }
+  if (c == '#' && remaining >= 7 && StringRef(cur, 7) == "#pragma" &&
+      (remaining == 7 || !canContinueIdentifier(cur[7]))) {
     unsupportedHashKeywordWidth = 7;
   }
   if (unsupportedHashKeywordWidth != 0) {

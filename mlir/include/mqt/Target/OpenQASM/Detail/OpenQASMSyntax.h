@@ -272,6 +272,9 @@ struct SyntaxSubroutineType {
   bool bitVector = false;
   ScalarKind scalar = ScalarKind::Int;
   std::optional<SyntaxExpressionId> width;
+  std::optional<bool> readonly;
+  std::vector<SyntaxExpressionId> dimensions;
+  std::optional<SyntaxExpressionId> rank;
 };
 
 struct SyntaxSubroutineParameter {

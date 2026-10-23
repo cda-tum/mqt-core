@@ -208,6 +208,8 @@ struct ArrayDeclaration {
   std::vector<int64_t> shape;
   std::string name;
   SourceLocation location;
+  bool borrowed = false;
+  bool readonly = false;
 };
 
 enum class RegisterKind : uint8_t {
@@ -303,16 +305,53 @@ struct GateDefinition {
   SourceLocation location;
 };
 
+/// Inclusive bounds of a runtime-sized range in one array dimension.
+struct ArrayRange {
+  std::optional<ExpressionId> start;
+  std::optional<ExpressionId> stop;
+  ExpressionId step = 0;
+};
+
+struct ArraySizeQuery {
+  ArrayRange range;
+  int64_t extent = 0;
+  /// Used when extent is dynamic (-1).
+  ArrayId array = 0;
+  uint32_t dimension = 0;
+};
+
+/// A scalar index (size -2), fixed range, or runtime range (size -1).
+struct ArraySelection {
+  ExpressionId offset = 0;
+  int64_t size = -2;
+  int64_t stride = 1;
+  std::optional<ArrayRange> runtime;
+
+  [[nodiscard]] bool isScalar() const { return size == -2; }
+};
+
+struct ArrayCopySource {
+  ArrayId array = 0;
+  std::vector<ArraySelection> indices;
+};
+
+struct SubroutineArrayType {
+  bool readonly = false;
+  /// A #dim signature has the given rank and dynamic (-1) extents.
+  std::vector<int64_t> shape;
+};
+
 struct SubroutineType {
   bool bitVector = false;
   bool scalarBit = false;
   ScalarType scalar = ScalarType::Int;
   unsigned width = 0;
+  std::optional<SubroutineArrayType> array;
 };
 
 struct SubroutineParameter {
   SubroutineType type;
-  /// ScalarId, or RegisterId for a bit value.
+  /// ArrayId for a reference, RegisterId for a bit value, otherwise ScalarId.
   uint32_t symbol = 0;
 };
 
@@ -328,6 +367,7 @@ struct SubroutineArgument {
   bool bitVector = false;
   /// ExpressionId, or BitVectorExpressionId for a bit value.
   uint32_t value = 0;
+  std::optional<ArrayCopySource> array;
 };
 
 struct SubroutineCall {
@@ -374,33 +414,6 @@ struct ArrayAssignmentStatement {
   ArrayId array = 0;
   std::vector<ExpressionId> indices;
   ExpressionId value = 0;
-};
-
-/// Inclusive bounds of a runtime-sized range in one array dimension.
-struct ArrayRange {
-  std::optional<ExpressionId> start;
-  std::optional<ExpressionId> stop;
-  ExpressionId step = 0;
-};
-
-struct ArraySizeQuery {
-  ArrayRange range;
-  int64_t extent = 0;
-};
-
-/// A scalar index (size -2), fixed range, or runtime range (size -1).
-struct ArraySelection {
-  ExpressionId offset = 0;
-  int64_t size = -2;
-  int64_t stride = 1;
-  std::optional<ArrayRange> runtime;
-
-  [[nodiscard]] bool isScalar() const { return size == -2; }
-};
-
-struct ArrayCopySource {
-  ArrayId array = 0;
-  std::vector<ArraySelection> indices;
 };
 
 struct ArrayCopyStatement {

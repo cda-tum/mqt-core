@@ -46,6 +46,7 @@
 #include <limits>
 #include <memory>
 #include <numbers>
+#include <numeric>
 #include <optional>
 #include <set>
 #include <string>
@@ -540,6 +541,8 @@ private:
       const auto& symbol = entry.getValue();
       if (symbol.kind == SymbolKind::Register) {
         registerStateSlots_[symbol.id] = std::numeric_limits<size_t>::max();
+      } else if (symbol.kind == SymbolKind::Array) {
+        arrayStateSlots_[symbol.id] = std::numeric_limits<size_t>::max();
       } else if (symbol.kind == SymbolKind::Scalar ||
                  symbol.kind == SymbolKind::GateLocalScalar) {
         scalarStateSlots_[symbol.id] = std::numeric_limits<size_t>::max();
@@ -3886,13 +3889,20 @@ private:
     std::vector<ArraySelection> selection;
     for (const auto [dimension, extent] : llvm::enumerate(shape)) {
       if (dimension >= count) {
-        selection.push_back({
+        ArraySelection whole{
             .offset = addConstant({
                 .type = ScalarType::Int,
                 .value = int64_t{0},
             }),
             .size = extent,
-        });
+        };
+        if (extent < 0) {
+          whole.runtime = ArrayRange{
+              .step =
+                  addConstant({.type = ScalarType::Int, .value = int64_t{1}}),
+          };
+        }
+        selection.push_back(whole);
         continue;
       }
       const auto id = dimension == 0 ? *index : additional[dimension - 1];
@@ -3914,7 +3924,7 @@ private:
         }
         return *asSigned(value);
       };
-      bool runtime = false;
+      bool runtime = extent < 0;
       for (const auto bound :
            {expression.lhs, expression.rhs, expression.step}) {
         if (bound) {
@@ -4063,6 +4073,8 @@ private:
       program.arraySizeQueries.push_back({
           .range = *index.runtime,
           .extent = program.arrays[source.array].shape[sourceDimension],
+          .array = source.array,
+          .dimension = static_cast<uint32_t>(sourceDimension),
       });
       size = addExpression({
           .kind = ExpressionKind::ArraySize,
@@ -4303,11 +4315,19 @@ private:
   }
 
   [[nodiscard]] FailureOr<ExpressionId>
-  analyzeArrayIndex(SyntaxExpressionId source, uint64_t length,
-                    SMLoc location) {
-    MQT_OQ3_TRY_ASSIGN(constant, constantIndex(source, length, location));
+  analyzeArrayIndex(SyntaxExpressionId source, int64_t length, SMLoc location) {
+    if (length < 0) {
+      MQT_OQ3_TRY_ASSIGN(dynamic, analyzeExpression(source));
+      if (!isInteger(program.expressions[dynamic].type)) {
+        return fail(location, "array index must be an integer expression");
+      }
+      return dynamic;
+    }
+    MQT_OQ3_TRY_ASSIGN(
+        constant,
+        constantIndex(source, static_cast<uint64_t>(length), location));
     if (constant) {
-      if (*constant >= length) {
+      if (std::cmp_greater_equal(*constant, length)) {
         return fail(location, "array index is out of bounds");
       }
       return addConstant(
@@ -4335,7 +4355,7 @@ private:
     std::vector<ExpressionId> indices;
     for (size_t dimension = 0; dimension < count; ++dimension) {
       const auto source = dimension == 0 ? *index : additional[dimension - 1];
-      const auto length = static_cast<uint64_t>(shape[dimension]);
+      const auto length = shape[dimension];
       MQT_OQ3_TRY_ASSIGN(value, analyzeArrayIndex(source, length, location));
       indices.push_back(value);
     }
@@ -4344,6 +4364,9 @@ private:
 
   [[nodiscard]] std::optional<size_t>
   constantArrayOffset(ArrayId array, ArrayRef<ExpressionId> indices) const {
+    if (program.arrays[array].borrowed) {
+      return std::nullopt;
+    }
     size_t offset = 0;
     for (const auto [dimension, index] : llvm::enumerate(indices)) {
       const auto& expression = program.expressions[index];
@@ -4399,6 +4422,10 @@ private:
     const auto* symbol = lookup(assignment.target.identifier);
     if (symbol != nullptr && symbol->kind == SymbolKind::Array) {
       const auto array = symbol->id;
+      if (program.arrays[array].readonly) {
+        return fail(location,
+                    "cannot write through a readonly array reference");
+      }
       MQT_OQ3_TRY_ASSIGN(
           selection,
           analyzeArraySelection(array, assignment.target.index,
@@ -4705,7 +4732,30 @@ private:
       MQT_OQ3_TRY_ASSIGN(type, analyzeSubroutineType(parameter.type, location));
       std::vector<StatementId> ignored;
       uint32_t symbol = 0;
-      if (type.bitVector) {
+      if (type.array) {
+        symbol = static_cast<ArrayId>(program.arrays.size());
+        program.arrays.push_back({
+            .type = type.scalar,
+            .elementWidth = type.width,
+            .shape = type.array->shape,
+            .name = parameter.identifier.str(),
+            .location = getSourceLocation(location),
+            .borrowed = true,
+            .readonly = type.array->readonly,
+        });
+        arrayStateSlots_.push_back(initializedBits.size());
+        arraysWithInitializers_.push_back(true);
+        // Callers establish complete initialization for each borrowed view.
+        initializedBits.push_back(std::make_shared<BitInitialization>(1, true));
+        if (failed(declare(location, parameter.identifier,
+                           {
+                               .kind = SymbolKind::Array,
+                               .type = type.scalar,
+                               .id = symbol,
+                           }))) {
+          return failure();
+        }
+      } else if (type.bitVector) {
         symbol = static_cast<RegisterId>(program.registers.size());
         if (failed(analyzeRegisterDeclaration(
                 location, parameter.identifier, parameter.type.width,
@@ -4727,7 +4777,8 @@ private:
         }
         initializedScalars[scalarStateSlots_[symbol]] = true;
       }
-      definition.parameters.push_back({.type = type, .symbol = symbol});
+      definition.parameters.push_back(
+          {.type = std::move(type), .symbol = symbol});
     }
     if (failed(analyzeBody(body, definition.body, false))) {
       return failure();
@@ -4759,6 +4810,22 @@ private:
         .scalarBit = syntaxType.bitVector && !syntaxType.width,
         .scalar = scalarType(syntaxType.scalar),
     };
+    if (syntaxType.readonly) {
+      type.array = SubroutineArrayType{.readonly = *syntaxType.readonly};
+      if (syntaxType.rank) {
+        MQT_OQ3_TRY_ASSIGN(rank,
+                           constantWidth(syntaxType.rank, location,
+                                         "array reference rank", false, 7));
+        type.array->shape.assign(rank, -1);
+      } else {
+        for (const auto dimension : syntaxType.dimensions) {
+          MQT_OQ3_TRY_ASSIGN(extent, constantWidth(dimension, location,
+                                                   "array dimension", true,
+                                                   ARRAY_ELEMENT_LIMIT));
+          type.array->shape.push_back(static_cast<int64_t>(extent));
+        }
+      }
+    }
     if (type.bitVector) {
       MQT_OQ3_TRY_ASSIGN(width, constantWidth(syntaxType.width, location,
                                               "bit parameter width", false,
@@ -4780,6 +4847,9 @@ private:
           return fail(location, "float subroutine types require width 64");
         }
       }
+    } else if (type.array && type.scalar == ScalarType::Angle) {
+      MQT_OQ3_TRY_ASSIGN(width, angleWidth(syntaxType.width, location));
+      type.width = width;
     } else {
       return fail(location, "runtime angle subroutine types are not supported");
     }
@@ -4789,6 +4859,45 @@ private:
   [[nodiscard]] FailureOr<SubroutineArgument>
   analyzeSubroutineValue(SyntaxExpressionId expression,
                          const SubroutineType& type) {
+    if (type.array) {
+      const auto location = syntax.expressions[expression].location;
+      MQT_OQ3_TRY_ASSIGN(
+          source, analyzeArraySource(
+                      syntax.expressions[expression], location,
+                      "array reference argument requires an array or slice"));
+      const auto& declaration = program.arrays[source.array];
+      const auto shape = selectedShape(source.indices);
+      if (declaration.type != type.scalar ||
+          (type.scalar != ScalarType::Bool &&
+           (declaration.elementWidth == 0 ? 64 : declaration.elementWidth) !=
+               type.width) ||
+          shape.size() != type.array->shape.size()) {
+        return fail(
+            location,
+            "array argument must match the parameter element type and rank");
+      }
+      for (const auto [actual, expected] :
+           llvm::zip_equal(shape, type.array->shape)) {
+        if (expected >= 0 && actual != expected) {
+          return fail(location,
+                      "array argument must match the parameter shape");
+        }
+      }
+      if (!type.array->readonly && declaration.readonly) {
+        return fail(location,
+                    "readonly array cannot bind to a mutable parameter");
+      }
+      const auto& initialized =
+          *initializedBits[arrayStateSlots_[source.array]];
+      if (!initialized.all() &&
+          !visitArraySelectionRuns(
+              source.array, source.indices, [&](unsigned first, unsigned last) {
+                return initialized.find_first_unset_in(first, last) == -1;
+              })) {
+        return fail(location, "array argument has uninitialized elements");
+      }
+      return SubroutineArgument{.array = std::move(source)};
+    }
     if (type.bitVector) {
       if (type.scalarBit) {
         MQT_OQ3_TRY_ASSIGN(condition, analyzeBoolValue(expression));
@@ -4815,6 +4924,48 @@ private:
                                    isInteger(type.scalar) ? type.width : 0,
                                    expression));
     return SubroutineArgument{.bitVector = false, .value = value};
+  }
+
+  [[nodiscard]] bool arrayArgumentsDisjoint(const ArrayCopySource& lhs,
+                                            const ArrayCopySource& rhs) const {
+    if (lhs.array != rhs.array) {
+      return true;
+    }
+    for (const auto& [left, right] :
+         llvm::zip_equal(lhs.indices, rhs.indices)) {
+      if (left.size == 0 || right.size == 0) {
+        return true;
+      }
+      if (left.runtime || right.runtime) {
+        continue;
+      }
+      const auto& leftOffset = program.expressions[left.offset];
+      const auto& rightOffset = program.expressions[right.offset];
+      if (leftOffset.kind != ExpressionKind::Constant ||
+          rightOffset.kind != ExpressionKind::Constant) {
+        continue;
+      }
+      const auto* leftConstant = std::get_if<int64_t>(&leftOffset.constant);
+      const auto* rightConstant = std::get_if<int64_t>(&rightOffset.constant);
+      if (leftConstant == nullptr || rightConstant == nullptr) {
+        continue;
+      }
+      const auto leftFirst = *leftConstant;
+      const auto rightFirst = *rightConstant;
+      if (leftFirst < 0 || rightFirst < 0) {
+        continue;
+      }
+      const auto leftLast =
+          leftFirst + (left.isScalar() ? 0 : left.size - 1) * left.stride;
+      const auto rightLast =
+          rightFirst + (right.isScalar() ? 0 : right.size - 1) * right.stride;
+      if (std::max(leftFirst, leftLast) < std::min(rightFirst, rightLast) ||
+          std::max(rightFirst, rightLast) < std::min(leftFirst, leftLast) ||
+          (leftFirst - rightFirst) % std::gcd(left.stride, right.stride) != 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   [[nodiscard]] FailureOr<SubroutineCallId>
@@ -4846,7 +4997,19 @@ private:
          llvm::zip_equal(expression.arguments, definition.parameters)) {
       MQT_OQ3_TRY_ASSIGN(value,
                          analyzeSubroutineValue(argument, parameter.type));
-      call.arguments.push_back(value);
+      if (value.array) {
+        for (const auto [index, previous] : llvm::enumerate(call.arguments)) {
+          if (previous.array &&
+              (!parameter.type.array->readonly ||
+               !definition.parameters[index].type.array->readonly) &&
+              !arrayArgumentsDisjoint(*value.array, *previous.array)) {
+            return fail(expression.location,
+                        "mutable array arguments must be provably disjoint "
+                        "from other array arguments");
+          }
+        }
+      }
+      call.arguments.push_back(std::move(value));
     }
     const auto id = static_cast<SubroutineCallId>(program.calls.size());
     program.calls.push_back(std::move(call));

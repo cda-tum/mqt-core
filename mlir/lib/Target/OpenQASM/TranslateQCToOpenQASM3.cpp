@@ -41,6 +41,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/ComposeSubView.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -204,22 +205,45 @@ public:
 
   [[nodiscard]] static bool hasSubroutineSignature(func::FuncOp function) {
     return function.getNumResults() <= 1 &&
-           llvm::all_of(
-               function.getArgumentTypes(),
-               [](Type type) { return !subroutineType(type).empty(); }) &&
+           llvm::all_of(function.getArgumentTypes(),
+                        [](Type type) {
+                          if (auto array = dyn_cast<MemRefType>(type)) {
+                            return array.getRank() >= 1 &&
+                                   array.getRank() <= 7 &&
+                                   (array.hasStaticShape() ||
+                                    std::cmp_equal(array.getNumDynamicDims(),
+                                                   array.getRank())) &&
+                                   !array.getMemorySpace() &&
+                                   !scalarKind(array.getElementType()).empty();
+                          }
+                          return !subroutineType(type).empty();
+                        }) &&
            llvm::all_of(function.getResultTypes(), [](Type type) {
              return !subroutineType(type).empty();
            });
   }
 
-  [[nodiscard]] static bool hasClassicalBody(func::FuncOp function) {
-    return !function
-                .walk([](Operation* operation) {
-                  return operation->getName().getDialectNamespace() == "qc" ||
-                                 isa<memref::AllocaOp, memref::AllocOp>(
-                                     operation)
-                             ? WalkResult::interrupt()
-                             : WalkResult::advance();
+  [[nodiscard]] bool hasClassicalBody(func::FuncOp helper) {
+    if (helper
+            .walk([](Operation* operation) {
+              return operation->getName().getDialectNamespace() == "qc" ||
+                             isa<memref::AllocOp>(operation)
+                         ? WalkResult::interrupt()
+                         : WalkResult::advance();
+            })
+            .wasInterrupted()) {
+      return false;
+    }
+    llvm::SaveAndRestore functionGuard(function, helper);
+    llvm::SaveAndRestore assignmentsGuard(
+        arrayAssignments_, DenseMap<Operation*, ArrayAssignment>{});
+    llvm::SaveAndRestore elidedGuard(elidedArrayOps_, DenseSet<Operation*>{});
+    collectArrayAssignments();
+    return !helper
+                .walk([&](memref::AllocaOp allocation) {
+                  return elidedArrayOps_.contains(allocation)
+                             ? WalkResult::advance()
+                             : WalkResult::interrupt();
                 })
                 .wasInterrupted();
   }
@@ -299,6 +323,42 @@ private:
   int64_t numArrayElements_ = 0;
   DenseMap<Operation*, ArrayAssignment> arrayAssignments_;
   DenseSet<Operation*> elidedArrayOps_;
+  DenseSet<Value> readonlyArguments_;
+
+  [[nodiscard]] bool isReadonlyArray(Value argument) {
+    SmallVector<Value> worklist{argument};
+    DenseSet<Value> visited;
+    while (!worklist.empty()) {
+      auto value = worklist.pop_back_val();
+      if (!visited.insert(value).second) {
+        continue;
+      }
+      for (OpOperand& use : value.getUses()) {
+        auto* user = use.getOwner();
+        if (isa<memref::LoadOp, memref::DimOp, memref::RankOp>(user)) {
+          continue;
+        }
+        if (auto copy = dyn_cast<memref::CopyOp>(user);
+            copy && use.getOperandNumber() == 0) {
+          continue;
+        }
+        if (isa<memref::SubViewOp, memref::ReinterpretCastOp, memref::CastOp>(
+                user)) {
+          worklist.push_back(user->getResult(0));
+          continue;
+        }
+        if (auto call = dyn_cast<func::CallOp>(user)) {
+          auto callee = resolveSubroutineCallee(call);
+          if (callee && readonlyArguments_.contains(
+                            callee.getArgument(use.getOperandNumber()))) {
+            continue;
+          }
+        }
+        return false;
+      }
+    }
+    return true;
+  }
 
   static constexpr size_t MAX_EXPRESSION_NESTING = 256;
   static constexpr size_t MAX_EXPRESSION_WORK = 4096;
@@ -317,6 +377,9 @@ private:
       auto type = cast<MemRefType>(value.getType());
       SmallVector<OpFoldResult> offsets(type.getRank(),
                                         builder.getIndexAttr(0));
+      if (auto allocation = value.getDefiningOp<memref::AllocaOp>()) {
+        return HyperrectangularSlice(offsets, allocation.getMixedSizes());
+      }
       SmallVector<OpFoldResult> sizes;
       for (const auto extent : type.getShape()) {
         sizes.push_back(builder.getIndexAttr(extent));
@@ -430,6 +493,8 @@ private:
         for (auto* user : views[index].getUsers()) {
           if (auto view = dyn_cast<memref::SubViewOp>(user)) {
             views.push_back(view);
+          } else if (isa<memref::DimOp>(user)) {
+            continue;
           } else if (auto copy = dyn_cast<memref::CopyOp>(user)) {
             if (root(copy.getSource()) == alloc &&
                 root(copy.getTarget()) == alloc) {
@@ -567,6 +632,24 @@ private:
   }
 
   [[nodiscard]] LogicalResult prepareFunctions() {
+    auto* context = moduleOp.getContext();
+    DialectRegistry registry;
+    arith::registerValueBoundsOpInterfaceExternalModels(registry);
+    memref::registerValueBoundsOpInterfaceExternalModels(registry);
+    context->appendDialectRegistry(registry);
+    if (moduleOp
+            .walk([&](memref::CastOp castOp) {
+              if (!memref::CastOp::canFoldIntoConsumerOp(castOp)) {
+                std::ignore =
+                    fail(castOp, "array casts that assert shape or layout "
+                                 "are not supported");
+                return WalkResult::interrupt();
+              }
+              return WalkResult::advance();
+            })
+            .wasInterrupted()) {
+      return failure();
+    }
     const CallGraph callGraph(moduleOp);
     DenseSet<CallGraphNode*> gates;
     DenseSet<CallGraphNode*> subroutines;
@@ -621,15 +704,14 @@ private:
     if (!needsInlining && !needsArrayNormalization) {
       return success();
     }
-    auto* context = moduleOp.getContext();
     if (needsInlining) {
       for (auto helper : helperFunctions_) {
         helper.setNoInline(true);
       }
-      DialectRegistry registry;
-      func::registerInlinerExtension(registry);
-      LLVM::registerInlinerInterface(registry);
-      context->appendDialectRegistry(registry);
+      DialectRegistry inlinerRegistry;
+      func::registerInlinerExtension(inlinerRegistry);
+      LLVM::registerInlinerInterface(inlinerRegistry);
+      context->appendDialectRegistry(inlinerRegistry);
       PassManager manager(context);
       // Keep supported definitions while expanding other helpers.
       manager.addPass(createInlinerPass({}, [](OpPassManager&) {}));
@@ -638,9 +720,6 @@ private:
       }
     }
     if (needsArrayNormalization) {
-      DialectRegistry registry;
-      arith::registerValueBoundsOpInterfaceExternalModels(registry);
-      context->appendDialectRegistry(registry);
       context->getOrLoadDialect<affine::AffineDialect>();
       RewritePatternSet patterns(context);
       memref::populateComposeSubViewPatterns(patterns, context);
@@ -736,6 +815,11 @@ private:
           current, preserveName
                        ? requested.str()
                        : uniqueName(isSubroutine ? "def" : "gate", nextHelper));
+      for (Value argument : current.getArguments()) {
+        if (isa<MemRefType>(argument.getType()) && isReadonlyArray(argument)) {
+          readonlyArguments_.insert(argument);
+        }
+      }
     }
     const auto hasInvalidCall = [&](func::FuncOp current) {
       return current
@@ -1068,9 +1152,31 @@ private:
     llvm::raw_string_ostream definitionStream(definition);
     raw_indented_ostream definitionOutput(definitionStream);
     definitionOutput << "def " << subroutineNames_.at(helper) << '(';
+    llvm::SaveAndRestore resourcesGuard(resources, DenseMap<Value, Resource>{});
+    llvm::SaveAndRestore orderGuard(resourceOrder, SmallVector<Value>{});
     SmallVector<std::string> parameters;
     for (Value argument : helper.getArguments()) {
       auto name = uniqueName("arg", nextScalar);
+      if (auto array = dyn_cast<MemRefType>(argument.getType())) {
+        std::string type =
+            readonlyArguments_.contains(argument) ? "readonly " : "mutable ";
+        type += "array[" + scalarKind(array.getElementType());
+        if (array.hasStaticShape()) {
+          for (auto extent : array.getShape()) {
+            type += ", " + std::to_string(extent);
+          }
+        } else {
+          type += ", #dim = " + std::to_string(array.getRank());
+        }
+        type += "] ";
+        type += name;
+        parameters.push_back(std::move(type));
+        resources.try_emplace(argument, Resource{
+                                            .kind = ResourceKind::Array,
+                                            .name = std::move(name),
+                                        });
+        continue;
+      }
       parameters.push_back(subroutineType(argument.getType()) + " " + name);
       valueNames[argument] = std::move(name);
     }
@@ -1082,8 +1188,6 @@ private:
     definitionOutput.indent();
     llvm::SaveAndRestore outputGuard(output, &definitionOutput);
     llvm::SaveAndRestore functionGuard(function, helper);
-    llvm::SaveAndRestore resourcesGuard(resources, DenseMap<Value, Resource>{});
-    llvm::SaveAndRestore orderGuard(resourceOrder, SmallVector<Value>{});
     if (failed(collectProgramShape(false))) {
       return failure();
     }
@@ -1179,7 +1283,7 @@ private:
       return emitTableLookup(extract);
     }
     if (isa<arith::ConstantOp, cbit::LoadOp, cbit::ReadOp, cbit::AllocOp,
-            memref::LoadOp, memref::AllocaOp, memref::SubViewOp,
+            memref::LoadOp, memref::AllocaOp, memref::SubViewOp, memref::CastOp,
             memref::ReinterpretCastOp, memref::AllocOp, memref::DeallocOp,
             qc::AllocOp, qc::DeallocOp, qc::StaticOp>(&operation)) {
       return success();
@@ -1290,7 +1394,9 @@ private:
       if (auto callee = resolveSubroutineCallee(call)) {
         SmallVector<std::string> arguments;
         for (Value argument : call.getOperands()) {
-          auto expression = emitSubroutineValue(argument);
+          auto expression = isa<MemRefType>(argument.getType())
+                                ? emitArraySelection(argument)
+                                : emitSubroutineValue(argument);
           if (failed(expression)) {
             return failure();
           }
@@ -1411,9 +1517,9 @@ private:
     const auto name = operation.getName().getStringRef();
     return (isa<memref::LoadOp>(&operation) &&
             !isa<qc::QubitType>(operation.getResult(0).getType())) ||
-           isa<arith::ConstantOp, arith::CmpIOp, arith::CmpFOp, cbit::LoadOp,
-               cbit::ReadOp, arith::SelectOp, arith::ExtSIOp, arith::ExtUIOp,
-               arith::TruncIOp, arith::ShRSIOp>(&operation) ||
+           isa<memref::DimOp, arith::ConstantOp, arith::CmpIOp, arith::CmpFOp,
+               cbit::LoadOp, cbit::ReadOp, arith::SelectOp, arith::ExtSIOp,
+               arith::ExtUIOp, arith::TruncIOp, arith::ShRSIOp>(&operation) ||
            !binaryOperator(name).empty() || name == "arith.negf" ||
            name == "math.absf" || name == "arith.remf" ||
            name == "llvm.intr.fshl" || name == "llvm.intr.fshr" ||
@@ -1528,7 +1634,8 @@ private:
     for (auto [dimension, index] : llvm::enumerate(indices)) {
       if (auto constant = getConstantInteger(index);
           constant &&
-          (*constant < 0 || *constant >= type.getDimSize(dimension))) {
+          (*constant < 0 || (!type.isDynamicDim(dimension) &&
+                             *constant >= type.getDimSize(dimension)))) {
         return failExpression(index, "constant array index is out of bounds");
       }
       auto text = emitExpression(index);
@@ -1541,10 +1648,42 @@ private:
   }
 
   [[nodiscard]] FailureOr<std::string> emitArraySelection(Value array) {
+    while (auto castOp = array.getDefiningOp<memref::CastOp>()) {
+      array = castOp.getSource();
+    }
     if (const auto resource = resources.find(array);
         resource != resources.end() &&
         resource->second.kind == ResourceKind::Array) {
       return resource->second.name;
+    }
+    if (auto empty = array.getDefiningOp<memref::ReinterpretCastOp>()) {
+      auto type = empty.getType();
+      auto sourceType = cast<MemRefType>(empty.getSource().getType());
+      const auto resource = resources.find(empty.getSource());
+      if (!type.hasStaticShape() || !sourceType.hasStaticShape() ||
+          !llvm::is_contained(type.getShape(), int64_t{0}) ||
+          resource == resources.end() ||
+          resource->second.kind != ResourceKind::Array) {
+        return failExpression(array, "unsupported empty array view");
+      }
+      SmallVector<std::string> subscripts;
+      int64_t retained = 0;
+      for (auto extent : sourceType.getShape()) {
+        if (retained < type.getRank() && type.getDimSize(retained) <= extent &&
+            (type.getDimSize(retained) == 0) == (extent == 0)) {
+          const auto size = type.getDimSize(retained++);
+          subscripts.push_back(
+              size == extent ? ":" : "0:" + std::to_string(size - 1));
+        } else if (extent != 0) {
+          subscripts.emplace_back("0");
+        } else {
+          return failExpression(array, "cannot represent empty array view");
+        }
+      }
+      if (retained != type.getRank()) {
+        return failExpression(array, "cannot represent empty array view");
+      }
+      return resource->second.name + "[" + llvm::join(subscripts, ", ") + "]";
     }
     auto view = array.getDefiningOp<memref::SubViewOp>();
     if (!view) {
@@ -1554,7 +1693,8 @@ private:
     if (resource == resources.end() ||
         resource->second.kind != ResourceKind::Array) {
       return failExpression(
-          array, "array view must refer to an entry-block allocation");
+          array,
+          "array view must refer to an allocation or borrowed parameter");
     }
     const auto text = [&](OpFoldResult value) -> FailureOr<std::string> {
       if (auto constant = getConstantIntValue(value)) {
@@ -1573,6 +1713,11 @@ private:
       }
       if (dropped.test(dimension)) {
         subscripts.push_back(std::move(*first));
+        continue;
+      }
+      if (view.getSourceType().getDimSize(dimension) == 0 &&
+          isConstantIntValue(offset, 0) && isConstantIntValue(size, 0)) {
+        subscripts.emplace_back(":");
         continue;
       }
       auto count = text(size);
@@ -1607,6 +1752,14 @@ private:
     const auto type = value.getType();
     if (const auto found = valueNames.find(value); found != valueNames.end()) {
       return found->second;
+    }
+    if (auto dimension = value.getDefiningOp<memref::DimOp>()) {
+      auto array = emitArraySelection(dimension.getSource());
+      auto index = getConstantInteger(dimension.getIndex());
+      if (failed(array) || !index) {
+        return failExpression(value, "array dimension must be a constant");
+      }
+      return "sizeof(" + *array + ", " + std::to_string(*index) + ")";
     }
     if (auto load = value.getDefiningOp<memref::LoadOp>()) {
       if (load.getOperation() != expressionConsumer) {
