@@ -1601,9 +1601,8 @@ normalizePythonTarget(const nb::handle target,
   }
   if (nb::isinstance(target, circuitModule.attr("ClassicalRegister"))) {
     const auto size = nb::len(target);
-    if (size == 0U || size > 64U) {
-      throw std::runtime_error(
-          "Qiskit classical targets require between 1 and 64 bits");
+    if (size == 0U || size > std::numeric_limits<uint32_t>::max()) {
+      throw std::runtime_error("Qiskit classical target has an invalid width");
     }
     result.kind = ClassicalTargetKind::ClassicalRegister;
     result.reg = pythonRegister(target, resolveBit);

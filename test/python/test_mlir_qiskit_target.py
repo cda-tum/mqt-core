@@ -945,6 +945,7 @@ def test_z_frames_stop_at_control_flow_and_barriers(*, native_rz: bool) -> None:
     """A pending Z frame must dominate each branch and stay before barriers."""
     source = Target(num_qubits=2)
     source.add_instruction(CZGate())
+    source.add_instruction(Measure())
     if native_rz:
         source.add_instruction(RZGate(Parameter("rz")))
         source.add_instruction(SXGate())
@@ -953,6 +954,8 @@ def test_z_frames_stop_at_control_flow_and_barriers(*, native_rz: bool) -> None:
     target = CompilerTarget.from_qiskit(source)
     theta = Parameter("angle")
     circuit = QuantumCircuit(2, 1)
+    circuit.sx(0)
+    circuit.measure(0, 0)
     circuit.rz(theta, 0)
     circuit.cz(0, 1)
     circuit.barrier(0)
@@ -972,6 +975,7 @@ def test_z_frames_stop_at_control_flow_and_barriers(*, native_rz: bool) -> None:
         )
     )
     exported = program.to_qiskit(target=target)
+    assert exported.count_ops().get("if_else") == 1
 
     def branch_unitary(circuit: QuantumCircuit, branch: int) -> Operator:
         result = QuantumCircuit(2, global_phase=circuit.global_phase)
@@ -979,7 +983,7 @@ def test_z_frames_stop_at_control_flow_and_barriers(*, native_rz: bool) -> None:
             qubits = [circuit.find_bit(qubit).index for qubit in item.qubits]
             if isinstance(item.operation, IfElseOp):
                 result.compose(item.operation.blocks[branch], qubits=qubits, inplace=True)
-            elif item.operation.name != "barrier":
+            elif item.operation.name not in {"barrier", "measure"}:
                 result.append(item.operation, qubits)
         return Operator(result)
 

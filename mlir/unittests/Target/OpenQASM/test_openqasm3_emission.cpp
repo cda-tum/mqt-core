@@ -1902,7 +1902,7 @@ module {
 
 TEST(OpenQASM3EmissionTest, RoundTripsNestedDynamicBoundsAndCarriedScalars) {
   constexpr llvm::StringLiteral source = R"mlir(module {
-    func.func @main() -> (i64, i64) {
+    func.func @main() {
       %zero = arith.constant 0 : index
       %one = arith.constant 1 : index
       %two = arith.constant 2 : index
@@ -1932,7 +1932,7 @@ TEST(OpenQASM3EmissionTest, RoundTripsNestedDynamicBoundsAndCarriedScalars) {
         qc.x %qubit : !qc.qubit
       }
       qc.dealloc %qubit : !qc.qubit
-      return %result#0, %result#1 : i64, i64
+      return
     }
   })mlir";
   DialectRegistry registry = emissionDialects();

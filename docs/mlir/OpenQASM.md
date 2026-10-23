@@ -382,6 +382,19 @@ constants. With LLVM/MLIR 23.1, promotion requires at most 16 elements, constant
 indices, and supported uses. Call `program.cleanup()` before `to_qiskit()`;
 Qiskit export itself only folds scalar expressions.
 
+Cleanup also promotes local CBit registers of at most 256 bits to Boolean SSA
+values. Accesses must use constant indices, whole-register writes, or
+whole-register reads of at most 64 bits. Wider reads also participate when all
+reads of the local register feed constant comparisons: cleanup evaluates these
+comparisons bit by bit at the snapshot point, avoiding wide packed arithmetic.
+Other wide reads retain storage. Branches and loops carry promoted values
+through their results and block arguments. Returned registers, register
+arguments, dynamic accesses, and opaque register users retain storage. Reads of
+undefined bits before their first store remain undefined behavior; promotion may
+choose zero for those values. Whole-register reads preserve snapshots, and
+returned registers preserve their names and bit order. The promotion bound does
+not limit output register widths.
+
 Export retains private gate-shaped helper functions. Other defined helpers,
 including functions with integer or register arguments or classical results, are
 inlined on a copy of the module using MLIR's inliner. Their supported structured

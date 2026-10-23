@@ -583,7 +583,7 @@ TEST(CompilerQDMIAdapterTest,
   }
 }
 
-TEST(CompilerQDMIAdapterTest, ValidatesQIRLoweringCapabilities) {
+TEST(CompilerQDMIAdapterTest, DynamicQIRIndexingDoesNotRequireLoops) {
   auto input = mlir::QCProgram::fromMLIRString(R"mlir(module {
     func.func @main() attributes {mqt.entry_point} {
       %zero = arith.constant 0 : index
@@ -608,48 +608,14 @@ TEST(CompilerQDMIAdapterTest, ValidatesQIRLoweringCapabilities) {
   std::vector<mlir::ProgramCapability> capabilities(
       baseline.capabilities().begin(), baseline.capabilities().end());
   llvm::erase_if(capabilities, [](const auto& capability) {
-    return capability.id == mlir::ProgramCapability::CONDITIONAL_LOOP;
+    return capability.id == mlir::ProgramCapability::CONDITIONAL_LOOP ||
+           capability.id == mlir::ProgramCapability::COUNTED_ITERATION;
   });
-  llvm::find_if(capabilities,
-                [](const auto& capability) {
-                  return capability.id ==
-                         mlir::ProgramCapability::COUNTED_ITERATION;
-                })
-      ->constraints = {
-      {.id = mlir::ProgramConstraint::MAX_ITERATION_COUNT.str(), .value = 4},
-  };
-  std::string diagnostics;
-  const mlir::ScopedDiagnosticHandler handler(
-      input->context().get(), [&](mlir::Diagnostic& diagnostic) {
-        llvm::raw_string_ostream stream(diagnostics);
-        diagnostic.print(stream);
-        return mlir::success();
-      });
-  const auto compile = [&] {
-    diagnostics.clear();
-    return mlir::runDefaultPipeline(
-        input->copy(), mlir::ProgramFormat::QIRAdaptive,
-        mlir::TargetEnvironment(
-            target, llvm::cantFail(mlir::PayloadSpecification::create(
-                        baseline.format(), capabilities))));
-  };
-  EXPECT_TRUE(mlir::failed(compile()));
-  EXPECT_NE(diagnostics.find("requires capability 'conditional-loop'"),
-            std::string::npos);
-  capabilities.push_back({
-      .id = mlir::ProgramCapability::CONDITIONAL_LOOP.str(),
-      .constraints =
-          {
-              {
-                  .id = mlir::ProgramConstraint::MAX_ITERATION_COUNT.str(),
-                  .value = 4,
-              },
-          },
-  });
-  EXPECT_TRUE(mlir::failed(compile()));
-  EXPECT_NE(diagnostics.find("cannot verify constraints"), std::string::npos);
-  capabilities.back().constraints.clear();
-  EXPECT_TRUE(mlir::succeeded(compile()));
+  EXPECT_TRUE(mlir::succeeded(mlir::runDefaultPipeline(
+      input->copy(), mlir::ProgramFormat::QIRAdaptive,
+      mlir::TargetEnvironment(target,
+                              llvm::cantFail(mlir::PayloadSpecification::create(
+                                  baseline.format(), capabilities))))));
 }
 
 TEST(CompilerQDMIAdapterTest, CompilesAdaptiveMeasurementControlledLoop) {

@@ -110,8 +110,9 @@ simulate(func::FuncOp func, const dd::VectorDD& in, dd::Package& dd,
 /// Simulate a zero-state QCO function without collapsing terminal
 /// measurements.
 ///
-/// The function must have one block. Measurement results can be unused or can
-/// set returned CBit registers. No later operation can use a measured wire.
+/// The function must have one block. Measurement results can be unused,
+/// returned directly, or stored in returned CBit registers. No later operation
+/// can use a measured wire.
 /// Called functions cannot measure or reset qubits.
 ///
 /// @param argumentBindings Scalar values and dynamic QTensor argument sizes.
@@ -122,11 +123,12 @@ FailureOr<dd::VectorDD> simulateStatevector(
 
 /// Sample a single-block QCO function from the zero state.
 ///
-/// Returned CBit registers use conventional count-string order: the last
-/// returned register comes first, and each register is MSB-first. Without CBit
-/// results, the function samples all DD wires. Terminal measurements use one
-/// simulation for all shots. Adaptive programs share shot prefixes when their
-/// measurements and resets are in the top-level stream or counted loops.
+/// Returned CBit registers and Boolean values use conventional count-string
+/// order: the last result comes first, and each register is MSB-first. Other
+/// classical output types are rejected. Without classical results, the function
+/// samples all DD wires. Terminal measurements use
+/// one simulation for all shots. Adaptive programs share shot prefixes when
+/// their measurements and resets are in the top-level stream or counted loops.
 /// Other adaptive programs run once per shot across independent workers.
 ///
 /// The containing module must pass MLIR verification and

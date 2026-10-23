@@ -292,6 +292,18 @@ struct ClassicalEnv {
     return values.lookup(value);
   }
 
+  [[nodiscard]] RegisterBit lookupBit(Value value) const {
+    assert(value.getType().isInteger(1));
+    if (const auto wire = deferredMeasurements.find(value);
+        wire != deferredMeasurements.end()) {
+      return {.deferredWire = wire->second};
+    }
+    if (const auto bit = dyn_cast_if_present<IntegerAttr>(lookup(value))) {
+      return {.value = !bit.getValue().isZero()};
+    }
+    return {};
+  }
+
   LogicalResult bindFrom(Value source, Value dest, Operation* op) {
     auto value = lookup(source);
     if (!value) {
@@ -740,20 +752,12 @@ static LogicalResult storeRegister(cbit::StoreOp store,
   if (failed(index)) {
     return failure();
   }
-  auto& cell = (*regIt->second)[*index];
-  if (const auto deferred =
-          classical.deferredMeasurements.find(store.getValue());
-      deferred != classical.deferredMeasurements.end()) {
-    cell.value.reset();
-    cell.deferredWire = deferred->second;
-    return success();
+  const auto bit = classical.lookupBit(store.getValue());
+  if (!bit.value && !bit.deferredWire) {
+    return store.emitError()
+           << "classical SSA value is not mapped for QCO DD simulation";
   }
-  auto value = lookupBool(store.getValue(), classical, store);
-  if (failed(value)) {
-    return failure();
-  }
-  cell.value.emplace(*value);
-  cell.deferredWire.reset();
+  (*regIt->second)[*index] = bit;
   return success();
 }
 
@@ -2395,18 +2399,16 @@ getSamplingPlan(func::FuncOp func, bool statevectorAnalysis = false) {
            << "single-block QCO DD execution requires func.return";
   }
 
-  bool hasOther = false;
   for (Value value : returnOp.getOperands()) {
-    if (isa<cbit::RegisterType>(value.getType())) {
+    if (isa<cbit::RegisterType>(value.getType()) ||
+        value.getType().isInteger(1)) {
       plan.outputs.push_back(value);
-    } else {
-      hasOther = true;
+    } else if (!statevectorAnalysis && !isa<QubitType>(value.getType()) &&
+               !isQTensorType(value.getType())) {
+      return returnOp.emitError()
+             << "QCO DD sampling supports only CBit registers and Boolean "
+                "classical outputs";
     }
-  }
-  if (!statevectorAnalysis && !plan.outputs.empty() && hasOther) {
-    return returnOp.emitError()
-           << "QCO DD sampling does not support mixed CBit and non-CBit "
-              "results";
   }
 
   analyzeSampling(func, plan);
@@ -2428,7 +2430,8 @@ simulateStatevector(func::FuncOp func, dd::Package& dd,
   if (plan->dynamic) {
     return func.emitError()
            << "statevector extraction supports only terminal measurements "
-              "that assemble returned CBit registers";
+              "whose results are unused, returned directly, or stored in "
+              "returned CBit registers";
   }
   DenseSet<dd::Qubit> measuredWires;
   Operation* deferredMeasurementUse = nullptr;
@@ -2452,19 +2455,32 @@ static FailureOr<std::string> encodeOutcome(ArrayRef<Value> outputs,
   }
   std::string outcome;
   for (Value value : llvm::reverse(outputs)) {
-    const auto reg = classical.registers.find(value);
-    if (reg == classical.registers.end()) {
-      return emitError(value.getLoc())
-             << "returned CBit register is not mapped for QCO DD simulation";
+    const bool isScalar = value.getType().isInteger(1);
+    ClassicalEnv::RegisterBit scalar;
+    ArrayRef<ClassicalEnv::RegisterBit> bits;
+    if (isScalar) {
+      scalar = classical.lookupBit(value);
+      bits = scalar;
+    } else {
+      const auto reg = classical.registers.find(value);
+      if (reg == classical.registers.end()) {
+        return emitError(value.getLoc())
+               << "returned CBit register is not mapped for QCO DD simulation";
+      }
+      bits = *reg->second;
     }
-    for (size_t i = reg->second->size(); i > 0; --i) {
+    for (size_t i = bits.size(); i > 0; --i) {
       const size_t index = i - 1;
-      const auto& cell = (*reg->second)[index];
+      const auto& cell = bits[index];
       if (cell.value) {
         outcome.push_back(*cell.value ? '1' : '0');
       } else if (cell.deferredWire && *cell.deferredWire < basis.size()) {
         outcome.push_back(basis[basis.size() - 1 - *cell.deferredWire]);
       } else {
+        if (isScalar) {
+          return emitError(value.getLoc()) << "returned Boolean value is not "
+                                              "mapped for QCO DD simulation";
+        }
         return emitError(value.getLoc())
                << "returned CBit register element " << index << " is undefined";
       }

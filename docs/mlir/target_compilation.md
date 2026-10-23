@@ -612,9 +612,10 @@ compilation with explicit restrictions.
 
 QIR submission requires a parameterless entry point. QC-to-QIR conversion
 records direct measurements and CBit-register results, then emits runtime status
-0 for successful execution. All explicit QC and QCO returns are program data;
-scalar entry results, including a constant-zero `i64`, are unsupported with or
-without a target. Keep classical temporaries local, or select OpenQASM 3 for
+0 for successful execution. Adaptive Profile also records computed Boolean
+(`i1`) results. All explicit QC and QCO returns are program data; other scalar
+entry results, including a constant-zero `i64`, are unsupported with or without
+a target. Keep other classical temporaries local, or select OpenQASM 3 for wider
 scalar outputs. In OpenQASM 3, declare `output bit` registers explicitly when
 global scalar variables are only temporaries. See the
 {doc}`QIR execution contracts <../qir/index>`.

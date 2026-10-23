@@ -348,15 +348,12 @@ struct ExportState {
     size_t registerIndex;
     uint32_t base;
     uint32_t size;
-    mlir::cbit::Initialization initialization;
   };
 
   llvm::DenseMap<mlir::Value, uint32_t> qubits;
   llvm::DenseMap<mlir::Value, uint32_t> quantumBases;
   llvm::DenseMap<mlir::Value, uint32_t> quantumSizes;
   llvm::DenseMap<mlir::Value, ClassicalRegisterInfo> classicalRegisterInfo;
-  using InitializedBits = llvm::DenseMap<mlir::Value, llvm::DenseSet<uint32_t>>;
-  InitializedBits unconditionalWrites;
   llvm::DenseSet<mlir::Operation*> expressionOperations;
   llvm::DenseMap<mlir::Value, size_t> expressionDepths;
   std::vector<Register> quantumRegisters;
@@ -1044,7 +1041,6 @@ static void collectResources(mlir::func::FuncOp function, ExportState& state,
         .registerIndex = state.classicalRegisters.size(),
         .base = state.numClbits,
         .size = size,
-        .initialization = alloc.getInitialization(),
     };
     auto sourceName = alloc->getAttrOfType<mlir::StringAttr>(
         mlir::mqt::MQTDialect::RegisterNameAttrHelper::getNameStr());
@@ -1092,10 +1088,6 @@ static void setExpressionType(Expression& expression, const mlir::Type type) {
     return;
   }
   if (const auto integer = llvm::dyn_cast<mlir::IntegerType>(type)) {
-    if (integer.getWidth() == 0U || integer.getWidth() > 64U) {
-      throw std::runtime_error(
-          "Qiskit unsigned classical values must be between 1 and 64 bits");
-    }
     expression.type = ClassicalType::Uint;
     expression.width = integer.getWidth();
     return;
@@ -1126,44 +1118,16 @@ static void setExpressionType(Expression& expression, const mlir::Type type) {
     throw std::runtime_error(
         "Qiskit classical expression uses an out-of-bounds classical bit");
   }
-  if (info->second.initialization != mlir::cbit::Initialization::Zero) {
-    const auto written = state.unconditionalWrites.find(load.getReg());
-    if (written == state.unconditionalWrites.end() ||
-        !written->second.contains(checked)) {
-      throw std::runtime_error(
-          "Qiskit classical expression loads an undefined classical bit "
-          "before an unconditional write");
-    }
-  }
   return checkedAdd(info->second.base, checked, "classical-bit");
 }
 
 [[nodiscard]] static const Register&
-classicalRegisterLayout(mlir::Value value, const ExportState& state,
-                        const bool allowWide = false) {
+classicalRegister(mlir::Value value, const ExportState& state) {
   const auto info = state.classicalRegisterInfo.find(value);
-  if (info == state.classicalRegisterInfo.end() || info->second.size == 0U ||
-      (!allowWide && info->second.size > 64U)) {
-    throw std::runtime_error(
-        "Qiskit classical registers require between 1 and 64 bits");
+  if (info == state.classicalRegisterInfo.end() || info->second.size == 0U) {
+    throw std::runtime_error("Qiskit classical register could not be resolved");
   }
   return state.classicalRegisters[info->second.registerIndex];
-}
-
-[[nodiscard]] static const Register&
-classicalRegister(mlir::Value value, const ExportState& state,
-                  const bool allowWide = false) {
-  const auto info = state.classicalRegisterInfo.find(value);
-  if (info != state.classicalRegisterInfo.end() &&
-      info->second.initialization != mlir::cbit::Initialization::Zero) {
-    const auto written = state.unconditionalWrites.find(value);
-    if (written == state.unconditionalWrites.end() ||
-        written->second.size() != info->second.size) {
-      throw std::runtime_error(
-          "Qiskit classical expression reads undefined classical bits");
-    }
-  }
-  return classicalRegisterLayout(value, state, allowWide);
 }
 
 [[nodiscard]] static BinaryOperation
@@ -1383,12 +1347,12 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
     return std::move(result);
   };
 
-  const auto uintLiteral = [&](unsigned width, uint64_t bits) {
+  const auto uintLiteral = [&](const llvm::APInt& bits) {
     countExpressionNode(nodeCount);
     auto literal = std::make_unique<Expression>();
     literal->type = ClassicalType::Uint;
-    literal->width = width;
-    literal->uintValue = llvm::APInt(width, bits);
+    literal->width = bits.getBitWidth();
+    literal->uintValue = bits;
     return literal;
   };
   const auto uintCast = [&](std::unique_ptr<Expression> operand,
@@ -1435,12 +1399,12 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
         uintCast(exportExpressionImpl(cast.getIn(), state, evaluationBlock,
                                       depth + 1U, nodeCount),
                  width);
-    const auto sign = uint64_t{1} << (sourceWidth - 1U);
+    const auto sign = llvm::APInt::getOneBitSet(width, sourceWidth - 1U);
     state.expressionOperations.insert(operation);
     return uintBinary(BinaryOperation::Subtract, width,
                       uintBinary(BinaryOperation::BitXor, width,
-                                 std::move(operand), uintLiteral(width, sign)),
-                      uintLiteral(width, sign));
+                                 std::move(operand), uintLiteral(sign)),
+                      uintLiteral(sign));
   }
   if (auto select = llvm::dyn_cast<mlir::arith::SelectOp>(operation)) {
     if (!llvm::isa<mlir::IntegerType>(value.getType())) {
@@ -1452,9 +1416,9 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
                                            depth + 1U, nodeCount),
                       width);
     };
-    auto mask =
-        uintBinary(BinaryOperation::Subtract, width, uintLiteral(width, 0),
-                   operand(select.getCondition()));
+    auto mask = uintBinary(BinaryOperation::Subtract, width,
+                           uintLiteral(llvm::APInt::getZero(width)),
+                           operand(select.getCondition()));
     auto difference = uintBinary(BinaryOperation::BitXor, width,
                                  operand(select.getTrueValue()),
                                  operand(select.getFalseValue()));
@@ -1519,50 +1483,6 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
           "Qiskit integer comparisons require integer operands");
     }
     const auto width = type.getWidth();
-    if (width > 64U) {
-      auto read = op.getLhs().getDefiningOp<mlir::cbit::ReadOp>();
-      auto constant = op.getRhs().getDefiningOp<mlir::arith::ConstantOp>();
-      bool reverse = false;
-      if (!read || !constant ||
-          !llvm::isa<mlir::IntegerAttr>(constant.getValue())) {
-        read = op.getRhs().getDefiningOp<mlir::cbit::ReadOp>();
-        constant = op.getLhs().getDefiningOp<mlir::arith::ConstantOp>();
-        reverse = true;
-      }
-      const auto integer =
-          constant ? llvm::dyn_cast<mlir::IntegerAttr>(constant.getValue())
-                   : mlir::IntegerAttr{};
-      if (read && integer) {
-        if (mlir::mqt::unsignedPredicate(op.getPredicate()) !=
-            op.getPredicate()) {
-          throw std::runtime_error(
-              "Qiskit signed register comparisons support at most 64 bits");
-        }
-        if (read->getBlock() != &evaluationBlock) {
-          throw std::runtime_error(
-              "Qiskit classical expressions cannot capture a computed SSA "
-              "value across a control-flow region");
-        }
-        countExpressionNode(nodeCount);
-        auto reg = std::make_unique<Expression>();
-        reg->kind = ExpressionKind::ClassicalRegister;
-        reg->type = ClassicalType::Uint;
-        reg->width = width;
-        reg->reg = classicalRegister(read.getReg(), state, true);
-        countExpressionNode(nodeCount);
-        auto expected = std::make_unique<Expression>();
-        expected->type = ClassicalType::Uint;
-        expected->width = width;
-        expected->uintValue = integer.getValue();
-        result->kind = ExpressionKind::Binary;
-        result->binaryOperation = comparisonOperation(op.getPredicate());
-        result->left = reverse ? std::move(expected) : std::move(reg);
-        result->right = reverse ? std::move(reg) : std::move(expected);
-        state.expressionOperations.insert(read);
-        state.expressionOperations.insert(operation);
-        return result;
-      }
-    }
     auto comparison = binary(
         comparisonOperation(mlir::mqt::unsignedPredicate(op.getPredicate())),
         op.getLhs(), op.getRhs(), width);
@@ -1570,7 +1490,7 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
       for (auto* operand : {&comparison->left, &comparison->right}) {
         *operand =
             uintBinary(BinaryOperation::BitXor, width, std::move(*operand),
-                       uintLiteral(width, uint64_t{1} << (width - 1U)));
+                       uintLiteral(llvm::APInt::getSignMask(width)));
       }
     }
     return comparison;
@@ -1637,14 +1557,14 @@ exportExpressionImpl(mlir::Value value, ExportState& state,
                                            depth + 1U, nodeCount),
                       width);
     };
-    const auto sign = uint64_t{1} << (width - 1U);
+    const auto sign = llvm::APInt::getSignMask(width);
     auto shifted =
         uintBinary(BinaryOperation::ShiftRight, width,
                    uintBinary(BinaryOperation::BitXor, width,
-                              operand(op.getLhs()), uintLiteral(width, sign)),
+                              operand(op.getLhs()), uintLiteral(sign)),
                    operand(op.getRhs()));
     auto bias = uintBinary(BinaryOperation::ShiftRight, width,
-                           uintLiteral(width, sign), operand(op.getRhs()));
+                           uintLiteral(sign), operand(op.getRhs()));
     auto difference = uintBinary(BinaryOperation::Subtract, width,
                                  std::move(shifted), std::move(bias));
     state.expressionOperations.insert(operation);
@@ -1931,11 +1851,19 @@ exportStoreTarget(mlir::cbit::StoreOp store, ExportState& state,
   target->left->kind = ExpressionKind::ClassicalRegister;
   target->left->type = ClassicalType::Uint;
   target->left->width = info->second.size;
-  target->left->reg = classicalRegisterLayout(store.getReg(), state);
+  target->left->reg = classicalRegister(store.getReg(), state);
   target->right =
       castBoolToUintOne(exportExpression(cast.getIn(), state, evaluationBlock));
   if (target->right->type != ClassicalType::Uint) {
     throw std::runtime_error("Qiskit dynamic Store index must be Uint");
+  }
+  if (target->right->width > 64U) {
+    auto narrowed = std::make_unique<Expression>();
+    narrowed->kind = ExpressionKind::Cast;
+    narrowed->type = ClassicalType::Uint;
+    narrowed->width = 64U;
+    narrowed->left = std::move(target->right);
+    target->right = std::move(narrowed);
   }
   return {
       .kind = ClassicalTargetKind::Expression,
@@ -1987,6 +1915,9 @@ exportSwitchTarget(mlir::Value value, ExportState& state,
     throw std::runtime_error("Qiskit switch targets must be Boolean or Uint");
   }
   target.width = target.expression->width;
+  if (target.width > 64U) {
+    throw std::runtime_error("Qiskit switch targets support at most 64 bits");
+  }
   return target;
 }
 
@@ -2239,16 +2170,6 @@ collectResultBlock(mlir::Block& block, mlir::ValueRange results,
                       isConditionOperation);
 }
 
-static void intersectWrites(ExportState::InitializedBits& writes,
-                            const ExportState::InitializedBits& other) {
-  for (auto& [reg, bits] : writes) {
-    const auto found = other.find(reg);
-    bits.remove_if([&](uint32_t bit) {
-      return found == other.end() || !found->second.contains(bit);
-    });
-  }
-}
-
 [[nodiscard]] static std::unique_ptr<ExportedControlFlow>
 collectIf(mlir::scf::IfOp ifOp, ExportedCircuit& containing, ExportState& state,
           const size_t controlFlowDepth) {
@@ -2258,17 +2179,14 @@ collectIf(mlir::scf::IfOp ifOp, ExportedCircuit& containing, ExportState& state,
   result->kind = ControlFlowKind::IfElse;
   result->target = exportCondition(ifOp.getCondition(), state,
                                    *ifOp->getBlock(), *ifOp.getOperation());
-  const auto entryWrites = state.unconditionalWrites;
   result->blocks.push_back(collectResultBlock(ifOp.getThenRegion().front(),
                                               ifOp.getResults(), state,
                                               controlFlowDepth + 1U));
-  auto thenWrites = std::exchange(state.unconditionalWrites, entryWrites);
   if (!ifOp.getElseRegion().empty()) {
     result->blocks.push_back(collectResultBlock(ifOp.getElseRegion().front(),
                                                 ifOp.getResults(), state,
                                                 controlFlowDepth + 1U));
   }
-  intersectWrites(state.unconditionalWrites, thenWrites);
   return result;
 }
 
@@ -2328,7 +2246,6 @@ collectFor(mlir::scf::ForOp loop, ExportedCircuit& containing,
       state.parameters[projection->value] = *loopParameter;
     }
   }
-  auto entryWrites = state.unconditionalWrites;
   auto body = collectResultBlock(*loop.getBody(), loop.getResults(), state,
                                  controlFlowDepth + 1U);
   if (projection && loopParameter &&
@@ -2355,9 +2272,6 @@ collectFor(mlir::scf::ForOp loop, ExportedCircuit& containing,
                         result->loop.start, "scf.for induction stop");
     }
   }
-  if (*lower >= *upper) {
-    state.unconditionalWrites = std::move(entryWrites);
-  }
   result->blocks.push_back(std::move(body));
   return result;
 }
@@ -2383,9 +2297,7 @@ collectWhile(mlir::scf::WhileOp loop, ExportedCircuit& containing,
             operation.getName().getStringRef().str());
       }
     }
-    auto entryWrites = state.unconditionalWrites;
     result->blocks.push_back(collectBlock(after, state, controlFlowDepth + 1));
-    state.unconditionalWrites = std::move(entryWrites);
     return result;
   }
   declareLocals(before.getArguments(), containing, state);
@@ -2423,9 +2335,7 @@ collectWhile(mlir::scf::WhileOp loop, ExportedCircuit& containing,
   });
   exit->blocks.push_back(std::move(breakBody));
   validateControlFlowDepth(controlFlowDepth + 1U);
-  auto exitWrites = state.unconditionalWrites;
   auto tail = collectBlock(after, state, controlFlowDepth + 2U);
-  state.unconditionalWrites = std::move(exitWrites);
   assignEdge(before.getArguments(), yield.getResults(), tail, state,
              *yield.getOperation());
   exit->blocks.push_back(std::move(tail));
@@ -2453,16 +2363,6 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
   result->target =
       exportSwitchTarget(switchOp.getArg(), state, *switchOp->getBlock(),
                          *switchOp.getOperation());
-  const auto entryWrites = state.unconditionalWrites;
-  std::optional<ExportState::InitializedBits> mergedWrites;
-  const auto mergeBranch = [&] {
-    if (mergedWrites) {
-      intersectWrites(*mergedWrites, state.unconditionalWrites);
-    } else {
-      mergedWrites = state.unconditionalWrites;
-    }
-    state.unconditionalWrites = entryWrites;
-  };
   const uint32_t targetWidth = result->target.width;
   for (const auto [index, label] : llvm::enumerate(switchOp.getCases())) {
     if (label < 0) {
@@ -2479,14 +2379,11 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
     result->blocks.push_back(collectResultBlock(
         switchOp.getCaseRegions()[index].front(), switchOp.getResults(), state,
         controlFlowDepth + 1U));
-    mergeBranch();
   }
   result->switchCases.push_back({.isDefault = true});
   result->blocks.push_back(
       collectResultBlock(switchOp.getDefaultRegion().front(),
                          switchOp.getResults(), state, controlFlowDepth + 1U));
-  mergeBranch();
-  state.unconditionalWrites = std::move(*mergedWrites);
   return result;
 }
 
@@ -2510,9 +2407,6 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
           (needsScalarSnapshot(operation.getResult(0), state) ||
            expressionDepth >= MAX_EXPORT_EXPRESSION_DEPTH / 2U) &&
           !operation.getResult(0).getType().isIndex() &&
-          !(llvm::isa<mlir::cbit::ReadOp>(operation) &&
-            mlir::cast<mlir::IntegerType>(operation.getResult(0).getType())
-                    .getWidth() > 64U) &&
           !operation.getResult(0).use_empty() &&
           (llvm::isa<mlir::cbit::LoadOp, mlir::cbit::ReadOp>(operation) ||
            operation.getDialect() ==
@@ -2537,7 +2431,6 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
         continue;
       }
       if (auto alloc = llvm::dyn_cast<mlir::cbit::AllocOp>(operation)) {
-        state.unconditionalWrites.erase(alloc.getResult());
         if (!topLevel && !alloc.getResult().use_empty() &&
             alloc.getInitialization() == mlir::cbit::Initialization::Zero) {
           const auto& info = state.classicalRegisterInfo.at(alloc.getResult());
@@ -2596,11 +2489,6 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
         validateClassicalSnapshot(store.getValue(), operation, state);
         auto target = exportStoreTarget(store, state, block);
         auto value = exportExpression(store.getValue(), state, block);
-        if (target.kind == ClassicalTargetKind::ClassicalBit) {
-          const auto info = state.classicalRegisterInfo.find(store.getReg());
-          state.unconditionalWrites[store.getReg()].insert(target.bit -
-                                                           info->second.base);
-        }
         circuit.instructions.push_back({
             .kind = ExportedInstruction::Kind::Store,
             .target = std::move(target),
@@ -2619,16 +2507,12 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
         if (info->second.size == 1U) {
           value = castBoolToUintOne(std::move(value));
         }
-        auto& written = state.unconditionalWrites[write.getReg()];
-        for (uint32_t index = 0U; index < info->second.size; ++index) {
-          written.insert(index);
-        }
         circuit.instructions.push_back({
             .kind = ExportedInstruction::Kind::Store,
             .target =
                 {
                     .kind = ClassicalTargetKind::ClassicalRegister,
-                    .reg = classicalRegisterLayout(write.getReg(), state),
+                    .reg = classicalRegister(write.getReg(), state),
                     .width = info->second.size,
                 },
             .value = std::move(value),
@@ -2659,7 +2543,6 @@ collectSwitch(mlir::scf::IndexSwitchOp switchOp, ExportedCircuit& containing,
           throw std::runtime_error(
               "QC measurement uses an out-of-bounds classical destination");
         }
-        state.unconditionalWrites[destination.getReg()].insert(checked);
         const auto destinationBit =
             checkedAdd(info->second.base, checked, "classical-bit");
         circuit.instructions.push_back({
@@ -3011,18 +2894,6 @@ exportCircuitImpl(mlir::QCProgram program,
   collectResources(function, state, target);
   indexWrites(function.getBody().front(), state.writes);
   auto circuit = collectBlock(function.getBody().front(), state, 0U);
-  for (const auto& [reg, info] : state.classicalRegisterInfo) {
-    if (info.initialization == mlir::cbit::Initialization::Zero ||
-        reg.getDefiningOp()->getBlock() != &function.getBody().front()) {
-      continue;
-    }
-    const auto written = state.unconditionalWrites.find(reg);
-    if (written == state.unconditionalWrites.end() ||
-        written->second.size() != info.size) {
-      throw std::runtime_error(
-          "QC to Qiskit export cannot return undefined classical bits");
-    }
-  }
   llvm::StringSet<> usedNames;
   validateExportParameters(circuit, usedNames);
   if (target != nullptr) {

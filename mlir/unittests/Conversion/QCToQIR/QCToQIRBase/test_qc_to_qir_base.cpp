@@ -653,16 +653,22 @@ TEST_F(QCToQIRBaseNativeTest, RejectsNonMeasurementClassicalStore) {
                                    "stores to returned CBit registers");
 }
 
-TEST_F(QCToQIRBaseNativeTest, AcceptsZeroInitializedClassicalRegister) {
-  qc::QCProgramBuilder builder(&context);
-  builder.initialize();
-  auto c = builder.allocClassicalBitRegister(1);
-
-  auto module = builder.finalize(c);
-  ASSERT_TRUE(module);
-
-  EXPECT_TRUE(succeeded(runQCToQIRBaseConversion(*module)));
-  EXPECT_TRUE(succeeded(verify(*module)));
+TEST_F(QCToQIRBaseNativeTest, RejectsUnmeasuredOutputBits) {
+  for (auto initialization :
+       {cbit::Initialization::Zero, cbit::Initialization::Undefined}) {
+    for (bool partiallyMeasured : {false, true}) {
+      qc::QCProgramBuilder builder(&context);
+      builder.initialize();
+      auto c = builder.allocClassicalBitRegister(2, {}, initialization);
+      if (partiallyMeasured) {
+        builder.measure(builder.allocQubit(), c, 1);
+      }
+      auto moduleOp = builder.finalize(c);
+      ASSERT_TRUE(moduleOp);
+      expectConversionFailure(*moduleOp,
+                              "requires every output bit to be measured");
+    }
+  }
 }
 
 TEST_F(QCToQIRBaseNativeTest, RejectsNonMeasurementStoreAfterMeasurement) {
@@ -1243,11 +1249,7 @@ INSTANTIATE_TEST_SUITE_P(
         QCToQIRBaseTestCase{
             "MeasurementWithoutRegisters",
             MQT_NAMED_BUILDER(qc::measurementWithoutRegisters),
-            MQT_NAMED_BUILDER(qir::measurementWithoutRegisters)},
-        QCToQIRBaseTestCase{
-            "PartialMeasurementToRegister",
-            MQT_NAMED_BUILDER(qc::partialMeasurementToRegister),
-            MQT_NAMED_BUILDER(qir::partialMeasurementToRegister)}));
+            MQT_NAMED_BUILDER(qir::measurementWithoutRegisters)}));
 /// @}
 
 /// \name QCToQIRBase/QubitManagement/QubitManagement.cpp

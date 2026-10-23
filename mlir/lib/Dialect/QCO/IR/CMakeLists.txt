@@ -28,6 +28,7 @@ add_mlir_dialect_library(
   PUBLIC
   MLIRMQTUtils
   MLIRQCOMatrix
+  MLIRMemorySlotInterfaces
   PRIVATE
   MLIRCBitDialect
   MLIRFuncDialect

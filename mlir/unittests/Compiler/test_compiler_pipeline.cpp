@@ -1734,7 +1734,8 @@ TEST_F(CompilerPipelineTest, ArrayRangesCheckMemrefBoundsAndShapesInDD) {
   for (const auto& [body, message] : cases) {
     SCOPED_TRACE(body.str());
     auto qc = QCProgram::fromOpenQASMString(
-        "OPENQASM 3.0; array[int, 4] a = {0, 1, 2, 3}; array[int, 2] b; " +
+        "OPENQASM 3.0; output bit result; result = 0; "
+        "array[int, 4] a = {0, 1, 2, 3}; array[int, 2] b; " +
         body.str());
     ASSERT_TRUE(mlir::succeeded(qc));
     auto qco = std::move(*qc).intoQCO();
@@ -3982,8 +3983,7 @@ TEST_F(CompilerPipelineTest, IndexedPlacementPreservesSparseSitesAndLoopBody) {
       qco::sample(mlir::mqt::getEntryPoint(qasmProgram.module()), 1, 42);
   ASSERT_TRUE(succeeded(outcomes));
   ASSERT_EQ(outcomes->size(), 1);
-  // Without a CBit output register, sampling reports the physical wire state.
-  EXPECT_EQ(outcomes->begin()->first, "10000000");
+  EXPECT_EQ(outcomes->begin()->first, "1");
   auto qasmQC = std::move(qasmProgram).intoQC();
   ASSERT_TRUE(mlir::succeeded(qasmQC));
   auto qasm = qasmQC->toOpenQASM3();

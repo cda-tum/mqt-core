@@ -851,8 +851,9 @@ class QCProgram(Program):
     def to_qir(self, profile: QIRProfile, *, copy: bool = False) -> QIRProgram:
         """Lower this program to QIR for the requested profile.
 
-        Entry results must be direct measurements or CBit registers. Other scalar
-        outputs are unsupported. The generated QIR returns a zero execution status.
+        Entry results may be direct measurements or CBit registers. Adaptive Profile
+        also supports computed Boolean (``i1``) results. Other scalar outputs are
+        unsupported. The generated QIR returns a zero execution status.
         Base conversion unrolls static counted loops; Adaptive conversion retains them.
         Set ``copy=True`` to preserve it.
         """
@@ -1141,8 +1142,9 @@ class QCOProgram(Program):
 
         Returns:
             Histogram keys use conventional count-string order. The last returned
-            register comes first, and each register is MSB-first. If no CBit result
-            exists, final ``measureAll`` bitstrings are used instead.
+            CBit register or Boolean value comes first, and each register is MSB-first.
+            Other classical output types are rejected. Without classical results,
+            final ``measureAll`` bitstrings are used instead.
 
         Raises:
             ValueError: When the program is unsupported for sampling.
@@ -1270,10 +1272,11 @@ def simulate(
 ) -> Annotated[np.typing.NDArray[np.complex128], {"shape": (None,)}]:
     """Simulate a closed compiler input from the all-zero state.
 
-    The DD package is managed internally. Terminal measurements that only assemble
-    returned classical registers do not collapse the state. Mid-circuit measurement
-    feedback and resets are unsupported; use {py:meth}`QCOProgram.simulate` with an
-    explicit DD package for those workflows or for a custom initial state.
+    The DD package is managed internally. Terminal measurements returned directly
+    or stored in returned classical registers do not collapse the state.
+    Mid-circuit measurement feedback and resets are unsupported; use
+    :py:meth:`QCOProgram.simulate` with an explicit DD package for those workflows
+    or for a custom initial state.
 
     Args:
         program: Compiler input to lower directly to QCO.
