@@ -39,6 +39,7 @@
 #include <cstdint>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <utility>
 
 namespace mlir {
@@ -200,14 +201,16 @@ private:
 
 void populateTargetCompilationPipeline(OpPassManager& pm,
                                        const TargetEnvironment& environment,
-                                       const MappingOptions& mapping) {
+                                       const MappingOptions& mapping,
+                                       std::optional<uint64_t> ancillaBudget) {
   pm.addPass(std::make_unique<PrepareTargetCompilationPass>(environment, false,
                                                             mapping));
   const auto& target = environment.target();
   // The module cleanup below owns canonicalization and dead symbols.
   pm.addPass(createInlinerPass({}, [](OpPassManager&) {}));
   // Fold tensor accesses before SCCP; defer liveness until after placement.
-  populateQCOCleanupPipeline(pm, /*removeDeadValues=*/false);
+  populateQCOCleanupPipeline(pm, /*removeDeadValues=*/false,
+                             /*shrinkQTensor=*/ancillaBudget == 0);
   pm.addPass(qco::createCombineControlledGates(target));
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createSCCPPass());
@@ -219,10 +222,17 @@ void populateTargetCompilationPipeline(OpPassManager& pm,
       GreedyRewriteConfig{}.setUseTopDownTraversal().setMaxIterations(
           GreedyRewriteConfig::kNoLimit)));
   pm.addPass(createCSEPass());
-  pm.addPass(qtensor::createShrinkQTensorToFitPass());
+  // Preserve unused, initialized slots as potential decomposition helpers.
+  if (ancillaBudget == 0) {
+    pm.addPass(qtensor::createShrinkQTensorToFitPass());
+  }
   pm.addPass(createSymbolDCEPass());
   pm.addPass(qco::createLegalizeControlFlow());
-  pm.addPass(qco::createDecomposeMultiControlled(target));
+  pm.addPass(qco::createDecomposeMultiControlled(target, 3, ancillaBudget));
+  if (ancillaBudget != 0) {
+    // Only helpers actually used by decomposition need physical capacity.
+    pm.addPass(qtensor::createShrinkQTensorToFitPass());
+  }
   pm.addPass(qco::createElideTerminalSwapsPass());
   pm.addPass(qco::createFuseTwoQubitGates(target));
   // U fusion shrinks runs before routing. Other bases can expand symbolic
@@ -254,18 +264,23 @@ void populateTargetCompilationPipeline(OpPassManager& pm,
 
 void populateTargetSynthesisPipeline(OpPassManager& pm,
                                      const TargetEnvironment& environment,
-                                     const MappingOptions& mapping) {
+                                     const MappingOptions& mapping,
+                                     std::optional<uint64_t> ancillaBudget) {
   pm.addPass(std::make_unique<PrepareTargetCompilationPass>(environment, true,
                                                             mapping));
   const auto& target = environment.target();
   // The module cleanup below owns canonicalization and dead symbols.
   pm.addPass(createInlinerPass({}, [](OpPassManager&) {}));
   // Placement changes region results; run liveness once afterwards.
-  populateQCOCleanupPipeline(pm, /*removeDeadValues=*/false);
+  populateQCOCleanupPipeline(pm, /*removeDeadValues=*/false,
+                             /*shrinkQTensor=*/ancillaBudget == 0);
   pm.addPass(qco::createCombineControlledGates(target));
   pm.addPass(createCanonicalizerPass());
   pm.addPass(qco::createLegalizeControlFlow());
-  pm.addPass(qco::createDecomposeMultiControlled(target));
+  pm.addPass(qco::createDecomposeMultiControlled(target, 3, ancillaBudget));
+  if (ancillaBudget != 0) {
+    pm.addPass(qtensor::createShrinkQTensorToFitPass());
+  }
   pm.addPass(qco::createElideTerminalSwapsPass());
   pm.addPass(qco::createFuseTwoQubitGates(target));
   if (const auto basis = target.synthesisBasis();
