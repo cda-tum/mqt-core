@@ -98,7 +98,12 @@ ordinary QNode batch are prepared before any jobs are submitted.
 The compiler selects an advertised format in this order: Adaptive QIR
 binary/text, OpenQASM 3, then Base QIR binary/text. Results follow PennyLane's
 wire order regardless of physical placement. If the provider returns only
-counts, samples are reconstructed without temporal shot order.
+counts, samples are reconstructed without temporal shot order. Terminal
+measurements of a compiled circuit share one provider readout.
+
+Catalyst compiles the host control flow ahead of time. MQT Core records and
+compiles the quantum program at execution time using the current parameter
+values. Include this device compilation cost when measuring repeated calls.
 
 To inspect or transform a circuit without opening a device session, import a
 preprocessed tape with {py:meth}`~mqt.core.mlir.QCProgram.from_pennylane`:

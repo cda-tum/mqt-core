@@ -133,7 +133,9 @@ static Readout readout(const qdmi::Job& job, size_t width, size_t shots,
   Readout result;
   std::string shotsError;
   try {
-    for (auto& bits : job.getShots(programIndex)) {
+    auto samples = job.getShots(programIndex);
+    result.reserve(samples.size());
+    for (auto& bits : samples) {
       result.emplace_back(std::move(bits), 1);
     }
   } catch (const std::exception& error) {
@@ -156,8 +158,7 @@ static Readout readout(const qdmi::Job& job, size_t width, size_t shots,
     std::erase(bits, ' ');
     require(bits.size() == width &&
                 bits.find_first_not_of("01") == std::string::npos,
-            "QDMI returned a malformed " + std::to_string(width) +
-                "-bit sample.");
+            "QDMI returned a malformed " + llvm::Twine(width) + "-bit sample.");
     require(count <= shots - total,
             "QDMI returned more samples than requested.");
     total += count;
