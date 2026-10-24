@@ -18,10 +18,12 @@ every use of an entry-block allocation and emits a declaration initializer,
 which preserves definite initialization on reimport.
 
 Equal literals share immutable data. The jeff importer rematerializes numeric
-literal operations when mutating control flow needs independent storage; live
-computed arrays retain their existing restriction. Export removes unused zero
-placeholders only when static shape and constant length match. The pinned jeff
-dependency lacks the effects interfaces needed for generic dead-code removal.
+literals and zero arrays when updates or mutating control flow need independent
+storage; live computed arrays retain their existing restriction. Export uses
+jeff's array constant type conversion to flatten and widen whole-array
+initializers directly, without an intermediate dense attribute. MLIR region
+dead-code elimination removes unused zero placeholders using jeff's
+memory-effect interfaces.
 
 Existing MLIR facilities suffice; no custom initialization operation, pooling
 pass, general constant evaluator, or broader ownership analysis is needed.
@@ -47,12 +49,15 @@ repository.
 Follow-up measurements against `d88f5b5820` confirm one fewer 128 KiB buffer
 allocation in the 16,384-element DD probe. Peak live heap remains 16.53 MB.
 Fifteen alternating pairs on one core across nine public routes give median
-CPU-time ratios of 0.994–1.011; no runtime speedup is established. The existing
-jeff normalization and placeholder cleanup remain necessary for the pinned
-dependency's rank, integer-width, and memory-effect contracts.
+CPU-time ratios of 0.994–1.011; no runtime speedup is established. The jeff pin
+includes upstream PRs #96 and #97, replacing the local normalization rewrite and
+zero-placeholder deletion loop.
 
-Local validation on main `0e0826b1bf` passes: 4,081 tests with
-`ctest --preset release`, 2,038 Python tests with `-m 'not slurm'`, whole-file
-C++ lint, and repository lint. Existing user documentation describes the
-unchanged behavior and limits. Hosted CI and cross-platform validation remain
-separate from these local checks.
+Local validation on main `eb8f7db150` with jeff `ab4d73a590` passes: 4,082
+native tests, 333 Python MLIR tests, and 14 existing OpenQASM programs through
+cleanup, serialized jeff round-trip, and sampling. Five existing round-trip
+tests caught redundant copies after CSE merged zero arrays; rematerialization
+fixes them. The negative control-flow test uses a computed array to retain its
+ownership contract. Full-file C++ lint and repository lint pass; the nox C++
+wrapper's local reporting error is bypassed by running the same cpp-linter
+command directly. Hosted CI and cross-platform validation remain separate.

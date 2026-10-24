@@ -262,6 +262,21 @@ static bool needsArrayCopy(Value value, Operation* update) {
   });
 }
 
+/// Recreate an immutable initializer instead of copying its mutable storage.
+static bool rematerializeArrayLiteral(OpOperand& operand) {
+  auto* literal = operand.get().getDefiningOp();
+  if (!isa_and_nonnull<jeff::IntArrayZeroOp, jeff::FloatArrayZeroOp,
+                       jeff::IntArrayConst8Op, jeff::IntArrayConst16Op,
+                       jeff::IntArrayConst32Op, jeff::IntArrayConst64Op,
+                       jeff::FloatArrayConst32Op, jeff::FloatArrayConst64Op>(
+          literal)) {
+    return false;
+  }
+  OpBuilder builder(literal);
+  operand.set(builder.clone(*literal)->getResult(0));
+  return true;
+}
+
 /// Moves a region from a jeff operation to a QCO/SCF operation
 template <typename YieldOpType>
 static void moveRegion(Region& source, Region& dest,
@@ -1385,6 +1400,9 @@ protected:
           getClassicalStorageType(operation->getOperand(0).getType(),
                                   &typeConverter) &&
           needsArrayCopy(operation->getOperand(0), operation)) {
+        if (rematerializeArrayLiteral(operation->getOpOperand(0))) {
+          return WalkResult::advance();
+        }
         if (operation->getParentOfType<jeff::SwitchOp>() ||
             operation->getParentOfType<jeff::WhileOp>() ||
             (operation->getParentOfType<jeff::ForOp>() &&
@@ -1413,18 +1431,9 @@ protected:
                   update->getOperand(0).getType(), &typeConverter));
         });
         if (updatesArray) {
-          OpBuilder builder(operation);
           for (auto& operand : operation->getOpOperands()) {
-            auto value = operand.get();
-            auto* literal = value.getDefiningOp();
-            if (isa_and_nonnull<
-                    jeff::IntArrayConst8Op, jeff::IntArrayConst16Op,
-                    jeff::IntArrayConst32Op, jeff::IntArrayConst64Op,
-                    jeff::FloatArrayConst32Op, jeff::FloatArrayConst64Op>(
-                    literal) &&
-                needsArrayCopy(value, operation)) {
-              // Shared literals can initialize independent mutable storage.
-              operand.set(builder.clone(*literal)->getResult(0));
+            if (needsArrayCopy(operand.get(), operation)) {
+              static_cast<void>(rematerializeArrayLiteral(operand));
             }
           }
           if (llvm::any_of(operation->getOperands(), [&](Value value) {

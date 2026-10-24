@@ -564,41 +564,6 @@ static void getAboveValues(Region& region, SetVector<Value>& values) {
 
 namespace {
 
-/// Flatten initialized tensor data and retain narrow integer bit patterns.
-struct ConvertInitializationConstant final
-    : OpConversionPattern<arith::ConstantOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(arith::ConstantOp op, OpAdaptor,
-                  ConversionPatternRewriter& rewriter) const override {
-    auto elements = dyn_cast<DenseElementsAttr>(op.getValue());
-    if (!elements || op->use_empty() ||
-        !llvm::all_of(op->getUsers(), [](Operation* user) {
-          return isa<bufferization::MaterializeInDestinationOp>(user);
-        })) {
-      return failure();
-    }
-    auto elementType =
-        getTypeConverter()->convertType(elements.getElementType());
-    if (!elementType) {
-      return failure();
-    }
-    auto type = RankedTensorType::get({elements.getNumElements()}, elementType);
-    if (type == op.getType()) {
-      return failure();
-    }
-    if (elementType != elements.getElementType()) {
-      const auto width = cast<IntegerType>(elementType).getWidth();
-      elements = elements.mapValues(elementType, [width](const APInt& value) {
-        return value.zext(width);
-      });
-    }
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, elements.reshape(type));
-    return success();
-  }
-};
-
 /// Replace whole-array initialization with the corresponding immutable value.
 struct ConvertArrayInitialization final
     : StatefulOpConversionPattern<bufferization::MaterializeInDestinationOp> {
@@ -2303,10 +2268,23 @@ protected:
     RewritePatternSet patterns(context);
     QCOToJeffTypeConverter typeConverter(context);
     TypeConverter initializationTypeConverter(typeConverter);
-    initializationTypeConverter.addConversion([&](RankedTensorType type) {
-      return typeConverter.convertType(
-          MemRefType::get(type.getShape(), type.getElementType()));
-    });
+    initializationTypeConverter.addConversion(
+        [&](Value value) -> std::optional<Type> {
+          auto type = dyn_cast<RankedTensorType>(value.getType());
+          if (!type) {
+            return std::nullopt;
+          }
+          // Flatten and widen only whole-array initializers, not tensor
+          // expressions.
+          if (value.use_empty() ||
+              !llvm::all_of(value.getUsers(), [](Operation* user) {
+                return isa<bufferization::MaterializeInDestinationOp>(user);
+              })) {
+            return type;
+          }
+          return typeConverter.convertType(
+              MemRefType::get(type.getShape(), type.getElementType()));
+        });
 
     LoweringState state;
     for (auto function : moduleOp.getOps<func::FuncOp>()) {
@@ -2351,9 +2329,8 @@ protected:
     populateCallOpTypeConversionPattern(patterns, typeConverter);
 
     // Register operation conversion patterns
-    jeff::populateNativeToJeffConversionPatterns(patterns);
-    patterns.add<ConvertInitializationConstant>(typeConverter, context,
-                                                PatternBenefit(2));
+    jeff::populateNativeToJeffConversionPatterns(patterns,
+                                                 &initializationTypeConverter);
     patterns.add<ConvertIntegerExpression, ConvertNegFOp>(typeConverter,
                                                           context);
     patterns.add<ConvertFloatGreaterComparison>(typeConverter, context);
@@ -2454,20 +2431,8 @@ protected:
 
     patchCregYields(moduleOp, state);
 
-    // Initialized storage can leave unused zero placeholders; jeff lacks
-    // memory-effect interfaces for generic DCE of these operations.
-    moduleOp.walk([](Operation* op) {
-      if (!isa<jeff::IntArrayZeroOp, jeff::FloatArrayZeroOp>(op) ||
-          !op->use_empty()) {
-        return;
-      }
-      auto length = op->getOperand(0).getDefiningOp<jeff::IntConst32Op>();
-      auto type = cast<RankedTensorType>(op->getResult(0).getType());
-      if (length && type.hasStaticShape() &&
-          length.getValAttr().getInt() == type.getNumElements()) {
-        op->erase();
-      }
-    });
+    IRRewriter rewriter(context);
+    static_cast<void>(runRegionDCE(rewriter, moduleOp->getRegions()));
 
     if (cleanUp(moduleOp, state).failed()) {
       signalPassFailure();

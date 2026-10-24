@@ -23,7 +23,7 @@ def JeffToQCO : Pass<"jeff-to-qco", "mlir::ModuleOp"> {
     - Only specific `PPROp`s are currently supported
     - The entry function must have a single block ending in `func.return`
     - Mutable classical-register arguments in helper functions are not supported
-    - Live old or duplicate array operands across mutating control-flow regions require numeric literals
+    - Live old or duplicate array operands across mutating control-flow regions require numeric literals or zero arrays
 
     Static classical arrays use internal reference storage. Non-Boolean arrays
     become stack memrefs in programs without non-Boolean array arguments or
