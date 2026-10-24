@@ -12,11 +12,26 @@ releases may include breaking changes.
 
 ### Changed
 
+- ⚡ Prefetch the next reusable DD entry during allocation ([#2826], [#2831])
+  ([**@burgholzer**], [**@denialhaag**])
+- 💥 Propagate DD allocation and table-index errors through exceptions instead
+  of terminating ([#2826], [#2814]) ([**@burgholzer**], [**@denialhaag**])
 - ♻️ Defer selected Python imports until first use on Python 3.15. Older Python
   versions retain eager imports. ([#2760]) ([**@denialhaag**])
 
 ### Fixed
 
+- 🐛 Reject DD extraction widths, dimensions, and output vectors that cannot
+  represent the requested result ([#2826], [#2814]) ([**@burgholzer**],
+  [**@denialhaag**])
+- 🐛 Preserve memory-manager state on failed reset allocation and roll back
+  incomplete unique-table growth ([#2826], [#2814]) ([**@burgholzer**],
+  [**@denialhaag**])
+- 🐛 Avoid counting edges twice in DD active and peak memory estimates ([#2826],
+  [#2814]) ([**@burgholzer**], [**@denialhaag**])
+- 🐛 Render DD SVG paths literally, including spaces and Unicode, and report
+  file and Graphviz failures ([#2826], [#2814]) ([**@burgholzer**],
+  [**@denialhaag**])
 - 🐛 Fix dynamic circuit detection for symbolic gates and barriers ([#2722])
   ([**@denialhaag**])
 
@@ -912,6 +927,9 @@ for previous changelogs._
 
 <!-- PR links -->
 
+[#2831]: https://github.com/munich-quantum-toolkit/core/pull/2831
+[#2826]: https://github.com/munich-quantum-toolkit/core/pull/2826
+[#2814]: https://github.com/munich-quantum-toolkit/core/pull/2814
 [#2760]: https://github.com/munich-quantum-toolkit/core/pull/2760
 [#2722]: https://github.com/munich-quantum-toolkit/core/pull/2722
 [#2714]: https://github.com/munich-quantum-toolkit/core/pull/2714
