@@ -2710,8 +2710,10 @@ TEST(DDPackageTest, DataStructureStatistics) {
 TEST(DDPackageTest, DDStatistics) {
   constexpr auto nqubits = 2U;
   const auto dd = std::make_unique<Package>(nqubits);
+  const auto initialPeakMemoryMiB = computePeakMemoryMiB(*dd);
   const auto dummyGate = getDD(qc::StandardOperation(0U, qc::X), *dd);
   EXPECT_NE(dummyGate.p, nullptr);
+  dd->incRef(dummyGate);
   const auto statsString = getStatisticsString(*dd, true);
   const auto stats = nlohmann::json::parse(statsString);
 
@@ -2720,6 +2722,11 @@ TEST(DDPackageTest, DDStatistics) {
   ASSERT_TRUE(stats.contains("matrix"));
   EXPECT_TRUE(stats.contains("real_numbers"));
   EXPECT_TRUE(stats.contains("compute_tables"));
+  const auto nodeMemoryMiB = static_cast<double>(sizeof(mNode)) / (1ULL << 20U);
+  EXPECT_EQ(stats["active_memory_mib"], nodeMemoryMiB);
+  EXPECT_EQ(stats["peak_memory_mib"], initialPeakMemoryMiB + nodeMemoryMiB);
+  EXPECT_EQ(computeActiveMemoryMiB(*dd), nodeMemoryMiB);
+  EXPECT_EQ(computePeakMemoryMiB(*dd), initialPeakMemoryMiB + nodeMemoryMiB);
   const auto& matrixStats = stats["matrix"];
   ASSERT_TRUE(matrixStats.contains("unique_table"));
   const auto& uniqueTableStats = matrixStats["unique_table"];
@@ -2730,6 +2737,7 @@ TEST(DDPackageTest, DDStatistics) {
   EXPECT_GT(uniqueTableStats["0"]["num_buckets"], 0);
   ASSERT_TRUE(uniqueTableStats["total"].contains("num_buckets"));
   EXPECT_GT(uniqueTableStats["total"]["num_buckets"], 0);
+  dd->decRef(dummyGate);
 }
 
 TEST(DDPackageTest, ReduceAncillaRegression) {
