@@ -24,14 +24,19 @@ and signature source are `bindings/mlir/register_mlir.cpp` and
   preserves all inputs.
 - Compile serially against one target snapshot. An empty sequence skips target
   resolution. Keep existing program and context ownership.
-- Use nanobind type handles and `isinstance`, preserving scalar dispatch order.
-  The shared scalar importer needs no batch-specific enum. Inspect supported
-  bases only for candidate sequences; keep optional Qiskit imports lazy.
+- Use nanobind handles and `list_builder` to borrow tuple-owned inputs and
+  transfer results into a preallocated list. Native scalars bypass the Python
+  sequence ABC. Classify the first supported family once; exact Python types
+  share that classification and differing subclasses use the canonical base
+  checks. Input families are determined by their classes. Keep the owning tuple,
+  scalar precedence, and lazy Qiskit integration; add no enum or Python cache.
 - Constrained type variables reject mixed kinds; scalar and sequence overloads
   preserve output types. Qiskit target defaults precede same-family defaults
   because Qiskit's partly untyped `Target` otherwise matches `CompilerTarget` in
   ty. A closed `TypedDict` and `Unpack` share the common keyword arguments
-  without accepting unknown keywords.
+  without accepting unknown keywords. Further shape-TypeVar experiments returned
+  `Sequence` instead of `list`, union signatures lost scalar/list precision, and
+  a bound union accepted mixed kinds. Keep the 28 precise overloads.
 
 The
 [typing specification](https://typing.python.org/en/latest/spec/distributing.html#syntax)
@@ -43,23 +48,32 @@ at runtime, even when a caller annotates it as a sequence.
 
 ## Performance evidence and limits
 
-The initial optimized Clang 23/ThinLTO build on upstream `0e0826b1bf` used
-Python 3.14.8 and Qiskit 2.6.0. Seven alternating pairs compiled eight copies of
-Core GHZ(32), QFT(10), repeat-until-success(3), and Qiskit efficient SU2(10,
-reps=3), through the public entry point with a Qiskit target, seed 7, and
-OpenQASM output. Batching saved median paired CPU time of 5.3%, 1.1%, 3.7%, and
-1.7%, respectively. The shared host prevents a general wall-time claim.
+The optimized Clang 23/ThinLTO comparison used Python 3.14.8, nanobind 3.1,
+Qiskit 2.6.0, and the previous PR head `a084814395` as the baseline. Seven
+alternating fresh-process pairs called the public entry point with `copy=True`
+and seed 7. Core GHZ(2) with `QC_IMPORT` exposes binding costs: median scalar
+CPU time fell from 2.69 to 2.30 microseconds; eight-element list calls fell from
+20.60 to 18.95 microseconds. Median paired reductions were 14.8% and 8.1%, with
+improvements in every pair. Tuple and `UserList` batches improved by 8.7% and
+5.9%. These results justify the added dispatch branches.
 
-QFT target passes took 12.6 ms of a 19.0 ms singleton call; the native profile
-placed 83.4% of sampled cycles in MLIR. Input classification and payload
-preparation were not visible hotspots. Output IR preserved dynamic loops where
-required, and scalar/batch output hashes matched. These findings justify one
-target import, but no enum, payload cache, or shared-context infrastructure.
+Eight QFT(10) programs compiled to OpenQASM for a Qiskit target took 60.15 and
+60.59 ms; eight Qiskit efficient-SU2(2, reps=1) imports took 5.16 and 5.24 ms.
+Those results do not establish an end-to-end improvement. A QFT singleton spent
+5.7 ms in target passes within a 9.4 ms public call; loop unrolling and native
+synthesis took 1.6 and 1.0 ms. The native profile confirms compiler work
+dominates. Input and output hashes matched across all pairs; emitted QFT IR
+contained loops and the target OpenQASM used fixed physical qubits. Keep
+existing pipelines and context ownership, without payload caching or shared
+contexts.
 
-Memray measured QFT allocation traffic of 82.84/83.44 MB for batch/scalar calls,
-peak live tracked allocations of 0.937/0.931 MB, and 89.7/84.4 kB remaining
-after results were deleted. Process peak RSS was about 130 MB. These measure
-different quantities and establish neither a live-memory improvement nor a leak.
+Memray, including Python allocator tracing, measured 626 versus 589 allocations
+and 371.5 versus 366.4 kB of allocation traffic for the GHZ batch. Peak live
+tracked memory was 177.0 versus 176.2 kB. QFT allocated 82.74 MB in either
+build, with identical 855.8 kB peak live tracked memory and 11.1 kB remaining
+after result deletion. Process peak RSS was approximately 131 MB. Allocation
+traffic, live memory, and RSS are distinct; these results establish no material
+peak-memory improvement. Timing results are local to this shared host.
 
 ## Validation
 
@@ -70,7 +84,8 @@ target reuse with owning input references. Existing scalar tests cover output
 conversions, consumed-program rejection, option forwarding, and input parsing.
 
 Ty LSP probes compare keyword completions, return-type hovers, and diagnostics
-before and after edits. Positive consumer checks target Python 3.11; negative
+before and after edits (zero diagnostics, precise list return types, and common
+keyword completions). Positive consumer checks target Python 3.11; negative
 probes reject mixed inputs, iterators, nesting, incorrect keyword types, and
 unknown keywords. Ruff checks the generated stubs.
 
@@ -79,7 +94,7 @@ the retained mixed-format test. One Ponytail review covered the connected
 compiler/sample/submit paths; specialist critique also checked type precedence
 and stub compatibility.
 
-After rebasing on upstream `bcf97cbb6e`, the optimized editable build and 1,181
+After rebasing on upstream `6c0e1f65f8`, the optimized editable build and 1,181
 compiler, Qiskit, QDMI-compilation, DD, and QIR-runner tests passed. The
 sequence suite has 12 cases, with device payloads executed end to end. Stub
 regeneration, repository lint, Python 3.11 type checks, and whole-file C++ lint

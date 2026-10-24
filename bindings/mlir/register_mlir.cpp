@@ -503,7 +503,7 @@ programFromString(const std::string_view input) {
 ///
 /// Consume typed MLIR programs unless @p copy requests an independent copy.
 /// Text, paths and external circuit objects remain borrowed.
-[[nodiscard]] static ImportedProgram programFromInput(const nb::object& program,
+[[nodiscard]] static ImportedProgram programFromInput(const nb::handle program,
                                                       const bool copy) {
   if (nb::isinstance<nb::str>(program)) {
     const auto input = nb::cast<std::string_view>(program);
@@ -546,13 +546,11 @@ programFromString(const std::string_view input) {
     };
   }
 
-  const auto programType =
-      nb::cast<std::string>(program.type().attr("__name__"));
   const auto sysModules =
       nb::cast<nb::dict>(nb::module_::import_("sys").attr("modules"));
   if (sysModules.contains("qiskit.circuit")) {
     const auto qiskitCircuit =
-        nb::module_::import_("qiskit.circuit").attr("QuantumCircuit");
+        sysModules["qiskit.circuit"].attr("QuantumCircuit");
     if (nb::isinstance(program, qiskitCircuit)) {
       return {
           .program = bindings::qiskit::importCircuit(program),
@@ -560,8 +558,9 @@ programFromString(const std::string_view input) {
       };
     }
   }
-  throw std::runtime_error("Program type " + programType +
-                           " is not supported.");
+  throw std::runtime_error(
+      "Program type " + nb::cast<std::string>(program.type().attr("__name__")) +
+      " is not supported.");
 }
 
 /// Resolve an open device or registered ID.
@@ -604,7 +603,7 @@ payloadForOutput(OutputFormat output) {
 
 /// Compile one program with an already resolved target and output default.
 [[nodiscard]] static nb::object compileSingleProgram(
-    const nb::object& program, const nb::object& target,
+    const nb::handle program, const nb::object& target,
     const std::optional<mlir::TargetEnvironment>& targetEnvironment,
     std::optional<OutputFormat> output, bool copy,
     const std::string& qcoPipeline, const mlir::CompilationOptions& options) {
@@ -699,24 +698,43 @@ compilePythonProgram(const nb::object& program, const nb::object& target,
   }
 
   std::optional<nb::tuple> programs;
+  const bool builtinSequence =
+      nb::isinstance<nb::list>(program) || nb::isinstance<nb::tuple>(program);
   if (!nb::isinstance<nb::str>(program) &&
       !nb::hasattr(program, "__fspath__") &&
+      !nb::isinstance<mlir::Program>(program) &&
+      !nb::isinstance<mlir::OpenQASMProgram>(program) &&
       !nb::isinstance<nb::bytes>(program) &&
       !nb::isinstance<nb::bytearray>(program) &&
       !nb::isinstance<nb::memoryview>(program) &&
-      nb::isinstance(
-          program, nb::module_::import_("collections.abc").attr("Sequence"))) {
-    nb::list inputTypes(nb::make_tuple(
-        nb::str("").type(), nb::module_::import_("os").attr("PathLike"),
-        nb::type<mlir::QCProgram>(), nb::type<mlir::QCOProgram>(),
-        nb::type<mlir::JeffProgram>(), nb::type<mlir::OpenQASMProgram>()));
-    const auto sysModules =
-        nb::cast<nb::dict>(nb::module_::import_("sys").attr("modules"));
-    if (sysModules.contains("qiskit.circuit")) {
-      inputTypes.append(sysModules["qiskit.circuit"].attr("QuantumCircuit"));
-    }
-    const auto inputType = [&](nb::handle item) -> nb::handle {
-      for (const auto type : inputTypes) {
+      (builtinSequence ||
+       nb::isinstance(
+           program,
+           nb::module_::import_("collections.abc").attr("Sequence")))) {
+    const auto inputType = [](nb::handle item) -> nb::object {
+      if (nb::isinstance<nb::str>(item)) {
+        return nb::borrow<nb::object>(nb::str("").type());
+      }
+      if (nb::hasattr(item, "__fspath__")) {
+        nb::object type = nb::module_::import_("os").attr("PathLike");
+        if (nb::isinstance(item, type)) {
+          return type;
+        }
+      }
+      for (const auto type : {
+               nb::type<mlir::QCProgram>(),
+               nb::type<mlir::QCOProgram>(),
+               nb::type<mlir::JeffProgram>(),
+               nb::type<mlir::OpenQASMProgram>(),
+           }) {
+        if (nb::isinstance(item, type)) {
+          return nb::borrow<nb::object>(type);
+        }
+      }
+      const auto sysModules =
+          nb::cast<nb::dict>(nb::module_::import_("sys").attr("modules"));
+      if (sysModules.contains("qiskit.circuit")) {
+        nb::object type = sysModules["qiskit.circuit"].attr("QuantumCircuit");
         if (nb::isinstance(item, type)) {
           return type;
         }
@@ -728,9 +746,12 @@ compilePythonProgram(const nb::object& program, const nb::object& target,
       if (programs->empty()) {
         return nb::list();
       }
-      const auto type = inputType((*programs)[0]);
+      const nb::handle first = (*programs)[0];
+      const auto type = inputType(first);
       for (size_t i = 0; i < programs->size(); ++i) {
-        if (!type || !inputType((*programs)[i]).is(type)) {
+        const nb::handle item = (*programs)[i];
+        if (!type ||
+            (!item.type().is(first.type()) && !inputType(item).is(type))) {
           throw nb::type_error(("Program sequences must contain one supported "
                                 "input kind; invalid "
                                 "element at index " +
@@ -760,13 +781,12 @@ compilePythonProgram(const nb::object& program, const nb::object& target,
     return compileSingleProgram(program, target, environment, output, copy,
                                 qcoPipeline, options);
   }
-  nb::list results;
+  nb::list_builder results(programs->size());
   for (const auto item : *programs) {
-    results.append(compileSingleProgram(nb::borrow<nb::object>(item), target,
-                                        environment, output, copy, qcoPipeline,
-                                        options));
+    results.put(compileSingleProgram(item, target, environment, output, copy,
+                                     qcoPipeline, options));
   }
-  return results;
+  return results.commit();
 }
 
 /// Compile or submit through the shared C++ QDMI adapter.
