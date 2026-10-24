@@ -16,6 +16,7 @@ add_executable(
   test_benchmark_generate_magic_state_distillation.cpp
   test_benchmark_generate_modular_multiplier.cpp
   test_benchmark_generate_multiplexer.cpp
+  test_benchmark_generate_qaoa.cpp
   test_benchmark_generate_qft.cpp
   test_benchmark_generate_qft_adder.cpp
   test_benchmark_generate_qpe.cpp
@@ -27,16 +28,20 @@ add_executable(
 
 target_link_libraries(
   mqt-core-mlir-unittests-benchmark
-  PRIVATE GTest::gtest_main MQT::CoreBenchGenerate MLIRQCODDFunctionality MQT::CoreQIRJIT
-          MQT::CoreQIRRuntime)
+  PRIVATE
+    GTest::gtest_main MQT::CoreBenchGenerate MLIRQCODDFunctionality MQT::CoreQIRJIT
+    MQT::CoreQIRRuntime)
 
-target_include_directories(mqt-core-mlir-unittests-benchmark
-                           PRIVATE ${PROJECT_SOURCE_DIR}/mlir/bench/programs)
+target_include_directories(
+  mqt-core-mlir-unittests-benchmark
+  PRIVATE ${PROJECT_SOURCE_DIR}/mlir/bench/programs)
 
 mqt_mlir_configure_unittest_target(mqt-core-mlir-unittests-benchmark REQUIRES_EH)
 
-gtest_discover_tests(mqt-core-mlir-unittests-benchmark PROPERTIES LABELS mqt-mlir-unittests
-                                                                  DISCOVERY_TIMEOUT 60)
+gtest_discover_tests(
+  mqt-core-mlir-unittests-benchmark
+  PROPERTIES LABELS mqt-mlir-unittests
+  DISCOVERY_TIMEOUT 60)
 
 add_test(
   NAME mqt-core-mlir-benchmark-cli

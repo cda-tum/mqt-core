@@ -22,6 +22,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -486,7 +487,10 @@ private:
   /// Collect capabilities from all emitted function definitions.
   void collectAdaptiveFeatures(LLVM::LLVMFuncOp entryPoint,
                                const HelperCalls& helpers, Metadata& metadata) {
-    const auto recordType = [&](const Type type) {
+    const auto recordType = [&](Type type) {
+      while (auto array = dyn_cast<LLVM::LLVMArrayType>(type)) {
+        type = array.getElementType();
+      }
       if (const auto integer = dyn_cast<IntegerType>(type);
           integer && integer.getWidth() > 1) {
         metadata.integerTypes.insert("i" + std::to_string(integer.getWidth()));
@@ -515,12 +519,6 @@ private:
       }
       size_t returnCount = 0;
       function.walk([&](Operation* operation) {
-        if (auto allocation = dyn_cast<LLVM::AllocaOp>(operation)) {
-          // Opaque pointers cannot distinguish resource arrays from other
-          // buffers.
-          metadata.useArrays |=
-              isa<LLVM::LLVMPointerType>(allocation.getElemType());
-        }
         if (auto call = dyn_cast<LLVM::CallOp>(operation)) {
           const auto name = call.getCallee();
           metadata.useDynamicQubit |=
@@ -532,6 +530,28 @@ private:
         }
         returnCount += isa<LLVM::ReturnOp>(operation);
         metadata.usesMultipleTargetBranching |= isa<LLVM::SwitchOp>(operation);
+        metadata.useArrays |=
+            isa<LLVM::AllocaOp, LLVM::LoadOp, LLVM::StoreOp,
+                LLVM::ExtractValueOp, LLVM::InsertValueOp>(operation);
+        if (auto store = dyn_cast<LLVM::StoreOp>(operation)) {
+          recordType(store.getValue().getType());
+        }
+        if (auto gep = dyn_cast<LLVM::GEPOp>(operation)) {
+          const auto dynamic =
+              llvm::any_of(gep.getDynamicIndices(), [](Value index) {
+                return !matchPattern(index, m_Constant());
+              });
+          const auto label =
+              !dynamic &&
+              llvm::all_of(gep.getResult().getUses(), [](OpOperand& use) {
+                auto call = dyn_cast<LLVM::CallOp>(use.getOwner());
+                return call && call.getCallee() &&
+                       call.getCallee()->starts_with("__quantum__rt__") &&
+                       call.getCallee()->ends_with("_record_output") &&
+                       use.getOperandNumber() + 1 == call.getNumOperands();
+              });
+          metadata.useArrays |= !label;
+        }
         if (operation->hasTrait<OpTrait::ConstantLike>()) {
           return;
         }

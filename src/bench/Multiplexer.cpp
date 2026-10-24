@@ -38,15 +38,18 @@ const Output& Multiplexer::output() const noexcept { return output_; }
 double Multiplexer::probability(const std::string_view outcome) const {
   detail::validateOutcome(outcome, output_.width);
 
-  double state = 0.;
+  // Compute target-zero amplitudes from 1-x to avoid cancellation.
+  const auto target = outcome.back();
+  double state = target == '0'
+                     ? std::ldexp(1., 1 - static_cast<int>(options_.qubits))
+                     : 0.;
   double weight = 0.5;
   for (const auto bit : outcome.substr(0, outcome.size() - 1)) {
-    state += bit == '1' ? weight : 0.;
+    state += bit == target ? weight : 0.;
     weight *= 0.5;
   }
   const auto angle = std::numbers::pi * state;
-  const auto amplitude =
-      outcome.back() == '0' ? std::cos(angle / 2.) : std::sin(angle / 2.);
+  const auto amplitude = std::sin(angle / 2.);
   return std::ldexp(amplitude * amplitude,
                     1 - static_cast<int>(options_.qubits));
 }

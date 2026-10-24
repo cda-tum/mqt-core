@@ -268,14 +268,10 @@ struct ConvertCBitAllocOp final : StatefulOpConversionPattern<cbit::AllocOp> {
       reg.array = storage;
       if (op.getInitialization() == cbit::Initialization::Zero) {
         rewriter.setInsertionPoint(op);
-        auto zero = LLVM::ConstantOp::create(rewriter, loc,
-                                             rewriter.getI8IntegerAttr(0));
-        auto null = LLVM::ZeroOp::create(rewriter, loc, ptrType);
-        auto end = LLVM::GEPOp::create(rewriter, loc, ptrType, i1Type, null,
-                                       ValueRange{size});
-        auto bytes =
-            LLVM::PtrToIntOp::create(rewriter, loc, rewriter.getI64Type(), end);
-        LLVM::MemsetOp::create(rewriter, loc, storage, zero, bytes, false);
+        auto zero = LLVM::ZeroOp::create(
+            rewriter, loc,
+            LLVM::LLVMArrayType::get(i1Type, op.getType().getWidth()));
+        LLVM::StoreOp::create(rewriter, loc, zero, storage);
       }
       rewriter.replaceOp(op, storage);
       return success();
@@ -918,8 +914,17 @@ protected:
     // Stage 5: Convert QC dialect to LLVM (QIR calls)
     {
       RewritePatternSet patterns(ctx);
-      target.addIllegalDialect<cbit::CBitDialect, QCDialect,
-                               memref::MemRefDialect>();
+      target.addIllegalDialect<cbit::CBitDialect, QCDialect>();
+      // Defer classical memory and index types to final MemRef-to-LLVM
+      // lowering.
+      target.addDynamicallyLegalDialect<memref::MemRefDialect>(
+          [&](Operation* op) {
+            return llvm::all_of(
+                llvm::concat<Type>(op->getOperandTypes(), op->getResultTypes()),
+                [&](Type type) {
+                  return !isa<MemRefType>(type) || typeConverter.isLegal(type);
+                });
+          });
 
       populateQCToQIRAdaptivePatterns(patterns, typeConverter, ctx, state);
 

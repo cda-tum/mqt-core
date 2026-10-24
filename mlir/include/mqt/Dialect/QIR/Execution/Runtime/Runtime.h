@@ -18,6 +18,7 @@
 #include "dd/Package.hpp"
 #include "mqt/Dialect/QIR/Execution/Runtime/QIR.h"
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <array>
@@ -142,8 +143,11 @@ private:
   auto enlargeState(size_t maxQubit) -> void;
   void configureStaticResources(std::optional<size_t> qubits,
                                 std::optional<size_t> results);
-  auto sampleMeasurements(std::span<const uintptr_t> outputs, size_t shots,
-                          std::vector<std::string>& results) -> void;
+  auto
+  sampleMeasurements(std::span<const uintptr_t> outputs, size_t shots,
+                     llvm::function_ref<void(std::string&&)> emitOwned,
+                     llvm::function_ref<void(std::string_view)> emitBorrowed)
+      -> void;
   static auto staticQubitId(const Qubit* qubit) -> dd::Qubit {
     const auto id = reinterpret_cast<uintptr_t>(qubit);
     if (id >= dd::Package::MAX_POSSIBLE_QUBITS) {

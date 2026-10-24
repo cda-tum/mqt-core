@@ -94,6 +94,7 @@ decodeCodePoint(const char* position, const char* end) {
       .Case("OPENQASM", TokenKind::OpenQASM)
       .Case("include", TokenKind::Include)
       .Case("const", TokenKind::Const)
+      .Case("array", TokenKind::Array)
       .Case("qubit", TokenKind::Qubit)
       .Case("qreg", TokenKind::Qreg)
       .Case("bit", TokenKind::Bit)
@@ -118,6 +119,7 @@ decodeCodePoint(const char* position, const char* end) {
       .Case("gphase", TokenKind::Gphase)
       .Case("inv", TokenKind::Inv)
       .Case("pow", TokenKind::Pow)
+      .Case("sizeof", TokenKind::SizeOf)
       .Case("ctrl", TokenKind::Ctrl)
       .Case("negctrl", TokenKind::NegCtrl)
       .Case("int", TokenKind::Int)
@@ -133,10 +135,8 @@ decodeCodePoint(const char* position, const char* end) {
       .Cases({"extern", "box", "let"}, TokenKind::UnsupportedKeyword)
       .Cases({"end", "return"}, TokenKind::UnsupportedKeyword)
       .Cases({"pragma", "readonly", "mutable"}, TokenKind::UnsupportedKeyword)
-      .Cases({"complex", "array", "void", "stretch"},
-             TokenKind::UnsupportedKeyword)
-      .Cases({"durationof", "delay", "im", "sizeof"},
-             TokenKind::UnsupportedKeyword)
+      .Cases({"complex", "void", "stretch"}, TokenKind::UnsupportedKeyword)
+      .Cases({"durationof", "delay", "im"}, TokenKind::UnsupportedKeyword)
       .Default(TokenKind::Identifier);
 }
 
@@ -500,6 +500,9 @@ Token Lexer::next() {
     return peek() == '=' ? twoChar(TokenKind::GreaterEquals)
                          : single(TokenKind::Greater);
   case '+':
+    if (peek() == '+') {
+      return twoChar(TokenKind::DoublePlus);
+    }
     return peek() == '=' ? twoChar(TokenKind::CompoundAssign)
                          : single(TokenKind::Plus);
   case '-':

@@ -68,6 +68,9 @@ Package::Package(const std::size_t nq, const DDPackageConfig& config)
 }
 
 void Package::resize(const std::size_t nq) {
+  if (nq < nqubits) {
+    throw std::invalid_argument("A DD package cannot be shrunk.");
+  }
   if (nq > MAX_POSSIBLE_QUBITS) {
     throw std::invalid_argument("Requested too many qubits from package. "
                                 "Qubit datatype only allows up to " +
@@ -76,30 +79,22 @@ void Package::resize(const std::size_t nq) {
                                 " were requested. Please recompile the "
                                 "package with a wider Qubit type!");
   }
+  vUniqueTable.resize(nq);
+  mUniqueTable.resize(nq);
   nqubits = nq;
-  vUniqueTable.resize(nqubits);
-  mUniqueTable.resize(nqubits);
 }
 
 void Package::reset() {
-  clearUniqueTables();
-  resetMemoryManagers();
+  vUniqueTable.clear();
+  mUniqueTable.clear();
+  cUniqueTable.clear();
+  vMemoryManager.reset();
+  mMemoryManager.reset();
+  cMemoryManager.reset();
   vUniqueTable.resetIds();
   mUniqueTable.resetIds();
   clearComputeTables();
   roots.reset();
-}
-
-void Package::resetMemoryManagers(const bool resizeToTotal) {
-  vMemoryManager.reset(resizeToTotal);
-  mMemoryManager.reset(resizeToTotal);
-  cMemoryManager.reset(resizeToTotal);
-}
-
-void Package::clearUniqueTables() {
-  vUniqueTable.clear();
-  mUniqueTable.clear();
-  cUniqueTable.clear();
 }
 
 bool Package::garbageCollect(bool force) {
@@ -130,7 +125,6 @@ bool Package::garbageCollect(bool force) {
     vectorAdd.clear();
     vectorInnerProduct.clear();
     vectorKronecker.clear();
-    matrixVectorMultiplication.clear();
   }
   // invalidate all compute tables involving matrices if any matrix node has
   // been collected
@@ -140,19 +134,10 @@ bool Package::garbageCollect(bool force) {
     conjugateMatrixTranspose.clear();
     matrixKronecker.clear();
     matrixTrace.clear();
-    matrixVectorMultiplication.clear();
     matrixMatrixMultiplication.clear();
   }
-  // invalidate all compute tables where any component of the entry contains
-  // numbers from the complex table if any complex numbers were collected
-  if (invC) {
+  if (invV || invM) {
     matrixVectorMultiplication.clear();
-    matrixMatrixMultiplication.clear();
-    conjugateMatrixTranspose.clear();
-    vectorInnerProduct.clear();
-    vectorKronecker.clear();
-    matrixKronecker.clear();
-    matrixTrace.clear();
   }
 
   // Invalidate every affected cache before growth can allocate and fail.
@@ -657,7 +642,7 @@ std::string Package::measureAll(vEdge& rootEdge, const bool collapse,
     if (threshold < p0) {
       cur = cur.p->e.at(0);
     } else {
-      result[cur.p->v] = '1';
+      result[numberOfQubits - 1U - cur.p->v] = '1';
       cur = cur.p->e.at(1);
     }
   }
@@ -666,7 +651,7 @@ std::string Package::measureAll(vEdge& rootEdge, const bool collapse,
     vEdge e = vEdge::one();
     std::array<vEdge, 2> edges{};
     for (std::size_t p = 0U; p < numberOfQubits; ++p) {
-      if (result[p] == '0') {
+      if (result[numberOfQubits - 1U - p] == '0') {
         edges[0] = e;
         edges[1] = vEdge::zero();
       } else {
@@ -680,7 +665,6 @@ std::string Package::measureAll(vEdge& rootEdge, const bool collapse,
     rootEdge = e;
   }
 
-  std::ranges::reverse(result);
   return result;
 }
 fp Package::assignProbabilities(const vEdge& edge,
@@ -1056,9 +1040,8 @@ ComplexValue Package::trace(const mEdge& a, const std::size_t numQubits) {
 }
 bool Package::isCloseToIdentity(const mEdge& m, const fp tol,
                                 const std::vector<bool>& garbage,
-                                const bool checkCloseToOne) const {
+                                const bool checkCloseToOne) {
   std::unordered_set<decltype(m.p)> visited{};
-  visited.reserve(mUniqueTable.getNumEntries());
   return isCloseToIdentityRecursive(m, visited, tol, garbage, checkCloseToOne);
 }
 mCachedEdge Package::trace(const mEdge& a,

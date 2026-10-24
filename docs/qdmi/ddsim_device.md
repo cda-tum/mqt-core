@@ -63,8 +63,8 @@ before starting the parent process to cap the total active slots; the default
 uses LLVM's physical-core-aware thread strategy. An invalid value falls back to
 that default. Each host process has its own budget; coordinate separate host
 processes externally. Direct QCO sampling applies the same setting
-independently. A fixed seed and effective worker count reproduce ordered shots;
-changing the worker count may change individual shots. The C++ and Python QDMI
+independently. The seed controls sampling, but shot order is unspecified and
+changing the worker count may change sampled outcomes. The C++ and Python QDMI
 clients may also pass a nonnegative native `int` to `custom3`.
 
 Under the hood, the QDMI device imports OpenQASM into the compiler's QC
@@ -77,18 +77,19 @@ partially initialized output register fail during import. The Qiskit backend
 preserves Qiskit's zero-initialized classical-bit semantics by writing every
 classical bit before submitting its generated OpenQASM 3 program.
 
-Sampling returns ordered bitstrings through `QDMI_JOB_RESULT_SHOTS` and their
+Sampling returns individual bitstrings through `QDMI_JOB_RESULT_SHOTS` and their
 histogram through `QDMI_JOB_RESULT_HIST_KEYS` and `QDMI_JOB_RESULT_HIST_VALUES`.
-Both results come from the same samples, including mid-circuit measurements. QIR
-Base or Adaptive programs with a static terminal measurement region can sample
-one prepared DD; other QIR programs run once per shot. See the
-[QIR execution contract](../qir/index.md) for eligibility and resource limits.
-OpenQASM classical registers use reverse declaration order, with each register
-most-significant-bit first. QIR records define increasing output-bit indices;
-the device reverses each recorded bitstring before returning shots and counts.
-Equivalent OpenQASM and QIR programs therefore use the same bitstring order.
-Adaptive QIR shots can record different numbers of bits; their histogram retains
-these variable-length outcomes.
+Both results come from the same samples, including mid-circuit measurements. The
+sequence of shots has no defined meaning. QIR Base or Adaptive programs with a
+static terminal measurement region can sample one prepared DD; other QIR
+programs run once per shot. See the [QIR execution contract](../qir/index.md)
+for eligibility and resource limits. OpenQASM classical registers use reverse
+declaration order, with each register most-significant-bit first. QIR records
+define increasing output-bit indices; the device reverses each recorded
+bitstring before returning shots and counts. Equivalent OpenQASM and QIR
+programs therefore use the same bit positions within each bitstring. Adaptive
+QIR shots can record different numbers of bits; their histogram retains these
+variable-length outcomes.
 
 Sparse statevector and probability results use ascending numerical basis-index
 order. Their keys and values share that order. Sparse exports require at most 64
@@ -156,7 +157,7 @@ not require a separate job or zero shots. Circuits with mid-circuit measurements
 or resets do not support state extraction.
 
 ```{code-cell} ipython3
-from mqt.core.mlir import compile_program, submit_program
+from mqt.core.mlir import submit_program
 from mqt.core.qdmi import ProgramFormat
 from mqt.core.qdmi import open_device
 
@@ -170,8 +171,7 @@ result = measure q;
 """
 
 device = open_device("mqt.ddsim.default")
-program = compile_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
-job = submit_program(program, target=device)
+job = submit_program(bell_qasm, target=device, program_format=ProgramFormat.QASM3)
 job.wait()
 print(job.get_counts())
 print(job.get_dense_statevector())
