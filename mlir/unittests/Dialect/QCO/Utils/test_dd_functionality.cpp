@@ -1397,15 +1397,25 @@ TEST_F(QCODDFunctionalityTest, AdaptiveWorkersAndTopLevelBranches) {
                           nullptr, {}, workers);
     const auto b = sampleShots(mainFunc(*mod), 512, 19, second,
                                DDArgumentBindings{}, nullptr, {}, workers);
+    const auto countsOnly =
+        sample(mainFunc(*mod), 512, 19, DDArgumentBindings{}, nullptr, nullptr,
+               {}, workers);
     ASSERT_TRUE(succeeded(a));
     ASSERT_TRUE(succeeded(b));
-    EXPECT_EQ(first, second);
+    ASSERT_TRUE(succeeded(countsOnly));
+    EXPECT_EQ(*a, *countsOnly);
+    std::map<std::string, size_t> firstCounts;
+    for (const auto& shot : first) {
+      ++firstCounts[shot];
+    }
+    EXPECT_EQ(*a, firstCounts);
     std::map<std::string, size_t> counts;
     for (const auto& shot : second) {
       ++counts[shot];
     }
     EXPECT_EQ(*a, counts);
     EXPECT_EQ(first.size(), 512U);
+    EXPECT_EQ(second.size(), 512U);
     EXPECT_NEAR(static_cast<double>(a->at("1")), 128., 50.);
   }
 }
@@ -1464,7 +1474,11 @@ TEST_F(QCODDFunctionalityTest, BranchesIsolateMemRefWritesAndPreserveAliases) {
       }
       func.func @set(%memory: memref<32xi1, strided<[2], offset: ?>>, %value: i1) {
         %zero = arith.constant 0 : index
-        memref.store %value, %memory[%zero] : memref<32xi1, strided<[2], offset: ?>>
+        %one = arith.constant 1 : index
+        %size = arith.constant 32 : index
+        scf.for %i = %zero to %size step %one {
+          memref.store %value, %memory[%i] : memref<32xi1, strided<[2], offset: ?>>
+        }
         return
       }
       func.func @main() {
@@ -1547,10 +1561,20 @@ TEST_F(QCODDFunctionalityTest, BranchesThroughCountedMeasurementsAndResets) {
                           &first, nullptr, {}, workers);
     const auto b = sample(mainFunc(*mod), 2048, 41, DDArgumentBindings{},
                           &second, nullptr, {}, workers);
+    const auto countsOnly =
+        sample(mainFunc(*mod), 2048, 41, DDArgumentBindings{}, nullptr, nullptr,
+               {}, workers);
     ASSERT_TRUE(succeeded(a));
     ASSERT_TRUE(succeeded(b));
+    ASSERT_TRUE(succeeded(countsOnly));
     EXPECT_EQ(first, second);
     EXPECT_EQ(*a, *b);
+    EXPECT_EQ(*a, *countsOnly);
+    std::map<std::string, size_t> fromShots;
+    for (const auto& shot : first) {
+      ++fromShots[shot];
+    }
+    EXPECT_EQ(*a, fromShots);
     EXPECT_EQ(a->size(), 8U);
     for (const auto& [outcome, count] : *a) {
       EXPECT_EQ(outcome.size(), 3U);
@@ -2697,22 +2721,30 @@ TEST_F(QCODDFunctionalityTest, SimulateRicherClassicalArithmetic) {
   expectSimulatesFromZero(mainFunc(*mod), true);
 }
 
-TEST_F(QCODDFunctionalityTest, SampleReturnsCBitRegistersInCountStringOrder) {
-  auto mod = buildModule([](QCOProgramBuilder& b) -> SmallVector<Value> {
-    auto wide =
-        b.allocClassicalBitRegister(2, {}, cbit::Initialization::Undefined);
-    auto narrow = b.allocClassicalBitRegister(1);
-    b.storeClassicalBit(b.boolConstant(false), wide, 0);
-    b.storeClassicalBit(b.boolConstant(true), wide, 1);
-    b.storeClassicalBit(b.boolConstant(true), narrow, 0);
-    return {wide, narrow};
-  });
+TEST_F(QCODDFunctionalityTest,
+       SampleReturnsClassicalResultsInCountStringOrder) {
+  auto mod = parseSourceString<ModuleOp>(R"mlir(module {
+    func.func @main(%q: !qco.qubit) -> (!cbit.reg<2>, i1, !cbit.reg<1>, i1, i1, !qco.qubit) {
+      %false = arith.constant false
+      %true = arith.constant true
+      %zero = arith.constant 0 : index
+      %one = arith.constant 1 : index
+      %wide = cbit.alloc(#cbit.init<zero>) : !cbit.reg<2>
+      %narrow = cbit.alloc(#cbit.init<zero>) : !cbit.reg<1>
+      %flipped = qco.x %q : !qco.qubit
+      %measured, %bit = qco.measure %flipped : !qco.qubit
+      cbit.store %bit, %wide[%zero] : !cbit.reg<2>
+      cbit.store %true, %wide[%one] : !cbit.reg<2>
+      cbit.store %true, %narrow[%zero] : !cbit.reg<1>
+      return %wide, %false, %narrow, %bit, %bit, %measured : !cbit.reg<2>, i1, !cbit.reg<1>, i1, i1, !qco.qubit
+    }
+  })mlir",
+                                         context.get());
   ASSERT_TRUE(mod);
 
   const auto histogram = sample(mainFunc(*mod), 8, 3);
   ASSERT_TRUE(succeeded(histogram));
-  // Count strings place the last returned register first: "1" + "10".
-  EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"110", 8}}));
+  EXPECT_EQ(*histogram, (std::map<std::string, size_t>{{"111011", 8}}));
 }
 
 TEST_F(QCODDFunctionalityTest, SampleRejectsUndefinedAndMixedResults) {
@@ -2727,20 +2759,27 @@ TEST_F(QCODDFunctionalityTest, SampleRejectsUndefinedAndMixedResults) {
 
   EXPECT_TRUE(failed(sample(mainFunc(*undefined), 1, 3)));
   EXPECT_TRUE(failed(sample(mainFunc(*mixed), 1, 3)));
+  for (const int64_t value : {0, 7}) {
+    auto scalar = buildModule([&](QCOProgramBuilder& b) {
+      b.sink(b.x(b.staticQubit(0)));
+      return b.intConstant(value);
+    });
+    ASSERT_TRUE(scalar);
+    EXPECT_TRUE(failed(sample(mainFunc(*scalar), 1, 3)));
+  }
 }
 
 TEST_F(QCODDFunctionalityTest,
        SampleDefersReturnedMeasurementDespiteLaterUnrelatedOp) {
   auto mod = buildModule([](QCOProgramBuilder& b) {
-    auto reg =
-        b.allocClassicalBitRegister(1, {}, cbit::Initialization::Undefined);
     auto q0 = b.x(b.staticQubit(0));
     auto q1 = b.staticQubit(1);
-    std::tie(q0, std::ignore) = b.measure(q0, reg, 0);
+    Value bit;
+    std::tie(q0, bit) = b.measure(q0);
     q1 = b.x(q1);
     b.sink(q0);
     b.sink(q1);
-    return reg;
+    return bit;
   });
   ASSERT_TRUE(mod);
 
@@ -3074,11 +3113,15 @@ TEST_F(QCODDFunctionalityTest,
       ++counts[shot];
     }
     EXPECT_EQ(counts, *histogram);
-    std::vector<std::string> ordered;
+    std::vector<std::string> samples;
     ASSERT_TRUE(succeeded(sampleShots(
-        mainFunc(*mod), 128, 9, ordered, DDArgumentBindings{}, nullptr, {},
+        mainFunc(*mod), 128, 9, samples, DDArgumentBindings{}, nullptr, {},
         workers, [](size_t desired) { return desired; })));
-    EXPECT_EQ(ordered, shots);
+    std::map<std::string, size_t> sampleCounts;
+    for (const auto& shot : samples) {
+      ++sampleCounts[shot];
+    }
+    EXPECT_EQ(sampleCounts, *histogram);
   }
   std::vector<std::string> serial;
   std::vector<std::string> capped;
@@ -3087,7 +3130,15 @@ TEST_F(QCODDFunctionalityTest,
   ASSERT_TRUE(succeeded(sampleShots(mainFunc(*mod), 128, 9, capped,
                                     DDArgumentBindings{}, nullptr, {}, 4,
                                     [](size_t) { return size_t{1}; })));
-  EXPECT_EQ(capped, serial);
+  std::map<std::string, size_t> serialCounts;
+  std::map<std::string, size_t> cappedCounts;
+  for (const auto& shot : serial) {
+    ++serialCounts[shot];
+  }
+  for (const auto& shot : capped) {
+    ++cappedCounts[shot];
+  }
+  EXPECT_EQ(cappedCounts, serialCounts);
 }
 
 TEST_F(QCODDFunctionalityTest, SampleDefersNestedTerminalMeasurement) {

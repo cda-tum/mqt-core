@@ -205,30 +205,47 @@ Program::Storage Program::releaseStorage() && {
   };
 }
 
+static LogicalResult writeTextProgram(StringRef source,
+                                      const std::filesystem::path& path,
+                                      StringRef format) {
+  std::error_code error;
+  llvm::raw_fd_ostream stream(path.string(), error, llvm::sys::fs::OF_Text);
+  if (error) {
+    llvm::errs() << "failed to open " << format << " output file '"
+                 << path.string() << "': " << error.message() << '\n';
+    return failure();
+  }
+  stream << source;
+  stream.flush();
+  if (stream.has_error()) {
+    stream.clear_error();
+    llvm::errs() << "failed to write " << format << " file '" << path.string()
+                 << "'\n";
+    return failure();
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // OpenQASMProgram
 //===----------------------------------------------------------------------===//
 
 const std::string& OpenQASMProgram::source() const noexcept { return source_; }
 
+std::string OpenQASMProgram::intoSource() && { return std::move(source_); }
+
 const std::string& OpenQASMProgram::str() const noexcept { return source_; }
 
 LogicalResult OpenQASMProgram::write(const std::filesystem::path& path) const {
-  std::error_code error;
-  llvm::raw_fd_ostream stream(path.string(), error, llvm::sys::fs::OF_Text);
-  if (error) {
-    llvm::errs() << "failed to open OpenQASM output file '" << path.string()
-                 << "': " << error.message() << '\n';
-    return failure();
-  }
-  stream << source_;
-  stream.flush();
-  if (stream.has_error()) {
-    stream.clear_error();
-    llvm::errs() << "failed to write OpenQASM file '" << path.string() << "'\n";
-    return failure();
-  }
-  return success();
+  return writeTextProgram(source_, path, "OpenQASM");
+}
+
+//===----------------------------------------------------------------------===//
+// IQMJSONProgram
+//===----------------------------------------------------------------------===//
+
+LogicalResult IQMJSONProgram::write(const std::filesystem::path& path) const {
+  return writeTextProgram(source_, path, "IQM JSON");
 }
 
 //===----------------------------------------------------------------------===//
@@ -313,16 +330,18 @@ FailureOr<QCProgram> QCProgram::fromModule(std::shared_ptr<MLIRContext> context,
 QCProgram QCProgram::copy() const { return QCProgram(cloneStorage()); }
 
 FailureOr<QCOProgram> QCProgram::intoQCO() && {
-  PassManager pm(mod().getContext());
+  auto storage = std::move(*this).releaseStorage();
+  auto moduleOp = *storage.mod;
+  PassManager pm(moduleOp.getContext());
   pm.addPass(createQCToQCO());
-  if (failed(pm.run(mod()))) {
-    mod().emitError("failed to convert QC to QCO");
+  if (failed(pm.run(moduleOp))) {
+    moduleOp.emitError("failed to convert QC to QCO");
     return failure();
   }
-  if (failed(qco::verifyLinearity(mod()))) {
+  if (failed(qco::verifyLinearity(moduleOp))) {
     return failure();
   }
-  return QCOProgram(std::move(*this).releaseStorage());
+  return QCOProgram(std::move(storage));
 }
 
 //===----------------------------------------------------------------------===//

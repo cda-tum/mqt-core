@@ -139,9 +139,9 @@ static void expectReference(const Shor& benchmark, const Counts& counts) {
 }
 
 template <class Benchmark>
-static void expectQIRSampling(const Benchmark& benchmark,
-                              QIRProgram& qirProgram, size_t shots) {
-  const auto bitcode = qirProgram.toBitcode();
+static void expectQIRSampling(const Benchmark& benchmark, QIRProgram qirProgram,
+                              size_t shots) {
+  const auto bitcode = std::move(qirProgram).intoBitcode();
   ASSERT_TRUE(mlir::succeeded(bitcode));
   ASSERT_FALSE(bitcode->empty());
   qir::JitSession session(
@@ -181,7 +181,8 @@ static void expectPortableExecution(const Benchmark& benchmark, size_t shots) {
   compiled = runDefaultPipeline(CompilerInput{std::move(*qc)},
                                 ProgramFormat::QIRAdaptive);
   ASSERT_TRUE(mlir::succeeded(compiled));
-  expectQIRSampling(benchmark, std::get<QIRProgram>(*compiled), shots);
+  expectQIRSampling(benchmark, std::get<QIRProgram>(std::move(*compiled)),
+                    shots);
 }
 
 TEST(GenerateProgramTest, ExecutesRuntimePhasesThroughJeffAndAdaptiveQIR) {
@@ -228,7 +229,7 @@ static void expectOpenQASMRoundTrip(const Benchmark& benchmark, size_t shots) {
       ASSERT_TRUE(mlir::succeeded(compiled));
       qasm = std::get<OpenQASMProgram>(std::move(*compiled));
     } else {
-      qasm = qc->toOpenQASM3();
+      qasm = qc->copy().intoOpenQASM3();
     }
     ASSERT_TRUE(mlir::succeeded(qasm));
     auto restored = QCProgram::fromOpenQASMString(qasm->source());
@@ -285,7 +286,7 @@ static void expectStaticTargetExecution(const Benchmark& benchmark) {
   ASSERT_TRUE(mlir::succeeded(compiled));
   auto& qirProgram = std::get<QIRProgram>(*compiled);
   EXPECT_EQ(qirProgram.profile(), QIRProfile::Base);
-  expectQIRSampling(benchmark, qirProgram, 2048);
+  expectQIRSampling(benchmark, std::move(qirProgram), 2048);
 
   auto qasmPayload =
       PayloadSpecification::create({.id = "openqasm", .version = "3.1"});
@@ -323,7 +324,7 @@ TEST(GenerateProgramTest, RoundTripsWStateThroughOpenQASM) {
   const WState benchmark{{.qubits = 3}};
   auto qc = generate(benchmark);
   ASSERT_TRUE(mlir::succeeded(qc));
-  auto qasm = qc->toOpenQASM3();
+  auto qasm = std::move(*qc).intoOpenQASM3();
   ASSERT_TRUE(mlir::succeeded(qasm));
   auto restored = QCProgram::fromOpenQASMString(qasm->source());
   ASSERT_TRUE(mlir::succeeded(restored));

@@ -63,7 +63,7 @@ static void expectOpenQASMSampling(std::string_view source,
   ASSERT_TRUE(mlir::succeeded(restored));
   auto qir = std::move(*restored).intoQIR(mlir::QIRProfile::Adaptive);
   ASSERT_TRUE(mlir::succeeded(qir));
-  const auto ir = qir->llvmIR();
+  const auto ir = std::move(*qir).intoLLVMIR();
   ASSERT_TRUE(mlir::succeeded(ir));
   qir::JitSession session(*ir, "openqasm-slices", qir::Execution::Sampling, 42);
   session.runtime().disableOutput();
@@ -147,7 +147,7 @@ result = measure q;
   ASSERT_TRUE(mlir::succeeded(qc));
   auto qir = std::move(*qc).intoQIR(mlir::QIRProfile::Adaptive);
   ASSERT_TRUE(mlir::succeeded(qir));
-  const auto ir = qir->llvmIR();
+  const auto ir = std::move(*qir).intoLLVMIR();
   ASSERT_TRUE(mlir::succeeded(ir));
   qir::JitSession session(*ir, "feedback-arithmetic", qir::Execution::Sampling,
                           42);
@@ -738,6 +738,21 @@ TEST(QIRBatchSampling, SeedReproducesBellSamples) {
   EXPECT_THAT(a, testing::Contains("11"));
 }
 
+TEST(QIRBatchSampling, EmitsEmptyOutcomes) {
+  constexpr llvm::StringRef ir = R"(
+define i64 @main() #0 { ret i64 0 }
+attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubits"="0" }
+)";
+  qir::JitSession session(ir, "empty-outcomes");
+  session.runtime().disableOutput();
+  ASSERT_TRUE(session.canSampleTerminal());
+  std::vector<std::string> shots;
+  ASSERT_EQ(session.sample(
+                3, [&](std::string_view shot) { shots.emplace_back(shot); }),
+            0);
+  EXPECT_EQ(shots, std::vector<std::string>(3));
+}
+
 TEST(QIRBatchSampling, RetainedStatePreservesPhaseOrderAndSessionLifetime) {
   constexpr llvm::StringRef ir = R"(
 define i64 @main() #0 {
@@ -1020,7 +1035,10 @@ attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" "required_num_
     }
     session.runtime().seed(42);
     std::vector<std::string> repeated;
-    ASSERT_EQ(session.sample(32, repeated), 0);
+    ASSERT_EQ(
+        session.sample(
+            32, [&](std::string_view shot) { repeated.emplace_back(shot); }),
+        0);
     EXPECT_EQ(repeated, shots);
   }
 }

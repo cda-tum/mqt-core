@@ -167,21 +167,22 @@ def test_compile_program_explicit_output(target_kind: str, output: OutputFormat,
         job.wait()
         assert job.get_counts() == {"01": 4}
     else:
+        assert isinstance(compiled, (QuantumCircuit, QCProgram, QCOProgram, JeffProgram, OpenQASMProgram))
         assert sample(compiled, shots=4, seed=1) == {"01": 4}
 
 
-@pytest.mark.parametrize(("inplace", "control_flow"), [(False, False), (True, True)])
-def test_compile_program_qiskit_typed_input(*, inplace: bool, control_flow: bool) -> None:
+@pytest.mark.parametrize(("copy", "control_flow"), [(True, False), (False, True)])
+def test_compile_program_qiskit_typed_input(*, copy: bool, control_flow: bool) -> None:
     """Compile loops with ordered outputs while copying or consuming the input."""
     source = QCProgram.from_openqasm_str(
         'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; bit[3] c = 0; '
         "for int i in [0:2] { x q[0]; } c[1] = measure q[0]; c[0] = measure q[1];"
     )
     backend = GenericBackendV2(3, basis_gates=["sx", "x", "rz", "cx"], control_flow=control_flow, seed=1)
-    compiled = compile_program(source, target=backend, inplace=inplace)
+    compiled = compile_program(source, target=backend, copy=copy)
 
     assert_type(compiled, QuantumCircuit)
-    assert source.is_valid is not inplace
+    assert source.is_valid is copy
     assert ("for_loop" in compiled.count_ops()) is control_flow
     assert compiled.num_clbits == 3
     assert sample(compiled, shots=4, seed=1) == {"010": 4}
@@ -242,13 +243,14 @@ def test_compile_program_qiskit_control_flow(unsupported: str | None, output: Ou
     source = QCProgram.from_qiskit(circuit)
 
     if unsupported or output == OutputFormat.QIR_BASE:
-        inplace = output == OutputFormat.QIR_BASE
+        copy = output != OutputFormat.QIR_BASE
         diagnostic = "forward-branching" if unsupported == "if_else" else "scf.while"
         with pytest.raises(RuntimeError, match=diagnostic):
-            compile_program(source, target=target, output=output, inplace=inplace)
-        assert source.is_valid is not inplace
+            compile_program(source, target=target, output=output, copy=copy)
+        assert source.is_valid is copy
         return
     compiled = compile_program(source, target=target, output=output)
+    assert not source.is_valid
     assert isinstance(compiled, (QuantumCircuit, OpenQASMProgram))
     assert sample(compiled, shots=4, seed=1) == {"1": 4}
 
@@ -945,6 +947,7 @@ def test_z_frames_stop_at_control_flow_and_barriers(*, native_rz: bool) -> None:
     """A pending Z frame must dominate each branch and stay before barriers."""
     source = Target(num_qubits=2)
     source.add_instruction(CZGate())
+    source.add_instruction(Measure())
     if native_rz:
         source.add_instruction(RZGate(Parameter("rz")))
         source.add_instruction(SXGate())
@@ -953,6 +956,8 @@ def test_z_frames_stop_at_control_flow_and_barriers(*, native_rz: bool) -> None:
     target = CompilerTarget.from_qiskit(source)
     theta = Parameter("angle")
     circuit = QuantumCircuit(2, 1)
+    circuit.sx(0)
+    circuit.measure(0, 0)
     circuit.rz(theta, 0)
     circuit.cz(0, 1)
     circuit.barrier(0)
@@ -972,6 +977,7 @@ def test_z_frames_stop_at_control_flow_and_barriers(*, native_rz: bool) -> None:
         )
     )
     exported = program.to_qiskit(target=target)
+    assert exported.count_ops().get("if_else") == 1
 
     def branch_unitary(circuit: QuantumCircuit, branch: int) -> Operator:
         result = QuantumCircuit(2, global_phase=circuit.global_phase)
@@ -979,7 +985,7 @@ def test_z_frames_stop_at_control_flow_and_barriers(*, native_rz: bool) -> None:
             qubits = [circuit.find_bit(qubit).index for qubit in item.qubits]
             if isinstance(item.operation, IfElseOp):
                 result.compose(item.operation.blocks[branch], qubits=qubits, inplace=True)
-            elif item.operation.name != "barrier":
+            elif item.operation.name not in {"barrier", "measure"}:
                 result.append(item.operation, qubits)
         return Operator(result)
 

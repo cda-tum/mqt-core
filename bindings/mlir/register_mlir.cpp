@@ -427,6 +427,7 @@ enum class OutputFormat : uint8_t {
   Jeff = static_cast<uint8_t>(mlir::ProgramFormat::Jeff),
   QIRBase = static_cast<uint8_t>(mlir::ProgramFormat::QIRBase),
   QIRAdaptive = static_cast<uint8_t>(mlir::ProgramFormat::QIRAdaptive),
+  IQMJSON = static_cast<uint8_t>(mlir::ProgramFormat::IQMJSON),
   Qiskit,
 };
 struct ImportedProgram {
@@ -482,9 +483,9 @@ programFromPath(const std::filesystem::path& path) {
 
 /// Construct a frontend program from a string containing source or path.
 [[nodiscard]] static ImportedProgram
-programFromString(const std::string& input) {
+programFromString(const std::string_view input) {
   if (isSourceString(input)) {
-    if (input.find("OPENQASM") != std::string::npos) {
+    if (input.find("OPENQASM") != std::string_view::npos) {
       return {
           .program = takeResult(mlir::QCProgram::fromOpenQASMString(input)),
           .format = OutputFormat::OpenQASM3,
@@ -500,13 +501,12 @@ programFromString(const std::string& input) {
 
 /// Convert a Python object to a compiler program.
 ///
-/// Program objects are copied by default so the high-level entry point
-/// behaves like a conventional compiler function. Set @p inplace to transfer
-/// ownership from a program object instead.
+/// Consume typed MLIR programs unless @p copy requests an independent copy.
+/// Text, paths and external circuit objects remain borrowed.
 [[nodiscard]] static ImportedProgram programFromInput(const nb::object& program,
-                                                      const bool inplace) {
+                                                      const bool copy) {
   if (nb::isinstance<nb::str>(program)) {
-    const auto input = nb::cast<std::string>(program);
+    const auto input = nb::cast<std::string_view>(program);
     const nb::gil_scoped_release release;
     return programFromString(input);
   }
@@ -518,21 +518,21 @@ programFromString(const std::string& input) {
   if (nb::isinstance<mlir::QCProgram>(program)) {
     auto& value = nb::cast<mlir::QCProgram&>(program);
     return {
-        .program = copiedOrConsumed(value, !inplace),
+        .program = copiedOrConsumed(value, copy),
         .format = OutputFormat::QC,
     };
   }
   if (nb::isinstance<mlir::QCOProgram>(program)) {
     auto& value = nb::cast<mlir::QCOProgram&>(program);
     return {
-        .program = copiedOrConsumed(value, !inplace),
+        .program = copiedOrConsumed(value, copy),
         .format = OutputFormat::QCOOptimized,
     };
   }
   if (nb::isinstance<mlir::JeffProgram>(program)) {
     auto& value = nb::cast<mlir::JeffProgram&>(program);
     return {
-        .program = copiedOrConsumed(value, !inplace),
+        .program = copiedOrConsumed(value, copy),
         .format = OutputFormat::Jeff,
     };
   }
@@ -582,6 +582,7 @@ programFromString(const std::string& input) {
 payloadForOutput(OutputFormat output) {
   switch (output) {
   case OutputFormat::OpenQASM3:
+  case OutputFormat::IQMJSON:
   case OutputFormat::QIRBase:
   case OutputFormat::QIRAdaptive:
     return takeResult(mlir::PayloadSpecification::forProgramFormat(
@@ -616,7 +617,7 @@ payloadForOutput(OutputFormat output) {
 /// Resolve input, target, and output before compiling a typed program.
 [[nodiscard]] static nb::object
 compilePythonProgram(const nb::object& program, const nb::object& target,
-                     std::optional<OutputFormat> output, bool inplace,
+                     std::optional<OutputFormat> output, bool copy,
                      const std::string& qcoPipeline,
                      // Snapshot mutable Python options before releasing the
                      // GIL. NOLINTNEXTLINE(performance-unnecessary-value-param)
@@ -647,7 +648,7 @@ compilePythonProgram(const nb::object& program, const nb::object& target,
   }
 
   if (deviceTarget && !output) {
-    auto input = programFromInput(program, inplace);
+    auto input = programFromInput(program, copy);
     auto compiled = [&] {
       const nb::gil_scoped_release release;
       return takeResult(mlir::CompiledProgram::compile(std::move(input.program),
@@ -656,7 +657,7 @@ compilePythonProgram(const nb::object& program, const nb::object& target,
     return nb::cast(std::move(compiled));
   }
 
-  auto input = programFromInput(program, inplace);
+  auto input = programFromInput(program, copy);
   const auto selected = output.value_or(input.format);
   if (!target.is_none()) {
     auto payload = payloadForOutput(selected);
@@ -758,7 +759,7 @@ submitProgram(const nb::object& program, const nb::object& target,
                                           params[1], params[2], params[3],
                                           params[4]));
   }
-  auto input = programFromInput(program, false).program;
+  auto input = programFromInput(program, true).program;
   const nb::gil_scoped_release release;
   return takeResult(
       mlir::submitProgram(device, std::move(input), numShots, programFormat,
@@ -774,7 +775,7 @@ template <class Function>
         nb::cast<const mlir::QCOProgram&>(program));
   }
   auto compiled = [&] {
-    auto input = programFromInput(program, false).program;
+    auto input = programFromInput(program, true).program;
     const nb::gil_scoped_release release;
     return takeResult(
         mlir::runDefaultPipeline(std::move(input), mlir::ProgramFormat::QCO));
@@ -923,6 +924,8 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
       .value("QC", OutputFormat::QC, "QC after the optimized QCO round trip.")
       .value("OPENQASM3", OutputFormat::OpenQASM3,
              "OpenQASM 3 after the optimized QCO round trip.")
+      .value("IQM_JSON", OutputFormat::IQMJSON,
+             "An IQM circuit for an explicit physical target.")
       .value("JEFF", OutputFormat::Jeff, "Serializable ``jeff`` MLIR.")
       .value("QIR_BASE", OutputFormat::QIRBase, "QIR for the Base Profile.")
       .value("QIR_ADAPTIVE", OutputFormat::QIRAdaptive,
@@ -1765,15 +1768,20 @@ Args:
           "Normalize scoped global phases in place.")
       .def(
           "to_openqasm3",
-          [](const mlir::QCProgram& program) {
-            requireValid(program);
+          [](mlir::QCProgram& program, const bool copy) {
+            auto source = copiedOrConsumed(program, copy);
+            const auto context = source.context();
             return withDiagnostics<nb::exception_type::runtime_error>(
-                program.module().getContext(),
-                "cannot export QC program to OpenQASM 3",
-                [&] { return program.toOpenQASM3(); });
+                context.get(), "cannot export QC program to OpenQASM 3",
+                [&] { return std::move(source).intoOpenQASM3(); });
           },
-          "Clean up and emit this QC program as OpenQASM 3 without QCO "
-          "optimization.")
+          nb::kw_only(), "copy"_a = false,
+          R"pb(Clean up and emit this QC program as OpenQASM 3 without QCO optimization.
+
+The source is consumed, including when export fails. Set ``copy=True`` to preserve it.
+
+Args:
+    copy: Preserve the source program by exporting a copy.)pb")
       .def(
           "to_qiskit",
           [](mlir::QCProgram& program, const mlir::CompilerTarget* target,
@@ -1805,7 +1813,7 @@ Args:
           nb::kw_only(), "copy"_a = false,
           R"pb(Convert this program to QCO.
 
-Set ``copy=True`` to preserve it.)pb")
+The source is consumed even on failure. Set ``copy=True`` to preserve it.)pb")
       .def(
           "to_qir",
           [](mlir::QCProgram& value, const mlir::QIRProfile profile,
@@ -1816,10 +1824,11 @@ Set ``copy=True`` to preserve it.)pb")
           "profile"_a, nb::kw_only(), "copy"_a = false,
           R"pb(Lower this program to QIR for the requested profile.
 
-Entry results must be direct measurements or CBit registers. Other scalar
-outputs are unsupported. The generated QIR returns a zero execution status.
+Entry results may be direct measurements or CBit registers. Adaptive Profile
+also supports computed Boolean (``i1``) results. Other scalar outputs are
+unsupported. The generated QIR returns a zero execution status.
 Base conversion unrolls static counted loops; Adaptive conversion retains them.
-Set ``copy=True`` to preserve it.)pb");
+The source is consumed even on failure. Set ``copy=True`` to preserve it.)pb");
 
   auto qcoProgram = nb::class_<mlir::QCOProgram, mlir::Program>(
       m, "QCOProgram", R"pb(A compiler program in the QCO dialect.
@@ -1953,7 +1962,7 @@ Args:
           nb::kw_only(), "copy"_a = false,
           R"pb(Convert this program to QC.
 
-Set ``copy=True`` to preserve it.)pb")
+The source is consumed even on failure. Set ``copy=True`` to preserve it.)pb")
       .def(
           "to_jeff",
           [](mlir::QCOProgram& value, const bool copy) {
@@ -1963,7 +1972,7 @@ Set ``copy=True`` to preserve it.)pb")
           nb::kw_only(), "copy"_a = false,
           R"pb(Convert this program to ``jeff`` MLIR.
 
-Set ``copy=True`` to preserve it.)pb");
+The source is consumed even on failure. Set ``copy=True`` to preserve it.)pb");
 
   registerInspection(qcProgram);
   registerInspection(qcoProgram);
@@ -2083,7 +2092,16 @@ segment data is copied or flattened.)pb")
           nb::kw_only(), "copy"_a = false,
           R"pb(Convert this program to QCO.
 
-Set ``copy=True`` to preserve it.)pb");
+The source is consumed even on failure. Set ``copy=True`` to preserve it.)pb");
+
+  nb::class_<mlir::IQMJSONProgram>(
+      m, "IQMJSONProgram", "An immutable output-only IQM circuit object.")
+      .def_prop_ro("source", &mlir::IQMJSONProgram::source,
+                   "The emitted IQM JSON source.")
+      .def("write", &FallibleMemberAdapter<&mlir::IQMJSONProgram::write>::call,
+           "path"_a, "Write the IQM JSON source to a file.")
+      .def("__str__", &mlir::IQMJSONProgram::str,
+           "Return the emitted IQM JSON source.");
 
   nb::class_<mlir::OpenQASMProgram>(
       m, "OpenQASMProgram",
@@ -2107,25 +2125,59 @@ LLVM bitcode.)pb");
            "Run the standard QIR cleanup pipeline in place.")
       .def_prop_ro("profile", &mlir::QIRProgram::profile,
                    "The QIR target profile used to produce this program.")
-      .def_prop_ro(
-          "llvm_ir",
-          [](const mlir::QIRProgram& value) {
-            requireValid(value);
-            return takeResult(value.llvmIR());
+      .def(
+          "to_llvm_ir",
+          [](mlir::QIRProgram& value, const bool copy) {
+            auto source = copiedOrConsumed(value, copy);
+            const auto context = source.context();
+            return withDiagnostics<nb::exception_type::runtime_error>(
+                context.get(), "cannot export QIR as LLVM IR",
+                [&] { return std::move(source).intoLLVMIR(); });
           },
-          "The program as textual LLVM IR.")
+          nb::kw_only(), "copy"_a = false,
+          R"pb(Consume this program and emit LLVM IR text.
+
+The source is consumed even on failure. Set ``copy=True`` to preserve it.
+
+Args:
+    copy: Preserve the source program by exporting a copy.)pb")
       .def(
           "to_bitcode",
-          [](const mlir::QIRProgram& value) {
-            requireValid(value);
-            const auto bytes = takeResult(value.toBitcode());
-            return nb::bytes(reinterpret_cast<const char*>(bytes.data()),
-                             bytes.size());
+          [](mlir::QIRProgram& value, const bool copy) {
+            auto source = copiedOrConsumed(value, copy);
+            const auto context = source.context();
+            std::string bytes;
+            llvm::raw_string_ostream stream(bytes);
+            withDiagnostics<nb::exception_type::runtime_error>(
+                context.get(), "cannot export QIR as bitcode",
+                [&] { return std::move(source).intoBitcode(stream); });
+            return nb::bytes(bytes.data(), bytes.size());
           },
-          "Serialize this program as LLVM bitcode.")
-      .def("write_bitcode",
-           &FallibleMemberAdapter<&mlir::QIRProgram::writeBitcode>::call,
-           "path"_a, "Write this program as LLVM bitcode.");
+          nb::kw_only(), "copy"_a = false,
+          R"pb(Consume this program and emit LLVM bitcode.
+
+The source is consumed even on failure. Set ``copy=True`` to preserve it.
+
+Args:
+    copy: Preserve the source program by exporting a copy.)pb")
+      .def(
+          "write_bitcode",
+          [](mlir::QIRProgram& value, const std::filesystem::path& path,
+             const bool copy) {
+            auto source = copiedOrConsumed(value, copy);
+            const auto context = source.context();
+            withDiagnostics<nb::exception_type::runtime_error>(
+                context.get(), "cannot write QIR bitcode",
+                [&] { return std::move(source).writeBitcode(path); });
+          },
+          "path"_a, nb::kw_only(), "copy"_a = false,
+          R"pb(Consume this program and write LLVM bitcode to a file.
+
+The source is consumed even on failure. Set ``copy=True`` to preserve it.
+
+Args:
+    path: Destination file.
+    copy: Preserve the source program by exporting a copy.)pb");
 
   nb::module_::import_("mqt.core.dd");
 
@@ -2176,8 +2228,9 @@ Args:
 
 Returns:
     Histogram keys use conventional count-string order. The last returned
-    register comes first, and each register is MSB-first. If no CBit result
-    exists, final ``measureAll`` bitstrings are used instead.
+    CBit register or Boolean value comes first, and each register is MSB-first.
+    Other classical output types are rejected. Without classical results,
+    final ``measureAll`` bitstrings are used instead.
 
 Raises:
     ValueError: When the program is unsupported for sampling.)pb");
@@ -2208,10 +2261,11 @@ Raises:
                 "{'shape': (None,)}]"),
         R"pb(Simulate a closed compiler input from the all-zero state.
 
-The DD package is managed internally. Terminal measurements that only assemble
-returned classical registers do not collapse the state. Mid-circuit measurement
-feedback and resets are unsupported; use {py:meth}`QCOProgram.simulate` with an
-explicit DD package for those workflows or for a custom initial state.
+The DD package is managed internally. Terminal measurements returned directly
+or stored in returned classical registers do not collapse the state.
+Mid-circuit measurement feedback and resets are unsupported; use
+:py:meth:`QCOProgram.simulate` with an explicit DD package for those workflows
+or for a custom initial state.
 
 Args:
     program: Compiler input to lower directly to QCO.
@@ -2264,7 +2318,7 @@ contracts.)pb");
           "The payload format and capabilities used for compilation.");
 
   m.def("compile_program", &compilePythonProgram, "program"_a, nb::kw_only(),
-        "target"_a = nb::none(), "output"_a = nb::none(), "inplace"_a = false,
+        "target"_a = nb::none(), "output"_a = nb::none(), "copy"_a = false,
         "qco_pipeline"_a = "mqt-qco-default",
         "options"_a = mlir::CompilationOptions{},
         R"pb(Compile a program, optionally for a hardware target.
@@ -2276,18 +2330,21 @@ a Qiskit target selects QuantumCircuit or a QDMI device selects a
 
 Source strings and paths return typed programs: OpenQASM returns
 :class:`OpenQASMProgram`, QC MLIR returns :class:`QCProgram`, and jeff files
-return :class:`JeffProgram`. QCO inputs return optimized QCO.
+return :class:`JeffProgram`. QCO inputs return optimized QCO. Typed MLIR
+programs are consumed, including if compilation fails; set ``copy=True`` to
+preserve them. Source strings, paths, Qiskit circuits and OpenQASM text programs
+remain reusable.
 
 Args:
     program: Source text, a file path, a Qiskit circuit, or a typed compiler program.
     target: A CompilerTarget, Qiskit BackendV2 or Target, QDMI Device, or device ID.
     output: The returned representation. QC_IMPORT and raw QCO are checkpoints
         before target compilation and cannot be combined with a target.
-    inplace: Whether a typed input program may be consumed; otherwise it is copied.
+    copy: Preserve a typed input program by compiling an explicit copy.
     qco_pipeline: The QCO optimization pipeline. Custom pipelines require no target.
     options: Shared compilation controls.
 
-Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, then Base QIR
+Device defaults prefer Adaptive QIR (binary, text), OpenQASM 3, IQM JSON, then Base QIR
 (binary, text). Select an exact execution format with
 :func:`submit_program` and its ``program_format`` argument. An explicit output
 need not be a device's execution format. Jeff output does not retain hardware

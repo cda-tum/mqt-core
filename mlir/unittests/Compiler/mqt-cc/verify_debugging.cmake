@@ -15,12 +15,8 @@ function(run_compiler expected_result)
   if(NOT "${result}" STREQUAL "${expected_result}")
     message(FATAL_ERROR "mqt-cc ${ARGN}: expected ${expected_result}, got ${result}:\n${error}")
   endif()
-  set(output
-      "${output}"
-      PARENT_SCOPE)
-  set(error
-      "${error}"
-      PARENT_SCOPE)
+  set(output "${output}" PARENT_SCOPE)
+  set(error "${error}" PARENT_SCOPE)
 endfunction()
 
 function(reject_compiler expected_diagnostic)
@@ -42,8 +38,7 @@ function(check_action_profile path expected_pass)
   string(JSON last_phase GET "${profile}" ${last_event} ph)
   if(NOT first_phase STREQUAL "B"
      OR NOT last_phase STREQUAL "E"
-     OR NOT profile MATCHES "pass-execution"
-     OR NOT profile MATCHES "${expected_pass}")
+     OR NOT profile MATCHES "pass-execution" OR NOT profile MATCHES "${expected_pass}")
     message(FATAL_ERROR "Action profile is missing ${expected_pass} or its events: ${profile}")
   endif()
 endfunction()
@@ -53,10 +48,23 @@ file(MAKE_DIRECTORY "${OUTPUT_DIR}")
 # The default checkpoint is QC, including when the input format is explicit.
 run_compiler(0 "${QASM_INPUT}")
 set(default_output "${output}")
-run_compiler(0 "${QASM_INPUT}" --input-format=openqasm --emit=qc)
+set(normal_profile "${OUTPUT_DIR}/normal-profile.json")
+file(REMOVE "${normal_profile}")
+run_compiler(
+  0
+  "${QASM_INPUT}"
+  --input-format=openqasm
+  --emit=qc
+  "--profile-actions-to=${normal_profile}"
+  --mlir-timing
+  --mlir-pass-statistics)
 if(NOT output STREQUAL default_output OR NOT output MATCHES "qc.h")
   message(FATAL_ERROR "Default and explicit QC checkpoints disagree: ${output}")
 endif()
+if(NOT error MATCHES "Execution time report" OR NOT error MATCHES "Pass statistics report")
+  message(FATAL_ERROR "MLIR timing or statistics report missing: ${error}")
+endif()
+check_action_profile("${normal_profile}" "QCToQCO")
 set(openqasm_text "${OUTPUT_DIR}/program.txt")
 configure_file("${QASM_INPUT}" "${openqasm_text}" COPYONLY)
 run_compiler(0 "${openqasm_text}" --input-format=openqasm --emit=qc)
@@ -66,17 +74,6 @@ endif()
 reject_compiler("Could not determine the input format" "${QASM_INPUT}" --input-format=qasm)
 reject_compiler("Unknown output format" "${QASM_INPUT}" --emit=mlir)
 
-set(normal_profile "${OUTPUT_DIR}/normal-profile.json")
-file(REMOVE "${normal_profile}")
-run_compiler(0 "${QASM_INPUT}" "--profile-actions-to=${normal_profile}" --mlir-timing
-             --mlir-pass-statistics)
-if(NOT output STREQUAL default_output)
-  message(FATAL_ERROR "Action profiling changed compiler output: ${output}")
-endif()
-if(NOT error MATCHES "Execution time report" OR NOT error MATCHES "Pass statistics report")
-  message(FATAL_ERROR "MLIR timing or statistics report missing: ${error}")
-endif()
-check_action_profile("${normal_profile}" "QCToQCO")
 foreach(option IN ITEMS profile-actions-to log-actions-to)
   reject_compiler("Opening file for --${option} failed" "${QASM_INPUT}" "--${option}=${OUTPUT_DIR}")
 endforeach()
@@ -129,9 +126,9 @@ foreach(mode IN ITEMS --run-pipeline --emit=qco-optimized)
                   "--pass-pipeline=func.func(cse)")
   reject_compiler("must be anchored on builtin.module" "${reduced}" "${mode}"
                   "--pass-pipeline=builtin.module(cse")
-  reject_compiler(
-    "without disabling multi-threading" "${reduced}" "${mode}" "--pass-pipeline=builtin.module()"
-    --mlir-print-ir-module-scope --mlir-disable-threading=false)
+  reject_compiler("without disabling multi-threading" "${reduced}" "${mode}"
+                  "--pass-pipeline=builtin.module()" --mlir-print-ir-module-scope
+                  --mlir-disable-threading=false)
   run_compiler(0 "${reduced}" "${mode}" "--pass-pipeline=builtin.module()"
                --mlir-print-ir-module-scope --mlir-disable-threading)
 endforeach()
@@ -211,12 +208,35 @@ run_compiler(
   --mlir-disable-threading
   "--mlir-pass-pipeline-crash-reproducer=${reproducer}"
   "--profile-actions-to=${failure_profile}")
-if(NOT EXISTS "${reproducer}"
-   OR NOT error MATCHES "After QCToQCO Failed"
-   OR NOT error MATCHES "does not support unstructured control flow"
-   OR NOT error MATCHES "note: diagnostic emitted with trace:"
-   OR NOT error MATCHES "note: see current operation"
-   OR NOT error MATCHES "cf[.]br .next")
+if(
+  NOT
+  EXISTS
+  "${reproducer}"
+  OR
+  NOT
+  error
+  MATCHES
+  "After QCToQCO Failed"
+  OR
+  NOT
+  error
+  MATCHES
+  "does not support unstructured control flow"
+  OR
+  NOT
+  error
+  MATCHES
+  "note: diagnostic emitted with trace:"
+  OR
+  NOT
+  error
+  MATCHES
+  "note: see current operation"
+  OR
+  NOT
+  error
+  MATCHES
+  "cf[.]br .next")
   message(
     FATAL_ERROR "Failure diagnostics, source excerpts, notes, or reproducer missing: ${error}")
 endif()
@@ -237,8 +257,8 @@ endif()
 
 # Reloading the saved pipeline must reproduce the same conversion failure.
 run_compiler(1 "${reproducer}" --run-reproducer --mlir-print-ir-before-all)
-if(NOT error MATCHES "Before QCToQCO" OR NOT error MATCHES
-                                         "does not support unstructured control flow")
+if(NOT error MATCHES "Before QCToQCO"
+   OR NOT error MATCHES "does not support unstructured control flow")
   message(FATAL_ERROR "Saved pipeline was not replayed: ${error}")
 endif()
 run_compiler(1 "${unsupported}" --run-pipeline "--pass-pipeline=builtin.module(qc-to-qco)")
@@ -247,17 +267,14 @@ run_compiler(1 "${unsupported}" --run-pipeline "--pass-pipeline=builtin.module(q
 foreach(profile IN ITEMS qir-base qir-adaptive)
   set(qir_reproducer "${OUTPUT_DIR}/${profile}-failure.mlir")
   file(REMOVE "${qir_reproducer}")
-  reject_compiler(
-    "no main function with mqt.entry_point found" "${reduced}" "--emit=${profile}"
-    --mlir-disable-threading "--mlir-pass-pipeline-crash-reproducer=${qir_reproducer}")
-  reject_compiler("no main function with mqt.entry_point found" "${qir_reproducer}"
-                  --run-reproducer)
+  reject_compiler("no main function with mqt.entry_point found" "${reduced}" "--emit=${profile}"
+                  --mlir-disable-threading "--mlir-pass-pipeline-crash-reproducer=${qir_reproducer}")
+  reject_compiler("no main function with mqt.entry_point found" "${qir_reproducer}" --run-reproducer)
 endforeach()
 
 # Register the named shrink and QIR cleanup passes for isolated pipelines too.
-run_compiler(
-  0 "${reduced}" --run-pipeline
-  "--pass-pipeline=builtin.module(qtensor-shrink-to-fit,qc-shrink-qubit-registers,qir-cleanup)")
+run_compiler(0 "${reduced}" --run-pipeline
+             "--pass-pipeline=builtin.module(qtensor-shrink-to-fit,qc-shrink-qubit-registers,qir-cleanup)")
 reject_compiler("QIR metadata attachment requires exactly one entry point" "${reduced}"
                 --run-pipeline "--pass-pipeline=builtin.module(set-qir-attributes-and-metadata)")
 
@@ -292,7 +309,7 @@ endif()
 file(READ "${unverified}" reproducer_source)
 set(invalid_reproducer "${OUTPUT_DIR}/invalid-reproducer.mlir")
 string(REPLACE "builtin.module(cse)" "builtin.module(not-a-pass)" invalid_source
-               "${reproducer_source}")
+       "${reproducer_source}")
 file(WRITE "${invalid_reproducer}" "${invalid_source}")
 reject_compiler("does not refer to a registered pass" "${invalid_reproducer}" --run-reproducer)
 foreach(pipeline IN ITEMS "builtin.module()" "func.func(cse)")
@@ -357,9 +374,7 @@ run_compiler(
   "--profile-actions-to=${qir_profile}")
 string(FIND "${error}" "Before Inliner" inliner)
 string(FIND "${error}" "Before HadamardLifting" custom_pass)
-if(inliner LESS 0
-   OR NOT inliner LESS custom_pass
-   OR NOT output MATCHES "define i64 @main")
+if(inliner LESS 0 OR NOT inliner LESS custom_pass OR NOT output MATCHES "define i64 @main")
   message(FATAL_ERROR "Custom pipeline discarded required inlining: ${error}")
 endif()
 check_action_profile("${qir_profile}" "ReconcileUnrealizedCasts")

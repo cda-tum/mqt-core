@@ -57,6 +57,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -477,6 +478,12 @@ int64_t JitSession::sample(size_t shots, std::vector<std::string>& results,
                            stateAvailable);
 }
 
+int64_t JitSession::sample(size_t shots,
+                           llvm::function_ref<void(std::string_view)> emit,
+                           bool* stateAvailable, bool emitHeader) {
+  return sampleWithRuntime(*runtime_, shots, emit, emitHeader, stateAvailable);
+}
+
 int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
                                       std::vector<std::string>& results,
                                       bool emitHeader, bool* stateAvailable) {
@@ -491,6 +498,36 @@ int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
   }
   results.clear();
   results.reserve(shots);
+  return sampleWithRuntimeImpl(
+      runtime, shots,
+      [&](std::string&& shot) { results.push_back(std::move(shot)); },
+      [&](std::string_view shot) { results.emplace_back(shot); }, emitHeader,
+      stateAvailable);
+}
+
+int64_t
+JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
+                              llvm::function_ref<void(std::string_view)> emit,
+                              bool emitHeader, bool* stateAvailable) {
+  return sampleWithRuntimeImpl(
+      runtime, shots, [&](const std::string& shot) { emit(shot); },
+      [&](std::string_view shot) { emit(shot); }, emitHeader, stateAvailable);
+}
+
+int64_t JitSession::sampleWithRuntimeImpl(
+    Runtime& runtime, size_t shots,
+    llvm::function_ref<void(std::string&&)> emitOwned,
+    llvm::function_ref<void(std::string_view)> emitBorrowed, bool emitHeader,
+    bool* stateAvailable) {
+  if (&runtime != runtime_.get() && !shareCompiledCode_) {
+    throw std::logic_error("QIR entry point cannot be shared across workers");
+  }
+  if (stateAvailable != nullptr) {
+    *stateAvailable = false;
+  }
+  if (execution_ != Execution::Sampling) {
+    throw std::logic_error("Cannot sample a QIR state-extraction session");
+  }
   if (emitHeader) {
     runtime.outputProgramHeader();
   }
@@ -510,7 +547,8 @@ int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
     if (const auto code = execute(); code != 0) {
       return code;
     }
-    runtime.sampleMeasurements(*samplingOutputs_, shots, results);
+    runtime.sampleMeasurements(*samplingOutputs_, shots, emitOwned,
+                               emitBorrowed);
     if (stateAvailable != nullptr) {
       *stateAvailable = true;
     }
@@ -520,7 +558,7 @@ int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
     if (const auto code = execute(); code != 0) {
       return code;
     }
-    results.push_back(runtime.getMeasurements());
+    emitBorrowed(runtime.getMeasurements());
   }
   return 0;
 }
@@ -640,6 +678,7 @@ void JitSession::initialize(
 
   std::string entryPointName;
   std::vector<std::pair<std::string, void*>> runtimeSymbols;
+  bool hasAggregateLoads = false;
   loadedModule.withModuleDo([&](llvm::Module& module) {
     normalizeNativeQISNames(module);
     std::string verification;
@@ -650,6 +689,8 @@ void JitSession::initialize(
     for (const auto& function : module) {
       for (const auto& block : function) {
         for (const auto& instruction : block) {
+          hasAggregateLoads |= llvm::isa<llvm::LoadInst>(instruction) &&
+                               instruction.getType()->isAggregateType();
           const auto* call = llvm::dyn_cast<llvm::CallBase>(&instruction);
           const auto* callee =
               call == nullptr ? nullptr : call->getCalledFunction();
@@ -808,7 +849,8 @@ void JitSession::initialize(
   }
 
   // Avoid optimizer startup for programs eligible for terminal sampling.
-  if (execution == Execution::Sampling && !samplingOutputs_) {
+  if (!samplingOutputs_ &&
+      (execution == Execution::Sampling || hasAggregateLoads)) {
     loadedModule.withModuleDo([&](llvm::Module& module) {
       module.setDataLayout(jit_->getDataLayout());
       module.setTargetTriple(jit_->getTargetTriple());
@@ -825,8 +867,14 @@ void JitSession::initialize(
       passBuilder.registerLoopAnalyses(loopAnalyses);
       passBuilder.crossRegisterProxies(loopAnalyses, functionAnalyses,
                                        cgsccAnalyses, moduleAnalyses);
-      auto pipeline = passBuilder.buildPerModuleDefaultPipeline(
-          llvm::OptimizationLevel::O1);
+      llvm::ModulePassManager pipeline;
+      // Keep aggregate copies compact through scalar replacement and codegen.
+      pipeline.addPass(
+          llvm::createModuleToFunctionPassAdaptor(llvm::MemCpyOptPass()));
+      if (execution == Execution::Sampling) {
+        pipeline.addPass(passBuilder.buildPerModuleDefaultPipeline(
+            llvm::OptimizationLevel::O1));
+      }
       pipeline.run(module, moduleAnalyses);
     });
   }
