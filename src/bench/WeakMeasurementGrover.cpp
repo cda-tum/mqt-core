@@ -14,10 +14,12 @@
 
 #include "EvaluationUtils.hpp"
 
+#include "llvm/Support/Error.h"
+
 #include <cmath>
 #include <cstddef>
-#include <stdexcept>
 #include <string_view>
+#include <system_error>
 #include <utility>
 
 namespace mqt::bench {
@@ -32,26 +34,34 @@ namespace {
 WeakMeasurementGrover::WeakMeasurementGrover(
     WeakMeasurementGroverOptions options)
     : options_(std::move(options)),
-      output_{.name = "result", .width = options_.markedBitstring.size()} {
-  const auto width = options_.markedBitstring.size();
+      output_{.name = "result", .width = options_.markedBitstring.size()} {}
+
+llvm::Expected<WeakMeasurementGrover>
+WeakMeasurementGrover::create(WeakMeasurementGroverOptions options) {
+  const auto width = options.markedBitstring.size();
   if (width < 2 || width > WeakMeasurementGroverOptions::MAX_QUBITS) {
-    throw std::invalid_argument(
+    return llvm::createStringError(
+        std::errc::invalid_argument,
         "weak-measurement Grover requires a marked bitstring of width 2 "
         "through 2044");
   }
-  detail::validateOutcome(options_.markedBitstring, width);
+  if (auto error = detail::validateOutcome(options.markedBitstring, width)) {
+    return error;
+  }
 
   const auto maximumStrength = defaultMeasurementStrength(width);
-  if (!options_.measurementStrength) {
-    options_.measurementStrength = maximumStrength;
+  if (!options.measurementStrength) {
+    options.measurementStrength = maximumStrength;
   }
-  if (!std::isfinite(*options_.measurementStrength) ||
-      *options_.measurementStrength <= 0. ||
-      *options_.measurementStrength > maximumStrength) {
-    throw std::invalid_argument(
+  if (!std::isfinite(*options.measurementStrength) ||
+      *options.measurementStrength <= 0. ||
+      *options.measurementStrength > maximumStrength) {
+    return llvm::createStringError(
+        std::errc::invalid_argument,
         "weak-measurement Grover measurement strength must be finite and in "
         "(0, 2^(-n/2)]");
   }
+  return WeakMeasurementGrover(std::move(options));
 }
 
 const WeakMeasurementGroverOptions&
@@ -63,13 +73,16 @@ size_t WeakMeasurementGrover::qubits() const noexcept { return output_.width; }
 
 const Output& WeakMeasurementGrover::output() const noexcept { return output_; }
 
-double
+llvm::Expected<double>
 WeakMeasurementGrover::probability(const std::string_view outcome) const {
-  detail::validateOutcome(outcome, output_.width);
+  if (auto error = detail::validateOutcome(outcome, output_.width)) {
+    return error;
+  }
   return outcome == options_.markedBitstring ? 1. : 0.;
 }
 
-Evaluation WeakMeasurementGrover::evaluate(const Counts& counts) const {
+llvm::Expected<Evaluation>
+WeakMeasurementGrover::evaluate(const Counts& counts) const {
   return detail::evaluate(*this, counts, options_.markedBitstring);
 }
 

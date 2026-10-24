@@ -20,35 +20,36 @@
 
 #include <cmath>
 #include <limits>
-#include <stdexcept>
 #include <string>
+#include <system_error>
 
 namespace mqt::bench {
 
 TEST(WeakMeasurementGrover, ResolvesTheDefaultMeasurementStrength) {
-  const WeakMeasurementGrover benchmark{{.markedBitstring = "101"}};
+  const auto benchmark =
+      llvm::cantFail(WeakMeasurementGrover::create({.markedBitstring = "101"}));
   ASSERT_TRUE(benchmark.options().measurementStrength);
   EXPECT_DOUBLE_EQ(*benchmark.options().measurementStrength,
                    std::exp2(-3. / 2.));
   EXPECT_EQ(benchmark.qubits(), 3);
   EXPECT_EQ(benchmark.output(), (Output{"result", 3}));
-  EXPECT_DOUBLE_EQ(benchmark.probability("101"), 1.);
-  EXPECT_DOUBLE_EQ(benchmark.probability("001"), 0.);
+  EXPECT_DOUBLE_EQ(llvm::cantFail(benchmark.probability("101")), 1.);
+  EXPECT_DOUBLE_EQ(llvm::cantFail(benchmark.probability("001")), 0.);
 }
 
 TEST(WeakMeasurementGrover, AcceptsStrengthsInTheProvenRegime) {
-  const WeakMeasurementGrover boundary{
-      {.markedBitstring = "10", .measurementStrength = 0.5}};
+  const auto boundary = llvm::cantFail(WeakMeasurementGrover::create(
+      {.markedBitstring = "10", .measurementStrength = 0.5}));
   EXPECT_DOUBLE_EQ(*boundary.options().measurementStrength, 0.5);
 
-  const WeakMeasurementGrover weaker{
-      {.markedBitstring = "0000", .measurementStrength = 0.125}};
+  const auto weaker = llvm::cantFail(WeakMeasurementGrover::create(
+      {.markedBitstring = "0000", .measurementStrength = 0.125}));
   EXPECT_DOUBLE_EQ(*weaker.options().measurementStrength, 0.125);
 
-  const WeakMeasurementGrover largest{{
+  const auto largest = llvm::cantFail(WeakMeasurementGrover::create({
       .markedBitstring =
           std::string(WeakMeasurementGroverOptions::MAX_QUBITS, '0'),
-  }};
+  }));
   ASSERT_TRUE(largest.options().measurementStrength);
   EXPECT_DOUBLE_EQ(*largest.options().measurementStrength,
                    std::numeric_limits<double>::min());
@@ -60,9 +61,9 @@ TEST(WeakMeasurementGrover, RejectsUnsupportedOptions) {
            std::string{"0x"},
            std::string(WeakMeasurementGroverOptions::MAX_QUBITS + 1, '0'),
        }) {
-    EXPECT_THROW(
-        static_cast<void>(WeakMeasurementGrover{{.markedBitstring = marked}}),
-        std::invalid_argument);
+    test::expectError(
+        WeakMeasurementGrover::create({.markedBitstring = marked}),
+        std::errc::invalid_argument);
   }
 
   for (const auto strength : {
@@ -72,19 +73,23 @@ TEST(WeakMeasurementGrover, RejectsUnsupportedOptions) {
            std::numeric_limits<double>::infinity(),
            std::numeric_limits<double>::quiet_NaN(),
        }) {
-    EXPECT_THROW(
-        static_cast<void>(WeakMeasurementGrover{
-            {.markedBitstring = "00", .measurementStrength = strength}}),
-        std::invalid_argument);
+    test::expectError(
+        WeakMeasurementGrover::create(
+            {.markedBitstring = "00", .measurementStrength = strength}),
+        std::errc::invalid_argument);
   }
-  EXPECT_THROW(static_cast<void>(WeakMeasurementGrover{
-                   {.markedBitstring = "0000", .measurementStrength = 0.3}}),
-               std::invalid_argument);
+  test::expectError(WeakMeasurementGrover::create({
+                        .markedBitstring = "0000",
+                        .measurementStrength = 0.3,
+                    }),
+                    std::errc::invalid_argument);
 }
 
 TEST(WeakMeasurementGrover, EvaluatesTheMarkedOutcomeAsSuccess) {
-  const WeakMeasurementGrover benchmark{{.markedBitstring = "01"}};
-  const auto evaluation = benchmark.evaluate({{"00", 1}, {"01", 9}});
+  const auto benchmark =
+      llvm::cantFail(WeakMeasurementGrover::create({.markedBitstring = "01"}));
+  const auto evaluation =
+      llvm::cantFail(benchmark.evaluate({{"00", 1}, {"01", 9}}));
   EXPECT_NEAR(evaluation.totalVariationDistance, 0.1, 1e-15);
   EXPECT_NEAR(evaluation.squaredHellingerFidelity, 0.9, 1e-15);
   ASSERT_TRUE(evaluation.successProbability);
@@ -100,8 +105,8 @@ TEST(WeakMeasurementGrover, RoundTripsJSON) {
   EXPECT_EQ(
       toInstanceSpecificationJSON(defaults),
       R"({"benchmark":"grover-weak-measurement","parameters":{"marked_bitstring":"10","measurement_strength":0.5},"schema_version":1})");
-  const WeakMeasurementGrover weaker{
-      {.markedBitstring = "10", .measurementStrength = 0.25}};
+  const auto weaker = llvm::cantFail(WeakMeasurementGrover::create(
+      {.markedBitstring = "10", .measurementStrength = 0.25}));
   const auto manifest = toManifestJSON(weaker);
   EXPECT_EQ(toManifestJSON(llvm::cantFail(
                 weakMeasurementGroverFromManifestJSON(manifest))),
@@ -118,11 +123,11 @@ TEST(WeakMeasurementGrover, UsesSemanticCaseIds) {
       llvm::cantFail(weakMeasurementGroverFromInstanceSpecificationJSON(
           R"({"schema_version":1,"benchmark":"grover-weak-measurement","parameters":{"marked_bitstring":"10"}})"));
   EXPECT_EQ(caseId(defaults),
-            caseId(WeakMeasurementGrover{
-                {.markedBitstring = "10", .measurementStrength = 0.5}}));
+            caseId(llvm::cantFail(WeakMeasurementGrover::create(
+                {.markedBitstring = "10", .measurementStrength = 0.5}))));
   EXPECT_NE(caseId(defaults),
-            caseId(WeakMeasurementGrover{
-                {.markedBitstring = "10", .measurementStrength = 0.25}}));
+            caseId(llvm::cantFail(WeakMeasurementGrover::create(
+                {.markedBitstring = "10", .measurementStrength = 0.25}))));
 }
 
 TEST(WeakMeasurementGrover, DescribesJSONSchema) {
@@ -148,7 +153,8 @@ TEST(WeakMeasurementGrover, RejectsInvalidJSONParameters) {
 }
 
 TEST(WeakMeasurementGrover, EvaluatesCountsFromJSON) {
-  const WeakMeasurementGrover benchmark{{.markedBitstring = "10"}};
+  const auto benchmark =
+      llvm::cantFail(WeakMeasurementGrover::create({.markedBitstring = "10"}));
   const auto evaluation = llvm::cantFail(
       evaluateJSON(toManifestJSON(benchmark),
                    R"({"schema_version":1,"counts":{"10":8,"00":2}})"));
