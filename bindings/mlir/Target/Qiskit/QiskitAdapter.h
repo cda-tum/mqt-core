@@ -1160,7 +1160,7 @@ public:
       // Finish reading the borrowed view before invoking Python fallbacks.
       if (!symbolic.empty()) {
         const auto parameters =
-            pythonAttribute(pythonOperation(index), "params",
+            pythonAttribute(data_[index], "params",
                             "Qiskit operation does not expose its parameters");
         if (nb::len(parameters) != native.num_params) {
           throw std::runtime_error(
@@ -1173,7 +1173,7 @@ public:
       }
 #else
       const auto parameters =
-          pythonAttribute(pythonOperation(index), "params",
+          pythonAttribute(data_[index], "params",
                           "Qiskit operation does not expose its parameters");
       result.parameters.reserve(native.num_params);
       try {

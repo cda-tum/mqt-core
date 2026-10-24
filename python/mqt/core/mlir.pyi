@@ -50,9 +50,6 @@ class _CompileOptions(TypedDict, total=False, closed=True):
     qco_pipeline: str
     options: CompilationOptions
 
-def _generate_benchmark(instance_specification_json: str) -> QCProgram:
-    """Generate the QC program described by an instance specification."""
-
 class QIRProfile(enum.Enum):
     """QIR target profiles."""
 

@@ -779,7 +779,7 @@ when the custom slot is unsupported.)pb");
            nb::sig("def __ne__(self, arg: object, /) -> bool"));
   // Operation class
   auto operation = nb::class_<qdmi::Operation>(
-      device, "Operation",
+      device, "Operation", nb::pooled(),
       "An operation represents a quantum operation that can be performed on a "
       "quantum device.");
 
