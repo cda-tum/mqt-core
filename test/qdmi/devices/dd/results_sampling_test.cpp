@@ -124,65 +124,83 @@ protected:
 
   static void checkTypedOutput(const QDMI_Program_Format format,
                                const std::string_view program) {
-    for (const size_t workers : {1U, 4U}) {
-      SCOPED_TRACE(workers);
-      const qdmi_test::SessionGuard session{};
-      const qdmi_test::JobGuard job{session.session};
-      ASSERT_EQ(qdmi_test::setProgram(job.job, format, program), QDMI_SUCCESS);
-      ASSERT_EQ(qdmi_test::setShots(job.job, 4), QDMI_SUCCESS);
-      ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
-                    job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM3, sizeof(workers),
-                    &workers),
-                QDMI_SUCCESS);
-      ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
-      const auto samples = getShots(job.job);
-      ASSERT_EQ(samples.size(), 4U);
-      const auto [keys, counts] = qdmi_test::getHistogram(job.job);
-      EXPECT_EQ(std::accumulate(counts.begin(), counts.end(), size_t{0}), 4U);
-      const auto size = qdmi_test::querySize(job.job, QDMI_JOB_RESULT_CUSTOM1);
-      ASSERT_GT(size, 1U);
-      std::string output(size, '\0');
-      ASSERT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
-                    job.job, 0, QDMI_JOB_RESULT_CUSTOM1, size, output.data(),
-                    nullptr),
-                QDMI_SUCCESS);
-      for (const auto* type : {"INT", "DOUBLE", "TUPLE", "ARRAY"}) {
-        EXPECT_NE(output.find(std::string("OUTPUT\t") + type + "\t"),
-                  std::string::npos);
-      }
-      std::istringstream records(output);
-      std::string line;
-      std::string bits;
-      size_t shot = 0;
-      size_t weight = 0;
-      while (std::getline(records, line)) {
-        std::istringstream fields(line);
-        std::string record;
-        std::string type;
-        std::string value;
-        fields >> record >> type >> value;
-        if (record == "OUTPUT") {
-          if (type == "RESULT") {
-            bits += value;
-            weight += static_cast<size_t>(value == "1");
-          } else if (type == "BOOL") {
-            bits += value == "true" ? '1' : '0';
-          } else if (type == "INT") {
-            EXPECT_EQ(std::stoull(value), weight);
-          } else if (type == "DOUBLE") {
-            EXPECT_DOUBLE_EQ(std::stod(value),
-                             static_cast<double>(weight) / 3.);
-          }
-        } else if (record == "END") {
-          ASSERT_LT(shot, samples.size());
-          ASSERT_EQ(bits.size(), 6U);
-          std::ranges::reverse(bits);
-          EXPECT_EQ(bits, samples[shot++]);
-          bits.clear();
-          weight = 0;
+    for (const bool capture : {false, true}) {
+      SCOPED_TRACE(capture);
+      for (const size_t workers : {1U, 4U}) {
+        SCOPED_TRACE(workers);
+        const qdmi_test::SessionGuard session{};
+        const qdmi_test::JobGuard job{session.session};
+        ASSERT_EQ(qdmi_test::setProgram(job.job, format, program),
+                  QDMI_SUCCESS);
+        ASSERT_EQ(qdmi_test::setShots(job.job, 4), QDMI_SUCCESS);
+        ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
+                      job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM3,
+                      sizeof(workers), &workers),
+                  QDMI_SUCCESS);
+        if (capture) {
+          ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
+                        job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM2,
+                        sizeof(capture), &capture),
+                    QDMI_SUCCESS);
         }
+        ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
+        const auto samples = getShots(job.job);
+        ASSERT_EQ(samples.size(), 4U);
+        const auto [keys, counts] = qdmi_test::getHistogram(job.job);
+        EXPECT_EQ(std::accumulate(counts.begin(), counts.end(), size_t{0}), 4U);
+        if (!capture) {
+          EXPECT_EQ(
+              MQT_DDSIM_QDMI_device_job_get_results(
+                  job.job, 0, QDMI_JOB_RESULT_CUSTOM1, 0, nullptr, nullptr),
+              QDMI_ERROR_NOTSUPPORTED);
+          continue;
+        }
+        const auto size =
+            qdmi_test::querySize(job.job, QDMI_JOB_RESULT_CUSTOM1);
+        ASSERT_GT(size, 1U);
+        std::string output(size, '\0');
+        ASSERT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
+                      job.job, 0, QDMI_JOB_RESULT_CUSTOM1, size, output.data(),
+                      nullptr),
+                  QDMI_SUCCESS);
+        for (const auto* type : {"INT", "DOUBLE", "TUPLE", "ARRAY"}) {
+          EXPECT_NE(output.find(std::string("OUTPUT\t") + type + "\t"),
+                    std::string::npos);
+        }
+        std::istringstream records(output);
+        std::string line;
+        std::string bits;
+        size_t shot = 0;
+        size_t weight = 0;
+        while (std::getline(records, line)) {
+          std::istringstream fields(line);
+          std::string record;
+          std::string type;
+          std::string value;
+          fields >> record >> type >> value;
+          if (record == "OUTPUT") {
+            if (type == "RESULT") {
+              bits += value;
+              weight += static_cast<size_t>(value == "1");
+            } else if (type == "BOOL") {
+              bits += value == "true" ? '1' : '0';
+            } else if (type == "INT") {
+              EXPECT_EQ(std::stoull(value), weight);
+            } else if (type == "DOUBLE") {
+              EXPECT_DOUBLE_EQ(std::stod(value),
+                               static_cast<double>(weight) / 3.);
+            }
+          } else if (record == "END") {
+            ASSERT_LT(shot, samples.size());
+            ASSERT_EQ(bits.size(), 6U);
+            std::ranges::reverse(bits);
+            EXPECT_EQ(bits, samples[shot++]);
+            bits.clear();
+            weight = 0;
+          }
+        }
+        EXPECT_EQ(shot, samples.size());
       }
-      EXPECT_EQ(shot, samples.size());
     }
   }
 };
@@ -573,6 +591,11 @@ declare void @__quantum__rt__bool_record_output(i1, ptr)
                   job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, executable),
               QDMI_SUCCESS);
     ASSERT_EQ(qdmi_test::setShots(job.job, 2), QDMI_SUCCESS);
+    const bool capture = true;
+    ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
+                  job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM2, sizeof(capture),
+                  &capture),
+              QDMI_SUCCESS);
     ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
     EXPECT_EQ(getShots(job.job), std::vector<std::string>(2, "0101"));
     const auto [keys, values] = qdmi_test::getHistogram(job.job);
@@ -655,6 +678,11 @@ define void @record_teardown() {
                 job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, program),
             QDMI_SUCCESS);
   ASSERT_EQ(qdmi_test::setShots(job.job, shots), QDMI_SUCCESS);
+  const bool capture = true;
+  ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
+                job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM2, sizeof(capture),
+                &capture),
+            QDMI_SUCCESS);
   ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
   const auto size = qdmi_test::querySize(job.job, QDMI_JOB_RESULT_CUSTOM1);
   ASSERT_GT(size, 1U);

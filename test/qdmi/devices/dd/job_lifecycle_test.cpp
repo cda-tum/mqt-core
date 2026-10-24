@@ -146,6 +146,11 @@ TEST(JobLifecycle, ReusesWorkersAndDestroysJobGlobals) {
                   job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, program),
               QDMI_SUCCESS);
     ASSERT_EQ(qdmi_test::setShots(job.job, 1), QDMI_SUCCESS);
+    const bool capture = true;
+    ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
+                  job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM2, sizeof(capture),
+                  &capture),
+              QDMI_SUCCESS);
     ASSERT_EQ(qdmi_test::submitAndWait(job.job, 10), QDMI_SUCCESS);
     const auto size = qdmi_test::querySize(job.job, QDMI_JOB_RESULT_CUSTOM1);
     ASSERT_GT(size, 1);

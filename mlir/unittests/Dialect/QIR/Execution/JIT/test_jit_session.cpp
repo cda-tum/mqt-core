@@ -115,7 +115,7 @@ attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" }
 )";
   std::async(std::launch::async, [&] {
     qir::JitSession session(ir, "static-lifecycle", qir::Execution::Sampling,
-                            42, &sink, qir::OutputRecording::NonBinary);
+                            42, &sink);
     EXPECT_EQ(session.run(), 1);
   }).get();
   EXPECT_EQ(sink.str(), "OUTPUT\tBOOL\ttrue\nOUTPUT\tBOOL\tfalse\n");

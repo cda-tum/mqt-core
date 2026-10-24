@@ -80,6 +80,7 @@ struct Execution {
   std::optional<uint64_t> seed_;
   size_t maxWorkers_;
   bool automaticWorkers_;
+  bool captureQirOutput_;
   std::optional<std::string> qirOutput_;
   std::optional<qdmi::dd::OutputTemplate> outputTemplate_;
   std::string shots_;
@@ -139,23 +140,19 @@ struct Execution {
   bool qirProgram() {
     const llvm::StringRef irBytes(program_.data(), program_.size());
     const bool sampling = numShots_ != 0;
+    const bool capture = sampling && captureQirOutput_;
     std::optional<llvm::raw_string_ostream> output;
     auto jitSession = qir::JitSession(
         irBytes, "QDMI job",
         sampling ? qir::Execution::Sampling : qir::Execution::StateExtraction,
         sampling ? seed_ : std::nullopt,
-        sampling ? &output.emplace(qirOutput_.emplace()) : nullptr,
-        qir::OutputRecording::NonBinary);
+        capture ? &output.emplace(qirOutput_.emplace()) : nullptr);
     auto& runtime = jitSession.runtime();
-    const bool capture = runtime.hasOutput();
     if (capture) {
       // Constructors run before sampling; the schema header still comes first.
       const auto constructorRecords = std::exchange(*qirOutput_, {});
       runtime.outputProgramHeader();
       *output << constructorRecords;
-    } else {
-      output.reset();
-      qirOutput_.reset();
     }
     bool stateAvailable = !sampling;
     const bool large = jitSession.canShareCompiledCode() &&
@@ -304,6 +301,7 @@ qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request,
       .seed_ = request.seed,
       .maxWorkers_ = static_cast<size_t>(request.maxWorkers),
       .automaticWorkers_ = request.automaticWorkers,
+      .captureQirOutput_ = request.captureQirOutput,
   };
   const bool qasm = request.format == QDMI_PROGRAM_FORMAT_QASM2 ||
                     request.format == QDMI_PROGRAM_FORMAT_QASM3;

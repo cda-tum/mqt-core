@@ -222,13 +222,12 @@ print("Counts:", recorded.get_counts())
 ```
 
 The histogram contains the final recorded bit, not every intermediate
-measurement. DDSIM retains a compact histogram for this binary-only program and
-expands shot strings when requested.
+measurement. DDSIM retains a compact histogram and expands shot strings when
+requested.
 
-Programs that reference integer or double output recording also provide the
-complete typed QIR stream through `CustomProperty.CUSTOM1`. DDSIM captures
-programs with global constructors or destructors as well, since these can record
-values outside individual shots. The
+Pass `custom2=True` when submitting a job to capture the complete typed QIR
+stream through `CustomProperty.CUSTOM1`. This includes numeric values, labels,
+and any records from global constructors and destructors. The
 [QIR guide's numeric-output example](../qir/index.md#retrieve-the-qir-output-stream-through-qdmi)
 shows the stream and its relation to counts. That guide also covers resource
 lifetimes and state-extraction restrictions.

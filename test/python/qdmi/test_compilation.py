@@ -570,15 +570,31 @@ c = measure q;
         ProgramFormat.QIR_ADAPTIVE_MODULE,
     ],
 )
-def test_binary_qir_results(program_format: ProgramFormat) -> None:
+@pytest.mark.parametrize("capture", [False, True])
+def test_binary_qir_results(program_format: ProgramFormat, *, capture: bool) -> None:
     """Binary QIR sampling exposes counts, shots, and eligible retained states."""
     source = 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; bit[2] c = measure q;'
-    job = submit_program(source, target="mqt.ddsim.default", program_format=program_format, num_shots=8, custom1=7)
+    job = submit_program(
+        source, target="mqt.ddsim.default", program_format=program_format, num_shots=8, custom1=7, custom2=capture
+    )
     assert job.wait()
     shots = job.get_shots()
     assert len(shots) == 8
     assert job.get_counts() == {bits: shots.count(bits) for bits in set(shots)}
-    assert job.get_custom_result(CustomProperty.CUSTOM1, str) is None
+    output = job.get_custom_result(CustomProperty.CUSTOM1, str)
+    if capture:
+        assert isinstance(output, str)
+        recorded_shots = []
+        for frame in output.split("START\n")[1:]:
+            bits = [
+                line.split("\t")[2]
+                for line in frame.splitlines()
+                if line.startswith(("OUTPUT\tRESULT\t", "OUTPUT\tRESULT_ARRAY\t"))
+            ]
+            recorded_shots.append("".join(bits)[::-1])
+        assert recorded_shots == shots
+    else:
+        assert output is None
     if program_format in {ProgramFormat.QIR_BASE_STRING, ProgramFormat.QIR_BASE_MODULE}:
         assert job.get_dense_statevector() == pytest.approx([2**-0.5, 2**-0.5, 0, 0])
     else:
@@ -588,7 +604,7 @@ def test_binary_qir_results(program_format: ProgramFormat) -> None:
 
 @pytest.mark.parametrize(("program_format", "shots"), [(ProgramFormat.QASM3, 1), (ProgramFormat.QIR_BASE_MODULE, 0)])
 def test_qir_output_requires_qir_sampling(program_format: ProgramFormat, shots: int) -> None:
-    """Reject output requests that cannot produce a sampled QIR stream."""
+    """QIR text capture requires a QIR program and a positive shot count."""
     device = open_device("mqt.ddsim.default")
     payload = (
         BELL
@@ -599,6 +615,7 @@ def test_qir_output_requires_qir_sampling(program_format: ProgramFormat, shots: 
         cast("Sequence[str] | Sequence[bytes]", [payload]),
         program_format,
         num_shots=shots,
+        custom2=True,
     )
     assert job.wait()
     assert job.get_custom_result(CustomProperty.CUSTOM1, str) is None

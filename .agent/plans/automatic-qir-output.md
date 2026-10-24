@@ -4,11 +4,12 @@ Status: implementation, review, and local validation complete.
 
 ## Contract
 
-DDSIM captures QIR text when integer/double recording is referenced or global
-constructors/destructors may record outside the shot frames. Other QIR jobs
-retain compact counts and expand shots on request. Shot order is unspecified.
-The public `sample()` function uses QCO and never enables QIR text. Explicit C++
-JIT streams remain complete; `sampleCounts` suppresses text while sampling.
+DDSIM captures QIR text only when job parameter CUSTOM2 is true (`custom2=True`
+in Python). Capture defaults to false and does not inspect the program's output
+types or lifecycle hooks. Jobs without capture retain compact counts and expand
+shots on request. Shot order is unspecified. The public `sample()` function uses
+QCO and never enables QIR text. Explicit C++ JIT streams remain complete;
+`sampleCounts` suppresses text while sampling.
 
 Eligible histogram-only QIR splits shot populations at measurements, resets, and
 releases. Sibling paths replay deterministic entry-point prefixes. Equal
@@ -31,7 +32,7 @@ current compiler inputs rejected by the OpenQASM exporter. Neither route wins
 universally. Do not add format heuristics or a general execution layer.
 
 Counts-only recording saves retained memory; grouping also reduces execution and
-allocation churn. Full numeric output remains proportional to recorded volume.
+allocation churn. Captured output remains proportional to recorded volume.
 Replay can still approach per-shot work when outcomes do not share paths. Seeded
 results repeat within a strategy, not across algorithms.
 
@@ -40,8 +41,8 @@ results repeat within a strategy, not across algorithms.
 Validate the complete native CTest suite, including the QDMI client tests, plus
 the Python QDMI/QIR-Runner suites, whole-file C++ checks, repository lint, and
 executable docs. Device-only tests do not cover client custom-parameter
-validation. The client test uses the current seed and worker-count parameters
-and checks provider error propagation.
+validation. Tests cover capture opt-in, default suppression of numeric output,
+record/shot alignment, parameter validation, and provider error propagation.
 
 The upstream cpp-linter 1.15 local client no longer writes the result file
 expected by the nox wrapper. Inspect reported diagnostic counts separately from

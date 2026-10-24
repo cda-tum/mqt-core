@@ -52,9 +52,6 @@ struct SampledOutput {
 /// and direct helpers are supported; recorded outputs are suppressed.
 enum class Execution { Sampling, StateExtraction };
 
-/// Whether a supplied stream records every program or only nonbinary outputs.
-enum class OutputRecording { All, NonBinary };
-
 /// In-process JIT executor for QIR programs.
 ///
 /// The session does the following, in order:
@@ -79,16 +76,12 @@ public:
   /// @param randomSeed Optional deterministic runtime seed.
   /// @param output Borrowed stream for constructor, entry-point, and destructor
   /// records. It must outlive the session; null disables output.
-  /// @param recording NonBinary enables the stream only when the module
-  /// references integer/double recording or has lifecycle hooks, whose records
-  /// are outside the per-shot bit projection.
   /// @throws std::runtime_error if the IR cannot be parsed or the JIT fails
   /// to initialize.
   JitSession(llvm::StringRef irBytes, llvm::StringRef bufferName,
              Execution execution = Execution::Sampling,
              std::optional<uint64_t> randomSeed = std::nullopt,
-             llvm::raw_ostream* output = &llvm::outs(),
-             OutputRecording recording = OutputRecording::All);
+             llvm::raw_ostream* output = &llvm::outs());
 
   /// Tears down the LLJIT and any JIT'd resources owned by the session.
   ~JitSession();
@@ -218,7 +211,7 @@ private:
   ///
   /// @throws std::runtime_error if loading failed or the JIT cannot start.
   void initialize(llvm::Expected<llvm::orc::ThreadSafeModule> llvmModule,
-                  Execution execution, OutputRecording recording);
+                  Execution execution);
 
   /// Tears down the @c LLJIT.
   void deinitialize() const;

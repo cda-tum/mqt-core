@@ -137,11 +137,12 @@ not isolate arbitrary native process-global side effects between executions.
 
 ## QIR output capture
 
-Sampled QIR Base or Adaptive programs provide textual output through
-`QDMI_JOB_RESULT_CUSTOM1` when the module references integer or double output
-recording, or defines global constructors or destructors. These lifecycle hooks
-can record values outside the shot frames. Other QIR programs use only the bit
-projection, without retaining textual records.
+Set `QDMI_DEVICE_JOB_PARAMETER_CUSTOM2` to a native `bool` with value `true`
+(`custom2=True` in Python) to capture the complete textual output of sampled QIR
+Base or Adaptive programs through `QDMI_JOB_RESULT_CUSTOM1`. Capture is disabled
+by default, regardless of the program's output types or lifecycle hooks. Without
+capture, the device retains only the bit projection and does not generate QIR
+text.
 
 The result is a null-terminated string; its reported size includes the
 terminator. In Python, use `job.get_custom_result(CustomProperty.CUSTOM1, str)`;

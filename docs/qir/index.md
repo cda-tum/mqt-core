@@ -222,10 +222,10 @@ registers use result-array recording when their stores can fuse safely and
 preserve returned measurement snapshots. Other stores use Boolean storage,
 including runtime-indexed accesses. QIR's textual output stream also preserves
 output labels, array and tuple records, other recorded scalar values, and shot
-framing. DDSIM captures this stream when the module references integer or double
-output recording, or defines global constructors or destructors. These lifecycle
-hooks can record values outside the shot frames. Other programs retain only a
-compact histogram; individual shots are expanded when requested.
+framing. Pass `custom2=True` when submitting a DDSIM job to capture this stream,
+including records from global constructors and destructors. Capture is disabled
+by default: jobs retain only a compact histogram and expand individual shots
+when requested.
 
 Integer and double records do not add bits to shots or histograms. This authored
 Adaptive QIR program records a Boolean and two numeric values. Request its
@@ -253,7 +253,11 @@ attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile"
 !3 = !{i32 1, !"dynamic_result_management", i1 false}
 """
 recorded_job = device.submit_job(
-    numeric_llvm, ProgramFormat.QIR_ADAPTIVE_STRING, num_shots=2, custom1=7
+    numeric_llvm,
+    ProgramFormat.QIR_ADAPTIVE_STRING,
+    num_shots=2,
+    custom1=7,
+    custom2=True,
 )
 assert recorded_job.wait()
 output = recorded_job.get_custom_result(CustomProperty.CUSTOM1, str)
@@ -267,8 +271,9 @@ assert recorded_job.get_counts() == {"1": 2}
 ```
 
 The parameter and result slots are separate: **job parameter CUSTOM1** is the
-seed; **job result CUSTOM1** contains the captured text. The same capture API
-works for Base and Adaptive profiles, with text or bitcode input.
+seed, **job parameter CUSTOM2** enables capture, and **job result CUSTOM1**
+contains the captured text. The same capture API works for Base and Adaptive
+profiles, with text or bitcode input.
 
 The stream uses QIR record order; QDMI shots and counts place the highest-index
 bit first. Eligible terminal programs sample one prepared state and construct

@@ -200,12 +200,14 @@ TEST_F(ErrorHandling, CustomEnums) {
 
   for (const auto param : {
            QDMI_DEVICE_JOB_PARAMETER_CUSTOM1,
+           QDMI_DEVICE_JOB_PARAMETER_CUSTOM2,
            QDMI_DEVICE_JOB_PARAMETER_CUSTOM3,
            QDMI_DEVICE_JOB_PARAMETER_CUSTOM4,
            QDMI_DEVICE_JOB_PARAMETER_CUSTOM5,
        }) {
     EXPECT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(j.job, param, 0, nullptr),
               param == QDMI_DEVICE_JOB_PARAMETER_CUSTOM1 ||
+                      param == QDMI_DEVICE_JOB_PARAMETER_CUSTOM2 ||
                       param == QDMI_DEVICE_JOB_PARAMETER_CUSTOM3
                   ? QDMI_SUCCESS
                   : QDMI_ERROR_NOTSUPPORTED)

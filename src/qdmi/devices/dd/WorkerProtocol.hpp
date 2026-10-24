@@ -36,6 +36,7 @@ struct WorkerRequest {
   std::optional<uint64_t> seed;
   uint64_t maxWorkers = 1;
   bool automaticWorkers = true;
+  bool captureQirOutput = false;
 };
 /// One optional request/grant exchange before parallel sampling.
 ///

@@ -448,7 +448,7 @@ JitSession::JitSession(const llvm::StringRef irBytes,
                        const llvm::StringRef bufferName,
                        const Execution execution,
                        std::optional<uint64_t> randomSeed,
-                       llvm::raw_ostream* output, OutputRecording recording)
+                       llvm::raw_ostream* output)
     : runtime_(std::make_unique<Runtime>(
           randomSeed ? *randomSeed : Runtime::generateRandomSeed())),
       execution_(execution) {
@@ -457,7 +457,7 @@ JitSession::JitSession(const llvm::StringRef irBytes,
   } else {
     runtime_->disableOutput();
   }
-  initialize(loadModuleFromMemory(irBytes, bufferName), execution, recording);
+  initialize(loadModuleFromMemory(irBytes, bufferName), execution);
 }
 
 JitSession::~JitSession() { deinitialize(); }
@@ -756,7 +756,7 @@ static void normalizeNativeQISNames(llvm::Module& module) {
 
 void JitSession::initialize(
     llvm::Expected<llvm::orc::ThreadSafeModule> llvmModule,
-    const Execution execution, OutputRecording recording) {
+    const Execution execution) {
   if (!llvmModule) {
     throw std::runtime_error(llvm::toString(llvmModule.takeError()));
   }
@@ -771,16 +771,6 @@ void JitSession::initialize(
     llvm::raw_string_ostream diagnostics(verification);
     if (llvm::verifyModule(module, &diagnostics)) {
       throw std::runtime_error("Invalid QIR module: " + verification);
-    }
-    if (recording == OutputRecording::NonBinary &&
-        module.getNamedGlobal("llvm.global_ctors") == nullptr &&
-        module.getNamedGlobal("llvm.global_dtors") == nullptr &&
-        !llvm::any_of(module, [](const auto& function) {
-          return !function.use_empty() &&
-                 (function.getName() == "__quantum__rt__int_record_output" ||
-                  function.getName() == "__quantum__rt__double_record_output");
-        })) {
-      runtime_->disableOutput();
     }
     for (const auto& function : module) {
       for (const auto& block : function) {
