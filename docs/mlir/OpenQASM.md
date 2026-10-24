@@ -385,15 +385,18 @@ OpenQASM export supports fixed-size stack arrays, strided and overlapping
 copies, and concatenation. Arrays support one to seven dimensions and up to
 100,000 elements in total, including temporary arrays whose copies cannot be
 folded into one assignment. Export preserves loaded values across writes,
-retains integer bit patterns, and emits angles as floating-point radians.
-Reimport also requires the combined register-and-array limit described above.
+retains integer bit patterns, and emits angles as floating-point radians. Dense
+constant initialization becomes an array declaration initializer; it must write
+a whole entry-block allocation before any other use. Reimport also requires the
+combined register-and-array limit described above.
 
 jeff export flattens fixed-size stack arrays in row-major order and carries
 updates through control flow. Import uses reference storage with copies for live
 old values; array-valued interfaces stay tensor-based. Lengths must fit signed
-i32. Unresolved safety assertions are unsupported. Arrays cannot have live old
-values or be passed more than once into mutating control flow. Loop-carried
-stack arrays must keep their incoming storage.
+i32. Unresolved safety assertions are unsupported. Across mutating control flow,
+live old array values and repeated operands require numeric literals or zero
+arrays, which initialize independent storage. Loop-carried stack arrays must
+keep their incoming storage.
 
 Qiskit and Base QIR export require array storage to be eliminated. Compiler
 cleanup promotes eligible arrays to scalar values and folds constants. With

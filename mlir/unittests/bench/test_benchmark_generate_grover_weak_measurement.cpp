@@ -8,7 +8,7 @@
  * Licensed under the MIT License
  */
 
-#include "bench/WeakMeasurementGrover.hpp"
+#include "bench/GroverWeakMeasurement.hpp"
 #include "mqt/Dialect/QC/IR/QCOps.h"
 #include "mqt/bench/Generate.h"
 
@@ -32,7 +32,7 @@ namespace mqt::bench {
 using namespace mlir;
 
 TEST(GenerateProgramTest, EmitsWeakMeasurementAfterEachGroverIteration) {
-  auto program = generate(WeakMeasurementGrover{
+  auto program = generate(GroverWeakMeasurement{
       {.markedBitstring = "01", .measurementStrength = 0.5}});
   ASSERT_TRUE(mlir::succeeded(program));
   auto moduleOp = program->module();
@@ -89,9 +89,9 @@ TEST(GenerateProgramTest, EmitsWeakMeasurementAfterEachGroverIteration) {
   EXPECT_NEAR(angleValue.getValueAsDouble(), std::numbers::pi / 2., 1e-15);
 }
 
-TEST(GenerateProgramTest, SamplesWeakMeasurementGroverAgainstReference) {
+TEST(GenerateProgramTest, SamplesGroverWeakMeasurementAgainstReference) {
   auto program =
-      test::generateQCO(WeakMeasurementGrover{{.markedBitstring = "110"}});
+      test::generateQCO(GroverWeakMeasurement{{.markedBitstring = "110"}});
   ASSERT_TRUE(mlir::succeeded(program));
   auto counts =
       qco::sample(mlir::mqt::getEntryPoint(program->module()), 64, 17);
