@@ -15,6 +15,7 @@
 #include "bench/FanOut.hpp"
 #include "bench/GHZ.hpp"
 #include "bench/Grover.hpp"
+#include "bench/GroverWeakMeasurement.hpp"
 #include "bench/MagicStateDistillation.hpp"
 #include "bench/ModularMultiplier.hpp"
 #include "bench/Multiplexer.hpp"
@@ -26,7 +27,6 @@
 #include "bench/Shor.hpp"
 #include "bench/Teleportation.hpp"
 #include "bench/WState.hpp"
-#include "bench/WeakMeasurementGrover.hpp"
 
 #include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
@@ -395,12 +395,12 @@ void requireBenchmark(const Json& root, const std::string_view expected,
                             [&options] { return Grover(std::move(options)); });
 }
 
-[[nodiscard]] WeakMeasurementGrover
-parseWeakMeasurementGroverParameters(const Json& parameters,
+[[nodiscard]] GroverWeakMeasurement
+parseGroverWeakMeasurementParameters(const Json& parameters,
                                      const std::string_view source) {
   rejectUnknownKeys(parameters, {"marked_bitstring", "measurement_strength"},
                     source, "$/parameters");
-  WeakMeasurementGroverOptions options{
+  GroverWeakMeasurementOptions options{
       .markedBitstring = stringValue(
           required(parameters, "marked_bitstring", source, "$/parameters"),
           source, "$/parameters/marked_bitstring"),
@@ -411,7 +411,7 @@ parseWeakMeasurementGroverParameters(const Json& parameters,
         numberValue(*strength, source, "$/parameters/measurement_strength");
   }
   return constructBenchmark(
-      source, [&options] { return WeakMeasurementGrover(std::move(options)); });
+      source, [&options] { return GroverWeakMeasurement(std::move(options)); });
 }
 
 [[nodiscard]] MagicStateDistillation
@@ -683,7 +683,7 @@ parseTeleportationParameters(const Json& parameters,
   };
 }
 
-[[nodiscard]] Json parametersJSON(const WeakMeasurementGrover& benchmark) {
+[[nodiscard]] Json parametersJSON(const GroverWeakMeasurement& benchmark) {
   const auto& options = benchmark.options();
   return {
       {"marked_bitstring", options.markedBitstring},
@@ -823,7 +823,7 @@ parseTeleportationParameters(const Json& parameters,
                                benchmark.options().markedBitstring);
 }
 
-[[nodiscard]] Json referenceJSON(const WeakMeasurementGrover& benchmark) {
+[[nodiscard]] Json referenceJSON(const GroverWeakMeasurement& benchmark) {
   return analyticReferenceJSON(benchmark.output(), "grover_weak_measurement",
                                benchmark.options().markedBitstring);
 }
@@ -1089,15 +1089,15 @@ template <class Benchmark>
   });
 }
 
-[[nodiscard]] Json weakMeasurementGroverInstanceSpecificationSchema() {
-  return baseInstanceSpecificationSchema<WeakMeasurementGrover>({
+[[nodiscard]] Json groverWeakMeasurementInstanceSpecificationSchema() {
+  return baseInstanceSpecificationSchema<GroverWeakMeasurement>({
       {
           "properties",
           {
               {
                   "marked_bitstring",
                   {
-                      {"maxLength", WeakMeasurementGroverOptions::MAX_QUBITS},
+                      {"maxLength", GroverWeakMeasurementOptions::MAX_QUBITS},
                       {"minLength", 2},
                       {"pattern", "^[01]+$"},
                       {"type", "string"},

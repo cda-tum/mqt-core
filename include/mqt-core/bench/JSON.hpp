@@ -15,6 +15,7 @@
 #include "bench/FanOut.hpp"
 #include "bench/GHZ.hpp"
 #include "bench/Grover.hpp"
+#include "bench/GroverWeakMeasurement.hpp"
 #include "bench/MagicStateDistillation.hpp"
 #include "bench/ModularMultiplier.hpp"
 #include "bench/Multiplexer.hpp"
@@ -26,7 +27,6 @@
 #include "bench/Shor.hpp"
 #include "bench/Teleportation.hpp"
 #include "bench/WState.hpp"
-#include "bench/WeakMeasurementGrover.hpp"
 #include "bench/mqt_core_bench_export.h"
 
 #include <cstddef>
@@ -38,7 +38,7 @@ namespace mqt::bench {
 
 /// One validated benchmark instance from the JSON registry.
 using BenchmarkInstance =
-    std::variant<BV, FanOut, GHZ, Grover, WeakMeasurementGrover,
+    std::variant<BV, FanOut, GHZ, Grover, GroverWeakMeasurement,
                  MagicStateDistillation, ModularMultiplier, Multiplexer, QAOA,
                  QFT, QFTAdder, QPE, RepeatUntilSuccess, Shor, Teleportation,
                  WState>;
