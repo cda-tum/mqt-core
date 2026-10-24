@@ -1,97 +1,99 @@
 # Python binding performance
 
-Status: complete; local implementation and validation complete.
+Status: complete; implemented and validated locally. Hosted CI remains pending.
 
-## Scope and contracts
+## Contracts and decisions
 
-The public benchmark, QDMI, and Qiskit interfaces keep their signatures and
-supported inputs. Benchmark objects remain immutable validated inputs;
-generating a program loads MLIR lazily. QDMI operation wrappers retain their
-session while alive and release it when destroyed. Qiskit import preserves
-packed parameter order, identity, and numeric values on the supported 2.5 and
-2.6 adapters.
+The public benchmark, QDMI, and Qiskit signatures and supported inputs are
+unchanged. The binding changes preserve lazy MLIR loading, session ownership,
+parameter identities, gate semantics, and target aliases.
 
-Only primitive instruction parameter reads change. Custom operations, control
-flow, validation, and error ordering retain their existing paths. Changing a
-cached Qiskit Gate without assigning it back can leave its parameters
-inconsistent with the circuit. Import follows packed circuit state, as QPY
-serialization does; it does not preserve Qiskit 2.5's incidental reading of a
-stale numeric cache.
-[Qiskit documents the assignment-back requirement](https://github.com/Qiskit/qiskit/blob/2.5.0/crates/circuit/src/circuit_instruction.rs#L90-L97).
+- `bindings/bench/register_benchmark.hpp` forwards the validated, immutable
+  receiver with `nb::find`. The private MLIR bridge uses the existing benchmark
+  family registry and typed generators. This removes JSON serialization,
+  reparsing, and unused manifest construction. Public stubs remain unchanged.
+- `bindings/qdmi/qdmi.cpp` uses nanobind's bounded pool for `Operation`
+  wrappers. Destruction releases the session before storage enters the pool. The
+  default capacity retains at most 128 empty 56-byte wrappers plus pool
+  bookkeeping.
+- `bindings/mlir/Target/Qiskit/QiskitAdapter.h` reads primitive parameters from
+  `CircuitInstruction.params`, avoiding Gate construction. Import follows packed
+  circuit state. Qiskit requires changes to cached Gate objects to be assigned
+  back; stale cached parameters are not an input contract.
+  [Qiskit's ownership explanation](https://github.com/Qiskit/qiskit/blob/2.5.0/crates/circuit/src/circuit_instruction.rs#L90-L97)
+  describes this distinction.
+- Symbolic export obtains standard-gate enums from `StandardGate.all_gates()`
+  instead of constructing the full gate dictionary. Each writer owns its lazy
+  list; renamed target operations retain the actual gate dictionary. This relies
+  on the supported Qiskit 2.5/2.6 implementations: `all_gates()` iterates the
+  discriminants of the same Rust enum exposed as `QkGate` by the C API.
+  [The implementation](https://github.com/Qiskit/qiskit/blob/2.6.0/crates/circuit/src/standard_gate/mod.rs#L1895-L1899)
+  and checks of all 52 entries on both adapters establish the indexing contract.
 
-## Decisions and evidence
+## Measured evidence
 
-Baseline: `eb8f7db150836e3c516aca82d3dce92765a2bb24`, rebuilt from its exact
-binding sources with the candidate compilation settings and native libraries.
 Measurements used CPython 3.14.8, Qiskit 2.6.0, nanobind 3.1.0, and Clang 23
 Release builds with ThinLTO and mold on an ARM64 DGX Spark. Eight alternating
-baseline/candidate pairs ran in fresh processes on the same CPU. The shared host
-was not reserved. Public entry points produced identical IR or metadata
-fingerprints in both cohorts. Times below are medians of process CPU time; wall
-times closely matched them.
+baseline/candidate pairs ran in fresh processes on one CPU; the shared host was
+not reserved. Public entry points produced matching IR or metadata fingerprints.
+The following are median process CPU times; wall times closely matched.
 
-| Change and public workload                                |                 Baseline |                Candidate | Interpretation                                                                 |
-| --------------------------------------------------------- | -----------------------: | -----------------------: | ------------------------------------------------------------------------------ |
-| Benchmark GHZ(8), QFT(10), QAOA(8, depth=2) generation    | 0.898 / 1.079 / 1.154 ms | 0.883 / 1.064 / 1.132 ms | Small timing change; some paired intervals overlap noise                       |
-| QDMI operations, 3 / 54 wrappers                          |            198 / 1535 ns |             165 / 908 ns | Repeatable warmed wrapper-query reduction                                      |
-| QDMIBackend construction, SC / DDSIM                      |         0.517 / 0.259 ms |         0.519 / 0.258 ms | No clear end-to-end benefit                                                    |
-| Qiskit import, 256 symbolic RX / efficient_su2(8, reps=3) |         2.118 / 1.129 ms |         1.794 / 1.030 ms | 7/8 symbolic RX pairs and 8/8 ansatz pairs improved; numeric control unchanged |
+Against `eb8f7db150836e3c516aca82d3dce92765a2bb24`, the first three changes
+gave:
 
-- **Benchmark handoff:** use the existing family registry and typed native
-  generators, passing the existing Python receiver with `nb::find`. Validated
-  immutable inputs make JSON serialization, reparsing, and an unused manifest
-  unnecessary. All 16 families already have generation tests. This removes about
-  200 allocation events per measured call without copying benchmark values.
-  Separate encoding, parsing/construction, and manifest probes cost roughly 1,
-  1.2–1.5, and 4.5–4.7 microseconds. These probes are not additive attribution
-  of the complete JSON path. Native generation and destruction dominate; sampled
-  native profiles show allocation, MLIR storage uniquing, operation
-  registration, and context destruction. Sharing contexts is outside scope.
-- **Operation pooling:** use nanobind's bounded pool only for `Operation`. Its
-  destructor releases the session before wrapper storage enters the pool. Warm
-  54-operation queries drop from 58 allocation events to 4; backend creation
-  drops from 3422 to 3314. Target construction dominates the latter (about 98%
-  of the profiled constructor), so a query speedup does not imply a backend
-  speedup. First operation queries showed no meaningful cold penalty. At the
-  default capacity of 128, empty 56-byte wrappers occupy at most 7168 bytes,
-  plus pool bookkeeping. Site pooling is excluded: large site lists have a
-  different reuse pattern and previously regressed.
-- **Qiskit parameters:** read `CircuitInstruction.params` directly. The two
-  changed reads remove 512 Gate constructions for 256 symbolic RX instructions
-  and 128 for the ansatz on both supported adapters. UUID decoding remains
-  unchanged. No cache, invalidation logic, or new retained state is needed.
-  Symbolic RX allocation traffic falls from 2.58 MB to 1.68 MB; peak live traced
-  memory stays about 0.7 MB. Benchmark retained memory is unchanged. Warm-pool
-  allocation traces exclude storage allocated during warmup. Process peak RSS
-  varied between runs; no meaningful RSS reduction is claimed.
+| Public workload                                   |                 Baseline |                Candidate |
+| ------------------------------------------------- | -----------------------: | -----------------------: |
+| GHZ(8) / QFT(10) / QAOA(8, depth=2) generation    | 0.898 / 1.079 / 1.154 ms | 0.883 / 1.064 / 1.132 ms |
+| QDMI operations, 3 / 54 wrappers                  |            198 / 1535 ns |             165 / 908 ns |
+| QDMIBackend construction, SC / DDSIM              |         0.517 / 0.259 ms |         0.519 / 0.258 ms |
+| Import 256 symbolic RX / efficient_su2(8, reps=3) |         2.118 / 1.129 ms |         1.794 / 1.030 ms |
 
-Cold benchmark generation, including lazy module import, remained about 11–12
-ms. Do not interpret these local measurements as isolated-host or CI benchmarks.
-The private benchmark bridge is omitted from generated stubs; public
-`generate()` annotations remain unchanged.
+Native generation and destruction dominate benchmark generation. The removed
+JSON phases take microseconds and about 200 allocations; native profiles show
+MLIR storage, allocation, and context destruction. Qiskit target construction
+accounts for about 98% of profiled backend construction, explaining why faster
+operation queries do not yield a clear backend speedup. Import removes 512 Gate
+constructions for symbolic RX and 128 for the ansatz; UUID decoding is
+unchanged.
 
-## Validation
+Against `0fb6b738ca` with the first three binding changes above, enum lookup
+reduced export of the ansatz from 294 to 243 microseconds and eight symbolic
+control-flow blocks from 629 to 255 microseconds. All eight pairs improved. Full
+ansatz `compile_program` changed from 8.30 to 8.10 ms, with paired changes
+spanning a 1.7% regression to a 7.1% improvement. Numeric export stayed at 213
+microseconds. MLIR's timing facility reports about 3.5 ms in QCO passes alone;
+export is a small part of full compilation.
 
-- 1193 existing benchmark, QDMI, Qiskit
-  translation/target/parameter/loop/integer, and Qiskit backend tests passed on
-  Python 3.14/Qiskit 2.6.
-- 43 focused existing compatibility tests passed on Python 3.11.17/Qiskit 2.5.2.
-  Four fixed circuit fixtures have identical emitted IR across both builds and
-  versions, preserve parameter UUIDs, and match bound statevectors exactly.
-- Fresh-process probes cover both benchmark import orders, subclass and
-  temporary receivers, and rejection of the wrong receiver type. The existing
-  native session fixture verifies immediate session release for three bursts of
-  258 Operation wrappers, while a separately retained operation remains usable.
-- No new tests duplicate the existing end-to-end contracts. Temporary profiles
-  check removed construction/allocation work without making implementation
-  details permanent test requirements. One independent Ponytail review found no
-  substantiated defects.
-- Stub regeneration, optimized rebuild, and the final 1193-test selection
-  passed. Repository lint, including Ruff and ty, passed. All-line clang-tidy
-  checked all four changed C++ files without diagnostics. The local nox wrapper
-  cannot read its feedback file; running its underlying cpp-linter command
-  against the staged files completed successfully.
+Memray traces distinguish allocation traffic from live memory. Symbolic RX
+import traffic falls from 2.58 to 1.68 MB while peak live traced memory stays
+about 0.7 MB. Eight-block export traffic falls from 1.30 to 0.36 MB; peak live
+traced memory falls from 88 to 74 KB. Warm operation queries allocate 4 rather
+than 58 times for 54 wrappers. Warm-pool traces exclude storage allocated during
+warmup. Process peak RSS varies; no RSS reduction is claimed.
 
-No context sharing, parameter cache, site pooling, API expansion, or general
-benchmark infrastructure is part of this change. Hosted CI has not run for this
-local investigation.
+## Limits and validation
+
+No new caches, shared contexts, or input shapes are needed. Site pooling was
+excluded after a regression. DD ndarray views show mixed optimized code without
+a demonstrated public-call gain. Read-only DD arrays would expand accepted
+inputs. QDMI string views would lose ownership of temporary sequence items; UUID
+normalization cannot assume subclass properties are valid.
+
+Existing benchmark, QDMI, and Qiskit end-to-end tests cover the retained
+contracts. One added symbolic round-trip test compares parameter identities and
+bound operators across parameterized standard gates. Swapping RX/RY enum entries
+makes it fail at the operator comparison. Compatibility checks cover Python
+3.11/Qiskit 2.5.2 as well as Python 3.14/Qiskit 2.6.0.
+
+Local validation after rebasing on `6559f17812` passed:
+
+- 1194 focused tests in `test/python/bench`, `test/python/qdmi/test_qdmi.py`,
+  the MLIR Qiskit translation/target/parameter/loop/integer suites, and the
+  Qiskit backend suite on Python 3.14/Qiskit 2.6.
+- 743 tests in those five MLIR suites on Python 3.11/Qiskit 2.5.
+- Optimized rebuild, `uvx nox -s stubs`, and `uvx nox -s lint`, including Ruff
+  and ty. All-line clang-tidy checked all four changed C++ files without
+  diagnostics.
+- Independent enum/ownership scrutiny and a Ponytail review found no
+  substantiated defects. No extra implementation or test infrastructure was
+  retained.

@@ -2482,16 +2482,17 @@ public:
       values.append(pythonParameter(parameter));
     }
     if (!standardInstruction_.is_valid()) {
-      standardGates_ = nb::module_::import_("qiskit.circuit.library")
-                           .attr("get_standard_gate_name_mapping")();
+      standardGateIds_ = nb::module_::import_("qiskit._accelerate.circuit")
+                             .attr("StandardGate")
+                             .attr("all_gates")();
       standardInstruction_ = nb::module_::import_("qiskit.circuit")
                                  .attr("CircuitInstruction")
                                  .attr("from_standard");
     }
-    const nb::object standard =
-        standardGates_[nb::str(gate->name.data(), gate->name.size())];
-    auto instruction = standardInstruction_(standard.attr("_standard_gate"),
-                                            pythonQubits(qubits), values);
+    // Qiskit's Python and C gate enums share the all_gates() order.
+    auto instruction = standardInstruction_(
+        standardGateIds_[static_cast<size_t>(gate->native)],
+        pythonQubits(qubits), values);
     // As with numeric appends, this private circuit has no builder scope or
     // cached duration.
     data_.attr("append")(instruction);
@@ -2974,6 +2975,7 @@ private:
   nb::object data_;
   QkCircuit* circuit_;
   nb::object standardGates_;
+  nb::object standardGateIds_;
   nb::object standardInstruction_;
   PythonVariables variables_;
   std::optional<PythonClassicalBuilder> classical_;
