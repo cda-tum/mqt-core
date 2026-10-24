@@ -238,12 +238,15 @@ auto Runtime::measure(Qubit* qubit, Result* result) -> void {
   }
 }
 
-auto Runtime::sampleMeasurements(std::span<const uintptr_t> qubits,
-                                 size_t shots,
-                                 std::vector<std::string>& results) -> void {
+auto Runtime::sampleMeasurements(
+    std::span<const uintptr_t> qubits, size_t shots,
+    llvm::function_ref<void(std::string&&)> emitOwned,
+    llvm::function_ref<void(std::string_view)> emitBorrowed) -> void {
   measurements.clear();
   if (qubits.empty()) {
-    results.resize(shots);
+    for (size_t i = 0; i < shots; ++i) {
+      emitBorrowed({});
+    }
     return;
   }
   bool ascending = qubits.size() == qState.numQubits;
@@ -254,10 +257,10 @@ auto Runtime::sampleMeasurements(std::span<const uintptr_t> qubits,
     for (size_t i = 0; i < shots; ++i) {
       auto basis = qState.dd->measureAll(qState.edge, false, mt);
       std::ranges::reverse(basis);
-      results.push_back(std::move(basis));
-    }
-    if (shots != 0) {
-      measurements = results.back();
+      if (i + 1 == shots) {
+        measurements = basis;
+      }
+      emitOwned(std::move(basis));
     }
     return;
   }
@@ -268,7 +271,7 @@ auto Runtime::sampleMeasurements(std::span<const uintptr_t> qubits,
     for (const auto qubit : qubits) {
       measurements.push_back(basis[basis.size() - 1 - qubitPermutation[qubit]]);
     }
-    results.push_back(measurements);
+    emitBorrowed(measurements);
   }
 }
 

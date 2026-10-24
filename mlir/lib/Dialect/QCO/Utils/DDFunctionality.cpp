@@ -75,7 +75,6 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include <numeric>
 #include <optional>
 #include <random>
 #include <string>
@@ -368,6 +367,7 @@ struct LoopRange {
 struct SamplingPlan {
   bool dynamic = false;
   SmallVector<Value> outputs;
+  size_t outputWidth = 0;
   DenseSet<Operation*> deferredMeasurements;
 };
 } // namespace
@@ -2404,6 +2404,10 @@ getSamplingPlan(func::FuncOp func, bool statevectorAnalysis = false) {
     if (isa<cbit::RegisterType>(value.getType()) ||
         value.getType().isInteger(1)) {
       plan.outputs.push_back(value);
+      plan.outputWidth +=
+          value.getType().isInteger(1)
+              ? 1U
+              : cast<cbit::RegisterType>(value.getType()).getWidth();
     } else if (!statevectorAnalysis && !isa<QubitType>(value.getType()) &&
                !isQTensorType(value.getType())) {
       return returnOp.emitError()
@@ -2450,11 +2454,13 @@ simulateStatevector(func::FuncOp func, dd::Package& dd,
 
 static FailureOr<std::string> encodeOutcome(ArrayRef<Value> outputs,
                                             const ClassicalEnv& classical,
-                                            std::string basis) {
+                                            std::string basis,
+                                            size_t outputWidth) {
   if (outputs.empty()) {
     return basis;
   }
   std::string outcome;
+  outcome.reserve(outputWidth);
   for (Value value : llvm::reverse(outputs)) {
     const bool isScalar = value.getType().isInteger(1);
     ClassicalEnv::RegisterBit scalar;
@@ -2519,7 +2525,7 @@ static bool canBranchStructured(func::FuncOp func) {
 static FailureOr<std::map<std::string, size_t>>
 sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
                std::mt19937_64& rng, const PreparedState& prepared,
-               const SamplingPlan& plan, std::vector<std::string>* ordered,
+               const SamplingPlan& plan, std::vector<std::string>* shotResults,
                const DDExecutionOptions& options, bool collectCounts) {
   struct ForFrame {
     scf::ForOp op;
@@ -2534,12 +2540,9 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
     TensorMap tensors;
     ClassicalEnv classical;
     size_t remainingWhileIterations;
-    std::vector<size_t> ids;
+    size_t count;
     SmallVector<ForFrame, 2> loops;
   };
-  if (ordered != nullptr) {
-    ordered->resize(shots);
-  }
   std::map<std::string, size_t> counts;
   Group first{
       .state = dd::makeZeroState(prepared.qubits.numQubits, dd),
@@ -2547,10 +2550,8 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
       .tensors = prepared.tensors.clone(),
       .classical = prepared.classical.clone(),
       .remainingWhileIterations = options.maxWhileIterations,
-      .ids = {},
+      .count = shots,
   };
-  first.ids.resize(shots);
-  std::iota(first.ids.begin(), first.ids.end(), 0);
   Block& entry = func.getBody().front();
   DenseSet<Operation*> branchLoops;
   func.getBody().walk([&](Operation* op) {
@@ -2641,7 +2642,7 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
       }
       auto measure = dyn_cast<MeasureOp>(op);
       auto reset = dyn_cast<ResetOp>(op);
-      if ((!measure && !reset) || group.ids.size() == 1) {
+      if ((!measure && !reset) || group.count == 1) {
         if (failed(applyOp(op, walk, group.state))) {
           return failure();
         }
@@ -2660,14 +2661,19 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
       if (std::abs(sum - 1) > 0.001) {
         return op.emitError() << "numerical instability during measurement";
       }
-      std::vector<size_t> zero;
-      std::vector<size_t> one;
-      zero.reserve(group.ids.size());
-      one.reserve(group.ids.size());
-      std::uniform_real_distribution<dd::fp> dist(0., 1.);
-      for (const auto id : group.ids) {
-        (dist(rng) < pzero / sum ? zero : one).push_back(id);
+      const auto probabilityZero = pzero / sum;
+      size_t zeroCount = 0;
+      // Small groups retain the individual RNG path through the DD.
+      if (group.count < 256) {
+        std::uniform_real_distribution<dd::fp> dist(0., 1.);
+        for (size_t i = 0; i < group.count; ++i) {
+          zeroCount += dist(rng) < probabilityZero;
+        }
+      } else {
+        zeroCount = std::binomial_distribution<size_t>(group.count,
+                                                       probabilityZero)(rng);
       }
+      const auto oneCount = group.count - zeroCount;
       auto advance = std::next(current);
       const auto collapse = [&](Group& branch, bool measuredZero,
                                 dd::fp probability) {
@@ -2691,14 +2697,12 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
         collapse(branch, measuredZero, probability);
         return visit(advance, std::move(branch));
       };
-      if (zero.empty()) {
-        group.ids = std::move(one);
+      if (zeroCount == 0) {
         collapse(group, false, pone);
         current = advance;
         continue;
       }
-      if (one.empty()) {
-        group.ids = std::move(zero);
+      if (oneCount == 0) {
         collapse(group, true, pzero);
         current = advance;
         continue;
@@ -2709,17 +2713,17 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
           .tensors = group.tensors.clone(),
           .classical = group.classical.clone(),
           .remainingWhileIterations = walk.remainingWhileIterations,
-          .ids = std::move(one),
+          .count = oneCount,
           .loops = group.loops,
       };
       dd.incRef(other.state);
-      group.ids = std::move(zero);
+      group.count = zeroCount;
       if (reset) {
         collapse(group, true, pzero);
         collapse(other, false, pone);
         // Equal nodes represent the same normalized state up to root phase.
         if (group.state.p == other.state.p) {
-          group.ids.insert(group.ids.end(), other.ids.begin(), other.ids.end());
+          group.count += other.count;
           dd.decRef(other.state);
           current = advance;
           continue;
@@ -2743,27 +2747,26 @@ sampleBranches(func::FuncOp func, dd::Package& dd, size_t shots,
       return failure();
     }
     if (!plan.outputs.empty()) {
-      auto outcome = encodeOutcome(plan.outputs, group.classical, {});
+      auto outcome =
+          encodeOutcome(plan.outputs, group.classical, {}, plan.outputWidth);
       if (failed(outcome)) {
         return failure();
       }
       if (collectCounts) {
-        counts[*outcome] += group.ids.size();
+        counts[*outcome] += group.count;
       }
-      if (ordered != nullptr) {
-        for (const auto id : group.ids) {
-          (*ordered)[id] = *outcome;
-        }
+      if (shotResults != nullptr) {
+        shotResults->insert(shotResults->end(), group.count, *outcome);
       }
       return success();
     }
-    for (const auto id : group.ids) {
+    for (size_t i = 0; i < group.count; ++i) {
       auto outcome = dd.measureAll(group.state, false, rng);
       if (collectCounts) {
         ++counts[outcome];
       }
-      if (ordered != nullptr) {
-        (*ordered)[id] = std::move(outcome);
+      if (shotResults != nullptr) {
+        shotResults->push_back(std::move(outcome));
       }
     }
     return success();
@@ -2787,7 +2790,8 @@ sampleImpl(func::FuncOp func, dd::Package& dd, size_t shots,
   std::map<std::string, size_t> counts;
   const auto record = [&](const ClassicalEnv& classical,
                           std::string basis) -> LogicalResult {
-    auto outcome = encodeOutcome(plan.outputs, classical, std::move(basis));
+    auto outcome = encodeOutcome(plan.outputs, classical, std::move(basis),
+                                 plan.outputWidth);
     if (failed(outcome)) {
       return failure();
     }
@@ -2994,8 +2998,18 @@ sample(func::FuncOp func, size_t shots, uint64_t seed,
        const DDArgumentBindings& argumentBindings,
        std::vector<std::string>* shotResults, DDSamplingState* retainedState,
        const DDExecutionOptions& options, size_t workers) {
+  return sample(func, shots, seed, argumentBindings, shotResults, retainedState,
+                options, workers, nullptr);
+}
+
+FailureOr<std::map<std::string, size_t>>
+sample(func::FuncOp func, size_t shots, uint64_t seed,
+       const DDArgumentBindings& argumentBindings,
+       std::vector<std::string>* shotResults, DDSamplingState* retainedState,
+       const DDExecutionOptions& options, size_t workers,
+       function_ref<size_t(size_t)> requestWorkers) {
   return sampleProgram(func, shots, seed, argumentBindings, shotResults,
-                       retainedState, options, workers, true, nullptr);
+                       retainedState, options, workers, true, requestWorkers);
 }
 
 LogicalResult sampleShots(func::FuncOp func, size_t shots, uint64_t seed,

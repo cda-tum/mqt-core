@@ -22,6 +22,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <tuple>
 
@@ -92,17 +93,27 @@ TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
 
   WorkerResponse response;
   response.succeeded = true;
-  response.shots = {"10", "01", "10"};
+  response.shotCount = 5;
+  response.shots = "10,01,10,,,";
   response.output = "OUTPUT\tBOOL\ttrue\n";
   response.qubits = 2;
   response.state = std::string("DD\0bytes", 8);
   WorkerResponse result;
   ASSERT_TRUE(decode(encode(response), result));
   EXPECT_TRUE(result.succeeded);
+  EXPECT_EQ(result.shotCount, response.shotCount);
   EXPECT_EQ(result.shots, response.shots);
   EXPECT_EQ(result.output, response.output);
   EXPECT_EQ(result.qubits, response.qubits);
   EXPECT_EQ(result.state, response.state);
+
+  WorkerResponse compressed;
+  compressed.succeeded = true;
+  compressed.counts = {{"0", 2}, {"1", 1}};
+  WorkerResponse decodedCounts;
+  ASSERT_TRUE(decode(encode(compressed), decodedCounts));
+  EXPECT_TRUE(decodedCounts.shots.empty());
+  EXPECT_EQ(decodedCounts.counts, compressed.counts);
 
   WorkerSlots slots;
   ASSERT_TRUE(decode(encode(WorkerSlots{3}), slots));
@@ -114,7 +125,8 @@ TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
 TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
   WorkerResponse response;
   response.succeeded = true;
-  response.shots = {"01"};
+  response.shotCount = 1;
+  response.shots = "01,";
   const auto bytes = encode(response);
   for (size_t size = 0; size < bytes.size(); ++size) {
     WorkerResponse result;
@@ -125,7 +137,27 @@ TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
   invalidFlag[0] = 2;
   EXPECT_FALSE(decode(invalidFlag, result));
   EXPECT_FALSE(decode(bytes + "x", result));
-  response.shots = {"02"};
+  response.shots = "02,";
+  EXPECT_FALSE(decode(encode(response), result));
+  response.shots.clear();
+  response.shotCount = 0;
+  response.counts = {{"02", 1}};
+  EXPECT_FALSE(decode(encode(response), result));
+  response.counts = {{"01", 0}};
+  EXPECT_FALSE(decode(encode(response), result));
+  response.counts = {{"0", 1}, {"1", 1}};
+  auto duplicate = encode(response);
+  duplicate[duplicate.size() - sizeof(uint64_t) - 1] = '0';
+  WorkerResponse duplicateResult;
+  EXPECT_FALSE(decode(duplicate, duplicateResult));
+  response.shotCount = 1;
+  response.shots = "01,";
+  response.counts = {{"01", 1}};
+  EXPECT_FALSE(decode(encode(response), result));
+  response.counts.clear();
+  response.shots = "01";
+  EXPECT_FALSE(decode(encode(response), result));
+  response.shots = "01,,";
   EXPECT_FALSE(decode(encode(response), result));
   const auto request = encode(WorkerRequest{
       .format = 7,

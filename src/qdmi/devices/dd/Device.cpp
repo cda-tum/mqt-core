@@ -234,10 +234,12 @@ namespace qdmi::dd {
 namespace {
 struct ProgramResult {
   std::optional<std::string> qirOutput_;
-  /// Immutable measurement outcomes in sampling order.
-  std::vector<std::string> shots_;
+  /// Comma-terminated QIR outcomes aligned with output records.
+  std::string shots_;
+  /// OpenQASM outcomes stay compact until serialized into a SHOTS buffer.
+  std::map<std::string, size_t> qasmCounts_;
 
-  /// Histogram keys borrow from shots_.
+  /// QIR histogram keys borrow from shots_.
   std::map<std::string_view, size_t> counts_;
   std::once_flag countsOnce_;
 
@@ -257,7 +259,7 @@ struct ProgramResult {
   auto getHistogram(QDMI_Job_Result result, size_t size, void* data,
                     size_t* sizeRet) -> QDMI_STATUS;
 
-  /// Copy ordered outcomes to the QDMI comma-separated shot representation.
+  /// Copy outcomes to the QDMI comma-separated shot representation.
   auto getShots(size_t size, void* data, size_t* sizeRet) const -> QDMI_STATUS;
 
   /// Write dense amplitudes or probabilities into the caller's buffer.
@@ -820,10 +822,28 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
               });
           executor.slots.release(static_cast<ptrdiff_t>(grant - 1));
           grant = 1;
-          if (reusable && response.succeeded &&
-              response.shots.size() == request.shots) {
+          uint64_t remaining = request.shots;
+          bool validCounts = response.shotCount == 0;
+          for (const auto& entry : response.counts) {
+            const auto count = entry.second;
+            if (count == 0 || count > remaining) {
+              validCounts = false;
+              break;
+            }
+            remaining -= count;
+          }
+          validCounts &= remaining == 0;
+          const bool qasm = request.format == QDMI_PROGRAM_FORMAT_QASM2 ||
+                            request.format == QDMI_PROGRAM_FORMAT_QASM3;
+          const bool validSamples =
+              qasm && request.shots != 0
+                  ? validCounts
+                  : response.counts.empty() &&
+                        response.shotCount == request.shots;
+          if (reusable && response.succeeded && validSamples) {
             result = std::make_unique<qdmi::dd::ProgramResult>();
             result->shots_ = std::move(response.shots);
+            result->qasmCounts_ = std::move(response.counts);
             result->qirOutput_ = std::move(response.output);
             if (response.state) {
               result->dd_ = std::make_unique<dd::Package>(
@@ -916,11 +936,16 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::wait(size_t timeout) const
 }
 auto qdmi::dd::ProgramResult::getShots(const size_t size, void* data,
                                        size_t* sizeRet) const -> QDMI_STATUS {
-  const size_t required =
-      std::accumulate(shots_.begin(), shots_.end(), size_t{0},
-                      [](const size_t total, const auto& shot) {
-                        return total + shot.size() + 1;
-                      });
+  size_t required = shots_.size();
+  if (!qasmCounts_.empty()) {
+    for (const auto& [shot, count] : qasmCounts_) {
+      const auto width = shot.size() + 1;
+      if (count > (std::numeric_limits<size_t>::max() - required) / width) {
+        return QDMI_ERROR_OUTOFMEM;
+      }
+      required += count * width;
+    }
+  }
   if (sizeRet != nullptr) {
     *sizeRet = required;
   }
@@ -929,10 +954,19 @@ auto qdmi::dd::ProgramResult::getShots(const size_t size, void* data,
       return QDMI_ERROR_INVALIDARGUMENT;
     }
     auto output = std::span(static_cast<char*>(data), required);
-    for (const auto& shot : shots_) {
+    const auto writeShot = [&](std::string_view shot) {
       std::ranges::copy(shot, output.begin());
       output[shot.size()] = ',';
       output = output.subspan(shot.size() + 1);
+    };
+    if (qasmCounts_.empty()) {
+      std::ranges::copy(shots_, output.begin());
+    } else {
+      for (const auto& [shot, count] : qasmCounts_) {
+        for (size_t i = 0; i < count; ++i) {
+          writeShot(shot);
+        }
+      }
     }
     if (required > 0) {
       std::span(static_cast<char*>(data), required).back() = '\0';
@@ -943,59 +977,68 @@ auto qdmi::dd::ProgramResult::getShots(const size_t size, void* data,
 auto qdmi::dd::ProgramResult::getHistogram(const QDMI_Job_Result result,
                                            const size_t size, void* data,
                                            size_t* sizeRet) -> QDMI_STATUS {
-  std::call_once(countsOnce_, [this] {
-    decltype(counts_) counts;
-    for (const auto& shot : shots_) {
-      ++counts[shot];
-    }
-    counts_ = std::move(counts);
-  });
-  if (counts_.size() == 1 && counts_.begin()->first.empty()) {
-    return reportEmptyResult(sizeRet);
+  if (qasmCounts_.empty()) {
+    std::call_once(countsOnce_, [this] {
+      decltype(counts_) counts;
+      std::string_view remaining(shots_);
+      while (!remaining.empty()) {
+        const auto delimiter = remaining.find(',');
+        ++counts[remaining.substr(0, delimiter)];
+        remaining.remove_prefix(delimiter + 1);
+      }
+      counts_ = std::move(counts);
+    });
   }
-  if (result == QDMI_JOB_RESULT_HIST_KEYS) {
-    const size_t reqSize =
-        std::accumulate(counts_.begin(), counts_.end(), size_t{0},
-                        [](const size_t total, const auto& entry) {
-                          return total + entry.first.size() + 1;
-                        });
-    if (sizeRet != nullptr) {
-      *sizeRet = reqSize;
+  const auto writeHistogram = [&](const auto& counts) -> QDMI_STATUS {
+    if (counts.size() == 1 && counts.begin()->first.empty()) {
+      return reportEmptyResult(sizeRet);
     }
-    if (data != nullptr) {
-      if (size < reqSize) {
-        return QDMI_ERROR_INVALIDARGUMENT;
+    if (result == QDMI_JOB_RESULT_HIST_KEYS) {
+      const size_t reqSize =
+          std::accumulate(counts.begin(), counts.end(), size_t{0},
+                          [](const size_t total, const auto& entry) {
+                            return total + entry.first.size() + 1;
+                          });
+      if (sizeRet != nullptr) {
+        *sizeRet = reqSize;
       }
-      auto* dataPtr = static_cast<char*>(data);
-      for (const auto& bitstring : counts_ | std::views::keys) {
-        std::ranges::copy(bitstring, dataPtr);
+      if (data != nullptr) {
+        if (size < reqSize) {
+          return QDMI_ERROR_INVALIDARGUMENT;
+        }
+        auto* dataPtr = static_cast<char*>(data);
+        for (const auto& bitstring : counts | std::views::keys) {
+          std::ranges::copy(bitstring, dataPtr);
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+          dataPtr += bitstring.length();
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+          *dataPtr++ = ',';
+        }
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        dataPtr += bitstring.length();
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        *dataPtr++ = ',';
+        *(dataPtr - 1) = '\0'; // Replace last comma with null terminator
       }
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      *(dataPtr - 1) = '\0'; // Replace last comma with null terminator
-    }
-  } else {
-    // case QDMI_JOB_RESULT_HIST_VALUES:
-    const size_t reqSize = counts_.size() * sizeof(size_t);
-    if (sizeRet != nullptr) {
-      *sizeRet = reqSize;
-    }
-    if (data != nullptr) {
-      if (size < reqSize) {
-        return QDMI_ERROR_INVALIDARGUMENT;
+    } else {
+      // case QDMI_JOB_RESULT_HIST_VALUES:
+      const size_t reqSize = counts.size() * sizeof(size_t);
+      if (sizeRet != nullptr) {
+        *sizeRet = reqSize;
       }
-      // NOLINTNEXTLINE(misc-const-correctness): fills a mutable output buffer.
-      auto* dataPtr = static_cast<size_t*>(data);
-      for (const auto& count : counts_ | std::views::values) {
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        *dataPtr++ = count;
+      if (data != nullptr) {
+        if (size < reqSize) {
+          return QDMI_ERROR_INVALIDARGUMENT;
+        }
+        // NOLINTNEXTLINE(misc-const-correctness): writes into caller buffer.
+        auto* dataPtr = static_cast<size_t*>(data);
+        for (const auto& count : counts | std::views::values) {
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+          *dataPtr++ = count;
+        }
       }
     }
-  }
-  return QDMI_SUCCESS;
+    return QDMI_SUCCESS;
+  };
+  return qasmCounts_.empty() ? writeHistogram(counts_)
+                             : writeHistogram(qasmCounts_);
 }
 auto qdmi::dd::ProgramResult::getDenseResults(const QDMI_Job_Result result,
                                               const size_t size, void* data,
@@ -1135,13 +1178,13 @@ auto qdmi::dd::ProgramResult::getResults(const QDMI_Job_Result result,
   }
   switch (result) {
   case QDMI_JOB_RESULT_SHOTS:
-    if (shots_.empty()) {
+    if (shots_.empty() && qasmCounts_.empty()) {
       return QDMI_ERROR_INVALIDARGUMENT;
     }
     return getShots(size, data, sizeRet);
   case QDMI_JOB_RESULT_HIST_KEYS:
   case QDMI_JOB_RESULT_HIST_VALUES:
-    if (shots_.empty()) {
+    if (shots_.empty() && qasmCounts_.empty()) {
       return QDMI_ERROR_INVALIDARGUMENT;
     }
     return getHistogram(result, size, data, sizeRet);
