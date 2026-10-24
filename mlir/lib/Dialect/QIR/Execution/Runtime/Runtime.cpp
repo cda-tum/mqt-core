@@ -440,6 +440,11 @@ void Runtime::outputType(const char* type, std::string_view value,
 }
 
 auto Runtime::outputResult(bool value, const char* label) const -> void {
+  if (outputResultPositions_ != nullptr) {
+    outputResultPositions_->push_back(
+        static_cast<uint64_t>(os->tellp()) +
+        std::string_view("OUTPUT\tRESULT\t").size());
+  }
   outputType("RESULT", value ? "1" : "0", label);
 }
 

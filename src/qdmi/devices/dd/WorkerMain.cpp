@@ -78,10 +78,10 @@ struct Execution {
   std::string_view program_;
   size_t numShots_;
   std::optional<uint64_t> seed_;
-  bool captureQIROutput_;
   size_t maxWorkers_;
   bool automaticWorkers_;
   std::optional<std::string> qirOutput_;
+  std::optional<qdmi::dd::OutputTemplate> outputTemplate_;
   std::string shots_;
   size_t shotCount_ = 0;
   std::map<std::string, size_t> counts_;
@@ -148,12 +148,14 @@ struct Execution {
     auto jitSession = qir::JitSession(
         irBytes, "QDMI job",
         sampling ? qir::Execution::Sampling : qir::Execution::StateExtraction,
-        sampling ? seed_ : std::nullopt);
+        sampling ? seed_ : std::nullopt,
+        sampling ? &output.emplace() : nullptr);
     auto& runtime = jitSession.runtime();
-    if (sampling && captureQIROutput_) {
-      runtime.setOstream(output.emplace());
-    } else {
-      runtime.disableOutput();
+    if (sampling) {
+      // Constructors run before sampling; the schema header still comes first.
+      const auto constructorRecords = std::move(*output).str();
+      runtime.outputProgramHeader();
+      *output << constructorRecords;
     }
     bool stateAvailable = !sampling;
     const bool large = jitSession.canShareCompiledCode() &&
@@ -170,6 +172,7 @@ struct Execution {
       }
     }
     if (workers == 1) {
+      std::optional<qir::SampledOutput> terminalOutput;
       const auto emit = [&](std::string_view shot) {
         if (shots_.empty() && jitSession.canSampleTerminal() &&
             numShots_ <= shots_.max_size() / (shot.size() + 1)) {
@@ -178,11 +181,16 @@ struct Execution {
         appendShot(shots_, shot);
       };
       const auto rc = sampling
-                          ? jitSession.sample(numShots_, emit, &stateAvailable)
+                          ? jitSession.sample(numShots_, emit, &stateAvailable,
+                                              false, &terminalOutput)
                           : jitSession.run();
       if (rc != 0) {
         std::cerr << "QIR program returned exit code " << rc << '\n';
         return false;
+      }
+      if (terminalOutput) {
+        outputTemplate_.emplace(std::move(terminalOutput->text),
+                                std::move(terminalOutput->resultOffsets));
       }
     } else {
       std::mt19937_64 rng(seed_ ? *seed_ : qir::Runtime::generateRandomSeed());
@@ -204,7 +212,8 @@ struct Execution {
             workerRuntime = jitSession.makeWorkerRuntime(workerSeeds[i]);
           } else if (i != 0) {
             peer = std::make_unique<qir::JitSession>(
-                irBytes, "QDMI job", qir::Execution::Sampling, workerSeeds[i]);
+                irBytes, "QDMI job", qir::Execution::Sampling, workerSeeds[i],
+                &localOutput);
           }
           qir::Runtime* worker = &runtime;
           if (workerRuntime) {
@@ -213,11 +222,7 @@ struct Execution {
             worker = &peer->runtime();
           }
           if (i != 0) {
-            if (captureQIROutput_) {
-              worker->setOstream(localOutput);
-            } else {
-              worker->disableOutput();
-            }
+            worker->setOstream(localOutput);
           }
           const size_t count = (numShots_ / workers) +
                                static_cast<size_t>(i < numShots_ % workers);
@@ -228,17 +233,17 @@ struct Execution {
               workerRuntime
                   ? jitSession.sampleWithRuntime(*worker, count, emit, false)
                   : (i == 0 ? jitSession : *peer)
-                        .sample(count, emit, nullptr, i == 0);
+                        .sample(count, emit, nullptr, false);
           peer.reset();
-          if (i != 0 && captureQIROutput_) {
+          if (i != 0) {
             records[i] = std::move(localOutput).str();
           }
           return code;
         }));
       }
       int64_t firstError = 0;
-      for (size_t i = 0; i < workers; ++i) {
-        const auto code = tasks[i].get();
+      for (auto& task : tasks) {
+        const auto code = task.get();
         if (firstError == 0 && code != 0) {
           firstError = code;
         }
@@ -255,10 +260,8 @@ struct Execution {
       for (const auto& part : parts) {
         shots_ += part;
       }
-      if (output) {
-        for (size_t i = 1; i < workers; ++i) {
-          *output << records[i];
-        }
+      for (size_t i = 1; i < workers; ++i) {
+        *output << records[i];
       }
     }
     shotCount_ = numShots_;
@@ -279,7 +282,6 @@ qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request,
       .program_ = request.program,
       .numShots_ = static_cast<size_t>(request.shots),
       .seed_ = request.seed,
-      .captureQIROutput_ = request.captureOutput,
       .maxWorkers_ = static_cast<size_t>(request.maxWorkers),
       .automaticWorkers_ = request.automaticWorkers,
   };
@@ -296,6 +298,7 @@ qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request,
     response.shots = std::move(execution.shots_);
     response.counts = std::move(execution.counts_);
     response.output = std::move(execution.qirOutput_);
+    response.outputTemplate = std::move(execution.outputTemplate_);
     if (execution.dd_) {
       const auto root = execution.stateVecDD_;
       response.qubits =

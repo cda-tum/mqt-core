@@ -90,6 +90,7 @@ TEST_F(JitSessionTest, BindsRuntimeForStaticConstructorsAndDestructors) {
     [{ i32, ptr, ptr } { i32 65535, ptr @cleanup, ptr null }]
 define void @setup() {
   call void @__quantum__qis__x__body(ptr null)
+  call void @__quantum__rt__int_record_output(i64 2, ptr null)
   ret void
 }
 define void @cleanup() {
@@ -110,11 +111,10 @@ attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" }
 )";
   std::async(std::launch::async, [&] {
     qir::JitSession session(ir, "static-lifecycle", qir::Execution::Sampling,
-                            42);
-    session.runtime().setOstream(sink);
+                            42, &sink);
     EXPECT_EQ(session.run(), 1);
   }).get();
-  EXPECT_EQ(sink.str(), "OUTPUT\tINT\t3\n");
+  EXPECT_EQ(sink.str(), "OUTPUT\tINT\t2\nOUTPUT\tINT\t3\n");
 }
 
 TEST(OpenQASMExecutionTest, ExecutesAffineQuantumSlices) {
@@ -693,33 +693,67 @@ attributes #0 = { "entry_point" }
 
 TEST(QIRBatchSampling, PreservesLogicalOutputOrderAndRepeatedMeasurements) {
   constexpr llvm::StringRef ir = R"(
+@label = constant [6 x i8] c"items\00"
 define i64 @main() #0 {
   call void @__quantum__rt__initialize(ptr null)
   call void @__quantum__qis__x__body(ptr null)
   call void @__quantum__qis__swap__body(ptr null, ptr inttoptr (i64 2 to ptr))
   call void @__quantum__qis__mz__body(ptr null, ptr null)
   call void @__quantum__qis__mz__body(ptr inttoptr (i64 2 to ptr), ptr inttoptr (i64 1 to ptr))
-  call void @__quantum__rt__result_record_output(ptr inttoptr (i64 1 to ptr), ptr null)
+  call void @__quantum__rt__tuple_record_output(i64 4, ptr @label)
+  call void @__quantum__rt__array_record_output(i64 2, ptr @label)
+  call void @__quantum__rt__result_record_output(ptr inttoptr (i64 1 to ptr), ptr @label)
   call void @__quantum__rt__result_record_output(ptr null, ptr null)
-  call void @__quantum__rt__result_record_output(ptr inttoptr (i64 1 to ptr), ptr null)
+  call void @__quantum__rt__result_record_output(ptr null, ptr @label)
+  call void @__quantum__rt__int_record_output(i64 7, ptr @label)
+  call void @__quantum__rt__double_record_output(double 0.5, ptr null)
   ret i64 0
 }
+declare void @__quantum__rt__int_record_output(i64, ptr)
+declare void @__quantum__rt__double_record_output(double, ptr)
 declare void @__quantum__rt__initialize(ptr)
 declare void @__quantum__qis__x__body(ptr)
 declare void @__quantum__qis__swap__body(ptr, ptr)
 declare void @__quantum__qis__mz__body(ptr, ptr)
 declare void @__quantum__rt__result_record_output(ptr, ptr)
+declare void @__quantum__rt__array_record_output(i64, ptr)
+declare void @__quantum__rt__tuple_record_output(i64, ptr)
 attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubits"="3" "required_num_results"="2" }
 )";
-  qir::JitSession session(ir, "output-order");
-  session.runtime().disableOutput();
-  std::vector<std::string> results;
-  ASSERT_EQ(session.sample(32, results), 0);
-  EXPECT_EQ(results, std::vector<std::string>(32, "101"));
-  ASSERT_EQ(session.sample(2, results), 0);
-  EXPECT_EQ(results, std::vector<std::string>(2, "101"));
-  ASSERT_EQ(session.sample(0, results), 0);
-  EXPECT_TRUE(results.empty());
+  for (const auto schema : {
+           qir::Runtime::OutputSchema::Ordered,
+           qir::Runtime::OutputSchema::Labeled,
+       }) {
+    std::ostringstream output;
+    qir::JitSession session(ir, "output-order", qir::Execution::Sampling, 42,
+                            &output);
+    session.runtime().setOutputSchema(schema);
+    std::vector<std::string> results;
+    bool stateAvailable = false;
+    ASSERT_EQ(session.sample(
+                  2, [&](std::string_view shot) { results.emplace_back(shot); },
+                  &stateAvailable),
+              0);
+    EXPECT_TRUE(stateAvailable);
+    EXPECT_EQ(results, std::vector<std::string>(2, "100"));
+    const std::string label =
+        schema == qir::Runtime::OutputSchema::Labeled ? "\titems" : "";
+    std::ostringstream expectedRecords;
+    expectedRecords << "OUTPUT\tTUPLE\t4" << label << "\n"
+                    << "OUTPUT\tARRAY\t2" << label << "\n"
+                    << "OUTPUT\tRESULT\t1" << label << "\n"
+                    << "OUTPUT\tRESULT\t0\n"
+                    << "OUTPUT\tRESULT\t0" << label << "\n"
+                    << "OUTPUT\tINT\t7" << label << "\n"
+                    << "OUTPUT\tDOUBLE\t0.5\nEND\t0\n";
+    const auto expected = expectedRecords.str();
+    const auto text = output.str();
+    const auto first = text.find(expected);
+    ASSERT_NE(first, std::string::npos);
+    EXPECT_NE(text.find(expected, first + expected.size()), std::string::npos);
+    ASSERT_EQ(session.sample(0, results), 0);
+    EXPECT_TRUE(results.empty());
+  }
 }
 
 TEST(QIRBatchSampling, SeedReproducesBellSamples) {
@@ -792,21 +826,62 @@ attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" "required_num_
               0., 1e-12);
 }
 
-TEST(QIRBatchSampling, TextOutputKeepsPerShotRecords) {
+TEST(QIRBatchSampling, TextOutputPreservesTerminalSamplesAndState) {
   const auto ir = getProgram("BellPairStatic.ll");
-  qir::JitSession session(ir, "text", qir::Execution::Sampling, 42);
   std::ostringstream output;
-  session.runtime().setOstream(output);
+  qir::JitSession session(ir, "text", qir::Execution::Sampling, 42, &output);
   std::vector<std::string> results;
-  ASSERT_EQ(session.sample(4, results), 0);
-  EXPECT_EQ(results.size(), 4);
-  const auto text = output.str();
-  size_t ends = 0;
-  for (size_t pos = text.find("END\t0\n"); pos != std::string::npos;
-       pos = text.find("END\t0\n", pos + 1)) {
-    ++ends;
+  bool stateAvailable = false;
+  ASSERT_EQ(session.sample(32, results, &stateAvailable), 0);
+  ASSERT_TRUE(stateAvailable);
+  EXPECT_THAT(results, testing::Contains("00"));
+  EXPECT_THAT(results, testing::Contains("11"));
+  std::istringstream records(output.str());
+  std::string line;
+  size_t shot = 0;
+  std::string bits;
+  while (std::getline(records, line)) {
+    if (line.starts_with("OUTPUT\tRESULT\t")) {
+      bits += line.at(std::string_view("OUTPUT\tRESULT\t").size());
+    } else if (line == "END\t0") {
+      ASSERT_LT(shot, results.size());
+      EXPECT_EQ(bits, results[shot++]);
+      bits.clear();
+    }
   }
-  EXPECT_EQ(ends, 4);
+  EXPECT_EQ(shot, results.size());
+  const auto state = session.runtime().takeState();
+  const auto vector = dd::getVector(state.edge);
+  ASSERT_EQ(vector.size(), 4);
+  EXPECT_NEAR(std::abs(vector[0]), std::sqrt(0.5), 1e-12);
+  EXPECT_NEAR(std::abs(vector[3]), std::sqrt(0.5), 1e-12);
+}
+
+TEST(QIRBatchSampling, FramesEmptyTerminalOutputs) {
+  constexpr llvm::StringRef ir = R"(
+define i64 @main() #0 {
+  call void @__quantum__rt__tuple_record_output(i64 0, ptr null)
+  ret i64 0
+}
+declare void @__quantum__rt__tuple_record_output(i64, ptr)
+attributes #0 = { "entry_point" "qir_profiles"="base_profile" }
+)";
+  std::ostringstream output;
+  qir::JitSession session(ir, "empty-output", qir::Execution::Sampling, 42,
+                          &output);
+  std::vector<std::string> results;
+  ASSERT_EQ(session.sample(3, results), 0);
+  EXPECT_EQ(results, std::vector<std::string>(3, ""));
+  std::istringstream records(output.str());
+  std::string line;
+  size_t starts = 0;
+  size_t ends = 0;
+  while (std::getline(records, line)) {
+    starts += static_cast<size_t>(line == "START");
+    ends += static_cast<size_t>(line == "END\t0");
+  }
+  EXPECT_EQ(starts, 3U);
+  EXPECT_EQ(ends, 3U);
 }
 
 TEST(QIRBatchSampling, ExecutesClassicalSideEffectsOnEveryShot) {

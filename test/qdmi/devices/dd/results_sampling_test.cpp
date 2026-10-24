@@ -41,6 +41,7 @@
 #include <numeric>
 #include <optional>
 #include <ranges>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -66,7 +67,6 @@ class HistogramTest : public ::testing::Test {
 protected:
   using Histogram = std::pair<std::vector<std::string>, std::vector<size_t>>;
   static constexpr size_t NUM_SHOTS = 1024;
-  static constexpr size_t NUM_QUBITS = 3;
 
   static Histogram
   runProgram(const QDMI_Program_Format format, const std::string_view program,
@@ -122,21 +122,64 @@ protected:
         keys, [](const auto& k) { return k == "00" || k == "11"; }));
   }
 
-  /// AdaptiveRecordOutputs records each bit as both a Result and a Boolean.
-  static void checkSmokeHistogram(const Histogram& hist) {
-    const auto& [keys, vals] = hist;
-    // Both vectors have the same size.
-    ASSERT_EQ(keys.size(), vals.size());
-    // Values sum up to NUM_SHOTS.
-    const auto sum = std::accumulate(vals.cbegin(), vals.cend(), size_t{0});
-    EXPECT_EQ(sum, NUM_SHOTS);
-    // Each output group contains the same measurement bits.
-    EXPECT_TRUE(std::ranges::all_of(keys, [](const auto& k) {
-      return k.size() == 2 * NUM_QUBITS &&
-             k.substr(0, NUM_QUBITS) == k.substr(NUM_QUBITS) &&
-             std::ranges::all_of(k,
-                                 [](char c) { return c == '0' || c == '1'; });
-    }));
+  static void checkTypedOutput(const QDMI_Program_Format format,
+                               const std::string_view program) {
+    for (const size_t workers : {1U, 4U}) {
+      SCOPED_TRACE(workers);
+      const qdmi_test::SessionGuard session{};
+      const qdmi_test::JobGuard job{session.session};
+      ASSERT_EQ(qdmi_test::setProgram(job.job, format, program), QDMI_SUCCESS);
+      ASSERT_EQ(qdmi_test::setShots(job.job, 4), QDMI_SUCCESS);
+      ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
+                    job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM3, sizeof(workers),
+                    &workers),
+                QDMI_SUCCESS);
+      ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
+      const auto samples = getShots(job.job);
+      ASSERT_EQ(samples.size(), 4U);
+      const auto [keys, counts] = qdmi_test::getHistogram(job.job);
+      EXPECT_EQ(std::accumulate(counts.begin(), counts.end(), size_t{0}), 4U);
+      const auto size = qdmi_test::querySize(job.job, QDMI_JOB_RESULT_CUSTOM1);
+      ASSERT_GT(size, 1U);
+      std::string output(size, '\0');
+      ASSERT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
+                    job.job, 0, QDMI_JOB_RESULT_CUSTOM1, size, output.data(),
+                    nullptr),
+                QDMI_SUCCESS);
+      std::istringstream records(output);
+      std::string line;
+      std::string bits;
+      size_t shot = 0;
+      size_t weight = 0;
+      while (std::getline(records, line)) {
+        std::istringstream fields(line);
+        std::string record;
+        std::string type;
+        std::string value;
+        fields >> record >> type >> value;
+        if (record == "OUTPUT") {
+          if (type == "RESULT") {
+            bits += value;
+            weight += static_cast<size_t>(value == "1");
+          } else if (type == "BOOL") {
+            bits += value == "true" ? '1' : '0';
+          } else if (type == "INT") {
+            EXPECT_EQ(std::stoull(value), weight);
+          } else if (type == "DOUBLE") {
+            EXPECT_DOUBLE_EQ(std::stod(value),
+                             static_cast<double>(weight) / 3.);
+          }
+        } else if (record == "END") {
+          ASSERT_LT(shot, samples.size());
+          ASSERT_EQ(bits.size(), 6U);
+          std::ranges::reverse(bits);
+          EXPECT_EQ(bits, samples[shot++]);
+          bits.clear();
+          weight = 0;
+        }
+      }
+      EXPECT_EQ(shot, samples.size());
+    }
   }
 };
 
@@ -239,14 +282,13 @@ TEST_F(QIRHistogramTestString, Adaptive) {
 
 TEST_F(QIRHistogramTestModule, AdaptiveRecordOutputs) {
   constexpr auto format = QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE;
-  checkSmokeHistogram(
-      runProgram(format, getProgram("AdaptiveRecordOutputs.ll")));
+  checkTypedOutput(format, getProgram("AdaptiveRecordOutputs.ll"));
 }
 
 TEST_F(QIRHistogramTestString, AdaptiveRecordOutputs) {
   constexpr auto format = QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING;
-  checkSmokeHistogram(
-      runProgram(format, qdmi_test::getQIRProgram("AdaptiveRecordOutputs.ll")));
+  checkTypedOutput(format,
+                   qdmi_test::getQIRProgram("AdaptiveRecordOutputs.ll"));
 }
 
 TEST_F(HistogramTest, SeedReproducesQASMSampling) {
@@ -303,7 +345,7 @@ b[0] = measure q[1];
 }
 
 TEST_F(QIRHistogramTestString, AdaptiveWorkersRepeatSeededShots) {
-  const auto program = qdmi_test::getQIRProgram("AdaptiveRecordOutputs.ll");
+  const auto program = qdmi_test::getQIRProgram("BellPairAdaptive.ll");
   std::vector<std::string> first;
   std::vector<std::string> second;
   for (const size_t workers : {0U, 4U}) {
@@ -481,6 +523,13 @@ TEST(ResultsSampling, RepeatedShotProgramsDoNotExposeATrajectory) {
 
 TEST_F(QIRHistogramTestString, StaticSamplingPreservesRepeatedOutputOrder) {
   constexpr std::string_view program = R"(
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
+    [{ i32, ptr, ptr } { i32 65535, ptr @setup, ptr null }]
+define void @setup() {
+  call void @__quantum__rt__int_record_output(i64 98, ptr null)
+  ret void
+}
+declare void @__quantum__rt__int_record_output(i64, ptr)
 define i64 @main() #0 {
   call void @__quantum__qis__x__body(ptr null)
   call void @__quantum__qis__swap__body(ptr null, ptr inttoptr (i64 2 to ptr))
@@ -490,18 +539,86 @@ define i64 @main() #0 {
   call void @__quantum__rt__result_record_output(ptr null, ptr null)
   call void @__quantum__rt__result_record_output(ptr inttoptr (i64 1 to ptr), ptr null)
   call void @__quantum__rt__result_record_output(ptr null, ptr null)
+  call void @__quantum__rt__int_record_output(i64 7, ptr null)
   ret i64 0
 }
 declare void @__quantum__qis__x__body(ptr)
 declare void @__quantum__qis__swap__body(ptr, ptr)
 declare void @__quantum__qis__mz__body(ptr, ptr)
 declare void @__quantum__rt__result_record_output(ptr, ptr)
-attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubits"="3" "required_num_results"="2" }
+attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" "required_num_qubits"="3" "required_num_results"="2" }
 )";
-  const auto [keys, values] =
-      runProgram(QDMI_PROGRAM_FORMAT_QIRBASESTRING, program);
-  EXPECT_EQ(keys, std::vector<std::string>{"0101"});
-  EXPECT_EQ(values, std::vector<size_t>{NUM_SHOTS});
+  for (const bool destructor : {false, true}) {
+    SCOPED_TRACE(destructor);
+    std::string executable(program);
+    if (destructor) {
+      executable += R"(
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }]
+    [{ i32, ptr, ptr } { i32 65535, ptr @teardown, ptr null }]
+define void @teardown() {
+  %last = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
+  call void @__quantum__rt__bool_record_output(i1 %last, ptr null)
+  ret void
+}
+declare i1 @__quantum__rt__read_result(ptr)
+declare void @__quantum__rt__bool_record_output(i1, ptr)
+)";
+    }
+    const qdmi_test::SessionGuard session{};
+    const qdmi_test::JobGuard job{session.session};
+    ASSERT_EQ(qdmi_test::setProgram(
+                  job.job, QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING, executable),
+              QDMI_SUCCESS);
+    ASSERT_EQ(qdmi_test::setShots(job.job, 2), QDMI_SUCCESS);
+    ASSERT_EQ(qdmi_test::submitAndWait(job.job, 0), QDMI_SUCCESS);
+    EXPECT_EQ(getShots(job.job), std::vector<std::string>(2, "0101"));
+    const auto [keys, values] = qdmi_test::getHistogram(job.job);
+    EXPECT_EQ(keys, std::vector<std::string>{"0101"});
+    EXPECT_EQ(values, std::vector<size_t>{2});
+    const auto size = qdmi_test::querySize(job.job, QDMI_JOB_RESULT_CUSTOM1);
+    ASSERT_GT(size, 1U);
+    std::string output(size, '\0');
+    EXPECT_EQ(MQT_DDSIM_QDMI_device_job_get_results(
+                  job.job, 0, QDMI_JOB_RESULT_CUSTOM1, size - 1, output.data(),
+                  nullptr),
+              QDMI_ERROR_INVALIDARGUMENT);
+    ASSERT_EQ(
+        MQT_DDSIM_QDMI_device_job_get_results(
+            job.job, 0, QDMI_JOB_RESULT_CUSTOM1, size, output.data(), nullptr),
+        QDMI_SUCCESS);
+    EXPECT_TRUE(output.starts_with("HEADER\tschema_id\t"));
+    EXPECT_EQ(output.find("HEADER\tschema_id\t", 1), std::string::npos);
+    EXPECT_LT(output.find("OUTPUT\tINT\t98\n"), output.find("START\n"));
+    EXPECT_EQ(
+        MQT_DDSIM_QDMI_device_job_get_results(
+            job.job, 0, QDMI_JOB_RESULT_STATEVECTOR_DENSE, 0, nullptr, nullptr),
+        destructor ? QDMI_ERROR_NOTSUPPORTED : QDMI_SUCCESS);
+    if (destructor) {
+      EXPECT_TRUE(output.ends_with(std::string("OUTPUT\tBOOL\ttrue\n") + '\0'));
+    }
+    std::istringstream records(output);
+    std::vector<std::string> recorded;
+    std::string bits;
+    size_t starts = 0;
+    for (std::string line; std::getline(records, line);) {
+      if (line == "START") {
+        ++starts;
+      } else if (line.starts_with("OUTPUT\tRESULT\t")) {
+        bits += line.back();
+      } else if (line == "END\t0") {
+        recorded.push_back(std::move(bits));
+        bits.clear();
+      }
+    }
+    EXPECT_EQ(starts, 2U);
+    EXPECT_EQ(recorded, std::vector<std::string>(2, "1010"));
+    std::string again(size, '\0');
+    ASSERT_EQ(
+        MQT_DDSIM_QDMI_device_job_get_results(
+            job.job, 0, QDMI_JOB_RESULT_CUSTOM1, size, again.data(), nullptr),
+        QDMI_SUCCESS);
+    EXPECT_EQ(again, output);
+  }
 }
 
 TEST(QIROutput, CapturesTypedRecordsAndValidatesBuffers) {
@@ -536,6 +653,12 @@ TEST(QIROutput, CapturesTypedRecordsAndValidatesBuffers) {
 )");
   program += R"(
 @completed_shots = global i64 0
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
+    [{ i32, ptr, ptr } { i32 65535, ptr @record_setup, ptr null }]
+define void @record_setup() {
+  call void @__quantum__rt__int_record_output(i64 98, ptr null)
+  ret void
+}
 @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }]
     [{ i32, ptr, ptr } { i32 65535, ptr @record_teardown, ptr null }]
 define void @record_teardown() {
@@ -572,6 +695,7 @@ exit:
             QDMI_SUCCESS);
   EXPECT_EQ(output.back(), '\0');
   EXPECT_TRUE(output.starts_with("HEADER\tschema_id\t"));
+  EXPECT_LT(output.find("OUTPUT\tINT\t98\n"), output.find("START\n"));
   constexpr std::string_view destructorRecord = "OUTPUT\tINT\t99\n";
   EXPECT_TRUE(output.ends_with(std::string(destructorRecord) + '\0'));
   for (const auto record : {

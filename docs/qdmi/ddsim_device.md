@@ -87,9 +87,11 @@ for eligibility and resource limits. OpenQASM classical registers use reverse
 declaration order, with each register most-significant-bit first. QIR records
 define increasing output-bit indices; the device reverses each recorded
 bitstring before returning shots and counts. Equivalent OpenQASM and QIR
-programs therefore use the same bit positions within each bitstring. Adaptive
-QIR shots can record different numbers of bits; their histogram retains these
-variable-length outcomes.
+programs therefore use the same bit positions within each bitstring. QIR shots
+contain the recorded Result and Boolean values, including result-array elements.
+Integer and double records remain in the complete QIR output stream and do not
+add bits to shots or histograms. Adaptive QIR shots can record different numbers
+of bits; their histogram retains these variable-length outcomes.
 
 Sparse statevector and probability results use ascending numerical basis-index
 order. Their keys and values share that order. Sparse exports require at most 64
@@ -130,23 +132,25 @@ not isolate arbitrary native process-global side effects between executions.
 
 ## QIR output capture
 
-Set `QDMI_DEVICE_JOB_PARAMETER_CUSTOM2` to a `bool` value of `true` before
-submission to capture textual QIR output. In Python, pass `custom2=True` to
-`submit_job` or `submit_program`. This option requires a QIR Base or Adaptive
-program and a positive shot count; other jobs reject it with
-`QDMI_ERROR_NOTSUPPORTED`.
+Every sampled QIR Base or Adaptive program provides its textual QIR output
+through `QDMI_JOB_RESULT_CUSTOM1`. The result is a null-terminated string; its
+reported size includes the terminator. In Python, use
+`job.get_custom_result(CustomProperty.CUSTOM1, str)`; C++ clients use
+`job.getCustomResult<std::string>(qdmi::CustomProperty::Custom1)`. OpenQASM jobs
+and zero-shot state extraction do not provide this result (`None` in Python).
+The Boolean job parameter `CUSTOM2` is accepted for compatibility and does not
+change output availability.
 
-After successful execution, `QDMI_JOB_RESULT_CUSTOM1` returns the complete,
-null-terminated output stream. Its reported size includes the terminator. The
-Python equivalent is `job.get_custom_result(CustomProperty.CUSTOM1, str)`; C++
-clients use `job.getCustomResult<std::string>(qdmi::CustomProperty::Custom1)`.
-Without capture, that result is unsupported (`None` in Python).
-
-Capture retains the QIR header, per-shot metadata, typed output records, and
-exit codes in memory. Double records preserve the original floating-point value
-when parsed back. Capture executes the program once per shot, so capture jobs
-provide counts and shots but no uncollapsed statevector. Default sampling keeps
-its optimized path. See the
+The stream retains the QIR header, metadata, typed output records, and exit
+codes. Its shot records align with the order returned by
+`QDMI_JOB_RESULT_SHOTS`. Double records preserve the original floating-point
+value when parsed back. Terminal sampling builds a record template from one
+execution and fills it with each sample's bits, preserving the uncollapsed
+statevector. The job retains one template and writes the expanded stream
+directly into the caller's buffer when requested; size queries do not expand it.
+Other programs execute once per shot and retain their full output until the job
+is released, so their memory use grows with the recorded output volume. Shots
+and counts remain available as the bit projection described above. See the
 [executable QIR example](../qir/index.md#retrieve-the-qir-output-stream-through-qdmi).
 
 ## Compile and execute

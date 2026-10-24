@@ -21,6 +21,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -30,6 +31,12 @@
 namespace qir {
 
 class Runtime;
+
+/// One terminal shot's output, with Result digit offsets in recording order.
+struct SampledOutput {
+  std::string text;
+  std::vector<uint64_t> resultOffsets;
+};
 
 /// Whether the JIT'd program runs to produce measurement samples or
 /// to leave the final quantum state in @ref qir::Runtime for external
@@ -66,11 +73,14 @@ public:
   /// @param bufferName Identifier used in diagnostics.
   /// @param execution Execution mode.
   /// @param randomSeed Optional deterministic runtime seed.
+  /// @param output Stream for constructor, entry-point, and destructor records;
+  /// null disables output.
   /// @throws std::runtime_error if the IR cannot be parsed or the JIT fails
   /// to initialize.
   JitSession(llvm::StringRef irBytes, llvm::StringRef bufferName,
              Execution execution = Execution::Sampling,
-             std::optional<uint64_t> randomSeed = std::nullopt);
+             std::optional<uint64_t> randomSeed = std::nullopt,
+             std::ostream* output = &std::cout);
 
   /// Tears down the LLJIT and any JIT'd resources owned by the session.
   ~JitSession();
@@ -83,20 +93,28 @@ public:
   /// Execute a batch, preserving recorded-result order and returning the first
   /// nonzero exit code.
   ///
-  /// With textual output disabled, eligible static Base or Adaptive programs
-  /// are executed once with deferred measurements, then sampled. Other programs
+  /// Eligible static Base or Adaptive programs execute once with deferred
+  /// measurements, then sample that state. Other programs
   /// execute normally for every shot. State-extraction sessions cannot be
   /// sampled. The supplied vector is replaced, including for zero shots. If
   /// supplied, stateAvailable is set only when successful terminal sampling
   /// leaves an uncollapsed state. The caller may then use runtime().takeState()
   /// before executing the session again.
+  /// Results contain recorded Result and Boolean values; numeric records appear
+  /// only in the textual output. Terminal sampling replays output records from
+  /// the sampled bits without repeating quantum execution. If terminalOutput is
+  /// supplied and output is enabled, terminal sampling returns the template
+  /// instead of writing per-shot records. Other output still goes to the
+  /// stream; terminalOutput is reset when no template is produced.
   int64_t sample(size_t shots, std::vector<std::string>& results,
-                 bool* stateAvailable = nullptr, bool emitHeader = true);
+                 bool* stateAvailable = nullptr, bool emitHeader = true,
+                 std::optional<SampledOutput>* terminalOutput = nullptr);
 
   /// Execute a batch and emit each shot before the next is generated.
   /// The view is valid only during the callback.
   int64_t sample(size_t shots, llvm::function_ref<void(std::string_view)> emit,
-                 bool* stateAvailable = nullptr, bool emitHeader = true);
+                 bool* stateAvailable = nullptr, bool emitHeader = true,
+                 std::optional<SampledOutput>* terminalOutput = nullptr);
 
   /// Whether sampling may share the compiled entry point.
   ///
@@ -118,19 +136,22 @@ public:
   ///
   /// Concurrent calls require separate runtimes from makeWorkerRuntime().
   /// Throws std::logic_error when a separate runtime is not eligible.
-  int64_t sampleWithRuntime(Runtime& runtime, size_t shots,
-                            std::vector<std::string>& results,
-                            bool emitHeader = true,
-                            bool* stateAvailable = nullptr);
+  /// Output handling follows sample().
+  int64_t
+  sampleWithRuntime(Runtime& runtime, size_t shots,
+                    std::vector<std::string>& results, bool emitHeader = true,
+                    bool* stateAvailable = nullptr,
+                    std::optional<SampledOutput>* terminalOutput = nullptr);
 
   /// Emit each shot with a separate worker runtime.
   /// The view is valid only during the callback.
-  int64_t sampleWithRuntime(Runtime& runtime, size_t shots,
-                            llvm::function_ref<void(std::string_view)> emit,
-                            bool emitHeader = true,
-                            bool* stateAvailable = nullptr);
+  int64_t
+  sampleWithRuntime(Runtime& runtime, size_t shots,
+                    llvm::function_ref<void(std::string_view)> emit,
+                    bool emitHeader = true, bool* stateAvailable = nullptr,
+                    std::optional<SampledOutput>* terminalOutput = nullptr);
 
-  /// Whether the current output mode can use one retained terminal state.
+  /// Whether sampling can use one retained terminal state.
   [[nodiscard]] bool canSampleTerminal() const;
 
   [[nodiscard]] auto runtime() -> Runtime&;
@@ -150,7 +171,8 @@ private:
   sampleWithRuntimeImpl(Runtime& runtime, size_t shots,
                         llvm::function_ref<void(std::string&&)> emitOwned,
                         llvm::function_ref<void(std::string_view)> emitBorrowed,
-                        bool emitHeader, bool* stateAvailable);
+                        bool emitHeader, bool* stateAvailable,
+                        std::optional<SampledOutput>* terminalOutput);
 
   /// Initializes the native target, asm printer and asm parser.
   ///

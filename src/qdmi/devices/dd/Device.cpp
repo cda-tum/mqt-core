@@ -234,6 +234,7 @@ namespace qdmi::dd {
 namespace {
 struct ProgramResult {
   std::optional<std::string> qirOutput_;
+  std::optional<OutputTemplate> outputTemplate_;
   /// Comma-terminated QIR outcomes aligned with output records.
   std::string shots_;
   /// OpenQASM outcomes stay compact until serialized into a SHOTS buffer.
@@ -254,6 +255,10 @@ struct ProgramResult {
   /// Number of amplitudes visited by the sparse result traversal.
   size_t sparseAmplitudeCount_ = 0;
   std::once_flag sparseAmplitudeCountOnce_;
+
+  /// Materialize the QIR stream directly into the caller's buffer.
+  auto getQIROutput(size_t size, void* data, size_t* sizeRet) const
+      -> QDMI_STATUS;
 
   /// Translate counts to QDMI histogram
   auto getHistogram(QDMI_Job_Result result, size_t size, void* data,
@@ -568,7 +573,6 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::setParameter(
     if (size != sizeof(bool)) {
       return QDMI_ERROR_INVALIDARGUMENT;
     }
-    captureQIROutput_ = *static_cast<const bool*>(value);
     return QDMI_SUCCESS;
   case QDMI_DEVICE_JOB_PARAMETER_CUSTOM3:
     if (value == nullptr) {
@@ -720,11 +724,6 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
       execution->programs.empty()) {
     return QDMI_ERROR_BADSTATE;
   }
-  if (captureQIROutput_ &&
-      (numShots_ == 0 || format_ == QDMI_PROGRAM_FORMAT_QASM2 ||
-       format_ == QDMI_PROGRAM_FORMAT_QASM3)) {
-    return QDMI_ERROR_NOTSUPPORTED;
-  }
   auto& executor = qdmi::dd::executor();
   const size_t perProgramLimit =
       std::max(size_t{1}, executor.limit / execution->programs.size());
@@ -744,7 +743,6 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
           .format = static_cast<int32_t>(format_),
           .shots = numShots_,
           .seed = seed_,
-          .captureOutput = captureQIROutput_,
           .maxWorkers = desired,
           .automaticWorkers = maxWorkers_ == 0,
       };
@@ -845,6 +843,7 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
             result->shots_ = std::move(response.shots);
             result->qasmCounts_ = std::move(response.counts);
             result->qirOutput_ = std::move(response.output);
+            result->outputTemplate_ = std::move(response.outputTemplate);
             if (response.state) {
               result->dd_ = std::make_unique<dd::Package>(
                   response.qubits, RESULT_PACKAGE_CONFIG);
@@ -1169,14 +1168,59 @@ auto qdmi::dd::ProgramResult::getSparseResults(const QDMI_Job_Result result,
   }
   return QDMI_SUCCESS;
 }
+auto qdmi::dd::ProgramResult::getQIROutput(const size_t size, void* data,
+                                           size_t* sizeRet) const
+    -> QDMI_STATUS {
+  if (!qirOutput_) {
+    return QDMI_ERROR_NOTSUPPORTED;
+  }
+  size_t required = qirOutput_->size() + 1;
+  if (outputTemplate_) {
+    const size_t recordSize = outputTemplate_->text.size();
+    const auto shots =
+        shots_.size() / (outputTemplate_->resultOffsets.size() + 1);
+    if (recordSize != 0 &&
+        shots > (std::numeric_limits<size_t>::max() - required) / recordSize) {
+      return QDMI_ERROR_OUTOFMEM;
+    }
+    required += shots * recordSize;
+  }
+  if (sizeRet != nullptr) {
+    *sizeRet = required;
+  }
+  if (data == nullptr) {
+    return QDMI_SUCCESS;
+  }
+  if (size < required) {
+    return QDMI_ERROR_INVALIDARGUMENT;
+  }
+  auto output = std::span(static_cast<char*>(data), required);
+  std::ranges::copy(*qirOutput_, output.begin());
+  output = output.subspan(qirOutput_->size());
+  if (outputTemplate_) {
+    const auto& record = *outputTemplate_;
+    std::string_view remaining(shots_);
+    const auto width = record.resultOffsets.size();
+    while (!remaining.empty()) {
+      std::ranges::copy(record.text, output.begin());
+      for (size_t i = 0; i < record.resultOffsets.size(); ++i) {
+        // QDMI bitstrings have the reverse of QIR recording order.
+        output[record.resultOffsets[i]] = remaining[width - 1 - i];
+      }
+      output = output.subspan(record.text.size());
+      remaining.remove_prefix(width + 1);
+    }
+  }
+  output.front() = '\0';
+  return QDMI_SUCCESS;
+}
+
 auto qdmi::dd::ProgramResult::getResults(const QDMI_Job_Result result,
                                          const size_t size, void* data,
                                          size_t* sizeRet) -> QDMI_STATUS {
-  if (qirOutput_) {
-    ADD_STRING_PROPERTY(QDMI_JOB_RESULT_CUSTOM1, qirOutput_->c_str(), result,
-                        size, data, sizeRet)
-  }
   switch (result) {
+  case QDMI_JOB_RESULT_CUSTOM1:
+    return getQIROutput(size, data, sizeRet);
   case QDMI_JOB_RESULT_SHOTS:
     if (shots_.empty() && qasmCounts_.empty()) {
       return QDMI_ERROR_INVALIDARGUMENT;

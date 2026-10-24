@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace qdmi::dd {
 struct CloseWorkerStream {
@@ -33,7 +34,6 @@ struct WorkerRequest {
   llvm::StringRef program;
   uint64_t shots = 0;
   std::optional<uint64_t> seed;
-  bool captureOutput = false;
   uint64_t maxWorkers = 1;
   bool automaticWorkers = true;
 };
@@ -44,6 +44,11 @@ struct WorkerRequest {
 struct WorkerSlots {
   uint64_t count = 1;
 };
+/// Terminal shot records appended after the header and constructor output.
+struct OutputTemplate {
+  std::string text;
+  std::vector<uint64_t> resultOffsets;
+};
 struct WorkerResponse {
   bool succeeded = false;
   uint64_t shotCount = 0;
@@ -52,6 +57,7 @@ struct WorkerResponse {
   std::string shots;
   std::map<std::string, size_t> counts;
   std::optional<std::string> output;
+  std::optional<OutputTemplate> outputTemplate;
   uint32_t qubits = 0;
   std::optional<std::string> state;
 };

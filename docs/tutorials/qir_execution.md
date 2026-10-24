@@ -207,12 +207,12 @@ else:
 
 ## Read the records behind the counts
 
-Enable DDSIM's QIR output capture for two shots. Each shot may execute several
+Retrieve DDSIM's QIR output for two shots. Each shot may execute several
 measurements, but only the final `result` is recorded as program output.
 
 ```{code-cell} ipython3
 recorded = device.submit_job(
-    loop.to_bitcode(), ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=2, custom1=seed, custom2=True
+    loop.to_bitcode(), ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=2, custom1=seed
 )
 assert recorded.wait()
 output = recorded.get_custom_result(CustomProperty.CUSTOM1, str)
@@ -228,10 +228,11 @@ The header identifies the output schema. `START` and `END` delimit each shot;
 recorded measurement bits, not every intermediate measurement performed in the
 loop.
 
-Capture runs once per shot and retains the text in memory. Leave it disabled for
-ordinary sampling; it also prevents the terminal-sampling statevector from being
-retained. The {doc}`QIR guide <../qir/index>` covers both output schemas,
-resource lifetimes, and state-extraction restrictions.
+DDSIM provides this output automatically. Terminal sampling retains one record
+template and expands it when requested. Other programs, including this loop,
+execute once per shot and retain their full output until the job is released.
+The {doc}`QIR guide <../qir/index>` covers both output schemas, resource
+lifetimes, and state-extraction restrictions.
 
 Continue with {doc}`qdmi_execution` to explore device discovery, payload
 selection, repeated jobs, and the different kinds of results behind this API.

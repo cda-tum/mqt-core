@@ -74,14 +74,11 @@ def test_computed_classical_outputs(program_format: ProgramFormat) -> None:
       for int i in [0:2] { computed[i] = bool(measured) != bool(i % 2); }
       computed[0] = false;
     """
-    capture = program_format == ProgramFormat.QIR_ADAPTIVE_MODULE
-    job = submit_program(
-        source, target="mqt.ddsim.default", program_format=program_format, num_shots=4, custom1=17, custom2=capture
-    )
+    job = submit_program(source, target="mqt.ddsim.default", program_format=program_format, num_shots=4, custom1=17)
     assert job.wait()
     assert job.get_counts() == {"01001": 4}
     assert job.get_shots() == ["01001"] * 4
-    if capture:
+    if program_format == ProgramFormat.QIR_ADAPTIVE_MODULE:
         output = job.get_custom_result(CustomProperty.CUSTOM1, str)
         assert isinstance(output, str)
         for index, value in enumerate(("false", "false", "true", "false")):
@@ -579,12 +576,12 @@ c = measure q;
     ],
 )
 def test_qir_output_stream_matches_shots(program_format: ProgramFormat) -> None:
-    """Capture framed records without changing QDMI result order or other jobs."""
+    """Expose QIR records, their bit projection, and eligible retained states."""
     source = 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; bit[2] c = measure q;'
     device = open_device("mqt.ddsim.default")
-    job = submit_program(source, target=device, program_format=program_format, num_shots=8, custom1=7, custom2=True)
+    job = submit_program(source, target=device, program_format=program_format, num_shots=8, custom1=7)
     payload = job.get_program(bytes) if is_binary_program_format(program_format) else job.get_program()
-    ordinary = device.submit_job(payload, program_format, num_shots=8, custom1=7)
+    ordinary = device.submit_job(payload, program_format, num_shots=8, custom1=7, custom2=False)
     assert job.wait()
     assert ordinary.wait()
     output = job.get_custom_result(CustomProperty.CUSTOM1, str)
@@ -603,13 +600,16 @@ def test_qir_output_stream_matches_shots(program_format: ProgramFormat) -> None:
     assert sum(job.get_counts().values()) == 8
     assert job.get_custom_result(CustomProperty.CUSTOM1, str) == output
     assert job.get_custom_result(CustomProperty.CUSTOM1, bytes) == output.encode() + b"\0"
-    assert ordinary.get_custom_result(CustomProperty.CUSTOM1, str) is None
-    with pytest.raises(RuntimeError, match="Not supported"):
-        job.get_dense_statevector()
+    assert ordinary.get_custom_result(CustomProperty.CUSTOM1, str) == output
+    if program_format in {ProgramFormat.QIR_BASE_STRING, ProgramFormat.QIR_BASE_MODULE}:
+        assert job.get_dense_statevector() == ordinary.get_dense_statevector()
+    else:
+        with pytest.raises(RuntimeError, match="Not supported"):
+            job.get_dense_statevector()
 
 
 @pytest.mark.parametrize(("program_format", "shots"), [(ProgramFormat.QASM3, 1), (ProgramFormat.QIR_BASE_MODULE, 0)])
-def test_qir_output_capture_requires_qir_sampling(program_format: ProgramFormat, shots: int) -> None:
+def test_qir_output_requires_qir_sampling(program_format: ProgramFormat, shots: int) -> None:
     """Reject output requests that cannot produce a sampled QIR stream."""
     device = open_device("mqt.ddsim.default")
     payload = (
@@ -617,13 +617,11 @@ def test_qir_output_capture_requires_qir_sampling(program_format: ProgramFormat,
         if program_format == ProgramFormat.QASM3
         else compile_program(BELL, output=OutputFormat.QIR_BASE).to_bitcode()
     )
-    with pytest.raises(RuntimeError, match="Not supported"):
-        device.submit_job(
-            cast("Sequence[str] | Sequence[bytes]", [payload]),
-            program_format,
-            num_shots=shots,
-            custom2=True,
-        )
-    # The RTTI-free adapter can lose the nested exception text on macOS.
-    with pytest.raises(ValueError, match="Failed to submit compiled program"):
-        submit_program(BELL, target=device, program_format=program_format, num_shots=shots, custom2=True)
+    job = device.submit_job(
+        cast("Sequence[str] | Sequence[bytes]", [payload]),
+        program_format,
+        num_shots=shots,
+        custom2=True,
+    )
+    assert job.wait()
+    assert job.get_custom_result(CustomProperty.CUSTOM1, str) is None

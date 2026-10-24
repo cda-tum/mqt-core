@@ -135,6 +135,8 @@ private:
   QState qState;
   std::mt19937_64 mt;
   std::ostream* os = &std::cout;
+  // Set only while building a terminal-sampling template in an ostringstream.
+  std::vector<uint64_t>* outputResultPositions_ = nullptr;
   // The QIR spec does not define a default output schema.
   // The runtime picks @c Labeled when a program doesn't declare one.
   OutputSchema outputSchema = OutputSchema::Labeled;
