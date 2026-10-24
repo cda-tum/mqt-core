@@ -22,6 +22,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -51,6 +52,9 @@ struct SampledOutput {
 /// and direct helpers are supported; recorded outputs are suppressed.
 enum class Execution { Sampling, StateExtraction };
 
+/// Whether a supplied stream records every program or only nonbinary outputs.
+enum class OutputRecording { All, NonBinary };
+
 /// In-process JIT executor for QIR programs.
 ///
 /// The session does the following, in order:
@@ -75,12 +79,16 @@ public:
   /// @param randomSeed Optional deterministic runtime seed.
   /// @param output Borrowed stream for constructor, entry-point, and destructor
   /// records. It must outlive the session; null disables output.
+  /// @param recording NonBinary enables the stream only when the module
+  /// references integer/double recording or has lifecycle hooks, whose records
+  /// are outside the per-shot bit projection.
   /// @throws std::runtime_error if the IR cannot be parsed or the JIT fails
   /// to initialize.
   JitSession(llvm::StringRef irBytes, llvm::StringRef bufferName,
              Execution execution = Execution::Sampling,
              std::optional<uint64_t> randomSeed = std::nullopt,
-             llvm::raw_ostream* output = &llvm::outs());
+             llvm::raw_ostream* output = &llvm::outs(),
+             OutputRecording recording = OutputRecording::All);
 
   /// Tears down the LLJIT and any JIT'd resources owned by the session.
   ~JitSession();
@@ -115,6 +123,18 @@ public:
   int64_t sample(size_t shots, llvm::function_ref<void(std::string_view)> emit,
                  bool* stateAvailable = nullptr, bool emitHeader = true,
                  std::optional<SampledOutput>* terminalOutput = nullptr);
+
+  /// Sample a histogram without textual recording or retained shot strings.
+  ///
+  /// Eligible deterministic programs split shot populations at measurements
+  /// and replay their prefixes for sibling paths. Other programs execute per
+  /// shot. Counts use QIR recording order; seeded results are repeatable within
+  /// this sampling strategy, not across strategies.
+  int64_t sampleCounts(size_t shots, std::map<std::string, size_t>& counts,
+                       bool* stateAvailable = nullptr);
+
+  /// Whether histogram sampling can group measurement paths.
+  [[nodiscard]] bool canSampleBranches() const { return sampleBranches_; }
 
   /// Whether sampling may share the compiled entry point.
   ///
@@ -163,6 +183,7 @@ private:
   std::optional<std::vector<uintptr_t>> samplingOutputs_;
   bool initializesRuntime_ = false;
   bool shareCompiledCode_ = false;
+  bool sampleBranches_ = false;
   size_t quantumCallSites_ = 0;
   Execution execution_;
 
@@ -197,7 +218,7 @@ private:
   ///
   /// @throws std::runtime_error if loading failed or the JIT cannot start.
   void initialize(llvm::Expected<llvm::orc::ThreadSafeModule> llvmModule,
-                  Execution execution);
+                  Execution execution, OutputRecording recording);
 
   /// Tears down the @c LLJIT.
   void deinitialize() const;

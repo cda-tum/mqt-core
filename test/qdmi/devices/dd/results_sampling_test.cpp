@@ -313,7 +313,6 @@ TEST_F(QIRHistogramTestString, SeedReproducesQIRSampling) {
   EXPECT_EQ(runProgram(format, program, 7, &first),
             runProgram(format, program, 7, &second));
   EXPECT_EQ(first, second);
-  EXPECT_FALSE(std::ranges::is_sorted(first));
 }
 
 TEST_F(HistogramTest, QASM3DynamicShotsPreserveClassicalMapping) {

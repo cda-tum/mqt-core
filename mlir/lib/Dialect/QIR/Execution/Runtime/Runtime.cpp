@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <format>
@@ -73,6 +74,9 @@ auto Runtime::reset() -> void {
   rRegister.clear();
   std::ranges::fill(resultValues_, ResultStruct{});
   measurements.clear();
+  if (samplingBranches_ != nullptr) {
+    samplingBranches_->position = 0;
+  }
   measuredQubits_.clear();
   invalidStateExtraction_ = false;
   currentMaxQubitAddress = MIN_DYN_QUBIT_ADDRESS;
@@ -232,9 +236,43 @@ auto Runtime::measure(Qubit* qubit, Result* result) -> void {
   if (extractState_) {
     measuredQubits_.insert(target);
   } else if (!deferMeasurements_) {
-    value.r = qState.dd->measureOneCollapsing(
-                  qState.edge, qubitPermutation[target], mt) == '1';
+    value.r = measureQubit(qubitPermutation[target]);
   }
+}
+
+bool Runtime::measureQubit(dd::Qubit target) {
+  if (samplingBranches_ == nullptr ||
+      (samplingBranches_->count == 1 &&
+       samplingBranches_->position == samplingBranches_->path.size())) {
+    return qState.dd->measureOneCollapsing(qState.edge, target, mt) == '1';
+  }
+  auto& branches = *samplingBranches_;
+  const auto [pzero, pone] =
+      dd::Package::determineMeasurementProbabilities(qState.edge, target);
+  const auto sum = pzero + pone;
+  if (std::abs(sum - 1) > 0.001) {
+    throw std::runtime_error("Numerical instability during measurement");
+  }
+  bool one = false;
+  if (branches.position < branches.path.size()) {
+    one = branches.path[branches.position];
+  } else {
+    const auto zeros =
+        std::binomial_distribution<size_t>(branches.count, pzero / sum)(mt);
+    const auto ones = branches.count - zeros;
+    one = zeros == 0;
+    if (zeros != 0 && ones != 0) {
+      auto sibling = branches.path;
+      sibling.push_back(true);
+      branches.pending.emplace_back(std::move(sibling), ones);
+      branches.count = zeros;
+    }
+    branches.path.push_back(one);
+  }
+  ++branches.position;
+  qState.dd->performCollapsingMeasurement(qState.edge, target,
+                                          one ? pone : pzero, !one);
+  return one;
 }
 
 auto Runtime::sampleMeasurements(
@@ -285,7 +323,33 @@ auto Runtime::reset(std::span<Qubit* const> qubits) -> void {
   });
   const auto matrix = mlir::qco::XOp::getUnitaryMatrix();
   for (const auto target : targets) {
-    if (qState.dd->measureOneCollapsing(qState.edge, target, mt) == '1') {
+    if (samplingBranches_ != nullptr && samplingBranches_->count > 1 &&
+        samplingBranches_->position == samplingBranches_->path.size()) {
+      const auto [pzero, pone] =
+          dd::Package::determineMeasurementProbabilities(qState.edge, target);
+      if (pzero > 0 && pone > 0) {
+        auto zero = qState.edge;
+        auto one = qState.edge;
+        qState.dd->incRef(zero);
+        qState.dd->incRef(one);
+        qState.dd->performCollapsingMeasurement(zero, target, pzero, true);
+        qState.dd->performCollapsingMeasurement(one, target, pone, false);
+        one = qState.dd->applyOperation(
+            mlir::qco::makeGateDD(*qState.dd, matrix, std::array{target}), one);
+        // Reset outcomes with equal normalized states can keep one population.
+        const bool equal = zero.p == one.p;
+        qState.dd->decRef(one);
+        if (equal) {
+          qState.dd->decRef(qState.edge);
+          qState.edge = zero;
+          samplingBranches_->path.push_back(false);
+          ++samplingBranches_->position;
+          continue;
+        }
+        qState.dd->decRef(zero);
+      }
+    }
+    if (measureQubit(target)) {
       const std::array targetArray{target};
       qState.edge = qState.dd->applyOperation(
           mlir::qco::makeGateDD(*qState.dd, matrix, targetArray), qState.edge);

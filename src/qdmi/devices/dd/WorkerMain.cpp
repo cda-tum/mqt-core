@@ -144,13 +144,18 @@ struct Execution {
         irBytes, "QDMI job",
         sampling ? qir::Execution::Sampling : qir::Execution::StateExtraction,
         sampling ? seed_ : std::nullopt,
-        sampling ? &output.emplace(qirOutput_.emplace()) : nullptr);
+        sampling ? &output.emplace(qirOutput_.emplace()) : nullptr,
+        qir::OutputRecording::NonBinary);
     auto& runtime = jitSession.runtime();
-    if (sampling) {
+    const bool capture = runtime.hasOutput();
+    if (capture) {
       // Constructors run before sampling; the schema header still comes first.
       const auto constructorRecords = std::exchange(*qirOutput_, {});
       runtime.outputProgramHeader();
       *output << constructorRecords;
+    } else {
+      output.reset();
+      qirOutput_.reset();
     }
     bool stateAvailable = !sampling;
     const bool large = jitSession.canShareCompiledCode() &&
@@ -159,7 +164,8 @@ struct Execution {
         std::clamp(numShots_ / (large ? 32 : 256), size_t{1},
                    large ? size_t{32} : size_t{8});
     size_t workers = 1;
-    if (sampling && !jitSession.canSampleTerminal()) {
+    if (sampling && !jitSession.canSampleTerminal() &&
+        (capture || !jitSession.canSampleBranches())) {
       workers =
           automaticWorkers_ ? std::min(maxWorkers_, automatic) : maxWorkers_;
       if (workers > 1) {
@@ -168,6 +174,7 @@ struct Execution {
     }
     if (workers == 1) {
       std::optional<qir::SampledOutput> terminalOutput;
+      std::map<std::string, size_t> outcomes;
       const auto emit = [&](std::string_view shot) {
         if (shots_.empty() && jitSession.canSampleTerminal() &&
             numShots_ <= shots_.max_size() / (shot.size() + 1)) {
@@ -175,10 +182,15 @@ struct Execution {
         }
         appendShot(shots_, shot);
       };
-      const auto rc = sampling
-                          ? jitSession.sample(numShots_, emit, &stateAvailable,
-                                              false, &terminalOutput)
-                          : jitSession.run();
+      int64_t rc = 0;
+      if (!sampling) {
+        rc = jitSession.run();
+      } else if (capture) {
+        rc = jitSession.sample(numShots_, emit, &stateAvailable, false,
+                               &terminalOutput);
+      } else {
+        rc = jitSession.sampleCounts(numShots_, outcomes, &stateAvailable);
+      }
       if (rc != 0) {
         std::cerr << "QIR program returned exit code " << rc << '\n';
         return false;
@@ -186,6 +198,9 @@ struct Execution {
       if (terminalOutput) {
         outputTemplate_.emplace(std::move(terminalOutput->text),
                                 std::move(terminalOutput->resultOffsets));
+      }
+      for (const auto& [shot, count] : outcomes) {
+        counts_.emplace(std::string(shot.rbegin(), shot.rend()), count);
       }
     } else {
       std::mt19937_64 rng(seed_ ? *seed_ : qir::Runtime::generateRandomSeed());
@@ -195,6 +210,7 @@ struct Execution {
       }
       std::vector<std::string> parts(workers);
       std::vector<std::string> records(workers);
+      std::vector<std::map<std::string, size_t>> counts(workers);
       std::vector<std::future<int64_t>> tasks;
       tasks.reserve(workers);
       const bool shareCode = jitSession.canShareCompiledCode();
@@ -208,7 +224,7 @@ struct Execution {
           } else if (i != 0) {
             peer = std::make_unique<qir::JitSession>(
                 irBytes, "QDMI job", qir::Execution::Sampling, workerSeeds[i],
-                &localOutput);
+                capture ? &localOutput : nullptr);
           }
           qir::Runtime* worker = &runtime;
           if (workerRuntime) {
@@ -217,12 +233,20 @@ struct Execution {
             worker = &peer->runtime();
           }
           if (i != 0) {
-            worker->setOstream(localOutput);
+            if (capture) {
+              worker->setOstream(localOutput);
+            } else {
+              worker->disableOutput();
+            }
           }
           const size_t count = (numShots_ / workers) +
                                static_cast<size_t>(i < numShots_ % workers);
           const auto emit = [&](std::string_view shot) {
-            appendShot(parts[i], shot);
+            if (capture) {
+              appendShot(parts[i], shot);
+            } else {
+              ++counts[i][std::string(shot.rbegin(), shot.rend())];
+            }
           };
           return workerRuntime
                      ? jitSession.sampleWithRuntime(*worker, count, emit, false)
@@ -250,10 +274,17 @@ struct Execution {
         shots_ += part;
       }
       for (size_t i = 1; i < workers; ++i) {
-        *output << records[i];
+        if (capture) {
+          *output << records[i];
+        }
+      }
+      for (const auto& part : counts) {
+        for (const auto& [shot, count] : part) {
+          counts_[shot] += count;
+        }
       }
     }
-    shotCount_ = numShots_;
+    shotCount_ = capture ? numShots_ : 0;
     if (stateAvailable) {
       auto state = runtime.takeState();
       dd_ = std::move(state.dd);

@@ -78,11 +78,6 @@ def test_computed_classical_outputs(program_format: ProgramFormat) -> None:
     assert job.wait()
     assert job.get_counts() == {"01001": 4}
     assert job.get_shots() == ["01001"] * 4
-    if program_format == ProgramFormat.QIR_ADAPTIVE_MODULE:
-        output = job.get_custom_result(CustomProperty.CUSTOM1, str)
-        assert isinstance(output, str)
-        for index, value in enumerate(("false", "false", "true", "false")):
-            assert output.count(f"OUTPUT\tBOOL\t{value}\tcomputed_{index}\n") == 4
 
 
 @pytest.mark.parametrize(
@@ -575,28 +570,15 @@ c = measure q;
         ProgramFormat.QIR_ADAPTIVE_MODULE,
     ],
 )
-def test_qir_output_stream_matches_shots(program_format: ProgramFormat) -> None:
-    """Expose QIR records, their bit projection, and eligible retained states."""
+def test_binary_qir_results(program_format: ProgramFormat) -> None:
+    """Binary QIR sampling exposes counts, shots, and eligible retained states."""
     source = 'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; h q[0]; bit[2] c = measure q;'
-    device = open_device("mqt.ddsim.default")
-    job = submit_program(source, target=device, program_format=program_format, num_shots=8, custom1=7)
+    job = submit_program(source, target="mqt.ddsim.default", program_format=program_format, num_shots=8, custom1=7)
     assert job.wait()
-    output = job.get_custom_result(CustomProperty.CUSTOM1, str)
-    assert isinstance(output, str)
-    assert output.startswith("HEADER\tschema_id\tlabeled\nHEADER\tschema_version\t2.1\n")
-    records = output.split("START\n")[1:]
-    assert len(records) == 8
-    for record, shot in zip(records, job.get_shots(), strict=True):
-        assert record.endswith("END\t0\n")
-        bits = [
-            line.split("\t")[2]
-            for line in record.splitlines()
-            if line.startswith(("OUTPUT\tRESULT\t", "OUTPUT\tRESULT_ARRAY\t"))
-        ]
-        assert "".join(bits)[::-1] == shot
-    assert sum(job.get_counts().values()) == 8
-    assert job.get_custom_result(CustomProperty.CUSTOM1, str) == output
-    assert job.get_custom_result(CustomProperty.CUSTOM1, bytes) == output.encode() + b"\0"
+    shots = job.get_shots()
+    assert len(shots) == 8
+    assert job.get_counts() == {bits: shots.count(bits) for bits in set(shots)}
+    assert job.get_custom_result(CustomProperty.CUSTOM1, str) is None
     if program_format in {ProgramFormat.QIR_BASE_STRING, ProgramFormat.QIR_BASE_MODULE}:
         assert job.get_dense_statevector() == pytest.approx([2**-0.5, 2**-0.5, 0, 0])
     else:

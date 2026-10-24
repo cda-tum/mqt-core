@@ -134,6 +134,13 @@ private:
   uintptr_t currentMaxResultAddress;
   QState qState;
   std::mt19937_64 mt;
+  struct SamplingBranches {
+    std::vector<bool> path;
+    std::vector<std::pair<std::vector<bool>, size_t>> pending;
+    size_t count;
+    size_t position = 0;
+  };
+  SamplingBranches* samplingBranches_ = nullptr;
   llvm::raw_ostream* os = &llvm::outs();
   // Set only while building a terminal-sampling template in a
   // raw_string_ostream.
@@ -144,6 +151,7 @@ private:
   std::vector<std::pair<std::string, std::string>> metadata;
 
   auto enlargeState(size_t maxQubit) -> void;
+  bool measureQubit(dd::Qubit target);
   void configureStaticResources(std::optional<size_t> qubits,
                                 std::optional<size_t> results);
   auto

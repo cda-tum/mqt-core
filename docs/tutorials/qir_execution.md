@@ -207,32 +207,31 @@ else:
 
 ## Read the records behind the counts
 
-Retrieve DDSIM's QIR output for two shots. Each shot may execute several
-measurements, but only the final `result` is recorded as program output.
+Sample the loop twice. Each shot may execute several measurements, but only the
+final `result` is recorded as program output.
 
 ```{code-cell} ipython3
 recorded = device.submit_job(
     loop.to_bitcode(), ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=2, custom1=seed
 )
 assert recorded.wait()
-output = recorded.get_custom_result(CustomProperty.CUSTOM1, str)
-assert isinstance(output, str)
-assert output.count("START\n") == 2 and output.count("END\t0\n") == 2
 assert recorded.get_counts() == {"0": 2}
-print(output, end="")
+assert recorded.get_shots() == ["0", "0"]
+assert recorded.get_custom_result(CustomProperty.CUSTOM1, str) is None
 print("Counts:", recorded.get_counts())
 ```
 
-The header identifies the output schema. `START` and `END` delimit each shot;
-`OUTPUT` lines preserve result labels and typed values. The histogram contains
-recorded measurement bits, not every intermediate measurement performed in the
-loop.
+The histogram contains the final recorded bit, not every intermediate
+measurement. DDSIM retains a compact histogram for this binary-only program and
+expands shot strings when requested.
 
-DDSIM provides this output automatically. Terminal sampling retains one record
-template and expands it when requested. Other programs, including this loop,
-execute once per shot and retain their full output until the job is released.
-The {doc}`QIR guide <../qir/index>` covers both output schemas, resource
-lifetimes, and state-extraction restrictions.
+Programs that reference integer or double output recording also provide the
+complete typed QIR stream through `CustomProperty.CUSTOM1`. DDSIM captures
+programs with global constructors or destructors as well, since these can record
+values outside individual shots. The
+[QIR guide's numeric-output example](../qir/index.md#retrieve-the-qir-output-stream-through-qdmi)
+shows the stream and its relation to counts. That guide also covers resource
+lifetimes and state-extraction restrictions.
 
 Continue with {doc}`qdmi_execution` to explore device discovery, payload
 selection, repeated jobs, and the different kinds of results behind this API.
