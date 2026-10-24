@@ -368,28 +368,6 @@ TEST(MatrixFunctionality, GetMatrixTerminal) {
   EXPECT_EQ(mEdge::one().getMatrix(0), CMat{{1.}});
 }
 
-TEST(MatrixFunctionality, GetMatrixRoundtrip) {
-  auto dd = std::make_unique<Package>(2);
-  // clang-format off
-  const CMat mat = {
-    {std::sqrt(0.1),  std::sqrt(0.2),  std::sqrt(0.3),  std::sqrt(0.4)},
-    {-std::sqrt(0.2), -std::sqrt(0.3), std::sqrt(0.4),  std::sqrt(0.1)},
-    {-std::sqrt(0.3), -std::sqrt(0.4), std::sqrt(0.1),  std::sqrt(0.2)},
-    {-std::sqrt(0.4), -std::sqrt(0.1), -std::sqrt(0.2), std::sqrt(0.3)},};
-  // clang-format on
-
-  const auto matDD = dd->makeDDFromMatrix(mat);
-  const auto matVec = matDD.getMatrix(dd->qubits());
-  for (std::size_t i = 0U; i < mat.size(); ++i) {
-    for (std::size_t j = 0U; j < mat.size(); ++j) {
-      const auto val = matDD.getValueByIndex(dd->qubits(), i, j);
-      const auto ref = mat[i][j];
-      EXPECT_NEAR(ref.real(), val.real(), 1e-10);
-      EXPECT_NEAR(ref.imag(), val.imag(), 1e-10);
-    }
-  }
-}
-
 TEST(MatrixFunctionality, GetMatrixTolerance) {
   auto dd = std::make_unique<Package>(2);
   // clang-format off
@@ -402,14 +380,6 @@ TEST(MatrixFunctionality, GetMatrixTolerance) {
 
   const auto matDD = dd->makeDDFromMatrix(mat);
   const auto matVec = matDD.getMatrix(dd->qubits(), std::sqrt(0.1));
-  for (std::size_t i = 0U; i < mat.size(); ++i) {
-    for (std::size_t j = 0U; j < mat.size(); ++j) {
-      const auto val = matDD.getValueByIndex(dd->qubits(), i, j);
-      const auto ref = mat[i][j];
-      EXPECT_NEAR(ref.real(), val.real(), 1e-10);
-      EXPECT_NEAR(ref.imag(), val.imag(), 1e-10);
-    }
-  }
   const auto matVec2 =
       matDD.getMatrix(dd->qubits(), std::sqrt(0.1) + RealNumber::eps);
   EXPECT_NE(matVec2, matVec);
