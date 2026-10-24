@@ -4390,7 +4390,7 @@ def test_mismatched_native_minor_is_rejected(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_mlir_binding_import_does_not_import_qiskit() -> None:
-    """Keep importing the MLIR extension independent of optional Qiskit."""
+    """Keep Qiskit optional and allow it to be imported after MLIR."""
     script = """
 import importlib.abc
 import sys
@@ -4401,9 +4401,19 @@ class RejectQiskit(importlib.abc.MetaPathFinder):
             raise AssertionError("MLIR binding attempted to import Qiskit")
         return None
 
-sys.meta_path.insert(0, RejectQiskit())
+blocker = RejectQiskit()
+sys.meta_path.insert(0, blocker)
 import mqt.core.mlir
 assert "qiskit" not in sys.modules
+
+sys.meta_path.remove(blocker)
+from qiskit import QuantumCircuit
+from mqt.core.mlir import OutputFormat, compile_program, sample
+circuit = QuantumCircuit(1)
+circuit.x(0)
+assert sample(circuit, shots=1) == {"1": 1}
+programs = compile_program([circuit], output=OutputFormat.QC_IMPORT)
+assert sample(programs[0], shots=1) == {"1": 1}
 """
     subprocess.run([sys.executable, "-c", script], check=True)  # ruff: ignore[subprocess-without-shell-equals-true]
 

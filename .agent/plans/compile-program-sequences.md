@@ -29,7 +29,12 @@ and signature source are `bindings/mlir/register_mlir.cpp` and
   sequence ABC. Classify the first supported family once; exact Python types
   share that classification and differing subclasses use the canonical base
   checks. Input families are determined by their classes. Keep the owning tuple,
-  scalar precedence, and lazy Qiskit integration; add no enum or Python cache.
+  scalar precedence, and lazy Qiskit integration. Initialize stable Python types
+  once per module and cache QuantumCircuit only after it becomes available.
+  Captured state owns these types without retaining sys.modules. Borrowed
+  entry-point handles remain owned by the Python call; the batch tuple owns its
+  elements across callbacks. Imported integration classes retain their identity;
+  replacing modules or class definitions at runtime is outside this contract.
 - Constrained type variables reject mixed kinds; scalar and sequence overloads
   preserve output types. Qiskit target defaults precede same-family defaults
   because Qiskit's partly untyped `Target` otherwise matches `CompilerTarget` in
@@ -48,32 +53,72 @@ at runtime, even when a caller annotates it as a sequence.
 
 ## Performance evidence and limits
 
-The optimized Clang 23/ThinLTO comparison used Python 3.14.8, nanobind 3.1,
-Qiskit 2.6.0, and the previous PR head `a084814395` as the baseline. Seven
-alternating fresh-process pairs called the public entry point with `copy=True`
-and seed 7. Core GHZ(2) with `QC_IMPORT` exposes binding costs: median scalar
-CPU time fell from 2.69 to 2.30 microseconds; eight-element list calls fell from
-20.60 to 18.95 microseconds. Median paired reductions were 14.8% and 8.1%, with
-improvements in every pair. Tuple and `UserList` batches improved by 8.7% and
-5.9%. These results justify the added dispatch branches.
+The full-file binding audit compared rebased baseline `1d10fa936e` with the
+candidate, both on upstream `c8dcc7f775`, using Clang 23/ThinLTO, Python 3.14.8,
+nanobind 3.1, and Qiskit 2.6.0. Seven alternating fresh-process pairs used the
+public APIs, five warmed groups per process, and fixed inputs and seeds. Final
+pairs shared CPU 8 to reduce migration between the host's different core types.
+This is a shared-host comparison, not a general compiler speedup claim.
 
-Eight QFT(10) programs compiled to OpenQASM for a Qiskit target took 60.15 and
-60.59 ms; eight Qiskit efficient-SU2(2, reps=1) imports took 5.16 and 5.24 ms.
-Those results do not establish an end-to-end improvement. A QFT singleton spent
-5.7 ms in target passes within a 9.4 ms public call; loop unrolling and native
-synthesis took 1.6 and 1.0 ms. The native profile confirms compiler work
-dominates. Input and output hashes matched across all pairs; emitted QFT IR
-contained loops and the target OpenQASM used fixed physical qubits. Keep
-existing pipelines and context ownership, without payload caching or shared
-contexts.
+| Public workload                           | Baseline CPU time | Candidate CPU time |
+| ----------------------------------------- | ----------------: | -----------------: |
+| 32-site target metadata snapshot          |           6.39 us |            5.79 us |
+| GHZ(2), scalar, QC_IMPORT                 |           2.33 us |            2.30 us |
+| GHZ(2), eight-element list, QC_IMPORT     |          19.33 us |           18.50 us |
+| GHZ(2), eight-element UserList, QC_IMPORT |          20.77 us |           20.04 us |
+| Copy and bind 24 efficient-SU2 parameters |          86.33 us |           85.49 us |
+| Eight Qiskit efficient-SU2(2) imports     |           4.58 ms |            4.57 ms |
+| Eight QFT(10) programs to target OpenQASM |          60.41 ms |           60.45 ms |
 
-Memray, including Python allocator tracing, measured 626 versus 589 allocations
-and 371.5 versus 366.4 kB of allocation traffic for the GHZ batch. Peak live
-tracked memory was 177.0 versus 176.2 kB. QFT allocated 82.74 MB in either
-build, with identical 855.8 kB peak live tracked memory and 11.1 kB remaining
-after result deletion. Process peak RSS was approximately 131 MB. Allocation
-traffic, live memory, and RSS are distinct; these results establish no material
-peak-memory improvement. Timing results are local to this shared host.
+Metadata and GHZ improvements occurred in every pair. Parameter binding has a
+small, noisy timing gain; fewer allocations support retaining its simpler
+snapshot. Qiskit import, QFT compilation, sampling, Jeff views, and module
+import show no convincing latency change. Input and output fingerprints matched.
+
+The retained changes and their correctness boundaries are:
+
+- Repeated module/type lookup adds dispatch work. Per-module positive caching
+  and exact builtin container checks remove it from common paths. Freezing
+  Qiskit's absence was rejected because the late-import regression fails.
+- Mapping-to-map-to-map duplicates nodes and keys. A private nanobind dictionary
+  snapshot feeds the native parameter map directly, preserving Mapping inputs,
+  callback ownership, array-rank checks, and validation before mutation. An
+  intermediate items tuple provided little benefit and was discarded.
+- ArrayRef-to-vector-to-list creates temporary containers. A typed list builder
+  copies directly into owned Python elements; string_view avoids intermediate
+  strings. Returning aliases instead fails the metadata copy regression.
+- Python wrapper allocation remains visible in metadata access. The nanobind
+  pools for QCProgram, Site, and OperationCapability improved all seven isolated
+  pairs: roughly 7-8% for metadata and 1.5% for eight QC outputs. Native
+  destructors run before wrapper parking, and subclasses are not pooled. The
+  three default pools retain at most 50 KiB of raw wrappers and slots, plus
+  allocator and instance-index overhead. No other classes are pooled.
+
+A warmed QFT singleton spent 5.2 ms in target passes within an 8.1 ms public
+call; loop unrolling and native synthesis accounted for 1.5 and 0.9 ms.
+Parameter binding phases were approximately 8 us copying, 79 us binding, and 2
+us destroying the result. Emitted QFT input IR contains loops; target OpenQASM
+uses physical qubits. A same-source unstripped native profile attributes about
+64% of target snapshot cycles to libc allocation/free paths, with another 19% in
+Python. These costs do not justify changing native compilation or metadata
+ownership.
+
+Memray with Python allocator tracing measured warmed metadata calls at 305 to
+262 allocations, 26.6 to 17.4 kB allocation traffic, and 23.2 to 17.1 kB peak
+live tracked memory. Parameter binding fell from 1,347 to 1,322 allocations and
+249.9 to 248.5 kB traffic. QFT still allocates 82.74 MB with about 856 kB peak
+live tracked memory. Post-call and isolated-process peak RSS remain about 131
+MB; allocation traffic, live memory, and RSS establish different limits. There
+is no material process peak-memory reduction. Repeated construct/consume/delete
+and subclass probes retained about 7 kB after either 200 or 2,000 cycles, with
+all 2,400 subclass destructors observed.
+
+Dense NumPy arrays and Jeff segment views already transfer owned buffers without
+copying. Keep their ownership capsules, required bytes materialization, and
+existing GIL boundaries. Blanket GIL release would change concurrent mutation
+safety; frozen classes and conversion restrictions would narrow the API. Do not
+add payload caching, shared contexts, internal nanobind APIs, or a general cache
+framework.
 
 ## Validation
 
@@ -94,10 +139,16 @@ the retained mixed-format test. One Ponytail review covered the connected
 compiler/sample/submit paths; specialist critique also checked type precedence
 and stub compatibility.
 
-After rebasing on upstream `6c0e1f65f8`, the optimized editable build and 1,181
-compiler, Qiskit, QDMI-compilation, DD, and QIR-runner tests passed. The
-sequence suite has 12 cases, with device payloads executed end to end. Stub
-regeneration, repository lint, Python 3.11 type checks, and whole-file C++ lint
-passed. The executable documentation and internal links passed; Chrome
-inspection covered the walkthrough and API reference. Hosted CI remains separate
-from these local results.
+After rebasing on upstream `c8dcc7f775`, the optimized editable build and 1,181
+compiler, Qiskit, QDMI-compilation, DD, and QIR-runner tests passed. Existing
+tests also cover late Qiskit import, UserDict parameter binding, and metadata
+copy independence without adding test cases. Compiled frozen-negative-cache and
+reference-return mutations fail the corresponding regression checks.
+
+Stub regeneration produces no signature changes; Ruff and Python 3.11 ty probes
+pass, with eight expected invalid-call diagnostics. Whole-file C++ lint passes
+through cpp-linter directly. The nox wrapper's result-reading step is blocked by
+git-bot-feedback 0.3's local mode not writing GITHUB_OUTPUT; no repository
+tooling was changed. Repository lint is required before publication. Earlier
+executable documentation and Chrome checks cover the unchanged user
+documentation. Hosted CI remains separate from these local results.
