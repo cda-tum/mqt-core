@@ -35,23 +35,14 @@ allocation churn. Full numeric output remains proportional to recorded volume.
 Replay can still approach per-shot work when outcomes do not share paths. Seeded
 results repeat within a strategy, not across algorithms.
 
-## Completion
+## Validation
 
-- [x] Conditional recording and existing compact-count transport.
-- [x] Bounded grouped sampling with conservative fallback.
-- [x] Representative performance, emitted IR, phases, and memory measurements.
-- [x] Independent semantic references and targeted mutation probes.
-- [x] One Ponytail review; no actionable findings or justified further deletion.
-- [ ] Final native/Python suites, whole-file C++ lint, repository lint, and
-      docs.
-- [x] Signed commits verified; update the existing PR after final inspection.
-
-Machine-local benchmark inputs, binaries, scripts, logs, and reports are kept
-outside the repository under the `core-dynamic-parity-20261024` and
-`core-qir-histogram-20261024` experiment directories. They pin the measured
-revision and source diff rather than attributing old measurements to a later
-rebased commit.
+Validate the complete native CTest suite, including the QDMI client tests, plus
+the Python QDMI/QIR-Runner suites, whole-file C++ checks, repository lint, and
+executable docs. Device-only tests do not cover client custom-parameter
+validation. The client test uses the current seed and worker-count parameters
+and checks provider error propagation.
 
 The upstream cpp-linter 1.15 local client no longer writes the result file
-expected by the nox wrapper. Inspect the reported diagnostic counts separately
-from that wrapper failure. Hosted CI status is reported with the PR update.
+expected by the nox wrapper. Inspect reported diagnostic counts separately from
+that wrapper failure. Hosted validation is reported with the PR update.
