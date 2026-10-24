@@ -56,11 +56,13 @@ if(BUILD_MQT_CORE_SHARED_LIBS)
     endif()
     foreach(native_library ${MQT_CORE_TARGET_NAME}-bench-library ${MQT_CORE_TARGET_NAME}-qdmi)
       if(APPLE)
-        set_property(TARGET ${native_library} PROPERTY LINK_LIBRARY_OVERRIDE_${llvm_library}
-                                                       mqt_llvm_hidden)
+        set_property(
+          TARGET ${native_library}
+          PROPERTY LINK_LIBRARY_OVERRIDE_${llvm_library} mqt_llvm_hidden)
       elseif(UNIX)
-        target_link_options(${native_library} PRIVATE
-                            "LINKER:--exclude-libs,$<TARGET_FILE_NAME:${llvm_library}>")
+        target_link_options(
+          ${native_library}
+          PRIVATE "LINKER:--exclude-libs,$<TARGET_FILE_NAME:${llvm_library}>")
       endif()
     endforeach()
   endforeach()
@@ -85,15 +87,15 @@ if(MQT_CORE_INSTALL)
   set_target_properties(${runtime_targets} PROPERTIES INTERFACE_COMPILE_FEATURES "")
 
   # Runtime exports contain only the C ABI and executable tools.
-  # cmake-format: off
   install(
     TARGETS ${runtime_targets}
     EXPORT mqt-core-runtime-targets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime
-    FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mqt-core
-                     COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime)
+    FILE_SET HEADERS
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mqt-core
+      COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime)
 
   install(
     TARGETS ${MQT_CORE_TARGETS}
@@ -101,14 +103,14 @@ if(MQT_CORE_INSTALL)
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${MQT_CORE_TARGET_NAME}_Development
-    FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mqt-core
-                     COMPONENT ${MQT_CORE_TARGET_NAME}_Development)
-  # cmake-format: on
+    FILE_SET HEADERS
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mqt-core
+      COMPONENT ${MQT_CORE_TARGET_NAME}_Development)
 
   install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/mqt-core-config.cmake
-          ${CMAKE_CURRENT_BINARY_DIR}/mqt-core-config-version.cmake
-          ${PROJECT_SOURCE_DIR}/cmake/AddMQTQDMIDevice.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/mqt-core-config-version.cmake
+    ${PROJECT_SOURCE_DIR}/cmake/AddMQTQDMIDevice.cmake
     DESTINATION ${config_install_dir}
     COMPONENT ${MQT_CORE_TARGET_NAME}_Runtime)
   install(

@@ -158,14 +158,13 @@ repos:
       - id: pyproject-fmt
         priority: 5
 
-  ## Format CMake files with cmake-format
-  - repo: https://github.com/cheshirekow/cmake-format-precommit
-    rev: v0.6.13
+  ## Format CMake files with cmakefmt
+  - repo: https://github.com/cmakefmt/cmakefmt
+    rev: v2.2.0
     hooks:
-      - id: cmake-format
-        additional_dependencies: [pyyaml]
+      - id: cmakefmt-fix
         types: [file]
-        files: (\.cmake|CMakeLists.txt)(.in)?$
+        files: (\.cmake|CMakeLists\.txt)(\.in)?$
         priority: 5
 
   ## Format C++ files with clang-format

@@ -225,7 +225,7 @@ flexibility in how the library is integrated into the project.
 include(FetchContent)
 set(FETCH_PACKAGES "")
 
-# cmake-format: off
+# cmakefmt: off
 set(MQT_CORE_MINIMUM_VERSION "<minimum_version>"
     CACHE STRING "MQT Core minimum version")
 set(MQT_CORE_VERSION "<version>"
@@ -234,7 +234,7 @@ set(MQT_CORE_REV "<revision>"
     CACHE STRING "MQT Core identifier (tag, branch or commit hash)")
 set(MQT_CORE_REPO_OWNER "munich-quantum-toolkit"
     CACHE STRING "MQT Core repository owner (change when using a fork)")
-# cmake-format: on
+# cmakefmt: on
 FetchContent_Declare(
   mqt-core
   GIT_REPOSITORY https://github.com/${MQT_CORE_REPO_OWNER}/core.git
