@@ -9,8 +9,8 @@
  */
 
 #include "bench/Evaluation.hpp"
+#include "bench/GroverWeakMeasurement.hpp"
 #include "bench/JSON.hpp"
-#include "bench/WeakMeasurementGrover.hpp"
 
 #include "gtest/gtest.h"
 
@@ -21,8 +21,8 @@
 
 namespace mqt::bench {
 
-TEST(WeakMeasurementGrover, ResolvesTheDefaultMeasurementStrength) {
-  const WeakMeasurementGrover benchmark{{.markedBitstring = "101"}};
+TEST(GroverWeakMeasurement, ResolvesTheDefaultMeasurementStrength) {
+  const GroverWeakMeasurement benchmark{{.markedBitstring = "101"}};
   ASSERT_TRUE(benchmark.options().measurementStrength);
   EXPECT_DOUBLE_EQ(*benchmark.options().measurementStrength,
                    std::exp2(-3. / 2.));
@@ -32,32 +32,32 @@ TEST(WeakMeasurementGrover, ResolvesTheDefaultMeasurementStrength) {
   EXPECT_DOUBLE_EQ(benchmark.probability("001"), 0.);
 }
 
-TEST(WeakMeasurementGrover, AcceptsStrengthsInTheProvenRegime) {
-  const WeakMeasurementGrover boundary{
+TEST(GroverWeakMeasurement, AcceptsStrengthsInTheProvenRegime) {
+  const GroverWeakMeasurement boundary{
       {.markedBitstring = "10", .measurementStrength = 0.5}};
   EXPECT_DOUBLE_EQ(*boundary.options().measurementStrength, 0.5);
 
-  const WeakMeasurementGrover weaker{
+  const GroverWeakMeasurement weaker{
       {.markedBitstring = "0000", .measurementStrength = 0.125}};
   EXPECT_DOUBLE_EQ(*weaker.options().measurementStrength, 0.125);
 
-  const WeakMeasurementGrover largest{{
+  const GroverWeakMeasurement largest{{
       .markedBitstring =
-          std::string(WeakMeasurementGroverOptions::MAX_QUBITS, '0'),
+          std::string(GroverWeakMeasurementOptions::MAX_QUBITS, '0'),
   }};
   ASSERT_TRUE(largest.options().measurementStrength);
   EXPECT_DOUBLE_EQ(*largest.options().measurementStrength,
                    std::numeric_limits<double>::min());
 }
 
-TEST(WeakMeasurementGrover, RejectsUnsupportedOptions) {
+TEST(GroverWeakMeasurement, RejectsUnsupportedOptions) {
   for (const auto& marked : {
            std::string{"0"},
            std::string{"0x"},
-           std::string(WeakMeasurementGroverOptions::MAX_QUBITS + 1, '0'),
+           std::string(GroverWeakMeasurementOptions::MAX_QUBITS + 1, '0'),
        }) {
     EXPECT_THROW(
-        static_cast<void>(WeakMeasurementGrover{{.markedBitstring = marked}}),
+        static_cast<void>(GroverWeakMeasurement{{.markedBitstring = marked}}),
         std::invalid_argument);
   }
 
@@ -69,17 +69,17 @@ TEST(WeakMeasurementGrover, RejectsUnsupportedOptions) {
            std::numeric_limits<double>::quiet_NaN(),
        }) {
     EXPECT_THROW(
-        static_cast<void>(WeakMeasurementGrover{
+        static_cast<void>(GroverWeakMeasurement{
             {.markedBitstring = "00", .measurementStrength = strength}}),
         std::invalid_argument);
   }
-  EXPECT_THROW(static_cast<void>(WeakMeasurementGrover{
+  EXPECT_THROW(static_cast<void>(GroverWeakMeasurement{
                    {.markedBitstring = "0000", .measurementStrength = 0.3}}),
                std::invalid_argument);
 }
 
-TEST(WeakMeasurementGrover, EvaluatesTheMarkedOutcomeAsSuccess) {
-  const WeakMeasurementGrover benchmark{{.markedBitstring = "01"}};
+TEST(GroverWeakMeasurement, EvaluatesTheMarkedOutcomeAsSuccess) {
+  const GroverWeakMeasurement benchmark{{.markedBitstring = "01"}};
   const auto evaluation = benchmark.evaluate({{"00", 1}, {"01", 9}});
   EXPECT_NEAR(evaluation.totalVariationDistance, 0.1, 1e-15);
   EXPECT_NEAR(evaluation.squaredHellingerFidelity, 0.9, 1e-15);
@@ -87,18 +87,18 @@ TEST(WeakMeasurementGrover, EvaluatesTheMarkedOutcomeAsSuccess) {
   EXPECT_NEAR(*evaluation.successProbability, 0.9, 1e-15);
 }
 
-TEST(WeakMeasurementGrover, RoundTripsJSON) {
-  const auto defaults = weakMeasurementGroverFromInstanceSpecificationJSON(
+TEST(GroverWeakMeasurement, RoundTripsJSON) {
+  const auto defaults = groverWeakMeasurementFromInstanceSpecificationJSON(
       R"({"schema_version":1,"benchmark":"grover-weak-measurement","parameters":{"marked_bitstring":"10"}})");
   ASSERT_TRUE(defaults.options().measurementStrength);
   EXPECT_DOUBLE_EQ(*defaults.options().measurementStrength, 0.5);
   EXPECT_EQ(
       toInstanceSpecificationJSON(defaults),
       R"({"benchmark":"grover-weak-measurement","parameters":{"marked_bitstring":"10","measurement_strength":0.5},"schema_version":1})");
-  const WeakMeasurementGrover weaker{
+  const GroverWeakMeasurement weaker{
       {.markedBitstring = "10", .measurementStrength = 0.25}};
   const auto manifest = toManifestJSON(weaker);
-  EXPECT_EQ(toManifestJSON(weakMeasurementGroverFromManifestJSON(manifest)),
+  EXPECT_EQ(toManifestJSON(groverWeakMeasurementFromManifestJSON(manifest)),
             manifest);
   EXPECT_EQ(benchmarkIdFromManifestJSON(manifest), "grover-weak-measurement");
   EXPECT_NE(manifest.find(R"("model":"grover_weak_measurement")"),
@@ -106,25 +106,25 @@ TEST(WeakMeasurementGrover, RoundTripsJSON) {
   EXPECT_NE(manifest.find(R"("success_outcome":"10")"), std::string::npos);
 }
 
-TEST(WeakMeasurementGrover, UsesSemanticCaseIds) {
-  const auto defaults = weakMeasurementGroverFromInstanceSpecificationJSON(
+TEST(GroverWeakMeasurement, UsesSemanticCaseIds) {
+  const auto defaults = groverWeakMeasurementFromInstanceSpecificationJSON(
       R"({"schema_version":1,"benchmark":"grover-weak-measurement","parameters":{"marked_bitstring":"10"}})");
   EXPECT_EQ(caseId(defaults),
-            caseId(WeakMeasurementGrover{
+            caseId(GroverWeakMeasurement{
                 {.markedBitstring = "10", .measurementStrength = 0.5}}));
   EXPECT_NE(caseId(defaults),
-            caseId(WeakMeasurementGrover{
+            caseId(GroverWeakMeasurement{
                 {.markedBitstring = "10", .measurementStrength = 0.25}}));
 }
 
-TEST(WeakMeasurementGrover, DescribesJSONSchema) {
+TEST(GroverWeakMeasurement, DescribesJSONSchema) {
   const auto schema = describeBenchmarkJSON("grover-weak-measurement");
   EXPECT_NE(schema.find(R"("exclusiveMinimum":0)"), std::string::npos);
   EXPECT_NE(schema.find(R"("maximum":0.5)"), std::string::npos);
   EXPECT_NE(schema.find(R"("maxLength":2044)"), std::string::npos);
 }
 
-TEST(WeakMeasurementGrover, RejectsInvalidJSONParameters) {
+TEST(GroverWeakMeasurement, RejectsInvalidJSONParameters) {
   for (const auto* strength : {"0", "0.3", "true", "\"0.25\""}) {
     const auto instance =
         std::string{
@@ -132,13 +132,13 @@ TEST(WeakMeasurementGrover, RejectsInvalidJSONParameters) {
         strength + "}}";
     EXPECT_THROW(
         static_cast<void>(
-            weakMeasurementGroverFromInstanceSpecificationJSON(instance)),
+            groverWeakMeasurementFromInstanceSpecificationJSON(instance)),
         std::invalid_argument);
   }
 }
 
-TEST(WeakMeasurementGrover, EvaluatesCountsFromJSON) {
-  const WeakMeasurementGrover benchmark{{.markedBitstring = "10"}};
+TEST(GroverWeakMeasurement, EvaluatesCountsFromJSON) {
+  const GroverWeakMeasurement benchmark{{.markedBitstring = "10"}};
   const auto evaluation =
       evaluateJSON(toManifestJSON(benchmark),
                    R"({"schema_version":1,"counts":{"10":8,"00":2}})");

@@ -1702,6 +1702,76 @@ TEST_F(CompilerPipelineTest, ClassicalArraysSurviveQCQCOAndQIR) {
   }
 }
 
+TEST_F(CompilerPipelineTest, ConstantArrayInitializationPreservesValues) {
+  constexpr auto source = R"qasm(OPENQASM 3.1;
+    array[int[3], 2, 9] a = {{-1,0,1,2,3,-4,-3,-2,-1},
+                             {-1,0,1,2,3,-4,-3,-2,-1}};
+    array[int[3], 2, 9] b = {{-1,0,1,2,3,-4,-3,-2,-1},
+                             {-1,0,1,2,3,-4,-3,-2,-1}};
+    array[float, 18] reals = {-0.0,0.0,0.5,1.5,2.5,3.5,4.5,5.5,6.5,
+                             7.5,8.5,9.5,10.5,11.5,12.5,13.5,14.5,15.5};
+    qubit q;
+    h q;
+    bit choice = measure q;
+    if (choice) { a[0,0] += 1; } else { a[1,8] += 1; }
+    int totalA = 0;
+    int totalB = 0;
+    for int row in [0:1] {
+      for int column in [0:8] {
+        totalA += a[row,column];
+        totalB += (row * 9 + column + 1) * b[row,column];
+      }
+    }
+    reset q;
+    if (totalA == -9 && totalB == -135 &&
+        1.0 / reals[0] < 0.0 && 1.0 / reals[1] > 0.0 && reals[17] == 15.5) {
+      x q;
+    }
+    output bit result;
+    result = measure q;
+  )qasm";
+  for (const bool throughJeff : {false, true}) {
+    SCOPED_TRACE(throughJeff);
+    auto qc = QCProgram::fromOpenQASMString(source);
+    ASSERT_TRUE(succeeded(qc));
+    auto qco = std::move(*qc).intoQCO();
+    ASSERT_TRUE(succeeded(qco));
+    if (throughJeff) {
+      auto jeff = std::move(*qco).intoJeff();
+      ASSERT_TRUE(succeeded(jeff));
+      auto restored = JeffProgram::fromBytes(jeff->toBytes());
+      ASSERT_TRUE(succeeded(restored));
+      qco = std::move(*restored).intoQCO();
+      ASSERT_TRUE(succeeded(qco));
+    }
+    const auto samples =
+        qco::sample(mlir::mqt::getEntryPoint(qco->module()), 16, 42);
+    ASSERT_TRUE(succeeded(samples));
+    EXPECT_EQ(*samples, (std::map<std::string, size_t>{{"1", 16}}));
+    auto restoredQC = std::move(*qco).intoQC();
+    ASSERT_TRUE(succeeded(restoredQC));
+    auto exported = restoredQC->copy().intoOpenQASM3();
+    ASSERT_TRUE(succeeded(exported));
+    auto reimported = QCProgram::fromOpenQASMString(exported->source());
+    ASSERT_TRUE(succeeded(reimported));
+    auto roundTrip = std::move(*reimported).intoQCO();
+    ASSERT_TRUE(succeeded(roundTrip));
+    const auto roundTripSamples =
+        qco::sample(mlir::mqt::getEntryPoint(roundTrip->module()), 16, 42);
+    ASSERT_TRUE(succeeded(roundTripSamples));
+    EXPECT_EQ(*roundTripSamples, (std::map<std::string, size_t>{{"1", 16}}));
+    auto qir = std::move(*restoredQC).intoQIR(QIRProfile::Adaptive);
+    ASSERT_TRUE(succeeded(qir));
+    auto llvmIR = std::move(*qir).intoLLVMIR();
+    ASSERT_TRUE(succeeded(llvmIR));
+    ::qir::JitSession session(*llvmIR, "constant-arrays",
+                              ::qir::Execution::Sampling, 42);
+    std::vector<std::string> qirSamples;
+    ASSERT_EQ(session.sample(16, qirSamples), 0);
+    EXPECT_EQ(qirSamples, std::vector<std::string>(16, "1"));
+  }
+}
+
 TEST_F(CompilerPipelineTest, BaseRejectsResidualClassicalArrayStorage) {
   auto qc = QCProgram::fromMLIRString(R"mlir(module {
     memref.global "private" @angles : memref<1xf64> = dense<1.0>

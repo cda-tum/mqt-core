@@ -592,11 +592,11 @@ incomplete. The trace covers actions on the compiler context, including
 conversion passes, but does not time every parsing or serialization operation.
 `profile_actions_to` applies to the coordinated compilation pipeline, including
 target compilation and source submission; individual typed transformation
-methods do not use it. Each call overwrites its trace file. Use separate files
-for concurrent compilations. While tracing, do not run other compilations on the
-same context, including copies of a typed program. In-process tracing rejects a
-context that already has an MLIR action handler; configure profiling through
-that handler instead.
+methods do not use it. Trace one program per call; each compilation overwrites
+the file. Use separate files for concurrent compilations. While tracing, do not
+run other compilations on the same context, including copies of a typed program.
+In-process tracing rejects a context that already has an MLIR action handler;
+configure profiling through that handler instead.
 
 For Python, enable pass progress and MLIR's timing and statistics reports
 through {py:class}`~mqt.core.mlir.CompilationOptions`:

@@ -84,6 +84,7 @@ add_mlir_library(
   MLIRLLVMIRTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRMathDialect
+  MLIRBufferizationDialect
   MLIRMemRefDialect
   MLIRMQTDialect
   MLIRParser

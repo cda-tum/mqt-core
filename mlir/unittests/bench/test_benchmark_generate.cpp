@@ -12,6 +12,7 @@
 #include "bench/FanOut.hpp"
 #include "bench/GHZ.hpp"
 #include "bench/Grover.hpp"
+#include "bench/GroverWeakMeasurement.hpp"
 #include "bench/JSON.hpp"
 #include "bench/MagicStateDistillation.hpp"
 #include "bench/ModularMultiplier.hpp"
@@ -24,7 +25,6 @@
 #include "bench/Shor.hpp"
 #include "bench/Teleportation.hpp"
 #include "bench/WState.hpp"
-#include "bench/WeakMeasurementGrover.hpp"
 #include "mqt/Compiler/Programs.h"
 #include "mqt/Compiler/Target.h"
 #include "mqt/Compiler/TargetEnvironment.h"
@@ -99,6 +99,7 @@ TEST(GenerateProgramTest, GeneratesEveryBenchmarkMethodAsQCAndJeff) {
   }});
   expectQCAndJeff(GHZ{{.qubits = 3}});
   expectQCAndJeff(Grover{{.markedBitstring = "101"}});
+  expectQCAndJeff(GroverWeakMeasurement{{.markedBitstring = "101"}});
   expectQCAndJeff(MagicStateDistillation{{.levels = 1}});
   expectQCAndJeff(Multiplexer{{.qubits = 3}});
   expectQCAndJeff(QAOA{{.qubits = 3}});
@@ -119,7 +120,6 @@ TEST(GenerateProgramTest, GeneratesEveryBenchmarkMethodAsQCAndJeff) {
   expectQCAndJeff(Shor{{.number = 15}});
   expectQCAndJeff(Teleportation{});
   expectQCAndJeff(WState{{.qubits = 3}});
-  expectQCAndJeff(WeakMeasurementGrover{{.markedBitstring = "101"}});
 }
 
 template <class Benchmark>
