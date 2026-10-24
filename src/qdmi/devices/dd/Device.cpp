@@ -566,14 +566,6 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::setParameter(
     }
     seed_ = *static_cast<const int*>(value);
     return QDMI_SUCCESS;
-  case QDMI_DEVICE_JOB_PARAMETER_CUSTOM2:
-    if (value == nullptr) {
-      return QDMI_SUCCESS;
-    }
-    if (size != sizeof(bool)) {
-      return QDMI_ERROR_INVALIDARGUMENT;
-    }
-    return QDMI_SUCCESS;
   case QDMI_DEVICE_JOB_PARAMETER_CUSTOM3:
     if (value == nullptr) {
       return QDMI_SUCCESS;

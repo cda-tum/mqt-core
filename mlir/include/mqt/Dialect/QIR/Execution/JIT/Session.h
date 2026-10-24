@@ -18,10 +18,10 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -73,14 +73,14 @@ public:
   /// @param bufferName Identifier used in diagnostics.
   /// @param execution Execution mode.
   /// @param randomSeed Optional deterministic runtime seed.
-  /// @param output Stream for constructor, entry-point, and destructor records;
-  /// null disables output.
+  /// @param output Borrowed stream for constructor, entry-point, and destructor
+  /// records. It must outlive the session; null disables output.
   /// @throws std::runtime_error if the IR cannot be parsed or the JIT fails
   /// to initialize.
   JitSession(llvm::StringRef irBytes, llvm::StringRef bufferName,
              Execution execution = Execution::Sampling,
              std::optional<uint64_t> randomSeed = std::nullopt,
-             std::ostream* output = &std::cout);
+             llvm::raw_ostream* output = &llvm::outs());
 
   /// Tears down the LLJIT and any JIT'd resources owned by the session.
   ~JitSession();

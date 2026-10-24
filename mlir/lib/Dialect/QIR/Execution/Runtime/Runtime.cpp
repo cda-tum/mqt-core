@@ -21,18 +21,17 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <format>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <numeric>
 #include <optional>
-#include <ostream>
 #include <random>
 #include <span>
 #include <sstream>
@@ -421,9 +420,9 @@ auto Runtime::takeState() -> QState {
   return ret;
 }
 
-auto Runtime::setOstream(std::ostream& other) -> void { os = &other; }
+auto Runtime::setOstream(llvm::raw_ostream& other) -> void { os = &other; }
 
-auto Runtime::resetOstream() -> void { os = &std::cout; }
+auto Runtime::resetOstream() -> void { os = &llvm::outs(); }
 
 auto Runtime::disableOutput() -> void { os = nullptr; }
 
@@ -442,8 +441,7 @@ void Runtime::outputType(const char* type, std::string_view value,
 auto Runtime::outputResult(bool value, const char* label) const -> void {
   if (outputResultPositions_ != nullptr) {
     outputResultPositions_->push_back(
-        static_cast<uint64_t>(os->tellp()) +
-        std::string_view("OUTPUT\tRESULT\t").size());
+        os->tell() + std::string_view("OUTPUT\tRESULT\t").size());
   }
   outputType("RESULT", value ? "1" : "0", label);
 }
@@ -532,8 +530,8 @@ auto Runtime::setMetadata(
   metadata = std::move(entryPointMetadata);
 }
 
-auto operator<<(std::ostream& os, const Runtime::OutputSchema schema)
-    -> std::ostream& {
+auto operator<<(llvm::raw_ostream& os, const Runtime::OutputSchema schema)
+    -> llvm::raw_ostream& {
   return os << (schema == Runtime::OutputSchema::Labeled ? LABELED_SCHEMA
                                                          : ORDERED_SCHEMA);
 }

@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinOps.h"
 
 #include "llvm/Support/LogicalResult.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <array>
 #include <complex>
@@ -79,7 +80,8 @@ namespace {
 
 class JitSessionTest : public testing::Test {
 protected:
-  std::ostringstream sink;
+  std::string sinkText;
+  llvm::raw_string_ostream sink{sinkText};
 };
 
 TEST_F(JitSessionTest, BindsRuntimeForStaticConstructorsAndDestructors) {
@@ -486,10 +488,12 @@ attributes #0 = { "entry_point" }
 
 TEST_F(JitSessionTest, SessionsExecuteIndependently) {
   const auto program = getProgram("BellPairStatic.ll");
+  std::string firstSinkText;
+  llvm::raw_string_ostream firstSink{firstSinkText};
+  std::string secondSinkText;
+  llvm::raw_string_ostream secondSink{secondSinkText};
   qir::JitSession first(program, "first.ll");
   qir::JitSession second(program, "second.ll");
-  std::ostringstream firstSink;
-  std::ostringstream secondSink;
   first.runtime().setOstream(firstSink);
   second.runtime().setOstream(secondSink);
   int64_t firstExit = -1;
@@ -724,7 +728,8 @@ attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubi
            qir::Runtime::OutputSchema::Ordered,
            qir::Runtime::OutputSchema::Labeled,
        }) {
-    std::ostringstream output;
+    std::string outputText;
+    llvm::raw_string_ostream output{outputText};
     qir::JitSession session(ir, "output-order", qir::Execution::Sampling, 42,
                             &output);
     session.runtime().setOutputSchema(schema);
@@ -772,21 +777,6 @@ TEST(QIRBatchSampling, SeedReproducesBellSamples) {
   EXPECT_THAT(a, testing::Contains("11"));
 }
 
-TEST(QIRBatchSampling, EmitsEmptyOutcomes) {
-  constexpr llvm::StringRef ir = R"(
-define i64 @main() #0 { ret i64 0 }
-attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubits"="0" }
-)";
-  qir::JitSession session(ir, "empty-outcomes");
-  session.runtime().disableOutput();
-  ASSERT_TRUE(session.canSampleTerminal());
-  std::vector<std::string> shots;
-  ASSERT_EQ(session.sample(
-                3, [&](std::string_view shot) { shots.emplace_back(shot); }),
-            0);
-  EXPECT_EQ(shots, std::vector<std::string>(3));
-}
-
 TEST(QIRBatchSampling, RetainedStatePreservesPhaseOrderAndSessionLifetime) {
   constexpr llvm::StringRef ir = R"(
 define i64 @main() #0 {
@@ -828,7 +818,8 @@ attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile" "required_num_
 
 TEST(QIRBatchSampling, TextOutputPreservesTerminalSamplesAndState) {
   const auto ir = getProgram("BellPairStatic.ll");
-  std::ostringstream output;
+  std::string outputText;
+  llvm::raw_string_ostream output{outputText};
   qir::JitSession session(ir, "text", qir::Execution::Sampling, 42, &output);
   std::vector<std::string> results;
   bool stateAvailable = false;
@@ -866,22 +857,28 @@ define i64 @main() #0 {
 declare void @__quantum__rt__tuple_record_output(i64, ptr)
 attributes #0 = { "entry_point" "qir_profiles"="base_profile" }
 )";
-  std::ostringstream output;
-  qir::JitSession session(ir, "empty-output", qir::Execution::Sampling, 42,
-                          &output);
-  std::vector<std::string> results;
-  ASSERT_EQ(session.sample(3, results), 0);
-  EXPECT_EQ(results, std::vector<std::string>(3, ""));
-  std::istringstream records(output.str());
-  std::string line;
-  size_t starts = 0;
-  size_t ends = 0;
-  while (std::getline(records, line)) {
-    starts += static_cast<size_t>(line == "START");
-    ends += static_cast<size_t>(line == "END\t0");
+  for (const bool enabled : {false, true}) {
+    std::string output;
+    llvm::raw_string_ostream stream(output);
+    qir::JitSession session(ir, "empty-output", qir::Execution::Sampling, 42,
+                            enabled ? &stream : nullptr);
+    std::vector<std::string> results;
+    ASSERT_EQ(
+        session.sample(
+            3, [&](std::string_view shot) { results.emplace_back(shot); }),
+        0);
+    EXPECT_EQ(results, std::vector<std::string>(3));
+    std::istringstream records(output);
+    std::string line;
+    size_t starts = 0;
+    size_t ends = 0;
+    while (std::getline(records, line)) {
+      starts += static_cast<size_t>(line == "START");
+      ends += static_cast<size_t>(line == "END\t0");
+    }
+    EXPECT_EQ(starts, enabled ? 3U : 0U);
+    EXPECT_EQ(ends, starts);
   }
-  EXPECT_EQ(starts, 3U);
-  EXPECT_EQ(ends, 3U);
 }
 
 TEST(QIRBatchSampling, ExecutesClassicalSideEffectsOnEveryShot) {
@@ -1134,6 +1131,8 @@ declare void @__quantum__rt__result_record_output(ptr, ptr)
 declare void @__quantum__rt__bool_record_output(i1, ptr)
 attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubits"="1" "required_num_results"="1" }
 )";
+  std::string outputText;
+  llvm::raw_string_ostream output{outputText};
   qir::JitSession session(ir, "boolean-output", qir::Execution::Sampling);
   EXPECT_EQ(session.quantumCallSites(), 1U);
   session.runtime().disableOutput();
@@ -1144,7 +1143,6 @@ attributes #0 = { "entry_point" "qir_profiles"="base_profile" "required_num_qubi
   EXPECT_EQ(shots, (std::vector<std::string>{"011", "011", "011", "011"}));
   EXPECT_EQ(session.runtime().getMeasurements(), shots.back());
 
-  std::ostringstream output;
   session.runtime().setOstream(output);
   ASSERT_EQ(session.sample(4, shots, &available), 0);
   EXPECT_FALSE(available);

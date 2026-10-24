@@ -32,7 +32,7 @@ namespace qdmi::dd {
 namespace {
 using namespace llvm::orc::shared;
 constexpr uint32_t MAGIC = 0x4d515444;
-constexpr uint32_t VERSION = 6;
+constexpr uint32_t VERSION = 4;
 // Distinct from the response success byte (0 or 1).
 constexpr uint8_t SLOTS = 2;
 using Header = SPSArgList<uint32_t, uint32_t, uint64_t>;

@@ -446,7 +446,8 @@ JitSession::loadModuleFromMemory(const llvm::StringRef irBytes,
 JitSession::JitSession(const llvm::StringRef irBytes,
                        const llvm::StringRef bufferName,
                        const Execution execution,
-                       std::optional<uint64_t> randomSeed, std::ostream* output)
+                       std::optional<uint64_t> randomSeed,
+                       llvm::raw_ostream* output)
     : runtime_(std::make_unique<Runtime>(
           randomSeed ? *randomSeed : Runtime::generateRandomSeed())),
       execution_(execution) {
@@ -555,8 +556,8 @@ int64_t JitSession::sampleWithRuntimeImpl(
     return code;
   };
   if (samplingOutputs_ && shots != 0) {
-    std::ostringstream captured;
     SampledOutput record;
+    llvm::raw_string_ostream captured(record.text);
     auto* output = runtime.os;
     runtime.deferMeasurements_ = true;
     const auto restore = llvm::scope_exit([&] {
@@ -571,7 +572,6 @@ int64_t JitSession::sampleWithRuntimeImpl(
     if (const auto code = execute(); code != 0) {
       return code;
     }
-    record.text = std::move(captured).str();
     if (output != nullptr && terminalOutput == nullptr) {
       const auto writeShot = [&](std::string_view shot) {
         for (size_t i = 0; i < record.resultOffsets.size(); ++i) {

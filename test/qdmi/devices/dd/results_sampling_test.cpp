@@ -146,6 +146,10 @@ protected:
                     job.job, 0, QDMI_JOB_RESULT_CUSTOM1, size, output.data(),
                     nullptr),
                 QDMI_SUCCESS);
+      for (const auto* type : {"INT", "DOUBLE", "TUPLE", "ARRAY"}) {
+        EXPECT_NE(output.find(std::string("OUTPUT\t") + type + "\t"),
+                  std::string::npos);
+      }
       std::istringstream records(output);
       std::string line;
       std::string bits;
@@ -621,18 +625,9 @@ declare void @__quantum__rt__bool_record_output(i1, ptr)
   }
 }
 
-TEST(QIROutput, CapturesTypedRecordsAndValidatesBuffers) {
+TEST(QIROutput, PreservesWorkerLifecycleOutput) {
   const qdmi_test::SessionGuard session{};
   const qdmi_test::JobGuard job{session.session};
-  const bool capture = true;
-  EXPECT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
-                job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM2, sizeof(bool) + 1,
-                &capture),
-            QDMI_ERROR_INVALIDARGUMENT);
-  ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
-                job.job, QDMI_DEVICE_JOB_PARAMETER_CUSTOM2, sizeof(capture),
-                &capture),
-            QDMI_SUCCESS);
   const size_t workers = 4;
   constexpr size_t shots = 4;
   ASSERT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(
@@ -643,16 +638,7 @@ TEST(QIROutput, CapturesTypedRecordsAndValidatesBuffers) {
                 job.job, 0, QDMI_JOB_RESULT_CUSTOM1, 0, nullptr, nullptr),
             QDMI_ERROR_BADSTATE);
   auto program = qdmi_test::getQIRProgram("AdaptiveRecordOutputs.ll");
-  // Account for every shot at teardown, regardless of the granted worker count.
-  const auto returnPos = program.find("  ret i64 0");
-  ASSERT_NE(returnPos, std::string::npos);
-  program.insert(returnPos, R"(
-  %completed = load i64, ptr @completed_shots
-  %next = add i64 %completed, 1
-  store i64 %next, ptr @completed_shots
-)");
   program += R"(
-@completed_shots = global i64 0
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
     [{ i32, ptr, ptr } { i32 65535, ptr @record_setup, ptr null }]
 define void @record_setup() {
@@ -662,18 +648,7 @@ define void @record_setup() {
 @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }]
     [{ i32, ptr, ptr } { i32 65535, ptr @record_teardown, ptr null }]
 define void @record_teardown() {
-entry:
-  %shots = load i64, ptr @completed_shots
-  br label %loop
-loop:
-  %remaining = phi i64 [ %shots, %entry ], [ %next, %record ]
-  %done = icmp eq i64 %remaining, 0
-  br i1 %done, label %exit, label %record
-record:
   call void @__quantum__rt__int_record_output(i64 99, ptr null)
-  %next = sub i64 %remaining, 1
-  br label %loop
-exit:
   ret void
 }
 )";
@@ -698,23 +673,18 @@ exit:
   EXPECT_LT(output.find("OUTPUT\tINT\t98\n"), output.find("START\n"));
   constexpr std::string_view destructorRecord = "OUTPUT\tINT\t99\n";
   EXPECT_TRUE(output.ends_with(std::string(destructorRecord) + '\0'));
-  for (const auto record : {
-           std::string_view{"START\n"},
-           std::string_view{"END\t0\n"},
-           destructorRecord,
-       }) {
+  const auto countRecord = [&](std::string_view record) {
     size_t count = 0;
     for (size_t pos = 0; (pos = output.find(record, pos)) != std::string::npos;
          pos += record.size()) {
       ++count;
     }
-    EXPECT_EQ(count, shots) << record;
-  }
+    return count;
+  };
+  EXPECT_EQ(countRecord("START\n"), shots);
+  EXPECT_EQ(countRecord("END\t0\n"), shots);
+  const auto constructors = countRecord("OUTPUT\tINT\t98\n");
+  EXPECT_GT(constructors, 0U);
+  EXPECT_EQ(countRecord(destructorRecord), constructors);
   EXPECT_EQ(output.find("HEADER\tschema_id\t", 1), std::string::npos);
-  for (const auto* type :
-       {"RESULT", "BOOL", "INT", "DOUBLE", "TUPLE", "ARRAY"}) {
-    EXPECT_NE(output.find(std::string("OUTPUT\t") + type + "\t"),
-              std::string::npos);
-  }
-  EXPECT_NE(output.find("\t  hamming_weight\n"), std::string::npos);
 }

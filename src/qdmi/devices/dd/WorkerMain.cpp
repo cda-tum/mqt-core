@@ -22,12 +22,12 @@
 
 #include "qdmi/constants.h"
 
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_socket_stream.h"
 
 #include <algorithm>
@@ -139,21 +139,16 @@ struct Execution {
   bool qirProgram() {
     const llvm::StringRef irBytes(program_.data(), program_.size());
     const bool sampling = numShots_ != 0;
-    std::optional<std::ostringstream> output;
-    const auto captureOutput = llvm::scope_exit([&] {
-      if (output) {
-        qirOutput_ = std::move(*output).str();
-      }
-    });
+    std::optional<llvm::raw_string_ostream> output;
     auto jitSession = qir::JitSession(
         irBytes, "QDMI job",
         sampling ? qir::Execution::Sampling : qir::Execution::StateExtraction,
         sampling ? seed_ : std::nullopt,
-        sampling ? &output.emplace() : nullptr);
+        sampling ? &output.emplace(qirOutput_.emplace()) : nullptr);
     auto& runtime = jitSession.runtime();
     if (sampling) {
       // Constructors run before sampling; the schema header still comes first.
-      const auto constructorRecords = std::move(*output).str();
+      const auto constructorRecords = std::exchange(*qirOutput_, {});
       runtime.outputProgramHeader();
       *output << constructorRecords;
     }
@@ -205,7 +200,7 @@ struct Execution {
       const bool shareCode = jitSession.canShareCompiledCode();
       for (size_t i = 0; i < workers; ++i) {
         tasks.push_back(std::async(std::launch::async, [&, i] {
-          std::ostringstream localOutput;
+          llvm::raw_string_ostream localOutput(records[i]);
           std::unique_ptr<qir::JitSession> peer;
           std::unique_ptr<qir::Runtime> workerRuntime;
           if (i != 0 && shareCode) {
@@ -229,16 +224,10 @@ struct Execution {
           const auto emit = [&](std::string_view shot) {
             appendShot(parts[i], shot);
           };
-          const auto code =
-              workerRuntime
-                  ? jitSession.sampleWithRuntime(*worker, count, emit, false)
-                  : (i == 0 ? jitSession : *peer)
-                        .sample(count, emit, nullptr, false);
-          peer.reset();
-          if (i != 0) {
-            records[i] = std::move(localOutput).str();
-          }
-          return code;
+          return workerRuntime
+                     ? jitSession.sampleWithRuntime(*worker, count, emit, false)
+                     : (i == 0 ? jitSession : *peer)
+                           .sample(count, emit, nullptr, false);
         }));
       }
       int64_t firstError = 0;

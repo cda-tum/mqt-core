@@ -138,19 +138,16 @@ reported size includes the terminator. In Python, use
 `job.get_custom_result(CustomProperty.CUSTOM1, str)`; C++ clients use
 `job.getCustomResult<std::string>(qdmi::CustomProperty::Custom1)`. OpenQASM jobs
 and zero-shot state extraction do not provide this result (`None` in Python).
-The Boolean job parameter `CUSTOM2` is accepted for compatibility and does not
-change output availability.
 
 The stream retains the QIR header, metadata, typed output records, and exit
 codes. Its shot records align with the order returned by
 `QDMI_JOB_RESULT_SHOTS`. Double records preserve the original floating-point
-value when parsed back. Terminal sampling builds a record template from one
-execution and fills it with each sample's bits, preserving the uncollapsed
-statevector. The job retains one template and writes the expanded stream
-directly into the caller's buffer when requested; size queries do not expand it.
-Other programs execute once per shot and retain their full output until the job
-is released, so their memory use grows with the recorded output volume. Shots
-and counts remain available as the bit projection described above. See the
+value when parsed back. Terminal sampling retains one output template and the
+uncollapsed statevector. Reading the full stream expands that template using the
+sampled bits; size queries do not expand it. Other programs execute once per
+shot and retain their full output until the job is released, so their memory use
+grows with the recorded output volume. Shots and counts remain available as the
+bit projection described above. See the
 [executable QIR example](../qir/index.md#retrieve-the-qir-output-stream-through-qdmi).
 
 ## Compile and execute
