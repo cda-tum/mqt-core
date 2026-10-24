@@ -33,8 +33,7 @@ void registerBenchmarkIO(
           "generate",
           [](const Benchmark& value) {
             return nb::module_::import_("mqt.core.mlir")
-                .attr("_generate_benchmark")(
-                    bench::toInstanceSpecificationJSON(value));
+                .attr("_generate_benchmark")(nb::find(value));
           },
           nb::sig("def generate(self) -> mqt.core.mlir.QCProgram"),
           "Generate the benchmark as a QC program.")

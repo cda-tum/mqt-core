@@ -8,6 +8,22 @@
  * Licensed under the MIT License
  */
 
+#include "bench/BV.hpp"
+#include "bench/FanOut.hpp"
+#include "bench/GHZ.hpp"
+#include "bench/Grover.hpp"
+#include "bench/GroverWeakMeasurement.hpp"
+#include "bench/MagicStateDistillation.hpp"
+#include "bench/ModularMultiplier.hpp"
+#include "bench/Multiplexer.hpp"
+#include "bench/QAOA.hpp"
+#include "bench/QFT.hpp"
+#include "bench/QFTAdder.hpp"
+#include "bench/QPE.hpp"
+#include "bench/RepeatUntilSuccess.hpp"
+#include "bench/Shor.hpp"
+#include "bench/Teleportation.hpp"
+#include "bench/WState.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Edge.hpp"
 #include "dd/Node.hpp"
@@ -1002,13 +1018,14 @@ sample(PythonInputTypes& types, const nb::handle program, size_t shots,
   });
 }
 
+template <class Benchmark>
 [[nodiscard]] static mlir::QCProgram
-generateBenchmark(const std::string_view instanceSpecificationJSON) {
-  auto generated = bench::generate(instanceSpecificationJSON);
+generateBenchmark(const Benchmark& benchmark) {
+  auto generated = bench::generate(benchmark);
   if (mlir::failed(generated)) {
     throw std::runtime_error("failed to generate benchmark");
   }
-  return std::move(generated->program);
+  return std::move(*generated);
 }
 
 NB_MODULE(MQT_CORE_MODULE_NAME, m) {
@@ -1023,9 +1040,10 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
   const auto inputTypes = std::make_shared<PythonInputTypes>();
   [[maybe_unused]] const auto initialQiskitType = inputTypes->quantumCircuit();
 
-  m.def("_generate_benchmark", &generateBenchmark,
-        "instance_specification_json"_a,
-        "Generate the QC program described by an instance specification.");
+#define MQT_BENCHMARK_FAMILY(TYPE, STEM, ID, DEFINITION_VERSION)               \
+  m.def("_generate_benchmark", &generateBenchmark<bench::TYPE>, "benchmark"_a, \
+        "Generate the QC program for a benchmark instance.");
+#include "bench/BenchmarkFamilies.inc"
 
   nb::enum_<mlir::QIRProfile>(m, "QIRProfile", "QIR target profiles.")
       .value("BASE", mlir::QIRProfile::Base, "The QIR Base Profile.")

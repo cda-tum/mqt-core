@@ -1,3 +1,5 @@
+mqt\.core\.mlir\._generate_benchmark$:
+
 mqt\.core\.mlir\.(?:QC|QCO)Program\.bind_parameters$:
     \from collections.abc import Mapping, Sequence
     \from typing import Any, SupportsFloat
