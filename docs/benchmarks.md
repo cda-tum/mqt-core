@@ -217,16 +217,26 @@ The output format changes the file name, but not the semantic case ID.
 
 A source installation provides the `MQT::CoreBench` target with typed
 parameters, references, evaluation, instances, instance specifications, and
-manifests.
+manifests. This target links statically so LLVM errors and their handlers use
+the same runtime. Checked factories (`create`), probability, evaluation,
+factoring, and JSON boundaries return `llvm::Expected<T>`. Callers must check
+results and consume or propagate errors with `takeError()`. Getters and
+Teleportation construction remain infallible. Python keeps its constructors,
+`ValueError` for invalid input, and `OverflowError` for shot-count overflow.
+Shor's native executor returns `llvm::Expected<Counts>`; Python executor errors
+retain their original exception.
 
 ```cpp
 #include "bench/Grover.hpp"
 
+#include "llvm/Support/Error.h"
+
 #include <cassert>
 
 int main() {
-  const mqt::bench::Grover benchmark{{.markedBitstring = "101"}};
-  const auto evaluation = benchmark.evaluate({{"101", 1000}});
+  const auto benchmark =
+      llvm::cantFail(mqt::bench::Grover::create({.markedBitstring = "101"}));
+  const auto evaluation = llvm::cantFail(benchmark.evaluate({{"101", 1000}}));
   assert(evaluation.successProbability == 1.0);
 }
 ```
@@ -260,7 +270,7 @@ Adding a family requires five extension points:
    `bindings/bench/`, use `registerBenchmarkIO` for generation and JSON methods,
    register its direct submodule in `register_bench.cpp`, and add the source to
    `bindings/bench/CMakeLists.txt`.
-5. Test the reference, strict instance specification JSON, emitter structure,
+5. Test the reference, instance specification validation, emitter structure,
    `jeff` conversion, and Python generation.
 
 `BenchmarkFamilies.inc` is the sole family catalog. Do not add a private family
@@ -271,8 +281,10 @@ list, a generic option map, or a public base class.
 Instance specifications reject unknown fields and invalid values. The case ID
 does not depend on a path or output format. Parsing a manifest checks its
 resolved parameters, logical output, reference, definition version, and case ID.
-Before evaluation, normalize backend results to the manifest's big-endian
-`result` order.
+Typed integer parameters retain 64-bit precision. Redundant output metadata uses
+LLVM JSON value equality. JSON APIs require the C numeric locale
+(`LC_NUMERIC=C`), finite numbers, and UTF-8 text. Normalize backend results to
+the manifest's big-endian `result` order before evaluation.
 
 ## Benchmark families
 
