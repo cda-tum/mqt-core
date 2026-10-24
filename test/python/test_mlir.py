@@ -1762,6 +1762,8 @@ def test_payload_specification_preserves_python_api() -> None:
     payload_format.version = "9.9.9"
     exposed_descriptor = environment.format
     exposed_descriptor.version = "8.8.8"
+    exposed_capability = environment.capabilities[0]
+    exposed_capability.value = 2
     capability.value = 1
     assert environment.format.version == "2.1.0"
     assert environment.capabilities[0].value == 0
