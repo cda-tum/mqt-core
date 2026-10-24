@@ -45,7 +45,7 @@ entry:
   call void @__quantum__rt__qubit_release(ptr %q1)
   call void @__quantum__rt__qubit_release(ptr %q2)
 
-  ; Record the raw measurement bits alongside the derived numeric outputs.
+  ; Record the raw measurement bits (these feed the histogram bucketing key).
   call void @__quantum__rt__result_record_output(ptr %r0, ptr @r0_lbl)
   call void @__quantum__rt__result_record_output(ptr %r1, ptr @r1_lbl)
   call void @__quantum__rt__result_record_output(ptr %r2, ptr @r2_lbl)

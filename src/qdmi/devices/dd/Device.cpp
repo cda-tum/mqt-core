@@ -573,7 +573,7 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::setParameter(
     if (size != sizeof(bool)) {
       return QDMI_ERROR_INVALIDARGUMENT;
     }
-    captureQirOutput_ = *static_cast<const bool*>(value);
+    captureQIROutput_ = *static_cast<const bool*>(value);
     return QDMI_SUCCESS;
   case QDMI_DEVICE_JOB_PARAMETER_CUSTOM3:
     if (value == nullptr) {
@@ -725,6 +725,11 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
       execution->programs.empty()) {
     return QDMI_ERROR_BADSTATE;
   }
+  if (captureQIROutput_ &&
+      (numShots_ == 0 || format_ == QDMI_PROGRAM_FORMAT_QASM2 ||
+       format_ == QDMI_PROGRAM_FORMAT_QASM3)) {
+    return QDMI_ERROR_NOTSUPPORTED;
+  }
   auto& executor = qdmi::dd::executor();
   const size_t perProgramLimit =
       std::max(size_t{1}, executor.limit / execution->programs.size());
@@ -744,9 +749,9 @@ auto MQT_DDSIM_QDMI_Device_Job_impl_d::submit() -> QDMI_STATUS {
           .format = static_cast<int32_t>(format_),
           .shots = numShots_,
           .seed = seed_,
+          .captureOutput = captureQIROutput_,
           .maxWorkers = desired,
           .automaticWorkers = maxWorkers_ == 0,
-          .captureQirOutput = captureQirOutput_,
       };
       executor.threads.async([pending = std::weak_ptr(execution), index,
                               request, &executor]() mutable {

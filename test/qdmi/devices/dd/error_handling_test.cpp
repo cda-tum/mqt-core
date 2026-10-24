@@ -145,6 +145,7 @@ TEST_F(ErrorHandling, CustomEnums) {
   ASSERT_EQ(MQT_DDSIM_QDMI_device_session_alloc(&session), QDMI_SUCCESS);
   for (const auto param : {
            QDMI_DEVICE_SESSION_PARAMETER_CUSTOM1,
+           QDMI_DEVICE_SESSION_PARAMETER_CUSTOM2,
            QDMI_DEVICE_SESSION_PARAMETER_CUSTOM3,
            QDMI_DEVICE_SESSION_PARAMETER_CUSTOM4,
            QDMI_DEVICE_SESSION_PARAMETER_CUSTOM5,
@@ -158,6 +159,7 @@ TEST_F(ErrorHandling, CustomEnums) {
 
   for (const auto prop : {
            QDMI_DEVICE_PROPERTY_CUSTOM1,
+           QDMI_DEVICE_PROPERTY_CUSTOM2,
            QDMI_DEVICE_PROPERTY_CUSTOM3,
            QDMI_DEVICE_PROPERTY_CUSTOM4,
            QDMI_DEVICE_PROPERTY_CUSTOM5,
@@ -173,6 +175,7 @@ TEST_F(ErrorHandling, CustomEnums) {
   ASSERT_FALSE(sites.empty());
   for (const auto prop : {
            QDMI_SITE_PROPERTY_CUSTOM1,
+           QDMI_SITE_PROPERTY_CUSTOM2,
            QDMI_SITE_PROPERTY_CUSTOM3,
            QDMI_SITE_PROPERTY_CUSTOM4,
            QDMI_SITE_PROPERTY_CUSTOM5,
@@ -187,6 +190,7 @@ TEST_F(ErrorHandling, CustomEnums) {
   ASSERT_FALSE(ops.empty());
   for (const auto prop : {
            QDMI_OPERATION_PROPERTY_CUSTOM1,
+           QDMI_OPERATION_PROPERTY_CUSTOM2,
            QDMI_OPERATION_PROPERTY_CUSTOM3,
            QDMI_OPERATION_PROPERTY_CUSTOM4,
            QDMI_OPERATION_PROPERTY_CUSTOM5,
@@ -206,11 +210,10 @@ TEST_F(ErrorHandling, CustomEnums) {
            QDMI_DEVICE_JOB_PARAMETER_CUSTOM5,
        }) {
     EXPECT_EQ(MQT_DDSIM_QDMI_device_job_set_parameter(j.job, param, 0, nullptr),
-              param == QDMI_DEVICE_JOB_PARAMETER_CUSTOM1 ||
-                      param == QDMI_DEVICE_JOB_PARAMETER_CUSTOM2 ||
-                      param == QDMI_DEVICE_JOB_PARAMETER_CUSTOM3
-                  ? QDMI_SUCCESS
-                  : QDMI_ERROR_NOTSUPPORTED)
+              param == QDMI_DEVICE_JOB_PARAMETER_CUSTOM4 ||
+                      param == QDMI_DEVICE_JOB_PARAMETER_CUSTOM5
+                  ? QDMI_ERROR_NOTSUPPORTED
+                  : QDMI_SUCCESS)
         << param;
   }
 
@@ -221,6 +224,7 @@ TEST_F(ErrorHandling, CustomEnums) {
   ASSERT_EQ(qdmi_test::submitAndWait(j.job, 0), QDMI_SUCCESS);
   for (const auto result : {
            QDMI_JOB_RESULT_CUSTOM1,
+           QDMI_JOB_RESULT_CUSTOM2,
            QDMI_JOB_RESULT_CUSTOM3,
            QDMI_JOB_RESULT_CUSTOM4,
            QDMI_JOB_RESULT_CUSTOM5,

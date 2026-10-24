@@ -207,30 +207,30 @@ else:
 
 ## Read the records behind the counts
 
-Sample the loop twice. Each shot may execute several measurements, but only the
-final `result` is recorded as program output.
+Enable DDSIM's QIR output capture for two shots. Each shot may execute several
+measurements, but only the final `result` is recorded as program output.
 
 ```{code-cell} ipython3
 recorded = device.submit_job(
-    loop.to_bitcode(), ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=2, custom1=seed
+    loop.to_bitcode(), ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=2, custom1=seed, custom2=True
 )
 assert recorded.wait()
+output = recorded.get_custom_result(CustomProperty.CUSTOM1, str)
+assert isinstance(output, str)
+assert output.count("START\n") == 2 and output.count("END\t0\n") == 2
 assert recorded.get_counts() == {"0": 2}
-assert recorded.get_shots() == ["0", "0"]
-assert recorded.get_custom_result(CustomProperty.CUSTOM1, str) is None
+print(output, end="")
 print("Counts:", recorded.get_counts())
 ```
 
-The histogram contains the final recorded bit, not every intermediate
-measurement. DDSIM retains a compact histogram and expands shot strings when
-requested.
+The header identifies the output schema. `START` and `END` delimit each shot;
+`OUTPUT` lines preserve result labels and typed values. The histogram contains
+recorded measurement bits, not every intermediate measurement performed in the
+loop.
 
-Pass `custom2=True` when submitting a job to capture the complete typed QIR
-stream through `CustomProperty.CUSTOM1`. This includes numeric values, labels,
-and any records from global constructors and destructors. The
-[QIR guide's numeric-output example](../qir/index.md#retrieve-the-qir-output-stream-through-qdmi)
-shows the stream and its relation to counts. That guide also covers resource
-lifetimes and state-extraction restrictions.
+Leave capture disabled for ordinary sampling. The
+{doc}`QIR guide <../qir/index>` covers both output schemas, resource lifetimes,
+and state-extraction restrictions.
 
 Continue with {doc}`qdmi_execution` to explore device discovery, payload
 selection, repeated jobs, and the different kinds of results behind this API.

@@ -480,18 +480,18 @@ int64_t JitSession::runWithRuntime(Runtime& runtime) {
 }
 
 int64_t JitSession::sample(size_t shots, std::vector<std::string>& results,
-                           bool* stateAvailable, bool emitHeader,
-                           std::optional<SampledOutput>* terminalOutput) {
+                           bool* stateAvailable, bool emitHeader) {
   return sampleWithRuntime(*runtime_, shots, results, emitHeader,
-                           stateAvailable, terminalOutput);
+                           stateAvailable);
 }
 
 int64_t JitSession::sample(size_t shots,
                            llvm::function_ref<void(std::string_view)> emit,
                            bool* stateAvailable, bool emitHeader,
                            std::optional<SampledOutput>* terminalOutput) {
-  return sampleWithRuntime(*runtime_, shots, emit, emitHeader, stateAvailable,
-                           terminalOutput);
+  return sampleWithRuntimeImpl(
+      *runtime_, shots, [&](const std::string& shot) { emit(shot); }, emit,
+      emitHeader, stateAvailable, terminalOutput);
 }
 
 int64_t JitSession::sampleCounts(size_t shots,
@@ -502,7 +502,7 @@ int64_t JitSession::sampleCounts(size_t shots,
   auto* output = runtime.os;
   runtime.disableOutput();
   const auto restore = llvm::scope_exit([&] { runtime.os = output; });
-  if (!sampleBranches_ || samplingOutputs_ || shots == 0) {
+  if (!sampleBranches_ || shots == 0) {
     return sample(
         shots, [&](std::string_view shot) { ++counts[std::string(shot)]; },
         stateAvailable, false);
@@ -532,11 +532,9 @@ int64_t JitSession::sampleCounts(size_t shots,
   }
 }
 
-int64_t
-JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
-                              std::vector<std::string>& results,
-                              bool emitHeader, bool* stateAvailable,
-                              std::optional<SampledOutput>* terminalOutput) {
+int64_t JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
+                                      std::vector<std::string>& results,
+                                      bool emitHeader, bool* stateAvailable) {
   if (&runtime != runtime_.get() && !shareCompiledCode_) {
     throw std::logic_error("QIR entry point cannot be shared across workers");
   }
@@ -552,17 +550,16 @@ JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
       runtime, shots,
       [&](std::string&& shot) { results.push_back(std::move(shot)); },
       [&](std::string_view shot) { results.emplace_back(shot); }, emitHeader,
-      stateAvailable, terminalOutput);
+      stateAvailable, nullptr);
 }
 
 int64_t
 JitSession::sampleWithRuntime(Runtime& runtime, size_t shots,
                               llvm::function_ref<void(std::string_view)> emit,
-                              bool emitHeader, bool* stateAvailable,
-                              std::optional<SampledOutput>* terminalOutput) {
+                              bool emitHeader, bool* stateAvailable) {
   return sampleWithRuntimeImpl(
       runtime, shots, [&](const std::string& shot) { emit(shot); }, emit,
-      emitHeader, stateAvailable, terminalOutput);
+      emitHeader, stateAvailable, nullptr);
 }
 
 int64_t JitSession::sampleWithRuntimeImpl(

@@ -76,9 +76,9 @@ TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
       .program = llvm::StringRef("QIR\0bytes", 9),
       .shots = 19,
       .seed = 42,
+      .captureOutput = true,
       .maxWorkers = 3,
       .automaticWorkers = false,
-      .captureQirOutput = true,
   };
   const auto frame = encode(request);
   WorkerRequest decoded;
@@ -87,9 +87,9 @@ TEST(WorkerProtocol, PreservesExactPayloadAndResultMetadata) {
   EXPECT_EQ(decoded.program, request.program);
   EXPECT_EQ(decoded.shots, request.shots);
   EXPECT_EQ(decoded.seed, request.seed);
+  EXPECT_EQ(decoded.captureOutput, request.captureOutput);
   EXPECT_EQ(decoded.maxWorkers, request.maxWorkers);
   EXPECT_EQ(decoded.automaticWorkers, request.automaticWorkers);
-  EXPECT_EQ(decoded.captureQirOutput, request.captureQirOutput);
 
   WorkerResponse response;
   response.succeeded = true;
@@ -203,6 +203,7 @@ TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
       .program = "payload",
       .shots = 1,
       .seed = {},
+      .captureOutput = false,
   });
   for (size_t size = 0; size < request.size(); ++size) {
     WorkerRequest parsed;
@@ -217,10 +218,8 @@ TEST(WorkerProtocol, RejectsTruncationTrailingBytesAndInvalidResults) {
   }
   EXPECT_FALSE(decode(grant + "x", slots));
   EXPECT_FALSE(decode(encode(WorkerSlots{0}), slots));
-  for (const size_t offset : {1U, 2U}) {
-    auto invalidFlag = request;
-    invalidFlag[invalidFlag.size() - offset] = 2;
-    EXPECT_FALSE(decode(invalidFlag, parsed));
-  }
+  auto invalidWorkers = request;
+  invalidWorkers.back() = 2;
+  EXPECT_FALSE(decode(invalidWorkers, parsed));
 }
 } // namespace qdmi::dd

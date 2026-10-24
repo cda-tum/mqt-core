@@ -95,24 +95,22 @@ public:
   /// nonzero exit code.
   ///
   /// Eligible static Base or Adaptive programs execute once with deferred
-  /// measurements, then sample that state. Other programs
-  /// execute normally for every shot. State-extraction sessions cannot be
-  /// sampled. The supplied vector is replaced, including for zero shots. If
-  /// supplied, stateAvailable is set only when successful terminal sampling
-  /// leaves an uncollapsed state. The caller may then use runtime().takeState()
-  /// before executing the session again.
-  /// Results contain recorded Result and Boolean values; numeric records appear
-  /// only in the textual output. Terminal sampling replays output records from
-  /// the sampled bits without repeating quantum execution. If terminalOutput is
-  /// supplied and output is enabled, terminal sampling returns the template
-  /// instead of writing per-shot records. Other output still goes to the
-  /// stream; terminalOutput is reset when no template is produced.
+  /// measurements, then sample that state. Other programs execute per shot.
+  /// State-extraction sessions cannot be sampled. The supplied vector is
+  /// replaced, including for zero shots. If supplied, stateAvailable is set
+  /// only when successful terminal sampling leaves an uncollapsed state. The
+  /// caller may then use runtime().takeState() before executing the session
+  /// again. Results contain recorded Result and Boolean values; numeric records
+  /// appear only in the textual output.
   int64_t sample(size_t shots, std::vector<std::string>& results,
-                 bool* stateAvailable = nullptr, bool emitHeader = true,
-                 std::optional<SampledOutput>* terminalOutput = nullptr);
+                 bool* stateAvailable = nullptr, bool emitHeader = true);
 
   /// Execute a batch and emit each shot before the next is generated.
-  /// The view is valid only during the callback.
+  ///
+  /// The view is valid only during the callback. If supplied with output
+  /// enabled, terminalOutput receives the template instead of writing per-shot
+  /// records. Other output goes to the stream; terminalOutput is reset when no
+  /// template is produced.
   int64_t sample(size_t shots, llvm::function_ref<void(std::string_view)> emit,
                  bool* stateAvailable = nullptr, bool emitHeader = true,
                  std::optional<SampledOutput>* terminalOutput = nullptr);
@@ -149,20 +147,17 @@ public:
   ///
   /// Concurrent calls require separate runtimes from makeWorkerRuntime().
   /// Throws std::logic_error when a separate runtime is not eligible.
-  /// Output handling follows sample().
-  int64_t
-  sampleWithRuntime(Runtime& runtime, size_t shots,
-                    std::vector<std::string>& results, bool emitHeader = true,
-                    bool* stateAvailable = nullptr,
-                    std::optional<SampledOutput>* terminalOutput = nullptr);
+  int64_t sampleWithRuntime(Runtime& runtime, size_t shots,
+                            std::vector<std::string>& results,
+                            bool emitHeader = true,
+                            bool* stateAvailable = nullptr);
 
   /// Emit each shot with a separate worker runtime.
   /// The view is valid only during the callback.
-  int64_t
-  sampleWithRuntime(Runtime& runtime, size_t shots,
-                    llvm::function_ref<void(std::string_view)> emit,
-                    bool emitHeader = true, bool* stateAvailable = nullptr,
-                    std::optional<SampledOutput>* terminalOutput = nullptr);
+  int64_t sampleWithRuntime(Runtime& runtime, size_t shots,
+                            llvm::function_ref<void(std::string_view)> emit,
+                            bool emitHeader = true,
+                            bool* stateAvailable = nullptr);
 
   /// Whether sampling can use one retained terminal state.
   [[nodiscard]] bool canSampleTerminal() const;

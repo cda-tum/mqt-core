@@ -222,42 +222,14 @@ registers use result-array recording when their stores can fuse safely and
 preserve returned measurement snapshots. Other stores use Boolean storage,
 including runtime-indexed accesses. QIR's textual output stream also preserves
 output labels, array and tuple records, other recorded scalar values, and shot
-framing. Pass `custom2=True` when submitting a DDSIM job to capture this stream,
-including records from global constructors and destructors. Capture is disabled
-by default: jobs retain only a compact histogram and expand individual shots
-when requested.
-
-Integer and double records do not add bits to shots or histograms. This authored
-Adaptive QIR program records a Boolean and two numeric values. Request its
-complete stream as a string from `CustomProperty.CUSTOM1`:
+framing. Enable capture with DDSIM's boolean `custom2` parameter, then request
+its string result from `CustomProperty.CUSTOM1`:
 
 ```{code-cell} ipython3
 from mqt.core.qdmi import CustomProperty
 
-numeric_llvm = """
-define i64 @main() #0 {
-  call void @__quantum__rt__bool_record_output(i1 true, ptr null)
-  call void @__quantum__rt__int_record_output(i64 7, ptr null)
-  call void @__quantum__rt__double_record_output(double 0.5, ptr null)
-  ret i64 0
-}
-declare void @__quantum__rt__bool_record_output(i1, ptr)
-declare void @__quantum__rt__int_record_output(i64, ptr)
-declare void @__quantum__rt__double_record_output(double, ptr)
-attributes #0 = { "entry_point" "qir_profiles"="adaptive_profile"
-  "output_labeling_schema"="ordered" "required_num_qubits"="0" "required_num_results"="0" }
-!llvm.module.flags = !{!0, !1, !2, !3}
-!0 = !{i32 1, !"qir_major_version", i32 2}
-!1 = !{i32 7, !"qir_minor_version", i32 1}
-!2 = !{i32 1, !"dynamic_qubit_management", i1 false}
-!3 = !{i32 1, !"dynamic_result_management", i1 false}
-"""
 recorded_job = device.submit_job(
-    numeric_llvm,
-    ProgramFormat.QIR_ADAPTIVE_STRING,
-    num_shots=2,
-    custom1=7,
-    custom2=True,
+    adaptive_bitcode, ProgramFormat.QIR_ADAPTIVE_MODULE, num_shots=2, custom1=7, custom2=True
 )
 assert recorded_job.wait()
 output = recorded_job.get_custom_result(CustomProperty.CUSTOM1, str)
@@ -265,26 +237,17 @@ assert isinstance(output, str)
 assert output.count("START\n") == 2 and output.count("END\t0\n") == 2
 print(output, end="")
 print("Counts:", recorded_job.get_counts())
-assert output.count("OUTPUT\tINT\t7\n") == 2
-assert output.count("OUTPUT\tDOUBLE\t0.5\n") == 2
-assert recorded_job.get_counts() == {"1": 2}
+assert recorded_job.get_counts() == {"0": 2}
 ```
 
 The parameter and result slots are separate: **job parameter CUSTOM1** is the
-seed, **job parameter CUSTOM2** enables capture, and **job result CUSTOM1**
-contains the captured text. The same capture API works for Base and Adaptive
-profiles, with text or bitcode input.
+seed; **job result CUSTOM1** contains the captured text. The same capture API
+works for Base and Adaptive profiles, with text or bitcode input.
 
-The stream uses QIR record order; QDMI shots and counts place the highest-index
-bit first. Eligible terminal programs sample one prepared state and construct
-the records from those samples; they also retain the uncollapsed statevector.
-Terminal jobs retain one output template and materialize the complete stream
-when requested. Other captured programs execute once per shot and retain their
-full output until the job is released. Shot records stay aligned with QDMI
-shots; lifecycle records are outside the shot bit projection. Jobs without
-capture, OpenQASM jobs, and zero-shot state extraction do not provide a QIR
-stream (`None` in Python). See {doc}`DDSIM <../qdmi/ddsim_device>` for the C API
-result and resource limits.
+Capture is off by default. The stream uses QIR record order; QDMI shots and
+counts place the highest-index bit first. Capture jobs provide both results, and
+terminal sampling can also retain an uncollapsed statevector. See
+{doc}`DDSIM <../qdmi/ddsim_device>` for capture limits and the C API.
 
 ## Execution contracts
 
@@ -378,12 +341,7 @@ payload.
 Every DDSIM QIR job owns its JIT session, runtime, simulator state,
 random-number generator, and output settings. QIR jobs can therefore execute
 concurrently without sharing measurements or output records. DDSIM records
-result bits directly. Jobs without captured text retain histograms and expand
-shots only when requested. Captured terminal jobs defer expansion of the textual
-output until it is requested; other captured jobs record text during execution.
-The public {py:func}`~mqt.core.mlir.sample` function executes through QCO and
-returns counts without QIR text. The C++ `JitSession::run` and `sample` APIs
-record full output by default; `sampleCounts` suppresses text during sampling.
+result bits directly and formats textual records only when capture is enabled.
 
 For sampling programs that cannot use terminal sampling, the JIT applies LLVM O1
 optimization with automatic loop unrolling disabled. This reduces repeated
@@ -403,25 +361,18 @@ later jobs remain usable.
 Sampling supports Base and Adaptive formats. For either profile with an acyclic,
 unconditional entry path, constant gate arguments, terminal Z measurements and
 scalar result records, DDSIM prepares the DD once and samples it for all shots.
-Constant numeric records and tuple or array headers are preserved in the output
-template. The runtime retains repeated or reordered result records in program
-order, including after SWAPs. The QDMI device reverses each shot for
-most-significant-bit first serialization before constructing its histogram.
-Classical memory accesses, helper calls, conditional branches, resets, dynamic
-resources, global destructors, Boolean output records, and generic controlled
-argument arrays exclude this terminal optimization, including when all Boolean
-records are constant.
+The runtime preserves repeated or reordered results, constant numeric records,
+and tuple or array headers. Classical memory accesses, helper calls, conditional
+branches, resets, dynamic resources, global destructors, Boolean output records,
+and generic controlled argument arrays exclude this terminal optimization.
 
-Histogram-only sampling through `JitSession::sampleCounts` can also group shots
-by measurement outcomes. Resets and qubit releases split groups when they
-collapse a superposition. The JIT replays entry-point prefixes for sibling
-paths, so classical execution must be deterministic. After LLVM O1, eligible
-entries use only local stack memory, defined constant globals, direct supported
-QIR calls, and deterministic scalar LLVM intrinsics. Remaining helper calls,
-heap-allocated classical arrays, constructors or destructors, native side
-effects, and observations of pointer addresses exclude grouping. Other inputs
-remain supported through per-shot execution. Full-output `run` and `sample`
-retain per-shot execution outside the terminal optimization.
+With capture disabled, `JitSession::sampleCounts` can group shots by measurement
+outcomes and replay deterministic prefixes for sibling paths. After LLVM O1,
+eligible programs use only local stack memory, defined constant globals, direct
+supported QIR calls, and deterministic scalar LLVM intrinsics. Remaining helper
+calls, heap-allocated classical arrays, lifecycle hooks, native effects, and
+pointer-address observations exclude grouping. Other supported programs execute
+once per shot.
 
 A fixed seed reproduces outcomes for the same execution path; sequences need not
 match across different sampling algorithms or software versions.

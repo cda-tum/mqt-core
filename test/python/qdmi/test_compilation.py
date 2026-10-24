@@ -74,10 +74,18 @@ def test_computed_classical_outputs(program_format: ProgramFormat) -> None:
       for int i in [0:2] { computed[i] = bool(measured) != bool(i % 2); }
       computed[0] = false;
     """
-    job = submit_program(source, target="mqt.ddsim.default", program_format=program_format, num_shots=4, custom1=17)
+    capture = program_format == ProgramFormat.QIR_ADAPTIVE_MODULE
+    job = submit_program(
+        source, target="mqt.ddsim.default", program_format=program_format, num_shots=4, custom1=17, custom2=capture
+    )
     assert job.wait()
     assert job.get_counts() == {"01001": 4}
     assert job.get_shots() == ["01001"] * 4
+    if capture:
+        output = job.get_custom_result(CustomProperty.CUSTOM1, str)
+        assert isinstance(output, str)
+        for index, value in enumerate(("false", "false", "true", "false")):
+            assert output.count(f"OUTPUT\tBOOL\t{value}\tcomputed_{index}\n") == 4
 
 
 @pytest.mark.parametrize(
@@ -603,19 +611,21 @@ def test_binary_qir_results(program_format: ProgramFormat, *, capture: bool) -> 
 
 
 @pytest.mark.parametrize(("program_format", "shots"), [(ProgramFormat.QASM3, 1), (ProgramFormat.QIR_BASE_MODULE, 0)])
-def test_qir_output_requires_qir_sampling(program_format: ProgramFormat, shots: int) -> None:
-    """QIR text capture requires a QIR program and a positive shot count."""
+def test_qir_output_capture_requires_qir_sampling(program_format: ProgramFormat, shots: int) -> None:
+    """Reject output requests that cannot produce a sampled QIR stream."""
     device = open_device("mqt.ddsim.default")
     payload = (
         BELL
         if program_format == ProgramFormat.QASM3
         else compile_program(BELL, output=OutputFormat.QIR_BASE).to_bitcode()
     )
-    job = device.submit_job(
-        cast("Sequence[str] | Sequence[bytes]", [payload]),
-        program_format,
-        num_shots=shots,
-        custom2=True,
-    )
-    assert job.wait()
-    assert job.get_custom_result(CustomProperty.CUSTOM1, str) is None
+    with pytest.raises(RuntimeError, match="Not supported"):
+        device.submit_job(
+            cast("Sequence[str] | Sequence[bytes]", [payload]),
+            program_format,
+            num_shots=shots,
+            custom2=True,
+        )
+    # The RTTI-free adapter can lose the nested exception text on macOS.
+    with pytest.raises(ValueError, match="Failed to submit compiled program"):
+        submit_program(BELL, target=device, program_format=program_format, num_shots=shots, custom2=True)

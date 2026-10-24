@@ -78,9 +78,9 @@ struct Execution {
   std::string_view program_;
   size_t numShots_;
   std::optional<uint64_t> seed_;
+  bool captureQIROutput_;
   size_t maxWorkers_;
   bool automaticWorkers_;
-  bool captureQirOutput_;
   std::optional<std::string> qirOutput_;
   std::optional<qdmi::dd::OutputTemplate> outputTemplate_;
   std::string shots_;
@@ -140,7 +140,7 @@ struct Execution {
   bool qirProgram() {
     const llvm::StringRef irBytes(program_.data(), program_.size());
     const bool sampling = numShots_ != 0;
-    const bool capture = sampling && captureQirOutput_;
+    const bool capture = sampling && captureQIROutput_;
     std::optional<llvm::raw_string_ostream> output;
     auto jitSession = qir::JitSession(
         irBytes, "QDMI job",
@@ -270,8 +270,8 @@ struct Execution {
       for (const auto& part : parts) {
         shots_ += part;
       }
-      for (size_t i = 1; i < workers; ++i) {
-        if (capture) {
+      if (output) {
+        for (size_t i = 1; i < workers; ++i) {
           *output << records[i];
         }
       }
@@ -299,9 +299,9 @@ qdmi::dd::WorkerResponse execute(const qdmi::dd::WorkerRequest& request,
       .program_ = request.program,
       .numShots_ = static_cast<size_t>(request.shots),
       .seed_ = request.seed,
+      .captureQIROutput_ = request.captureOutput,
       .maxWorkers_ = static_cast<size_t>(request.maxWorkers),
       .automaticWorkers_ = request.automaticWorkers,
-      .captureQirOutput_ = request.captureQirOutput,
   };
   const bool qasm = request.format == QDMI_PROGRAM_FORMAT_QASM2 ||
                     request.format == QDMI_PROGRAM_FORMAT_QASM3;

@@ -971,6 +971,9 @@ TEST_F(DDSimulatorDeviceTest, SubmitJobValidatesCustomParameters) {
                    std::nullopt, std::nullopt, 42),
                std::runtime_error);
   EXPECT_THROW(std::ignore = device.submitJob(
+                   program, QDMI_PROGRAM_FORMAT_QASM3, 10, std::nullopt, true),
+               std::runtime_error);
+  EXPECT_THROW(std::ignore = device.submitJob(
                    program, QDMI_PROGRAM_FORMAT_QASM3, 10, std::nullopt, 1),
                std::invalid_argument);
 }

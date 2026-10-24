@@ -34,9 +34,9 @@ struct WorkerRequest {
   llvm::StringRef program;
   uint64_t shots = 0;
   std::optional<uint64_t> seed;
+  bool captureOutput = false;
   uint64_t maxWorkers = 1;
   bool automaticWorkers = true;
-  bool captureQirOutput = false;
 };
 /// One optional request/grant exchange before parallel sampling.
 ///

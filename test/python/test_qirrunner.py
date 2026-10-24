@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 
 from mqt.core.mlir import CompilerTarget, OutputFormat, QIRProfile, QIRProgram, compile_program
-from mqt.core.qdmi import ProgramFormat, open_device
+from mqt.core.qdmi import CustomProperty, ProgramFormat, open_device
 
 qirrunner = pytest.importorskip("qirrunner")
 
@@ -140,16 +140,20 @@ bit[4] c = measure q;
 
 
 @pytest.mark.parametrize("flipped", [0, 1])
-def test_ddsim_and_qirrunner_sample_equivalent_outputs(flipped: int) -> None:
-    """Both runtimes preserve output bit order and deterministic outcomes."""
+def test_ddsim_and_qirrunner_record_equivalent_outputs(flipped: int) -> None:
+    """Both runtimes preserve labels, record order, and deterministic outcomes."""
     qir = _compile(
         f'OPENQASM 3.0; include "stdgates.inc"; qubit[2] q; x q[{flipped}]; bit[2] result = measure q;',
     )
     bitcode = qir.to_bitcode()
-    reference = _recorded_bitstrings(_run(bitcode, shots=3), width=2)
+    reference = _run(bitcode, shots=3)
     device = open_device("mqt.ddsim.default")
-    job = device.submit_job(bitcode, ProgramFormat.QIR_BASE_MODULE, 3)
+    job = device.submit_job(bitcode, ProgramFormat.QIR_BASE_MODULE, 3, custom2=True)
     assert job.wait()
-    assert job.get_shots() == [shot[::-1] for shot in reference]
+    output = job.get_custom_result(CustomProperty.CUSTOM1, str)
+    assert isinstance(output, str)
+    assert [line for line in output.splitlines() if line.startswith("OUTPUT\t")] == [
+        line for line in reference.splitlines() if line.startswith("OUTPUT\t")
+    ]
     expected = "01" if flipped == 0 else "10"
     assert job.get_counts() == {expected: 3}
