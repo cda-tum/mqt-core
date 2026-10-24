@@ -23,7 +23,7 @@ void registerBV(const nb::module_& m);
 void registerFanOut(const nb::module_& m);
 void registerGHZ(const nb::module_& m);
 void registerGrover(const nb::module_& m);
-void registerWeakMeasurementGrover(const nb::module_& m);
+void registerGroverWeakMeasurement(const nb::module_& m);
 void registerMagicStateDistillation(const nb::module_& m);
 void registerModularMultiplier(const nb::module_& m);
 void registerMultiplexer(const nb::module_& m);
@@ -77,7 +77,7 @@ NB_MODULE(MQT_CORE_MODULE_NAME, m) {
   const nb::module_ groverWeakMeasurement = m.def_submodule(
       "grover_weak_measurement",
       "Weak-measurement Grover benchmark instances and options.");
-  registerWeakMeasurementGrover(groverWeakMeasurement);
+  registerGroverWeakMeasurement(groverWeakMeasurement);
 
   const nb::module_ magicStateDistillation = m.def_submodule(
       "magic_state_distillation",

@@ -8,7 +8,7 @@
  * Licensed under the MIT License
  */
 
-#include "bench/WeakMeasurementGrover.hpp"
+#include "bench/GroverWeakMeasurement.hpp"
 
 #include "bench/Evaluation.hpp"
 
@@ -29,12 +29,12 @@ namespace {
 
 } // namespace
 
-WeakMeasurementGrover::WeakMeasurementGrover(
-    WeakMeasurementGroverOptions options)
+GroverWeakMeasurement::GroverWeakMeasurement(
+    GroverWeakMeasurementOptions options)
     : options_(std::move(options)),
       output_{.name = "result", .width = options_.markedBitstring.size()} {
   const auto width = options_.markedBitstring.size();
-  if (width < 2 || width > WeakMeasurementGroverOptions::MAX_QUBITS) {
+  if (width < 2 || width > GroverWeakMeasurementOptions::MAX_QUBITS) {
     throw std::invalid_argument(
         "weak-measurement Grover requires a marked bitstring of width 2 "
         "through 2044");
@@ -54,22 +54,22 @@ WeakMeasurementGrover::WeakMeasurementGrover(
   }
 }
 
-const WeakMeasurementGroverOptions&
-WeakMeasurementGrover::options() const noexcept {
+const GroverWeakMeasurementOptions&
+GroverWeakMeasurement::options() const noexcept {
   return options_;
 }
 
-size_t WeakMeasurementGrover::qubits() const noexcept { return output_.width; }
+size_t GroverWeakMeasurement::qubits() const noexcept { return output_.width; }
 
-const Output& WeakMeasurementGrover::output() const noexcept { return output_; }
+const Output& GroverWeakMeasurement::output() const noexcept { return output_; }
 
 double
-WeakMeasurementGrover::probability(const std::string_view outcome) const {
+GroverWeakMeasurement::probability(const std::string_view outcome) const {
   detail::validateOutcome(outcome, output_.width);
   return outcome == options_.markedBitstring ? 1. : 0.;
 }
 
-Evaluation WeakMeasurementGrover::evaluate(const Counts& counts) const {
+Evaluation GroverWeakMeasurement::evaluate(const Counts& counts) const {
   return detail::evaluate(*this, counts, options_.markedBitstring);
 }
 

@@ -13,6 +13,7 @@ add_executable(
   test_benchmark_generate_fan_out.cpp
   test_benchmark_generate_ghz.cpp
   test_benchmark_generate_grover.cpp
+  test_benchmark_generate_grover_weak_measurement.cpp
   test_benchmark_generate_magic_state_distillation.cpp
   test_benchmark_generate_modular_multiplier.cpp
   test_benchmark_generate_multiplexer.cpp
@@ -23,8 +24,7 @@ add_executable(
   test_benchmark_generate_repeat_until_success.cpp
   test_benchmark_generate_shor.cpp
   test_benchmark_generate_teleportation.cpp
-  test_benchmark_generate_w_state.cpp
-  test_benchmark_generate_weak_measurement_grover.cpp)
+  test_benchmark_generate_w_state.cpp)
 
 target_link_libraries(
   mqt-core-mlir-unittests-benchmark

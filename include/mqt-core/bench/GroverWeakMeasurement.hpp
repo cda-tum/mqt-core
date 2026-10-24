@@ -21,7 +21,7 @@
 namespace mqt::bench {
 
 /// Parameters for one weak-measurement Grover benchmark instance.
-struct WeakMeasurementGroverOptions {
+struct GroverWeakMeasurementOptions {
   /// Largest width whose default strength is a normal double.
   static constexpr size_t MAX_QUBITS = 2'044;
 
@@ -32,11 +32,11 @@ struct WeakMeasurementGroverOptions {
 };
 
 /// A validated weak-measurement Grover benchmark.
-class MQT_CORE_BENCH_EXPORT WeakMeasurementGrover final {
+class MQT_CORE_BENCH_EXPORT GroverWeakMeasurement final {
 public:
-  explicit WeakMeasurementGrover(WeakMeasurementGroverOptions options);
+  explicit GroverWeakMeasurement(GroverWeakMeasurementOptions options);
 
-  [[nodiscard]] const WeakMeasurementGroverOptions& options() const noexcept;
+  [[nodiscard]] const GroverWeakMeasurementOptions& options() const noexcept;
   /// Return the number of search qubits.
   [[nodiscard]] size_t qubits() const noexcept;
   [[nodiscard]] const Output& output() const noexcept;
@@ -46,7 +46,7 @@ public:
   [[nodiscard]] Evaluation evaluate(const Counts& counts) const;
 
 private:
-  WeakMeasurementGroverOptions options_;
+  GroverWeakMeasurementOptions options_;
   Output output_;
 };
 
