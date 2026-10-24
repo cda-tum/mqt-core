@@ -54,6 +54,7 @@ add_mlir_library(
   MLIROpenQASMFrontend
   MLIRControlFlowDialect
   MLIRMathDialect
+  MLIRBufferizationDialect
   MLIRMemRefDialect
   MLIRMemRefTransforms
   MLIRMQTDialect
