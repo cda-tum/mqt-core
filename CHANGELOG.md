@@ -12,6 +12,8 @@ releases may include breaking changes.
 
 ### Changed
 
+- ⚡ Prefetch the next reusable DD entry during allocation ([#2826], [#2831])
+  ([**@burgholzer**], [**@denialhaag**])
 - 💥 Propagate DD allocation and table-index errors through exceptions instead
   of terminating ([#2826], [#2814]) ([**@burgholzer**], [**@denialhaag**])
 - ♻️ Defer selected Python imports until first use on Python 3.15. Older Python
@@ -925,6 +927,7 @@ for previous changelogs._
 
 <!-- PR links -->
 
+[#2831]: https://github.com/munich-quantum-toolkit/core/pull/2831
 [#2826]: https://github.com/munich-quantum-toolkit/core/pull/2826
 [#2814]: https://github.com/munich-quantum-toolkit/core/pull/2814
 [#2760]: https://github.com/munich-quantum-toolkit/core/pull/2760

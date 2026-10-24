@@ -17,6 +17,14 @@
 #include <cstring>
 #include <memory>
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#ifdef _M_X64
+#include <xmmintrin.h>
+#elif defined(_M_ARM64)
+#include <intrin.h>
+#endif
+#endif
+
 namespace dd {
 
 MemoryManager::MemoryManager(size_t entrySize,
@@ -81,6 +89,15 @@ LLBase* MemoryManager::getEntryFromAvailableList() noexcept {
 
   auto* entry = available;
   available = available->next();
+  if (available != nullptr) {
+#if defined(__clang__) || defined(__GNUC__)
+    __builtin_prefetch(available, 0, 3);
+#elif defined(_M_ARM64)
+    __prefetch(available);
+#elif defined(_M_X64)
+    _mm_prefetch(reinterpret_cast<char*>(available), _MM_HINT_T0);
+#endif
+  }
   stats.trackReusedEntries();
   return entry;
 }
